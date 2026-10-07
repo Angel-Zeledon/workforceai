@@ -78,7 +78,7 @@ func gov(g policy.Governance) catalog.PackRules {
 func (h *harness) waitApproval() domain.Approval {
 	h.t.Helper()
 	var ap domain.Approval
-	h.waitFor("pending approval", func() bool { var ok bool; ap, ok = h.pendingApproval(); return ok })
+	ap = h.awaitApproval()
 	return ap
 }
 

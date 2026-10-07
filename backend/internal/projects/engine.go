@@ -159,6 +159,13 @@ func (s *Service) Control(ctx context.Context, id, action string) (Summary, erro
 	var rejectPending bool
 	rec, err := s.update(ctx, id, func(r *Record) error {
 		st := r.Status
+		// The engine persists a terminal status on its next tick; until then the
+		// derived status is the truth (the snapshot already reports it).
+		if r.RequestID != "" && !terminalStatus(st) && (action == "pause" || action == "cancel") {
+			if d, err := s.detailOf(ctx, *r); err == nil && terminalStatus(d.Project.Status) {
+				st = d.Project.Status
+			}
+		}
 		switch action {
 		case "pause":
 			if r.RequestID == "" || terminalStatus(st) {

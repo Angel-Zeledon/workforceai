@@ -139,6 +139,19 @@ func (h *harness) agent(id string) domain.Agent {
 	return a
 }
 
+// awaitApproval waits until an approval is pending and its agent has settled
+// in awaiting_approval (the approval row is written before the agent state).
+func (h *harness) awaitApproval() domain.Approval {
+	h.t.Helper()
+	var ap domain.Approval
+	h.waitFor("pending approval", func() bool {
+		var ok bool
+		ap, ok = h.pendingApproval()
+		return ok && h.agent(ap.AgentID).State == domain.StateAwaitingApproval
+	})
+	return ap
+}
+
 func (h *harness) pendingApproval() (domain.Approval, bool) {
 	ps, _ := h.store.ListApprovals(context.Background(), domain.DemoOrgID, "pending")
 	if len(ps) == 0 {
@@ -186,7 +199,7 @@ func TestApprovalApprovedContinuesAndProducesReport(t *testing.T) {
 		t.Fatal(err)
 	}
 	var ap domain.Approval
-	h.waitFor("pending approval", func() bool { var ok bool; ap, ok = h.pendingApproval(); return ok })
+	ap = h.awaitApproval()
 
 	if ap.Action != "send_proposal" || ap.AgentID != "sales" {
 		t.Fatalf("unexpected approval %+v", ap)
@@ -252,7 +265,7 @@ func TestApprovalRejectedBlocksTaskAndDependants(t *testing.T) {
 	h := newHarness(t, sendProposalRuntime(proposalPlan(independent)), nil)
 	reqID, _ := h.orch.Submit(context.Background(), "enviar propuesta")
 	var ap domain.Approval
-	h.waitFor("pending approval", func() bool { var ok bool; ap, ok = h.pendingApproval(); return ok })
+	ap = h.awaitApproval()
 
 	if _, err := h.appr.Decide(context.Background(), ap.ID, "reject", "no"); err != nil {
 		t.Fatal(err)
@@ -302,7 +315,7 @@ func TestHighRiskNeedsApprovalEvenIfActionNotListed(t *testing.T) {
 	h := newHarness(t, rt, nil)
 	h.orch.Submit(context.Background(), "contratar")
 	var ap domain.Approval
-	h.waitFor("pending approval", func() bool { var ok bool; ap, ok = h.pendingApproval(); return ok })
+	ap = h.awaitApproval()
 	if ap.Risk != "high" {
 		t.Fatalf("risk = %s", ap.Risk)
 	}
