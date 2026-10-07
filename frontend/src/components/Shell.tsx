@@ -46,7 +46,7 @@ export function Shell() {
   const reset = async () => {
     try {
       await api.reset();
-      useStore.setState({ tasks: {}, requests: {}, plans: {}, conversations: {}, messages: {}, approvals: {}, reports: {}, activity: [], errors: [], links: [], selectedAgentId: null });
+      useStore.setState({ tasks: {}, requests: {}, plans: {}, conversations: {}, messages: {}, chat: {}, routes: {}, lastTurnId: null, typing: {}, approvals: {}, reports: {}, activity: [], errors: [], links: [], selectedAgentId: null });
       await useStore.getState().loadAll();
     } catch { /* backend without reset */ }
   };

@@ -9,7 +9,10 @@ import random
 
 from . import sim_content as sc
 from .engine import AgentEngine, estimate_cost
+from .routing import assigned_reason, compose_reply
 from .models import (
+    ChatReplyRequest,
+    ChatReplyResponse,
     Consult,
     ConsultRequest,
     ConsultResponse,
@@ -76,7 +79,8 @@ class SimulationEngine(AgentEngine):
             kept.add(key)
             tasks.append(PlanTask(key=key, title=title, description=desc,
                                   agent_id=by_role.get(role, role),
-                                  depends_on=[d for d in deps]))
+                                  depends_on=[d for d in deps],
+                                  reason=assigned_reason(req.locale, scenario, key, role) or None))
         for t in tasks:
             t.depends_on = [d for d in t.depends_on if d in kept]
         if not tasks:  # ningun agente conocido: usa el primero disponible
@@ -127,6 +131,14 @@ class SimulationEngine(AgentEngine):
         return ConsultResponse(answer=answer, usage=self._usage(
             f"consult|{req.from_agent_id}|{req.to_agent_id}|{req.question}", ms,
             in_range=(500, 1200), out_range=(120, 380)))
+
+    # ------------------------------------------------------------ chat-reply
+    async def chat_reply(self, req: ChatReplyRequest) -> ChatReplyResponse:
+        ms = await self._latency(0.3, 1.0)
+        text, kind, consult = compose_reply(req)
+        # A chat line is tiny: a few hundred tokens in, a few dozen out (cost ~ fractions of a cent).
+        usage = self._usage(f"chat|{req.agent.id}|{req.text}|{req.slot}", ms, in_range=(260, 520), out_range=(25, 70))
+        return ChatReplyResponse(text=text, kind=kind, consult=consult, usage=usage)
 
     # ----------------------------------------------------------- synthesize
     async def synthesize(self, req: SynthesizeRequest) -> SynthesizeResponse:

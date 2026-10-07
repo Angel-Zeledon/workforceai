@@ -11,10 +11,12 @@ import { ActivityFeed } from "./ActivityFeed";
 import { ConversationThread } from "./Conversation";
 import { ReportView } from "./ReportView";
 import { AgentFilesTab } from "./workspace/AgentFilesTab";
-import { Card, Empty, Progress, StateBadge, TaskBadge, timeAgo } from "./ui";
+import { Card, Empty, Progress, ReasonChip, StateBadge, TaskBadge, readable, timeAgo } from "./ui";
+import { AgentChat } from "./chat/AgentChat";
+import { Avatar } from "./chat/ChatThread";
 import { Icon } from "./icons";
 
-const TABS = ["state", "tasks", "chats", "memory", "reports", "files", "activity", "profile"] as const;
+const TABS = ["chat", "state", "tasks", "chats", "memory", "reports", "files", "activity", "profile"] as const;
 type Tab = (typeof TABS)[number];
 
 export function AgentPanel({ id }: { id: string }) {
@@ -26,13 +28,13 @@ export function AgentPanel({ id }: { id: string }) {
   const reports = useStore((s) => s.reports);
   const storeTasks = useStore((s) => s.tasks);
   const [detail, setDetail] = useState<AgentDetail | null>(null);
-  const [tab, setTab] = useState<Tab>("state");
+  const [tab, setTab] = useState<Tab>("chat");
   const [openConv, setOpenConv] = useState<string | null>(null);
   const [openReport, setOpenReport] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setDetail(null); setTab("state"); setOpenConv(null); setOpenReport(null); }, [id]);
+  useEffect(() => { setDetail(null); setTab("chat"); setOpenConv(null); setOpenReport(null); }, [id]);
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
@@ -54,25 +56,28 @@ export function AgentPanel({ id }: { id: string }) {
   return (
     <aside className="pointer-events-auto flex h-full w-[420px] max-w-full flex-col border-l border-line bg-panel shadow-float">
       <div className="border-b border-line p-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute"><span className="h-2 w-2 rounded-full" style={{ background: meta.color }} />{roleLabel}</div>
-            <h2 className="font-display mt-0.5 text-lg font-semibold text-ink">{view.name}</h2>
-            <div className="text-xs text-mute">{view.title}</div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar id={id} size={40} />
+            <div className="min-w-0">
+              <h2 className="font-display truncate text-[17px] font-semibold leading-tight text-ink">{view.name}</h2>
+              <div className="truncate text-xs text-mute">{view.title}<span className="mx-1.5 text-line-strong">·</span><span style={{ color: readable(meta.color) }} className="font-medium">{roleLabel}</span></div>
+            </div>
           </div>
           <button onClick={() => select(null)} className="rounded-md p-1.5 text-mute hover:bg-mute/10 hover:text-ink" aria-label={t("common.close")}><Icon name="x" size={16} /></button>
         </div>
         <div className="mt-3 flex items-center gap-2"><StateBadge state={agent.state} /><span className="truncate text-xs text-ink2">{agent.activity}</span></div>
         {agent.progress > 0 && <div className="mt-2"><Progress value={agent.progress} color={sm.color} /></div>}
       </div>
-      <nav className="flex gap-0.5 overflow-x-auto border-b border-line px-2">
+      <nav role="tablist" className="flex gap-0.5 overflow-x-auto border-b border-line px-2">
         {TABS.map((tb) => (
-          <button key={tb} data-testid={`panel-tab-${tb}`} onClick={() => setTab(tb)} className={`whitespace-nowrap border-b-2 px-2.5 py-2.5 text-[11.5px] font-medium transition ${tab === tb ? "border-accent text-ink" : "border-transparent text-mute hover:text-ink"}`}>
+          <button key={tb} role="tab" aria-selected={tab === tb} data-testid={`panel-tab-${tb}`} onClick={() => setTab(tb)} className={`whitespace-nowrap border-b-2 px-2.5 py-2.5 text-[11.5px] font-medium transition ${tab === tb ? "border-accent text-ink" : "border-transparent text-mute hover:text-ink"}`}>
             {t(`panel.tab.${tb}`)}
           </button>
         ))}
       </nav>
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+      <div className={tab === "chat" ? "min-h-0 flex-1" : "min-h-0 flex-1 space-y-3 overflow-y-auto p-4"}>
+        {tab === "chat" && <AgentChat id={id} />}
         {error && !detail && <Empty>{t("panel.loadError")}</Empty>}
         {tab === "profile" && <Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card>}
         {tab === "state" && (
@@ -82,6 +87,7 @@ export function AgentPanel({ id }: { id: string }) {
                 <div>
                   <div className="text-[13px] font-semibold text-ink">{cur.title}</div>
                   <p className="mt-0.5 text-xs text-mute">{cur.description}</p>
+                  <ReasonChip agentId={id} reason={cur.assigned_reason} className="mt-2" />
                   <div className="mt-2 flex items-center gap-2"><TaskBadge status={cur.status} /><span className="font-mono text-[11px] text-mute">{agent.progress}%</span></div>
                   <div className="mt-2"><Progress value={agent.progress} color={sm.color} /></div>
                 </div>
@@ -111,6 +117,7 @@ export function AgentPanel({ id }: { id: string }) {
           <Card key={task.id}>
             <div className="flex items-start justify-between gap-2"><div className="text-[13px] font-semibold text-ink">{task.title}</div><TaskBadge status={task.status} /></div>
             <p className="mt-1 text-xs text-mute">{task.description}</p>
+            <ReasonChip agentId={id} reason={task.assigned_reason} className="mt-2" />
             {task.output && (
               <div className="mt-2 space-y-1 rounded-md bg-bg/60 p-2 text-[11.5px] text-ink2">
                 <div className="text-ink">{task.output.summary}</div>

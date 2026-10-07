@@ -56,7 +56,7 @@ Extension compatible de `GET /metrics`: ademas de `{tasks_active, tasks_done, ap
 | Ruta | Descripcion |
 |---|---|
 | `GET /approvals/{id}` | Detalle con `args` exactos, cadena de delegacion, riesgo |
-| `POST /approvals/{id}/decision` | **[SPEC]**; respuesta incluye la `Approval` resuelta; `409 invalid_state` si ya resuelta o `args_hash` cambio |
+| `POST /approvals/{id}/decision` | **[SPEC]**; respuesta incluye la `Approval` resuelta; `409 invalid_state` si ya resuelta o `args_hash` cambio. Con gobierno (sec. 14.6): `403` si el actor es un agente, no alcanza el rol requerido o es el solicitante; doble aprobacion = la primera responde `pending` con `decisions` |
 | `GET /approvals?status=&risk=&agent_id=` | Filtros |
 
 ### Eventos y actividad
@@ -124,6 +124,8 @@ Extension compatible de `GET /metrics`: ademas de `{tasks_active, tasks_done, ap
 `GET /notifications?status=unread`, `POST /notifications/{id}/read`, `POST /notifications/read-all`, `GET/PUT /notification-preferences`.
 
 ### Auditoria
+**Implementado en el backend (contrato real en la sec. 14):** `GET /audit` (filtros `from`, `to`, `actor`, `type`, `entity`, `request_id`; cursor), `GET /audit/export?format=jsonl|csv` (streaming sincrono, con la cadena de hash para SIEM) y `GET /audit/verify` (verificacion de la cadena, ancla externa opcional), todos con `audit:read`. Lo de abajo era el diseno inicial; difiere en: el export es sincrono (no 202), no esta firmado (la cadena de hash permite verificarlo; la firma queda pendiente) y no hay filtro `decision` (usa `type=policy.decision` y mira `details.effect`).
+
 | Ruta | Descripcion | Permiso |
 |---|---|---|
 | `GET /audit?actor=&action=&entity_type=&entity_id=&from=&to=&decision=` | Busqueda paginada | `audit:read` |
@@ -426,3 +428,134 @@ Ningún payload contiene secretos ni contenido de mensajes (salvo `tool_call` en
 ### 13.8 Variables de entorno
 
 `CONNECTIONS_KEK`, `CONNECTIONS_KEK_PREVIOUS`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `OAUTH_REDIRECT_URL`, `UI_BASE_URL`, `EMAIL_HOLD_SECONDS`, `KILL_SWITCH`, `APP_ENV` (tabla en `backend/README.md`).
+
+## 14. Auditoría encadenada, aprobaciones con gobierno y reglas de aprobación (backend implementado)
+
+Aditivo y retrocompatible. Cierra los hallazgos "Políticas sin conectar" y "Auditoría incompleta" de `enterprise-and-ecosystem-roadmap.md` (jugada 1). Las decisiones de diseño y su razón están en `06-permisos-autonomia.md` sec. 8; el modelo de amenazas, en `07-seguridad-costos.md` sec. 6.
+
+### 14.1 Convenciones
+
+- Errores: `{"error": "<texto>"}` (igual que el resto de la API). `403` = autenticado pero sin permiso para **esa** decisión (rol insuficiente, aprobar la propia solicitud, agente); `409` = ya resuelta o ya aprobaste; `400` = filtro o regla inválidos.
+- Sin `AUTH_ENABLED` el actor implícito es `user` con rol `owner` (demo). La API de auditoría solo **lee**: no existe endpoint que escriba, cambie o borre una entrada.
+- Permisos: `audit:read` (admin, owner) para `/audit*`; `approvals:read` para leer reglas; `policy:manage` (**solo owner**) para cambiarlas. Ningún rol de agente tiene `approvals:decide`, `audit:read` ni `policy:manage`.
+
+### 14.2 `GET /audit`
+
+Filtros (todos opcionales, combinables): `from` (inclusive) y `to` (exclusivo) en RFC 3339 o `YYYY-MM-DD` (UTC); `actor` (exacto: id de usuario, id de agente o `system`); `type` (acción: exacta, o prefijo con `*`: `approval.*`, `policy.decision`; alias `action`); `entity` (`task`, `approval`, `request`, `connection`, `org`...); `request_id`. Paginación por cursor: `limit` (1-1000, def. 100), `cursor` (opaco), `order=asc|desc` (def. `desc` en la API; el export es siempre `asc`).
+
+```json
+{
+  "items": [{
+    "seq": 41, "id": "uuid", "ts": "2026-10-06T14:03:22.123456Z", "org_id": "uuid",
+    "actor": "sales", "action": "policy.decision", "entity": "task", "entity_id": "uuid", "request_id": "uuid",
+    "details": {"tool":"email","action":"send_proposal","effect":"require_approval","rule_id":"dual_approval.action:send_proposal",
+                "required_approvals":2,"required_role":"admin","args_hash":"3f…","on_behalf_of":"user-id"},
+    "prev_hash": "ab…", "hash": "cd…"
+  }],
+  "next_cursor": "…"
+}
+```
+
+`next_cursor` solo aparece si hay más. `seq` es 0 en filas anteriores a la cadena (migración 250): se listan, pero no entran en la verificación.
+
+### 14.3 `GET /audit/export?format=jsonl|csv` (+ los mismos filtros)
+
+Descarga **síncrona en streaming** (no 202): `application/x-ndjson` (`.jsonl`, una entrada por línea, el objeto de 14.2) o `text/csv` (columnas `seq,id,ts,org_id,actor,action,entity,entity_id,request_id,details,prev_hash,hash`; `details` es JSON; las celdas que empiezan por `= + - @` llevan un `'` delante contra inyección de fórmulas). Orden: más antigua primero (el orden de la cadena). Es una **instantánea**: solo entradas hasta el `seq` vigente al empezar; la entrada `audit.exported` que registra la descarga no entra en ella. Tope de 500 000 entradas por descarga (si hay más, acota por fechas). Cada export se audita (formato y filtros, nunca el contenido). `Content-Disposition: attachment`, `Cache-Control: no-store`.
+
+Un export **sin filtrar** se verifica sin base de datos: `server ctl audit-verify -file export.jsonl -strict`; uno filtrado se verifica sin `-strict` (hay huecos por construcción, pero cada hash y cada par adyacente se comprueban). Para un SIEM: ingerir JSONL tal cual; `hash`/`prev_hash` permiten al SIEM detectar huecos por su cuenta.
+
+### 14.4 Cadena de hash y `GET /audit/verify`
+
+Cada entrada de una organización incluye el hash de la anterior: `hash = sha256(JSON compacto {v:1, org_id, seq, prev_hash, ts, actor, action, entity, entity_id, request_id, details})` con los campos en ese orden, claves de mapas ordenadas, `ts` en UTC con microsegundos (`2006-01-02T15:04:05.000000Z`), `details` normalizado (viaje JSON de ida y vuelta) y `prev_hash=""` en `seq=1`. Los `ts` crecen estrictamente a lo largo de la cadena (orden por tiempo = orden por `seq`). Cada organización tiene su cadena.
+
+`GET /audit/verify[?anchor_seq=N&anchor_hash=H]` recorre toda la cadena y responde **200** con el informe (200 aunque la cadena no verifique: la verificación se ejecutó; el que falla es el registro):
+
+```json
+{"ok": false, "checked": 3, "first_seq": 1, "last_seq": 3, "head_seq": 3, "head_hash": "…",
+ "broken_at_seq": 4, "reason": "hash_mismatch", "detail": "entry content was modified", "anchor_checked": false}
+```
+
+`reason`: `hash_mismatch` (entrada modificada), `prev_hash_mismatch` (no enlaza con la anterior: p. ej. se rehízo el hash de una entrada), `gap` (se borró, insertó o reordenó), `head_mismatch` (la cola se truncó: la cadena termina antes de la cabeza registrada), `anchor_mismatch` (el hash difiere del ancla externa o el ancla queda más allá del final), `org_mismatch`. Cada verificación se audita (`audit.verified` / `audit.integrity_failed`).
+
+**Límite honesto:** quien controle por completo la base puede reescribir **toda** la cadena de forma coherente (incluida la cabeza). Se detecta con un **ancla externa**: guardar fuera de la base (WORM/S3 Object Lock, ticket, SIEM) el último `seq`+`hash` de cada export o verificación, y pasarlo como `anchor_seq`/`anchor_hash` (o `-anchor-seq/-anchor-hash` en el comando). El job diario que publica el ancla **no está implementado** (ver 06 sec. 8.7).
+
+Comando (sin API, útil si la UI no responde): `server ctl audit-verify [-org ID | -all] [-anchor-seq N -anchor-hash H]` (usa `DATABASE_URL`; sale con error si no verifica) y `server ctl audit-verify -file export.jsonl [-strict]` (sin base de datos).
+
+### 14.5 Qué se registra (solo metadatos)
+
+Toda entrada pasa por un **depurador central** (`audit.Scrub`, en `Recorder.Audit`): se sustituyen por `[redacted]` las claves de contenido (`args`, `body`, `text`, `subject`, `output`, `summary`, `description`, `details`, `context`...) y de credenciales (`*secret*`, `*password*`, `*api_key*`, `token`, `*_token`, `authorization`...); los secretos dentro de textos (JWT, claves de API, tokens de Google, `password=`...) se enmascaran con `sanitize.RedactSecrets`; los textos se truncan a 300 caracteres. Contadores como `input_tokens` se conservan. En su lugar se guardan `arg_keys` (qué campos se enviaron) y `args_hash` (huella de la acción, no reversible).
+
+| `action` | Cuándo | Metadatos clave |
+|---|---|---|
+| `policy.decision` | cada tool request que no es una lectura | `tool`, `action`, `risk`, `effect` (`allow`/`require_approval`/`deny`), `rule_id`, `reason`, `source` (`baseline`/`engine`), `trace` (todas las reglas que se activaron), `required_role`, `required_approvals`, `autonomy`, `args_hash`, `amount`, `on_behalf_of` |
+| `tool.executed` / `tool.denied` | ejecución o rechazo (`reason`: `policy:<regla>`, `read_only_mode`, `tool_disabled`...) | `tool`, `action`, `arg_keys`, `approval_id`, `approvers` |
+| `approval.requested` | se pide una aprobación | (evento WS, sin contenido) |
+| `approval.partial` | llega la primera de dos aprobaciones | `received`, `required`, `required_role`, `policy_rule` |
+| `approval.approved` / `approval.rejected` | decisión final (también `rejected` por tiempo, actor `system`) | `approvers[]`, `required_approvals`, `required_role`, `requested_by`, `policy_rule`, `note` |
+| `approval.decision_refused` | alguien intentó decidir y no podía | `reason`: `agents_cannot_decide`, `role_too_low`, `self_approval` |
+| `policy.rules_updated` | cambio de reglas (owner) | umbral, `always_approve`, y solo **conteos** de lo demás |
+| `connection.*`, `control.changed`, `agent.control_changed`, `tool_call.*` | uso de conexiones y controles (Tool Gateway, kill switch, solo lectura, pausa) | ver `integrations-credentials.md` sec. 9 |
+| `audit.exported`, `audit.verified`, `audit.integrity_failed` | uso de la propia auditoría | formato, filtros, resultado |
+
+Todas llevan `request_id` cuando la acción ocurre dentro de una solicitud (las de aprobaciones lo obtienen de la tarea). Las direcciones de destinatarios pueden aparecer como metadato en eventos de conexiones (identifican a quién se escribió, no qué se escribió).
+
+### 14.6 Aprobaciones con gobierno
+
+`Approval` (en `GET /approvals` y en el payload de `approval.requested|resolved|progress`) gana campos aditivos:
+
+| Campo | Significado |
+|---|---|
+| `required_approvals` | `1`, o `2` (doble aprobación: dos humanos distintos) |
+| `required_role` | rol mínimo de **cada** aprobador (`admin`/`owner`; `""` = cualquiera con `approvals:decide`) |
+| `requested_by` | el humano en cuyo nombre actúan los agentes (`""` sin autenticación) |
+| `no_self_approval` | `true` con doble aprobación o `forbid_self_approval` |
+| `policy_rule` | regla que exigió la aprobación (`org.amount`, `dual_approval.action:make_payment`, `baseline.risk_high`...) |
+| `decisions` | `[{by, role, note, ts}]` aprobaciones recibidas hasta ahora |
+
+`POST /approvals/{id}/decision {decision: "approve"|"reject", note}` (permiso `approvals:decide`: admin, owner) ahora responde:
+
+| Caso | Respuesta |
+|---|---|
+| El actor es un agente o `system` (nunca pueden decidir) | `403` |
+| `approve` con rol por debajo de `required_role` | `403` |
+| `approve` del solicitante (`requested_by`) con `no_self_approval` | `403` |
+| `approve` de quien ya aprobó esta solicitud | `409` |
+| Primera de dos aprobaciones | `200`, `status:"pending"`, `decisions` con 1; evento `approval.progress`; la tarea sigue esperando |
+| Aprobación que completa el quórum | `200`, `status:"approved"` |
+| `reject` de cualquier humano autorizado (incluso tras una aprobación) | `200`, `status:"rejected"`, **definitivo** |
+| Ya resuelta | `409` |
+
+Con `AUTH_ENABLED=false` hay un solo actor anónimo: una doble aprobación no se puede completar (falla cerrado: caduca como cualquier aprobación pendiente). Las aprobaciones de acciones de conexiones (Gmail) llevan los mismos campos. Evento WS nuevo: `approval.progress` `{approval}` (primera de dos aprobaciones).
+
+### 14.7 Reglas de aprobación como datos: `GET|PUT /policy/rules`
+
+`GET` (permiso `approvals:read`) devuelve `{approval_amount_usd, always_approve[], governance{…}, enforced, baseline[]}`. `PUT` (permiso `policy:manage`, owner) reemplaza solo lo que se envía (`approval_amount_usd`, `always_approve`, `governance`; `governance:{}` la borra), valida y audita (`policy.rules_updated`). Las reglas viven en `org_settings.rules` junto a las que siembra el paquete de onboarding (reaplicar un paquete no borra `governance`). `enforced=false` = la organización no tiene reglas: rige solo el `baseline` (ver 06 sec. 8.1).
+
+```json
+{
+  "approval_amount_usd": 3000,
+  "always_approve": ["send_proposal", "send_contract"],
+  "governance": {
+    "deny_actions": ["crm.delete_*"],
+    "new_recipient_requires_approval": true,
+    "known_domains": ["acme.com"], "known_contacts": ["socio@otra.com"],
+    "approval_categories": ["legal", "financial"],
+    "amount_tiers": [{"amount_above": 5000, "role": "admin"}, {"amount_above": 50000, "role": "owner", "action": "make_payment"}],
+    "action_roles": [{"action": "send_contract", "role": "owner"}],
+    "dual_approval": {"actions": ["make_payment"], "amount_above": 20000, "high_risk": true},
+    "limits": [{"id": "mail.hourly", "tool": "email", "action": "send*", "window_seconds": 3600, "max_calls": 30, "on_exceed": "deny"},
+               {"id": "pay.daily", "action": "make_payment", "window_seconds": 86400, "max_amount": 50000, "on_exceed": "require_approval"}],
+    "forbid_self_approval": false
+  }
+}
+```
+
+Semántica (detalle y decisiones en 06 sec. 8): `deny_actions` nunca se ejecutan; un destinatario no conocido (ni dominio ni dirección listados; sin destinatario reconocible en una acción de salida) exige aprobación; un monto por encima de un `amount_tier` exige aprobación **de ese rol o superior**; `action_roles` solo sube el rol; `dual_approval` exige dos humanos distintos si coincide la acción, el monto o el riesgo `high` declarado por el runtime, **sea cual sea la autonomía del agente**; `limits` son ventanas deslizantes por agente (o por organización con `per_org`). `role` solo admite `admin` u `owner` (solo ellos pueden decidir).
+
+### 14.8 Datos y RLS
+
+Migración `250_audit_chain.sql` (+ `backend/migrations/down/250_audit_chain_down.sql`): `audit_logs` gana `seq`, `prev_hash`, `hash`, `request_id`; tabla `audit_chain_heads(org_id, seq, hash, last_ts)` (serializa los apéndices con `SELECT … FOR UPDATE` y permite detectar el truncado de la cola); `approvals` gana `required_approvals`, `required_role`, `requested_by`, `no_self_approval`, `policy_rule`, `decisions`. Ambas tablas de auditoría con RLS por organización. **Append-only por dos vías**: el rol de la aplicación no tiene `UPDATE/DELETE/TRUNCATE`, y triggers impiden `UPDATE/DELETE/TRUNCATE` de `audit_logs` incluso al dueño de la tabla (hay que desactivar el trigger, un acto de DDL visible); un trigger solo deja avanzar la cabeza de `audit_chain_heads` de uno en uno.
+
+### 14.9 Variables de entorno
+
+Ninguna nueva. `APPROVAL_ACTIONS` (def. `send_proposal,send_contract`) sigue siendo parte del suelo inalterable (06 sec. 8.1).

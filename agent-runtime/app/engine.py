@@ -8,10 +8,14 @@ from typing import TYPE_CHECKING
 
 from .providers import configured_providers
 from .models import (
+    ChatReplyRequest,
+    ChatReplyResponse,
     ConsultRequest,
     ConsultResponse,
     PlanRequest,
     PlanResponse,
+    RouteRequest,
+    RouteResponse,
     RunTaskRequest,
     RunTaskResponse,
     SynthesizeRequest,
@@ -86,6 +90,22 @@ class AgentEngine(abc.ABC):
     async def synthesize(self, req: SynthesizeRequest) -> SynthesizeResponse: ...
 
     model: str | None = None  # model used for pricing (None = default rate)
+
+    async def route(self, req: RouteRequest) -> RouteResponse:
+        """Who should answer a chat message (docs/architecture/chat-routing.md). Default: the rules."""
+        from .routing import rules_route
+
+        return rules_route(req)
+
+    async def chat_reply(self, req: ChatReplyRequest) -> ChatReplyResponse:
+        """One short, human reply of ONE agent. Default: scripted (no LLM, tiny simulated usage)."""
+        from .routing import compose_reply
+        from .models import Usage
+
+        text, kind, consult = compose_reply(req)
+        return ChatReplyResponse(text=text, kind=kind, consult=consult,
+                                 usage=Usage(model="simulation-claude-sonnet", input_tokens=0, output_tokens=0,
+                                             cost_usd=0.0, duration_ms=0))
 
     async def estimate(self, req: "EstimateRequest") -> "EstimateResponse":
         """Cost range for a plan, before running it. Never calls the LLM."""

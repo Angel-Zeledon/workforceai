@@ -58,6 +58,19 @@ export function TaskBadge({ status }: { status: string }) {
     </span>
   );
 }
+/** "Asignado a Tomás porque…": plain-language reason why a task went to an agent (task.assigned_reason). */
+export function ReasonChip({ agentId, reason, compact = false, className = "" }: { agentId?: string | null; reason?: string | null; compact?: boolean; className?: string }) {
+  const { t } = useT();
+  const name = useAgentName();
+  if (!reason) return null;
+  const text = agentId && !compact ? t("reason.assigned", { name: name(agentId).split(" ")[0], reason }) : t("reason.assignedShort", { reason });
+  return (
+    <span data-testid="reason-chip" title={text} className={`inline-flex max-w-full items-start gap-1 rounded-md bg-accent-soft px-2 py-1 text-[10.5px] font-medium leading-snug text-accent-hover ${className}`}>
+      <svg className="mt-[1px] shrink-0" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
+      <span className={compact ? "line-clamp-2" : "line-clamp-3"}>{text}</span>
+    </span>
+  );
+}
 export function RiskBadge({ risk }: { risk: string }) {
   const { t } = useT();
   const c = risk === "high" ? "#a63232" : risk === "medium" ? "#a86208" : "#2f7d55";

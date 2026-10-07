@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"regexp"
 	"strings"
 
 	"aiworkforce/backend/internal/sanitize"
@@ -92,8 +93,15 @@ func scrub(v any, depth int) any {
 	return v
 }
 
+// uuidRe: identifiers are not secrets. The card-number masker would otherwise
+// mangle all-digit UUIDs such as the demo organization id.
+var uuidRe = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
 func clean(s string) string {
 	s = strings.ReplaceAll(s, "\x00", "")
+	if uuidRe.MatchString(s) {
+		return s
+	}
 	s = sanitize.RedactSecrets(s, nil)
 	if r := []rune(s); len(r) > maxString {
 		s = string(r[:maxString]) + "…"

@@ -5,6 +5,7 @@ import { stateMeta } from "@/lib/meta";
 import { useAgentView, usePreferences } from "@/lib/preferences";
 import { labelEntries } from "./labels";
 import { LINK_KIND } from "./kinds";
+import { readable, useAgentColor, useAgentName } from "../ui";
 
 const BUBBLE_TTL = 7000;
 const KIND = LINK_KIND;
@@ -85,10 +86,15 @@ function AgentTag({ id }: { id: string }) {
 
 /** Burbuja de diálogo, anclada al emisor del mensaje real. */
 function Bubble({ link }: { link: Link }) {
-  const k = KIND[link.kind] || KIND.chat;
+  const base = KIND[link.kind] || KIND.chat;
+  const name = useAgentName();
+  const agentColor = useAgentColor();
+  // chat.message bubbles show who is speaking (first name, agent color); inter-agent traffic keeps its kind label
+  const k = link.chat && !["user", "all", "system"].includes(link.from) ? { color: readable(agentColor(link.from)), label: name(link.from).split(" ")[0] } : base;
   const anchor = ["user", "all", "system"].includes(link.from) ? "user" : link.from;
   const ref = useRegister(`bubble:${link.id}`, "bubble", anchor);
-  const text = link.text.length > 86 ? link.text.slice(0, 84) + "…" : link.text;
+  const firstLine = link.text.split("\n")[0];
+  const text = firstLine.length > 86 ? firstLine.slice(0, 84) + "…" : firstLine;
   const lines = Math.min(3, Math.ceil(text.length / 26));
   return (
     <div

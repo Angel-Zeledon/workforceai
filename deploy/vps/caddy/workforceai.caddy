@@ -1,0 +1,35 @@
+# Site blocks for the EXISTING Caddy on the VPS (imported from /etc/caddy/extra/*.caddy).
+# Kept in a separate file so a stockai deploy never overwrites them.
+
+workforceai.es, www.workforceai.es {
+	encode gzip
+	header Strict-Transport-Security "max-age=31536000"
+
+	@www host www.workforceai.es
+	redir @www https://workforceai.es{uri} 308
+
+	reverse_proxy wf-landing:80
+}
+
+app.workforceai.es {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# REST + WebSocket -> backend (Caddy proxies Upgrade automatically)
+	@backend path /api/* /ws
+	handle @backend {
+		reverse_proxy wf-backend:8080 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		reverse_proxy wf-frontend:3000
+	}
+}

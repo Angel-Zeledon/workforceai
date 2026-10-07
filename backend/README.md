@@ -72,7 +72,7 @@ API en `http://localhost:8080/api/v1`, WebSocket en `ws://localhost:8080/ws`.
 
 Auth: `POST /api/v1/auth/{register,login,refresh,logout}`, `GET /api/v1/auth/me`, gestión de miembros en `/api/v1/auth/members`. WebSocket: `ws://host/ws?access_token=<jwt>` (o cabecera `Authorization`); el servidor lo cierra con código 4401 a los 15 min para forzar reconexión con token nuevo. Aprobar/rechazar (`approvals/{id}/decision`) exige rol admin u owner.
 
-RLS: las migraciones 201-203 se aplican al arrancar. Cada llamada del store corre en una transacción con `set_config('app.org_id', ..., true)` (`postgres.Store.WithOrgTx`) y el pool usa el rol `app_user` (no owner, sin BYPASSRLS); `audit_logs` es append-only para la app. Rollbacks en `migrations/down/`.
+RLS: las migraciones 201-203 se aplican al arrancar. Cada llamada del store corre en una transacción con `set_config('app.org_id', ..., true)` (`postgres.Store.WithOrgTx`) y el pool usa el rol `app_user` (no owner, sin BYPASSRLS); `audit_logs` es append-only (privilegios y triggers) y está encadenada por hash por organización (migración 250: `GET /audit`, `/audit/export`, `/audit/verify`; `server ctl audit-verify [-org ID|-all]` o `-file export.jsonl`). Rollbacks en `migrations/down/`.
 
 Compromisos conocidos: el pool se conecta con las credenciales owner y hace `SET ROLE` (en producción preferible un login role miembro de `app_user` en `DATABASE_URL` + `MIGRATE_DATABASE_URL`); el presupuesto (`BUDGET_USD`) y `Reset` cancelan/aplican a nivel de proceso, no por organización; `register` es público.
 

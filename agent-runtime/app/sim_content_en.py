@@ -358,3 +358,195 @@ TEXTS = {
     "conf_body": "Average agent confidence: {avg:.0%} across {n} tasks.",
     "fallback_task": ("task_1", "Handle the request"),
 }
+
+
+# ------------------------------------------------------------------ chat (docs/architecture/chat-routing.md)
+TASK_REASONS: dict[tuple[str, str], str] = {
+    ("new_client", "ventas"): "knows the client and is the one who builds the commercial proposal",
+    ("new_client", "legal"): "must review penalties, intellectual property and liability before anything goes out",
+    ("new_client", "contador"): "has to confirm the real margin against the 31% budgeted",
+    ("new_client", "analista"): "needs the Accountant's real margin to measure the client's profitability",
+    ("new_client", "operaciones"): "knows whether current capacity covers the scope and the deadline",
+    ("sales_drop", "analista"): "can read sales by product, channel and segment",
+    ("sales_drop", "ventas"): "knows the pipeline and the reasons for lost deals",
+    ("sales_drop", "contador"): "can measure how much the drop affects cash flow",
+    ("hiring", "rrhh"): "runs recruiting and defines the profile",
+    ("hiring", "contador"): "calculates the total cost of the hire",
+    ("hiring", "legal"): "must review the employment contract and compliance",
+    ("contract", "legal"): "is the one who reviews clauses and contract risks",
+    ("contract", "ventas"): "has to align the commercial terms with Legal's findings",
+}
+ROLE_REASONS: dict[str, str] = {
+    "sales": "owns the client relationship and commercial proposals",
+    "hr": "handles hiring and labor rules",
+    "legal": "reviews contracts, compliance and legal risks",
+    "accounting": "controls margins, costs and invoicing",
+    "analyst": "analyzes data and profitability with evidence",
+    "operations": "knows operational capacity and delivery deadlines",
+    "assistant": "coordinates and structures the request",
+}
+
+CHAT: dict = {
+    "topic_labels": {
+        "finance": "finance", "legal": "legal matters", "hr": "people and hiring", "sales": "sales",
+        "data": "data and analysis", "operations": "operations", "general": "general topics",
+    },
+    "reasons": {
+        "owner": "Owns {topic}",
+        "coordinates": "Coordinates the team and handles general topics",
+        "greeting": "Answers the greeting first",
+        "peer_greeting": "Says a quick hello",
+        "related": "Can add something from {topic}",
+        "direct": "You wrote to them directly",
+        "consult": "This is about {topic}; {name} can clarify it",
+        "task": "Coordinates the request and splits the work",
+    },
+    "area": {
+        "sales": "clients, proposals and pipeline", "hr": "hiring and labor matters",
+        "legal": "contracts and legal risks", "accounting": "margins, costs and invoicing",
+        "analyst": "data, metrics and profitability", "operations": "capacity, logistics and delivery",
+        "assistant": "coordinating the team and organizing your requests",
+    },
+    "greet_primary": [
+        "Hi! I'm {name}. How can I help you today?",
+        "Hello! {name} here, ready for whatever you need. Tell me.",
+        "Hey, how's it going? Tell me what you have in mind and we'll see who on the team takes it.",
+        "Hi there! Good to see you. Shall we start on something, or just saying hello?",
+        "Good morning. {name} here; if you need anything, let me know and I'll coordinate it.",
+    ],
+    "greet_peer": {
+        "default": ["Hi, good morning.", "Hello! We're around.", "Hey, how are you?"],
+        "accounting": ["Hi, good morning. Here with the numbers.", "Hello! Any question about costs or invoices, just ask.",
+                       "Hey. The books are calm for now."],
+        "legal": ["Hi. If there's a contract to review, I'm here.", "Hello! Keeping an eye out for any clause.",
+                  "Hi, how are you. At your service."],
+        "sales": ["Hi! Pipeline's up to date, tell us if there's something to close.", "Hey, how is everyone? Here with the clients.",
+                  "Hello! Ready for anything commercial."],
+        "hr": ["Hi, how's everything? Here with the team.", "Hello! Anything people-related, tell me.",
+               "Hi, good morning everyone."],
+        "analyst": ["Hi. Here with the data, tell me if you need an analysis.", "Hello! Numbers talk, I just listen.",
+                    "Hi, how are you?"],
+        "operations": ["Hi, good morning. Operations are on track.", "Hello! Here with the team's capacity.",
+                       "Hi, at your service."],
+    },
+    "greet_self": [
+        "Hi, I'm {name}, {title}. What do you need?",
+        "Hello! {name} here. Tell me what you have in mind.",
+        "Hey, tell me how I can help.",
+        "Hi, how are you? I'm here for anything about {area}.",
+    ],
+    "howare": [
+        "All good here, thanks for asking. And you, what are you up to?",
+        "Doing well, nicely busy. Do you need anything from the team?",
+        "Calm and on schedule. Tell me, what do you have in mind?",
+    ],
+    "thanks": [
+        "You're welcome! I'm here for whatever you need.",
+        "My pleasure. If anything else comes up, let me know.",
+        "Anytime. Just write if you need something.",
+        "Great, I'll be around.",
+    ],
+    "help": [
+        "I can help split the work: Sales, Legal, Accounting, HR, Analysis and Operations are available. Ask something from their area or give me a task and I'll coordinate it.",
+        "I'm the team's assistant. Tell me what you need and I'll say who is the right person, or coordinate it myself. For quick questions, talk to each person directly.",
+    ],
+    "help_self": [
+        "I take care of {area}. Ask me anything about it, or ask me to prepare something and I'll coordinate it.",
+        "I can help you with {area}. What do you need?",
+    ],
+    "answer_general": [
+        "I'm with you. To give you something useful, tell me a bit more: is it something to look up or do you want the team to prepare it?",
+        "Got it. If you give me more context I'll tell you who on the team can help best.",
+        "Noted. Shall we talk it through here, or should I turn it into a task for the team?",
+    ],
+    "answer": {
+        "accounting": [
+            "On the finances: for now income and direct costs look reasonably aligned. If you like, I'll go through this month's balance and flag anything unusual. Which period are you interested in?",
+            "Happy to. To give you a reliable number I need the period and whether we mean gross or net margin. Which one?",
+            "Numbers are better with detail: I can put together a quick close with income, costs and cash flow. Tell me from when you want it.",
+        ],
+        "legal": [
+            "From the legal side, the first thing is knowing which document or agreement is involved. Can you tell me more about the context?",
+            "Good question. The prudent move is to review deadlines, penalties and liability before we commit. Do you have the draft?",
+            "It depends on what was signed. If you share the contract, I'll tell you which risks I see.",
+        ],
+        "hr": [
+            "On people: before deciding we should define the profile and the budget. Is it a new position or a replacement?",
+            "Sure. To hire well I need the role, the salary band and when they need it.",
+            "We can look at it. If you tell me the team size and current workload, I can give you a more concrete opinion.",
+        ],
+        "sales": [
+            "In sales, follow-up is what moves the needle. Are we talking about a specific client or the pipeline in general?",
+            "Here's how I see it: there are open opportunities, but it depends on each client. Which one do you want to discuss?",
+            "Good point. If you give me the client and the approximate amount, I'll tell you what chance I see.",
+        ],
+        "analyst": [
+            "With the available data I can look at trends, but I need to know which metric and which period. Which one?",
+            "I could cross it with the history to see if it's a pattern or a one-off. Which period do we compare?",
+            "Happy to look. Tell me the business question and I'll tell you what data we'd need.",
+        ],
+        "operations": [
+            "In operations it all comes down to capacity and deadlines. What volume or date do you have in mind?",
+            "I'll look into it. To tell you whether we can make it I need the scope and the delivery date.",
+            "Sure. Are we talking about team capacity, suppliers or logistics?",
+        ],
+    },
+    "contrib": {
+        "legal": [
+            "Just a legal note: before committing to anything, it's worth reviewing the payment and deadline clauses. I can do it if you like.",
+            "Watch out on the contract side: if there are penalties or automatic renewal, let's look at them.",
+        ],
+        "accounting": [
+            "Adding an accounting point: it's worth validating the cash flow impact before deciding.",
+            "On the numbers side, I suggest confirming the real margin before moving on.",
+        ],
+        "hr": [
+            "From the people side: if this means adding headcount, we'll assess it against the budget.",
+            "An HR note: any team change goes through a review of the current workload.",
+        ],
+        "sales": [
+            "From sales, it's worth telling the client early.",
+            "On the commercial side, be careful with the deadlines promised to the client.",
+        ],
+        "analyst": [
+            "If you like, I can back it up with historical data.",
+            "I can look at the trend so we don't decide blind.",
+        ],
+        "operations": [
+            "From operations, we'd need to confirm capacity is enough.",
+            "An operations note: let's check the real timelines before promising dates.",
+        ],
+        "default": ["If needed, I'll chip in."],
+    },
+    "task_ack": [
+        "Understood, let me see who on the team is the right fit and we'll set it up.",
+        "Perfect. I'll coordinate it with the team and tell you who does what and why.",
+        "On it. I'll check what this needs and split the work; I'll explain in a moment.",
+    ],
+    "task_ack_self": [
+        "Sure, I'll take care of it. I'll set it up with the team and tell you who does what.",
+        "On it. I'll see what I need from the others and let you know how it looks.",
+        "Done, let me organize it with the team and I'll tell you the plan.",
+    ],
+    "redirect": [
+        "{other} ({other_title}) handles that better. I'll ask and get back to you.",
+        "That's more {other}'s area than mine. I'll ask and come back to you.",
+        "For that, {other} ({other_title}) is the right person. Let me check with them.",
+    ],
+    "consult_q": [
+        "{other}, the user is asking: \"{q}\". What should we tell them?",
+        "{other}, can you help me with this? They ask: \"{q}\".",
+    ],
+    "consult_a": {
+        "accounting": ["On the numbers, the prudent thing is to validate the period and margin with closed data before giving a figure."],
+        "legal": ["Legally, the sound approach is to review the document and the deadlines before committing to anything."],
+        "hr": ["From the people side, define the profile and budget first; then we look at hiring timelines."],
+        "sales": ["Commercially, it depends on the client and the amount; with those I can give you a realistic probability."],
+        "analyst": ["With the data we have I can give a trend, but I need the period to refine it."],
+        "operations": ["In operations the key is capacity and delivery date; with those I can tell you if it's doable."],
+        "default": ["I'll look into it and confirm."],
+    },
+}
+
+# Regional tone applies to Spanish text only.
+TONE_SUBS: dict[str, list[tuple[str, str]]] = {}

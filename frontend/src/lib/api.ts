@@ -1,6 +1,6 @@
 import { API_URL, MOCK } from "./config";
 import type {
-  Agent, AgentDetail, Approval, Conversation, Message, Metrics, Report, Request, Task, ActivityItem,
+  Agent, AgentDetail, Approval, ChatMessage, Conversation, Message, Metrics, Report, Request, Task, ActivityItem,
 } from "./types";
 
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -22,6 +22,16 @@ function list<T>(x: any): T[] {
   return Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : [];
 }
 
+/** Normalizes a history row from GET /conversations/{id}/messages (accepts `conversation` or `conversation_id`). */
+export function toChatMessage(x: any, conv: string): ChatMessage {
+  return {
+    id: String(x.id ?? x.message_id ?? `${x.turn_id ?? "t"}:${x.from}:${x.ts}`),
+    conversation: String(x.conversation ?? x.conversation_id ?? conv),
+    turn_id: x.turn_id ?? null, from: String(x.from), to: String(x.to ?? ""),
+    kind: x.kind ?? "chat", text: String(x.text ?? ""), reply_to: x.reply_to ?? null, ts: String(x.ts ?? new Date().toISOString()),
+  };
+}
+
 export const api = {
   agents: async () => list<Agent>(await call("GET", "/agents")),
   agentDetail: (id: string) => call<AgentDetail>("GET", `/agents/${id}/detail`),
@@ -29,6 +39,14 @@ export const api = {
   requests: async () => list<Request>(await call("GET", "/requests")),
   conversations: async () => list<Conversation>(await call("GET", "/conversations")),
   messages: async (id: string) => list<Message>(await call("GET", `/conversations/${id}/messages`)),
+  /** Chat history of "office" or "agent:<id>" (newest page; `before` is an ISO ts cursor). */
+  chatHistory: async (conv: string, before?: string, limit = 60) => {
+    const q = new URLSearchParams({ limit: String(limit), ...(before ? { before } : {}) });
+    return list<any>(await call("GET", `/conversations/${conv}/messages?${q}`)).map((x) => toChatMessage(x, conv));
+  },
+  /** POST /messages: the backend decides who answers and replies over the WebSocket (chat.message / chat.typing / route.decided). */
+  postMessage: (conversation: string, text: string) =>
+    call<{ message_id: string; turn_id: string }>("POST", "/messages", { conversation, text }),
   approvals: async () => list<Approval>(await call("GET", "/approvals")),
   reports: async () => list<Report>(await call("GET", "/reports")),
   report: (id: string) => call<Report>("GET", `/reports/${id}`),

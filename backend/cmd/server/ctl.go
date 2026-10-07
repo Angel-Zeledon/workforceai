@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 	"strings"
 
 	"aiworkforce/backend/internal/application"
@@ -105,6 +106,10 @@ func verifyAuditDB(ctx context.Context, pg *postgres.Store, org string, all bool
 		ids, err := pg.ListOrgIDs(ctx)
 		if err != nil {
 			return err
+		}
+		// The fixed demo organization has no memberships, so it is not listed.
+		if !slices.Contains(ids, org) {
+			ids = append(ids, org)
 		}
 		orgs = ids
 	}

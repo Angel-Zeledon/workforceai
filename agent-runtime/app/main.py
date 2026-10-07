@@ -9,13 +9,17 @@ from fastapi import FastAPI, HTTPException
 from .engine import AgentEngine, select_engine
 from .estimate import EstimateRequest, EstimateResponse
 from .providers import ProviderError
-from .redact import redact_any
+from .redact import redact_any, redact_secrets
 from .models import (
+    ChatReplyRequest,
+    ChatReplyResponse,
     ConsultRequest,
     ConsultResponse,
     HealthResponse,
     PlanRequest,
     PlanResponse,
+    RouteRequest,
+    RouteResponse,
     RunTaskRequest,
     RunTaskResponse,
     SynthesizeRequest,
@@ -86,6 +90,15 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
     @app.post("/v1/synthesize", response_model=SynthesizeResponse, response_model_exclude_none=True)
     async def synthesize(req: SynthesizeRequest):
         return await guarded(eng().synthesize(req))
+
+    @app.post("/v1/route", response_model=RouteResponse, response_model_exclude_none=True)
+    async def route(req: RouteRequest):
+        return await guarded(eng().route(req))
+
+    @app.post("/v1/chat-reply", response_model=ChatReplyResponse, response_model_exclude_none=True)
+    async def chat_reply(req: ChatReplyRequest):
+        resp = await guarded(eng().chat_reply(req))
+        return resp.model_copy(update={"text": redact_secrets(resp.text)})
 
     return app
 

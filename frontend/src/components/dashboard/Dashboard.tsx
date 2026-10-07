@@ -12,7 +12,7 @@ import { ReportView } from "../ReportView";
 import { DashboardFiles } from "../workspace/DashboardFiles";
 import { BudgetLimitsPanel, CostBreakdownPanel } from "../cost/CostBreakdownPanel";
 import { EstimateCard } from "../cost/EstimateCard";
-import { Card, Dot, Empty, Progress, StateBadge, TaskBadge, readable, timeAgo, useAgentColor, useAgentName } from "../ui";
+import { Card, Dot, Empty, Progress, ReasonChip, StateBadge, TaskBadge, readable, timeAgo, useAgentColor, useAgentName } from "../ui";
 
 const SECTIONS = ["overview", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "costs"] as const;
 type Section = (typeof SECTIONS)[number];
@@ -31,6 +31,7 @@ export function Dashboard() {
   const { t } = useT();
   const [section, setSection] = useState<Section>("overview");
   const approvalsMap = useStore((s) => s.approvals);
+  const tasksMap = useStore((s) => s.tasks);
   const pending = Object.values(approvalsMap).filter((a) => a.status === "pending").length;
   return (
     <div className="flex h-full min-h-0 flex-col md:flex-row">
@@ -65,6 +66,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
   const agentPrefs = usePreferences((s) => s.prefs.agents);
   const order = useStore((s) => s.agentOrder);
   const approvalsMap = useStore((s) => s.approvals);
+  const tasksMap = useStore((s) => s.tasks);
   const approvals = Object.values(approvalsMap).filter((a) => a.status === "pending");
   const select = useStore((s) => s.select);
   const setMode = useStore((s) => s.setMode);
@@ -94,6 +96,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
                   <div className="mt-1 truncate text-[11px] text-mute">{v.title}</div>
                   <div className="mt-1.5 truncate text-[11.5px] text-ink2">{a.activity || "—"}</div>
                   {a.progress > 0 && <div className="mt-2"><Progress value={a.progress} /></div>}
+                  {a.current_task_id && tasksMap[a.current_task_id]?.assigned_reason && <ReasonChip agentId={id} reason={tasksMap[a.current_task_id].assigned_reason} compact className="mt-2" />}
                 </button>
               );
             })}
@@ -139,8 +142,8 @@ function Requests() {
   const items = useMemo(() => {
     if (!cur) return [];
     const real = Object.values(tasks).filter((t) => t.request_id === cur.id);
-    if (real.length) return real.map((t) => ({ id: t.id, title: t.title, agent_id: t.agent_id, depends_on: t.depends_on, status: t.status as string }));
-    return (plans[cur.id] || []).map((p) => ({ ...p, status: "pending" }));
+    if (real.length) return real.map((t) => ({ id: t.id, title: t.title, agent_id: t.agent_id, depends_on: t.depends_on, status: t.status as string, assigned_reason: t.assigned_reason }));
+    return (plans[cur.id] || []).map((p) => ({ ...p, status: "pending", assigned_reason: undefined as string | null | undefined }));
   }, [cur, tasks, plans]);
   const depth = depthOf(items);
   const cols = Math.max(0, ...items.map((i) => depth(i.id))) + 1;
@@ -177,6 +180,7 @@ function Requests() {
                     <div key={i.id} className="rounded-md border bg-panel2 p-2.5" style={{ borderColor: `${TASK_STATUS_COLOR[i.status] || "#e2e6ec"}88`, borderLeftWidth: 3, borderLeftColor: color(i.agent_id) }}>
                       <div className="text-[12px] font-semibold text-ink">{i.title}</div>
                       <div className="mt-1 flex items-center justify-between"><span className="text-[11px]" style={{ color: readable(color(i.agent_id)) }}>{name(i.agent_id)}</span><TaskBadge status={i.status} /></div>
+                      <ReasonChip agentId={i.agent_id} reason={i.assigned_reason} compact className="mt-1.5" />
                       {i.depends_on.length > 0 && <div className="mt-1 text-[10px] text-mute">{t("dash.dependsOn")}: {i.depends_on.map((d) => items.find((x) => x.id === d)?.title ?? d).join(", ")}</div>}
                     </div>
                   ))}
@@ -225,7 +229,7 @@ function Tasks() {
             {list.map((t) => (
               <Fragment key={t.id}>
                 <tr onClick={() => setOpen(open === t.id ? null : t.id)} className="cursor-pointer border-b border-line/60 hover:bg-mute/[0.05]">
-                  <td className="py-2.5 pr-3 font-medium text-ink">{t.title}</td>
+                  <td className="py-2.5 pr-3 font-medium text-ink">{t.title}{t.assigned_reason && <div className="mt-0.5 max-w-[320px] truncate text-[10.5px] font-normal text-mute" title={t.assigned_reason}>{tt("reason.assignedShort", { reason: t.assigned_reason })}</div>}</td>
                   <td className="pr-3"><span className="flex items-center gap-1.5"><Dot color={color(t.agent_id)} />{name(t.agent_id)}</span></td>
                   <td className="pr-3"><TaskBadge status={t.status} /></td>
                   <td className="pr-3 text-mute">{t.depends_on.length ? t.depends_on.map((d) => (
@@ -237,6 +241,7 @@ function Tasks() {
                 {open === t.id && (
                   <tr key={`${t.id}-o`} className="border-b border-line/60 bg-bg/50"><td colSpan={6} className="p-3 text-[12px] text-ink2">
                     <p className="mb-2 text-mute">{t.description}</p>
+                    <ReasonChip agentId={t.agent_id} reason={t.assigned_reason} className="mb-2" />
                     {t.output ? (<div className="space-y-1"><div className="font-semibold text-ink">{t.output.summary}</div>{t.output.findings.map((f, i) => <div key={i}>• {f}</div>)}
                       {Object.keys(t.output.metrics).length > 0 && <div className="flex flex-wrap gap-2 pt-1">{Object.entries(t.output.metrics).map(([k, v]) => <span key={k} className="rounded bg-mute/[0.08] px-2 py-0.5 font-mono text-[11px]">{k}: {String(v)}</span>)}</div>}
                       {t.output.recommendations.length > 0 && <div className="pt-1 text-mute">{tt("dash.tasks.recommendations")}: {t.output.recommendations.join(" · ")}</div>}

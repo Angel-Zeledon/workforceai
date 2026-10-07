@@ -376,6 +376,203 @@ TEXTS = {
 }
 
 
+# ------------------------------------------------------------------ chat (docs/architecture/chat-routing.md)
+# Why each planned task goes to its agent (shown to the user). Scenario-specific first, then by role.
+TASK_REASONS: dict[tuple[str, str], str] = {
+    ("new_client", "ventas"): "conoce al cliente y es quien arma la propuesta comercial",
+    ("new_client", "legal"): "debe revisar penalidades, propiedad intelectual y responsabilidad antes de enviar nada",
+    ("new_client", "contador"): "tiene que confirmar el margen real contra el 31% presupuestado",
+    ("new_client", "analista"): "necesita el margen real del Contador para medir la rentabilidad del cliente",
+    ("new_client", "operaciones"): "sabe si la capacidad actual alcanza para el alcance y el plazo",
+    ("sales_drop", "analista"): "es quien puede leer las ventas por producto, canal y segmento",
+    ("sales_drop", "ventas"): "conoce el pipeline y los motivos de pérdida",
+    ("sales_drop", "contador"): "puede medir cuánto afecta la caída al flujo de caja",
+    ("hiring", "rrhh"): "lleva el reclutamiento y define el perfil",
+    ("hiring", "contador"): "calcula cuánto cuesta la contratación en total",
+    ("hiring", "legal"): "debe revisar el contrato laboral y el cumplimiento",
+    ("contract", "legal"): "es quien revisa cláusulas y riesgos del contrato",
+    ("contract", "ventas"): "tiene que alinear los términos comerciales con lo que diga Legal",
+}
+ROLE_REASONS: dict[str, str] = {
+    "sales": "lleva la relación con el cliente y las propuestas comerciales",
+    "hr": "se ocupa de contratación y normativa laboral",
+    "legal": "revisa contratos, cumplimiento y riesgos legales",
+    "accounting": "controla márgenes, costos y facturación",
+    "analyst": "analiza datos y rentabilidad con evidencia",
+    "operations": "conoce la capacidad operativa y los plazos de entrega",
+    "assistant": "coordina y estructura la solicitud",
+}
+
+CHAT: dict = {
+    "topic_labels": {
+        "finance": "finanzas", "legal": "temas legales", "hr": "personas y contratación", "sales": "ventas",
+        "data": "datos y análisis", "operations": "operaciones", "general": "lo general",
+    },
+    "reasons": {
+        "owner": "Es quien lleva {topic}",
+        "coordinates": "Coordina al equipo y atiende lo general",
+        "greeting": "Responde primero al saludo",
+        "peer_greeting": "Saluda brevemente",
+        "related": "Puede aportar algo desde {topic}",
+        "direct": "Le escribiste directamente",
+        "consult": "El tema es de {topic}; {name} lo puede aclarar",
+        "task": "Coordina la solicitud y reparte el trabajo",
+    },
+    "area": {
+        "sales": "clientes, propuestas y pipeline", "hr": "contratación y temas laborales",
+        "legal": "contratos y riesgos legales", "accounting": "márgenes, costos y facturación",
+        "analyst": "datos, métricas y rentabilidad", "operations": "capacidad, logística y entrega",
+        "assistant": "coordinar al equipo y organizar tus pedidos",
+    },
+    "greet_primary": [
+        "¡Hola! Soy {name}. ¿En qué te puedo ayudar hoy?",
+        "¡Buenas! Por aquí {name}, lista para lo que necesites. Cuéntame.",
+        "Hola, ¿cómo va todo? Dime qué tienes en mente y vemos quién del equipo lo toma.",
+        "¡Hola! Qué gusto verte por aquí. ¿Empezamos con algo o vienes a saludar?",
+        "Buen día. Aquí {name}; si necesitas algo, me avisas y lo coordino.",
+    ],
+    "greet_peer": {
+        "default": ["Hola, buen día.", "¡Hola! Por aquí estamos.", "Buenas, qué tal."],
+        "accounting": ["Hola, buen día. Por aquí con los números.", "¡Hola! Cualquier duda de costos o facturas, me dices.",
+                       "Buenas. Las cuentas están tranquilas por ahora."],
+        "legal": ["Hola. Si hay algún contrato por revisar, aquí estoy.", "¡Buenas! Atenta a cualquier cláusula que haga falta.",
+                  "Hola, qué tal. Por aquí, a la orden."],
+        "sales": ["¡Hola! Con el pipeline al día, avisen si hay algo para cerrar.", "Buenas, ¿cómo están? Por aquí con los clientes.",
+                  "¡Hola! Lista para lo comercial."],
+        "hr": ["Hola, ¿cómo va todo? Por aquí con el equipo.", "¡Buenas! Cualquier tema de personal, me cuentan.",
+               "Hola, buen día a todos."],
+        "analyst": ["Hola. Por aquí con los datos, avisen si necesitan algún análisis.", "¡Buenas! Los números hablan, yo solo los escucho.",
+                    "Hola, ¿qué tal?"],
+        "operations": ["Hola, buen día. Operaciones al día.", "¡Buenas! Por aquí con la capacidad del equipo.",
+                       "Hola, a la orden."],
+    },
+    "greet_self": [
+        "Hola, soy {name}, {title}. ¿Qué necesitas?",
+        "¡Hola! {name} por aquí. Cuéntame qué tienes en mente.",
+        "Buenas, dime en qué te ayudo.",
+        "Hola, ¿cómo estás? Aquí me tienes para lo de {area}.",
+    ],
+    "howare": [
+        "Todo bien por aquí, gracias por preguntar. ¿Y tú, en qué andas?",
+        "Bien, con buen ritmo. ¿Necesitas algo del equipo?",
+        "Tranquilos y al día. Cuéntame, ¿qué tienes en mente?",
+    ],
+    "thanks": [
+        "¡De nada! Aquí estoy para lo que necesites.",
+        "Con gusto. Si surge algo más, me avisas.",
+        "A ti. Cualquier cosa, me escribes.",
+        "Perfecto, quedo atenta.",
+    ],
+    "help": [
+        "Puedo ayudarte a repartir el trabajo: Ventas, Legal, Contabilidad, RR. HH., Análisis y Operaciones están disponibles. Pregunta algo de su área o pídeme una tarea y la coordino.",
+        "Soy la asistente del equipo. Si me dices qué necesitas, te digo quién es el indicado o lo coordino yo. Para dudas rápidas, habla directo con cada persona.",
+    ],
+    "help_self": [
+        "Me ocupo de {area}. Pregúntame lo que quieras de eso o pídeme que prepare algo y lo coordino.",
+        "Puedo ayudarte con {area}. ¿Qué necesitas?",
+    ],
+    "answer_general": [
+        "Te sigo. Para darte algo útil, cuéntame un poco más: ¿es algo para consultar o quieres que el equipo lo prepare?",
+        "Entiendo. Si me das más contexto te digo quién del equipo puede ayudarte mejor.",
+        "Anotado. ¿Prefieres que lo hablemos aquí o que lo convierta en una tarea para el equipo?",
+    ],
+    "answer": {
+        "accounting": [
+            "Sobre las finanzas: por ahora veo ingresos y costos directos razonablemente alineados. Si quieres, reviso el balance del mes y te marco lo que se salga de lo normal. ¿Qué periodo te interesa?",
+            "Con gusto. Para darte un número fiable necesito saber el periodo y si hablamos de margen bruto o neto. ¿Cuál prefieres?",
+            "Los números mejor con detalle: puedo armar un cierre rápido con ingresos, costos y flujo de caja. Dime desde cuándo lo quieres.",
+        ],
+        "legal": [
+            "Desde lo legal, lo primero es saber qué documento o acuerdo está de por medio. ¿Me cuentas más del contexto?",
+            "Buena pregunta. Lo prudente es revisar plazos, penalidades y responsabilidad antes de comprometernos. ¿Tienes el borrador?",
+            "Depende de lo que se haya firmado. Si me compartes el contrato, te digo qué riesgos veo.",
+        ],
+        "hr": [
+            "Sobre personas: antes de decidir conviene definir el perfil y el presupuesto. ¿Es una vacante nueva o un reemplazo?",
+            "Claro. Para contratar bien necesito saber el puesto, la banda salarial y para cuándo lo necesitan.",
+            "Podemos verlo. Si me cuentas el tamaño del equipo y la carga actual, te doy una opinión más concreta.",
+        ],
+        "sales": [
+            "En ventas, lo que más mueve la aguja es el seguimiento. ¿Hablamos de un cliente en concreto o del pipeline en general?",
+            "Te cuento cómo lo veo: hay oportunidades abiertas, pero depende de cada cliente. ¿De cuál quieres hablar?",
+            "Buen punto. Si me dices el cliente y el monto aproximado, te digo qué probabilidad le veo.",
+        ],
+        "analyst": [
+            "Con los datos disponibles puedo mirar tendencias, pero necesito saber qué métrica y qué periodo. ¿Cuál te interesa?",
+            "Podría cruzarlo con el histórico para ver si es un patrón o algo puntual. ¿Qué periodo comparamos?",
+            "Lo miro con gusto. Dime la pregunta de negocio y te digo qué datos harían falta.",
+        ],
+        "operations": [
+            "En operaciones todo depende de la capacidad y los plazos. ¿Qué volumen o fecha tienes en mente?",
+            "Lo reviso. Para decirte si llegamos necesito el alcance y la fecha de entrega.",
+            "Claro. ¿Hablamos de capacidad del equipo, proveedores o logística?",
+        ],
+    },
+    "contrib": {
+        "legal": [
+            "Solo un apunte legal: antes de comprometer algo, conviene revisar cláusulas de pago y plazos. Si quieres, lo reviso.",
+            "Ojo con lo contractual: si hay penalidades o renovación automática, lo miramos.",
+        ],
+        "accounting": [
+            "Añado un dato contable: conviene validar el impacto en flujo de caja antes de decidir.",
+            "Por el lado de números, sugiero confirmar el margen real antes de avanzar.",
+        ],
+        "hr": [
+            "Desde personas: si esto implica sumar gente, lo evaluamos con el presupuesto.",
+            "Un apunte de RR. HH.: cualquier cambio de equipo pasa por revisar la carga actual.",
+        ],
+        "sales": [
+            "Desde ventas, vale la pena avisar al cliente con tiempo.",
+            "Por el lado comercial, ojo con los plazos que se le prometen al cliente.",
+        ],
+        "analyst": [
+            "Si quieres, lo respaldo con datos del histórico.",
+            "Puedo mirar la tendencia para no decidir a ciegas.",
+        ],
+        "operations": [
+            "Desde operaciones, habría que confirmar que la capacidad alcanza.",
+            "Un apunte de operaciones: miremos los plazos reales antes de prometer fechas.",
+        ],
+        "default": ["Si hace falta, me sumo."],
+    },
+    "task_ack": [
+        "Entendido, déjame ver quién del equipo es el indicado y lo armamos.",
+        "Perfecto. Lo coordino con el equipo y te cuento quién hace qué y por qué.",
+        "Va. Reviso qué necesita esto y reparto el trabajo; en un momento te explico.",
+    ],
+    "task_ack_self": [
+        "Claro, me encargo. Lo armo con el equipo y te cuento quién hace qué.",
+        "Va, lo tomo. Veo qué necesito de los demás y te aviso cómo queda.",
+        "Listo, déjame organizarlo con el equipo y te cuento el plan.",
+    ],
+    "redirect": [
+        "Eso lo lleva mejor {other} ({other_title}). Se lo consulto y te cuento.",
+        "Es más de {other} que mío. Le pregunto y vuelvo contigo.",
+        "Para eso conviene {other} ({other_title}). Déjame consultarlo.",
+    ],
+    "consult_q": [
+        "{other}, el usuario pregunta: «{q}». ¿Qué le diríamos?",
+        "{other}, ¿me ayudas con esto? Preguntan: «{q}».",
+    ],
+    "consult_a": {
+        "accounting": ["Por números, lo prudente es validar primero el periodo y el margen con datos cerrados antes de dar una cifra."],
+        "legal": ["Legalmente, lo sano es revisar el documento y los plazos antes de comprometernos con algo."],
+        "hr": ["Desde personas, primero definir perfil y presupuesto; después vemos tiempos de contratación."],
+        "sales": ["Comercialmente, depende del cliente y del monto; con esos datos te doy una probabilidad realista."],
+        "analyst": ["Con los datos que tenemos puedo dar una tendencia, pero necesito el periodo para afinarla."],
+        "operations": ["En operaciones, lo clave es la capacidad y la fecha de entrega; con eso te digo si se puede."],
+        "default": ["Lo reviso y te confirmo."],
+    },
+}
+
+# Regional tone for scripted chat text (simulation only; live mode gets the tone as an instruction).
+TONE_SUBS: dict[str, list[tuple[str, str]]] = {
+    "ar": [("dime", "decime"), ("cuéntame", "contame"), ("cuentame", "contame"), ("tienes", "tenés"),
+           ("puedes", "podés"), ("quieres", "querés"), ("necesitas", "necesitás"), ("avisas", "avisás"),
+           ("escribes", "escribís"), ("prefieres", "preferís")],
+}
+
+
 def bundle(locale: str):
     """Return the content module for a locale ("es" default, "en")."""
     if locale == "en":

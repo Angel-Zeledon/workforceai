@@ -1,14 +1,14 @@
 import { create } from "zustand";
-import { api } from "./api";
+import { api, toChatMessage } from "./api";
 import { useArtifacts } from "./artifacts";
 import { isCostFrame, useCost } from "./cost";
 import { isConnectionsFrame, useConnections } from "./connections/store";
 import type {
-  ActivityItem, Agent, Approval, Conversation, ErrorItem, Message, Metrics, PlanTask,
-  Report, Request, Task, WsFrame,
+  ActivityItem, Agent, Approval, ChatMessage, Conversation, ErrorItem, Message, Metrics, PlanTask,
+  Report, Request, RouteDecision, Task, WsFrame,
 } from "./types";
 
-export interface Link { id: string; from: string; to: string; kind: string; text: string; ts: number }
+export interface Link { id: string; from: string; to: string; kind: string; text: string; ts: number; /** from chat.message: bubble only, no 3D line */ chat?: boolean }
 
 interface State {
   connected: boolean;
@@ -22,6 +22,13 @@ interface State {
   plans: Record<string, PlanTask[]>;
   conversations: Record<string, Conversation>;
   messages: Record<string, Message[]>;
+  /** 1:1 and office chat, keyed by "office" | "agent:<id>" */
+  chat: Record<string, ChatMessage[]>;
+  /** routing decisions by turn_id (who answers and why) */
+  routes: Record<string, RouteDecision>;
+  lastTurnId: string | null;
+  /** who is typing per conversation: agent_id -> start ms (auto-expires) */
+  typing: Record<string, Record<string, number>>;
   approvals: Record<string, Approval>;
   reports: Record<string, Report>;
   activity: ActivityItem[];
@@ -36,6 +43,9 @@ interface State {
   setConnected: (c: boolean) => void;
   loadAll: () => Promise<void>;
   loadMessages: (convId: string) => Promise<void>;
+  loadChat: (conv: string) => Promise<void>;
+  /** optimistic local echo of the user's own message until the backend echoes it */
+  addLocalChat: (m: ChatMessage) => void;
   loadConversations: () => Promise<void>;
   apply: (f: WsFrame) => void;
 }
@@ -57,11 +67,20 @@ function deriveRequest(requestId: string, tasks: Record<string, Task>, reqs: Rec
   return status === r.status ? reqs : { ...reqs, [requestId]: { ...r, status } };
 }
 
+const TYPING_TTL = 20000;
+/** Merges chat messages by id, then drops the local optimistic echo once the real one (same text, same sender) arrived. */
+function mergeChat(a: ChatMessage[], b: ChatMessage[]): ChatMessage[] {
+  const map = new Map<string, ChatMessage>();
+  [...a, ...b].forEach((m) => map.set(m.id, m));
+  const all = Array.from(map.values()).sort((x, y) => +new Date(x.ts) - +new Date(y.ts));
+  return all.filter((m) => !(m.id.startsWith("local:") && all.some((o) => o !== m && !o.id.startsWith("local:") && o.from === m.from && o.text === m.text && o.turn_id)));
+}
+
 let convTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useStore = create<State>((set, get) => ({
   connected: false, loaded: false, mode: "office", selectedAgentId: null,
-  agents: {}, agentOrder: [], tasks: {}, requests: {}, plans: {}, conversations: {}, messages: {},
+  agents: {}, agentOrder: [], tasks: {}, requests: {}, plans: {}, conversations: {}, messages: {}, chat: {}, routes: {}, lastTurnId: null, typing: {},
   approvals: {}, reports: {}, activity: [], errors: [], metrics: null, links: [], agentTick: {},
 
   setMode: (mode) => set({ mode }),
@@ -102,6 +121,14 @@ export const useStore = create<State>((set, get) => ({
       });
     } catch { /* ignore */ }
   },
+
+  loadChat: async (conv) => {
+    try {
+      const m = await api.chatHistory(conv);
+      set((s) => ({ chat: { ...s.chat, [conv]: mergeChat(s.chat[conv] || [], m) } }));
+    } catch { /* ignore */ }
+  },
+  addLocalChat: (m) => set((s) => ({ chat: { ...s.chat, [m.conversation]: mergeChat(s.chat[m.conversation] || [], [m]) } })),
 
   apply: (f) => {
     if (f.type.startsWith("artifact.")) { useArtifacts.getState().applyFrame(f); return; }
@@ -162,9 +189,11 @@ export const useStore = create<State>((set, get) => ({
         break;
       }
       case "task.created": case "task.started": case "task.completed": case "task.failed": case "task.blocked": {
-        const t: Task = p.task;
-        if (!t) break;
+        const t0: Task = p.task;
+        if (!t0) break;
         set((s) => {
+          const reason = t0.assigned_reason ?? (f.type === "task.created" ? p.assigned_reason : undefined) ?? s.tasks[t0.id]?.assigned_reason;
+          const t: Task = reason ? { ...t0, assigned_reason: reason } : t0;
           const tasks = { ...s.tasks, [t.id]: t };
           return { tasks, requests: deriveRequest(t.request_id, tasks, s.requests), agentTick: tick(s, [t.agent_id]) };
         });
@@ -192,6 +221,41 @@ export const useStore = create<State>((set, get) => ({
         if (!known && !convTimer) {
           convTimer = setTimeout(() => { convTimer = null; get().loadConversations(); }, 600);
         }
+        break;
+      }
+      case "chat.message": {
+        const m = toChatMessage({ ...p, id: p.id ?? p.message_id ?? f.id, ts: p.ts ?? f.ts }, p.conversation ?? "office");
+        const typingOff = (s: State) => {
+          const cur = s.typing[m.conversation];
+          if (!cur || !(m.from in cur)) return s.typing;
+          const { [m.from]: _gone, ...rest } = cur;
+          return { ...s.typing, [m.conversation]: rest };
+        };
+        set((s) => {
+          const speaker = !["user", "all", "system"].includes(m.from);
+          const now = Date.now();
+          const links = speaker
+            ? [...s.links.filter((l) => now - l.ts < 15000), { id: m.id, from: m.from, to: m.to, kind: m.kind === "system" ? "chat" : m.kind, text: m.text, ts: now, chat: true }]
+            : s.links;
+          return {
+            chat: { ...s.chat, [m.conversation]: mergeChat(s.chat[m.conversation] || [], [m]) },
+            typing: typingOff(s), links, agentTick: tick(s, [m.from, m.to]),
+          };
+        });
+        break;
+      }
+      case "chat.typing":
+        set((s) => {
+          const conv: string = p.conversation, id: string = p.agent_id;
+          if (!conv || !id) return {};
+          const cur = { ...(s.typing[conv] || {}) };
+          if (p.on) cur[id] = Date.now(); else delete cur[id];
+          return { typing: { ...s.typing, [conv]: cur } };
+        });
+        break;
+      case "route.decided": {
+        const r: RouteDecision = { turn_id: p.turn_id, intent: p.intent, topic: p.topic ?? "", responders: p.responders || [], ts: f.ts };
+        if (r.turn_id) set((s) => ({ routes: { ...s.routes, [r.turn_id]: r }, lastTurnId: r.turn_id }));
         break;
       }
       case "approval.requested": case "approval.resolved": {
@@ -226,3 +290,9 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 }));
+
+/** Selector helper: agents currently typing in a conversation (ignores stale entries). */
+export function typingIn(typing: Record<string, Record<string, number>>, conv: string): string[] {
+  const now = Date.now();
+  return Object.entries(typing[conv] || {}).filter(([, ts]) => now - ts < TYPING_TTL).map(([id]) => id);
+}

@@ -71,6 +71,6 @@ export function Links() {
     const i = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(i);
   }, []);
-  const active = useMemo(() => links.filter((l) => now - l.ts < TTL).slice(-6), [links, now]);
+  const active = useMemo(() => links.filter((l) => !l.chat && now - l.ts < TTL).slice(-6), [links, now]);
   return <>{active.map((l) => <LinkViz key={l.id} link={l} />)}</>;
 }

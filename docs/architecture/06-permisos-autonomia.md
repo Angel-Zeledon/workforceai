@@ -131,6 +131,7 @@ CEL sobre `args`, `customer`, `agent`, `risk`, `task`, `recipients_known`. Regla
 ### 3.2 Aprobaciones (reglas de gobierno)
 - `args_hash` fija **exactamente** lo aprobado; si la accion cambia (re-ejecucion con otros args), se pide nueva aprobacion.
 - Aprobar requiere `approvals:decide` y rol >= `required_role`; `risk=high` requiere `approvals:decide:high`. **Nadie aprueba su propia peticion de alto riesgo** (maker-checker): `decided_by != requests.requested_by` cuando `risk=high` (configurable por org).
+- **Estado**: la doble aprobacion, el rol por monto/accion y el maker-checker configurable estan implementados (sec. 8); `approvals:decide:high` aun no existe (hoy `approvals:decide` = admin/owner).
 - Expiracion por defecto 48 h => `expired` => tarea `blocked`.
 - Aprobacion registra `decided_by`, nota y snapshot de `details`.
 
@@ -207,3 +208,51 @@ type Authorizer interface {
 - Paquete `application/authz`: puro y testeable (tabla de casos); sin acceso a red. Cache de roles por org (invalida en `roles.changed`).
 - Fase 1 (sin auth): `OnBehalfOf = system:demo`, rol `owner` implicito; la maquina de decision ya funciona con `autonomy` por agente y lista de aprobacion, de modo que Fase 2 solo conecta identidades reales.
 - Test de propiedad: para toda `Authority` y accion, `effective_scopes ⊆ actor_scopes ∩ origin_scopes`.
+
+## 8. Implementación conectada (estado actual del backend)
+
+El motor `backend/internal/policy` ya decide las acciones del orquestador (`application/policyflow.go`); `needsApproval` dejó de ser la única regla. Contrato HTTP y de auditoría: `08-api.md` sec. 14. Lo de las secciones 1-7 es el diseño objetivo (RBAC con `Authority`, CEL, `agent_tools`); esta sección dice **qué está construido y qué decidimos donde el diseño no llegaba**.
+
+### 8.1 Cómo se decide (dos capas, gana la más estricta)
+
+1. **Suelo (`baseline`)**: exactamente la regla de siempre: riesgo `high` declarado por el runtime, acciones de `APPROVAL_ACTIONS` (def. `send_proposal,send_contract`) y agentes en `suggest`/`approve_each`. **Ninguna regla de organización lo debilita** (los tres son invariantes de la sec. 3). Una organización sin reglas se comporta como antes: el escenario de demo y el smoke no cambian (hay tests de equivalencia sobre todas las combinaciones autonomía x riesgo x acción).
+2. **Motor**, solo si la organización tiene reglas (`approval_amount_usd`/`always_approve` sembrados por el paquete de onboarding, que **hoy sí se aplican**, o `governance` configurado): monto sobre el umbral, acciones prohibidas, límites por ventana, destinatario nuevo, categorías sensibles, rol del aprobador, doble aprobación.
+
+Qué pasa con cada veredicto: `allow` ejecuta; `require_approval` crea la `Approval` con los requisitos (rol, nº de aprobadores, quién pidió) y la tarea espera; `deny` registra `policy.decision` + `tool.denied`, la acción **no** se ejecuta y la tarea sigue (queda una nota en su evidencia). Tras la aprobación la acción se **revalida** (las reglas pudieron cambiar mientras esperaba: un `deny` posterior o un límite agotado la detienen; cada aprobación se consume una vez, con la huella de la acción). Las lecturas por conexión no pasan por aquí (no necesitan aprobación). Las acciones respaldadas por una conexión (Gmail) pasan por el mismo gate **antes** del Tool Gateway (deny, límites) y su aprobación hereda los requisitos; el Gateway sigue exigiendo su propia aprobación + ventana de 60 s.
+
+### 8.2 Reglas como datos (`GET|PUT /policy/rules`)
+
+Viven en `org_settings.rules` (JSONB, sin migración de esa tabla), junto a las del paquete. Se evalúan en cada decisión desde la base (cambiar una regla surte efecto sin reiniciar; los contadores de ventana se conservan). Esquema y ejemplo: `08-api.md` sec. 14.7. Solo el **owner** las cambia (`policy:manage`) y cada cambio se audita. Reaplicar un paquete de onboarding (`force`) reescribe monto y `always_approve` pero **conserva `governance`**.
+
+### 8.3 Doble aprobación
+
+- Se activa por reglas (`dual_approval`): por acción (`make_payment`, `email.send`...), por monto o por riesgo `high`. Es un **requisito duro**: sube a `require_approval` aunque el agente sea `autonomous`.
+- Dos humanos **distintos**, ambos con el rol requerido. Una segunda aprobación del mismo humano es `409`.
+- **El solicitante nunca aprueba** una doble aprobación (ni como primero ni como segundo). *Decisión (el diseño solo vetaba al segundo):* se aplica el default más seguro, y es lo que hace útil la regla cuando el solicitante es el owner de una organización pequeña (hacen falta dos aprobadores distintos de él). Solicitante = la persona que envió la solicitud (`OnBehalfOf`); sin autenticación es anónimo y por tanto una doble aprobación no se puede completar (falla cerrado: caduca y la tarea queda `blocked`).
+- Un solo rechazo de un humano autorizado es **definitivo**, incluso tras una primera aprobación.
+- Maker-checker para aprobaciones simples: `forbid_self_approval` (def. **apagado**, por compatibilidad con equipos de una persona; el diseño 3.2 lo describía "configurable por org").
+- La primera aprobación se persiste (`approvals.decisions`) y se anuncia (`approval.progress`); si caduca (`ApprovalTimeout`) se rechaza como cualquier otra.
+
+### 8.4 Quién aprueba (rol por monto y por tipo de acción)
+
+`amount_tiers`: por encima del monto de un tramo se exige aprobación **y** el rol del tramo (gana el tramo más alto). `action_roles`: solo sube el rol para ciertas acciones. Los roles admitidos son `admin` y `owner` (los únicos que pueden decidir). El rol se toma del token (`Authenticator`), nunca del cuerpo. Un monto no interpretable (`"mucho"`) se trata como por encima de todo umbral (falla hacia el humano).
+
+### 8.5 Los agentes nunca reciben "aprobar"
+
+- Ningún rol de agente tiene `approvals:decide` (ni `audit:read` ni `policy:manage`); el agente no tiene token HTTP.
+- Defensa en profundidad en `Approvals.Decide`: un actor `system`, `orchestrator`, `agent:*` o cuyo id sea el del agente que pidió la acción recibe `403` aunque llegara por un contexto falsificado; el intento queda en `approval.decision_refused`. Test: `TestAgentsAndSystemNeverApprove`.
+
+### 8.6 Límites por ventana, destinatario nuevo, categorías
+
+- Límites: ventana deslizante por agente (o `per_org`), por llamadas y/o monto acumulado; `on_exceed: deny` (def.) o `require_approval`. Los contadores están **en memoria del proceso**: se pierden al reiniciar y no se comparten entre réplicas (ver 8.7).
+- Destinatario nuevo: "conocido" = dominio en `known_domains` o dirección en `known_contacts`, **datos que fija un owner**; nunca se aprende de correo entrante (un correo hostil no puede "ascender" a un atacante a contacto). Sin destinatario reconocible en una acción de salida (`send_*`, `share_*`...) cuenta como nuevo.
+- Categorías (`legal`, `financial`, o declaradas en `category`/`type` de los args) por palabras clave del motor.
+
+### 8.7 Pendiente / no verificado (explícito)
+
+- Los contadores de ventana no sobreviven a un reinicio ni se comparten entre instancias: con varias réplicas el límite efectivo es N veces el configurado. Falta persistirlos (por ejemplo, derivarlos de `audit_logs`) o llevarlos a Redis.
+- El job diario que verifica la cadena **y publica el último hash** fuera de la base (WORM) no existe: hoy es `GET /audit/verify`, `server ctl audit-verify` y el ancla manual (`08-api.md` 14.4). Sin ancla externa, quien controle toda la base puede reescribir la cadena completa.
+- `Authority`/RBAC por recurso, `agent_tools`, reglas CEL y "simular regla" (secciones 1-3.1) **no** están: el motor usa los `grants` sintéticos "todos permitidos, las reglas solo restringen"; qué agente usa qué herramienta lo siguen decidiendo los grants del Tool Gateway. `GET /approvals` no devuelve aún la cadena de delegación.
+- Un envío por conexión que el propio Gateway deja pasar sin aprobación (borradores) no escala a aprobación por una regla del motor; el motor sí puede denegarlo.
+- Las aprobaciones y la espera siguen viviendo en el proceso (jugada 2 de la hoja de ruta: ejecución duradera).
+- Crear la fila de `org_settings` (la primera vez que un owner guarda reglas en una organización sin configurar) hace que el runtime reciba `locale: "es"` (el valor por defecto) desde ese momento.

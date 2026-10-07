@@ -10,6 +10,8 @@ import type {
 import { MockArtifacts } from "./artifacts-mock";
 import { MockOrgConfig } from "./orgconfig-mock";
 import { MockConnections } from "./connections-mock";
+import { MockChat } from "./chat-mock";
+import { tr } from "../i18n-core";
 
 const ORG = "00000000-0000-0000-0000-000000000001";
 let seq = 0;
@@ -50,9 +52,9 @@ const SEED_MEMORY: Record<string, MemoryItem[]> = {
 
 const out = (o: Partial<StructuredOutput>): Partial<StructuredOutput> => o;
 
-function buildPlan(text: string): TaskSpec[] {
+export function buildPlan(text: string): TaskSpec[] {
   const t = text.toLowerCase();
-  if (/50[, ]?000|propuesta|cliente|cotiz/.test(t)) {
+  if (/50[, ]?000|propuesta|cliente|cotiz|proposal|quote/.test(t)) {
     return [
       { key: "t1", agent: "sales", title: "Analizar cliente y requerimientos", desc: "Perfilar al cliente y alcance de la propuesta de $50,000.", secs: 5, deps: [], activities: ["Revisando historial del cliente", "Mapeando requerimientos", "Estimando alcance y precio"], out: out({ summary: "Cliente Grupo Alfa: alcance de 6 meses, ticket de $50,000, decisor identificado.", findings: ["Cliente recurrente con buen historial de pago", "Pide entrega en 8 semanas", "Margen objetivo comercial: 31%"], metrics: { ticket: "$50,000", margen_estimado: "31%" }, recommendations: ["Preparar propuesta por fases"], confidence: 0.86 }) },
       { key: "t2", agent: "legal", title: "Revisar términos del contrato", desc: "Revisar cláusulas de penalización, SLA y responsabilidad.", secs: 6, deps: ["t1"], reviewing: true, activities: ["Leyendo borrador de contrato", "Comparando contra plantilla MSA", "Marcando cláusulas de riesgo"],
@@ -73,7 +75,7 @@ function buildPlan(text: string): TaskSpec[] {
       { key: "t7", agent: "assistant", title: "Consolidar informe ejecutivo", desc: "Unir los resultados del equipo en un informe.", secs: 4, deps: ["t6"], activities: ["Reuniendo resultados del equipo", "Redactando resumen ejecutivo", "Verificando cifras"], out: out({ summary: "Informe ejecutivo consolidado.", confidence: 0.9 }) },
     ];
   }
-  if (/ventas|bajaron|bajó|cayeron|caída/.test(t)) {
+  if (/ventas|bajaron|bajó|cayeron|caída|sales (dropped|fell)|sales are down/.test(t)) {
     return [
       { key: "b1", agent: "analyst", title: "Analizar caída de ventas por segmento", desc: "Descomponer la caída por cliente, producto y región.", secs: 6, deps: [], activities: ["Consultando datos de ventas", "Segmentando por cliente y región", "Buscando anomalías"],
         consult: { to: "sales", q: "¿Hubo cambios en el pipeline o en el equipo este mes?", a: "Perdimos 2 cuentas medianas por precio y el pipeline de nuevos leads bajó 18%." },
@@ -83,7 +85,7 @@ function buildPlan(text: string): TaskSpec[] {
       { key: "b4", agent: "assistant", title: "Consolidar informe", desc: "Unir resultados.", secs: 4, deps: ["b2", "b3"], activities: ["Reuniendo resultados", "Redactando resumen"], out: out({ summary: "Informe consolidado.", confidence: 0.88 }) },
     ];
   }
-  if (/contrat|vacante|personal|reclut/.test(t)) {
+  if (/contrat|vacante|personal|reclut|hire|hiring|vacanc/.test(t)) {
     return [
       { key: "c1", agent: "hr", title: "Definir perfiles y banda salarial", desc: "Perfiles, requisitos y rango salarial de mercado.", secs: 5, deps: [], activities: ["Definiendo perfiles", "Comparando banda salarial"], out: out({ summary: "Dos perfiles senior definidos; banda $3,600-$4,200.", metrics: { banda: "$3,600-$4,200" }, confidence: 0.84 }) },
       { key: "c2", agent: "accounting", title: "Validar presupuesto de contratación", desc: "Impacto en nómina y flujo de caja.", secs: 5, deps: ["c1"], activities: ["Calculando costo cargado", "Proyectando nómina"], consult: { to: "hr", q: "¿Incluyes prestaciones en la banda salarial?", a: "Sí, el rango es bruto; el costo cargado agrega ~28%." }, out: out({ summary: "Costo cargado de $7,800/mes por las 2 personas; viable dentro del presupuesto.", metrics: { costo_mensual: "$7,800" }, confidence: 0.87 }) },
@@ -121,6 +123,12 @@ export class MockBackend {
   private running = new Map<string, number>(); // agent -> number of tasks running
   private orgCfg = new MockOrgConfig(); // workflow templates, onboarding, org settings and schedules
   private art = new MockArtifacts((t, p, a) => this.emit(t, p, a), (ms) => this.wait(ms)); // workspaces: artifact.* endpoints/events
+  private chat = new MockChat({
+    emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agent: (id) => this.agents.find((a) => a.id === id), agents: () => this.agents,
+    setState: (id, st, act, tid, pr) => this.setState(id, st, act, tid, pr), log: (a, k, t) => this.log(a, k, t),
+    planPreview: (text) => buildPlan(text).map((s) => ({ key: s.key, agent: s.agent, title: s.title })),
+    startRequest: (text) => this.startRequest(text), startDirectTask: (id, text) => this.startDirectTask(id, text), uid,
+  }); // chat routing: POST /messages, chat.* and route.decided
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
 
   constructor() { this.seed(); }
@@ -128,7 +136,7 @@ export class MockBackend {
   private seed() {
     this.agents = SEED_AGENTS.map((a) => ({ ...a, metrics: { ...a.metrics }, state: "idle" as AgentState, activity: "Disponible", current_task_id: null, progress: 0 }));
     this.tasks = []; this.requests = []; this.conversations = []; this.messages = {}; this.approvals = [];
-    this.reports = []; this.activity = []; this.errorsCount = 0; this.decisions.clear(); this.specs.clear(); this.running.clear();
+    this.reports = []; this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.decisions.clear(); this.specs.clear(); this.running.clear();
   }
 
   // ---- realtime -----------------------------------------------------------------------------
@@ -181,7 +189,7 @@ export class MockBackend {
     this.emit("message.sent", { message: m }, from !== "user" && from !== "system" ? from : undefined);
     return m;
   }
-  private emitTask(type: string, t: Task) { this.emit(type, { task: { ...t } }, t.agent_id); this.art.onTask(type, t); }
+  private emitTask(type: string, t: Task) { this.emit(type, { task: { ...t }, ...(type === "task.created" && t.assigned_reason ? { assigned_reason: t.assigned_reason } : {}) }, t.agent_id); this.art.onTask(type, t); }
 
   // ---- orchestrator -------------------------------------------------------------------------
   private async startRequest(text: string): Promise<string> {
@@ -199,6 +207,33 @@ export class MockBackend {
     return req.id;
   }
 
+  /** Task asked in an agent's own 1:1 chat: only that agent works on it. Resolves with the summary. */
+  private async startDirectTask(agentId: string, text: string): Promise<string> {
+    const title = tr("mock.direct.title", { text: text.slice(0, 48) });
+    const req: Request = { id: uid("req"), text, status: "running", created_at: nowIso(), report_id: null, cost_usd: 0 };
+    this.requests.unshift(req);
+    this.emit("request.received", { request_id: req.id, text });
+    const spec: TaskSpec = {
+      key: "direct", agent: agentId, title, desc: tr("mock.direct.desc"), secs: 4, deps: [],
+      activities: [tr("mock.direct.act1"), tr("mock.direct.act2"), tr("mock.direct.act3")],
+      out: out({ summary: tr("mock.direct.summary", { title }), confidence: 0.82 }),
+    };
+    const task: Task = {
+      id: uid("task"), request_id: req.id, workflow_id: null, title, description: spec.desc, agent_id: agentId, status: "pending",
+      depends_on: [], parent_task_id: null, created_at: nowIso(), started_at: null, finished_at: null, output: null,
+      assigned_reason: tr("mock.reason.direct"),
+    };
+    this.specs.set(task.id, spec); this.tasks.push(task);
+    this.emit("plan.created", { request_id: req.id, tasks: [{ id: task.id, title, agent_id: agentId, depends_on: [] }] }, agentId);
+    this.emitTask("task.created", task);
+    this.pushMetrics();
+    await this.runTask(task, req);
+    req.status = task.status === "done" ? "done" : "failed";
+    if (task.status === "done") this.emit("request.completed", { request_id: req.id, report_id: null }, agentId);
+    this.pushMetrics();
+    return task.output?.summary || "";
+  }
+
   private async orchestrate(req: Request, conv: Conversation) {
     this.setState("assistant", "thinking", "Analizando la solicitud", null, 15);
     await this.wait(900);
@@ -210,6 +245,7 @@ export class MockBackend {
       const t: Task = {
         id: uid("task"), request_id: req.id, workflow_id: null, title: s.title, description: s.desc, agent_id: s.agent, status: "pending",
         depends_on: [], parent_task_id: null, created_at: nowIso(), started_at: null, finished_at: null, output: null,
+        assigned_reason: tr(`mock.reason.${s.key}`),
       };
       keyToId.set(s.key, t.id); this.specs.set(t.id, s);
       return t;
@@ -280,6 +316,7 @@ export class MockBackend {
     req.report_id = report.id; req.status = "done"; req.cost_usd = cost;
     this.emit("request.completed", { request_id: req.id, report_id: report.id }, "assistant");
     this.log("assistant", "request.completed", `Solicitud completada. Informe: ${report.title}`);
+    this.chat.note("assistant", "user", "chat", tr("mock.task.done", { title: report.title }));
     this.setState("assistant", "completed", "Informe entregado", null, 100);
     await this.wait(2500);
     if (this.agent("assistant").state === "completed") this.setState("assistant", "idle", "Disponible", null, 0);
@@ -300,7 +337,7 @@ export class MockBackend {
     task.status = "running"; task.started_at = nowIso();
     this.bump(id, 1);
     this.emitTask("task.started", task);
-    this.log(id, "task.started", `${this.agent(id).name} inicia: ${task.title}`);
+    this.log(id, "task.started", tr("mock.act.started", { name: this.agent(id).name.split(" ")[0], task: task.title, reason: task.assigned_reason || "" }));
     this.setState(id, "thinking", "Entendiendo la tarea", task.id, 5);
     this.pushMetrics();
     await this.wait(800);
@@ -344,6 +381,7 @@ export class MockBackend {
       this.emitTask("task.started", task); // status carries awaiting_approval; the spec has no dedicated event
       this.emit("approval.requested", { approval: { ...ap } }, id);
       this.log(id, "approval.requested", `Aprobación requerida: ${ap.title}`);
+      this.chat.note("assistant", "user", "chat", tr("mock.task.approval", { title: ap.title }));
       this.pushMetrics();
       const decision = await new Promise<"approve" | "reject">((res) => this.decisions.set(ap.id, res));
       ap.status = decision === "approve" ? "approved" : "rejected"; ap.resolved_at = nowIso();
@@ -377,7 +415,8 @@ export class MockBackend {
     req.cost_usd = +(req.cost_usd + cost).toFixed(4);
     this.emitTask("task.completed", task);
     this.setState(id, "completed", "Tarea completada", task.id, 100);
-    this.log(id, "task.completed", `${a.name} completó: ${task.title}`);
+    this.log(id, "task.completed", tr("mock.act.completed", { name: a.name.split(" ")[0], task: task.title }));
+    if (id !== "assistant" && spec.key !== "direct") this.chat.note(id, "user", "chat", tr("mock.task.agentDone", { task: task.title }));
     this.pushMetrics();
     this.settle(id, 3200);
   }
@@ -395,11 +434,13 @@ export class MockBackend {
     this.messages[conv.id] = [];
     this.setState(from, "talking", `Consultando a ${this.agent(to).name}`, task.id, this.agent(from).progress);
     this.sendMessage(conv, from, to, "consult", c.q, task.id);
-    this.log(from, "message.sent", `${this.agent(from).name} consulta a ${this.agent(to).name}: ${c.q}`);
+    this.log(from, "message.sent", tr("mock.act.consult", { from: this.agent(from).name.split(" ")[0], to: this.agent(to).name.split(" ")[0], q: c.q }));
+    this.chat.note(from, to, "consult", c.q);
     if (!toBusy) this.setState(to, "talking", `Atendiendo consulta de ${this.agent(from).name}`, prevTo.current_task_id, prevTo.progress);
     await this.wait(5200); // time for the asker to walk to the other desk
     this.sendMessage(conv, to, from, "answer", c.a, task.id);
-    this.log(to, "message.sent", `${this.agent(to).name} responde a ${this.agent(from).name}`);
+    this.log(to, "message.sent", tr("mock.act.answered", { from: this.agent(from).name.split(" ")[0], to: this.agent(to).name.split(" ")[0] }));
+    this.chat.note(to, from, "answer", c.a);
     await this.wait(3500);
     if (!toBusy) this.setState(to, prevTo.state === "talking" ? "idle" : prevTo.state, prevTo.activity, prevTo.current_task_id, prevTo.progress);
     this.setState(from, "working", spec.activities[spec.activities.length - 1], task.id, this.agent(from).progress);
@@ -438,7 +479,10 @@ export class MockBackend {
         return { request: this.requests.find((r) => r.id === r1), tasks: this.tasks.filter((t) => t.request_id === r1) };
       }
       if (r0 === "conversations" && !r1) return this.conversations;
-      if (r0 === "conversations" && r1 && r2 === "messages") return this.messages[r1] || [];
+      if (r0 === "conversations" && r1 && r2 === "messages") {
+        if (this.chat.matches(r1)) return this.chat.list(r1, q.get("before"), Number(q.get("limit") || 60));
+        return this.messages[r1] || [];
+      }
       if (r0 === "approvals") { const st = q.get("status"); return this.approvals.filter((a) => !st || a.status === st); }
       if (r0 === "reports" && !r1) return this.reports;
       if (r0 === "reports" && r1) return this.reports.find((r) => r.id === r1);
@@ -447,6 +491,7 @@ export class MockBackend {
       if (r0 === "healthz") return { status: "ok", mode: "simulation" };
     }
     if (method === "POST") {
+      if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim());
       if (r0 === "requests") { const id = await this.startRequest(String(body?.text || "").trim()); return { request_id: id }; }
       if (r0 === "conversations" && r1 && r2 === "messages") {
         const conv = this.conversations.find((c) => c.id === r1);

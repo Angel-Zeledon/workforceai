@@ -351,3 +351,29 @@ func TestQueryHelpers(t *testing.T) {
 		t.Fatal("cursor ordering on equal timestamps uses the id")
 	}
 }
+
+func TestTimestampsStrictlyIncreaseAlongTheChain(t *testing.T) {
+	c := newChain("org-1")
+	same := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
+	var head domain.AuditHead
+	var prev time.Time
+	for i := 0; i < 5; i++ {
+		// A coarse clock (or concurrent writers) hands out the same instant, or an earlier one.
+		e := audit.Seal(c.org, head, domain.AuditLog{ID: fmt.Sprint(i), Actor: "u", Action: "x", TS: same.Add(-time.Duration(i) * time.Millisecond)})
+		if i > 0 && !e.TS.After(prev) {
+			t.Fatalf("entry %d: ts %v is not after %v", e.Seq, e.TS, prev)
+		}
+		head, prev = domain.AuditHead{Seq: e.Seq, Hash: e.Hash, TS: e.TS}, e.TS
+	}
+}
+
+func TestIdentifiersAreNotMangledByTheSecretMasker(t *testing.T) {
+	const demoOrg = "00000000-0000-0000-0000-000000000001"
+	if got := audit.CleanField(demoOrg); got != demoOrg {
+		t.Fatalf("an all-digit UUID was altered: %q", got)
+	}
+	out := audit.Scrub(map[string]any{"org_id": demoOrg, "note": "card 4111 1111 1111 1111 declined"}).(map[string]any)
+	if out["org_id"] != demoOrg || !strings.Contains(out["note"].(string), "[REDACTED:card]") {
+		t.Fatalf("ids stay, card numbers in text are masked: %v", out)
+	}
+}

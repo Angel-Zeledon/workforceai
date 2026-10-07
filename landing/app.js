@@ -22,7 +22,7 @@
     var mail = "mailto:" + (CFG.CONTACT_EMAIL || "") + "?subject=" + subject;
     document.querySelectorAll("[data-cta]").forEach(function (a) {
       var kind = a.getAttribute("data-cta");
-      if (kind === "contact") a.setAttribute("href", mail);
+      if (kind === "contact") a.setAttribute("href", CFG.CONTACT_EMAIL ? mail : (CFG.DEMO_URL || "#"));
       if (kind === "demo") {
         a.setAttribute("href", CFG.DEMO_URL || "#");
         a.setAttribute("rel", "noopener");

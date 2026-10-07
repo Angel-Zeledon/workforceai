@@ -1,0 +1,58 @@
+# AI Workforce OS - public DEMO on the shared VPS (alongside stockai).
+#   workforceai.es      -> landing (static)
+#   app.workforceai.es  -> app (frontend + backend + runtime in SIMULATION mode)
+#
+# TLS and routing come from the EXISTING Caddy of the stockai project, which owns ports 80/443.
+# This project never publishes ports: its edge services join that Caddy's network (`faro_default`)
+# under unique `wf-*` aliases, and everything else stays on a private network.
+# Demo scope: in-memory store (no Postgres/Redis), simulation runtime (no API keys, no cost).
+name: workforceai
+
+services:
+  wf-runtime:
+    build: ../../agent-runtime
+    restart: unless-stopped
+    environment:
+      SIMULATION: "true"
+    mem_limit: 768m
+    networks: [internal]
+
+  wf-backend:
+    build: ../../backend
+    restart: unless-stopped
+    depends_on:
+      wf-runtime:
+        condition: service_healthy
+    environment:
+      PORT: "8080"
+      RUNTIME_URL: http://wf-runtime:8000
+      BUDGET_USD: "5"
+      UI_BASE_URL: https://app.workforceai.es
+      ALLOWED_ORIGINS: https://app.workforceai.es
+      # Open public demo (decided by the owner): no login, fixed demo org, resettable.
+      AUTH_ENABLED: "false"
+      ENABLE_DEMO_RESET: "true"
+    mem_limit: 256m
+    networks: [internal, edge]
+
+  wf-frontend:
+    build:
+      context: ../../frontend
+      args:
+        NEXT_PUBLIC_API_URL: https://app.workforceai.es/api/v1
+        NEXT_PUBLIC_WS_URL: wss://app.workforceai.es/ws
+    restart: unless-stopped
+    mem_limit: 384m
+    networks: [internal, edge]
+
+  wf-landing:
+    build: ../../landing
+    restart: unless-stopped
+    mem_limit: 64m
+    networks: [edge]
+
+networks:
+  internal: {}
+  edge:
+    external: true
+    name: faro_default

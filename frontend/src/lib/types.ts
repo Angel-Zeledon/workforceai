@@ -20,8 +20,10 @@ export interface Task {
   id: string; request_id: string; workflow_id: string | null; title: string; description: string;
   agent_id: string; status: TaskStatus; depends_on: string[]; parent_task_id: string | null;
   created_at: string; started_at: string | null; finished_at: string | null; output: StructuredOutput | null;
+  /** plain-language reason why this agent got the task (task.created.assigned_reason) */
+  assigned_reason?: string | null;
 }
-export type MessageKind = "chat" | "delegation" | "consult" | "answer";
+export type MessageKind = "chat" | "delegation" | "consult" | "answer" | "system";
 export interface Message {
   id: string; conversation_id: string; from: string; to: string; kind: MessageKind;
   text: string; task_id: string | null; ts: string;
@@ -53,3 +55,13 @@ export interface WsFrame {
   id: string; type: string; ts: string; org_id?: string; agent_id?: string; payload: any;
 }
 export interface ErrorItem { id: string; ts: string; agent_id: string | null; message: string }
+
+/** Chat routing contract (docs/architecture/chat-routing.md): conversation is "office" or "agent:<id>". */
+export type ChatConversationId = string;
+export interface ChatMessage {
+  id: string; conversation: ChatConversationId; turn_id: string | null; from: string; to: string;
+  kind: MessageKind; text: string; reply_to: string | null; ts: string;
+}
+export type TurnIntent = "smalltalk" | "question" | "task";
+export interface RouteResponder { agent_id: string; role: "primary" | "contributor"; reason: string }
+export interface RouteDecision { turn_id: string; intent: TurnIntent; topic: string; responders: RouteResponder[]; ts: string }

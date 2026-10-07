@@ -22,10 +22,15 @@ from pydantic import BaseModel, Field
 from .engine import AgentEngine, estimate_cost
 from .redact import redact_secrets
 from .models import (
+    ChatReplyRequest,
+    ChatReplyResponse,
     ConsultRequest,
     ConsultResponse,
     PlanRequest,
     PlanResponse,
+    ReplyConsult,
+    RouteRequest,
+    RouteResponse,
     RunTaskRequest,
     RunTaskResponse,
     Section,
@@ -45,7 +50,11 @@ from .providers import (
     is_transient,
     policy_from_request,
 )
+from .routing import rules_route, validate_route
 from .security import (
+    build_chat_prompt,
+    build_chat_system_prompt,
+    build_route_prompt,
     language_rule,
     system_rules,
     build_consult_prompt,
@@ -84,6 +93,20 @@ class _ConsultAnswer(BaseModel):
     answer: str
 
 
+class _RouteLLM(BaseModel):
+    intent: str
+    topic: str = "general"
+    primary_agent_id: str
+    contributor_agent_ids: list[str] = Field(default_factory=list)
+    reasons: dict[str, str] = Field(default_factory=dict)
+
+
+class _ChatLLM(BaseModel):
+    text: str
+    consult_to_agent_id: str | None = None
+    consult_question: str | None = None
+
+
 class _Synth(BaseModel):
     title: str
     summary: str
@@ -114,19 +137,20 @@ class CrewAIEngine(AgentEngine):
         self.model = self.providers[0].model
         self._llms: dict[str, Any] = {}
 
-    def _llm_for(self, cfg: ProviderConfig) -> Any:
-        if cfg.id not in self._llms:
+    def _llm_for(self, cfg: ProviderConfig, max_tokens: int | None = None) -> Any:
+        key = f"{cfg.id}:{max_tokens or 0}"
+        if key not in self._llms:
             kw: dict[str, Any] = {"model": cfg.model, "api_key": cfg.api_key, "temperature": 0.3,
-                                  "max_tokens": 4096, "timeout": PROVIDER_TIMEOUT_S}
+                                  "max_tokens": max_tokens or 4096, "timeout": PROVIDER_TIMEOUT_S}
             if cfg.base_url:
                 kw["base_url"] = cfg.base_url
-            self._llms[cfg.id] = self._LLM(**kw)
-        return self._llms[cfg.id]
+            self._llms[key] = self._LLM(**kw)
+        return self._llms[key]
 
     # ------------------------------------------------------------ nucleo
     def _kickoff_once(self, cfg: ProviderConfig, *, role: str, goal: str, backstory: str, description: str,
-                      expected: str, schema: type[BaseModel]) -> tuple[Any, Usage]:
-        agent = self._Agent(role=role, goal=goal, backstory=backstory, llm=self._llm_for(cfg),
+                      expected: str, schema: type[BaseModel], max_tokens: int | None = None) -> tuple[Any, Usage]:
+        agent = self._Agent(role=role, goal=goal, backstory=backstory, llm=self._llm_for(cfg, max_tokens),
                             tools=[], allow_delegation=False, verbose=False)
         task = self._Task(description=description, expected_output=expected,
                           agent=agent, output_pydantic=schema)
@@ -197,7 +221,8 @@ class CrewAIEngine(AgentEngine):
             f"Presupuesto maximo USD: {req.budget_usd}\n\n{language_rule(req.locale, req.tone)}\n\n"
             "Descompone la solicitud en objetivos y tareas. Cada tarea tiene key unica, title, "
             "description, agent_id y depends_on (lista de keys). Maximiza el paralelismo, sin ciclos. "
-            "Si falta informacion critica, agrega clarifying_questions."
+            "Si falta informacion critica, agrega clarifying_questions. "
+            "En cada tarea agrega reason: una frase corta y humana que explique por que ESE agente tiene esa tarea."
         )
         plan, usage = await self._run(
             role="Orquestadora / Asistente Ejecutiva",
@@ -249,3 +274,41 @@ class CrewAIEngine(AgentEngine):
             policy=policy_from_request(req, "synthesize"))
         return SynthesizeResponse(title=res.title, summary=res.summary, sections=res.sections,
                                   provider=usage.provider, model=usage.model)
+
+    # ------------------------------------------------------------ chat layer
+    async def route(self, req: RouteRequest) -> RouteResponse:
+        """LLM classification with validated JSON; ANY failure ends in the deterministic rules (never fails)."""
+        try:
+            res, usage = await self._run(
+                role="Recepcionista del equipo", goal="Decidir quien responde un mensaje de chat",
+                backstory=system_rules(req.locale, req.tone),
+                description=build_route_prompt(req.text, req.conversation, req.agents, req.history, req.locale),
+                expected="JSON con intent, topic, primary_agent_id, contributor_agent_ids y reasons",
+                schema=_RouteLLM, policy=policy_from_request(req, "route"), max_tokens=300)
+            out = validate_route(res.model_dump(), req)
+            if out is not None:
+                out.usage, out.provider, out.model = usage, usage.provider, usage.model
+                return out
+            log.warning("route: invalid LLM routing, using rules")
+        except Exception as exc:  # provider failure, data policy, bad JSON...: the rules are the safe path
+            log.warning("route: LLM unavailable (%s), using rules", type(exc).__name__)
+        return rules_route(req)
+
+    async def chat_reply(self, req: ChatReplyRequest) -> ChatReplyResponse:
+        res, usage = await self._run(
+            role=req.agent.title or req.agent.role, goal="Responder en el chat de la oficina como una persona",
+            backstory=build_chat_system_prompt(req.agent, req.locale, req.tone),
+            description=build_chat_prompt(req), expected="JSON con text y, si aplica, consult",
+            schema=_ChatLLM, policy=policy_from_request(req, req.agent.role), max_tokens=350)
+        text = (res.text or "").strip()
+        if not text:
+            raise ValueError("empty chat reply")
+        consult = None
+        valid = {a.id for a in req.agents}
+        if (res.consult_to_agent_id and res.consult_question and res.consult_to_agent_id in valid
+                and res.consult_to_agent_id != req.agent.id and req.consult is None
+                and req.conversation.startswith("agent:")):  # consults only in 1:1 chats, never chained
+            consult = ReplyConsult(to_agent_id=res.consult_to_agent_id, question=res.consult_question.strip()[:300])
+        kind = "answer" if req.consult is not None else "chat"
+        return ChatReplyResponse(text=text[:1200], kind=kind, consult=consult, usage=usage,
+                                 provider=usage.provider, model=usage.model)

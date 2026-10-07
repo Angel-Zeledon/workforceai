@@ -93,6 +93,8 @@ class PlanTask(_Base):
     description: str
     agent_id: str
     depends_on: list[str] = Field(default_factory=list)
+    # Optional, human-readable: why this agent got this task (shown in the chat). Omitted when unknown.
+    reason: str | None = None
 
 
 class PlanResponse(_Base):
@@ -245,6 +247,117 @@ class SynthesizeResponse(_Base):
     title: str
     summary: str
     sections: list[Section] = Field(default_factory=list)
+    provider: str | None = None
+    model: str | None = None
+
+
+# ---- /v1/route and /v1/chat-reply (conversational layer, docs/architecture/chat-routing.md) ----
+Intent = Literal["smalltalk", "question", "task"]
+INTENTS: tuple[str, ...] = ("smalltalk", "question", "task")
+ResponderRole = Literal["primary", "contributor"]
+
+
+class RouteAgent(_Base):
+    id: str
+    role: str = ""
+    title: str = ""
+    name: str = ""
+
+
+class HistoryItem(_Base):
+    """One earlier chat message. ``from`` is "user" or an agent id."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    from_: str = Field(default="", alias="from")
+    text: str = ""
+
+
+class RouteRequest(_ProviderPolicyMixin):
+    text: str
+    conversation: str = "office"  # "office" | "agent:<id>"
+    agents: list[RouteAgent] = Field(default_factory=list)
+    history: list[HistoryItem] = Field(default_factory=list)
+    locale: Locale = "es"
+    tone: Tone = "neutral"
+
+    _norm = field_validator("locale", mode="before")(normalize_locale)
+    _norm_tone = field_validator("tone", mode="before")(normalize_tone)
+
+
+class Responder(_Base):
+    agent_id: str
+    role: ResponderRole = "primary"
+    reason: str = ""
+
+
+class RouteConsult(_Base):
+    """1:1 chats only: the question belongs to another area; the agent may ask that colleague."""
+
+    agent_id: str
+    reason: str = ""
+
+
+class RouteResponse(_Base):
+    intent: Intent
+    topic: str = "general"
+    responders: list[Responder] = Field(default_factory=list)
+    replies: list[dict[str, Any]] | None = None  # reserved; the backend asks /v1/chat-reply per responder
+    consult: RouteConsult | None = None
+    source: Literal["rules", "llm"] = "rules"
+    usage: Usage | None = None  # only when an LLM classified (live)
+    provider: str | None = None
+    model: str | None = None
+
+
+class ChatAgent(_Base):
+    id: str
+    role: str = ""
+    title: str = ""
+    name: str = ""
+    persona: str = ""
+
+
+class ReplyConsult(_Base):
+    """Asks the backend to show a visible consult message and to call chat-reply for ``to_agent_id``."""
+
+    to_agent_id: str
+    question: str
+
+
+class ChatConsultIn(_Base):
+    """Set when the agent answers a colleague's consult (instead of a user message)."""
+
+    from_agent_id: str
+    question: str
+
+
+class ChatReplyRequest(_ProviderPolicyMixin):
+    agent: ChatAgent
+    text: str  # what the user wrote
+    conversation: str = "office"
+    intent: Intent = "question"
+    topic: str = "general"
+    responder_role: ResponderRole = "primary"
+    reason: str = ""
+    agents: list[RouteAgent] = Field(default_factory=list)  # roster, for redirects and mentions
+    history: list[HistoryItem] = Field(default_factory=list)
+    prior_replies: list[HistoryItem] = Field(default_factory=list)  # replies already given in this turn
+    consult: ChatConsultIn | None = None
+    slot: int = 0  # position of this reply in the turn (0 = first), for greeting variety
+    consult_to: str | None = None  # agent id that owns the topic (1:1 redirect hint from /v1/route)
+    locale: Locale = "es"
+    tone: Tone = "neutral"
+
+    _norm = field_validator("locale", mode="before")(normalize_locale)
+    _norm_tone = field_validator("tone", mode="before")(normalize_tone)
+
+
+class ChatReplyResponse(_Base):
+    text: str
+    kind: Literal["chat", "consult", "answer"] = "chat"
+    consult: ReplyConsult | None = None
+    usage: Usage
     provider: str | None = None
     model: str | None = None
 
