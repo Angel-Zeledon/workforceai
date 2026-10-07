@@ -1,0 +1,55 @@
+{
+  "id": "google_gmail",
+  "version": 1,
+  "label_key": "provider.google_gmail.name",
+  "phase": "available",
+  "auth": [
+    {
+      "method": "oauth2_pkce",
+      "authorize_url": "https://accounts.google.com/o/oauth2/v2/auth",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "revoke_url": "https://oauth2.googleapis.com/revoke",
+      "identity_scopes": ["openid", "email"],
+      "extra_params": { "access_type": "offline", "prompt": "consent" }
+    }
+  ],
+  "capabilities": {
+    "mail.read": {
+      "class": "read",
+      "scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "tools": ["email.search", "email.list", "email.read"],
+      "risk": "low",
+      "side_effects": false,
+      "default": true,
+      "label_key": "conn.cap.mail.read"
+    },
+    "mail.draft": {
+      "class": "write",
+      "scopes": ["https://www.googleapis.com/auth/gmail.compose"],
+      "tools": ["email.draft"],
+      "risk": "low",
+      "side_effects": true,
+      "reversibility": "full",
+      "default": false,
+      "label_key": "conn.cap.mail.draft",
+      "scope_overreach": "gmail.compose also allows sending; the gateway blocks it (D4)"
+    },
+    "mail.send": {
+      "class": "write",
+      "scopes": ["https://www.googleapis.com/auth/gmail.send"],
+      "tools": ["email.send"],
+      "risk": "high",
+      "side_effects": true,
+      "reversibility": "none",
+      "always_approval": true,
+      "hold_seconds_default": 60,
+      "default": false,
+      "label_key": "conn.cap.mail.send"
+    }
+  },
+  "never_offered": ["mail.delete_permanent", "mail.settings", "mail.forwarding"],
+  "identity": { "userinfo_url": "https://openidconnect.googleapis.com/v1/userinfo", "account_field": "email" },
+  "resource_filters": ["labels", "max_age_days", "exclude_labels"],
+  "default_limits": { "per_minute": 30, "per_hour": 600, "per_day": 2000, "write_per_day": 20, "max_items_per_call": 25, "max_bytes_per_day": 20000000 },
+  "untrusted_sources": ["email.body", "email.subject", "email.from", "email.snippet"]
+}

@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="meta.title">AI Workforce OS: tu equipo de empleados de IA, a la vista y bajo tu control</title>
+  <meta name="description" content="Una oficina virtual 3D donde los empleados son agentes de IA persistentes. Pides en lenguaje natural, los ves colaborar, apruebas lo sensible y recibes un reporte. Acceso anticipado." data-i18n-attr="content:meta.description">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:title" content="AI Workforce OS: tu equipo de empleados de IA, a la vista y bajo tu control" data-i18n-attr="content:meta.ogTitle">
+  <meta property="og:description" content="Pides, ves colaborar a tus empleados de IA y apruebas lo sensible. Con costo estimado, topes de gasto y credenciales fuera del modelo." data-i18n-attr="content:meta.ogDescription">
+  <!-- TODO: og:image y og:url deben ser URLs absolutas cuando se conozca el dominio (config.js > SITE_URL). -->
+  <meta property="og:image" content="img/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="preload" href="fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main" data-i18n="a11y.skip">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="#top" data-i18n-aria="a11y.home" aria-label="AI Workforce OS, inicio">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="7" fill="currentColor"/><path d="M9 21V11l7 4 7-4v10" fill="none" stroke="var(--on-accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" data-i18n-aria="a11y.nav" aria-label="Principal">
+        <a href="#como" data-i18n="nav.how">Cómo funciona</a>
+        <a href="#control" data-i18n="nav.control">Control</a>
+        <a href="#equipo" data-i18n="nav.team">Equipo</a>
+        <a href="#confianza" data-i18n="nav.trust">Seguridad</a>
+        <a href="#estado" data-i18n="nav.status">Estado actual</a>
+        <a href="#faq" data-i18n="nav.faq">Preguntas</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" data-i18n-aria="a11y.lang" aria-label="Idioma">
+          <button type="button" data-lang="es" aria-pressed="true">ES</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <a class="btn btn-primary btn-sm" data-cta="contact" href="#final"><span class="long" data-i18n="cta.early">Pedir acceso anticipado</span><span class="short" data-i18n="cta.early.short">Acceso anticipado</span></a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="wrap">
+        <h1 data-i18n="hero.title">Tu equipo de empleados de IA, a la vista y bajo tu control.</h1>
+        <p class="lead hero-sub" data-i18n="hero.sub">Una oficina virtual donde le pides trabajo en lenguaje natural a Ventas, Legal, Contabilidad, Análisis, Operaciones, RR. HH. y tu Asistente. Los ves colaborar en vivo, apruebas lo sensible y recibes un reporte.</p>
+        <div class="actions">
+          <a class="btn btn-primary" data-cta="contact" href="#final" data-i18n="cta.early">Pedir acceso anticipado</a>
+          <a class="btn btn-ghost" data-cta="demo" href="#" data-i18n="cta.demo">Ver la demo</a>
+        </div>
+        <p class="fine" data-i18n="hero.note">Hoy funciona en modo simulación, sin clave de IA. Todavía no hay precios: estamos abriendo acceso anticipado.</p>
+        <figure class="window hero-shot">
+          <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <img src="img/office.webp" width="1600" height="1000" alt="Captura real de la oficina 3D de AI Workforce OS con los siete empleados de IA en sus escritorios." data-i18n-alt="hero.shotAlt" fetchpriority="high" decoding="async">
+          <figcaption data-i18n="hero.shotCaption">Captura real de la app, en modo simulación.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section problem" aria-labelledby="problem-h">
+      <div class="wrap">
+        <div class="head">
+          <h2 id="problem-h" data-i18n="problem.title">Los agentes de IA suelen trabajar a puerta cerrada.</h2>
+          <p class="lead" data-i18n="problem.lead">Le encargas una tarea y recibes un resultado. Lo que pasó en medio es una caja negra.</p>
+        </div>
+        <div class="questions">
+          <div><h3 data-i18n="problem.q1">¿Qué hicieron?</h3><p data-i18n="problem.a1">Un historial de mensajes no te dice quién tocó qué, ni qué se envió afuera.</p></div>
+          <div><h3 data-i18n="problem.q2">¿Cuánto gastaron?</h3><p data-i18n="problem.a2">El costo aparece después, en una factura, cuando ya no puedes decidir nada.</p></div>
+          <div><h3 data-i18n="problem.q3">¿Lo hicieron bien?</h3><p data-i18n="problem.a3">Sin ver el proceso ni a quién consultaron, revisar el resultado es adivinar.</p></div>
+        </div>
+        <p class="pull" data-i18n="problem.close">AI Workforce OS parte de lo contrario: todo lo que hace un empleado de IA es visible, tiene tope de gasto y espera tu decisión cuando importa.</p>
+      </div>
+    </section>
+
+    <section class="section alt" id="como" aria-labelledby="how-h">
+      <div class="wrap">
+        <div class="head">
+          <h2 id="how-h" data-i18n="how.title">Cómo funciona</h2>
+          <p class="lead" data-i18n="how.lead">Tres pasos, y tú sigues al mando en cada uno.</p>
+        </div>
+        <ol class="steps">
+          <li><span class="step-n" aria-hidden="true">1</span><h3 data-i18n="how.s1.t">Pides</h3><p data-i18n-html="how.s1.d">Escribes lo que necesitas como se lo dirías a un colega: <em>“prepara una propuesta de $50,000”</em>. Antes de ejecutar puedes ver una estimación de costo.</p></li>
+          <li><span class="step-n" aria-hidden="true">2</span><h3 data-i18n="how.s2.t">Ves colaborar</h3><p data-i18n-html="how.s2.d">La Asistente arma el plan. Cada empleado toma su parte, consulta a los demás y trabaja en paralelo cuando el plan lo permite. Lo ves pasar en la oficina.</p></li>
+          <li><span class="step-n" aria-hidden="true">3</span><h3 data-i18n="how.s3.t">Apruebas</h3><p data-i18n-html="how.s3.d">Antes de enviar una propuesta o iniciar una contratación, el empleado se detiene y te pide el visto bueno. Al final recibes un reporte con lo que se hizo y lo que costó.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section" id="app" aria-labelledby="shots-h">
+      <div class="wrap">
+        <div class="head">
+          <h2 id="shots-h" data-i18n="shots.title">La app real, no una maqueta</h2>
+          <p class="lead" data-i18n="shots.lead">Capturas de la aplicación corriendo en modo simulación. Lo que ves en pantalla sale de eventos reales del sistema.</p>
+        </div>
+        <div class="shots">
+          <figure class="window wide">
+            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+            <img src="img/approvals.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Bandeja de aprobaciones con acciones pendientes de decisión humana." data-i18n-alt="shots.appr.alt">
+            <figcaption><strong data-i18n="shots.appr.t">Aprobaciones</strong> <span data-i18n="shots.appr.d">Las acciones sensibles esperan tu decisión: aprobar o rechazar.</span></figcaption>
+          </figure>
+          <figure class="window">
+            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+            <img src="img/dashboard.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Modo dashboard con indicadores, tareas y actividad de los empleados." data-i18n-alt="shots.dash.alt">
+            <figcaption><strong data-i18n="shots.dash.t">Dashboard</strong> <span data-i18n="shots.dash.d">Para quien prefiere listas: tareas, costos, conversaciones y actividad.</span></figcaption>
+          </figure>
+          <figure class="window">
+            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+            <img src="img/projects.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Plan del proyecto Cierre financiero del trimestre, con tareas por empleado, estimación de costo y botón para lanzar." data-i18n-alt="shots.proj.alt">
+            <figcaption><strong data-i18n="shots.proj.t">Proyectos</strong> <span data-i18n="shots.proj.d">El plan de un cierre trimestral: balance general y estado de resultados en paralelo, costo estimado antes de lanzar y una compuerta de aprobación humana.</span></figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="control" aria-labelledby="control-h">
+      <div class="wrap">
+        <div class="head">
+          <h2 id="control-h" data-i18n="control.title">Lo que ya está construido, y por qué importa</h2>
+          <p class="lead" data-i18n="control.lead">Estas capacidades existen hoy en el código de la app. Las que dependen de integraciones reales se detallan en “Estado actual”.</p>
+        </div>
+        <dl class="features">
+          <div><dt data-i18n="c.office.t">Oficina 3D con el trabajo en vivo</dt><dd data-i18n="c.office.d">Cada movimiento sale de eventos reales: quién trabaja, quién consulta a quién, quién espera. Si prefieres listas, hay modo dashboard.</dd></div>
+          <div><dt data-i18n="c.appr.t">Aprobaciones humanas en acciones sensibles</dt><dd data-i18n="c.appr.d">Enviar una propuesta o un contrato requiere tu decisión. Los agentes pueden pedir aprobación; nunca darla. Eliges cuánta autonomía tiene cada empleado: sugerir, aprobar cada acción, reglas o autónomo.</dd></div>
+          <div><dt data-i18n="c.cost.t">Costo estimado antes de ejecutar, y topes</dt><dd data-i18n="c.cost.d">Ves una estimación antes de correr una solicitud. Hay topes por solicitud, por empleado y por organización; al llegar al tope el trabajo se pausa y tú decides si continúa.</dd></div>
+          <div><dt data-i18n="c.vault.t">Credenciales fuera del modelo</dt><dd data-i18n="c.vault.d">Las claves viven en una bóveda cifrada (AES-256-GCM). El modelo de IA nunca las ve: las herramientas las ejecuta el backend, no el modelo.</dd></div>
+          <div><dt data-i18n="c.kill.t">Kill-switch y modo solo lectura</dt><dd data-i18n="c.kill.d">Congela la actividad o pasa toda la oficina a solo lectura. También puedes pausar a un empleado o apagar una herramienta concreta.</dd></div>
+          <div><dt data-i18n="c.audit.t">Auditoría</dt><dd data-i18n="c.audit.d">Cada acción relevante se registra en una bitácora que la aplicación solo puede escribir, no editar ni borrar.</dd></div>
+          <div><dt data-i18n="c.proj.t">Proyectos enteros, con trabajo en paralelo</dt><dd data-i18n="c.proj.d">Un proyecto se reparte en tareas con dependencias. Lo que no depende de otra cosa corre a la vez. Mira el ejemplo de abajo.</dd></div>
+          <div><dt data-i18n="c.tpl.t">Plantillas de workflow y paquetes por tipo de negocio</dt><dd data-i18n="c.tpl.d">Cinco plantillas (propuesta, cliente nuevo, cobranza, cierre de mes y resumen diario) y cuatro paquetes (agencia, comercio, servicios profesionales y general) que fijan reglas y nivel de autonomía.</dd></div>
+          <div><dt data-i18n="c.es.t">Español nativo, con tonos regionales</dt><dd data-i18n="c.es.d">Interfaz y empleados pensados en español, con tono regional configurable. Incluye plantillas fiscales de ejemplo para México y España, marcadas como ejemplo.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="section" id="paralelo" aria-labelledby="lanes-h">
+      <div class="wrap">
+        <div class="head">
+          <h2 id="lanes-h" data-i18n="lanes.title">Un proyecto, varios empleados a la vez</h2>
+          <p class="lead" data-i18n="lanes.lead">Ejemplo: el cierre financiero del trimestre, como en la captura de Proyectos. El Contador no espera a terminar una cosa para empezar la otra.</p>
+        </div>
+        <figure class="lanes" role="img" tabindex="0" data-i18n-aria="lanes.alt" aria-label="Diagrama: la Asistente arma el plan; el Contador hace el balance general y el estado de resultados al mismo tiempo; el Analista consolida cuando ambos terminan; tú apruebas el envío y llega el reporte.">
+          <div class="lane-grid" aria-hidden="true">
+            <div class="lane-label" data-i18n="lanes.assistant">Asistente</div>
+            <div class="lane-track"><span class="bar b-plan" data-i18n="lanes.plan">Arma el plan</span><span class="bar b-rep" data-i18n="lanes.report">Reporte</span></div>
+
+            <div class="lane-label" data-i18n="lanes.accounting">Contador</div>
+            <div class="lane-track two">
+              <span class="bar b-bal" data-i18n="lanes.balance">Balance general</span>
+              <span class="bar b-pnl" data-i18n="lanes.pnl">Estado de resultados</span>
+              <span class="bracket" data-i18n="lanes.parallel">En paralelo</span>
+            </div>
+
+            <div class="lane-label" data-i18n="lanes.analyst">Analista</div>
+            <div class="lane-track"><span class="wait" data-i18n="lanes.wait">Espera a ambos</span><span class="bar b-ana" data-i18n="lanes.consolidate">Consolida hallazgos</span></div>
+
+            <div class="lane-label" data-i18n="lanes.you">Tú</div>
+            <div class="lane-track"><span class="bar b-you" data-i18n="lanes.approve">Apruebas el envío</span></div>
+          </div>
+          <figcaption data-i18n="lanes.tag">Diagrama ilustrativo del flujo; no es una captura.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section alt" id="equipo" aria-labelledby="team-h">
+      <div class="wrap">
+        <div class="head">
+          <h2 id="team-h" data-i18n="team.title">El equipo</h2>
+          <p class="lead" data-i18n="team.lead">Siete empleados con rol y herramientas propias. Cada uno es persistente: tiene memoria y un historial de lo que hizo.</p>
+        </div>
+        <ul class="roles">
+          <li><h3 data-i18n="r.assistant.t">Asistente</h3><p data-i18n="r.assistant.d">Planifica, coordina al equipo y consolida el reporte final.</p></li>
+          <li><h3 data-i18n="r.sales.t">Ventas</h3><p data-i18n="r.sales.d">Analiza al cliente y prepara propuestas.</p></li>
+          <li><h3 data-i18n="r.legal.t">Legal</h3><p data-i18n="r.legal.d">Revisa contratos y señala riesgos.</p></li>
+          <li><h3 data-i18n="r.accounting.t">Contabilidad</h3><p data-i18n="r.accounting.d">Calcula márgenes y arma estados financieros.</p></li>
+          <li><h3 data-i18n="r.analyst.t">Análisis</h3><p data-i18n="r.analyst.d">Evalúa rentabilidad y saca hallazgos de los datos.</p></li>
+          <li><h3 data-i18n="r.ops.t">Operaciones</h3><p data-i18n="r.ops.d">Revisa capacidad, entregas y necesidades de personal.</p></li>
+          <li><h3 data-i18n="r.hr.t">RR. HH.</h3><p data-i18n="r.hr.d">Prepara procesos de contratación y perfiles.</p></li>
+          <li class="soon"><h3 data-i18n="team.soon.t">Próximamente, más profesiones</h3><p data-i18n="team.soon.d">Estamos diseñando los roles como configuración para sumar profesiones sin reescribir el motor. Es una propuesta de diseño; aún no está construida.</p></li>
+        </ul>
+        <p class="fine" data-i18n="team.note">Los empleados preparan y organizan. No dan asesoría legal, fiscal ni médica: esas decisiones son de un profesional humano.</p>
+      </div>
+    </section>
+
+    <section class="section" id="confianza" aria-labelledby="trust-h">
+      <div class="wrap">
+        <div class="head">
+          <h2 id="trust-h" data-i18n="trust.title">Seguridad y confianza</h2>
+          <p class="lead" data-i18n="trust.lead">Principios de diseño que puedes revisar en la arquitectura. No son certificaciones.</p>
+        </div>
+        <dl class="features two">
+          <div><dt data-i18n="t1.t">El backend decide, el modelo propone</dt><dd data-i18n="t1.d">El motor de IA devuelve resultados y solicitudes de herramienta. Quien decide si se ejecutan, se aprueban o se rechazan es el backend.</dd></div>
+          <div><dt data-i18n="t2.t">El contenido externo es dato, no instrucción</dt><dd data-i18n="t2.d">Los correos y documentos que lee un empleado se tratan como datos delimitados, para que no puedan darle órdenes al sistema.</dd></div>
+          <div><dt data-i18n="t3.t">Aislamiento por organización</dt><dd data-i18n="t3.d">Los datos llevan el identificador de su organización y la base de datos aplica seguridad por filas, con un rol de aplicación sin acceso para saltársela.</dd></div>
+          <div><dt data-i18n="t4.t">Mínimo privilegio</dt><dd data-i18n="t4.d">Un empleado solo usa las conexiones y capacidades que le autorizas, y cada permiso queda registrado.</dd></div>
+        </dl>
+        <aside class="callout">
+          <h3 data-i18n="trust.not.t">Lo que no afirmamos</h3>
+          <p data-i18n="trust.not.d">No tenemos certificaciones (ni SOC 2 ni ISO) y no estamos listos para entornos empresariales regulados. Hoy no hay inicio de sesión único (SSO), ni exportación de auditoría, ni ejecuciones que sobrevivan a un reinicio del servidor.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section alt" id="estado" aria-labelledby="status-h">
+      <div class="wrap">
+        <div class="head">
+          <h2 id="status-h" data-i18n="status.title">Estado actual</h2>
+          <p class="lead" data-i18n="status.lead">Claro y sin adornos: qué funciona hoy, qué se está construyendo y qué solo está planeado.</p>
+        </div>
+        <ul class="status">
+          <li><span class="badge demo" data-i18n="st.demo">Demo</span><div><h3 data-i18n="st.1.t">Oficina 3D, dashboard, proyectos, aprobaciones y costos</h3><p data-i18n="st.1.d">Funcionan de punta a punta en modo simulación: respuestas guionadas y realistas, sin clave de IA y sin costo.</p></div></li>
+          <li><span class="badge dev" data-i18n="st.dev">En desarrollo</span><div><h3 data-i18n="st.2.t">IA real</h3><p data-i18n="st.2.d">Se activa al configurar una clave de API del proveedor de modelo. La ruta existe, pero la hemos probado menos que la simulación.</p></div></li>
+          <li><span class="badge dev" data-i18n="st.dev">En desarrollo</span><div><h3 data-i18n="st.3.t">Gmail</h3><p data-i18n="st.3.d">El flujo con permisos y envío diferido funciona en simulación. Con cuentas reales de Gmail aún no está probado.</p></div></li>
+          <li><span class="badge soon" data-i18n="st.soon">Próximamente</span><div><h3 data-i18n="st.4.t">Otras integraciones (WhatsApp, calendario, etc.)</h3><p data-i18n="st.4.d">Planeadas. Hoy no existen.</p></div></li>
+          <li><span class="badge soon" data-i18n="st.soon">Próximamente</span><div><h3 data-i18n="st.5.t">Más profesiones</h3><p data-i18n="st.5.d">Diseño en papel; ningún rol nuevo está construido todavía.</p></div></li>
+          <li><span class="badge soon" data-i18n="st.soon">Próximamente</span><div><h3 data-i18n="st.6.t">Resistencia y empresa</h3><p data-i18n="st.6.d">Ejecuciones que sobreviven a un reinicio, SSO y exportación de auditoría no existen todavía.</p></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="faq" aria-labelledby="faq-h">
+      <div class="wrap narrow">
+        <h2 id="faq-h" data-i18n="faq.title">Preguntas frecuentes</h2>
+        <div class="faq">
+          <details><summary data-i18n="faq.q1">¿Esto usa IA de verdad hoy?</summary><p data-i18n="faq.a1">Por defecto no: sin clave de API corre en modo simulación, con resultados guionados. Al configurar la clave, usa un modelo real. Si pruebas la demo, ya sabes qué esperar.</p></details>
+          <details><summary data-i18n="faq.q2">¿Puede enviar correos o mensajes por mí?</summary><p data-i18n="faq.a2">El flujo existe para Gmail y siempre pide tu aprobación, pero con cuentas reales aún no está probado. No lo uses todavía con correo importante. WhatsApp y otros canales están planeados, no construidos.</p></details>
+          <details><summary data-i18n="faq.q3">¿Qué pasa con mis datos y mis claves?</summary><p data-i18n="faq.a3">Las claves van a una bóveda cifrada y el modelo no las ve. Con IA real, el texto de las tareas se envía al proveedor de modelo que configures; revisa sus condiciones antes de usar datos sensibles.</p></details>
+          <details><summary data-i18n="faq.q4">¿Puede un agente aprobar algo por su cuenta?</summary><p data-i18n="faq.a4">No. Un agente puede pedir aprobación, pero la decisión es siempre de una persona. Tú ajustas qué requiere aprobación y cuánta autonomía tiene cada empleado.</p></details>
+          <details><summary data-i18n="faq.q5">¿Reemplaza a mi equipo?</summary><p data-i18n="faq.a5">No es la propuesta. Es un equipo de apoyo que prepara, organiza y consulta; las decisiones importantes siguen siendo tuyas. No sustituye a un abogado, contador ni otro profesional.</p></details>
+          <details><summary data-i18n="faq.q6">¿Cuánto cuesta?</summary><p data-i18n="faq.a6">Todavía no hay precios. Estamos abriendo acceso anticipado para aprender de uso real antes de fijarlos.</p></details>
+          <details><summary data-i18n="faq.q7">¿Sirve para una empresa grande?</summary><p data-i18n="faq.a7">Hoy no. Está pensado para equipos pequeños y profesionales hispanohablantes. Faltan SSO, auditoría exportable y durabilidad ante reinicios, entre otras cosas.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="final" id="final" aria-labelledby="final-h">
+      <div class="wrap">
+        <h2 id="final-h" data-i18n="final.title">Acceso anticipado</h2>
+        <p class="lead" data-i18n="final.d">Estamos dejando entrar a un grupo pequeño. Escríbenos y te contamos cómo probarlo. No pedimos datos en esta página.</p>
+        <div class="actions">
+          <a class="btn btn-invert" data-cta="contact" href="#final" data-i18n="cta.early">Pedir acceso anticipado</a>
+          <a class="btn btn-outline-invert" data-cta="demo" href="#" data-i18n="cta.demo">Ver la demo</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p data-i18n="footer.line">AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como demo funcionan en modo simulación.</p>
+      <a href="#top" data-i18n="footer.top">Volver arriba</a>
+    </div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

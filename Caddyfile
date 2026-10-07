@@ -1,0 +1,35 @@
+# Un solo dominio. Caddy obtiene y renueva el certificado Let's Encrypt automaticamente
+# (requiere DNS A/AAAA apuntando al servidor y puertos 80/443 abiertos).
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# API REST y WebSocket -> backend (Caddy proxea Upgrade/WebSocket automaticamente)
+	@backend path /api/* /ws
+	handle @backend {
+		reverse_proxy backend:8080 {
+			flush_interval -1
+		}
+	}
+
+	# Todo lo demas -> frontend Next.js
+	handle {
+		reverse_proxy frontend:3000
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

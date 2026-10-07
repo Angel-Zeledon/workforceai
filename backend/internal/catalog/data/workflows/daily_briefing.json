@@ -1,0 +1,29 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "daily_briefing",
+  "version": 1,
+  "category": "assistant",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [],
+  "steps": [
+    { "key": "briefing", "title_key": "step.briefing.title", "description_key": "step.briefing.desc", "agent_role": "assistant", "depends_on": [] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Resumen diario",
+      "tpl.description": "La asistente prepara cada día un resumen de pendientes, aprobaciones y prioridades.",
+      "tpl.request": "Resumen diario de la asistente",
+      "step.briefing.title": "Preparar el resumen del día",
+      "step.briefing.desc": "Resumir en pocas líneas: aprobaciones pendientes, tareas en curso, resultados recientes y las tres prioridades del día. Usa solo la información disponible y marca lo que falte."
+    },
+    "en": {
+      "tpl.name": "Daily briefing",
+      "tpl.description": "The assistant prepares a daily summary of pending items, approvals and priorities.",
+      "tpl.request": "Assistant daily briefing",
+      "step.briefing.title": "Prepare the daily briefing",
+      "step.briefing.desc": "Summarize briefly: pending approvals, tasks in progress, recent results and the three priorities of the day. Use only available information and flag what is missing."
+    }
+  }
+}

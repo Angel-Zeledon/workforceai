@@ -1,0 +1,43 @@
+{
+  "schema": "aiw.onboarding_pack/1",
+  "key": "agency",
+  "version": 1,
+  "name_key": "pack.name",
+  "description_key": "pack.description",
+  "agents": [
+    { "id": "assistant", "autonomy": "rules" },
+    { "id": "sales", "autonomy": "approve_each" },
+    { "id": "operations", "autonomy": "rules" },
+    { "id": "analyst", "autonomy": "autonomous" },
+    { "id": "accounting", "autonomy": "rules" },
+    { "id": "legal", "autonomy": "approve_each" },
+    { "id": "hr", "autonomy": "suggest" }
+  ],
+  "memory": [
+    { "agent_id": "assistant", "scope": "org", "key": "business_type", "value_key": "mem.business_type" },
+    { "agent_id": "operations", "scope": "org", "key": "delivery_model", "value_key": "mem.delivery_model" },
+    { "agent_id": "sales", "scope": "org", "key": "sales_style", "value_key": "mem.sales_style" },
+    { "agent_id": "accounting", "scope": "org", "key": "billing_model", "value_key": "mem.billing_model" }
+  ],
+  "rules": { "approval_amount_usd": 3000, "always_approve": ["send_proposal", "send_contract"] },
+  "templates": ["new_client", "proposal", "collections", "daily_briefing"],
+  "briefing": { "hour": 8, "minute": 30 },
+  "i18n": {
+    "es": {
+      "pack.name": "Agencia creativa o de marketing",
+      "pack.description": "Proyectos y retainers para clientes: briefs, entregables con fechas y facturación mensual.",
+      "mem.business_type": "Agencia (marketing, diseño o desarrollo) que trabaja por proyectos y retainers mensuales.",
+      "mem.delivery_model": "Cada proyecto tiene brief, entregables con fecha y revisión interna antes de enviarse al cliente.",
+      "mem.sales_style": "Las propuestas incluyen alcance, equipo asignado, calendario y número de rondas de revisión.",
+      "mem.billing_model": "Retainer mensual más proyectos puntuales; facturar al inicio del mes."
+    },
+    "en": {
+      "pack.name": "Creative or marketing agency",
+      "pack.description": "Projects and retainers for clients: briefs, dated deliverables and monthly billing.",
+      "mem.business_type": "Agency (marketing, design or development) working on projects and monthly retainers.",
+      "mem.delivery_model": "Each project has a brief, dated deliverables and internal review before going to the client.",
+      "mem.sales_style": "Proposals include scope, assigned team, schedule and number of revision rounds.",
+      "mem.billing_model": "Monthly retainer plus one-off projects; invoice at the start of the month."
+    }
+  }
+}

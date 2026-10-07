@@ -1,0 +1,41 @@
+{
+  "schema": "aiw.tax_template/1",
+  "key": "mx_invoice_example",
+  "version": 1,
+  "country": "MX",
+  "example": true,
+  "name_key": "tax.name",
+  "disclaimer_key": "tax.disclaimer",
+  "fields": [
+    { "key": "tax_id", "label_key": "field.tax_id", "kind": "id", "example": "RFC" },
+    { "key": "vat_rate", "label_key": "field.vat_rate", "kind": "rate", "example": "16" },
+    { "key": "invoice_doc", "label_key": "field.invoice_doc", "kind": "document", "example": "CFDI" }
+  ],
+  "checklist": [
+    { "key": "ids", "text_key": "check.ids" },
+    { "key": "rate", "text_key": "check.rate" },
+    { "key": "advisor", "text_key": "check.advisor" }
+  ],
+  "i18n": {
+    "es": {
+      "tax.name": "Facturación en México (estructura de ejemplo)",
+      "tax.disclaimer": "Ejemplo, no asesoría fiscal. Valida tasas, documentos y plazos con tu contador o con la autoridad fiscal.",
+      "field.tax_id": "Identificador fiscal del cliente",
+      "field.vat_rate": "Tasa de IVA general (porcentaje)",
+      "field.invoice_doc": "Comprobante fiscal",
+      "check.ids": "Confirmar el identificador fiscal y el domicilio del cliente antes de facturar.",
+      "check.rate": "Confirmar con tu contador la tasa de impuesto aplicable a cada concepto.",
+      "check.advisor": "Pedir a tu contador que revise la factura antes de emitirla."
+    },
+    "en": {
+      "tax.name": "Invoicing in Mexico (example structure)",
+      "tax.disclaimer": "Example, not tax advice. Verify rates, documents and deadlines with your accountant or the tax authority.",
+      "field.tax_id": "Customer tax identifier",
+      "field.vat_rate": "General VAT rate (percent)",
+      "field.invoice_doc": "Tax invoice document",
+      "check.ids": "Confirm the customer tax identifier and address before invoicing.",
+      "check.rate": "Confirm with your accountant the tax rate applicable to each line item.",
+      "check.advisor": "Ask your accountant to review the invoice before issuing it."
+    }
+  }
+}

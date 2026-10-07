@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   Design tokens. Un solo acento (índigo profundo), neutros fríos tipo
+   slate/piedra y semánticos desaturados. Triples RGB para que Tailwind
+   pueda aplicar opacidad (`bg-panel/90`).
+------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+  --bg: 243 245 248;            /* lienzo de la app */
+  --panel: 255 255 255;         /* superficies elevadas */
+  --panel2: 247 248 250;        /* superficie secundaria / inputs */
+  --line: 226 230 236;          /* bordes de 1px */
+  --line-strong: 203 210 220;   /* hover / énfasis de borde */
+  --ink: 21 27 38;              /* texto principal (AAA sobre panel) */
+  --ink2: 62 73 90;             /* texto secundario fuerte */
+  --mute: 91 102 120;           /* texto terciario (AA sobre bg y panel) */
+  --accent: 52 81 178;          /* índigo profundo */
+  --accent-hover: 40 66 150;
+  --accent-soft: 236 240 251;
+  --ok: 47 125 85;
+  --warn: 168 98 8;
+  --err: 180 68 60;
+  --info: 43 108 176;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --ring: 0 0 0 2px rgb(var(--panel)), 0 0 0 4px rgb(var(--accent) / 0.55);
+}
+
+html, body { height: 100%; margin: 0; background: rgb(var(--bg)); color: rgb(var(--ink)); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-feature-settings: "cv11", "ss03"; }
+/* Cifras tabulares en todo el producto: columnas e indicadores no "bailan" */
+body { font-variant-numeric: tabular-nums; }
+.font-mono, code, kbd, pre { font-variant-numeric: tabular-nums slashed-zero; letter-spacing: -0.01em; }
+
+* { scrollbar-width: thin; scrollbar-color: rgb(var(--line-strong)) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--line-strong)); border-radius: 8px; border: 2px solid rgb(var(--bg)); }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--mute) / 0.6); }
+canvas { outline: none; display: block; }
+select { color-scheme: light; }
+input::placeholder, textarea::placeholder { color: rgb(var(--mute) / 0.75); }
+::selection { background: rgb(var(--accent) / 0.18); }
+
+/* Focus accesible y consistente (solo teclado) */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; border-radius: 4px; }
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; box-shadow: var(--ring); border-color: rgb(var(--accent)); }
+
+/* Entradas sobrias: aparición breve, sin rebotes. (Nombres antiguos conservados: ac-pop / ac-bounce.) */
+@keyframes ui-in { from { transform: translateY(3px) scale(0.985); opacity: 0; } to { transform: none; opacity: 1; } }
+.ac-pop { animation: ui-in 0.18s ease-out both; }
+@keyframes ui-nudge { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+.ac-bounce { animation: ui-nudge 2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ac-pop, .ac-bounce { animation: none; } }
+.font-display { letter-spacing: -0.012em; }

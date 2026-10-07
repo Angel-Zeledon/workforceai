@@ -1,0 +1,50 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "collections",
+  "version": 1,
+  "category": "finance",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "scope", "label_key": "param.scope", "required": false, "default_key": "param.scope.default" }
+  ],
+  "steps": [
+    { "key": "aging", "title_key": "step.aging.title", "description_key": "step.aging.desc", "agent_role": "accounting", "depends_on": [] },
+    { "key": "risk", "title_key": "step.risk.title", "description_key": "step.risk.desc", "agent_role": "analyst", "depends_on": ["aging"] },
+    { "key": "reminders", "title_key": "step.reminders.title", "description_key": "step.reminders.desc", "agent_role": "sales", "depends_on": ["aging"] },
+    { "key": "plan", "title_key": "step.plan.title", "description_key": "step.plan.desc", "agent_role": "assistant", "depends_on": ["risk", "reminders"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Cobranza",
+      "tpl.description": "Clasifica las cuentas por cobrar, prioriza el riesgo y redacta recordatorios (el envío siempre pide tu aprobación).",
+      "tpl.request": "Gestionar la cobranza de cuentas por cobrar ({{scope}})",
+      "param.scope": "Alcance",
+      "param.scope.default": "todas las cuentas vencidas",
+      "step.aging.title": "Clasificar cuentas por antigüedad",
+      "step.aging.desc": "Agrupar las cuentas por cobrar ({{scope}}) por tramos de antigüedad: 0-30, 31-60, 61-90 y más de 90 días.",
+      "step.risk.title": "Priorizar cuentas por riesgo de impago",
+      "step.risk.desc": "Ordenar las cuentas ({{scope}}) por monto y probabilidad de impago, con la evidencia usada.",
+      "step.reminders.title": "Redactar recordatorios de cobro",
+      "step.reminders.desc": "Preparar borradores de recordatorio cordiales y firmes para las cuentas ({{scope}}). No enviar sin aprobación.",
+      "step.plan.title": "Armar el plan de cobranza",
+      "step.plan.desc": "Consolidar prioridades y borradores en un plan de seguimiento con fechas y responsables."
+    },
+    "en": {
+      "tpl.name": "Collections",
+      "tpl.description": "Ages receivables, ranks the risk and drafts reminders (sending always asks for your approval).",
+      "tpl.request": "Manage collections of receivables ({{scope}})",
+      "param.scope": "Scope",
+      "param.scope.default": "all overdue accounts",
+      "step.aging.title": "Age receivables",
+      "step.aging.desc": "Group receivables ({{scope}}) into aging buckets: 0-30, 31-60, 61-90 and 90+ days.",
+      "step.risk.title": "Rank accounts by default risk",
+      "step.risk.desc": "Sort accounts ({{scope}}) by amount and likelihood of non-payment, with the evidence used.",
+      "step.reminders.title": "Draft payment reminders",
+      "step.reminders.desc": "Prepare friendly but firm reminder drafts for the accounts ({{scope}}). Do not send without approval.",
+      "step.plan.title": "Build the collections plan",
+      "step.plan.desc": "Consolidate priorities and drafts into a follow-up plan with dates and owners."
+    }
+  }
+}

@@ -1,0 +1,85 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: workforce
+      POSTGRES_PASSWORD: workforce
+      POSTGRES_DB: workforce
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workforce"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  agent-runtime:
+    build: ./agent-runtime
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      SIMULATION: ${SIMULATION:-}
+      MODEL: ${MODEL:-}
+    ports:
+      - "8000:8000"
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgres://workforce:workforce@postgres:5432/workforce?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      RUNTIME_URL: http://agent-runtime:8000
+      PORT: "8080"
+      BUDGET_USD: ${BUDGET_USD:-25}
+      COST_CONFIRM_THRESHOLD_USD: ${COST_CONFIRM_THRESHOLD_USD:-}
+      REQUEST_BUDGET_CAP_USD: ${REQUEST_BUDGET_CAP_USD:-}
+      AGENT_BUDGET_USD: ${AGENT_BUDGET_USD:-}
+      # Connections (docs/architecture/integrations-credentials.md). Without
+      # CONNECTIONS_KEK only simulated connections work. Generate one with
+      # `openssl rand -base64 32` and back it up apart from the database.
+      CONNECTIONS_KEK: ${CONNECTIONS_KEK:-}
+      CONNECTIONS_KEK_PREVIOUS: ${CONNECTIONS_KEK_PREVIOUS:-}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      OAUTH_REDIRECT_URL: ${OAUTH_REDIRECT_URL:-http://localhost:8080/api/v1/connections/oauth/callback}
+      UI_BASE_URL: ${UI_BASE_URL:-http://localhost:3000}
+      EMAIL_HOLD_SECONDS: ${EMAIL_HOLD_SECONDS:-60}
+      KILL_SWITCH: ${KILL_SWITCH:-}
+      # --- DEVELOPMENT ONLY ---
+      # Dev runs open (no login, fixed "demo" org) and exposes POST /demo/reset
+      # for scripts/smoke and the e2e suite. In production OMIT both lines (the
+      # defaults are false) and set AUTH_ENABLED=true, JWT_SECRET (>=32 bytes)
+      # and ALLOWED_ORIGINS=https://your-frontend. See backend/README.md.
+      AUTH_ENABLED: "false"
+      ENABLE_DEMO_RESET: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      agent-runtime:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+        NEXT_PUBLIC_WS_URL: ws://localhost:8080/ws
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:

@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "new_client",
+  "version": 1,
+  "category": "sales",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "client", "label_key": "param.client", "required": true },
+    { "key": "service", "label_key": "param.service", "required": false, "default_key": "param.service.default" }
+  ],
+  "steps": [
+    { "key": "profile", "title_key": "step.profile.title", "description_key": "step.profile.desc", "agent_role": "sales", "depends_on": [] },
+    { "key": "contract", "title_key": "step.contract.title", "description_key": "step.contract.desc", "agent_role": "legal", "depends_on": ["profile"] },
+    { "key": "billing", "title_key": "step.billing.title", "description_key": "step.billing.desc", "agent_role": "accounting", "depends_on": ["profile"] },
+    { "key": "capacity", "title_key": "step.capacity.title", "description_key": "step.capacity.desc", "agent_role": "operations", "depends_on": ["profile"] },
+    { "key": "welcome", "title_key": "step.welcome.title", "description_key": "step.welcome.desc", "agent_role": "assistant", "depends_on": ["contract", "billing", "capacity"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Nuevo cliente",
+      "tpl.description": "Perfila al cliente, revisa contrato, facturación y capacidad en paralelo y prepara la bienvenida.",
+      "tpl.request": "Dar de alta al nuevo cliente {{client}} ({{service}})",
+      "param.client": "Nombre del cliente",
+      "param.service": "Servicio contratado",
+      "param.service.default": "servicio por definir",
+      "step.profile.title": "Perfilar a {{client}}",
+      "step.profile.desc": "Reunir datos del cliente {{client}}, alcance de {{service}} y contactos clave.",
+      "step.contract.title": "Revisar contrato de {{client}}",
+      "step.contract.desc": "Revisar cláusulas, responsabilidades y riesgos del contrato con {{client}}.",
+      "step.billing.title": "Configurar facturación de {{client}}",
+      "step.billing.desc": "Definir condiciones de pago, datos fiscales y calendario de facturación de {{client}}.",
+      "step.capacity.title": "Validar capacidad para {{client}}",
+      "step.capacity.desc": "Confirmar si hay capacidad operativa para entregar {{service}} a {{client}}.",
+      "step.welcome.title": "Preparar bienvenida a {{client}}",
+      "step.welcome.desc": "Consolidar lo anterior y redactar el correo de bienvenida y siguientes pasos para {{client}}."
+    },
+    "en": {
+      "tpl.name": "New client",
+      "tpl.description": "Profiles the client, reviews contract, billing and capacity in parallel, and prepares the welcome.",
+      "tpl.request": "Onboard the new client {{client}} ({{service}})",
+      "param.client": "Client name",
+      "param.service": "Contracted service",
+      "param.service.default": "service to be defined",
+      "step.profile.title": "Profile {{client}}",
+      "step.profile.desc": "Gather client data for {{client}}, the scope of {{service}} and key contacts.",
+      "step.contract.title": "Review {{client}} contract",
+      "step.contract.desc": "Review clauses, liabilities and risks of the contract with {{client}}.",
+      "step.billing.title": "Set up billing for {{client}}",
+      "step.billing.desc": "Define payment terms, tax details and the invoicing calendar for {{client}}.",
+      "step.capacity.title": "Check capacity for {{client}}",
+      "step.capacity.desc": "Confirm there is operational capacity to deliver {{service}} to {{client}}.",
+      "step.welcome.title": "Prepare welcome for {{client}}",
+      "step.welcome.desc": "Consolidate the above and draft the welcome email and next steps for {{client}}."
+    }
+  }
+}

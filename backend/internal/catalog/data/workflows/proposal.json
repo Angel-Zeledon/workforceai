@@ -1,0 +1,63 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "proposal",
+  "version": 1,
+  "category": "sales",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "client", "label_key": "param.client", "required": true },
+    { "key": "amount", "label_key": "param.amount", "required": false, "default_key": "param.amount.default" }
+  ],
+  "steps": [
+    { "key": "scope", "title_key": "step.scope.title", "description_key": "step.scope.desc", "agent_role": "sales", "depends_on": [] },
+    { "key": "pricing", "title_key": "step.pricing.title", "description_key": "step.pricing.desc", "agent_role": "accounting", "depends_on": ["scope"] },
+    { "key": "terms", "title_key": "step.terms.title", "description_key": "step.terms.desc", "agent_role": "legal", "depends_on": ["scope"] },
+    { "key": "capacity", "title_key": "step.capacity.title", "description_key": "step.capacity.desc", "agent_role": "operations", "depends_on": ["scope"] },
+    { "key": "draft", "title_key": "step.draft.title", "description_key": "step.draft.desc", "agent_role": "sales", "depends_on": ["pricing", "terms", "capacity"] },
+    { "key": "review", "title_key": "step.review.title", "description_key": "step.review.desc", "agent_role": "assistant", "depends_on": ["draft"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Propuesta comercial",
+      "tpl.description": "Define alcance, valida precio, términos y capacidad en paralelo y redacta la propuesta para tu aprobación.",
+      "tpl.request": "Preparar una propuesta para {{client}} por {{amount}}",
+      "param.client": "Cliente",
+      "param.amount": "Monto aproximado",
+      "param.amount.default": "monto por definir",
+      "step.scope.title": "Definir alcance para {{client}}",
+      "step.scope.desc": "Entender la necesidad de {{client}} y delimitar el alcance de la propuesta ({{amount}}).",
+      "step.pricing.title": "Validar precio y margen",
+      "step.pricing.desc": "Calcular el margen real de la propuesta para {{client}} ({{amount}}) con costos y descuentos.",
+      "step.terms.title": "Revisar términos legales",
+      "step.terms.desc": "Revisar condiciones, penalizaciones y responsabilidad aplicables a la propuesta para {{client}}.",
+      "step.capacity.title": "Confirmar capacidad de entrega",
+      "step.capacity.desc": "Verificar plazos y capacidad operativa para cumplir lo prometido a {{client}}.",
+      "step.draft.title": "Redactar la propuesta",
+      "step.draft.desc": "Redactar la propuesta para {{client}} integrando precio, términos y plazos. No enviarla sin aprobación.",
+      "step.review.title": "Revisión final y resumen",
+      "step.review.desc": "Revisar coherencia de la propuesta y resumir riesgos y siguientes pasos para la dirección."
+    },
+    "en": {
+      "tpl.name": "Sales proposal",
+      "tpl.description": "Defines scope, validates pricing, terms and capacity in parallel, and drafts the proposal for your approval.",
+      "tpl.request": "Prepare a proposal for {{client}} worth {{amount}}",
+      "param.client": "Client",
+      "param.amount": "Approximate amount",
+      "param.amount.default": "amount to be defined",
+      "step.scope.title": "Define scope for {{client}}",
+      "step.scope.desc": "Understand the need of {{client}} and bound the proposal scope ({{amount}}).",
+      "step.pricing.title": "Validate price and margin",
+      "step.pricing.desc": "Compute the real margin of the proposal for {{client}} ({{amount}}) with costs and discounts.",
+      "step.terms.title": "Review legal terms",
+      "step.terms.desc": "Review conditions, penalties and liability applicable to the proposal for {{client}}.",
+      "step.capacity.title": "Confirm delivery capacity",
+      "step.capacity.desc": "Check lead times and operational capacity to deliver what is promised to {{client}}.",
+      "step.draft.title": "Draft the proposal",
+      "step.draft.desc": "Draft the proposal for {{client}} combining price, terms and timelines. Do not send without approval.",
+      "step.review.title": "Final review and summary",
+      "step.review.desc": "Check the proposal is coherent and summarize risks and next steps for management."
+    }
+  }
+}

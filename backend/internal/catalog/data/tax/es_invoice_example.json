@@ -1,0 +1,41 @@
+{
+  "schema": "aiw.tax_template/1",
+  "key": "es_invoice_example",
+  "version": 1,
+  "country": "ES",
+  "example": true,
+  "name_key": "tax.name",
+  "disclaimer_key": "tax.disclaimer",
+  "fields": [
+    { "key": "tax_id", "label_key": "field.tax_id", "kind": "id", "example": "NIF/CIF" },
+    { "key": "vat_rate", "label_key": "field.vat_rate", "kind": "rate", "example": "21" },
+    { "key": "invoice_doc", "label_key": "field.invoice_doc", "kind": "document", "example": "factura" }
+  ],
+  "checklist": [
+    { "key": "ids", "text_key": "check.ids" },
+    { "key": "rate", "text_key": "check.rate" },
+    { "key": "advisor", "text_key": "check.advisor" }
+  ],
+  "i18n": {
+    "es": {
+      "tax.name": "Facturación en España (estructura de ejemplo)",
+      "tax.disclaimer": "Ejemplo, no asesoría fiscal. Valida tipos, requisitos de la factura y plazos con tu gestor o asesor fiscal.",
+      "field.tax_id": "Identificador fiscal del cliente",
+      "field.vat_rate": "Tipo de IVA general (porcentaje)",
+      "field.invoice_doc": "Documento de facturación",
+      "check.ids": "Confirmar el identificador fiscal y la dirección del cliente antes de facturar.",
+      "check.rate": "Confirmar con tu gestor el tipo de IVA aplicable a cada concepto.",
+      "check.advisor": "Pedir a tu gestor que revise la factura antes de emitirla."
+    },
+    "en": {
+      "tax.name": "Invoicing in Spain (example structure)",
+      "tax.disclaimer": "Example, not tax advice. Verify rates, invoice requirements and deadlines with your tax advisor.",
+      "field.tax_id": "Customer tax identifier",
+      "field.vat_rate": "General VAT rate (percent)",
+      "field.invoice_doc": "Invoice document",
+      "check.ids": "Confirm the customer tax identifier and address before invoicing.",
+      "check.rate": "Confirm with your tax advisor the VAT rate applicable to each line item.",
+      "check.advisor": "Ask your tax advisor to review the invoice before issuing it."
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "month_close",
+  "version": 1,
+  "category": "finance",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "month", "label_key": "param.month", "required": true }
+  ],
+  "steps": [
+    { "key": "reconcile", "title_key": "step.reconcile.title", "description_key": "step.reconcile.desc", "agent_role": "accounting", "depends_on": [] },
+    { "key": "balance_sheet", "title_key": "step.balance_sheet.title", "description_key": "step.balance_sheet.desc", "agent_role": "accounting", "depends_on": ["reconcile"] },
+    { "key": "income_statement", "title_key": "step.income_statement.title", "description_key": "step.income_statement.desc", "agent_role": "analyst", "depends_on": ["reconcile"] },
+    { "key": "variance", "title_key": "step.variance.title", "description_key": "step.variance.desc", "agent_role": "analyst", "depends_on": ["income_statement"] },
+    { "key": "close_report", "title_key": "step.close_report.title", "description_key": "step.close_report.desc", "agent_role": "assistant", "depends_on": ["balance_sheet", "variance"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Cierre de mes",
+      "tpl.description": "Concilia el mes y elabora balance general y estado de resultados en paralelo; luego analiza variaciones y consolida.",
+      "tpl.request": "Realizar el cierre contable de {{month}}",
+      "param.month": "Mes a cerrar",
+      "step.reconcile.title": "Conciliar movimientos de {{month}}",
+      "step.reconcile.desc": "Conciliar bancos, cuentas por cobrar y por pagar de {{month}} e informar diferencias.",
+      "step.balance_sheet.title": "Balance general de {{month}}",
+      "step.balance_sheet.desc": "Elaborar el balance general de {{month}} a partir de la conciliación.",
+      "step.income_statement.title": "Estado de resultados de {{month}}",
+      "step.income_statement.desc": "Elaborar el estado de resultados de {{month}} con ingresos, costos y gastos.",
+      "step.variance.title": "Variaciones contra el mes anterior",
+      "step.variance.desc": "Explicar las variaciones relevantes de {{month}} frente al mes anterior y el presupuesto, con hipótesis y evidencia.",
+      "step.close_report.title": "Informe de cierre de {{month}}",
+      "step.close_report.desc": "Consolidar balance general, estado de resultados y variaciones en un informe ejecutivo de cierre."
+    },
+    "en": {
+      "tpl.name": "Month-end close",
+      "tpl.description": "Reconciles the month and builds the balance sheet and income statement in parallel; then analyzes variances and consolidates.",
+      "tpl.request": "Perform the accounting close for {{month}}",
+      "param.month": "Month to close",
+      "step.reconcile.title": "Reconcile {{month}} transactions",
+      "step.reconcile.desc": "Reconcile bank, receivables and payables for {{month}} and report differences.",
+      "step.balance_sheet.title": "Balance sheet for {{month}}",
+      "step.balance_sheet.desc": "Build the balance sheet for {{month}} from the reconciliation.",
+      "step.income_statement.title": "Income statement for {{month}}",
+      "step.income_statement.desc": "Build the income statement for {{month}} with revenue, costs and expenses.",
+      "step.variance.title": "Variances vs previous month",
+      "step.variance.desc": "Explain the relevant {{month}} variances against the previous month and budget, with hypotheses and evidence.",
+      "step.close_report.title": "Close report for {{month}}",
+      "step.close_report.desc": "Consolidate balance sheet, income statement and variances into an executive close report."
+    }
+  }
+}

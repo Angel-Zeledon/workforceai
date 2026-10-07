@@ -1,0 +1,43 @@
+{
+  "schema": "aiw.onboarding_pack/1",
+  "key": "commerce",
+  "version": 1,
+  "name_key": "pack.name",
+  "description_key": "pack.description",
+  "agents": [
+    { "id": "assistant", "autonomy": "rules" },
+    { "id": "sales", "autonomy": "approve_each" },
+    { "id": "operations", "autonomy": "rules" },
+    { "id": "accounting", "autonomy": "rules" },
+    { "id": "analyst", "autonomy": "autonomous" },
+    { "id": "legal", "autonomy": "approve_each" },
+    { "id": "hr", "autonomy": "suggest" }
+  ],
+  "memory": [
+    { "agent_id": "assistant", "scope": "org", "key": "business_type", "value_key": "mem.business_type" },
+    { "agent_id": "operations", "scope": "org", "key": "inventory_policy", "value_key": "mem.inventory_policy" },
+    { "agent_id": "accounting", "scope": "org", "key": "credit_policy", "value_key": "mem.credit_policy" },
+    { "agent_id": "sales", "scope": "org", "key": "sales_style", "value_key": "mem.sales_style" }
+  ],
+  "rules": { "approval_amount_usd": 2000, "always_approve": ["send_proposal", "send_contract"] },
+  "templates": ["collections", "month_close", "new_client", "daily_briefing"],
+  "briefing": { "hour": 8, "minute": 0 },
+  "i18n": {
+    "es": {
+      "pack.name": "Comercio o distribución",
+      "pack.description": "Venta de productos a empresas o público: inventario, crédito a clientes y cobranza.",
+      "mem.business_type": "Comercio o distribución de productos con ventas recurrentes y cuentas por cobrar.",
+      "mem.inventory_policy": "Revisar existencias semanalmente y avisar antes de que un producto clave llegue a su punto de reorden.",
+      "mem.credit_policy": "Crédito a clientes con límite por cuenta; las cuentas vencidas se escalan en cobranza.",
+      "mem.sales_style": "Cotizaciones rápidas con precio por volumen; seguimiento a clientes inactivos."
+    },
+    "en": {
+      "pack.name": "Retail or distribution",
+      "pack.description": "Selling products to businesses or consumers: inventory, customer credit and collections.",
+      "mem.business_type": "Retail or distribution business with recurring sales and receivables.",
+      "mem.inventory_policy": "Check stock weekly and warn before a key product reaches its reorder point.",
+      "mem.credit_policy": "Customer credit with a per-account limit; overdue accounts are escalated to collections.",
+      "mem.sales_style": "Fast quotes with volume pricing; follow up with inactive customers."
+    }
+  }
+}

@@ -1,0 +1,27 @@
+.env
+node_modules/
+.next/
+out/
+dist/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.log
+bin/
+coverage/
+test-results/
+playwright-report/
+.DS_Store
+
+# Secretos / entornos
+.env.*
+!.env.example
+!.env.prod.example
+
+# Build/test artifacts
+.next*/
+*.tsbuildinfo
+Caddyfile;C*/
+.claude/

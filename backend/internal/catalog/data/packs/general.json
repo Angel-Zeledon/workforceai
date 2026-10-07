@@ -1,0 +1,34 @@
+{
+  "schema": "aiw.onboarding_pack/1",
+  "key": "general",
+  "version": 1,
+  "name_key": "pack.name",
+  "description_key": "pack.description",
+  "agents": [
+    { "id": "assistant", "autonomy": "approve_each" },
+    { "id": "sales", "autonomy": "approve_each" },
+    { "id": "hr", "autonomy": "approve_each" },
+    { "id": "legal", "autonomy": "approve_each" },
+    { "id": "accounting", "autonomy": "approve_each" },
+    { "id": "analyst", "autonomy": "suggest" },
+    { "id": "operations", "autonomy": "approve_each" }
+  ],
+  "memory": [
+    { "agent_id": "assistant", "scope": "org", "key": "business_type", "value_key": "mem.business_type" }
+  ],
+  "rules": { "approval_amount_usd": 1000, "always_approve": ["send_proposal", "send_contract"] },
+  "templates": ["new_client", "proposal", "daily_briefing"],
+  "briefing": { "hour": 8, "minute": 0 },
+  "i18n": {
+    "es": {
+      "pack.name": "Otro tipo de negocio",
+      "pack.description": "Punto de partida prudente: casi todo pide tu aprobación mientras el equipo aprende cómo trabajas.",
+      "mem.business_type": "Negocio pequeño o mediano; el tipo de negocio aún no está definido, preguntar cuando sea relevante."
+    },
+    "en": {
+      "pack.name": "Other kind of business",
+      "pack.description": "A cautious starting point: nearly everything asks for your approval while the team learns how you work.",
+      "mem.business_type": "Small or mid-sized business; the business type is not defined yet, ask when relevant."
+    }
+  }
+}

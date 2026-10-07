@@ -1,0 +1,43 @@
+{
+  "schema": "aiw.onboarding_pack/1",
+  "key": "professional_services",
+  "version": 1,
+  "name_key": "pack.name",
+  "description_key": "pack.description",
+  "agents": [
+    { "id": "assistant", "autonomy": "rules" },
+    { "id": "sales", "autonomy": "approve_each" },
+    { "id": "legal", "autonomy": "approve_each" },
+    { "id": "accounting", "autonomy": "rules" },
+    { "id": "analyst", "autonomy": "autonomous" },
+    { "id": "operations", "autonomy": "rules" },
+    { "id": "hr", "autonomy": "suggest" }
+  ],
+  "memory": [
+    { "agent_id": "assistant", "scope": "org", "key": "business_type", "value_key": "mem.business_type" },
+    { "agent_id": "sales", "scope": "org", "key": "sales_style", "value_key": "mem.sales_style" },
+    { "agent_id": "accounting", "scope": "org", "key": "billing_model", "value_key": "mem.billing_model" },
+    { "agent_id": "legal", "scope": "org", "key": "contract_policy", "value_key": "mem.contract_policy" }
+  ],
+  "rules": { "approval_amount_usd": 5000, "always_approve": ["send_proposal", "send_contract"] },
+  "templates": ["new_client", "proposal", "month_close", "daily_briefing"],
+  "briefing": { "hour": 8, "minute": 0 },
+  "i18n": {
+    "es": {
+      "pack.name": "Despacho o consultoría",
+      "pack.description": "Servicios profesionales con clientes recurrentes: propuestas, contratos y facturación por proyecto u honorarios.",
+      "mem.business_type": "Negocio de servicios profesionales (despacho o consultoría) con clientes recurrentes.",
+      "mem.sales_style": "Las propuestas se hacen por alcance y fases; el cliente decide con base en confianza y referencias.",
+      "mem.billing_model": "Facturación por honorarios o por hitos del proyecto; seguimiento mensual de cuentas por cobrar.",
+      "mem.contract_policy": "Todo contrato nuevo se revisa antes de enviarse; los montos altos requieren aprobación del dueño."
+    },
+    "en": {
+      "pack.name": "Professional services firm",
+      "pack.description": "Professional services with recurring clients: proposals, contracts and billing by project or fees.",
+      "mem.business_type": "Professional services business (firm or consultancy) with recurring clients.",
+      "mem.sales_style": "Proposals are scoped and phased; clients decide based on trust and references.",
+      "mem.billing_model": "Billing by fees or project milestones; monthly follow-up of receivables.",
+      "mem.contract_policy": "Every new contract is reviewed before sending; high amounts require owner approval."
+    }
+  }
+}

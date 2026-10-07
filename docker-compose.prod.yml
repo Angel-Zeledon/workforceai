@@ -1,0 +1,178 @@
+# Compose de PRODUCCION (independiente; no se combina con docker-compose.yml de dev).
+#
+#   Imagenes de GHCR (CI):   docker compose -f docker-compose.prod.yml --env-file .env.prod pull
+#                            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#   Build local (sin GHCR):  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# Solo Caddy publica puertos (80/443). Todo lo demas vive en la red `internal`
+# (sin salida a internet). El runtime ademas se une a `egress` para llamar a DeepSeek.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+name: aiworkforce
+
+services:
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?define DOMAIN (ej. app.ejemplo.com)}
+      ACME_EMAIL: ${ACME_EMAIL:?define ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge, internal]
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:2019/config/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    mem_limit: 256m
+    cpus: 0.5
+    logging: *logging
+
+  postgres:
+    image: postgres:16.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-workforce}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-workforce}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    mem_limit: 1g
+    cpus: 1.0
+    logging: *logging
+
+  redis:
+    image: redis:7.4.2-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?define REDIS_PASSWORD}
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?define REDIS_PASSWORD}
+    command:
+      - sh
+      - -c
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes --maxmemory ${REDIS_MAXMEMORY:-256mb} --maxmemory-policy noeviction
+    volumes:
+      - redisdata:/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    mem_limit: 384m
+    cpus: 0.5
+    logging: *logging
+
+  agent-runtime:
+    image: ghcr.io/${OWNER:?define OWNER (usuario/org de GHCR, minusculas)}/aiworkforce-agent-runtime:${TAG:?define TAG}
+    build: ./agent-runtime
+    restart: unless-stopped
+    environment:
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?define DEEPSEEK_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      SIMULATION: "false"
+      MODEL: ${MODEL:-}
+    networks: [internal, egress]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    mem_limit: 768m
+    cpus: 1.0
+    logging: *logging
+
+  backend:
+    image: ghcr.io/${OWNER:?define OWNER}/aiworkforce-backend:${TAG:?define TAG}
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-workforce}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-workforce}?sslmode=disable
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      RUNTIME_URL: http://agent-runtime:8000
+      PORT: "8080"
+      BUDGET_USD: ${BUDGET_USD:-25}
+      SIMULATION: "false"
+      AUTH_ENABLED: "true"
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET (min. 32 chars)}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?define ALLOWED_ORIGINS (ej. https://app.ejemplo.com)}
+      ENABLE_DEMO_RESET: ${ENABLE_DEMO_RESET:-false}
+    networks: [internal]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      agent-runtime:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    mem_limit: 512m
+    cpus: 1.0
+    logging: *logging
+
+  frontend:
+    image: ghcr.io/${OWNER:?define OWNER}/aiworkforce-frontend:${TAG:?define TAG}
+    build:
+      context: ./frontend
+      # Vacios = rutas relativas (/api/v1) y WS derivado de window.location.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
+    restart: unless-stopped
+    networks: [internal]
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    mem_limit: 512m
+    cpus: 1.0
+    logging: *logging
+
+networks:
+  edge:
+  egress:
+  internal:
+    internal: true
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:
