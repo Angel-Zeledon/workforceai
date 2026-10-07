@@ -18,8 +18,8 @@ Variables opcionales: `FRONTEND_URL`, `API_URL` (default `http://localhost:8080/
 | data-testid | Elemento | Notas |
 |---|---|---|
 | `agent-<id>` | Personaje/tarjeta de cada agente | `<id>` en `sales`, `hr`, `legal`, `accounting`, `analyst`, `operations`, `assistant`. Debe existir exactamente 1 por agente en la vista de oficina (puede ser un nodo DOM superpuesto/overlay sobre el canvas 3D, p. ej. la etiqueta flotante de drei `Html`). Recomendado: atributo `data-state` con el estado actual. No usar el prefijo `agent-` para ningún otro elemento. |
-| `command-input` | Input/textarea "Dile a tu empresa..." | Visible en ambos modos. |
-| `command-submit` | Botón de enviar el comando | Dispara `POST /requests`. |
+| `command-input` | Input del chat de la Oficina (canal general) | Visible en el modo oficina. |
+| `command-submit` | Botón de enviar al chat de la Oficina | Dispara `POST /messages` con `conversation: "office"`; el backend decide quién responde y, si es una tarea, crea la solicitud (si el backend aún no tiene `/messages` el frontend cae a `POST /requests`). |
 | `approval-<id>` | Una aprobación pendiente en la bandeja | `<id>` = id de la `Approval`. Debe contener un botón con texto "Aprobar" (y "Rechazar"). Solo aprobaciones `pending`; desaparece al resolverse. |
 | `mode-toggle` | Botón de cambio oficina/dashboard | Debe exponer `data-mode="office"` o `data-mode="dashboard"` (modo activo). |
 | `activity-feed` | Contenedor del feed de actividad | Muestra los `activity.logged` en texto. |
@@ -172,3 +172,25 @@ Frontend: `frontend/src/components/cost/*`. Contrato en `docs/architecture/08-ap
 
 Nota: los `data-testid` y `data-mode` existentes no cambian. Con el umbral por defecto (1 USD) el escenario de simulacion no pide confirmacion, asi que los tests existentes no ven el dialogo.
 
+
+
+## `data-testid` del chat (prefijos `chat-`, `panel-`, `turn-`, `route-`, `reason-`)
+
+Contrato en `docs/architecture/chat-routing.md`. Frontend: `frontend/src/components/chat/*`, `CommandBar.tsx` (chat de la Oficina) y `AgentPanel.tsx`. Ninguno empieza con `agent-` ni `approval-`.
+
+**Cambio importante: al tocar a un agente (oficina o dashboard) el panel abre PRIMERO en la pestaña `chat` (chat 1:1), ya no en `state`.** Los tests que miraban el estado/tareas/archivos deben hacer clic antes en `panel-tab-state` / `panel-tab-tasks` / `panel-tab-files`. Pestañas del panel: `panel-tab-chat` (por defecto), `panel-tab-state`, `panel-tab-tasks`, `panel-tab-chats` ("Con el equipo": conversaciones entre agentes), `panel-tab-memory`, `panel-tab-reports`, `panel-tab-files`, `panel-tab-activity`, `panel-tab-profile`.
+
+| data-testid | Elemento | Notas |
+|---|---|---|
+| `chat-pane-agent` | Panel del chat 1:1 (`conversation: "agent:<id>"`) | Dentro de `AgentPanel`, pestaña Chat |
+| `chat-input`, `chat-submit` | Input y botón de enviar del chat 1:1 | `POST /messages` con `agent:<id>`; responde solo ese agente |
+| `chat-log` | Lista de mensajes (`role="log"`, `aria-live="polite"`) | En el 1:1 y en el chat de la Oficina |
+| `chat-msg` (`data-from`, `data-kind`) | Mensaje (burbuja) | `data-kind`: chat/consult/answer/delegation/system |
+| `chat-typing` (`data-count`) | Indicador "escribiendo…" (`chat.typing`) | `data-count` = agentes escribiendo |
+| `office-chat` (`data-open`) | Panel del chat de la Oficina sobre la barra de comandos | Colapsable |
+| `chat-collapse`, `chat-unread` | Botón colapsar/expandir; contador de mensajes nuevos si está colapsado | |
+| `turn-chip` (`data-intent`) | Tipo de turno: `smalltalk` (conversación), `question` (pregunta), `task` (tarea), de `route.decided` | En la cabecera del chat de la Oficina y en cada nota de ruta |
+| `route-note` (`data-intent`) | Quién responde/aporta y por qué, bajo el mensaje del usuario | Solo en el chat de la Oficina |
+| `reason-chip` | "Asignado a X porque …" (`assigned_reason` de la tarea) | Panel del agente (estado/tareas/chat), tarjetas del dashboard y plan de solicitud |
+
+- `tests/chat.spec.ts`: el chat 1:1 es la pestaña por defecto del panel y solo responde ese agente; un saludo en la oficina es `smalltalk` y no crea solicitud.

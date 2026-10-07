@@ -124,7 +124,11 @@ func run(log *slog.Logger) error {
 		auditSvc = &application.AuditService{Store: as, Rec: rec, Cfg: cfg.App}
 	}
 
+	// Projects (whole workflows with parallel work) and agent workspaces (artifacts).
+	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw)
+
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
+		Projects: ws.projects, Artifacts: ws.artifacts,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}

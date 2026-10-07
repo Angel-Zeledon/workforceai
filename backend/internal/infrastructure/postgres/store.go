@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 )
@@ -300,13 +302,13 @@ func (s *Store) UpdateAgentState(ctx context.Context, orgID, id string, st domai
 
 // ---- tasks ----
 
-const taskCols = `id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, cost_usd, output, created_at, started_at, finished_at`
+const taskCols = `id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, cost_usd, output, created_at, started_at, finished_at, assigned_reason`
 
 func scanTask(r scanner) (domain.Task, error) {
 	var t domain.Task
 	var status string
 	var deps, out []byte
-	err := r.Scan(&t.ID, &t.RequestID, &t.WorkflowID, &t.Title, &t.Description, &t.AgentID, &status, &deps, &t.ParentTaskID, &t.Depth, &t.CostUSD, &out, &t.CreatedAt, &t.StartedAt, &t.FinishedAt)
+	err := r.Scan(&t.ID, &t.RequestID, &t.WorkflowID, &t.Title, &t.Description, &t.AgentID, &status, &deps, &t.ParentTaskID, &t.Depth, &t.CostUSD, &out, &t.CreatedAt, &t.StartedAt, &t.FinishedAt, &t.AssignedReason)
 	t.Status = domain.TaskStatus(status)
 	unmarshal(deps, &t.DependsOn)
 	t.DependsOn = strs(t.DependsOn)
@@ -320,9 +322,9 @@ func scanTask(r scanner) (domain.Task, error) {
 }
 
 func (s *Store) CreateTask(ctx context.Context, orgID string, t domain.Task) error {
-	return s.exec(ctx, orgID, `INSERT INTO tasks (id, org_id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, output, created_at, started_at, finished_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
-		t.ID, orgID, t.RequestID, t.WorkflowID, t.Title, t.Description, t.AgentID, string(t.Status), jb(strs(t.DependsOn)), t.ParentTaskID, t.Depth, outJSON(t.Output), t.CreatedAt, t.StartedAt, t.FinishedAt)
+	return s.exec(ctx, orgID, `INSERT INTO tasks (id, org_id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, output, created_at, started_at, finished_at, assigned_reason)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+		t.ID, orgID, t.RequestID, t.WorkflowID, t.Title, t.Description, t.AgentID, string(t.Status), jb(strs(t.DependsOn)), t.ParentTaskID, t.Depth, outJSON(t.Output), t.CreatedAt, t.StartedAt, t.FinishedAt, t.AssignedReason)
 }
 
 func outJSON(o *domain.StructuredOutput) []byte {
@@ -475,8 +477,8 @@ func (s *Store) ListConversations(ctx context.Context, orgID string) ([]domain.C
 
 func (s *Store) AddMessage(ctx context.Context, orgID string, m domain.Message) error {
 	return s.WithOrgTx(ctx, orgID, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `INSERT INTO messages (id, org_id, conversation_id, from_id, to_id, kind, text, task_id, ts) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-			m.ID, orgID, m.ConversationID, m.From, m.To, m.Kind, m.Text, m.TaskID, m.TS); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO messages (id, org_id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+			m.ID, orgID, m.ConversationID, m.From, m.To, m.Kind, m.Text, m.TaskID, m.TS, m.TurnID, m.ReplyTo, m.RequestID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `UPDATE conversations SET last_message_at=$3 WHERE org_id=$1 AND id=$2`, orgID, m.ConversationID, m.TS); err != nil {
@@ -495,13 +497,41 @@ func (s *Store) AddMessage(ctx context.Context, orgID string, m domain.Message) 
 	})
 }
 
-func (s *Store) ListMessages(ctx context.Context, orgID, conversationID string) ([]domain.Message, error) {
-	return many(ctx, s, orgID, func(r scanner) (domain.Message, error) {
-		var m domain.Message
-		err := r.Scan(&m.ID, &m.ConversationID, &m.From, &m.To, &m.Kind, &m.Text, &m.TaskID, &m.TS)
-		return m, err
-	}, `SELECT id, conversation_id, from_id, to_id, kind, text, task_id, ts FROM messages WHERE org_id=$1 AND conversation_id=$2 ORDER BY ts, id`, orgID, conversationID)
+const msgCols = `id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id`
+
+func scanMessage(r scanner) (domain.Message, error) {
+	var m domain.Message
+	err := r.Scan(&m.ID, &m.ConversationID, &m.From, &m.To, &m.Kind, &m.Text, &m.TaskID, &m.TS, &m.TurnID, &m.ReplyTo, &m.RequestID)
+	return m, err
 }
+
+func (s *Store) ListMessages(ctx context.Context, orgID, conversationID string) ([]domain.Message, error) {
+	return many(ctx, s, orgID, scanMessage, `SELECT `+msgCols+` FROM messages WHERE org_id=$1 AND conversation_id=$2 ORDER BY ts, id`, orgID, conversationID)
+}
+
+// ListMessagesPage implements application.MessagePager: the `limit` messages
+// older than beforeID ("" = the newest), oldest first, and whether older ones remain.
+func (s *Store) ListMessagesPage(ctx context.Context, orgID, conversationID, beforeID string, limit int) ([]domain.Message, bool, error) {
+	if limit <= 0 {
+		all, err := s.ListMessages(ctx, orgID, conversationID)
+		return all, false, err
+	}
+	rows, err := many(ctx, s, orgID, scanMessage, `SELECT `+msgCols+` FROM messages
+		WHERE org_id=$1 AND conversation_id=$2
+		  AND ($3 = '' OR (ts, id) < (SELECT ts, id FROM messages WHERE org_id=$1 AND id=$3))
+		ORDER BY ts DESC, id DESC LIMIT $4`, orgID, conversationID, beforeID, limit+1)
+	if err != nil {
+		return nil, false, err
+	}
+	more := len(rows) > limit
+	if more {
+		rows = rows[:limit]
+	}
+	slices.Reverse(rows)
+	return rows, more, nil
+}
+
+var _ application.MessagePager = (*Store)(nil)
 
 // ---- approvals ----
 

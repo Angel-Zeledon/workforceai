@@ -27,6 +27,9 @@ interface State {
   /** routing decisions by turn_id (who answers and why) */
   routes: Record<string, RouteDecision>;
   lastTurnId: string | null;
+  /** text prefilled in a chat input (e.g. when jumping to a colleague's 1:1 chat with context) */
+  drafts: Record<string, string>;
+  setDraft: (conv: string, text: string) => void;
   /** who is typing per conversation: agent_id -> start ms (auto-expires) */
   typing: Record<string, Record<string, number>>;
   approvals: Record<string, Approval>;
@@ -80,7 +83,8 @@ let convTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useStore = create<State>((set, get) => ({
   connected: false, loaded: false, mode: "office", selectedAgentId: null,
-  agents: {}, agentOrder: [], tasks: {}, requests: {}, plans: {}, conversations: {}, messages: {}, chat: {}, routes: {}, lastTurnId: null, typing: {},
+  agents: {}, agentOrder: [], tasks: {}, requests: {}, plans: {}, conversations: {}, messages: {}, chat: {}, routes: {}, lastTurnId: null, typing: {}, drafts: {},
+  setDraft: (conv, text) => set((s) => ({ drafts: { ...s.drafts, [conv]: text } })),
   approvals: {}, reports: {}, activity: [], errors: [], metrics: null, links: [], agentTick: {},
 
   setMode: (mode) => set({ mode }),
@@ -203,6 +207,8 @@ export const useStore = create<State>((set, get) => ({
         const m: Message = p.message;
         if (!m) break;
         const known = !!get().conversations[m.conversation_id];
+        // the user's own request text is already visible in the office chat: no duplicate bubble
+        const echoed = m.from === "user" && (get().chat.office || []).some((c) => c.from === "user" && c.text === m.text);
         set((s) => {
           const conv = s.conversations[m.conversation_id] || {
             id: m.conversation_id, title: "Conversación", request_id: null, last_message_at: m.ts,
@@ -210,7 +216,7 @@ export const useStore = create<State>((set, get) => ({
           };
           const list = s.messages[m.conversation_id] || [];
           const now = Date.now();
-          const links = [...s.links.filter((l) => now - l.ts < 15000), { id: m.id, from: m.from, to: m.to, kind: m.kind, text: m.text, ts: now }];
+          const links = echoed ? s.links : [...s.links.filter((l) => now - l.ts < 15000), { id: m.id, from: m.from, to: m.to, kind: m.kind, text: m.text, ts: now }];
           return {
             conversations: { ...s.conversations, [conv.id]: { ...conv, last_message_at: m.ts } },
             messages: list.some((x) => x.id === m.id) ? s.messages : { ...s.messages, [m.conversation_id]: [...list, m] },
@@ -254,7 +260,7 @@ export const useStore = create<State>((set, get) => ({
         });
         break;
       case "route.decided": {
-        const r: RouteDecision = { turn_id: p.turn_id, intent: p.intent, topic: p.topic ?? "", responders: p.responders || [], ts: f.ts };
+        const r: RouteDecision = { turn_id: p.turn_id, intent: p.intent, topic: p.topic ?? "", responders: p.responders || [], ts: f.ts, source: p.source, consult: p.consult ?? null };
         if (r.turn_id) set((s) => ({ routes: { ...s.routes, [r.turn_id]: r }, lastTurnId: r.turn_id }));
         break;
       }

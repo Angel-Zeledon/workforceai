@@ -27,6 +27,7 @@ func New(baseURL string) *Client {
 var (
 	_ application.Runtime   = (*Client)(nil)
 	_ application.Estimator = (*Client)(nil)
+	_ application.ChatRuntime = (*Client)(nil)
 )
 
 func (c *Client) do(ctx context.Context, method, path string, in, out any) error {
@@ -87,6 +88,18 @@ func (c *Client) Synthesize(ctx context.Context, in application.SynthesizeReques
 // Estimate implements application.Estimator (POST /v1/estimate).
 func (c *Client) Estimate(ctx context.Context, in application.EstimateRequest) (out application.EstimateResponse, err error) {
 	err = c.do(ctx, http.MethodPost, "/v1/estimate", in, &out)
+	return
+}
+
+// Route implements application.ChatRuntime (POST /v1/route).
+func (c *Client) Route(ctx context.Context, in application.RouteRequest) (out application.RouteResponse, err error) {
+	err = c.do(ctx, http.MethodPost, "/v1/route", in, &out)
+	return
+}
+
+// ChatReply implements application.ChatRuntime (POST /v1/chat-reply).
+func (c *Client) ChatReply(ctx context.Context, in application.ChatReplyRequest) (out application.ChatReplyResponse, err error) {
+	err = c.do(ctx, http.MethodPost, "/v1/chat-reply", in, &out)
 	return
 }
 

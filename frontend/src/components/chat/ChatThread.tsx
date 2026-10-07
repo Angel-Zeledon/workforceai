@@ -76,18 +76,43 @@ export function TypingLine({ conv }: { conv: string }) {
   );
 }
 
+/** Colleague an agent is redirecting the user to: explicit handoff_to, else the one other agent named in a 1:1 reply. */
+function useHandoff(m: ChatMessage): string | null {
+  const agents = useStore((s) => s.agents);
+  // only the latest redirect is actionable: once the user answered, the offer is over
+  const answered = useStore((s) => (s.chat[m.conversation] || []).some((x) => x.from === "user" && +new Date(x.ts) > +new Date(m.ts)));
+  if (answered || m.from === "user" || m.kind === "consult") return null;
+  if (m.handoff_to && agents[m.handoff_to]) return m.handoff_to;
+  if (!m.conversation.startsWith("agent:") || m.from !== m.conversation.slice(6) || m.kind !== "chat") return null;
+  const hits = Object.values(agents).filter((a) => a.id !== m.from && new RegExp(`(^|[^\\p{L}])${a.name.split(" ")[0]}([^\\p{L}]|$)`, "u").test(m.text));
+  return hits.length === 1 ? hits[0].id : null;
+}
+
 function Bubble({ m, grouped, showRoute }: { m: ChatMessage; grouped: boolean; showRoute: boolean }) {
   const { t } = useT();
   const name = useAgentName();
   const color = useAgentColor();
   const route = useStore((s) => (m.turn_id ? s.routes[m.turn_id] : undefined));
   const mine = m.from === "user";
+  const handoff = useHandoff(m);
+  const select = useStore((s) => s.select);
+  const setDraft = useStore((s) => s.setDraft);
+  const ask = () => {
+    if (!handoff) return;
+    const list = useStore.getState().chat[m.conversation] || [];
+    const idx = list.findIndex((x) => x.id === m.id);
+    const prev = [...list.slice(0, Math.max(0, idx))].reverse().find((x) => x.from === "user");
+    if (prev) setDraft(`agent:${handoff}`, prev.text);
+    select(handoff);
+  };
   if (m.kind === "system" || m.from === "system") {
     return <div className="py-0.5 text-center text-[10.5px] text-mute">{m.text}</div>;
   }
-  const tag = !mine && m.kind !== "chat" ? t(`chat.kind.${m.kind}`) : "";
   const toAgent = m.to && !["user", "all", "system", ""].includes(m.to) && !mine ? name(m.to).split(" ")[0] : "";
+  // kind tag only for team traffic (assignments, questions between agents); plain replies to you need no label
+  const tag = !mine && (m.kind === "delegation" || m.kind === "consult" || (m.kind === "answer" && toAgent)) ? t(`chat.kind.${m.kind}`) : "";
   return (
+    <>
     <div data-testid="chat-msg" data-from={m.from} data-kind={m.kind} className={`flex gap-2 ${mine ? "flex-row-reverse" : ""} ${grouped ? "" : "pt-1"}`}>
       {!mine && (grouped ? <span className="w-6 shrink-0" /> : <Avatar id={m.from} />)}
       <div className={`flex min-w-0 max-w-[86%] flex-col ${mine ? "items-end" : "items-start"}`}>
@@ -102,9 +127,16 @@ function Bubble({ m, grouped, showRoute }: { m: ChatMessage; grouped: boolean; s
         <div className={`whitespace-pre-line break-words rounded-xl px-3 py-1.5 text-[12.5px] leading-[1.45] ${mine ? "rounded-tr-sm bg-accent text-white" : `rounded-tl-sm border border-line bg-panel2 text-ink ${m.kind === "delegation" ? "border-l-2" : ""}`}`} style={!mine && m.kind === "delegation" ? { borderLeftColor: readable(color(m.from)) } : undefined}>
           {m.text}
         </div>
-        {mine && showRoute && route && <RouteNote r={route} />}
+        {handoff && !mine && (
+          <button type="button" data-testid="chat-ask-colleague" data-colleague={handoff} onClick={ask} title={t("chat.askColleagueHint", { name: name(handoff).split(" ")[0] })}
+            className="mt-1 inline-flex items-center gap-1 rounded-md border border-line-strong bg-panel px-2 py-1 text-[11px] font-medium text-accent-hover transition hover:border-accent">
+            <Icon name="arrow" size={12} />{t("chat.askColleague", { name: name(handoff).split(" ")[0] })}
+          </button>
+        )}
       </div>
     </div>
+    {mine && showRoute && route && <div className="pb-1 pl-1"><RouteNote r={route} /></div>}
+    </>
   );
 }
 
@@ -119,8 +151,8 @@ export function ChatThread({ conv, showRoute = false, className = "", emptyText 
   useEffect(() => { loadChat(conv); }, [conv, loadChat]);
   useEffect(() => {
     const el = box.current;
-    if (el && stick.current) el.scrollTo({ top: el.scrollHeight, behavior: reduce ? "auto" : "smooth" });
-  }, [msgs.length, reduce]);
+    if (el && stick.current) el.scrollTop = el.scrollHeight;
+  }, [msgs.length]);
   const rows = useMemo(() => msgs.map((m, i) => ({ m, grouped: i > 0 && msgs[i - 1].from === m.from && msgs[i - 1].kind === m.kind && m.from !== "user" && msgs[i - 1].turn_id === m.turn_id })), [msgs]);
   return (
     <div className={`flex min-h-0 flex-col ${className}`}>
@@ -154,6 +186,14 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const draft = useStore((s) => s.drafts[conv]);
+  const setDraft = useStore((s) => s.setDraft);
+  useEffect(() => {
+    if (!draft) return;
+    setText(draft); setDraft(conv, "");
+    inputRef.current?.focus();
+  }, [draft, conv, setDraft]);
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
     const v = text.trim();
@@ -166,7 +206,7 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
     <form onSubmit={submit} className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
         <input
-          data-testid={testId} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus} autoComplete="off"
+          ref={inputRef} data-testid={testId} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus} autoComplete="off"
           className="min-w-0 flex-1 rounded-lg border border-line bg-panel2 px-3 py-2 text-[13px] text-ink outline-none placeholder:text-mute"
         />
         <Btn data-testid={submitTestId} type="submit" kind="primary" disabled={busy || !text.trim()}><span className="flex items-center gap-1.5"><Icon name="arrow" size={13} />{busy ? t("cmd.sending") : t("cmd.send")}</span></Btn>

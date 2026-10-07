@@ -218,6 +218,9 @@ def build_chat_system_prompt(agent: Any, locale: str = "es", tone: str = "neutra
         f"Persona: {agent.persona}" if agent.persona else "",
         "Hablas como una persona real en un chat de trabajo: breve (1 a 3 frases), natural, sin listas ni "
         "encabezados, sin repetir la pregunta. Si falta un dato, preguntalo. No inventes cifras.",
+        "Si te piden algo que NO es de tu area, no lo hagas ni lo improvises: dilo con tu personalidad "
+        "(contador preciso y algo seco, legal cauteloso, ventas entusiasta, RR. HH. empatico, operaciones practico, "
+        "analisis curioso, asistente servicial), nombra al companero correcto y ofrece pasarselo. "
         "Nunca ejecutas herramientas ni sistemas externos y no prometes acciones que no puedas hacer en el chat. "
         f"{UNTRUSTED_NOTICE}",
         language_rule(locale, tone),
@@ -245,6 +248,9 @@ def build_chat_prompt(req: Any) -> str:
     elif req.intent == "smalltalk":
         lines.append("Responde con un saludo o cortesia breve y humana" +
                      (" (maximo una frase, eres un companero que saluda de pasada)." if req.responder_role == "contributor" else "."))
+    elif req.intent == "task" and req.consult_to:
+        lines.append(f"El usuario pide un trabajo que NO es de tu area: es de {req.consult_to}. Rechazalo con tu "
+                     "personalidad, nombra a ese companero y di que se lo reasignas; NO lo hagas tu.")
     elif req.intent == "task":
         lines.append("El usuario pide un trabajo. Confirma brevemente que te encargas y que coordinaras con el equipo; "
                      "NO inventes resultados.")

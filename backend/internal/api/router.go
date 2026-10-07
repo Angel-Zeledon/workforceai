@@ -16,12 +16,14 @@ import (
 	"github.com/gorilla/websocket"
 
 	"aiworkforce/backend/internal/application"
+	"aiworkforce/backend/internal/artifacts"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
+	"aiworkforce/backend/internal/projects"
 )
 
 // Deps are the collaborators of the HTTP layer.
@@ -53,6 +55,11 @@ type Deps struct {
 	Conns    *connections.Service
 	Controls *controls.Service
 	Gateway  *gateway.Gateway
+	// Projects serves /projects, /project-templates and /approvals/batch
+	// (projects.go); Artifacts serves /artifacts and /projects/{id}/workspace
+	// (artifacts.go). Both optional: when nil the routes are not mounted.
+	Projects  *projects.Service
+	Artifacts *artifacts.Service
 	// AllowedOrigins is the CORS/WebSocket origin allow-list (see originPolicy).
 	AllowedOrigins []string
 	// EnableDemoReset registers POST /api/v1/demo/reset (admin role when auth is on).
@@ -103,6 +110,7 @@ func NewRouter(d Deps) http.Handler {
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}", s.getRequest)
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations", s.listConversations)
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations/{id}/messages", s.listMessages)
+			r.With(s.can(auth.PermConversationsPost)).Post("/messages", s.postChat)
 			r.With(s.can(auth.PermConversationsPost)).Post("/conversations/{id}/messages", s.postMessage)
 			r.With(s.can(auth.PermApprovalsRead)).Get("/approvals", s.listApprovals)
 			// Deciding approvals is a privileged action: admin/owner only.
@@ -116,6 +124,8 @@ func NewRouter(d Deps) http.Handler {
 			s.mountCost(r)
 			s.mountConnections(r)
 			s.mountControls(r)
+			s.mountProjects(r)
+			s.mountArtifacts(r)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}
@@ -283,20 +293,6 @@ func (s *server) getRequest(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) listConversations(w http.ResponseWriter, r *http.Request) {
 	v, err := s.Store.ListConversations(r.Context(), s.org(r))
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	writeJSON(w, 200, list(v))
-}
-
-func (s *server) listMessages(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if _, err := s.Store.GetConversation(r.Context(), s.org(r), id); err != nil {
-		s.fail(w, err)
-		return
-	}
-	v, err := s.Store.ListMessages(r.Context(), s.org(r), id)
 	if err != nil {
 		s.fail(w, err)
 		return

@@ -27,6 +27,10 @@ type Config struct {
 	AgentBudgetCapUSD   float64       // default monthly hard cap per agent
 	ConfirmThresholdUSD float64       // ask for confirmation when the estimated max exceeds this
 	PauseTimeout        time.Duration // how long a capped request/agent waits for a raised cap
+
+	// Chat layer (docs/architecture/chat-routing.md); zero values use the defaults noted here.
+	ChatTimeout time.Duration // per runtime call of a chat turn (route, reply); default 30s
+	ChatStagger time.Duration // pause before each additional responder of a turn (0 = none)
 }
 
 // DefaultConfig returns sane defaults.
@@ -38,6 +42,7 @@ func DefaultConfig() Config {
 		TaskTimeout: 120 * time.Second, MaxRetries: 3, RetryBase: 500 * time.Millisecond,
 		ApprovalTimeout: 30 * time.Minute, LockTTL: 10 * time.Minute, IdleDelay: 4 * time.Second,
 		ConfirmThresholdUSD: 1.0, PauseTimeout: 30 * time.Minute,
+		ChatTimeout: 30 * time.Second, ChatStagger: 900 * time.Millisecond,
 	}
 }
 

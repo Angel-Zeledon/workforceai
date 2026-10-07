@@ -54,6 +54,17 @@ const (
 	PermControlsKillSwitch    Permission = "controls:killswitch"
 	// PermControlsRelease lifts the kill switch / read-only mode: owner only.
 	PermControlsRelease Permission = "controls:release"
+
+	// Agent workspaces (docs/architecture/agent-workspaces.md sec. 7.1). Agents
+	// never hold artifacts:approve or artifacts:delete: their authority over an
+	// artifact is the intersection of their attachment mode and the user's rights.
+	PermArtifactsRead    Permission = "artifacts:read"
+	PermArtifactsCreate  Permission = "artifacts:create"
+	PermArtifactsWrite   Permission = "artifacts:write"
+	PermArtifactsComment Permission = "artifacts:comment"
+	PermArtifactsExport  Permission = "artifacts:export"
+	PermArtifactsApprove Permission = "artifacts:approve"
+	PermArtifactsDelete  Permission = "artifacts:delete"
 )
 
 func set(ps ...Permission) map[Permission]struct{} {
@@ -81,16 +92,19 @@ var (
 		PermMembersRead, PermAgentsRead, PermTasksRead, PermRequestsRead,
 		PermConversationsRead, PermApprovalsRead, PermReportsRead,
 		PermMemoriesRead, PermActivityRead, PermMetricsRead,
+		PermArtifactsRead,
 	)
 	memberPerms = union(viewerPerms,
 		PermRequestsCreate, PermTasksCreate, PermConversationsPost, PermMemoriesWrite,
 		PermConnectionsRead,
+		PermArtifactsCreate, PermArtifactsWrite, PermArtifactsComment, PermArtifactsExport,
 	)
 	adminPerms = union(memberPerms,
 		PermOrgManage, PermMembersInvite, PermMembersManage, PermAgentsWrite,
 		PermTasksManage, PermApprovalsDecide, PermAuditRead,
 		PermConnectionsManage, PermConnectionsGrant, PermConnectionsGrantWrite, PermConnectionsRevoke,
 		PermConnectionsUsageRead, PermControlsPause, PermControlsKillSwitch,
+		PermArtifactsApprove, PermArtifactsDelete,
 	)
 	ownerPerms = union(adminPerms, PermOrgDelete, PermBillingManage, PermControlsRelease, PermPolicyManage)
 

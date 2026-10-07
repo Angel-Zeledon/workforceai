@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/audit"
 	"aiworkforce/backend/internal/domain"
 )
@@ -341,6 +342,21 @@ func (s *Store) ListMessages(_ context.Context, _, conversationID string) ([]dom
 	}
 	return out, nil
 }
+
+// ListMessagesPage implements application.MessagePager.
+func (s *Store) ListMessagesPage(_ context.Context, _, conversationID, beforeID string, limit int) ([]domain.Message, bool, error) {
+	s.mu.Lock()
+	var all []domain.Message
+	for _, m := range s.messages {
+		if m.ConversationID == conversationID {
+			all = append(all, m)
+		}
+	}
+	s.mu.Unlock()
+	return application.PageMessages(all, beforeID, limit)
+}
+
+var _ application.MessagePager = (*Store)(nil)
 
 func (s *Store) CreateApproval(_ context.Context, _ string, a domain.Approval) error {
 	s.mu.Lock()

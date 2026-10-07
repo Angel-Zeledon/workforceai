@@ -12,7 +12,7 @@ def test_plan_shape(client):
     assert r.status_code == 200
     d = r.json()
     assert set(d) == {"objectives", "tasks", "clarifying_questions"}
-    assert set(d["tasks"][0]) == {"key", "title", "description", "agent_id", "depends_on"}
+    assert set(d["tasks"][0]) - {"reason"} == {"key", "title", "description", "agent_id", "depends_on"}  # reason is optional
     assert len(d["tasks"]) == 5
 
 

@@ -69,6 +69,7 @@ type run struct {
 	// the "on behalf of" of every tool request and the requester of its approvals.
 	requestedBy string
 	ext         runExt // taint, read-only request flag (connections_flow.go)
+	chat        *chatLink // set when the request was born in a chat turn (chat.go)
 }
 
 func (r *run) touch(agentID string) {
@@ -119,6 +120,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	rs.preset = preset
 	rs.requestedBy = ActorFrom(ctx, "")
 	rs.style = o.loadStyle(ctx)
+	rs.chat = chatLinkFrom(ctx)
 	o.rec.Emit(ctx, Action{Type: domain.EvRequestReceived, Entity: "request", EntityID: req.ID,
 		Payload: map[string]any{"request_id": req.ID, "text": text}, Text: "Nueva solicitud: " + truncate(text, 100)})
 	o.sendMessage(ctx, rs, "user", assistantID, "chat", text, nil)
@@ -264,6 +266,7 @@ func (o *Orchestrator) finish(ctx context.Context, rs *run, tasks []domain.Task,
 		Payload: map[string]any{"report": report}, Text: "Informe listo: " + report.Title})
 	o.setState(ctx, assistantID, domain.StateCompleted, "Informe entregado", nil, 100)
 	o.sendMessage(ctx, rs, assistantID, "user", "chat", "El informe está listo: "+report.Title, nil)
+	o.chatEchoReport(ctx, rs, report.Title)
 	o.rec.Emit(ctx, Action{Type: domain.EvRequestCompleted, Entity: "request", EntityID: rs.req.ID,
 		Payload: map[string]any{"request_id": rs.req.ID, "report_id": report.ID}, Text: "Solicitud completada"})
 	o.emitMetrics(ctx)
@@ -325,10 +328,10 @@ func (o *Orchestrator) createTasks(ctx context.Context, rs *run, plan PlanRespon
 		if err != nil {
 			return nil, err
 		}
-		if d > o.cfg.MaxDepth {
+		if maxDepth := max(o.cfg.MaxDepth, plan.MaxDepth); d > maxDepth { // plan.MaxDepth: long project chains (projects_hooks.go)
 			o.rec.Audit(ctx, domain.AuditLog{Actor: assistantID, Action: "delegation.depth_exceeded", Entity: "request", EntityID: rs.req.ID,
-				Details: map[string]any{"task": pt.Key, "depth": d, "max": o.cfg.MaxDepth}})
-			return nil, fmt.Errorf("profundidad de delegación %d supera el máximo %d", d, o.cfg.MaxDepth)
+				Details: map[string]any{"task": pt.Key, "depth": d, "max": maxDepth}})
+			return nil, fmt.Errorf("profundidad de delegación %d supera el máximo %d", d, maxDepth)
 		}
 	}
 
@@ -345,8 +348,15 @@ func (o *Orchestrator) createTasks(ctx context.Context, rs *run, plan PlanRespon
 		for _, k := range pt.DependsOn {
 			deps = append(deps, ids[k])
 		}
+		reason := cleanReason(pt.Reason)
+		if a, why := o.chatReassign(ctx, rs, agent, pt); why != "" { // the addressed agent declined it: the topic owner takes it
+			agent, reason = a, why
+		}
+		if reason == "" {
+			reason = defaultAssignReason(rs.style.Locale, rs.agents[agent])
+		}
 		t := domain.Task{ID: ids[pt.Key], RequestID: rs.req.ID, Title: pt.Title, Description: pt.Description, AgentID: agent,
-			Status: domain.TaskPending, DependsOn: deps, CreatedAt: now, Depth: depth[pt.Key]}
+			Status: domain.TaskPending, DependsOn: deps, CreatedAt: now, Depth: depth[pt.Key], AssignedReason: reason}
 		if err := o.store.CreateTask(ctx, o.org(ctx), t); err != nil {
 			return nil, err
 		}
@@ -360,12 +370,14 @@ func (o *Orchestrator) createTasks(ctx context.Context, rs *run, plan PlanRespon
 		Payload: map[string]any{"request_id": rs.req.ID, "tasks": planTasks(tasks)},
 		Text:    fmt.Sprintf("Plan creado con %d tareas", len(tasks))})
 	for _, t := range tasks {
-		o.rec.Emit(ctx, Action{Type: domain.EvTaskCreated, AgentID: t.AgentID, Entity: "task", EntityID: t.ID, Payload: map[string]any{"task": t}})
+		o.rec.Emit(ctx, Action{Type: domain.EvTaskCreated, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
+			Payload: map[string]any{"task": t, "assigned_reason": t.AssignedReason}})
 		if t.AgentID != assistantID {
 			tid := t.ID
 			o.sendMessage(ctx, rs, assistantID, t.AgentID, "delegation", "Te asigno: "+t.Title, &tid)
 		}
 	}
+	o.announceAssignments(ctx, rs, tasks) // chat-born requests: who got what and why, in plain language
 	return tasks, nil
 }
 
@@ -384,6 +396,9 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 
 	if !o.admitTask(ctx, rs, t) {
 		return OutcomeFailed // kill switch / pause never released before shutdown
+	}
+	if out, handled := o.projectGate(ctx, rs, t); handled {
+		return out // project paused/cancelled, human gate or milestone (projects_hooks.go)
 	}
 	agent := rs.agents[t.AgentID]
 	// Hold budget for the call first; a request/agent cap pauses here (visibly) until raised.
@@ -723,6 +738,7 @@ func (o *Orchestrator) failRequest(ctx context.Context, rs *run, agentID, what s
 	o.setState(ctx, agentID, domain.StateError, what, nil, 0)
 	o.reportError(ctx, agentID, fmt.Sprintf("%s: %v", what, cause))
 	o.sendMessage(ctx, rs, "system", "user", "chat", fmt.Sprintf("%s: %v", what, cause), nil)
+	o.chatEchoFailure(ctx, rs, what, cause)
 	o.emitMetrics(ctx)
 }
 

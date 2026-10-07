@@ -48,7 +48,7 @@ def _tokens(n: str) -> list[str]:
 # Stems over the normalized text (accents removed), Spanish and English.
 _TOPIC_PATTERNS: dict[str, re.Pattern[str]] = {
     "accounting": re.compile(
-        r"\b(financ|balance|margen|margin|costo|cost\b|costs\b|factur|invoice|presupuest|budget|flujo de caja|"
+        r"\b(finanz|financ|balance|margen|margin|costo|cost\b|costs\b|factur|invoice|presupuest|budget|flujo de caja|"
         r"cash ?flow|impuest|tax|contab|accounting|utilidad|profit|gasto|expense|ingreso|revenue|rentab|"
         r"deuda|debt|prestamo|loan|iva\b|p&l|estado de resultados|cuentas por)"),
     "legal": re.compile(
@@ -60,7 +60,7 @@ _TOPIC_PATTERNS: dict[str, re.Pattern[str]] = {
         r"nomina|salario|salary|vacaciones|hire\b|hiring|recruit|payroll|employee|candidat|entrevista|interview|"
         r"talento|despido|dismissal)"),
     "sales": re.compile(
-        r"\b(ventas?\b|vender|sales\b|sell\b|selling|propuesta|proposal|cliente|client|customer|cotizacion|quote\b|"
+        r"\b(ventas?\b|vend|sales\b|sell\b|selling|propuesta|proposal|cliente|client|customer|cotizacion|quote\b|"
         r"pipeline|prospecto|lead\b|leads\b|comercial|negociacion|negotiation|descuento|discount|oferta)"),
     "analyst": re.compile(
         r"\b(datos|data\b|analisis|analysis|analiz|analyz|metric|kpi|tendencia|trend|estadistic|statistic|"
@@ -113,7 +113,9 @@ _ACK = {"ok", "okay", "vale", "listo", "entendido", "dale", "bien", "cool", "ya"
 _FLUFF = {"a", "todos", "todas", "equipo", "team", "everyone", "all", "there", "amigos", "chicos", "chicas",
           "companeros", "como", "estan", "estas", "esta", "va", "y", "you", "how", "are", "is", "it", "going",
           "que", "tal", "muy", "dias", "tardes", "noches", "de", "nuevo", "again", "morning", "afternoon", "evening",
-          "les", "te", "bien", "yo", "aqui", "todo", "hows", "oficina", "office"}
+          "les", "te", "bien", "yo", "aqui", "todo", "hows", "oficina", "office",
+          # greeting words that can follow the opening ("hola equipo, buenos dias")
+          "buenos", "buenas", "buen", "good", "dia", "hola", "hi", "hello", "hey", "saludos", "gente"}
 
 _INTERROGATIVE = re.compile(
     r"^(que|como|cuanto|cuantos|cuanta|cuantas|cual|cuales|por que|porque|cuando|donde|quien|quienes|"
@@ -130,8 +132,8 @@ _TASK_STEMS = re.compile(
     r"schedule|research|summar|compare|estimate|plan\b|find|check)")
 _IMPERATIVES_ES = re.compile(
     r"^(prepara|haz|calcula|revisa|redacta|genera|crea|elabora|arma|analiza|envia|manda|investiga|escribe|"
-    r"resume|compara|estima|planifica|organiza|busca|contrata|cotiza|proponme|agendame)(me|lo|la|le|nos|melo|mela|selo)?$|^dame$")
-_AGENDA = re.compile(r"agenda (una|un|el|la)")
+    r"resume|compara|estima|planifica|organiza|busca|contrata|cotiza|vende|proponme|agendame)(me|lo|la|le|nos|melo|mela|selo)?$|^dame$")
+_AGENDA = re.compile(r"\bagenda (una|un|el|la)\b")
 _IMPERATIVES_EN = {"prepare", "make", "calculate", "review", "draft", "write", "create", "build", "generate", "analyze",
                    "analyse", "send", "schedule", "research", "summarize", "summarise", "compare", "estimate", "plan",
                    "find", "give", "put", "check", "run", "set", "list", "show"}
@@ -275,12 +277,22 @@ def rules_route(req: RouteRequest) -> RouteResponse:
         resp = RouteResponse(intent=intent, topic=topic,
                              responders=[Responder(agent_id=direct.id, role="primary", reason=rs["direct"])])
         owner = roster.for_role(primary_role) if primary_role and primary_role != ASSISTANT else None
-        if intent == "question" and owner is not None and owner.id != direct.id:
+        if intent in ("question", "task") and owner is not None and owner.id != direct.id and                 (direct.role or direct.id) != ASSISTANT:
             resp.consult = RouteConsult(agent_id=owner.id, reason=rs["consult"].format(
                 topic=label, name=roster.label(owner)))
         return resp
 
     assistant = roster.assistant()
+    # ---- office, but the user spoke to one colleague by name: only that person answers
+    addressed = _addressed(n, roster) if intent in ("question", "task") else None
+    if addressed is not None:
+        resp = RouteResponse(intent=intent, topic=topic, responders=[
+            Responder(agent_id=addressed.id, role="primary", reason=rs["direct"])])
+        owner = roster.for_role(primary_role) if primary_role and primary_role != ASSISTANT else None
+        if owner is not None and owner.id != addressed.id and (addressed.role or addressed.id) != ASSISTANT:
+            resp.consult = RouteConsult(agent_id=owner.id, reason=rs["consult"].format(
+                topic=label, name=roster.label(owner)))
+        return resp
     # ---- office: smalltalk -> the assistant answers first, one or two colleagues say hi
     if intent == "smalltalk":
         responders = [Responder(agent_id=assistant.id, role="primary", reason=rs["greeting"])]
@@ -309,6 +321,13 @@ def rules_route(req: RouteRequest) -> RouteResponse:
         responders.append(Responder(agent_id=contributor.id, role="contributor", reason=rs["related"].format(
             topic=_topic_label(req.locale, ROLE_TOPIC.get(crole, "general")))))
     return RouteResponse(intent=intent, topic=topic, responders=responders[:1 + MAX_CONTRIBUTORS])
+
+
+def _addressed(n: str, roster: Roster) -> RouteAgent | None:
+    """The one agent the user called by first name at the start of the message ("Tomás, ...", "oye Tomás ...")."""
+    toks = [t for t in _tokens(n) if t not in _EN_FILLER and t not in ("oye", "ey", "disculpa", "perdona", "sorry")][:2]
+    hits = [a for a in roster.agents if a.name and len(_tokens(norm(a.name))[0]) >= 3 and _tokens(norm(a.name))[0] in toks]
+    return hits[0] if len(hits) == 1 else None
 
 
 def _pick_contributor(primary: str, scores: dict[str, int], n: str, roster: Roster) -> RouteAgent | None:
@@ -402,7 +421,21 @@ def compose_reply(req: ChatReplyRequest) -> tuple[str, str, ReplyConsult | None]
     consult = None
     kind = "chat"
 
-    if req.consult is not None:  # a colleague asked this agent
+    other = roster.by_id.get(req.consult_to or "")
+    if other is not None and other.id == agent.id:
+        other = None
+    other_role = (other.role or other.id) if other is not None else ""
+    ctx = dict(other=roster.label(other) if other else "", other_title=(other.title or other.role) if other else "",
+               topic_area=c["area"].get(other_role, ""), my_area=area)
+
+    if req.limit:  # a real limit: say no in this role's own voice
+        core = c["limit_core"].get(req.limit) or c["limit_core"]["paused"]
+        lead = c["limit_lead"].get(role) or c["limit_lead"]["assistant"]
+        options = [f"{l} {k}" for l in lead for k in core]
+        text = _pick(options, rng, avoid, **base)
+    elif req.handoff and other is not None:
+        text = _pick(c["handoff_yes"], rng, avoid, other=ctx["other"])
+    elif req.consult is not None:  # a colleague asked this agent
         options = c["consult_a"].get(role) or c["consult_a"]["default"]
         text, kind = _pick(options, rng, avoid, **base), "answer"
     elif req.intent == "smalltalk":
@@ -419,17 +452,21 @@ def compose_reply(req: ChatReplyRequest) -> tuple[str, str, ReplyConsult | None]
             text = _pick(c["greet_primary"], rng, avoid, **base)
         else:
             text = _pick(c["greet_self"], rng, avoid, **base)
+    elif req.intent == "task" and other is not None and role != ASSISTANT:
+        lead = c["limit_lead"].get(role) or c["limit_lead"]["assistant"]
+        text = _pick([f"{l} {k}" for l in lead for k in c["refuse_core"]], rng, avoid, **base, **ctx)
     elif req.intent == "task":
         text = _pick(c["task_ack"] if role == ASSISTANT else c["task_ack_self"], rng, avoid, **base)
     elif req.responder_role == "contributor":
         text = _pick(c["contrib"].get(role) or c["contrib"]["default"], rng, avoid, **base)
     else:
-        other = roster.by_id.get(req.consult_to or "")
-        if other is not None and other.id != agent.id and parse_conversation(req.conversation):
-            text = _pick(c["redirect"], rng, avoid, other=roster.label(other), other_title=other.title or other.role, **base)
+        if other is not None:
+            pool = list(c["deflect"].get(role) or c["deflect"]["assistant"])
+            pool += c["deflect_pair"].get((role, other_role), [])
+            text = _pick(pool, rng, avoid, **base, **ctx)
             q = re.sub(r"\s+", " ", req.text).strip()[:140]
             consult = ReplyConsult(to_agent_id=other.id, question=_pick(
-                c["consult_q"], rng, set(), other=roster.label(other), q=q))
+                c["consult_q"], rng, set(), other=ctx["other"], q=q))
         elif role == ASSISTANT or role not in c["answer"]:
             text = _pick(c["answer_general"], rng, avoid, **base)
         else:

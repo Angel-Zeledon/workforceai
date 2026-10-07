@@ -54,7 +54,7 @@ const out = (o: Partial<StructuredOutput>): Partial<StructuredOutput> => o;
 
 export function buildPlan(text: string): TaskSpec[] {
   const t = text.toLowerCase();
-  if (/50[, ]?000|propuesta|cliente|cotiz|proposal|quote/.test(t)) {
+  if (/50[, ]?000|propuesta|cliente|cotiz|proposal|\bquote/.test(t)) {
     return [
       { key: "t1", agent: "sales", title: "Analizar cliente y requerimientos", desc: "Perfilar al cliente y alcance de la propuesta de $50,000.", secs: 5, deps: [], activities: ["Revisando historial del cliente", "Mapeando requerimientos", "Estimando alcance y precio"], out: out({ summary: "Cliente Grupo Alfa: alcance de 6 meses, ticket de $50,000, decisor identificado.", findings: ["Cliente recurrente con buen historial de pago", "Pide entrega en 8 semanas", "Margen objetivo comercial: 31%"], metrics: { ticket: "$50,000", margen_estimado: "31%" }, recommendations: ["Preparar propuesta por fases"], confidence: 0.86 }) },
       { key: "t2", agent: "legal", title: "Revisar términos del contrato", desc: "Revisar cláusulas de penalización, SLA y responsabilidad.", secs: 6, deps: ["t1"], reviewing: true, activities: ["Leyendo borrador de contrato", "Comparando contra plantilla MSA", "Marcando cláusulas de riesgo"],
@@ -85,7 +85,7 @@ export function buildPlan(text: string): TaskSpec[] {
       { key: "b4", agent: "assistant", title: "Consolidar informe", desc: "Unir resultados.", secs: 4, deps: ["b2", "b3"], activities: ["Reuniendo resultados", "Redactando resumen"], out: out({ summary: "Informe consolidado.", confidence: 0.88 }) },
     ];
   }
-  if (/contrat|vacante|personal|reclut|hire|hiring|vacanc/.test(t)) {
+  if (/contrat|vacante|personal|reclut|\bhire\b|hiring|vacanc/.test(t)) {
     return [
       { key: "c1", agent: "hr", title: "Definir perfiles y banda salarial", desc: "Perfiles, requisitos y rango salarial de mercado.", secs: 5, deps: [], activities: ["Definiendo perfiles", "Comparando banda salarial"], out: out({ summary: "Dos perfiles senior definidos; banda $3,600-$4,200.", metrics: { banda: "$3,600-$4,200" }, confidence: 0.84 }) },
       { key: "c2", agent: "accounting", title: "Validar presupuesto de contratación", desc: "Impacto en nómina y flujo de caja.", secs: 5, deps: ["c1"], activities: ["Calculando costo cargado", "Proyectando nómina"], consult: { to: "hr", q: "¿Incluyes prestaciones en la banda salarial?", a: "Sí, el rango es bruto; el costo cargado agrega ~28%." }, out: out({ summary: "Costo cargado de $7,800/mes por las 2 personas; viable dentro del presupuesto.", metrics: { costo_mensual: "$7,800" }, confidence: 0.87 }) },
@@ -127,7 +127,7 @@ export class MockBackend {
     emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agent: (id) => this.agents.find((a) => a.id === id), agents: () => this.agents,
     setState: (id, st, act, tid, pr) => this.setState(id, st, act, tid, pr), log: (a, k, t) => this.log(a, k, t),
     planPreview: (text) => buildPlan(text).map((s) => ({ key: s.key, agent: s.agent, title: s.title })),
-    startRequest: (text) => this.startRequest(text), startDirectTask: (id, text) => this.startDirectTask(id, text), uid,
+    startRequest: (text) => this.startRequest(text), startDirectTask: (id, text, reason) => this.startDirectTask(id, text, reason), uid,
   }); // chat routing: POST /messages, chat.* and route.decided
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
 
@@ -208,7 +208,7 @@ export class MockBackend {
   }
 
   /** Task asked in an agent's own 1:1 chat: only that agent works on it. Resolves with the summary. */
-  private async startDirectTask(agentId: string, text: string): Promise<string> {
+  private async startDirectTask(agentId: string, text: string, reason?: string): Promise<string> {
     const title = tr("mock.direct.title", { text: text.slice(0, 48) });
     const req: Request = { id: uid("req"), text, status: "running", created_at: nowIso(), report_id: null, cost_usd: 0 };
     this.requests.unshift(req);
@@ -221,7 +221,7 @@ export class MockBackend {
     const task: Task = {
       id: uid("task"), request_id: req.id, workflow_id: null, title, description: spec.desc, agent_id: agentId, status: "pending",
       depends_on: [], parent_task_id: null, created_at: nowIso(), started_at: null, finished_at: null, output: null,
-      assigned_reason: tr("mock.reason.direct"),
+      assigned_reason: reason || tr("mock.reason.direct"),
     };
     this.specs.set(task.id, spec); this.tasks.push(task);
     this.emit("plan.created", { request_id: req.id, tasks: [{ id: task.id, title, agent_id: agentId, depends_on: [] }] }, agentId);

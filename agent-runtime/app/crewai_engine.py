@@ -50,7 +50,7 @@ from .providers import (
     is_transient,
     policy_from_request,
 )
-from .routing import rules_route, validate_route
+from .routing import compose_reply, rules_route, validate_route
 from .security import (
     build_chat_prompt,
     build_chat_system_prompt,
@@ -286,6 +286,10 @@ class CrewAIEngine(AgentEngine):
                 expected="JSON con intent, topic, primary_agent_id, contributor_agent_ids y reasons",
                 schema=_RouteLLM, policy=policy_from_request(req, "route"), max_tokens=300)
             out = validate_route(res.model_dump(), req)
+            rules = rules_route(req)
+            if rules.consult is not None:  # wrong-area asks (1:1 or addressed by name) follow the deterministic rules
+                rules.usage, rules.provider, rules.model = usage, usage.provider, usage.model
+                return rules
             if out is not None:
                 out.usage, out.provider, out.model = usage, usage.provider, usage.model
                 return out
@@ -295,6 +299,10 @@ class CrewAIEngine(AgentEngine):
         return rules_route(req)
 
     async def chat_reply(self, req: ChatReplyRequest) -> ChatReplyResponse:
+        if req.limit or req.handoff:  # "I can't" lines and handoffs are scripted: no LLM call, no cost
+            text, kind, consult = compose_reply(req)
+            return ChatReplyResponse(text=text, kind=kind, consult=consult, usage=Usage(
+                model="scripted", input_tokens=0, output_tokens=0, cost_usd=0.0, duration_ms=0))
         res, usage = await self._run(
             role=req.agent.title or req.agent.role, goal="Responder en el chat de la oficina como una persona",
             backstory=build_chat_system_prompt(req.agent, req.locale, req.tone),
@@ -307,7 +315,7 @@ class CrewAIEngine(AgentEngine):
         valid = {a.id for a in req.agents}
         if (res.consult_to_agent_id and res.consult_question and res.consult_to_agent_id in valid
                 and res.consult_to_agent_id != req.agent.id and req.consult is None
-                and req.conversation.startswith("agent:")):  # consults only in 1:1 chats, never chained
+                and req.consult_to == res.consult_to_agent_id):  # only the colleague the router named, never chained
             consult = ReplyConsult(to_agent_id=res.consult_to_agent_id, question=res.consult_question.strip()[:300])
         kind = "answer" if req.consult is not None else "chat"
         return ChatReplyResponse(text=text[:1200], kind=kind, consult=consult, usage=usage,

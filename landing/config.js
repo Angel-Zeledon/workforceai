@@ -6,8 +6,8 @@ window.LANDING_CONFIG = {
   // Demo pública (app abierta en modo simulación, sin IA real ni credenciales).
   DEMO_URL: "https://app.workforceai.es",
 
-  // Correo de contacto / acceso anticipado. Vacío = el botón de contacto lleva a la demo (no se publica ningún correo).
-  CONTACT_EMAIL: "",
+  // Correo de contacto / acceso anticipado. Vacío = el botón de contacto lleva a la demo.
+  CONTACT_EMAIL: "info@workforceai.es",
 
   // Asunto del correo de acceso anticipado, por idioma.
   CONTACT_SUBJECT: {

@@ -61,7 +61,14 @@ export type ChatConversationId = string;
 export interface ChatMessage {
   id: string; conversation: ChatConversationId; turn_id: string | null; from: string; to: string;
   kind: MessageKind; text: string; reply_to: string | null; ts: string;
+  /** optional: the agent redirects the topic to this colleague (offers a quick action) */
+  handoff_to?: string | null;
 }
 export type TurnIntent = "smalltalk" | "question" | "task";
 export interface RouteResponder { agent_id: string; role: "primary" | "contributor"; reason: string }
-export interface RouteDecision { turn_id: string; intent: TurnIntent; topic: string; responders: RouteResponder[]; ts: string }
+export interface RouteDecision {
+  turn_id: string; intent: TurnIntent; topic: string; responders: RouteResponder[]; ts: string;
+  /** llm | rules | local | handoff */ source?: string;
+  /** topic of another area: who it would be handed to (questions) / reassigned to (tasks) */
+  consult?: { agent_id: string; reason?: string } | null;
+}

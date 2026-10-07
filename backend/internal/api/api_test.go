@@ -96,6 +96,7 @@ type opts struct {
 	wsMaxAge       time.Duration
 	timeouts       api.Timeouts
 	skipAuthRoutes bool
+	ws             bool // mount projects and artifacts (workspaces_api_test.go)
 }
 
 type env struct {
@@ -128,6 +129,9 @@ func newEnv(t *testing.T, o opts) *env {
 
 	d := api.Deps{Cfg: cfg, Queries: q, Orch: orch, Approvals: appr, Store: spy, Runtime: fakeRuntime{}, Hub: hub, Log: log,
 		AuthEnabled: o.auth, AllowedOrigins: o.origins, EnableDemoReset: o.demoReset, MaxBodyBytes: o.maxBody, WSMaxAge: o.wsMaxAge}
+	if o.ws {
+		attachWorkspaces(&d, spy, rec, appr, orch, log, ctx)
+	}
 	var svc *auth.Service
 	if o.auth {
 		var err error

@@ -159,12 +159,17 @@ type PlannedTask struct {
 	Description string   `json:"description"`
 	AgentID     string   `json:"agent_id"`
 	DependsOn   []string `json:"depends_on"`
+	// Reason is the optional human explanation of why this agent got the task.
+	Reason string `json:"reason,omitempty"`
 }
 
 type PlanResponse struct {
 	Objectives          []string      `json:"objectives"`
 	Tasks               []PlannedTask `json:"tasks"`
 	ClarifyingQuestions []string      `json:"clarifying_questions"`
+	// MaxDepth, when above Config.MaxDepth, raises the dependency-chain limit
+	// for this plan only (long project workflows). Never sent by the runtime.
+	MaxDepth int `json:"-"`
 }
 
 type RunTaskInfo struct {

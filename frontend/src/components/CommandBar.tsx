@@ -40,7 +40,7 @@ export function CommandBar() {
   };
 
   return (
-    <div data-testid="office-chat" data-open={open && hasThread ? "true" : "false"} className="pointer-events-auto w-full max-w-[760px]">
+    <div data-testid="office-chat" data-open={open && hasThread ? "true" : "false"} className="pointer-events-auto w-full max-w-[720px]">
       {hasThread && (
         <section aria-label={t("chat.office.title")} className="mb-2 overflow-hidden rounded-xl border border-line-strong bg-panel/95 shadow-float backdrop-blur">
           <header className="flex items-center gap-2 px-3 py-2">
@@ -49,6 +49,7 @@ export function CommandBar() {
             {!open && who.length > 0 && <span className="text-[11px] text-mute" aria-hidden>{t(who.length === 1 ? "chat.typing.one" : "chat.typing.many", { name: name(who[0]).split(" ")[0] })}</span>}
             {!open && who.length === 0 && last && <span className="min-w-0 flex-1 truncate text-[11.5px] text-ink2">{name(last.from).split(" ")[0]}: {last.text.split("\n")[0]}</span>}
             <span className="flex-1" />
+            {active && <span data-testid="chat-progress" className="hidden whitespace-nowrap text-[11px] text-mute sm:block">{t("cmd.inProgress", { status: t(`cmd.status.${active.status}`) })}</span>}
             {!open && unread > 0 && <span data-testid="chat-unread" className="rounded-full bg-accent px-1.5 py-[1px] text-[10px] font-semibold text-white">{t("chat.office.new", { count: unread })}</span>}
             <button
               ref={toggle} type="button" data-testid="chat-collapse" aria-expanded={open} onClick={() => setOpen((o) => !o)}
@@ -76,7 +77,6 @@ export function CommandBar() {
           <div className="min-w-0 flex-1">
             <ChatInput conv={OFFICE} testId="command-input" submitTestId="command-submit" placeholder={t("cmd.placeholder")} onSent={() => setOpen(true)} />
           </div>
-          {active && <span className="hidden whitespace-nowrap text-[11px] text-mute sm:block">{t("cmd.inProgress", { status: t(`cmd.status.${active.status}`) })}</span>}
         </div>
       </div>
       {err && <div role="alert" className="mt-1 text-center text-[11px] text-err">{err}</div>}

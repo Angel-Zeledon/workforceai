@@ -345,7 +345,11 @@ class ChatReplyRequest(_ProviderPolicyMixin):
     prior_replies: list[HistoryItem] = Field(default_factory=list)  # replies already given in this turn
     consult: ChatConsultIn | None = None
     slot: int = 0  # position of this reply in the turn (0 = first), for greeting variety
-    consult_to: str | None = None  # agent id that owns the topic (1:1 redirect hint from /v1/route)
+    consult_to: str | None = None  # agent id that owns the topic (redirect / reassignment hint from /v1/route)
+    # A real limit stops the agent from doing what was asked: it says so in its own voice (scripted, never an
+    # LLM call, zero cost). kill_switch | paused | budget | read_only | no_connection
+    limit: str | None = None
+    handoff: bool = False  # the user accepted a redirect: this agent now takes the turn from the colleague
     locale: Locale = "es"
     tone: Tone = "neutral"
 

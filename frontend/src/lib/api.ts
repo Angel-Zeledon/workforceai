@@ -28,7 +28,7 @@ export function toChatMessage(x: any, conv: string): ChatMessage {
     id: String(x.id ?? x.message_id ?? `${x.turn_id ?? "t"}:${x.from}:${x.ts}`),
     conversation: String(x.conversation ?? x.conversation_id ?? conv),
     turn_id: x.turn_id ?? null, from: String(x.from), to: String(x.to ?? ""),
-    kind: x.kind ?? "chat", text: String(x.text ?? ""), reply_to: x.reply_to ?? null, ts: String(x.ts ?? new Date().toISOString()),
+    kind: x.kind ?? "chat", text: String(x.text ?? ""), reply_to: x.reply_to ?? null, ts: String(x.ts ?? new Date().toISOString()), handoff_to: x.handoff_to ?? null,
   };
 }
 

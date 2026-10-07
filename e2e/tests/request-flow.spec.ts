@@ -41,5 +41,5 @@ test("solicitud -> aprobación -> reporte", async ({ page }) => {
   const reports = (await api.get<Report[] | null>("/reports")) ?? [];
   expect(reports[0].contributors.length).toBeGreaterThanOrEqual(3);
 
-  await expect(page.getByTestId("activity-feed")).toContainText(/report|reporte/i);
+  await expect(page.getByTestId("activity-feed")).toContainText(/report|reporte|informe/i);
 });

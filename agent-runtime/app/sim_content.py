@@ -573,6 +573,105 @@ TONE_SUBS: dict[str, list[tuple[str, str]]] = {
 }
 
 
+# ---- out-of-competence dialogue: each role answers in its own voice ({other}: the right colleague by name)
+# Placeholders: {other} name, {other_title} job title, {topic_area} what that colleague covers, {my_area} what I cover.
+CHAT["deflect"] = {
+    "accounting": [  # precise, a bit dry
+        "Eso no es lo mío: {topic_area} lo lleva {other}. Háblalo con {other}; si quieres, se lo paso.",
+        "Fuera de mi área. Para {topic_area}, quien corresponde es {other}. ¿Se lo traslado?",
+        "Yo me ciño a lo mío ({my_area}); {topic_area} es de {other} ({other_title}). Se lo paso si me lo confirmas.",
+        "No me corresponde. {other} lleva {topic_area}. Te lo canalizo, dime.",
+        "Mi campo es {my_area}. {other} se encarga de {topic_area}. ¿Lo derivo?",
+        "Mejor con {other}: {topic_area} no es mi campo y no pienso improvisar.",
+    ],
+    "legal": [  # cautious
+        "Prefiero no opinar sobre {topic_area}: lo lleva {other} y conviene que lo vea quien sabe. ¿Se lo paso?",
+        "Con cautela: {topic_area} no es mi área y no quiero darte algo impreciso. {other} es quien lo lleva.",
+        "Eso cae fuera de lo mío; mejor que lo vea {other} ({other_title}). Si quieres, se lo consulto.",
+        "No me corresponde pronunciarme sobre {topic_area}. {other} puede orientarte mejor; ¿le escribo?",
+        "Para no meter la pata: {topic_area} es de {other}. Yo me quedo con {my_area}.",
+        "Antes de que haya malentendidos: eso es de {other}, no mío. ¿Lo derivo?",
+    ],
+    "sales": [  # enthusiastic
+        "¡Uy, eso le toca a {other}, que lleva {topic_area}! ¿Se lo paso?",
+        "¡Qué buena idea, pero no es lo mío! {other} es quien se encarga de {topic_area}. ¿Te lo conecto?",
+        "Eso lo hace mejor {other} ({other_title}); {topic_area} es su terreno. ¡Te lo paso en un momento!",
+        "¡Con gusto te ayudo con ventas, pero {topic_area} es de {other}! ¿Los conecto?",
+        "Ay, ahí me pierdo: {topic_area} lo domina {other}. Te lo paso, ¿va?",
+        "¡Vamos a ponerte con la persona correcta! {other} lleva {topic_area}.",
+    ],
+    "hr": [  # empathetic
+        "Entiendo lo que necesitas, pero {topic_area} lo lleva {other}; quiero que te lo resuelvan bien. ¿Se lo paso?",
+        "Con todo el cariño: eso no es mi área. {other} ({other_title}) te va a ayudar mejor con {topic_area}.",
+        "Me encantaría ayudarte, pero {topic_area} es de {other}. ¿Quieres que le avise?",
+        "Para que quedes bien atendido: {other} se ocupa de {topic_area}. Yo me quedo con {my_area}. ¿Le paso tu pedido?",
+        "Gracias por confiarme esto, aunque no me toca: {other} lleva {topic_area}. Te acompaño en el traspaso, si quieres.",
+        "Mejor que lo vea {other}; {topic_area} es lo suyo y te va a dar una respuesta más útil.",
+    ],
+    "operations": [  # practical
+        "Eso no me toca. {topic_area}: {other}. ¿Se lo paso?",
+        "Directo: no es mi área. Para {topic_area} ve con {other} ({other_title}). Si quieres, lo derivo.",
+        "Yo veo {my_area}; {topic_area} es de {other}. Lo más rápido es pasárselo. ¿Va?",
+        "Para no perder tiempo: eso lo resuelve {other}. ¿Lo derivo ahora?",
+        "No es mío. {other} lleva {topic_area}; dime y se lo paso.",
+        "Eso va con {other}. Yo me quedo con {my_area}.",
+    ],
+    "analyst": [  # curious
+        "Interesante, pero {topic_area} no es mi terreno; {other} sabrá más. ¿Se lo paso?",
+        "Me da curiosidad, aunque no me toca: {other} lleva {topic_area}. ¿Quieres que le pregunte?",
+        "Ahí no tengo datos ni criterio; {other} ({other_title}) sí. ¿Se lo consulto?",
+        "Buena pregunta para {other}, que lleva {topic_area}. Yo puedo aportar datos después, si hace falta.",
+        "No es mi campo, pero me intriga; mejor {other}. ¿Le paso la pregunta?",
+        "Eso cae en {topic_area}, de {other}. Si luego quieres cruzarlo con datos, aquí estoy.",
+    ],
+    "assistant": [  # helpful
+        "Con gusto te lo resuelvo: {topic_area} lo lleva {other}. Se lo paso ahora mismo, ¿te parece?",
+        "Eso lo ve mejor {other} ({other_title}); te lo conecto enseguida.",
+        "Déjame ponerte con {other}, que lleva {topic_area}. ¿Va?",
+        "Para que salga bien, lo mejor es {other}. Yo coordino y se lo hago llegar.",
+        "{other} es la persona indicada para {topic_area}. ¿Le paso tu mensaje?",
+        "Lo coordino con {other}, que se encarga de {topic_area}. Dime y arranco.",
+    ],
+}
+# Pair-specific lines (role asked, role that owns the topic), added to the pool of that pair.
+CHAT["deflect_pair"] = {
+    ("accounting", "sales"): ["Uy, eso le toca a {other}, ella lleva las ventas. Yo solo llevo los números; ¿se lo paso?",
+                              "Vender no es lo mío. {other} es quien vende; te la conecto."],
+    ("legal", "sales"): ["Yo reviso los contratos, no vendo. Para la parte comercial, {other}. ¿Se lo paso?"],
+    ("sales", "accounting"): ["¡Los números finos son de {other}! Yo vendo, él cuenta. ¿Se lo paso?"],
+    ("hr", "legal"): ["Lo del contrato lo ve {other}; yo acompaño a las personas, no firmo cláusulas. ¿Le aviso?"],
+}
+# Task clearly outside the role: personality lead + core, then the backend reassigns the work.
+CHAT["refuse_core"] = [
+    "Ese trabajo no me toca: lo reasigno a {other} ({other_title}), que lleva {topic_area}, y te cuento el plan.",
+    "No es mío: se lo paso a {other}, que se ocupa de {topic_area}, y lo coordino con el equipo.",
+    "Eso es de {topic_area}, o sea de {other}. Lo reasigno y te explico por qué.",
+]
+# Real limits ("I can't do that"): lead per role + core per limit kind.
+CHAT["limit_lead"] = {
+    "accounting": ["Seré breve.", "Dato directo.", "Sin vueltas."],
+    "legal": ["Con cautela.", "Mejor aclararlo.", "Prudencia primero."],
+    "sales": ["¡Uy, qué pena!", "¡Ay, justo ahora!", "¡Lo siento mucho!"],
+    "hr": ["Lo lamento de verdad.", "Me da pena decirlo.", "Entiendo que no es lo que esperabas."],
+    "operations": ["Claro y corto.", "Sin rodeos.", "Directo."],
+    "analyst": ["Qué lástima.", "Mala noticia.", "Ojo."],
+    "assistant": ["Disculpa.", "Perdona la molestia.", "Lo siento."],
+}
+CHAT["limit_core"] = {
+    "kill_switch": ["Ahora mismo el equipo está en pausa por el interruptor de emergencia, así que no puedo hacerlo.",
+                    "Hay un freno de emergencia activo; hasta que lo levanten no puedo trabajar en esto."],
+    "paused": ["Me pusieron en pausa, así que por ahora no puedo ayudarte con eso.",
+               "Estoy en pausa hasta nuevo aviso; no puedo tomarlo."],
+    "budget": ["Llegamos al tope de gasto y no puedo seguir hasta que lo suban.",
+               "El presupuesto está agotado; sin más tope no puedo responder."],
+    "read_only": ["Estamos en modo solo lectura: puedo analizar, pero no ejecutar ni enviar nada.",
+                  "Con el modo solo lectura activo, no puedo hacer cambios ni envíos."],
+    "no_connection": ["No tengo conexión con esa herramienta, así que no puedo hacerlo yo.",
+                      "Me falta la conexión o el permiso para eso; habría que habilitarlo primero."],
+}
+CHAT["handoff_yes"] = ["Perfecto, te paso con {other}.", "Va, {other} toma desde aquí.", "Listo, ahora te atiende {other}."]
+
+
 def bundle(locale: str):
     """Return the content module for a locale ("es" default, "en")."""
     if locale == "en":

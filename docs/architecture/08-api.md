@@ -559,3 +559,102 @@ Migración `250_audit_chain.sql` (+ `backend/migrations/down/250_audit_chain_dow
 ### 14.9 Variables de entorno
 
 Ninguna nueva. `APPROVAL_ACTIONS` (def. `send_proposal,send_contract`) sigue siendo parte del suelo inalterable (06 sec. 8.1).
+
+## 15. Chat conversacional (backend implementado)
+
+Contrato completo y reglas en [chat-routing.md](chat-routing.md). Resumen:
+
+### 15.1 `POST /messages`
+
+`{"conversation": "office" | "agent:<id>", "text": "..."}` -> `202 {"message_id", "turn_id"}`. Permiso `conversations:write`. Guarda el mensaje, enruta (`POST /v1/route` del runtime, con respaldo a reglas locales) y responde por WebSocket (`chat.message`, `chat.typing`, `route.decided`). `smalltalk` y `question` no crean solicitud, plan ni tareas; `task` sigue el flujo existente (plan, aprobación humana). `400` texto vacío / conversación inválida, `404` agente desconocido.
+
+### 15.2 `GET /conversations/{id}/messages`
+
+Sin parámetros devuelve todo (como antes). `?limit=N` (máx. 200) devuelve los N más recientes; `?before=<message_id>` los N anteriores. Cuerpo = array; headers `X-Has-More` y `X-Next-Before`. Los ids `office` y `agent:<id>` son conversaciones por organización creadas al primer mensaje (lista vacía si aún no hay).
+
+### 15.3 Cambios aditivos
+
+`Message` gana `turn_id`, `reply_to`, `request_id`; `Task` gana `assigned_reason`; `POST /v1/plan` admite `reason` por tarea. Migración `260_chat.sql`.
+
+### 15.4 Runtime
+
+`POST /v1/route` y `POST /v1/chat-reply` (ver chat-routing.md sec. 5). Opcionales: sin ellos el backend usa reglas locales.
+
+## 16. Proyectos (backend implementado)
+
+Un proyecto es un workflow entero con trabajo en paralelo: objetivos -> flujos -> nodos. Lanzarlo envía sus hojas como **una solicitud** del orquestador (tareas reales con dependencias), por lo que el tope de presupuesto, las aprobaciones, el kill-switch / solo lectura / pausa de agente, la política y la auditoría son los de siempre. Diseño y decisiones: [workflow-visualization.md](workflow-visualization.md) (Apéndice A, "Estado del backend"). Código: `backend/internal/projects`, `backend/internal/api/projects.go`. Migración `270_projects.sql` (down: `migrations/down/270_projects_down.sql`). Los ids de proyecto son `prj-<12 hex>`; los de nodo `<proyecto>:<clave>` (la subtarea delegada, `<nodo>~s`).
+
+### 16.1 Endpoints (`/api/v1`)
+
+| Ruta | Permiso | Respuesta |
+|---|---|---|
+| `GET /projects` | `tasks:read` | array de `ProjectSummary` (más recientes primero) |
+| `POST /projects/draft` `{goal, template_id?, params?, budget_usd?, locale?}` | `requests:create` | `201 {project_id}`. Plantilla: id/clave (`tpl-financial-close`, `tpl-branch-opening`, `tpl-generic`), `wf:<clave>` (flujo del catálogo, p. ej. `wf:month_close` con `params:{month}`) o una guardada. Sin `template_id`: "cierre financiero/contable" -> `financial_close`; si no, planificador del runtime con respaldo `generic` |
+| `POST /projects/from-template` | `requests:create` | igual que `draft` (exige `template_id`) |
+| `GET /projects/{id}` y `GET /projects/{id}/snapshot?depth=full` | `tasks:read` | `{project, objectives, nodes, approvals, budget, estimate, structure_version, max_parallel, planning:null}` |
+| `PATCH /projects/{id}/plan` `{ops:[{op:"update", id, fields:{title?, agent_id?}}]}` | `requests:create` | `{structure_version, issues}`; solo borradores (`409` si no); agente inexistente `400` |
+| `POST /projects/{id}/estimate` | `requests:create` | `{estimate:{basis:"priors", total{p50_usd,p90_usd,calls}, duration, by_objective, by_agent, warnings}}` |
+| `POST /projects/{id}/validate` | `requests:create` | `{ok, issues:[{severity,code,node_id?}]}`; códigos `cycle`, `no_nodes`, `empty_title`, `no_agent`, `unknown_agent`, `dangling_dependency` |
+| `POST /projects/{id}/launch` `{approved_budget_usd, acknowledge_underbudget?, max_parallel?}` | `requests:create` | `202 {ok, project}`. `409` si no es borrador o `underbudget` (presupuesto < P50 sin reconocimiento); `400 invalid_plan (...)` |
+| `POST /projects/{id}/control` `{action: "pause"\|"resume"\|"cancel"}` y atajos `POST /projects/{id}/pause\|resume\|cancel` | `tasks:manage` | `{ok, status, control, project}`; `409` en transiciones no válidas |
+| `PUT /projects/{id}/budget` `{budget_usd}` | `tasks:manage` | `{ok, project}`; en un proyecto lanzado cambia el tope de su solicitud y despierta lo pausado (debe ser > 0) |
+| `GET /projects/{id}/health` | `tasks:read` | semáforo, progreso, ETA P50/P90, camino crítico, presupuesto y pronóstico, esperando humano, riesgos, por objetivo |
+| `GET /projects/{id}/approvals` | `approvals:read` | aprobaciones del proyecto: compuertas, de herramientas de sus tareas y `extend_budget` |
+| `POST /approvals/batch` `{filter:{project_id, action}, decision:"approve"\|"reject", expected_count, include_high?}` | `approvals:decide` | `{ok, count, decided}`. `409 count_mismatch` si hay otro número pendiente; `409 high_risk_needs_confirmation` si alguna es de riesgo alto sin `include_high`. Cada decisión pasa por `Approvals.Decide` (rol, "los agentes nunca aprueban", doble aprobación, auditoría); la primera que falle corta y lo ya decidido queda decidido (`decided`) |
+| `GET /project-templates` | `tasks:read` | plantillas incorporadas + flujos del catálogo (`wf:*`) + las guardadas por la organización |
+| `POST /projects/{id}/save-as-template` | `requests:create` | `201 Template` (guardada por organización, `builtin:false`) |
+
+`GET /projects/{id}/workspace` (entregables como artefactos) está en la sec. 17. Aislamiento: un proyecto de otra organización responde `404` en todas las rutas.
+
+### 16.2 Estados
+
+`project.status`: `draft`, `running`, `paused`, `waiting_human` (esperando una aprobación o ampliación de presupuesto), `done`, `failed`, `cancelled`; `control`: `active|paused|cancelled`. Nodo: `draft`, `pending`, `ready`, `running`, `awaiting_approval`, `waiting` (temporizador), `paused` (proyecto o agente en pausa / kill-switch), `blocked`, `done`, `failed`, `cancelled`. Todo se deriva de las tareas del orquestador al leer.
+
+### 16.3 Eventos WS (aditivos)
+
+`project.created`, `project.status_changed`, `project.delta`: `payload = {project: ProjectSummary, nodes?: Node[] (solo los que cambiaron, con rev), approvals?, estimate?, structure_version?}`. Los publica el monitor del proyecto (cada 250 ms si algo cambió). Sin entrada de auditoría por delta; sí `project.created|launched|paused|resumed|cancelled|budget_changed|plan_edited|saved_as_template|approvals_batch|done|failed`.
+
+### 16.4 Notas de contrato
+
+- Las tareas de un proyecto aparecen también en `/tasks` y `/requests/{request_id}` (el `request_id` está en `project.request_id`). Su descripción termina con `[project-node:<id>]`.
+- La estimación usa priors (`basis:"priors"`, modelo `deepseek-chat`), no el estimador del runtime; el gasto real puede diferir.
+- `max_parallel` se guarda pero no se impone por proyecto (manda `MAX_PARALLEL`). Pausar no interrumpe llamadas en curso. Las consultas entre agentes de nodos con más de `MAX_DEPTH` niveles de dependencia se omiten (se amplía el límite de cadena solo para planes de proyecto).
+- Un proyecto en curso cuando el servidor se reinicia se marca `failed` ("interrupted") al leerlo.
+
+## 17. Artefactos y espacios de trabajo (backend implementado)
+
+Artefactos tipados (`sheet`, `doc`, `table`, `board`, `chart`, `pdf`, `form`, `inbox`, `agenda`) con contenido canónico `aiw.<kind>/1`, versiones inmutables, adjuntos por agente y vínculos entre artefactos. Diseño: [agent-workspaces.md](agent-workspaces.md) (sec. 5, 7 y 11). Código: `backend/internal/artifacts`, `backend/internal/api/artifacts.go`. Migración `280_artifacts.sql` (down: `migrations/down/280_artifacts_down.sql`). Permisos nuevos (`auth/rbac.go`): `artifacts:read` (viewer+), `artifacts:create|write|comment|export` (member+), `artifacts:approve|delete` (admin+). Los agentes nunca reciben `approve`/`delete`.
+
+### 17.1 Endpoints (`/api/v1`)
+
+| Ruta | Permiso | Respuesta |
+|---|---|---|
+| `GET /artifact-kinds?agent_id=` | `artifacts:read` | `{items:[{kind, schema_version, suggested}]}` (los sugeridos para el rol primero, sin restringir) |
+| `GET /artifact-templates?agent_id=&kind=` | `artifacts:read` | `{items:[{id, kind, title:{es,en}, suggested_for}]}` |
+| `GET /artifacts?kind=&agent_id=&task_id=&status=&q=&project_id=` | `artifacts:read` | `{items: ArtifactMeta[]}` (sin contenido; archivados solo con `status=archived`) |
+| `POST /artifacts` `{kind, title, content? \| template_id?, agent_id?, customer_id?, task_id?, locale?}` | `artifacts:create` | `201 Artifact` (meta + `content` + `version`) |
+| `GET /artifacts/{id}?version=` | `artifacts:read` | `Artifact`; con `version` el contenido de esa versión |
+| `PATCH /artifacts/{id}` `{title?, status?, project_id?, deliverable_id?}` | `artifacts:write`; `approved`/`sent` (o salir de ellos) exigen `artifacts:approve`; archivar un artefacto ajeno, `artifacts:delete` | `ArtifactMeta`; `403` si falta el permiso; `409` si está bloqueado (`approved`/`sent`) |
+| `DELETE /artifacts/{id}` | `artifacts:write` (+ creador o `artifacts:delete`) | `204`; archiva (las versiones se conservan) |
+| `POST /artifacts/{id}/versions` `{base_version, content, summary?}` | `artifacts:write` | `201 {version, merged, content?}`; `409 {code:"conflict", head_version, merged:false, conflicts:[{unit, mine, theirs, theirs_author}]}`; `400` contenido inválido o `base_version` fuera de rango; `409` si está bloqueado |
+| `GET /artifacts/{id}/versions`, `GET /artifacts/{id}/versions/{n}` | `artifacts:read` | `{items: VersionInfo[]}` (más reciente primero) / `Artifact` de esa versión |
+| `POST /artifacts/{id}/restore` `{version}` | `artifacts:write` | `ArtifactMeta` (crea una versión nueva `source:"restore"`) |
+| `PUT /artifacts/{id}/attachments/{agent_id}` `{mode: "none"\|"read"\|"propose"\|"edit"}` | `artifacts:write` | `ArtifactMeta`; `approve` -> `400`; agente inexistente `404` |
+| `GET /artifacts/{id}/links?direction=in\|out\|both` | `artifacts:read` | `{items:[{id, from, to, relation, anchor?, alias?, stale?}]}` |
+| `POST /artifacts/{id}/links` `{to, relation, anchor?}` | `artifacts:write` | `201 Link`; duplicado `409`; a sí mismo `400`; destino inexistente `404` |
+| `POST /artifacts/{id}/refresh-dependencies` | `artifacts:write` | `{refreshed, version, changed_units, unresolved}` |
+| `POST /artifacts/{id}/ask` `{agent_id, text?, mode:"review_my_changes"\|"free"}` | `requests:create` | `202 {request_id}` (solicitud normal del orquestador; concede lectura al agente si no la tenía) |
+| `GET /projects/{id}/workspace` | `artifacts:read` | `{project_id, name, status, deliverables:[{deliverable_id, title, agent_id, status, progress, build_state, artifacts}], links}` |
+
+Cuerpo de hasta 6 MB al crear y al guardar versiones (el resto de rutas, `MAX_BODY_BYTES`). Aislamiento: un artefacto de otra organización responde `404` en todas las rutas; los vínculos a artefactos de otra organización no se crean.
+
+### 17.2 Eventos WS (aditivos; `agent_id` en el envelope si lo originó un agente)
+
+`artifact.created {artifact, open_in_workspace}`, `artifact.updated {artifact}`, `artifact.status_changed {artifact_id, from, to, by}`, `artifact.version_created {artifact_id, version, base_version, author, source, summary, changed_units}`, `artifact.progress_changed {artifact_id, project_id, deliverable_id, task_id, progress, build_state}`, `artifact.dependency_changed {artifact_id, source_id, source_version?, stale}`, `artifact.recalculated {artifact_id, version, source_id, changed_units}`, `artifact.agent_focus {artifact_id, agent_id, region, ttl_ms}` (efímero), `artifact.link_added {from, to, relation}` y `artifact.deleted {artifact_id}`. Auditoría (`entity:"artifact"`): `artifact.created|version_created|status_changed|attachment_changed|link_added|ask` con autor, versión y `content_hash`, nunca el contenido.
+
+### 17.3 Notas de contrato
+
+- Contenido rechazado (`400`): esquema distinto de `aiw.<kind>/1`, fórmulas con funciones fuera de la lista blanca o referencias externas, `AIW_REF` con alias no declarado, nodos/marcas de documento desconocidos, enlaces que no sean `http|https|mailto`, imágenes remotas, filas/tarjetas con ids repetidos, tamaños sobre los límites (doc 1 MB; resto 5 MB).
+- Guardado concurrente: merge de 3 vías por unidad; la misma unidad en ambos lados es conflicto (`409`) y no se escribe nada. Un guardado idéntico al contenido actual no crea versión.
+- Los agentes escriben a través de `artifacts.Service.ApplyAgent` (solo con modo `edit`); no hay endpoint HTTP que acepte un `agent_id` de un cliente.
+- No implementado todavía: propuestas y comentarios, `diff`, `export`, blobs/`import`, `GET|PUT /workspaces/{desk}` y la tool `artifacts` del runtime.

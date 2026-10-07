@@ -44,6 +44,7 @@ SPEC: `{ id, type, ts, org_id, agent_id?, payload }`. **[CAMBIO] aditivo y compa
 | Tipo | Payload | Cuando | Fase |
 |---|---|---|---|
 | `request.failed` | `{request_id, reason}` | Fallo irrecuperable | 1 |
+| `task.created` (campo nuevo) | `assigned_reason` (también en `task`) | Por qué ese agente tiene la tarea | 1 |
 | `task.retrying` | `{task_id, attempt, next_attempt_at, error}` | Reintento programado | 1 |
 | `task.awaiting_approval` | `{task_id, approval_id}` | Tarea pausada | 1 |
 | `agent.consult.started` / `.answered` | `{from, to, question_id}` | Consulta entre agentes (UI camina a la mesa) | 1 |
@@ -61,6 +62,9 @@ SPEC: `{ id, type, ts, org_id, agent_id?, payload }`. **[CAMBIO] aditivo y compa
 | `notification.created` | `{notification}` | Para el usuario destino | 2 |
 | `integration.inbound` | `{channel, conversation_id, message_id}` | Llega email/WhatsApp (ya sanitizado) | 4 |
 | `security.alert` | `{kind, agent_id?, detail}` | Inyeccion detectada, intento denegado (07) | 2 |
+| `chat.message` | `{id, conversation, turn_id, from, to, kind, text, reply_to, ts, request_id?}` | Mensaje del usuario o de un agente/sistema en `office` o `agent:<id>` (chat-routing.md) | 1 |
+| `chat.typing` | `{conversation, turn_id, agent_id, on}` | Un agente prepara su respuesta (siempre par on/off) | 1 |
+| `route.decided` | `{turn_id, conversation, intent, topic, responders:[{agent_id, role, reason}], source, consult?}` | El router decidió quién responde; `intent=task` sigue con `request.received`/`plan.created` | 1 |
 
 Convencion de nombres: `<entidad>.<verbo_pasado>`; estados como `agent.state_changed`. Prohibido emitir verbos en presente/intencion.
 

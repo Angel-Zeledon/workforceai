@@ -550,3 +550,97 @@ CHAT: dict = {
 
 # Regional tone applies to Spanish text only.
 TONE_SUBS: dict[str, list[tuple[str, str]]] = {}
+
+# ---- out-of-competence dialogue (see sim_content.py for the placeholders)
+CHAT["deflect"] = {
+    "accounting": [
+        "That's not mine: {topic_area} is {other}'s. Talk to {other}; I can pass it on if you like.",
+        "Outside my area. For {topic_area}, {other} is the right person. Shall I forward it?",
+        "I stick to my own ({my_area}); {topic_area} belongs to {other} ({other_title}). I'll pass it on once you confirm.",
+        "Not my remit. {other} handles {topic_area}. Tell me and I'll route it.",
+        "My field is {my_area}. {other} takes care of {topic_area}. Should I hand it over?",
+        "Better with {other}: {topic_area} isn't my field and I won't improvise.",
+    ],
+    "legal": [
+        "I'd rather not weigh in on {topic_area}: {other} handles it and it should be seen by someone who knows. Shall I pass it on?",
+        "With caution: {topic_area} isn't my area and I don't want to give you something imprecise. {other} is the one.",
+        "That falls outside mine; {other} ({other_title}) should look at it. I can ask them if you like.",
+        "It isn't for me to comment on {topic_area}. {other} can guide you better; shall I write to them?",
+        "To avoid a misstep: {topic_area} is {other}'s. I'll stay with {my_area}.",
+        "Before any misunderstanding: that's {other}'s, not mine. Shall I hand it over?",
+    ],
+    "sales": [
+        "Oh, that's {other}'s turf, they handle {topic_area}! Shall I pass it on?",
+        "Great idea, but not my thing! {other} is in charge of {topic_area}. Want me to connect you?",
+        "{other} ({other_title}) does that better; {topic_area} is their ground. I'll pass it on in a moment!",
+        "Happy to help with sales, but {topic_area} is {other}'s! Shall I connect you?",
+        "Ah, I'm lost there: {other} masters {topic_area}. I'll pass it on, okay?",
+        "Let's get you to the right person! {other} handles {topic_area}.",
+    ],
+    "hr": [
+        "I understand what you need, but {other} handles {topic_area}; I want you to get it done right. Shall I pass it on?",
+        "With all due care: that isn't my area. {other} ({other_title}) will help you better with {topic_area}.",
+        "I'd love to help, but {topic_area} is {other}'s. Want me to let them know?",
+        "So you're well taken care of: {other} deals with {topic_area}. I stay with {my_area}. Shall I hand over your request?",
+        "Thanks for trusting me with this, though it isn't mine: {other} handles {topic_area}. I'll go with you through the handover if you like.",
+        "Best if {other} looks at it; {topic_area} is their thing and you'll get a more useful answer.",
+    ],
+    "operations": [
+        "Not mine. {topic_area}: {other}. Shall I pass it on?",
+        "Straight: not my area. For {topic_area} go to {other} ({other_title}). I can forward it.",
+        "I handle {my_area}; {topic_area} is {other}'s. Fastest is to pass it over. Okay?",
+        "To save time: {other} solves that. Forward it now?",
+        "Not mine. {other} handles {topic_area}; say so and I'll pass it on.",
+        "That goes to {other}. I stay with {my_area}.",
+    ],
+    "analyst": [
+        "Interesting, but {topic_area} isn't my ground; {other} will know more. Shall I pass it on?",
+        "I'm curious, though it isn't mine: {other} handles {topic_area}. Want me to ask?",
+        "I have no data or judgment there; {other} ({other_title}) does. Shall I ask them?",
+        "Good question for {other}, who handles {topic_area}. I can add data afterwards if needed.",
+        "Not my field, but intriguing; better {other}. Shall I pass the question along?",
+        "That falls under {topic_area}, {other}'s. If you later want to cross it with data, I'm here.",
+    ],
+    "assistant": [
+        "Happy to sort it out: {topic_area} is {other}'s. I'll pass it on right now, sound good?",
+        "{other} ({other_title}) sees that better; I'll connect you right away.",
+        "Let me put you through to {other}, who handles {topic_area}. Okay?",
+        "To get it right, {other} is best. I coordinate and will get it to them.",
+        "{other} is the right person for {topic_area}. Shall I pass your message?",
+        "I'll coordinate it with {other}, who takes care of {topic_area}. Say the word and I'll start.",
+    ],
+}
+CHAT["deflect_pair"] = {
+    ("accounting", "sales"): ["Oh, that's {other}'s, they handle sales. I only handle the numbers; shall I pass it on?",
+                              "Selling isn't mine. {other} is the one who sells; I'll connect you."],
+    ("legal", "sales"): ["I review contracts, I don't sell. For the commercial side, {other}. Shall I pass it on?"],
+    ("sales", "accounting"): ["The fine numbers are {other}'s! I sell, they count. Shall I pass it on?"],
+    ("hr", "legal"): ["The contract is {other}'s; I look after people, I don't sign clauses. Shall I let them know?"],
+}
+CHAT["refuse_core"] = [
+    "That work isn't mine: I'm reassigning it to {other} ({other_title}), who handles {topic_area}, and I'll tell you the plan.",
+    "Not mine: I'll hand it to {other}, who takes care of {topic_area}, and coordinate it with the team.",
+    "That's {topic_area}, so it's {other}'s. I'll reassign it and explain why.",
+]
+CHAT["limit_lead"] = {
+    "accounting": ["Brief version.", "Plain fact.", "No detours."],
+    "legal": ["With caution.", "Better to be clear.", "Prudence first."],
+    "sales": ["Oh, I'm so sorry!", "Ugh, right now!", "I'm really sorry!"],
+    "hr": ["I'm truly sorry.", "It pains me to say it.", "I know it's not what you hoped for."],
+    "operations": ["Short and clear.", "No fluff.", "Straight."],
+    "analyst": ["Too bad.", "Bad news.", "Heads up."],
+    "assistant": ["Apologies.", "Sorry about that.", "I'm sorry."],
+}
+CHAT["limit_core"] = {
+    "kill_switch": ["The team is paused by the emergency switch right now, so I can't do it.",
+                    "An emergency brake is active; until it's lifted I can't work on this."],
+    "paused": ["I've been paused, so I can't help with that for now.",
+               "I'm paused until further notice; I can't take it on."],
+    "budget": ["We hit the spending cap and I can't continue until it's raised.",
+               "The budget is exhausted; without a higher cap I can't reply."],
+    "read_only": ["We're in read-only mode: I can analyze, but not execute or send anything.",
+                  "With read-only mode on, I can't make changes or send anything."],
+    "no_connection": ["I have no connection to that tool, so I can't do it myself.",
+                      "I'm missing the connection or permission for that; it would need to be enabled first."],
+}
+CHAT["handoff_yes"] = ["Perfect, I'll pass you to {other}.", "Okay, {other} takes it from here.", "Done, {other} will help you now."]

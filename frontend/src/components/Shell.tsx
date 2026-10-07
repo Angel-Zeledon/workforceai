@@ -37,6 +37,7 @@ export function Shell() {
   const connected = useStore((s) => s.connected);
   const metrics = useStore((s) => s.metrics);
   const selected = useStore((s) => s.selectedAgentId);
+  const pendingApprovals = useStore((s) => Object.values(s.approvals).some((a) => a.status === "pending"));
   const projectsOpen = useProjects((s) => s.open);
   const setProjectsOpen = useProjects((s) => s.setOpen);
 
@@ -112,7 +113,7 @@ export function Shell() {
               <ProjectPill />
             </div>
             <div className="pointer-events-none absolute bottom-[96px] left-4"><ApprovalsTray /></div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-4" style={{ paddingRight: selected ? "var(--panel-w, 420px)" : 16 }}>
+            <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-4" style={{ paddingRight: selected ? "var(--panel-w, 420px)" : 16, paddingLeft: pendingApprovals ? 352 : 16 }}>
               <CommandBar />
             </div>
             <div className="pointer-events-none absolute right-4 top-4 z-40 flex items-start gap-2" style={{ right: selected ? "calc(var(--panel-w, 420px) + 16px)" : 16 }}>

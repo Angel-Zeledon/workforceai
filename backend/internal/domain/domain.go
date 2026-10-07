@@ -124,6 +124,9 @@ type Task struct {
 	StartedAt    *time.Time        `json:"started_at"`
 	FinishedAt   *time.Time        `json:"finished_at"`
 	Output       *StructuredOutput `json:"output"`
+	// AssignedReason says, in plain language, why this agent got the task
+	// (optional: tasks created before the chat layer have none).
+	AssignedReason string `json:"assigned_reason,omitempty"`
 
 	Depth   int     `json:"-"` // delegation depth, 1-based
 	CostUSD float64 `json:"-"`
@@ -138,6 +141,14 @@ type Message struct {
 	Text           string    `json:"text"`
 	TaskID         *string   `json:"task_id"`
 	TS             time.Time `json:"ts"`
+
+	// Chat layer (docs/architecture/chat-routing.md); all optional and omitted
+	// for the messages of a request conversation. TurnID groups the replies to
+	// one user message, ReplyTo is the user message they answer and RequestID is
+	// the request a task turn created.
+	TurnID    string  `json:"turn_id,omitempty"`
+	ReplyTo   *string `json:"reply_to,omitempty"`
+	RequestID *string `json:"request_id,omitempty"`
 }
 
 type Conversation struct {
