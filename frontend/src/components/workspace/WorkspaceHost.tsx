@@ -36,7 +36,7 @@ export function WorkspaceHost({ id }: { id: string }) {
 
   const sm = stateMeta(agent?.state ?? "idle");
   return (
-    <div data-testid="ws-host" data-size={current} data-desk={id} className="pointer-events-auto h-full max-w-full" style={{ width: WIDTH[current], transition: "width 360ms cubic-bezier(.2,.8,.2,1)" }}>
+    <div data-testid="ws-host" data-size={current} data-desk={id} className="pointer-events-auto h-full" style={{ width: WIDTH[current], maxWidth: "100vw", transition: "width 360ms cubic-bezier(.2,.8,.2,1)" }}>
       {current === "dock" ? <AgentPanel id={id} /> : (
         <aside className="flex h-full w-full border-l border-line bg-panel shadow-float">
           <div className="ac-pop flex w-16 shrink-0 flex-col items-center gap-3 border-r border-line bg-panel2 py-3">

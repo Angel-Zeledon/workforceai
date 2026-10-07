@@ -1,7 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
-import { api } from "@/lib/api";
 import { MOCK } from "@/lib/config";
 import { useStore } from "@/lib/store";
 import { startRealtime } from "@/lib/ws";
@@ -16,10 +15,9 @@ import { useProjects } from "@/lib/projects/store";
 import { fmtUsd } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
-import { LightingToggle, OfficeSettings } from "./OfficeSettings";
-import { TemplatesButton } from "./templates/TemplatesButton";
-import { OnboardingEntry } from "./onboarding/OnboardingEntry";
-import { ControlsBanner, ControlsBar, ControlsOverlay } from "./security/ControlsChrome";
+import { LightingToggle } from "./OfficeSettings";
+import { AdminMenu } from "./admin/AdminMenu";
+import { ControlsBanner, ControlsOverlay } from "./security/ControlsChrome";
 import { CostOverlays } from "./cost/CostOverlays";
 import { Icon } from "./icons";
 import { navBtn } from "./navStyles";
@@ -44,17 +42,9 @@ export function Shell() {
   useEffect(() => startRealtime(), []);
   useEffect(() => { hydratePrefs(); }, [hydratePrefs]);
 
-  const reset = async () => {
-    try {
-      await api.reset();
-      useStore.setState({ tasks: {}, requests: {}, plans: {}, conversations: {}, messages: {}, chat: {}, routes: {}, lastTurnId: null, typing: {}, approvals: {}, reports: {}, activity: [], errors: [], links: [], selectedAgentId: null });
-      await useStore.getState().loadAll();
-    } catch { /* backend without reset */ }
-  };
-
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg text-ink">
-      <header className="z-20 flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line bg-panel px-4 py-2 md:min-h-[56px]">
+      <header className="relative z-[55] flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line bg-panel px-4 py-2 md:min-h-[56px]">
         <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-4 gap-y-2 xl:flex-nowrap">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white"><Icon name="office" size={17} /></div>
@@ -76,25 +66,22 @@ export function Shell() {
             <button type="button" data-testid="nav-projects" data-active={projectsOpen} onClick={() => setProjectsOpen(!projectsOpen)} className={navBtn(projectsOpen)}>
               <Icon name="folder" size={14} />{t("nav.projects")}
             </button>
-            <ControlsBar />
           </div>
         </div>
-        <div className="flex max-w-full flex-nowrap items-center gap-x-3 overflow-x-auto text-[11px] text-mute [&>*]:shrink-0 [&>*]:whitespace-nowrap">
+        <div className="flex items-center gap-x-3 text-[11px] text-mute">
           {metrics && (
-            <div className="hidden items-center gap-4 border-r border-line pr-4 2xl:flex">
-              <span>{t("hud.active")} <b className="font-mono font-medium text-ink">{metrics.tasks_active}</b></span>
-              <span>{t("hud.approvalsShort")} <b className={`font-mono font-medium ${metrics.approvals_pending ? "text-warn" : "text-ink"}`}>{metrics.approvals_pending}</b></span>
-              <span>{t("common.cost")} <b className="font-mono font-medium text-ink">{fmtUsd(metrics.cost_usd)}</b></span>
+            <div className="flex items-center gap-3 border-r border-line pr-3 sm:gap-4 sm:pr-4">
+              <span className="hidden 2xl:inline">{t("hud.active")} <b className="font-mono font-medium text-ink">{metrics.tasks_active}</b></span>
+              <span data-testid="hud-approvals">{t("hud.approvalsShort")} <b className={`font-mono font-medium ${metrics.approvals_pending ? "text-warn" : "text-ink"}`}>{metrics.approvals_pending}</b></span>
+              <span data-testid="hud-cost">{t("common.cost")} <b className="font-mono font-medium text-ink">{fmtUsd(metrics.cost_usd)}</b></span>
             </div>
           )}
-          <TemplatesButton />
-          <OnboardingEntry />
-          <button onClick={reset} className="rounded-md border border-line px-2.5 py-1 font-medium text-ink2 hover:bg-panel2 hover:text-ink" title="POST /demo/reset">{t("hud.resetDemo")}</button>
-          {MOCK && <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700">Mock</span>}
-          <span className="flex items-center gap-1.5 font-medium text-ink2">
+          {MOCK && <span data-testid="mock-badge" className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700">Mock</span>}
+          <span className="flex items-center gap-1.5 whitespace-nowrap font-medium text-ink2">
             <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-ok" : "animate-pulse bg-err"}`} />
             {connected ? t("hud.live") : t("hud.reconnecting")}
           </span>
+          <AdminMenu />
         </div>
       </header>
 
@@ -118,7 +105,6 @@ export function Shell() {
             </div>
             <div className="pointer-events-none absolute right-4 top-4 z-40 flex items-start gap-2" style={{ right: selected ? "calc(var(--panel-w, 420px) + 16px)" : 16 }}>
               <LightingToggle />
-              <OfficeSettings />
             </div>
             {selected && <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-30"><WorkspaceHost id={selected} /></div>}
             {!selected && <div className="pointer-events-none absolute bottom-4 right-4 hidden rounded-md border border-line bg-panel/80 px-3 py-1.5 text-[10px] font-semibold text-mute md:block">{t("hud.cameraHint")}</div>}

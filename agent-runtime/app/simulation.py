@@ -9,7 +9,7 @@ import random
 
 from . import sim_content as sc
 from .engine import AgentEngine, estimate_cost
-from .routing import assigned_reason, compose_reply
+from .routing import assigned_reason, compose_reply, owner_role
 from .models import (
     ChatReplyRequest,
     ChatReplyResponse,
@@ -73,7 +73,15 @@ class SimulationEngine(AgentEngine):
 
         tasks: list[PlanTask] = []
         kept: set[str] = set()
-        for key, role, title, desc, deps in spec["tasks"]:
+        spec_tasks = list(spec["tasks"])
+        if scenario == "default":
+            # no scripted scenario: when the text names an area, the owner of that area does the work
+            owner = owner_role(req.request_text)
+            if owner and owner in known and owner not in ("assistant", "analyst"):
+                okey, otitle, odesc = c.TEXTS["owner_task"]
+                area = c.CHAT["area"].get(owner, owner)
+                spec_tasks = [spec_tasks[0], (okey, owner, otitle.format(area=area), odesc.format(area=area), [spec_tasks[0][0]])]
+        for key, role, title, desc, deps in spec_tasks:
             if req.agents and role not in known:
                 continue  # el agente no existe en esta organizacion
             kept.add(key)
@@ -134,6 +142,9 @@ class SimulationEngine(AgentEngine):
 
     # ------------------------------------------------------------ chat-reply
     async def chat_reply(self, req: ChatReplyRequest) -> ChatReplyResponse:
+        if req.limit:  # "I can't do that" is a scripted line: instant and free, never worth a simulated delay
+            text, kind, consult = compose_reply(req)
+            return ChatReplyResponse(text=text, kind=kind, consult=consult, usage=Usage(model=SIM_MODEL, input_tokens=0, output_tokens=0, cost_usd=0.0, duration_ms=0))
         ms = await self._latency(0.3, 1.0)
         text, kind, consult = compose_reply(req)
         # A chat line is tiny: a few hundred tokens in, a few dozen out (cost ~ fractions of a cent).

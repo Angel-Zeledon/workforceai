@@ -28,6 +28,13 @@ const P: Record<string, string> = {
   chevron: "M9 6l6 6-6 6",
   down: "M6 9l6 6 6-6",
   expand: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
+  chat: "M4 5h16v11H10l-5 4v-4H4z",
+  pulse: "M3 12h4l3-8 4 16 3-8h4",
+  users: "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20a6 6 0 0 1 12 0M16 5.2a3 3 0 0 1 0 5.6M18 14.5a6 6 0 0 1 3 5.5",
+  layers: "M12 3l9 5-9 5-9-5zM3 13l9 5 9-5",
+  doc: "M6 3h8l5 5v13H6zM14 3v5h5M9 13h7M9 17h7",
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
+  clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2",
   shrink: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
 };
 

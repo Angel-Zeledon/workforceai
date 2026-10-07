@@ -35,6 +35,9 @@ type Orchestrator struct {
 	conn   connState      // optional: controls guard, Tool Gateway, plan review (connections_flow.go)
 	policy *PolicyService // optional: organization rules and the policy engine (policyflow.go)
 
+	chatIdem idemCache // Idempotency-Key of POST /messages (chat.go)
+	chatQ    chatQueue // per-conversation FIFO of chat turns (chat.go)
+
 	mu     sync.Mutex      // guards base/cancel and serializes Reset vs. start
 	root   context.Context // process lifetime
 	base   context.Context // parent of in-flight runs; cancelled by Reset
@@ -68,7 +71,7 @@ type run struct {
 	// requestedBy is the human who submitted the request ("" without auth):
 	// the "on behalf of" of every tool request and the requester of its approvals.
 	requestedBy string
-	ext         runExt // taint, read-only request flag (connections_flow.go)
+	ext         runExt    // taint, read-only request flag (connections_flow.go)
 	chat        *chatLink // set when the request was born in a chat turn (chat.go)
 }
 
@@ -859,9 +862,12 @@ func (o *Orchestrator) call(ctx context.Context, name string, fn func(ctx contex
 // PostUserMessage lets the user intervene in a conversation. The note is also
 // stored in the memory of the conversation's agents so later tasks see it.
 func (o *Orchestrator) PostUserMessage(ctx context.Context, convID, text string) (domain.Message, error) {
-	text = strings.TrimSpace(text)
+	text = SanitizeChatText(text)
 	if text == "" {
 		return domain.Message{}, fmt.Errorf("%w: text is required", domain.ErrInvalid)
+	}
+	if len([]rune(text)) > maxChatTextRunes {
+		return domain.Message{}, fmt.Errorf("%w: text is too long (max %d characters)", domain.ErrInvalid, maxChatTextRunes)
 	}
 	conv, err := o.store.GetConversation(ctx, o.org(ctx), convID)
 	if err != nil {
@@ -894,6 +900,9 @@ func (o *Orchestrator) Reset(ctx context.Context) error {
 	defer o.mu.Unlock()
 	o.cancel()
 	o.wg.Wait()
+	o.chatIdem.mu.Lock()
+	o.chatIdem.m = nil // the conversations are about to be wiped: their keys must not replay
+	o.chatIdem.mu.Unlock()
 	parent := context.WithoutCancel(ctx)
 	if err := o.store.Reset(parent, o.org(ctx)); err != nil {
 		return err

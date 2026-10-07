@@ -263,5 +263,7 @@ def build_chat_prompt(req: Any) -> str:
     else:
         lines.append("Responde a la pregunta desde tu area, de forma breve y conversacional.")
     lines.append('Responde SOLO JSON: {"text": "...", "consult_to_agent_id": null, "consult_question": null}')
-    lines.append(language_rule(req.locale, req.tone))
+    from .routing import detect_locale  # reply in the language the user wrote in
+
+    lines.append(language_rule(detect_locale(req.text, req.locale), req.tone))
     return "\n".join(lines)

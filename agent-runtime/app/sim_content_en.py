@@ -357,6 +357,8 @@ TEXTS = {
     "h_conf": "Overall confidence",
     "conf_body": "Average agent confidence: {avg:.0%} across {n} tasks.",
     "fallback_task": ("task_1", "Handle the request"),
+    "owner_task": ("responsable", "Handle the {area} part",
+                   "Resolve the {area} part of the request with the available information and leave clear conclusions."),
 }
 
 
@@ -445,6 +447,14 @@ CHAT: dict = {
         "My pleasure. If anything else comes up, let me know.",
         "Anytime. Just write if you need something.",
         "Great, I'll be around.",
+        "That's what we're here for. Anything else?",
+    ],
+    "ack": [
+        "Noted. I'm here if anything comes up.",
+        "Perfect. Whenever you want, we pick it up.",
+        "Great, count on me for what's next!",
+        "Got it. If you need anything, just say.",
+        "Sounds good. I'll keep an eye out.",
     ],
     "help": [
         "I can help split the work: Sales, Legal, Accounting, HR, Analysis and Operations are available. Ask something from their area or give me a task and I'll coordinate it.",
@@ -459,36 +469,53 @@ CHAT: dict = {
         "Got it. If you give me more context I'll tell you who on the team can help best.",
         "Noted. Shall we talk it through here, or should I turn it into a task for the team?",
     ],
+    "answer_agenda": [
+        "For your calendar I need the day, the time and who it's with. Do you want to review what's there or should I book something new?",
+        "Sure, I'll help with that. Shall we look at today or at the week?",
+        "I'll organize it. Tell me which meeting to move or create and I'll find the best slot.",
+    ],
     "answer": {
         "accounting": [
             "On the finances: for now income and direct costs look reasonably aligned. If you like, I'll go through this month's balance and flag anything unusual. Which period are you interested in?",
             "Happy to. To give you a reliable number I need the period and whether we mean gross or net margin. Which one?",
             "Numbers are better with detail: I can put together a quick close with income, costs and cash flow. Tell me from when you want it.",
+            "I can give you a figure, but I would rather the numbers be the right ones: do we mean billed or collected, and for which month?",
+            "Before I weigh in, I reconcile income against costs for the period. Tell me the range and I will confirm with closed numbers.",
         ],
         "legal": [
             "From the legal side, the first thing is knowing which document or agreement is involved. Can you tell me more about the context?",
             "Good question. The prudent move is to review deadlines, penalties and liability before we commit. Do you have the draft?",
             "It depends on what was signed. If you share the contract, I'll tell you which risks I see.",
+            "Without seeing the text I would rather not get ahead of myself. Can you send me the document, or at least the clauses that worry you?",
+            "That has nuances: it changes with the scope and the jurisdiction. Tell me which agreement we mean and I will review it calmly.",
         ],
         "hr": [
             "On people: before deciding we should define the profile and the budget. Is it a new position or a replacement?",
             "Sure. To hire well I need the role, the salary band and when they need it.",
             "We can look at it. If you tell me the team size and current workload, I can give you a more concrete opinion.",
+            "It is a delicate subject, so let us take it slowly. Are we talking about one person or about how the team is doing overall?",
+            "Count on me. What worries you most: the workload, hiring times or the atmosphere?",
         ],
         "sales": [
             "In sales, follow-up is what moves the needle. Are we talking about a specific client or the pipeline in general?",
             "Here's how I see it: there are open opportunities, but it depends on each client. Which one do you want to discuss?",
             "Good point. If you give me the client and the approximate amount, I'll tell you what chance I see.",
+            "Let us go for it! Give me the client name and what stage they are in, and we will plan how to close it.",
+            "That is solved with follow-up and good timing. Which opportunity worries you most?",
         ],
         "analyst": [
             "With the available data I can look at trends, but I need to know which metric and which period. Which one?",
             "I could cross it with the history to see if it's a pattern or a one-off. Which period do we compare?",
             "Happy to look. Tell me the business question and I'll tell you what data we'd need.",
+            "I am intrigued. If you tell me which metric matters, I will check whether there is a pattern behind it or just noise.",
+            "Before drawing conclusions it helps to look at the distribution, not just the average. Which period shall we look at?",
         ],
         "operations": [
             "In operations it all comes down to capacity and deadlines. What volume or date do you have in mind?",
             "I'll look into it. To tell you whether we can make it I need the scope and the delivery date.",
             "Sure. Are we talking about team capacity, suppliers or logistics?",
+            "Let us keep it practical: give me the date and volume and I will tell you whether we make it or what has to move.",
+            "I will put it in real timings. Which delivery or process worries you?",
         ],
     },
     "contrib": {

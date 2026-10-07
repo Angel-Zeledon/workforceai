@@ -9,6 +9,7 @@ import { Btn, Card, Empty } from "../ui";
 import { ErrorLine, errText, inputCls, useViewer } from "../connections/shared";
 import { EmailDraftCard } from "./EmailDraftCard";
 import { PlanReviewCard } from "./PlanReviewCard";
+import { KillSwitchDialog } from "./KillSwitchDialog";
 
 function Section({ id, title, children, right }: { id: string; title: string; children: ReactNode; right?: ReactNode }) {
   return <div data-testid={id}><Card title={title} right={right}>{children}</Card></div>;
@@ -21,6 +22,7 @@ function GlobalState() {
   const [reason, setReason] = useState("");
   const [resume, setResume] = useState<"all" | "none">("all");
   const [err, setErr] = useState<string | null>(null);
+  const [ksOpen, setKsOpen] = useState(false);
   if (!controls) return null;
   const level = controls.kill_switch_level;
   const ro = controls.mode === "read_only";
@@ -38,6 +40,14 @@ function GlobalState() {
           <Btn data-testid="ctl-readonly-toggle" data-on={ro} disabled={ro ? !isOwner : !isAdmin} onClick={() => run(() => ctlApi.setReadOnly(!ro))}>{ro ? t("ctl.readonly.disable") : t("ctl.readonly.enable")}</Btn>
         </div>
         {ro && !isOwner && <p className="text-[11px] text-mute">{t("ctl.ownerOnlyRelease")}</p>}
+
+        {level === "none" && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-err/30 bg-panel2 px-3 py-2">
+            <div><b>{t("ctl.killswitch.title")}</b><p className="text-mute">{t("ctl.killswitch.body")}</p></div>
+            <Btn data-testid="ctl-security-killswitch" kind="danger" disabled={!isAdmin} onClick={() => setKsOpen(true)}>{t("ctl.killswitch.title")}</Btn>
+          </div>
+        )}
+        {ksOpen && <KillSwitchDialog onClose={() => setKsOpen(false)} />}
 
         {level !== "none" && (
           <div className="space-y-2 rounded-xl border border-red-300 bg-red-50 p-3">

@@ -17,6 +17,8 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Conversation string `json:"conversation"`
 		Text         string `json:"text"`
+		// ClientMessageID is an alternative to the Idempotency-Key header.
+		ClientMessageID string `json:"client_message_id"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
@@ -25,10 +27,18 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 	if body.Conversation == "" {
 		body.Conversation = domain.ChatOffice
 	}
-	turn, err := s.Orch.PostChat(r.Context(), body.Conversation, body.Text)
+	// A retry or double click with the same Idempotency-Key (or client_message_id) gets the first turn back.
+	key := r.Header.Get("Idempotency-Key")
+	if key == "" {
+		key = body.ClientMessageID
+	}
+	turn, replayed, err := s.Orch.PostChatKeyed(r.Context(), body.Conversation, body.Text, key)
 	if err != nil {
 		s.fail(w, err)
 		return
+	}
+	if replayed {
+		w.Header().Set("Idempotent-Replayed", "true")
 	}
 	writeJSON(w, http.StatusAccepted, turn)
 }

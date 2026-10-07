@@ -81,6 +81,8 @@ export function LabelSolver() {
         op = tier === "hidden" ? 0 : age > 5500 ? Math.max(0, (7000 - age) / 1500) : 1;
       }
       el.style.opacity = String(op);
+      // expose the agent test id only once the tag sits over its character (see AgentTag)
+      if (!isBubble && it.ok && el.dataset.agentId && !el.hasAttribute("data-testid")) el.setAttribute("data-testid", `agent-${el.dataset.agentId}`);
       el.style.zIndex = exp ? "1000" : isBubble ? "500" : String(10 + Math.round(it.sy / 10));
     }
     if (cur.size > labelEntries.size + 8) cur.forEach((_, k) => { if (!labelEntries.has(k)) cur.delete(k); });

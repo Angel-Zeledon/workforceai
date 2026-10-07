@@ -50,7 +50,7 @@ from .providers import (
     is_transient,
     policy_from_request,
 )
-from .routing import compose_reply, rules_route, validate_route
+from .routing import compose_reply, detect_locale, rules_route, validate_route
 from .security import (
     build_chat_prompt,
     build_chat_system_prompt,
@@ -305,7 +305,7 @@ class CrewAIEngine(AgentEngine):
                 model="scripted", input_tokens=0, output_tokens=0, cost_usd=0.0, duration_ms=0))
         res, usage = await self._run(
             role=req.agent.title or req.agent.role, goal="Responder en el chat de la oficina como una persona",
-            backstory=build_chat_system_prompt(req.agent, req.locale, req.tone),
+            backstory=build_chat_system_prompt(req.agent, detect_locale(req.text, req.locale), req.tone),
             description=build_chat_prompt(req), expected="JSON con text y, si aplica, consult",
             schema=_ChatLLM, policy=policy_from_request(req, req.agent.role), max_tokens=350)
         text = (res.text or "").strip()

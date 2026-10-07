@@ -88,7 +88,7 @@ func (o *Orchestrator) chatLimitSay(ctx context.Context, t *chatTurn, agent doma
 	req := ChatReplyRequest{
 		Agent: ChatAgent{ID: agent.ID, Role: agent.Role, Title: agent.Title, Name: agent.Name, Persona: agent.Persona},
 		Text:  t.text, Conversation: t.conv, Intent: domain.IntentTask, Topic: "general", ResponderRole: domain.RolePrimary,
-		Agents: o.routeAgents(t.agents), History: t.history, Limit: limit, Locale: t.style.Locale, Tone: t.style.ToneFor(agent.ID),
+		Agents: o.routeAgents(t.agents), History: append([]ChatHistoryItem{}, t.history...), PriorReplies: []ChatHistoryItem{}, Limit: limit, Locale: t.style.Locale, Tone: t.style.ToneFor(agent.ID),
 	}
 	cctx, cancel := context.WithTimeout(ctx, o.chatTimeout())
 	resp, err := cr.ChatReply(cctx, req)

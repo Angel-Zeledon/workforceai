@@ -178,7 +178,7 @@ Nota: los `data-testid` y `data-mode` existentes no cambian. Con el umbral por d
 
 Contrato en `docs/architecture/chat-routing.md`. Frontend: `frontend/src/components/chat/*`, `CommandBar.tsx` (chat de la Oficina) y `AgentPanel.tsx`. Ninguno empieza con `agent-` ni `approval-`.
 
-**Cambio importante: al tocar a un agente (oficina o dashboard) el panel abre PRIMERO en la pestaña `chat` (chat 1:1), ya no en `state`.** Los tests que miraban el estado/tareas/archivos deben hacer clic antes en `panel-tab-state` / `panel-tab-tasks` / `panel-tab-files`. Pestañas del panel: `panel-tab-chat` (por defecto), `panel-tab-state`, `panel-tab-tasks`, `panel-tab-chats` ("Con el equipo": conversaciones entre agentes), `panel-tab-memory`, `panel-tab-reports`, `panel-tab-files`, `panel-tab-activity`, `panel-tab-profile`.
+**Cambio importante: al tocar a un agente (oficina o dashboard) el panel abre PRIMERO en la pestaña `chat` (chat 1:1), ya no en `state`.** Los tests que miraban el estado/tareas/archivos deben hacer clic antes en `panel-tab-state` / `panel-tab-tasks` / `panel-tab-files`. Pestañas del panel (ahora items de una **rueda radial** que se abre con `panel-nav`; cerrada siguen en el DOM, así que `toHaveAttribute("aria-selected")` funciona, pero para hacer clic hay que abrirla: ver `openPanelTab` en `support/ui.ts`; en pantallas <640px es una hoja inferior con la misma lista; `panel-nav-current` muestra la sección actual): `panel-tab-chat` (por defecto), `panel-tab-state`, `panel-tab-tasks`, `panel-tab-chats` ("Con el equipo": conversaciones entre agentes), `panel-tab-memory`, `panel-tab-reports`, `panel-tab-files`, `panel-tab-activity`, `panel-tab-profile`.
 
 | data-testid | Elemento | Notas |
 |---|---|---|
@@ -194,3 +194,18 @@ Contrato en `docs/architecture/chat-routing.md`. Frontend: `frontend/src/compone
 | `reason-chip` | "Asignado a X porque …" (`assigned_reason` de la tarea) | Panel del agente (estado/tareas/chat), tarjetas del dashboard y plan de solicitud |
 
 - `tests/chat.spec.ts`: el chat 1:1 es la pestaña por defecto del panel y solo responde ese agente; un saludo en la oficina es `smalltalk` y no crea solicitud.
+
+
+## Menú de administración (engranaje de la cabecera)
+
+La cabecera solo deja marca, `mode-toggle`, `nav-projects`, estado En vivo, `hud-approvals`/`hud-cost` y la insignia `mock-badge` (solo en modo mock). Todo lo demás vive en UN menú (`admin-menu`, `role="menu"` en `admin-menu-list`; punto de atención `admin-menu-dot`) que se **cierra tras elegir una entrada**. Los `data-testid` se conservan pero **solo existen mientras el menú está abierto**: abrirlo antes con `openAdminMenu`/`adminClick` (`support/ui.ts`).
+
+| data-testid | Entrada |
+|---|---|
+| `nav-connections`, `nav-security` | Conexiones / Seguridad (`data-active`) |
+| `ctl-killswitch` (`data-level`) | Detener todo (confirmación en `ctl-killswitch-dialog`); con el kill-switch activo muestra el nivel y lleva a Seguridad |
+| `ctl-security-killswitch` | Mismo control dentro de la pantalla de Seguridad (junto a `ctl-readonly-toggle`) |
+| `templates-open`, `onboarding-open` / `org-config-open`, `office-settings` (panel: `office-settings-panel`), `demo-reset` | Plantillas, configurar oficina / ajustes del equipo, ajustes de la oficina, reiniciar demo |
+
+`ctl-banner` solo aparece mientras el kill-switch o el modo solo lectura están activos.
+`agent-<id>` (etiquetas de la oficina) ahora solo se añade al DOM cuando la etiqueta ya está colocada sobre su personaje (antes, un clic inmediato caía sobre otra etiqueta apilada en el origen y abría al agente equivocado).

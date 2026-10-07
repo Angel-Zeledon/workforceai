@@ -17,6 +17,11 @@ function useRegister(key: string, kind: "agent" | "bubble", anchor: string) {
   }, [key, kind, anchor]);
 }
 
+/**
+ * The `agent-<id>` test id is NOT rendered here: LabelSolver stamps it on the first frame the
+ * label is really positioned over its character. Before that the tag sits at the screen origin
+ * (opacity 0), and a click on it would land on whichever unplaced tag is stacked on top.
+ */
 /** Etiqueta de agente: chip con nombre + estado; al pasar el cursor / seleccionar se expande con detalle. */
 function AgentTag({ id }: { id: string }) {
   const agent = useStore((s) => s.agents[id]);
@@ -38,7 +43,7 @@ function AgentTag({ id }: { id: string }) {
   return (
     <div
       ref={ref}
-      data-testid={`agent-${id}`}
+      data-agent-id={id}
       data-state={agent.state}
       data-exp={exp ? "1" : "0"}
       data-fw={Math.round(fw)}

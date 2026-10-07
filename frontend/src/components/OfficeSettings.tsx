@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { LOCALES, useT, type Locale } from "@/lib/i18n";
 import { resolveAgent, usePreferences, type LabelSize, type Lighting } from "@/lib/preferences";
@@ -46,27 +46,31 @@ function Toggle({ on, onChange, label, testid }: { on: boolean; onChange: (v: bo
   );
 }
 
-/** "Office settings" button + popover: language, labels, motion and per-employee customization. */
-export function OfficeSettings() {
+/** Office settings popover (language, labels, motion, per-employee customization). Opened from the admin menu. */
+export function OfficeSettingsPanel({ onClose }: { onClose: () => void }) {
   const { t, locale } = useT();
-  const [open, setOpen] = useState(false);
   const prefs = usePreferences((s) => s.prefs);
   const set = usePreferences((s) => s.set);
   const order = useStore((s) => s.agentOrder);
   const agents = useStore((s) => s.agents);
   const [emp, setEmp] = useState<string>("");
   const current = emp && agents[emp] ? emp : order[0] ?? "";
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    ref.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); prev?.focus?.(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
-    <div className="pointer-events-auto relative">
-      <button type="button" data-testid="office-settings" aria-expanded={open} onClick={() => setOpen(!open)} title={t("settings.title")}
-        className={`flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-3 text-[12px] font-semibold shadow-pop transition ${open ? "bg-accent-soft text-accent" : "bg-panel text-ink hover:border-accent"}`}>
-        <Icon name="settings" size={15} /><span className="hidden sm:inline">{t("settings.title")}</span>
-      </button>
-      {open && (
-        <div data-testid="office-settings-panel" className="ac-pop absolute right-0 top-11 z-40 max-h-[calc(100vh-170px)] w-[330px] overflow-y-auto rounded-xl border border-line bg-panel p-4 shadow-float">
+    <div className="pointer-events-auto fixed inset-0 z-[54]" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div ref={ref} tabIndex={-1} role="dialog" aria-label={t("settings.title")} data-testid="office-settings-panel"
+        className="ac-pop absolute right-3 top-[60px] max-h-[calc(100vh-76px)] w-[330px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-xl border border-line bg-panel p-4 shadow-float outline-none">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-[15px] font-semibold tracking-tight text-ink">{t("settings.title")}</h3>
-            <button type="button" onClick={() => setOpen(false)} aria-label={t("common.close")} className="rounded-md p-1 text-mute hover:bg-mute/10 hover:text-ink"><Icon name="x" size={15} /></button>
+            <button type="button" onClick={onClose} aria-label={t("common.close")} className="rounded-md p-1 text-mute hover:bg-mute/10 hover:text-ink"><Icon name="x" size={15} /></button>
           </div>
 
           <section className="mb-4">
@@ -102,8 +106,7 @@ export function OfficeSettings() {
             </div>
             {current && <AgentCustomizer key={current} id={current} tid="settings-" />}
           </section>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

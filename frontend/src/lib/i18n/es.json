@@ -1,10 +1,8 @@
 {
   "app.demoOffice": "Oficina demo",
-
   "mode.switchTitle": "Cambiar entre oficina 3D y dashboard",
   "mode.office": "Oficina",
   "mode.dashboard": "Dashboard",
-
   "hud.active": "Activas",
   "hud.approvalsShort": "Aprobaciones",
   "hud.resetDemo": "Reiniciar demo",
@@ -12,7 +10,6 @@
   "hud.reconnecting": "Reconectando…",
   "hud.liveActivity": "Actividad en vivo",
   "hud.cameraHint": "Arrastra para rotar · rueda para acercar · clic derecho para mover",
-
   "common.close": "Cerrar",
   "common.cost": "Costo",
   "common.confidence": "Confianza",
@@ -23,10 +20,8 @@
   "common.you": "Tú",
   "common.everyone": "Todos",
   "common.now": "ahora",
-
   "activity.empty": "Aún no hay actividad. Pídele algo a tu empresa.",
   "report.executiveSummary": "Resumen ejecutivo",
-
   "cmd.placeholder": "Escribe a la oficina: saluda, pregunta o pide algo…",
   "cmd.send": "Enviar",
   "cmd.sending": "Enviando…",
@@ -41,7 +36,6 @@
   "cmd.suggestion2.prompt": "Las ventas bajaron este mes, ¿qué pasó?",
   "cmd.suggestion3.label": "Contratar 2 personas",
   "cmd.suggestion3.prompt": "Necesito contratar 2 personas para operaciones",
-
   "approvals.pendingTitle": "Aprobaciones pendientes: {count}",
   "approvals.pendingTitle_one": "{count} aprobación pendiente",
   "approvals.pendingTitle_other": "{count} aprobaciones pendientes",
@@ -50,14 +44,12 @@
   "approvals.approved": "Aprobada",
   "approvals.rejected": "Rechazada",
   "approvals.decideError": "No se pudo registrar tu decisión. Inténtalo de nuevo.",
-
   "conversation.empty": "Aún no hay mensajes.",
   "conversation.placeholder": "Escribe un mensaje…",
   "kind.chat": "chat",
   "kind.delegation": "delegación",
   "kind.consult": "consulta",
   "kind.answer": "respuesta",
-
   "panel.tab.state": "Estado",
   "panel.tab.tasks": "Tareas",
   "panel.tab.chats": "Con el equipo",
@@ -78,12 +70,10 @@
   "panel.noChats": "Aún no tiene conversaciones.",
   "panel.noMemory": "Aún no tiene memoria guardada.",
   "panel.noReports": "Aún no tiene reportes.",
-
   "light.title": "Iluminación de la oficina",
   "light.ambient": "Ambiente",
   "light.day": "Luz prendida",
   "light.night": "Noche",
-
   "settings.title": "Ajustes de la oficina",
   "settings.language": "Idioma",
   "settings.labels": "Etiquetas",
@@ -93,7 +83,6 @@
   "settings.employees": "Empleados",
   "lang.es": "Español",
   "lang.en": "English",
-
   "custom.fullName": "Nombre completo",
   "custom.nickname": "Apodo (etiqueta 3D)",
   "custom.jobTitle": "Cargo",
@@ -118,7 +107,6 @@
   "accessory.hardhat": "Casco",
   "accessory.beanie": "Gorro",
   "accessory.lanyard": "Credencial",
-
   "role.default": "Agente",
   "role.sales": "Ventas",
   "role.analyst": "Analista",
@@ -134,7 +122,6 @@
   "agent.title.analyst": "Analista",
   "agent.title.operations": "Operaciones",
   "agent.title.assistant": "Secretaria / Asistente Ejecutivo",
-
   "state.idle": "Inactivo",
   "state.thinking": "Pensando",
   "state.working": "Trabajando",
@@ -155,7 +142,6 @@
   "autonomy.approve_each": "Aprobar cada acción",
   "autonomy.rules": "Según reglas",
   "autonomy.autonomous": "Autónomo",
-
   "dash.section.overview": "Resumen",
   "dash.section.requests": "Solicitudes y plan",
   "dash.section.tasks": "Tareas",
@@ -222,7 +208,6 @@
   "dash.costs.noRequests": "Sin solicitudes.",
   "dash.costs.errorsTitle": "Errores y bloqueos ({count})",
   "dash.costs.noErrors": "Sin errores. Todo en orden.",
-
   "panel.tab.files": "Archivos",
   "dash.section.files": "Archivos",
   "dash.files.backToLibrary": "Volver a la biblioteca",
@@ -355,7 +340,6 @@
   "agenda.confirmed": "confirmado",
   "embed.tooDeep": "Incrustación demasiado profunda.",
   "embed.locked": "Archivo no disponible o sin permiso.",
-
   "nav.projects": "Proyectos",
   "pv.backendMissing": "El backend aún no expone los endpoints de proyectos. Activa el modo mock (NEXT_PUBLIC_MOCK=true) para verlos.",
   "pv.title": "Proyectos",
@@ -616,7 +600,6 @@
   "proj.gen.w3": "Entrega",
   "proj.gen.v1": "Aprobar el plan",
   "proj.gen.v2": "Consolidar el informe final",
-
   "tpl.open": "Plantillas",
   "tpl.open.title": "Abrir la galería de plantillas de trabajo",
   "tpl.title": "Galería de plantillas de trabajo",
@@ -717,7 +700,6 @@
   "cfg.tax.badge": "Ejemplo, no asesoría fiscal",
   "cfg.tax.fields": "Campos",
   "cfg.tax.checklist": "Lista de verificación",
-
   "nav.connections": "Conexiones",
   "nav.security": "Seguridad",
   "conn.title": "Conexiones",
@@ -1055,7 +1037,6 @@
   "conn.risk.low": "Riesgo bajo",
   "conn.risk.medium": "Riesgo medio",
   "conn.risk.high": "Riesgo alto",
-
   "cmd.status.awaiting_confirmation": "esperando tu confirmación de costo",
   "cmd.status.paused": "en pausa por presupuesto",
   "dash.reqStatus.awaiting_confirmation": "Espera confirmación de costo",
@@ -1131,7 +1112,6 @@
   "cost.limits.save": "Guardar",
   "cost.limits.invalid": "Escribe un número igual o mayor que cero (vacío quita el tope).",
   "cost.limits.error": "No se pudo guardar el tope. Inténtalo de nuevo.",
-
   "panel.tab.chat": "Chat",
   "chat.log": "Mensajes del chat",
   "chat.placeholder.agent": "Escríbele a {name}…",
@@ -1278,5 +1258,14 @@
   "mock.chat.handoff.ok.2": "Listo, le aviso a {name} ahora mismo.",
   "mock.chat.handoff.consult": "{name}, el usuario pregunta: «{text}». ¿Lo tomas tú?",
   "mock.chat.handoff.take": "Claro, lo tomo yo. Gracias por avisarme.",
-  "mock.reason.reassigned": "{from} pasó el encargo porque es de su área"
+  "mock.reason.reassigned": "{from} pasó el encargo porque es de su área",
+  "admin.title": "Administración",
+  "admin.group.workspace": "Espacio de trabajo",
+  "admin.group.safety": "Seguridad",
+  "admin.group.demo": "Demo",
+  "admin.pending": "Pendiente",
+  "admin.active": "Activo",
+  "panel.nav.label": "Secciones del agente",
+  "panel.nav.current": "Sección actual",
+  "panel.nav.go": "Ir a esta sección"
 }

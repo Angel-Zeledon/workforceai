@@ -14,10 +14,12 @@ import { AgentFilesTab } from "./workspace/AgentFilesTab";
 import { Card, Empty, Progress, ReasonChip, StateBadge, TaskBadge, readable, timeAgo } from "./ui";
 import { AgentChat } from "./chat/AgentChat";
 import { Avatar } from "./chat/ChatThread";
-import { Icon } from "./icons";
+import { Icon, type IconName } from "./icons";
+import { SectionWheel } from "./SectionWheel";
 
 const TABS = ["chat", "state", "tasks", "chats", "memory", "reports", "files", "activity", "profile"] as const;
 type Tab = (typeof TABS)[number];
+const TAB_ICON: Record<Tab, IconName> = { chat: "chat", state: "pulse", tasks: "list", chats: "users", memory: "layers", reports: "doc", files: "folder", activity: "clock", profile: "user" };
 
 export function AgentPanel({ id }: { id: string }) {
   const { t } = useT();
@@ -54,7 +56,7 @@ export function AgentPanel({ id }: { id: string }) {
   const tasks = (detail?.tasks ?? []).map((t) => storeTasks[t.id] ?? t);
 
   return (
-    <aside className="pointer-events-auto flex h-full w-[420px] max-w-full flex-col border-l border-line bg-panel shadow-float">
+    <aside className="pointer-events-auto relative flex h-full w-[min(420px,100vw)] flex-col border-l border-line bg-panel shadow-float">
       <div className="border-b border-line p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -64,19 +66,16 @@ export function AgentPanel({ id }: { id: string }) {
               <div className="truncate text-xs text-mute">{view.title}<span className="mx-1.5 text-line-strong">·</span><span style={{ color: readable(meta.color) }} className="font-medium">{roleLabel}</span></div>
             </div>
           </div>
-          <button onClick={() => select(null)} className="rounded-md p-1.5 text-mute hover:bg-mute/10 hover:text-ink" aria-label={t("common.close")}><Icon name="x" size={16} /></button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <SectionWheel items={TABS.map((tb) => ({ id: tb, icon: TAB_ICON[tb], label: t(`panel.tab.${tb}`), testid: `panel-tab-${tb}` }))} value={tab} onChange={setTab}
+              hubAvatar={<Avatar id={id} size={52} />} ariaLabel={t("panel.nav.label")} />
+            <button onClick={() => select(null)} className="rounded-md p-1.5 text-mute hover:bg-mute/10 hover:text-ink" aria-label={t("common.close")}><Icon name="x" size={16} /></button>
+          </div>
         </div>
         <div className="mt-3 flex items-center gap-2"><StateBadge state={agent.state} /><span className="truncate text-xs text-ink2">{agent.activity}</span></div>
         {agent.progress > 0 && <div className="mt-2"><Progress value={agent.progress} color={sm.color} /></div>}
       </div>
-      <nav role="tablist" className="flex gap-0.5 overflow-x-auto border-b border-line px-2">
-        {TABS.map((tb) => (
-          <button key={tb} role="tab" aria-selected={tab === tb} data-testid={`panel-tab-${tb}`} onClick={() => setTab(tb)} className={`whitespace-nowrap border-b-2 px-2.5 py-2.5 text-[11.5px] font-medium transition ${tab === tb ? "border-accent text-ink" : "border-transparent text-mute hover:text-ink"}`}>
-            {t(`panel.tab.${tb}`)}
-          </button>
-        ))}
-      </nav>
-      <div className={tab === "chat" ? "min-h-0 flex-1" : "min-h-0 flex-1 space-y-3 overflow-y-auto p-4"}>
+      <div role="tabpanel" aria-label={t(`panel.tab.${tab}`)} className={tab === "chat" ? "min-h-0 flex-1" : "min-h-0 flex-1 space-y-3 overflow-y-auto p-4"}>
         {tab === "chat" && <AgentChat id={id} />}
         {error && !detail && <Empty>{t("panel.loadError")}</Empty>}
         {tab === "profile" && <Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card>}

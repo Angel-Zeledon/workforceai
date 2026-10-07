@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
+	"unicode"
 
 	"aiworkforce/backend/internal/domain"
 )
@@ -168,6 +170,28 @@ func chatLocale(s RunStyle) string {
 	return "es"
 }
 
+// SanitizeChatText cleans what a user typed before it is stored, shown to the
+// team or put in a prompt: invalid UTF-8, control characters (NUL, escape, ...),
+// bidirectional overrides and zero-width characters (they hide or reorder text)
+// are dropped (the zero-width joiner stays: emoji need it); newlines and tabs stay. Surrounding whitespace is trimmed.
+func SanitizeChatText(s string) string {
+	s = strings.ToValidUTF8(s, "")
+	s = strings.Map(func(r rune) rune {
+		switch {
+		case r == '\n' || r == '\t':
+			return r
+		case r == '\r':
+			return -1
+		case unicode.IsControl(r): // C0, DEL and C1
+			return -1
+		case r == 0x200B, r == 0x200C, r == 0x200E, r == 0x200F, r >= 0x202A && r <= 0x202E, r >= 0x2060 && r <= 0x2064, r >= 0x2066 && r <= 0x2069, r == 0xFEFF:
+			return -1
+		}
+		return r
+	}, s)
+	return strings.TrimSpace(s)
+}
+
 // IsChatConversation reports whether id is a logical chat conversation.
 func IsChatConversation(id string) bool {
 	return id == domain.ChatOffice || strings.HasPrefix(id, domain.ChatAgentPrefix)
@@ -185,7 +209,80 @@ func (o *Orchestrator) routeAgents(agents []domain.Agent) []RouteAgent {
 // turn asynchronously: route, then answers (or a request for a task). It
 // returns as soon as the message is stored.
 func (o *Orchestrator) PostChat(ctx context.Context, conversation, text string) (ChatTurn, error) {
-	text = strings.TrimSpace(text)
+	turn, _, err := o.PostChatKeyed(ctx, conversation, text, "")
+	return turn, err
+}
+
+// idemTTL is how long a client-chosen key remembers its turn.
+const (
+	idemTTL = 10 * time.Minute
+	idemMax = 5000
+)
+
+// idemCache makes POST /messages safe to retry: the same Idempotency-Key in the
+// same organization and conversation returns the original turn instead of
+// posting (and answering) the message twice. The zero value is ready to use.
+type idemCache struct {
+	mu sync.Mutex
+	m  map[string]idemEntry
+}
+
+type idemEntry struct {
+	turn ChatTurn
+	at   time.Time
+}
+
+func (c *idemCache) get(key string) (ChatTurn, bool) {
+	e, ok := c.m[key]
+	if !ok || time.Since(e.at) > idemTTL {
+		return ChatTurn{}, false
+	}
+	return e.turn, true
+}
+
+func (c *idemCache) put(key string, t ChatTurn) {
+	if c.m == nil {
+		c.m = map[string]idemEntry{}
+	}
+	if len(c.m) >= idemMax {
+		for k, e := range c.m {
+			if time.Since(e.at) > idemTTL {
+				delete(c.m, k)
+			}
+		}
+		if len(c.m) >= idemMax { // still full: drop everything older than the newest half
+			c.m = map[string]idemEntry{}
+		}
+	}
+	c.m[key] = idemEntry{turn: t, at: time.Now()}
+}
+
+// PostChatKeyed is PostChat with an optional idempotency key (a retry or a
+// double click with the same key returns the first turn; replayed is true then).
+func (o *Orchestrator) PostChatKeyed(ctx context.Context, conversation, text, key string) (turn ChatTurn, replayed bool, err error) {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		turn, err = o.postChat(ctx, conversation, text)
+		return turn, false, err
+	}
+	if len(key) > 128 {
+		return ChatTurn{}, false, fmt.Errorf("%w: idempotency key is too long (max 128 characters)", domain.ErrInvalid)
+	}
+	full := o.org(ctx) + "|" + strings.TrimSpace(conversation) + "|" + key
+	o.chatIdem.mu.Lock()
+	defer o.chatIdem.mu.Unlock()
+	if t, ok := o.chatIdem.get(full); ok {
+		return t, true, nil
+	}
+	turn, err = o.postChat(ctx, conversation, text)
+	if err == nil {
+		o.chatIdem.put(full, turn)
+	}
+	return turn, false, err
+}
+
+func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) (ChatTurn, error) {
+	text = SanitizeChatText(text)
 	if text == "" {
 		return ChatTurn{}, fmt.Errorf("%w: text is required", domain.ErrInvalid)
 	}
@@ -217,7 +314,6 @@ func (o *Orchestrator) PostChat(ctx context.Context, conversation, text string) 
 	if err := o.ensureChatConv(ctx, t); err != nil {
 		return ChatTurn{}, err
 	}
-	t.history = o.chatHistory(ctx, t)
 	m := domain.Message{ID: t.userMsgID, ConversationID: conversation, From: "user", To: to, Kind: domain.MsgChat, Text: text,
 		TS: time.Now().UTC(), TurnID: t.id}
 	if err := o.store.AddMessage(ctx, org, m); err != nil {
@@ -230,12 +326,58 @@ func (o *Orchestrator) PostChat(ctx context.Context, conversation, text string) 
 	rctx := WithOrg(o.base, org)
 	rctx = WithActor(rctx, ActorFrom(ctx, ""))
 	rctx = WithActorRole(rctx, ActorRoleFrom(ctx, ""))
+	// Turns of one conversation run one after the other, in the order the messages arrived: answers never
+	// interleave between turns and a follow-up always sees what the previous turn said.
+	key := org + "|" + conversation
+	prev, done := o.chatQ.enqueue(key)
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
+		defer o.chatQ.finish(key, done)
+		select {
+		case <-prev:
+		case <-rctx.Done():
+			return
+		}
+		t.history = o.chatHistory(rctx, t)
 		o.runTurn(rctx, t)
 	}()
 	return ChatTurn{MessageID: m.ID, TurnID: t.id}, nil
+}
+
+// chatQueue chains the turns of each conversation (FIFO). The zero value is ready to use.
+type chatQueue struct {
+	mu    sync.Mutex
+	tails map[string]chan struct{}
+}
+
+// enqueue returns the channel that closes when the previous turn of key is over
+// (already closed when there is none) and the one this turn must close.
+func (q *chatQueue) enqueue(key string) (prev <-chan struct{}, done chan struct{}) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if q.tails == nil {
+		q.tails = map[string]chan struct{}{}
+	}
+	done = make(chan struct{})
+	if last, ok := q.tails[key]; ok {
+		prev = last
+	} else {
+		closed := make(chan struct{})
+		close(closed)
+		prev = closed
+	}
+	q.tails[key] = done
+	return prev, done
+}
+
+func (q *chatQueue) finish(key string, done chan struct{}) {
+	close(done)
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if q.tails[key] == done {
+		delete(q.tails, key)
+	}
 }
 
 func (o *Orchestrator) ensureChatConv(ctx context.Context, t *chatTurn) error {
@@ -265,27 +407,42 @@ func (o *Orchestrator) ensureChatConv(ctx context.Context, t *chatTurn) error {
 	return nil
 }
 
-// chatHistory returns the most recent spoken messages of the conversation.
+// chatHistory returns the most recent spoken messages of the conversation that
+// came BEFORE this turn: not the user's message of this turn nor messages the
+// user wrote later while this turn was waiting in the queue.
 func (o *Orchestrator) chatHistory(ctx context.Context, t *chatTurn) []ChatHistoryItem {
+	const window = chatHistoryLimit + 8 // room for the messages that are filtered out below
 	var msgs []domain.Message
 	var err error
 	if p, ok := o.store.(MessagePager); ok {
-		msgs, _, err = p.ListMessagesPage(ctx, o.org(ctx), t.conv, "", chatHistoryLimit)
+		msgs, _, err = p.ListMessagesPage(ctx, o.org(ctx), t.conv, "", window)
 	} else {
 		msgs, err = o.store.ListMessages(ctx, o.org(ctx), t.conv)
-		if len(msgs) > chatHistoryLimit {
-			msgs = msgs[len(msgs)-chatHistoryLimit:]
+		if len(msgs) > window {
+			msgs = msgs[len(msgs)-window:]
 		}
 	}
 	if err != nil {
 		return nil
+	}
+	var mine time.Time
+	for _, m := range msgs {
+		if m.ID == t.userMsgID {
+			mine = m.TS
+		}
 	}
 	out := make([]ChatHistoryItem, 0, len(msgs))
 	for _, m := range msgs {
 		if m.From == "system" || (m.Kind != domain.MsgChat && m.Kind != domain.MsgAnswer) {
 			continue
 		}
+		if m.ID == t.userMsgID || (m.From == "user" && !mine.IsZero() && m.TS.After(mine)) {
+			continue
+		}
 		out = append(out, ChatHistoryItem{From: m.From, Text: truncate(m.Text, 400)})
+	}
+	if len(out) > chatHistoryLimit {
+		out = out[len(out)-chatHistoryLimit:]
 	}
 	return out
 }
@@ -350,7 +507,7 @@ func (o *Orchestrator) chatReplyRequest(t *chatTurn, agent domain.Agent, route R
 	req := ChatReplyRequest{
 		Agent: ChatAgent{ID: agent.ID, Role: agent.Role, Title: agent.Title, Name: agent.Name, Persona: agent.Persona},
 		Text:  t.text, Conversation: t.conv, Intent: route.Intent, Topic: route.Topic, ResponderRole: r.Role, Reason: r.Reason,
-		Agents: o.routeAgents(t.agents), History: t.history, PriorReplies: append([]ChatHistoryItem{}, prior...), Slot: slot,
+		Agents: o.routeAgents(t.agents), History: append([]ChatHistoryItem{}, t.history...), PriorReplies: append([]ChatHistoryItem{}, prior...), Slot: slot,
 		Locale: t.style.Locale, Tone: t.style.ToneFor(agent.ID),
 	}
 	if route.Consult != nil && r.Role == domain.RolePrimary {
@@ -364,7 +521,7 @@ func (o *Orchestrator) chatReplyRequest(t *chatTurn, agent domain.Agent, route R
 // decideRoute asks the runtime and falls back to the local rules on any
 // problem (runtime down, timeout, invalid answer). It never fails.
 func (o *Orchestrator) decideRoute(ctx context.Context, t *chatTurn) RouteResponse {
-	in := RouteRequest{Text: t.text, Conversation: t.conv, Agents: o.routeAgents(t.agents), History: t.history,
+	in := RouteRequest{Text: t.text, Conversation: t.conv, Agents: o.routeAgents(t.agents), History: append([]ChatHistoryItem{}, t.history...),
 		Locale: t.style.Locale, Tone: t.style.Tone}
 	if cr, ok := o.rt.(ChatRuntime); ok {
 		cctx, cancel := context.WithTimeout(ctx, o.chatTimeout())
@@ -601,7 +758,7 @@ func (o *Orchestrator) chatTask(ctx context.Context, t *chatTurn, route RouteRes
 	id, err := o.Submit(withChatLink(ctx, link), t.text)
 	if err != nil {
 		if ctx.Err() == nil {
-			o.chatSystem(ctx, t, fmt.Sprintf(chatText(t.loc, "task_failed"), err))
+			o.chatSystem(ctx, t, fmt.Sprintf(chatText(t.loc, "task_failed"), chatSafeCause(t.loc, err)))
 		}
 		return
 	}
@@ -819,7 +976,11 @@ func (o *Orchestrator) announceAssignments(ctx context.Context, rs *run, tasks [
 		return
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, chatText(l.loc, "plan_intro"), len(tasks))
+	intro := "plan_intro"
+	if l.reassignFrom != "" {
+		intro = "plan_intro_reassigned" // the speaker declined this work: no "I put together a plan"
+	}
+	fmt.Fprintf(&b, chatText(l.loc, intro), len(tasks))
 	for _, t := range tasks {
 		a := rs.agents[t.AgentID]
 		fmt.Fprintf(&b, "\n• %s (%s): %s. %s %s.", a.Name, a.Title, strings.TrimRight(t.Title, ". "), chatText(l.loc, "why"),
@@ -839,7 +1000,24 @@ func (o *Orchestrator) chatEchoFailure(ctx context.Context, rs *run, what string
 		return
 	}
 	o.chatStore(ctx, domain.Message{ID: newID(), ConversationID: rs.chat.conv, From: "system", To: "user", Kind: domain.MsgChat,
-		Text: fmt.Sprintf("%s: %v", what, cause), TS: time.Now().UTC(), TurnID: rs.chat.turnID, ReplyTo: &rs.chat.replyTo}, rs.req.ID)
+		Text: fmt.Sprintf("%s: %s", what, chatSafeCause(rs.chat.loc, cause)), TS: time.Now().UTC(), TurnID: rs.chat.turnID, ReplyTo: &rs.chat.replyTo}, rs.req.ID)
+}
+
+// chatSafeCause is what the user may read about a failure: network and runtime
+// errors carry internal addresses, so they become one plain sentence (the full
+// error stays in the log and the audit trail).
+func chatSafeCause(loc string, err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	low := strings.ToLower(msg)
+	for _, leak := range []string{"://", "agent-runtime", "dial tcp", "connection refused", "context deadline", "i/o timeout", "eof", "post \""} {
+		if strings.Contains(low, leak) {
+			return chatText(loc, "cause_unavailable")
+		}
+	}
+	return truncate(strings.Join(strings.Fields(msg), " "), 200)
 }
 
 func (o *Orchestrator) chatEchoReport(ctx context.Context, rs *run, title string) {

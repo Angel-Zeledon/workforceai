@@ -1,6 +1,5 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { useT } from "@/lib/i18n";
 import { orgApi, type OrgSettings } from "@/lib/orgConfigApi";
 import { OnboardingWizard } from "./OnboardingWizard";
 import { OrgConfigPanel } from "./OrgConfigPanel";
@@ -18,13 +17,14 @@ function writeDismissed() {
 }
 
 /**
- * Header entry for organization setup. Until onboarding is completed it shows
- * a highlighted "Set up your office" button that opens the wizard; afterwards
- * it becomes "Team settings" (regional tone, daily briefing, fiscal examples).
- * Renders nothing when the backend does not expose the endpoints.
+ * Organization setup entry, owned by the admin menu. Until onboarding is
+ * completed the menu item opens the wizard ("Set up your office", data-testid
+ * `onboarding-open`); afterwards it opens "Team settings" (regional tone, daily
+ * briefing, fiscal examples; `org-config-open`). `supported` is false when the
+ * backend does not expose the endpoints. Render `dialogs` once, outside the menu,
+ * so they outlive it closing.
  */
-export function OnboardingEntry() {
-  const { t } = useT();
+export function useOnboardingEntry() {
   const [settings, setSettings] = useState<OrgSettings | null>(null);
   const [unsupported, setUnsupported] = useState(false);
   const [wizard, setWizard] = useState(false);
@@ -38,19 +38,17 @@ export function OnboardingEntry() {
     if (AUTO_OPEN && settings && !settings.onboarding_completed && !readDismissed()) setWizard(true);
   }, [settings]);
 
-  if (unsupported || !settings) return null;
-  const pending = !settings.onboarding_completed;
-  return (
+  const pending = !!settings && !settings.onboarding_completed;
+  const dialogs = (
     <>
-      {pending ? (
-        <button type="button" data-testid="onboarding-open" onClick={() => setWizard(true)} title={t("onb.prompt.body")}
-          className="animate-pulse rounded-md border border-accent bg-accent/10 px-3 py-1 font-semibold text-accent hover:animate-none">{t("onb.prompt.title")}</button>
-      ) : (
-        <button type="button" data-testid="org-config-open" onClick={() => setPanel(true)}
-          className="rounded-md border border-line px-3 py-1 font-semibold hover:text-ink">{t("cfg.open")}</button>
-      )}
       {wizard && <OnboardingWizard onClose={() => { writeDismissed(); setWizard(false); load(); }} onDone={(r) => setSettings(r.settings)} />}
       {panel && <OrgConfigPanel onClose={() => { setPanel(false); load(); }} />}
     </>
   );
+  return {
+    supported: !unsupported && !!settings,
+    pending,
+    open: () => (pending ? setWizard(true) : setPanel(true)),
+    dialogs,
+  };
 }

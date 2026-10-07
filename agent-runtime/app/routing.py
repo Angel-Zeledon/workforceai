@@ -44,30 +44,103 @@ def _tokens(n: str) -> list[str]:
     return re.findall(r"[a-z0-9&$]+", n)
 
 
+# ------------------------------------------------------------------ typo tolerance
+# Words a user is likely to misspell in a topic question ("balanse", "presupuesot"). A token is only
+# corrected when it is NOT already something the rules understand and is one edit away from exactly one
+# of these words, so ordinary words are left alone.
+_VOCAB = ("balance", "finanzas", "financiero", "margen", "factura", "facturas", "presupuesto", "impuestos", "contabilidad",
+          "contrato", "contratos", "clausula", "abogado", "vacante", "vacantes", "nomina", "salario", "vacaciones",
+          "ventas", "cliente", "clientes", "propuesta", "cotizacion", "datos", "analisis", "metricas", "operaciones",
+          "capacidad", "proveedor", "inventario", "logistica", "reunion", "calendario", "reporte", "informe",
+          "invoice", "contract", "budget", "payroll", "customer", "proposal", "inventory", "analysis", "meeting",
+          "finance", "revenue", "profit", "delivery", "lawyer", "metrics")
+
+
+def _within_one_edit(a: str, b: str) -> bool:
+    """True when a and b differ by one insertion, deletion, substitution or adjacent swap."""
+    if a == b:
+        return True
+    la, lb = len(a), len(b)
+    if abs(la - lb) > 1:
+        return False
+    if la == lb:
+        diff = [i for i in range(la) if a[i] != b[i]]
+        return len(diff) == 1 or (len(diff) == 2 and diff[1] == diff[0] + 1 and a[diff[0]] == b[diff[1]] and a[diff[1]] == b[diff[0]])
+    short, long_ = (a, b) if la < lb else (b, a)
+    i = 0
+    while i < len(short) and short[i] == long_[i]:
+        i += 1
+    return short[i:] == long_[i + 1:]
+
+
+def fix_typos(n: str, keep: Iterable[str] = ()) -> str:
+    """Normalized text with obvious misspellings of topic words replaced by the word they mean."""
+    keep_set = set(keep)
+    out = []
+    for tok in n.split(" "):
+        word = re.sub(r"[^a-z0-9]", "", tok)
+        if (len(word) >= 6 and word not in keep_set and word not in _VOCAB and not _TASK_STEMS.match(word)
+                and not any(p.search(word) for p in _TOPIC_PATTERNS.values())):
+            hits = [v for v in _VOCAB if v[0] == word[0] and _within_one_edit(word, v)]
+            if len(hits) == 1 or (hits and len({h.rstrip("s") for h in hits}) == 1):
+                tok = tok.replace(word, hits[0])
+        out.append(tok)
+    return " ".join(out)
+
+
+_EN_WORDS = {"the", "is", "are", "what", "whats", "how", "hello", "hi", "hey", "thanks", "thank", "you", "please", "can", "could",
+             "our", "we", "my", "do", "does", "did", "to", "of", "with", "about", "going", "team", "everyone", "good", "morning",
+             "afternoon", "evening", "any", "have", "has", "need", "want", "much", "many", "who", "when", "where", "why", "it",
+             "this", "that", "and", "for", "your", "me", "i", "its", "there", "will", "should", "would", "on", "in", "at", "us"}
+_ES_WORDS = {"el", "la", "los", "las", "de", "del", "que", "para", "con", "por", "un", "una", "hola", "gracias", "como", "cual",
+             "cuanto", "cuantos", "donde", "quien", "es", "son", "esta", "estan", "mi", "nuestro", "nuestra", "tengo", "tenemos",
+             "necesito", "quiero", "buenos", "buenas", "dias", "tardes", "noches", "equipo", "todos", "ayuda", "va", "voy", "hay",
+             "y", "en", "al", "lo", "se", "me", "te", "puedes", "favor", "porque", "cuando", "sobre", "este", "esto", "eso"}
+
+
+def detect_locale(text: str, default: str) -> str:
+    """The language of the message when it is clearly the other one; otherwise the organization's.
+
+    Only used by scripted (simulation) replies: a user who writes English to a Spanish workspace gets English back.
+    """
+    raw = (text or "").lower()
+    if re.search(r"[áéíóúñü¿¡]", raw):
+        return "es"
+    toks = re.findall(r"[a-z']+", raw)
+    en = sum(1 for t in toks if t in _EN_WORDS)
+    es = sum(1 for t in toks if t in _ES_WORDS)
+    if en and not es:
+        return "en"
+    if es and not en and default == "en" and any(t in _ES_WORDS for t in toks):
+        return "es" if es >= 1 else default
+    return default
+
+
 # ------------------------------------------------------------------ topics
 # Stems over the normalized text (accents removed), Spanish and English.
 _TOPIC_PATTERNS: dict[str, re.Pattern[str]] = {
     "accounting": re.compile(
         r"\b(finanz|financ|balance|margen|margin|costo|cost\b|costs\b|factur|invoice|presupuest|budget|flujo de caja|"
         r"cash ?flow|impuest|tax|contab|accounting|utilidad|profit|gasto|expense|ingreso|revenue|rentab|"
-        r"deuda|debt|prestamo|loan|iva\b|p&l|estado de resultados|cuentas por)"),
+        r"deuda|debt|prestamo|loan|iva\b|p&l|estado de resultados|cuentas por|cuesta|cuestan|cobr|contador|contadora|"
+        r"accountant|flujo|lana\b|plata\b|guita\b|caja\b|dinero|money)"),
     "legal": re.compile(
         r"\b(contratos?\b|contract|legal|clausula|clause|demanda|lawsuit|cumplimiento|compliance|abogad|lawyer|"
         r"attorney|ley\b|leyes|law\b|terminos y condiciones|terms and conditions|privacidad|privacy|nda\b|"
-        r"propiedad intelectual|intellectual property|litigio|regulat|licencia|license|penalidad|penalty)"),
+        r"propiedad intelectual|intellectual property|litigio|regulat|licencia|license|penalidad|penalty|juridic|notari)"),
     "hr": re.compile(
         r"\b(contratar|contrataci|contratamos|vacante|empleado|rrhh|recursos humanos|personal\b|reclut|onboarding|"
         r"nomina|salario|salary|vacaciones|hire\b|hiring|recruit|payroll|employee|candidat|entrevista|interview|"
-        r"talento|despido|dismissal)"),
+        r"talento|despido|dismissal|contrata\b|job post|job opening|oferta laboral|oferta de empleo|reclutador|recruiter|incapacidad|permiso laboral|clima laboral)"),
     "sales": re.compile(
         r"\b(ventas?\b|vend|sales\b|sell\b|selling|propuesta|proposal|cliente|client|customer|cotizacion|quote\b|"
-        r"pipeline|prospecto|lead\b|leads\b|comercial|negociacion|negotiation|descuento|discount|oferta)"),
+        r"pipeline|prospecto|lead\b|leads\b|comercial|negociacion|negotiation|descuento|discount|oferta|vetas|bentas|vendedor|seller)"),
     "analyst": re.compile(
         r"\b(datos|data\b|analisis|analysis|analiz|analyz|metric|kpi|tendencia|trend|estadistic|statistic|"
-        r"dashboard|grafic|chart|insight|correlacion|forecast|pronostico|proyeccion)"),
+        r"dashboard|grafic|chart|insight|correlacion|forecast|pronostico|proyeccion|analista|analyst)"),
     "operations": re.compile(
         r"\b(operacion|operaciones|operations|capacidad|capacity|logistic|entrega|delivery|proveedor|supplier|"
-        r"inventario|inventory|plazo|produccion|production|almacen|warehouse|envio|shipping)"),
+        r"inventario|inventory|plazo|produccion|production|almacen|warehouse|envio|shipping|retraso|delay)"),
     "assistant": re.compile(r"\b(agenda|calendario|calendar|reunion|meeting|recordatorio|reminder|coordin)"),
 }
 
@@ -104,18 +177,22 @@ def _first_pos(n: str, role: str) -> int:
 
 # ------------------------------------------------------------------ intent
 _GREET = re.compile(
-    r"^(hola+|holi+|buen(as|os)( (dias|tardes|noches))?|hey+|ey|hi|hello|hiya|good (morning|afternoon|evening)|"
+    r"^(hola+|holi+|buen(as|os)( (dias|tardes|noches))?|buen dia|hey+|ey|hi|hello|hiya|good (morning|afternoon|evening)|"
     r"saludos|que tal|que onda|que hubo|quihubo|ola)\b")
-_THANKS = re.compile(r"\b(gracias|thanks|thank you|thx|genial|perfecto|excelente|buen trabajo|great|awesome|perfect)\b")
+_THANKS = re.compile(r"\b(gracias|thanks|thank you|thx|ty)\b")
+_PRAISE = re.compile(r"\b(genial|perfecto|excelente|buen trabajo|great|awesome|perfect|bravo|muy bien)\b")
+_LAUGH = re.compile(r"^(j+a+j+[aj]*|ja(ja)+j?|je(je)+|ha(ha)+h?|lol+|lmao|xd+|jsjs+|jiji+)$")
+_CALL = {"oye", "ey", "hey", "hola", "hi", "hello", "disculpa", "perdona", "sorry", "excuse", "me", "buenas", "buenos", "dias"}
 _HELP = re.compile(r"\b(ayuda|ayudame|ayudenme|help|que puedes hacer|que haces|quien eres|who are you|what can you do|como funciona)\b")
 _HOWARE = re.compile(r"\b(como estas|como esta|como andas|como va todo|como les va|how are you|how is it going|hows it going|que cuentas)\b")
 _ACK = {"ok", "okay", "vale", "listo", "entendido", "dale", "bien", "cool", "ya", "claro", "si", "sip", "yes", "yep", "got", "it"}
 _FLUFF = {"a", "todos", "todas", "equipo", "team", "everyone", "all", "there", "amigos", "chicos", "chicas",
           "companeros", "como", "estan", "estas", "esta", "va", "y", "you", "how", "are", "is", "it", "going",
           "que", "tal", "muy", "dias", "tardes", "noches", "de", "nuevo", "again", "morning", "afternoon", "evening",
-          "les", "te", "bien", "yo", "aqui", "todo", "hows", "oficina", "office",
+          "les", "te", "bien", "aqui", "todo", "hows", "oficina", "office",
           # greeting words that can follow the opening ("hola equipo, buenos dias")
-          "buenos", "buenas", "buen", "good", "dia", "hola", "hi", "hello", "hey", "saludos", "gente"}
+          "buenos", "buenas", "buen", "good", "dia", "hola", "hi", "hello", "hey", "saludos", "gente",
+          "el", "todo", "al", "del", "que", "tal", "como"}
 
 _INTERROGATIVE = re.compile(
     r"^(que|como|cuanto|cuantos|cuanta|cuantas|cual|cuales|por que|porque|cuando|donde|quien|quienes|"
@@ -139,6 +216,9 @@ _IMPERATIVES_EN = {"prepare", "make", "calculate", "review", "draft", "write", "
                    "find", "give", "put", "check", "run", "set", "list", "show"}
 _EN_FILLER = {"please", "just", "can", "you", "could", "would", "go", "ahead", "kindly", "ok", "so", "now", "hey",
               "hi", "hello", "hola", "team", "buenas", "buenos", "dias", "tardes"}
+_HELP_ME = re.compile(r"\b(ayudame|ayudenme|ayudanos|me ayudas|me ayudan|me puedes ayudar|me podrias ayudar|ayudarme|"
+                      r"help me|can you help me|could you help me)\b")
+_DELEGATE = re.compile(r"^(?:oye |hey |por favor |please )?(dile|diles|pidele|pideles|pedile|encargale|encargaselo|tell|ask)\b")
 _NOT_TASK_AFTER_WANT = re.compile(r"\b(saber|entender|hablar|preguntar|conocer|ver|know|understand|talk|ask|see)\b")
 
 
@@ -149,8 +229,18 @@ def _name_tokens(agents: Iterable[RouteAgent]) -> set[str]:
     return out
 
 
+def _emoji_only(text: str) -> bool:
+    """No letters or digits, at least one pictograph (👍, 😀, 🙏...): a reaction, not a question."""
+    t = text or ""
+    if any(c.isalnum() for c in t):
+        return False
+    return any(unicodedata.category(c) in ("So", "Sk") for c in t)
+
+
 def smalltalk_kind(text: str, extra_fluff: set[str] | None = None) -> str | None:
-    """greeting | howare | thanks | help, or None when the message has real content."""
+    """greeting | howare | thanks | ack | help, or None when the message has real content."""
+    if _emoji_only(text):
+        return "greeting" if "\U0001F44B" in text else "ack"  # 👋 waves, everything else acknowledges
     n = re.sub(r"^[^a-z0-9]+", "", norm(text))
     if not n:
         return None
@@ -165,10 +255,25 @@ def smalltalk_kind(text: str, extra_fluff: set[str] | None = None) -> str | None
     toks = _tokens(n)
     if _HELP.search(n) and len(toks) <= 8 and not topic_scores(n):
         return "help"
-    if _THANKS.search(n) and len(toks) <= 6 and not topic_scores(n):
-        return "thanks"
+    if toks and all(_LAUGH.match(t) for t in toks):
+        return "ack"
+    # a message that is only a colleague's name ("Tomás", "oye Tomás") calls that colleague
+    names = extra_fluff or set()
+    if names and any(t in names for t in toks) and all(t in names or t in _CALL for t in toks):
+        return "greeting"
+    if _THANKS.search(n):
+        if toks[0] == "no" and len(toks) <= 3:
+            return "ack"
+        # "gracias por el balance" thanks even though a topic is named; "gracias, ¿y las ventas?" is a question
+        after = re.sub(r"^.*?\b(gracias|thanks|thank you|thx|ty)\b", "", n, count=1)
+        if len(toks) <= 8 and "?" not in text and not _INTERROGATIVE.match(after.strip(" ,.!")) and not is_task(after):
+            return "thanks"
+        if len(toks) <= 6 and not topic_scores(n):
+            return "thanks"
+    if _PRAISE.search(n) and len(toks) <= 6 and not topic_scores(n) and "?" not in text:
+        return "ack"
     if not m and toks and all(t in _ACK or t in fluff for t in toks) and len(toks) <= 3:
-        return "thanks"
+        return "ack"
     return None
 
 
@@ -179,6 +284,12 @@ def is_task(text: str) -> bool:
     if not toks:
         return False
     polite = bool(_POLITE.search(n))
+    # "tell Tomás to prepare the balance", "dile a Tomás que prepare el balance": asking a colleague to do something
+    if _DELEGATE.match(n) and _TASK_STEMS.search(n):
+        return True
+    # "help me with the contract": a request for work when it names an area; "help me understand" stays a question
+    if _HELP_ME.search(n) and topic_scores(n) and not _NOT_TASK_AFTER_WANT.search(n):
+        return True
     if _INTERROGATIVE.match(n) and not polite:
         return False
     # first-person plural ("hablemos", "revisemos") invites a conversation, it is not an order
@@ -192,7 +303,8 @@ def is_task(text: str) -> bool:
     if first in _IMPERATIVES_EN:
         return True
     if _WANT_DET.search(n) and not _NOT_TASK_AFTER_WANT.search(n):
-        return True
+        # "¿necesitamos un NDA?" asks, "necesitamos un NDA" orders; "¿puedes...?" is handled below
+        return not ("?" in text and not re.search(r"\b(puedes|podrias|podes|can you|could you|would you)\b", n))
     if polite and _TASK_STEMS.search(n) and not _NOT_TASK_AFTER_WANT.search(n):
         return True
     return False
@@ -252,18 +364,35 @@ def parse_conversation(conversation: str) -> str | None:
     return None
 
 
+def owner_role(text: str) -> str | None:
+    """The role that owns the topic of a text (None when it names no area)."""
+    n = fix_typos(norm(text))
+    scores = topic_scores(n)
+    if not scores:
+        return None
+    return sorted(scores, key=lambda r: (-scores[r], _first_pos(n, r)))[0]
+
+
 # ------------------------------------------------------------------ the rules router
 def rules_route(req: RouteRequest) -> RouteResponse:
     """Deterministic router. Never raises; always returns at least one responder."""
     roster = Roster(req.agents)
     fluff = _name_tokens(roster.agents)
-    n = norm(req.text)
+    n = fix_typos(norm(req.text), fluff)
     kind = smalltalk_kind(req.text, fluff)
-    intent = "smalltalk" if kind else ("task" if is_task(req.text) else "question")
+    intent = "smalltalk" if kind else ("task" if is_task(n) else "question")
     scores = topic_scores(n)
     primary_role = None
     if scores:
         primary_role = sorted(scores, key=lambda r: (-scores[r], _first_pos(n, r)))[0]
+    last = _last_primary(req.history, roster)
+    if not scores and last is not None and parse_conversation(req.conversation) is None:
+        # "¿y por qué?", "y eso?": a follow-up without a topic stays with whoever answered last
+        if intent == "question" and _FOLLOWUP.search(re.sub(r"^[^a-z0-9]+", "", n)) and len(_tokens(n)) <= 10:
+            primary_role = roster.role_of(last.id)
+        # "gracias" right after an answer thanks the one who answered
+        elif kind in ("thanks", "ack") and roster.role_of(last.id) != ASSISTANT:
+            primary_role = roster.role_of(last.id)
     topic = ROLE_TOPIC.get(primary_role or "assistant", "general") if intent != "smalltalk" else (
         "greeting" if kind in ("greeting", "howare") else kind or "general")
     rs = _reasons(req.locale)
@@ -283,6 +412,19 @@ def rules_route(req: RouteRequest) -> RouteResponse:
         return resp
 
     assistant = roster.assistant()
+    # ---- office smalltalk that names colleagues ("hola Tomás", "gracias Elena"): only they answer
+    if intent == "smalltalk" and kind in ("greeting", "howare", "thanks", "ack"):
+        named = [a for a in _mentioned(n, roster) if (a.role or a.id) != ASSISTANT]
+        if named:
+            return RouteResponse(intent=intent, topic=topic, responders=[
+                Responder(agent_id=named[0].id, role="primary", reason=rs["direct"])] + [
+                Responder(agent_id=a.id, role="contributor", reason=rs["peer_greeting"]) for a in named[1:MAX_GREETERS]])
+        # thanks for something a colleague just did: that colleague answers
+        if kind in ("thanks", "ack") and primary_role and primary_role != ASSISTANT:
+            owner = roster.for_role(primary_role)
+            if owner is not None:
+                return RouteResponse(intent=intent, topic=topic, responders=[
+                    Responder(agent_id=owner.id, role="primary", reason=rs["owner"].format(topic=label))])
     # ---- office, but the user spoke to one colleague by name: only that person answers
     addressed = _addressed(n, roster) if intent in ("question", "task") else None
     if addressed is not None:
@@ -323,9 +465,32 @@ def rules_route(req: RouteRequest) -> RouteResponse:
     return RouteResponse(intent=intent, topic=topic, responders=responders[:1 + MAX_CONTRIBUTORS])
 
 
+_FOLLOWUP = re.compile(
+    r"^(y |pero |entonces |and |but |so |what about |por que|porque|why|cuanto|cuanta|cuantos|cual|cuales|como asi|en serio|"
+    r"really|how come|a que te refieres|puedes explicar)|\b(eso|esto|ese|esa|esos|esas|aquello|lo anterior|that|this|those|it|them|they)\b")
+_CALLING = ("oye", "ey", "disculpa", "perdona", "sorry", "excuse", "dile", "diles", "pidele", "pideles", "pedile", "encargale",
+            "encargaselo", "preguntale", "preguntales", "pregunta", "tell", "ask", "a", "to")
+
+
+def _last_primary(history: list, roster: Roster) -> RouteAgent | None:
+    """The agent that answered the user's previous message first (history is oldest first, agents only count)."""
+    last_user = max((i for i, h in enumerate(history) if h.from_ == "user"), default=-1)
+    for h in history[last_user + 1:]:
+        if h.from_ in roster.by_id:
+            return roster.by_id[h.from_]
+    return None
+
+
+def _mentioned(n: str, roster: Roster) -> list[RouteAgent]:
+    """Agents whose first name appears in a message that is otherwise only fluff (smalltalk)."""
+    toks = set(_tokens(n))
+    out = [a for a in roster.agents if a.name and len(_tokens(norm(a.name))[0]) >= 3 and _tokens(norm(a.name))[0] in toks]
+    return out[:2]
+
+
 def _addressed(n: str, roster: Roster) -> RouteAgent | None:
     """The one agent the user called by first name at the start of the message ("Tomás, ...", "oye Tomás ...")."""
-    toks = [t for t in _tokens(n) if t not in _EN_FILLER and t not in ("oye", "ey", "disculpa", "perdona", "sorry")][:2]
+    toks = [t for t in _tokens(n) if t not in _EN_FILLER and t not in _CALLING][:2]
     hits = [a for a in roster.agents if a.name and len(_tokens(norm(a.name))[0]) >= 3 and _tokens(norm(a.name))[0] in toks]
     return hits[0] if len(hits) == 1 else None
 
@@ -359,7 +524,7 @@ def validate_route(data: dict, req: RouteRequest) -> RouteResponse | None:
     rs = _reasons(req.locale)
     reasons = data.get("reasons") if isinstance(data.get("reasons"), dict) else {}
     topic = str(data.get("topic") or "general").strip().lower()
-    topic = topic if topic in TOPIC_ROLE or topic in ("greeting", "thanks", "help") else "general"
+    topic = topic if topic in TOPIC_ROLE or topic in ("greeting", "thanks", "ack", "help") else "general"
     direct_id = parse_conversation(req.conversation)
     if direct_id and direct_id in roster.by_id:  # 1:1: hard rule, never more than that agent
         primary = roster.by_id[direct_id]
@@ -406,9 +571,19 @@ def apply_tone(text: str, tone: str, locale: str) -> str:
     return text
 
 
+def _strip_address(text: str, agent) -> str:
+    """"Tomás, ¿cuánto vendimos?" -> "¿cuánto vendimos?": the consult must not repeat who the user was talking to."""
+    first = re.escape((agent.name or "").split(" ")[0])
+    if not first:
+        return text
+    out = re.sub(rf"^(?:oye |hey |hola )?{first}\b[\s,:;-]*", "", text, flags=re.IGNORECASE)
+    return out or text
+
+
 def compose_reply(req: ChatReplyRequest) -> tuple[str, str, ReplyConsult | None]:
     """(text, kind, consult) of one scripted chat reply. kind: chat | answer."""
-    c = sc.bundle(req.locale).CHAT
+    locale = detect_locale(req.text, req.locale)  # a message in the other language is answered in that language
+    c = sc.bundle(locale).CHAT
     agent = req.agent
     role = agent.role or agent.id
     roster = Roster(req.agents)
@@ -442,6 +617,8 @@ def compose_reply(req: ChatReplyRequest) -> tuple[str, str, ReplyConsult | None]
         sk = smalltalk_kind(req.text, _name_tokens(roster.agents)) or "greeting"
         if sk == "thanks":
             text = _pick(c["thanks"], rng, avoid, **base)
+        elif sk == "ack":
+            text = _pick(c["ack"], rng, avoid, **base)
         elif sk == "help":
             text = _pick(c["help"] if role == ASSISTANT else c["help_self"], rng, avoid, **base)
         elif sk == "howare" and role == ASSISTANT:
@@ -464,14 +641,16 @@ def compose_reply(req: ChatReplyRequest) -> tuple[str, str, ReplyConsult | None]
             pool = list(c["deflect"].get(role) or c["deflect"]["assistant"])
             pool += c["deflect_pair"].get((role, other_role), [])
             text = _pick(pool, rng, avoid, **base, **ctx)
-            q = re.sub(r"\s+", " ", req.text).strip()[:140]
+            q = _strip_address(re.sub(r"\s+", " ", req.text).strip(), agent)[:140]
             consult = ReplyConsult(to_agent_id=other.id, question=_pick(
                 c["consult_q"], rng, set(), other=ctx["other"], q=q))
+        elif role == ASSISTANT and _TOPIC_PATTERNS["assistant"].search(norm(req.text)):
+            text = _pick(c["answer_agenda"], rng, avoid, **base)  # agenda, calendar, meetings: the assistant's own area
         elif role == ASSISTANT or role not in c["answer"]:
             text = _pick(c["answer_general"], rng, avoid, **base)
         else:
             text = _pick(c["answer"][role], rng, avoid, **base)
-    return apply_tone(text, req.tone, req.locale), kind, consult
+    return apply_tone(text, req.tone, locale), kind, consult
 
 
 def assigned_reason(locale: str, scenario: str, key: str, role: str) -> str:

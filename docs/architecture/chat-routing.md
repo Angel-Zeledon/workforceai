@@ -36,7 +36,13 @@ El id guardado es el mismo string. En Postgres la clave de `conversations` pasa 
 ```json
 { "conversation": "office", "text": "hola" }
 ```
-`conversation` es opcional (`office`). → `202 {"message_id": "...", "turn_id": "..."}`. Errores: `400` texto vacío, de más de 4000 caracteres o conversación inválida; `404` agente desconocido. El resto llega por WebSocket.
+`conversation` es opcional (`office`). → `202 {"message_id": "...", "turn_id": "..."}`. Errores: `400` texto vacío (o solo caracteres invisibles), de más de 4000 caracteres, conversación inválida o `Idempotency-Key` de más de 128 caracteres; `404` agente desconocido; `413` cuerpo mayor a 1 MB. El resto llega por WebSocket.
+
+El texto se **sanitiza** antes de guardarse, mostrarse al equipo o entrar en un prompt: UTF-8 inválido, caracteres de control (NUL, ESC…), sobrescrituras bidireccionales y caracteres de ancho cero se eliminan (se conservan saltos de línea, tabulaciones y emojis compuestos). `POST /conversations/{id}/messages` (conversaciones de solicitudes) aplica el mismo saneado y el mismo tope.
+
+**Idempotencia**: con el header `Idempotency-Key` (o `client_message_id` en el cuerpo) un reintento o doble clic con la misma clave en la misma conversación devuelve el turno original (`202` + header `Idempotent-Replayed: true`) en vez de publicar y responder dos veces; la clave vive 10 minutos.
+
+**Orden**: los turnos de una misma conversación se ejecutan en cola, uno tras otro, en el orden de llegada. Las respuestas no se entrelazan entre turnos (varios mensajes rápidos) y cada turno ve en `history` lo que dijo el anterior (nunca su propio mensaje ni los que el usuario escribió después).
 
 ### `GET /api/v1/conversations/{id}/messages`
 
@@ -140,6 +146,22 @@ Textos visibles localizables (es por defecto, `en`) tanto en el runtime (`sim_co
 - Un mensaje de tarea nombrando a un compañero lo confirma él (no la asistente); en 1:1 confirma y explica el agente.
 - Los eventos de `chat.*` no se auditan uno a uno (solo `chat.turn`).
 
-## 13. Piezas
+## 13. Barrido de comportamiento (calidad de los agentes)
 
-Runtime: `app/routing.py` (reglas, validación, guiones), `sim_content.py` / `sim_content_en.py` (`CHAT`, `TASK_REASONS`), `main.py` (`/v1/route`, `/v1/chat-reply`), `crewai_engine.py` (live), `security.py` (prompts). Backend: `application/chat.go`, `chat_local.go`, `chat_handoff.go`, `api/chat.go`, `infrastructure/runtime/client.go`, migración `260_chat.sql` (+ down). Tests: `agent-runtime/tests/test_chat.py`, `backend/internal/application/chat_test.go`, `backend/internal/api/chat_test.go`.
+Arnés: `agent-runtime/tests/behavior_sweep.py` (extremo a extremo, HTTP + WebSocket contra un backend y runtime reales; ver su docstring) con los escenarios de `tests/behavior_cases.py`, que también alimentan `tests/test_behavior_routing.py` (en proceso, sin red). Cubre saludos, cortesías, preguntas por tema, ambiguas, tareas, "hablemos de…", nombres, 1:1 propio/ajeno, traspasos, tareas ajenas, límites (pausa, solo lectura, kill switch, presupuesto), robustez (entradas raras, concurrencia, orden y duplicados de eventos, runtime caído), contexto, idioma y tono.
+
+Reglas añadidas por el barrido:
+
+- **Typos y jerga**: `fix_typos` corrige palabras de tema a una edición de distancia ("balanse", "contrado") sin tocar palabras reales ni verbos de tarea; jerga de dinero/ventas (*lana*, *plata*, *vetas*). Roles por nombre de oficio (*contador*, *analista*, *reclutador*…).
+- **Intención**: "¿necesitamos un NDA?" (con `?`) es pregunta, "necesitamos un NDA" es tarea; "ayúdame con el contrato" / "help me with the budget" es tarea si nombra un área ("ayúdame a entender…" sigue siendo pregunta); "dile a Tomás que prepare el balance" / "tell Elena to review…" es tarea y la toma ese compañero.
+- **Smalltalk**: nuevo tipo `ack` (topic `ack`) para "ok", "vale", emojis, risas ("jajaja") y elogios sueltos, distinto de `thanks`; 👋 es saludo. "Gracias por el balance" es agradecimiento (no una pregunta de finanzas). Un mensaje que es solo un nombre ("Tomás", "hola Tomás", "oye Valeria") lo contesta esa persona.
+- **Contexto**: una pregunta sin tema que sigue a una respuesta ("¿y por qué?", "¿y eso?") va a quien contestó primero en el turno anterior; "gracias"/"ok" tras una respuesta los recibe quien respondió. Nunca cambia un chat 1:1.
+- **Idioma**: en simulación, un mensaje claramente en inglés a una organización en español se contesta en inglés (y al revés); en live el idioma de la instrucción sigue al del mensaje. Voseo (`ar`) más completo; el sustantivo *cuentas* no se toca.
+- **Guiones**: más variantes por rol (5 por tema), líneas de agenda para la asistente, `ack`, sin género fijo en las cortesías. Las líneas de límite son instantáneas y de costo cero. La consulta a un compañero no repite el nombre al que se dirigió el usuario.
+- **Plan simulado**: sin escenario guionado, si el texto nombra un área el responsable de esa área trabaja la tarea (antes siempre asistente + analista).
+- **Errores claros**: el aviso de fallo de una solicitud nacida en el chat no muestra URLs ni errores de red internos ("el servicio del equipo no responde…"). Sin runtime, un 1:1 sobre un tema ajeno nombra igualmente al compañero correcto.
+- **Contrato con el runtime**: Go serializa los slices nil como `null`; el runtime acepta `null` como lista vacía en `agents`/`history`/`prior_replies`. (Antes, cada línea de límite fallaba con 422 y caía al aviso de sistema genérico.)
+
+## 14. Piezas
+
+Runtime: `app/routing.py` (reglas, validación, guiones), `sim_content.py` / `sim_content_en.py` (`CHAT`, `TASK_REASONS`), `main.py` (`/v1/route`, `/v1/chat-reply`), `crewai_engine.py` (live), `security.py` (prompts). Backend: `application/chat.go`, `chat_local.go`, `chat_handoff.go`, `api/chat.go`, `infrastructure/runtime/client.go`, migración `260_chat.sql` (+ down). Tests: `agent-runtime/tests/test_chat.py`, `agent-runtime/tests/test_behavior_routing.py` (+ `behavior_cases.py`, `behavior_sweep.py`), `backend/internal/application/chat_test.go`, `chat_internal_test.go`, `backend/internal/api/chat_test.go`.

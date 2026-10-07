@@ -31,13 +31,14 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    ".next-chat/types/**/*.ts",
     ".next-dev/types/**/*.ts",
     ".next-mock/types/**/*.ts",
     ".next-native/types/**/*.ts",
     ".next-verify/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    ".next-chat/types/**/*.ts"
+    ".next-ui/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

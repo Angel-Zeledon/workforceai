@@ -1,10 +1,8 @@
 {
   "app.demoOffice": "Demo office",
-
   "mode.switchTitle": "Switch between 3D office and dashboard",
   "mode.office": "Office",
   "mode.dashboard": "Dashboard",
-
   "hud.active": "Active",
   "hud.approvalsShort": "Approvals",
   "hud.resetDemo": "Reset demo",
@@ -12,7 +10,6 @@
   "hud.reconnecting": "Reconnecting…",
   "hud.liveActivity": "Live activity",
   "hud.cameraHint": "Drag to rotate · scroll to zoom · right-click to pan",
-
   "common.close": "Close",
   "common.cost": "Cost",
   "common.confidence": "Confidence",
@@ -23,10 +20,8 @@
   "common.you": "You",
   "common.everyone": "Everyone",
   "common.now": "now",
-
   "activity.empty": "No activity yet. Ask your company for something.",
   "report.executiveSummary": "Executive summary",
-
   "cmd.placeholder": "Write to the office: say hi, ask or request something…",
   "cmd.send": "Send",
   "cmd.sending": "Sending…",
@@ -41,7 +36,6 @@
   "cmd.suggestion2.prompt": "Sales dropped this month, what happened?",
   "cmd.suggestion3.label": "Hire 2 people",
   "cmd.suggestion3.prompt": "I need to hire 2 people for operations",
-
   "approvals.pendingTitle": "Pending approvals: {count}",
   "approvals.pendingTitle_one": "{count} pending approval",
   "approvals.pendingTitle_other": "{count} pending approvals",
@@ -50,14 +44,12 @@
   "approvals.approved": "Approved",
   "approvals.rejected": "Rejected",
   "approvals.decideError": "Couldn't record your decision. Please try again.",
-
   "conversation.empty": "No messages yet.",
   "conversation.placeholder": "Write a message…",
   "kind.chat": "chat",
   "kind.delegation": "delegation",
   "kind.consult": "consult",
   "kind.answer": "answer",
-
   "panel.tab.state": "Status",
   "panel.tab.tasks": "Tasks",
   "panel.tab.chats": "With the team",
@@ -78,12 +70,10 @@
   "panel.noChats": "No conversations yet.",
   "panel.noMemory": "No saved memory yet.",
   "panel.noReports": "No reports yet.",
-
   "light.title": "Office lighting",
   "light.ambient": "Ambient",
   "light.day": "Lights on",
   "light.night": "Night",
-
   "settings.title": "Office settings",
   "settings.language": "Language",
   "settings.labels": "Labels",
@@ -93,7 +83,6 @@
   "settings.employees": "Employees",
   "lang.es": "Español",
   "lang.en": "English",
-
   "custom.fullName": "Full name",
   "custom.nickname": "Nickname (3D label)",
   "custom.jobTitle": "Job title",
@@ -118,7 +107,6 @@
   "accessory.hardhat": "Hard hat",
   "accessory.beanie": "Beanie",
   "accessory.lanyard": "Badge lanyard",
-
   "role.default": "Agent",
   "role.sales": "Sales",
   "role.analyst": "Analyst",
@@ -134,7 +122,6 @@
   "agent.title.analyst": "Analyst",
   "agent.title.operations": "Operations",
   "agent.title.assistant": "Executive Assistant",
-
   "state.idle": "Idle",
   "state.thinking": "Thinking",
   "state.working": "Working",
@@ -155,7 +142,6 @@
   "autonomy.approve_each": "Approve each action",
   "autonomy.rules": "Rule-based",
   "autonomy.autonomous": "Autonomous",
-
   "dash.section.overview": "Overview",
   "dash.section.requests": "Requests & plan",
   "dash.section.tasks": "Tasks",
@@ -222,7 +208,6 @@
   "dash.costs.noRequests": "No requests.",
   "dash.costs.errorsTitle": "Errors & blockers ({count})",
   "dash.costs.noErrors": "No errors. All good.",
-
   "panel.tab.files": "Files",
   "dash.section.files": "Files",
   "dash.files.backToLibrary": "Back to library",
@@ -355,7 +340,6 @@
   "agenda.confirmed": "confirmed",
   "embed.tooDeep": "Embed nested too deeply.",
   "embed.locked": "File unavailable or no permission.",
-
   "nav.projects": "Projects",
   "pv.backendMissing": "The backend does not expose the projects endpoints yet. Enable mock mode (NEXT_PUBLIC_MOCK=true) to see them.",
   "pv.title": "Projects",
@@ -616,7 +600,6 @@
   "proj.gen.w3": "Delivery",
   "proj.gen.v1": "Approve the plan",
   "proj.gen.v2": "Consolidate the final report",
-
   "tpl.open": "Templates",
   "tpl.open.title": "Open the workflow template gallery",
   "tpl.title": "Workflow template gallery",
@@ -717,7 +700,6 @@
   "cfg.tax.badge": "Example, not tax advice",
   "cfg.tax.fields": "Fields",
   "cfg.tax.checklist": "Checklist",
-
   "nav.connections": "Connections",
   "nav.security": "Security",
   "conn.title": "Connections",
@@ -1055,7 +1037,6 @@
   "conn.risk.low": "Low risk",
   "conn.risk.medium": "Medium risk",
   "conn.risk.high": "High risk",
-
   "cmd.status.awaiting_confirmation": "waiting for your cost confirmation",
   "cmd.status.paused": "paused by budget",
   "dash.reqStatus.awaiting_confirmation": "Awaiting cost confirmation",
@@ -1131,7 +1112,6 @@
   "cost.limits.save": "Save",
   "cost.limits.invalid": "Enter a number equal to or greater than zero (empty removes the cap).",
   "cost.limits.error": "The cap could not be saved. Please try again.",
-
   "panel.tab.chat": "Chat",
   "chat.log": "Chat messages",
   "chat.placeholder.agent": "Message {name}…",
@@ -1278,5 +1258,14 @@
   "mock.chat.handoff.ok.2": "Done, letting {name} know right now.",
   "mock.chat.handoff.consult": "{name}, the user asks: \"{text}\". Can you take it?",
   "mock.chat.handoff.take": "Sure, I'll take it. Thanks for the heads-up.",
-  "mock.reason.reassigned": "{from} passed the assignment on because it is in their area"
+  "mock.reason.reassigned": "{from} passed the assignment on because it is in their area",
+  "admin.title": "Administration",
+  "admin.group.workspace": "Workspace",
+  "admin.group.safety": "Safety",
+  "admin.group.demo": "Demo",
+  "admin.pending": "Pending",
+  "admin.active": "Active",
+  "panel.nav.label": "Agent sections",
+  "panel.nav.current": "Current section",
+  "panel.nav.go": "Go to this section"
 }

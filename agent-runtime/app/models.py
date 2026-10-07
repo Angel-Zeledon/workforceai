@@ -251,6 +251,11 @@ class SynthesizeResponse(_Base):
     model: str | None = None
 
 
+def _none_to_list(v):
+    """Go marshals a nil slice as null; for these list fields that means "empty"."""
+    return [] if v is None else v
+
+
 # ---- /v1/route and /v1/chat-reply (conversational layer, docs/architecture/chat-routing.md) ----
 Intent = Literal["smalltalk", "question", "task"]
 INTENTS: tuple[str, ...] = ("smalltalk", "question", "task")
@@ -283,6 +288,7 @@ class RouteRequest(_ProviderPolicyMixin):
 
     _norm = field_validator("locale", mode="before")(normalize_locale)
     _norm_tone = field_validator("tone", mode="before")(normalize_tone)
+    _lists = field_validator("agents", "history", mode="before")(_none_to_list)
 
 
 class Responder(_Base):
@@ -355,6 +361,7 @@ class ChatReplyRequest(_ProviderPolicyMixin):
 
     _norm = field_validator("locale", mode="before")(normalize_locale)
     _norm_tone = field_validator("tone", mode="before")(normalize_tone)
+    _lists = field_validator("agents", "history", "prior_replies", mode="before")(_none_to_list)
 
 
 class ChatReplyResponse(_Base):

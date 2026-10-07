@@ -373,6 +373,12 @@ TEXTS = {
     "h_conf": "Confianza global",
     "conf_body": "Confianza promedio de los agentes: {avg:.0%} sobre {n} tareas.",
     "fallback_task": ("tarea_1", "Atender la solicitud"),
+    # default scenario with a recognizable topic: the owner of the topic does the work, the assistant frames it
+    "owner_task": ("responsable", "Resolver la parte de {area}",
+                   "Resolver la parte de {area} de la solicitud con la información disponible y dejar conclusiones claras."),
+    # default scenario with a recognizable topic: the owner of the topic does the work, the assistant frames it
+    "owner_task": ("responsable", "Atender la solicitud desde {area}",
+                   "Resolver la parte de {area} de la solicitud con la información disponible y dejar conclusiones claras."),
 }
 
 
@@ -461,7 +467,15 @@ CHAT: dict = {
         "¡De nada! Aquí estoy para lo que necesites.",
         "Con gusto. Si surge algo más, me avisas.",
         "A ti. Cualquier cosa, me escribes.",
-        "Perfecto, quedo atenta.",
+        "Perfecto, aquí sigo.",
+        "Para eso estamos. ¿Algo más?",
+    ],
+    "ack": [
+        "Anotado. Aquí sigo por si surge algo.",
+        "Perfecto. Cuando quieras, seguimos.",
+        "Genial, ¡cuenta conmigo para lo siguiente!",
+        "Entendido. Si necesitas algo, solo dime.",
+        "Va. Quedo al pendiente.",
     ],
     "help": [
         "Puedo ayudarte a repartir el trabajo: Ventas, Legal, Contabilidad, RR. HH., Análisis y Operaciones están disponibles. Pregunta algo de su área o pídeme una tarea y la coordino.",
@@ -476,36 +490,53 @@ CHAT: dict = {
         "Entiendo. Si me das más contexto te digo quién del equipo puede ayudarte mejor.",
         "Anotado. ¿Prefieres que lo hablemos aquí o que lo convierta en una tarea para el equipo?",
     ],
+    "answer_agenda": [
+        "Para tu agenda necesito saber el día, la hora y con quién. ¿Quieres revisar lo que hay o agendo algo nuevo?",
+        "Claro, te ayudo con eso. ¿Miramos lo de hoy o lo de la semana?",
+        "Lo organizo yo. Dime qué reunión quieres mover o crear y busco el mejor hueco.",
+    ],
     "answer": {
         "accounting": [
             "Sobre las finanzas: por ahora veo ingresos y costos directos razonablemente alineados. Si quieres, reviso el balance del mes y te marco lo que se salga de lo normal. ¿Qué periodo te interesa?",
             "Con gusto. Para darte un número fiable necesito saber el periodo y si hablamos de margen bruto o neto. ¿Cuál prefieres?",
             "Los números mejor con detalle: puedo armar un cierre rápido con ingresos, costos y flujo de caja. Dime desde cuándo lo quieres.",
+            "Puedo darte una cifra, pero prefiero que los números sean los correctos: ¿hablamos de lo facturado o de lo cobrado, y de qué mes?",
+            "Antes de opinar, concilio ingresos contra costos del periodo. Dime qué rango te sirve y te lo confirmo con números cerrados.",
         ],
         "legal": [
             "Desde lo legal, lo primero es saber qué documento o acuerdo está de por medio. ¿Me cuentas más del contexto?",
             "Buena pregunta. Lo prudente es revisar plazos, penalidades y responsabilidad antes de comprometernos. ¿Tienes el borrador?",
             "Depende de lo que se haya firmado. Si me compartes el contrato, te digo qué riesgos veo.",
+            "Sin ver el texto no me quiero adelantar. ¿Me pasas el documento o al menos las cláusulas que te preocupan?",
+            "Eso tiene matices: según el alcance y la jurisdicción cambia. Cuéntame de qué acuerdo hablamos y lo reviso con calma.",
         ],
         "hr": [
             "Sobre personas: antes de decidir conviene definir el perfil y el presupuesto. ¿Es una vacante nueva o un reemplazo?",
             "Claro. Para contratar bien necesito saber el puesto, la banda salarial y para cuándo lo necesitan.",
             "Podemos verlo. Si me cuentas el tamaño del equipo y la carga actual, te doy una opinión más concreta.",
+            "Es un tema delicado, así que vamos con calma. ¿Hablamos de una persona en concreto o de cómo está el equipo en general?",
+            "Cuenta conmigo. ¿Qué es lo que más te preocupa: la carga de trabajo, los tiempos de contratación o el ambiente?",
         ],
         "sales": [
             "En ventas, lo que más mueve la aguja es el seguimiento. ¿Hablamos de un cliente en concreto o del pipeline en general?",
             "Te cuento cómo lo veo: hay oportunidades abiertas, pero depende de cada cliente. ¿De cuál quieres hablar?",
             "Buen punto. Si me dices el cliente y el monto aproximado, te digo qué probabilidad le veo.",
+            "¡Vamos con ganas! Dame el nombre del cliente y en qué etapa está, y armamos cómo cerrarlo.",
+            "Eso se resuelve con seguimiento y buen timing. ¿Cuál es la oportunidad que más te inquieta?",
         ],
         "analyst": [
             "Con los datos disponibles puedo mirar tendencias, pero necesito saber qué métrica y qué periodo. ¿Cuál te interesa?",
             "Podría cruzarlo con el histórico para ver si es un patrón o algo puntual. ¿Qué periodo comparamos?",
             "Lo miro con gusto. Dime la pregunta de negocio y te digo qué datos harían falta.",
+            "Me intriga. Si me dices qué métrica te importa, busco si hay un patrón detrás o si es ruido.",
+            "Antes de sacar conclusiones, conviene ver la distribución y no solo el promedio. ¿Qué periodo miramos?",
         ],
         "operations": [
             "En operaciones todo depende de la capacidad y los plazos. ¿Qué volumen o fecha tienes en mente?",
             "Lo reviso. Para decirte si llegamos necesito el alcance y la fecha de entrega.",
             "Claro. ¿Hablamos de capacidad del equipo, proveedores o logística?",
+            "Vamos a lo práctico: dime fecha y volumen y te digo si llegamos o qué hay que mover.",
+            "Lo aterrizo en tiempos reales. ¿Qué entrega o proceso te preocupa?",
         ],
     },
     "contrib": {
@@ -569,7 +600,11 @@ CHAT: dict = {
 TONE_SUBS: dict[str, list[tuple[str, str]]] = {
     "ar": [("dime", "decime"), ("cuéntame", "contame"), ("cuentame", "contame"), ("tienes", "tenés"),
            ("puedes", "podés"), ("quieres", "querés"), ("necesitas", "necesitás"), ("avisas", "avisás"),
-           ("escribes", "escribís"), ("prefieres", "preferís")],
+           ("escribes", "escribís"), ("prefieres", "preferís"), ("me cuentas", "me contás"), ("dices", "decís"),
+           ("sabes", "sabés"), ("haces", "hacés"), ("eres", "sos"), ("pasas", "pasás"), ("miras", "mirás"),
+           ("pides", "pedís"), ("llamas", "llamás"), ("revisas", "revisás"), ("buscas", "buscás"),
+           ("ayudas", "ayudás"), ("conoces", "conocés"), ("estás", "estás"), ("cuenta conmigo", "contá conmigo"),
+           ("vienes", "venís"), ("empiezas", "empezás"), ("piensas", "pensás"), ("A ti", "A vos")],
 }
 
 

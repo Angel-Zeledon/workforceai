@@ -1,10 +1,12 @@
 package application
 
 import (
+	"fmt"
 	"hash/fnv"
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	"aiworkforce/backend/internal/domain"
 )
@@ -28,16 +30,16 @@ var topicRules = []struct {
 	topic string
 	re    *regexp.Regexp
 }{
-	{"accounting", "finance", regexp.MustCompile(`\b(financ|balance|margen|margin|costo|costs?\b|factur|invoice|presupuest|budget|flujo de caja|cash ?flow|impuest|tax|contab|accounting|utilidad|profit|gasto|expense|ingreso|revenue|rentab|deuda|debt|prestamo|loan|iva\b|estado de resultados)`)},
+	{"accounting", "finance", regexp.MustCompile(`\b(financ|balance|margen|margin|costo|costs?\b|factur|invoice|presupuest|budget|flujo de caja|cash ?flow|impuest|tax|contab|accounting|utilidad|profit|gasto|expense|ingreso|revenue|rentab|deuda|debt|prestamo|loan|iva\b|estado de resultados|cuesta|cuestan|cobr|contador|accountant|flujo|lana\b|plata\b|guita\b|caja\b|dinero|money)`)},
 	{"legal", "legal", regexp.MustCompile(`\b(contratos?\b|contract|legal|clausula|clause|demanda|lawsuit|cumplimiento|compliance|abogad|lawyer|attorney|ley\b|leyes|law\b|privacidad|privacy|nda\b|propiedad intelectual|intellectual property|litigio|regulat|licencia|license|penalidad|penalty)`)},
-	{"hr", "hr", regexp.MustCompile(`\b(contratar|contrataci|contratamos|vacante|empleado|rrhh|recursos humanos|personal\b|reclut|onboarding|nomina|salario|salary|vacaciones|hire\b|hiring|recruit|payroll|employee|candidat|entrevista|interview|talento|despido)`)},
-	{"sales", "sales", regexp.MustCompile(`\b(ventas?\b|vender|sales\b|sell\b|selling|propuesta|proposal|cliente|client|customer|cotizacion|quote\b|pipeline|prospecto|lead\b|leads\b|comercial|negociacion|negotiation|descuento|discount|oferta)`)},
-	{"analyst", "data", regexp.MustCompile(`\b(datos|data\b|analisis|analysis|analiz|analyz|metric|kpi|tendencia|trend|estadistic|statistic|dashboard|grafic|chart|insight|forecast|pronostico|proyeccion)`)},
-	{"operations", "operations", regexp.MustCompile(`\b(operacion|operaciones|operations|capacidad|capacity|logistic|entrega|delivery|proveedor|supplier|inventario|inventory|plazo|produccion|production|almacen|warehouse|envio|shipping)`)},
+	{"hr", "hr", regexp.MustCompile(`\b(contratar|contrataci|contratamos|vacante|empleado|rrhh|recursos humanos|personal\b|reclut|onboarding|nomina|salario|salary|vacaciones|hire\b|hiring|recruit|payroll|employee|candidat|entrevista|interview|talento|despido|contrata\b|job post|job opening|oferta laboral|oferta de empleo|reclutador)`)},
+	{"sales", "sales", regexp.MustCompile(`\b(ventas?\b|vender|sales\b|sell\b|selling|propuesta|proposal|cliente|client|customer|cotizacion|quote\b|pipeline|prospecto|lead\b|leads\b|comercial|negociacion|negotiation|descuento|discount|oferta|vetas|bentas|vendedor|seller)`)},
+	{"analyst", "data", regexp.MustCompile(`\b(datos|data\b|analisis|analysis|analiz|analyz|metric|kpi|tendencia|trend|estadistic|statistic|dashboard|grafic|chart|insight|forecast|pronostico|proyeccion|analista|analyst)`)},
+	{"operations", "operations", regexp.MustCompile(`\b(operacion|operaciones|operations|capacidad|capacity|logistic|entrega|delivery|proveedor|supplier|inventario|inventory|plazo|produccion|production|almacen|warehouse|envio|shipping|retraso|delay)`)},
 }
 
 var (
-	greetRe        = regexp.MustCompile(`^(hola+|holi+|buen(as|os)( (dias|tardes|noches))?|hey+|ey|hi|hello|hiya|good (morning|afternoon|evening)|saludos|que tal|que onda|que hubo|ola)\b`)
+	greetRe        = regexp.MustCompile(`^(hola+|holi+|buen(as|os)( (dias|tardes|noches))?|buen dia|hey+|ey|hi|hello|hiya|good (morning|afternoon|evening)|saludos|que tal|que onda|que hubo|ola)\b`)
 	thanksRe       = regexp.MustCompile(`\b(gracias|thanks|thank you|thx|genial|perfecto|excelente|buen trabajo|great|awesome|perfect)\b`)
 	helpRe         = regexp.MustCompile(`\b(ayuda|ayudame|help|que puedes hacer|que haces|quien eres|who are you|what can you do|como funciona)\b`)
 	howareRe       = regexp.MustCompile(`\b(como estas|como esta|como andas|como va todo|como les va|how are you|how is it going|hows it going|que cuentas)\b`)
@@ -48,6 +50,10 @@ var (
 	taskStemsRe    = regexp.MustCompile(`\b(prepar|calcul|revis|redact|gener|elabor|armar|analiz|envi|mandar|agendar|investig|escrib|resum|compar|estim|planific|organiz|buscar|cotiz|crear|hacer|contrat|draft|write|create|build|review|prepare|send|schedule|research|summar|compare|estimate|plan\b|find|check)`)
 	impESRe        = regexp.MustCompile(`^(prepara|haz|calcula|revisa|redacta|genera|crea|elabora|arma|analiza|envia|manda|investiga|escribe|resume|compara|estima|planifica|organiza|busca|contrata|cotiza|vende|proponme|agendame)(me|lo|la|le|nos|melo|mela|selo)?$|^dame$`)
 	agendaRe       = regexp.MustCompile(`\bagenda (una|un|el|la)\b`)
+	helpMeRe       = regexp.MustCompile(`\b(ayudame|ayudenme|ayudanos|me ayudas|me ayudan|me puedes ayudar|me podrias ayudar|ayudarme|help me|can you help me|could you help me)\b`)
+	delegateRe     = regexp.MustCompile(`^(oye |hey |por favor |please )?(dile|diles|pidele|pideles|pedile|encargale|encargaselo|tell|ask)\b`)
+	askModalRe     = regexp.MustCompile(`\b(puedes|podrias|podes|can you|could you|would you)\b`)
+	followUpRe     = regexp.MustCompile(`^(y |pero |entonces |and |but |so |what about |por que|porque|why|cuanto|cuanta|cuantos|cual|cuales|como asi|en serio|really|how come)|\b(eso|esto|ese|esa|esos|esas|aquello|lo anterior|that|this|those|it|them|they)\b`)
 	nonLetterStart = regexp.MustCompile(`^[^a-z0-9]+`)
 	nonAlnum       = regexp.MustCompile(`[^a-z0-9 ]`)
 )
@@ -65,8 +71,8 @@ var greetFluff = map[string]bool{"a": true, "todos": true, "todas": true, "equip
 	"there": true, "amigos": true, "chicos": true, "chicas": true, "companeros": true, "como": true, "estan": true, "estas": true,
 	"esta": true, "va": true, "y": true, "you": true, "how": true, "are": true, "is": true, "it": true, "going": true, "que": true,
 	"tal": true, "muy": true, "dias": true, "tardes": true, "noches": true, "de": true, "nuevo": true, "again": true,
-	"morning": true, "afternoon": true, "evening": true, "les": true, "te": true, "bien": true, "yo": true, "aqui": true,
-	"todo": true, "hows": true, "oficina": true, "office": true}
+	"morning": true, "afternoon": true, "evening": true, "les": true, "te": true, "bien": true, "aqui": true,
+	"todo": true, "hows": true, "oficina": true, "office": true, "el": true, "al": true, "del": true}
 
 var ackWords = map[string]bool{"ok": true, "okay": true, "vale": true, "listo": true, "entendido": true, "dale": true, "bien": true,
 	"cool": true, "ya": true, "claro": true, "si": true, "sip": true, "yes": true, "yep": true, "got": true, "it": true}
@@ -86,6 +92,13 @@ func topicScores(n string) map[string]int {
 }
 
 func localSmalltalkKind(n string, names map[string]bool) string {
+	if strings.TrimSpace(n) != "" && !strings.ContainsFunc(n, func(r rune) bool { return unicode.IsLetter(r) || unicode.IsDigit(r) }) &&
+		strings.ContainsFunc(n, func(r rune) bool { return unicode.IsSymbol(r) }) {
+		if strings.Contains(n, "\U0001F44B") {
+			return "greeting"
+		}
+		return "thanks" // a reaction (👍, 🙏, 😀): acknowledge it
+	}
 	n = nonLetterStart.ReplaceAllString(n, "")
 	if n == "" {
 		return ""
@@ -117,6 +130,21 @@ func localSmalltalkKind(n string, names map[string]bool) string {
 	if helpRe.MatchString(n) && len(toks) <= 8 && noTopic {
 		return "help"
 	}
+	// a message that is only a colleague's name ("Tomás", "oye Tomás") calls that colleague
+	if len(toks) > 0 {
+		named, all := false, true
+		for _, t := range toks {
+			switch {
+			case names[t]:
+				named = true
+			case t != "oye" && t != "ey" && t != "hey" && t != "hola" && t != "hi" && t != "hello" && t != "disculpa" && t != "perdona":
+				all = false
+			}
+		}
+		if named && all {
+			return "greeting"
+		}
+	}
 	if thanksRe.MatchString(n) && len(toks) <= 6 && noTopic {
 		return "thanks"
 	}
@@ -141,6 +169,12 @@ func localIsTask(n string) bool {
 		return false
 	}
 	polite := politeRe.MatchString(n)
+	if delegateRe.MatchString(n) && taskStemsRe.MatchString(n) {
+		return true // "dile a Tomás que prepare el balance"
+	}
+	if helpMeRe.MatchString(n) && len(topicScores(n)) > 0 && !notTaskWantRe.MatchString(n) {
+		return true // "ayúdame con el contrato"
+	}
 	if interrogRe.MatchString(n) && !polite {
 		return false
 	}
@@ -168,7 +202,8 @@ func localIsTask(n string) bool {
 		break
 	}
 	if wantDetRe.MatchString(n) && !notTaskWantRe.MatchString(n) {
-		return true
+		// "¿necesitamos un NDA?" asks; "necesitamos un NDA" orders
+		return !(strings.Contains(n, "?") && !askModalRe.MatchString(n))
 	}
 	return polite && taskStemsRe.MatchString(n) && !notTaskWantRe.MatchString(n)
 }
@@ -233,6 +268,13 @@ func localRoute(in RouteRequest) RouteResponse {
 			primaryRole, best = role, s
 		}
 	}
+	if primaryRole == "" && intent == domain.IntentQuestion && !strings.HasPrefix(in.Conversation, domain.ChatAgentPrefix) &&
+		followUpRe.MatchString(nonLetterStart.ReplaceAllString(n, "")) && len(tokenRe.FindAllString(n, -1)) <= 10 {
+		// "¿y por qué?", "y eso?": a follow-up without a topic stays with whoever answered last
+		if a, ok := lastPrimary(in.History, byID); ok {
+			primaryRole = a.Role
+		}
+	}
 	topic := "general"
 	if primaryRole != "" {
 		topic = topicOfRole[primaryRole]
@@ -269,6 +311,13 @@ func localRoute(in RouteRequest) RouteResponse {
 				resp.Consult = &RouteConsult{AgentID: owner.ID, Reason: strings.NewReplacer("{topic}", label, "{name}", owner.Name).Replace(reason("consult"))}
 			}
 			return resp
+		}
+	}
+	if intent == domain.IntentSmalltalk && (kind == "greeting" || kind == "howare" || kind == "thanks") {
+		// "hola Tomás", "gracias Elena": only the colleague who was named answers
+		if a, ok := mentionedAgent(n, in.Agents); ok && a.Role != "assistant" {
+			return RouteResponse{Intent: intent, Topic: topic, Source: "local",
+				Responders: []RouteResponder{{AgentID: a.ID, Role: domain.RolePrimary, Reason: reason("direct")}}}
 		}
 	}
 	switch intent {
@@ -326,11 +375,43 @@ func localRoute(in RouteRequest) RouteResponse {
 	return RouteResponse{Intent: intent, Topic: topic, Responders: out, Source: "local"}
 }
 
+// lastPrimary is the agent that answered the user's previous message first (history is oldest first).
+func lastPrimary(history []ChatHistoryItem, byID map[string]RouteAgent) (RouteAgent, bool) {
+	lastUser := -1
+	for i, h := range history {
+		if h.From == "user" {
+			lastUser = i
+		}
+	}
+	for _, h := range history[lastUser+1:] {
+		if a, ok := byID[h.From]; ok {
+			return a, true
+		}
+	}
+	return RouteAgent{}, false
+}
+
+// mentionedAgent finds the one agent whose first name appears anywhere in a (smalltalk) message.
+func mentionedAgent(n string, agents []RouteAgent) (RouteAgent, bool) {
+	toks := tokenRe.FindAllString(n, -1)
+	var hit RouteAgent
+	count := 0
+	for _, a := range agents {
+		first := tokenRe.FindAllString(normText(a.Name), -1)
+		if len(first) > 0 && len(first[0]) >= 3 && slices.Contains(toks, first[0]) {
+			hit = a
+			count++
+		}
+	}
+	return hit, count == 1
+}
+
 // addressedAgent finds the one agent called by first name at the start of the message.
 func addressedAgent(n string, agents []RouteAgent) (RouteAgent, bool) {
 	var toks []string
 	for _, t := range tokenRe.FindAllString(n, -1) {
-		if enFiller[t] || t == "oye" || t == "ey" || t == "disculpa" || t == "perdona" || t == "sorry" {
+		if enFiller[t] || t == "oye" || t == "ey" || t == "disculpa" || t == "perdona" || t == "sorry" || t == "dile" || t == "diles" ||
+			t == "pidele" || t == "pideles" || t == "preguntale" || t == "tell" || t == "ask" || t == "a" || t == "to" {
 			continue
 		}
 		toks = append(toks, t)
@@ -365,68 +446,76 @@ func isHandoffAccepted(text string) bool {
 
 var chatTexts = map[string]map[string]string{
 	"es": {
-		"office_title":                "Oficina",
-		"direct_title":                "Chat con %s",
-		"task_failed":                 "No pude crear la solicitud: %v",
-		"blocked_kill_switch_active":  "El equipo está en pausa (interruptor de emergencia activo). No puedo atenderte hasta que se reanude.",
+		"office_title":                 "Oficina",
+		"direct_title":                 "Chat con %s",
+		"task_failed":                  "No pude crear la solicitud: %s",
+		"cause_unavailable":            "el servicio del equipo no responde en este momento. Inténtalo de nuevo en un momento.",
+		"blocked_kill_switch_active":   "El equipo está en pausa (interruptor de emergencia activo). No puedo atenderte hasta que se reanude.",
 		"blocked_controls_unavailable": "No puedo comprobar el estado del equipo ahora mismo, así que por seguridad no respondo. Inténtalo en un momento.",
-		"blocked_agent_paused":        "%s está en pausa ahora mismo y no puede responder.",
-		"blocked_other":               "%s no está disponible en este momento.",
-		"budget_agent":                "No puedo responder ahora: este agente llegó a su tope mensual de presupuesto ($%.2f de $%.2f). Sube el tope para seguir conversando.",
-		"budget_org":                  "No puedo responder ahora: se agotó el presupuesto de la organización ($%.2f de $%.2f).",
-		"budget_request":              "No puedo responder ahora: se alcanzó el tope de presupuesto ($%.2f de $%.2f).",
-		"plan_intro":                  "Listo, armé un plan de %d tareas. Esto es lo que hará cada quien:",
-		"why":                         "Por qué:",
-		"plan_outro":                  "Antes de cualquier acción sensible te pediré aprobación. Puedes seguir el avance en Solicitudes.",
-		"report_ready":                "El informe está listo: %s. Lo encuentras en Informes.",
-		"reason_direct":               "Le escribiste directamente",
-		"reason_greeting":             "Responde primero al saludo",
-		"reason_peer_greeting":        "Saluda brevemente",
-		"reason_task":                 "Coordina la solicitud y reparte el trabajo",
-		"reason_coordinates":          "Coordina al equipo y atiende lo general",
-		"reason_owner":                "Es quien lleva {topic}",
-		"reason_related":              "Puede aportar algo desde {topic}",
-		"reason_consult":              "El tema es de {topic}; {name} lo puede aclarar",
-		"reason_handoff":              "Aceptaste que te lo pase",
-		"reassigned":                  "Reasignada: %s no lleva este tema, así que la toma %s, que %s.",
-		"fb_greet_assistant":          "¡Hola! Soy %s. ¿En qué te ayudo?",
-		"fb_greet_peer":               "Hola.",
-		"fb_greet_self":               "Hola, soy %s. ¿Qué necesitas?",
-		"fb_thanks":                   "¡De nada!",
-		"fb_task":                     "Entendido, lo coordino con el equipo.",
-		"fb_question":                 "Ahora mismo no puedo darte una buena respuesta: el servicio del equipo no responde. Inténtalo de nuevo en un momento.",
+		"blocked_agent_paused":         "%s está en pausa ahora mismo y no puede responder.",
+		"blocked_other":                "%s no está disponible en este momento.",
+		"budget_agent":                 "No puedo responder ahora: este agente llegó a su tope mensual de presupuesto ($%.2f de $%.2f). Sube el tope para seguir conversando.",
+		"budget_org":                   "No puedo responder ahora: se agotó el presupuesto de la organización ($%.2f de $%.2f).",
+		"budget_request":               "No puedo responder ahora: se alcanzó el tope de presupuesto ($%.2f de $%.2f).",
+		"plan_intro":                   "Listo, armé un plan de %d tareas. Esto es lo que hará cada quien:",
+		"plan_intro_reassigned":        "Listo, el plan quedó en %d tareas. Esto es lo que hará cada quien:",
+		"why":                          "Por qué:",
+		"plan_outro":                   "Antes de cualquier acción sensible te pediré aprobación. Puedes seguir el avance en Solicitudes.",
+		"report_ready":                 "El informe está listo: %s. Lo encuentras en Informes.",
+		"reason_direct":                "Le escribiste directamente",
+		"reason_greeting":              "Responde primero al saludo",
+		"reason_peer_greeting":         "Saluda brevemente",
+		"reason_task":                  "Coordina la solicitud y reparte el trabajo",
+		"reason_coordinates":           "Coordina al equipo y atiende lo general",
+		"reason_owner":                 "Es quien lleva {topic}",
+		"reason_related":               "Puede aportar algo desde {topic}",
+		"reason_consult":               "El tema es de {topic}; {name} lo puede aclarar",
+		"reason_handoff":               "Aceptaste que te lo pase",
+		"reassigned":                   "Reasignada: %s no lleva este tema, así que la toma %s, que %s.",
+		"fb_greet_assistant":           "¡Hola! Soy %s. ¿En qué te ayudo?",
+		"fb_greet_peer":                "Hola.",
+		"fb_greet_self":                "Hola, soy %s. ¿Qué necesitas?",
+		"fb_thanks":                    "¡De nada!",
+		"fb_task":                      "Entendido, lo coordino con el equipo.",
+		"fb_redirect":                  "Eso lo lleva %s; escríbele directamente y te lo resuelve mejor que yo.",
+		"fb_task_redirect":             "Ese trabajo no me toca: lo reasigno a %s y te cuento el plan.",
+		"fb_question":                  "Ahora mismo no puedo darte una buena respuesta: el servicio del equipo no responde. Inténtalo de nuevo en un momento.",
 	},
 	"en": {
-		"office_title":                "Office",
-		"direct_title":                "Chat with %s",
-		"task_failed":                 "I couldn't create the request: %v",
-		"blocked_kill_switch_active":  "The team is paused (emergency switch is on). I can't help until it is resumed.",
+		"office_title":                 "Office",
+		"direct_title":                 "Chat with %s",
+		"task_failed":                  "I couldn't create the request: %s",
+		"cause_unavailable":            "the team's service isn't responding right now. Please try again in a moment.",
+		"blocked_kill_switch_active":   "The team is paused (emergency switch is on). I can't help until it is resumed.",
 		"blocked_controls_unavailable": "I can't check the team's status right now, so for safety I won't answer. Please try again in a moment.",
-		"blocked_agent_paused":        "%s is paused right now and can't reply.",
-		"blocked_other":               "%s is not available at the moment.",
-		"budget_agent":                "I can't reply right now: this agent reached its monthly budget cap ($%.2f of $%.2f). Raise the cap to keep chatting.",
-		"budget_org":                  "I can't reply right now: the organization's budget is exhausted ($%.2f of $%.2f).",
-		"budget_request":              "I can't reply right now: the budget cap was reached ($%.2f of $%.2f).",
-		"plan_intro":                  "Done, I put together a plan of %d tasks. Here is what each person will do:",
-		"why":                         "Why:",
-		"plan_outro":                  "I'll ask for your approval before any sensitive action. You can follow progress under Requests.",
-		"report_ready":                "The report is ready: %s. You'll find it under Reports.",
-		"reason_direct":               "You wrote to them directly",
-		"reason_greeting":             "Answers the greeting first",
-		"reason_peer_greeting":        "Says a quick hello",
-		"reason_task":                 "Coordinates the request and splits the work",
-		"reason_coordinates":          "Coordinates the team and handles general topics",
-		"reason_owner":                "Owns {topic}",
-		"reason_related":              "Can add something from {topic}",
-		"reason_consult":              "This is about {topic}; {name} can clarify it",
-		"reason_handoff":              "You accepted the handoff",
-		"reassigned":                  "Reassigned: %s doesn't cover this, so %s takes it, who %s.",
-		"fb_greet_assistant":          "Hi! I'm %s. How can I help?",
-		"fb_greet_peer":               "Hi.",
-		"fb_greet_self":               "Hi, I'm %s. What do you need?",
-		"fb_thanks":                   "You're welcome!",
-		"fb_task":                     "Understood, I'll coordinate it with the team.",
-		"fb_question":                 "I can't give you a good answer right now: the team's service isn't responding. Please try again in a moment.",
+		"blocked_agent_paused":         "%s is paused right now and can't reply.",
+		"blocked_other":                "%s is not available at the moment.",
+		"budget_agent":                 "I can't reply right now: this agent reached its monthly budget cap ($%.2f of $%.2f). Raise the cap to keep chatting.",
+		"budget_org":                   "I can't reply right now: the organization's budget is exhausted ($%.2f of $%.2f).",
+		"budget_request":               "I can't reply right now: the budget cap was reached ($%.2f of $%.2f).",
+		"plan_intro":                   "Done, I put together a plan of %d tasks. Here is what each person will do:",
+		"plan_intro_reassigned":        "Done, the plan came out at %d tasks. Here is what each person will do:",
+		"why":                          "Why:",
+		"plan_outro":                   "I'll ask for your approval before any sensitive action. You can follow progress under Requests.",
+		"report_ready":                 "The report is ready: %s. You'll find it under Reports.",
+		"reason_direct":                "You wrote to them directly",
+		"reason_greeting":              "Answers the greeting first",
+		"reason_peer_greeting":         "Says a quick hello",
+		"reason_task":                  "Coordinates the request and splits the work",
+		"reason_coordinates":           "Coordinates the team and handles general topics",
+		"reason_owner":                 "Owns {topic}",
+		"reason_related":               "Can add something from {topic}",
+		"reason_consult":               "This is about {topic}; {name} can clarify it",
+		"reason_handoff":               "You accepted the handoff",
+		"reassigned":                   "Reassigned: %s doesn't cover this, so %s takes it, who %s.",
+		"fb_greet_assistant":           "Hi! I'm %s. How can I help?",
+		"fb_greet_peer":                "Hi.",
+		"fb_greet_self":                "Hi, I'm %s. What do you need?",
+		"fb_thanks":                    "You're welcome!",
+		"fb_task":                      "Understood, I'll coordinate it with the team.",
+		"fb_redirect":                  "That is %s's area; message them directly and they will sort it out better than I can.",
+		"fb_task_redirect":             "That work isn't mine: I'm reassigning it to %s and I'll tell you the plan.",
+		"fb_question":                  "I can't give you a good answer right now: the team's service isn't responding. Please try again in a moment.",
 	},
 }
 
@@ -462,12 +551,31 @@ func fallbackReply(loc string, req ChatReplyRequest, agent domain.Agent) string 
 			return strings.Replace(chatText(loc, "fb_greet_self"), "%s", agent.Name, 1)
 		}
 	case domain.IntentTask:
+		if name := consultName(req); name != "" {
+			return fmt.Sprintf(chatText(loc, "fb_task_redirect"), name)
+		}
 		return chatText(loc, "fb_task")
 	}
 	if req.ResponderRole == domain.RoleContributor {
 		return ""
 	}
+	if name := consultName(req); name != "" {
+		return fmt.Sprintf(chatText(loc, "fb_redirect"), name)
+	}
 	return chatText(loc, "fb_question")
+}
+
+// consultName is the colleague a 1:1 question or task belongs to ("" when it is the agent's own).
+func consultName(req ChatReplyRequest) string {
+	if req.ConsultTo == "" {
+		return ""
+	}
+	for _, a := range req.Agents {
+		if a.ID == req.ConsultTo {
+			return a.Name
+		}
+	}
+	return ""
 }
 
 var roleReasons = map[string]map[string]string{

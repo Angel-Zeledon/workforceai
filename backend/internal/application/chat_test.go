@@ -2,6 +2,7 @@ package application_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -84,7 +85,7 @@ func (g guardFake) Admit(_ context.Context, _, agentID string) application.Guard
 	return application.GuardVerdict{Allowed: true}
 }
 func (g guardFake) SideEffectsBlocked(context.Context, string, string) bool { return g.readOnly }
-func (guardFake) ToolBlocked(context.Context, string, string, string) bool { return false }
+func (guardFake) ToolBlocked(context.Context, string, string, string) bool  { return false }
 func (guardFake) IsSideEffect(string, string) bool                          { return false }
 
 type styleFake struct{ s application.RunStyle }
@@ -442,8 +443,12 @@ func TestLocalRulesIntentTable(t *testing.T) {
 
 func TestRuntimeDownMidTurnFallsBack(t *testing.T) {
 	boom := errors.New("runtime down")
-	rt := newChatRuntime(func(application.RouteRequest) (application.RouteResponse, error) { return application.RouteResponse{}, boom })
-	rt.reply = func(application.ChatReplyRequest) (application.ChatReplyResponse, error) { return application.ChatReplyResponse{}, boom }
+	rt := newChatRuntime(func(application.RouteRequest) (application.RouteResponse, error) {
+		return application.RouteResponse{}, boom
+	})
+	rt.reply = func(application.ChatReplyRequest) (application.ChatReplyResponse, error) {
+		return application.ChatReplyResponse{}, boom
+	}
 	h := newChat(t, rt, nil)
 	h.say("office", "hola")
 	ms := h.messages("office")
@@ -467,9 +472,13 @@ func TestRuntimeDownMidTurnFallsBack(t *testing.T) {
 		t.Fatalf("honest fallback line: %+v", ms2)
 	}
 	// and a task is still turned into a request, whose planning fails visibly like before
-	rt3 := newChatRuntime(func(application.RouteRequest) (application.RouteResponse, error) { return application.RouteResponse{}, boom })
+	rt3 := newChatRuntime(func(application.RouteRequest) (application.RouteResponse, error) {
+		return application.RouteResponse{}, boom
+	})
 	rt3.reply = rt.reply
-	rt3.fakeRuntime.plan = func(application.PlanRequest) (application.PlanResponse, error) { return application.PlanResponse{}, boom }
+	rt3.fakeRuntime.plan = func(application.PlanRequest) (application.PlanResponse, error) {
+		return application.PlanResponse{}, boom
+	}
 	h3 := newChat(t, rt3, func(c *application.Config) { c.MaxRetries = 1 })
 	h3.say("office", "prepara una propuesta para Acme")
 	reqs, _ := h3.store.ListRequests(context.Background(), domain.DemoOrgID)
@@ -708,7 +717,6 @@ func TestChatDoesNotBreakTheClassicRequestFlow(t *testing.T) {
 	}
 }
 
-
 // ---- out of competence, handoffs and limits ----
 
 func TestPlainSystemNoticesWhenTheRuntimeCannotVoiceALimit(t *testing.T) {
@@ -892,5 +900,194 @@ func TestReadOnlyModeIsSaidByTheAgentButTheWorkContinues(t *testing.T) {
 	}
 	if reqs, _ := h.store.ListRequests(context.Background(), domain.DemoOrgID); len(reqs) != 1 {
 		t.Fatalf("read-only does not block planning")
+	}
+}
+
+// ---- behaviour sweep regressions (docs/architecture/chat-routing.md, section 13) ----
+
+func TestSanitizeChatText(t *testing.T) {
+	for name, c := range map[string]struct{ in, want string }{
+		"plain":           {"  hola  ", "hola"},
+		"nul and escape":  {"a\x00b\x1b[31m hola", "ab[31m hola"},
+		"bidi override":   {"\u202ehola\u202c", "hola"},
+		"zero width":      {"ho\u200bla\ufeff", "hola"},
+		"emoji joiner":    {"👩\u200d💻", "👩\u200d💻"},
+		"keeps newlines":  {"a\n\tb", "a\n\tb"},
+		"carriage return": {"a\r\nb", "a\nb"},
+		"invalid utf8":    {"ho\xffla", "hola"},
+		"only control":    {"\x00\x01\u202e", ""},
+	} {
+		if got := application.SanitizeChatText(c.in); got != c.want {
+			t.Errorf("%s: %q => %q, want %q", name, c.in, got, c.want)
+		}
+	}
+}
+
+func TestPostChatStoresSanitizedTextAndRejectsControlOnlyText(t *testing.T) {
+	h := newChat(t, newChatRuntime(fixedRoute("smalltalk", "greeting", primary("assistant"))), nil)
+	h.say("office", "ho\x00la\u202e")
+	if ms := h.messages("office"); ms[0].Text != "hola" {
+		t.Fatalf("the stored message must be clean: %q", ms[0].Text)
+	}
+	if _, err := h.orch.PostChat(context.Background(), "office", "\x00\u200b\u202e"); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("text with nothing visible is invalid: %v", err)
+	}
+}
+
+func TestRuntimeRequestsNeverCarryNullLists(t *testing.T) {
+	// Go marshals a nil slice as null; the runtime validates lists strictly (this broke every "I can't" line once).
+	rt := newChatRuntime(fixedRoute("smalltalk", "greeting", primary("assistant")))
+	h := newChat(t, rt, nil)
+	h.orch.SetConnections(guardFake{deny: map[string]string{"*": "kill_switch_active"}}, nil, nil)
+	h.say("office", "hola")
+	h2 := newChat(t, rt, nil)
+	h2.say("agent:accounting", "hola")
+	if len(rt.replies) == 0 || len(rt.routes) == 0 {
+		t.Fatalf("expected runtime calls: %d replies, %d routes", len(rt.replies), len(rt.routes))
+	}
+	for _, r := range rt.replies {
+		raw, _ := json.Marshal(r)
+		for _, f := range []string{`"history":null`, `"prior_replies":null`, `"agents":null`} {
+			if strings.Contains(string(raw), f) {
+				t.Errorf("chat-reply carries %s: %s", f, raw)
+			}
+		}
+	}
+	for _, r := range rt.routes {
+		raw, _ := json.Marshal(r)
+		if strings.Contains(string(raw), `"history":null`) || strings.Contains(string(raw), `"agents":null`) {
+			t.Errorf("route carries a null list: %s", raw)
+		}
+	}
+}
+
+func TestLocalRulesSweepRegressions(t *testing.T) {
+	cases := []struct{ text, intent, first string }{
+		{"buen día", "smalltalk", "assistant"}, {"buen dia a todos", "smalltalk", "assistant"}, {"hola a todo el equipo", "smalltalk", "assistant"},
+		{"👍", "smalltalk", "assistant"}, {"👋", "smalltalk", "assistant"},
+		{"¿necesitamos un NDA?", "question", "legal"}, {"necesitamos un NDA para el cliente", "task", "assistant"},
+		{"ayúdame con el contrato", "task", "assistant"}, {"¿cuánto nos cuesta el servicio?", "question", "accounting"},
+		{"cuánta lana tenemos en caja", "question", "accounting"}, {"¿quién es el contador?", "question", "accounting"},
+		{"how are the sales going", "question", "sales"}, {"contrata a un desarrollador", "task", "assistant"},
+	}
+	for _, c := range cases {
+		h := newChat(t, &fakeRuntime{plan: proposalPlan()}, nil)
+		h.say("office", c.text)
+		p := h.pub.of(domain.EvRouteDecided)[0].Payload.(map[string]any)
+		rs := p["responders"].([]application.RouteResponder)
+		if p["intent"] != c.intent || rs[0].AgentID != c.first {
+			t.Errorf("%q => %v %+v, want %s/%s", c.text, p["intent"], rs, c.intent, c.first)
+		}
+		if c.intent == "smalltalk" {
+			h.noWork()
+		}
+	}
+}
+
+func TestLocalRulesFollowUpKeepsTheLastAnswerer(t *testing.T) {
+	h := newChat(t, &fakeRuntime{plan: proposalPlan()}, nil)
+	h.say("office", "¿cómo van las ventas?")
+	h.say("office", "¿y por qué?")
+	dec := h.pub.of(domain.EvRouteDecided)
+	last := dec[len(dec)-1].Payload.(map[string]any)["responders"].([]application.RouteResponder)
+	if last[0].AgentID != "sales" {
+		t.Fatalf("a follow-up without a topic stays with sales: %+v", last)
+	}
+}
+
+func TestCannedRedirectNamesTheColleagueWhenTheRuntimeIsDown(t *testing.T) {
+	h := newChat(t, &fakeRuntime{plan: proposalPlan()}, nil)
+	h.say("agent:accounting", "¿cómo van las ventas?")
+	ms := h.messages("agent:accounting")
+	if len(ms) < 2 || !strings.Contains(ms[1].Text, h.agent("sales").Name) {
+		t.Fatalf("the canned line must point to the colleague by name: %+v", ms)
+	}
+}
+
+func TestPostChatIsIdempotentWithAKey(t *testing.T) {
+	rt := newChatRuntime(fixedRoute("smalltalk", "greeting", primary("assistant")))
+	h := newChat(t, rt, nil)
+	ctx := context.Background()
+	t1, replayed, err := h.orch.PostChatKeyed(ctx, "office", "hola", "k1")
+	if err != nil || replayed {
+		t.Fatalf("first post: %v replayed=%v", err, replayed)
+	}
+	t2, replayed, err := h.orch.PostChatKeyed(ctx, "office", "hola", "k1")
+	if err != nil || !replayed || t2 != t1 {
+		t.Fatalf("a retry with the same key returns the first turn: %+v vs %+v replayed=%v err=%v", t2, t1, replayed, err)
+	}
+	t3, replayed, _ := h.orch.PostChatKeyed(ctx, "office", "hola", "k2")
+	if replayed || t3.TurnID == t1.TurnID {
+		t.Fatalf("a different key is a new message")
+	}
+	if _, replayed, _ = h.orch.PostChatKeyed(ctx, "agent:sales", "hola", "k1"); replayed {
+		t.Fatalf("the key is scoped to the conversation")
+	}
+	if _, _, err := h.orch.PostChatKeyed(ctx, "office", "hola", strings.Repeat("k", 129)); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("an oversized key is a 400: %v", err)
+	}
+	h.orch.Wait()
+	users := 0
+	for _, m := range h.messages("office") {
+		if m.From == "user" {
+			users++
+		}
+	}
+	if users != 2 {
+		t.Fatalf("the duplicate must not be stored twice: %d user messages", users)
+	}
+}
+
+func TestLegacyMessageEndpointAppliesTheSameLimits(t *testing.T) {
+	h := newChat(t, newChatRuntime(fixedRoute("smalltalk", "greeting", primary("assistant"))), nil)
+	if _, err := h.orch.PostUserMessage(context.Background(), "office", strings.Repeat("x", 4001)); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("too long: %v", err)
+	}
+	if _, err := h.orch.PostUserMessage(context.Background(), "office", "\x00\u200b"); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("invisible text: %v", err)
+	}
+}
+
+func TestTurnsOfOneConversationRunInOrderAndSeeTheirPast(t *testing.T) {
+	release := make(chan struct{})
+	first := make(chan struct{}, 1)
+	rt := newChatRuntime(fixedRoute("smalltalk", "greeting", primary("assistant")))
+	rt.reply = func(in application.ChatReplyRequest) (application.ChatReplyResponse, error) {
+		select {
+		case first <- struct{}{}: // only the very first reply waits
+			<-release
+		default:
+		}
+		return application.ChatReplyResponse{Text: "re: " + in.Text}, nil
+	}
+	h := newChat(t, rt, nil)
+	ctx := context.Background()
+	if _, err := h.orch.PostChat(ctx, "office", "uno"); err != nil {
+		t.Fatal(err)
+	}
+	<-first // the first turn is now speaking
+	if _, err := h.orch.PostChat(ctx, "office", "dos"); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(rt.speakers()); got != 1 {
+		t.Fatalf("the second turn must wait for the first: %d replies so far", got)
+	}
+	close(release)
+	h.orch.Wait()
+	var seq []string
+	for _, m := range h.messages("office") {
+		seq = append(seq, m.Text)
+	}
+	if strings.Join(seq, "|") != "uno|dos|re: uno|re: dos" && strings.Join(seq, "|") != "uno|re: uno|dos|re: dos" {
+		t.Fatalf("answers must not interleave between turns: %v", seq)
+	}
+	rt.mu.Lock()
+	defer rt.mu.Unlock()
+	if len(rt.routes) != 2 {
+		t.Fatalf("routes: %d", len(rt.routes))
+	}
+	hist := rt.routes[1].History
+	if len(hist) != 2 || hist[0].Text != "uno" || hist[1].Text != "re: uno" {
+		t.Fatalf("the second turn sees the first one (and not its own message): %+v", hist)
 	}
 }
