@@ -1,12 +1,12 @@
 /*
- * Regenera las capturas reales de la app en landing/img (webp, 1600x1000).
+ * Regenerates the real app screenshots in landing/img (webp, 1600x1000).
  *
- * Uso (desde la raíz del repo):
- *   node landing/scripts/capture.mjs                       # app en http://localhost:3000
+ * Usage (from the repo root):
+ *   node landing/scripts/capture.mjs                       # app at http://localhost:3000
  *   CAPTURE_URL=http://localhost:3100 node landing/scripts/capture.mjs
  *
- * Requisitos: la app corriendo (Docker, o `NEXT_PUBLIC_MOCK=true npm run build && npx next start` en frontend/)
- * y Playwright en e2e/ y sharp en frontend/ (npm install en ambos; `cd e2e && npm install && npx playwright install chromium`).
+ * Requires: the app running (Docker, or `NEXT_PUBLIC_MOCK=true npm run build && npx next start` in frontend/)
+ * plus Playwright in e2e/ and sharp in frontend/ (npm install in both; `cd e2e && npm install && npx playwright install chromium`).
  */
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -34,21 +34,21 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1, locale: "es-ES" });
 page.on("pageerror", (e) => console.log("pageerror:", e.message));
 await page.goto(BASE, { waitUntil: "networkidle" });
-// Oculta el banner de controles si el modo mock lo deja con la clave sin traducir.
+// Hide the controls banner if mock mode leaves it with an untranslated key.
 await page.addStyleTag({ content: '[data-testid="ctl-banner"]{display:none!important}' });
 await page.waitForSelector('[data-testid="agent-sales"]');
 
-// Lanza el escenario guionado de la propuesta de $50,000 y deja que se vea el trabajo.
+// Launch the scripted $50,000 proposal scenario and let the work show.
 await page.getByTestId("command-input").fill("Prepara una propuesta de $50,000 para un cliente nuevo");
 await page.getByTestId("command-submit").click();
 await page.waitForTimeout(7000);
 const officePng = await save(page, "office");
 
-// Aprobaciones: espera a que aparezca una pendiente.
+// Approvals: wait for a pending one to appear.
 try {
   await page.waitForSelector('[data-testid^="approval-"]', { timeout: 90000 });
   await page.waitForTimeout(800);
-} catch { console.log("aviso: no apareció aprobación pendiente"); }
+} catch { console.log("warning: no pending approval appeared"); }
 await save(page, "approvals");
 
 // Dashboard
@@ -57,15 +57,15 @@ await page.waitForTimeout(1500);
 await save(page, "dashboard");
 await page.getByTestId("mode-toggle").click();
 
-// Proyectos
+// Projects
 await page.getByTestId("nav-projects").click();
 await page.waitForSelector('[data-testid="projects-view"]');
 await page.waitForTimeout(1200);
-// Abre el primer proyecto (p. ej. "Cierre financiero del trimestre") para mostrar tareas en paralelo.
+// Open the first project (e.g. "Cierre financiero del trimestre") to show parallel tasks.
 const card = page.locator('[data-testid^="project-card-"]:not([data-testid^="project-card-progress-"])').first();
 if (await card.count()) { await card.click(); await page.waitForTimeout(2000); }
 await save(page, "projects");
 
-// Imagen Open Graph (1200x630) a partir de la oficina
+// Open Graph image (1200x630) from the office
 await sharp(officePng).resize(1200, 630, { fit: "cover", position: "north" }).png({ compressionLevel: 9 }).toFile(path.join(OUT, "og.png"));
 await browser.close();

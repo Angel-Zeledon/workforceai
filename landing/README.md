@@ -22,6 +22,8 @@ Sube el contenido de `landing/` a cualquier hosting estático (Netlify, Vercel, 
 | Todos los textos, ES y EN | `i18n.js` (diccionario por clave) |
 | Estructura y orden de secciones | `index.html` (cada texto es `data-i18n="clave"`) |
 | Colores, tipografía, espaciado | `styles.css` (tokens en `:root`, mismos neutros e índigo que la app) |
+| Oficina animada del hero (guion, estados, arcos, globos) | `stage.js` (guion fijo; con movimiento reducido muestra un cuadro estático) |
+| Sonido y música (apagados por defecto, Web Audio sin archivos) | `sound.js` |
 | Capturas | `img/`, regenerables con `scripts/capture.mjs` |
 
 ### Idioma

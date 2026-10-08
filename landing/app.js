@@ -1,4 +1,4 @@
-/* Idioma (ES/EN) y CTA. Sin dependencias, sin analítica, sin red. */
+/* Language (ES/EN) and CTAs. No dependencies, no analytics, no network. */
 (function () {
   "use strict";
   var DICT = window.I18N, CFG = window.LANDING_CONFIG || {};
@@ -55,6 +55,7 @@
       b.setAttribute("aria-pressed", String(b.getAttribute("data-lang") === lang));
     });
     applyCtas(lang);
+    document.dispatchEvent(new Event("langchange"));
   }
 
   document.querySelectorAll(".lang button").forEach(function (b) {
@@ -66,4 +67,17 @@
   });
 
   apply(pickLang());
+
+  // Scroll-in entrances with the app's short motion (ui-in). Without JS or with reduced
+  // motion everything is visible from the start.
+  var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!still && "IntersectionObserver" in window) {
+    document.documentElement.classList.add("motion");
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+      });
+    }, { rootMargin: "0px 0px -8% 0px" });
+    document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
+  }
 })();

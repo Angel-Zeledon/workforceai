@@ -1,8 +1,8 @@
 /*
- * Opcional: hornea el español del diccionario (i18n.js) dentro de index.html para SEO,
- * vista previa en redes y carga sin JavaScript. Idempotente. Ejecutar tras editar textos:
+ * Optional: bakes the Spanish dictionary (i18n.js) into index.html for SEO, social previews
+ * and no-JS loading. Idempotent. Run after editing texts:
  *   node landing/scripts/prerender.mjs
- * No requiere dependencias. El sitio funciona igual sin ejecutarlo (app.js rellena los textos).
+ * No dependencies. The site works the same without it (app.js fills in the texts).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -15,15 +15,15 @@ vm.runInNewContext(fs.readFileSync(path.join(dir, "i18n.js"), "utf8"), ctx);
 const es = ctx.window.I18N.es;
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const escAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-const get = (k) => { if (!(k in es)) throw new Error("Falta la clave: " + k); return es[k]; };
+const get = (k) => { if (!(k in es)) throw new Error("Missing key: " + k); return es[k]; };
 
 let html = fs.readFileSync(path.join(dir, "index.html"), "utf8");
 
-// Elementos con contenido: <tag ... data-i18n="k" ...>...</tag>
+// Elements with content: <tag ... data-i18n="k" ...>...</tag>
 html = html.replace(/(<([a-z0-9]+)\b[^>]*\bdata-i18n="([^"]+)"[^>]*>)([\s\S]*?)(<\/\2>)/g, (_, open, _t, k, _c, close) => open + esc(get(k)) + close);
 html = html.replace(/(<([a-z0-9]+)\b[^>]*\bdata-i18n-html="([^"]+)"[^>]*>)([\s\S]*?)(<\/\2>)/g, (_, open, _t, k, _c, close) => open + get(k) + close);
 
-// Atributos: reemplaza o inserta el valor del atributo destino.
+// Attributes: replace or insert the value of the target attribute.
 function setAttr(tag, attr, value) {
   const re = new RegExp(`(\\s${attr}=")[^"]*(")`);
   return re.test(tag) ? tag.replace(re, `$1${escAttr(value)}$2`) : tag.replace(/\s*\/?>$/, (m) => ` ${attr}="${escAttr(value)}"${m.trim()}`);
@@ -35,4 +35,4 @@ html = html.replace(/<meta\b[^>]*\bdata-i18n-attr="([^"]+)"[^>]*>/g, (tag, spec)
 });
 
 fs.writeFileSync(path.join(dir, "index.html"), html);
-console.log("index.html actualizado con el español del diccionario.");
+console.log("index.html updated with the Spanish dictionary.");
