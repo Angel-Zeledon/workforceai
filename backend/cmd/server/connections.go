@@ -14,6 +14,7 @@ import (
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/connections/calendar"
 	"aiworkforce/backend/internal/connections/drive"
+	"aiworkforce/backend/internal/connections/github"
 	"aiworkforce/backend/internal/connections/gmail"
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
@@ -89,7 +90,11 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 	if err != nil {
 		return connWiring{}, err
 	}
-	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal, "google_drive": drv}
+	gh, err := github.New(github.Config{APIBase: os.Getenv("GITHUB_API_URL")}) // empty = api.github.com
+	if err != nil {
+		return connWiring{}, err
+	}
+	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal, "google_drive": drv, "github": gh}
 	apps := map[string]connections.OAuthApp{}
 	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
 		// One Google OAuth client serves every Google adapter; each connection

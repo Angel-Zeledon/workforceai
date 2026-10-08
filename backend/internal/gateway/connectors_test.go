@@ -2,6 +2,8 @@ package gateway
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -10,7 +12,9 @@ import (
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/connections/calendar"
 	"aiworkforce/backend/internal/connections/drive"
+	"aiworkforce/backend/internal/connections/github"
 	"aiworkforce/backend/internal/connections/gmail"
+	"aiworkforce/backend/internal/vault"
 )
 
 // Connector tests: every new provider goes through the same gateway as Gmail,
@@ -22,6 +26,7 @@ type connectors struct {
 	*env
 	cal *calendar.Provider
 	drv *drive.Provider
+	gh  *github.Provider
 }
 
 func newConnectors(t *testing.T) *connectors {
@@ -35,8 +40,12 @@ func newConnectors(t *testing.T) *connectors {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.cs.Providers["google_calendar"], e.cs.Providers["google_drive"] = cal, drv
-	return &connectors{env: e, cal: cal, drv: drv}
+	gh, err := github.New(github.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.cs.Providers["google_calendar"], e.cs.Providers["google_drive"], e.cs.Providers["github"] = cal, drv, gh
+	return &connectors{env: e, cal: cal, drv: drv, gh: gh}
 }
 
 func (c *connectors) conn(provider, label string, scope connections.ResourceScope, caps ...string) connections.Connection {
@@ -192,5 +201,87 @@ func TestDriveHasNoWriteTools(t *testing.T) {
 		if out := c.exec(call("drive", action, map[string]any{"file_id": "doc-001"})); out.Decision != "denied" {
 			t.Fatalf("drive.%s must be denied: %+v", action, out)
 		}
+	}
+}
+
+// ---- GitHub ----
+
+func TestGitHubReadsAllowlistedReposAsData(t *testing.T) {
+	c := newConnectors(t)
+	c.conn("github", "GitHub", connections.ResourceScope{Repos: []string{"empresa/sitio-web"}}, "repo.read")
+	issues := c.exec(call("github", "list_issues", map[string]any{"repo": "empresa/sitio-web"}))
+	readsAreUntrustedData(t, issues, true)
+	if len(issues.Blocks) != 2 {
+		t.Fatalf("issues = %d (pull requests must not be listed as issues)", len(issues.Blocks))
+	}
+	pulls := c.exec(call("github", "list_pulls", map[string]any{"repo": "empresa/sitio-web"}))
+	readsAreUntrustedData(t, pulls, false)
+	if out := c.exec(call("github", "list_issues", map[string]any{"repo": "empresa/finanzas"})); out.DenyReason != connections.CodeOutOfScope {
+		t.Fatalf("repository outside the allowlist: %+v", out)
+	}
+	if out := c.exec(call("github", "read_issue", map[string]any{"repo": "../../etc", "number": 1})); out.Decision == "allowed" && out.Status == "succeeded" {
+		t.Fatalf("malformed repository accepted: %+v", out)
+	}
+}
+
+func TestGitHubWritesNeedApprovalAndHold(t *testing.T) {
+	c := newConnectors(t)
+	conn := c.conn("github", "GitHub escritura", connections.ResourceScope{Repos: []string{"empresa/sitio-web"}}, "repo.issue_write")
+	fake := c.gh.FakeFor(conn.ID)
+	out := c.writeNeedsApprovalThenHold(call("github", "create_issue", map[string]any{"repo": "empresa/sitio-web", "title": "Revisar formulario", "body": "Detalle"}),
+		func() int { return fake.Writes() })
+	if !strings.Contains(out.Pending.Details, "Revisar formulario") {
+		t.Fatalf("the card must show the issue title: %s", out.Pending.Details)
+	}
+	// The write connection cannot reach a repository outside its allowlist even when approved.
+	cl := call("github", "comment", map[string]any{"repo": "empresa/finanzas", "number": 1, "body": "hola"})
+	if first := c.exec(cl); first.Decision == "needs_approval" {
+		cl.ApprovedArgsHash, cl.ApprovalID = first.Pending.ArgsHash, "ap-x"
+		c.exec(cl)
+		c.clk.Add(2 * time.Minute)
+		c.g.ProcessDue(context.Background())
+	}
+	if fake.Writes() != 1 {
+		t.Fatalf("writes = %d: a comment reached a repository outside the allowlist", fake.Writes())
+	}
+}
+
+func TestGitHubTokenOnlyTravelsAsBearerHeader(t *testing.T) {
+	c := newConnectors(t)
+	const token = "github_pat_0123456789abcdefghij_KLMNOPQRSTUV"
+	var auth []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth = append(auth, r.Header.Get("Authorization"))
+		switch r.URL.Path {
+		case "/user":
+			w.Write([]byte(`{"login":"octo"}`))
+		case "/repos/empresa/sitio-web/issues":
+			w.Write([]byte(`[{"number":1,"title":"Hola","body":"x","state":"open","user":{"login":"a"}}]`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	gh, _ := github.New(github.Config{APIBase: srv.URL})
+	c.cs.Providers["github"] = gh
+	sec := vault.NewSecret([]byte(token))
+	conn, err := c.cs.Create(context.Background(), org, connections.CreateInput{Provider: "github", Label: "GH", Capabilities: []string{"repo.read"},
+		Mode: connections.ModeLive, Kind: "api_key", Secret: &sec, ResourceScope: connections.ResourceScope{Repos: []string{"empresa/sitio-web"}}, Actor: "u1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.grant(conn.ID, "assistant", connections.GrantInput{Capabilities: []string{"repo.read"}})
+	if res, err := c.cs.Test(context.Background(), org, conn.ID, "u1"); err != nil || !res.OK || res.Account != "octo" {
+		t.Fatalf("test: %v %+v", err, res)
+	}
+	out := c.exec(call("github", "list_issues", map[string]any{"repo": "empresa/sitio-web"}))
+	readsAreUntrustedData(t, out, false)
+	for _, a := range auth {
+		if a != "Bearer "+token {
+			t.Fatalf("authorization header = %q", a)
+		}
+	}
+	if strings.Contains(c.sink.text(), token) || strings.Contains(strings.Join(out.Blocks, ""), token) {
+		t.Fatal("the token leaked into audit, events or runtime data")
 	}
 }
