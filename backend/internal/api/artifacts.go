@@ -61,6 +61,13 @@ func (s *server) mountArtifacts(r chi.Router) {
 	r.With(read).Get("/artifacts/{id}/links", s.artifactLinks)
 	r.With(write).Post("/artifacts/{id}/links", s.addArtifactLink)
 	r.With(write).Post("/artifacts/{id}/refresh-dependencies", s.refreshArtifact)
+	comment := s.can(auth.PermArtifactsComment)
+	r.With(read).Get("/artifacts/{id}/comments", s.listArtifactComments)
+	r.With(comment).Post("/artifacts/{id}/comments", s.addArtifactComment)
+	r.With(comment).Patch("/artifacts/{id}/comments/{cid}", s.resolveArtifactComment)
+	r.With(read).Get("/artifacts/{id}/proposals", s.listArtifactProposals)
+	r.With(comment).Post("/artifacts/{id}/proposals", s.proposeArtifact)
+	r.With(s.can(auth.PermArtifactsApprove)).Post("/artifacts/{id}/proposals/{pid}/decision", s.decideArtifactProposal)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/artifacts/{id}/ask", s.askAboutArtifact)
 	r.With(read).Get("/projects/{id}/workspace", s.projectWorkspace)
 }
@@ -284,4 +291,86 @@ func (s *server) projectWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, ws)
+}
+
+func (s *server) listArtifactComments(w http.ResponseWriter, r *http.Request) {
+	v, err := s.Artifacts.Comments(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, map[string]any{"items": list(v)})
+}
+
+func (s *server) addArtifactComment(w http.ResponseWriter, r *http.Request) {
+	var body artifacts.CommentInput
+	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	c, err := s.Artifacts.AddComment(r.Context(), s.artifactActor(r), chi.URLParam(r, "id"), body)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, c)
+}
+
+func (s *server) resolveArtifactComment(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Resolved bool `json:"resolved"`
+	}
+	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	c, err := s.Artifacts.ResolveComment(r.Context(), s.artifactActor(r), chi.URLParam(r, "id"), chi.URLParam(r, "cid"), body.Resolved)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, c)
+}
+
+func (s *server) listArtifactProposals(w http.ResponseWriter, r *http.Request) {
+	v, err := s.Artifacts.Proposals(r.Context(), chi.URLParam(r, "id"), r.URL.Query().Get("status"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, map[string]any{"items": list(v)})
+}
+
+func (s *server) proposeArtifact(w http.ResponseWriter, r *http.Request) {
+	var body artifacts.ProposalInput
+	if err := s.decodeArtifact(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	p, err := s.Artifacts.Propose(r.Context(), s.artifactActor(r), chi.URLParam(r, "id"), body)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, p)
+}
+
+// decideArtifactProposal: 200 with the proposal, or 409 with the conflicting units when the accepted content collides with newer edits.
+func (s *server) decideArtifactProposal(w http.ResponseWriter, r *http.Request) {
+	var body artifacts.DecisionInput
+	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	p, err := s.Artifacts.Decide(r.Context(), s.artifactActor(r), chi.URLParam(r, "id"), chi.URLParam(r, "pid"), body)
+	var c *artifacts.Conflict
+	if errors.As(err, &c) {
+		writeJSON(w, http.StatusConflict, map[string]any{"code": "conflict", "error": c.Error(), "head_version": c.HeadVersion, "conflicts": list(c.Conflicts)})
+		return
+	}
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, p)
 }

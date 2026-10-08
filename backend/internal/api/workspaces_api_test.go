@@ -408,3 +408,47 @@ func TestArtifactExportPermissionsAndTenants(t *testing.T) {
 		t.Errorf("sheet as docx = %d, want 400", c)
 	}
 }
+
+func TestArtifactCommentsAndProposalsOverHTTP(t *testing.T) {
+	e := newEnv(t, opts{auth: true, ws: true})
+	owner := e.register("owner-p@example.com", "OwnerP")
+	viewer := e.member(owner, "viewer-p@example.com", auth.RoleViewer)
+	member := e.member(owner, "member-p@example.com", auth.RoleMember)
+	admin := e.member(owner, "admin-p@example.com", auth.RoleAdmin)
+	rival := e.register("rival-p@example.com", "RivalP")
+
+	sheet := func(v int) map[string]any {
+		return map[string]any{"schema": "aiw.sheet/1", "sheets": []any{map[string]any{"id": "s1", "name": "S", "rows": 10, "cols": 4,
+			"cells": map[string]any{"A1": map[string]any{"v": v}}}}}
+	}
+	id := str(e.json("POST", api1+"/artifacts", member, map[string]any{"kind": "sheet", "title": "T", "content": sheet(1)}, 201), "id")
+	base := api1 + "/artifacts/" + id
+
+	if c := e.status("POST", base+"/comments", viewer, map[string]any{"body": "x"}); c != 403 {
+		t.Errorf("viewer comment = %d", c)
+	}
+	cm := e.json("POST", base+"/comments", member, map[string]any{"body": "Revisar", "anchor": map[string]any{"sheet": "S", "range": "A1"}}, 201)
+	e.json("PATCH", base+"/comments/"+str(cm, "id"), member, map[string]any{"resolved": true}, 200)
+	if l := e.list(base+"/comments", viewer); len(l) != 1 {
+		t.Fatalf("comments: %v", l)
+	}
+	if c := e.status("GET", base+"/comments", rival.AccessToken, nil); c != 404 {
+		t.Errorf("rival comments = %d", c)
+	}
+
+	p := e.json("POST", base+"/proposals", member, map[string]any{"base_version": 1, "content": sheet(7), "summary": "A1 a 7"}, 201)
+	pid := str(p, "id")
+	if c := e.status("POST", base+"/proposals/"+pid+"/decision", member, map[string]any{"decision": "accept"}); c != 403 {
+		t.Errorf("member decision = %d, want 403", c)
+	}
+	if c := e.status("POST", base+"/proposals/"+pid+"/decision", rival.AccessToken, map[string]any{"decision": "accept"}); c != 404 {
+		t.Errorf("rival decision = %d, want 404", c)
+	}
+	done := e.json("POST", base+"/proposals/"+pid+"/decision", admin, map[string]any{"decision": "accept"}, 200)
+	if str(done, "status") != "accepted" {
+		t.Fatalf("decision: %v", done)
+	}
+	if got := e.json("GET", base, viewer, nil, 200); got["head_version"].(float64) != 2 || got["pending_proposals"].(float64) != 0 {
+		t.Fatalf("artifact: %v", got)
+	}
+}

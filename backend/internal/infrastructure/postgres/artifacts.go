@@ -230,3 +230,85 @@ func (a *ArtifactStore) ListAllLinks(ctx context.Context, org string) ([]artifac
 func (a *ArtifactStore) SetSyncedVersion(ctx context.Context, org, linkID string, version int) error {
 	return a.S.exec(ctx, org, `UPDATE artifact_links SET synced_version=$3 WHERE org_id=$1 AND id=$2`, org, linkID, version)
 }
+
+// ---- comments and proposals (migration 340) ----
+
+var _ artifacts.CollabStore = (*ArtifactStore)(nil)
+
+const artCommentCols = `id, artifact_id, parent_id, anchor, author, body, mentions, resolved, resolved_by, created_at`
+
+func scanArtComment(r scanner) (artifacts.Comment, error) {
+	var c artifacts.Comment
+	var anchor, author, mentions []byte
+	err := r.Scan(&c.ID, &c.ArtifactID, &c.ParentID, &anchor, &author, &c.Body, &mentions, &c.Resolved, &c.ResolvedBy, &c.CreatedAt)
+	if len(anchor) > 0 && string(anchor) != "null" {
+		c.Anchor = &artifacts.Anchor{}
+		unmarshal(anchor, c.Anchor)
+	}
+	unmarshal(author, &c.Author)
+	unmarshal(mentions, &c.Mentions)
+	if c.Mentions == nil {
+		c.Mentions = []string{}
+	}
+	return c, err
+}
+
+func (a *ArtifactStore) AddComment(ctx context.Context, org string, c artifacts.Comment) error {
+	_, err := a.S.execTag(ctx, org, `INSERT INTO artifact_comments (id, org_id, artifact_id, parent_id, anchor, author, body, mentions, resolved, resolved_by, created_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+		c.ID, org, c.ArtifactID, c.ParentID, anchorJSON(c.Anchor), jb(c.Author), c.Body, jb(c.Mentions), c.Resolved, c.ResolvedBy, c.CreatedAt)
+	return err
+}
+
+func (a *ArtifactStore) ListComments(ctx context.Context, org, artifactID string) ([]artifacts.Comment, error) {
+	return many(ctx, a.S, org, scanArtComment, `SELECT `+artCommentCols+` FROM artifact_comments WHERE org_id=$1 AND artifact_id=$2 ORDER BY created_at, id`, org, artifactID)
+}
+
+func (a *ArtifactStore) GetComment(ctx context.Context, org, id string) (artifacts.Comment, error) {
+	c, err := one(ctx, a.S, org, scanArtComment, `SELECT `+artCommentCols+` FROM artifact_comments WHERE org_id=$1 AND id=$2`, org, id)
+	return c, mapErr(err)
+}
+
+func (a *ArtifactStore) UpdateComment(ctx context.Context, org string, c artifacts.Comment) error {
+	tag, err := a.S.execTag(ctx, org, `UPDATE artifact_comments SET resolved=$3, resolved_by=$4 WHERE org_id=$1 AND id=$2`, org, c.ID, c.Resolved, c.ResolvedBy)
+	if err == nil && tag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return err
+}
+
+const artProposalCols = `id, artifact_id, base_version, author, summary, content, status, resolved_by, resolved_note, resolved_version, created_at, resolved_at`
+
+func scanArtProposal(r scanner) (artifacts.Proposal, error) {
+	var p artifacts.Proposal
+	var author, content []byte
+	err := r.Scan(&p.ID, &p.ArtifactID, &p.BaseVersion, &author, &p.Summary, &content, &p.Status, &p.ResolvedBy, &p.ResolvedNote, &p.ResolvedVersion, &p.CreatedAt, &p.ResolvedAt)
+	unmarshal(author, &p.Author)
+	p.Content = json.RawMessage(content)
+	return p, err
+}
+
+func (a *ArtifactStore) AddProposal(ctx context.Context, org string, p artifacts.Proposal) error {
+	_, err := a.S.execTag(ctx, org, `INSERT INTO artifact_proposals (id, org_id, artifact_id, base_version, author, summary, content, status, created_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+		p.ID, org, p.ArtifactID, p.BaseVersion, jb(p.Author), p.Summary, []byte(p.Content), p.Status, p.CreatedAt)
+	return err
+}
+
+func (a *ArtifactStore) ListProposals(ctx context.Context, org, artifactID string) ([]artifacts.Proposal, error) {
+	return many(ctx, a.S, org, scanArtProposal, `SELECT `+artProposalCols+` FROM artifact_proposals WHERE org_id=$1 AND artifact_id=$2 ORDER BY created_at, id`, org, artifactID)
+}
+
+func (a *ArtifactStore) GetProposal(ctx context.Context, org, id string) (artifacts.Proposal, error) {
+	p, err := one(ctx, a.S, org, scanArtProposal, `SELECT `+artProposalCols+` FROM artifact_proposals WHERE org_id=$1 AND id=$2`, org, id)
+	return p, mapErr(err)
+}
+
+func (a *ArtifactStore) UpdateProposal(ctx context.Context, org string, p artifacts.Proposal) error {
+	tag, err := a.S.execTag(ctx, org, `UPDATE artifact_proposals SET status=$3, resolved_by=$4, resolved_note=$5, resolved_version=$6, resolved_at=$7 WHERE org_id=$1 AND id=$2`,
+		org, p.ID, p.Status, p.ResolvedBy, p.ResolvedNote, p.ResolvedVersion, p.ResolvedAt)
+	if err == nil && tag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return err
+}

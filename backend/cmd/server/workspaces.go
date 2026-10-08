@@ -21,7 +21,9 @@ type workspaceWiring struct {
 // projects service (the two are built in a cycle: projects feed the workspace).
 type projectLookup func(ctx context.Context, id string) (string, string, error)
 
-func (f projectLookup) Info(ctx context.Context, id string) (string, string, error) { return f(ctx, id) }
+func (f projectLookup) Info(ctx context.Context, id string) (string, string, error) {
+	return f(ctx, id)
+}
 
 // wireWorkspaces builds the projects service (whole workflows launched as real
 // orchestrator tasks) and the artifacts service (agent workspaces), with
@@ -31,15 +33,17 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 
 	var pstore projects.Store = projects.NewMemStore()
 	var astore artifacts.Store = artifacts.NewMemStore()
+	var collab artifacts.CollabStore = artifacts.NewMemCollab()
 	if pg != nil {
-		pstore, astore = &postgres.ProjectStore{S: pg}, &postgres.ArtifactStore{S: pg}
+		as := &postgres.ArtifactStore{S: pg}
+		pstore, astore, collab = &postgres.ProjectStore{S: pg}, as, as
 	}
 	var guard application.ExecutionGuard
 	if cw.gw != nil {
 		guard = gateway.Guard{G: cw.gw}
 	}
 	var psvc *projects.Service
-	asvc := artifacts.New(artifacts.Config{Store: astore, Rec: rec, Core: store, Asker: orch, OrgID: cfg.App.OrgID, Log: log,
+	asvc := artifacts.New(artifacts.Config{Store: astore, Collab: collab, Rec: rec, Core: store, Asker: orch, OrgID: cfg.App.OrgID, Log: log,
 		Projects: projectLookup(func(ctx context.Context, id string) (string, string, error) { return psvc.Info(ctx, id) })})
 	pcfg := projects.Config{Store: pstore, Orch: orch, Core: store, Approvals: approvals, Rec: rec, Runtime: rt, Guard: guard, Sink: asvc, OrgID: cfg.App.OrgID, Log: log}
 	if orgCfg != nil {
