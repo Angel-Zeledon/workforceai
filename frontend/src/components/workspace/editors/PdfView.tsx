@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { API_URL, MOCK } from "@/lib/config";
-import type { StoredArtifact } from "@/lib/artifacts";
+import { MOCK } from "@/lib/config";
+import { artifactApi, PDF_MAX_BYTES, useArtifacts, type StoredArtifact } from "@/lib/artifacts";
+import { useConnections } from "@/lib/connections/store";
 import { useT } from "@/lib/i18n";
 
 interface Annotation { id: string; page: number; text: string; author?: { kind: string; id: string } }
-interface PdfContent { schema: "aiw.pdf/1"; blob_id: string | null; pages: number; annotations: Annotation[] }
+interface PdfContent { schema: "aiw.pdf/1"; blob_id: string | null; pages: number; annotations: Annotation[]; filename?: string; size_bytes?: number }
 
 // Minimal structural types of the pdf.js objects used here (the library is loaded lazily, never at module scope).
 interface PdfPage { getViewport(o: { scale: number }): { width: number; height: number }; render(o: { canvasContext: CanvasRenderingContext2D; viewport: unknown }): { promise: Promise<void>; cancel(): void } }
@@ -72,14 +73,84 @@ function PageCanvas({ doc, n, notes, total }: { doc: PdfDoc; n: number; notes: A
 
 /** Bytes of a stored PDF blob (GET /artifact-blobs/{id}); null in demo mode, where there is no blob storage. */
 async function fetchBlob(blobId: string): Promise<ArrayBuffer | null> {
-  if (MOCK) return null;
-  const res = await fetch(`${API_URL}/artifact-blobs/${encodeURIComponent(blobId)}`, { cache: "no-store" });
-  if (!res.ok) throw new Error(String(res.status));
-  return res.arrayBuffer();
+  const res = await artifactApi.pdfBlob(blobId);
+  return res ? res.arrayBuffer() : null;
 }
 
-/** PDF viewer: pdf.js renders each page lazily when it scrolls into view; annotations are overlaid. Read-only. */
-export function PdfView({ art }: { art: StoredArtifact }) {
+/** Client-side pre-check (the server repeats both): size cap and the "%PDF-" signature. */
+async function precheck(file: File): Promise<string | null> {
+  if (file.size > PDF_MAX_BYTES) return "too_large";
+  const head = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+  return String.fromCharCode(...head) === "%PDF-" ? null : "not_a_pdf";
+}
+
+const UPLOAD_ERRORS: Record<string, string> = {
+  too_large: "pdf.errTooLarge", not_a_pdf: "pdf.errNotPdf", unsupported_media_type: "pdf.errNotPdf",
+  read_only_mode: "pdf.errReadOnly", conflict: "pdf.errConflict", "409": "pdf.errConflict", "403": "pdf.errForbidden",
+};
+
+/** Upload / replace / download bar of a pdf artifact. Hidden for read-only embeds; disabled in demo mode and read-only mode. */
+function PdfToolbar({ art, blobId, filename }: { art: StoredArtifact; blobId: string | null; filename?: string }) {
+  const { t } = useT();
+  const input = useRef<HTMLInputElement>(null);
+  const orgReadOnly = useConnections((s) => s.controls?.mode === "read_only");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const disabled = MOCK || orgReadOnly || busy || art.status === "approved" || art.status === "sent" || art.status === "archived";
+  const why = MOCK ? t("pdf.demoUnavailable") : orgReadOnly ? t("pdf.errReadOnly") : undefined;
+
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    setMsg(null);
+    const bad = await precheck(file);
+    if (bad) { setMsg({ kind: "error", text: t(UPLOAD_ERRORS[bad], { mb: PDF_MAX_BYTES >> 20 }) }); return; }
+    setBusy(true);
+    try {
+      const r = await artifactApi.uploadPdf(art.id, file, file.name);
+      await useArtifacts.getState().ensureContent(art.id, true);
+      setMsg({ kind: "ok", text: t("pdf.uploaded", { version: r.version }) });
+    } catch (e) {
+      const code = e instanceof Error ? e.message : "";
+      setMsg({ kind: "error", text: t(UPLOAD_ERRORS[code] ?? "pdf.errUpload", { mb: PDF_MAX_BYTES >> 20 }) });
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  };
+  const download = async () => {
+    if (!blobId) return;
+    try {
+      const res = await artifactApi.pdfBlob(blobId, true);
+      if (!res) return;
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a"); a.href = url; a.download = filename || `${art.title}.pdf`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch { setMsg({ kind: "error", text: t("pdf.error") }); }
+  };
+
+  return (
+    <div className="mx-auto mb-3 flex max-w-[720px] flex-wrap items-center gap-2 text-[11px]">
+      <input ref={input} data-testid="pdf-upload-input" type="file" accept="application/pdf,.pdf" className="hidden" disabled={disabled}
+        onChange={(e) => void upload(e.target.files?.[0])} />
+      <button type="button" data-testid="pdf-upload" disabled={disabled} title={why} onClick={() => input.current?.click()}
+        className="rounded-md border border-accent bg-accent px-3 py-1 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+        {busy ? t("pdf.uploading") : blobId ? t("pdf.replace") : t("pdf.upload")}
+      </button>
+      {blobId && !MOCK && (
+        <button type="button" data-testid="pdf-download" onClick={() => void download()} className="rounded-md border border-line px-3 py-1 font-semibold text-ink hover:border-accent">
+          {t("pdf.download")}
+        </button>
+      )}
+      {filename && <span data-testid="pdf-filename" className="truncate font-mono text-[10px] text-mute">{filename}</span>}
+      {msg && <span data-testid="pdf-upload-status" data-kind={msg.kind} role={msg.kind === "error" ? "alert" : "status"}
+        className={msg.kind === "error" ? "text-red-600" : "text-emerald-700"}>{msg.text}</span>}
+      {!msg && why && <span className="text-mute">{why}</span>}
+    </div>
+  );
+}
+
+/** PDF viewer: pdf.js renders each page lazily when it scrolls into view; annotations are overlaid. The file is uploaded or replaced from the toolbar. */
+export function PdfView({ art, readOnly }: { art: StoredArtifact; readOnly?: boolean }) {
   const { t } = useT();
   const c = art.content as PdfContent | undefined;
   const blobId = c?.blob_id ?? null;
@@ -107,7 +178,8 @@ export function PdfView({ art }: { art: StoredArtifact }) {
   const total = doc ? Math.min(doc.numPages, MAX_PAGES) : c.pages;
   const notesOf = (n: number) => c.annotations.filter((a) => a.page === n);
   return (
-    <div data-testid="art-pdf" className="h-full overflow-auto bg-panel2/50 p-4">
+    <div data-testid="art-pdf" data-blob={blobId ?? ""} className="h-full overflow-auto bg-panel2/50 p-4">
+      {!readOnly && <PdfToolbar art={art} blobId={blobId} filename={c.filename} />}
       <p className="mb-3 text-center text-[11px] text-mute" data-testid="pdf-status">
         {state === "loading" ? t("pdf.loading") : state === "error" ? t("pdf.error") : !blobId ? t("pdf.noFile") : t("pdf.note", { count: total })}
       </p>

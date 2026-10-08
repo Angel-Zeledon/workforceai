@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { create } from "zustand";
 import { call } from "./api";
 import { API_URL, MOCK } from "./config";
+import { authFetch } from "./session";
 import type { WsFrame } from "./types";
 
 // ---- types (sec. 5.1) -----------------------------------------------------------------------------
@@ -88,13 +89,38 @@ export const artifactApi = {
   /** Server-side docx/xlsx export (GET /artifacts/{id}/export); resolves with the file to download. Not available in demo mode. */
   exportFile: async (id: string, format: "docx" | "xlsx", version?: number) => {
     if (MOCK) throw new Error("export unavailable in demo mode");
-    const res = await fetch(`${API_URL}/artifacts/${encodeURIComponent(id)}/export?format=${format}${version ? `&version=${version}` : ""}`, { cache: "no-store" });
+    const res = await authFetch(`${API_URL}/artifacts/${encodeURIComponent(id)}/export?format=${format}${version ? `&version=${version}` : ""}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`export -> ${res.status}`);
     const name = /filename="?([^";]+)"?/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? `artifact.${format}`;
     return { blob: await res.blob(), name };
   },
   project: (pid: string) => call<ProjectWorkspace>("GET", `/projects/${pid}/workspace`),
+  /**
+   * POST /artifacts/{id}/pdf with the raw file (application/pdf, max PDF_MAX_BYTES); the server checks the type and the
+   * %PDF- signature, stores the blob and writes a new version. Rejects with the server error code (too_large,
+   * unsupported_media_type, not_a_pdf, read_only_mode, conflict, ...). Not available in demo mode.
+   */
+  uploadPdf: async (id: string, file: Blob, filename: string, baseVersion?: number) => {
+    if (MOCK) throw new Error("demo_mode");
+    const q = new URLSearchParams({ filename, ...(baseVersion ? { base_version: String(baseVersion) } : {}) });
+    const res = await authFetch(`${API_URL}/artifacts/${encodeURIComponent(id)}/pdf?${q}`, { method: "POST", headers: { "Content-Type": "application/pdf" }, body: file, cache: "no-store" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(String(body?.code ?? res.status));
+    }
+    return (await res.json()) as { blob: { blob_id: string; filename: string; size: number; sha256: string }; version: number; pages: number };
+  },
+  /** GET /artifact-blobs/{id}: bytes of an uploaded PDF (`download` = as attachment, audited). */
+  pdfBlob: async (blobId: string, download = false) => {
+    if (MOCK) return null;
+    const res = await authFetch(`${API_URL}/artifact-blobs/${encodeURIComponent(blobId)}${download ? "?download=1" : ""}`, { cache: "no-store" });
+    if (!res.ok) throw new Error(String(res.status));
+    return res;
+  },
 };
+
+/** Upload cap of a PDF file (the server enforces the same 25 MB). */
+export const PDF_MAX_BYTES = 25 * 1024 * 1024;
 
 // ---- store -----------------------------------------------------------------------------------------
 export type SaveState = "saved" | "saving" | "conflict" | "offline";

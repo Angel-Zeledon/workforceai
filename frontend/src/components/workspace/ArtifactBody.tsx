@@ -20,7 +20,7 @@ export function ArtifactBody({ art, readOnly, compact, depth = 0 }: { art: Store
     case "table": return <TableEditor art={art} readOnly={readOnly} compact={compact} />;
     case "board": return <BoardView art={art} readOnly={readOnly} />;
     case "chart": return <ChartView art={art} compact={compact} />;
-    case "pdf": return <PdfView art={art} />;
+    case "pdf": return <PdfView art={art} readOnly={readOnly} />;
     case "form": return <FormView art={art} />;
     case "inbox": return <InboxView art={art} />;
     case "agenda": return <AgendaView art={art} readOnly={readOnly} />;
