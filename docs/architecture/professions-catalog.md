@@ -422,3 +422,25 @@ Regla común: ninguna fila implica un grant automático; la plantilla solo **rec
 3. ¿Se permiten **plantillas personalizadas por organización** desde el inicio o solo roles curados por la plataforma?
 4. ¿Idioma de trabajo del agente: el de la UI, el de la organización o el de cada conversación?
 5. ¿`clinic_admin` y facturación electrónica se postergan hasta tener revisión legal por país? ¿Qué países primero?
+
+## 8. Estado (workstream A5)
+
+**Construido**
+
+- Las profesiones son plantillas de datos (`backend/internal/roles/templates/*.json`, esquema `aiw.role_template/1`): 7 plantillas semilla más la primera oleada `project_manager`, `education`, `data_analyst` y `software_engineer`. Los agentes semilla se crean desde esas plantillas.
+- API: `GET /role-templates` (localizada, con conteo `hired`), `GET /role-templates/{id}` y `POST /agents/from-template` (permiso `agents:write`, solo admin/owner). Los agentes nuevos nunca reciben la capacidad de aprobar.
+- El backend envía los perfiles de enrutamiento al runtime; el runtime enruta y planifica con los perfiles de rol (simulación de la primera oleada incluida).
+- Frontend: entrada "Contratar desde plantilla" (`data-testid="hire-open"`) en el menú de administración, con diálogo (`hire-dialog`), nombre opcional y resultado visible; deshabilitada para no administradores. También funciona en el build mock (`roles-mock.ts`).
+- Oficina 3D: los roles sin entrada fija en `ROLE_META` toman color y apariencia de `display` de la plantilla (registrada con `registerRoleTemplates`) y un escritorio libre automático (`assignDesks`); los 7 agentes de la demo no cambian de aspecto ni de lugar.
+
+**Pendiente / sin verificar**
+
+- Verificación visual en el navegador de la oficina con agentes contratados (solo se verificó compilación, tipos e i18n).
+- Pruebas end-to-end con un backend real y el runtime; los escritorios libres son 8 y, al agotarse, se apilan en una fila extra.
+- La segunda oleada del catálogo (sección 7) no está construida.
+
+**Decisiones abiertas**
+
+1. ¿Se mantienen las 8 priorizadas y las dos oleadas, o se sustituye alguna?
+2. ¿`data_analyst` queda separado del `analyst` existente o pasa a ser una especialización (menos escritorios en la oficina 3D)? Hoy conviven ambos.
+3. ¿Plantillas personalizadas por organización o solo roles curados por la plataforma?
