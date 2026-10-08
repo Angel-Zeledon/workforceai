@@ -376,3 +376,35 @@ func TestArtifactsOverHTTP(t *testing.T) {
 		t.Fatalf("malformed body = %d", c)
 	}
 }
+
+func TestArtifactExportPermissionsAndTenants(t *testing.T) {
+	e := newEnv(t, opts{auth: true, ws: true})
+	owner := e.register("owner-x@example.com", "OwnerX")
+	viewer := e.member(owner, "viewer-x@example.com", auth.RoleViewer)
+	member := e.member(owner, "member-x@example.com", auth.RoleMember)
+	rival := e.register("rival-x@example.com", "RivalX")
+
+	art := e.json("POST", api1+"/artifacts", member, map[string]any{"kind": "sheet", "title": "Margen: Q1",
+		"content": map[string]any{"schema": "aiw.sheet/1", "sheets": []any{map[string]any{"id": "s1", "name": "Margen", "rows": 10, "cols": 4,
+			"cells": map[string]any{"A1": map[string]any{"v": "=1+1"}}}}}}, 201)
+	id := str(art, "id")
+	path := api1 + "/artifacts/" + id + "/export?format=xlsx"
+
+	resp, body := e.do("GET", path, member, nil, nil)
+	if resp.StatusCode != 200 || !strings.Contains(resp.Header.Get("Content-Type"), "spreadsheetml.sheet") ||
+		!strings.Contains(resp.Header.Get("Content-Disposition"), "attachment") || len(body) < 100 || string(body[:2]) != "PK" {
+		t.Fatalf("member export = %d %v", resp.StatusCode, resp.Header)
+	}
+	if c := e.status("GET", path, "", nil); c != 401 {
+		t.Errorf("no token = %d", c)
+	}
+	if c := e.status("GET", path, viewer, nil); c != 403 {
+		t.Errorf("viewer export = %d, want 403", c)
+	}
+	if c := e.status("GET", path, rival.AccessToken, nil); c != 404 {
+		t.Errorf("other tenant export = %d, want 404", c)
+	}
+	if c := e.status("GET", api1+"/artifacts/"+id+"/export?format=docx", member, nil); c != 400 {
+		t.Errorf("sheet as docx = %d, want 400", c)
+	}
+}

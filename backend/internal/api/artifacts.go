@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"mime"
 	"net/http"
 	"strconv"
 
@@ -52,6 +53,7 @@ func (s *server) mountArtifacts(r chi.Router) {
 	r.With(write).Patch("/artifacts/{id}", s.patchArtifact)
 	r.With(write).Delete("/artifacts/{id}", s.archiveArtifact)
 	r.With(write).Post("/artifacts/{id}/versions", s.saveArtifactVersion)
+	r.With(read, s.can(auth.PermArtifactsExport)).Get("/artifacts/{id}/export", s.exportArtifact)
 	r.With(read).Get("/artifacts/{id}/versions", s.artifactVersions)
 	r.With(read).Get("/artifacts/{id}/versions/{n}", s.artifactVersion)
 	r.With(write).Post("/artifacts/{id}/restore", s.restoreArtifact)
@@ -147,6 +149,23 @@ func (s *server) saveArtifactVersion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, res)
+}
+
+// exportArtifact streams a docx/xlsx copy of the content (never stored) and audits it.
+func (s *server) exportArtifact(w http.ResponseWriter, r *http.Request) {
+	ver, _ := strconv.Atoi(r.URL.Query().Get("version"))
+	f, err := s.Artifacts.Export(r.Context(), s.artifactActor(r), chi.URLParam(r, "id"), ver, r.URL.Query().Get("format"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", f.MIME)
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": f.Filename}))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Length", strconv.Itoa(len(f.Data)))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(f.Data)
 }
 
 func (s *server) artifactVersions(w http.ResponseWriter, r *http.Request) {
