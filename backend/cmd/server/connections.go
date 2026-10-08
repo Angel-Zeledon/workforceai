@@ -135,6 +135,11 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 	ctl := controls.New(kstore, controls.AuditFunc(audit), controls.EmitFunc(emit))
 	gw := gateway.New(cs, ctl, sus, log)
 	gw.Audit, gw.Emit, gw.HoldSeconds, gw.OrgIDs = audit, emit, cfg.EmailHoldSeconds, orgIDs
+	if pg != nil {
+		// Durable at-most-once of approved actions (migration 350): the same
+		// approval never runs twice, across restarts, the outbox and the task.
+		gw.Executions = pg
+	}
 	cs.OnRevoke = func(ctx context.Context, org, id, reason string) { gw.CancelHoldsFor(ctx, org, id, reason) }
 	ctl.Hooks = controls.Hooks{OnKillSwitch: gw.OnKillSwitch, OnRelease: gw.OnRelease}
 	orch.SetConnections(gateway.Guard{G: gw}, gw, gw)

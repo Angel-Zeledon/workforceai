@@ -130,13 +130,38 @@ func (o *Orchestrator) EstimateFor(ctx context.Context, requestID string) (domai
 // threshold or the request cap, waits for the user's decision. It returns
 // false when the request must not continue (cancelled, timed out or aborted).
 func (o *Orchestrator) confirmEstimate(ctx context.Context, rs *run, tasks []domain.Task) bool {
+	return o.confirmEstimateFrom(ctx, rs, tasks, nil)
+}
+
+// confirmEstimateFrom is confirmEstimate; resumed (non-nil) is the cost
+// confirmation a request was waiting on before a restart: the same estimate is
+// asked again, with the original deadline (decision D-A1b), and it is asked
+// even if a fresh estimate would not need it (the human never confirmed it).
+func (o *Orchestrator) confirmEstimateFrom(ctx context.Context, rs *run, tasks []domain.Task, resumed *RunGate) bool {
 	org := o.org(ctx)
-	est := o.buildEstimate(ctx, rs.req.ID, rs.req.Text, tasks)
+	since := time.Now().UTC()
+	var est domain.CostEstimate
+	switch {
+	case resumed != nil && resumed.Estimate != nil:
+		est, since = *resumed.Estimate, resumed.StartedAt
+	case resumed != nil:
+		est, since = o.buildEstimate(ctx, rs.req.ID, rs.req.Text, tasks), resumed.StartedAt
+	default:
+		est = o.buildEstimate(ctx, rs.req.ID, rs.req.Text, tasks)
+	}
+	if resumed != nil && !est.RequiresConfirmation {
+		est.RequiresConfirmation = true
+		if est.ConfirmReason == "" {
+			est.ConfirmReason = domain.ConfirmReasonThreshold
+		}
+	}
 	o.budget.setEstimate(org, est)
 	var ch chan Confirmation
 	if est.RequiresConfirmation {
 		ch = o.budget.awaitConfirmation(org, rs.req.ID) // register before publishing
 		defer o.budget.dropConfirmation(org, rs.req.ID)
+		saved := est
+		o.setGate(ctx, rs, &RunGate{Kind: GateCostConfirmation, StartedAt: since, Estimate: &saved}) // durable: survives a restart
 	}
 	o.rec.Emit(ctx, Action{Type: domain.EvCostEstimated, AgentID: assistantID, Entity: "request", EntityID: rs.req.ID,
 		Payload: map[string]any{"request_id": rs.req.ID, "estimate": est},
@@ -147,7 +172,7 @@ func (o *Orchestrator) confirmEstimate(ctx context.Context, rs *run, tasks []dom
 	o.setRequestStatus(ctx, rs, domain.RequestAwaitingConfirmation)
 	o.setState(ctx, assistantID, domain.StateWaiting, "Esperando tu confirmación del costo estimado", nil, 20)
 	o.emitMetrics(ctx)
-	timer := time.NewTimer(o.cfg.ApprovalTimeout)
+	timer := time.NewTimer(max(time.Until(since.Add(o.cfg.ApprovalTimeout)), 0))
 	defer timer.Stop()
 	select {
 	case c := <-ch:
@@ -156,6 +181,7 @@ func (o *Orchestrator) confirmEstimate(ctx context.Context, rs *run, tasks []dom
 			o.failRequest(ctx, rs, assistantID, "Solicitud cancelada", errors.New("no confirmaste la estimación de costo"))
 			return false
 		}
+		o.setGate(ctx, rs, nil)
 		return true
 	case <-timer.C:
 		o.cancelPlanned(ctx, rs, tasks, "sin confirmación de costo")

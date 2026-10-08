@@ -118,6 +118,17 @@ type ToolGateway interface {
 	ApprovalResolved(approvalID string, approved bool)
 }
 
+// StatusAlreadyExecuted is the status of a GatewayOutcome for an approved call
+// whose approval was already executed (the execution ledger refused a second run).
+const StatusAlreadyExecuted = "already_executed"
+
+// GatewayRestorer is optionally implemented by a ToolGateway that keeps the
+// approval context (outbox item) in memory: after a restart the orchestrator
+// restores it from the task checkpoint before waiting on the approval again.
+type GatewayRestorer interface {
+	RestoreApproval(ctx context.Context, approvalID string, c GatewayCall, p GatewayPending)
+}
+
 // PlanTaskInfo is a task of a plan under review.
 type PlanTaskInfo struct {
 	ID        string   `json:"id"`
