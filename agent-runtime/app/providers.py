@@ -72,6 +72,8 @@ class ProviderPolicy:
     allowed: tuple[str, ...] | None = None
     preferred: tuple[str, ...] = ()
     role: str = ""
+    role_order: tuple[str, ...] = ()  # organization policy for this role (request field role_providers)
+    role_model: str = ""  # "provider/model" from the organization policy (request field role_models)
 
 
 def _norm_list(values: Iterable[str] | None) -> tuple[str, ...] | None:
@@ -92,10 +94,22 @@ def _env_list(name: str) -> tuple[str, ...] | None:
     return _norm_list(raw.split(","))
 
 
+def _role_key(role: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", (role or "").lower()).strip("_")
+
+
 def policy_from_request(req: object, role: str = "") -> ProviderPolicy:
+    key = _role_key(role)
+    by_role = {_role_key(k): v for k, v in (getattr(req, "role_providers", None) or {}).items()}
+    models = {_role_key(k): v for k, v in (getattr(req, "role_models", None) or {}).items()}
+    model = str(models.get(key, "") or "").strip() if key else ""
+    if model and ("/" not in model or model.split("/", 1)[0].lower() not in KNOWN_PROVIDERS):
+        model = ""  # malformed: ignored (the backend validates; this is a second barrier)
     return ProviderPolicy(allowed=_norm_list(getattr(req, "allowed_providers", None)),
                           preferred=_norm_list(getattr(req, "preferred_providers", None)) or (),
-                          role=role)
+                          role=role,
+                          role_order=_norm_list(by_role.get(key)) or () if key else (),
+                          role_model=model)
 
 
 def _role_env(role: str) -> str:
@@ -158,8 +172,18 @@ def effective_allowed(policy: ProviderPolicy) -> tuple[str, ...] | None:
 def candidates(configs: list[ProviderConfig], policy: ProviderPolicy) -> list[ProviderConfig]:
     """Ordered failover list after the data policy. Raises ProviderError if empty."""
     by_id = {c.id: c for c in configs}
+    if policy.role_model:
+        prov, name = policy.role_model.split("/", 1)
+        prov = prov.lower()
+        if prov in by_id:  # only swaps the model of a configured provider, never adds one
+            c = by_id[prov]
+            if prov == "custom":  # litellm name of an OpenAI-compatible endpoint
+                model = name if "/" in name else f"openai/{name}"
+            else:
+                model = f"{prov}/{name}"
+            by_id[prov] = ProviderConfig(c.id, model, c.api_key, c.base_url)
     order: list[str] = []
-    for src in (_env_list(_role_env(policy.role)) if policy.role else None, policy.preferred,
+    for src in (_env_list(_role_env(policy.role)) if policy.role else None, policy.role_order, policy.preferred,
                 tuple(c.id for c in configs)):
         for p in src or ():
             if p in by_id and p not in order:

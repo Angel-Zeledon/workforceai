@@ -84,9 +84,21 @@ func run(log *slog.Logger) error {
 		log.Warn("REDIS_URL not set: using in-process events and locks")
 	}
 
-	rt := runtime.New(cfg.RuntimeURL)
+	rt := runtime.New(cfg.RuntimeURL).WithToken(os.Getenv("RUNTIME_TOKEN"))
+	if os.Getenv("RUNTIME_TOKEN") == "" {
+		log.Warn("RUNTIME_TOKEN not set: calls to the agent runtime are not authenticated (set it in both services)")
+	}
 	queries := &application.Queries{Store: store, Cfg: cfg.App}
 	rec := &application.Recorder{OrgID: cfg.App.OrgID, Store: store, Pub: pub, Log: log}
+
+	// Organization model policy (allowed/preferred providers, model per role),
+	// within the operator ceiling ALLOWED_PROVIDERS; sent on every runtime call.
+	var modelPolicy *application.ModelPolicyService
+	if ps, ok := store.(application.ModelPolicyStore); ok {
+		modelPolicy = &application.ModelPolicyService{Store: ps, Rec: rec, Cfg: cfg.App,
+			Ceiling: application.ParseProviderList(os.Getenv("ALLOWED_PROVIDERS"))}
+		rt.WithPolicy(modelPolicy.Runtime)
+	}
 	approvals := application.NewApprovals(cfg.App, store, rec)
 	orch := application.NewOrchestrator(ctx, cfg.App, store, rt, locker, rec, approvals, queries, log)
 
@@ -145,7 +157,7 @@ func run(log *slog.Logger) error {
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Projects: ws.projects, Artifacts: ws.artifacts,
-		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg,
+		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
 	if cfg.AuthEnabled {

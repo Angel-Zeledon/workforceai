@@ -28,6 +28,8 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       SIMULATION: ${SIMULATION:-}
       MODEL: ${MODEL:-}
+      RUNTIME_TOKEN: ${RUNTIME_TOKEN:-}
+      ALLOWED_PROVIDERS: ${ALLOWED_PROVIDERS:-}
     ports:
       - "8000:8000"
 
@@ -37,6 +39,8 @@ services:
       DATABASE_URL: postgres://workforce:workforce@postgres:5432/workforce?sslmode=disable
       REDIS_URL: redis://redis:6379
       RUNTIME_URL: http://agent-runtime:8000
+      RUNTIME_TOKEN: ${RUNTIME_TOKEN:-}
+      ALLOWED_PROVIDERS: ${ALLOWED_PROVIDERS:-}
       PORT: "8080"
       BUDGET_USD: ${BUDGET_USD:-25}
       COST_CONFIRM_THRESHOLD_USD: ${COST_CONFIRM_THRESHOLD_USD:-}

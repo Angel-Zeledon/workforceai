@@ -47,8 +47,10 @@ type Deps struct {
 	Auth        *auth.Service
 	// OrgConfig serves workflow templates, onboarding, org settings/tone and
 	// schedules (see orgconfig.go). Optional: nil leaves those routes unmounted.
-	OrgConfig  *application.OrgConfig
-	AuthRoutes http.Handler
+	OrgConfig *application.OrgConfig
+	// ModelPolicy serves GET/PUT /settings/model-policy (owner/admin). Optional.
+	ModelPolicy *application.ModelPolicyService
+	AuthRoutes  http.Handler
 	// InvitationRoutes (auth on) is mounted at /api/v1/invitations.
 	InvitationRoutes http.Handler
 	// Conns, Controls and Gateway serve the connections / controls endpoints
@@ -128,6 +130,7 @@ func NewRouter(d Deps) http.Handler {
 			r.With(s.can(auth.PermActivityRead)).Get("/activity", s.activity)
 			r.With(s.can(auth.PermMetricsRead)).Get("/metrics", s.metrics)
 			s.mountOrgConfig(r)
+			s.mountModelPolicy(r)
 			s.mountAudit(r)
 			s.mountCost(r)
 			s.mountConnections(r)

@@ -1,0 +1,26 @@
+{
+  "id": "plan_proposal_50k",
+  "description": "The $50,000 scenario: the planner splits the proposal among the right roles.",
+  "endpoint": "/v1/plan",
+  "request": {
+    "request_text": "Tengo un cliente nuevo que quiere una propuesta de $50,000 para implementar su sistema de ventas. Prepara todo para enviarla.",
+    "agents": [
+      {"id": "sales", "role": "sales", "title": "Gerente de Ventas", "responsibilities": "Propuestas comerciales y relación con clientes"},
+      {"id": "legal", "role": "legal", "title": "Abogada", "responsibilities": "Contratos, cláusulas y riesgos legales"},
+      {"id": "accounting", "role": "accounting", "title": "Contador", "responsibilities": "Márgenes, costos y estados financieros"},
+      {"id": "analyst", "role": "analyst", "title": "Analista", "responsibilities": "Rentabilidad y escenarios"},
+      {"id": "operations", "role": "operations", "title": "Operaciones", "responsibilities": "Capacidad y entregas"},
+      {"id": "hr", "role": "hr", "title": "Recursos Humanos", "responsibilities": "Contratación"},
+      {"id": "assistant", "role": "assistant", "title": "Asistente", "responsibilities": "Coordinación y reportes"}
+    ],
+    "budget_usd": 5,
+    "locale": "es"
+  },
+  "rubric": {
+    "min_tasks": 3,
+    "max_tasks": 10,
+    "must_assign": ["sales", "legal", "accounting"],
+    "objectives_non_empty": true
+  },
+  "max_cost_usd": 0.5
+}

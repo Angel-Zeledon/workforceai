@@ -25,3 +25,6 @@ playwright-report/
 *.tsbuildinfo
 Caddyfile;C*/
 .claude/
+
+# scripts/eval-live output (may contain model answers)
+agent-runtime/evals/reports/

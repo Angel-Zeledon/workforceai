@@ -98,6 +98,10 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       SIMULATION: "false"
       MODEL: ${MODEL:-}
+      # Shared secret with the backend (recommended; the backend warns when empty).
+      RUNTIME_TOKEN: ${RUNTIME_TOKEN:-}
+      # Operator ceiling of model providers (comma-separated; empty = all configured).
+      ALLOWED_PROVIDERS: ${ALLOWED_PROVIDERS:-}
     networks: [internal, egress]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
@@ -117,6 +121,8 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-workforce}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-workforce}?sslmode=disable
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       RUNTIME_URL: http://agent-runtime:8000
+      RUNTIME_TOKEN: ${RUNTIME_TOKEN:-}
+      ALLOWED_PROVIDERS: ${ALLOWED_PROVIDERS:-}
       PORT: "8080"
       BUDGET_USD: ${BUDGET_USD:-25}
       SIMULATION: "false"
