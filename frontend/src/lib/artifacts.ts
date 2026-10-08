@@ -13,7 +13,7 @@ import type { WsFrame } from "./types";
 export type ArtifactKind = "sheet" | "doc" | "table" | "board" | "chart" | "pdf" | "form" | "inbox" | "agenda";
 export const ARTIFACT_KINDS: ArtifactKind[] = ["sheet", "doc", "table", "board", "chart", "pdf", "form", "inbox", "agenda"];
 /** Kinds with a full editor in the first version; the others are read-only views. */
-export const EDITABLE_KINDS: ArtifactKind[] = ["sheet", "doc", "table"];
+export const EDITABLE_KINDS: ArtifactKind[] = ["sheet", "doc", "table", "board", "agenda"];
 
 export type ArtifactStatus = "draft" | "in_review" | "approved" | "sent" | "archived";
 export type BuildState = "queued" | "building" | "ready_for_review" | "done" | "blocked";
