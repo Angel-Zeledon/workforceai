@@ -140,3 +140,24 @@ Implementado en Fase 1.5 sobre el codigo actual (ver `08-api.md` sec. 12):
 | 2 | Auth + RLS en prod, rol de BD sin bypass, rate limits, maker-checker, hash chain, test de aislamiento en CI |
 | 3 | Vault de secretos, allowlists de destino, corpus de inyeccion en CI, `idempotency_key` en herramientas |
 | 4+ | Webhooks firmados, saneado de contenido entrante, pentest, retencion y DPA |
+
+## 9. Límites por conexión y detección de anomalías (A7b)
+
+### 9.1 Límites por conexión (verificado, sin cambios)
+
+`connections.Limits` (`backend/internal/connections/types.go`) fija `per_minute`, `per_hour`, `per_day`, `write_per_day`, `max_bytes_per_day` y `monthly_budget_usd` por conexión y por grant (el grant solo puede estrechar). `Service.LimitCheck` los evalúa contando filas de `connection_usage` con `Store.CountUsage` (Postgres), por lo que **sobreviven a un reinicio y se comparten entre réplicas**, a diferencia de los límites de ventana del motor de políticas (`policy.Limit`, en memoria; ver 06 sección 8.7). Se editan con `PUT /connections/{id}/limits`. Lo que falta: un tope de cantidad por conexión con ventana arbitraria y por tipo de acción (hoy son ventanas fijas de minuto/hora/día).
+
+### 9.2 Detección de anomalías v1
+
+Cuatro reglas explicables, evaluadas en `backend/internal/controls/anomaly.go` con ventanas deslizantes **en memoria**:
+
+| Regla (`rule`) | Dispara cuando | Umbral por defecto |
+|---|---|---|
+| `spend_spike` | el gasto de la hora actual >= 4x el promedio horario de las 24 h anteriores y >= 2 USD | necesita >= 3 h de historial observado |
+| `tool_request_burst` | un agente pide >= 40 herramientas en 60 s | |
+| `rejected_approvals` | >= 5 aprobaciones rechazadas en 1 h | |
+| `new_recipient_domains` | >= 3 dominios de destinatario nunca vistos en 1 h | tras aprender 5 dominios |
+
+Cada detección escribe auditoría (`anomaly.detected`, actor `system:anomaly`) y emite el evento `anomaly.detected` con `rule`, `explanation` y los valores observados. Un mismo `rule` no se repite antes de 15 min (enfriamiento). Detectar nunca bloquea por sí solo. `GET|PUT /org/anomaly-settings` (`org:manage`): `auto_freeze` (por defecto **apagado**) activa el freeze del kill switch (levantarlo sigue siendo decisión del owner); `disabled` apaga la detección y solo lo puede hacer un owner.
+
+Limitaciones honestas: los contadores no persisten (un reinicio borra la línea base y las reglas de gasto y dominios vuelven a calentarse); no se comparten entre réplicas; los umbrales son fijos en v1; "dominio nuevo" es relativo a lo visto desde el arranque, no a una libreta de contactos persistida.
