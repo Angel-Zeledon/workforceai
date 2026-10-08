@@ -161,17 +161,47 @@ _LINKS: dict[tuple[str, str], re.Pattern[str]] = {
 }
 
 
-def topic_scores(n: str) -> dict[str, int]:
+_KEYWORD_CACHE: dict[tuple[str, ...], re.Pattern[str]] = {}
+
+
+def _keyword_pattern(keywords: Iterable[str]) -> re.Pattern[str] | None:
+    """One alternation over the normalized keywords of a role template (es + en)."""
+    words = tuple(sorted({norm(k) for k in keywords if norm(k)}, key=lambda w: (-len(w), w)))
+    if not words:
+        return None
+    if words not in _KEYWORD_CACHE:
+        _KEYWORD_CACHE[words] = re.compile(r"\b(" + "|".join(re.escape(w) for w in words) + r")\b")
+    return _KEYWORD_CACHE[words]
+
+
+def _patterns(agents: Iterable[RouteAgent] | None = None) -> dict[str, re.Pattern[str]]:
+    """Topic patterns: the tuned ones of the seed roles, plus the keywords of every other role in the office.
+
+    A role without a tuned pattern only counts when an agent with that role (and its profile) is present,
+    so a profession nobody hired never wins a question.
+    """
+    out = dict(_TOPIC_PATTERNS)
+    for a in agents or ():
+        role = a.role or a.id
+        if role not in out and a.keywords:
+            pat = _keyword_pattern(a.keywords)
+            if pat is not None:
+                out[role] = pat
+    return out
+
+
+def topic_scores(n: str, agents: Iterable[RouteAgent] | None = None) -> dict[str, int]:
     out: dict[str, int] = {}
-    for role, pat in _TOPIC_PATTERNS.items():
+    for role, pat in _patterns(agents).items():
         hits = {m.group(0) for m in pat.finditer(n)}
         if hits:
             out[role] = len(hits)
     return out
 
 
-def _first_pos(n: str, role: str) -> int:
-    m = _TOPIC_PATTERNS[role].search(n)
+def _first_pos(n: str, role: str, agents: Iterable[RouteAgent] | None = None) -> int:
+    pat = _patterns(agents).get(role)
+    m = pat.search(n) if pat else None
     return m.start() if m else len(n)
 
 
@@ -342,6 +372,22 @@ class Roster:
     def label(self, a: RouteAgent) -> str:
         return a.name or a.title or a.id
 
+    def topic_of(self, role: str) -> str:
+        """The topic of a role: the tuned map for the seed roles, else the profile sent by the backend."""
+        if role in ROLE_TOPIC:
+            return ROLE_TOPIC[role]
+        a = self.by_role.get(role)
+        return (a.topic if a is not None and a.topic else "general")
+
+    def related_of(self, role: str) -> set[str]:
+        if role in _RELATED:
+            return _RELATED[role]
+        a = self.by_role.get(role)
+        return set(a.related) if a is not None else set()
+
+    def topics(self) -> set[str]:
+        return {a.topic for a in self.agents if a.topic}
+
 
 def _rng(*parts: str) -> random.Random:
     return random.Random(int(hashlib.sha256("|".join(parts).encode()).hexdigest()[:12], 16))
@@ -364,13 +410,14 @@ def parse_conversation(conversation: str) -> str | None:
     return None
 
 
-def owner_role(text: str) -> str | None:
+def owner_role(text: str, agents: Iterable[RouteAgent] | None = None) -> str | None:
     """The role that owns the topic of a text (None when it names no area)."""
+    agents = list(agents or ())
     n = fix_typos(norm(text))
-    scores = topic_scores(n)
+    scores = topic_scores(n, agents)
     if not scores:
         return None
-    return sorted(scores, key=lambda r: (-scores[r], _first_pos(n, r)))[0]
+    return sorted(scores, key=lambda r: (-scores[r], _first_pos(n, r, agents)))[0]
 
 
 # ------------------------------------------------------------------ the rules router
@@ -381,10 +428,10 @@ def rules_route(req: RouteRequest) -> RouteResponse:
     n = fix_typos(norm(req.text), fluff)
     kind = smalltalk_kind(req.text, fluff)
     intent = "smalltalk" if kind else ("task" if is_task(n) else "question")
-    scores = topic_scores(n)
+    scores = topic_scores(n, roster.agents)
     primary_role = None
     if scores:
-        primary_role = sorted(scores, key=lambda r: (-scores[r], _first_pos(n, r)))[0]
+        primary_role = sorted(scores, key=lambda r: (-scores[r], _first_pos(n, r, roster.agents)))[0]
     last = _last_primary(req.history, roster)
     if not scores and last is not None and parse_conversation(req.conversation) is None:
         # "¿y por qué?", "y eso?": a follow-up without a topic stays with whoever answered last
@@ -393,7 +440,7 @@ def rules_route(req: RouteRequest) -> RouteResponse:
         # "gracias" right after an answer thanks the one who answered
         elif kind in ("thanks", "ack") and roster.role_of(last.id) != ASSISTANT:
             primary_role = roster.role_of(last.id)
-    topic = ROLE_TOPIC.get(primary_role or "assistant", "general") if intent != "smalltalk" else (
+    topic = roster.topic_of(primary_role or "assistant") if intent != "smalltalk" else (
         "greeting" if kind in ("greeting", "howare") else kind or "general")
     rs = _reasons(req.locale)
     label = _topic_label(req.locale, topic)
@@ -461,7 +508,7 @@ def rules_route(req: RouteRequest) -> RouteResponse:
     if contributor is not None:
         crole = roster.role_of(contributor.id)
         responders.append(Responder(agent_id=contributor.id, role="contributor", reason=rs["related"].format(
-            topic=_topic_label(req.locale, ROLE_TOPIC.get(crole, "general")))))
+            topic=_topic_label(req.locale, roster.topic_of(crole)))))
     return RouteResponse(intent=intent, topic=topic, responders=responders[:1 + MAX_CONTRIBUTORS])
 
 
@@ -497,11 +544,11 @@ def _addressed(n: str, roster: Roster) -> RouteAgent | None:
 
 def _pick_contributor(primary: str, scores: dict[str, int], n: str, roster: Roster) -> RouteAgent | None:
     """A second voice only when the text really touches a related area (low noise)."""
-    related = _RELATED.get(primary, set())
+    related = roster.related_of(primary)
     candidates = []
     for role, s in scores.items():
         if role != primary and role in related and role != ASSISTANT:
-            candidates.append((-s, _first_pos(n, role), role))
+            candidates.append((-s, _first_pos(n, role, roster.agents), role))
     for (a, b), pat in _LINKS.items():
         if a == primary and pat.search(n) and all(c[2] != b for c in candidates):
             candidates.append((0, len(n), b))
@@ -524,7 +571,7 @@ def validate_route(data: dict, req: RouteRequest) -> RouteResponse | None:
     rs = _reasons(req.locale)
     reasons = data.get("reasons") if isinstance(data.get("reasons"), dict) else {}
     topic = str(data.get("topic") or "general").strip().lower()
-    topic = topic if topic in TOPIC_ROLE or topic in ("greeting", "thanks", "ack", "help") else "general"
+    topic = topic if topic in TOPIC_ROLE or topic in roster.topics() or topic in ("greeting", "thanks", "ack", "help") else "general"
     direct_id = parse_conversation(req.conversation)
     if direct_id and direct_id in roster.by_id:  # 1:1: hard rule, never more than that agent
         primary = roster.by_id[direct_id]
@@ -542,7 +589,7 @@ def validate_route(data: dict, req: RouteRequest) -> RouteResponse | None:
         a = roster.by_id.get(aid)
         if a is not None and a.id != primary.id and all(r.agent_id != a.id for r in responders):
             responders.append(Responder(agent_id=a.id, role="contributor", reason=str(reasons.get(a.id) or rs["related"].format(
-                topic=_topic_label(req.locale, ROLE_TOPIC.get(roster.role_of(a.id), "general"))))))
+                topic=_topic_label(req.locale, roster.topic_of(roster.role_of(a.id)))))))
     return RouteResponse(intent=data["intent"], topic=topic, responders=responders, source="llm")
 
 
@@ -591,7 +638,7 @@ def compose_reply(req: ChatReplyRequest) -> tuple[str, str, ReplyConsult | None]
     title = agent.title or role
     avoid = {h.text for h in req.history if h.from_ == agent.id} | {h.text for h in req.prior_replies}
     rng = _rng(req.text, agent.id, str(len(req.history)), str(req.slot), req.consult.question if req.consult else "")
-    area = c["area"].get(role, c["area"]["assistant"])
+    area = c["area"].get(role) or agent.area or c["area"]["assistant"]
     base = dict(name=name, title=title, area=area)
     consult = None
     kind = "chat"
@@ -601,7 +648,7 @@ def compose_reply(req: ChatReplyRequest) -> tuple[str, str, ReplyConsult | None]
         other = None
     other_role = (other.role or other.id) if other is not None else ""
     ctx = dict(other=roster.label(other) if other else "", other_title=(other.title or other.role) if other else "",
-               topic_area=c["area"].get(other_role, ""), my_area=area)
+               topic_area=c["area"].get(other_role) or (other.area if other is not None else ""), my_area=area)
 
     if req.limit:  # a real limit: say no in this role's own voice
         core = c["limit_core"].get(req.limit) or c["limit_core"]["paused"]
@@ -646,6 +693,8 @@ def compose_reply(req: ChatReplyRequest) -> tuple[str, str, ReplyConsult | None]
                 c["consult_q"], rng, set(), other=ctx["other"], q=q))
         elif role == ASSISTANT and _TOPIC_PATTERNS["assistant"].search(norm(req.text)):
             text = _pick(c["answer_agenda"], rng, avoid, **base)  # agenda, calendar, meetings: the assistant's own area
+        elif role != ASSISTANT and role not in c["answer"] and agent.area:
+            text = _pick(c["answer_profile"], rng, avoid, **base)  # a profession without scripted lines speaks from its area
         elif role == ASSISTANT or role not in c["answer"]:
             text = _pick(c["answer_general"], rng, avoid, **base)
         else:
