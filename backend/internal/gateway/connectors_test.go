@@ -9,6 +9,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/connections/calendar"
+	"aiworkforce/backend/internal/connections/drive"
 	"aiworkforce/backend/internal/connections/gmail"
 )
 
@@ -20,6 +21,7 @@ import (
 type connectors struct {
 	*env
 	cal *calendar.Provider
+	drv *drive.Provider
 }
 
 func newConnectors(t *testing.T) *connectors {
@@ -29,8 +31,12 @@ func newConnectors(t *testing.T) *connectors {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.cs.Providers["google_calendar"] = cal
-	return &connectors{env: e, cal: cal}
+	drv, err := drive.New(drive.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.cs.Providers["google_calendar"], e.cs.Providers["google_drive"] = cal, drv
+	return &connectors{env: e, cal: cal, drv: drv}
 }
 
 func (c *connectors) conn(provider, label string, scope connections.ResourceScope, caps ...string) connections.Connection {
@@ -138,5 +144,53 @@ func TestCalendarReadConnectionCannotCreate(t *testing.T) {
 	}
 	if len(c.cal.FakeFor(conn.ID).CreatedEvents()) != 0 {
 		t.Fatal("event created through a read connection")
+	}
+}
+
+// ---- Google Drive (read-only) ----
+
+func TestDriveReadsOnlyAllowedFoldersAsData(t *testing.T) {
+	c := newConnectors(t)
+	c.conn("google_drive", "Drive clientes", connections.ResourceScope{Folders: []string{"fld-clientes"}}, "drive.read")
+	list := c.exec(call("drive", "search", map[string]any{}))
+	readsAreUntrustedData(t, list, false)
+	if len(list.Blocks) != 2 {
+		t.Fatalf("files = %d, want only the 2 of the allowed folder", len(list.Blocks))
+	}
+	doc := c.exec(call("drive", "read", map[string]any{"file_id": "doc-002"}))
+	readsAreUntrustedData(t, doc, true) // the hostile document is flagged, never obeyed
+	if !strings.Contains(doc.Blocks[0], "exfil@evil.com") && !strings.Contains(doc.Blocks[0], "redacted") {
+		t.Fatalf("the document text must reach the runtime only inside the data block: %s", doc.Blocks[0])
+	}
+	for _, args := range []map[string]any{{"file_id": "doc-900"}, {"folder_id": "fld-privado"}} {
+		action := "read"
+		if _, ok := args["folder_id"]; ok {
+			action = "list"
+		}
+		out := c.exec(call("drive", action, args))
+		if out.DenyReason != connections.CodeOutOfScope {
+			t.Fatalf("%s %v outside the allowlist: %+v", action, args, out)
+		}
+	}
+}
+
+func TestDriveWithoutFoldersReadsNothing(t *testing.T) {
+	c := newConnectors(t)
+	c.conn("google_drive", "Drive", connections.ResourceScope{}, "drive.read")
+	if out := c.exec(call("drive", "search", map[string]any{"q": "propuesta"})); out.DenyReason != connections.CodeOutOfScope {
+		t.Fatalf("an empty folder allowlist must fail closed: %+v", out)
+	}
+}
+
+func TestDriveHasNoWriteTools(t *testing.T) {
+	c := newConnectors(t)
+	c.conn("google_drive", "Drive", connections.ResourceScope{Folders: []string{"fld-clientes"}}, "drive.read")
+	for _, action := range []string{"create_file", "share", "delete"} {
+		if c.g.IsSideEffect("drive", action) == false {
+			t.Fatalf("drive.%s must count as a side effect", action)
+		}
+		if out := c.exec(call("drive", action, map[string]any{"file_id": "doc-001"})); out.Decision != "denied" {
+			t.Fatalf("drive.%s must be denied: %+v", action, out)
+		}
 	}
 }

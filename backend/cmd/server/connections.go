@@ -13,6 +13,7 @@ import (
 	"aiworkforce/backend/internal/config"
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/connections/calendar"
+	"aiworkforce/backend/internal/connections/drive"
 	"aiworkforce/backend/internal/connections/gmail"
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
@@ -84,17 +85,21 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 	if err != nil {
 		return connWiring{}, err
 	}
-	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal}
+	drv, err := drive.New(drive.Config{})
+	if err != nil {
+		return connWiring{}, err
+	}
+	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal, "google_drive": drv}
 	apps := map[string]connections.OAuthApp{}
 	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
 		// One Google OAuth client serves every Google adapter; each connection
 		// still asks only for the scopes of its own capabilities.
 		google := connections.OAuthApp{ClientID: cfg.GoogleClientID, ClientSecret: cfg.GoogleClientSecret, RedirectURL: cfg.OAuthRedirectURL}
-		for _, id := range []string{"google_gmail", "google_calendar"} {
+		for _, id := range []string{"google_gmail", "google_calendar", "google_drive"} {
 			apps[id] = google
 		}
 	} else {
-		log.Info("GOOGLE_OAUTH_CLIENT_ID/SECRET not set: Google OAuth (Gmail, Calendar) is unavailable (bring your own OAuth app); simulated connections work")
+		log.Info("GOOGLE_OAUTH_CLIENT_ID/SECRET not set: Google OAuth (Gmail, Calendar, Drive) is unavailable (bring your own OAuth app); simulated connections work")
 	}
 	adminCount := func(ctx context.Context, org string) int {
 		if authStore == nil {
