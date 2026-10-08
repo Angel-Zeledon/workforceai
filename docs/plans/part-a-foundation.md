@@ -25,9 +25,21 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 
 ---
 
-## A1 Ejecución duradera — requiere visto bueno (toca aprobaciones)
+## A1 Ejecución duradera — implementado en parte (rama `feat/a1-durable`)
 
-### Estado actual (verificado)
+### Hecho (2026-10-08)
+- Pasos 1-5 del alcance: `RunStore` (memoria + Postgres, migración `290_durable_runs.sql` con down y RLS), checkpoint por tarea antes de esperar una aprobación de herramienta simulada, `Approvals.Attach/WaitUntil/Supersede` con plazo original, `Orchestrator.Recover` al arrancar (`cmd/server/main.go`), evento `request.resumed`, ejecución aprobada a lo sumo una vez. Decisiones tomadas: D-A1a reintento automático una vez; D-A1b plazo original. Detalle en `07-seguridad-costos.md` 5.4.
+- Tests: reinicios simulados con el store en memoria (aprobar, rechazar, decidido durante la caída, plazo vencido, sin checkpoint, doble `Recover`, interrumpida antes de empezar) y Postgres real (ida y vuelta, RLS, reset).
+
+### Pendiente
+- Reanudar proyectos (hoy sus solicitudes se marcan fallidas al reiniciar y el proyecto `interrupted`).
+- Reanudar aprobaciones del Tool Gateway (Gmail) desde su punto exacto: hoy se reemplazan por una aprobación nueva.
+- Revisión del plan y confirmación de costo pendientes: hoy la solicitud falla con aviso.
+- Paso 6 (cola con prioridades y límites por organización, contadores de ventana persistidos).
+- Varias instancias recuperando a la vez; el chat de origen no recibe el eco del reporte de una solicitud reanudada.
+- No verificado: e2e con `docker compose restart backend` a mitad del escenario de $50,000.
+
+### Estado anterior (verificado antes de implementar)
 - Cada solicitud corre en una goroutine con estado en memoria (`application/orchestrator.go` `submit`/`process`, struct `run`).
 - Las aprobaciones se persisten (`001_init.sql`), pero quien espera es un canal en memoria (`application/approvals.go` `waiters`); tras reiniciar, `Decide` actualiza la fila y nadie continúa la tarea. El timeout es un `time.Timer` del proceso.
 - Lo que la tarea iba a hacer tras la aprobación (lista de `ToolRequest` restantes, argumentos) sólo vive en la pila de `handleTools`.

@@ -127,6 +127,22 @@ func run(log *slog.Logger) error {
 	// Projects (whole workflows with parallel work) and agent workspaces (artifacts).
 	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw)
 
+	// Durable execution: resume the requests a previous process left in progress
+	// (after the project gate is installed, so project requests are recognized).
+	var orgIDs []string
+	if l, ok := store.(application.OrgLister); ok {
+		if ids, err := l.ListOrgIDs(ctx); err == nil {
+			orgIDs = ids
+		} else {
+			log.Warn("recover: list organizations", "err", err)
+		}
+	}
+	if n, err := orch.Recover(ctx, orgIDs); err != nil {
+		log.Warn("recover in-progress requests", "err", err)
+	} else if n > 0 {
+		log.Info("resumed in-progress requests", "count", n)
+	}
+
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Projects: ws.projects, Artifacts: ws.artifacts,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg,

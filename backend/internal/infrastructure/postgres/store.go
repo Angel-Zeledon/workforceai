@@ -255,7 +255,7 @@ func (s *Store) Seed(ctx context.Context, org domain.Organization, agents []doma
 
 func (s *Store) Reset(ctx context.Context, orgID string) error {
 	return s.WithOrgTx(ctx, orgID, func(tx pgx.Tx) error {
-		for _, t := range []string{"tasks", "requests", "messages", "conversations", "approvals", "reports", "memories", "events", "activity", "usage_entries"} {
+		for _, t := range []string{"tasks", "requests", "messages", "conversations", "approvals", "reports", "memories", "events", "activity", "usage_entries", "request_runs", "task_checkpoints"} {
 			if _, err := tx.Exec(ctx, "DELETE FROM "+t+" WHERE org_id=$1", orgID); err != nil {
 				return err
 			}
