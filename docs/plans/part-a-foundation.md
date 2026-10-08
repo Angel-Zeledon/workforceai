@@ -91,8 +91,9 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 ## A2 Cuentas y login — hecho (integrado en `next-features`)
 
 **Hecho:** invitaciones (migración 300, token hasheado, un solo uso, sin escalar rol, RLS), `GET /auth/config`, lista de organizaciones en `/auth/me` y `POST /auth/switch-org`; frontend `/login`, `/register`, `/invite`, sesión, miembros e invitaciones en el menú de administración, UI según permisos; con auth apagado la demo abierta sigue igual. e2e `auth.spec.ts` (sólo con `E2E_AUTH=1`) verificado contra stack con auth.
-**Pendiente:** envío del enlace por correo (hoy se copia), nombre de la organización en la cabecera, SSO/SCIM, y la decisión del dueño sobre mover el refresh token a cookie `HttpOnly` (hoy en `localStorage`).
-**No verificado:** cambio de organización en e2e (sólo test de servicio).
+**Hecho (a6b):** nombre de la organización en la cabecera de la oficina y en `/approvals` (`OrgIndicator`); con varias organizaciones aparece un selector que usa `POST /auth/switch-org`. `/auth/me` añade `orgs[].name` (campo nuevo y opcional; en Postgres se lee en una transacción con `app.org_id` porque `organizations` tiene RLS). Con auth apagado la cabecera sigue diciendo "Oficina demo".
+**Pendiente:** envío del enlace por correo (hoy se copia), SSO/SCIM, y la decisión del dueño sobre mover el refresh token a cookie `HttpOnly` (hoy en `localStorage`; el contrato de `/auth/refresh` no se ha tocado).
+**No verificado:** cambio de organización en e2e (sólo test de servicio y de store); el selector no se ha probado en navegador con dos organizaciones reales.
 
 Plan original:
 
@@ -170,7 +171,8 @@ Plan original:
 ## A6 Móvil y canales — PWA y push hechos; Slack/WhatsApp sólo diseño (integrado en `next-features`)
 
 **Hecho:** manifest, iconos, service worker (sólo el armazón; nunca cachea `/api`), `/approvals` y `/approvals/[id]` pensados para móvil (riesgo, rol requerido, doble aprobación); Web Push con VAPID (RFC 8291, sin librería), migración 330, `GET /push/config`, `POST/DELETE /push/subscriptions`; el aviso lleva sólo título, riesgo e id (test que descifra el cuerpo). Diseño de Slack y WhatsApp en `docs/architecture/channels.md`.
-**Pendiente:** Slack y WhatsApp (necesitan cuentas del dueño); con auth activo el frontend no envía el token en estas pantallas fuera del flujo de sesión — revisar al activar auth.
+**Hecho (a6b, auth en la PWA):** `/approvals` y `/approvals/[id]` pasan por `AuthGate`: sin sesión van a `/login?next=<ruta>` y vuelven a la misma aprobación al entrar (sólo rutas del mismo origen; `//host`, URLs absolutas y las páginas de auth se ignoran). Todas las llamadas (lista, decisión, suscripción push) usan el mismo cliente `authFetch` con bearer y refresh; `bootstrapAuth` es de un solo vuelo y `authFetch` lo espera, así que ninguna petición sale sin token mientras se decide el modo. La descarga de PDF y la exportación de artefactos también pasan por `authFetch`. La decisión registra el id del usuario que aprueba (lo pone el backend desde el token). Con auth apagado la demo abierta no cambia. e2e `approvals-auth.spec.ts` (sólo con `E2E_AUTH=1`, viewport móvil), verificado junto con `auth.spec.ts` contra un stack con `AUTH_ENABLED=true` en puertos alternos, con captura móvil de `/approvals` y de la cabecera.
+**Pendiente:** Slack y WhatsApp (necesitan cuentas del dueño). El frontend no tiene runner de tests unitarios; la lógica de `safeReturnPath` se cubre sólo en e2e.
 **No verificado:** entrega de push a un navegador real.
 
 Plan original:
