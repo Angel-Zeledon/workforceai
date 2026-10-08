@@ -16,6 +16,7 @@ import (
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/infrastructure/memory"
 	"aiworkforce/backend/internal/projects"
+	"aiworkforce/backend/internal/roles"
 )
 
 // ---- fakes ----
@@ -131,7 +132,7 @@ func newEnv(t *testing.T, rt *fakeRuntime, guard application.ExecutionGuard, mut
 		mutate(&cfg)
 	}
 	store := memory.New()
-	if err := store.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), domain.SeedAgents()); err != nil {
+	if err := store.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), roles.SeedAgents()); err != nil {
 		t.Fatal(err)
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))

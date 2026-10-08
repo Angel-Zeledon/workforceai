@@ -1326,5 +1326,20 @@
   "conn.cap.repo.issue_write": "Abrir issues y comentar (cada uno pedirá tu aprobación)",
   "conn.cap.chat.read": "Leer canales elegidos",
   "conn.cap.chat.post": "Publicar mensajes (cada uno pedirá tu aprobación)",
-  "conn.filter.channels": "Canales (IDs, p. ej. C0123ABCD)"
+  "conn.filter.channels": "Canales (IDs, p. ej. C0123ABCD)",
+  "hire.open": "Contratar desde plantilla",
+  "hire.title": "Contratar desde plantilla",
+  "hire.subtitle": "Elige una profesión para sumar un nuevo agente a la oficina. Empieza con autonomía mínima y nunca puede aprobar por su cuenta.",
+  "hire.loading": "Cargando plantillas…",
+  "hire.loadError": "No se pudieron cargar las plantillas.",
+  "hire.empty": "No hay plantillas disponibles.",
+  "hire.hired": "{count} contratados",
+  "hire.name": "Nombre del nuevo agente ({title})",
+  "hire.namePlaceholder": "Nombre (opcional)",
+  "hire.action": "Contratar",
+  "hire.hiring": "Contratando…",
+  "hire.done": "{name} se unió a la oficina como {title}.",
+  "hire.error": "No se pudo contratar al agente.",
+  "hire.error.forbidden": "Solo un administrador puede contratar agentes.",
+  "hire.error.conflict": "No se pudo contratar: la oficina está llena o ya hay un agente con ese nombre."
 }

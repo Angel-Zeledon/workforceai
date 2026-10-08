@@ -323,6 +323,8 @@ ROLE_NAMES = {
 
 
 def generic_content(role: str, task_title: str) -> dict:
+    if role in ROLE_CONTENT:  # a profession with its own scripted output (defined at the end of this module)
+        return ROLE_CONTENT[role]
     name = ROLE_NAMES.get(role, role)
     return dict(
         output=_o(
@@ -714,3 +716,105 @@ def bundle(locale: str):
         return m
     import sys
     return sys.modules[__name__]
+
+
+# ------------------------------------------------------------------ wave A professions (role templates)
+# Scripted lines of the hireable professions (backend/internal/roles/templates). They are not part of the
+# demo org; these lines only show up once an organization hires them.
+ROLE_NAMES.update({"project_manager": "Gestión de proyectos", "education": "Diseño educativo",
+                   "data_analyst": "Análisis de datos", "software_engineer": "Ingeniería de software"})
+ROLE_REASONS.update({
+    "project_manager": "arma el plan, las dependencias y la ruta crítica",
+    "education": "diseña clases, evaluaciones y material didáctico",
+    "data_analyst": "consulta y limpia los datos antes de sacar conclusiones",
+    "software_engineer": "revisa código y repositorios en solo lectura",
+})
+CHAT["topic_labels"].update({"projects": "proyectos y planificación", "education": "formación y clases",
+                             "data_engineering": "consultas y calidad de datos", "software": "código y software"})
+CHAT["area"].update({"project_manager": "planes de proyecto, hitos y riesgos", "education": "clases, cursos y evaluación",
+                     "data_analyst": "consultas, calidad de datos y cohortes", "software_engineer": "código, repositorios y versiones"})
+CHAT["answer"].update({
+    "project_manager": [
+        "Para ordenarlo, primero hitos y dueños: ¿cuál es la fecha que no se puede mover?",
+        "Lo convierto en un plan con dependencias y ruta crítica. ¿Qué entregables tiene el proyecto?",
+        "Veo el riesgo en las dependencias, no en las tareas. Dime qué depende de quién y te marco el camino crítico.",
+        "Puedo armarte un tablero con estado por entregable. ¿Lo quieres por semana o por responsable?",
+    ],
+    "education": [
+        "Empecemos por el objetivo de aprendizaje: ¿qué debe poder hacer el alumno al final de la unidad?",
+        "Lo armo como unidad didáctica: objetivos, actividades por semana y una rúbrica. ¿Para qué nivel es?",
+        "Para la evaluación propongo una rúbrica con tres niveles de logro. ¿Prefieres examen o proyecto?",
+        "Puedo adaptar el material a distintos niveles. ¿Cuántas sesiones tienes y de cuánto tiempo?",
+    ],
+    "data_analyst": [
+        "Antes de concluir reviso la calidad de los datos: nulos, duplicados y fechas raras. ¿De qué tabla hablamos?",
+        "Lo veo con una consulta de solo lectura y te dejo la consulta documentada. ¿Qué periodo cubrimos?",
+        "Si lo partimos por cohortes vemos si es un efecto de los clientes nuevos o de todos. ¿Lo hago así?",
+        "Ojo con la correlación: primero confirmo que el dato es fiable y luego buscamos la causa.",
+    ],
+    "software_engineer": [
+        "Lo reviso leyendo el código y los PRs, en solo lectura. ¿Qué repositorio y qué rama?",
+        "Puedo armarte el changelog desde los PRs fusionados y marcar lo que rompe compatibilidad. ¿Desde qué versión?",
+        "Antes de opinar quiero ver el diff. Si me dices el PR, te dejo una revisión con checklist.",
+        "Push, merge y deploy no los hago yo: preparo la revisión y el plan de pruebas para que decida una persona.",
+    ],
+})
+CHAT["greet_peer"].update({
+    "project_manager": ["Hola. Si hay algún proyecto por ordenar, me avisan.", "¡Buenas! Con los hitos al día."],
+    "education": ["¡Hola! Por aquí preparando material.", "Buenas, cualquier clase o curso, me cuentan."],
+    "data_analyst": ["Hola. Con las consultas listas por si hacen falta.", "¡Buenas! Los datos, limpios primero."],
+    "software_engineer": ["Hola, por aquí revisando código.", "¡Buenas! Si hay un PR que mirar, me dicen."],
+})
+CHAT["contrib"].update({
+    "project_manager": ["Desde proyectos: si esto tiene fecha, conviene ver qué depende de qué.",
+                        "Un apunte de planificación: marquemos un responsable por entregable."],
+    "education": ["Si hay que capacitar a alguien, puedo preparar el material."],
+    "data_analyst": ["Si quieres, lo valido con una consulta antes de decidir.",
+                     "Ojo con la calidad del dato: lo reviso antes de sacar conclusiones."],
+    "software_engineer": ["Desde lo técnico, conviene revisar el impacto en el código antes de comprometer fechas."],
+})
+CHAT["consult_a"].update({
+    "project_manager": ["En el plan, lo clave es la ruta crítica: con las dependencias te digo qué fecha es realista."],
+    "education": ["Didácticamente, primero el objetivo de aprendizaje; con eso ajusto actividades y evaluación."],
+    "data_analyst": ["Con una consulta de solo lectura lo confirmo; antes reviso que los datos estén completos."],
+    "software_engineer": ["Técnicamente depende del código; si me pasas el repositorio, lo reviso en solo lectura."],
+})
+CHAT["answer_profile"] = [
+    "Me ocupo de {area}. Cuéntame un poco más y te digo cómo lo abordaría.",
+    "Eso entra en {area}. ¿Lo quieres como consulta rápida o lo convierto en tarea?",
+    "Puedo ayudarte con {area}. ¿Qué es lo que más te urge?",
+]
+ROLE_CONTENT: dict[str, dict] = {
+    "project_manager": dict(output=_o(
+        "Plan de trabajo con hitos, responsables y ruta crítica; dos dependencias concentran el riesgo de retraso.",
+        ["La ruta crítica pasa por 4 de las 9 tareas.", "Dos tareas dependen de un mismo proveedor.", "Falta un responsable en un entregable."],
+        {"tareas": 9, "hitos": 3, "riesgos_altos": 2},
+        ["Si el proveedor se retrasa una semana, el hito final se mueve una semana."],
+        ["Lista de entregables y dependencias declaradas en la solicitud."],
+        ["Asignar responsable al entregable sin dueño.", "Pedir fecha comprometida al proveedor.", "Revisar el plan cada lunes."],
+        0.74, ["Reporte semanal de avance"]), consults=[], tool_requests=[]),
+    "education": dict(output=_o(
+        "Unidad didáctica de 4 semanas con objetivos, actividades por semana, banco de preguntas y rúbrica de tres niveles.",
+        ["Los objetivos están alineados con la evaluación final.", "Se incluyen actividades para tres niveles de avance.", "No se usaron datos de estudiantes."],
+        {"semanas": 4, "actividades": 12, "preguntas": 20},
+        ["Una evaluación por proyecto mide mejor el objetivo 3 que un examen."],
+        ["Tema y nivel indicados en la solicitud."],
+        ["Revisar la rúbrica con el docente titular.", "Probar una actividad con un grupo piloto."],
+        0.77, ["Versión en PDF para compartir (requiere aprobación)"]), consults=[], tool_requests=[]),
+    "data_analyst": dict(output=_o(
+        "Consulta de solo lectura documentada y análisis por cohortes; 3% de filas con fechas inválidas se excluyeron y se reportan.",
+        ["La caída se concentra en la cohorte de clientes de los últimos 3 meses.", "El 3% de los registros tenía fechas inválidas.", "Sin duplicados en la tabla de pedidos."],
+        {"filas_analizadas": 48210, "filas_excluidas": 1446, "cohortes": 6},
+        ["La retención del mes 2 explica la mayor parte de la caída."],
+        ["Consulta SQL de solo lectura incluida en el anexo."],
+        ["Corregir la captura de fechas en el origen.", "Repetir el análisis con el mes en curso."],
+        0.79, ["Gráfica de cohortes para el informe"]), consults=[], tool_requests=[]),
+    "software_engineer": dict(output=_o(
+        "Revisión en solo lectura: changelog desde los PRs fusionados, dos dependencias con versión vulnerable y un plan de pruebas de regresión.",
+        ["12 PRs fusionados desde la última versión; 1 rompe compatibilidad.", "2 dependencias tienen avisos de seguridad.", "Faltan pruebas para el módulo de pagos."],
+        {"prs_revisados": 12, "dependencias_con_aviso": 2, "casos_de_prueba": 18},
+        ["El cambio de API del PR 7 afectará a los clientes móviles."],
+        ["Historial de PRs y manifiesto de dependencias (solo lectura)."],
+        ["Actualizar las dos dependencias antes de publicar.", "Anunciar el cambio de API con una versión de transición."],
+        0.76, ["Borrador de notas de versión (revisión humana)"]), consults=[], tool_requests=[]),
+}

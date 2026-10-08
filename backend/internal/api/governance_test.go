@@ -21,6 +21,7 @@ import (
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/infrastructure/memory"
 	"aiworkforce/backend/internal/policy"
+	"aiworkforce/backend/internal/roles"
 )
 
 // proposalRuntime: one sales task that asks to send a proposal (an action the
@@ -45,7 +46,7 @@ func newGovEnv(t *testing.T) *govEnv {
 	cfg := application.DefaultConfig()
 	cfg.IdleDelay = 0
 	mem := memory.New()
-	if err := mem.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), domain.SeedAgents()); err != nil {
+	if err := mem.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), roles.SeedAgents()); err != nil {
 		t.Fatal(err)
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))

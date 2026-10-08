@@ -10,6 +10,7 @@ import { useViewer } from "../connections/shared";
 import { OfficeSettingsPanel } from "../OfficeSettings";
 import { TemplateGallery } from "../templates/TemplateGallery";
 import { useOnboardingEntry } from "../onboarding/OnboardingEntry";
+import { HireFromTemplateDialog } from "./HireFromTemplateDialog";
 import { KillSwitchDialog } from "../security/KillSwitchDialog";
 import { useBootConnections } from "../security/ControlsChrome";
 import { MembersDialog } from "../auth/MembersDialog";
@@ -51,7 +52,7 @@ export function AdminMenu() {
   const { t } = useT();
   useBootConnections();
   const [open, setOpen] = useState(false);
-  const [dialog, setDialog] = useState<null | "kill" | "templates" | "settings" | "members">(null);
+  const [dialog, setDialog] = useState<null | "kill" | "templates" | "settings" | "members" | "hire">(null);
   const session = useSession();
   const signedIn = session.status === "authenticated";
   const canMembers = useCan("members:read");
@@ -115,6 +116,7 @@ export function AdminMenu() {
           className="ac-pop absolute right-0 top-full z-[70] mt-2 w-[290px] max-w-[calc(100vw-24px)] divide-y divide-line rounded-xl border border-line bg-panel p-1.5 text-ink shadow-float">
           <Group title={t("admin.group.workspace")}>
             <Item icon="plug" testid="nav-connections" active={view === "connections"} label={t("nav.connections")} onClick={run(() => setView(view === "connections" ? null : "connections"))} />
+            <Item icon="plus" testid="hire-open" disabled={!isAdmin} label={t("hire.open")} onClick={run(() => setDialog("hire"))} />
             <Item icon="layout" testid="templates-open" label={t("tpl.open")} onClick={run(() => setDialog("templates"))} />
             {onboarding.supported && (
               <Item icon="flag" testid={onboarding.pending ? "onboarding-open" : "org-config-open"} label={onboarding.pending ? t("onb.prompt.title") : t("cfg.open")}
@@ -154,6 +156,7 @@ export function AdminMenu() {
       )}
       {dialog === "kill" && <KillSwitchDialog onClose={() => setDialog(null)} />}
       {dialog === "templates" && <TemplateGallery onClose={() => setDialog(null)} />}
+      {dialog === "hire" && <HireFromTemplateDialog onClose={() => setDialog(null)} />}
       {dialog === "settings" && <OfficeSettingsPanel onClose={() => setDialog(null)} />}
       {dialog === "members" && <MembersDialog onClose={() => setDialog(null)} />}
       {onboarding.dialogs}

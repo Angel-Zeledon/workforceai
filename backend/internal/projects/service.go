@@ -351,7 +351,7 @@ func (s *Service) plannedTemplate(ctx context.Context, goal, locale string) (Tem
 	pa := make([]application.PlanAgent, 0, len(agents))
 	known := map[string]bool{}
 	for _, a := range agents {
-		pa = append(pa, application.PlanAgent{ID: a.ID, Role: a.Role, Title: a.Title, Responsibilities: a.Responsibilities})
+		pa = append(pa, application.NewPlanAgent(a, locale))
 		known[a.ID] = true
 	}
 	pctx, cancel := context.WithTimeout(ctx, 20*time.Second)

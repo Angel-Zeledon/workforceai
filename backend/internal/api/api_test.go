@@ -22,6 +22,7 @@ import (
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/infrastructure/memory"
+	"aiworkforce/backend/internal/roles"
 )
 
 const goodPW = "Correct-Horse-9"
@@ -49,6 +50,10 @@ type orgSpy struct {
 	application.Store
 	mu   sync.Mutex
 	orgs map[string]int
+}
+
+func (s *orgSpy) CreateAgent(ctx context.Context, orgID string, a domain.Agent) error {
+	return s.Store.(application.AgentWriter).CreateAgent(ctx, orgID, a)
 }
 
 func (s *orgSpy) note(org string) {
@@ -115,7 +120,7 @@ func newEnv(t *testing.T, o opts) *env {
 	cfg.IdleDelay = 0
 	mem := memory.New()
 	spy := &orgSpy{Store: mem, orgs: map[string]int{}}
-	if err := mem.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), domain.SeedAgents()); err != nil {
+	if err := mem.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), roles.SeedAgents()); err != nil {
 		t.Fatal(err)
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -358,7 +363,7 @@ func TestNewOrganizationGetsItsAgents(t *testing.T) {
 	}
 	var agents []domain.Agent
 	_ = json.Unmarshal(body, &agents)
-	if len(agents) != len(domain.SeedAgents()) {
+	if len(agents) != len(roles.SeedAgents()) {
 		t.Fatalf("agents = %d", len(agents))
 	}
 }

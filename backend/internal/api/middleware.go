@@ -9,6 +9,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/roles"
 )
 
 // ---- CORS / origins ----
@@ -152,7 +153,7 @@ func (s *server) ensureSeeded(ctx context.Context, org string) error {
 	}
 	if len(agents) == 0 {
 		o := domain.Organization{ID: org, Name: org, Slug: org, BudgetUSD: s.Cfg.BudgetUSD}
-		if err := s.Store.Seed(ctx, o, domain.SeedAgents()); err != nil {
+		if err := s.Store.Seed(ctx, o, roles.SeedAgents()); err != nil {
 			return err
 		}
 	}

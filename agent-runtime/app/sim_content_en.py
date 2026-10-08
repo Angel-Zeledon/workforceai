@@ -306,6 +306,8 @@ ROLE_NAMES = {
 
 
 def generic_content(role: str, task_title: str) -> dict:
+    if role in ROLE_CONTENT:  # a profession with its own scripted output (defined at the end of this module)
+        return ROLE_CONTENT[role]
     name = ROLE_NAMES.get(role, role)
     return dict(
         output=_o(
@@ -671,3 +673,105 @@ CHAT["limit_core"] = {
                       "I'm missing the connection or permission for that; it would need to be enabled first."],
 }
 CHAT["handoff_yes"] = ["Perfect, I'll pass you to {other}.", "Okay, {other} takes it from here.", "Done, {other} will help you now."]
+
+
+# ------------------------------------------------------------------ wave A professions (role templates)
+# Scripted lines of the hireable professions (backend/internal/roles/templates). They are not part of the
+# demo org; these lines only show up once an organization hires them.
+ROLE_NAMES.update({"project_manager": "Project management", "education": "Instructional design",
+                   "data_analyst": "Data analysis", "software_engineer": "Software engineering"})
+ROLE_REASONS.update({
+    "project_manager": "builds the plan, the dependencies and the critical path",
+    "education": "designs classes, assessments and teaching material",
+    "data_analyst": "queries and cleans the data before drawing conclusions",
+    "software_engineer": "reviews code and repositories with read-only access",
+})
+CHAT["topic_labels"].update({"projects": "projects and planning", "education": "training and classes",
+                             "data_engineering": "queries and data quality", "software": "code and software"})
+CHAT["area"].update({"project_manager": "project plans, milestones and risks", "education": "classes, courses and assessment",
+                     "data_analyst": "queries, data quality and cohorts", "software_engineer": "code, repositories and releases"})
+CHAT["answer"].update({
+    "project_manager": [
+        "To sort it out, milestones and owners first: which date can't move?",
+        "I'll turn it into a plan with dependencies and a critical path. What are the project's deliverables?",
+        "The risk is in the dependencies, not the tasks. Tell me what depends on whom and I'll mark the critical path.",
+        "I can build a board with the status of each deliverable. By week or by owner?",
+    ],
+    "education": [
+        "Let's start from the learning goal: what should students be able to do at the end of the unit?",
+        "I'll shape it as a teaching unit: goals, weekly activities and a rubric. What level is it for?",
+        "For assessment I'd use a rubric with three levels. Do you prefer an exam or a project?",
+        "I can adapt the material to different levels. How many sessions do you have, and how long are they?",
+    ],
+    "data_analyst": [
+        "Before concluding I check data quality: nulls, duplicates and odd dates. Which table are we talking about?",
+        "I'll look at it with a read-only query and leave the query documented. Which period?",
+        "If we split it by cohort we'll see whether it's new customers or everyone. Shall I do that?",
+        "Careful with correlation: first I confirm the data is reliable, then we look for the cause.",
+    ],
+    "software_engineer": [
+        "I'll review it by reading the code and the PRs, read-only. Which repository and branch?",
+        "I can build the changelog from merged PRs and flag breaking changes. Since which version?",
+        "I want to see the diff before giving an opinion. Tell me the PR and I'll leave a review with a checklist.",
+        "I don't push, merge or deploy: I prepare the review and the test plan so a person decides.",
+    ],
+})
+CHAT["greet_peer"].update({
+    "project_manager": ["Hi. If there's a project to organize, let me know.", "Hey! Milestones are up to date."],
+    "education": ["Hi! Preparing material over here.", "Hey, any class or course, just tell me."],
+    "data_analyst": ["Hi. Queries ready if you need them.", "Hey! Clean data first."],
+    "software_engineer": ["Hi, reviewing code over here.", "Hey! If there's a PR to look at, tell me."],
+})
+CHAT["contrib"].update({
+    "project_manager": ["From the project side: if this has a date, let's see what depends on what.",
+                        "A planning note: let's name one owner per deliverable."],
+    "education": ["If someone needs training, I can prepare the material."],
+    "data_analyst": ["If you want, I'll validate it with a query before deciding.",
+                     "Careful with data quality: I'll check it before we conclude."],
+    "software_engineer": ["Technically, let's check the impact on the code before committing to dates."],
+})
+CHAT["consult_a"].update({
+    "project_manager": ["In the plan, the key is the critical path: with the dependencies I can tell you which date is realistic."],
+    "education": ["Pedagogically, learning goal first; with that I adjust activities and assessment."],
+    "data_analyst": ["A read-only query will confirm it; first I check the data is complete."],
+    "software_engineer": ["Technically it depends on the code; send me the repository and I'll review it read-only."],
+})
+CHAT["answer_profile"] = [
+    "I handle {area}. Tell me a bit more and I'll say how I'd approach it.",
+    "That falls under {area}. Quick question, or shall I turn it into a task?",
+    "I can help with {area}. What's most urgent?",
+]
+ROLE_CONTENT: dict[str, dict] = {
+    "project_manager": dict(output=_o(
+        "Work plan with milestones, owners and critical path; two dependencies concentrate the delay risk.",
+        ["The critical path goes through 4 of the 9 tasks.", "Two tasks depend on the same supplier.", "One deliverable has no owner."],
+        {"tasks": 9, "milestones": 3, "high_risks": 2},
+        ["If the supplier slips one week, the final milestone moves one week."],
+        ["Deliverables and dependencies stated in the request."],
+        ["Assign an owner to the unowned deliverable.", "Ask the supplier for a committed date.", "Review the plan every Monday."],
+        0.74, ["Weekly progress report"]), consults=[], tool_requests=[]),
+    "education": dict(output=_o(
+        "Four-week teaching unit with goals, weekly activities, a question bank and a three-level rubric.",
+        ["Goals are aligned with the final assessment.", "Activities cover three progress levels.", "No student data was used."],
+        {"weeks": 4, "activities": 12, "questions": 20},
+        ["A project-based assessment measures goal 3 better than an exam."],
+        ["Topic and level given in the request."],
+        ["Review the rubric with the lead teacher.", "Pilot one activity with a small group."],
+        0.77, ["PDF version to share (needs approval)"]), consults=[], tool_requests=[]),
+    "data_analyst": dict(output=_o(
+        "Documented read-only query and cohort analysis; 3% of rows with invalid dates were excluded and reported.",
+        ["The drop is concentrated in the last 3 months' customer cohort.", "3% of records had invalid dates.", "No duplicates in the orders table."],
+        {"rows_analyzed": 48210, "rows_excluded": 1446, "cohorts": 6},
+        ["Month-2 retention explains most of the drop."],
+        ["Read-only SQL query included in the appendix."],
+        ["Fix date capture at the source.", "Rerun the analysis with the current month."],
+        0.79, ["Cohort chart for the report"]), consults=[], tool_requests=[]),
+    "software_engineer": dict(output=_o(
+        "Read-only review: changelog from merged PRs, two dependencies on vulnerable versions and a regression test plan.",
+        ["12 PRs merged since the last release; 1 breaks compatibility.", "2 dependencies have security advisories.", "The payments module lacks tests."],
+        {"prs_reviewed": 12, "flagged_dependencies": 2, "test_cases": 18},
+        ["PR 7's API change will affect mobile clients."],
+        ["PR history and dependency manifest (read-only)."],
+        ["Update both dependencies before releasing.", "Announce the API change with a transition version."],
+        0.76, ["Draft release notes (human review)"]), consults=[], tool_requests=[]),
+}

@@ -76,10 +76,11 @@ class SimulationEngine(AgentEngine):
         spec_tasks = list(spec["tasks"])
         if scenario == "default":
             # no scripted scenario: when the text names an area, the owner of that area does the work
-            owner = owner_role(req.request_text)
+            owner = owner_role(req.request_text, req.agents)
             if owner and owner in known and owner not in ("assistant", "analyst"):
                 okey, otitle, odesc = c.TEXTS["owner_task"]
-                area = c.CHAT["area"].get(owner, owner)
+                profile_area = next((a.area for a in req.agents if (a.role or a.id) == owner and a.area), "")
+                area = c.CHAT["area"].get(owner) or profile_area or owner
                 spec_tasks = [spec_tasks[0], (okey, owner, otitle.format(area=area), odesc.format(area=area), [spec_tasks[0][0]])]
         for key, role, title, desc, deps in spec_tasks:
             if req.agents and role not in known:

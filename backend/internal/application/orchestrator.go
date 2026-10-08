@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/roles"
 )
 
 const assistantID = "assistant"
@@ -40,7 +41,7 @@ type Orchestrator struct {
 
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
 
-	mu     sync.Mutex     // guards base/cancel and serializes Reset vs. start
+	mu     sync.Mutex      // guards base/cancel and serializes Reset vs. start
 	root   context.Context // process lifetime
 	base   context.Context // parent of in-flight runs; cancelled by Reset
 	cancel context.CancelFunc
@@ -161,7 +162,7 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 		err = o.call(ctx, "plan", func(c context.Context) (err error) {
 			agents := make([]PlanAgent, 0, len(rs.agents))
 			for _, a := range sortedAgents(rs.agents) {
-				agents = append(agents, PlanAgent{ID: a.ID, Role: a.Role, Title: a.Title, Responsibilities: a.Responsibilities})
+				agents = append(agents, NewPlanAgent(a, rs.style.Locale))
 			}
 			plan, err = o.rt.Plan(c, PlanRequest{RequestText: rs.req.Text, Agents: agents, BudgetUSD: o.cfg.BudgetUSD,
 				Locale: rs.style.Locale, Tone: rs.style.Tone})
@@ -513,7 +514,7 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 	}
 	return RunTaskRequest{
 		Task:    RunTaskInfo{ID: t.ID, Title: t.Title, Description: t.Description, AgentID: t.AgentID},
-		Agent:   RunAgentInfo{ID: agent.ID, Role: agent.Role, Title: agent.Title, Persona: agent.Persona, Responsibilities: agent.Responsibilities, Tools: agent.Tools},
+		Agent:   RunAgentInfo{ID: agent.ID, Role: agent.Role, Title: agent.Title, Persona: agent.Persona, Responsibilities: agent.Responsibilities, Tools: agent.Tools, Area: areaOf(agent.Role, rs.style.Locale)},
 		Context: rc,
 		Locale:  rs.style.Locale,
 		Tone:    rs.style.ToneFor(t.AgentID),
@@ -955,7 +956,7 @@ func (o *Orchestrator) Reset(ctx context.Context) error {
 	if err := o.store.Reset(parent, o.org(ctx)); err != nil {
 		return err
 	}
-	if err := o.store.Seed(parent, domain.SeedOrg(o.cfg.BudgetUSD), domain.SeedAgents()); err != nil {
+	if err := o.store.Seed(parent, domain.SeedOrg(o.cfg.BudgetUSD), roles.SeedAgents()); err != nil {
 		return err
 	}
 	o.base, o.cancel = context.WithCancel(o.root)

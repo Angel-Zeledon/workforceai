@@ -80,6 +80,10 @@ class PlanAgent(_Base):
     role: str
     title: str = ""
     responsibilities: Union[str, list[str]] = ""
+    # role template profile (sent by the backend): the planner gives a task to the owner of its area
+    topic: str = ""
+    keywords: list[str] = Field(default_factory=list)
+    area: str = ""
 
 
 class PlanRequest(_ProviderPolicyMixin):
@@ -126,6 +130,7 @@ class AgentInfo(_Base):
     persona: str = ""
     responsibilities: Union[str, list[str]] = ""
     tools: list[str] = Field(default_factory=list)
+    area: str = ""
 
 
 class DependencyOutput(_Base):
@@ -273,6 +278,11 @@ class RouteAgent(_Base):
     role: str = ""
     title: str = ""
     name: str = ""
+    # role template profile (sent by the backend): routing works from data, not a fixed list of roles
+    topic: str = ""
+    keywords: list[str] = Field(default_factory=list)
+    related: list[str] = Field(default_factory=list)
+    area: str = ""
 
 
 class HistoryItem(_Base):
@@ -328,6 +338,7 @@ class ChatAgent(_Base):
     title: str = ""
     name: str = ""
     persona: str = ""
+    area: str = ""
 
 
 class ReplyConsult(_Base):

@@ -12,6 +12,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/infrastructure/memory"
+	"aiworkforce/backend/internal/roles"
 )
 
 // process is one backend process over a shared store: stop() simulates the
@@ -43,7 +44,7 @@ func startProcess(t *testing.T, store *memory.Store, pub *capture, rt applicatio
 func newStore(t *testing.T) *memory.Store {
 	t.Helper()
 	store := memory.New()
-	if err := store.Seed(context.Background(), domain.SeedOrg(25), domain.SeedAgents()); err != nil {
+	if err := store.Seed(context.Background(), domain.SeedOrg(25), roles.SeedAgents()); err != nil {
 		t.Fatal(err)
 	}
 	return store

@@ -289,6 +289,7 @@ type Event struct {
 // Event type names (WS contract).
 const (
 	EvRequestReceived  = "request.received"
+	EvAgentCreated     = "agent.created"
 	EvRequestCompleted = "request.completed"
 	// EvRequestResumed: a request interrupted by a restart continues (additive, A1).
 	EvRequestResumed = "request.resumed"

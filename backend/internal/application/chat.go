@@ -36,6 +36,12 @@ type RouteAgent struct {
 	Role  string `json:"role"`
 	Title string `json:"title"`
 	Name  string `json:"name"`
+	// Profile of the role template (absent for roles without one): the runtime
+	// routes and plans with it instead of a fixed list of roles.
+	Topic    string   `json:"topic,omitempty"`
+	Keywords []string `json:"keywords,omitempty"`
+	Related  []string `json:"related,omitempty"`
+	Area     string   `json:"area,omitempty"`
 }
 
 // ChatHistoryItem is one earlier message; From is "user" or an agent id.
@@ -80,6 +86,7 @@ type ChatAgent struct {
 	Title   string `json:"title"`
 	Name    string `json:"name"`
 	Persona string `json:"persona"`
+	Area    string `json:"area,omitempty"`
 }
 
 type ChatConsultIn struct {
@@ -197,10 +204,12 @@ func IsChatConversation(id string) bool {
 	return id == domain.ChatOffice || strings.HasPrefix(id, domain.ChatAgentPrefix)
 }
 
-func (o *Orchestrator) routeAgents(agents []domain.Agent) []RouteAgent {
+func (o *Orchestrator) routeAgents(agents []domain.Agent, loc string) []RouteAgent {
 	out := make([]RouteAgent, 0, len(agents))
 	for _, a := range agents {
-		out = append(out, RouteAgent{ID: a.ID, Role: a.Role, Title: a.Title, Name: a.Name})
+		ra := RouteAgent{ID: a.ID, Role: a.Role, Title: a.Title, Name: a.Name}
+		ra.Topic, ra.Keywords, ra.Related, ra.Area = profileOf(a.Role, loc)
+		out = append(out, ra)
 	}
 	return out
 }
@@ -505,9 +514,9 @@ func (o *Orchestrator) runTurn(ctx context.Context, t *chatTurn) {
 
 func (o *Orchestrator) chatReplyRequest(t *chatTurn, agent domain.Agent, route RouteResponse, r RouteResponder, slot int, prior []ChatHistoryItem) ChatReplyRequest {
 	req := ChatReplyRequest{
-		Agent: ChatAgent{ID: agent.ID, Role: agent.Role, Title: agent.Title, Name: agent.Name, Persona: agent.Persona},
+		Agent: chatAgent(agent, t.style.Locale),
 		Text:  t.text, Conversation: t.conv, Intent: route.Intent, Topic: route.Topic, ResponderRole: r.Role, Reason: r.Reason,
-		Agents: o.routeAgents(t.agents), History: append([]ChatHistoryItem{}, t.history...), PriorReplies: append([]ChatHistoryItem{}, prior...), Slot: slot,
+		Agents: o.routeAgents(t.agents, t.style.Locale), History: append([]ChatHistoryItem{}, t.history...), PriorReplies: append([]ChatHistoryItem{}, prior...), Slot: slot,
 		Locale: t.style.Locale, Tone: t.style.ToneFor(agent.ID),
 	}
 	if route.Consult != nil && r.Role == domain.RolePrimary {
@@ -521,7 +530,7 @@ func (o *Orchestrator) chatReplyRequest(t *chatTurn, agent domain.Agent, route R
 // decideRoute asks the runtime and falls back to the local rules on any
 // problem (runtime down, timeout, invalid answer). It never fails.
 func (o *Orchestrator) decideRoute(ctx context.Context, t *chatTurn) RouteResponse {
-	in := RouteRequest{Text: t.text, Conversation: t.conv, Agents: o.routeAgents(t.agents), History: append([]ChatHistoryItem{}, t.history...),
+	in := RouteRequest{Text: t.text, Conversation: t.conv, Agents: o.routeAgents(t.agents, t.style.Locale), History: append([]ChatHistoryItem{}, t.history...),
 		Locale: t.style.Locale, Tone: t.style.Tone}
 	if cr, ok := o.rt.(ChatRuntime); ok {
 		cctx, cancel := context.WithTimeout(ctx, o.chatTimeout())

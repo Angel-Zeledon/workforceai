@@ -22,6 +22,7 @@ import (
 	"aiworkforce/backend/internal/infrastructure/postgres"
 	redisinfra "aiworkforce/backend/internal/infrastructure/redis"
 	"aiworkforce/backend/internal/infrastructure/runtime"
+	"aiworkforce/backend/internal/roles"
 )
 
 func main() {
@@ -59,7 +60,7 @@ func run(log *slog.Logger) error {
 		log.Warn("DATABASE_URL not set: using in-memory store (data is not persisted)")
 		store = memory.New()
 	}
-	if err := store.Seed(ctx, domain.SeedOrg(cfg.App.BudgetUSD), domain.SeedAgents()); err != nil {
+	if err := store.Seed(ctx, domain.SeedOrg(cfg.App.BudgetUSD), roles.SeedAgents()); err != nil {
 		return err
 	}
 

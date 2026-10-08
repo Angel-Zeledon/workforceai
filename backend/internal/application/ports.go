@@ -65,6 +65,12 @@ type Store interface {
 	AddAudit(ctx context.Context, orgID string, a domain.AuditLog) error
 }
 
+// AgentWriter adds agents to an organization (hiring from a role template).
+// Both the memory and the Postgres stores implement it.
+type AgentWriter interface {
+	CreateAgent(ctx context.Context, orgID string, a domain.Agent) error
+}
+
 // AuditStore is the read side of the tamper-evident audit trail (the write
 // side is Store.AddAudit, which chains each entry to the previous one of the
 // organization). Both the memory and the Postgres stores implement it.
@@ -141,6 +147,10 @@ type PlanAgent struct {
 	Role             string   `json:"role"`
 	Title            string   `json:"title"`
 	Responsibilities []string `json:"responsibilities"`
+	// Profile of the role template: lets the planner give a task to the owner of its area.
+	Topic    string   `json:"topic,omitempty"`
+	Keywords []string `json:"keywords,omitempty"`
+	Area     string   `json:"area,omitempty"`
 }
 
 type PlanRequest struct {
@@ -186,6 +196,7 @@ type RunAgentInfo struct {
 	Persona          string   `json:"persona"`
 	Responsibilities []string `json:"responsibilities"`
 	Tools            []string `json:"tools"`
+	Area             string   `json:"area,omitempty"`
 }
 
 type DependencyOutput struct {

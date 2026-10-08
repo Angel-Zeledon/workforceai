@@ -1326,5 +1326,20 @@
   "conn.cap.repo.issue_write": "Open issues and comment (each one asks for your approval)",
   "conn.cap.chat.read": "Read selected channels",
   "conn.cap.chat.post": "Post messages (each one asks for your approval)",
-  "conn.filter.channels": "Channels (IDs, e.g. C0123ABCD)"
+  "conn.filter.channels": "Channels (IDs, e.g. C0123ABCD)",
+  "hire.open": "Hire from template",
+  "hire.title": "Hire from template",
+  "hire.subtitle": "Pick a profession to add a new agent to the office. It starts with minimal autonomy and can never approve on its own.",
+  "hire.loading": "Loading templates…",
+  "hire.loadError": "Could not load the templates.",
+  "hire.empty": "No templates available.",
+  "hire.hired": "{count} hired",
+  "hire.name": "Name of the new agent ({title})",
+  "hire.namePlaceholder": "Name (optional)",
+  "hire.action": "Hire",
+  "hire.hiring": "Hiring…",
+  "hire.done": "{name} joined the office as {title}.",
+  "hire.error": "Could not hire the agent.",
+  "hire.error.forbidden": "Only an administrator can hire agents.",
+  "hire.error.conflict": "Could not hire: the office is full or an agent with that name already exists."
 }

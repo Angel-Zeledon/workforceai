@@ -136,6 +136,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountConnections(r)
 			s.mountControls(r)
 			s.mountProjects(r)
+			s.mountRoles(r)
 			s.mountArtifacts(r)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
