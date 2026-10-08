@@ -83,6 +83,12 @@ type ResourceScope struct {
 	Labels        []string `json:"labels,omitempty"`
 	ExcludeLabels []string `json:"exclude_labels,omitempty"`
 	MaxAgeDays    int      `json:"max_age_days,omitempty"`
+	// Per-provider allowlists; empty = not narrowed. Adapters enforce them on
+	// every call (an agent can never widen them with arguments).
+	Calendars []string `json:"calendars,omitempty"` // Google Calendar ids ("primary", ...)
+	Folders   []string `json:"folders,omitempty"`   // Google Drive folder ids
+	Repos     []string `json:"repos,omitempty"`     // GitHub "owner/name"
+	Channels  []string `json:"channels,omitempty"`  // Slack channel ids
 }
 
 // Constraints are extra rules of a grant.

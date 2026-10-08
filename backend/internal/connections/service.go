@@ -785,7 +785,8 @@ func (s *Service) Test(ctx context.Context, org, id, actor string) (TestResult, 
 	}
 	res := TestResult{OK: true, Account: c.AccountLabel}
 	now := s.Now().UTC()
-	if c.Mode == ModeLive && c.Kind == "oauth2" {
+	_, hasAdapter := s.Providers[c.Provider]
+	if c.Mode == ModeLive && (c.Kind == "oauth2" || (c.Kind == "api_key" && hasAdapter)) {
 		p, ok := s.Providers[c.Provider]
 		if !ok {
 			return TestResult{}, ErrUnknownProvider

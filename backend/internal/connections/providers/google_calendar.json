@@ -1,0 +1,45 @@
+{
+  "id": "google_calendar",
+  "version": 1,
+  "label_key": "provider.google_calendar.name",
+  "phase": "available",
+  "auth": [
+    {
+      "method": "oauth2_pkce",
+      "authorize_url": "https://accounts.google.com/o/oauth2/v2/auth",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "revoke_url": "https://oauth2.googleapis.com/revoke",
+      "identity_scopes": ["openid", "email"],
+      "extra_params": { "access_type": "offline", "prompt": "consent" }
+    }
+  ],
+  "capabilities": {
+    "calendar.read": {
+      "class": "read",
+      "scopes": ["https://www.googleapis.com/auth/calendar.events.readonly"],
+      "tools": ["calendar.list_events", "calendar.read_event"],
+      "risk": "low",
+      "side_effects": false,
+      "default": true,
+      "label_key": "conn.cap.calendar.read"
+    },
+    "calendar.create_event": {
+      "class": "write",
+      "scopes": ["https://www.googleapis.com/auth/calendar.events"],
+      "tools": ["calendar.create_event"],
+      "risk": "medium",
+      "side_effects": true,
+      "reversibility": "compensating",
+      "always_approval": true,
+      "hold_seconds_default": 60,
+      "default": false,
+      "label_key": "conn.cap.calendar.create_event",
+      "scope_overreach": "calendar.events also allows editing and deleting events; the adapter only implements create (no update/delete tools exist)"
+    }
+  },
+  "never_offered": ["calendar.delete_event", "calendar.share", "calendar.settings"],
+  "identity": { "userinfo_url": "https://openidconnect.googleapis.com/v1/userinfo", "account_field": "email" },
+  "resource_filters": ["calendars"],
+  "default_limits": { "per_minute": 30, "per_hour": 600, "per_day": 2000, "write_per_day": 20, "max_items_per_call": 25, "max_bytes_per_day": 10000000 },
+  "untrusted_sources": ["event.summary", "event.description", "event.location", "event.organizer", "event.attendees"]
+}

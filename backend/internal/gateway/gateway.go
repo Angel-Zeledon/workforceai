@@ -274,7 +274,7 @@ var addrRe = regexp.MustCompile(`[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}`
 
 func recipientsOf(args map[string]any) []string {
 	var out []string
-	for _, k := range []string{"to", "cc"} {
+	for _, k := range []string{"to", "cc", "attendees"} { // calendar invites reach people too
 		switch v := args[k].(type) {
 		case string:
 			out = append(out, addrRe.FindAllString(v, -1)...)
@@ -454,7 +454,7 @@ func (g *Gateway) buildPending(c application.GatewayCall, t target, cd candidate
 		}
 	}
 	p.Title = fmt.Sprintf("%s.%s from %s", c.Tool, c.Action, cd.conn.AccountLabel)
-	subj, _ := c.Args["subject"].(string)
+	subj := headline(c.Args)
 	p.Details = fmt.Sprintf("account=%s recipients=%s subject=%q reversibility=%s hold_seconds=%d flags=%s",
 		cd.conn.AccountLabel, strings.Join(rcpt, ","), sanitize.SanitizeInline(subj, 120, sanitize.Options{Suspects: g.Suspects}),
 		p.Reversibility, p.HoldSeconds, strings.Join(p.Flags, ","))
@@ -583,6 +583,11 @@ func (g *Gateway) run(ctx context.Context, c application.GatewayCall, t target, 
 		// Structured, trusted ids only (draft id); never message text.
 		if id, _ := res.Data["draft_id"].(string); id != "" {
 			out.Summary = "draft created (not sent): " + id
+		}
+		for _, k := range []string{"event_id", "issue_url", "comment_url", "message_ts"} {
+			if id, _ := res.Data[k].(string); id != "" {
+				out.Summary = res.Summary + ": " + id
+			}
 		}
 	}
 	status := "succeeded"
