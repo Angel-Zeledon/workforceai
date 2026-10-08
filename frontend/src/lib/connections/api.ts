@@ -47,6 +47,17 @@ export const connApi = {
   agentGrants: async (agentId: string) => items<Grant>(await call("GET", `/agents/${agentId}/connections`)),
 };
 
+export interface OperatingHoursInterval { day: number; open: string; close: string }
+export interface OperatingHours { enabled: boolean; timezone: string; weekly: OperatingHoursInterval[]; open_now?: boolean; next_open_at?: string | null }
+export interface AnomalySettings { disabled: boolean; auto_freeze: boolean; rules?: string[] }
+
+export const hoursApi = {
+  get: () => call<OperatingHours>("GET", "/org/operating-hours"),
+  put: (b: Pick<OperatingHours, "enabled" | "timezone" | "weekly">) => call<OperatingHours>("PUT", "/org/operating-hours", b),
+  anomaly: () => call<AnomalySettings>("GET", "/org/anomaly-settings"),
+  putAnomaly: (b: Pick<AnomalySettings, "disabled" | "auto_freeze">) => call<AnomalySettings>("PUT", "/org/anomaly-settings", b),
+};
+
 export const ctlApi = {
   controls: () => call<OrgControls>("GET", "/org/controls"),
   setReadOnly: (on: boolean) => call<OrgControls>("PUT", "/org/controls", { mode: on ? "read_only" : "normal" }),

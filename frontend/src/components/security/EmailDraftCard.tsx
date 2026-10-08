@@ -88,9 +88,12 @@ export function EmailDraftCard({ draft }: { draft: EmailDraft }) {
             <span className="text-xs font-semibold text-amber-800">{t("ctl.hold.sendingIn", { seconds })}</span>
             <Btn data-testid="ctl-hold-cancel" kind="danger" disabled={busy || seconds === 0} onClick={() => run(() => ctlApi.cancelHold(draft.id))}>{t("ctl.hold.cancel")}</Btn>
           </div>
+          <p data-testid="ctl-hold-undo-note" className="mt-1 text-[11px] text-amber-800">{t("ctl.hold.undoNote")}</p>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-amber-200"><div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${(seconds / Math.max(1, draft.hold_seconds)) * 100}%` }} /></div>
         </div>
       )}
+
+      {draft.status === "sent" && <p data-testid="ctl-sent-irreversible" className="mt-2 text-[11px] font-semibold text-red-700">{t("ctl.hold.sentIrreversible")}</p>}
 
       {editable && (
         <>

@@ -36,6 +36,8 @@ type Budget struct {
 	wake      chan struct{} // closed (and replaced) whenever a cap changes
 	confirm   map[string]chan Confirmation
 	estimates map[string]domain.CostEstimate // org|request id
+	// observer (optional) receives every recorded cost (anomaly detection).
+	observer AnomalyObserver
 }
 
 // NewBudget builds the manager. Config zero values disable the optional caps.
@@ -229,6 +231,9 @@ func (b *Budget) Record(ctx context.Context, requestID string, u domain.UsageEnt
 		return cost, err
 	}
 	b.checkWarnings(ctx, org, requestID, u.AgentID)
+	if b.observer != nil {
+		b.observer.ObserveSpend(ctx, org, cost)
+	}
 	return cost, nil
 }
 

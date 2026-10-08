@@ -142,7 +142,7 @@ export function ArtifactPane({ id, deskId, focused, onFocus }: { id: string; des
                   <div className="flex items-center justify-between"><b className="font-mono">v{v.version}</b><span className="text-mute">{agentName(v.author.id === "me" ? "user" : v.author.id)}</span></div>
                   <div className="text-ink">{v.summary}</div>
                   <div className="text-[10px] text-mute">{fmtDateTime(v.created_at)}</div>
-                  {v.version !== art.head_version && !art.locked && <button type="button" data-testid={`art-restore-${v.version}`} onClick={() => artifactApi.restore(id, v.version).then(() => useArtifacts.getState().ensureContent(id, true))} className="mt-0.5 font-semibold text-accent hover:underline">{t("art.restore")}</button>}
+                  {v.version !== art.head_version && !art.locked && <button type="button" data-testid={`art-restore-${v.version}`} title={t("art.restore.hint")} onClick={() => artifactApi.restore(id, v.version).then(() => useArtifacts.getState().ensureContent(id, true))} className="mt-0.5 font-semibold text-accent hover:underline">{t("art.restore")}</button>}
                 </li>
               ))}
             </ul>

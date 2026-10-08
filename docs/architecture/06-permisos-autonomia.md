@@ -256,3 +256,24 @@ Viven en `org_settings.rules` (JSONB, sin migración de esa tabla), junto a las 
 - Un envío por conexión que el propio Gateway deja pasar sin aprobación (borradores) no escala a aprobación por una regla del motor; el motor sí puede denegarlo.
 - Las aprobaciones y la espera siguen viviendo en el proceso (jugada 2 de la hoja de ruta: ejecución duradera).
 - Crear la fila de `org_settings` (la primera vez que un owner guarda reglas en una organización sin configurar) hace que el runtime reciba `locale: "es"` (el valor por defecto) desde ese momento.
+
+## 9. Horario de operación y deshacer (A7b)
+
+### 9.1 Horario de operación por organización
+
+- `GET|PUT /org/operating-hours` (lectura: `connections:read`; escritura: `org:manage`, es decir owner y admin; cada cambio queda en auditoría como `control.operating_hours` y emite `control.changed`). Cuerpo: `{enabled, timezone (IANA), weekly: [{day 0..6 (0=domingo), open "HH:MM", close "HH:MM" | "24:00"}]}`. La respuesta añade `open_now` y `next_open_at`.
+- Por defecto `enabled=false`: siempre abierto, sin cambio de comportamiento. Se guarda dentro del JSON `settings` de `org_controls` (sin migración nueva).
+- Se aplica por el guard de ejecución existente: `controls.Service.Admit` devuelve `outside_operating_hours` y `Orchestrator.admitTask` deja la tarea **visiblemente en pausa** ("En pausa (outside_operating_hours)") hasta que abre la oficina; se reanuda sola. Es el mismo punto donde actúan el kill switch y la pausa de agente (`backend/internal/application/connections_flow.go`).
+- Lo que **no** bloquea: decidir aprobaciones, el trabajo que ya está en curso (sus llamadas a herramientas pasan por `Check`, no por `Admit`), ni el kill switch. Los tramos no cruzan la medianoche (turno nocturno = dos días). Zonas con cambio de horario se resuelven con `time/tzdata` embebido.
+
+### 9.2 Qué se puede deshacer y qué no
+
+| Acción | ¿Se puede deshacer? | Cómo |
+|---|---|---|
+| Envío de correo (Gmail) | Solo durante la retención de 60 s (configurable hacia arriba, máx. 300 s) | `POST /tool-calls/{id}/cancel-hold`; botón "Cancelar envío" en `EmailDraftCard`. También se cancelan al activar lockdown, revocar la conexión o pasar a solo lectura. |
+| Correo ya enviado | **No** | Un correo que salió no se puede recuperar; la UI lo dice (`ctl.hold.sentIrreversible`). |
+| Artefacto editado | Sí, sin perder nada | `POST /artifacts/{id}/restore {version}` crea una **versión nueva** con el contenido antiguo; las versiones son append-only (trigger en `280_artifacts.sql`). |
+| Artefacto archivado | Se conserva (no hay DELETE para `app_user`), pero no hay un botón de "desarchivar" | Pendiente. |
+| Aprobación decidida | **No** | Una aprobación resuelta es final; se corrige con una acción nueva. |
+| Acciones de otros conectores (Calendar, Drive, GitHub, Slack) | Según `reversibility` del manifiesto (`full`/`none`) | La UI muestra "Se puede deshacer"/"No se puede deshacer" antes de aprobar; el sistema **no** ejecuta la reversión por sí mismo. |
+| Pagos, contratos firmados | **No** | Siempre requieren aprobación humana; no hay reversión automática. |

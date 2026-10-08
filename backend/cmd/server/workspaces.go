@@ -21,7 +21,9 @@ type workspaceWiring struct {
 // projects service (the two are built in a cycle: projects feed the workspace).
 type projectLookup func(ctx context.Context, id string) (string, string, error)
 
-func (f projectLookup) Info(ctx context.Context, id string) (string, string, error) { return f(ctx, id) }
+func (f projectLookup) Info(ctx context.Context, id string) (string, string, error) {
+	return f(ctx, id)
+}
 
 // wireWorkspaces builds the projects service (whole workflows launched as real
 // orchestrator tasks) and the artifacts service (agent workspaces), with

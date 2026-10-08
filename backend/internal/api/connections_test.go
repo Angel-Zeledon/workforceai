@@ -547,3 +547,35 @@ func TestProviderCatalogShape(t *testing.T) {
 		t.Fatal("google_gmail missing from the catalog")
 	}
 }
+
+func TestOperatingHoursAndAnomalySettingsAPI(t *testing.T) {
+	e := newConnEnv(t, true, true)
+	owner := e.register("owner@example.com", "O")
+	admin := e.member(owner, "admin@example.com", auth.RoleAdmin)
+	member := e.member(owner, "member@example.com", auth.RoleMember)
+
+	resp, raw := e.do("GET", "/api/v1/org/operating-hours", member, nil, nil)
+	if resp.StatusCode != 200 || !bytes.Contains(raw, []byte(`"enabled":false`)) || !bytes.Contains(raw, []byte(`"open_now":true`)) {
+		t.Fatalf("default hours: %d %s", resp.StatusCode, raw)
+	}
+	body := map[string]any{"enabled": true, "timezone": "America/Bogota",
+		"weekly": []map[string]any{{"day": 1, "open": "08:00", "close": "17:00"}}}
+	if c := e.status("PUT", "/api/v1/org/operating-hours", member, body); c != 403 {
+		t.Fatalf("member put = %d", c)
+	}
+	if c := e.status("PUT", "/api/v1/org/operating-hours", admin, map[string]any{"enabled": true, "timezone": "Mars/Base"}); c != 400 {
+		t.Fatalf("bad zone = %d", c)
+	}
+	if c := e.status("PUT", "/api/v1/org/operating-hours", admin, body); c != 200 {
+		t.Fatalf("admin put = %d", c)
+	}
+	if c := e.status("PUT", "/api/v1/org/anomaly-settings", admin, map[string]any{"disabled": true}); c != 403 {
+		t.Fatalf("admin disabling detection = %d", c)
+	}
+	if c := e.status("PUT", "/api/v1/org/anomaly-settings", admin, map[string]any{"auto_freeze": true}); c != 200 {
+		t.Fatalf("admin auto_freeze = %d", c)
+	}
+	if c := e.status("PUT", "/api/v1/org/anomaly-settings", owner.AccessToken, map[string]any{"disabled": true}); c != 200 {
+		t.Fatalf("owner disable = %d", c)
+	}
+}

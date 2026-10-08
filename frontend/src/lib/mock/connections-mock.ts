@@ -84,6 +84,8 @@ export class MockConnections {
   private controls!: OrgControls;
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
   private planSeq = 0;
+  private hours = { enabled: false, timezone: "UTC", weekly: [] as { day: number; open: string; close: string }[] };
+  private anomaly = { disabled: false, auto_freeze: false };
 
   constructor(private emit: Emit) { this.seed(); }
 
@@ -273,6 +275,21 @@ export class MockConnections {
         this.emitControls(); return this.snapshotControls();
       }
       if (r1 === "reset") { this.reset(); return {}; }
+    }
+
+    if (r0 === "org" && r1 === "operating-hours") {
+      if (method === "PUT") {
+        this.requireRole(["owner", "admin"]);
+        this.hours = { enabled: !!body?.enabled, timezone: body?.timezone || "UTC", weekly: body?.weekly ?? [] };
+      }
+      return { ...this.hours, open_now: !this.hours.enabled, next_open_at: null };
+    }
+    if (r0 === "org" && r1 === "anomaly-settings") {
+      if (method === "PUT") {
+        this.requireRole(body?.disabled ? ["owner"] : ["owner", "admin"]);
+        this.anomaly = { disabled: !!body?.disabled, auto_freeze: !!body?.auto_freeze };
+      }
+      return { ...this.anomaly, rules: ["spend_spike", "tool_request_burst", "rejected_approvals", "new_recipient_domains"] };
     }
 
     if (r0 === "org" && r1 === "controls") {

@@ -70,6 +70,9 @@ func (r *run) readOnlyRequest() bool {
 	return r.ext.readOnly
 }
 
+// SetAnomalyObserver installs the anomaly detection observer for spend.
+func (o *Orchestrator) SetAnomalyObserver(a AnomalyObserver) { o.budget.observer = a }
+
 // admitTask blocks (visibly) while the kill switch, an agent pause or a drain
 // forbids work, and returns false only when ctx ends. A paused task is not
 // lost: it resumes from the same point once allowed (the guard fails closed,

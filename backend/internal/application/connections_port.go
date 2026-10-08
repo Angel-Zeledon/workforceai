@@ -32,6 +32,13 @@ type ExecutionGuard interface {
 	IsSideEffect(tool, action string) bool
 }
 
+// AnomalyObserver receives the signals of the anomaly detection rules
+// (implemented by controls.Service). Optional: nil observers are skipped.
+type AnomalyObserver interface {
+	ObserveSpend(ctx context.Context, org string, usd float64)
+	ObserveApprovalRejected(ctx context.Context, org, agentID string)
+}
+
 // GatewayRoute says how a tool request is served.
 type GatewayRoute int
 

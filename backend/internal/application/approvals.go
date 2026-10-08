@@ -22,6 +22,8 @@ type Approvals struct {
 	// decideMu serializes decisions so that the count of approvals of a
 	// double-approval request cannot be raced.
 	decideMu sync.Mutex
+	// Observer (optional) is told about rejected approvals (anomaly detection).
+	Observer AnomalyObserver
 }
 
 func NewApprovals(cfg Config, store Store, rec *Recorder) *Approvals {
@@ -233,6 +235,9 @@ func (a *Approvals) resolveLocked(ctx context.Context, ap domain.Approval, st do
 	a.rec.Audit(ctx, domain.AuditLog{Actor: actor, Action: "approval." + string(st), Entity: "approval", EntityID: id, RequestID: a.requestOf(ctx, ap),
 		Details: map[string]any{"note": note, "task_id": ap.TaskID, "action": ap.Action, "risk": ap.Risk, "approvers": approvers,
 			"required_approvals": ap.RequiredApprovals, "required_role": ap.RequiredRole, "requested_by": ap.RequestedBy, "policy_rule": ap.PolicyRule}})
+	if st == domain.ApprovalRejected && a.Observer != nil {
+		a.Observer.ObserveApprovalRejected(ctx, a.org(ctx), ap.AgentID)
+	}
 	a.rec.Emit(ctx, Action{Type: domain.EvApprovalResolved, AgentID: ap.AgentID, Entity: "approval", EntityID: id, SkipAudit: true,
 		Payload: map[string]any{"approval": ap},
 		Text:    fmt.Sprintf("Aprobación %s: %s", spanishStatus(st), ap.Title)})
