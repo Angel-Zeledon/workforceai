@@ -2,12 +2,15 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 	"sync"
 
 	"aiworkforce/backend/internal/catalog"
+	"aiworkforce/backend/internal/counters"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/policy"
 )
@@ -33,6 +36,11 @@ import (
 type PolicyService struct {
 	Store ConfigStore
 	Cfg   Config
+	// Counters (optional) persists the usage of the windowed limits so a
+	// restart does not reset them (internal/counters). Nil keeps them in memory.
+	Counters counters.Store
+	// Log (optional) reports counter persistence failures.
+	Log *slog.Logger
 
 	mu   sync.Mutex
 	orgs map[string]*orgPolicy
@@ -185,6 +193,12 @@ func (p *PolicyService) prepare(ctx context.Context, org string, in PolicyInput)
 		if err != nil {
 			return nil, rules, err
 		}
+		// The persisted usage must be loaded before the first decision: an
+		// unreadable snapshot fails like unreadable rules (towards a human)
+		// instead of silently starting the windows from zero.
+		if err := p.loadUsage(ctx, org, eng); err != nil {
+			return nil, rules, err
+		}
 		op.eng = eng
 		return eng, rules, nil
 	}
@@ -278,6 +292,8 @@ func (p *PolicyService) Reserve(ctx context.Context, in PolicyInput) PolicyVerdi
 		if d.RequireApproval {
 			v.Effect = string(policy.EffectDeny) // it was decided as allowed a moment ago: do not run it
 		}
+	} else {
+		p.saveUsage(ctx, org, eng)
 	}
 	return v
 }
@@ -307,8 +323,50 @@ func (p *PolicyService) Recheck(ctx context.Context, in PolicyInput, approvalID 
 		if d.RequireApproval {
 			v.Effect = string(policy.EffectDeny)
 		}
+	} else {
+		p.saveUsage(ctx, org, eng)
 	}
 	return v
+}
+
+// loadUsage restores the persisted usage of the windowed limits into a new engine.
+func (p *PolicyService) loadUsage(ctx context.Context, org string, eng *policy.Engine) error {
+	if p.Counters == nil {
+		return nil
+	}
+	b, err := p.Counters.LoadCounters(ctx, org, counters.ScopePolicyLimits)
+	if err != nil {
+		return fmt.Errorf("load windowed limit counters: %w", err)
+	}
+	if len(b) == 0 {
+		return nil
+	}
+	var u map[string][]policy.UsageEvent
+	if err := json.Unmarshal(b, &u); err != nil {
+		return fmt.Errorf("decode windowed limit counters: %w", err)
+	}
+	eng.RestoreUsage(u)
+	return nil
+}
+
+// saveUsage persists the usage after it changed. A failure keeps the counters
+// correct in this process (only a restart would forget them) and is logged.
+// Caller holds p.mu, so snapshots of one process are written in order.
+func (p *PolicyService) saveUsage(ctx context.Context, org string, eng *policy.Engine) {
+	if p.Counters == nil {
+		return
+	}
+	b, err := json.Marshal(eng.UsageSnapshot())
+	if err == nil {
+		err = p.Counters.SaveCounters(context.WithoutCancel(ctx), org, counters.ScopePolicyLimits, b)
+	}
+	if err != nil {
+		log := p.Log
+		if log == nil {
+			log = slog.Default()
+		}
+		log.Warn("persist windowed limit counters", "org", org, "err", err)
+	}
 }
 
 // argKeys returns the sorted argument names of a tool call: the audit trail
