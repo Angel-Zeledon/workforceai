@@ -46,24 +46,33 @@ LANGUAGE_RULES = {
 # Only applied to Spanish output; "neutral" (or an unknown code) adds nothing.
 TONE_RULES = {
     "mx": (
-        "Tono regional: espanol de Mexico, trato de tu cercano y profesional (usted solo si el contexto "
-        "es muy formal); vocabulario mexicano natural y sin exagerar el coloquialismo."
+        "Tono regional: espanol de Mexico. Guia de estilo: trato de tu cercano y profesional (usted solo en "
+        "contextos muy formales); saludos como 'Hola, con gusto' y cierres como 'Quedo al pendiente'; "
+        "vocabulario natural (celular, computadora, platicar, ahorita con medida); sin groserias, sin "
+        "diminutivos en exceso y sin exagerar el coloquialismo. Fechas dd/mm/aaaa, moneda 'pesos' o MXN."
     ),
     "co": (
-        "Tono regional: espanol de Colombia, trato cordial y respetuoso (usted en contextos formales, "
-        "tu en confianza); vocabulario colombiano natural y sin exagerar el coloquialismo."
+        "Tono regional: espanol de Colombia. Guia de estilo: trato cordial y respetuoso (usted en contextos "
+        "formales o con clientes, tu en confianza); saludos como 'Buenos dias, con mucho gusto' y cierres como "
+        "'Quedo atento'; vocabulario natural (celular, computador, tinto, de pronto con medida); sin "
+        "regionalismos cerrados ni exagerar el coloquialismo. Moneda 'pesos' o COP."
     ),
     "ar": (
-        "Tono regional: espanol rioplatense de Argentina, con voseo (vos tenes, vos podes) en el trato "
-        "directo y vocabulario argentino natural; en documentos formales usa registro neutro y claro."
+        "Tono regional: espanol rioplatense de Argentina. Guia de estilo: voseo (vos tenes, vos podes) en el "
+        "trato directo y vocabulario argentino natural (celular, computadora, laburo con medida); en documentos "
+        "formales y correos a clientes usa registro neutro y claro. Moneda 'pesos' o ARS."
     ),
     "cl": (
-        "Tono regional: espanol de Chile, trato de tu cercano y profesional; vocabulario chileno natural "
-        "y sin exagerar el coloquialismo ni las jergas."
+        "Tono regional: espanol de Chile. Guia de estilo: trato de tu cercano y profesional (usted en contextos "
+        "formales); saludos como 'Hola, un gusto' y cierres como 'Quedo atento a tus comentarios'; vocabulario "
+        "chileno natural (celular, computador, cachar y po con mucha medida o mejor evitarlos); sin jergas ni "
+        "garabatos. Moneda 'pesos' o CLP."
     ),
     "es": (
-        "Tono regional: espanol de Espana, trato de tu (vosotros en plural informal) y profesional; "
-        "vocabulario peninsular natural."
+        "Tono regional: espanol de Espana. Guia de estilo: trato de tu (vosotros en plural informal; usted solo "
+        "en contextos muy formales) y profesional; saludos como 'Hola, buenos dias' y cierres como 'Un saludo'; "
+        "vocabulario peninsular natural (movil, ordenador, vale, enhorabuena); sin muletillas coloquiales en "
+        "documentos. Moneda euros (EUR), fechas dd/mm/aaaa."
     ),
 }
 
