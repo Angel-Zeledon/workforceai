@@ -1,0 +1,18 @@
+{
+  "id": "route_legal_question",
+  "description": "Chat routing: a contract question goes to Legal.",
+  "endpoint": "/v1/route",
+  "request": {
+    "text": "¿Qué riesgos tiene la cláusula de penalización del contrato del cliente nuevo?",
+    "conversation": "office",
+    "agents": [
+      {"id": "sales", "role": "sales", "title": "Gerente de Ventas", "name": "Valeria"},
+      {"id": "legal", "role": "legal", "title": "Abogada", "name": "Elena"},
+      {"id": "accounting", "role": "accounting", "title": "Contador", "name": "Tomás"},
+      {"id": "assistant", "role": "assistant", "title": "Asistente", "name": "Sofía"}
+    ],
+    "locale": "es"
+  },
+  "rubric": {"primary_in": ["legal"], "intent_in": ["question", "task"]},
+  "max_cost_usd": 0.05
+}

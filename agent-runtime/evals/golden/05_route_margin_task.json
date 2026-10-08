@@ -1,0 +1,18 @@
+{
+  "id": "route_margin_task",
+  "description": "Chat routing: computing the margin of the proposal goes to Accounting.",
+  "endpoint": "/v1/route",
+  "request": {
+    "text": "Calcula el margen de la propuesta de $50,000 con un descuento del 5%.",
+    "conversation": "office",
+    "agents": [
+      {"id": "sales", "role": "sales", "title": "Gerente de Ventas", "name": "Valeria"},
+      {"id": "legal", "role": "legal", "title": "Abogada", "name": "Elena"},
+      {"id": "accounting", "role": "accounting", "title": "Contador", "name": "Tomás"},
+      {"id": "assistant", "role": "assistant", "title": "Asistente", "name": "Sofía"}
+    ],
+    "locale": "es"
+  },
+  "rubric": {"primary_in": ["accounting"], "intent_in": ["task", "question"]},
+  "max_cost_usd": 0.05
+}

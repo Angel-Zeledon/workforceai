@@ -1,0 +1,19 @@
+{
+  "id": "run_task_sales_proposal",
+  "description": "Sales drafts the proposal and asks to send it (a tool request the backend gates with approval).",
+  "endpoint": "/v1/run-task",
+  "request": {
+    "task": {"id": "t1", "title": "Preparar la propuesta de $50,000", "description": "Redacta la propuesta comercial para el cliente nuevo y deja lista la acción de envío.", "agent_id": "sales"},
+    "agent": {"id": "sales", "role": "sales", "title": "Gerente de Ventas", "persona": "Valeria Ríos, directa y orientada a cerrar.",
+              "responsibilities": ["Propuestas comerciales", "Relación con clientes"], "tools": ["email", "crm", "proposal_builder"]},
+    "context": {"request_text": "Propuesta de $50,000 para un cliente nuevo", "dependency_outputs": [], "memory": []},
+    "locale": "es"
+  },
+  "rubric": {
+    "summary_non_empty": true,
+    "min_confidence": 0.3,
+    "tool_request_action_contains": "send"
+  },
+  "estimate": {"title": "Preparar la propuesta de $50,000", "agent_id": "sales"},
+  "max_cost_usd": 0.3
+}

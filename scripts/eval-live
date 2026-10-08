@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""Live evaluation of the agent runtime against golden cases (A3).
+
+Runs agent-runtime/evals/golden/*.json against a RUNNING runtime in live mode and writes a
+JSON + Markdown report: rubric checks (quality), latency, real tokens and cost reported by
+the provider, and the runtime's own estimate when the case has one.
+
+It spends real money, so it refuses to run unless:
+  * --live is passed explicitly, and
+  * a provider key is present (ANTHROPIC_API_KEY, DEEPSEEK_API_KEY or CUSTOM_LLM_API_KEY), and
+  * the runtime's /healthz reports mode=live.
+
+Usage:
+  scripts/eval-live --live [--url http://localhost:8000] [--cases DIR] [--out DIR] [--only ID]
+
+RUNTIME_TOKEN (if set) is sent as the bearer token. Standard library only.
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+KEYS = ("ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "CUSTOM_LLM_API_KEY")
+
+
+def call(url: str, path: str, body: dict | None = None, timeout: float = 300) -> tuple[int, dict, float]:
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(url.rstrip("/") + path, data=data, method="POST" if body is not None else "GET",
+                                 headers={"Content-Type": "application/json"})
+    if os.getenv("RUNTIME_TOKEN"):
+        req.add_header("Authorization", "Bearer " + os.environ["RUNTIME_TOKEN"])
+    t0 = time.monotonic()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, json.loads(r.read() or b"{}"), time.monotonic() - t0
+    except urllib.error.HTTPError as e:
+        try:
+            payload = json.loads(e.read() or b"{}")
+        except ValueError:
+            payload = {}
+        return e.code, payload, time.monotonic() - t0
+
+
+def grade(case: dict, resp: dict) -> list[tuple[str, bool, str]]:
+    """Simple rubric: each check is (name, passed, detail)."""
+    r, out = case.get("rubric", {}), []
+    if "min_tasks" in r or "max_tasks" in r:
+        n = len(resp.get("tasks", []))
+        out.append(("task_count", r.get("min_tasks", 0) <= n <= r.get("max_tasks", 10**6), f"{n} tasks"))
+    if r.get("must_assign"):
+        got = {t.get("agent_id") for t in resp.get("tasks", [])}
+        missing = [a for a in r["must_assign"] if a not in got]
+        out.append(("must_assign", not missing, f"missing {missing}" if missing else "ok"))
+    if r.get("objectives_non_empty"):
+        out.append(("objectives", bool(resp.get("objectives")), f"{len(resp.get('objectives', []))} objectives"))
+    output = resp.get("output", {}) or {}
+    if r.get("summary_non_empty"):
+        out.append(("summary", bool(str(output.get("summary", "")).strip()), "ok" if output.get("summary") else "empty"))
+    if "min_confidence" in r:
+        c = float(output.get("confidence", 0) or 0)
+        out.append(("confidence", c >= r["min_confidence"], f"{c:.2f}"))
+    tools = resp.get("tool_requests", []) or []
+    if r.get("tool_request_action_contains"):
+        needle = r["tool_request_action_contains"]
+        hit = any(needle in str(t.get("action", "")) for t in tools)
+        out.append(("tool_request", hit, ", ".join(str(t.get("action")) for t in tools) or "none"))
+    if r.get("forbid_text_in_tool_args"):
+        bad = r["forbid_text_in_tool_args"]
+        leaked = any(bad in json.dumps(t.get("args", {}), ensure_ascii=False) for t in tools)
+        out.append(("injection_ignored", not leaked, "leaked into tool args" if leaked else "ok"))
+    if r.get("primary_in"):
+        prim = [x.get("agent_id") for x in resp.get("responders", []) if x.get("role", "primary") == "primary"]
+        out.append(("primary", bool(prim) and prim[0] in r["primary_in"], f"primary={prim[:1]}"))
+    if r.get("intent_in"):
+        out.append(("intent", resp.get("intent") in r["intent_in"], f"intent={resp.get('intent')}"))
+    return out
+
+
+def estimate_for(url: str, case: dict) -> dict | None:
+    e = case.get("estimate")
+    if not e:
+        return None
+    req = case["request"]
+    status, body, _ = call(url, "/v1/estimate", {"request_text": req.get("context", {}).get("request_text", ""),
+                                                 "tasks": [{"id": "t", "title": e["title"], "agent_id": e["agent_id"]}],
+                                                 "locale": req.get("locale", "es")})
+    if status != 200 or not body.get("tasks"):
+        return None
+    t = body["tasks"][0]
+    return {"min_usd": t["min_usd"], "max_usd": t["max_usd"], "model": body.get("model")}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--live", action="store_true", help="required: acknowledges that this spends real money")
+    ap.add_argument("--url", default=os.getenv("RUNTIME_URL", "http://localhost:8000"))
+    ap.add_argument("--cases", default=str(ROOT / "agent-runtime" / "evals" / "golden"))
+    ap.add_argument("--out", default=str(ROOT / "agent-runtime" / "evals" / "reports"))
+    ap.add_argument("--only", help="run a single case id")
+    a = ap.parse_args()
+
+    if not a.live:
+        print("Refusing to run: pass --live to confirm that this calls a real model and spends money.", file=sys.stderr)
+        return 2
+    if not any(os.getenv(k) for k in KEYS):
+        print(f"Refusing to run: set one of {', '.join(KEYS)} (the runtime must use the same key).", file=sys.stderr)
+        return 2
+    status, health, _ = call(a.url, "/healthz")
+    if status != 200 or health.get("mode") != "live":
+        print(f"Refusing to run: the runtime at {a.url} is not in live mode ({status} {health}).", file=sys.stderr)
+        return 2
+
+    cases = sorted(Path(a.cases).glob("*.json"))
+    results = []
+    for path in cases:
+        case = json.loads(path.read_text(encoding="utf-8"))
+        if a.only and case["id"] != a.only:
+            continue
+        status, resp, secs = call(a.url, case["endpoint"], case["request"])
+        usage = resp.get("usage") or {}
+        checks = grade(case, resp) if status == 200 else [("http", False, f"status {status}: {str(resp)[:200]}")]
+        cost = float(usage.get("cost_usd", 0) or 0)
+        if case.get("max_cost_usd") is not None:
+            checks.append(("cost_cap", cost <= case["max_cost_usd"], f"${cost:.4f} <= ${case['max_cost_usd']}"))
+        res = {"id": case["id"], "endpoint": case["endpoint"], "status": status, "latency_s": round(secs, 2),
+               "provider": usage.get("provider") or resp.get("provider"), "model": usage.get("model") or resp.get("model"),
+               "input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens"), "cost_usd": cost,
+               "estimate": estimate_for(a.url, case), "checks": [{"name": n, "passed": p, "detail": d} for n, p, d in checks]}
+        res["passed"] = all(c["passed"] for c in res["checks"])
+        results.append(res)
+        print(f"{'PASS' if res['passed'] else 'FAIL'} {case['id']}  {secs:.1f}s  ${cost:.4f}  {res['model']}")
+
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    report = {"generated_at": stamp, "runtime": a.url, "health": health, "results": results,
+              "passed": sum(r["passed"] for r in results), "total": len(results),
+              "total_cost_usd": round(sum(r["cost_usd"] for r in results), 5)}
+    (out / f"eval-live-{stamp}.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+    lines = [f"# Live eval {stamp}", "", f"Runtime: {a.url} ({health.get('provider')})",
+             f"Passed {report['passed']}/{report['total']} · total cost ${report['total_cost_usd']}", "",
+             "| case | result | latency | model | tokens in/out | cost | estimate | failed checks |", "|---|---|---|---|---|---|---|---|"]
+    for r in results:
+        est = r["estimate"]
+        est_s = f"${est['min_usd']:.4f}-{est['max_usd']:.4f}" if est else "-"
+        failed = "; ".join(f"{c['name']}: {c['detail']}" for c in r["checks"] if not c["passed"]) or "-"
+        lines.append(f"| {r['id']} | {'PASS' if r['passed'] else 'FAIL'} | {r['latency_s']}s | {r['model']} | "
+                     f"{r['input_tokens']}/{r['output_tokens']} | ${r['cost_usd']:.4f} | {est_s} | {failed} |")
+    (out / f"eval-live-{stamp}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"Report: {out}/eval-live-{stamp}.md")
+    return 0 if report["passed"] == report["total"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
