@@ -1,10 +1,13 @@
 """FastAPI app: contrato Go -> agent-runtime."""
 from __future__ import annotations
 
+import hmac
 import logging
+import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from .engine import AgentEngine, select_engine
 from .estimate import EstimateRequest, EstimateResponse
@@ -48,6 +51,18 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
 
     app = FastAPI(title="agent-runtime", version="1.0.0", lifespan=lifespan)
     app.state.engine = engine
+
+    # Shared secret with the backend: when RUNTIME_TOKEN is set, every call except
+    # /healthz must carry "Authorization: Bearer <token>". Read per request so that
+    # rotating the variable needs no code change; compared in constant time.
+    @app.middleware("http")
+    async def require_token(request: Request, call_next):
+        token = os.getenv("RUNTIME_TOKEN", "")
+        if token and request.url.path != "/healthz":
+            got = request.headers.get("authorization", "")
+            if not hmac.compare_digest(got.encode(), f"Bearer {token}".encode()):
+                return JSONResponse(status_code=401, content={"detail": "missing or invalid runtime token"})
+        return await call_next(request)
 
     def eng() -> AgentEngine:
         if app.state.engine is None:  # TestClient sin lifespan

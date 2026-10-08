@@ -36,7 +36,8 @@ type Store struct {
 	budget        float64
 	orgSeeded     bool
 	failOnAddCost error
-	cfg           configState // organization settings and schedules (config.go)
+	cfg           configState                        // organization settings and schedules (config.go)
+	modelPolicies map[string]application.ModelPolicy // org -> model policy (modelpolicy.go)
 	usage         []domain.UsageEntry
 	caps          map[string]domain.BudgetCap // scope/id
 }

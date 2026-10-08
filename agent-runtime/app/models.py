@@ -62,10 +62,16 @@ class _ProviderPolicyMixin(_Base):
         the stable error code no_allowed_provider (HTTP 422). Known ids: deepseek, anthropic, custom.
         The operator ceiling ALLOWED_PROVIDERS (env) is intersected with it, never widened.
     preferred_providers: try these first (in order); the other allowed providers remain as fallbacks.
+    role_providers: per agent role, the provider order to try first (organization policy; the
+        operator's MODEL_PROVIDER_ORDER_<ROLE> env still wins). Allowed providers still apply.
+    role_models: per agent role, the model to use, as "provider/model" (e.g.
+        "anthropic/claude-opus-5-5"). Only replaces that provider's model; it never adds a provider.
     """
 
     allowed_providers: list[str] | None = None
     preferred_providers: list[str] | None = None
+    role_providers: dict[str, list[str]] | None = None
+    role_models: dict[str, str] | None = None
 
 
 # ---- /v1/plan -------------------------------------------------------------

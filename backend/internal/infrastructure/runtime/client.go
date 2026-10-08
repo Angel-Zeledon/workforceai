@@ -15,8 +15,12 @@ import (
 )
 
 type Client struct {
-	base string
-	http *http.Client
+	base  string
+	http  *http.Client
+	token string
+	// policy returns the organization model policy to merge into every call
+	// (allowed/preferred providers, per-role provider order and model). Optional.
+	policy func(ctx context.Context) application.RuntimePolicy
 }
 
 // New creates a client. Per-call deadlines come from the caller's context.
@@ -24,16 +28,54 @@ func New(baseURL string) *Client {
 	return &Client{base: strings.TrimRight(baseURL, "/"), http: &http.Client{Timeout: 5 * time.Minute}}
 }
 
+// WithToken sets the shared secret sent as "Authorization: Bearer" (RUNTIME_TOKEN).
+func (c *Client) WithToken(token string) *Client { c.token = strings.TrimSpace(token); return c }
+
+// WithPolicy installs the source of the organization model policy, applied to
+// every runtime call (the tenant comes from the context).
+func (c *Client) WithPolicy(fn func(ctx context.Context) application.RuntimePolicy) *Client {
+	c.policy = fn
+	return c
+}
+
+// body marshals a request and merges the organization model policy into it.
+func (c *Client) body(ctx context.Context, in any) ([]byte, error) {
+	raw, err := json.Marshal(in)
+	if err != nil || c.policy == nil {
+		return raw, err
+	}
+	p := c.policy(ctx)
+	if p.Empty() {
+		return raw, nil
+	}
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return raw, nil // not an object: send as is
+	}
+	extra, err := json.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+	var add map[string]json.RawMessage
+	if err := json.Unmarshal(extra, &add); err != nil {
+		return nil, err
+	}
+	for k, v := range add {
+		m[k] = v
+	}
+	return json.Marshal(m)
+}
+
 var (
-	_ application.Runtime   = (*Client)(nil)
-	_ application.Estimator = (*Client)(nil)
+	_ application.Runtime     = (*Client)(nil)
+	_ application.Estimator   = (*Client)(nil)
 	_ application.ChatRuntime = (*Client)(nil)
 )
 
 func (c *Client) do(ctx context.Context, method, path string, in, out any) error {
 	var body io.Reader
 	if in != nil {
-		raw, err := json.Marshal(in)
+		raw, err := c.body(ctx, in)
 		if err != nil {
 			return err
 		}
@@ -44,6 +86,9 @@ func (c *Client) do(ctx context.Context, method, path string, in, out any) error
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("runtime %s: %w", path, err)
