@@ -35,11 +35,16 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 - Pasos 1-5 del alcance: `RunStore` (memoria + Postgres, migración `290_durable_runs.sql` con down y RLS), checkpoint por tarea antes de esperar una aprobación de herramienta simulada, `Approvals.Attach/WaitUntil/Supersede` con plazo original, `Orchestrator.Recover` al arrancar (`cmd/server/main.go`), evento `request.resumed`, ejecución aprobada a lo sumo una vez. Decisiones tomadas: D-A1a reintento automático una vez; D-A1b plazo original. Detalle en `07-seguridad-costos.md` 5.4.
 - Tests: reinicios simulados con el store en memoria (aprobar, rechazar, decidido durante la caída, plazo vencido, sin checkpoint, doble `Recover`, interrumpida antes de empezar) y Postgres real (ida y vuelta, RLS, reset).
 
+### Hecho: paso 6 (rama `feat/a1c-queue`)
+- Cola por organización con prioridades (`application/orgqueue.go`): `MAX_PARALLEL_PER_ORG` (por defecto 8) llamadas al runtime en vuelo por organización; interactivo > proyecto > programado; eventos aditivos `request.queued` / `request.dequeued`, auditoría y una línea de actividad por solicitud encolada. Lo que ocupa turno es la llamada al runtime, no la espera humana: kill-switch, pausa, horario, topes y aprobaciones se comprueban antes, así que nada se los salta y una tarea en pausa no bloquea a la organización. Cambio en `orchestrator.go` acotado a `submit` (propaga la prioridad) y `call` (pide turno).
+- Contadores de ventana persistidos (`internal/counters`, migración `360_window_counters.sql` con down y RLS): uso de los límites de ventana del motor de políticas (scope `policy.limits`) y ventanas de la detección de anomalías (scope `anomaly`). Postgres o memoria sin `DATABASE_URL`. Detalle en `07-seguridad-costos.md` 5.6.
+- Tests: orden por prioridad, tope bajo estrés con cancelaciones, sin fuga de turnos, tope entre solicitudes con eventos visibles, tarea en pausa sin turno, límite de ventana y anomalías que sobreviven a un reinicio simulado, Postgres real (ida y vuelta, RLS, down/up).
+- Limitaciones: semáforo por proceso (no global entre réplicas); prioridad estricta sin envejecimiento; el chat conversacional no pasa por la cola; instantáneas "último escritor gana" entre réplicas. No verificado: e2e con carga real en el stack completo.
+
 ### Pendiente
 - Reanudar proyectos (hoy sus solicitudes se marcan fallidas al reiniciar y el proyecto `interrupted`).
 - Reanudar aprobaciones del Tool Gateway (Gmail) desde su punto exacto: hoy se reemplazan por una aprobación nueva.
 - Revisión del plan y confirmación de costo pendientes: hoy la solicitud falla con aviso.
-- Paso 6 (cola con prioridades y límites por organización, contadores de ventana persistidos).
 - Varias instancias recuperando a la vez; el chat de origen no recibe el eco del reporte de una solicitud reanudada.
 - No verificado: e2e con `docker compose restart backend` a mitad del escenario de $50,000.
 
@@ -49,7 +54,7 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 - Lo que la tarea iba a hacer tras la aprobación (lista de `ToolRequest` restantes, argumentos) sólo vive en la pila de `handleTools`.
 - No hay barrido al arrancar (`cmd/server/main.go`); los proyectos se marcan `failed` de forma perezosa al leerlos (`projects/service.go` `get`).
 - Reservas de presupuesto y pausas por tope en mapas del proceso (`application/budget.go`); gasto y topes sí persistidos (`210_cost_ledger.sql`).
-- Sin cola ni prioridades; paralelismo sólo dentro de una solicitud (`Scheduler.MaxParallel`). Límites por ventana sólo en auth (`auth/ratelimit.go`). Idempotencia sólo en `POST /messages` y en memoria.
+- Sin cola ni prioridades; paralelismo sólo dentro de una solicitud (`Scheduler.MaxParallel`) (resuelto en el paso 6). Límites por ventana sólo en auth (`auth/ratelimit.go`). Idempotencia sólo en `POST /messages` y en memoria.
 - Sobrevive hoy: envíos diferidos de Gmail (`connection_holds`) y agendas.
 
 ### Alcance
@@ -183,7 +188,8 @@ Plan original:
 
 **Hecho (A7a):** exportar docx/xlsx (`GET /artifacts/{id}/export`, auditado, sin inyección de fórmulas), visor PDF real con `pdfjs-dist` local, comentarios y propuestas (migración 340; los agentes proponen, sólo humanos aceptan), edición de tablero y agenda con arrastrar y teclado.
 **Hecho (A7b):** horario de operación por organización (fuera de horario el trabajo nuevo se pausa visiblemente; por defecto siempre abierto), detección de anomalías v1 con reglas explicables y congelado automático opcional (apagado por defecto), notas honestas de qué se puede deshacer, guías de tono regional ampliadas. Los límites por conexión ya existían y persisten en `connection_usage`.
-**Pendiente:** subida/descarga de blobs PDF (el visor muestra marcadores hasta entonces), propuestas granulares, contadores de anomalías persistentes, mapa grande de proyectos con LOD.
+**Hecho (A7, rama `feat/a1c-queue`):** contadores de anomalías persistentes (scope `anomaly` en `window_counters`, migración 360; ver `07-seguridad-costos.md` 5.6 y 9.2).
+**Pendiente:** subida/descarga de blobs PDF (el visor muestra marcadores hasta entonces), propuestas granulares, mapa grande de proyectos con LOD.
 **No verificado:** docx/xlsx abiertos en Word/Excel; Postgres de la migración 340 contra una base real; arrastrar y soltar en navegador.
 
 Plan original:

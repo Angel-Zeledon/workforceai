@@ -66,7 +66,7 @@ Capas (token bucket en Redis, clave incluye `org_id`):
 | `POST /requests` por org | 10/min, 200/dia | 429 + evento `budget.warning` |
 | `POST /conversations/{id}/messages` por usuario | 30/min | 429 |
 | Conexiones WS | 20/usuario, 200/org | cierre 4429 |
-| Llamadas al runtime en vuelo por org | 8 | encola (backpressure) |
+| Llamadas al runtime en vuelo por org | 8 (`MAX_PARALLEL_PER_ORG`, implementado, ver 5.6) | encola por prioridad, evento `request.queued` |
 | Tool calls por agente/dia | segun `constraints.max_per_day` (default 50) | `deny` con `reason=rate_limit` |
 | Emails/mensajes salientes por org/hora | 100 | `needs_approval` forzado al exceder 80 % |
 | Webhooks entrantes por fuente | 120/min, firma HMAC obligatoria + anti-replay (timestamp +-5 min) | 401/429 |
@@ -104,7 +104,7 @@ flowchart TD
 | Tokens de salida por llamada | `max_tokens` por agente (p. ej. 4000) | Runtime profile | Truncado + `confidence` baja |
 | Tiempo por tarea | 15 min (timeout) | Scheduler | `failed` reintentable |
 | Tiempo por request | 1 h | Orquestador | `failed` + cancelar pendientes |
-| Concurrencia | 4 tareas/org, 1 por agente | Scheduler | Cola |
+| Concurrencia | 4 tareas por solicitud (`MAX_PARALLEL`); 8 llamadas al runtime en vuelo por org (`MAX_PARALLEL_PER_ORG`) | Scheduler + cola por org (5.6) | Cola con prioridad |
 | Tamano de contexto | Memoria 2000 tok; `dependency_outputs` truncados a 6000 tok totales (resumidos si exceden) | ContextBuilder | Resumen |
 
 Circuit breaker del runtime: 5 fallos en 30 s => abierto 30 s; **no cuenta contra presupuesto** y evita tormenta de reintentos. Ademas, detector de **bucle**: si 3 llamadas consecutivas de la misma tarea producen outputs con hash identico, se detiene (`blocked`, `reason=loop_detected`).
@@ -132,6 +132,17 @@ Implementado en Fase 1.5 sobre el codigo actual (ver `08-api.md` sec. 12):
 - **Token backend → runtime**: con `RUNTIME_TOKEN` definido en ambos servicios, el runtime exige `Authorization: Bearer` en todo salvo `/healthz` (comparacion en tiempo constante). Es opcional para no romper despliegues existentes; el backend avisa al arrancar si falta. Recomendado en produccion.
 - **Medicion en vivo**: `scripts/eval-live --live` corre los casos dorados de `agent-runtime/evals/golden/` contra un runtime en modo live y escribe un reporte JSON/Markdown (rubrica, latencia, tokens y costo real, estimacion previa). Se niega a correr sin `--live`, sin clave y si el runtime no esta en modo live. **No verificado**: no se ha corrido con una clave real.
 - **Fuera de alcance**: clave propia por organizacion (BYOK) guardada en la boveda; pendiente de la decision de seguridad del dueño.
+
+### 5.6 Cola por organización y contadores de ventana persistidos (A1 paso 6)
+- **Cola por organización** (`backend/internal/application/orgqueue.go`): cada llamada del orquestador al runtime (plan, tarea, consulta, síntesis) toma un turno de su organización antes de empezar y lo devuelve al terminar. Como máximo `MAX_PARALLEL_PER_ORG` llamadas en vuelo por organización (por defecto **8**; variable de entorno, entero > 0). `MAX_PARALLEL` (4) sigue limitando las tareas paralelas de **una** solicitud. Si no hay turno, la llamada espera en una cola con prioridad: **interactivo** (chat, solicitudes escritas, plantillas lanzadas por una persona) > **proyecto** (`projects/engine.go`) > **programado** (agendas, `RunDue`); a igual prioridad, por orden de llegada. La prioridad viaja en el contexto (`WithWorkPriority`).
+- **Visible**: al encolarse se emite `request.queued` (aditivo; `request_id`, `priority`, `call`, `ahead`, `max_parallel_per_org`), queda en la auditoría y, la primera vez por solicitud, una línea en la actividad ("Solicitud en cola..."); al obtener turno, `request.dequeued` con `waited_ms`. Sin cambios de endpoints ni del estado de la solicitud.
+- **Respeta los controles**: lo que ocupa un turno es una llamada al runtime, nunca una espera humana. Kill-switch, pausa de agente, horario de operación (`admitTask`), topes de gasto (`reserveOrPause`, comprobación de presupuesto en `call`), revisión de plan, confirmación de costo y aprobaciones se evalúan **antes** de pedir turno, así que una tarea en pausa o esperando aprobación no bloquea al resto de la organización y la cola no permite saltarse ninguna de esas comprobaciones. Reset/apagado cancelan las esperas.
+- **Límites honestos**: el semáforo vive en el proceso (cada instancia tiene el suyo; con varias réplicas el máximo efectivo es réplicas x `MAX_PARALLEL_PER_ORG`). Prioridad estricta: con carga interactiva continua el trabajo programado puede esperar indefinidamente (sin envejecimiento en v1). Las respuestas del chat (`chat.go`, rutas y respuestas conversacionales) no pasan por la cola. Las solicitudes reanudadas por `Recover` entran como interactivas.
+- **Contadores de ventana persistidos** (paquete `backend/internal/counters`, migración `360_window_counters.sql` con su `down` y RLS por organización): una instantánea JSON por `(org_id, scope)`.
+  - `policy.limits`: el uso de los límites de ventana del motor de políticas (`policy.Limit`: llamadas y monto acumulado por agente u organización). Se carga al construir el motor de la organización y se guarda tras cada uso contado (`Reserve`, `Recheck`). Si la instantánea no se puede leer, la decisión falla como si no se pudieran leer las reglas (hacia un humano / denegar lo aprobado) en vez de empezar las ventanas en cero.
+  - `anomaly`: las ventanas de la detección de anomalías (ver 9.2).
+  - Sin `DATABASE_URL` se usa un almacén en memoria (mismo código; nada sobrevive al reinicio del proceso). Un fallo al guardar se registra en el log y no cambia la decisión (sólo un reinicio olvidaría lo último). Último escritor gana: no se comparten con exactitud entre réplicas.
+  - Los límites de login/IP de `auth/ratelimit.go` ya sobreviven a reinicios con Redis (`RedisLimiter`); sin Redis siguen en memoria. Los límites por conexión ya persistían en `connection_usage` (9.1).
 
 ## 6. Auditoria y no repudio
 
@@ -161,11 +172,11 @@ Implementado en Fase 1.5 sobre el codigo actual (ver `08-api.md` sec. 12):
 
 ### 9.1 Límites por conexión (verificado, sin cambios)
 
-`connections.Limits` (`backend/internal/connections/types.go`) fija `per_minute`, `per_hour`, `per_day`, `write_per_day`, `max_bytes_per_day` y `monthly_budget_usd` por conexión y por grant (el grant solo puede estrechar). `Service.LimitCheck` los evalúa contando filas de `connection_usage` con `Store.CountUsage` (Postgres), por lo que **sobreviven a un reinicio y se comparten entre réplicas**, a diferencia de los límites de ventana del motor de políticas (`policy.Limit`, en memoria; ver 06 sección 8.7). Se editan con `PUT /connections/{id}/limits`. Lo que falta: un tope de cantidad por conexión con ventana arbitraria y por tipo de acción (hoy son ventanas fijas de minuto/hora/día).
+`connections.Limits` (`backend/internal/connections/types.go`) fija `per_minute`, `per_hour`, `per_day`, `write_per_day`, `max_bytes_per_day` y `monthly_budget_usd` por conexión y por grant (el grant solo puede estrechar). `Service.LimitCheck` los evalúa contando filas de `connection_usage` con `Store.CountUsage` (Postgres), por lo que **sobreviven a un reinicio y se comparten entre réplicas**, igual que ahora los límites de ventana del motor de políticas (`policy.Limit`, persistidos desde A1 paso 6 en `window_counters`; ver 5.6). Se editan con `PUT /connections/{id}/limits`. Lo que falta: un tope de cantidad por conexión con ventana arbitraria y por tipo de acción (hoy son ventanas fijas de minuto/hora/día).
 
 ### 9.2 Detección de anomalías v1
 
-Cuatro reglas explicables, evaluadas en `backend/internal/controls/anomaly.go` con ventanas deslizantes **en memoria**:
+Cuatro reglas explicables, evaluadas en `backend/internal/controls/anomaly.go` con ventanas deslizantes que **se persisten** por organización en `window_counters` (scope `anomaly`, ver 5.6) cuando hay Postgres:
 
 | Regla (`rule`) | Dispara cuando | Umbral por defecto |
 |---|---|---|
@@ -176,4 +187,4 @@ Cuatro reglas explicables, evaluadas en `backend/internal/controls/anomaly.go` c
 
 Cada detección escribe auditoría (`anomaly.detected`, actor `system:anomaly`) y emite el evento `anomaly.detected` con `rule`, `explanation` y los valores observados. Un mismo `rule` no se repite antes de 15 min (enfriamiento). Detectar nunca bloquea por sí solo. `GET|PUT /org/anomaly-settings` (`org:manage`): `auto_freeze` (por defecto **apagado**) activa el freeze del kill switch (levantarlo sigue siendo decisión del owner); `disabled` apaga la detección y solo lo puede hacer un owner.
 
-Limitaciones honestas: los contadores no persisten (un reinicio borra la línea base y las reglas de gasto y dominios vuelven a calentarse); no se comparten entre réplicas; los umbrales son fijos en v1; "dominio nuevo" es relativo a lo visto desde el arranque, no a una libreta de contactos persistida.
+Limitaciones honestas: los contadores sobreviven a un reinicio (la línea base, los dominios aprendidos y el enfriamiento se cargan al primer uso), pero sin Postgres siguen en memoria; si la instantánea no se puede leer, esa observación se omite en lugar de sobrescribir lo guardado; no se comparten con exactitud entre réplicas (último escritor gana); los umbrales son fijos en v1; "dominio nuevo" es relativo a lo observado (ahora persistido), no a una libreta de contactos.
