@@ -113,6 +113,22 @@ func (s *PGStore) UserByID(ctx context.Context, id string) (User, error) {
 	return scanUser(s.db.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE id = $1`, id))
 }
 
+// OrgName reads organizations.name. The table is under RLS (id = app.org_id),
+// so the lookup runs in a transaction scoped to that organization.
+func (s *PGStore) OrgName(ctx context.Context, orgID string) (string, error) {
+	var name string
+	err := s.inTx(ctx, func(tx pgx.Tx) error {
+		if err := SetOrgID(ctx, tx, orgID); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `SELECT name FROM organizations WHERE id = $1`, orgID).Scan(&name)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return name, err
+}
+
 func (s *PGStore) MembershipsOf(ctx context.Context, userID string) ([]Membership, error) {
 	rows, err := s.db.Query(ctx,
 		`SELECT org_id, user_id, role, created_at FROM memberships WHERE user_id = $1 ORDER BY created_at, org_id`, userID)

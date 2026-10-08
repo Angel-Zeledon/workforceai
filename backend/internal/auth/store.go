@@ -67,6 +67,8 @@ type Store interface {
 
 	UserByEmail(ctx context.Context, email string) (User, error) // ErrNotFound
 	UserByID(ctx context.Context, id string) (User, error)       // ErrNotFound
+	// OrgName returns the display name of an organization (ErrNotFound).
+	OrgName(ctx context.Context, orgID string) (string, error)
 
 	MembershipsOf(ctx context.Context, userID string) ([]Membership, error) // oldest first
 	GetMembership(ctx context.Context, orgID, userID string) (Membership, error)

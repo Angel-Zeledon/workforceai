@@ -68,6 +68,16 @@ func (s *MemoryStore) UserByID(_ context.Context, id string) (User, error) {
 	return u, nil
 }
 
+func (s *MemoryStore) OrgName(_ context.Context, orgID string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	o, ok := s.orgs[orgID]
+	if !ok {
+		return "", ErrNotFound
+	}
+	return o.Name, nil
+}
+
 func (s *MemoryStore) MembershipsOf(_ context.Context, userID string) ([]Membership, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

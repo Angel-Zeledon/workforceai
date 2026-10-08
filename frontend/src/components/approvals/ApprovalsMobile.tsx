@@ -6,6 +6,8 @@ import { usePreferences } from "@/lib/preferences";
 import { useT } from "@/lib/i18n";
 import type { Approval } from "@/lib/types";
 import { currentSubscription, disablePush, enablePush, getPushConfig, pushSupported, sendLabels, type PushConfig } from "@/lib/push";
+import { useSession } from "@/lib/session";
+import { OrgIndicator } from "../auth/OrgIndicator";
 import { Progress, RiskBadge } from "../ui";
 
 type PushState = "loading" | "unsupported" | "unavailable" | "denied" | "off" | "on";
@@ -119,6 +121,7 @@ function ApprovalItem({ a, focused, onDone }: { a: Approval; focused: boolean; o
 export function ApprovalsMobile({ focusId }: { focusId?: string }) {
   const { t } = useT();
   const hydrate = usePreferences((s) => s.hydrate);
+  const signedIn = useSession((s) => s.status === "authenticated");
   const [items, setItems] = useState<Approval[] | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => { hydrate(); }, [hydrate]);
@@ -146,6 +149,7 @@ export function ApprovalsMobile({ focusId }: { focusId?: string }) {
       <header>
         <h1 className="text-xl font-bold text-ink">{t("approvals.mobile.title")}</h1>
         <p className="text-[13px] text-mute">{t("approvals.mobile.subtitle")}</p>
+        {signedIn && <OrgIndicator className="mt-1 text-[12px] font-medium text-ink2" />}
       </header>
       <PushControl />
       {failed && (
