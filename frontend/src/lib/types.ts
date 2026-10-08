@@ -33,6 +33,9 @@ export interface Approval {
   id: string; task_id: string; agent_id: string; action: string; title: string; details: string;
   risk: "low" | "medium" | "high"; status: "pending" | "approved" | "rejected";
   created_at: string; resolved_at: string | null;
+  /** Governance (optional: older backends omit them). */
+  required_approvals?: number; required_role?: string; requested_by?: string;
+  decisions?: { by: string; role?: string; note?: string; ts: string }[];
 }
 export interface Report {
   id: string; request_id: string; title: string; summary: string;

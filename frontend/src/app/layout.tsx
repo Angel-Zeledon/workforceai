@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { PwaRegister } from "@/components/PwaRegister";
 
 // Tipografías empaquetadas localmente (sin depender de red en build/Docker).
 const inter = localFont({
@@ -25,12 +26,17 @@ const mono = localFont({
 export const metadata: Metadata = {
   title: "AI Workforce OS",
   description: "Oficina virtual 3D con empleados de IA",
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  appleWebApp: { capable: true, title: "Workforce", statusBarStyle: "default" },
 };
+
+export const viewport: Viewport = { themeColor: "#3451b2", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${inter.variable} ${mono.variable}`}>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">{children}<PwaRegister /></body>
     </html>
   );
 }

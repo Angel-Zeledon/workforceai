@@ -677,3 +677,17 @@ Cuerpo de hasta 6 MB al crear y al guardar versiones (el resto de rutas, `MAX_BO
 - Guardado concurrente: merge de 3 vías por unidad; la misma unidad en ambos lados es conflicto (`409`) y no se escribe nada. Un guardado idéntico al contenido actual no crea versión.
 - Los agentes escriben a través de `artifacts.Service.ApplyAgent` (solo con modo `edit`); no hay endpoint HTTP que acepte un `agent_id` de un cliente.
 - No implementado todavía: propuestas y comentarios, `diff`, `export`, blobs/`import`, `GET|PUT /workspaces/{desk}` y la tool `artifacts` del runtime.
+
+## 18. Notificaciones push (Web Push)
+
+Solo notifican: la notificación lleva **título, riesgo e id de la aprobación** (nunca detalles, argumentos ni contenido, cifrados además con RFC 8291) y decidir sigue exigiendo `POST /approvals/{id}/decision` autenticado con el permiso `approvals:decide`. Se activa con `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` (`mailto:` o `https:`); sin ellas `GET /push/config` responde `enabled:false` y las otras rutas no existen. `PUSH_ALLOWED_HOSTS` (lista separada por comas) amplía los servicios push permitidos.
+
+### 18.1 Endpoints (`/api/v1`)
+
+| Ruta | Permiso | Respuesta |
+|---|---|---|
+| `GET /push/config` | `approvals:read` | `{enabled, public_key?}` (clave pública VAPID para `applicationServerKey`) |
+| `POST /push/subscriptions` `{endpoint, keys:{p256dh, auth}}` | `approvals:read` | `201 {id, created_at}`; el `endpoint` no se devuelve. Endpoint no `https`, IP, puerto distinto de 443 o fuera de la lista de servicios push -> `400`. Repetir el mismo endpoint lo actualiza |
+| `DELETE /push/subscriptions` `{endpoint}` | `approvals:read` | `204`; solo borra suscripciones propias (misma organización y usuario) |
+
+Auditoría (`entity:"push_subscription"`): `push.subscribed` y `push.unsubscribed`, sin endpoint ni claves. Tabla `push_subscriptions` (migración 330) con RLS por organización; las suscripciones que el servicio push declara caducadas (`404/410`) se eliminan solas.
