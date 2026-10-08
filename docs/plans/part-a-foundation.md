@@ -154,20 +154,39 @@ Plan original:
 - Cada conector = manifiesto JSON + proveedor Go con la misma interfaz que Gmail, con fake para tests.
 - Esfuerzo: Gmail real 2 días (si hay credenciales); cada conector nuevo 4-6 días.
 
-## A5 Más profesiones
+## A5 Más profesiones — hecho, ola A (integrado en `next-features`)
+
+**Hecho:** `backend/internal/roles` con plantillas JSON embebidas; los 7 agentes del demo salen de ellas sin cambiar ids ni comportamiento (test contra la lista anterior); `GET /role-templates`, `POST /agents/from-template` (auditado); el runtime enruta y planifica con los perfiles que manda el backend; ola A (`project_manager`, `education`, `data_analyst`, `software_engineer`) disponible para contratar, no añadida al demo; "Contratar desde plantilla" en el menú de administración; los roles nuevos toman color/aspecto de la plantilla y un escritorio libre. Diálogo verificado en captura.
+**Pendiente:** ola B; preguntas abiertas del catálogo (¿mantener las 8? ¿`data_analyst` separado de `analyst`?).
+**No verificado:** aspecto 3D de un agente contratado en el navegador.
+
+Plan original:
 
 - Hoy 7 agentes fijos en código, duplicados en `domain/seed.go`, `agent-runtime/app/routing.py` y `frontend/src/lib/meta.ts`. No existe `internal/roles` ni `POST /agents/from-template` (diseñado en `professions-catalog.md`).
 - Alcance: `backend/internal/roles/templates/*.json` embebidos, endpoint `GET /role-templates` y `POST /agents/from-template`, el runtime y el frontend leen la definición del agente (no listas fijas). Luego las 8 priorizadas, ola A primero (`project_manager`, `education`, `data_analyst`, `software_engineer`).
 - Preguntas abiertas del catálogo (`professions-catalog.md`): ¿se mantienen esas 8? ¿`data_analyst` separado de `analyst`?
 - Esfuerzo: motor 5-6 días; cada profesión 1-2 días con tests de enrutamiento.
 
-## A6 Móvil y canales
+## A6 Móvil y canales — PWA y push hechos; Slack/WhatsApp sólo diseño (integrado en `next-features`)
+
+**Hecho:** manifest, iconos, service worker (sólo el armazón; nunca cachea `/api`), `/approvals` y `/approvals/[id]` pensados para móvil (riesgo, rol requerido, doble aprobación); Web Push con VAPID (RFC 8291, sin librería), migración 330, `GET /push/config`, `POST/DELETE /push/subscriptions`; el aviso lleva sólo título, riesgo e id (test que descifra el cuerpo). Diseño de Slack y WhatsApp en `docs/architecture/channels.md`.
+**Pendiente:** Slack y WhatsApp (necesitan cuentas del dueño); con auth activo el frontend no envía el token en estas pantallas fuera del flujo de sesión — revisar al activar auth.
+**No verificado:** entrega de push a un navegador real.
+
+Plan original:
 
 - No existe manifest, service worker ni Web Push. Alcance: PWA con bandeja de aprobaciones, Web Push (VAPID), luego Slack (botones interactivos) y WhatsApp (plantillas y consentimiento de WhatsApp Business: requiere cuenta del dueño).
 - Depende de A1 (aprobar horas después de un reinicio) y A2 (identidad del que aprueba).
 - Esfuerzo: PWA + push 5-7 días; Slack 5 días; WhatsApp 6-8 días + trámite de Meta.
 
-## A7 Terminar lo a medias
+## A7 Terminar lo a medias — en gran parte hecho (integrado en `next-features`)
+
+**Hecho (A7a):** exportar docx/xlsx (`GET /artifacts/{id}/export`, auditado, sin inyección de fórmulas), visor PDF real con `pdfjs-dist` local, comentarios y propuestas (migración 340; los agentes proponen, sólo humanos aceptan), edición de tablero y agenda con arrastrar y teclado.
+**Hecho (A7b):** horario de operación por organización (fuera de horario el trabajo nuevo se pausa visiblemente; por defecto siempre abierto), detección de anomalías v1 con reglas explicables y congelado automático opcional (apagado por defecto), notas honestas de qué se puede deshacer, guías de tono regional ampliadas. Los límites por conexión ya existían y persisten en `connection_usage`.
+**Pendiente:** subida/descarga de blobs PDF (el visor muestra marcadores hasta entonces), propuestas granulares, contadores de anomalías persistentes, mapa grande de proyectos con LOD.
+**No verificado:** docx/xlsx abiertos en Word/Excel; Postgres de la migración 340 contra una base real; arrastrar y soltar en navegador.
+
+Plan original:
 
 Lista del prompt; se verifica pieza a pieza al empezar (no auditado en esta sesión). Propuesta de orden por valor/riesgo: export docx/xlsx, visor de PDF real, comentarios/propuestas en artefactos, edición de tablero y agenda, horario de operación, límite por conexión, detección de anomalías, deshacer, tonos regionales mx/co/cl/es, mapa de proyectos con LOD.
 
