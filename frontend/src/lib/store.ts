@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { api, toChatMessage } from "./api";
+import { registerRoleTemplates } from "./meta";
+import { getLocale } from "./i18n-core";
 import { useArtifacts } from "./artifacts";
 import { isCostFrame, useCost } from "./cost";
 import { isConnectionsFrame, useConnections } from "./connections/store";
@@ -95,6 +97,8 @@ export const useStore = create<State>((set, get) => ({
     async function safe<T>(p: Promise<T>, d: T): Promise<T> {
       try { return await p; } catch { return d; }
     }
+    // Look of template-based roles (best effort) must be known before their agents render.
+    await safe(api.roleTemplates(getLocale()).then(registerRoleTemplates), undefined);
     const [agents, tasks, requests, conversations, approvals, reports, activity, metrics] = await Promise.all([
       safe(api.agents(), [] as Agent[]), safe(api.tasks(), [] as Task[]), safe(api.requests(), [] as Request[]),
       safe(api.conversations(), [] as Conversation[]), safe(api.approvals(), [] as Approval[]),

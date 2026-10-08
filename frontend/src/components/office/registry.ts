@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { Agent } from "@/lib/types";
-import { roleMeta } from "@/lib/meta";
+import { assignDesks, roleMeta } from "@/lib/meta";
+import { useStore } from "@/lib/store";
 
 /** Live world positions of each character's head, written by <Character/> every frame and read by links/bubbles. */
 export const headPos = new Map<string, THREE.Vector3>();
@@ -9,9 +10,10 @@ export const feetPos = new Map<string, THREE.Vector3>();
 export const AISLE_Z = -1.3;
 
 export function deskOf(agent: Pick<Agent, "role" | "id">, index: number): [number, number] {
-  const m = roleMeta(agent.role);
-  if (m.desk[1] === 6) return [-8 + index * 4.5, 6.5];
-  return m.desk;
+  const S = useStore.getState();
+  const list = S.agentOrder.map((id) => S.agents[id]).filter(Boolean).map((a) => ({ id: a.id, role: a.role }));
+  if (!list.some((a) => a.id === agent.id)) list.push({ id: agent.id, role: agent.role });
+  return assignDesks(list)[agent.id] ?? roleMeta(agent.role).desk;
 }
 // Characters sit on the +z side of their desk, facing -z (toward the monitor).
 export const seatOf = (d: [number, number]): [number, number] => [d[0], d[1] + 0.85];
