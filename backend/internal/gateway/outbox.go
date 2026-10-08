@@ -477,5 +477,16 @@ var controlCodes = map[string]bool{
 
 // subjectSummary is the content-free label stored on a hold.
 func (g *Gateway) subjectSummary(args map[string]any) string {
-	return sanitize.SanitizeInline(str(args["subject"]), 120, sanitize.Options{Suspects: g.Suspects})
+	return sanitize.SanitizeInline(headline(args), 120, sanitize.Options{Suspects: g.Suspects})
+}
+
+// headline is the short label of an outgoing item: the email subject, or the
+// title/summary of an event or issue, or the text of a chat message.
+func headline(args map[string]any) string {
+	for _, k := range []string{"subject", "title", "summary", "text"} {
+		if v := str(args[k]); v != "" {
+			return v
+		}
+	}
+	return ""
 }

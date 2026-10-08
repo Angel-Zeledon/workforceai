@@ -1,0 +1,33 @@
+{
+  "id": "google_drive",
+  "version": 1,
+  "label_key": "provider.google_drive.name",
+  "phase": "available",
+  "auth": [
+    {
+      "method": "oauth2_pkce",
+      "authorize_url": "https://accounts.google.com/o/oauth2/v2/auth",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "revoke_url": "https://oauth2.googleapis.com/revoke",
+      "identity_scopes": ["openid", "email"],
+      "extra_params": { "access_type": "offline", "prompt": "consent" }
+    }
+  ],
+  "capabilities": {
+    "drive.read": {
+      "class": "read",
+      "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
+      "tools": ["drive.search", "drive.list", "drive.read"],
+      "risk": "low",
+      "side_effects": false,
+      "default": true,
+      "label_key": "conn.cap.drive.read",
+      "scope_overreach": "drive.readonly can read every file of the account; the adapter only serves files whose parent folder is in the connection's folder allowlist and refuses everything when the allowlist is empty"
+    }
+  },
+  "never_offered": ["drive.write", "drive.delete", "drive.share", "drive.permissions"],
+  "identity": { "userinfo_url": "https://openidconnect.googleapis.com/v1/userinfo", "account_field": "email" },
+  "resource_filters": ["folders"],
+  "default_limits": { "per_minute": 30, "per_hour": 600, "per_day": 2000, "write_per_day": 0, "max_items_per_call": 25, "max_bytes_per_day": 20000000 },
+  "untrusted_sources": ["file.name", "file.text", "file.owner"]
+}

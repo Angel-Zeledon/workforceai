@@ -12,7 +12,11 @@ import (
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/config"
 	"aiworkforce/backend/internal/connections"
+	"aiworkforce/backend/internal/connections/calendar"
+	"aiworkforce/backend/internal/connections/drive"
+	"aiworkforce/backend/internal/connections/github"
 	"aiworkforce/backend/internal/connections/gmail"
+	"aiworkforce/backend/internal/connections/slack"
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/gateway"
@@ -79,11 +83,33 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 	if err != nil {
 		return connWiring{}, err
 	}
+	cal, err := calendar.New(calendar.Config{})
+	if err != nil {
+		return connWiring{}, err
+	}
+	drv, err := drive.New(drive.Config{})
+	if err != nil {
+		return connWiring{}, err
+	}
+	gh, err := github.New(github.Config{APIBase: os.Getenv("GITHUB_API_URL")}) // empty = api.github.com
+	if err != nil {
+		return connWiring{}, err
+	}
+	sl, err := slack.New(slack.Config{})
+	if err != nil {
+		return connWiring{}, err
+	}
+	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal, "google_drive": drv, "github": gh, "slack": sl}
 	apps := map[string]connections.OAuthApp{}
 	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
-		apps["google_gmail"] = connections.OAuthApp{ClientID: cfg.GoogleClientID, ClientSecret: cfg.GoogleClientSecret, RedirectURL: cfg.OAuthRedirectURL}
+		// One Google OAuth client serves every Google adapter; each connection
+		// still asks only for the scopes of its own capabilities.
+		google := connections.OAuthApp{ClientID: cfg.GoogleClientID, ClientSecret: cfg.GoogleClientSecret, RedirectURL: cfg.OAuthRedirectURL}
+		for _, id := range []string{"google_gmail", "google_calendar", "google_drive"} {
+			apps[id] = google
+		}
 	} else {
-		log.Info("GOOGLE_OAUTH_CLIENT_ID/SECRET not set: Gmail OAuth is unavailable (bring your own OAuth app); simulated Gmail works")
+		log.Info("GOOGLE_OAUTH_CLIENT_ID/SECRET not set: Google OAuth (Gmail, Calendar, Drive) is unavailable (bring your own OAuth app); simulated connections work")
 	}
 	adminCount := func(ctx context.Context, org string) int {
 		if authStore == nil {
@@ -102,7 +128,7 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 		return n
 	}
 	cs, err := connections.NewService(connections.Config{Store: cstore, Vault: v, Apps: apps, Suspects: sus,
-		Providers: map[string]connections.Provider{"google_gmail": gm}, Audit: audit, Emit: emit, AdminCount: adminCount, UIBase: cfg.UIBaseURL, RedirectURL: cfg.OAuthRedirectURL})
+		Providers: providers, Audit: audit, Emit: emit, AdminCount: adminCount, UIBase: cfg.UIBaseURL, RedirectURL: cfg.OAuthRedirectURL})
 	if err != nil {
 		return connWiring{}, err
 	}

@@ -1,0 +1,41 @@
+{
+  "id": "github",
+  "version": 1,
+  "label_key": "provider.github.name",
+  "phase": "available",
+  "auth": [
+    {
+      "method": "api_key",
+      "secret_regex": "^(github_pat_[A-Za-z0-9_]{20,255}|gh[pousr]_[A-Za-z0-9]{30,255})$"
+    }
+  ],
+  "capabilities": {
+    "repo.read": {
+      "class": "read",
+      "scopes": [],
+      "tools": ["github.list_repos", "github.list_issues", "github.read_issue", "github.list_pulls", "github.read_pull"],
+      "risk": "low",
+      "side_effects": false,
+      "default": true,
+      "label_key": "conn.cap.repo.read",
+      "scope_overreach": "use a fine-grained token limited to the chosen repositories with Metadata, Issues and Pull requests set to read-only; the adapter also enforces the repository allowlist"
+    },
+    "repo.issue_write": {
+      "class": "write",
+      "scopes": [],
+      "tools": ["github.create_issue", "github.comment"],
+      "risk": "medium",
+      "side_effects": true,
+      "reversibility": "compensating",
+      "always_approval": true,
+      "hold_seconds_default": 60,
+      "default": false,
+      "label_key": "conn.cap.repo.issue_write",
+      "scope_overreach": "a token with Issues: read and write; it cannot push code, merge or change settings (no such tools exist either)"
+    }
+  },
+  "never_offered": ["repo.push", "repo.merge", "repo.delete", "repo.settings", "repo.secrets"],
+  "resource_filters": ["repos"],
+  "default_limits": { "per_minute": 30, "per_hour": 600, "per_day": 2000, "write_per_day": 20, "max_items_per_call": 25, "max_bytes_per_day": 10000000 },
+  "untrusted_sources": ["issue.title", "issue.body", "pull.title", "pull.body", "repo.description", "user.login"]
+}

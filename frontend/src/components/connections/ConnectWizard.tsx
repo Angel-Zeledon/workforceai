@@ -47,7 +47,10 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
   const chooseProfile = (p: "read" | "write") => {
     if (!prov) return;
     setProfile(p);
-    setCaps(p === "read" ? prov.capabilities.filter((c) => c.profile === "read").map((c) => c.id) : prov.capabilities.filter((c) => c.id === "mail.draft").map((c) => c.id));
+    // Write profile: Gmail starts with drafts only (sending is opt-in); other providers with their write capabilities.
+    const writes = prov.capabilities.filter((c) => c.profile === "write");
+    const safest = writes.filter((c) => c.id === "mail.draft");
+    setCaps(p === "read" ? prov.capabilities.filter((c) => c.profile === "read").map((c) => c.id) : (safest.length ? safest : writes).map((c) => c.id));
   };
   const toggleCap = (id: string) => setCaps((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
   const hasWrite = !!prov && caps.some((id) => prov.capabilities.find((c) => c.id === id)?.side_effects);
