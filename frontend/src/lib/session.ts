@@ -13,7 +13,7 @@ import { API_URL, MOCK } from "./config";
 
 export type SessionStatus = "loading" | "disabled" | "anonymous" | "authenticated";
 export interface SessionUser { id: string; email: string; name: string }
-export interface OrgRef { org_id: string; role: string }
+export interface OrgRef { org_id: string; role: string; name?: string }
 
 interface SessionPayload {
   access_token: string; refresh_token: string; expires_at: string;
@@ -100,10 +100,20 @@ export function refresh(): Promise<boolean> {
   return refreshing;
 }
 
-/** Decides the mode once at startup: open demo, or login (restoring a stored session when possible). */
-export async function bootstrapAuth(): Promise<SessionStatus> {
+let booting: Promise<SessionStatus> | null = null;
+
+/**
+ * Decides the mode once at startup: open demo, or login (restoring a stored session when possible).
+ * Single-flight: every screen (office, /approvals, auth pages) and authFetch can call it safely.
+ */
+export function bootstrapAuth(): Promise<SessionStatus> {
   const cur = useSession.getState().status;
-  if (cur !== "loading") return cur;
+  if (cur !== "loading") return Promise.resolve(cur);
+  booting ??= decideMode().finally(() => { booting = null; });
+  return booting;
+}
+
+async function decideMode(): Promise<SessionStatus> {
   if (MOCK) { useSession.setState({ status: "disabled" }); return "disabled"; }
   let enabled = false;
   try {
@@ -154,6 +164,8 @@ export async function accessToken(): Promise<string> {
 
 /** fetch with the bearer token; on 401 refreshes once and retries. In demo mode it is a plain fetch. */
 export async function authFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  // A screen may fire requests before its gate decided the mode: wait for it instead of sending no token.
+  if (!MOCK && useSession.getState().status === "loading") await bootstrapAuth();
   if (!authEnabled() || MOCK) return fetch(url, init);
   const withToken = (tok: string): RequestInit => ({ ...init, headers: { ...(init.headers as Record<string, string> | undefined), ...(tok ? { Authorization: `Bearer ${tok}` } : {}) } });
   let res = await fetch(url, withToken(await accessToken()));
@@ -178,3 +190,25 @@ export function can(perm: string): boolean {
 
 /** React hook version of can(). */
 export const useCan = (perm: string) => useSession((s) => s.status !== "authenticated" || s.permissions.includes(perm));
+
+/**
+ * A same-origin path to come back to after login, or "/" when the value is missing or unsafe
+ * (absolute URLs, protocol-relative "//host", backslashes or the auth pages themselves).
+ */
+export function safeReturnPath(raw: string | null | undefined): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\") || /[\u0000-\u001f]/.test(raw)) return "/";
+  const path = raw.split(/[?#]/)[0];
+  if (["/login", "/register", "/invite"].includes(path)) return "/";
+  return raw;
+}
+
+/** The login URL that brings the user back to `returnTo` afterwards. */
+export function loginPath(returnTo: string): string {
+  const next = safeReturnPath(returnTo);
+  return next === "/" ? "/login" : `/login?next=${encodeURIComponent(next)}`;
+}
+
+/** Display name of an organization of the session (falls back to a short id). */
+export function orgLabel(o: OrgRef | undefined, fallbackId = ""): string {
+  return o?.name?.trim() || (o?.org_id ?? fallbackId).slice(0, 8);
+}

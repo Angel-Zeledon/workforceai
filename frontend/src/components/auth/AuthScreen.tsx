@@ -2,7 +2,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n";
-import { acceptInvitation, AuthError, bootstrapAuth, login, register, useSession } from "@/lib/session";
+import { acceptInvitation, AuthError, bootstrapAuth, login, loginPath, register, safeReturnPath, useSession } from "@/lib/session";
 import { Btn } from "../ui";
 import { ErrorLine, inputCls } from "../connections/shared";
 
@@ -32,6 +32,8 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+const withNext = (page: string, next: string) => (next === "/" ? page : `${page}?next=${encodeURIComponent(next)}`);
+
 /** Login, registration and invitation acceptance. With auth disabled it sends the visitor to the open demo. */
 export function AuthScreen({ mode }: { mode: Mode }) {
   const { t } = useT();
@@ -44,14 +46,19 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Where to go after signing in (e.g. /approvals/<id> from a notification); only same-origin paths.
+  // null until read from the URL, so a signed-in visitor is not sent to "/" first.
+  const [next, setNext] = useState<string | null>(null);
 
   useEffect(() => { bootstrapAuth(); }, []);
   useEffect(() => {
-    if (mode === "invite") setToken(new URLSearchParams(window.location.search).get("token") ?? "");
+    const q = new URLSearchParams(window.location.search);
+    if (mode === "invite") setToken(q.get("token") ?? "");
+    setNext(safeReturnPath(q.get("next")));
   }, [mode]);
   useEffect(() => {
-    if (status === "disabled" || status === "authenticated") router.replace("/");
-  }, [status, router]);
+    if (next !== null && (status === "disabled" || status === "authenticated")) router.replace(next);
+  }, [status, router, next]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -60,7 +67,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
       if (mode === "login") await login(email, password);
       else if (mode === "register") await register({ email, password, name, org_name: org });
       else await acceptInvitation({ token, password, ...(name.trim() ? { name } : {}) });
-      router.replace("/");
+      router.replace(next ?? "/");
     } catch (x) {
       setErr(t(errorKey(x)));
       setBusy(false);
@@ -105,21 +112,26 @@ export function AuthScreen({ mode }: { mode: Mode }) {
           {t(`auth.${mode}.submit`)}
         </Btn>
         <div className="flex justify-between pt-1 text-xs">
-          {mode !== "login" && <a className="text-accent hover:underline" href="/login" data-testid="auth-to-login">{t("auth.toLogin")}</a>}
-          {mode !== "register" && <a className="text-accent hover:underline" href="/register" data-testid="auth-to-register">{t("auth.toRegister")}</a>}
+          {mode !== "login" && <a className="text-accent hover:underline" href={withNext("/login", next ?? "/")} data-testid="auth-to-login">{t("auth.toLogin")}</a>}
+          {mode !== "register" && <a className="text-accent hover:underline" href={withNext("/register", next ?? "/")} data-testid="auth-to-register">{t("auth.toRegister")}</a>}
         </div>
       </form>
     </main>
   );
 }
 
-/** Renders the app when the session allows it (open demo or signed in); otherwise sends the visitor to /login. */
+/**
+ * Renders the app when the session allows it (open demo or signed in); otherwise sends the visitor to
+ * /login, keeping the current path (e.g. /approvals/<id>) to come back to after signing in.
+ */
 export function AuthGate({ children }: { children: ReactNode }) {
   const { t } = useT();
   const router = useRouter();
   const status = useSession((s) => s.status);
   useEffect(() => { bootstrapAuth(); }, []);
-  useEffect(() => { if (status === "anonymous") router.replace("/login"); }, [status, router]);
+  useEffect(() => {
+    if (status === "anonymous") router.replace(loginPath(window.location.pathname + window.location.search));
+  }, [status, router]);
   if (status === "disabled" || status === "authenticated") return <>{children}</>;
   return <div data-testid="auth-loading" className="flex min-h-screen items-center justify-center text-sm text-mute">{t("auth.loading")}</div>;
 }

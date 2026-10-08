@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { API_URL, MOCK } from "@/lib/config";
+import { authFetch } from "@/lib/session";
 import type { StoredArtifact } from "@/lib/artifacts";
 import { useT } from "@/lib/i18n";
 
@@ -73,7 +74,7 @@ function PageCanvas({ doc, n, notes, total }: { doc: PdfDoc; n: number; notes: A
 /** Bytes of a stored PDF blob (GET /artifact-blobs/{id}); null in demo mode, where there is no blob storage. */
 async function fetchBlob(blobId: string): Promise<ArrayBuffer | null> {
   if (MOCK) return null;
-  const res = await fetch(`${API_URL}/artifact-blobs/${encodeURIComponent(blobId)}`, { cache: "no-store" });
+  const res = await authFetch(`${API_URL}/artifact-blobs/${encodeURIComponent(blobId)}`, { cache: "no-store" });
   if (!res.ok) throw new Error(String(res.status));
   return res.arrayBuffer();
 }

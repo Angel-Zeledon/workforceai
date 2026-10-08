@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { create } from "zustand";
 import { call } from "./api";
 import { API_URL, MOCK } from "./config";
+import { authFetch } from "./session";
 import type { WsFrame } from "./types";
 
 // ---- types (sec. 5.1) -----------------------------------------------------------------------------
@@ -88,7 +89,7 @@ export const artifactApi = {
   /** Server-side docx/xlsx export (GET /artifacts/{id}/export); resolves with the file to download. Not available in demo mode. */
   exportFile: async (id: string, format: "docx" | "xlsx", version?: number) => {
     if (MOCK) throw new Error("export unavailable in demo mode");
-    const res = await fetch(`${API_URL}/artifacts/${encodeURIComponent(id)}/export?format=${format}${version ? `&version=${version}` : ""}`, { cache: "no-store" });
+    const res = await authFetch(`${API_URL}/artifacts/${encodeURIComponent(id)}/export?format=${format}${version ? `&version=${version}` : ""}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`export -> ${res.status}`);
     const name = /filename="?([^";]+)"?/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? `artifact.${format}`;
     return { blob: await res.blob(), name };
