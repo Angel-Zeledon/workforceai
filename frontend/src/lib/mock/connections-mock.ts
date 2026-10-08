@@ -33,25 +33,33 @@ const PROVIDERS: ProviderDef[] = [
     resource_filters: [{ key: "labels", type: "list", default: "INBOX" }, { key: "max_age_days", type: "number", default: 30 }],
   },
   {
-    id: "google_calendar", auth: ["oauth2_byo_app"], available: true, phase: "C2",
+    id: "google_calendar", auth: ["oauth2_byo_app"], available: true, phase: "C2", split_read_write: true,
     capabilities: [
-      { id: "calendar.read", risk: "low", side_effects: false, default: true },
-      { id: "calendar.create_event", risk: "medium", side_effects: true, reversibility: "compensating", default: false },
+      { id: "calendar.read", risk: "low", side_effects: false, default: true, profile: "read" },
+      { id: "calendar.create_event", risk: "medium", side_effects: true, reversibility: "compensating", default: false, always_approval: true, hold_seconds_default: HOLD_SECONDS, profile: "write" },
     ],
     resource_filters: [{ key: "calendars", type: "list", default: "primary" }],
   },
   {
     id: "google_drive", auth: ["oauth2_byo_app"], available: true, phase: "C2",
-    capabilities: [
-      { id: "drive.read", risk: "low", side_effects: false, default: true },
-      { id: "drive.create_file", risk: "medium", side_effects: true, reversibility: "full", default: false },
-    ],
+    capabilities: [{ id: "drive.read", risk: "low", side_effects: false, default: true, profile: "read" }],
     resource_filters: [{ key: "folders", type: "list" }],
   },
   {
-    id: "github", auth: ["api_key"], available: true, phase: "C4",
-    capabilities: [{ id: "repo.read", risk: "low", side_effects: false, default: true }],
+    id: "github", auth: ["api_key"], available: true, phase: "C4", split_read_write: true,
+    capabilities: [
+      { id: "repo.read", risk: "low", side_effects: false, default: true, profile: "read" },
+      { id: "repo.issue_write", risk: "medium", side_effects: true, reversibility: "compensating", default: false, always_approval: true, hold_seconds_default: HOLD_SECONDS, profile: "write" },
+    ],
     resource_filters: [{ key: "repos", type: "list" }],
+  },
+  {
+    id: "slack", auth: ["api_key"], available: true, phase: "C4", split_read_write: true,
+    capabilities: [
+      { id: "chat.read", risk: "low", side_effects: false, default: true, profile: "read" },
+      { id: "chat.post", risk: "medium", side_effects: true, reversibility: "compensating", default: false, always_approval: true, hold_seconds_default: HOLD_SECONDS, profile: "write" },
+    ],
+    resource_filters: [{ key: "channels", type: "list" }],
   },
   {
     id: "generic_api", auth: ["api_key"], available: true, phase: "C1",
