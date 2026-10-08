@@ -3,6 +3,7 @@
  * WebSocket frames/payloads as docs/SPEC.md, including the scripted $50,000 proposal scenario.
  * The frontend never special-cases it: frames go through the same store.apply() as the real WS.
  */
+import { MockRoles } from "./roles-mock";
 import type {
   ActivityItem, Agent, AgentState, Approval, Conversation, MemoryItem, Message, MessageKind,
   Metrics, PlanTask, Report, Request, StructuredOutput, Task, WsFrame,
@@ -129,6 +130,7 @@ export class MockBackend {
     planPreview: (text) => buildPlan(text).map((s) => ({ key: s.key, agent: s.agent, title: s.title })),
     startRequest: (text) => this.startRequest(text), startDirectTask: (id, text, reason) => this.startDirectTask(id, text, reason), uid,
   }); // chat routing: POST /messages, chat.* and route.decided
+  private roles = new MockRoles(); // role templates + hiring from a template
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
 
   constructor() { this.seed(); }
@@ -453,6 +455,12 @@ export class MockBackend {
     const q = new URLSearchParams(qs || "");
     const seg = path.split("/").filter(Boolean);
     const [r0, r1, r2] = seg;
+    if (this.roles.matches(method, seg)) {
+      if (method === "GET") return this.roles.list(q);
+      const res = this.roles.hire(body, this.agents);
+      this.emit("hello", { agents: this.agents });
+      return res;
+    }
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
     if (this.orgCfg.matches(seg)) return this.orgCfg.handle(method, seg, body, (text) => this.handle("POST", "/requests", { text }));
     if (this.conns.matches(r0, r2)) return this.conns.handle(method, seg, q, body);
@@ -511,6 +519,7 @@ export class MockBackend {
       if (r0 === "demo" && r1 === "reset") {
         this.gen++;
         this.art.reset();
+        this.roles.reset();
         this.conns.reset();
         this.decisions.clear();
         this.seed();

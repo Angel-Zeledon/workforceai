@@ -32,7 +32,18 @@ export function toChatMessage(x: any, conv: string): ChatMessage {
   };
 }
 
+/** GET /role-templates item (the fields the UI uses). Contract: backend/internal/api/roles.go. */
+export interface RoleTemplate {
+  id: string; version: number; category: string; risk_tier: string; seed: boolean;
+  title: string; description: string; responsibilities: string[]; disclaimers: string[]; out_of_scope: string[];
+  display: { color: string; appearance: { skin: string; hair: string; hair_style: string; accessory: string; tie: boolean; female: boolean } };
+  tools: string[]; autonomy: { default: string; ceiling: string }; hired: number;
+}
+
 export const api = {
+  roleTemplates: async (locale: string) => list<RoleTemplate>(await call("GET", `/role-templates?locale=${encodeURIComponent(locale)}`)),
+  hireFromTemplate: (template_id: string, locale: string, name?: string) =>
+    call<{ agent: Agent; template_id: string }>("POST", "/agents/from-template", { template_id, locale, ...(name?.trim() ? { name: name.trim() } : {}) }),
   agents: async () => list<Agent>(await call("GET", "/agents")),
   agentDetail: (id: string) => call<AgentDetail>("GET", `/agents/${id}/detail`),
   tasks: async () => list<Task>(await call("GET", "/tasks")),
