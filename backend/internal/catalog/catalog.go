@@ -20,6 +20,7 @@ import (
 
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/policy"
+	"aiworkforce/backend/internal/roles"
 )
 
 //go:embed data/workflows/*.json data/packs/*.json data/tax/*.json
@@ -283,9 +284,9 @@ func Default() *Catalog {
 // data/packs and data/tax directories.
 func Load(fsys fs.FS) (*Catalog, error) {
 	c := &Catalog{workflows: map[string]rawWorkflow{}, packs: map[string]rawPack{}, tax: map[string]rawTax{}}
-	roles := map[string]bool{}
-	for _, a := range domain.SeedAgents() {
-		roles[a.ID] = true
+	seedIDs := map[string]bool{}
+	for _, a := range roles.SeedAgents() {
+		seedIDs[a.ID] = true
 	}
 	var errs []string
 	load := func(dir string, each func(name string, raw []byte) error) {
@@ -312,7 +313,7 @@ func Load(fsys fs.FS) (*Catalog, error) {
 		if err := strictUnmarshal(raw, &w); err != nil {
 			return err
 		}
-		if err := validateWorkflow(w, roles); err != nil {
+		if err := validateWorkflow(w, seedIDs); err != nil {
 			return err
 		}
 		if _, dup := c.workflows[w.Key]; dup {
@@ -326,7 +327,7 @@ func Load(fsys fs.FS) (*Catalog, error) {
 		if err := strictUnmarshal(raw, &p); err != nil {
 			return err
 		}
-		if err := validatePack(p, roles); err != nil {
+		if err := validatePack(p, seedIDs); err != nil {
 			return err
 		}
 		if _, dup := c.packs[p.Key]; dup {

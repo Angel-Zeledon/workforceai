@@ -16,6 +16,7 @@ import (
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/infrastructure/memory"
+	"aiworkforce/backend/internal/roles"
 )
 
 // cfgEnv is a minimal API environment with OrgConfig mounted.
@@ -24,7 +25,7 @@ func cfgEnv(t *testing.T, withAuth bool) *env {
 	cfg := application.DefaultConfig()
 	cfg.IdleDelay = 0
 	mem := memory.New()
-	if err := mem.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), domain.SeedAgents()); err != nil {
+	if err := mem.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), roles.SeedAgents()); err != nil {
 		t.Fatal(err)
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))

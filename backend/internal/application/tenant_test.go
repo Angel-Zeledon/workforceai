@@ -11,6 +11,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/infrastructure/memory"
+	"aiworkforce/backend/internal/roles"
 )
 
 // orgSpy records which org id reaches the store on every write.
@@ -61,7 +62,7 @@ func TestTenantFromContextReachesBackgroundWork(t *testing.T) {
 	cfg := application.DefaultConfig()
 	cfg.IdleDelay, cfg.RetryBase = 0, time.Millisecond
 	spy := &orgSpy{Store: memory.New(), orgs: map[string]int{}}
-	_ = spy.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), domain.SeedAgents())
+	_ = spy.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), roles.SeedAgents())
 	pub := &capture{}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	rec := &application.Recorder{OrgID: cfg.OrgID, Store: spy, Pub: pub, Log: log}

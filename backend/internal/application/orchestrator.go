@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/roles"
 )
 
 const assistantID = "assistant"
@@ -907,7 +908,7 @@ func (o *Orchestrator) Reset(ctx context.Context) error {
 	if err := o.store.Reset(parent, o.org(ctx)); err != nil {
 		return err
 	}
-	if err := o.store.Seed(parent, domain.SeedOrg(o.cfg.BudgetUSD), domain.SeedAgents()); err != nil {
+	if err := o.store.Seed(parent, domain.SeedOrg(o.cfg.BudgetUSD), roles.SeedAgents()); err != nil {
 		return err
 	}
 	o.base, o.cancel = context.WithCancel(o.root)

@@ -18,6 +18,7 @@ import (
 	"aiworkforce/backend/internal/catalog"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/policy"
+	"aiworkforce/backend/internal/roles"
 )
 
 // ---- helpers ----
@@ -397,7 +398,7 @@ func TestAgentsAndSystemNeverApprove(t *testing.T) {
 }
 
 func TestNoRoleHasTheApproveCapabilityForAgents(t *testing.T) {
-	for _, a := range domain.SeedAgents() {
+	for _, a := range roles.SeedAgents() {
 		for _, p := range a.Permissions {
 			if strings.Contains(p, "approv") {
 				t.Fatalf("agent %s holds %q", a.ID, p)

@@ -17,6 +17,7 @@ import (
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/gateway"
+	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/sanitize"
 	"aiworkforce/backend/internal/vault"
 )
@@ -389,7 +390,7 @@ func TestPerToolKillSwitchBlocksSimulatedTool(t *testing.T) {
 }
 
 func TestSeedAgentsNeverHoldTheApproveCapability(t *testing.T) {
-	for _, a := range domain.SeedAgents() {
+	for _, a := range roles.SeedAgents() {
 		for _, p := range append(append([]string{}, a.Permissions...), a.Tools...) {
 			if strings.Contains(strings.ToLower(p), "approve") || strings.Contains(strings.ToLower(p), "decide") {
 				t.Fatalf("agent %s holds %q: agents never receive the approve capability", a.ID, p)

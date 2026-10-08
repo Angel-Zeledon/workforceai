@@ -16,6 +16,7 @@ import (
 
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/roles"
 )
 
 // Integration tests against a real Postgres. They run only when
@@ -74,7 +75,7 @@ func testStore(t *testing.T) *testEnv {
 
 func seedOrg(t *testing.T, st *Store, id string) {
 	t.Helper()
-	if err := st.Seed(context.Background(), domain.Organization{ID: id, Name: id, Slug: id, BudgetUSD: 10}, domain.SeedAgents()); err != nil {
+	if err := st.Seed(context.Background(), domain.Organization{ID: id, Name: id, Slug: id, BudgetUSD: 10}, roles.SeedAgents()); err != nil {
 		t.Fatalf("seed %s: %v", id, err)
 	}
 }
@@ -204,7 +205,7 @@ func TestStoreIsolatesTwoOrganizations(t *testing.T) {
 			t.Fatalf("%s requests = %v", c.org, rs)
 		}
 		ags, _ := st.ListAgents(ctx, c.org)
-		if len(ags) != len(domain.SeedAgents()) {
+		if len(ags) != len(roles.SeedAgents()) {
 			t.Fatalf("%s agents = %d", c.org, len(ags))
 		}
 		if _, err := st.GetTask(ctx, c.org, c.otherTask); !errors.Is(err, domain.ErrNotFound) {
@@ -306,14 +307,14 @@ func TestAuditLogsAreAppendOnlyForTheApp(t *testing.T) {
 func TestDemoOrgWorksWithRLS(t *testing.T) {
 	st := testStore(t).Store
 	ctx := context.Background()
-	if err := st.Seed(ctx, domain.SeedOrg(25), domain.SeedAgents()); err != nil {
+	if err := st.Seed(ctx, domain.SeedOrg(25), roles.SeedAgents()); err != nil {
 		t.Fatal(err)
 	}
 	ags, err := st.ListAgents(ctx, domain.DemoOrgID)
-	if err != nil || len(ags) != len(domain.SeedAgents()) {
+	if err != nil || len(ags) != len(roles.SeedAgents()) {
 		t.Fatalf("agents = %d, %v", len(ags), err)
 	}
-	if err := st.Seed(ctx, domain.SeedOrg(25), domain.SeedAgents()); err != nil {
+	if err := st.Seed(ctx, domain.SeedOrg(25), roles.SeedAgents()); err != nil {
 		t.Fatalf("seed must be idempotent: %v", err)
 	}
 }
@@ -346,7 +347,7 @@ func TestAuthRegistrationOnRLSPool(t *testing.T) {
 	if err != nil || p.OrgID != a.OrgID || p.Role != auth.RoleOwner {
 		t.Fatalf("principal = %+v, %v", p, err)
 	}
-	if err := st.Seed(ctx, domain.Organization{ID: a.OrgID, Name: "A", Slug: "a-slug", BudgetUSD: 1}, domain.SeedAgents()); err != nil {
+	if err := st.Seed(ctx, domain.Organization{ID: a.OrgID, Name: "A", Slug: "a-slug", BudgetUSD: 1}, roles.SeedAgents()); err != nil {
 		t.Fatal(err)
 	}
 	if ags, _ := st.ListAgents(ctx, b.OrgID); len(ags) != 0 {

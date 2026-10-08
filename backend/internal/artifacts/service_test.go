@@ -15,6 +15,7 @@ import (
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/infrastructure/memory"
 	"aiworkforce/backend/internal/projects"
+	"aiworkforce/backend/internal/roles"
 )
 
 type capture struct {
@@ -76,7 +77,7 @@ type env struct {
 func newEnv(t *testing.T, mutate func(*artifacts.Config)) *env {
 	t.Helper()
 	store := memory.New()
-	if err := store.Seed(context.Background(), domain.SeedOrg(50), domain.SeedAgents()); err != nil {
+	if err := store.Seed(context.Background(), domain.SeedOrg(50), roles.SeedAgents()); err != nil {
 		t.Fatal(err)
 	}
 	pub := &capture{}

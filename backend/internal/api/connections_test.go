@@ -22,6 +22,7 @@ import (
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
 	"aiworkforce/backend/internal/infrastructure/memory"
+	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/sanitize"
 	"aiworkforce/backend/internal/vault"
 )
@@ -45,7 +46,7 @@ func newConnEnv(t *testing.T, withAuth, withKEK bool) *connEnv {
 	cfg := application.DefaultConfig()
 	cfg.IdleDelay = 0
 	mem := memory.New()
-	if err := mem.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), domain.SeedAgents()); err != nil {
+	if err := mem.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), roles.SeedAgents()); err != nil {
 		t.Fatal(err)
 	}
 	logs := &bytes.Buffer{}
