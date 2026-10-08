@@ -2,10 +2,13 @@ package controls
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
+
+	"aiworkforce/backend/internal/counters"
 )
 
 // Anomaly detection v1: four explainable rules over in-memory sliding windows.
@@ -14,8 +17,11 @@ import (
 // blocks anything by itself; the optional auto-freeze (default off) activates
 // the same freeze a human could (lifting it stays an owner decision).
 //
-// Honest limits: counters live in process memory, so a restart forgets the
-// baseline (the spend and new-domain rules warm up again before firing).
+// Persistence: with Service.Counters set, the windows of each organization are
+// loaded on first use and saved after every observation (internal/counters,
+// migration 360), so a restart keeps the baseline. Without it they live in
+// process memory and a restart forgets the baseline (the spend and new-domain
+// rules warm up again before firing).
 
 // Anomaly rule identifiers.
 const (
@@ -54,14 +60,16 @@ func DefaultAnomalyThresholds() AnomalyThresholds {
 		RejectedMax: 5, RejectedWindow: time.Hour, NewDomainsMax: 3, DomainWindow: time.Hour, DomainWarmup: 5, Cooldown: 15 * time.Minute}
 }
 
+// orgDetect is the detection state of one organization; it is also the JSON
+// snapshot persisted under counters.ScopeAnomaly.
 type orgDetect struct {
-	spend      map[int64]float64 // unix hour -> USD
-	firstHour  int64
-	bursts     map[string][]time.Time // agent -> request times
-	rejections []time.Time
-	domains    map[string]bool
-	newDomains map[string]time.Time
-	lastFired  map[string]time.Time
+	Spend      map[int64]float64      `json:"spend"` // unix hour -> USD
+	FirstHour  int64                  `json:"first_hour"`
+	Bursts     map[string][]time.Time `json:"bursts"` // agent -> request times
+	Rejections []time.Time            `json:"rejections"`
+	Domains    map[string]bool        `json:"domains"`
+	NewDomains map[string]time.Time   `json:"new_domains"`
+	LastFired  map[string]time.Time   `json:"last_fired"`
 }
 
 type detector struct {
@@ -70,14 +78,65 @@ type detector struct {
 	by map[string]*orgDetect
 }
 
-func (d *detector) org(org string) *orgDetect {
-	o := d.by[org]
-	if o == nil {
-		o = &orgDetect{spend: map[int64]float64{}, bursts: map[string][]time.Time{}, domains: map[string]bool{},
-			newDomains: map[string]time.Time{}, lastFired: map[string]time.Time{}}
-		d.by[org] = o
+func newOrgDetect() *orgDetect {
+	return &orgDetect{Spend: map[int64]float64{}, Bursts: map[string][]time.Time{}, Domains: map[string]bool{},
+		NewDomains: map[string]time.Time{}, LastFired: map[string]time.Time{}}
+}
+
+// org returns the state of an organization, loading the persisted snapshot on
+// first use. Must be called with d.mu held. It returns nil when the snapshot
+// cannot be read: the observation is skipped (detection is best effort) rather
+// than starting from an empty baseline that would later overwrite the stored one.
+func (d *detector) org(ctx context.Context, cs counters.Store, org string) *orgDetect {
+	if o := d.by[org]; o != nil {
+		return o
 	}
+	o := newOrgDetect()
+	if cs != nil {
+		b, err := cs.LoadCounters(ctx, org, counters.ScopeAnomaly)
+		if err != nil {
+			return nil
+		}
+		if len(b) > 0 {
+			if err := json.Unmarshal(b, o); err != nil {
+				o = newOrgDetect() // a corrupt snapshot is replaced, not fatal
+			}
+			o.fill()
+		}
+	}
+	d.by[org] = o
 	return o
+}
+
+// fill replaces nil maps of a decoded snapshot.
+func (o *orgDetect) fill() {
+	if o.Spend == nil {
+		o.Spend = map[int64]float64{}
+	}
+	if o.Bursts == nil {
+		o.Bursts = map[string][]time.Time{}
+	}
+	if o.Domains == nil {
+		o.Domains = map[string]bool{}
+	}
+	if o.NewDomains == nil {
+		o.NewDomains = map[string]time.Time{}
+	}
+	if o.LastFired == nil {
+		o.LastFired = map[string]time.Time{}
+	}
+}
+
+// save persists the state of an organization; must be called with d.mu held
+// (snapshots of one process are written in order). A failure only means a
+// restart would forget the latest observations.
+func (d *detector) save(ctx context.Context, cs counters.Store, org string, o *orgDetect) {
+	if cs == nil {
+		return
+	}
+	if b, err := json.Marshal(o); err == nil {
+		_ = cs.SaveCounters(context.WithoutCancel(ctx), org, counters.ScopeAnomaly, b)
+	}
 }
 
 // SetAnomalyThresholds replaces the thresholds (tests, future configuration).
@@ -105,10 +164,10 @@ type hit struct {
 
 // fire applies the cooldown; must be called with d.mu held. It returns nil when cooling down.
 func (d *detector) fire(o *orgDetect, now time.Time, h hit) *hit {
-	if last, ok := o.lastFired[h.rule]; ok && now.Sub(last) < d.th.Cooldown {
+	if last, ok := o.LastFired[h.rule]; ok && now.Sub(last) < d.th.Cooldown {
 		return nil
 	}
-	o.lastFired[h.rule] = now
+	o.LastFired[h.rule] = now
 	return &h
 }
 
@@ -132,35 +191,40 @@ func (s *Service) ObserveSpend(ctx context.Context, org string, usd float64) {
 	d, now := s.detector(), s.now()
 	hour := now.Unix() / 3600
 	d.mu.Lock()
-	o := d.org(org)
-	if o.firstHour == 0 {
-		o.firstHour = hour
+	o := d.org(ctx, s.Counters, org)
+	if o == nil {
+		d.mu.Unlock()
+		return
 	}
-	o.spend[hour] += usd
+	if o.FirstHour == 0 {
+		o.FirstHour = hour
+	}
+	o.Spend[hour] += usd
 	var sum float64
-	for h, v := range o.spend {
+	for h, v := range o.Spend {
 		switch {
 		case h < hour-24:
-			delete(o.spend, h)
+			delete(o.Spend, h)
 		case h < hour:
 			sum += v
 		}
 	}
 	var res *hit
-	observed := hour - o.firstHour
+	observed := hour - o.FirstHour
 	if observed >= int64(d.th.SpendWarmup) {
 		n := observed
 		if n > 24 {
 			n = 24
 		}
 		avg := sum / float64(n)
-		cur := o.spend[hour]
+		cur := o.Spend[hour]
 		if cur >= d.th.SpendFloorUSD && cur >= d.th.SpendFactor*avg {
 			res = d.fire(o, now, hit{RuleSpendSpike,
 				fmt.Sprintf("spend this hour (%.2f USD) is at least %.0fx the trailing hourly average (%.2f USD)", cur, d.th.SpendFactor, avg),
 				map[string]any{"current_hour_usd": cur, "trailing_hourly_avg_usd": avg, "factor": d.th.SpendFactor, "floor_usd": d.th.SpendFloorUSD}})
 		}
 	}
+	d.save(ctx, s.Counters, org, o)
 	d.mu.Unlock()
 	s.raise(ctx, org, set, res)
 }
@@ -173,22 +237,27 @@ func (s *Service) ObserveToolRequest(ctx context.Context, org, agentID string) {
 	}
 	d, now := s.detector(), s.now()
 	d.mu.Lock()
-	o := d.org(org)
+	o := d.org(ctx, s.Counters, org)
+	if o == nil {
+		d.mu.Unlock()
+		return
+	}
 	cut := now.Add(-d.th.BurstWindow)
-	keep := o.bursts[agentID][:0]
-	for _, t := range o.bursts[agentID] {
+	keep := o.Bursts[agentID][:0]
+	for _, t := range o.Bursts[agentID] {
 		if t.After(cut) {
 			keep = append(keep, t)
 		}
 	}
 	keep = append(keep, now)
-	o.bursts[agentID] = keep
+	o.Bursts[agentID] = keep
 	var res *hit
 	if len(keep) >= d.th.BurstCalls {
 		res = d.fire(o, now, hit{RuleToolBurst,
 			fmt.Sprintf("agent %s made %d tool requests within %s (threshold %d)", agentID, len(keep), d.th.BurstWindow, d.th.BurstCalls),
 			map[string]any{"agent_id": agentID, "requests": len(keep), "window_seconds": int(d.th.BurstWindow.Seconds()), "threshold": d.th.BurstCalls}})
 	}
+	d.save(ctx, s.Counters, org, o)
 	d.mu.Unlock()
 	s.raise(ctx, org, set, res)
 }
@@ -201,21 +270,26 @@ func (s *Service) ObserveApprovalRejected(ctx context.Context, org, agentID stri
 	}
 	d, now := s.detector(), s.now()
 	d.mu.Lock()
-	o := d.org(org)
+	o := d.org(ctx, s.Counters, org)
+	if o == nil {
+		d.mu.Unlock()
+		return
+	}
 	cut := now.Add(-d.th.RejectedWindow)
-	keep := o.rejections[:0]
-	for _, t := range o.rejections {
+	keep := o.Rejections[:0]
+	for _, t := range o.Rejections {
 		if t.After(cut) {
 			keep = append(keep, t)
 		}
 	}
-	o.rejections = append(keep, now)
+	o.Rejections = append(keep, now)
 	var res *hit
-	if len(o.rejections) >= d.th.RejectedMax {
+	if len(o.Rejections) >= d.th.RejectedMax {
 		res = d.fire(o, now, hit{RuleRejectedBurst,
-			fmt.Sprintf("%d approvals were rejected within %s (threshold %d): the agents keep proposing things people refuse", len(o.rejections), d.th.RejectedWindow, d.th.RejectedMax),
-			map[string]any{"rejected": len(o.rejections), "window_seconds": int(d.th.RejectedWindow.Seconds()), "threshold": d.th.RejectedMax, "last_agent_id": agentID}})
+			fmt.Sprintf("%d approvals were rejected within %s (threshold %d): the agents keep proposing things people refuse", len(o.Rejections), d.th.RejectedWindow, d.th.RejectedMax),
+			map[string]any{"rejected": len(o.Rejections), "window_seconds": int(d.th.RejectedWindow.Seconds()), "threshold": d.th.RejectedMax, "last_agent_id": agentID}})
 	}
+	d.save(ctx, s.Counters, org, o)
 	d.mu.Unlock()
 	s.raise(ctx, org, set, res)
 }
@@ -228,28 +302,32 @@ func (s *Service) ObserveRecipients(ctx context.Context, org string, addrs []str
 	}
 	d, now := s.detector(), s.now()
 	d.mu.Lock()
-	o := d.org(org)
+	o := d.org(ctx, s.Counters, org)
+	if o == nil {
+		d.mu.Unlock()
+		return
+	}
 	for _, a := range addrs {
 		i := strings.LastIndex(a, "@")
 		if i < 0 || i == len(a)-1 {
 			continue
 		}
 		dom := strings.ToLower(strings.TrimSpace(a[i+1:]))
-		if o.domains[dom] {
+		if o.Domains[dom] {
 			continue
 		}
-		if len(o.domains) >= d.th.DomainWarmup {
-			o.newDomains[dom] = now
+		if len(o.Domains) >= d.th.DomainWarmup {
+			o.NewDomains[dom] = now
 		}
-		o.domains[dom] = true
+		o.Domains[dom] = true
 	}
 	cut := now.Add(-d.th.DomainWindow)
 	var recent []string
-	for dom, t := range o.newDomains {
+	for dom, t := range o.NewDomains {
 		if t.After(cut) {
 			recent = append(recent, dom)
 		} else {
-			delete(o.newDomains, dom)
+			delete(o.NewDomains, dom)
 		}
 	}
 	var res *hit
@@ -258,6 +336,7 @@ func (s *Service) ObserveRecipients(ctx context.Context, org string, addrs []str
 			fmt.Sprintf("%d recipient domains never contacted before within %s (threshold %d)", len(recent), d.th.DomainWindow, d.th.NewDomainsMax),
 			map[string]any{"domains": recent, "window_seconds": int(d.th.DomainWindow.Seconds()), "threshold": d.th.NewDomainsMax}})
 	}
+	d.save(ctx, s.Counters, org, o)
 	d.mu.Unlock()
 	s.raise(ctx, org, set, res)
 }

@@ -133,6 +133,7 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 		return connWiring{}, err
 	}
 	ctl := controls.New(kstore, controls.AuditFunc(audit), controls.EmitFunc(emit))
+	ctl.Counters = counterStore(pg) // anomaly windows survive restarts (Postgres)
 	gw := gateway.New(cs, ctl, sus, log)
 	gw.Audit, gw.Emit, gw.HoldSeconds, gw.OrgIDs = audit, emit, cfg.EmailHoldSeconds, orgIDs
 	if pg != nil {

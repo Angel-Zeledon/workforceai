@@ -518,7 +518,7 @@ func (s *OrgConfig) RunDue(ctx context.Context, orgs []string) int {
 }
 
 func (s *OrgConfig) runSchedule(ctx context.Context, sc Schedule) (string, error) {
-	return s.InstantiateTemplate(WithActor(ctx, "scheduler"), sc.TemplateKey, sc.Params, "")
+	return s.InstantiateTemplate(WithWorkPriority(WithActor(ctx, "scheduler"), PrioritySchedule), sc.TemplateKey, sc.Params, "")
 }
 
 // StartScheduler polls for due schedules until ctx is cancelled. lister may be

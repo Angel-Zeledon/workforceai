@@ -292,7 +292,12 @@ const (
 	EvAgentCreated     = "agent.created"
 	EvRequestCompleted = "request.completed"
 	// EvRequestResumed: a request interrupted by a restart continues (additive, A1).
-	EvRequestResumed   = "request.resumed"
+	EvRequestResumed = "request.resumed"
+	// EvRequestQueued / EvRequestDequeued: a runtime call of the request waits
+	// for a free slot of its organization (MAX_PARALLEL_PER_ORG) and gets it
+	// (additive, A1 step 6).
+	EvRequestQueued    = "request.queued"
+	EvRequestDequeued  = "request.dequeued"
 	EvPlanCreated      = "plan.created"
 	EvAgentState       = "agent.state_changed"
 	EvTaskCreated      = "task.created"

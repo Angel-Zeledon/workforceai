@@ -244,13 +244,13 @@ Viven en `org_settings.rules` (JSONB, sin migración de esa tabla), junto a las 
 
 ### 8.6 Límites por ventana, destinatario nuevo, categorías
 
-- Límites: ventana deslizante por agente (o `per_org`), por llamadas y/o monto acumulado; `on_exceed: deny` (def.) o `require_approval`. Los contadores están **en memoria del proceso**: se pierden al reiniciar y no se comparten entre réplicas (ver 8.7).
+- Límites: ventana deslizante por agente (o `per_org`), por llamadas y/o monto acumulado; `on_exceed: deny` (def.) o `require_approval`. Los contadores se **persisten** por organización en `window_counters` (migración 360; ver 07 sección 5.6), así que sobreviven a un reinicio; sin Postgres quedan en memoria del proceso y no se comparten con exactitud entre réplicas (ver 8.7).
 - Destinatario nuevo: "conocido" = dominio en `known_domains` o dirección en `known_contacts`, **datos que fija un owner**; nunca se aprende de correo entrante (un correo hostil no puede "ascender" a un atacante a contacto). Sin destinatario reconocible en una acción de salida (`send_*`, `share_*`...) cuenta como nuevo.
 - Categorías (`legal`, `financial`, o declaradas en `category`/`type` de los args) por palabras clave del motor.
 
 ### 8.7 Pendiente / no verificado (explícito)
 
-- Los contadores de ventana no sobreviven a un reinicio ni se comparten entre instancias: con varias réplicas el límite efectivo es N veces el configurado. Falta persistirlos (por ejemplo, derivarlos de `audit_logs`) o llevarlos a Redis.
+- Los contadores de ventana ya sobreviven a un reinicio (instantánea por organización en `window_counters`, migración 360), pero no se comparten con exactitud entre instancias: con varias réplicas escribiendo a la vez gana la última instantánea y el límite efectivo puede superar el configurado. Falta un conteo atómico compartido (filas por evento o Redis).
 - El job diario que verifica la cadena **y publica el último hash** fuera de la base (WORM) no existe: hoy es `GET /audit/verify`, `server ctl audit-verify` y el ancla manual (`08-api.md` 14.4). Sin ancla externa, quien controle toda la base puede reescribir la cadena completa.
 - `Authority`/RBAC por recurso, `agent_tools`, reglas CEL y "simular regla" (secciones 1-3.1) **no** están: el motor usa los `grants` sintéticos "todos permitidos, las reglas solo restringen"; qué agente usa qué herramienta lo siguen decidiendo los grants del Tool Gateway. `GET /approvals` no devuelve aún la cadena de delegación.
 - Un envío por conexión que el propio Gateway deja pasar sin aprobación (borradores) no escala a aprobación por una regla del motor; el motor sí puede denegarlo.

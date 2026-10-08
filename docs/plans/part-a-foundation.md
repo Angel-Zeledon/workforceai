@@ -45,8 +45,13 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 - Corrección de paso: la bandeja de salida se liga a su aprobación antes de que la aprobación sea visible (aprobar desde la bandeja al instante podía dejar la tarea esperando; el test `TestApprovingFromTheOutboxContinuesTheWaitingTaskWithEditedContent` fallaba ~1 de cada 10 con `-race`).
 - Tests: reinicios simulados en memoria (revisión de plan reanudada y con plazo vencido, confirmación de costo reanudada y cancelada, aprobación de Gmail reanudada, aprobada desde la bandeja restaurada, rechazada durante la caída, ejecutada antes del reinicio sin repetirse, registro de ejecuciones simuladas, eco en el chat, proyecto reanudado en su puerta y puerta rechazada tras el reinicio) y Postgres real (columnas nuevas, reclamos concurrentes, RLS, reset, down y up).
 
+### Hecho: paso 6 (rama `feat/a1c-queue`)
+- Cola por organización con prioridades (`application/orgqueue.go`): `MAX_PARALLEL_PER_ORG` (por defecto 8) llamadas al runtime en vuelo por organización; interactivo > proyecto > programado; eventos aditivos `request.queued` / `request.dequeued`, auditoría y una línea de actividad por solicitud encolada. Lo que ocupa turno es la llamada al runtime, no la espera humana: kill-switch, pausa, horario, topes y aprobaciones se comprueban antes, así que nada se los salta y una tarea en pausa no bloquea a la organización. Cambio en `orchestrator.go` acotado a `submit` (propaga la prioridad) y `call` (pide turno).
+- Contadores de ventana persistidos (`internal/counters`, migración `360_window_counters.sql` con down y RLS): uso de los límites de ventana del motor de políticas (scope `policy.limits`) y ventanas de la detección de anomalías (scope `anomaly`). Postgres o memoria sin `DATABASE_URL`. Detalle en `07-seguridad-costos.md` 5.6.
+- Tests: orden por prioridad, tope bajo estrés con cancelaciones, sin fuga de turnos, tope entre solicitudes con eventos visibles, tarea en pausa sin turno, límite de ventana y anomalías que sobreviven a un reinicio simulado, Postgres real (ida y vuelta, RLS, down/up).
+- Limitaciones: semáforo por proceso (no global entre réplicas); prioridad estricta sin envejecimiento; el chat conversacional no pasa por la cola; instantáneas "último escritor gana" entre réplicas. No verificado: e2e con carga real en el stack completo.
+
 ### Pendiente
-- Paso 6 (cola con prioridades y límites por organización, contadores de ventana persistidos).
 - Varias instancias recuperando a la vez (documentado en `07-seguridad-costos.md` 5.4): hoy una sola instancia debe recuperar; el registro de ejecuciones sí es compartido.
 - Ediciones de la revisión del plan hechas antes del reinicio (se pierden: la revisión empieza limpia); esperas de nodos `wait` de proyecto (vuelven a empezar); planificación interrumpida a mitad (la solicitud falla).
 - No verificado: e2e con `docker compose restart backend` a mitad del escenario de $50,000, ni la reanudación con una cuenta real de Gmail (sólo buzón simulado).
@@ -57,7 +62,7 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 - Lo que la tarea iba a hacer tras la aprobación (lista de `ToolRequest` restantes, argumentos) sólo vive en la pila de `handleTools`.
 - No hay barrido al arrancar (`cmd/server/main.go`); los proyectos se marcan `failed` de forma perezosa al leerlos (`projects/service.go` `get`).
 - Reservas de presupuesto y pausas por tope en mapas del proceso (`application/budget.go`); gasto y topes sí persistidos (`210_cost_ledger.sql`).
-- Sin cola ni prioridades; paralelismo sólo dentro de una solicitud (`Scheduler.MaxParallel`). Límites por ventana sólo en auth (`auth/ratelimit.go`). Idempotencia sólo en `POST /messages` y en memoria.
+- Sin cola ni prioridades; paralelismo sólo dentro de una solicitud (`Scheduler.MaxParallel`) (resuelto en el paso 6). Límites por ventana sólo en auth (`auth/ratelimit.go`). Idempotencia sólo en `POST /messages` y en memoria.
 - Sobrevive hoy: envíos diferidos de Gmail (`connection_holds`) y agendas.
 
 ### Alcance
@@ -191,7 +196,8 @@ Plan original:
 
 **Hecho (A7a):** exportar docx/xlsx (`GET /artifacts/{id}/export`, auditado, sin inyección de fórmulas), visor PDF real con `pdfjs-dist` local, comentarios y propuestas (migración 340; los agentes proponen, sólo humanos aceptan), edición de tablero y agenda con arrastrar y teclado.
 **Hecho (A7b):** horario de operación por organización (fuera de horario el trabajo nuevo se pausa visiblemente; por defecto siempre abierto), detección de anomalías v1 con reglas explicables y congelado automático opcional (apagado por defecto), notas honestas de qué se puede deshacer, guías de tono regional ampliadas. Los límites por conexión ya existían y persisten en `connection_usage`.
-**Pendiente:** subida/descarga de blobs PDF (el visor muestra marcadores hasta entonces), propuestas granulares, contadores de anomalías persistentes, mapa grande de proyectos con LOD.
+**Hecho (A7, rama `feat/a1c-queue`):** contadores de anomalías persistentes (scope `anomaly` en `window_counters`, migración 360; ver `07-seguridad-costos.md` 5.6 y 9.2).
+**Pendiente:** subida/descarga de blobs PDF (el visor muestra marcadores hasta entonces), propuestas granulares, mapa grande de proyectos con LOD.
 **No verificado:** docx/xlsx abiertos en Word/Excel; Postgres de la migración 340 contra una base real; arrastrar y soltar en navegador.
 
 Plan original:

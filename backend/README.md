@@ -28,6 +28,7 @@ internal/api                  REST (chi) + WS /ws
 | `BUDGET_USD` | `50` | Presupuesto por org |
 | `APPROVAL_ACTIONS` | `send_proposal,send_contract` | Acciones que siempre piden aprobación |
 | `MAX_PARALLEL` / `TASK_TIMEOUT` / `TASK_RETRIES` / `APPROVAL_TIMEOUT` | `4` / `120s` / `3` / `30m` | Opcionales |
+| `MAX_PARALLEL_PER_ORG` | `8` | Opcional. Llamadas al runtime en vuelo por organización; el resto espera en cola con prioridad (interactivo > proyecto > programado) y se emite `request.queued` |
 | `COST_CONFIRM_THRESHOLD_USD` / `REQUEST_BUDGET_CAP_USD` / `AGENT_BUDGET_USD` / `BUDGET_PAUSE_TIMEOUT` | `1.0` / `0` / `0` / `30m` | Control de costos: umbral de confirmacion de la estimacion, tope duro por solicitud y por agente (mensual), espera de una pausa por tope. `0` desactiva. Ver `docs/architecture/08-api.md` sec. 12 |
 | `CONNECTIONS_KEK` / `CONNECTIONS_KEK_PREVIOUS` | vacío | Clave que envuelve las claves de datos de la bóveda (base64 de 32 bytes, `openssl rand -base64 32`). **Sin ella no se guarda ninguna credencial real** (falla cerrado); las conexiones `simulated` siguen funcionando. `..._PREVIOUS` permite rotar la KEK. Respaldarla aparte de la BD |
 | `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` / `OAUTH_REDIRECT_URL` / `UI_BASE_URL` | vacío / vacío / `http://localhost:8080/api/v1/connections/oauth/callback` / `/` | "Trae tu app OAuth" (autoalojado) para Gmail. También se puede dar por conexión (`oauth_client_id` + `oauth_client_secret`). Ver `docs/architecture/integrations-credentials.md` sec. 18 |
