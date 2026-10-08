@@ -347,6 +347,12 @@ func (g *Gateway) Execute(ctx context.Context, c application.GatewayCall) applic
 		return application.GatewayOutcome{Decision: "denied", DenyReason: connections.CodeInvalidArgs}
 	}
 	approved := c.ApprovedArgsHash != ""
+	if !approved { // the approved re-execution is the same request: count it once
+		g.Controls.ObserveToolRequest(ctx, c.Org, c.AgentID)
+		if t.spec.SideEffects {
+			g.Controls.ObserveRecipients(ctx, c.Org, recipientsOf(c.Args))
+		}
+	}
 	if approved {
 		// Idempotent: the outbox and the waiting task may both execute the same
 		// approval; the first one wins and the second gets the same outcome.

@@ -114,6 +114,9 @@ func run(log *slog.Logger) error {
 		return err
 	}
 
+	approvals.Observer = cw.ctl
+	orch.SetAnomalyObserver(cw.ctl)
+
 	// Approval rules and the policy engine (organization rules as data, applied
 	// to every tool request) and the tamper-evident audit trail.
 	if cs, ok := store.(application.ConfigStore); ok {

@@ -24,6 +24,10 @@ func (s *server) mountControls(r chi.Router) {
 	r.With(s.can(auth.PermControlsRelease)).Post("/org/controls/release", s.releaseKillSwitch)
 	r.With(s.can(auth.PermControlsKillSwitch)).Put("/org/controls/tools/{tool}", s.putToolControl)
 	r.With(s.can(auth.PermControlsPause)).Post("/agents/{id}/control", s.agentControl)
+	r.With(s.can(auth.PermConnectionsRead)).Get("/org/operating-hours", s.getOperatingHours)
+	r.With(s.can(auth.PermOrgManage)).Put("/org/operating-hours", s.putOperatingHours)
+	r.With(s.can(auth.PermConnectionsRead)).Get("/org/anomaly-settings", s.getAnomalySettings)
+	r.With(s.can(auth.PermOrgManage)).Put("/org/anomaly-settings", s.putAnomalySettings)
 }
 
 type controlsView struct {

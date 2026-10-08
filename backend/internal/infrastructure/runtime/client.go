@@ -25,8 +25,8 @@ func New(baseURL string) *Client {
 }
 
 var (
-	_ application.Runtime   = (*Client)(nil)
-	_ application.Estimator = (*Client)(nil)
+	_ application.Runtime     = (*Client)(nil)
+	_ application.Estimator   = (*Client)(nil)
 	_ application.ChatRuntime = (*Client)(nil)
 )
 

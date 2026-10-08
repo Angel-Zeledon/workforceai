@@ -65,6 +65,11 @@ var (
 // Settings are the organization-level governance settings.
 type Settings struct {
 	PlanReview string `json:"plan_review"`
+	// OperatingHours is the weekly schedule for starting new agent work (nil =
+	// always open). Stored in the settings JSON: no extra column needed.
+	OperatingHours *OperatingHours `json:"operating_hours,omitempty"`
+	// Anomaly configures anomaly detection (default: detect and alert only).
+	Anomaly AnomalySettings `json:"anomaly"`
 }
 
 // OrgState is the persisted state of an organization's controls.
@@ -133,6 +138,8 @@ type Service struct {
 
 	envLevel atomic.Value // string: KILL_SWITCH from the environment (process-wide)
 	mu       sync.Mutex
+	detMu    sync.Mutex
+	det      *detector
 }
 
 // New builds a Service and loads KILL_SWITCH from the environment.
@@ -316,6 +323,13 @@ func (s *Service) Admit(ctx context.Context, org, agentID string) Verdict {
 		} else if ac.Control == AgentPaused {
 			return Verdict{Code: CodeAgentPaused}
 		}
+	}
+	st, err := s.State(ctx, org)
+	if err != nil {
+		return Verdict{Code: CodeUnavailable}
+	}
+	if st.Settings.OperatingHours != nil && !st.Settings.OperatingHours.IsOpen(s.now()) {
+		return Verdict{Code: CodeOutsideHours}
 	}
 	return Verdict{Allowed: true}
 }
