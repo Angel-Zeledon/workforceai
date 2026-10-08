@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"mime"
 	"net/http"
 	"strconv"
@@ -70,6 +71,74 @@ func (s *server) mountArtifacts(r chi.Router) {
 	r.With(s.can(auth.PermArtifactsApprove)).Post("/artifacts/{id}/proposals/{pid}/decision", s.decideArtifactProposal)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/artifacts/{id}/ask", s.askAboutArtifact)
 	r.With(read).Get("/projects/{id}/workspace", s.projectWorkspace)
+	r.With(write).Post("/artifacts/{id}/pdf", s.uploadArtifactPDF)
+	r.With(read).Get("/artifact-blobs/{id}", s.downloadArtifactBlob)
+}
+
+// uploadArtifactPDF: POST /artifacts/{id}/pdf?filename=&base_version= with the
+// raw PDF as body (Content-Type: application/pdf, at most 25 MB). 201
+// {blob, version, pages}; 413 too_large; 415 unsupported_media_type; 400
+// not_a_pdf; 423 read_only_mode.
+func (s *server) uploadArtifactPDF(w http.ResponseWriter, r *http.Request) {
+	body := http.MaxBytesReader(w, r.Body, artifacts.MaxPDFBytes+1)
+	data, err := io.ReadAll(body)
+	if err != nil {
+		var mbe *http.MaxBytesError
+		if errors.As(err, &mbe) {
+			codeErr(w, http.StatusRequestEntityTooLarge, "too_large", "the PDF exceeds the upload limit")
+			return
+		}
+		s.fail(w, errors.Join(domain.ErrInvalid, err))
+		return
+	}
+	base, _ := strconv.Atoi(r.URL.Query().Get("base_version"))
+	res, err := s.Artifacts.UploadPDF(r.Context(), s.artifactActor(r), chi.URLParam(r, "id"), artifacts.UploadInput{
+		Filename: r.URL.Query().Get("filename"), ContentType: r.Header.Get("Content-Type"), Data: data, BaseVersion: base})
+	switch {
+	case errors.Is(err, artifacts.ErrReadOnly):
+		codeErr(w, http.StatusLocked, "read_only_mode", "the organization is in read-only mode")
+	case errors.Is(err, artifacts.ErrTooLarge):
+		codeErr(w, http.StatusRequestEntityTooLarge, "too_large", err.Error())
+	case errors.Is(err, artifacts.ErrUnsupportedMedia):
+		codeErr(w, http.StatusUnsupportedMediaType, "unsupported_media_type", err.Error())
+	case errors.Is(err, artifacts.ErrNotPDF):
+		codeErr(w, http.StatusBadRequest, "not_a_pdf", err.Error())
+	case err != nil:
+		var c *artifacts.Conflict
+		if errors.As(err, &c) {
+			writeJSON(w, http.StatusConflict, map[string]any{"code": "conflict", "error": c.Error(), "head_version": c.HeadVersion, "conflicts": list(c.Conflicts)})
+			return
+		}
+		s.fail(w, err)
+	default:
+		writeJSON(w, http.StatusCreated, res)
+	}
+}
+
+// downloadArtifactBlob: GET /artifact-blobs/{id}[?download=1]. Served inline
+// for the viewer (attachment with ?download=1, which is audited), never sniffed,
+// never cached by shared caches and sandboxed if opened directly.
+func (s *server) downloadArtifactBlob(w http.ResponseWriter, r *http.Request) {
+	dl := r.URL.Query().Get("download") == "1"
+	b, err := s.Artifacts.PDFBlob(r.Context(), s.artifactActor(r), chi.URLParam(r, "id"), dl)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	disp := "inline"
+	if dl {
+		disp = "attachment"
+	}
+	h := w.Header()
+	h.Set("Content-Type", b.MIME)
+	h.Set("Content-Disposition", mime.FormatMediaType(disp, map[string]string{"filename": b.Filename}))
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("Cache-Control", "private, no-store")
+	h.Set("Content-Security-Policy", "default-src 'none'; sandbox")
+	h.Set("Content-Length", strconv.Itoa(len(b.Data)))
+	h.Set("ETag", `"`+b.SHA256+`"`)
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(b.Data)
 }
 
 func (s *server) artifactKinds(w http.ResponseWriter, r *http.Request) {

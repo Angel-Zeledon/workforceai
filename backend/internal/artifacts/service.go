@@ -30,13 +30,17 @@ type Asker interface {
 
 // Config wires the service.
 type Config struct {
-	Store    Store
-	Rec      *application.Recorder
-	Collab   CollabStore       // comments and proposals (memory when nil)
-	Core     application.Store // agents of the organization (attachments, deliverables)
-	Asker    Asker
-	Projects ProjectLookup
-	OrgID    string
+	Store  Store
+	Rec    *application.Recorder
+	Collab CollabStore // comments and proposals (memory when nil)
+	Blobs  BlobStore   // uploaded PDF files (memory when nil)
+	// WriteGate refuses file uploads while the organization is in read-only
+	// mode (returns ErrReadOnly); nil = always open (tests, no controls).
+	WriteGate func(ctx context.Context, org string) error
+	Core      application.Store // agents of the organization (attachments, deliverables)
+	Asker     Asker
+	Projects  ProjectLookup
+	OrgID     string
 	// AutoRecalc recomputes dependent sheets when a source artifact changes (default on).
 	DisableAutoRecalc bool
 	Now               func() time.Time
@@ -58,6 +62,9 @@ func New(cfg Config) *Service {
 	}
 	if cfg.Collab == nil {
 		cfg.Collab = NewMemCollab()
+	}
+	if cfg.Blobs == nil {
+		cfg.Blobs = NewMemBlobs()
 	}
 	return &Service{cfg: cfg, locks: map[string]*sync.Mutex{}, deliv: map[string]string{}}
 }

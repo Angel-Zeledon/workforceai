@@ -82,6 +82,8 @@ func parseContent(kind Kind, raw json.RawMessage) (json.RawMessage, map[string]a
 		err = checkTable(root)
 	case KindBoard:
 		err = checkBoard(root)
+	case KindPDF:
+		err = checkPDF(root)
 	}
 	if err != nil {
 		return nil, nil, err
