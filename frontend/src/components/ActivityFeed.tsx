@@ -7,7 +7,7 @@ import { Icon, type IconName } from "./icons";
 
 const KIND_ICON: Record<string, IconName> = {
   "task.completed": "check", "task.failed": "x", "task.started": "play", "approval.requested": "alert", "approval.resolved": "check",
-  "message.sent": "mail", "plan.created": "list", "request.received": "arrow", "request.completed": "flag", error: "x",
+  "message.sent": "mail", "plan.created": "list", "request.received": "arrow", "request.completed": "flag", "request.queued": "clock", error: "x",
 };
 
 export function ActivityFeed({ limit = 8, compact = false, agentId }: { limit?: number; compact?: boolean; agentId?: string }) {

@@ -16,6 +16,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/config"
+	"aiworkforce/backend/internal/counters"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/infrastructure/memory"
@@ -140,7 +141,7 @@ func run(log *slog.Logger) error {
 	// Approval rules and the policy engine (organization rules as data, applied
 	// to every tool request) and the tamper-evident audit trail.
 	if cs, ok := store.(application.ConfigStore); ok {
-		orch.SetPolicy(&application.PolicyService{Store: cs, Cfg: cfg.App})
+		orch.SetPolicy(&application.PolicyService{Store: cs, Cfg: cfg.App, Counters: counterStore(pg), Log: log})
 	}
 	var auditSvc *application.AuditService
 	if as, ok := store.(application.AuditStore); ok {
@@ -215,6 +216,15 @@ func run(log *slog.Logger) error {
 		orch.Wait()
 	}
 	return nil
+}
+
+// counterStore is where windowed counters (policy limits, anomaly detection)
+// persist: Postgres when configured, otherwise process memory (lost on restart).
+func counterStore(pg *postgres.Store) counters.Store {
+	if pg != nil {
+		return pg
+	}
+	return counters.NewMemStore()
 }
 
 // connectPostgres retries so that the backend survives starting before the DB.
