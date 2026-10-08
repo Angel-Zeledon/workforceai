@@ -267,7 +267,12 @@ func TestSwitchOrg(t *testing.T) {
 	if err != nil || s.OrgID != b.OrgID || s.Role != RoleViewer {
 		t.Fatalf("switch: %+v %v", s, err)
 	}
-	if orgs, _ := e.svc.Orgs(bg, a.User.ID); len(orgs) != 2 {
+	orgs, _ := e.svc.Orgs(bg, a.User.ID)
+	names := map[string]OrgRef{}
+	for _, o := range orgs {
+		names[o.OrgID] = o
+	}
+	if len(orgs) != 2 || names[a.OrgID].Name != "alpha Inc" || names[b.OrgID].Name != "beta Inc" || names[b.OrgID].Role != RoleViewer {
 		t.Fatalf("orgs: %+v", orgs)
 	}
 }

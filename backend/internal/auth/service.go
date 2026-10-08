@@ -481,9 +481,11 @@ func (s *Service) RemoveMember(ctx context.Context, actor Principal, targetUserI
 type OrgRef struct {
 	OrgID string `json:"org_id"`
 	Role  Role   `json:"role"`
+	// Name is the organization's display name (empty if it could not be read).
+	Name string `json:"name,omitempty"`
 }
 
-// Orgs lists the organizations of a user, oldest membership first.
+// Orgs lists the organizations of a user (with their names), oldest membership first.
 func (s *Service) Orgs(ctx context.Context, userID string) ([]OrgRef, error) {
 	ms, err := s.store.MembershipsOf(ctx, userID)
 	if err != nil {
@@ -491,7 +493,9 @@ func (s *Service) Orgs(ctx context.Context, userID string) ([]OrgRef, error) {
 	}
 	out := make([]OrgRef, 0, len(ms))
 	for _, m := range ms {
-		out = append(out, OrgRef{OrgID: m.OrgID, Role: m.Role})
+		// A missing name is cosmetic: never fail /auth/me for it.
+		name, _ := s.store.OrgName(ctx, m.OrgID)
+		out = append(out, OrgRef{OrgID: m.OrgID, Role: m.Role, Name: name})
 	}
 	return out, nil
 }

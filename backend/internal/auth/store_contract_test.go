@@ -48,6 +48,13 @@ func storeContract(t *testing.T, st Store) {
 		t.Fatal(err)
 	}
 
+	if name, err := st.OrgName(bg, o1.ID); err != nil || name != "Org" {
+		t.Fatalf("OrgName: %q %v", name, err)
+	}
+	if _, err := st.OrgName(bg, uuid.NewString()); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("OrgName missing: %v", err)
+	}
+
 	// Memberships / roles / last owner.
 	ua, oa, ma := mkAccount("c4-"+randomHex(3)+"@example.com", "s-"+randomHex(4))
 	if err := st.CreateAccount(bg, ua, oa, ma); err != nil {
