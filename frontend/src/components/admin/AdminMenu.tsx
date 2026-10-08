@@ -14,7 +14,7 @@ import { HireFromTemplateDialog } from "./HireFromTemplateDialog";
 import { KillSwitchDialog } from "../security/KillSwitchDialog";
 import { useBootConnections } from "../security/ControlsChrome";
 import { MembersDialog } from "../auth/MembersDialog";
-import { logout, switchOrg, useCan, useSession } from "@/lib/session";
+import { logout, orgLabel, switchOrg, useCan, useSession } from "@/lib/session";
 
 function Item({ icon, label, onClick, testid, disabled, danger, trailing, active, level }: {
   icon: IconName; label: string; onClick: () => void; testid: string; disabled?: boolean; danger?: boolean; trailing?: ReactNode; active?: boolean; level?: string;
@@ -146,7 +146,7 @@ export function AdminMenu() {
               </div>
               {canMembers && <Item icon="users" testid="members-open" label={t("members.title")} onClick={run(() => setDialog("members"))} />}
               {session.orgs.length > 1 && session.orgs.filter((o) => o.org_id !== session.orgId).map((o) => (
-                <Item key={o.org_id} icon="layout" testid={`org-switch-${o.org_id}`} label={t("admin.switchOrg", { org: o.org_id.slice(0, 8), role: t(`members.roles.${o.role}`) })}
+                <Item key={o.org_id} icon="layout" testid={`org-switch-${o.org_id}`} label={t("admin.switchOrg", { org: orgLabel(o), role: t(`members.roles.${o.role}`) })}
                   onClick={run(() => { switchOrg(o.org_id).catch(() => undefined); })} />
               ))}
               <Item icon="power" testid="logout" label={t("auth.logout")} onClick={run(() => { logout().then(() => { window.location.href = "/login"; }); })} />

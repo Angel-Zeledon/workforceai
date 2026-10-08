@@ -17,6 +17,7 @@ import { useT } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import { LightingToggle } from "./OfficeSettings";
 import { AdminMenu } from "./admin/AdminMenu";
+import { OrgIndicator } from "./auth/OrgIndicator";
 import { ControlsBanner, ControlsOverlay } from "./security/ControlsChrome";
 import { CostOverlays } from "./cost/CostOverlays";
 import { Icon } from "./icons";
@@ -50,7 +51,7 @@ export function Shell() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white"><Icon name="office" size={17} /></div>
             <div className="leading-tight">
               <div className="text-[13px] font-semibold tracking-tight">AI Workforce OS</div>
-              <div className="text-[10.5px] text-mute">{t("app.demoOffice")}</div>
+              <OrgIndicator className="text-[10.5px] text-mute" />
             </div>
           </div>
           <div className="hidden h-6 w-px bg-line md:block" />
