@@ -110,3 +110,18 @@ func TestCostControlEnv(t *testing.T) {
 		t.Fatalf("invalid value must keep the default, got %v", got)
 	}
 }
+
+func TestMaxParallelPerOrg(t *testing.T) {
+	t.Setenv("MAX_PARALLEL_PER_ORG", "")
+	if got := Load().App.MaxParallelPerOrg; got != 8 {
+		t.Fatalf("default = %d, want 8", got)
+	}
+	t.Setenv("MAX_PARALLEL_PER_ORG", "3")
+	if got := Load().App.MaxParallelPerOrg; got != 3 {
+		t.Fatalf("env = %d, want 3", got)
+	}
+	t.Setenv("MAX_PARALLEL_PER_ORG", "0") // invalid values keep the default
+	if got := Load().App.MaxParallelPerOrg; got != 8 {
+		t.Fatalf("zero = %d, want 8", got)
+	}
+}

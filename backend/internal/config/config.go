@@ -160,6 +160,7 @@ func Load() Config {
 		}
 	}
 	app.MaxParallel = getInt("MAX_PARALLEL", app.MaxParallel)
+	app.MaxParallelPerOrg = getInt("MAX_PARALLEL_PER_ORG", app.MaxParallelPerOrg)
 	app.TaskTimeout = getDuration("TASK_TIMEOUT", app.TaskTimeout)
 	app.MaxRetries = getInt("TASK_RETRIES", app.MaxRetries)
 	app.ApprovalTimeout = getDuration("APPROVAL_TIMEOUT", app.ApprovalTimeout)

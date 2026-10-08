@@ -41,6 +41,10 @@ type Orchestrator struct {
 
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
 
+	queue      orgQueue        // per-org slots for runtime calls (orgqueue.go)
+	queuedMu   sync.Mutex      // guards queuedSeen
+	queuedSeen map[string]bool // requests already announced as queued
+
 	mu     sync.Mutex      // guards base/cancel and serializes Reset vs. start
 	root   context.Context // process lifetime
 	base   context.Context // parent of in-flight runs; cancelled by Reset
@@ -139,6 +143,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	// The background run keeps the lifetime of the orchestrator but carries the
 	// tenant of the request that started it.
 	rctx := WithRequestID(WithOrg(o.base, o.org(ctx)), req.ID)
+	rctx = WithWorkPriority(rctx, WorkPriorityFrom(ctx)) // queue priority (orgqueue.go)
 	o.track(req.ID)
 	o.wg.Add(1)
 	go func() {
@@ -895,9 +900,14 @@ func (o *Orchestrator) call(ctx context.Context, name string, fn func(ctx contex
 				return ctx.Err()
 			}
 		}
+		release, qerr := o.acquireSlot(ctx, name) // per-org queue; waits visibly when full
+		if qerr != nil {
+			return qerr
+		}
 		cctx, cancel := context.WithTimeout(ctx, o.cfg.TaskTimeout)
 		err = fn(cctx)
 		cancel()
+		release()
 		if err == nil || ctx.Err() != nil {
 			return err
 		}
