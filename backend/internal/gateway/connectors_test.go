@@ -14,6 +14,7 @@ import (
 	"aiworkforce/backend/internal/connections/drive"
 	"aiworkforce/backend/internal/connections/github"
 	"aiworkforce/backend/internal/connections/gmail"
+	"aiworkforce/backend/internal/connections/slack"
 	"aiworkforce/backend/internal/vault"
 )
 
@@ -27,6 +28,7 @@ type connectors struct {
 	cal *calendar.Provider
 	drv *drive.Provider
 	gh  *github.Provider
+	sl  *slack.Provider
 }
 
 func newConnectors(t *testing.T) *connectors {
@@ -44,8 +46,12 @@ func newConnectors(t *testing.T) *connectors {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.cs.Providers["google_calendar"], e.cs.Providers["google_drive"], e.cs.Providers["github"] = cal, drv, gh
-	return &connectors{env: e, cal: cal, drv: drv, gh: gh}
+	sl, err := slack.New(slack.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.cs.Providers["google_calendar"], e.cs.Providers["google_drive"], e.cs.Providers["github"], e.cs.Providers["slack"] = cal, drv, gh, sl
+	return &connectors{env: e, cal: cal, drv: drv, gh: gh, sl: sl}
 }
 
 func (c *connectors) conn(provider, label string, scope connections.ResourceScope, caps ...string) connections.Connection {
@@ -283,5 +289,53 @@ func TestGitHubTokenOnlyTravelsAsBearerHeader(t *testing.T) {
 	}
 	if strings.Contains(c.sink.text(), token) || strings.Contains(strings.Join(out.Blocks, ""), token) {
 		t.Fatal("the token leaked into audit, events or runtime data")
+	}
+}
+
+// ---- Slack ----
+
+func TestSlackReadsOnlySelectedChannelsAsData(t *testing.T) {
+	c := newConnectors(t)
+	c.conn("slack", "Slack", connections.ResourceScope{Channels: []string{"C0VENTAS01"}}, "chat.read")
+	out := c.exec(call("slack", "history", map[string]any{"channel": "C0VENTAS01"}))
+	readsAreUntrustedData(t, out, true)
+	if len(out.Blocks) != 2 {
+		t.Fatalf("messages = %d", len(out.Blocks))
+	}
+	if out := c.exec(call("slack", "history", map[string]any{"channel": "C0DIRECC01"})); out.DenyReason != connections.CodeOutOfScope {
+		t.Fatalf("a channel outside the allowlist was read: %+v", out)
+	}
+	chans := c.exec(call("slack", "list_channels", map[string]any{}))
+	readsAreUntrustedData(t, chans, false)
+	if len(chans.Blocks) != 1 {
+		t.Fatalf("channels = %d", len(chans.Blocks))
+	}
+}
+
+func TestSlackPostNeedsApprovalAndHoldLikeEmail(t *testing.T) {
+	c := newConnectors(t)
+	conn := c.conn("slack", "Slack publicar", connections.ResourceScope{Channels: []string{"C0VENTAS01"}}, "chat.post")
+	fake := c.sl.FakeFor(conn.ID)
+	out := c.writeNeedsApprovalThenHold(call("slack", "post_message", map[string]any{"channel": "C0VENTAS01", "text": "Propuesta enviada a Acme"}),
+		func() int { return len(fake.PostedMessages()) })
+	if out.Pending.HoldSeconds < MinHoldSeconds || !strings.Contains(out.Pending.Details, "Propuesta enviada") {
+		t.Fatalf("approval card: %+v", out.Pending)
+	}
+}
+
+func TestSlackPostCanBeCancelledDuringHold(t *testing.T) {
+	c := newConnectors(t)
+	conn := c.conn("slack", "Slack publicar", connections.ResourceScope{Channels: []string{"C0VENTAS01"}}, "chat.post")
+	cl := call("slack", "post_message", map[string]any{"channel": "C0VENTAS01", "text": "Hola"})
+	first := c.exec(cl)
+	cl.ApprovedArgsHash, cl.ApprovalID = first.Pending.ArgsHash, "ap-sl"
+	held := c.exec(cl)
+	if _, err := c.g.CancelHold(context.Background(), org, held.HoldID, "u1"); err != nil {
+		t.Fatal(err)
+	}
+	c.clk.Add(2 * time.Minute)
+	c.g.ProcessDue(context.Background())
+	if n := len(c.sl.FakeFor(conn.ID).PostedMessages()); n != 0 {
+		t.Fatalf("a cancelled post went out (%d)", n)
 	}
 }

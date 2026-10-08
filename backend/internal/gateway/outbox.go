@@ -481,9 +481,9 @@ func (g *Gateway) subjectSummary(args map[string]any) string {
 }
 
 // headline is the short label of an outgoing item: the email subject, or the
-// title/summary of an event, issue or chat message.
+// title/summary of an event or issue, or the text of a chat message.
 func headline(args map[string]any) string {
-	for _, k := range []string{"subject", "title", "summary"} {
+	for _, k := range []string{"subject", "title", "summary", "text"} {
 		if v := str(args[k]); v != "" {
 			return v
 		}

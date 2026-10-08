@@ -1,0 +1,41 @@
+{
+  "id": "slack",
+  "version": 1,
+  "label_key": "provider.slack.name",
+  "phase": "available",
+  "auth": [
+    {
+      "method": "api_key",
+      "secret_regex": "^xoxb-[A-Za-z0-9-]{20,255}$"
+    }
+  ],
+  "capabilities": {
+    "chat.read": {
+      "class": "read",
+      "scopes": [],
+      "tools": ["slack.list_channels", "slack.history"],
+      "risk": "low",
+      "side_effects": false,
+      "default": true,
+      "label_key": "conn.cap.chat.read",
+      "scope_overreach": "bot token with channels:read and channels:history only; the bot only sees channels it was invited to and the adapter also enforces the channel allowlist"
+    },
+    "chat.post": {
+      "class": "write",
+      "scopes": [],
+      "tools": ["slack.post_message"],
+      "risk": "medium",
+      "side_effects": true,
+      "reversibility": "compensating",
+      "always_approval": true,
+      "hold_seconds_default": 60,
+      "default": false,
+      "label_key": "conn.cap.chat.post",
+      "scope_overreach": "a separate bot token with chat:write only"
+    }
+  },
+  "never_offered": ["chat.delete", "chat.dm_any_user", "admin.users", "files.write"],
+  "resource_filters": ["channels"],
+  "default_limits": { "per_minute": 20, "per_hour": 400, "per_day": 2000, "write_per_day": 30, "max_items_per_call": 50, "max_bytes_per_day": 10000000 },
+  "untrusted_sources": ["message.text", "message.user", "channel.topic"]
+}

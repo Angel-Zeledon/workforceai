@@ -16,6 +16,7 @@ import (
 	"aiworkforce/backend/internal/connections/drive"
 	"aiworkforce/backend/internal/connections/github"
 	"aiworkforce/backend/internal/connections/gmail"
+	"aiworkforce/backend/internal/connections/slack"
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/gateway"
@@ -94,7 +95,11 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 	if err != nil {
 		return connWiring{}, err
 	}
-	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal, "google_drive": drv, "github": gh}
+	sl, err := slack.New(slack.Config{})
+	if err != nil {
+		return connWiring{}, err
+	}
+	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal, "google_drive": drv, "github": gh, "slack": sl}
 	apps := map[string]connections.OAuthApp{}
 	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
 		// One Google OAuth client serves every Google adapter; each connection
