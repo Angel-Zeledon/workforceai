@@ -18,12 +18,12 @@ export function ArtifactBody({ art, readOnly, compact, depth = 0 }: { art: Store
     case "sheet": return <SheetEditor art={art} readOnly={readOnly} compact={compact} />;
     case "doc": return <DocEditor art={art} readOnly={readOnly} compact={compact} depth={depth} />;
     case "table": return <TableEditor art={art} readOnly={readOnly} compact={compact} />;
-    case "board": return <BoardView art={art} />;
+    case "board": return <BoardView art={art} readOnly={readOnly} />;
     case "chart": return <ChartView art={art} compact={compact} />;
     case "pdf": return <PdfView art={art} />;
     case "form": return <FormView art={art} />;
     case "inbox": return <InboxView art={art} />;
-    case "agenda": return <AgendaView art={art} />;
+    case "agenda": return <AgendaView art={art} readOnly={readOnly} />;
   }
 }
 

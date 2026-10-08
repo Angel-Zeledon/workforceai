@@ -32,6 +32,7 @@ type Asker interface {
 type Config struct {
 	Store    Store
 	Rec      *application.Recorder
+	Collab   CollabStore       // comments and proposals (memory when nil)
 	Core     application.Store // agents of the organization (attachments, deliverables)
 	Asker    Asker
 	Projects ProjectLookup
@@ -54,6 +55,9 @@ type Service struct {
 func New(cfg Config) *Service {
 	if cfg.Log == nil {
 		cfg.Log = slog.Default()
+	}
+	if cfg.Collab == nil {
+		cfg.Collab = NewMemCollab()
 	}
 	return &Service{cfg: cfg, locks: map[string]*sync.Mutex{}, deliv: map[string]string{}}
 }
@@ -457,6 +461,9 @@ func (s *Service) saveLocked(ctx context.Context, org string, actor Actor, id st
 	if actor.IsAgent() {
 		source = "agent_task"
 	}
+	if in.source != "" {
+		source = in.source
+	}
 	if in.BaseVersion == m.HeadVersion {
 		if sameContent(raw, cur.Content) {
 			return SaveResult{Version: m.HeadVersion}, false, nil
@@ -492,7 +499,11 @@ func (s *Service) saveLocked(ctx context.Context, org string, actor Actor, id st
 	if sameContent(mraw, cur.Content) {
 		return SaveResult{Version: m.HeadVersion, Merged: true, Content: mraw}, false, nil
 	}
-	v, err := s.commit(ctx, org, cur, mraw, mroot, actor.Ref(), "rebase", in.Summary, &in.BaseVersion)
+	rebaseSource := "rebase"
+	if in.source != "" {
+		rebaseSource = in.source
+	}
+	v, err := s.commit(ctx, org, cur, mraw, mroot, actor.Ref(), rebaseSource, in.Summary, &in.BaseVersion)
 	if err != nil {
 		return SaveResult{}, false, err
 	}

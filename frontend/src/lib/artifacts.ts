@@ -6,13 +6,14 @@
 import { useEffect } from "react";
 import { create } from "zustand";
 import { call } from "./api";
+import { API_URL, MOCK } from "./config";
 import type { WsFrame } from "./types";
 
 // ---- types (sec. 5.1) -----------------------------------------------------------------------------
 export type ArtifactKind = "sheet" | "doc" | "table" | "board" | "chart" | "pdf" | "form" | "inbox" | "agenda";
 export const ARTIFACT_KINDS: ArtifactKind[] = ["sheet", "doc", "table", "board", "chart", "pdf", "form", "inbox", "agenda"];
 /** Kinds with a full editor in the first version; the others are read-only views. */
-export const EDITABLE_KINDS: ArtifactKind[] = ["sheet", "doc", "table"];
+export const EDITABLE_KINDS: ArtifactKind[] = ["sheet", "doc", "table", "board", "agenda"];
 
 export type ArtifactStatus = "draft" | "in_review" | "approved" | "sent" | "archived";
 export type BuildState = "queued" | "building" | "ready_for_review" | "done" | "blocked";
@@ -35,6 +36,8 @@ export interface Artifact extends ArtifactMeta { content: any; version: number }
 export interface ArtifactVersionInfo { artifact_id: string; version: number; base_version: number | null; author: ActorRef; source: string; summary: string; created_at: string }
 export interface ArtifactLink { id: string; from: string; to: string; relation: "embeds" | "source_of" | "derived_from" | "refers_to"; anchor?: Anchor | null; alias?: string | null; stale?: boolean }
 export type Anchor = { sheet?: string; range?: string; bid?: string; card?: string; page?: number };
+export interface ArtifactComment { id: string; artifact_id: string; parent_id?: string | null; anchor?: Anchor | null; author: ActorRef; body: string; mentions: string[]; resolved: boolean; resolved_by?: string | null; created_at: string }
+export interface ArtifactProposal { id: string; artifact_id: string; base_version: number; author: ActorRef; summary: string; status: "pending" | "accepted" | "rejected"; resolved_by?: string | null; resolved_note?: string; resolved_version?: number | null; created_at: string; resolved_at?: string | null }
 export interface Deliverable { deliverable_id: string; title: string; agent_id: string; status: string; progress: number; build_state: BuildState; artifacts: ArtifactMeta[] }
 export interface ProjectWorkspace { project_id: string; name: string; status: string; deliverables: Deliverable[]; links: ArtifactLink[] }
 export interface ArtifactTemplate { id: string; kind: ArtifactKind; title: { es: string; en: string }; suggested_for: string[] }
@@ -76,6 +79,20 @@ export const artifactApi = {
   links: async (id: string) => { const r = await call<any>("GET", `/artifacts/${id}/links?direction=both`); return (Array.isArray(r) ? r : r?.items ?? []) as ArtifactLink[]; },
   refreshDependencies: (id: string) => call<unknown>("POST", `/artifacts/${id}/refresh-dependencies`),
   ask: (id: string, body: { agent_id: string; text?: string; mode: "review_my_changes" | "free" }) => call<{ request_id: string }>("POST", `/artifacts/${id}/ask`, body),
+  comments: async (id: string) => { const r = await call<any>("GET", `/artifacts/${id}/comments`); return (Array.isArray(r) ? r : r?.items ?? []) as ArtifactComment[]; },
+  addComment: (id: string, body: { body: string; parent_id?: string; anchor?: Anchor }) => call<ArtifactComment>("POST", `/artifacts/${id}/comments`, body),
+  resolveComment: (id: string, cid: string, resolved: boolean) => call<ArtifactComment>("PATCH", `/artifacts/${id}/comments/${cid}`, { resolved }),
+  proposals: async (id: string, status?: string) => { const r = await call<any>("GET", `/artifacts/${id}/proposals${status ? `?status=${status}` : ""}`); return (Array.isArray(r) ? r : r?.items ?? []) as ArtifactProposal[]; },
+  /** Accept or reject: the server only allows a person with the approve capability (never an agent). */
+  decideProposal: (id: string, pid: string, decision: "accept" | "reject", note?: string) => call<ArtifactProposal>("POST", `/artifacts/${id}/proposals/${pid}/decision`, { decision, note }),
+  /** Server-side docx/xlsx export (GET /artifacts/{id}/export); resolves with the file to download. Not available in demo mode. */
+  exportFile: async (id: string, format: "docx" | "xlsx", version?: number) => {
+    if (MOCK) throw new Error("export unavailable in demo mode");
+    const res = await fetch(`${API_URL}/artifacts/${encodeURIComponent(id)}/export?format=${format}${version ? `&version=${version}` : ""}`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`export -> ${res.status}`);
+    const name = /filename="?([^";]+)"?/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? `artifact.${format}`;
+    return { blob: await res.blob(), name };
+  },
   project: (pid: string) => call<ProjectWorkspace>("GET", `/projects/${pid}/workspace`),
 };
 

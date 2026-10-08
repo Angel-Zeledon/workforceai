@@ -233,6 +233,8 @@ type SaveInput struct {
 	BaseVersion int             `json:"base_version"`
 	Content     json.RawMessage `json:"content"`
 	Summary     string          `json:"summary,omitempty"`
+
+	source string // internal: overrides the version source (accept_proposal)
 }
 
 // SaveResult is the answer of a version save.
