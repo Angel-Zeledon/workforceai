@@ -35,6 +35,10 @@ func (a *Approvals) Request(ctx context.Context, ap domain.Approval) (domain.App
 	ap.ID, ap.Status, ap.CreatedAt = newID(), domain.ApprovalPending, time.Now().UTC()
 	ap.RequiredApprovals = max(ap.RequiredApprovals, 1)
 	ap.Decisions = []domain.ApprovalDecision{}
+	// decideMu: nobody can decide the approval before its "requested" entry is
+	// in the audit trail (the row is visible as soon as it is stored).
+	a.decideMu.Lock()
+	defer a.decideMu.Unlock()
 	if err := a.store.CreateApproval(ctx, a.org(ctx), ap); err != nil {
 		return ap, nil, err
 	}

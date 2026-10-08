@@ -182,16 +182,25 @@ func TestProjectsLifecycleOverHTTP(t *testing.T) {
 	if l := e.list(api1+"/projects", ""); len(l) != 1 || l[0]["status"] != "done" {
 		t.Fatalf("projects: %v", l)
 	}
-	// Deliverables of the project were created in its workspace (artifacts) and finished.
-	ws := e.json("GET", api1+"/projects/"+id+"/workspace", "", nil, 200)
-	dl := ws["deliverables"].([]any)
-	if ws["name"] == "" || len(dl) == 0 {
-		t.Fatalf("workspace: %v", ws)
-	}
-	for _, d := range dl {
-		if d.(map[string]any)["build_state"] != "ready_for_review" {
-			t.Fatalf("deliverable not finished: %v", d)
+	// Deliverables of the project were created in its workspace (artifacts) and
+	// finished. The workspace sink runs on the engine tick after the last task,
+	// so it can trail the derived "done" status by one tick.
+	var ws map[string]any
+	e.eventually("deliverables finished", func() bool {
+		ws = e.json("GET", api1+"/projects/"+id+"/workspace", "", nil, 200)
+		dl, _ := ws["deliverables"].([]any)
+		if len(dl) == 0 {
+			return false
 		}
+		for _, d := range dl {
+			if d.(map[string]any)["build_state"] != "ready_for_review" {
+				return false
+			}
+		}
+		return true
+	})
+	if ws["name"] == "" {
+		t.Fatalf("workspace: %v", ws)
 	}
 }
 

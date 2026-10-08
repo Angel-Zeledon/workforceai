@@ -19,7 +19,11 @@ type auditSink struct {
 	ev []AuditEvent
 }
 
-func (a *auditSink) add(_ context.Context, e AuditEvent) { a.mu.Lock(); a.ev = append(a.ev, e); a.mu.Unlock() }
+func (a *auditSink) add(_ context.Context, e AuditEvent) {
+	a.mu.Lock()
+	a.ev = append(a.ev, e)
+	a.mu.Unlock()
+}
 func (a *auditSink) has(action string) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()

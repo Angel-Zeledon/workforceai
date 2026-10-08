@@ -41,7 +41,11 @@ func NewFake() *Fake {
 func (f *Fake) Calls() int { f.mu.Lock(); defer f.mu.Unlock(); return f.calls }
 
 // Writes returns how many issues and comments were created.
-func (f *Fake) Writes() int { f.mu.Lock(); defer f.mu.Unlock(); return len(f.Created) + len(f.Comments) }
+func (f *Fake) Writes() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.Created) + len(f.Comments)
+}
 
 func (f *Fake) repo(_ context.Context, full string) (Repo, int, error) {
 	f.mu.Lock()

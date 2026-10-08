@@ -40,7 +40,7 @@ type Store struct {
 	cfg           configState                        // organization settings and schedules (config.go)
 	modelPolicies map[string]application.ModelPolicy // org -> model policy (modelpolicy.go)
 	usage         []domain.UsageEntry
-	caps          map[string]domain.BudgetCap // scope/id
+	caps          map[string]domain.BudgetCap    // scope/id
 	runMeta       map[string]application.RunMeta // request id -> run meta (runs.go)
 	checkpoints   map[string][]byte              // task id -> JSON checkpoint (runs.go)
 }
