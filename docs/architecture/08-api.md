@@ -71,7 +71,26 @@ Extension compatible de `GET /metrics`: ademas de `{tasks_active, tasks_done, ap
 
 ## 4. Fase 2 - Identidad, multitenant y gobierno
 
-### Auth y organizacion
+### Auth y organizacion: implementado (A2)
+
+Rutas reales bajo `/api/v1` (con `AUTH_ENABLED=true`; código en `backend/internal/auth`). La tabla de diseño original sigue debajo como referencia de lo pendiente (OIDC, roles personalizados, departamentos).
+
+| Ruta | Descripcion | Permiso |
+|---|---|---|
+| `GET /auth/config` | `{enabled, registration}`: el frontend decide entre login y demo abierta. Existe también con auth apagada (`enabled:false`) | público |
+| `POST /auth/register`, `POST /auth/login` | Crea cuenta + organización (owner) / abre sesión. Devuelven `{access_token, refresh_token, expires_at, user, org_id, role}` | público, con límite por IP y por correo |
+| `POST /auth/refresh`, `POST /auth/logout` | `refresh_token` en el cuerpo JSON (rotación; reutilizar uno ya rotado revoca la familia). Moverlo a cookie `HttpOnly` cambiaría este contrato: **pendiente de decisión del dueño** | público |
+| `GET /auth/me` | Usuario, `org_id`, rol, permisos efectivos y `orgs: [{org_id, role}]` | autenticado |
+| `POST /auth/switch-org` `{org_id}` | Nueva sesión del mismo usuario en otra organización suya (403 si no es miembro) | autenticado |
+| `POST /auth/logout-all` | Revoca todas las sesiones del usuario | autenticado |
+| `GET /auth/members`, `POST /auth/members`, `PATCH/DELETE /auth/members/{id}` | Miembros; nadie asigna un rol por encima del suyo (`CanAssign`), el último owner no se puede quitar | `members:read` / `members:invite` / `members:manage` |
+| `GET /invitations`, `POST /invitations` `{email, role}`, `DELETE /invitations/{id}` | Invitaciones. `POST` devuelve el `token` **una sola vez** (solo se guarda su SHA-256); caduca en 7 días; una nueva invitación al mismo correo revoca la anterior | `members:read` / `members:invite` |
+| `POST /auth/invitations/accept` `{token, name?, password}` | Usuario nuevo: crea la cuenta. Usuario existente con ese correo: exige su contraseña (mismo bloqueo que el login). Falla si caducó, se usó, se revocó o quien invitó ya no puede otorgar ese rol | público, con límite por IP |
+| `GET /ws?access_token=` | WebSocket autenticado; se cierra al caducar el token y el cliente reconecta con uno nuevo | autenticado |
+
+Auditoría: `invitation.created`, `invitation.revoked`, `invitation.accepted`, `invitation.accept_refused`, `invitation.refused` (solo el dominio del correo, nunca el token).
+
+### Auth y organizacion: diseño original
 | Ruta | Descripcion | Permiso |
 |---|---|---|
 | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` | Si hay login propio (alternativa: OIDC externo) | publico |
