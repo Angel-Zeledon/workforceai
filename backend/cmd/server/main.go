@@ -165,6 +165,13 @@ func run(log *slog.Logger) error {
 	} else if n > 0 {
 		log.Info("resumed in-progress requests", "count", n)
 	}
+	// Launched projects whose request was resumed are already live; the others
+	// (their request finished while the process was down) settle their status.
+	if ws.projects != nil {
+		if n := ws.projects.Recover(ctx, orgIDs); n > 0 {
+			log.Info("re-attached launched projects", "count", n)
+		}
+	}
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Projects: ws.projects, Artifacts: ws.artifacts, Push: pushSvc, Rec: rec,

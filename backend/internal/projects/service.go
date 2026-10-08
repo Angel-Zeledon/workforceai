@@ -73,6 +73,9 @@ type Service struct {
 	// launching counts the projects being submitted and registered: the gate of
 	// a task that starts before its registration finished waits for it.
 	launching atomic.Int32
+	// recovered: Recover ran, so a launched project without a live entry is
+	// adopted (its request was settled by the orchestrator) instead of failed.
+	recovered atomic.Bool
 }
 
 // New builds the service and installs it as the orchestrator's task gate.
@@ -155,12 +158,18 @@ func (s *Service) emit(ctx context.Context, typ, id string, payload any) {
 	s.cfg.Rec.Emit(ctx, application.Action{Type: typ, Entity: "project", EntityID: id, Payload: payload, SkipAudit: true})
 }
 
-// get loads a record, failing a project that was running when the process restarted.
+// get loads a record. A launched, unfinished project without a live entry is
+// adopted when the restart recovery ran (application/durable.go); without it
+// (no recovery in this process) it is failed as interrupted.
 func (s *Service) get(ctx context.Context, id string) (Record, error) {
 	org := s.org(ctx)
 	rec, err := s.cfg.Store.Get(ctx, org, id)
 	if err != nil {
 		return rec, err
+	}
+	if rec.RequestID != "" && !terminalStatus(rec.Status) && s.liveOf(org, id) == nil && s.recovered.Load() {
+		s.adopt(ctx, rec)
+		return rec, nil
 	}
 	if rec.RequestID != "" && !terminalStatus(rec.Status) && s.liveOf(org, id) == nil {
 		now := s.now()
