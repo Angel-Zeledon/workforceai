@@ -247,3 +247,23 @@ func decodeBody(t *testing.T, w *httptest.ResponseRecorder, v any) {
 		t.Fatalf("decode %s: %v", w.Body, err)
 	}
 }
+
+func TestSwitchOrg(t *testing.T) {
+	e := newEnv(t)
+	a := e.register(t, "a@example.com", "alpha")
+	b := e.register(t, "b@example.com", "beta")
+	if _, err := e.svc.SwitchOrg(bg, e.principal(t, a), b.OrgID, ClientMeta{}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("switch to foreign org: %v", err)
+	}
+	inv, _ := e.svc.CreateInvitation(bg, e.principal(t, b), "a@example.com", RoleViewer)
+	if _, err := e.svc.AcceptInvitation(bg, AcceptInput{Token: inv.Token, Password: goodPW}, ClientMeta{}); err != nil {
+		t.Fatal(err)
+	}
+	s, err := e.svc.SwitchOrg(bg, e.principal(t, a), b.OrgID, ClientMeta{})
+	if err != nil || s.OrgID != b.OrgID || s.Role != RoleViewer {
+		t.Fatalf("switch: %+v %v", s, err)
+	}
+	if orgs, _ := e.svc.Orgs(bg, a.User.ID); len(orgs) != 2 {
+		t.Fatalf("orgs: %+v", orgs)
+	}
+}

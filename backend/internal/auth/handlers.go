@@ -54,6 +54,9 @@ func NewHandler(svc *Service, cfg HandlerConfig) *Handler {
 //	POST   /logout          public (refresh token in body; idempotent)
 //	GET    /me              authenticated
 //	POST   /logout-all      authenticated
+//	POST   /switch-org      authenticated {org_id}: session in another org of the user
+//	GET    /config          public {enabled}
+//	POST   /invitations/accept public {token, name?, password}
 //	GET    /members         members:read
 //	POST   /members         members:invite   {email, role}
 //	PATCH  /members/{id}    members:manage   {role}
@@ -81,6 +84,7 @@ func (h *Handler) Routes() http.Handler {
 		}
 		r.Get("/me", h.me)
 		r.Post("/logout-all", h.logoutAll)
+		r.Post("/switch-org", h.switchOrg)
 		r.With(RequirePermission(PermMembersRead)).Get("/members", h.listMembers)
 		r.With(RequirePermission(PermMembersInvite)).Post("/members", h.addMember)
 		r.With(RequirePermission(PermMembersManage)).Patch("/members/{id}", h.changeRole)
@@ -179,9 +183,30 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
+	orgs, err := h.svc.Orgs(r.Context(), p.UserID)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"user": u, "org_id": p.OrgID, "role": p.Role, "permissions": p.Role.Permissions(),
+		"user": u, "org_id": p.OrgID, "role": p.Role, "permissions": p.Role.Permissions(), "orgs": orgs,
 	})
+}
+
+func (h *Handler) switchOrg(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		OrgID string `json:"org_id"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	p, _ := PrincipalFrom(r.Context())
+	s, err := h.svc.SwitchOrg(r.Context(), p, in.OrgID, h.meta(r))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, s)
 }
 
 func (h *Handler) logoutAll(w http.ResponseWriter, r *http.Request) {

@@ -476,3 +476,40 @@ func (s *Service) RemoveMember(ctx context.Context, actor Principal, targetUserI
 	}
 	return s.store.RevokeOrgUserTokens(ctx, actor.OrgID, targetUserID, s.now())
 }
+
+// OrgRef is one organization the user belongs to (for the organization switcher).
+type OrgRef struct {
+	OrgID string `json:"org_id"`
+	Role  Role   `json:"role"`
+}
+
+// Orgs lists the organizations of a user, oldest membership first.
+func (s *Service) Orgs(ctx context.Context, userID string) ([]OrgRef, error) {
+	ms, err := s.store.MembershipsOf(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]OrgRef, 0, len(ms))
+	for _, m := range ms {
+		out = append(out, OrgRef{OrgID: m.OrgID, Role: m.Role})
+	}
+	return out, nil
+}
+
+// SwitchOrg opens a new session of the same user in another organization the
+// user belongs to (ErrForbidden otherwise). The caller should log out the
+// previous refresh token.
+func (s *Service) SwitchOrg(ctx context.Context, actor Principal, orgID string, meta ClientMeta) (*Session, error) {
+	if actor.UserID == "" {
+		return nil, ErrUnauthenticated
+	}
+	m, err := s.pickMembership(ctx, actor.UserID, orgID)
+	if err != nil || orgID == "" {
+		return nil, ErrForbidden
+	}
+	u, err := s.store.UserByID(ctx, actor.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return s.issueSession(ctx, u, m, uuid.NewString(), meta)
+}
