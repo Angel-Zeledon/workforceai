@@ -22,6 +22,7 @@ import (
 	"aiworkforce/backend/internal/infrastructure/postgres"
 	redisinfra "aiworkforce/backend/internal/infrastructure/redis"
 	"aiworkforce/backend/internal/infrastructure/runtime"
+	"aiworkforce/backend/internal/push"
 )
 
 func main() {
@@ -84,6 +85,12 @@ func run(log *slog.Logger) error {
 		log.Warn("REDIS_URL not set: using in-process events and locks")
 	}
 
+	// Web Push (optional): approval.requested also notifies subscribed browsers.
+	pushSvc := wirePush(log, pg)
+	if pushSvc != nil {
+		pub = push.Notifier{Inner: pub, Svc: pushSvc}
+	}
+
 	rt := runtime.New(cfg.RuntimeURL)
 	queries := &application.Queries{Store: store, Cfg: cfg.App}
 	rec := &application.Recorder{OrgID: cfg.App.OrgID, Store: store, Pub: pub, Log: log}
@@ -128,7 +135,7 @@ func run(log *slog.Logger) error {
 	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw)
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
-		Projects: ws.projects, Artifacts: ws.artifacts,
+		Projects: ws.projects, Artifacts: ws.artifacts, Push: pushSvc, Rec: rec,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}

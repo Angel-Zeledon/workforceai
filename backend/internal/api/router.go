@@ -24,6 +24,7 @@ import (
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
 	"aiworkforce/backend/internal/projects"
+	"aiworkforce/backend/internal/push"
 )
 
 // Deps are the collaborators of the HTTP layer.
@@ -60,6 +61,10 @@ type Deps struct {
 	// (artifacts.go). Both optional: when nil the routes are not mounted.
 	Projects  *projects.Service
 	Artifacts *artifacts.Service
+	// Push serves /push/* (push.go); nil disables Web Push. Rec audits
+	// subscription changes (optional).
+	Push *push.Service
+	Rec  *application.Recorder
 	// AllowedOrigins is the CORS/WebSocket origin allow-list (see originPolicy).
 	AllowedOrigins []string
 	// EnableDemoReset registers POST /api/v1/demo/reset (admin role when auth is on).
@@ -126,6 +131,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountControls(r)
 			s.mountProjects(r)
 			s.mountArtifacts(r)
+			s.mountPush(r)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}

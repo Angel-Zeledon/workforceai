@@ -16,6 +16,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/audit"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/push"
 )
 
 // Integration tests of migration 250 (tamper-evident audit trail and
@@ -397,3 +398,37 @@ func TestMigration250DownThenUpAgain(t *testing.T) {
 }
 
 func discardLogger() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
+
+func TestPushSubscriptionsAreIsolatedByRLS(t *testing.T) {
+	env := testStore(t)
+	ps := &PushStore{S: env.Store}
+	ctx := context.Background()
+	seedOrg(t, env.Store, "org-a")
+	seedOrg(t, env.Store, "org-b")
+	for _, org := range []string{"org-a", "org-b"} {
+		if _, err := ps.SavePushSubscription(ctx, push.Subscription{ID: "id-" + org, OrgID: org, UserID: "u-" + org,
+			Endpoint: "https://fcm.googleapis.com/x/" + org, P256dh: "k", Auth: "a", CreatedAt: time.Now()}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if l, _ := ps.ListPushSubscriptions(ctx, "org-b"); len(l) != 1 || l[0].OrgID != "org-b" {
+		t.Fatalf("org-b sees %+v", l)
+	}
+	// Deleting another org's endpoint through my tenant context removes nothing.
+	_ = ps.DeletePushSubscription(ctx, "org-b", "", "https://fcm.googleapis.com/x/org-a")
+	if l, _ := ps.ListPushSubscriptions(ctx, "org-a"); len(l) != 1 {
+		t.Fatal("org-a subscription must survive")
+	}
+	// A user cannot delete a subscription of another user.
+	_ = ps.DeletePushSubscription(ctx, "org-a", "someone-else", "https://fcm.googleapis.com/x/org-a")
+	if l, _ := ps.ListPushSubscriptions(ctx, "org-a"); len(l) != 1 {
+		t.Fatal("only the owner may delete")
+	}
+	err := env.Store.WithOrgTx(ctx, "org-b", func(tx pgx.Tx) error {
+		_, e := tx.Exec(ctx, `INSERT INTO push_subscriptions (id, org_id, endpoint, p256dh, auth) VALUES ('evil','org-a','https://x','k','a')`)
+		return e
+	})
+	if err == nil {
+		t.Fatal("RLS must refuse writing a subscription of another organization")
+	}
+}
