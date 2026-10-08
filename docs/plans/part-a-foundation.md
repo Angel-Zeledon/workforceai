@@ -13,7 +13,9 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 
 ---
 
-## A8 CI — estado: arreglado `go test`, falta verificar en GitHub
+## A8 CI — estado: arreglado `go test`, `-race` añadido; falta verificar en GitHub
+
+- 2026-10-08: smoke del escenario de $50,000 y 7/7 e2e de Playwright en verde contra el stack completo (compose en puertos alternos), con A1 integrado.
 
 - Causa reproducida en `golang:1.26` (CI usa `go-version-file`): `TestProjectsLifecycleOverHTTP` fallaba con "cancel of a finished project = 200".
   El snapshot deriva `done` (`projects/view.go` `deriveStatus`) pero el estado terminal se persiste en el siguiente tick del motor (`projects/engine.go` `publish`); en ese hueco `Control` veía `running` y aceptaba cancelar.
@@ -25,7 +27,9 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 
 ---
 
-## A1 Ejecución duradera — implementado en parte (rama `feat/a1-durable`)
+## A1 Ejecución duradera — implementado en parte (integrado en `next-features`)
+
+- Verificado en stack real (Postgres + Redis + runtime): aprobación pendiente → `docker compose restart backend` → log "resumed in-progress requests count=1" → aprobar → solicitud `done` con informe.
 
 ### Hecho (2026-10-08)
 - Pasos 1-5 del alcance: `RunStore` (memoria + Postgres, migración `290_durable_runs.sql` con down y RLS), checkpoint por tarea antes de esperar una aprobación de herramienta simulada, `Approvals.Attach/WaitUntil/Supersede` con plazo original, `Orchestrator.Recover` al arrancar (`cmd/server/main.go`), evento `request.resumed`, ejecución aprobada a lo sumo una vez. Decisiones tomadas: D-A1a reintento automático una vez; D-A1b plazo original. Detalle en `07-seguridad-costos.md` 5.4.
@@ -84,7 +88,13 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 
 ---
 
-## A2 Cuentas y login — el backend existe; falta UI e invitaciones
+## A2 Cuentas y login — hecho (integrado en `next-features`)
+
+**Hecho:** invitaciones (migración 300, token hasheado, un solo uso, sin escalar rol, RLS), `GET /auth/config`, lista de organizaciones en `/auth/me` y `POST /auth/switch-org`; frontend `/login`, `/register`, `/invite`, sesión, miembros e invitaciones en el menú de administración, UI según permisos; con auth apagado la demo abierta sigue igual. e2e `auth.spec.ts` (sólo con `E2E_AUTH=1`) verificado contra stack con auth.
+**Pendiente:** envío del enlace por correo (hoy se copia), nombre de la organización en la cabecera, SSO/SCIM, y la decisión del dueño sobre mover el refresh token a cookie `HttpOnly` (hoy en `localStorage`).
+**No verificado:** cambio de organización en e2e (sólo test de servicio).
+
+Plan original:
 
 ### Estado actual (verificado)
 - `auth`: registro (crea usuario, org y owner), login, refresh, logout, `me`, miembros con roles `owner/admin/member/viewer` y ~40 permisos (`auth/service.go`, `handlers.go`, `rbac.go`). RLS por org (`202_rls_policies.sql`, `203_app_role.sql`).
@@ -106,7 +116,13 @@ Seguridad del token en el navegador (recomiendo access token en memoria + refres
 
 ---
 
-## A3 IA real probada — necesita una clave del dueño
+## A3 IA real probada — hecho salvo la medición real (integrado en `next-features`)
+
+**Hecho:** tabla de precios única (`model_prices.json`, idéntica en Go y Python por test) con los modelos Claude actuales; política de modelo por organización (`GET/PUT /settings/model-policy`, migración 310, tope del servidor `ALLOWED_PROVIDERS`, auditada; nunca amplía lo permitido); `RUNTIME_TOKEN` entre backend y runtime (opcional, aviso al arrancar si falta); `scripts/eval-live` con 5 casos dorados (exige `--live` y clave); modelo Anthropic por defecto `claude-sonnet-5-5`.
+**Pendiente:** BYOK (decisión de seguridad), UI de administración de la política.
+**No verificado:** `eval-live` contra un modelo real (no hay claves en este entorno).
+
+Plan original:
 
 ### Estado actual (verificado)
 - Runtime con proveedores deepseek/anthropic/custom y respaldo en orden (`agent-runtime/app/providers.py`, `crewai_engine.py`); orden por rol vía `MODEL_PROVIDER_ORDER_<ROLE>`.
