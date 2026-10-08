@@ -125,14 +125,23 @@ func (o *Orchestrator) gateApproval(ctx context.Context, rs *run, t *domain.Task
 	if risk != "low" && risk != "medium" && risk != "high" {
 		risk = "medium"
 	}
-	ap := domain.Approval{TaskID: t.ID, AgentID: t.AgentID, Action: spec.Action, Risk: risk, Title: spec.Title, Details: spec.Details}
+	ap := domain.Approval{TaskID: t.ID, AgentID: t.AgentID, Action: spec.Action, Risk: risk, Title: spec.Title, Details: spec.Details,
+		Context: map[string]any{gateApprovalKey: true}}
 	governApproval(&ap, rs, PolicyVerdict{RequiredApprovals: 1})
 	t.Status = domain.TaskAwaitingApproval
 	if err := o.store.UpdateTask(ctx, o.org(ctx), *t); err != nil {
 		o.failTask(ctx, rs, *t, err)
 		return false
 	}
-	ap, ch, err := o.approvals.Request(ctx, ap)
+	var ch <-chan domain.Approval
+	var err error
+	if prev, ok := o.pendingGateApproval(ctx, t.ID, spec.Action); ok {
+		// Resumed after a restart: wait on the same approval, with its original
+		// deadline (a decision taken meanwhile is delivered at once).
+		ap, ch, err = o.approvals.Attach(ctx, prev.ID)
+	} else {
+		ap, ch, err = o.approvals.Request(ctx, ap)
+	}
 	if err != nil {
 		o.failTask(ctx, rs, *t, err)
 		return false
@@ -141,7 +150,7 @@ func (o *Orchestrator) gateApproval(ctx context.Context, rs *run, t *domain.Task
 	o.setRequestStatus(ctx, rs, domain.RequestAwaitingApproval)
 	o.setState(ctx, t.AgentID, domain.StateAwaitingApproval, "Esperando aprobación: "+ap.Title, &tid, 80)
 	o.emitMetrics(ctx)
-	res, err := o.approvals.Wait(ctx, ch, ap.ID)
+	res, err := o.approvals.WaitUntil(ctx, ch, ap.ID, o.approvals.Deadline(ap))
 	if err != nil {
 		return false // cancelled
 	}
@@ -152,6 +161,34 @@ func (o *Orchestrator) gateApproval(ctx context.Context, rs *run, t *domain.Task
 	}
 	g.GateResolved(ctx, o.org(ctx), *t, res.ID, res.Status == domain.ApprovalApproved)
 	return true
+}
+
+// gateApprovalKey marks (in Approval.Context) the approvals of a project gate,
+// so a restart resumes them instead of superseding them.
+const gateApprovalKey = "project_gate"
+
+func isGateApproval(a domain.Approval) bool {
+	v, _ := a.Context[gateApprovalKey].(bool)
+	return v
+}
+
+// pendingGateApproval finds the gate approval a task was already waiting on
+// before a restart: pending, or decided while no process was waiting (its
+// answer never reached the gate, which would not be asking otherwise). The
+// most recent one wins.
+func (o *Orchestrator) pendingGateApproval(ctx context.Context, taskID, action string) (domain.Approval, bool) {
+	all, err := o.store.ListApprovals(ctx, o.org(ctx), "")
+	if err != nil {
+		return domain.Approval{}, false
+	}
+	var found domain.Approval
+	ok := false
+	for _, a := range all {
+		if a.TaskID == taskID && a.Action == action && isGateApproval(a) && (!ok || a.CreatedAt.After(found.CreatedAt)) {
+			found, ok = a, true
+		}
+	}
+	return found, ok
 }
 
 // blockTask marks a task that will never run (project cancelled or gate rejected).

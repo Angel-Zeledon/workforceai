@@ -191,6 +191,40 @@ func (g *Gateway) RegisterApproval(id string, p application.GatewayPending) {
 	}
 }
 
+var _ application.GatewayRestorer = (*Gateway)(nil)
+
+// RestoreApproval implements application.GatewayRestorer. After a restart the
+// orchestrator resumes a task that waits on the approval of a write; the
+// outbox item (kept in memory) is rebuilt from the task checkpoint with the
+// same id and content, so the human can still see, edit, approve or reject it.
+// Nothing is executed here.
+func (g *Gateway) RestoreApproval(ctx context.Context, approvalID string, c application.GatewayCall, p application.GatewayPending) {
+	connID := ""
+	if t, ok := g.lookup(c.Tool, c.Action); ok {
+		if cd, code := g.resolve(ctx, c, t); code == "" {
+			connID = cd.conn.ID
+		}
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.approvals[approvalID] = p
+	if p.OutboxID == "" {
+		return
+	}
+	if e, ok := g.entries[p.OutboxID]; ok {
+		e.approvalID = approvalID
+		g.byKey[approvalID] = e.id
+		return
+	}
+	now := g.now()
+	e := &outboxEntry{id: p.OutboxID, call: c, pending: p, connID: connID, account: p.Account, approvalID: approvalID,
+		version: 1, status: OutboxPendingApproval, createdAt: now, updatedAt: now}
+	e.call.Args = cloneArgs(c.Args)
+	e.call.ApprovalID, e.call.ApprovedArgsHash = "", ""
+	g.entries[e.id] = e
+	g.byKey[approvalID] = e.id
+}
+
 // ApprovalResolved implements application.ToolGateway: a rejected (or timed
 // out) approval closes its outbox entry.
 func (g *Gateway) ApprovalResolved(approvalID string, approved bool) {

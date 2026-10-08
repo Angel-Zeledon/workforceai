@@ -30,9 +30,14 @@ func NewApprovals(cfg Config, store Store, rec *Recorder) *Approvals {
 	return &Approvals{cfg: cfg, store: store, rec: rec, waiters: map[string]chan domain.Approval{}}
 }
 
-// Request stores a pending approval, registers its waiter and emits approval.requested.
+// Request stores a pending approval, registers its waiter and emits
+// approval.requested. ap.ID is kept when set (a caller that must bind context
+// to the id before the approval becomes visible); otherwise a new one is made.
 func (a *Approvals) Request(ctx context.Context, ap domain.Approval) (domain.Approval, <-chan domain.Approval, error) {
-	ap.ID, ap.Status, ap.CreatedAt = newID(), domain.ApprovalPending, time.Now().UTC()
+	if ap.ID == "" {
+		ap.ID = newID()
+	}
+	ap.Status, ap.CreatedAt = domain.ApprovalPending, time.Now().UTC()
 	ap.RequiredApprovals = max(ap.RequiredApprovals, 1)
 	ap.Decisions = []domain.ApprovalDecision{}
 	// decideMu: nobody can decide the approval before its "requested" entry is

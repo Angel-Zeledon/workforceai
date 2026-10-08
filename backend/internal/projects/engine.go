@@ -123,11 +123,7 @@ func (s *Service) Launch(ctx context.Context, id string, b LaunchBody) (Summary,
 		return Summary{}, err
 	}
 	rec.RequestID = reqID
-	lp := &liveProject{org: org, id: id, requestID: reqID, control: ControlActive, locale: rec.Locale, name: rec.Name,
-		nodes: map[string]NodeDef{}, decisions: map[string]string{}, waitSince: map[string]time.Time{}, rev: map[string]int{}, lastSig: map[string]string{}}
-	for _, n := range rec.Nodes {
-		lp.nodes[n.ID] = n
-	}
+	lp := newLive(rec)
 	s.mu.Lock()
 	s.live[org+"|"+id] = lp
 	s.byReq[org+"|"+reqID] = lp
@@ -142,6 +138,96 @@ func (s *Service) Launch(ctx context.Context, id string, b LaunchBody) (Summary,
 	s.emit(ctx, "project.status_changed", id, map[string]any{"project": d.Project, "nodes": d.Nodes, "structure_version": rec.StructureVersion})
 	go s.watch(lp)
 	return d.Project, nil
+}
+
+// newLive builds the in-memory state of a launched project from its record.
+func newLive(rec Record) *liveProject {
+	lp := &liveProject{org: rec.OrgID, id: rec.ID, requestID: rec.RequestID, control: rec.Control, locale: rec.Locale, name: rec.Name,
+		nodes: map[string]NodeDef{}, decisions: map[string]string{}, waitSince: map[string]time.Time{}, rev: map[string]int{}, lastSig: map[string]string{}}
+	if lp.control == "" {
+		lp.control = ControlActive
+	}
+	for _, n := range rec.Nodes {
+		lp.nodes[n.ID] = n
+	}
+	for k, v := range rec.Decisions {
+		lp.decisions[k] = v
+	}
+	return lp
+}
+
+// ---- restart recovery (A1, application/durable.go) ----
+
+// ResumeRequest implements application.RequestOwner: before the orchestrator
+// resumes the request of a launched project after a restart, the project is
+// re-attached (gate decisions, pause/cancel, the pending budget extension) and
+// its monitor restarts. It returns false when the project cannot continue.
+func (s *Service) ResumeRequest(ctx context.Context, org, requestID string) bool {
+	rec, err := s.cfg.Store.ByRequest(application.WithOrg(ctx, org), org, requestID)
+	if err != nil || terminalStatus(rec.Status) {
+		return false
+	}
+	s.adopt(application.WithOrg(ctx, org), rec)
+	return true
+}
+
+// Recover re-attaches, after a restart, the launched projects that are not
+// finished: the ones whose request the orchestrator resumed are already live
+// (ResumeRequest); the others (their request finished or was failed while the
+// process stopped) get a monitor that settles their final status. Call it
+// after the orchestrator's Recover. orgs empty means the default organization.
+func (s *Service) Recover(ctx context.Context, orgs []string) int {
+	if len(orgs) == 0 {
+		orgs = []string{s.cfg.OrgID}
+	}
+	n := 0
+	for _, org := range orgs {
+		octx := application.WithOrg(ctx, org)
+		recs, err := s.cfg.Store.List(octx, org)
+		if err != nil {
+			s.cfg.Log.Warn("recover projects", "org", org, "err", err)
+			continue
+		}
+		for _, rec := range recs {
+			if rec.RequestID == "" || terminalStatus(rec.Status) {
+				continue
+			}
+			if s.adopt(octx, rec) {
+				n++
+			}
+		}
+	}
+	s.recovered.Store(true)
+	return n
+}
+
+// adopt registers a launched project as live and starts its monitor. It
+// returns false when it already was live.
+func (s *Service) adopt(ctx context.Context, rec Record) bool {
+	org := rec.OrgID
+	if org == "" {
+		org = s.org(ctx)
+		rec.OrgID = org
+	}
+	lp := newLive(rec)
+	if snap, err := s.loadSnapshot(ctx, rec); err == nil {
+		for _, a := range snap.approvals {
+			if a.TaskID == budgetTaskID(rec.ID) && a.Action == ActionExtendBudget && a.Status == domain.ApprovalPending {
+				lp.budgetApp = a.ID // its decision is applied by the monitor, as before the restart
+			}
+		}
+	}
+	s.mu.Lock()
+	if s.live[org+"|"+rec.ID] != nil {
+		s.mu.Unlock()
+		return false
+	}
+	s.live[org+"|"+rec.ID] = lp
+	s.byReq[org+"|"+rec.RequestID] = lp
+	s.mu.Unlock()
+	s.audit(application.WithActor(ctx, "system"), "project.resumed", rec.ID, map[string]any{"request_id": rec.RequestID})
+	go s.watch(lp)
+	return true
 }
 
 func orInt(v, def int) int {
@@ -315,7 +401,10 @@ func (s *Service) DecideBatch(ctx context.Context, b BatchDecision) (BatchResult
 
 // ---- the task gate (application.TaskGate) ----
 
-var _ application.TaskGate = (*Service)(nil)
+var (
+	_ application.TaskGate     = (*Service)(nil)
+	_ application.RequestOwner = (*Service)(nil)
+)
 
 func (s *Service) lookupReq(org, requestID string) *liveProject {
 	s.mu.Lock()
@@ -325,8 +414,8 @@ func (s *Service) lookupReq(org, requestID string) *liveProject {
 }
 
 // OwnsRequest tells the orchestrator's restart recovery that a request belongs
-// to a project: projects are not resumed yet (get marks them interrupted), so
-// the orchestrator fails the request instead of running it without its gate.
+// to a project: it is resumed only after ResumeRequest re-attached the project,
+// so no task runs without its gate.
 func (s *Service) OwnsRequest(ctx context.Context, org, requestID string) bool {
 	if s.lookupReq(org, requestID) != nil {
 		return true

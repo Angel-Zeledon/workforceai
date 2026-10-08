@@ -78,6 +78,7 @@ type run struct {
 	ext         runExt    // taint, read-only request flag (connections_flow.go)
 	removed     []string  // task ids removed in the plan review (persisted in the run meta)
 	chat        *chatLink // set when the request was born in a chat turn (chat.go)
+	gate        *RunGate  // human gate in progress before the start (persisted in the run meta; guarded by mu)
 }
 
 func (r *run) touch(agentID string) {
@@ -650,7 +651,7 @@ func (o *Orchestrator) handleToolsFrom(ctx context.Context, rs *run, t *domain.T
 		route := o.routeOf(ctx, agent, tr)
 		if route == RouteRead {
 			// Reads never need approval; the gateway skips the ones that survived the read rounds.
-			if _, out := o.gatewayTool(ctx, rs, t, agent, tr, PolicyVerdict{}); out != OutcomeDone {
+			if _, out := o.gatewayTool(ctx, rs, t, agent, tr, PolicyVerdict{}, nil); out != OutcomeDone {
 				return out
 			}
 			continue
@@ -664,7 +665,11 @@ func (o *Orchestrator) handleToolsFrom(ctx context.Context, rs *run, t *domain.T
 			continue
 		}
 		if route != RouteNone {
-			if _, out := o.gatewayTool(ctx, rs, t, agent, tr, pv); out != OutcomeDone {
+			// Durable point of a gateway action: its approval card and what the task
+			// still has to do survive a restart.
+			idx := i
+			onPending := func(apID string, p GatewayPending) { o.saveCheckpoint(ctx, rs, *t, reqs, idx, apID, &p) }
+			if _, out := o.gatewayTool(ctx, rs, t, agent, tr, pv, onPending); out != OutcomeDone {
 				return out
 			}
 			continue
@@ -700,7 +705,7 @@ func (o *Orchestrator) handleToolsFrom(ctx context.Context, rs *run, t *domain.T
 			return OutcomeFailed
 		}
 		// Durable point: what the task still has to do survives a restart.
-		o.saveCheckpoint(ctx, rs, *t, reqs, i, ap.ID)
+		o.saveCheckpoint(ctx, rs, *t, reqs, i, ap.ID, nil)
 		if out := o.waitToolApproval(ctx, rs, t, agent, tr, ap, ch, o.approvals.Deadline(ap)); out != OutcomeDone {
 			return out
 		}
@@ -744,10 +749,17 @@ func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.
 		}
 		t.Status = domain.TaskRunning
 		// At most once: mark the checkpoint before recording the execution, so a
-		// restart in between never executes the approved action a second time.
+		// restart in between never executes the approved action a second time,
+		// and claim the approval id in the execution ledger (any process).
 		o.markExecuted(ctx, t.ID, res.ID)
-		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.executed", Entity: "task", EntityID: t.ID,
-			Details: map[string]any{"tool": tr.Tool, "action": tr.Action, "arg_keys": argKeys(tr.Args), "approval_id": res.ID, "approvers": approverIDs(res), "simulated": true}})
+		if ok, why := o.claimExecution(ctx, *t, res.ID, tr, argsHashOf(tr)); !ok {
+			o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.execution_skipped", Entity: "task", EntityID: t.ID,
+				Details: map[string]any{"tool": tr.Tool, "action": tr.Action, "approval_id": res.ID, "reason": why, "simulated": true}})
+		} else {
+			o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.executed", Entity: "task", EntityID: t.ID,
+				Details: map[string]any{"tool": tr.Tool, "action": tr.Action, "arg_keys": argKeys(tr.Args), "approval_id": res.ID, "approvers": approverIDs(res), "simulated": true}})
+			o.finishExecution(ctx, res.ID, "simulated")
+		}
 		o.setState(ctx, agent.ID, domain.StateWorking, "Acción aprobada, finalizando: "+t.Title, &tid, 90)
 	}
 	return OutcomeDone

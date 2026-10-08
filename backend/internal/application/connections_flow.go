@@ -113,11 +113,23 @@ func (o *Orchestrator) admitTask(ctx context.Context, rs *run, t domain.Task) bo
 // wired to a dependency that never completes, so the scheduler skips them and
 // everything that depends on them.
 func (o *Orchestrator) reviewPlan(ctx context.Context, rs *run, tasks []domain.Task) bool {
+	return o.reviewPlanSince(ctx, rs, tasks, time.Now().UTC())
+}
+
+// reviewPlanSince is reviewPlan for a review that began at since (a request
+// resumed after a restart keeps the original deadline, decision D-A1b).
+func (o *Orchestrator) reviewPlanSince(ctx context.Context, rs *run, tasks []domain.Task, since time.Time) bool {
 	p := o.conn.plans
 	if p == nil {
 		return true
 	}
 	org := o.org(ctx)
+	deadline := since.Add(o.cfg.ApprovalTimeout)
+	if !time.Now().Before(deadline) {
+		o.cancelPlanned(ctx, rs, tasks, "plan sin revisar")
+		o.failRequest(ctx, rs, assistantID, "Plan sin revisar", fmt.Errorf("el plan no se revisó a tiempo"))
+		return false
+	}
 	infos := make([]PlanTaskInfo, 0, len(tasks))
 	for _, t := range tasks {
 		infos = append(infos, PlanTaskInfo{ID: t.ID, Title: t.Title, AgentID: t.AgentID, DependsOn: t.DependsOn})
@@ -131,9 +143,10 @@ func (o *Orchestrator) reviewPlan(ctx context.Context, rs *run, tasks []domain.T
 	if !required {
 		return true
 	}
+	o.setGate(ctx, rs, &RunGate{Kind: GatePlanReview, StartedAt: since}) // durable: the review survives a restart
 	o.setState(ctx, assistantID, domain.StateWaiting, "Esperando la revisión de tu plan", nil, 20)
 	o.emitMetrics(ctx)
-	timer := time.NewTimer(o.cfg.ApprovalTimeout)
+	timer := time.NewTimer(time.Until(deadline))
 	defer timer.Stop()
 	select {
 	case d := <-ch:
@@ -157,7 +170,7 @@ func (o *Orchestrator) reviewPlan(ctx context.Context, rs *run, tasks []domain.T
 		o.rec.Audit(ctx, domain.AuditLog{Actor: ActorFrom(ctx, "user"), Action: "plan.approved", Entity: "request", EntityID: rs.req.ID,
 			Details: map[string]any{"removed": d.RemoveTaskIDs, "no_external_actions": d.NoExternalActions}})
 		rs.removed = append([]string{}, d.RemoveTaskIDs...)
-		o.saveRunMeta(ctx, rs) // a resumed run keeps "no external actions" and the removed tasks
+		o.setGate(ctx, rs, nil) // a resumed run keeps "no external actions" and the removed tasks
 		return true
 	case <-timer.C:
 		p.Forget(org, rs.req.ID)
@@ -295,11 +308,24 @@ func (o *Orchestrator) legacyBlocked(ctx context.Context, rs *run, t *domain.Tas
 	return true
 }
 
+// gatewayCall builds the gateway call of a tool request with the taint of the task.
+func (o *Orchestrator) gatewayCall(ctx context.Context, rs *run, t domain.Task, agent domain.Agent, tr ToolRequest) GatewayCall {
+	taint := rs.taintOf(t.ID)
+	rs.ext.mu.Lock()
+	defer rs.ext.mu.Unlock()
+	return GatewayCall{Org: o.org(ctx), AgentID: agent.ID, TaskID: t.ID, RequestID: rs.req.ID, OnBehalfOf: ActorFrom(ctx, ""),
+		Tool: tr.Tool, Action: tr.Action, Args: tr.Args, Autonomy: agent.Autonomy, Tainted: taint.tainted,
+		ReadConnections: append([]string{}, taint.conns...), InjectionSuspected: taint.suspected, ReadOnlyRequest: rs.ext.readOnly}
+}
+
 // gatewayTool routes a tool request through the Tool Gateway when it is
 // connection-backed. handled=false means "use the legacy path". pv is the
 // verdict of the policy layer (already checked: not a deny); its approval
 // requirements (role, double approval) are attached to the gateway's approval.
-func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, tr ToolRequest, pv PolicyVerdict) (handled bool, out Outcome) {
+// onPending (optional) is told about the approval right after it is requested
+// (the durable checkpoint of the task).
+func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, tr ToolRequest, pv PolicyVerdict,
+	onPending func(approvalID string, p GatewayPending)) (handled bool, out Outcome) {
 	gw := o.conn.gw
 	if gw == nil {
 		return false, OutcomeDone
@@ -317,24 +343,14 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 	if !o.admitTask(ctx, rs, *t) {
 		return true, OutcomeFailed
 	}
-	taint := rs.taintOf(t.ID)
-	rs.ext.mu.Lock()
-	call := GatewayCall{Org: org, AgentID: agent.ID, TaskID: t.ID, RequestID: rs.req.ID, OnBehalfOf: ActorFrom(ctx, ""),
-		Tool: tr.Tool, Action: tr.Action, Args: tr.Args, Autonomy: agent.Autonomy, Tainted: taint.tainted,
-		ReadConnections: append([]string{}, taint.conns...), InjectionSuspected: taint.suspected, ReadOnlyRequest: rs.ext.readOnly}
-	rs.ext.mu.Unlock()
+	call := o.gatewayCall(ctx, rs, *t, agent, tr)
 	res := gw.Execute(ctx, call)
 
-	note := func(format string, a ...any) {
-		if t.Output != nil {
-			t.Output.Evidence = append(t.Output.Evidence, fmt.Sprintf(format, a...))
-		}
-	}
 	switch res.Decision {
 	case "denied":
 		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.denied", Entity: "task", EntityID: t.ID,
 			Details: map[string]any{"tool": tr.Tool, "action": tr.Action, "reason": res.DenyReason}})
-		note("Acción %s.%s denegada (%s)", tr.Tool, tr.Action, res.DenyReason)
+		noteTask(t, "Acción %s.%s denegada (%s)", tr.Tool, tr.Action, res.DenyReason)
 		return true, OutcomeDone
 	case "allowed":
 		if o.policy != nil {
@@ -342,7 +358,7 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 		}
 		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.executed", Entity: "task", EntityID: t.ID,
 			Details: map[string]any{"tool": tr.Tool, "action": tr.Action, "status": res.Status, "hold_id": res.HoldID}})
-		note("%s.%s: %s", tr.Tool, tr.Action, res.Summary)
+		noteTask(t, "%s.%s: %s", tr.Tool, tr.Action, res.Summary)
 		return true, OutcomeDone
 	}
 	// needs_approval: the human decides; the approval is bound to these exact args.
@@ -358,24 +374,49 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 		Context: map[string]any{"account": p.Account, "recipients": p.Recipients, "reversibility": p.Reversibility, "tainted": p.Tainted,
 			"external_origin": p.ExternalOrigin, "hold_seconds": p.HoldSeconds, "flags": p.Flags, "args_hash": p.ArgsHash, "outbox_id": p.OutboxID}}
 	governApproval(&ap, rs, pv)
-	tid := t.ID
 	t.Status = domain.TaskAwaitingApproval
 	if err := o.store.UpdateTask(ctx, org, *t); err != nil {
 		o.failTask(ctx, rs, *t, err)
 		return true, OutcomeFailed
 	}
+	// Bind the outbox item to the approval before the approval is visible: a
+	// human approving from the outbox right away must resolve this approval.
+	ap.ID = newID()
+	gw.RegisterApproval(ap.ID, *p)
 	ap, ch, err := o.approvals.Request(ctx, ap)
 	if err != nil {
+		gw.ApprovalResolved(ap.ID, false)
 		o.failTask(ctx, rs, *t, err)
 		return true, OutcomeFailed
 	}
-	gw.RegisterApproval(ap.ID, *p)
+	if onPending != nil {
+		onPending(ap.ID, *p)
+	}
+	return true, o.gatewayAwait(ctx, rs, t, agent, tr, call, *p, ap, ch, o.approvals.Deadline(ap))
+}
+
+func noteTask(t *domain.Task, format string, a ...any) {
+	if t.Output != nil {
+		t.Output.Evidence = append(t.Output.Evidence, fmt.Sprintf(format, a...))
+	}
+}
+
+// gatewayAwait waits for the human decision on a gateway action and executes
+// it (re-validated by the gateway) once approved. It is also the resume point
+// of a task interrupted by a restart, which keeps the approval's original
+// deadline. The approved action runs at most once: the checkpoint is marked
+// before the call and the gateway claims the approval id in its ledger.
+func (o *Orchestrator) gatewayAwait(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, tr ToolRequest, call GatewayCall,
+	p GatewayPending, ap domain.Approval, ch <-chan domain.Approval, deadline time.Time) Outcome {
+	gw := o.conn.gw
+	org := o.org(ctx)
+	tid := t.ID
 	o.setRequestStatus(ctx, rs, domain.RequestAwaitingApproval)
 	o.setState(ctx, agent.ID, domain.StateAwaitingApproval, "Esperando aprobación: "+ap.Title, &tid, 80)
 	o.emitMetrics(ctx)
-	decision, err := o.approvals.Wait(ctx, ch, ap.ID)
+	decision, err := o.approvals.WaitUntil(ctx, ch, ap.ID, deadline)
 	if err != nil {
-		return true, OutcomeFailed // cancelled
+		return OutcomeFailed // cancelled
 	}
 	approved := decision.Status == domain.ApprovalApproved
 	if approved && o.policy != nil {
@@ -397,10 +438,12 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 		o.rec.Emit(ctx, Action{Type: domain.EvTaskBlocked, AgentID: agent.ID, Entity: "task", EntityID: t.ID,
 			Payload: map[string]any{"task": *t}, Text: fmt.Sprintf("Tarea bloqueada (aprobación rechazada): %s", t.Title)})
 		o.emitMetrics(ctx)
-		return true, OutcomeBlocked
+		return OutcomeBlocked
 	}
 	t.Status = domain.TaskRunning
 	call.ApprovedArgsHash, call.ApprovalID = p.ArgsHash, decision.ID
+	// At most once: a restart after this point never executes it again.
+	o.markExecuted(ctx, t.ID, decision.ID)
 	// Everything is re-validated at execution time (TOCTOU): a revoked grant or
 	// an active kill switch stops an approved action.
 	res2 := gw.Execute(ctx, call)
@@ -408,12 +451,16 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 	case res2.Decision == "denied":
 		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.denied", Entity: "task", EntityID: t.ID,
 			Details: map[string]any{"tool": tr.Tool, "action": tr.Action, "reason": res2.DenyReason, "approval_id": decision.ID}})
-		note("Acción aprobada pero denegada al ejecutar (%s)", res2.DenyReason)
+		noteTask(t, "Acción aprobada pero denegada al ejecutar (%s)", res2.DenyReason)
+	case res2.Status == StatusAlreadyExecuted:
+		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.execution_skipped", Entity: "task", EntityID: t.ID,
+			Details: map[string]any{"tool": tr.Tool, "action": tr.Action, "approval_id": decision.ID, "reason": "already_executed", "hold_id": res2.HoldID}})
+		noteTask(t, "%s.%s: la acción aprobada ya se había ejecutado", tr.Tool, tr.Action)
 	default:
 		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.executed", Entity: "task", EntityID: t.ID,
 			Details: map[string]any{"tool": tr.Tool, "action": tr.Action, "status": res2.Status, "approval_id": decision.ID, "approvers": approverIDs(decision), "hold_id": res2.HoldID}})
-		note("%s.%s: %s", tr.Tool, tr.Action, res2.Summary)
+		noteTask(t, "%s.%s: %s", tr.Tool, tr.Action, res2.Summary)
 	}
 	o.setState(ctx, agent.ID, domain.StateWorking, "Acción aprobada, finalizando: "+t.Title, &tid, 90)
-	return true, OutcomeDone
+	return OutcomeDone
 }

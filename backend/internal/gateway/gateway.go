@@ -38,6 +38,9 @@ const MaxHoldSeconds = 300
 const (
 	CodeApprovalMismatch = "approval_mismatch"
 	CodeNoSecrets        = connections.CodeSecretDetected
+	// CodeExecutionUnavailable: the execution ledger could not be reached, so an
+	// approved action is not run (it could not be guaranteed to run only once).
+	CodeExecutionUnavailable = "execution_record_unavailable"
 )
 
 // Gateway wires connections, controls and the sanitizer.
@@ -54,6 +57,10 @@ type Gateway struct {
 	// OrgIDs lists the organizations visited by background sweeps (provider
 	// revocation retries). Optional.
 	OrgIDs func(ctx context.Context) []string
+	// Executions (optional) records every executed approval durably, so an
+	// approved action runs at most once across restarts and instances. Without
+	// it only the in-memory record of this process applies.
+	Executions application.ExecutionLedger
 
 	mu        sync.Mutex
 	seen      map[string]map[string]bool // org/task -> addresses seen in external content
@@ -398,6 +405,21 @@ func (g *Gateway) Execute(ctx context.Context, c application.GatewayCall) applic
 		}
 	}
 
+	if approved && c.ApprovalID != "" && g.Executions != nil {
+		claimed, prev, err := g.Executions.ClaimExecution(ctx, c.Org, application.ApprovalExecution{ApprovalID: c.ApprovalID, TaskID: c.TaskID,
+			Tool: c.Tool, Action: c.Action, ArgsHash: c.ApprovedArgsHash})
+		if err != nil {
+			g.Log.Warn("gateway: claim approved execution", "approval", c.ApprovalID, "err", err)
+			return g.deny(ctx, c, t, cd, CodeExecutionUnavailable)
+		}
+		if !claimed {
+			// Already executed (before a restart, by the outbox or by another
+			// instance): never again. The caller learns it was not run now.
+			return application.GatewayOutcome{Decision: "allowed", Status: application.StatusAlreadyExecuted, HoldID: prev.HoldID,
+				Summary: "already executed", ConnectionID: cd.conn.ID}
+		}
+	}
+
 	var out application.GatewayOutcome
 	if side && t.spec.AlwaysApproval {
 		// Only reachable with an approval for this exact call: defer the send.
@@ -407,6 +429,15 @@ func (g *Gateway) Execute(ctx context.Context, c application.GatewayCall) applic
 	}
 	if approved && c.ApprovalID != "" && out.Decision == "allowed" && (out.Status == "scheduled" || out.Status == "succeeded") {
 		g.rememberApproved(c.ApprovalID, out)
+	}
+	if approved && c.ApprovalID != "" && g.Executions != nil {
+		st := out.Status
+		if out.Decision != "allowed" {
+			st = "denied:" + out.DenyReason
+		}
+		if err := g.Executions.FinishExecution(ctx, c.Org, c.ApprovalID, st, out.HoldID); err != nil {
+			g.Log.Warn("gateway: finish approved execution", "approval", c.ApprovalID, "err", err)
+		}
 	}
 	return out
 }
