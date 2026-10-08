@@ -142,7 +142,12 @@ Plan original:
 
 ---
 
-## A4 Conectores reales
+## A4 Conectores reales — hecho con dobles locales; sin probar con cuentas reales (integrado en `next-features`)
+
+**Hecho:** Google Calendar (leer; crear evento con aprobación y retención de 60 s), Google Drive (sólo lectura y sólo en carpetas elegidas; sin carpeta no lee nada), GitHub (token fino en la bóveda; repos en lista blanca; issues/comentarios con aprobación + retención), Slack (canales en lista blanca; publicar con aprobación + retención, cancelable, una sola vez). El contenido externo llega como datos delimitados y marcados, incluida la muestra de inyección. UI de conexiones con los cuatro proveedores. Lista de verificación manual de Gmail real en `docs/runbooks/gmail-live-checklist.md`.
+**No verificado:** ninguno de los cinco conectores (Gmail incluido) contra una cuenta real; sólo contra servidores falsos locales.
+
+Plan original:
 
 - Gmail ya tiene lectura, borrador y envío con OAuth PKCE, bóveda, envío diferido de 60 s y buzón simulado con un correo de inyección (`connections/gmail/*`, `providers/google_gmail.json`). Falta probarlo con cuenta real: requiere `GOOGLE_OAUTH_CLIENT_ID/SECRET` y una cuenta de prueba del dueño.
 - Orden: 1) Gmail real lectura + borrador (checklist manual documentada), 2) Calendar (lectura, crear evento con aprobación), 3) Drive (lectura), 4) GitHub (lectura, issues con aprobación), 5) Slack (lectura de canales elegidos, publicar con aprobación).
