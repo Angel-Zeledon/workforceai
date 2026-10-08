@@ -638,7 +638,7 @@ Un proyecto es un workflow entero con trabajo en paralelo: objetivos -> flujos -
 - Las tareas de un proyecto aparecen también en `/tasks` y `/requests/{request_id}` (el `request_id` está en `project.request_id`). Su descripción termina con `[project-node:<id>]`.
 - La estimación usa priors (`basis:"priors"`, modelo `deepseek-chat`), no el estimador del runtime; el gasto real puede diferir.
 - `max_parallel` se guarda pero no se impone por proyecto (manda `MAX_PARALLEL`). Pausar no interrumpe llamadas en curso. Las consultas entre agentes de nodos con más de `MAX_DEPTH` niveles de dependencia se omiten (se amplía el límite de cadena solo para planes de proyecto).
-- Un proyecto en curso cuando el servidor se reinicia se marca `failed` ("interrupted") al leerlo.
+- Un proyecto en curso cuando el servidor se reinicia (con Postgres) se reanuda: su solicitud sigue donde estaba, las puertas humanas pendientes siguen siendo la misma aprobación con su plazo original y el monitor vuelve a publicar `project.*` (auditoría `project.resumed`). Solo sin recuperación (p. ej. sin `DATABASE_URL`) se marca `failed` ("interrupted") al leerlo. Ver `07-seguridad-costos.md` 5.4.
 
 ## 17. Artefactos y espacios de trabajo (backend implementado)
 

@@ -27,7 +27,7 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 
 ---
 
-## A1 Ejecución duradera — implementado en parte (integrado en `next-features`)
+## A1 Ejecución duradera — implementado salvo el paso 6 (A1b en `feat/a1b-resume`)
 
 - Verificado en stack real (Postgres + Redis + runtime): aprobación pendiente → `docker compose restart backend` → log "resumed in-progress requests count=1" → aprobar → solicitud `done` con informe.
 
@@ -35,13 +35,21 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 - Pasos 1-5 del alcance: `RunStore` (memoria + Postgres, migración `290_durable_runs.sql` con down y RLS), checkpoint por tarea antes de esperar una aprobación de herramienta simulada, `Approvals.Attach/WaitUntil/Supersede` con plazo original, `Orchestrator.Recover` al arrancar (`cmd/server/main.go`), evento `request.resumed`, ejecución aprobada a lo sumo una vez. Decisiones tomadas: D-A1a reintento automático una vez; D-A1b plazo original. Detalle en `07-seguridad-costos.md` 5.4.
 - Tests: reinicios simulados con el store en memoria (aprobar, rechazar, decidido durante la caída, plazo vencido, sin checkpoint, doble `Recover`, interrumpida antes de empezar) y Postgres real (ida y vuelta, RLS, reset).
 
+### Hecho (A1b, 2026-10-08, rama `feat/a1b-resume`)
+- Proyectos: se reanudan tras un reinicio (`RequestOwner.ResumeRequest` + `projects.Service.Recover`); las puertas pendientes siguen siendo la misma aprobación y ya no se marcan `interrupted` (salvo sin recuperación).
+- Revisión del plan y confirmación de costo pendientes: siguen esperando tras el reinicio con el plazo original (D-A1b); la puerta se guarda en `request_runs.gate`.
+- Aprobaciones del Tool Gateway (Gmail): se reanudan desde su punto exacto (misma aprobación, mismos argumentos, elemento de la bandeja restaurado con el mismo id), sin reemplazarlas.
+- A lo sumo una vez: registro `approval_executions` (clave `(org_id, approval_id)` + `args_hash`), compartido por la tarea y la bandeja de salida; falla cerrado si no está disponible.
+- El chat de origen recibe el eco del informe de una solicitud reanudada (`request_runs.chat`).
+- Migración `350_durable_resume.sql` (up y down, RLS por organización).
+- Corrección de paso: la bandeja de salida se liga a su aprobación antes de que la aprobación sea visible (aprobar desde la bandeja al instante podía dejar la tarea esperando; el test `TestApprovingFromTheOutboxContinuesTheWaitingTaskWithEditedContent` fallaba ~1 de cada 10 con `-race`).
+- Tests: reinicios simulados en memoria (revisión de plan reanudada y con plazo vencido, confirmación de costo reanudada y cancelada, aprobación de Gmail reanudada, aprobada desde la bandeja restaurada, rechazada durante la caída, ejecutada antes del reinicio sin repetirse, registro de ejecuciones simuladas, eco en el chat, proyecto reanudado en su puerta y puerta rechazada tras el reinicio) y Postgres real (columnas nuevas, reclamos concurrentes, RLS, reset, down y up).
+
 ### Pendiente
-- Reanudar proyectos (hoy sus solicitudes se marcan fallidas al reiniciar y el proyecto `interrupted`).
-- Reanudar aprobaciones del Tool Gateway (Gmail) desde su punto exacto: hoy se reemplazan por una aprobación nueva.
-- Revisión del plan y confirmación de costo pendientes: hoy la solicitud falla con aviso.
 - Paso 6 (cola con prioridades y límites por organización, contadores de ventana persistidos).
-- Varias instancias recuperando a la vez; el chat de origen no recibe el eco del reporte de una solicitud reanudada.
-- No verificado: e2e con `docker compose restart backend` a mitad del escenario de $50,000.
+- Varias instancias recuperando a la vez (documentado en `07-seguridad-costos.md` 5.4): hoy una sola instancia debe recuperar; el registro de ejecuciones sí es compartido.
+- Ediciones de la revisión del plan hechas antes del reinicio (se pierden: la revisión empieza limpia); esperas de nodos `wait` de proyecto (vuelven a empezar); planificación interrumpida a mitad (la solicitud falla).
+- No verificado: e2e con `docker compose restart backend` a mitad del escenario de $50,000, ni la reanudación con una cuenta real de Gmail (sólo buzón simulado).
 
 ### Estado anterior (verificado antes de implementar)
 - Cada solicitud corre en una goroutine con estado en memoria (`application/orchestrator.go` `submit`/`process`, struct `run`).
