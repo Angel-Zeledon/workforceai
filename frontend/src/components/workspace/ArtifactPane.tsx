@@ -8,6 +8,7 @@ import { fmtDateTime, useT } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { useAgentColor, useAgentName } from "@/components/ui";
 import { ArtifactBody } from "./ArtifactBody";
+import { CollabRail } from "./CollabRail";
 import { KindIcon } from "./kindMeta";
 
 const ATTACH_MODES: AttachMode[] = ["none", "read", "propose", "edit"];
@@ -60,6 +61,7 @@ export function ArtifactPane({ id, deskId, focused, onFocus }: { id: string; des
   const [showHistory, setShowHistory] = useState(false);
   const [versions, setVersions] = useState<ArtifactVersionInfo[]>([]);
   const [links, setLinks] = useState<ArtifactLink[]>([]);
+  const [showCollab, setShowCollab] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
   const [askText, setAskText] = useState("");
   const [askSent, setAskSent] = useState(false);
@@ -116,6 +118,7 @@ export function ArtifactPane({ id, deskId, focused, onFocus }: { id: string; des
             {exportable && (art.kind === "sheet" || art.kind === "table") && <button type="button" data-testid="art-export-csv" onClick={() => download(`${art.title}.csv`, "text/csv", toCsv(art))} className="text-mute hover:text-ink">CSV</button>}
             {exportable && !MOCK && art.kind === "doc" && <button type="button" data-testid="art-export-docx" onClick={() => downloadExport(art.id, "docx")} className="text-mute hover:text-ink">DOCX</button>}
             {exportable && !MOCK && (art.kind === "sheet" || art.kind === "table") && <button type="button" data-testid="art-export-xlsx" onClick={() => downloadExport(art.id, "xlsx")} className="text-mute hover:text-ink">XLSX</button>}
+            {!MOCK && <button type="button" data-testid="art-collab-toggle" aria-expanded={showCollab} onClick={() => setShowCollab(!showCollab)} className={`font-semibold ${showCollab ? "text-accent" : "text-mute hover:text-ink"}`}>{t("collab.toggle")}{art.pending_proposals > 0 ? ` (${art.pending_proposals})` : ""}</button>}
             <button type="button" data-testid="art-history-toggle" onClick={() => setShowHistory(!showHistory)} className={`font-semibold ${showHistory ? "text-accent" : "text-mute hover:text-ink"}`}>{t("art.history")}</button>
           </span>
         </div>
@@ -145,6 +148,7 @@ export function ArtifactPane({ id, deskId, focused, onFocus }: { id: string; des
         <div className="min-h-0 min-w-0 flex-1">
           {art.content === undefined ? <div className="p-6 text-center text-xs text-mute">…</div> : <ArtifactBody art={art} />}
         </div>
+        {showCollab && !MOCK && <CollabRail art={art} />}
         {showHistory && (
           <aside className="w-[220px] shrink-0 overflow-y-auto border-l border-line bg-panel2/40 p-2">
             <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-mute">{t("art.history")}</h4>
