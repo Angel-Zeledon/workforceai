@@ -290,6 +290,18 @@ func (s *Store) ListAgents(ctx context.Context, orgID string) ([]domain.Agent, e
 	return many(ctx, s, orgID, scanAgent, `SELECT `+agentCols+` FROM agents WHERE org_id=$1 ORDER BY position, id`, orgID)
 }
 
+// CreateAgent adds an agent at the end of the office (hiring from a role template).
+func (s *Store) CreateAgent(ctx context.Context, orgID string, a domain.Agent) error {
+	tag, err := s.execTag(ctx, orgID, `INSERT INTO agents (org_id, id, name, role, title, description, persona, responsibilities, state, activity, progress, tools, permissions, autonomy, position)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,$11,$12,$13,(SELECT COALESCE(MAX(position)+1, 0) FROM agents WHERE org_id=$1)) ON CONFLICT (org_id, id) DO NOTHING`,
+		orgID, a.ID, a.Name, a.Role, a.Title, a.Description, a.Persona, jb(strs(a.Responsibilities)), string(a.State), a.Activity,
+		jb(strs(a.Tools)), jb(strs(a.Permissions)), a.Autonomy)
+	if err == nil && tag.RowsAffected() == 0 {
+		return fmt.Errorf("%w: agent %s already exists", domain.ErrConflict, a.ID)
+	}
+	return err
+}
+
 func (s *Store) GetAgent(ctx context.Context, orgID, id string) (domain.Agent, error) {
 	a, err := one(ctx, s, orgID, scanAgent, `SELECT `+agentCols+` FROM agents WHERE org_id=$1 AND id=$2`, orgID, id)
 	return a, mapErr(err)

@@ -6,9 +6,11 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"unicode"
 
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/roles"
 )
 
 // Local routing rules and canned lines. They are the safety net of the chat
@@ -25,11 +27,13 @@ func normText(s string) string {
 var tokenRe = regexp.MustCompile(`[a-z0-9&$]+`)
 
 // topicRules maps a role to its cues over the normalized text (es + en).
-var topicRules = []struct {
+type topicRule struct {
 	role  string
 	topic string
 	re    *regexp.Regexp
-}{
+}
+
+var topicRules = []topicRule{
 	{"accounting", "finance", regexp.MustCompile(`\b(financ|balance|margen|margin|costo|costs?\b|factur|invoice|presupuest|budget|flujo de caja|cash ?flow|impuest|tax|contab|accounting|utilidad|profit|gasto|expense|ingreso|revenue|rentab|deuda|debt|prestamo|loan|iva\b|estado de resultados|cuesta|cuestan|cobr|contador|accountant|flujo|lana\b|plata\b|guita\b|caja\b|dinero|money)`)},
 	{"legal", "legal", regexp.MustCompile(`\b(contratos?\b|contract|legal|clausula|clause|demanda|lawsuit|cumplimiento|compliance|abogad|lawyer|attorney|ley\b|leyes|law\b|privacidad|privacy|nda\b|propiedad intelectual|intellectual property|litigio|regulat|licencia|license|penalidad|penalty)`)},
 	{"hr", "hr", regexp.MustCompile(`\b(contratar|contrataci|contratamos|vacante|empleado|rrhh|recursos humanos|personal\b|reclut|onboarding|nomina|salario|salary|vacaciones|hire\b|hiring|recruit|payroll|employee|candidat|entrevista|interview|talento|despido|contrata\b|job post|job opening|oferta laboral|oferta de empleo|reclutador)`)},
@@ -77,9 +81,61 @@ var greetFluff = map[string]bool{"a": true, "todos": true, "todas": true, "equip
 var ackWords = map[string]bool{"ok": true, "okay": true, "vale": true, "listo": true, "entendido": true, "dale": true, "bien": true,
 	"cool": true, "ya": true, "claro": true, "si": true, "sip": true, "yes": true, "yep": true, "got": true, "it": true}
 
+// templateRules are the topic rules of the role templates without a hand-tuned
+// rule above: their routing keywords (es + en) as one alternation.
+var templateRules = sync.OnceValue(func() []topicRule {
+	var out []topicRule
+	tuned := map[string]bool{}
+	for _, r := range topicRules {
+		tuned[r.role] = true
+	}
+	for _, t := range roles.All() {
+		if tuned[t.ID] {
+			continue
+		}
+		var alts []string
+		for _, loc := range []string{"es", "en"} {
+			for _, k := range t.Routing.Keywords[loc] {
+				if k = normText(k); k != "" {
+					alts = append(alts, regexp.QuoteMeta(k))
+				}
+			}
+		}
+		if len(alts) > 0 {
+			out = append(out, topicRule{t.ID, t.Routing.Topic, regexp.MustCompile(`\b(` + strings.Join(alts, "|") + `)\b`)})
+		}
+	}
+	return out
+})
+
+func allTopicRules() []topicRule {
+	return append(append([]topicRule{}, topicRules...), templateRules()...)
+}
+
+// roleTopic is the topic of a role: the tuned map, else its template.
+func roleTopic(role string) string {
+	if t, ok := topicOfRole[role]; ok {
+		return t
+	}
+	if t, ok := roles.Get(role); ok {
+		return t.Routing.Topic
+	}
+	return "general"
+}
+
+func relatedOf(role string) []string {
+	if r, ok := localRelated[role]; ok {
+		return r
+	}
+	if t, ok := roles.Get(role); ok {
+		return t.Routing.Related
+	}
+	return nil
+}
+
 func topicScores(n string) map[string]int {
 	out := map[string]int{}
-	for _, r := range topicRules {
+	for _, r := range allTopicRules() {
 		hits := map[string]bool{}
 		for _, m := range r.re.FindAllString(n, -1) {
 			hits[m] = true
@@ -218,9 +274,20 @@ var topicOfRole = map[string]string{"accounting": "finance", "legal": "legal", "
 
 var topicLabels = map[string]map[string]string{
 	"es": {"finance": "finanzas", "legal": "temas legales", "hr": "personas y contratación", "sales": "ventas",
-		"data": "datos y análisis", "operations": "operaciones", "general": "lo general"},
+		"data": "datos y análisis", "operations": "operaciones", "general": "lo general",
+		"projects": "proyectos y planificación", "education": "formación y clases", "data_engineering": "consultas y calidad de datos",
+		"software": "código y software"},
 	"en": {"finance": "finance", "legal": "legal matters", "hr": "people and hiring", "sales": "sales",
-		"data": "data and analysis", "operations": "operations", "general": "general topics"},
+		"data": "data and analysis", "operations": "operations", "general": "general topics",
+		"projects": "projects and planning", "education": "training and classes", "data_engineering": "queries and data quality",
+		"software": "code and software"},
+}
+
+func topicLabel(loc, topic string) string {
+	if l := topicLabels[loc][topic]; l != "" {
+		return l
+	}
+	return topicLabels[loc]["general"]
 }
 
 // localRoute is the deterministic router of the backend.
@@ -255,10 +322,17 @@ func localRoute(in RouteRequest) RouteResponse {
 		intent = domain.IntentTask
 	}
 	scores := topicScores(n)
+	for role := range scores {
+		if _, tuned := topicOfRole[role]; !tuned {
+			if _, present := byRole[role]; !present {
+				delete(scores, role) // a hireable profession nobody in this office has
+			}
+		}
+	}
 	primaryRole := ""
 	best := 0
 	first := map[string]int{}
-	for _, r := range topicRules {
+	for _, r := range allTopicRules() {
 		if at := r.re.FindStringIndex(n); at != nil {
 			first[r.role] = at[0]
 		}
@@ -277,7 +351,7 @@ func localRoute(in RouteRequest) RouteResponse {
 	}
 	topic := "general"
 	if primaryRole != "" {
-		topic = topicOfRole[primaryRole]
+		topic = roleTopic(primaryRole)
 	}
 	if intent == domain.IntentSmalltalk {
 		topic = kind
@@ -285,10 +359,7 @@ func localRoute(in RouteRequest) RouteResponse {
 			topic = "greeting"
 		}
 	}
-	label := topicLabels[loc][topic]
-	if label == "" {
-		label = topicLabels[loc]["general"]
-	}
+	label := topicLabel(loc, topic)
 	reason := func(key string) string { return chatText(loc, "reason_"+key) }
 
 	if id, ok := strings.CutPrefix(in.Conversation, domain.ChatAgentPrefix); ok {
@@ -355,7 +426,7 @@ func localRoute(in RouteRequest) RouteResponse {
 	out := []RouteResponder{{AgentID: owner.ID, Role: domain.RolePrimary, Reason: strings.ReplaceAll(reason("owner"), "{topic}", label)}}
 	// one related colleague, only if the text really names their area
 	var rel []string
-	for _, r := range localRelated[primaryRole] {
+	for _, r := range relatedOf(primaryRole) {
 		if scores[r] > 0 {
 			rel = append(rel, r)
 		}
@@ -369,7 +440,7 @@ func localRoute(in RouteRequest) RouteResponse {
 	if len(rel) > 0 {
 		if c, ok := byRole[rel[0]]; ok {
 			out = append(out, RouteResponder{AgentID: c.ID, Role: domain.RoleContributor,
-				Reason: strings.ReplaceAll(reason("related"), "{topic}", topicLabels[loc][topicOfRole[rel[0]]])})
+				Reason: strings.ReplaceAll(reason("related"), "{topic}", topicLabel(loc, roleTopic(rel[0])))})
 		}
 	}
 	return RouteResponse{Intent: intent, Topic: topic, Responders: out, Source: "local"}
@@ -598,6 +669,12 @@ func defaultAssignReason(locale string, a domain.Agent) string {
 	loc := chatLocale(RunStyle{Locale: locale})
 	if r, ok := roleReasons[loc][a.Role]; ok {
 		return r
+	}
+	if t, ok := roles.Get(a.Role); ok {
+		if loc == "en" {
+			return "handles " + t.Text(loc).Area
+		}
+		return "se ocupa de " + t.Text(loc).Area
 	}
 	if loc == "en" {
 		return "is the best fit for this work"

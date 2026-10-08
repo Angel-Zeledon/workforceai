@@ -52,6 +52,10 @@ type orgSpy struct {
 	orgs map[string]int
 }
 
+func (s *orgSpy) CreateAgent(ctx context.Context, orgID string, a domain.Agent) error {
+	return s.Store.(application.AgentWriter).CreateAgent(ctx, orgID, a)
+}
+
 func (s *orgSpy) note(org string) {
 	s.mu.Lock()
 	s.orgs[org]++

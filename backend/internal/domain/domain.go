@@ -289,6 +289,7 @@ type Event struct {
 // Event type names (WS contract).
 const (
 	EvRequestReceived  = "request.received"
+	EvAgentCreated     = "agent.created"
 	EvRequestCompleted = "request.completed"
 	EvPlanCreated      = "plan.created"
 	EvAgentState       = "agent.state_changed"

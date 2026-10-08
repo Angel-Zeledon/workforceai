@@ -4,6 +4,7 @@ package memory
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"sync"
@@ -97,6 +98,21 @@ func (s *Store) ListAgents(_ context.Context, _ string) ([]domain.Agent, error) 
 		out = append(out, s.agents[id])
 	}
 	return out, nil
+}
+
+// CreateAgent adds an agent at the end of the office (hiring from a role template).
+func (s *Store) CreateAgent(_ context.Context, _ string, a domain.Agent) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.agents == nil {
+		s.agents = map[string]domain.Agent{}
+	}
+	if _, ok := s.agents[a.ID]; ok {
+		return fmt.Errorf("%w: agent %s already exists", domain.ErrConflict, a.ID)
+	}
+	s.agents[a.ID] = a
+	s.agentOrder = append(s.agentOrder, a.ID)
+	return nil
 }
 
 func (s *Store) GetAgent(_ context.Context, _, id string) (domain.Agent, error) {
