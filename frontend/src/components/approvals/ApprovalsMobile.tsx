@@ -90,7 +90,7 @@ function ApprovalItem({ a, focused, onDone }: { a: Approval; focused: boolean; o
         <RiskBadge risk={a.risk} />
       </div>
       {focused && <p className="mt-1 text-[11px] font-medium text-accent">{t("approvals.mobile.focused")}</p>}
-      {a.details && <p className="mt-2 text-[13px] leading-snug text-ink2">{a.details}</p>}
+      {a.details && <p className="mt-2 text-[13px] leading-snug text-ink2 [overflow-wrap:anywhere]">{a.details}</p>}
       <dl className="mt-2 space-y-1 text-[12px] text-mute">
         <div className="font-mono">{a.action}</div>
         {a.required_role && <div data-testid={`approval-role-${a.id}`}>{t("approvals.mobile.requiredRole", { role: a.required_role })}</div>}
