@@ -6,6 +6,7 @@
 import { useEffect } from "react";
 import { create } from "zustand";
 import { call } from "./api";
+import { API_URL, MOCK } from "./config";
 import type { WsFrame } from "./types";
 
 // ---- types (sec. 5.1) -----------------------------------------------------------------------------
@@ -76,6 +77,14 @@ export const artifactApi = {
   links: async (id: string) => { const r = await call<any>("GET", `/artifacts/${id}/links?direction=both`); return (Array.isArray(r) ? r : r?.items ?? []) as ArtifactLink[]; },
   refreshDependencies: (id: string) => call<unknown>("POST", `/artifacts/${id}/refresh-dependencies`),
   ask: (id: string, body: { agent_id: string; text?: string; mode: "review_my_changes" | "free" }) => call<{ request_id: string }>("POST", `/artifacts/${id}/ask`, body),
+  /** Server-side docx/xlsx export (GET /artifacts/{id}/export); resolves with the file to download. Not available in demo mode. */
+  exportFile: async (id: string, format: "docx" | "xlsx", version?: number) => {
+    if (MOCK) throw new Error("export unavailable in demo mode");
+    const res = await fetch(`${API_URL}/artifacts/${encodeURIComponent(id)}/export?format=${format}${version ? `&version=${version}` : ""}`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`export -> ${res.status}`);
+    const name = /filename="?([^";]+)"?/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? `artifact.${format}`;
+    return { blob: await res.blob(), name };
+  },
   project: (pid: string) => call<ProjectWorkspace>("GET", `/projects/${pid}/workspace`),
 };
 

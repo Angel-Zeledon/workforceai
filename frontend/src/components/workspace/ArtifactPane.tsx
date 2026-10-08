@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   artifactApi, attachModeOf, useArtifact, useArtifacts, type ArtifactLink, type ArtifactVersionInfo, type AttachMode, type StoredArtifact,
 } from "@/lib/artifacts";
+import { MOCK } from "@/lib/config";
 import { fmtDateTime, useT } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { useAgentColor, useAgentName } from "@/components/ui";
@@ -29,6 +30,15 @@ function toCsv(art: StoredArtifact): string {
   const lines: string[] = [];
   for (let r = 1; r <= max.r; r++) lines.push(Array.from({ length: max.c }, (_, ci) => csvCell(sheet.cells[`${String.fromCharCode(65 + ci)}${r}`]?.v)).join(","));
   return lines.join("\n");
+}
+
+async function downloadExport(id: string, format: "docx" | "xlsx") {
+  try {
+    const { blob, name } = await artifactApi.exportFile(id, format);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch { /* forbidden or offline: the button simply does nothing */ }
 }
 
 export function ArtifactPane({ id, deskId, focused, onFocus }: { id: string; deskId: string; focused?: boolean; onFocus?: () => void }) {
@@ -104,6 +114,8 @@ export function ArtifactPane({ id, deskId, focused, onFocus }: { id: string; des
           <span className="ml-auto flex items-center gap-1.5">
             {exportable && <button type="button" data-testid="art-export-json" onClick={() => download(`${art.title}.json`, "application/json", JSON.stringify(art.content, null, 2))} className="text-mute hover:text-ink">JSON</button>}
             {exportable && (art.kind === "sheet" || art.kind === "table") && <button type="button" data-testid="art-export-csv" onClick={() => download(`${art.title}.csv`, "text/csv", toCsv(art))} className="text-mute hover:text-ink">CSV</button>}
+            {exportable && !MOCK && art.kind === "doc" && <button type="button" data-testid="art-export-docx" onClick={() => downloadExport(art.id, "docx")} className="text-mute hover:text-ink">DOCX</button>}
+            {exportable && !MOCK && (art.kind === "sheet" || art.kind === "table") && <button type="button" data-testid="art-export-xlsx" onClick={() => downloadExport(art.id, "xlsx")} className="text-mute hover:text-ink">XLSX</button>}
             <button type="button" data-testid="art-history-toggle" onClick={() => setShowHistory(!showHistory)} className={`font-semibold ${showHistory ? "text-accent" : "text-mute hover:text-ink"}`}>{t("art.history")}</button>
           </span>
         </div>
