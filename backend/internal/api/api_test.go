@@ -102,6 +102,7 @@ type opts struct {
 	timeouts       api.Timeouts
 	skipAuthRoutes bool
 	ws             bool // mount projects and artifacts (workspaces_api_test.go)
+	writeGate      func(ctx context.Context, org string) error
 }
 
 type env struct {
@@ -135,7 +136,7 @@ func newEnv(t *testing.T, o opts) *env {
 	d := api.Deps{Cfg: cfg, Queries: q, Orch: orch, Approvals: appr, Store: spy, Runtime: fakeRuntime{}, Hub: hub, Log: log,
 		AuthEnabled: o.auth, AllowedOrigins: o.origins, EnableDemoReset: o.demoReset, MaxBodyBytes: o.maxBody, WSMaxAge: o.wsMaxAge}
 	if o.ws {
-		attachWorkspaces(&d, spy, rec, appr, orch, log, ctx)
+		attachWorkspaces(&d, spy, rec, appr, orch, log, ctx, o.writeGate)
 	}
 	var svc *auth.Service
 	if o.auth {

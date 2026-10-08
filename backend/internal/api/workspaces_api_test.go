@@ -23,9 +23,10 @@ type infoFn func(ctx context.Context, id string) (string, string, error)
 
 func (f infoFn) Info(ctx context.Context, id string) (string, string, error) { return f(ctx, id) }
 
-func attachWorkspaces(d *api.Deps, core application.Store, rec *application.Recorder, appr *application.Approvals, orch *application.Orchestrator, log *slog.Logger, ctx context.Context) {
+func attachWorkspaces(d *api.Deps, core application.Store, rec *application.Recorder, appr *application.Approvals, orch *application.Orchestrator, log *slog.Logger, ctx context.Context,
+	gate func(ctx context.Context, org string) error) {
 	var ps *projects.Service
-	as := artifacts.New(artifacts.Config{Store: artifacts.NewMemStore(), Rec: rec, Core: core, Asker: orch, OrgID: d.Cfg.OrgID, Log: log,
+	as := artifacts.New(artifacts.Config{Store: artifacts.NewMemStore(), WriteGate: gate, Rec: rec, Core: core, Asker: orch, OrgID: d.Cfg.OrgID, Log: log,
 		Projects: infoFn(func(ctx context.Context, id string) (string, string, error) { return ps.Info(ctx, id) })})
 	ps = projects.New(ctx, projects.Config{Store: projects.NewMemStore(), Orch: orch, Core: core, Approvals: appr, Rec: rec, Runtime: fakeRuntime{}, Sink: as,
 		OrgID: d.Cfg.OrgID, Poll: 10 * time.Millisecond, Log: log})
