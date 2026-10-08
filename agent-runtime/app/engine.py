@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import abc
+import json
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .providers import configured_providers
@@ -28,20 +30,20 @@ if TYPE_CHECKING:  # avoid a circular import (estimate.py imports engine.py)
 log = logging.getLogger("agent_runtime")
 
 # USD per million tokens (input, output), keyed by model name without the "provider/" prefix.
-# DeepSeek (https://api-docs.deepseek.com/quick_start/pricing, checked 2026-10): the page no longer lists
-# deepseek-chat/deepseek-reasoner; their aliases bill as Flash. We use the PEAK rate (highest, cache miss)
-# so the budget is never underestimated: Flash 0.30 in / 1.20 out; V4 Pro 1.32 in / 3.96 out.
-# Verify and adjust if they change, or force values with PRICE_IN_PER_M / PRICE_OUT_PER_M.
-MODEL_PRICES: dict[str, tuple[float, float]] = {
-    "deepseek-chat": (0.30, 1.20),
-    "deepseek-reasoner": (0.30, 1.20),
-    "deepseek-flash": (0.30, 1.20),
-    "deepseek-v4-flash": (0.30, 1.20),
-    "deepseek-v4-pro": (1.32, 3.96),
-}
-# Default rate (Claude Sonnet): unknown model or simulation.
-PRICE_IN_PER_M = 3.0
-PRICE_OUT_PER_M = 15.0
+# Loaded from model_prices.json, the single table shared with the backend
+# (backend/internal/application/model_prices.json must be byte-identical; tests check it).
+# Peak rates so the budget is never underestimated; force values with PRICE_IN_PER_M / PRICE_OUT_PER_M.
+PRICES_FILE = Path(__file__).with_name("model_prices.json")
+
+
+def _load_prices() -> tuple[dict[str, tuple[float, float]], tuple[float, float]]:
+    data = json.loads(PRICES_FILE.read_text(encoding="utf-8"))
+    models = {k.lower(): (float(v["input"]), float(v["output"])) for k, v in data["models"].items()}
+    return models, (float(data["default"]["input"]), float(data["default"]["output"]))
+
+
+MODEL_PRICES, (PRICE_IN_PER_M, PRICE_OUT_PER_M) = _load_prices()
+_warned_models: set[str] = set()
 
 
 def _env_price(name_in: str, name_out: str) -> tuple[float, float] | None:
@@ -61,7 +63,13 @@ def _price_for(model: str | None, provider: str | None = None) -> tuple[float, f
     if provider == "custom":  # unknown model names on a custom endpoint: own rate or the default one
         return _env_price("CUSTOM_PRICE_IN_PER_M", "CUSTOM_PRICE_OUT_PER_M") or (PRICE_IN_PER_M, PRICE_OUT_PER_M)
     key = (model or "").split("/")[-1].lower()
-    return MODEL_PRICES.get(key, (PRICE_IN_PER_M, PRICE_OUT_PER_M))
+    if key in MODEL_PRICES:
+        return MODEL_PRICES[key]
+    if key and "simulat" not in key and key not in _warned_models:
+        _warned_models.add(key)
+        log.warning("model %s not in the price table: billed at the default rate %s/%s per M tokens",
+                    model, PRICE_IN_PER_M, PRICE_OUT_PER_M)
+    return PRICE_IN_PER_M, PRICE_OUT_PER_M
 
 
 def estimate_cost(input_tokens: int, output_tokens: int, model: str | None = None,
