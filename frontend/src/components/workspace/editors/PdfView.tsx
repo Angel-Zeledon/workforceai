@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { create } from "zustand";
 import { MOCK } from "@/lib/config";
 import { artifactApi, PDF_MAX_BYTES, useArtifacts, type StoredArtifact } from "@/lib/artifacts";
 import { useConnections } from "@/lib/connections/store";
@@ -10,7 +11,7 @@ interface PdfContent { schema: "aiw.pdf/1"; blob_id: string | null; pages: numbe
 
 // Minimal structural types of the pdf.js objects used here (the library is loaded lazily, never at module scope).
 interface PdfPage { getViewport(o: { scale: number }): { width: number; height: number }; render(o: { canvasContext: CanvasRenderingContext2D; viewport: unknown }): { promise: Promise<void>; cancel(): void } }
-interface PdfDoc { numPages: number; getPage(n: number): Promise<PdfPage>; destroy(): Promise<void> }
+interface PdfDoc { numPages: number; getPage(n: number): Promise<PdfPage> }
 
 const MAX_PAGES = 500;
 let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
@@ -89,13 +90,20 @@ const UPLOAD_ERRORS: Record<string, string> = {
   read_only_mode: "pdf.errReadOnly", conflict: "pdf.errConflict", "409": "pdf.errConflict", "403": "pdf.errForbidden",
 };
 
+type UploadMsg = { kind: "ok" | "error"; text: string };
+/** Last upload message per artifact: a store, so it survives the remount caused by the content refresh after an upload. */
+const useUploadMsg = create<{ msgs: Record<string, UploadMsg | undefined>; set: (id: string, m: UploadMsg | null) => void }>((set) => ({
+  msgs: {}, set: (id, m) => set((s) => ({ msgs: { ...s.msgs, [id]: m ?? undefined } })),
+}));
+
 /** Upload / replace / download bar of a pdf artifact. Hidden for read-only embeds; disabled in demo mode and read-only mode. */
 function PdfToolbar({ art, blobId, filename }: { art: StoredArtifact; blobId: string | null; filename?: string }) {
   const { t } = useT();
   const input = useRef<HTMLInputElement>(null);
   const orgReadOnly = useConnections((s) => s.controls?.mode === "read_only");
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const msg = useUploadMsg((s) => s.msgs[art.id]) ?? null;
+  const setMsg = (m: UploadMsg | null) => useUploadMsg.getState().set(art.id, m);
   const disabled = MOCK || orgReadOnly || busy || art.status === "approved" || art.status === "sent" || art.status === "archived";
   const why = MOCK ? t("pdf.demoUnavailable") : orgReadOnly ? t("pdf.errReadOnly") : undefined;
 
@@ -160,18 +168,20 @@ export function PdfView({ art, readOnly }: { art: StoredArtifact; readOnly?: boo
   useEffect(() => {
     if (!blobId) { setDoc(null); setState("idle"); return; }
     let dead = false;
-    let loaded: PdfDoc | null = null;
+    // The loading task owns the worker-side document: destroying it frees both (pdf.js 6 has no destroy() on the document proxy).
+    let task: { destroy(): Promise<void> } | null = null;
     setState("loading");
     (async () => {
       const bytes = await fetchBlob(blobId);
       if (!bytes || dead) { if (!dead) setState("idle"); return; }
       const lib = await loadPdfjs();
-      const task = lib.getDocument({ data: new Uint8Array(bytes), isEvalSupported: false, enableScripting: false } as Parameters<typeof lib.getDocument>[0]);
-      loaded = (await task.promise) as unknown as PdfDoc;
-      if (dead) { void loaded.destroy(); return; }
+      const lt = lib.getDocument({ data: new Uint8Array(bytes), isEvalSupported: false, enableScripting: false } as Parameters<typeof lib.getDocument>[0]);
+      task = lt;
+      const loaded = (await lt.promise) as unknown as PdfDoc;
+      if (dead) return;
       setDoc(loaded); setState("idle");
     })().catch(() => { if (!dead) setState("error"); });
-    return () => { dead = true; void loaded?.destroy(); };
+    return () => { dead = true; void task?.destroy().catch(() => {}); };
   }, [blobId]);
 
   if (!c) return <div className="p-4 text-xs text-mute">…</div>;
