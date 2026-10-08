@@ -49,6 +49,8 @@ type Deps struct {
 	// schedules (see orgconfig.go). Optional: nil leaves those routes unmounted.
 	OrgConfig  *application.OrgConfig
 	AuthRoutes http.Handler
+	// InvitationRoutes (auth on) is mounted at /api/v1/invitations.
+	InvitationRoutes http.Handler
 	// Conns, Controls and Gateway serve the connections / controls endpoints
 	// (see connections.go and controls.go). All optional: when nil the routes
 	// are not mounted and the API is exactly as before.
@@ -94,6 +96,12 @@ func NewRouter(d Deps) http.Handler {
 		r.Get("/healthz", s.healthz)
 		if d.AuthEnabled && d.AuthRoutes != nil {
 			r.Mount("/auth", d.AuthRoutes)
+			if d.InvitationRoutes != nil {
+				r.Mount("/invitations", d.InvitationRoutes)
+			}
+		} else {
+			// Open demo: the frontend asks here whether to show the login.
+			r.Get("/auth/config", auth.AuthConfigHandler(false))
 		}
 		// The OAuth callback is public (the browser comes back from the provider
 		// without a bearer token); it is verified by its single-use state.

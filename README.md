@@ -49,6 +49,16 @@ O con Make: `make up` (segundo plano), `make logs`, `make down`.
 
 `GET http://localhost:8000/healthz` informa el modo (`simulation` o `live`).
 
+## Cuentas y login
+
+- **Demo abierta** (por defecto, `AUTH_ENABLED` vacío): sin login, organización fija `demo`. La app se comporta como siempre.
+- **Con cuentas**: `AUTH_ENABLED=true`, `JWT_SECRET` (32+ bytes) y `DATABASE_URL`. La app muestra `/login` y `/register`; cada registro crea una organización propia (rol owner).
+- **Invitar**: menú de administración → Cuenta → *Miembros e invitaciones*. Se genera un enlace `/invite?token=…` que se muestra **una sola vez** y caduca en 7 días (el servidor aún no envía correos: compártelo tú). Roles: owner, admin, member, viewer; un admin solo invita a member/viewer.
+- Varias organizaciones por persona: el menú permite cambiar de organización.
+- Pendiente de decisión: guardar el refresh token en cookie `HttpOnly` (hoy va en el cuerpo JSON y el navegador lo guarda en `localStorage`), y SSO/SCIM con un proveedor externo.
+
+Contrato en [docs/architecture/08-api.md](docs/architecture/08-api.md) (sección 4). E2E: `E2E_AUTH=1 npx playwright test auth.spec.ts` contra un stack con auth.
+
 ## Pruebas
 
 ```bash

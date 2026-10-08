@@ -4,12 +4,13 @@
  * endpoints are listed in that document ("Frontend delivery status").
  */
 import { API_URL, MOCK } from "../config";
+import { authFetch } from "../session";
 import type {
   ControlAction, LaunchBody, NewProjectBody, PlanOp, ProjectDetail, ProjectEstimate, ProjectHealth, ProjectSummary, ProjectTemplate,
 } from "./types";
 
 async function http<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await authFetch(`${API_URL}${path}`, {
     method, cache: "no-store",
     headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
     body: body !== undefined ? JSON.stringify(body) : undefined,

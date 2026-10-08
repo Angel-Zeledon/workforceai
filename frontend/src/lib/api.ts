@@ -1,4 +1,5 @@
 import { API_URL, MOCK } from "./config";
+import { authFetch } from "./session";
 import type {
   Agent, AgentDetail, Approval, ChatMessage, Conversation, Message, Metrics, Report, Request, Task, ActivityItem,
 } from "./types";
@@ -8,7 +9,7 @@ export async function call<T>(method: string, path: string, body?: unknown): Pro
     const { mockBackend } = await import("./mock/engine");
     return (await mockBackend.handle(method, path, body)) as T;
   }
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await authFetch(`${API_URL}${path}`, {
     method,
     headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
     body: body !== undefined ? JSON.stringify(body) : undefined,

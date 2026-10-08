@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import type { Approval } from "@/lib/types";
 import { useT } from "@/lib/i18n";
+import { useCan } from "@/lib/session";
 import { Btn, Dot, RiskBadge, useAgentColor, useAgentName } from "./ui";
 
 export function ApprovalCard({ a, compact = false }: { a: Approval; compact?: boolean }) {
@@ -12,6 +13,7 @@ export function ApprovalCard({ a, compact = false }: { a: Approval; compact?: bo
   const color = useAgentColor();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const canDecide = useCan("approvals:decide");
   const decide = async (d: "approve" | "reject") => {
     setBusy(true); setErr("");
     try { await api.decide(a.id, d); } catch { setErr(t("approvals.decideError")); setBusy(false); }
@@ -25,7 +27,9 @@ export function ApprovalCard({ a, compact = false }: { a: Approval; compact?: bo
       </div>
       <div className="text-[13px] font-semibold text-ink">{a.title}</div>
       {!compact && a.details && <p className="mt-1 text-[12px] leading-snug text-ink2">{a.details}</p>}
-      {pending ? (
+      {pending && !canDecide ? (
+        <div data-testid="approval-no-permission" className="mt-2 text-[11px] text-mute">{t("approvals.noPermission")}</div>
+      ) : pending ? (
         <div className="mt-2.5 flex items-center gap-2">
           <Btn kind="ok" disabled={busy} onClick={() => decide("approve")}>{t("approvals.approve")}</Btn>
           <Btn kind="danger" disabled={busy} onClick={() => decide("reject")}>{t("approvals.reject")}</Btn>

@@ -154,12 +154,16 @@ func run(log *slog.Logger) error {
 			Secret:              []byte(cfg.JWTSecret),
 			DefaultOrgBudgetUSD: cfg.App.BudgetUSD,
 			LoginLimiter:        limiter,
+			Audit: func(actx context.Context, e auth.AuditEvent) {
+				rec.Audit(application.WithOrg(actx, e.OrgID), domain.AuditLog{Actor: e.Actor, Action: e.Action, Entity: e.Entity, EntityID: e.EntityID, Details: e.Details})
+			},
 		})
 		if err != nil {
 			return err
 		}
 		deps.Auth = svc
-		deps.AuthRoutes = auth.NewHandler(svc, auth.HandlerConfig{Limiter: limiter, TrustedProxies: cfg.TrustedProxies, FailOpen: true}).Routes()
+		ah := auth.NewHandler(svc, auth.HandlerConfig{Limiter: limiter, TrustedProxies: cfg.TrustedProxies, FailOpen: true})
+		deps.AuthRoutes, deps.InvitationRoutes = ah.Routes(), ah.InvitationRoutes()
 		deps.WSMaxAge = 15 * time.Minute // = default access token lifetime
 	} else {
 		log.Warn("AUTH_ENABLED=false: the API is open and uses the fixed demo organization (development only)")

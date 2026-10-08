@@ -12,6 +12,8 @@ import { TemplateGallery } from "../templates/TemplateGallery";
 import { useOnboardingEntry } from "../onboarding/OnboardingEntry";
 import { KillSwitchDialog } from "../security/KillSwitchDialog";
 import { useBootConnections } from "../security/ControlsChrome";
+import { MembersDialog } from "../auth/MembersDialog";
+import { logout, switchOrg, useCan, useSession } from "@/lib/session";
 
 function Item({ icon, label, onClick, testid, disabled, danger, trailing, active, level }: {
   icon: IconName; label: string; onClick: () => void; testid: string; disabled?: boolean; danger?: boolean; trailing?: ReactNode; active?: boolean; level?: string;
@@ -49,7 +51,10 @@ export function AdminMenu() {
   const { t } = useT();
   useBootConnections();
   const [open, setOpen] = useState(false);
-  const [dialog, setDialog] = useState<null | "kill" | "templates" | "settings">(null);
+  const [dialog, setDialog] = useState<null | "kill" | "templates" | "settings" | "members">(null);
+  const session = useSession();
+  const signedIn = session.status === "authenticated";
+  const canMembers = useCan("members:read");
   const wrap = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -125,15 +130,32 @@ export function AdminMenu() {
               trailing={level !== "none" ? badge(t("admin.active"), "bg-err text-white") : undefined}
               onClick={run(() => (level === "none" ? setDialog("kill") : setView("security")))} />
           </Group>
-          <Group title={t("admin.group.demo")}>
-            <Item icon="back" testid="demo-reset" label={t("hud.resetDemo")} onClick={run(reset)}
-              trailing={MOCK ? badge("Mock", "bg-violet-500/15 text-violet-700") : undefined} />
-          </Group>
+          {(!signedIn || session.role === "admin" || session.role === "owner") && (
+            <Group title={t("admin.group.demo")}>
+              <Item icon="back" testid="demo-reset" label={t("hud.resetDemo")} onClick={run(reset)}
+                trailing={MOCK ? badge("Mock", "bg-violet-500/15 text-violet-700") : undefined} />
+            </Group>
+          )}
+          {signedIn && (
+            <Group title={t("admin.group.account")}>
+              <div data-testid="account-who" className="px-2.5 pb-1.5 text-[11.5px] leading-tight text-mute">
+                <b className="block truncate text-[12.5px] text-ink">{session.user?.name}</b>
+                <span className="block truncate">{session.user?.email} · {t(`members.roles.${session.role}`)}</span>
+              </div>
+              {canMembers && <Item icon="users" testid="members-open" label={t("members.title")} onClick={run(() => setDialog("members"))} />}
+              {session.orgs.length > 1 && session.orgs.filter((o) => o.org_id !== session.orgId).map((o) => (
+                <Item key={o.org_id} icon="layout" testid={`org-switch-${o.org_id}`} label={t("admin.switchOrg", { org: o.org_id.slice(0, 8), role: t(`members.roles.${o.role}`) })}
+                  onClick={run(() => { switchOrg(o.org_id).catch(() => undefined); })} />
+              ))}
+              <Item icon="power" testid="logout" label={t("auth.logout")} onClick={run(() => { logout().then(() => { window.location.href = "/login"; }); })} />
+            </Group>
+          )}
         </div>
       )}
       {dialog === "kill" && <KillSwitchDialog onClose={() => setDialog(null)} />}
       {dialog === "templates" && <TemplateGallery onClose={() => setDialog(null)} />}
       {dialog === "settings" && <OfficeSettingsPanel onClose={() => setDialog(null)} />}
+      {dialog === "members" && <MembersDialog onClose={() => setDialog(null)} />}
       {onboarding.dialogs}
     </div>
   );

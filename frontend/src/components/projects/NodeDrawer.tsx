@@ -1,5 +1,6 @@
 "use client";
 import { useT } from "@/lib/i18n";
+import { useCan } from "@/lib/session";
 import { explainNode, fmtDuration, isDoneState } from "@/lib/projects/calc";
 import { useProjects } from "@/lib/projects/store";
 import { Btn } from "../ui";
@@ -8,6 +9,7 @@ import { AgentChip, StatePill, fmtMoney, useNodeTitle } from "./shared";
 /** Right-hand panel for the selected node: facts, dependencies in/out and a deterministic "why is it blocked?". */
 export function NodeDrawer() {
   const { t } = useT();
+  const canDecide = useCan("approvals:decide");
   const detail = useProjects((s) => s.detail)!;
   const id = useProjects((s) => s.selectedNodeId)!;
   const select = useProjects((s) => s.selectNode);
@@ -43,7 +45,8 @@ export function NodeDrawer() {
       {approval && (
         <div className="rounded-xl border border-line bg-panel2 p-2">
           <div className="text-[11px] font-semibold text-ink">{approval.title}</div>
-          <div className="mt-2 flex gap-2"><Btn kind="ok" onClick={() => decide(approval.id, "approve")}>{t("pv.approve")}</Btn><Btn kind="danger" onClick={() => decide(approval.id, "reject")}>{t("pv.reject")}</Btn></div>
+          {canDecide ? <div className="mt-2 flex gap-2"><Btn kind="ok" onClick={() => decide(approval.id, "approve")}>{t("pv.approve")}</Btn><Btn kind="danger" onClick={() => decide(approval.id, "reject")}>{t("pv.reject")}</Btn></div>
+            : <div className="mt-1 text-[11px] text-mute">{t("approvals.noPermission")}</div>}
         </div>
       )}
       {headline && (

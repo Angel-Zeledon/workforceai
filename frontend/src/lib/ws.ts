@@ -1,5 +1,6 @@
 import { MOCK, WS_URL } from "./config";
 import { useStore } from "./store";
+import { wsUrl } from "./session";
 import type { WsFrame } from "./types";
 
 let started = false;
@@ -33,9 +34,12 @@ export function startRealtime() {
     const delay = Math.min(10000, 800 * 2 ** Math.min(retry++, 5));
     timer = setTimeout(open, delay);
   };
-  const open = () => {
+  const open = async () => {
     if (stopped) return;
-    try { ws = new WebSocket(WS_URL); } catch { schedule(); return; }
+    // With auth on, every (re)connection carries a fresh access token: the backend closes sockets when it expires.
+    const url = await wsUrl(WS_URL);
+    if (stopped) return;
+    try { ws = new WebSocket(url); } catch { schedule(); return; }
     ws.onopen = () => { retry = 0; setConnected(true); loadAll(); };
     ws.onmessage = (ev) => {
       try { apply(JSON.parse(ev.data as string) as WsFrame); } catch { /* ignore malformed frame */ }

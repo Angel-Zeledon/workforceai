@@ -47,6 +47,7 @@ func pgConn(t *testing.T) *pgx.Conn {
 		"../infrastructure/postgres/migrations/001_init.sql",
 		"../infrastructure/postgres/migrations/201_auth_tables.sql",
 		"../infrastructure/postgres/migrations/202_rls_policies.sql",
+		"../infrastructure/postgres/migrations/300_invitations.sql",
 	} {
 		b, err := os.ReadFile(f)
 		if err != nil {
@@ -71,6 +72,57 @@ func pgConn(t *testing.T) *pgx.Conn {
 func TestPGStoreContract(t *testing.T) {
 	conn := pgConn(t)
 	storeContract(t, NewPGStore(conn))
+}
+
+func TestPGInvitationContract(t *testing.T) {
+	invitationContract(t, NewPGStore(pgConn(t)))
+}
+
+// TestPGInvitationsRLS: as the application role, an organization only sees its
+// own invitations, and a transaction without a tenant only sees the row whose
+// token hash it set.
+func TestPGInvitationsRLS(t *testing.T) {
+	conn := pgConn(t)
+	ctx := context.Background()
+	orgA, orgB := "org-a-"+randomHex(3), "org-b-"+randomHex(3)
+	for _, org := range []string{orgA, orgB} {
+		if _, err := conn.Exec(ctx, fmt.Sprintf(`INSERT INTO organizations (id, name, slug) VALUES ('%[1]s','n','slug-%[1]s')`, org)); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := conn.Exec(ctx, `INSERT INTO invitations (id, org_id, email, role, token_hash, invited_by, expires_at)
+			VALUES ($1,$2,'x@example.com','member',$3,'u', now() + interval '1 hour')`, "i-"+org, org, "hash-"+org); err != nil {
+			t.Fatal(err)
+		}
+	}
+	count := func(setup string, args ...any) int {
+		tx, err := conn.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer tx.Rollback(ctx)
+		if setup != "" {
+			if _, err := tx.Exec(ctx, setup, args...); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := tx.Exec(ctx, "SET LOCAL ROLE authtest_app"); err != nil {
+			t.Fatal(err)
+		}
+		var n int
+		if err := tx.QueryRow(ctx, "SELECT count(*) FROM invitations").Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if n := count(`SELECT set_config('app.org_id', $1, true)`, orgA); n != 1 {
+		t.Fatalf("org A sees %d invitations, want 1", n)
+	}
+	if n := count(""); n != 0 {
+		t.Fatalf("no tenant sees %d invitations, want 0", n)
+	}
+	if n := count(`SELECT set_config('app.invitation_hash', $1, true)`, "hash-"+orgB); n != 1 {
+		t.Fatalf("hash scope sees %d invitations, want 1", n)
+	}
 }
 
 func TestPGRowLevelSecurityIsolatesTenants(t *testing.T) {
