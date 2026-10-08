@@ -1,5 +1,6 @@
 "use client";
 import { fmtNumber, fmtTime, useT } from "@/lib/i18n";
+import { useCan } from "@/lib/session";
 import { fmtDuration, isDoneState } from "@/lib/projects/calc";
 import { useProjects } from "@/lib/projects/store";
 import { Btn, Card, Empty, Progress, RiskBadge, useAgentName } from "../ui";
@@ -7,6 +8,7 @@ import { CRITICAL_COLOR, Kpi, LIGHT_COLOR, StatePill, fmtMoney, useNodeTitle } f
 
 export function HealthView() {
   const { t } = useT();
+  const canDecide = useCan("approvals:decide");
   const detail = useProjects((s) => s.detail)!;
   const h = useProjects((s) => s.health);
   const decide = useProjects((s) => s.decide);
@@ -65,10 +67,12 @@ export function HealthView() {
                     <RiskBadge risk={a.risk} />
                   </div>
                   <div className="mt-0.5 text-[11px] text-mute">{a.details}</div>
-                  <div className="mt-2 flex gap-2">
-                    <Btn kind="ok" onClick={() => decide(a.id, "approve")}>{t("pv.approve")}</Btn>
-                    <Btn kind="danger" onClick={() => decide(a.id, "reject")}>{t("pv.reject")}</Btn>
-                  </div>
+                  {canDecide ? (
+                    <div className="mt-2 flex gap-2">
+                      <Btn kind="ok" onClick={() => decide(a.id, "approve")}>{t("pv.approve")}</Btn>
+                      <Btn kind="danger" onClick={() => decide(a.id, "reject")}>{t("pv.reject")}</Btn>
+                    </div>
+                  ) : <div className="mt-1 text-[11px] text-mute">{t("approvals.noPermission")}</div>}
                 </div>
               ))}
             </div>
