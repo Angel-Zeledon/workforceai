@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"aiworkforce/backend/internal/counters"
 )
 
 // Kill switch levels.
@@ -135,6 +137,9 @@ type Service struct {
 	Emit  EmitFunc
 	Hooks Hooks
 	Now   func() time.Time
+	// Counters (optional) persists the anomaly detection windows so that a
+	// restart keeps the baseline (internal/counters). Nil keeps them in memory.
+	Counters counters.Store
 
 	envLevel atomic.Value // string: KILL_SWITCH from the environment (process-wide)
 	mu       sync.Mutex
