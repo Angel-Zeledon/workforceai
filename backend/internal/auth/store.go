@@ -97,4 +97,19 @@ type Store interface {
 	RevokeFamilyOf(ctx context.Context, tokenHash string, now time.Time) error
 	RevokeUserTokens(ctx context.Context, userID string, now time.Time) error
 	RevokeOrgUserTokens(ctx context.Context, orgID, userID string, now time.Time) error
+
+	// Invitations. CreateInvitation revokes any other pending invitation for
+	// the same e-mail in the same organization.
+	CreateInvitation(ctx context.Context, inv Invitation, now time.Time) error
+	ListInvitations(ctx context.Context, orgID string) ([]Invitation, error) // newest first
+	GetInvitation(ctx context.Context, orgID, id string) (Invitation, error) // ErrNotFound
+	// RevokeInvitation revokes a pending invitation; ErrNotFound if it is not pending.
+	RevokeInvitation(ctx context.Context, orgID, id string, now time.Time) error
+	// InvitationByTokenHash finds an invitation in any organization (ErrNotFound).
+	InvitationByTokenHash(ctx context.Context, tokenHash string) (Invitation, error)
+	// AcceptInvitation atomically re-checks that the invitation is still
+	// pending and unexpired (ErrInvalidToken / ErrTokenExpired), creates
+	// newUser when not nil (ErrEmailTaken), adds the membership
+	// (ErrAlreadyMember) and marks the invitation accepted by m.UserID.
+	AcceptInvitation(ctx context.Context, tokenHash string, newUser *User, m Membership, now time.Time) error
 }

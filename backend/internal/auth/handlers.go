@@ -70,6 +70,9 @@ func (h *Handler) Routes() http.Handler {
 	r.With(lim("login", h.cfg.LoginLimit)).Post("/login", h.login)
 	r.With(lim("refresh", h.cfg.RefreshLimit)).Post("/refresh", h.refresh)
 	r.With(lim("refresh", h.cfg.RefreshLimit)).Post("/logout", h.logout)
+	r.Get("/config", AuthConfigHandler(true))
+	// Accepting is public (the invitee may not have an account yet); throttled like registration.
+	r.With(lim("invite-accept", h.cfg.RegisterLimit)).Post("/invitations/accept", h.acceptInvitation)
 
 	r.Group(func(r chi.Router) {
 		r.Use(h.svc.Authenticator())
@@ -244,6 +247,78 @@ func (h *Handler) removeMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// AuthConfigHandler serves the public GET /api/v1/auth/config, which tells the
+// frontend whether to show the login (auth on) or the open demo (auth off).
+func AuthConfigHandler(enabled bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]any{"enabled": enabled, "registration": enabled})
+	}
+}
+
+// InvitationRoutes returns the router mounted at /api/v1/invitations:
+//
+//	GET    /       members:read
+//	POST   /       members:invite  {email, role} -> invitation + one-time token
+//	DELETE /{id}   members:invite  (revoke)
+func (h *Handler) InvitationRoutes() http.Handler {
+	r := chi.NewRouter()
+	r.Use(h.svc.Authenticator())
+	if h.cfg.Limiter != nil {
+		r.Use(RateLimit(h.cfg.Limiter, h.cfg.UserLimit, UserKey("invitations", h.cfg.TrustedProxies), h.cfg.FailOpen))
+	}
+	r.With(RequirePermission(PermMembersRead)).Get("/", h.listInvitations)
+	r.With(RequirePermission(PermMembersInvite)).Post("/", h.createInvitation)
+	r.With(RequirePermission(PermMembersInvite)).Delete("/{id}", h.revokeInvitation)
+	return r
+}
+
+func (h *Handler) createInvitation(w http.ResponseWriter, r *http.Request) {
+	var in memberBody
+	if !decode(w, r, &in) {
+		return
+	}
+	p, _ := PrincipalFrom(r.Context())
+	inv, err := h.svc.CreateInvitation(r.Context(), p, in.Email, in.Role)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusCreated, inv)
+}
+
+func (h *Handler) listInvitations(w http.ResponseWriter, r *http.Request) {
+	p, _ := PrincipalFrom(r.Context())
+	invs, err := h.svc.ListInvitations(r.Context(), p)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"invitations": invs})
+}
+
+func (h *Handler) revokeInvitation(w http.ResponseWriter, r *http.Request) {
+	p, _ := PrincipalFrom(r.Context())
+	if err := h.svc.RevokeInvitation(r.Context(), p, chi.URLParam(r, "id")); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) acceptInvitation(w http.ResponseWriter, r *http.Request) {
+	var in AcceptInput
+	if !decode(w, r, &in) {
+		return
+	}
+	s, err := h.svc.AcceptInvitation(r.Context(), in, h.meta(r))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, s)
 }
 
 // writeServiceError maps domain errors to HTTP responses without leaking

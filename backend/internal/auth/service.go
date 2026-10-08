@@ -40,6 +40,11 @@ type Config struct {
 	// DefaultOrgBudgetUSD is the budget assigned to newly registered orgs.
 	DefaultOrgBudgetUSD float64
 
+	// InvitationTTL is how long an invitation link stays valid (default 7 days).
+	InvitationTTL time.Duration
+	// Audit (optional) receives the invitation events for the audit trail.
+	Audit func(ctx context.Context, e AuditEvent)
+
 	Now func() time.Time // default time.Now (tests)
 }
 

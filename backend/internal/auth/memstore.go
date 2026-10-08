@@ -16,6 +16,7 @@ type MemoryStore struct {
 	slugs       map[string]string
 	memberships map[[2]string]Membership // {org, user}
 	tokens      map[string]*RefreshToken // by hash
+	invitations map[string]*Invitation   // by id
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -26,6 +27,7 @@ func NewMemoryStore() *MemoryStore {
 		slugs:       map[string]string{},
 		memberships: map[[2]string]Membership{},
 		tokens:      map[string]*RefreshToken{},
+		invitations: map[string]*Invitation{},
 	}
 }
 
@@ -289,4 +291,101 @@ func (s *MemoryStore) ActiveTokens(userID string) int {
 		}
 	}
 	return n
+}
+
+func (s *MemoryStore) CreateInvitation(_ context.Context, inv Invitation, now time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.orgs[inv.OrgID]; !ok {
+		return ErrNotFound
+	}
+	for _, o := range s.invitations {
+		if o.OrgID == inv.OrgID && o.Email == inv.Email && o.Status(now) == InvitationPending {
+			o.RevokedAt = now
+		}
+	}
+	c := inv
+	s.invitations[inv.ID] = &c
+	return nil
+}
+
+func (s *MemoryStore) ListInvitations(_ context.Context, orgID string) ([]Invitation, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []Invitation
+	for _, i := range s.invitations {
+		if i.OrgID == orgID {
+			out = append(out, *i)
+		}
+	}
+	sort.Slice(out, func(a, b int) bool { return out[a].CreatedAt.After(out[b].CreatedAt) })
+	return out, nil
+}
+
+func (s *MemoryStore) GetInvitation(_ context.Context, orgID, id string) (Invitation, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i, ok := s.invitations[id]
+	if !ok || i.OrgID != orgID {
+		return Invitation{}, ErrNotFound
+	}
+	return *i, nil
+}
+
+func (s *MemoryStore) RevokeInvitation(_ context.Context, orgID, id string, now time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i, ok := s.invitations[id]
+	if !ok || i.OrgID != orgID || i.Status(now) != InvitationPending {
+		return ErrNotFound
+	}
+	i.RevokedAt = now
+	return nil
+}
+
+func (s *MemoryStore) InvitationByTokenHash(_ context.Context, tokenHash string) (Invitation, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, i := range s.invitations {
+		if i.TokenHash == tokenHash {
+			return *i, nil
+		}
+	}
+	return Invitation{}, ErrNotFound
+}
+
+func (s *MemoryStore) AcceptInvitation(_ context.Context, tokenHash string, newUser *User, m Membership, now time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var inv *Invitation
+	for _, i := range s.invitations {
+		if i.TokenHash == tokenHash {
+			inv = i
+		}
+	}
+	if inv == nil {
+		return ErrInvalidToken
+	}
+	switch inv.Status(now) {
+	case InvitationExpired:
+		return ErrTokenExpired
+	case InvitationAccepted, InvitationRevoked:
+		return ErrInvalidToken
+	}
+	if newUser != nil {
+		if _, ok := s.emails[newUser.Email]; ok {
+			return ErrEmailTaken
+		}
+	}
+	k := [2]string{m.OrgID, m.UserID}
+	if _, ok := s.memberships[k]; ok {
+		return ErrAlreadyMember
+	}
+	if newUser != nil {
+		s.users[newUser.ID] = *newUser
+		s.emails[newUser.Email] = newUser.ID
+	}
+	s.memberships[k] = m
+	inv.AcceptedAt, inv.AcceptedBy = now, m.UserID
+	return nil
 }
