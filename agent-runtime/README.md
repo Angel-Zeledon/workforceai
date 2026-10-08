@@ -15,7 +15,7 @@ Proveedores: `deepseek`, `anthropic` y `custom` (un endpoint compatible con Open
 | Variable | Descripcion |
 |---|---|
 | `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL` | DeepSeek (def. `deepseek/deepseek-chat`) |
-| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Anthropic (def. `anthropic/claude-sonnet-4-5`) |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Anthropic (def. `anthropic/claude-sonnet-5-5`) |
 | `CUSTOM_LLM_BASE_URL` (obligatoria), `CUSTOM_LLM_API_KEY` (opcional), `CUSTOM_LLM_MODEL` | Endpoint compatible OpenAI. El modelo se pasa como `openai/<nombre>` |
 | `CUSTOM_PRICE_IN_PER_M`, `CUSTOM_PRICE_OUT_PER_M` | USD por millon de tokens del endpoint custom (sin ellas se usa la tarifa Sonnet, conservadora). Un modelo local puede ser `0` |
 | `MODEL` | Heredada: `proveedor/modelo` aplica a ese proveedor; un nombre sin prefijo aplica al primario |

@@ -25,7 +25,7 @@ KNOWN_PROVIDERS: tuple[str, ...] = ("deepseek", "anthropic", "custom")
 DEFAULT_ORDER: tuple[str, ...] = ("deepseek", "anthropic", "custom")  # legacy priority, backwards compatible
 
 DEFAULT_MODELS = {
-    "anthropic": "anthropic/claude-sonnet-4-5",
+    "anthropic": "anthropic/claude-sonnet-5-5",
     "deepseek": "deepseek/deepseek-chat",
     "custom": "openai/custom-model",  # overridden by CUSTOM_LLM_MODEL
 }
