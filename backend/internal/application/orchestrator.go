@@ -38,7 +38,9 @@ type Orchestrator struct {
 	chatIdem idemCache // Idempotency-Key of POST /messages (chat.go)
 	chatQ    chatQueue // per-conversation FIFO of chat turns (chat.go)
 
-	mu     sync.Mutex      // guards base/cancel and serializes Reset vs. start
+	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
+
+	mu     sync.Mutex     // guards base/cancel and serializes Reset vs. start
 	root   context.Context // process lifetime
 	base   context.Context // parent of in-flight runs; cancelled by Reset
 	cancel context.CancelFunc
@@ -48,6 +50,7 @@ type Orchestrator struct {
 func NewOrchestrator(ctx context.Context, cfg Config, store Store, rt Runtime, locks Locker, rec *Recorder, approvals *Approvals, q *Queries, log *slog.Logger) *Orchestrator {
 	o := &Orchestrator{cfg: cfg, store: store, rt: rt, locks: locks, rec: rec, approvals: approvals, q: q, log: log}
 	o.budget = NewBudget(cfg, store, rec, log)
+	o.durable.runs, _ = store.(RunStore)
 	o.root = ctx
 	o.base, o.cancel = context.WithCancel(ctx)
 	return o
@@ -72,6 +75,7 @@ type run struct {
 	// the "on behalf of" of every tool request and the requester of its approvals.
 	requestedBy string
 	ext         runExt    // taint, read-only request flag (connections_flow.go)
+	removed     []string  // task ids removed in the plan review (persisted in the run meta)
 	chat        *chatLink // set when the request was born in a chat turn (chat.go)
 }
 
@@ -134,6 +138,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	// The background run keeps the lifetime of the orchestrator but carries the
 	// tenant of the request that started it.
 	rctx := WithRequestID(WithOrg(o.base, o.org(ctx)), req.ID)
+	o.track(req.ID)
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
@@ -144,6 +149,8 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 
 func (o *Orchestrator) process(ctx context.Context, rs *run) {
 	defer o.releaseAgents(ctx, rs)
+	defer o.untrack(rs.req.ID)
+	o.saveRunMeta(ctx, rs)
 	o.setState(ctx, assistantID, domain.StateThinking, "Analizando la solicitud", nil, 10)
 
 	var plan PlanResponse
@@ -186,7 +193,13 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 	}
 	o.setRequestStatus(ctx, rs, domain.RequestRunning)
 	o.setState(ctx, assistantID, domain.StateWaiting, "Coordinando al equipo", nil, 30)
+	o.execute(ctx, rs, tasks, func(c context.Context, t domain.Task) Outcome { return o.runTask(c, rs, t) })
+}
 
+// execute schedules the tasks of a request (parallel where dependencies allow)
+// and writes the report. exec runs one task; a resumed request passes one that
+// returns the outcome of the tasks that finished before the restart.
+func (o *Orchestrator) execute(ctx context.Context, rs *run, tasks []domain.Task, exec func(context.Context, domain.Task) Outcome) {
 	byID := make(map[string]domain.Task, len(tasks))
 	nodes := make([]Node, 0, len(tasks))
 	for _, t := range tasks {
@@ -195,7 +208,13 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 	}
 	sched := Scheduler{MaxParallel: o.cfg.MaxParallel}
 	outcomes := sched.Run(ctx, nodes,
-		func(c context.Context, id string) Outcome { return o.runTask(c, rs, byID[id]) },
+		func(c context.Context, id string) Outcome {
+			out := exec(c, byID[id])
+			if c.Err() == nil {
+				o.dropCheckpoint(c, id) // the task is over; a shutdown keeps it for Recover
+			}
+			return out
+		},
 		func(id string) { o.skipTask(ctx, rs, byID[id]) })
 	if ctx.Err() != nil {
 		return // demo reset or shutdown
@@ -451,7 +470,12 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 	if out := o.handleTools(ctx, rs, &t, agent, resp.ToolRequests); out != OutcomeDone {
 		return out
 	}
+	return o.completeTask(ctx, rs, t, agent)
+}
 
+// completeTask stores a finished task, remembers it and frees its agent.
+func (o *Orchestrator) completeTask(ctx context.Context, rs *run, t domain.Task, agent domain.Agent) Outcome {
+	tid := t.ID
 	fin := time.Now().UTC()
 	t.Status, t.FinishedAt = domain.TaskDone, &fin
 	if err := o.store.UpdateTask(ctx, o.org(ctx), t); err != nil {
@@ -614,8 +638,14 @@ func approverIDs(ap domain.Approval) []string {
 // handleTools applies the approval policy to the runtime's tool requests.
 // Phase 1 has no real tools: approved/allowed actions are recorded as executed.
 func (o *Orchestrator) handleTools(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, reqs []ToolRequest) Outcome {
-	tid := t.ID
-	for _, tr := range reqs {
+	return o.handleToolsFrom(ctx, rs, t, agent, reqs, 0)
+}
+
+// handleToolsFrom handles reqs[start:] (a resumed task skips the tool requests
+// handled before the restart).
+func (o *Orchestrator) handleToolsFrom(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, reqs []ToolRequest, start int) Outcome {
+	for i := start; i < len(reqs); i++ {
+		tr := reqs[i]
 		route := o.routeOf(ctx, agent, tr)
 		if route == RouteRead {
 			// Reads never need approval; the gateway skips the ones that survived the read rounds.
@@ -668,10 +698,25 @@ func (o *Orchestrator) handleTools(ctx context.Context, rs *run, t *domain.Task,
 			o.failTask(ctx, rs, *t, err)
 			return OutcomeFailed
 		}
+		// Durable point: what the task still has to do survives a restart.
+		o.saveCheckpoint(ctx, rs, *t, reqs, i, ap.ID)
+		if out := o.waitToolApproval(ctx, rs, t, agent, tr, ap, ch, o.approvals.Deadline(ap)); out != OutcomeDone {
+			return out
+		}
+	}
+	return OutcomeDone
+}
+
+// waitToolApproval waits for the human decision on a (simulated) tool action
+// and records its execution once approved. It is also the resume point of a
+// task interrupted by a restart, which keeps the approval's original deadline.
+func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, tr ToolRequest, ap domain.Approval, ch <-chan domain.Approval, deadline time.Time) Outcome {
+	tid := t.ID
+	{
 		o.setRequestStatus(ctx, rs, domain.RequestAwaitingApproval)
 		o.setState(ctx, agent.ID, domain.StateAwaitingApproval, "Esperando aprobación: "+ap.Title, &tid, 80)
 		o.emitMetrics(ctx)
-		res, err := o.approvals.Wait(ctx, ch, ap.ID)
+		res, err := o.approvals.WaitUntil(ctx, ch, ap.ID, deadline)
 		if err != nil {
 			return OutcomeFailed // cancelled
 		}
@@ -697,6 +742,9 @@ func (o *Orchestrator) handleTools(ctx context.Context, rs *run, t *domain.Task,
 			return OutcomeBlocked
 		}
 		t.Status = domain.TaskRunning
+		// At most once: mark the checkpoint before recording the execution, so a
+		// restart in between never executes the approved action a second time.
+		o.markExecuted(ctx, t.ID, res.ID)
 		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.executed", Entity: "task", EntityID: t.ID,
 			Details: map[string]any{"tool": tr.Tool, "action": tr.Action, "arg_keys": argKeys(tr.Args), "approval_id": res.ID, "approvers": approverIDs(res), "simulated": true}})
 		o.setState(ctx, agent.ID, domain.StateWorking, "Acción aprobada, finalizando: "+t.Title, &tid, 90)

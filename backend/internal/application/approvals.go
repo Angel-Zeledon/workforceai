@@ -46,10 +46,54 @@ func (a *Approvals) Request(ctx context.Context, ap domain.Approval) (domain.App
 	return ap, ch, nil
 }
 
+// Attach registers a waiter for an approval that already exists (a task
+// resumed after a restart). If the approval was decided meanwhile, the channel
+// already holds the decision.
+func (a *Approvals) Attach(ctx context.Context, id string) (domain.Approval, <-chan domain.Approval, error) {
+	// decideMu: a decision cannot slip between reading the status and registering the waiter.
+	a.decideMu.Lock()
+	defer a.decideMu.Unlock()
+	ap, err := a.store.GetApproval(ctx, a.org(ctx), id)
+	if err != nil {
+		return ap, nil, err
+	}
+	ch := make(chan domain.Approval, 1)
+	if ap.Status != domain.ApprovalPending {
+		ch <- ap
+		return ap, ch, nil
+	}
+	a.mu.Lock()
+	a.waiters[id] = ch
+	a.mu.Unlock()
+	return ap, ch, nil
+}
+
+// Deadline is when a pending approval is auto-rejected. It derives from the
+// creation time, so a restart never extends (or resets) the wait.
+func (a *Approvals) Deadline(ap domain.Approval) time.Time {
+	return ap.CreatedAt.Add(a.cfg.ApprovalTimeout)
+}
+
+// Supersede rejects a pending approval as the system because the action it
+// guarded will be asked again (its task restarts from scratch after a restart).
+func (a *Approvals) Supersede(ctx context.Context, id, note string) (domain.Approval, error) {
+	return a.resolve(ctx, id, domain.ApprovalRejected, note, "system")
+}
+
 // Wait blocks until the approval is resolved, the timeout expires (auto-reject)
 // or ctx is cancelled.
 func (a *Approvals) Wait(ctx context.Context, ch <-chan domain.Approval, id string) (domain.Approval, error) {
-	timer := time.NewTimer(a.cfg.ApprovalTimeout)
+	return a.WaitUntil(ctx, ch, id, time.Now().Add(a.cfg.ApprovalTimeout))
+}
+
+// WaitUntil is Wait with an absolute deadline (already past: auto-reject now).
+func (a *Approvals) WaitUntil(ctx context.Context, ch <-chan domain.Approval, id string, deadline time.Time) (domain.Approval, error) {
+	select {
+	case ap := <-ch: // decided before the wait started (Attach)
+		return ap, nil
+	default:
+	}
+	timer := time.NewTimer(max(time.Until(deadline), 0))
 	defer timer.Stop()
 	select {
 	case ap := <-ch:

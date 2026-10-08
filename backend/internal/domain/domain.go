@@ -290,6 +290,8 @@ type Event struct {
 const (
 	EvRequestReceived  = "request.received"
 	EvRequestCompleted = "request.completed"
+	// EvRequestResumed: a request interrupted by a restart continues (additive, A1).
+	EvRequestResumed = "request.resumed"
 	EvPlanCreated      = "plan.created"
 	EvAgentState       = "agent.state_changed"
 	EvTaskCreated      = "task.created"

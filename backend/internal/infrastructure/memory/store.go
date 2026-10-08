@@ -39,6 +39,8 @@ type Store struct {
 	cfg           configState // organization settings and schedules (config.go)
 	usage         []domain.UsageEntry
 	caps          map[string]domain.BudgetCap // scope/id
+	runMeta       map[string]application.RunMeta // request id -> run meta (runs.go)
+	checkpoints   map[string][]byte              // task id -> JSON checkpoint (runs.go)
 }
 
 func New() *Store {
@@ -54,6 +56,7 @@ func (s *Store) clear() {
 	s.taskOrder, s.reqOrder, s.convOrder, s.apprOrder, s.repOrder = nil, nil, nil, nil, nil
 	s.messages, s.events, s.activity = nil, nil, nil
 	s.usage = nil
+	s.runMeta, s.checkpoints = map[string]application.RunMeta{}, map[string][]byte{}
 	// Request caps are execution data; agent caps are configuration and survive a reset.
 	for k, c := range s.caps {
 		if c.Scope == domain.ScopeRequest {

@@ -153,6 +153,8 @@ func (o *Orchestrator) reviewPlan(ctx context.Context, rs *run, tasks []domain.T
 		}
 		o.rec.Audit(ctx, domain.AuditLog{Actor: ActorFrom(ctx, "user"), Action: "plan.approved", Entity: "request", EntityID: rs.req.ID,
 			Details: map[string]any{"removed": d.RemoveTaskIDs, "no_external_actions": d.NoExternalActions}})
+		rs.removed = append([]string{}, d.RemoveTaskIDs...)
+		o.saveRunMeta(ctx, rs) // a resumed run keeps "no external actions" and the removed tasks
 		return true
 	case <-timer.C:
 		p.Forget(org, rs.req.ID)

@@ -59,7 +59,12 @@ type TaskGate interface {
 }
 
 // SetTaskGate installs the project gate (nil removes it).
-func (o *Orchestrator) SetTaskGate(g TaskGate) { o.conn.gate = g }
+// A gate that is also a RequestOwner (projects) keeps its requests out of the
+// restart recovery (durable.go).
+func (o *Orchestrator) SetTaskGate(g TaskGate) {
+	o.conn.gate = g
+	o.durable.owner, _ = g.(RequestOwner)
+}
 
 const gatePoll = 100 * time.Millisecond
 

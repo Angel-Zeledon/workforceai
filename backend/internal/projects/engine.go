@@ -324,6 +324,17 @@ func (s *Service) lookupReq(org, requestID string) *liveProject {
 	return lp
 }
 
+// OwnsRequest tells the orchestrator's restart recovery that a request belongs
+// to a project: projects are not resumed yet (get marks them interrupted), so
+// the orchestrator fails the request instead of running it without its gate.
+func (s *Service) OwnsRequest(ctx context.Context, org, requestID string) bool {
+	if s.lookupReq(org, requestID) != nil {
+		return true
+	}
+	_, err := s.cfg.Store.ByRequest(application.WithOrg(ctx, org), org, requestID)
+	return err == nil
+}
+
 // GateTask decides what happens to a task of a launched project: it holds new
 // work while the project is paused, refuses it once cancelled, completes
 // milestones and timers, and asks a human before gates and approval steps.
