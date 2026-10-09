@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 Risk = Literal["low", "medium", "high"]
 MetricValue = Union[str, int, float]
@@ -30,6 +30,38 @@ def normalize_tone(value: Any) -> str:
     """Regional tone code; anything unknown or empty -> "neutral" (backwards compatible)."""
     v = str(value or "").strip().lower()
     return v if v in TONES else "neutral"
+
+
+Creativity = Literal["low", "medium", "high"]
+CREATIVITY_LEVELS: tuple[str, ...] = ("low", "medium", "high")
+
+
+def normalize_creativity(value: Any) -> str:
+    """low|medium|high; anything else (or empty) -> "" = not set (the runtime keeps its current default)."""
+    v = str(value or "").strip().lower()
+    return v if v in CREATIVITY_LEVELS else ""
+
+
+MAX_SKILLS = 12
+
+
+def clean_skills(value: Any) -> list[str]:
+    """Routing-hint tags: short lowercase strings, no blanks or duplicates. They never grant anything."""
+    if not isinstance(value, (list, tuple)):
+        return []
+    out: list[str] = []
+    for item in value:
+        text = str(item or "").strip().lower()[:32]
+        if text and text not in out and len(out) < MAX_SKILLS:
+            out.append(text)
+    return out
+
+
+def _merge_skills(self):
+    """Skills are routing hints only: they extend the keywords the router/planner score with."""
+    if getattr(self, "skills", None):
+        self.keywords = list(dict.fromkeys([*self.keywords, *self.skills]))
+    return self
 
 
 class StructuredOutput(_Base):
@@ -84,6 +116,10 @@ class PlanAgent(_Base):
     topic: str = ""
     keywords: list[str] = Field(default_factory=list)
     area: str = ""
+    skills: list[str] = Field(default_factory=list)  # V2: org-configured tags, routing hints only
+
+    _norm_skills = field_validator("skills", mode="before")(clean_skills)
+    _merge = model_validator(mode="after")(_merge_skills)
 
 
 class PlanRequest(_ProviderPolicyMixin):
@@ -247,6 +283,14 @@ class AgentInfo(_Base):
     responsibilities: Union[str, list[str]] = ""
     tools: list[str] = Field(default_factory=list)
     area: str = ""
+    # V2 work profile (additive, all optional). `instructions` is trusted organization configuration
+    # appended to the persona; it can never grant tools, permissions or approvals (see security.py).
+    instructions: str = ""
+    creativity: str = ""  # low|medium|high; "" = current default behaviour
+    skills: list[str] = Field(default_factory=list)  # routing hints only
+
+    _norm_creativity = field_validator("creativity", mode="before")(normalize_creativity)
+    _norm_skills = field_validator("skills", mode="before")(clean_skills)
 
 
 class DependencyOutput(_Base):
@@ -327,6 +371,9 @@ class RunTaskRequest(_ProviderPolicyMixin):
     tools_available: list[ToolAvailable] | None = None
     tainted: bool = False
     rework: ReworkInfo | None = None  # Q1: set when the quality review asked for a new run
+    # V2: notes a human sent to steer this task. Additional guidance, never authority (security.py).
+    human_guidance: list[str] | None = None
+    want_trace: bool = False  # V2: return the redacted prompt as built, for the thought audit
     locale: Locale = "es"
     tone: Tone = "neutral"
 
@@ -354,6 +401,13 @@ class TaskResult(_Base):
     tool_requests: list[ToolRequest] = Field(default_factory=list)
 
 
+class RunTrace(_Base):
+    """The prompt exactly as the runtime builds it (before framework wrapping), redacted. Only on request."""
+
+    system: str = ""
+    user: str = ""
+
+
 class RunTaskResponse(_Base):
     output: StructuredOutput
     consults: list[Consult] = Field(default_factory=list)
@@ -361,6 +415,7 @@ class RunTaskResponse(_Base):
     usage: Usage
     provider: str | None = None  # optional: same as usage.provider / usage.model
     model: str | None = None
+    trace: RunTrace | None = None  # V2: only when the request had want_trace
 
 
 # ---- /v1/review (Q1) ------------------------------------------------------
@@ -476,6 +531,10 @@ class RouteAgent(_Base):
     keywords: list[str] = Field(default_factory=list)
     related: list[str] = Field(default_factory=list)
     area: str = ""
+    skills: list[str] = Field(default_factory=list)  # V2: org-configured tags, routing hints only
+
+    _norm_skills = field_validator("skills", mode="before")(clean_skills)
+    _merge = model_validator(mode="after")(_merge_skills)
 
 
 class HistoryItem(_Base):
