@@ -14,6 +14,8 @@ const T: { id: string; category: string; color: string; look: RoleTemplate["disp
     es: ["Ingeniería de software", "Revisa código, redacta especificaciones y apoya el diseño técnico."], en: ["Software engineer", "Reviews code, drafts specs and supports technical design."], names: ["Diego Fuentes", "Dean Foster"], tools: ["github", "docs"] },
   { id: "finance_treasury", category: "finance", color: "#2b8a8f", look: { skin: "#e0b08c", hair: "#2a211b", hair_style: "bun", accessory: "roundglasses", tie: false, female: true },
     es: ["Finanzas y tesorería (solo análisis)", "Concilia extractos importados, revisa antigüedad de cuentas por cobrar y proyecta el flujo a 13 semanas. Nunca mueve dinero."], en: ["Finance and treasury (analysis only)", "Reconciles imported statements, reviews receivables aging and projects a 13-week cash flow. It never moves money."], names: ["Valeria Montoya", "Valerie Monroe"], tools: ["sheets", "docs"] },
+  { id: "internal_auditor", category: "business", color: "#5b7fa6", look: { skin: "#d9a98a", hair: "#3a3a3d", hair_style: "short", accessory: "glasses", tie: true, female: false },
+    es: ["Auditor interno", "Revisa entregables y cruza cifras entre tareas, citando la evidencia. Solo lectura."], en: ["Internal auditor", "Reviews deliverables and cross-checks figures between tasks, citing the evidence. Read-only."], names: ["Álvaro Beltrán", "Alan Brooks"], tools: [] },
 ];
 
 export class MockRoles {

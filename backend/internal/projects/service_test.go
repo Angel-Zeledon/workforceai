@@ -33,7 +33,9 @@ type fakeRuntime struct {
 	onRun    func(in application.RunTaskRequest)
 	cost     float64
 	planResp *application.PlanResponse
-	failFn   func(title string) error // injected runtime failure (nil: none)
+	failFn   func(title string) error                                             // injected runtime failure (nil: none)
+	review   func(n int, in application.ReviewRequest) application.ReviewResponse // Q1 reviewer (nil: always pass)
+	reviews  []application.ReviewRequest
 }
 
 func newRT() *fakeRuntime { return &fakeRuntime{finished: map[string]int{}} }

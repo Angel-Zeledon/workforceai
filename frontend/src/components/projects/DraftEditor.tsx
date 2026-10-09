@@ -92,6 +92,16 @@ export function DraftEditor() {
           {est.warnings.map((w, i) => <div key={i} className="mt-2 rounded-xl bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800">{t(w.key, { objective: title(detail.objectives.find((o) => o.id === w.params?.id) ?? { title: "" }) })}</div>)}
         </Card>
 
+        <Card title={t("pv.quality.title")}>
+          <label className="block text-[11px] font-semibold text-mute">{t("pv.quality.review")}
+            <select data-testid="quality-review-select" value={detail.quality?.review ?? "off"} onChange={(e) => patchPlan([{ op: "set_quality", fields: { review: e.target.value as "off" | "low_confidence" | "always" } }])}
+              className="mt-1 w-full rounded-lg border border-line-strong bg-panel px-2 py-1 text-[12px] text-ink">
+              {(["off", "low_confidence", "always"] as const).map((m) => <option key={m} value={m}>{t(`pv.quality.mode.${m}`)}</option>)}
+            </select>
+          </label>
+          <div className="mt-1 text-[10px] text-mute">{t("pv.quality.hint")}</div>
+        </Card>
+
         <Card title={t("pv.validate.title")}>
           {errors.length === 0 ? (
             <div data-testid="validate-ok" className="text-[12px] font-semibold text-emerald-700">{t("pv.validate.ok")}</div>
@@ -125,7 +135,7 @@ export function DraftEditor() {
   );
 }
 
-function DraftRow({ n, agents, onChange }: { n: ProjectNode; agents: string[]; onChange: (f: { title?: string; agent_id?: string }) => void }) {
+function DraftRow({ n, agents, onChange }: { n: ProjectNode; agents: string[]; onChange: (f: { title?: string; agent_id?: string; acceptance?: string[] }) => void }) {
   const { t } = useT();
   const title = useNodeTitle();
   const agentName = useAgentName();
@@ -134,7 +144,12 @@ function DraftRow({ n, agents, onChange }: { n: ProjectNode; agents: string[]; o
   useEffect(() => { setText(shown); }, [shown]);
   const human = n.kind === "gate" || n.kind === "milestone" || n.kind === "wait";
   const commit = () => { if (text !== shown) onChange({ title: text }); };
+  const [acc, setAcc] = useState((n.acceptance ?? []).join("\n"));
+  const accShown = (n.acceptance ?? []).join("\n");
+  useEffect(() => { setAcc(accShown); }, [accShown]);
+  const commitAcc = () => { if (acc !== accShown) onChange({ acceptance: acc.split("\n").map((c) => c.trim()).filter(Boolean) }); };
   return (
+    <div>
     <div className="flex items-center gap-2">
       <span className="w-14 shrink-0 text-[9px] font-semibold uppercase tracking-wide text-mute">{t(`pv.kind.${n.kind}`)}</span>
       <input data-testid="draft-node-title-input" value={text} onChange={(e) => setText(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
@@ -146,6 +161,11 @@ function DraftRow({ n, agents, onChange }: { n: ProjectNode; agents: string[]; o
         </select>
       )}
       <span className="w-16 shrink-0 text-right font-mono text-[10px] text-mute">{n.est_cost_usd ? fmtMoney(n.est_cost_usd) : "—"}</span>
+    </div>
+    {!human && (n.kind === "task" || n.kind === "subtask") && (
+      <textarea data-testid="draft-node-acceptance-input" value={acc} rows={acc ? Math.min(4, acc.split("\n").length) : 1} onChange={(e) => setAcc(e.target.value)} onBlur={commitAcc}
+        placeholder={t("pv.quality.acceptancePlaceholder")} className="ml-16 mt-1 w-[calc(100%-4rem)] rounded-lg border border-line bg-panel px-2 py-1 text-[11px] text-ink outline-none focus:border-accent" />
+    )}
     </div>
   );
 }

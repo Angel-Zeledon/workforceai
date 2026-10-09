@@ -46,8 +46,24 @@ export interface ProjectNode {
   /** a human skipped this failed node (W2) */
   skipped?: boolean;
   skip_reason?: string;
+  /** Q1: checkable criteria the output is reviewed against, and the verdict of that review */
+  acceptance?: string[];
+  review?: NodeReview | null;
   error?: string | null;
 }
+
+export type ReviewVerdict = "pass" | "rework" | "fail";
+export interface NodeReview {
+  verdict: ReviewVerdict;
+  reasons: string[];
+  criteria?: { criterion: string; met: boolean; note?: string }[];
+  evidence?: string[];
+  reviewer: string;
+  reworks: number;
+  rework_exhausted?: boolean;
+  at?: string;
+}
+export type ReviewMode = "off" | "low_confidence" | "always";
 
 export interface ProjectObjective { id: string; title: string; title_key?: string; title_params?: Record<string, string>; position: number }
 
@@ -100,6 +116,8 @@ export interface ProjectDetail {
   planning: { done: number; total: number } | null;
   /** how the plan of a goal-based project was produced; failures and fallbacks are shown, never silent */
   planner?: PlannerInfo | null;
+  /** Q1: quality-review setting; absent = off */
+  quality?: { review: ReviewMode } | null;
 }
 
 export interface PlannerInfo {
@@ -158,7 +176,8 @@ export interface ProjectFrame {
 }
 
 export type PlanOp =
-  | { op: "update"; id: string; fields: { title?: string; agent_id?: string } };
+  | { op: "update"; id: string; fields: { title?: string; agent_id?: string; acceptance?: string[] } }
+  | { op: "set_quality"; id?: string; fields: { review: ReviewMode } };
 
 export interface NewProjectBody { goal: string; template_id?: string; params?: Record<string, string>; budget_usd?: number }
 export interface LaunchBody { approved_budget_usd: number; acknowledge_underbudget?: boolean; max_parallel?: number }

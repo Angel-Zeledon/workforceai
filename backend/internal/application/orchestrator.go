@@ -265,9 +265,17 @@ func (o *Orchestrator) finish(ctx context.Context, rs *run, tasks []domain.Task,
 		return
 	}
 	o.setState(ctx, assistantID, domain.StateWorking, "Consolidando resultados", nil, 85)
+	qt := o.qualityOf(ctx, rs) // Q1: empty (and a no-op) unless tasks were reviewed or audited
+	if !qt.empty() {
+		outs = append(outs, qt.synthOutput(rs.style.Locale))
+		wfKeys = append(wfKeys, "")
+	}
 	syn, ok := o.synthesize(ctx, rs, outs, wfKeys)
 	if !ok {
 		return
+	}
+	if !qt.empty() {
+		syn.Sections = append(syn.Sections, qt.section(rs.style.Locale))
 	}
 	if len(unfinished) > 0 {
 		syn.Sections = append(syn.Sections, domain.Section{Heading: "Tareas no completadas", Body: "- " + strings.Join(unfinished, "\n- ")})
@@ -453,6 +461,12 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 	o.emitMetrics(ctx)
 
 	in := o.buildRunRequest(ctx, rs, t, agent)
+	spec := o.reviewSpecOf(ctx, t) // Q1: off (zero spec) unless the project enabled the review
+	if len(spec.Criteria) > 0 {
+		in.Task.Acceptance = spec.Criteria
+	} else {
+		spec = ReviewSpec{}
+	}
 	var resp RunTaskResponse
 	attempt := 1
 	for { // W2: task-level retry of transient runtime failures (recovery.go)
@@ -488,6 +502,16 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 	}
 	resp = o.connectionReads(ctx, rs, &t, agent, in, resp)
 	resp.Output.Normalize()
+	if agent.Role == AuditorRole {
+		enforceAuditEvidence(&resp.Output) // never "verified" without evidence references
+	}
+	if spec.Mode != "" {
+		var out Outcome
+		var stop bool
+		if resp, out, stop = o.qualityReview(ctx, rs, &t, agent, in, resp, spec); stop {
+			return out
+		}
+	}
 	t.Output = &resp.Output
 	o.setState(ctx, t.AgentID, domain.StateWorking, "Revisando resultados: "+t.Title, &tid, 60)
 

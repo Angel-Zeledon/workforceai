@@ -25,6 +25,8 @@ from .models import (
     PlanPhasesResponse,
     PlanRequest,
     PlanResponse,
+    ReviewRequest,
+    ReviewResponse,
     RouteRequest,
     RouteResponse,
     RunTaskRequest,
@@ -105,6 +107,12 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
     async def run_task(req: RunTaskRequest):
         resp = await guarded(eng().run_task(req))
         return scrub_run_task(resp)
+
+    @app.post("/v1/review", response_model=ReviewResponse, response_model_exclude_none=True)
+    async def review(req: ReviewRequest):
+        resp = await guarded(eng().review(req))
+        data = redact_any(resp.model_dump(exclude={"usage"}))  # nothing with the shape of a credential leaves the runtime
+        return ReviewResponse(**data, usage=resp.usage)
 
     @app.post("/v1/estimate", response_model=EstimateResponse)
     async def estimate(req: EstimateRequest):

@@ -11,6 +11,8 @@ package projects
 
 import (
 	"time"
+
+	"aiworkforce/backend/internal/domain"
 )
 
 // Node kinds, states and statuses: the exact vocabulary of frontend/src/lib/projects/types.ts.
@@ -95,6 +97,10 @@ type Node struct {
 	// Skipped: a human skipped this failed node (W2); SkipReason is theirs.
 	Skipped    bool   `json:"skipped,omitempty"`
 	SkipReason string `json:"skip_reason,omitempty"`
+	// Acceptance are the checkable criteria of the node and Review the verdict
+	// of its quality review (Q1, additive).
+	Acceptance []string       `json:"acceptance,omitempty"`
+	Review     *domain.Review `json:"review,omitempty"`
 }
 
 type Approval struct {
@@ -223,6 +229,8 @@ type Detail struct {
 	// Planner says how the draft plan was produced and whether the planner
 	// failed or degraded (additive; absent for template projects).
 	Planner *PlannerInfo `json:"planner,omitempty"`
+	// Quality is the quality-review setting of the project (additive, Q1).
+	Quality *Quality `json:"quality,omitempty"`
 }
 
 // PlanningProgress is the progress of a draft whose planner is still running.
@@ -350,6 +358,7 @@ type TemplateNode struct {
 	Description string            `json:"description,omitempty"`
 	Agent       string            `json:"agent,omitempty"`
 	Complexity  string            `json:"complexity,omitempty"`
+	Acceptance  []string          `json:"acceptance,omitempty"`
 	Deps        []string          `json:"deps,omitempty"`
 	Secs        float64           `json:"secs,omitempty"`
 	Approval    *TemplateApproval `json:"approval,omitempty"`
@@ -407,11 +416,16 @@ type LaunchBody struct {
 }
 
 type PlanOp struct {
+	// Op is "update" (a node; ID required) or "set_quality" (the project; Fields.Review).
 	Op     string `json:"op"`
 	ID     string `json:"id"`
 	Fields struct {
 		Title   *string `json:"title,omitempty"`
 		AgentID *string `json:"agent_id,omitempty"`
+		// Acceptance replaces the acceptance criteria of a node (Q1); [] clears them.
+		Acceptance *[]string `json:"acceptance,omitempty"`
+		// Review sets quality.review: off|low_confidence|always (op "set_quality").
+		Review *string `json:"review,omitempty"`
 	} `json:"fields"`
 }
 
@@ -454,6 +468,8 @@ type NodeDef struct {
 	ApprovalAction  string            `json:"approval_action,omitempty"`
 	ApprovalRisk    string            `json:"approval_risk,omitempty"`
 	TaskID          string            `json:"task_id,omitempty"`
+	// Acceptance: checkable criteria the output is reviewed against (Q1).
+	Acceptance []string `json:"acceptance,omitempty"`
 }
 
 func (n NodeDef) isGroup() bool { return n.Kind == KindGroup }
@@ -495,4 +511,6 @@ type Record struct {
 	// BudgetWarned lists the early-warning thresholds (fractions of BudgetUSD)
 	// already alerted, so a restart never repeats an alert (W5).
 	BudgetWarned []float64 `json:"budget_warned,omitempty"`
+	// Quality is the quality-review setting (Q1); nil means review off.
+	Quality *Quality `json:"quality,omitempty"`
 }

@@ -51,6 +51,18 @@ export function NodeDrawer() {
         <Fact k={t("pv.node.complexity")} v={n.complexity} />
       </dl>
       {n.error && <div className="rounded-xl bg-red-500/10 px-2 py-1 text-[11px] text-red-700">{t("pv.node.error", { code: n.error })}</div>}
+      {n.acceptance && n.acceptance.length > 0 && (
+        <div data-testid="node-acceptance" className="rounded-xl border border-line bg-panel2 p-2 text-[11px] text-ink">
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-mute">{t("pv.quality.acceptance")}</div>
+          <ul className="list-disc space-y-0.5 pl-4">{n.acceptance.map((c, i) => <li key={i}>{c}</li>)}</ul>
+        </div>
+      )}
+      {n.review && (
+        <div data-testid="node-review" data-verdict={n.review.verdict} className={`rounded-xl px-2 py-1 text-[11px] ${n.review.verdict === "pass" ? "bg-emerald-500/10 text-emerald-800" : n.review.verdict === "fail" ? "bg-red-500/10 text-red-700" : "bg-amber-500/10 text-amber-800"}`}>
+          <div className="font-semibold">{t(`pv.quality.verdict.${n.review.verdict}`)}{n.review.reworks > 0 ? ` · ${t("pv.quality.reworks", { count: n.review.reworks })}` : ""}{n.review.rework_exhausted ? ` · ${t("pv.quality.exhausted")}` : ""}</div>
+          <ul className="mt-0.5 list-disc space-y-0.5 pl-4">{n.review.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
+        </div>
+      )}
       {n.skipped && <div data-testid="node-skipped" className="rounded-xl bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800">{t("pv.recover.skipped", { reason: n.skip_reason ?? "" })}</div>}
       {canRecover && (n.state === "failed" || n.state === "blocked") && (
         <div data-testid="node-recovery" className="space-y-2 rounded-xl border border-line bg-panel2 p-2">

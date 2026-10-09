@@ -21,6 +21,8 @@ type connState struct {
 	gw    ToolGateway
 	plans PlanReviewer
 	gate  TaskGate // optional project gate (projects_hooks.go)
+	// reviewPolicy says which tasks get a quality review (review.go); set with the gate when it implements it.
+	reviewPolicy ReviewPolicy
 	// poll is how often a blocked task re-checks the guard.
 	poll time.Duration
 }

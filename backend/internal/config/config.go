@@ -183,6 +183,8 @@ func Load() Config {
 	app.ProjectContextTokenBudget = getInt("PROJECT_CONTEXT_TOKEN_BUDGET", app.ProjectContextTokenBudget)
 	app.SynthTokenBudget = getInt("SYNTH_TOKEN_BUDGET", app.SynthTokenBudget)
 	app.SynthMaxGroups = getInt("SYNTH_MAX_GROUPS", app.SynthMaxGroups)
+	app.QualityMaxRework = getInt("QUALITY_MAX_REWORK", app.QualityMaxRework)
+	app.QualityLowConfidence = getFloat("QUALITY_LOW_CONFIDENCE", app.QualityLowConfidence)
 
 	c := Config{
 		Port:              getenv("PORT", "8080"),
@@ -256,5 +258,6 @@ func projectLimits() projects.Limits {
 		PhasesTimeout:       getDuration("PLANNER_PHASES_TIMEOUT", d.PhasesTimeout),
 		PhaseTimeout:        getDuration("PLANNER_PHASE_TIMEOUT", d.PhaseTimeout),
 		SyncWait:            getDuration("PLANNER_SYNC_WAIT", d.SyncWait),
+		NoAuditNodes:        strings.EqualFold(strings.TrimSpace(getenv("QUALITY_AUDIT_NODES", "true")), "false"),
 	}
 }

@@ -330,7 +330,8 @@ func (t Template) instantiate(pid, goal string, params map[string]string, locale
 				title, tkey, np := textP(n.Params, n.TitleKey, n.Title)
 				def := NodeDef{ID: id, Key: n.Key, ObjectiveID: oid, ParentID: &gid, Kind: kind, Title: title, TitleKey: tkey, TitleParams: np,
 					Description: n.Description, DelegationDepth: 1, DelegationChain: []string{}, Complexity: normComplexity(n.Complexity),
-					WBSPath: pad(oi+1) + "." + pad(wi+1) + "." + pad(ni+1)}
+					Acceptance: cleanAcceptance(n.Acceptance, MaxAcceptance),
+					WBSPath:    pad(oi+1) + "." + pad(wi+1) + "." + pad(ni+1)}
 				def.DependsOn = []string{}
 				for _, d := range n.Deps {
 					did, ok := keyToID[d]
@@ -411,7 +412,7 @@ func templateFromRecord(r Record, id, key string) Template {
 					continue
 				}
 				tn := TemplateNode{Key: idKey(n.ID), Title: displayTitle(n.Title, n.TitleKey, n.TitleParams, r.Locale), Description: n.Description,
-					Complexity: n.Complexity, Secs: n.EstSeconds}
+					Complexity: n.Complexity, Secs: n.EstSeconds, Acceptance: n.Acceptance}
 				if n.Kind != KindTask {
 					tn.Kind = n.Kind
 				}

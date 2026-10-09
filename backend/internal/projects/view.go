@@ -100,6 +100,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 	if d.Budget.WarnAt == nil {
 		d.Budget = defaultBudgetPolicy()
 	}
+	d.Quality = rec.Quality
 	launched := rec.RequestID != ""
 	lp := s.liveOf(rec.OrgID, rec.ID)
 
@@ -119,7 +120,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 			TitleKey: def.TitleKey, TitleParams: def.TitleParams, AgentID: def.AgentID, DependsOn: nonNil(def.DependsOn), DelegationDepth: def.DelegationDepth,
 			DelegationChain: nonNil(def.DelegationChain), DagLevel: def.DagLevel, WBSPath: def.WBSPath, Complexity: def.Complexity,
 			EstCostUSD: def.EstCostUSD, EstSeconds: def.EstSeconds, PlanStartMS: def.PlanStartMS, PlanEndMS: def.PlanEndMS,
-			ApprovalAction: def.ApprovalAction, MaxAttempts: s.cfg.MaxAttempts, State: StateDraft}
+			ApprovalAction: def.ApprovalAction, MaxAttempts: s.cfg.MaxAttempts, State: StateDraft, Acceptance: def.Acceptance}
 		if def.isGroup() {
 			nodes = append(nodes, n)
 			continue
@@ -142,6 +143,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 				} else if a, ok := t.Output.Metrics["attempts"].(int); ok && a > 1 {
 					n.Attempt = a
 				}
+				n.Review = t.Output.Review
 				if sk, _ := t.Output.Metrics["skipped"].(bool); sk {
 					n.Skipped = true
 					n.SkipReason, _ = t.Output.Metrics["skip_reason"].(string)
@@ -389,6 +391,7 @@ type liveProject struct {
 	waitSince  map[string]time.Time
 	rev        map[string]int
 	lastSig    map[string]string
+	review     string // quality.review of the project (Q1): off|low_confidence|always
 	budgetApp  string // id of the pending extend_budget approval
 	lastStatus string
 	epoch      int // bumped (under Service.mu) when a finished project is revived; the monitor must not exit across a bump

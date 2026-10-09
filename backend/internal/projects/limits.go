@@ -28,6 +28,9 @@ type Limits struct {
 	// SyncWait is how long CreateDraft waits for the planner before it answers
 	// with a draft that is still being planned (the REST write timeout is 60s).
 	SyncWait time.Duration
+	// NoAuditNodes disables the planner-inserted audit task per phase (Q1,
+	// QUALITY_AUDIT_NODES=false). The zero value keeps them enabled.
+	NoAuditNodes bool
 }
 
 // Stable error codes of a limit (the frontend maps them to translated texts).

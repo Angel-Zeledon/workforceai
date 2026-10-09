@@ -7,6 +7,7 @@ import hashlib
 import os
 import random
 
+from . import review as rv
 from . import sim_content as sc
 from .engine import AgentEngine, estimate_cost
 from .routing import assigned_reason, compose_reply, owner_role
@@ -110,6 +111,10 @@ class SimulationEngine(AgentEngine):
             entry = c.generic_content(role, req.task.title)
         entry = copy.deepcopy(entry)
         out = StructuredOutput(**entry["output"])
+        if role == rv.AUDITOR_ROLE:  # Q1: the internal auditor cross-checks the figures of its dependencies
+            out = rv.sim_audit_output(req)
+            entry["consults"], entry["tool_requests"] = [], []
+        out = rv.apply_sim_markers(rv.apply_rework(out, req), req)
 
         n_dep = len(req.context.dependency_outputs)
         n_ext = len(req.external_content or [])

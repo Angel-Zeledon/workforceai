@@ -34,6 +34,8 @@ from .models import (
     PlanRequest,
     PlanResponse,
     ReplyConsult,
+    ReviewRequest,
+    ReviewResponse,
     RouteRequest,
     RouteResponse,
     RunTaskRequest,
@@ -55,6 +57,7 @@ from .providers import (
     is_transient,
     policy_from_request,
 )
+from .review import build_review_prompt, normalize_review
 from .routing import compose_reply, detect_locale, rules_route, validate_route
 from .security import (
     build_chat_prompt,
@@ -110,6 +113,13 @@ class _ChatLLM(BaseModel):
     text: str
     consult_to_agent_id: str | None = None
     consult_question: str | None = None
+
+
+class _ReviewLLM(BaseModel):
+    verdict: str
+    reasons: list[str] = Field(default_factory=list)
+    criteria: list[dict[str, Any]] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
 
 
 class _Synth(BaseModel):
@@ -311,6 +321,19 @@ class CrewAIEngine(AgentEngine):
         return RunTaskResponse(output=out, consults=res.consults,
                                tool_requests=res.tool_requests, usage=usage,
                                provider=usage.provider, model=usage.model)
+
+    async def review(self, req: ReviewRequest) -> ReviewResponse:
+        """Quality review (Q1): the reviewer persona (internal auditor or neutral) judges ONE output."""
+        persona = req.reviewer
+        res, usage = await self._run(
+            role=(persona.title or persona.role) if persona else "Revisor",
+            goal="Revisar un entregable contra sus criterios de aceptacion con rigor y sin inventar datos",
+            backstory=build_system_prompt(persona, req.locale, req.tone) if persona else system_rules(req.locale, req.tone),
+            description=build_review_prompt(req),
+            expected="JSON con verdict, reasons, criteria y evidence", schema=_ReviewLLM,
+            policy=policy_from_request(req, "review"), max_tokens=1500)
+        data = normalize_review(res.model_dump(), req)
+        return ReviewResponse(**data, usage=usage, provider=usage.provider, model=usage.model)
 
     async def consult(self, req: ConsultRequest) -> ConsultResponse:
         res, usage = await self._run(

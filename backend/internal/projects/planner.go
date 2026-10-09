@@ -267,6 +267,13 @@ func (s *Service) planHierarchical(ctx context.Context, j *planJob, hp applicati
 		brief[i] = application.PhaseBrief{Key: p.Key, Title: p.Title}
 	}
 	fallbackAgent := pickFallbackAgent(pa, known)
+	// Q1: with an internal auditor in the organization every phase gets ONE audit task at its end.
+	auditor, maxTasks := "", lim.MaxTasksPerPhase
+	if !lim.NoAuditNodes {
+		if auditor = auditorOf(pa); auditor != "" && maxTasks > 2 {
+			maxTasks-- // the audit counts against the per-phase cap
+		}
+	}
 	tasks := make([][]application.PhaseTask, len(phases))
 	failedPhase := make([]error, len(phases))
 	sem := make(chan struct{}, lim.PlannerConcurrency)
@@ -290,7 +297,10 @@ func (s *Service) planHierarchical(ctx context.Context, j *planJob, hp applicati
 					return resp.Usage, err
 				})
 			if err == nil {
-				tasks[i], err = cleanPhaseTasks(resp.Tasks, known, fallbackAgent, lim.MaxTasksPerPhase)
+				tasks[i], err = cleanPhaseTasks(resp.Tasks, known, fallbackAgent, maxTasks)
+				if err == nil && auditor != "" && len(tasks[i]) >= 2 {
+					tasks[i] = withAuditTask(tasks[i], ph, auditor, locale)
+				}
 			}
 			if err != nil {
 				failedPhase[i] = err
@@ -409,7 +419,7 @@ func cleanPhaseTasks(in []application.PhaseTask, known map[string]bool, fallback
 			cx = "M"
 		}
 		out = append(out, application.PhaseTask{Key: k, Title: clip(t.Title, 200), Description: clip(t.Description, 2000), AgentID: agent,
-			DependsOn: t.DependsOn, Complexity: cx, Reason: clip(t.Reason, 200)})
+			DependsOn: t.DependsOn, Complexity: cx, Reason: clip(t.Reason, 200), Acceptance: cleanAcceptance(t.Acceptance, plannerAcceptance)})
 	}
 	if len(out) == 0 {
 		return nil, invalidf("the phase has no usable tasks")
@@ -513,7 +523,7 @@ func buildPhaseTemplate(goal string, phases []application.PlanPhase, tasks [][]a
 				deps = append(deps, upstream...)
 			}
 			nodes = append(nodes, TemplateNode{Key: p.Key + "_" + t.Key, Title: t.Title, Description: t.Description, Agent: t.AgentID,
-				Complexity: t.Complexity, Deps: deps})
+				Complexity: t.Complexity, Deps: deps, Acceptance: t.Acceptance})
 		}
 		obj := TemplateObjective{Key: p.Key, Title: p.Title}
 		chunks := (len(nodes) + maxChildren - 1) / maxChildren

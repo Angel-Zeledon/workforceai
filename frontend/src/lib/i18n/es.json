@@ -1515,5 +1515,18 @@
   "pv.recover.reason": "Motivo de la omisión (obligatorio)",
   "pv.recover.skipConfirm": "Confirmar omisión",
   "pv.recover.skipHint": "Los pasos siguientes continuarán sabiendo que falta el resultado de este paso.",
-  "pv.recover.skipped": "Omitido por una persona: {reason}"
+  "pv.recover.skipped": "Omitido por una persona: {reason}",
+  "pv.quality.acceptance": "Criterios de aceptación",
+  "pv.quality.acceptancePlaceholder": "Criterios de aceptación (uno por línea, opcional)",
+  "pv.quality.title": "Revisión de calidad",
+  "pv.quality.review": "Revisar los resultados",
+  "pv.quality.hint": "Solo se revisan las tareas con criterios de aceptación. Cada revisión cuenta en el presupuesto.",
+  "pv.quality.mode.off": "No revisar",
+  "pv.quality.mode.low_confidence": "Solo si el agente duda",
+  "pv.quality.mode.always": "Siempre",
+  "pv.quality.verdict.pass": "Revisión: aprobado",
+  "pv.quality.verdict.rework": "Revisión: falta trabajo",
+  "pv.quality.verdict.fail": "Revisión: rechazado",
+  "pv.quality.reworks": "rehecho {count} vez",
+  "pv.quality.exhausted": "límite de reintentos alcanzado"
 }
