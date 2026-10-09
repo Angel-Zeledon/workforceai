@@ -150,7 +150,7 @@ func (o *Orchestrator) gateApproval(ctx context.Context, rs *run, t *domain.Task
 	o.setRequestStatus(ctx, rs, domain.RequestAwaitingApproval)
 	o.setState(ctx, t.AgentID, domain.StateAwaitingApproval, "Esperando aprobación: "+ap.Title, &tid, 80)
 	o.emitMetrics(ctx)
-	res, err := o.approvals.WaitUntil(ctx, ch, ap.ID, o.approvals.Deadline(ap))
+	res, err := o.awaitApproval(ctx, rs, ch, ap, o.approvals.Deadline(ap))
 	if err != nil {
 		return false // cancelled
 	}

@@ -283,12 +283,14 @@ type Notifier struct {
 
 func (n Notifier) Publish(ctx context.Context, e domain.Event) error {
 	err := n.Inner.Publish(ctx, e)
-	if n.Svc != nil && e.Type == domain.EvApprovalRequest {
+	if n.Svc != nil && (e.Type == domain.EvApprovalRequest || e.Type == domain.EvApprovalReminder) {
 		if ap, ok := approvalOf(e.Payload); ok {
 			go func() {
 				c, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 				defer cancel()
-				n.Svc.Notify(c, e.OrgID, FromApproval(ap))
+				m := FromApproval(ap)
+				m.Type = e.Type
+				n.Svc.Notify(c, e.OrgID, m)
 			}()
 		}
 	}

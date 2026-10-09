@@ -126,6 +126,86 @@ func (a *Approvals) WaitUntil(ctx context.Context, ch <-chan domain.Approval, id
 	}
 }
 
+// WaitReminding is the wait of a project approval (W2): it never auto-rejects
+// on the interactive 30-minute deadline. Every `every` it emits
+// approval.reminder (also pushed to the subscriptions of the organization) and
+// it keeps waiting until a human decides or ctx is cancelled. timeout > 0
+// restores an auto-reject after that long since the approval was created.
+// The reminder cadence follows the approval's age, so a restart does not
+// reset it.
+func (a *Approvals) WaitReminding(ctx context.Context, ch <-chan domain.Approval, ap domain.Approval, every, timeout time.Duration) (domain.Approval, error) {
+	select {
+	case res := <-ch: // decided before the wait started (Attach)
+		return res, nil
+	default:
+	}
+	created := ap.CreatedAt
+	if created.IsZero() {
+		created = time.Now()
+	}
+	var expire <-chan time.Time
+	if timeout > 0 {
+		t := time.NewTimer(max(time.Until(created.Add(timeout)), 0))
+		defer t.Stop()
+		expire = t.C
+	}
+	var tick <-chan time.Time
+	var timer *time.Timer
+	next := func() {
+		d := every - (time.Since(created) % every)
+		if timer == nil {
+			timer = time.NewTimer(d)
+		} else {
+			timer.Reset(d)
+		}
+		tick = timer.C
+	}
+	if every > 0 {
+		next()
+		defer timer.Stop()
+	}
+	n := 0
+	for {
+		select {
+		case res := <-ch:
+			return res, nil
+		case <-tick:
+			n++
+			a.remind(ctx, ap, n, time.Since(created))
+			next()
+		case <-expire:
+			res, err := a.resolve(ctx, ap.ID, domain.ApprovalRejected, "sin respuesta: tiempo de espera agotado", "system")
+			if err != nil {
+				select {
+				case res2 := <-ch:
+					return res2, nil
+				default:
+				}
+			}
+			return res, err
+		case <-ctx.Done():
+			a.forget(ap.ID)
+			return domain.Approval{}, ctx.Err()
+		}
+	}
+}
+
+// remind emits approval.reminder for a still pending approval. It is a system
+// notification, not an audited decision (SkipAudit): the approval itself keeps
+// its audit trail.
+func (a *Approvals) remind(ctx context.Context, ap domain.Approval, n int, waited time.Duration) {
+	cur, err := a.store.GetApproval(ctx, a.org(ctx), ap.ID)
+	if err == nil {
+		if cur.Status != domain.ApprovalPending {
+			return // decided meanwhile
+		}
+		ap = cur
+	}
+	a.rec.Emit(ctx, Action{Type: domain.EvApprovalReminder, AgentID: ap.AgentID, Entity: "approval", EntityID: ap.ID, SkipAudit: true,
+		Payload: map[string]any{"approval": ap, "reminder": n, "waiting_seconds": int(waited.Seconds())},
+		Text:    fmt.Sprintf("Recordatorio: aprobación pendiente desde hace %s: %s", waited.Round(time.Minute), ap.Title)})
+}
+
 // Decide applies a human decision ("approve" | "reject").
 //
 // Governance rules enforced here (docs/architecture/06-permisos-autonomia.md 3.2):
