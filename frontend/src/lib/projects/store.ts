@@ -33,6 +33,8 @@ interface PState {
   patchPlan: (ops: PlanOp[]) => Promise<void>;
   launch: (b: LaunchBody) => Promise<void>;
   control: (a: ControlAction) => Promise<void>;
+  retryNode: (nodeId: string) => Promise<void>;
+  skipNode: (nodeId: string, reason: string) => Promise<void>;
   decide: (approvalId: string, d: "approve" | "reject") => Promise<void>;
   decideBatch: (b: { action: string; decision: "approve" | "reject"; expected_count: number; include_high?: boolean }) => Promise<void>;
   setBudget: (usd: number) => Promise<void>;
@@ -119,6 +121,8 @@ export const useProjects = create<PState>((set, get) => ({
   },
   launch: async (b) => { const id = get().activeId; if (!id) return; await projectsApi.launch(id, b); if (!MOCK) set({ detail: await projectsApi.get(id) }); },
   control: async (a) => { const id = get().activeId; if (!id) return; await projectsApi.control(id, a); if (!MOCK) set({ detail: await projectsApi.get(id) }); },
+  retryNode: async (nodeId) => { const id = get().activeId; if (!id) return; await projectsApi.retryNode(id, nodeId); if (!MOCK) set({ detail: await projectsApi.get(id) }); },
+  skipNode: async (nodeId, reason) => { const id = get().activeId; if (!id) return; await projectsApi.skipNode(id, nodeId, reason); if (!MOCK) set({ detail: await projectsApi.get(id) }); },
   decide: async (approvalId, d) => { const id = get().activeId; if (!id) return; await projectsApi.decide(id, approvalId, d); if (!MOCK) set({ detail: await projectsApi.get(id) }); },
   decideBatch: async (b) => { const id = get().activeId; if (!id) return; await projectsApi.decideBatch(id, b); if (!MOCK) set({ detail: await projectsApi.get(id) }); },
   setBudget: async (usd) => { const id = get().activeId; if (!id) return; await projectsApi.setBudget(id, usd); if (!MOCK) set({ detail: await projectsApi.get(id) }); },

@@ -310,11 +310,16 @@ const (
 	EvApprovalResolved = "approval.resolved"
 	// EvApprovalProgress: a double-approval request received its first approval.
 	EvApprovalProgress = "approval.progress"
-	EvReportCreated    = "report.created"
-	EvActivityLogged   = "activity.logged"
-	EvError            = "error"
-	EvMetricsUpdated   = "metrics.updated"
-	EvHello            = "hello"
+	// EvApprovalReminder: a project approval is still pending (it never expires).
+	EvApprovalReminder = "approval.reminder"
+	// EvTaskRetrying: a task failed transiently and starts another attempt, or a
+	// human re-queued it (payload.manual).
+	EvTaskRetrying   = "task.retrying"
+	EvReportCreated  = "report.created"
+	EvActivityLogged = "activity.logged"
+	EvError          = "error"
+	EvMetricsUpdated = "metrics.updated"
+	EvHello          = "hello"
 )
 
 // AuditLog is one entry of the append-only audit trail. Details carries

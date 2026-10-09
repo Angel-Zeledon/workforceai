@@ -1469,5 +1469,12 @@
   "ctl.anomaly.disable": "Switch alerts off (owner only)",
   "ctl.hold.undoNote": "Cancelling now stops the email completely. After it is sent it cannot be recalled.",
   "ctl.hold.sentIrreversible": "Sent. An email that already left cannot be undone.",
-  "art.restore.hint": "Restoring creates a new version with this content; no version is lost."
+  "art.restore.hint": "Restoring creates a new version with this content; no version is lost.",
+  "pv.recover.title": "Recovery",
+  "pv.recover.retry": "Retry",
+  "pv.recover.skip": "Skip",
+  "pv.recover.reason": "Reason for skipping (required)",
+  "pv.recover.skipConfirm": "Confirm skip",
+  "pv.recover.skipHint": "Following steps will continue knowing this step's result is missing.",
+  "pv.recover.skipped": "Skipped by a person: {reason}"
 }

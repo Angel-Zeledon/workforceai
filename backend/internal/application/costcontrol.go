@@ -244,6 +244,9 @@ func (o *Orchestrator) reserveOrPause(ctx context.Context, rs *run, agentID, tas
 	org := o.org(ctx)
 	est := o.reserveFor(ctx, rs.req.ID, kind, taskID)
 	var timer *time.Timer
+	armed := false // the timeout/reminder of this pause were set up
+	var timerC, remindC <-chan time.Time
+	var remind *time.Ticker
 	var paused *Exceeded
 	leave := func() {
 		if paused != nil {
@@ -284,19 +287,36 @@ func (o *Orchestrator) reserveOrPause(ctx context.Context, rs *run, agentID, tas
 			o.announceExceeded(ctx, rs, ex, false)
 		}
 		paused = ex
-		if timer == nil {
-			timer = time.NewTimer(o.cfg.PauseTimeout)
-			defer timer.Stop()
+		if !armed {
+			armed = true
+			// Projects wait for the cap (with reminders) instead of failing after 30 minutes.
+			to := o.cfg.PauseTimeout
+			if o.projectOwned(ctx, rs) {
+				to = o.cfg.ProjectBudgetPauseTimeout
+				if every := o.cfg.ProjectReminderEvery; every > 0 {
+					remind = time.NewTicker(every)
+					defer remind.Stop()
+					remindC = remind.C
+				}
+			}
+			if to > 0 {
+				timer = time.NewTimer(to)
+				defer timer.Stop()
+				timerC = timer.C
+			}
 		}
 		resume := YieldSlot(ctx) // a task paused by a cap does not hold a scheduler slot
 		select {
+		case <-remindC:
+			resume()                               // the loop yields again on the next pass
+			o.announceExceeded(ctx, rs, ex, false) // still paused: remind (event with fresh numbers)
 		case <-wake:
 			resume()
 		case <-ctx.Done():
 			resume()
 			leave()
 			return nil, ctx.Err()
-		case <-timer.C:
+		case <-timerC:
 			resume()
 			leave()
 			return nil, fmt.Errorf("la pausa por tope de presupuesto no se resolvió a tiempo (%s %s)", ex.Scope, ex.ScopeID)

@@ -462,3 +462,20 @@ func TestArtifactCommentsAndProposalsOverHTTP(t *testing.T) {
 		t.Fatalf("artifact: %v", got)
 	}
 }
+
+// W2: the node recovery endpoints exist and validate (the behavior itself is
+// covered in the projects and application packages).
+func TestProjectNodeRecoveryEndpointsValidate(t *testing.T) {
+	e := newEnv(t, opts{ws: true})
+	created := e.json("POST", api1+"/projects/draft", "", map[string]any{"goal": "cierre financiero", "template_id": "tpl-financial-close"}, 201)
+	id := str(created, "project_id")
+	if c := e.status("POST", api1+"/projects/"+id+"/nodes/n1/retry", "", nil); c != 409 {
+		t.Fatalf("retry on a draft = %d, want 409", c)
+	}
+	if c := e.status("POST", api1+"/projects/nope/nodes/n1/retry", "", nil); c != 404 {
+		t.Fatalf("retry on an unknown project = %d, want 404", c)
+	}
+	if c := e.status("POST", api1+"/projects/"+id+"/nodes/n1/skip", "", map[string]any{"reason": ""}); c != 409 && c != 400 {
+		t.Fatalf("skip without reason = %d", c)
+	}
+}

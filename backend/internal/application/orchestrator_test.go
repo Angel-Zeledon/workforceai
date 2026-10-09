@@ -86,6 +86,7 @@ func newHarness(t *testing.T, rt application.Runtime, mutate func(*application.C
 	t.Helper()
 	cfg := application.DefaultConfig()
 	cfg.IdleDelay, cfg.RetryBase, cfg.MaxRetries = 0, time.Millisecond, 3
+	cfg.TaskRetryBackoff = time.Millisecond
 	if mutate != nil {
 		mutate(&cfg)
 	}
@@ -357,7 +358,7 @@ func TestTaskFailureAfterRetriesMarksAgentError(t *testing.T) {
 			return application.RunTaskResponse{}, errors.New("boom")
 		},
 	}
-	h := newHarness(t, rt, nil)
+	h := newHarness(t, rt, func(c *application.Config) { c.TaskMaxAttempts = 1 }) // only the call-level retries
 	reqID, _ := h.orch.Submit(context.Background(), "analiza")
 	h.orch.Wait()
 	if calls.Load() != 3 {

@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useCan } from "@/lib/session";
 import { explainNode, fmtDuration, isDoneState } from "@/lib/projects/calc";
@@ -10,6 +11,14 @@ import { AgentChip, StatePill, fmtMoney, useNodeTitle } from "./shared";
 export function NodeDrawer() {
   const { t } = useT();
   const canDecide = useCan("approvals:decide");
+  const canRecover = useCan("tasks:manage");
+  const retryNode = useProjects((s) => s.retryNode);
+  const skipNode = useProjects((s) => s.skipNode);
+  const [skipping, setSkipping] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const run = async (fn: () => Promise<void>) => { setBusy(true); setErr(null); try { await fn(); setSkipping(false); setReason(""); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); } };
   const detail = useProjects((s) => s.detail)!;
   const id = useProjects((s) => s.selectedNodeId)!;
   const select = useProjects((s) => s.selectNode);
@@ -42,6 +51,24 @@ export function NodeDrawer() {
         <Fact k={t("pv.node.complexity")} v={n.complexity} />
       </dl>
       {n.error && <div className="rounded-xl bg-red-500/10 px-2 py-1 text-[11px] text-red-700">{t("pv.node.error", { code: n.error })}</div>}
+      {n.skipped && <div data-testid="node-skipped" className="rounded-xl bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800">{t("pv.recover.skipped", { reason: n.skip_reason ?? "" })}</div>}
+      {canRecover && (n.state === "failed" || n.state === "blocked") && (
+        <div data-testid="node-recovery" className="space-y-2 rounded-xl border border-line bg-panel2 p-2">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-mute">{t("pv.recover.title")}</div>
+          <div className="flex flex-wrap gap-2">
+            <Btn kind="ok" disabled={busy} onClick={() => run(() => retryNode(n.id))} data-testid="node-retry">{t("pv.recover.retry")}</Btn>
+            {n.state === "failed" && <Btn kind="danger" disabled={busy} onClick={() => setSkipping((v) => !v)} data-testid="node-skip">{t("pv.recover.skip")}</Btn>}
+          </div>
+          {skipping && (
+            <div className="space-y-1">
+              <textarea data-testid="node-skip-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={2} placeholder={t("pv.recover.reason")} className="w-full rounded-lg border border-line bg-panel px-2 py-1 text-[11px] text-ink" />
+              <Btn kind="danger" disabled={busy || !reason.trim()} onClick={() => run(() => skipNode(n.id, reason.trim()))} data-testid="node-skip-confirm">{t("pv.recover.skipConfirm")}</Btn>
+              <div className="text-[10px] text-mute">{t("pv.recover.skipHint")}</div>
+            </div>
+          )}
+          {err && <div data-testid="node-recovery-error" className="text-[11px] text-red-700">{err}</div>}
+        </div>
+      )}
       {approval && (
         <div className="rounded-xl border border-line bg-panel2 p-2">
           <div className="text-[11px] font-semibold text-ink">{approval.title}</div>

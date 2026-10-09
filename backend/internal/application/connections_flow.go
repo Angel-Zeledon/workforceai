@@ -128,8 +128,14 @@ func (o *Orchestrator) reviewPlanSince(ctx context.Context, rs *run, tasks []dom
 		return true
 	}
 	org := o.org(ctx)
-	deadline := since.Add(o.cfg.ApprovalTimeout)
-	if !time.Now().Before(deadline) {
+	// A project's plan review waits like its approvals (W2): no 30-minute expiry
+	// unless PROJECT_APPROVAL_TIMEOUT is set.
+	wait := o.cfg.ApprovalTimeout
+	if o.projectOwned(ctx, rs) {
+		wait = o.cfg.ProjectApprovalTimeout
+	}
+	deadline := since.Add(wait)
+	if wait > 0 && !time.Now().Before(deadline) {
 		o.cancelPlanned(ctx, rs, tasks, "plan sin revisar")
 		o.failRequest(ctx, rs, assistantID, "Plan sin revisar", fmt.Errorf("el plan no se revisó a tiempo"))
 		return false
@@ -150,8 +156,12 @@ func (o *Orchestrator) reviewPlanSince(ctx context.Context, rs *run, tasks []dom
 	o.setGate(ctx, rs, &RunGate{Kind: GatePlanReview, StartedAt: since}) // durable: the review survives a restart
 	o.setState(ctx, assistantID, domain.StateWaiting, "Esperando la revisión de tu plan", nil, 20)
 	o.emitMetrics(ctx)
-	timer := time.NewTimer(time.Until(deadline))
-	defer timer.Stop()
+	var timerC <-chan time.Time
+	if wait > 0 {
+		timer := time.NewTimer(time.Until(deadline))
+		defer timer.Stop()
+		timerC = timer.C
+	}
 	select {
 	case d := <-ch:
 		if !d.Approved {
@@ -176,7 +186,7 @@ func (o *Orchestrator) reviewPlanSince(ctx context.Context, rs *run, tasks []dom
 		rs.removed = append([]string{}, d.RemoveTaskIDs...)
 		o.setGate(ctx, rs, nil) // a resumed run keeps "no external actions" and the removed tasks
 		return true
-	case <-timer.C:
+	case <-timerC:
 		p.Forget(org, rs.req.ID)
 		o.cancelPlanned(ctx, rs, tasks, "plan sin revisar")
 		o.failRequest(ctx, rs, assistantID, "Plan sin revisar", fmt.Errorf("el plan no se revisó a tiempo"))
@@ -418,7 +428,7 @@ func (o *Orchestrator) gatewayAwait(ctx context.Context, rs *run, t *domain.Task
 	o.setRequestStatus(ctx, rs, domain.RequestAwaitingApproval)
 	o.setState(ctx, agent.ID, domain.StateAwaitingApproval, "Esperando aprobación: "+ap.Title, &tid, 80)
 	o.emitMetrics(ctx)
-	decision, err := o.approvals.WaitUntil(ctx, ch, ap.ID, deadline)
+	decision, err := o.awaitApproval(ctx, rs, ch, ap, deadline)
 	if err != nil {
 		return OutcomeFailed // cancelled
 	}

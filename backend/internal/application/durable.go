@@ -185,6 +185,8 @@ type durableState struct {
 
 	mu     sync.Mutex
 	active map[string]bool // requests being processed by this process
+	// reopening counts the manual recoveries (recovery.go) running per request.
+	reopening map[string]int
 }
 
 // track registers a request as being processed; false if it already was.

@@ -92,6 +92,9 @@ type Node struct {
 	Error           *string           `json:"error,omitempty"`
 	// TaskID is the orchestrator task behind a launched leaf node (additive).
 	TaskID string `json:"task_id,omitempty"`
+	// Skipped: a human skipped this failed node (W2); SkipReason is theirs.
+	Skipped    bool   `json:"skipped,omitempty"`
+	SkipReason string `json:"skip_reason,omitempty"`
 }
 
 type Approval struct {

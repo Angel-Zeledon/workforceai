@@ -1469,5 +1469,12 @@
   "ctl.anomaly.disable": "Apagar las alertas (solo el dueño)",
   "ctl.hold.undoNote": "Si cancelas ahora, el correo no sale. Una vez enviado no se puede recuperar.",
   "ctl.hold.sentIrreversible": "Enviado. Un correo que ya salió no se puede deshacer.",
-  "art.restore.hint": "Restaurar crea una versión nueva con este contenido; no se pierde ninguna versión."
+  "art.restore.hint": "Restaurar crea una versión nueva con este contenido; no se pierde ninguna versión.",
+  "pv.recover.title": "Recuperación",
+  "pv.recover.retry": "Reintentar",
+  "pv.recover.skip": "Omitir",
+  "pv.recover.reason": "Motivo de la omisión (obligatorio)",
+  "pv.recover.skipConfirm": "Confirmar omisión",
+  "pv.recover.skipHint": "Los pasos siguientes continuarán sabiendo que falta el resultado de este paso.",
+  "pv.recover.skipped": "Omitido por una persona: {reason}"
 }
