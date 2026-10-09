@@ -62,6 +62,10 @@ _REASON = {
     "es": "Es la responsable natural de esta parte de la fase.",
     "en": "This agent owns this part of the phase.",
 }
+_ACCEPT = {
+    "es": ["Entrega un resumen claro de «{title}»", "Cita los datos o la evidencia que respaldan el resultado"],
+    "en": ["Delivers a clear summary of \"{title}\"", "Cites the data or evidence backing the result"],
+}
 _CX_CYCLE = ["S", "M", "M", "L", "S", "M", "XL", "M", "L", "S"]
 
 
@@ -196,7 +200,8 @@ def sim_plan_phase(req: PlanPhaseRequest) -> PlanPhaseResponse:
             description=_TASK_DESC[loc].format(n=i + 1, phase=req.phase.title, goal=req.request_text[:300],
                                                pgoal=req.phase.goal or req.phase.title),
             agent_id=roles[(off + i) % len(roles)], depends_on=deps,
-            complexity=_CX_CYCLE[(i + off) % len(_CX_CYCLE)], reason=_REASON[loc]))
+            complexity=_CX_CYCLE[(i + off) % len(_CX_CYCLE)], reason=_REASON[loc],
+            acceptance=[c.format(title=_TASK_TITLE[loc].format(verb=verb, phase=req.phase.title, n=i + 1)) for c in _ACCEPT[loc]]))
     tasks = normalize_phase_tasks(tasks, req.agents, req.max_tasks)
     return PlanPhaseResponse(tasks=tasks, usage=_usage("phase|" + req.phase.key + req.request_text, (1200, 2200), (900, 1800)),
                              provider="simulation", model=SIM_MODEL)

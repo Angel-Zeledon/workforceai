@@ -177,6 +177,24 @@ class PlanPhaseRequest(_ProviderPolicyMixin):
     _norm_tone = field_validator("tone", mode="before")(normalize_tone)
 
 
+MAX_ACCEPTANCE = 8
+MAX_ACCEPTANCE_LEN = 240
+
+
+def clean_acceptance(value: Any, limit: int = MAX_ACCEPTANCE) -> list[str]:
+    """Acceptance criteria: short strings, trimmed, no blanks or duplicates, at most `limit`."""
+    if not isinstance(value, (list, tuple)):
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        text = str(item or "").strip()[:MAX_ACCEPTANCE_LEN]
+        if text and text.lower() not in seen and len(out) < limit:
+            seen.add(text.lower())
+            out.append(text)
+    return out
+
+
 class PhaseTask(_Base):
     key: str  # unique inside the phase; dependencies refer to keys of the same phase
     title: str
@@ -185,8 +203,11 @@ class PhaseTask(_Base):
     depends_on: list[str] = Field(default_factory=list)
     complexity: str = "M"
     reason: str | None = None
+    # Q1 (additive): short, checkable criteria the output will be reviewed against.
+    acceptance: list[str] = Field(default_factory=list)
 
     _norm_cx = field_validator("complexity", mode="before")(normalize_complexity)
+    _norm_acc = field_validator("acceptance", mode="before")(lambda v: clean_acceptance(v, 5))
 
 
 class PlanPhaseResponse(_Base):
@@ -202,6 +223,20 @@ class TaskInfo(_Base):
     title: str
     description: str = ""
     agent_id: str
+    acceptance: list[str] = Field(default_factory=list)  # Q1: criteria the output will be reviewed against
+
+    _norm_acc = field_validator("acceptance", mode="before")(clean_acceptance)
+
+
+class ReworkInfo(_Base):
+    """Q1: the task runs again because the quality review asked for it. `notes` are the reviewer's
+    reasons: untrusted data (they quote the agent's own output), never instructions."""
+
+    attempt: int = 1
+    notes: list[str] = Field(default_factory=list)
+    previous_summary: str = ""
+
+    _lists = field_validator("notes", mode="before")(lambda v: [str(x) for x in v][:8] if isinstance(v, list) else [])
 
 
 class AgentInfo(_Base):
@@ -291,6 +326,7 @@ class RunTaskRequest(_ProviderPolicyMixin):
     untrusted: list[UntrustedItem] | None = None
     tools_available: list[ToolAvailable] | None = None
     tainted: bool = False
+    rework: ReworkInfo | None = None  # Q1: set when the quality review asked for a new run
     locale: Locale = "es"
     tone: Tone = "neutral"
 
@@ -324,6 +360,42 @@ class RunTaskResponse(_Base):
     tool_requests: list[ToolRequest] = Field(default_factory=list)
     usage: Usage
     provider: str | None = None  # optional: same as usage.provider / usage.model
+    model: str | None = None
+
+
+# ---- /v1/review (Q1) ------------------------------------------------------
+Verdict = Literal["pass", "rework", "fail"]
+
+
+class ReviewRequest(_ProviderPolicyMixin):
+    """The output of ONE task and the criteria it must meet. The output is untrusted data."""
+
+    task: TaskInfo
+    acceptance: list[str] = Field(default_factory=list)
+    output: Any = None
+    reviewer: AgentInfo | None = None  # the internal auditor of the organization, or a neutral reviewer
+    round: int = 0  # 0 for the first review of a task, grows with each rework
+    locale: Locale = "es"
+    tone: Tone = "neutral"
+
+    _norm = field_validator("locale", mode="before")(normalize_locale)
+    _norm_tone = field_validator("tone", mode="before")(normalize_tone)
+    _norm_acc = field_validator("acceptance", mode="before")(clean_acceptance)
+
+
+class CriterionResult(_Base):
+    criterion: str
+    met: bool
+    note: str = ""
+
+
+class ReviewResponse(_Base):
+    verdict: Verdict
+    reasons: list[str] = Field(default_factory=list)
+    criteria: list[CriterionResult] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
+    usage: Usage
+    provider: str | None = None
     model: str | None = None
 
 

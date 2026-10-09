@@ -183,6 +183,17 @@ def build_system_prompt(agent: AgentInfo, locale: str = "es", tone: str = "neutr
     return "\n".join(p for p in parts if p)
 
 
+AUDITOR_TASK_RULES = (
+    "AUDITORIA: compara las cifras de las salidas de las tareas previas (dependencias). Declara "
+    "metrics.audit_status = verified | inconsistency | unverified. 'verified' SOLO si citas en evidence, para cada "
+    "cifra comparada, de que tarea (ref) y de que campo salio, con al menos dos fuentes. Si no hay cifras "
+    "comparables usa 'unverified'. Si dos cifras que deben coincidir no coinciden usa 'inconsistency' y "
+    "detalla en findings cuales y por cuanto. Nunca des por verificado algo que no comparaste."
+)
+
+
+
+
 def build_task_prompt(req: RunTaskRequest) -> str:
     """Prompt de usuario: tarea + datos delimitados."""
     ctx = req.context
@@ -190,9 +201,13 @@ def build_task_prompt(req: RunTaskRequest) -> str:
         f"TAREA: {req.task.title}",
         f"DESCRIPCION: {req.task.description}",
         f"SOLICITUD ORIGINAL DEL USUARIO: {ctx.request_text}",
-        "",
-        UNTRUSTED_NOTICE,
     ]
+    if req.task.acceptance:  # Q1: criteria set by the project plan; the output will be reviewed against them
+        lines += ["CRITERIOS DE ACEPTACION (tu resultado sera revisado contra estos criterios):"]
+        lines += [f"{i}. {c}" for i, c in enumerate(req.task.acceptance, 1)]
+    if (req.agent.role or req.agent.id) == "internal_auditor":
+        lines += [AUDITOR_TASK_RULES]
+    lines += ["", UNTRUSTED_NOTICE]
     dep_texts = fit_texts([_as_text(d.output) for d in ctx.dependency_outputs], dep_budget_tokens())
     for dep, text in zip(ctx.dependency_outputs, dep_texts):
         lines += ["", wrap_untrusted(_dep_label(dep), text)]
@@ -212,6 +227,11 @@ def build_task_prompt(req: RunTaskRequest) -> str:
     if ctx.memory:
         mem = [{"scope": m.scope, "key": m.key, "value": m.value} for m in ctx.memory]
         lines += ["", wrap_untrusted("memoria del agente", mem)]
+    rw = req.rework
+    if rw is not None:  # Q1: the reviewer's notes quote the previous output: data, never instructions
+        lines += ["", f"REHACER (intento {rw.attempt}): la revision anterior pidio corregir tu resultado. Corrige "
+                      "lo que las observaciones senalan y entrega el resultado completo otra vez."]
+        lines += ["", wrap_untrusted("observaciones del revisor", {"notes": rw.notes, "previous_summary": rw.previous_summary})]
     for i, content in enumerate(req.external_content or [], start=1):
         lines += ["", wrap_untrusted(f"contenido externo {i}", content)]
     # Resultados de herramientas con conexion (Go -> runtime, docs/architecture/

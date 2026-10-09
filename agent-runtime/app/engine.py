@@ -20,6 +20,8 @@ from .models import (
     PlanPhasesResponse,
     PlanRequest,
     PlanResponse,
+    ReviewRequest,
+    ReviewResponse,
     RouteRequest,
     RouteResponse,
     RunTaskRequest,
@@ -114,6 +116,12 @@ class AgentEngine(abc.ABC):
         from .hier_plan import sim_plan_phase
 
         return sim_plan_phase(req)
+
+    async def review(self, req: ReviewRequest) -> ReviewResponse:
+        """Quality review of ONE task output (Q1). Default: the deterministic simulated reviewer."""
+        from .review import sim_review
+
+        return sim_review(req)
 
     async def route(self, req: RouteRequest) -> RouteResponse:
         """Who should answer a chat message (docs/architecture/chat-routing.md). Default: the rules."""
