@@ -14,6 +14,10 @@ from .models import (
     ChatReplyResponse,
     ConsultRequest,
     ConsultResponse,
+    PlanPhaseRequest,
+    PlanPhaseResponse,
+    PlanPhasesRequest,
+    PlanPhasesResponse,
     PlanRequest,
     PlanResponse,
     RouteRequest,
@@ -98,6 +102,18 @@ class AgentEngine(abc.ABC):
     async def synthesize(self, req: SynthesizeRequest) -> SynthesizeResponse: ...
 
     model: str | None = None  # model used for pricing (None = default rate)
+
+    async def plan_phases(self, req: PlanPhasesRequest) -> PlanPhasesResponse:
+        """Hierarchical planning, step 1: the goal as phases. Default: the deterministic simulated planner."""
+        from .hier_plan import sim_plan_phases
+
+        return sim_plan_phases(req)
+
+    async def plan_phase(self, req: PlanPhaseRequest) -> PlanPhaseResponse:
+        """Hierarchical planning, step 2: ONE phase as tasks. Default: the deterministic simulated planner."""
+        from .hier_plan import sim_plan_phase
+
+        return sim_plan_phase(req)
 
     async def route(self, req: RouteRequest) -> RouteResponse:
         """Who should answer a chat message (docs/architecture/chat-routing.md). Default: the rules."""

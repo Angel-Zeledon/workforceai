@@ -20,12 +20,17 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from .engine import AgentEngine, estimate_cost
+from .hier_plan import normalize_phase_tasks, normalize_phases
 from .redact import redact_secrets
 from .models import (
     ChatReplyRequest,
     ChatReplyResponse,
     ConsultRequest,
     ConsultResponse,
+    PlanPhaseRequest,
+    PlanPhaseResponse,
+    PlanPhasesRequest,
+    PlanPhasesResponse,
     PlanRequest,
     PlanResponse,
     ReplyConsult,
@@ -239,7 +244,59 @@ class CrewAIEngine(AgentEngine):
         if not plan.tasks:
             raise ValueError("el plan generado no contiene tareas validas")
         plan.provider, plan.model = usage.provider, usage.model
+        plan.usage = usage
         return plan
+
+    async def plan_phases(self, req: PlanPhasesRequest) -> PlanPhasesResponse:
+        agents = [{"id": a.id, "role": a.role, "title": a.title} for a in req.agents]
+        desc = (
+            f"SOLICITUD DEL USUARIO (proyecto grande): {req.request_text}\n\n"
+            f"Agentes disponibles: {json.dumps(agents, ensure_ascii=False)}\n"
+            f"Presupuesto maximo USD: {req.budget_usd}\n\n{language_rule(req.locale, req.tone)}\n\n"
+            f"Divide el proyecto en FASES (hoja de ruta de 3 a {req.max_phases} fases, en orden logico). "
+            "Cada fase tiene key unica (p1, p2...), title, goal (1-2 frases), size (S, M, L o XL segun cuanto "
+            "trabajo contiene: S~6 tareas, M~12, L~16, XL~22) y depends_on (keys de fases anteriores que deben "
+            "terminar antes; deja en paralelo las fases independientes, sin ciclos). "
+            "NO listes tareas todavia. Si falta informacion critica, agrega clarifying_questions."
+        )
+        res, usage = await self._run(
+            role="Orquestadora / Asistente Ejecutiva",
+            goal="Planificar por fases un proyecto grande de la empresa",
+            backstory=system_rules(req.locale, req.tone), description=desc,
+            expected="JSON con objectives, phases y clarifying_questions", schema=PlanPhasesResponse,
+            policy=policy_from_request(req, "plan"), max_tokens=2048)
+        res.phases = normalize_phases(res.phases, req.max_phases)
+        if not res.phases:
+            raise ValueError("el plan generado no contiene fases validas")
+        res.usage, res.provider, res.model = usage, usage.provider, usage.model
+        return res
+
+    async def plan_phase(self, req: PlanPhaseRequest) -> PlanPhaseResponse:
+        agents = [{"id": a.id, "role": a.role, "title": a.title, "responsibilities": a.responsibilities}
+                  for a in req.agents]
+        roadmap = [{"key": p.key, "title": p.title} for p in req.other_phases]
+        desc = (
+            f"SOLICITUD DEL USUARIO (proyecto grande): {req.request_text}\n\n"
+            f"FASE A DESCOMPONER: {json.dumps(req.phase.model_dump(), ensure_ascii=False)}\n"
+            f"Resto de la hoja de ruta (solo contexto, no planifiques estas fases): {json.dumps(roadmap, ensure_ascii=False)}\n"
+            f"Agentes disponibles (usa SOLO estos agent_id): {json.dumps(agents, ensure_ascii=False)}\n\n"
+            f"{language_rule(req.locale, req.tone)}\n\n"
+            f"Descompone SOLO esta fase en unas {req.target_tasks} tareas (maximo {req.max_tasks}). Cada tarea: key unica "
+            "dentro de la fase (t1, t2...), title, description, agent_id, complexity (S, M, L o XL), depends_on "
+            "(keys de tareas de ESTA fase; maximiza el paralelismo, sin ciclos) y reason (una frase corta). "
+            "Las tareas sin depends_on arrancan la fase; las dependencias con otras fases las resuelve el sistema."
+        )
+        res, usage = await self._run(
+            role="Orquestadora / Asistente Ejecutiva",
+            goal="Descomponer una fase de un proyecto grande en tareas asignadas a los agentes correctos",
+            backstory=system_rules(req.locale, req.tone), description=desc,
+            expected="JSON con tasks", schema=PlanPhaseResponse,
+            policy=policy_from_request(req, "plan"), max_tokens=6144)
+        res.tasks = normalize_phase_tasks(res.tasks, req.agents, req.max_tasks)
+        if not res.tasks:
+            raise ValueError("la fase generada no contiene tareas validas")
+        res.usage, res.provider, res.model = usage, usage.provider, usage.model
+        return res
 
     async def run_task(self, req: RunTaskRequest) -> RunTaskResponse:
         # El system prompt (persona/reglas) va en backstory; los datos no confiables solo en la descripcion.

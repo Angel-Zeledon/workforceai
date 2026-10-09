@@ -113,6 +113,87 @@ class PlanResponse(_Base):
     clarifying_questions: list[str] = Field(default_factory=list)
     provider: str | None = None  # optional: provider/model that answered (live mode only)
     model: str | None = None
+    usage: Usage | None = None  # optional (additive): tokens/cost of the planning call, for spend accounting
+
+
+# ---- /v1/plan-phases and /v1/plan-phase (hierarchical planning of large projects) ----
+Complexity = Literal["S", "M", "L", "XL"]
+
+
+def normalize_complexity(value: Any) -> str:
+    """S|M|L|XL; anything else (LLM noise, empty) -> "M"."""
+    v = str(value or "").strip().upper()
+    return v if v in ("S", "M", "L", "XL") else "M"
+
+
+class PhaseSpec(_Base):
+    key: str
+    title: str
+    goal: str = ""
+    size: str = "M"  # rough size S|M|L|XL: drives how many tasks the phase is expanded into
+    depends_on: list[str] = Field(default_factory=list)  # keys of earlier phases
+
+    _norm_size = field_validator("size", mode="before")(normalize_complexity)
+
+
+class PlanPhasesRequest(_ProviderPolicyMixin):
+    request_text: str
+    agents: list[PlanAgent] = Field(default_factory=list)
+    budget_usd: float = 0.0
+    locale: Locale = "es"
+    tone: Tone = "neutral"
+    max_phases: int = Field(default=8, ge=1, le=20)
+
+    _norm = field_validator("locale", mode="before")(normalize_locale)
+    _norm_tone = field_validator("tone", mode="before")(normalize_tone)
+
+
+class PlanPhasesResponse(_Base):
+    objectives: list[str] = Field(default_factory=list)
+    phases: list[PhaseSpec]
+    clarifying_questions: list[str] = Field(default_factory=list)
+    usage: Usage | None = None
+    provider: str | None = None
+    model: str | None = None
+
+
+class PhaseBrief(_Base):
+    key: str
+    title: str
+
+
+class PlanPhaseRequest(_ProviderPolicyMixin):
+    request_text: str
+    phase: PhaseSpec
+    other_phases: list[PhaseBrief] = Field(default_factory=list)  # the rest of the roadmap, for context only
+    agents: list[PlanAgent] = Field(default_factory=list)
+    target_tasks: int = Field(default=12, ge=1, le=200)  # a goal, the planner may deviate a little
+    max_tasks: int = Field(default=40, ge=1, le=200)  # hard cap: the runtime drops the extra tasks
+    budget_usd: float = 0.0
+    locale: Locale = "es"
+    tone: Tone = "neutral"
+
+    _norm = field_validator("locale", mode="before")(normalize_locale)
+    _norm_tone = field_validator("tone", mode="before")(normalize_tone)
+
+
+class PhaseTask(_Base):
+    key: str  # unique inside the phase; dependencies refer to keys of the same phase
+    title: str
+    description: str = ""
+    agent_id: str
+    depends_on: list[str] = Field(default_factory=list)
+    complexity: str = "M"
+    reason: str | None = None
+
+    _norm_cx = field_validator("complexity", mode="before")(normalize_complexity)
+
+
+class PlanPhaseResponse(_Base):
+    tasks: list[PhaseTask]
+    usage: Usage | None = None
+    provider: str | None = None
+    model: str | None = None
 
 
 # ---- /v1/run-task ---------------------------------------------------------
