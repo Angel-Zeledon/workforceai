@@ -232,6 +232,7 @@ func (o *Orchestrator) applyMeta(ctx context.Context, rs *run) {
 		return
 	}
 	rs.requestedBy, rs.removed = meta.RequestedBy, meta.RemovedTaskIDs
+	rs.maxParallel = meta.MaxParallel
 	if meta.ConversationID != "" {
 		rs.convID = meta.ConversationID
 	}
@@ -375,7 +376,7 @@ func (o *Orchestrator) reopenRun(ctx context.Context, rs *run, sub []domain.Task
 		}
 		nodes = append(nodes, Node{ID: t.ID, DependsOn: deps})
 	}
-	outcomes := Scheduler{MaxParallel: o.cfg.MaxParallel}.Run(ctx, nodes,
+	outcomes := Scheduler{MaxParallel: o.parallelFor(rs)}.Run(ctx, nodes,
 		func(c context.Context, id string) Outcome {
 			out := o.runTask(c, rs, byID[id])
 			if c.Err() == nil {

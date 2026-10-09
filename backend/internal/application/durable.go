@@ -59,6 +59,8 @@ type RunMeta struct {
 	ConversationID string   `json:"conversation_id"`
 	ReadOnly       bool     `json:"read_only"`
 	RemovedTaskIDs []string `json:"removed_task_ids"`
+	// MaxParallel is the per-request parallelism override (WithRunParallel); 0 = Config.MaxParallel.
+	MaxParallel int `json:"max_parallel,omitempty"`
 	// Gate is the human gate the request waits on before it starts (nil: none).
 	Gate *RunGate `json:"gate,omitempty"`
 	// Chat is the chat turn that started the request (nil: not chat-born).
@@ -220,7 +222,7 @@ func (o *Orchestrator) saveRunMeta(ctx context.Context, rs *run) {
 	rs.mu.Lock()
 	gate := rs.gate
 	rs.mu.Unlock()
-	m := RunMeta{RequestID: rs.req.ID, RequestedBy: rs.requestedBy, ConversationID: rs.convID, ReadOnly: ro,
+	m := RunMeta{RequestID: rs.req.ID, RequestedBy: rs.requestedBy, ConversationID: rs.convID, ReadOnly: ro, MaxParallel: rs.maxParallel,
 		RemovedTaskIDs: append([]string{}, rs.removed...), Gate: gate, Chat: chatMeta(rs.chat), UpdatedAt: time.Now().UTC()}
 	if err := o.durable.runs.PutRunMeta(context.WithoutCancel(ctx), o.org(ctx), m); err != nil {
 		o.log.Warn("save run meta", "request", rs.req.ID, "err", err)
@@ -381,6 +383,7 @@ func (o *Orchestrator) recoverRequest(ctx context.Context, req domain.Request) b
 	}
 	if metaErr == nil {
 		rs.requestedBy, rs.removed = meta.RequestedBy, meta.RemovedTaskIDs
+		rs.maxParallel = meta.MaxParallel
 		if meta.ConversationID != "" {
 			rs.convID = meta.ConversationID
 		}
