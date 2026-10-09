@@ -119,7 +119,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 			TitleKey: def.TitleKey, TitleParams: def.TitleParams, AgentID: def.AgentID, DependsOn: nonNil(def.DependsOn), DelegationDepth: def.DelegationDepth,
 			DelegationChain: nonNil(def.DelegationChain), DagLevel: def.DagLevel, WBSPath: def.WBSPath, Complexity: def.Complexity,
 			EstCostUSD: def.EstCostUSD, EstSeconds: def.EstSeconds, PlanStartMS: def.PlanStartMS, PlanEndMS: def.PlanEndMS,
-			ApprovalAction: def.ApprovalAction, MaxAttempts: s.cfg.MaxAttempts, State: StateDraft}
+			ApprovalAction: def.ApprovalAction, MaxAttempts: s.cfg.MaxAttempts, State: StateDraft, PlanChangeID: def.PlanChangeID}
 		if def.isGroup() {
 			nodes = append(nodes, n)
 			continue
@@ -164,6 +164,9 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 		case n.State == StateFailed:
 			n.Error = ptrStr("failed")
 		}
+		if def.Superseded != "" { // replaced or removed by a plan change: out of the plan
+			n.Superseded, n.State, n.Progress, n.Error = def.Superseded, StateCancelled, 0, nil
+		}
 		if lp != nil {
 			n.Rev = lp.revOf(n)
 		}
@@ -189,7 +192,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 		g.State = rollupState(kids)
 		done, total := 0, 0
 		for _, k := range kids {
-			if k.Kind == KindGroup {
+			if k.Kind == KindGroup || k.Superseded != "" {
 				continue
 			}
 			total++
