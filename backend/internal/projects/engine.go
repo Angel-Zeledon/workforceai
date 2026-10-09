@@ -543,9 +543,20 @@ func (s *Service) GateResolved(ctx context.Context, org string, t domain.Task, _
 func (s *Service) watch(lp *liveProject) {
 	ctx := application.WithOrg(s.root, lp.org)
 	for {
+		s.mu.Lock()
+		epoch := lp.epoch
+		lp.stepEpoch = epoch
+		s.mu.Unlock()
 		done, changed := s.step(ctx, lp)
 		if done {
 			s.mu.Lock()
+			if lp.epoch != epoch {
+				// Revived (RetryNode/SkipNode) while this tick judged it finished from
+				// a stale view: keep monitoring instead of leaving it unwatched.
+				s.mu.Unlock()
+				lp.idleTicks, lp.lastFP = 0, ""
+				continue
+			}
 			delete(s.live, lp.org+"|"+lp.id)
 			delete(s.byReq, lp.org+"|"+lp.requestID)
 			s.mu.Unlock()
@@ -701,8 +712,8 @@ func (s *Service) publish(ctx context.Context, lp *liveProject, rec *Record, sna
 			rec.FinishedAt = fin
 		}
 		upd, err := s.update(ctx, rec.ID, func(r *Record) error {
-			if terminalStatus(r.Status) {
-				return nil
+			if terminalStatus(r.Status) || s.revivedSince(lp) {
+				return nil // already settled, or revived after this tick took its snapshot
 			}
 			r.Status = d.Project.Status
 			if r.FinishedAt == nil {
