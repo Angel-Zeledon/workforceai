@@ -216,22 +216,18 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 // and writes the report. exec runs one task; a resumed request passes one that
 // returns the outcome of the tasks that finished before the restart.
 func (o *Orchestrator) execute(ctx context.Context, rs *run, tasks []domain.Task, exec func(context.Context, domain.Task) Outcome) {
-	byID := make(map[string]domain.Task, len(tasks))
-	nodes := make([]Node, 0, len(tasks))
-	for _, t := range tasks {
-		byID[t.ID] = t
-		nodes = append(nodes, Node{ID: t.ID, DependsOn: t.DependsOn})
-	}
-	sched := Scheduler{MaxParallel: o.parallelFor(rs)}
-	outcomes := sched.Run(ctx, nodes,
+	lr := o.registerLive(rs, tasks, true)
+	sched := Scheduler{MaxParallel: o.parallelFor(rs), Live: lr.h}
+	outcomes := sched.Run(ctx, lr.nodes(tasks),
 		func(c context.Context, id string) Outcome {
-			out := exec(c, byID[id])
+			out := exec(c, lr.task(id))
 			if c.Err() == nil {
 				o.dropCheckpoint(c, id) // the task is over; a shutdown keeps it for Recover
 			}
 			return out
 		},
-		func(id string) { o.skipTask(ctx, rs, byID[id]) })
+		func(id string) { o.skipTask(ctx, rs, lr.task(id)) })
+	tasks = o.unregisterLive(lr) // includes the tasks added while it ran (plan_dynamic.go)
 	if ctx.Err() != nil {
 		return // demo reset or shutdown
 	}
