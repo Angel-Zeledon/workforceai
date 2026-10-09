@@ -19,12 +19,15 @@ type Config struct {
 	// requests; the rest wait in a priority queue (orgqueue.go). <= 0: no cap.
 	MaxParallelPerOrg int
 	MaxDepth          int
-	TaskTimeout       time.Duration // per runtime call attempt
-	MaxRetries        int           // total attempts per runtime call
-	RetryBase         time.Duration // backoff base (doubles each attempt)
-	ApprovalTimeout   time.Duration
-	LockTTL           time.Duration
-	IdleDelay         time.Duration // how long agents stay "completed" after a request
+	// MaxPlanDepth is the longest dependency chain of a free-form request plan
+	// (0: MaxDepth). Raise it for long sequential plans; cycles stay rejected.
+	MaxPlanDepth    int
+	TaskTimeout     time.Duration // per runtime call attempt
+	MaxRetries      int           // total attempts per runtime call
+	RetryBase       time.Duration // backoff base (doubles each attempt)
+	ApprovalTimeout time.Duration
+	LockTTL         time.Duration
+	IdleDelay       time.Duration // how long agents stay "completed" after a request
 
 	// Cost control (all optional; zero disables). See docs/architecture/07-seguridad-costos.md.
 	RequestBudgetCapUSD float64       // default hard cap per request
@@ -42,7 +45,7 @@ func DefaultConfig() Config {
 	return Config{
 		OrgID: domain.DemoOrgID, BudgetUSD: 50,
 		ApprovalActions: map[string]bool{"send_proposal": true, "send_contract": true},
-		MaxParallel:     4, MaxParallelPerOrg: 8, MaxDepth: 5,
+		MaxParallel:     4, MaxParallelPerOrg: 8, MaxDepth: 5, MaxPlanDepth: 30,
 		TaskTimeout: 120 * time.Second, MaxRetries: 3, RetryBase: 500 * time.Millisecond,
 		ApprovalTimeout: 30 * time.Minute, LockTTL: 10 * time.Minute, IdleDelay: 4 * time.Second,
 		ConfirmThresholdUSD: 1.0, PauseTimeout: 30 * time.Minute,

@@ -89,6 +89,20 @@ export interface ProjectDetail {
   max_parallel: number;
   /** while the hierarchical planner is still producing nodes */
   planning: { done: number; total: number } | null;
+  /** how the plan of a goal-based project was produced; failures and fallbacks are shown, never silent */
+  planner?: PlannerInfo | null;
+}
+
+export interface PlannerInfo {
+  mode: "hierarchical" | "flat" | "generic";
+  status: "ok" | "running" | "degraded" | "failed";
+  /** stable reason: planner_unavailable | planner_timeout | planner_invalid | budget_exceeded | no_runtime | no_agents | planner_interrupted | phases_failed */
+  code?: string;
+  message?: string;
+  fell_back_from?: string;
+  phases?: number;
+  tasks?: number;
+  failed_phases?: string[];
 }
 
 export interface TemplateParam { key: string; label_key: string; default: string }

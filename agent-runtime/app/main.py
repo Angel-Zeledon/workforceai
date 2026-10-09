@@ -19,6 +19,10 @@ from .models import (
     ConsultRequest,
     ConsultResponse,
     HealthResponse,
+    PlanPhaseRequest,
+    PlanPhaseResponse,
+    PlanPhasesRequest,
+    PlanPhasesResponse,
     PlanRequest,
     PlanResponse,
     RouteRequest,
@@ -88,6 +92,14 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
     @app.post("/v1/plan", response_model=PlanResponse, response_model_exclude_none=True)
     async def plan(req: PlanRequest):
         return await guarded(eng().plan(req))
+
+    @app.post("/v1/plan-phases", response_model=PlanPhasesResponse, response_model_exclude_none=True)
+    async def plan_phases(req: PlanPhasesRequest):
+        return await guarded(eng().plan_phases(req))
+
+    @app.post("/v1/plan-phase", response_model=PlanPhaseResponse, response_model_exclude_none=True)
+    async def plan_phase(req: PlanPhaseRequest):
+        return await guarded(eng().plan_phase(req))
 
     @app.post("/v1/run-task", response_model=RunTaskResponse, response_model_exclude_none=True)
     async def run_task(req: RunTaskRequest):

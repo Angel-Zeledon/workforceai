@@ -181,6 +181,9 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 		o.failRequest(ctx, rs, assistantID, "No pude planificar la solicitud", err)
 		return
 	}
+	if plan.Usage != nil && rs.preset == nil { // the planner call spends too (additive field; old runtimes omit it)
+		o.recordUsage(ctx, rs, "", assistantID, domain.UsagePlan, *plan.Usage, nil, nil)
+	}
 	rs.req.Plan = domain.Plan{Objectives: plan.Objectives, ClarifyingQuestions: plan.ClarifyingQuestions}
 	if len(plan.Tasks) == 0 {
 		if len(plan.ClarifyingQuestions) > 0 {
@@ -359,7 +362,7 @@ func (o *Orchestrator) createTasks(ctx context.Context, rs *run, plan PlanRespon
 		if err != nil {
 			return nil, err
 		}
-		if maxDepth := max(o.cfg.MaxDepth, plan.MaxDepth); d > maxDepth { // plan.MaxDepth: long project chains (projects_hooks.go)
+		if maxDepth := max(o.cfg.MaxDepth, o.cfg.MaxPlanDepth, plan.MaxDepth); d > maxDepth { // plan.MaxDepth: long project chains (projects_hooks.go)
 			o.rec.Audit(ctx, domain.AuditLog{Actor: assistantID, Action: "delegation.depth_exceeded", Entity: "request", EntityID: rs.req.ID,
 				Details: map[string]any{"task": pt.Key, "depth": d, "max": maxDepth}})
 			return nil, fmt.Errorf("profundidad de delegación %d supera el máximo %d", d, maxDepth)

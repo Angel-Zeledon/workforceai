@@ -9,13 +9,28 @@ import type {
   ControlAction, LaunchBody, NewProjectBody, PlanOp, ProjectDetail, ProjectEstimate, ProjectHealth, ProjectSummary, ProjectTemplate,
 } from "./types";
 
+/** HTTP error that keeps the server message ({"error": "..."}), where limits carry "limit_exceeded: <code>". */
+export class ApiError extends Error {
+  constructor(message: string, public status: number, public detail: string) { super(message); }
+}
+
+/** "max_nodes_per_project" | "max_children_per_group" | "max_active_projects" | null */
+export function limitCode(err: unknown): string | null {
+  const m = err instanceof ApiError ? /limit_exceeded: (\w+)/.exec(err.detail) : null;
+  return m ? m[1] : null;
+}
+
 async function http<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await authFetch(`${API_URL}${path}`, {
     method, cache: "no-store",
     headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(`${method} ${path} -> ${res.status}`);
+  if (!res.ok) {
+    let detail = "";
+    try { detail = String(JSON.parse(await res.text())?.error ?? ""); } catch { /* not JSON */ }
+    throw new ApiError(`${method} ${path} -> ${res.status}`, res.status, detail);
+  }
   const text = await res.text();
   return (text ? JSON.parse(text) : {}) as T;
 }

@@ -125,3 +125,19 @@ func TestMaxParallelPerOrg(t *testing.T) {
 		t.Fatalf("zero = %d, want 8", got)
 	}
 }
+
+func TestProjectLimitsAndPlanDepth(t *testing.T) {
+	c := Load()
+	if c.Projects.MaxNodesPerProject != 20000 || c.Projects.MaxChildrenPerGroup != 200 || c.Projects.MaxActiveProjects != 20 || c.App.MaxPlanDepth != 30 {
+		t.Fatalf("defaults: %+v depth %d", c.Projects, c.App.MaxPlanDepth)
+	}
+	t.Setenv("PROJECT_MAX_NODES", "500")
+	t.Setenv("PROJECT_MAX_CHILDREN_PER_GROUP", "40")
+	t.Setenv("PROJECT_MAX_ACTIVE", "2")
+	t.Setenv("PLANNER_CONCURRENCY", "5")
+	t.Setenv("MAX_PLAN_DEPTH", "12")
+	c = Load()
+	if c.Projects.MaxNodesPerProject != 500 || c.Projects.MaxChildrenPerGroup != 40 || c.Projects.MaxActiveProjects != 2 || c.Projects.PlannerConcurrency != 5 || c.App.MaxPlanDepth != 12 {
+		t.Fatalf("env: %+v depth %d", c.Projects, c.App.MaxPlanDepth)
+	}
+}

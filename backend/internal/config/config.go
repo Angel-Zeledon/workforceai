@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"aiworkforce/backend/internal/application"
+	"aiworkforce/backend/internal/projects"
 )
 
 // MinJWTSecretBytes is the minimum accepted length of JWT_SECRET.
@@ -29,6 +30,8 @@ type Config struct {
 	RedisURL   string
 	RuntimeURL string
 	App        application.Config
+	// Projects holds the size limits of projects and the planner bounds (env PROJECT_*, PLANNER_*).
+	Projects projects.Limits
 
 	// AuthEnabled turns on JWT authentication, RBAC and per-tenant isolation
 	// (org_id comes from the token). Default false (demo mode, fixed org).
@@ -161,6 +164,7 @@ func Load() Config {
 	}
 	app.MaxParallel = getInt("MAX_PARALLEL", app.MaxParallel)
 	app.MaxParallelPerOrg = getInt("MAX_PARALLEL_PER_ORG", app.MaxParallelPerOrg)
+	app.MaxPlanDepth = getInt("MAX_PLAN_DEPTH", app.MaxPlanDepth)
 	app.TaskTimeout = getDuration("TASK_TIMEOUT", app.TaskTimeout)
 	app.MaxRetries = getInt("TASK_RETRIES", app.MaxRetries)
 	app.ApprovalTimeout = getDuration("APPROVAL_TIMEOUT", app.ApprovalTimeout)
@@ -179,6 +183,7 @@ func Load() Config {
 		RedisURL:          getenv("REDIS_URL", ""),
 		RuntimeURL:        getenv("RUNTIME_URL", "http://localhost:8000"),
 		App:               app,
+		Projects:          projectLimits(),
 		JWTSecret:         os.Getenv("JWT_SECRET"), // not trimmed: bytes count
 		AllowedOrigins:    splitList(getenv("ALLOWED_ORIGINS", "")),
 		ReadHeaderTimeout: getDuration("READ_HEADER_TIMEOUT", 10*time.Second),
@@ -226,4 +231,21 @@ func (c Config) Validate() error {
 		}
 	}
 	return errors.Join(errs...)
+}
+
+// projectLimits reads the size limits of projects and the planner bounds
+// (docs/plans/large-workflows.md, W4). Unset or invalid values keep the defaults.
+func projectLimits() projects.Limits {
+	d := projects.DefaultLimits()
+	return projects.Limits{
+		MaxNodesPerProject:  getInt("PROJECT_MAX_NODES", d.MaxNodesPerProject),
+		MaxChildrenPerGroup: getInt("PROJECT_MAX_CHILDREN_PER_GROUP", d.MaxChildrenPerGroup),
+		MaxActiveProjects:   getInt("PROJECT_MAX_ACTIVE", d.MaxActiveProjects),
+		MaxPhases:           getInt("PLANNER_MAX_PHASES", d.MaxPhases),
+		MaxTasksPerPhase:    getInt("PLANNER_MAX_TASKS_PER_PHASE", d.MaxTasksPerPhase),
+		PlannerConcurrency:  getInt("PLANNER_CONCURRENCY", d.PlannerConcurrency),
+		PhasesTimeout:       getDuration("PLANNER_PHASES_TIMEOUT", d.PhasesTimeout),
+		PhaseTimeout:        getDuration("PLANNER_PHASE_TIMEOUT", d.PhaseTimeout),
+		SyncWait:            getDuration("PLANNER_SYNC_WAIT", d.SyncWait),
+	}
 }

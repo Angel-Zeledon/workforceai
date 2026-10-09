@@ -180,18 +180,54 @@ type Summary struct {
 }
 
 type Detail struct {
-	Project          Summary      `json:"project"`
-	Objectives       []Objective  `json:"objectives"`
-	Nodes            []Node       `json:"nodes"`
-	Approvals        []Approval   `json:"approvals"`
-	Budget           BudgetPolicy `json:"budget"`
-	Estimate         *Estimate    `json:"estimate"`
-	StructureVersion int          `json:"structure_version"`
-	MaxParallel      int          `json:"max_parallel"`
-	Planning         *struct {
-		Done  int `json:"done"`
-		Total int `json:"total"`
-	} `json:"planning"`
+	Project          Summary           `json:"project"`
+	Objectives       []Objective       `json:"objectives"`
+	Nodes            []Node            `json:"nodes"`
+	Approvals        []Approval        `json:"approvals"`
+	Budget           BudgetPolicy      `json:"budget"`
+	Estimate         *Estimate         `json:"estimate"`
+	StructureVersion int               `json:"structure_version"`
+	MaxParallel      int               `json:"max_parallel"`
+	Planning         *PlanningProgress `json:"planning"`
+	// Planner says how the draft plan was produced and whether the planner
+	// failed or degraded (additive; absent for template projects).
+	Planner *PlannerInfo `json:"planner,omitempty"`
+}
+
+// PlanningProgress is the progress of a draft whose planner is still running.
+type PlanningProgress struct {
+	Done  int `json:"done"`
+	Total int `json:"total"`
+}
+
+// Planner modes and statuses (PlannerInfo).
+const (
+	PlannerHierarchical = "hierarchical" // phases, then tasks per phase
+	PlannerFlat         = "flat"         // one planner call (single workflow)
+	PlannerGeneric      = "generic"      // the generic template: the planner did not produce a plan
+
+	PlannerOK       = "ok"
+	PlannerRunning  = "running"  // the draft is still being planned
+	PlannerDegraded = "degraded" // a plan exists but not the one asked for (fallback or failed phases)
+	PlannerFailed   = "failed"   // no plan: the generic template was used
+)
+
+// PlannerInfo is the visible outcome of the planner of a project created from a goal.
+type PlannerInfo struct {
+	Mode   string `json:"mode"`
+	Status string `json:"status"`
+	// Code is a stable reason of a failure or degradation: planner_unavailable,
+	// planner_timeout, planner_invalid, budget_exceeded, no_runtime, no_agents,
+	// planner_interrupted, phases_failed.
+	Code    string `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
+	// FellBackFrom is the mode that failed before this one produced the plan.
+	FellBackFrom string   `json:"fell_back_from,omitempty"`
+	Phases       int      `json:"phases,omitempty"`
+	Tasks        int      `json:"tasks,omitempty"`
+	FailedPhases []string `json:"failed_phases,omitempty"`
+	Calls        int      `json:"calls,omitempty"`
+	CostUSD      float64  `json:"cost_usd,omitempty"`
 }
 
 // Health is GET /projects/{id}/health.
@@ -410,6 +446,7 @@ type Record struct {
 	// Decisions maps a gate task id to "approved" or "rejected".
 	Decisions  map[string]string `json:"decisions,omitempty"`
 	Error      string            `json:"error,omitempty"`
+	Planner    *PlannerInfo      `json:"planner,omitempty"`
 	CreatedBy  string            `json:"created_by,omitempty"`
 	CreatedAt  time.Time         `json:"created_at"`
 	StartedAt  *time.Time        `json:"started_at"`
