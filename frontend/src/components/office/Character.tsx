@@ -7,132 +7,19 @@ import { useStore } from "@/lib/store";
 import { usePreferences, useAgentView } from "@/lib/preferences";
 import { roleMeta, USER_POS } from "@/lib/meta";
 import type { AgentState } from "@/lib/types";
+import {
+  EVENT_GESTURES, GESTURE_DURATION, KEYS, WALK_SPEED, applyGesture, blinkDelay, clamp, computePose, createRng, fidgetDelay,
+  hashSeed, pickFidget, propFor, smooth, wrapAngle as wrap, zeroPose, type GestureKind,
+} from "./gestures";
 import { AISLE_Z, deskOf, feetPos, headPos, seatOf, standOf, visitorOf } from "./registry";
-
-const KEYS = [
-  "pelvisY", "torsoX", "torsoZ", "headX", "headY", "headZ",
-  "lShX", "lShZ", "lElX", "rShX", "rShZ", "rElX",
-  "lHipX", "rHipX", "lKneeX", "rKneeX",
-] as const;
-type Pose = Record<(typeof KEYS)[number], number>;
 
 const SEATED = new Set<AgentState>(["thinking", "working", "waiting", "reviewing", "blocked", "awaiting_approval"]);
 const ACTIVE_TASK = new Set(["pending", "running", "awaiting_approval"]);
 /** Where the assistant hands the finished report to the user (in front of the approvals desk, clear of furniture). */
 const DELIVER_POS: [number, number] = [USER_POS[0] - 1.6, USER_POS[2] - 1.1];
-const STAND_Y = 0.4;
-const SEAT_Y = 0.46;
 const BODY_SCALE = 1.2;
-
-const zeroPose = (): Pose => Object.fromEntries(KEYS.map((k) => [k, 0])) as Pose;
-const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
-
-/** Pose target for a (placement, state). Every pose is chosen from the real agent state in the store. */
-function computePose(mode: string, t: number): Pose {
-  const p = zeroPose();
-  const sit = mode.startsWith("seat");
-  p.pelvisY = sit ? SEAT_Y : STAND_Y;
-  const breathe = Math.sin(t * 1.7) * 0.012;
-  if (sit) {
-    p.lHipX = -Math.PI / 2 + 0.05; p.rHipX = -Math.PI / 2 + 0.05;
-    p.lKneeX = Math.PI / 2 - 0.05; p.rKneeX = Math.PI / 2 - 0.05;
-    p.pelvisY += breathe;
-  }
-  // default: hands resting on keyboard
-  const rest = () => {
-    p.torsoX = 0.14; p.headX = 0.12;
-    p.lShX = -0.55; p.lElX = -0.95; p.lShZ = 0.12;
-    p.rShX = -0.55; p.rElX = -0.95; p.rShZ = 0.12;
-  };
-  if (mode === "walk") {
-    const w = t * 7.5;
-    const s = Math.sin(w);
-    p.pelvisY = STAND_Y + Math.abs(s) * 0.06;
-    p.lHipX = s * 0.75; p.rHipX = -s * 0.75;
-    p.lKneeX = Math.max(0, Math.sin(w + 1.3)) * 0.95; p.rKneeX = Math.max(0, -Math.sin(w + 1.3)) * 0.95;
-    p.lShX = -s * 0.55; p.rShX = s * 0.55; p.lElX = -0.3; p.rElX = -0.3;
-    p.lShZ = 0.08; p.rShZ = 0.08; p.torsoX = 0.06; p.torsoZ = s * 0.03;
-    return p;
-  }
-  switch (mode) {
-    case "seat:working": {
-      rest();
-      p.lElX += Math.sin(t * 15) * 0.1; p.rElX += Math.sin(t * 15 + Math.PI) * 0.1;
-      p.lShX += Math.sin(t * 7.3) * 0.04; p.rShX += Math.sin(t * 6.1) * 0.04;
-      p.headX = 0.2 + Math.sin(t * 2.2) * 0.03; p.headY = Math.sin(t * 0.7) * 0.08;
-      break;
-    }
-    case "seat:thinking": {
-      rest();
-      p.rShX = -0.95; p.rElX = -1.9; p.rShZ = 0.1;
-      p.headX = -0.05; p.headZ = 0.12; p.headY = Math.sin(t * 0.8) * 0.22 + 0.1;
-      p.torsoX = 0.08;
-      break;
-    }
-    case "seat:idle": {
-      // task assigned but not started yet: settled at the desk, looking at the screen
-      rest();
-      p.headX = 0.08; p.headY = Math.sin(t * 0.6) * 0.15;
-      break;
-    }
-    case "seat:waiting": {
-      rest();
-      p.rElX += Math.max(0, Math.sin(t * 3)) * 0.15;
-      p.headX = 0.05; p.headY = Math.sin(t * 0.6) * 0.35;
-      break;
-    }
-    case "seat:reviewing": {
-      p.torsoX = 0.1;
-      p.lShX = -1.0; p.lElX = -0.8; p.lShZ = -0.05;
-      p.rShX = -1.0; p.rElX = -0.8; p.rShZ = -0.05;
-      p.headX = 0.12; p.headY = Math.sin(t * 1.8) * 0.28;
-      break;
-    }
-    case "seat:blocked": {
-      rest();
-      p.torsoX = 0.3; p.headX = 0.5; p.headZ = -0.1;
-      p.lShX = -1.4; p.lElX = -1.9; p.lShZ = 0.2;
-      p.headY = Math.sin(t * 0.5) * 0.08;
-      break;
-    }
-    case "seat:awaiting_approval": {
-      rest();
-      p.torsoX = 0.02; p.headX = -0.02; p.headY = 0.5 + Math.sin(t * 1.4) * 0.08; // looks toward the approvals zone
-      p.rShX = -2.85; p.rShZ = 0.12; p.rElX = -0.15 + Math.sin(t * 5) * 0.28;
-      break;
-    }
-    case "stand:talking": {
-      p.torsoX = 0.03; p.headX = Math.sin(t * 5.3) * 0.06; p.headY = Math.sin(t * 1.3) * 0.12;
-      p.pelvisY = STAND_Y + breathe;
-      p.rShX = -0.95 + Math.sin(t * 3.1) * 0.35; p.rElX = -0.85 + Math.sin(t * 4.3) * 0.45; p.rShZ = 0.15;
-      p.lShX = -0.65 + Math.sin(t * 2.7 + 1) * 0.3; p.lElX = -0.75 + Math.sin(t * 3.7) * 0.35; p.lShZ = 0.15;
-      break;
-    }
-    case "stand:completed": {
-      p.pelvisY = STAND_Y + Math.abs(Math.sin(t * 4)) * 0.07;
-      p.torsoX = -0.05; p.headX = -0.1;
-      p.rShX = -2.6; p.rElX = -0.5 + Math.sin(t * 6) * 0.2; p.rShZ = 0.1;
-      p.lShX = 0.05; p.lShZ = 0.12; p.lElX = -0.2;
-      break;
-    }
-    case "stand:error": {
-      p.pelvisY = STAND_Y + breathe;
-      p.torsoX = 0.12; p.headX = 0.2; p.headY = Math.sin(t * 9) * 0.18;
-      p.lShX = -2.3; p.rShX = -2.3; p.lShZ = 0.6; p.rShZ = 0.6; p.lElX = -1.7; p.rElX = -1.7;
-      break;
-    }
-    default: {
-      // stand:idle - breathes and looks around
-      p.pelvisY = STAND_Y + breathe;
-      p.torsoX = 0.02; p.torsoZ = Math.sin(t * 0.4) * 0.03;
-      p.headY = Math.sin(t * 0.55) * 0.6 * (Math.sin(t * 0.21) > 0 ? 1 : 0.35);
-      p.headX = Math.sin(t * 0.33) * 0.05;
-      p.lShX = 0.04 + Math.sin(t * 1.7) * 0.02; p.rShX = p.lShX; p.lShZ = 0.1; p.rShZ = 0.1;
-      p.lElX = -0.12; p.rElX = -0.12;
-    }
-  }
-  return p;
-}
+/** Beyond this squared camera distance fidgets and event gestures are skipped (cheap LOD). */
+const FAR_D2 = 24 * 24;
 
 function route(cur: [number, number], dest: [number, number], toSeat: boolean, own: { seat: [number, number]; stand: [number, number] }) {
   const pts: [number, number][] = [];
@@ -172,6 +59,35 @@ function Ico({ kind }: { kind: "check" | "alert" | "warn" }) {
   );
 }
 
+function startGesture(sm: Sim, kind: GestureKind, aimWorld: number | null, canTurn: boolean, blocked: boolean) {
+  if (blocked) return;
+  sm.gKind = kind; sm.gStart = sm.t; sm.gDur = GESTURE_DURATION[kind]; sm.gEvent = EVENT_GESTURES.has(kind);
+  if (aimWorld !== null) {
+    sm.aimWorld = aimWorld; sm.hasAim = true;
+    if (canTurn) { sm.turnYaw = aimWorld; sm.turnUntil = sm.t + sm.gDur * 0.9; }
+  } else sm.hasAim = false;
+}
+
+function makeSim(id: string, seat: [number, number]) {
+  const seed = hashSeed(id);
+  const rng = createRng(seed);
+  return {
+    pos: new THREE.Vector2(seat[0], seat[1]),
+    yaw: Math.PI, t: rng() * 40, pose: zeroPose(), target: zeroPose(), place: "", pts: [] as [number, number][],
+    rng, phase: rng() * Math.PI * 2, rate: 0.85 + rng() * 0.3,
+    blinkAt: 2, inited: false, prev: "", pop: 0,
+    taskSrc: null as unknown, hasTask: false,
+    // movement
+    speed: 0, stride: 0, turn: 0, mode: "", blend: 1,
+    // gestures
+    gKind: null as GestureKind | null, gStart: 0, gDur: 1, gEvent: false, hasAim: false, aimWorld: 0,
+    turnYaw: 0, turnUntil: 0, nextFid: 5, wasSel: false,
+    linkSrc: null as unknown, linkTs: 0, apprSrc: null as unknown, seenAppr: new Set<string>(),
+  };
+}
+
+type Sim = ReturnType<typeof makeSim>;
+
 export function Character({ id, index }: { id: string; index: number }) {
   const agent0 = useStore((s) => s.agents[id]);
   const selected = useStore((s) => s.selectedAgentId === id);
@@ -201,30 +117,32 @@ export function Character({ id, index }: { id: string; index: number }) {
   const warnG = useRef<THREE.Group>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
 
-  const sim = useRef({
-    pos: new THREE.Vector2(own.seat[0], own.seat[1]),
-    yaw: Math.PI, t: Math.random() * 20, pose: zeroPose(), place: "", pts: [] as [number, number][],
-    blinkAt: 2, inited: false, prev: "", pop: 0,
-    taskSrc: null as unknown, hasTask: false,
-  });
+  const mug = useRef<THREE.Group>(null!);
+  const phone = useRef<THREE.Mesh>(null!);
+
+  // Per-character seed (from the id): phase/tempo/timers differ so the office never moves in unison.
+  const sim = useRef<Sim | null>(null);
+  if (!sim.current) sim.current = makeSim(id, own.seat);
 
   const skin = meta.skin, hair = meta.hair;
   const blazer = meta.color;
   const sleeve = blazer;
   const pants = "#9a7a5c", shoe = "#6b4a36";
 
-  useFrame((_, dtRaw) => {
+  useFrame((state, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
     const S = useStore.getState();
     const ag = S.agents[id];
     if (!ag || !root.current) return;
-    const sm = sim.current;
+    const sm = sim.current!;
     if (!sm.inited) {
       sm.inited = true;
       const start = SEATED.has(ag.state) ? own.seat : own.stand;
       sm.pos.set(start[0], start[1]);
       sm.yaw = SEATED.has(ag.state) ? Math.PI : 0.35;
       sm.place = SEATED.has(ag.state) ? "seat" : "stand";
+      sm.wasSel = selected; sm.linkTs = Date.now(); sm.linkSrc = S.links; sm.apprSrc = S.approvals;
+      sm.nextFid = sm.t + 2 + sm.rng() * 8; sm.blinkAt = sm.t + 1 + sm.rng() * 3;
     }
     sm.t += dt;
     const now = Date.now();
@@ -282,31 +200,94 @@ export function Character({ id, index }: { id: string; index: number }) {
       if (reduce) { sm.pts = [dest]; sm.pos.set(dest[0], dest[1]); sm.pts = []; }
     }
 
-    // --- movement ---
+    // --- movement (speed eases in/out; stride phase advances with distance so arms/legs match the pace) ---
     let walking = false;
     let moveYaw: number | null = null;
     const wp = sm.pts[0];
+    let speedTarget = 0;
     if (wp) {
       const dx = wp[0] - sm.pos.x, dz = wp[1] - sm.pos.y;
       const d = Math.hypot(dx, dz);
       if (d < 0.05) { sm.pos.set(wp[0], wp[1]); sm.pts.shift(); }
       else {
-        const step = Math.min(d, 2.1 * dt);
+        speedTarget = sm.pts.length === 1 ? clamp(d * 2.6, 0.7, WALK_SPEED) : WALK_SPEED;
+        sm.speed += (speedTarget - sm.speed) * Math.min(1, dt * 7);
+        if (sm.speed < 0.5) sm.speed = 0.5;
+        const step = Math.min(d, sm.speed * dt);
         sm.pos.x += (dx / d) * step; sm.pos.y += (dz / d) * step;
+        sm.stride += sm.speed * dt * 3.6;
         walking = true; moveYaw = Math.atan2(dx, dz);
       }
     }
+    if (!walking) sm.speed = 0;
 
+    const far = ((state.camera.position.x - sm.pos.x) ** 2 + (state.camera.position.z - sm.pos.y) ** 2) > FAR_D2;
+    const mode = walking ? "walk" : place === "seat" ? `seat:${st}` : `stand:${visit ? "talking" : st}`;
+
+    // --- gestures: event reactions (selection, approvals, delegation, user messages) and idle fidgets ---
+    const standing = place !== "seat";
+    const canTurn = standing && face === null;
+    if (!reduce && !far) {
+      if (selected && !sm.wasSel) {
+        // greets whoever just opened them: face the camera when standing
+        const c = state.camera.position;
+        startGesture(sm, "wave", Math.atan2(c.x - sm.pos.x, c.z - sm.pos.y), canTurn, reduce || walking);
+      }
+      if (sm.linkSrc !== S.links) {
+        sm.linkSrc = S.links;
+        for (let i = S.links.length - 1; i >= 0 && S.links[i].ts > sm.linkTs; i--) {
+          const l = S.links[i];
+          const other = l.from === id ? l.to : l.from;
+          if (l.kind === "delegation" && (l.from === id || l.to === id)) {
+            let aw: number | null = null;
+            if (other === "user") aw = Math.atan2(USER_POS[0] - sm.pos.x, USER_POS[2] - sm.pos.y);
+            else { const h = feetPos.get(other); if (h) aw = Math.atan2(h.x - sm.pos.x, h.z - sm.pos.y); }
+            if (aw !== null) startGesture(sm, l.from === id ? "point" : "lookAt", aw, canTurn, reduce || walking);
+          } else if (l.from === "user" && l.to === id && !l.chat) startGesture(sm, "nod", null, canTurn, reduce || walking);
+        }
+        if (S.links.length) sm.linkTs = Math.max(sm.linkTs, S.links[S.links.length - 1].ts);
+      }
+      if (sm.apprSrc !== S.approvals) {
+        sm.apprSrc = S.approvals;
+        for (const a of Object.values(S.approvals)) {
+          if (a.agent_id !== id || a.status === "pending" || sm.seenAppr.has(a.id)) continue;
+          sm.seenAppr.add(a.id);
+          const at = a.resolved_at ? Date.parse(a.resolved_at) : NaN;
+          if (!Number.isNaN(at) && Math.abs(now - at) < 15000) startGesture(sm, a.status === "approved" ? "nod" : "headShake", null, canTurn, reduce || walking);
+        }
+      }
+    }
+    sm.wasSel = selected;
+    if (reduce || walking) sm.gKind = null;
+    else if (sm.gKind && sm.t - sm.gStart >= sm.gDur) sm.gKind = null;
+    if (!sm.gKind && !reduce && !walking && !far && sm.t >= sm.nextFid) {
+      const k = pickFidget(mode, sm.rng());
+      if (k) startGesture(sm, k, null, canTurn, reduce || walking);
+      sm.nextFid = sm.t + fidgetDelay(mode, sm.rng());
+    }
+    const gu = sm.gKind ? (sm.t - sm.gStart) / sm.gDur : 0;
+
+    // --- orientation: smooth turn toward walking direction / conversation partner / greeting target ---
     let targetYaw: number;
     if (moveYaw !== null) targetYaw = moveYaw;
     else if (place === "seat") targetYaw = Math.PI;
     else if (face !== null) targetYaw = face;
+    else if (sm.t < sm.turnUntil) targetYaw = sm.turnYaw;
     else targetYaw = 0.35;
-    sm.yaw += wrap(targetYaw - sm.yaw) * Math.min(1, dt * 9);
+    const dyaw = wrap(targetYaw - sm.yaw);
+    sm.yaw += dyaw * Math.min(1, dt * (walking ? 9 : 5));
+    sm.turn += (clamp(dyaw, -1, 1) - sm.turn) * Math.min(1, dt * 6); // lean into the turn
 
-    const mode = walking ? "walk" : place === "seat" ? `seat:${st}` : `stand:${visit ? "talking" : st}`;
-    const target = computePose(mode, reduce ? 0 : sm.t);
-    const k = Math.min(1, dt * (walking ? 14 : 8));
+    // --- pose: base target + gesture layer, blended with easing ---
+    if (mode !== sm.mode) { sm.mode = mode; sm.blend = 0; }
+    sm.blend = Math.min(1, sm.blend + dt / 0.45);
+    const target = computePose(sm.target, mode, reduce ? 0 : sm.t, sm.phase, sm.rate, sm.stride, sm.speed / WALK_SPEED);
+    if (walking) target.torsoZ += -sm.turn * 0.12;
+    if (sm.gKind) {
+      const aim = sm.hasAim ? wrap(sm.aimWorld - sm.yaw) : (sm.gKind === "wave" ? (place === "seat" ? 0.6 : 0) : 0);
+      applyGesture(target, sm.gKind, gu, sm.t, aim);
+    }
+    const k = Math.min(1, dt * (walking ? 14 : 8) * (0.4 + 0.6 * smooth(sm.blend)));
     const c = sm.pose;
     for (const key of KEYS) c[key] += (target[key] - c[key]) * k;
 
@@ -314,24 +295,35 @@ export function Character({ id, index }: { id: string; index: number }) {
     root.current.position.set(sm.pos.x, 0, sm.pos.y);
     root.current.rotation.y = sm.yaw;
     pelvis.current.position.y = c.pelvisY;
-    torso.current.rotation.set(c.torsoX, 0, c.torsoZ);
+    torso.current.rotation.set(c.torsoX, c.torsoY, c.torsoZ);
     head.current.rotation.set(c.headX, c.headY, c.headZ);
     lSh.current.rotation.set(c.lShX, 0, c.lShZ); lEl.current.rotation.x = c.lElX;
     rSh.current.rotation.set(c.rShX, 0, -c.rShZ); rEl.current.rotation.x = c.rElX;
     lHip.current.rotation.x = c.lHipX; rHip.current.rotation.x = c.rHipX;
     lKnee.current.rotation.x = c.lKneeX; rKnee.current.rotation.x = c.rKneeX;
 
-    // face details
+    // face details: blink (double-blinks sometimes), tired eyes when blocked, wider smile when done
     const talking = st === "talking";
-    mouth.current.scale.y = talking ? 0.5 + Math.abs(Math.sin(sm.t * 13)) * 1.2 : 0.45;
-    if (sm.t > sm.blinkAt) { eyes.current.scale.y = 0.1; if (sm.t > sm.blinkAt + 0.12) { eyes.current.scale.y = 1; sm.blinkAt = sm.t + 2 + Math.random() * 4; } }
+    const eyeOpen = st === "blocked" ? 0.6 : 1;
+    mouth.current.scale.y = talking ? 0.5 + Math.abs(Math.sin(sm.t * 13)) * 1.2 : st === "completed" ? 0.7 : st === "error" ? 0.9 : 0.45;
+    mouth.current.scale.x = st === "completed" ? 2.3 : st === "error" ? 1.0 : 1.6;
+    if (reduce) eyes.current.scale.y = eyeOpen;
+    else if (sm.t > sm.blinkAt) {
+      eyes.current.scale.y = 0.1;
+      if (sm.t > sm.blinkAt + 0.12) {
+        eyes.current.scale.y = eyeOpen;
+        sm.blinkAt = sm.rng() < 0.2 ? sm.t + 0.15 : sm.t + blinkDelay(mode, sm.rng());
+      }
+    } else eyes.current.scale.y = eyeOpen;
+    const prop = propFor(sm.gKind, gu);
+    mug.current.visible = prop === 1; phone.current.visible = prop === 2;
     docRef.current.visible = st === "reviewing" && !walking;
     dots.current.visible = st === "thinking" && !walking;
     if (dots.current.visible) dots.current.children.forEach((m, i) => { m.position.y = Math.sin(sm.t * 4 + i * 0.9) * 0.04; (m as THREE.Mesh).scale.setScalar(0.8 + 0.25 * Math.sin(sm.t * 4 + i * 0.9)); });
     checkG.current.visible = st === "completed" && !walking;
     alertG.current.visible = (st === "blocked" || st === "error") && !walking;
     warnG.current.visible = st === "awaiting_approval" && !walking;
-    const bob = Math.sin(sm.t * 3) * 0.03;
+    const bob = reduce ? 0 : Math.sin(sm.t * 3) * 0.03;
     icoWrap.current.position.y = (c.pelvisY + 0.87) * BODY_SCALE + 0.28 + bob;
     // rebote suave (squash & stretch) cuando cambia el estado real del agente
     if (sm.prev !== st) { if (sm.prev) sm.pop = 1; sm.prev = st; }
@@ -413,6 +405,18 @@ export function Character({ id, index }: { id: string; index: number }) {
               <group ref={elRef} position={[0, -0.2, 0]}>
                 <mesh castShadow position={[0, -0.1, 0]}><capsuleGeometry args={[0.062, 0.06, 4, 10]} /><meshStandardMaterial color={blazer} roughness={0.8} /></mesh>
                 <mesh castShadow position={[0, -0.215, 0]}><sphereGeometry args={[0.075, 12, 10]} /><meshStandardMaterial color={skin} roughness={0.8} /></mesh>
+                {i === 1 && (
+                  <group ref={mug} position={[0, -0.27, 0.07]} visible={false}>
+                    <mesh><cylinderGeometry args={[0.05, 0.043, 0.1, 12]} /><meshStandardMaterial color="#f4efe6" roughness={0.6} /></mesh>
+                    <mesh position={[0, 0.045, 0]}><cylinderGeometry args={[0.042, 0.042, 0.012, 12]} /><meshStandardMaterial color="#5a3a24" /></mesh>
+                    <mesh position={[0.06, 0, 0]} rotation={[0, 0, Math.PI / 2]}><torusGeometry args={[0.025, 0.007, 6, 10]} /><meshStandardMaterial color="#f4efe6" /></mesh>
+                  </group>
+                )}
+                {i === 1 && (
+                  <mesh ref={phone} position={[0, -0.28, 0.07]} rotation={[0.2, 0, 0]} visible={false}>
+                    <boxGeometry args={[0.07, 0.13, 0.012]} /><meshStandardMaterial color="#22262e" emissive="#3a6ea5" emissiveIntensity={0.5} />
+                  </mesh>
+                )}
                 {i === 1 && (
                   <mesh ref={docRef} position={[0.06, -0.26, 0.12]} rotation={[0.3, 0, 0.1]} visible={false}>
                     <boxGeometry args={[0.22, 0.28, 0.015]} />
