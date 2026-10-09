@@ -288,12 +288,16 @@ func (o *Orchestrator) reserveOrPause(ctx context.Context, rs *run, agentID, tas
 			timer = time.NewTimer(o.cfg.PauseTimeout)
 			defer timer.Stop()
 		}
+		resume := YieldSlot(ctx) // a task paused by a cap does not hold a scheduler slot
 		select {
 		case <-wake:
+			resume()
 		case <-ctx.Done():
+			resume()
 			leave()
 			return nil, ctx.Err()
 		case <-timer.C:
+			resume()
 			leave()
 			return nil, fmt.Errorf("la pausa por tope de presupuesto no se resolvió a tiempo (%s %s)", ex.Scope, ex.ScopeID)
 		}

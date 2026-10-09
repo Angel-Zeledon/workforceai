@@ -77,8 +77,13 @@ func (o *Orchestrator) projectGate(ctx context.Context, rs *run, t domain.Task) 
 	}
 	org := o.org(ctx)
 	held := false
+	resume := func() {}
+	defer func() { resume() }()
 	for {
 		d := g.GateTask(ctx, org, t)
+		if d.Action != GateHold {
+			resume() // back from a pause: take a scheduler slot before continuing
+		}
 		switch d.Action {
 		case GateRun:
 			if held {
@@ -92,6 +97,7 @@ func (o *Orchestrator) projectGate(ctx context.Context, rs *run, t domain.Task) 
 		case GateHold:
 			if !held {
 				held = true
+				resume = YieldSlot(ctx) // a paused project task does not hold a scheduler slot
 				tid := t.ID
 				o.setState(ctx, t.AgentID, domain.StateBlocked, "En pausa (proyecto): "+t.Title, &tid, 0)
 				o.rec.Audit(ctx, domain.AuditLog{Actor: "system", Action: "task.paused", Entity: "task", EntityID: t.ID,
@@ -150,7 +156,9 @@ func (o *Orchestrator) gateApproval(ctx context.Context, rs *run, t *domain.Task
 	o.setRequestStatus(ctx, rs, domain.RequestAwaitingApproval)
 	o.setState(ctx, t.AgentID, domain.StateAwaitingApproval, "Esperando aprobación: "+ap.Title, &tid, 80)
 	o.emitMetrics(ctx)
+	resume := YieldSlot(ctx) // a task waiting for a human does not hold a scheduler slot
 	res, err := o.approvals.WaitUntil(ctx, ch, ap.ID, o.approvals.Deadline(ap))
+	resume()
 	if err != nil {
 		return false // cancelled
 	}

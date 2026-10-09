@@ -84,16 +84,20 @@ func (o *Orchestrator) admitTask(ctx context.Context, rs *run, t domain.Task) bo
 	}
 	org := o.org(ctx)
 	announced := false
+	resume := func() {}
+	defer func() { resume() }()
 	for {
 		v := g.Admit(ctx, org, t.AgentID)
 		if v.Allowed {
 			if announced {
+				resume() // take a scheduler slot again before continuing
 				o.setState(ctx, t.AgentID, domain.StateWorking, "Reanudado: "+t.Title, &t.ID, 10)
 			}
 			return true
 		}
 		if !announced {
 			announced = true
+			resume = YieldSlot(ctx) // a paused task does not hold a scheduler slot
 			tid := t.ID
 			o.setState(ctx, t.AgentID, domain.StateBlocked, "En pausa ("+v.Code+"): "+t.Title, &tid, 0)
 			o.rec.Audit(ctx, domain.AuditLog{Actor: "system", Action: "task.paused", Entity: "task", EntityID: t.ID,
