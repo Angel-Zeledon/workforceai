@@ -433,8 +433,16 @@ Regla común: ninguna fila implica un grant automático; la plantilla solo **rec
 - Frontend: entrada "Contratar desde plantilla" (`data-testid="hire-open"`) en el menú de administración, con diálogo (`hire-dialog`), nombre opcional y resultado visible; deshabilitada para no administradores. También funciona en el build mock (`roles-mock.ts`).
 - Oficina 3D: los roles sin entrada fija en `ROLE_META` toman color y apariencia de `display` de la plantilla (registrada con `registerRoleTemplates`) y un escritorio libre automático (`assignDesks`); los 7 agentes de la demo no cambian de aspecto ni de lugar.
 
+**Construido en Q3 (finanzas, solo análisis)**
+
+- `finance_treasury` (riesgo `amber`, techo `rules`, arranca en `approve_each`, avisos "ejemplo, no asesoría financiera" en es/en): herramientas solo `spreadsheet`, `calculator`, `artifacts`; no hay ninguna herramienta que mueva dinero. Disponible para contratar, **no** está en la demo (siguen siendo 7 agentes). Enrutamiento propio (`treasury`) y guion de simulación (funciona sin API key), caso dorado `06_run_task_finance_csv_injection` y prueba de que una celda de extracto con órdenes se trata como dato.
+- `docs.parse_statement` **no existe como herramienta** del agente: la importación es del backend. `POST /artifacts/import-statement` (humano, no agentes; 5 MB, 5000 filas, 30 columnas, texto de celda 500) convierte un CSV/xlsx en un artefacto `sheet` determinista; no conserva fórmulas (`<f>` ignorado, solo el valor en caché) y el texto que una hoja evaluaría (`= + - @`) queda con apóstrofo, igual que la exportación xlsx. Ese artefacto es contexto de solo lectura (`artifact:<id>` en la tarea, W3). `erp.read_invoices` sigue sin construirse.
+- `payment.propose` tampoco es una herramienta: la "lista de pagos propuesta" es un artefacto/borrador que produce una tarea y que revisa una persona en una compuerta (`approve_payment_proposal`); el pago se hace fuera del sistema.
+- Proyecto ejemplo "Cierre de caja trimestral" (`quarterly_cash_close`, parámetros `accounts` 1-12 por defecto 6 y `clients` 1-10 por defecto 1): 29 tareas con 6 cuentas y 88 con 3 clientes x 6 cuentas. Requiere haber contratado el rol (si no, el lanzamiento informa `unknown_agent`).
+
 **Pendiente / sin verificar**
 
+- Finanzas: sin verificar con proveedor real ni en navegador; sin herramienta `erp.read_invoices`; la importación no tiene aún pantalla propia en el frontend (solo API).
 - Verificación visual en el navegador de la oficina con agentes contratados (solo se verificó compilación, tipos e i18n).
 - Pruebas end-to-end con un backend real y el runtime; los escritorios libres son 8 y, al agotarse, se apilan en una fila extra.
 - La segunda oleada del catálogo (sección 7) no está construida.
