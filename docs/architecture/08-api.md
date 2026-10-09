@@ -701,3 +701,23 @@ Auditoría (`entity:"push_subscription"`): `push.subscribed` y `push.unsubscribe
 ### Cambios de plan (Q2)
 
 `PlanChange {id, project_id, proposed_by: agent|human, actor, source: suggested_tasks|replan|manual, source_node_id?, reason, ops, status: pending|approved|rejected|applied, impact{added, replaced, removed, updated, est_cost_delta_usd, est_seconds_delta, projected_cost_usd, budget_usd, exceeds_budget, nodes_after}, risk: low|medium|high, approval_id?, required_approvals?, approvals?, decided_by?, applied_at?, error?, created_at}`. Los nodos de `GET /projects/{id}` ganan `plan_change_id?` y `superseded?: replaced|removed` (estado `cancelled`, fuera de los conteos). Evento WS `project.plan_change {project_id, change}`. Runtime: `POST /v1/replan` (ver large-workflows.md, Q2).
+
+## 19. Perfil de trabajo, auditoría de pensamiento e intervención (V2)
+
+Todo aditivo. Roles: lectura de perfil `agents:read`; edición `agents:write` (admin/owner); trazas y exportación `audit:read` (admin/owner); `store_prompts` `org:manage`; steer/reasignar `tasks:manage`. Los agentes nunca editan perfiles.
+
+| Método y ruta | Descripción |
+|---|---|
+| `GET /agents/{id}/profile` | `{agent_id, instructions, creativity(low\|medium\|high), tone, skills, role_skills, version, updated_by, updated_at, limits}` |
+| `PUT /agents/{id}/profile` | `{instructions, creativity, skills, tone?}` -> perfil; nueva versión si hay cambios; 400 si hay secretos/longitud; 403 si el actor es un agente |
+| `GET /agents/{id}/profile/versions` | historial, más nueva primero: `{version, author, created_at, restored_from, diff, snapshot}` |
+| `POST /agents/{id}/profile/restore` | `{version}` -> perfil (crea una versión nueva) |
+| `GET /agents/{id}/traces?limit&before` | `{traces, store_prompts, retention_days}` (sin prompt) |
+| `GET /agents/{id}/traces/{traceId}` | traza completa, con `prompt {system, segments[{kind: text\|untrusted, label, text, truncated}]}` si se guardó |
+| `GET /agents/{id}/traces/export` | descarga JSON; auditado (`trace.exported`) |
+| `GET/PUT /settings/traces` | `{store_prompts, retention_days}`; PUT `{store_prompts}` |
+| `GET /tasks/{id}/intervention` | `{task_status, steer_notes, can_steer, can_apply_now, can_reassign, estimated_rerun_usd, reassign_candidates}` |
+| `POST /tasks/{id}/steer` | `{note, apply_now?}` -> `{note, apply_now_status: ""\|restarted\|not_mid_call\|limit_reached, estimated_rerun_usd}`; 409 si la tarea terminó |
+| `POST /tasks/{id}/reassign` | `{agent_id}` -> tarea; 409 si no está pendiente; 400 si el agente no puede tomarla |
+
+Runtime (aditivo): `run-task` acepta `agent.instructions|creativity|skills`, `human_guidance[]`, `want_trace` y devuelve `trace {system, user}` solo si se pidió; plan/route aceptan `skills` por agente. Env: `TRACE_RETENTION_DAYS` (30). Eventos WS: `task.steered`, `task.reassigned`, `agent.profile_changed`. Detalle y límites: `docs/plans/large-workflows.md`, sección "V2 agent profile, thought audit and intervention".
