@@ -46,6 +46,10 @@ export interface ProjectNode {
   /** a human skipped this failed node (W2) */
   skipped?: boolean;
   skip_reason?: string;
+  /** added by this plan change (Q2) */
+  plan_change_id?: string;
+  /** replaced or removed by a plan change: out of the plan, state is cancelled (Q2) */
+  superseded?: "replaced" | "removed";
   error?: string | null;
 }
 
@@ -159,3 +163,26 @@ export type PlanOp =
 export interface NewProjectBody { goal: string; template_id?: string; params?: Record<string, string>; budget_usd?: number }
 export interface LaunchBody { approved_budget_usd: number; acknowledge_underbudget?: boolean; max_parallel?: number }
 export type ControlAction = "pause" | "resume" | "cancel";
+
+// ---- Q2: plan changes (mid-flight replanning) ----
+export interface ProposedTask { key: string; title: string; description?: string; agent_id?: string; complexity?: string; depends_on?: string[]; parent_id?: string }
+export interface PlanChangeOp {
+  op: "add_task" | "replace_task" | "remove_pending_task" | "update_pending_task";
+  node_id?: string;
+  tasks?: ProposedTask[];
+  fields?: { title?: string; agent_id?: string; description?: string };
+}
+export interface PlanChangeImpact {
+  added: number; replaced: number; removed: number; updated: number;
+  est_cost_delta_usd: number; est_seconds_delta: number; projected_cost_usd: number; budget_usd: number; exceeds_budget: boolean; nodes_after: number;
+}
+export interface PlanChange {
+  id: string; project_id: string;
+  proposed_by: "agent" | "human"; actor: string;
+  source: "suggested_tasks" | "replan" | "manual"; source_node_id?: string;
+  reason: string; ops: PlanChangeOp[];
+  status: "pending" | "approved" | "rejected" | "applied";
+  impact: PlanChangeImpact; risk: Risk;
+  approval_id?: string; required_approvals?: number; approvals?: number;
+  decided_by?: string; applied_at?: string; error?: string; created_at: string;
+}

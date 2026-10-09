@@ -14,6 +14,8 @@ export function NodeDrawer() {
   const canRecover = useCan("tasks:manage");
   const retryNode = useProjects((s) => s.retryNode);
   const skipNode = useProjects((s) => s.skipNode);
+  const replanNode = useProjects((s) => s.replanNode);
+  const setTab = useProjects((s) => s.setTab);
   const [skipping, setSkipping] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -51,6 +53,7 @@ export function NodeDrawer() {
         <Fact k={t("pv.node.complexity")} v={n.complexity} />
       </dl>
       {n.error && <div className="rounded-xl bg-red-500/10 px-2 py-1 text-[11px] text-red-700">{t("pv.node.error", { code: n.error })}</div>}
+      {n.superseded && <div data-testid="node-superseded" className="rounded-xl bg-panel2 px-2 py-1 text-[11px] text-mute">{t(`pv.changes.superseded.${n.superseded}`)}</div>}
       {n.skipped && <div data-testid="node-skipped" className="rounded-xl bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800">{t("pv.recover.skipped", { reason: n.skip_reason ?? "" })}</div>}
       {canRecover && (n.state === "failed" || n.state === "blocked") && (
         <div data-testid="node-recovery" className="space-y-2 rounded-xl border border-line bg-panel2 p-2">
@@ -58,6 +61,7 @@ export function NodeDrawer() {
           <div className="flex flex-wrap gap-2">
             <Btn kind="ok" disabled={busy} onClick={() => run(() => retryNode(n.id))} data-testid="node-retry">{t("pv.recover.retry")}</Btn>
             {n.state === "failed" && <Btn kind="danger" disabled={busy} onClick={() => setSkipping((v) => !v)} data-testid="node-skip">{t("pv.recover.skip")}</Btn>}
+            {n.state === "failed" && <Btn disabled={busy} onClick={() => run(async () => { await replanNode(n.id); setTab("changes"); })} data-testid="node-replan">{t("pv.replan.button")}</Btn>}
           </div>
           {skipping && (
             <div className="space-y-1">
@@ -66,6 +70,7 @@ export function NodeDrawer() {
               <div className="text-[10px] text-mute">{t("pv.recover.skipHint")}</div>
             </div>
           )}
+          {n.state === "failed" && <div className="text-[10px] text-mute">{t("pv.replan.hint")}</div>}
           {err && <div data-testid="node-recovery-error" className="text-[11px] text-red-700">{err}</div>}
         </div>
       )}
