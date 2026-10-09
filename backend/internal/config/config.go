@@ -170,6 +170,10 @@ func Load() Config {
 	app.PauseTimeout = getDuration("BUDGET_PAUSE_TIMEOUT", app.PauseTimeout)
 	app.ChatStagger = getDuration("CHAT_STAGGER", app.ChatStagger)
 	app.ChatTimeout = getDuration("CHAT_TIMEOUT", app.ChatTimeout)
+	app.DepContextTokenBudget = getInt("DEP_CONTEXT_TOKEN_BUDGET", app.DepContextTokenBudget)
+	app.ProjectContextTokenBudget = getInt("PROJECT_CONTEXT_TOKEN_BUDGET", app.ProjectContextTokenBudget)
+	app.SynthTokenBudget = getInt("SYNTH_TOKEN_BUDGET", app.SynthTokenBudget)
+	app.SynthMaxGroups = getInt("SYNTH_MAX_GROUPS", app.SynthMaxGroups)
 
 	c := Config{
 		Port:              getenv("PORT", "8080"),

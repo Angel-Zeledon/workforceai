@@ -203,6 +203,37 @@ type DependencyOutput struct {
 	TaskID  string                  `json:"task_id"`
 	AgentID string                  `json:"agent_id"`
 	Output  domain.StructuredOutput `json:"output"`
+	// W3 (additive): reference id, title and whether the output was reduced to
+	// its summary to respect the dependency token budget.
+	Ref       string `json:"ref,omitempty"`
+	Title     string `json:"title,omitempty"`
+	Truncated bool   `json:"truncated,omitempty"`
+}
+
+// ProjectTaskRef is one line of the read-only project index (W3).
+type ProjectTaskRef struct {
+	Ref     string `json:"ref"`
+	TaskID  string `json:"task_id"`
+	Title   string `json:"title"`
+	AgentID string `json:"agent_id"`
+	Summary string `json:"summary"`
+}
+
+// ContextArtifact is the text of an artifact explicitly referenced by a task,
+// fetched by the backend (never by the runtime) and bounded by a token budget.
+type ContextArtifact struct {
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	Kind      string `json:"kind,omitempty"`
+	Text      string `json:"text"`
+	Truncated bool   `json:"truncated,omitempty"`
+}
+
+// ProjectContext is the bounded, read-only view of the rest of a project (W3).
+type ProjectContext struct {
+	Index        []ProjectTaskRef  `json:"index"`
+	IndexOmitted int               `json:"index_omitted,omitempty"`
+	Artifacts    []ContextArtifact `json:"artifacts,omitempty"`
 }
 
 type MemoryEntry struct {
@@ -215,6 +246,10 @@ type RunContext struct {
 	RequestText       string             `json:"request_text"`
 	DependencyOutputs []DependencyOutput `json:"dependency_outputs"`
 	Memory            []MemoryEntry      `json:"memory"`
+	// W3 (additive, omitted when empty): dependencies left out by the token
+	// budget and the project-wide context.
+	DependencyOmitted int             `json:"dependency_omitted,omitempty"`
+	ProjectContext    *ProjectContext `json:"project_context,omitempty"`
 }
 
 type RunTaskRequest struct {
@@ -279,6 +314,11 @@ type SynthesizeRequest struct {
 	Outputs     []SynthOutput `json:"outputs"`
 	Locale      string        `json:"locale,omitempty"`
 	Tone        string        `json:"tone,omitempty"`
+	// W3 (additive): hierarchical synthesis. Stage is "" (single pass),
+	// "group" (Part of Parts) or "final" (over group syntheses).
+	Stage string `json:"stage,omitempty"`
+	Part  int    `json:"part,omitempty"`
+	Parts int    `json:"parts,omitempty"`
 }
 
 type SynthesizeResponse struct {
