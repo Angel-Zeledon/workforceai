@@ -115,6 +115,18 @@ func (c *Client) Plan(ctx context.Context, in application.PlanRequest) (out appl
 	return
 }
 
+// PlanPhases implements application.HierarchicalPlanner (POST /v1/plan-phases).
+func (c *Client) PlanPhases(ctx context.Context, in application.PlanPhasesRequest) (out application.PlanPhasesResponse, err error) {
+	err = c.do(ctx, http.MethodPost, "/v1/plan-phases", in, &out)
+	return
+}
+
+// PlanPhase implements application.HierarchicalPlanner (POST /v1/plan-phase).
+func (c *Client) PlanPhase(ctx context.Context, in application.PlanPhaseRequest) (out application.PlanPhaseResponse, err error) {
+	err = c.do(ctx, http.MethodPost, "/v1/plan-phase", in, &out)
+	return
+}
+
 func (c *Client) RunTask(ctx context.Context, in application.RunTaskRequest) (out application.RunTaskResponse, err error) {
 	err = c.do(ctx, http.MethodPost, "/v1/run-task", in, &out)
 	return

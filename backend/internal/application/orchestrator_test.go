@@ -3,6 +3,7 @@ package application_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"sync"
@@ -430,14 +431,47 @@ func TestDelegationDepthLimit(t *testing.T) {
 		}
 		return application.PlanResponse{Tasks: tasks}, nil
 	}}
-	h := newHarness(t, rt, nil)
+	h := newHarness(t, rt, func(c *application.Config) { c.MaxPlanDepth = 5 }) // the configured limit stays enforced
 	reqID, _ := h.orch.Submit(context.Background(), "cadena larga")
 	h.orch.Wait()
 	if h.request(reqID).Status != domain.RequestFailed || len(h.tasks(reqID)) != 0 {
-		t.Fatal("a plan deeper than 5 must be rejected before creating tasks")
+		t.Fatal("a plan deeper than the limit must be rejected before creating tasks")
 	}
 	if !h.hasAudit("delegation.depth_exceeded") {
 		t.Error("missing depth audit")
+	}
+}
+
+// A free-form request may be a long sequential chain: the default limit is well above 5,
+// and cycles / unknown dependencies are still rejected.
+func TestLongSequentialChainRuns(t *testing.T) {
+	chain := func(n int, cycle bool) func(application.PlanRequest) (application.PlanResponse, error) {
+		return func(application.PlanRequest) (application.PlanResponse, error) {
+			var tasks []application.PlannedTask
+			for i := 0; i < n; i++ {
+				pt := application.PlannedTask{Key: fmt.Sprintf("k%d", i), Title: fmt.Sprintf("paso %d", i), AgentID: "analyst"}
+				if i > 0 {
+					pt.DependsOn = []string{fmt.Sprintf("k%d", i-1)}
+				}
+				tasks = append(tasks, pt)
+			}
+			if cycle {
+				tasks[0].DependsOn = []string{fmt.Sprintf("k%d", n-1)}
+			}
+			return application.PlanResponse{Tasks: tasks}, nil
+		}
+	}
+	h := newHarness(t, &fakeRuntime{plan: chain(12, false)}, nil)
+	reqID, _ := h.orch.Submit(context.Background(), "cadena de 12")
+	h.orch.Wait()
+	if st := h.request(reqID).Status; st != domain.RequestDone || len(h.tasks(reqID)) != 12 {
+		t.Fatalf("a 12-step chain must run: status %s, tasks %d", st, len(h.tasks(reqID)))
+	}
+	h = newHarness(t, &fakeRuntime{plan: chain(12, true)}, nil)
+	reqID, _ = h.orch.Submit(context.Background(), "ciclo")
+	h.orch.Wait()
+	if h.request(reqID).Status != domain.RequestFailed || len(h.tasks(reqID)) != 0 {
+		t.Fatal("a cycle must be rejected")
 	}
 }
 

@@ -61,6 +61,25 @@ func planOf(r Record) application.PlanResponse {
 	return plan
 }
 
+// checkActiveLimit refuses a launch when the organization already has
+// MaxActiveProjects launched, unfinished projects.
+func (s *Service) checkActiveLimit(ctx context.Context, org, self string) error {
+	recs, err := s.cfg.Store.List(ctx, org)
+	if err != nil {
+		return err
+	}
+	active := 0
+	for _, r := range recs {
+		if r.ID != self && r.Status != StatusDraft && !terminalStatus(r.Status) {
+			active++
+		}
+	}
+	if active >= s.cfg.Limits.MaxActiveProjects {
+		return limitError(domain.ErrConflict, LimitMaxActive, s.cfg.Limits.MaxActiveProjects, fmt.Sprintf("the organization has %d active projects", active))
+	}
+	return nil
+}
+
 // Launch validates and estimates the draft and submits it as one orchestrator
 // request capped at the approved budget. Tasks run in parallel wherever the
 // dependencies allow it.
@@ -78,6 +97,18 @@ func (s *Service) Launch(ctx context.Context, id string, b LaunchBody) (Summary,
 	}
 	if b.ApprovedBudgetUSD <= 0 || math.IsNaN(b.ApprovedBudgetUSD) || math.IsInf(b.ApprovedBudgetUSD, 0) || b.ApprovedBudgetUSD > 1e6 {
 		return Summary{}, fmt.Errorf("%w: approved_budget_usd must be between 0 and 1000000", domain.ErrInvalid)
+	}
+	if rec.Planner != nil && rec.Planner.Status == PlannerRunning && s.jobOf(org, id) != nil {
+		return Summary{}, fmt.Errorf("%w: planning_in_progress: the planner is still building this draft", domain.ErrConflict)
+	}
+	if err := s.cfg.Limits.checkSize(rec.Nodes); err != nil {
+		return Summary{}, err
+	}
+	// MaxActiveProjects: the check and the launch are one step (launchMu), or two launches could both pass.
+	s.launchMu.Lock()
+	defer s.launchMu.Unlock()
+	if err := s.checkActiveLimit(ctx, org, id); err != nil {
+		return Summary{}, err
 	}
 	ids, err := s.agentIDs(ctx)
 	if err != nil {

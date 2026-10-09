@@ -180,6 +180,76 @@ type PlanResponse struct {
 	// MaxDepth, when above Config.MaxDepth, raises the dependency-chain limit
 	// for this plan only (long project workflows). Never sent by the runtime.
 	MaxDepth int `json:"-"`
+	// Usage is the optional cost of the planning call (additive; old runtimes omit it).
+	Usage *Usage `json:"usage,omitempty"`
+}
+
+// ---- hierarchical planning of large projects (W4) ----
+
+// PlanPhase is one phase of the roadmap: a rough size and the phases it waits for.
+type PlanPhase struct {
+	Key       string   `json:"key"`
+	Title     string   `json:"title"`
+	Goal      string   `json:"goal,omitempty"`
+	Size      string   `json:"size"` // S|M|L|XL
+	DependsOn []string `json:"depends_on"`
+}
+
+type PlanPhasesRequest struct {
+	RequestText string      `json:"request_text"`
+	Agents      []PlanAgent `json:"agents"`
+	BudgetUSD   float64     `json:"budget_usd"`
+	MaxPhases   int         `json:"max_phases,omitempty"`
+	Locale      string      `json:"locale,omitempty"`
+	Tone        string      `json:"tone,omitempty"`
+}
+
+type PlanPhasesResponse struct {
+	Objectives          []string    `json:"objectives"`
+	Phases              []PlanPhase `json:"phases"`
+	ClarifyingQuestions []string    `json:"clarifying_questions"`
+	Usage               *Usage      `json:"usage,omitempty"`
+}
+
+type PhaseBrief struct {
+	Key   string `json:"key"`
+	Title string `json:"title"`
+}
+
+type PlanPhaseRequest struct {
+	RequestText string       `json:"request_text"`
+	Phase       PlanPhase    `json:"phase"`
+	OtherPhases []PhaseBrief `json:"other_phases,omitempty"`
+	Agents      []PlanAgent  `json:"agents"`
+	TargetTasks int          `json:"target_tasks"`
+	MaxTasks    int          `json:"max_tasks"`
+	BudgetUSD   float64      `json:"budget_usd"`
+	Locale      string       `json:"locale,omitempty"`
+	Tone        string       `json:"tone,omitempty"`
+}
+
+// PhaseTask is a task of ONE phase: keys are local to the phase.
+type PhaseTask struct {
+	Key         string   `json:"key"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	AgentID     string   `json:"agent_id"`
+	DependsOn   []string `json:"depends_on"`
+	Complexity  string   `json:"complexity"` // S|M|L|XL
+	Reason      string   `json:"reason,omitempty"`
+}
+
+type PlanPhaseResponse struct {
+	Tasks []PhaseTask `json:"tasks"`
+	Usage *Usage      `json:"usage,omitempty"`
+}
+
+// HierarchicalPlanner is the optional runtime capability behind big-project
+// planning (POST /v1/plan-phases, /v1/plan-phase). A Runtime that does not
+// implement it makes the projects service use the flat planner.
+type HierarchicalPlanner interface {
+	PlanPhases(ctx context.Context, in PlanPhasesRequest) (PlanPhasesResponse, error)
+	PlanPhase(ctx context.Context, in PlanPhaseRequest) (PlanPhaseResponse, error)
 }
 
 type RunTaskInfo struct {

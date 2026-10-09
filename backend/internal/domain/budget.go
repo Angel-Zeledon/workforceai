@@ -36,6 +36,8 @@ const (
 	UsageRunTask    UsageKind = "run_task"
 	UsageConsult    UsageKind = "consult"
 	UsageSynthesize UsageKind = "synthesize"
+	// UsagePlan is a planner call (project planning); it belongs to no request.
+	UsagePlan UsageKind = "plan"
 )
 
 // UsageEntry is one reconciled runtime call: the cost ledger row.

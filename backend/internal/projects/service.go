@@ -58,6 +58,8 @@ type Config struct {
 	MaxAttempts int           // shown as max_attempts of a node (default 3)
 	Log         *slog.Logger
 	Now         func() time.Time
+	// Limits are the size limits and planner bounds (zero values: defaults).
+	Limits Limits
 }
 
 // Service is the projects use case layer.
@@ -69,6 +71,9 @@ type Service struct {
 	live  map[string]*liveProject // org|project id
 	byReq map[string]*liveProject // org|request id
 	locks map[string]*sync.Mutex  // org|project id
+	jobs  map[string]*planJob     // org|project id: planners still running
+	// launchMu serializes the active-projects check with the launch itself.
+	launchMu sync.Mutex
 
 	// launching counts the projects being submitted and registered: the gate of
 	// a task that starts before its registration finished waits for it.
@@ -92,7 +97,8 @@ func New(ctx context.Context, cfg Config) *Service {
 	if cfg.Log == nil {
 		cfg.Log = slog.Default()
 	}
-	s := &Service{cfg: cfg, root: ctx, live: map[string]*liveProject{}, byReq: map[string]*liveProject{}, locks: map[string]*sync.Mutex{}}
+	cfg.Limits = cfg.Limits.withDefaults()
+	s := &Service{cfg: cfg, root: ctx, live: map[string]*liveProject{}, byReq: map[string]*liveProject{}, locks: map[string]*sync.Mutex{}, jobs: map[string]*planJob{}}
 	if cfg.Orch != nil {
 		cfg.Orch.SetTaskGate(s)
 	}
@@ -192,7 +198,18 @@ func (s *Service) detailOf(ctx context.Context, rec Record) (Detail, error) {
 	if err != nil {
 		return Detail{}, err
 	}
-	return s.build(ctx, snap), nil
+	d := s.build(ctx, snap)
+	d.Planner = snap.rec.Planner
+	if p := snap.rec.Planner; p != nil && p.Status == PlannerRunning {
+		if j := s.jobOf(snap.rec.OrgID, snap.rec.ID); j != nil {
+			d.Planning = &PlanningProgress{Done: int(j.doneN.Load()), Total: int(j.tot.Load())}
+		} else { // the server restarted while the planner ran: say so, do not wait forever
+			cp := *p
+			cp.Status, cp.Code = PlannerFailed, "planner_interrupted"
+			d.Planner = &cp
+		}
+	}
+	return d, nil
 }
 
 // List returns the summaries of the organization's projects, newest first.
@@ -268,19 +285,42 @@ func (s *Service) CreateDraft(ctx context.Context, in NewProject) (Record, error
 	}
 	org := s.org(ctx)
 	locale := s.locale(ctx, in.Locale)
-	tpl, params, goal, err := s.pickTemplate(ctx, in, goal, locale)
-	if err != nil {
+	pid := "prj-" + strings.ReplaceAll(uuid.NewString(), "-", "")[:12]
+	var (
+		tpl    Template
+		params map[string]string
+		info   *PlannerInfo
+		job    *planJob
+		err    error
+	)
+	if in.TemplateID == "" && goal != "" && !financialCloseRe.MatchString(goal) {
+		// A free goal: the planner (hierarchical when the runtime supports it) builds the plan.
+		// CreateDraft waits for it up to SyncWait; a slower planner finishes in the background
+		// and the draft shows its progress (Detail.Planning) until then.
+		job = s.startPlanner(ctx, pid, goal, locale)
+		select {
+		case <-job.done:
+			tpl, info = job.tpl, &job.info
+			s.dropJob(org, pid)
+		case <-time.After(s.cfg.Limits.SyncWait):
+			tpl, info = placeholderTemplate(goal), &PlannerInfo{Mode: PlannerHierarchical, Status: PlannerRunning}
+		case <-ctx.Done():
+			return Record{}, ctx.Err()
+		}
+	} else if tpl, params, goal, err = s.pickTemplate(ctx, in, goal, locale); err != nil {
 		return Record{}, err
 	}
-	pid := "prj-" + strings.ReplaceAll(uuid.NewString(), "-", "")[:12]
 	inst, err := tpl.instantiate(pid, goal, params, locale)
+	if err == nil {
+		err = s.cfg.Limits.checkSize(inst.Nodes)
+	}
 	if err != nil {
 		return Record{}, err
 	}
 	tid := tpl.ID
 	rec := Record{ID: pid, OrgID: org, Name: inst.Name, NameKey: inst.NameKey, Goal: inst.Goal, Status: StatusDraft, Control: ControlActive, TemplateID: &tid,
 		Params: params, Locale: locale, Budget: defaultBudgetPolicy(), MaxParallel: 4, Objectives: inst.Objectives, Nodes: inst.Nodes, StructureVersion: 1,
-		Decisions: map[string]string{}, CreatedBy: application.ActorFrom(ctx, ""), CreatedAt: s.now()}
+		Decisions: map[string]string{}, CreatedBy: application.ActorFrom(ctx, ""), CreatedAt: s.now(), Planner: info}
 	rec.Estimate = estimatePlan(rec.Nodes, rec.Objectives)
 	rec.BudgetUSD = in.BudgetUSD
 	if rec.BudgetUSD <= 0 {
@@ -291,8 +331,64 @@ func (s *Service) CreateDraft(ctx context.Context, in NewProject) (Record, error
 	}
 	s.audit(ctx, "project.created", pid, map[string]any{"template": tpl.ID, "nodes": len(leaves(rec.Nodes))})
 	d, _ := s.detailOf(ctx, rec)
-	s.emit(ctx, "project.created", pid, map[string]any{"project": d.Project, "nodes": d.Nodes, "objectives": d.Objectives, "planning": nil, "estimate": rec.Estimate})
+	s.emit(ctx, "project.created", pid, map[string]any{"project": d.Project, "nodes": d.Nodes, "objectives": d.Objectives, "planning": d.Planning, "estimate": rec.Estimate, "planner": d.Planner})
+	if job != nil && info.Status == PlannerRunning {
+		go s.finishPlanning(context.WithoutCancel(ctx), rec, job, in.BudgetUSD, locale)
+	} else if info != nil {
+		s.plannerNotice(ctx, pid, info)
+	}
 	return rec, nil
+}
+
+// plannerNotice makes a planner failure or degradation visible: an event for the
+// open UI (the draft also carries it) and an audit entry. An ok plan is silent.
+func (s *Service) plannerNotice(ctx context.Context, pid string, info *PlannerInfo) {
+	if info == nil || info.Status == PlannerOK || info.Status == PlannerRunning {
+		return
+	}
+	s.audit(ctx, "project.planner_"+info.Status, pid, map[string]any{"mode": info.Mode, "code": info.Code, "fell_back_from": info.FellBackFrom,
+		"failed_phases": info.FailedPhases, "message": info.Message})
+	s.emit(ctx, "project.planner_notice", pid, map[string]any{"project_id": pid, "planner": info})
+}
+
+// finishPlanning waits for a background planner and fills the draft with its plan.
+func (s *Service) finishPlanning(ctx context.Context, rec Record, job *planJob, userBudget float64, locale string) {
+	<-job.done
+	org := s.org(ctx)
+	defer s.dropJob(org, rec.ID)
+	tpl, info := job.tpl, job.info
+	inst, err := tpl.instantiate(rec.ID, rec.Goal, nil, locale)
+	if err == nil {
+		err = s.cfg.Limits.checkSize(inst.Nodes)
+	}
+	if err != nil { // the plan does not fit the limits: keep the generic one and say why
+		info = PlannerInfo{Mode: PlannerGeneric, Status: PlannerFailed, Code: "planner_invalid", Message: clip(err.Error(), 200), Calls: info.Calls, CostUSD: info.CostUSD}
+		inst, _ = genericTemplate().instantiate(rec.ID, rec.Goal, nil, locale)
+	}
+	var out Record
+	_, err = s.update(ctx, rec.ID, func(r *Record) error {
+		if r.Status != StatusDraft || r.Planner == nil || r.Planner.Status != PlannerRunning {
+			return fmt.Errorf("%w: the draft changed while it was being planned", domain.ErrConflict)
+		}
+		tid := tpl.ID
+		r.TemplateID, r.Objectives, r.Nodes, r.Planner = &tid, inst.Objectives, inst.Nodes, &info
+		r.Estimate = estimatePlan(r.Nodes, r.Objectives)
+		if userBudget <= 0 {
+			r.BudgetUSD = defaultBudget(r.Estimate)
+		}
+		r.StructureVersion++
+		out = *r
+		return nil
+	})
+	if err != nil {
+		s.cfg.Log.Warn("planner result discarded", "project", rec.ID, "err", err)
+		return
+	}
+	d, _ := s.detailOf(ctx, out)
+	s.audit(ctx, "project.planned", rec.ID, map[string]any{"mode": info.Mode, "status": info.Status, "nodes": len(leaves(out.Nodes)), "calls": info.Calls, "cost_usd": info.CostUSD})
+	s.emit(ctx, "project.planned", rec.ID, map[string]any{"project": d.Project, "nodes": d.Nodes, "objectives": d.Objectives, "estimate": out.Estimate,
+		"structure_version": out.StructureVersion, "planner": d.Planner})
+	s.plannerNotice(ctx, rec.ID, &info)
 }
 
 func defaultBudget(e *Estimate) float64 { return math.Ceil(e.Total.P90USD*1.1*1000) / 1000 }
@@ -303,9 +399,6 @@ func (s *Service) pickTemplate(ctx context.Context, in NewProject, goal, locale 
 		t, _ := builtinByID(idFinancialClose)
 		return t, in.Params, goal, nil
 	case id == "":
-		if t, ok := s.plannedTemplate(ctx, goal, locale); ok {
-			return t, nil, goal, nil
-		}
 		t, _ := builtinByID(idGeneric)
 		return t, nil, goal, nil
 	case strings.HasPrefix(id, catalogPrefix):
@@ -346,48 +439,6 @@ func planTemplate(id, key, name string, tasks []catalog.Task) Template {
 	}
 	return Template{ID: id, Key: key, Version: 1, Name: name, Params: []TemplateParam{},
 		Objectives: []TemplateObjective{{Key: "o1", Title: name, Workflows: []TemplateWorkflow{{Key: "w1", Title: name, Nodes: nodes}}}}}
-}
-
-// plannedTemplate asks the runtime planner for a plan (best effort).
-func (s *Service) plannedTemplate(ctx context.Context, goal, locale string) (Template, bool) {
-	if s.cfg.Runtime == nil || goal == "" {
-		return Template{}, false
-	}
-	agents, err := s.cfg.Core.ListAgents(ctx, s.org(ctx))
-	if err != nil || len(agents) == 0 {
-		return Template{}, false
-	}
-	pa := make([]application.PlanAgent, 0, len(agents))
-	known := map[string]bool{}
-	for _, a := range agents {
-		pa = append(pa, application.NewPlanAgent(a, locale))
-		known[a.ID] = true
-	}
-	pctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
-	resp, err := s.cfg.Runtime.Plan(pctx, application.PlanRequest{RequestText: goal, Agents: pa, Locale: locale})
-	if err != nil || len(resp.Tasks) == 0 {
-		return Template{}, false
-	}
-	keys := map[string]bool{}
-	var tasks []catalog.Task
-	for i, t := range resp.Tasks {
-		if t.Key == "" {
-			t.Key = fmt.Sprintf("t%d", i+1)
-		}
-		if keys[t.Key] || strings.ContainsAny(t.Key, ":~") {
-			return Template{}, false
-		}
-		keys[t.Key] = true
-		if !known[t.AgentID] {
-			t.AgentID = "assistant"
-		}
-		tasks = append(tasks, catalog.Task{Key: t.Key, Title: t.Title, Description: t.Description, AgentID: t.AgentID, DependsOn: t.DependsOn})
-	}
-	for i := range tasks {
-		tasks[i].DependsOn = slices.DeleteFunc(slices.Clone(tasks[i].DependsOn), func(d string) bool { return !keys[d] })
-	}
-	return planTemplate("tpl-planned", "planned", truncRunes(goal, 60), tasks), true
 }
 
 // PatchPlan edits a draft. Only "update" operations (title, agent) exist today.
