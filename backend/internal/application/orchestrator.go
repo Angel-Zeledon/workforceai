@@ -83,6 +83,7 @@ type run struct {
 	removed     []string  // task ids removed in the plan review (persisted in the run meta)
 	chat        *chatLink // set when the request was born in a chat turn (chat.go)
 	gate        *RunGate  // human gate in progress before the start (persisted in the run meta; guarded by mu)
+	maxParallel int       // per-request override of Config.MaxParallel (WithRunParallel); 0 = config
 }
 
 func (r *run) touch(agentID string) {
@@ -131,6 +132,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 		rs.agents[a.ID] = a
 	}
 	rs.preset = preset
+	rs.maxParallel = RunParallelFrom(ctx)
 	rs.requestedBy = ActorFrom(ctx, "")
 	rs.style = o.loadStyle(ctx)
 	rs.chat = chatLinkFrom(ctx)
@@ -213,7 +215,7 @@ func (o *Orchestrator) execute(ctx context.Context, rs *run, tasks []domain.Task
 		byID[t.ID] = t
 		nodes = append(nodes, Node{ID: t.ID, DependsOn: t.DependsOn})
 	}
-	sched := Scheduler{MaxParallel: o.cfg.MaxParallel}
+	sched := Scheduler{MaxParallel: o.parallelFor(rs)}
 	outcomes := sched.Run(ctx, nodes,
 		func(c context.Context, id string) Outcome {
 			out := exec(c, byID[id])
@@ -727,7 +729,9 @@ func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.
 		o.setRequestStatus(ctx, rs, domain.RequestAwaitingApproval)
 		o.setState(ctx, agent.ID, domain.StateAwaitingApproval, "Esperando aprobación: "+ap.Title, &tid, 80)
 		o.emitMetrics(ctx)
+		resume := YieldSlot(ctx) // a task waiting for a human does not hold a scheduler slot
 		res, err := o.approvals.WaitUntil(ctx, ch, ap.ID, deadline)
+		resume()
 		if err != nil {
 			return OutcomeFailed // cancelled
 		}

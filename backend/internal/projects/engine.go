@@ -118,7 +118,7 @@ func (s *Service) Launch(ctx context.Context, id string, b LaunchBody) (Summary,
 
 	s.launching.Add(1)
 	defer s.launching.Add(-1)
-	reqID, err := s.cfg.Orch.SubmitPlan(application.WithWorkPriority(application.WithBudgetCap(ctx, rec.BudgetUSD), application.PriorityProject), rec.Goal, planOf(rec))
+	reqID, err := s.cfg.Orch.SubmitPlan(application.WithRunParallel(application.WithWorkPriority(application.WithBudgetCap(ctx, rec.BudgetUSD), application.PriorityProject), rec.MaxParallel), rec.Goal, planOf(rec))
 	if err != nil {
 		return Summary{}, err
 	}
