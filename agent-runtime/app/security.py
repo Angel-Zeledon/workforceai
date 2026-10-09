@@ -8,6 +8,7 @@ usuario dentro de bloques marcados como DATOS NO CONFIABLES.
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Any
 
@@ -120,6 +121,50 @@ def wrap_untrusted(label: str, content: Any) -> str:
     return f"{_BEGIN.format(label=label)}\n{_neutralize(redact_secrets(content))}\n{_END.format(label=label)}"
 
 
+# ---- W3: token budgets (safety net; the backend already enforces them) ------------------------
+def _env_int(name: str, default: int) -> int:
+    try:
+        v = int(os.environ.get(name, ""))
+        return v if v > 0 else default
+    except ValueError:
+        return default
+
+
+CHARS_PER_TOKEN = 4
+CUT_MARK = " [...recortado por presupuesto de contexto]"
+
+
+def dep_budget_tokens() -> int:
+    return _env_int("DEP_CONTEXT_TOKEN_BUDGET", 8000)
+
+
+def synth_budget_tokens() -> int:
+    # Go splits requests above SYNTH_TOKEN_BUDGET (12000), so a single call stays below this.
+    return _env_int("SYNTH_PROMPT_TOKEN_BUDGET", 24000)
+
+
+def _as_text(content: Any) -> str:
+    return content if isinstance(content, str) else json.dumps(content, ensure_ascii=False, indent=2, default=str)
+
+
+def fit_texts(texts: list[str], budget_tokens: int) -> list[str]:
+    """Deterministic cap: unchanged while the total fits; otherwise each text gets an equal share."""
+    budget = budget_tokens * CHARS_PER_TOKEN
+    if sum(len(t) for t in texts) <= budget or not texts:
+        return texts
+    share = max(len(CUT_MARK) + 40, budget // len(texts))
+    return [t if len(t) <= share else t[: max(0, share - len(CUT_MARK))] + CUT_MARK for t in texts]
+
+
+def _dep_label(dep: Any) -> str:
+    label = f"salida de dependencia {dep.task_id} (agente {dep.agent_id})"
+    if dep.ref:
+        label += f" ref {dep.ref}"
+    if dep.truncated:
+        label += " [solo resumen: el texto completo se omitio por presupuesto; consulta la referencia]"
+    return label
+
+
 def _join(value: Any) -> str:
     if isinstance(value, (list, tuple)):
         return "; ".join(str(v) for v in value)
@@ -148,8 +193,22 @@ def build_task_prompt(req: RunTaskRequest) -> str:
         "",
         UNTRUSTED_NOTICE,
     ]
-    for dep in ctx.dependency_outputs:
-        lines += ["", wrap_untrusted(f"salida de dependencia {dep.task_id} (agente {dep.agent_id})", dep.output)]
+    dep_texts = fit_texts([_as_text(d.output) for d in ctx.dependency_outputs], dep_budget_tokens())
+    for dep, text in zip(ctx.dependency_outputs, dep_texts):
+        lines += ["", wrap_untrusted(_dep_label(dep), text)]
+    if ctx.dependency_omitted:
+        lines += ["", f"NOTA: {ctx.dependency_omitted} dependencias mas se omitieron por presupuesto de contexto."]
+    pc = ctx.project_context
+    if pc is not None:
+        if pc.index:
+            index = [{"ref": e.ref, "title": e.title, "agent": e.agent_id, "summary": e.summary} for e in pc.index]
+            label = "indice del proyecto (tareas ya completadas)"
+            if pc.index_omitted:
+                label += f" ({pc.index_omitted} mas omitidas)"
+            lines += ["", wrap_untrusted(label, index)]
+        art_texts = fit_texts([a.text for a in pc.artifacts], dep_budget_tokens() // 2)
+        for a, text in zip(pc.artifacts, art_texts):
+            lines += ["", wrap_untrusted(f"artefacto {a.id} ({a.title})", text)]
     if ctx.memory:
         mem = [{"scope": m.scope, "key": m.key, "value": m.value} for m in ctx.memory]
         lines += ["", wrap_untrusted("memoria del agente", mem)]
@@ -182,12 +241,23 @@ def build_consult_prompt(from_id: str, to_id: str, question: str, context: Any, 
     return "\n".join(lines)
 
 
-def build_synthesis_prompt(request_text: str, outputs: list[Any], locale: str = "es", tone: str = "neutral") -> str:
+def build_synthesis_prompt(request_text: str, outputs: list[Any], locale: str = "es", tone: str = "neutral",
+                           stage: str = "", part: int = 0, parts: int = 0) -> str:
     lines = [f"SOLICITUD ORIGINAL: {request_text}", "", UNTRUSTED_NOTICE]
-    for o in outputs:
-        lines += ["", wrap_untrusted(f"salida de tarea {o.task_id} ({o.title}) agente {o.agent_id}", o.output)]
-    lines.append("\nRedacta el reporte ejecutivo final: title, summary y sections (heading, body). "
-                 + language_rule(locale, tone))
+    texts = fit_texts([_as_text(o.output) for o in outputs], synth_budget_tokens())
+    for o, text in zip(outputs, texts):
+        lines += ["", wrap_untrusted(f"salida de tarea {o.task_id} ({o.title}) agente {o.agent_id}", text)]
+    if stage == "group":
+        lines.append(f"\nEsta es la parte {part} de {parts} de un proyecto grande: sintetiza SOLO estas salidas "
+                     "(title, summary y sections con heading y body). Otra pasada las combinara despues; "
+                     "conserva cifras, decisiones y riesgos concretos. " + language_rule(locale, tone))
+    elif stage == "final":
+        lines.append(f"\nLas salidas anteriores son {parts} sintesis parciales del mismo proyecto. Integralas en UN "
+                     "solo reporte ejecutivo final: title, summary y sections (heading, body), sin repetir y sin "
+                     "perder cifras ni riesgos. " + language_rule(locale, tone))
+    else:
+        lines.append("\nRedacta el reporte ejecutivo final: title, summary y sections (heading, body). "
+                     + language_rule(locale, tone))
     return "\n".join(lines)
 
 
