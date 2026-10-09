@@ -131,6 +131,12 @@ func (c *Client) PlanPhase(ctx context.Context, in application.PlanPhaseRequest)
 	return
 }
 
+// Replan implements application.Replanner (POST /v1/replan).
+func (c *Client) Replan(ctx context.Context, in application.ReplanRequest) (out application.ReplanResponse, err error) {
+	err = c.do(ctx, http.MethodPost, "/v1/replan", in, &out)
+	return
+}
+
 func (c *Client) RunTask(ctx context.Context, in application.RunTaskRequest) (out application.RunTaskResponse, err error) {
 	err = c.do(ctx, http.MethodPost, "/v1/run-task", in, &out)
 	return

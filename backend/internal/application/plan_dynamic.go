@@ -142,10 +142,19 @@ type RunAmendment struct {
 	Add []NewTaskSpec
 	// Repoint maps a pending or blocked task to its complete new dependency list.
 	Repoint map[string][]string
+	// Edit changes the title, description or agent of pending (or blocked) tasks.
+	Edit map[string]TaskEdit
 	// Drop lists pending (or blocked) tasks that must never run.
 	Drop []string
 	// Requeue lists blocked tasks to run again once their dependencies are done.
 	Requeue []string
+}
+
+// TaskEdit is a change of the content of a task that has not started.
+type TaskEdit struct {
+	Title       *string
+	Description *string
+	AgentID     *string
 }
 
 // AmendResult says what AmendRun did.
@@ -184,6 +193,11 @@ func (o *Orchestrator) AmendRun(ctx context.Context, requestID string, a RunAmen
 		return nil
 	}
 	for id := range a.Repoint {
+		if err := editable(id); err != nil {
+			return AmendResult{}, err
+		}
+	}
+	for id := range a.Edit {
 		if err := editable(id); err != nil {
 			return AmendResult{}, err
 		}
@@ -296,16 +310,34 @@ func (o *Orchestrator) AmendRun(ctx context.Context, requestID string, a RunAmen
 	for _, id := range a.Requeue {
 		requeue[id] = true
 	}
-	var edited []domain.Task // existing tasks whose record changes
+	editIDs := map[string]bool{}
 	for id := range a.Repoint {
-		if !slices.Contains(a.Drop, id) {
-			edited = append(edited, changed(id))
-		}
+		editIDs[id] = true
+	}
+	for id := range a.Edit {
+		editIDs[id] = true
 	}
 	for _, id := range a.Requeue {
-		if _, ok := a.Repoint[id]; !ok {
-			edited = append(edited, changed(id))
+		editIDs[id] = true
+	}
+	var edited []domain.Task // existing tasks whose record changes
+	for id := range editIDs {
+		if slices.Contains(a.Drop, id) {
+			continue
 		}
+		t := changed(id)
+		if e, ok := a.Edit[id]; ok {
+			if e.Title != nil && strings.TrimSpace(*e.Title) != "" {
+				t.Title = strings.TrimSpace(*e.Title)
+			}
+			if e.Description != nil {
+				t.Description = *e.Description
+			}
+			if e.AgentID != nil && *e.AgentID != "" {
+				t.AgentID = *e.AgentID
+			}
+		}
+		edited = append(edited, t)
 	}
 	slices.SortFunc(edited, func(x, y domain.Task) int { return strings.Compare(x.ID, y.ID) })
 
@@ -422,6 +454,11 @@ func (o *Orchestrator) amendLive(ctx context.Context, lr *liveRun, a RunAmendmen
 	lr.amendMu.Lock()
 	defer lr.amendMu.Unlock()
 	for _, t := range fresh {
+		if _, known := lr.rs.agents[t.AgentID]; !known {
+			return false, fmt.Errorf("%w: agent %q is not part of this run (it was hired after the project started)", domain.ErrInvalid, t.AgentID)
+		}
+	}
+	for _, t := range edited {
 		if _, known := lr.rs.agents[t.AgentID]; !known {
 			return false, fmt.Errorf("%w: agent %q is not part of this run (it was hired after the project started)", domain.ErrInvalid, t.AgentID)
 		}
