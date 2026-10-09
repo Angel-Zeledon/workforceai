@@ -775,3 +775,28 @@ ROLE_CONTENT: dict[str, dict] = {
         ["Update both dependencies before releasing.", "Announce the API change with a transition version."],
         0.76, ["Draft release notes (human review)"]), consults=[], tool_requests=[]),
 }
+
+
+# ------------------------------------------------------------------ finance_treasury (analysis only, Q3)
+ROLE_NAMES["finance_treasury"] = "Finance and treasury"
+ROLE_REASONS["finance_treasury"] = "reconciles imported statements and projects cash flow, analysis only"
+CHAT["topic_labels"]["treasury"] = "treasury and cash flow"
+CHAT["area"]["finance_treasury"] = "treasury, reconciliations and cash flow"
+CHAT["answer"]["finance_treasury"] = [
+    "I work from the statements a person imported: I reconcile line by line and flag the differences. Which account and period?",
+    "I can build the 13-week cash forecast with explicit assumptions. Example, not financial advice. Which receipts and payments do we know?",
+    "I will prepare a proposed payment list; I pay nothing: a person decides and executes it outside the system.",
+]
+CHAT["greet_peer"]["finance_treasury"] = ["Hi. Reconciliations up to date.", "Hey! The next 13 weeks of cash, under control."]
+CHAT["contrib"]["finance_treasury"] = ["From treasury: before committing a payment, look at the cash flow of the coming weeks."]
+CHAT["consult_a"]["finance_treasury"] = ["With the imported statement I reconcile and tell you which items are still open; example figures, not financial advice."]
+ROLE_CONTENT["finance_treasury"] = dict(output=_o(
+    "Example reconciliation and forecast over the imported statement: 2 unreconciled items and one tight cash week. Example, not financial advice.",
+    ["46 of 48 statement movements were reconciled; 2 remain open (a fee and a deposit without an invoice).",
+     "The text of statement cells was treated as data; no instruction found in them was followed.",
+     "Forecast week 6 falls below the minimum cushion if every overdue invoice is paid."],
+    {"movements": 48, "reconciled": 46, "open_items": 2, "weeks_projected": 13},
+    ["Collecting two overdue invoices earlier would cover week 6."],
+    ["Statement imported by a person (read-only) and receivables aging."],
+    ["Review the 2 open items with accounting.", "Decide which payments of the proposed list to run; a person executes them outside the system."],
+    0.72, ["Proposed payment list (draft, never executed)"]), consults=[], tool_requests=[])

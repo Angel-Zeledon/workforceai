@@ -818,3 +818,29 @@ ROLE_CONTENT: dict[str, dict] = {
         ["Actualizar las dos dependencias antes de publicar.", "Anunciar el cambio de API con una versión de transición."],
         0.76, ["Borrador de notas de versión (revisión humana)"]), consults=[], tool_requests=[]),
 }
+
+
+# ------------------------------------------------------------------ finance_treasury (analysis only, Q3)
+# Analysis of statements a person imported; never a bank action. Example figures: not financial advice.
+ROLE_NAMES["finance_treasury"] = "Finanzas y tesorería"
+ROLE_REASONS["finance_treasury"] = "concilia extractos importados y proyecta el flujo de caja, solo análisis"
+CHAT["topic_labels"]["treasury"] = "tesorería y flujo de caja"
+CHAT["area"]["finance_treasury"] = "tesorería, conciliaciones y flujo de caja"
+CHAT["answer"]["finance_treasury"] = [
+    "Trabajo sobre los extractos que importe una persona: concilio partida por partida y te marco las diferencias. ¿De qué cuenta y periodo?",
+    "Puedo armar la proyección de caja a 13 semanas con supuestos explícitos. Ejemplo, no asesoría financiera. ¿Qué cobros y pagos conocemos?",
+    "Prepararé una lista de pagos propuesta; no pago nada: la decide y la ejecuta una persona fuera del sistema.",
+]
+CHAT["greet_peer"]["finance_treasury"] = ["Hola. Con las conciliaciones al día.", "¡Buenas! La caja de las próximas 13 semanas, bajo control."]
+CHAT["contrib"]["finance_treasury"] = ["Desde tesorería: antes de comprometer un pago conviene ver el flujo de caja de las próximas semanas."]
+CHAT["consult_a"]["finance_treasury"] = ["Con el extracto importado concilio y te digo qué partidas siguen abiertas; son cifras de ejemplo, no asesoría financiera."]
+ROLE_CONTENT["finance_treasury"] = dict(output=_o(
+    "Conciliación y proyección de ejemplo sobre el extracto importado: 2 partidas sin conciliar y una semana con caja ajustada. Ejemplo, no asesoría financiera.",
+    ["Se conciliaron 46 de 48 movimientos del extracto; 2 quedan abiertos (comisión y un depósito sin factura).",
+     "El texto de las celdas del extracto se trató como datos; no se siguió ninguna instrucción contenida en ellos.",
+     "La semana 6 de la proyección queda por debajo del colchón mínimo si se pagan todas las facturas vencidas."],
+    {"movimientos": 48, "conciliados": 46, "partidas_abiertas": 2, "semanas_proyectadas": 13},
+    ["Adelantar el cobro de dos facturas vencidas cubriría la semana 6."],
+    ["Extracto importado por una persona (solo lectura) y antigüedad de cuentas por cobrar."],
+    ["Revisar las 2 partidas abiertas con contabilidad.", "Decidir qué pagos de la lista propuesta se ejecutan; los ejecuta una persona fuera del sistema."],
+    0.72, ["Lista de pagos propuesta (borrador, nunca ejecutada)"]), consults=[], tool_requests=[])

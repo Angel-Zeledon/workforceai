@@ -12,6 +12,8 @@ const T: { id: string; category: string; color: string; look: RoleTemplate["disp
     es: ["Analista de datos", "Explora datos, calcula métricas y propone visualizaciones."], en: ["Data analyst", "Explores data, computes metrics and proposes visualizations."], names: ["Camila Nuñez", "Camille Nash"], tools: ["sheets", "docs"] },
   { id: "software_engineer", category: "engineering", color: "#7a5bd1", look: { skin: "#edc29b", hair: "#16110d", hair_style: "short", accessory: "headphones", tie: false, female: false },
     es: ["Ingeniería de software", "Revisa código, redacta especificaciones y apoya el diseño técnico."], en: ["Software engineer", "Reviews code, drafts specs and supports technical design."], names: ["Diego Fuentes", "Dean Foster"], tools: ["github", "docs"] },
+  { id: "finance_treasury", category: "finance", color: "#2b8a8f", look: { skin: "#e0b08c", hair: "#2a211b", hair_style: "bun", accessory: "roundglasses", tie: false, female: true },
+    es: ["Finanzas y tesorería (solo análisis)", "Concilia extractos importados, revisa antigüedad de cuentas por cobrar y proyecta el flujo a 13 semanas. Nunca mueve dinero."], en: ["Finance and treasury (analysis only)", "Reconciles imported statements, reviews receivables aging and projects a 13-week cash flow. It never moves money."], names: ["Valeria Montoya", "Valerie Monroe"], tools: ["sheets", "docs"] },
 ];
 
 export class MockRoles {

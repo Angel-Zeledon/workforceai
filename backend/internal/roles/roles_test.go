@@ -54,7 +54,7 @@ func TestBuiltinTemplatesPassTheLint(t *testing.T) {
 		}
 		ids[tp.ID] = true
 	}
-	for _, id := range []string{"project_manager", "education", "data_analyst", "software_engineer"} {
+	for _, id := range []string{"project_manager", "education", "data_analyst", "software_engineer", "finance_treasury"} {
 		tp, ok := Get(id)
 		if !ok || tp.Seed != nil {
 			t.Fatalf("%s must be a hireable template outside the demo org", id)
@@ -63,7 +63,7 @@ func TestBuiltinTemplatesPassTheLint(t *testing.T) {
 			t.Fatalf("%s: a new role starts at approve_each, got %s", id, tp.Autonomy.Default)
 		}
 	}
-	if len(ids) != 11 {
+	if len(ids) != 12 {
 		t.Fatalf("templates = %d", len(ids))
 	}
 }
@@ -111,5 +111,33 @@ func TestInstantiateAndProfile(t *testing.T) {
 	}
 	if _, ok := ProfileOf("unknown", "es"); ok {
 		t.Fatal("unknown role has no profile")
+	}
+}
+
+// Q3: the treasury role is analysis only: no tool that could move money, amber
+// with a rules ceiling, disclaimers in both languages, never in the demo seed.
+func TestFinanceTreasuryIsAnalysisOnly(t *testing.T) {
+	tp, ok := Get("finance_treasury")
+	if !ok || tp.Seed != nil {
+		t.Fatal("finance_treasury must be a hireable template outside the demo org")
+	}
+	if tp.RiskTier != "amber" || tp.Autonomy.Ceiling != "rules" || tp.Autonomy.Default != "approve_each" {
+		t.Fatalf("tier/autonomy: %s %+v", tp.RiskTier, tp.Autonomy)
+	}
+	safe := map[string]bool{"spreadsheet": true, "calculator": true, "artifacts": true}
+	for _, tool := range tp.Tools {
+		if !safe[tool] {
+			t.Fatalf("tool %q is not in the analysis-only set", tool)
+		}
+	}
+	for _, loc := range []string{"es", "en"} {
+		if len(tp.I18n[loc].Disclaimers) < 2 {
+			t.Fatalf("%s: disclaimers missing", loc)
+		}
+	}
+	for _, a := range SeedAgents() {
+		if a.Role == "finance_treasury" {
+			t.Fatal("the demo seed must stay at 7 agents")
+		}
 	}
 }
