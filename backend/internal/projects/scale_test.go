@@ -69,7 +69,20 @@ func (s *scaleRT) Synthesize(ctx context.Context, in application.SynthesizeReque
 func TestScaleHierarchicalProjectEndToEnd(t *testing.T) {
 	const budget = 10.0
 	rt := &scaleRT{hierRT: &hierRT{fakeRuntime: newRT()}}
-	rt.onRun = func(application.RunTaskRequest) { time.Sleep(25 * time.Millisecond) }
+	rt.onRun = func(application.RunTaskRequest) {
+		// Until more than 4 calls have overlapped once, hold each call briefly so
+		// the peak measures what the scheduler allows, not goroutine timing under
+		// a loaded -race run. A scheduler capped at 4 still fails the assertion.
+		for deadline := time.Now().Add(60 * time.Millisecond); time.Now().Before(deadline); time.Sleep(time.Millisecond) {
+			rt.fakeRuntime.mu.Lock()
+			p := rt.fakeRuntime.peak
+			rt.fakeRuntime.mu.Unlock()
+			if p > 4 {
+				break
+			}
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 	var flaky atomic.Int32
 	const flakyTitle, gateTitle = "Design step 3", "Support step 2"
 	rt.failFn = func(title string) error {
@@ -239,7 +252,7 @@ func TestScaleHierarchicalProjectEndToEnd(t *testing.T) {
 	if dd.Project.SpentUSD <= 0.8*budget || dd.Project.SpentUSD >= budget {
 		t.Fatalf("spent %.2f of %.2f: the test must cross 80%% without reaching the cap", dd.Project.SpentUSD, budget)
 	}
-	if elapsed > 10*time.Second {
+	if elapsed > 20*time.Second {
 		t.Fatalf("took %s", elapsed)
 	}
 	t.Logf("%d tasks, peak %d, synthesis calls %d, %s", total, rt.fakeRuntime.peak, rt.synth.Load(), elapsed.Round(time.Millisecond))
