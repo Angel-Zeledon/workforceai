@@ -900,7 +900,7 @@ func (o *Orchestrator) call(ctx context.Context, name string, fn func(ctx contex
 	attempts := max(1, o.cfg.MaxRetries)
 	var err error
 	for i := 0; i < attempts; i++ {
-		if used, e := o.store.OrgCost(ctx, o.org(ctx)); e == nil && o.cfg.BudgetUSD > 0 && used >= o.cfg.BudgetUSD {
+		if used, e := o.budget.OrgSpent(ctx, o.org(ctx)); e == nil && o.cfg.BudgetUSD > 0 && used >= o.cfg.BudgetUSD {
 			o.rec.Audit(ctx, domain.AuditLog{Actor: "system", Action: "budget.exceeded", Entity: "org", EntityID: o.org(ctx),
 				Details: map[string]any{"used_usd": used, "budget_usd": o.cfg.BudgetUSD, "call": name}})
 			return errBudget

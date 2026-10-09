@@ -421,6 +421,22 @@ func (s *Store) ListApprovals(_ context.Context, _, status string) ([]domain.App
 	return out, nil
 }
 
+// ListApprovalsByRequest returns the approvals of the tasks of a request plus
+// those of extraTaskIDs, newest first.
+func (s *Store) ListApprovalsByRequest(_ context.Context, _, requestID string, extraTaskIDs []string) ([]domain.Approval, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := []domain.Approval{}
+	for _, id := range s.apprOrder {
+		a := s.approvals[id]
+		if t, ok := s.tasks[a.TaskID]; (ok && t.RequestID == requestID) || slices.Contains(extraTaskIDs, a.TaskID) {
+			out = append(out, a)
+		}
+	}
+	slices.Reverse(out)
+	return out, nil
+}
+
 func (s *Store) CreateReport(_ context.Context, _ string, r domain.Report) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
