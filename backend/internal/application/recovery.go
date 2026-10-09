@@ -138,6 +138,7 @@ func (o *Orchestrator) recoverTask(ctx context.Context, taskID string, skip bool
 	if t.Status != domain.TaskFailed && t.Status != domain.TaskBlocked {
 		return RecoveryResult{}, fmt.Errorf("%w: only a failed or blocked task can be %s (it is %s)", domain.ErrConflict, map[bool]string{false: "retried", true: "skipped"}[skip], t.Status)
 	}
+	o.awaitRunSettled(ctx, org, t)
 	req, err := o.store.GetRequest(ctx, org, t.RequestID)
 	if err != nil {
 		return RecoveryResult{}, err
@@ -247,6 +248,65 @@ func containsID(ids []string, id string) bool {
 		}
 	}
 	return false
+}
+
+// settleWait bounds awaitRunSettled; the run ends in milliseconds in practice.
+const settleWait = 5 * time.Second
+
+// awaitRunSettled lets the original run of the request finish what it is doing
+// because of the failure of t before the recovery looks at the store. The run
+// persists the failed task first, then blocks its dependents one by one, and
+// ends the request (failed/report) afterwards. A recovery that slips in
+// between would miss the dependents that were not yet blocked (the run then
+// blocks them for good) and have its "running" status overwritten by the
+// run's final one. It waits (bounded) for the dependents of t to be decided
+// and, when nothing else is in flight, for the run to end. It never waits for
+// a run that is busy with other branches (e.g. waiting for a human).
+func (o *Orchestrator) awaitRunSettled(ctx context.Context, org string, t domain.Task) {
+	deadline := time.Now().Add(settleWait)
+	for o.isTracked(t.RequestID) && time.Now().Before(deadline) {
+		all, err := o.store.ListTasksByRequest(ctx, org, t.RequestID)
+		if err != nil || !runWrappingUp(t, all) {
+			return
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+}
+
+// runWrappingUp reports whether the original run is only finishing the failure
+// of t: every task is decided except dependents of t that it has still to block,
+// or all are decided and the run has still to end the request.
+func runWrappingUp(t domain.Task, all []domain.Task) bool {
+	dep := map[string]bool{t.ID: true}
+	for changed := true; changed; {
+		changed = false
+		for _, x := range all {
+			if dep[x.ID] {
+				continue
+			}
+			for _, d := range x.DependsOn {
+				if dep[d] {
+					dep[x.ID], changed = true, true
+					break
+				}
+			}
+		}
+	}
+	for _, x := range all {
+		if x.Status == domain.TaskPending && dep[x.ID] {
+			return true // its cascade block is still to come
+		}
+	}
+	for _, x := range all {
+		if x.Status == domain.TaskPending || x.Status == domain.TaskRunning {
+			return false // busy with other branches: the run is not about to end
+		}
+	}
+	return true // everything decided: the run is ending the request
 }
 
 // requeueSet returns the ids to put back in the queue: the task itself (retry)
