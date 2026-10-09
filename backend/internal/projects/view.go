@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
 )
 
@@ -63,6 +64,19 @@ func (s *Service) loadSnapshot(ctx context.Context, rec Record) (snapshot, error
 			snap.tasks[id] = t
 			snap.taskNode[t.ID] = id
 		}
+	}
+	if l, ok := s.cfg.Core.(application.RequestApprovalLister); ok {
+		// Filtered at the store: the cost no longer grows with the org's approvals.
+		all, err := l.ListApprovalsByRequest(ctx, org, rec.RequestID, []string{budgetTaskID(rec.ID)})
+		if err != nil {
+			return snap, err
+		}
+		for _, a := range all {
+			if _, ok := snap.taskNode[a.TaskID]; ok || a.TaskID == budgetTaskID(rec.ID) {
+				snap.approvals = append(snap.approvals, a)
+			}
+		}
+		return snap, nil
 	}
 	all, err := s.cfg.Core.ListApprovals(ctx, org, "")
 	if err != nil {
@@ -192,7 +206,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 	c := countStates(nodes)
 	sum := Summary{ID: rec.ID, Name: rec.Name, NameKey: rec.NameKey, Goal: rec.Goal, Status: rec.Status, Control: rec.Control, TemplateID: rec.TemplateID,
 		BudgetUSD: rec.BudgetUSD, TasksDone: c.done, TasksTotal: c.total, Running: c.running, Awaiting: c.awaiting, Failed: c.failed, Light: "green",
-		CreatedAt: rec.CreatedAt, StartedAt: rec.StartedAt, FinishedAt: rec.FinishedAt, DeadlineAt: rec.DeadlineAt, ObjectivesCnt: len(rec.Objectives), RequestID: rec.RequestID}
+		CreatedAt: rec.CreatedAt, StartedAt: rec.StartedAt, FinishedAt: rec.FinishedAt, DeadlineAt: rec.DeadlineAt, ObjectivesCnt: len(rec.Objectives), RequestID: rec.RequestID, BudgetWarnPct: warnedPct(rec.BudgetWarned)}
 	if sum.Control == "" {
 		sum.Control = ControlActive
 	}
@@ -366,6 +380,24 @@ type liveProject struct {
 	lastSig    map[string]string
 	budgetApp  string // id of the pending extend_budget approval
 	lastStatus string
+
+	// monitor state (only the watch goroutine writes it)
+	poke      chan struct{} // wakes the monitor early (human action, cap change)
+	lastFP    string        // fingerprint of the last snapshot that was built
+	lastFull  time.Time     // when the last full rebuild ran
+	idleTicks int           // consecutive ticks without a change
+}
+
+// wake nudges the monitor so it re-reads the project now instead of after the
+// idle backoff. Never blocks.
+func (lp *liveProject) wake() {
+	if lp == nil {
+		return
+	}
+	select {
+	case lp.poke <- struct{}{}:
+	default:
+	}
 }
 
 func (lp *liveProject) revOf(n Node) int {

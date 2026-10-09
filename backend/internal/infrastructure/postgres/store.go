@@ -602,6 +602,17 @@ func (s *Store) ListApprovals(ctx context.Context, orgID, status string) ([]doma
 	return many(ctx, s, orgID, scanApproval, `SELECT `+apprCols+` FROM approvals WHERE org_id=$1 AND ($2='' OR status=$2) ORDER BY created_at DESC`, orgID, status)
 }
 
+// ListApprovalsByRequest returns the approvals of the tasks of one request plus
+// those of extraTaskIDs (e.g. a project's budget approval), newest first. It is
+// the filtered counterpart of ListApprovals(ctx, org, "") (migration 400).
+func (s *Store) ListApprovalsByRequest(ctx context.Context, orgID, requestID string, extraTaskIDs []string) ([]domain.Approval, error) {
+	if extraTaskIDs == nil {
+		extraTaskIDs = []string{}
+	}
+	return many(ctx, s, orgID, scanApproval, `SELECT `+apprCols+` FROM approvals WHERE org_id=$1 AND (task_id = ANY($3)
+		OR task_id IN (SELECT id FROM tasks WHERE org_id=$1 AND request_id=$2)) ORDER BY created_at DESC`, orgID, requestID, extraTaskIDs)
+}
+
 // ---- reports ----
 
 const repCols = `id, request_id, title, summary, sections, contributors, cost_usd, created_at`

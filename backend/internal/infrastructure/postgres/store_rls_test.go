@@ -217,6 +217,14 @@ func TestStoreIsolatesTwoOrganizations(t *testing.T) {
 		if _, err := st.GetApproval(ctx, c.org, "ap-"+c.other); !errors.Is(err, domain.ErrNotFound) {
 			t.Errorf("%s reads approval of other tenant: %v", c.org, err)
 		}
+		// W5: the filtered approvals query returns this tenant's approval of the
+		// request (and the extra task id), never another tenant's.
+		if aps, err := st.ListApprovalsByRequest(ctx, c.org, c.req, []string{"project:x"}); err != nil || len(aps) != 1 || aps[0].ID != "ap-"+c.org {
+			t.Errorf("%s approvals by request = %v, %v", c.org, aps, err)
+		}
+		if aps, _ := st.ListApprovalsByRequest(ctx, c.org, c.otherReq, nil); len(aps) != 0 {
+			t.Errorf("%s sees approvals of another tenant's request: %v", c.org, aps)
+		}
 		mem, _ := st.ListMemory(ctx, c.org, "sales")
 		if len(mem) != 1 || mem[0].Value != "v-"+c.org {
 			t.Errorf("%s memory = %v", c.org, mem)

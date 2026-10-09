@@ -38,6 +38,8 @@ type Budget struct {
 	estimates map[string]domain.CostEstimate // org|request id
 	// observer (optional) receives every recorded cost (anomaly detection).
 	observer AnomalyObserver
+	// spend is the incremental org spend counter (spend.go).
+	spend spendCounter
 }
 
 // NewBudget builds the manager. Config zero values disable the optional caps.
@@ -161,7 +163,7 @@ func (b *Budget) Reserve(ctx context.Context, requestID, agentID string, estimat
 		return nil, nil, err
 	}
 	caps := capsMap(capList)
-	used, err := b.store.OrgCost(ctx, org)
+	used, err := b.OrgSpent(ctx, org)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -227,6 +229,7 @@ func (b *Budget) Record(ctx context.Context, requestID string, u domain.UsageEnt
 	if err := b.store.AddCost(ctx, org, requestID, u.TaskID, cost); err != nil {
 		return cost, err
 	}
+	b.spend.add(org, cost)
 	if err := b.store.AddUsage(ctx, org, u); err != nil {
 		return cost, err
 	}
@@ -261,7 +264,7 @@ func (b *Budget) checkWarnings(ctx context.Context, org, requestID, agentID stri
 		}
 	}
 	if b.cfg.BudgetUSD > 0 {
-		if used, err := b.store.OrgCost(ctx, org); err == nil {
+		if used, err := b.OrgSpent(ctx, org); err == nil {
 			ws = append(ws, w{domain.ScopeOrg, org, b.cfg.BudgetUSD, used})
 		}
 	}
@@ -434,6 +437,7 @@ func (b *Budget) reset() {
 	b.reserved = map[string]float64{}
 	b.pauses = map[string]*PauseInfo{}
 	b.warned = map[string]bool{}
+	b.spend.reset()
 	b.confirm = map[string]chan Confirmation{}
 	b.estimates = map[string]domain.CostEstimate{}
 	close(b.wake)

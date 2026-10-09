@@ -357,3 +357,10 @@ type SynthesizeResponse struct {
 	Sections []domain.Section `json:"sections"`
 	Usage    Usage            `json:"usage"`
 }
+
+// RequestApprovalLister is an optional Store capability: the approvals of one
+// request (plus extra task ids) without loading every approval of the org.
+// Callers fall back to ListApprovals when the store does not implement it.
+type RequestApprovalLister interface {
+	ListApprovalsByRequest(ctx context.Context, orgID, requestID string, extraTaskIDs []string) ([]domain.Approval, error)
+}
