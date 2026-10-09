@@ -39,6 +39,9 @@ type Node struct {
 // branches keep running meanwhile.
 type Scheduler struct {
 	MaxParallel int
+	// Live (optional) lets the caller amend the node set while Run is running
+	// (scheduler_dynamic.go).
+	Live *LiveHandle
 }
 
 type evKind int
@@ -129,6 +132,7 @@ func (s Scheduler) Run(ctx context.Context, nodes []Node, exec func(ctx context.
 	if limit < 1 {
 		limit = 1
 	}
+	nodes = append([]Node(nil), nodes...) // Live amendments append to it: never touch the caller's array
 	n := len(nodes)
 	outcomes := make(map[string]Outcome, n)
 	index := make(map[string]int, n)
@@ -200,8 +204,19 @@ func (s Scheduler) Run(ctx context.Context, nodes []Node, exec func(ctx context.
 	var resumers []chan struct{}
 	swept := false
 	done := ctx.Done()
+	lv := s.Live
+	var wakeCh <-chan struct{}
+	if lv != nil {
+		wakeCh = lv.wake
+	}
+	st := &schedState{nodes: &nodes, index: index, uniq: &uniq, dependents: &dependents, indeg: &indeg, unknownDep: &unknownDep,
+		started: &started, rank: &rank, outcomes: outcomes, ready: ready, decided: decided, skipCascade: skipCascade, markSkipped: markSkipped,
+		cancelled: func() bool { return ctx.Err() != nil }}
 
 	for {
+		if lv != nil {
+			lv.applyPending(st)
+		}
 		if ctx.Err() != nil {
 			if !swept {
 				swept = true
@@ -249,6 +264,9 @@ func (s Scheduler) Run(ctx context.Context, nodes []Node, exec func(ctx context.
 			}(nodes[i].ID)
 		}
 		if running == 0 {
+			if lv != nil && !lv.closeIfIdle() {
+				continue // an amendment arrived: apply it before deciding the run is over
+			}
 			// Nothing running and nothing launchable: whatever is left is stuck (cycle).
 			for _, i := range uniq {
 				if !decided(i) {
@@ -280,6 +298,7 @@ func (s Scheduler) Run(ctx context.Context, nodes []Node, exec func(ctx context.
 					}
 				}
 			}
+		case <-wakeCh: // an amendment is pending (applied at the top of the loop)
 		case <-done:
 			done = nil // handled at the top of the loop
 		}
