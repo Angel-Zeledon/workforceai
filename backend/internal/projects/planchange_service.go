@@ -44,9 +44,6 @@ func (s *Service) changeable(rec Record, d Detail) error {
 	if rec.Control == ControlCancelled || rec.Status == StatusCancelled || d.Project.Status == StatusCancelled {
 		return fmt.Errorf("%w: the project is cancelled", domain.ErrConflict)
 	}
-	if rec.Status == StatusDone || d.Project.Status == StatusDone {
-		return fmt.Errorf("%w: the project already finished", domain.ErrConflict)
-	}
 	if s.cfg.Orch == nil {
 		return fmt.Errorf("%w: plan changes are not available", domain.ErrConflict)
 	}
@@ -322,7 +319,7 @@ func (s *Service) applyLocked(ctx context.Context, rec Record, ch PlanChange) (P
 		rec.Nodes = plan.nodes
 		rec.StructureVersion++
 		rec.Estimate = estimatePlan(rec.Nodes, rec.Objectives)
-		if rec.Status == StatusFailed {
+		if rec.Status == StatusFailed || rec.Status == StatusDone { // follow-up work reopens a finished project
 			rec.Status, rec.FinishedAt, rec.Error = StatusRunning, nil, ""
 		}
 		if err := s.cfg.Store.Put(ctx, rec); err != nil {

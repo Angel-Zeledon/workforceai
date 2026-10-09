@@ -441,7 +441,6 @@ func (s *Service) planChange(rec Record, states map[string]string, agentIDs []st
 				}
 				d.WBSPath = wbs(parent)
 				appendNew(d)
-				impact.Added++
 			}
 		case OpReplaceTask:
 			target, ok := live(op.NodeID)
@@ -608,7 +607,8 @@ func (s *Service) planChange(rec Record, states map[string]string, agentIDs []st
 			}
 		}
 	}
-	impact.NodesAfter = len(leaves(nodes))
+	impact.Added = len(addedNew)
+	impact.NodesAfter = len(activeLeaves(nodes))
 	// Cost and time against the remaining plan.
 	var added, removed float64
 	for _, d := range addedNew {
