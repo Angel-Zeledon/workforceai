@@ -26,18 +26,18 @@ func jbOpt[T any](v *T) []byte {
 }
 
 func (s *Store) PutRunMeta(ctx context.Context, orgID string, m application.RunMeta) error {
-	return s.exec(ctx, orgID, `INSERT INTO request_runs (org_id, request_id, requested_by, conversation_id, read_only, removed_task_ids, gate, chat, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now())
+	return s.exec(ctx, orgID, `INSERT INTO request_runs (org_id, request_id, requested_by, conversation_id, read_only, removed_task_ids, gate, chat, max_parallel, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,now())
 		ON CONFLICT (org_id, request_id) DO UPDATE SET requested_by=EXCLUDED.requested_by, conversation_id=EXCLUDED.conversation_id,
-			read_only=EXCLUDED.read_only, removed_task_ids=EXCLUDED.removed_task_ids, gate=EXCLUDED.gate, chat=EXCLUDED.chat, updated_at=now()`,
-		orgID, m.RequestID, m.RequestedBy, m.ConversationID, m.ReadOnly, jb(strs(m.RemovedTaskIDs)), jbOpt(m.Gate), jbOpt(m.Chat))
+			read_only=EXCLUDED.read_only, removed_task_ids=EXCLUDED.removed_task_ids, gate=EXCLUDED.gate, chat=EXCLUDED.chat, max_parallel=EXCLUDED.max_parallel, updated_at=now()`,
+		orgID, m.RequestID, m.RequestedBy, m.ConversationID, m.ReadOnly, jb(strs(m.RemovedTaskIDs)), jbOpt(m.Gate), jbOpt(m.Chat), m.MaxParallel)
 }
 
 func (s *Store) GetRunMeta(ctx context.Context, orgID, requestID string) (application.RunMeta, error) {
 	m, err := one(ctx, s, orgID, func(r scanner) (application.RunMeta, error) {
 		var m application.RunMeta
 		var removed, gate, chat []byte
-		err := r.Scan(&m.RequestID, &m.RequestedBy, &m.ConversationID, &m.ReadOnly, &removed, &gate, &chat, &m.UpdatedAt)
+		err := r.Scan(&m.RequestID, &m.RequestedBy, &m.ConversationID, &m.ReadOnly, &removed, &gate, &chat, &m.MaxParallel, &m.UpdatedAt)
 		unmarshal(removed, &m.RemovedTaskIDs)
 		if len(gate) > 0 {
 			m.Gate = &application.RunGate{}
@@ -48,7 +48,7 @@ func (s *Store) GetRunMeta(ctx context.Context, orgID, requestID string) (applic
 			unmarshal(chat, m.Chat)
 		}
 		return m, err
-	}, `SELECT request_id, requested_by, conversation_id, read_only, removed_task_ids, gate, chat, updated_at FROM request_runs WHERE org_id=$1 AND request_id=$2`, orgID, requestID)
+	}, `SELECT request_id, requested_by, conversation_id, read_only, removed_task_ids, gate, chat, max_parallel, updated_at FROM request_runs WHERE org_id=$1 AND request_id=$2`, orgID, requestID)
 	return m, mapErr(err)
 }
 

@@ -114,3 +114,55 @@ func TestHeldTasksDoNotBlockIndependentBranches(t *testing.T) {
 		}
 	}
 }
+
+// W1 gap: the per-project max_parallel is persisted with the run meta, so a
+// request resumed by restart recovery keeps it instead of using MAX_PARALLEL.
+func TestRecoverRestoresRunParallelOverride(t *testing.T) {
+	store, pub := newStore(t), &capture{}
+	cfg := func(c *application.Config) { c.MaxParallel = 2; c.MaxParallelPerOrg = 32; c.MaxRetries = 1 }
+
+	hold := make(chan struct{})
+	var inside atomic.Int32
+	p1 := startProcess(t, store, pub, &fakeRuntime{runTask: func(application.RunTaskRequest) (application.RunTaskResponse, error) {
+		inside.Add(1)
+		<-hold
+		return application.RunTaskResponse{}, fmt.Errorf("process killed") // never completes: the task stays for Recover
+	}}, cfg)
+	reqID, err := p1.orch.SubmitPlan(application.WithRunParallel(context.Background(), 8), "wide", independentPlan(8))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p1.waitFor("8 tasks inside the runtime", func() bool { return inside.Load() == 8 })
+	go func() { time.Sleep(50 * time.Millisecond); close(hold) }()
+	p1.stop() // the "crash": the request stays running in the store
+
+	var mu sync.Mutex
+	arrived := 0
+	all := make(chan struct{})
+	p2 := startProcess(t, store, pub, &fakeRuntime{runTask: func(application.RunTaskRequest) (application.RunTaskResponse, error) {
+		mu.Lock()
+		if arrived++; arrived == 8 {
+			close(all)
+		}
+		mu.Unlock()
+		select {
+		case <-all:
+			return okResult("ok"), nil
+		case <-time.After(5 * time.Second):
+			return application.RunTaskResponse{}, fmt.Errorf("only %d tasks ran together after recovery", arrived)
+		}
+	}}, cfg)
+	if n, err := p2.orch.Recover(context.Background(), nil); err != nil || n != 1 {
+		t.Fatalf("recover = %d, %v", n, err)
+	}
+	p2.orch.Wait()
+	mu.Lock()
+	n := arrived
+	mu.Unlock()
+	if n != 8 {
+		t.Fatalf("%d tasks ran after recovery, want 8", n)
+	}
+	if st := p2.request(reqID).Status; st != domain.RequestDone {
+		t.Fatalf("status = %s, want done (8 together needs the restored max_parallel=8, MAX_PARALLEL is 2)", st)
+	}
+}
