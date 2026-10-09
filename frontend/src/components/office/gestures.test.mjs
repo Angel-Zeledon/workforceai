@@ -40,7 +40,7 @@ test("gestures change the pose mid-way and stay finite and bounded", () => {
   for (const kind of Object.keys(GESTURE_DURATION)) {
     const base = computePose(zeroPose(), "stand:idle", 1.1, 0.4, 1);
     const p = { ...base };
-    applyGesture(p, kind, 0.5, 1.1, 0.7);
+    applyGesture(p, kind, 0.3, 1.1, 0.7);
     assert.ok(KEYS.some((k) => Math.abs(p[k] - base[k]) > 1e-3), `${kind} did nothing`);
     for (const k of KEYS) assert.ok(Number.isFinite(p[k]) && Math.abs(p[k]) < 8, `${kind} ${k}=${p[k]}`);
   }
