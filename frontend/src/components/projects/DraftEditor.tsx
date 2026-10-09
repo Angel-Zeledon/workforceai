@@ -3,8 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { estimatePlan, fmtDuration, isGroup, leaves, validatePlan } from "@/lib/projects/calc";
+import { MOCK } from "@/lib/config";
+import { limitCode, projectsApi } from "@/lib/projects/api";
 import { useProjects } from "@/lib/projects/store";
-import type { ProjectNode } from "@/lib/projects/types";
+import type { ProjectDetail as ProjectDetailT, ProjectNode } from "@/lib/projects/types";
 import { Btn, Card, Progress, useAgentName } from "../ui";
 import { Kpi, fmtMoney, useNodeTitle } from "./shared";
 
@@ -26,19 +28,31 @@ export function DraftEditor() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   useEffect(() => { if (!planning && p.budget_usd > 0 && budget === "") setBudget(String(p.budget_usd)); }, [planning, p.budget_usd, budget]);
+  // the real backend plans big projects in the background: poll until the planner is done
+  const planningRunning = !!planning || detail.planner?.status === "running";
+  useEffect(() => {
+    if (MOCK || !planningRunning) return;
+    const id = setInterval(() => { projectsApi.get(p.id).then((d) => { if (useProjects.getState().activeId === p.id) useProjects.setState({ detail: d }); }).catch(() => {}); }, 2000);
+    return () => clearInterval(id);
+  }, [planningRunning, p.id]);
   const b = Number(budget);
   const under = b > 0 && b < est.total.p50_usd;
   const errors = issues.filter((i) => i.severity === "error");
   const canLaunch = !planning && !errors.length && b > 0 && (!under || ack) && !busy;
   const doLaunch = async () => {
     setBusy(true); setErr("");
-    try { await launch({ approved_budget_usd: b, acknowledge_underbudget: ack }); } catch { setErr(t("pv.launch.error")); setBusy(false); }
+    try { await launch({ approved_budget_usd: b, acknowledge_underbudget: ack }); } catch (e) {
+      const lc = limitCode(e);
+      setErr(lc ? t(`pv.limit.${lc}`) : String((e as { detail?: string })?.detail ?? "").includes("planning_in_progress") ? t("pv.launch.planning") : t("pv.launch.error"));
+      setBusy(false);
+    }
   };
 
   return (
     <div data-testid="draft-editor" className="grid gap-5 xl:grid-cols-3">
       <div className="space-y-4 xl:col-span-2">
         <Card title={t("pv.draft.plan")} right={<span data-testid="draft-node-count" data-count={count} className="font-mono text-[11px] text-mute">{t("pv.card.nodes", { count })}</span>}>
+          <PlannerNotice detail={detail} />
           {planning && (
             <div className="mb-3">
               <div className="mb-1 text-[11px] font-semibold text-violet-700">{t("pv.draft.planning", { done: planning.done, total: planning.total })}</div>
@@ -132,6 +146,21 @@ function DraftRow({ n, agents, onChange }: { n: ProjectNode; agents: string[]; o
         </select>
       )}
       <span className="w-16 shrink-0 text-right font-mono text-[10px] text-mute">{n.est_cost_usd ? fmtMoney(n.est_cost_usd) : "—"}</span>
+    </div>
+  );
+}
+
+/** Failure or fallback of the planner of a goal-based project: visible, never silent. */
+function PlannerNotice({ detail }: { detail: ProjectDetailT }) {
+  const { t } = useT();
+  const pl = detail.planner;
+  if (!pl || (pl.status !== "failed" && pl.status !== "degraded")) return null;
+  const reason = pl.code ? t(`pv.planner.code.${pl.code}`) : "";
+  const failedPhases = pl.failed_phases?.length ? pl.failed_phases.join(", ") : "";
+  return (
+    <div data-testid="planner-notice" data-status={pl.status} data-code={pl.code ?? ""} className="mb-3 rounded-xl bg-amber-500/10 p-2 text-[11px] text-amber-800">
+      <div>{t(pl.status === "failed" ? "pv.planner.failed" : "pv.planner.degraded", { reason })}</div>
+      {failedPhases && <div className="mt-1">{t("pv.planner.phases", { phases: failedPhases })}</div>}
     </div>
   );
 }

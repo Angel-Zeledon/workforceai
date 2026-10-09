@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useT, fmtNumber } from "@/lib/i18n";
+import { limitCode } from "@/lib/projects/api";
 import { startProjectsRealtime, useProjects } from "@/lib/projects/store";
 import type { ProjectSummary, ProjectTemplate } from "@/lib/projects/types";
 import { Btn, Card, Empty, Progress } from "../ui";
@@ -122,7 +123,7 @@ function NewProjectWizard({ initialTemplate, onClose }: { initialTemplate: strin
       const b = Number(budget);
       await createDraft({ goal: goal.trim(), template_id: tplId || undefined, params, budget_usd: b > 0 ? b : undefined });
       onClose();
-    } catch { setErr(t("pv.wizard.error")); setBusy(false); }
+    } catch (e) { const lc = limitCode(e); setErr(lc ? t(`pv.limit.${lc}`) : t("pv.wizard.error")); setBusy(false); }
   };
   return (
     <Modal onClose={onClose} testId="new-project-wizard">
