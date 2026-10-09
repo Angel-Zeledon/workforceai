@@ -267,6 +267,12 @@ Artefactos: `sheet`, `doc`, `table`, `board`, `chart`, `pdf`, `form`, `inbox`, `
 - **Aprobación**: compartir informes con externos, exportaciones con PII, consultas que excedan el límite de filas.
 - **Notas**: es una **especialización del `analyst` existente**: se implementa como plantilla con más herramientas, no como motor nuevo.
 
+### 4.8b Auditor interno (`internal_auditor`) - Q1
+
+- **Riesgo**: `green`. Solo lectura, **sin herramientas externas** (`tools: []`); autonomía inicial `approve_each`. No aprueba nada ni modifica lo que revisa.
+- **Función**: revisa entregables contra criterios de aceptación (revisor de la calidad a escala, `docs/plans/large-workflows.md` "Q1 quality") y cruza cifras entre tareas (totales que deben coincidir). Sus salidas son **"verificado con evidencia"** (cita qué tareas y campos comparó) o **"inconsistencia"** con detalle; sin referencias de evidencia nunca se marca "verificado".
+- **Contratación**: está en la lista "Contratar desde plantilla"; **no** está en la semilla de la demo. Si existe en la organización, es el revisor de los proyectos jerárquicos y el planificador puede insertar un nodo de auditoría al final de cada fase (uno por fase).
+
 ### 4.9 Community manager (`community_manager`)
 
 - **Riesgo**: `red` por alcance público (publicar es irreversible en la práctica).

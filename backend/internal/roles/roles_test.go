@@ -54,7 +54,7 @@ func TestBuiltinTemplatesPassTheLint(t *testing.T) {
 		}
 		ids[tp.ID] = true
 	}
-	for _, id := range []string{"project_manager", "education", "data_analyst", "software_engineer"} {
+	for _, id := range []string{"project_manager", "education", "data_analyst", "software_engineer", "internal_auditor"} {
 		tp, ok := Get(id)
 		if !ok || tp.Seed != nil {
 			t.Fatalf("%s must be a hireable template outside the demo org", id)
@@ -63,7 +63,7 @@ func TestBuiltinTemplatesPassTheLint(t *testing.T) {
 			t.Fatalf("%s: a new role starts at approve_each, got %s", id, tp.Autonomy.Default)
 		}
 	}
-	if len(ids) != 11 {
+	if len(ids) != 12 {
 		t.Fatalf("templates = %d", len(ids))
 	}
 }

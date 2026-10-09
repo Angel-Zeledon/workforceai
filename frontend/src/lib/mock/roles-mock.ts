@@ -12,6 +12,8 @@ const T: { id: string; category: string; color: string; look: RoleTemplate["disp
     es: ["Analista de datos", "Explora datos, calcula métricas y propone visualizaciones."], en: ["Data analyst", "Explores data, computes metrics and proposes visualizations."], names: ["Camila Nuñez", "Camille Nash"], tools: ["sheets", "docs"] },
   { id: "software_engineer", category: "engineering", color: "#7a5bd1", look: { skin: "#edc29b", hair: "#16110d", hair_style: "short", accessory: "headphones", tie: false, female: false },
     es: ["Ingeniería de software", "Revisa código, redacta especificaciones y apoya el diseño técnico."], en: ["Software engineer", "Reviews code, drafts specs and supports technical design."], names: ["Diego Fuentes", "Dean Foster"], tools: ["github", "docs"] },
+  { id: "internal_auditor", category: "business", color: "#5b7fa6", look: { skin: "#d9a98a", hair: "#3a3a3d", hair_style: "short", accessory: "glasses", tie: true, female: false },
+    es: ["Auditor interno", "Revisa entregables y cruza cifras entre tareas, citando la evidencia. Solo lectura."], en: ["Internal auditor", "Reviews deliverables and cross-checks figures between tasks, citing the evidence. Read-only."], names: ["Álvaro Beltrán", "Alan Brooks"], tools: [] },
 ];
 
 export class MockRoles {
