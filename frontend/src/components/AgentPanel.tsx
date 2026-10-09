@@ -16,10 +16,14 @@ import { AgentChat } from "./chat/AgentChat";
 import { Avatar } from "./chat/ChatThread";
 import { Icon, type IconName } from "./icons";
 import { SectionWheel } from "./SectionWheel";
+import { ProfileSheet } from "./agent/ProfileSheet";
+import { ThoughtAudit } from "./agent/ThoughtAudit";
+import { TaskIntervention } from "./agent/TaskIntervention";
+import { AgentPauseToggle } from "./agent/AgentPauseToggle";
 
-const TABS = ["chat", "state", "tasks", "chats", "memory", "reports", "files", "activity", "profile"] as const;
+const TABS = ["chat", "state", "tasks", "chats", "memory", "reports", "files", "activity", "profile", "thoughts"] as const;
 type Tab = (typeof TABS)[number];
-const TAB_ICON: Record<Tab, IconName> = { chat: "chat", state: "pulse", tasks: "list", chats: "users", memory: "layers", reports: "doc", files: "folder", activity: "clock", profile: "user" };
+const TAB_ICON: Record<Tab, IconName> = { chat: "chat", state: "pulse", tasks: "list", chats: "users", memory: "layers", reports: "doc", files: "folder", activity: "clock", profile: "user", thoughts: "shield" };
 
 export function AgentPanel({ id }: { id: string }) {
   const { t } = useT();
@@ -74,11 +78,13 @@ export function AgentPanel({ id }: { id: string }) {
         </div>
         <div className="mt-3 flex items-center gap-2"><StateBadge state={agent.state} /><span className="truncate text-xs text-ink2">{agent.activity}</span></div>
         {agent.progress > 0 && <div className="mt-2"><Progress value={agent.progress} color={sm.color} /></div>}
+        <div className="mt-2"><AgentPauseToggle id={id} /></div>
       </div>
       <div role="tabpanel" aria-label={t(`panel.tab.${tab}`)} className={tab === "chat" ? "min-h-0 flex-1" : "min-h-0 flex-1 space-y-3 overflow-y-auto p-4"}>
         {tab === "chat" && <AgentChat id={id} />}
         {error && !detail && <Empty>{t("panel.loadError")}</Empty>}
-        {tab === "profile" && <Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card>}
+        {tab === "profile" && <><Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card><ProfileSheet id={id} /></>}
+        {tab === "thoughts" && <ThoughtAudit id={id} />}
         {tab === "state" && (
           <>
             <Card title={t("panel.currentTask")}>
@@ -124,6 +130,7 @@ export function AgentPanel({ id }: { id: string }) {
                 <div className="text-mute">{t("common.confidence")} {Math.round(task.output.confidence * 100)}%</div>
               </div>
             )}
+            <TaskIntervention taskId={task.id} status={task.status} />
           </Card>
         )) : <Empty>{t("panel.noTasks")}</Empty>)}
         {tab === "chats" && ((detail?.conversations ?? []).length ? (detail!.conversations).map((c) => (
