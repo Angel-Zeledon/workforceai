@@ -4,9 +4,12 @@ import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { useStore } from "@/lib/store";
+import { useCost } from "@/lib/cost";
 import { usePreferences } from "@/lib/preferences";
 import { roleMeta, MEETING_CENTER, USER_POS } from "@/lib/meta";
+import { useT } from "@/lib/i18n";
 import { deskOf, seatOf } from "./registry";
+import { CAFE_CENTER } from "./officeState";
 
 export const DESK_H = 0.72;
 
@@ -320,6 +323,43 @@ function ApprovalsZone() {
   );
 }
 
+/** Small coffee corner where agents whose work is paused by a budget cap wait (see officeState.zoneFor). */
+function Cafeteria() {
+  const { t } = useT();
+  const [cx, cz] = CAFE_CENTER;
+  const led = useRef<THREE.MeshBasicMaterial>(null!);
+  useFrame(({ clock }) => {
+    const paused = Object.keys(useCost.getState().alerts).length > 0;
+    const reduce = usePreferences.getState().prefs.reduceMotion;
+    led.current.opacity = paused ? (reduce ? 1 : 0.55 + Math.abs(Math.sin(clock.elapsedTime * 2)) * 0.45) : 0.5;
+  });
+  return (
+    <group position={[cx, 0, cz]}>
+      <RoundedBox args={[3.9, 0.02, 4.4]} radius={0.01} smoothness={2} position={[0.1, 0.011, 0]} receiveShadow><meshStandardMaterial color="#e1d8c8" roughness={1} /></RoundedBox>
+      {/* counter along the east edge */}
+      <RoundedBox args={[0.7, 0.9, 3.8]} radius={0.03} smoothness={3} castShadow receiveShadow position={[1.75, 0.45, 0]}><meshStandardMaterial color={GRAPHITE_L} roughness={0.8} /></RoundedBox>
+      <RoundedBox args={[0.78, 0.05, 3.88]} radius={0.015} smoothness={2} castShadow position={[1.75, 0.925, 0]}><meshStandardMaterial color={OAK} roughness={0.7} /></RoundedBox>
+      {/* coffee machine */}
+      <group position={[1.8, 0.95, -0.9]}>
+        <RoundedBox args={[0.42, 0.55, 0.5]} radius={0.04} smoothness={3} castShadow position={[0, 0.275, 0]}><meshStandardMaterial color="#2c323b" roughness={0.5} metalness={0.3} /></RoundedBox>
+        <mesh position={[-0.215, 0.38, 0]}><boxGeometry args={[0.012, 0.07, 0.07]} /><meshBasicMaterial ref={led} color="#e8943a" transparent toneMapped={false} /></mesh>
+        <mesh position={[-0.215, 0.18, 0]}><boxGeometry args={[0.02, 0.1, 0.12]} /><meshStandardMaterial color={STEEL} metalness={0.5} roughness={0.4} /></mesh>
+      </group>
+      {/* mugs and a pot on the counter */}
+      {[0.1, 0.4, 0.7].map((z, i) => (
+        <mesh key={i} castShadow position={[1.7, 1.0, z]}><cylinderGeometry args={[0.05, 0.043, 0.1, 12]} /><meshStandardMaterial color={["#f4efe6", "#e0735a", "#5a95e8"][i]} roughness={0.6} /></mesh>
+      ))}
+      <mesh castShadow position={[1.8, 1.07, 1.3]}><cylinderGeometry args={[0.1, 0.12, 0.24, 14]} /><meshStandardMaterial color="#c9d3dc" roughness={0.35} metalness={0.5} /></mesh>
+      {/* small high table */}
+      <mesh castShadow position={[-0.6, 0.95, 0]}><cylinderGeometry args={[0.42, 0.42, 0.05, 28]} /><meshStandardMaterial color={OAK} roughness={0.7} /></mesh>
+      <mesh castShadow position={[-0.6, 0.47, 0]}><cylinderGeometry args={[0.05, 0.14, 0.94, 14]} /><meshStandardMaterial color={GRAPHITE} roughness={0.6} metalness={0.2} /></mesh>
+      <mesh castShadow position={[-0.5, 1.02, 0.1]}><cylinderGeometry args={[0.05, 0.043, 0.1, 12]} /><meshStandardMaterial color="#f4efe6" roughness={0.6} /></mesh>
+      <Plant position={[-1.5, 0, -1.9]} s={0.8} tint="#8aa28c" />
+      <FloorSign pos={[0.2, 0.04, 2.35]} text={t("office.cafeteria")} color="#c98a4a" />
+    </group>
+  );
+}
+
 /** Ventanal: marco fino grafito + vidrio claro; los montantes dividen el paño. */
 function GlassBand({ length, horizontal = true }: { length: number; horizontal?: boolean }) {
   const n = Math.max(1, Math.round(length / 2.6));
@@ -443,6 +483,7 @@ export function OfficeEnv() {
       {order.map((id, i) => <Desk key={id} id={id} index={i} />)}
       <MeetingRoom />
       <ApprovalsZone />
+      <Cafeteria />
     </>
   );
 }

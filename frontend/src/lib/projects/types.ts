@@ -22,6 +22,8 @@ export interface ProjectNode {
   title_key?: string;
   title_params?: Record<string, string>;
   agent_id: string | null;
+  /** orchestrator task behind a launched leaf node (additive; used by the office to match tasks with project estimates) */
+  task_id?: string;
   state: NodeState;
   attempt: number;
   max_attempts: number;

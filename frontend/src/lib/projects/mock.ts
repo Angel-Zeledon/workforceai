@@ -184,7 +184,7 @@ export class ProjectsMock {
         mp.detail.planning = { done: leaves(mp.detail.nodes).length, total };
         this.emit({ type: "plan.draft_progress", payload: { project: this.summary(mp), nodes: add, objectives: [o], planning: mp.detail.planning } });
         if (i === objs.length - 1) this.later(() => this.finishPlanning(mp, body.budget_usd), 400);
-      }, 600 * (i + 1));
+      }, 2200 * (i + 1));
     });
     return { project_id: pid };
   }
