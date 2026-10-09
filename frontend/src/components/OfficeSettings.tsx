@@ -87,6 +87,7 @@ export function OfficeSettingsPanel({ onClose }: { onClose: () => void }) {
               <Seg<LabelSize> value={prefs.labelSize} testid="setting-label-size" onChange={(v) => set({ labelSize: v })}
                 options={[{ v: "s", label: "S" }, { v: "m", label: "M" }, { v: "l", label: "L" }]} />
             </div>
+            <Toggle testid="setting-show-bubbles" on={prefs.showBubbles} onChange={(v) => set({ showBubbles: v })} label={t("settings.showBubbles")} />
             <Toggle testid="setting-reduce-motion" on={prefs.reduceMotion} onChange={(v) => set({ reduceMotion: v })} label={t("settings.reduceMotion")} />
           </section>
 

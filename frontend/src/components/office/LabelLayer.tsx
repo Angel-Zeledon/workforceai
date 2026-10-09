@@ -1,21 +1,19 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore, type Link } from "@/lib/store";
 import { stateMeta } from "@/lib/meta";
 import { useAgentView, usePreferences } from "@/lib/preferences";
-import { labelEntries } from "./labels";
+import { useRegister } from "./useRegister";
+import { ApprovalDeskCard, MeetingTag, SpeechLayer } from "./OfficeOverlays";
+import { EnergyBar } from "./EnergyBar";
+import { useEnergy, useTaskProgress } from "./officeHooks";
+import { etaShort } from "./officeState";
 import { LINK_KIND } from "./kinds";
 import { readable, useAgentColor, useAgentName } from "../ui";
+import { useT } from "@/lib/i18n";
 
 const BUBBLE_TTL = 7000;
 const KIND = LINK_KIND;
-
-function useRegister(key: string, kind: "agent" | "bubble", anchor: string) {
-  return useCallback((el: HTMLElement | null) => {
-    if (el) labelEntries.set(key, { el, kind, anchor });
-    else labelEntries.delete(key);
-  }, [key, kind, anchor]);
-}
 
 /**
  * The `agent-<id>` test id is NOT rendered here: LabelSolver stamps it on the first frame the
@@ -31,15 +29,19 @@ function AgentTag({ id }: { id: string }) {
   const view = useAgentView(id);
   const showNames = usePreferences((s) => s.prefs.showNames);
   const labelSize = usePreferences((s) => s.prefs.labelSize);
+  const { t } = useT();
+  const prog = useTaskProgress(id);
+  const energy = useEnergy(id);
   const ref = useRegister(`agent:${id}`, "agent", id);
   if (!agent) return null;
   const meta = { color: view.color };
   const scale = labelSize === "s" ? 0.85 : labelSize === "l" ? 1.2 : 1;
   const sm = stateMeta(agent.state);
+  const showEnergyChip = !!energy && (energy.paused || energy.level !== "ok");
   const exp = selected || hover;
   const busy = ["working", "reviewing", "thinking", "awaiting_approval"].includes(agent.state) && agent.progress > 0;
   const attention = ["awaiting_approval", "error", "blocked", "completed"].includes(agent.state);
-  const fw = (52 + (showNames ? view.label.length * 7.4 : 0) + (agent.state === "idle" ? 0 : sm.label.length * 5.6 + 10)) * scale;
+  const fw = (52 + (showNames ? view.label.length * 7.4 : 0) + (agent.state === "idle" ? 0 : sm.label.length * 5.6 + 10) + (prog ? 58 : 0) + (showEnergyChip ? 62 : 0)) * scale;
   return (
     <div
       ref={ref}
@@ -47,6 +49,7 @@ function AgentTag({ id }: { id: string }) {
       data-state={agent.state}
       data-exp={exp ? "1" : "0"}
       data-fw={Math.round(fw)}
+      data-eh={112 + (prog ? 16 : 0) + (energy ? 22 : 0) + (energy?.paused ? 14 : 0)}
       data-tier="full"
       className="group pointer-events-none absolute left-0 top-0 origin-bottom select-none transition-opacity duration-300"
       style={{ opacity: 0 }}
@@ -69,6 +72,15 @@ function AgentTag({ id }: { id: string }) {
             </div>
             <div className="mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${sm.color}1f`, color: sm.color }}>{sm.label}</div>
             <div className="mt-1 line-clamp-2 min-h-[14px] text-[11px] font-normal leading-[14px] text-ink2">{agent.activity || "Sin actividad"}</div>
+            {prog && (
+              <div data-testid={`office-eta-${id}`} className="mt-1 flex items-center gap-1.5 text-[10px] font-medium text-ink2">
+                <span>{t("office.progress", { pct: Math.round(prog.eta.pct) })}</span>
+                {prog.eta.etaS !== null && <span className="font-mono">{t("office.eta", { time: etaShort(prog.eta.etaS) })}</span>}
+                {prog.projectEtaS !== null && <span className="font-mono text-mute">{t("office.eta.project", { time: etaShort(prog.projectEtaS) })}</span>}
+              </div>
+            )}
+            {energy?.paused && <div className="mt-1 text-[10px] font-semibold text-amber-700">{t("office.energy.paused")}</div>}
+            <EnergyBar id={id} />
             {busy && (
               <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-mute/15">
                 <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(4, agent.progress)}%`, background: sm.color }} />
@@ -82,6 +94,13 @@ function AgentTag({ id }: { id: string }) {
             {agent.state !== "idle" && (
               <span className="rounded-full px-1.5 py-[2px] text-[9px] font-semibold uppercase leading-none tracking-wide group-data-[tier=mini]:hidden" style={{ background: `${sm.color}1f`, color: sm.color }}>{sm.label}</span>
             )}
+            {prog && (
+              <span data-testid={`office-eta-${id}`} className="flex items-center gap-1 group-data-[tier=mini]:hidden">
+                <span className="h-1 w-7 overflow-hidden rounded-full bg-mute/20"><span className="block h-full rounded-full" style={{ width: `${Math.max(6, Math.round(prog.eta.pct))}%`, background: sm.color }} /></span>
+                {prog.eta.etaS !== null && <span className="font-mono text-[9px] font-semibold text-ink2">{etaShort(prog.eta.etaS)}</span>}
+              </span>
+            )}
+            {showEnergyChip && <span className="group-data-[tier=mini]:hidden"><EnergyBar id={id} compact /></span>}
           </div>
         )}
       </div>
@@ -142,6 +161,9 @@ export function LabelLayer() {
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {order.map((id) => <AgentTag key={id} id={id} />)}
       {bubbles.map((l) => <Bubble key={l.id} link={l} />)}
+      <SpeechLayer />
+      <ApprovalDeskCard />
+      <MeetingTag />
     </div>
   );
 }
