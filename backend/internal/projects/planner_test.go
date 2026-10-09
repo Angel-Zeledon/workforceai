@@ -30,6 +30,7 @@ type hierRT struct {
 	inflight   int
 	peak       int
 	phaseSizes []string
+	accept     bool // propose acceptance criteria for every task (Q1)
 }
 
 var simRoadmap = []application.PlanPhase{
@@ -78,6 +79,9 @@ func (h *hierRT) PlanPhase(_ context.Context, in application.PlanPhaseRequest) (
 			Complexity: cx[i%len(cx)], DependsOn: []string{}}
 		if i >= 4 {
 			t.DependsOn = []string{fmt.Sprintf("t%d", i-3)}
+		}
+		if h.accept {
+			t.Acceptance = []string{"Includes a summary", "  ", "Includes a summary", "Cites its sources"}
 		}
 		tasks = append(tasks, t)
 	}
