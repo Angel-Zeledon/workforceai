@@ -43,6 +43,9 @@ export interface ProjectNode {
   finished_at: string | null;
   rev: number;
   approval_action?: string;
+  /** a human skipped this failed node (W2) */
+  skipped?: boolean;
+  skip_reason?: string;
   error?: string | null;
 }
 

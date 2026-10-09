@@ -32,6 +32,8 @@ export const projectsApi = {
   estimate: async (id: string): Promise<{ estimate: ProjectEstimate }> => (MOCK ? { estimate: (await mock().then((m) => m.get(id))).estimate! } : http("POST", `/projects/${id}/estimate`)),
   launch: async (id: string, b: LaunchBody) => (MOCK ? (await mock()).launch(id, b) : http("POST", `/projects/${id}/launch`, b)),
   control: async (id: string, action: ControlAction) => (MOCK ? (await mock()).control(id, action) : http("POST", `/projects/${id}/control`, { action })),
+  retryNode: async (id: string, nodeId: string) => (MOCK ? (await mock()).retryNode(id, nodeId) : http("POST", `/projects/${id}/nodes/${nodeId}/retry`)),
+  skipNode: async (id: string, nodeId: string, reason: string) => (MOCK ? (await mock()).skipNode(id, nodeId, reason) : http("POST", `/projects/${id}/nodes/${nodeId}/skip`, { reason })),
   setBudget: async (id: string, usd: number) => (MOCK ? (await mock()).setBudget(id, usd) : http("PUT", `/projects/${id}/budget`, { budget_usd: usd })),
   decide: async (pid: string, approvalId: string, decision: "approve" | "reject") =>
     MOCK ? (await mock()).decide(pid, approvalId, decision) : http("POST", `/approvals/${approvalId}/decision`, { decision }),

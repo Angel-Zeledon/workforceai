@@ -249,6 +249,10 @@ export class ProjectsMock {
     return { ok: true };
   }
 
+  // The demo backend has no failing nodes: recovery only exists against the real API.
+  async retryNode(_id: string, _nodeId: string) { return { ok: true }; }
+  async skipNode(_id: string, _nodeId: string, _reason: string) { return { ok: true }; }
+
   async control(id: string, action: ControlAction) {
     const mp = this.projects.get(id);
     if (!mp) throw new Error("project not found");
