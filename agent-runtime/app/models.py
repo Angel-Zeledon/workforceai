@@ -218,6 +218,11 @@ class DependencyOutput(_Base):
     task_id: str
     agent_id: str
     output: Any = None
+    # W3 (additive, optional): reference id, title, and whether the backend reduced
+    # the output to its summary to respect the dependency token budget.
+    ref: str = ""
+    title: str = ""
+    truncated: bool = False
 
 
 class MemoryItem(_Base):
@@ -226,10 +231,40 @@ class MemoryItem(_Base):
     value: Any = None
 
 
+class ProjectTaskRef(_Base):
+    ref: str = ""
+    task_id: str = ""
+    title: str = ""
+    agent_id: str = ""
+    summary: str = ""
+
+
+class ContextArtifact(_Base):
+    """Text of an artifact the backend read for this task (the runtime never fetches anything)."""
+
+    id: str = ""
+    title: str = ""
+    kind: str = ""
+    text: str = ""
+    truncated: bool = False
+
+
+class ProjectContext(_Base):
+    """Bounded, read-only view of the rest of a project (W3). Always untrusted data."""
+
+    index: list[ProjectTaskRef] = Field(default_factory=list)
+    index_omitted: int = 0
+    artifacts: list[ContextArtifact] = Field(default_factory=list)
+
+    _lists = field_validator("index", "artifacts", mode="before")(lambda v: [] if v is None else v)
+
+
 class TaskContext(_Base):
     request_text: str = ""
     dependency_outputs: list[DependencyOutput] = Field(default_factory=list)
     memory: list[MemoryItem] = Field(default_factory=list)
+    dependency_omitted: int = 0  # W3: dependencies left out by the backend token budget
+    project_context: ProjectContext | None = None  # W3: only for project tasks
 
 
 class UntrustedItem(_Base):
@@ -325,9 +360,14 @@ class SynthesizeRequest(_ProviderPolicyMixin):
     outputs: list[SynthOutput] = Field(default_factory=list)
     locale: Locale = "es"
     tone: Tone = "neutral"
+    # W3 hierarchical synthesis: "" = single pass, "group" = part N of `parts`, "final" = over group syntheses.
+    stage: str = ""
+    part: int = 0
+    parts: int = 0
 
     _norm = field_validator("locale", mode="before")(normalize_locale)
     _norm_tone = field_validator("tone", mode="before")(normalize_tone)
+    _stage = field_validator("stage", mode="before")(lambda v: v if v in ("group", "final") else "")
 
 
 class Section(_Base):

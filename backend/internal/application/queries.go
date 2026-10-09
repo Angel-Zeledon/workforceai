@@ -38,6 +38,12 @@ type Config struct {
 	// Chat layer (docs/architecture/chat-routing.md); zero values use the defaults noted here.
 	ChatTimeout time.Duration // per runtime call of a chat turn (route, reply); default 30s
 	ChatStagger time.Duration // pause before each additional responder of a turn (0 = none)
+
+	// W3 context handoff and synthesis (token estimates; <= 0 uses the default).
+	DepContextTokenBudget     int // dependency outputs of one task (default 8000)
+	ProjectContextTokenBudget int // project index of one task (default 1500)
+	SynthTokenBudget          int // above this the report is synthesized hierarchically (default 12000)
+	SynthMaxGroups            int // group syntheses at most; plus the final pass (default 6)
 }
 
 // DefaultConfig returns sane defaults.
@@ -50,6 +56,8 @@ func DefaultConfig() Config {
 		ApprovalTimeout: 30 * time.Minute, LockTTL: 10 * time.Minute, IdleDelay: 4 * time.Second,
 		ConfirmThresholdUSD: 1.0, PauseTimeout: 30 * time.Minute,
 		ChatTimeout: 30 * time.Second, ChatStagger: 900 * time.Millisecond,
+		DepContextTokenBudget: defaultDepContextTokenBudget, ProjectContextTokenBudget: defaultProjectContextBudget,
+		SynthTokenBudget: defaultSynthTokenBudget, SynthMaxGroups: defaultSynthMaxGroups,
 	}
 }
 

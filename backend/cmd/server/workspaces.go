@@ -82,5 +82,6 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 		pcfg.LocaleFor = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }
 	}
 	psvc = projects.New(ctx, pcfg)
+	orch.SetContextSource(asvc) // W3: referenced artifacts reach project tasks as delimited data
 	return workspaceWiring{projects: psvc, artifacts: asvc}
 }

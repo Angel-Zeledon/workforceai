@@ -39,6 +39,8 @@ type Orchestrator struct {
 	chatIdem idemCache // Idempotency-Key of POST /messages (chat.go)
 	chatQ    chatQueue // per-conversation FIFO of chat turns (chat.go)
 
+	ctxSrc ContextSource // optional: artifact text for project tasks (context_flow.go)
+
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
 
 	queue      orgQueue        // per-org slots for runtime calls (orgqueue.go)
@@ -237,12 +239,18 @@ func (o *Orchestrator) execute(ctx context.Context, rs *run, tasks []domain.Task
 // finish synthesizes the report from completed tasks.
 func (o *Orchestrator) finish(ctx context.Context, rs *run, tasks []domain.Task, outcomes map[string]Outcome) {
 	var outs []SynthOutput
+	var wfKeys []string // workflow of each output (grouping hint for hierarchical synthesis)
 	var unfinished []string
 	contributors := []string{}
 	for _, t := range tasks {
 		if outcomes[t.ID] == OutcomeDone {
 			d := rs.done[t.ID]
 			outs = append(outs, SynthOutput{TaskID: t.ID, AgentID: t.AgentID, Title: t.Title, Output: *d.Output})
+			wf := ""
+			if t.WorkflowID != nil {
+				wf = *t.WorkflowID
+			}
+			wfKeys = append(wfKeys, wf)
 			if !slices.Contains(contributors, t.AgentID) {
 				contributors = append(contributors, t.AgentID)
 			}
@@ -255,25 +263,10 @@ func (o *Orchestrator) finish(ctx context.Context, rs *run, tasks []domain.Task,
 		return
 	}
 	o.setState(ctx, assistantID, domain.StateWorking, "Consolidando resultados", nil, 85)
-	var syn SynthesizeResponse
-	synRes, err := o.reserveOrPause(ctx, rs, assistantID, "", domain.UsageSynthesize)
-	if err != nil {
-		if ctx.Err() == nil {
-			o.failRequest(ctx, rs, assistantID, "No pude consolidar el informe", err)
-		}
+	syn, ok := o.synthesize(ctx, rs, outs, wfKeys)
+	if !ok {
 		return
 	}
-	err = o.call(ctx, "synthesize", func(c context.Context) (err error) {
-		syn, err = o.rt.Synthesize(c, SynthesizeRequest{RequestText: rs.req.Text, Outputs: outs,
-			Locale: rs.style.Locale, Tone: rs.style.Tone})
-		return err
-	})
-	if err != nil {
-		synRes.Release()
-		o.failRequest(ctx, rs, assistantID, "No pude consolidar el informe", err)
-		return
-	}
-	o.recordUsage(ctx, rs, "", assistantID, domain.UsageSynthesize, syn.Usage, nil, synRes)
 	if len(unfinished) > 0 {
 		syn.Sections = append(syn.Sections, domain.Section{Heading: "Tareas no completadas", Body: "- " + strings.Join(unfinished, "\n- ")})
 	}
@@ -509,13 +502,24 @@ func (o *Orchestrator) completeTask(ctx context.Context, rs *run, t domain.Task,
 
 func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Task, agent domain.Agent) RunTaskRequest {
 	rc := RunContext{RequestText: rs.req.Text, DependencyOutputs: []DependencyOutput{}, Memory: []MemoryEntry{}}
+	var deps, others []domain.Task
 	rs.mu.Lock()
+	isDep := make(map[string]bool, len(t.DependsOn))
 	for _, d := range t.DependsOn {
+		isDep[d] = true
 		if dt, ok := rs.done[d]; ok && dt.Output != nil {
-			rc.DependencyOutputs = append(rc.DependencyOutputs, DependencyOutput{TaskID: dt.ID, AgentID: dt.AgentID, Output: *dt.Output})
+			deps = append(deps, dt)
+		}
+	}
+	for id, dt := range rs.done {
+		if !isDep[id] && id != t.ID && dt.Output != nil {
+			others = append(others, dt)
 		}
 	}
 	rs.mu.Unlock()
+	// W3: bounded dependency context and read-only project context.
+	rc.DependencyOutputs, rc.DependencyOmitted = fitDependencies(deps, t.AgentID, o.cfg.depBudget())
+	rc.ProjectContext = o.projectContext(ctx, rs, t, others)
 	mem, err := o.store.ListMemory(ctx, o.org(ctx), t.AgentID)
 	if err != nil {
 		o.log.Warn("list memory", "err", err)

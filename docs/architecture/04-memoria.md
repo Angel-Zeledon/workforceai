@@ -64,6 +64,14 @@ Reglas del builder (tests obligatorios):
 4. El orden y los limites son deterministas: `company` (<= 10 items) -> `agent` (<= 10) -> `customer` (<= 20) -> `task` -> `conversation` (resumen). Presupuesto total `MEMORY_TOKEN_BUDGET` (default 2000 tokens); se prioriza `pinned`, luego recencia/confianza.
 5. Cada item lleva `scope` y se entrega como dato delimitado (ver `07`); las memorias creadas a partir de contenido externo llevan `source` y `trust` y se rotulan como no confiables.
 
+Estado real del codigo (W3, ver `docs/plans/large-workflows.md`): aun no existe un `ContextBuilder` con
+scopes company/customer/task/conversation; hoy `context.memory` solo trae la memoria del agente (`last_task`).
+Lo que SI esta implementado: (a) `dependency_outputs` respeta un presupuesto de tokens (`DEP_CONTEXT_TOKEN_BUDGET`,
+default 8000: resumen + `ref` por dependencia y texto completo de las mas relevantes mientras quepa);
+(b) `context.project_context` (solo requests de proyecto) con un indice acotado de tareas ya completadas y
+el texto de artefactos referenciados como `artifact:<id>`, leidos por el backend y entregados como dato delimitado;
+(c) la sintesis final es jerarquica por encima de `SYNTH_TOKEN_BUDGET`. `MEMORY_TOKEN_BUDGET` sigue sin implementarse.
+
 ### 3.3 Escrituras
 El runtime puede devolver `memory_writes: [{scope, key, value, kind, confidence}]` (**[CAMBIO] aditivo al contrato `run-task`**; Fase 1 puede ignorarlo). Go **no confia en el scope declarado**: reescribe la direccion:
 - `scope=customer` -> usa `task.customer_id` (si es NULL, se rechaza y se audita).

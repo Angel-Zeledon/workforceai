@@ -326,7 +326,8 @@ class CrewAIEngine(AgentEngine):
         res, usage = await self._run(
             role="Asistente Ejecutiva", goal="Consolidar los resultados en un reporte ejecutivo",
             backstory=system_rules(req.locale, req.tone),
-            description=build_synthesis_prompt(req.request_text, req.outputs, req.locale, req.tone),
+            description=build_synthesis_prompt(req.request_text, req.outputs, req.locale, req.tone,
+                                           req.stage, req.part, req.parts),
             expected="JSON con title, summary y sections", schema=_Synth,
             policy=policy_from_request(req, "synthesize"))
         return SynthesizeResponse(title=res.title, summary=res.summary, sections=res.sections,
