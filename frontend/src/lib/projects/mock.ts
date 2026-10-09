@@ -202,8 +202,10 @@ export class ProjectsMock {
     if (!mp || mp.detail.project.status !== "draft") throw new Error("not a draft");
     const changed: ProjectNode[] = [];
     for (const op of ops) {
+      if (op.op === "set_quality") { mp.detail.quality = { review: op.fields.review }; continue; }
       const n = mp.detail.nodes.find((x) => x.id === op.id);
       if (!n) continue;
+      if (op.fields.acceptance !== undefined) n.acceptance = op.fields.acceptance.map((c) => c.trim()).filter(Boolean).slice(0, 8);
       if (op.fields.title !== undefined) { n.title = op.fields.title; n.title_key = undefined; }
       if (op.fields.agent_id !== undefined) { n.agent_id = op.fields.agent_id; n.delegation_chain = [op.fields.agent_id]; }
       n.rev++; changed.push({ ...n });

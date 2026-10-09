@@ -1483,5 +1483,18 @@
   "pv.recover.reason": "Reason for skipping (required)",
   "pv.recover.skipConfirm": "Confirm skip",
   "pv.recover.skipHint": "Following steps will continue knowing this step's result is missing.",
-  "pv.recover.skipped": "Skipped by a person: {reason}"
+  "pv.recover.skipped": "Skipped by a person: {reason}",
+  "pv.quality.acceptance": "Acceptance criteria",
+  "pv.quality.acceptancePlaceholder": "Acceptance criteria (one per line, optional)",
+  "pv.quality.title": "Quality review",
+  "pv.quality.review": "Review the results",
+  "pv.quality.hint": "Only tasks with acceptance criteria are reviewed. Each review counts toward the budget.",
+  "pv.quality.mode.off": "Do not review",
+  "pv.quality.mode.low_confidence": "Only when the agent is unsure",
+  "pv.quality.mode.always": "Always",
+  "pv.quality.verdict.pass": "Review: passed",
+  "pv.quality.verdict.rework": "Review: needs rework",
+  "pv.quality.verdict.fail": "Review: rejected",
+  "pv.quality.reworks": "reworked {count} time(s)",
+  "pv.quality.exhausted": "rework limit reached"
 }

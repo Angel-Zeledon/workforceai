@@ -46,6 +46,7 @@ SPEC: `{ id, type, ts, org_id, agent_id?, payload }`. **[CAMBIO] aditivo y compa
 | `request.failed` | `{request_id, reason}` | Fallo irrecuperable | 1 |
 | `task.created` (campo nuevo) | `assigned_reason` (también en `task`) | Por qué ese agente tiene la tarea | 1 |
 | `task.retrying` | `{task_id, attempt, next_attempt_at, error}` | Reintento programado | 1 |
+| `task.reviewed` | `{task_id, request_id, verdict, reasons, reworks, rework_exhausted, reviewer}` | Revisión de calidad (Q1): pass/rework/fail | 1 |
 | `task.awaiting_approval` | `{task_id, approval_id}` | Tarea pausada | 1 |
 | `agent.consult.started` / `.answered` | `{from, to, question_id}` | Consulta entre agentes (UI camina a la mesa) | 1 |
 | `agent.delegated` | `{from, to, task_id, depth, chain[]}` | Delegacion con cadena (06) | 1 |
