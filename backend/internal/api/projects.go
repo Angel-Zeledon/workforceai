@@ -36,6 +36,9 @@ func (s *server) mountProjects(r chi.Router) {
 		r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/"+a, func(w http.ResponseWriter, r *http.Request) { s.projectAction(w, r, a) })
 	}
 	r.With(s.can(auth.PermTasksManage)).Put("/projects/{id}/budget", s.projectBudget)
+	// W2 manual recovery of a failed/blocked node (human-only, audited).
+	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/nodes/{nodeId}/retry", s.retryProjectNode)
+	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/nodes/{nodeId}/skip", s.skipProjectNode)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/projects/{id}/save-as-template", s.saveProjectTemplate)
 	r.With(s.can(auth.PermTasksRead)).Get("/project-templates", s.listProjectTemplates)
 	// Deciding approvals is privileged (admin/owner); every decision still goes through Approvals.Decide.
@@ -170,6 +173,31 @@ func (s *server) runControl(w http.ResponseWriter, r *http.Request, action strin
 		return
 	}
 	writeJSON(w, 200, map[string]any{"ok": true, "status": p.Status, "control": p.Control, "project": p})
+}
+
+func (s *server) retryProjectNode(w http.ResponseWriter, r *http.Request) {
+	res, err := s.Projects.RetryNode(r.Context(), chi.URLParam(r, "id"), chi.URLParam(r, "nodeId"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"ok": true, "node": res.Node, "project": res.Project, "requeued": list(res.Requeued)})
+}
+
+func (s *server) skipProjectNode(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Reason string `json:"reason"`
+	}
+	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	res, err := s.Projects.SkipNode(r.Context(), chi.URLParam(r, "id"), chi.URLParam(r, "nodeId"), body.Reason)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"ok": true, "node": res.Node, "project": res.Project, "requeued": list(res.Requeued)})
 }
 
 func (s *server) projectBudget(w http.ResponseWriter, r *http.Request) {

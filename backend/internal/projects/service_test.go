@@ -33,6 +33,7 @@ type fakeRuntime struct {
 	onRun    func(in application.RunTaskRequest)
 	cost     float64
 	planResp *application.PlanResponse
+	failFn   func(title string) error // injected runtime failure (nil: none)
 }
 
 func newRT() *fakeRuntime { return &fakeRuntime{finished: map[string]int{}} }
@@ -52,6 +53,14 @@ func (f *fakeRuntime) RunTask(_ context.Context, in application.RunTaskRequest) 
 	f.mu.Unlock()
 	if f.onRun != nil {
 		f.onRun(in)
+	}
+	if fn := f.failFn; fn != nil {
+		if err := fn(in.Task.Title); err != nil {
+			f.mu.Lock()
+			f.running--
+			f.mu.Unlock()
+			return application.RunTaskResponse{}, err
+		}
 	}
 	f.mu.Lock()
 	f.running--

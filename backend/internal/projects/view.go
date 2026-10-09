@@ -122,6 +122,17 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 			if t.StartedAt != nil {
 				n.Attempt = 1
 			}
+			if t.Output != nil {
+				if a, ok := t.Output.Metrics["attempts"].(float64); ok && a > 1 { // task-level retry (W2)
+					n.Attempt = int(a)
+				} else if a, ok := t.Output.Metrics["attempts"].(int); ok && a > 1 {
+					n.Attempt = a
+				}
+				if sk, _ := t.Output.Metrics["skipped"].(bool); sk {
+					n.Skipped = true
+					n.SkipReason, _ = t.Output.Metrics["skip_reason"].(string)
+				}
+			}
 		}
 		switch n.State {
 		case StateDone:
