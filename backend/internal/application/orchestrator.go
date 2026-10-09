@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"aiworkforce/backend/internal/domain"
@@ -79,10 +80,11 @@ type run struct {
 	// requestedBy is the human who submitted the request ("" without auth):
 	// the "on behalf of" of every tool request and the requester of its approvals.
 	requestedBy string
-	ext         runExt    // taint, read-only request flag (connections_flow.go)
-	removed     []string  // task ids removed in the plan review (persisted in the run meta)
-	chat        *chatLink // set when the request was born in a chat turn (chat.go)
-	gate        *RunGate  // human gate in progress before the start (persisted in the run meta; guarded by mu)
+	ext         runExt      // taint, read-only request flag (connections_flow.go)
+	removed     []string    // task ids removed in the plan review (persisted in the run meta)
+	chat        *chatLink   // set when the request was born in a chat turn (chat.go)
+	projOwned   atomic.Bool // the request belongs to a project (recovery.go): its human waits never expire
+	gate        *RunGate    // human gate in progress before the start (persisted in the run meta; guarded by mu)
 }
 
 func (r *run) touch(agentID string) {
@@ -454,20 +456,38 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 
 	in := o.buildRunRequest(ctx, rs, t, agent)
 	var resp RunTaskResponse
-	err = o.call(ctx, "run-task", func(c context.Context) (err error) {
-		resp, err = o.rt.RunTask(c, in)
-		return err
-	})
-	if err != nil {
-		res.Release()
+	attempt := 1
+	for { // W2: task-level retry of transient runtime failures (recovery.go)
+		err = o.call(ctx, "run-task", func(c context.Context) (err error) {
+			resp, err = o.rt.RunTask(c, in)
+			return err
+		})
+		if err == nil {
+			break
+		}
+		res.Release() // a failed attempt holds no budget; its (zero) usage was never recorded
 		if ctx.Err() != nil {
 			return OutcomeFailed
 		}
-		o.failTask(ctx, rs, t, err)
-		return OutcomeFailed
+		if attempt >= max(1, o.cfg.TaskMaxAttempts) || !retryableTaskErr(err) {
+			o.failTask(ctx, rs, t, err)
+			return OutcomeFailed
+		}
+		next, out, ok := o.beginRetry(ctx, rs, t, attempt, err)
+		if !ok {
+			return out
+		}
+		res = next
+		attempt++
 	}
 	o.recordUsage(ctx, rs, t.ID, t.AgentID, domain.UsageRunTask, resp.Usage, resp.ToolRequests, res)
 	resp.Output.Normalize()
+	if attempt > 1 {
+		if resp.Output.Metrics == nil {
+			resp.Output.Metrics = map[string]any{}
+		}
+		resp.Output.Metrics["attempts"] = attempt
+	}
 	resp = o.connectionReads(ctx, rs, &t, agent, in, resp)
 	resp.Output.Normalize()
 	t.Output = &resp.Output
@@ -727,7 +747,7 @@ func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.
 		o.setRequestStatus(ctx, rs, domain.RequestAwaitingApproval)
 		o.setState(ctx, agent.ID, domain.StateAwaitingApproval, "Esperando aprobación: "+ap.Title, &tid, 80)
 		o.emitMetrics(ctx)
-		res, err := o.approvals.WaitUntil(ctx, ch, ap.ID, deadline)
+		res, err := o.awaitApproval(ctx, rs, ch, ap, deadline)
 		if err != nil {
 			return OutcomeFailed // cancelled
 		}
@@ -926,6 +946,9 @@ func (o *Orchestrator) call(ctx context.Context, name string, fn func(ctx contex
 		o.log.Warn("runtime call failed", "call", name, "attempt", i+1, "of", attempts, "err", err)
 		o.rec.Audit(ctx, domain.AuditLog{Actor: "system", Action: "runtime.call_failed", Entity: "runtime", EntityID: name,
 			Details: map[string]any{"attempt": i + 1, "error": err.Error()}})
+		if errors.Is(err, ErrNonRetryable) {
+			break // the runtime refused the request itself: the same call cannot succeed
+		}
 	}
 	return fmt.Errorf("agent-runtime no disponible (%s): %w", name, err)
 }

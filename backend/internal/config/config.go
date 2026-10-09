@@ -168,6 +168,11 @@ func Load() Config {
 	app.AgentBudgetCapUSD = getFloat("AGENT_BUDGET_USD", app.AgentBudgetCapUSD)
 	app.ConfirmThresholdUSD = getFloat("COST_CONFIRM_THRESHOLD_USD", app.ConfirmThresholdUSD)
 	app.PauseTimeout = getDuration("BUDGET_PAUSE_TIMEOUT", app.PauseTimeout)
+	app.TaskMaxAttempts = getInt("TASK_MAX_ATTEMPTS", app.TaskMaxAttempts)
+	app.TaskRetryBackoff = getDuration("TASK_RETRY_BACKOFF", app.TaskRetryBackoff)
+	app.ProjectReminderEvery = getDuration("PROJECT_APPROVAL_REMINDER_EVERY", app.ProjectReminderEvery)
+	app.ProjectApprovalTimeout = getDuration("PROJECT_APPROVAL_TIMEOUT", app.ProjectApprovalTimeout)
+	app.ProjectBudgetPauseTimeout = getDuration("PROJECT_BUDGET_PAUSE_TIMEOUT", app.ProjectBudgetPauseTimeout)
 	app.ChatStagger = getDuration("CHAT_STAGGER", app.ChatStagger)
 	app.ChatTimeout = getDuration("CHAT_TIMEOUT", app.ChatTimeout)
 

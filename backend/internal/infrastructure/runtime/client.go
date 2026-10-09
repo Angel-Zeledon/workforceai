@@ -99,7 +99,11 @@ func (c *Client) do(ctx context.Context, method, path string, in, out any) error
 		return fmt.Errorf("runtime %s: %w", path, err)
 	}
 	if resp.StatusCode/100 != 2 {
-		return fmt.Errorf("runtime %s: status %d: %s", path, resp.StatusCode, truncate(string(data), 300))
+		err := fmt.Errorf("runtime %s: status %d: %s", path, resp.StatusCode, truncate(string(data), 300))
+		if sc := resp.StatusCode; sc >= 400 && sc < 500 && sc != http.StatusRequestTimeout && sc != http.StatusTooManyRequests {
+			err = fmt.Errorf("%w: %w", err, application.ErrNonRetryable) // retrying the same request cannot help
+		}
+		return err
 	}
 	if out == nil {
 		return nil

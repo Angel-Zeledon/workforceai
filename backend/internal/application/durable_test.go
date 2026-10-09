@@ -26,6 +26,7 @@ func startProcess(t *testing.T, store *memory.Store, pub *capture, rt applicatio
 	t.Helper()
 	cfg := application.DefaultConfig()
 	cfg.IdleDelay, cfg.RetryBase, cfg.MaxRetries = 0, time.Millisecond, 3
+	cfg.TaskRetryBackoff = time.Millisecond
 	if mutate != nil {
 		mutate(&cfg)
 	}
