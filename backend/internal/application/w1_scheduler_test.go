@@ -166,3 +166,73 @@ func TestRecoverRestoresRunParallelOverride(t *testing.T) {
 		t.Fatalf("status = %s, want done (8 together needs the restored max_parallel=8, MAX_PARALLEL is 2)", st)
 	}
 }
+
+// reserveOrPause yields the scheduler slot while a project task waits on a cap
+// (with reminders) and takes it back on each wake-up. A capped task must neither
+// leak a slot (the others would run below MAX_PARALLEL) nor take two (above it),
+// across many reminder ticks, and must resume correctly when the cap is raised.
+func TestBudgetPausedProjectTaskNeitherLeaksNorDoubleAcquiresSlots(t *testing.T) {
+	const sales = 14
+	c := &concurrency{}
+	var capped atomic.Int32
+	rt := &fakeRuntime{
+		plan: func(application.PlanRequest) (application.PlanResponse, error) {
+			p := application.PlanResponse{Objectives: []string{"x"}, Tasks: []application.PlannedTask{{Key: "cap", Title: "Capped", AgentID: "analyst"}}}
+			for i := 0; i < sales; i++ {
+				p.Tasks = append(p.Tasks, application.PlannedTask{Key: fmt.Sprintf("s%d", i), Title: fmt.Sprintf("S%02d", i), AgentID: "sales"})
+			}
+			return p, nil
+		},
+		runTask: func(in application.RunTaskRequest) (application.RunTaskResponse, error) {
+			r := okResult("ok")
+			r.Usage = application.Usage{Model: "m", InputTokens: 10, OutputTokens: 10, CostUSD: 0.01}
+			if in.Task.Title == "Capped" {
+				capped.Add(1)
+				r.Usage.CostUSD = 0.04
+				return r, nil
+			}
+			c.enter() // 15 ms inside the runtime
+			return r, nil
+		},
+	}
+	h := newHarness(t, &estRuntime{fakeRuntime: rt, taskMax: 0.05, synthMax: 0.01}, func(cfg *application.Config) {
+		cfg.MaxParallel, cfg.MaxParallelPerOrg, cfg.ProjectReminderEvery, cfg.ConfirmThresholdUSD = 2, 32, 5*time.Millisecond, 0
+	})
+	h.orch.SetTaskGate(projectOwner{})
+	ctx := context.Background()
+	if err := h.orch.Budget().SetCap(ctx, domain.ScopeAgent, "analyst", 0.03); err != nil {
+		t.Fatal(err)
+	}
+	reqID, err := h.orch.Submit(ctx, "x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.waitFor("all the other tasks done while one is cap-paused", func() bool {
+		done := 0
+		for title, tk := range h.tasks(reqID) {
+			if title != "Capped" && tk.Status == domain.TaskDone {
+				done++
+			}
+		}
+		return done == sales
+	})
+	if got := h.pub.count(domain.EvBudgetExceeded); got < 5 {
+		t.Fatalf("only %d budget.exceeded events: the pause must have seen several reminder ticks", got)
+	}
+	if p := c.max(); p != 2 {
+		t.Fatalf("peak concurrency = %d, want exactly MAX_PARALLEL=2 (<2 leaks a slot, >2 double-acquires)", p)
+	}
+	if st := h.tasks(reqID)["Capped"].Status; st != domain.TaskPending || capped.Load() != 0 {
+		t.Fatalf("the capped task must still be waiting, status=%s runs=%d", st, capped.Load())
+	}
+	if err := h.orch.Budget().SetCap(ctx, domain.ScopeAgent, "analyst", 1); err != nil {
+		t.Fatal(err)
+	}
+	h.orch.Wait()
+	if st := h.request(reqID).Status; st != domain.RequestDone {
+		t.Fatalf("request = %s, want done after the cap was raised", st)
+	}
+	if capped.Load() != 1 || h.tasks(reqID)["Capped"].Status != domain.TaskDone {
+		t.Fatalf("the capped task must run exactly once, runs=%d", capped.Load())
+	}
+}
