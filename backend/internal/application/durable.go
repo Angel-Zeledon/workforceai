@@ -318,6 +318,14 @@ func (o *Orchestrator) finishExecution(ctx context.Context, approvalID, status s
 
 // ---- recovery ----
 
+// WithDefaultOrg returns orgs plus def when it is missing (and not empty).
+func WithDefaultOrg(orgs []string, def string) []string {
+	if def == "" || slices.Contains(orgs, def) {
+		return orgs
+	}
+	return append(slices.Clone(orgs), def)
+}
+
 func resumableStatus(st domain.RequestStatus) bool {
 	return st == domain.RequestRunning || st == domain.RequestAwaitingApproval || st == domain.RequestPaused
 }
@@ -327,12 +335,11 @@ func beforeStartStatus(st domain.RequestStatus) bool {
 }
 
 // Recover resumes (or fails, when they cannot be resumed) the requests that
-// were in progress when the process stopped. orgs empty means the default
-// organization. It returns how many requests were resumed.
+// were in progress when the process stopped. The default organization is
+// always included: it has no memberships, so ListOrgIDs never lists it. It
+// returns how many requests were resumed.
 func (o *Orchestrator) Recover(ctx context.Context, orgs []string) (int, error) {
-	if len(orgs) == 0 {
-		orgs = []string{o.cfg.OrgID}
-	}
+	orgs = WithDefaultOrg(orgs, o.cfg.OrgID)
 	resumed := 0
 	for _, org := range orgs {
 		octx := WithOrg(ctx, org)

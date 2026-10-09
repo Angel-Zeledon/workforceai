@@ -112,6 +112,38 @@ func TestRecoverResumesPendingApprovalAndFinishes(t *testing.T) {
 	}
 }
 
+// The server lists organizations through memberships, which never include the
+// demo organization: once anyone registers, Recover gets a non-empty list
+// without it and must still resume the demo organization's requests.
+func TestRecoverIncludesDefaultOrgWhenOthersAreListed(t *testing.T) {
+	store, pub, reqID, ap := pendingBeforeRestart(t)
+	p2 := startProcess(t, store, pub, sendProposalRuntime(proposalPlan()), nil)
+	n, err := p2.orch.Recover(context.Background(), []string{"11111111-1111-1111-1111-111111111111"})
+	if err != nil || n != 1 {
+		t.Fatalf("recover = %d, %v", n, err)
+	}
+	p2.waitFor("agent waiting again", func() bool { return p2.agent("sales").State == domain.StateAwaitingApproval })
+	if _, err := p2.appr.Decide(context.Background(), ap.ID, "approve", "ok"); err != nil {
+		t.Fatal(err)
+	}
+	p2.orch.Wait()
+	if r := p2.request(reqID); r.Status != domain.RequestDone {
+		t.Fatalf("request after resume: %+v", r)
+	}
+}
+
+func TestWithDefaultOrg(t *testing.T) {
+	if got := application.WithDefaultOrg(nil, "d"); len(got) != 1 || got[0] != "d" {
+		t.Fatalf("nil list: %v", got)
+	}
+	if got := application.WithDefaultOrg([]string{"a", "d"}, "d"); len(got) != 2 {
+		t.Fatalf("already listed: %v", got)
+	}
+	if got := application.WithDefaultOrg([]string{"a"}, "d"); len(got) != 2 || got[1] != "d" {
+		t.Fatalf("missing: %v", got)
+	}
+}
+
 func TestRecoverRejectAfterRestartBlocksTask(t *testing.T) {
 	store, pub, reqID, ap := pendingBeforeRestart(t)
 	p2 := startProcess(t, store, pub, sendProposalRuntime(proposalPlan()), nil)

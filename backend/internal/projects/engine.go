@@ -175,11 +175,9 @@ func (s *Service) ResumeRequest(ctx context.Context, org, requestID string) bool
 // finished: the ones whose request the orchestrator resumed are already live
 // (ResumeRequest); the others (their request finished or was failed while the
 // process stopped) get a monitor that settles their final status. Call it
-// after the orchestrator's Recover. orgs empty means the default organization.
+// after the orchestrator's Recover. The default organization is always included.
 func (s *Service) Recover(ctx context.Context, orgs []string) int {
-	if len(orgs) == 0 {
-		orgs = []string{s.cfg.OrgID}
-	}
+	orgs = application.WithDefaultOrg(orgs, s.cfg.OrgID)
 	n := 0
 	for _, org := range orgs {
 		octx := application.WithOrg(ctx, org)
