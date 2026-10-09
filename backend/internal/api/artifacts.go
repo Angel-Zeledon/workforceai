@@ -50,6 +50,7 @@ func (s *server) mountArtifacts(r chi.Router) {
 	r.With(read).Get("/artifact-templates", s.artifactTemplates)
 	r.With(read).Get("/artifacts", s.listArtifacts)
 	r.With(create).Post("/artifacts", s.createArtifact)
+	r.With(create).Post("/artifacts/import-statement", s.importStatement)
 	r.With(read).Get("/artifacts/{id}", s.getArtifact)
 	r.With(write).Patch("/artifacts/{id}", s.patchArtifact)
 	r.With(write).Delete("/artifacts/{id}", s.archiveArtifact)
@@ -442,4 +443,35 @@ func (s *server) decideArtifactProposal(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, 200, p)
+}
+
+// importStatement: POST /artifacts/import-statement?filename=&title=&locale=&customer_id= with the
+// raw CSV or xlsx statement as body (at most 5 MB). The backend parses it into a
+// sheet artifact (no formulas kept, size-limited) that agents can read as
+// context. 201 artifact; 413 too_large; 400 invalid; 423 read_only_mode.
+func (s *server) importStatement(w http.ResponseWriter, r *http.Request) {
+	body := http.MaxBytesReader(w, r.Body, artifacts.MaxStatementBytes+1)
+	data, err := io.ReadAll(body)
+	if err != nil {
+		var mbe *http.MaxBytesError
+		if errors.As(err, &mbe) {
+			codeErr(w, http.StatusRequestEntityTooLarge, "too_large", "the statement exceeds the upload limit")
+			return
+		}
+		s.fail(w, errors.Join(domain.ErrInvalid, err))
+		return
+	}
+	q := r.URL.Query()
+	a, err := s.Artifacts.ImportStatement(r.Context(), s.artifactActor(r), artifacts.StatementInput{
+		Filename: q.Get("filename"), Title: q.Get("title"), Locale: q.Get("locale"), CustomerID: q.Get("customer_id"), Data: data})
+	switch {
+	case errors.Is(err, artifacts.ErrReadOnly):
+		codeErr(w, http.StatusLocked, "read_only_mode", "the organization is in read-only mode")
+	case errors.Is(err, artifacts.ErrTooLarge):
+		codeErr(w, http.StatusRequestEntityTooLarge, "too_large", err.Error())
+	case err != nil:
+		s.fail(w, err)
+	default:
+		writeJSON(w, http.StatusCreated, a)
+	}
 }
