@@ -48,7 +48,7 @@ func readOnlyGate(ctl *controls.Service) func(ctx context.Context, org string) e
 // orchestrator tasks) and the artifacts service (agent workspaces), with
 // Postgres storage when a database is configured and memory otherwise.
 func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg *postgres.Store, store application.Store, rt application.Runtime,
-	rec *application.Recorder, approvals *application.Approvals, orch *application.Orchestrator, orgCfg *application.OrgConfig, cw connWiring) workspaceWiring {
+	rec *application.Recorder, approvals *application.Approvals, orch *application.Orchestrator, orgCfg *application.OrgConfig, cw connWiring, modelPolicy *application.ModelPolicyService) workspaceWiring {
 
 	var pstore projects.Store = projects.NewMemStore()
 	var astore artifacts.Store = artifacts.NewMemStore()
@@ -77,6 +77,11 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	if v, err := strconv.ParseFloat(os.Getenv("PROJECT_BUDGET_WARN_PCT"), 64); err == nil && v >= 1 && v <= 100 {
 		pcfg.BudgetWarnPct = v / 100
 	}
+	if modelPolicy != nil {
+		// Q3: estimates are priced at the model each role is routed to.
+		pcfg.ModelFor = func(ctx context.Context, role string) string { return modelPolicy.Runtime(ctx).RoleModels[role] }
+	}
+	pcfg.SynthTokenBudget, pcfg.SynthMaxGroups = cfg.App.SynthTokenBudget, cfg.App.SynthMaxGroups
 	if orgCfg != nil {
 		pcfg.Catalog = orgCfg.Catalog()
 		pcfg.LocaleFor = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }

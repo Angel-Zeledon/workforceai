@@ -31,8 +31,9 @@ func TestLocalRouteSendsQuestionsToHiredProfessions(t *testing.T) {
 		{"¿qué rúbrica usamos para el examen del curso?", "education"},
 		{"¿la consulta sql de cohortes está lista?", "data_analyst"},
 		{"is the pull request for the bug ready?", "software_engineer"},
+		{"¿ya está la conciliación bancaria del extracto de septiembre?", "finance_treasury"},
 	}
-	office := officeWith("project_manager", "education", "data_analyst", "software_engineer")
+	office := officeWith("project_manager", "education", "data_analyst", "software_engineer", "finance_treasury")
 	for _, c := range cases {
 		r := localRoute(RouteRequest{Text: c.text, Conversation: "office", Agents: office, Locale: "es"})
 		if len(r.Responders) == 0 || r.Responders[0].AgentID != c.role {

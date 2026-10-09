@@ -12,7 +12,7 @@ func TestRoleTemplatesAndHiring(t *testing.T) {
 	tok := owner.AccessToken
 
 	items := e.list(api1+"/role-templates?locale=en", tok)
-	if len(items) != 11 {
+	if len(items) != 12 {
 		t.Fatalf("templates = %d", len(items))
 	}
 	byID := map[string]map[string]any{}

@@ -123,7 +123,7 @@ func (s *Service) Launch(ctx context.Context, id string, b LaunchBody) (Summary,
 		}
 		return Summary{}, fmt.Errorf("%w: invalid_plan (%s)", domain.ErrInvalid, strings.Join(slices.Compact(codes), ", "))
 	}
-	est := estimatePlan(rec.Nodes, rec.Objectives)
+	est := estimatePlanWith(rec.Nodes, rec.Objectives, s.estimator(ctx, rec.Planner))
 	if b.ApprovedBudgetUSD < est.Total.P50USD && !b.AcknowledgeUnderbudget {
 		return Summary{}, fmt.Errorf("%w: underbudget: the approved budget $%.4f is below the P50 estimate $%.4f", domain.ErrConflict, b.ApprovedBudgetUSD, est.Total.P50USD)
 	}

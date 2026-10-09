@@ -237,11 +237,23 @@ func retryFactor(maxAttempts int) float64 { return 1 + 0.08*math.Max(0, float64(
 const planMaxAttempts = 3
 
 func estimatePlan(nodes []NodeDef, objectives []Objective) *Estimate {
+	return estimatePlanWith(nodes, objectives, estimateOpts{})
+}
+
+func estimatePlanWith(nodes []NodeDef, objectives []Objective, opts estimateOpts) *Estimate {
 	ls := leaves(nodes)
+	cost := make([]float64, len(ls)) // per leaf, before retries
+	byModel := newModelTally()
 	var p50 float64
-	for _, n := range ls {
-		p50 += n.EstCostUSD * retryFactor(planMaxAttempts)
+	for i, n := range ls {
+		cost[i] = opts.nodeCost(n)
+		m, listed := opts.modelOf(n)
+		byModel.add(n, m, listed, cost[i])
+		p50 += cost[i] * retryFactor(planMaxAttempts)
 	}
+	tasksUSD := p50
+	syn := opts.synthesis(ls)
+	p50 += syn.USD
 	sim := simulate(simNodes(nodes))
 	human := 0
 	for _, n := range ls {
@@ -251,17 +263,25 @@ func estimatePlan(nodes []NodeDef, objectives []Objective) *Estimate {
 	}
 	e := &Estimate{Basis: "priors", Model: estimateModel, Confidence: "low",
 		ByObjective: []EstObjective{}, ByAgent: []EstAgent{}, Warnings: []EstWarning{}}
+	e.Breakdown = &EstBreakdown{TasksUSD: tasksUSD, SynthesisUSD: syn.USD, SynthesisCalls: syn.Calls, SynthesisModel: syn.Model,
+		PlannerUSD: opts.PlannerUSD, PlannerCalls: opts.PlannerCalls}
+	e.ByModel = byModel.list()
+	if len(e.ByModel) == 1 && e.ByModel[0].Priced {
+		e.Model = e.ByModel[0].Model
+	} else if len(e.ByModel) > 1 {
+		e.Model = "mixed"
+	}
 	if len(ls) > 30 {
 		e.Confidence = "medium"
 	}
-	e.Total.P50USD, e.Total.P90USD, e.Total.Calls = p50, p50*1.7, int(math.Round(float64(len(ls))*1.3))
+	e.Total.P50USD, e.Total.P90USD, e.Total.Calls = p50, p50*1.7, int(math.Round(float64(len(ls))*1.3))+syn.Calls+opts.PlannerCalls
 	e.Duration.P50Seconds, e.Duration.P90Seconds, e.Duration.HumanWaitSeconds = sim.Makespan, sim.Makespan*1.4, float64(human*10)
 	for _, o := range objectives {
 		var v float64
 		cnt := 0
-		for _, n := range ls {
+		for i, n := range ls {
 			if n.ObjectiveID == o.ID {
-				v += n.EstCostUSD * retryFactor(planMaxAttempts)
+				v += cost[i] * retryFactor(planMaxAttempts)
 				cnt++
 			}
 		}
@@ -269,7 +289,7 @@ func estimatePlan(nodes []NodeDef, objectives []Objective) *Estimate {
 	}
 	agents := map[string]*EstAgent{}
 	var order []string
-	for _, n := range ls {
+	for i, n := range ls {
 		if n.AgentID == nil {
 			continue
 		}
@@ -279,7 +299,7 @@ func estimatePlan(nodes []NodeDef, objectives []Objective) *Estimate {
 			agents[*n.AgentID] = a
 			order = append(order, *n.AgentID)
 		}
-		a.P50USD += n.EstCostUSD
+		a.P50USD += cost[i]
 		a.Calls++
 	}
 	for _, id := range order {

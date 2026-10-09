@@ -139,6 +139,31 @@ type Estimate struct {
 	ByObjective []EstObjective `json:"by_objective"`
 	ByAgent     []EstAgent     `json:"by_agent"`
 	Warnings    []EstWarning   `json:"warnings"`
+	// Breakdown and ByModel explain the total (additive, Q3): total.p50_usd =
+	// breakdown.tasks_usd + breakdown.synthesis_usd. The planner is already spent
+	// when the draft exists, so it is reported but not part of the run total.
+	Breakdown *EstBreakdown `json:"breakdown,omitempty"`
+	ByModel   []EstModel    `json:"by_model,omitempty"`
+}
+
+// EstBreakdown splits the P50 total. Tasks include the retry factor.
+type EstBreakdown struct {
+	TasksUSD       float64 `json:"tasks_usd"`
+	SynthesisUSD   float64 `json:"synthesis_usd"`
+	SynthesisCalls int     `json:"synthesis_calls"`
+	SynthesisModel string  `json:"synthesis_model"`
+	PlannerUSD     float64 `json:"planner_usd"`
+	PlannerCalls   int     `json:"planner_calls"`
+}
+
+// EstModel is the task cost (before retries) priced at one model. Priced is
+// false when the model is not in the shared table and the deepseek-chat prior
+// was kept.
+type EstModel struct {
+	Model  string  `json:"model"`
+	P50USD float64 `json:"p50_usd"`
+	Calls  int     `json:"calls"`
+	Priced bool    `json:"priced"`
 }
 
 type EstObjective struct {
@@ -329,18 +354,22 @@ type TemplateNode struct {
 	Secs        float64           `json:"secs,omitempty"`
 	Approval    *TemplateApproval `json:"approval,omitempty"`
 	Delegate    *TemplateDelegate `json:"delegate,omitempty"`
+	// Params are extra title parameters of this node (merged over the project ones).
+	Params map[string]string `json:"params,omitempty"`
 }
 type TemplateWorkflow struct {
-	Key      string         `json:"key"`
-	TitleKey string         `json:"title_key"`
-	Title    string         `json:"title,omitempty"`
-	Nodes    []TemplateNode `json:"nodes"`
+	Key      string            `json:"key"`
+	TitleKey string            `json:"title_key"`
+	Title    string            `json:"title,omitempty"`
+	Nodes    []TemplateNode    `json:"nodes"`
+	Params   map[string]string `json:"params,omitempty"`
 }
 type TemplateObjective struct {
 	Key       string             `json:"key"`
 	TitleKey  string             `json:"title_key"`
 	Title     string             `json:"title,omitempty"`
 	Workflows []TemplateWorkflow `json:"workflows"`
+	Params    map[string]string  `json:"params,omitempty"`
 }
 type Template struct {
 	ID             string              `json:"id"`
