@@ -57,6 +57,12 @@ type Config struct {
 	ProjectContextTokenBudget int // project index of one task (default 1500)
 	SynthTokenBudget          int // above this the report is synthesized hierarchically (default 12000)
 	SynthMaxGroups            int // group syntheses at most; plus the final pass (default 6)
+
+	// Q1 quality review (review.go). QualityMaxRework bounds the extra runs a
+	// review can cause per task (0-3, default 1); QualityLowConfidence is the
+	// confidence under which the "low_confidence" mode reviews (default 0.6).
+	QualityMaxRework     int
+	QualityLowConfidence float64
 }
 
 // DefaultConfig returns sane defaults.
@@ -72,6 +78,7 @@ func DefaultConfig() Config {
 		ChatTimeout: 30 * time.Second, ChatStagger: 900 * time.Millisecond,
 		DepContextTokenBudget: defaultDepContextTokenBudget, ProjectContextTokenBudget: defaultProjectContextBudget,
 		SynthTokenBudget: defaultSynthTokenBudget, SynthMaxGroups: defaultSynthMaxGroups,
+		QualityMaxRework: defaultQualityMaxRework, QualityLowConfidence: defaultQualityLowConfidence,
 	}
 }
 

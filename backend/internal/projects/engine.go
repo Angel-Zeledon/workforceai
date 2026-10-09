@@ -184,6 +184,7 @@ func newLive(rec Record) *liveProject {
 	for k, v := range rec.Decisions {
 		lp.decisions[k] = v
 	}
+	lp.review = reviewModeOf(rec.Quality)
 	return lp
 }
 

@@ -36,6 +36,8 @@ const (
 	UsageRunTask    UsageKind = "run_task"
 	UsageConsult    UsageKind = "consult"
 	UsageSynthesize UsageKind = "synthesize"
+	// UsageReview is a quality-review call (Q1); it belongs to the reviewed task.
+	UsageReview UsageKind = "review"
 	// UsagePlan is a planner call (project planning); it belongs to no request.
 	UsagePlan UsageKind = "plan"
 )

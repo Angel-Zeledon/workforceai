@@ -70,6 +70,7 @@ var (
 	_ application.Runtime     = (*Client)(nil)
 	_ application.Estimator   = (*Client)(nil)
 	_ application.ChatRuntime = (*Client)(nil)
+	_ application.Reviewer    = (*Client)(nil)
 )
 
 func (c *Client) do(ctx context.Context, method, path string, in, out any) error {
@@ -143,6 +144,12 @@ func (c *Client) Consult(ctx context.Context, in application.ConsultRequest) (ou
 
 func (c *Client) Synthesize(ctx context.Context, in application.SynthesizeRequest) (out application.SynthesizeResponse, err error) {
 	err = c.do(ctx, http.MethodPost, "/v1/synthesize", in, &out)
+	return
+}
+
+// Review implements application.Reviewer (POST /v1/review).
+func (c *Client) Review(ctx context.Context, in application.ReviewRequest) (out application.ReviewResponse, err error) {
+	err = c.do(ctx, http.MethodPost, "/v1/review", in, &out)
 	return
 }
 

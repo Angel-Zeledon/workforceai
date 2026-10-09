@@ -237,6 +237,8 @@ type PhaseTask struct {
 	DependsOn   []string `json:"depends_on"`
 	Complexity  string   `json:"complexity"` // S|M|L|XL
 	Reason      string   `json:"reason,omitempty"`
+	// Acceptance (Q1, additive): short, checkable criteria proposed by the planner.
+	Acceptance []string `json:"acceptance,omitempty"`
 }
 
 type PlanPhaseResponse struct {
@@ -257,6 +259,9 @@ type RunTaskInfo struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	AgentID     string `json:"agent_id"`
+	// Acceptance (Q1, additive, omitted when empty): the checkable criteria the
+	// output will be reviewed against.
+	Acceptance []string `json:"acceptance,omitempty"`
 }
 
 type RunAgentInfo struct {
@@ -329,6 +334,8 @@ type RunTaskRequest struct {
 	ExternalContent []string     `json:"external_content,omitempty"`
 	Locale          string       `json:"locale,omitempty"`
 	Tone            string       `json:"tone,omitempty"`
+	// Rework (Q1, additive): set when the quality review asked for a new run.
+	Rework *ReworkInfo `json:"rework,omitempty"`
 }
 
 type ConsultRequestItem struct {

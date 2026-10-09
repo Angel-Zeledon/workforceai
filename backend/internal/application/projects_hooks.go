@@ -63,6 +63,7 @@ type TaskGate interface {
 // restart recovery (durable.go).
 func (o *Orchestrator) SetTaskGate(g TaskGate) {
 	o.conn.gate = g
+	o.conn.reviewPolicy, _ = g.(ReviewPolicy)
 	o.durable.owner, _ = g.(RequestOwner)
 }
 

@@ -86,6 +86,37 @@ type StructuredOutput struct {
 	Recommendations []string       `json:"recommendations"`
 	Confidence      float64        `json:"confidence"`
 	SuggestedTasks  []string       `json:"suggested_tasks"`
+	// Review is the verdict of the quality review (Q1); omitted when the task
+	// was not reviewed, so old payloads stay valid.
+	Review *Review `json:"review,omitempty"`
+}
+
+// Review verdicts (Q1).
+const (
+	VerdictPass   = "pass"
+	VerdictRework = "rework"
+	VerdictFail   = "fail"
+)
+
+// CriterionResult is the reviewer's judgement of one acceptance criterion.
+type CriterionResult struct {
+	Criterion string `json:"criterion"`
+	Met       bool   `json:"met"`
+	Note      string `json:"note,omitempty"`
+}
+
+// Review is the persisted outcome of the quality review of a task output.
+// Reworks counts the extra runs the review caused; Rework exhausted means the
+// last output still had a "rework" verdict when the bound was reached.
+type Review struct {
+	Verdict   string            `json:"verdict"` // pass|rework|fail
+	Reasons   []string          `json:"reasons"`
+	Criteria  []CriterionResult `json:"criteria,omitempty"`
+	Evidence  []string          `json:"evidence,omitempty"`
+	Reviewer  string            `json:"reviewer"` // agent id of the reviewer ("assistant" = neutral reviewer)
+	Reworks   int               `json:"reworks"`
+	Exhausted bool              `json:"rework_exhausted,omitempty"`
+	At        time.Time         `json:"at"`
 }
 
 // Normalize makes sure no collection serializes as null.
@@ -314,7 +345,9 @@ const (
 	EvApprovalReminder = "approval.reminder"
 	// EvTaskRetrying: a task failed transiently and starts another attempt, or a
 	// human re-queued it (payload.manual).
-	EvTaskRetrying   = "task.retrying"
+	EvTaskRetrying = "task.retrying"
+	// EvTaskReviewed: the quality review judged a task output (Q1).
+	EvTaskReviewed   = "task.reviewed"
 	EvReportCreated  = "report.created"
 	EvActivityLogged = "activity.logged"
 	EvError          = "error"

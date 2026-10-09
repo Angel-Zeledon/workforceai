@@ -348,6 +348,9 @@ func (s *Service) CreateDraft(ctx context.Context, in NewProject) (Record, error
 	rec := Record{ID: pid, OrgID: org, Name: inst.Name, NameKey: inst.NameKey, Goal: inst.Goal, Status: StatusDraft, Control: ControlActive, TemplateID: &tid,
 		Params: params, Locale: locale, Budget: defaultBudgetPolicy(), MaxParallel: 4, Objectives: inst.Objectives, Nodes: inst.Nodes, StructureVersion: 1,
 		Decisions: map[string]string{}, CreatedBy: application.ActorFrom(ctx, ""), CreatedAt: s.now(), Planner: info}
+	if info != nil && info.Mode == PlannerHierarchical {
+		rec.Quality = &Quality{Review: application.ReviewLowConfidence} // Q1: default of new hierarchical projects
+	}
 	rec.Estimate = estimatePlan(rec.Nodes, rec.Objectives)
 	rec.BudgetUSD = in.BudgetUSD
 	if rec.BudgetUSD <= 0 {
@@ -399,6 +402,9 @@ func (s *Service) finishPlanning(ctx context.Context, rec Record, job *planJob, 
 		}
 		tid := tpl.ID
 		r.TemplateID, r.Objectives, r.Nodes, r.Planner = &tid, inst.Objectives, inst.Nodes, &info
+		if info.Mode != PlannerHierarchical && r.Quality != nil && r.Quality.Review == application.ReviewLowConfidence {
+			r.Quality = nil // the plan fell back to flat/generic: no acceptance criteria, no default review
+		}
 		r.Estimate = estimatePlan(r.Nodes, r.Objectives)
 		if userBudget <= 0 {
 			r.BudgetUSD = defaultBudget(r.Estimate)
@@ -482,6 +488,12 @@ func (s *Service) PatchPlan(ctx context.Context, id string, ops []PlanOp) (int, 
 			return fmt.Errorf("%w: only a draft can be edited", domain.ErrConflict)
 		}
 		for _, op := range ops {
+			if op.Op == "set_quality" {
+				if err := setQuality(r, op.Fields.Review); err != nil {
+					return err
+				}
+				continue
+			}
 			if op.Op != "update" {
 				return fmt.Errorf("%w: unsupported plan operation %q", domain.ErrInvalid, op.Op)
 			}
@@ -496,6 +508,12 @@ func (s *Service) PatchPlan(ctx context.Context, id string, ops []PlanOp) (int, 
 					return fmt.Errorf("%w: title must have 1-300 characters", domain.ErrInvalid)
 				}
 				n.Title, n.TitleKey, n.TitleParams = title, "", nil
+			}
+			if ac := op.Fields.Acceptance; ac != nil {
+				if n.isGroup() || n.human() {
+					return fmt.Errorf("%w: node %q has no acceptance criteria", domain.ErrInvalid, op.ID)
+				}
+				n.Acceptance = cleanAcceptance(*ac, MaxAcceptance)
 			}
 			if a := op.Fields.AgentID; a != nil {
 				if n.isGroup() || n.human() {
