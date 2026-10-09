@@ -16,6 +16,7 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 ## A8 CI — estado: arreglado `go test`, `-race` añadido; falta verificar en GitHub
 
 - 2026-10-08: smoke del escenario de $50,000 y 7/7 e2e de Playwright en verde contra el stack completo (compose en puertos alternos), con A1 integrado.
+- 2026-10-09, rama `integrate/part-a-leftovers` (A1b + A1c + A6b + A7c): `gofmt`, `go vet`, `go test -race ./...`, `pytest` (548 ok, 31 omitidos), `tsc`, `check:i18n`, `next build`, smoke de $50,000, 7/7 e2e sin auth y 4/4 e2e con `E2E_AUTH=1` en verde contra el stack completo; migraciones 350-370 aplicadas con RLS en Postgres real.
 
 - Causa reproducida en `golang:1.26` (CI usa `go-version-file`): `TestProjectsLifecycleOverHTTP` fallaba con "cancel of a finished project = 200".
   El snapshot deriva `done` (`projects/view.go` `deriveStatus`) pero el estado terminal se persiste en el siguiente tick del motor (`projects/engine.go` `publish`); en ese hueco `Control` veía `running` y aceptaba cancelar.
@@ -27,7 +28,7 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 
 ---
 
-## A1 Ejecución duradera — implementado salvo el paso 6 (A1b en `feat/a1b-resume`)
+## A1 Ejecución duradera — implementado (A1b y paso 6 integrados en `integrate/part-a-leftovers`)
 
 - Verificado en stack real (Postgres + Redis + runtime): aprobación pendiente → `docker compose restart backend` → log "resumed in-progress requests count=1" → aprobar → solicitud `done` con informe.
 
@@ -54,7 +55,9 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 ### Pendiente
 - Varias instancias recuperando a la vez (documentado en `07-seguridad-costos.md` 5.4): hoy una sola instancia debe recuperar; el registro de ejecuciones sí es compartido.
 - Ediciones de la revisión del plan hechas antes del reinicio (se pierden: la revisión empieza limpia); esperas de nodos `wait` de proyecto (vuelven a empezar); planificación interrumpida a mitad (la solicitud falla).
-- No verificado: e2e con `docker compose restart backend` a mitad del escenario de $50,000, ni la reanudación con una cuenta real de Gmail (sólo buzón simulado).
+- Verificado 2026-10-09 en el stack completo: `docker compose restart backend` a mitad del escenario de $50,000 con la aprobación pendiente → "resumed in-progress requests count=1" → aprobar → `done` con informe; también una aprobación decidida mientras la recuperación no la veía, reanudada al arrancar.
+- Corregido con esa prueba: `Recover` sólo recorría las organizaciones con miembros (`ListOrgIDs` lee `memberships`), así que en cuanto alguien se registraba la org demo dejaba de recuperarse y sus solicitudes quedaban en `awaiting_approval`. Ahora siempre incluye la org por defecto, como el resto de barridos (test `TestRecoverIncludesDefaultOrgWhenOthersAreListed`).
+- No verificado: la reanudación con una cuenta real de Gmail (sólo buzón simulado).
 
 ### Estado anterior (verificado antes de implementar)
 - Cada solicitud corre en una goroutine con estado en memoria (`application/orchestrator.go` `submit`/`process`, struct `run`).
