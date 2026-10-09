@@ -36,6 +36,7 @@ type Orchestrator struct {
 	budget *Budget        // hard caps: reserve before each runtime call, reconcile after
 	conn   connState      // optional: controls guard, Tool Gateway, plan review (connections_flow.go)
 	policy *PolicyService // optional: organization rules and the policy engine (policyflow.go)
+	code   CodeRunner     // optional: approval-gated code sandbox (code_flow.go)
 
 	chatIdem idemCache // Idempotency-Key of POST /messages (chat.go)
 	chatQ    chatQueue // per-conversation FIFO of chat turns (chat.go)
@@ -702,6 +703,12 @@ func (o *Orchestrator) handleTools(ctx context.Context, rs *run, t *domain.Task,
 func (o *Orchestrator) handleToolsFrom(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, reqs []ToolRequest, start int) Outcome {
 	for i := start; i < len(reqs); i++ {
 		tr := reqs[i]
+		if isCodeRun(tr) { // never auto-approved: see code_flow.go
+			if out := o.handleCodeRun(ctx, rs, t, agent, tr, i, reqs); out != OutcomeDone {
+				return out
+			}
+			continue
+		}
 		route := o.routeOf(ctx, agent, tr)
 		if route == RouteRead {
 			// Reads never need approval; the gateway skips the ones that survived the read rounds.

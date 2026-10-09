@@ -579,6 +579,18 @@ func (o *Orchestrator) resumeTask(ctx context.Context, rs *run, t domain.Task) O
 		if res := o.resumeGatewayApproval(ctx, rs, &t, agent, tr, cp); res != OutcomeDone {
 			return res
 		}
+	case isCodeRun(tr):
+		ap, ch, err := o.approvals.Attach(ctx, cp.ApprovalID)
+		if err != nil {
+			o.failTask(ctx, rs, t, err)
+			return OutcomeFailed
+		}
+		if o.code == nil {
+			o.supersedeApprovals(ctx, t.ID, true)
+			o.codeDenied(ctx, &t, agent, "code_execution_disabled")
+		} else if res := o.codeAwait(ctx, rs, &t, agent, tr, ap, ch, o.approvals.Deadline(ap), ""); res != OutcomeDone {
+			return res
+		}
 	default:
 		ap, ch, err := o.approvals.Attach(ctx, cp.ApprovalID)
 		if err != nil {
