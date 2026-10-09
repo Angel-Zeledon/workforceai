@@ -128,6 +128,28 @@ func (s *Service) liveOf(org, id string) *liveProject {
 	return s.live[org+"|"+id]
 }
 
+// revive marks the live monitor of a project as revived and wakes it, so a
+// tick that already judged the project finished cannot make it exit (see
+// watch). It returns false when the project has no monitor (adopt a new one).
+func (s *Service) revive(org, id string) bool {
+	s.mu.Lock()
+	lp := s.live[org+"|"+id]
+	if lp != nil {
+		lp.epoch++
+	}
+	s.mu.Unlock()
+	lp.wake()
+	return lp != nil
+}
+
+// revivedSince reports whether the project was revived after the current
+// monitor tick started, which makes the tick's snapshot stale.
+func (s *Service) revivedSince(lp *liveProject) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return lp.epoch != lp.stepEpoch
+}
+
 func (s *Service) lockFor(org, id string) *sync.Mutex {
 	s.mu.Lock()
 	defer s.mu.Unlock()

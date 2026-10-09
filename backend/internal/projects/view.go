@@ -391,8 +391,10 @@ type liveProject struct {
 	lastSig    map[string]string
 	budgetApp  string // id of the pending extend_budget approval
 	lastStatus string
+	epoch      int // bumped (under Service.mu) when a finished project is revived; the monitor must not exit across a bump
 
 	// monitor state (only the watch goroutine writes it)
+	stepEpoch int           // epoch observed when the current tick started
 	poke      chan struct{} // wakes the monitor early (human action, cap change)
 	lastFP    string        // fingerprint of the last snapshot that was built
 	lastFull  time.Time     // when the last full rebuild ran

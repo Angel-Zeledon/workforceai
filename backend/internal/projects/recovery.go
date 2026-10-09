@@ -71,6 +71,11 @@ func (s *Service) recoverNode(ctx context.Context, projectID, nodeID string, ski
 	for _, id := range res.Requeued {
 		requeued[id] = true
 	}
+	// The request is already revived here. Tell the monitor before the record
+	// changes: a tick that judged the project finished from a stale view must
+	// neither exit nor persist the terminal status (see watch/publish). When
+	// there is no monitor (it exited, or after a restart) a new one is adopted.
+	live := s.revive(rec.OrgID, projectID)
 	// A re-queued gate asks its human again: its old answer is forgotten. The
 	// project is running again (its terminal status is re-derived by the monitor).
 	upd, err := s.update(ctx, projectID, func(r *Record) error {
@@ -85,12 +90,13 @@ func (s *Service) recoverNode(ctx context.Context, projectID, nodeID string, ski
 	if err != nil {
 		return RecoveryResult{}, err
 	}
-	if lp := s.liveOf(upd.OrgID, projectID); lp != nil {
+	if lp := s.liveOf(upd.OrgID, projectID); lp != nil && live {
 		lp.mu.Lock()
 		for id := range requeued {
 			delete(lp.decisions, id)
 		}
 		lp.mu.Unlock()
+		lp.wake()
 	} else {
 		s.adopt(application.WithOrg(ctx, upd.OrgID), upd)
 	}
