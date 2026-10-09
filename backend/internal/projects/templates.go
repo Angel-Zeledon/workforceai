@@ -114,7 +114,7 @@ func builtinTemplates() []Template {
 				}},
 			}},
 		}}
-	return []Template{fc, bo, gen}
+	return []Template{fc, bo, gen, cashCloseTemplate()}
 }
 
 // i18n of the built-in templates: the keys of the frontend catalogs (proj.*, pv.action.*).
@@ -256,6 +256,9 @@ func truncRunes(s string, n int) string {
 // instantiate builds the nodes of a draft. params are the user values (missing
 // ones take the template default); the goal is available as {goal}.
 func (t Template) instantiate(pid, goal string, params map[string]string, locale string) (instance, error) {
+	if t.Key == keyCashClose && t.Builtin {
+		t = expandCashClose(params, locale) // Q3: the structure depends on accounts and clients
+	}
 	all := map[string]string{"goal": truncRunes(strings.TrimSpace(goal), 60)}
 	for _, p := range t.Params {
 		v := catalog.SanitizeParam(params[p.Key])
@@ -264,14 +267,30 @@ func (t Template) instantiate(pid, goal string, params map[string]string, locale
 		}
 		all[p.Key] = v
 	}
-	text := func(key, literal string) (string, string) {
+	textP := func(p map[string]string, key, literal string) (string, string, map[string]string) {
+		if len(p) > 0 {
+			merged := make(map[string]string, len(all)+len(p))
+			for k, v := range all {
+				merged[k] = v
+			}
+			for k, v := range p {
+				merged[k] = v
+			}
+			p = merged
+		} else {
+			p = all
+		}
 		if literal != "" {
-			return literal, ""
+			return literal, "", p
 		}
 		if hasKey(key) {
-			return tr(locale, key, all), key
+			return tr(locale, key, p), key, p
 		}
-		return key, ""
+		return key, "", p
+	}
+	text := func(key, literal string) (string, string) {
+		a, b, _ := textP(nil, key, literal)
+		return a, b
 	}
 	inst := instance{Goal: goal}
 	name, nameKey := text(t.NameKey, t.Name)
@@ -295,12 +314,12 @@ func (t Template) instantiate(pid, goal string, params map[string]string, locale
 	}
 	for oi, o := range t.Objectives {
 		oid := pid + ":" + o.Key
-		title, key := text(o.TitleKey, o.Title)
-		inst.Objectives = append(inst.Objectives, Objective{ID: oid, Title: title, TitleKey: key, TitleParams: all, Position: oi})
+		title, key, op := textP(o.Params, o.TitleKey, o.Title)
+		inst.Objectives = append(inst.Objectives, Objective{ID: oid, Title: title, TitleKey: key, TitleParams: op, Position: oi})
 		for wi, w := range o.Workflows {
 			gid := pid + ":" + w.Key
-			gt, gk := text(w.TitleKey, w.Title)
-			inst.Nodes = append(inst.Nodes, NodeDef{ID: gid, Key: w.Key, ObjectiveID: oid, Kind: KindGroup, Title: gt, TitleKey: gk, TitleParams: all,
+			gt, gk, gp := textP(w.Params, w.TitleKey, w.Title)
+			inst.Nodes = append(inst.Nodes, NodeDef{ID: gid, Key: w.Key, ObjectiveID: oid, Kind: KindGroup, Title: gt, TitleKey: gk, TitleParams: gp,
 				DependsOn: []string{}, DelegationDepth: 1, DelegationChain: []string{}, WBSPath: pad(oi+1) + "." + pad(wi+1), Complexity: "S"})
 			for ni, n := range w.Nodes {
 				id := keyToID[n.Key]
@@ -308,8 +327,8 @@ func (t Template) instantiate(pid, goal string, params map[string]string, locale
 				if kind == "" {
 					kind = KindTask
 				}
-				title, tkey := text(n.TitleKey, n.Title)
-				def := NodeDef{ID: id, Key: n.Key, ObjectiveID: oid, ParentID: &gid, Kind: kind, Title: title, TitleKey: tkey, TitleParams: all,
+				title, tkey, np := textP(n.Params, n.TitleKey, n.Title)
+				def := NodeDef{ID: id, Key: n.Key, ObjectiveID: oid, ParentID: &gid, Kind: kind, Title: title, TitleKey: tkey, TitleParams: np,
 					Description: n.Description, DelegationDepth: 1, DelegationChain: []string{}, Complexity: normComplexity(n.Complexity),
 					WBSPath: pad(oi+1) + "." + pad(wi+1) + "." + pad(ni+1)}
 				def.DependsOn = []string{}

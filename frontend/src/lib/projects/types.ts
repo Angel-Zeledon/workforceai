@@ -68,6 +68,10 @@ export interface ProjectEstimate {
   by_objective: { id: string; p50_usd: number; p90_usd: number; nodes: number }[];
   by_agent: { agent_id: string; p50_usd: number; calls: number }[];
   warnings: { key: string; params?: Record<string, string | number> }[];
+  /** Q3: total.p50_usd = tasks_usd + synthesis_usd; the planner is already spent (reported, not added) */
+  breakdown?: { tasks_usd: number; synthesis_usd: number; synthesis_calls: number; synthesis_model: string; planner_usd: number; planner_calls: number };
+  /** Q3: task cost by the model each agent is routed to; priced=false keeps the deepseek-chat prior */
+  by_model?: { model: string; p50_usd: number; calls: number; priced: boolean }[];
 }
 
 export interface ProjectSummary {

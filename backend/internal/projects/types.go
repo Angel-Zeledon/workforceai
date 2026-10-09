@@ -354,18 +354,22 @@ type TemplateNode struct {
 	Secs        float64           `json:"secs,omitempty"`
 	Approval    *TemplateApproval `json:"approval,omitempty"`
 	Delegate    *TemplateDelegate `json:"delegate,omitempty"`
+	// Params are extra title parameters of this node (merged over the project ones).
+	Params map[string]string `json:"params,omitempty"`
 }
 type TemplateWorkflow struct {
-	Key      string         `json:"key"`
-	TitleKey string         `json:"title_key"`
-	Title    string         `json:"title,omitempty"`
-	Nodes    []TemplateNode `json:"nodes"`
+	Key      string            `json:"key"`
+	TitleKey string            `json:"title_key"`
+	Title    string            `json:"title,omitempty"`
+	Nodes    []TemplateNode    `json:"nodes"`
+	Params   map[string]string `json:"params,omitempty"`
 }
 type TemplateObjective struct {
 	Key       string             `json:"key"`
 	TitleKey  string             `json:"title_key"`
 	Title     string             `json:"title,omitempty"`
 	Workflows []TemplateWorkflow `json:"workflows"`
+	Params    map[string]string  `json:"params,omitempty"`
 }
 type Template struct {
 	ID             string              `json:"id"`
