@@ -321,6 +321,7 @@ export class ProjectsMock {
     const c = countStates(d.nodes);
     p.tasks_done = c.done; p.tasks_total = c.total; p.running = c.running; p.awaiting = c.awaiting; p.failed = c.failed;
     p.spent_usd = d.nodes.reduce((s, n) => s + n.cost_usd, 0);
+    p.budget_warn_pct = p.budget_usd > 0 && p.spent_usd >= p.budget_usd * 0.8 ? 0.8 : undefined;
     p.light = p.status === "draft" || p.status === "planning" ? "green" : computeHealth(d).light;
     return { ...p };
   }

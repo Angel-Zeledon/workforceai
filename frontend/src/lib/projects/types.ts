@@ -79,6 +79,8 @@ export interface ProjectSummary {
   light: Light;
   created_at: string; started_at: string | null; finished_at: string | null; deadline_at: string | null;
   objectives_count: number;
+  /** highest budget early-warning threshold already crossed, as a fraction (0.8 = 80%); absent when none (W5) */
+  budget_warn_pct?: number;
 }
 
 export interface ProjectDetail {
@@ -128,7 +130,7 @@ export interface ProjectTemplate {
 export interface ProjectHealth {
   project_id: string; computed_at: string; light: Light;
   progress: { tasks_done: number; tasks_total: number; weighted_pct: number };
-  schedule: { deadline_at: string | null; eta_p50: string | null; eta_p90: string | null; slip_seconds_p50: number | null };
+  schedule: { deadline_at: string | null; eta_p50: string | null; eta_p90: string | null; slip_seconds_p50: number | null; calibration_factor?: number; calibration_samples?: number };
   critical_path: { length_seconds: number; node_ids: string[]; blocked_on_human: number };
   budget: { limit_usd: number; spent_usd: number; burn_usd_per_h: number; forecast_at_completion_usd: number; forecast_p90_usd: number; warning: "none" | "p90_near_limit" | "over" };
   waiting_human: { count: number; oldest_age_seconds: number; blocking_critical: number };
@@ -138,7 +140,7 @@ export interface ProjectHealth {
 
 /** WS-like frames for the projects channel (project.created / status_changed / delta / plan.draft_progress). */
 export interface ProjectFrame {
-  type: "project.created" | "project.status_changed" | "project.delta" | "plan.draft_progress";
+  type: "project.created" | "project.status_changed" | "project.delta" | "project.budget_warning" | "plan.draft_progress";
   payload: {
     project: ProjectSummary;
     nodes?: ProjectNode[];

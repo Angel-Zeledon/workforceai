@@ -22,13 +22,37 @@ export function HealthView() {
   const b = h.budget;
   const max = Math.max(b.limit_usd, b.forecast_p90_usd, b.forecast_at_completion_usd, 0.000001);
   const slip = h.schedule.slip_seconds_p50;
+  const cnt = { running: 0, awaiting: 0, failed: 0, pending: 0, done: 0 };
+  for (const n of detail.nodes) {
+    if (n.kind === "group") continue;
+    if (n.state === "running") cnt.running++;
+    else if (n.state === "awaiting_approval") cnt.awaiting++;
+    else if (n.state === "failed") cnt.failed++;
+    else if (n.state === "done" || n.state === "skipped") cnt.done++;
+    else if (n.state === "pending" || n.state === "ready" || n.state === "blocked" || n.state === "waiting") cnt.pending++;
+  }
+  const warn = detail.project.budget_warn_pct;
+  const spentPct = detail.project.budget_usd > 0 ? (detail.project.spent_usd / detail.project.budget_usd) * 100 : 0;
   return (
     <div className="space-y-4">
+      {warn ? (
+        <div data-testid="budget-warning-banner" data-pct={warn * 100} role="alert" className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] font-semibold text-ink">
+          ⚠ {t("pv.health.budgetWarn", { pct: fmtNumber(Math.max(spentPct, warn * 100), 0), spent: fmtMoney(detail.project.spent_usd), limit: fmtMoney(detail.project.budget_usd) })}
+        </div>
+      ) : null}
+      <div data-testid="status-counts" className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-mute">
+        {(["running", "awaiting", "failed", "pending", "done"] as const).map((k) => (
+          <span key={k} data-testid={`status-count-${k}`} data-count={cnt[k]}>{t(`pv.health.count.${k}`)}: <b className="font-mono text-ink">{cnt[k]}</b></span>
+        ))}
+      </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label={t("pv.health.light")} testId="health-light" attrs={{ "data-light": h.light }} color={LIGHT_COLOR[h.light]} value={t(`pv.light.${h.light}`)}
           sub={t("pv.health.progress", { pct: fmtNumber(h.progress.weighted_pct * 100, 0) })} />
         <Kpi label={t("pv.health.eta")} testId="health-eta-p50" value={h.schedule.eta_p50 ? fmtTime(h.schedule.eta_p50) : "—"}
-          sub={slip === null ? t("pv.health.noDeadline") : slip > 0 ? t("pv.health.late", { d: fmtDuration(slip) }) : t("pv.health.early", { d: fmtDuration(-slip) })}
+          sub={<>
+            {slip === null ? t("pv.health.noDeadline") : slip > 0 ? t("pv.health.late", { d: fmtDuration(slip) }) : t("pv.health.early", { d: fmtDuration(-slip) })}
+            {h.schedule.calibration_factor ? <span data-testid="eta-calibration" className="block text-[10px] text-mute">{t("pv.health.calibrated", { n: h.schedule.calibration_samples ?? 0, factor: fmtNumber(h.schedule.calibration_factor, 2) })}</span> : null}
+          </>}
           color={slip !== null && slip > 0 ? "#a63232" : undefined} />
         <Kpi label={t("pv.health.budget")} testId="health-budget-forecast" attrs={{ "data-forecast": b.forecast_at_completion_usd }}
           value={fmtMoney(b.forecast_at_completion_usd)} sub={t("pv.health.ofLimit", { spent: fmtMoney(b.spent_usd), limit: fmtMoney(b.limit_usd) })}
