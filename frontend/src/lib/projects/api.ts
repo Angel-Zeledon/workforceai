@@ -6,7 +6,7 @@
 import { API_URL, MOCK } from "../config";
 import { authFetch } from "../session";
 import type {
-  ControlAction, LaunchBody, NewProjectBody, PlanOp, ProjectDetail, ProjectEstimate, ProjectHealth, ProjectSummary, ProjectTemplate,
+  ControlAction, LaunchBody, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectEstimate, ProjectHealth, ProjectSummary, ProjectTemplate,
 } from "./types";
 
 /** HTTP error that keeps the server message ({"error": "..."}), where limits carry "limit_exceeded: <code>". */
@@ -49,6 +49,11 @@ export const projectsApi = {
   control: async (id: string, action: ControlAction) => (MOCK ? (await mock()).control(id, action) : http("POST", `/projects/${id}/control`, { action })),
   retryNode: async (id: string, nodeId: string) => (MOCK ? (await mock()).retryNode(id, nodeId) : http("POST", `/projects/${id}/nodes/${nodeId}/retry`)),
   skipNode: async (id: string, nodeId: string, reason: string) => (MOCK ? (await mock()).skipNode(id, nodeId, reason) : http("POST", `/projects/${id}/nodes/${nodeId}/skip`, { reason })),
+  /** Q2 plan changes: agents only propose; a human decides. */
+  listChanges: async (id: string): Promise<PlanChange[]> => (MOCK ? [] : items<PlanChange>(await http("GET", `/projects/${id}/plan-changes`))),
+  proposeChange: async (id: string, reason: string, ops: PlanChangeOp[]): Promise<PlanChange | null> => (MOCK ? null : http("POST", `/projects/${id}/plan-changes`, { reason, ops })),
+  decideChange: async (id: string, changeId: string, decision: "approve" | "reject"): Promise<PlanChange | null> => (MOCK ? null : http("POST", `/projects/${id}/plan-changes/${changeId}/${decision}`, {})),
+  replanNode: async (id: string, nodeId: string): Promise<PlanChange | null> => (MOCK ? null : http("POST", `/projects/${id}/nodes/${nodeId}/replan`)),
   setBudget: async (id: string, usd: number) => (MOCK ? (await mock()).setBudget(id, usd) : http("PUT", `/projects/${id}/budget`, { budget_usd: usd })),
   decide: async (pid: string, approvalId: string, decision: "approve" | "reject") =>
     MOCK ? (await mock()).decide(pid, approvalId, decision) : http("POST", `/approvals/${approvalId}/decision`, { decision }),

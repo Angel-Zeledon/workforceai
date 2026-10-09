@@ -3,10 +3,10 @@ import { MOCK } from "../config";
 import { useStore } from "../store";
 import { projectsApi } from "./api";
 import type {
-  ControlAction, LaunchBody, NewProjectBody, PlanOp, ProjectDetail, ProjectFrame, ProjectHealth, ProjectSummary, ProjectTemplate,
+  ControlAction, LaunchBody, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectFrame, ProjectHealth, ProjectSummary, ProjectTemplate,
 } from "./types";
 
-export const PROJECT_TABS = ["health", "map", "timeline", "kanban", "lanes", "delegation", "approvals", "costs"] as const;
+export const PROJECT_TABS = ["health", "map", "timeline", "kanban", "lanes", "delegation", "approvals", "changes", "costs"] as const;
 export type ProjectTab = (typeof PROJECT_TABS)[number];
 
 interface PState {
@@ -20,6 +20,8 @@ interface PState {
   tab: ProjectTab;
   selectedNodeId: string | null;
   templates: ProjectTemplate[];
+  /** Q2: plan changes of the open project */
+  changes: PlanChange[];
   error: string | null;
   setOpen: (o: boolean) => void;
   setTab: (t: ProjectTab) => void;
@@ -39,6 +41,10 @@ interface PState {
   decideBatch: (b: { action: string; decision: "approve" | "reject"; expected_count: number; include_high?: boolean }) => Promise<void>;
   setBudget: (usd: number) => Promise<void>;
   saveAsTemplate: () => Promise<void>;
+  loadChanges: () => Promise<void>;
+  proposeChange: (reason: string, ops: PlanChangeOp[]) => Promise<void>;
+  decideChange: (changeId: string, d: "approve" | "reject") => Promise<void>;
+  replanNode: (nodeId: string) => Promise<void>;
 }
 
 let healthTimer: ReturnType<typeof setTimeout> | null = null;
@@ -54,7 +60,7 @@ function scheduleHealth(get: () => PState, set: (p: Partial<PState>) => void) {
 
 export const useProjects = create<PState>((set, get) => ({
   open: false, loaded: false, projects: {}, activeId: null, detail: null, health: null, tab: "health", selectedNodeId: null,
-  templates: [], error: null,
+  templates: [], changes: [], error: null,
 
   setOpen: (open) => set({ open }),
   setTab: (tab) => set({ tab }),
@@ -69,15 +75,16 @@ export const useProjects = create<PState>((set, get) => ({
   loadTemplates: async () => { try { set({ templates: await projectsApi.templates() }); } catch { /* ignore */ } },
 
   openProject: async (id) => {
-    set({ activeId: id, detail: null, health: null, tab: "health", selectedNodeId: null, error: null });
+    set({ activeId: id, detail: null, health: null, changes: [], tab: "health", selectedNodeId: null, error: null });
     try {
       const detail = await projectsApi.get(id);
       if (get().activeId !== id) return;
       set({ detail });
       projectsApi.health(id).then((h) => { if (get().activeId === id) set({ health: h }); }).catch(() => {});
+      get().loadChanges();
     } catch { set({ error: "unavailable" }); }
   },
-  closeProject: () => set({ activeId: null, detail: null, health: null, selectedNodeId: null }),
+  closeProject: () => set({ activeId: null, detail: null, health: null, changes: [], selectedNodeId: null }),
 
   apply: (f) => {
     const { project } = f.payload;
@@ -126,6 +133,13 @@ export const useProjects = create<PState>((set, get) => ({
   decide: async (approvalId, d) => { const id = get().activeId; if (!id) return; await projectsApi.decide(id, approvalId, d); if (!MOCK) set({ detail: await projectsApi.get(id) }); },
   decideBatch: async (b) => { const id = get().activeId; if (!id) return; await projectsApi.decideBatch(id, b); if (!MOCK) set({ detail: await projectsApi.get(id) }); },
   setBudget: async (usd) => { const id = get().activeId; if (!id) return; await projectsApi.setBudget(id, usd); if (!MOCK) set({ detail: await projectsApi.get(id) }); },
+  loadChanges: async () => {
+    const id = get().activeId; if (!id) return;
+    try { const changes = await projectsApi.listChanges(id); if (get().activeId === id) set({ changes }); } catch { /* backend without plan changes */ }
+  },
+  proposeChange: async (reason, ops) => { const id = get().activeId; if (!id) return; await projectsApi.proposeChange(id, reason, ops); if (!MOCK) { set({ detail: await projectsApi.get(id) }); await get().loadChanges(); } },
+  decideChange: async (changeId, d) => { const id = get().activeId; if (!id) return; await projectsApi.decideChange(id, changeId, d); if (!MOCK) { set({ detail: await projectsApi.get(id) }); await get().loadChanges(); } },
+  replanNode: async (nodeId) => { const id = get().activeId; if (!id) return; await projectsApi.replanNode(id, nodeId); if (!MOCK) await get().loadChanges(); },
   saveAsTemplate: async () => { const id = get().activeId; if (!id) return; await projectsApi.saveAsTemplate(id); await get().loadTemplates(); },
 }));
 
@@ -153,6 +167,7 @@ export function startProjectsRealtime() {
         // Backend without /projects yet: back off to one retry every ~30 s instead of a 404 every 3 s.
         if (s.error === "unavailable" && tick++ % 10 !== 0) return;
         s.loadList();
+        if (s.activeId) s.loadChanges();
         if (s.activeId) projectsApi.get(s.activeId).then((d) => { if (useProjects.getState().activeId === d.project.id) useProjects.setState({ detail: d }); }).catch(() => {});
       }, 3000);
       stopFn = () => clearInterval(h);

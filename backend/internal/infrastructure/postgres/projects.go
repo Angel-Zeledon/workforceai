@@ -66,3 +66,31 @@ func (p *ProjectStore) ListTemplates(ctx context.Context, org string) ([]project
 		return t, json.Unmarshal(raw, &t)
 	}, `SELECT data FROM project_templates WHERE org_id=$1 ORDER BY created_at, id`, org)
 }
+
+var _ projects.ChangeStore = (*ProjectStore)(nil)
+
+func scanChange(r scanner) (projects.PlanChange, error) {
+	var raw []byte
+	var c projects.PlanChange
+	if err := r.Scan(&raw); err != nil {
+		return c, err
+	}
+	return c, json.Unmarshal(raw, &c)
+}
+
+// PutChange upserts a plan change (migration 440).
+func (p *ProjectStore) PutChange(ctx context.Context, c projects.PlanChange) error {
+	return p.S.exec(ctx, c.OrgID, `INSERT INTO plan_changes (id, org_id, project_id, status, data, created_at)
+		VALUES ($1,$2,$3,$4,$5,$6)
+		ON CONFLICT (org_id, id) DO UPDATE SET status=EXCLUDED.status, data=EXCLUDED.data, updated_at=now()`,
+		c.ID, c.OrgID, c.ProjectID, c.Status, jb(c), c.CreatedAt)
+}
+
+func (p *ProjectStore) GetChange(ctx context.Context, org, project, id string) (projects.PlanChange, error) {
+	c, err := one(ctx, p.S, org, scanChange, `SELECT data FROM plan_changes WHERE org_id=$1 AND project_id=$2 AND id=$3`, org, project, id)
+	return c, mapErr(err)
+}
+
+func (p *ProjectStore) ListChanges(ctx context.Context, org, project string) ([]projects.PlanChange, error) {
+	return many(ctx, p.S, org, scanChange, `SELECT data FROM plan_changes WHERE org_id=$1 AND project_id=$2 ORDER BY created_at, id`, org, project)
+}

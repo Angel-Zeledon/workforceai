@@ -101,6 +101,11 @@ type Node struct {
 	// of its quality review (Q1, additive).
 	Acceptance []string       `json:"acceptance,omitempty"`
 	Review     *domain.Review `json:"review,omitempty"`
+	// PlanChangeID is the plan change that added this node (Q2, additive).
+	PlanChangeID string `json:"plan_change_id,omitempty"`
+	// Superseded is "replaced" or "removed" when a plan change took the node out
+	// of the plan; its state is then "cancelled" and it no longer counts (Q2).
+	Superseded string `json:"superseded,omitempty"`
 }
 
 type Approval struct {
@@ -470,6 +475,10 @@ type NodeDef struct {
 	TaskID          string            `json:"task_id,omitempty"`
 	// Acceptance: checkable criteria the output is reviewed against (Q1).
 	Acceptance []string `json:"acceptance,omitempty"`
+	// PlanChangeID / Superseded / SupersededBy: mid-flight replanning (Q2, planchange.go).
+	PlanChangeID string `json:"plan_change_id,omitempty"`
+	Superseded   string `json:"superseded,omitempty"`
+	SupersededBy string `json:"superseded_by,omitempty"`
 }
 
 func (n NodeDef) isGroup() bool { return n.Kind == KindGroup }

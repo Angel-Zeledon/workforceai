@@ -189,6 +189,8 @@ type durableState struct {
 	active map[string]bool // requests being processed by this process
 	// reopening counts the manual recoveries (recovery.go) running per request.
 	reopening map[string]int
+	// live are the schedulers of each request that accept amendments (plan_dynamic.go).
+	live map[string][]*liveRun
 }
 
 // track registers a request as being processed; false if it already was.

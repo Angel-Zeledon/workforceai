@@ -38,6 +38,7 @@ type MemStore struct {
 	mu   sync.Mutex
 	recs map[string]Record // org|id
 	tpls map[string][]Template
+	chg  *MemChangeStore
 }
 
 func NewMemStore() *MemStore {
@@ -45,6 +46,28 @@ func NewMemStore() *MemStore {
 }
 
 var _ Store = (*MemStore)(nil)
+
+// MemStore also keeps the plan changes (Q2).
+var _ ChangeStore = (*MemStore)(nil)
+
+func (m *MemStore) PutChange(ctx context.Context, c PlanChange) error {
+	return m.changes().PutChange(ctx, c)
+}
+func (m *MemStore) GetChange(ctx context.Context, org, project, id string) (PlanChange, error) {
+	return m.changes().GetChange(ctx, org, project, id)
+}
+func (m *MemStore) ListChanges(ctx context.Context, org, project string) ([]PlanChange, error) {
+	return m.changes().ListChanges(ctx, org, project)
+}
+
+func (m *MemStore) changes() *MemChangeStore {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.chg == nil {
+		m.chg = NewMemChangeStore()
+	}
+	return m.chg
+}
 
 func (m *MemStore) Put(_ context.Context, r Record) error {
 	m.mu.Lock()

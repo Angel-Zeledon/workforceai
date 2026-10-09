@@ -120,7 +120,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 			TitleKey: def.TitleKey, TitleParams: def.TitleParams, AgentID: def.AgentID, DependsOn: nonNil(def.DependsOn), DelegationDepth: def.DelegationDepth,
 			DelegationChain: nonNil(def.DelegationChain), DagLevel: def.DagLevel, WBSPath: def.WBSPath, Complexity: def.Complexity,
 			EstCostUSD: def.EstCostUSD, EstSeconds: def.EstSeconds, PlanStartMS: def.PlanStartMS, PlanEndMS: def.PlanEndMS,
-			ApprovalAction: def.ApprovalAction, MaxAttempts: s.cfg.MaxAttempts, State: StateDraft, Acceptance: def.Acceptance}
+			ApprovalAction: def.ApprovalAction, MaxAttempts: s.cfg.MaxAttempts, State: StateDraft, Acceptance: def.Acceptance, PlanChangeID: def.PlanChangeID}
 		if def.isGroup() {
 			nodes = append(nodes, n)
 			continue
@@ -166,6 +166,9 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 		case n.State == StateFailed:
 			n.Error = ptrStr("failed")
 		}
+		if def.Superseded != "" { // replaced or removed by a plan change: out of the plan
+			n.Superseded, n.State, n.Progress, n.Error = def.Superseded, StateCancelled, 0, nil
+		}
 		if lp != nil {
 			n.Rev = lp.revOf(n)
 		}
@@ -191,7 +194,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 		g.State = rollupState(kids)
 		done, total := 0, 0
 		for _, k := range kids {
-			if k.Kind == KindGroup {
+			if k.Kind == KindGroup || k.Superseded != "" {
 				continue
 			}
 			total++
@@ -394,7 +397,11 @@ type liveProject struct {
 	review     string // quality.review of the project (Q1): off|low_confidence|always
 	budgetApp  string // id of the pending extend_budget approval
 	lastStatus string
-	epoch      int // bumped (under Service.mu) when a finished project is revived; the monitor must not exit across a bump
+	// plan changes (Q2): suggested_tasks already turned into a proposal, and whether a change is open
+	sugSeen     map[string]bool
+	sugLoaded   bool
+	openChanges bool
+	epoch       int // bumped (under Service.mu) when a finished project is revived; the monitor must not exit across a bump
 
 	// monitor state (only the watch goroutine writes it)
 	stepEpoch int           // epoch observed when the current tick started

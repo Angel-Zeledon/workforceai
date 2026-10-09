@@ -39,6 +39,12 @@ func (s *server) mountProjects(r chi.Router) {
 	// W2 manual recovery of a failed/blocked node (human-only, audited).
 	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/nodes/{nodeId}/retry", s.retryProjectNode)
 	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/nodes/{nodeId}/skip", s.skipProjectNode)
+	// Q2 mid-flight replanning: agents only propose; a human decides.
+	r.With(s.can(auth.PermTasksRead)).Get("/projects/{id}/plan-changes", s.listPlanChanges)
+	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/plan-changes", s.createPlanChange)
+	r.With(s.can(auth.PermApprovalsDecide)).Post("/projects/{id}/plan-changes/{changeId}/approve", func(w http.ResponseWriter, r *http.Request) { s.decidePlanChange(w, r, "approve") })
+	r.With(s.can(auth.PermApprovalsDecide)).Post("/projects/{id}/plan-changes/{changeId}/reject", func(w http.ResponseWriter, r *http.Request) { s.decidePlanChange(w, r, "reject") })
+	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/nodes/{nodeId}/replan", s.replanProjectNode)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/projects/{id}/save-as-template", s.saveProjectTemplate)
 	r.With(s.can(auth.PermTasksRead)).Get("/project-templates", s.listProjectTemplates)
 	// Deciding approvals is privileged (admin/owner); every decision still goes through Approvals.Decide.
@@ -246,4 +252,49 @@ func (s *server) decideApprovalsBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, res)
+}
+
+func (s *server) listPlanChanges(w http.ResponseWriter, r *http.Request) {
+	v, err := s.Projects.ListChanges(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, list(v))
+}
+
+func (s *server) createPlanChange(w http.ResponseWriter, r *http.Request) {
+	var body projects.NewPlanChange
+	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	c, err := s.Projects.ProposeChange(r.Context(), chi.URLParam(r, "id"), body)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, c)
+}
+
+func (s *server) decidePlanChange(w http.ResponseWriter, r *http.Request, decision string) {
+	var body struct {
+		Note string `json:"note"`
+	}
+	_ = s.decode(w, r, &body)
+	c, err := s.Projects.DecideChange(r.Context(), chi.URLParam(r, "id"), chi.URLParam(r, "changeId"), decision, body.Note)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, c)
+}
+
+func (s *server) replanProjectNode(w http.ResponseWriter, r *http.Request) {
+	c, err := s.Projects.ProposeReplan(r.Context(), chi.URLParam(r, "id"), chi.URLParam(r, "nodeId"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, c)
 }

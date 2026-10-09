@@ -36,6 +36,7 @@ type fakeRuntime struct {
 	failFn   func(title string) error                                             // injected runtime failure (nil: none)
 	review   func(n int, in application.ReviewRequest) application.ReviewResponse // Q1 reviewer (nil: always pass)
 	reviews  []application.ReviewRequest
+	suggest  func(title string) []string // suggested_tasks of a task output (nil: none)
 }
 
 func newRT() *fakeRuntime { return &fakeRuntime{finished: map[string]int{}} }
@@ -69,7 +70,11 @@ func (f *fakeRuntime) RunTask(_ context.Context, in application.RunTaskRequest) 
 	f.nFin++
 	f.finished[in.Task.Title] = f.nFin
 	f.mu.Unlock()
-	return application.RunTaskResponse{Output: domain.StructuredOutput{Summary: "hecho: " + in.Task.Title, Confidence: 0.9},
+	var sug []string
+	if f.suggest != nil {
+		sug = f.suggest(in.Task.Title)
+	}
+	return application.RunTaskResponse{Output: domain.StructuredOutput{Summary: "hecho: " + in.Task.Title, Confidence: 0.9, SuggestedTasks: sug},
 		Usage: application.Usage{Model: "deepseek-chat", CostUSD: f.cost}}, nil
 }
 
@@ -213,6 +218,15 @@ func (e *env) approveAll(id string, stop func(projects.Detail) bool) {
 		}
 		return stop(d)
 	})
+}
+
+// approveGates approves the pending project approvals once.
+func (e *env) approveGates(id string) {
+	for _, a := range e.detail(id).Approvals {
+		if a.Status == "pending" {
+			_, _ = e.appr.Decide(e.ctx, a.ID, "approve", "")
+		}
+	}
 }
 
 func nodeByTitle(d projects.Detail, title string) projects.Node {

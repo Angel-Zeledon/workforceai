@@ -219,7 +219,7 @@ func simulate(nodes []simNode) simResult {
 
 func simNodes(nodes []NodeDef) []simNode {
 	out := make([]simNode, 0, len(nodes))
-	for _, n := range leaves(nodes) {
+	for _, n := range activeLeaves(nodes) {
 		a := ""
 		if n.AgentID != nil {
 			a = *n.AgentID
@@ -241,7 +241,7 @@ func estimatePlan(nodes []NodeDef, objectives []Objective) *Estimate {
 }
 
 func estimatePlanWith(nodes []NodeDef, objectives []Objective, opts estimateOpts) *Estimate {
-	ls := leaves(nodes)
+	ls := activeLeaves(nodes)        // superseded nodes (Q2) are not estimated
 	cost := make([]float64, len(ls)) // per leaf, before retries
 	byModel := newModelTally()
 	var p50 float64
@@ -371,7 +371,7 @@ func isDone(state string) bool { return state == StateDone }
 func rollupState(children []Node) string {
 	ls := make([]Node, 0, len(children))
 	for _, c := range children {
-		if c.Kind != KindGroup {
+		if c.Kind != KindGroup && c.Superseded == "" {
 			ls = append(ls, c)
 		}
 	}
@@ -411,7 +411,7 @@ type counts struct{ done, running, ready, pending, awaiting, failed, total int }
 func countStates(nodes []Node) counts {
 	var c counts
 	for _, n := range nodes {
-		if n.Kind == KindGroup {
+		if n.Kind == KindGroup || n.Superseded != "" {
 			continue
 		}
 		c.total++
@@ -437,7 +437,7 @@ func countStates(nodes []Node) counts {
 func criticalPath(nodes []Node) ([]string, float64) {
 	var ls []Node
 	for _, n := range nodes {
-		if n.Kind != KindGroup {
+		if n.Kind != KindGroup && n.Superseded == "" {
 			ls = append(ls, n)
 		}
 	}
@@ -491,7 +491,7 @@ func computeHealth(d Detail, now time.Time) Health {
 	h := Health{ProjectID: p.ID, ComputedAt: now, Risks: []Risk{}, ByObjective: []HealthByObj{}}
 	var ls []Node
 	for _, n := range d.Nodes {
-		if n.Kind != KindGroup {
+		if n.Kind != KindGroup && n.Superseded == "" {
 			ls = append(ls, n)
 		}
 	}

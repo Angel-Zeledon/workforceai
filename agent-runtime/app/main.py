@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from .engine import AgentEngine, select_engine
 from .estimate import EstimateRequest, EstimateResponse
 from .providers import ProviderError
+from .replan import ReplanRequest, ReplanResponse
 from .redact import redact_any, redact_secrets
 from .models import (
     ChatReplyRequest,
@@ -102,6 +103,10 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
     @app.post("/v1/plan-phase", response_model=PlanPhaseResponse, response_model_exclude_none=True)
     async def plan_phase(req: PlanPhaseRequest):
         return await guarded(eng().plan_phase(req))
+
+    @app.post("/v1/replan", response_model=ReplanResponse, response_model_exclude_none=True)
+    async def replan(req: ReplanRequest):
+        return await guarded(eng().replan(req))
 
     @app.post("/v1/run-task", response_model=RunTaskResponse, response_model_exclude_none=True)
     async def run_task(req: RunTaskRequest):

@@ -420,31 +420,17 @@ func (o *Orchestrator) reopenRun(ctx context.Context, rs *run, sub []domain.Task
 			rs.touch(t.AgentID)
 		}
 	}
-	inSub := map[string]bool{}
-	byID := make(map[string]domain.Task, len(sub))
-	for _, t := range sub {
-		inSub[t.ID] = true
-		byID[t.ID] = t
-	}
-	nodes := make([]Node, 0, len(sub))
-	for _, t := range sub {
-		deps := []string{}
-		for _, d := range t.DependsOn {
-			if inSub[d] {
-				deps = append(deps, d)
-			}
-		}
-		nodes = append(nodes, Node{ID: t.ID, DependsOn: deps})
-	}
-	outcomes := Scheduler{MaxParallel: o.parallelFor(rs)}.Run(ctx, nodes,
+	lr := o.registerLive(rs, sub, false)
+	outcomes := Scheduler{MaxParallel: o.parallelFor(rs), Live: lr.h}.Run(ctx, lr.nodes(sub),
 		func(c context.Context, id string) Outcome {
-			out := o.runTask(c, rs, byID[id])
+			out := o.runTask(c, rs, lr.task(id))
 			if c.Err() == nil {
 				o.dropCheckpoint(c, id)
 			}
 			return out
 		},
-		func(id string) { o.skipTask(ctx, rs, byID[id]) })
+		func(id string) { o.skipTask(ctx, rs, lr.task(id)) })
+	o.unregisterLive(lr)
 	if ctx.Err() != nil {
 		return // shutdown: the request stays running and Recover resumes it
 	}

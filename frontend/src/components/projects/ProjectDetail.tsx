@@ -10,6 +10,7 @@ import { DraftEditor } from "./DraftEditor";
 import { HealthView } from "./HealthView";
 import { KanbanBoard } from "./KanbanBoard";
 import { NodeDrawer } from "./NodeDrawer";
+import { PlanChangesPanel } from "./PlanChangesPanel";
 import { ProjectMap } from "./ProjectMap";
 import { Timeline } from "./Timeline";
 import { LightDot, STATUS_COLOR, StatusPill } from "./shared";
@@ -24,6 +25,7 @@ export function ProjectDetailView() {
   const saveAsTemplate = useProjects((s) => s.saveAsTemplate);
   const selected = useProjects((s) => s.selectedNodeId);
   const light = useProjects((s) => s.health?.light);
+  const pendingChanges = useProjects((s) => s.changes.filter((c) => c.status === "pending").length);
   const pendingApprovals = useProjects((s) => s.detail?.approvals.filter((a) => a.status === "pending").length ?? 0);
 
   if (!detail) return <div className="p-6 text-sm text-mute">…</div>;
@@ -72,6 +74,7 @@ export function ProjectDetailView() {
                 <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`pv-tab-${k}`} onClick={() => setTab(k)}
                   className={`rounded-md border px-3.5 py-1.5 text-xs font-semibold transition ${tab === k ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel text-mute hover:text-ink"}`}>
                   {t(`pv.tab.${k}`)}
+                  {k === "changes" && pendingChanges > 0 && <span data-testid="plan-changes-badge" className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-black">{pendingChanges}</span>}
                   {k === "approvals" && pendingApprovals > 0 && <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-black">{pendingApprovals}</span>}
                 </button>
               ))}
@@ -84,6 +87,7 @@ export function ProjectDetailView() {
             {tab === "lanes" && <AgentLanes />}
             {tab === "delegation" && <DelegationTree />}
             {tab === "approvals" && <ApprovalsBatch />}
+            {tab === "changes" && <PlanChangesPanel />}
             {tab === "costs" && <CostsView />}
           </>
         )}

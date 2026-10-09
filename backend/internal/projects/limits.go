@@ -25,6 +25,10 @@ type Limits struct {
 	PlannerConcurrency int           // phase expansions in flight at once (default 3)
 	PhasesTimeout      time.Duration // the phases call (default 45s)
 	PhaseTimeout       time.Duration // each phase expansion (default 75s)
+	// MaxOpenPlanChanges caps the pending plan change proposals of a project (default 3).
+	MaxOpenPlanChanges int
+	// MaxTasksPerChange caps the tasks one plan change adds (default 40).
+	MaxTasksPerChange int
 	// SyncWait is how long CreateDraft waits for the planner before it answers
 	// with a draft that is still being planned (the REST write timeout is 60s).
 	SyncWait time.Duration
@@ -38,12 +42,15 @@ const (
 	LimitMaxNodes    = "max_nodes_per_project"
 	LimitMaxChildren = "max_children_per_group"
 	LimitMaxActive   = "max_active_projects"
+	// Plan changes (Q2).
+	LimitOpenChanges    = "max_open_plan_changes"
+	LimitTasksPerChange = "max_tasks_per_plan_change"
 )
 
 // DefaultLimits are the documented defaults.
 func DefaultLimits() Limits {
 	return Limits{MaxNodesPerProject: 20000, MaxChildrenPerGroup: 200, MaxActiveProjects: 20,
-		MaxPhases: 12, MaxTasksPerPhase: 40, PlannerConcurrency: 3,
+		MaxPhases: 12, MaxTasksPerPhase: 40, MaxOpenPlanChanges: 3, MaxTasksPerChange: 40, PlannerConcurrency: 3,
 		PhasesTimeout: 45 * time.Second, PhaseTimeout: 75 * time.Second, SyncWait: 40 * time.Second}
 }
 
@@ -64,6 +71,7 @@ func (l Limits) withDefaults() Limits {
 	l.MaxNodesPerProject, l.MaxChildrenPerGroup = pick(l.MaxNodesPerProject, d.MaxNodesPerProject), pick(l.MaxChildrenPerGroup, d.MaxChildrenPerGroup)
 	l.MaxActiveProjects, l.MaxPhases = pick(l.MaxActiveProjects, d.MaxActiveProjects), pick(l.MaxPhases, d.MaxPhases)
 	l.MaxTasksPerPhase, l.PlannerConcurrency = pick(l.MaxTasksPerPhase, d.MaxTasksPerPhase), pick(l.PlannerConcurrency, d.PlannerConcurrency)
+	l.MaxOpenPlanChanges, l.MaxTasksPerChange = pick(l.MaxOpenPlanChanges, d.MaxOpenPlanChanges), pick(l.MaxTasksPerChange, d.MaxTasksPerChange)
 	l.PhasesTimeout, l.PhaseTimeout, l.SyncWait = pickD(l.PhasesTimeout, d.PhasesTimeout), pickD(l.PhaseTimeout, d.PhaseTimeout), pickD(l.SyncWait, d.SyncWait)
 	return l
 }

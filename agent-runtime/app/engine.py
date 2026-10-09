@@ -123,6 +123,12 @@ class AgentEngine(abc.ABC):
 
         return sim_review(req)
 
+    async def replan(self, req):
+        """Replacement sub-plan for a failed node (Q2). Default: the deterministic simulated replanner."""
+        from .replan import sim_replan
+
+        return sim_replan(req)
+
     async def route(self, req: RouteRequest) -> RouteResponse:
         """Who should answer a chat message (docs/architecture/chat-routing.md). Default: the rules."""
         from .routing import rules_route
