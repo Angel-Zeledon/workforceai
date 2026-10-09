@@ -149,7 +149,7 @@ func run(log *slog.Logger) error {
 	}
 
 	// Projects (whole workflows with parallel work) and agent workspaces (artifacts).
-	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw)
+	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy)
 
 	// Durable execution: resume the requests a previous process left in progress
 	// (after the project gate is installed, so project requests are recognized).

@@ -65,6 +65,14 @@ type Config struct {
 	Now           func() time.Time
 	// Limits are the size limits and planner bounds (zero values: defaults).
 	Limits Limits
+	// ModelFor returns the model ("provider/model") an agent role is routed to
+	// (organization model policy); "" when none is configured. Optional: nil
+	// keeps the deepseek-chat priors (Q3).
+	ModelFor func(ctx context.Context, role string) string
+	// SynthTokenBudget and SynthMaxGroups mirror the orchestrator's W3 synthesis
+	// settings, used only to estimate the synthesis calls (0: defaults).
+	SynthTokenBudget int
+	SynthMaxGroups   int
 }
 
 // Service is the projects use case layer.
@@ -348,7 +356,7 @@ func (s *Service) CreateDraft(ctx context.Context, in NewProject) (Record, error
 	rec := Record{ID: pid, OrgID: org, Name: inst.Name, NameKey: inst.NameKey, Goal: inst.Goal, Status: StatusDraft, Control: ControlActive, TemplateID: &tid,
 		Params: params, Locale: locale, Budget: defaultBudgetPolicy(), MaxParallel: 4, Objectives: inst.Objectives, Nodes: inst.Nodes, StructureVersion: 1,
 		Decisions: map[string]string{}, CreatedBy: application.ActorFrom(ctx, ""), CreatedAt: s.now(), Planner: info}
-	rec.Estimate = estimatePlan(rec.Nodes, rec.Objectives)
+	rec.Estimate = estimatePlanWith(rec.Nodes, rec.Objectives, s.estimator(ctx, rec.Planner))
 	rec.BudgetUSD = in.BudgetUSD
 	if rec.BudgetUSD <= 0 {
 		rec.BudgetUSD = defaultBudget(rec.Estimate)
@@ -393,13 +401,14 @@ func (s *Service) finishPlanning(ctx context.Context, rec Record, job *planJob, 
 		inst, _ = genericTemplate().instantiate(rec.ID, rec.Goal, nil, locale)
 	}
 	var out Record
+	eo := s.estimator(ctx, &info)
 	_, err = s.update(ctx, rec.ID, func(r *Record) error {
 		if r.Status != StatusDraft || r.Planner == nil || r.Planner.Status != PlannerRunning {
 			return fmt.Errorf("%w: the draft changed while it was being planned", domain.ErrConflict)
 		}
 		tid := tpl.ID
 		r.TemplateID, r.Objectives, r.Nodes, r.Planner = &tid, inst.Objectives, inst.Nodes, &info
-		r.Estimate = estimatePlan(r.Nodes, r.Objectives)
+		r.Estimate = estimatePlanWith(r.Nodes, r.Objectives, eo)
 		if userBudget <= 0 {
 			r.BudgetUSD = defaultBudget(r.Estimate)
 		}
@@ -477,6 +486,7 @@ func (s *Service) PatchPlan(ctx context.Context, id string, ops []PlanOp) (int, 
 		}
 	}
 	var issues []Issue
+	eo := s.estimator(ctx, nil)
 	rec, err := s.update(ctx, id, func(r *Record) error {
 		if r.Status != StatusDraft {
 			return fmt.Errorf("%w: only a draft can be edited", domain.ErrConflict)
@@ -513,7 +523,10 @@ func (s *Service) PatchPlan(ctx context.Context, id string, ops []PlanOp) (int, 
 			}
 		}
 		r.StructureVersion++
-		r.Estimate = estimatePlan(r.Nodes, r.Objectives)
+		if r.Planner != nil {
+			eo.PlannerUSD, eo.PlannerCalls = r.Planner.CostUSD, r.Planner.Calls
+		}
+		r.Estimate = estimatePlanWith(r.Nodes, r.Objectives, eo)
 		issues = validatePlan(r.Nodes, agentIDs)
 		return nil
 	})
@@ -535,7 +548,8 @@ func (s *Service) Estimate(ctx context.Context, id string) (*Estimate, error) {
 	if rec.Status != StatusDraft && rec.Estimate != nil {
 		return rec.Estimate, nil
 	}
-	rec, err = s.update(ctx, id, func(r *Record) error { r.Estimate = estimatePlan(r.Nodes, r.Objectives); return nil })
+	eo := s.estimator(ctx, rec.Planner)
+	rec, err = s.update(ctx, id, func(r *Record) error { r.Estimate = estimatePlanWith(r.Nodes, r.Objectives, eo); return nil })
 	return rec.Estimate, err
 }
 
