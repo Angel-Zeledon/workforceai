@@ -141,6 +141,7 @@ var i18n = map[string]map[string]string{
 		"pv.approval.details":       "Un humano debe autorizar este paso antes de que continúe el proyecto: {node}",
 		"pv.approval.budgetDetails": "El proyecto alcanzó su tope de presupuesto y está en pausa. Aprueba una ampliación del 25 % para continuar o recházala para cancelar el proyecto.",
 		"project.delegated":         "Delegado desde: {node}",
+		"pv.budgetWarn.text":        "El proyecto \"{name}\" ya usó el {pct} % de su presupuesto.",
 	},
 	"en": {
 		"proj.fc.name": "Quarterly financial close", "proj.fc.desc": "The accountant builds the balance sheet and, in parallel, the income statement; then it is reviewed and delivered.",
@@ -164,6 +165,7 @@ var i18n = map[string]map[string]string{
 		"pv.approval.details":       "A person must authorize this step before the project continues: {node}",
 		"pv.approval.budgetDetails": "The project reached its budget cap and is paused. Approve a 25% extension to continue, or reject it to cancel the project.",
 		"project.delegated":         "Delegated from: {node}",
+		"pv.budgetWarn.text":        "Project \"{name}\" has used {pct}% of its budget.",
 	},
 }
 

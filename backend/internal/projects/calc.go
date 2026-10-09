@@ -492,8 +492,15 @@ func computeHealth(d Detail, now time.Time) Health {
 	}
 	sim := simulate(sn)
 	finished := p.Status == StatusDone
-	etaP50 := now.Add(time.Duration(sim.Makespan * float64(time.Second)))
-	etaP90 := now.Add(time.Duration(sim.Makespan * 1.4 * float64(time.Second)))
+	// The remaining estimate is scaled by what the finished nodes actually took.
+	factor, samples := calibrationFactor(ls)
+	if samples >= minCalibrationSamples {
+		h.Schedule.CalibrationFactor, h.Schedule.CalibrationSamples = math.Round(factor*100)/100, samples
+	} else {
+		factor = 1
+	}
+	etaP50 := now.Add(time.Duration(sim.Makespan * factor * float64(time.Second)))
+	etaP90 := now.Add(time.Duration(sim.Makespan * factor * 1.4 * float64(time.Second)))
 	if finished && p.FinishedAt != nil {
 		etaP50, etaP90 = *p.FinishedAt, *p.FinishedAt
 	}
@@ -607,4 +614,36 @@ func computeHealth(d Detail, now time.Time) Health {
 		h.ByObjective = append(h.ByObjective, HealthByObj{ID: o.ID, Pct: pct, State: rollupState(own), SpentUSD: spent})
 	}
 	return h
+}
+
+// minCalibrationSamples is how many finished agent nodes are needed before the
+// ETA trusts the observed pace over the planning estimate.
+const minCalibrationSamples = 3
+
+// calibrationFactor is the median of (observed duration / estimated duration)
+// over the finished agent nodes, clamped to [0.2, 5]. It is the whole ETA
+// model: remaining estimate (by complexity) x observed pace. Human nodes and
+// nodes without timestamps or estimate are ignored.
+func calibrationFactor(ls []Node) (float64, int) {
+	var ratios []float64
+	for _, n := range ls {
+		if n.State != StateDone || n.AgentID == nil || n.EstSeconds <= 0 || n.StartedAt == nil || n.FinishedAt == nil {
+			continue
+		}
+		if n.Kind == KindGate || n.Kind == KindMilestone || n.Kind == KindWait {
+			continue
+		}
+		if d := n.FinishedAt.Sub(*n.StartedAt).Seconds(); d > 0 {
+			ratios = append(ratios, d/n.EstSeconds)
+		}
+	}
+	if len(ratios) == 0 {
+		return 1, 0
+	}
+	slices.Sort(ratios)
+	m := ratios[len(ratios)/2]
+	if len(ratios)%2 == 0 {
+		m = (ratios[len(ratios)/2-1] + ratios[len(ratios)/2]) / 2
+	}
+	return math.Min(5, math.Max(0.2, m)), len(ratios)
 }

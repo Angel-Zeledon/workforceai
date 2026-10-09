@@ -631,7 +631,7 @@ Un proyecto es un workflow entero con trabajo en paralelo: objetivos -> flujos -
 
 ### 16.3 Eventos WS (aditivos)
 
-`project.created`, `project.status_changed`, `project.delta`: `payload = {project: ProjectSummary, nodes?: Node[] (solo los que cambiaron, con rev), approvals?, estimate?, structure_version?}`. Los publica el monitor del proyecto (cada 250 ms si algo cambió). Sin entrada de auditoría por delta; sí `project.created|launched|paused|resumed|cancelled|budget_changed|plan_edited|saved_as_template|approvals_batch|done|failed`.
+`project.created`, `project.status_changed`, `project.delta`: `payload = {project: ProjectSummary, nodes?: Node[] (solo los que cambiaron, con rev), approvals?, estimate?, structure_version?}`. Los publica el monitor del proyecto (cada 250 ms mientras algo cambia; con retroceso hasta 2 s en reposo, W5). Sin entrada de auditoría por delta; sí `project.created|launched|paused|resumed|cancelled|budget_changed|plan_edited|saved_as_template|approvals_batch|done|failed`.
 
 ### 16.4 Notas de contrato
 

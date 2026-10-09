@@ -143,7 +143,7 @@ func (s *Service) Launch(ctx context.Context, id string, b LaunchBody) (Summary,
 // newLive builds the in-memory state of a launched project from its record.
 func newLive(rec Record) *liveProject {
 	lp := &liveProject{org: rec.OrgID, id: rec.ID, requestID: rec.RequestID, control: rec.Control, locale: rec.Locale, name: rec.Name,
-		nodes: map[string]NodeDef{}, decisions: map[string]string{}, waitSince: map[string]time.Time{}, rev: map[string]int{}, lastSig: map[string]string{}}
+		nodes: map[string]NodeDef{}, decisions: map[string]string{}, waitSince: map[string]time.Time{}, rev: map[string]int{}, lastSig: map[string]string{}, poke: make(chan struct{}, 1)}
 	if lp.control == "" {
 		lp.control = ControlActive
 	}
@@ -280,6 +280,7 @@ func (s *Service) Control(ctx context.Context, id, action string) (Summary, erro
 		lp.mu.Lock()
 		lp.control = rec.Control
 		lp.mu.Unlock()
+		lp.wake()
 	}
 	s.audit(ctx, "project."+map[string]string{"pause": "paused", "resume": "resumed", "cancel": "cancelled"}[action], id, map[string]any{"request_id": rec.RequestID})
 	if rejectPending {
@@ -332,6 +333,7 @@ func (s *Service) SetBudget(ctx context.Context, id string, usd float64) (Summar
 	if err != nil {
 		return Summary{}, err
 	}
+	s.liveOf(rec.OrgID, id).wake()
 	s.audit(ctx, "project.budget_changed", id, map[string]any{"from_usd": prev, "to_usd": usd})
 	d, err := s.detailOf(ctx, rec)
 	if err != nil {
@@ -489,6 +491,7 @@ func (s *Service) GateResolved(ctx context.Context, org string, t domain.Task, _
 	lp.mu.Lock()
 	lp.decisions[t.ID] = verdict
 	lp.mu.Unlock()
+	defer lp.wake()
 	if _, err := s.update(application.WithOrg(ctx, org), lp.id, func(r *Record) error {
 		if r.Decisions == nil {
 			r.Decisions = map[string]string{}
@@ -508,37 +511,45 @@ func (s *Service) GateResolved(ctx context.Context, org string, t domain.Task, _
 // publishes project.* events when something changed.
 func (s *Service) watch(lp *liveProject) {
 	ctx := application.WithOrg(s.root, lp.org)
-	tick := time.NewTicker(s.cfg.Poll)
-	defer tick.Stop()
 	for {
-		if s.step(ctx, lp) {
+		done, changed := s.step(ctx, lp)
+		if done {
 			s.mu.Lock()
 			delete(s.live, lp.org+"|"+lp.id)
 			delete(s.byReq, lp.org+"|"+lp.requestID)
 			s.mu.Unlock()
 			return
 		}
+		delay := s.nextDelay(lp, changed)
+		t := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
+			t.Stop()
 			return
-		case <-tick.C:
+		case <-lp.poke:
+			lp.idleTicks = 0
+		case <-t.C:
 		}
+		t.Stop()
 	}
 }
 
-// step runs one monitor iteration; it returns true when everything finished.
-func (s *Service) step(ctx context.Context, lp *liveProject) bool {
+// step runs one monitor iteration. It returns done=true when everything
+// finished and changed=true when the project view changed (it resets the
+// polling backoff). An unchanged snapshot skips the rebuild and the publish
+// (monitor.go).
+func (s *Service) step(ctx context.Context, lp *liveProject) (done, changed bool) {
 	rec, err := s.cfg.Store.Get(ctx, lp.org, lp.id)
 	if err != nil {
-		return ctx.Err() != nil
+		return ctx.Err() != nil, false
 	}
 	snap, err := s.loadSnapshot(ctx, rec)
 	if err != nil {
-		return false
+		return false, false
 	}
 	if snap.req == nil {
 		if !errors.Is(snap.reqErr, domain.ErrNotFound) {
-			return false // transient store error: try again next tick
+			return false, false // transient store error: try again next tick
 		}
 		if !terminalStatus(rec.Status) {
 			// The request disappeared (demo reset): the project cannot continue.
@@ -548,7 +559,11 @@ func (s *Service) step(ctx context.Context, lp *liveProject) bool {
 				return nil
 			})
 		}
-		return true
+		return true, true
+	}
+	reqDone := snap.req.Status == domain.RequestDone || snap.req.Status == domain.RequestFailed
+	if !s.snapshotChanged(lp, snap) {
+		return terminalStatus(rec.Status) && reqDone, false
 	}
 	if snap.req.Status == domain.RequestAwaitingConfirmation {
 		// The budget was approved at launch: the cost confirmation of the request is implicit.
@@ -556,9 +571,11 @@ func (s *Service) step(ctx context.Context, lp *liveProject) bool {
 	}
 	s.handleBudget(ctx, lp, &rec, snap)
 	d := s.build(ctx, snap)
-	s.publish(ctx, lp, &rec, snap, d)
-	reqDone := snap.req.Status == domain.RequestDone || snap.req.Status == domain.RequestFailed
-	return terminalStatus(rec.Status) && reqDone
+	changed = s.publish(ctx, lp, &rec, snap, d)
+	if s.checkBudgetAlert(ctx, &rec, d) {
+		changed = true
+	}
+	return terminalStatus(rec.Status) && reqDone, changed
 }
 
 // handleBudget turns a budget pause into an approval and applies its decision.
@@ -626,7 +643,7 @@ func (s *Service) extendBudget(ctx context.Context, rec *Record) {
 
 // publish emits the project.* events for what changed since the last tick,
 // persists the terminal status and feeds the workspace sink.
-func (s *Service) publish(ctx context.Context, lp *liveProject, rec *Record, snap snapshot, d Detail) {
+func (s *Service) publish(ctx context.Context, lp *liveProject, rec *Record, snap snapshot, d Detail) bool {
 	lp.mu.Lock()
 	var changed []Node
 	for i := range d.Nodes {
@@ -677,7 +694,7 @@ func (s *Service) publish(ctx context.Context, lp *liveProject, rec *Record, sna
 		s.emit(ctx, typ, rec.ID, map[string]any{"project": d.Project, "nodes": changed, "approvals": d.Approvals, "structure_version": d.StructureVersion})
 	}
 	if s.cfg.Sink == nil {
-		return
+		return len(changed) > 0 || statusChanged
 	}
 	for _, n := range changed {
 		if n.Kind == KindGroup || n.AgentID == nil || n.Kind == KindGate || n.Kind == KindMilestone || n.Kind == KindWait {
@@ -690,4 +707,5 @@ func (s *Service) publish(ctx context.Context, lp *liveProject, rec *Record, sna
 		}
 		s.cfg.Sink.NodeChanged(ctx, ev)
 	}
+	return len(changed) > 0 || statusChanged
 }

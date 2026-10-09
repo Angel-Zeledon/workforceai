@@ -177,6 +177,9 @@ type Summary struct {
 	ObjectivesCnt int        `json:"objectives_count"`
 	// RequestID is the orchestrator request behind a launched project (additive).
 	RequestID string `json:"request_id,omitempty"`
+	// BudgetWarnPct is the highest budget early-warning threshold already crossed
+	// (percent of the approved budget, e.g. 80); 0 when none (additive, W5).
+	BudgetWarnPct float64 `json:"budget_warn_pct,omitempty"`
 }
 
 type Detail struct {
@@ -209,6 +212,11 @@ type Health struct {
 		EtaP50         *time.Time `json:"eta_p50"`
 		EtaP90         *time.Time `json:"eta_p90"`
 		SlipSecondsP50 *int64     `json:"slip_seconds_p50"`
+		// CalibrationFactor is observed/estimated duration of the finished agent
+		// nodes (median); the remaining estimate is multiplied by it. Omitted
+		// until CalibrationSamples >= minCalibrationSamples (additive, W5).
+		CalibrationFactor  float64 `json:"calibration_factor,omitempty"`
+		CalibrationSamples int     `json:"calibration_samples,omitempty"`
 	} `json:"schedule"`
 	CriticalPath struct {
 		LengthSeconds  float64  `json:"length_seconds"`
@@ -415,4 +423,7 @@ type Record struct {
 	StartedAt  *time.Time        `json:"started_at"`
 	FinishedAt *time.Time        `json:"finished_at"`
 	DeadlineAt *time.Time        `json:"deadline_at"`
+	// BudgetWarned lists the early-warning thresholds (fractions of BudgetUSD)
+	// already alerted, so a restart never repeats an alert (W5).
+	BudgetWarned []float64 `json:"budget_warned,omitempty"`
 }

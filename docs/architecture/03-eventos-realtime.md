@@ -53,6 +53,7 @@ SPEC: `{ id, type, ts, org_id, agent_id?, payload }`. **[CAMBIO] aditivo y compa
 | `tool.executed` / `tool.failed` | `{tool_call_id, tool, status}` | Ejecucion real | 3 |
 | `approval.expired` | `{approval}` | Vencio `expires_at` | 2 |
 | `budget.warning` | `{scope, used_usd, limit_usd, pct}` | 80% y 100% | 1 |
+| `project.budget_warning` | `{project: ProjectSummary, threshold_pct, pct, spent_usd, budget_usd, remaining_usd, text}` | el gasto del proyecto cruza su umbral de alerta (80 % por defecto; `budget.warn_at` del proyecto si se personalizo). Una vez por cruce, persistido en el registro del proyecto (no se repite tras un reinicio; se rearma si se amplia el presupuesto). Aditivo (W5). Detalle en `docs/plans/large-workflows.md` | 1 |
 | `budget.exceeded` | `{scope, request_id?}` | Se bloquea ejecucion | 1 |
 | `memory.written` | `{scope, key, agent_id?, customer_id?}` | Nueva memoria (sin valor, solo metadato) | 2 |
 | `workflow.run.started|completed|failed|timed_out` | `{run_id, workflow_key}` | Motor (05) | 2 |

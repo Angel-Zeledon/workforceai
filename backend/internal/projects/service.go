@@ -53,11 +53,16 @@ type Config struct {
 	Sink    Sink
 	OrgID   string
 	// LocaleFor resolves the project language (org setting); default "es".
-	LocaleFor   func(ctx context.Context) string
-	Poll        time.Duration // monitor period (default 250 ms)
-	MaxAttempts int           // shown as max_attempts of a node (default 3)
-	Log         *slog.Logger
-	Now         func() time.Time
+	LocaleFor func(ctx context.Context) string
+	Poll      time.Duration // monitor period while the project changes (default 250 ms)
+	// PollIdleMax is the longest monitor period while nothing changes (default 2 s).
+	PollIdleMax time.Duration
+	// BudgetWarnPct is the early-warning threshold as a fraction of the project
+	// budget (default 0.8) for projects with the default budget policy.
+	BudgetWarnPct float64
+	MaxAttempts   int // shown as max_attempts of a node (default 3)
+	Log           *slog.Logger
+	Now           func() time.Time
 }
 
 // Service is the projects use case layer.
