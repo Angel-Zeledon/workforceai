@@ -347,7 +347,11 @@ const (
 	// human re-queued it (payload.manual).
 	EvTaskRetrying = "task.retrying"
 	// EvTaskReviewed: the quality review judged a task output (Q1).
-	EvTaskReviewed   = "task.reviewed"
+	EvTaskReviewed = "task.reviewed"
+	// EvTaskSteered: a human sent a steer note to a task; EvTaskReassigned: a
+	// human moved a pending task to another agent (V2, additive).
+	EvTaskSteered    = "task.steered"
+	EvTaskReassigned = "task.reassigned"
 	EvReportCreated  = "report.created"
 	EvActivityLogged = "activity.logged"
 	EvError          = "error"

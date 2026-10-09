@@ -69,6 +69,11 @@ type Deps struct {
 	// subscription changes (optional).
 	Push *push.Service
 	Rec  *application.Recorder
+	// Profiles, V2 and Tracer serve the agent work profile and the thought audit
+	// (v2.go); all optional. The intervention endpoints use Orch.
+	Profiles *application.ProfileService
+	V2       application.V2Store
+	Tracer   *application.Tracer
 	// AllowedOrigins is the CORS/WebSocket origin allow-list (see originPolicy).
 	AllowedOrigins []string
 	// EnableDemoReset registers POST /api/v1/demo/reset (admin role when auth is on).
@@ -144,6 +149,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountPush(r)
+			s.mountV2(r)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}

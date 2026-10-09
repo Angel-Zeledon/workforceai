@@ -42,6 +42,8 @@ type Orchestrator struct {
 
 	ctxSrc ContextSource // optional: artifact text for project tasks (context_flow.go)
 
+	v2 v2State // work profiles, thought audit and intervention (intervene.go); zero value = off
+
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
 
 	queue      orgQueue        // per-org slots for runtime calls (orgqueue.go)
@@ -173,8 +175,11 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 	} else {
 		err = o.call(ctx, "plan", func(c context.Context) (err error) {
 			agents := make([]PlanAgent, 0, len(rs.agents))
+			skills := o.skillsByAgent(c)
 			for _, a := range sortedAgents(rs.agents) {
-				agents = append(agents, NewPlanAgent(a, rs.style.Locale))
+				pa := NewPlanAgent(a, rs.style.Locale)
+				pa.Skills = skills[a.ID]
+				agents = append(agents, pa)
 			}
 			plan, err = o.rt.Plan(c, PlanRequest{RequestText: rs.req.Text, Agents: agents, BudgetUSD: o.cfg.BudgetUSD,
 				Locale: rs.style.Locale, Tone: rs.style.Tone})
@@ -433,7 +438,13 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 	if out, handled := o.projectGate(ctx, rs, t); handled {
 		return out // project paused/cancelled, human gate or milestone (projects_hooks.go)
 	}
-	agent := rs.agents[t.AgentID]
+	if cur, err := o.store.GetTask(ctx, o.org(ctx), t.ID); err == nil && cur.Status == domain.TaskPending && cur.AgentID != t.AgentID {
+		t.AgentID, t.AssignedReason = cur.AgentID, cur.AssignedReason // reassigned by a human while it waited
+	}
+	agent, known := rs.agents[t.AgentID]
+	if !known {
+		agent, _ = o.store.GetAgent(ctx, o.org(ctx), t.AgentID)
+	}
 	// Hold budget for the call first; a request/agent cap pauses here (visibly) until raised.
 	res, err := o.reserveOrPause(ctx, rs, t.AgentID, t.ID, domain.UsageRunTask)
 	if err != nil {
@@ -457,6 +468,7 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 	o.emitMetrics(ctx)
 
 	in := o.buildRunRequest(ctx, rs, t, agent)
+	o.decorateRun(ctx, &in)
 	spec := o.reviewSpecOf(ctx, t) // Q1: off (zero spec) unless the project enabled the review
 	if len(spec.Criteria) > 0 {
 		in.Task.Acceptance = spec.Criteria
@@ -466,10 +478,33 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 	var resp RunTaskResponse
 	attempt := 1
 	for { // W2: task-level retry of transient runtime failures (recovery.go)
-		err = o.call(ctx, "run-task", func(c context.Context) (err error) {
-			resp, err = o.rt.RunTask(c, in)
+		cctx, endCall := o.beginInflight(ctx, t.ID)
+		err = o.call(cctx, "run-task", func(c context.Context) (err error) {
+			resp, err = o.rtRunTask(c, rs, "run-task", in)
 			return err
 		})
+		restart := endCall()
+		if restart && ctx.Err() == nil { // V2 "apply now": a human steer note replaces this call
+			if err == nil { // it finished before the cancel took effect: its cost is real, record it
+				o.recordUsage(ctx, rs, t.ID, t.AgentID, domain.UsageRunTask, resp.Usage, nil, res)
+			} else {
+				res.Release()
+			}
+			o.traceEvent(ctx, t.ID, "apply_now", map[string]any{"completed_before_cancel": err == nil})
+			o.applyGuidance(ctx, &in)
+			if !o.admitTask(ctx, rs, t) {
+				return OutcomeFailed
+			}
+			next, rerr := o.reserveOrPause(ctx, rs, t.AgentID, t.ID, domain.UsageRunTask)
+			if rerr != nil {
+				if ctx.Err() == nil {
+					o.failTask(ctx, rs, t, rerr)
+				}
+				return OutcomeFailed
+			}
+			res = next
+			continue
+		}
 		if err == nil {
 			break
 		}
@@ -487,6 +522,7 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 		}
 		res = next
 		attempt++
+		o.applyGuidance(ctx, &in) // notes sent while it failed ride on the retry
 	}
 	o.recordUsage(ctx, rs, t.ID, t.AgentID, domain.UsageRunTask, resp.Usage, resp.ToolRequests, res)
 	resp.Output.Normalize()
@@ -655,9 +691,11 @@ func (o *Orchestrator) decideTool(ctx context.Context, rs *run, t *domain.Task, 
 		if o.needsApproval(agent, tr) {
 			v.Effect, v.RuleID = "require_approval", "baseline"
 		}
+		o.traceEvent(ctx, t.ID, "tool_decision", map[string]any{"tool": tr.Tool, "action": tr.Action, "effect": v.Effect, "rule_id": v.RuleID})
 		return v
 	}
 	v := o.policy.Decide(ctx, o.policyInput(rs, agent, tr))
+	o.traceEvent(ctx, t.ID, "tool_decision", map[string]any{"tool": tr.Tool, "action": tr.Action, "effect": v.Effect, "rule_id": v.RuleID, "reason": v.Reason})
 	o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "policy.decision", Entity: "task", EntityID: t.ID, Details: map[string]any{
 		"tool": tr.Tool, "action": tr.Action, "risk": tr.Risk, "effect": v.Effect, "rule_id": v.RuleID, "reason": v.Reason, "source": v.Source,
 		"trace": v.Trace, "required_role": v.RequiredRole, "required_approvals": v.RequiredApprovals, "autonomy": v.Autonomy,
@@ -784,6 +822,7 @@ func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.
 		}
 		o.setRequestStatus(ctx, rs, domain.RequestRunning)
 		approved := res.Status == domain.ApprovalApproved
+		o.traceEvent(ctx, t.ID, "approval", map[string]any{"tool": tr.Tool, "action": tr.Action, "approval_id": res.ID, "status": string(res.Status)})
 		if approved && o.policy != nil {
 			// The rules may have changed while the approval waited: re-validate.
 			if rv := o.policy.Recheck(ctx, o.policyInput(rs, agent, tr), res.ID, approverIDs(res)); rv.Denied() {

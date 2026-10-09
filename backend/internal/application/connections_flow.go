@@ -274,7 +274,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 		}
 		var next RunTaskResponse
 		err = o.call(ctx, "run-task", func(c context.Context) (err error) {
-			next, err = o.rt.RunTask(c, in2)
+			next, err = o.rtRunTask(c, rs, "read-followup", in2)
 			return err
 		})
 		if err != nil {
