@@ -394,7 +394,11 @@ type liveProject struct {
 	lastSig    map[string]string
 	budgetApp  string // id of the pending extend_budget approval
 	lastStatus string
-	epoch      int // bumped (under Service.mu) when a finished project is revived; the monitor must not exit across a bump
+	// plan changes (Q2): suggested_tasks already turned into a proposal, and whether a change is open
+	sugSeen     map[string]bool
+	sugLoaded   bool
+	openChanges bool
+	epoch       int // bumped (under Service.mu) when a finished project is revived; the monitor must not exit across a bump
 
 	// monitor state (only the watch goroutine writes it)
 	stepEpoch int           // epoch observed when the current tick started

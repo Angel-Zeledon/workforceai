@@ -612,6 +612,9 @@ func (s *Service) step(ctx context.Context, lp *liveProject) (done, changed bool
 		_ = s.cfg.Orch.Budget().Confirm(ctx, rec.RequestID, true, 0)
 	}
 	s.handleBudget(ctx, lp, &rec, snap)
+	if s.planChangeTick(ctx, lp, rec, snap) {
+		return false, true // the plan changed: rebuild on the next tick
+	}
 	d := s.build(ctx, snap)
 	changed = s.publish(ctx, lp, &rec, snap, d)
 	if s.checkBudgetAlert(ctx, &rec, d) {

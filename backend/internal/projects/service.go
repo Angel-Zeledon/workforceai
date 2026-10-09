@@ -65,6 +65,9 @@ type Config struct {
 	Now           func() time.Time
 	// Limits are the size limits and planner bounds (zero values: defaults).
 	Limits Limits
+	// Changes persists plan changes (Q2). Default: the Store when it implements
+	// ChangeStore (Postgres), otherwise memory.
+	Changes ChangeStore
 }
 
 // Service is the projects use case layer.
@@ -103,6 +106,13 @@ func New(ctx context.Context, cfg Config) *Service {
 		cfg.Log = slog.Default()
 	}
 	cfg.Limits = cfg.Limits.withDefaults()
+	if cfg.Changes == nil {
+		if cs, ok := cfg.Store.(ChangeStore); ok {
+			cfg.Changes = cs
+		} else {
+			cfg.Changes = NewMemChangeStore()
+		}
+	}
 	s := &Service{cfg: cfg, root: ctx, live: map[string]*liveProject{}, byReq: map[string]*liveProject{}, locks: map[string]*sync.Mutex{}, jobs: map[string]*planJob{}}
 	if cfg.Orch != nil {
 		cfg.Orch.SetTaskGate(s)
