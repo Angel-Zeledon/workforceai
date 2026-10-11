@@ -11,6 +11,7 @@ import { EmailDraftCard } from "./EmailDraftCard";
 import { PlanReviewCard } from "./PlanReviewCard";
 import { KillSwitchDialog } from "./KillSwitchDialog";
 import { OperatingHoursCard } from "./OperatingHoursCard";
+import { CodeExecutionCard } from "./CodeExecutionCard";
 
 function Section({ id, title, children, right }: { id: string; title: string; children: ReactNode; right?: ReactNode }) {
   return <div data-testid={id}><Card title={title} right={right}>{children}</Card></div>;
@@ -209,6 +210,7 @@ export function SecurityCenter() {
           </table>
         </Section>
         <OperatingHoursCard />
+        <CodeExecutionCard />
         <SimulationCard />
       </div>
     </div>
