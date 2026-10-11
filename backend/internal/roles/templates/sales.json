@@ -106,5 +106,32 @@
   "suggested_artifacts": [
     "doc",
     "table"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_gmail",
+      "capabilities": [
+        "mail.read",
+        "mail.draft",
+        "mail.send"
+      ],
+      "why": "client follow-up; sending always needs approval"
+    },
+    {
+      "provider": "google_calendar",
+      "capabilities": [
+        "calendar.read",
+        "calendar.create_event"
+      ],
+      "why": "book meetings with prospects; needs approval"
+    },
+    {
+      "provider": "linkedin",
+      "capabilities": [
+        "profile.read",
+        "post.create"
+      ],
+      "why": "social selling posts; every post needs approval"
+    }
   ]
 }

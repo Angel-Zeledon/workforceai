@@ -62,6 +62,15 @@ const PROVIDERS: ProviderDef[] = [
     resource_filters: [{ key: "channels", type: "list" }],
   },
   {
+    // Mirrors backend/internal/connections/providers/linkedin.json (self-serve API products only)
+    id: "linkedin", auth: ["oauth2_byo_app"], available: true, phase: "C4", split_read_write: true,
+    capabilities: [
+      { id: "profile.read", risk: "low", side_effects: false, default: true },
+      { id: "post.create", risk: "high", side_effects: true, reversibility: "compensating", default: false, always_approval: true, hold_seconds_default: HOLD_SECONDS },
+    ],
+    resource_filters: [],
+  },
+  {
     id: "generic_api", auth: ["api_key"], available: true, phase: "C1",
     capabilities: [{ id: "api.read", risk: "low", side_effects: false, default: true }],
     resource_filters: [],

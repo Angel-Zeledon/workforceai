@@ -16,6 +16,7 @@ import (
 	"aiworkforce/backend/internal/connections/drive"
 	"aiworkforce/backend/internal/connections/github"
 	"aiworkforce/backend/internal/connections/gmail"
+	"aiworkforce/backend/internal/connections/linkedin"
 	"aiworkforce/backend/internal/connections/slack"
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
@@ -100,8 +101,17 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 	if err != nil {
 		return connWiring{}, err
 	}
-	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal, "google_drive": drv, "github": gh, "slack": sl}
+	li, err := linkedin.New(linkedin.Config{})
+	if err != nil {
+		return connWiring{}, err
+	}
+	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal, "google_drive": drv, "github": gh, "slack": sl, "linkedin": li}
 	apps := map[string]connections.OAuthApp{}
+	if cfg.LinkedInClientID != "" && cfg.LinkedInClientSecret != "" {
+		apps["linkedin"] = connections.OAuthApp{ClientID: cfg.LinkedInClientID, ClientSecret: cfg.LinkedInClientSecret, RedirectURL: cfg.OAuthRedirectURL}
+	} else {
+		log.Info("LINKEDIN_OAUTH_CLIENT_ID/SECRET not set: live LinkedIn is unavailable; simulated connections work")
+	}
 	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
 		// One Google OAuth client serves every Google adapter; each connection
 		// still asks only for the scopes of its own capabilities.

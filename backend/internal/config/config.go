@@ -59,7 +59,11 @@ type Config struct {
 	// OAUTH_REDIRECT_URL (the public URL of GET /api/v1/connections/oauth/callback).
 	GoogleClientID     string
 	GoogleClientSecret string
-	OAuthRedirectURL   string
+	// LinkedIn app (Sign In with LinkedIn using OpenID Connect + Share on
+	// LinkedIn): LINKEDIN_OAUTH_CLIENT_ID/SECRET; same OAUTH_REDIRECT_URL.
+	LinkedInClientID     string
+	LinkedInClientSecret string
+	OAuthRedirectURL     string
 	// UIBaseURL is where the OAuth callback sends the browser afterwards.
 	UIBaseURL string
 	// EmailHoldSeconds is the cancellation window of an email send. The
@@ -208,6 +212,8 @@ func Load() Config {
 		ConnectionsKEKPrevious: strings.TrimSpace(os.Getenv("CONNECTIONS_KEK_PREVIOUS")),
 		GoogleClientID:         getenv("GOOGLE_OAUTH_CLIENT_ID", ""),
 		GoogleClientSecret:     strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_CLIENT_SECRET")),
+		LinkedInClientID:       getenv("LINKEDIN_OAUTH_CLIENT_ID", ""),
+		LinkedInClientSecret:   strings.TrimSpace(os.Getenv("LINKEDIN_OAUTH_CLIENT_SECRET")),
 		OAuthRedirectURL:       getenv("OAUTH_REDIRECT_URL", "http://localhost:8080/api/v1/connections/oauth/callback"),
 		UIBaseURL:              getenv("UI_BASE_URL", ""),
 		EmailHoldSeconds:       getInt("EMAIL_HOLD_SECONDS", 60),

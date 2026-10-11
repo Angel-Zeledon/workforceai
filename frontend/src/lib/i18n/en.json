@@ -1735,5 +1735,15 @@
   "desk.action.list": "Just looked at the folder {path}",
   "desk.action.search": "Just searched {path}",
   "desk.action.move": "Just moved {path}",
-  "desk.action.delete": "Just moved {path} to the trash"
+  "desk.action.delete": "Just moved {path} to the trash",
+  "conn.provider.linkedin": "LinkedIn",
+  "conn.provider.linkedin.desc": "Reads your profile (name and email) and posts as you: every post asks for your approval and waits 60 s before going out. LinkedIn does not let apps outside its partner programs read messages, connections or manage company pages.",
+  "conn.cap.profile.read": "See the connected profile (name and email)",
+  "conn.cap.post.create": "Post on LinkedIn (each post will ask for your approval)",
+  "conn.matrix.recommended": "Recommended for its role ({n})",
+  "conn.capShort.chat.read": "Read channels",
+  "conn.capShort.chat.post": "Post to channels",
+  "conn.capShort.repo.issue_write": "Issues and comments",
+  "conn.capShort.profile.read": "See profile",
+  "conn.capShort.post.create": "Post"
 }

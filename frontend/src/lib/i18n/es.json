@@ -1735,5 +1735,15 @@
   "desk.action.list": "Acaba de revisar la carpeta {path}",
   "desk.action.search": "Acaba de buscar en {path}",
   "desk.action.move": "Acaba de mover {path}",
-  "desk.action.delete": "Acaba de mandar a la papelera {path}"
+  "desk.action.delete": "Acaba de mandar a la papelera {path}",
+  "conn.provider.linkedin": "LinkedIn",
+  "conn.provider.linkedin.desc": "Lee tu perfil (nombre y correo) y publica en tu nombre: cada publicación pide tu aprobación y espera 60 s antes de salir. LinkedIn no permite a apps sin programa de socios leer mensajes, contactos ni administrar páginas de empresa.",
+  "conn.cap.profile.read": "Ver el perfil conectado (nombre y correo)",
+  "conn.cap.post.create": "Publicar en LinkedIn (cada publicación pedirá tu aprobación)",
+  "conn.matrix.recommended": "Recomendado para su rol ({n})",
+  "conn.capShort.chat.read": "Leer canales",
+  "conn.capShort.chat.post": "Publicar en canales",
+  "conn.capShort.repo.issue_write": "Issues y comentarios",
+  "conn.capShort.profile.read": "Ver perfil",
+  "conn.capShort.post.create": "Publicar"
 }

@@ -81,6 +81,17 @@ type Template struct {
 	Autonomy           Autonomy        `json:"autonomy"`
 	Routing            Routing         `json:"routing"`
 	SuggestedArtifacts []string        `json:"suggested_artifacts"`
+	// RecommendedConnections are the connections and capabilities this role
+	// usually needs (catalog sec. 6). A recommendation only: nothing is granted
+	// until an admin grants it on the connection.
+	RecommendedConnections []RecommendedConnection `json:"recommended_connections,omitempty"`
+}
+
+// RecommendedConnection names a provider and the capabilities the role uses.
+type RecommendedConnection struct {
+	Provider     string   `json:"provider"`
+	Capabilities []string `json:"capabilities"`
+	Why          string   `json:"why,omitempty"` // short, English (UI translates by provider/capability)
 }
 
 // KnownTools are the tool labels the engine knows. A template can only combine
@@ -94,7 +105,13 @@ var KnownTools = map[string]bool{
 	"fs": true, "fs_read": true,
 }
 
-var autonomyRank = map[string]int{"suggest": 1, "approve_each": 2, "rules": 3, "autonomous": 4}
+// KnownProviders are the connection providers a template may recommend
+// (backend/internal/connections/providers/*.json; cross-checked by a test in cmd/server).
+var KnownProviders = map[string]bool{
+	"google_gmail": true, "google_calendar": true, "google_drive": true, "github": true, "slack": true, "linkedin": true,
+}
+
+var autonomyRank =map[string]int{"suggest": 1, "approve_each": 2, "rules": 3, "autonomous": 4}
 
 // tierCeiling is the highest autonomy a risk tier allows (catalog sec. 2.1).
 var tierCeiling = map[string]string{"green": "autonomous", "amber": "rules", "red": "approve_each"}
@@ -129,6 +146,11 @@ func Validate(t Template) error {
 	for _, tool := range t.Tools {
 		if !KnownTools[tool] {
 			return fmt.Errorf("%s: tool %q is not registered", t.ID, tool)
+		}
+	}
+	for _, rc := range t.RecommendedConnections {
+		if !KnownProviders[rc.Provider] || len(rc.Capabilities) == 0 {
+			return fmt.Errorf("%s: recommended connection %q needs a known provider and its capabilities", t.ID, rc.Provider)
 		}
 	}
 	for _, loc := range []string{"es", "en"} {

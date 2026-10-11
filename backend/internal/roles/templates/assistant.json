@@ -88,5 +88,39 @@
   "suggested_artifacts": [
     "doc",
     "agenda"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_gmail",
+      "capabilities": [
+        "mail.read",
+        "mail.draft",
+        "mail.send"
+      ],
+      "why": "triage the inbox, draft replies; sending always needs approval"
+    },
+    {
+      "provider": "google_calendar",
+      "capabilities": [
+        "calendar.read",
+        "calendar.create_event"
+      ],
+      "why": "coordinate agendas; new events need approval"
+    },
+    {
+      "provider": "google_drive",
+      "capabilities": [
+        "drive.read"
+      ],
+      "why": "find documents in chosen folders"
+    },
+    {
+      "provider": "linkedin",
+      "capabilities": [
+        "profile.read",
+        "post.create"
+      ],
+      "why": "company announcements; every post needs approval"
+    }
   ]
 }
