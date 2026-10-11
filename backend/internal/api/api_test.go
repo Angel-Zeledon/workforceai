@@ -20,8 +20,10 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/infrastructure/memory"
+	"aiworkforce/backend/internal/objstore"
 	"aiworkforce/backend/internal/roles"
 )
 
@@ -102,6 +104,7 @@ type opts struct {
 	timeouts       api.Timeouts
 	skipAuthRoutes bool
 	ws             bool // mount projects and artifacts (workspaces_api_test.go)
+	drive          bool // mount the drive (drive_api_test.go); writeGate applies to it too
 	writeGate      func(ctx context.Context, org string) error
 }
 
@@ -137,6 +140,9 @@ func newEnv(t *testing.T, o opts) *env {
 		AuthEnabled: o.auth, AllowedOrigins: o.origins, EnableDemoReset: o.demoReset, MaxBodyBytes: o.maxBody, WSMaxAge: o.wsMaxAge}
 	if o.ws {
 		attachWorkspaces(&d, spy, rec, appr, orch, log, ctx, o.writeGate)
+	}
+	if o.drive {
+		d.Drive = drive.New(drive.Config{Store: drive.NewMemStore(), Objects: objstore.NewMemory(), OrgID: cfg.OrgID, WriteGate: o.writeGate, Log: log})
 	}
 	var svc *auth.Service
 	if o.auth {

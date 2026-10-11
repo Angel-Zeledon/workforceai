@@ -11,6 +11,7 @@ import (
 	"aiworkforce/backend/internal/artifacts"
 	"aiworkforce/backend/internal/config"
 	"aiworkforce/backend/internal/controls"
+	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/gateway"
 	"aiworkforce/backend/internal/infrastructure/postgres"
 	"aiworkforce/backend/internal/projects"
@@ -19,6 +20,7 @@ import (
 type workspaceWiring struct {
 	projects  *projects.Service
 	artifacts *artifacts.Service
+	drive     *drive.Service
 }
 
 // projectLookup lets the artifacts service name a project without importing the
@@ -54,8 +56,12 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	var astore artifacts.Store = artifacts.NewMemStore()
 	var collab artifacts.CollabStore = artifacts.NewMemCollab()
 	var blobs artifacts.BlobStore = artifacts.NewMemBlobs()
+	objects := objectStoreFromEnv(ctx, log, pg)
 	if pg != nil {
 		as := &postgres.ArtifactStore{S: pg}
+		if _, isPG := objects.(*postgres.ObjectStore); !isPG {
+			as.Objects = objects // new PDF files go to S3 when configured; old bytea blobs stay readable
+		}
 		pstore, astore, collab, blobs = &postgres.ProjectStore{S: pg}, as, as, as
 	}
 	var guard application.ExecutionGuard
@@ -88,5 +94,6 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	}
 	psvc = projects.New(ctx, pcfg)
 	orch.SetContextSource(asvc) // W3: referenced artifacts reach project tasks as delimited data
-	return workspaceWiring{projects: psvc, artifacts: asvc}
+	dsvc := wireDrive(ctx, cfg, log, pg, store, rec, cw, pstore, objects)
+	return workspaceWiring{projects: psvc, artifacts: asvc, drive: dsvc}
 }

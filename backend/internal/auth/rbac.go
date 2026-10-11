@@ -65,6 +65,11 @@ const (
 	PermArtifactsExport  Permission = "artifacts:export"
 	PermArtifactsApprove Permission = "artifacts:approve"
 	PermArtifactsDelete  Permission = "artifacts:delete"
+	// Drive (docs/architecture/drive.md): files and folders of the organization.
+	PermFilesRead   Permission = "files:read"
+	PermFilesWrite  Permission = "files:write"
+	PermFilesDelete Permission = "files:delete"
+	PermFilesGrant  Permission = "files:grant" // give an agent read access to more folders
 )
 
 func set(ps ...Permission) map[Permission]struct{} {
@@ -92,12 +97,13 @@ var (
 		PermMembersRead, PermAgentsRead, PermTasksRead, PermRequestsRead,
 		PermConversationsRead, PermApprovalsRead, PermReportsRead,
 		PermMemoriesRead, PermActivityRead, PermMetricsRead,
-		PermArtifactsRead,
+		PermArtifactsRead, PermFilesRead,
 	)
 	memberPerms = union(viewerPerms,
 		PermRequestsCreate, PermTasksCreate, PermConversationsPost, PermMemoriesWrite,
 		PermConnectionsRead,
 		PermArtifactsCreate, PermArtifactsWrite, PermArtifactsComment, PermArtifactsExport,
+		PermFilesWrite,
 	)
 	adminPerms = union(memberPerms,
 		PermOrgManage, PermMembersInvite, PermMembersManage, PermAgentsWrite,
@@ -105,6 +111,7 @@ var (
 		PermConnectionsManage, PermConnectionsGrant, PermConnectionsGrantWrite, PermConnectionsRevoke,
 		PermConnectionsUsageRead, PermControlsPause, PermControlsKillSwitch,
 		PermArtifactsApprove, PermArtifactsDelete,
+		PermFilesDelete, PermFilesGrant,
 	)
 	ownerPerms = union(adminPerms, PermOrgDelete, PermBillingManage, PermControlsRelease, PermPolicyManage)
 

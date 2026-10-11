@@ -29,6 +29,7 @@ type connWiring struct {
 	conns *connections.Service
 	ctl   *controls.Service
 	gw    *gateway.Gateway
+	sus   *sanitize.Suspects // known secret values, redacted from anything an agent reads
 }
 
 // wireConnections builds the vault, connections service, controls, Tool
@@ -162,5 +163,5 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 	if lvl := ctl.ReloadEnv(); lvl != controls.LevelNone {
 		log.Warn("KILL_SWITCH is set in the environment: nothing will run until it is unset and the process is reloaded", "level", lvl)
 	}
-	return connWiring{conns: cs, ctl: ctl, gw: gw}, nil
+	return connWiring{conns: cs, ctl: ctl, gw: gw, sus: sus}, nil
 }
