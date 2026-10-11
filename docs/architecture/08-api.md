@@ -701,3 +701,35 @@ Auditoría (`entity:"push_subscription"`): `push.subscribed` y `push.unsubscribe
 ### Cambios de plan (Q2)
 
 `PlanChange {id, project_id, proposed_by: agent|human, actor, source: suggested_tasks|replan|manual, source_node_id?, reason, ops, status: pending|approved|rejected|applied, impact{added, replaced, removed, updated, est_cost_delta_usd, est_seconds_delta, projected_cost_usd, budget_usd, exceeds_budget, nodes_after}, risk: low|medium|high, approval_id?, required_approvals?, approvals?, decided_by?, applied_at?, error?, created_at}`. Los nodos de `GET /projects/{id}` ganan `plan_change_id?` y `superseded?: replaced|removed` (estado `cancelled`, fuera de los conteos). Evento WS `project.plan_change {project_id, change}`. Runtime: `POST /v1/replan` (ver large-workflows.md, Q2).
+
+## 19. Unidad de archivos (drive, F1)
+
+Archivos y carpetas de la organización (diseño: `docs/architecture/drive.md`). Solo personas: los agentes usan la herramienta `fs` del Tool Gateway, nunca esta API. Permisos: `files:read` (viewer+), `files:write` (member+), `files:delete` y `files:grant` (admin+). Errores con `{code, error}`; `version_conflict` añade `current_version`.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/drive/list?path=` | read | `{folder, folders, files}`; `/` lista las raíces |
+| GET | `/drive/search?q=&path=&limit=&config=` | read | texto completo sobre nombres y texto extraído (`spanish` por defecto) |
+| GET | `/drive/usage` | read | bytes usados y cuota |
+| GET | `/drive/trash` | read | carpetas y archivos borrados (restaurables) |
+| POST | `/drive/folders` `{path}` | write | crea las carpetas que falten |
+| POST | `/drive/folders/{id}/move` `{path}` | write | |
+| DELETE | `/drive/folders/{id}` | delete | borrado lógico (204) |
+| POST | `/drive/folders/{id}/restore` | write | |
+| PUT | `/drive/upload?path=&message=&expected_version=` | write | cuerpo = archivo; 201 creado, 200 versión nueva o sin cambios; 409, 413, 415, 423 |
+| GET | `/drive/files/{id}` | read | metadatos |
+| GET | `/drive/files/{id}/content?version=&download=1` | read | streaming; `nosniff`, `private, no-store`, CSP sandbox |
+| GET | `/drive/files/{id}/text?version=&offset=&max_chars=` | read | texto extraído, paginado (lo que leería un agente) |
+| PUT | `/drive/files/{id}/content?message=&expected_version=` | write | versión nueva |
+| GET | `/drive/files/{id}/versions` | read | |
+| POST | `/drive/files/{id}/versions/{n}/restore?expected_version=` | write | crea una versión nueva igual a `n` (el historial no se reescribe) |
+| GET | `/drive/files/{id}/diff?from=&to=` | read | archivos de texto |
+| POST | `/drive/files/{id}/move` `{path}` | write | |
+| PUT | `/drive/files/{id}/tags` `{tags}` | write | |
+| DELETE | `/drive/files/{id}` | delete | borrado lógico (204) |
+| POST | `/drive/files/{id}/restore` | write | |
+| GET | `/drive/grants?agent_id=` | read | carpetas extra que un agente puede leer |
+| POST | `/drive/grants` `{agent_id, path}` | grant | lectura; escribir ahí sigue pidiendo aprobación |
+| DELETE | `/drive/grants/{id}` | grant | |
+
+Todo cambio queda auditado (`entity: file|folder|grant`, sin contenido). El modo solo lectura bloquea todo cambio (423) pero no la lectura.
