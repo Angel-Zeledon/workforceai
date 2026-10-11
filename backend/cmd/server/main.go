@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -148,6 +150,25 @@ func run(log *slog.Logger) error {
 		auditSvc = &application.AuditService{Store: as, Rec: rec, Cfg: cfg.App}
 	}
 
+	// V2: agent work profiles, thought audit (traces, retention) and task intervention.
+	var v2Store application.V2Store
+	var profiles *application.ProfileService
+	var tracer *application.Tracer
+	if vs, ok := store.(application.V2Store); ok {
+		v2Store = vs
+		var tones application.ConfigStore
+		if cs, ok := store.(application.ConfigStore); ok {
+			tones = cs
+		}
+		profiles = &application.ProfileService{Store: vs, Core: store, Tones: tones, Rec: rec, Config: cfg.App}
+		if orgCfg != nil {
+			profiles.Locale = func(c context.Context) string { return orgCfg.Locale(c, "") }
+		}
+		tracer = &application.Tracer{Store: vs, Log: log, Retention: traceRetention()}
+		orch.SetV2(vs, profiles, tracer)
+		go purgeTracesLoop(ctx, log, tracer, store)
+	}
+
 	// Projects (whole workflows with parallel work) and agent workspaces (artifacts).
 	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy)
 
@@ -175,7 +196,7 @@ func run(log *slog.Logger) error {
 	}
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
-		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Push: pushSvc, Rec: rec,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Push: pushSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
@@ -251,4 +272,39 @@ func connectPostgres(ctx context.Context, cfg config.Config, log *slog.Logger) (
 		}
 	}
 	return nil, lastErr
+}
+
+// traceRetention is TRACE_RETENTION_DAYS (default 30): how long thought-audit traces are kept.
+func traceRetention() time.Duration {
+	days := application.DefaultTraceRetention
+	if n, err := strconv.Atoi(strings.TrimSpace(os.Getenv("TRACE_RETENTION_DAYS"))); err == nil && n > 0 {
+		days = n
+	}
+	return time.Duration(days) * 24 * time.Hour
+}
+
+// purgeTracesLoop deletes expired traces once an hour, organization by organization (RLS applies).
+func purgeTracesLoop(ctx context.Context, log *slog.Logger, tr *application.Tracer, store application.Store) {
+	tick := time.NewTicker(time.Hour)
+	defer tick.Stop()
+	for {
+		orgs := []string{domain.DemoOrgID}
+		if l, ok := store.(application.OrgLister); ok {
+			if ids, err := l.ListOrgIDs(ctx); err == nil {
+				orgs = application.WithDefaultOrg(ids, domain.DemoOrgID)
+			}
+		}
+		for _, org := range orgs {
+			if n, err := tr.Purge(ctx, org); err != nil {
+				log.Warn("trace purge", "org", org, "err", err)
+			} else if n > 0 {
+				log.Info("expired traces purged", "org", org, "count", n)
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+	}
 }

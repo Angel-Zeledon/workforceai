@@ -42,6 +42,8 @@ type RouteAgent struct {
 	Keywords []string `json:"keywords,omitempty"`
 	Related  []string `json:"related,omitempty"`
 	Area     string   `json:"area,omitempty"`
+	// Skills (V2, additive): organization-configured tags, routing hints only.
+	Skills []string `json:"skills,omitempty"`
 }
 
 // ChatHistoryItem is one earlier message; From is "user" or an agent id.
@@ -530,7 +532,7 @@ func (o *Orchestrator) chatReplyRequest(t *chatTurn, agent domain.Agent, route R
 // decideRoute asks the runtime and falls back to the local rules on any
 // problem (runtime down, timeout, invalid answer). It never fails.
 func (o *Orchestrator) decideRoute(ctx context.Context, t *chatTurn) RouteResponse {
-	in := RouteRequest{Text: t.text, Conversation: t.conv, Agents: o.routeAgents(t.agents, t.style.Locale), History: append([]ChatHistoryItem{}, t.history...),
+	in := RouteRequest{Text: t.text, Conversation: t.conv, Agents: o.withRouteSkills(ctx, o.routeAgents(t.agents, t.style.Locale)), History: append([]ChatHistoryItem{}, t.history...),
 		Locale: t.style.Locale, Tone: t.style.Tone}
 	if cr, ok := o.rt.(ChatRuntime); ok {
 		cctx, cancel := context.WithTimeout(ctx, o.chatTimeout())

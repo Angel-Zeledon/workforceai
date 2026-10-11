@@ -103,6 +103,7 @@ type opts struct {
 	wsMaxAge       time.Duration
 	timeouts       api.Timeouts
 	skipAuthRoutes bool
+	v2             bool // mount profiles, thought audit and intervention (v2_api_test.go)
 	ws             bool // mount projects and artifacts (workspaces_api_test.go)
 	drive          bool // mount the drive (drive_api_test.go); writeGate applies to it too
 	writeGate      func(ctx context.Context, org string) error
@@ -138,6 +139,12 @@ func newEnv(t *testing.T, o opts) *env {
 
 	d := api.Deps{Cfg: cfg, Queries: q, Orch: orch, Approvals: appr, Store: spy, Runtime: fakeRuntime{}, Hub: hub, Log: log,
 		AuthEnabled: o.auth, AllowedOrigins: o.origins, EnableDemoReset: o.demoReset, MaxBodyBytes: o.maxBody, WSMaxAge: o.wsMaxAge}
+	if o.v2 {
+		pr := &application.ProfileService{Store: mem, Core: spy, Tones: mem, Rec: rec, Config: cfg}
+		tr := &application.Tracer{Store: mem, Log: log, Retention: 30 * 24 * time.Hour}
+		orch.SetV2(mem, pr, tr)
+		d.Profiles, d.V2, d.Tracer, d.Rec = pr, mem, tr, rec
+	}
 	if o.ws {
 		attachWorkspaces(&d, spy, rec, appr, orch, log, ctx, o.writeGate)
 	}

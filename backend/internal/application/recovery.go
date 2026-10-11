@@ -71,6 +71,7 @@ func (o *Orchestrator) beginRetry(ctx context.Context, rs *run, t domain.Task, a
 	o.rec.Emit(ctx, Action{Type: domain.EvTaskRetrying, AgentID: t.AgentID, Entity: "task", EntityID: t.ID, SkipAudit: true,
 		Payload: map[string]any{"task": t, "attempt": attempt + 1, "max_attempts": maxAtt, "error": truncate(cause.Error(), 300), "manual": false},
 		Text:    fmt.Sprintf("Reintentando tarea (intento %d/%d): %s", attempt+1, maxAtt, t.Title)})
+	o.traceEvent(ctx, t.ID, "retry", map[string]any{"attempt": attempt, "next_attempt": attempt + 1, "error": truncate(cause.Error(), 200)})
 	tid := t.ID
 	o.setState(ctx, t.AgentID, domain.StateWorking, fmt.Sprintf("Reintentando (%d/%d): %s", attempt+1, maxAtt, t.Title), &tid, 10)
 	select {

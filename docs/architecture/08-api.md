@@ -733,3 +733,22 @@ Archivos y carpetas de la organización (diseño: `docs/architecture/drive.md`).
 | DELETE | `/drive/grants/{id}` | grant | |
 
 Todo cambio queda auditado (`entity: file|folder|grant`, sin contenido). El modo solo lectura bloquea todo cambio (423) pero no la lectura.
+## 19. Perfil de trabajo, auditoría de pensamiento e intervención (V2)
+
+Todo aditivo. Roles: lectura de perfil `agents:read`; edición `agents:write` (admin/owner); trazas y exportación `audit:read` (admin/owner); `store_prompts` `org:manage`; steer/reasignar `tasks:manage`. Los agentes nunca editan perfiles.
+
+| Método y ruta | Descripción |
+|---|---|
+| `GET /agents/{id}/profile` | `{agent_id, instructions, creativity(low\|medium\|high), tone, skills, role_skills, version, updated_by, updated_at, limits}` |
+| `PUT /agents/{id}/profile` | `{instructions, creativity, skills, tone?}` -> perfil; nueva versión si hay cambios; 400 si hay secretos/longitud; 403 si el actor es un agente |
+| `GET /agents/{id}/profile/versions` | historial, más nueva primero: `{version, author, created_at, restored_from, diff, snapshot}` |
+| `POST /agents/{id}/profile/restore` | `{version}` -> perfil (crea una versión nueva) |
+| `GET /agents/{id}/traces?limit&before` | `{traces, store_prompts, retention_days}` (sin prompt) |
+| `GET /agents/{id}/traces/{traceId}` | traza completa, con `prompt {system, segments[{kind: text\|untrusted, label, text, truncated}]}` si se guardó |
+| `GET /agents/{id}/traces/export` | descarga JSON; auditado (`trace.exported`) |
+| `GET/PUT /settings/traces` | `{store_prompts, retention_days}`; PUT `{store_prompts}` |
+| `GET /tasks/{id}/intervention` | `{task_status, steer_notes, can_steer, can_apply_now, can_reassign, estimated_rerun_usd, reassign_candidates}` |
+| `POST /tasks/{id}/steer` | `{note, apply_now?}` -> `{note, apply_now_status: ""\|restarted\|not_mid_call\|limit_reached, estimated_rerun_usd}`; 409 si la tarea terminó |
+| `POST /tasks/{id}/reassign` | `{agent_id}` -> tarea; 409 si no está pendiente; 400 si el agente no puede tomarla |
+
+Runtime (aditivo): `run-task` acepta `agent.instructions|creativity|skills`, `human_guidance[]`, `want_trace` y devuelve `trace {system, user}` solo si se pidió; plan/route aceptan `skills` por agente. Env: `TRACE_RETENTION_DAYS` (30). Eventos WS: `task.steered`, `task.reassigned`, `agent.profile_changed`. Detalle y límites: `docs/plans/large-workflows.md`, sección "V2 agent profile, thought audit and intervention".
