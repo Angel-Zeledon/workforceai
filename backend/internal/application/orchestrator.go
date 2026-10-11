@@ -40,7 +40,7 @@ type Orchestrator struct {
 	chatIdem idemCache // Idempotency-Key of POST /messages (chat.go)
 	chatQ    chatQueue // per-conversation FIFO of chat turns (chat.go)
 
-	ctxSrc ContextSource // optional: artifact text for project tasks (context_flow.go)
+	ctxSrc ContextSource   // optional: artifact text for project tasks (context_flow.go)
 	wsSrc  WorkspaceSource // optional: the agent's drive folders (workspace_flow.go)
 
 	v2 v2State // work profiles, thought audit and intervention (intervene.go); zero value = off
@@ -605,8 +605,8 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 		rc.Memory = append(rc.Memory, MemoryEntry{Scope: m.Scope, Key: m.Key, Value: m.Value})
 	}
 	return RunTaskRequest{
-		Task:    RunTaskInfo{ID: t.ID, Title: t.Title, Description: t.Description, AgentID: t.AgentID},
-		Agent:   RunAgentInfo{ID: agent.ID, Role: agent.Role, Title: agent.Title, Persona: agent.Persona, Responsibilities: agent.Responsibilities, Tools: agent.Tools, Area: areaOf(agent.Role, rs.style.Locale)},
+		Task:      RunTaskInfo{ID: t.ID, Title: t.Title, Description: t.Description, AgentID: t.AgentID},
+		Agent:     RunAgentInfo{ID: agent.ID, Role: agent.Role, Title: agent.Title, Persona: agent.Persona, Responsibilities: agent.Responsibilities, Tools: agent.Tools, Area: areaOf(agent.Role, rs.style.Locale)},
 		Context:   rc,
 		Locale:    rs.style.Locale,
 		Tone:      rs.style.ToneFor(t.AgentID),

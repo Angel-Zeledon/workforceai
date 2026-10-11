@@ -134,7 +134,7 @@ var KnownProviders = map[string]bool{
 	"google_gmail": true, "google_calendar": true, "google_drive": true, "github": true, "slack": true, "linkedin": true,
 }
 
-var autonomyRank =map[string]int{"suggest": 1, "approve_each": 2, "rules": 3, "autonomous": 4}
+var autonomyRank = map[string]int{"suggest": 1, "approve_each": 2, "rules": 3, "autonomous": 4}
 
 // tierCeiling is the highest autonomy a risk tier allows (catalog sec. 2.1).
 var tierCeiling = map[string]string{"green": "autonomous", "amber": "rules", "red": "approve_each"}

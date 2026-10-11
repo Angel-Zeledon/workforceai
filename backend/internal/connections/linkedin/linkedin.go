@@ -67,7 +67,9 @@ func or(a, b string) string {
 
 func (p *Provider) Manifest() connections.Manifest { return p.manifest }
 
-func (p *Provider) AuthStart(in connections.AuthStartIn) (string, error) { return p.oauth.AuthStart(in) }
+func (p *Provider) AuthStart(in connections.AuthStartIn) (string, error) {
+	return p.oauth.AuthStart(in)
+}
 
 // AuthFinish exchanges the code. Without a refresh token (the normal case for
 // non-partner apps) the access token itself is kept in the vault and reused

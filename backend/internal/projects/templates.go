@@ -114,7 +114,7 @@ func builtinTemplates() []Template {
 				}},
 			}},
 		}}
-	return []Template{fc, bo, gen, cashCloseTemplate()}
+	return append([]Template{fc, bo, gen, cashCloseTemplate()}, multinationalTemplates()...)
 }
 
 // i18n of the built-in templates: the keys of the frontend catalogs (proj.*, pv.action.*).
@@ -266,6 +266,11 @@ func truncRunes(s string, n int) string {
 func (t Template) instantiate(pid, goal string, params map[string]string, locale string) (instance, error) {
 	if t.Key == keyCashClose && t.Builtin {
 		t = expandCashClose(params, locale) // Q3: the structure depends on accounts and clients
+	}
+	if t.Builtin {
+		if x, ok := expandMultinational(t, params, locale); ok {
+			t = x // the structure depends on subsidiaries, countries or entities
+		}
 	}
 	all := map[string]string{"goal": truncRunes(strings.TrimSpace(goal), 60)}
 	for _, p := range t.Params {

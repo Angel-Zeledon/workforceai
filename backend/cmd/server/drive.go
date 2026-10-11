@@ -131,7 +131,7 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 type driveWorkspace struct {
 	drive  *drive.Service
 	pstore projects.Store
-	store  application.Store                   // the agent's role (work kit)
+	store  application.Store                // the agent's role (work kit)
 	locale func(ctx context.Context) string // organization language (default "es")
 }
 

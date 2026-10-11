@@ -39,7 +39,9 @@ func (d deliverableSink) NodeChanged(ctx context.Context, ev projects.NodeEvent)
 		d.log.Warn("deliverable: project folder", "project", ev.ProjectID, "err", err)
 		return
 	}
-	path := folder.Path + "/" + deliverableName(ev.NodeID, ev.Title)
+	// node ids carry the project id ("prj-xxx:board"); the folder already names the project
+	node := strings.TrimPrefix(strings.TrimPrefix(ev.NodeID, ev.ProjectID+":"), ev.ProjectID+"-")
+	path := folder.Path + "/" + deliverableName(node, ev.Title)
 	_, err = d.drive.Write(wctx, drive.AgentP(ev.AgentID), drive.WriteInput{Path: path, Data: []byte(renderDeliverable(ev)),
 		Message: "deliverable of " + ev.NodeID, Source: "deliverable"})
 	if err != nil {

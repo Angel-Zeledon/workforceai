@@ -22,7 +22,8 @@ func TestDeliverablesBecomeProjectFiles(t *testing.T) {
 	svc := drive.New(drive.Config{Store: drive.NewMemStore(), Objects: objstore.NewMemory(), OrgID: "org1", Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	next := &countSink{}
 	sink := deliverableSink{next: next, drive: svc, log: slog.New(slog.NewTextHandler(io.Discard, nil))}
-	ev := projects.NodeEvent{ProjectID: "p1", ProjectName: "Cierre de caja", NodeID: "t3", Kind: projects.KindTask, Title: "Conciliación cuenta A",
+	// real node ids carry the project id ("p1:t3"); the file name drops it
+	ev := projects.NodeEvent{ProjectID: "p1", ProjectName: "Cierre de caja", NodeID: "p1:t3", Kind: projects.KindTask, Title: "Conciliación cuenta A",
 		AgentID: "accounting", State: projects.StateDone,
 		Output: &domain.StructuredOutput{Summary: "Cuadra al centavo.", Findings: []string{"2 partidas en tránsito"}, Metrics: map[string]any{"diferencia": 0}}}
 
