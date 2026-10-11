@@ -59,6 +59,7 @@
     }
   },
   "tools": [
+    "fs",
     "artifacts",
     "calendar",
     "docs"

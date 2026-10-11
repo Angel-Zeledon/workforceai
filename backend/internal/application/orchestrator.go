@@ -41,6 +41,7 @@ type Orchestrator struct {
 	chatQ    chatQueue // per-conversation FIFO of chat turns (chat.go)
 
 	ctxSrc ContextSource // optional: artifact text for project tasks (context_flow.go)
+	wsSrc  WorkspaceSource // optional: the agent's drive folders (workspace_flow.go)
 
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
 
@@ -570,9 +571,10 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 	return RunTaskRequest{
 		Task:    RunTaskInfo{ID: t.ID, Title: t.Title, Description: t.Description, AgentID: t.AgentID},
 		Agent:   RunAgentInfo{ID: agent.ID, Role: agent.Role, Title: agent.Title, Persona: agent.Persona, Responsibilities: agent.Responsibilities, Tools: agent.Tools, Area: areaOf(agent.Role, rs.style.Locale)},
-		Context: rc,
-		Locale:  rs.style.Locale,
-		Tone:    rs.style.ToneFor(t.AgentID),
+		Context:   rc,
+		Locale:    rs.style.Locale,
+		Tone:      rs.style.ToneFor(t.AgentID),
+		Workspace: o.workspaceFor(ctx, rs, agent),
 	}
 }
 

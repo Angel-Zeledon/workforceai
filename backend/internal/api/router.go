@@ -21,6 +21,7 @@ import (
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
 	"aiworkforce/backend/internal/projects"
@@ -65,6 +66,8 @@ type Deps struct {
 	// (artifacts.go). Both optional: when nil the routes are not mounted.
 	Projects  *projects.Service
 	Artifacts *artifacts.Service
+	// Drive serves /drive/* (drive.go): the organization's files. Optional.
+	Drive *drive.Service
 	// Push serves /push/* (push.go); nil disables Web Push. Rec audits
 	// subscription changes (optional).
 	Push *push.Service
@@ -143,6 +146,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountProjects(r)
 			s.mountRoles(r)
 			s.mountArtifacts(r)
+			s.mountDrive(r)
 			s.mountPush(r)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)

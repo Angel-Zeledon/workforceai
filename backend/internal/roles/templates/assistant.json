@@ -54,6 +54,7 @@
     }
   },
   "tools": [
+    "fs",
     "calendar",
     "docs"
   ],

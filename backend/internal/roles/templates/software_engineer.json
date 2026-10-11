@@ -65,6 +65,7 @@
     }
   },
   "tools": [
+    "fs",
     "repo_read",
     "docs",
     "artifacts"
