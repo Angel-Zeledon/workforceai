@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useStore } from "@/lib/store";
 import { useCost } from "@/lib/cost";
 import { useProjects } from "@/lib/projects/store";
@@ -53,7 +54,10 @@ export function ApprovalDeskCard() {
   const first = queue[0];
   if (!first) return null;
   const a = approvals[first.id] ?? first;
-  return (
+  // Rendered above the office chat (#office-popups has the same box as the scene, so the
+  // solver's coordinates still apply); falls back to the label layer when it is absent.
+  const host = typeof document !== "undefined" ? document.getElementById("office-popups") : null;
+  const card = (
     <div ref={ref} data-h={190} data-w={316} data-tier="popup" className="pointer-events-none absolute left-0 top-0 origin-bottom" style={{ opacity: 0 }}>
       <div data-testid="office-approval-desk" data-approval-id={a.id} className="ac-pop pointer-events-auto relative w-[304px] rounded-xl border border-amber-500/50 bg-white p-2 font-sans shadow-float">
         <div className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-wider text-amber-700">{t("office.approvalDesk.title")} · {t("office.approvalDesk.waiting", { name: name(a.agent_id).split(" ")[0] })}</div>
@@ -63,6 +67,7 @@ export function ApprovalDeskCard() {
       </div>
     </div>
   );
+  return host ? createPortal(card, host) : card;
 }
 
 // ---------------------------------------------------------------------------------------------

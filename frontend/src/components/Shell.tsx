@@ -104,6 +104,8 @@ export function Shell() {
             <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-4" style={{ paddingRight: selected ? "var(--panel-w, 420px)" : 16, paddingLeft: pendingApprovals ? 352 : 16 }}>
               <CommandBar />
             </div>
+            {/* Same box as the office scene but above the chat: in-scene popups that must stay clickable (approvals desk card). */}
+            <div id="office-popups" className="pointer-events-none absolute inset-0 z-20" />
             <div className="pointer-events-none absolute right-4 top-4 z-40 flex items-start gap-2" style={{ right: selected ? "calc(var(--panel-w, 420px) + 16px)" : 16 }}>
               <LightingToggle />
             </div>
