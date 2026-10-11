@@ -31,6 +31,9 @@ type GatewayTool struct {
 	// AgentTools returns the tool labels of an agent (nil = no label check).
 	// An error or an unknown agent denies (fail closed).
 	AgentTools func(ctx context.Context, org, agentID string) ([]string, error)
+	// Notify (optional) is told about every successful action (path only, never
+	// content), so the office can show which file an agent is working on.
+	Notify func(ctx context.Context, org, agentID, taskID, action, path string)
 }
 
 var _ application.NativeTool = (*GatewayTool)(nil)
@@ -134,6 +137,13 @@ func (t *GatewayTool) Run(ctx context.Context, c application.GatewayCall, approv
 		return application.NativeResult{Status: "failed", Code: rr.Code, Summary: t.inline(rr.Summary)}
 	}
 	res := application.NativeResult{Status: "succeeded", Summary: t.inline(rr.Summary)}
+	if t.Notify != nil {
+		p, _ := rr.Data["path"].(string)
+		if p == "" {
+			p = argStr(c.Args, "path")
+		}
+		t.Notify(ctx, c.Org, c.AgentID, c.TaskID, action, p)
+	}
 	if rr.Text != "" {
 		blk, suspected := t.block(action, rr.SourceNote, rr.Text)
 		res.Blocks = []string{blk}

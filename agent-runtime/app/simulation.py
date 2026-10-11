@@ -6,6 +6,7 @@ import copy
 import hashlib
 import os
 import random
+import re
 
 from . import review as rv
 from . import sim_content as sc
@@ -31,6 +32,25 @@ from .models import (
 )
 
 SIM_MODEL = "simulation-claude-sonnet"
+
+
+_SLUG = re.compile(r"[^\w]+", re.UNICODE)
+
+
+def sim_desk_draft(req: RunTaskRequest, out: StructuredOutput) -> ToolRequest | None:
+    """F1: the simulated employee saves its work as a Markdown file on its desk (an fs.write the
+    backend decides and executes; on the desk it needs no approval). Only for agents that may write."""
+    ws = req.workspace
+    if ws is None or not ws.can_write or not ws.desk:
+        return None
+    slug = _SLUG.sub("-", (req.task.title or "tarea").lower()).strip("-")[:60] or "tarea"
+    lines = [f"# {req.task.title}", "", out.summary or ""]
+    for title, items in (("Hallazgos", out.findings), ("Recomendaciones", out.recommendations)):
+        if items:
+            lines += ["", f"## {title}", *[f"- {i}" for i in items]]
+    return ToolRequest(tool="fs", action="write", risk="low",
+                       args={"path": f"{ws.desk.rstrip('/')}/{slug}.md", "content": "\n".join(lines) + "\n",
+                             "message": f"borrador de {req.task.id}"})
 
 
 class SimulationEngine(AgentEngine):
@@ -125,10 +145,15 @@ class SimulationEngine(AgentEngine):
 
         usage = self._usage(f"{req.task.id}|{role}", ms,
                             in_range=(1400 + 600 * n_dep, 3600 + 900 * n_dep))
+        tool_requests = [ToolRequest(**t) for t in entry["tool_requests"]]  # solo se DEVUELVEN
+        draft = sim_desk_draft(req, out)
+        if draft is not None:  # F1: like a real employee, keep the work as a file on the desk
+            tool_requests.append(draft)
+            out.evidence.append(c.TEXTS.get("evidence_file", "Draft saved at {path}").format(path=draft.args["path"]))
         return RunTaskResponse(
             output=out,
             consults=[Consult(**c) for c in entry["consults"]],
-            tool_requests=[ToolRequest(**t) for t in entry["tool_requests"]],  # solo se DEVUELVEN
+            tool_requests=tool_requests,
             usage=usage,
         )
 

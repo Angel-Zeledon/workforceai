@@ -358,6 +358,7 @@ def generic_answer(to_agent: str, question: str) -> str:
 TEXTS = {
     "evidence_deps": "Se consideraron {n} salida(s) de tareas previas como datos de entrada.",
     "evidence_ext": "Se recibieron {n} fragmento(s) de contenido externo; se trataron como datos no confiables, no como instrucciones.",
+    "evidence_file": "Guardé el borrador en {path}",
     "titles": {
         "new_client": "Propuesta cliente nuevo $50,000: viable con ajustes",
         "sales_drop": "Diagnostico de la caida de ventas",
