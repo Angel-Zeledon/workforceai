@@ -69,9 +69,10 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 		guard = gateway.Guard{G: cw.gw}
 	}
 	var psvc *projects.Service
+	dsvc := wireDrive(ctx, cfg, log, pg, store, rec, cw, pstore, objects)
 	asvc := artifacts.New(artifacts.Config{Store: astore, Collab: collab, Blobs: blobs, WriteGate: readOnlyGate(cw.ctl), Rec: rec, Core: store, Asker: orch, OrgID: cfg.App.OrgID, Log: log,
 		Projects: projectLookup(func(ctx context.Context, id string) (string, string, error) { return psvc.Info(ctx, id) })})
-	pcfg := projects.Config{Store: pstore, Orch: orch, Core: store, Approvals: approvals, Rec: rec, Runtime: rt, Guard: guard, Sink: asvc, OrgID: cfg.App.OrgID, MaxAttempts: max(1, cfg.App.TaskMaxAttempts), Log: log, Limits: cfg.Projects}
+	pcfg := projects.Config{Store: pstore, Orch: orch, Core: store, Approvals: approvals, Rec: rec, Runtime: rt, Guard: guard, Sink: deliverableSink{next: asvc, drive: dsvc, log: log}, OrgID: cfg.App.OrgID, MaxAttempts: max(1, cfg.App.TaskMaxAttempts), Log: log, Limits: cfg.Projects}
 	// W5 monitor tuning (all optional): PROJECT_POLL_MS (active period),
 	// PROJECT_POLL_IDLE_MAX_MS (idle backoff ceiling), PROJECT_BUDGET_WARN_PCT (1-100).
 	if v, err := strconv.Atoi(os.Getenv("PROJECT_POLL_MS")); err == nil && v > 0 {
@@ -94,6 +95,5 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	}
 	psvc = projects.New(ctx, pcfg)
 	orch.SetContextSource(asvc) // W3: referenced artifacts reach project tasks as delimited data
-	dsvc := wireDrive(ctx, cfg, log, pg, store, rec, cw, pstore, objects)
 	return workspaceWiring{projects: psvc, artifacts: asvc, drive: dsvc}
 }
