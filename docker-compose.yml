@@ -97,6 +97,11 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
       # --- DEVELOPMENT ONLY --- POST /demo/reset (admin role when auth is on).
       ENABLE_DEMO_RESET: "true"
+      # Code sandbox (profile "sandbox", `make up-sandbox`): when both are set,
+      # agents with the "code" tool can ask to run Python, ALWAYS with human
+      # approval. Leave them empty to keep code execution unavailable.
+      SANDBOX_URL: ${SANDBOX_URL:-}
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,6 +124,37 @@ services:
       - backend
     ports:
       - "3000:3000"
+
+  # ---- Code sandbox (docs/architecture/code-sandbox.md) -- DISABLED by default ----
+  # Start it with `make up-sandbox` (profile "sandbox"). WARNING: this is the
+  # only service with the Docker socket, which is root-equivalent on the host.
+  # Never publish its port, never mount the socket anywhere else; for a stronger
+  # boundary use a dedicated/rootless/remote daemon and SANDBOX_RUNTIME=runsc.
+  sandbox-image:
+    profiles: ["sandbox"]
+    build: ./sandbox
+    image: wfai-sandbox-python:1
+    entrypoint: ["true"]
+    restart: "no"
+
+  sandbox-runner:
+    profiles: ["sandbox"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.sandbox-runner
+    environment:
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-}  # required: the runner refuses to start without it
+      SANDBOX_IMAGE: wfai-sandbox-python:1
+      SANDBOX_RUNTIME: ${SANDBOX_RUNTIME:-}
+      SANDBOX_MAX_RUNTIME_SECONDS: ${SANDBOX_MAX_RUNTIME_SECONDS:-60}
+      SANDBOX_MEMORY_MB: ${SANDBOX_MEMORY_MB:-512}
+      SANDBOX_MAX_CONCURRENT: ${SANDBOX_MAX_CONCURRENT:-2}
+      PORT: "8090"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - sandbox-image
+    # No published ports: only the backend reaches it, on the internal network.
 
 volumes:
   pgdata:
