@@ -76,7 +76,7 @@ export function Folders() {
       g.rotation.y += dt * 2.2;
       g.rotation.z = Math.sin(k * Math.PI) * 0.35;
       const sc = u < 0.1 ? u / 0.1 : u > 0.9 ? (1 - u) / 0.1 : 1; // pops in at the sender, shrinks into the receiver's desk
-      g.scale.setScalar(0.4 + 0.6 * sc);
+      g.scale.setScalar((0.4 + 0.6 * sc) * 1.3);
     }
   });
 

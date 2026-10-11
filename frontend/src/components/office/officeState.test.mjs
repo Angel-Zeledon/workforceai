@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  BUBBLE_GAP_MS, BUBBLE_MAX_VISIBLE, BUBBLE_SHOW_MS, FolderPool, approvalsSpot, detectHandoffs, energyOf, etaShort, meetingSeat,
+  BUBBLE_GAP_MS, BUBBLE_MAX_VISIBLE, BUBBLE_SHOW_MS, FolderPool, approvalsSpot, cafeSpot, detectHandoffs, energyOf, etaShort, meetingSeat,
   phaseFor, pickBubble, slotIndex, stepBubbles, taskEta, truncateText, zoneFor,
 } from "./officeState.ts";
 
@@ -28,6 +28,13 @@ test("slotIndex caps each zone", () => {
   assert.equal(slotIndex(ids, "f", 6), 5);
   assert.equal(slotIndex(ids, "g", 6), -1);
   assert.equal(slotIndex(ids, "zzz", 6), -1);
+});
+
+test("cafeteria spots are distinct and face the counter or the table", () => {
+  const spots = [0, 1, 2, 3, 4, 5].map((k) => cafeSpot(k));
+  assert.equal(new Set(spots.map((s) => s.pos.join(","))).size, 6);
+  for (const s of spots.slice(0, 4)) assert.ok(Math.abs(s.yaw - Math.PI / 2) < 1e-9); // toward the counter (east)
+  assert.ok(Math.abs(spots[4].yaw) < 1e-9 && Math.abs(spots[5].yaw - Math.PI) < 1e-9); // flank the high table
 });
 
 test("spots are distinct and meeting seats face the table", () => {
@@ -94,6 +101,19 @@ test("stepBubbles rate-limits, never repeats and caps concurrency", () => {
   // once the first ones expire the others get their turn
   const later = stepBubbles(st2, many, BUBBLE_SHOW_MS + 10);
   assert.deepEqual(later.sort(), ["d", "e"]);
+});
+
+test("stepBubbles: stale bubbles disappear and urgent changes replace a visible one", () => {
+  const st = new Map();
+  const b = (k, urgent) => ({ key: k, kind: "task", text: k, urgent });
+  assert.deepEqual(stepBubbles(st, [{ id: "a", bubble: b("x") }], 0), ["a"]);
+  // a non-urgent change keeps the visible bubble; urgent replaces it right away
+  assert.equal(stepBubbles(st, [{ id: "a", bubble: b("y") }], 1000).length, 1);
+  assert.equal(st.get("a").text, "x");
+  assert.equal(stepBubbles(st, [{ id: "a", bubble: b("paused", true) }], 2000).length, 1);
+  assert.equal(st.get("a").text, "paused");
+  // nothing real to say: removed at once
+  assert.deepEqual(stepBubbles(st, [{ id: "a", bubble: null }], 2500), []);
 });
 
 test("taskEta: reported progress, estimate fallback, nothing to say", () => {

@@ -176,15 +176,16 @@ export class ProjectsMock {
     mp.detail.nodes = []; mp.detail.objectives = [];
     mp.detail.planning = { done: 0, total };
     this.emit({ type: "project.created", payload: { project: this.summary(mp), nodes: [], objectives: [], planning: mp.detail.planning } });
-    // The hierarchical planner reveals the tree level by level (objective by objective).
+    // The hierarchical planner reveals the tree level by level (objective by objective); slow on purpose so the office
+    // visibly shows the team meeting while the plan is drafted (a real planner takes a similar time).
     objs.forEach((o, i) => {
       this.later(() => {
         const add = full.filter((n) => n.objective_id === o.id);
         mp.detail.objectives.push(o); mp.detail.nodes.push(...add);
         mp.detail.planning = { done: leaves(mp.detail.nodes).length, total };
         this.emit({ type: "plan.draft_progress", payload: { project: this.summary(mp), nodes: add, objectives: [o], planning: mp.detail.planning } });
-        if (i === objs.length - 1) this.later(() => this.finishPlanning(mp, body.budget_usd), 400);
-      }, 2200 * (i + 1));
+        if (i === objs.length - 1) this.later(() => this.finishPlanning(mp, body.budget_usd), 14000);
+      }, 4000 * (i + 1));
     });
     return { project_id: pid };
   }

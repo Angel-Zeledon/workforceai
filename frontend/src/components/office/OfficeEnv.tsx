@@ -354,8 +354,8 @@ function Cafeteria() {
       <mesh castShadow position={[-0.6, 0.95, 0]}><cylinderGeometry args={[0.42, 0.42, 0.05, 28]} /><meshStandardMaterial color={OAK} roughness={0.7} /></mesh>
       <mesh castShadow position={[-0.6, 0.47, 0]}><cylinderGeometry args={[0.05, 0.14, 0.94, 14]} /><meshStandardMaterial color={GRAPHITE} roughness={0.6} metalness={0.2} /></mesh>
       <mesh castShadow position={[-0.5, 1.02, 0.1]}><cylinderGeometry args={[0.05, 0.043, 0.1, 12]} /><meshStandardMaterial color="#f4efe6" roughness={0.6} /></mesh>
-      <Plant position={[-1.5, 0, -1.9]} s={0.8} tint="#8aa28c" />
-      <FloorSign pos={[0.2, 0.04, 2.35]} text={t("office.cafeteria")} color="#c98a4a" />
+      <Plant position={[-1.6, 0, 1.8]} s={0.8} tint="#8aa28c" />
+      <FloorSign pos={[0.2, 0.04, 1.95]} text={t("office.cafeteria")} color="#c98a4a" />
     </group>
   );
 }

@@ -30,7 +30,6 @@ const EMPTY: Signals = {
 
 const PLANNING_MAX_AGE = 5 * 60_000;
 const PROJECT_PLANNING_MAX_AGE = 15 * 60_000;
-const ACTIVE = new Set(["pending", "running", "awaiting_approval"]);
 
 let key: unknown[] = [];
 let cached: Signals = EMPTY;

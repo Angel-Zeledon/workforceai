@@ -41,7 +41,7 @@ export function slotIndex(ids: readonly string[], id: string, cap: number): numb
   return k >= cap ? -1 : k;
 }
 
-export const CAFE_CENTER: [number, number] = [11.6, 0];
+export const CAFE_CENTER: [number, number] = [9.2, 1.2];
 /** Counter along the east edge (local x = +1.75); 4 spots face it, 2 more flank the small high table. */
 const CAFE_SPOTS: { dx: number; dz: number; yaw: number }[] = [
   { dx: 0.95, dz: -1.2, yaw: Math.PI / 2 }, { dx: 0.95, dz: -0.4, yaw: Math.PI / 2 }, { dx: 0.95, dz: 0.4, yaw: Math.PI / 2 }, { dx: 0.95, dz: 1.2, yaw: Math.PI / 2 },
@@ -79,7 +79,8 @@ export function truncateText(s: string, max = 64): string {
 }
 
 export type BubbleKind = "phase" | "consult" | "chat" | "task" | "step";
-export interface Bubble { key: string; kind: BubbleKind; text: string }
+/** `urgent`: a change of situation (e.g. the agent just got paused) replaces a visible bubble immediately. */
+export interface Bubble { key: string; kind: BubbleKind; text: string; urgent?: boolean }
 
 export interface BubbleInput {
   state: string;
@@ -133,7 +134,11 @@ export function stepBubbles(state: BubbleState, cands: readonly { id: string; bu
   for (const c of cands) {
     seen.add(c.id);
     const cur = state.get(c.id);
-    if (cur && now < cur.until) { out.push(c.id); continue; }
+    if (cur && now < cur.until) {
+      if (!c.bubble) { state.delete(c.id); visible--; continue; } // nothing real to say anymore: the stale bubble goes away
+      if (c.bubble.urgent && c.bubble.key !== cur.key) { cur.key = c.bubble.key; cur.text = c.bubble.text; cur.kind = c.bubble.kind; cur.shownAt = now; cur.until = now + BUBBLE_SHOW_MS; cur.nextAt = cur.until + BUBBLE_GAP_MS; }
+      out.push(c.id); continue;
+    }
     if (!c.bubble) { if (cur && now >= cur.nextAt) state.delete(c.id); continue; }
     if (cur && now < cur.nextAt) continue;
     if (cur && cur.key === c.bubble.key) continue; // same content already said

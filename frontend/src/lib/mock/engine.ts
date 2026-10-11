@@ -278,7 +278,7 @@ export class MockBackend {
     if (meetingDemo) {
       const { projectsMock } = await import("../projects/mock");
       await projectsMock.createDraft({ goal: req.text, template_id: "tpl-generic" });
-      await this.wait(9000);
+      await this.wait(34000); // long enough for the team to walk to the meeting room and for the phases to appear
     } else await this.wait(1500);
     const specs = buildPlan(req.text);
     // demo: an agent hits its budget cap mid-task and waits for the cap to be raised
