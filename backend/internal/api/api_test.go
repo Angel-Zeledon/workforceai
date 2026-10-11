@@ -25,6 +25,7 @@ import (
 	"aiworkforce/backend/internal/infrastructure/memory"
 	"aiworkforce/backend/internal/objstore"
 	"aiworkforce/backend/internal/roles"
+	"aiworkforce/backend/internal/sandbox"
 )
 
 const goodPW = "Correct-Horse-9"
@@ -105,6 +106,7 @@ type opts struct {
 	skipAuthRoutes bool
 	v2             bool // mount profiles, thought audit and intervention (v2_api_test.go)
 	ws             bool // mount projects and artifacts (workspaces_api_test.go)
+	code           bool // mount the code sandbox settings and runs (code_api_test.go)
 	drive          bool // mount the drive (drive_api_test.go); writeGate applies to it too
 	writeGate      func(ctx context.Context, org string) error
 }
@@ -117,6 +119,7 @@ type env struct {
 	hub   *events.Hub
 	store *memory.Store
 	appr  *application.Approvals
+	code  *sandbox.Service
 }
 
 func newEnv(t *testing.T, o opts) *env {
@@ -151,6 +154,11 @@ func newEnv(t *testing.T, o opts) *env {
 	if o.drive {
 		d.Drive = drive.New(drive.Config{Store: drive.NewMemStore(), Objects: objstore.NewMemory(), OrgID: cfg.OrgID, WriteGate: o.writeGate, Log: log})
 	}
+	if o.code {
+		d.Sandbox = &sandbox.Service{Store: sandbox.NewMemoryStore(), Ceiling: sandbox.DefaultLimits(), MaxRunsPerDay: 20, Audit: func(c context.Context, org, actor, action, entity, id string, det map[string]any) {
+			rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: entity, EntityID: id, Details: det})
+		}}
+	}
 	var svc *auth.Service
 	if o.auth {
 		var err error
@@ -171,7 +179,7 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	ts.Start()
 	t.Cleanup(ts.Close)
-	return &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr}
+	return &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr, code: d.Sandbox}
 }
 
 func (e *env) do(method, path, token string, body any, hdr map[string]string) (*http.Response, []byte) {
