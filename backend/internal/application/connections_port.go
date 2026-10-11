@@ -118,6 +118,41 @@ type ToolGateway interface {
 	ApprovalResolved(approvalID string, approved bool)
 }
 
+// NativeTool is a tool implemented inside the backend (no connection and no
+// credential), served by the Tool Gateway like any other: the drive's fs.*
+// actions. The gateway keeps doing what it does for every tool (kill switch,
+// pause, read-only mode, approvals bound to the exact args, execution ledger,
+// audit); the tool only knows its own domain rules.
+type NativeTool interface {
+	Name() string
+	// SideEffect reports whether tool.action changes state (ok=false: unknown action).
+	SideEffect(action string) (side bool, ok bool)
+	// Assess validates a call and says what it needs. It must be pure: no effects.
+	Assess(ctx context.Context, c GatewayCall) NativeAssessment
+	// Run executes the call. It re-assesses: approved satisfies only "needs
+	// approval", never a refusal.
+	Run(ctx context.Context, c GatewayCall, approved bool) NativeResult
+}
+
+// NativeAssessment is the verdict of NativeTool.Assess.
+type NativeAssessment struct {
+	DenyCode      string // stable code; "" = not denied
+	NeedsApproval bool
+	// Pending is the approval card when NeedsApproval (ArgsHash is set by the gateway).
+	Pending GatewayPending
+}
+
+// NativeResult is the outcome of NativeTool.Run.
+type NativeResult struct {
+	Status  string // succeeded | failed
+	Code    string // stable failure code
+	Summary string
+	// Blocks are sanitized, delimited <untrusted_data> blocks for the runtime.
+	Blocks             []string
+	Tainted            bool
+	InjectionSuspected bool
+}
+
 // StatusAlreadyExecuted is the status of a GatewayOutcome for an approved call
 // whose approval was already executed (the execution ledger refused a second run).
 const StatusAlreadyExecuted = "already_executed"

@@ -536,7 +536,9 @@ func (a *AgentFS) runList(ctx context.Context, agentID, p string) RunResult {
 		return failure(err)
 	}
 	var b strings.Builder
-	if p == "/" || strings.Count(p, "/") == 1 { // "/" or a root: only what the agent can reach
+	// "/" or a root the agent can only partly read (/Agents, /Projects, /Clients):
+	// show only what it can reach. A wholly readable root (/Shared) lists its content.
+	if p == "/" || strings.Count(p, "/") == 1 && !canRead(a.zone(ctx, org, sc, p)) {
 		roots := a.readableRoots(ctx, org, sc)
 		slices.Sort(roots)
 		fmt.Fprintf(&b, "folders you can use under %s:\n", p)
