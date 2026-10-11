@@ -40,6 +40,10 @@ type Config struct {
 	// TaskRetryBackoff is the wait before the second attempt (doubles after).
 	TaskMaxAttempts  int
 	TaskRetryBackoff time.Duration
+	// WorkReadRounds bounds the work loop of a task (F2): how many times the
+	// runtime may ask to list/read/search (drive, connections) and be called
+	// again with the results before it must deliver. Each round reserves budget.
+	WorkReadRounds int
 	// Projects never lose an overnight run to an unanswered human: their
 	// approvals and budget pauses WAIT and remind every ProjectReminderEvery
 	// (0: wait without reminders). A timeout > 0 restores the auto-reject
@@ -74,7 +78,7 @@ func DefaultConfig() Config {
 		TaskTimeout: 120 * time.Second, MaxRetries: 3, RetryBase: 500 * time.Millisecond,
 		ApprovalTimeout: 30 * time.Minute, LockTTL: 10 * time.Minute, IdleDelay: 4 * time.Second,
 		ConfirmThresholdUSD: 1.0, PauseTimeout: 30 * time.Minute,
-		TaskMaxAttempts: 2, TaskRetryBackoff: 2 * time.Second, ProjectReminderEvery: time.Hour,
+		TaskMaxAttempts: 2, TaskRetryBackoff: 2 * time.Second, ProjectReminderEvery: time.Hour, WorkReadRounds: 4,
 		ChatTimeout: 30 * time.Second, ChatStagger: 900 * time.Millisecond,
 		DepContextTokenBudget: defaultDepContextTokenBudget, ProjectContextTokenBudget: defaultProjectContextBudget,
 		SynthTokenBudget: defaultSynthTokenBudget, SynthMaxGroups: defaultSynthMaxGroups,
