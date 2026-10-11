@@ -457,6 +457,9 @@ export class MockBackend {
     a.metrics.avg_seconds = Math.round(((a.metrics.avg_seconds * (a.metrics.tasks_completed - 1)) + dur) / a.metrics.tasks_completed);
     a.metrics.cost_usd = +(a.metrics.cost_usd + cost).toFixed(4);
     req.cost_usd = +(req.cost_usd + cost).toFixed(4);
+    // F2: like the simulated runtime against the real backend, the agent saves its draft on its desk
+    const slug = (task.title || "tarea").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 60);
+    this.emit("file.activity", { agent_id: id, task_id: task.id, action: "write", path: `/Agents/${id}/${slug}.md` }, id);
     this.emitTask("task.completed", task);
     this.setState(id, "completed", "Tarea completada", task.id, 100);
     this.log(id, "task.completed", tr("mock.act.completed", { name: a.name.split(" ")[0], task: task.title }));

@@ -78,7 +78,7 @@ export function truncateText(s: string, max = 64): string {
   return (sp > max * 0.55 ? cut.slice(0, sp) : cut).replace(/[\s,.;:]+$/, "") + "…";
 }
 
-export type BubbleKind = "phase" | "consult" | "chat" | "task" | "step";
+export type BubbleKind = "phase" | "consult" | "chat" | "task" | "step" | "file";
 /** `urgent`: a change of situation (e.g. the agent just got paused) replaces a visible bubble immediately. */
 export interface Bubble { key: string; kind: BubbleKind; text: string; urgent?: boolean }
 
@@ -92,9 +92,19 @@ export interface BubbleInput {
   phaseTitle: string | null;
   /** latest message this agent sent (chat or consult question) and its age in ms */
   line: { text: string; kind: string; ageMs: number } | null;
+  /** last drive file the agent touched (file.activity) and its age in ms */
+  file?: { action: string; path: string; ageMs: number } | null;
 }
 
 export const LINE_MAX_AGE = 20000;
+export const FILE_MAX_AGE = 15000;
+const FILE_ICON: Record<string, string> = { write: "✍️", read: "📖", list: "📂", search: "🔎", move: "📦", delete: "🗑️" };
+
+/** "✍️ propuesta.md": what the agent is doing with which file (name only, never content). */
+export function fileBubbleText(action: string, path: string): string {
+  const name = path.split("/").filter(Boolean).pop() || path || "/";
+  return `${FILE_ICON[action] ?? "📄"} ${truncateText(name, 48)}`;
+}
 
 /**
  * Real content only, in priority order: phase being planned > consult question / chat line (recent) >
@@ -105,6 +115,9 @@ export function pickBubble(i: BubbleInput): Bubble | null {
   if (i.line && i.line.ageMs <= LINE_MAX_AGE && i.line.text.trim()) {
     const kind: BubbleKind = i.line.kind === "consult" ? "consult" : "chat";
     return { key: `${kind}:${i.line.text}`, kind, text: truncateText(i.line.text, 70) };
+  }
+  if (i.file && i.file.ageMs <= FILE_MAX_AGE && i.file.path) {
+    return { key: `file:${i.file.action}:${i.file.path}`, kind: "file", text: fileBubbleText(i.file.action, i.file.path) };
   }
   const busy = i.state === "working" || i.state === "thinking" || i.state === "reviewing";
   if (busy && i.taskTitle) {

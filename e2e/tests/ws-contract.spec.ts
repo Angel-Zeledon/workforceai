@@ -28,6 +28,8 @@ const KNOWN_TYPES = new Set([
   "budget.warning",
   "budget.exceeded",
   "budget.resumed",
+  // Drive (additive, docs/architecture/03-eventos-realtime.md): which file an agent used (path only)
+  "file.activity",
 ]);
 
 const AGENT_STATES = [

@@ -3,8 +3,21 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   BUBBLE_GAP_MS, BUBBLE_MAX_VISIBLE, BUBBLE_SHOW_MS, FolderPool, approvalsSpot, cafeSpot, detectHandoffs, energyOf, etaShort, meetingSeat,
-  phaseFor, pickBubble, slotIndex, stepBubbles, taskEta, truncateText, zoneFor,
+  phaseFor, pickBubble, slotIndex, stepBubbles, taskEta, truncateText, zoneFor, fileBubbleText, FILE_MAX_AGE,
 } from "./officeState.ts";
+
+test("file bubble: what the agent does with which file, after the plan phase and chat lines", () => {
+  const base = { state: "working", activity: "Revisando", taskTitle: "Propuesta", phaseTitle: null, line: null };
+  const file = { action: "write", path: "/Agents/sales/propuesta-alfa.md", ageMs: 1000 };
+  assert.deepEqual(pickBubble({ ...base, file }), { key: "file:write:/Agents/sales/propuesta-alfa.md", kind: "file", text: "✍️ propuesta-alfa.md" });
+  // a recent chat line and a planning phase still win
+  assert.equal(pickBubble({ ...base, file, line: { text: "¿Margen?", kind: "consult", ageMs: 10 } }).kind, "consult");
+  assert.equal(pickBubble({ ...base, file, phaseTitle: "Fase 1" }).kind, "phase");
+  // an old file activity is not news anymore: back to the task
+  assert.equal(pickBubble({ ...base, file: { ...file, ageMs: FILE_MAX_AGE + 1 } }).kind, "task");
+  assert.equal(fileBubbleText("read", "/Shared/Finanzas/saldos.csv"), "📖 saldos.csv");
+  assert.equal(fileBubbleText("list", "/"), "📂 /");
+});
 
 const base = { state: "working", budgetPaused: false, planning: false, approvalPending: false };
 

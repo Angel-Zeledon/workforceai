@@ -20,6 +20,7 @@ import { ProfileSheet } from "./agent/ProfileSheet";
 import { ThoughtAudit } from "./agent/ThoughtAudit";
 import { TaskIntervention } from "./agent/TaskIntervention";
 import { AgentPauseToggle } from "./agent/AgentPauseToggle";
+import { DeskFiles } from "./drive/DeskFiles";
 
 const TABS = ["chat", "state", "tasks", "chats", "memory", "reports", "files", "activity", "profile", "thoughts"] as const;
 type Tab = (typeof TABS)[number];
@@ -154,7 +155,7 @@ export function AgentPanel({ id }: { id: string }) {
             <div className="text-[13px] font-semibold text-ink">{r.title}</div><div className="mt-1 line-clamp-2 text-xs text-mute">{r.summary}</div>
           </button>
         )) : <Empty>{t("panel.noReports")}</Empty>)}
-        {tab === "files" && <AgentFilesTab id={id} />}
+        {tab === "files" && <><DeskFiles id={id} /><AgentFilesTab id={id} /></>}
         {tab === "activity" && <ActivityFeed agentId={id} limit={40} />}
       </div>
     </aside>

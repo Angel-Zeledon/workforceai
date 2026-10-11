@@ -160,6 +160,7 @@ export function SpeechLayer() {
         const bubble = pickBubble({
           state: paused ? "working" : ag.state, activity: ag.activity || "", phaseTitle, line,
           taskTitle: paused ? "" : (ag.current_task_id ? S.tasks[ag.current_task_id]?.title ?? "" : ""),
+          file: S.files[id] ? { action: S.files[id].action, path: S.files[id].path, ageMs: now - S.files[id].ts } : null,
         });
         (slot !== undefined ? meeting : rest).push({ id, bubble: bubble && paused ? { ...bubble, urgent: true } : bubble });
       }
