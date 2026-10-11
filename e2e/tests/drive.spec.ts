@@ -33,11 +33,13 @@ test("after the $50,000 request each participating agent has its draft on its de
   await page.getByTestId("nav-drive").click();
   await page.getByTestId("drive-folder-Agents").click();
   await page.getByTestId("drive-folder-legal").click();
-  const file = page.locator('[data-testid^="drive-file-"]').first();
-  await expect(file).toBeVisible();
-  await expect(file).toContainText(".md");
-  await file.click();
-  // written by the agent itself, and it is the agent's real result
+  // the desk also holds the role's work kit (written by the system); the draft is the row the AGENT wrote
+  const draft = page.locator('[data-testid^="drive-file-"]').filter({ hasText: /Agente|Agent/ }).first();
+  await expect(draft).toBeVisible();
+  await expect(draft).toContainText(".md");
+  await draft.click();
   await expect(page.getByTestId("drive-file-pane")).toContainText(/Agente|Agent/);
   await expect(page.getByTestId("drive-preview-text")).toContainText("#");
+  // and the work kit of the role is there too
+  await expect(page.getByTestId("drive-file-checklist-revision-contrato.md")).toBeVisible();
 });

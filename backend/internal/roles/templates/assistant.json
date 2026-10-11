@@ -122,5 +122,12 @@
       ],
       "why": "company announcements; every post needs approval"
     }
+  ],
+  "starter_files": [
+    {
+      "name": "agenda-semanal.md",
+      "es": "# Agenda de la semana\n\n## Lunes\n\n## Martes\n\n## Miércoles\n\n## Jueves\n\n## Viernes\n",
+      "en": "# Weekly agenda\n\n## Monday\n\n## Tuesday\n\n## Wednesday\n\n## Thursday\n\n## Friday\n"
+    }
   ]
 }

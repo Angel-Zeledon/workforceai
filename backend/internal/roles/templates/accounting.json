@@ -107,5 +107,28 @@
   "suggested_artifacts": [
     "sheet",
     "chart"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_drive",
+      "capabilities": [
+        "drive.read"
+      ],
+      "why": "statements and invoices in chosen folders"
+    },
+    {
+      "provider": "google_gmail",
+      "capabilities": [
+        "mail.read"
+      ],
+      "why": "invoices and bank notices received"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "checklist-cierre-mensual.md",
+      "es": "# Cierre mensual\n\n- [ ] Conciliaciones bancarias\n- [ ] Cuentas por cobrar y por pagar\n- [ ] Provisiones y depreciación\n- [ ] Balance de comprobación\n- [ ] Estados financieros y variaciones\n",
+      "en": "# Month-end close\n\n- [ ] Bank reconciliations\n- [ ] Receivables and payables\n- [ ] Accruals and depreciation\n- [ ] Trial balance\n- [ ] Financial statements and variances\n"
+    }
   ]
 }

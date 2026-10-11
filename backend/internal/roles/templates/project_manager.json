@@ -117,5 +117,37 @@
     "doc",
     "chart",
     "agenda"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_calendar",
+      "capabilities": [
+        "calendar.read",
+        "calendar.create_event"
+      ],
+      "why": "milestones and meetings"
+    },
+    {
+      "provider": "slack",
+      "capabilities": [
+        "chat.read",
+        "chat.post"
+      ],
+      "why": "status updates; posts need approval"
+    },
+    {
+      "provider": "github",
+      "capabilities": [
+        "repo.read"
+      ],
+      "why": "follow engineering work"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "riesgos.csv",
+      "es": "riesgo,probabilidad,impacto,dueño,mitigacion,estado\n",
+      "en": "risk,probability,impact,owner,mitigation,status\n"
+    }
   ]
 }

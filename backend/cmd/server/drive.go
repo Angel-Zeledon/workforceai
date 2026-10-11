@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/config"
@@ -15,6 +16,7 @@ import (
 	"aiworkforce/backend/internal/infrastructure/postgres"
 	"aiworkforce/backend/internal/objstore"
 	"aiworkforce/backend/internal/projects"
+	"aiworkforce/backend/internal/roles"
 )
 
 // objectStoreFromEnv picks where file bytes live: an S3-compatible store when
@@ -129,6 +131,8 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 type driveWorkspace struct {
 	drive  *drive.Service
 	pstore projects.Store
+	store  application.Store                   // the agent's role (work kit)
+	locale func(ctx context.Context) string // organization language (default "es")
 }
 
 func (d driveWorkspace) Workspace(ctx context.Context, org, agentID, requestID string) *application.RunWorkspace {
@@ -136,6 +140,7 @@ func (d driveWorkspace) Workspace(ctx context.Context, org, agentID, requestID s
 	ws := &application.RunWorkspace{Desk: "/" + drive.RootAgents + "/" + agentID, Shared: "/" + drive.RootShared}
 	if f, err := d.drive.EnsureOwnedFolder(ctx, drive.RootAgents, agentID, agentID); err == nil {
 		ws.Desk = f.Path
+		d.seedDesk(ctx, org, agentID, f.Path)
 	}
 	if requestID == "" || d.pstore == nil {
 		return ws
@@ -146,6 +151,49 @@ func (d driveWorkspace) Workspace(ctx context.Context, org, agentID, requestID s
 		}
 	}
 	return ws
+}
+
+// seedDesk puts the role's work kit on an EMPTY desk: a "how I work" note from
+// the role template plus the templates of its trade (roles: starter_files).
+// A desk that already has anything is never touched; read-only mode simply
+// refuses the writes (they are retried the next time the desk is resolved).
+func (d driveWorkspace) seedDesk(ctx context.Context, org, agentID, desk string) {
+	if d.store == nil {
+		return
+	}
+	l, err := d.drive.List(ctx, desk)
+	if err != nil || len(l.Files) > 0 || len(l.Folders) > 0 {
+		return
+	}
+	a, err := d.store.GetAgent(ctx, org, agentID)
+	if err != nil {
+		return
+	}
+	tpl, ok := roles.Get(a.Role)
+	if !ok {
+		return
+	}
+	loc := "es"
+	if d.locale != nil {
+		loc = d.locale(ctx)
+	}
+	x := tpl.Text(loc)
+	var b strings.Builder
+	title, resp := "Cómo trabajo", "Mis responsabilidades"
+	if strings.HasPrefix(loc, "en") {
+		title, resp = "How I work", "My responsibilities"
+	}
+	fmt.Fprintf(&b, "# %s: %s\n\n%s\n\n## %s\n\n", title, x.Title, x.Persona, resp)
+	for _, r := range x.Responsibilities {
+		b.WriteString("- " + r + "\n")
+	}
+	files := map[string]string{map[bool]string{true: "how-i-work.md", false: "como-trabajo.md"}[strings.HasPrefix(loc, "en")]: b.String()}
+	for _, f := range tpl.StarterFiles {
+		files[f.Name] = f.Content(loc)
+	}
+	for name, content := range files {
+		_, _ = d.drive.Write(ctx, drive.System(), drive.WriteInput{Path: desk + "/" + name, Data: []byte(content), Message: "work kit", Source: "starter"})
+	}
 }
 
 // driveReadOnlyGate refuses every drive change in read-only mode; an unreadable

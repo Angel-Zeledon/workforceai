@@ -120,5 +120,22 @@
     "doc",
     "table",
     "board"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "github",
+      "capabilities": [
+        "repo.read",
+        "repo.issue_write"
+      ],
+      "why": "read code; issues and comments need approval"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "notas-tecnicas.md",
+      "es": "# Notas técnicas\n\n## Decisiones\n\n## Riesgos\n\n## Pendientes\n",
+      "en": "# Technical notes\n\n## Decisions\n\n## Risks\n\n## To do\n"
+    }
   ]
 }

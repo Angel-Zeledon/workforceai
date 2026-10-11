@@ -108,5 +108,29 @@
   },
   "suggested_artifacts": [
     "doc"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_drive",
+      "capabilities": [
+        "drive.read"
+      ],
+      "why": "contracts in chosen folders"
+    },
+    {
+      "provider": "google_gmail",
+      "capabilities": [
+        "mail.read",
+        "mail.draft"
+      ],
+      "why": "read counterpart emails, draft answers"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "checklist-revision-contrato.md",
+      "es": "# Revisión de contrato\n\n- [ ] Partes y objeto\n- [ ] Precio y forma de pago\n- [ ] Penalidades y topes\n- [ ] Propiedad intelectual\n- [ ] Confidencialidad\n- [ ] Terminación y ley aplicable\n",
+      "en": "# Contract review\n\n- [ ] Parties and purpose\n- [ ] Price and payment terms\n- [ ] Penalties and caps\n- [ ] Intellectual property\n- [ ] Confidentiality\n- [ ] Termination and governing law\n"
+    }
   ]
 }

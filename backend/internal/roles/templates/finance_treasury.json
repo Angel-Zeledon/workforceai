@@ -124,5 +124,21 @@
     "table",
     "doc",
     "form"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_drive",
+      "capabilities": [
+        "drive.read"
+      ],
+      "why": "bank statements in chosen folders"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "flujo-13-semanas.csv",
+      "es": "semana,saldo_inicial,cobros,pagos,saldo_final\n",
+      "en": "week,opening_balance,receipts,payments,closing_balance\n"
+    }
   ]
 }

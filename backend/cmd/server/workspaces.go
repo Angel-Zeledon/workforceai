@@ -95,6 +95,10 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	}
 	psvc = projects.New(ctx, pcfg)
 	orch.SetContextSource(asvc) // W3: referenced artifacts reach project tasks as delimited data
-	orch.SetWorkspaceSource(driveWorkspace{drive: dsvc, pstore: pstore}) // F1: agents know their drive folders
+	dws := driveWorkspace{drive: dsvc, pstore: pstore, store: store}
+	if orgCfg != nil {
+		dws.locale = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }
+	}
+	orch.SetWorkspaceSource(dws) // F1: agents know their drive folders (and find their work kit)
 	return workspaceWiring{projects: psvc, artifacts: asvc, drive: dsvc}
 }

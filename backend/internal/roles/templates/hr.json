@@ -104,5 +104,36 @@
   "suggested_artifacts": [
     "doc",
     "form"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_gmail",
+      "capabilities": [
+        "mail.read",
+        "mail.draft",
+        "mail.send"
+      ],
+      "why": "candidates; sending always needs approval"
+    },
+    {
+      "provider": "google_calendar",
+      "capabilities": [
+        "calendar.read",
+        "calendar.create_event"
+      ],
+      "why": "interviews; new events need approval"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "plantilla-descripcion-de-puesto.md",
+      "es": "# {Puesto}\n\n## Propósito\n\n## Responsabilidades\n\n## Requisitos\n\n## Ofrecemos\n",
+      "en": "# {Role}\n\n## Purpose\n\n## Responsibilities\n\n## Requirements\n\n## We offer\n"
+    },
+    {
+      "name": "candidatos.csv",
+      "es": "nombre,puesto,etapa,proxima_entrevista,notas\n",
+      "en": "name,role,stage,next_interview,notes\n"
+    }
   ]
 }

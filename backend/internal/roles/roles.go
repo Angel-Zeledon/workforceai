@@ -85,7 +85,30 @@ type Template struct {
 	// usually needs (catalog sec. 6). A recommendation only: nothing is granted
 	// until an admin grants it on the connection.
 	RecommendedConnections []RecommendedConnection `json:"recommended_connections,omitempty"`
+	// StarterFiles are the work kit the agent finds on its drive desk
+	// (/Agents/<id>) the first time it is used: templates of its trade.
+	StarterFiles []StarterFile `json:"starter_files,omitempty"`
 }
+
+// StarterFile is one file of a role's work kit, in Spanish and English.
+type StarterFile struct {
+	Name string `json:"name"`
+	ES   string `json:"es"`
+	EN   string `json:"en"`
+}
+
+// Content returns the file text for a locale (Spanish by default).
+func (f StarterFile) Content(locale string) string {
+	if strings.HasPrefix(locale, "en") && f.EN != "" {
+		return f.EN
+	}
+	return f.ES
+}
+
+var starterNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,80}\.(md|csv|txt)$`)
+
+// maxStarterBytes keeps the kit small: it is a starting point, not content.
+const maxStarterBytes = 8 << 10
 
 // RecommendedConnection names a provider and the capabilities the role uses.
 type RecommendedConnection struct {
@@ -146,6 +169,11 @@ func Validate(t Template) error {
 	for _, tool := range t.Tools {
 		if !KnownTools[tool] {
 			return fmt.Errorf("%s: tool %q is not registered", t.ID, tool)
+		}
+	}
+	for _, f := range t.StarterFiles {
+		if !starterNameRe.MatchString(f.Name) || f.ES == "" || f.EN == "" || len(f.ES) > maxStarterBytes || len(f.EN) > maxStarterBytes {
+			return fmt.Errorf("%s: starter file %q needs a safe .md/.csv/.txt name and short es/en content", t.ID, f.Name)
 		}
 	}
 	for _, rc := range t.RecommendedConnections {
