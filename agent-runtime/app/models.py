@@ -316,6 +316,16 @@ class ToolAvailable(_Base):
     actions: list[str] = Field(default_factory=list)
 
 
+class RunWorkspace(_Base):
+    """F1: where the agent works in the drive. Paths only: the runtime never touches
+    storage; the agent asks for fs.* tool requests and the backend executes them."""
+
+    desk: str
+    project: str | None = None
+    shared: str = "/Shared"
+    can_write: bool = False
+
+
 class RunTaskRequest(_ProviderPolicyMixin):
     # El contrato NO tiene campos de credenciales, connection_id ni URLs de API:
     # el runtime nunca ve secretos ni llama al proveedor (test_contract_has_no_secret_fields).
@@ -327,6 +337,7 @@ class RunTaskRequest(_ProviderPolicyMixin):
     tools_available: list[ToolAvailable] | None = None
     tainted: bool = False
     rework: ReworkInfo | None = None  # Q1: set when the quality review asked for a new run
+    workspace: RunWorkspace | None = None  # F1: the agent's drive folders (fs/fs_read agents only)
     locale: Locale = "es"
     tone: Tone = "neutral"
 

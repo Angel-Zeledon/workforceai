@@ -336,6 +336,9 @@ type RunTaskRequest struct {
 	Tone            string       `json:"tone,omitempty"`
 	// Rework (Q1, additive): set when the quality review asked for a new run.
 	Rework *ReworkInfo `json:"rework,omitempty"`
+	// Workspace (F1, additive): the agent's drive folders; only for agents with
+	// the fs/fs_read tool label.
+	Workspace *RunWorkspace `json:"workspace,omitempty"`
 }
 
 type ConsultRequestItem struct {

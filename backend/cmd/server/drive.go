@@ -117,6 +117,32 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 	return svc
 }
 
+// driveWorkspace resolves the folders an agent works in for a request: its
+// desk, the project folder when the request is a launched project, and /Shared.
+// Folders are created on demand; in read-only mode (or on any error) the paths
+// are still given, the drive itself refuses the writes.
+type driveWorkspace struct {
+	drive  *drive.Service
+	pstore projects.Store
+}
+
+func (d driveWorkspace) Workspace(ctx context.Context, org, agentID, requestID string) *application.RunWorkspace {
+	ctx = application.WithOrg(ctx, org)
+	ws := &application.RunWorkspace{Desk: "/" + drive.RootAgents + "/" + agentID, Shared: "/" + drive.RootShared}
+	if f, err := d.drive.EnsureOwnedFolder(ctx, drive.RootAgents, agentID, agentID); err == nil {
+		ws.Desk = f.Path
+	}
+	if requestID == "" || d.pstore == nil {
+		return ws
+	}
+	if rec, err := d.pstore.ByRequest(ctx, org, requestID); err == nil {
+		if f, err := d.drive.EnsureOwnedFolder(ctx, drive.RootProjects, rec.ID, rec.Name); err == nil {
+			ws.Project = f.Path
+		}
+	}
+	return ws
+}
+
 // driveReadOnlyGate refuses every drive change in read-only mode; an unreadable
 // controls state also refuses (fail closed).
 func driveReadOnlyGate(ctl *controls.Service) func(ctx context.Context, org string) error {
