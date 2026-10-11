@@ -7,7 +7,7 @@ import {
 
 const MODES = [
   "walk", "seat:working", "seat:thinking", "seat:idle", "seat:waiting", "seat:reviewing", "seat:blocked", "seat:awaiting_approval",
-  "stand:talking", "stand:completed", "stand:error", "stand:idle",
+  "stand:talking", "stand:completed", "stand:error", "stand:idle", "stand:cafe", "seat:meeting", "stand:awaiting_approval",
 ];
 
 test("seeded rng is deterministic per id and differs between ids", () => {

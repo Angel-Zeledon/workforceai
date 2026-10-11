@@ -1,13 +1,16 @@
 "use client";
-import { Suspense, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useStore } from "@/lib/store";
+import { useCost } from "@/lib/cost";
 import { OfficeEnv } from "./OfficeEnv";
 import { Character } from "./Character";
 import { Links } from "./Links";
+import { Folders } from "./Folders";
+import { startProjectsRealtime } from "@/lib/projects/store";
 import { LabelLayer } from "./LabelLayer";
 import { LabelSolver } from "./LabelSolver";
 
@@ -42,6 +45,15 @@ function Cast() {
 
 export default function OfficeScene() {
   const select = useStore((s) => s.select);
+  // project summaries / planning phases feed the meeting room (reference-counted with the Projects screen)
+  useEffect(() => startProjectsRealtime(), []);
+  // remaining budget per agent (energy bars): refreshed here because spend changes without a budget.* event
+  useEffect(() => {
+    const { loadStatus } = useCost.getState();
+    void loadStatus();
+    const i = setInterval(() => void useCost.getState().loadStatus(), 20000);
+    return () => clearInterval(i);
+  }, []);
   return (
     <div className="relative h-full w-full">
       <Canvas
@@ -55,6 +67,7 @@ export default function OfficeScene() {
           <OfficeEnv />
           <Cast />
           <Links />
+          <Folders />
         </Suspense>
         <LabelSolver />
         <Rig />

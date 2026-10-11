@@ -71,6 +71,9 @@ export function envelope(u: number, edge = 0.25): number {
 /** Blend a pose channel toward `v` with weight `w`. */
 function to(p: Pose, k: PoseKey, v: number, w: number) { p[k] += (v - p[k]) * w; }
 
+/** Modes in which the character keeps a coffee mug in hand (cafeteria). */
+export const holdsMug = (mode: string): boolean => mode === "stand:cafe";
+
 /** Which hand prop a gesture shows: 0 none, 1 coffee mug, 2 phone. */
 export function propFor(kind: GestureKind | null, u: number): 0 | 1 | 2 {
   if (!kind || u < 0.12 || u > 0.88) return 0;
@@ -294,7 +297,7 @@ export function computePose(p: Pose, mode: string, t: number, ph = 0, rate = 1, 
       p.rElX += Math.sin(t * 0.8 + ph) * 0.05;
       break;
     }
-    case "seat:awaiting_approval": {
+    case "seat:awaiting_approval": case "stand:awaiting_approval": {
       rest();
       // raised hand alternates with fingers tapping and a glance back over the shoulder
       const cyc = frac(t * rate / 9 + ph / TAU);
@@ -305,6 +308,26 @@ export function computePose(p: Pose, mode: string, t: number, ph = 0, rate = 1, 
       p.rElX = -0.95 + (-0.15 - -0.95) * up + Math.sin(t * 5 * rate) * 0.28 * up;
       p.lElX += Math.max(0, Math.sin(t * 9 + ph)) * 0.14 * (1 - up);
       p.rElX += Math.max(0, Math.sin(t * 10 + ph)) * 0.1 * (1 - up);
+      break;
+    }
+    case "stand:cafe": {
+      // holds a coffee mug at chest height and lifts it for a sip now and then, glancing around the room
+      const cyc = frac(t * rate / 8 + ph / TAU);
+      const sip = envelope(clamp((cyc - 0.5) / 0.3, 0, 1), 0.3);
+      p.pelvisY = STAND_Y + breathe;
+      p.torsoX = 0.04; p.torsoZ = sway * 0.03;
+      p.headY = Math.sin(t * 0.5 * rate + ph) * 0.35; p.headX = -0.03 - 0.1 * sip;
+      p.rShX = -0.9 - 0.15 * sip; p.rElX = -1.75 - 0.3 * sip; p.rShZ = 0.1;
+      p.lShX = -0.1; p.lElX = -0.35; p.lShZ = 0.12;
+      break;
+    }
+    case "seat:meeting": {
+      // seated at the meeting table: follows the conversation around the table, small hand beats, nods
+      const em = smooth(0.5 + 1.0 * Math.sin(t * 0.5 * rate + ph));
+      rest();
+      p.torsoX = 0.06; p.headX = 0.06; p.headY = Math.sin(t * 0.45 * rate + ph) * 0.5;
+      p.rShX = -0.75 + Math.sin(t * 2.6 * rate + ph) * 0.18 * em; p.rElX = -1.2 + Math.sin(t * 3.4 * rate) * 0.25 * em;
+      p.headX += Math.pow(Math.max(0, Math.sin(t * 1.3 * rate + ph * 2)), 8) * 0.12;
       break;
     }
     case "stand:talking": {
