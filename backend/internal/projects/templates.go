@@ -114,7 +114,12 @@ func builtinTemplates() []Template {
 				}},
 			}},
 		}}
-	return append([]Template{fc, bo, gen, cashCloseTemplate()}, multinationalTemplates()...)
+	all := append([]Template{fc, bo, gen, cashCloseTemplate()}, multinationalTemplates()...)
+	all = append(all, giantTemplates()...)
+	for i := range all {
+		all[i].Category = categoryOfBuiltin(all[i].Key)
+	}
+	return all
 }
 
 // i18n of the built-in templates: the keys of the frontend catalogs (proj.*, pv.action.*).
@@ -211,7 +216,12 @@ func (t Template) resolved(locale string) Template {
 	}
 	out.Params = make([]TemplateParam, len(t.Params))
 	for i, p := range t.Params {
-		p.Label = tr(locale, p.LabelKey, nil)
+		if p.LabelKey != "" {
+			p.Label = tr(locale, p.LabelKey, nil)
+		}
+		if p.DefaultKey != "" {
+			p.Default = tr(locale, p.DefaultKey, nil)
+		}
 		out.Params[i] = p
 	}
 	return out
@@ -264,13 +274,16 @@ func truncRunes(s string, n int) string {
 // instantiate builds the nodes of a draft. params are the user values (missing
 // ones take the template default); the goal is available as {goal}.
 func (t Template) instantiate(pid, goal string, params map[string]string, locale string) (instance, error) {
-	if t.Key == keyCashClose && t.Builtin {
-		t = expandCashClose(params, locale) // Q3: the structure depends on accounts and clients
-	}
-	if t.Builtin {
-		if x, ok := expandMultinational(t, params, locale); ok {
-			t = x // the structure depends on subsidiaries, countries or entities
-		}
+	return t.instantiateWith(DefaultLimits(), pid, goal, params, locale)
+}
+
+// instantiateWith is instantiate with the configured limits (they bound the expansion of data templates).
+func (t Template) instantiateWith(lim Limits, pid, goal string, params map[string]string, locale string) (instance, error) {
+	// Q3 / multinational: the structure depends on accounts, clients, subsidiaries...; data templates
+	// (G2): parameters are substituted and repeated blocks unrolled.
+	t, params, err := expandedFor(t, goal, params, locale, lim)
+	if err != nil {
+		return instance{}, err
 	}
 	all := map[string]string{"goal": truncRunes(strings.TrimSpace(goal), 60)}
 	for _, p := range t.Params {
@@ -373,6 +386,8 @@ func (t Template) instantiate(pid, goal string, params map[string]string, locale
 				}
 				if n.Approval != nil {
 					def.ApprovalAction, def.ApprovalRisk = n.Approval.Action, n.Approval.Risk
+				} else if kind == KindGate {
+					def.ApprovalAction, def.ApprovalRisk = "approve_step", "medium"
 				}
 				inst.Nodes = append(inst.Nodes, def)
 				if n.Delegate != nil {

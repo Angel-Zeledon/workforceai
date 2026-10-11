@@ -1,7 +1,10 @@
 package api
 
 import (
+	"errors"
+	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -47,6 +50,16 @@ func (s *server) mountProjects(r chi.Router) {
 	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/nodes/{nodeId}/replan", s.replanProjectNode)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/projects/{id}/save-as-template", s.saveProjectTemplate)
 	r.With(s.can(auth.PermTasksRead)).Get("/project-templates", s.listProjectTemplates)
+	// Customizable work templates (G2): members create and edit, admins delete.
+	r.With(s.can(auth.PermRequestsCreate)).Post("/project-templates", s.createProjectTemplate)
+	r.With(s.can(auth.PermRequestsCreate)).Post("/project-templates/preview", s.previewProjectTemplate)
+	r.With(s.can(auth.PermRequestsCreate)).Post("/project-templates/validate", s.validateProjectTemplate)
+	r.With(s.can(auth.PermTasksRead)).Get("/project-templates/{id}", s.getProjectTemplate)
+	r.With(s.can(auth.PermRequestsCreate)).Put("/project-templates/{id}", s.updateProjectTemplate)
+	r.With(s.can(auth.PermTasksManage)).Delete("/project-templates/{id}", s.deleteProjectTemplate)
+	r.With(s.can(auth.PermRequestsCreate)).Post("/project-templates/{id}/duplicate", s.duplicateProjectTemplate)
+	r.With(s.can(auth.PermTasksRead)).Get("/project-templates/{id}/versions", s.projectTemplateVersions)
+	r.With(s.can(auth.PermRequestsCreate)).Post("/project-templates/{id}/versions/{version}/restore", s.restoreProjectTemplate)
 	// Deciding approvals is privileged (admin/owner); every decision still goes through Approvals.Decide.
 	r.With(s.can(auth.PermApprovalsDecide)).Post("/approvals/batch", s.decideApprovalsBatch)
 }
@@ -223,7 +236,14 @@ func (s *server) projectBudget(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) saveProjectTemplate(w http.ResponseWriter, r *http.Request) {
-	t, err := s.Projects.SaveAsTemplate(r.Context(), chi.URLParam(r, "id"))
+	var body projects.SaveOpts
+	if r.ContentLength != 0 { // the body is optional: name, description, category, shared
+		if err := s.decode(w, r, &body); err != nil && !errors.Is(err, io.EOF) {
+			s.fail(w, err)
+			return
+		}
+	}
+	t, err := s.Projects.SaveAsTemplateWith(r.Context(), chi.URLParam(r, "id"), body)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -297,4 +317,113 @@ func (s *server) replanProjectNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, c)
+}
+
+func (s *server) createProjectTemplate(w http.ResponseWriter, r *http.Request) {
+	var body projects.TemplateInput
+	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	t, err := s.Projects.CreateTemplate(r.Context(), body)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, t)
+}
+
+func (s *server) getProjectTemplate(w http.ResponseWriter, r *http.Request) {
+	t, err := s.Projects.GetTemplate(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, t)
+}
+
+func (s *server) updateProjectTemplate(w http.ResponseWriter, r *http.Request) {
+	var body projects.TemplateInput
+	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	t, err := s.Projects.UpdateTemplate(r.Context(), chi.URLParam(r, "id"), body)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, t)
+}
+
+func (s *server) deleteProjectTemplate(w http.ResponseWriter, r *http.Request) {
+	if err := s.Projects.DeleteTemplate(r.Context(), chi.URLParam(r, "id")); err != nil {
+		s.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) duplicateProjectTemplate(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Name string `json:"name"`
+	}
+	if r.ContentLength != 0 {
+		if err := s.decode(w, r, &body); err != nil && !errors.Is(err, io.EOF) {
+			s.fail(w, err)
+			return
+		}
+	}
+	t, err := s.Projects.DuplicateTemplate(r.Context(), chi.URLParam(r, "id"), body.Name)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, t)
+}
+
+func (s *server) projectTemplateVersions(w http.ResponseWriter, r *http.Request) {
+	v, err := s.Projects.TemplateVersions(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, list(v))
+}
+
+func (s *server) restoreProjectTemplate(w http.ResponseWriter, r *http.Request) {
+	n, err := strconv.Atoi(chi.URLParam(r, "version"))
+	if err != nil || n < 1 {
+		s.fail(w, errInvalid("version must be a positive integer"))
+		return
+	}
+	t, err := s.Projects.RestoreTemplate(r.Context(), chi.URLParam(r, "id"), n)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, t)
+}
+
+func (s *server) validateProjectTemplate(w http.ResponseWriter, r *http.Request) {
+	var body projects.TemplateInput
+	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, s.Projects.ValidateTemplate(r.Context(), body))
+}
+
+func (s *server) previewProjectTemplate(w http.ResponseWriter, r *http.Request) {
+	var body projects.PreviewRequest
+	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	p, err := s.Projects.PreviewTemplate(r.Context(), body)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, p)
 }

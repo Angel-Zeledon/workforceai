@@ -119,8 +119,8 @@ func init() {
 
 func cashCloseParams() []TemplateParam {
 	return []TemplateParam{
-		{Key: "accounts", LabelKey: "proj.cc.param.accounts", Default: "6"},
-		{Key: "clients", LabelKey: "proj.cc.param.clients", Default: "1"},
+		{Key: "accounts", LabelKey: "proj.cc.param.accounts", Default: "6", Type: "number", Min: 1, Max: cashCloseMaxAccts},
+		{Key: "clients", LabelKey: "proj.cc.param.clients", Default: "1", Type: "number", Min: 1, Max: cashCloseMaxCli},
 	}
 }
 

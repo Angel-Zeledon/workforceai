@@ -71,7 +71,7 @@ func expandMultinational(t Template, params map[string]string, locale string) (T
 
 func buildGroupClose(subs int, locale string) Template {
 	t := Template{ID: idGroupClose, Key: keyGroupClose, Version: 1, Builtin: true, NameKey: "proj.gc.name", DescriptionKey: "proj.gc.desc",
-		Params: []TemplateParam{{Key: "subsidiaries", LabelKey: "proj.gc.param.subsidiaries", Default: "8"}}}
+		Params: []TemplateParam{{Key: "subsidiaries", LabelKey: "proj.gc.param.subsidiaries", Default: "8", Type: "number", Min: 1, Max: 20}}}
 	var wfs []TemplateWorkflow
 	var ics, fxs, taxes []string
 	for i := 0; i < subs; i++ {
@@ -108,7 +108,7 @@ func buildGroupClose(subs int, locale string) Template {
 
 func buildMarketEntry(n int, locale string) Template {
 	t := Template{ID: idMarketEntry, Key: keyMarketEnt, Version: 1, Builtin: true, NameKey: "proj.me.name", DescriptionKey: "proj.me.desc",
-		Params: []TemplateParam{{Key: "countries", LabelKey: "proj.me.param.countries", Default: "5"}}}
+		Params: []TemplateParam{{Key: "countries", LabelKey: "proj.me.param.countries", Default: "5", Type: "number", Min: 1, Max: 12}}}
 	var wfs []TemplateWorkflow
 	var briefs, sizes, comps []string
 	for i := 0; i < n; i++ {
@@ -145,7 +145,7 @@ func buildMarketEntry(n int, locale string) Template {
 
 func buildDueDiligence(n int, locale string) Template {
 	t := Template{ID: idDueDilig, Key: keyDueDilig, Version: 1, Builtin: true, NameKey: "proj.dd.name", DescriptionKey: "proj.dd.desc",
-		Params: []TemplateParam{{Key: "entities", LabelKey: "proj.dd.param.entities", Default: "3"}}}
+		Params: []TemplateParam{{Key: "entities", LabelKey: "proj.dd.param.entities", Default: "3", Type: "number", Min: 1, Max: 10}}}
 	var wfs []TemplateWorkflow
 	var flags []string
 	for i := 0; i < n; i++ {
