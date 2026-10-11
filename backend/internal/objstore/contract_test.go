@@ -65,7 +65,8 @@ func TestS3AgainstFakeServer(t *testing.T) {
 	}
 }
 
-// Real MinIO: S3_TEST_ENDPOINT=http://localhost:19000 (see docs/architecture/drive.md).
+// Real S3-compatible server (RustFS 1.0.1 in docker-compose; MinIO works too):
+// S3_TEST_ENDPOINT=http://localhost:19000 S3_TEST_ACCESS_KEY=... S3_TEST_SECRET_KEY=...
 func TestS3AgainstMinIO(t *testing.T) {
 	ep := os.Getenv("S3_TEST_ENDPOINT")
 	if ep == "" {
