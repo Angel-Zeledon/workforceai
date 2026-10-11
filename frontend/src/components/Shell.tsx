@@ -12,6 +12,8 @@ import { Dashboard } from "./dashboard/Dashboard";
 import { ProjectsView } from "./projects/ProjectsView";
 import { ProjectPill } from "./projects/ProjectPill";
 import { DriveView } from "./drive/DriveView";
+import { FileViewerPanel } from "./files/FileViewerPanel";
+import { useFileViewer } from "@/lib/fileView";
 import { useDriveNav } from "@/lib/drive";
 import { useProjects } from "@/lib/projects/store";
 import { fmtUsd } from "@/lib/meta";
@@ -41,6 +43,7 @@ export function Shell() {
   const pendingApprovals = useStore((s) => Object.values(s.approvals).some((a) => a.status === "pending"));
   const projectsOpenRaw = useProjects((s) => s.open);
   const setProjectsOpenRaw = useProjects((s) => s.setOpen);
+  const viewerOpen = useFileViewer((s) => !!s.ref);
   const driveOpen = useDriveNav((s) => s.open);
   const drivePath = useDriveNav((s) => s.path);
   const projectsOpen = projectsOpenRaw && !driveOpen;
@@ -112,12 +115,12 @@ export function Shell() {
               <ProjectPill />
             </div>
             <div className="pointer-events-none absolute bottom-[96px] left-4"><ApprovalsTray /></div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-4" style={{ paddingRight: selected ? "var(--panel-w, 420px)" : 16, paddingLeft: pendingApprovals ? 352 : 16 }}>
+            <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-4" style={{ paddingRight: `calc(${selected ? "var(--panel-w, 420px)" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})`, paddingLeft: pendingApprovals ? 352 : 16 }}>
               <CommandBar />
             </div>
             {/* Same box as the office scene but above the chat: in-scene popups that must stay clickable (approvals desk card). */}
             <div id="office-popups" className="pointer-events-none absolute inset-0 z-20" />
-            <div className="pointer-events-none absolute right-4 top-4 z-40 flex items-start gap-2" style={{ right: selected ? "calc(var(--panel-w, 420px) + 16px)" : 16 }}>
+            <div className="pointer-events-none absolute right-4 top-4 z-40 flex items-start gap-2" style={{ right: `calc(${selected ? "var(--panel-w, 420px) + 16px" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})` }}>
               <LightingToggle />
             </div>
             {selected && <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-30"><WorkspaceHost id={selected} /></div>}
@@ -125,6 +128,12 @@ export function Shell() {
           </>
         ) : (
           <Dashboard />
+        )}
+        {/* Files in the conversation: viewer next to the chat (left of the agent panel when it is open) */}
+        {!driveOpen && viewerOpen && (
+          <div data-testid="file-viewer-host" className="pointer-events-none absolute bottom-0 top-0 z-[35] max-w-full" style={{ right: mode === "office" && selected ? "var(--panel-w, 420px)" : 0 }}>
+            <FileViewerPanel />
+          </div>
         )}
       </main>
     </div>

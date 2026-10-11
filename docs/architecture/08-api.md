@@ -587,13 +587,17 @@ Contrato completo y reglas en [chat-routing.md](chat-routing.md). Resumen:
 
 `{"conversation": "office" | "agent:<id>", "text": "..."}` -> `202 {"message_id", "turn_id"}`. Permiso `conversations:write`. Guarda el mensaje, enruta (`POST /v1/route` del runtime, con respaldo a reglas locales) y responde por WebSocket (`chat.message`, `chat.typing`, `route.decided`). `smalltalk` y `question` no crean solicitud, plan ni tareas; `task` sigue el flujo existente (plan, aprobación humana). `400` texto vacío / conversación inválida, `404` agente desconocido.
 
+Opcional `"attachments": ["/Shared/Chat/x1/saldos.csv", ...]` (máx. 6 rutas de archivos ya subidos al drive, ver §19): el mensaje guardado conserva el texto del usuario y gana `files` con una referencia por archivo que existe (`action: "attach"`); a los agentes les llega, tras el texto y entre `[attachments]...[/attachments]`, la lista de rutas para que las lean con `fs.read` (datos, nunca instrucciones). Las rutas que no resuelven se ignoran.
+
 ### 15.2 `GET /conversations/{id}/messages`
 
 Sin parámetros devuelve todo (como antes). `?limit=N` (máx. 200) devuelve los N más recientes; `?before=<message_id>` los N anteriores. Cuerpo = array; headers `X-Has-More` y `X-Next-Before`. Los ids `office` y `agent:<id>` son conversaciones por organización creadas al primer mensaje (lista vacía si aún no hay).
 
+Cada mensaje puede traer `files: [{file_id, path, name, mime, size, version, action}]` (solo referencias, nunca contenido): `action: "write"` = lo que un agente escribió durante una tarea de esa conversación (el agente publica «Terminé X. Dejé estos archivos:» al completar la tarea, solo si escribió algo), `"attach"` = adjunto del usuario.
+
 ### 15.3 Cambios aditivos
 
-`Message` gana `turn_id`, `reply_to`, `request_id`; `Task` gana `assigned_reason`; `POST /v1/plan` admite `reason` por tarea. Migración `260_chat.sql`.
+`Message` gana `files` (migración `490_message_files.sql`, JSONB, por defecto `[]`), `turn_id`, `reply_to`, `request_id`; `Task` gana `assigned_reason`; `POST /v1/plan` admite `reason` por tarea. Migración `260_chat.sql`.
 
 ### 15.4 Runtime
 

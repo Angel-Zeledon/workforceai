@@ -8,6 +8,9 @@ import { usePreferences, useAgentView } from "@/lib/preferences";
 import type { ChatMessage, RouteDecision, TurnIntent } from "@/lib/types";
 import { Btn, readable, useAgentColor, useAgentName } from "../ui";
 import { Icon } from "../icons";
+import { FileCards } from "../files/FileCard";
+import { drive, DriveError } from "@/lib/drive";
+import type { FileRef } from "@/lib/types";
 
 const EMPTY: ChatMessage[] = [];
 
@@ -127,6 +130,7 @@ function Bubble({ m, grouped, showRoute }: { m: ChatMessage; grouped: boolean; s
         <div className={`whitespace-pre-line break-words rounded-xl px-3 py-1.5 text-[12.5px] leading-[1.45] ${mine ? "rounded-tr-sm bg-accent text-white" : `rounded-tl-sm border border-line bg-panel2 text-ink ${m.kind === "delegation" ? "border-l-2" : ""}`}`} style={!mine && m.kind === "delegation" ? { borderLeftColor: readable(color(m.from)) } : undefined}>
           {m.text}
         </div>
+        <FileCards files={m.files} mine={mine} />
         {handoff && !mine && (
           <button type="button" data-testid="chat-ask-colleague" data-colleague={handoff} onClick={ask} title={t("chat.askColleagueHint", { name: name(handoff).split(" ")[0] })}
             className="mt-1 inline-flex items-center gap-1 rounded-md border border-line-strong bg-panel px-2 py-1 text-[11px] font-medium text-accent-hover transition hover:border-accent">
@@ -169,24 +173,42 @@ export function ChatThread({ conv, showRoute = false, className = "", emptyText 
   );
 }
 
-/** Sends to POST /messages (falls back to the legacy request endpoint if the backend has no chat yet, office only). */
-export async function sendChat(conv: string, text: string, from = "user") {
+/** Sends to POST /messages (falls back to the legacy request endpoint if the backend has no chat yet, office only).
+ * `attachments` are drive paths already uploaded: they show as file cards in the user's message and reach the agents as paths to fs.read. */
+export async function sendChat(conv: string, text: string, from = "user", attachments: string[] = [], refs?: FileRef[]) {
   const store = useStore.getState();
-  store.addLocalChat({ id: `local:${Date.now().toString(36)}`, conversation: conv, turn_id: null, from, to: conv === "office" ? "all" : conv.slice(6), kind: "chat", text, reply_to: null, ts: new Date().toISOString() });
+  const files = refs ?? attachments.map((p) => ({ path: p, name: p.split("/").pop() || p, action: "attach" }));
+  store.addLocalChat({ id: `local:${Date.now().toString(36)}`, conversation: conv, turn_id: null, from, to: conv === "office" ? "all" : conv.slice(6), kind: "chat", text, reply_to: null, ts: new Date().toISOString(), ...(files.length ? { files } : {}) });
   try {
-    await api.postMessage(conv, text);
+    await api.postMessage(conv, text, attachments);
   } catch (e) {
     if (conv === "office" && /-> (404|405|501)\b/.test(String((e as Error)?.message))) { await api.postRequest(text); return; }
     throw e;
   }
 }
 
+/** Where attachments go: one folder per message under /Shared/Chat (agents can read /Shared). */
+async function uploadAttachments(files: File[]): Promise<FileRef[]> {
+  const batch = Math.random().toString(36).slice(2, 8);
+  const out: FileRef[] = [];
+  for (const f of files) {
+    const path = `/Shared/Chat/${batch}/${f.name.replace(/[\\/]/g, "_")}`;
+    const r = await drive.upload(path, f);
+    out.push({ file_id: r.file.id, path: r.file.path, name: r.file.name, mime: r.file.mime, size: r.file.size, version: r.file.current_version, action: "attach" });
+  }
+  return out;
+}
+
+const MAX_ATTACH = 5;
+
 export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, autoFocus = false }: { conv: string; placeholder: string; testId?: string; submitTestId?: string; onSent?: () => void; autoFocus?: boolean }) {
   const { t } = useT();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [picked, setPicked] = useState<File[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const draft = useStore((s) => s.drafts[conv]);
   const setDraft = useStore((s) => s.setDraft);
   useEffect(() => {
@@ -196,20 +218,40 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
   }, [draft, conv, setDraft]);
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
-    const v = text.trim();
+    const v = text.trim() || (picked.length ? t("chat.attach.defaultText") : "");
     if (!v || busy) return;
     setBusy(true); setErr("");
-    try { await sendChat(conv, v); setText(""); onSent?.(); } catch { setErr(t("chat.sendError")); }
+    try {
+      let refs: FileRef[] = [];
+      if (picked.length) {
+        try { refs = await uploadAttachments(picked); } catch (x) { setErr(x instanceof DriveError ? t("chat.attach.error", { code: x.code }) : t("chat.attach.error", { code: "upload" })); setBusy(false); return; }
+      }
+      await sendChat(conv, v, "user", refs.map((r) => r.path), refs);
+      setText(""); setPicked([]); onSent?.();
+    } catch { setErr(t("chat.sendError")); }
     setBusy(false);
   };
   return (
     <form onSubmit={submit} className="flex flex-col gap-1">
+      {picked.length > 0 && (
+        <ul data-testid="chat-attachments" className="flex flex-wrap gap-1.5">
+          {picked.map((f, i) => (
+            <li key={`${f.name}${i}`} className="flex max-w-[200px] items-center gap-1 rounded-md border border-line bg-panel2 py-0.5 pl-2 pr-1 text-[11px] text-ink2">
+              <span className="truncate">{f.name}</span>
+              <button type="button" aria-label={t("chat.attach.remove", { name: f.name })} onClick={() => setPicked((p) => p.filter((_, j) => j !== i))} className="rounded p-0.5 text-mute hover:bg-mute/10 hover:text-ink"><Icon name="x" size={11} /></button>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="flex items-center gap-2">
+        <input ref={fileRef} type="file" multiple data-testid="chat-attach-input" className="hidden" onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) setPicked((p) => [...p, ...fs].slice(0, MAX_ATTACH)); e.target.value = ""; }} />
+        <button type="button" data-testid="chat-attach" title={t("chat.attach.title")} aria-label={t("chat.attach.title")} disabled={busy || picked.length >= MAX_ATTACH} onClick={() => fileRef.current?.click()}
+          className="rounded-lg border border-line bg-panel2 p-2 text-mute hover:border-accent hover:text-ink disabled:opacity-40"><Icon name="plus" size={14} /></button>
         <input
           ref={inputRef} data-testid={testId} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus} autoComplete="off"
           className="min-w-0 flex-1 rounded-lg border border-line bg-panel2 px-3 py-2 text-[13px] text-ink outline-none placeholder:text-mute"
         />
-        <Btn data-testid={submitTestId} type="submit" kind="primary" disabled={busy || !text.trim()}><span className="flex items-center gap-1.5"><Icon name="arrow" size={13} />{busy ? t("cmd.sending") : t("cmd.send")}</span></Btn>
+        <Btn data-testid={submitTestId} type="submit" kind="primary" disabled={busy || (!text.trim() && !picked.length)}><span className="flex items-center gap-1.5"><Icon name="arrow" size={13} />{busy ? t("cmd.sending") : t("cmd.send")}</span></Btn>
       </div>
       {err && <div role="alert" className="text-[11px] text-err">{err}</div>}
     </form>

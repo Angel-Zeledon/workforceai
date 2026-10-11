@@ -61,11 +61,19 @@ export interface ErrorItem { id: string; ts: string; agent_id: string | null; me
 
 /** Chat routing contract (docs/architecture/chat-routing.md): conversation is "office" or "agent:<id>". */
 export type ChatConversationId = string;
+/** A drive file a chat message points to (never content): what an agent produced or the user attached. */
+export interface FileRef {
+  file_id?: string; path: string; name: string; mime?: string; size?: number; version?: number;
+  /** write: produced by an agent; attach: attached by the user */
+  action?: "write" | "attach" | string;
+}
 export interface ChatMessage {
   id: string; conversation: ChatConversationId; turn_id: string | null; from: string; to: string;
   kind: MessageKind; text: string; reply_to: string | null; ts: string;
   /** optional: the agent redirects the topic to this colleague (offers a quick action) */
   handoff_to?: string | null;
+  /** drive files of this message (cards in the chat) */
+  files?: FileRef[];
 }
 export type TurnIntent = "smalltalk" | "question" | "task";
 export interface RouteResponder { agent_id: string; role: "primary" | "contributor"; reason: string }
