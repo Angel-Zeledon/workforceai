@@ -549,7 +549,7 @@ func (s *Service) storeOutputs(ctx context.Context, org string, run Run, files [
 		o := OutputInfo{Name: f.Name, Size: int64(len(f.Data)), SHA256: hex.EncodeToString(sum[:])}
 		if s.Sink == nil {
 			o.Error = "no_file_sink"
-		} else if ref, err := s.Sink.WriteOutput(ctx, org, run.AgentID, "code-runs/"+run.ID, f.Name, bytes.NewReader(f.Data)); err != nil {
+		} else if ref, err := s.Sink.WriteOutput(ctx, org, run.AgentID, "outputs/"+run.ID, f.Name, bytes.NewReader(f.Data)); err != nil {
 			o.Error = "write_failed"
 			s.log().Warn("sandbox: write output", "run", run.ID, "file", f.Name, "err", err)
 		} else {

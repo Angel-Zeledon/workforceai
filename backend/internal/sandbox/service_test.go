@@ -270,7 +270,7 @@ func TestOutputsGoThroughSinkAttributedToAgent(t *testing.T) {
 		t.Fatalf("outcome %+v", o)
 	}
 	name, agent, folder, data, ok := e.files.Output(org, o.OutputRefs[0])
-	if !ok || name != "result.csv" || agent != "analyst" || !strings.HasPrefix(folder, "code-runs/") || string(data) != "a,b\n1,2\n" {
+	if !ok || name != "result.csv" || agent != "analyst" || !strings.HasPrefix(folder, "outputs/") || string(data) != "a,b\n1,2\n" {
 		t.Fatalf("stored %v %v %v %q %v", name, agent, folder, data, ok)
 	}
 	run, _ := e.store.GetRunByApproval(context.Background(), org, "ap1")

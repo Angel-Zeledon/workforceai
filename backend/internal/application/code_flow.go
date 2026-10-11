@@ -36,7 +36,7 @@ func (o *Orchestrator) codeDenied(ctx context.Context, t *domain.Task, agent dom
 func (o *Orchestrator) handleCodeRun(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, tr ToolRequest, idx int, reqs []ToolRequest) Outcome {
 	switch {
 	case o.code == nil:
-		o.codeDenied(ctx, t, agent, "code_execution_disabled")
+		o.codeDenied(ctx, t, agent, "sandbox_unavailable")
 		return OutcomeDone
 	case !slices.Contains(agent.Tools, CodeToolName):
 		o.codeDenied(ctx, t, agent, "code_tool_not_granted") // the tool must be granted to the agent

@@ -7,7 +7,7 @@ import (
 
 // Port of the approval-gated code sandbox (internal/sandbox, docs/architecture/
 // code-sandbox.md). Optional: with no CodeRunner set a code.run request is
-// denied ("code_execution_disabled") and nothing ever runs.
+// denied ("sandbox_unavailable") and nothing ever runs.
 
 // CodeToolName and CodeActionRun identify the tool request that asks to run code.
 const (

@@ -587,7 +587,7 @@ func (o *Orchestrator) resumeTask(ctx context.Context, rs *run, t domain.Task) O
 		}
 		if o.code == nil {
 			o.supersedeApprovals(ctx, t.ID, true)
-			o.codeDenied(ctx, &t, agent, "code_execution_disabled")
+			o.codeDenied(ctx, &t, agent, "sandbox_unavailable")
 		} else if res := o.codeAwait(ctx, rs, &t, agent, tr, ap, ch, o.approvals.Deadline(ap), ""); res != OutcomeDone {
 			return res
 		}

@@ -21,6 +21,7 @@ type workspaceWiring struct {
 	projects  *projects.Service
 	artifacts *artifacts.Service
 	drive     *drive.Service
+	sandbox   sandboxWiring
 }
 
 // projectLookup lets the artifacts service name a project without importing the
@@ -100,5 +101,5 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 		dws.locale = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }
 	}
 	orch.SetWorkspaceSource(dws) // F1: agents know their drive folders (and find their work kit)
-	return workspaceWiring{projects: psvc, artifacts: asvc, drive: dsvc}
+	return workspaceWiring{projects: psvc, artifacts: asvc, drive: dsvc, sandbox: wireSandbox(log, pg, rec, cw, orch, dsvc)}
 }
