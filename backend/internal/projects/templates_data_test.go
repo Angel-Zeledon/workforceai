@@ -129,11 +129,14 @@ func TestValidateTemplate(t *testing.T) {
 		"no agent":    {func(t *Template) { t.Objectives[0].Workflows[0].Nodes[0].Agent = "" }, "no_agent"},
 		"title":       {func(t *Template) { t.Objectives[0].Workflows[0].Nodes[0].Title = " " }, "empty_title"},
 		"repeat":      {func(t *Template) { t.Objectives[0].Workflows[0].Repeat = []string{"year"} }, IssueBadRepeat},
-		"repeat 3":    {func(t *Template) { t.Params = append(t.Params, TemplateParam{Key: "z", Type: ParamList, Default: "a"}); t.Objectives[0].Workflows[0].Repeat = []string{"countries", "units", "z"} }, IssueBadRepeat},
-		"param":       {func(t *Template) { t.Params[2].Key = "Bad Key" }, IssueBadParam},
-		"complexity":  {func(t *Template) { t.Objectives[0].Workflows[0].Nodes[0].Complexity = "XXL" }, "invalid_complexity"},
-		"approval":    {func(t *Template) { t.Objectives[1].Workflows[0].Nodes[1].Approval.Risk = "extreme" }, IssueBadApproval},
-		"name":        {func(t *Template) { t.Name = "" }, IssueBadName},
+		"repeat 3": {func(t *Template) {
+			t.Params = append(t.Params, TemplateParam{Key: "z", Type: ParamList, Default: "a"})
+			t.Objectives[0].Workflows[0].Repeat = []string{"countries", "units", "z"}
+		}, IssueBadRepeat},
+		"param":      {func(t *Template) { t.Params[2].Key = "Bad Key" }, IssueBadParam},
+		"complexity": {func(t *Template) { t.Objectives[0].Workflows[0].Nodes[0].Complexity = "XXL" }, "invalid_complexity"},
+		"approval":   {func(t *Template) { t.Objectives[1].Workflows[0].Nodes[1].Approval.Risk = "extreme" }, IssueBadApproval},
+		"name":       {func(t *Template) { t.Name = "" }, IssueBadName},
 	} {
 		if is := mut(tc.f); !has(is, tc.code) {
 			t.Errorf("%s: want %s, got %+v", name, tc.code, is)

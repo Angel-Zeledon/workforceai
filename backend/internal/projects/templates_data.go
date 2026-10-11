@@ -340,13 +340,31 @@ func expandData(t Template, goal string, raw map[string]string, locale string, l
 						nn.Delegate = &d
 					}
 					nn.Deps = nil
-					for _, dk := range n.Deps {
+					for _, dep := range n.Deps {
+						dk, prev, _ := strings.Cut(dep, "^")
 						ref, ok := wfOf[dk]
 						if !ok {
 							return t, nil, fmt.Errorf("%w: node %q depends on unknown node %q", domain.ErrInvalid, n.Key, dk)
 						}
+						fixed := pos
+						if prev != "" {
+							// "key^list": the same instance but the previous item of that list (none for the first item).
+							pi := slices.Index(listOrder, prev)
+							at, here := pos[pi]
+							if pi < 0 || !here || !slices.Contains(ref.dims, pi) {
+								return t, nil, fmt.Errorf("%w: node %q: %q is not a repeat dimension of both blocks", domain.ErrInvalid, n.Key, prev)
+							}
+							if at == 0 {
+								continue
+							}
+							fixed = map[int]int{}
+							for k, v := range pos {
+								fixed[k] = v
+							}
+							fixed[pi] = at - 1
+						}
 						// Dims shared with the dependent use its item; the others fan in.
-						for _, tgt := range combosFixed(ref.dims, lens, pos) {
+						for _, tgt := range combosFixed(ref.dims, lens, fixed) {
 							nn.Deps = append(nn.Deps, dk+suffixOf(tgt))
 							if edges++; edges > maxTplEdges {
 								return t, nil, limitError(domain.ErrInvalid, LimitTemplateEdges, maxTplEdges, "the template has too many dependencies after expansion")
@@ -406,7 +424,7 @@ func ValidateTemplate(t Template, agentIDs []string, lim Limits) []Issue {
 	lim = lim.withDefaults()
 	var issues []Issue
 	add := func(sev, key, code string) { issues = append(issues, Issue{Severity: sev, NodeID: key, Code: code}) }
-	if n := len([]rune(strings.TrimSpace(t.Name))); n == 0 || n > maxTplName {
+	if n := len([]rune(strings.TrimSpace(t.Name))); (n == 0 && t.NameKey == "") || n > maxTplName {
 		add("error", "", IssueBadName)
 	}
 	if len([]rune(t.Description)) > maxTplDesc {
@@ -453,6 +471,7 @@ func ValidateTemplate(t Template, agentIDs []string, lim Limits) []Issue {
 	}
 	keys := map[string]bool{} // objectives, workflows and nodes share one namespace
 	nodeKeys := map[string]bool{}
+	repeatOf := map[string][]string{} // node key -> repeat dims of its workflow
 	nodes := 0
 	workflows := 0
 	for _, o := range t.Objectives {
@@ -487,6 +506,7 @@ func ValidateTemplate(t Template, agentIDs []string, lim Limits) []Issue {
 					add("error", n.Key, IssueDupKey)
 				}
 				keys[n.Key], nodeKeys[n.Key] = true, true
+				repeatOf[n.Key] = w.Repeat
 			}
 		}
 	}
@@ -545,12 +565,17 @@ func ValidateTemplate(t Template, agentIDs []string, lim Limits) []Issue {
 				if len(n.Deps) > maxTplDeps {
 					add("error", n.Key, IssueTooLarge)
 				}
-				for _, d := range n.Deps {
+				for _, dep := range n.Deps {
+					d, prev, hasPrev := strings.Cut(dep, "^")
 					switch {
-					case d == n.Key:
-						add("error", n.Key, IssueSelfDep)
 					case !nodeKeys[d]:
 						add("error", n.Key, IssueUnknownDep)
+					case d == n.Key && !hasPrev:
+						add("error", n.Key, IssueSelfDep)
+					case hasPrev && !(slices.Contains(w.Repeat, prev) && slices.Contains(repeatOf[d], prev)):
+						add("error", n.Key, IssueBadRepeat)
+					case hasPrev:
+						// the previous item of a list is not a cycle: it is a chain
 					default:
 						graph[n.Key] = append(graph[n.Key], d)
 					}

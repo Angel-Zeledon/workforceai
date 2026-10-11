@@ -531,9 +531,7 @@ func (s *Service) SaveAsTemplateWith(ctx context.Context, projectID string, o Sa
 		in.Description = d
 	}
 	in.Category = o.Category
-	if o.Shared != nil {
-		in.Shared = o.Shared
-	}
+	in.Shared = o.Shared // nil: shared with the organization
 	in.Params = []TemplateParam{}
 	if in.Name == "" {
 		in.Name = rec.Name
