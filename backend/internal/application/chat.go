@@ -327,6 +327,14 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	}
 	m := domain.Message{ID: t.userMsgID, ConversationID: conversation, From: "user", To: to, Kind: domain.MsgChat, Text: text,
 		TS: time.Now().UTC(), TurnID: t.id}
+	if att := attachmentsFrom(ctx); len(att) > 0 {
+		if len(att) > maxAttachments {
+			att = att[:maxAttachments]
+		}
+		// the agents get the paths (they read with fs.read); the stored message keeps the user's own text
+		m.Files = o.resolveFiles(ctx, att, "attach")
+		t.text += attachmentNote(t.loc, m.Files)
+	}
 	if err := o.store.AddMessage(ctx, org, m); err != nil {
 		return ChatTurn{}, err
 	}
@@ -932,6 +940,9 @@ func (o *Orchestrator) emitChat(ctx context.Context, m domain.Message, requestID
 		"kind": m.Kind, "text": m.Text, "reply_to": m.ReplyTo, "ts": m.TS}
 	if requestID != "" {
 		payload["request_id"] = requestID
+	}
+	if len(m.Files) > 0 {
+		payload["files"] = m.Files
 	}
 	act := Action{Type: domain.EvChatMessage, Entity: "message", EntityID: m.ID, Payload: payload, SkipAudit: true}
 	if m.From != "user" && m.From != "system" {

@@ -69,7 +69,7 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 		guard = gateway.Guard{G: cw.gw}
 	}
 	var psvc *projects.Service
-	dsvc := wireDrive(ctx, cfg, log, pg, store, rec, cw, pstore, objects)
+	dsvc := wireDrive(ctx, cfg, log, pg, store, rec, cw, pstore, objects, orch)
 	asvc := artifacts.New(artifacts.Config{Store: astore, Collab: collab, Blobs: blobs, WriteGate: readOnlyGate(cw.ctl), Rec: rec, Core: store, Asker: orch, OrgID: cfg.App.OrgID, Log: log,
 		Projects: projectLookup(func(ctx context.Context, id string) (string, string, error) { return psvc.Info(ctx, id) })})
 	pcfg := projects.Config{Store: pstore, Orch: orch, Core: store, Approvals: approvals, Rec: rec, Runtime: rt, Guard: guard, Sink: deliverableSink{next: asvc, drive: dsvc, log: log}, OrgID: cfg.App.OrgID, MaxAttempts: max(1, cfg.App.TaskMaxAttempts), Log: log, Limits: cfg.Projects}
@@ -99,6 +99,7 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	if orgCfg != nil {
 		dws.locale = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }
 	}
-	orch.SetWorkspaceSource(dws) // F1: agents know their drive folders (and find their work kit)
+	orch.SetFileResolver(driveFileResolver{drive: dsvc}) // chat: file cards and attachments
+	orch.SetWorkspaceSource(dws)                         // F1: agents know their drive folders (and find their work kit)
 	return workspaceWiring{projects: psvc, artifacts: asvc, drive: dsvc}
 }

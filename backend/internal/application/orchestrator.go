@@ -42,6 +42,7 @@ type Orchestrator struct {
 
 	ctxSrc ContextSource   // optional: artifact text for project tasks (context_flow.go)
 	wsSrc  WorkspaceSource // optional: the agent's drive folders (workspace_flow.go)
+	files  chatFiles       // files agents wrote per task and the resolver of paths (chat_files.go)
 
 	v2 v2State // work profiles, thought audit and intervention (intervene.go); zero value = off
 
@@ -574,6 +575,7 @@ func (o *Orchestrator) completeTask(ctx context.Context, rs *run, t domain.Task,
 	o.rec.Emit(ctx, Action{Type: domain.EvTaskCompleted, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
 		Payload: map[string]any{"task": t}, Text: fmt.Sprintf("%s completó: %s", agent.Name, t.Title)})
 	o.emitMetrics(ctx)
+	o.chatTaskFiles(ctx, rs, t, agent)
 	return OutcomeDone
 }
 

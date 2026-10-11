@@ -489,8 +489,8 @@ func (s *Store) ListConversations(ctx context.Context, orgID string) ([]domain.C
 
 func (s *Store) AddMessage(ctx context.Context, orgID string, m domain.Message) error {
 	return s.WithOrgTx(ctx, orgID, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `INSERT INTO messages (id, org_id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-			m.ID, orgID, m.ConversationID, m.From, m.To, m.Kind, m.Text, m.TaskID, m.TS, m.TurnID, m.ReplyTo, m.RequestID); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO messages (id, org_id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id, files) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+			m.ID, orgID, m.ConversationID, m.From, m.To, m.Kind, m.Text, m.TaskID, m.TS, m.TurnID, m.ReplyTo, m.RequestID, jb(fileRefs(m.Files))); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `UPDATE conversations SET last_message_at=$3 WHERE org_id=$1 AND id=$2`, orgID, m.ConversationID, m.TS); err != nil {
@@ -509,11 +509,20 @@ func (s *Store) AddMessage(ctx context.Context, orgID string, m domain.Message) 
 	})
 }
 
-const msgCols = `id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id`
+const msgCols = `id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id, files`
+
+func fileRefs(f []domain.FileRef) []domain.FileRef {
+	if f == nil {
+		return []domain.FileRef{}
+	}
+	return f
+}
 
 func scanMessage(r scanner) (domain.Message, error) {
 	var m domain.Message
-	err := r.Scan(&m.ID, &m.ConversationID, &m.From, &m.To, &m.Kind, &m.Text, &m.TaskID, &m.TS, &m.TurnID, &m.ReplyTo, &m.RequestID)
+	var files []byte
+	err := r.Scan(&m.ID, &m.ConversationID, &m.From, &m.To, &m.Kind, &m.Text, &m.TaskID, &m.TS, &m.TurnID, &m.ReplyTo, &m.RequestID, &files)
+	unmarshal(files, &m.Files)
 	return m, err
 }
 

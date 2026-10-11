@@ -180,6 +180,9 @@ type Message struct {
 	TurnID    string  `json:"turn_id,omitempty"`
 	ReplyTo   *string `json:"reply_to,omitempty"`
 	RequestID *string `json:"request_id,omitempty"`
+	// Files are the drive files this message refers to: what an agent produced
+	// during the task, or what the user attached. References only, never content.
+	Files []FileRef `json:"files,omitempty"`
 }
 
 type Conversation struct {
