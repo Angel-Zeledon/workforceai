@@ -71,6 +71,7 @@
     }
   },
   "tools": [
+    "fs",
     "spreadsheet",
     "calculator",
     "artifacts"

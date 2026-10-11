@@ -59,6 +59,7 @@
     }
   },
   "tools": [
+    "fs",
     "bi",
     "spreadsheet",
     "calculator",

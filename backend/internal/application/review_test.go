@@ -265,7 +265,7 @@ func TestAuditorIsTheReviewerWhenPresent(t *testing.T) {
 	h.orch.SetTaskGate(&reviewGate{mode: application.ReviewAlways, criteria: crit})
 	id, _ := h.orch.Submit(context.Background(), "x")
 	h.orch.Wait()
-	if len(rt.reviews) != 1 || rt.reviews[0].Reviewer.ID != aud || rt.reviews[0].Reviewer.Role != "internal_auditor" || len(rt.reviews[0].Reviewer.Tools) != 0 {
+	if len(rt.reviews) != 1 || rt.reviews[0].Reviewer.ID != aud || rt.reviews[0].Reviewer.Role != "internal_auditor" || !readOnlyTools(rt.reviews[0].Reviewer.Tools) {
 		t.Fatalf("reviewer = %+v", rt.reviews)
 	}
 	for _, tk := range h.tasks(id) {
@@ -273,11 +273,21 @@ func TestAuditorIsTheReviewerWhenPresent(t *testing.T) {
 			t.Fatalf("review = %+v", tk.Output.Review)
 		}
 	}
-	// the auditor has no tools and no way to approve anything
+	// the auditor can only read (drive read-only) and has no way to approve anything
 	tp, _ := roles.Get("internal_auditor")
-	if len(tp.Tools) != 0 || tp.RiskTier != "green" || tp.Seed != nil {
+	if !readOnlyTools(tp.Tools) || tp.RiskTier != "green" || tp.Seed != nil {
 		t.Fatalf("template = %+v", tp)
 	}
+}
+
+// readOnlyTools: no tool label that can change anything ("fs_read" lists, reads, searches).
+func readOnlyTools(tools []string) bool {
+	for _, t := range tools {
+		if t != "fs_read" {
+			return false
+		}
+	}
+	return true
 }
 
 func TestAuditorCannotClaimVerifiedWithoutEvidence(t *testing.T) {

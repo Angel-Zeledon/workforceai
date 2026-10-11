@@ -89,6 +89,9 @@ var KnownTools = map[string]bool{
 	"crm": true, "email": true, "proposal_builder": true, "ats": true, "contract_review": true, "docs": true,
 	"ledger": true, "spreadsheet": true, "bi": true, "planner": true, "inventory": true, "calendar": true,
 	"artifacts": true, "calculator": true, "repo_read": true,
+	// The drive (docs/architecture/drive.md): "fs" = list/read/search/write/move/delete
+	// under the zone policy; "fs_read" = list/read/search only.
+	"fs": true, "fs_read": true,
 }
 
 var autonomyRank = map[string]int{"suggest": 1, "approve_each": 2, "rules": 3, "autonomous": 4}

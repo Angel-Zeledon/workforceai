@@ -60,6 +60,7 @@
     }
   },
   "tools": [
+    "fs",
     "ledger",
     "spreadsheet"
   ],
