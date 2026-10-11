@@ -258,12 +258,13 @@ func (o *Orchestrator) rework(ctx context.Context, rs *run, t *domain.Task, agen
 		return RunTaskResponse{}, false, OutcomeFailed
 	}
 	rin := in
+	o.applyGuidance(ctx, &rin) // notes sent since the first call ride on the rework
 	rin.Rework = &ReworkInfo{Attempt: attempt, Notes: prev.Output.Review.Reasons, PreviousSummary: truncate(prev.Output.Summary, maxReviewText)}
 	tid := t.ID
 	o.setState(ctx, t.AgentID, domain.StateWorking, fmt.Sprintf("Rehaciendo (%d): %s", attempt, t.Title), &tid, 50)
 	var resp RunTaskResponse
 	err = o.call(ctx, "run-task", func(c context.Context) (err error) {
-		resp, err = o.rt.RunTask(c, rin)
+		resp, err = o.rtRunTask(c, rs, "rework", rin)
 		return err
 	})
 	if err != nil {
@@ -288,6 +289,7 @@ func (o *Orchestrator) rework(ctx context.Context, rs *run, t *domain.Task, agen
 }
 
 func (o *Orchestrator) announceReview(ctx context.Context, t domain.Task, r *domain.Review) {
+	o.traceEvent(ctx, t.ID, "review", map[string]any{"verdict": r.Verdict, "reviewer": r.Reviewer, "reworks": r.Reworks, "reasons": strings.Join(r.Reasons, "; ")})
 	d := map[string]any{"verdict": r.Verdict, "reasons": r.Reasons, "reworks": r.Reworks, "rework_exhausted": r.Exhausted, "reviewer": r.Reviewer, "agent_id": t.AgentID}
 	o.rec.Audit(ctx, domain.AuditLog{Actor: r.Reviewer, Action: "task.reviewed", Entity: "task", EntityID: t.ID, Details: d})
 	o.rec.Emit(ctx, Action{Type: domain.EvTaskReviewed, AgentID: t.AgentID, Entity: "task", EntityID: t.ID, SkipAudit: true,

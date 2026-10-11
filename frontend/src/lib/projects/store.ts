@@ -3,13 +3,32 @@ import { MOCK } from "../config";
 import { useStore } from "../store";
 import { projectsApi } from "./api";
 import type {
+  ProjectNode, ProjectObjective,
   ControlAction, LaunchBody, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectFrame, ProjectHealth, ProjectSummary, ProjectTemplate,
 } from "./types";
 
 export const PROJECT_TABS = ["health", "map", "timeline", "kanban", "lanes", "delegation", "approvals", "changes", "costs"] as const;
 export type ProjectTab = (typeof PROJECT_TABS)[number];
 
+/** What the office needs of a project being planned: phase titles (objectives / workflow groups) and agents seen so far. */
+export interface PlanningInfo { titles: string[]; agents: string[]; updated: number }
+
+function mergePlanning(prev: PlanningInfo | undefined, nodes: ProjectNode[] | undefined, objectives: ProjectObjective[] | undefined): PlanningInfo {
+  const titles = prev ? prev.titles.slice() : [];
+  const agents = prev ? prev.agents.slice() : [];
+  for (const o of objectives || []) if (o.title && !titles.includes(o.title)) titles.push(o.title);
+  for (const n of nodes || []) {
+    if (n.kind === "group" && n.title && !titles.includes(n.title)) titles.push(n.title);
+    if (n.agent_id && !agents.includes(n.agent_id)) agents.push(n.agent_id);
+  }
+  return { titles: titles.slice(-24), agents: agents.slice(-12), updated: Date.now() };
+}
+
 interface PState {
+  /** Office: projects whose planner is running (project id -> real phase titles / agents known so far). Additive. */
+  planningPhases: Record<string, PlanningInfo>;
+  /** Office: feeds planningPhases from a full project detail (polling, live mode). */
+  notePlanningDetail: (d: ProjectDetail) => void;
   /** the Projects screen is shown in place of office/dashboard */
   open: boolean;
   loaded: boolean;
@@ -59,6 +78,12 @@ function scheduleHealth(get: () => PState, set: (p: Partial<PState>) => void) {
 }
 
 export const useProjects = create<PState>((set, get) => ({
+  planningPhases: {},
+  notePlanningDetail: (d) => set((s) => {
+    const id = d.project.id;
+    if (d.project.status !== "planning" && !d.planning) { if (!s.planningPhases[id]) return {}; const { [id]: _g, ...rest } = s.planningPhases; return { planningPhases: rest }; }
+    return { planningPhases: { ...s.planningPhases, [id]: mergePlanning(undefined, d.nodes, d.objectives) } };
+  }),
   open: false, loaded: false, projects: {}, activeId: null, detail: null, health: null, tab: "health", selectedNodeId: null,
   templates: [], changes: [], error: null,
 
@@ -90,6 +115,8 @@ export const useProjects = create<PState>((set, get) => ({
     const { project } = f.payload;
     const s = get();
     const next: Partial<PState> = { projects: { ...s.projects, [project.id]: project } };
+    if (project.status === "planning" || f.payload.planning) next.planningPhases = { ...s.planningPhases, [project.id]: mergePlanning(s.planningPhases[project.id], f.payload.nodes, f.payload.objectives) };
+    else if (s.planningPhases[project.id]) { const { [project.id]: _g, ...rest } = s.planningPhases; next.planningPhases = rest; }
     if (s.detail && s.activeId === project.id) {
       const d = s.detail;
       let nodes = d.nodes;
@@ -167,6 +194,10 @@ export function startProjectsRealtime() {
         // Backend without /projects yet: back off to one retry every ~30 s instead of a 404 every 3 s.
         if (s.error === "unavailable" && tick++ % 10 !== 0) return;
         s.loadList();
+        // Office: the phases of a plan being drafted (at most 2 projects) so the meeting room can show them
+        Object.values(s.projects).filter((p) => p.status === "planning").slice(0, 2).forEach((p) => {
+          projectsApi.get(p.id).then((d) => useProjects.getState().notePlanningDetail(d)).catch(() => {});
+        });
         if (s.activeId) s.loadChanges();
         if (s.activeId) projectsApi.get(s.activeId).then((d) => { if (useProjects.getState().activeId === d.project.id) useProjects.setState({ detail: d }); }).catch(() => {});
       }, 3000);

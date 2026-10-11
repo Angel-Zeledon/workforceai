@@ -58,7 +58,9 @@
       ]
     }
   },
-  "tools": [],
+  "tools": [
+    "fs_read"
+  ],
   "permissions": [
     "read:all"
   ],
@@ -96,5 +98,21 @@
   "suggested_artifacts": [
     "doc",
     "table"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_drive",
+      "capabilities": [
+        "drive.read"
+      ],
+      "why": "evidence in chosen folders (read only)"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "registro-de-hallazgos.csv",
+      "es": "hallazgo,evidencia,severidad,responsable,estado\n",
+      "en": "finding,evidence,severity,owner,status\n"
+    }
   ]
 }

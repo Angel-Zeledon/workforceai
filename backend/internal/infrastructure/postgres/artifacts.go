@@ -8,13 +8,19 @@ import (
 
 	"aiworkforce/backend/internal/artifacts"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/objstore"
 )
 
 // ArtifactStore implements artifacts.Store on Postgres (migration 280). Every
 // call runs through WithOrgTx, so Row-Level Security applies. A version save is
 // one transaction: the head is replaced only if its version is the expected
 // one (compare-and-swap) and the immutable version row is appended.
-type ArtifactStore struct{ S *Store }
+type ArtifactStore struct {
+	S *Store
+	// Objects (optional) keeps new PDF files in an object store (S3-compatible)
+	// instead of bytea; see artifact_blobs.go.
+	Objects objstore.Store
+}
 
 var _ artifacts.Store = (*ArtifactStore)(nil)
 

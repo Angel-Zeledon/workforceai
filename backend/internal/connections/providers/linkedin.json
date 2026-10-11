@@ -1,0 +1,44 @@
+{
+  "id": "linkedin",
+  "version": 1,
+  "label_key": "provider.linkedin.name",
+  "phase": "available",
+  "auth": [
+    {
+      "method": "oauth2_pkce",
+      "authorize_url": "https://www.linkedin.com/oauth/v2/authorization",
+      "token_url": "https://www.linkedin.com/oauth/v2/accessToken",
+      "revoke_url": "https://www.linkedin.com/oauth/v2/revoke",
+      "identity_scopes": ["openid", "profile", "email"]
+    }
+  ],
+  "capabilities": {
+    "profile.read": {
+      "class": "read",
+      "scopes": ["openid", "profile", "email"],
+      "tools": ["linkedin.whoami"],
+      "risk": "low",
+      "side_effects": false,
+      "default": true,
+      "label_key": "conn.cap.profile.read",
+      "scope_overreach": "Sign In with LinkedIn (OpenID Connect): name, picture and email of the connected member only"
+    },
+    "post.create": {
+      "class": "write",
+      "scopes": ["w_member_social"],
+      "tools": ["linkedin.create_post"],
+      "risk": "high",
+      "side_effects": true,
+      "reversibility": "compensating",
+      "always_approval": true,
+      "hold_seconds_default": 60,
+      "default": false,
+      "label_key": "conn.cap.post.create",
+      "scope_overreach": "Share on LinkedIn (w_member_social): text posts as the connected member; nothing else is granted"
+    }
+  },
+  "never_offered": ["messages.read", "messages.send", "connections.read", "profile.read_others", "company.admin", "ads.manage", "post.delete"],
+  "resource_filters": [],
+  "default_limits": { "per_minute": 10, "per_hour": 60, "per_day": 200, "write_per_day": 5, "max_items_per_call": 1, "max_bytes_per_day": 1000000 },
+  "untrusted_sources": ["profile.name", "profile.email"]
+}

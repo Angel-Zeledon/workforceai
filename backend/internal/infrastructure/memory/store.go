@@ -44,6 +44,7 @@ type Store struct {
 	runMeta       map[string][]byte                        // request id -> JSON run meta (runs.go)
 	checkpoints   map[string][]byte                        // task id -> JSON checkpoint (runs.go)
 	executions    map[string]application.ApprovalExecution // approval id -> executed action (runs.go)
+	v2            v2State                                  // work profiles, traces, steer notes (v2.go)
 }
 
 func New() *Store {
@@ -61,6 +62,7 @@ func (s *Store) clear() {
 	s.usage = nil
 	s.runMeta, s.checkpoints = map[string][]byte{}, map[string][]byte{}
 	s.executions = map[string]application.ApprovalExecution{}
+	s.v2.traces, s.v2.steer = nil, nil // execution data; profiles are configuration and survive a reset
 	// Request caps are execution data; agent caps are configuration and survive a reset.
 	for k, c := range s.caps {
 		if c.Scope == domain.ScopeRequest {

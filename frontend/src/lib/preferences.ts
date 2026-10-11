@@ -23,6 +23,8 @@ export interface Prefs {
   showNames: boolean;
   labelSize: LabelSize;
   reduceMotion: boolean;
+  /** short speech bubbles over the agents (task / step / plan phase) */
+  showBubbles: boolean;
   agents: Record<string, AgentPrefs>;
 }
 
@@ -36,7 +38,7 @@ export interface PreferencesBackend {
 }
 
 const KEY = "aiwos.preferences.v1";
-export const DEFAULT_PREFS: Prefs = { version: 1, locale: "es", lighting: "ambient", showNames: true, labelSize: "m", reduceMotion: false, agents: {} };
+export const DEFAULT_PREFS: Prefs = { version: 1, locale: "es", lighting: "ambient", showNames: true, labelSize: "m", reduceMotion: false, showBubbles: true, agents: {} };
 
 export const localBackend: PreferencesBackend = {
   load() {

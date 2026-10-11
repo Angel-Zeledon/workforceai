@@ -59,6 +59,7 @@
     }
   },
   "tools": [
+    "fs",
     "bi",
     "spreadsheet",
     "calculator",
@@ -115,5 +116,21 @@
     "sheet",
     "table",
     "doc"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_drive",
+      "capabilities": [
+        "drive.read"
+      ],
+      "why": "datasets in chosen folders"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "metricas.csv",
+      "es": "metrica,periodo,valor,meta,fuente\n",
+      "en": "metric,period,value,target,source\n"
+    }
   ]
 }

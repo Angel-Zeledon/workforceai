@@ -39,6 +39,8 @@ export interface RoleTemplate {
   title: string; description: string; responsibilities: string[]; disclaimers: string[]; out_of_scope: string[];
   display: { color: string; appearance: { skin: string; hair: string; hair_style: string; accessory: string; tie: boolean; female: boolean } };
   tools: string[]; autonomy: { default: string; ceiling: string }; hired: number;
+  /** what the role usually needs; never granted automatically */
+  recommended_connections?: { provider: string; capabilities: string[]; why?: string }[];
 }
 
 export const api = {

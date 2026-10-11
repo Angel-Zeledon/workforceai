@@ -35,8 +35,10 @@ type roleTemplateView struct {
 	Autonomy           roles.Autonomy `json:"autonomy"`
 	Topic              string         `json:"topic"`
 	SuggestedArtifacts []string       `json:"suggested_artifacts"`
-	Hired              int            `json:"hired"`
-	Locale             string         `json:"locale"`
+	// RecommendedConnections: what the role usually needs (never granted automatically).
+	RecommendedConnections []roles.RecommendedConnection `json:"recommended_connections"`
+	Hired                  int                           `json:"hired"`
+	Locale                 string                        `json:"locale"`
 }
 
 func (s *server) mountRoles(r chi.Router) {
@@ -63,7 +65,8 @@ func toTemplateView(t roles.Template, loc string, hired int) roleTemplateView {
 	return roleTemplateView{ID: t.ID, Version: t.Version, Category: t.Category, RiskTier: t.RiskTier, SensitiveData: nz(t.SensitiveData),
 		Seed: t.Seed != nil, Title: x.Title, Description: x.Description, Responsibilities: nz(x.Responsibilities), Area: x.Area,
 		Disclaimers: nz(x.Disclaimers), OutOfScope: nz(x.OutOfScope), Display: t.Display, Tools: nz(t.Tools), Autonomy: t.Autonomy,
-		Topic: t.Routing.Topic, SuggestedArtifacts: nz(t.SuggestedArtifacts), Hired: hired, Locale: loc}
+		Topic: t.Routing.Topic, SuggestedArtifacts: nz(t.SuggestedArtifacts), Hired: hired, Locale: loc,
+		RecommendedConnections: recs(t.RecommendedConnections)}
 }
 
 func (s *server) hiredByRole(r *http.Request) map[string]int {
@@ -120,4 +123,11 @@ func (s *server) hireFromTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"agent": a, "template_id": body.TemplateID})
+}
+
+func recs(v []roles.RecommendedConnection) []roles.RecommendedConnection {
+	if v == nil {
+		return []roles.RecommendedConnection{}
+	}
+	return v
 }

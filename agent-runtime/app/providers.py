@@ -207,3 +207,26 @@ _TRANSIENT = re.compile(r"timeout|timed out|rate.?limit|429|overload|502|503|504
 def is_transient(exc: BaseException) -> bool:
     """Worth retrying on the same provider (timeout / rate limit / 5xx / network)."""
     return bool(_TRANSIENT.search(f"{type(exc).__name__} {exc}"))
+
+
+# ---- V2: creativity -> bounded temperature ----------------------------------------------------
+DEFAULT_TEMPERATURE = 0.3  # what the runtime always used; "medium" and "not set" both map to it
+
+# provider -> (low, medium, high). Every value is clamped to the provider's accepted range, so a
+# profile can make an agent more or less exploratory but never push a call outside safe sampling.
+_TEMPERATURES = {
+    "anthropic": (0.1, DEFAULT_TEMPERATURE, 0.8),
+    "deepseek": (0.1, DEFAULT_TEMPERATURE, 1.0),
+    "custom": (0.1, DEFAULT_TEMPERATURE, 0.8),
+}
+_TEMPERATURE_MAX = {"anthropic": 1.0, "deepseek": 1.5, "custom": 1.0}
+
+
+def temperature_for(provider: str, creativity: str = "") -> float:
+    """Sampling temperature for a provider and a creativity level; unknown/empty -> the current default."""
+    level = {"low": 0, "medium": 1, "high": 2}.get((creativity or "").strip().lower())
+    if level is None:
+        return DEFAULT_TEMPERATURE
+    low, med, high = _TEMPERATURES.get(provider, (0.1, DEFAULT_TEMPERATURE, 0.8))
+    value = (low, med, high)[level]
+    return round(max(0.0, min(value, _TEMPERATURE_MAX.get(provider, 1.0))), 2)

@@ -10,6 +10,9 @@ import type {
   Report, Request, RouteDecision, Task, WsFrame,
 } from "./types";
 
+/** file.activity: an agent listed, read, searched, wrote, moved or deleted a drive path. */
+export interface FileActivity { agent_id: string; task_id?: string; action: string; path: string; ts: number }
+
 export interface Link { id: string; from: string; to: string; kind: string; text: string; ts: number; /** from chat.message: bubble only, no 3D line */ chat?: boolean }
 
 interface State {
@@ -43,6 +46,8 @@ interface State {
   links: Link[];
   /** bumps on events relevant to an agent, used to refresh its detail panel */
   agentTick: Record<string, number>;
+  /** last file each agent touched in the drive (file.activity): path only, never content */
+  files: Record<string, FileActivity>;
   setMode: (m: "office" | "dashboard") => void;
   select: (id: string | null) => void;
   setConnected: (c: boolean) => void;
@@ -87,7 +92,7 @@ export const useStore = create<State>((set, get) => ({
   connected: false, loaded: false, mode: "office", selectedAgentId: null,
   agents: {}, agentOrder: [], tasks: {}, requests: {}, plans: {}, conversations: {}, messages: {}, chat: {}, routes: {}, lastTurnId: null, typing: {}, drafts: {},
   setDraft: (conv, text) => set((s) => ({ drafts: { ...s.drafts, [conv]: text } })),
-  approvals: {}, reports: {}, activity: [], errors: [], metrics: null, links: [], agentTick: {},
+  approvals: {}, reports: {}, activity: [], errors: [], metrics: null, links: [], agentTick: {}, files: {},
 
   setMode: (mode) => set({ mode }),
   select: (selectedAgentId) => set({ selectedAgentId }),
@@ -297,6 +302,13 @@ export const useStore = create<State>((set, get) => ({
       case "metrics.updated":
         if (p.metrics) set({ metrics: p.metrics });
         break;
+      case "file.activity": {
+        const agent = String(p.agent_id ?? f.agent_id ?? "");
+        if (!agent || typeof p.path !== "string") break;
+        const fa: FileActivity = { agent_id: agent, task_id: p.task_id || undefined, action: String(p.action ?? ""), path: p.path, ts: Date.now() };
+        set((s) => ({ files: { ...s.files, [agent]: fa }, agentTick: tick(s, [agent]) }));
+        break;
+      }
     }
   },
 }));

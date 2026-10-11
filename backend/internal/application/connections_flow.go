@@ -216,7 +216,12 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 		resp.Output.Evidence = append(resp.Output.Evidence, notes...)
 		return resp
 	}
-	for round := 0; round < 2; round++ {
+	rounds := o.cfg.WorkReadRounds // F2: bounded work loop (WORK_READ_ROUNDS, default 4, at most 10)
+	if rounds <= 0 {
+		rounds = 4
+	}
+	rounds = min(rounds, 10)
+	for round := 0; round < rounds; round++ {
 		var reads, rest []ToolRequest
 		for _, tr := range resp.ToolRequests {
 			if gw.Route(ctx, org, agent.ID, tr.Tool, tr.Action) == RouteRead {
@@ -274,7 +279,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 		}
 		var next RunTaskResponse
 		err = o.call(ctx, "run-task", func(c context.Context) (err error) {
-			next, err = o.rt.RunTask(c, in2)
+			next, err = o.rtRunTask(c, rs, "read-followup", in2)
 			return err
 		})
 		if err != nil {
@@ -286,7 +291,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 		resp, in = next, in2
 		resp.Output.Normalize()
 	}
-	// Reads left after two rounds are dropped (the model asked for too much).
+	// Reads left after the last round are dropped (the model asked for too much).
 	var keep []ToolRequest
 	for _, tr := range resp.ToolRequests {
 		if gw.Route(ctx, org, agent.ID, tr.Tool, tr.Action) != RouteRead {

@@ -21,6 +21,7 @@ import (
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
 	"aiworkforce/backend/internal/projects"
@@ -65,10 +66,17 @@ type Deps struct {
 	// (artifacts.go). Both optional: when nil the routes are not mounted.
 	Projects  *projects.Service
 	Artifacts *artifacts.Service
+	// Drive serves /drive/* (drive.go): the organization's files. Optional.
+	Drive *drive.Service
 	// Push serves /push/* (push.go); nil disables Web Push. Rec audits
 	// subscription changes (optional).
 	Push *push.Service
 	Rec  *application.Recorder
+	// Profiles, V2 and Tracer serve the agent work profile and the thought audit
+	// (v2.go); all optional. The intervention endpoints use Orch.
+	Profiles *application.ProfileService
+	V2       application.V2Store
+	Tracer   *application.Tracer
 	// AllowedOrigins is the CORS/WebSocket origin allow-list (see originPolicy).
 	AllowedOrigins []string
 	// EnableDemoReset registers POST /api/v1/demo/reset (admin role when auth is on).
@@ -143,7 +151,9 @@ func NewRouter(d Deps) http.Handler {
 			s.mountProjects(r)
 			s.mountRoles(r)
 			s.mountArtifacts(r)
+			s.mountDrive(r)
 			s.mountPush(r)
+			s.mountV2(r)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}

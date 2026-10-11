@@ -1,12 +1,34 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { create } from "zustand";
 import { useT } from "@/lib/i18n";
+import { api } from "@/lib/api";
 import { connApi } from "@/lib/connections/api";
 import { useConnections } from "@/lib/connections/store";
 import type { Connection, Grant } from "@/lib/connections/types";
 import { useStore } from "@/lib/store";
 import { Btn, Empty } from "../ui";
 import { CapChip, ErrorLine, errText, Field, inputCls, useViewer } from "./shared";
+
+/** role -> provider -> capabilities the role template recommends (never granted automatically). */
+const useRecommended = create<{ byRole: Record<string, Record<string, string[]>>; loaded: boolean; load: (locale: string) => void }>((set, get) => ({
+  byRole: {}, loaded: false,
+  load: (locale) => {
+    if (get().loaded) return;
+    set({ loaded: true });
+    api.roleTemplates(locale).then((ts) => {
+      const byRole: Record<string, Record<string, string[]>> = {};
+      for (const tpl of ts) for (const rc of tpl.recommended_connections ?? []) (byRole[tpl.id] ??= {})[rc.provider] = rc.capabilities;
+      set({ byRole });
+    }).catch(() => set({ loaded: false }));
+  },
+}));
+
+function useRecommendedFor(agentId: string, provider: string): string[] {
+  const role = useStore((s) => s.agents[agentId]?.role ?? agentId);
+  return useRecommended((s) => s.byRole[role]?.[provider] ?? EMPTY);
+}
+const EMPTY: string[] = [];
 
 function GrantDrawer({ conn, agentId, onClose }: { conn: Connection; agentId: string; onClose: () => void }) {
   const { t } = useT();
@@ -16,7 +38,9 @@ function GrantDrawer({ conn, agentId, onClose }: { conn: Connection; agentId: st
   const grant = useConnections((s) => (s.grants[conn.id] ?? []).find((g) => g.agent_id === agentId));
   const { viewer, isOwner, isAdmin } = useViewer();
   const defs = providers.find((p) => p.id === conn.provider)?.capabilities ?? [];
-  const [caps, setCaps] = useState<string[]>(grant?.capabilities ?? []);
+  const recommended = useRecommendedFor(agentId, conn.provider);
+  // a new grant starts with what the role recommends (offered capabilities only); saving is still explicit
+  const [caps, setCaps] = useState<string[]>(grant?.capabilities ?? recommended.filter((c) => conn.granted_capabilities.includes(c)));
   const [domains, setDomains] = useState((grant?.constraints.allowed_recipient_domains ?? []).join(", "));
   const [until, setUntil] = useState(grant?.valid_until?.slice(0, 10) ?? "");
   const [confirm, setConfirm] = useState("");
@@ -117,6 +141,10 @@ export function GrantMatrix() {
   const agentOrder = useStore((s) => s.agentOrder);
   const agents = useStore((s) => s.agents);
   const [sel, setSel] = useState<{ conn: string; agent: string } | null>(null);
+  const { locale } = useT();
+  const loadRecommended = useRecommended((s) => s.load);
+  const byRole = useRecommended((s) => s.byRole);
+  useEffect(() => { loadRecommended(locale); }, [loadRecommended, locale]);
   const cols = Object.values(connections).filter((c) => c.status !== "revoked");
   if (cols.length === 0) return <Empty>{t("conn.empty")}</Empty>;
   const cell = (agentId: string, c: Connection): Grant | undefined => (grants[c.id] ?? []).find((g) => g.agent_id === agentId);
@@ -138,11 +166,15 @@ export function GrantMatrix() {
                 <td className="whitespace-nowrap px-3 py-2 font-semibold">{agents[a]?.name ?? a}</td>
                 {cols.map((c) => {
                   const g = cell(a, c);
+                  // only what this connection actually offers (read and write live in separate connections)
+                  const rec = (byRole[agents[a]?.role ?? a]?.[c.provider] ?? []).filter((cap) => c.granted_capabilities.includes(cap));
                   return (
                     <td key={c.id} className="px-2 py-1.5">
                       <button type="button" data-testid={`conn-matrix-cell-${a}-${c.id}`} data-caps={g?.capabilities.join(",") ?? ""} data-status={g?.status ?? "none"} onClick={() => setSel({ conn: c.id, agent: a })}
                         className="flex min-h-[32px] w-full flex-wrap items-center gap-1 rounded-xl border border-dashed border-line px-2 py-1 text-left transition hover:border-accent">
-                        {g ? g.capabilities.map((cap) => <CapChip key={cap} cap={cap} risk={defs(c).find((d) => d.id === cap)?.risk ?? "low"} dim={g.status !== "active"} />) : <span className="text-mute">{t("conn.matrix.none")}</span>}
+                        {g ? g.capabilities.map((cap) => <CapChip key={cap} cap={cap} risk={defs(c).find((d) => d.id === cap)?.risk ?? "low"} dim={g.status !== "active"} />)
+                          : rec.length ? <span data-testid={`conn-matrix-recommended-${a}-${c.id}`} className="text-[10.5px] font-medium text-accent">{t("conn.matrix.recommended", { n: rec.length })}</span>
+                          : <span className="text-mute">{t("conn.matrix.none")}</span>}
                         {g?.status === "pending_second_approval" && <span className="text-[10px] font-semibold text-amber-700">{t("conn.grant.pending")}</span>}
                       </button>
                     </td>

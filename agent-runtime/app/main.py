@@ -14,6 +14,7 @@ from .estimate import EstimateRequest, EstimateResponse
 from .providers import ProviderError
 from .replan import ReplanRequest, ReplanResponse
 from .redact import redact_any, redact_secrets
+from .security import build_trace
 from .models import (
     ChatReplyRequest,
     ChatReplyResponse,
@@ -32,6 +33,7 @@ from .models import (
     RouteResponse,
     RunTaskRequest,
     RunTaskResponse,
+    RunTrace,
     SynthesizeRequest,
     SynthesizeResponse,
 )
@@ -111,7 +113,10 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
     @app.post("/v1/run-task", response_model=RunTaskResponse, response_model_exclude_none=True)
     async def run_task(req: RunTaskRequest):
         resp = await guarded(eng().run_task(req))
-        return scrub_run_task(resp)
+        out = scrub_run_task(resp)
+        if req.want_trace:  # V2 thought audit: the prompt exactly as built (same builders the engine uses), redacted
+            out.trace = RunTrace(**build_trace(req))
+        return out
 
     @app.post("/v1/review", response_model=ReviewResponse, response_model_exclude_none=True)
     async def review(req: ReviewRequest):

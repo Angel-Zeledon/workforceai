@@ -59,7 +59,11 @@ type Config struct {
 	// OAUTH_REDIRECT_URL (the public URL of GET /api/v1/connections/oauth/callback).
 	GoogleClientID     string
 	GoogleClientSecret string
-	OAuthRedirectURL   string
+	// LinkedIn app (Sign In with LinkedIn using OpenID Connect + Share on
+	// LinkedIn): LINKEDIN_OAUTH_CLIENT_ID/SECRET; same OAUTH_REDIRECT_URL.
+	LinkedInClientID     string
+	LinkedInClientSecret string
+	OAuthRedirectURL     string
 	// UIBaseURL is where the OAuth callback sends the browser afterwards.
 	UIBaseURL string
 	// EmailHoldSeconds is the cancellation window of an email send. The
@@ -173,6 +177,7 @@ func Load() Config {
 	app.ConfirmThresholdUSD = getFloat("COST_CONFIRM_THRESHOLD_USD", app.ConfirmThresholdUSD)
 	app.PauseTimeout = getDuration("BUDGET_PAUSE_TIMEOUT", app.PauseTimeout)
 	app.TaskMaxAttempts = getInt("TASK_MAX_ATTEMPTS", app.TaskMaxAttempts)
+	app.WorkReadRounds = getInt("WORK_READ_ROUNDS", app.WorkReadRounds)
 	app.TaskRetryBackoff = getDuration("TASK_RETRY_BACKOFF", app.TaskRetryBackoff)
 	app.ProjectReminderEvery = getDuration("PROJECT_APPROVAL_REMINDER_EVERY", app.ProjectReminderEvery)
 	app.ProjectApprovalTimeout = getDuration("PROJECT_APPROVAL_TIMEOUT", app.ProjectApprovalTimeout)
@@ -207,6 +212,8 @@ func Load() Config {
 		ConnectionsKEKPrevious: strings.TrimSpace(os.Getenv("CONNECTIONS_KEK_PREVIOUS")),
 		GoogleClientID:         getenv("GOOGLE_OAUTH_CLIENT_ID", ""),
 		GoogleClientSecret:     strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_CLIENT_SECRET")),
+		LinkedInClientID:       getenv("LINKEDIN_OAUTH_CLIENT_ID", ""),
+		LinkedInClientSecret:   strings.TrimSpace(os.Getenv("LINKEDIN_OAUTH_CLIENT_SECRET")),
 		OAuthRedirectURL:       getenv("OAUTH_REDIRECT_URL", "http://localhost:8080/api/v1/connections/oauth/callback"),
 		UIBaseURL:              getenv("UI_BASE_URL", ""),
 		EmailHoldSeconds:       getInt("EMAIL_HOLD_SECONDS", 60),

@@ -33,7 +33,7 @@ cp .env.example .env      # opcional; sin cambios corre en simulación
 docker compose up --build
 ```
 
-O con Make: `make up` (segundo plano), `make logs`, `make down`.
+O con Make: `make up` (con cuentas, segundo plano), `make demo` (demo abierta sin login), `make logs`, `make down`.
 
 | Servicio | URL |
 |---|---|
@@ -51,13 +51,13 @@ O con Make: `make up` (segundo plano), `make logs`, `make down`.
 
 ## Cuentas y login
 
-- **Demo abierta** (por defecto, `AUTH_ENABLED` vacío): sin login, organización fija `demo`. La app se comporta como siempre.
-- **Con cuentas**: `AUTH_ENABLED=true`, `JWT_SECRET` (32+ bytes) y `DATABASE_URL`. La app muestra `/login` y `/register`; cada registro crea una organización propia (rol owner).
+- **Con cuentas** (por defecto en docker-compose, `make up`): login y registro propios con correo y contraseña (sin Google ni otro proveedor). La app muestra `/login` y `/register`; cada registro crea una organización propia (rol owner) con su oficina de agentes. Requiere `JWT_SECRET` (32+ bytes) y `DATABASE_URL`; docker-compose trae un `JWT_SECRET` **solo para desarrollo** (el backend avisa al arrancar): en producción pon el tuyo (`openssl rand -base64 48`) y `ALLOWED_ORIGINS`.
+- **Demo abierta** (`make demo`, o `AUTH_ENABLED=false`): sin login, organización fija `demo`. Es lo que usan `make smoke` y `make test-e2e`.
 - **Invitar**: menú de administración → Cuenta → *Miembros e invitaciones*. Se genera un enlace `/invite?token=…` que se muestra **una sola vez** y caduca en 7 días (el servidor aún no envía correos: compártelo tú). Roles: owner, admin, member, viewer; un admin solo invita a member/viewer.
 - Varias organizaciones por persona: el menú permite cambiar de organización.
 - Pendiente de decisión: guardar el refresh token en cookie `HttpOnly` (hoy va en el cuerpo JSON y el navegador lo guarda en `localStorage`), y SSO/SCIM con un proveedor externo.
 
-Contrato en [docs/architecture/08-api.md](docs/architecture/08-api.md) (sección 4). E2E: `E2E_AUTH=1 npx playwright test auth.spec.ts` contra un stack con auth.
+Contrato en [docs/architecture/08-api.md](docs/architecture/08-api.md) (sección 4). E2E de cuentas: `make test-e2e-auth` contra `make up`.
 
 ## Pruebas
 

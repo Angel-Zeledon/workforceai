@@ -1,8 +1,13 @@
-.PHONY: up down logs test test-backend test-runtime test-e2e smoke reset \
+.PHONY: up demo down logs test test-backend test-runtime test-e2e test-e2e-auth smoke reset \
         dev-backend dev-runtime dev-frontend dev-infra
 
+# Accounts on: sign up / log in at http://localhost:3000.
 up:
 	docker compose up --build -d
+
+# Open demo (no login, fixed demo organization): what smoke and e2e run against.
+demo:
+	docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d
 
 down:
 	docker compose down
@@ -20,10 +25,15 @@ test-backend:
 test-runtime:
 	cd agent-runtime && python -m pytest -q
 
-# E2E Playwright (requiere `make up`).
+# E2E Playwright (requiere `make demo`: demo abierta sin login).
 test-e2e:
 	cd e2e && npm install && npx playwright install chromium && npm test
 
+# E2E de cuentas (requiere `make up`: login activado).
+test-e2e-auth:
+	cd e2e && npm install && npx playwright install chromium && E2E_AUTH=1 npx playwright test auth.spec.ts approvals-auth.spec.ts
+
+# Smoke del escenario de $50,000 (requiere `make demo`).
 smoke:
 	bash scripts/smoke.sh
 

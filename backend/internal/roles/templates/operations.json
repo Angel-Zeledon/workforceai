@@ -54,6 +54,7 @@
     }
   },
   "tools": [
+    "fs",
     "planner",
     "inventory"
   ],
@@ -100,5 +101,28 @@
   "suggested_artifacts": [
     "board",
     "table"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_calendar",
+      "capabilities": [
+        "calendar.read"
+      ],
+      "why": "delivery dates and capacity"
+    },
+    {
+      "provider": "google_drive",
+      "capabilities": [
+        "drive.read"
+      ],
+      "why": "supplier and inventory sheets"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "capacidad.csv",
+      "es": "equipo,semana,capacidad_horas,comprometido_horas,riesgo\n",
+      "en": "team,week,capacity_hours,committed_hours,risk\n"
+    }
   ]
 }

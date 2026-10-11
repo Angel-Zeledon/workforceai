@@ -27,6 +27,8 @@ interface TaskSpec {
   consult?: { to: string; q: string; a: string };
   approval?: { action: string; title: string; details: string; risk: "low" | "medium" | "high" };
   reviewing?: boolean;
+  /** demo: the agent hits its budget cap in the middle of this task and waits (budget.exceeded -> budget.resumed) */
+  budgetPause?: boolean;
   fail?: string;
   out: Partial<StructuredOutput>;
 }
@@ -120,6 +122,8 @@ export class MockBackend {
   private errorsCount = 0;
   private budget = 50;
   private decisions = new Map<string, (d: "approve" | "reject") => void>();
+  /** agent id -> active budget pause (GET /budget `pauses`) */
+  private pauses = new Map<string, { scope: "agent"; scope_id: string; request_id: string; since: string; cap_usd: number; spent_usd: number; needed_usd: number; waiters: number }>();
   private specs = new Map<string, TaskSpec>();
   private running = new Map<string, number>(); // agent -> number of tasks running
   private orgCfg = new MockOrgConfig(); // workflow templates, onboarding, org settings and schedules
@@ -180,6 +184,35 @@ export class MockBackend {
       budget_usd: this.budget, errors: this.errorsCount, requests_total: this.requests.length,
     };
   }
+  /** GET /budget: per-agent caps (demo value) with the real spend of the mock, plus the active pauses. */
+  private budgetStatus() {
+    const cap = 0.6;
+    return {
+      org: { budget_usd: this.budget, used_usd: this.agents.reduce((n, a) => n + a.metrics.cost_usd, 0), reserved_usd: 0 },
+      defaults: { request_cap_usd: 5, agent_cap_usd: cap, confirm_threshold_usd: 2, period_start: nowIso() },
+      agents: this.agents.map((a) => {
+        const p = this.pauses.get(a.id);
+        return { agent_id: a.id, cap_usd: cap, spent_usd: p ? p.spent_usd : Math.min(cap, a.metrics.cost_usd), reserved_usd: 0, paused: !!p };
+      }),
+      pauses: Array.from(this.pauses.values()),
+    };
+  }
+
+  /** Demo of a budget cap: the agent stops (budget.exceeded), waits ~16 s as if a human raised the cap, then resumes (budget.resumed). */
+  private async budgetPause(task: Task, req: Request, pct: number) {
+    const id = task.agent_id;
+    const cap = 0.6, spent = 0.57, needed = 0.08;
+    this.pauses.set(id, { scope: "agent", scope_id: id, request_id: req.id, since: nowIso(), cap_usd: cap, spent_usd: spent, needed_usd: needed, waiters: 1 });
+    const msg = "Pausado: tope de presupuesto del agente";
+    this.emit("budget.exceeded", { scope: "agent", scope_id: id, request_id: req.id, agent_id: id, task_id: task.id, cap_usd: cap, spent_usd: spent, reserved_usd: 0, needed_usd: needed, resumable: true, message: msg }, id);
+    this.setState(id, "blocked", msg, task.id, pct);
+    this.log(id, "budget.exceeded", msg);
+    await this.wait(16000);
+    this.pauses.delete(id);
+    this.emit("budget.resumed", { scope: "agent", scope_id: id, request_id: req.id, agent_id: id, cap_usd: cap * 2 }, id);
+    this.log(id, "budget.resumed", "Presupuesto ampliado: la tarea continúa");
+  }
+
   private pushMetrics() {
     for (const a of this.agents) a.metrics.tasks_pending = this.tasks.filter((t) => t.agent_id === a.id && (t.status === "pending" || t.status === "running")).length;
     this.emit("metrics.updated", { metrics: this.metrics() });
@@ -240,8 +273,16 @@ export class MockBackend {
     this.setState("assistant", "thinking", "Analizando la solicitud", null, 15);
     await this.wait(900);
     this.setState("assistant", "thinking", "Planificando tareas y dependencias", null, 60);
-    await this.wait(1500);
+    // demo: a planning meeting (project draft planned phase by phase while the team meets in the meeting room)
+    const meetingDemo = /reuni[oó]n de planificaci[oó]n|planning meeting/i.test(req.text);
+    if (meetingDemo) {
+      const { projectsMock } = await import("../projects/mock");
+      await projectsMock.createDraft({ goal: req.text, template_id: "tpl-generic" });
+      await this.wait(34000); // long enough for the team to walk to the meeting room and for the phases to appear
+    } else await this.wait(1500);
     const specs = buildPlan(req.text);
+    // demo: an agent hits its budget cap mid-task and waits for the cap to be raised
+    if (/tope de presupuesto|budget (cap|pause)/i.test(req.text) && specs.length > 1) specs[1].budgetPause = true;
     const keyToId = new Map<string, string>();
     const tasks: Task[] = specs.map((s) => {
       const t: Task = {
@@ -352,6 +393,7 @@ export class MockBackend {
         const phase = Math.min(spec.activities.length - 1, Math.floor((i / steps) * spec.activities.length));
         const reviewing = spec.reviewing && i > steps * 0.55;
         this.setState(id, reviewing ? "reviewing" : "working", reviewing ? `Revisando: ${spec.activities[phase]}` : spec.activities[phase], task.id, pct);
+        if (spec.budgetPause && i === Math.ceil(steps * 0.5)) await this.budgetPause(task, req, pct);
         if (!consulted && i >= steps * 0.4) {
           consulted = true;
           await this.doConsult(task, spec, id);
@@ -415,6 +457,9 @@ export class MockBackend {
     a.metrics.avg_seconds = Math.round(((a.metrics.avg_seconds * (a.metrics.tasks_completed - 1)) + dur) / a.metrics.tasks_completed);
     a.metrics.cost_usd = +(a.metrics.cost_usd + cost).toFixed(4);
     req.cost_usd = +(req.cost_usd + cost).toFixed(4);
+    // F2: like the simulated runtime against the real backend, the agent saves its draft on its desk
+    const slug = (task.title || "tarea").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 60);
+    this.emit("file.activity", { agent_id: id, task_id: task.id, action: "write", path: `/Agents/${id}/${slug}.md` }, id);
     this.emitTask("task.completed", task);
     this.setState(id, "completed", "Tarea completada", task.id, 100);
     this.log(id, "task.completed", tr("mock.act.completed", { name: a.name.split(" ")[0], task: task.title }));
@@ -496,6 +541,7 @@ export class MockBackend {
       if (r0 === "reports" && r1) return this.reports.find((r) => r.id === r1);
       if (r0 === "activity") return this.activity.slice(0, Number(q.get("limit") || 100));
       if (r0 === "metrics") return this.metrics();
+      if (r0 === "budget" && !r1) return this.budgetStatus();
       if (r0 === "healthz") return { status: "ok", mode: "simulation" };
     }
     if (method === "POST") {

@@ -63,6 +63,7 @@
     }
   },
   "tools": [
+    "fs",
     "artifacts",
     "docs",
     "calculator"
@@ -121,5 +122,21 @@
     "form",
     "table",
     "pdf"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_drive",
+      "capabilities": [
+        "drive.read"
+      ],
+      "why": "course material in chosen folders"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "plan-de-curso.md",
+      "es": "# Plan de curso\n\n## Objetivos\n\n## Módulos\n\n## Evaluación\n",
+      "en": "# Course plan\n\n## Goals\n\n## Modules\n\n## Assessment\n"
+    }
   ]
 }

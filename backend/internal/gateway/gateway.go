@@ -65,6 +65,7 @@ type Gateway struct {
 	mu        sync.Mutex
 	seen      map[string]map[string]bool // org/task -> addresses seen in external content
 	planStore *planStore
+	natives   []application.NativeTool // tools served without a connection (native.go)
 	approvals map[string]application.GatewayPending
 	// outbox (see outbox.go)
 	entries     map[string]*outboxEntry
@@ -131,6 +132,9 @@ func (g *Gateway) lookup(tool, action string) (target, bool) {
 // Connection tools use their manifest; for any other tool unknown actions
 // count as side effects (fail closed) unless they are well-known reads.
 func (g *Gateway) IsSideEffect(tool, action string) bool {
+	if _, side, ok := g.nativeFor(tool, action); ok {
+		return side
+	}
 	if t, ok := g.lookup(tool, action); ok {
 		return t.spec.SideEffects
 	}
@@ -143,6 +147,12 @@ func (g *Gateway) IsSideEffect(tool, action string) bool {
 
 // Route implements application.ToolGateway.
 func (g *Gateway) Route(ctx context.Context, org, agentID, tool, action string) application.GatewayRoute {
+	if _, side, ok := g.nativeFor(tool, action); ok {
+		if side {
+			return application.RouteWrite
+		}
+		return application.RouteRead
+	}
 	t, ok := g.lookup(tool, action)
 	if !ok {
 		return application.RouteNone
@@ -349,6 +359,9 @@ func (g *Gateway) wasSeen(org, task, addr string) bool {
 
 // Execute implements application.ToolGateway.
 func (g *Gateway) Execute(ctx context.Context, c application.GatewayCall) application.GatewayOutcome {
+	if nt, side, ok := g.nativeFor(c.Tool, c.Action); ok {
+		return g.executeNative(ctx, c, nt, side)
+	}
 	t, ok := g.lookup(c.Tool, c.Action)
 	if !ok {
 		return application.GatewayOutcome{Decision: "denied", DenyReason: connections.CodeInvalidArgs}

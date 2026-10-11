@@ -151,6 +151,9 @@ type PlanAgent struct {
 	Topic    string   `json:"topic,omitempty"`
 	Keywords []string `json:"keywords,omitempty"`
 	Area     string   `json:"area,omitempty"`
+	// Skills (V2, additive): organization-configured tags of the agent's work
+	// profile. Routing hints only; they never grant anything.
+	Skills []string `json:"skills,omitempty"`
 }
 
 type PlanRequest struct {
@@ -272,6 +275,13 @@ type RunAgentInfo struct {
 	Responsibilities []string `json:"responsibilities"`
 	Tools            []string `json:"tools"`
 	Area             string   `json:"area,omitempty"`
+	// Work profile (V2, additive, omitted when the agent has none): trusted
+	// organization instructions appended to the persona, a creativity level the
+	// runtime maps to a bounded temperature, and routing-hint skills. None of it
+	// can grant tools, permissions or approvals.
+	Instructions string   `json:"instructions,omitempty"`
+	Creativity   string   `json:"creativity,omitempty"`
+	Skills       []string `json:"skills,omitempty"`
 }
 
 type DependencyOutput struct {
@@ -336,6 +346,15 @@ type RunTaskRequest struct {
 	Tone            string       `json:"tone,omitempty"`
 	// Rework (Q1, additive): set when the quality review asked for a new run.
 	Rework *ReworkInfo `json:"rework,omitempty"`
+	// Workspace (F1, additive): the agent's drive folders; only for agents with
+	// the fs/fs_read tool label.
+	Workspace *RunWorkspace `json:"workspace,omitempty"`
+	// HumanGuidance (V2, additive): notes a human sent to steer this task, oldest
+	// first. Extra guidance for the model, never authority.
+	HumanGuidance []string `json:"human_guidance,omitempty"`
+	// WantTrace (V2, additive): ask the runtime to return the redacted prompt it
+	// built, for the thought audit. Only set when the organization stores prompts.
+	WantTrace bool `json:"want_trace,omitempty"`
 }
 
 type ConsultRequestItem struct {
@@ -351,7 +370,9 @@ type ToolRequest struct {
 }
 
 type Usage struct {
-	Model        string  `json:"model"`
+	Model string `json:"model"`
+	// Provider (additive): which provider answered, when the runtime says so.
+	Provider     string  `json:"provider,omitempty"`
 	InputTokens  int     `json:"input_tokens"`
 	OutputTokens int     `json:"output_tokens"`
 	CostUSD      float64 `json:"cost_usd"`
@@ -363,6 +384,15 @@ type RunTaskResponse struct {
 	Consults     []ConsultRequestItem    `json:"consults"`
 	ToolRequests []ToolRequest           `json:"tool_requests"`
 	Usage        Usage                   `json:"usage"`
+	// Trace (V2, additive): the redacted prompt as the runtime built it; only
+	// present when WantTrace was set. Never stored as is: the tracer redacts, splits and bounds it.
+	Trace *RunTrace `json:"trace,omitempty"`
+}
+
+// RunTrace is the prompt of a run-task call as the runtime builds it.
+type RunTrace struct {
+	System string `json:"system"`
+	User   string `json:"user"`
 }
 
 type ConsultRequest struct {

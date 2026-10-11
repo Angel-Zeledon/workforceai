@@ -56,6 +56,7 @@ from .providers import (
     candidates,
     is_transient,
     policy_from_request,
+    temperature_for,
 )
 from .review import build_review_prompt, normalize_review
 from .routing import compose_reply, detect_locale, rules_route, validate_route
@@ -152,10 +153,11 @@ class CrewAIEngine(AgentEngine):
         self.model = self.providers[0].model
         self._llms: dict[str, Any] = {}
 
-    def _llm_for(self, cfg: ProviderConfig, max_tokens: int | None = None) -> Any:
-        key = f"{cfg.id}:{max_tokens or 0}"
+    def _llm_for(self, cfg: ProviderConfig, max_tokens: int | None = None, creativity: str = "") -> Any:
+        temperature = temperature_for(cfg.id, creativity)
+        key = f"{cfg.id}:{max_tokens or 0}:{temperature}"
         if key not in self._llms:
-            kw: dict[str, Any] = {"model": cfg.model, "api_key": cfg.api_key, "temperature": 0.3,
+            kw: dict[str, Any] = {"model": cfg.model, "api_key": cfg.api_key, "temperature": temperature,
                                   "max_tokens": max_tokens or 4096, "timeout": PROVIDER_TIMEOUT_S}
             if cfg.base_url:
                 kw["base_url"] = cfg.base_url
@@ -164,8 +166,9 @@ class CrewAIEngine(AgentEngine):
 
     # ------------------------------------------------------------ nucleo
     def _kickoff_once(self, cfg: ProviderConfig, *, role: str, goal: str, backstory: str, description: str,
-                      expected: str, schema: type[BaseModel], max_tokens: int | None = None) -> tuple[Any, Usage]:
-        agent = self._Agent(role=role, goal=goal, backstory=backstory, llm=self._llm_for(cfg, max_tokens),
+                      expected: str, schema: type[BaseModel], max_tokens: int | None = None,
+                      creativity: str = "") -> tuple[Any, Usage]:
+        agent = self._Agent(role=role, goal=goal, backstory=backstory, llm=self._llm_for(cfg, max_tokens, creativity),
                             tools=[], allow_delegation=False, verbose=False)
         task = self._Task(description=description, expected_output=expected,
                           agent=agent, output_pydantic=schema)
@@ -316,7 +319,7 @@ class CrewAIEngine(AgentEngine):
             backstory=build_system_prompt(req.agent, req.locale, req.tone),
             description=build_task_prompt(req),
             expected="JSON con output (StructuredOutput), consults y tool_requests",
-            schema=TaskResult, policy=policy_from_request(req, req.agent.role))
+            schema=TaskResult, policy=policy_from_request(req, req.agent.role), creativity=req.agent.creativity)
         out = StructuredOutput.model_validate(res.output.model_dump())  # validacion estricta
         return RunTaskResponse(output=out, consults=res.consults,
                                tool_requests=res.tool_requests, usage=usage,

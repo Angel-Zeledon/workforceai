@@ -54,6 +54,7 @@
     }
   },
   "tools": [
+    "fs",
     "calendar",
     "docs"
   ],
@@ -87,5 +88,46 @@
   "suggested_artifacts": [
     "doc",
     "agenda"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_gmail",
+      "capabilities": [
+        "mail.read",
+        "mail.draft",
+        "mail.send"
+      ],
+      "why": "triage the inbox, draft replies; sending always needs approval"
+    },
+    {
+      "provider": "google_calendar",
+      "capabilities": [
+        "calendar.read",
+        "calendar.create_event"
+      ],
+      "why": "coordinate agendas; new events need approval"
+    },
+    {
+      "provider": "google_drive",
+      "capabilities": [
+        "drive.read"
+      ],
+      "why": "find documents in chosen folders"
+    },
+    {
+      "provider": "linkedin",
+      "capabilities": [
+        "profile.read",
+        "post.create"
+      ],
+      "why": "company announcements; every post needs approval"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "agenda-semanal.md",
+      "es": "# Agenda de la semana\n\n## Lunes\n\n## Martes\n\n## Miércoles\n\n## Jueves\n\n## Viernes\n",
+      "en": "# Weekly agenda\n\n## Monday\n\n## Tuesday\n\n## Wednesday\n\n## Thursday\n\n## Friday\n"
+    }
   ]
 }

@@ -5,12 +5,14 @@ import { Billboard } from "@react-three/drei";
 import * as THREE from "three";
 import { useStore } from "@/lib/store";
 import { usePreferences, useAgentView } from "@/lib/preferences";
-import { roleMeta, USER_POS } from "@/lib/meta";
+import { roleMeta, MEETING_CENTER, USER_POS } from "@/lib/meta";
 import type { AgentState } from "@/lib/types";
 import {
   EVENT_GESTURES, GESTURE_DURATION, KEYS, WALK_SPEED, applyGesture, blinkDelay, clamp, computePose, createRng, fidgetDelay,
-  hashSeed, pickFidget, propFor, smooth, wrapAngle as wrap, zeroPose, type GestureKind,
+  hashSeed, holdsMug, pickFidget, propFor, smooth, wrapAngle as wrap, zeroPose, type GestureKind,
 } from "./gestures";
+import { approvalsSpot, cafeSpot, meetingSeat, zoneFor } from "./officeState";
+import { getSignals } from "./officeSignals";
 import { AISLE_Z, deskOf, feetPos, headPos, seatOf, standOf, visitorOf } from "./registry";
 
 const SEATED = new Set<AgentState>(["thinking", "working", "waiting", "reviewing", "blocked", "awaiting_approval"]);
@@ -82,6 +84,7 @@ function makeSim(id: string, seat: [number, number]) {
     // gestures
     gKind: null as GestureKind | null, gStart: 0, gDur: 1, gEvent: false, hasAim: false, aimWorld: 0,
     turnYaw: 0, turnUntil: 0, nextFid: 5, wasSel: false,
+    leaveAt: 0, curDest: [0, 0] as [number, number], curFace: null as number | null,
     linkSrc: null as unknown, linkTs: 0, apprSrc: null as unknown, seenAppr: new Set<string>(),
   };
 }
@@ -163,6 +166,10 @@ export function Character({ id, index }: { id: string; index: number }) {
         if (l.kind === "consult" && l.from === id && now - l.ts < 20000 && S.agents[l.to] && l.to !== id) { visit = l.to; break; }
       }
     }
+    const sig = getSignals();
+    const zone = zoneFor({
+      state: st, budgetPaused: sig.cafeSlot.has(id), planning: sig.meetingSlot.has(id), approvalPending: sig.apprSlot.has(id),
+    });
     let place = "stand";
     let dest: [number, number] = own.stand;
     let face: number | null = null;
@@ -172,6 +179,15 @@ export function Character({ id, index }: { id: string; index: number }) {
       dest = visitorOf(td);
       const tgt = standOf(td);
       face = Math.atan2(tgt[0] - dest[0], tgt[1] - dest[1]);
+    } else if (zone === "cafeteria") {
+      // budget cap reached: waits for the cap to be raised with a coffee (the agent is paused, not failing)
+      const cs = cafeSpot(sig.cafeSlot.get(id) ?? 0);
+      place = `cafe:${sig.cafeSlot.get(id)}`; dest = cs.pos; face = cs.yaw;
+    } else if (zone === "meeting") {
+      const ms = meetingSeat([MEETING_CENTER[0], MEETING_CENTER[1]], sig.meetingSlot.get(id) ?? 0);
+      place = `meeting:${sig.meetingSlot.get(id)}`; dest = ms.pos; face = ms.yaw;
+    } else if (zone === "approvals") {
+      place = `appr:${sig.apprSlot.get(id)}`; dest = approvalsSpot(USER_POS, sig.apprSlot.get(id) ?? 0); face = 0;
     } else if (SEATED.has(st) || (st === "idle" && sm.hasTask)) { place = "seat"; dest = own.seat; }
     else if (st === "completed" && ag.role === "assistant") {
       // the final report is handed to the user (request.completed -> assistant "completed")
@@ -193,8 +209,13 @@ export function Character({ id, index }: { id: string; index: number }) {
       }
     }
 
+    // after a decision the agent stays at the approvals desk long enough for the nod / head shake, then walks back
+    if (sm.place.startsWith("appr:") && !place.startsWith("appr:") && !reduce) {
+      if (sm.leaveAt === 0) sm.leaveAt = sm.t + 2;
+      if (sm.t < sm.leaveAt) { place = sm.place; dest = sm.curDest; face = sm.curFace; }
+    }
     if (place !== sm.place) {
-      sm.place = place;
+      sm.place = place; sm.leaveAt = 0; sm.curDest = dest; sm.curFace = face;
       sm.pts = route([sm.pos.x, sm.pos.y], dest, place === "seat", own);
       // reduce motion: no walking, snap straight to the destination
       if (reduce) { sm.pts = [dest]; sm.pos.set(dest[0], dest[1]); sm.pts = []; }
@@ -222,10 +243,15 @@ export function Character({ id, index }: { id: string; index: number }) {
     if (!walking) sm.speed = 0;
 
     const far = ((state.camera.position.x - sm.pos.x) ** 2 + (state.camera.position.z - sm.pos.y) ** 2) > FAR_D2;
-    const mode = walking ? "walk" : place === "seat" ? `seat:${st}` : `stand:${visit ? "talking" : st}`;
+    const atZone = place.startsWith("cafe:") ? "cafe" : place.startsWith("meeting:") ? "meeting" : place.startsWith("appr:") ? "appr" : "";
+    const mode = walking ? "walk"
+      : atZone === "cafe" ? "stand:cafe"
+      : atZone === "meeting" ? "seat:meeting"
+      : atZone === "appr" ? (st === "awaiting_approval" ? "stand:awaiting_approval" : "stand:idle")
+      : place === "seat" ? `seat:${st}` : `stand:${visit ? "talking" : st}`;
 
     // --- gestures: event reactions (selection, approvals, delegation, user messages) and idle fidgets ---
-    const standing = place !== "seat";
+    const standing = place !== "seat" && atZone !== "meeting";
     const canTurn = standing && face === null;
     if (!reduce && !far) {
       if (selected && !sm.wasSel) {
@@ -316,12 +342,12 @@ export function Character({ id, index }: { id: string; index: number }) {
       }
     } else eyes.current.scale.y = eyeOpen;
     const prop = propFor(sm.gKind, gu);
-    mug.current.visible = prop === 1; phone.current.visible = prop === 2;
+    mug.current.visible = prop === 1 || (!walking && holdsMug(mode)); phone.current.visible = prop === 2;
     docRef.current.visible = st === "reviewing" && !walking;
     dots.current.visible = st === "thinking" && !walking;
     if (dots.current.visible) dots.current.children.forEach((m, i) => { m.position.y = Math.sin(sm.t * 4 + i * 0.9) * 0.04; (m as THREE.Mesh).scale.setScalar(0.8 + 0.25 * Math.sin(sm.t * 4 + i * 0.9)); });
     checkG.current.visible = st === "completed" && !walking;
-    alertG.current.visible = (st === "blocked" || st === "error") && !walking;
+    alertG.current.visible = (st === "blocked" || st === "error") && !walking && atZone !== "cafe";
     warnG.current.visible = st === "awaiting_approval" && !walking;
     const bob = reduce ? 0 : Math.sin(sm.t * 3) * 0.03;
     icoWrap.current.position.y = (c.pelvisY + 0.87) * BODY_SCALE + 0.28 + bob;

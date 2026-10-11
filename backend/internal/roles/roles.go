@@ -81,6 +81,40 @@ type Template struct {
 	Autonomy           Autonomy        `json:"autonomy"`
 	Routing            Routing         `json:"routing"`
 	SuggestedArtifacts []string        `json:"suggested_artifacts"`
+	// RecommendedConnections are the connections and capabilities this role
+	// usually needs (catalog sec. 6). A recommendation only: nothing is granted
+	// until an admin grants it on the connection.
+	RecommendedConnections []RecommendedConnection `json:"recommended_connections,omitempty"`
+	// StarterFiles are the work kit the agent finds on its drive desk
+	// (/Agents/<id>) the first time it is used: templates of its trade.
+	StarterFiles []StarterFile `json:"starter_files,omitempty"`
+}
+
+// StarterFile is one file of a role's work kit, in Spanish and English.
+type StarterFile struct {
+	Name string `json:"name"`
+	ES   string `json:"es"`
+	EN   string `json:"en"`
+}
+
+// Content returns the file text for a locale (Spanish by default).
+func (f StarterFile) Content(locale string) string {
+	if strings.HasPrefix(locale, "en") && f.EN != "" {
+		return f.EN
+	}
+	return f.ES
+}
+
+var starterNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,80}\.(md|csv|txt)$`)
+
+// maxStarterBytes keeps the kit small: it is a starting point, not content.
+const maxStarterBytes = 8 << 10
+
+// RecommendedConnection names a provider and the capabilities the role uses.
+type RecommendedConnection struct {
+	Provider     string   `json:"provider"`
+	Capabilities []string `json:"capabilities"`
+	Why          string   `json:"why,omitempty"` // short, English (UI translates by provider/capability)
 }
 
 // KnownTools are the tool labels the engine knows. A template can only combine
@@ -89,6 +123,15 @@ var KnownTools = map[string]bool{
 	"crm": true, "email": true, "proposal_builder": true, "ats": true, "contract_review": true, "docs": true,
 	"ledger": true, "spreadsheet": true, "bi": true, "planner": true, "inventory": true, "calendar": true,
 	"artifacts": true, "calculator": true, "repo_read": true,
+	// The drive (docs/architecture/drive.md): "fs" = list/read/search/write/move/delete
+	// under the zone policy; "fs_read" = list/read/search only.
+	"fs": true, "fs_read": true,
+}
+
+// KnownProviders are the connection providers a template may recommend
+// (backend/internal/connections/providers/*.json; cross-checked by a test in cmd/server).
+var KnownProviders = map[string]bool{
+	"google_gmail": true, "google_calendar": true, "google_drive": true, "github": true, "slack": true, "linkedin": true,
 }
 
 var autonomyRank = map[string]int{"suggest": 1, "approve_each": 2, "rules": 3, "autonomous": 4}
@@ -126,6 +169,16 @@ func Validate(t Template) error {
 	for _, tool := range t.Tools {
 		if !KnownTools[tool] {
 			return fmt.Errorf("%s: tool %q is not registered", t.ID, tool)
+		}
+	}
+	for _, f := range t.StarterFiles {
+		if !starterNameRe.MatchString(f.Name) || f.ES == "" || f.EN == "" || len(f.ES) > maxStarterBytes || len(f.EN) > maxStarterBytes {
+			return fmt.Errorf("%s: starter file %q needs a safe .md/.csv/.txt name and short es/en content", t.ID, f.Name)
+		}
+	}
+	for _, rc := range t.RecommendedConnections {
+		if !KnownProviders[rc.Provider] || len(rc.Capabilities) == 0 {
+			return fmt.Errorf("%s: recommended connection %q needs a known provider and its capabilities", t.ID, rc.Provider)
 		}
 	}
 	for _, loc := range []string{"es", "en"} {

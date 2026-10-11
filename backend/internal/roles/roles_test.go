@@ -41,7 +41,13 @@ func legacySeed() []domain.Agent {
 }
 
 func TestSeedAgentsMatchTheLegacySeed(t *testing.T) {
-	if got, want := SeedAgents(), legacySeed(); !reflect.DeepEqual(got, want) {
+	// F1: every role works in the drive, so each seed agent also carries the
+	// "fs" tool label first; everything else is the legacy seed unchanged.
+	want := legacySeed()
+	for i := range want {
+		want[i].Tools = append([]string{"fs"}, want[i].Tools...)
+	}
+	if got := SeedAgents(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("seed agents changed:\n got %+v\nwant %+v", got, want)
 	}
 }
@@ -124,7 +130,9 @@ func TestFinanceTreasuryIsAnalysisOnly(t *testing.T) {
 	if tp.RiskTier != "amber" || tp.Autonomy.Ceiling != "rules" || tp.Autonomy.Default != "approve_each" {
 		t.Fatalf("tier/autonomy: %s %+v", tp.RiskTier, tp.Autonomy)
 	}
-	safe := map[string]bool{"spreadsheet": true, "calculator": true, "artifacts": true}
+	// fs writes only to its own desk and assigned projects without approval,
+	// versioned and reversible; it never moves money or leaves the system.
+	safe := map[string]bool{"spreadsheet": true, "calculator": true, "artifacts": true, "fs": true}
 	for _, tool := range tp.Tools {
 		if !safe[tool] {
 			t.Fatalf("tool %q is not in the analysis-only set", tool)

@@ -56,6 +56,7 @@
     }
   },
   "tools": [
+    "fs",
     "crm",
     "email",
     "proposal_builder"
@@ -105,5 +106,44 @@
   "suggested_artifacts": [
     "doc",
     "table"
+  ],
+  "recommended_connections": [
+    {
+      "provider": "google_gmail",
+      "capabilities": [
+        "mail.read",
+        "mail.draft",
+        "mail.send"
+      ],
+      "why": "client follow-up; sending always needs approval"
+    },
+    {
+      "provider": "google_calendar",
+      "capabilities": [
+        "calendar.read",
+        "calendar.create_event"
+      ],
+      "why": "book meetings with prospects; needs approval"
+    },
+    {
+      "provider": "linkedin",
+      "capabilities": [
+        "profile.read",
+        "post.create"
+      ],
+      "why": "social selling posts; every post needs approval"
+    }
+  ],
+  "starter_files": [
+    {
+      "name": "pipeline.csv",
+      "es": "cliente,etapa,monto_usd,probabilidad,proxima_accion,fecha\n",
+      "en": "client,stage,amount_usd,probability,next_action,date\n"
+    },
+    {
+      "name": "plantilla-propuesta.md",
+      "es": "# Propuesta para {cliente}\n\n## Alcance\n\n## Inversión\n\n## Plazos y entregables\n\n## Condiciones\n",
+      "en": "# Proposal for {client}\n\n## Scope\n\n## Investment\n\n## Timeline and deliverables\n\n## Terms\n"
+    }
   ]
 }

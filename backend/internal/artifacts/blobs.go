@@ -50,6 +50,8 @@ type Blob struct {
 	CreatedBy  ActorRef  `json:"created_by"`
 	CreatedAt  time.Time `json:"created_at"`
 	Data       []byte    `json:"-"`
+	// ObjectKey is where the bytes live when an object store holds them (internal).
+	ObjectKey string `json:"-"`
 }
 
 // BlobStore persists blobs, scoped by organization (RLS in Postgres).
