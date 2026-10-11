@@ -1,0 +1,7 @@
+# Open demo mode: no login, the fixed demo organization with its seven agents.
+# Used by `make demo`, scripts/smoke.sh and the e2e suite (except E2E_AUTH specs):
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d
+services:
+  backend:
+    environment:
+      AUTH_ENABLED: "false"

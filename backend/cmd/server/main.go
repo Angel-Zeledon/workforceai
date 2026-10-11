@@ -201,6 +201,9 @@ func run(log *slog.Logger) error {
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
 	if cfg.AuthEnabled {
+		if strings.HasPrefix(cfg.JWTSecret, "dev-only-insecure") {
+			log.Warn("JWT_SECRET is the local development default from docker-compose.yml: set your own secret before exposing this server")
+		}
 		svc, err := auth.NewService(auth.Config{
 			Store:               authStore,
 			Secret:              []byte(cfg.JWTSecret),

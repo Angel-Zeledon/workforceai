@@ -84,12 +84,16 @@ services:
       S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE:-true}
       DRIVE_MAX_FILE_MB: ${DRIVE_MAX_FILE_MB:-}
       DRIVE_QUOTA_MB: ${DRIVE_QUOTA_MB:-}
-      # --- DEVELOPMENT ONLY ---
-      # Dev runs open (no login, fixed "demo" org) and exposes POST /demo/reset
-      # for scripts/smoke and the e2e suite. In production OMIT both lines (the
-      # defaults are false) and set AUTH_ENABLED=true, JWT_SECRET (>=32 bytes)
-      # and ALLOWED_ORIGINS=https://your-frontend. See backend/README.md.
-      AUTH_ENABLED: "false"
+      # Accounts: sign up and log in with email and password (our own auth, no
+      # third-party login). The open demo without login is a separate mode:
+      # `make demo` (docker-compose.demo.yml sets AUTH_ENABLED=false).
+      # The JWT_SECRET default below is for local development ONLY: in production
+      # set your own (>= 32 random bytes, e.g. `openssl rand -base64 48`) and
+      # ALLOWED_ORIGINS=https://your-frontend. See backend/README.md.
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-jwt-secret-change-me-0123456789}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      # --- DEVELOPMENT ONLY --- POST /demo/reset (admin role when auth is on).
       ENABLE_DEMO_RESET: "true"
     depends_on:
       postgres:
