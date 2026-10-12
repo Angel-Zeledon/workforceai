@@ -277,3 +277,19 @@ Viven en `org_settings.rules` (JSONB, sin migración de esa tabla), junto a las 
 | Aprobación decidida | **No** | Una aprobación resuelta es final; se corrige con una acción nueva. |
 | Acciones de otros conectores (Calendar, Drive, GitHub, Slack) | Según `reversibility` del manifiesto (`full`/`none`) | La UI muestra "Se puede deshacer"/"No se puede deshacer" antes de aprobar; el sistema **no** ejecuta la reversión por sí mismo. |
 | Pagos, contratos firmados | **No** | Siempre requieren aprobación humana; no hay reversión automática. |
+
+## 10. Permisos permanentes por proyecto (A1 decisiones)
+
+Decisión del dueño: una persona que aprueba puede elegir **"permitir siempre esta clase de acción en este proyecto"**. Alcance = proyecto + herramienta.acción + agente (o cualquier agente del proyecto, si la persona lo amplía). Se guarda (`standing_approvals`, migración 540), se audita y se revoca desde la pestaña Aprobaciones del proyecto. Caduca con el proyecto (terminado, fallido o cancelado) o a los `STANDING_APPROVAL_DAYS` (30 por defecto, máx. 90).
+
+**Qué nunca cubre (denegar por defecto).** `application.StandingEligibility` es una lista blanca, no una lista negra:
+
+| Cubre | No cubre nunca |
+|---|---|
+| `documents` (borrador/crear/actualizar/editar/añadir), `spreadsheet` (crear/actualizar/escribir/editar/añadir/celda/recalcular), `fs` = el drive (`write`, `move`; versionados, se pueden deshacer) | Enviar fuera (correo, mensajes), publicar, pagar/transferir, borrar (incluido `fs.delete`), compartir/invitar, contratar/despedir, **`code.run`** (aprobación por ejecución ligada al hash; ni siquiera consulta esta capa), cualquier herramienta de conexión (Gmail...), herramientas no listadas (`crm`, `calendar`...) |
+
+Además solo si: riesgo `low` o `medium` (ausente o `high` => no), un solo aprobador y sin rol exigido, y la aprobación existe por la **autonomía del agente** (`approve_each`/`suggest`), no por una regla de la organización (lista "siempre aprobar", umbral de monto, límites, doble aprobación) ni por una retención del drive con contenido leído de fuera (`tainted`/`external_origin`) o sin versionado. Un segundo cerrojo rechaza verbos externos aunque una herramienta los listara.
+
+**Dónde se comprueba.** (1) Al crear la aprobación (`Orchestrator.markStanding`): solo entonces se marca `standing_eligible` y la UI ofrece la casilla. (2) Al guardar el permiso (`StandingService.Grant`): el servidor relee la aprobación guardada y vuelve a clasificar; no confía en el cliente. (3) En cada uso (`Match`): vuelve a clasificar y comprueba que el proyecto sigue activo. El uso crea una aprobación ya resuelta por `standing:<id>` (`Approvals.RequestAuto`), de modo que el resto del flujo (re-validación de la política, ejecución una sola vez, ledger) es el mismo que con una persona, y queda en la auditoría (`approval.auto_approved`, `standing_approval.used`).
+
+**Fuera de alcance, a propósito.** No hay permisos "de la organización" ni por herramienta externa; las retenciones de correo (`hold`) y la doble aprobación siguen intactas. Revocar no deshace lo ya ejecutado.

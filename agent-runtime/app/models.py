@@ -682,3 +682,7 @@ class HealthResponse(_Base):
     # Set when a provider is configured but the live engine could not start: the runtime
     # is answering in simulation and status is "degraded" (never a silent fallback).
     warning: str | None = None
+    # Providers that have credentials (never the keys) and the one used first: DeepSeek when its key
+    # is present, otherwise Anthropic. The backend shows them in the provider settings.
+    configured_providers: list[str] = []
+    default_provider: str = ""

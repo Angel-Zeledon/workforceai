@@ -557,14 +557,14 @@ var _ application.MessagePager = (*Store)(nil)
 // ---- approvals ----
 
 const apprCols = `id, task_id, agent_id, action, title, details, risk, status, note, created_at, resolved_at,
-	required_approvals, required_role, requested_by, no_self_approval, policy_rule, decisions`
+	required_approvals, required_role, requested_by, no_self_approval, policy_rule, decisions, tool, project_id, standing_eligible`
 
 func scanApproval(r scanner) (domain.Approval, error) {
 	var a domain.Approval
 	var st string
 	var decisions []byte
 	err := r.Scan(&a.ID, &a.TaskID, &a.AgentID, &a.Action, &a.Title, &a.Details, &a.Risk, &st, &a.Note, &a.CreatedAt, &a.ResolvedAt,
-		&a.RequiredApprovals, &a.RequiredRole, &a.RequestedBy, &a.NoSelfApproval, &a.PolicyRule, &decisions)
+		&a.RequiredApprovals, &a.RequiredRole, &a.RequestedBy, &a.NoSelfApproval, &a.PolicyRule, &decisions, &a.Tool, &a.ProjectID, &a.StandingEligible)
 	a.Status = domain.ApprovalStatus(st)
 	unmarshal(decisions, &a.Decisions)
 	if a.Decisions == nil {
@@ -581,10 +581,10 @@ func (s *Store) CreateApproval(ctx context.Context, orgID string, a domain.Appro
 		a.Decisions = []domain.ApprovalDecision{}
 	}
 	return s.exec(ctx, orgID, `INSERT INTO approvals (id, org_id, task_id, agent_id, action, title, details, risk, status, note, created_at,
-		required_approvals, required_role, requested_by, no_self_approval, policy_rule, decisions)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+		required_approvals, required_role, requested_by, no_self_approval, policy_rule, decisions, tool, project_id, standing_eligible)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
 		a.ID, orgID, a.TaskID, a.AgentID, a.Action, a.Title, a.Details, a.Risk, string(a.Status), a.Note, a.CreatedAt,
-		a.RequiredApprovals, a.RequiredRole, a.RequestedBy, a.NoSelfApproval, a.PolicyRule, jb(a.Decisions))
+		a.RequiredApprovals, a.RequiredRole, a.RequestedBy, a.NoSelfApproval, a.PolicyRule, jb(a.Decisions), a.Tool, a.ProjectID, a.StandingEligible)
 }
 
 func (s *Store) GetApproval(ctx context.Context, orgID, id string) (domain.Approval, error) {

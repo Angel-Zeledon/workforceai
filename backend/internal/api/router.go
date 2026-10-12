@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,6 +38,8 @@ type Deps struct {
 	Queries   *application.Queries
 	Orch      *application.Orchestrator
 	Approvals *application.Approvals
+	// Standing serves "always allow this kind of action in this project" (standing.go). Optional.
+	Standing *application.StandingService
 	// Audit serves GET /audit, /audit/export and /audit/verify; Policy-related
 	// rules are served from OrgConfig (/policy/rules). Both optional.
 	Audit   *application.AuditService
@@ -161,6 +164,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountConnections(r)
 			s.mountControls(r)
 			s.mountProjects(r)
+			s.mountStanding(r)
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountDrive(r)
@@ -373,21 +377,51 @@ func (s *server) listApprovals(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, list(v))
 }
 
+// decidedApproval is the approval (flat) plus the outcome of the "always allow" choice.
+type decidedApproval struct {
+	domain.Approval
+	Standing      *application.StandingApproval `json:"standing,omitempty"`
+	StandingError string                        `json:"standing_error,omitempty"`
+}
+
 func (s *server) decide(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Decision string `json:"decision"`
 		Note     string `json:"note"`
+		// AlwaysAllow (approve only) also stores a standing approval for this kind
+		// of action in the approval's project; AlwaysAllowAnyAgent widens it from
+		// this agent to every agent of the project. The server accepts it only for
+		// internal, reversible actions (application.StandingEligibility).
+		AlwaysAllow         bool `json:"always_allow"`
+		AlwaysAllowAnyAgent bool `json:"always_allow_any_agent"`
+		AlwaysAllowDays     int  `json:"always_allow_days"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
 		return
 	}
-	ap, err := s.Approvals.Decide(r.Context(), chi.URLParam(r, "id"), body.Decision, body.Note)
+	id := chi.URLParam(r, "id")
+	if body.AlwaysAllow && (s.Standing == nil || !strings.EqualFold(body.Decision, "approve")) {
+		codeErr(w, http.StatusBadRequest, "invalid", "always_allow only applies when approving, and standing approvals must be enabled")
+		return
+	}
+	ap, err := s.Approvals.Decide(r.Context(), id, body.Decision, body.Note)
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, 200, ap)
+	if !body.AlwaysAllow || ap.Status != domain.ApprovalApproved {
+		writeJSON(w, 200, ap)
+		return
+	}
+	// The approval itself is already decided; the standing permission is a separate,
+	// stricter step. If it is refused (not eligible) the approval stands and says why.
+	st, err := s.Standing.Grant(r.Context(), application.StandingGrantInput{ApprovalID: id, AnyAgent: body.AlwaysAllowAnyAgent, Days: body.AlwaysAllowDays})
+	if err != nil {
+		writeJSON(w, 200, decidedApproval{Approval: ap, StandingError: err.Error()})
+		return
+	}
+	writeJSON(w, 200, decidedApproval{Approval: ap, Standing: &st})
 }
 
 func (s *server) listReports(w http.ResponseWriter, r *http.Request) {

@@ -5,6 +5,7 @@ import { PROJECT_TABS, useProjects, type ProjectTab } from "@/lib/projects/store
 import { Btn, Progress } from "../ui";
 import { AgentLanes } from "./AgentLanes";
 import { ApprovalsBatch } from "./ApprovalsBatch";
+import { StandingApprovals } from "./StandingApprovals";
 import { CostsView } from "./CostsView";
 import { DelegationTree } from "./DelegationTree";
 import { DraftEditor } from "./DraftEditor";
@@ -87,7 +88,7 @@ export function ProjectDetailView() {
             {tab === "kanban" && <KanbanBoard />}
             {tab === "lanes" && <AgentLanes />}
             {tab === "delegation" && <DelegationTree />}
-            {tab === "approvals" && <ApprovalsBatch />}
+            {tab === "approvals" && <><ApprovalsBatch /><StandingApprovals projectId={detail.project.id} /></>}
             {tab === "changes" && <PlanChangesPanel />}
             {tab === "costs" && <CostsView />}
           </>

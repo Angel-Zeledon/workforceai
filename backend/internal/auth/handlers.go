@@ -6,7 +6,9 @@ import (
 	"io"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -25,7 +27,25 @@ type HandlerConfig struct {
 	RefreshLimit   Limit // per IP, default 60 / 15m
 	UserLimit      Limit // per authenticated user on member endpoints, default 120 / min
 	FailOpen       bool  // allow requests when the limiter backend is down
+
+	// Refresh-token cookie. The refresh token never appears in a JSON body: it
+	// travels in an HttpOnly, SameSite=Strict cookie scoped to the auth routes.
+	CookieName   string // default "wfai_refresh"
+	CookieSecure bool   // Secure attribute; turn off only for local plain-http development
+	// AllowedOrigins is the browser origin allow-list (same list as CORS) used to
+	// reject cross-site refresh/logout requests. The request's own host is always allowed.
+	AllowedOrigins []string
 }
+
+const (
+	// DefaultCookieName is the refresh-token cookie.
+	DefaultCookieName = "wfai_refresh"
+	// CSRFHeader must be present on the cookie-authenticated endpoints. A custom
+	// header cannot be sent by a cross-site form or simple request, and a
+	// cross-origin fetch carrying it needs a CORS preflight that the allow-list decides.
+	CSRFHeader = "X-WFAI-CSRF"
+	cookiePath = "/api/v1/auth"
+)
 
 // Handler exposes the auth service over HTTP.
 type Handler struct {
@@ -43,15 +63,73 @@ func NewHandler(svc *Service, cfg HandlerConfig) *Handler {
 	def(&cfg.RegisterLimit, 5, time.Hour)
 	def(&cfg.RefreshLimit, 60, 15*time.Minute)
 	def(&cfg.UserLimit, 120, time.Minute)
+	if cfg.CookieName == "" {
+		cfg.CookieName = DefaultCookieName
+	}
 	return &Handler{svc: svc, cfg: cfg}
+}
+
+// setRefreshCookie stores the refresh token in the HttpOnly cookie.
+func (h *Handler) setRefreshCookie(w http.ResponseWriter, token string) {
+	http.SetCookie(w, &http.Cookie{
+		Name: h.cfg.CookieName, Value: token, Path: cookiePath,
+		MaxAge:   int(h.svc.RefreshTTL() / time.Second),
+		HttpOnly: true, Secure: h.cfg.CookieSecure, SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func (h *Handler) clearRefreshCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name: h.cfg.CookieName, Value: "", Path: cookiePath, MaxAge: -1,
+		HttpOnly: true, Secure: h.cfg.CookieSecure, SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func (h *Handler) refreshCookie(r *http.Request) string {
+	c, err := r.Cookie(h.cfg.CookieName)
+	if err != nil {
+		return ""
+	}
+	return c.Value
+}
+
+// writeSession sends the session with the refresh token moved into the cookie.
+func (h *Handler) writeSession(w http.ResponseWriter, status int, s *Session) {
+	h.setRefreshCookie(w, s.RefreshToken)
+	view := *s
+	view.RefreshToken = ""
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, status, view)
+}
+
+// csrfOK guards the endpoints that act on the ambient cookie: the custom header
+// must be present and a browser Origin, when sent, must be allowed or same-host.
+func (h *Handler) csrfOK(r *http.Request) bool {
+	if r.Header.Get(CSRFHeader) == "" {
+		return false
+	}
+	if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
+		return false
+	}
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true // not a browser fetch: nothing ambient to abuse
+	}
+	for _, o := range h.cfg.AllowedOrigins {
+		if strings.EqualFold(strings.TrimRight(o, "/"), origin) {
+			return true
+		}
+	}
+	u, err := url.Parse(origin)
+	return err == nil && strings.EqualFold(u.Host, r.Host)
 }
 
 // Routes returns a router to mount, e.g. r.Mount("/api/v1/auth", h.Routes()):
 //
 //	POST   /register        public
 //	POST   /login           public
-//	POST   /refresh         public (refresh token in body)
-//	POST   /logout          public (refresh token in body; idempotent)
+//	POST   /refresh         public (refresh token in the HttpOnly cookie + X-WFAI-CSRF header; rotates it)
+//	POST   /logout          public (cookie + X-WFAI-CSRF header; idempotent; clears the cookie)
 //	GET    /me              authenticated
 //	POST   /logout-all      authenticated
 //	POST   /switch-org      authenticated {org_id}: session in another org of the user
@@ -131,7 +209,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, s)
+	h.writeSession(w, http.StatusCreated, s)
 }
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
@@ -144,35 +222,36 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, s)
-}
-
-type refreshBody struct {
-	RefreshToken string `json:"refresh_token"`
+	h.writeSession(w, http.StatusOK, s)
 }
 
 func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
-	var in refreshBody
-	if !decode(w, r, &in) {
+	if !h.csrfOK(r) {
+		writeError(w, http.StatusForbidden, "csrf", "missing or invalid request origin")
 		return
 	}
-	s, err := h.svc.Refresh(r.Context(), in.RefreshToken, h.meta(r))
+	s, err := h.svc.Refresh(r.Context(), h.refreshCookie(r), h.meta(r))
 	if err != nil {
+		// A rejected token (expired, revoked or reused) is useless: drop it.
+		if errors.Is(err, ErrInvalidToken) || errors.Is(err, ErrTokenExpired) || errors.Is(err, ErrTokenReuse) {
+			h.clearRefreshCookie(w)
+		}
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, s)
+	h.writeSession(w, http.StatusOK, s)
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
-	var in refreshBody
-	if !decode(w, r, &in) {
+	if !h.csrfOK(r) {
+		writeError(w, http.StatusForbidden, "csrf", "missing or invalid request origin")
 		return
 	}
-	if err := h.svc.Logout(r.Context(), in.RefreshToken); err != nil {
+	if err := h.svc.Logout(r.Context(), h.refreshCookie(r)); err != nil {
 		writeServiceError(w, err)
 		return
 	}
+	h.clearRefreshCookie(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -206,7 +285,9 @@ func (h *Handler) switchOrg(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, s)
+	// The cookie is about to point at the new organization's session: end the old family.
+	_ = h.svc.Logout(r.Context(), h.refreshCookie(r))
+	h.writeSession(w, http.StatusOK, s)
 }
 
 func (h *Handler) logoutAll(w http.ResponseWriter, r *http.Request) {
@@ -215,6 +296,7 @@ func (h *Handler) logoutAll(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
+	h.clearRefreshCookie(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -343,7 +425,7 @@ func (h *Handler) acceptInvitation(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, s)
+	h.writeSession(w, http.StatusOK, s)
 }
 
 // writeServiceError maps domain errors to HTTP responses without leaking
