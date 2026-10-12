@@ -100,3 +100,10 @@ button:not(:disabled):active, a.ac-press:active { transform: scale(0.985); }
 }
 [data-reduce="1"] .ac-fade, [data-reduce="1"] .ac-page, [data-reduce="1"] .ac-slide-left, [data-reduce="1"] .ac-toast, [data-reduce="1"] .ac-rise, [data-reduce="1"] .ac-stagger > * { animation: none !important; }
 [data-reduce="1"] .ac-skeleton { animation: none; }
+
+/* Brand mark: the agent blinks now and then and its antenna light breathes. */
+@keyframes mark-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes mark-led { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.ac-mark-eyes { transform-box: fill-box; transform-origin: center; animation: mark-blink 5s infinite; }
+.ac-mark-led { animation: mark-led 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ac-mark-eyes, .ac-mark-led { animation: none; } }

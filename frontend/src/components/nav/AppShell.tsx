@@ -1,4 +1,5 @@
 "use client";
+import { AgentMark } from "../brand/AgentMark";
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -48,7 +49,7 @@ function Sidebar({ section, collapsed, onToggle, onNavigate }: { section: string
   return (
     <nav aria-label={t("nav.main")} data-testid="sidebar" data-collapsed={collapsed} className="flex h-full flex-col bg-navy text-white">
       <div className={`flex h-14 shrink-0 items-center gap-2.5 border-b border-white/10 ${collapsed ? "justify-center" : "px-4"}`}>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-navy"><Icon name="check" size={18} strokeWidth={2.4} /></span>
+        <AgentMark size={32} tone="light" className="shrink-0" />
         {!collapsed && <span className="truncate text-[14px] font-semibold tracking-tight">AI Workforce OS</span>}
       </div>
       <div className="flex-1 space-y-1 overflow-y-auto p-2.5">
