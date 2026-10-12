@@ -53,3 +53,20 @@ func TestGatewayToolWriteDocument(t *testing.T) {
 		t.Fatalf("bad document: %+v", res)
 	}
 }
+
+// A write in a free zone needs no approval from the drive, but the gateway may
+// still hold it (an approve_each agent): the change must be described anyway, or
+// that approval has no title and cannot become a standing approval.
+func TestFreeZoneWriteIsStillDescribed(t *testing.T) {
+	e := newAgentEnv(t)
+	tool := &drive.GatewayTool{FS: e.fs, AgentTools: func(context.Context, string, string) ([]string, error) { return []string{"fs"}, nil }}
+	call := application.GatewayCall{Org: "o1", AgentID: "sales", TaskID: "t1", Tool: "fs", Action: "write",
+		Args: map[string]any{"path": "/Agents/sales/nota.md", "content": "hola"}}
+	as := tool.Assess(e.ctx, call)
+	if as.DenyCode != "" || as.NeedsApproval {
+		t.Fatalf("a desk write is free: %+v", as)
+	}
+	if as.Pending.Reversibility != "versioned" || !strings.Contains(as.Pending.Title, "/Agents/sales/nota.md") || as.Pending.Risk == "" {
+		t.Fatalf("the write must be described: %+v", as.Pending)
+	}
+}

@@ -228,8 +228,8 @@ const (
 	// ActWriteDocument writes a real office document (xlsx, docx, pdf) or a
 	// rendered md/csv from a structured document (see internal/officedoc).
 	ActWriteDocument = "write_document"
-	ActMove   = "move"
-	ActDelete = "delete"
+	ActMove          = "move"
+	ActDelete        = "delete"
 )
 
 // IsWriteAction reports whether the action changes the drive.

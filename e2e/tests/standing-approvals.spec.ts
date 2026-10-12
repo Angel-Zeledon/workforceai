@@ -60,7 +60,8 @@ test("always allow an internal action: the next one is automatic and the permiss
     .not.toBe("");
   expect(auto!.tool).toBe("fs");
   expect(auto!.project_id).toBe(project_id);
-  expect(list(await api.get<Approval[] | { items: Approval[] }>("/approvals?status=pending")).filter((a) => a.id !== approvalId)).toHaveLength(0);
+  // No drive write is left waiting (a plan-change proposal from the agent's suggestions may be, and must keep asking).
+  expect(list(await api.get<Approval[] | { items: Approval[] }>("/approvals?status=pending")).filter((a) => a.id !== approvalId && a.tool === "fs")).toHaveLength(0);
 
   // The project screen lists it with its use count and revokes it.
   const standing = list(await api.get<Standing[] | null>(`/projects/${project_id}/standing-approvals`));

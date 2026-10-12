@@ -104,7 +104,11 @@ func (t *GatewayTool) Assess(ctx context.Context, c application.GatewayCall) app
 		return application.NativeAssessment{DenyCode: pl.Deny}
 	}
 	as := application.NativeAssessment{NeedsApproval: pl.Approval}
-	if pl.Approval {
+	// The description of the change is filled for every write, not only when the
+	// zone asks: the gateway can still hold a free-zone write (an agent whose
+	// autonomy is approve_each), and without it that approval had no title and no
+	// reversibility, so it could never be remembered as a standing approval.
+	if pl.Approval || IsWriteAction(action) {
 		as.Pending = application.GatewayPending{
 			Title:         fmt.Sprintf("%s.%s %s", ToolName, action, t.inline(pl.Path)),
 			Details:       fmt.Sprintf("path=%s bytes=%d flags=%s reversibility=%s", t.inline(pl.Path), pl.Bytes, strings.Join(pl.Flags, ","), pl.Reversibility),
