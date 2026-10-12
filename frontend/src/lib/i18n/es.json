@@ -1849,7 +1849,7 @@
   "fileviewer.saving": "Guardando…",
   "fileviewer.save": "Guardar versión nueva",
   "fileviewer.saveHint": "Se guarda como v{v} · Ctrl+Enter",
-  "fileviewer.askText": "Sobre el archivo \"{name}\" ({path}, versión {v}): {text}\nLéelo con fs.read, haz los cambios y guarda una versión nueva del mismo archivo.",
+  "fileviewer.askText": "Redacta una nueva versión del archivo \"{name}\" ({path}, versión {v}) con este cambio: {text}\nLéelo antes con fs.read y guarda el resultado como versión nueva del mismo archivo.",
   "fileviewer.commentText": "Comentario sobre el archivo \"{name}\" ({path}, versión {v}): {text}\n(Es solo un comentario; no cambies el archivo a menos que te lo pida.)",
   "fileviewer.askLabel": "Pídele cambios a {name}",
   "fileviewer.askLabelTeam": "Pídele cambios al equipo",

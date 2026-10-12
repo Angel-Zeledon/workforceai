@@ -1849,7 +1849,7 @@
   "fileviewer.saving": "Saving…",
   "fileviewer.save": "Save new version",
   "fileviewer.saveHint": "Saved as v{v} · Ctrl+Enter",
-  "fileviewer.askText": "About the file \"{name}\" ({path}, version {v}): {text}\nRead it with fs.read, make the changes and save a new version of the same file.",
+  "fileviewer.askText": "Write a new version of the file \"{name}\" ({path}, version {v}) with this change: {text}\nRead it first with fs.read and save the result as a new version of the same file.",
   "fileviewer.commentText": "Comment on the file \"{name}\" ({path}, version {v}): {text}\n(This is only a comment; do not change the file unless I ask.)",
   "fileviewer.askLabel": "Ask {name} for changes",
   "fileviewer.askLabelTeam": "Ask the team for changes",
