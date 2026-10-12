@@ -27,6 +27,9 @@ La cuenta de DeepSeek quedó en -0.04 USD ("Insufficient Balance"). Para seguir:
 - Define `CONNECTIONS_KEK` (`openssl rand -base64 32`) en el backend. Sin ella no se pueden guardar las keys de "tu propio LLM" ni las de conectores.
 - Tu contenedor `kb-embeddings` / `assistant-embeddings`, de otro proyecto, consume mucha CPU y RAM de Docker. Apágalo cuando trabajemos aquí.
 
+## Prueba e2e abierta
+- `e2e/tests/templates.spec.ts` "UI (Spanish) › duplicate a built-in…": el proyecto arranca (con datos de ejemplo) pero no termina en 10 min en simulación. Las pruebas de plantillas por API sí pasan. Revisar si leer los archivos de entrada alarga la ejecución simulada o si algún nodo queda esperando.
+
 ## Pendiente después
 - Pulir monedas: revisar los 63 artículos y probar de punta a punta los bonos de proyecto y de calidad.
 - Probar los conectores reales (Gmail, Google, LinkedIn, Slack) con cuentas de verdad.
