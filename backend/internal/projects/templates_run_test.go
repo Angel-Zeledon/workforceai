@@ -225,8 +225,12 @@ func TestEveryBuiltinTemplateRunsAtMaximumSize(t *testing.T) {
 	if len(builtin) < 13 {
 		t.Fatalf("only %d built-in templates", len(builtin))
 	}
+	slots := make(chan struct{}, 4) // a few templates at a time: each has its own organization state
 	for _, tp := range builtin {
 		t.Run(tp.Key, func(t *testing.T) {
+			t.Parallel()
+			slots <- struct{}{}
+			defer func() { <-slots }()
 			e := newBigEnv(t, 32)
 			if tp.Key == "quarterly_cash_close" { // the only built-in that asks for a hired role
 				if _, err := e.hireTreasury(); err != nil {
@@ -255,7 +259,7 @@ func TestEveryBuiltinTemplateRunsAtMaximumSize(t *testing.T) {
 			if gatesPlanned < 1 && tp.Key != "generic" && tp.Key != "branch_opening" {
 				t.Fatalf("%s has no human gate", tp.Key)
 			}
-			dd := e.waitDone(t, []string{id}, 120*time.Second)[id]
+			dd := e.waitDone(t, []string{id}, 300*time.Second)[id]
 			if dd.Project.TasksDone != dd.Project.TasksTotal || dd.Project.Failed != 0 {
 				t.Fatalf("%d/%d done, %d failed", dd.Project.TasksDone, dd.Project.TasksTotal, dd.Project.Failed)
 			}
@@ -337,7 +341,7 @@ func TestLargeProjectsRunConcurrentlyInOneOrganization(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	done := e.waitDone(t, ids, 180*time.Second)
+	done := e.waitDone(t, ids, 300*time.Second)
 	grand := 0
 	for _, id := range ids {
 		d := done[id]

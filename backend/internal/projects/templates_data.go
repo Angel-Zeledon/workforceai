@@ -118,8 +118,11 @@ func splitList(s string) []string {
 	return strings.FieldsFunc(s, func(r rune) bool { return r == ',' || r == ';' || r == '\n' || r == '\r' })
 }
 
+// braces are never part of an item: it is substituted into texts and must not introduce placeholders.
+var braceless = strings.NewReplacer("{", "(", "}", ")")
+
 func cleanItem(s string) string {
-	return truncRunes(catalog.SanitizeParam(s), MaxItemLen)
+	return truncRunes(braceless.Replace(catalog.SanitizeParam(s)), MaxItemLen)
 }
 
 // resolveParams applies defaults and bounds to the user values. Text values are
@@ -161,7 +164,7 @@ func resolveParams(t Template, raw map[string]string, locale string) (map[string
 			lists[p.Key] = items
 			vals[p.Key] = strings.Join(items, ", ")
 		default:
-			c := catalog.SanitizeParam(v)
+			c := braceless.Replace(catalog.SanitizeParam(v))
 			if c == "" {
 				c = def
 			}

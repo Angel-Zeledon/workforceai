@@ -277,7 +277,15 @@ func TestSaveFinishedProjectAsTemplateAndRunItAgain(t *testing.T) {
 	if err != nil || tpl.Shared || tpl.Version != 1 {
 		t.Fatalf("save a finished project: %v %+v", err, tpl)
 	}
-	again := e.draft(tpl.ID, 0)
+	// it is private: another user cannot use it, its creator can
+	if _, err := e.svc.CreateDraft(e.ctx, projects.NewProject{TemplateID: tpl.ID}); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("a private template used by someone else: %v", err)
+	}
+	rec, err := e.svc.CreateDraft(ctx, projects.NewProject{TemplateID: tpl.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	again := rec.ID
 	if a, b := e.detail(again).Project.TasksTotal, e.detail(id).Project.TasksTotal; a != b {
 		t.Fatalf("saved template builds %d tasks, the project had %d", a, b)
 	}

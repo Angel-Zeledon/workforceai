@@ -12,7 +12,7 @@ interface ProjectSummary { id: string; name: string; status: string; tasks_done:
 interface Listing { folders: { name: string; path: string }[]; files: { name: string; updated_by: { kind: string; id: string } }[] }
 interface Tpl { id: string; name: string; version: number; stats?: { tasks: number; tasks_max: number; gates: number } }
 
-const campaign = (name: string) => ({
+const campaign = (name: string): Record<string, any> => ({
   name, description: "E2E: una campaña por país con revisión legal y compuerta", category: "sales", shared: true,
   params: [
     { key: "countries", label: "Países", type: "list", item_name: "country", default: "México, Chile, Perú", max: 10 },
@@ -132,4 +132,80 @@ test("a giant built-in template at a reduced size runs to completion", async () 
   expect(p.tasks_done).toBe(p.tasks_total);
   const files = (await projectFolder(p, project_id)).filter((f) => f.updated_by.kind === "agent");
   expect(files.length).toBeGreaterThanOrEqual(30);
+});
+
+test("UI: duplicate a built-in, customize it in the builder, preview it, run it and save the result", async ({ page }) => {
+  test.setTimeout(420_000);
+  const name = `E2E lanzamiento ${Date.now()}`;
+
+  await page.goto("/");
+  await page.getByTestId("nav-projects").click();
+  await page.getByTestId("template-library-open").click();
+  await expect(page.getByTestId("template-library")).toBeVisible();
+  // search and category narrow the library
+  await page.getByTestId("tpl-search").fill("lanzamiento");
+  await expect(page.getByTestId("template-card-tpl-product-launch")).toBeVisible();
+  await expect(page.getByTestId("template-card-tpl-year-end-audit")).toHaveCount(0);
+  await page.getByTestId("tpl-search").fill("");
+  await page.getByTestId("tpl-cat-compliance").click();
+  await expect(page.getByTestId("template-card-tpl-compliance-program")).toBeVisible();
+  await expect(page.getByTestId("template-card-tpl-product-launch")).toHaveCount(0);
+  await page.getByTestId("tpl-cat-all").click();
+
+  // duplicate the built-in: an editable copy opens in the builder
+  await page.getByTestId("tpl-duplicate-tpl-product-launch").click();
+  await expect(page.getByTestId("template-builder")).toBeVisible();
+  await page.getByTestId("tb-name").fill(name);
+  // add one more task to the per-market block (phase 2, workflow 1) and rename the first one
+  const markets = page.getByTestId("tb-wf-1-0-title");
+  await expect(markets).toBeVisible();
+  await page.getByTestId("tb-add-task-1-0").click();
+  const extra = "tb-task-1-0-7";
+  await page.getByTestId(`${extra}-title`).fill("Revisión extra de {market}");
+  await page.getByTestId(`${extra}-agent`).selectOption("legal");
+  await page.getByTestId("tb-task-0-0-0-title").fill("Definir el posicionamiento personalizado");
+  // the live preview of the unsaved draft: 4 markets and 3 channels by default + the extra task per market
+  await expect(page.getByTestId("tb-preview-tasks")).toHaveText(String(67 + 4), { timeout: 20_000 });
+  await page.getByTestId("tb-validate").click();
+  await page.getByTestId("tb-save").click();
+  await expect(page.getByTestId("tb-saved")).toBeVisible();
+
+  // use it: two markets and one channel
+  await page.getByTestId("tb-back").click();
+  await page.getByTestId("tpl-search").fill(name);
+  const card = page.locator('[data-testid^="template-card-"]').filter({ hasText: name });
+  await expect(card).toHaveCount(1);
+  await card.locator('[data-testid^="tpl-use-"]').click();
+  await page.getByTestId("wizard-param-markets").fill("Chile, Perú");
+  await page.getByTestId("wizard-param-channels").fill("Tienda en línea");
+  // global 5 + 2 x (7 + 1 extra) + 2 x 1 x 2 channel tasks + go/no-go 1 + 2 x 2 launch tasks + report 1
+  await expect(page.getByTestId("wizard-preview-tasks")).toHaveText("31", { timeout: 20_000 });
+  await page.getByTestId("wizard-create").click();
+  await expect(page.getByTestId("draft-editor")).toBeVisible();
+  await expect(page.getByText("Revisión extra de Perú").first()).toBeVisible();
+  await page.getByTestId("launch-confirm").click();
+  await expect(page.getByTestId("project-status")).not.toHaveAttribute("data-status", "draft", { timeout: 30_000 });
+
+  // it runs to completion with the go/no-go gate approved by a person
+  const list = await api.get<ProjectSummary[]>("/projects");
+  const mine = list.find((p) => p.name.includes(name));
+  expect(mine).toBeTruthy();
+  const p = await runToDone(mine!.id);
+  expect(p.status).toBe("done");
+  expect(p.failed ?? 0).toBe(0);
+  expect(p.tasks_done).toBe(31);
+  const files = (await projectFolder(p, mine!.id)).filter((f) => f.updated_by.kind === "agent");
+  expect(files.length).toBeGreaterThanOrEqual(30);
+  const detail = await api.get<{ nodes: { title: string }[] }>(`/projects/${mine!.id}`);
+  expect(detail.nodes.map((n) => n.title)).toContain("Revisión extra de Chile");
+
+  // save the finished project as a template, from the project screen
+  await page.getByTestId(`project-card-${mine!.id}`).click().catch(() => {});
+  await page.getByTestId("save-as-template").click();
+  await page.getByTestId("save-template-name").fill(`${name} (guardada)`);
+  await page.getByTestId("save-template-confirm").click();
+  await expect(page.getByTestId("save-template-done")).toBeVisible();
+
+  // cleanup: an admin deletes the templates this test created
+  for (const t of (await api.get<Tpl[]>("/project-templates")).filter((x) => x.name.startsWith(name))) await api.del(`/project-templates/${t.id}`);
 });

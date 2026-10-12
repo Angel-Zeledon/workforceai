@@ -7,6 +7,7 @@ import { API_URL, MOCK } from "../config";
 import { authFetch } from "../session";
 import type {
   ControlAction, LaunchBody, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectEstimate, ProjectHealth, ProjectSummary, ProjectTemplate,
+  SaveTemplateOpts, TemplateInput, TemplatePreview, TemplatePreviewRequest, TemplateValidation, TemplateVersionInfo,
 } from "./types";
 
 /** HTTP error that keeps the server message ({"error": "..."}), where limits carry "limit_exceeded: <code>". */
@@ -19,6 +20,11 @@ export function limitCode(err: unknown): string | null {
   const m = err instanceof ApiError ? /limit_exceeded: (\w+)/.exec(err.detail) : null;
   return m ? m[1] : null;
 }
+
+/** HTTP status of a failed call (ApiError or the mock's equivalent), 0 when unknown */
+export const httpStatus = (err: unknown): number => (typeof (err as { status?: unknown })?.status === "number" ? (err as { status: number }).status : 0);
+/** server message of a failed call */
+export const errorDetail = (err: unknown): string => String((err as { detail?: unknown })?.detail ?? "");
 
 async function http<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await authFetch(`${API_URL}${path}`, {
@@ -60,5 +66,15 @@ export const projectsApi = {
   decideBatch: async (pid: string, b: { action: string; decision: "approve" | "reject"; expected_count: number; include_high?: boolean }) =>
     MOCK ? (await mock()).decideBatch(pid, b) : http("POST", "/approvals/batch", { filter: { project_id: pid, action: b.action }, decision: b.decision, expected_count: b.expected_count, include_high: b.include_high }),
   templates: async (): Promise<ProjectTemplate[]> => (MOCK ? (await mock()).templates() : items<ProjectTemplate>(await http("GET", "/project-templates"))),
-  saveAsTemplate: async (id: string): Promise<ProjectTemplate> => (MOCK ? (await mock()).saveAsTemplate(id) : http("POST", `/projects/${id}/save-as-template`)),
+  saveAsTemplate: async (id: string, opts?: SaveTemplateOpts): Promise<ProjectTemplate> => (MOCK ? (await mock()).saveAsTemplate(id, opts) : http("POST", `/projects/${id}/save-as-template`, opts ?? {})),
+  // ---- customizable templates (library, builder, versions) ----
+  getTemplate: async (id: string): Promise<ProjectTemplate> => (MOCK ? (await mock()).getTemplate(id) : http("GET", `/project-templates/${id}`)),
+  createTemplate: async (b: TemplateInput): Promise<ProjectTemplate> => (MOCK ? (await mock()).createTemplate(b) : http("POST", "/project-templates", b)),
+  updateTemplate: async (id: string, b: TemplateInput): Promise<ProjectTemplate> => (MOCK ? (await mock()).updateTemplate(id, b) : http("PUT", `/project-templates/${id}`, b)),
+  deleteTemplate: async (id: string): Promise<void> => { if (MOCK) await (await mock()).deleteTemplate(id); else await http("DELETE", `/project-templates/${id}`); },
+  duplicateTemplate: async (id: string, name?: string): Promise<ProjectTemplate> => (MOCK ? (await mock()).duplicateTemplate(id, name) : http("POST", `/project-templates/${id}/duplicate`, name ? { name } : {})),
+  templateVersions: async (id: string): Promise<TemplateVersionInfo[]> => (MOCK ? (await mock()).templateVersions(id) : items<TemplateVersionInfo>(await http("GET", `/project-templates/${id}/versions`))),
+  restoreTemplate: async (id: string, version: number): Promise<ProjectTemplate> => (MOCK ? (await mock()).restoreTemplate(id, version) : http("POST", `/project-templates/${id}/versions/${version}/restore`, {})),
+  validateTemplate: async (b: TemplateInput): Promise<TemplateValidation> => (MOCK ? (await mock()).validateTemplate(b) : http("POST", "/project-templates/validate", b)),
+  previewTemplate: async (r: TemplatePreviewRequest): Promise<TemplatePreview> => (MOCK ? (await mock()).previewTemplate(r) : http("POST", "/project-templates/preview", r)),
 };

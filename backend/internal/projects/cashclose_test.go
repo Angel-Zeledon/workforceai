@@ -33,7 +33,19 @@ type cashEnv struct {
 func newCashEnv(t *testing.T, hireTreasury bool) *cashEnv {
 	t.Helper()
 	rt := newRT()
-	rt.onRun = func(application.RunTaskRequest) { time.Sleep(20 * time.Millisecond) }
+	rt.onRun = func(application.RunTaskRequest) {
+		// Hold each call briefly until more than 4 overlapped once, so the peak measures what the
+		// scheduler allows and not goroutine timing in a loaded -race run.
+		for deadline := time.Now().Add(60 * time.Millisecond); time.Now().Before(deadline); time.Sleep(time.Millisecond) {
+			rt.mu.Lock()
+			p := rt.peak
+			rt.mu.Unlock()
+			if p > 4 {
+				break
+			}
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 	cfg := application.DefaultConfig()
 	cfg.IdleDelay, cfg.RetryBase, cfg.TaskRetryBackoff = 0, time.Millisecond, time.Millisecond
 	cfg.MaxParallelPerOrg = 32
