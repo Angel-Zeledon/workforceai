@@ -55,6 +55,8 @@ def sim_desk_draft(req: RunTaskRequest, out: StructuredOutput) -> ToolRequest | 
 
 class SimulationEngine(AgentEngine):
     mode = "simulation"
+    # Set by select_engine when a provider was configured but the live engine failed.
+    fallback_reason: str | None = None
 
     def __init__(self, latency_scale: float | None = None, min_s: float = 2.0, max_s: float = 6.0):
         if latency_scale is None:

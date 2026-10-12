@@ -92,7 +92,9 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
 
     @app.get("/healthz", response_model=HealthResponse)
     async def healthz():
-        return HealthResponse(status="ok", mode=eng().mode, provider=getattr(eng(), "provider", "simulation"))  # type: ignore[arg-type]
+        reason = getattr(eng(), "fallback_reason", None)
+        return HealthResponse(status="degraded" if reason else "ok", mode=eng().mode,  # type: ignore[arg-type]
+                              provider=getattr(eng(), "provider", "simulation"), warning=reason)
 
     @app.post("/v1/plan", response_model=PlanResponse, response_model_exclude_none=True)
     async def plan(req: PlanRequest):
