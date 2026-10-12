@@ -393,13 +393,14 @@ func TestLargeProjectsRunConcurrentlyInOneOrganization(t *testing.T) {
 		}
 	}
 	// Launching a plan of hundreds of nodes takes a while (the launches are serialized), so projects start at
-	// different moments. From the moment every project has delivered its first task, the next quarter of the
-	// work must include some of each project that still has work: nobody is locked out by the others.
+	// different moments (and a gate waits for its approver). From the moment every project has delivered its
+	// first task, the next half of the work must include some of each project that still has work: nobody is
+	// locked out by the others. The turns themselves are tested in application/orgqueue_test.go.
 	from := 0
 	for _, id := range ids {
 		from = max(from, first[id])
 	}
-	window := fins[min(from, len(fins)):min(from+len(fins)/4, len(fins))]
+	window := fins[min(from, len(fins)):min(from+len(fins)/2, len(fins))]
 	inWindow := map[string]int{}
 	before := map[string]int{}
 	for i, f := range fins {

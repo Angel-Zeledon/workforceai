@@ -479,7 +479,7 @@ func (s *Service) pickTemplate(ctx context.Context, in NewProject, goal, locale 
 		return Template{}, nil, goal, err
 	}
 	for _, t := range customs {
-		if t.ID == in.TemplateID || t.Key == in.TemplateID {
+		if (t.ID == in.TemplateID || t.Key == in.TemplateID) && s.canSee(ctx, t) {
 			return t, in.Params, goal, nil
 		}
 	}

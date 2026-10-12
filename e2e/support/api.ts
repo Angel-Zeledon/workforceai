@@ -30,6 +30,18 @@ export const api = {
         body: body === undefined ? undefined : JSON.stringify(body),
       }),
     ),
+  put: async <T>(path: string, body?: unknown): Promise<T> =>
+    json<T>(
+      await fetch(`${API_URL}${path}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      }),
+    ),
+  del: async (path: string): Promise<void> => {
+    const res = await fetch(`${API_URL}${path}`, { method: "DELETE" });
+    if (!res.ok) throw new Error(`${res.url} -> ${res.status} ${await res.text()}`);
+  },
 };
 
 export const resetDemo = () => api.post("/demo/reset");

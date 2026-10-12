@@ -168,9 +168,11 @@ func TestTemplateVisibilityAndOrganizationIsolation(t *testing.T) {
 	if !has(ana, priv.ID) || has(bob, priv.ID) || !has(bob, shared.ID) {
 		t.Fatal("a private template is only for its creator; a shared one is for the organization")
 	}
-	if _, err := e.svc.CreateDraft(bob, projects.NewProject{TemplateID: priv.ID}); err == nil {
-		// pickTemplate resolves by id; the library hides it, but using it directly must not leak either
-		t.Log("note: a private template id can still be used by someone who knows it")
+	if _, err := e.svc.CreateDraft(bob, projects.NewProject{TemplateID: priv.ID}); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("a private template must not be usable by someone else: %v", err)
+	}
+	if _, err := e.svc.CreateDraft(ana, projects.NewProject{TemplateID: priv.ID}); err != nil {
+		t.Fatalf("its creator uses it: %v", err)
 	}
 	if _, err := e.svc.UpdateTemplate(bob, priv.ID, campaignInput()); err == nil {
 		t.Fatal("bob edited a private template of ana")
