@@ -22,7 +22,15 @@ export class MockRewards {
   private seq = 0;
 
   private emit: Emit;
-  constructor(emit: Emit) { this.emit = emit; }
+  /** The demo office starts with `startCoins` (same as the backend's REWARDS_DEMO_COINS welcome grant). */
+  constructor(emit: Emit, startCoins = 1000) {
+    this.emit = emit;
+    if (startCoins > 0) {
+      this.keys.add("grant:welcome");
+      this.wallet = { balance: startCoins, earned_total: startCoins, spent_total: 0 };
+      this.push({ kind: "earn", amount: startCoins, reason: "welcome_grant", ref_kind: "grant", ref_id: "welcome", title: "welcome", actor: "system" });
+    }
+  }
 
   matches(seg: string[]) {
     const [r0, r1, r2] = seg;

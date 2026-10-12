@@ -34,6 +34,8 @@ const (
 	ReasonTaskRework    = "task_rework"     // reduced pay: the output needed rework
 	ReasonProjectDone   = "project_done"    // project completion bonus
 	ReasonPurchase      = "purchase"        // spent on a shop item
+	ReasonWelcome       = "welcome_grant"   // starting coins of the demo office
+	RefGrant            = "grant"           // ref kind of a welcome grant
 	RefTask, RefProject = "task", "project" // ref kinds of earn entries
 	RefItem             = "item"            // ref kind of a purchase
 )

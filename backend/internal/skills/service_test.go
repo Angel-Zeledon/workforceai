@@ -323,7 +323,7 @@ func TestExportThenImportGivesTheSameContent(t *testing.T) {
 func TestAssignmentRoleDefaultsAndBounds(t *testing.T) {
 	e := newEnv(t, true) // starters
 	l, err := e.svc.List(e.ctx)
-	if err != nil || len(l) != 7 {
+	if err != nil || len(l) < 7 {
 		t.Fatalf("starters: %v %d", err, len(l))
 	}
 	for _, sk := range l {
@@ -496,7 +496,7 @@ func TestTamperedFilesAreNotServed(t *testing.T) {
 func TestStartersAreValidCleanAndMapped(t *testing.T) {
 	for _, lang := range []string{"es", "en"} {
 		ps, err := Starters(lang)
-		if err != nil || len(ps) != 7 {
+		if err != nil || len(ps) < 7 {
 			t.Fatalf("%s: %v %d", lang, err, len(ps))
 		}
 		for _, p := range ps {

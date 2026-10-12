@@ -90,6 +90,17 @@ func (s *Service) OnProjectDone(ctx context.Context, org, projectID, name string
 	}, "")
 }
 
+// GrantWelcome gives an organization its starting coins once (idempotent: a restart or a replay pays nothing more).
+func (s *Service) GrantWelcome(ctx context.Context, org string, amount int64) {
+	if amount <= 0 || !s.Rules.Enabled {
+		return
+	}
+	s.earn(ctx, org, Entry{
+		Kind: KindEarn, Amount: amount, Reason: ReasonWelcome, RefKind: RefGrant, RefID: "welcome",
+		Title: "welcome", Actor: "system", IdemKey: "grant:welcome",
+	}, "")
+}
+
 func (s *Service) earn(ctx context.Context, org string, e Entry, requestID string) {
 	ctx = application.WithOrg(context.WithoutCancel(ctx), org)
 	stored, w, applied, err := s.Store.Earn(ctx, org, e)

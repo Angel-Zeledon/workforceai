@@ -24,6 +24,8 @@ import { ControlsBanner, ControlsOverlay } from "../security/ControlsChrome";
 import { CostOverlays } from "../cost/CostOverlays";
 import { Icon, type IconName } from "../icons";
 import { Toaster } from "./Toaster";
+import { TourLauncher } from "../tour/TourLauncher";
+import { TourOverlay } from "../tour/TourOverlay";
 
 const COLLAPSE_KEY = "wf.sidebar.collapsed";
 
@@ -144,6 +146,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span data-testid="hud-cost">{t("common.cost")} <b className="font-mono font-medium text-ink">{fmtUsd(metrics.cost_usd)}</b></span>
               </div>
             )}
+            <TourLauncher section={section} />
             <CoinCounter />
             {MOCK && <span data-testid="mock-badge" className="hidden rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 sm:inline">Mock</span>}
             <span className="hidden items-center gap-1.5 whitespace-nowrap font-medium text-ink2 sm:flex">
@@ -169,6 +172,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
       <Toaster />
+      <TourOverlay />
     </div>
   );
 }

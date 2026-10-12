@@ -1094,6 +1094,6440 @@
    },
    "color": "#1b2238",
    "color2": "#4cd9a6"
+  },
+  {
+   "id": "outfit_olive",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Traje oliva",
+    "en": "Olive suit"
+   },
+   "description": {
+    "es": "Un saco verde oliva para el personaje.",
+    "en": "An olive green jacket for the character."
+   },
+   "color": "#6b7a2f"
+  },
+  {
+   "id": "outfit_teal",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Traje turquesa",
+    "en": "Teal suit"
+   },
+   "description": {
+    "es": "Un saco turquesa con aire marino.",
+    "en": "A teal jacket with a seaside feel."
+   },
+   "color": "#1f7a7a"
+  },
+  {
+   "id": "outfit_coral",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Traje coral",
+    "en": "Coral suit"
+   },
+   "description": {
+    "es": "Un saco coral para días cálidos.",
+    "en": "A coral jacket for warm days."
+   },
+   "color": "#f08070"
+  },
+  {
+   "id": "outfit_sky",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Traje celeste",
+    "en": "Sky suit"
+   },
+   "description": {
+    "es": "Un saco azul cielo y ligero.",
+    "en": "A light sky-blue jacket."
+   },
+   "color": "#87ceeb"
+  },
+  {
+   "id": "outfit_plum",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Traje ciruela",
+    "en": "Plum suit"
+   },
+   "description": {
+    "es": "Un saco morado profundo y sobrio.",
+    "en": "A deep purple, understated jacket."
+   },
+   "color": "#5b2a4e"
+  },
+  {
+   "id": "outfit_sand",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Traje arena",
+    "en": "Sand suit"
+   },
+   "description": {
+    "es": "Un saco beige como la playa al atardecer.",
+    "en": "A beige jacket like a beach at dusk."
+   },
+   "color": "#d8c49a"
+  },
+  {
+   "id": "outfit_mint",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Traje menta",
+    "en": "Mint suit"
+   },
+   "description": {
+    "es": "Un saco fresco de tono menta.",
+    "en": "A fresh mint-toned jacket."
+   },
+   "color": "#98e0c0"
+  },
+  {
+   "id": "outfit_slate",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Traje pizarra",
+    "en": "Slate suit"
+   },
+   "description": {
+    "es": "Un saco gris azulado para las reuniones.",
+    "en": "A blue-grey jacket for meetings."
+   },
+   "color": "#5d6b7a"
+  },
+  {
+   "id": "outfit_cocoa",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Traje cacao",
+    "en": "Cocoa suit"
+   },
+   "description": {
+    "es": "Un saco marrón de tono cacao.",
+    "en": "A brown jacket in cocoa tones."
+   },
+   "color": "#5c3b2e"
+  },
+  {
+   "id": "outfit_peach",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Traje durazno",
+    "en": "Peach suit"
+   },
+   "description": {
+    "es": "Un saco suave de color durazno.",
+    "en": "A soft peach-coloured jacket."
+   },
+   "color": "#f7b98a"
+  },
+  {
+   "id": "outfit_ivory",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Traje marfil",
+    "en": "Ivory suit"
+   },
+   "description": {
+    "es": "Un saco claro, elegante y limpio.",
+    "en": "A light, elegant and clean jacket."
+   },
+   "color": "#f5f0dc"
+  },
+  {
+   "id": "outfit_lime",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Traje lima",
+    "en": "Lime suit"
+   },
+   "description": {
+    "es": "Un saco verde lima lleno de energía.",
+    "en": "A lime green jacket full of energy."
+   },
+   "color": "#b5d334"
+  },
+  {
+   "id": "outfit_rust",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Traje óxido",
+    "en": "Rust suit"
+   },
+   "description": {
+    "es": "Un saco de tono óxido, cálido y terroso.",
+    "en": "A warm, earthy rust-coloured jacket."
+   },
+   "color": "#a3471f"
+  },
+  {
+   "id": "outfit_indigo",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Traje índigo",
+    "en": "Indigo suit"
+   },
+   "description": {
+    "es": "Un saco índigo para las noches largas.",
+    "en": "An indigo jacket for long nights."
+   },
+   "color": "#3f2f7a"
+  },
+  {
+   "id": "outfit_mocha",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Traje moka",
+    "en": "Mocha suit"
+   },
+   "description": {
+    "es": "Un saco color café con leche.",
+    "en": "A coffee-with-milk coloured jacket."
+   },
+   "color": "#7b5a45"
+  },
+  {
+   "id": "outfit_pistachio",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Traje pistacho",
+    "en": "Pistachio suit"
+   },
+   "description": {
+    "es": "Un saco verde pistacho suave.",
+    "en": "A soft pistachio green jacket."
+   },
+   "color": "#aebf7a"
+  },
+  {
+   "id": "outfit_fuchsia",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Traje fucsia",
+    "en": "Fuchsia suit"
+   },
+   "description": {
+    "es": "Un saco fucsia que no pasa desapercibido.",
+    "en": "A fuchsia jacket that never goes unnoticed."
+   },
+   "color": "#c2306e"
+  },
+  {
+   "id": "outfit_aqua",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 35,
+   "rarity": "common",
+   "name": {
+    "es": "Traje aguamarina",
+    "en": "Aqua suit"
+   },
+   "description": {
+    "es": "Un saco aguamarina para días de verano.",
+    "en": "An aqua jacket for summer days."
+   },
+   "color": "#58c9c0"
+  },
+  {
+   "id": "outfit_sage",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 30,
+   "rarity": "common",
+   "name": {
+    "es": "Traje salvia",
+    "en": "Sage suit"
+   },
+   "description": {
+    "es": "Un saco verde grisáceo y tranquilo.",
+    "en": "A calm, greyish-green jacket."
+   },
+   "color": "#9aae8c"
+  },
+  {
+   "id": "outfit_cherry",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Traje cereza",
+    "en": "Cherry suit"
+   },
+   "description": {
+    "es": "Un saco rojo cereza intenso.",
+    "en": "A bold cherry-red jacket."
+   },
+   "color": "#b0182e"
+  },
+  {
+   "id": "outfit_honey",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Traje miel",
+    "en": "Honey suit"
+   },
+   "description": {
+    "es": "Un saco dulce de tono miel.",
+    "en": "A sweet honey-toned jacket."
+   },
+   "color": "#e0a526"
+  },
+  {
+   "id": "outfit_berry",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Traje mora",
+    "en": "Berry suit"
+   },
+   "description": {
+    "es": "Un saco color mora madura.",
+    "en": "A ripe-blackberry coloured jacket."
+   },
+   "color": "#7a2048"
+  },
+  {
+   "id": "outfit_moss",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Traje musgo",
+    "en": "Moss suit"
+   },
+   "description": {
+    "es": "Un saco verde musgo de bosque.",
+    "en": "A forest-moss green jacket."
+   },
+   "color": "#4a5d23"
+  },
+  {
+   "id": "outfit_storm",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Traje tormenta",
+    "en": "Storm suit"
+   },
+   "description": {
+    "es": "Un saco gris tormenta para días lluviosos.",
+    "en": "A storm-grey jacket for rainy days."
+   },
+   "color": "#4f6d7a"
+  },
+  {
+   "id": "outfit_ocean",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje océano",
+    "en": "Ocean suit"
+   },
+   "description": {
+    "es": "Un saco azul profundo como el mar.",
+    "en": "A deep blue jacket like the sea."
+   },
+   "color": "#1d5c8a"
+  },
+  {
+   "id": "outfit_ruby",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 200,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje rubí",
+    "en": "Ruby suit"
+   },
+   "description": {
+    "es": "Un saco rojo joya que brilla.",
+    "en": "A jewel-red jacket that shines."
+   },
+   "color": "#9b111e"
+  },
+  {
+   "id": "outfit_emerald",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 220,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje esmeralda",
+    "en": "Emerald suit"
+   },
+   "description": {
+    "es": "Un saco verde esmeralda de gala.",
+    "en": "A formal emerald green jacket."
+   },
+   "color": "#0f8a55"
+  },
+  {
+   "id": "outfit_amethyst",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje amatista",
+    "en": "Amethyst suit"
+   },
+   "description": {
+    "es": "Un saco violeta como una piedra preciosa.",
+    "en": "A violet jacket like a precious stone."
+   },
+   "color": "#8a5cc7"
+  },
+  {
+   "id": "outfit_bronze",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 160,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje bronce",
+    "en": "Bronze suit"
+   },
+   "description": {
+    "es": "Un saco metálico de tono bronce.",
+    "en": "A metallic bronze-toned jacket."
+   },
+   "color": "#a8743a"
+  },
+  {
+   "id": "outfit_pearl",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje perla",
+    "en": "Pearl suit"
+   },
+   "description": {
+    "es": "Un saco nacarado con reflejos suaves.",
+    "en": "A pearly jacket with soft shimmers."
+   },
+   "color": "#ece6f0"
+  },
+  {
+   "id": "outfit_tangerine",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje mandarina",
+    "en": "Tangerine suit"
+   },
+   "description": {
+    "es": "Un saco naranja vivo y jugoso.",
+    "en": "A vivid, juicy orange jacket."
+   },
+   "color": "#f28c28"
+  },
+  {
+   "id": "outfit_lavender",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 130,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje lavanda",
+    "en": "Lavender suit"
+   },
+   "description": {
+    "es": "Un saco lavanda para una tarde tranquila.",
+    "en": "A lavender jacket for a calm afternoon."
+   },
+   "color": "#c8b6e2"
+  },
+  {
+   "id": "outfit_aurora",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje aurora",
+    "en": "Aurora suit"
+   },
+   "description": {
+    "es": "Un saco verde aurora que cambia de tono.",
+    "en": "A shifting aurora-green jacket."
+   },
+   "color": "#3ddc97"
+  },
+  {
+   "id": "outfit_obsidian",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje obsidiana",
+    "en": "Obsidian suit"
+   },
+   "description": {
+    "es": "Un saco negro volcánico y pulido.",
+    "en": "A polished volcanic-black jacket."
+   },
+   "color": "#14171c"
+  },
+  {
+   "id": "outfit_sapphire",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 240,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje zafiro",
+    "en": "Sapphire suit"
+   },
+   "description": {
+    "es": "Un saco azul zafiro intenso.",
+    "en": "An intense sapphire-blue jacket."
+   },
+   "color": "#2350c4"
+  },
+  {
+   "id": "outfit_crimson",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 170,
+   "rarity": "rare",
+   "name": {
+    "es": "Traje carmesí",
+    "en": "Crimson suit"
+   },
+   "description": {
+    "es": "Un saco carmesí para los grandes días.",
+    "en": "A crimson jacket for big days."
+   },
+   "color": "#dc143c"
+  },
+  {
+   "id": "outfit_diamond",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 850,
+   "rarity": "epic",
+   "name": {
+    "es": "Traje de diamante",
+    "en": "Diamond suit"
+   },
+   "description": {
+    "es": "Un saco que brilla como un diamante.",
+    "en": "A jacket that sparkles like a diamond."
+   },
+   "color": "#e6f4ff"
+  },
+  {
+   "id": "outfit_galaxy",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 600,
+   "rarity": "epic",
+   "name": {
+    "es": "Traje galáctico",
+    "en": "Galaxy suit"
+   },
+   "description": {
+    "es": "Un saco con el color del espacio profundo.",
+    "en": "A jacket in the colour of deep space."
+   },
+   "color": "#2b0f4c"
+  },
+  {
+   "id": "outfit_phoenix",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 480,
+   "rarity": "epic",
+   "name": {
+    "es": "Traje fénix",
+    "en": "Phoenix suit"
+   },
+   "description": {
+    "es": "Un saco ardiente que renace cada lunes.",
+    "en": "A blazing jacket that rises again every Monday."
+   },
+   "color": "#e8542a"
+  },
+  {
+   "id": "outfit_solar",
+   "kind": "character",
+   "category": "outfit",
+   "slot": "outfit",
+   "price": 420,
+   "rarity": "epic",
+   "name": {
+    "es": "Traje solar",
+    "en": "Solar suit"
+   },
+   "description": {
+    "es": "Un saco amarillo sol para iluminar la sala.",
+    "en": "A sun-yellow jacket to light up the room."
+   },
+   "color": "#ffb703"
+  },
+  {
+   "id": "hat_beret",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Boina",
+    "en": "Beret"
+   },
+   "description": {
+    "es": "Una boina morada con estilo parisino.",
+    "en": "A purple beret with a Parisian air."
+   },
+   "color": "#5a2a7a"
+  },
+  {
+   "id": "hat_straw",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Sombrero de paja",
+    "en": "Straw hat"
+   },
+   "description": {
+    "es": "Un sombrero de paja con cinta para el verano.",
+    "en": "A straw hat with a band for summer."
+   },
+   "color": "#e8c872",
+   "color2": "#b8862b"
+  },
+  {
+   "id": "hat_bucket",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Gorro de pescador",
+    "en": "Bucket hat"
+   },
+   "description": {
+    "es": "Un gorro de ala ancha para días de sol.",
+    "en": "A wide-brimmed hat for sunny days."
+   },
+   "color": "#7a9e3b"
+  },
+  {
+   "id": "hat_panama",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Sombrero panamá",
+    "en": "Panama hat"
+   },
+   "description": {
+    "es": "Un sombrero claro de ala fina y elegante.",
+    "en": "A light hat with a fine, elegant brim."
+   },
+   "color": "#efe2c0",
+   "color2": "#3a2a1a"
+  },
+  {
+   "id": "hat_toque",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Gorro tejido",
+    "en": "Knit toque"
+   },
+   "description": {
+    "es": "Un gorro tejido para las mañanas frescas.",
+    "en": "A knitted hat for cool mornings."
+   },
+   "color": "#c0553a"
+  },
+  {
+   "id": "hat_sailor",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Gorra de marinero",
+    "en": "Sailor cap"
+   },
+   "description": {
+    "es": "Una gorra azul marino con franja blanca.",
+    "en": "A navy cap with a white stripe."
+   },
+   "color": "#1f3b5c",
+   "color2": "#ffffff"
+  },
+  {
+   "id": "hat_fez",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Fez",
+    "en": "Fez"
+   },
+   "description": {
+    "es": "Un fez rojo con un toque clásico.",
+    "en": "A red fez with a classic touch."
+   },
+   "color": "#b3262e"
+  },
+  {
+   "id": "hat_bunny",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Orejas de conejo",
+    "en": "Bunny ears"
+   },
+   "description": {
+    "es": "Unas orejas de conejo muy suaves.",
+    "en": "Very soft bunny ears."
+   },
+   "color": "#f5d6e0",
+   "color2": "#ff8fb1"
+  },
+  {
+   "id": "hat_pumpkin",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Gorro calabaza",
+    "en": "Pumpkin hat"
+   },
+   "description": {
+    "es": "Un gorro con forma de calabaza de otoño.",
+    "en": "A hat shaped like an autumn pumpkin."
+   },
+   "color": "#e8701a",
+   "color2": "#2e7d32"
+  },
+  {
+   "id": "hat_leaf",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Corona de hojas",
+    "en": "Leaf crown"
+   },
+   "description": {
+    "es": "Una corona de hojas frescas del bosque.",
+    "en": "A crown of fresh forest leaves."
+   },
+   "color": "#6aa84f",
+   "color2": "#c9a227"
+  },
+  {
+   "id": "hat_flower",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Corona de flores",
+    "en": "Flower crown"
+   },
+   "description": {
+    "es": "Flores pequeñas para un día primaveral.",
+    "en": "Small flowers for a spring day."
+   },
+   "color": "#f7b5cd",
+   "color2": "#fff3b0"
+  },
+  {
+   "id": "hat_hardhat",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Casco de obra",
+    "en": "Hard hat"
+   },
+   "description": {
+    "es": "Un casco amarillo para las obras grandes.",
+    "en": "A yellow helmet for big builds."
+   },
+   "color": "#f0a500"
+  },
+  {
+   "id": "hat_santa",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Gorro navideño",
+    "en": "Santa hat"
+   },
+   "description": {
+    "es": "Un gorro rojo con borde blanco para las fiestas.",
+    "en": "A red hat with a white trim for the holidays."
+   },
+   "color": "#b0002d",
+   "color2": "#ffffff"
+  },
+  {
+   "id": "hat_safari",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Sombrero safari",
+    "en": "Safari hat"
+   },
+   "description": {
+    "es": "Un sombrero de explorador en tono arena.",
+    "en": "An explorer hat in sand tones."
+   },
+   "color": "#c2a878"
+  },
+  {
+   "id": "hat_sunhat",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Sombrero de sol",
+    "en": "Sun hat"
+   },
+   "description": {
+    "es": "Un sombrero azul claro contra el calor.",
+    "en": "A light blue hat against the heat."
+   },
+   "color": "#9ad0ec"
+  },
+  {
+   "id": "hat_turban",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Turbante",
+    "en": "Turban"
+   },
+   "description": {
+    "es": "Un turbante verde con un detalle dorado.",
+    "en": "A green turban with a golden detail."
+   },
+   "color": "#1e7f6e",
+   "color2": "#f2c94c"
+  },
+  {
+   "id": "hat_nightcap",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Gorro de dormir",
+    "en": "Nightcap"
+   },
+   "description": {
+    "es": "Para quien trabaja hasta muy tarde.",
+    "en": "For those who work very late."
+   },
+   "color": "#3f4fa0",
+   "color2": "#f4f1ea"
+  },
+  {
+   "id": "hat_bandana",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Bandana",
+    "en": "Bandana"
+   },
+   "description": {
+    "es": "Una bandana oscura con borde dorado.",
+    "en": "A dark bandana with a golden edge."
+   },
+   "color": "#2f4f4f",
+   "color2": "#e9c46a"
+  },
+  {
+   "id": "hat_visor",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Visera deportiva",
+    "en": "Sport visor"
+   },
+   "description": {
+    "es": "Una visera ligera para entrenar al aire libre.",
+    "en": "A light visor for outdoor training."
+   },
+   "color": "#e76f51"
+  },
+  {
+   "id": "hat_snow",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Gorro de nieve",
+    "en": "Snow hat"
+   },
+   "description": {
+    "es": "Un gorro blanco con franja azul.",
+    "en": "A white hat with a blue stripe."
+   },
+   "color": "#e8f4fb",
+   "color2": "#3b82c4"
+  },
+  {
+   "id": "hat_newsboy",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Gorra de periódico",
+    "en": "Newsboy cap"
+   },
+   "description": {
+    "es": "Una gorra de tweed para pasear.",
+    "en": "A tweed cap for a stroll."
+   },
+   "color": "#8d6e63"
+  },
+  {
+   "id": "hat_explorer",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Sombrero de explorador",
+    "en": "Explorer hat"
+   },
+   "description": {
+    "es": "Un sombrero verde para la próxima aventura.",
+    "en": "A green hat for the next adventure."
+   },
+   "color": "#556b2f"
+  },
+  {
+   "id": "hat_shower",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 35,
+   "rarity": "common",
+   "name": {
+    "es": "Gorro de baño",
+    "en": "Shower cap"
+   },
+   "description": {
+    "es": "Ideal para las pausas de agua.",
+    "en": "Ideal for water-cooler breaks."
+   },
+   "color": "#7fd3e6"
+  },
+  {
+   "id": "hat_headband",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Cinta para el pelo",
+    "en": "Headband"
+   },
+   "description": {
+    "es": "Una cinta sencilla y divertida.",
+    "en": "A simple, fun headband."
+   },
+   "color": "#ff5c8a"
+  },
+  {
+   "id": "hat_cowboy",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Sombrero vaquero",
+    "en": "Cowboy hat"
+   },
+   "description": {
+    "es": "Un sombrero de ala ancha de pradera.",
+    "en": "A wide-brimmed prairie hat."
+   },
+   "color": "#8b5a2b",
+   "color2": "#d9a441"
+  },
+  {
+   "id": "hat_tricorn",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 200,
+   "rarity": "rare",
+   "name": {
+    "es": "Tricornio",
+    "en": "Tricorn hat"
+   },
+   "description": {
+    "es": "Un sombrero de tres picos con galón dorado.",
+    "en": "A three-cornered hat with gold trim."
+   },
+   "color": "#2b2b2b",
+   "color2": "#c9a227"
+  },
+  {
+   "id": "hat_detective",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Gorro de detective",
+    "en": "Detective cap"
+   },
+   "description": {
+    "es": "Un gorro de cuadros para resolver casos.",
+    "en": "A deerstalker for solving cases."
+   },
+   "color": "#7c6a46",
+   "color2": "#3a3320"
+  },
+  {
+   "id": "hat_bowler",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 170,
+   "rarity": "rare",
+   "name": {
+    "es": "Sombrero de bombín",
+    "en": "Bowler hat"
+   },
+   "description": {
+    "es": "Un bombín con cinta dorada.",
+    "en": "A bowler hat with a golden band."
+   },
+   "color": "#3b2a20",
+   "color2": "#c0a060"
+  },
+  {
+   "id": "hat_viking",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Casco vikingo",
+    "en": "Viking helmet"
+   },
+   "description": {
+    "es": "Un casco de metal con adornos dorados.",
+    "en": "A metal helmet with golden ornaments."
+   },
+   "color": "#8a9099",
+   "color2": "#d9a82e"
+  },
+  {
+   "id": "hat_wizard",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 240,
+   "rarity": "rare",
+   "name": {
+    "es": "Sombrero de mago",
+    "en": "Wizard hat"
+   },
+   "description": {
+    "es": "Un sombrero puntiagudo lleno de estrellas.",
+    "en": "A pointed hat full of stars."
+   },
+   "color": "#3d2a8f",
+   "color2": "#f2c94c"
+  },
+  {
+   "id": "hat_plumed",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Sombrero con pluma",
+    "en": "Plumed hat"
+   },
+   "description": {
+    "es": "Un sombrero de viaje con pluma naranja.",
+    "en": "A travel hat with an orange feather."
+   },
+   "color": "#1f6f5c",
+   "color2": "#ff8c42"
+  },
+  {
+   "id": "hat_jester",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Gorro de bufón",
+    "en": "Jester hat"
+   },
+   "description": {
+    "es": "Un gorro de cascabeles para bromear.",
+    "en": "A bell-tipped hat for good-natured teasing."
+   },
+   "color": "#7b2fbf",
+   "color2": "#2ec4b6"
+  },
+  {
+   "id": "hat_laurel",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 280,
+   "rarity": "rare",
+   "name": {
+    "es": "Corona de laurel",
+    "en": "Laurel wreath"
+   },
+   "description": {
+    "es": "La corona clásica de los vencedores.",
+    "en": "The classic crown of victors."
+   },
+   "color": "#3f8f4a",
+   "color2": "#f2d16b"
+  },
+  {
+   "id": "hat_samurai",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 230,
+   "rarity": "rare",
+   "name": {
+    "es": "Yelmo samurái",
+    "en": "Samurai helm"
+   },
+   "description": {
+    "es": "Un yelmo de honor con detalles dorados.",
+    "en": "An honour helm with gold details."
+   },
+   "color": "#a33b2a",
+   "color2": "#d9b26f"
+  },
+  {
+   "id": "hat_knight",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 220,
+   "rarity": "rare",
+   "name": {
+    "es": "Yelmo de caballero",
+    "en": "Knight helm"
+   },
+   "description": {
+    "es": "Un yelmo gris con plumero rojo.",
+    "en": "A grey helm with a red plume."
+   },
+   "color": "#5f6b7a",
+   "color2": "#c0392b"
+  },
+  {
+   "id": "hat_fedora",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 165,
+   "rarity": "rare",
+   "name": {
+    "es": "Fedora",
+    "en": "Fedora"
+   },
+   "description": {
+    "es": "Un sombrero clásico de fieltro.",
+    "en": "A classic felt hat."
+   },
+   "color": "#6d4c41",
+   "color2": "#e8b53a"
+  },
+  {
+   "id": "hat_halo",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 650,
+   "rarity": "epic",
+   "name": {
+    "es": "Aureola",
+    "en": "Halo"
+   },
+   "description": {
+    "es": "Un aro de luz sobre la cabeza.",
+    "en": "A ring of light above the head."
+   },
+   "color": "#fff4b8",
+   "color2": "#f5c542"
+  },
+  {
+   "id": "hat_astronaut",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 620,
+   "rarity": "epic",
+   "name": {
+    "es": "Casco espacial",
+    "en": "Space helmet"
+   },
+   "description": {
+    "es": "Listo para salir a la órbita.",
+    "en": "Ready for orbit."
+   },
+   "color": "#e6ebf2",
+   "color2": "#1b6ca8"
+  },
+  {
+   "id": "hat_dragon",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 880,
+   "rarity": "epic",
+   "name": {
+    "es": "Yelmo dragón",
+    "en": "Dragon helm"
+   },
+   "description": {
+    "es": "Un yelmo con escamas y cuernos dorados.",
+    "en": "A helm with scales and golden horns."
+   },
+   "color": "#2d6a4f",
+   "color2": "#ffb703"
+  },
+  {
+   "id": "hat_tiara",
+   "kind": "character",
+   "category": "hat",
+   "slot": "hat",
+   "price": 500,
+   "rarity": "epic",
+   "name": {
+    "es": "Tiara de diamantes",
+    "en": "Diamond tiara"
+   },
+   "description": {
+    "es": "Brillo digno de una gran reunión.",
+    "en": "Sparkle worthy of a big meeting."
+   },
+   "color": "#cfefff",
+   "color2": "#8fd3ff"
+  },
+  {
+   "id": "glasses_round",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas redondas",
+    "en": "Round glasses"
+   },
+   "description": {
+    "es": "Un clásico de montura circular.",
+    "en": "A classic round frame."
+   },
+   "color": "#c9a227"
+  },
+  {
+   "id": "glasses_aviator",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas de aviador",
+    "en": "Aviator glasses"
+   },
+   "description": {
+    "es": "Montura fina para volar con estilo.",
+    "en": "A thin frame for flying in style."
+   },
+   "color": "#7d8a96"
+  },
+  {
+   "id": "glasses_cateye",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas de gato",
+    "en": "Cat-eye glasses"
+   },
+   "description": {
+    "es": "Un diseño retro con las esquinas hacia arriba.",
+    "en": "A retro design with upturned corners."
+   },
+   "color": "#6b2d5c"
+  },
+  {
+   "id": "glasses_tortoise",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas de carey",
+    "en": "Tortoiseshell glasses"
+   },
+   "description": {
+    "es": "Montura moteada de tono ámbar oscuro.",
+    "en": "A mottled frame in dark amber."
+   },
+   "color": "#8b4a1f"
+  },
+  {
+   "id": "glasses_goggles",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas de buceo",
+    "en": "Swim goggles"
+   },
+   "description": {
+    "es": "Para bucear en la hora del café.",
+    "en": "For diving during coffee break."
+   },
+   "color": "#2a9d8f"
+  },
+  {
+   "id": "glasses_ski",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas de esquí",
+    "en": "Ski goggles"
+   },
+   "description": {
+    "es": "Protección para la nieve y la prisa.",
+    "en": "Protection from snow and rush."
+   },
+   "color": "#ff6b35"
+  },
+  {
+   "id": "glasses_monocle",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Monóculo",
+    "en": "Monocle"
+   },
+   "description": {
+    "es": "Para mirar los informes con lupa.",
+    "en": "For inspecting reports with a close eye."
+   },
+   "color": "#3a2f5c"
+  },
+  {
+   "id": "glasses_threed",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas 3D",
+    "en": "3D glasses"
+   },
+   "description": {
+    "es": "Los informes saltan de la pantalla.",
+    "en": "Reports jump right off the screen."
+   },
+   "color": "#0077b6"
+  },
+  {
+   "id": "glasses_pixel",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas de píxel",
+    "en": "Pixel glasses"
+   },
+   "description": {
+    "es": "Una montura de videojuego retro.",
+    "en": "A retro video-game frame."
+   },
+   "color": "#52d681"
+  },
+  {
+   "id": "glasses_rimless",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 35,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas sin montura",
+    "en": "Rimless glasses"
+   },
+   "description": {
+    "es": "Discretas y casi invisibles.",
+    "en": "Discreet and almost invisible."
+   },
+   "color": "#e0e0e0"
+  },
+  {
+   "id": "glasses_reading",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas de lectura",
+    "en": "Reading glasses"
+   },
+   "description": {
+    "es": "Para leer la letra pequeña del contrato.",
+    "en": "For reading the small print."
+   },
+   "color": "#a0522d"
+  },
+  {
+   "id": "glasses_ice",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas de hielo",
+    "en": "Ice glasses"
+   },
+   "description": {
+    "es": "Lentes frías como un día de invierno.",
+    "en": "Lenses as cool as a winter day."
+   },
+   "color": "#cfe9f5"
+  },
+  {
+   "id": "glasses_sunset",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas de atardecer",
+    "en": "Sunset glasses"
+   },
+   "description": {
+    "es": "Un tono cálido para el final del día.",
+    "en": "A warm tint for the end of the day."
+   },
+   "color": "#ff7e5f"
+  },
+  {
+   "id": "glasses_lime",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas lima",
+    "en": "Lime glasses"
+   },
+   "description": {
+    "es": "Un toque fresco y muy llamativo.",
+    "en": "A fresh and very eye-catching touch."
+   },
+   "color": "#a4d65e"
+  },
+  {
+   "id": "glasses_welder",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Gafas de soldador",
+    "en": "Welding goggles"
+   },
+   "description": {
+    "es": "Protección para las tareas más intensas.",
+    "en": "Protection for the most intense tasks."
+   },
+   "color": "#3d6b2e"
+  },
+  {
+   "id": "glasses_steampunk",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 170,
+   "rarity": "rare",
+   "name": {
+    "es": "Gafas steampunk",
+    "en": "Steampunk goggles"
+   },
+   "description": {
+    "es": "Engranajes de latón para ideas brillantes.",
+    "en": "Brass gears for bright ideas."
+   },
+   "color": "#b07d48"
+  },
+  {
+   "id": "glasses_ruby",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 200,
+   "rarity": "rare",
+   "name": {
+    "es": "Gafas rubí",
+    "en": "Ruby glasses"
+   },
+   "description": {
+    "es": "Lentes de rubí que llaman la atención.",
+    "en": "Ruby lenses that draw attention."
+   },
+   "color": "#9b111e"
+  },
+  {
+   "id": "glasses_emerald",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Gafas esmeralda",
+    "en": "Emerald glasses"
+   },
+   "description": {
+    "es": "Lentes verdes de gran elegancia.",
+    "en": "Green lenses of great elegance."
+   },
+   "color": "#0f8a55"
+  },
+  {
+   "id": "glasses_sapphire",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 220,
+   "rarity": "rare",
+   "name": {
+    "es": "Gafas zafiro",
+    "en": "Sapphire glasses"
+   },
+   "description": {
+    "es": "Lentes azules con brillo de joya.",
+    "en": "Blue lenses with a jewel's shine."
+   },
+   "color": "#1f4fbf"
+  },
+  {
+   "id": "glasses_amber",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Gafas ámbar",
+    "en": "Amber glasses"
+   },
+   "description": {
+    "es": "Lentes doradas como la miel al sol.",
+    "en": "Golden lenses like honey in the sun."
+   },
+   "color": "#e07b00"
+  },
+  {
+   "id": "glasses_laser",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Gafas láser",
+    "en": "Laser glasses"
+   },
+   "description": {
+    "es": "Un visor que dispara ideas.",
+    "en": "A visor that fires off ideas."
+   },
+   "color": "#ff2d95"
+  },
+  {
+   "id": "glasses_crystal",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 230,
+   "rarity": "rare",
+   "name": {
+    "es": "Gafas de cristal",
+    "en": "Crystal glasses"
+   },
+   "description": {
+    "es": "Transparentes y brillantes como el cristal.",
+    "en": "Clear and bright like crystal."
+   },
+   "color": "#d6f0ff"
+  },
+  {
+   "id": "glasses_onyx",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Gafas ónice",
+    "en": "Onyx glasses"
+   },
+   "description": {
+    "es": "Lentes oscuras de piedra pulida.",
+    "en": "Dark lenses of polished stone."
+   },
+   "color": "#2d1b3d"
+  },
+  {
+   "id": "glasses_diamond",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 600,
+   "rarity": "epic",
+   "name": {
+    "es": "Gafas de diamante",
+    "en": "Diamond glasses"
+   },
+   "description": {
+    "es": "Un destello de lujo en cada mirada.",
+    "en": "A flash of luxury in every glance."
+   },
+   "color": "#f0faff"
+  },
+  {
+   "id": "glasses_nebula",
+   "kind": "character",
+   "category": "glasses",
+   "slot": "face",
+   "price": 450,
+   "rarity": "epic",
+   "name": {
+    "es": "Gafas nebulosa",
+    "en": "Nebula glasses"
+   },
+   "description": {
+    "es": "Lentes con el color de una nebulosa.",
+    "en": "Lenses in the colour of a nebula."
+   },
+   "color": "#5b2a86"
+  },
+  {
+   "id": "scarf_mint",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda menta",
+    "en": "Mint scarf"
+   },
+   "description": {
+    "es": "Frescura para los días de calor.",
+    "en": "Fresh for warm days."
+   },
+   "color": "#98d8c0"
+  },
+  {
+   "id": "scarf_lemon",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda limón",
+    "en": "Lemon scarf"
+   },
+   "description": {
+    "es": "Energía cítrica para la mañana.",
+    "en": "Citrus energy for the morning."
+   },
+   "color": "#f5e663"
+  },
+  {
+   "id": "scarf_cocoa",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda cacao",
+    "en": "Cocoa scarf"
+   },
+   "description": {
+    "es": "Calidez de chocolate caliente.",
+    "en": "The warmth of hot chocolate."
+   },
+   "color": "#6b4226",
+   "color2": "#f3e3c3"
+  },
+  {
+   "id": "scarf_coral",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda coral",
+    "en": "Coral scarf"
+   },
+   "description": {
+    "es": "Un atardecer alrededor del cuello.",
+    "en": "A sunset around the neck."
+   },
+   "color": "#ff7f6e"
+  },
+  {
+   "id": "scarf_sky",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda celeste",
+    "en": "Sky scarf"
+   },
+   "description": {
+    "es": "Cielo despejado en cualquier reunión.",
+    "en": "Clear skies in any meeting."
+   },
+   "color": "#87ceeb"
+  },
+  {
+   "id": "scarf_olive",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda oliva",
+    "en": "Olive scarf"
+   },
+   "description": {
+    "es": "Sencilla y de temporada.",
+    "en": "Simple and seasonal."
+   },
+   "color": "#6b7c3a"
+  },
+  {
+   "id": "scarf_lavender",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda lavanda",
+    "en": "Lavender scarf"
+   },
+   "description": {
+    "es": "Suave como un domingo tranquilo.",
+    "en": "Soft as a quiet Sunday."
+   },
+   "color": "#b9a3e3"
+  },
+  {
+   "id": "scarf_plum",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda ciruela",
+    "en": "Plum scarf"
+   },
+   "description": {
+    "es": "Un toque de fruta madura.",
+    "en": "A touch of ripe fruit."
+   },
+   "color": "#6e3a6b"
+  },
+  {
+   "id": "scarf_sand",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 35,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda arena",
+    "en": "Sand scarf"
+   },
+   "description": {
+    "es": "Como la playa en otoño.",
+    "en": "Like the beach in autumn."
+   },
+   "color": "#e0c48c"
+  },
+  {
+   "id": "scarf_moss",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda musgo",
+    "en": "Moss scarf"
+   },
+   "description": {
+    "es": "Verde suave de sendero.",
+    "en": "A soft trail green."
+   },
+   "color": "#5c7a4a",
+   "color2": "#a9c08a"
+  },
+  {
+   "id": "scarf_cherry",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda cereza",
+    "en": "Cherry scarf"
+   },
+   "description": {
+    "es": "Dulce y brillante.",
+    "en": "Sweet and bright."
+   },
+   "color": "#b5121b",
+   "color2": "#ffd1d6"
+  },
+  {
+   "id": "scarf_slate",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda pizarra",
+    "en": "Slate scarf"
+   },
+   "description": {
+    "es": "Gris tranquilo para las reuniones largas.",
+    "en": "A calm grey for long meetings."
+   },
+   "color": "#5b6573"
+  },
+  {
+   "id": "scarf_peach",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda durazno",
+    "en": "Peach scarf"
+   },
+   "description": {
+    "es": "Tono suave de verano.",
+    "en": "A soft summer tone."
+   },
+   "color": "#ffb88c"
+  },
+  {
+   "id": "scarf_teal",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda turquesa",
+    "en": "Turquoise scarf"
+   },
+   "description": {
+    "es": "Como el agua de una laguna.",
+    "en": "Like lagoon water."
+   },
+   "color": "#1fa39a",
+   "color2": "#0d5c63"
+  },
+  {
+   "id": "scarf_tartan",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Bufanda a cuadros",
+    "en": "Checkered scarf"
+   },
+   "description": {
+    "es": "Cuadros clásicos para el invierno.",
+    "en": "Classic squares for winter."
+   },
+   "color": "#7a1f2b",
+   "color2": "#e8d9a8"
+  },
+  {
+   "id": "scarf_ruby",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 160,
+   "rarity": "rare",
+   "name": {
+    "es": "Bufanda rubí",
+    "en": "Ruby scarf"
+   },
+   "description": {
+    "es": "Brilla como una piedra preciosa.",
+    "en": "Shines like a precious stone."
+   },
+   "color": "#9b111e",
+   "color2": "#e0115f"
+  },
+  {
+   "id": "scarf_emerald",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 170,
+   "rarity": "rare",
+   "name": {
+    "es": "Bufanda esmeralda",
+    "en": "Emerald scarf"
+   },
+   "description": {
+    "es": "Verde profundo y elegante.",
+    "en": "Deep and elegant green."
+   },
+   "color": "#046307",
+   "color2": "#50c878"
+  },
+  {
+   "id": "scarf_sapphire",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Bufanda zafiro",
+    "en": "Sapphire scarf"
+   },
+   "description": {
+    "es": "Azul intenso para noches de gala.",
+    "en": "Deep blue for gala nights."
+   },
+   "color": "#0f52ba"
+  },
+  {
+   "id": "scarf_amber",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 130,
+   "rarity": "rare",
+   "name": {
+    "es": "Bufanda ámbar",
+    "en": "Amber scarf"
+   },
+   "description": {
+    "es": "Cálida como la resina antigua.",
+    "en": "Warm like old resin."
+   },
+   "color": "#ffbf00",
+   "color2": "#b8860b"
+  },
+  {
+   "id": "scarf_autumn",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 140,
+   "rarity": "rare",
+   "name": {
+    "es": "Bufanda otoñal",
+    "en": "Autumn scarf"
+   },
+   "description": {
+    "es": "Hojas que caen con elegancia.",
+    "en": "Leaves falling with grace."
+   },
+   "color": "#c8552b",
+   "color2": "#8a5a1c"
+  },
+  {
+   "id": "scarf_snow",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 125,
+   "rarity": "rare",
+   "name": {
+    "es": "Bufanda de nieve",
+    "en": "Snow scarf"
+   },
+   "description": {
+    "es": "Blanca como la primera nevada.",
+    "en": "White like the first snowfall."
+   },
+   "color": "#eef6fb",
+   "color2": "#9cc3d8"
+  },
+  {
+   "id": "scarf_jade",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Bufanda jade",
+    "en": "Jade scarf"
+   },
+   "description": {
+    "es": "Piedra verde de buena suerte.",
+    "en": "A lucky green stone."
+   },
+   "color": "#00a36c"
+  },
+  {
+   "id": "scarf_obsidian",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 280,
+   "rarity": "rare",
+   "name": {
+    "es": "Bufanda obsidiana",
+    "en": "Obsidian scarf"
+   },
+   "description": {
+    "es": "Negra y pulida como el vidrio.",
+    "en": "Black and polished like glass."
+   },
+   "color": "#1c1c24",
+   "color2": "#5d5f8a"
+  },
+  {
+   "id": "scarf_royal",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 500,
+   "rarity": "epic",
+   "name": {
+    "es": "Bufanda real",
+    "en": "Royal scarf"
+   },
+   "description": {
+    "es": "Terciopelo para los grandes logros.",
+    "en": "Velvet for great achievements."
+   },
+   "color": "#4b1f6f",
+   "color2": "#d9a82e"
+  },
+  {
+   "id": "scarf_diamond",
+   "kind": "character",
+   "category": "scarf",
+   "slot": "neck",
+   "price": 800,
+   "rarity": "epic",
+   "name": {
+    "es": "Bufanda de diamante",
+    "en": "Diamond scarf"
+   },
+   "description": {
+    "es": "Un brillo que nunca se apaga.",
+    "en": "A shine that never fades."
+   },
+   "color": "#e6f2ff",
+   "color2": "#7fc8f8"
+  },
+  {
+   "id": "badge_leaf",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de hoja",
+    "en": "Leaf badge"
+   },
+   "description": {
+    "es": "Crecimiento constante, día a día.",
+    "en": "Steady growth, day by day."
+   },
+   "color": "#6bbf59"
+  },
+  {
+   "id": "badge_cloud",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de nube",
+    "en": "Cloud badge"
+   },
+   "description": {
+    "es": "Ideas que flotan en el aire.",
+    "en": "Ideas floating in the air."
+   },
+   "color": "#dfe9f5",
+   "color2": "#9fb8d6"
+  },
+  {
+   "id": "badge_flame",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de llama",
+    "en": "Flame badge"
+   },
+   "description": {
+    "es": "Entusiasmo que no se apaga.",
+    "en": "Enthusiasm that never fades."
+   },
+   "color": "#ff7a1a",
+   "color2": "#ffd23f"
+  },
+  {
+   "id": "badge_drop",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 35,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de gota",
+    "en": "Drop badge"
+   },
+   "description": {
+    "es": "Pequeña pero siempre presente.",
+    "en": "Small but always present."
+   },
+   "color": "#3da5d9"
+  },
+  {
+   "id": "badge_clover",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de trébol",
+    "en": "Clover badge"
+   },
+   "description": {
+    "es": "Un poco de suerte en cada entrega.",
+    "en": "A little luck in every delivery."
+   },
+   "color": "#2e8b57"
+  },
+  {
+   "id": "badge_watermelon",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de sandía",
+    "en": "Watermelon badge"
+   },
+   "description": {
+    "es": "Dulce y fresca en pleno verano.",
+    "en": "Sweet and fresh in midsummer."
+   },
+   "color": "#ff6f7d",
+   "color2": "#3fae5a"
+  },
+  {
+   "id": "badge_bolt",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de rayo",
+    "en": "Lightning badge"
+   },
+   "description": {
+    "es": "Respuestas rápidas, sin rodeos.",
+    "en": "Quick answers, no detours."
+   },
+   "color": "#ffd60a",
+   "color2": "#3b3b58"
+  },
+  {
+   "id": "badge_moon",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de luna",
+    "en": "Moon badge"
+   },
+   "description": {
+    "es": "Para las guardias nocturnas.",
+    "en": "For late-night shifts."
+   },
+   "color": "#dcd3f5",
+   "color2": "#5b4b8a"
+  },
+  {
+   "id": "badge_key",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de llave",
+    "en": "Key badge"
+   },
+   "description": {
+    "es": "Acceso a todo lo importante.",
+    "en": "Access to everything that matters."
+   },
+   "color": "#b08d57"
+  },
+  {
+   "id": "badge_owl",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de búho",
+    "en": "Owl badge"
+   },
+   "description": {
+    "es": "Sabiduría de madrugada.",
+    "en": "Early-morning wisdom."
+   },
+   "color": "#7a5c3e",
+   "color2": "#f2d16b"
+  },
+  {
+   "id": "badge_compass",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de brújula",
+    "en": "Compass badge"
+   },
+   "description": {
+    "es": "Siempre sabe hacia dónde ir.",
+    "en": "Always knows where to go."
+   },
+   "color": "#2d6a8f",
+   "color2": "#e53935"
+  },
+  {
+   "id": "badge_ticket",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 30,
+   "rarity": "common",
+   "name": {
+    "es": "Insignia de boleto",
+    "en": "Ticket badge"
+   },
+   "description": {
+    "es": "Cada tarea, un boleto cumplido.",
+    "en": "Every task, a ticket completed."
+   },
+   "color": "#ff9f43",
+   "color2": "#222f3e"
+  },
+  {
+   "id": "badge_crystal",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Insignia de cristal",
+    "en": "Crystal badge"
+   },
+   "description": {
+    "es": "Clara como un buen informe.",
+    "en": "Clear as a good report."
+   },
+   "color": "#cfeffd",
+   "color2": "#7ecbe6"
+  },
+  {
+   "id": "badge_shield",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Insignia de escudo",
+    "en": "Shield badge"
+   },
+   "description": {
+    "es": "Protege la calidad del trabajo.",
+    "en": "Guards the quality of the work."
+   },
+   "color": "#1e3a8a",
+   "color2": "#f5c542"
+  },
+  {
+   "id": "badge_phoenix",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Insignia de fénix",
+    "en": "Phoenix badge"
+   },
+   "description": {
+    "es": "Renace con cada proyecto.",
+    "en": "Rises again with every project."
+   },
+   "color": "#ff5e3a",
+   "color2": "#ffb400"
+  },
+  {
+   "id": "badge_lotus",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 140,
+   "rarity": "rare",
+   "name": {
+    "es": "Insignia de loto",
+    "en": "Lotus badge"
+   },
+   "description": {
+    "es": "Calma en medio del caos.",
+    "en": "Calm amid the chaos."
+   },
+   "color": "#f7b7d2",
+   "color2": "#c2185b"
+  },
+  {
+   "id": "badge_comet",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 200,
+   "rarity": "rare",
+   "name": {
+    "es": "Insignia de cometa",
+    "en": "Comet badge"
+   },
+   "description": {
+    "es": "Pasa rápido y deja huella.",
+    "en": "Passes fast and leaves a trail."
+   },
+   "color": "#3c1f78",
+   "color2": "#9be7ff"
+  },
+  {
+   "id": "badge_pine",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 120,
+   "rarity": "rare",
+   "name": {
+    "es": "Insignia de pino",
+    "en": "Pine badge"
+   },
+   "description": {
+    "es": "Verde todo el año.",
+    "en": "Green all year round."
+   },
+   "color": "#1f5f3f",
+   "color2": "#a7d7b4"
+  },
+  {
+   "id": "badge_platinum",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 450,
+   "rarity": "epic",
+   "name": {
+    "es": "Insignia de platino",
+    "en": "Platinum badge"
+   },
+   "description": {
+    "es": "Metal raro, premio de los premios.",
+    "en": "A rare metal, the award of awards."
+   },
+   "color": "#e5e4e2",
+   "color2": "#9aa3ad"
+  },
+  {
+   "id": "badge_sun",
+   "kind": "character",
+   "category": "badge",
+   "slot": "badge",
+   "price": 700,
+   "rarity": "epic",
+   "name": {
+    "es": "Insignia de sol",
+    "en": "Sun badge"
+   },
+   "description": {
+    "es": "Ilumina a todo el equipo.",
+    "en": "Lights up the whole team."
+   },
+   "color": "#ffb300",
+   "color2": "#ff5722"
+  },
+  {
+   "id": "headphones_mint",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Auriculares de menta",
+    "en": "Mint headphones"
+   },
+   "description": {
+    "es": "Frescos para largas sesiones.",
+    "en": "Fresh for long sessions."
+   },
+   "color": "#7fd8be"
+  },
+  {
+   "id": "headphones_cherry",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Auriculares cereza",
+    "en": "Cherry headphones"
+   },
+   "description": {
+    "es": "Un rojo que se oye de lejos.",
+    "en": "A red you can hear from afar."
+   },
+   "color": "#a4161a"
+  },
+  {
+   "id": "headphones_sky",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Auriculares celestes",
+    "en": "Sky headphones"
+   },
+   "description": {
+    "es": "Ligeros como una mañana despejada.",
+    "en": "Light as a clear morning."
+   },
+   "color": "#8ecae6"
+  },
+  {
+   "id": "headphones_lemon",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Orejeras limón",
+    "en": "Lemon earmuffs"
+   },
+   "description": {
+    "es": "Alegres para los días nublados.",
+    "en": "Cheerful for cloudy days."
+   },
+   "color": "#f9e27d"
+  },
+  {
+   "id": "headphones_slate",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Auriculares grises",
+    "en": "Grey headphones"
+   },
+   "description": {
+    "es": "Discretos para cualquier oficina.",
+    "en": "Discreet for any office."
+   },
+   "color": "#6c757d"
+  },
+  {
+   "id": "headphones_coconut",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Orejeras de coco",
+    "en": "Coconut earmuffs"
+   },
+   "description": {
+    "es": "Suaves como una brisa tropical.",
+    "en": "Soft as a tropical breeze."
+   },
+   "color": "#f5f0e1"
+  },
+  {
+   "id": "headphones_lime",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Auriculares lima",
+    "en": "Lime headphones"
+   },
+   "description": {
+    "es": "Energía verde para el ritmo.",
+    "en": "Green energy for the beat."
+   },
+   "color": "#a7d129"
+  },
+  {
+   "id": "headphones_orange",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 35,
+   "rarity": "common",
+   "name": {
+    "es": "Auriculares naranja",
+    "en": "Orange headphones"
+   },
+   "description": {
+    "es": "Un toque de sol en tu escritorio.",
+    "en": "A touch of sun on your desk."
+   },
+   "color": "#ff8c42"
+  },
+  {
+   "id": "headphones_plum",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Orejeras ciruela",
+    "en": "Plum earmuffs"
+   },
+   "description": {
+    "es": "Cálidas y con mucho carácter.",
+    "en": "Warm and full of character."
+   },
+   "color": "#6a2c70"
+  },
+  {
+   "id": "headphones_ocean",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Auriculares océano",
+    "en": "Ocean headphones"
+   },
+   "description": {
+    "es": "Ondas profundas para concentrarse.",
+    "en": "Deep waves to focus."
+   },
+   "color": "#1b6ca8"
+  },
+  {
+   "id": "headphones_sand",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 30,
+   "rarity": "common",
+   "name": {
+    "es": "Orejeras arena",
+    "en": "Sand earmuffs"
+   },
+   "description": {
+    "es": "Tonos de playa en invierno.",
+    "en": "Beach tones in winter."
+   },
+   "color": "#e4c08a"
+  },
+  {
+   "id": "headphones_mocha",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 90,
+   "rarity": "common",
+   "name": {
+    "es": "Auriculares moca",
+    "en": "Mocha headphones"
+   },
+   "description": {
+    "es": "Con aroma a café recién hecho.",
+    "en": "Smelling of fresh coffee."
+   },
+   "color": "#7b5b45"
+  },
+  {
+   "id": "headphones_retro",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Auriculares retro",
+    "en": "Retro headphones"
+   },
+   "description": {
+    "es": "Diseño de otra época.",
+    "en": "A design from another era."
+   },
+   "color": "#e4572e"
+  },
+  {
+   "id": "headphones_chrome",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 220,
+   "rarity": "rare",
+   "name": {
+    "es": "Auriculares cromados",
+    "en": "Chrome headphones"
+   },
+   "description": {
+    "es": "Reflejan cada idea brillante.",
+    "en": "They reflect every bright idea."
+   },
+   "color": "#c9d1d9"
+  },
+  {
+   "id": "headphones_midnight",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Auriculares medianoche",
+    "en": "Midnight headphones"
+   },
+   "description": {
+    "es": "Azul oscuro para el turno de noche.",
+    "en": "Dark blue for the night shift."
+   },
+   "color": "#14213d"
+  },
+  {
+   "id": "headphones_emerald",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Orejeras esmeralda",
+    "en": "Emerald earmuffs"
+   },
+   "description": {
+    "es": "Brillan con un verde de joya.",
+    "en": "They shine with a gem-green."
+   },
+   "color": "#13a36b"
+  },
+  {
+   "id": "headphones_pearl",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 200,
+   "rarity": "rare",
+   "name": {
+    "es": "Auriculares perla",
+    "en": "Pearl headphones"
+   },
+   "description": {
+    "es": "Elegantes para cualquier llamada.",
+    "en": "Elegant for any call."
+   },
+   "color": "#f4ead5"
+  },
+  {
+   "id": "headphones_violet",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 240,
+   "rarity": "rare",
+   "name": {
+    "es": "Auriculares violeta",
+    "en": "Violet headphones"
+   },
+   "description": {
+    "es": "Un sonido con mucho misterio.",
+    "en": "A sound full of mystery."
+   },
+   "color": "#8e44ad"
+  },
+  {
+   "id": "headphones_ruby",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 520,
+   "rarity": "epic",
+   "name": {
+    "es": "Auriculares de rubí",
+    "en": "Ruby headphones"
+   },
+   "description": {
+    "es": "Un lujo que se nota en cada nota.",
+    "en": "A luxury you hear in every note."
+   },
+   "color": "#b00020"
+  },
+  {
+   "id": "headphones_quartz",
+   "kind": "character",
+   "category": "headphones",
+   "slot": "ears",
+   "price": 720,
+   "rarity": "epic",
+   "name": {
+    "es": "Auriculares de cuarzo",
+    "en": "Quartz headphones"
+   },
+   "description": {
+    "es": "Cristal puro, sonido perfecto.",
+    "en": "Pure crystal, perfect sound."
+   },
+   "color": "#f1c6ff"
+  },
+  {
+   "id": "buddy_duck_lemon",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Patito limón",
+    "en": "Lemon rubber duck"
+   },
+   "description": {
+    "es": "Amarillo que ilumina el escritorio.",
+    "en": "Yellow that lights up the desk."
+   },
+   "color": "#fff176"
+  },
+  {
+   "id": "buddy_duck_mint",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Patito menta",
+    "en": "Mint rubber duck"
+   },
+   "description": {
+    "es": "Frescura para las mañanas largas.",
+    "en": "Freshness for long mornings."
+   },
+   "color": "#9be8c4"
+  },
+  {
+   "id": "buddy_duck_plum",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Patito ciruela",
+    "en": "Plum rubber duck"
+   },
+   "description": {
+    "es": "Elegante y muy tranquilo.",
+    "en": "Elegant and very calm."
+   },
+   "color": "#7b4f9e"
+  },
+  {
+   "id": "buddy_duck_cocoa",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Patito cacao",
+    "en": "Cocoa rubber duck"
+   },
+   "description": {
+    "es": "Dulce compañero de depuración.",
+    "en": "A sweet debugging companion."
+   },
+   "color": "#8d5b3a"
+  },
+  {
+   "id": "buddy_duck_coral",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Patito coral",
+    "en": "Coral rubber duck"
+   },
+   "description": {
+    "es": "Siempre de buen humor.",
+    "en": "Always in a good mood."
+   },
+   "color": "#ff8a7a"
+  },
+  {
+   "id": "buddy_parrot_lime",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Loro lima",
+    "en": "Lime parrot"
+   },
+   "description": {
+    "es": "Repite los mejores consejos.",
+    "en": "Repeats the best tips."
+   },
+   "color": "#9acd32",
+   "color2": "#2e8b57"
+  },
+  {
+   "id": "buddy_parrot_sunny",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Loro amarillo",
+    "en": "Yellow parrot"
+   },
+   "description": {
+    "es": "Alegra cualquier reunión.",
+    "en": "Brightens any meeting."
+   },
+   "color": "#ffd23f",
+   "color2": "#ef476f"
+  },
+  {
+   "id": "buddy_parrot_sky",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Loro celeste",
+    "en": "Sky parrot"
+   },
+   "description": {
+    "es": "Vuela sobre los pendientes.",
+    "en": "Flies over the to-do list."
+   },
+   "color": "#5fb3ea",
+   "color2": "#f8f8f2"
+  },
+  {
+   "id": "buddy_robot_copper",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 90,
+   "rarity": "common",
+   "name": {
+    "es": "Robotito de cobre",
+    "en": "Copper robot"
+   },
+   "description": {
+    "es": "Pequeño y brillante.",
+    "en": "Small and shiny."
+   },
+   "color": "#b87333",
+   "color2": "#f5d0a9"
+  },
+  {
+   "id": "buddy_duck_sunset",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Patito atardecer",
+    "en": "Sunset rubber duck"
+   },
+   "description": {
+    "es": "Colores de fin de jornada.",
+    "en": "Colors of the end of the day."
+   },
+   "color": "#ff7b54"
+  },
+  {
+   "id": "buddy_duck_ice",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 130,
+   "rarity": "rare",
+   "name": {
+    "es": "Patito de hielo",
+    "en": "Ice rubber duck"
+   },
+   "description": {
+    "es": "Frío y perfecto para el verano.",
+    "en": "Cool and perfect for summer."
+   },
+   "color": "#d6f1ff"
+  },
+  {
+   "id": "buddy_parrot_emerald",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Loro esmeralda",
+    "en": "Emerald parrot"
+   },
+   "description": {
+    "es": "Plumas de joya para tu hombro.",
+    "en": "Gem-like feathers for your shoulder."
+   },
+   "color": "#0f9d58",
+   "color2": "#ffd700"
+  },
+  {
+   "id": "buddy_parrot_scarlet",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Loro escarlata",
+    "en": "Scarlet parrot"
+   },
+   "description": {
+    "es": "Rojo intenso y mirada atenta.",
+    "en": "Bold red and watchful eyes."
+   },
+   "color": "#d62828",
+   "color2": "#003049"
+  },
+  {
+   "id": "buddy_parrot_tropical",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 240,
+   "rarity": "rare",
+   "name": {
+    "es": "Loro tropical",
+    "en": "Tropical parrot"
+   },
+   "description": {
+    "es": "Colores de selva en tu oficina.",
+    "en": "Jungle colors in your office."
+   },
+   "color": "#2ec4b6",
+   "color2": "#ff9f1c"
+  },
+  {
+   "id": "buddy_robot_chrome",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Robot cromado",
+    "en": "Chrome robot"
+   },
+   "description": {
+    "es": "Reluce con cada actualización.",
+    "en": "Shines with every update."
+   },
+   "color": "#d9dde3",
+   "color2": "#6c7a89"
+  },
+  {
+   "id": "buddy_robot_neon",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 280,
+   "rarity": "rare",
+   "name": {
+    "es": "Robot neón",
+    "en": "Neon robot"
+   },
+   "description": {
+    "es": "Pura luz de ciudad.",
+    "en": "Pure city light."
+   },
+   "color": "#14213d",
+   "color2": "#ff1f8e"
+  },
+  {
+   "id": "buddy_robot_jade",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 175,
+   "rarity": "rare",
+   "name": {
+    "es": "Robot de jade",
+    "en": "Jade robot"
+   },
+   "description": {
+    "es": "Tranquilo como el bambú.",
+    "en": "Calm as bamboo."
+   },
+   "color": "#2a9d8f",
+   "color2": "#e9c46a"
+  },
+  {
+   "id": "buddy_robot_gold",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 450,
+   "rarity": "epic",
+   "name": {
+    "es": "Robot dorado",
+    "en": "Golden robot"
+   },
+   "description": {
+    "es": "Un asistente con brillo propio.",
+    "en": "An assistant with its own shine."
+   },
+   "color": "#d9a82e",
+   "color2": "#fff3c4"
+  },
+  {
+   "id": "buddy_parrot_phoenix",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 620,
+   "rarity": "epic",
+   "name": {
+    "es": "Loro fénix",
+    "en": "Phoenix parrot"
+   },
+   "description": {
+    "es": "Renace con cada entrega.",
+    "en": "Rises again with every delivery."
+   },
+   "color": "#ff4500",
+   "color2": "#ffc107"
+  },
+  {
+   "id": "buddy_duck_crystal",
+   "kind": "character",
+   "category": "buddy",
+   "slot": "buddy",
+   "price": 500,
+   "rarity": "epic",
+   "name": {
+    "es": "Patito de cristal",
+    "en": "Crystal rubber duck"
+   },
+   "description": {
+    "es": "Transparente y mágico.",
+    "en": "Clear and magical."
+   },
+   "color": "#bfe9ff",
+   "color2": "#7b61ff"
+  },
+  {
+   "id": "window_atardecer",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Atardecer serrano",
+    "en": "Mountain sunset"
+   },
+   "description": {
+    "es": "Naranja cálido sobre las montañas.",
+    "en": "Warm orange over the mountains."
+   },
+   "color": "#f08a4b",
+   "color2": "#7a3e6e"
+  },
+  {
+   "id": "window_lluvia",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Tarde lluviosa",
+    "en": "Rainy afternoon"
+   },
+   "description": {
+    "es": "Gotas en el cristal y calma.",
+    "en": "Raindrops on the glass and calm."
+   },
+   "color": "#6b7a8f",
+   "color2": "#aab8c8"
+  },
+  {
+   "id": "window_nieve",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Montaña nevada",
+    "en": "Snowy peaks"
+   },
+   "description": {
+    "es": "Silencio blanco y frío.",
+    "en": "White silence and cold."
+   },
+   "color": "#e8f1fa",
+   "color2": "#7d93ad"
+  },
+  {
+   "id": "window_lavanda",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Campo de lavanda",
+    "en": "Lavender field"
+   },
+   "description": {
+    "es": "Aroma y color en la ventana.",
+    "en": "Scent and color at the window."
+   },
+   "color": "#b49ad8",
+   "color2": "#6e5aa0"
+  },
+  {
+   "id": "window_sakura",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 170,
+   "rarity": "rare",
+   "name": {
+    "es": "Cerezos en flor",
+    "en": "Cherry blossoms"
+   },
+   "description": {
+    "es": "Pétalos que caen despacio.",
+    "en": "Petals falling slowly."
+   },
+   "color": "#f7c6d9",
+   "color2": "#d9739a"
+  },
+  {
+   "id": "window_laguna",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Laguna tropical",
+    "en": "Tropical lagoon"
+   },
+   "description": {
+    "es": "Agua turquesa y palmeras.",
+    "en": "Turquoise water and palm trees."
+   },
+   "color": "#2ec4b6",
+   "color2": "#ffe9a8"
+  },
+  {
+   "id": "window_canon",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Cañón rojizo",
+    "en": "Red canyon"
+   },
+   "description": {
+    "es": "Rocas que guardan el tiempo.",
+    "en": "Rocks that keep time."
+   },
+   "color": "#c8553d",
+   "color2": "#f6c28b"
+  },
+  {
+   "id": "window_faro",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Faro al amanecer",
+    "en": "Lighthouse at dawn"
+   },
+   "description": {
+    "es": "Luz que guía la mañana.",
+    "en": "Light that guides the morning."
+   },
+   "color": "#ffd6a5",
+   "color2": "#3d5a80"
+  },
+  {
+   "id": "window_pradera",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Pradera de verano",
+    "en": "Summer meadow"
+   },
+   "description": {
+    "es": "Hierba alta y cielo limpio.",
+    "en": "Tall grass and a clear sky."
+   },
+   "color": "#9ccc65",
+   "color2": "#87ceeb"
+  },
+  {
+   "id": "window_selva",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Selva lluviosa",
+    "en": "Rainforest"
+   },
+   "description": {
+    "es": "Verde profundo y niebla.",
+    "en": "Deep green and mist."
+   },
+   "color": "#1f6b4a",
+   "color2": "#a7d8b5"
+  },
+  {
+   "id": "window_volcan",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 650,
+   "rarity": "epic",
+   "name": {
+    "es": "Volcán en erupción",
+    "en": "Erupting volcano"
+   },
+   "description": {
+    "es": "Fuego lejano y cielo oscuro.",
+    "en": "Distant fire and a dark sky."
+   },
+   "color": "#2b1d1d",
+   "color2": "#ff6b35"
+  },
+  {
+   "id": "window_otono",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Hojas de otoño",
+    "en": "Autumn leaves"
+   },
+   "description": {
+    "es": "Rojos y dorados en el parque.",
+    "en": "Reds and golds in the park."
+   },
+   "color": "#c0572b",
+   "color2": "#e0a526"
+  },
+  {
+   "id": "window_fiordo",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 230,
+   "rarity": "rare",
+   "name": {
+    "es": "Fiordo nórdico",
+    "en": "Nordic fjord"
+   },
+   "description": {
+    "es": "Aguas profundas entre acantilados.",
+    "en": "Deep water between cliffs."
+   },
+   "color": "#26547c",
+   "color2": "#b8d4e3"
+  },
+  {
+   "id": "window_bambu",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Jardín de bambú",
+    "en": "Bamboo garden"
+   },
+   "description": {
+    "es": "Verde suave y brisa ligera.",
+    "en": "Soft green and a light breeze."
+   },
+   "color": "#a3b18a",
+   "color2": "#588157"
+  },
+  {
+   "id": "window_glaciar",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Glaciar azul",
+    "en": "Blue glacier"
+   },
+   "description": {
+    "es": "Hielo que brilla al sol.",
+    "en": "Ice that shines in the sun."
+   },
+   "color": "#9ad8f0",
+   "color2": "#1e4d78"
+  },
+  {
+   "id": "window_sabana",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Sabana dorada",
+    "en": "Golden savanna"
+   },
+   "description": {
+    "es": "Hierba seca y horizonte amplio.",
+    "en": "Dry grass and a wide horizon."
+   },
+   "color": "#e6b655",
+   "color2": "#8a5a2b"
+  },
+  {
+   "id": "window_puerto",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Puerto al alba",
+    "en": "Harbor at dawn"
+   },
+   "description": {
+    "es": "Barcos suaves sobre el agua.",
+    "en": "Boats gently on the water."
+   },
+   "color": "#f9a6a0",
+   "color2": "#34506b"
+  },
+  {
+   "id": "window_desierto_noche",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 200,
+   "rarity": "rare",
+   "name": {
+    "es": "Desierto de estrellas",
+    "en": "Starry desert"
+   },
+   "description": {
+    "es": "Dunas bajo un cielo lleno de estrellas.",
+    "en": "Dunes under a sky full of stars."
+   },
+   "color": "#2a1f4d",
+   "color2": "#f5d28a"
+  },
+  {
+   "id": "window_tormenta",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 140,
+   "rarity": "rare",
+   "name": {
+    "es": "Tormenta de verano",
+    "en": "Summer storm"
+   },
+   "description": {
+    "es": "Relámpagos lejanos y lluvia fresca.",
+    "en": "Distant lightning and fresh rain."
+   },
+   "color": "#374151",
+   "color2": "#fbbf24"
+  },
+  {
+   "id": "window_menta",
+   "kind": "office",
+   "category": "window",
+   "slot": "window_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Costa de menta",
+    "en": "Mint coast"
+   },
+   "description": {
+    "es": "Brisa fresca junto al mar.",
+    "en": "Fresh breeze by the sea."
+   },
+   "color": "#98e2c6",
+   "color2": "#3aa6a0"
+  },
+  {
+   "id": "plant_fern",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Helecho",
+    "en": "Fern"
+   },
+   "description": {
+    "es": "Frondas frescas y verdes.",
+    "en": "Fresh green fronds."
+   },
+   "color": "#3f7d4e"
+  },
+  {
+   "id": "plant_aloe",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Aloe vera",
+    "en": "Aloe vera"
+   },
+   "description": {
+    "es": "Gel para los días difíciles.",
+    "en": "Gel for the tough days."
+   },
+   "color": "#8fbc8f"
+  },
+  {
+   "id": "plant_succulent",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Suculenta de piedra",
+    "en": "Stone succulent"
+   },
+   "description": {
+    "es": "Pequeña y muy paciente.",
+    "en": "Small and very patient."
+   },
+   "color": "#9ab973"
+  },
+  {
+   "id": "plant_olive",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Olivo",
+    "en": "Olive tree"
+   },
+   "description": {
+    "es": "Sabiduría antigua en maceta.",
+    "en": "Ancient wisdom in a pot."
+   },
+   "color": "#6b7f3a"
+  },
+  {
+   "id": "plant_ivy",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Hiedra colgante",
+    "en": "Trailing ivy"
+   },
+   "description": {
+    "es": "Cae con elegancia desde la estantería.",
+    "en": "Cascades elegantly from the shelf."
+   },
+   "color": "#2e6b3a"
+  },
+  {
+   "id": "plant_lavender_pot",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Lavanda en maceta",
+    "en": "Potted lavender"
+   },
+   "description": {
+    "es": "Aroma relajante en el escritorio.",
+    "en": "A calming scent on the desk."
+   },
+   "color": "#9b7fd1"
+  },
+  {
+   "id": "plant_snake",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Sansevieria",
+    "en": "Snake plant"
+   },
+   "description": {
+    "es": "Resistente y casi sin cuidados.",
+    "en": "Tough and nearly care-free."
+   },
+   "color": "#2f5d3a"
+  },
+  {
+   "id": "plant_jade",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 130,
+   "rarity": "rare",
+   "name": {
+    "es": "Árbol de jade",
+    "en": "Jade plant"
+   },
+   "description": {
+    "es": "Suerte y prosperidad para el equipo.",
+    "en": "Luck and prosperity for the team."
+   },
+   "color": "#5fa878"
+  },
+  {
+   "id": "plant_bamboo_pot",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Bambú de la suerte",
+    "en": "Lucky bamboo"
+   },
+   "description": {
+    "es": "Tallos firmes y hojas brillantes.",
+    "en": "Firm stalks and shiny leaves."
+   },
+   "color": "#5c9e4a"
+  },
+  {
+   "id": "plant_moss",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 35,
+   "rarity": "common",
+   "name": {
+    "es": "Musgo en piedra",
+    "en": "Moss stone"
+   },
+   "description": {
+    "es": "Un pedacito de bosque.",
+    "en": "A little piece of forest."
+   },
+   "color": "#4e6b3a"
+  },
+  {
+   "id": "plant_hibiscus",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Hibisco",
+    "en": "Hibiscus"
+   },
+   "description": {
+    "es": "Flores rojas que alegran la oficina.",
+    "en": "Red flowers that brighten the office."
+   },
+   "color": "#d62f5e"
+  },
+  {
+   "id": "plant_fig",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Ficus de hoja de violín",
+    "en": "Fiddle-leaf fig"
+   },
+   "description": {
+    "es": "Hojas enormes y muy elegantes.",
+    "en": "Huge and very elegant leaves."
+   },
+   "color": "#2d6a4f"
+  },
+  {
+   "id": "plant_pothos",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Pothos dorado",
+    "en": "Golden pothos"
+   },
+   "description": {
+    "es": "Hojas con vetas doradas.",
+    "en": "Leaves with golden streaks."
+   },
+   "color": "#b5c96b"
+  },
+  {
+   "id": "plant_tulips",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Tulipanes",
+    "en": "Tulips"
+   },
+   "description": {
+    "es": "Primavera en cada rincón.",
+    "en": "Spring in every corner."
+   },
+   "color": "#f25c8a"
+  },
+  {
+   "id": "plant_sunflower",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Girasoles",
+    "en": "Sunflowers"
+   },
+   "description": {
+    "es": "Siguen el sol sin pedir permiso.",
+    "en": "They follow the sun without asking."
+   },
+   "color": "#f2c12e"
+  },
+  {
+   "id": "plant_lotus",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Flor de loto",
+    "en": "Lotus flower"
+   },
+   "description": {
+    "es": "Calma que nace del barro.",
+    "en": "Calm that grows from the mud."
+   },
+   "color": "#f9d3e0"
+  },
+  {
+   "id": "plant_orchid",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 240,
+   "rarity": "rare",
+   "name": {
+    "es": "Orquídea",
+    "en": "Orchid"
+   },
+   "description": {
+    "es": "Elegancia que dura semanas.",
+    "en": "Elegance that lasts for weeks."
+   },
+   "color": "#b070c0"
+  },
+  {
+   "id": "plant_hydrangea",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Hortensias",
+    "en": "Hydrangeas"
+   },
+   "description": {
+    "es": "Azules o rosas según el suelo.",
+    "en": "Blue or pink depending on the soil."
+   },
+   "color": "#6fa8dc"
+  },
+  {
+   "id": "plant_marigold",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Caléndulas",
+    "en": "Marigolds"
+   },
+   "description": {
+    "es": "Pequeñas y alegres.",
+    "en": "Small and cheerful."
+   },
+   "color": "#f39c12"
+  },
+  {
+   "id": "plant_herbs",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Hierbas de cocina",
+    "en": "Kitchen herbs"
+   },
+   "description": {
+    "es": "Albahaca y romero a mano.",
+    "en": "Basil and rosemary at hand."
+   },
+   "color": "#58a55c"
+  },
+  {
+   "id": "plant_poppy",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Amapolas",
+    "en": "Poppies"
+   },
+   "description": {
+    "es": "Rojo intenso sobre el escritorio.",
+    "en": "Bright red on the desk."
+   },
+   "color": "#e0393e"
+  },
+  {
+   "id": "plant_lily",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Lirio de paz",
+    "en": "Peace lily"
+   },
+   "description": {
+    "es": "Florece aunque nadie lo mire.",
+    "en": "Blooms even when no one looks."
+   },
+   "color": "#ecf7f0"
+  },
+  {
+   "id": "plant_cherry_tree",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Cerezo en maceta",
+    "en": "Potted cherry tree"
+   },
+   "description": {
+    "es": "Flores rosas durante todo el año.",
+    "en": "Pink blossoms all year round."
+   },
+   "color": "#f7b8c8"
+  },
+  {
+   "id": "plant_redwood",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 750,
+   "rarity": "epic",
+   "name": {
+    "es": "Secuoya gigante",
+    "en": "Giant sequoia"
+   },
+   "description": {
+    "es": "Un bosque entero en un tiesto.",
+    "en": "A whole forest in a pot."
+   },
+   "color": "#8b5a2b"
+  },
+  {
+   "id": "plant_ginkgo",
+   "kind": "office",
+   "category": "plant",
+   "slot": "plant_2",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Ginkgo",
+    "en": "Ginkgo"
+   },
+   "description": {
+    "es": "Hojas en forma de abanico.",
+    "en": "Fan-shaped leaves."
+   },
+   "color": "#e3c15c"
+  },
+  {
+   "id": "lamp_candle",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Candelabro",
+    "en": "Candelabra"
+   },
+   "description": {
+    "es": "Luz de velas sin humo.",
+    "en": "Candlelight without the smoke."
+   },
+   "color": "#f7e7b4"
+  },
+  {
+   "id": "lamp_paper",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Farol de papel",
+    "en": "Paper lantern"
+   },
+   "description": {
+    "es": "Luz suave a través del papel.",
+    "en": "Soft light through paper."
+   },
+   "color": "#f4b183",
+   "color2": "#fff1d6"
+  },
+  {
+   "id": "lamp_industrial",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Lámpara industrial",
+    "en": "Industrial lamp"
+   },
+   "description": {
+    "es": "Metal negro y bombilla desnuda.",
+    "en": "Black metal and a bare bulb."
+   },
+   "color": "#3b3f46",
+   "color2": "#c9ced6"
+  },
+  {
+   "id": "lamp_green",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Lámpara verde",
+    "en": "Green desk lamp"
+   },
+   "description": {
+    "es": "La clásica de siempre en el escritorio.",
+    "en": "The timeless classic on the desk."
+   },
+   "color": "#2e7d5b",
+   "color2": "#d8efe3"
+  },
+  {
+   "id": "lamp_moon",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 160,
+   "rarity": "rare",
+   "name": {
+    "es": "Lámpara lunar",
+    "en": "Moon lamp"
+   },
+   "description": {
+    "es": "Brilla como una luna pequeña.",
+    "en": "Glows like a small moon."
+   },
+   "color": "#e8e4d9",
+   "color2": "#bcc6d6"
+  },
+  {
+   "id": "lamp_crystal",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 230,
+   "rarity": "rare",
+   "name": {
+    "es": "Lámpara de cristal",
+    "en": "Crystal lamp"
+   },
+   "description": {
+    "es": "Prismas que dibujan arcoíris.",
+    "en": "Prisms that paint rainbows."
+   },
+   "color": "#bfe9ff",
+   "color2": "#f4b6ff"
+  },
+  {
+   "id": "lamp_stained",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Lámpara de vitral",
+    "en": "Stained-glass lamp"
+   },
+   "description": {
+    "es": "Colores de iglesia en la oficina.",
+    "en": "Church colors in the office."
+   },
+   "color": "#7b2d8e",
+   "color2": "#f2b705"
+  },
+  {
+   "id": "lamp_neon",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Lámpara de neón",
+    "en": "Neon lamp"
+   },
+   "description": {
+    "es": "Un tubo de luz rosa y violeta.",
+    "en": "A tube of pink and violet light."
+   },
+   "color": "#ff4fa3",
+   "color2": "#7b5cff"
+  },
+  {
+   "id": "lamp_bamboo",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Lámpara de bambú",
+    "en": "Bamboo lamp"
+   },
+   "description": {
+    "es": "Pantalla tejida a mano.",
+    "en": "A hand-woven shade."
+   },
+   "color": "#d9b98a"
+  },
+  {
+   "id": "lamp_mini",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 35,
+   "rarity": "common",
+   "name": {
+    "es": "Lámpara de mesa",
+    "en": "Table lamp"
+   },
+   "description": {
+    "es": "Una luz pequeña para trabajar.",
+    "en": "A small light for working."
+   },
+   "color": "#ffd166"
+  },
+  {
+   "id": "lamp_chandelier",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 620,
+   "rarity": "epic",
+   "name": {
+    "es": "Candelabro de cristal",
+    "en": "Crystal chandelier"
+   },
+   "description": {
+    "es": "Brillo de gala para el equipo.",
+    "en": "Gala sparkle for the team."
+   },
+   "color": "#f8f3e3",
+   "color2": "#d4af37"
+  },
+  {
+   "id": "lamp_sunrise",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Lámpara amanecer",
+    "en": "Sunrise lamp"
+   },
+   "description": {
+    "es": "Luz que despierta poco a poco.",
+    "en": "Light that wakes you up gradually."
+   },
+   "color": "#ffb347",
+   "color2": "#ff6f61"
+  },
+  {
+   "id": "lamp_fairy",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Luces de hadas",
+    "en": "Fairy lights"
+   },
+   "description": {
+    "es": "Guirnalda cálida en la pared.",
+    "en": "A warm garland on the wall."
+   },
+   "color": "#ffe08a"
+  },
+  {
+   "id": "lamp_lantern_blue",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Farol de puerto",
+    "en": "Harbor lantern"
+   },
+   "description": {
+    "es": "Luz de muelle para noches largas.",
+    "en": "Dock light for long nights."
+   },
+   "color": "#2a6f97"
+  },
+  {
+   "id": "lamp_pendant",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Lámpara colgante",
+    "en": "Pendant lamp"
+   },
+   "description": {
+    "es": "Luz que cuelga como una gota.",
+    "en": "Light that hangs like a drop."
+   },
+   "color": "#c7a17a"
+  },
+  {
+   "id": "lamp_jellyfish",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 480,
+   "rarity": "epic",
+   "name": {
+    "es": "Medusa luminosa",
+    "en": "Glowing jellyfish lamp"
+   },
+   "description": {
+    "es": "Un océano que flota sobre la mesa.",
+    "en": "An ocean floating on the desk."
+   },
+   "color": "#7ee8fa",
+   "color2": "#c77dff"
+  },
+  {
+   "id": "lamp_glass_sphere",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 130,
+   "rarity": "rare",
+   "name": {
+    "es": "Esfera de vidrio",
+    "en": "Glass globe lamp"
+   },
+   "description": {
+    "es": "Burbuja de luz tranquila.",
+    "en": "A calm bubble of light."
+   },
+   "color": "#d6f5ef",
+   "color2": "#5bc0be"
+  },
+  {
+   "id": "lamp_rose",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Lámpara rosa",
+    "en": "Rose lamp"
+   },
+   "description": {
+    "es": "Tono suave para días tranquilos.",
+    "en": "A soft tone for quiet days."
+   },
+   "color": "#f7a1c4"
+  },
+  {
+   "id": "lamp_tube",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Lámpara de tubo",
+    "en": "Tube lamp"
+   },
+   "description": {
+    "es": "Forma minimalista y brillante.",
+    "en": "Minimal shape, bright glow."
+   },
+   "color": "#f2f2f2",
+   "color2": "#6c757d"
+  },
+  {
+   "id": "lamp_ember",
+   "kind": "office",
+   "category": "lamp",
+   "slot": "lamp_1",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Lámpara de brasas",
+    "en": "Ember lamp"
+   },
+   "description": {
+    "es": "Naranja intenso como una fogata.",
+    "en": "Deep orange like a campfire."
+   },
+   "color": "#b23a1c"
+  },
+  {
+   "id": "rug_sand",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra arena",
+    "en": "Sand rug"
+   },
+   "description": {
+    "es": "Tono claro que ilumina el suelo.",
+    "en": "A light tone that brightens the floor."
+   },
+   "color": "#e3c9a0"
+  },
+  {
+   "id": "rug_mint",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra menta",
+    "en": "Mint rug"
+   },
+   "description": {
+    "es": "Fresca como una mañana de verano.",
+    "en": "Fresh like a summer morning."
+   },
+   "color": "#9ed9c0"
+  },
+  {
+   "id": "rug_charcoal",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra grafito",
+    "en": "Graphite rug"
+   },
+   "description": {
+    "es": "Sobria y fácil de combinar.",
+    "en": "Sober and easy to match."
+   },
+   "color": "#4a4f59"
+  },
+  {
+   "id": "rug_moss",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra musgo",
+    "en": "Moss rug"
+   },
+   "description": {
+    "es": "Verde suave para descansar la vista.",
+    "en": "Soft green to rest your eyes."
+   },
+   "color": "#6b8e4e"
+  },
+  {
+   "id": "rug_mustard",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra mostaza",
+    "en": "Mustard rug"
+   },
+   "description": {
+    "es": "Un toque alegre bajo la silla.",
+    "en": "A cheerful touch under the chair."
+   },
+   "color": "#d9a441"
+  },
+  {
+   "id": "rug_coral",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra coral",
+    "en": "Coral rug"
+   },
+   "description": {
+    "es": "Color cálido para días largos.",
+    "en": "Warm color for long days."
+   },
+   "color": "#ff7f6e"
+  },
+  {
+   "id": "rug_stripes",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra a rayas",
+    "en": "Striped rug"
+   },
+   "description": {
+    "es": "Rayas simples y alegres.",
+    "en": "Simple and cheerful stripes."
+   },
+   "color": "#f4f1ea",
+   "color2": "#4a6fa5"
+  },
+  {
+   "id": "rug_lavender",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra lavanda",
+    "en": "Lavender rug"
+   },
+   "description": {
+    "es": "Suave como un campo en flor.",
+    "en": "Soft like a field in bloom."
+   },
+   "color": "#c3b1e1"
+  },
+  {
+   "id": "rug_ivory",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra marfil",
+    "en": "Ivory rug"
+   },
+   "description": {
+    "es": "Limpia y luminosa.",
+    "en": "Clean and luminous."
+   },
+   "color": "#f5efe0"
+  },
+  {
+   "id": "rug_tile",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra de azulejos",
+    "en": "Tile rug"
+   },
+   "description": {
+    "es": "Patrón de mosaico para el pasillo.",
+    "en": "Mosaic pattern for the hallway."
+   },
+   "color": "#2a9d8f",
+   "color2": "#e9c46a"
+  },
+  {
+   "id": "rug_chevron",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 140,
+   "rarity": "rare",
+   "name": {
+    "es": "Alfombra en zigzag",
+    "en": "Chevron rug"
+   },
+   "description": {
+    "es": "Líneas que guían la mirada.",
+    "en": "Lines that guide the eye."
+   },
+   "color": "#264653",
+   "color2": "#e76f51"
+  },
+  {
+   "id": "rug_kilim",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Alfombra kilim",
+    "en": "Kilim rug"
+   },
+   "description": {
+    "es": "Tejido tradicional con motivos geométricos.",
+    "en": "Traditional weave with geometric motifs."
+   },
+   "color": "#9b2226",
+   "color2": "#e9d8a6"
+  },
+  {
+   "id": "rug_galaxy",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 240,
+   "rarity": "rare",
+   "name": {
+    "es": "Alfombra galaxia",
+    "en": "Galaxy rug"
+   },
+   "description": {
+    "es": "Estrellas sobre un fondo azul profundo.",
+    "en": "Stars over a deep blue background."
+   },
+   "color": "#1d1f3d",
+   "color2": "#b8a1ff"
+  },
+  {
+   "id": "rug_tropical",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Alfombra tropical",
+    "en": "Tropical rug"
+   },
+   "description": {
+    "es": "Hojas grandes y color vivo.",
+    "en": "Big leaves and vivid color."
+   },
+   "color": "#2d6a4f",
+   "color2": "#f4a261"
+  },
+  {
+   "id": "rug_ocean",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 130,
+   "rarity": "rare",
+   "name": {
+    "es": "Alfombra oceánica",
+    "en": "Ocean rug"
+   },
+   "description": {
+    "es": "Olas suaves bajo los pies.",
+    "en": "Soft waves under your feet."
+   },
+   "color": "#1b6f8a",
+   "color2": "#a8dadc"
+  },
+  {
+   "id": "rug_sunset",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 200,
+   "rarity": "rare",
+   "name": {
+    "es": "Alfombra atardecer",
+    "en": "Sunset rug"
+   },
+   "description": {
+    "es": "Degradado de naranja y rosa.",
+    "en": "A gradient of orange and pink."
+   },
+   "color": "#ff9a5a",
+   "color2": "#c2185b"
+  },
+  {
+   "id": "rug_mosaic_gold",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 700,
+   "rarity": "epic",
+   "name": {
+    "es": "Alfombra de mosaico dorado",
+    "en": "Golden mosaic rug"
+   },
+   "description": {
+    "es": "Mosaico de hilos dorados y marfil.",
+    "en": "Mosaic of gold and ivory threads."
+   },
+   "color": "#efe6c8",
+   "color2": "#c9a13b"
+  },
+  {
+   "id": "rug_royal",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 850,
+   "rarity": "epic",
+   "name": {
+    "es": "Alfombra real",
+    "en": "Royal rug"
+   },
+   "description": {
+    "es": "Terciopelo oscuro con bordes dorados.",
+    "en": "Dark velvet with golden edges."
+   },
+   "color": "#3d0c2e",
+   "color2": "#e0b040"
+  },
+  {
+   "id": "rug_hexagon",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra hexagonal",
+    "en": "Hexagon rug"
+   },
+   "description": {
+    "es": "Panal de colores para el suelo.",
+    "en": "A honeycomb of colors for the floor."
+   },
+   "color": "#7aa6c2",
+   "color2": "#f3e9d2"
+  },
+  {
+   "id": "rug_forest",
+   "kind": "office",
+   "category": "rug",
+   "slot": "rug_1",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Alfombra bosque profundo",
+    "en": "Deep forest rug"
+   },
+   "description": {
+    "es": "Verde oscuro que abraza el suelo.",
+    "en": "Dark green that hugs the floor."
+   },
+   "color": "#1f4d3a"
+  },
+  {
+   "id": "coffee_french",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Prensa francesa",
+    "en": "French press"
+   },
+   "description": {
+    "es": "Café de cuerpo y calma.",
+    "en": "Full-bodied coffee and calm."
+   },
+   "color": "#8d5524"
+  },
+  {
+   "id": "coffee_moka",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Cafetera moka",
+    "en": "Moka pot"
+   },
+   "description": {
+    "es": "Café fuerte de estufa.",
+    "en": "Strong coffee from the stovetop."
+   },
+   "color": "#b0b8c1"
+  },
+  {
+   "id": "coffee_drip",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 35,
+   "rarity": "common",
+   "name": {
+    "es": "Cafetera de goteo",
+    "en": "Drip coffee maker"
+   },
+   "description": {
+    "es": "Sencilla y de todos los días.",
+    "en": "Simple and for every day."
+   },
+   "color": "#f5f0e6"
+  },
+  {
+   "id": "coffee_cold_brew",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Jarra de café frío",
+    "en": "Cold brew jar"
+   },
+   "description": {
+    "es": "Café suave preparado toda la noche.",
+    "en": "Smooth coffee brewed overnight."
+   },
+   "color": "#4a7c99"
+  },
+  {
+   "id": "coffee_cezve",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Cezve de cobre",
+    "en": "Copper cezve"
+   },
+   "description": {
+    "es": "Espuma tradicional en cobre pulido.",
+    "en": "Traditional foam in polished copper."
+   },
+   "color": "#b87333"
+  },
+  {
+   "id": "coffee_latte",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Estación de latte",
+    "en": "Latte station"
+   },
+   "description": {
+    "es": "Espuma sedosa cada mañana.",
+    "en": "Silky foam every morning."
+   },
+   "color": "#e8d5b5"
+  },
+  {
+   "id": "coffee_pour",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Vertido a mano",
+    "en": "Pour-over stand"
+   },
+   "description": {
+    "es": "Filtro de café con paciencia.",
+    "en": "Coffee filtered with patience."
+   },
+   "color": "#2f4858"
+  },
+  {
+   "id": "coffee_thermos",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 30,
+   "rarity": "common",
+   "name": {
+    "es": "Termo de café",
+    "en": "Coffee thermos"
+   },
+   "description": {
+    "es": "Para llevar el café al escritorio.",
+    "en": "To carry your coffee to the desk."
+   },
+   "color": "#3c6e71"
+  },
+  {
+   "id": "coffee_grinder",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Molinillo de granos",
+    "en": "Bean grinder"
+   },
+   "description": {
+    "es": "Aroma recién molido.",
+    "en": "Freshly ground aroma."
+   },
+   "color": "#7b4f2e"
+  },
+  {
+   "id": "coffee_roaster",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Tostadora de granos",
+    "en": "Bean roaster"
+   },
+   "description": {
+    "es": "Cada grano tostado a tu gusto.",
+    "en": "Every bean roasted to your taste."
+   },
+   "color": "#5d3a1a"
+  },
+  {
+   "id": "coffee_siphon",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 230,
+   "rarity": "rare",
+   "name": {
+    "es": "Cafetera de sifón",
+    "en": "Siphon brewer"
+   },
+   "description": {
+    "es": "Ciencia y café en un solo vaso.",
+    "en": "Science and coffee in one glass."
+   },
+   "color": "#e0e7ee"
+  },
+  {
+   "id": "coffee_kettle",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 120,
+   "rarity": "rare",
+   "name": {
+    "es": "Hervidor de cuello de cisne",
+    "en": "Gooseneck kettle"
+   },
+   "description": {
+    "es": "Vierte con precisión.",
+    "en": "Pours with precision."
+   },
+   "color": "#2b2d42"
+  },
+  {
+   "id": "coffee_bar",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Barra de café",
+    "en": "Coffee bar"
+   },
+   "description": {
+    "es": "Un rincón completo para el café.",
+    "en": "A complete corner for coffee."
+   },
+   "color": "#8c6d46"
+  },
+  {
+   "id": "coffee_neon",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 500,
+   "rarity": "epic",
+   "name": {
+    "es": "Cafetera de neón",
+    "en": "Neon coffee maker"
+   },
+   "description": {
+    "es": "Café con brillo nocturno.",
+    "en": "Coffee with a nightlight glow."
+   },
+   "color": "#ff2e88"
+  },
+  {
+   "id": "coffee_marble",
+   "kind": "office",
+   "category": "coffee",
+   "slot": "coffee_1",
+   "price": 760,
+   "rarity": "epic",
+   "name": {
+    "es": "Cafetera de mármol",
+    "en": "Marble coffee station"
+   },
+   "description": {
+    "es": "Lujo frío y elegante.",
+    "en": "Cool and elegant luxury."
+   },
+   "color": "#ece9e2"
+  },
+  {
+   "id": "poster_jazz",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de jazz",
+    "en": "Jazz poster"
+   },
+   "description": {
+    "es": "Notas azules en una noche larga.",
+    "en": "Blue notes on a long night."
+   },
+   "color": "#1f2a44",
+   "color2": "#e0a93b"
+  },
+  {
+   "id": "poster_otono",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de otoño",
+    "en": "Autumn poster"
+   },
+   "description": {
+    "es": "Hojas doradas en cada pared.",
+    "en": "Golden leaves on every wall."
+   },
+   "color": "#b5562b",
+   "color2": "#e9b44c"
+  },
+  {
+   "id": "poster_invierno",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de invierno",
+    "en": "Winter poster"
+   },
+   "description": {
+    "es": "Nieve limpia y silencio.",
+    "en": "Clean snow and quiet."
+   },
+   "color": "#dfe9f3",
+   "color2": "#3f6e9a"
+  },
+  {
+   "id": "poster_primavera",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de primavera",
+    "en": "Spring poster"
+   },
+   "description": {
+    "es": "Brotes nuevos cada semana.",
+    "en": "New shoots every week."
+   },
+   "color": "#f9d5e5",
+   "color2": "#7cc08a"
+  },
+  {
+   "id": "poster_oceano",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de océano",
+    "en": "Ocean poster"
+   },
+   "description": {
+    "es": "Olas que nunca se detienen.",
+    "en": "Waves that never stop."
+   },
+   "color": "#0e4d6b",
+   "color2": "#6fd3d9"
+  },
+  {
+   "id": "poster_desierto",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de desierto",
+    "en": "Desert poster"
+   },
+   "description": {
+    "es": "Dunas bajo un cielo sin nubes.",
+    "en": "Dunes under a cloudless sky."
+   },
+   "color": "#e8a567",
+   "color2": "#7a3e2a"
+  },
+  {
+   "id": "poster_neon",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 220,
+   "rarity": "rare",
+   "name": {
+    "es": "Póster de neón urbano",
+    "en": "Urban neon poster"
+   },
+   "description": {
+    "es": "Carteles encendidos hasta el amanecer.",
+    "en": "Signs glowing until dawn."
+   },
+   "color": "#120b2e",
+   "color2": "#ff4fa3"
+  },
+  {
+   "id": "poster_marmol",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Póster de mármol",
+    "en": "Marble poster"
+   },
+   "description": {
+    "es": "Vetas suaves como una escultura.",
+    "en": "Soft veins like a sculpture."
+   },
+   "color": "#ece8e1",
+   "color2": "#8a8f99"
+  },
+  {
+   "id": "poster_volcanico",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 650,
+   "rarity": "epic",
+   "name": {
+    "es": "Póster volcánico",
+    "en": "Volcanic poster"
+   },
+   "description": {
+    "es": "Roca fundida en plena erupción.",
+    "en": "Molten rock mid-eruption."
+   },
+   "color": "#2b0f0a",
+   "color2": "#ff6a1a"
+  },
+  {
+   "id": "poster_cosmos",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Póster cósmico",
+    "en": "Cosmic poster"
+   },
+   "description": {
+    "es": "Galaxias para perderse un rato.",
+    "en": "Galaxies to get lost in for a while."
+   },
+   "color": "#0b0f2a",
+   "color2": "#b28dff"
+  },
+  {
+   "id": "poster_menta",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 35,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de menta",
+    "en": "Mint poster"
+   },
+   "description": {
+    "es": "Frescura para el lunes.",
+    "en": "Freshness for Monday."
+   },
+   "color": "#bff0dc",
+   "color2": "#2e8b6e"
+  },
+  {
+   "id": "poster_cafe",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de café",
+    "en": "Coffee poster"
+   },
+   "description": {
+    "es": "Aroma tostado en la pared.",
+    "en": "Roasted aroma on the wall."
+   },
+   "color": "#4b2e1f",
+   "color2": "#d8a86b"
+  },
+  {
+   "id": "poster_geometrico",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_1",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Póster geométrico",
+    "en": "Geometric poster"
+   },
+   "description": {
+    "es": "Triángulos y círculos bien ordenados.",
+    "en": "Neat triangles and circles."
+   },
+   "color": "#2b59c3",
+   "color2": "#ffd23f"
+  },
+  {
+   "id": "poster_selva",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de selva",
+    "en": "Jungle poster"
+   },
+   "description": {
+    "es": "Hojas tropicales por todas partes.",
+    "en": "Tropical leaves everywhere."
+   },
+   "color": "#1e5e3a",
+   "color2": "#c7e36b"
+  },
+  {
+   "id": "poster_pixel",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Póster pixelado",
+    "en": "Pixel poster"
+   },
+   "description": {
+    "es": "Gráficos de otra época.",
+    "en": "Graphics from another era."
+   },
+   "color": "#2d1b69",
+   "color2": "#3ee6c4"
+  },
+  {
+   "id": "poster_mosaico",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Póster de mosaico",
+    "en": "Mosaic poster"
+   },
+   "description": {
+    "es": "Teselas de colores vivos.",
+    "en": "Bright colored tiles."
+   },
+   "color": "#1a3c5e",
+   "color2": "#e8c07d"
+  },
+  {
+   "id": "poster_crepusculo",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Póster de crepúsculo",
+    "en": "Dusk poster"
+   },
+   "description": {
+    "es": "El cielo justo antes de anochecer.",
+    "en": "The sky just before dark."
+   },
+   "color": "#5b2a86",
+   "color2": "#ff9e6d"
+  },
+  {
+   "id": "poster_luna",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de luna",
+    "en": "Moon poster"
+   },
+   "description": {
+    "es": "Una luna llena para el escritorio.",
+    "en": "A full moon for your desk."
+   },
+   "color": "#e6e2d3",
+   "color2": "#2c3350"
+  },
+  {
+   "id": "poster_ajedrez",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de ajedrez",
+    "en": "Chess poster"
+   },
+   "description": {
+    "es": "Cada jugada cuenta.",
+    "en": "Every move counts."
+   },
+   "color": "#3b3b3b",
+   "color2": "#f0ead6"
+  },
+  {
+   "id": "poster_glaciar",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 230,
+   "rarity": "rare",
+   "name": {
+    "es": "Póster de glaciar",
+    "en": "Glacier poster"
+   },
+   "description": {
+    "es": "Hielo azul de siglos.",
+    "en": "Centuries-old blue ice."
+   },
+   "color": "#a7d8f0",
+   "color2": "#1f4f7a"
+  },
+  {
+   "id": "poster_cerezo",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de cerezo",
+    "en": "Cherry blossom poster"
+   },
+   "description": {
+    "es": "Flores que duran apenas una semana.",
+    "en": "Flowers that last barely a week."
+   },
+   "color": "#f7c6d9",
+   "color2": "#8b2e5a"
+  },
+  {
+   "id": "poster_brutalista",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Póster brutalista",
+    "en": "Brutalist poster"
+   },
+   "description": {
+    "es": "Hormigón con mucho carácter.",
+    "en": "Concrete with plenty of character."
+   },
+   "color": "#7d7d7d",
+   "color2": "#ffb300"
+  },
+  {
+   "id": "poster_diamante",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 720,
+   "rarity": "epic",
+   "name": {
+    "es": "Póster de diamante",
+    "en": "Diamond poster"
+   },
+   "description": {
+    "es": "Un brillo que no se apaga.",
+    "en": "A shine that never fades."
+   },
+   "color": "#cfe8ff",
+   "color2": "#7b5cff"
+  },
+  {
+   "id": "poster_vinilo",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 140,
+   "rarity": "rare",
+   "name": {
+    "es": "Póster de vinilo",
+    "en": "Vinyl poster"
+   },
+   "description": {
+    "es": "Surcos de música en cada pared.",
+    "en": "Music grooves on every wall."
+   },
+   "color": "#161616",
+   "color2": "#d9534f"
+  },
+  {
+   "id": "poster_acuarela",
+   "kind": "office",
+   "category": "poster",
+   "slot": "poster_2",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Póster de acuarela",
+    "en": "Watercolor poster"
+   },
+   "description": {
+    "es": "Manchas suaves de color.",
+    "en": "Soft washes of color."
+   },
+   "color": "#9ad1d4",
+   "color2": "#f6d6ad"
+  },
+  {
+   "id": "shelf_pino",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Estantería de pino",
+    "en": "Pine shelf"
+   },
+   "description": {
+    "es": "Madera clara y sencilla.",
+    "en": "Light, simple wood."
+   },
+   "color": "#e3c48f"
+  },
+  {
+   "id": "shelf_nogal",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 240,
+   "rarity": "rare",
+   "name": {
+    "es": "Estantería de nogal",
+    "en": "Walnut shelf"
+   },
+   "description": {
+    "es": "Vetas oscuras y elegantes.",
+    "en": "Dark, elegant grain."
+   },
+   "color": "#5c3a21",
+   "color2": "#c99a6b"
+  },
+  {
+   "id": "shelf_bambu",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Estantería de bambú",
+    "en": "Bamboo shelf"
+   },
+   "description": {
+    "es": "Ligera y sostenible.",
+    "en": "Light and sustainable."
+   },
+   "color": "#d7c27a",
+   "color2": "#8c9a4b"
+  },
+  {
+   "id": "shelf_metal",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Estantería metálica",
+    "en": "Metal shelf"
+   },
+   "description": {
+    "es": "Industrial y resistente.",
+    "en": "Industrial and sturdy."
+   },
+   "color": "#6c7580"
+  },
+  {
+   "id": "shelf_cristal",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 170,
+   "rarity": "rare",
+   "name": {
+    "es": "Estantería de cristal",
+    "en": "Glass shelf"
+   },
+   "description": {
+    "es": "Transparente y ligera a la vista.",
+    "en": "Clear and airy to the eye."
+   },
+   "color": "#cfe9f2",
+   "color2": "#7fb8c9"
+  },
+  {
+   "id": "shelf_lacada",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Estantería lacada",
+    "en": "Lacquered shelf"
+   },
+   "description": {
+    "es": "Blanco brillante con un toque rojo.",
+    "en": "Glossy white with a red touch."
+   },
+   "color": "#f0f0f0",
+   "color2": "#e74c3c"
+  },
+  {
+   "id": "shelf_caoba",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Estantería de caoba",
+    "en": "Mahogany shelf"
+   },
+   "description": {
+    "es": "Aire de biblioteca antigua.",
+    "en": "The air of an old library."
+   },
+   "color": "#6b1f1f",
+   "color2": "#d89b5b"
+  },
+  {
+   "id": "shelf_menta",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Estantería menta",
+    "en": "Mint shelf"
+   },
+   "description": {
+    "es": "Color fresco para la pared.",
+    "en": "Fresh color for the wall."
+   },
+   "color": "#9fd8c0"
+  },
+  {
+   "id": "shelf_cubos",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Estantería de cubos",
+    "en": "Cube shelf"
+   },
+   "description": {
+    "es": "Módulos que se combinan a gusto.",
+    "en": "Modules you mix however you like."
+   },
+   "color": "#f2a541",
+   "color2": "#3c3c3c"
+  },
+  {
+   "id": "shelf_rustico",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Estantería rústica",
+    "en": "Rustic shelf"
+   },
+   "description": {
+    "es": "Madera vieja con historia.",
+    "en": "Old wood with a story."
+   },
+   "color": "#8a6a4a"
+  },
+  {
+   "id": "shelf_cobalto",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 130,
+   "rarity": "rare",
+   "name": {
+    "es": "Estantería cobalto",
+    "en": "Cobalt shelf"
+   },
+   "description": {
+    "es": "Un azul intenso que se nota.",
+    "en": "A bold blue that stands out."
+   },
+   "color": "#223a70",
+   "color2": "#e6eef9"
+  },
+  {
+   "id": "shelf_hierro",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 560,
+   "rarity": "epic",
+   "name": {
+    "es": "Estantería de hierro forjado",
+    "en": "Wrought iron shelf"
+   },
+   "description": {
+    "es": "Ornamentos dignos de un palacio.",
+    "en": "Ornaments worthy of a palace."
+   },
+   "color": "#2e2e33",
+   "color2": "#c9a227"
+  },
+  {
+   "id": "shelf_playa",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Estantería de playa",
+    "en": "Beach shelf"
+   },
+   "description": {
+    "es": "Madera clara y brisa salada.",
+    "en": "Pale wood and a salty breeze."
+   },
+   "color": "#f4e3c1",
+   "color2": "#3fb6c9"
+  },
+  {
+   "id": "shelf_bosque",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Estantería de bosque",
+    "en": "Forest shelf"
+   },
+   "description": {
+    "es": "Ramas que sostienen los libros.",
+    "en": "Branches that hold the books."
+   },
+   "color": "#3f5f3a",
+   "color2": "#b7d68a"
+  },
+  {
+   "id": "shelf_neon",
+   "kind": "office",
+   "category": "shelf",
+   "slot": "shelf_1",
+   "price": 90,
+   "rarity": "common",
+   "name": {
+    "es": "Estantería neón",
+    "en": "Neon shelf"
+   },
+   "description": {
+    "es": "Brillo verde para leer de noche.",
+    "en": "Green glow for night reading."
+   },
+   "color": "#1a1a2e",
+   "color2": "#39ff88"
+  },
+  {
+   "id": "aquarium_coral",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Arrecife de coral",
+    "en": "Coral reef tank"
+   },
+   "description": {
+    "es": "Corales de colores brillantes.",
+    "en": "Bright coral colors."
+   },
+   "color": "#ff7f6e"
+  },
+  {
+   "id": "aquarium_medusa",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 740,
+   "rarity": "epic",
+   "name": {
+    "es": "Acuario de medusas",
+    "en": "Jellyfish tank"
+   },
+   "description": {
+    "es": "Medusas que flotan sin prisa.",
+    "en": "Jellyfish drifting without hurry."
+   },
+   "color": "#c9a7ff"
+  },
+  {
+   "id": "aquarium_algas",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Acuario de algas",
+    "en": "Kelp tank"
+   },
+   "description": {
+    "es": "Algas altas y verdes.",
+    "en": "Tall green kelp."
+   },
+   "color": "#2e6b3f"
+  },
+  {
+   "id": "aquarium_arena",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Acuario de arena",
+    "en": "Sand tank"
+   },
+   "description": {
+    "es": "Fondo de arena fina.",
+    "en": "A fine sand floor."
+   },
+   "color": "#e9d19a"
+  },
+  {
+   "id": "aquarium_polar",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Acuario polar",
+    "en": "Polar tank"
+   },
+   "description": {
+    "es": "Agua fría y tranquila.",
+    "en": "Cold, calm water."
+   },
+   "color": "#d6f1ff"
+  },
+  {
+   "id": "aquarium_nocturno",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 90,
+   "rarity": "common",
+   "name": {
+    "es": "Acuario nocturno",
+    "en": "Night tank"
+   },
+   "description": {
+    "es": "Luces tenues para peces nocturnos.",
+    "en": "Soft lights for night fish."
+   },
+   "color": "#101a33"
+  },
+  {
+   "id": "aquarium_rio",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Acuario de río",
+    "en": "River tank"
+   },
+   "description": {
+    "es": "Piedras lisas y corriente suave.",
+    "en": "Smooth stones and a gentle current."
+   },
+   "color": "#6b8f5e"
+  },
+  {
+   "id": "aquarium_tropical",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Acuario tropical",
+    "en": "Tropical tank"
+   },
+   "description": {
+    "es": "Peces de colores vivos.",
+    "en": "Vivid, colorful fish."
+   },
+   "color": "#1fb8b0"
+  },
+  {
+   "id": "aquarium_cilindro",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 170,
+   "rarity": "rare",
+   "name": {
+    "es": "Pecera cilíndrica",
+    "en": "Cylinder tank"
+   },
+   "description": {
+    "es": "Una columna de agua en la oficina.",
+    "en": "A column of water in the office."
+   },
+   "color": "#b8e4f0"
+  },
+  {
+   "id": "aquarium_cueva",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Acuario de cueva",
+    "en": "Cave tank"
+   },
+   "description": {
+    "es": "Rocas y escondites para los peces.",
+    "en": "Rocks and hiding spots for fish."
+   },
+   "color": "#5d5566"
+  },
+  {
+   "id": "aquarium_volcan",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 290,
+   "rarity": "rare",
+   "name": {
+    "es": "Acuario volcánico",
+    "en": "Volcanic tank"
+   },
+   "description": {
+    "es": "Roca oscura y agua cálida.",
+    "en": "Dark rock and warm water."
+   },
+   "color": "#b5412b"
+  },
+  {
+   "id": "aquarium_pastel",
+   "kind": "office",
+   "category": "aquarium",
+   "slot": "aquarium_1",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Acuario pastel",
+    "en": "Pastel tank"
+   },
+   "description": {
+    "es": "Tonos suaves para relajarse.",
+    "en": "Soft tones to relax."
+   },
+   "color": "#f7c9e3"
+  },
+  {
+   "id": "arcade_carreras",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 280,
+   "rarity": "rare",
+   "name": {
+    "es": "Máquina de carreras",
+    "en": "Racing machine"
+   },
+   "description": {
+    "es": "Volante y velocidad.",
+    "en": "Wheel and speed."
+   },
+   "color": "#1d1d1d",
+   "color2": "#ff3b30"
+  },
+  {
+   "id": "arcade_espacio",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Máquina espacial",
+    "en": "Space shooter"
+   },
+   "description": {
+    "es": "Naves contra asteroides.",
+    "en": "Ships against asteroids."
+   },
+   "color": "#0b0f2a",
+   "color2": "#7cf0ff"
+  },
+  {
+   "id": "arcade_puzle",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Máquina de puzle",
+    "en": "Puzzle machine"
+   },
+   "description": {
+    "es": "Piezas que encajan a la primera.",
+    "en": "Pieces that fit on the first try."
+   },
+   "color": "#ffd166",
+   "color2": "#06d6a0"
+  },
+  {
+   "id": "arcade_lucha",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 230,
+   "rarity": "rare",
+   "name": {
+    "es": "Máquina de lucha",
+    "en": "Fighting machine"
+   },
+   "description": {
+    "es": "Combos para cerrar discusiones.",
+    "en": "Combos to settle arguments."
+   },
+   "color": "#3a0ca3",
+   "color2": "#f72585"
+  },
+  {
+   "id": "arcade_bolos",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Máquina de bolos",
+    "en": "Bowling machine"
+   },
+   "description": {
+    "es": "Un pleno en cada partida.",
+    "en": "A strike every game."
+   },
+   "color": "#c8a165",
+   "color2": "#2b2b2b"
+  },
+  {
+   "id": "arcade_verde",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Consola verde",
+    "en": "Green cabinet"
+   },
+   "description": {
+    "es": "Pantalla fosforescente de otra época.",
+    "en": "A phosphor screen from another era."
+   },
+   "color": "#39a078",
+   "color2": "#0f2d22"
+  },
+  {
+   "id": "arcade_hockey",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Mesa de hockey",
+    "en": "Air hockey table"
+   },
+   "description": {
+    "es": "Discos que vuelan sobre la mesa.",
+    "en": "Pucks flying across the table."
+   },
+   "color": "#e6f0ff",
+   "color2": "#e63946"
+  },
+  {
+   "id": "arcade_dados",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Máquina de dados",
+    "en": "Dice machine"
+   },
+   "description": {
+    "es": "Azar con mucho estilo.",
+    "en": "Luck with plenty of style."
+   },
+   "color": "#f4f1ea",
+   "color2": "#222831"
+  },
+  {
+   "id": "arcade_ritmo",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Máquina de ritmo",
+    "en": "Rhythm machine"
+   },
+   "description": {
+    "es": "Botones que siguen el compás.",
+    "en": "Buttons that follow the beat."
+   },
+   "color": "#2a0a3d",
+   "color2": "#ff9f1c"
+  },
+  {
+   "id": "arcade_pesca",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Máquina de pesca",
+    "en": "Fishing machine"
+   },
+   "description": {
+    "es": "Premios para quien no se rinde.",
+    "en": "Prizes for the persistent."
+   },
+   "color": "#2a7fb8",
+   "color2": "#ffd166"
+  },
+  {
+   "id": "arcade_peluches",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Máquina de peluches",
+    "en": "Plush claw machine"
+   },
+   "description": {
+    "es": "Peluches para todo el equipo.",
+    "en": "Plushies for the whole team."
+   },
+   "color": "#ff8fab",
+   "color2": "#fff0f3"
+  },
+  {
+   "id": "arcade_jackpot",
+   "kind": "office",
+   "category": "arcade",
+   "slot": "arcade_1",
+   "price": 620,
+   "rarity": "epic",
+   "name": {
+    "es": "Máquina de jackpot",
+    "en": "Jackpot machine"
+   },
+   "description": {
+    "es": "Premio mayor de vez en cuando.",
+    "en": "A top prize every now and then."
+   },
+   "color": "#ffb703",
+   "color2": "#8e1b3a"
+  },
+  {
+   "id": "trophy_roble",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Vitrina de roble",
+    "en": "Oak trophy case"
+   },
+   "description": {
+    "es": "Madera cálida para los premios.",
+    "en": "Warm wood for prizes."
+   },
+   "color": "#a0724a"
+  },
+  {
+   "id": "trophy_cristal",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Vitrina de cristal",
+    "en": "Crystal trophy case"
+   },
+   "description": {
+    "es": "Cada premio se ve desde la puerta.",
+    "en": "Every prize visible from the door."
+   },
+   "color": "#cfeaf7"
+  },
+  {
+   "id": "trophy_esmeralda",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 230,
+   "rarity": "rare",
+   "name": {
+    "es": "Vitrina esmeralda",
+    "en": "Emerald trophy case"
+   },
+   "description": {
+    "es": "Verde profundo para los grandes logros.",
+    "en": "Deep green for big wins."
+   },
+   "color": "#1f7a5a"
+  },
+  {
+   "id": "trophy_rubi",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 720,
+   "rarity": "epic",
+   "name": {
+    "es": "Vitrina rubí",
+    "en": "Ruby trophy case"
+   },
+   "description": {
+    "es": "Rojo intenso para los récords.",
+    "en": "Deep red for records."
+   },
+   "color": "#9b1d3a"
+  },
+  {
+   "id": "trophy_platino",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 240,
+   "rarity": "rare",
+   "name": {
+    "es": "Vitrina de platino",
+    "en": "Platinum trophy case"
+   },
+   "description": {
+    "es": "Brillo raro y elegante.",
+    "en": "A rare, elegant shine."
+   },
+   "color": "#e5e4e2"
+  },
+  {
+   "id": "trophy_ebano",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Vitrina de ébano",
+    "en": "Ebony trophy case"
+   },
+   "description": {
+    "es": "Negro elegante para los expertos.",
+    "en": "Elegant black for the experts."
+   },
+   "color": "#2b1d16"
+  },
+  {
+   "id": "trophy_marmol",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Vitrina de mármol",
+    "en": "Marble trophy case"
+   },
+   "description": {
+    "es": "Piedra pulida para los hitos.",
+    "en": "Polished stone for milestones."
+   },
+   "color": "#ecebe6"
+  },
+  {
+   "id": "trophy_pizarra",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 65,
+   "rarity": "common",
+   "name": {
+    "es": "Vitrina de pizarra",
+    "en": "Slate trophy case"
+   },
+   "description": {
+    "es": "Gris pizarra para anotar los logros.",
+    "en": "Slate gray for noting wins."
+   },
+   "color": "#3c4650"
+  },
+  {
+   "id": "trophy_colores",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 170,
+   "rarity": "rare",
+   "name": {
+    "es": "Vitrina de colores",
+    "en": "Colorful trophy case"
+   },
+   "description": {
+    "es": "Premios en todos los tonos.",
+    "en": "Prizes in every shade."
+   },
+   "color": "#8e6cd9"
+  },
+  {
+   "id": "trophy_pino",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Vitrina de pino",
+    "en": "Pine trophy case"
+   },
+   "description": {
+    "es": "Sencilla para todos los equipos.",
+    "en": "Simple for every team."
+   },
+   "color": "#e0bd7a"
+  },
+  {
+   "id": "trophy_estrellas",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Estante de estrellas",
+    "en": "Star trophy shelf"
+   },
+   "description": {
+    "es": "Un estante lleno de pequeños logros.",
+    "en": "A shelf full of small wins."
+   },
+   "color": "#f7b538"
+  },
+  {
+   "id": "trophy_podio",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 280,
+   "rarity": "rare",
+   "name": {
+    "es": "Podio de ganadores",
+    "en": "Winners' podium"
+   },
+   "description": {
+    "es": "Tres escalones para los mejores.",
+    "en": "Three steps for the best."
+   },
+   "color": "#2e4a7d"
+  },
+  {
+   "id": "trophy_vintage",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Vitrina vintage",
+    "en": "Vintage trophy case"
+   },
+   "description": {
+    "es": "Estilo antiguo con alma nueva.",
+    "en": "Old style with a fresh soul."
+   },
+   "color": "#6e8b6b"
+  },
+  {
+   "id": "trophy_zafiro",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 560,
+   "rarity": "epic",
+   "name": {
+    "es": "Vitrina de zafiro",
+    "en": "Sapphire trophy case"
+   },
+   "description": {
+    "es": "Azul profundo para los campeones.",
+    "en": "Deep blue for champions."
+   },
+   "color": "#1d4e9c"
+  },
+  {
+   "id": "trophy_grafito",
+   "kind": "office",
+   "category": "trophy",
+   "slot": "trophy_1",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Vitrina de grafito",
+    "en": "Graphite trophy case"
+   },
+   "description": {
+    "es": "Discreta y de confianza.",
+    "en": "Discreet and dependable."
+   },
+   "color": "#4a4f57"
   }
  ]
 }

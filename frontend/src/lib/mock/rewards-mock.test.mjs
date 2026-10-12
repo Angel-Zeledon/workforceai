@@ -6,7 +6,7 @@ import { MockRewards } from "./rewards-mock.ts";
 
 const mk = () => {
   const events = [];
-  const r = new MockRewards((type, payload, agent) => events.push({ type, payload, agent }));
+  const r = new MockRewards((type, payload, agent) => events.push({ type, payload, agent }), 0);
   return { r, events };
 };
 const get = (r, path) => r.handle("GET", path.split("/").filter(Boolean), new URLSearchParams(), undefined);
