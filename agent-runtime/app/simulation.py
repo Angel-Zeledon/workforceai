@@ -53,6 +53,31 @@ def sim_desk_draft(req: RunTaskRequest, out: StructuredOutput) -> ToolRequest | 
                              "message": f"borrador de {req.task.id}"})
 
 
+SIM_CODE_MARKER = "[sim:code]"
+
+_SIM_CODE = """import pandas as pd
+
+df = pd.DataFrame({"region": ["norte", "sur", "norte"], "monto": [100, 50, 25]})
+res = df.groupby("region", as_index=False)["monto"].sum()
+res.to_csv("out/resumen.csv", index=False)
+print(res.to_string(index=False))
+"""
+
+
+def sim_code_request(req: RunTaskRequest) -> ToolRequest | None:
+    """F3: a simulated analyst asks to run a small pandas analysis, but ONLY when the task text carries
+    the [sim:code] marker (so the standard scenarios, e.g. the $50k flow, never change). Asked once: not
+    again after the result came back as external content. The backend still requires the human approval."""
+    if "code" not in (req.agent.tools or []) or req.external_content:
+        return None
+    text = " ".join([req.task.title or "", req.task.description or "", req.context.request_text or ""])
+    if SIM_CODE_MARKER not in text:
+        return None
+    return ToolRequest(tool="code", action="run", risk="high",
+                       args={"language": "python", "code": _SIM_CODE, "purpose": "Totales por region (simulacion)",
+                             "input_files": [], "expected_outputs": ["resumen.csv"]})
+
+
 class SimulationEngine(AgentEngine):
     mode = "simulation"
     # Set by select_engine when a provider was configured but the live engine failed.
@@ -148,6 +173,8 @@ class SimulationEngine(AgentEngine):
         usage = self._usage(f"{req.task.id}|{role}", ms,
                             in_range=(1400 + 600 * n_dep, 3600 + 900 * n_dep))
         tool_requests = [ToolRequest(**t) for t in entry["tool_requests"]]  # solo se DEVUELVEN
+        if (code_req := sim_code_request(req)) is not None:
+            tool_requests.append(code_req)
         draft = sim_desk_draft(req, out)
         if draft is not None:  # F1: like a real employee, keep the work as a file on the desk
             tool_requests.append(draft)

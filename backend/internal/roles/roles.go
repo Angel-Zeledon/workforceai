@@ -126,6 +126,9 @@ var KnownTools = map[string]bool{
 	// The drive (docs/architecture/drive.md): "fs" = list/read/search/write/move/delete
 	// under the zone policy; "fs_read" = list/read/search only.
 	"fs": true, "fs_read": true,
+	// The code sandbox (docs/architecture/code-sandbox.md): "code" lets an agent REQUEST code.run;
+	// every run needs a human approval and the org must enable it.
+	"code": true,
 }
 
 // KnownProviders are the connection providers a template may recommend

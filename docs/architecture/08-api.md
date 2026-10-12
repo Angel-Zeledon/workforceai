@@ -752,3 +752,16 @@ Todo aditivo. Roles: lectura de perfil `agents:read`; edición `agents:write` (a
 | `POST /tasks/{id}/reassign` | `{agent_id}` -> tarea; 409 si no está pendiente; 400 si el agente no puede tomarla |
 
 Runtime (aditivo): `run-task` acepta `agent.instructions|creativity|skills`, `human_guidance[]`, `want_trace` y devuelve `trace {system, user}` solo si se pidió; plan/route aceptan `skills` por agente. Env: `TRACE_RETENTION_DAYS` (30). Eventos WS: `task.steered`, `task.reassigned`, `agent.profile_changed`. Detalle y límites: `docs/plans/large-workflows.md`, sección "V2 agent profile, thought audit and intervention".
+
+## 20. Ejecución de código (sandbox, F3)
+
+Diseño y riesgos: `docs/architecture/code-sandbox.md`. Los agentes con la herramienta `code` (data_analyst, analyst) solo pueden **pedir** `{tool:"code", action:"run", args}`; cada ejecución exige una aprobación humana que muestra el código completo (`approval.action = "code.run"`, `risk = "high"`, `context.kind = "code_run"`). Apagada por defecto por organización.
+
+| Método y ruta | Permiso | Descripción |
+|---|---|---|
+| `GET /settings/code-execution` | `org:manage` | `{enabled, max_runs_per_day, max_runtime_seconds, available, ceiling_runs_per_day, ceiling_runtime_seconds}`. `available=false`: no hay runner configurado (`SANDBOX_URL`/`SANDBOX_TOKEN`), nada se ejecuta aunque `enabled` sea true |
+| `PUT /settings/code-execution` | `org:manage` | `{enabled, max_runs_per_day, max_runtime_seconds}` (0 = valor de la plataforma; la organización solo puede bajar los techos; 400 si `max_runtime_seconds > 600` o negativos). Auditado: `code.settings.updated` |
+| `GET /code-runs?limit&approval_id` | `approvals:decide` | ejecuciones, más nueva primero: `{id, agent_id, task_id, approval_id, code, purpose, inputs[{id,name,size,sha256}], expected_outputs, limits, status, deny_reason, approvers, exit_code, duration_ms, stdout, stderr, *_truncated, outputs[{name,size,sha256,file_ref,error}], created_at, started_at, finished_at}`; `approval_id` devuelve la ejecución de esa aprobación (404 si no existe) |
+| `GET /code-runs/{id}` | `approvals:decide` | una ejecución (404 si es de otra organización) |
+
+`status`: `awaiting_approval | running | succeeded | failed | timeout | aborted | rejected | denied`. `file_ref` es la ruta en la unidad de archivos (`/Agents/<agente>/outputs/<run>/<archivo>`). Códigos de denegación estables: `code_execution_disabled`, `sandbox_unavailable`, `code_tool_not_granted`, `code_invalid`, `code_daily_limit`, `approval_mismatch`, `inputs_changed`, y los de los controles (`kill_switch_active`, `read_only_mode`, ...). Eventos WS: `code.run.finished` (`run_id, status, exit_code`); los archivos producidos emiten `file.activity` (solo ruta).

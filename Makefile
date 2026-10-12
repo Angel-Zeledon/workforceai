@@ -1,9 +1,20 @@
-.PHONY: up demo down logs test test-backend test-runtime test-e2e test-e2e-auth smoke reset \
+.PHONY: up-sandbox sandbox-image up demo down logs test test-backend test-runtime test-e2e test-e2e-auth smoke reset \
         dev-backend dev-runtime dev-frontend dev-infra
 
 # Accounts on: sign up / log in at http://localhost:3000.
 up:
 	docker compose up --build -d
+
+# Pinned Python image in which approved code runs (docs/architecture/code-sandbox.md).
+sandbox-image:
+	docker build -t wfai-sandbox-python:1 sandbox/
+
+# Stack WITH the code sandbox (profile "sandbox": the runner gets the Docker
+# socket; read the warning in docs/architecture/code-sandbox.md first).
+# SANDBOX_TOKEN is generated once into .env.sandbox (not committed).
+up-sandbox: sandbox-image
+	@test -f .env.sandbox || (echo "SANDBOX_TOKEN=$$(openssl rand -hex 24)" > .env.sandbox)
+	@set -a; . ./.env.sandbox; set +a; SANDBOX_URL=http://sandbox-runner:8090 docker compose --profile sandbox up --build -d
 
 # Open demo (no login, fixed demo organization): what smoke and e2e run against.
 demo:

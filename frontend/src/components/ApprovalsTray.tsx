@@ -6,6 +6,7 @@ import type { Approval } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 import { useCan } from "@/lib/session";
 import { Btn, Dot, RiskBadge, useAgentColor, useAgentName } from "./ui";
+import { CodeRunView } from "./code/CodeRunView";
 
 /** `scope="office"` is the card shown over the approvals desk in the 3D office: same decision call and permission
  * checks, different test ids so the tray's `approval-<id>` selectors stay unique. */
@@ -28,7 +29,8 @@ export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approv
         <RiskBadge risk={a.risk} />
       </div>
       <div className="text-[13px] font-semibold text-ink">{a.title}</div>
-      {!compact && a.details && <p className="mt-1 text-[12px] leading-snug text-ink2">{a.details}</p>}
+      {a.action === "code.run" ? <CodeRunView approvalId={a.id} status={a.status} compact={compact} />
+        : !compact && a.details && <p className="mt-1 text-[12px] leading-snug text-ink2">{a.details}</p>}
       {pending && !canDecide ? (
         <div data-testid={scope === "office" ? "office-approval-no-permission" : "approval-no-permission"} className="mt-2 text-[11px] text-mute">{t("approvals.noPermission")}</div>
       ) : pending ? (

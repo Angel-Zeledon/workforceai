@@ -56,7 +56,8 @@
   "tools": [
     "fs",
     "bi",
-    "spreadsheet"
+    "spreadsheet",
+    "code"
   ],
   "permissions": [
     "read:analytics"

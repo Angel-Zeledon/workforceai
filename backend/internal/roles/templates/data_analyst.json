@@ -63,7 +63,8 @@
     "bi",
     "spreadsheet",
     "calculator",
-    "artifacts"
+    "artifacts",
+    "code"
   ],
   "permissions": [
     "read:analytics"

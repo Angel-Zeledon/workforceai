@@ -30,7 +30,7 @@ func legacySeed() []domain.Agent {
 			[]string{"Márgenes y costos", "Facturación", "Presupuestos"}, []string{"ledger", "spreadsheet"}, []string{"read:finance"}),
 		mk("analyst", "Nadia Ortega", "Analista", "Análisis de datos, rentabilidad y métricas del negocio.",
 			"Analista curiosa que formula hipótesis y las contrasta con evidencia.",
-			[]string{"Análisis de rentabilidad", "Métricas", "Hipótesis y evidencia"}, []string{"bi", "spreadsheet"}, []string{"read:analytics"}),
+			[]string{"Análisis de rentabilidad", "Métricas", "Hipótesis y evidencia"}, []string{"bi", "spreadsheet", "code"}, []string{"read:analytics"}),
 		mk("operations", "Iván Duarte", "Operaciones", "Capacidad operativa, logística y entrega.",
 			"Responsable de operaciones pragmático, piensa en capacidad y plazos.",
 			[]string{"Capacidad", "Planificación de entrega", "Proveedores"}, []string{"planner", "inventory"}, []string{"read:operations"}),
@@ -146,6 +146,20 @@ func TestFinanceTreasuryIsAnalysisOnly(t *testing.T) {
 	for _, a := range SeedAgents() {
 		if a.Role == "finance_treasury" {
 			t.Fatal("the demo seed must stay at 7 agents")
+		}
+	}
+}
+
+// Only the data roles may ask to run code (every run still needs a human approval).
+func TestOnlyDataRolesGetTheCodeTool(t *testing.T) {
+	want := map[string]bool{"data_analyst": true, "analyst": true}
+	for _, tpl := range All() {
+		has := false
+		for _, tool := range tpl.Tools {
+			has = has || tool == "code"
+		}
+		if has != want[tpl.ID] {
+			t.Errorf("role %s: code tool = %v, want %v", tpl.ID, has, want[tpl.ID])
 		}
 	}
 }

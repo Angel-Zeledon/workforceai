@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1
+# The sandbox runner: the ONLY service that talks to Docker (docs/architecture/code-sandbox.md).
+# It needs the docker CLI and the Docker socket. Build context: ./backend
+FROM golang:1.26.0-alpine3.22 AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/sandbox-runner ./cmd/sandbox-runner
+
+FROM docker:27-cli AS cli
+
+FROM alpine:3.22.1
+RUN apk add --no-cache ca-certificates
+COPY --from=cli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=build /out/sandbox-runner /usr/local/bin/sandbox-runner
+# Runs as root inside its container ONLY to be able to use the mounted socket;
+# the code it runs never does (non-root, no capabilities, no network: see runnerd).
+ENV PORT=8090
+EXPOSE 8090
+ENTRYPOINT ["sandbox-runner"]
