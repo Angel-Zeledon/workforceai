@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/officedoc"
 )
 
 // ProjectRef names a project an agent works on.
@@ -70,6 +71,10 @@ type Plan struct {
 	Bytes int
 	// Reversibility of the action: versioned | trash.
 	Reversibility string
+	// data is the built file of a write_document; docErr is why the document
+	// could not be built (reported to the agent by Run, which writes nothing).
+	data   []byte
+	docErr string
 }
 
 type scope struct {
@@ -220,18 +225,22 @@ const (
 	ActRead   = "read"
 	ActSearch = "search"
 	ActWrite  = "write"
+	// ActWriteDocument writes a real office document (xlsx, docx, pdf) or a
+	// rendered md/csv from a structured document (see internal/officedoc).
+	ActWriteDocument = "write_document"
 	ActMove   = "move"
 	ActDelete = "delete"
 )
 
 // IsWriteAction reports whether the action changes the drive.
 func IsWriteAction(action string) bool {
-	return action == ActWrite || action == ActMove || action == ActDelete
+	return action == ActWrite || action == ActWriteDocument || action == ActMove || action == ActDelete
 }
 
 // Plan decides what an action needs. It is pure and is evaluated again at
 // execution time (an approved call is re-checked for everything but approval).
 func (a *AgentFS) Plan(ctx context.Context, agentID, action string, args map[string]any) Plan {
+	action = canonicalAction(action, args)
 	org := a.Svc.org(ctx)
 	sc, err := a.scopeOf(ctx, agentID)
 	if err != nil {
@@ -272,6 +281,8 @@ func (a *AgentFS) Plan(ctx context.Context, agentID, action string, args map[str
 		return Plan{}
 	case ActWrite:
 		return a.planWrite(ctx, org, sc, args)
+	case ActWriteDocument:
+		return a.planWriteDocument(ctx, org, sc, args)
 	case ActMove:
 		return a.planMove(ctx, org, sc, args)
 	case ActDelete:
@@ -328,7 +339,7 @@ func (a *AgentFS) planWrite(ctx context.Context, org string, sc scope, args map[
 		return deny("name_invalid", err.(*Error).Msg)
 	}
 	if !IsTextName(name) {
-		return deny("unsupported_type", "agents write text files only (md, txt, csv, json, code)")
+		return deny("unsupported_type", "write takes text files only (md, txt, csv, json, code); for xlsx, docx or pdf use write_document with a structured document")
 	}
 	content, ok := args["content"].(string)
 	if !ok || content == "" {
@@ -347,6 +358,66 @@ func (a *AgentFS) planWrite(ctx context.Context, org string, sc scope, args map[
 		}
 	}
 	pl := Plan{Path: c, Bytes: len(content), Reversibility: "versioned", Risk: "medium"}
+	if z := a.zoneAll(ctx, org, sc, c); !autoWrite(z) {
+		pl.Approval, pl.Flags = true, []string{"outside_scope"}
+		if z == ZoneOtherDesk {
+			pl.Flags = append(pl.Flags, "other_agent_desk")
+		}
+	}
+	return pl
+}
+
+// canonicalAction routes a write that carries a structured "document" to
+// write_document, so a model that puts the document on fs.write still works.
+func canonicalAction(action string, args map[string]any) string {
+	if action == ActWrite {
+		if d, ok := args["document"]; ok && d != nil {
+			return ActWriteDocument
+		}
+	}
+	return action
+}
+
+// planWriteDocument is planWrite for a structured document: the same zones and
+// approvals (desk and assigned projects free, anything else asks a human), but
+// the bytes are built by the backend from the model, never taken from the agent.
+func (a *AgentFS) planWriteDocument(ctx context.Context, org string, sc scope, args map[string]any) Plan {
+	p := argStr(args, "path")
+	folder, name, err := SplitFile(p)
+	if err != nil {
+		return deny("path_invalid", err.(*Error).Msg)
+	}
+	c := folder + "/" + name
+	if _, err := CleanName(name); err != nil {
+		return deny("name_invalid", err.(*Error).Msg)
+	}
+	format := officedoc.FormatOfName(name)
+	if format == "" {
+		return deny("unsupported_type", "write_document makes xlsx, docx, pdf, md or csv files: the path must end in one of them")
+	}
+	if tags := argTags(args); tags != nil {
+		if _, err := CleanTags(tags); err != nil {
+			return deny("tags_invalid", err.(*Error).Msg)
+		}
+	}
+	pl := Plan{Path: c, Reversibility: "versioned", Risk: "medium"}
+	doc, perr := officedoc.Parse(args["document"])
+	var data []byte
+	if perr == nil {
+		data, perr = officedoc.Build(format, doc)
+	}
+	if perr != nil {
+		pl.docErr = perr.Error()
+		var oe *officedoc.Error
+		if errors.As(perr, &oe) {
+			pl.docErr = oe.Msg
+		}
+		return pl
+	}
+	if int64(len(data)) > a.Svc.cfg.Limits.MaxFileBytes {
+		return deny("file_too_large", fmt.Sprintf("the file exceeds the limit of %d MB", a.Svc.cfg.Limits.MaxFileBytes>>20))
+	}
+	pl.data, pl.Bytes = data, len(data)
 	if z := a.zoneAll(ctx, org, sc, c); !autoWrite(z) {
 		pl.Approval, pl.Flags = true, []string{"outside_scope"}
 		if z == ZoneOtherDesk {
@@ -441,6 +512,7 @@ func IsErr(err, target error) bool { return errors.Is(err, target) }
 // Run executes an action as the agent. It re-checks the plan: an approval
 // satisfies only "needs approval", never a refusal.
 func (a *AgentFS) Run(ctx context.Context, agentID, action string, args map[string]any, approved bool) RunResult {
+	action = canonicalAction(action, args)
 	pl := a.Plan(ctx, agentID, action, args)
 	if pl.Deny != "" {
 		return RunResult{Code: pl.Deny, Summary: pl.Deny + ": " + pl.DenyMsg}
@@ -473,6 +545,17 @@ func (a *AgentFS) Run(ctx context.Context, agentID, action string, args map[stri
 		if res.Unchanged {
 			sum = fmt.Sprintf("%s already has this content (version %d), nothing written", res.File.Path, res.File.CurrentVersion)
 		}
+		return RunResult{OK: true, Summary: sum, Data: map[string]any{"file_id": res.File.ID, "path": res.File.Path, "version": res.File.CurrentVersion, "created": res.Created}}
+	case ActWriteDocument:
+		if pl.docErr != "" {
+			return RunResult{Code: "invalid_args", Summary: "invalid_args: " + pl.docErr}
+		}
+		in := WriteInput{Path: pl.Path, Data: pl.data, Message: argStr(args, "message"), Tags: argTags(args), Source: "agent_tool"}
+		res, err := a.Svc.Write(ctx, me, in)
+		if err != nil {
+			return failure(err)
+		}
+		sum := fmt.Sprintf("wrote %s (version %d, %d bytes)", res.File.Path, res.File.CurrentVersion, res.File.Size)
 		return RunResult{OK: true, Summary: sum, Data: map[string]any{"file_id": res.File.ID, "path": res.File.Path, "version": res.File.CurrentVersion, "created": res.Created}}
 	case ActMove:
 		f, err := a.targetFile(ctx, args, "path")

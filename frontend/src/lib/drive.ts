@@ -23,6 +23,10 @@ export interface TextResult { text: string; more: boolean; offset: number; retur
 export interface Hit { file_id: string; path: string; name: string; snippet: string; size: number }
 export interface DiffLine { op: string; text: string }
 export interface DiffResult { from: number; to: number; added: number; removed: number; lines: DiffLine[]; truncated: boolean }
+/** Server-read preview of an office file (xlsx sheets, docx blocks): the browser never parses the package. */
+export interface PreviewSheet { name: string; rows: string[][]; truncated?: boolean }
+export interface PreviewBlock { type: "heading" | "paragraph" | "bullets" | "table"; level?: number; text?: string; items?: string[]; rows?: string[][] }
+export interface Preview { kind: "sheets" | "doc" | "none"; sheets?: PreviewSheet[]; blocks?: PreviewBlock[]; truncated: boolean; note?: string }
 export interface Trash { folders: DriveFolder[]; files: DriveFile[] }
 
 /** A drive error with the backend's stable code (version_conflict, read_only_mode, too_large...). */
@@ -54,6 +58,7 @@ export const drive = MOCK ? mockDrive() : {
   text: (id: string, version = 0) => req<TextResult>("GET", `/drive/files/${id}/text?version=${version}&max_chars=20000`),
   versions: (id: string) => req<{ versions: DriveVersion[] }>("GET", `/drive/files/${id}/versions`).then((r) => r.versions ?? []),
   restoreVersion: (id: string, v: number) => req("POST", `/drive/files/${id}/versions/${v}/restore`),
+  preview: (id: string, version = 0) => req<{ preview: Preview }>("GET", `/drive/files/${id}/preview?version=${version}`).then((r) => r.preview),
   file: (id: string) => req<DriveFile>("GET", `/drive/files/${id}`),
   /** The file at a path (lists its folder): chat cards may only know the path. */
   byPath: async (path: string): Promise<DriveFile | null> => {
@@ -170,6 +175,7 @@ function mockDrive() {
       return { text: v?.text ?? "", more: false, offset: 0, returned: v?.text.length ?? 0 } as TextResult;
     },
     versions: async (id: string) => byId(id).versions.map((x) => x.v).reverse(),
+    preview: async (): Promise<Preview> => ({ kind: "none", truncated: false, note: "mock" }),
     file: async (id: string) => byId(id).file,
     byPath: async (path: string) => { syncDesks(); return live().find((m) => m.file.path === path)?.file ?? null; },
     diff: async (id: string, from: number, to: number): Promise<DiffResult> => {

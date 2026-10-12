@@ -422,7 +422,11 @@ class Consult(_Base):
 class ToolRequest(_Base):
     tool: str
     action: str
-    args: dict[str, Any] = Field(default_factory=dict)
+    args: dict[str, Any] = Field(
+        default_factory=dict,
+        description=("Arguments of the tool. Office files: tool=fs, action=write_document, args={path:'/Agents/x/file.xlsx|.docx|.pdf', "
+                     "document:{sheets:[{name,columns:[{header,type}],rows:[[...]]}]} for xlsx, or {title,blocks:[{type:heading|paragraph|"
+                     "bullets|table,...}]} for docx/pdf}; never binary content."))
     risk: Risk = "low"
 
 
