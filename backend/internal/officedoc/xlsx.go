@@ -270,4 +270,3 @@ func longestLine(s string) float64 {
 	}
 	return float64(best)
 }
-

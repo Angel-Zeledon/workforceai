@@ -23,11 +23,11 @@ type cell struct {
 
 // table is a sheet or a table block with typed columns and computed formulas.
 type table struct {
-	name  string
-	cols  []Column // Type always resolved (text | number | currency | percent | date)
-	rows  [][]cell // data rows (len == len(cols)); then the totals row when any
-	data  int      // number of data rows (without totals)
-	extra map[[2]int]cell
+	name   string
+	cols   []Column // Type always resolved (text | number | currency | percent | date)
+	rows   [][]cell // data rows (len == len(cols)); then the totals row when any
+	data   int      // number of data rows (without totals)
+	extra  map[[2]int]cell
 	freeze bool
 	// totalsRow is the index in rows of the totals row, or -1.
 	totalsRow int
