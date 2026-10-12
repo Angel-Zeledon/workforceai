@@ -438,7 +438,11 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 // from outside, can be remembered. Connection-backed actions (email and the
 // like) never qualify: their tools are not on the allow-list.
 func nativeStandingRule(p GatewayPending) string {
-	if p.Tainted || p.ExternalOrigin || p.Reversibility != "versioned" {
+	// Only versioned, internal changes (the drive keeps every version: one click
+	// undoes them). A task that read other agents' files (long-term memory, project
+	// inputs) is tainted, but its versioned write to the drive can still be
+	// remembered: content from outside the organization (ExternalOrigin) cannot.
+	if p.ExternalOrigin || p.Reversibility != "versioned" {
 		return "native.restricted"
 	}
 	for _, f := range p.Flags {
