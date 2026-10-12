@@ -138,22 +138,62 @@ export interface PlannerInfo {
   failed_phases?: string[];
 }
 
-export interface TemplateParam { key: string; label_key: string; default: string }
+export type TemplateParamType = "text" | "number" | "list";
+export type TemplateCategory = "finance" | "operations" | "legal" | "sales" | "marketing" | "hr" | "it" | "compliance" | "general";
+export interface TemplateParam {
+  key: string; label_key?: string; label?: string; default: string; default_key?: string;
+  type?: TemplateParamType; item_name?: string; min?: number; max?: number;
+}
 export interface TemplateNode {
-  key: string; kind?: NodeKind; title_key: string; title?: string; agent?: string; complexity?: Complexity;
-  deps?: string[]; secs?: number;
+  key: string; kind?: NodeKind; title_key: string; title?: string; description?: string; agent?: string; complexity?: Complexity;
+  acceptance?: string[]; deps?: string[]; secs?: number;
   approval?: { action: string; risk: Risk };
   /** the agent delegates a subtask to another agent at runtime (fork/join, delegation_depth+1) */
   delegate?: { agent: string; title_key: string; complexity?: Complexity };
   fail_once?: boolean;
 }
-export interface TemplateWorkflow { key: string; title_key: string; title?: string; nodes: TemplateNode[] }
+/** `repeat`: list parameter keys; the block is repeated once per item (two lists = cartesian product). A dependency "key^list" = same block, previous item of that list. */
+export interface TemplateWorkflow { key: string; title_key: string; title?: string; nodes: TemplateNode[]; repeat?: string[] }
 export interface TemplateObjective { key: string; title_key: string; title?: string; workflows: TemplateWorkflow[] }
+/** size of a template at its default and at its maximum parameters */
+export interface TemplateStat { objectives: number; tasks: number; tasks_max: number; gates: number }
 export interface ProjectTemplate {
   id: string; key: string; version: number; name_key?: string; name: string; description_key?: string; description: string;
   params: TemplateParam[]; objectives: TemplateObjective[]; builtin: boolean;
   budget_hint?: { p50_usd: number; p90_usd: number; basis: "priors" | "calibrated" };
+  // organization templates (all additive)
+  category?: TemplateCategory | string; shared?: boolean; forked_from?: string; created_by?: string; updated_by?: string;
+  created_at?: string; updated_at?: string; stats?: TemplateStat;
 }
+
+// ---- customizable templates: what the builder sends and the API answers ----
+export interface TemplateInputParam { key: string; label: string; type: TemplateParamType; item_name?: string; min?: number; max?: number; default: string }
+export interface TemplateInputNode {
+  key: string; kind?: "task" | "gate" | "milestone" | "wait"; title: string; description?: string; agent?: string; complexity?: Complexity;
+  acceptance?: string[]; deps?: string[]; approval?: { action: string; risk: Risk };
+}
+export interface TemplateInput {
+  name: string; description: string; category: string; shared?: boolean;
+  params: TemplateInputParam[];
+  objectives: { key: string; title: string; workflows: { key: string; title: string; repeat?: string[]; nodes: TemplateInputNode[] }[] }[];
+  base_version?: number; note?: string;
+}
+export interface TemplateIssue { severity: "error" | "warn"; node_id?: string; code: string }
+export interface TemplateValidation { ok: boolean; issues: TemplateIssue[] }
+export interface TemplatePreviewRequest { template_id?: string; template?: TemplateInput; params?: Record<string, string>; goal?: string; locale?: string }
+export interface TemplatePreview {
+  name: string; tasks: number; gates: number; workflows: number; objectives: number; nodes: number;
+  /** longest dependency chain */
+  levels: number;
+  /** widest level */
+  parallel: number;
+  agents: string[];
+  estimate?: (Pick<ProjectEstimate, "total"> & Partial<ProjectEstimate>) | null;
+  issues: TemplateIssue[];
+  sample?: string[];
+}
+export interface TemplateVersionInfo { template_id: string; version: number; name: string; saved_by: string; saved_at: string; note?: string }
+export interface SaveTemplateOpts { name?: string; description?: string; category?: string; shared?: boolean }
 
 export interface ProjectHealth {
   project_id: string; computed_at: string; light: Light;

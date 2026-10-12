@@ -90,6 +90,9 @@ type Service struct {
 	jobs  map[string]*planJob     // org|project id: planners still running
 	// launchMu serializes the active-projects check with the launch itself.
 	launchMu sync.Mutex
+	// tplMu serializes the edits of organization templates (version numbers); stats caches built-in sizes.
+	tplMu sync.Mutex
+	stats map[statKey]*TemplateStat
 
 	// launching counts the projects being submitted and registered: the gate of
 	// a task that starts before its registration finished waits for it.
@@ -355,7 +358,7 @@ func (s *Service) CreateDraft(ctx context.Context, in NewProject) (Record, error
 	} else if tpl, params, goal, err = s.pickTemplate(ctx, in, goal, locale); err != nil {
 		return Record{}, err
 	}
-	inst, err := tpl.instantiate(pid, goal, params, locale)
+	inst, err := tpl.instantiateWith(s.cfg.Limits, pid, goal, params, locale)
 	if err == nil {
 		err = s.cfg.Limits.checkSize(inst.Nodes)
 	}
@@ -476,7 +479,7 @@ func (s *Service) pickTemplate(ctx context.Context, in NewProject, goal, locale 
 		return Template{}, nil, goal, err
 	}
 	for _, t := range customs {
-		if t.ID == in.TemplateID || t.Key == in.TemplateID {
+		if (t.ID == in.TemplateID || t.Key == in.TemplateID) && s.canSee(ctx, t) {
 			return t, in.Params, goal, nil
 		}
 	}
@@ -609,21 +612,29 @@ func (s *Service) agentIDs(ctx context.Context) ([]string, error) {
 // ---- templates ----
 
 // Templates lists the built-in project templates, the catalog workflows and the
-// custom templates saved by the organization.
+// organization templates (the shared ones, and the private ones of the caller),
+// each with its size at the default and maximum parameters.
 func (s *Service) Templates(ctx context.Context) ([]Template, error) {
 	locale := s.locale(ctx, "")
 	out := []Template{}
 	for _, t := range builtinTemplates() {
+		t.Stats = s.statsCached(t, locale)
 		out = append(out, t.resolved(locale))
 	}
 	for _, v := range s.cfg.Catalog.Workflows(locale) {
-		out = append(out, catalogTemplate(v))
+		ct := catalogTemplate(v)
+		ct.Category = "general"
+		out = append(out, ct)
 	}
 	customs, err := s.cfg.Store.ListTemplates(ctx, s.org(ctx))
 	if err != nil {
 		return nil, err
 	}
 	for _, t := range customs {
+		if !s.canSee(ctx, t) {
+			continue
+		}
+		t.Stats = statsOf(t, locale, s.cfg.Limits)
 		out = append(out, t.resolved(locale))
 	}
 	return out, nil
@@ -631,18 +642,5 @@ func (s *Service) Templates(ctx context.Context) ([]Template, error) {
 
 // SaveAsTemplate stores the structure of a project as a reusable template.
 func (s *Service) SaveAsTemplate(ctx context.Context, id string) (Template, error) {
-	rec, err := s.get(ctx, id)
-	if err != nil {
-		return Template{}, err
-	}
-	customs, err := s.cfg.Store.ListTemplates(ctx, s.org(ctx))
-	if err != nil {
-		return Template{}, err
-	}
-	tpl := templateFromRecord(rec, "tpl-"+strings.ReplaceAll(uuid.NewString(), "-", "")[:12], fmt.Sprintf("custom_%d", len(customs)+1))
-	if err := s.cfg.Store.PutTemplate(ctx, s.org(ctx), tpl); err != nil {
-		return tpl, err
-	}
-	s.audit(ctx, "project.saved_as_template", id, map[string]any{"template": tpl.ID})
-	return tpl, nil
+	return s.SaveAsTemplateWith(ctx, id, SaveOpts{})
 }

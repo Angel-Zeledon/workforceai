@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "check:i18n": "node scripts/check-i18n.mjs",
-    "test:unit": "node --test src/lib/projects/mapLod.test.mjs src/components/office/gestures.test.mjs src/lib/agentV2Logic.test.mjs src/lib/fileView.test.mjs src/components/office/officeState.test.mjs"
+    "i18n:giant": "node scripts/merge-giant-i18n.mjs",
+    "test:unit": "node --test src/lib/projects/mapLod.test.mjs src/lib/projects/templateLogic.test.mjs src/components/office/gestures.test.mjs src/lib/agentV2Logic.test.mjs src/lib/fileView.test.mjs src/components/office/officeState.test.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.0",

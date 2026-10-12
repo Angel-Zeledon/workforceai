@@ -142,3 +142,53 @@ func TestWorkPriorityContext(t *testing.T) {
 		t.Fatal("priority round trip")
 	}
 }
+
+// Requests take turns within one priority: a request that arrives behind a long
+// backlog of another one is served after one turn, not after the whole backlog.
+func TestOrgQueueRequestsTakeTurns(t *testing.T) {
+	var q orgQueue
+	base := context.Background()
+	a, b := WithRequestID(base, "req-a"), WithRequestID(base, "req-b")
+	hold, err := q.acquire(a, "o", 1, PriorityProject, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mu sync.Mutex
+	var order []string
+	var wg sync.WaitGroup
+	start := func(ctx context.Context, name string) {
+		queued := make(chan int, 1)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rel, err := q.acquire(ctx, "o", 1, PriorityProject, func(ahead int) { queued <- ahead })
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			mu.Lock()
+			order = append(order, name)
+			mu.Unlock()
+			rel()
+		}()
+		select {
+		case <-queued:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("%s did not queue", name)
+		}
+	}
+	for _, n := range []string{"a1", "a2", "a3", "a4"} {
+		start(a, n)
+	}
+	start(b, "b1")
+	start(b, "b2")
+	hold()
+	wg.Wait()
+	// a had the slot (so b goes first), then they alternate, each keeping its own arrival order
+	want := []string{"b1", "a1", "b2", "a2", "a3", "a4"}
+	for i := range want {
+		if order[i] != want[i] {
+			t.Fatalf("order = %v, want %v", order, want)
+		}
+	}
+}

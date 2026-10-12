@@ -10,9 +10,10 @@ import {
   priorCost, priorSeconds, rollupState, simulate, topoOrder, validatePlan,
 } from "./calc";
 import { BUILTIN_TEMPLATES } from "./templates";
+import { MockTemplates } from "./mockTemplateStore";
 import type {
   ControlAction, LaunchBody, NewProjectBody, PlanOp, ProjectApproval, ProjectDetail, ProjectFrame, ProjectHealth,
-  ProjectNode, ProjectObjective, ProjectSummary, ProjectTemplate, TemplateNode,
+  ProjectNode, ProjectObjective, ProjectSummary, ProjectTemplate, SaveTemplateOpts, TemplateInput, TemplateNode, TemplatePreviewRequest,
 } from "./types";
 
 const TICK_MS = 500;
@@ -41,14 +42,14 @@ function resolveTitle(key: string, literal: string | undefined, params: Record<s
 
 export class ProjectsMock {
   private projects = new Map<string, MockProject>();
-  private tpls: ProjectTemplate[] = BUILTIN_TEMPLATES.map((t) => ({ ...t }));
+  readonly tplStore = new MockTemplates();
   private listeners = new Set<(f: ProjectFrame) => void>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private timeouts = new Set<ReturnType<typeof setTimeout>>();
 
   constructor() {
     // Canonical example, ready to launch: the accountant builds the balance sheet and, in parallel, the income statement.
-    const tpl = this.tpls.find((t) => t.key === "financial_close")!;
+    const tpl = BUILTIN_TEMPLATES.find((t) => t.key === "financial_close")!;
     this.instantDraft(tpl, {}, "");
   }
 
@@ -162,13 +163,25 @@ export class ProjectsMock {
     return computeHealth(mp.detail);
   }
   async templates(): Promise<ProjectTemplate[]> {
-    return this.tpls.map((t) => ({ ...t, name: t.name_key ? tr(t.name_key) : t.name, description: t.description_key ? tr(t.description_key) : t.description }));
+    return this.tplStore.list();
   }
+  async getTemplate(id: string) { return this.tplStore.get(id); }
+  async createTemplate(b: TemplateInput) { return this.tplStore.create(b); }
+  async updateTemplate(id: string, b: TemplateInput) { return this.tplStore.update(id, b); }
+  async deleteTemplate(id: string) { this.tplStore.remove(id); }
+  async duplicateTemplate(id: string, name?: string) { return this.tplStore.duplicate(id, name); }
+  async templateVersions(id: string) { return this.tplStore.versions(id); }
+  async restoreTemplate(id: string, n: number) { return this.tplStore.restore(id, n); }
+  async validateTemplate(b: TemplateInput) { return this.tplStore.validate(b); }
+  async previewTemplate(r: TemplatePreviewRequest) { return this.tplStore.preview(r); }
 
   async createDraft(body: NewProjectBody): Promise<{ project_id: string }> {
-    const tpl = this.tpls.find((t) => t.id === body.template_id) ?? this.tpls.find((t) => t.key === "generic")!;
-    const params: Record<string, string> = {};
+    let tpl = this.tplStore.find(body.template_id ?? "") ?? BUILTIN_TEMPLATES.find((t) => t.key === "generic")!;
+    let params: Record<string, string> = {};
     for (const p of tpl.params) params[p.key] = body.params?.[p.key] ?? p.default;
+    // templates with lists / repeated blocks (and organization templates) are expanded into a flat plan first
+    const flat = this.tplStore.flatten(tpl.id, body.params ?? {});
+    if (flat) { tpl = flat.tpl; params = flat.params; }
     const pid = uid("prj");
     const mp = this.register(pid, tpl, body.goal.trim(), params, body.budget_usd, "planning");
     const full = mp.detail.nodes; const objs = mp.detail.objectives;
@@ -293,11 +306,11 @@ export class ProjectsMock {
     return { ok: true, count: group.length };
   }
 
-  async saveAsTemplate(id: string): Promise<ProjectTemplate> {
+  async saveAsTemplate(id: string, opts: SaveTemplateOpts = {}): Promise<ProjectTemplate> {
     const mp = this.projects.get(id);
     if (!mp) throw new Error("project not found");
     const d = mp.detail;
-    const key = `custom_${this.tpls.length + 1}`;
+    const key = `custom_${uid("k")}`;
     const idKey = (nid: string) => nid.slice(nid.indexOf(":") + 1);
     const tpl: ProjectTemplate = {
       id: uid("tpl"), key, version: 1, name: d.project.name, description: d.project.goal, params: [], builtin: false,
@@ -314,8 +327,7 @@ export class ProjectsMock {
       })),
       budget_hint: d.estimate ? { p50_usd: d.estimate.total.p50_usd, p90_usd: d.estimate.total.p90_usd, basis: "priors" } : undefined,
     };
-    this.tpls.push(tpl);
-    return tpl;
+    return this.tplStore.addFromProject(tpl, opts);
   }
 
   // ---- engine -----------------------------------------------------------------------------------

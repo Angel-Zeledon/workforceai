@@ -14,8 +14,12 @@ import (
 // organization never has more than Config.MaxParallelPerOrg calls in flight
 // (MAX_PARALLEL_PER_ORG, default 8). When no slot is free the call waits in a
 // priority queue: interactive work (chat, typed requests, templates run by a
-// person) goes before project work, which goes before scheduled work; equal
-// priorities are served in arrival order.
+// person) goes before project work, which goes before scheduled work. Within a
+// priority the requests take turns (G2): the waiting call of the request that
+// was served longest ago goes first, and calls of one request keep their
+// arrival order. A project that launches while others have a backlog of
+// ready tasks therefore starts after one turn per active request, not after
+// the whole backlog.
 //
 // What holds a slot is a runtime call, never a wait for a human: approvals,
 // plan reviews, cost confirmations, kill switch, agent pauses and operating
@@ -70,18 +74,43 @@ type orgQueue struct {
 type orgSlots struct {
 	inUse   int
 	waiters []*slotWaiter
+	// lastGrant is the grant counter at which each request was last served (round-robin turns).
+	lastGrant map[string]uint64
+	grants    uint64
 }
 
 type slotWaiter struct {
 	prio    WorkPriority
 	seq     uint64
+	key     string // the request the call belongs to ("" for work without one)
 	ready   chan struct{}
 	granted bool
 }
 
+// before orders by arrival (used to count the calls ahead of a new one).
 func (w *slotWaiter) before(o *slotWaiter) bool {
 	if w.prio != o.prio {
 		return w.prio < o.prio
+	}
+	return w.seq < o.seq
+}
+
+// noteGrant records that the request got a slot now (its turn).
+func (s *orgSlots) noteGrant(key string) {
+	if s.lastGrant == nil || len(s.lastGrant) > 4096 {
+		s.lastGrant = map[string]uint64{} // bounded memory: forgetting the turns is harmless
+	}
+	s.grants++
+	s.lastGrant[key] = s.grants
+}
+
+// served says which of two waiters goes first: priority, then the request served longest ago, then arrival.
+func (s *orgSlots) served(w, o *slotWaiter) bool {
+	if w.prio != o.prio {
+		return w.prio < o.prio
+	}
+	if lw, lo := s.lastGrant[w.key], s.lastGrant[o.key]; lw != lo {
+		return lw < lo
 	}
 	return w.seq < o.seq
 }
@@ -104,11 +133,12 @@ func (q *orgQueue) acquire(ctx context.Context, org string, limit int, prio Work
 	}
 	if s.inUse < limit && len(s.waiters) == 0 {
 		s.inUse++
+		s.noteGrant(RequestIDFrom(ctx))
 		q.mu.Unlock()
 		return q.releaser(org, limit), nil
 	}
 	q.seq++
-	w := &slotWaiter{prio: prio, seq: q.seq, ready: make(chan struct{})}
+	w := &slotWaiter{prio: prio, seq: q.seq, key: RequestIDFrom(ctx), ready: make(chan struct{})}
 	ahead := 0
 	for _, o := range s.waiters {
 		if o.before(w) {
@@ -158,7 +188,7 @@ func (q *orgQueue) release(org string, limit int) {
 	for s.inUse < limit && len(s.waiters) > 0 {
 		best := 0
 		for i, w := range s.waiters {
-			if w.before(s.waiters[best]) {
+			if s.served(w, s.waiters[best]) {
 				best = i
 			}
 		}
@@ -166,6 +196,7 @@ func (q *orgQueue) release(org string, limit int) {
 		s.waiters = append(s.waiters[:best], s.waiters[best+1:]...)
 		w.granted = true
 		s.inUse++
+		s.noteGrant(w.key)
 		close(w.ready)
 	}
 	if s.inUse == 0 && len(s.waiters) == 0 {

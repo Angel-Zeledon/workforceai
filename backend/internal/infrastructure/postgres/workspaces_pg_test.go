@@ -136,3 +136,65 @@ func TestArtifactStoreVersionsCompareAndSwapAndIsolation(t *testing.T) {
 		t.Fatal("links leaked across tenants")
 	}
 }
+
+// Migration 500: template history, delete with cascade, and isolation.
+func TestProjectTemplateVersionsDeleteAndIsolation(t *testing.T) {
+	env := testStore(t)
+	ctx := context.Background()
+	seedOrg(t, env.Store, "org-a")
+	seedOrg(t, env.Store, "org-b")
+	ps := &ProjectStore{S: env.Store}
+	now := time.Now().UTC()
+
+	tpl := projects.Template{ID: "tpl-h", Key: "custom_h", Version: 1, Name: "H", Params: []projects.TemplateParam{{Key: "c", Type: "list", ItemName: "country", Default: "A, B", Max: 5}},
+		Objectives: []projects.TemplateObjective{{Key: "o1", Title: "O", Workflows: []projects.TemplateWorkflow{{Key: "w1", Title: "{country}", Repeat: []string{"c"}, Nodes: []projects.TemplateNode{{Key: "n1", Title: "T", Agent: "legal"}}}}}},
+		CreatedBy:  "u1", CreatedAt: &now}
+	if err := ps.PutTemplate(ctx, "org-a", tpl); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ps.GetTemplate(ctx, "org-a", "tpl-h")
+	if err != nil || got.Objectives[0].Workflows[0].Repeat[0] != "c" || got.Params[0].Type != "list" || got.CreatedBy != "u1" {
+		t.Fatalf("get: %v %+v", err, got)
+	}
+	if _, err := ps.GetTemplate(ctx, "org-b", "tpl-h"); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("cross-tenant get: %v", err)
+	}
+	for v := 1; v <= 3; v++ {
+		cp := tpl
+		cp.Version = v
+		cp.Name = "H" + string(rune('0'+v))
+		if err := ps.PutTemplateVersion(ctx, "org-a", projects.TemplateVersion{TemplateID: "tpl-h", Version: v, Name: cp.Name, SavedBy: "u1", SavedAt: now, Note: "n", Template: &cp}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// idempotent by version
+	if err := ps.PutTemplateVersion(ctx, "org-a", projects.TemplateVersion{TemplateID: "tpl-h", Version: 2, SavedAt: now, Template: &tpl}); err != nil {
+		t.Fatal(err)
+	}
+	vs, err := ps.ListTemplateVersions(ctx, "org-a", "tpl-h")
+	if err != nil || len(vs) != 3 || vs[0].Version != 3 || vs[2].Version != 1 || vs[0].Template == nil || vs[0].Template.Name != "H3" || vs[0].Note != "n" {
+		t.Fatalf("versions: %v %+v", err, vs)
+	}
+	if vs, _ := ps.ListTemplateVersions(ctx, "org-b", "tpl-h"); len(vs) != 0 {
+		t.Fatalf("another org sees the history: %v", vs)
+	}
+	// org-b cannot write a version for org-a's template (RLS + foreign key)
+	if err := ps.PutTemplateVersion(ctx, "org-b", projects.TemplateVersion{TemplateID: "tpl-h", Version: 9, SavedAt: now, Template: &tpl}); err == nil {
+		t.Fatal("a version for a template of another organization was accepted")
+	}
+	if err := ps.DeleteTemplate(ctx, "org-b", "tpl-h"); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("cross-tenant delete: %v", err)
+	}
+	if err := ps.DeleteTemplate(ctx, "org-a", "tpl-h"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ps.GetTemplate(ctx, "org-a", "tpl-h"); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("deleted: %v", err)
+	}
+	if vs, _ := ps.ListTemplateVersions(ctx, "org-a", "tpl-h"); len(vs) != 0 {
+		t.Fatalf("the history must go with the template: %v", vs)
+	}
+	if err := ps.DeleteTemplate(ctx, "org-a", "tpl-h"); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("second delete: %v", err)
+	}
+}

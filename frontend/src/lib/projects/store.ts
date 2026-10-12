@@ -4,11 +4,13 @@ import { useStore } from "../store";
 import { projectsApi } from "./api";
 import type {
   ProjectNode, ProjectObjective,
-  ControlAction, LaunchBody, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectFrame, ProjectHealth, ProjectSummary, ProjectTemplate,
+  ControlAction, LaunchBody, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectFrame, ProjectHealth, ProjectSummary, ProjectTemplate, SaveTemplateOpts,
 } from "./types";
 
 export const PROJECT_TABS = ["health", "map", "timeline", "kanban", "lanes", "delegation", "approvals", "changes", "costs"] as const;
 export type ProjectTab = (typeof PROJECT_TABS)[number];
+/** what the Projects screen shows when no project is open */
+export type ProjectsScreen = "list" | "library" | "builder";
 
 /** What the office needs of a project being planned: phase titles (objectives / workflow groups) and agents seen so far. */
 export interface PlanningInfo { titles: string[]; agents: string[]; updated: number }
@@ -39,6 +41,19 @@ interface PState {
   tab: ProjectTab;
   selectedNodeId: string | null;
   templates: ProjectTemplate[];
+  /** template library / builder (inside the Projects screen) */
+  view: ProjectsScreen;
+  /** template being edited in the builder (null = a new blank one) */
+  editingId: string | null;
+  /** new-project wizard (open over the list or the library) */
+  wizard: { templateId: string } | null;
+  setView: (v: ProjectsScreen) => void;
+  openLibrary: () => void;
+  openBuilder: (templateId: string | null) => void;
+  openWizard: (templateId: string) => void;
+  closeWizard: () => void;
+  duplicateTemplate: (id: string) => Promise<ProjectTemplate>;
+  deleteTemplate: (id: string) => Promise<void>;
   /** Q2: plan changes of the open project */
   changes: PlanChange[];
   error: string | null;
@@ -59,7 +74,7 @@ interface PState {
   decide: (approvalId: string, d: "approve" | "reject") => Promise<void>;
   decideBatch: (b: { action: string; decision: "approve" | "reject"; expected_count: number; include_high?: boolean }) => Promise<void>;
   setBudget: (usd: number) => Promise<void>;
-  saveAsTemplate: () => Promise<void>;
+  saveAsTemplate: (opts?: SaveTemplateOpts) => Promise<ProjectTemplate | null>;
   loadChanges: () => Promise<void>;
   proposeChange: (reason: string, ops: PlanChangeOp[]) => Promise<void>;
   decideChange: (changeId: string, d: "approve" | "reject") => Promise<void>;
@@ -86,6 +101,14 @@ export const useProjects = create<PState>((set, get) => ({
   }),
   open: false, loaded: false, projects: {}, activeId: null, detail: null, health: null, tab: "health", selectedNodeId: null,
   templates: [], changes: [], error: null,
+  view: "list", editingId: null, wizard: null,
+  setView: (view) => set({ view }),
+  openLibrary: () => set({ view: "library", activeId: null, detail: null }),
+  openBuilder: (editingId) => set({ view: "builder", editingId, activeId: null, detail: null }),
+  openWizard: (templateId) => set({ wizard: { templateId } }),
+  closeWizard: () => set({ wizard: null }),
+  duplicateTemplate: async (id) => { const t = await projectsApi.duplicateTemplate(id); await get().loadTemplates(); return t; },
+  deleteTemplate: async (id) => { await projectsApi.deleteTemplate(id); await get().loadTemplates(); },
 
   setOpen: (open) => set({ open }),
   setTab: (tab) => set({ tab }),
@@ -100,7 +123,7 @@ export const useProjects = create<PState>((set, get) => ({
   loadTemplates: async () => { try { set({ templates: await projectsApi.templates() }); } catch { /* ignore */ } },
 
   openProject: async (id) => {
-    set({ activeId: id, detail: null, health: null, changes: [], tab: "health", selectedNodeId: null, error: null });
+    set({ activeId: id, detail: null, health: null, changes: [], tab: "health", selectedNodeId: null, error: null, view: "list" });
     try {
       const detail = await projectsApi.get(id);
       if (get().activeId !== id) return;
@@ -167,7 +190,7 @@ export const useProjects = create<PState>((set, get) => ({
   proposeChange: async (reason, ops) => { const id = get().activeId; if (!id) return; await projectsApi.proposeChange(id, reason, ops); if (!MOCK) { set({ detail: await projectsApi.get(id) }); await get().loadChanges(); } },
   decideChange: async (changeId, d) => { const id = get().activeId; if (!id) return; await projectsApi.decideChange(id, changeId, d); if (!MOCK) { set({ detail: await projectsApi.get(id) }); await get().loadChanges(); } },
   replanNode: async (nodeId) => { const id = get().activeId; if (!id) return; await projectsApi.replanNode(id, nodeId); if (!MOCK) await get().loadChanges(); },
-  saveAsTemplate: async () => { const id = get().activeId; if (!id) return; await projectsApi.saveAsTemplate(id); await get().loadTemplates(); },
+  saveAsTemplate: async (opts) => { const id = get().activeId; if (!id) return null; const t = await projectsApi.saveAsTemplate(id, opts); await get().loadTemplates(); return t; },
 }));
 
 // Switching office/dashboard (mode-toggle) leaves the Projects screen.

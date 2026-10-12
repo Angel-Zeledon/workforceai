@@ -344,6 +344,16 @@ type TemplateParam struct {
 	LabelKey string `json:"label_key"`
 	Label    string `json:"label,omitempty"`
 	Default  string `json:"default"`
+	// Type is "text" (default), "number" (integer clamped to Min..Max) or "list"
+	// (comma or line separated items, at most Max, default 20). A workflow with
+	// Repeat=[list param] is expanded once per item; ItemName is the placeholder
+	// of the current item inside the repeated block (default "item").
+	Type     string `json:"type,omitempty"`
+	ItemName string `json:"item_name,omitempty"`
+	Min      int    `json:"min,omitempty"`
+	Max      int    `json:"max,omitempty"`
+	// DefaultKey is the i18n key of a built-in default (list defaults are localized).
+	DefaultKey string `json:"default_key,omitempty"`
 }
 type TemplateApproval struct {
 	Action string `json:"action"`
@@ -377,6 +387,12 @@ type TemplateWorkflow struct {
 	Title    string            `json:"title,omitempty"`
 	Nodes    []TemplateNode    `json:"nodes"`
 	Params   map[string]string `json:"params,omitempty"`
+	// Repeat lists the list parameters this block is repeated over (one or two:
+	// two give the cartesian product, e.g. business unit x country). Keys of the
+	// block get a "_<n>" suffix per instance; a dependency on a repeated node
+	// resolves to the same item when the dependent block repeats over the same
+	// parameter, and to every instance (fan-in) otherwise.
+	Repeat []string `json:"repeat,omitempty"`
 }
 type TemplateObjective struct {
 	Key       string             `json:"key"`
@@ -397,6 +413,24 @@ type Template struct {
 	Objectives     []TemplateObjective `json:"objectives"`
 	Builtin        bool                `json:"builtin"`
 	BudgetHint     *BudgetHint         `json:"budget_hint,omitempty"`
+
+	// Organization templates (customizable, versioned). All additive.
+	Category   string        `json:"category,omitempty"`
+	Shared     bool          `json:"shared,omitempty"` // visible to the whole organization (false: only its creator)
+	ForkedFrom string        `json:"forked_from,omitempty"`
+	CreatedBy  string        `json:"created_by,omitempty"`
+	UpdatedBy  string        `json:"updated_by,omitempty"`
+	CreatedAt  *time.Time    `json:"created_at,omitempty"`
+	UpdatedAt  *time.Time    `json:"updated_at,omitempty"`
+	Stats      *TemplateStat `json:"stats,omitempty"`
+}
+
+// TemplateStat is the size of a template at its default and at its maximum parameters.
+type TemplateStat struct {
+	Objectives int `json:"objectives"`
+	Tasks      int `json:"tasks"`     // work items at the default parameters
+	TasksMax   int `json:"tasks_max"` // work items at the maximum parameters
+	Gates      int `json:"gates"`     // human gates at the default parameters
 }
 type BudgetHint struct {
 	P50USD float64 `json:"p50_usd"`

@@ -67,6 +67,54 @@ func (p *ProjectStore) ListTemplates(ctx context.Context, org string) ([]project
 	}, `SELECT data FROM project_templates WHERE org_id=$1 ORDER BY created_at, id`, org)
 }
 
+func scanTemplate(r scanner) (projects.Template, error) {
+	var raw []byte
+	var t projects.Template
+	if err := r.Scan(&raw); err != nil {
+		return t, err
+	}
+	return t, json.Unmarshal(raw, &t)
+}
+
+func (p *ProjectStore) GetTemplate(ctx context.Context, org, id string) (projects.Template, error) {
+	t, err := one(ctx, p.S, org, scanTemplate, `SELECT data FROM project_templates WHERE org_id=$1 AND id=$2`, org, id)
+	return t, mapErr(err)
+}
+
+// DeleteTemplate removes the template; its history goes with it (ON DELETE CASCADE, migration 500).
+func (p *ProjectStore) DeleteTemplate(ctx context.Context, org, id string) error {
+	tag, err := p.S.execTag(ctx, org, `DELETE FROM project_templates WHERE org_id=$1 AND id=$2`, org, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (p *ProjectStore) PutTemplateVersion(ctx context.Context, org string, v projects.TemplateVersion) error {
+	return p.S.exec(ctx, org, `INSERT INTO project_template_versions (org_id, template_id, version, saved_by, note, data, saved_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (org_id, template_id, version) DO NOTHING`,
+		org, v.TemplateID, v.Version, v.SavedBy, v.Note, jb(v.Template), v.SavedAt)
+}
+
+func (p *ProjectStore) ListTemplateVersions(ctx context.Context, org, id string) ([]projects.TemplateVersion, error) {
+	return many(ctx, p.S, org, func(r scanner) (projects.TemplateVersion, error) {
+		var raw []byte
+		v := projects.TemplateVersion{TemplateID: id}
+		if err := r.Scan(&v.Version, &v.SavedBy, &v.Note, &v.SavedAt, &raw); err != nil {
+			return v, err
+		}
+		var t projects.Template
+		if err := json.Unmarshal(raw, &t); err != nil {
+			return v, err
+		}
+		v.Template, v.Name = &t, t.Name
+		return v, nil
+	}, `SELECT version, saved_by, note, saved_at, data FROM project_template_versions WHERE org_id=$1 AND template_id=$2 ORDER BY version DESC`, org, id)
+}
+
 var _ projects.ChangeStore = (*ProjectStore)(nil)
 
 func scanChange(r scanner) (projects.PlanChange, error) {

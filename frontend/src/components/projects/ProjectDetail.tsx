@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { useT, fmtNumber } from "@/lib/i18n";
 import { PROJECT_TABS, useProjects, type ProjectTab } from "@/lib/projects/store";
 import { Btn, Progress } from "../ui";
@@ -11,6 +12,7 @@ import { HealthView } from "./HealthView";
 import { KanbanBoard } from "./KanbanBoard";
 import { NodeDrawer } from "./NodeDrawer";
 import { PlanChangesPanel } from "./PlanChangesPanel";
+import { SaveTemplateModal } from "./SaveTemplateModal";
 import { ProjectMap } from "./ProjectMap";
 import { Timeline } from "./Timeline";
 import { LightDot, STATUS_COLOR, StatusPill } from "./shared";
@@ -22,7 +24,7 @@ export function ProjectDetailView() {
   const setTab = useProjects((s) => s.setTab);
   const close = useProjects((s) => s.closeProject);
   const control = useProjects((s) => s.control);
-  const saveAsTemplate = useProjects((s) => s.saveAsTemplate);
+  const [saveOpen, setSaveOpen] = useState(false);
   const selected = useProjects((s) => s.selectedNodeId);
   const light = useProjects((s) => s.health?.light);
   const pendingChanges = useProjects((s) => s.changes.filter((c) => c.status === "pending").length);
@@ -34,7 +36,6 @@ export function ProjectDetailView() {
   const isDraft = p.status === "draft" || p.status === "planning";
   const active = p.status === "running" || p.status === "waiting_human";
   const canResume = p.status === "paused" || (p.status === "waiting_human" && p.control === "paused");
-  const finished = p.status === "done" || p.status === "failed" || p.status === "cancelled";
 
   return (
     <div className="flex h-full min-h-0">
@@ -53,7 +54,7 @@ export function ProjectDetailView() {
             {active && !canResume && <Btn data-testid="project-pause" onClick={() => control("pause")}>{t("pv.pause")}</Btn>}
             {canResume && <Btn data-testid="project-resume" kind="ok" onClick={() => control("resume")}>{t("pv.resume")}</Btn>}
             {(active || p.status === "paused") && <Btn data-testid="project-cancel" kind="danger" onClick={() => { if (window.confirm(t("pv.cancelConfirm"))) control("cancel"); }}>{t("pv.cancel")}</Btn>}
-            {finished && <Btn data-testid="save-as-template" onClick={() => saveAsTemplate()}>{t("pv.saveTemplate")}</Btn>}
+            <Btn data-testid="save-as-template" onClick={() => setSaveOpen(true)}>{t("pv.saveTemplate")}</Btn>
           </div>
         </div>
 
@@ -93,6 +94,7 @@ export function ProjectDetailView() {
         )}
       </div>
       {selected && !isDraft && <NodeDrawer />}
+      {saveOpen && <SaveTemplateModal defaultName={p.name_key ? t(p.name_key) : p.name} defaultDescription={p.goal} onClose={() => setSaveOpen(false)} />}
     </div>
   );
 }
