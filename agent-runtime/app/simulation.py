@@ -53,6 +53,15 @@ def sim_desk_draft(req: RunTaskRequest, out: StructuredOutput) -> ToolRequest | 
                              "message": f"borrador de {req.task.id}"})
 
 
+def sim_skill_load(req: RunTaskRequest) -> ToolRequest | None:
+    """S1: a task whose title (or description) carries "[sim:skill]" makes the simulated employee ask for
+    its first skill with skill.load (once). Nothing else changes: the $50,000 scenario never has the marker."""
+    text = f"{req.task.title} {req.task.description}".lower()
+    if "[sim:skill]" not in text or not req.skills or req.loaded_skills:
+        return None
+    return ToolRequest(tool="skill", action="load", risk="low", args={"name": req.skills[0].name})
+
+
 class SimulationEngine(AgentEngine):
     mode = "simulation"
 
@@ -150,6 +159,12 @@ class SimulationEngine(AgentEngine):
         if draft is not None:  # F1: like a real employee, keep the work as a file on the desk
             tool_requests.append(draft)
             out.evidence.append(c.TEXTS.get("evidence_file", "Draft saved at {path}").format(path=draft.args["path"]))
+        sl = sim_skill_load(req)
+        if sl is not None:  # S1: like a real employee, look up the skill before doing the work
+            tool_requests.append(sl)
+        elif req.loaded_skills and "[sim:skill]" in f"{req.task.title} {req.task.description}".lower():
+            names = ", ".join(l.name for l in req.loaded_skills)
+            out.evidence.append(("Skill applied: " if req.locale == "en" else "Habilidad aplicada: ") + names)
         return RunTaskResponse(
             output=out,
             consults=[Consult(**c) for c in entry["consults"]],

@@ -370,6 +370,25 @@ class RunWorkspace(_Base):
     can_write: bool = False
 
 
+class SkillRef(_Base):
+    """S1: a skill the agent has (progressive disclosure): name and description only."""
+
+    name: str
+    description: str = ""
+
+
+class LoadedSkill(_Base):
+    """S1: the text of a skill (or one of its files) the agent asked for with skill.load. It is
+    approved ORGANIZATION configuration delivered by the backend in its own channel."""
+
+    kind: str = "skill"
+    name: str
+    version: int = 0
+    file: str | None = None
+    text: str = ""
+    files: list[str] | None = None
+
+
 class RunTaskRequest(_ProviderPolicyMixin):
     # El contrato NO tiene campos de credenciales, connection_id ni URLs de API:
     # el runtime nunca ve secretos ni llama al proveedor (test_contract_has_no_secret_fields).
@@ -382,6 +401,9 @@ class RunTaskRequest(_ProviderPolicyMixin):
     tainted: bool = False
     rework: ReworkInfo | None = None  # Q1: set when the quality review asked for a new run
     workspace: RunWorkspace | None = None  # F1: the agent's drive folders (fs/fs_read agents only)
+    # S1: active skills of the agent (name + description) and the ones it loaded this task.
+    skills: list[SkillRef] | None = None
+    loaded_skills: list[LoadedSkill] | None = None
     # V2: notes a human sent to steer this task. Additional guidance, never authority (security.py).
     human_guidance: list[str] | None = None
     want_trace: bool = False  # V2: return the redacted prompt as built, for the thought audit
