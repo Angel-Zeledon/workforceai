@@ -46,6 +46,7 @@ type Store struct {
 	executions    map[string]application.ApprovalExecution // approval id -> executed action (runs.go)
 	standing      standingState                            // standing per-project approvals (standing.go)
 	v2            v2State                                  // work profiles, traces, steer notes (v2.go)
+	hist          chatHistState                            // chat history: archive, custom titles, read markers (chat_history.go)
 }
 
 func New() *Store {
@@ -60,6 +61,7 @@ func (s *Store) clear() {
 	s.memories = map[string]map[string]domain.Memory{}
 	s.taskOrder, s.reqOrder, s.convOrder, s.apprOrder, s.repOrder = nil, nil, nil, nil, nil
 	s.messages, s.events, s.activity = nil, nil, nil
+	s.hist = chatHistState{}
 	s.usage = nil
 	s.runMeta, s.checkpoints = map[string][]byte{}, map[string][]byte{}
 	s.executions = map[string]application.ApprovalExecution{}

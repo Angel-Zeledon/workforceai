@@ -1,8 +1,10 @@
 "use client";
+import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { useAgentView } from "@/lib/preferences";
 import { ReasonChip } from "../ui";
+import { Icon } from "../icons";
 import { ChatInput, ChatThread } from "./ChatThread";
 
 /** 1:1 chat with a single agent (conversation "agent:<id>"): only that agent answers. */
@@ -21,6 +23,11 @@ export function AgentChat({ id }: { id: string }) {
           <ReasonChip agentId={id} reason={task.assigned_reason} />
         </div>
       )}
+      <div className="flex justify-end border-b border-line px-3 py-1">
+        <Link href={`/chats/${encodeURIComponent(id)}`} data-testid="agent-chat-history" className="inline-flex items-center gap-1 text-[11px] font-medium text-accent-hover hover:underline">
+          {t("chats.history")}<Icon name="arrow" size={11} />
+        </Link>
+      </div>
       <ChatThread conv={conv} emptyText={t("chat.empty.agent", { name: first })} className="flex-1" />
       <div className="border-t border-line bg-panel p-3">
         <ChatInput conv={conv} testId="chat-input" submitTestId="chat-submit" placeholder={t("chat.placeholder.agent", { name: first })} />

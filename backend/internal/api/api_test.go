@@ -148,6 +148,8 @@ func newEnv(t *testing.T, o opts) *env {
 
 	d := api.Deps{Cfg: cfg, Queries: q, Orch: orch, Approvals: appr, Store: spy, Runtime: fakeRuntime{}, Hub: hub, Log: log,
 		AuthEnabled: o.auth, AllowedOrigins: o.origins, EnableDemoReset: o.demoReset, MaxBodyBytes: o.maxBody, WSMaxAge: o.wsMaxAge}
+	d.Chats = &application.ChatHistory{Store: mem, Core: spy, Rec: rec, Cfg: cfg}
+	d.Audit = &application.AuditService{Store: mem, Rec: rec, Cfg: cfg}
 	if o.v2 {
 		pr := &application.ProfileService{Store: mem, Core: spy, Tones: mem, Rec: rec, Config: cfg}
 		tr := &application.Tracer{Store: mem, Log: log, Retention: 30 * 24 * time.Hour}

@@ -188,6 +188,7 @@ func run(log *slog.Logger) error {
 		orch.SetStanding(standingSvc)
 	}
 	rewardsSvc := wireRewards(log, pg, store, rec, ws.projects)
+	chats := wireChatHistory(cfg.App, store, rec, ws.projects)
 	rewardsObs.Bind(rewardsSvc)
 
 	// Durable execution: resume the requests a previous process left in progress
@@ -215,7 +216,7 @@ func run(log *slog.Logger) error {
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Standing: standingSvc,
-		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Skills: skillsSvc, Rewards: rewardsSvc, Push: pushSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Skills: skillsSvc, Rewards: rewardsSvc, Chats: chats, Push: pushSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
@@ -382,4 +383,18 @@ func purgeTracesLoop(ctx context.Context, log *slog.Logger, tr *application.Trac
 		case <-tick.C:
 		}
 	}
+}
+
+// wireChatHistory builds the chat history service (docs/architecture/chat-history.md)
+// over the store, which implements application.ChatHistoryStore in Postgres and in memory.
+func wireChatHistory(cfg application.Config, store application.Store, rec *application.Recorder, proj *projects.Service) *application.ChatHistory {
+	hs, ok := store.(application.ChatHistoryStore)
+	if !ok {
+		return nil
+	}
+	h := &application.ChatHistory{Store: hs, Core: store, Rec: rec, Cfg: cfg}
+	if proj != nil {
+		h.ProjectOf = proj.ProjectIDForRequest
+	}
+	return h
 }

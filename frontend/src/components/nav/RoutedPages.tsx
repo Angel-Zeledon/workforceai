@@ -30,7 +30,7 @@ export const OfficePage = () => <OfficeView />;
 export const DashboardPage = () => <Dashboard />;
 export const ShopPage = () => <Hinted id="shop"><ShopView /></Hinted>;
 export const SettingsPage = () => <SettingsView />;
-export const ChatsPage = ({ agentId }: { agentId?: string }) => <ChatsView agentId={agentId} />;
+export const ChatsPage = ({ agentId }: { agentId?: string }) => <ChatsView agentId={agentId ? decodeURIComponent(agentId) : undefined} />;
 
 function FilesInner() {
   const path = useSearchParams().get("path") || "/";
