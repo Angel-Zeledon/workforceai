@@ -228,7 +228,8 @@ func run(log *slog.Logger) error {
 			return err
 		}
 		deps.Auth = svc
-		ah := auth.NewHandler(svc, auth.HandlerConfig{Limiter: limiter, TrustedProxies: cfg.TrustedProxies, FailOpen: true})
+		ah := auth.NewHandler(svc, auth.HandlerConfig{Limiter: limiter, TrustedProxies: cfg.TrustedProxies, FailOpen: true,
+			CookieName: cfg.AuthCookieName, CookieSecure: cfg.AuthCookieSecure, AllowedOrigins: cfg.AllowedOrigins})
 		deps.AuthRoutes, deps.InvitationRoutes = ah.Routes(), ah.InvitationRoutes()
 		deps.WSMaxAge = 15 * time.Minute // = default access token lifetime
 	} else {

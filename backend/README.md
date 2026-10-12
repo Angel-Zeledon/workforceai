@@ -61,6 +61,8 @@ API en `http://localhost:8080/api/v1`, WebSocket en `ws://localhost:8080/ws`.
 |---|---|---|
 | `AUTH_ENABLED` | `false` | `true`: JWT obligatorio en `/api/v1/*` (salvo `/healthz` y `/api/v1/auth/*`) y en `/ws`; el `org_id` sale del token |
 | `JWT_SECRET` | vacío | HS256, **>= 32 bytes**; obligatorio con `AUTH_ENABLED=true` (el arranque falla si falta) |
+| `AUTH_COOKIE_SECURE` | `true` | Atributo `Secure` de la cookie `HttpOnly` del refresh token. Solo desarrollo en http plano (`docker-compose.yml`) lo apaga |
+| `AUTH_COOKIE_NAME` | `wfai_refresh` | Nombre de la cookie; cámbialo si varias instalaciones comparten host |
 | `ALLOWED_ORIGINS` | vacío | Lista por comas para CORS y WS. Vacío + auth off = `*` (dev); vacío + auth on = solo same-origin. `*` prohibido con auth on |
 | `ENABLE_DEMO_RESET` | `false` | Registra `POST /api/v1/demo/reset` (con auth: rol admin). **Omitir en producción** |
 | `MIGRATE_DATABASE_URL` | = `DATABASE_URL` | Credenciales de owner solo para migraciones |

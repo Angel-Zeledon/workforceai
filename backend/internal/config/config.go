@@ -71,6 +71,12 @@ type Config struct {
 	EmailHoldSeconds int
 	// AppEnv ("production" warns when the KEK comes from the environment).
 	AppEnv string
+	// AuthCookieSecure sets the Secure attribute of the refresh-token cookie
+	// (AUTH_COOKIE_SECURE, default true). Only local plain-http development
+	// (docker-compose.yml) turns it off. AuthCookieName overrides the cookie
+	// name (AUTH_COOKIE_NAME) so stacks sharing a hostname do not collide.
+	AuthCookieSecure bool
+	AuthCookieName   string
 
 	ReadHeaderTimeout time.Duration
 	ReadTimeout       time.Duration
@@ -223,6 +229,10 @@ func Load() Config {
 	if c.AuthEnabled, err = getBool("AUTH_ENABLED", false); err != nil {
 		c.errs = append(c.errs, err)
 	}
+	if c.AuthCookieSecure, err = getBool("AUTH_COOKIE_SECURE", true); err != nil {
+		c.errs = append(c.errs, err)
+	}
+	c.AuthCookieName = strings.TrimSpace(getenv("AUTH_COOKIE_NAME", ""))
 	if c.EnableDemoReset, err = getBool("ENABLE_DEMO_RESET", false); err != nil {
 		c.errs = append(c.errs, err)
 	}
