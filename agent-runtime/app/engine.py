@@ -175,5 +175,9 @@ def select_engine() -> AgentEngine:
 
         return CrewAIEngine(providers=configured_providers())
     except Exception as exc:  # CrewAI not installed / incompatible
-        log.warning("CrewAI unavailable (%s); using SimulationEngine", exc)
-        return SimulationEngine()
+        # A provider IS configured: answering with scripted content would look like real
+        # work. Keep serving (simulation) but say so loudly: error log + degraded healthz.
+        log.error("live engine unavailable (%s): a model provider is configured but the runtime is in SIMULATION", exc)
+        eng = SimulationEngine()
+        eng.fallback_reason = f"live engine unavailable: {type(exc).__name__}: {exc}"[:300]
+        return eng

@@ -98,6 +98,19 @@ def parse_json_output(raw: str, schema: type[BaseModel]) -> Any:
         return schema.model_validate(json.loads(text[i:j + 1]))
 
 
+def native_structured_output(cfg: ProviderConfig) -> bool:
+    """Whether the provider accepts a JSON-schema response_format (structured output).
+    DeepSeek only supports {"type": "json_object"}; custom OpenAI-compatible endpoints vary,
+    so they also get the schema in the prompt."""
+    return cfg.id == "anthropic"
+
+
+def json_instructions(schema: type[BaseModel]) -> str:
+    """Prompt-side contract for providers without structured output."""
+    return ("\n\nResponde SOLO con un objeto JSON valido (sin texto antes ni despues, sin ```), "
+            "que cumpla exactamente este JSON Schema:\n" + json.dumps(schema.model_json_schema(), ensure_ascii=False))
+
+
 class _ConsultAnswer(BaseModel):
     answer: str
 
@@ -159,6 +172,12 @@ class CrewAIEngine(AgentEngine):
         if key not in self._llms:
             kw: dict[str, Any] = {"model": cfg.model, "api_key": cfg.api_key, "temperature": temperature,
                                   "max_tokens": max_tokens or 4096, "timeout": PROVIDER_TIMEOUT_S}
+            if cfg.id == "deepseek":
+                # Live finding: long consolidations came back as invalid JSON (unescaped quotes
+                # around char 13k). DeepSeek's JSON mode guarantees syntactically valid JSON
+                # (the schema still goes in the instructions), and deepseek-chat allows 8K out.
+                kw["response_format"] = {"type": "json_object"}
+                kw["max_tokens"] = max(kw["max_tokens"], 8192)
             if cfg.base_url:
                 kw["base_url"] = cfg.base_url
             self._llms[key] = self._LLM(**kw)
@@ -170,8 +189,15 @@ class CrewAIEngine(AgentEngine):
                       creativity: str = "") -> tuple[Any, Usage]:
         agent = self._Agent(role=role, goal=goal, backstory=backstory, llm=self._llm_for(cfg, max_tokens, creativity),
                             tools=[], allow_delegation=False, verbose=False)
-        task = self._Task(description=description, expected_output=expected,
-                          agent=agent, output_pydantic=schema)
+        if native_structured_output(cfg):
+            task = self._Task(description=description, expected_output=expected,
+                              agent=agent, output_pydantic=schema)
+        else:
+            # Providers without JSON-schema response_format (DeepSeek answers 400 "This
+            # response_format type is unavailable"): the schema goes into the instructions and
+            # the raw answer is parsed and validated below (one retry on invalid JSON).
+            task = self._Task(description=description, expected_output=expected + json_instructions(schema),
+                              agent=agent)
         crew = self._Crew(agents=[agent], tasks=[task], process=self._Process.sequential, verbose=False)
         t0 = time.monotonic()
         result = crew.kickoff()

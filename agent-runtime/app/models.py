@@ -657,3 +657,6 @@ class HealthResponse(_Base):
     status: str
     mode: Literal["simulation", "live"]
     provider: Literal["simulation", "deepseek", "anthropic", "custom"] = "simulation"
+    # Set when a provider is configured but the live engine could not start: the runtime
+    # is answering in simulation and status is "degraded" (never a silent fallback).
+    warning: str | None = None
