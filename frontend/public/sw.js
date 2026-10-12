@@ -1,10 +1,10 @@
 /* Service worker: offline app shell + Web Push notifications.
  * It NEVER caches API responses or anything cross-origin: approvals and every
  * other business datum always come live from the authenticated API. */
-const SHELL = "wfai-shell-v1";
+const SHELL = "wfai-shell-v2"; // v2: the agent logo (old icons dropped on activate)
 const LABELS = "wfai-labels-v1";
 const LABELS_KEY = "/__labels.json";
-const SHELL_URLS = ["/approvals", "/manifest.webmanifest", "/icon.svg"];
+const SHELL_URLS = ["/approvals", "/manifest.webmanifest", "/icon.svg", "/icon-192.png", "/apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   title: "AI Workforce OS",
   description: "Oficina virtual 3D con empleados de IA",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  icons: { icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/icon.svg", type: "image/svg+xml" }, { url: "/favicon-32.png", sizes: "32x32", type: "image/png" }], apple: "/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "Workforce", statusBarStyle: "default" },
 };
 
