@@ -203,4 +203,63 @@ func storeContract(t *testing.T, st Store) {
 	}
 }
 
-func TestMemoryStoreContract(t *testing.T) { storeContract(t, NewMemoryStore()) }
+// emailAndTrialContract covers the e-mail verification tokens and the trial-expiry column (memory and Postgres alike).
+func emailAndTrialContract(t *testing.T, st Store) {
+	t.Helper()
+	now := time.Now().UTC().Truncate(time.Second)
+	exp := now.Add(24 * time.Hour)
+	mk := func(trial time.Time) User {
+		u := User{ID: uuid.NewString(), Email: "v-" + randomHex(4) + "@example.com", Name: "N", PasswordHash: "h", CreatedAt: now, TrialExpiresAt: trial}
+		o := Org{ID: uuid.NewString(), Name: "Org", Slug: "v-" + randomHex(4)}
+		if err := st.CreateAccount(bg, u, o, Membership{OrgID: o.ID, UserID: u.ID, Role: RoleOwner, CreatedAt: now}); err != nil {
+			t.Fatalf("CreateAccount: %v", err)
+		}
+		return u
+	}
+	// A normal account starts unverified and not a trial; a trial keeps its expiry through the store.
+	u := mk(time.Time{})
+	if got, _ := st.UserByID(bg, u.ID); !got.VerifiedAt.IsZero() || !got.TrialExpiresAt.IsZero() {
+		t.Fatalf("new account: %+v", got)
+	}
+	tr := mk(exp)
+	if got, _ := st.UserByEmail(bg, tr.Email); !got.TrialExpiresAt.Equal(exp) {
+		t.Fatalf("trial expiry lost: %v", got.TrialExpiresAt)
+	}
+
+	// Tokens: unknown, valid (once), replaced by a newer one, expired.
+	if _, err := st.ConsumeEmailVerification(bg, hashToken("nope"), now); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("unknown token: %v", err)
+	}
+	h1 := hashToken("t1-" + randomHex(4))
+	if err := st.CreateEmailVerification(bg, EmailVerification{TokenHash: h1, UserID: u.ID, ExpiresAt: now.Add(time.Hour), CreatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	h2 := hashToken("t2-" + randomHex(4))
+	if err := st.CreateEmailVerification(bg, EmailVerification{TokenHash: h2, UserID: u.ID, ExpiresAt: now.Add(time.Hour), CreatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.ConsumeEmailVerification(bg, h1, now); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("a replaced token must be dead: %v", err)
+	}
+	got, err := st.ConsumeEmailVerification(bg, h2, now)
+	if err != nil || got.ID != u.ID || got.VerifiedAt.IsZero() {
+		t.Fatalf("consume: %+v %v", got, err)
+	}
+	if again, _ := st.UserByID(bg, u.ID); again.VerifiedAt.IsZero() {
+		t.Fatal("the user must stay verified")
+	}
+	if _, err := st.ConsumeEmailVerification(bg, h2, now); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("second use: %v", err)
+	}
+	h3 := hashToken("t3-" + randomHex(4))
+	_ = st.CreateEmailVerification(bg, EmailVerification{TokenHash: h3, UserID: tr.ID, ExpiresAt: now.Add(time.Minute), CreatedAt: now})
+	if _, err := st.ConsumeEmailVerification(bg, h3, now.Add(2*time.Minute)); !errors.Is(err, ErrTokenExpired) {
+		t.Fatalf("expired token: %v", err)
+	}
+}
+
+func TestMemoryStoreContract(t *testing.T) {
+	st := NewMemoryStore()
+	storeContract(t, st)
+	emailAndTrialContract(t, st)
+}

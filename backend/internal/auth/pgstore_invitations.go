@@ -128,8 +128,8 @@ func (s *PGStore) AcceptInvitation(ctx context.Context, tokenHash string, newUse
 			return ErrInvalidToken
 		}
 		if newUser != nil {
-			_, err := tx.Exec(ctx, `INSERT INTO users (id, email, name, password_hash) VALUES ($1,$2,$3,$4)`,
-				newUser.ID, newUser.Email, newUser.Name, newUser.PasswordHash)
+			_, err := tx.Exec(ctx, `INSERT INTO users (id, email, name, password_hash, email_verified_at) VALUES ($1,$2,$3,$4,$5)`,
+				newUser.ID, newUser.Email, newUser.Name, newUser.PasswordHash, nullTime(newUser.VerifiedAt))
 			if _, ok := isUnique(err); ok {
 				return ErrEmailTaken
 			}

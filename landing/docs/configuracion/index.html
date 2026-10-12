@@ -60,7 +60,7 @@
         <h1>Referencia de configuración</h1>
         <p class="lead">Toda la configuración se lee del entorno. El backend (Go) carga y valida sus variables al arrancar y se niega a iniciar con valores incoherentes; el runtime (Python) lee las suyas al usarlas; el frontend solo tiene argumentos de build. Los valores por defecto de esta página provienen del código.</p>
         
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">Cómo se carga la configuración</a></li><li><a href="#s2">Servidor y base de datos</a></li><li><a href="#s3">Autenticación, CORS y proxy</a></li><li><a href="#s4">Presupuesto, costo y límites de ejecución</a></li><li><a href="#s5">Recompensas y monedas</a></li><li><a href="#s6">Runtime: proveedores de modelo y claves</a></li><li><a href="#s7">Conexiones, correo, sandbox y almacenamiento</a></li><li><a href="#s8">Límites de tasa</a></li><li><a href="#s9">Frontend: argumentos de build</a></li></ol></nav>
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">Cómo se carga la configuración</a></li><li><a href="#s2">Servidor y base de datos</a></li><li><a href="#s3">Autenticación, CORS y proxy</a></li><li><a href="#s4">Presupuesto, costo y límites de ejecución</a></li><li><a href="#s5">Recompensas y monedas</a></li><li><a href="#s6">Runtime: proveedores de modelo y claves</a></li><li><a href="#s7">Conexiones, correo, sandbox y almacenamiento</a></li><li><a href="#s8">Límites de tasa</a></li><li><a href="#s9">Frontend: argumentos de build</a></li><li><a href="#s10">Verificación de correo y cuentas de prueba</a></li></ol></nav>
 
       <section class="g-sec" id="s1" aria-labelledby="h1">
         <h2 id="h1">Cómo se carga la configuración</h2>
@@ -156,6 +156,15 @@
         <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Argumento de build</th><th scope="col">Por defecto</th><th scope="col">Obligatoria</th><th scope="col">Significado</th></tr></thead><tbody><tr><th scope="row"><code>NEXT_PUBLIC_API_URL</code></th><td>vacío</td><td>No</td><td>URL base absoluta de la API (por ejemplo https://app.example.com/api/v1). Vacía: ruta relativa.</td></tr><tr><th scope="row"><code>NEXT_PUBLIC_WS_URL</code></th><td>vacío</td><td>No</td><td>URL absoluta del WebSocket (wss://app.example.com/ws). Vacía: se deriva de window.location.</td></tr><tr><th scope="row"><code>NEXT_PUBLIC_MOCK</code></th><td>vacío</td><td>No</td><td>true ejecuta el frontend con datos simulados, sin backend.</td></tr></tbody></table></div>
         
       </section>
+
+      <section class="g-sec" id="s10" aria-labelledby="h10">
+        <h2 id="h10">Verificación de correo y cuentas de prueba</h2>
+        <p>Dos funciones opcionales de acceso. La verificación de correo exige SMTP funcional: con EMAIL_VERIFICATION=true y sin SMTP válido el backend se niega a arrancar, de modo que un servidor a medio configurar no deja a nadie fuera. Las cuentas de prueba permiten probar sin registrarse y caducan solas.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Variable</th><th scope="col">Por defecto</th><th scope="col">Significado</th></tr></thead><tbody><tr><th scope="row"><code>EMAIL_VERIFICATION</code></th><td>false</td><td>Las cuentas nuevas deben abrir un enlace de un solo uso enviado a su correo antes de poder entrar. Requiere AUTH_ENABLED, UI_BASE_URL y SMTP_* (o EMAIL_DEV_LOG).</td></tr><tr><th scope="row"><code>EMAIL_DEV_LOG</code></th><td>false</td><td>Solo desarrollo: los enlaces de verificación se escriben en el log en lugar de enviarse.</td></tr><tr><th scope="row"><code>SMTP_HOST</code></th><td></td><td>Servidor SMTP. Obligatorio con EMAIL_VERIFICATION salvo que EMAIL_DEV_LOG esté activo.</td></tr><tr><th scope="row"><code>SMTP_PORT</code></th><td>465</td><td>465 usa TLS implícito; 587 usa STARTTLS.</td></tr><tr><th scope="row"><code>SMTP_TLS</code></th><td>tls (465) / starttls</td><td>tls, starttls o none (none solo para un relay local).</td></tr><tr><th scope="row"><code>SMTP_USER / SMTP_PASS</code></th><td></td><td>Credenciales del servidor SMTP; define ambas o ninguna.</td></tr><tr><th scope="row"><code>SMTP_FROM</code></th><td></td><td>Remitente, p. ej. AI Workforce OS &lt;no-reply@example.com&gt;.</td></tr><tr><th scope="row"><code>TRIAL_ENABLED</code></th><td>false</td><td>Activa POST /auth/trial: cuentas desechables con su propia organización (requiere AUTH_ENABLED).</td></tr><tr><th scope="row"><code>TRIAL_TTL_HOURS</code></th><td>24</td><td>Cuánto funciona una cuenta de prueba.</td></tr><tr><th scope="row"><code>TRIAL_PER_IP_PER_DAY</code></th><td>3</td><td>Cuentas de prueba que una misma dirección puede crear al día.</td></tr><tr><th scope="row"><code>TRIAL_GLOBAL_PER_DAY</code></th><td>300</td><td>Cuentas de prueba creadas al día, entre todas las direcciones.</td></tr><tr><th scope="row"><code>TRIAL_EMAIL_DOMAIN</code></th><td>prueba.invalid</td><td>Dominio de las direcciones generadas para las pruebas (sin buzón detrás).</td></tr></tbody></table></div>
+        
+      </section>
       </article>
       <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="cards"><li><a href="/docs/despliegue/"><b>Despliegue en producción</b><span>Guía para desplegar AI Workforce OS con Docker Compose: Caddy con TLS automático, Postgres, Redis, backups, actualizaciones y rollback.</span></a></li><li><a href="/docs/autenticacion-y-multitenencia/"><b>Autenticación y multitenencia</b><span>Cómo cuentas, sesiones, roles, invitaciones y row-level security de Postgres aíslan las organizaciones en AI Workforce OS.</span></a></li><li><a href="/docs/runtime-de-agentes/"><b>Runtime de agentes</b><span>El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.</span></a></li></ul></section>
     </div>
@@ -167,6 +176,7 @@
       <div class="cta-row">
         <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
         <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Probar sin registrarte</a>
       </div>
     </div>
   </section>

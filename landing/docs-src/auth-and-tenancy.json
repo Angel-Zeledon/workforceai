@@ -208,6 +208,13 @@
           ]
         },
         "tip": "Consulta la referencia de la API para la lista completa de rutas y el modelo de seguridad para el análisis de amenazas."
+      },
+      {
+        "h": "Verificación de correo y cuentas de prueba",
+        "paras": [
+          "Con EMAIL_VERIFICATION=true, POST /auth/register crea la cuenta pero no abre sesión: responde 202 con verification_required y envía un enlace de un solo uso (token aleatorio, guardado como hash, válido 24 horas). POST /auth/login responde 403 email_not_verified solo cuando la contraseña es correcta; con una contraseña incorrecta sigue respondiendo invalid_credentials, de modo que el endpoint no revela qué correos existen. POST /auth/verify {token} consume el enlace, marca el correo como verificado y abre la sesión. POST /auth/verify/resend {email} reenvía el enlace, limitado por dirección, y responde 204 exista o no la cuenta.",
+          "Con TRIAL_ENABLED=true, POST /auth/trial crea una cuenta desechable con su propia organización y devuelve una sola vez el usuario y una contraseña generada (formato XXXX-XXXX-XXXX); solo se guarda su hash. La cuenta deja de funcionar a las TRIAL_TTL_HOURS: el token de acceso nunca dura más que la prueba, el login responde 403 trial_expired y la renovación de sesión se rechaza. La creación se limita por dirección de cliente y en total por día. GET /auth/config informa a la interfaz de ambas funciones."
+        ]
       }
     ]
   },
@@ -410,6 +417,13 @@
           ]
         },
         "tip": "See the API reference for the full route list and the security model for the threat analysis."
+      },
+      {
+        "h": "Email verification and trial accounts",
+        "paras": [
+          "With EMAIL_VERIFICATION=true, POST /auth/register creates the account but opens no session: it answers 202 with verification_required and sends a one-time link (random token, stored as a hash, valid for 24 hours). POST /auth/login answers 403 email_not_verified only when the password is correct; with a wrong password it still answers invalid_credentials, so the endpoint does not reveal which addresses exist. POST /auth/verify {token} consumes the link, marks the address verified and opens the session. POST /auth/verify/resend {email} sends the link again, rate-limited per address, and answers 204 whether or not the account exists.",
+          "With TRIAL_ENABLED=true, POST /auth/trial creates a throwaway account with its own organization and returns the username and a generated password exactly once (format XXXX-XXXX-XXXX); only its hash is stored. The account stops working after TRIAL_TTL_HOURS: the access token never outlives the trial, login answers 403 trial_expired and session renewal is refused. Creation is limited per client address and in total per day. GET /auth/config tells the UI about both features."
+        ]
       }
     ]
   }

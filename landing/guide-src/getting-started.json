@@ -28,7 +28,7 @@
           "Solo una cuenta. Entra a app.workforceai.es, elige «Crear cuenta» y escribe tu nombre, el nombre de tu empresa, tu correo y una contraseña (mínimo 10 caracteres). Llegas a tu propia oficina, separada de las demás. Por ahora la IA corre en modo simulación: las respuestas son guionadas y realistas, no hay un modelo real detrás, no tiene costo y no te pide ninguna clave.",
           "Que sea una simulación no cambia cómo se usa. El flujo es el mismo que tendrías con un modelo real: pides, los agentes colaboran, tú apruebas y recibes un reporte. Por eso es buena forma de aprender antes de conectar nada."
         ],
-        "tip": "Tu oficina empieza con 1,000 monedas de bienvenida: ya puedes estrenar la Tienda."
+        "tip": "¿Quieres mirar antes de registrarte? En «Probar sin registrarte» te damos un usuario y una contraseña de prueba que caducan a las 24 horas. Tu oficina empieza con 1,000 monedas de bienvenida."
       },
       {
         "h": "¿Cómo le pido algo a mi oficina?",
@@ -101,7 +101,7 @@
           "Just an account. Go to app.workforceai.es, choose “Create account” and enter your name, your company name, your email and a password (at least 10 characters). You land in your own office, separate from everyone else’s. For now the AI runs in simulation mode: responses are scripted and realistic, there is no real model behind it, it costs nothing and it never asks for a key.",
           "Being a simulation does not change how you use it. The flow is the same you would have with a real model: you ask, agents collaborate, you approve, and you get a report. That makes it a good way to learn before connecting anything."
         ],
-        "tip": "Your office starts with 1,000 welcome coins, so you can try the Shop right away."
+        "tip": "Want to look around before signing up? “Try it without signing up” gives you a trial username and password that expire after 24 hours. Your office starts with 1,000 welcome coins."
       },
       {
         "h": "How do I ask my office for something?",

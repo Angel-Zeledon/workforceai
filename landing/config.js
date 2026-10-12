@@ -7,6 +7,7 @@ window.LANDING_CONFIG = {
   APP_URL: "https://app.workforceai.es",
   SIGNUP_URL: "https://app.workforceai.es/register",
   LOGIN_URL: "https://app.workforceai.es/login",
+  TRIAL_URL: "https://app.workforceai.es/prueba",
 
   // Contact email (footer / structured data).
   CONTACT_EMAIL: "info@workforceai.es",

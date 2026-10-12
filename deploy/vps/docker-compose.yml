@@ -57,6 +57,18 @@ services:
       AUTH_ENABLED: "true"
       JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET in deploy/vps/.env (>= 32 bytes)}
       ENABLE_DEMO_RESET: "false"
+      # "Try it without signing up": throwaway accounts that stop working after 24 h (3 per client address per day).
+      TRIAL_ENABLED: "true"
+      TRIAL_EMAIL_DOMAIN: prueba.workforceai.es
+      # E-mail verification of new accounts. Turn on in ./.env (EMAIL_VERIFICATION=true) once the SMTP_* values are set there;
+      # the backend refuses to start with verification on and no working SMTP, so a half-configured server cannot lock people out.
+      EMAIL_VERIFICATION: ${EMAIL_VERIFICATION:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_TLS: ${SMTP_TLS:-}
       # Caddy (stockai project) is the only proxy in front: trust its X-Forwarded-For so rate limits count real client IPs.
       TRUSTED_PROXIES: 172.16.1.0/24
     mem_limit: 256m

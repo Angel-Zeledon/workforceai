@@ -60,7 +60,7 @@
         <h1>Authentication and multi-tenancy</h1>
         <p class="lead">AI Workforce OS can run open, with one fixed organization, or with accounts, roles and per-organization isolation. This page describes the auth service in the Go backend: how accounts and sessions work, what each role can do and how Postgres enforces the tenant boundary.</p>
         
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">Two modes: AUTH_ENABLED false and true</a></li><li><a href="#s2">Accounts and registration</a></li><li><a href="#s3">Login, lockout and rate limits</a></li><li><a href="#s4">Sessions: access token and rotating refresh token</a></li><li><a href="#s5">Roles and permissions (RBAC)</a></li><li><a href="#s6">Organizations, members and switching</a></li><li><a href="#s7">Invitations</a></li><li><a href="#s8">Tenant isolation with Postgres row-level security</a></li><li><a href="#s9">Endpoint reference</a></li></ol></nav>
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">Two modes: AUTH_ENABLED false and true</a></li><li><a href="#s2">Accounts and registration</a></li><li><a href="#s3">Login, lockout and rate limits</a></li><li><a href="#s4">Sessions: access token and rotating refresh token</a></li><li><a href="#s5">Roles and permissions (RBAC)</a></li><li><a href="#s6">Organizations, members and switching</a></li><li><a href="#s7">Invitations</a></li><li><a href="#s8">Tenant isolation with Postgres row-level security</a></li><li><a href="#s9">Endpoint reference</a></li><li><a href="#s10">Email verification and trial accounts</a></li></ol></nav>
 
       <section class="g-sec" id="s1" aria-labelledby="h1">
         <h2 id="h1">Two modes: AUTH_ENABLED false and true</h2>
@@ -172,6 +172,16 @@ CREATE POLICY tenant_isolation ON agents
         <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Endpoint</th><th scope="col">Access</th></tr></thead><tbody><tr><th scope="row"><code>POST /api/v1/auth/register, /login, /refresh, /logout</code></th><td>Public (refresh and logout use the cookie plus X-WFAI-CSRF)</td></tr><tr><th scope="row"><code>POST /api/v1/auth/invitations/accept</code></th><td>Public, token in the body</td></tr><tr><th scope="row"><code>GET /api/v1/auth/config</code></th><td>Public, reports whether auth and registration are enabled</td></tr><tr><th scope="row"><code>GET /me, POST /logout-all, POST /switch-org</code></th><td>Any authenticated user</td></tr><tr><th scope="row"><code>GET/POST/PATCH/DELETE /members</code></th><td>members:read, members:invite, members:manage; a member may remove themself</td></tr><tr><th scope="row"><code>GET/POST/DELETE /invitations</code></th><td>members:read to list, members:invite to create and revoke</td></tr></tbody></table></div>
         <aside class="tip"><b>Tip.</b> See the API reference for the full route list and the security model for the threat analysis.</aside>
       </section>
+
+      <section class="g-sec" id="s10" aria-labelledby="h10">
+        <h2 id="h10">Email verification and trial accounts</h2>
+        <p>With EMAIL_VERIFICATION=true, POST /auth/register creates the account but opens no session: it answers 202 with verification_required and sends a one-time link (random token, stored as a hash, valid for 24 hours). POST /auth/login answers 403 email_not_verified only when the password is correct; with a wrong password it still answers invalid_credentials, so the endpoint does not reveal which addresses exist. POST /auth/verify {token} consumes the link, marks the address verified and opens the session. POST /auth/verify/resend {email} sends the link again, rate-limited per address, and answers 204 whether or not the account exists.</p>
+        <p>With TRIAL_ENABLED=true, POST /auth/trial creates a throwaway account with its own organization and returns the username and a generated password exactly once (format XXXX-XXXX-XXXX); only its hash is stored. The account stops working after TRIAL_TTL_HOURS: the access token never outlives the trial, login answers 403 trial_expired and session renewal is refused. Creation is limited per client address and in total per day. GET /auth/config tells the UI about both features.</p>
+        
+        
+        
+        
+      </section>
       </article>
       <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/api-reference/"><b>API Reference</b><span>Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.</span></a></li><li><a href="/en/docs/security-model/"><b>Security model</b><span>How an agent's blast radius is limited: credential vault, human approvals, caps, kill switch, audit, RLS and sandbox. With the current limits stated.</span></a></li><li><a href="/en/docs/configuration/"><b>Configuration reference</b><span>Environment variable reference for AI Workforce OS: server, database, auth, budget, rewards, model providers and frontend build arguments.</span></a></li></ul></section>
     </div>
@@ -183,6 +193,7 @@ CREATE POLICY tenant_isolation ON agents
       <div class="cta-row">
         <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
         <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
       </div>
     </div>
   </section>

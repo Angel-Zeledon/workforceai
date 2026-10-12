@@ -13,7 +13,10 @@ import { create } from "zustand";
 import { API_URL, MOCK } from "./config";
 
 export type SessionStatus = "loading" | "disabled" | "anonymous" | "authenticated";
-export interface SessionUser { id: string; email: string; name: string }
+export interface SessionUser { id: string; email: string; name: string; /** Set only for trial accounts: when they stop working (ISO). */ trial_expires_at?: string }
+/** What the backend offers: e-mail verification for new accounts, and "try it without signing up". */
+export interface AuthFlags { verification: boolean; trial: boolean }
+export interface TrialAccount { email: string; password: string; expires_at: string }
 export interface OrgRef { org_id: string; role: string; name?: string }
 
 interface SessionPayload {
@@ -22,6 +25,7 @@ interface SessionPayload {
 }
 
 interface SessionState {
+  flags: AuthFlags;
   status: SessionStatus;
   user: SessionUser | null;
   orgId: string | null;
@@ -31,6 +35,7 @@ interface SessionState {
 }
 
 export const useSession = create<SessionState>(() => ({
+  flags: { verification: false, trial: false },
   status: "loading", user: null, orgId: null, role: null, permissions: [], orgs: [],
 }));
 
@@ -116,7 +121,9 @@ async function decideMode(): Promise<SessionStatus> {
   try {
     const res = await fetch(`${API_URL}/auth/config`, { cache: "no-store" });
     // An older backend without the endpoint is an open demo.
-    enabled = res.ok && (await res.json())?.enabled === true;
+    const cfg = res.ok ? await res.json() : null;
+    enabled = cfg?.enabled === true;
+    if (enabled) useSession.setState({ flags: { verification: cfg?.verification === true, trial: cfg?.trial === true } });
   } catch { enabled = false; }
   if (!enabled) { useSession.setState({ status: "disabled" }); return "disabled"; }
   dropLegacyStore();
@@ -135,7 +142,21 @@ async function begin(path: string, body: unknown) {
 }
 
 export const login = (email: string, password: string) => begin("/auth/login", { email, password });
-export const register = (b: { email: string; password: string; name: string; org_name: string }) => begin("/auth/register", b);
+export type RegisterResult = { verificationRequired: false } | { verificationRequired: true; email: string; emailSent: boolean };
+/** Creates the account. With e-mail verification on there is no session yet: the user must open the link we send. */
+export async function register(b: { email: string; password: string; name: string; org_name: string; locale?: string }): Promise<RegisterResult> {
+  const data = await post<SessionPayload & { verification_required?: boolean; email?: string; email_sent?: boolean }>("/auth/register", b);
+  if (data.verification_required) return { verificationRequired: true, email: data.email ?? b.email, emailSent: data.email_sent === true };
+  adopt(data);
+  await loadMe();
+  return { verificationRequired: false };
+}
+/** Opens the session of the account whose verification link was followed. */
+export const verifyEmail = (token: string) => begin("/auth/verify", { token });
+/** Asks for a new verification link; the answer never says whether the address exists. */
+export const resendVerification = (email: string, locale?: string) => post<Record<string, never>>("/auth/verify/resend", { email, locale });
+/** Mints a throwaway account ("try it without signing up"); the password is shown once and never retrievable. */
+export const createTrial = (locale?: string) => post<TrialAccount>("/auth/trial", { locale });
 export const acceptInvitation = (b: { token: string; password: string; name?: string }) => begin("/auth/invitations/accept", b);
 
 export async function logout() {

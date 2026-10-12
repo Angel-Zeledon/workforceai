@@ -60,7 +60,7 @@
         <h1>Configuration reference</h1>
         <p class="lead">All configuration comes from the environment. The backend (Go) loads and validates its variables at startup and refuses to boot with inconsistent values; the runtime (Python) reads its own when it needs them; the frontend only has build arguments. The defaults on this page come from the code.</p>
         
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">How configuration is loaded</a></li><li><a href="#s2">Server and database</a></li><li><a href="#s3">Authentication, CORS and proxy</a></li><li><a href="#s4">Budget, cost and execution limits</a></li><li><a href="#s5">Rewards and coins</a></li><li><a href="#s6">Runtime: model providers and keys</a></li><li><a href="#s7">Connections, email, sandbox and storage</a></li><li><a href="#s8">Rate limits</a></li><li><a href="#s9">Frontend: build arguments</a></li></ol></nav>
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">How configuration is loaded</a></li><li><a href="#s2">Server and database</a></li><li><a href="#s3">Authentication, CORS and proxy</a></li><li><a href="#s4">Budget, cost and execution limits</a></li><li><a href="#s5">Rewards and coins</a></li><li><a href="#s6">Runtime: model providers and keys</a></li><li><a href="#s7">Connections, email, sandbox and storage</a></li><li><a href="#s8">Rate limits</a></li><li><a href="#s9">Frontend: build arguments</a></li><li><a href="#s10">Email verification and trial accounts</a></li></ol></nav>
 
       <section class="g-sec" id="s1" aria-labelledby="h1">
         <h2 id="h1">How configuration is loaded</h2>
@@ -156,6 +156,15 @@
         <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Build argument</th><th scope="col">Default</th><th scope="col">Required</th><th scope="col">Meaning</th></tr></thead><tbody><tr><th scope="row"><code>NEXT_PUBLIC_API_URL</code></th><td>empty</td><td>No</td><td>Absolute API base URL (for example https://app.example.com/api/v1). Empty: relative path.</td></tr><tr><th scope="row"><code>NEXT_PUBLIC_WS_URL</code></th><td>empty</td><td>No</td><td>Absolute WebSocket URL (wss://app.example.com/ws). Empty: derived from window.location.</td></tr><tr><th scope="row"><code>NEXT_PUBLIC_MOCK</code></th><td>empty</td><td>No</td><td>true runs the frontend with mock data, without a backend.</td></tr></tbody></table></div>
         
       </section>
+
+      <section class="g-sec" id="s10" aria-labelledby="h10">
+        <h2 id="h10">Email verification and trial accounts</h2>
+        <p>Two optional sign-in features. Email verification needs a working SMTP: with EMAIL_VERIFICATION=true and no valid SMTP the backend refuses to start, so a half-configured server cannot lock anyone out. Trial accounts let people try the app without signing up and expire on their own.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Variable</th><th scope="col">Default</th><th scope="col">Meaning</th></tr></thead><tbody><tr><th scope="row"><code>EMAIL_VERIFICATION</code></th><td>false</td><td>New accounts must open a one-time link sent to their address before they can sign in. Needs AUTH_ENABLED, UI_BASE_URL and SMTP_* (or EMAIL_DEV_LOG).</td></tr><tr><th scope="row"><code>EMAIL_DEV_LOG</code></th><td>false</td><td>Development only: verification links are written to the log instead of being sent.</td></tr><tr><th scope="row"><code>SMTP_HOST</code></th><td></td><td>SMTP server. Required with EMAIL_VERIFICATION unless EMAIL_DEV_LOG is on.</td></tr><tr><th scope="row"><code>SMTP_PORT</code></th><td>465</td><td>465 uses implicit TLS; 587 uses STARTTLS.</td></tr><tr><th scope="row"><code>SMTP_TLS</code></th><td>tls (465) / starttls</td><td>tls, starttls or none (none only for a local relay).</td></tr><tr><th scope="row"><code>SMTP_USER / SMTP_PASS</code></th><td></td><td>Credentials for the SMTP server; set both or neither.</td></tr><tr><th scope="row"><code>SMTP_FROM</code></th><td></td><td>Sender, e.g. AI Workforce OS &lt;no-reply@example.com&gt;.</td></tr><tr><th scope="row"><code>TRIAL_ENABLED</code></th><td>false</td><td>Turns on POST /auth/trial: throwaway accounts with their own organization (needs AUTH_ENABLED).</td></tr><tr><th scope="row"><code>TRIAL_TTL_HOURS</code></th><td>24</td><td>How long a trial account works.</td></tr><tr><th scope="row"><code>TRIAL_PER_IP_PER_DAY</code></th><td>3</td><td>Trial accounts one client address may create per day.</td></tr><tr><th scope="row"><code>TRIAL_GLOBAL_PER_DAY</code></th><td>300</td><td>Trial accounts created per day, all addresses together.</td></tr><tr><th scope="row"><code>TRIAL_EMAIL_DOMAIN</code></th><td>prueba.invalid</td><td>Domain of the generated trial addresses (no mailbox behind it).</td></tr></tbody></table></div>
+        
+      </section>
       </article>
       <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/deployment/"><b>Production deployment</b><span>How to deploy AI Workforce OS with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.</span></a></li><li><a href="/en/docs/auth-and-tenancy/"><b>Authentication and multi-tenancy</b><span>How accounts, sessions, roles, invitations and Postgres row-level security isolate organizations in AI Workforce OS.</span></a></li><li><a href="/en/docs/agent-runtime/"><b>Agent runtime</b><span>The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.</span></a></li></ul></section>
     </div>
@@ -167,6 +176,7 @@
       <div class="cta-row">
         <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
         <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
       </div>
     </div>
   </section>

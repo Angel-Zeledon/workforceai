@@ -28,6 +28,7 @@ import { TourLauncher } from "../tour/TourLauncher";
 import { TourOverlay } from "../tour/TourOverlay";
 import { WelcomeOverlay } from "../onboarding/WelcomeOverlay";
 import { RouteCurtain } from "./RouteCurtain";
+import { TrialBanner } from "./TrialBanner";
 
 const COLLAPSE_KEY = "wf.sidebar.collapsed";
 
@@ -159,6 +160,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
+        <TrialBanner />
         <ControlsBanner />
         <ProviderAlert />
         <CostOverlays />

@@ -583,6 +583,81 @@
           "lang": "bash",
           "text": "docker build \\\n  --build-arg NEXT_PUBLIC_API_URL=https://app.example.com/api/v1 \\\n  --build-arg NEXT_PUBLIC_WS_URL=wss://app.example.com/ws \\\n  -t aiworkforce-frontend ./frontend"
         }
+      },
+      {
+        "h": "Verificación de correo y cuentas de prueba",
+        "paras": [
+          "Dos funciones opcionales de acceso. La verificación de correo exige SMTP funcional: con EMAIL_VERIFICATION=true y sin SMTP válido el backend se niega a arrancar, de modo que un servidor a medio configurar no deja a nadie fuera. Las cuentas de prueba permiten probar sin registrarse y caducan solas."
+        ],
+        "table": {
+          "head": [
+            "Variable",
+            "Por defecto",
+            "Significado"
+          ],
+          "rows": [
+            [
+              "EMAIL_VERIFICATION",
+              "false",
+              "Las cuentas nuevas deben abrir un enlace de un solo uso enviado a su correo antes de poder entrar. Requiere AUTH_ENABLED, UI_BASE_URL y SMTP_* (o EMAIL_DEV_LOG)."
+            ],
+            [
+              "EMAIL_DEV_LOG",
+              "false",
+              "Solo desarrollo: los enlaces de verificación se escriben en el log en lugar de enviarse."
+            ],
+            [
+              "SMTP_HOST",
+              "",
+              "Servidor SMTP. Obligatorio con EMAIL_VERIFICATION salvo que EMAIL_DEV_LOG esté activo."
+            ],
+            [
+              "SMTP_PORT",
+              "465",
+              "465 usa TLS implícito; 587 usa STARTTLS."
+            ],
+            [
+              "SMTP_TLS",
+              "tls (465) / starttls",
+              "tls, starttls o none (none solo para un relay local)."
+            ],
+            [
+              "SMTP_USER / SMTP_PASS",
+              "",
+              "Credenciales del servidor SMTP; define ambas o ninguna."
+            ],
+            [
+              "SMTP_FROM",
+              "",
+              "Remitente, p. ej. AI Workforce OS <no-reply@example.com>."
+            ],
+            [
+              "TRIAL_ENABLED",
+              "false",
+              "Activa POST /auth/trial: cuentas desechables con su propia organización (requiere AUTH_ENABLED)."
+            ],
+            [
+              "TRIAL_TTL_HOURS",
+              "24",
+              "Cuánto funciona una cuenta de prueba."
+            ],
+            [
+              "TRIAL_PER_IP_PER_DAY",
+              "3",
+              "Cuentas de prueba que una misma dirección puede crear al día."
+            ],
+            [
+              "TRIAL_GLOBAL_PER_DAY",
+              "300",
+              "Cuentas de prueba creadas al día, entre todas las direcciones."
+            ],
+            [
+              "TRIAL_EMAIL_DOMAIN",
+              "prueba.invalid",
+              "Dominio de las direcciones generadas para las pruebas (sin buzón detrás)."
+            ]
+          ]
+        }
       }
     ]
   },
@@ -1159,6 +1234,81 @@
         "code": {
           "lang": "bash",
           "text": "docker build \\\n  --build-arg NEXT_PUBLIC_API_URL=https://app.example.com/api/v1 \\\n  --build-arg NEXT_PUBLIC_WS_URL=wss://app.example.com/ws \\\n  -t aiworkforce-frontend ./frontend"
+        }
+      },
+      {
+        "h": "Email verification and trial accounts",
+        "paras": [
+          "Two optional sign-in features. Email verification needs a working SMTP: with EMAIL_VERIFICATION=true and no valid SMTP the backend refuses to start, so a half-configured server cannot lock anyone out. Trial accounts let people try the app without signing up and expire on their own."
+        ],
+        "table": {
+          "head": [
+            "Variable",
+            "Default",
+            "Meaning"
+          ],
+          "rows": [
+            [
+              "EMAIL_VERIFICATION",
+              "false",
+              "New accounts must open a one-time link sent to their address before they can sign in. Needs AUTH_ENABLED, UI_BASE_URL and SMTP_* (or EMAIL_DEV_LOG)."
+            ],
+            [
+              "EMAIL_DEV_LOG",
+              "false",
+              "Development only: verification links are written to the log instead of being sent."
+            ],
+            [
+              "SMTP_HOST",
+              "",
+              "SMTP server. Required with EMAIL_VERIFICATION unless EMAIL_DEV_LOG is on."
+            ],
+            [
+              "SMTP_PORT",
+              "465",
+              "465 uses implicit TLS; 587 uses STARTTLS."
+            ],
+            [
+              "SMTP_TLS",
+              "tls (465) / starttls",
+              "tls, starttls or none (none only for a local relay)."
+            ],
+            [
+              "SMTP_USER / SMTP_PASS",
+              "",
+              "Credentials for the SMTP server; set both or neither."
+            ],
+            [
+              "SMTP_FROM",
+              "",
+              "Sender, e.g. AI Workforce OS <no-reply@example.com>."
+            ],
+            [
+              "TRIAL_ENABLED",
+              "false",
+              "Turns on POST /auth/trial: throwaway accounts with their own organization (needs AUTH_ENABLED)."
+            ],
+            [
+              "TRIAL_TTL_HOURS",
+              "24",
+              "How long a trial account works."
+            ],
+            [
+              "TRIAL_PER_IP_PER_DAY",
+              "3",
+              "Trial accounts one client address may create per day."
+            ],
+            [
+              "TRIAL_GLOBAL_PER_DAY",
+              "300",
+              "Trial accounts created per day, all addresses together."
+            ],
+            [
+              "TRIAL_EMAIL_DOMAIN",
+              "prueba.invalid",
+              "Domain of the generated trial addresses (no mailbox behind it)."
+            ]
+          ]
         }
       }
     ]

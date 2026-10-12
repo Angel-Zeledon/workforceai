@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"aiworkforce/backend/internal/application"
+	"aiworkforce/backend/internal/mailer"
 	"aiworkforce/backend/internal/projects"
 )
 
@@ -64,8 +65,20 @@ type Config struct {
 	LinkedInClientID     string
 	LinkedInClientSecret string
 	OAuthRedirectURL     string
-	// UIBaseURL is where the OAuth callback sends the browser afterwards.
+	// UIBaseURL is where the OAuth callback sends the browser afterwards (and the base of e-mail verification links).
 	UIBaseURL string
+	// EmailVerification (EMAIL_VERIFICATION) makes new accounts verify their e-mail before they can sign in.
+	// It needs AUTH_ENABLED, UI_BASE_URL and either SMTP_* or EMAIL_DEV_LOG (development: links are logged, not sent).
+	EmailVerification bool
+	// Trial accounts (TRIAL_ENABLED): "try it without signing up". TRIAL_TTL_HOURS (24), TRIAL_PER_IP_PER_DAY (3),
+	// TRIAL_GLOBAL_PER_DAY (300), TRIAL_EMAIL_DOMAIN (generated addresses).
+	TrialEnabled      bool
+	TrialTTLHours     int
+	TrialPerIPPerDay  int
+	TrialGlobalPerDay int
+	TrialEmailDomain  string
+	EmailDevLog       bool
+	SMTP              mailer.SMTPConfig
 	// EmailHoldSeconds is the cancellation window of an email send. The
 	// mandatory minimum is 60 s; smaller values are raised, never honoured.
 	EmailHoldSeconds int
@@ -237,6 +250,33 @@ func Load() Config {
 		c.errs = append(c.errs, err)
 	}
 	c.AuthCookieName = strings.TrimSpace(getenv("AUTH_COOKIE_NAME", ""))
+	if c.EmailVerification, err = getBool("EMAIL_VERIFICATION", false); err != nil {
+		c.errs = append(c.errs, err)
+	}
+	if c.EmailDevLog, err = getBool("EMAIL_DEV_LOG", false); err != nil {
+		c.errs = append(c.errs, err)
+	}
+	if c.TrialEnabled, err = getBool("TRIAL_ENABLED", false); err != nil {
+		c.errs = append(c.errs, err)
+	}
+	c.TrialTTLHours = getInt("TRIAL_TTL_HOURS", 24)
+	c.TrialPerIPPerDay = getInt("TRIAL_PER_IP_PER_DAY", 3)
+	c.TrialGlobalPerDay = getInt("TRIAL_GLOBAL_PER_DAY", 300)
+	c.TrialEmailDomain = strings.TrimSpace(getenv("TRIAL_EMAIL_DOMAIN", "prueba.invalid"))
+	c.SMTP = mailer.SMTPConfig{
+		Host: strings.TrimSpace(getenv("SMTP_HOST", "")),
+		Port: getInt("SMTP_PORT", 465),
+		User: getenv("SMTP_USER", ""),
+		Pass: getenv("SMTP_PASS", ""),
+		From: strings.TrimSpace(getenv("SMTP_FROM", "")),
+	}
+	c.SMTP.TLS = strings.ToLower(strings.TrimSpace(getenv("SMTP_TLS", "")))
+	if c.SMTP.TLS == "" {
+		c.SMTP.TLS = "starttls"
+		if c.SMTP.Port == 465 {
+			c.SMTP.TLS = "tls"
+		}
+	}
 	if c.EnableDemoReset, err = getBool("ENABLE_DEMO_RESET", false); err != nil {
 		c.errs = append(c.errs, err)
 	}
@@ -259,6 +299,22 @@ func (c Config) Validate() error {
 		for _, o := range c.AllowedOrigins {
 			if o == "*" {
 				errs = append(errs, errors.New(`ALLOWED_ORIGINS must not contain "*" when AUTH_ENABLED=true`))
+			}
+		}
+	}
+	if c.TrialEnabled && !c.AuthEnabled {
+		errs = append(errs, errors.New("TRIAL_ENABLED=true needs AUTH_ENABLED=true"))
+	}
+	if c.EmailVerification {
+		if !c.AuthEnabled {
+			errs = append(errs, errors.New("EMAIL_VERIFICATION=true needs AUTH_ENABLED=true"))
+		}
+		if strings.TrimSpace(c.UIBaseURL) == "" {
+			errs = append(errs, errors.New("EMAIL_VERIFICATION=true needs UI_BASE_URL (the public URL of the app, used in the verification link)"))
+		}
+		if !c.EmailDevLog {
+			if err := c.SMTP.Validate(); err != nil {
+				errs = append(errs, fmt.Errorf("EMAIL_VERIFICATION=true needs a working SMTP configuration: %w", err))
 			}
 		}
 	}

@@ -14,6 +14,8 @@ type User struct {
 	FailedAttempts int
 	LockedUntil    time.Time // zero when not locked
 	CreatedAt      time.Time
+	VerifiedAt     time.Time // zero until the address is verified
+	TrialExpiresAt time.Time // zero for a normal account; a trial account stops working at this instant
 }
 
 // Org is the tenant created at registration.
@@ -114,4 +116,10 @@ type Store interface {
 	// newUser when not nil (ErrEmailTaken), adds the membership
 	// (ErrAlreadyMember) and marks the invitation accepted by m.UserID.
 	AcceptInvitation(ctx context.Context, tokenHash string, newUser *User, m Membership, now time.Time) error
+
+	// Email verification. CreateEmailVerification invalidates the user's other pending tokens.
+	CreateEmailVerification(ctx context.Context, v EmailVerification) error
+	// ConsumeEmailVerification atomically uses the token: ErrInvalidToken (unknown or already used) or ErrTokenExpired;
+	// otherwise it marks the user verified (if not yet) and returns the user.
+	ConsumeEmailVerification(ctx context.Context, tokenHash string, now time.Time) (User, error)
 }

@@ -141,3 +141,46 @@ func TestProjectLimitsAndPlanDepth(t *testing.T) {
 		t.Fatalf("env: %+v depth %d", c.Projects, c.App.MaxPlanDepth)
 	}
 }
+
+func TestEmailVerificationNeedsAuthURLAndMail(t *testing.T) {
+	clear := func() {
+		for _, k := range []string{"AUTH_ENABLED", "JWT_SECRET", "DATABASE_URL", "ALLOWED_ORIGINS", "EMAIL_VERIFICATION", "EMAIL_DEV_LOG", "UI_BASE_URL", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "SMTP_TLS"} {
+			t.Setenv(k, "")
+		}
+	}
+	clear()
+	t.Setenv("EMAIL_VERIFICATION", "true")
+	if err := Load().Validate(); err == nil {
+		t.Fatal("EMAIL_VERIFICATION without auth, URL and SMTP must fail")
+	}
+	// A complete setup passes.
+	clear()
+	t.Setenv("AUTH_ENABLED", "true")
+	t.Setenv("JWT_SECRET", "0123456789abcdef0123456789abcdef-secret")
+	t.Setenv("DATABASE_URL", "postgres://x")
+	t.Setenv("ALLOWED_ORIGINS", "https://app.example.com")
+	t.Setenv("EMAIL_VERIFICATION", "true")
+	t.Setenv("UI_BASE_URL", "https://app.example.com")
+	t.Setenv("SMTP_HOST", "smtp.example.com")
+	t.Setenv("SMTP_FROM", "AI Workforce OS <no-reply@example.com>")
+	t.Setenv("SMTP_USER", "u")
+	t.Setenv("SMTP_PASS", "p")
+	c := Load()
+	if err := c.Validate(); err != nil {
+		t.Fatalf("complete setup rejected: %v", err)
+	}
+	if c.SMTP.TLS != "tls" || c.SMTP.Port != 465 {
+		t.Fatalf("defaults: port %d tls %q, want 465/tls", c.SMTP.Port, c.SMTP.TLS)
+	}
+	t.Setenv("SMTP_PORT", "587")
+	t.Setenv("SMTP_TLS", "")
+	if got := Load().SMTP.TLS; got != "starttls" {
+		t.Fatalf("port 587 must default to starttls, got %q", got)
+	}
+	// Development: links are logged instead of sent.
+	t.Setenv("SMTP_HOST", "")
+	t.Setenv("EMAIL_DEV_LOG", "true")
+	if err := Load().Validate(); err != nil {
+		t.Fatalf("EMAIL_DEV_LOG must not need SMTP: %v", err)
+	}
+}

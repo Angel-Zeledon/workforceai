@@ -51,17 +51,10 @@ def litellm_model(provider: str, name: str) -> str:
         return name if name.startswith("openai/") else f"openai/{name.removeprefix(provider + '/')}"
     return name if name.startswith(prefix + "/") else f"{prefix}/{name}"
 
-# Owner decision: a deployment without DEEPSEEK_API_KEY still works with the real model
-# (it used to fall back to the scripted simulation silently). The environment always
-# wins; DISABLE_DEFAULT_LLM_KEY=true (tests) or SIMULATION=true turn this off.
-_DEFAULT_KEYS = {"deepseek": "sk-a6031827ae1b4f478aa0001720ea5f1d"}
-
-
+# Provider keys come ONLY from the environment (or from the organization's own credentials via the backend).
+# There is deliberately no built-in default key: a key committed to the repository is a leaked key.
 def _api_key(provider: str) -> str:
-    key = os.getenv(_KEY_ENV[provider], "").strip()
-    if key or (os.getenv("DISABLE_DEFAULT_LLM_KEY", "").strip().lower() in ("1", "true", "yes", "on")):
-        return key
-    return _DEFAULT_KEYS.get(provider, "")
+    return os.getenv(_KEY_ENV[provider], "").strip()
 
 # Stable machine-readable error codes (the backend can switch on these).
 ERR_NO_ALLOWED_PROVIDER = "no_allowed_provider"

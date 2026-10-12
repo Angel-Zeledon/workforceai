@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"aiworkforce/backend/internal/mailer"
 	"context"
 	"errors"
 	"fmt"
@@ -45,6 +46,21 @@ type Config struct {
 	// Audit (optional) receives the invitation events for the audit trail.
 	Audit func(ctx context.Context, e AuditEvent)
 
+	// RequireVerification makes a new account prove it owns its e-mail (one-time link) before it gets a session.
+	// It needs Mailer and AppURL (the public URL of the app, used to build the link).
+	RequireVerification bool
+	Mailer              mailer.Mailer
+	AppURL              string
+	VerifyTTL           time.Duration // default 24h
+	ResendLimit         Limit         // per e-mail address, default 3 / hour
+	// Trial accounts ("try it without signing up"): TrialEnabled turns on POST /auth/trial.
+	TrialEnabled      bool
+	TrialTTL          time.Duration // default 24h
+	TrialGlobalPerDay int           // accounts minted per day, all addresses together (default 300)
+	TrialEmailDomain  string        // domain of the generated addresses (default "prueba.invalid")
+	// Logf (optional) receives operational notes that must not reach the caller (e.g. delivery failures).
+	Logf func(format string, args ...any)
+
 	Now func() time.Time // default time.Now (tests)
 }
 
@@ -84,6 +100,27 @@ func NewService(cfg Config) (*Service, error) {
 	if cfg.LoginLimit.Max <= 0 || cfg.LoginLimit.Window <= 0 {
 		cfg.LoginLimit = Limit{Max: 10, Window: 15 * time.Minute}
 	}
+	if cfg.VerifyTTL <= 0 {
+		cfg.VerifyTTL = DefaultVerifyTTL
+	}
+	if cfg.ResendLimit.Max <= 0 || cfg.ResendLimit.Window <= 0 {
+		cfg.ResendLimit = Limit{Max: 3, Window: time.Hour}
+	}
+	if cfg.TrialTTL <= 0 {
+		cfg.TrialTTL = DefaultTrialTTL
+	}
+	if cfg.TrialGlobalPerDay <= 0 {
+		cfg.TrialGlobalPerDay = 300
+	}
+	if strings.TrimSpace(cfg.TrialEmailDomain) == "" {
+		cfg.TrialEmailDomain = "prueba.invalid"
+	}
+	if cfg.Logf == nil {
+		cfg.Logf = func(string, ...any) {}
+	}
+	if cfg.RequireVerification && (cfg.Mailer == nil || strings.TrimSpace(cfg.AppURL) == "") {
+		return nil, errors.New("auth: RequireVerification needs a Mailer and AppURL")
+	}
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
@@ -113,6 +150,17 @@ type UserView struct {
 	ID    string `json:"id"`
 	Email string `json:"email"`
 	Name  string `json:"name"`
+	// TrialExpiresAt is set only for trial accounts: when the account stops working.
+	TrialExpiresAt *time.Time `json:"trial_expires_at,omitempty"`
+}
+
+func userView(u User) UserView {
+	v := UserView{ID: u.ID, Email: u.Email, Name: u.Name}
+	if !u.TrialExpiresAt.IsZero() {
+		t := u.TrialExpiresAt
+		v.TrialExpiresAt = &t
+	}
+	return v
 }
 
 // Session is returned by Register, Login and Refresh.
@@ -132,6 +180,7 @@ type RegisterInput struct {
 	Password string `json:"password"`
 	Name     string `json:"name"`
 	OrgName  string `json:"org_name"`
+	Locale   string `json:"locale,omitempty"` // language of the verification e-mail: es (default) or en
 }
 
 type LoginInput struct {
@@ -166,6 +215,9 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, meta ClientMet
 	}
 	now := s.now()
 	u := User{ID: uuid.NewString(), Email: email, Name: in.Name, PasswordHash: hash, CreatedAt: now}
+	if !s.verifyEnabled() {
+		u.VerifiedAt = now // nothing to verify against: the account is usable at once
+	}
 	for attempt := 0; ; attempt++ {
 		o := Org{ID: uuid.NewString(), Name: in.OrgName, Slug: slugify(in.OrgName) + "-" + randomHex(3), BudgetUSD: s.cfg.DefaultOrgBudgetUSD}
 		m := Membership{OrgID: o.ID, UserID: u.ID, Role: RoleOwner, CreatedAt: now}
@@ -175,6 +227,14 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, meta ClientMet
 		}
 		if err != nil {
 			return nil, err
+		}
+		if s.verifyEnabled() {
+			sent := true
+			if err := s.sendVerification(ctx, u, in.Locale); err != nil {
+				sent = false
+				s.cfg.Logf("auth: verification e-mail failed for a new account: %v", err)
+			}
+			return nil, &VerificationRequiredError{Email: email, EmailSent: sent}
 		}
 		return s.issueSession(ctx, u, m, uuid.NewString(), meta)
 	}
@@ -233,6 +293,12 @@ func (s *Service) Login(ctx context.Context, in LoginInput, meta ClientMeta) (*S
 			_ = s.store.UpdatePasswordHash(ctx, u.ID, h)
 		}
 	}
+	if trialExpired(u, now) {
+		return nil, ErrTrialExpired
+	}
+	if s.verifyEnabled() && u.VerifiedAt.IsZero() {
+		return nil, ErrEmailNotVerified
+	}
 	m, err := s.pickMembership(ctx, u.ID, in.OrgID)
 	if err != nil {
 		return nil, err
@@ -286,6 +352,10 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string, meta ClientM
 		_ = s.store.RevokeFamilyOf(ctx, hash, now)
 		return nil, ErrInvalidToken
 	}
+	if trialExpired(u, now) {
+		_ = s.store.RevokeFamilyOf(ctx, hash, now)
+		return nil, ErrInvalidToken
+	}
 	access, exp, err := s.accessFor(u, m)
 	if err != nil {
 		return nil, err
@@ -334,12 +404,15 @@ func (s *Service) Me(ctx context.Context, p Principal) (UserView, error) {
 	if err != nil {
 		return UserView{}, err
 	}
-	return UserView{ID: u.ID, Email: u.Email, Name: u.Name}, nil
+	return userView(u), nil
 }
 
 func (s *Service) accessFor(u User, m Membership) (string, time.Time, error) {
 	now := s.now()
 	exp := now.Add(s.cfg.AccessTTL)
+	if !u.TrialExpiresAt.IsZero() && u.TrialExpiresAt.Before(exp) {
+		exp = u.TrialExpiresAt // a trial session ends exactly when the trial does
+	}
 	tok, err := s.signer.Sign(Claims{
 		Subject: u.ID, OrgID: m.OrgID, Role: m.Role,
 		IssuedAt: now.Unix(), NotBefore: now.Unix(), ExpiresAt: exp.Unix(), ID: uuid.NewString(),
@@ -351,7 +424,7 @@ func (s *Service) sessionOf(u User, m Membership, access string, exp time.Time, 
 	return &Session{
 		TokenType: "Bearer", AccessToken: access, RefreshToken: refresh,
 		ExpiresIn: int(s.cfg.AccessTTL.Seconds()), ExpiresAt: exp,
-		User:  UserView{ID: u.ID, Email: u.Email, Name: u.Name},
+		User:  userView(u),
 		OrgID: m.OrgID, Role: m.Role,
 	}
 }

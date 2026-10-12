@@ -25,6 +25,7 @@ type HandlerConfig struct {
 	LoginLimit     Limit // per IP, default 20 / 15m
 	RegisterLimit  Limit // per IP, default 5 / hour
 	RefreshLimit   Limit // per IP, default 60 / 15m
+	TrialLimit     Limit // per IP, trial accounts, default 3 / day
 	UserLimit      Limit // per authenticated user on member endpoints, default 120 / min
 	FailOpen       bool  // allow requests when the limiter backend is down
 
@@ -62,6 +63,7 @@ func NewHandler(svc *Service, cfg HandlerConfig) *Handler {
 	def(&cfg.LoginLimit, 20, 15*time.Minute)
 	def(&cfg.RegisterLimit, 5, time.Hour)
 	def(&cfg.RefreshLimit, 60, 15*time.Minute)
+	def(&cfg.TrialLimit, 3, 24*time.Hour)
 	def(&cfg.UserLimit, 120, time.Minute)
 	if cfg.CookieName == "" {
 		cfg.CookieName = DefaultCookieName
@@ -151,7 +153,10 @@ func (h *Handler) Routes() http.Handler {
 	r.With(lim("login", h.cfg.LoginLimit)).Post("/login", h.login)
 	r.With(lim("refresh", h.cfg.RefreshLimit)).Post("/refresh", h.refresh)
 	r.With(lim("refresh", h.cfg.RefreshLimit)).Post("/logout", h.logout)
-	r.Get("/config", AuthConfigHandler(true))
+	r.With(lim("trial", h.cfg.TrialLimit)).Post("/trial", h.trial)
+	r.With(lim("verify", h.cfg.RegisterLimit)).Post("/verify", h.verify)
+	r.With(lim("verify-resend", h.cfg.RegisterLimit)).Post("/verify/resend", h.resendVerification)
+	r.Get("/config", AuthConfigHandlerV(true, h.svc.cfg.RequireVerification, h.svc.cfg.TrialEnabled))
 	// Accepting is public (the invitee may not have an account yet); throttled like registration.
 	r.With(lim("invite-accept", h.cfg.RegisterLimit)).Post("/invitations/accept", h.acceptInvitation)
 
@@ -205,6 +210,12 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s, err := h.svc.Register(r.Context(), in, h.meta(r))
+	var vr *VerificationRequiredError
+	if errors.As(err, &vr) {
+		// The account exists but cannot sign in until the e-mail is verified.
+		writeJSON(w, http.StatusAccepted, map[string]any{"verification_required": true, "email": vr.Email, "email_sent": vr.EmailSent})
+		return
+	}
 	if err != nil {
 		writeServiceError(w, err)
 		return
@@ -223,6 +234,52 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.writeSession(w, http.StatusOK, s)
+}
+
+func (h *Handler) trial(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Locale string `json:"locale"`
+	}
+	if r.ContentLength != 0 && !decode(w, r, &in) {
+		return
+	}
+	acct, err := h.svc.CreateTrial(r.Context(), in.Locale)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store") // it carries a password
+	writeJSON(w, http.StatusCreated, acct)
+}
+
+func (h *Handler) verify(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token string `json:"token"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	s, err := h.svc.Verify(r.Context(), in.Token, h.meta(r))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	h.writeSession(w, http.StatusOK, s)
+}
+
+func (h *Handler) resendVerification(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Email  string `json:"email"`
+		Locale string `json:"locale"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if err := h.svc.ResendVerification(r.Context(), in.Email, in.Locale); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent) // same answer whether or not the address exists
 }
 
 func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
@@ -359,8 +416,13 @@ func (h *Handler) removeMember(w http.ResponseWriter, r *http.Request) {
 // AuthConfigHandler serves the public GET /api/v1/auth/config, which tells the
 // frontend whether to show the login (auth on) or the open demo (auth off).
 func AuthConfigHandler(enabled bool) http.HandlerFunc {
+	return AuthConfigHandlerV(enabled, false, false)
+}
+
+// AuthConfigHandlerV also tells the UI whether new accounts must verify their e-mail.
+func AuthConfigHandlerV(enabled, verification, trial bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{"enabled": enabled, "registration": enabled})
+		writeJSON(w, http.StatusOK, map[string]any{"enabled": enabled, "registration": enabled, "verification": verification, "trial": trial})
 	}
 }
 
@@ -451,6 +513,12 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many requests")
 	case errors.Is(err, ErrInvalidCredentials):
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid email or password")
+	case errors.Is(err, ErrTrialExpired):
+		writeError(w, http.StatusForbidden, "trial_expired", "this trial account has expired")
+	case errors.Is(err, ErrTrialDisabled):
+		writeError(w, http.StatusNotFound, "not_found", "not found")
+	case errors.Is(err, ErrEmailNotVerified):
+		writeError(w, http.StatusForbidden, "email_not_verified", "verify your email before signing in")
 	case errors.Is(err, ErrTokenExpired), errors.Is(err, ErrInvalidToken), errors.Is(err, ErrTokenReuse), errors.Is(err, ErrUnauthenticated):
 		writeError(w, http.StatusUnauthorized, "invalid_token", "invalid or expired token")
 	case errors.Is(err, ErrForbidden):

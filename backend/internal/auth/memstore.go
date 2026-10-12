@@ -17,10 +17,17 @@ type MemoryStore struct {
 	memberships map[[2]string]Membership // {org, user}
 	tokens      map[string]*RefreshToken // by hash
 	invitations map[string]*Invitation   // by id
+	verifs      map[string]*memVerif     // by token hash
+}
+
+type memVerif struct {
+	EmailVerification
+	Used bool
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
+		verifs:      map[string]*memVerif{},
 		users:       map[string]User{},
 		emails:      map[string]string{},
 		orgs:        map[string]Org{},
@@ -398,4 +405,38 @@ func (s *MemoryStore) AcceptInvitation(_ context.Context, tokenHash string, newU
 	s.memberships[k] = m
 	inv.AcceptedAt, inv.AcceptedBy = now, m.UserID
 	return nil
+}
+
+func (s *MemoryStore) CreateEmailVerification(_ context.Context, v EmailVerification) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, o := range s.verifs {
+		if o.UserID == v.UserID {
+			o.Used = true
+		}
+	}
+	s.verifs[v.TokenHash] = &memVerif{EmailVerification: v}
+	return nil
+}
+
+func (s *MemoryStore) ConsumeEmailVerification(_ context.Context, tokenHash string, now time.Time) (User, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v, ok := s.verifs[tokenHash]
+	if !ok || v.Used {
+		return User{}, ErrInvalidToken
+	}
+	if !v.ExpiresAt.After(now) {
+		return User{}, ErrTokenExpired
+	}
+	u, ok := s.users[v.UserID]
+	if !ok {
+		return User{}, ErrInvalidToken
+	}
+	v.Used = true
+	if u.VerifiedAt.IsZero() {
+		u.VerifiedAt = now
+		s.users[u.ID] = u
+	}
+	return u, nil
 }

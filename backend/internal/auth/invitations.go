@@ -217,7 +217,7 @@ func (s *Service) AcceptInvitation(ctx context.Context, in AcceptInput, meta Cli
 		if err != nil {
 			return nil, err
 		}
-		u = User{ID: uuid.NewString(), Email: inv.Email, Name: name, PasswordHash: h, CreatedAt: now}
+		u = User{ID: uuid.NewString(), Email: inv.Email, Name: name, PasswordHash: h, CreatedAt: now, VerifiedAt: now}
 		newUser = &u
 	case err != nil:
 		return nil, err

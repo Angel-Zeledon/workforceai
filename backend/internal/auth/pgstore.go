@@ -62,18 +62,20 @@ func (s *PGStore) inTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
 	return tx.Commit(ctx)
 }
 
-const userCols = `id, email, name, password_hash, failed_attempts, locked_until, created_at`
+const userCols = `id, email, name, password_hash, failed_attempts, locked_until, created_at, email_verified_at, trial_expires_at`
 
 func scanUser(row pgx.Row) (User, error) {
 	var u User
-	var locked *time.Time
-	if err := row.Scan(&u.ID, &u.Email, &u.Name, &u.PasswordHash, &u.FailedAttempts, &locked, &u.CreatedAt); err != nil {
+	var locked, verified, trial *time.Time
+	if err := row.Scan(&u.ID, &u.Email, &u.Name, &u.PasswordHash, &u.FailedAttempts, &locked, &u.CreatedAt, &verified, &trial); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return User{}, ErrNotFound
 		}
 		return User{}, err
 	}
 	u.LockedUntil = timeOrZero(locked)
+	u.VerifiedAt = timeOrZero(verified)
+	u.TrialExpiresAt = timeOrZero(trial)
 	return u, nil
 }
 
@@ -88,8 +90,8 @@ func (s *PGStore) CreateAccount(ctx context.Context, u User, o Org, m Membership
 			o.ID, o.Name, o.Slug, o.BudgetUSD); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO users (id, email, name, password_hash) VALUES ($1,$2,$3,$4)`,
-			u.ID, u.Email, u.Name, u.PasswordHash); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO users (id, email, name, password_hash, email_verified_at, trial_expires_at) VALUES ($1,$2,$3,$4,$5,$6)`,
+			u.ID, u.Email, u.Name, u.PasswordHash, nullTime(u.VerifiedAt), nullTime(u.TrialExpiresAt)); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `INSERT INTO memberships (org_id, user_id, role) VALUES ($1,$2,$3)`,
@@ -346,4 +348,51 @@ func (s *PGStore) RevokeOrgUserTokens(ctx context.Context, orgID, userID string,
 	_, err := s.db.Exec(ctx, `UPDATE refresh_tokens SET revoked_at = $3 WHERE org_id = $1 AND user_id = $2 AND revoked_at IS NULL`,
 		orgID, userID, now)
 	return err
+}
+
+// CreateEmailVerification stores a new token and retires the user's other pending ones.
+func (s *PGStore) CreateEmailVerification(ctx context.Context, v EmailVerification) error {
+	return s.inTx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `UPDATE email_verifications SET used_at = $2 WHERE user_id = $1 AND used_at IS NULL`, v.UserID, v.CreatedAt); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `INSERT INTO email_verifications (token_hash, user_id, expires_at, created_at) VALUES ($1,$2,$3,$4)`,
+			v.TokenHash, v.UserID, v.ExpiresAt, v.CreatedAt)
+		return err
+	})
+}
+
+// ConsumeEmailVerification uses a token exactly once (the row is locked while it is checked) and marks the user verified.
+func (s *PGStore) ConsumeEmailVerification(ctx context.Context, tokenHash string, now time.Time) (User, error) {
+	var u User
+	err := s.inTx(ctx, func(tx pgx.Tx) error {
+		var userID string
+		var expires time.Time
+		var used *time.Time
+		if err := tx.QueryRow(ctx, `SELECT user_id, expires_at, used_at FROM email_verifications WHERE token_hash = $1 FOR UPDATE`, tokenHash).Scan(&userID, &expires, &used); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrInvalidToken
+			}
+			return err
+		}
+		if used != nil {
+			return ErrInvalidToken
+		}
+		if !expires.After(now) {
+			return ErrTokenExpired
+		}
+		if _, err := tx.Exec(ctx, `UPDATE email_verifications SET used_at = $2 WHERE token_hash = $1`, tokenHash, now); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `UPDATE users SET email_verified_at = COALESCE(email_verified_at, $2) WHERE id = $1`, userID, now); err != nil {
+			return err
+		}
+		var err error
+		u, err = scanUser(tx.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE id = $1`, userID))
+		return err
+	})
+	if err != nil {
+		return User{}, err
+	}
+	return u, nil
 }

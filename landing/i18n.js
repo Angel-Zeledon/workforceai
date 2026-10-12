@@ -28,6 +28,7 @@ window.I18N = {
     "cta.early": "Crear cuenta",
     "cta.early.short": "Crear cuenta",
     "cta.demo": "Entrar",
+    "cta.trial": "Probar sin registrarte",
 
     "hero.title": "Tu equipo de empleados de IA, a la vista y bajo tu control.",
     "hero.sub": "Una oficina virtual donde le pides trabajo en lenguaje natural a Ventas, Legal, Contabilidad, Análisis, Operaciones, RR. HH. y tu Asistente. Los ves colaborar en vivo, apruebas lo sensible y recibes un reporte.",
@@ -276,6 +277,7 @@ window.I18N = {
     "cta.early": "Create account",
     "cta.early.short": "Create account",
     "cta.demo": "Sign in",
+    "cta.trial": "Try it without signing up",
 
     "hero.title": "Your team of AI employees, in plain sight and under your control.",
     "hero.sub": "A virtual office where you ask Sales, Legal, Accounting, Analysis, Operations, HR and your Assistant for work in plain language. Watch them collaborate live, approve what is sensitive and receive a report.",

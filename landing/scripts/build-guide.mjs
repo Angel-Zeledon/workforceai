@@ -23,7 +23,7 @@ const UI = {
   es: {
     skip: "Saltar al contenido", navLabel: "Principal", crumbLabel: "Ruta de navegación", home: "Inicio", langLabel: "Idioma",
     onThisPage: "En esta página", steps: "Pasos", tip: "Consejo", related: "Sigue leyendo",
-    ctaTitle: "Empieza ahora", ctaBody: "Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.", signup: "Crear cuenta", login: "Entrar",
+    ctaTitle: "Empieza ahora", ctaBody: "Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.", signup: "Crear cuenta", login: "Entrar", trial: "Probar sin registrarte",
     footer: "AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.", top: "Volver arriba",
     locale: "es_ES",
     guide: {
@@ -40,7 +40,7 @@ const UI = {
   en: {
     skip: "Skip to content", navLabel: "Main", crumbLabel: "Breadcrumb", home: "Home", langLabel: "Language",
     onThisPage: "On this page", steps: "Steps", tip: "Tip", related: "Keep reading",
-    ctaTitle: "Start now", ctaBody: "Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.", signup: "Create account", login: "Sign in",
+    ctaTitle: "Start now", ctaBody: "Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.", signup: "Create account", login: "Sign in", trial: "Try it without signing up",
     footer: "AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.", top: "Back to top",
     locale: "en_US",
     guide: {
@@ -56,7 +56,7 @@ const UI = {
   },
 };
 const rootOf = (coll, lang) => COLLECTIONS[coll].root[lang];
-const ctaHref = () => ({ signup: CFG.SIGNUP_URL, login: CFG.LOGIN_URL });
+const ctaHref = () => ({ signup: CFG.SIGNUP_URL, login: CFG.LOGIN_URL, trial: CFG.TRIAL_URL });
 
 function head({ lang, title, description, path: pth, altPath, type = "article", image, ld }) {
   const u = UI[lang];
@@ -132,6 +132,7 @@ ${body}
       <div class="cta-row">
         <a class="btn btn-invert" href="${esc(cta.signup)}" rel="noopener">${u.signup}</a>
         <a class="btn btn-outline-invert" href="${esc(cta.login)}" rel="noopener">${u.login}</a>
+        <a class="btn btn-outline-invert" href="${esc(cta.trial)}" rel="noopener">${u.trial}</a>
       </div>
     </div>
   </section>

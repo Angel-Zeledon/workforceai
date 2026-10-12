@@ -15,6 +15,7 @@
       var kind = a.getAttribute("data-cta");
       if (kind === "signup") a.setAttribute("href", CFG.SIGNUP_URL || "#");
       if (kind === "login") a.setAttribute("href", CFG.LOGIN_URL || "#");
+      if (kind === "trial") a.setAttribute("href", CFG.TRIAL_URL || "#");
       a.setAttribute("rel", "noopener");
     });
   }

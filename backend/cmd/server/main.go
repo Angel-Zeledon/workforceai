@@ -25,6 +25,7 @@ import (
 	"aiworkforce/backend/internal/infrastructure/postgres"
 	redisinfra "aiworkforce/backend/internal/infrastructure/redis"
 	"aiworkforce/backend/internal/infrastructure/runtime"
+	"aiworkforce/backend/internal/mailer"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/rewards"
@@ -237,7 +238,25 @@ func run(log *slog.Logger) error {
 		if strings.HasPrefix(cfg.JWTSecret, "dev-only-insecure") {
 			log.Warn("JWT_SECRET is the local development default from docker-compose.yml: set your own secret before exposing this server")
 		}
+		var authMailer mailer.Mailer
+		if cfg.EmailVerification {
+			if cfg.EmailDevLog {
+				authMailer = mailer.Log{Log: log}
+			} else {
+				sm, merr := mailer.NewSMTP(cfg.SMTP)
+				if merr != nil {
+					return merr
+				}
+				authMailer = sm
+			}
+			log.Info("email verification is ON for new accounts")
+		} else {
+			log.Warn("EMAIL_VERIFICATION is off: anyone can register without proving they own the address")
+		}
 		svc, err := auth.NewService(auth.Config{
+			RequireVerification: cfg.EmailVerification, Mailer: authMailer, AppURL: cfg.UIBaseURL,
+			TrialEnabled: cfg.TrialEnabled, TrialTTL: time.Duration(cfg.TrialTTLHours) * time.Hour, TrialGlobalPerDay: cfg.TrialGlobalPerDay, TrialEmailDomain: cfg.TrialEmailDomain,
+			Logf:                func(f string, a ...any) { log.Warn(fmt.Sprintf(f, a...)) },
 			Store:               authStore,
 			Secret:              []byte(cfg.JWTSecret),
 			DefaultOrgBudgetUSD: cfg.App.BudgetUSD,
@@ -251,7 +270,8 @@ func run(log *slog.Logger) error {
 		}
 		deps.Auth = svc
 		ah := auth.NewHandler(svc, auth.HandlerConfig{Limiter: limiter, TrustedProxies: cfg.TrustedProxies, FailOpen: true,
-			CookieName: cfg.AuthCookieName, CookieSecure: cfg.AuthCookieSecure, AllowedOrigins: cfg.AllowedOrigins})
+			CookieName: cfg.AuthCookieName, CookieSecure: cfg.AuthCookieSecure, AllowedOrigins: cfg.AllowedOrigins,
+			TrialLimit: auth.Limit{Max: cfg.TrialPerIPPerDay, Window: 24 * time.Hour}})
 		deps.AuthRoutes, deps.InvitationRoutes = ah.Routes(), ah.InvitationRoutes()
 		deps.WSMaxAge = 15 * time.Minute // = default access token lifetime
 	} else {
