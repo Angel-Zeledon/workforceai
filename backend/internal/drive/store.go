@@ -14,6 +14,11 @@ type SearchQuery struct {
 	Limit int
 	// Config is the Postgres text search configuration: "spanish" (default) or "simple".
 	Config string
+	// Terms (long-term memory) switches to an accent-insensitive "any of these
+	// words" search over the folded index (textfold.Terms); Query is ignored.
+	// A hit's Snippet is then the start of the extracted text (the caller picks
+	// the best passage) and Score is in [0,1).
+	Terms []string
 }
 
 // Hit is a search result.

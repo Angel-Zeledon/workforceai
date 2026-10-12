@@ -984,6 +984,8 @@ type RetrieveQuery struct {
 	Under  []string
 	Limit  int
 	Config string // "spanish" (default) | "simple"
+	// Terms: "any of these words", accent-insensitive (see SearchQuery.Terms).
+	Terms []string
 }
 
 // Retriever finds relevant stored text for a query. The drive implements it
@@ -997,6 +999,17 @@ var _ Retriever = (*Service)(nil)
 
 // Retrieve implements Retriever.
 func (s *Service) Retrieve(ctx context.Context, q RetrieveQuery) ([]Hit, error) {
+	if len(q.Terms) > 0 {
+		lim := q.Limit
+		if lim <= 0 || lim > 50 {
+			lim = 20
+		}
+		hits, err := s.cfg.Store.Search(ctx, s.org(ctx), SearchQuery{Terms: q.Terms, Under: q.Under, Limit: lim})
+		if hits == nil {
+			hits = []Hit{}
+		}
+		return hits, err
+	}
 	if strings.TrimSpace(q.Query) == "" {
 		return []Hit{}, nil
 	}

@@ -86,6 +86,9 @@ type StructuredOutput struct {
 	Recommendations []string       `json:"recommendations"`
 	Confidence      float64        `json:"confidence"`
 	SuggestedTasks  []string       `json:"suggested_tasks"`
+	// MemoryNotes (M1) are the short lessons/facts the agent wants to remember
+	// for later work. Optional: old payloads and outputs without it stay valid.
+	MemoryNotes []string `json:"memory_notes,omitempty"`
 	// Review is the verdict of the quality review (Q1); omitted when the task
 	// was not reviewed, so old payloads stay valid.
 	Review *Review `json:"review,omitempty"`

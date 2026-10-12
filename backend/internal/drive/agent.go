@@ -529,6 +529,18 @@ func (a *AgentFS) readableRoots(ctx context.Context, org string, sc scope) []str
 	return append(roots, sc.grants...)
 }
 
+// ReadableRoots lists the folders an agent may read (its desk, /Shared, the
+// folders of its projects and the ones a human granted): the exact scope of
+// fs.search, exported so the long-term memory retrieves files under the same
+// rule. An error means "unknown": callers must treat it as nothing readable.
+func (a *AgentFS) ReadableRoots(ctx context.Context, agentID string) ([]string, error) {
+	sc, err := a.scopeOf(ctx, agentID)
+	if err != nil {
+		return nil, err
+	}
+	return a.readableRoots(ctx, a.Svc.org(ctx), sc), nil
+}
+
 func (a *AgentFS) runList(ctx context.Context, agentID, p string) RunResult {
 	org := a.Svc.org(ctx)
 	sc, err := a.scopeOf(ctx, agentID)

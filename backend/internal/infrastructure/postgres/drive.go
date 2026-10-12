@@ -283,7 +283,43 @@ func (d *DriveStore) UsedBytes(ctx context.Context, org string) (int64, error) {
 	return n, err
 }
 
+// searchTerms is the long-term memory leg (migration 550): "any of these
+// words" over the accent-insensitive vector search_mem. Terms are letters and
+// digits only (textfold.Terms), so the tsquery cannot be malformed. The score
+// is ts_rank_cd normalized into [0,1).
+func (d *DriveStore) searchTerms(ctx context.Context, org string, q drive.SearchQuery) ([]drive.Hit, error) {
+	if q.Under != nil && len(q.Under) == 0 {
+		return []drive.Hit{}, nil // an explicit but empty scope means "nothing readable"
+	}
+	under := q.Under
+	if under == nil {
+		under = []string{}
+	}
+	limit := q.Limit
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	const sql = `WITH qq AS (SELECT to_tsquery('spanish'::regconfig, $2) AS q)
+		SELECT f.id, fo.path || '/' || f.name, f.name, f.mime, f.current_version, f.size_bytes, f.updated_by,
+		       ts_rank_cd(f.search_mem, qq.q, 32)::float8 AS score, left(f.search_text, 6000)
+		FROM drive_files f JOIN drive_folders fo ON fo.org_id=f.org_id AND fo.id=f.folder_id, qq
+		WHERE f.org_id=$1 AND f.deleted_at IS NULL AND fo.deleted_at IS NULL AND f.search_mem @@ qq.q
+		  AND (cardinality($3::text[]) = 0 OR EXISTS (SELECT 1 FROM unnest($3::text[]) u(p)
+		        WHERE lower(fo.path) = lower(u.p) OR left(lower(fo.path), length(u.p)+1) = lower(u.p) || '/'))
+		ORDER BY score DESC, fo.path, f.name LIMIT $4`
+	return many(ctx, d.S, org, func(r scanner) (drive.Hit, error) {
+		var h drive.Hit
+		var by []byte
+		err := r.Scan(&h.FileID, &h.Path, &h.Name, &h.Mime, &h.Version, &h.Size, &by, &h.Score, &h.Snippet)
+		unmarshal(by, &h.UpdatedBy)
+		return h, err
+	}, sql, org, strings.Join(q.Terms, " | "), under, limit)
+}
+
 func (d *DriveStore) Search(ctx context.Context, org string, q drive.SearchQuery) ([]drive.Hit, error) {
+	if len(q.Terms) > 0 {
+		return d.searchTerms(ctx, org, q)
+	}
 	vec, cfg := "f.search_es", "spanish"
 	if q.Config == "simple" {
 		vec, cfg = "f.search_simple", "simple"

@@ -45,6 +45,7 @@ type Orchestrator struct {
 	wsSrc    WorkspaceSource // optional: the agent's drive folders (workspace_flow.go)
 	files    chatFiles       // files agents wrote per task and the resolver of paths (chat_files.go)
 	skillSrc SkillSource     // optional: the agent's active skills (skills_flow.go)
+	memSrc   MemorySource    // optional: long-term memory (memory_flow.go)
 
 	v2 v2State // work profiles, thought audit and intervention (intervene.go); zero value = off
 
@@ -303,6 +304,9 @@ func (o *Orchestrator) finish(ctx context.Context, rs *run, tasks []domain.Task,
 		return
 	}
 	rs.req.ReportID = &report.ID
+	if o.memSrc != nil {
+		o.memSrc.RememberReport(ctx, o.org(ctx), report)
+	}
 	o.setRequestStatus(ctx, rs, domain.RequestDone)
 	o.rec.Emit(ctx, Action{Type: domain.EvReportCreated, AgentID: assistantID, Entity: "report", EntityID: report.ID,
 		Payload: map[string]any{"report": report}, Text: "Informe listo: " + report.Title})
@@ -573,6 +577,9 @@ func (o *Orchestrator) completeTask(ctx context.Context, rs *run, t domain.Task,
 	if err := o.store.SetMemory(ctx, o.org(ctx), t.AgentID, domain.Memory{Scope: "agent", Key: "last_task", Value: t.Title + ": " + t.Output.Summary}); err != nil {
 		o.log.Warn("set memory", "err", err)
 	}
+	if o.memSrc != nil {
+		o.memSrc.RememberTask(ctx, o.org(ctx), t, rs.req.Text)
+	}
 	o.setState(ctx, t.AgentID, domain.StateCompleted, "Completó: "+t.Title, &tid, 100)
 	o.rec.Emit(ctx, Action{Type: domain.EvTaskCompleted, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
 		Payload: map[string]any{"task": t}, Text: fmt.Sprintf("%s completó: %s", agent.Name, t.Title)})
@@ -608,7 +615,9 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 	for _, m := range mem {
 		rc.Memory = append(rc.Memory, MemoryEntry{Scope: m.Scope, Key: m.Key, Value: m.Value})
 	}
+	recalled := o.recallFor(ctx, rs, t)
 	return RunTaskRequest{
+		Recalled:  recalled,
 		Task:      RunTaskInfo{ID: t.ID, Title: t.Title, Description: t.Description, AgentID: t.AgentID},
 		Agent:     RunAgentInfo{ID: agent.ID, Role: agent.Role, Title: agent.Title, Persona: agent.Persona, Responsibilities: agent.Responsibilities, Tools: agent.Tools, Area: areaOf(agent.Role, rs.style.Locale)},
 		Context:   rc,
