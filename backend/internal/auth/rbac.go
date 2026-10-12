@@ -70,6 +70,10 @@ const (
 	PermFilesWrite  Permission = "files:write"
 	PermFilesDelete Permission = "files:delete"
 	PermFilesGrant  Permission = "files:grant" // give an agent read access to more folders
+	// Coins and shop (docs/architecture/rewards.md): everybody sees the wallet,
+	// the ledger and the catalog; members spend the coins the work earned.
+	PermShopRead Permission = "shop:read"
+	PermShopBuy  Permission = "shop:buy"
 )
 
 func set(ps ...Permission) map[Permission]struct{} {
@@ -97,13 +101,13 @@ var (
 		PermMembersRead, PermAgentsRead, PermTasksRead, PermRequestsRead,
 		PermConversationsRead, PermApprovalsRead, PermReportsRead,
 		PermMemoriesRead, PermActivityRead, PermMetricsRead,
-		PermArtifactsRead, PermFilesRead,
+		PermArtifactsRead, PermFilesRead, PermShopRead,
 	)
 	memberPerms = union(viewerPerms,
 		PermRequestsCreate, PermTasksCreate, PermConversationsPost, PermMemoriesWrite,
 		PermConnectionsRead,
 		PermArtifactsCreate, PermArtifactsWrite, PermArtifactsComment, PermArtifactsExport,
-		PermFilesWrite,
+		PermFilesWrite, PermShopBuy,
 	)
 	adminPerms = union(memberPerms,
 		PermOrgManage, PermMembersInvite, PermMembersManage, PermAgentsWrite,
