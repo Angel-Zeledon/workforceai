@@ -31,6 +31,18 @@ DEFAULT_MODELS = {
 }
 _KEY_ENV = {"anthropic": "ANTHROPIC_API_KEY", "deepseek": "DEEPSEEK_API_KEY", "custom": "CUSTOM_LLM_API_KEY"}
 
+# Owner decision: a deployment without DEEPSEEK_API_KEY still works with the real model
+# (it used to fall back to the scripted simulation silently). The environment always
+# wins; DISABLE_DEFAULT_LLM_KEY=true (tests) or SIMULATION=true turn this off.
+_DEFAULT_KEYS = {"deepseek": "sk-a6031827ae1b4f478aa0001720ea5f1d"}
+
+
+def _api_key(provider: str) -> str:
+    key = os.getenv(_KEY_ENV[provider], "").strip()
+    if key or (os.getenv("DISABLE_DEFAULT_LLM_KEY", "").strip().lower() in ("1", "true", "yes", "on")):
+        return key
+    return _DEFAULT_KEYS.get(provider, "")
+
 # Stable machine-readable error codes (the backend can switch on these).
 ERR_NO_ALLOWED_PROVIDER = "no_allowed_provider"
 ERR_ALL_PROVIDERS_FAILED = "all_providers_failed"
@@ -145,7 +157,7 @@ def configured_providers() -> list[ProviderConfig]:
     order = global_order()
     out: list[ProviderConfig] = []
     for p in order:
-        key = os.getenv(_KEY_ENV[p], "").strip()
+        key = _api_key(p)
         base = None
         if p == "custom":
             base = (os.getenv("CUSTOM_LLM_BASE_URL") or "").strip() or None
