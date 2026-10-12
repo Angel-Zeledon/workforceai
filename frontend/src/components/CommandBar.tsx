@@ -42,7 +42,7 @@ export function CommandBar() {
   return (
     <div data-testid="office-chat" data-open={open && hasThread ? "true" : "false"} className="pointer-events-auto w-full max-w-[720px]">
       {hasThread && (
-        <section aria-label={t("chat.office.title")} className="mb-2 overflow-hidden rounded-xl border border-line-strong bg-panel/95 shadow-float backdrop-blur">
+        <section data-tour="office.thread" aria-label={t("chat.office.title")} className="mb-2 overflow-hidden rounded-xl border border-line-strong bg-panel/95 shadow-float backdrop-blur">
           <header className="flex items-center gap-2 px-3 py-2">
             <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-mute">{t("chat.office.title")}</h3>
             {lastTurn && <TurnChip intent={lastTurn.intent} withHint />}
@@ -63,7 +63,7 @@ export function CommandBar() {
         </section>
       )}
       {(!hasThread || !open) && !busy && (
-        <div className="mb-2 flex flex-wrap justify-center gap-1.5">
+        <div data-tour="office.suggestions" className="mb-2 flex flex-wrap justify-center gap-1.5">
           {SUGGESTIONS.map((s) => (
             <button key={s} onClick={() => quick(t(`${s}.prompt`))} disabled={busy}
               className="rounded-md border border-line bg-panel/90 px-3 py-1 text-[11px] text-ink2 backdrop-blur transition hover:border-accent hover:text-ink disabled:opacity-50">
@@ -72,7 +72,7 @@ export function CommandBar() {
           ))}
         </div>
       )}
-      <div className="rounded-xl border border-line-strong bg-panel/95 p-2 shadow-float backdrop-blur">
+      <div data-tour="office.command" className="rounded-xl border border-line-strong bg-panel/95 p-2 shadow-float backdrop-blur">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <ChatInput conv={OFFICE} testId="command-input" submitTestId="command-submit" placeholder={t("cmd.placeholder")} onSent={() => setOpen(true)} />

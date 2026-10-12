@@ -35,7 +35,7 @@ export function Dashboard() {
   const pending = Object.values(approvalsMap).filter((a) => a.status === "pending").length;
   return (
     <div className="flex h-full min-h-0 flex-col md:flex-row">
-      <nav className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-line bg-panel p-2 md:block md:w-[210px] md:space-y-0.5 md:overflow-visible md:border-b-0 md:border-r md:p-3">
+      <nav data-tour="dashboard.nav" className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-line bg-panel p-2 md:block md:w-[210px] md:space-y-0.5 md:overflow-visible md:border-b-0 md:border-r md:p-3">
         {SECTIONS.map((k) => (
           <button key={k} data-testid={`dash-nav-${k}`} onClick={() => setSection(k)}
             className={`flex shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-[13px] transition md:w-full ${section === k ? "bg-accent-soft font-medium text-accent" : "text-ink2 hover:bg-mute/[0.08] hover:text-ink"}`}>
@@ -74,7 +74,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
   const budgetPct = m ? Math.min(100, (m.cost_usd / Math.max(0.01, m.budget_usd)) * 100) : 0;
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
+      <div data-tour="dashboard.kpis" className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
         <Kpi label={t("dash.kpi.requests")} value={m?.requests_total ?? 0} />
         <Kpi label={t("dash.kpi.tasksActive")} value={m?.tasks_active ?? 0} color="#2b6cb0" />
         <Kpi label={t("dash.kpi.tasksDone")} value={m?.tasks_done ?? 0} color="#2f7d55" />
@@ -85,7 +85,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
       </div>
       <div className="grid gap-5 xl:grid-cols-3">
         <Card title={t("dash.team")} className="xl:col-span-2" right={<button className="text-[11px] text-accent" onClick={() => go("agents")}>{t("dash.viewAll")}</button>}>
-          <div className="grid gap-2 md:grid-cols-2">
+          <div data-tour="dashboard.team" className="grid gap-2 md:grid-cols-2">
             {order.map((id) => {
               const a = agents[id]; if (!a) return null;
               const meta = roleMeta(a.role);
@@ -102,7 +102,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
             })}
           </div>
         </Card>
-        <div className="space-y-5">
+        <div data-tour="dashboard.side" className="space-y-5">
           <Card title={t("dash.pendingApprovals")}>
             {approvals.length ? <div className="space-y-2">{approvals.map((a) => <ApprovalCard key={a.id} a={a} compact />)}</div> : <Empty>{t("dash.nothingToApprove")}</Empty>}
           </Card>

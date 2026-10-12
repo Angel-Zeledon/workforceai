@@ -552,11 +552,11 @@ export function ChatsView({ agentId }: { agentId?: string }) {
         <div className="space-y-2 border-b border-line px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <h1 className="text-[15px] font-semibold tracking-tight text-ink">{t("chats.title")}</h1>
-            <button type="button" data-testid="chats-to-office" onClick={() => goOffice()} className="chats-t inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-[11px] font-medium text-ink2 transition-colors hover:border-accent hover:text-ink">
+            <button type="button" data-testid="chats-to-office" data-tour="chats.toOffice" onClick={() => goOffice()} className="chats-t inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-[11px] font-medium text-ink2 transition-colors hover:border-accent hover:text-ink">
               <Glyph name="office" size={12} />{t("chats.toOffice")}
             </button>
           </div>
-          <label className="relative block">
+          <label data-tour="chats.search" className="relative block">
             <span className="sr-only">{t("chats.search")}</span>
             <Glyph name="search" size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-mute" />
             <input
@@ -581,13 +581,13 @@ export function ChatsView({ agentId }: { agentId?: string }) {
             </section>
           ) : (
             <>
-              <section aria-label={t("chats.threads")} data-testid="chats-threads">
+              <section aria-label={t("chats.threads")} data-testid="chats-threads" data-tour="chats.threads">
                 <h2 className="px-2 pb-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{t("chats.threads")}</h2>
                 {listLoading ? <Skeleton kind="list" rows={6} /> : threadList.map((x) => (
                   <ThreadRow key={x.key} info={x} active={sel.kind === "thread" && sel.key === x.key} onPick={() => navigate({ kind: "thread", key: x.key })} />
                 ))}
               </section>
-              <section aria-label={t("chats.past")} data-testid="chats-past" className="mt-4">
+              <section aria-label={t("chats.past")} data-testid="chats-past" data-tour="chats.past" className="mt-4">
                 <div className="flex items-center justify-between px-2 pb-1">
                   <h2 className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{showArchived ? t("chats.archived") : t("chats.past")}</h2>
                   <button type="button" data-testid="chats-toggle-archived" onClick={() => setShowArchived((v) => !v)} className="text-[11px] font-medium text-accent-hover hover:underline">
@@ -610,7 +610,7 @@ export function ChatsView({ agentId }: { agentId?: string }) {
 
       {/* ---- right: the open thread ---- */}
       <section aria-label={t("chats.conversation")} className={`${showThread ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-1 flex-col bg-bg`}>
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-panel px-4 py-2.5">
+        <header data-tour="chats.header" className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-panel px-4 py-2.5">
           <button type="button" data-testid="chats-back" onClick={back} aria-label={t("chats.back")} className="rounded-md p-1.5 text-ink2 hover:bg-panel2 md:hidden"><Glyph name="back" size={16} /></button>
           {sel.kind === "thread" ? (
             <>
@@ -647,14 +647,14 @@ export function ChatsView({ agentId }: { agentId?: string }) {
             <button type="button" className="rounded-md border border-line-strong bg-panel px-3 py-1.5 text-xs font-medium text-ink hover:bg-panel2" onClick={() => navigate({ kind: "thread", key: GENERAL })}>{t("chats.unknown.go")}</button>
           </div>
         ) : (
-          <div key={histKey} className="chats-fade flex min-h-0 flex-1 flex-col">
+          <div key={histKey} data-tour="chats.messages" className="chats-fade flex min-h-0 flex-1 flex-col">
             <Messages sel={sel} onOpenReport={setReport} onOpenConv={(id) => navigate({ kind: "conv", id })} empty={sel.kind === "thread" ? emptyThread : <p className="py-10 text-center text-xs text-mute">{t("chats.work.empty")}</p>} />
             {sel.kind === "thread" && <TypingNow thread={sel.key} />}
           </div>
         )}
 
         {sel.kind === "thread" && !unknownAgent ? (
-          <div className="border-t border-line bg-panel p-3">
+          <div data-tour="chats.input" className="border-t border-line bg-panel p-3">
             <ChatInput
               key={sel.key} conv={convForThread(sel.key)} general={sel.key === GENERAL} testId="chats-input" submitTestId="chats-send"
               placeholder={sel.key === GENERAL ? t("cmd.placeholder") : t("chat.placeholder.agent", { name: first1 })}

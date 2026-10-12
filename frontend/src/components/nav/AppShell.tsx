@@ -122,12 +122,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="relative z-[55] flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line bg-panel px-3 sm:px-4">
           <div className="flex min-w-0 items-center gap-3">
             <button type="button" data-testid="nav-open" aria-label={t("nav.open")} title={t("nav.open")} onClick={() => setDrawer(true)} className="rounded-md p-1.5 text-ink2 transition hover:bg-panel2 md:hidden"><Icon name="menu" size={20} /></button>
-            <div className="min-w-0 leading-tight">
+            <div data-tour="shell.title" className="min-w-0 leading-tight">
               <div className="truncate text-[14px] font-semibold tracking-tight">{title}</div>
               <OrgIndicator className="truncate text-[10.5px] text-mute" />
             </div>
             {modeToggle && (
-              <button type="button" data-testid="mode-toggle" data-mode={section === "dashboard" ? "dashboard" : "office"} onClick={() => router.push(section === "dashboard" ? "/" : "/dashboard")} title={t("mode.switchTitle")}
+              <button type="button" data-tour="shell.mode" data-testid="mode-toggle" data-mode={section === "dashboard" ? "dashboard" : "office"} onClick={() => router.push(section === "dashboard" ? "/" : "/dashboard")} title={t("mode.switchTitle")}
                 className="ml-1 hidden rounded-lg border border-line bg-panel2 p-0.5 text-xs font-medium sm:flex">
                 {(["office", "dashboard"] as const).map((m) => (
                   <span key={m} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition ${(section === "dashboard") === (m === "dashboard") ? "bg-panel text-ink shadow-pop ring-1 ring-line" : "text-mute hover:text-ink"}`}>
@@ -140,14 +140,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-x-3 text-[11px] text-mute">
             {metrics && (
-              <div className="hidden items-center gap-3 border-r border-line pr-3 sm:flex sm:gap-4 sm:pr-4">
+              <div data-tour="shell.metrics" className="hidden items-center gap-3 border-r border-line pr-3 sm:flex sm:gap-4 sm:pr-4">
                 <span className="hidden 2xl:inline">{t("hud.active")} <b className="font-mono font-medium text-ink">{metrics.tasks_active}</b></span>
                 <span data-testid="hud-approvals">{t("hud.approvalsShort")} <b className={`font-mono font-medium ${metrics.approvals_pending ? "text-warn" : "text-ink"}`}>{metrics.approvals_pending}</b></span>
                 <span data-testid="hud-cost">{t("common.cost")} <b className="font-mono font-medium text-ink">{fmtUsd(metrics.cost_usd)}</b></span>
               </div>
             )}
             <TourLauncher section={section} />
-            <CoinCounter />
+            <span data-tour="shell.coins" className="inline-flex"><CoinCounter /></span>
             {MOCK && <span data-testid="mock-badge" className="hidden rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 sm:inline">Mock</span>}
             <span className="hidden items-center gap-1.5 whitespace-nowrap font-medium text-ink2 sm:flex">
               <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-ok" : "animate-pulse bg-err"}`} />

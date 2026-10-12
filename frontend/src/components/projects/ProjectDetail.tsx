@@ -51,7 +51,7 @@ export function ProjectDetailView() {
             </div>
             <p className="mt-0.5 max-w-[720px] text-[11px] text-mute">{p.goal}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div data-tour="projects.controls" className="flex flex-wrap items-center gap-2">
             {active && !canResume && <Btn data-testid="project-pause" onClick={() => control("pause")}>{t("pv.pause")}</Btn>}
             {canResume && <Btn data-testid="project-resume" kind="ok" onClick={() => control("resume")}>{t("pv.resume")}</Btn>}
             {(active || p.status === "paused") && <Btn data-testid="project-cancel" kind="danger" onClick={() => { if (window.confirm(t("pv.cancelConfirm"))) control("cancel"); }}>{t("pv.cancel")}</Btn>}
@@ -60,7 +60,7 @@ export function ProjectDetailView() {
         </div>
 
         {!isDraft && (
-          <div data-testid="project-progress" data-done={p.tasks_done} data-total={p.tasks_total} className="rounded-xl border border-line bg-panel p-3 shadow-pop">
+          <div data-tour="projects.progress" data-testid="project-progress" data-done={p.tasks_done} data-total={p.tasks_total} className="rounded-xl border border-line bg-panel p-3 shadow-pop">
             <div className="mb-1.5 flex items-center justify-between text-[11px] text-mute">
               <span>{t("pv.card.done", { done: p.tasks_done, total: p.tasks_total })}</span>
               <span className="font-mono font-semibold text-ink">{fmtNumber(pct, 0)}%</span>
@@ -71,7 +71,7 @@ export function ProjectDetailView() {
 
         {isDraft ? <DraftEditor /> : (
           <>
-            <div className="flex flex-wrap items-center gap-1.5" role="tablist">
+            <div data-tour="projects.tabs" className="flex flex-wrap items-center gap-1.5" role="tablist">
               {PROJECT_TABS.map((k: ProjectTab) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`pv-tab-${k}`} onClick={() => setTab(k)}
                   className={`rounded-md border px-3.5 py-1.5 text-xs font-semibold transition ${tab === k ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel text-mute hover:text-ink"}`}>

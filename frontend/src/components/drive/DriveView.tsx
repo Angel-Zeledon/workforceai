@@ -66,8 +66,8 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
       onDrop={(e) => { e.preventDefault(); setDrag(false); if (canUpload && e.dataTransfer.files.length) upload(e.dataTransfer.files); }}>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-5 py-3">
-          <div className="mr-3"><h1 className="font-display text-xl font-semibold text-ink">{t("drive.title")}</h1><p className="text-[12px] text-mute">{t("drive.page.desc")}</p></div>
-          <nav data-testid="drive-crumbs" className="flex flex-wrap items-center gap-1 text-sm">
+          <div data-tour="files.header" className="mr-3"><h1 className="font-display text-xl font-semibold text-ink">{t("drive.title")}</h1><p className="text-[12px] text-mute">{t("drive.page.desc")}</p></div>
+          <nav data-tour="files.crumbs" data-testid="drive-crumbs" className="flex flex-wrap items-center gap-1 text-sm">
             <button type="button" className="rounded px-1.5 py-0.5 text-mute hover:bg-panel2 hover:text-ink" onClick={() => { setPath("/"); setSelected(null); setTrash(null); }}>{t("drive.root")}</button>
             {crumbs.map((c, i) => (
               <span key={i} className="flex items-center gap-1">
@@ -79,18 +79,18 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2">
-            <input data-testid="drive-search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") search(); }}
+            <input data-tour="files.search" data-testid="drive-search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") search(); }}
               placeholder={t("drive.searchPlaceholder")} className="w-56 rounded-lg border border-line bg-panel2 px-3 py-1.5 text-xs outline-none focus:border-accent" />
-            <Btn data-testid="drive-trash" onClick={async () => setTrash(trash ? null : (await drive.trash().catch(() => ({ files: [] }))).files)}>{t("drive.trash")}</Btn>
+            <span data-tour="files.trash" className="inline-flex"><Btn data-testid="drive-trash" onClick={async () => setTrash(trash ? null : (await drive.trash().catch(() => ({ files: [] }))).files)}>{t("drive.trash")}</Btn></span>
             <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) upload(e.target.files); e.target.value = ""; }} />
-            <Btn kind="primary" data-testid="drive-upload" className="inline-flex items-center gap-1" disabled={!canUpload || busy} onClick={() => fileInput.current?.click()}>
+            <span data-tour="files.upload" className="inline-flex"><Btn kind="primary" data-testid="drive-upload" className="inline-flex items-center gap-1" disabled={!canUpload || busy} onClick={() => fileInput.current?.click()}>
               <Icon name="plus" size={13} />{busy ? t("drive.uploading") : t("drive.upload")}
-            </Btn>
+            </Btn></span>
           </div>
         </div>
         {error && <div data-testid="drive-error" className="mx-5 mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-700">{error}</div>}
         {drag && <div className="mx-5 mt-3 rounded-xl border-2 border-dashed border-accent px-4 py-6 text-center text-sm text-accent">{t("drive.dropHere", { path })}</div>}
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+        <div data-tour="files.list" className="min-h-0 flex-1 overflow-y-auto p-5">
           {hits ? (
             <SearchResults hits={hits} onOpen={async (h) => { setHits(null); setPath(parentOf(h.path)); }} onClose={() => setHits(null)} />
           ) : trash ? (
@@ -210,7 +210,7 @@ function FilePane({ file, onClose, onChanged, onDeleted }: { file: DriveFile; on
     drive.text(file.id, shown).then((r) => setText(r.text)).catch(() => setText(null));
   }, [file.id, file.current_version, shown, textual]);
   return (
-    <aside data-testid="drive-file-pane" className="flex w-[420px] min-w-[320px] flex-col border-l border-line bg-panel">
+    <aside data-tour="files.pane" data-testid="drive-file-pane" className="flex w-[420px] min-w-[320px] flex-col border-l border-line bg-panel">
       <div className="flex items-start gap-2 border-b border-line p-4">
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium text-ink">{file.name}</div>
@@ -229,7 +229,7 @@ function FilePane({ file, onClose, onChanged, onDeleted }: { file: DriveFile; on
       </div>
       <div className="max-h-[38%] overflow-y-auto border-t border-line p-4">
         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-mute">{t("drive.history")}</h3>
-        <ul data-testid="drive-versions" className="space-y-1.5">
+        <ul data-tour="files.versions" data-testid="drive-versions" className="space-y-1.5">
           {versions.map((v) => (
             <li key={v.version} className="flex items-center gap-2 text-xs">
               <button type="button" className={`rounded px-1.5 py-0.5 font-mono ${shown === v.version || (!shown && v.version === file.current_version) ? "bg-accent/10 text-accent" : "text-mute hover:bg-panel2"}`}

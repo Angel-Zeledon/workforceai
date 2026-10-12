@@ -172,7 +172,7 @@ export function ShopView() {
     <div data-testid="shop-view" className="flex h-full min-h-0 flex-col bg-bg">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-panel px-5 py-3">
         <h1 className="font-display text-xl font-semibold text-ink">{t("shop.title")}</h1>
-        <div data-testid="shop-wallet" data-balance={wallet.balance} className="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-100/70 px-3 py-1">
+        <div data-tour="shop.wallet" data-testid="shop-wallet" data-balance={wallet.balance} className="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-100/70 px-3 py-1">
           <CoinIcon size={18} />
           <b className="font-mono text-base font-semibold tabular-nums text-amber-800">{fmtNumber(wallet.balance, 0)}</b>
           <span className="text-[11px] text-amber-800">{t("shop.coins")}</span>
@@ -180,26 +180,26 @@ export function ShopView() {
         <div className="hidden text-[11px] text-mute md:block">
           {t("shop.earnedTotal")} <b className="font-mono text-ink2">{fmtNumber(wallet.earned_total, 0)}</b> · {t("shop.spentTotal")} <b className="font-mono text-ink2">{fmtNumber(wallet.spent_total, 0)}</b>
         </div>
-        <div role="tablist" className="ml-auto flex rounded-lg border border-line bg-panel2 p-0.5 text-xs font-medium">
+        <div data-tour="shop.tabs" role="tablist" className="ml-auto flex rounded-lg border border-line bg-panel2 p-0.5 text-xs font-medium">
           {(["shop", "mine", "history"] as const).map((k) => (
             <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`shop-tab-${k}`} onClick={() => setTab(k)}
               className={`rounded-md px-3 py-1.5 transition ${tab === k ? "bg-panel text-ink shadow-pop ring-1 ring-line" : "text-mute hover:text-ink"}`}>{t(`shop.tab.${k}`)}</button>
           ))}
         </div>
       </div>
-      <p data-testid="shop-rule" className="border-b border-line bg-amber-100/40 px-5 py-1.5 text-[11.5px] text-amber-800">{t("shop.rule")}</p>
+      <p data-tour="shop.rule" data-testid="shop-rule" className="border-b border-line bg-amber-100/40 px-5 py-1.5 text-[11.5px] text-amber-800">{t("shop.rule")}</p>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+      <div data-tour="shop.content" className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         {tab === "history" ? <History /> : (
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex rounded-lg border border-line bg-panel p-0.5 text-xs font-medium">
+              <div data-tour="shop.groups" className="flex rounded-lg border border-line bg-panel p-0.5 text-xs font-medium">
                 {(["character", "office"] as const).map((g) => (
                   <button key={g} type="button" data-testid={`shop-group-${g}`} aria-pressed={group === g} onClick={() => { setGroup(g); setCat("all"); }}
                     className={`rounded-md px-3 py-1.5 transition ${group === g ? "bg-accent-soft text-accent" : "text-mute hover:text-ink"}`}>{t(`shop.group.${g}`)}</button>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div data-tour="shop.categories" className="flex flex-wrap gap-1.5">
                 {["all", ...cats].map((c) => (
                   <button key={c} type="button" data-testid={`shop-cat-${c}`} aria-pressed={cat === c} onClick={() => setCat(c)}
                     className={`rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition ${cat === c ? "border-accent/40 bg-accent-soft text-accent" : "border-line bg-panel text-ink2 hover:bg-panel2"}`}>
@@ -209,7 +209,7 @@ export function ShopView() {
               </div>
             </div>
             {items.length === 0 ? <Empty>{tab === "mine" ? t("shop.mineEmpty") : t("shop.empty")}</Empty> : (
-              <div data-testid="shop-grid" className="ac-stagger grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
+              <div data-tour="shop.grid" data-testid="shop-grid" className="ac-stagger grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
                 {items.map((it) => <ItemCard key={it.id} item={it} mode={tab === "mine" ? "inventory" : "shop"} onOpenInventory={() => setTab("mine")} />)}
               </div>
             )}

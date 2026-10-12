@@ -16,9 +16,9 @@ import { PageHeader } from "../nav/ui2";
 
 type Dlg = null | "kill" | "templates" | "settings" | "members" | "hire";
 
-function Row({ icon, title, body, onClick, testid, disabled, danger }: { icon: IconName; title: string; body: string; onClick: () => void; testid: string; disabled?: boolean; danger?: boolean }) {
+function Row({ icon, title, body, onClick, testid, disabled, danger, tour }: { tour?: string; icon: IconName; title: string; body: string; onClick: () => void; testid: string; disabled?: boolean; danger?: boolean }) {
   return (
-    <button type="button" data-testid={testid} disabled={disabled} onClick={onClick}
+    <button type="button" data-tour={tour} data-testid={testid} disabled={disabled} onClick={onClick}
       className={`ac-rise group flex w-full items-start gap-3.5 rounded-xl border border-line bg-panel p-4 text-left transition duration-150 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-soft active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 ${danger ? "hover:border-err/40" : ""}`}>
       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${danger ? "bg-err/10 text-err" : "bg-accent-soft text-accent"}`}><Icon name={icon} size={18} /></span>
       <span className="min-w-0 flex-1">
@@ -57,20 +57,20 @@ export function SettingsView() {
       <PageHeader title={t("settings.page.title")} description={t("settings.page.desc")} />
       <div className="mx-auto max-w-4xl px-5 py-6 sm:px-6">
         <Section title={t("admin.group.workspace")}>
-          <Row testid="settings-office" icon="edit" title={t("settings.title")} body={t("settings.page.office")} onClick={() => setDlg("settings")} />
-          <Row testid="settings-hire" icon="plus" title={t("hire.open")} body={t("settings.page.hire")} disabled={!isAdmin} onClick={() => setDlg("hire")} />
-          <Row testid="settings-templates" icon="layout" title={t("tpl.open")} body={t("settings.page.templates")} onClick={() => setDlg("templates")} />
-          <Row testid="settings-connections" icon="plug" title={t("nav.connections")} body={t("settings.page.connections")} onClick={() => setView("connections")} />
-          {onboarding.supported && <Row testid="settings-onboarding" icon="flag" title={onboarding.pending ? t("onb.prompt.title") : t("cfg.open")} body={t("settings.page.onboarding")} onClick={onboarding.open} />}
+          <Row tour="settings.office" testid="settings-office" icon="edit" title={t("settings.title")} body={t("settings.page.office")} onClick={() => setDlg("settings")} />
+          <Row tour="settings.hire" testid="settings-hire" icon="plus" title={t("hire.open")} body={t("settings.page.hire")} disabled={!isAdmin} onClick={() => setDlg("hire")} />
+          <Row tour="settings.templates" testid="settings-templates" icon="layout" title={t("tpl.open")} body={t("settings.page.templates")} onClick={() => setDlg("templates")} />
+          <Row tour="settings.connections" testid="settings-connections" icon="plug" title={t("nav.connections")} body={t("settings.page.connections")} onClick={() => setView("connections")} />
+          {onboarding.supported && <Row tour="settings.onboarding" testid="settings-onboarding" icon="flag" title={onboarding.pending ? t("onb.prompt.title") : t("cfg.open")} body={t("settings.page.onboarding")} onClick={onboarding.open} />}
         </Section>
         <Section title={t("admin.group.safety")}>
-          <Row testid="settings-security" icon="shield" title={t("nav.security")} body={t("settings.page.security")} onClick={() => setView("security")} />
-          <Row testid="settings-killswitch" icon="power" danger title={level === "none" ? t("ctl.killswitch.title") : t(`ctl.level.${level}`)} body={t("settings.page.kill")} disabled={level === "none" && !isAdmin}
+          <Row tour="settings.security" testid="settings-security" icon="shield" title={t("nav.security")} body={t("settings.page.security")} onClick={() => setView("security")} />
+          <Row tour="settings.killswitch" testid="settings-killswitch" icon="power" danger title={level === "none" ? t("ctl.killswitch.title") : t(`ctl.level.${level}`)} body={t("settings.page.kill")} disabled={level === "none" && !isAdmin}
             onClick={() => (level === "none" ? setDlg("kill") : setView("security"))} />
         </Section>
         {signedIn && (
           <Section title={t("admin.group.account")}>
-            <div className="rounded-xl border border-line bg-panel p-4 text-[12.5px] text-mute">
+            <div data-tour="settings.account" className="rounded-xl border border-line bg-panel p-4 text-[12.5px] text-mute">
               <b className="block truncate text-[13.5px] text-ink">{session.user?.name}</b>
               <span className="block truncate">{session.user?.email} · {t(`members.roles.${session.role}`)}</span>
             </div>

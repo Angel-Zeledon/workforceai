@@ -47,23 +47,23 @@ function ProjectList() {
           <h1 className="font-display text-xl font-semibold text-ink">{t("pv.title")}</h1>
           <p className="text-xs text-mute">{t("pv.subtitle")}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div data-tour="projects.actions" className="flex items-center gap-2">
           <Btn data-testid="template-library-open" onClick={openLibrary}>{t("tpl.lib.open")}</Btn>
           <Btn data-testid="project-new" kind="primary" onClick={() => openWizard("")}>{t("pv.new")}</Btn>
         </div>
       </div>
 
       {list.length ? (
-        <div className="ac-stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div data-tour="projects.cards" className="ac-stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {list.map((p) => <ProjectCard key={p.id} p={p} onOpen={() => openProject(p.id)} />)}
         </div>
       ) : <EmptyState testid="projects-empty" icon="folder" title={t("pv.emptyTitle")} body={t("pv.empty")} action={<Btn kind="primary" onClick={() => openWizard("")}>{t("pv.new")}</Btn>} />}
 
-      <Card title={t("pv.templates")} right={<button type="button" data-testid="template-library-all" onClick={openLibrary} className="text-[11px] font-semibold text-accent hover:underline">{t("tpl.lib.seeAll", { count: templates.length })}</button>}>
+      <div data-tour="projects.templates"><Card title={t("pv.templates")} right={<button type="button" data-testid="template-library-all" onClick={openLibrary} className="text-[11px] font-semibold text-accent hover:underline">{t("tpl.lib.seeAll", { count: templates.length })}</button>}>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {templates.slice(0, 6).map((tpl) => <TemplateCard key={tpl.id} tpl={tpl} onUse={() => openWizard(tpl.id)} />)}
         </div>
-      </Card>
+      </Card></div>
     </div>
   );
 }

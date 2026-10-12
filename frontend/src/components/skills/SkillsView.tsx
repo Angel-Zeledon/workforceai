@@ -58,15 +58,15 @@ export function SkillsView() {
   return (
     <div data-testid="skills-view" className="flex h-full min-h-0 flex-col bg-bg">
       <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-5 py-3">
-        <div className="mr-3">
+        <div data-tour="skills.header" className="mr-3">
           <h1 className="font-display text-xl font-semibold text-ink">{t("skills.title")}</h1>
           <p className="text-[11px] text-mute">{t("skills.subtitle")}</p>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <input data-testid="skills-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("skills.searchPlaceholder")} aria-label={t("skills.searchPlaceholder")} className="w-56 rounded-lg border border-line bg-panel2 px-3 py-1.5 text-xs outline-none focus:border-accent" />
+          <input data-tour="skills.search" data-testid="skills-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("skills.searchPlaceholder")} aria-label={t("skills.searchPlaceholder")} className="w-56 rounded-lg border border-line bg-panel2 px-3 py-1.5 text-xs outline-none focus:border-accent" />
           <input ref={input} type="file" accept=".zip,.md,application/zip,text/markdown" data-testid="skills-import-input" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = ""; }} />
-          {canWrite && <Btn data-testid="skills-import" disabled={busy} onClick={() => input.current?.click()}>{busy ? t("skills.import.busy") : t("skills.import.button")}</Btn>}
-          {canWrite && <Btn kind="primary" data-testid="skills-new" className="inline-flex items-center gap-1" onClick={() => nav.openNew(null)}><Icon name="plus" size={13} />{t("skills.new")}</Btn>}
+          {canWrite && <span data-tour="skills.import" className="inline-flex"><Btn data-testid="skills-import" disabled={busy} onClick={() => input.current?.click()}>{busy ? t("skills.import.busy") : t("skills.import.button")}</Btn></span>}
+          {canWrite && <span data-tour="skills.new" className="inline-flex"><Btn kind="primary" data-testid="skills-new" className="inline-flex items-center gap-1" onClick={() => nav.openNew(null)}><Icon name="plus" size={13} />{t("skills.new")}</Btn></span>}
         </div>
       </div>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
@@ -79,7 +79,7 @@ export function SkillsView() {
             <button type="button" className="text-mute underline" onClick={() => setRename(null)}>{t("common.close")}</button>
           </div>
         )}
-        <div role="tablist" aria-label={t("skills.filter.label")} className="flex flex-wrap gap-1.5">
+        <div data-tour="skills.filters" role="tablist" aria-label={t("skills.filter.label")} className="flex flex-wrap gap-1.5">
           {FILTERS.map((f) => (
             <button key={f} role="tab" aria-selected={filter === f} data-testid={`skills-filter-${f}`} onClick={() => setFilter(f)}
               className={`rounded-full border px-3 py-1 text-xs font-medium ${filter === f ? "border-accent/30 bg-accent-soft text-accent" : "border-line text-ink2 hover:bg-panel2"} ${f === "in_review" && counts.in_review ? "ring-1 ring-warn/50" : ""}`}>
@@ -88,7 +88,7 @@ export function SkillsView() {
           ))}
         </div>
         {list === null ? <Loading rows={4} /> : shown.length === 0 ? <Empty>{t("skills.empty")}</Empty> : (
-          <div data-testid="skills-grid" className="ac-stagger grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div data-tour="skills.list" data-testid="skills-grid" className="ac-stagger grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {shown.map((s) => (
               <button key={s.id} type="button" data-testid={`skill-card-${s.name}`} data-status={s.status} onClick={() => nav.select(s.id, needsReview(s) ? "review" : "content")}
                 className="ac-card-hover flex flex-col rounded-xl border border-line bg-panel p-4 text-left shadow-soft hover:border-accent">

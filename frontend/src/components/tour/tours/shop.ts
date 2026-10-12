@@ -1,0 +1,53 @@
+import type { TourDefinition } from "../types";
+
+/** Shop: coins earned by finished work, spent on cosmetic items for characters and the office. */
+export const shopTour: TourDefinition = {
+  id: "shop-v1",
+  section: "shop",
+  name: "tour.name",
+  steps: [
+    { title: "intro.title", body: "intro.body" },
+    { anchor: "shop.wallet", title: "wallet.title", body: "wallet.body" },
+    { anchor: "shop.rule", title: "rule.title", body: "rule.body" },
+    { anchor: "shop.groups", title: "groups.title", body: "groups.body" },
+    { anchor: "shop.categories", title: "cats.title", body: "cats.body" },
+    { anchor: "shop.grid", title: "grid.title", body: "grid.body" },
+    { anchor: "shop.tabs", title: "tabs.title", body: "tabs.body" },
+  ],
+  copy: {
+    es: {
+      "tour.name": "Recorrido de la tienda",
+      "intro.title": "La tienda de tu oficina",
+      "intro.body": "Aquí gastas las monedas que tu equipo gana al terminar trabajo. Con ellas compras objetos estéticos para los personajes y para la oficina.\n\nEn la demo empiezas con 1000 monedas, así que puedes probar todo.",
+      "wallet.title": "Tu saldo de monedas",
+      "wallet.body": "Mira aquí cuántas monedas tienes. Baja cuando compras y sube cuando un agente termina trabajo. Si un objeto cuesta más que tu saldo, su botón Comprar se desactiva y verás cuántas monedas te faltan.",
+      "rule.title": "Cómo funcionan las monedas",
+      "rule.body": "Lee esta regla una vez: las monedas se ganan solo con trabajo terminado y no se pueden comprar con dinero. Los objetos son solo estéticos, no cambian lo que hacen los agentes.",
+      "groups.title": "Personajes u oficina",
+      "groups.body": "Elige Personajes para ropa y accesorios de tus agentes, u Oficina para decorar el espacio. Al cambiar de grupo, las categorías se reinician a Todo.",
+      "cats.title": "Filtra por categoría",
+      "cats.body": "Con unos 430 objetos, no hace falta mirarlos todos. Haz clic en una categoría para ver solo esa, o vuelve a Todo. Los objetos aparecen ordenados del más barato al más caro.",
+      "grid.title": "Compra un objeto",
+      "grid.body": "Cada tarjeta muestra vista previa, rareza, descripción y precio. Pulsa Comprar en uno que puedas pagar. La compra va al inventario y no se aplica sola; después aparece \"Equipar desde el inventario\".",
+      "tabs.title": "Inventario e historial",
+      "tabs.body": "Abre Inventario para usar lo que compraste: elige un agente y pulsa Equipar, o pulsa Colocar para poner un objeto en la oficina (Quitar lo retira). Historial lista cada ganancia y compra con su saldo.",
+    },
+    en: {
+      "tour.name": "Shop tour",
+      "intro.title": "Your office shop",
+      "intro.body": "Here you spend the coins your team earns by finishing work. You buy cosmetic items for the characters and for the office.\n\nThe demo starts you with 1000 coins, so you can try everything.",
+      "wallet.title": "Your coin balance",
+      "wallet.body": "Check here how many coins you have. It goes down when you buy and up when an agent finishes work. If an item costs more than your balance, its Buy button is disabled and you see how many coins you are missing.",
+      "rule.title": "How coins work",
+      "rule.body": "Read this rule once: coins are earned only by finished work and can never be bought with money. Items are cosmetic only and do not change what the agents do.",
+      "groups.title": "Characters or office",
+      "groups.body": "Pick Characters for your agents' outfits and accessories, or Office to decorate the space. Switching group resets the categories to All.",
+      "cats.title": "Filter by category",
+      "cats.body": "With around 430 items you do not need to browse them all. Click a category to see only that one, or go back to All. Items are sorted from cheapest to most expensive.",
+      "grid.title": "Buy an item",
+      "grid.body": "Each card shows a preview, rarity, description and price. Press Buy on one you can afford. The purchase goes to your inventory and is not applied automatically; then \"Equip from inventory\" appears.",
+      "tabs.title": "Inventory and history",
+      "tabs.body": "Open Inventory to use what you bought: choose an agent and press Equip, or press Place to put an item in the office (Remove takes it out). History lists every earning and purchase with its balance.",
+    },
+  },
+};
