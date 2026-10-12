@@ -456,6 +456,20 @@ func (s *Service) OwnsRequest(ctx context.Context, org, requestID string) bool {
 	return err == nil
 }
 
+// ProjectIDForRequest is the id of the project launched as the given request
+// ("" when the request is not a project). Used by the chat history to link a
+// conversation to its project.
+func (s *Service) ProjectIDForRequest(ctx context.Context, org, requestID string) string {
+	if lp := s.lookupReq(org, requestID); lp != nil {
+		return lp.id
+	}
+	rec, err := s.cfg.Store.ByRequest(application.WithOrg(ctx, org), org, requestID)
+	if err != nil {
+		return ""
+	}
+	return rec.ID
+}
+
 // GateTask decides what happens to a task of a launched project: it holds new
 // work while the project is paused, refuses it once cancelled, completes
 // milestones and timers, and asks a human before gates and approval steps.

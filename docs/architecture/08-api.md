@@ -603,6 +603,22 @@ Cada mensaje puede traer `files: [{file_id, path, name, mime, size, version, act
 
 `POST /v1/route` y `POST /v1/chat-reply` (ver chat-routing.md sec. 5). Opcionales: sin ellos el backend usa reglas locales.
 
+### 15.5 Historial de chats (E1)
+
+Diseño: [chat-history.md](chat-history.md). Migración `570_chat_history.sql` (down en `migrations/down/`).
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| GET | `/conversations?agent_id=&q=&kind=office\|agent\|request&archived=only\|all&limit=&offset=` | conversations:read | Lista enriquecida: `title`, `kind`, `agent_id`, `preview`, `preview_from`, `message_count`, `unread`, `archived`, `title_custom`, `request_id`, `project_id`, `updated_at` (= `last_message_at`). Búsqueda sin distinguir mayúsculas en título y mensajes (`%`/`_` literales). Cuerpo = array; `X-Has-More`, `X-Next-Offset` |
+| PATCH | `/conversations/{id}` `{title?, archived?}` | conversations:write | Renombra / archiva (auditado: `conversation.updated`, sin texto) |
+| DELETE | `/conversations/{id}` | conversations:delete (admin) | Borra la conversación y sus mensajes (auditado: `conversation.deleted`) -> 204 |
+| POST | `/conversations/{id}/read` | conversations:write | Marca leída -> 204 |
+| GET | `/chats/threads` | conversations:read | `general` y un hilo por agente: `preview`, `message_count`, `unread`, `last_message_at` |
+| GET | `/chats/threads/{general\|agentId}/messages?limit=&before=` | conversations:read | Mensajes del hilo (más antiguo primero) + `agent_ids` por mensaje; `X-Has-More`, `X-Next-Before` |
+| POST | `/chats/threads/{key}/read` | conversations:write | Marca el hilo leído -> 204 |
+
+Enviar sigue siendo `POST /messages` (`office` desde General, `agent:<id>` desde el hilo de un agente).
+
 ## 16. Proyectos (backend implementado)
 
 Un proyecto es un workflow entero con trabajo en paralelo: objetivos -> flujos -> nodos. Lanzarlo envía sus hojas como **una solicitud** del orquestador (tareas reales con dependencias), por lo que el tope de presupuesto, las aprobaciones, el kill-switch / solo lectura / pausa de agente, la política y la auditoría son los de siempre. Diseño y decisiones: [workflow-visualization.md](workflow-visualization.md) (Apéndice A, "Estado del backend"). Código: `backend/internal/projects`, `backend/internal/api/projects.go`. Migración `270_projects.sql` (down: `migrations/down/270_projects_down.sql`). Los ids de proyecto son `prj-<12 hex>`; los de nodo `<proyecto>:<clave>` (la subtarea delegada, `<nodo>~s`).

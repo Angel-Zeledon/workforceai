@@ -74,6 +74,10 @@ export interface ChatMessage {
   handoff_to?: string | null;
   /** drive files of this message (cards in the chat) */
   files?: FileRef[];
+  /** the request this message created or reports on (deep link from the chat history) */
+  request_id?: string | null;
+  /** chat history: the agents this message belongs to (where it was routed), for the badges */
+  agent_ids?: string[];
 }
 export type TurnIntent = "smalltalk" | "question" | "task";
 export interface RouteResponder { agent_id: string; role: "primary" | "contributor"; reason: string }

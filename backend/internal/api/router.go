@@ -80,6 +80,9 @@ type Deps struct {
 	// Rewards serves /rewards/* and /shop/* (rewards.go): the coin wallet,
 	// ledger, catalog, purchases, equipment and office items. Optional.
 	Rewards *rewards.Service
+	// Chats serves the chat history (chat_history.go): the enriched GET /conversations,
+	// rename/archive/delete and /chats/*. Optional: nil keeps the plain list.
+	Chats *application.ChatHistory
 	// Push serves /push/* (push.go); nil disables Web Push. Rec audits
 	// subscription changes (optional).
 	Push *push.Service
@@ -144,6 +147,7 @@ func NewRouter(d Deps) http.Handler {
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests", s.listRequests)
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}", s.getRequest)
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations", s.listConversations)
+			s.mountChatHistory(r)
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations/{id}/messages", s.listMessages)
 			r.With(s.can(auth.PermConversationsPost)).Post("/messages", s.postChat)
 			r.With(s.can(auth.PermConversationsPost)).Post("/conversations/{id}/messages", s.postMessage)
@@ -335,6 +339,10 @@ func (s *server) getRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) listConversations(w http.ResponseWriter, r *http.Request) {
+	if s.Chats != nil {
+		s.listConversationsHistory(w, r)
+		return
+	}
 	v, err := s.Store.ListConversations(r.Context(), s.org(r))
 	if err != nil {
 		s.fail(w, err)

@@ -91,7 +91,7 @@ function useHandoff(m: ChatMessage): string | null {
   return hits.length === 1 ? hits[0].id : null;
 }
 
-function Bubble({ m, grouped, showRoute }: { m: ChatMessage; grouped: boolean; showRoute: boolean }) {
+export function Bubble({ m, grouped, showRoute }: { m: ChatMessage; grouped: boolean; showRoute: boolean }) {
   const { t } = useT();
   const name = useAgentName();
   const color = useAgentColor();
