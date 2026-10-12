@@ -73,6 +73,11 @@ function head({ lang, title, description, path: pth, altPath, type = "article", 
   <meta name="theme-color" content="#f7f9fb">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico?v=3" sizes="any">
+  <link rel="icon" href="/favicon-32.png?v=3" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3">
+  <link rel="manifest" href="/manifest.webmanifest?v=3">
+  <meta name="apple-mobile-web-app-title" content="Workforce">
   <link rel="canonical" href="${url(pth)}">
   <link rel="alternate" hreflang="es" href="${url(pairs[0])}">
   <link rel="alternate" hreflang="en" href="${url(pairs[1])}">
@@ -152,7 +157,7 @@ ${body}
 const crumbs = (lang, items) => `<nav class="crumbs" aria-label="${UI[lang].crumbLabel}"><ol>${items.map((it, i) => (it.href && i < items.length - 1 ? `<li><a href="${it.href}">${esc(it.name)}</a></li>` : `<li aria-current="page">${esc(it.name)}</li>`)).join("")}</ol></nav>`;
 const crumbLd = (items) => ({ "@type": "BreadcrumbList", itemListElement: items.map((it, i) => ({ "@type": "ListItem", position: i + 1, name: it.name, item: url(it.path) })) });
 const write = (rel, html) => { const f = path.join(dir, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, html); };
-const publisher = { "@type": "Organization", "@id": SITE + "/#org", name: "AI Workforce OS", url: SITE + "/", logo: SITE + "/favicon.svg" };
+const publisher = { "@type": "Organization", "@id": SITE + "/#org", name: "AI Workforce OS", url: SITE + "/", logo: SITE + "/icon-512.png" };
 
 const renderTable = (t) => `<div class="tbl" role="region" tabindex="0"><table><thead><tr>${t.head.map((h) => `<th scope="col">${esc(h)}</th>`).join("")}</tr></thead><tbody>${t.rows.map((r) => `<tr>${r.map((c, i) => (i === 0 ? `<th scope="row"><code>${esc(c)}</code></th>` : `<td>${esc(c)}</td>`)).join("")}</tr>`).join("")}</tbody></table></div>`;
 const renderCode = (c) => `<pre class="code" tabindex="0"><code class="lang-${esc(c.lang || "text")}">${esc(c.text)}</code></pre>`;

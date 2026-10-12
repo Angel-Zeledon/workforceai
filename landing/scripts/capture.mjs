@@ -5,7 +5,7 @@
  *   node landing/scripts/capture.mjs                       # app at http://localhost:3000
  *   CAPTURE_URL=http://localhost:3100 node landing/scripts/capture.mjs
  *
- * Requires: the app running (Docker, or `NEXT_PUBLIC_MOCK=true npm run build && npx next start` in frontend/)
+ * Requires: the app running in mock mode (`cd frontend && NEXT_PUBLIC_MOCK=true npm run build && NEXT_PUBLIC_MOCK=true npx next start -p 3100`)
  * plus Playwright in e2e/ and sharp in frontend/ (npm install in both; `cd e2e && npm install && npx playwright install chromium`).
  */
 import { createRequire } from "node:module";
@@ -30,13 +30,25 @@ async function save(page, name) {
   return png;
 }
 
-const browser = await chromium.launch();
+let browser;
+for (const channel of [undefined, "chrome", "msedge"]) {
+  try { browser = await chromium.launch(channel ? { channel } : {}); break; } catch { /* try the next browser */ }
+}
+if (!browser) throw new Error("No browser available for Playwright");
 const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1, locale: "es-ES" });
 page.on("pageerror", (e) => console.log("pageerror:", e.message));
+// Skip the first-visit welcome: the screenshots show the working office, not onboarding.
+await page.addInitScript(() => { try { localStorage.setItem("wf.welcome.v1.anon", "1"); } catch { /* ignore */ } });
 await page.goto(BASE, { waitUntil: "networkidle" });
-// Hide the controls banner if mock mode leaves it with an untranslated key.
-await page.addStyleTag({ content: '[data-testid="ctl-banner"]{display:none!important}' });
-await page.waitForSelector('[data-testid="agent-sales"]');
+await page.waitForSelector('[data-testid="splash"]', { state: "detached", timeout: 30000 }); // the loading screen
+// The product is not a demo: no "Mock" badge, and the mock organization is just "your office".
+await page.addStyleTag({ content: '[data-testid="ctl-banner"],[data-testid="mock-badge"],nextjs-portal{display:none!important}' });
+await page.evaluate(() => {
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) if (n.nodeValue && n.nodeValue.trim() === "Oficina demo") n.nodeValue = "Rojas y Asociados";
+});
+await page.waitForSelector("canvas");
+await page.waitForTimeout(2500);
 
 // Launch the scripted $50,000 proposal scenario and let the work show.
 await page.getByTestId("command-input").fill("Prepara una propuesta de $50,000 para un cliente nuevo");
@@ -59,7 +71,7 @@ await page.getByTestId("mode-toggle").click();
 
 // Projects
 await page.getByTestId("nav-projects").click();
-await page.waitForSelector('[data-testid="projects-view"]');
+await page.waitForSelector('[data-testid="projects-view"]', { timeout: 150000 });
 await page.waitForTimeout(1200);
 // Open the first project (e.g. "Cierre financiero del trimestre") to show parallel tasks.
 const card = page.locator('[data-testid^="project-card-"]:not([data-testid^="project-card-progress-"])').first();

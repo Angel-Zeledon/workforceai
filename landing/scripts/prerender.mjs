@@ -66,7 +66,7 @@ function bake(template, lang) {
   const ld = {
     "@context": "https://schema.org",
     "@graph": [
-      { "@type": "Organization", "@id": SITE + "/#org", name: "AI Workforce OS", url: SITE + "/", logo: SITE + "/favicon.svg", email: "info@workforceai.es" },
+      { "@type": "Organization", "@id": SITE + "/#org", name: "AI Workforce OS", url: SITE + "/", logo: SITE + "/icon-512.png", email: "info@workforceai.es" },
       { "@type": "WebSite", "@id": SITE + "/#website", url: SITE + "/", name: "AI Workforce OS", inLanguage: ["es", "en"], publisher: { "@id": SITE + "/#org" } },
       {
         "@type": "SoftwareApplication", name: "AI Workforce OS", url: page.url, inLanguage: lang,
