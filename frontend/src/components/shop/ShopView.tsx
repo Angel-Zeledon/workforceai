@@ -152,6 +152,8 @@ function History() {
   );
 }
 
+const PAGE = 48; // cards rendered at once: the catalog has hundreds of items
+
 /** "Shop" screen: spend the coins that finished work earned on cosmetic items for the characters and the office. */
 export function ShopView() {
   const { t } = useT();
@@ -161,7 +163,9 @@ export function ShopView() {
   const [tab, setTab] = useState<Tab>("shop");
   const [group, setGroup] = useState<Group>("character");
   const [cat, setCat] = useState<string>("all");
+  const [limit, setLimit] = useState(PAGE);
   useEffect(() => { void useRewards.getState().load(); }, []);
+  useEffect(() => { setLimit(PAGE); }, [group, cat, tab]);
 
   const cats: readonly string[] = group === "character" ? CHARACTER_CATEGORIES : OFFICE_CATEGORIES;
   const items = useMemo(() => catalog
@@ -210,7 +214,14 @@ export function ShopView() {
             </div>
             {items.length === 0 ? <Empty>{tab === "mine" ? t("shop.mineEmpty") : t("shop.empty")}</Empty> : (
               <div data-tour="shop.grid" data-testid="shop-grid" className="ac-stagger grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
-                {items.map((it) => <ItemCard key={it.id} item={it} mode={tab === "mine" ? "inventory" : "shop"} onOpenInventory={() => setTab("mine")} />)}
+                {items.slice(0, limit).map((it) => <ItemCard key={it.id} item={it} mode={tab === "mine" ? "inventory" : "shop"} onOpenInventory={() => setTab("mine")} />)}
+              </div>
+            )}
+            {items.length > limit && (
+              <div className="mt-4 flex justify-center">
+                <button type="button" data-testid="shop-more" onClick={() => setLimit((n) => n + PAGE)} className="rounded-lg border border-line bg-panel px-4 py-2 text-xs font-semibold text-ink hover:bg-panel2">
+                  {t("shop.more", { n: items.length - limit })}
+                </button>
               </div>
             )}
           </div>

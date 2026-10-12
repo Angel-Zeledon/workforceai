@@ -2630,6 +2630,7 @@
   "shop.forAgent": "Personaje",
   "shop.wornBy": "Lo lleva: {names}",
   "shop.placed": "Colocado en la oficina",
+  "shop.more": "Mostrar más (faltan {n})",
   "shop.empty": "No hay objetos en esta categoría.",
   "shop.mineEmpty": "Tu inventario está vacío. Compra objetos en la Tienda: aparecerán aquí y desde aquí eliges a quién ponérselos o dónde colocarlos.",
   "shop.error": "No se pudo completar. Revisa tus monedas e inténtalo de nuevo.",

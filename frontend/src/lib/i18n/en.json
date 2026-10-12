@@ -2630,6 +2630,7 @@
   "shop.forAgent": "Character",
   "shop.wornBy": "Worn by: {names}",
   "shop.placed": "Placed in the office",
+  "shop.more": "Show more ({n} left)",
   "shop.empty": "No items in this category.",
   "shop.mineEmpty": "Your inventory is empty. Buy items in the Shop: they show up here, where you choose who wears them or where they go.",
   "shop.error": "Could not complete. Check your coins and try again.",

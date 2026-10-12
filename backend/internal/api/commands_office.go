@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"aiworkforce/backend/internal/application"
@@ -320,13 +321,17 @@ func cmdRemember(c *cmdCall) (*cmdResult, *cmdFail) {
 			return nil, c.serviceFail(err)
 		}
 	} else {
-		key := fmt.Sprintf("nota-%d", time.Now().UnixNano())
+		// The sequence keeps two notes written within one clock tick (coarse on Windows) from sharing a key and overwriting each other.
+		key := fmt.Sprintf("nota-%d-%d", time.Now().UnixNano(), noteSeq.Add(1))
 		if err := c.s.Store.SetMemory(c.ctx, c.org, a.ID, domain.Memory{Scope: "agent", Key: key, Value: trunc(text, 1000)}); err != nil {
 			return nil, c.serviceFail(err)
 		}
 	}
 	return msgResult(c.t("Anotado", "Noted"), fmt.Sprintf(c.t("%s lo recordará: «%s»", "%s will remember it: “%s”"), a.Name, trunc(text, 120)), map[string]any{"agent_id": a.ID}), nil
 }
+
+// noteSeq makes the key of a remembered note unique within the process.
+var noteSeq atomic.Int64
 
 // ---- tone / language ----
 
