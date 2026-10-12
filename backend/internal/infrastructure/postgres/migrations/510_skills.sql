@@ -92,7 +92,9 @@ BEGIN
     END LOOP;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_user') THEN
         GRANT SELECT, INSERT, UPDATE ON skills TO app_user;
+        REVOKE DELETE ON skills FROM app_user;
         GRANT SELECT, INSERT ON skill_versions TO app_user;
+        REVOKE UPDATE, DELETE ON skill_versions FROM app_user;
         GRANT SELECT, INSERT, DELETE ON skill_assignments TO app_user;
     END IF;
 END

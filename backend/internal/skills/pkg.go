@@ -161,6 +161,11 @@ func ReadZip(data []byte) (Package, error) {
 		if strings.ContainsAny(name, "\\\x00") || strings.HasPrefix(name, "/") {
 			return Package{}, invalid("path_traversal", "entry %q has an unsafe path", clip(name))
 		}
+		for _, seg := range strings.Split(strings.TrimSuffix(name, "/"), "/") {
+			if seg == ".." || seg == "." || seg == "" {
+				return Package{}, invalid("path_traversal", "entry %q uses an empty, . or .. segment", clip(name))
+			}
+		}
 		if junkRe.MatchString(name) {
 			continue
 		}
