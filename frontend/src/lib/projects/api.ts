@@ -7,7 +7,7 @@ import { API_URL, MOCK } from "../config";
 import { authFetch } from "../session";
 import type { StandingApproval } from "../types";
 import type {
-  ControlAction, LaunchBody, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectEstimate, ProjectHealth, ProjectSummary, ProjectTemplate,
+  ControlAction, LaunchBody, ProjectInputs, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectEstimate, ProjectHealth, ProjectSummary, ProjectTemplate,
   SaveTemplateOpts, TemplateInput, TemplatePreview, TemplatePreviewRequest, TemplateValidation, TemplateVersionInfo,
 } from "./types";
 
@@ -56,6 +56,22 @@ export const projectsApi = {
   patchPlan: async (id: string, ops: PlanOp[]) => (MOCK ? (await mock()).patchPlan(id, ops) : http("PATCH", `/projects/${id}/plan`, { ops })),
   estimate: async (id: string): Promise<{ estimate: ProjectEstimate }> => (MOCK ? { estimate: (await mock().then((m) => m.get(id))).estimate! } : http("POST", `/projects/${id}/estimate`)),
   launch: async (id: string, b: LaunchBody) => (MOCK ? (await mock()).launch(id, b) : http("POST", `/projects/${id}/launch`, b)),
+  // ---- H1: inputs of a draft (the mock has none: its templates declare no inputs) ----
+  inputs: async (id: string): Promise<ProjectInputs | null> => (MOCK ? null : http("GET", `/projects/${id}/inputs`)),
+  uploadInput: async (id: string, key: string, file: File): Promise<ProjectInputs> => {
+    const path = `/projects/${id}/inputs/${key}/upload?name=${encodeURIComponent(file.name)}`;
+    const res = await authFetch(`${API_URL}${path}`, { method: "PUT", cache: "no-store", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
+    if (!res.ok) {
+      let detail = "", code = "";
+      try { const j = JSON.parse(await res.text()); detail = String(j?.error ?? ""); code = String(j?.code ?? ""); } catch { /* not JSON */ }
+      throw new ApiError(`PUT ${path} -> ${res.status}`, res.status, code || detail);
+    }
+    return res.json();
+  },
+  linkInput: async (id: string, key: string, paths: string[]): Promise<ProjectInputs> => http("POST", `/projects/${id}/inputs/${key}/link`, { paths }),
+  setInputValue: async (id: string, key: string, value: string): Promise<ProjectInputs> => http("PUT", `/projects/${id}/inputs/${key}/value`, { value }),
+  removeInputFile: async (id: string, key: string, path: string): Promise<ProjectInputs> => http("DELETE", `/projects/${id}/inputs/${key}/files?path=${encodeURIComponent(path)}`),
+  useDemoInputs: async (id: string): Promise<ProjectInputs> => http("POST", `/projects/${id}/inputs/demo`),
   control: async (id: string, action: ControlAction) => (MOCK ? (await mock()).control(id, action) : http("POST", `/projects/${id}/control`, { action })),
   retryNode: async (id: string, nodeId: string) => (MOCK ? (await mock()).retryNode(id, nodeId) : http("POST", `/projects/${id}/nodes/${nodeId}/retry`)),
   skipNode: async (id: string, nodeId: string, reason: string) => (MOCK ? (await mock()).skipNode(id, nodeId, reason) : http("POST", `/projects/${id}/nodes/${nodeId}/skip`, { reason })),

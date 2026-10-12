@@ -6,9 +6,10 @@ import { estimatePlan, fmtDuration, isGroup, leaves, validatePlan } from "@/lib/
 import { MOCK } from "@/lib/config";
 import { limitCode, projectsApi } from "@/lib/projects/api";
 import { useProjects } from "@/lib/projects/store";
-import type { ProjectDetail as ProjectDetailT, ProjectNode } from "@/lib/projects/types";
+import type { ProjectDetail as ProjectDetailT, ProjectInputs, ProjectNode } from "@/lib/projects/types";
 import { Btn, Card, Progress, useAgentName } from "../ui";
 import { Kpi, fmtMoney, useNodeTitle } from "./shared";
+import { InputsCard } from "./InputsCard";
 
 /** Draft review: editable tree (titles, agents), live estimate (P50-P90 range), validation and launch. */
 export function DraftEditor() {
@@ -27,6 +28,11 @@ export function DraftEditor() {
   const [ack, setAck] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // H1: the data the project needs; launching without the required ones is an explicit choice
+  const [inputs, setInputs] = useState<ProjectInputs | null>(detail.inputs ?? null);
+  const [proceed, setProceed] = useState(false);
+  useEffect(() => { setInputs(detail.inputs ?? null); }, [detail.inputs]);
+  const inputsBlock = !!inputs && !inputs.ready && !proceed;
   useEffect(() => { if (!planning && p.budget_usd > 0 && budget === "") setBudget(String(p.budget_usd)); }, [planning, p.budget_usd, budget]);
   // the real backend plans big projects in the background: poll until the planner is done
   const planningRunning = !!planning || detail.planner?.status === "running";
@@ -38,12 +44,13 @@ export function DraftEditor() {
   const b = Number(budget);
   const under = b > 0 && b < est.total.p50_usd;
   const errors = issues.filter((i) => i.severity === "error");
-  const canLaunch = !planning && !errors.length && b > 0 && (!under || ack) && !busy;
+  const canLaunch = !planning && !errors.length && b > 0 && (!under || ack) && !busy && !inputsBlock;
   const doLaunch = async () => {
     setBusy(true); setErr("");
-    try { await launch({ approved_budget_usd: b, acknowledge_underbudget: ack }); } catch (e) {
+    try { await launch({ approved_budget_usd: b, acknowledge_underbudget: ack, ...(inputs && !inputs.ready && proceed ? { proceed_without_inputs: true } : {}) }); } catch (e) {
       const lc = limitCode(e);
-      setErr(lc ? t(`pv.limit.${lc}`) : String((e as { detail?: string })?.detail ?? "").includes("planning_in_progress") ? t("pv.launch.planning") : t("pv.launch.error"));
+      const d = String((e as { detail?: string })?.detail ?? "");
+      setErr(lc ? t(`pv.limit.${lc}`) : d.includes("planning_in_progress") ? t("pv.launch.planning") : d.includes("inputs_required") ? t("pv.launch.inputsRequired") : t("pv.launch.error"));
       setBusy(false);
     }
   };
@@ -51,6 +58,7 @@ export function DraftEditor() {
   return (
     <div data-testid="draft-editor" className="grid gap-5 xl:grid-cols-3">
       <div className="space-y-4 xl:col-span-2">
+        {inputs && <InputsCard projectId={p.id} inputs={inputs} onChange={setInputs} proceed={proceed} onProceed={setProceed} />}
         <Card title={t("pv.draft.plan")} right={<span data-testid="draft-node-count" data-count={count} className="font-mono text-[11px] text-mute">{t("pv.card.nodes", { count })}</span>}>
           <PlannerNotice detail={detail} />
           {planning && (
@@ -127,6 +135,7 @@ export function DraftEditor() {
               </label>
             </div>
           )}
+          {inputsBlock && <div data-testid="launch-blocked-inputs" className="mt-2 rounded-xl bg-amber-500/10 p-2 text-[11px] text-amber-800">{t("pv.launch.inputsBlocked", { count: inputs!.missing.length })}</div>}
           {err && <div className="mt-2 text-[11px] text-red-700">{err}</div>}
           <Btn data-testid="launch-confirm" kind="primary" className="mt-3 w-full" disabled={!canLaunch} onClick={doLaunch}>{t("pv.launch.confirm")}</Btn>
         </Card>
