@@ -3,9 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRewards, useShopNav } from "@/lib/rewards";
 import { usePreferences } from "@/lib/preferences";
 import { useT, fmtNumber } from "@/lib/i18n";
-import { useDriveNav } from "@/lib/drive";
 import { useStore } from "@/lib/store";
-import { useProjects } from "@/lib/projects/store";
 
 /** The coin: a gold disc with a star. Deliberately not a "$": coins are earned by work, they are not money. */
 export function CoinIcon({ size = 14, className = "" }: { size?: number; className?: string }) {
@@ -24,11 +22,7 @@ export function CoinCounter() {
   const available = useRewards((s) => s.available);
   const balance = useRewards((s) => s.wallet.balance);
   const tick = useRewards((s) => s.earnTick);
-  const open = useShopNav((s) => s.open);
-  const toggle = () => {
-    if (!open) { useDriveNav.getState().close(); useProjects.getState().setOpen(false); }
-    useShopNav.getState().toggle();
-  };
+  const toggle = () => useShopNav.getState().toggle();
   const [pulse, setPulse] = useState(false);
   const first = useRef(true);
   useEffect(() => {

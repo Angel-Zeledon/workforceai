@@ -20,6 +20,8 @@ const config: Config = {
         accent: v("accent"),
         "accent-hover": v("accent-hover"),
         "accent-soft": v("accent-soft"),
+        navy: v("navy"),
+        navy2: v("navy2"),
         ok: v("ok"),
         warn: v("warn"),
         err: v("err"),

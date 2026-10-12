@@ -3,7 +3,7 @@ import type { ArtifactKind } from "@/lib/artifacts";
 
 /** Accent color per artifact kind: categóricos apagados, legibles sobre blanco. */
 export const KIND_COLOR: Record<ArtifactKind, string> = {
-  sheet: "#2f7d55", doc: "#3451b2", table: "#2a8590", board: "#a8741f", chart: "#7461b5",
+  sheet: "#2f7d55", doc: "#1d4f91", table: "#2a8590", board: "#a8741f", chart: "#7461b5",
   pdf: "#b4443c", form: "#5d6fa8", inbox: "#a35b80", agenda: "#5f8a3f",
 };
 

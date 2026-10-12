@@ -79,7 +79,7 @@ export function AgentLanes() {
             </div>
             <div className="min-w-0 flex-1 overflow-x-auto">
               <svg width={W} height={h} className="block">
-                <line data-testid={id === agents[0] ? "lanes-now-line" : undefined} x1={x(now)} x2={x(now)} y1={0} y2={h} stroke="#3451b2" strokeWidth={1.5} />
+                <line data-testid={id === agents[0] ? "lanes-now-line" : undefined} x1={x(now)} x2={x(now)} y1={0} y2={h} stroke="#0F766E" strokeWidth={1.5} />
                 {arr.map((b) => {
                   const bx = x(b.s); const bw = Math.max(4, x(b.e) - bx); const by = 4 + b.lane * (BAR_H + 4);
                   const c = nodeColor(b.n);

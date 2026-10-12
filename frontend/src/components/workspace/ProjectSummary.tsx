@@ -24,7 +24,7 @@ export function ProjectSummary({ pid, deskId }: { pid: string; deskId: string })
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-mute">{t("workspace.project")}</div>
           <h2 className="font-display text-xl font-semibold text-ink">{project.name}</h2>
-          <div className="mt-2 flex items-center gap-3"><div className="flex-1"><Progress value={total} color="#3451b2" /></div><span className="font-mono text-xs text-ink">{total}%</span></div>
+          <div className="mt-2 flex items-center gap-3"><div className="flex-1"><Progress value={total} color="#0F766E" /></div><span className="font-mono text-xs text-ink">{total}%</span></div>
         </div>
         <ul className="space-y-2">
           {project.deliverables.map((d) => (

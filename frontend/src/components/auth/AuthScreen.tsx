@@ -5,6 +5,7 @@ import { useT } from "@/lib/i18n";
 import { acceptInvitation, AuthError, bootstrapAuth, login, loginPath, register, safeReturnPath, useSession } from "@/lib/session";
 import { Btn } from "../ui";
 import { ErrorLine, inputCls } from "../connections/shared";
+import { Brand } from "../landing/Brand";
 
 type Mode = "login" | "register" | "invite";
 
@@ -79,13 +80,27 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   }
   const title = t(`auth.${mode}.title`);
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-4 py-10">
-      <form onSubmit={submit} data-testid={`auth-${mode}`} className="ac-pop w-full max-w-sm space-y-3 rounded-2xl border border-line bg-panel p-6 shadow-float">
-        <div className="mb-2 flex items-center gap-2">
-          <span className="h-6 w-6 rounded-md bg-accent" aria-hidden />
-          <span className="text-sm font-semibold text-ink">AI Workforce OS</span>
+    <main className="grid min-h-screen bg-bg lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      <aside className="relative hidden flex-col justify-between gap-10 overflow-hidden bg-navy p-12 text-white lg:flex">
+        <div aria-hidden className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)", backgroundSize: "56px 56px" }} />
+        <a href="/welcome" className="relative w-fit" aria-label="AI Workforce OS"><Brand tone="light" /></a>
+        <div className="relative max-w-md">
+          <h2 className="text-4xl font-semibold leading-[1.1] tracking-[-0.02em]">{t("auth.brand.title")}</h2>
+          <p className="mt-5 text-base leading-relaxed text-white/70">{t("auth.brand.sub")}</p>
+          <ul className="mt-9 space-y-4">
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="flex gap-3 text-[15px] leading-snug text-white/90">
+                <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden className="mt-0.5 shrink-0 text-[#7fd1c8]"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                {t(`auth.brand.${i}`)}
+              </li>
+            ))}
+          </ul>
         </div>
-        <h1 className="font-display text-xl font-semibold text-ink">{title}</h1>
+      </aside>
+      <div className="flex items-center justify-center px-4 py-10 sm:px-8">
+      <form onSubmit={submit} data-testid={`auth-${mode}`} className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-7 shadow-soft sm:p-8">
+        <a href="/welcome" className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{title}</h1>
         {mode === "invite" && <p className="text-xs text-mute">{t("auth.invite.body")}</p>}
         {mode !== "invite" && (
           <Field label={t("auth.email")}>
@@ -116,6 +131,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
           {mode !== "register" && <a className="text-accent hover:underline" href={withNext("/register", next ?? "/")} data-testid="auth-to-register">{t("auth.toRegister")}</a>}
         </div>
       </form>
+      </div>
     </main>
   );
 }

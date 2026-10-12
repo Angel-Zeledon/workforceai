@@ -5,6 +5,7 @@
  * agent's desk shows a draft for every task it finished (what the simulated runtime
  * does against the real backend).
  */
+import { go } from "@/lib/navBridge";
 import { create } from "zustand";
 import { API_URL, MOCK } from "./config";
 import { authFetch } from "./session";
@@ -229,7 +230,7 @@ export const parentOf = (p: string) => p.split("/").slice(0, -1).join("/") || "/
 /** The "Files" screen: open/closed and the folder to show (set from an agent's desk, a project...). */
 export const useDriveNav = create<{ open: boolean; path: string; show: (path: string) => void; close: () => void; toggle: () => void }>((set) => ({
   open: false, path: "/",
-  show: (path) => set({ open: true, path }),
+  show: (path) => { set({ open: true, path }); go(path === "/" ? "/files" : `/files?path=${encodeURIComponent(path)}`); },
   close: () => set({ open: false }),
-  toggle: () => set((s) => ({ open: !s.open })),
+  toggle: () => go(useDriveNav.getState().open ? "/" : "/files"),
 }));

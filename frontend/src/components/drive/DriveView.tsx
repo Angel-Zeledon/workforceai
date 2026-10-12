@@ -3,7 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT, fmtNumber } from "@/lib/i18n";
 import { drive, DriveError, isTextual, parentOf, type DriveFile, type DriveVersion, type Hit, type Listing } from "@/lib/drive";
 import { useStore } from "@/lib/store";
-import { Btn, Empty } from "../ui";
+import { toast } from "@/lib/toast";
+import { Btn, Empty, Loading } from "../ui";
+import { EmptyState } from "../nav/ui2";
 import { Icon } from "../icons";
 import { useAgentName } from "../ui";
 
@@ -44,6 +46,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
     try {
       for (const f of Array.from(files)) await drive.upload(`${path === "/" ? "" : path}/${f.name}`, f);
       await load();
+      toast(t("toast.uploaded"));
     } catch (e) {
       setError(e instanceof DriveError ? t("drive.error", { code: e.code }) : String(e));
     } finally {
@@ -63,7 +66,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
       onDrop={(e) => { e.preventDefault(); setDrag(false); if (canUpload && e.dataTransfer.files.length) upload(e.dataTransfer.files); }}>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-5 py-3">
-          <h1 className="mr-3 font-display text-xl font-semibold text-ink">{t("drive.title")}</h1>
+          <div className="mr-3"><h1 className="font-display text-xl font-semibold text-ink">{t("drive.title")}</h1><p className="text-[12px] text-mute">{t("drive.page.desc")}</p></div>
           <nav data-testid="drive-crumbs" className="flex flex-wrap items-center gap-1 text-sm">
             <button type="button" className="rounded px-1.5 py-0.5 text-mute hover:bg-panel2 hover:text-ink" onClick={() => { setPath("/"); setSelected(null); setTrash(null); }}>{t("drive.root")}</button>
             {crumbs.map((c, i) => (
@@ -93,10 +96,10 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
           ) : trash ? (
             <TrashList files={trash} onRestore={async (f) => { await drive.restore(f.id); setTrash((await drive.trash()).files); load(); }} />
           ) : !listing ? (
-            <Empty>{t("drive.loading")}</Empty>
+            <Loading rows={5} />
           ) : (
             <FileTable listing={listing} path={path} selected={selected?.id ?? null}
-              onFolder={(p) => { setPath(p); setSelected(null); }} onFile={setSelected} canUpload={canUpload} />
+              onFolder={(p) => { setPath(p); setSelected(null); }} onFile={setSelected} canUpload={canUpload} onUpload={() => fileInput.current?.click()} />
           )}
         </div>
       </div>
@@ -113,11 +116,13 @@ function Author({ p }: { p: DriveFile["updated_by"] }) {
   return <span>{t("drive.person")}</span>;
 }
 
-function FileTable({ listing, path, selected, onFolder, onFile, canUpload }: {
-  listing: Listing; path: string; selected: string | null; onFolder: (p: string) => void; onFile: (f: DriveFile) => void; canUpload: boolean;
+function FileTable({ listing, path, selected, onFolder, onFile, canUpload, onUpload }: {
+  listing: Listing; path: string; selected: string | null; onFolder: (p: string) => void; onFile: (f: DriveFile) => void; canUpload: boolean; onUpload: () => void;
 }) {
   const { t } = useT();
-  if (!listing.folders.length && !listing.files.length) return <Empty>{canUpload ? t("drive.emptyFolder") : t("drive.empty")}</Empty>;
+  if (!listing.folders.length && !listing.files.length) return canUpload
+    ? <EmptyState testid="drive-empty" icon="doc" title={t("drive.emptyTitle")} body={t("drive.emptyFolder")} action={<Btn kind="primary" onClick={onUpload}>{t("drive.upload")}</Btn>} />
+    : <Empty>{t("drive.empty")}</Empty>;
   return (
     <table data-testid="drive-table" className="w-full text-left text-sm">
       <thead className="text-[11px] uppercase tracking-wide text-mute">
