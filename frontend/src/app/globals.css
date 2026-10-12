@@ -107,3 +107,13 @@ button:not(:disabled):active, a.ac-press:active { transform: scale(0.985); }
 .ac-mark-eyes { transform-box: fill-box; transform-origin: center; animation: mark-blink 5s infinite; }
 .ac-mark-led { animation: mark-led 2.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .ac-mark-eyes, .ac-mark-led { animation: none; } }
+
+/* Welcome overlay (components/onboarding/WelcomeOverlay.tsx) */
+@keyframes wf-welcome-in { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes wf-coin-drop { 0% { transform: translateY(-30px) rotate(0deg); opacity: 0; } 12% { opacity: 1; } 100% { transform: translateY(460px) rotate(540deg); opacity: 0; } }
+@keyframes wf-wave { 0%, 100% { transform: rotate(0deg); } 20% { transform: rotate(-9deg); } 40% { transform: rotate(8deg); } 60% { transform: rotate(-6deg); } 80% { transform: rotate(4deg); } }
+.wf-welcome { animation: wf-welcome-in .38s cubic-bezier(.2,.8,.2,1) both; }
+.wf-coin { position: absolute; top: 0; opacity: 0; animation-name: wf-coin-drop; animation-timing-function: cubic-bezier(.4,.1,.6,1); animation-fill-mode: both; }
+.wf-wave { transform-origin: 50% 90%; animation: wf-wave 1.3s ease-in-out .5s 1; }
+@media (prefers-reduced-motion: reduce) { .wf-welcome, .wf-coin, .wf-wave { animation: none !important; } }
+[data-reduce="1"] .wf-welcome, [data-reduce="1"] .wf-wave { animation: none !important; }
