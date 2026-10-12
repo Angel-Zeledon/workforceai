@@ -628,12 +628,22 @@ func (s *Service) proposeSuggestions(ctx context.Context, rec Record, t domain.T
 	if src.ID == "" || src.AgentID == nil || src.human() {
 		return
 	}
-	known := map[string]bool{}
+	// A follow-up does not suggest follow-ups of its own: live, chains of
+	// suggestions grew a 19-task close to 121 tasks, a third of them repeats.
+	if src.PlanChangeID != "" {
+		return
+	}
+	var known []map[string]bool
+	launched := 0
 	for _, n := range rec.Nodes {
 		if !n.isGroup() && n.Superseded == "" {
-			known[normTitle(n.Title)] = true
+			known = append(known, titleWords(n.Title))
+			if n.PlanChangeID == "" {
+				launched++
+			}
 		}
 	}
+	suggested := 0 // tasks already added or proposed by suggestions
 	if list, err := s.cfg.Changes.ListChanges(ctx, rec.OrgID, rec.ID); err == nil {
 		for _, c := range list {
 			if c.Status == ChangeRejected {
@@ -641,21 +651,38 @@ func (s *Service) proposeSuggestions(ctx context.Context, rec Record, t domain.T
 			}
 			for _, op := range c.Ops {
 				for _, pt := range op.Tasks {
-					known[normTitle(pt.Title)] = true
+					known = append(known, titleWords(pt.Title))
+					if c.Source == SourceSuggested {
+						suggested++
+					}
 				}
 			}
 		}
 	}
+	room := max(minSuggestedBudget, int(math.Ceil(maxSuggestedGrowth*float64(launched)))) - suggested
+	dup := func(w map[string]bool) bool {
+		for _, k := range known {
+			if similarTitle(w, k) {
+				return true
+			}
+		}
+		return false
+	}
 	var tasks []ProposedTask
 	for _, title := range t.Output.SuggestedTasks {
 		title = cleanText(title, maxProposedTitleLen)
-		if title == "" || known[normTitle(title)] || len(tasks) >= maxSuggestedPerNode {
+		w := titleWords(title)
+		if title == "" || dup(w) || len(tasks) >= min(maxSuggestedPerNode, room) {
 			continue
 		}
-		known[normTitle(title)] = true
+		known = append(known, w)
 		tasks = append(tasks, ProposedTask{Key: fmt.Sprintf("s%d", len(tasks)+1), Title: title, AgentID: *src.AgentID, Complexity: "M", DependsOn: []string{nodeID}})
 	}
 	if len(tasks) == 0 {
+		if room <= 0 && len(t.Output.SuggestedTasks) > 0 {
+			s.audit(application.WithActor(ctx, "system"), "project.plan_change_suppressed", rec.ID,
+				map[string]any{"source_node_id": nodeID, "reason": "suggestion_budget", "suggested": suggested, "launched": launched})
+		}
 		return
 	}
 	actor := *src.AgentID

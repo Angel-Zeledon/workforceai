@@ -83,6 +83,9 @@ type run struct {
 	mu       sync.Mutex
 	done     map[string]domain.Task // finished tasks by id
 	involved map[string]bool
+	// budgetOut is set by the first task stopped by the exhausted organization
+	// budget: the others stop quietly (one message, not one per task).
+	budgetOut atomic.Bool
 
 	preset *PlanResponse // plan from a workflow template: skips the runtime planner
 	style  RunStyle      // locale and regional tone captured when the run started
@@ -883,6 +886,10 @@ func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.
 }
 
 func (o *Orchestrator) failTask(ctx context.Context, rs *run, t domain.Task, cause error) {
+	if errors.Is(cause, errBudget) {
+		o.stopForBudget(ctx, rs, t)
+		return
+	}
 	fin := time.Now().UTC()
 	t.Status, t.FinishedAt = domain.TaskFailed, &fin
 	if err := o.store.UpdateTask(context.WithoutCancel(ctx), o.org(ctx), t); err != nil {
@@ -893,6 +900,25 @@ func (o *Orchestrator) failTask(ctx context.Context, rs *run, t domain.Task, cau
 	o.reportError(ctx, t.AgentID, fmt.Sprintf("la tarea %q falló: %v", t.Title, cause))
 	o.rec.Emit(ctx, Action{Type: domain.EvTaskFailed, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
 		Payload: map[string]any{"task": t}, Text: fmt.Sprintf("Tarea fallida: %s", t.Title)})
+	o.emitMetrics(ctx)
+}
+
+// stopForBudget stops a task that never ran because the organization budget is
+// exhausted: it did not fail (nothing was tried), it is blocked, and only the
+// first one of the run tells the user. Live, a large project otherwise showed
+// 98 "failed" tasks and 98 error messages for one cause.
+func (o *Orchestrator) stopForBudget(ctx context.Context, rs *run, t domain.Task) {
+	fin := time.Now().UTC()
+	t.Status, t.FinishedAt = domain.TaskBlocked, &fin
+	if err := o.store.UpdateTask(context.WithoutCancel(ctx), o.org(ctx), t); err != nil {
+		o.log.Warn("update task", "err", err)
+	}
+	o.setState(ctx, t.AgentID, domain.StateIdle, "", nil, 0)
+	if rs == nil || !rs.budgetOut.Swap(true) {
+		o.reportError(ctx, t.AgentID, fmt.Sprintf("trabajo detenido: %v; las tareas pendientes quedan bloqueadas hasta que se amplíe el presupuesto", errBudget))
+	}
+	o.rec.Emit(ctx, Action{Type: domain.EvTaskBlocked, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
+		Payload: map[string]any{"task": t, "reason": "org_budget"}, Text: fmt.Sprintf("Tarea bloqueada (presupuesto agotado): %s", t.Title)})
 	o.emitMetrics(ctx)
 }
 

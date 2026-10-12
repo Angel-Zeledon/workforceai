@@ -411,7 +411,8 @@ func TestBudgetStopsFurtherRuntimeCalls(t *testing.T) {
 	reqID, _ := h.orch.Submit(context.Background(), "x")
 	h.orch.Wait()
 	ts := h.tasks(reqID)
-	if ts["Caro"].Status != domain.TaskDone || ts["Siguiente"].Status != domain.TaskFailed {
+	// The next task never ran: it is blocked by the budget, not failed.
+	if ts["Caro"].Status != domain.TaskDone || ts["Siguiente"].Status != domain.TaskBlocked {
 		t.Fatalf("statuses: %s / %s", ts["Caro"].Status, ts["Siguiente"].Status)
 	}
 	if !h.hasAudit("budget.exceeded") {
