@@ -190,6 +190,10 @@ func run(log *slog.Logger) error {
 	rewardsSvc := wireRewards(log, pg, store, rec, ws.projects)
 	chats := wireChatHistory(cfg.App, store, rec, ws.projects)
 	rewardsObs.Bind(rewardsSvc)
+	// Slash commands: /clear and /compact keep their state in the conversation context store.
+	if cc, ok := store.(application.ConvContextStore); ok {
+		orch.SetConvContext(cc)
+	}
 
 	// Durable execution: resume the requests a previous process left in progress
 	// (after the project gate is installed, so project requests are recognized).
@@ -216,7 +220,7 @@ func run(log *slog.Logger) error {
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Standing: standingSvc,
-		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Skills: skillsSvc, Rewards: rewardsSvc, Chats: chats, Push: pushSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Skills: skillsSvc, Rewards: rewardsSvc, Chats: chats, Commands: &api.CommandsDeps{}, Push: pushSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}

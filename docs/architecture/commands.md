@@ -121,7 +121,7 @@ Response:
 * `request`: `request_id`, `conversation_id?`, `text`
 
 HTTP status: `200` for `ok|needs_confirmation|started`; errors: `400 invalid_args|missing_arg|unknown_agent|unknown_project|surface_not_supported`,
-`403 forbidden`, `404 unknown_command|not_found`, `409 conflict|read_only`, `422 nothing_to_do`, `429 rate_limited`,
+`403 forbidden`, `404 unknown_command|not_found`, `409 conflict|read_only|budget_exceeded`, `422 nothing_to_do`, `429 rate_limited`,
 `501 not_available` (the service behind it is not wired). The body is always the same envelope.
 
 Navigation hrefs used: `/office?agent=<id>`, `/chats`, `/chats/<agentId>`, `/projects/new?template=<id>`,
@@ -132,7 +132,7 @@ Navigation hrefs used: `/office?agent=<id>`, `/chats`, `/chats/<agentId>`, `/pro
 
 `/command arg1 arg2 ...`: arguments are assigned in the order of `args`; the last `variadic` argument
 takes the rest of the line. `@name` is accepted wherever an `agent` is expected. Agent references match
-the id, the name or the role, ignoring case and accents. Special syntax:
+the id, the name or the role, ignoring case and accents, and also the words people use for the area (`ventas`, `contabilidad`, `rrhh`, `legal`, `finance`...). Special syntax:
 
 * `/meeting sales legal accounting: <topic>` (`/reunion ventas legal contabilidad: <tema>`): agents before the colon, topic after.
 * `/memory forget <text>` / `/memoria olvidar <texto>`.
@@ -156,7 +156,7 @@ Aliases are unique across the two languages (a unit test enforces it). The regis
 | stop | detener, parar | stop | control | controls:pause | no | destructive; agent: immediate drain; project: cancel |
 | status | estado | status | control | agents:read | no | agents, running tasks, pending approvals |
 | trace | traza | trace | control | audit:read | no | navigate to the last trace of the agent |
-| export | exportar | export | control | conversations:read | no | `md` or `pdf` of the conversation, saved in the drive |
+| export | exportar | export | control | conversations:read | no | `md` or `pdf` of the whole conversation, saved in the drive under `/Shared/Exports/` (needs `files:write`); result kind `download` |
 | excel, word, pdf, presentation | excel, word, pdf, presentacion | excel, word, pdf, presentation | office | requests:create | yes | request with `[[format:..]]` marker |
 | meeting | reunion | meeting | office | requests:create | yes | request with `[[meeting:..]]`: one task per agent + conclusion by the assistant |
 | assign | encargar | assign | office | requests:create | yes | direct task to one agent |
@@ -175,6 +175,18 @@ Aliases are unique across the two languages (a unit test enforces it). The regis
 | hire | contratar | hire | org | agents:write | no | from a role template |
 | permissions | permisos | permissions | org | approvals:read | no | who approves what |
 | shop, inventory | tienda, inventario | shop, inventory | org | shop:read | no | navigate |
+
+## Behavior notes
+
+* `/clear` and `/compact` act on the conversation of the context (`office` for the office and General, `agent:<id>` for a 1:1 chat). Neither deletes messages: the chat history keeps everything and shows a system notice where the epoch changed; only what the model receives changes.
+* `/compact` summarizes only what is newer than the last clear/summary and keeps the previous summary as input, so it can be repeated. The summary is sent as the first history item (`from: "system"`).
+* `/assign` creates the request with a one-task plan for that agent (no planner call), `/meeting` and the deliverables go through the normal planner with markers.
+* `/skill` assigns an active library skill to the agent (it then appears in the agent's skill list for every next task; `skill.load` still brings the text). Loading a skill for a single task only is not part of K1.
+* `/learn` saves the last finished task of the agent as a skill **draft** (source `from_work`); an administrator reviews it before agents can use it.
+* `/undo` restores the previous version of the file in the agent's (or your) latest drive change as a new version; history is kept.
+* `/trace` needs `audit:read` (thought audit is admin only).
+* `/presentation` is a PDF with one section per slide (no `.pptx`).
+* Seams: `Deps.Commands.Models` and `Deps.Commands.LongMemory` (see below); the long-term memory of branch m1 and the BYO models of g3 plug in there without touching the commands.
 
 ## Language
 

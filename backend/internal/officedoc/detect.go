@@ -16,10 +16,15 @@ var formatPatterns = []struct {
 	{FormatDOCX, regexp.MustCompile(`(?i)\b(hazme|haz|genera|generame|cr[eé]a|prepara|redacta|dame|necesito|quiero|elabora|make|create|generate|write|prepare|draft)\b[^.\n]{0,40}\b(documento|document)\b`)},
 }
 
+var formatMarker = regexp.MustCompile(`(?i)\[\[format:(xlsx|docx|pdf)\]\]`)
+
 // FormatFromText returns the office format a request asks for ("excel" ->
 // xlsx, "word" or "make me a document" -> docx, "pdf" -> pdf), or "" when it
 // names none. When it names several, the one mentioned first wins.
 func FormatFromText(text string) string {
+	if m := formatMarker.FindStringSubmatch(text); m != nil { // [[format:xlsx]] from a slash command wins
+		return strings.ToLower(m[1])
+	}
 	best, at := "", -1
 	for _, p := range formatPatterns {
 		if loc := p.re.FindStringIndex(text); loc != nil && (at < 0 || loc[0] < at) {

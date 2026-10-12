@@ -863,3 +863,22 @@ Las monedas se **ganan solo trabajando** (tarea terminada, proyecto terminado) y
 
 Ranuras de personaje: `outfit`, `hat`, `face`, `ears`, `neck`, `badge`, `buddy`. Ranuras de oficina: `plant_1`, `plant_2`, `lamp_1`, `rug_1`, `coffee_1`, `poster_1`, `poster_2`, `shelf_1`, `aquarium_1`, `arcade_1`, `trophy_1`, `window_1`. Eventos WS: `coins.earned`, `shop.purchased`, `item.equipped`, `item.unequipped`, `office.item_placed`, `office.item_removed` (ver 03).
 
+
+## 23. Comandos con `/` en el chat (K1)
+
+Comandos que se escriben en la oficina, en Chats > General y en el chat 1:1 con un agente. Los ejecuta el backend (o el frontend si son pura navegación); el modelo solo recibe texto cuando el comando lo necesita, así que funcionan igual con DeepSeek, OpenAI, Claude o Kimi. Contrato completo, catálogo, idioma y semillas para otras ramas: `docs/architecture/commands.md`.
+
+Todo comando responde a su alias en **español y en inglés** (`/resumir` y `/compact`) sea cual sea el idioma de la UI; el **idioma de la respuesta sigue al alias escrito** (`lang` en la petición; si falta se deduce del alias, luego del texto, luego de la organización). RBAC por comando en el servidor, límite de ritmo por persona (120/min; 20/min si el comando llama al modelo), auditoría `command.run` / `command.denied` con el id y los NOMBRES de los argumentos (nunca valores ni texto del chat).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/commands` | autenticado | catálogo `[{id, aliases{es,en}, title, description, example, group, icon, args[], permission, destructive, uses_llm, surfaces[], client_only, allowed, available}]`; `allowed:false` = el rol no puede, `available:false` = el servidor no tiene el servicio |
+| GET | `/commands/complete?kind=&q=&limit=` | según el tipo | `kind` = `agent`\|`project`\|`file`\|`skill`\|`template` → `[{value, label, hint}]` |
+| GET | `/commands/suggest?surface=&conversation_id=` | autenticado | hasta 3 sugerencias `[{command, reason{es,en}, severity}]` (resumir si hay 40+ mensajes, uso si el presupuesto ≥ 80 %, pendientes) |
+| POST | `/commands/run` `{command, args, raw, lang, context{surface, agent_id?, conversation_id?, project_id?}, confirm?, idempotency_key?}` | el del comando | `{status: ok\|needs_confirmation\|started\|error, lang, command, confirm?{message{es,en}}, result?{kind: message\|table\|navigate\|download\|card\|request, ...}, error?{code, message}}` |
+
+Estados HTTP: 200 (`ok`, `needs_confirmation`, `started`), 400 (`invalid_args`, `missing_arg`, `unknown_agent`, `surface_not_supported`), 403 `forbidden`, 404 `unknown_command` / `not_found`, 409 `budget_exceeded` / `read_only` / `conflict`, 422 `nothing_to_do`, 429 `rate_limited`, 501 `not_available`. La misma `idempotency_key` (10 min, por persona) repite la primera respuesta (`Idempotent-Replay: true`).
+
+Los destructivos (`stop`, `undo`, `memory borrar|olvidar`) devuelven `needs_confirmation` hasta que se repite con `confirm:true`. `/correo` y `/linkedin` solo crean una solicitud cuyo agente redacta un borrador; enviarlo pasa por aprobación humana como cualquier acción externa. Los comandos que llaman al modelo (`compact`, `daily-summary`, `meeting`, `assign`, entregables, borradores) pasan por la reserva de presupuesto y el libro de uso como cualquier tarea.
+
+Runtime (aditivo): `POST /v1/summarize` (compact/meeting/daily; sirve con modelos sin salida estructurada) y `POST /v1/context-sizes` (segmentos del prompt sin llamar al modelo). Migración `600_conversation_context` (`conversation_contexts`, RLS): `/clear` y `/compact` guardan una época y un resumen por conversación; el historial completo se conserva.
