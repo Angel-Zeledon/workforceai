@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ------------------------------------------------------------------
-   Design tokens. Un solo acento (índigo profundo), neutros fríos tipo
+   Design tokens. Marca navy profundo + un solo acento teal sobrio, neutros fríos tipo
    slate/piedra y semánticos desaturados. Triples RGB para que Tailwind
    pueda aplicar opacidad (`bg-panel/90`).
 ------------------------------------------------------------------- */
@@ -14,13 +14,15 @@
   --panel2: 247 248 250;        /* superficie secundaria / inputs */
   --line: 226 230 236;          /* bordes de 1px */
   --line-strong: 203 210 220;   /* hover / énfasis de borde */
-  --ink: 21 27 38;              /* texto principal (AAA sobre panel) */
-  --ink2: 62 73 90;             /* texto secundario fuerte */
+  --ink: 11 31 58;              /* navy #0B1F3A: texto principal (AAA sobre panel) */
+  --ink2: 47 62 86;             /* texto secundario fuerte */
   --mute: 91 102 120;           /* texto terciario (AA sobre bg y panel) */
-  --accent: 52 81 178;          /* índigo profundo */
-  --accent-hover: 40 66 150;
-  --accent-soft: 236 240 251;
-  --ok: 47 125 85;
+  --accent: 15 118 110;         /* teal #0F766E (blanco encima: 5.5:1) */
+  --accent-hover: 17 94 89;     /* #115E59 */
+  --accent-soft: 230 242 241;   /* #E6F2F1 */
+  --navy: 11 31 58;             /* #0B1F3A marca / héroes */
+  --navy2: 19 41 75;            /* #13294B */
+  --ok: 40 124 72;
   --warn: 168 98 8;
   --err: 180 68 60;
   --info: 43 108 176;

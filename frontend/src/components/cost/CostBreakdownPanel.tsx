@@ -87,7 +87,7 @@ export function CostBreakdownPanel() {
                   </td>
                   <td className="py-1.5 pr-3">
                     <div className="h-2 overflow-hidden rounded bg-mute/[0.08]">
-                      <div className="h-full rounded" style={{ width: `${(r.cost / max) * 100}%`, background: r.color || "#3451b2" }} />
+                      <div className="h-full rounded" style={{ width: `${(r.cost / max) * 100}%`, background: r.color || "#0F766E" }} />
                     </div>
                   </td>
                   <td className="py-1.5 text-right font-mono text-mute">{r.calls}</td>
