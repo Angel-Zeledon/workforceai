@@ -53,8 +53,8 @@ p{margin:0}
 .nav a:hover{color:var(--ink)}
 .bar-end{margin-left:auto;display:flex;align-items:center;gap:10px}
 .lang{display:flex;border:1px solid var(--line-strong);border-radius:8px;padding:2px;background:var(--panel)}
-.lang button{font:600 .78rem var(--font);color:var(--ink2);background:none;border:0;border-radius:6px;padding:5px 9px;cursor:pointer;min-height:28px}
-.lang button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}
+.lang a{font:600 .78rem var(--font);color:var(--ink2);text-decoration:none;border-radius:6px;padding:5px 9px;min-height:28px;display:inline-flex;align-items:center}
+.lang a[aria-current]{background:var(--accent);color:var(--on-accent)}
 .btn-sm .short{display:inline}.btn-sm .long{display:none}
 @media (min-width:520px){.btn-sm .short{display:none}.btn-sm .long{display:inline}}
 @media (min-width:1000px){.nav{display:flex}}

@@ -8,7 +8,7 @@ Sitio estático autocontenido: HTML + CSS + JS mínimo. Sin build, sin framework
 npx serve landing          # o: npx --yes serve landing -l 4000
 ```
 
-También funciona abriendo `landing/index.html` directamente en el navegador. Parámetro `?lang=en` fuerza el idioma.
+También funciona abriendo `landing/index.html` directamente en el navegador. El inglés vive en `/en/` (el español en `/`): son dos URLs reales enlazadas con `hreflang`; el idioma nunca se adivina por el navegador.
 
 ## Desplegar
 
@@ -27,7 +27,7 @@ Sube el contenido de `landing/` a cualquier hosting estático (Netlify, Vercel, 
 | Capturas | `img/`, regenerables con `scripts/capture.mjs` |
 
 ### Idioma
-Se detecta del navegador (español por defecto) y el selector ES/EN guarda la preferencia en `localStorage`. El HTML trae el español horneado para SEO y carga sin JS: tras editar textos en español corre `node landing/scripts/prerender.mjs`.
+Dos páginas: `index.html` (es) y `en/index.html` (en), el selector ES/EN son enlaces entre ellas. Ambas traen el texto horneado para SEO y cargan sin JS: tras editar textos (`i18n.js`) o `index.html` corre `node landing/scripts/prerender.mjs`, que regenera las dos páginas, el JSON-LD y `sitemap.xml`. `robots.txt` apunta al sitemap.
 
 ### Capturas
 Con la app corriendo (Docker en :3000, o la build mock local):

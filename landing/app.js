@@ -2,19 +2,12 @@
 (function () {
   "use strict";
   var DICT = window.I18N, CFG = window.LANDING_CONFIG || {};
-  var KEY = "aiwos-lang";
 
-  function store(get, v) {
-    try { return get ? localStorage.getItem(KEY) : localStorage.setItem(KEY, v); } catch (e) { return null; }
-  }
-
+  // The language is the one the page was written in: "/" is Spanish and "/en/" is English, two real URLs
+  // (with hreflang) that the ES/EN links switch between. It is never guessed from the browser: a crawler
+  // that renders in en-US must see the same text a Spanish reader gets.
   function pickLang() {
-    var q = new URLSearchParams(location.search).get("lang");
-    if (q === "es" || q === "en") return q;
-    var saved = store(true);
-    if (saved === "es" || saved === "en") return saved;
-    var nav = (navigator.languages && navigator.languages[0]) || navigator.language || "es";
-    return /^en/i.test(nav) ? "en" : "es";
+    return document.documentElement.lang === "en" ? "en" : "es";
   }
 
   function applyCtas(lang) {
@@ -51,20 +44,9 @@
         el.setAttribute(p[0], t(lang, p[1]));
       });
     });
-    document.querySelectorAll(".lang button").forEach(function (b) {
-      b.setAttribute("aria-pressed", String(b.getAttribute("data-lang") === lang));
-    });
     applyCtas(lang);
     document.dispatchEvent(new Event("langchange"));
   }
-
-  document.querySelectorAll(".lang button").forEach(function (b) {
-    b.addEventListener("click", function () {
-      var l = b.getAttribute("data-lang");
-      store(false, l);
-      apply(l);
-    });
-  });
 
   apply(pickLang());
 

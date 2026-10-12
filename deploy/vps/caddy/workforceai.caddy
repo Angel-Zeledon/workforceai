@@ -19,6 +19,8 @@ app.workforceai.es {
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
+		# The app is a login/demo screen, not content: keep it out of search results (the landing is what gets indexed).
+		X-Robots-Tag "noindex, nofollow"
 	}
 
 	# REST + WebSocket -> backend (Caddy proxies Upgrade automatically)
