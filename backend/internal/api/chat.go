@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
 )
 
@@ -19,6 +20,8 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		Text         string `json:"text"`
 		// ClientMessageID is an alternative to the Idempotency-Key header.
 		ClientMessageID string `json:"client_message_id"`
+		// Attachments are drive paths the user uploaded for this message (max 6); the agents read them with fs.read.
+		Attachments []string `json:"attachments"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
@@ -32,7 +35,11 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 	if key == "" {
 		key = body.ClientMessageID
 	}
-	turn, replayed, err := s.Orch.PostChatKeyed(r.Context(), body.Conversation, body.Text, key)
+	ctx := r.Context()
+	if len(body.Attachments) > 0 {
+		ctx = application.WithAttachments(ctx, body.Attachments)
+	}
+	turn, replayed, err := s.Orch.PostChatKeyed(ctx, body.Conversation, body.Text, key)
 	if err != nil {
 		s.fail(w, err)
 		return

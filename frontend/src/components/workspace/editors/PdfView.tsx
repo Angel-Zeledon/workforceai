@@ -6,18 +6,18 @@ import { artifactApi, PDF_MAX_BYTES, useArtifacts, type StoredArtifact } from "@
 import { useConnections } from "@/lib/connections/store";
 import { useT } from "@/lib/i18n";
 
-interface Annotation { id: string; page: number; text: string; author?: { kind: string; id: string } }
+export interface Annotation { id: string; page: number; text: string; author?: { kind: string; id: string } }
 interface PdfContent { schema: "aiw.pdf/1"; blob_id: string | null; pages: number; annotations: Annotation[]; filename?: string; size_bytes?: number }
 
 // Minimal structural types of the pdf.js objects used here (the library is loaded lazily, never at module scope).
 interface PdfPage { getViewport(o: { scale: number }): { width: number; height: number }; render(o: { canvasContext: CanvasRenderingContext2D; viewport: unknown }): { promise: Promise<void>; cancel(): void } }
-interface PdfDoc { numPages: number; getPage(n: number): Promise<PdfPage> }
+export interface PdfDoc { numPages: number; getPage(n: number): Promise<PdfPage> }
 
 const MAX_PAGES = 500;
 let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
 
 /** Loads pdf.js on first use. The worker is a bundled asset (no CDN): webpack emits it next to the app. */
-function loadPdfjs() {
+export function loadPdfjs() {
   pdfjsPromise ??= import("pdfjs-dist").then((lib) => {
     if (!lib.GlobalWorkerOptions.workerPort) {
       lib.GlobalWorkerOptions.workerPort = new Worker(new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url), { type: "module" });
@@ -27,7 +27,7 @@ function loadPdfjs() {
   return pdfjsPromise;
 }
 
-function PageCanvas({ doc, n, notes, total }: { doc: PdfDoc; n: number; notes: Annotation[]; total: number }) {
+export function PageCanvas({ doc, n, notes, total }: { doc: PdfDoc; n: number; notes: Annotation[]; total: number }) {
   const host = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [visible, setVisible] = useState(false);

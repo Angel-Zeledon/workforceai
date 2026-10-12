@@ -30,6 +30,7 @@ export function toChatMessage(x: any, conv: string): ChatMessage {
     conversation: String(x.conversation ?? x.conversation_id ?? conv),
     turn_id: x.turn_id ?? null, from: String(x.from), to: String(x.to ?? ""),
     kind: x.kind ?? "chat", text: String(x.text ?? ""), reply_to: x.reply_to ?? null, ts: String(x.ts ?? new Date().toISOString()), handoff_to: x.handoff_to ?? null,
+    ...(Array.isArray(x.files) && x.files.length ? { files: x.files.filter((f: any) => f && typeof f.path === "string").map((f: any) => ({ file_id: f.file_id, path: f.path, name: String(f.name ?? f.path.split("/").pop()), mime: f.mime, size: f.size, version: f.version, action: f.action })) } : {}),
   };
 }
 
@@ -59,8 +60,8 @@ export const api = {
     return list<any>(await call("GET", `/conversations/${conv}/messages?${q}`)).map((x) => toChatMessage(x, conv));
   },
   /** POST /messages: the backend decides who answers and replies over the WebSocket (chat.message / chat.typing / route.decided). */
-  postMessage: (conversation: string, text: string) =>
-    call<{ message_id: string; turn_id: string }>("POST", "/messages", { conversation, text }),
+  postMessage: (conversation: string, text: string, attachments?: string[]) =>
+    call<{ message_id: string; turn_id: string }>("POST", "/messages", { conversation, text, ...(attachments?.length ? { attachments } : {}) }),
   approvals: async () => list<Approval>(await call("GET", "/approvals")),
   reports: async () => list<Report>(await call("GET", "/reports")),
   report: (id: string) => call<Report>("GET", `/reports/${id}`),

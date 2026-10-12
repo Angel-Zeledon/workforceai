@@ -44,3 +44,15 @@ const (
 // UsageChat is the ledger kind of a chat call (reply or LLM routing). Chat
 // calls belong to no request: their entries have an empty request id.
 const UsageChat UsageKind = "chat"
+
+// FileRef points to a drive file from a chat message (never carries content).
+// Action is "write" (produced by the agent), "attach" (attached by the user).
+type FileRef struct {
+	FileID  string `json:"file_id,omitempty"`
+	Path    string `json:"path"`
+	Name    string `json:"name"`
+	Mime    string `json:"mime,omitempty"`
+	Size    int64  `json:"size,omitempty"`
+	Version int    `json:"version,omitempty"`
+	Action  string `json:"action,omitempty"`
+}

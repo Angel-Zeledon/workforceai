@@ -9,6 +9,7 @@ import { create } from "zustand";
 import { API_URL, MOCK } from "./config";
 import { authFetch } from "./session";
 import { useStore } from "./store";
+import { draftSlug } from "./mock/draft";
 
 export interface Principal { kind: "human" | "agent" | "system"; id: string }
 export interface DriveFolder { id: string; name: string; path: string; root_kind?: string }
@@ -20,6 +21,8 @@ export interface DriveVersion { file_id: string; version: number; size: number; 
 export interface Listing { folder: DriveFolder; folders: DriveFolder[]; files: DriveFile[] }
 export interface TextResult { text: string; more: boolean; offset: number; returned: number; info?: { kind?: string; note?: string } }
 export interface Hit { file_id: string; path: string; name: string; snippet: string; size: number }
+export interface DiffLine { op: string; text: string }
+export interface DiffResult { from: number; to: number; added: number; removed: number; lines: DiffLine[]; truncated: boolean }
 export interface Trash { folders: DriveFolder[]; files: DriveFile[] }
 
 /** A drive error with the backend's stable code (version_conflict, read_only_mode, too_large...). */
@@ -51,6 +54,23 @@ export const drive = MOCK ? mockDrive() : {
   text: (id: string, version = 0) => req<TextResult>("GET", `/drive/files/${id}/text?version=${version}&max_chars=20000`),
   versions: (id: string) => req<{ versions: DriveVersion[] }>("GET", `/drive/files/${id}/versions`).then((r) => r.versions ?? []),
   restoreVersion: (id: string, v: number) => req("POST", `/drive/files/${id}/versions/${v}/restore`),
+  file: (id: string) => req<DriveFile>("GET", `/drive/files/${id}`),
+  /** The file at a path (lists its folder): chat cards may only know the path. */
+  byPath: async (path: string): Promise<DriveFile | null> => {
+    const l = await req<Listing>("GET", `/drive/list?path=${q(parentOf(path))}`);
+    return l.files.find((f) => f.path === path) ?? null;
+  },
+  diff: (id: string, from: number, to: number) => req<DiffResult>("GET", `/drive/files/${id}/diff?from=${from}&to=${to}`),
+  /** New version of a text file; 409 version_conflict when someone saved in between. */
+  save: (id: string, text: string, expected: number, message = "") =>
+    req<{ file: DriveFile }>("PUT", `/drive/files/${id}/content?expected_version=${expected}${message ? `&message=${q(message)}` : ""}`, text,
+      { "Content-Type": "text/plain; charset=utf-8" }),
+  /** Raw bytes through the session (images, PDF). */
+  blob: async (id: string, version = 0): Promise<Blob> => {
+    const res = await authFetch(contentURL(id, version), { cache: "no-store" });
+    if (!res.ok) throw new DriveError(res.status, String(res.status), res.statusText);
+    return res.blob();
+  },
   upload: (path: string, file: Blob, expected?: number) =>
     req<{ file: DriveFile; created: boolean }>("PUT", `/drive/upload?path=${q(path)}${expected ? `&expected_version=${expected}` : ""}`, file,
       { "Content-Type": file.type || "application/octet-stream" }),
@@ -89,7 +109,7 @@ function mockDrive() {
     }
     const id = `fil_mock_${++seq}`;
     const name = path.split("/").pop() || "file";
-    const mime = name.endsWith(".csv") ? "text/csv" : name.endsWith(".md") ? "text/markdown" : "text/plain";
+    const mime = name.endsWith(".csv") ? "text/csv" : name.endsWith(".md") ? "text/markdown" : name.endsWith(".json") ? "application/json" : "text/plain";
     const file: DriveFile = { id, name, path, mime, size: text.length, current_version: 1, updated_by: by, updated_at: now(), tags: [] };
     files.set(id, { file, versions: [{ v: { file_id: id, version: 1, size: text.length, author: by, message, created_at: now() }, text }] });
     return file;
@@ -99,11 +119,13 @@ function mockDrive() {
   put("/Clients/Grupo Alfa/brief.md", "# Brief Grupo Alfa\n\nRediseño completo, presupuesto USD 50,000, entrega en 8 semanas.\n", human);
 
   /** Each finished task leaves its draft on the agent's desk, as the simulated runtime does. */
+  const drafted = new Set<string>(); // one draft per task: later edits by people are not overwritten
   const syncDesks = () => {
     const s = useStore.getState();
     for (const t of Object.values(s.tasks)) {
-      if (t.status !== "done" || !t.agent_id || !t.output) continue;
-      const slug = (t.title || "tarea").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 60);
+      if (t.status !== "done" || !t.agent_id || !t.output || drafted.has(t.id)) continue;
+      drafted.add(t.id);
+      const slug = draftSlug(t.title);
       const body = [`# ${t.title}`, "", t.output.summary ?? "", ...(t.output.findings?.length ? ["", "## Hallazgos", ...t.output.findings.map((x) => `- ${x}`)] : [])].join("\n");
       put(`/Agents/${t.agent_id}/${slug}.md`, body + "\n", { kind: "agent", id: t.agent_id }, `borrador de ${t.id}`);
     }
@@ -148,6 +170,29 @@ function mockDrive() {
       return { text: v?.text ?? "", more: false, offset: 0, returned: v?.text.length ?? 0 } as TextResult;
     },
     versions: async (id: string) => byId(id).versions.map((x) => x.v).reverse(),
+    file: async (id: string) => byId(id).file,
+    byPath: async (path: string) => { syncDesks(); return live().find((m) => m.file.path === path)?.file ?? null; },
+    diff: async (id: string, from: number, to: number): Promise<DiffResult> => {
+      const m = byId(id);
+      const a = (m.versions.find((x) => x.v.version === from)?.text ?? "").split("\n"), b = (m.versions.find((x) => x.v.version === to)?.text ?? "").split("\n");
+      const lines: DiffLine[] = [];
+      let added = 0, removed = 0;
+      // line diff good enough for a demo: keep common lines, mark the rest
+      const bs = new Set(b), as = new Set(a);
+      for (const l of a) { if (bs.has(l)) lines.push({ op: " ", text: l }); else { lines.push({ op: "-", text: l }); removed++; } }
+      for (const l of b) if (!as.has(l)) { lines.push({ op: "+", text: l }); added++; }
+      return { from, to, added, removed, lines, truncated: false };
+    },
+    save: async (id: string, text: string, expected: number, message = "") => {
+      const m = byId(id);
+      if (m.file.current_version !== expected) throw new DriveError(409, "version_conflict", "version conflict", m.file.current_version);
+      return { file: put(m.file.path, text, human, message || "edit") };
+    },
+    blob: async (id: string, version = 0) => {
+      const m = byId(id);
+      const v = version ? m.versions.find((x) => x.v.version === version) : m.versions[m.versions.length - 1];
+      return new Blob([v?.text ?? ""], { type: m.file.mime });
+    },
     restoreVersion: async (id: string, v: number) => {
       const m = byId(id);
       const old = m.versions.find((x) => x.v.version === v);

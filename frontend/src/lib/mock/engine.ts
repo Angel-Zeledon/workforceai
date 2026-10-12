@@ -6,13 +6,20 @@
 import { MockRoles } from "./roles-mock";
 import type {
   ActivityItem, Agent, AgentState, Approval, Conversation, MemoryItem, Message, MessageKind,
-  Metrics, PlanTask, Report, Request, StructuredOutput, Task, WsFrame,
+  FileRef, Metrics, PlanTask, Report, Request, StructuredOutput, Task, WsFrame,
 } from "../types";
 import { MockArtifacts } from "./artifacts-mock";
 import { MockOrgConfig } from "./orgconfig-mock";
 import { MockConnections } from "./connections-mock";
 import { MockChat } from "./chat-mock";
 import { tr } from "../i18n-core";
+import { draftSlug } from "./draft";
+
+/** Card of the draft an agent leaves on its desk after a task (the mock drive creates the same path). */
+const draftRef = (agentId: string, title: string): FileRef => {
+  const slug = draftSlug(title);
+  return { path: `/Agents/${agentId}/${slug}.md`, name: `${slug}.md`, mime: "text/markdown", version: 1, action: "write" };
+};
 
 const ORG = "00000000-0000-0000-0000-000000000001";
 let seq = 0;
@@ -132,7 +139,7 @@ export class MockBackend {
     emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agent: (id) => this.agents.find((a) => a.id === id), agents: () => this.agents,
     setState: (id, st, act, tid, pr) => this.setState(id, st, act, tid, pr), log: (a, k, t) => this.log(a, k, t),
     planPreview: (text) => buildPlan(text).map((s) => ({ key: s.key, agent: s.agent, title: s.title })),
-    startRequest: (text) => this.startRequest(text), startDirectTask: (id, text, reason) => this.startDirectTask(id, text, reason), uid,
+    draftOf: (id) => this.draftOf(id), startRequest: (text) => this.startRequest(text), startDirectTask: (id, text, reason) => this.startDirectTask(id, text, reason), uid,
   }); // chat routing: POST /messages, chat.* and route.decided
   private roles = new MockRoles(); // role templates + hiring from a template
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
@@ -240,6 +247,12 @@ export class MockBackend {
     this.pushMetrics();
     this.orchestrate(req, conv).catch(() => { /* cancelled by reset */ });
     return req.id;
+  }
+
+  /** The draft the last finished task of an agent left on its desk (see syncDesks in lib/drive.ts). */
+  private draftOf(agentId: string): FileRef | undefined {
+    const t = [...this.tasks].reverse().find((x) => x.agent_id === agentId && x.status === "done");
+    return t ? draftRef(agentId, t.title) : undefined;
   }
 
   /** Task asked in an agent's own 1:1 chat: only that agent works on it. Resolves with the summary. */
@@ -458,12 +471,11 @@ export class MockBackend {
     a.metrics.cost_usd = +(a.metrics.cost_usd + cost).toFixed(4);
     req.cost_usd = +(req.cost_usd + cost).toFixed(4);
     // F2: like the simulated runtime against the real backend, the agent saves its draft on its desk
-    const slug = (task.title || "tarea").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 60);
-    this.emit("file.activity", { agent_id: id, task_id: task.id, action: "write", path: `/Agents/${id}/${slug}.md` }, id);
+    this.emit("file.activity", { agent_id: id, task_id: task.id, action: "write", path: draftRef(id, task.title).path }, id);
     this.emitTask("task.completed", task);
     this.setState(id, "completed", "Tarea completada", task.id, 100);
     this.log(id, "task.completed", tr("mock.act.completed", { name: a.name.split(" ")[0], task: task.title }));
-    if (id !== "assistant" && spec.key !== "direct") this.chat.note(id, "user", "chat", tr("mock.task.agentDone", { task: task.title }));
+    if (id !== "assistant" && spec.key !== "direct") this.chat.note(id, "user", "chat", tr("mock.task.agentDone", { task: task.title }), [draftRef(id, task.title)]);
     this.pushMetrics();
     this.settle(id, 3200);
   }
@@ -545,7 +557,7 @@ export class MockBackend {
       if (r0 === "healthz") return { status: "ok", mode: "simulation" };
     }
     if (method === "POST") {
-      if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim());
+      if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : []);
       if (r0 === "requests") { const id = await this.startRequest(String(body?.text || "").trim()); return { request_id: id }; }
       if (r0 === "conversations" && r1 && r2 === "messages") {
         const conv = this.conversations.find((c) => c.id === r1);

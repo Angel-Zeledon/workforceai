@@ -63,6 +63,30 @@ can_write}` and the prompt explains the tool. The backend executes; the runtime 
 - Project deliverables: when a project task finishes with an output, a Markdown file
   `/Projects/<project>/<node>-<title>.md` is written as the agent (replays add no version).
 
+## Files in the conversation
+
+- **Agents -> chat.** When a task of a request born in a chat finishes and the agent wrote or
+  moved files (`fs.write/move`, notified through `file.activity` with the task id), the agent
+  posts one message in that conversation: "I finished X. I left these files:" with
+  `files: [{file_id, path, name, mime, size, version, action: "write"}]`. References only,
+  never content; tasks that wrote nothing say nothing. Persisted in `messages.files`
+  (migration 490) and sent in `chat.message.files`.
+- **People -> chat.** The chat input uploads attachments to `/Shared/Chat/<batch>/<name>`
+  (member+, versioned like any file) and sends `POST /messages {attachments: [paths]}`. The
+  stored message keeps the user's text and gets `files` (`action: "attach"`); the agents see the
+  paths in a delimited `[attachments]` block (data, not instructions) and read them with `fs.read`
+  (`/Shared` is readable by every agent).
+- **Viewer.** Clicking a card opens a side panel by type: Markdown (own safe renderer: no HTML,
+  no remote images, links `noopener noreferrer nofollow`, only http(s)/mailto), CSV/XLSX as a
+  sortable table (xlsx through `/text`), JSON tree, code/text with line numbers, PDF with the
+  pdf.js viewer of PDF artifacts, images from our own API as blobs (`nosniff`). Other types:
+  download. Version picker, line diff against the previous version, download, open in Files.
+- **Iterating.** "Ask for changes" sends a chat message to the agent that wrote the last version
+  (or the office) with the file attached: its next task reads it with `fs.read` and writes a new
+  version. People can also edit text files in the panel (`PUT /drive/files/{id}/content` with
+  `expected_version`; a 409 offers "save mine on top" or "discard mine"). "Comment" sends a
+  whole-file comment as a chat message (no new backend).
+
 ## People: the API
 
 Permissions: `files:read` (viewer+), `files:write` (member+), `files:delete` and

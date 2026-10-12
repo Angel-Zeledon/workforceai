@@ -70,7 +70,7 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 		guard = gateway.Guard{G: cw.gw}
 	}
 	var psvc *projects.Service
-	dsvc := wireDrive(ctx, cfg, log, pg, store, rec, cw, pstore, objects)
+	dsvc := wireDrive(ctx, cfg, log, pg, store, rec, cw, pstore, objects, orch)
 	if cfg.EnableDemoReset { // demo/dev deployments only: the demo company gets business documents
 		seedDemoShared(ctx, dsvc, cfg.App.OrgID, log)
 	}
@@ -103,6 +103,7 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	if orgCfg != nil {
 		dws.locale = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }
 	}
-	orch.SetWorkspaceSource(dws) // F1: agents know their drive folders (and find their work kit)
+	orch.SetFileResolver(driveFileResolver{drive: dsvc}) // chat: file cards and attachments
+	orch.SetWorkspaceSource(dws)                         // F1: agents know their drive folders (and find their work kit)
 	return workspaceWiring{projects: psvc, artifacts: asvc, drive: dsvc, sandbox: wireSandbox(log, pg, rec, cw, orch, dsvc)}
 }

@@ -88,7 +88,7 @@ func (d projectDirectory) AgentProjects(ctx context.Context, org, agentID string
 // wireDrive builds the drive (folders, files and versions; bytes in the object
 // store) and serves the agents' fs.* tools through the Tool Gateway.
 func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *postgres.Store, store application.Store, rec *application.Recorder,
-	cw connWiring, pstore projects.Store, objects objstore.Store) *drive.Service {
+	cw connWiring, pstore projects.Store, objects objstore.Store, orch *application.Orchestrator) *drive.Service {
 
 	var dstore drive.Store = drive.NewMemStore()
 	if pg != nil {
@@ -116,6 +116,7 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 			Notify: func(actx context.Context, org, agentID, taskID, action, path string) {
 				rec.Emit(application.WithOrg(actx, org), application.Action{Type: "file.activity", AgentID: agentID, Entity: "file", SkipAudit: true,
 					Payload: map[string]any{"agent_id": agentID, "task_id": taskID, "action": action, "path": path}})
+				orch.NoteTaskFile(taskID, action, path) // the chat message of the task points to what it wrote
 			}}
 		cw.gw.AddNative(tool)
 	}
@@ -209,4 +210,15 @@ func driveReadOnlyGate(ctl *controls.Service) func(ctx context.Context, org stri
 		}
 		return nil
 	}
+}
+
+// driveFileResolver lets the chat point to drive files (id, version, type, size; never content).
+type driveFileResolver struct{ drive *drive.Service }
+
+func (d driveFileResolver) ResolveFile(ctx context.Context, org, path string) (domain.FileRef, bool) {
+	f, err := d.drive.FileByPath(application.WithOrg(ctx, org), path)
+	if err != nil || f.DeletedAt != nil {
+		return domain.FileRef{}, false
+	}
+	return domain.FileRef{FileID: f.ID, Path: f.Path, Name: f.Name, Mime: f.Mime, Size: f.Size, Version: f.CurrentVersion}, true
 }

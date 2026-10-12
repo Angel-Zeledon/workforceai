@@ -4,7 +4,7 @@
  * and answers over the WebSocket with chat.typing / route.decided / chat.message. All texts are localized (es/en).
  */
 import { tr } from "../i18n-core";
-import type { Agent, AgentState, ChatMessage, MessageKind, RouteResponder, TurnIntent } from "../types";
+import type { Agent, AgentState, ChatMessage, FileRef, MessageKind, RouteResponder, TurnIntent } from "../types";
 
 export interface PlanPreview { key: string; agent: string; title: string }
 
@@ -21,6 +21,8 @@ export interface ChatHost {
   /** a task for one agent only, asked from their 1:1 chat; resolves with the summary when done */
   startDirectTask(agentId: string, text: string, reason?: string): Promise<string>;
   uid(prefix: string): string;
+  /** the draft file the last finished task of this agent left on its desk (a file card for the chat) */
+  draftOf(agentId: string): FileRef | undefined;
 }
 
 type Topic = "finance" | "legal" | "hr" | "sales" | "operations" | "analytics" | "general";
@@ -74,26 +76,26 @@ export class MockChat {
   matches(conv: string) { return conv === "office" || conv.startsWith("agent:"); }
 
   /** Say something in a conversation (stores history and emits chat.message). */
-  say(conv: string, from: string, to: string, kind: MessageKind, text: string, turn: string | null, replyTo: string | null = null, handoffTo: string | null = null) {
-    const m: ChatMessage = { id: this.host.uid("cm"), conversation: conv, turn_id: turn, from, to, kind, text, reply_to: replyTo, ts: new Date().toISOString(), ...(handoffTo ? { handoff_to: handoffTo } : {}) };
+  say(conv: string, from: string, to: string, kind: MessageKind, text: string, turn: string | null, replyTo: string | null = null, handoffTo: string | null = null, files?: FileRef[]) {
+    const m: ChatMessage = { id: this.host.uid("cm"), conversation: conv, turn_id: turn, from, to, kind, text, reply_to: replyTo, ts: new Date().toISOString(), ...(handoffTo ? { handoff_to: handoffTo } : {}), ...(files?.length ? { files } : {}) };
     (this.history[conv] ||= []).push(m);
     this.host.emit("chat.message", { ...m, message_id: m.id }, from !== "user" && from !== "system" ? from : undefined);
     return m;
   }
   /** Team notes mirrored into the office thread while a task runs (who does what, who asks whom). */
-  note(from: string, to: string, kind: MessageKind, text: string) { this.say("office", from, to, kind, text, null); }
+  note(from: string, to: string, kind: MessageKind, text: string, files?: FileRef[]) { this.say("office", from, to, kind, text, null, null, null, files); }
 
   private typing(conv: string, id: string, on: boolean) { this.host.emit("chat.typing", { conversation: conv, agent_id: id, on }, id); }
 
   /** Shows "typing…", waits a human-feeling time, speaks, and keeps the agent in `talking` only if it was free. */
-  private async speak(conv: string, id: string, to: string, text: string, turn: string, replyTo: string | null, kind: MessageKind = "chat", handoffTo: string | null = null) {
+  private async speak(conv: string, id: string, to: string, text: string, turn: string, replyTo: string | null, kind: MessageKind = "chat", handoffTo: string | null = null, files?: FileRef[]) {
     const a = this.host.agent(id); if (!a) return;
     this.typing(conv, id, true);
     await this.host.wait(Math.min(2600, 700 + text.length * 11));
     const prev = { state: a.state, activity: a.activity, task: a.current_task_id, progress: a.progress };
     const free = prev.state === "idle" || prev.state === "completed";
     if (free) this.host.setState(id, "talking", tr("mock.chat.replying"), prev.task, 0);
-    this.say(conv, id, to, kind, text, turn, replyTo, handoffTo);
+    this.say(conv, id, to, kind, text, turn, replyTo, handoffTo, files);
     if (free) {
       this.host.wait(2600).then(() => { if (this.host.agent(id)?.state === "talking") this.host.setState(id, prev.state, prev.activity, prev.task, prev.progress); }).catch(() => {});
     }
@@ -123,7 +125,7 @@ export class MockChat {
       await this.speak(conv, to.id, "user", tr("mock.chat.handoff.take"), turn, replyTo);
       h.log(to.id, "task.started", tr("mock.act.direct", { name: first(to), task: text.slice(0, 60) }));
       const summary = await h.startDirectTask(to.id, text, tr("mock.reason.reassigned", { from: first(from) }));
-      await this.speak(conv, to.id, "user", tr("mock.chat.direct.done", { summary }), turn, replyTo, "answer");
+      await this.speak(conv, to.id, "user", tr("mock.chat.direct.done", { summary }), turn, replyTo, "answer", null, h.draftOf(to.id) && [h.draftOf(to.id)!]);
       return;
     }
     const answer = this.topicAnswer(to.id, "");
@@ -133,9 +135,10 @@ export class MockChat {
   }
 
   /** POST /messages */
-  post(conversation: string, text: string): { message_id: string; turn_id: string } {
+  post(conversation: string, text: string, attachments: string[] = []): { message_id: string; turn_id: string } {
     const turn = this.host.uid("turn");
-    const um = this.say(conversation, "user", conversation === "office" ? "all" : conversation.slice(6), "chat", text, turn);
+    const files: FileRef[] = attachments.slice(0, 6).map((p) => ({ path: p, name: p.split("/").pop() || p, action: "attach" }));
+    const um = this.say(conversation, "user", conversation === "office" ? "all" : conversation.slice(6), "chat", text, turn, null, null, files);
     this.route(conversation, text, turn, um.id).catch(() => { /* cancelled by reset */ });
     return { message_id: um.id, turn_id: turn };
   }
@@ -173,7 +176,7 @@ export class MockChat {
         await this.speak(conv, convAgent, "user", tr("mock.chat.direct.ok"), turn, replyTo);
         h.log(convAgent, "task.started", tr("mock.act.direct", { name: first(me), task: text.slice(0, 60) }));
         const summary = await h.startDirectTask(convAgent, text);
-        await this.speak(conv, convAgent, "user", tr("mock.chat.direct.done", { summary }), turn, replyTo, "answer");
+        await this.speak(conv, convAgent, "user", tr("mock.chat.direct.done", { summary }), turn, replyTo, "answer", null, h.draftOf(convAgent) && [h.draftOf(convAgent)!]);
         return;
       }
       let reply: string;
