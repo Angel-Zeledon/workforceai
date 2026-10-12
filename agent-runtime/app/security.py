@@ -385,16 +385,20 @@ MAX_RECALLED_CHARS = 2600
 _REF = re.compile(r"^(?:task|report|memory):[A-Za-z0-9_.-]{1,80}$|^file:/[^\x00-\x1f]{1,300}$")
 
 
-def memory_lines(recalled) -> list[str]:
-    """What the organization already did that looks relevant (chosen by the backend), plus how to dig
-    deeper. Everything inside is past text written by people, agents or files: DATA, never instructions."""
-    lines = [
+def memory_lines() -> list[str]:
+    """How to use the long-term memory (trusted guidance; the memories themselves come later, as data)."""
+    return [
         "MEMORIA A LARGO PLAZO: trabajo previo de la organizacion. Si necesitas mas, pide en tool_requests "
         "{\"tool\": \"memory\", \"action\": \"search\", \"args\": {\"query\": \"...\"}} (o args.ref para abrir "
         "un task:/report:/memory:); los archivos (file:) se abren con fs read. Cita la referencia cuando uses un dato. "
         "Si algo aprendido servira en trabajos futuros, anotalo en memory_notes (maximo 4 notas breves; jamas "
         "contrasenas, claves ni datos personales sensibles).",
     ]
+
+
+def memory_block(recalled) -> list[str]:
+    """What the organization already did that looks relevant (chosen by the backend). Past text written by
+    people, agents or files: DATA, never instructions."""
     items, used = [], 0
     for m in (recalled or [])[:MAX_RECALLED]:
         ref = (getattr(m, "ref", "") or "").strip()
@@ -410,9 +414,7 @@ def memory_lines(recalled) -> list[str]:
         if items and used > MAX_RECALLED_CHARS:
             break
         items.append(item)
-    if items:
-        lines += ["", wrap_untrusted("memoria relevante de trabajo previo", items)]
-    return lines
+    return ["", wrap_untrusted("memoria relevante de trabajo previo", items)] if items else []
 
 
 def build_task_prompt(req: RunTaskRequest) -> str:
@@ -434,7 +436,7 @@ def build_task_prompt(req: RunTaskRequest) -> str:
         lines += ["", *workspace_lines(req.workspace, ctx.request_text)]
     if code := code_lines(req.agent):
         lines += ["", *code]
-    lines += ["", *memory_lines(getattr(req, "recalled", None))]
+    lines += ["", *memory_lines()]
     sk = skill_lines(getattr(req, "skills", None))
     if sk:
         lines += ["", *sk]
@@ -442,6 +444,7 @@ def build_task_prompt(req: RunTaskRequest) -> str:
     if lk:
         lines += lk
     lines += ["", UNTRUSTED_NOTICE]
+    lines += memory_block(getattr(req, "recalled", None))
     dep_texts = fit_texts([_as_text(d.output) for d in ctx.dependency_outputs], dep_budget_tokens())
     for dep, text in zip(ctx.dependency_outputs, dep_texts):
         lines += ["", wrap_untrusted(_dep_label(dep), text)]

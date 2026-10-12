@@ -863,3 +863,14 @@ Las monedas se **ganan solo trabajando** (tarea terminada, proyecto terminado) y
 
 Ranuras de personaje: `outfit`, `hat`, `face`, `ears`, `neck`, `badge`, `buddy`. Ranuras de oficina: `plant_1`, `plant_2`, `lamp_1`, `rug_1`, `coffee_1`, `poster_1`, `poster_2`, `shelf_1`, `aquarium_1`, `arcade_1`, `trophy_1`, `window_1`. Eventos WS: `coins.earned`, `shop.purchased`, `item.equipped`, `item.unequipped`, `office.item_placed`, `office.item_removed` (ver 03).
 
+## 23. Memoria a largo plazo (M1)
+
+Lo que un agente recuerda de trabajo previo. Diseño: `docs/architecture/memory.md`. Permisos: `memories:read` (viewer+) y `memories:write` (member+). Borrar queda auditado (`memory.deleted`).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/agents/{id}/memory?limit=` | read | lo que el agente produjo y recuerda, sus lecciones primero: `[{id, ref, kind: task\|report\|note, title, snippet, source_ref?, project?, at, deletable}]` |
+| GET | `/agents/{id}/memory?q=texto` | read | lo que el agente **recordaría** sobre `q`: documentos y archivos del drive que ese agente puede leer (`kind: file`, `ref: file:<ruta>`; nunca los que no puede leer) |
+| DELETE | `/agents/{id}/memory/{docId}` | write | olvida una entrada del agente (204; 404 si no es suya). La tarea o el informe siguen existiendo y la entrada no vuelve con una reindexación |
+
+Herramienta del Tool Gateway (solo lectura, ruta de lectura `WORK_READ_ROUNDS`): `memory.search {query, limit?}` o `{ref}` (abre un `task:`/`report:`/`memory:`). Devuelve bloques `<untrusted_data>` con `ref`. Runtime (aditivo): `run-task` acepta `recalled[{ref, kind, title, snippet, project?, agent_id?, at?}]` y el resultado puede traer `output.memory_notes[]` (hasta 4 notas cortas, sin secretos).

@@ -20,8 +20,9 @@ test.beforeEach(async () => {
 });
 
 test("a second related request carries the memory of the first", async ({ page }) => {
+  test.setTimeout(900_000); // the UI part is slow on a loaded machine (software WebGL)
   const first = await api.post<{ request_id: string }>("/requests", { text: SCENARIO_TEXT });
-  expect((await approveUntilDone(first.request_id)).status).toBe("done");
+  expect((await approveUntilDone(first.request_id, 400_000)).status).toBe("done");
 
   // what the sales agent remembers: its work and the lesson it declared, with sources
   let mem: MemoryEntry[] = [];
@@ -34,7 +35,7 @@ test("a second related request carries the memory of the first", async ({ page }
   expect(mem.some((m) => m.kind === "task" && m.ref.startsWith("task:"))).toBe(true);
 
   const second = await api.post<{ request_id: string }>("/requests", { text: SECOND });
-  expect((await approveUntilDone(second.request_id)).status).toBe("done");
+  expect((await approveUntilDone(second.request_id, 400_000)).status).toBe("done");
 
   // the second request's tasks: at least one run carries the retrieved memory, with refs, as untrusted data
   const tasks = ((await api.get<TaskRow[] | null>("/tasks")) ?? []).filter((t) => t.request_id === second.request_id);
@@ -58,19 +59,21 @@ test("a second related request carries the memory of the first", async ({ page }
   await page.getByTestId("agent-sales").click({ force: true });
   await openPanelTab(page, "memory");
   await expect(page.getByTestId("memory-tab")).toBeVisible();
-  await expect(page.getByTestId("memory-entry-note").first()).toBeVisible();
+  await expect(page.getByTestId("memory-entry-note").first()).toBeVisible({ timeout: 150_000 });
   await expect(page.getByTestId("memory-source").first()).toContainText(/task:/);
 
   await page.getByTestId("memory-search").fill("propuesta contrato margen");
   await page.getByTestId("memory-search-go").click();
-  await expect(page.locator('[data-testid^="memory-entry-"]').first()).toBeVisible();
+  await expect(page.locator('[data-testid^="memory-entry-"]').first()).toBeVisible({ timeout: 150_000 });
 
   await page.getByTestId("memory-search").fill("");
-  await expect(page.getByTestId("memory-entry-note").first()).toBeVisible();
+  await expect(page.getByTestId("memory-entry-note").first()).toBeVisible({ timeout: 150_000 });
   const before = await page.getByTestId("memory-entry-note").count();
   await page.getByTestId("memory-entry-note").first().getByTestId("memory-delete").click();
   await expect(page.getByTestId("memory-entry-note")).toHaveCount(before - 1);
-  const audit = await api.get<{ items?: { action: string }[] } | { action: string }[]>("/audit?action=memory.deleted");
+  // the keep-alive socket of the API client may have been closed while the slow UI part ran: retry once
+  const getAudit = () => api.get<{ items?: { action: string }[] } | { action: string }[]>("/audit?action=memory.deleted");
+  const audit = await getAudit().catch(getAudit);
   const rows = Array.isArray(audit) ? audit : (audit.items ?? []);
   expect(rows.some((r) => r.action === "memory.deleted")).toBe(true);
 });

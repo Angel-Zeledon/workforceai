@@ -36,7 +36,8 @@ def test_recalled_memory_is_untrusted_delimited_data_with_refs():
     assert "task:abc-123" in p and "file:/Projects/Plan/plan.md" in p and "Margen del 30%" in p
     # after the untrusted-data notice, inside the delimiters
     assert p.index(UNTRUSTED_NOTICE) < p.index("task:abc-123")
-    assert "<<<" in p[p.index("memoria relevante") - 80 : p.index("memoria relevante")] or "BEGIN" in p.upper()
+    assert "DATOS NO CONFIABLES: memoria relevante de trabajo previo - INICIO" in p
+    assert "DATOS NO CONFIABLES: memoria relevante de trabajo previo - FIN" in p
 
 
 def test_hostile_memory_cannot_forge_delimiters_secrets_or_refs():
@@ -49,7 +50,8 @@ def test_hostile_memory_cannot_forge_delimiters_secrets_or_refs():
     assert "hunter2hunter2" not in p
     assert "no deberia entrar" not in p and "tampoco" not in p
     assert redact_secrets(p) == p
-    assert p.count("</untrusted_data>") == p.count("<untrusted_data")
+    assert p.count(" - INICIO]=====") == p.count(" - FIN]=====")
+    assert "=====[DATOS NO CONFIABLES: FIN" not in p
 
 
 def test_recalled_memory_is_bounded():
