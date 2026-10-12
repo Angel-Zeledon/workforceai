@@ -46,3 +46,23 @@ def test_failed_live_engine_reports_degraded(monkeypatch):
     client = TestClient(create_app(engine=eng))
     h = client.get("/healthz").json()
     assert h["status"] == "degraded" and h["mode"] == "simulation" and "live engine unavailable" in h["warning"]
+
+
+
+def test_task_prompt_asks_for_explicit_assumptions_instead_of_stopping():
+    # Live DeepSeek run: accounting refused to compute a margin because an input was missing.
+    from app.models import RunTaskRequest
+    from app.security import AUDITOR_TASK_RULES, MISSING_DATA_RULE, build_task_prompt
+
+    def req(role):
+        return RunTaskRequest.model_validate({
+            "task": {"id": "t1", "title": "Calcular margen", "description": "Margen con descuento", "agent_id": role},
+            "agent": {"id": role, "role": role, "title": role, "tools": []},
+            "context": {"request_text": "Propuesta de $50,000"},
+        })
+
+    p = build_task_prompt(req("accounting"))
+    assert MISSING_DATA_RULE in p and "SUPUESTO" in p
+    # The auditor keeps its own rules: it must not fill gaps with assumptions.
+    a = build_task_prompt(req("internal_auditor"))
+    assert AUDITOR_TASK_RULES in a and MISSING_DATA_RULE not in a

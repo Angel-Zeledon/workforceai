@@ -224,6 +224,17 @@ def build_system_prompt(agent: AgentInfo, locale: str = "es", tone: str = "neutr
     return "\n".join(p for p in parts if p)
 
 
+# Productivity on real work: a missing input is not a reason to stop. Seen live with
+# DeepSeek: accounting refused to compute a margin because no hours estimate existed.
+MISSING_DATA_RULE = (
+    "SI FALTA UN DATO: no te detengas ni entregues solo la lista de lo que falta. Avanza con supuestos "
+    "razonables y explicitos (rotulados como SUPUESTO, con su fuente o criterio: datos del espacio de trabajo, "
+    "practica habitual del sector o la salida de otro agente), calcula escenarios (conservador, base, optimista) "
+    "cuando el supuesto pese en el resultado, y lista al final que debe confirmar una persona. Baja la confianza "
+    "segun cuanto dependa el resultado de supuestos. Nunca presentes un supuesto como un hecho."
+)
+
+
 AUDITOR_TASK_RULES = (
     "AUDITORIA: compara las cifras de las salidas de las tareas previas (dependencias). Declara "
     "metrics.audit_status = verified | inconsistency | unverified. 'verified' SOLO si citas en evidence, para cada "
@@ -358,6 +369,8 @@ def build_task_prompt(req: RunTaskRequest) -> str:
         lines += [f"{i}. {c}" for i, c in enumerate(req.task.acceptance, 1)]
     if (req.agent.role or req.agent.id) == "internal_auditor":
         lines += [AUDITOR_TASK_RULES]
+    else:
+        lines += ["", MISSING_DATA_RULE]
     if req.workspace is not None:
         lines += ["", *workspace_lines(req.workspace)]
     if code := code_lines(req.agent):
