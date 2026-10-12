@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { loadPdfjs, PageCanvas, type PdfDoc } from "../workspace/editors/PdfView";
 
+import { clampSheet, isNumericCell } from "@/lib/fileView";
+import type { PreviewBlock, PreviewSheet } from "@/lib/drive";
+
 const num = (s: string) => (s.trim() !== "" && /^-?[\d.,]+%?$/.test(s.trim()) ? Number(s.replace(/[,%]/g, "")) : NaN);
 
 /** Sortable table (click a header). Cells are text, never HTML. */
@@ -152,5 +155,62 @@ export function DiffView({ lines, added, removed }: { lines: { op: string; text:
         </div>
       ))}
     </div>
+  );
+}
+
+/** A workbook: one tab per sheet and its rows as a table (formatted as the file shows them). Cells are text, never HTML. */
+export function SheetView({ sheets }: { sheets: PreviewSheet[] }) {
+  const { t } = useT();
+  const [active, setActive] = useState(0);
+  if (sheets.length === 0) return <div className="p-4 text-xs text-mute">{t("fileviewer.empty")}</div>;
+  const i = clampSheet(active, sheets.length);
+  const sh = sheets[i];
+  return (
+    <div data-testid="viewer-workbook">
+      {sheets.length > 1 && (
+        <div role="tablist" aria-label={t("fileviewer.sheets")} className="mb-2 flex flex-wrap gap-1 border-b border-line pb-1.5">
+          {sheets.map((s, k) => (
+            <button key={k} type="button" role="tab" aria-selected={k === i} data-testid={`viewer-sheet-tab-${k}`} onClick={() => setActive(k)}
+              className={`rounded-md px-2.5 py-1 text-[11.5px] font-medium ${k === i ? "bg-accent/10 text-accent-hover" : "text-ink2 hover:bg-panel2"}`}>{s.name}</button>
+          ))}
+        </div>
+      )}
+      {sh.truncated && <div className="mb-2 rounded-md bg-warn/10 px-2 py-1 text-[11px] text-warn">{t("fileviewer.sheetTruncated")}</div>}
+      <TableView key={i} rows={sh.rows} testId="viewer-sheet" />
+    </div>
+  );
+}
+
+/** A word document as formatted blocks (headings, paragraphs, lists, tables). Everything is text, never HTML. */
+export function DocView({ blocks }: { blocks: PreviewBlock[] }) {
+  const { t } = useT();
+  if (blocks.length === 0) return <div className="p-4 text-xs text-mute">{t("fileviewer.empty")}</div>;
+  return (
+    <article data-testid="viewer-doc" className="space-y-2.5 text-[13px] leading-relaxed text-ink">
+      {blocks.map((b, i) => {
+        switch (b.type) {
+          case "heading":
+            return b.level === 1 ? <h2 key={i} className="mt-3 text-[17px] font-bold text-ink">{b.text}</h2>
+              : b.level === 2 ? <h3 key={i} className="mt-2 text-[14.5px] font-semibold text-ink">{b.text}</h3>
+              : <h4 key={i} className="mt-1.5 text-[13px] font-semibold text-ink2">{b.text}</h4>;
+          case "bullets":
+            return <ul key={i} className="list-disc space-y-0.5 pl-5">{(b.items ?? []).map((x, k) => <li key={k}>{x}</li>)}</ul>;
+          case "table": {
+            const [head, ...rows] = b.rows ?? [];
+            if (!head) return null;
+            return (
+              <div key={i} className="overflow-auto">
+                <table data-testid="viewer-doc-table" className="w-full border-collapse text-[12px]">
+                  <thead><tr>{head.map((c, j) => <th key={j} className="border border-line-strong bg-panel2 px-2 py-1 text-left font-semibold">{c}</th>)}</tr></thead>
+                  <tbody>{rows.map((r, k) => <tr key={k}>{head.map((_, j) => <td key={j} className={`border border-line px-2 py-1 ${isNumericCell(r[j] ?? "") ? "text-right font-mono" : ""}`}>{r[j] ?? ""}</td>)}</tr>)}</tbody>
+                </table>
+              </div>
+            );
+          }
+          default:
+            return <p key={i} className="whitespace-pre-wrap">{b.text}</p>;
+        }
+      })}
+    </article>
   );
 }

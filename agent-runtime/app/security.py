@@ -12,6 +12,7 @@ import os
 import re
 from typing import Any
 
+from .formats import format_hint
 from .models import AgentInfo, RunTaskRequest
 from .redact import redact_secrets
 
@@ -251,7 +252,26 @@ def _clean_path(p: str | None) -> str:
     return " ".join((p or "").split())[:300]
 
 
-def workspace_lines(ws) -> list[str]:
+OFFICE_DOC_RULES = (
+    "- write_document {path, document, message?}: crea un archivo REAL de oficina. La extension de path decide el formato: "
+    ".xlsx (Excel / hoja de calculo), .docx (Word / documento), .pdf, o .md/.csv. NUNCA pongas contenido binario ni XML en "
+    "content: describes el documento y el backend escribe el archivo. Mismas zonas y aprobaciones que write.",
+    "  document para .xlsx: {\"sheets\":[{\"name\":\"Productos\",\"columns\":[{\"header\":\"Producto\",\"type\":\"text\"},"
+    "{\"header\":\"Precio\",\"type\":\"currency\"},{\"header\":\"Stock\",\"type\":\"number\"}],\"rows\":[[\"Lapiz\",1.5,100]],"
+    "\"totals\":{\"label\":\"Total\",\"columns\":[\"Stock\"]},\"freeze_header\":true}]}. type: text | number | currency | percent "
+    "(fraccion 0.15 o \"15%\") | date (\"2026-01-31\"). Pon un numero como numero (1.5), no como texto. Maximo 8 hojas, 5000 filas, "
+    "30 columnas. Las celdas son SIEMPRE valores; las formulas solo existen declaradas en formulas:[{\"cell\":\"E2\",\"formula\":"
+    "\"SUM(B2:B11)\"}] (solo SUM y AVERAGE sobre celdas de la misma hoja, filas de datos desde la 2) o con totals.",
+    "  document para .docx y .pdf: {\"title\":\"...\",\"blocks\":[{\"type\":\"heading\",\"level\":1,\"text\":\"...\"},"
+    "{\"type\":\"paragraph\",\"text\":\"...\"},{\"type\":\"bullets\",\"items\":[\"...\"]},{\"type\":\"table\",\"columns\":[\"A\",\"B\"],"
+    "\"rows\":[[\"x\",1]]}]}. Si el backend responde invalid_args, corrige el documento y vuelve a pedirlo.",
+    "FORMATO: elige el archivo segun lo que pide la persona: \"excel\", \"hoja de calculo\" o \"xlsx\" -> .xlsx; "
+    "\"word\" o \"documento\" -> .docx; \"pdf\" -> .pdf; tablas de datos sin formato pedido -> .xlsx si son muchas filas, "
+    "si no .md. Entrega lo pedido en ese formato y no repitas el mismo contenido en .md.",
+)
+
+
+def workspace_lines(ws, request_text: str | None = None) -> list[str]:
     """F1: how the agent uses the drive. Tool requests are DATA the backend decides and
     executes; file content always comes back delimited as untrusted data."""
     lines = [
@@ -270,11 +290,14 @@ def workspace_lines(ws) -> list[str]:
         lines += [
             "- write {path, content, message?, expected_version?}: crea el archivo o una version nueva (texto: md, csv, "
             "json, txt). En tu escritorio y en la carpeta del proyecto no necesita aprobacion; fuera de ahi, si.",
+            *OFFICE_DOC_RULES,
             "- move {path, to} / delete {path}: delete siempre pide aprobacion y es reversible (papelera).",
-            "Guarda tu trabajo como archivos (borradores, tablas csv, notas) y menciona sus rutas en summary/evidence.",
+            "Guarda tu trabajo como archivos (borradores, tablas, notas) y menciona sus rutas en summary/evidence.",
         ]
+        if hint := format_hint(request_text, _clean_path(ws.desk)):
+            lines.append(hint)
     else:
-        lines.append("Solo lectura: no pidas write, move ni delete.")
+        lines.append("Solo lectura: no pidas write, write_document, move ni delete.")
     return lines
 
 
@@ -372,7 +395,7 @@ def build_task_prompt(req: RunTaskRequest) -> str:
     else:
         lines += ["", MISSING_DATA_RULE]
     if req.workspace is not None:
-        lines += ["", *workspace_lines(req.workspace)]
+        lines += ["", *workspace_lines(req.workspace, ctx.request_text)]
     if code := code_lines(req.agent):
         lines += ["", *code]
     sk = skill_lines(getattr(req, "skills", None))

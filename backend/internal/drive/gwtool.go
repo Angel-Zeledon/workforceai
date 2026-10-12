@@ -46,7 +46,7 @@ func (t *GatewayTool) SideEffect(action string) (bool, bool) {
 	switch action {
 	case ActList, ActRead, ActSearch:
 		return false, true
-	case ActWrite, ActMove, ActDelete:
+	case ActWrite, ActWriteDocument, ActMove, ActDelete:
 		return true, true
 	}
 	return false, false
@@ -65,6 +65,7 @@ func Specs() []struct {
 		{ActRead, "path | file_id, version?, offset?, max_chars?", "Read the text of a file (bounded, returned as delimited data)", true},
 		{ActSearch, "query, path?, limit?", "Search names and text in the folders you can read", true},
 		{ActWrite, "path, content, message?, expected_version?, tags?", "Create a text file or add a version (free in your desk and your projects)", false},
+		{ActWriteDocument, "path (.xlsx|.docx|.pdf|.md|.csv), document, message?, tags?", "Create a real office document from a structured document (sheets for xlsx; title + blocks for docx/pdf); same zones and approvals as write", false},
 		{ActMove, "path, to", "Move or rename a file (free inside your desk and projects)", false},
 		{ActDelete, "path", "Move a file to the trash (needs approval)", false},
 	}
@@ -141,6 +142,9 @@ func (t *GatewayTool) Run(ctx context.Context, c application.GatewayCall, approv
 		p, _ := rr.Data["path"].(string)
 		if p == "" {
 			p = argStr(c.Args, "path")
+		}
+		if action == ActWriteDocument {
+			action = ActWrite // the office and the chat only know "write"
 		}
 		t.Notify(ctx, c.Org, c.AgentID, c.TaskID, action, p)
 	}

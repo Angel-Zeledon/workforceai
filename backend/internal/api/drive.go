@@ -39,6 +39,7 @@ func (s *server) mountDrive(r chi.Router) {
 	r.With(read).Get("/drive/files/{id}", s.driveFile)
 	r.With(read).Get("/drive/files/{id}/content", s.driveContent)
 	r.With(read).Get("/drive/files/{id}/text", s.driveText)
+	r.With(read).Get("/drive/files/{id}/preview", s.drivePreview)
 	r.With(write).Put("/drive/files/{id}/content", s.driveNewVersion)
 	r.With(read).Get("/drive/files/{id}/versions", s.driveVersions)
 	r.With(write).Post("/drive/files/{id}/versions/{n}/restore", s.driveRestoreVersion)
@@ -298,6 +299,24 @@ func (s *server) driveText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, t)
+}
+
+// drivePreview: GET /drive/files/{id}/preview?version=. A bounded JSON form of an
+// office file (xlsx sheets, docx blocks) read by the server; the browser never
+// parses the untrusted package.
+func (s *server) drivePreview(w http.ResponseWriter, r *http.Request) {
+	f, err := s.Drive.GetFile(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.driveFail(w, err)
+		return
+	}
+	p, v, err := s.Drive.PreviewOf(r.Context(), f, queryInt(r, "version"))
+	if err != nil {
+		s.driveFail(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "private, no-store")
+	writeJSON(w, http.StatusOK, map[string]any{"file_id": f.ID, "version": v.Version, "preview": p})
 }
 
 // driveNewVersion: PUT /drive/files/{id}/content?message=&expected_version= raw body.

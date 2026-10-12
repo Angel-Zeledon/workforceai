@@ -1,8 +1,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useT } from "@/lib/i18n";
-import { drive, DriveError, type DiffResult, type DriveFile, type DriveVersion } from "@/lib/drive";
-import { EDITABLE, TEXTUAL, fileKind, fmtBytes, useFileViewer } from "@/lib/fileView";
+import { drive, DriveError, type DiffResult, type DriveFile, type DriveVersion, type Preview } from "@/lib/drive";
+import { EDITABLE, PREVIEWED, TEXTUAL, fileKind, fmtBytes, useFileViewer } from "@/lib/fileView";
 import { useStore } from "@/lib/store";
 import { useDriveNav } from "@/lib/drive";
 import { Icon } from "../icons";
@@ -11,7 +11,7 @@ import { sendChat } from "../chat/ChatThread";
 import { FileBadge } from "./FileCard";
 import { Markdown } from "./markdown";
 import { parseCsv } from "@/lib/csv";
-import { CodeView, DiffView, ImageView, JsonView, PdfBytesView, TableView } from "./viewers";
+import { CodeView, DiffView, DocView, ImageView, JsonView, PdfBytesView, SheetView, TableView } from "./viewers";
 
 type Load = { state: "loading" } | { state: "error"; code: string } | { state: "ok"; file: DriveFile; versions: DriveVersion[] };
 
@@ -139,14 +139,16 @@ function Body({ file, kind, version, latest, showDiff }: { file: DriveFile; kind
   const { t } = useT();
   const [text, setText] = useState<{ text: string; more: boolean } | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
+  const [preview, setPreview] = useState<Preview | null>(null);
   const [diff, setDiff] = useState<DiffResult | null>(null);
   const [err, setErr] = useState("");
   const binary = kind === "pdf" || kind === "image";
   useEffect(() => {
     let dead = false;
-    setText(null); setBlob(null); setErr("");
+    setText(null); setBlob(null); setPreview(null); setErr("");
     const v = version === latest ? 0 : version;
-    if (TEXTUAL.includes(kind)) drive.text(file.id, v).then((r) => !dead && setText({ text: r.text, more: r.more })).catch(() => !dead && setErr("load"));
+    if (PREVIEWED.includes(kind)) drive.preview(file.id, v).then((p) => !dead && setPreview(p)).catch(() => !dead && setErr("load"));
+    else if (TEXTUAL.includes(kind)) drive.text(file.id, v).then((r) => !dead && setText({ text: r.text, more: r.more })).catch(() => !dead && setErr("load"));
     else if (binary) drive.blob(file.id, v).then((b) => !dead && setBlob(b)).catch(() => !dead && setErr("load"));
     return () => { dead = true; };
   }, [file.id, file.current_version, version, latest, kind, binary]);
@@ -169,6 +171,24 @@ function Body({ file, kind, version, latest, showDiff }: { file: DriveFile; kind
       </div>
     );
   }
+  if (PREVIEWED.includes(kind)) {
+    if (!preview) return <div className="p-6 text-center text-xs text-mute">{t("drive.loading")}</div>;
+    if (preview.kind === "none") {
+      return (
+        <div data-testid="viewer-nopreview" className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
+          <FileBadge kind={kind} size={52} />
+          <p className="max-w-[300px] text-xs leading-relaxed text-mute">{t("fileviewer.noPreview")}</p>
+          <button type="button" onClick={() => drive.download(file).catch(() => {})} className="rounded-md border border-accent bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-hover">{t("fileviewer.download")}</button>
+        </div>
+      );
+    }
+    return (
+      <div className="p-3">
+        {preview.truncated && <div className="mb-2 rounded-md bg-warn/10 px-2 py-1 text-[11px] text-warn">{t("fileviewer.truncated")}</div>}
+        {preview.kind === "sheets" ? <SheetView key={file.id} sheets={preview.sheets ?? []} /> : <DocView blocks={preview.blocks ?? []} />}
+      </div>
+    );
+  }
   if (binary) {
     if (!blob) return <div className="p-6 text-center text-xs text-mute">{t("drive.loading")}</div>;
     return kind === "pdf" ? <PdfBytesView blob={blob} /> : <ImageView blob={blob} name={file.name} />;
@@ -179,7 +199,6 @@ function Body({ file, kind, version, latest, showDiff }: { file: DriveFile; kind
       {text.more && <div className="mb-2 rounded-md bg-warn/10 px-2 py-1 text-[11px] text-warn">{t("fileviewer.truncated")}</div>}
       {kind === "markdown" ? <Markdown text={text.text} />
         : kind === "csv" ? <TableView rows={parseCsv(text.text)} />
-        : kind === "sheet" ? <TableView rows={parseCsv(text.text.replace(/"/g, "'"))} testId="viewer-sheet" />
         : kind === "json" ? <JsonView text={text.text} />
         : <CodeView text={text.text} />}
     </div>
