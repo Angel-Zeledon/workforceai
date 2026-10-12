@@ -59,7 +59,9 @@ type Deps struct {
 	OrgConfig *application.OrgConfig
 	// ModelPolicy serves GET/PUT /settings/model-policy (owner/admin). Optional.
 	ModelPolicy *application.ModelPolicyService
-	AuthRoutes  http.Handler
+	// LLM serves /settings/llm (bring-your-own-model credentials; owner/admin). Optional.
+	LLM        *application.LLMService
+	AuthRoutes http.Handler
 	// InvitationRoutes (auth on) is mounted at /api/v1/invitations.
 	InvitationRoutes http.Handler
 	// Conns, Controls and Gateway serve the connections / controls endpoints
@@ -169,6 +171,7 @@ func NewRouter(d Deps) http.Handler {
 			r.With(s.can(auth.PermMetricsRead)).Get("/metrics", s.metrics)
 			s.mountOrgConfig(r)
 			s.mountModelPolicy(r)
+			s.mountLLM(r)
 			s.mountAudit(r)
 			s.mountCost(r)
 			s.mountConnections(r)

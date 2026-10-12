@@ -45,6 +45,7 @@ type Store struct {
 	runMeta       map[string][]byte                        // request id -> JSON run meta (runs.go)
 	checkpoints   map[string][]byte                        // task id -> JSON checkpoint (runs.go)
 	executions    map[string]application.ApprovalExecution // approval id -> executed action (runs.go)
+	llm           llmState                                 // bring-your-own-model credentials (llmcreds.go)
 	standing      standingState                            // standing per-project approvals (standing.go)
 	v2            v2State                                  // work profiles, traces, steer notes (v2.go)
 	hist          chatHistState                            // chat history: archive, custom titles, read markers (chat_history.go)

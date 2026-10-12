@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
 Risk = Literal["low", "medium", "high"]
 MetricValue = Union[str, int, float]
@@ -88,24 +88,43 @@ class Usage(_Base):
     failed_providers: list[str] | None = None
 
 
+class ProviderCredential(_Base):
+    """An organization's own key for ONE provider (bring-your-own-model). Sent by the backend over the
+    internal, RUNTIME_TOKEN-authenticated hop only. The key is a SecretStr (never in repr/dumps/logs)
+    and is never echoed: validation errors are stripped of their input (see main.py)."""
+
+    provider: str
+    api_key: SecretStr = Field(repr=False)
+    model: str = ""  # bare model name ("gpt-4.1"); empty = the provider's default
+    base_url: str | None = None  # openai / kimi / custom
+    org_id: str = ""  # OpenAI organization id (optional)
+    project_id: str = ""  # OpenAI project id (optional)
+
+
 class _ProviderPolicyMixin(_Base):
     """Optional data/routing policy, added to every request. Absent = no request-level restriction.
 
     allowed_providers: provider ids this request's data may be sent to (e.g. ["anthropic"] to exclude
         DeepSeek). The runtime applies it BEFORE sending; an empty list means "none" and fails with
-        the stable error code no_allowed_provider (HTTP 422). Known ids: deepseek, anthropic, custom.
+        the stable error code no_allowed_provider (HTTP 422). Known ids: deepseek, anthropic, openai, kimi, custom.
         The operator ceiling ALLOWED_PROVIDERS (env) is intersected with it, never widened.
     preferred_providers: try these first (in order); the other allowed providers remain as fallbacks.
     role_providers: per agent role, the provider order to try first (organization policy; the
         operator's MODEL_PROVIDER_ORDER_<ROLE> env still wins). Allowed providers still apply.
     role_models: per agent role, the model to use, as "provider/model" (e.g.
         "anthropic/claude-opus-5-5"). Only replaces that provider's model; it never adds a provider.
+    provider_credentials: the organization's own provider keys (bring-your-own-model). They override the
+        operator's environment configuration for the same provider.
+    byo_only: when true, ONLY provider_credentials may answer (no fallback to the platform's keys: the
+        organization chose its own model, so its data and its cost never go elsewhere silently).
     """
 
     allowed_providers: list[str] | None = None
     preferred_providers: list[str] | None = None
     role_providers: dict[str, list[str]] | None = None
     role_models: dict[str, str] | None = None
+    provider_credentials: list[ProviderCredential] | None = Field(default=None, repr=False)
+    byo_only: bool = False
 
 
 # ---- /v1/plan -------------------------------------------------------------
@@ -758,7 +777,7 @@ class ContextSizesResponse(_Base):
 class HealthResponse(_Base):
     status: str
     mode: Literal["simulation", "live"]
-    provider: Literal["simulation", "deepseek", "anthropic", "custom"] = "simulation"
+    provider: Literal["simulation", "deepseek", "anthropic", "openai", "kimi", "custom"] = "simulation"
     # Set when a provider is configured but the live engine could not start: the runtime
     # is answering in simulation and status is "degraded" (never a silent fallback).
     warning: str | None = None
@@ -766,3 +785,18 @@ class HealthResponse(_Base):
     # is present, otherwise Anthropic. The backend shows them in the provider settings.
     configured_providers: list[str] = []
     default_provider: str = ""
+
+
+# ---- /v1/provider-test ------------------------------------------------------
+class ProviderTestRequest(_Base):
+    credential: ProviderCredential
+
+
+class ProviderTestResponse(_Base):
+    ok: bool
+    # Stable codes: ok | invalid_key | quota | model_not_found | network | unknown
+    code: str
+    message: str = ""
+    provider: str = ""
+    model: str = ""
+    latency_ms: int = 0

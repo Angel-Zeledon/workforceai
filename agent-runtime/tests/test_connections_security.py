@@ -74,6 +74,11 @@ def test_untrusted_tool_results_are_delimited_data_whatever_they_claim():
 def test_contract_has_no_secret_fields():
     forbidden = ("token", "secret", "password", "credential", "api_key", "apikey", "connection_id", "authorization", "refresh")
     seen: set[str] = set()
+    # The ONE deliberate exception: the organization's own MODEL-provider key (bring-your-own-model),
+    # carried only on the internal backend -> runtime hop as a SecretStr. Third-party connection
+    # credentials (OAuth tokens, connection ids) stay forbidden everywhere.
+    byo = {("_ProviderPolicyMixin", "provider_credentials"), ("RunTaskRequest", "provider_credentials"),
+           ("ProviderCredential", "api_key")}
 
     def walk(model, depth=0):
         if depth > 4 or model in seen:
@@ -81,6 +86,12 @@ def test_contract_has_no_secret_fields():
         seen.add(model)
         for name, field in model.model_fields.items():
             low = name.lower()
+            if any(model.__name__ == m and name == n for m, n in byo) or \
+                    (name == "provider_credentials" and field.repr is False):
+                assert field.repr is False
+                if name == "api_key":
+                    assert "SecretStr" in str(field.annotation)
+                continue
             assert not any(f in low for f in forbidden), f"{model.__name__}.{name} looks like a credential field"
             ann = field.annotation
             for arg in (getattr(ann, "__args__", None) or (ann,)):

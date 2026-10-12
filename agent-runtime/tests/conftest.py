@@ -8,6 +8,9 @@ os.environ.setdefault("DISABLE_DEFAULT_LLM_KEY", "true")
 import pytest
 from fastapi.testclient import TestClient
 
+# Tests never call (or authenticate to) a real model: a platform-level default key must stay off.
+os.environ.setdefault("DISABLE_DEFAULT_LLM_KEY", "1")
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.main import create_app  # noqa: E402

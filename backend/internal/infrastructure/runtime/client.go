@@ -39,12 +39,15 @@ func (c *Client) WithPolicy(fn func(ctx context.Context) application.RuntimePoli
 }
 
 // body marshals a request and merges the organization model policy into it.
-func (c *Client) body(ctx context.Context, in any) ([]byte, error) {
+func (c *Client) body(ctx context.Context, path string, in any) ([]byte, error) {
 	raw, err := json.Marshal(in)
 	if err != nil || c.policy == nil {
 		return raw, err
 	}
 	p := c.policy(ctx)
+	if path == "/v1/estimate" || path == "/v1/provider-test" { // no model call of the org's, or it carries its own key
+		p.ProviderCredentials, p.ByoOnly = nil, false
+	}
 	if p.Empty() {
 		return raw, nil
 	}
@@ -71,12 +74,13 @@ var (
 	_ application.Estimator   = (*Client)(nil)
 	_ application.ChatRuntime = (*Client)(nil)
 	_ application.Reviewer    = (*Client)(nil)
+	_ application.LLMTester   = (*Client)(nil)
 )
 
 func (c *Client) do(ctx context.Context, method, path string, in, out any) error {
 	var body io.Reader
 	if in != nil {
-		raw, err := c.body(ctx, in)
+		raw, err := c.body(ctx, path, in)
 		if err != nil {
 			return err
 		}
@@ -212,6 +216,16 @@ func (c *Client) Providers(ctx context.Context) (configured []string, def string
 		return nil, "", err
 	}
 	return h.Configured, h.Default, nil
+}
+
+// TestProvider implements application.LLMTester (POST /v1/provider-test): one tiny real call with the
+// organization's key. The key travels only on this internal hop and is never logged.
+func (c *Client) TestProvider(ctx context.Context, cred application.RuntimeCredential) (application.LLMTestResult, error) {
+	var out application.LLMTestResult
+	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+	err := c.do(ctx, http.MethodPost, "/v1/provider-test", map[string]any{"credential": cred}, &out)
+	return out, err
 }
 
 func truncate(s string, n int) string {

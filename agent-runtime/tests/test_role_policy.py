@@ -46,7 +46,7 @@ def test_role_model_never_adds_a_provider_nor_bypasses_allowed():
 
 
 def test_malformed_role_model_is_ignored():
-    for bad in ("claude-opus-5-5", "openai/gpt-x", ""):
+    for bad in ("claude-opus-5-5", "mistral/large", ""):
         p = policy_from_request(req(role_models={"legal": bad}), "legal")
         assert p.role_model == ""
 

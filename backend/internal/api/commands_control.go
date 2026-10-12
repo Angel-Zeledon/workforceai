@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -302,6 +303,12 @@ func cmdUsage(c *cmdCall) (*cmdResult, *cmdFail) {
 
 // ---- model ----
 
+// byoWords are the providers of the bring-your-own-model settings (application.LLMService).
+var byoWords = map[string]string{
+	"deepseek": "deepseek", "anthropic": "anthropic", "claude": "anthropic", "openai": "openai", "gpt": "openai", "chatgpt": "openai",
+	"kimi": "kimi", "moonshot": "kimi", "custom": "custom",
+}
+
 var providerWords = map[string]string{
 	"deepseek": "deepseek", "anthropic": "anthropic", "claude": "anthropic",
 	"custom": "custom", "kimi": "custom", "moonshot": "custom", "openai": "custom", "gpt": "custom",
@@ -332,6 +339,20 @@ func cmdModel(c *cmdCall) (*cmdResult, *cmdFail) {
 	}
 	if f := c.need("org:manage"); f != nil {
 		return nil, f
+	}
+	// Bring-your-own-model (settings/llm): at the organization level the word picks the
+	// active provider, whose key the organization stored in Settings -> AI model.
+	if byo, isByo := byoWords[commands.Fold(val)]; isByo && c.s.LLM != nil && c.str("agent") == "" && c.agentID == "" {
+		if _, err := c.s.LLM.SetActive(c.ctx, byo); err != nil {
+			if errors.Is(err, domain.ErrInvalid) {
+				return nil, fail(http.StatusBadRequest, "not_configured",
+					fmt.Sprintf("Para usar «%s» primero agrega su API key en Ajustes → Modelo de IA.", val),
+					fmt.Sprintf("To use “%s”, first add its API key in Settings → AI model.", val))
+			}
+			return nil, c.serviceFail(err)
+		}
+		return msgResult(c.t("Modelo cambiado", "Model changed"),
+			fmt.Sprintf(c.t("Ahora la organización trabaja con «%s».", "The organization now works with “%s”."), byo), map[string]any{"provider": byo}), nil
 	}
 	prov, ok := providerWords[commands.Fold(val)]
 	if !ok && c.s.cmds.Models != nil {
