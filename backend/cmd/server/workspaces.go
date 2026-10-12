@@ -18,6 +18,7 @@ import (
 )
 
 type workspaceWiring struct {
+	pstore    projects.Store
 	projects  *projects.Service
 	artifacts *artifacts.Service
 	drive     *drive.Service
@@ -105,5 +106,5 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	}
 	orch.SetFileResolver(driveFileResolver{drive: dsvc}) // chat: file cards and attachments
 	orch.SetWorkspaceSource(dws)                         // F1: agents know their drive folders (and find their work kit)
-	return workspaceWiring{projects: psvc, artifacts: asvc, drive: dsvc, sandbox: wireSandbox(log, pg, rec, cw, orch, dsvc)}
+	return workspaceWiring{pstore: pstore, projects: psvc, artifacts: asvc, drive: dsvc, sandbox: wireSandbox(log, pg, rec, cw, orch, dsvc)}
 }

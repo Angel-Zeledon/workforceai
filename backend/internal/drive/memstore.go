@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/textfold"
 )
 
 // MemStore is the in-memory Store (demo mode without a database and tests).
@@ -366,6 +367,9 @@ func tokens(s string) []string {
 func (m *MemStore) Search(_ context.Context, org string, q SearchQuery) ([]Hit, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if len(q.Terms) > 0 {
+		return m.searchTerms(org, q), nil
+	}
 	qt := tokens(q.Query)
 	if len(qt) == 0 {
 		return []Hit{}, nil
@@ -405,6 +409,44 @@ func (m *MemStore) Search(_ context.Context, org string, q SearchQuery) ([]Hit, 
 		hits = hits[:q.Limit]
 	}
 	return hits, nil
+}
+
+// searchTerms is the "any of these words" search used by the long-term memory:
+// accent-insensitive, the score is the share of terms found (in [0,1)).
+func (m *MemStore) searchTerms(org string, q SearchQuery) []Hit {
+	hits := []Hit{}
+	for key, f := range m.files {
+		if !strings.HasPrefix(key, org+"|") || f.DeletedAt != nil {
+			continue
+		}
+		f = m.fill(org, f)
+		if q.Under != nil && !slices.ContainsFunc(q.Under, func(p string) bool { return IsUnder(f.Path, p) }) {
+			continue
+		}
+		name, text := textfold.Fold(f.Name), textfold.Fold(f.SearchText)
+		found := 0
+		for _, t := range q.Terms {
+			if strings.Contains(name, t) || strings.Contains(text, t) {
+				found++
+			}
+		}
+		if found == 0 {
+			continue
+		}
+		r, _, _ := cut(f.SearchText, 6000)
+		hits = append(hits, Hit{FileID: f.ID, Path: f.Path, Name: f.Name, Mime: f.Mime, Version: f.CurrentVersion,
+			Score: float64(found) / float64(found+len(q.Terms)), Snippet: r, Size: f.Size, UpdatedBy: f.UpdatedBy})
+	}
+	sort.Slice(hits, func(i, j int) bool {
+		if hits[i].Score != hits[j].Score {
+			return hits[i].Score > hits[j].Score
+		}
+		return hits[i].Path < hits[j].Path
+	})
+	if q.Limit > 0 && len(hits) > q.Limit {
+		hits = hits[:q.Limit]
+	}
+	return hits
 }
 
 func snippetAround(text, tok string) string {

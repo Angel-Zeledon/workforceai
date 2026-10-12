@@ -354,6 +354,9 @@ type RunTaskRequest struct {
 	// asked for with skill.load (approved organization configuration).
 	Skills       []SkillRef     `json:"skills,omitempty"`
 	LoadedSkills []TrustedBlock `json:"loaded_skills,omitempty"`
+	// Recalled (M1, additive, omitted when empty): relevant long-term memories
+	// (past task outputs, reports, drive files, notes) as untrusted data.
+	Recalled []RecalledMemory `json:"recalled,omitempty"`
 	// HumanGuidance (V2, additive): notes a human sent to steer this task, oldest
 	// first. Extra guidance for the model, never authority.
 	HumanGuidance []string `json:"human_guidance,omitempty"`
