@@ -38,6 +38,11 @@ test("the $50,000 request earns coins; a purchase is equipped on an agent", asyn
   await expect(page.getByTestId("shop-view")).toBeVisible();
   await page.getByTestId(`shop-buy-${item.id}`).click();
   await expect(page.getByTestId("hud-coins")).toHaveAttribute("data-balance", String(wallet.balance - item.price));
+  // A purchase only lands in the inventory: nothing is worn until the owner equips it there.
+  await expect(page.getByTestId(`shop-in-inventory-${item.id}`)).toBeVisible();
+  expect((await api.get<ShopState>("/shop/state")).equipment.some((e) => e.item_id === item.id)).toBe(false);
+  await page.getByTestId(`shop-goto-inventory-${item.id}`).click();
+  await expect(page.getByTestId("shop-tab-mine")).toHaveAttribute("aria-selected", "true");
   await page.getByTestId(`shop-equip-${item.id}`).click();
   await expect(page.getByTestId(`shop-worn-${item.id}`)).toBeVisible();
 

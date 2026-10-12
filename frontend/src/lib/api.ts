@@ -1,7 +1,7 @@
 import { API_URL, MOCK } from "./config";
 import { authFetch } from "./session";
 import type {
-  Agent, AgentDetail, Approval, ChatMessage, Conversation, Message, Metrics, Report, Request, Task, ActivityItem,
+  Agent, AgentDetail, Approval, ChatMessage, Conversation, Message, Metrics, Report, Request, StandingApproval, Task, ActivityItem,
 } from "./types";
 
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -30,6 +30,8 @@ export function toChatMessage(x: any, conv: string): ChatMessage {
     conversation: String(x.conversation ?? x.conversation_id ?? conv),
     turn_id: x.turn_id ?? null, from: String(x.from), to: String(x.to ?? ""),
     kind: x.kind ?? "chat", text: String(x.text ?? ""), reply_to: x.reply_to ?? null, ts: String(x.ts ?? new Date().toISOString()), handoff_to: x.handoff_to ?? null,
+    ...(x.request_id ? { request_id: String(x.request_id) } : {}),
+    ...(Array.isArray(x.agent_ids) ? { agent_ids: x.agent_ids.map(String) } : {}),
     ...(Array.isArray(x.files) && x.files.length ? { files: x.files.filter((f: any) => f && typeof f.path === "string").map((f: any) => ({ file_id: f.file_id, path: f.path, name: String(f.name ?? f.path.split("/").pop()), mime: f.mime, size: f.size, version: f.version, action: f.action })) } : {}),
   };
 }
@@ -69,7 +71,10 @@ export const api = {
   metrics: () => call<Metrics>("GET", "/metrics"),
   postRequest: (text: string) => call<{ request_id: string }>("POST", "/requests", { text }),
   sendMessage: (convId: string, text: string) => call<unknown>("POST", `/conversations/${convId}/messages`, { text }),
-  decide: (id: string, decision: "approve" | "reject", note?: string) =>
-    call<unknown>("POST", `/approvals/${id}/decision`, { decision, note }),
+  /** `always` (approve only) also stores a standing approval for this kind of action in the approval's project;
+   * the server refuses it unless the action is internal and reversible, and says so in `standing_error`. */
+  decide: (id: string, decision: "approve" | "reject", note?: string, always?: { anyAgent: boolean }) =>
+    call<{ standing?: StandingApproval; standing_error?: string }>("POST", `/approvals/${id}/decision`,
+      always ? { decision, note, always_allow: true, always_allow_any_agent: always.anyAgent } : { decision, note }),
   reset: () => call<unknown>("POST", "/demo/reset"),
 };

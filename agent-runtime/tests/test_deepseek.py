@@ -37,7 +37,9 @@ def test_deepseek_engine_model_and_health(monkeypatch):
     eng = select_engine()
     assert eng.provider == "deepseek" and eng.model == "deepseek/deepseek-chat"
     with TestClient(create_app(eng)) as c:
-        assert c.get("/healthz").json() == {"status": "ok", "mode": "live", "provider": "deepseek"}
+        body = c.get("/healthz").json()
+        assert {k: body[k] for k in ("status", "mode", "provider")} == {"status": "ok", "mode": "live", "provider": "deepseek"}
+        assert body["default_provider"] == "deepseek"
 
 
 def test_model_env_without_prefix_gets_provider(monkeypatch):

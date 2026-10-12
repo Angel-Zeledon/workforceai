@@ -7,6 +7,7 @@ const BADGE: Record<FileKind, { label: string; cls: string }> = {
   markdown: { label: "MD", cls: "bg-info/15 text-info" },
   csv: { label: "CSV", cls: "bg-ok/15 text-ok" },
   sheet: { label: "XLS", cls: "bg-ok/15 text-ok" },
+  doc: { label: "DOC", cls: "bg-info/15 text-info" },
   json: { label: "JSON", cls: "bg-warn/15 text-warn" },
   code: { label: "</>", cls: "bg-accent/15 text-accent-hover" },
   text: { label: "TXT", cls: "bg-mute/15 text-ink2" },

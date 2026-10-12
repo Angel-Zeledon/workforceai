@@ -29,14 +29,16 @@ const (
 	PermRequestsCreate    Permission = "requests:create"
 	PermConversationsRead Permission = "conversations:read"
 	PermConversationsPost Permission = "conversations:write"
-	PermApprovalsRead     Permission = "approvals:read"
-	PermApprovalsDecide   Permission = "approvals:decide"
-	PermReportsRead       Permission = "reports:read"
-	PermMemoriesRead      Permission = "memories:read"
-	PermMemoriesWrite     Permission = "memories:write"
-	PermActivityRead      Permission = "activity:read"
-	PermMetricsRead       Permission = "metrics:read"
-	PermAuditRead         Permission = "audit:read"
+	// PermConversationsDelete erases a conversation and its messages for good (admin and owner).
+	PermConversationsDelete Permission = "conversations:delete"
+	PermApprovalsRead       Permission = "approvals:read"
+	PermApprovalsDecide     Permission = "approvals:decide"
+	PermReportsRead         Permission = "reports:read"
+	PermMemoriesRead        Permission = "memories:read"
+	PermMemoriesWrite       Permission = "memories:write"
+	PermActivityRead        Permission = "activity:read"
+	PermMetricsRead         Permission = "metrics:read"
+	PermAuditRead           Permission = "audit:read"
 	// PermPolicyManage edits the approval rules (thresholds, double approval,
 	// limits). Owner only: whoever can relax the rules must not be able to
 	// approve the actions they govern as a mere admin. Agents never hold it.
@@ -120,7 +122,7 @@ var (
 		PermConnectionsManage, PermConnectionsGrant, PermConnectionsGrantWrite, PermConnectionsRevoke,
 		PermConnectionsUsageRead, PermControlsPause, PermControlsKillSwitch,
 		PermArtifactsApprove, PermArtifactsDelete,
-		PermFilesDelete, PermFilesGrant, PermSkillsReview,
+		PermFilesDelete, PermFilesGrant, PermSkillsReview, PermConversationsDelete,
 	)
 	ownerPerms = union(adminPerms, PermOrgDelete, PermBillingManage, PermControlsRelease, PermPolicyManage)
 

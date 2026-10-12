@@ -32,3 +32,14 @@ test("fmtBytes", () => {
   assert.equal(fmtBytes(512), "512 B");
   assert.equal(fmtBytes(2048), "2.0 KB");
 });
+
+test("office files get their own viewers", async () => {
+  const { PREVIEWED, isNumericCell, clampSheet } = await import("./fileView.ts");
+  assert.equal(fileKind("informe.docx"), "doc");
+  assert.deepEqual(PREVIEWED, ["sheet", "doc"]);
+  for (const s of ["12", "$1,234.50", "30%", "-5", "(5)", "1.234,50", "€ 7"]) assert.ok(isNumericCell(s), s);
+  for (const s of ["", "Lapiz", "=SUM(A1)", "2026-01-31 x", "12abc"]) assert.ok(!isNumericCell(s), s);
+  assert.equal(clampSheet(5, 2), 1);
+  assert.equal(clampSheet(-1, 2), 0);
+  assert.equal(clampSheet(3, 0), 0);
+});

@@ -79,7 +79,7 @@ export function DashboardFiles() {
             <summary className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] font-semibold text-ink">
               <span>{pid ? (projects[pid]?.name ?? t("workspace.project")) : t("dash.files.noProject")}</span>
               <span className="text-[11px] font-normal text-mute">{t("files.count", { count: list.length })}</span>
-              {pid && <span className="ml-auto flex w-40 items-center gap-2"><span className="flex-1"><Progress value={avg} color="#3451b2" /></span><span className="font-mono text-[11px]">{avg}%</span></span>}
+              {pid && <span className="ml-auto flex w-40 items-center gap-2"><span className="flex-1"><Progress value={avg} color="#0F766E" /></span><span className="font-mono text-[11px]">{avg}%</span></span>}
             </summary>
             <div className="grid gap-3 p-4 pt-1 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((a) => (
@@ -87,7 +87,7 @@ export function DashboardFiles() {
                   <div className="flex items-center gap-2"><KindIcon kind={a.kind} size={18} /><span className="truncate text-[13px] font-semibold text-ink">{a.title}</span></div>
                   <div className="mt-1 text-[11px] text-mute">{t(`artifact.kind.${a.kind}`)} &middot; {t(`artifact.status.${a.status}`)} &middot; v{a.head_version}</div>
                   <div className="mt-0.5 text-[11px] text-mute">{a.last_author.kind === "agent" ? name(a.last_author.id) : t("common.you")}{a.pending_proposals > 0 ? ` · ${t("workspace.proposalsCount", { count: a.pending_proposals })}` : ""}</div>
-                  {a.deliverable_id && <div className="mt-2 flex items-center gap-2"><div className="flex-1"><Progress value={a.progress} color="#3451b2" /></div><span className="font-mono text-[10px] text-mute">{a.progress}%</span></div>}
+                  {a.deliverable_id && <div className="mt-2 flex items-center gap-2"><div className="flex-1"><Progress value={a.progress} color="#0F766E" /></div><span className="font-mono text-[10px] text-mute">{a.progress}%</span></div>}
                 </button>
               ))}
             </div>

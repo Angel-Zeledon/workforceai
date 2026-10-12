@@ -230,6 +230,15 @@ type Approval struct {
 	PolicyRule        string             `json:"policy_rule,omitempty"`
 	Decisions         []ApprovalDecision `json:"decisions"`
 
+	// Standing approvals (docs/architecture/06-permisos-autonomia.md). Tool and
+	// ProjectID say what the approval is about; StandingEligible is set by the
+	// server only for internal, reversible actions of a project, and is the only
+	// case where the approver may choose "always allow this kind of action in
+	// this project". The server re-checks it when the choice is made.
+	Tool             string `json:"tool,omitempty"`
+	ProjectID        string `json:"project_id,omitempty"`
+	StandingEligible bool   `json:"standing_eligible,omitempty"`
+
 	// Context is optional structured information for the approval card of a
 	// connection-backed action (account, recipients, reversibility, hold
 	// window, taint). It carries no secrets or message content and is not

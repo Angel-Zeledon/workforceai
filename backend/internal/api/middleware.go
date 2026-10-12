@@ -60,9 +60,11 @@ func (s *server) cors(next http.Handler) http.Handler {
 				h.Set("Access-Control-Allow-Origin", "*")
 			} else {
 				h.Set("Access-Control-Allow-Origin", origin)
+				// The refresh-token cookie travels on cross-origin (same-site) calls.
+				h.Set("Access-Control-Allow-Credentials", "true")
 			}
 			h.Set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
-			h.Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			h.Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-WFAI-CSRF")
 			h.Set("Access-Control-Max-Age", "600")
 		}
 		if r.Method == http.MethodOptions {

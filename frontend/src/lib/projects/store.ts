@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { go } from "@/lib/navBridge";
 import { MOCK } from "../config";
 import { useStore } from "../store";
 import { projectsApi } from "./api";
@@ -110,7 +111,7 @@ export const useProjects = create<PState>((set, get) => ({
   duplicateTemplate: async (id) => { const t = await projectsApi.duplicateTemplate(id); await get().loadTemplates(); return t; },
   deleteTemplate: async (id) => { await projectsApi.deleteTemplate(id); await get().loadTemplates(); },
 
-  setOpen: (open) => set({ open }),
+  setOpen: (open) => { set({ open }); if (open) go("/projects"); },
   setTab: (tab) => set({ tab }),
   selectNode: (selectedNodeId) => set({ selectedNodeId }),
 
@@ -193,10 +194,6 @@ export const useProjects = create<PState>((set, get) => ({
   saveAsTemplate: async (opts) => { const id = get().activeId; if (!id) return null; const t = await projectsApi.saveAsTemplate(id, opts); await get().loadTemplates(); return t; },
 }));
 
-// Switching office/dashboard (mode-toggle) leaves the Projects screen.
-if (typeof window !== "undefined") {
-  useStore.subscribe((s, prev) => { if (s.mode !== prev.mode && useProjects.getState().open) useProjects.getState().setOpen(false); });
-}
 
 let users = 0;
 let stopFn: (() => void) | null = null;

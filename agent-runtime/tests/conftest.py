@@ -1,5 +1,9 @@
+import os
 import sys
 from pathlib import Path
+
+# Tests never reach a real model: the built-in default key is off (providers._api_key).
+os.environ.setdefault("DISABLE_DEFAULT_LLM_KEY", "true")
 
 import pytest
 from fastapi.testclient import TestClient

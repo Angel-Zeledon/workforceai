@@ -119,8 +119,8 @@ type UserView struct {
 type Session struct {
 	TokenType    string    `json:"token_type"`
 	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	ExpiresIn    int       `json:"expires_in"` // seconds
+	RefreshToken string    `json:"refresh_token,omitempty"` // over HTTP it travels in the cookie
+	ExpiresIn    int       `json:"expires_in"`              // seconds
 	ExpiresAt    time.Time `json:"expires_at"`
 	User         UserView  `json:"user"`
 	OrgID        string    `json:"org_id"`
@@ -257,6 +257,9 @@ func (s *Service) pickMembership(ctx context.Context, userID, orgID string) (Mem
 	}
 	return ms[0], nil
 }
+
+// RefreshTTL is the lifetime of a refresh token (the cookie's Max-Age).
+func (s *Service) RefreshTTL() time.Duration { return s.cfg.RefreshTTL }
 
 // Refresh exchanges a refresh token for a new access + refresh pair. The old
 // refresh token is consumed; presenting it again revokes the whole family.

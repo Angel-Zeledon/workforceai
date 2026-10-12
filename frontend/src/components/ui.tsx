@@ -4,6 +4,7 @@ import { useStore } from "@/lib/store";
 import { fmtTime, stateMeta, taskStatusLabel, TASK_STATUS_COLOR } from "@/lib/meta";
 import { tr, useT } from "@/lib/i18n";
 import { resolveAgent, usePreferences } from "@/lib/preferences";
+import { Skeleton } from "./nav/ui2";
 
 /** Resolves an agent id to its display name (honors user-customized names). */
 export function useAgentName() {
@@ -100,8 +101,21 @@ export function Card({ title, right, children, className = "" }: { title?: React
     </section>
   );
 }
-export function Empty({ children }: { children: ReactNode }) {
-  return <div className="rounded-lg border border-dashed border-line-strong px-3 py-6 text-center text-xs text-mute">{children}</div>;
+export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="ac-pop rounded-lg border border-dashed border-line-strong px-4 py-7 text-center text-[13px] leading-relaxed text-mute">
+      {children}
+      {action && <div className="mt-3">{action}</div>}
+    </div>
+  );
+}
+/** Skeleton rows while a list loads (instead of a bare "Loading…"). */
+export function Loading({ rows = 3 }: { rows?: number }) {
+  return (
+    <div role="status" aria-busy="true" className="space-y-2.5">
+      {Array.from({ length: rows }, (_, i) => <Skeleton key={i} className="h-12" />)}
+    </div>
+  );
 }
 export function Btn({ children, onClick, kind = "ghost", disabled, className = "", type = "button", "data-testid": testId }: {
   "data-testid"?: string; children: ReactNode; onClick?: () => void; kind?: "ghost" | "primary" | "ok" | "danger"; disabled?: boolean; className?: string; type?: "button" | "submit";

@@ -10,6 +10,7 @@ import re
 
 from . import review as rv
 from . import sim_content as sc
+from .formats import EXT, requested_format
 from .engine import AgentEngine, estimate_cost
 from .routing import assigned_reason, compose_reply, owner_role
 from .models import (
@@ -51,6 +52,96 @@ def sim_desk_draft(req: RunTaskRequest, out: StructuredOutput) -> ToolRequest | 
     return ToolRequest(tool="fs", action="write", risk="low",
                        args={"path": f"{ws.desk.rstrip('/')}/{slug}.md", "content": "\n".join(lines) + "\n",
                              "message": f"borrador de {req.task.id}"})
+
+
+_COUNT = re.compile(r"\b(\d{1,3})\s+([a-záéíóúñ]{3,})", re.I)
+_ATTR_SPLIT = re.compile(r"\s*(?:,|;|\sy\s|\se\s|\sand\s|\scon\s|\swith\s)\s*", re.I)
+_CURRENCY = ("precio", "costo", "coste", "monto", "importe", "total", "price", "cost", "amount", "salario", "salary", "venta", "sales")
+_NUMBER = ("stock", "cantidad", "unidades", "qty", "quantity", "units", "inventario", "inventory", "edad", "age")
+_PERCENT = ("porcentaje", "margen", "percent", "margin", "descuento", "discount", "%")
+_DATE = ("fecha", "date", "vencimiento", "alta")
+
+
+def _attr_type(word: str) -> str:
+    w = word.lower()
+    for kind, words in (("currency", _CURRENCY), ("number", _NUMBER), ("percent", _PERCENT), ("date", _DATE)):
+        if any(x in w for x in words):
+            return kind
+    return "text"
+
+
+def sim_office_sheet(request_text: str, locale: str = "es") -> dict:
+    """A small believable workbook built from the REQUEST text ("10 productos, precio y stock" -> 10 rows, a
+    Producto, a Precio (currency) and a Stock (number) column), not a fixed canned file."""
+    text = " ".join((request_text or "").split())
+    m = _COUNT.search(text)
+    n, noun = (min(int(m.group(1)), 200), m.group(2)) if m else (10, "items" if locale == "en" else "registros")
+    n = max(n, 1)
+    tail = text[m.end():] if m else text
+    attrs: list[str] = []
+    for part in _ATTR_SPLIT.split(tail):
+        word = re.sub(r"[^\w%áéíóúñÁÉÍÓÚÑ ]", "", part).strip().split(" ")[0:2]
+        word = " ".join(w for w in word if w)
+        if word and len(word) <= 24 and word.lower() not in {x.lower() for x in attrs} and word.lower() not in ("de", "del", "la", "el", "the", "a", "un", "una"):
+            attrs.append(word)
+        if len(attrs) >= 4:
+            break
+    if not attrs:
+        attrs = ["Cantidad", "Valor"] if locale != "en" else ["Quantity", "Value"]
+    one = noun[:-1] if noun.lower().endswith("s") and len(noun) > 3 else noun
+    cols = [{"header": one.capitalize(), "type": "text"}] + [{"header": a.capitalize(), "type": _attr_type(a)} for a in attrs]
+    r = random.Random(int(hashlib.sha256(text.encode()).hexdigest()[:12], 16))
+    rows = []
+    for i in range(1, n + 1):
+        row: list = [f"{one.capitalize()} {i:02d}"]
+        for c in cols[1:]:
+            t = c["type"]
+            if t == "currency":
+                row.append(round(r.uniform(2, 250), 2))
+            elif t == "number":
+                row.append(r.randint(0, 500))
+            elif t == "percent":
+                row.append(round(r.uniform(0.05, 0.6), 2))
+            elif t == "date":
+                row.append(f"2026-{r.randint(1, 12):02d}-{r.randint(1, 28):02d}")
+            else:
+                row.append(f"{c['header']} {r.randint(1, 9)}")
+        rows.append(row)
+    sheet: dict = {"name": noun.capitalize()[:31], "columns": cols, "rows": rows, "freeze_header": True}
+    sums = [c["header"] for c in cols[1:] if c["type"] in ("currency", "number")]
+    if sums:
+        sheet["totals"] = {"label": "Total", "columns": sums[:3]}
+    return {"title": text[:80] or noun.capitalize(), "sheets": [sheet]}
+
+
+def sim_office_text(req: RunTaskRequest, out: StructuredOutput) -> dict:
+    """A small word/pdf document from the request and the task output."""
+    en = req.locale == "en"
+    text = " ".join((req.context.request_text or req.task.title or "").split())
+    blocks: list[dict] = [{"type": "heading", "level": 1, "text": "Summary" if en else "Resumen"},
+                          {"type": "paragraph", "text": out.summary or text}]
+    if out.findings:
+        blocks += [{"type": "heading", "level": 2, "text": "Findings" if en else "Hallazgos"}, {"type": "bullets", "items": list(out.findings)}]
+    if out.recommendations:
+        blocks += [{"type": "heading", "level": 2, "text": "Recommendations" if en else "Recomendaciones"},
+                   {"type": "bullets", "items": list(out.recommendations)}]
+    blocks += [{"type": "heading", "level": 2, "text": "Request" if en else "Solicitud"}, {"type": "paragraph", "text": text}]
+    return {"title": (req.task.title or text)[:120], "blocks": blocks}
+
+
+def sim_office_document(req: RunTaskRequest, out: StructuredOutput) -> ToolRequest | None:
+    """When the request asks for an Excel, a Word document or a PDF, the simulated employee delivers a REAL
+    file with fs.write_document (the backend builds the bytes). Only the task without dependencies makes it, so a
+    request yields one file, not one per task."""
+    ws = req.workspace
+    fmt = requested_format(req.context.request_text)
+    if not fmt or ws is None or not ws.can_write or not ws.desk or req.context.dependency_outputs:
+        return None
+    text = req.context.request_text or req.task.title or "documento"
+    slug = _SLUG.sub("-", re.sub(r"\b(hazme|haz|genera|crea|prepara|un|una|el|la|en|de|con|excel|word|pdf|documento)\b", " ", text.lower())).strip("-")[:50] or "documento"
+    doc = sim_office_sheet(text, req.locale) if fmt == "xlsx" else sim_office_text(req, out)
+    return ToolRequest(tool="fs", action="write_document", risk="low",
+                       args={"path": f"{ws.desk.rstrip('/')}/{slug}{EXT[fmt]}", "document": doc, "message": f"entregable de {req.task.id}"})
 
 
 SIM_CODE_MARKER = "[sim:code]"
@@ -205,7 +296,11 @@ class SimulationEngine(AgentEngine):
         tool_requests = [ToolRequest(**t) for t in entry["tool_requests"]]  # solo se DEVUELVEN
         if (code_req := sim_code_request(req)) is not None:
             tool_requests.append(code_req)
-        draft = sim_desk_draft(req, out)
+        office = sim_office_document(req, out)
+        if office is not None:  # the request named Excel / Word / PDF: deliver that file, not a .md
+            tool_requests.append(office)
+            out.evidence.append(c.TEXTS.get("evidence_file", "Draft saved at {path}").format(path=office.args["path"]))
+        draft = sim_desk_draft(req, out) if office is None else None
         if draft is not None:  # F1: like a real employee, keep the work as a file on the desk
             tool_requests.append(draft)
             out.evidence.append(c.TEXTS.get("evidence_file", "Draft saved at {path}").format(path=draft.args["path"]))

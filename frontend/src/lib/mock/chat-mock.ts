@@ -74,6 +74,10 @@ export class MockChat {
     return rows.slice(-limit);
   }
   matches(conv: string) { return conv === "office" || conv.startsWith("agent:"); }
+  /** every office / 1:1 chat message by conversation (the chat history reads it) */
+  all(): Record<string, ChatMessage[]> { return this.history; }
+  /** deletes the history of a conversation (DELETE /conversations/{id}) */
+  remove(conv: string) { delete this.history[conv]; }
 
   /** Say something in a conversation (stores history and emits chat.message). */
   say(conv: string, from: string, to: string, kind: MessageKind, text: string, turn: string | null, replyTo: string | null = null, handoffTo: string | null = null, files?: FileRef[]) {
@@ -88,17 +92,18 @@ export class MockChat {
   private typing(conv: string, id: string, on: boolean) { this.host.emit("chat.typing", { conversation: conv, agent_id: id, on }, id); }
 
   /** Shows "typing…", waits a human-feeling time, speaks, and keeps the agent in `talking` only if it was free. */
-  private async speak(conv: string, id: string, to: string, text: string, turn: string, replyTo: string | null, kind: MessageKind = "chat", handoffTo: string | null = null, files?: FileRef[]) {
-    const a = this.host.agent(id); if (!a) return;
+  private async speak(conv: string, id: string, to: string, text: string, turn: string, replyTo: string | null, kind: MessageKind = "chat", handoffTo: string | null = null, files?: FileRef[]): Promise<ChatMessage | undefined> {
+    const a = this.host.agent(id); if (!a) return undefined;
     this.typing(conv, id, true);
     await this.host.wait(Math.min(2600, 700 + text.length * 11));
     const prev = { state: a.state, activity: a.activity, task: a.current_task_id, progress: a.progress };
     const free = prev.state === "idle" || prev.state === "completed";
     if (free) this.host.setState(id, "talking", tr("mock.chat.replying"), prev.task, 0);
-    this.say(conv, id, to, kind, text, turn, replyTo, handoffTo, files);
+    const said = this.say(conv, id, to, kind, text, turn, replyTo, handoffTo, files);
     if (free) {
       this.host.wait(2600).then(() => { if (this.host.agent(id)?.state === "talking") this.host.setState(id, prev.state, prev.activity, prev.task, prev.progress); }).catch(() => {});
     }
+    return said;
   }
 
   private topicAnswer(id: string, topic: string): string {
@@ -228,7 +233,10 @@ export class MockChat {
     h.emit("route.decided", { turn_id: turn, intent: "task", topic: cls.topic === "task" ? "task" : cls.topic, responders });
     h.log("assistant", "route", tr("mock.act.routed", { name: first(assistant), intent: tr("mock.intent.task"), who: responders.slice(1).map((r) => first(h.agent(r.agent_id)!)).join(", ") }));
     const lines = plan.filter((p) => p.agent !== "assistant").map((p) => tr("mock.task.line", { name: first(h.agent(p.agent)!), task: p.title, reason: tr(`mock.reason.${p.key}`) }));
-    await this.speak(conv, "assistant", "user", `${tr("mock.task.intro")}\n${lines.join("\n")}`, turn, replyTo, "delegation");
-    h.startRequest(text).catch(() => {});
+    const said = await this.speak(conv, "assistant", "user", `${tr("mock.task.intro")}\n${lines.join("\n")}`, turn, replyTo, "delegation");
+    h.startRequest(text).then((rid) => {
+      // the message that announced the work points to the request it created (deep link from the chat history)
+      if (said) said.request_id = rid;
+    }).catch(() => {});
   }
 }

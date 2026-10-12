@@ -10,7 +10,7 @@ export interface ChartSpec {
   source: { artifact_id?: string; sheet?: string; range?: string; inline?: { columns: string[]; rows: CellValue[][] } };
   encoding: { x: string; y: string[]; series?: string | null }; format?: { y?: string }; stack?: boolean;
 }
-const PALETTE = ["#3451b2", "#2a8590", "#a8741f", "#7461b5", "#b4543c", "#5f8a3f", "#5b8fb5", "#7b8494"];
+const PALETTE = ["#0F766E", "#1d4f91", "#a8741f", "#7461b5", "#b4543c", "#5f8a3f", "#5b8fb5", "#7b8494"];
 
 /** Resolves the chart data matrix (header row + rows) from an inline table or from another artifact (live). */
 function useChartMatrix(spec: ChartSpec | undefined): CellValue[][] {
@@ -63,7 +63,7 @@ export function ChartView({ art, compact, height }: { art: StoredArtifact; compa
   const mark = spec.mark === "combo" || spec.mark === "scatter" ? "line" : spec.mark;
 
   return (
-    <div data-testid="art-chart" className="h-full overflow-auto bg-panel p-3" style={focus ? { boxShadow: "inset 0 0 0 2px #3451b2" } : undefined}>
+    <div data-testid="art-chart" className="h-full overflow-auto bg-panel p-3" style={focus ? { boxShadow: "inset 0 0 0 2px #0F766E" } : undefined}>
       {spec.title && <div className="mb-1 font-display text-sm font-semibold text-ink">{spec.title}</div>}
       {series.length === 0 || cats.length === 0 ? <div className="p-6 text-center text-xs text-mute">{t("chart.noData")}</div> : (
         <>

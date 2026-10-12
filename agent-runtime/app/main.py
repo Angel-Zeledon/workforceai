@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 
 from .engine import AgentEngine, select_engine
 from .estimate import EstimateRequest, EstimateResponse
-from .providers import ProviderError
+from .providers import ProviderError, configured_providers, default_provider
 from .replan import ReplanRequest, ReplanResponse
 from .redact import redact_any, redact_secrets
 from .security import build_trace
@@ -94,7 +94,9 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
     async def healthz():
         reason = getattr(eng(), "fallback_reason", None)
         return HealthResponse(status="degraded" if reason else "ok", mode=eng().mode,  # type: ignore[arg-type]
-                              provider=getattr(eng(), "provider", "simulation"), warning=reason)
+                              provider=getattr(eng(), "provider", "simulation"), warning=reason,
+                              configured_providers=[c.id for c in configured_providers()],
+                              default_provider=default_provider())
 
     @app.post("/v1/plan", response_model=PlanResponse, response_model_exclude_none=True)
     async def plan(req: PlanRequest):

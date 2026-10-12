@@ -60,11 +60,16 @@ type ModelPolicyStore interface {
 
 // ModelPolicyView is the admin response: the policy plus what the server allows.
 type ModelPolicyView struct {
-	Policy         ModelPolicy `json:"policy"`
-	ServerAllowed  []string    `json:"server_allowed_providers"`
-	KnownProviders []string    `json:"known_providers"`
-	PricedModels   []string    `json:"priced_models"`
-	Warnings       []string    `json:"warnings"`
+	Policy        ModelPolicy `json:"policy"`
+	ServerAllowed []string    `json:"server_allowed_providers"`
+	// KnownProviders is the display order: DeepSeek and Anthropic first.
+	KnownProviders []string `json:"known_providers"`
+	// ConfiguredProviders and DefaultProvider come from the runtime (it holds the keys):
+	// the default is DeepSeek when its key is present, otherwise Anthropic.
+	ConfiguredProviders []string `json:"configured_providers"`
+	DefaultProvider     string   `json:"default_provider"`
+	PricedModels        []string `json:"priced_models"`
+	Warnings            []string `json:"warnings"`
 }
 
 // ModelPolicyService validates, stores, audits and serves the policy. Ceiling
@@ -75,6 +80,8 @@ type ModelPolicyService struct {
 	Rec     *Recorder
 	Cfg     Config
 	TTL     time.Duration // cache of the runtime payload per org (default 10s)
+	// Providers (optional) asks the runtime which providers have keys and which is the default.
+	Providers func(ctx context.Context) (configured []string, def string, err error)
 
 	mu    sync.Mutex
 	cache map[string]cachedPolicy
@@ -114,7 +121,15 @@ func (s *ModelPolicyService) Get(ctx context.Context) (ModelPolicyView, error) {
 	if err != nil {
 		return ModelPolicyView{}, err
 	}
-	return s.view(normalizePolicy(p)), nil
+	v := s.view(normalizePolicy(p))
+	if s.Providers != nil {
+		pctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+		if conf, def, err := s.Providers(pctx); err == nil {
+			v.ConfiguredProviders, v.DefaultProvider = conf, def
+		}
+	}
+	return v, nil
 }
 
 func (s *ModelPolicyService) view(p ModelPolicy) ModelPolicyView {
@@ -123,7 +138,7 @@ func (s *ModelPolicyService) view(p ModelPolicy) ModelPolicyView {
 		priced = append(priced, k)
 	}
 	sort.Strings(priced)
-	v := ModelPolicyView{Policy: p, ServerAllowed: s.serverAllowed(), KnownProviders: KnownProviders, PricedModels: priced, Warnings: []string{}}
+	v := ModelPolicyView{Policy: p, ServerAllowed: s.serverAllowed(), KnownProviders: KnownProviders, PricedModels: priced, Warnings: []string{}, ConfiguredProviders: []string{}}
 	roles := make([]string, 0, len(p.RoleModels))
 	for r := range p.RoleModels {
 		roles = append(roles, r)

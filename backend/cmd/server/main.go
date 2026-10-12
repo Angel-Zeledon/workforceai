@@ -115,6 +115,7 @@ func run(log *slog.Logger) error {
 	if ps, ok := store.(application.ModelPolicyStore); ok {
 		modelPolicy = &application.ModelPolicyService{Store: ps, Rec: rec, Cfg: cfg.App,
 			Ceiling: application.ParseProviderList(os.Getenv("ALLOWED_PROVIDERS"))}
+		modelPolicy.Providers = rt.Providers
 		rt.WithPolicy(modelPolicy.Runtime)
 	}
 	approvals := application.NewApprovals(cfg.App, store, rec)
@@ -180,7 +181,14 @@ func run(log *slog.Logger) error {
 	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy)
 	skillsSvc := wireSkills(cfg, log, pg, store, rec, orch, orgCfg, cw, ws.drive)
 
+	// Standing per-project approvals: "always allow this internal, reversible action in this project".
+	var standingSvc *application.StandingService
+	if ss, ok := store.(application.StandingStore); ok && ws.projects != nil {
+		standingSvc = &application.StandingService{Store: ss, Core: store, Projects: ws.projects, Rec: rec, Cfg: cfg.App, Days: cfg.StandingApprovalDays}
+		orch.SetStanding(standingSvc)
+	}
 	rewardsSvc := wireRewards(log, pg, store, rec, ws.projects)
+	chats := wireChatHistory(cfg.App, store, rec, ws.projects)
 	rewardsObs.Bind(rewardsSvc)
 
 	// Durable execution: resume the requests a previous process left in progress
@@ -208,7 +216,8 @@ func run(log *slog.Logger) error {
 	}
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
-		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Push: pushSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
+		Standing: standingSvc,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Chats: chats, Push: pushSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
@@ -229,7 +238,8 @@ func run(log *slog.Logger) error {
 			return err
 		}
 		deps.Auth = svc
-		ah := auth.NewHandler(svc, auth.HandlerConfig{Limiter: limiter, TrustedProxies: cfg.TrustedProxies, FailOpen: true})
+		ah := auth.NewHandler(svc, auth.HandlerConfig{Limiter: limiter, TrustedProxies: cfg.TrustedProxies, FailOpen: true,
+			CookieName: cfg.AuthCookieName, CookieSecure: cfg.AuthCookieSecure, AllowedOrigins: cfg.AllowedOrigins})
 		deps.AuthRoutes, deps.InvitationRoutes = ah.Routes(), ah.InvitationRoutes()
 		deps.WSMaxAge = 15 * time.Minute // = default access token lifetime
 	} else {
@@ -374,4 +384,18 @@ func purgeTracesLoop(ctx context.Context, log *slog.Logger, tr *application.Trac
 		case <-tick.C:
 		}
 	}
+}
+
+// wireChatHistory builds the chat history service (docs/architecture/chat-history.md)
+// over the store, which implements application.ChatHistoryStore in Postgres and in memory.
+func wireChatHistory(cfg application.Config, store application.Store, rec *application.Recorder, proj *projects.Service) *application.ChatHistory {
+	hs, ok := store.(application.ChatHistoryStore)
+	if !ok {
+		return nil
+	}
+	h := &application.ChatHistory{Store: hs, Core: store, Rec: rec, Cfg: cfg}
+	if proj != nil {
+		h.ProjectOf = proj.ProjectIDForRequest
+	}
+	return h
 }

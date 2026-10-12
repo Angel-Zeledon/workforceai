@@ -113,6 +113,7 @@ type opts struct {
 	skills         bool // mount the skill library (skills_api_test.go); implies the drive
 	writeGate      func(ctx context.Context, org string) error
 	rewards        bool // mount coins and shop (rewards_api_test.go)
+	standing       bool // mount the standing per-project approvals (standing_api_test.go)
 }
 
 type env struct {
@@ -147,6 +148,8 @@ func newEnv(t *testing.T, o opts) *env {
 
 	d := api.Deps{Cfg: cfg, Queries: q, Orch: orch, Approvals: appr, Store: spy, Runtime: fakeRuntime{}, Hub: hub, Log: log,
 		AuthEnabled: o.auth, AllowedOrigins: o.origins, EnableDemoReset: o.demoReset, MaxBodyBytes: o.maxBody, WSMaxAge: o.wsMaxAge}
+	d.Chats = &application.ChatHistory{Store: mem, Core: spy, Rec: rec, Cfg: cfg}
+	d.Audit = &application.AuditService{Store: mem, Rec: rec, Cfg: cfg}
 	if o.v2 {
 		pr := &application.ProfileService{Store: mem, Core: spy, Tones: mem, Rec: rec, Config: cfg}
 		tr := &application.Tracer{Store: mem, Log: log, Retention: 30 * 24 * time.Hour}
@@ -170,6 +173,9 @@ func newEnv(t *testing.T, o opts) *env {
 				a, err := mem.GetAgent(c, org, id)
 				return a.Role, err
 			}})
+	}
+	if o.standing {
+		d.Standing = &application.StandingService{Store: mem, Core: spy, Projects: standingProjects{}, Rec: rec, Cfg: cfg, Days: 7}
 	}
 	var coins *rewards.Service
 	if o.rewards {
@@ -341,8 +347,11 @@ func TestRegisterLoginRefreshOverHTTP(t *testing.T) {
 	}
 	var sess auth.Session
 	_ = json.Unmarshal(body, &sess)
-	if sess.AccessToken == "" || sess.RefreshToken == "" || sess.OrgID == "" || sess.Role != auth.RoleOwner {
+	if sess.AccessToken == "" || sess.RefreshToken != "" || sess.OrgID == "" || sess.Role != auth.RoleOwner {
 		t.Fatalf("session = %+v", sess)
+	}
+	if c := refreshCookie(resp); c == nil || !c.HttpOnly || c.SameSite != http.SameSiteStrictMode || c.Path != "/api/v1/auth" || c.Value == "" {
+		t.Fatalf("register cookie = %+v", c)
 	}
 	resp, body = e.do("POST", "/api/v1/auth/login", "", map[string]string{"email": "x@example.com", "password": goodPW}, nil)
 	if resp.StatusCode != 200 {
@@ -353,18 +362,26 @@ func TestRegisterLoginRefreshOverHTTP(t *testing.T) {
 	if c := e.status("POST", "/api/v1/auth/login", "", map[string]string{"email": "x@example.com", "password": "wrong-Password-1"}); c != 401 {
 		t.Errorf("bad password = %d", c)
 	}
-	resp, body = e.do("POST", "/api/v1/auth/refresh", "", map[string]string{"refresh_token": login.RefreshToken}, nil)
+	loginCookie := refreshCookie(resp).Value
+	hdr := func(tok string) map[string]string {
+		return map[string]string{"Cookie": auth.DefaultCookieName + "=" + tok, auth.CSRFHeader: "1"}
+	}
+	// A refresh without the CSRF header is refused even with a valid cookie.
+	if c := e.status("POST", "/api/v1/auth/refresh", "", nil); c != 403 {
+		t.Errorf("refresh without header = %d, want 403", c)
+	}
+	resp, body = e.do("POST", "/api/v1/auth/refresh", "", nil, hdr(loginCookie))
 	if resp.StatusCode != 200 {
 		t.Fatalf("refresh = %d %s", resp.StatusCode, body)
 	}
 	var ref auth.Session
 	_ = json.Unmarshal(body, &ref)
-	if ref.RefreshToken == login.RefreshToken || ref.AccessToken == "" {
-		t.Fatal("refresh must rotate the refresh token")
+	if rc := refreshCookie(resp); rc == nil || rc.Value == loginCookie || ref.AccessToken == "" {
+		t.Fatal("refresh must rotate the refresh cookie")
 	}
 	// Reusing the rotated token is rejected.
-	if c := e.status("POST", "/api/v1/auth/refresh", "", map[string]string{"refresh_token": login.RefreshToken}); c != 401 {
-		t.Errorf("refresh token reuse = %d, want 401", c)
+	if resp, _ := e.do("POST", "/api/v1/auth/refresh", "", nil, hdr(loginCookie)); resp.StatusCode != 401 {
+		t.Errorf("refresh token reuse = %d, want 401", resp.StatusCode)
 	}
 	if c := e.status("GET", "/api/v1/agents", ref.AccessToken, nil); c != 200 {
 		t.Errorf("agents with refreshed token = %d", c)
@@ -781,5 +798,28 @@ func TestWebSocketSurvivesWriteTimeout(t *testing.T) {
 	_ = events.LocalBus{Hub: e.hub}.Publish(context.Background(), domain.Event{ID: "1", Type: "late", TS: time.Now(), OrgID: domain.DemoOrgID})
 	if ev := readFrame(t, c); ev.Type != "late" {
 		t.Fatalf("got %s", ev.Type)
+	}
+}
+
+// refreshCookie is the refresh-token cookie a response sets (nil when absent).
+func refreshCookie(resp *http.Response) *http.Cookie {
+	for _, c := range resp.Cookies() {
+		if c.Name == auth.DefaultCookieName {
+			return c
+		}
+	}
+	return nil
+}
+
+func TestAuthCORSAllowsCredentialsAndCSRFHeader(t *testing.T) {
+	e := newEnv(t, opts{auth: true, origins: []string{"http://app.test"}})
+	resp, _ := e.do("OPTIONS", "/api/v1/auth/refresh", "", nil, map[string]string{"Origin": "http://app.test"})
+	if resp.Header.Get("Access-Control-Allow-Origin") != "http://app.test" || resp.Header.Get("Access-Control-Allow-Credentials") != "true" ||
+		!strings.Contains(resp.Header.Get("Access-Control-Allow-Headers"), auth.CSRFHeader) {
+		t.Fatalf("preflight headers = %v", resp.Header)
+	}
+	resp, _ = e.do("OPTIONS", "/api/v1/auth/refresh", "", nil, map[string]string{"Origin": "http://evil.test"})
+	if resp.Header.Get("Access-Control-Allow-Origin") != "" {
+		t.Fatalf("foreign origin allowed: %v", resp.Header)
 	}
 }

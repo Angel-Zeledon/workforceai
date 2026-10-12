@@ -138,7 +138,7 @@ export function Timeline() {
                 </g>
               );
             })}
-            <line data-testid="timeline-now-line" x1={x(now)} x2={x(now)} y1={0} y2={H} stroke="#3451b2" strokeWidth={2} />
+            <line data-testid="timeline-now-line" x1={x(now)} x2={x(now)} y1={0} y2={H} stroke="#0F766E" strokeWidth={2} />
           </svg>
         </div>
       </div>
