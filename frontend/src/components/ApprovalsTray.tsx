@@ -34,7 +34,7 @@ export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approv
       </div>
       <div className="text-[13px] font-semibold text-ink">{a.title}</div>
       {a.action === "code.run" ? <CodeRunView approvalId={a.id} status={a.status} compact={compact} />
-        : !compact && a.details && <p className="mt-1 text-[12px] leading-snug text-ink2">{a.details}</p>}
+        : !compact && a.details && <p className="mt-1 line-clamp-6 break-words text-[12px] leading-snug text-ink2 [overflow-wrap:anywhere]" title={a.details}>{a.details}</p>}
       {pending && !canDecide ? (
         <div data-testid={scope === "office" ? "office-approval-no-permission" : "approval-no-permission"} className="mt-2 text-[11px] text-mute">{t("approvals.noPermission")}</div>
       ) : pending ? (

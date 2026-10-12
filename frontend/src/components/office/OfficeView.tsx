@@ -32,7 +32,8 @@ export function OfficeView() {
         </div>
         <ProjectPill />
       </div>
-      <div className="pointer-events-none absolute left-1/2 top-4 z-30 hidden w-[min(460px,34vw)] -translate-x-1/2 lg:block">
+      {/* Right above the command bar it talks about, clear of the lighting controls at the top. */}
+      <div className="pointer-events-none absolute bottom-[140px] left-1/2 z-30 hidden w-[min(460px,40vw)] -translate-x-1/2 lg:block">
         <FirstRunHint id="office" title={t("hint.office.title")} body={t("hint.office.body")} />
       </div>
       <div className="pointer-events-none absolute bottom-[96px] left-4"><ApprovalsTray /></div>
