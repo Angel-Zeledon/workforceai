@@ -790,3 +790,26 @@ Diseño y riesgos: `docs/architecture/code-sandbox.md`. Los agentes con la herra
 | `GET /code-runs/{id}` | `approvals:decide` | una ejecución (404 si es de otra organización) |
 
 `status`: `awaiting_approval | running | succeeded | failed | timeout | aborted | rejected | denied`. `file_ref` es la ruta en la unidad de archivos (`/Agents/<agente>/outputs/<run>/<archivo>`). Códigos de denegación estables: `code_execution_disabled`, `sandbox_unavailable`, `code_tool_not_granted`, `code_invalid`, `code_daily_limit`, `approval_mismatch`, `inputs_changed`, y los de los controles (`kill_switch_active`, `read_only_mode`, ...). Eventos WS: `code.run.finished` (`run_id, status, exit_code`); los archivos producidos emiten `file.activity` (solo ruta).
+## 21. Biblioteca de habilidades (skills, S1)
+
+Conocimiento reutilizable para agentes en el formato abierto Agent Skills (carpeta con `SKILL.md`, frontmatter YAML y archivos de apoyo de texto). Modelo, flujo de aprobación y modelo de amenazas: `docs/architecture/skills.md`. Permisos: `skills:read` (todos), `skills:write` (miembros: borradores, ediciones, importar), `skills:review` (admin/owner: aprobar, rechazar, desactivar, eliminar); asignar a un agente es `agents:write`. Los agentes nunca usan esta API: reciben nombre + descripción en cada tarea y piden el texto con la herramienta `skill.load` del Tool Gateway. Todo cambio queda auditado (`entity: skill`, sin contenido). El modo solo lectura bloquea los cambios (423) porque los archivos viven en el drive.
+
+| Método y ruta | Permiso | Descripción |
+|---|---|---|
+| `GET /skills` | read | lista (siembra las habilidades iniciales la primera vez): `{id, name, description, status(draft\|in_review\|active\|disabled), source(created\|imported\|from_work), builtin, current_version, active_version, agents, ...}` |
+| `POST /skills` `{name, description, instructions, allowed_tools[], license?, metadata?, files[{path, content}], changelog?, source?(from_work)}` | write | crea el borrador (versión 1); 409 `name_taken`, 400 `name_invalid\|description_required\|path_traversal\|extension_not_allowed\|...` |
+| `POST /skills/import` (multipart `file` = `.zip` o `SKILL.md`, `name?` para renombrar) | write | 201 `{...detalle, notes[]}`; **siempre queda `in_review`**; 413 `zip_bomb\|package_too_large\|too_many_files`, 400 `zip_symlink\|path_traversal\|skill_md_missing\|frontmatter_*` |
+| `GET /skills/{id}?version=n` | read | detalle con `instructions`, `skill_md`, `files[{path, content}]`, `version{files[{path,size,sha256,script}], warnings[{code: injection\|script\|allowed_tools\|import_note, path, hits}], changelog, author}` |
+| `PUT /skills/{id}` (mismo cuerpo que crear) | write | versión nueva (`changed:false` si el contenido es igual). Si la habilidad está activa, la edición de un miembro queda `in_review` y los agentes siguen con la versión aprobada; la de un admin es su propia revisión. El nombre no cambia (400 `name_immutable`) |
+| `GET /skills/{id}/versions` | read | historial (más nueva primero); las versiones son inmutables |
+| `POST /skills/{id}/versions/{n}/restore` | write | crea una versión nueva igual a `n` |
+| `POST /skills/{id}/submit` | write | `draft` -> `in_review` |
+| `POST /skills/{id}/review` `{decision: approve\|reject, version, note?}` | review | `version` debe ser la última que se leyó (409 `stale_review`); aprobar activa y verifica el hash de cada archivo |
+| `POST /skills/{id}/disable` | review | los agentes dejan de recibirla (reversible: aprobar de nuevo) |
+| `DELETE /skills/{id}` | review | borrado lógico (204); crear el mismo nombre la devuelve con una versión nueva |
+| `GET /skills/{id}/export?format=zip\|md&version=n` | read | zip en el layout estándar (`<name>/SKILL.md` + recursos) o solo `SKILL.md`; exportar e importar da el mismo contenido |
+| `GET /agents/{id}/skills` | agents:read | `[{...skill, via: agent\|role, servable}]` (asignadas y por defecto del rol) |
+| `PUT /agents/{id}/skills/{skillId}` | agents:write | asigna (idempotente); devuelve la lista del agente |
+| `DELETE /agents/{id}/skills/{skillId}` | agents:write | quita la asignación directa |
+
+Herramienta del Tool Gateway (solo lectura, ruta de lectura `WORK_READ_ROUNDS`): `skill.load {name, file?}` devuelve el texto aprobado en el canal de configuración de confianza (`loaded_skills` del runtime), nunca como contenido no confiable. Runtime (aditivo): `run-task` acepta `skills[{name, description}]` y `loaded_skills[{kind, name, version, file?, text, files[]}]`.

@@ -26,6 +26,7 @@ import (
 	"aiworkforce/backend/internal/objstore"
 	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/sandbox"
+	"aiworkforce/backend/internal/skills"
 )
 
 const goodPW = "Correct-Horse-9"
@@ -108,6 +109,7 @@ type opts struct {
 	ws             bool // mount projects and artifacts (workspaces_api_test.go)
 	code           bool // mount the code sandbox settings and runs (code_api_test.go)
 	drive          bool // mount the drive (drive_api_test.go); writeGate applies to it too
+	skills         bool // mount the skill library (skills_api_test.go); implies the drive
 	writeGate      func(ctx context.Context, org string) error
 }
 
@@ -151,13 +153,20 @@ func newEnv(t *testing.T, o opts) *env {
 	if o.ws {
 		attachWorkspaces(&d, spy, rec, appr, orch, log, ctx, o.writeGate)
 	}
-	if o.drive {
+	if o.drive || o.skills {
 		d.Drive = drive.New(drive.Config{Store: drive.NewMemStore(), Objects: objstore.NewMemory(), OrgID: cfg.OrgID, WriteGate: o.writeGate, Log: log})
 	}
 	if o.code {
 		d.Sandbox = &sandbox.Service{Store: sandbox.NewMemoryStore(), Ceiling: sandbox.DefaultLimits(), MaxRunsPerDay: 20, Audit: func(c context.Context, org, actor, action, entity, id string, det map[string]any) {
 			rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: entity, EntityID: id, Details: det})
 		}}
+	}
+	if o.skills {
+		d.Skills = skills.New(skills.Config{Store: skills.NewMemStore(), Drive: d.Drive, OrgID: cfg.OrgID, Log: log,
+			AgentRole: func(c context.Context, org, id string) (string, error) {
+				a, err := mem.GetAgent(c, org, id)
+				return a.Role, err
+			}})
 	}
 	var svc *auth.Service
 	if o.auth {

@@ -130,5 +130,6 @@
       "es": "# Cierre mensual\n\n- [ ] Conciliaciones bancarias\n- [ ] Cuentas por cobrar y por pagar\n- [ ] Provisiones y depreciación\n- [ ] Balance de comprobación\n- [ ] Estados financieros y variaciones\n",
       "en": "# Month-end close\n\n- [ ] Bank reconciliations\n- [ ] Receivables and payables\n- [ ] Accruals and depreciation\n- [ ] Trial balance\n- [ ] Financial statements and variances\n"
     }
-  ]
+  ],
+  "default_skills": ["bank-reconciliation", "month-end-close", "variance-analysis"]
 }

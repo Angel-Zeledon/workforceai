@@ -88,6 +88,10 @@ type Template struct {
 	// StarterFiles are the work kit the agent finds on its drive desk
 	// (/Agents/<id>) the first time it is used: templates of its trade.
 	StarterFiles []StarterFile `json:"starter_files,omitempty"`
+	// DefaultSkills are names of library skills (internal/skills) every agent of
+	// this role gets. Names only: the skill must exist and be active in the
+	// organization, and it never grants tools, connections or approvals.
+	DefaultSkills []string `json:"default_skills,omitempty"`
 }
 
 // StarterFile is one file of a role's work kit, in Spanish and English.
@@ -104,6 +108,8 @@ func (f StarterFile) Content(locale string) string {
 	}
 	return f.ES
 }
+
+var skillNameRe = regexp.MustCompile(`^[a-z0-9-]{1,64}$`)
 
 var starterNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,80}\.(md|csv|txt)$`)
 
@@ -177,6 +183,11 @@ func Validate(t Template) error {
 	for _, f := range t.StarterFiles {
 		if !starterNameRe.MatchString(f.Name) || f.ES == "" || f.EN == "" || len(f.ES) > maxStarterBytes || len(f.EN) > maxStarterBytes {
 			return fmt.Errorf("%s: starter file %q needs a safe .md/.csv/.txt name and short es/en content", t.ID, f.Name)
+		}
+	}
+	for _, sk := range t.DefaultSkills {
+		if !skillNameRe.MatchString(sk) {
+			return fmt.Errorf("%s: default skill %q is not a valid skill name", t.ID, sk)
 		}
 	}
 	for _, rc := range t.RecommendedConnections {

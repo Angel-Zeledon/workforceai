@@ -15,6 +15,8 @@ import { DriveView } from "./drive/DriveView";
 import { FileViewerPanel } from "./files/FileViewerPanel";
 import { useFileViewer } from "@/lib/fileView";
 import { useDriveNav } from "@/lib/drive";
+import { SkillsView } from "./skills/SkillsView";
+import { useSkillsNav } from "@/lib/skills";
 import { useProjects } from "@/lib/projects/store";
 import { fmtUsd } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
@@ -46,10 +48,12 @@ export function Shell() {
   const viewerOpen = useFileViewer((s) => !!s.ref);
   const driveOpen = useDriveNav((s) => s.open);
   const drivePath = useDriveNav((s) => s.path);
-  const projectsOpen = projectsOpenRaw && !driveOpen;
-  // Projects and Files are full screens: opening one closes the other.
-  const setProjectsOpen = (v: boolean) => { if (v) useDriveNav.getState().close(); setProjectsOpenRaw(v); };
-  const toggleDrive = () => { if (!driveOpen) setProjectsOpenRaw(false); useDriveNav.getState().toggle(); };
+  const skillsOpen = useSkillsNav((s) => s.open);
+  const projectsOpen = projectsOpenRaw && !driveOpen && !skillsOpen;
+  // Projects, Files and Skills are full screens: opening one closes the others.
+  const setProjectsOpen = (v: boolean) => { if (v) { useDriveNav.getState().close(); useSkillsNav.getState().close(); } setProjectsOpenRaw(v); };
+  const toggleDrive = () => { if (!driveOpen) { setProjectsOpenRaw(false); useSkillsNav.getState().close(); } useDriveNav.getState().toggle(); };
+  const toggleSkills = () => { if (!skillsOpen) { setProjectsOpenRaw(false); useDriveNav.getState().close(); } useSkillsNav.getState().toggle(); };
 
   useEffect(() => startRealtime(), []);
   useEffect(() => { hydratePrefs(); }, [hydratePrefs]);
@@ -81,6 +85,9 @@ export function Shell() {
             <button type="button" data-testid="nav-drive" data-active={driveOpen} onClick={toggleDrive} className={navBtn(driveOpen)}>
               <Icon name="doc" size={14} />{t("nav.drive")}
             </button>
+            <button type="button" data-testid="nav-skills" data-active={skillsOpen} onClick={toggleSkills} className={navBtn(skillsOpen)}>
+              <Icon name="layers" size={14} />{t("nav.skills")}
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-x-3 text-[11px] text-mute">
@@ -104,7 +111,7 @@ export function Shell() {
       <CostOverlays />
       <main className="relative min-h-0 flex-1">
         <ControlsOverlay />
-        {driveOpen ? <DriveView key={drivePath} initialPath={drivePath} /> : projectsOpen ? <ProjectsView /> : mode === "office" ? (
+        {skillsOpen ? <SkillsView /> : driveOpen ? <DriveView key={drivePath} initialPath={drivePath} /> : projectsOpen ? <ProjectsView /> : mode === "office" ? (
           <>
             <div className="absolute inset-0 isolate"><OfficeScene /></div>
             <div className="pointer-events-none absolute left-4 top-4 w-[330px] max-w-[calc(100vw-32px)] sm:max-w-[40vw]">

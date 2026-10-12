@@ -41,9 +41,10 @@ type Orchestrator struct {
 	chatIdem idemCache // Idempotency-Key of POST /messages (chat.go)
 	chatQ    chatQueue // per-conversation FIFO of chat turns (chat.go)
 
-	ctxSrc ContextSource   // optional: artifact text for project tasks (context_flow.go)
-	wsSrc  WorkspaceSource // optional: the agent's drive folders (workspace_flow.go)
-	files  chatFiles       // files agents wrote per task and the resolver of paths (chat_files.go)
+	ctxSrc   ContextSource   // optional: artifact text for project tasks (context_flow.go)
+	wsSrc    WorkspaceSource // optional: the agent's drive folders (workspace_flow.go)
+	files    chatFiles       // files agents wrote per task and the resolver of paths (chat_files.go)
+	skillSrc SkillSource     // optional: the agent's active skills (skills_flow.go)
 
 	v2 v2State // work profiles, thought audit and intervention (intervene.go); zero value = off
 
@@ -614,6 +615,7 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 		Locale:    rs.style.Locale,
 		Tone:      rs.style.ToneFor(t.AgentID),
 		Workspace: o.workspaceFor(ctx, rs, agent),
+		Skills:    o.skillsFor(ctx, agent.ID),
 	}
 }
 

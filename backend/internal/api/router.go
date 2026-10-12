@@ -27,6 +27,7 @@ import (
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/sandbox"
+	"aiworkforce/backend/internal/skills"
 )
 
 // Deps are the collaborators of the HTTP layer.
@@ -73,6 +74,8 @@ type Deps struct {
 	// says whether a runner is configured. Optional.
 	Sandbox          *sandbox.Service
 	SandboxAvailable bool
+	// Skills serves /skills/* and /agents/{id}/skills (skills.go). Optional.
+	Skills *skills.Service
 	// Push serves /push/* (push.go); nil disables Web Push. Rec audits
 	// subscription changes (optional).
 	Push *push.Service
@@ -158,6 +161,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountArtifacts(r)
 			s.mountDrive(r)
 			s.mountCode(r)
+			s.mountSkills(r)
 			s.mountPush(r)
 			s.mountV2(r)
 			if d.EnableDemoReset {

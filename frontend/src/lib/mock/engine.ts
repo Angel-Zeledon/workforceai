@@ -533,6 +533,10 @@ export class MockBackend {
           recent_activity: this.activity.filter((a) => a.agent_id === r1).slice(0, 20),
         };
       }
+      if (r0 === "agents" && r1 && r2 === "profile" && seg[3] === "versions") return [];
+      if (r0 === "agents" && r1 && r2 === "profile") {
+        return { agent_id: r1, instructions: "", creativity: "medium", skills: [], tone: "", version: 0, role_skills: [], limits: { instructions_max: 4000, skills_max: 20, skill_max_len: 40 } };
+      }
       if (r0 === "agents" && r1) return this.agent(r1);
       if (r0 === "tasks" && !r1) {
         const aid = q.get("agent_id"), st = q.get("status");

@@ -149,5 +149,6 @@
       "es": "riesgo,probabilidad,impacto,dueño,mitigacion,estado\n",
       "en": "risk,probability,impact,owner,mitigation,status\n"
     }
-  ]
+  ],
+  "default_skills": ["project-plan"]
 }

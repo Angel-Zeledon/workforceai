@@ -112,9 +112,13 @@ func (s *Store) AddTrace(ctx context.Context, orgID string, t application.Trace)
 }
 
 func (s *Store) AppendTraceEvent(ctx context.Context, orgID, taskID string, e application.TraceEvent) (bool, error) {
-	tag, err := s.execTag(ctx, orgID, `UPDATE agent_traces SET data = jsonb_set(data, '{events}', COALESCE(data->'events','[]'::jsonb) || $3::jsonb)
+	// A trace saved without events holds JSON null in data->'events' (not SQL NULL):
+	// COALESCE does not catch it and jsonb_array_length(null) fails with "cannot get
+	// array length of a scalar". Anything that is not an array counts as empty.
+	tag, err := s.execTag(ctx, orgID, `UPDATE agent_traces SET data = jsonb_set(data, '{events}',
+			(CASE WHEN jsonb_typeof(data->'events') = 'array' THEN data->'events' ELSE '[]'::jsonb END) || $3::jsonb)
 		WHERE org_id=$1 AND id = (SELECT id FROM agent_traces WHERE org_id=$1 AND task_id=$2 ORDER BY created_at DESC, id DESC LIMIT 1)
-		AND jsonb_array_length(COALESCE(data->'events','[]'::jsonb)) < 40`, orgID, taskID, jb(e))
+		AND jsonb_array_length(CASE WHEN jsonb_typeof(data->'events') = 'array' THEN data->'events' ELSE '[]'::jsonb END) < 40`, orgID, taskID, jb(e))
 	return tag.RowsAffected() > 0, err
 }
 

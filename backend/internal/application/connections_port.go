@@ -99,6 +99,9 @@ type GatewayOutcome struct {
 	Blocks             []string
 	Tainted            bool
 	InjectionSuspected bool
+	// Trusted are blocks of ORGANIZATION configuration (an active, human-approved
+	// skill), delivered to the runtime in their own channel, never as untrusted data.
+	Trusted []TrustedBlock
 	// ConnectionID is internal: it is never forwarded to the runtime.
 	ConnectionID string
 	Pending      *GatewayPending
@@ -151,6 +154,20 @@ type NativeResult struct {
 	Blocks             []string
 	Tainted            bool
 	InjectionSuspected bool
+	// Trusted: see GatewayOutcome.Trusted.
+	Trusted []TrustedBlock
+}
+
+// TrustedBlock is approved organization configuration returned by a native
+// read tool (skill.load). It guides HOW to work and never grants tools,
+// connections, permissions or approvals.
+type TrustedBlock struct {
+	Kind    string   `json:"kind"` // skill
+	Name    string   `json:"name"`
+	Version int      `json:"version"`
+	File    string   `json:"file,omitempty"` // set when a resource file was loaded
+	Text    string   `json:"text"`
+	Files   []string `json:"files,omitempty"`
 }
 
 // StatusAlreadyExecuted is the status of a GatewayOutcome for an approved call
