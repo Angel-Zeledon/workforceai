@@ -466,6 +466,7 @@ func ValidateTemplate(t Template, agentIDs []string, lim Limits) []Issue {
 			add("error", p.Key, IssueTooLarge)
 		}
 	}
+	issues = append(issues, validateInputSpecs(t.Inputs, t.Params)...)
 	if len(t.Objectives) == 0 {
 		add("error", "", "no_nodes")
 	}

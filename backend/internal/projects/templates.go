@@ -118,6 +118,7 @@ func builtinTemplates() []Template {
 	all = append(all, giantTemplates()...)
 	for i := range all {
 		all[i].Category = categoryOfBuiltin(all[i].Key)
+		all[i].Inputs, all[i].DemoSet = builtinInputs(all[i].Key)
 	}
 	return all
 }
@@ -224,6 +225,7 @@ func (t Template) resolved(locale string) Template {
 		}
 		out.Params[i] = p
 	}
+	out.Inputs = t.resolvedInputs(locale)
 	return out
 }
 

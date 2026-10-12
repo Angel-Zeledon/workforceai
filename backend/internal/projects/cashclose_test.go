@@ -78,7 +78,7 @@ func (e *cashEnv) runToDone(t *testing.T, params map[string]string, parallel int
 	}
 	d, _ := e.svc.Get(e.ctx, r.ID)
 	total := leafCount(d)
-	if _, err := e.svc.Launch(e.ctx, r.ID, projects.LaunchBody{ApprovedBudgetUSD: 50, AcknowledgeUnderbudget: true, MaxParallel: parallel}); err != nil {
+	if _, err := e.svc.Launch(e.ctx, r.ID, projects.LaunchBody{ApprovedBudgetUSD: 50, AcknowledgeUnderbudget: true, ProceedWithoutInputs: true, MaxParallel: parallel}); err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Now().Add(30 * time.Second)
@@ -199,7 +199,7 @@ func TestCashCloseNeedsTheTreasuryRoleHired(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = e.svc.Launch(e.ctx, r.ID, projects.LaunchBody{ApprovedBudgetUSD: 50, AcknowledgeUnderbudget: true})
+	_, err = e.svc.Launch(e.ctx, r.ID, projects.LaunchBody{ApprovedBudgetUSD: 50, AcknowledgeUnderbudget: true, ProceedWithoutInputs: true})
 	if !errors.Is(err, domain.ErrInvalid) || !strings.Contains(err.Error(), "unknown_agent") {
 		t.Fatalf("an org without the treasury role cannot launch: %v", err)
 	}

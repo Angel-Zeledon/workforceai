@@ -16,6 +16,30 @@ type RunWorkspace struct {
 	Project  string `json:"project,omitempty"`
 	Shared   string `json:"shared"`
 	CanWrite bool   `json:"can_write"`
+	// Inputs (H1, additive): the data the project needs and where it is. Descriptions
+	// are written by people (template authors): the runtime treats them as data.
+	Inputs        []WorkspaceInput `json:"inputs,omitempty"`
+	InputsFolder  string           `json:"inputs_folder,omitempty"`
+	InputsWaived  bool             `json:"inputs_waived,omitempty"`
+	InputsMissing []string         `json:"inputs_missing,omitempty"`
+}
+
+// WorkspaceInput is one input of the project as the agents see it.
+type WorkspaceInput struct {
+	Key         string               `json:"key"`
+	Label       string               `json:"label"`
+	Description string               `json:"description,omitempty"`
+	Kind        string               `json:"kind"`
+	Required    bool                 `json:"required,omitempty"`
+	Files       []WorkspaceInputFile `json:"files,omitempty"`
+	Value       string               `json:"value,omitempty"`
+	// Demo: the files are sample (fictional) data the person chose to use.
+	Demo bool `json:"demo,omitempty"`
+}
+
+type WorkspaceInputFile struct {
+	Path string `json:"path"`
+	Size int64  `json:"size,omitempty"`
 }
 
 // WorkspaceSource resolves the drive folders of an agent for a request

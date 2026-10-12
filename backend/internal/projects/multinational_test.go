@@ -24,7 +24,7 @@ func (e *cashEnv) runTemplate(t *testing.T, key string, params map[string]string
 	d, _ := e.svc.Get(e.ctx, r.ID)
 	total := leafCount(d)
 	start := time.Now()
-	if _, err := e.svc.Launch(e.ctx, r.ID, projects.LaunchBody{ApprovedBudgetUSD: 500, AcknowledgeUnderbudget: true, MaxParallel: parallel}); err != nil {
+	if _, err := e.svc.Launch(e.ctx, r.ID, projects.LaunchBody{ApprovedBudgetUSD: 500, AcknowledgeUnderbudget: true, ProceedWithoutInputs: true, MaxParallel: parallel}); err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Now().Add(90 * time.Second)

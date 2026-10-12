@@ -199,7 +199,7 @@ func (e *env) draft(templateID string, budget float64) string {
 
 func (e *env) launch(id string, budget float64) {
 	e.t.Helper()
-	if _, err := e.svc.Launch(e.ctx, id, projects.LaunchBody{ApprovedBudgetUSD: budget, AcknowledgeUnderbudget: true}); err != nil {
+	if _, err := e.svc.Launch(e.ctx, id, projects.LaunchBody{ApprovedBudgetUSD: budget, AcknowledgeUnderbudget: true, ProceedWithoutInputs: true}); err != nil {
 		e.t.Fatal(err)
 	}
 }

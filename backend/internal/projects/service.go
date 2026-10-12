@@ -16,6 +16,7 @@ import (
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/catalog"
+	"aiworkforce/backend/internal/demodata"
 	"aiworkforce/backend/internal/domain"
 )
 
@@ -248,6 +249,10 @@ func (s *Service) detailOf(ctx context.Context, rec Record) (Detail, error) {
 	}
 	d := s.build(ctx, snap)
 	d.Planner = snap.rec.Planner
+	if len(snap.rec.Inputs) > 0 {
+		v := viewOfInputs(snap.rec)
+		d.Inputs = &v
+	}
 	if p := snap.rec.Planner; p != nil && p.Status == PlannerRunning {
 		if j := s.jobOf(snap.rec.OrgID, snap.rec.ID); j != nil {
 			d.Planning = &PlanningProgress{Done: int(j.doneN.Load()), Total: int(j.tot.Load())}
@@ -371,6 +376,13 @@ func (s *Service) CreateDraft(ctx context.Context, in NewProject) (Record, error
 		Decisions: map[string]string{}, CreatedBy: application.ActorFrom(ctx, ""), CreatedAt: s.now(), Planner: info}
 	if info != nil && info.Mode == PlannerHierarchical {
 		rec.Quality = &Quality{Review: application.ReviewLowConfidence} // Q1: default of new hierarchical projects
+	}
+	rec.Inputs, rec.DemoSet = tpl.inputsFor(params, locale), tpl.DemoSet // H1: the data the project needs
+	if tpl.DemoSet != "" && demodata.Has(tpl.DemoSet) {
+		dp := tpl.DemoParams(params, locale)
+		rec.DemoParams = &dp
+	} else {
+		rec.DemoSet = ""
 	}
 	rec.Estimate = estimatePlanWith(rec.Nodes, rec.Objectives, s.estimator(ctx, rec.Planner))
 	rec.BudgetUSD = in.BudgetUSD

@@ -161,6 +161,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountConnections(r)
 			s.mountControls(r)
 			s.mountProjects(r)
+			s.mountProjectInputs(r)
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountDrive(r)

@@ -162,6 +162,9 @@ func (s *server) launchProject(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	if s.Drive != nil {
+		s.syncInputs(r, chi.URLParam(r, "id")) // a file deleted by hand no longer counts as provided
+	}
 	p, err := s.Projects.Launch(r.Context(), chi.URLParam(r, "id"), body)
 	if err != nil {
 		s.fail(w, err)

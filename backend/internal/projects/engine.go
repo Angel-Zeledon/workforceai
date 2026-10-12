@@ -22,13 +22,15 @@ func describeNode(r Record, n NodeDef) string {
 			objective = displayTitle(o.Title, o.TitleKey, o.TitleParams, r.Locale)
 		}
 	}
-	if n.Description != "" {
-		return n.Description
+	base := n.Description
+	if base == "" {
+		if r.Locale == "en" {
+			base = fmt.Sprintf("Project: %s. Objective: %s. Step: %s.", r.Name, objective, n.Title)
+		} else {
+			base = fmt.Sprintf("Proyecto: %s. Objetivo: %s. Paso: %s.", r.Name, objective, n.Title)
+		}
 	}
-	if r.Locale == "en" {
-		return fmt.Sprintf("Project: %s. Objective: %s. Step: %s.", r.Name, objective, n.Title)
-	}
-	return fmt.Sprintf("Proyecto: %s. Objetivo: %s. Paso: %s.", r.Name, objective, n.Title)
+	return base + inputsHint(r)
 }
 
 // planOf turns the leaf nodes into the plan the orchestrator executes. Humans'
@@ -104,6 +106,13 @@ func (s *Service) Launch(ctx context.Context, id string, b LaunchBody) (Summary,
 	if err := s.cfg.Limits.checkSize(rec.Nodes); err != nil {
 		return Summary{}, err
 	}
+	// H1: the data the project needs. Launch waits for the required inputs unless a person chose to go without them.
+	if missing := missingRequired(rec); len(missing) > 0 {
+		if !b.ProceedWithoutInputs {
+			return Summary{}, fmt.Errorf("%w: inputs_required: missing required inputs (%s)", domain.ErrConflict, strings.Join(missing, ", "))
+		}
+		rec.InputsWaived = &InputsWaiver{By: application.ActorFrom(ctx, ""), At: s.now(), Missing: missing}
+	}
 	// MaxActiveProjects: the check and the launch are one step (launchMu), or two launches could both pass.
 	s.launchMu.Lock()
 	defer s.launchMu.Unlock()
@@ -164,6 +173,9 @@ func (s *Service) Launch(ctx context.Context, id string, b LaunchBody) (Summary,
 	}
 	s.audit(ctx, "project.launched", id, map[string]any{"request_id": reqID, "budget_usd": rec.BudgetUSD, "tasks": len(leaves(rec.Nodes)),
 		"p50_usd": est.Total.P50USD, "underbudget_acknowledged": b.AcknowledgeUnderbudget})
+	if rec.InputsWaived != nil {
+		s.audit(ctx, "project.inputs_waived", id, map[string]any{"missing": rec.InputsWaived.Missing})
+	}
 	d, _ := s.detailOf(ctx, rec)
 	d.Project.Status = StatusRunning
 	s.emit(ctx, "project.status_changed", id, map[string]any{"project": d.Project, "nodes": d.Nodes, "structure_version": rec.StructureVersion})

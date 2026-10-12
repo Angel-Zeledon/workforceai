@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"aiworkforce/backend/internal/application"
+	"aiworkforce/backend/internal/demodata"
 	"aiworkforce/backend/internal/domain"
 )
 
@@ -44,6 +45,10 @@ type TemplateInput struct {
 	// BaseVersion, when set, must match the stored version (409 otherwise): two editors never overwrite each other.
 	BaseVersion int    `json:"base_version,omitempty"`
 	Note        string `json:"note,omitempty"`
+	// Inputs (H1) are the data the template needs; absent keeps the ones the template has, [] clears them.
+	// DemoSet names a sample dataset (only the ones the server knows).
+	Inputs  *[]InputSpec `json:"inputs,omitempty"`
+	DemoSet string       `json:"demo_set,omitempty"`
 }
 
 // SaveOpts customize "save a project as a template".
@@ -184,6 +189,14 @@ func (s *Service) templateFromInput(ctx context.Context, in TemplateInput, base 
 		if t.Params[i].Label == "" {
 			t.Params[i].Label = t.Params[i].Key
 		}
+	}
+	if in.Inputs != nil {
+		t.Inputs = cleanInputSpecs(*in.Inputs)
+	} else if len(t.Inputs) > 0 {
+		t.Inputs = cleanInputSpecs(t.resolvedInputs(s.locale(ctx, "")))
+	}
+	if in.DemoSet != "" && demodata.Has(in.DemoSet) {
+		t.DemoSet = in.DemoSet
 	}
 	t.Objectives = in.Objectives
 	for oi := range t.Objectives {
@@ -342,7 +355,12 @@ func (s *Service) replaceTemplate(ctx context.Context, cur Template, in Template
 
 func inputOf(t Template) TemplateInput {
 	sh := t.Shared
-	return TemplateInput{Name: t.Name, Description: t.Description, Category: t.Category, Shared: &sh, Params: t.Params, Objectives: t.Objectives}
+	in := TemplateInput{Name: t.Name, Description: t.Description, Category: t.Category, Shared: &sh, Params: t.Params, Objectives: t.Objectives, DemoSet: t.DemoSet}
+	if len(t.Inputs) > 0 {
+		inputs := t.Inputs
+		in.Inputs = &inputs
+	}
+	return in
 }
 
 // DeleteTemplate removes an organization template (admins and owners).
@@ -378,9 +396,19 @@ func (s *Service) DuplicateTemplate(ctx context.Context, id, name string) (Templ
 		if b.hasRepeat() {
 			x = b // data templates keep their repeat blocks: the copy stays parametric
 		}
+		x.Inputs, x.DemoSet = b.Inputs, b.DemoSet // generated templates are rebuilt without them
 		src = literalize(x, locale)
 		if !b.hasRepeat() {
 			src = dropUnusedParams(src) // the size parameters of generated templates no longer apply to the copy
+			keep := map[string]bool{}
+			for _, p := range src.Params {
+				keep[p.Key] = true
+			}
+			for i, sp := range src.Inputs { // "one file per subsidiary" becomes the number at the defaults
+				if sp.PerParam != "" && !keep[sp.PerParam] {
+					src.Inputs[i].MinFiles, src.Inputs[i].PerParam = b.paramCount(sp.PerParam, nil, locale), ""
+				}
+			}
 		}
 	} else if strings.HasPrefix(id, catalogPrefix) {
 		key := strings.TrimPrefix(id, catalogPrefix)
@@ -449,6 +477,10 @@ func literalize(t Template, locale string) Template {
 			return lit
 		}
 		return key
+	}
+	out.Inputs = t.resolvedInputs(locale)
+	for i := range out.Inputs {
+		out.Inputs[i].LabelKey, out.Inputs[i].DescriptionKey = "", ""
 	}
 	out.Objectives = make([]TemplateObjective, len(t.Objectives))
 	for oi, o := range t.Objectives {

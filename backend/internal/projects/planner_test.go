@@ -313,10 +313,10 @@ func TestLimitMaxActiveProjects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Launch(ctx, a.ID, projects.LaunchBody{ApprovedBudgetUSD: 10, AcknowledgeUnderbudget: true}); err != nil {
+	if _, err := svc.Launch(ctx, a.ID, projects.LaunchBody{ApprovedBudgetUSD: 10, AcknowledgeUnderbudget: true, ProceedWithoutInputs: true}); err != nil {
 		t.Fatal(err)
 	}
-	_, err = svc.Launch(ctx, b.ID, projects.LaunchBody{ApprovedBudgetUSD: 10, AcknowledgeUnderbudget: true})
+	_, err = svc.Launch(ctx, b.ID, projects.LaunchBody{ApprovedBudgetUSD: 10, AcknowledgeUnderbudget: true, ProceedWithoutInputs: true})
 	if err == nil || !strings.Contains(err.Error(), "limit_exceeded: max_active_projects") {
 		t.Fatalf("the second launch must hit the active-projects limit, got %v", err)
 	}
@@ -335,7 +335,7 @@ func TestSlowPlannerFinishesInTheBackground(t *testing.T) {
 	if d.Planner == nil || d.Planner.Status != projects.PlannerRunning || d.Planning == nil {
 		t.Fatalf("a slow planner leaves a draft in planning state: %+v %+v", d.Planner, d.Planning)
 	}
-	if _, err := svc.Launch(ctx, rec.ID, projects.LaunchBody{ApprovedBudgetUSD: 10, AcknowledgeUnderbudget: true}); err == nil || !strings.Contains(err.Error(), "planning_in_progress") {
+	if _, err := svc.Launch(ctx, rec.ID, projects.LaunchBody{ApprovedBudgetUSD: 10, AcknowledgeUnderbudget: true, ProceedWithoutInputs: true}); err == nil || !strings.Contains(err.Error(), "planning_in_progress") {
 		t.Fatalf("a draft that is still being planned cannot launch: %v", err)
 	}
 	close(gate)
