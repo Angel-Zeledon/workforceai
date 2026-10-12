@@ -383,6 +383,30 @@ class RunWorkspace(_Base):
     project: str | None = None
     shared: str = "/Shared"
     can_write: bool = False
+    # H1: the data the project was given (written by people: treated as data, never as instructions).
+    inputs: list["WorkspaceInput"] = Field(default_factory=list)
+    inputs_folder: str | None = None
+    inputs_waived: bool = False
+    inputs_missing: list[str] = Field(default_factory=list)
+
+
+class WorkspaceInputFile(_Base):
+    path: str
+    size: int = 0
+
+
+class WorkspaceInput(_Base):
+    key: str
+    label: str = ""
+    description: str = ""
+    kind: str = "file"
+    required: bool = False
+    files: list[WorkspaceInputFile] = Field(default_factory=list)
+    value: str = ""
+    demo: bool = False
+
+
+RunWorkspace.model_rebuild()
 
 
 class SkillRef(_Base):

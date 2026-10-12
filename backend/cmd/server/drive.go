@@ -150,8 +150,32 @@ func (d driveWorkspace) Workspace(ctx context.Context, org, agentID, requestID s
 		if f, err := d.drive.EnsureOwnedFolder(ctx, drive.RootProjects, rec.ID, rec.Name); err == nil {
 			ws.Project = f.Path
 		}
+		addProjectInputs(ws, rec)
 	}
 	return ws
+}
+
+// addProjectInputs tells the agents which data the project was given (H1).
+func addProjectInputs(ws *application.RunWorkspace, rec projects.Record) {
+	if len(rec.Inputs) == 0 {
+		return
+	}
+	v := projects.InputsOf(rec)
+	ws.InputsFolder = v.Folder
+	if v.Waived != nil {
+		ws.InputsWaived, ws.InputsMissing = true, v.Waived.Missing
+	}
+	for _, it := range v.Items {
+		wi := application.WorkspaceInput{Key: it.Key, Label: it.Label, Description: it.Description, Kind: it.Kind, Required: it.Required, Value: it.Value}
+		for _, f := range it.Files {
+			wi.Files = append(wi.Files, application.WorkspaceInputFile{Path: f.Path, Size: f.Size})
+			wi.Demo = wi.Demo || f.Source == projects.InputSourceDemo
+		}
+		if len(wi.Files) == 0 && wi.Value == "" {
+			continue // nothing was provided for it: the waiver lists what is missing
+		}
+		ws.Inputs = append(ws.Inputs, wi)
+	}
 }
 
 // seedDesk puts the role's work kit on an EMPTY desk: a "how I work" note from

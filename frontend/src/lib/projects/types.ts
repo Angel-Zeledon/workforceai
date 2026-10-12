@@ -124,6 +124,20 @@ export interface ProjectDetail {
   planner?: PlannerInfo | null;
   /** Q1: quality-review setting; absent = off */
   quality?: { review: ReviewMode } | null;
+  /** H1: the data the project needs and what was provided; absent when the template needs none */
+  inputs?: ProjectInputs | null;
+}
+
+// ---- H1: project inputs ("Antes de empezar") ----
+export type InputKind = "file" | "folder" | "text" | "number" | "select";
+export interface InputFileRef { path: string; name: string; size: number; source: "upload" | "drive" | "demo"; added_by?: string; added_at: string }
+export interface ProjectInputItem {
+  key: string; label: string; description: string; kind: InputKind; accept?: string[]; required: boolean; example?: string;
+  options?: string[]; min_files?: number; files: InputFileRef[]; value?: string; satisfied: boolean;
+}
+export interface ProjectInputs {
+  folder?: string; items: ProjectInputItem[]; missing: string[]; ready: boolean;
+  waived?: { by?: string; at: string; missing: string[] } | null; demo_set?: string; demo_used?: boolean;
 }
 
 export interface PlannerInfo {
@@ -164,6 +178,9 @@ export interface ProjectTemplate {
   // organization templates (all additive)
   category?: TemplateCategory | string; shared?: boolean; forked_from?: string; created_by?: string; updated_by?: string;
   created_at?: string; updated_at?: string; stats?: TemplateStat;
+  /** H1: the data the template needs (labels already in the user's language) */
+  inputs?: { key: string; label: string; description: string; kind: InputKind; accept?: string[]; required: boolean; example?: string }[];
+  demo_set?: string;
 }
 
 // ---- customizable templates: what the builder sends and the API answers ----
@@ -226,7 +243,7 @@ export type PlanOp =
   | { op: "set_quality"; id?: string; fields: { review: ReviewMode } };
 
 export interface NewProjectBody { goal: string; template_id?: string; params?: Record<string, string>; budget_usd?: number }
-export interface LaunchBody { approved_budget_usd: number; acknowledge_underbudget?: boolean; max_parallel?: number }
+export interface LaunchBody { approved_budget_usd: number; acknowledge_underbudget?: boolean; max_parallel?: number; proceed_without_inputs?: boolean }
 export type ControlAction = "pause" | "resume" | "cancel";
 
 // ---- Q2: plan changes (mid-flight replanning) ----

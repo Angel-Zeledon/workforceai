@@ -12,6 +12,7 @@ package projects
 import (
 	"time"
 
+	"aiworkforce/backend/internal/demodata"
 	"aiworkforce/backend/internal/domain"
 )
 
@@ -236,6 +237,8 @@ type Detail struct {
 	Planner *PlannerInfo `json:"planner,omitempty"`
 	// Quality is the quality-review setting of the project (additive, Q1).
 	Quality *Quality `json:"quality,omitempty"`
+	// Inputs are the data the project needs and what was provided (additive, H1).
+	Inputs *InputsView `json:"inputs,omitempty"`
 }
 
 // PlanningProgress is the progress of a draft whose planner is still running.
@@ -413,6 +416,10 @@ type Template struct {
 	Objectives     []TemplateObjective `json:"objectives"`
 	Builtin        bool                `json:"builtin"`
 	BudgetHint     *BudgetHint         `json:"budget_hint,omitempty"`
+	// Inputs are the data the project needs before it starts (H1); DemoSet names
+	// the sample dataset that can stand in for them ("" when there is none).
+	Inputs  []InputSpec `json:"inputs,omitempty"`
+	DemoSet string      `json:"demo_set,omitempty"`
 
 	// Organization templates (customizable, versioned). All additive.
 	Category   string        `json:"category,omitempty"`
@@ -451,7 +458,10 @@ type NewProject struct {
 type LaunchBody struct {
 	ApprovedBudgetUSD      float64 `json:"approved_budget_usd"`
 	AcknowledgeUnderbudget bool    `json:"acknowledge_underbudget,omitempty"`
-	MaxParallel            int     `json:"max_parallel,omitempty"`
+	// ProceedWithoutInputs launches although required inputs are missing; the
+	// decision is recorded and the agents are told (H1).
+	ProceedWithoutInputs bool `json:"proceed_without_inputs,omitempty"`
+	MaxParallel          int  `json:"max_parallel,omitempty"`
 }
 
 type PlanOp struct {
@@ -556,4 +566,14 @@ type Record struct {
 	BudgetWarned []float64 `json:"budget_warned,omitempty"`
 	// Quality is the quality-review setting (Q1); nil means review off.
 	Quality *Quality `json:"quality,omitempty"`
+	// Inputs (H1): the data the project needs, what was provided, the drive folder
+	// they live in, the sample dataset of the template and the waiver of a launch
+	// without the required ones.
+	Inputs       []ProjectInput `json:"inputs,omitempty"`
+	InputsFolder string         `json:"inputs_folder,omitempty"`
+	InputsWaived *InputsWaiver  `json:"inputs_waived,omitempty"`
+	DemoSet      string         `json:"demo_set,omitempty"`
+	DemoData     bool           `json:"demo_data,omitempty"`
+	// DemoParams are the sizes and lists the sample dataset is generated with.
+	DemoParams *demodata.Params `json:"demo_params,omitempty"`
 }

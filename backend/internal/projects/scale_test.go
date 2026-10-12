@@ -171,7 +171,7 @@ func TestScaleHierarchicalProjectEndToEnd(t *testing.T) {
 	}
 	rt.mu.Unlock()
 
-	if _, err := svc.Launch(ctx, r.ID, projects.LaunchBody{ApprovedBudgetUSD: budget, AcknowledgeUnderbudget: true, MaxParallel: 16}); err != nil {
+	if _, err := svc.Launch(ctx, r.ID, projects.LaunchBody{ApprovedBudgetUSD: budget, AcknowledgeUnderbudget: true, ProceedWithoutInputs: true, MaxParallel: 16}); err != nil {
 		t.Fatal(err)
 	}
 	waitUntil := func(what string, cond func() bool) {

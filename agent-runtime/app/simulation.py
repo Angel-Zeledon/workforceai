@@ -157,6 +157,30 @@ def sim_draft_request(req: RunTaskRequest, kind: str) -> ToolRequest:
                        args={"to": "destinatario@example.com", "subject": topic[:80], "body": body})
 
 
+_WORDS = re.compile(r"[\W_]+", re.UNICODE)
+
+
+def sim_input_files(req: RunTaskRequest) -> list[str]:
+    """H1: paths of the project inputs, the ones that match the task title first (e.g. the trial
+    balance of the subsidiary the task is about)."""
+    ws = req.workspace
+    if ws is None or not getattr(ws, "inputs", None):
+        return []
+    paths = [f.path for it in ws.inputs for f in it.files]
+    words = {w for w in _WORDS.split((req.task.title or "").lower()) if len(w) >= 2}
+    toks = lambda p: {w for w in _WORDS.split(p.rsplit("/", 1)[-1].lower()) if len(w) >= 2}
+    return sorted(paths, key=lambda p: -len(words & toks(p)))
+
+
+def sim_input_read(req: RunTaskRequest) -> ToolRequest | None:
+    """Like a real employee: read the input file before computing. Only on the first pass (a
+    follow-up pass already carries the file as external content), so the work loop ends."""
+    paths = sim_input_files(req)
+    if not paths or req.external_content:
+        return None
+    return ToolRequest(tool="fs", action="read", risk="low", args={"path": paths[0]})
+
+
 SIM_CODE_MARKER = "[sim:code]"
 
 _SIM_CODE = """import pandas as pd
@@ -357,6 +381,16 @@ class SimulationEngine(AgentEngine):
         if office is not None:  # the request named Excel / Word / PDF: deliver that file, not a .md
             tool_requests.append(office)
             out.evidence.append(c.TEXTS.get("evidence_file", "Draft saved at {path}").format(path=office.args["path"]))
+        in_paths = sim_input_files(req)
+        if in_paths:  # H1: the work cites the input files it computed from
+            fmt = ("Computed from {path} (rows 2-{n}); {total} input files" if req.locale == "en"
+                   else "Calculado a partir de {path} (filas 2-{n}); {total} archivos de entrada")
+            out.evidence.append(fmt.format(path=in_paths[0], n=24, total=len(in_paths)))
+            if (rd := sim_input_read(req)) is not None:
+                tool_requests.append(rd)
+        elif req.workspace is not None and getattr(req.workspace, "inputs_waived", False):
+            out.evidence.append("ASSUMPTION: the project was launched without input data" if req.locale == "en"
+                                else "SUPUESTO: el proyecto se lanzó sin datos de entrada")
         draft = sim_desk_draft(req, out) if office is None else None
         if draft is not None:  # F1: like a real employee, keep the work as a file on the desk
             tool_requests.append(draft)

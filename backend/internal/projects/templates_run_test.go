@@ -192,7 +192,7 @@ func (e *bigEnv) draftAndLaunch(t *testing.T, tplID string, params map[string]st
 	if err != nil {
 		t.Fatalf("%s: %v", tplID, err)
 	}
-	if _, err := e.svc.Launch(e.ctx, r.ID, projects.LaunchBody{ApprovedBudgetUSD: 2000, AcknowledgeUnderbudget: true, MaxParallel: parallel}); err != nil {
+	if _, err := e.svc.Launch(e.ctx, r.ID, projects.LaunchBody{ApprovedBudgetUSD: 2000, AcknowledgeUnderbudget: true, ProceedWithoutInputs: true, MaxParallel: parallel}); err != nil {
 		t.Fatalf("%s: %v", tplID, err)
 	}
 	return r.ID
@@ -335,7 +335,7 @@ func TestLargeProjectsRunConcurrentlyInOneOrganization(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := e.svc.Launch(e.ctx, id, projects.LaunchBody{ApprovedBudgetUSD: 2000, AcknowledgeUnderbudget: true, MaxParallel: 16}); err != nil {
+			if _, err := e.svc.Launch(e.ctx, id, projects.LaunchBody{ApprovedBudgetUSD: 2000, AcknowledgeUnderbudget: true, ProceedWithoutInputs: true, MaxParallel: 16}); err != nil {
 				t.Error(err)
 			}
 		}()
