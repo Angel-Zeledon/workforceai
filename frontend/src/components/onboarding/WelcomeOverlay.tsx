@@ -12,6 +12,7 @@ import { useTour } from "../tour/store";
 /** One welcome per account (per browser when auth is off): what this office is, the starter coins, and where to begin. */
 const seenKey = (uid: string) => `wf.welcome.v1.${uid}`;
 const COINS = 14; // falling coins in the animation
+export const welcomeSeen = (uid: string) => { try { return localStorage.getItem(seenKey(uid)) === "1"; } catch { return false; } };
 const read = (k: string) => { try { return localStorage.getItem(k) === "1"; } catch { return false; } };
 const write = (k: string) => { try { localStorage.setItem(k, "1"); } catch { /* storage unavailable: it will show again */ } };
 

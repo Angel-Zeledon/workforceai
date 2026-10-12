@@ -27,6 +27,8 @@
   "welcome.step3.d": "Lo sensible se detiene y espera tu decisión: nada sale sin ti.",
   "welcome.start": "Empezar",
   "welcome.tour": "Hacer el tour guiado",
+  "splash.loading": "Preparando tu oficina…",
+  "splash.hello": "Hola de nuevo, {name}",
   "common.breadcrumb": "Ruta de navegación",
   "common.back": "Volver",
   "common.hide": "Ocultar",

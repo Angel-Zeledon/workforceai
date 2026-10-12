@@ -27,6 +27,8 @@
   "welcome.step3.d": "Anything sensitive stops and waits for your decision: nothing leaves without you.",
   "welcome.start": "Get started",
   "welcome.tour": "Take the guided tour",
+  "splash.loading": "Getting your office ready…",
+  "splash.hello": "Welcome back, {name}",
   "common.breadcrumb": "Breadcrumb",
   "common.back": "Back",
   "common.hide": "Hide",

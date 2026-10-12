@@ -27,6 +27,7 @@ import { Toaster } from "./Toaster";
 import { TourLauncher } from "../tour/TourLauncher";
 import { TourOverlay } from "../tour/TourOverlay";
 import { WelcomeOverlay } from "../onboarding/WelcomeOverlay";
+import { RouteCurtain } from "./RouteCurtain";
 
 const COLLAPSE_KEY = "wf.sidebar.collapsed";
 
@@ -162,6 +163,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <ProviderAlert />
         <CostOverlays />
         <main className="relative min-h-0 flex-1">
+          <RouteCurtain section={section} />
           <div key={section === "dashboard" ? "office" : section} className="ac-page absolute inset-0">{children}</div>
           {/* Files in the conversation: viewer next to the chat (left of the agent panel when it is open) */}
           {section !== "drive" && viewerOpen && (

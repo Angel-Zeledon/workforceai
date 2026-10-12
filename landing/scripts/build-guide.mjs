@@ -70,7 +70,7 @@ function head({ lang, title, description, path: pth, altPath, type = "article", 
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f3f5f8">
+  <meta name="theme-color" content="#f7f9fb">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="canonical" href="${url(pth)}">
@@ -89,10 +89,10 @@ function head({ lang, title, description, path: pth, altPath, type = "article", 
   <meta name="twitter:title" content="${esc(title)}">
   <meta name="twitter:description" content="${esc(description)}">
   <meta name="twitter:image" content="${SITE}${image || "/img/og.png"}">
-  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/guide.css">
+  <link rel="stylesheet" href="/theme.css">
   <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>
 </head>`;
 }
