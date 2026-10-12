@@ -11,10 +11,14 @@ import (
 )
 
 type fakeGuard struct {
-	kill, readOnly, toolOff atomic.Bool
+	kill, readOnly, toolOff, down atomic.Bool
+	blips                         atomic.Int32 // the next N Admit calls cannot read the controls
 }
 
 func (g *fakeGuard) Admit(context.Context, string, string) application.GuardVerdict {
+	if g.down.Load() || g.blips.Add(-1) >= 0 {
+		return application.GuardVerdict{} // not allowed, no code: the controls are unreadable
+	}
 	if g.kill.Load() {
 		return application.GuardVerdict{Code: "kill_switch_active"}
 	}
@@ -330,5 +334,38 @@ func TestAbandonRejected(t *testing.T) {
 	}
 	if o := e.exec("ap1", r.Hash); o.Status != "denied" {
 		t.Fatalf("a rejected run must not run: %+v", o)
+	}
+}
+
+// A blip of the controls must not kill a run that is half done; unreadable
+// controls for good (fail closed) must.
+func TestRunSurvivesABlipOfTheControlsButNotAnOutage(t *testing.T) {
+	for name, tc := range map[string]struct {
+		blips int32
+		down  bool
+		want  string
+	}{"blip": {blips: 2, want: StatusSucceeded}, "outage": {down: true, want: StatusAborted}} {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t, true)
+			p := e.prepare(t, "ap1", "x")
+			started := make(chan struct{})
+			e.runner.Fn = func(ctx context.Context, req RunRequest) (RunResponse, error) {
+				close(started)
+				select {
+				case <-time.After(300 * time.Millisecond): // ~60 polls at 5 ms
+					return RunResponse{Status: RunOK, Stdout: "ok"}, nil
+				case <-ctx.Done():
+					return RunResponse{}, ctx.Err()
+				}
+			}
+			done := make(chan application.CodeOutcome, 1)
+			go func() { done <- e.exec("ap1", p.ArgsHash) }()
+			<-started
+			e.guard.blips.Store(tc.blips)
+			e.guard.down.Store(tc.down)
+			if o := <-done; o.Status != tc.want {
+				t.Fatalf("want %s, got %+v", tc.want, o)
+			}
+		})
 	}
 }

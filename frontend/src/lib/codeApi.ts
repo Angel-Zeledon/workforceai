@@ -20,16 +20,19 @@ export interface CodeSettings {
 const TERMINAL: CodeRunStatus[] = ["succeeded", "failed", "timeout", "aborted", "rejected", "denied"];
 export const isFinished = (s: CodeRunStatus) => TERMINAL.includes(s);
 
+/** Lists can arrive as null from older backends: iterate safely. */
+const norm = (r: CodeRun): CodeRun => ({ ...r, inputs: r.inputs ?? [], outputs: r.outputs ?? [], expected_outputs: r.expected_outputs ?? [], stdout: r.stdout ?? "", stderr: r.stderr ?? "" });
+
 export const codeApi = {
   settings: () => call<CodeSettings>("GET", "/settings/code-execution"),
   putSettings: (s: Pick<CodeSettings, "enabled" | "max_runs_per_day" | "max_runtime_seconds">) => call<CodeSettings>("PUT", "/settings/code-execution", s),
   runs: async (limit = 20) => {
     const x = await call<CodeRun[]>("GET", `/code-runs?limit=${limit}`);
-    return Array.isArray(x) ? x : [];
+    return Array.isArray(x) ? x.map(norm) : [];
   },
   byApproval: async (approvalId: string): Promise<CodeRun | null> => {
     const x = await call<CodeRun[]>("GET", `/code-runs?approval_id=${encodeURIComponent(approvalId)}`);
-    return Array.isArray(x) && x.length ? x[0] : null;
+    return Array.isArray(x) && x.length ? norm(x[0]) : null;
   },
 };
 

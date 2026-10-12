@@ -80,7 +80,7 @@ func (s *server) listCodeRuns(w http.ResponseWriter, r *http.Request) {
 			s.fail(w, err)
 			return
 		}
-		writeJSON(w, http.StatusOK, []sandbox.Run{run})
+		writeJSON(w, http.StatusOK, []sandbox.Run{normalizeRun(run)})
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
@@ -89,9 +89,11 @@ func (s *server) listCodeRuns(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	if runs == nil {
-		runs = []sandbox.Run{}
+	out := make([]sandbox.Run, 0, len(runs))
+	for _, run := range runs {
+		out = append(out, normalizeRun(run))
 	}
+	runs = out
 	writeJSON(w, http.StatusOK, runs)
 }
 
@@ -101,5 +103,22 @@ func (s *server) getCodeRun(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, run)
+	writeJSON(w, http.StatusOK, normalizeRun(run))
+}
+
+// normalizeRun makes the lists JSON arrays (never null) so clients can iterate them.
+func normalizeRun(r sandbox.Run) sandbox.Run {
+	if r.Inputs == nil {
+		r.Inputs = []sandbox.InputInfo{}
+	}
+	if r.Outputs == nil {
+		r.Outputs = []sandbox.OutputInfo{}
+	}
+	if r.ExpectedOutputs == nil {
+		r.ExpectedOutputs = []string{}
+	}
+	if r.Approvers == nil {
+		r.Approvers = []string{}
+	}
+	return r
 }

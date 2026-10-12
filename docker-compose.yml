@@ -102,6 +102,8 @@ services:
       # approval. Leave them empty to keep code execution unavailable.
       SANDBOX_URL: ${SANDBOX_URL:-}
       SANDBOX_TOKEN: ${SANDBOX_TOKEN:-}
+      SANDBOX_MAX_RUNTIME_SECONDS: ${SANDBOX_MAX_RUNTIME_SECONDS:-60}
+      SANDBOX_MAX_RUNS_PER_DAY: ${SANDBOX_MAX_RUNS_PER_DAY:-20}
     depends_on:
       postgres:
         condition: service_healthy

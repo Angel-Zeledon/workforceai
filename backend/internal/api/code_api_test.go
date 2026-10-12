@@ -46,6 +46,9 @@ func TestCodeExecutionSettingsAndRuns(t *testing.T) {
 	if l := e.list(api1+"/code-runs?approval_id=ap1", owner.AccessToken); len(l) != 1 || l[0]["code"] != "print(1)" {
 		t.Fatalf("by approval: %v", l)
 	}
+	if _, ok := l0(e, owner.AccessToken)["outputs"].([]any); !ok {
+		t.Fatal("outputs must be a JSON array, never null")
+	}
 	e.json("GET", api1+"/code-runs/run_x", owner.AccessToken, nil, 200)
 	e.json("GET", api1+"/code-runs/run_x", member, nil, 403)
 	e.json("GET", api1+"/code-runs/run_x", rival.AccessToken, nil, 404)
@@ -61,3 +64,5 @@ func TestCodeExecutionSettingsAndRuns(t *testing.T) {
 		t.Fatal("code.settings.updated audit missing")
 	}
 }
+
+func l0(e *env, token string) map[string]any { return e.list(api1+"/code-runs", token)[0] }

@@ -53,6 +53,10 @@ type Service struct {
 
 var _ application.CodeRunner = (*Service)(nil)
 
+// MaxUnavailablePolls is how many consecutive polls with unreadable controls
+// abort a running run (fail closed, with a little tolerance for a blip).
+const MaxUnavailablePolls = 5
+
 // DefaultMaxRunsPerDay is the platform ceiling when none is configured.
 const DefaultMaxRunsPerDay = 20
 
@@ -405,6 +409,7 @@ func (s *Service) Execute(ctx context.Context, org string, ex application.CodeEx
 		}
 		t := time.NewTicker(poll)
 		defer t.Stop()
+		unavailable := 0 // consecutive polls where the controls could not be read
 		for {
 			select {
 			case <-rctx.Done():
@@ -414,7 +419,19 @@ func (s *Service) Execute(ctx context.Context, org string, ex application.CodeEx
 				cancel()
 				return
 			case <-t.C:
-				if c := s.blocked(rctx, org, run.AgentID); c != "" {
+				c := s.blocked(rctx, org, run.AgentID)
+				if c == "controls_unavailable" {
+					// Fail closed, but a single slow or failed read of the controls must not kill a
+					// run that is half done: abort only when they stay unreadable. A real block
+					// (kill switch, pause, read-only mode, tool off) aborts at once.
+					if unavailable++; unavailable < MaxUnavailablePolls {
+						continue
+					}
+				} else {
+					unavailable = 0
+				}
+				if c != "" {
+					s.log().Warn("sandbox: run aborted by the controls", "run", run.ID, "code", c)
 					abortReason <- c
 					cancel()
 					actx, ac := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
