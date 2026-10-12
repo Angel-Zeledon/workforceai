@@ -4,6 +4,7 @@
  * review them here; agents only receive name + description and ask for the text with skill.load.
  * In mock mode (NEXT_PUBLIC_MOCK=true) an in-memory library with the starter skills is used.
  */
+import { go } from "@/lib/navBridge";
 import { create } from "zustand";
 import { API_URL, MOCK } from "./config";
 import { authFetch } from "./session";
@@ -92,11 +93,11 @@ export const useSkillsNav = create<{
   openNew: (prefill: SkillDraft | null) => void; close: () => void; toggle: () => void;
 }>((set) => ({
   open: false, selected: null, prefill: null, tab: "content",
-  show: (id = null, tab = "content") => set({ open: true, selected: id, tab }),
+  show: (id = null, tab = "content") => { set({ open: true, selected: id, tab }); go("/skills"); },
   select: (id, tab = "content") => set({ selected: id, tab, prefill: null }),
-  openNew: (prefill) => set({ open: true, selected: "new", prefill, tab: "content" }),
+  openNew: (prefill) => { set({ open: true, selected: "new", prefill, tab: "content" }); go("/skills"); },
   close: () => set({ open: false }),
-  toggle: () => set((s) => ({ open: !s.open })),
+  toggle: () => go(useSkillsNav.getState().open ? "/" : "/skills"),
 }));
 
 // ------------------------------------------------------------------------------------------
