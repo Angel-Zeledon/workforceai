@@ -64,7 +64,7 @@ Earning rules (`rewards.Rules`, defaults in `DefaultRules`):
 | Review verdict `fail` | 0 |
 
 Complexity comes from the project node (`projects.Service.RewardInfo`).
-Tasks of the review are unreviewed unless the project turned the quality review on, so no bonus is
+Tasks are unreviewed unless the project turned the quality review on, so no bonus is
 invented for work nobody judged.
 
 Configuration (environment): `REWARDS_ENABLED=false` switches earning off;
