@@ -9,6 +9,7 @@ import { ApprovalsTray } from "../ApprovalsTray";
 import { CommandBar } from "../CommandBar";
 import { ProjectPill } from "../projects/ProjectPill";
 import { LightingToggle } from "../OfficeSettings";
+import { FirstRunHint } from "../nav/ui2";
 
 const OfficeScene = dynamic(() => import("./OfficeScene"), {
   ssr: false,
@@ -30,6 +31,9 @@ export function OfficeView() {
           <ActivityFeed limit={7} compact />
         </div>
         <ProjectPill />
+      </div>
+      <div className="pointer-events-none absolute left-1/2 top-4 z-30 hidden w-[min(460px,34vw)] -translate-x-1/2 lg:block">
+        <FirstRunHint id="office" title={t("hint.office.title")} body={t("hint.office.body")} />
       </div>
       <div className="pointer-events-none absolute bottom-[96px] left-4"><ApprovalsTray /></div>
       <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-4" style={{ paddingRight: `calc(${selected ? "var(--panel-w, 420px)" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})`, paddingLeft: pendingApprovals ? 352 : 16 }}>

@@ -3,7 +3,8 @@ import { useEffect } from "react";
 import { useT, fmtNumber } from "@/lib/i18n";
 import { startProjectsRealtime, useProjects } from "@/lib/projects/store";
 import type { ProjectSummary, ProjectTemplate } from "@/lib/projects/types";
-import { Btn, Card, Empty, Progress } from "../ui";
+import { Btn, Card, Progress } from "../ui";
+import { EmptyState } from "../nav/ui2";
 import { NewProjectWizard } from "./NewProjectWizard";
 import { ProjectDetailView } from "./ProjectDetail";
 import { TemplateBuilder } from "./TemplateBuilder";
@@ -43,7 +44,7 @@ function ProjectList() {
     <div className="mx-auto max-w-[1180px] space-y-6 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-ink">{t("pv.title")}</h1>
+          <h1 className="font-display text-xl font-semibold text-ink">{t("pv.title")}</h1>
           <p className="text-xs text-mute">{t("pv.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -53,10 +54,10 @@ function ProjectList() {
       </div>
 
       {list.length ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="ac-stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {list.map((p) => <ProjectCard key={p.id} p={p} onOpen={() => openProject(p.id)} />)}
         </div>
-      ) : <Empty>{t("pv.empty")}</Empty>}
+      ) : <EmptyState testid="projects-empty" icon="folder" title={t("pv.emptyTitle")} body={t("pv.empty")} action={<Btn kind="primary" onClick={() => openWizard("")}>{t("pv.new")}</Btn>} />}
 
       <Card title={t("pv.templates")} right={<button type="button" data-testid="template-library-all" onClick={openLibrary} className="text-[11px] font-semibold text-accent hover:underline">{t("tpl.lib.seeAll", { count: templates.length })}</button>}>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

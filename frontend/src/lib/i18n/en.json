@@ -2680,5 +2680,22 @@
   "settings.page.security": "Permissions, spend caps and the audit log.",
   "settings.page.kill": "Immediately stop all external activity by every agent.",
   "settings.page.members": "Invite people and manage their roles.",
-  "settings.page.logout": "End the session on this device."
+  "settings.page.logout": "End the session on this device.",
+  "hint.office.title": "How work happens here",
+  "hint.office.body": "Type what you need in the bar below, as you would ask a team lead. Click an employee to see their work and talk to them.",
+  "hint.projects.title": "Start from a template",
+  "hint.projects.body": "For big work, pick a template: the system proposes phases, owners and cost before running anything.",
+  "hint.files.title": "Your team's files in one place",
+  "hint.files.body": "What agents produce appears in their folders. You can also upload your own files by dragging them here.",
+  "hint.skills.title": "Teach your team once",
+  "hint.skills.body": "A skill is a reusable guide. Create or import one, review it and assign it to the employees who need it.",
+  "hint.shop.title": "Coins are earned by working",
+  "hint.shop.body": "Every finished task pays coins to your organization. Spend them here on cosmetic items; they cannot be bought with money.",
+  "drive.page.desc": "Documents, sheets and deliverables of your office, with versions.",
+  "drive.emptyTitle": "This folder is empty",
+  "pv.emptyTitle": "You have no projects yet",
+  "toast.bought": "Purchase complete",
+  "toast.equipped": "Item equipped",
+  "toast.unequipped": "Item removed",
+  "toast.uploaded": "Files uploaded"
 }
