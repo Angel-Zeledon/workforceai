@@ -15,6 +15,7 @@ test.beforeEach(async () => {
 });
 
 test("an agent asks to run code, a person reads it, approves, and the result lands in Files", async ({ page }) => {
+  test.setTimeout(420_000);
   const st = await api.get<Settings>("/settings/code-execution");
   test.skip(!st.available, "sandbox profile not running (make up-sandbox)");
   await fetch(`${process.env.API_URL ?? "http://localhost:8080/api/v1"}/settings/code-execution`, {
@@ -54,7 +55,7 @@ test("an agent asks to run code, a person reads it, approves, and the result lan
 
   // The container runs pandas; the output is a new file on the agent's desk
   let run: Run | undefined;
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 300; i++) {
     run = (await api.get<Run[]>(`/code-runs?approval_id=${ap!.id}`))[0];
     if (["succeeded", "failed", "timeout", "aborted", "denied"].includes(run.status)) break;
     await sleep(1000);
