@@ -25,7 +25,9 @@ import (
 	"aiworkforce/backend/internal/infrastructure/postgres"
 	redisinfra "aiworkforce/backend/internal/infrastructure/redis"
 	"aiworkforce/backend/internal/infrastructure/runtime"
+	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
+	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/roles"
 )
 
@@ -94,6 +96,11 @@ func run(log *slog.Logger) error {
 	if pushSvc != nil {
 		pub = push.Notifier{Inner: pub, Svc: pushSvc}
 	}
+
+	// Coins: the observer sees task.completed / project.status_changed after
+	// they were published and pays them in the background (internal/rewards).
+	rewardsObs := &rewards.Observer{Inner: pub}
+	pub = rewardsObs
 
 	rt := runtime.New(cfg.RuntimeURL).WithToken(os.Getenv("RUNTIME_TOKEN"))
 	if os.Getenv("RUNTIME_TOKEN") == "" {
@@ -173,6 +180,9 @@ func run(log *slog.Logger) error {
 	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy)
 	skillsSvc := wireSkills(cfg, log, pg, store, rec, orch, orgCfg, cw, ws.drive)
 
+	rewardsSvc := wireRewards(log, pg, store, rec, ws.projects)
+	rewardsObs.Bind(rewardsSvc)
+
 	// Durable execution: resume the requests a previous process left in progress
 	// (after the project gate is installed, so project requests are recognized).
 	var orgIDs []string
@@ -197,7 +207,7 @@ func run(log *slog.Logger) error {
 	}
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
-		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Skills: skillsSvc, Push: pushSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Skills: skillsSvc, Rewards: rewardsSvc, Push: pushSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
@@ -248,6 +258,58 @@ func run(log *slog.Logger) error {
 		orch.Wait()
 	}
 	return nil
+}
+
+// wireRewards builds the coin service: Postgres when configured, memory
+// otherwise. REWARDS_ENABLED=false switches earning off; REWARDS_RULES (JSON)
+// overrides the earning rules (docs/architecture/rewards.md).
+func wireRewards(log *slog.Logger, pg *postgres.Store, store application.Store, rec *application.Recorder, proj *projects.Service) *rewards.Service {
+	cat, err := rewards.LoadCatalog()
+	if err != nil {
+		log.Error("rewards: catalog", "err", err)
+		return nil
+	}
+	rules, err := rewards.ParseRules(os.Getenv("REWARDS_RULES"))
+	if err != nil {
+		log.Warn("rewards: using the default rules", "err", err)
+		rules = rewards.DefaultRules()
+	}
+	if v := strings.ToLower(strings.TrimSpace(os.Getenv("REWARDS_ENABLED"))); v == "false" || v == "0" || v == "off" {
+		rules.Enabled = false
+	}
+	var rs rewards.Store = rewards.NewMemStore()
+	if pg != nil {
+		rs = pg
+	}
+	svc := &rewards.Service{Store: rs, Catalog: cat, Rules: rules, Rec: rec, Log: log,
+		Agents: func(ctx context.Context, org, id string) bool {
+			_, err := store.GetAgent(ctx, org, id)
+			return err == nil
+		},
+		// A task with an approval a human rejected earns nothing.
+		Rejected: func(ctx context.Context, org, taskID, requestID string) bool {
+			var list []domain.Approval
+			var err error
+			if l, ok := store.(application.RequestApprovalLister); ok && requestID != "" {
+				list, err = l.ListApprovalsByRequest(ctx, org, requestID, nil)
+			} else {
+				list, err = store.ListApprovals(ctx, org, string(domain.ApprovalRejected))
+			}
+			if err != nil {
+				return false
+			}
+			for _, a := range list {
+				if a.TaskID == taskID && a.Status == domain.ApprovalRejected {
+					return true
+				}
+			}
+			return false
+		},
+	}
+	if proj != nil {
+		svc.Classifier = proj
+	}
+	return svc
 }
 
 // counterStore is where windowed counters (policy limits, anomaly detection)

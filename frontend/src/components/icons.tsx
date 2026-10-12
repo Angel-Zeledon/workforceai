@@ -35,6 +35,7 @@ const P: Record<string, string> = {
   doc: "M6 3h8l5 5v13H6zM14 3v5h5M9 13h7M9 17h7",
   user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
   clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2",
+  bag: "M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2",
   shrink: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
 };
 

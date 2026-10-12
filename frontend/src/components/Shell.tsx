@@ -14,6 +14,9 @@ import { ProjectPill } from "./projects/ProjectPill";
 import { DriveView } from "./drive/DriveView";
 import { FileViewerPanel } from "./files/FileViewerPanel";
 import { useFileViewer } from "@/lib/fileView";
+import { ShopView } from "./shop/ShopView";
+import { CoinCounter } from "./shop/Coin";
+import { useRewards, useShopNav } from "@/lib/rewards";
 import { useDriveNav } from "@/lib/drive";
 import { SkillsView } from "./skills/SkillsView";
 import { useSkillsNav } from "@/lib/skills";
@@ -48,13 +51,21 @@ export function Shell() {
   const viewerOpen = useFileViewer((s) => !!s.ref);
   const driveOpen = useDriveNav((s) => s.open);
   const drivePath = useDriveNav((s) => s.path);
-  const skillsOpen = useSkillsNav((s) => s.open);
-  const projectsOpen = projectsOpenRaw && !driveOpen && !skillsOpen;
-  // Projects, Files and Skills are full screens: opening one closes the others.
-  const setProjectsOpen = (v: boolean) => { if (v) { useDriveNav.getState().close(); useSkillsNav.getState().close(); } setProjectsOpenRaw(v); };
-  const toggleDrive = () => { if (!driveOpen) { setProjectsOpenRaw(false); useSkillsNav.getState().close(); } useDriveNav.getState().toggle(); };
-  const toggleSkills = () => { if (!skillsOpen) { setProjectsOpenRaw(false); useDriveNav.getState().close(); } useSkillsNav.getState().toggle(); };
+  const skillsOpenRaw = useSkillsNav((s) => s.open);
+  const shopOpenRaw = useShopNav((s) => s.open);
+  const shopAvailable = useRewards((s) => s.available);
+  const shopOpen = shopOpenRaw && shopAvailable;
+  const skillsOpen = skillsOpenRaw && !shopOpen;
+  const driveShown = driveOpen && !shopOpen && !skillsOpen;
+  const projectsOpen = projectsOpenRaw && !driveOpen && !skillsOpen && !shopOpen;
+  // Projects, Files, Skills and the Shop are full screens: opening one closes the others.
+  const closeAll = () => { setProjectsOpenRaw(false); useDriveNav.getState().close(); useSkillsNav.getState().close(); useShopNav.getState().close(); };
+  const setProjectsOpen = (v: boolean) => { if (v) closeAll(); setProjectsOpenRaw(v); };
+  const toggleDrive = () => { if (!driveOpen) { closeAll(); useDriveNav.getState().toggle(); } else useDriveNav.getState().close(); };
+  const toggleSkills = () => { if (!skillsOpenRaw) { closeAll(); useSkillsNav.getState().toggle(); } else useSkillsNav.getState().close(); };
+  const toggleShop = () => { if (!shopOpenRaw) { closeAll(); useShopNav.getState().toggle(); } else useShopNav.getState().close(); };
 
+  useEffect(() => { if (driveOpen || projectsOpenRaw) useShopNav.getState().close(); }, [driveOpen, projectsOpenRaw]);
   useEffect(() => startRealtime(), []);
   useEffect(() => { hydratePrefs(); }, [hydratePrefs]);
 
@@ -82,12 +93,17 @@ export function Shell() {
             <button type="button" data-testid="nav-projects" data-active={projectsOpen} onClick={() => setProjectsOpen(!projectsOpen)} className={navBtn(projectsOpen)}>
               <Icon name="folder" size={14} />{t("nav.projects")}
             </button>
-            <button type="button" data-testid="nav-drive" data-active={driveOpen} onClick={toggleDrive} className={navBtn(driveOpen)}>
+            <button type="button" data-testid="nav-drive" data-active={driveShown} onClick={toggleDrive} className={navBtn(driveShown)}>
               <Icon name="doc" size={14} />{t("nav.drive")}
             </button>
             <button type="button" data-testid="nav-skills" data-active={skillsOpen} onClick={toggleSkills} className={navBtn(skillsOpen)}>
               <Icon name="layers" size={14} />{t("nav.skills")}
             </button>
+            {shopAvailable && (
+              <button type="button" data-testid="nav-shop" data-active={shopOpen} onClick={toggleShop} className={navBtn(shopOpen)}>
+                <Icon name="bag" size={14} />{t("nav.shop")}
+              </button>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-x-3 text-[11px] text-mute">
@@ -98,6 +114,7 @@ export function Shell() {
               <span data-testid="hud-cost">{t("common.cost")} <b className="font-mono font-medium text-ink">{fmtUsd(metrics.cost_usd)}</b></span>
             </div>
           )}
+          <CoinCounter />
           {MOCK && <span data-testid="mock-badge" className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700">Mock</span>}
           <span className="flex items-center gap-1.5 whitespace-nowrap font-medium text-ink2">
             <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-ok" : "animate-pulse bg-err"}`} />
@@ -111,7 +128,7 @@ export function Shell() {
       <CostOverlays />
       <main className="relative min-h-0 flex-1">
         <ControlsOverlay />
-        {skillsOpen ? <SkillsView /> : driveOpen ? <DriveView key={drivePath} initialPath={drivePath} /> : projectsOpen ? <ProjectsView /> : mode === "office" ? (
+        {shopOpen ? <ShopView /> : skillsOpen ? <SkillsView /> : driveShown ? <DriveView key={drivePath} initialPath={drivePath} /> : projectsOpen ? <ProjectsView /> : mode === "office" ? (
           <>
             <div className="absolute inset-0 isolate"><OfficeScene /></div>
             <div className="pointer-events-none absolute left-4 top-4 w-[330px] max-w-[calc(100vw-32px)] sm:max-w-[40vw]">

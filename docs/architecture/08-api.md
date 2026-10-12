@@ -813,3 +813,23 @@ Conocimiento reutilizable para agentes en el formato abierto Agent Skills (carpe
 | `DELETE /agents/{id}/skills/{skillId}` | agents:write | quita la asignación directa |
 
 Herramienta del Tool Gateway (solo lectura, ruta de lectura `WORK_READ_ROUNDS`): `skill.load {name, file?}` devuelve el texto aprobado en el canal de configuración de confianza (`loaded_skills` del runtime), nunca como contenido no confiable. Runtime (aditivo): `run-task` acepta `skills[{name, description}]` y `loaded_skills[{kind, name, version, file?, text, files[]}]`.
+
+## 22. Monedas y tienda (C1)
+
+Las monedas se **ganan solo trabajando** (tarea terminada, proyecto terminado) y **no se pueden comprar con dinero real**: ninguna ruta las acredita. Diseño, reglas y cifras: `docs/architecture/rewards.md`. El coste real en dólares de la IA es otra cosa y sigue visible aparte. Permisos: `shop:read` (viewer+) y `shop:buy` (member+: comprar, equipar, colocar). Compras, equipar y colocar quedan auditadas con la persona como actor (`shop.purchased`, `item.equipped`, `item.unequipped`, `office.item_placed`, `office.item_removed`). Errores `409` llevan `{code, error}` con `insufficient_coins`, `already_owned` o `not_owned`.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/rewards/wallet` | read | `{wallet: {balance, earned_total, spent_total}, earned_by_agent: {agent_id: monedas}}` |
+| GET | `/rewards/ledger?limit=&before=` | read | libro mayor, más nuevo primero: `[{id, seq, kind: earn\|spend, amount, reason, ref_kind, ref_id, title, agent_id, actor, detail, balance_after, created_at}]`; `before` = `seq` para paginar. `reason`: `task_done`, `task_first_try`, `task_rework`, `project_done`, `purchase` |
+| GET | `/rewards/rules` | read | reglas de ganancia activas (datos, ver rewards.md) |
+| GET | `/shop/catalog` | read | `{version, items[{id, kind: character\|office, category, slot, price, rarity: common\|rare\|epic, name{es,en}, description{es,en}, color?, color2?}], character_slots[], office_slots[]}` |
+| GET | `/shop/state` | read | `{wallet, earned_by_agent, inventory[{item_id, price_paid, purchased_by, purchased_at}], equipment[{agent_id, slot, item_id}], office[{slot, item_id}], rules}` |
+| POST | `/shop/purchases` `{item_id, idempotency_key?}` | buy | gasta monedas atómicamente: `201 {item, entry, wallet, replay:false}`; la misma clave (cabecera `Idempotency-Key` o campo) devuelve `200 replay:true` sin cobrar otra vez; 404 objeto desconocido; 409 `insufficient_coins` / `already_owned` (cada objeto se posee una vez) |
+| PUT | `/agents/{id}/equipment/{slot}` `{item_id}` | buy | equipa un objeto poseído; 400 si no encaja en la ranura, 404 agente, 409 `not_owned`; reemplaza lo que hubiera en la ranura |
+| DELETE | `/agents/{id}/equipment/{slot}` | buy | quita lo equipado (204) |
+| PUT | `/office/items/{slot}` `{item_id}` | buy | coloca un objeto poseído en su ranura de la oficina |
+| DELETE | `/office/items/{slot}` | buy | retira el objeto de la ranura (204) |
+
+Ranuras de personaje: `outfit`, `hat`, `face`, `ears`, `neck`, `badge`, `buddy`. Ranuras de oficina: `plant_1`, `plant_2`, `lamp_1`, `rug_1`, `coffee_1`, `poster_1`, `poster_2`, `shelf_1`, `aquarium_1`, `arcade_1`, `trophy_1`, `window_1`. Eventos WS: `coins.earned`, `shop.purchased`, `item.equipped`, `item.unequipped`, `office.item_placed`, `office.item_removed` (ver 03).
+

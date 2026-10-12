@@ -68,6 +68,10 @@ SPEC: `{ id, type, ts, org_id, agent_id?, payload }`. **[CAMBIO] aditivo y compa
 | `chat.message` | `{id, conversation, turn_id, from, to, kind, text, reply_to, ts, request_id?, files?}` | Mensaje del usuario o de un agente/sistema en `office` o `agent:<id>` (chat-routing.md). `files?` (aditivo) = `[{file_id, path, name, mime, size, version, action}]` referencias a archivos del drive (`write` producido por el agente, `attach` adjunto del usuario), nunca contenido; el frontend las muestra como tarjetas que abren el visor | 1 |
 | `chat.typing` | `{conversation, turn_id, agent_id, on}` | Un agente prepara su respuesta (siempre par on/off) | 1 |
 | `route.decided` | `{turn_id, conversation, intent, topic, responders:[{agent_id, role, reason}], source, consult?}` | El router decidió quién responde; `intent=task` sigue con `request.received`/`plan.created` | 1 |
+| `coins.earned` | `{entry, wallet, amount, agent_id, ref_kind: task\|project, ref_id, request_id}` (`agent_id` en el envelope) | Una tarea (o un proyecto) terminada pagó monedas, una sola vez (C1, `docs/architecture/rewards.md`). La oficina muestra el "+N" sobre ese agente. No hay evento si no corresponden monedas | 1 |
+| `shop.purchased` | `{item, entry, wallet, actor}` | Compra en la tienda (gasto atómico, auditada) | 1 |
+| `item.equipped` / `item.unequipped` | `{agent_id, slot, item_id?, item?, actor}` | Un objeto del personaje se puso/quitó (`agent_id` en el envelope) | 1 |
+| `office.item_placed` / `office.item_removed` | `{slot, item_id?, item?, actor}` | Un objeto de la oficina se colocó/retiró de su ranura | 1 |
 
 Convencion de nombres: `<entidad>.<verbo_pasado>`; estados como `agent.state_changed`. Prohibido emitir verbos en presente/intencion.
 

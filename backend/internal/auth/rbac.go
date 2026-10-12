@@ -75,6 +75,10 @@ const (
 	PermSkillsRead   Permission = "skills:read"
 	PermSkillsWrite  Permission = "skills:write"
 	PermSkillsReview Permission = "skills:review"
+	// Coins and shop (docs/architecture/rewards.md): everybody sees the wallet,
+	// the ledger and the catalog; members spend the coins the work earned.
+	PermShopRead Permission = "shop:read"
+	PermShopBuy  Permission = "shop:buy"
 )
 
 func set(ps ...Permission) map[Permission]struct{} {
@@ -102,13 +106,13 @@ var (
 		PermMembersRead, PermAgentsRead, PermTasksRead, PermRequestsRead,
 		PermConversationsRead, PermApprovalsRead, PermReportsRead,
 		PermMemoriesRead, PermActivityRead, PermMetricsRead,
-		PermArtifactsRead, PermFilesRead, PermSkillsRead,
+		PermArtifactsRead, PermFilesRead, PermSkillsRead, PermShopRead,
 	)
 	memberPerms = union(viewerPerms,
 		PermRequestsCreate, PermTasksCreate, PermConversationsPost, PermMemoriesWrite,
 		PermConnectionsRead,
 		PermArtifactsCreate, PermArtifactsWrite, PermArtifactsComment, PermArtifactsExport,
-		PermFilesWrite, PermSkillsWrite,
+		PermFilesWrite, PermSkillsWrite, PermShopBuy,
 	)
 	adminPerms = union(memberPerms,
 		PermOrgManage, PermMembersInvite, PermMembersManage, PermAgentsWrite,

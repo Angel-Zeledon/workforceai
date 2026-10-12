@@ -30,6 +30,13 @@ const KNOWN_TYPES = new Set([
   "budget.resumed",
   // Drive (additive, docs/architecture/03-eventos-realtime.md): which file an agent used (path only)
   "file.activity",
+  // Coins and shop (additive, docs/architecture/rewards.md)
+  "coins.earned",
+  "shop.purchased",
+  "item.equipped",
+  "item.unequipped",
+  "office.item_placed",
+  "office.item_removed",
 ]);
 
 const AGENT_STATES = [

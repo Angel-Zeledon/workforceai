@@ -24,6 +24,7 @@ import (
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/infrastructure/memory"
 	"aiworkforce/backend/internal/objstore"
+	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/sandbox"
 	"aiworkforce/backend/internal/skills"
@@ -111,6 +112,7 @@ type opts struct {
 	drive          bool // mount the drive (drive_api_test.go); writeGate applies to it too
 	skills         bool // mount the skill library (skills_api_test.go); implies the drive
 	writeGate      func(ctx context.Context, org string) error
+	rewards        bool // mount coins and shop (rewards_api_test.go)
 }
 
 type env struct {
@@ -122,6 +124,7 @@ type env struct {
 	store *memory.Store
 	appr  *application.Approvals
 	code  *sandbox.Service
+	coins *rewards.Service
 }
 
 func newEnv(t *testing.T, o opts) *env {
@@ -168,6 +171,19 @@ func newEnv(t *testing.T, o opts) *env {
 				return a.Role, err
 			}})
 	}
+	var coins *rewards.Service
+	if o.rewards {
+		cat, err := rewards.LoadCatalog()
+		if err != nil {
+			t.Fatal(err)
+		}
+		coins = &rewards.Service{Store: rewards.NewMemStore(), Catalog: cat, Rules: rewards.DefaultRules(), Rec: rec, Log: log,
+			Agents: func(ctx context.Context, org, id string) bool {
+				_, err := spy.GetAgent(ctx, org, id)
+				return err == nil
+			}}
+		d.Rewards, d.Rec = coins, rec
+	}
 	var svc *auth.Service
 	if o.auth {
 		var err error
@@ -188,7 +204,7 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	ts.Start()
 	t.Cleanup(ts.Close)
-	return &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr, code: d.Sandbox}
+	return &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr, code: d.Sandbox, coins: coins}
 }
 
 func (e *env) do(method, path, token string, body any, hdr map[string]string) (*http.Response, []byte) {
