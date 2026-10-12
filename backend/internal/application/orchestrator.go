@@ -20,6 +20,9 @@ const assistantID = "assistant"
 
 var errBudget = errors.New("presupuesto de la organización agotado")
 
+// EvProviderNoBalance tells the UI the model provider has no balance left (a banner with what to do).
+const EvProviderNoBalance = "provider.no_balance"
+
 // Orchestrator turns a user request into a plan, executes it with the
 // scheduler, handles consults and approvals, and produces a report.
 type Orchestrator struct {
@@ -931,6 +934,11 @@ func (o *Orchestrator) failTask(ctx context.Context, rs *run, t domain.Task, cau
 		o.stopForBudget(ctx, rs, t)
 		return
 	}
+	if errors.Is(cause, ErrProviderNoBalance) {
+		o.stopTask(ctx, rs, t, "provider_no_balance",
+			"tu proveedor de IA se quedó sin saldo: recarga la cuenta o elige otro modelo en Ajustes → Modelo de IA (o escribe /modelo); las tareas pendientes quedan en espera")
+		return
+	}
 	fin := time.Now().UTC()
 	t.Status, t.FinishedAt = domain.TaskFailed, &fin
 	if err := o.store.UpdateTask(context.WithoutCancel(ctx), o.org(ctx), t); err != nil {
@@ -949,6 +957,12 @@ func (o *Orchestrator) failTask(ctx context.Context, rs *run, t domain.Task, cau
 // first one of the run tells the user. Live, a large project otherwise showed
 // 98 "failed" tasks and 98 error messages for one cause.
 func (o *Orchestrator) stopForBudget(ctx context.Context, rs *run, t domain.Task) {
+	o.stopTask(ctx, rs, t, "org_budget", fmt.Sprintf("trabajo detenido: %v; las tareas pendientes quedan bloqueadas hasta que se amplíe el presupuesto", errBudget))
+}
+
+// stopTask blocks a task that could not run for a reason a person must fix
+// (budget, provider without balance): one message per run, not one per task.
+func (o *Orchestrator) stopTask(ctx context.Context, rs *run, t domain.Task, reason, message string) {
 	fin := time.Now().UTC()
 	t.Status, t.FinishedAt = domain.TaskBlocked, &fin
 	if err := o.store.UpdateTask(context.WithoutCancel(ctx), o.org(ctx), t); err != nil {
@@ -956,10 +970,14 @@ func (o *Orchestrator) stopForBudget(ctx context.Context, rs *run, t domain.Task
 	}
 	o.setState(ctx, t.AgentID, domain.StateIdle, "", nil, 0)
 	if rs == nil || !rs.budgetOut.Swap(true) {
-		o.reportError(ctx, t.AgentID, fmt.Sprintf("trabajo detenido: %v; las tareas pendientes quedan bloqueadas hasta que se amplíe el presupuesto", errBudget))
+		o.reportError(ctx, t.AgentID, message)
+		if reason == "provider_no_balance" {
+			o.rec.Emit(ctx, Action{Type: EvProviderNoBalance, AgentID: t.AgentID, Entity: "org", EntityID: o.org(ctx),
+				Payload: map[string]any{"reason": reason}, Text: message})
+		}
 	}
 	o.rec.Emit(ctx, Action{Type: domain.EvTaskBlocked, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
-		Payload: map[string]any{"task": t, "reason": "org_budget"}, Text: fmt.Sprintf("Tarea bloqueada (presupuesto agotado): %s", t.Title)})
+		Payload: map[string]any{"task": t, "reason": reason}, Text: fmt.Sprintf("Tarea en espera (%s): %s", reason, t.Title)})
 	o.emitMetrics(ctx)
 }
 

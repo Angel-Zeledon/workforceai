@@ -1,5 +1,6 @@
 "use client";
 import { AgentMark } from "../brand/AgentMark";
+import { ProviderAlert } from "./ProviderAlert";
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -154,6 +155,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         <ControlsBanner />
+        <ProviderAlert />
         <CostOverlays />
         <main className="relative min-h-0 flex-1">
           <ControlsOverlay />

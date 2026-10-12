@@ -66,6 +66,10 @@ def _api_key(provider: str) -> str:
 # Stable machine-readable error codes (the backend can switch on these).
 ERR_NO_ALLOWED_PROVIDER = "no_allowed_provider"
 ERR_ALL_PROVIDERS_FAILED = "all_providers_failed"
+# Every provider that was tried has no money left (DeepSeek "Insufficient Balance", OpenAI
+# "insufficient_quota", Anthropic "credit balance is too low"): retrying cannot help, a person
+# must top up or switch models.
+ERR_NO_BALANCE = "provider_no_balance"
 
 
 class ProviderError(Exception):
@@ -83,6 +87,8 @@ class ProviderError(Exception):
         self.configured = configured or []
         if code == ERR_NO_ALLOWED_PROVIDER:
             self.status_code = 422
+        elif code == ERR_NO_BALANCE:
+            self.status_code = 402
 
     def detail(self) -> dict:
         return {"code": self.code, "message": self.message, "providers_tried": self.tried,
@@ -328,6 +334,15 @@ def candidates(configs: list[ProviderConfig], policy: ProviderPolicy) -> list[Pr
 
 _TRANSIENT = re.compile(r"timeout|timed out|rate.?limit|429|overload|502|503|504|529|connection|temporar|unavailable",
                         re.I)
+
+
+_NO_BALANCE = re.compile(r"insufficient.?balance|insufficient_quota|exceeded your current quota|credit balance is too low|"
+                         r"payment required|\b402\b|billing hard limit|no remaining (quota|credit)", re.I)
+
+
+def is_no_balance(exc: BaseException) -> bool:
+    """The provider account has no money left: never worth a retry on the same provider."""
+    return bool(_NO_BALANCE.search(f"{type(exc).__name__} {exc}"))
 
 
 def is_transient(exc: BaseException) -> bool:

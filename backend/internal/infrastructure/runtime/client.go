@@ -108,6 +108,9 @@ func (c *Client) do(ctx context.Context, method, path string, in, out any) error
 		if sc := resp.StatusCode; sc >= 400 && sc < 500 && sc != http.StatusRequestTimeout && sc != http.StatusTooManyRequests {
 			err = fmt.Errorf("%w: %w", err, application.ErrNonRetryable) // retrying the same request cannot help
 		}
+		if bytes.Contains(data, []byte(`"provider_no_balance"`)) {
+			err = fmt.Errorf("%w: %w", err, application.ErrProviderNoBalance)
+		}
 		return err
 	}
 	if out == nil {

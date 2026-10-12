@@ -494,3 +494,26 @@ func TestResetClearsExecutionData(t *testing.T) {
 		t.Fatalf("metrics = %+v", m)
 	}
 }
+
+// The provider account is empty: the tasks wait (blocked, not failed) and the person is told once what to do.
+func TestProviderWithoutBalanceBlocksWithOneClearMessage(t *testing.T) {
+	rt := &fakeRuntime{
+		plan: func(application.PlanRequest) (application.PlanResponse, error) {
+			return application.PlanResponse{Tasks: []application.PlannedTask{
+				{Key: "a", Title: "Uno", AgentID: "analyst"},
+				{Key: "b", Title: "Dos", AgentID: "sales"},
+			}}, nil
+		},
+		runTask: func(application.RunTaskRequest) (application.RunTaskResponse, error) {
+			return application.RunTaskResponse{}, fmt.Errorf("runtime /v1/run-task: status 402: %w: %w", application.ErrNonRetryable, application.ErrProviderNoBalance)
+		},
+	}
+	h := newHarness(t, rt, nil)
+	reqID, _ := h.orch.Submit(context.Background(), "x")
+	h.orch.Wait()
+	for title, task := range h.tasks(reqID) {
+		if task.Status != domain.TaskBlocked {
+			t.Fatalf("%s: %s, want blocked", title, task.Status)
+		}
+	}
+}

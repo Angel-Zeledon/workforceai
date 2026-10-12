@@ -224,3 +224,21 @@ def test_healthz_reports_configured_providers_without_keys(monkeypatch):
     assert body["configured_providers"] == ["deepseek", "anthropic"]
     assert body["default_provider"] == "deepseek"
     assert "secret" not in str(body)
+
+
+# ---------------------------------------------------------------- no balance left
+def test_no_balance_is_not_retried_and_fails_over(monkeypatch):
+    monkeypatch.setattr(crewai_engine, "PROVIDER_RETRIES", 2)
+    eng = make_engine(monkeypatch, {"deepseek": RuntimeError("Insufficient Balance (402)"), "anthropic": (5, 5)})
+    out = run(eng)
+    assert eng.calls == ["deepseek", "anthropic"] and out.provider == "anthropic"
+
+
+def test_every_provider_without_balance_is_a_clear_error(monkeypatch):
+    from app.providers import ERR_NO_BALANCE, ProviderError
+    eng = make_engine(monkeypatch, {"deepseek": RuntimeError("Insufficient Balance"),
+                                    "anthropic": RuntimeError("Your credit balance is too low"),
+                                    "custom": RuntimeError("insufficient_quota: You exceeded your current quota")})
+    with pytest.raises(ProviderError) as e:
+        run(eng)
+    assert e.value.code == ERR_NO_BALANCE and e.value.status_code == 402

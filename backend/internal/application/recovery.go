@@ -26,6 +26,11 @@ import (
 // rejected the request itself). The runtime client wraps 4xx statuses with it.
 var ErrNonRetryable = errors.New("non-retryable")
 
+// ErrProviderNoBalance: every model provider the organization may use has no
+// money left (runtime code provider_no_balance). Nothing to retry: a person must
+// top up the account or choose another model in Settings -> AI model.
+var ErrProviderNoBalance = errors.New("el proveedor de IA se quedó sin saldo")
+
 // retryableTaskErr: a transient runtime failure (error, timeout, invalid
 // structured output) is retried; budget caps, cancellation and permanent
 // request errors are not.

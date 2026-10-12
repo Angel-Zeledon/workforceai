@@ -148,6 +148,7 @@ export const useStore = create<State>((set, get) => ({
     if (f.type.startsWith("artifact.")) { useArtifacts.getState().applyFrame(f); return; }
     if (isConnectionsFrame(f.type)) { useConnections.getState().applyFrame(f); return; }
     if (isRewardsFrame(f.type)) { useRewards.getState().applyFrame(f); return; }
+    if (f.type === "provider.no_balance") useProviderAlert.setState({ noBalance: true });
     if (f.type === "hello") { useArtifacts.getState().load(); useConnections.getState().applyFrame(f); void useRewards.getState().load(); }
     if (isCostFrame(f.type)) useCost.getState().applyFrame(f);
     const p = f.payload || {};
@@ -320,3 +321,10 @@ export function typingIn(typing: Record<string, Record<string, number>>, conv: s
   const now = Date.now();
   return Object.entries(typing[conv] || {}).filter(([, ts]) => now - ts < TYPING_TTL).map(([id]) => id);
 }
+
+
+/** The model provider ran out of balance (event provider.no_balance): AppShell shows what to do. */
+export const useProviderAlert = create<{ noBalance: boolean; dismiss: () => void }>((set) => ({
+  noBalance: false,
+  dismiss: () => set({ noBalance: false }),
+}));

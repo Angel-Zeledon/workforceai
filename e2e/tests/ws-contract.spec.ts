@@ -6,6 +6,7 @@ import { api, approveUntilDone, resetDemo } from "../support/api";
 /** Tipos definidos en docs/SPEC.md. */
 const KNOWN_TYPES = new Set([
   "hello",
+  "provider.no_balance",
   "request.received",
   "request.completed",
   "plan.created",

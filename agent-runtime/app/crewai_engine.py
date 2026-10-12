@@ -50,12 +50,14 @@ from .providers import (
     _api_key,
     DEFAULT_MODELS,
     ERR_ALL_PROVIDERS_FAILED,
+    ERR_NO_BALANCE,
     ProviderConfig,
     ProviderError,
     ProviderPolicy,
     candidates,
     classify_error,
     fixed_temperature_model,
+    is_no_balance,
     is_transient,
     policy_from_request,
     scrub,
@@ -264,6 +266,7 @@ class CrewAIEngine(AgentEngine):
         Transient errors are retried on the same provider; any failure then moves to the next one."""
         order = candidates(self.providers, policy or ProviderPolicy())
         failed: list[str] = []
+        broke: list[str] = []  # providers whose account has no balance left
         last: BaseException | None = None
         for cfg in order:
             attempt = 0
@@ -277,6 +280,11 @@ class CrewAIEngine(AgentEngine):
                     return parsed, usage
                 except Exception as exc:
                     last = exc
+                    if is_no_balance(exc):
+                        log.warning("provider %s has no balance left", cfg.id)
+                        failed.append(cfg.id)
+                        broke.append(cfg.id)
+                        break
                     if is_transient(exc) and attempt < PROVIDER_RETRIES:
                         attempt += 1
                         log.warning("provider %s transient error (%s); retry %d", cfg.id,
@@ -287,6 +295,11 @@ class CrewAIEngine(AgentEngine):
                                 scrub(str(exc), order)[:200])
                     failed.append(cfg.id)
                     break
+        if failed and len(broke) == len(failed):
+            raise ProviderError(
+                ERR_NO_BALANCE,
+                f"The model provider account has no balance left ({', '.join(broke)}): top it up or choose another model.",
+                tried=failed, allowed=[c.id for c in order], configured=[c.id for c in self.providers])
         raise ProviderError(
             ERR_ALL_PROVIDERS_FAILED,
             f"All allowed model providers failed ({', '.join(failed)}). Last error: "

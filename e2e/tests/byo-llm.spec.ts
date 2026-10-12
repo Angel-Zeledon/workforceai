@@ -13,6 +13,11 @@ const FAKE = "sk-proj-E2EFAKEKEY-abcdefghijklmnop-1234567890";
 
 test.beforeEach(async () => {
   await resetDemo();
+  // The model settings survive the demo reset: start every run from the platform default (DeepSeek).
+  await api.put("/settings/llm/active", { provider: "deepseek" }).catch(() => undefined);
+  for (const p of ["openai", "kimi", "anthropic", "custom"]) {
+    await fetch(`${API_URL}/settings/llm/providers/${p}`, { method: "DELETE" }).catch(() => undefined);
+  }
   // The gear-menu entry is "Team settings" once onboarding is completed.
   const packs = await api.get<{ key: string }[] | { items: { key: string }[] }>("/onboarding/packs");
   const list = Array.isArray(packs) ? packs : packs.items;

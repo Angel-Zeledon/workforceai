@@ -2904,5 +2904,8 @@
   "llm.help.anthropic": "Claude, by Anthropic. Great for long writing and analysis.",
   "llm.help.openai": "GPT models from OpenAI.",
   "llm.help.kimi": "Kimi, by Moonshot AI. OpenAI-compatible.",
-  "llm.help.custom": "Any OpenAI-compatible service (your own or a third party's). You need its base URL."
+  "llm.help.custom": "Any OpenAI-compatible service (your own or a third party's). You need its base URL.",
+  "provider.noBalance.title": "Your AI provider ran out of balance.",
+  "provider.noBalance.body": "The agents cannot work until you top up the account or choose another model (you can also type /model in the chat).",
+  "provider.noBalance.cta": "Go to Settings → AI model"
 }
