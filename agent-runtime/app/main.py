@@ -1,17 +1,19 @@
 """FastAPI app: contrato Go -> agent-runtime."""
 from __future__ import annotations
 
+import asyncio
 import hmac
 import logging
 import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from .engine import AgentEngine, select_engine
+from .engine import AgentEngine, _truthy, select_engine
 from .estimate import EstimateRequest, EstimateResponse
-from .providers import ProviderError, configured_providers, default_provider
+from .providers import ProviderError, config_from_credential, configured_providers, default_provider, scrub
 from .replan import ReplanRequest, ReplanResponse
 from .redact import redact_any, redact_secrets
 from .security import build_trace
@@ -21,6 +23,8 @@ from .models import (
     ConsultRequest,
     ConsultResponse,
     HealthResponse,
+    ProviderTestRequest,
+    ProviderTestResponse,
     PlanPhaseRequest,
     PlanPhaseResponse,
     PlanPhasesRequest,
@@ -39,6 +43,10 @@ from .models import (
 )
 
 log = logging.getLogger("agent_runtime")
+
+
+def simulation_forced() -> bool:
+    return _truthy(os.getenv("SIMULATION"))
 
 
 def scrub_run_task(resp: RunTaskResponse) -> RunTaskResponse:
@@ -73,10 +81,38 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
                 return JSONResponse(status_code=401, content={"detail": "missing or invalid runtime token"})
         return await call_next(request)
 
+    # Never echo a request body in a validation error: it may carry an organization's API key.
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(_request: Request, exc: RequestValidationError):
+        errs = [{"loc": list(e.get("loc", ())), "msg": str(e.get("msg", "")), "type": e.get("type", "")}
+                for e in exc.errors()]
+        return JSONResponse(status_code=422, content={"detail": errs})
+
     def eng() -> AgentEngine:
         if app.state.engine is None:  # TestClient sin lifespan
             app.state.engine = select_engine()
         return app.state.engine
+
+    def live_engine():
+        if not hasattr(app.state, "byo_engine"):
+            try:
+                from .crewai_engine import CrewAIEngine
+
+                app.state.byo_engine = CrewAIEngine(providers=[], allow_empty=True)
+            except Exception as exc:  # CrewAI missing: keep serving with the current engine
+                log.error("bring-your-own-model engine unavailable (%s)", type(exc).__name__)
+                app.state.byo_engine = None
+        return app.state.byo_engine
+
+    def eng_for(req) -> AgentEngine:
+        """The engine for a request. A request carrying the organization's own key needs a live engine even
+        when the operator configured no key of their own (SIMULATION=true always wins: no network)."""
+        e = eng()
+        if getattr(req, "provider_credentials", None) and e.mode != "live" and not simulation_forced():
+            live = live_engine()
+            if live is not None:
+                return live
+        return e
 
     async def guarded(coro):
         try:
@@ -100,23 +136,23 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
 
     @app.post("/v1/plan", response_model=PlanResponse, response_model_exclude_none=True)
     async def plan(req: PlanRequest):
-        return await guarded(eng().plan(req))
+        return await guarded(eng_for(req).plan(req))
 
     @app.post("/v1/plan-phases", response_model=PlanPhasesResponse, response_model_exclude_none=True)
     async def plan_phases(req: PlanPhasesRequest):
-        return await guarded(eng().plan_phases(req))
+        return await guarded(eng_for(req).plan_phases(req))
 
     @app.post("/v1/plan-phase", response_model=PlanPhaseResponse, response_model_exclude_none=True)
     async def plan_phase(req: PlanPhaseRequest):
-        return await guarded(eng().plan_phase(req))
+        return await guarded(eng_for(req).plan_phase(req))
 
     @app.post("/v1/replan", response_model=ReplanResponse, response_model_exclude_none=True)
     async def replan(req: ReplanRequest):
-        return await guarded(eng().replan(req))
+        return await guarded(eng_for(req).replan(req))
 
     @app.post("/v1/run-task", response_model=RunTaskResponse, response_model_exclude_none=True)
     async def run_task(req: RunTaskRequest):
-        resp = await guarded(eng().run_task(req))
+        resp = await guarded(eng_for(req).run_task(req))
         out = scrub_run_task(resp)
         if req.want_trace:  # V2 thought audit: the prompt exactly as built (same builders the engine uses), redacted
             out.trace = RunTrace(**build_trace(req))
@@ -124,7 +160,7 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
 
     @app.post("/v1/review", response_model=ReviewResponse, response_model_exclude_none=True)
     async def review(req: ReviewRequest):
-        resp = await guarded(eng().review(req))
+        resp = await guarded(eng_for(req).review(req))
         data = redact_any(resp.model_dump(exclude={"usage"}))  # nothing with the shape of a credential leaves the runtime
         return ReviewResponse(**data, usage=resp.usage)
 
@@ -134,20 +170,35 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
 
     @app.post("/v1/consult", response_model=ConsultResponse, response_model_exclude_none=True)
     async def consult(req: ConsultRequest):
-        return await guarded(eng().consult(req))
+        return await guarded(eng_for(req).consult(req))
 
     @app.post("/v1/synthesize", response_model=SynthesizeResponse, response_model_exclude_none=True)
     async def synthesize(req: SynthesizeRequest):
-        return await guarded(eng().synthesize(req))
+        return await guarded(eng_for(req).synthesize(req))
 
     @app.post("/v1/route", response_model=RouteResponse, response_model_exclude_none=True)
     async def route(req: RouteRequest):
-        return await guarded(eng().route(req))
+        return await guarded(eng_for(req).route(req))
 
     @app.post("/v1/chat-reply", response_model=ChatReplyResponse, response_model_exclude_none=True)
     async def chat_reply(req: ChatReplyRequest):
-        resp = await guarded(eng().chat_reply(req))
+        resp = await guarded(eng_for(req).chat_reply(req))
         return resp.model_copy(update={"text": redact_secrets(resp.text)})
+
+    @app.post("/v1/provider-test", response_model=ProviderTestResponse)
+    async def provider_test(req: ProviderTestRequest):
+        """Connection test with an organization's key: one tiny real call (a test double in SIMULATION).
+        Always answers 200 with a stable code, so the UI can explain what is wrong."""
+        cfg = config_from_credential(req.credential)
+        if cfg is None:
+            return ProviderTestResponse(ok=False, code="invalid_request", provider=req.credential.provider,
+                                        message="Unknown provider, missing key or missing base URL.")
+        e = eng()
+        if e.mode != "live" and not simulation_forced():
+            e = live_engine() or e
+        out = await asyncio.to_thread(e.test_provider, cfg)
+        out["message"] = scrub(str(out.get("message", "")), [cfg])
+        return ProviderTestResponse(**out)
 
     return app
 

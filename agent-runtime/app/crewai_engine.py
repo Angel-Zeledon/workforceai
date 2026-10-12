@@ -21,7 +21,6 @@ from pydantic import BaseModel, Field
 
 from .engine import AgentEngine, estimate_cost
 from .hier_plan import normalize_phase_tasks, normalize_phases
-from .redact import redact_secrets
 from .models import (
     ChatReplyRequest,
     ChatReplyResponse,
@@ -54,8 +53,11 @@ from .providers import (
     ProviderError,
     ProviderPolicy,
     candidates,
+    classify_error,
+    fixed_temperature_model,
     is_transient,
     policy_from_request,
+    scrub,
     temperature_for,
 )
 from .review import build_review_prompt, normalize_review
@@ -100,9 +102,9 @@ def parse_json_output(raw: str, schema: type[BaseModel]) -> Any:
 
 def native_structured_output(cfg: ProviderConfig) -> bool:
     """Whether the provider accepts a JSON-schema response_format (structured output).
-    DeepSeek only supports {"type": "json_object"}; custom OpenAI-compatible endpoints vary,
-    so they also get the schema in the prompt."""
-    return cfg.id == "anthropic"
+    Anthropic and OpenAI do. DeepSeek and Kimi (Moonshot) only support {"type": "json_object"};
+    custom OpenAI-compatible endpoints vary, so they also get the schema in the prompt."""
+    return cfg.id in ("anthropic", "openai")
 
 
 def json_instructions(schema: type[BaseModel]) -> str:
@@ -146,7 +148,7 @@ class CrewAIEngine(AgentEngine):
     mode = "live"
 
     def __init__(self, model: str | None = None, api_key: str | None = None, provider: str = "anthropic",
-                 providers: list[ProviderConfig] | None = None):
+                 providers: list[ProviderConfig] | None = None, allow_empty: bool = False):
         from crewai import LLM, Agent, Crew, Process, Task  # import aislado
 
         self._LLM, self._Agent, self._Task, self._Crew, self._Process = LLM, Agent, Task, Crew, Process
@@ -159,29 +161,63 @@ class CrewAIEngine(AgentEngine):
             if not api_key:
                 raise RuntimeError(f"{env_name} requerido para CrewAIEngine")
             providers = [ProviderConfig(id=provider, model=name, api_key=api_key)]
-        if not providers:
+        if not providers and not allow_empty:
             raise RuntimeError("no model provider configured for CrewAIEngine")
         self.providers = list(providers)
-        self.provider = self.providers[0].id  # primary (reported by /healthz)
-        self.model = self.providers[0].model
+        # allow_empty: an engine that only serves requests carrying the organization's own key
+        self.provider = self.providers[0].id if self.providers else "byo"  # primary (reported by /healthz)
+        self.model = self.providers[0].model if self.providers else ""
         self._llms: dict[str, Any] = {}
 
     def _llm_for(self, cfg: ProviderConfig, max_tokens: int | None = None, creativity: str = "") -> Any:
         temperature = temperature_for(cfg.id, creativity)
         key = f"{cfg.id}:{max_tokens or 0}:{temperature}"
-        if key not in self._llms:
-            kw: dict[str, Any] = {"model": cfg.model, "api_key": cfg.api_key, "temperature": temperature,
-                                  "max_tokens": max_tokens or 4096, "timeout": PROVIDER_TIMEOUT_S}
-            if cfg.id == "deepseek":
-                # Live finding: long consolidations came back as invalid JSON (unescaped quotes
-                # around char 13k). DeepSeek's JSON mode guarantees syntactically valid JSON
-                # (the schema still goes in the instructions), and deepseek-chat allows 8K out.
-                kw["response_format"] = {"type": "json_object"}
-                kw["max_tokens"] = max(kw["max_tokens"], 8192)
-            if cfg.base_url:
-                kw["base_url"] = cfg.base_url
-            self._llms[key] = self._LLM(**kw)
+        # An organization's own key is never cached: the cache is shared by every tenant.
+        if cfg.byo or key not in self._llms:
+            llm = self._LLM(**self._llm_kwargs(cfg, max_tokens, temperature))
+            if cfg.byo:
+                return llm
+            self._llms[key] = llm
         return self._llms[key]
+
+    @staticmethod
+    def _llm_kwargs(cfg: ProviderConfig, max_tokens: int | None, temperature: float | None) -> dict[str, Any]:
+        kw: dict[str, Any] = {"model": cfg.model, "api_key": cfg.api_key, "temperature": temperature,
+                              "max_tokens": max_tokens or 4096, "timeout": PROVIDER_TIMEOUT_S}
+        if temperature is None or (cfg.id == "openai" and fixed_temperature_model(cfg.model)):
+            kw.pop("temperature")  # reasoning models only accept their default
+        if cfg.id in ("deepseek", "kimi"):
+            # Live finding (DeepSeek): long consolidations came back as invalid JSON (unescaped quotes
+            # around char 13k). JSON mode guarantees syntactically valid JSON (the schema still goes in
+            # the instructions). Moonshot's Kimi has the same json_object mode and no json_schema.
+            kw["response_format"] = {"type": "json_object"}
+            kw["max_tokens"] = max(kw["max_tokens"], 8192)
+        if cfg.base_url:
+            kw["base_url"] = cfg.base_url
+        if cfg.id == "openai":
+            if cfg.org_id:
+                kw["organization"] = cfg.org_id
+            if cfg.project_id:
+                kw["project"] = cfg.project_id
+        return kw
+
+    def test_provider(self, cfg: ProviderConfig) -> dict[str, Any]:
+        """A tiny real call with the given credential. Never raises: returns a stable code
+        (ok | invalid_key | quota | model_not_found | network | unknown) and a redacted message."""
+        t0 = time.monotonic()
+        try:
+            kw = self._llm_kwargs(cfg, 64, None)
+            kw["timeout"] = min(PROVIDER_TIMEOUT_S, 30)
+            kw.pop("response_format", None)  # a plain text probe
+            kw["max_tokens"] = 64
+            self._LLM(**kw).call([{"role": "user", "content": "Reply with the single word: OK"}])
+            code, msg = "ok", "Connection works."
+        except Exception as exc:  # classified, redacted, never propagated
+            code = classify_error(exc)
+            msg = scrub(f"{type(exc).__name__}: {exc}", [cfg])[:300]
+            log.warning("provider test %s failed: %s", cfg.id, code)
+        return {"ok": code == "ok", "code": code, "message": msg, "provider": cfg.id, "model": cfg.model,
+                "latency_ms": int((time.monotonic() - t0) * 1000)}
 
     # ------------------------------------------------------------ nucleo
     def _kickoff_once(self, cfg: ProviderConfig, *, role: str, goal: str, backstory: str, description: str,
@@ -243,13 +279,13 @@ class CrewAIEngine(AgentEngine):
                         time.sleep(PROVIDER_RETRY_BACKOFF_S * attempt)
                         continue
                     log.warning("provider %s failed: %s: %s", cfg.id, type(exc).__name__,
-                                redact_secrets(str(exc))[:200])
+                                scrub(str(exc), order)[:200])
                     failed.append(cfg.id)
                     break
         raise ProviderError(
             ERR_ALL_PROVIDERS_FAILED,
             f"All allowed model providers failed ({', '.join(failed)}). Last error: "
-            f"{type(last).__name__}: {redact_secrets(str(last))[:200]}",
+            f"{type(last).__name__}: {scrub(str(last), order)[:200]}",
             tried=failed, allowed=[c.id for c in order], configured=[c.id for c in self.providers])
 
     async def _run(self, **kw) -> tuple[Any, Usage]:

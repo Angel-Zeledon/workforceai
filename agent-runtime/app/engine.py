@@ -89,7 +89,7 @@ class AgentEngine(abc.ABC):
     solo devuelve tool_requests para que el backend decida."""
 
     mode: str  # "simulation" | "live"
-    provider: str = "simulation"  # simulation | deepseek | anthropic | custom
+    provider: str = "simulation"  # simulation | deepseek | anthropic | openai | kimi | custom
 
     @abc.abstractmethod
     async def plan(self, req: PlanRequest) -> PlanResponse: ...
@@ -144,6 +144,20 @@ class AgentEngine(abc.ABC):
         return ChatReplyResponse(text=text, kind=kind, consult=consult,
                                  usage=Usage(model="simulation-claude-sonnet", input_tokens=0, output_tokens=0,
                                              cost_usd=0.0, duration_ms=0))
+
+    def test_provider(self, cfg) -> dict:
+        """Test double for the provider connection test (SIMULATION: no network, deterministic).
+        Keys beginning sim-ok are accepted; sim-quota / sim-nomodel / sim-net give those errors;
+        anything else is an invalid key, which is what a made-up key gets from a real provider."""
+        key = (cfg.api_key or "").lower()
+        table = {"sim-ok": ("ok", "Connection works (simulated)."),
+                 "sim-quota": ("quota", "Simulated: the account has no remaining quota."),
+                 "sim-nomodel": ("model_not_found", "Simulated: the model does not exist for this key."),
+                 "sim-net": ("network", "Simulated: could not reach the provider.")}
+        code, msg = next((v for k, v in table.items() if key.startswith(k)),
+                         ("invalid_key", "Simulated: the provider rejected this API key."))
+        return {"ok": code == "ok", "code": code, "message": msg, "provider": cfg.id, "model": cfg.model,
+                "latency_ms": 1}
 
     async def estimate(self, req: "EstimateRequest") -> "EstimateResponse":
         """Cost range for a plan, before running it. Never calls the LLM."""
