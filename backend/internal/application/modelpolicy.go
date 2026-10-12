@@ -15,7 +15,7 @@ import (
 )
 
 // KnownProviders are the model providers the runtime can route to.
-var KnownProviders = []string{"deepseek", "anthropic", "custom"}
+var KnownProviders = []string{"deepseek", "anthropic", "openai", "kimi", "custom"}
 
 // noneProvider is sent as allowed_providers when nothing is allowed: it matches
 // no configured provider, so the runtime refuses the call (no_allowed_provider)
@@ -45,11 +45,16 @@ type RuntimePolicy struct {
 	PreferredProviders []string            `json:"preferred_providers,omitempty"`
 	RoleProviders      map[string][]string `json:"role_providers,omitempty"`
 	RoleModels         map[string]string   `json:"role_models,omitempty"`
+	// ProviderCredentials carries the organization's own model key (bring-your-own-model) on the internal
+	// backend -> runtime hop only. ByoOnly forbids falling back to the platform's keys.
+	ProviderCredentials []RuntimeCredential `json:"provider_credentials,omitempty"`
+	ByoOnly             bool                `json:"byo_only,omitempty"`
 }
 
 // Empty reports whether there is nothing to send.
 func (p RuntimePolicy) Empty() bool {
-	return len(p.AllowedProviders) == 0 && len(p.PreferredProviders) == 0 && len(p.RoleProviders) == 0 && len(p.RoleModels) == 0
+	return len(p.AllowedProviders) == 0 && len(p.PreferredProviders) == 0 && len(p.RoleProviders) == 0 && len(p.RoleModels) == 0 &&
+		len(p.ProviderCredentials) == 0 && !p.ByoOnly
 }
 
 // ModelPolicyStore persists the policy (memory and Postgres stores implement it).

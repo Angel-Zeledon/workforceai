@@ -145,6 +145,14 @@ func run(log *slog.Logger) error {
 		return err
 	}
 
+	// Bring-your-own-model: the organization's own provider key (sealed with its data key) is merged
+	// into every runtime call; without a choice the platform default (DeepSeek) applies.
+	var llmSvc *application.LLMService
+	if ls, ok := store.(application.LLMStore); ok && modelPolicy != nil {
+		llmSvc = &application.LLMService{Store: ls, Sealer: cw.vault, Tester: rt, Policy: modelPolicy, Rec: rec, Cfg: cfg.App, Suspects: cw.sus}
+		rt.WithPolicy(func(c context.Context) application.RuntimePolicy { return llmSvc.Apply(c, modelPolicy.Runtime(c)) })
+	}
+
 	approvals.Observer = cw.ctl
 	orch.SetAnomalyObserver(cw.ctl)
 
@@ -216,7 +224,7 @@ func run(log *slog.Logger) error {
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Standing: standingSvc,
 		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Skills: skillsSvc, Rewards: rewardsSvc, Push: pushSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
-		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy,
+		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
 	if cfg.AuthEnabled {
