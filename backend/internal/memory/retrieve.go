@@ -59,9 +59,23 @@ func (f *FTS) Retrieve(ctx context.Context, org string, q Query) ([]Item, error)
 	return Rank(items, q, now, limit), nil
 }
 
+// coverage is the share of the query terms present in a text (accent-insensitive).
+func coverage(text string, terms []string) float64 {
+	if len(terms) == 0 {
+		return 1
+	}
+	ft, n := textfold.Fold(text), 0
+	for _, t := range terms {
+		if strings.Contains(ft, t) {
+			n++
+		}
+	}
+	return float64(n) / float64(len(terms))
+}
+
 func docItem(h DocHit, terms []string) Item {
 	d := h.Doc
-	return Item{ID: d.ID, Ref: d.Ref, Kind: d.Kind, Title: d.Title, Snippet: Passage(d.Body, terms, MaxSnippetChars), AgentID: d.AgentID,
+	return Item{cover: coverage(d.Title+" "+d.Body, terms), ID: d.ID, Ref: d.Ref, Kind: d.Kind, Title: d.Title, Snippet: Passage(d.Body, terms, MaxSnippetChars), AgentID: d.AgentID,
 		ProjectID: d.ProjectID, Project: d.ProjectName, SourceRef: d.SourceRef, At: d.UpdatedAt, Score: h.Score, Deletable: true}
 }
 
@@ -88,7 +102,7 @@ func (d *DriveFiles) Files(ctx context.Context, org, agentID string, terms []str
 	}
 	out := make([]Item, 0, len(hits))
 	for _, h := range hits {
-		out = append(out, Item{Ref: "file:" + h.Path, Kind: KindFile, Title: h.Name, Path: h.Path, Snippet: Passage(h.Snippet, terms, MaxSnippetChars),
+		out = append(out, Item{cover: coverage(h.Name+" "+h.Snippet, terms), Ref: "file:" + h.Path, Kind: KindFile, Title: h.Name, Path: h.Path, Snippet: Passage(h.Snippet, terms, MaxSnippetChars),
 			AgentID: agentIDOf(h.UpdatedBy), Score: h.Score, Foreign: h.UpdatedBy != drive.AgentP(agentID)})
 	}
 	return out, nil
@@ -110,6 +124,7 @@ func Rank(items []Item, q Query, now time.Time, limit int) []Item {
 	for i := range items {
 		it := &items[i]
 		s := it.Score
+		s *= 0.4 + 0.6*it.cover // a text with more of the query terms beats one with a single strong hit
 		if q.PreferProject != "" && it.ProjectID == q.PreferProject ||
 			q.PreferPath != "" && it.Path != "" && drive.IsUnder(it.Path, q.PreferPath) {
 			s *= 1.4
@@ -160,6 +175,9 @@ var _ Retriever = (*Multi)(nil)
 
 // Retrieve implements Retriever.
 func (m *Multi) Retrieve(ctx context.Context, org string, q Query) ([]Item, error) {
+	if len(m.Retrievers) == 1 {
+		return m.Retrievers[0].Retrieve(ctx, org, q)
+	}
 	const k = 60.0
 	score := map[string]float64{}
 	byRef := map[string]Item{}
@@ -248,16 +266,7 @@ func pieces(text string, max int) []string {
 		}
 		out = append(out, line)
 	}
-	// Neighbouring short lines read better together.
-	var merged []string
-	for _, p := range out {
-		if n := len(merged); n > 0 && len([]rune(merged[n-1]))+len([]rune(p)) < max {
-			merged[n-1] += " " + p
-			continue
-		}
-		merged = append(merged, p)
-	}
-	return merged
+	return out
 }
 
 func cutRunes(s string, max int) string {

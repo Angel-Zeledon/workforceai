@@ -24,6 +24,7 @@ import (
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
+	"aiworkforce/backend/internal/memory"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/rewards"
@@ -77,6 +78,8 @@ type Deps struct {
 	SandboxAvailable bool
 	// Skills serves /skills/* and /agents/{id}/skills (skills.go). Optional.
 	Skills *skills.Service
+	// Memory serves /agents/{id}/memory (memory.go): the long-term memory. Optional.
+	Memory *memory.Service
 	// Rewards serves /rewards/* and /shop/* (rewards.go): the coin wallet,
 	// ledger, catalog, purchases, equipment and office items. Optional.
 	Rewards *rewards.Service
@@ -166,6 +169,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountDrive(r)
 			s.mountCode(r)
 			s.mountSkills(r)
+			s.mountMemory(r)
 			s.mountRewards(r)
 			s.mountPush(r)
 			s.mountV2(r)

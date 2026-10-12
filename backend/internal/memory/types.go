@@ -84,6 +84,8 @@ type Item struct {
 	// Deletable: a person may remove it from the agent's memory (files are
 	// managed in the drive).
 	Deletable bool `json:"deletable"`
+
+	cover float64 // share of the query terms in the text (ranking)
 }
 
 // Query is what a Retriever is asked.
