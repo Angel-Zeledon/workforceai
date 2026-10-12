@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, type ReactNode } from "react";
 import { useT } from "@/lib/i18n";
+import { usePageMode } from "../nav/pageMode";
 
 /** Accessible modal shell shared by the template gallery and the onboarding wizard. */
 export function Modal({ title, onClose, children, testid, wide = false }: {
@@ -8,6 +9,7 @@ export function Modal({ title, onClose, children, testid, wide = false }: {
 }) {
   const { t } = useT();
   const ref = useRef<HTMLDivElement>(null);
+  const page = usePageMode();
   const closeRef = useRef(onClose);
   closeRef.current = onClose; // keep the latest handler without re-running the focus effect
   useEffect(() => {
@@ -22,6 +24,8 @@ export function Modal({ title, onClose, children, testid, wide = false }: {
     window.addEventListener("keydown", onKey);
     return () => { window.removeEventListener("keydown", onKey); prev?.focus?.(); };
   }, []);
+  // As a page (see nav/pageMode): inline body under the breadcrumb, nothing covers the sidebar.
+  if (page) return <div data-testid={testid} role="region" aria-label={title} className={`mx-auto w-full px-5 py-5 ${wide ? "max-w-4xl" : "max-w-xl"}`}>{children}</div>;
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/35 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} data-testid={testid}

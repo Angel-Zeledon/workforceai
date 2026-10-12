@@ -4,16 +4,12 @@ import { api } from "@/lib/api";
 import { MOCK } from "@/lib/config";
 import { useT } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
+import { go } from "@/lib/navBridge";
 import { useConnections } from "@/lib/connections/store";
 import { Icon, type IconName } from "../icons";
 import { useViewer } from "../connections/shared";
-import { OfficeSettingsPanel } from "../OfficeSettings";
-import { TemplateGallery } from "../templates/TemplateGallery";
 import { useOnboardingEntry } from "../onboarding/OnboardingEntry";
-import { HireFromTemplateDialog } from "./HireFromTemplateDialog";
-import { KillSwitchDialog } from "../security/KillSwitchDialog";
 import { useBootConnections } from "../security/ControlsChrome";
-import { MembersDialog } from "../auth/MembersDialog";
 import { logout, orgLabel, switchOrg, useCan, useSession } from "@/lib/session";
 
 function Item({ icon, label, onClick, testid, disabled, danger, trailing, active, level }: {
@@ -52,15 +48,12 @@ export function AdminMenu() {
   const { t } = useT();
   useBootConnections();
   const [open, setOpen] = useState(false);
-  const [dialog, setDialog] = useState<null | "kill" | "templates" | "settings" | "members" | "hire">(null);
   const session = useSession();
   const signedIn = session.status === "authenticated";
   const canMembers = useCan("members:read");
   const wrap = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
-  const view = useConnections((s) => s.view);
-  const setView = useConnections((s) => s.setView);
   const controls = useConnections((s) => s.controls);
   const { isAdmin } = useViewer();
   const onboarding = useOnboardingEntry();
@@ -115,22 +108,22 @@ export function AdminMenu() {
         <div ref={menu} id="admin-menu-list" role="menu" aria-label={t("admin.title")} data-testid="admin-menu-list" onKeyDown={onKey}
           className="ac-pop absolute right-0 top-full z-[70] mt-2 w-[290px] max-w-[calc(100vw-24px)] divide-y divide-line rounded-xl border border-line bg-panel p-1.5 text-ink shadow-float">
           <Group title={t("admin.group.workspace")}>
-            <Item icon="plug" testid="nav-connections" active={view === "connections"} label={t("nav.connections")} onClick={run(() => setView(view === "connections" ? null : "connections"))} />
-            <Item icon="plus" testid="hire-open" disabled={!isAdmin} label={t("hire.open")} onClick={run(() => setDialog("hire"))} />
-            <Item icon="layout" testid="templates-open" label={t("tpl.open")} onClick={run(() => setDialog("templates"))} />
+            <Item icon="plug" testid="nav-connections" label={t("nav.connections")} onClick={run(() => go("/settings?s=connections"))} />
+            <Item icon="plus" testid="hire-open" disabled={!isAdmin} label={t("hire.open")} onClick={run(() => go("/settings?s=hire"))} />
+            <Item icon="layout" testid="templates-open" label={t("tpl.open")} onClick={run(() => go("/settings?s=templates"))} />
             {onboarding.supported && (
               <Item icon="flag" testid={onboarding.pending ? "onboarding-open" : "org-config-open"} label={onboarding.pending ? t("onb.prompt.title") : t("cfg.open")}
                 trailing={onboarding.pending ? badge(t("admin.pending"), "bg-accent-soft text-accent") : undefined} onClick={run(onboarding.open)} />
             )}
-            <Item icon="edit" testid="office-settings" label={t("settings.title")} onClick={run(() => setDialog("settings"))} />
+            <Item icon="edit" testid="office-settings" label={t("settings.title")} onClick={run(() => go("/settings?s=office"))} />
           </Group>
           <Group title={t("admin.group.safety")}>
-            <Item icon="shield" testid="nav-security" active={view === "security"} label={t("nav.security")}
-              trailing={readOnly ? badge(t("ctl.state.readonly"), "bg-warn/15 text-warn") : undefined} onClick={run(() => setView(view === "security" ? null : "security"))} />
+            <Item icon="shield" testid="nav-security" label={t("nav.security")}
+              trailing={readOnly ? badge(t("ctl.state.readonly"), "bg-warn/15 text-warn") : undefined} onClick={run(() => go("/settings?s=security"))} />
             <Item icon="power" testid="ctl-killswitch" danger level={level} disabled={level === "none" && !isAdmin}
               label={level === "none" ? t("ctl.killswitch.title") : t(`ctl.level.${level}`)}
               trailing={level !== "none" ? badge(t("admin.active"), "bg-err text-white") : undefined}
-              onClick={run(() => (level === "none" ? setDialog("kill") : setView("security")))} />
+              onClick={run(() => go(level === "none" ? "/settings?s=kill" : "/settings?s=security"))} />
           </Group>
           {(!signedIn || session.role === "admin" || session.role === "owner") && (
             <Group title={t("admin.group.demo")}>
@@ -144,7 +137,7 @@ export function AdminMenu() {
                 <b className="block truncate text-[12.5px] text-ink">{session.user?.name}</b>
                 <span className="block truncate">{session.user?.email} · {t(`members.roles.${session.role}`)}</span>
               </div>
-              {canMembers && <Item icon="users" testid="members-open" label={t("members.title")} onClick={run(() => setDialog("members"))} />}
+              {canMembers && <Item icon="users" testid="members-open" label={t("members.title")} onClick={run(() => go("/settings?s=members"))} />}
               {session.orgs.length > 1 && session.orgs.filter((o) => o.org_id !== session.orgId).map((o) => (
                 <Item key={o.org_id} icon="layout" testid={`org-switch-${o.org_id}`} label={t("admin.switchOrg", { org: orgLabel(o), role: t(`members.roles.${o.role}`) })}
                   onClick={run(() => { switchOrg(o.org_id).catch(() => undefined); })} />
@@ -154,11 +147,6 @@ export function AdminMenu() {
           )}
         </div>
       )}
-      {dialog === "kill" && <KillSwitchDialog onClose={() => setDialog(null)} />}
-      {dialog === "templates" && <TemplateGallery onClose={() => setDialog(null)} />}
-      {dialog === "hire" && <HireFromTemplateDialog onClose={() => setDialog(null)} />}
-      {dialog === "settings" && <OfficeSettingsPanel onClose={() => setDialog(null)} />}
-      {dialog === "members" && <MembersDialog onClose={() => setDialog(null)} />}
       {onboarding.dialogs}
     </div>
   );

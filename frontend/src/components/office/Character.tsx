@@ -134,6 +134,7 @@ export function Character({ id, index }: { id: string; index: number }) {
   const blazer = outfit ?? meta.color;
   const sleeve = blazer;
   const pants = "#9a7a5c", shoe = "#6b4a36";
+  const noseCol = useMemo(() => "#" + new THREE.Color(skin).multiplyScalar(0.9).getHexString(), [skin]);
 
   useFrame((state, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
@@ -398,10 +399,16 @@ export function Character({ id, index }: { id: string; index: number }) {
         {/* piernas cortas y redondas */}
         {([[0.1, lHip, lKnee], [-0.1, rHip, rKnee]] as const).map(([x, hipRef, kneeRef], i) => (
           <group key={i} ref={hipRef} position={[x, -0.02, 0]}>
+            {/* round joints hide the seam between the stacked limb pieces: the leg reads as one soft limb */}
+            <mesh position={[0, 0, 0]}><sphereGeometry args={[0.085, 12, 10]} /><meshStandardMaterial color={pants} roughness={0.85} /></mesh>
             <mesh castShadow position={[0, -0.1, 0]}><capsuleGeometry args={[0.085, 0.06, 4, 10]} /><meshStandardMaterial color={pants} roughness={0.85} /></mesh>
             <group ref={kneeRef} position={[0, -0.2, 0]}>
+              <mesh position={[0, 0, 0]}><sphereGeometry args={[0.076, 12, 10]} /><meshStandardMaterial color={pants} roughness={0.85} /></mesh>
               <mesh castShadow position={[0, -0.06, 0]}><capsuleGeometry args={[0.075, 0.03, 4, 10]} /><meshStandardMaterial color={pants} roughness={0.85} /></mesh>
               <mesh castShadow position={[0, -0.12, 0.04]} scale={[1, 0.7, 1.5]}><sphereGeometry args={[0.09, 12, 10]} /><meshStandardMaterial color={shoe} roughness={0.6} /></mesh>
+              {/* darker sole and a lighter toe cap: the shoe stops being a plain ball */}
+              <mesh position={[0, -0.168, 0.042]} scale={[1.04, 0.26, 1.5]}><sphereGeometry args={[0.09, 12, 8]} /><meshStandardMaterial color="#3f2c21" roughness={0.9} /></mesh>
+              <mesh position={[0, -0.13, 0.118]} scale={[1, 0.65, 0.8]}><sphereGeometry args={[0.052, 10, 8]} /><meshStandardMaterial color="#8c6448" roughness={0.55} /></mesh>
             </group>
           </group>
         ))}
@@ -430,10 +437,15 @@ export function Character({ id, index }: { id: string; index: number }) {
           {/* brazos redondos */}
           {([[0.24, lSh, lEl], [-0.24, rSh, rEl]] as const).map(([x, shRef, elRef], i) => (
             <group key={i} ref={shRef} position={[x, 0.28, 0]}>
+              <mesh position={[0, 0, 0]}><sphereGeometry args={[0.072, 12, 10]} /><meshStandardMaterial color={blazer} roughness={0.8} /></mesh>
               <mesh castShadow position={[0, -0.1, 0]}><capsuleGeometry args={[0.07, 0.1, 4, 10]} /><meshStandardMaterial color={blazer} roughness={0.8} /></mesh>
               <group ref={elRef} position={[0, -0.2, 0]}>
+                <mesh position={[0, 0, 0]}><sphereGeometry args={[0.064, 12, 10]} /><meshStandardMaterial color={blazer} roughness={0.8} /></mesh>
                 <mesh castShadow position={[0, -0.1, 0]}><capsuleGeometry args={[0.062, 0.06, 4, 10]} /><meshStandardMaterial color={blazer} roughness={0.8} /></mesh>
+                {/* shirt cuff and a thumb: the hand reads as a hand without losing its round shape */}
+                <mesh position={[0, -0.166, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.066, 0.013, 8, 18]} /><meshStandardMaterial color="#fffaf0" roughness={0.9} /></mesh>
                 <mesh castShadow position={[0, -0.215, 0]}><sphereGeometry args={[0.075, 12, 10]} /><meshStandardMaterial color={skin} roughness={0.8} /></mesh>
+                <mesh position={[x > 0 ? -0.062 : 0.062, -0.2, 0.038]} scale={[0.8, 1.15, 0.9]}><sphereGeometry args={[0.032, 10, 8]} /><meshStandardMaterial color={skin} roughness={0.8} /></mesh>
                 {i === 1 && (
                   <group ref={mug} position={[0, -0.27, 0.07]} visible={false}>
                     <mesh><cylinderGeometry args={[0.05, 0.043, 0.1, 12]} /><meshStandardMaterial color="#f4efe6" roughness={0.6} /></mesh>
@@ -462,7 +474,13 @@ export function Character({ id, index }: { id: string; index: number }) {
             <group ref={eyes} position={[0, 0.17, 0]}>
               <mesh position={[0.058, 0, 0.145]} scale={[1, 1.35, 0.5]}><sphereGeometry args={[0.022, 10, 8]} /><meshBasicMaterial color={dark} /></mesh>
               <mesh position={[-0.058, 0, 0.145]} scale={[1, 1.35, 0.5]}><sphereGeometry args={[0.022, 10, 8]} /><meshBasicMaterial color={dark} /></mesh>
+              {/* catchlights: a tiny highlight makes the eyes look alive */}
+              <mesh position={[0.065, 0.012, 0.159]}><sphereGeometry args={[0.0075, 8, 6]} /><meshBasicMaterial color="#ffffff" /></mesh>
+              <mesh position={[-0.051, 0.012, 0.159]}><sphereGeometry args={[0.0075, 8, 6]} /><meshBasicMaterial color="#ffffff" /></mesh>
             </group>
+            <mesh position={[0, 0.128, 0.162]} scale={[1, 0.85, 0.8]}><sphereGeometry args={[0.019, 10, 8]} /><meshStandardMaterial color={noseCol} roughness={0.8} /></mesh>
+            <mesh position={[0.163, 0.145, -0.005]} scale={[0.45, 1, 0.8]}><sphereGeometry args={[0.04, 10, 8]} /><meshStandardMaterial color={skin} roughness={0.8} /></mesh>
+            <mesh position={[-0.163, 0.145, -0.005]} scale={[0.45, 1, 0.8]}><sphereGeometry args={[0.04, 10, 8]} /><meshStandardMaterial color={skin} roughness={0.8} /></mesh>
             <mesh position={[0.1, 0.1, 0.12]} scale={[1.2, 0.8, 0.4]}><sphereGeometry args={[0.025, 8, 6]} /><meshBasicMaterial color="#ff9fa8" transparent opacity={0.65} /></mesh>
             <mesh position={[-0.1, 0.1, 0.12]} scale={[1.2, 0.8, 0.4]}><sphereGeometry args={[0.025, 8, 6]} /><meshBasicMaterial color="#ff9fa8" transparent opacity={0.65} /></mesh>
             <mesh ref={mouth} position={[0, 0.095, 0.155]} scale={[1.6, 0.45, 0.5]}><sphereGeometry args={[0.02, 10, 8]} /><meshBasicMaterial color="#8a3b3b" /></mesh>

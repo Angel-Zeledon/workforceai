@@ -4,11 +4,13 @@ import { useT } from "@/lib/i18n";
 import { ctlApi } from "@/lib/connections/api";
 import { useConnections } from "@/lib/connections/store";
 import { Btn } from "../ui";
+import { useCloseLabel } from "../nav/pageMode";
 import { ErrorLine, errText, inputCls, Modal } from "../connections/shared";
 
 /** Confirmation dialog of the global kill switch (freeze / lockdown). Shared by the admin menu and the Security screen. */
 export function KillSwitchDialog({ onClose }: { onClose: () => void }) {
   const { t } = useT();
+  const closeLabel = useCloseLabel();
   const [level, setLevel] = useState<"freeze" | "lockdown">("freeze");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,7 +36,7 @@ export function KillSwitchDialog({ onClose }: { onClose: () => void }) {
         <ErrorLine msg={err} />
       </div>
       <div className="mt-4 flex justify-end gap-2">
-        <Btn onClick={onClose}>{t("common.close")}</Btn>
+        <Btn onClick={onClose}>{closeLabel}</Btn>
         <Btn data-testid="ctl-killswitch-confirm" kind="danger" disabled={busy} onClick={go}>{t("ctl.killswitch.confirm")}</Btn>
       </div>
     </Modal>

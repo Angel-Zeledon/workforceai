@@ -4,6 +4,7 @@ import { useT, trOr, tr } from "@/lib/i18n";
 import { errCode } from "@/lib/connections/api";
 import { useConnections } from "@/lib/connections/store";
 import type { ConnStatus, Human, Risk } from "@/lib/connections/types";
+import { usePageMode } from "../nav/pageMode";
 
 /** Translates an error thrown by the API layer into a localized, provider-agnostic message. */
 export function errText(e: unknown): string {
@@ -48,11 +49,13 @@ export function CapChip({ cap, risk, dim }: { cap: string; risk: Risk; dim?: boo
 }
 
 export function Modal({ children, onClose, testId, wide }: { children: ReactNode; onClose: () => void; testId?: string; wide?: boolean }) {
+  const page = usePageMode();
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
   }, [onClose]);
+  if (page) return <div data-testid={testId} role="region" className={`mx-auto w-full px-5 py-5 ${wide ? "max-w-2xl" : "max-w-md"}`}>{children}</div>;
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/35 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div data-testid={testId} role="dialog" aria-modal="true" className={`ac-pop max-h-[90vh] w-full overflow-y-auto rounded-xl border border-line bg-panel p-5 shadow-float ${wide ? "max-w-2xl" : "max-w-md"}`}>

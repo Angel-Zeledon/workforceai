@@ -29,7 +29,7 @@ function Hinted({ id, children }: { id: string; children: ReactNode }) {
 export const OfficePage = () => <OfficeView />;
 export const DashboardPage = () => <Dashboard />;
 export const ShopPage = () => <Hinted id="shop"><ShopView /></Hinted>;
-export const SettingsPage = () => <SettingsView />;
+export const SettingsPage = () => <Suspense fallback={<PageSkeleton />}><SettingsView /></Suspense>;
 export const ChatsPage = ({ agentId }: { agentId?: string }) => <ChatsView agentId={agentId ? decodeURIComponent(agentId) : undefined} />;
 
 function FilesInner() {

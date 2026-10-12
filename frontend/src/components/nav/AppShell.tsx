@@ -20,7 +20,7 @@ import { usePreferences } from "@/lib/preferences";
 import { setNavigator, SECTIONS, sectionOf } from "@/lib/navBridge";
 import { AdminMenu } from "../admin/AdminMenu";
 import { OrgIndicator } from "../auth/OrgIndicator";
-import { ControlsBanner, ControlsOverlay } from "../security/ControlsChrome";
+import { ControlsBanner } from "../security/ControlsChrome";
 import { CostOverlays } from "../cost/CostOverlays";
 import { Icon, type IconName } from "../icons";
 import { Toaster } from "./Toaster";
@@ -161,7 +161,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <ProviderAlert />
         <CostOverlays />
         <main className="relative min-h-0 flex-1">
-          <ControlsOverlay />
           <div key={section === "dashboard" ? "office" : section} className="ac-page absolute inset-0">{children}</div>
           {/* Files in the conversation: viewer next to the chat (left of the agent panel when it is open) */}
           {section !== "drive" && viewerOpen && (

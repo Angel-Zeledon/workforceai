@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { call } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import { useCloseLabel } from "../nav/pageMode";
 import { useCan, useSession } from "@/lib/session";
 import { Btn } from "../ui";
 import { ErrorLine, inputCls, Modal } from "../connections/shared";
@@ -18,6 +19,7 @@ const assignable = (actor: string | null) => ROLES.filter((r) => actor === "owne
 /** Members and invitations of the current organization (admin menu). Buttons follow the permissions of /auth/me. */
 export function MembersDialog({ onClose }: { onClose: () => void }) {
   const { t } = useT();
+  const closeLabel = useCloseLabel();
   const me = useSession((s) => s.user);
   const myRole = useSession((s) => s.role);
   const canInvite = useCan("members:invite");
@@ -132,7 +134,7 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
         </div>
       )}
       <div className="mt-3"><ErrorLine msg={err} /></div>
-      <div className="mt-4 flex justify-end"><Btn onClick={onClose}>{t("common.close")}</Btn></div>
+      <div className="mt-4 flex justify-end"><Btn onClick={onClose}>{closeLabel}</Btn></div>
     </Modal>
   );
 }

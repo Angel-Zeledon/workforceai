@@ -5,6 +5,7 @@ import { LOCALES, useT, type Locale } from "@/lib/i18n";
 import { resolveAgent, usePreferences, type LabelSize, type Lighting } from "@/lib/preferences";
 import { AgentCustomizer } from "./AgentCustomizer";
 import { Icon, type IconName } from "./icons";
+import { usePageMode } from "./nav/pageMode";
 
 const MODES: Lighting[] = ["ambient", "day", "night"];
 const MODE_ICON: Record<Lighting, IconName> = { ambient: "contrast", day: "sun", night: "moon" };
@@ -55,6 +56,7 @@ export function OfficeSettingsPanel({ onClose }: { onClose: () => void }) {
   const agents = useStore((s) => s.agents);
   const [emp, setEmp] = useState<string>("");
   const current = emp && agents[emp] ? emp : order[0] ?? "";
+  const page = usePageMode();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
@@ -65,10 +67,10 @@ export function OfficeSettingsPanel({ onClose }: { onClose: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <div className="pointer-events-auto fixed inset-0 z-[54]" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className={page ? undefined : "pointer-events-auto fixed inset-0 z-[54]"} onMouseDown={page ? undefined : (e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={ref} tabIndex={-1} role="dialog" aria-label={t("settings.title")} data-testid="office-settings-panel"
-        className="ac-pop absolute right-3 top-[60px] max-h-[calc(100vh-76px)] w-[330px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-xl border border-line bg-panel p-4 shadow-float outline-none">
-          <div className="mb-3 flex items-center justify-between">
+        className={page ? "mx-auto w-full max-w-xl p-5 outline-none" : "ac-pop absolute right-3 top-[60px] max-h-[calc(100vh-76px)] w-[330px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-xl border border-line bg-panel p-4 shadow-float outline-none"}>
+          <div className={`mb-3 flex items-center justify-between ${page ? "hidden" : ""}`}>
             <h3 className="text-[15px] font-semibold tracking-tight text-ink">{t("settings.title")}</h3>
             <button type="button" onClick={onClose} aria-label={t("common.close")} className="rounded-md p-1 text-mute hover:bg-mute/10 hover:text-ink"><Icon name="x" size={15} /></button>
           </div>
