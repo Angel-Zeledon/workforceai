@@ -172,6 +172,12 @@ class CrewAIEngine(AgentEngine):
         if key not in self._llms:
             kw: dict[str, Any] = {"model": cfg.model, "api_key": cfg.api_key, "temperature": temperature,
                                   "max_tokens": max_tokens or 4096, "timeout": PROVIDER_TIMEOUT_S}
+            if cfg.id == "deepseek":
+                # Live finding: long consolidations came back as invalid JSON (unescaped quotes
+                # around char 13k). DeepSeek's JSON mode guarantees syntactically valid JSON
+                # (the schema still goes in the instructions), and deepseek-chat allows 8K out.
+                kw["response_format"] = {"type": "json_object"}
+                kw["max_tokens"] = max(kw["max_tokens"], 8192)
             if cfg.base_url:
                 kw["base_url"] = cfg.base_url
             self._llms[key] = self._LLM(**kw)
