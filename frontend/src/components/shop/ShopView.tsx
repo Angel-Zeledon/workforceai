@@ -22,7 +22,10 @@ function Price({ n }: { n: number }) {
   return <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-amber-800"><CoinIcon size={13} />{fmtNumber(n, 0)}</span>;
 }
 
-function ItemCard({ item }: { item: ShopItem }) {
+/** One catalog item. In the Shop it can only be bought (a purchase lands in the
+ *  inventory, nothing is applied); in the Inventory the owner chooses who wears it
+ *  or places it in the office. */
+function ItemCard({ item, mode, onOpenInventory }: { item: ShopItem; mode: "shop" | "inventory"; onOpenInventory: () => void }) {
   const { t, locale } = useT();
   const name = useAgentName();
   const balance = useRewards((s) => s.wallet.balance);
@@ -69,6 +72,11 @@ function ItemCard({ item }: { item: ShopItem }) {
             </Btn>
             {!affordable && <div className="text-[10.5px] text-mute">{t("shop.missing", { count: item.price - balance })}</div>}
           </>
+        ) : mode === "shop" ? (
+          <div className="flex items-center justify-between gap-2">
+            <span data-testid={`shop-in-inventory-${item.id}`} className="text-[11px] font-medium text-ok">{t("shop.inInventory")}</span>
+            <Btn data-testid={`shop-goto-inventory-${item.id}`} onClick={onOpenInventory}>{t("shop.toInventory")}</Btn>
+          </div>
         ) : item.kind === "character" ? (
           <div className="flex flex-wrap items-center gap-1.5">
             <select aria-label={t("shop.forAgent")} data-testid={`shop-agent-${item.id}`} value={target} onChange={(e) => setAgent(e.target.value)}
@@ -86,7 +94,6 @@ function ItemCard({ item }: { item: ShopItem }) {
         ) : (
           <Btn kind="ok" data-testid={`shop-place-${item.id}`} disabled={busy} onClick={() => run(() => rw().place(item.id))}>{t("shop.place")}</Btn>
         )}
-        {owned && <div className="text-[10.5px] font-medium text-mute">{t("shop.owned")}</div>}
         {err && <div role="alert" className="text-[10.5px] font-medium text-err">{t("shop.error")}</div>}
       </div>
     </article>
@@ -202,7 +209,7 @@ export function ShopView() {
             </div>
             {items.length === 0 ? <Empty>{tab === "mine" ? t("shop.mineEmpty") : t("shop.empty")}</Empty> : (
               <div data-testid="shop-grid" className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
-                {items.map((it) => <ItemCard key={it.id} item={it} />)}
+                {items.map((it) => <ItemCard key={it.id} item={it} mode={tab === "mine" ? "inventory" : "shop"} onOpenInventory={() => setTab("mine")} />)}
               </div>
             )}
           </div>

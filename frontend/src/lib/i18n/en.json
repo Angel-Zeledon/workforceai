@@ -2512,7 +2512,7 @@
   "shop.spentTotal": "Spent",
   "shop.rule": "Coins are earned only by finished work and can never be bought with money. Items are cosmetic only.",
   "shop.tab.shop": "Shop",
-  "shop.tab.mine": "My items",
+  "shop.tab.mine": "Inventory",
   "shop.tab.history": "History",
   "shop.group.character": "Characters",
   "shop.group.office": "Office",
@@ -2548,7 +2548,7 @@
   "shop.wornBy": "Worn by: {names}",
   "shop.placed": "Placed in the office",
   "shop.empty": "No items in this category.",
-  "shop.mineEmpty": "You have not bought items of this category yet.",
+  "shop.mineEmpty": "Your inventory is empty. Buy items in the Shop: they show up here, where you choose who wears them or where they go.",
   "shop.error": "Could not complete. Check your coins and try again.",
   "shop.history.when": "When",
   "shop.history.what": "What",
@@ -2561,5 +2561,7 @@
   "shop.reason.task_first_try": "Task approved on the first try: {title}",
   "shop.reason.task_rework": "Task finished after rework: {title}",
   "shop.reason.project_done": "Project finished: {title}",
-  "shop.reason.purchase": "Purchase: {item}"
+  "shop.reason.purchase": "Purchase: {item}",
+  "shop.inInventory": "In your inventory",
+  "shop.toInventory": "Equip from inventory"
 }

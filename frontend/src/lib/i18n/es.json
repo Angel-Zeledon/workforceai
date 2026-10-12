@@ -2512,7 +2512,7 @@
   "shop.spentTotal": "Gastadas",
   "shop.rule": "Las monedas se ganan solo con trabajo terminado y no se pueden comprar con dinero. Los objetos son solo estéticos.",
   "shop.tab.shop": "Tienda",
-  "shop.tab.mine": "Mis objetos",
+  "shop.tab.mine": "Inventario",
   "shop.tab.history": "Historial",
   "shop.group.character": "Personajes",
   "shop.group.office": "Oficina",
@@ -2548,7 +2548,7 @@
   "shop.wornBy": "Lo lleva: {names}",
   "shop.placed": "Colocado en la oficina",
   "shop.empty": "No hay objetos en esta categoría.",
-  "shop.mineEmpty": "Aún no has comprado objetos de esta categoría.",
+  "shop.mineEmpty": "Tu inventario está vacío. Compra objetos en la Tienda: aparecerán aquí y desde aquí eliges a quién ponérselos o dónde colocarlos.",
   "shop.error": "No se pudo completar. Revisa tus monedas e inténtalo de nuevo.",
   "shop.history.when": "Cuándo",
   "shop.history.what": "Qué",
@@ -2561,5 +2561,7 @@
   "shop.reason.task_first_try": "Tarea aprobada a la primera: {title}",
   "shop.reason.task_rework": "Tarea terminada tras corregirla: {title}",
   "shop.reason.project_done": "Proyecto terminado: {title}",
-  "shop.reason.purchase": "Compra: {item}"
+  "shop.reason.purchase": "Compra: {item}",
+  "shop.inInventory": "En tu inventario",
+  "shop.toInventory": "Equipar desde el inventario"
 }
