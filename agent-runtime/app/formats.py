@@ -17,6 +17,8 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
                         r"generate|write|prepare|draft)\b[^.\n]{0,40}\b(documento|document)\b", re.I)),
 ]
 
+_MARKER = re.compile(r"\[\[format:(xlsx|docx|pdf)\]\]", re.I)
+
 EXT = {"xlsx": ".xlsx", "docx": ".docx", "pdf": ".pdf"}
 
 
@@ -26,6 +28,9 @@ def _fold(text: str) -> str:
 
 def requested_format(text: str | None) -> str:
     """"xlsx" | "docx" | "pdf" or "" when the text names none. The first one mentioned wins."""
+    mk = _MARKER.search(text or "")  # [[format:xlsx]] from a slash command wins over any word in the text
+    if mk:
+        return mk.group(1).lower()
     t = _fold(text or "")
     best, at = "", -1
     for fmt, rx in _PATTERNS:

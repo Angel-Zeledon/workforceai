@@ -124,6 +124,10 @@ class _RouteLLM(BaseModel):
     reasons: dict[str, str] = Field(default_factory=dict)
 
 
+class _SummaryLLM(BaseModel):
+    text: str
+
+
 class _ChatLLM(BaseModel):
     text: str
     consult_to_agent_id: str | None = None
@@ -385,6 +389,21 @@ class CrewAIEngine(AgentEngine):
             policy=policy_from_request(req, "synthesize"))
         return SynthesizeResponse(title=res.title, summary=res.summary, sections=res.sections,
                                   provider=usage.provider, model=usage.model)
+
+    async def summarize(self, req):
+        """Slash commands (compact / meeting / daily). Works without structured output: the JSON contract is in the
+        instructions (_kickoff_once) and the answer is parsed tolerantly with one retry."""
+        from .commands import build_summarize_prompt
+        from .models import SummarizeResponse
+
+        res, usage = await self._run(
+            role="Asistente Ejecutiva", goal="Resumir con fidelidad, sin inventar datos",
+            backstory=system_rules(req.locale, req.tone), description=build_summarize_prompt(req),
+            expected="JSON con text", schema=_SummaryLLM, policy=policy_from_request(req, "summarize"), max_tokens=2000)
+        text = (res.text or "").strip()
+        if not text:
+            raise ValueError("empty summary")
+        return SummarizeResponse(text=text, usage=usage, provider=usage.provider, model=usage.model)
 
     # ------------------------------------------------------------ chat layer
     async def route(self, req: RouteRequest) -> RouteResponse:

@@ -679,6 +679,41 @@ class ChatReplyResponse(_Base):
     model: str | None = None
 
 
+# ---- slash commands (docs/architecture/commands.md) ----
+class SummarizeRequest(_ProviderPolicyMixin):
+    """Summarize a conversation (compact), write a meeting conclusion or a daily summary. Any provider."""
+
+    mode: Literal["compact", "meeting", "daily"] = "compact"
+    messages: list[HistoryItem] = Field(default_factory=list)
+    previous_summary: str = ""
+    topic: str = ""
+    participants: list[str] = Field(default_factory=list)
+    locale: Locale = "es"
+    tone: Tone = "neutral"
+
+    _norm = field_validator("locale", mode="before")(normalize_locale)
+    _norm_tone = field_validator("tone", mode="before")(normalize_tone)
+    _lists = field_validator("messages", "participants", mode="before")(_none_to_list)
+
+
+class SummarizeResponse(_Base):
+    text: str
+    usage: Usage
+    provider: str | None = None
+    model: str | None = None
+
+
+class ContextSegment(_Base):
+    key: str
+    label: str
+    tokens: int
+
+
+class ContextSizesResponse(_Base):
+    segments: list[ContextSegment] = Field(default_factory=list)
+    total_tokens: int = 0
+
+
 class HealthResponse(_Base):
     status: str
     mode: Literal["simulation", "live"]

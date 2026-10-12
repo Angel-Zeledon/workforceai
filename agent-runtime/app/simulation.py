@@ -10,6 +10,7 @@ import re
 
 from . import review as rv
 from . import sim_content as sc
+from .commands import marker_draft, marker_meeting, sim_summary, sim_usage_tokens, strip_markers
 from .formats import EXT, requested_format
 from .engine import AgentEngine, estimate_cost
 from .routing import assigned_reason, compose_reply, owner_role
@@ -137,11 +138,23 @@ def sim_office_document(req: RunTaskRequest, out: StructuredOutput) -> ToolReque
     fmt = requested_format(req.context.request_text)
     if not fmt or ws is None or not ws.can_write or not ws.desk or req.context.dependency_outputs:
         return None
-    text = req.context.request_text or req.task.title or "documento"
+    text = strip_markers(req.context.request_text) or req.task.title or "documento"
     slug = _SLUG.sub("-", re.sub(r"\b(hazme|haz|genera|crea|prepara|un|una|el|la|en|de|con|excel|word|pdf|documento)\b", " ", text.lower())).strip("-")[:50] or "documento"
     doc = sim_office_sheet(text, req.locale) if fmt == "xlsx" else sim_office_text(req, out)
     return ToolRequest(tool="fs", action="write_document", risk="low",
                        args={"path": f"{ws.desk.rstrip('/')}/{slug}{EXT[fmt]}", "document": doc, "message": f"entregable de {req.task.id}"})
+
+
+def sim_draft_request(req: RunTaskRequest, kind: str) -> ToolRequest:
+    """/email and /linkedin: the simulated employee drafts the message and ASKS to send it (high risk: the backend
+    puts it in front of a human; nothing leaves without approval)."""
+    en = req.locale == "en"
+    topic = strip_markers(req.context.request_text)[:200]
+    body = (f"Draft: {topic}" if en else f"Borrador: {topic}")
+    if kind == "linkedin":
+        return ToolRequest(tool="linkedin", action="post", risk="high", args={"text": body})
+    return ToolRequest(tool="email", action="send", risk="high",
+                       args={"to": "destinatario@example.com", "subject": topic[:80], "body": body})
 
 
 SIM_CODE_MARKER = "[sim:code]"
@@ -208,6 +221,9 @@ class SimulationEngine(AgentEngine):
     # ----------------------------------------------------------------- plan
     async def plan(self, req: PlanRequest) -> PlanResponse:
         await self._latency(2, 4)
+        meeting = marker_meeting(req.request_text)
+        if meeting:
+            return self._meeting_plan(req, meeting)
         scenario = sc.detect_scenario(req.request_text)
         c = sc.bundle(req.locale)
         spec = c.PLANS[scenario]
@@ -245,6 +261,47 @@ class SimulationEngine(AgentEngine):
         return PlanResponse(objectives=list(spec["objectives"]), tasks=tasks,
                             clarifying_questions=list(spec["questions"]))
 
+    def _meeting_plan(self, req: PlanRequest, wanted: list[str]) -> PlanResponse:
+        """/meeting: one discussion task per named agent, then the assistant writes the conclusion."""
+        en = req.locale == "en"
+        topic = strip_markers(req.request_text)
+        by_id = {a.id: a for a in req.agents}
+        by_role = {a.role: a for a in req.agents}
+        picked = [by_id.get(w) or by_role.get(w) for w in wanted]
+        picked = [a for a in picked if a is not None]
+        tasks: list[PlanTask] = []
+        for i, a in enumerate(picked, 1):
+            who = a.title or a.role or a.id
+            tasks.append(PlanTask(
+                key=f"m{i}", agent_id=a.id,
+                title=(f"{who}: position on the topic" if en else f"{who}: postura sobre el tema"),
+                description=(f"In the meeting, give your area's position, risks and proposals on: {topic}" if en
+                             else f"En la reunion, da la postura de tu area, riesgos y propuestas sobre: {topic}"),
+                depends_on=[], reason=("Invited to the meeting" if en else "Invitado a la reunion")))
+        chair = by_role.get("assistant") or by_id.get("assistant") or (req.agents[0] if req.agents else None)
+        if chair is not None and tasks:
+            tasks.append(PlanTask(
+                key="conclusion", agent_id=chair.id,
+                title=("Meeting conclusion" if en else "Conclusion de la reunion"),
+                description=("Read every position and write the conclusion: agreements, disagreements, decisions and next steps with an owner."
+                             if en else "Lee todas las posturas y redacta la conclusion: acuerdos, desacuerdos, decisiones y proximos pasos con responsable."),
+                depends_on=[t.key for t in tasks], reason=("Writes the conclusion" if en else "Redacta la conclusion")))
+        if not tasks:
+            a = req.agents[0]
+            tasks = [PlanTask(key="t1", title=topic[:60] or "Meeting", description=topic, agent_id=a.id)]
+        return PlanResponse(objectives=[("Hold the meeting: " if en else "Realizar la reunion: ") + topic[:120]],
+                            tasks=tasks, clarifying_questions=[])
+
+    # ------------------------------------------------------------ summarize
+    async def summarize(self, req):
+        from .models import SummarizeResponse, Usage
+
+        ms = await self._latency(0.3, 0.8)
+        text = sim_summary(req)
+        n_in, n_out = sim_usage_tokens(req, text)
+        return SummarizeResponse(text=text, usage=Usage(model=SIM_MODEL, input_tokens=n_in, output_tokens=n_out,
+                                                       cost_usd=estimate_cost(n_in, n_out), duration_ms=ms))
+
     # ------------------------------------------------------------- run_task
     async def run_task(self, req: RunTaskRequest) -> RunTaskResponse:
         ms = await self._latency()
@@ -281,6 +338,9 @@ class SimulationEngine(AgentEngine):
         if draft is not None:  # F1: like a real employee, keep the work as a file on the desk
             tool_requests.append(draft)
             out.evidence.append(c.TEXTS.get("evidence_file", "Draft saved at {path}").format(path=draft.args["path"]))
+        draft_kind = marker_draft(req.context.request_text)
+        if draft_kind and not req.context.dependency_outputs and not req.external_content:
+            tool_requests.append(sim_draft_request(req, draft_kind))  # /email, /linkedin: the draft goes to human approval
         sl = sim_skill_load(req)
         if sl is not None:  # S1: like a real employee, look up the skill before doing the work
             tool_requests.append(sl)
