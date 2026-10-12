@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"aiworkforce/backend/internal/domain"
 )
@@ -46,8 +47,17 @@ const (
 	// ActionPlanChange is the kind of the approval a proposal raises.
 	ActionPlanChange = "plan_change"
 
-	maxChangeOps         = 20
-	maxSuggestedPerNode  = 5
+	maxChangeOps        = 20
+	maxSuggestedPerNode = 3
+	// Calibration of the cost priors with the real spend (costCalibration).
+	minCalibrationDone = 3
+	// Suggested follow-ups (consumeSuggestions): a title this similar to one in
+	// the plan is a duplicate, and all the suggestions together may add at most
+	// maxSuggestedGrowth of the launched plan (never fewer than minSuggestedBudget tasks).
+	similarTitleOverlap  = 0.7
+	maxSuggestedGrowth   = 0.2
+	minSuggestedBudget   = 3
+	maxCalibration       = 100.0
 	maxChangeReason      = 500
 	maxProposedDescLen   = 2000
 	maxProposedTitleLen  = 300
@@ -94,6 +104,9 @@ type ChangeImpact struct {
 	// EstCostDeltaUSD / EstSecondsDelta: change of the remaining estimate.
 	EstCostDeltaUSD float64 `json:"est_cost_delta_usd"`
 	EstSecondsDelta float64 `json:"est_seconds_delta"`
+	// CostCalibration is the factor applied to the cost priors from what the
+	// project really spent so far (1 = priors as they are; costCalibration).
+	CostCalibration float64 `json:"cost_calibration,omitempty"`
 	// ProjectedCostUSD is spent + remaining estimate after the change.
 	ProjectedCostUSD float64 `json:"projected_cost_usd"`
 	BudgetUSD        float64 `json:"budget_usd"`
@@ -609,13 +622,18 @@ func (s *Service) planChange(rec Record, states map[string]string, agentIDs []st
 	}
 	impact.Added = len(addedNew)
 	impact.NodesAfter = len(activeLeaves(nodes))
-	// Cost and time against the remaining plan.
+	// Cost and time against the remaining plan. The priors are calibrated with
+	// what this project really spent on the work it finished: live, a task that
+	// reads files over several rounds costs many times the prior, and a proposal
+	// that says "+$0.01" for five tasks gets approved without a second look.
+	cal := costCalibration(rec.Nodes, states, spent)
+	impact.CostCalibration = round6(cal)
 	var added, removed float64
 	for _, d := range addedNew {
-		added += d.EstCostUSD * retryFactor(planMaxAttempts)
+		added += d.EstCostUSD * retryFactor(planMaxAttempts) * cal
 	}
 	for _, v := range removedEst {
-		removed += v
+		removed += v * cal
 	}
 	impact.EstCostDeltaUSD = round6(added - removed)
 	before := remainingPlan(rec.Nodes, states)
@@ -624,13 +642,31 @@ func (s *Service) planChange(rec Record, states map[string]string, agentIDs []st
 	remaining := 0.0
 	for _, n := range leaves(nodes) {
 		if n.Superseded == "" && states[n.ID] != StateDone {
-			remaining += n.EstCostUSD * retryFactor(planMaxAttempts)
+			remaining += n.EstCostUSD * retryFactor(planMaxAttempts) * cal
 		}
 	}
 	impact.BudgetUSD = rec.BudgetUSD
 	impact.ProjectedCostUSD = round6(spent + remaining)
 	impact.ExceedsBudget = rec.BudgetUSD > 0 && impact.ProjectedCostUSD > rec.BudgetUSD
 	return &changePlan{nodes: nodes, impact: impact}, nil
+}
+
+// costCalibration is how much more (never less) the finished work of the
+// project cost than its priors said: spent / sum of the priors of the done
+// tasks, once at least minCalibrationDone tasks are done, capped at maxCalibration.
+func costCalibration(nodes []NodeDef, states map[string]string, spent float64) float64 {
+	var prior float64
+	done := 0
+	for _, n := range leaves(nodes) {
+		if states[n.ID] == StateDone && n.EstCostUSD > 0 {
+			prior += n.EstCostUSD
+			done++
+		}
+	}
+	if done < minCalibrationDone || prior <= 0 || spent <= prior {
+		return 1
+	}
+	return math.Min(spent/prior, maxCalibration)
 }
 
 func round6(v float64) float64 { return math.Round(v*1e6) / 1e6 }
@@ -675,7 +711,54 @@ func riskOf(im ChangeImpact) string {
 	return "low"
 }
 
-// normTitle is the key to deduplicate suggested tasks.
+// normTitle is the key to deduplicate suggested tasks: lower case, no
+// accents, no punctuation, single spaces.
 func normTitle(s string) string {
-	return strings.Join(strings.Fields(strings.ToLower(s)), " ")
+	var b strings.Builder
+	for _, r := range strings.ToLower(s) {
+		if f, ok := foldAccent[r]; ok {
+			r = f
+		}
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+		} else {
+			b.WriteRune(' ')
+		}
+	}
+	return strings.Join(strings.Fields(b.String()), " ")
+}
+
+var foldAccent = map[rune]rune{'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'ñ': 'n', 'à': 'a', 'è': 'e', 'ì': 'i', 'ò': 'o', 'ù': 'u', 'â': 'a', 'ê': 'e', 'ô': 'o', 'ç': 'c'}
+
+// stopWords do not count when two titles are compared (similarTitle).
+var stopWords = map[string]bool{"a": true, "al": true, "con": true, "de": true, "del": true, "el": true, "en": true, "la": true, "las": true,
+	"los": true, "para": true, "por": true, "su": true, "sus": true, "un": true, "una": true, "y": true, "o": true, "e": true,
+	"the": true, "of": true, "and": true, "to": true, "for": true, "in": true, "an": true, "on": true, "with": true}
+
+func titleWords(s string) map[string]bool {
+	w := map[string]bool{}
+	for _, f := range strings.Fields(normTitle(s)) {
+		if !stopWords[f] && len(f) > 2 {
+			w[f] = true
+		}
+	}
+	return w
+}
+
+// similarTitle says whether a suggested task repeats work already in the plan
+// with other words ("Pedir a la filial Chile el paquete de cierre" vs "Solicitar
+// a la filial Chile el paquete de cierre del periodo"): the overlap of their
+// content words, against the shorter title, is at least similarTitleOverlap.
+func similarTitle(a, b map[string]bool) bool {
+	n := min(len(a), len(b))
+	if n == 0 {
+		return false
+	}
+	common := 0
+	for w := range a {
+		if b[w] {
+			common++
+		}
+	}
+	return float64(common)/float64(n) >= similarTitleOverlap
 }

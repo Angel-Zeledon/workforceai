@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"aiworkforce/backend/internal/application"
@@ -180,7 +181,11 @@ func TestSuggestedTasksBecomeOneBoundedProposalAndNeedAHuman(t *testing.T) {
 
 func TestRejectedProposalLeavesThePlanUntouched(t *testing.T) {
 	rt := newRT()
-	rt.suggest = func(title string) []string { return []string{"Extra " + title} }
+	var seq atomic.Int64
+	rt.suggest = func(string) []string { // distinct follow-ups (similar titles are dropped as repeats)
+		k := seq.Add(1)
+		return []string{fmt.Sprintf("Revisar hallazgo%d anexo%d", k, k)}
+	}
 	e := newEnv(t, rt, nil, nil)
 	id := e.draft("tpl-generic", 0)
 	e.launch(id, budgetBig)
@@ -277,5 +282,42 @@ func TestAppliedChangeSurvivesARestart(t *testing.T) {
 	e2.approveAll(id, func(d projects.Detail) bool { return d.Project.Status == projects.StatusDone })
 	if n := nodeByTitle(e2.detail(id), "Tarea agregada en vuelo"); n.State != projects.StateDone {
 		t.Fatalf("the added task must run after the restart: %s", n.State)
+	}
+}
+
+// Live (DeepSeek) a 19-task group close grew to 121 tasks: every finished task
+// suggested five more, a third of them repeats. Suggestions now add at most a
+// fifth of the launched plan in total, and repeats with other words are dropped.
+func TestSuggestedFollowUpsAreBoundedForTheWholeProject(t *testing.T) {
+	rt := newRT()
+	var n atomic.Int64
+	rt.suggest = func(title string) []string {
+		k := n.Add(1)
+		return []string{fmt.Sprintf("Validar soporte%d", k), fmt.Sprintf("Documentar excepcion%d", k), "Repetir: " + title}
+	}
+	e := newEnv(t, rt, nil, nil)
+	id := e.draft("tpl-generic", 0)
+	launched := 0
+	for _, nd := range e.detail(id).Nodes {
+		if nd.Kind != projects.KindGroup {
+			launched++
+		}
+	}
+	e.launch(id, budgetBig)
+	e.approveAll(id, func(d projects.Detail) bool { return d.Project.Status == projects.StatusDone })
+	list, _ := e.svc.ListChanges(e.ctx, id)
+	total := 0
+	for _, c := range list {
+		for _, op := range c.Ops {
+			for _, tk := range op.Tasks {
+				total++
+				if strings.HasPrefix(tk.Title, "Repetir:") {
+					t.Fatalf("a repeat of a planned task was proposed: %q", tk.Title)
+				}
+			}
+		}
+	}
+	if limit := max(3, (launched+4)/5); total == 0 || total > limit {
+		t.Fatalf("suggested tasks = %d for a %d-task plan, want 1..%d", total, launched, limit)
 	}
 }
