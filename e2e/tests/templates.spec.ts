@@ -137,6 +137,7 @@ test("a giant built-in template at a reduced size runs to completion", async () 
     template_id: "tpl-erp-migration", locale: "es",
     params: { streams: "Finanzas, Compras", waves: "Piloto, Ola 1" },
   });
+  await api.post(`/projects/${project_id}/inputs/demo`);
   await api.post(`/projects/${project_id}/launch`, { approved_budget_usd: 200, acknowledge_underbudget: true, max_parallel: 16 });
   const p = await runToDone(project_id, 270_000);
   expect(p.status).toBe("done");
@@ -200,6 +201,9 @@ test("duplicate a built-in, customize it in the builder, preview it, run it and 
   const titles = await page.getByTestId("draft-node-title-input").evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value));
   expect(titles).toContain("Definir el posicionamiento personalizado");
   expect(titles).toContain("Revisión extra de Chile");
+  // the copy keeps the inputs of the built-in: sample data fills them
+  await page.getByTestId("inputs-use-demo").click();
+  await expect(page.getByTestId("inputs-status")).toHaveAttribute("data-ready", "1");
   await page.getByTestId("launch-confirm").click();
   await expect(page.getByTestId("project-status")).not.toHaveAttribute("data-status", "draft", { timeout: 30_000 });
 

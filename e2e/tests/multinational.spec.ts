@@ -19,6 +19,8 @@ test("group consolidated close: parallel subsidiaries, CFO gate, deliverables in
   const { project_id } = await api.post<{ project_id: string }>("/projects/from-template", {
     template_id: "group_consolidated_close", params: { subsidiaries: "4" }, locale: "es",
   });
+  // the project asks for its data first: the sample data stands in for it
+  await api.post(`/projects/${project_id}/inputs/demo`);
   await api.post(`/projects/${project_id}/launch`, { approved_budget_usd: 100, acknowledge_underbudget: true, max_parallel: 12 });
 
   let p: ProjectSummary | null = null;
