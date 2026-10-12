@@ -124,5 +124,6 @@
       "es": "equipo,semana,capacidad_horas,comprometido_horas,riesgo\n",
       "en": "team,week,capacity_hours,committed_hours,risk\n"
     }
-  ]
+  ],
+  "default_skills": ["project-plan"]
 }

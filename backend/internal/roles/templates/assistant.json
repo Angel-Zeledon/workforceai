@@ -129,5 +129,6 @@
       "es": "# Agenda de la semana\n\n## Lunes\n\n## Martes\n\n## Miércoles\n\n## Jueves\n\n## Viernes\n",
       "en": "# Weekly agenda\n\n## Monday\n\n## Tuesday\n\n## Wednesday\n\n## Thursday\n\n## Friday\n"
     }
-  ]
+  ],
+  "default_skills": ["client-email", "project-plan"]
 }

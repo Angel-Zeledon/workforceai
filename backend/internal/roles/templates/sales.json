@@ -145,5 +145,6 @@
       "es": "# Propuesta para {cliente}\n\n## Alcance\n\n## Inversión\n\n## Plazos y entregables\n\n## Condiciones\n",
       "en": "# Proposal for {client}\n\n## Scope\n\n## Investment\n\n## Timeline and deliverables\n\n## Terms\n"
     }
-  ]
+  ],
+  "default_skills": ["b2b-proposal", "client-email"]
 }

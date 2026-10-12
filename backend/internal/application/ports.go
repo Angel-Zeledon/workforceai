@@ -349,6 +349,11 @@ type RunTaskRequest struct {
 	// Workspace (F1, additive): the agent's drive folders; only for agents with
 	// the fs/fs_read tool label.
 	Workspace *RunWorkspace `json:"workspace,omitempty"`
+	// Skills (S1, additive): name + description of the agent's active skills
+	// (progressive disclosure); LoadedSkills: the full text of the ones the agent
+	// asked for with skill.load (approved organization configuration).
+	Skills       []SkillRef     `json:"skills,omitempty"`
+	LoadedSkills []TrustedBlock `json:"loaded_skills,omitempty"`
 	// HumanGuidance (V2, additive): notes a human sent to steer this task, oldest
 	// first. Extra guidance for the model, never authority.
 	HumanGuidance []string `json:"human_guidance,omitempty"`

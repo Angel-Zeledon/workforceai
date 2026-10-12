@@ -239,6 +239,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 		}
 		taint := rs.taintOf(t.ID)
 		var blocks []string
+		var trusted []TrustedBlock
 		for i, tr := range reads {
 			if i >= maxReadsPerRound {
 				break
@@ -249,6 +250,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 			switch {
 			case out.Decision == "allowed" && out.Status == "succeeded":
 				blocks = append(blocks, out.Blocks...)
+				trusted = append(trusted, out.Trusted...)
 				rs.ext.mu.Lock()
 				taint.tainted = taint.tainted || out.Tainted
 				taint.suspected = taint.suspected || out.InjectionSuspected
@@ -266,12 +268,16 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 				notes = append(notes, fmt.Sprintf("Lectura %s.%s no disponible (%s)", tr.Tool, tr.Action, reason))
 			}
 		}
-		if len(blocks) == 0 {
+		if len(blocks) == 0 && len(trusted) == 0 {
 			resp.ToolRequests = rest
 			return fin()
 		}
 		in2 := in
 		in2.ExternalContent = append(append([]string{}, in.ExternalContent...), blocks...)
+		in2.LoadedSkills = append([]TrustedBlock{}, in.LoadedSkills...)
+		for _, tb := range trusted {
+			addLoadedSkill(&in2, tb)
+		}
 		res, err := o.reserveOrPause(ctx, rs, agent.ID, t.ID, domain.UsageRunTask)
 		if err != nil {
 			resp.ToolRequests = rest

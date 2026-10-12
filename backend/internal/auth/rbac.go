@@ -70,6 +70,11 @@ const (
 	PermFilesWrite  Permission = "files:write"
 	PermFilesDelete Permission = "files:delete"
 	PermFilesGrant  Permission = "files:grant" // give an agent read access to more folders
+	// Skill library (docs/architecture/skills.md): anyone reads; members create
+	// drafts, edit and import; only administrators review, activate, disable and delete.
+	PermSkillsRead   Permission = "skills:read"
+	PermSkillsWrite  Permission = "skills:write"
+	PermSkillsReview Permission = "skills:review"
 )
 
 func set(ps ...Permission) map[Permission]struct{} {
@@ -97,13 +102,13 @@ var (
 		PermMembersRead, PermAgentsRead, PermTasksRead, PermRequestsRead,
 		PermConversationsRead, PermApprovalsRead, PermReportsRead,
 		PermMemoriesRead, PermActivityRead, PermMetricsRead,
-		PermArtifactsRead, PermFilesRead,
+		PermArtifactsRead, PermFilesRead, PermSkillsRead,
 	)
 	memberPerms = union(viewerPerms,
 		PermRequestsCreate, PermTasksCreate, PermConversationsPost, PermMemoriesWrite,
 		PermConnectionsRead,
 		PermArtifactsCreate, PermArtifactsWrite, PermArtifactsComment, PermArtifactsExport,
-		PermFilesWrite,
+		PermFilesWrite, PermSkillsWrite,
 	)
 	adminPerms = union(memberPerms,
 		PermOrgManage, PermMembersInvite, PermMembersManage, PermAgentsWrite,
@@ -111,7 +116,7 @@ var (
 		PermConnectionsManage, PermConnectionsGrant, PermConnectionsGrantWrite, PermConnectionsRevoke,
 		PermConnectionsUsageRead, PermControlsPause, PermControlsKillSwitch,
 		PermArtifactsApprove, PermArtifactsDelete,
-		PermFilesDelete, PermFilesGrant,
+		PermFilesDelete, PermFilesGrant, PermSkillsReview,
 	)
 	ownerPerms = union(adminPerms, PermOrgDelete, PermBillingManage, PermControlsRelease, PermPolicyManage)
 

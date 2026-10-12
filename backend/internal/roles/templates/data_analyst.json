@@ -132,5 +132,6 @@
       "es": "metrica,periodo,valor,meta,fuente\n",
       "en": "metric,period,value,target,source\n"
     }
-  ]
+  ],
+  "default_skills": ["variance-analysis"]
 }
