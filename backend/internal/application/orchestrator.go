@@ -36,7 +36,9 @@ type Orchestrator struct {
 	budget *Budget        // hard caps: reserve before each runtime call, reconcile after
 	conn   connState      // optional: controls guard, Tool Gateway, plan review (connections_flow.go)
 	policy *PolicyService // optional: organization rules and the policy engine (policyflow.go)
-	code   CodeRunner     // optional: approval-gated code sandbox (code_flow.go)
+	// standing (optional) remembers "always allow this internal, reversible action in this project" (standing.go).
+	standing *StandingService
+	code     CodeRunner // optional: approval-gated code sandbox (code_flow.go)
 
 	chatIdem idemCache // Idempotency-Key of POST /messages (chat.go)
 	chatQ    chatQueue // per-conversation FIFO of chat turns (chat.go)
@@ -679,6 +681,34 @@ func (o *Orchestrator) needsApproval(a domain.Agent, tr ToolRequest) bool {
 // organization rules). Without it the baseline rule decides, as before.
 func (o *Orchestrator) SetPolicy(p *PolicyService) { o.policy = p }
 
+// SetStanding installs the standing per-project approvals (nil disables them).
+func (o *Orchestrator) SetStanding(s *StandingService) { o.standing = s }
+
+// markStanding tags an approval with the tool and project it is about, decides
+// whether the approver may choose "always allow this in the project" and, when
+// a live standing approval already covers it, returns that one. Never for
+// code.run, external or irreversible actions (StandingEligibility).
+func (o *Orchestrator) markStanding(ctx context.Context, rs *run, ap *domain.Approval, agent domain.Agent, tool, rule string) (StandingApproval, bool) {
+	ap.Tool = strings.ToLower(tool)
+	if o.standing == nil {
+		return StandingApproval{}, false
+	}
+	res, ok := o.conn.gate.(ProjectResolver)
+	if !ok {
+		return StandingApproval{}, false
+	}
+	pid, active := res.ProjectOfRequest(ctx, o.org(ctx), rs.req.ID)
+	if pid == "" || !active {
+		return StandingApproval{}, false
+	}
+	ap.ProjectID = pid
+	if ok, _ := StandingEligibility(ap.Tool, ap.Action, ap.Risk, rule, ap.RequiredApprovals, ap.RequiredRole); !ok {
+		return StandingApproval{}, false
+	}
+	ap.StandingEligible = true
+	return o.standing.Match(ctx, pid, agent.ID, ap.Tool, ap.Action, ap.Risk, rule, ap.RequiredApprovals, ap.RequiredRole)
+}
+
 func (o *Orchestrator) routeOf(ctx context.Context, agent domain.Agent, tr ToolRequest) GatewayRoute {
 	if o.conn.gw == nil {
 		return RouteNone
@@ -799,12 +829,22 @@ func (o *Orchestrator) handleToolsFrom(ctx context.Context, rs *run, t *domain.T
 			Title:   fmt.Sprintf("%s: %s", strings.ReplaceAll(tr.Action, "_", " "), t.Title),
 			Details: fmt.Sprintf("Herramienta %s · acción %s · args %s", tr.Tool, tr.Action, details)}
 		governApproval(&ap, rs, pv)
+		standing, hasStanding := o.markStanding(ctx, rs, &ap, agent, tr.Tool, pv.RuleID)
 		t.Status = domain.TaskAwaitingApproval
 		if err := o.store.UpdateTask(ctx, o.org(ctx), *t); err != nil {
 			o.failTask(ctx, rs, *t, err)
 			return OutcomeFailed
 		}
-		ap, ch, err := o.approvals.Request(ctx, ap)
+		var ch <-chan domain.Approval
+		var err error
+		if hasStanding {
+			ap, ch, err = o.approvals.RequestAuto(ctx, ap, standing.ID)
+			if err == nil {
+				o.standing.Used(ctx, standing, ap.ID, t.ID)
+			}
+		} else {
+			ap, ch, err = o.approvals.Request(ctx, ap)
+		}
 		if err != nil {
 			o.failTask(ctx, rs, *t, err)
 			return OutcomeFailed

@@ -99,6 +99,7 @@ services:
       # because local dev runs on plain http; leave it on (default) in production.
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
       AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-}
+      STANDING_APPROVAL_DAYS: ${STANDING_APPROVAL_DAYS:-30}
       # --- DEVELOPMENT ONLY --- POST /demo/reset (admin role when auth is on).
       ENABLE_DEMO_RESET: "true"
       # Code sandbox (profile "sandbox", `make up-sandbox`): when both are set,

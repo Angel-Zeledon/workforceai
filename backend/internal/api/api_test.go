@@ -113,6 +113,7 @@ type opts struct {
 	skills         bool // mount the skill library (skills_api_test.go); implies the drive
 	writeGate      func(ctx context.Context, org string) error
 	rewards        bool // mount coins and shop (rewards_api_test.go)
+	standing       bool // mount the standing per-project approvals (standing_api_test.go)
 }
 
 type env struct {
@@ -170,6 +171,9 @@ func newEnv(t *testing.T, o opts) *env {
 				a, err := mem.GetAgent(c, org, id)
 				return a.Role, err
 			}})
+	}
+	if o.standing {
+		d.Standing = &application.StandingService{Store: mem, Core: spy, Projects: standingProjects{}, Rec: rec, Cfg: cfg, Days: 7}
 	}
 	var coins *rewards.Service
 	if o.rewards {

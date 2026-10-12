@@ -76,7 +76,10 @@ type Config struct {
 	// (docker-compose.yml) turns it off. AuthCookieName overrides the cookie
 	// name (AUTH_COOKIE_NAME) so stacks sharing a hostname do not collide.
 	AuthCookieSecure bool
-	AuthCookieName   string
+	// StandingApprovalDays is how long a standing per-project approval lasts
+	// (STANDING_APPROVAL_DAYS, default 30, at most 90); it also ends with the project.
+	StandingApprovalDays int
+	AuthCookieName       string
 
 	ReadHeaderTimeout time.Duration
 	ReadTimeout       time.Duration
@@ -224,6 +227,7 @@ func Load() Config {
 		UIBaseURL:              getenv("UI_BASE_URL", ""),
 		EmailHoldSeconds:       getInt("EMAIL_HOLD_SECONDS", 60),
 		AppEnv:                 strings.ToLower(getenv("APP_ENV", "")),
+		StandingApprovalDays:   getInt("STANDING_APPROVAL_DAYS", 30),
 	}
 	var err error
 	if c.AuthEnabled, err = getBool("AUTH_ENABLED", false); err != nil {
