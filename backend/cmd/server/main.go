@@ -115,6 +115,7 @@ func run(log *slog.Logger) error {
 	if ps, ok := store.(application.ModelPolicyStore); ok {
 		modelPolicy = &application.ModelPolicyService{Store: ps, Rec: rec, Cfg: cfg.App,
 			Ceiling: application.ParseProviderList(os.Getenv("ALLOWED_PROVIDERS"))}
+		modelPolicy.Providers = rt.Providers
 		rt.WithPolicy(modelPolicy.Runtime)
 	}
 	approvals := application.NewApprovals(cfg.App, store, rec)

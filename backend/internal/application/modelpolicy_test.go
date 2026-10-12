@@ -93,3 +93,27 @@ func TestModelPolicyNarrowedCeilingNeverWidens(t *testing.T) {
 		t.Fatalf("empty intersection must send none, got %+v", p)
 	}
 }
+
+func TestModelPolicyViewOffersDeepSeekAndAnthropicFirstWithRuntimeDefault(t *testing.T) {
+	s, _ := policySvc("")
+	s.Providers = func(context.Context) ([]string, string, error) {
+		return []string{"deepseek", "anthropic"}, "deepseek", nil
+	}
+	v, err := s.Get(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(v.KnownProviders[:2], []string{"deepseek", "anthropic"}) || v.DefaultProvider != "deepseek" ||
+		!slices.Equal(v.ConfiguredProviders, []string{"deepseek", "anthropic"}) {
+		t.Fatalf("view = %+v", v)
+	}
+	// Only Anthropic has a key: it becomes the default. A runtime error leaves the fields empty, not failing.
+	s.Providers = func(context.Context) ([]string, string, error) { return []string{"anthropic"}, "anthropic", nil }
+	if v, _ := s.Get(context.Background()); v.DefaultProvider != "anthropic" {
+		t.Fatalf("default = %q", v.DefaultProvider)
+	}
+	s.Providers = func(context.Context) ([]string, string, error) { return nil, "", errors.New("down") }
+	if v, err := s.Get(context.Background()); err != nil || v.DefaultProvider != "" {
+		t.Fatalf("runtime down: %+v %v", v, err)
+	}
+}

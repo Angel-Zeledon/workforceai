@@ -158,6 +158,14 @@ def configured_providers() -> list[ProviderConfig]:
     return [ProviderConfig(c.id, _model_for(c.id, i == 0), c.api_key, c.base_url) for i, c in enumerate(out)]
 
 
+def default_provider(configs: list[ProviderConfig] | None = None) -> str:
+    """The provider used first: DeepSeek when its key is present, otherwise Anthropic, otherwise the
+    first other configured provider ("" when none). The default global order is deepseek, anthropic,
+    custom, so this is the head of that list; an operator who sets MODEL_PROVIDER_ORDER overrides it."""
+    configs = configured_providers() if configs is None else configs
+    return configs[0].id if configs else ""
+
+
 def effective_allowed(policy: ProviderPolicy) -> tuple[str, ...] | None:
     """Operator ceiling (ALLOWED_PROVIDERS) intersected with the request list. None = unrestricted."""
     env = _env_list("ALLOWED_PROVIDERS")

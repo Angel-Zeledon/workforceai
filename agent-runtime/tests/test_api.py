@@ -4,7 +4,8 @@ from conftest import AGENTS, run_req
 def test_healthz(client):
     r = client.get("/healthz")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "mode": "simulation", "provider": "simulation"}
+    body = r.json()
+    assert {k: body[k] for k in ("status", "mode", "provider")} == {"status": "ok", "mode": "simulation", "provider": "simulation"}
 
 
 def test_plan_shape(client):
