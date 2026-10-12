@@ -77,6 +77,8 @@ export interface FileRef {
   action?: "write" | "attach" | string;
 }
 export interface ChatMessage {
+  /** result of a slash command, rendered as a system card (local to this browser) */
+  card?: import("./commands/registry").CmdResult & { command?: string; error?: boolean };
   id: string; conversation: ChatConversationId; turn_id: string | null; from: string; to: string;
   kind: MessageKind; text: string; reply_to: string | null; ts: string;
   /** optional: the agent redirects the topic to this colleague (offers a quick action) */

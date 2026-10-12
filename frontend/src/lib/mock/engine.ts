@@ -13,6 +13,7 @@ import { MockOrgConfig } from "./orgconfig-mock";
 import { MockConnections } from "./connections-mock";
 import { MockChat } from "./chat-mock";
 import { MockChatHistory } from "./chats-mock";
+import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
@@ -149,6 +150,7 @@ export class MockBackend {
     removeRequestConv: (id) => { this.conversations = this.conversations.filter((c) => c.id !== id); delete this.messages[id]; },
     renameRequestConv: (id, title) => { const c = this.conversations.find((x) => x.id === id); if (c) c.title = title; },
   }); // chat history: enriched /conversations, /chats/*, rename/archive/delete, read markers
+  private cmds = new MockCommands({ agents: () => this.agents, chatCount: (c) => this.chat.all()[c]?.length ?? 0, startRequest: (t) => this.startRequest(t) }); // slash commands
   private rewards = new MockRewards((t, p, a) => this.emit(t, p, a)); // coins + shop: earned only when a task finishes
   private roles = new MockRoles(); // role templates + hiring from a template
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
@@ -528,6 +530,7 @@ export class MockBackend {
       this.emit("hello", { agents: this.agents });
       return res;
     }
+    if (this.cmds.matches(seg)) return this.cmds.handle(method, seg, q, body);
     if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);

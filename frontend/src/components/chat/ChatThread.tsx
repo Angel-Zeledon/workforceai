@@ -11,6 +11,9 @@ import { Icon } from "../icons";
 import { FileCards } from "../files/FileCard";
 import { drive, DriveError } from "@/lib/drive";
 import type { FileRef } from "@/lib/types";
+import { CommandCard } from "./commands/CommandCard";
+import { useSlashComposer } from "./commands/useSlashComposer";
+import { surfaceOf } from "@/lib/commands/logic";
 
 const EMPTY: ChatMessage[] = [];
 
@@ -108,6 +111,7 @@ export function Bubble({ m, grouped, showRoute }: { m: ChatMessage; grouped: boo
     if (prev) setDraft(`agent:${handoff}`, prev.text);
     select(handoff);
   };
+  if (m.card) return <CommandCard m={m} />;
   if (m.kind === "system" || m.from === "system") {
     return <div className="py-0.5 text-center text-[10.5px] text-mute">{m.text}</div>;
   }
@@ -201,9 +205,11 @@ async function uploadAttachments(files: File[]): Promise<FileRef[]> {
 
 const MAX_ATTACH = 5;
 
-export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, autoFocus = false }: { conv: string; placeholder: string; testId?: string; submitTestId?: string; onSent?: () => void; autoFocus?: boolean }) {
+export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, autoFocus = false, general = false }: { conv: string; placeholder: string; testId?: string; submitTestId?: string; onSent?: () => void; autoFocus?: boolean; general?: boolean }) {
   const { t } = useT();
-  const [text, setText] = useState("");
+  const [text, setTextRaw] = useState("");
+  const [caret, setCaret] = useState(0);
+  const setText = (v: string, c?: number) => { setTextRaw(v); setCaret(c ?? v.length); };
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [picked, setPicked] = useState<File[]>([]);
@@ -216,8 +222,10 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
     setText(draft); setDraft(conv, "");
     inputRef.current?.focus();
   }, [draft, conv, setDraft]);
+  const sc = useSlashComposer({ conv, surface: surfaceOf(conv, general), text, caret, setText, inputRef, onSent });
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
+    if (!picked.length && sc.submit()) return;
     const v = text.trim() || (picked.length ? t("chat.attach.defaultText") : "");
     if (!v || busy) return;
     setBusy(true); setErr("");
@@ -232,7 +240,11 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
     setBusy(false);
   };
   return (
-    <form onSubmit={submit} className="flex flex-col gap-1">
+    <>
+    <form onSubmit={submit} className="relative flex flex-col gap-1">
+      {sc.menu}
+      {sc.suggestionChip}
+      {sc.chips}
       {picked.length > 0 && (
         <ul data-testid="chat-attachments" className="flex flex-wrap gap-1.5">
           {picked.map((f, i) => (
@@ -248,12 +260,18 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
         <button type="button" data-testid="chat-attach" title={t("chat.attach.title")} aria-label={t("chat.attach.title")} disabled={busy || picked.length >= MAX_ATTACH} onClick={() => fileRef.current?.click()}
           className="rounded-lg border border-line bg-panel2 p-2 text-mute hover:border-accent hover:text-ink disabled:opacity-40"><Icon name="plus" size={14} /></button>
         <input
-          ref={inputRef} data-testid={testId} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus} autoComplete="off"
+          ref={inputRef} data-testid={testId} value={text} onChange={(e) => { setText(e.target.value, e.target.selectionStart ?? e.target.value.length); sc.clearErr(); }}
+          onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? 0)} onKeyDown={sc.onKeyDown} {...sc.aria} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus} autoComplete="off"
           className="min-w-0 flex-1 rounded-lg border border-line bg-panel2 px-3 py-2 text-[13px] text-ink outline-none placeholder:text-mute"
         />
-        <Btn data-testid={submitTestId} type="submit" kind="primary" disabled={busy || (!text.trim() && !picked.length)}><span className="flex items-center gap-1.5"><Icon name="arrow" size={13} />{busy ? t("cmd.sending") : t("cmd.send")}</span></Btn>
+        <button type="button" data-testid="cmd-help" title={t("cmds.help.button")} aria-label={t("cmds.help.button")} onClick={sc.openHelp}
+          className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[12px] font-semibold text-mute hover:border-accent hover:text-ink">?</button>
+        <Btn data-testid={submitTestId} type="submit" kind="primary" disabled={busy || sc.running || (!text.trim() && !picked.length)}><span className="flex items-center gap-1.5"><Icon name="arrow" size={13} />{busy ? t("cmd.sending") : t("cmd.send")}</span></Btn>
       </div>
-      {err && <div role="alert" className="text-[11px] text-err">{err}</div>}
+      {sc.status}
+      {(err || sc.err) && <div role="alert" data-testid="cmd-error" className="text-[11px] text-err">{err || sc.err}</div>}
     </form>
+    {sc.dialogs}
+    </>
   );
 }

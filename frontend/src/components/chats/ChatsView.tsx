@@ -656,7 +656,7 @@ export function ChatsView({ agentId }: { agentId?: string }) {
         {sel.kind === "thread" && !unknownAgent ? (
           <div className="border-t border-line bg-panel p-3">
             <ChatInput
-              key={sel.key} conv={convForThread(sel.key)} testId="chats-input" submitTestId="chats-send"
+              key={sel.key} conv={convForThread(sel.key)} general={sel.key === GENERAL} testId="chats-input" submitTestId="chats-send"
               placeholder={sel.key === GENERAL ? t("cmd.placeholder") : t("chat.placeholder.agent", { name: first1 })}
             />
           </div>
