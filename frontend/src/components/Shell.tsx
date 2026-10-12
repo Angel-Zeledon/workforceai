@@ -12,6 +12,9 @@ import { Dashboard } from "./dashboard/Dashboard";
 import { ProjectsView } from "./projects/ProjectsView";
 import { ProjectPill } from "./projects/ProjectPill";
 import { DriveView } from "./drive/DriveView";
+import { ShopView } from "./shop/ShopView";
+import { CoinCounter } from "./shop/Coin";
+import { useRewards, useShopNav } from "@/lib/rewards";
 import { useDriveNav } from "@/lib/drive";
 import { useProjects } from "@/lib/projects/store";
 import { fmtUsd } from "@/lib/meta";
@@ -43,11 +46,17 @@ export function Shell() {
   const setProjectsOpenRaw = useProjects((s) => s.setOpen);
   const driveOpen = useDriveNav((s) => s.open);
   const drivePath = useDriveNav((s) => s.path);
-  const projectsOpen = projectsOpenRaw && !driveOpen;
-  // Projects and Files are full screens: opening one closes the other.
-  const setProjectsOpen = (v: boolean) => { if (v) useDriveNav.getState().close(); setProjectsOpenRaw(v); };
-  const toggleDrive = () => { if (!driveOpen) setProjectsOpenRaw(false); useDriveNav.getState().toggle(); };
+  const shopOpenRaw = useShopNav((s) => s.open);
+  const shopAvailable = useRewards((s) => s.available);
+  const shopOpen = shopOpenRaw && shopAvailable;
+  const projectsOpen = projectsOpenRaw && !driveOpen && !shopOpen;
+  const driveShown = driveOpen && !shopOpen;
+  // Projects, Files and the Shop are full screens: opening one closes the others.
+  const setProjectsOpen = (v: boolean) => { if (v) { useDriveNav.getState().close(); useShopNav.getState().close(); } setProjectsOpenRaw(v); };
+  const toggleDrive = () => { if (!driveOpen) { setProjectsOpenRaw(false); useShopNav.getState().close(); } useDriveNav.getState().toggle(); };
+  const toggleShop = () => { if (!shopOpenRaw) { setProjectsOpenRaw(false); useDriveNav.getState().close(); } useShopNav.getState().toggle(); };
 
+  useEffect(() => { if (driveOpen || projectsOpenRaw) useShopNav.getState().close(); }, [driveOpen, projectsOpenRaw]);
   useEffect(() => startRealtime(), []);
   useEffect(() => { hydratePrefs(); }, [hydratePrefs]);
 
@@ -75,9 +84,14 @@ export function Shell() {
             <button type="button" data-testid="nav-projects" data-active={projectsOpen} onClick={() => setProjectsOpen(!projectsOpen)} className={navBtn(projectsOpen)}>
               <Icon name="folder" size={14} />{t("nav.projects")}
             </button>
-            <button type="button" data-testid="nav-drive" data-active={driveOpen} onClick={toggleDrive} className={navBtn(driveOpen)}>
+            <button type="button" data-testid="nav-drive" data-active={driveShown} onClick={toggleDrive} className={navBtn(driveShown)}>
               <Icon name="doc" size={14} />{t("nav.drive")}
             </button>
+            {shopAvailable && (
+              <button type="button" data-testid="nav-shop" data-active={shopOpen} onClick={toggleShop} className={navBtn(shopOpen)}>
+                <Icon name="bag" size={14} />{t("nav.shop")}
+              </button>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-x-3 text-[11px] text-mute">
@@ -88,6 +102,7 @@ export function Shell() {
               <span data-testid="hud-cost">{t("common.cost")} <b className="font-mono font-medium text-ink">{fmtUsd(metrics.cost_usd)}</b></span>
             </div>
           )}
+          <CoinCounter />
           {MOCK && <span data-testid="mock-badge" className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700">Mock</span>}
           <span className="flex items-center gap-1.5 whitespace-nowrap font-medium text-ink2">
             <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-ok" : "animate-pulse bg-err"}`} />
@@ -101,7 +116,7 @@ export function Shell() {
       <CostOverlays />
       <main className="relative min-h-0 flex-1">
         <ControlsOverlay />
-        {driveOpen ? <DriveView key={drivePath} initialPath={drivePath} /> : projectsOpen ? <ProjectsView /> : mode === "office" ? (
+        {shopOpen ? <ShopView /> : driveOpen ? <DriveView key={drivePath} initialPath={drivePath} /> : projectsOpen ? <ProjectsView /> : mode === "office" ? (
           <>
             <div className="absolute inset-0 isolate"><OfficeScene /></div>
             <div className="pointer-events-none absolute left-4 top-4 w-[330px] max-w-[calc(100vw-32px)] sm:max-w-[40vw]">

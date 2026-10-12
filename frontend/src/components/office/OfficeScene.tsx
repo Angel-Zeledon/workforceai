@@ -13,6 +13,9 @@ import { Folders } from "./Folders";
 import { startProjectsRealtime } from "@/lib/projects/store";
 import { LabelLayer } from "./LabelLayer";
 import { LabelSolver } from "./LabelSolver";
+import { CoinFloats } from "./CoinFloats";
+import { OfficeItems } from "./OfficeItems";
+import { CoinAnnouncer } from "../shop/Coin";
 
 /** Cámara casi isométrica, ligeramente cenital, con zoom y rotación acotados. */
 function Rig() {
@@ -68,11 +71,14 @@ export default function OfficeScene() {
           <Cast />
           <Links />
           <Folders />
+          <OfficeItems />
+          <CoinFloats />
         </Suspense>
         <LabelSolver />
         <Rig />
       </Canvas>
       <LabelLayer />
+      <CoinAnnouncer />
     </div>
   );
 }

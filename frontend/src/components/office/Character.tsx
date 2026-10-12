@@ -13,6 +13,7 @@ import {
 } from "./gestures";
 import { approvalsSpot, cafeSpot, meetingSeat, zoneFor } from "./officeState";
 import { getSignals } from "./officeSignals";
+import { BodyWear, Buddy, HeadWear, suppressesAccessory, useOutfitColor, useWorn } from "./Worn";
 import { AISLE_Z, deskOf, feetPos, headPos, seatOf, standOf, visitorOf } from "./registry";
 
 const SEATED = new Set<AgentState>(["thinking", "working", "waiting", "reviewing", "blocked", "awaiting_approval"]);
@@ -127,8 +128,10 @@ export function Character({ id, index }: { id: string; index: number }) {
   const sim = useRef<Sim | null>(null);
   if (!sim.current) sim.current = makeSim(id, own.seat);
 
+  const worn = useWorn(id);
+  const outfit = useOutfitColor(worn);
   const skin = meta.skin, hair = meta.hair;
-  const blazer = meta.color;
+  const blazer = outfit ?? meta.color;
   const sleeve = blazer;
   const pants = "#9a7a5c", shoe = "#6b4a36";
 
@@ -464,8 +467,11 @@ export function Character({ id, index }: { id: string; index: number }) {
             <mesh position={[-0.1, 0.1, 0.12]} scale={[1.2, 0.8, 0.4]}><sphereGeometry args={[0.025, 8, 6]} /><meshBasicMaterial color="#ff9fa8" transparent opacity={0.65} /></mesh>
             <mesh ref={mouth} position={[0, 0.095, 0.155]} scale={[1.6, 0.45, 0.5]}><sphereGeometry args={[0.02, 10, 8]} /><meshBasicMaterial color="#8a3b3b" /></mesh>
             <Hair style={meta.hairStyle} color={hair} />
-            <Accessory kind={meta.accessory} color={meta.color} />
+            <Accessory kind={suppressesAccessory(worn, meta.accessory) ? "none" : meta.accessory} color={meta.color} />
+            <HeadWear worn={worn} />
           </group>
+          <BodyWear worn={worn} />
+          <Buddy worn={worn} />
         </group>
       </group>
       </group>

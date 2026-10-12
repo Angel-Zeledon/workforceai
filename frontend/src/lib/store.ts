@@ -4,6 +4,7 @@ import { registerRoleTemplates } from "./meta";
 import { getLocale } from "./i18n-core";
 import { useArtifacts } from "./artifacts";
 import { isCostFrame, useCost } from "./cost";
+import { isRewardsFrame, useRewards } from "./rewards";
 import { isConnectionsFrame, useConnections } from "./connections/store";
 import type {
   ActivityItem, Agent, Approval, ChatMessage, Conversation, ErrorItem, Message, Metrics, PlanTask,
@@ -146,7 +147,8 @@ export const useStore = create<State>((set, get) => ({
   apply: (f) => {
     if (f.type.startsWith("artifact.")) { useArtifacts.getState().applyFrame(f); return; }
     if (isConnectionsFrame(f.type)) { useConnections.getState().applyFrame(f); return; }
-    if (f.type === "hello") { useArtifacts.getState().load(); useConnections.getState().applyFrame(f); }
+    if (isRewardsFrame(f.type)) { useRewards.getState().applyFrame(f); return; }
+    if (f.type === "hello") { useArtifacts.getState().load(); useConnections.getState().applyFrame(f); void useRewards.getState().load(); }
     if (isCostFrame(f.type)) useCost.getState().applyFrame(f);
     const p = f.payload || {};
     const tick = (s: State, ids: (string | null | undefined)[]) => {

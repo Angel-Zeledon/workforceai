@@ -12,6 +12,7 @@ import { MockArtifacts } from "./artifacts-mock";
 import { MockOrgConfig } from "./orgconfig-mock";
 import { MockConnections } from "./connections-mock";
 import { MockChat } from "./chat-mock";
+import { MockRewards } from "./rewards-mock";
 import { tr } from "../i18n-core";
 
 const ORG = "00000000-0000-0000-0000-000000000001";
@@ -134,6 +135,7 @@ export class MockBackend {
     planPreview: (text) => buildPlan(text).map((s) => ({ key: s.key, agent: s.agent, title: s.title })),
     startRequest: (text) => this.startRequest(text), startDirectTask: (id, text, reason) => this.startDirectTask(id, text, reason), uid,
   }); // chat routing: POST /messages, chat.* and route.decided
+  private rewards = new MockRewards((t, p, a) => this.emit(t, p, a)); // coins + shop: earned only when a task finishes
   private roles = new MockRoles(); // role templates + hiring from a template
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
 
@@ -461,6 +463,7 @@ export class MockBackend {
     const slug = (task.title || "tarea").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 60);
     this.emit("file.activity", { agent_id: id, task_id: task.id, action: "write", path: `/Agents/${id}/${slug}.md` }, id);
     this.emitTask("task.completed", task);
+    this.rewards.onTaskDone({ id: task.id, title: task.title, agent_id: id });
     this.setState(id, "completed", "Tarea completada", task.id, 100);
     this.log(id, "task.completed", tr("mock.act.completed", { name: a.name.split(" ")[0], task: task.title }));
     if (id !== "assistant" && spec.key !== "direct") this.chat.note(id, "user", "chat", tr("mock.task.agentDone", { task: task.title }));
@@ -506,6 +509,7 @@ export class MockBackend {
       this.emit("hello", { agents: this.agents });
       return res;
     }
+    if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
     if (this.orgCfg.matches(seg)) return this.orgCfg.handle(method, seg, body, (text) => this.handle("POST", "/requests", { text }));
     if (this.conns.matches(r0, r2)) return this.conns.handle(method, seg, q, body);
