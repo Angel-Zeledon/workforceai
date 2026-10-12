@@ -5,6 +5,7 @@
  */
 import { API_URL, MOCK } from "../config";
 import { authFetch } from "../session";
+import type { StandingApproval } from "../types";
 import type {
   ControlAction, LaunchBody, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectEstimate, ProjectHealth, ProjectSummary, ProjectTemplate,
   SaveTemplateOpts, TemplateInput, TemplatePreview, TemplatePreviewRequest, TemplateValidation, TemplateVersionInfo,
@@ -47,6 +48,9 @@ export const projectsApi = {
   list: async (): Promise<ProjectSummary[]> => (MOCK ? (await mock()).list() : items<ProjectSummary>(await http("GET", "/projects"))),
   /** Mock: full detail. Real backend: GET /projects/{id}/snapshot?depth=full (header + objectives + nodes + approvals). */
   get: async (id: string): Promise<ProjectDetail> => (MOCK ? (await mock()).get(id) : http("GET", `/projects/${id}/snapshot?depth=full`)),
+  /** The project's standing approvals ("always allow"), history included. The mock has none. */
+  standing: async (id: string): Promise<StandingApproval[]> => (MOCK ? [] : items<StandingApproval>(await http("GET", `/projects/${id}/standing-approvals`))),
+  revokeStanding: async (id: string, sid: string): Promise<StandingApproval | null> => (MOCK ? null : http("DELETE", `/projects/${id}/standing-approvals/${sid}`)),
   health: async (id: string): Promise<ProjectHealth | null> => (MOCK ? (await mock()).health(id) : http("GET", `/projects/${id}/health`)),
   createDraft: async (b: NewProjectBody): Promise<{ project_id: string }> => (MOCK ? (await mock()).createDraft(b) : http("POST", "/projects/draft", b)),
   patchPlan: async (id: string, ops: PlanOp[]) => (MOCK ? (await mock()).patchPlan(id, ops) : http("PATCH", `/projects/${id}/plan`, { ops })),

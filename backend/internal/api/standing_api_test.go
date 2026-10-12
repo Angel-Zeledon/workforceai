@@ -81,7 +81,7 @@ func TestStandingApprovalAPIRefusesWhatIsNotInternalAndReversible(t *testing.T) 
 		{"not offered", "spreadsheet", "update", "medium", false},
 		{"forged flag on email", "email", "send_proposal", "medium", true},
 		{"forged flag on code.run", "code", "run", "low", true},
-		{"forged flag on delete", "drive", "delete", "medium", true},
+		{"forged flag on delete", "fs", "delete", "medium", true},
 		{"forged flag on a payment", "spreadsheet", "make_payment", "low", true},
 		{"high risk", "documents", "draft", "high", true},
 	} {

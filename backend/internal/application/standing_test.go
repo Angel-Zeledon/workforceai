@@ -21,8 +21,8 @@ func TestStandingEligibilityIsDefaultDeny(t *testing.T) {
 	}{
 		{"internal draft by autonomy", "documents", "draft", "low", "baseline.autonomy:approve_each", 1, "", true, ""},
 		{"spreadsheet update by engine autonomy", "spreadsheet", "update", "medium", "autonomy.approve_each", 1, "", true, ""},
-		{"drive versioned write", "drive", "write", "medium", "native.autonomy", 1, "", true, ""},
-		{"drive delete", "drive", "delete", "medium", "native.autonomy", 1, "", false, "not_internal_reversible"},
+		{"drive versioned write", "fs", "write", "medium", "native.autonomy", 1, "", true, ""},
+		{"drive delete", "fs", "delete", "medium", "native.autonomy", 1, "", false, "not_internal_reversible"},
 		{"email send", "email", "send_proposal", "medium", "baseline.autonomy:approve_each", 1, "", false, "not_internal_reversible"},
 		{"external verb on an internal tool", "documents", "send_contract", "medium", "baseline.autonomy:approve_each", 1, "", false, "not_internal_reversible"},
 		{"publish", "documents", "publish", "low", "baseline", 1, "", false, "not_internal_reversible"},
@@ -34,7 +34,7 @@ func TestStandingEligibilityIsDefaultDeny(t *testing.T) {
 		{"missing risk", "documents", "draft", "", "baseline", 1, "", false, "risk_too_high"},
 		{"always-approve list", "documents", "draft", "low", "baseline.approval_action:draft", 1, "", false, "organization_rule"},
 		{"amount threshold", "spreadsheet", "update", "low", "org.amount", 1, "", false, "organization_rule"},
-		{"tainted native hold", "drive", "write", "medium", "native.restricted", 1, "", false, "organization_rule"},
+		{"tainted native hold", "fs", "write", "medium", "native.restricted", 1, "", false, "organization_rule"},
 		{"double approval", "documents", "draft", "low", "baseline", 2, "", false, "governance_required"},
 		{"role required", "documents", "draft", "low", "baseline", 1, "admin", false, "governance_required"},
 	}
@@ -169,7 +169,7 @@ func TestStandingNeverAppliesToExternalOrIrreversibleActions(t *testing.T) {
 		{"email", "send_proposal", "medium"},
 		{"documents", "publish", "low"},
 		{"spreadsheet", "make_payment", "low"},
-		{"drive", "delete", "medium"},
+		{"fs", "delete", "medium"},
 		{"documents", "draft", "high"},
 	} {
 		h, svc, _ := standingHarness(t, c.tool, c.action, c.risk)
