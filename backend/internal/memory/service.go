@@ -337,3 +337,7 @@ func (s *Service) Delete(ctx context.Context, org, agentID, id, actor string) er
 	}
 	return nil
 }
+
+// Reset forgets everything of an organization (the demo reset: the tasks the
+// memories point to are gone too).
+func (s *Service) Reset(ctx context.Context, org string) error { return s.cfg.Docs.Clear(ctx, org) }

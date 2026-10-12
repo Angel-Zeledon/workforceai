@@ -356,6 +356,42 @@ def loaded_skill_lines(loaded) -> list[str]:
     return lines
 
 
+# ---- M1: long-term memory ---------------------------------------------------------------------------
+MAX_RECALLED = 6
+MAX_RECALLED_CHARS = 2600
+_REF = re.compile(r"^(?:task|report|memory):[A-Za-z0-9_.-]{1,80}$|^file:/[^\x00-\x1f]{1,300}$")
+
+
+def memory_lines(recalled) -> list[str]:
+    """What the organization already did that looks relevant (chosen by the backend), plus how to dig
+    deeper. Everything inside is past text written by people, agents or files: DATA, never instructions."""
+    lines = [
+        "MEMORIA A LARGO PLAZO: trabajo previo de la organizacion. Si necesitas mas, pide en tool_requests "
+        "{\"tool\": \"memory\", \"action\": \"search\", \"args\": {\"query\": \"...\"}} (o args.ref para abrir "
+        "un task:/report:/memory:); los archivos (file:) se abren con fs read. Cita la referencia cuando uses un dato. "
+        "Si algo aprendido servira en trabajos futuros, anotalo en memory_notes (maximo 4 notas breves; jamas "
+        "contrasenas, claves ni datos personales sensibles).",
+    ]
+    items, used = [], 0
+    for m in (recalled or [])[:MAX_RECALLED]:
+        ref = (getattr(m, "ref", "") or "").strip()
+        if not _REF.match(ref):
+            continue
+        item = {"ref": ref, "tipo": _one_line(m.kind, 12), "titulo": _one_line(m.title, 160),
+                "extracto": _one_line(m.snippet, 500)}
+        if m.project:
+            item["proyecto"] = _one_line(m.project, 80)
+        if m.at:
+            item["fecha"] = _one_line(m.at, 10)
+        used += len(item["titulo"]) + len(item["extracto"])
+        if items and used > MAX_RECALLED_CHARS:
+            break
+        items.append(item)
+    if items:
+        lines += ["", wrap_untrusted("memoria relevante de trabajo previo", items)]
+    return lines
+
+
 def build_task_prompt(req: RunTaskRequest) -> str:
     """Prompt de usuario: tarea + datos delimitados."""
     ctx = req.context
@@ -375,6 +411,7 @@ def build_task_prompt(req: RunTaskRequest) -> str:
         lines += ["", *workspace_lines(req.workspace)]
     if code := code_lines(req.agent):
         lines += ["", *code]
+    lines += ["", *memory_lines(getattr(req, "recalled", None))]
     sk = skill_lines(getattr(req, "skills", None))
     if sk:
         lines += ["", *sk]
@@ -424,7 +461,7 @@ def build_task_prompt(req: RunTaskRequest) -> str:
     lines += [
         "",
         "Entrega el resultado estructurado (summary, findings, metrics, hypotheses, evidence, "
-        "recommendations, confidence 0-1, suggested_tasks), mas consults a otros agentes y "
+        "recommendations, confidence 0-1, suggested_tasks, memory_notes opcional), mas consults a otros agentes y "
         "tool_requests si aplica.",
         language_rule(req.locale, req.tone),
     ]

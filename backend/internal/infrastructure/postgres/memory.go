@@ -100,3 +100,8 @@ func (m *MemoryStore) Suppress(ctx context.Context, org, id, by string, at time.
 	}
 	return nil
 }
+
+// Clear implements memory.DocStore (demo reset).
+func (m *MemoryStore) Clear(ctx context.Context, org string) error {
+	return m.S.exec(ctx, org, `DELETE FROM memory_docs WHERE org_id=$1`, org)
+}

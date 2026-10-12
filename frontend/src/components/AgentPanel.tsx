@@ -21,6 +21,7 @@ import { ThoughtAudit } from "./agent/ThoughtAudit";
 import { TaskIntervention } from "./agent/TaskIntervention";
 import { AgentPauseToggle } from "./agent/AgentPauseToggle";
 import { DeskFiles } from "./drive/DeskFiles";
+import { MemoryTab } from "./agent/MemoryTab";
 import { AgentSkillsCard } from "./skills/AgentSkillsCard";
 import { SaveAsSkillButton } from "./skills/SaveAsSkillButton";
 
@@ -145,12 +146,7 @@ export function AgentPanel({ id }: { id: string }) {
             {openConv === c.id && <div className="mt-3"><ConversationThread id={c.id} /></div>}
           </Card>
         )) : <Empty>{t("panel.noChats")}</Empty>)}
-        {tab === "memory" && ((detail?.memory ?? []).length ? (detail!.memory).map((m) => (
-          <div key={m.key} className="rounded-md border border-line bg-panel2 p-3">
-            <div className="flex items-center justify-between"><span className="font-mono text-[11px] text-accent">{m.key}</span><span className="rounded bg-mute/[0.08] px-1.5 text-[10px] uppercase text-mute">{m.scope}</span></div>
-            <div className="mt-1 text-xs text-ink2">{m.value}</div>
-          </div>
-        )) : <Empty>{t("panel.noMemory")}</Empty>)}
+        {tab === "memory" && <MemoryTab id={id} legacy={detail?.memory ?? []} />}
         {tab === "reports" && (openReport ? (
           <div><button className="mb-3 text-xs text-accent" onClick={() => setOpenReport(null)}><Icon name="back" size={12} className="mr-1 inline-block align-[-1px]" />{t("common.back")}</button><ReportView r={reports[openReport]} /></div>
         ) : myReports.length ? myReports.map((r) => (

@@ -2561,5 +2561,19 @@
   "shop.reason.task_first_try": "Tarea aprobada a la primera: {title}",
   "shop.reason.task_rework": "Tarea terminada tras corregirla: {title}",
   "shop.reason.project_done": "Proyecto terminado: {title}",
-  "shop.reason.purchase": "Compra: {item}"
+  "shop.reason.purchase": "Compra: {item}",
+  "memory.search.placeholder": "Busca lo que este agente recuerda",
+  "memory.search.label": "Buscar en la memoria",
+  "memory.search.go": "Buscar",
+  "memory.search.hint": "Lo que este agente recordaría sobre \"{q}\" (trabajo previo y los archivos que puede leer).",
+  "memory.loading": "Cargando memoria…",
+  "memory.noMatch": "Nada en la memoria coincide con eso.",
+  "memory.error": "No se pudo cargar la memoria.",
+  "memory.delete": "Olvidar",
+  "memory.quick": "Notas rápidas",
+  "memory.project": "Proyecto {name}",
+  "memory.kind.task": "Tarea",
+  "memory.kind.report": "Informe",
+  "memory.kind.file": "Archivo",
+  "memory.kind.note": "Lección"
 }

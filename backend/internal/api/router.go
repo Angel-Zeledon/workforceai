@@ -439,5 +439,11 @@ func (s *server) reset(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	if s.Memory != nil {
+		if err := s.Memory.Reset(r.Context(), s.org(r)); err != nil {
+			s.fail(w, err)
+			return
+		}
+	}
 	writeJSON(w, 200, map[string]string{"status": "ok"})
 }

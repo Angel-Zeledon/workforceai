@@ -22,7 +22,7 @@ def test_run_task_shape(client):
     d = r.json()
     assert set(d) == {"output", "consults", "tool_requests", "usage"}
     assert set(d["output"]) == {"summary", "findings", "metrics", "hypotheses", "evidence",
-                                "recommendations", "confidence", "suggested_tasks"}
+                                "recommendations", "confidence", "suggested_tasks", "memory_notes"}
     assert set(d["usage"]) == {"model", "input_tokens", "output_tokens", "cost_usd", "duration_ms"}
     tr = d["tool_requests"][0]
     assert set(tr) == {"tool", "action", "args", "risk"} and tr["risk"] == "high"

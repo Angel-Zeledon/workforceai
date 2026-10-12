@@ -73,6 +73,8 @@ class StructuredOutput(_Base):
     recommendations: list[str] = Field(default_factory=list)
     confidence: float = Field(ge=0, le=1)
     suggested_tasks: list[str] = Field(default_factory=list)
+    # M1: short lessons/facts worth remembering for later work (the backend stores a few; never secrets).
+    memory_notes: list[str] = Field(default_factory=list)
 
 
 class Usage(_Base):
@@ -346,6 +348,19 @@ class TaskContext(_Base):
     project_context: ProjectContext | None = None  # W3: only for project tasks
 
 
+class RecalledMemory(_Base):
+    """M1: a relevant long-term memory (past task output, report, drive file or note) chosen by the
+    backend. It is UNTRUSTED data; ref says where it came from (task:, report:, file:, memory:)."""
+
+    ref: str = ""
+    kind: str = ""
+    title: str = ""
+    snippet: str = ""
+    project: str | None = None
+    agent_id: str | None = None
+    at: str | None = None
+
+
 class UntrustedItem(_Base):
     """Contenido de terceros entregado por el backend (resultado de una herramienta)."""
 
@@ -406,6 +421,8 @@ class RunTaskRequest(_ProviderPolicyMixin):
     loaded_skills: list[LoadedSkill] | None = None
     # V2: notes a human sent to steer this task. Additional guidance, never authority (security.py).
     human_guidance: list[str] | None = None
+    # M1: relevant memories of past work (bounded by the backend); data, never instructions.
+    recalled: list[RecalledMemory] | None = None
     want_trace: bool = False  # V2: return the redacted prompt as built, for the thought audit
     locale: Locale = "es"
     tone: Tone = "neutral"

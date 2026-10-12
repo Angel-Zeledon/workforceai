@@ -2561,5 +2561,19 @@
   "shop.reason.task_first_try": "Task approved on the first try: {title}",
   "shop.reason.task_rework": "Task finished after rework: {title}",
   "shop.reason.project_done": "Project finished: {title}",
-  "shop.reason.purchase": "Purchase: {item}"
+  "shop.reason.purchase": "Purchase: {item}",
+  "memory.search.placeholder": "Search what this agent remembers",
+  "memory.search.label": "Search memory",
+  "memory.search.go": "Search",
+  "memory.search.hint": "What this agent would recall for \"{q}\" (past work and the files it may read).",
+  "memory.loading": "Loading memory…",
+  "memory.noMatch": "Nothing in memory matches that.",
+  "memory.error": "Could not load the memory.",
+  "memory.delete": "Forget",
+  "memory.quick": "Quick notes",
+  "memory.project": "Project {name}",
+  "memory.kind.task": "Task",
+  "memory.kind.report": "Report",
+  "memory.kind.file": "File",
+  "memory.kind.note": "Lesson"
 }

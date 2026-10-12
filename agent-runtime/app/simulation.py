@@ -85,6 +85,29 @@ def sim_skill_load(req: RunTaskRequest) -> ToolRequest | None:
     return ToolRequest(tool="skill", action="load", risk="low", args={"name": req.skills[0].name})
 
 
+SIM_MEMORY_MARKER = "[sim:memory]"
+
+
+def sim_memory_search(req: RunTaskRequest) -> ToolRequest | None:
+    """M1: a task whose text carries "[sim:memory]" makes the simulated employee look in the long-term
+    memory with memory.search (once, before the work), like a real one would. The $50,000 scenario never
+    has the marker, so nothing else changes."""
+    text = " ".join([req.task.title or "", req.task.description or "", req.context.request_text or ""]).lower()
+    if SIM_MEMORY_MARKER not in text or req.external_content:
+        return None
+    query = _SLUG.sub(" ", text.replace(SIM_MEMORY_MARKER, " ")).strip()[:200]
+    return ToolRequest(tool="memory", action="search", risk="low", args={"query": query or (req.task.title or "")})
+
+
+def sim_memory_notes(req: RunTaskRequest, out: StructuredOutput) -> list[str]:
+    """M1: a concise lesson the simulated employee wants to remember (the first sentence of its summary)."""
+    first = re.split(r"(?<=[.!?])\s+", (out.summary or "").strip())[0][:200].strip()
+    if len(first) < 12:
+        return []
+    prefix = "Lesson" if req.locale == "en" else "Lección"
+    return [f"{prefix} ({req.task.title[:60]}): {first}"]
+
+
 class SimulationEngine(AgentEngine):
     mode = "simulation"
     # Set by select_engine when a provider was configured but the live engine failed.
@@ -186,6 +209,13 @@ class SimulationEngine(AgentEngine):
         if draft is not None:  # F1: like a real employee, keep the work as a file on the desk
             tool_requests.append(draft)
             out.evidence.append(c.TEXTS.get("evidence_file", "Draft saved at {path}").format(path=draft.args["path"]))
+        if role != rv.AUDITOR_ROLE:
+            out.memory_notes = sim_memory_notes(req, out)
+        sm = sim_memory_search(req)
+        if sm is not None:  # M1: look at what the organization already did before doing the work
+            tool_requests.append(sm)
+        elif req.external_content and SIM_MEMORY_MARKER in " ".join([req.task.title or "", req.task.description or "", req.context.request_text or ""]).lower():
+            out.evidence.append(("Memory consulted: " if req.locale == "en" else "Memoria consultada: ") + str(len(req.external_content)))
         sl = sim_skill_load(req)
         if sl is not None:  # S1: like a real employee, look up the skill before doing the work
             tool_requests.append(sl)

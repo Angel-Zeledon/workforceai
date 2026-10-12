@@ -139,6 +139,8 @@ type DocStore interface {
 	Get(ctx context.Context, org, id string) (Doc, error)
 	// Suppress hides a document from every retrieval (a person deleted it).
 	Suppress(ctx context.Context, org, id, by string, at time.Time) error
+	// Clear removes every document of the organization (demo reset only).
+	Clear(ctx context.Context, org string) error
 }
 
 // FileSource retrieves the drive files an agent may read.

@@ -141,3 +141,15 @@ func (m *MemStore) Suppress(_ context.Context, org, id, _ string, _ time.Time) e
 	m.docs[key(org, id)] = d
 	return nil
 }
+
+// Clear implements DocStore.
+func (m *MemStore) Clear(_ context.Context, org string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for k := range m.docs {
+		if strings.HasPrefix(k, org+"|") {
+			delete(m.docs, k)
+		}
+	}
+	return nil
+}
