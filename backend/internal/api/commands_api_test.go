@@ -910,3 +910,13 @@ func TestCommandsOrgGroup(t *testing.T) {
 	e.fails(e.owner, map[string]any{"command": "status", "context": map[string]any{"surface": "mars"}}, 400, "surface_not_supported")
 	e.fails(e.owner, map[string]any{"command": "status", "context": map[string]any{"surface": "agent", "agent_id": "ghost"}}, 400, "unknown_agent")
 }
+
+// A command without arguments sends "args": [] — a JSON null crashed the composer ("/limpiar").
+func TestCommandsCatalogListsAreNeverNull(t *testing.T) {
+	e := newCmdEnv(t, cmdOpts{})
+	for _, c := range e.list(api1+"/commands", e.admin) {
+		if _, ok := c["args"].([]any); !ok {
+			t.Fatalf("%v: args = %#v, want an array", c["id"], c["args"])
+		}
+	}
+}

@@ -5,3 +5,6 @@ services:
   backend:
     environment:
       AUTH_ENABLED: "false"
+      # Demo/e2e only: a fixed key so bring-your-own-model keys and connections can be
+      # stored locally. Production must set its own CONNECTIONS_KEK (openssl rand -base64 32).
+      CONNECTIONS_KEK: ${CONNECTIONS_KEK:-euDk9Uq1aySyqrSB40BjUTeR30O1aoqrUNCXur0U6sg=}

@@ -107,6 +107,29 @@ export function parseArgs(cmd: Command, rest: string): ArgState {
     const a = cmd.args[ai];
     current = ai;
     if (ti >= toks.length) break;
+    // A list of agents followed by more arguments (/reunion ventas legal: tema): the agents are the
+    // @mentions at the start, or everything before a ":". Plain words are left for the next argument.
+    if (a.variadic && a.kind === "agent" && ai < cmd.args.length - 1) {
+      const colon = rest.indexOf(":");
+      let names: Tok[];
+      if (colon >= 0) names = toks.filter((t) => t.start < colon);
+      else { names = []; for (let k = ti; k < toks.length && toks[k].text.startsWith("@"); k++) names.push(toks[k]); }
+      if (names.length) {
+        values[a.name] = names.map((t) => stripAt(t.text.replace(/:$/, ""))).filter(Boolean).join(" ");
+        for (const t of names) mentions.push(stripAt(t.text.replace(/:$/, "")));
+      }
+      ti += names.length;
+      if (colon >= 0) {
+        const after = rest.slice(colon + 1);
+        // the remaining arguments read what follows the colon
+        const sub = parseArgs({ ...cmd, args: cmd.args.slice(ai + 1) } as Command, after);
+        Object.assign(values, sub.values); mentions.push(...sub.mentions);
+        currentTok = sub.currentTok; current = ai + 1 + sub.current;
+        ti = toks.length;
+        break;
+      }
+      continue;
+    }
     if (a.variadic) {
       const slice = toks.slice(ti);
       values[a.name] = rest.slice(slice[0].start).trim();

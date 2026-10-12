@@ -86,10 +86,11 @@ test("el mismo comando funciona con alias en español y en inglés, y la respues
   expect(en.lang).toBe("en");
   await expect(page.locator('[data-testid="cmd-card"][data-command="compact"]')).toHaveCount(2, { timeout: 90_000 });
 
-  // names shared by both languages use the UI locale (Spanish by default)
+  // names shared by both languages use the UI locale (whatever the browser picked)
+  const uiLang = (await page.getByTestId("nav-office").innerText()).includes("Oficina") ? "es" : "en";
   const x = await bodyOf("/excel ventas");
   expect(x.command).toBe("excel");
-  expect(x.lang).toBe("es");
+  expect(x.lang).toBe(uiLang);
 });
 
 test("/ayuda y el boton ? abren el panel de comandos con buscador", async ({ page }) => {

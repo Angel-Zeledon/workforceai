@@ -170,7 +170,7 @@ var all = []Command{
 		Title:       L{"Reunión de agentes", "Agents meeting"},
 		Description: L{"Los agentes nombrados discuten el tema y la asistente redacta la conclusión.", "The named agents discuss the topic and the assistant writes the conclusion."},
 		Example:     L{"/reunion ventas legal contabilidad: precios 2027", "/meeting sales legal accounting: 2027 pricing"}, Group: GroupOffice, Icon: "users",
-		Args:       []Arg{{Name: "agents", Kind: KindAgent, Required: true, Variadic: true}, {Name: "topic", Kind: KindText, Required: true}},
+		Args:       []Arg{{Name: "agents", Kind: KindAgent, Variadic: true}, {Name: "topic", Kind: KindText, Required: true}},
 		Permission: "requests:create", UsesLLM: true, Surfaces: allSurfaces},
 	{ID: "assign", Aliases: Aliases{ES: []string{"encargar", "asignar"}, EN: []string{"assign"}},
 		Title:       L{"Encargar una tarea", "Assign a task"},

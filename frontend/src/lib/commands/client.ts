@@ -13,11 +13,25 @@ const qs = (o: Record<string, string | number | undefined>) => {
   return s ? `?${s}` : "";
 };
 
+/** A server command with every list present: a JSON null (a Go nil slice) must never
+ *  reach `.some`/`.map` in the composer (it crashed the page on "/limpiar"). */
+export function normalizeCommand(raw: unknown): Command | null {
+  const c = raw as Partial<Command> | null;
+  if (!c || typeof c.id !== "string") return null;
+  const al = (c.aliases ?? {}) as Partial<Command["aliases"]>;
+  return {
+    ...(c as Command),
+    aliases: { es: Array.isArray(al.es) ? al.es : [], en: Array.isArray(al.en) ? al.en : [] },
+    args: Array.isArray(c.args) ? c.args.map((a) => ({ ...a, enum: Array.isArray(a.enum) ? a.enum : a.enum === undefined ? undefined : [] })) : [],
+    surfaces: Array.isArray(c.surfaces) ? c.surfaces : [],
+  };
+}
+
 export const commandsApi = {
   list: async (): Promise<Command[]> => {
     const r = await call<unknown>("GET", "/commands");
     const items = Array.isArray(r) ? r : (r as { items?: unknown[] })?.items;
-    return Array.isArray(items) ? (items as Command[]) : [];
+    return Array.isArray(items) ? items.map(normalizeCommand).filter((c): c is Command => c !== null) : [];
   },
   complete: async (kind: string, q: string, limit = 8): Promise<Completion[]> => {
     const r = await call<unknown>("GET", `/commands/complete${qs({ kind, q, limit })}`);
@@ -40,7 +54,8 @@ export const useRegistry = create<RegistryState>((set, get) => ({
     set({ loaded: true });
     try {
       const list = await commandsApi.list();
-      if (list.length) set({ commands: list });
+      // Commands that only exist in the browser (/ayuda, /archivo, /abrir...) stay available.
+      if (list.length) set({ commands: [...list, ...STATIC_COMMANDS.filter((c) => c.client_only && !list.some((x) => x.id === c.id))] });
     } catch { set({ loaded: false }); }
   },
 }));

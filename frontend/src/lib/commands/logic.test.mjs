@@ -111,3 +111,21 @@ test("surfaceOf and sortRows", () => {
   assert.deepEqual(sortRows([["b", "10"], ["a", "9"], ["c", "100"]], 1, 1).map((r) => r[0]), ["a", "b", "c"]);
   assert.deepEqual(sortRows([["b", 1], ["a", 2]], 0, -1).map((r) => r[0]), ["b", "a"]);
 });
+
+// The server's /reunion: an optional list of agents, then the topic.
+const meetingApi = { id: "meeting", aliases: { es: ["reunion"], en: ["meeting"] }, args: [
+  { name: "agents", kind: "agent", required: false, variadic: true }, { name: "topic", kind: "text", required: true, variadic: true }] };
+
+test("parseArgs: /reunion agents before a colon, or none (the topic is not read as agents)", () => {
+  let st = parseArgs(meetingApi, "ventas legal contabilidad: descuento del 10% para Grupo Alfa");
+  assert.equal(st.values.agents, "ventas legal contabilidad");
+  assert.equal(st.values.topic, "descuento del 10% para Grupo Alfa");
+  assert.deepEqual(st.missing, []);
+  st = parseArgs(meetingApi, "lanzamiento del producto de otoño");
+  assert.equal(st.values.agents, undefined);
+  assert.equal(st.values.topic, "lanzamiento del producto de otoño");
+  assert.deepEqual(st.missing, []);
+  st = parseArgs(meetingApi, "@Valeria @Elena precio final");
+  assert.equal(st.values.agents, "Valeria Elena");
+  assert.equal(st.values.topic, "precio final");
+});

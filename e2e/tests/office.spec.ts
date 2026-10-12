@@ -19,5 +19,6 @@ test("aparecen los 7 personajes", async ({ page }) => {
   for (const id of AGENT_IDS) {
     await expect(page.getByTestId(`agent-${id}`)).toBeAttached();
   }
-  await expect(page.locator('[data-testid^="agent-"]')).toHaveCount(AGENT_IDS.length);
+  // The 7 seed agents at least: other specs may have hired more (the demo reset keeps hires).
+  expect(await page.locator('[data-testid^="agent-"]').count()).toBeGreaterThanOrEqual(AGENT_IDS.length);
 });

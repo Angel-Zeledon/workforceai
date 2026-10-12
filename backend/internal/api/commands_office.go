@@ -86,6 +86,11 @@ func cmdMeeting(c *cmdCall) (*cmdResult, *cmdFail) {
 		}
 	}
 	topic := c.str("topic")
+	if len(ids) == 0 {
+		// Nobody named: the team meets and the planner calls in the areas the topic needs.
+		return c.submit(fmt.Sprintf(c.t("Reunión del equipo sobre: %s. Convoca a las áreas que el tema necesita; cada una da su postura con riesgos y propuestas, y la asistente redacta la conclusión (acuerdos, desacuerdos y próximos pasos).",
+			"Team meeting about: %s. Call in the areas the topic needs; each gives its position with risks and proposals, and the assistant writes the conclusion (agreements, disagreements and next steps)."), topic))
+	}
 	body := fmt.Sprintf(c.t("Reunión entre %s sobre: %s. Cada uno da la postura de su área con riesgos y propuestas; la asistente redacta la conclusión (acuerdos, desacuerdos y próximos pasos).",
 		"Meeting between %s about: %s. Each one gives their area's position with risks and proposals; the assistant writes the conclusion (agreements, disagreements and next steps)."),
 		strings.Join(names, ", "), topic)

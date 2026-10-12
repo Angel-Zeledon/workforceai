@@ -207,6 +207,10 @@ type commandView struct {
 func (s *server) listCommands(w http.ResponseWriter, r *http.Request) {
 	out := make([]commandView, 0, 48)
 	for _, c := range commands.All() {
+		// Lists are always JSON arrays, never null (the composer iterates them).
+		if c.Args == nil {
+			c.Args = []commands.Arg{}
+		}
 		out = append(out, commandView{Command: c, Allowed: s.has(r, auth.Permission(c.Permission)), Available: s.cmdAvailable(c.ID)})
 	}
 	writeJSON(w, http.StatusOK, out)
