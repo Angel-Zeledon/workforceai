@@ -36,6 +36,15 @@ export interface Approval {
   /** Governance (optional: older backends omit them). */
   required_approvals?: number; required_role?: string; requested_by?: string;
   decisions?: { by: string; role?: string; note?: string; ts: string }[];
+  /** Standing approvals: set by the server only for internal, reversible actions of a project. */
+  tool?: string; project_id?: string; standing_eligible?: boolean;
+}
+
+/** "Always allow this kind of action in this project" (docs/architecture/06-permisos-autonomia.md). */
+export interface StandingApproval {
+  id: string; project_id: string; agent_id: string; tool: string; action: string; approval_id?: string;
+  created_by: string; created_at: string; expires_at: string; revoked_at?: string; revoked_by?: string;
+  use_count: number; last_used_at?: string; status: "active" | "revoked" | "expired";
 }
 export interface Report {
   id: string; request_id: string; title: string; summary: string;
@@ -74,6 +83,10 @@ export interface ChatMessage {
   handoff_to?: string | null;
   /** drive files of this message (cards in the chat) */
   files?: FileRef[];
+  /** the request this message created or reports on (deep link from the chat history) */
+  request_id?: string | null;
+  /** chat history: the agents this message belongs to (where it was routed), for the badges */
+  agent_ids?: string[];
 }
 export type TurnIntent = "smalltalk" | "question" | "task";
 export interface RouteResponder { agent_id: string; role: "primary" | "contributor"; reason: string }

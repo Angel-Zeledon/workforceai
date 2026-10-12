@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { fmtDateTime, useT } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
-import { browserTimeZone, orgApi, type OrgSettings, type Schedule, type TaxTemplate, type ToneCode } from "@/lib/orgConfigApi";
+import { browserTimeZone, orgApi, type ModelPolicyView, type OrgSettings, type Schedule, type TaxTemplate, type ToneCode } from "@/lib/orgConfigApi";
 import { Modal } from "@/components/templates/Modal";
 import { useAgentName } from "@/components/ui";
 import { BriefingFields, type BriefingValue } from "./BriefingFields";
@@ -19,6 +19,7 @@ export function OrgConfigPanel({ onClose }: { onClose: () => void }) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [tax, setTax] = useState<TaxTemplate[]>([]);
   const [draft, setDraft] = useState<BriefingValue>({ enabled: true, hour: 8, minute: 0, timezone: browserTimeZone(), weekdays: [] });
+  const [prov, setProv] = useState<ModelPolicyView | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -26,6 +27,7 @@ export function OrgConfigPanel({ onClose }: { onClose: () => void }) {
       const [s, sc] = await Promise.all([orgApi.settings(), orgApi.schedules()]);
       setSettings(s); setSchedules(sc);
     } catch { setMsg({ ok: false, text: t("cfg.loadError") }); }
+    orgApi.modelPolicy().then(setProv).catch(() => setProv(null)); // owner/admin only; hidden otherwise
     orgApi.taxTemplates(locale).then(setTax).catch(() => setTax([]));
   }, [locale, t]);
   useEffect(() => { void load(); }, [load]);
@@ -61,6 +63,28 @@ export function OrgConfigPanel({ onClose }: { onClose: () => void }) {
           </div>
         )}
       </section>
+
+      {prov && (
+        <section className="mb-6" data-testid="cfg-providers">
+          <h3 className="mb-1 font-display text-[15px] font-semibold">{t("cfg.prov.title")}</h3>
+          <p className="mb-3 text-[12px] text-mute">{t("cfg.prov.hint")}</p>
+          <div className="grid gap-2" role="radiogroup" aria-label={t("cfg.prov.title")}>
+            {prov.known_providers.filter((p) => prov.server_allowed_providers.includes(p)).map((p) => {
+              const configured = prov.configured_providers.includes(p);
+              const current = prov.policy.preferred_providers[0] ?? prov.default_provider;
+              return (
+                <label key={p} data-testid={`cfg-prov-${p}`} data-configured={configured} className="flex items-center gap-2 text-[13px]">
+                  <input type="radio" name="cfg-prov" checked={current === p} disabled={!configured}
+                    onChange={() => void run(() => orgApi.putModelPolicy({ ...prov.policy, preferred_providers: [p] }))} />
+                  <span className="font-semibold">{t(`cfg.prov.${p}`)}</span>
+                  {p === prov.default_provider && <span className="rounded bg-emerald-500/15 px-1.5 py-[2px] text-[10px] font-semibold uppercase text-emerald-800">{t("cfg.prov.default")}</span>}
+                  {!configured && <span className="text-[11px] text-mute">{t("cfg.prov.nokey")}</span>}
+                </label>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="mb-6">
         <h3 className="mb-1 font-display text-[15px] font-semibold">{t("cfg.brief.title")}</h3>

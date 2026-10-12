@@ -188,6 +188,20 @@ func (c *Client) Health(ctx context.Context) (string, error) {
 	return h.Mode, nil
 }
 
+// Providers reports which model providers the runtime has credentials for
+// (never the keys) and the one it uses first (DeepSeek when its key is present,
+// otherwise Anthropic).
+func (c *Client) Providers(ctx context.Context) (configured []string, def string, err error) {
+	var h struct {
+		Configured []string `json:"configured_providers"`
+		Default    string   `json:"default_provider"`
+	}
+	if err := c.do(ctx, http.MethodGet, "/healthz", nil, &h); err != nil {
+		return nil, "", err
+	}
+	return h.Configured, h.Default, nil
+}
+
 func truncate(s string, n int) string {
 	if len(s) > n {
 		return s[:n] + "..."

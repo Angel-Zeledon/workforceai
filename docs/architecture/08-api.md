@@ -26,7 +26,7 @@ Base: `/api/v1`, JSON. Todo lo definido en el SPEC se **mantiene identico** (mar
 | `POST /requests` `{text}` -> `202 {request_id}` | **[SPEC]**; extension opcional: `{text, customer_id?, budget_cap_usd?}` |
 | `GET /requests`, `GET /requests/{id}` | **[SPEC]** |
 | `GET/POST /conversations/{id}/messages`, `GET /conversations` | **[SPEC]** |
-| `GET /approvals?status=`, `POST /approvals/{id}/decision` `{decision, note?}` | **[SPEC]** |
+| `GET /approvals?status=`, `POST /approvals/{id}/decision` `{decision, note?}` | **[SPEC]** (ver "Permisos permanentes por proyecto" más abajo para `always_allow`) |
 | `GET /reports`, `GET /reports/{id}`, `GET /activity?limit=`, `GET /metrics`, `GET /healthz`, `POST /demo/reset` | **[SPEC]** |
 | `GET /ws` | **[SPEC]** + extensiones (03) |
 
@@ -78,8 +78,8 @@ Rutas reales bajo `/api/v1` (con `AUTH_ENABLED=true`; código en `backend/intern
 | Ruta | Descripcion | Permiso |
 |---|---|---|
 | `GET /auth/config` | `{enabled, registration}`: el frontend decide entre login y demo abierta. Existe también con auth apagada (`enabled:false`) | público |
-| `POST /auth/register`, `POST /auth/login` | Crea cuenta + organización (owner) / abre sesión. Devuelven `{access_token, refresh_token, expires_at, user, org_id, role}` | público, con límite por IP y por correo |
-| `POST /auth/refresh`, `POST /auth/logout` | `refresh_token` en el cuerpo JSON (rotación; reutilizar uno ya rotado revoca la familia). Moverlo a cookie `HttpOnly` cambiaría este contrato: **pendiente de decisión del dueño** | público |
+| `POST /auth/register`, `POST /auth/login` | Crea cuenta + organización (owner) / abre sesión. Devuelven `{token_type, access_token, expires_in, expires_at, user, org_id, role}`; el refresh token **no va en el cuerpo**: llega en la cookie `Set-Cookie` descrita abajo | público, con límite por IP y por correo |
+| `POST /auth/refresh`, `POST /auth/logout` | Sin cuerpo: el refresh token se lee de la cookie. `refresh` lo **rota** (cookie nueva + `access_token` nuevo; reutilizar uno ya rotado revoca toda la familia, responde `401` y borra la cookie). `logout` revoca la familia, borra la cookie y es idempotente. Exigen la cabecera `X-WFAI-CSRF` y, si el navegador envía `Origin`, que esté en `ALLOWED_ORIGINS` o sea el mismo host; si no, `403 {code:"csrf"}` | público (cookie) |
 | `GET /auth/me` | Usuario, `org_id`, rol, permisos efectivos y `orgs: [{org_id, role}]` | autenticado |
 | `POST /auth/switch-org` `{org_id}` | Nueva sesión del mismo usuario en otra organización suya (403 si no es miembro) | autenticado |
 | `POST /auth/logout-all` | Revoca todas las sesiones del usuario | autenticado |
@@ -87,6 +87,20 @@ Rutas reales bajo `/api/v1` (con `AUTH_ENABLED=true`; código en `backend/intern
 | `GET /invitations`, `POST /invitations` `{email, role}`, `DELETE /invitations/{id}` | Invitaciones. `POST` devuelve el `token` **una sola vez** (solo se guarda su SHA-256); caduca en 7 días; una nueva invitación al mismo correo revoca la anterior | `members:read` / `members:invite` |
 | `POST /auth/invitations/accept` `{token, name?, password}` | Usuario nuevo: crea la cuenta. Usuario existente con ese correo: exige su contraseña (mismo bloqueo que el login). Falla si caducó, se usó, se revocó o quien invitó ya no puede otorgar ese rol | público, con límite por IP |
 | `GET /ws?access_token=` | WebSocket autenticado; se cierra al caducar el token y el cliente reconecta con uno nuevo | autenticado |
+
+**Cookie del refresh token** (decisión del dueño: nunca en `localStorage` ni en el cuerpo JSON): `wfai_refresh` (`AUTH_COOKIE_NAME`), `HttpOnly; SameSite=Strict; Path=/api/v1/auth; Max-Age=` vida del refresh token (30 d) y `Secure` salvo `AUTH_COOKIE_SECURE=false` (solo desarrollo en http plano; `docker-compose.yml` lo apaga). El access token (15 min) vive solo en memoria del frontend y viaja como `Authorization: Bearer`; al recargar se recupera con `POST /auth/refresh`. `register`, `login`, `refresh`, `switch-org` (que además termina la familia anterior) e `invitations/accept` fijan la cookie; `logout` y `logout-all` la borran. CORS con la lista de orígenes permitidos responde `Access-Control-Allow-Credentials: true` y acepta la cabecera `X-WFAI-CSRF` (el frontend llama con `credentials: "include"`). Defensa CSRF en capas: `SameSite=Strict`, cabecera personalizada obligatoria (no la puede enviar un formulario ni una petición simple entre sitios), comprobación de `Origin`/`Sec-Fetch-Site`, y la cookie solo vale en `/auth/*`: el resto de la API exige el bearer. Clientes que no son navegador (scripts) leen el `Set-Cookie` y lo reenvían con la cabecera.
+
+### Permisos permanentes por proyecto (A1 decisiones)
+
+Al aprobar, una persona puede elegir "permitir siempre esta clase de acción en este proyecto". Solo para acciones **internas y reversibles**; nunca para enviar fuera, publicar, pagar, borrar ni `code.run` (que siempre pide su aprobación por ejecución, ligada al hash del código). Diseño y reglas: [06-permisos-autonomia.md](06-permisos-autonomia.md) sec. 10.
+
+| Ruta | Descripcion | Permiso |
+|---|---|---|
+| `POST /approvals/{id}/decision` `{decision:"approve", always_allow?:true, always_allow_any_agent?:bool, always_allow_days?:1..90}` | Aprueba y, si el servidor lo permite, guarda el permiso. Respuesta: la aprobación (plana) más `standing:{...}` si se creó, o `standing_error` si no se pudo (la aprobación única sí queda hecha). `always_allow` con `reject`, o con la función apagada, da `400 invalid` | `approvals:decide` |
+| `GET /projects/{id}/standing-approvals` | `[{id, project_id, agent_id ("" = cualquier agente), tool, action, approval_id, created_by, created_at, expires_at, revoked_at?, revoked_by?, use_count, last_used_at?, status:"active"\|"revoked"\|"expired"}]`, historial incluido, más nuevo primero | `approvals:read` |
+| `DELETE /projects/{id}/standing-approvals/{sid}` | Revoca (idempotente; `404` si no es de ese proyecto) | `approvals:decide` |
+
+`Approval` gana `tool`, `project_id` y `standing_eligible` (el servidor lo pone solo si la acción cumple las reglas; la UI muestra la casilla únicamente entonces, y el servidor lo vuelve a comprobar). Una aprobación automática nace `approved` con `decisions:[{by:"standing:<id>", role:"standing"}]`. Auditoría: `standing_approval.created|used|revoked` y `approval.auto_approved` (más `approval.*` de siempre). Config: `STANDING_APPROVAL_DAYS` (30 por defecto, máx. 90). Migración `540_standing_approvals.sql` (down: `migrations/down/540_standing_approvals_down.sql`).
 
 Auditoría: `invitation.created`, `invitation.revoked`, `invitation.accepted`, `invitation.accept_refused`, `invitation.refused` (solo el dominio del correo, nunca el token).
 
@@ -602,6 +616,22 @@ Cada mensaje puede traer `files: [{file_id, path, name, mime, size, version, act
 ### 15.4 Runtime
 
 `POST /v1/route` y `POST /v1/chat-reply` (ver chat-routing.md sec. 5). Opcionales: sin ellos el backend usa reglas locales.
+
+### 15.5 Historial de chats (E1)
+
+Diseño: [chat-history.md](chat-history.md). Migración `570_chat_history.sql` (down en `migrations/down/`).
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| GET | `/conversations?agent_id=&q=&kind=office\|agent\|request&archived=only\|all&limit=&offset=` | conversations:read | Lista enriquecida: `title`, `kind`, `agent_id`, `preview`, `preview_from`, `message_count`, `unread`, `archived`, `title_custom`, `request_id`, `project_id`, `updated_at` (= `last_message_at`). Búsqueda sin distinguir mayúsculas en título y mensajes (`%`/`_` literales). Cuerpo = array; `X-Has-More`, `X-Next-Offset` |
+| PATCH | `/conversations/{id}` `{title?, archived?}` | conversations:write | Renombra / archiva (auditado: `conversation.updated`, sin texto) |
+| DELETE | `/conversations/{id}` | conversations:delete (admin) | Borra la conversación y sus mensajes (auditado: `conversation.deleted`) -> 204 |
+| POST | `/conversations/{id}/read` | conversations:write | Marca leída -> 204 |
+| GET | `/chats/threads` | conversations:read | `general` y un hilo por agente: `preview`, `message_count`, `unread`, `last_message_at` |
+| GET | `/chats/threads/{general\|agentId}/messages?limit=&before=` | conversations:read | Mensajes del hilo (más antiguo primero) + `agent_ids` por mensaje; `X-Has-More`, `X-Next-Before` |
+| POST | `/chats/threads/{key}/read` | conversations:write | Marca el hilo leído -> 204 |
+
+Enviar sigue siendo `POST /messages` (`office` desde General, `agent:<id>` desde el hilo de un agente).
 
 ## 16. Proyectos (backend implementado)
 

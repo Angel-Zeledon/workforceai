@@ -108,7 +108,7 @@ Esfuerzo en días-persona, juicio propio (no medición). Cada afirmación sobre 
 
 **Hecho:** invitaciones (migración 300, token hasheado, un solo uso, sin escalar rol, RLS), `GET /auth/config`, lista de organizaciones en `/auth/me` y `POST /auth/switch-org`; frontend `/login`, `/register`, `/invite`, sesión, miembros e invitaciones en el menú de administración, UI según permisos; con auth apagado la demo abierta sigue igual. e2e `auth.spec.ts` (sólo con `E2E_AUTH=1`) verificado contra stack con auth.
 **Hecho (a6b):** nombre de la organización en la cabecera de la oficina y en `/approvals` (`OrgIndicator`); con varias organizaciones aparece un selector que usa `POST /auth/switch-org`. `/auth/me` añade `orgs[].name` (campo nuevo y opcional; en Postgres se lee en una transacción con `app.org_id` porque `organizations` tiene RLS). Con auth apagado la cabecera sigue diciendo "Oficina demo".
-**Pendiente:** envío del enlace por correo (hoy se copia), SSO/SCIM, y la decisión del dueño sobre mover el refresh token a cookie `HttpOnly` (hoy en `localStorage`; el contrato de `/auth/refresh` no se ha tocado).
+**Pendiente:** envío del enlace por correo (hoy se copia), SSO/SCIM, . **Decidido y hecho (A1 decisiones):** el refresh token vive solo en una cookie `HttpOnly; SameSite=Strict; Path=/api/v1/auth` (`Secure` configurable con `AUTH_COOKIE_SECURE`), el access token solo en memoria; rotación con detección de reutilización, cabecera `X-WFAI-CSRF` y comprobación de `Origin` en `/auth/refresh` y `/auth/logout` (ver 08-api.md).
 **No verificado:** cambio de organización en e2e (sólo test de servicio y de store); el selector no se ha probado en navegador con dos organizaciones reales.
 
 Plan original:
@@ -126,7 +126,7 @@ Plan original:
 4. SSO/SCIM: después, con broker externo (WorkOS u otro) — **decisión del dueño** (coste por conexión).
 
 ### Riesgos
-Seguridad del token en el navegador (recomiendo access token en memoria + refresh en cookie `HttpOnly`, `SameSite=Lax`; hoy el refresh se devuelve en el cuerpo — confirmar en `handlers.go` antes de cambiar). Cambia contrato de `/auth/refresh` si se mueve a cookie → **requiere visto bueno**.
+Seguridad del token en el navegador: **hecho** (access token en memoria + refresh en cookie `HttpOnly`, `SameSite=Strict`; el cuerpo de las respuestas ya no lleva `refresh_token`).
 
 ### Esfuerzo
 6-8 días (UI + invitaciones), sin SSO.
@@ -220,6 +220,6 @@ Lista del prompt; se verifica pieza a pieza al empezar (no auditado en esta sesi
 ## Qué necesito del dueño para seguir
 
 1. Visto bueno al diseño de A1 y respuestas a D-A1a / D-A1b.
-2. Para A2: ¿refresh token en cookie `HttpOnly` (cambia contrato de `/auth/refresh`)?
+2. Para A2: ~~¿refresh token en cookie `HttpOnly`?~~ Decidido: sí, hecho.
 3. Para A3/A4: qué proveedores de modelo se permiten, una clave de prueba y credenciales OAuth de Google con una cuenta de prueba.
 4. Para A5: confirmar las 8 profesiones.

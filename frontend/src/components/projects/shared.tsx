@@ -10,7 +10,7 @@ export const NODE_STATE_COLOR: Record<NodeState, string> = {
   paused: "#8b94a3", blocked: "#b4443c", done: "#2f7d55", skipped: "#aab3c0", failed: "#a63232", cancelled: "#8b94a3",
 };
 export const RETRY_COLOR = "#b8651f";
-export const CRITICAL_COLOR = "#3451b2";
+export const CRITICAL_COLOR = "#0F766E";
 export const LIGHT_COLOR: Record<Light, string> = { green: "#2f7d55", amber: "#a86208", red: "#a63232" };
 export const STATUS_COLOR: Record<ProjectStatus, string> = {
   draft: "#aab3c0", planning: "#7c6bb0", ready: "#5b8fb5", running: "#2b6cb0", paused: "#8b94a3", waiting_human: "#a86208",

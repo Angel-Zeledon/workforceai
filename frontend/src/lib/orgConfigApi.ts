@@ -58,6 +58,17 @@ export interface TaxTemplate {
   checklist: { key: string; text: string }[];
 }
 
+/** GET/PUT /settings/model-policy (owner/admin). known_providers lists DeepSeek and Anthropic first. */
+export interface ModelPolicy {
+  allowed_providers: string[]; preferred_providers: string[];
+  role_providers: Record<string, string[]>; role_models: Record<string, string>;
+}
+export interface ModelPolicyView {
+  policy: ModelPolicy; server_allowed_providers: string[]; known_providers: string[];
+  /** Providers with a key in the runtime, and the one used first (DeepSeek if its key is present, else Anthropic). */
+  configured_providers: string[]; default_provider: string;
+}
+
 const arr = <T,>(x: unknown): T[] => (Array.isArray(x) ? (x as T[]) : []);
 const q = (locale?: Locale) => (locale ? `?locale=${locale}` : "");
 
@@ -70,6 +81,8 @@ export const orgApi = {
   onboard: (body: OnboardInput) => call<OnboardResult>("POST", "/onboarding", body),
   updateSettings: (body: { locale?: Locale; tone?: ToneCode }) => call<OrgSettings>("PUT", "/org/settings", body),
   setAgentTone: (agentId: string, tone: ToneCode | "") => call<OrgSettings>("PUT", `/agents/${encodeURIComponent(agentId)}/tone`, { tone }),
+  modelPolicy: () => call<ModelPolicyView>("GET", "/settings/model-policy"),
+  putModelPolicy: (p: ModelPolicy) => call<ModelPolicyView>("PUT", "/settings/model-policy", p),
   schedules: async () => arr<Schedule>(await call("GET", "/schedules")),
   createSchedule: (body: ScheduleInput) => call<Schedule>("POST", "/schedules", body),
   updateSchedule: (id: string, body: ScheduleInput) => call<Schedule>("PUT", `/schedules/${encodeURIComponent(id)}`, body),

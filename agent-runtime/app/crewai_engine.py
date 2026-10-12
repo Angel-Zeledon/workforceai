@@ -48,6 +48,7 @@ from .models import (
     Usage,
 )
 from .providers import (
+    _api_key,
     DEFAULT_MODELS,
     ERR_ALL_PROVIDERS_FAILED,
     ProviderConfig,
@@ -155,7 +156,7 @@ class CrewAIEngine(AgentEngine):
             if "/" not in name:
                 name = f"{provider}/{name}"
             env_name = "DEEPSEEK_API_KEY" if provider == "deepseek" else "ANTHROPIC_API_KEY"
-            api_key = api_key or os.getenv(env_name)
+            api_key = api_key or _api_key(provider)
             if not api_key:
                 raise RuntimeError(f"{env_name} requerido para CrewAIEngine")
             providers = [ProviderConfig(id=provider, model=name, api_key=api_key)]

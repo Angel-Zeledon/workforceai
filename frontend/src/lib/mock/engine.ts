@@ -12,6 +12,7 @@ import { MockArtifacts } from "./artifacts-mock";
 import { MockOrgConfig } from "./orgconfig-mock";
 import { MockConnections } from "./connections-mock";
 import { MockChat } from "./chat-mock";
+import { MockChatHistory } from "./chats-mock";
 import { MockRewards } from "./rewards-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
@@ -142,6 +143,12 @@ export class MockBackend {
     planPreview: (text) => buildPlan(text).map((s) => ({ key: s.key, agent: s.agent, title: s.title })),
     draftOf: (id) => this.draftOf(id), startRequest: (text) => this.startRequest(text), startDirectTask: (id, text, reason) => this.startDirectTask(id, text, reason), uid,
   }); // chat routing: POST /messages, chat.* and route.decided
+  private hist = new MockChatHistory({
+    chat: () => this.chat.all(), requestConvs: () => this.conversations, requestMessages: (id) => this.messages[id] || [], agents: () => this.agents,
+    removeChat: (c) => this.chat.remove(c),
+    removeRequestConv: (id) => { this.conversations = this.conversations.filter((c) => c.id !== id); delete this.messages[id]; },
+    renameRequestConv: (id, title) => { const c = this.conversations.find((x) => x.id === id); if (c) c.title = title; },
+  }); // chat history: enriched /conversations, /chats/*, rename/archive/delete, read markers
   private rewards = new MockRewards((t, p, a) => this.emit(t, p, a)); // coins + shop: earned only when a task finishes
   private roles = new MockRoles(); // role templates + hiring from a template
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
@@ -151,7 +158,7 @@ export class MockBackend {
   private seed() {
     this.agents = SEED_AGENTS.map((a) => ({ ...a, metrics: { ...a.metrics }, state: "idle" as AgentState, activity: "Disponible", current_task_id: null, progress: 0 }));
     this.tasks = []; this.requests = []; this.conversations = []; this.messages = {}; this.approvals = [];
-    this.reports = []; this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.decisions.clear(); this.specs.clear(); this.running.clear();
+    this.reports = []; this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.specs.clear(); this.running.clear();
   }
 
   // ---- realtime -----------------------------------------------------------------------------
@@ -521,6 +528,7 @@ export class MockBackend {
       this.emit("hello", { agents: this.agents });
       return res;
     }
+    if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
     if (this.orgCfg.matches(seg)) return this.orgCfg.handle(method, seg, body, (text) => this.handle("POST", "/requests", { text }));

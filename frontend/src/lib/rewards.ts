@@ -1,4 +1,5 @@
 "use client";
+import { go } from "@/lib/navBridge";
 import { create } from "zustand";
 import { call } from "./api";
 import type { WsFrame } from "./types";
@@ -191,7 +192,7 @@ export const itemDesc = (it: ShopItem, locale: string) => (locale === "en" ? it.
 
 /** Navigation of the Shop screen (full screen like Files and Projects). */
 export const useShopNav = create<{ open: boolean; show: () => void; close: () => void; toggle: () => void }>((set) => ({
-  open: false, show: () => set({ open: true }), close: () => set({ open: false }), toggle: () => set((s) => ({ open: !s.open })),
+  open: false, show: () => { set({ open: true }); go("/shop"); }, close: () => set({ open: false }), toggle: () => go(useShopNav.getState().open ? "/" : "/shop"),
 }));
 
 /** Category order of the Shop screen and its i18n label keys (listed explicitly in es.json/en.json). */

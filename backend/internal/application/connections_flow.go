@@ -401,6 +401,7 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 		Context: map[string]any{"account": p.Account, "recipients": p.Recipients, "reversibility": p.Reversibility, "tainted": p.Tainted,
 			"external_origin": p.ExternalOrigin, "hold_seconds": p.HoldSeconds, "flags": p.Flags, "args_hash": p.ArgsHash, "outbox_id": p.OutboxID}}
 	governApproval(&ap, rs, pv)
+	standing, hasStanding := o.markStanding(ctx, rs, &ap, agent, tr.Tool, nativeStandingRule(*p))
 	t.Status = domain.TaskAwaitingApproval
 	if err := o.store.UpdateTask(ctx, org, *t); err != nil {
 		o.failTask(ctx, rs, *t, err)
@@ -410,7 +411,16 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 	// human approving from the outbox right away must resolve this approval.
 	ap.ID = newID()
 	gw.RegisterApproval(ap.ID, *p)
-	ap, ch, err := o.approvals.Request(ctx, ap)
+	var ch <-chan domain.Approval
+	var err error
+	if hasStanding {
+		ap, ch, err = o.approvals.RequestAuto(ctx, ap, standing.ID)
+		if err == nil {
+			o.standing.Used(ctx, standing, ap.ID, t.ID)
+		}
+	} else {
+		ap, ch, err = o.approvals.Request(ctx, ap)
+	}
 	if err != nil {
 		gw.ApprovalResolved(ap.ID, false)
 		o.failTask(ctx, rs, *t, err)
@@ -420,6 +430,23 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 		onPending(ap.ID, *p)
 	}
 	return true, o.gatewayAwait(ctx, rs, t, agent, tr, call, *p, ap, ch, o.approvals.Deadline(ap))
+}
+
+// nativeStandingRule maps what a native tool (the drive) held for approval to a
+// rule id StandingEligibility understands: only a hold caused by the agent's own
+// autonomy level, on a versioned (undoable) change that carries nothing read
+// from outside, can be remembered. Connection-backed actions (email and the
+// like) never qualify: their tools are not on the allow-list.
+func nativeStandingRule(p GatewayPending) string {
+	if p.Tainted || p.ExternalOrigin || p.Reversibility != "versioned" {
+		return "native.restricted"
+	}
+	for _, f := range p.Flags {
+		if f != "autonomy" {
+			return "native.restricted"
+		}
+	}
+	return "native.autonomy"
 }
 
 func noteTask(t *domain.Task, format string, a ...any) {

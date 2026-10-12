@@ -57,6 +57,36 @@ func (a *Approvals) Request(ctx context.Context, ap domain.Approval) (domain.App
 	return ap, ch, nil
 }
 
+// RequestAuto stores an approval that a standing approval already decided: it
+// is born approved, with the decision attributed to "standing:<id>", audited as
+// approval.auto_approved and announced as resolved (never as requested: nobody
+// is asked, so nothing is pushed to phones). The returned channel already holds
+// the decision, so the caller continues exactly as after a human approval.
+func (a *Approvals) RequestAuto(ctx context.Context, ap domain.Approval, standingID string) (domain.Approval, <-chan domain.Approval, error) {
+	if ap.ID == "" {
+		ap.ID = newID()
+	}
+	now := time.Now().UTC()
+	ap.Status, ap.CreatedAt, ap.ResolvedAt = domain.ApprovalApproved, now, &now
+	ap.RequiredApprovals = 1
+	ap.Note = "standing approval"
+	ap.Decisions = []domain.ApprovalDecision{{By: "standing:" + standingID, Role: "standing", Note: "always allowed in this project", TS: now}}
+	a.decideMu.Lock()
+	defer a.decideMu.Unlock()
+	if err := a.store.CreateApproval(ctx, a.org(ctx), ap); err != nil {
+		return ap, nil, err
+	}
+	a.rec.Audit(ctx, domain.AuditLog{Actor: "standing:" + standingID, Action: "approval.auto_approved", Entity: "approval", EntityID: ap.ID,
+		Details: map[string]any{"task_id": ap.TaskID, "action": ap.Action, "tool": ap.Tool, "risk": ap.Risk, "project_id": ap.ProjectID,
+			"agent_id": ap.AgentID, "standing_id": standingID, "policy_rule": ap.PolicyRule}})
+	a.rec.Emit(ctx, Action{Type: domain.EvApprovalResolved, AgentID: ap.AgentID, Entity: "approval", EntityID: ap.ID, SkipAudit: true,
+		Payload: map[string]any{"approval": ap},
+		Text:    fmt.Sprintf("Aprobación automática (permiso del proyecto): %s", ap.Title)})
+	ch := make(chan domain.Approval, 1)
+	ch <- ap
+	return ap, ch, nil
+}
+
 // Attach registers a waiter for an approval that already exists (a task
 // resumed after a restart). If the approval was decided meanwhile, the channel
 // already holds the decision.

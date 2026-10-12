@@ -202,3 +202,25 @@ def test_simulation_ignores_policy_and_contract_is_unchanged(client):
 def test_old_requests_without_policy_fields_still_validate():
     req = RunTaskRequest(**run_req("legal"))
     assert req.allowed_providers is None and req.preferred_providers is None
+
+
+def test_default_provider_is_deepseek_when_its_key_is_present_otherwise_anthropic(monkeypatch):
+    from app.providers import configured_providers, default_provider
+    assert default_provider() == ""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "a")
+    assert default_provider() == "anthropic"
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "d")
+    assert default_provider() == "deepseek"
+    assert [c.id for c in configured_providers()][:2] == ["deepseek", "anthropic"]
+    monkeypatch.delenv("DEEPSEEK_API_KEY")
+    assert default_provider() == "anthropic"
+
+
+def test_healthz_reports_configured_providers_without_keys(monkeypatch):
+    monkeypatch.setenv("SIMULATION", "true")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "secret-anthropic")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "secret-deepseek")
+    body = TestClient(create_app()).get("/healthz").json()
+    assert body["configured_providers"] == ["deepseek", "anthropic"]
+    assert body["default_provider"] == "deepseek"
+    assert "secret" not in str(body)

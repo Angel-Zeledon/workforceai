@@ -76,8 +76,42 @@ func (h *httpEnv) signup(t *testing.T, email, org string) *Session {
 	}
 	var s Session
 	json.Unmarshal(rec.Body.Bytes(), &s)
+	if s.RefreshToken != "" {
+		t.Fatal("the refresh token must not be in the JSON body")
+	}
+	s.RefreshToken = cookieValue(rec, DefaultCookieName)
+	if s.RefreshToken == "" {
+		t.Fatal("register must set the refresh cookie")
+	}
 	return &s
 }
+
+// cookieValue returns the value a response sets for the named cookie ("" when absent).
+func cookieValue(rec *httptest.ResponseRecorder, name string) string {
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == name {
+			return c.Value
+		}
+	}
+	return ""
+}
+
+// doCookie posts to a cookie-authenticated endpoint like the browser client does.
+func (h *httpEnv) doCookie(path, refresh string, hdr map[string]string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest("POST", path, bytes.NewReader(nil))
+	req.RemoteAddr = "203.0.113.9:5555"
+	if refresh != "" {
+		req.AddCookie(&http.Cookie{Name: DefaultCookieName, Value: refresh})
+	}
+	for k, v := range hdr {
+		req.Header.Set(k, v)
+	}
+	rec := httptest.NewRecorder()
+	h.srv.ServeHTTP(rec, req)
+	return rec
+}
+
+var csrf = map[string]string{CSRFHeader: "1"}
 
 func TestHTTPTenantIsolationBetweenTwoOrgs(t *testing.T) {
 	h := newHTTPEnv(t, HandlerConfig{})
@@ -172,7 +206,7 @@ func TestHTTPMiddlewareRejectsBadTokens(t *testing.T) {
 		t.Fatalf("expired token: %d %s %v", rec.Code, rec.Body, rec.Header())
 	}
 	// The refresh endpoint still works and yields a usable token.
-	rec = h.do("POST", "/auth/refresh", "", map[string]string{"refresh_token": s.RefreshToken})
+	rec = h.doCookie("/auth/refresh", s.RefreshToken, csrf)
 	if rec.Code != 200 {
 		t.Fatalf("refresh: %d %s", rec.Code, rec.Body)
 	}
@@ -357,10 +391,10 @@ func TestHTTPMeLogoutFlow(t *testing.T) {
 	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"role":"owner"`) || !strings.Contains(rec.Body.String(), "org:delete") {
 		t.Fatalf("me: %d %s", rec.Code, rec.Body)
 	}
-	if rec := h.do("POST", "/auth/logout", "", map[string]string{"refresh_token": s.RefreshToken}); rec.Code != 204 {
-		t.Fatalf("logout: %d", rec.Code)
+	if rec := h.doCookie("/auth/logout", s.RefreshToken, csrf); rec.Code != 204 || !strings.Contains(rec.Header().Get("Set-Cookie"), "Max-Age=0") {
+		t.Fatalf("logout: %d %v", rec.Code, rec.Header())
 	}
-	if rec := h.do("POST", "/auth/refresh", "", map[string]string{"refresh_token": s.RefreshToken}); rec.Code != 401 {
+	if rec := h.doCookie("/auth/refresh", s.RefreshToken, csrf); rec.Code != 401 {
 		t.Fatalf("refresh after logout: %d", rec.Code)
 	}
 	if rec := h.do("POST", "/auth/logout-all", s.AccessToken, nil); rec.Code != 204 {
@@ -404,5 +438,110 @@ func TestPrincipalContextHelpers(t *testing.T) {
 	}
 	if u, _ := UserIDFrom(ctx); u != "u" {
 		t.Fatal(u)
+	}
+}
+
+func TestRefreshCookieAttributes(t *testing.T) {
+	h := newHTTPEnv(t, HandlerConfig{CookieSecure: true})
+	rec := h.do("POST", "/auth/register", "", RegisterInput{Email: "c@example.com", Password: goodPW, Name: "N", OrgName: "C Inc"})
+	if rec.Code != 201 {
+		t.Fatalf("register: %d", rec.Code)
+	}
+	if strings.Contains(rec.Body.String(), "refresh_token") {
+		t.Fatalf("body leaks the refresh token: %s", rec.Body)
+	}
+	cs := rec.Result().Cookies()
+	if len(cs) != 1 {
+		t.Fatalf("cookies = %v", cs)
+	}
+	c := cs[0]
+	if c.Name != DefaultCookieName || !c.HttpOnly || !c.Secure || c.SameSite != http.SameSiteStrictMode ||
+		c.Path != "/api/v1/auth" || c.MaxAge <= 0 || c.Value == "" {
+		t.Fatalf("cookie = %+v", c)
+	}
+	if rec.Header().Get("Cache-Control") != "no-store" {
+		t.Error("session responses must not be cached")
+	}
+	// Local plain-http development turns Secure off, nothing else.
+	h2 := newHTTPEnv(t, HandlerConfig{})
+	rec = h2.do("POST", "/auth/register", "", RegisterInput{Email: "d@example.com", Password: goodPW, Name: "N", OrgName: "D Inc"})
+	if c := rec.Result().Cookies()[0]; c.Secure || !c.HttpOnly || c.SameSite != http.SameSiteStrictMode {
+		t.Fatalf("dev cookie = %+v", c)
+	}
+}
+
+func TestRefreshRotatesCookieAndDetectsReuse(t *testing.T) {
+	h := newHTTPEnv(t, HandlerConfig{})
+	s := h.signup(t, "r@example.com", "R")
+	rec := h.doCookie("/auth/refresh", s.RefreshToken, csrf)
+	if rec.Code != 200 {
+		t.Fatalf("refresh: %d %s", rec.Code, rec.Body)
+	}
+	next := cookieValue(rec, DefaultCookieName)
+	if next == "" || next == s.RefreshToken || strings.Contains(rec.Body.String(), "refresh_token") {
+		t.Fatalf("refresh must rotate the cookie and keep it out of the body (%q)", next)
+	}
+	// Replaying the rotated token revokes the family: the newest one dies too, and the cookie is cleared.
+	rec = h.doCookie("/auth/refresh", s.RefreshToken, csrf)
+	if rec.Code != 401 || !strings.Contains(rec.Header().Get("Set-Cookie"), "Max-Age=0") {
+		t.Fatalf("reuse: %d %v", rec.Code, rec.Header())
+	}
+	if rec := h.doCookie("/auth/refresh", next, csrf); rec.Code != 401 {
+		t.Fatalf("family must be revoked after reuse: %d", rec.Code)
+	}
+	// No cookie at all.
+	if rec := h.doCookie("/auth/refresh", "", csrf); rec.Code != 401 {
+		t.Fatalf("no cookie: %d", rec.Code)
+	}
+	// The old JSON-body contract is gone.
+	if rec := h.do("POST", "/auth/refresh", "", map[string]string{"refresh_token": next}); rec.Code != 403 {
+		t.Fatalf("body token without csrf header: %d", rec.Code)
+	}
+}
+
+func TestRefreshCSRFGuards(t *testing.T) {
+	h := newHTTPEnv(t, HandlerConfig{AllowedOrigins: []string{"https://app.example.com"}})
+	s := h.signup(t, "x@example.com", "X")
+	cases := []struct {
+		name string
+		hdr  map[string]string
+		want int
+	}{
+		{"no custom header", map[string]string{"Origin": "https://app.example.com"}, 403},
+		{"foreign origin", map[string]string{CSRFHeader: "1", "Origin": "https://evil.example.net"}, 403},
+		{"cross-site fetch metadata", map[string]string{CSRFHeader: "1", "Sec-Fetch-Site": "cross-site"}, 403},
+		{"allowed origin", map[string]string{CSRFHeader: "1", "Origin": "https://app.example.com"}, 200},
+	}
+	for _, c := range cases {
+		// Rejected attempts must not consume the token, so the same one is reused.
+		if rec := h.doCookie("/auth/refresh", s.RefreshToken, c.hdr); rec.Code != c.want {
+			t.Errorf("%s: %d, want %d", c.name, rec.Code, c.want)
+		}
+	}
+	// Same-host origin is accepted (httptest requests use example.com).
+	s2 := h.signup(t, "y@example.com", "Y")
+	if rec := h.doCookie("/auth/logout", s2.RefreshToken, map[string]string{CSRFHeader: "1", "Origin": "http://example.com"}); rec.Code != 204 {
+		t.Errorf("same-host logout: %d", rec.Code)
+	}
+	// Logout without the header must not revoke anything.
+	s3 := h.signup(t, "z@example.com", "Z")
+	if rec := h.doCookie("/auth/logout", s3.RefreshToken, nil); rec.Code != 403 {
+		t.Errorf("logout without header: %d", rec.Code)
+	}
+	if rec := h.doCookie("/auth/refresh", s3.RefreshToken, csrf); rec.Code != 200 {
+		t.Errorf("token must survive a rejected logout: %d", rec.Code)
+	}
+}
+
+func TestSwitchOrgReplacesCookieAndEndsOldFamily(t *testing.T) {
+	h := newHTTPEnv(t, HandlerConfig{})
+	s := h.signup(t, "o@example.com", "O")
+	rec := h.do("POST", "/auth/switch-org", s.AccessToken, map[string]string{"org_id": s.OrgID})
+	if rec.Code != 200 {
+		t.Fatalf("switch-org: %d %s", rec.Code, rec.Body)
+	}
+	// Without the cookie on the request nothing old is revoked; the new cookie is still issued.
+	if cookieValue(rec, DefaultCookieName) == "" || strings.Contains(rec.Body.String(), "refresh_token") {
+		t.Fatal("switch-org must set a cookie and not return the token")
 	}
 }

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ------------------------------------------------------------------
-   Design tokens. Un solo acento (índigo profundo), neutros fríos tipo
+   Design tokens. Marca navy profundo + un solo acento teal sobrio, neutros fríos tipo
    slate/piedra y semánticos desaturados. Triples RGB para que Tailwind
    pueda aplicar opacidad (`bg-panel/90`).
 ------------------------------------------------------------------- */
@@ -14,13 +14,15 @@
   --panel2: 247 248 250;        /* superficie secundaria / inputs */
   --line: 226 230 236;          /* bordes de 1px */
   --line-strong: 203 210 220;   /* hover / énfasis de borde */
-  --ink: 21 27 38;              /* texto principal (AAA sobre panel) */
-  --ink2: 62 73 90;             /* texto secundario fuerte */
+  --ink: 11 31 58;              /* navy #0B1F3A: texto principal (AAA sobre panel) */
+  --ink2: 47 62 86;             /* texto secundario fuerte */
   --mute: 91 102 120;           /* texto terciario (AA sobre bg y panel) */
-  --accent: 52 81 178;          /* índigo profundo */
-  --accent-hover: 40 66 150;
-  --accent-soft: 236 240 251;
-  --ok: 47 125 85;
+  --accent: 15 118 110;         /* teal #0F766E (blanco encima: 5.5:1) */
+  --accent-hover: 17 94 89;     /* #115E59 */
+  --accent-soft: 230 242 241;   /* #E6F2F1 */
+  --navy: 11 31 58;             /* #0B1F3A marca / héroes */
+  --navy2: 19 41 75;            /* #13294B */
+  --ok: 40 124 72;
   --warn: 168 98 8;
   --err: 180 68 60;
   --info: 43 108 176;
@@ -64,3 +66,44 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: non
 @media (prefers-reduced-motion: reduce) { .ac-dots span { animation: none; opacity: .7; } }
 [data-reduce="1"] .ac-dots span { animation: none; opacity: .7; }
 [data-reduce="1"] .ac-pop { animation: none; }
+
+/* ------------------------------------------------------------------
+   Movimiento: breve (150-300 ms), sin rebotes. Se apaga con
+   prefers-reduced-motion y con el ajuste "reducir movimiento".
+------------------------------------------------------------------- */
+@keyframes ui-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ui-slide-left { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes ui-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes ui-toast { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes ui-shimmer { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+.ac-fade { animation: ui-fade 0.2s ease-out both; }
+.ac-page { animation: ui-fade 0.22s ease-out both; }
+.ac-slide-left { animation: ui-slide-left 0.22s cubic-bezier(.2,.8,.2,1) both; }
+.ac-toast { animation: ui-toast 0.22s cubic-bezier(.2,.8,.2,1) both; }
+.ac-skeleton { animation: ui-shimmer 1.4s ease-in-out infinite; }
+/* Entrada escalonada: pon style={{ animationDelay }} o usa .ac-stagger en el contenedor */
+.ac-rise { animation: ui-rise 0.28s cubic-bezier(.2,.8,.2,1) both; }
+.ac-stagger > * { animation: ui-rise 0.28s cubic-bezier(.2,.8,.2,1) both; }
+.ac-stagger > *:nth-child(1) { animation-delay: 0ms; } .ac-stagger > *:nth-child(2) { animation-delay: 40ms; }
+.ac-stagger > *:nth-child(3) { animation-delay: 80ms; } .ac-stagger > *:nth-child(4) { animation-delay: 120ms; }
+.ac-stagger > *:nth-child(5) { animation-delay: 160ms; } .ac-stagger > *:nth-child(6) { animation-delay: 200ms; }
+.ac-stagger > *:nth-child(n+7) { animation-delay: 240ms; }
+/* Micro-interacciones: botones y tarjetas pulsables */
+button:not(:disabled):active, a.ac-press:active { transform: scale(0.985); }
+.ac-card-hover { transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.ac-card-hover:hover { transform: translateY(-2px); box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 10px 24px -10px rgb(15 23 42 / 0.18); border-color: rgb(var(--line-strong)); }
+@media (prefers-reduced-motion: reduce) {
+  .ac-fade, .ac-page, .ac-slide-left, .ac-toast, .ac-rise, .ac-stagger > * { animation: none !important; }
+  .ac-skeleton { animation: none; }
+  .ac-card-hover:hover { transform: none; }
+  button:not(:disabled):active { transform: none; }
+}
+[data-reduce="1"] .ac-fade, [data-reduce="1"] .ac-page, [data-reduce="1"] .ac-slide-left, [data-reduce="1"] .ac-toast, [data-reduce="1"] .ac-rise, [data-reduce="1"] .ac-stagger > * { animation: none !important; }
+[data-reduce="1"] .ac-skeleton { animation: none; }
+
+/* Brand mark: the agent blinks now and then and its antenna light breathes. */
+@keyframes mark-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes mark-led { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.ac-mark-eyes { transform-box: fill-box; transform-origin: center; animation: mark-blink 5s infinite; }
+.ac-mark-led { animation: mark-led 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ac-mark-eyes, .ac-mark-led { animation: none; } }

@@ -4,7 +4,7 @@ import { useT } from "@/lib/i18n";
 import { skillsApi, SkillError, useSkillsNav, type Skill } from "@/lib/skills";
 import { countByStatus, filterSkills, needsReview, type SkillFilter } from "@/lib/skillsLogic";
 import { useCan } from "@/lib/session";
-import { Btn, Empty, timeAgo } from "../ui";
+import { Btn, Empty, Loading, timeAgo } from "../ui";
 import { Icon } from "../icons";
 import { SkillDetailView } from "./SkillDetailView";
 import { SourceChip, StatusBadge } from "./shared";
@@ -87,11 +87,11 @@ export function SkillsView() {
             </button>
           ))}
         </div>
-        {list === null ? <Empty>{t("skills.loading")}</Empty> : shown.length === 0 ? <Empty>{t("skills.empty")}</Empty> : (
-          <div data-testid="skills-grid" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {list === null ? <Loading rows={4} /> : shown.length === 0 ? <Empty>{t("skills.empty")}</Empty> : (
+          <div data-testid="skills-grid" className="ac-stagger grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {shown.map((s) => (
               <button key={s.id} type="button" data-testid={`skill-card-${s.name}`} data-status={s.status} onClick={() => nav.select(s.id, needsReview(s) ? "review" : "content")}
-                className="flex flex-col rounded-xl border border-line bg-panel p-4 text-left shadow-soft transition hover:border-accent">
+                className="ac-card-hover flex flex-col rounded-xl border border-line bg-panel p-4 text-left shadow-soft hover:border-accent">
                 <div className="flex items-start justify-between gap-2">
                   <span className="min-w-0 break-words font-mono text-[13px] font-semibold text-ink">{s.name}</span>
                   <StatusBadge status={s.status} />

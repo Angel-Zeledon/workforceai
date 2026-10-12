@@ -61,7 +61,8 @@ function validatePayload(f: Frame): void {
   switch (f.type) {
     case "hello":
       expect(Array.isArray(p.agents)).toBe(true);
-      expect(p.agents).toHaveLength(7);
+      // The 7 seed agents at least: the org may have hired more (the demo reset keeps hires).
+      expect(p.agents.length).toBeGreaterThanOrEqual(7);
       for (const a of p.agents) {
         expect(typeof a.id).toBe("string");
         expect(typeof a.name).toBe("string");

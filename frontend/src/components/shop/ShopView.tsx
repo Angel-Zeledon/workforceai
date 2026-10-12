@@ -6,6 +6,7 @@ import {
 } from "@/lib/rewards";
 import { useStore } from "@/lib/store";
 import { Btn, Empty, useAgentName } from "../ui";
+import { toast } from "@/lib/toast";
 import { CoinIcon } from "./Coin";
 import { ItemPreview } from "./ItemPreview";
 
@@ -22,7 +23,10 @@ function Price({ n }: { n: number }) {
   return <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-amber-800"><CoinIcon size={13} />{fmtNumber(n, 0)}</span>;
 }
 
-function ItemCard({ item }: { item: ShopItem }) {
+/** One catalog item. In the Shop it can only be bought (a purchase lands in the
+ *  inventory, nothing is applied); in the Inventory the owner chooses who wears it
+ *  or places it in the office. */
+function ItemCard({ item, mode, onOpenInventory }: { item: ShopItem; mode: "shop" | "inventory"; onOpenInventory: () => void }) {
   const { t, locale } = useT();
   const name = useAgentName();
   const balance = useRewards((s) => s.wallet.balance);
@@ -38,9 +42,9 @@ function ItemCard({ item }: { item: ShopItem }) {
   const target = agent || order[0] || "";
   const affordable = balance >= item.price;
 
-  const run = async (fn: () => Promise<void>) => {
+  const run = async (fn: () => Promise<void>, okMsg?: string) => {
     setBusy(true); setErr(false);
-    try { await fn(); } catch { setErr(true); void useRewards.getState().load(); } finally { setBusy(false); }
+    try { await fn(); if (okMsg) toast(okMsg); } catch { setErr(true); void useRewards.getState().load(); } finally { setBusy(false); }
   };
   const rw = useRewards.getState;
 
@@ -64,11 +68,16 @@ function ItemCard({ item }: { item: ShopItem }) {
         {item.kind === "office" && placed && <div data-testid={`shop-placed-${item.id}`} className="text-[11px] font-medium text-ok">{t("shop.placed")}</div>}
         {!owned ? (
           <>
-            <Btn kind="primary" data-testid={`shop-buy-${item.id}`} disabled={busy || !affordable} onClick={() => run(() => rw().buy(item.id))}>
+            <Btn kind="primary" data-testid={`shop-buy-${item.id}`} disabled={busy || !affordable} onClick={() => run(() => rw().buy(item.id), t("toast.bought"))}>
               {t("shop.buy")}
             </Btn>
             {!affordable && <div className="text-[10.5px] text-mute">{t("shop.missing", { count: item.price - balance })}</div>}
           </>
+        ) : mode === "shop" ? (
+          <div className="flex items-center justify-between gap-2">
+            <span data-testid={`shop-in-inventory-${item.id}`} className="text-[11px] font-medium text-ok">{t("shop.inInventory")}</span>
+            <Btn data-testid={`shop-goto-inventory-${item.id}`} onClick={onOpenInventory}>{t("shop.toInventory")}</Btn>
+          </div>
         ) : item.kind === "character" ? (
           <div className="flex flex-wrap items-center gap-1.5">
             <select aria-label={t("shop.forAgent")} data-testid={`shop-agent-${item.id}`} value={target} onChange={(e) => setAgent(e.target.value)}
@@ -76,9 +85,9 @@ function ItemCard({ item }: { item: ShopItem }) {
               {order.map((id) => <option key={id} value={id}>{name(id)}</option>)}
             </select>
             {target && equip[target]?.[item.slot] === item.id ? (
-              <Btn data-testid={`shop-unequip-${item.id}`} disabled={busy} onClick={() => run(() => rw().unequip(target, item.slot))}>{t("shop.unequip")}</Btn>
+              <Btn data-testid={`shop-unequip-${item.id}`} disabled={busy} onClick={() => run(() => rw().unequip(target, item.slot), t("toast.unequipped"))}>{t("shop.unequip")}</Btn>
             ) : (
-              <Btn kind="ok" data-testid={`shop-equip-${item.id}`} disabled={busy || !agents[target]} onClick={() => run(() => rw().equipItem(target, item.id))}>{t("shop.equip")}</Btn>
+              <Btn kind="ok" data-testid={`shop-equip-${item.id}`} disabled={busy || !agents[target]} onClick={() => run(() => rw().equipItem(target, item.id), t("toast.equipped"))}>{t("shop.equip")}</Btn>
             )}
           </div>
         ) : placed ? (
@@ -86,7 +95,6 @@ function ItemCard({ item }: { item: ShopItem }) {
         ) : (
           <Btn kind="ok" data-testid={`shop-place-${item.id}`} disabled={busy} onClick={() => run(() => rw().place(item.id))}>{t("shop.place")}</Btn>
         )}
-        {owned && <div className="text-[10.5px] font-medium text-mute">{t("shop.owned")}</div>}
         {err && <div role="alert" className="text-[10.5px] font-medium text-err">{t("shop.error")}</div>}
       </div>
     </article>
@@ -201,8 +209,8 @@ export function ShopView() {
               </div>
             </div>
             {items.length === 0 ? <Empty>{tab === "mine" ? t("shop.mineEmpty") : t("shop.empty")}</Empty> : (
-              <div data-testid="shop-grid" className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
-                {items.map((it) => <ItemCard key={it.id} item={it} />)}
+              <div data-testid="shop-grid" className="ac-stagger grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
+                {items.map((it) => <ItemCard key={it.id} item={it} mode={tab === "mine" ? "inventory" : "shop"} onOpenInventory={() => setTab("mine")} />)}
               </div>
             )}
           </div>

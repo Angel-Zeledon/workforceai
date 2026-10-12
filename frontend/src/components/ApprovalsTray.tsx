@@ -17,9 +17,13 @@ export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approv
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const canDecide = useCan("approvals:decide");
+  // "Always allow this kind of action in this project": only offered when the server marked the approval as an
+  // internal, reversible action of a project. The server checks it again; it never covers external actions.
+  const [always, setAlways] = useState(false);
+  const [anyAgent, setAnyAgent] = useState(false);
   const decide = async (d: "approve" | "reject") => {
     setBusy(true); setErr("");
-    try { await api.decide(a.id, d); } catch { setErr(t("approvals.decideError")); setBusy(false); }
+    try { await api.decide(a.id, d, undefined, d === "approve" && always ? { anyAgent } : undefined); } catch { setErr(t("approvals.decideError")); setBusy(false); }
   };
   const pending = a.status === "pending";
   return (
@@ -34,11 +38,28 @@ export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approv
       {pending && !canDecide ? (
         <div data-testid={scope === "office" ? "office-approval-no-permission" : "approval-no-permission"} className="mt-2 text-[11px] text-mute">{t("approvals.noPermission")}</div>
       ) : pending ? (
+        <>
+        {a.standing_eligible && a.project_id && (
+          <div className="mt-2 space-y-1 text-[11px] text-ink2">
+            <label className="flex items-center gap-1.5 font-semibold">
+              <input type="checkbox" data-testid={`approval-always-${a.id}`} checked={always} disabled={busy} onChange={(e) => setAlways(e.target.checked)} />
+              {t("approvals.always.label")}
+            </label>
+            {always && (
+              <label className="ml-5 flex items-center gap-1.5">
+                <input type="checkbox" data-testid={`approval-always-any-${a.id}`} checked={anyAgent} disabled={busy} onChange={(e) => setAnyAgent(e.target.checked)} />
+                {t("approvals.always.anyAgent")}
+              </label>
+            )}
+            {always && <p className="ml-5 text-mute">{t("approvals.always.hint")}</p>}
+          </div>
+        )}
         <div className="mt-2.5 flex items-center gap-2">
           <Btn kind="ok" disabled={busy} onClick={() => decide("approve")}>{t("approvals.approve")}</Btn>
           <Btn kind="danger" disabled={busy} onClick={() => decide("reject")}>{t("approvals.reject")}</Btn>
           {err && <span className="text-[11px] text-red-700">{err}</span>}
         </div>
+        </>
       ) : (
         <div className={`mt-2 text-[11px] font-semibold ${a.status === "approved" ? "text-emerald-700" : "text-red-700"}`}>
           {a.status === "approved" ? t("approvals.approved") : t("approvals.rejected")}
