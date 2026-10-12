@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modelo de seguridad de AI Workforce OS</title>
+  <meta name="description" content="Cómo se limita el daño de un agente: bóveda de credenciales, aprobaciones humanas, topes, kill switch, auditoría, RLS y sandbox. Con sus límites actuales.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/docs/modelo-de-seguridad/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/modelo-de-seguridad/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/security-model/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/modelo-de-seguridad/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:title" content="Modelo de seguridad de AI Workforce OS">
+  <meta property="og:description" content="Cómo se limita el daño de un agente: bóveda de credenciales, aprobaciones humanas, topes, kill switch, auditoría, RLS y sandbox. Con sus límites actuales.">
+  <meta property="og:url" content="https://workforceai.es/docs/modelo-de-seguridad/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Modelo de seguridad de AI Workforce OS">
+  <meta name="twitter:description" content="Cómo se limita el daño de un agente: bóveda de credenciales, aprobaciones humanas, topes, kill switch, auditoría, RLS y sandbox. Con sus límites actuales.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Documentación","item":"https://workforceai.es/docs/"},{"@type":"ListItem","position":3,"name":"Modelo de seguridad","item":"https://workforceai.es/docs/modelo-de-seguridad/"}]},{"@type":"TechArticle","headline":"Modelo de seguridad","description":"Cómo se limita el daño de un agente: bóveda de credenciales, aprobaciones humanas, topes, kill switch, auditoría, RLS y sandbox. Con sus límites actuales.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/docs/modelo-de-seguridad/","url":"https://workforceai.es/docs/modelo-de-seguridad/","dateModified":"2026-10-12","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="/">Inicio</a>
+        <a href="/docs/">Documentación</a>
+        <a href="/guia/">Guía de uso</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Idioma">
+          <a href="/docs/modelo-de-seguridad/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/docs/security-model/" hreflang="en" lang="en" >EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap wide">
+      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li><a href="/docs/">Documentación</a></li><li aria-current="page">Modelo de seguridad</li></ol></nav>
+      <article>
+        <h1>Modelo de seguridad</h1>
+        <p class="lead">El diseño parte de una premisa: el modelo de lenguaje puede ser engañado, porque procesa texto no confiable y tiene capacidad de actuar. Por eso el daño se acota con controles deterministas en el backend (Go), no con instrucciones en el prompt. Esta página describe lo que está implementado y, al final, lo que no.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">Principios de diseño</a></li><li><a href="#s2">Bóveda de credenciales</a></li><li><a href="#s3">Aprobaciones humanas</a></li><li><a href="#s4">Mínimo privilegio en conexiones</a></li><li><a href="#s5">Topes de gasto, horario y anomalías</a></li><li><a href="#s6">Kill switch y modo solo lectura</a></li><li><a href="#s7">Registro de auditoría</a></li><li><a href="#s8">Aislamiento por organización, autenticación y límites</a></li><li><a href="#s9">Contenido no confiable y sandbox de código</a></li><li><a href="#s10">Lo que no está cubierto</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">Principios de diseño</h2>
+        <p>Cada agente produce solo solicitudes de herramienta. Quien decide si se ejecutan es el backend, que evalúa en orden: permisos del rol, concesiones de la conexión, límites, nivel de autonomía y aprobaciones. El runtime de agentes no recibe credenciales ni puede alterar la identidad con la que se actúa.</p>
+        <p>La autoridad efectiva es la intersección entre lo que puede quien originó el trabajo y lo que puede el agente. Delegar nunca amplía poder, y la profundidad de delegación está acotada (5 por defecto). Todo lo que falla o no se puede leer se trata como denegado (falla cerrado).</p>
+        
+        
+        
+        <aside class="tip"><b>Consejo.</b> No se promete que el modelo nunca sea influido por un texto malicioso. Se promete que el radio de daño queda limitado a lo que el backend autoriza.</aside>
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">Bóveda de credenciales</h2>
+        <p>Las credenciales de las conexiones (tokens OAuth, claves de API) se guardan cifradas con AES-256-GCM en un esquema de sobre: una clave de cifrado de claves (KEK) fuera de la base de datos envuelve una clave de datos (DEK) por organización, y la DEK cifra cada secreto con un nonce aleatorio. Los datos autenticados adicionales incluyen organización, credencial, versión y tipo, de modo que un texto cifrado copiado a otra fila u organización no se descifra.</p>
+        <p>Sin KEK configurada (CONNECTIONS_KEK, 32 bytes en base64) la bóveda falla cerrada: no guarda ni lee credenciales reales. Se admiten varias KEK a la vez para rotarlas; las credenciales admiten rotación con versiones activas y retiradas. Revocar una conexión suspende su uso, llama al endpoint de revocación del proveedor y destruye el texto cifrado (crypto-shredding).</p>
+        <p>El modelo nunca ve un secreto: el contrato entre el backend y el runtime no tiene campos de credencial, la API solo devuelve metadatos y una pista corta, y los valores literales cargados en memoria se registran en un redactor que los enmascara en logs, auditoría y salidas.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">KEK (outside the DB, CONNECTIONS_KEK)
+  └─ wraps → per-organization DEK (versioned)
+       └─ AES-256-GCM(secret, random nonce, AAD = org|credential|version|kind)</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Aprobaciones humanas</h2>
+        <p>Un agente puede pedir una acción; nunca puede aprobarla. Las aprobaciones las toman personas con rol admin u owner, y el rol se toma del token de sesión, no del cuerpo de la petición. Cada aprobación queda ligada por hash a los argumentos exactos aprobados, se consume una sola vez y se revalida antes de ejecutar, porque las reglas pudieron cambiar mientras esperaba. Caduca (48 horas por defecto) y una caducidad cuenta como rechazo.</p>
+        <p>Hay un suelo que ninguna regla de organización debilita: riesgo alto declarado, acciones de la lista de aprobación obligatoria y agentes en los niveles suggest o approve_each. Encima, la organización puede añadir reglas: umbrales de monto, acciones prohibidas, destinatarios nuevos, categorías sensibles, rol exigido según monto o acción y doble aprobación.</p>
+        <p>En la doble aprobación se necesitan dos humanos distintos con el rol requerido, la misma persona no puede aprobar dos veces y quien hizo la solicitud nunca aprueba. Un solo rechazo de una persona autorizada es definitivo. Si la acción se ejecuta tras una reanudación del servidor, la aprobación se reclama de forma atómica para que se ejecute como máximo una vez.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Nivel de autonomía</th><th scope="col">Comportamiento</th></tr></thead><tbody><tr><th scope="row"><code>suggest</code></th><td>El agente solo propone; no se ejecuta nada.</td></tr><tr><th scope="row"><code>approve_each</code></th><td>Toda acción con efecto externo espera una aprobación (nivel por defecto).</td></tr><tr><th scope="row"><code>rules</code></th><td>Se ejecuta sola si coincide una regla allow y ninguna deny; si no, pide aprobación.</td></tr><tr><th scope="row"><code>autonomous</code></th><td>Ejecuta sin aprobar, salvo acciones de aprobación obligatoria, riesgo alto o efectos hacia destinatarios nuevos.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Mínimo privilegio en conexiones</h2>
+        <p>Una acción con una conexión externa debe pasar tres filtros en serie: la capacidad que declara el proveedor, la concesión (grant) que da la organización a un agente concreto, y la política y aprobación de la acción. Cada grant solo puede estrechar lo que permite la conexión. El patrón recomendado es separar una conexión de solo lectura de otra de escritura.</p>
+        <p>Cada conexión y cada grant admiten límites por minuto, hora y día, escrituras por día, bytes por día y presupuesto mensual. Esos contadores se calculan sobre la tabla de uso en Postgres, así que sobreviven a reinicios. Un agente no puede cambiar su propia autonomía, permisos ni reglas, y cualquier regla deny gana a una allow.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Topes de gasto, horario y anomalías</h2>
+        <p>Antes de cada llamada al runtime se reserva el costo máximo estimado contra la solicitud, el agente y la organización, y después se concilia con el mayor valor entre el costo informado por el runtime y el recalculado por el backend. Al llegar al tope, la solicitud o el agente se pausa y un humano decide si sube el tope. También hay límites estructurales contra bucles: profundidad de delegación, tareas por solicitud, reintentos, tiempo por tarea y por solicitud, y una cola por organización (8 llamadas simultáneas por defecto).</p>
+        <p>El horario de operación es una agenda semanal con zona horaria que solo impide empezar trabajo nuevo fuera de las horas abiertas; no bloquea aprobaciones ni lo ya admitido. La detección de anomalías v1 aplica cuatro reglas explicables y registra cada hallazgo en la auditoría. Por sí sola nunca bloquea; el congelamiento automático es opcional y viene apagado.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Regla</th><th scope="col">Se dispara cuando</th></tr></thead><tbody><tr><th scope="row"><code>spend_spike</code></th><td>El gasto de la hora actual es al menos 4 veces el promedio horario de las 24 h previas y no menos de 2 USD.</td></tr><tr><th scope="row"><code>tool_request_burst</code></th><td>Un agente pide 40 o más herramientas en 60 segundos.</td></tr><tr><th scope="row"><code>rejected_approvals</code></th><td>Se rechazan 5 o más aprobaciones en 1 hora.</td></tr><tr><th scope="row"><code>new_recipient_domains</code></th><td>Aparecen 3 o más dominios de destinatario nunca vistos en 1 hora.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">Kill switch y modo solo lectura</h2>
+        <p>El kill switch tiene dos niveles. Activarlo lo puede hacer cualquier admin u owner; levantarlo exige el permiso de liberación (owner) y un motivo escrito. También puede imponerse con la variable de entorno KILL_SWITCH (freeze o lockdown), que ninguna llamada de API puede levantar: hay que quitarla y recargar.</p>
+        <p>Además existen la pausa por agente (graceful deja terminar la llamada en curso; immediate lo detiene todo), el modo solo lectura de la organización o de un agente, y el apagado por herramienta o por acción (por ejemplo email o email.send). En solo lectura los agentes siguen leyendo y proponiendo, pero se deniegan los efectos. Las acciones retenidas vuelven a la cola de aprobación y se deben aprobar de nuevo: nada se ejecuta por inercia al levantar.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Nivel</th><th scope="col">Efecto</th><th scope="col">Quién lo levanta</th></tr></thead><tbody><tr><th scope="row"><code>none</code></th><td>Operación normal.</td><td>No aplica</td></tr><tr><th scope="row"><code>freeze</code></th><td>No se inicia trabajo nuevo y el Tool Gateway deniega todo uso de conexiones, lecturas incluidas.</td><td>owner, con motivo escrito</td></tr><tr><th scope="row"><code>lockdown</code></th><td>Freeze, además de suspender todas las conexiones y cancelar acciones retenidas.</td><td>owner, con motivo escrito; las conexiones se reanudan después</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Registro de auditoría</h2>
+        <p>La auditoría es una cadena de hash por organización: cada entrada incluye el hash de la anterior (SHA-256 sobre una representación canónica con secuencia, actor, acción, entidad y detalles). Modificar, borrar, reordenar o insertar una entrada rompe la cadena desde ese punto, y el truncado del final se detecta contra la cabeza de la cadena. Un endpoint de verificación recalcula la cadena.</p>
+        <p>Antes de encadenarse, cada entrada pasa por un depurador que guarda solo metadatos: reemplaza campos de contenido (cuerpos, argumentos, asuntos, resúmenes) y claves con aspecto de credencial por [redacted], enmascara secretos incrustados y trunca textos largos. Se auditan, entre otros, la autenticación, decisiones de política, aprobaciones, ejecuciones de herramientas, cambios de controles y presupuestos.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-http">GET /audit          # query
+GET /audit/export   # JSONL or CSV
+GET /audit/verify   # recomputes the hash chain</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Aislamiento por organización, autenticación y límites</h2>
+        <p>Las tablas con datos de organización usan seguridad a nivel de fila (RLS) en Postgres: cada transacción fija la organización con set_config en el ámbito de la transacción y las políticas filtran por ella. Un caso de prueba de integración cubre el aislamiento entre organizaciones.</p>
+        <p>Los tokens de acceso duran 15 minutos y los de refresco 30 días por defecto. Tras 5 intentos fallidos la cuenta se bloquea 15 minutos, y el inicio de sesión tiene además un límite de 10 intentos por ventana de 15 minutos (en Redis si está disponible; en memoria si no). Para cuentas inexistentes se calcula el mismo hash de contraseña, de modo que el tiempo de respuesta no revela si el usuario existe.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">Contenido no confiable y sandbox de código</h2>
+        <p>Todo lo que viene de fuera (correos, respuestas de APIs, archivos) pasa por una tubería determinista antes de llegar al modelo: se normaliza el texto (NFKC, sin caracteres invisibles), se enmascaran credenciales, códigos de un solo uso y tarjetas, se neutralizan imágenes y enlaces de markdown, se trunca, se puntúa con heurísticas de inyección y se envuelve en un bloque delimitado como datos. Un puntaje alto marca la tarea y eleva la aprobación de sus acciones. El puntaje es una señal, no una barrera; la barrera son los permisos, las aprobaciones y los límites.</p>
+        <p>El código que un agente quiere ejecutar es una solicitud de alto riesgo: se muestra completo a una persona, y solo tras su aprobación el backend lo envía al ejecutor. El contenedor no tiene red, usa sistema de archivos raíz de solo lectura, usuario sin privilegios, todas las capacidades eliminadas, límites de CPU, memoria y procesos, tiempo máximo, topes de salida y una lista de extensiones permitidas. No recibe variables de entorno del ejecutor ni acceso al drive o al backend. Cambiar el código o una entrada exige una nueva aprobación, y el kill switch aborta una ejecución en curso.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">&lt;untrusted_data id=&quot;a91f3c&quot; source=&quot;email:inbound&quot; trust=&quot;external_untrusted&quot;&gt;
+...sanitized content...
+&lt;/untrusted_data id=&quot;a91f3c&quot;&gt;</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s10" aria-labelledby="h10">
+        <h2 id="h10">Lo que no está cubierto</h2>
+        <p>No hay certificaciones (ni SOC 2 ni ISO) y el proyecto no está listo para entornos empresariales regulados. No hay inicio de sesión único (SSO). La exportación de auditoría es un volcado simple en JSONL o CSV, sin firma ni anclaje externo de la cabeza de la cadena.</p>
+        <p>Límites conocidos: la recuperación tras un reinicio supone una sola instancia; con varias réplicas, los semáforos y varios contadores son por proceso o de último escritor. Una llamada ya enviada al runtime termina aunque se active el kill switch. Algunos estados viven en la memoria del proceso. La permisología fina approvals:decide:high no existe: hoy decidir equivale a ser admin u owner. La opción forbid_self_approval viene apagada por compatibilidad con equipos de una persona.</p>
+        <p>El sandbox de código monta el socket de Docker en el ejecutor, lo que equivale a acceso de administrador del host. Para algo más que un único host de confianza se recomienda un demonio dedicado, sin root o remoto, y un runtime como gVisor. Fuera de alcance por ahora: claves propias de modelo por organización guardadas en la bóveda, deshacer acciones y topes de gasto unificados por conexión o herramienta.</p>
+        
+        
+        
+        <aside class="tip"><b>Consejo.</b> Si evalúas el proyecto para producción, trata esta página como el punto de partida de una revisión propia y no como una garantía.</aside>
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="cards"><li><a href="/docs/autenticacion-y-multitenencia/"><b>Autenticación y multitenencia</b><span>Cómo cuentas, sesiones, roles, invitaciones y row-level security de Postgres aíslan las organizaciones en AI Workforce OS.</span></a></li><li><a href="/docs/runtime-de-agentes/"><b>Runtime de agentes</b><span>El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.</span></a></li><li><a href="/docs/arquitectura/"><b>Arquitectura de AI Workforce OS</b><span>Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Empieza ahora</h2>
+      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+      <a href="/docs/">Documentación</a>
+      <a href="/guia/">Guía de uso</a>
+      <a href="#top">Volver arriba</a>
+    </div>
+  </footer>
+</body>
+</html>

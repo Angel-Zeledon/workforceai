@@ -1,0 +1,416 @@
+{
+  "id": "auth-and-tenancy",
+  "slug": {
+    "es": "autenticacion-y-multitenencia",
+    "en": "auth-and-tenancy"
+  },
+  "related": [
+    "api-reference",
+    "security-model",
+    "configuration"
+  ],
+  "es": {
+    "title": "Autenticación y multitenencia",
+    "metaTitle": "Auth, roles y aislamiento por organización | AI Workforce OS",
+    "description": "Cómo cuentas, sesiones, roles, invitaciones y row-level security de Postgres aíslan las organizaciones en AI Workforce OS.",
+    "intro": "AI Workforce OS puede correr abierto, con una organización fija, o con cuentas, roles y aislamiento por organización. Esta página describe el servicio de autenticación del backend en Go: cómo funcionan cuentas y sesiones, qué puede hacer cada rol y cómo Postgres hace cumplir la frontera entre organizaciones.",
+    "sections": [
+      {
+        "h": "Dos modos: AUTH_ENABLED false y true",
+        "paras": [
+          "Con AUTH_ENABLED=false (el valor por defecto) no hay login. La API está abierta y cada solicitud usa una única organización demo fija. Está pensado para desarrollo local y demos, y el servidor registra una advertencia al arrancar. No lo expongas a una red.",
+          "Con AUTH_ENABLED=true la API exige un token de acceso bearer en las rutas protegidas, resuelve un rol en cada solicitud y limita todo acceso a la base de datos a la organización de quien llama. La validación de arranque rechaza la configuración si JWT_SECRET tiene menos de 32 bytes, si falta DATABASE_URL o si ALLOWED_ORIGINS contiene un comodín."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Auth enabled\nAUTH_ENABLED=true\nJWT_SECRET=<at least 32 random bytes>\nDATABASE_URL=postgres://...         # required with auth\nMIGRATE_DATABASE_URL=postgres://... # owner/DDL role, runs migrations\nDB_APP_ROLE=app_user                # default\nALLOWED_ORIGINS=https://app.example.com   # no wildcard when auth is on\nTRUSTED_PROXIES=10.0.0.0/8          # honour X-Forwarded-For for IP limits\nAUTH_COOKIE_SECURE=true             # default; false only for plain-http dev\nAUTH_COOKIE_NAME=wfai_refresh       # optional override"
+        }
+      },
+      {
+        "h": "Cuentas y registro",
+        "paras": [
+          "Registrarse crea en un solo paso un usuario, una organización nueva y una membresía de owner, y abre una sesión. La organización parte con el presupuesto por defecto configurado para organizaciones nuevas. Los correos se normalizan (recorte y minúsculas) antes de cualquier búsqueda o almacenamiento, de modo que Ana@Example.com y ana@example.com son la misma cuenta.",
+          "Las contraseñas se almacenan con Argon2id (64 MiB, 3 iteraciones, 2 carriles por defecto). Los hashes creados con parámetros más débiles se recalculan en el siguiente login correcto. La entrada se valida con estas reglas:"
+        ],
+        "table": {
+          "head": [
+            "Campo",
+            "Regla"
+          ],
+          "rows": [
+            [
+              "email",
+              "Se recorta y pasa a minúsculas; máximo 254 caracteres; debe ser una dirección simple con un punto en el dominio"
+            ],
+            [
+              "password",
+              "10 a 128 caracteres; fuera de una lista corta de contraseñas comunes; distinta del correo o de su parte local; no un solo carácter repetido; al menos dos clases entre minúsculas, mayúsculas, dígitos y símbolos"
+            ],
+            [
+              "name",
+              "1 a 100 caracteres, sin caracteres de control"
+            ],
+            [
+              "org_name",
+              "2 a 100 caracteres, sin caracteres de control; el slug se deriva de él más un sufijo aleatorio"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Login, bloqueo y límites de tasa",
+        "paras": [
+          "Los fallos de login se cuentan por cuenta. Tras cinco contraseñas erróneas la cuenta se bloquea 15 minutos y los intentos siguientes devuelven un error de bloqueo con la hora de desbloqueo. Los correos desconocidos se verifican contra un hash ficticio, de modo que una cuenta inexistente cuesta lo mismo que una contraseña errónea, lo que limita la enumeración de cuentas.",
+          "La limitación es por capas: un limitador por correo que no depende de si la cuenta existe y limitadores por IP en los endpoints sin autenticar. Los contadores viven en Redis cuando está disponible, por lo que sobreviven a reinicios, y en memoria en caso contrario. Los límites por IP solo respetan X-Forwarded-For de las direcciones listadas en TRUSTED_PROXIES. Los valores por defecto son:"
+        ],
+        "table": {
+          "head": [
+            "Límite",
+            "Por defecto",
+            "Clave"
+          ],
+          "rows": [
+            [
+              "Intentos de login",
+              "10 por 15 min",
+              "Correo (con hash), exista o no la cuenta"
+            ],
+            [
+              "POST /login",
+              "20 por 15 min",
+              "IP del cliente"
+            ],
+            [
+              "POST /register y /invitations/accept",
+              "5 por hora",
+              "IP del cliente"
+            ],
+            [
+              "POST /refresh y /logout",
+              "60 por 15 min",
+              "IP del cliente"
+            ],
+            [
+              "Endpoints autenticados de auth e invitaciones",
+              "120 por min",
+              "Usuario"
+            ],
+            [
+              "Contraseñas erróneas antes del bloqueo",
+              "5, bloqueo de 15 min",
+              "Cuenta"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Sesiones: token de acceso y refresh rotatorio",
+        "paras": [
+          "Una sesión tiene dos partes. El token de acceso es un JWT firmado con HMAC y de vida corta (15 minutos por defecto) que lleva usuario, organización y rol, y se envía como bearer. El refresh token es un valor aleatorio opaco, válido 30 días por defecto, guardado en el servidor solo como hash SHA-256 y entregado en una cookie HttpOnly, SameSite=Strict (wfai_refresh) limitada a /api/v1/auth, con el atributo Secure activo por defecto. Nunca aparece en un cuerpo JSON.",
+          "Refresh y logout actúan sobre la cookie ambiental, así que exigen la cabecera propia X-WFAI-CSRF y rechazan solicitudes cross-site según Sec-Fetch-Site y Origin. Cada refresh rota el token dentro de una familia. Presentar un token ya usado revoca la familia completa, lo que detecta robos. Logout revoca la familia; logout-all revoca todos los refresh tokens del usuario en todas sus organizaciones."
+        ],
+        "code": {
+          "lang": "http",
+          "text": "POST /api/v1/auth/login\nContent-Type: application/json\n\n{\"email\":\"ana@example.com\",\"password\":\"...\",\"org_id\":\"(optional)\"}\n\n200 OK\nSet-Cookie: wfai_refresh=...; Path=/api/v1/auth; HttpOnly; SameSite=Strict; Secure\n{\"token_type\":\"Bearer\",\"access_token\":\"...\",\"expires_in\":900,\n \"user\":{...},\"org_id\":\"...\",\"role\":\"owner\"}"
+        }
+      },
+      {
+        "h": "Roles y permisos (RBAC)",
+        "paras": [
+          "Cada membresía tiene un rol: owner, admin, member o viewer. Un rol es un conjunto de permisos con nombre recurso:acción, y cada rol es un superconjunto estricto del inferior. Por defecto el rol se vuelve a leer de la base de datos en cada solicitud, así que degradar o quitar a un miembro surte efecto de inmediato y no al expirar el token de acceso (la opción TrustTokenClaims cambia esto por ausencia de estado).",
+          "Los cambios de rol siguen dos reglas. Un owner puede asignar cualquier rol; un admin solo asigna y gestiona roles inferiores a admin; nadie puede otorgar un rol superior al suyo. El último owner no puede eliminarse. Los agentes nunca tienen permisos de aprobación como artifacts:approve."
+        ],
+        "table": {
+          "head": [
+            "Rol",
+            "Añade sobre el rol inferior"
+          ],
+          "rows": [
+            [
+              "viewer",
+              "Solo lectura: miembros, agentes, tareas, solicitudes, conversaciones, aprobaciones, informes, memorias, actividad, métricas, artefactos, archivos, habilidades, tienda"
+            ],
+            [
+              "member",
+              "Crear solicitudes y tareas, escribir en conversaciones, escribir memorias, crear/editar/comentar/exportar artefactos, escribir archivos y habilidades, comprar en la tienda, leer conexiones"
+            ],
+            [
+              "admin",
+              "Gestionar la organización, invitar y gestionar miembros, escribir agentes, gestionar tareas, decidir aprobaciones, leer la auditoría, gestionar conexiones y permisos, pausa y kill switch, aprobar/borrar artefactos, borrar archivos, revisar habilidades, borrar conversaciones"
+            ],
+            [
+              "owner",
+              "Eliminar la organización, facturación, liberar el kill switch, editar la política de aprobaciones (policy:manage)"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Organizaciones, miembros y cambio de organización",
+        "paras": [
+          "Un usuario puede pertenecer a varias organizaciones, con un rol distinto en cada una. GET /me devuelve el usuario y la lista de organizaciones con nombre y rol. POST /switch-org abre una sesión nueva en otra organización a la que el usuario pertenece, y conviene descartar el refresh token anterior. Pedir una organización sin membresía devuelve forbidden.",
+          "Los miembros se listan, se agregan por correo (un usuario existente), se les cambia el rol y se eliminan solo dentro de la organización de quien actúa; los objetivos de otras organizaciones se reportan como no encontrados. Quitar a un miembro también revoca sus refresh tokens de esa organización."
+        ]
+      },
+      {
+        "h": "Invitaciones",
+        "paras": [
+          "Admins y owners crean invitaciones para un correo y un rol que pueden asignar. El servidor guarda solo el SHA-256 del token de un solo uso y devuelve el texto plano una única vez, al crear. El servidor no envía correo: quien invita comparte el enlace, que el frontend sirve en /invite. Una invitación nueva a la misma dirección revoca la pendiente anterior, y los enlaces expiran a los 7 días por defecto.",
+          "Aceptar es público y recibe el token. Una persona nueva indica nombre y contraseña. Una cuenta existente debe demostrar la propiedad con su contraseña actual, con el mismo bloqueo que el login. Los tokens desconocidos, expirados, revocados y usados fallan sin revelar cuál es el caso. Si quien invitó fue degradado o eliminado, la invitación deja de funcionar. Creación, revocación y aceptación quedan en la auditoría, guardando solo el dominio del correo."
+        ]
+      },
+      {
+        "h": "Aislamiento con row-level security de Postgres",
+        "paras": [
+          "Los roles deciden qué puede hacer un usuario; la row-level security decide qué filas existen para él. Cada tabla de tenant tiene una política tenant_isolation que compara org_id con app_current_org(), y FORCE ROW LEVEL SECURITY la aplica incluso al dueño de la tabla. Cada solicitud corre en una transacción que empieza con set_config('app.org_id', ..., true). El ajuste es local a la transacción, así que una conexión del pool no puede arrastrar un tenant a otra solicitud.",
+          "Falla cerrado: con app.org_id sin definir, ninguna fila es visible ni escribible. El servidor se conecta con credenciales de dueño y cambia a app_user en cada conexión (DB_APP_ROLE), un rol que no es superusuario, no tiene BYPASSRLS y no es dueño de ninguna tabla. El log de auditoría es de solo anexado para ese rol (UPDATE y DELETE revocados). Las migraciones corren con MIGRATE_DATABASE_URL, aparte."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "-- One transaction per request, scoped to the caller's organization\nSELECT set_config('app.org_id', '<org id>', true);   -- == SET LOCAL\n\nCREATE POLICY tenant_isolation ON agents\n  USING      (org_id = app_current_org())\n  WITH CHECK (org_id = app_current_org());"
+        }
+      },
+      {
+        "h": "Referencia de endpoints",
+        "paras": [
+          "El router de auth se monta en /api/v1/auth y el de invitaciones bajo el mismo prefijo. Los permisos se comprueban en un middleware antes del handler; el servicio vuelve a comprobar la membresía actual de quien actúa en cada operación sobre miembros."
+        ],
+        "table": {
+          "head": [
+            "Endpoint",
+            "Acceso"
+          ],
+          "rows": [
+            [
+              "POST /api/v1/auth/register, /login, /refresh, /logout",
+              "Público (refresh y logout usan la cookie más X-WFAI-CSRF)"
+            ],
+            [
+              "POST /api/v1/auth/invitations/accept",
+              "Público, token en el cuerpo"
+            ],
+            [
+              "GET /api/v1/auth/config",
+              "Público, indica si auth y registro están activos"
+            ],
+            [
+              "GET /me, POST /logout-all, POST /switch-org",
+              "Cualquier usuario autenticado"
+            ],
+            [
+              "GET/POST/PATCH/DELETE /members",
+              "members:read, members:invite, members:manage; un miembro puede salirse solo"
+            ],
+            [
+              "GET/POST/DELETE /invitations",
+              "members:read para listar, members:invite para crear y revocar"
+            ]
+          ]
+        },
+        "tip": "Consulta la referencia de la API para la lista completa de rutas y el modelo de seguridad para el análisis de amenazas."
+      }
+    ]
+  },
+  "en": {
+    "title": "Authentication and multi-tenancy",
+    "metaTitle": "Auth, roles and tenant isolation | AI Workforce OS",
+    "description": "How accounts, sessions, roles, invitations and Postgres row-level security isolate organizations in AI Workforce OS.",
+    "intro": "AI Workforce OS can run open, with one fixed organization, or with accounts, roles and per-organization isolation. This page describes the auth service in the Go backend: how accounts and sessions work, what each role can do and how Postgres enforces the tenant boundary.",
+    "sections": [
+      {
+        "h": "Two modes: AUTH_ENABLED false and true",
+        "paras": [
+          "With AUTH_ENABLED=false (the default) there is no login. The API is open and every request uses a single fixed demo organization. This is meant for local development and demos, and the server logs a warning at startup. Do not expose it to a network.",
+          "With AUTH_ENABLED=true the API requires a bearer access token on protected routes, resolves a role for every request and scopes every database access to the caller's organization. Startup validation refuses the configuration unless JWT_SECRET has at least 32 bytes, DATABASE_URL is set and ALLOWED_ORIGINS does not contain a wildcard."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Auth enabled\nAUTH_ENABLED=true\nJWT_SECRET=<at least 32 random bytes>\nDATABASE_URL=postgres://...         # required with auth\nMIGRATE_DATABASE_URL=postgres://... # owner/DDL role, runs migrations\nDB_APP_ROLE=app_user                # default\nALLOWED_ORIGINS=https://app.example.com   # no wildcard when auth is on\nTRUSTED_PROXIES=10.0.0.0/8          # honour X-Forwarded-For for IP limits\nAUTH_COOKIE_SECURE=true             # default; false only for plain-http dev\nAUTH_COOKIE_NAME=wfai_refresh       # optional override"
+        }
+      },
+      {
+        "h": "Accounts and registration",
+        "paras": [
+          "Registering creates a user, a new organization and an owner membership in one step, then opens a session. The organization starts with the default budget configured for new organizations. Email addresses are normalized (trimmed, lowercased) before any lookup or storage, so Ana@Example.com and ana@example.com are the same account.",
+          "Passwords are hashed with Argon2id (64 MiB, 3 iterations, 2 lanes by default). Hashes created with weaker parameters are re-hashed on the next successful login. Input is validated with these rules:"
+        ],
+        "table": {
+          "head": [
+            "Field",
+            "Rule"
+          ],
+          "rows": [
+            [
+              "email",
+              "Trimmed and lowercased; max 254 characters; must parse as a plain address with a dot in the domain"
+            ],
+            [
+              "password",
+              "10 to 128 characters; not in a short common-password list; not equal to the email or its local part; not a single repeated character; at least two of lowercase, uppercase, digits, symbols"
+            ],
+            [
+              "name",
+              "1 to 100 characters, no control characters"
+            ],
+            [
+              "org_name",
+              "2 to 100 characters, no control characters; the slug is derived from it plus a random suffix"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Login, lockout and rate limits",
+        "paras": [
+          "Login failures are counted per account. After five wrong passwords the account is locked for 15 minutes and further attempts return a locked error with the unlock time. Unknown emails are verified against a dummy hash so that a missing account costs the same time as a wrong password, which limits account enumeration.",
+          "Throttling is layered: a per-email limiter that does not depend on whether the account exists, and per-IP limiters on the unauthenticated endpoints. Counters live in Redis when available, so they survive restarts, and in memory otherwise. IP limits honour X-Forwarded-For only from addresses listed in TRUSTED_PROXIES. The defaults are:"
+        ],
+        "table": {
+          "head": [
+            "Limit",
+            "Default",
+            "Key"
+          ],
+          "rows": [
+            [
+              "Login attempts",
+              "10 per 15 min",
+              "Email address (hashed), whether or not the account exists"
+            ],
+            [
+              "POST /login",
+              "20 per 15 min",
+              "Client IP"
+            ],
+            [
+              "POST /register and /invitations/accept",
+              "5 per hour",
+              "Client IP"
+            ],
+            [
+              "POST /refresh and /logout",
+              "60 per 15 min",
+              "Client IP"
+            ],
+            [
+              "Authenticated auth and invitation endpoints",
+              "120 per min",
+              "User"
+            ],
+            [
+              "Failed passwords before lockout",
+              "5, lock for 15 min",
+              "Account"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Sessions: access token and rotating refresh token",
+        "paras": [
+          "A session has two parts. The access token is a short-lived (15 minutes by default) HMAC-signed JWT carrying the user, the organization and the role, sent as a bearer token. The refresh token is an opaque random value, valid 30 days by default, stored server-side only as a SHA-256 hash and delivered in an HttpOnly, SameSite=Strict cookie (wfai_refresh) scoped to /api/v1/auth, with the Secure attribute on by default. It never appears in a JSON body.",
+          "Refresh and logout act on the ambient cookie, so they require the custom X-WFAI-CSRF header and reject cross-site requests by Sec-Fetch-Site and Origin. Each refresh rotates the token inside a family. Presenting an already-used token revokes the whole family, which detects theft. Logout revokes the family; logout-all revokes every refresh token of the user in every organization."
+        ],
+        "code": {
+          "lang": "http",
+          "text": "POST /api/v1/auth/login\nContent-Type: application/json\n\n{\"email\":\"ana@example.com\",\"password\":\"...\",\"org_id\":\"(optional)\"}\n\n200 OK\nSet-Cookie: wfai_refresh=...; Path=/api/v1/auth; HttpOnly; SameSite=Strict; Secure\n{\"token_type\":\"Bearer\",\"access_token\":\"...\",\"expires_in\":900,\n \"user\":{...},\"org_id\":\"...\",\"role\":\"owner\"}"
+        }
+      },
+      {
+        "h": "Roles and permissions (RBAC)",
+        "paras": [
+          "Each membership has one role: owner, admin, member or viewer. A role is a set of permissions named resource:action, and each role is a strict superset of the one below. By default the role is re-read from the database on every request, so demoting or removing a member takes effect immediately instead of when the access token expires (the TrustTokenClaims option trades this for statelessness).",
+          "Role changes obey two rules. An owner can assign any role; an admin can assign and manage only roles below admin; nobody can grant a role above their own. The last owner cannot be removed. Agents never hold approval-granting permissions such as artifacts:approve."
+        ],
+        "table": {
+          "head": [
+            "Role",
+            "Adds on top of the role below"
+          ],
+          "rows": [
+            [
+              "viewer",
+              "Read-only: members, agents, tasks, requests, conversations, approvals, reports, memories, activity, metrics, artifacts, files, skills, shop"
+            ],
+            [
+              "member",
+              "Create requests and tasks, post in conversations, write memories, create/edit/comment/export artifacts, write files, write skills, buy in the shop, read connections"
+            ],
+            [
+              "admin",
+              "Manage the organization, invite and manage members, write agents, manage tasks, decide approvals, read the audit log, manage connections and grants, pause and kill switch, approve/delete artifacts, delete files, review skills, delete conversations"
+            ],
+            [
+              "owner",
+              "Delete the organization, billing, release the kill switch, edit approval policy (policy:manage)"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Organizations, members and switching",
+        "paras": [
+          "A user can belong to several organizations, with a different role in each. GET /me returns the user and the list of organizations with names and roles. POST /switch-org opens a new session for another organization the user belongs to, and the previous refresh token should be dropped. Asking for an organization without membership returns forbidden.",
+          "Members are listed, added by email (an existing user), re-roled and removed within the actor's organization only; targets from other organizations are reported as not found. Removing a member also revokes that user's refresh tokens for the organization."
+        ]
+      },
+      {
+        "h": "Invitations",
+        "paras": [
+          "Admins and owners create invitations for an email and a role they are allowed to assign. The server stores only the SHA-256 of the one-time token and returns the plaintext once, at creation. The server does not send email: the inviter shares the link, which the frontend serves at /invite. A new invitation to the same address revokes the previous pending one, and links expire after 7 days by default.",
+          "Accepting is public and takes the token. A new person provides a name and a password. An existing account must prove ownership with its current password, with the same lockout as login. Unknown, expired, revoked and used tokens fail without revealing which. If the inviter has since been demoted or removed, the invitation stops working. Creation, revocation and acceptance are written to the audit trail, storing only the email domain."
+        ]
+      },
+      {
+        "h": "Tenant isolation with Postgres row-level security",
+        "paras": [
+          "Role checks decide what a user may do; row-level security decides which rows exist for them. Every tenant table has a tenant_isolation policy comparing org_id with app_current_org(), and FORCE ROW LEVEL SECURITY applies it even to the table owner. Each request runs in a transaction that starts with set_config('app.org_id', ..., true). The setting is transaction-local, so a pooled connection cannot carry one tenant into another request.",
+          "It fails closed: when app.org_id is unset, no row is visible or writable. The server connects with owner credentials and switches to app_user on every connection (DB_APP_ROLE), a role that is not a superuser, has no BYPASSRLS and owns no table. The audit log is append-only for that role (UPDATE and DELETE are revoked). Migrations run with the separate MIGRATE_DATABASE_URL."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "-- One transaction per request, scoped to the caller's organization\nSELECT set_config('app.org_id', '<org id>', true);   -- == SET LOCAL\n\nCREATE POLICY tenant_isolation ON agents\n  USING      (org_id = app_current_org())\n  WITH CHECK (org_id = app_current_org());"
+        }
+      },
+      {
+        "h": "Endpoint reference",
+        "paras": [
+          "The auth router is mounted at /api/v1/auth and the invitation router under the same prefix. Permissions are checked by middleware before the handler runs; the service re-checks the actor's current membership on every member operation."
+        ],
+        "table": {
+          "head": [
+            "Endpoint",
+            "Access"
+          ],
+          "rows": [
+            [
+              "POST /api/v1/auth/register, /login, /refresh, /logout",
+              "Public (refresh and logout use the cookie plus X-WFAI-CSRF)"
+            ],
+            [
+              "POST /api/v1/auth/invitations/accept",
+              "Public, token in the body"
+            ],
+            [
+              "GET /api/v1/auth/config",
+              "Public, reports whether auth and registration are enabled"
+            ],
+            [
+              "GET /me, POST /logout-all, POST /switch-org",
+              "Any authenticated user"
+            ],
+            [
+              "GET/POST/PATCH/DELETE /members",
+              "members:read, members:invite, members:manage; a member may remove themself"
+            ],
+            [
+              "GET/POST/DELETE /invitations",
+              "members:read to list, members:invite to create and revoke"
+            ]
+          ]
+        },
+        "tip": "See the API reference for the full route list and the security model for the threat analysis."
+      }
+    ]
+  }
+}

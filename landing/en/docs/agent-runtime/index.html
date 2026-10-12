@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent runtime: providers, simulation, cost | AI Workforce OS</title>
+  <meta name="description" content="The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/en/docs/agent-runtime/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/runtime-de-agentes/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/agent-runtime/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/runtime-de-agentes/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta property="og:title" content="Agent runtime: providers, simulation, cost | AI Workforce OS">
+  <meta property="og:description" content="The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.">
+  <meta property="og:url" content="https://workforceai.es/en/docs/agent-runtime/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Agent runtime: providers, simulation, cost | AI Workforce OS">
+  <meta name="twitter:description" content="The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Agent runtime","item":"https://workforceai.es/en/docs/agent-runtime/"}]},{"@type":"TechArticle","headline":"Agent runtime","description":"The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/agent-runtime/","url":"https://workforceai.es/en/docs/agent-runtime/","dateModified":"2026-10-12","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="/en/">Home</a>
+        <a href="/en/docs/">Documentation</a>
+        <a href="/en/guide/">User guide</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Language">
+          <a href="/docs/runtime-de-agentes/" hreflang="es" lang="es" >ES</a>
+          <a href="/en/docs/agent-runtime/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap wide">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/docs/">Documentation</a></li><li aria-current="page">Agent runtime</li></ol></nav>
+      <article>
+        <h1>Agent runtime</h1>
+        <p class="lead">The agent runtime is a Python service (FastAPI and CrewAI) that turns a task and its context into a structured result. It talks only to model providers. Everything with side effects, such as tools, credentials, approvals and running code, stays in the Go backend.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">Role and HTTP contract</a></li><li><a href="#s2">Simulation and live mode</a></li><li><a href="#s3">Model providers</a></li><li><a href="#s4">Provider order and fallback</a></li><li><a href="#s5">Data policy: ALLOWED_PROVIDERS</a></li><li><a href="#s6">What leaves the process and redaction</a></li><li><a href="#s7">Tools: the model asks, the backend executes</a></li><li><a href="#s8">Code sandbox</a></li><li><a href="#s9">Cost accounting and budgets</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">Role and HTTP contract</h2>
+        <p>The backend calls the runtime over HTTP with a task, the agent profile and the context it assembled. The runtime returns validated structured output and, if the agent wants to act, a list of tool_requests. It never executes a tool and never calls an external system. This keeps the trust boundary in one place: the model may be misled by untrusted text, but it can only propose.</p>
+        <p>When RUNTIME_TOKEN is set in both services, the runtime requires an Authorization bearer header on every route except /healthz, compared in constant time. It is optional so existing deployments do not break; set it in production. The main endpoints are:</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Endpoint</th><th scope="col">Purpose</th></tr></thead><tbody><tr><th scope="row"><code>POST /v1/plan, /v1/plan-phases, /v1/plan-phase, /v1/replan</code></th><td>Turn a request into a plan of tasks for the available agents</td></tr><tr><th scope="row"><code>POST /v1/run-task</code></th><td>Run one task for one agent; returns structured output and optional tool_requests</td></tr><tr><th scope="row"><code>POST /v1/consult, /v1/review, /v1/synthesize, /v1/summarize</code></th><td>Agent-to-agent questions, review, final report, summaries</td></tr><tr><th scope="row"><code>POST /v1/route, /v1/chat-reply</code></th><td>Chat routing and conversational replies</td></tr><tr><th scope="row"><code>POST /v1/estimate</code></th><td>Cost range before running; does not call the model</td></tr><tr><th scope="row"><code>POST /v1/provider-test</code></th><td>One small real call to test an organization's key</td></tr><tr><th scope="row"><code>GET /healthz</code></th><td>Status, mode (simulation or live), configured and default provider; never keys</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">Simulation and live mode</h2>
+        <p>SIMULATION=true selects a scripted engine. It returns plausible plans, results, token counts and costs with simulated latency (SIM_LATENCY_SCALE=0 removes the delay). It needs no keys, makes no network calls and costs nothing. It also ignores the provider policy because no data leaves the process. The same engine is used when no provider is configured at all, and /healthz then reports mode simulation.</p>
+        <p>In live mode a CrewAI engine runs one agent, task and crew per role, with output validated against a StructuredOutput schema. Fields that exist only in live mode (provider, model, usage.failed_providers) are omitted in simulation, so the contract does not change. SIMULATION=true always wins, including over an organization's own key.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Model providers</h2>
+        <p>Three providers are supported and at least one must be configured: deepseek, anthropic and custom, an OpenAI-compatible endpoint that can be regional, a local vLLM or Ollama, or your own gateway. A custom model is passed as openai/&lt;name&gt;. A model that costs nothing, such as a local one, can be priced at 0 with the custom price variables.</p>
+        <p>Organizations can also bring their own key. It is sealed with the organization's data key (AES-256-GCM, wrapped by CONNECTIONS_KEK), is never returned by any endpoint beyond its last four characters, and travels in clear only on the internal, token-authenticated hop from the backend to the runtime.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Provider</th><th scope="col">Configuration</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope="row"><code>deepseek</code></th><td>DEEPSEEK_API_KEY, DEEPSEEK_MODEL</td><td>Third-party API; default model deepseek/deepseek-chat</td></tr><tr><th scope="row"><code>anthropic</code></th><td>ANTHROPIC_API_KEY, ANTHROPIC_MODEL</td><td>Third-party API; see the runtime README for the default model</td></tr><tr><th scope="row"><code>custom</code></th><td>CUSTOM_LLM_BASE_URL (required), CUSTOM_LLM_API_KEY, CUSTOM_LLM_MODEL</td><td>Any OpenAI-compatible endpoint: regional, vLLM or Ollama, own gateway. Prices via CUSTOM_PRICE_IN_PER_M and CUSTOM_PRICE_OUT_PER_M</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Provider order and fallback</h2>
+        <p>For each call the runtime builds an attempt list from three sources, each adding only the providers not yet listed: MODEL_PROVIDER_ORDER_&lt;ROLE&gt; (the agent role in capitals, or PLAN, CONSULT, SYNTHESIZE), then the request's preferred_providers, then the global MODEL_PROVIDER_ORDER (default deepseek, anthropic, custom). Every configured and permitted provider is therefore a fallback.</p>
+        <p>A transient failure (timeout, rate limit, 5xx) is retried on the same provider PROVIDER_RETRIES times (default 1, with PROVIDER_RETRY_BACKOFF_S) before moving to the next. PROVIDER_TIMEOUT_S bounds each attempt. The response reports which provider and model answered and which ones failed first. Per-role models can be overridden by the organization policy, but only for a provider that is already configured and allowed.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash"># Runtime (agent-runtime)
+SIMULATION=false                 # true: scripted engine, no network, no cost
+DEEPSEEK_API_KEY=...             # at least one provider is enough
+ANTHROPIC_API_KEY=...
+CUSTOM_LLM_BASE_URL=https://llm.internal.example/v1   # OpenAI-compatible
+MODEL_PROVIDER_ORDER=anthropic,deepseek,custom
+MODEL_PROVIDER_ORDER_LEGAL=anthropic                  # per role / task
+ALLOWED_PROVIDERS=anthropic,custom                    # operator ceiling
+RUNTIME_TOKEN=&lt;shared secret&gt;    # same value in the backend
+
+# Backend
+RUNTIME_URL=http://runtime:8000
+BUDGET_USD=50                    # organization budget
+REQUEST_BUDGET_CAP_USD=...       # per-request cap
+AGENT_BUDGET_USD=...             # per-agent cap</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Data policy: ALLOWED_PROVIDERS</h2>
+        <p>The data policy is applied before anything is sent. The effective list is the operator's ALLOWED_PROVIDERS intersected with the allowed_providers in the request. A provider outside the list is neither called nor used as a fallback, and a request can narrow the operator ceiling but never widen it.</p>
+        <p>The backend fills allowed_providers from each organization's model policy (owner and admin can edit it, and every change is audited). If the intersection is empty it sends a sentinel value that no provider matches, so the runtime refuses the call instead of widening the set. Failures are explicit, never silent:</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-json">{
+  &quot;detail&quot;: {
+    &quot;code&quot;: &quot;no_allowed_provider&quot;,
+    &quot;message&quot;: &quot;...&quot;,
+    &quot;providers_tried&quot;: [],
+    &quot;allowed_providers&quot;: [&quot;anthropic&quot;],
+    &quot;configured_providers&quot;: [&quot;deepseek&quot;]
+  }
+}</code></pre>
+        
+        <aside class="tip"><b>Tip.</b> no_allowed_provider returns HTTP 422 and nothing is sent. all_providers_failed returns HTTP 502 and lists providers_tried.</aside>
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">What leaves the process and redaction</h2>
+        <p>Only the prompts of each call reach a provider: the user's request text, the agent's persona, responsibilities and tool list, outputs of dependency tasks, agent memory, external content, tool results that the backend already filtered, and consult or synthesis questions. Credentials, connection ids, API URLs and tokens are not part of the contract, so they cannot be sent.</p>
+        <p>Secrets are redacted twice. The backend redacts tool results first; the runtime's redact module is the second barrier and covers private keys, JWTs, GitHub, AWS and Google tokens, API keys, bearer tokens, password-style assignments, URLs carrying tokens and Luhn-valid card numbers. It applies to prompt input and to model output, and provider error messages pass through it too. External content, dependency outputs and memory are inserted only in the user prompt, inside blocks marked as untrusted data with an instruction not to obey them. The system prompt is built only from backend-supplied persona, responsibilities and tools.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Tools: the model asks, the backend executes</h2>
+        <p>A tool request is a proposal. The backend checks the agent's tool list, the argument schema, constraints such as allowed domains, the policy engine and the autonomy level, and may create an approval for a person. Only then does the tool gateway run the tool, using credentials from the encrypted vault that never leave the backend. The result is returned to the model redacted and delimited as untrusted data.</p>
+        <p>Actions with irreversible external effects, such as sending an email, always require a human decision, regardless of the agent's autonomy. An approved action is claimed at most once, so a restart cannot run it twice. Tools without a connection use in-memory fake adapters, which is how simulation works end to end.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-json">{
+  &quot;tool_requests&quot;: [
+    { &quot;tool&quot;: &quot;email&quot;, &quot;action&quot;: &quot;send&quot;,
+      &quot;args&quot;: { &quot;to&quot;: &quot;customer@example.com&quot;, &quot;subject&quot;: &quot;Proposal&quot; } }
+  ]
+}</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Code sandbox</h2>
+        <p>The code tool, action run, lets an agent ask to execute Python. It is off by default and every run becomes a high-risk approval showing the full code, input files, purpose and limits; nothing can skip that step. The approval is bound to a hash of the code and the SHA-256 of every input, so changing either requires a new approval.</p>
+        <p>After approval the backend sends the run to a separate runner that starts a disposable container with no network, a read-only root, a non-root user, all capabilities dropped, CPU, memory and process limits, a timeout, output caps and an allow-list of output file types. The runner's environment is not forwarded, so no secrets reach the code. Kill switch, pause or read-only mode abort a running job. It needs SANDBOX_URL and SANDBOX_TOKEN in the backend; the runner mounts the Docker socket, which is root-equivalent on that host.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">Cost accounting and budgets</h2>
+        <p>Prices live in one table, model_prices.json, in USD per million tokens, embedded in the backend and copied byte for byte into the runtime; a test in each service enforces that they match. A model missing from the table is billed at a conservative default and logged once. PRICE_IN_PER_M and PRICE_OUT_PER_M force a rate for every provider, and the table is not a statement of what your own provider contract charges.</p>
+        <p>Before each model call the backend reserves the maximum estimate against the request, the agent and the organization, then records the greater of the runtime's reported cost and its own recalculation, so it does not depend on the runtime's accuracy. Spending is read from a ledger in Postgres. /v1/estimate gives a range before running, never a single figure. Limits:</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Control</th><th scope="col">Where it applies</th><th scope="col">Effect when exceeded</th></tr></thead><tbody><tr><th scope="row"><code>Organization budget (BUDGET_USD)</code></th><td>Backend, before each model call</td><td>Task fails with an explicit message and an event; not resumable from the API</td></tr><tr><th scope="row"><code>Request cap (REQUEST_BUDGET_CAP_USD)</code></th><td>Backend</td><td>Request pauses with budget.exceeded; raise the cap to continue</td></tr><tr><th scope="row"><code>Agent cap (AGENT_BUDGET_USD)</code></th><td>Backend</td><td>Agent pauses; raise the cap to continue</td></tr><tr><th scope="row"><code>COST_CONFIRM_THRESHOLD_USD</code></th><td>Backend, after /v1/estimate</td><td>A person confirms the estimated cost before the run starts</td></tr><tr><th scope="row"><code>MAX_PARALLEL_PER_ORG</code></th><td>Backend queue</td><td>Calls wait in a priority queue</td></tr></tbody></table></div>
+        
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/architecture/"><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li><li><a href="/en/docs/configuration/"><b>Configuration reference</b><span>Environment variable reference for AI Workforce OS: server, database, auth, budget, rewards, model providers and frontend build arguments.</span></a></li><li><a href="/en/docs/skills-format/"><b>Skills format</b><span>How a skill is defined: a folder with SKILL.md, frontmatter, limits, lifecycle, review, import and export, and how it reaches the model.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Start now</h2>
+      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+      <a href="/en/docs/">Documentation</a>
+      <a href="/en/guide/">User guide</a>
+      <a href="#top">Back to top</a>
+    </div>
+  </footer>
+</body>
+</html>

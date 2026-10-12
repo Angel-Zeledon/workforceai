@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Runtime de agentes y proveedores | AI Workforce OS</title>
+  <meta name="description" content="El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/docs/runtime-de-agentes/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/runtime-de-agentes/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/agent-runtime/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/runtime-de-agentes/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:title" content="Runtime de agentes y proveedores | AI Workforce OS">
+  <meta property="og:description" content="El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.">
+  <meta property="og:url" content="https://workforceai.es/docs/runtime-de-agentes/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Runtime de agentes y proveedores | AI Workforce OS">
+  <meta name="twitter:description" content="El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Documentación","item":"https://workforceai.es/docs/"},{"@type":"ListItem","position":3,"name":"Runtime de agentes","item":"https://workforceai.es/docs/runtime-de-agentes/"}]},{"@type":"TechArticle","headline":"Runtime de agentes","description":"El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/docs/runtime-de-agentes/","url":"https://workforceai.es/docs/runtime-de-agentes/","dateModified":"2026-10-12","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="/">Inicio</a>
+        <a href="/docs/">Documentación</a>
+        <a href="/guia/">Guía de uso</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Idioma">
+          <a href="/docs/runtime-de-agentes/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/docs/agent-runtime/" hreflang="en" lang="en" >EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap wide">
+      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li><a href="/docs/">Documentación</a></li><li aria-current="page">Runtime de agentes</li></ol></nav>
+      <article>
+        <h1>Runtime de agentes</h1>
+        <p class="lead">El runtime de agentes es un servicio en Python (FastAPI y CrewAI) que convierte una tarea y su contexto en un resultado estructurado. Solo habla con proveedores de modelo. Todo lo que tiene efectos, como herramientas, credenciales, aprobaciones y ejecución de código, queda en el backend en Go.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">Rol y contrato HTTP</a></li><li><a href="#s2">Simulación y modo real</a></li><li><a href="#s3">Proveedores de modelo</a></li><li><a href="#s4">Orden de proveedores y respaldo</a></li><li><a href="#s5">Política de datos: ALLOWED_PROVIDERS</a></li><li><a href="#s6">Qué sale del proceso y redacción</a></li><li><a href="#s7">Herramientas: el modelo pide, el backend ejecuta</a></li><li><a href="#s8">Sandbox de código</a></li><li><a href="#s9">Contabilidad de costos y presupuestos</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">Rol y contrato HTTP</h2>
+        <p>El backend llama al runtime por HTTP con una tarea, el perfil del agente y el contexto que armó. El runtime devuelve una salida estructurada validada y, si el agente quiere actuar, una lista de tool_requests. Nunca ejecuta una herramienta ni llama a un sistema externo. Así la frontera de confianza queda en un solo lugar: el modelo puede ser engañado por texto no confiable, pero solo puede proponer.</p>
+        <p>Cuando RUNTIME_TOKEN está definido en ambos servicios, el runtime exige una cabecera Authorization bearer en todas las rutas salvo /healthz, comparada en tiempo constante. Es opcional para no romper despliegues existentes; defínelo en producción. Los endpoints principales son:</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Endpoint</th><th scope="col">Propósito</th></tr></thead><tbody><tr><th scope="row"><code>POST /v1/plan, /v1/plan-phases, /v1/plan-phase, /v1/replan</code></th><td>Convierten una solicitud en un plan de tareas para los agentes disponibles</td></tr><tr><th scope="row"><code>POST /v1/run-task</code></th><td>Ejecuta una tarea para un agente; devuelve salida estructurada y tool_requests opcionales</td></tr><tr><th scope="row"><code>POST /v1/consult, /v1/review, /v1/synthesize, /v1/summarize</code></th><td>Consultas entre agentes, revisión, informe final, resúmenes</td></tr><tr><th scope="row"><code>POST /v1/route, /v1/chat-reply</code></th><td>Enrutamiento de chat y respuestas conversacionales</td></tr><tr><th scope="row"><code>POST /v1/estimate</code></th><td>Rango de costo antes de ejecutar; no llama al modelo</td></tr><tr><th scope="row"><code>POST /v1/provider-test</code></th><td>Una llamada real pequeña para probar la clave de una organización</td></tr><tr><th scope="row"><code>GET /healthz</code></th><td>Estado, modo (simulation o live), proveedor configurado y por defecto; nunca claves</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">Simulación y modo real</h2>
+        <p>SIMULATION=true selecciona un motor guionado. Devuelve planes, resultados, conteos de tokens y costos plausibles con latencia simulada (SIM_LATENCY_SCALE=0 elimina la espera). No necesita claves, no hace llamadas de red y no cuesta nada. También ignora la política de proveedores porque ningún dato sale del proceso. El mismo motor se usa cuando no hay ningún proveedor configurado, y entonces /healthz informa el modo simulation.</p>
+        <p>En modo real un motor CrewAI corre un agente, una tarea y un crew por rol, con la salida validada contra un esquema StructuredOutput. Los campos que solo existen en modo real (provider, model, usage.failed_providers) se omiten en simulación, así que el contrato no cambia. SIMULATION=true siempre gana, incluso sobre la clave propia de una organización.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Proveedores de modelo</h2>
+        <p>Se admiten tres proveedores y se necesita al menos uno configurado: deepseek, anthropic y custom, un endpoint compatible con OpenAI que puede ser regional, un vLLM u Ollama local o tu propia pasarela. Un modelo custom se pasa como openai/&lt;nombre&gt;. Un modelo sin costo, como uno local, puede tarificarse en 0 con las variables de precio custom.</p>
+        <p>Las organizaciones también pueden traer su propia clave. Se sella con la clave de datos de la organización (AES-256-GCM, envuelta por CONNECTIONS_KEK), ningún endpoint la devuelve salvo sus últimos cuatro caracteres, y viaja en claro solo por el salto interno, autenticado con token, del backend al runtime.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Proveedor</th><th scope="col">Configuración</th><th scope="col">Notas</th></tr></thead><tbody><tr><th scope="row"><code>deepseek</code></th><td>DEEPSEEK_API_KEY, DEEPSEEK_MODEL</td><td>API de terceros; modelo por defecto deepseek/deepseek-chat</td></tr><tr><th scope="row"><code>anthropic</code></th><td>ANTHROPIC_API_KEY, ANTHROPIC_MODEL</td><td>API de terceros; el modelo por defecto está en el README del runtime</td></tr><tr><th scope="row"><code>custom</code></th><td>CUSTOM_LLM_BASE_URL (obligatoria), CUSTOM_LLM_API_KEY, CUSTOM_LLM_MODEL</td><td>Cualquier endpoint compatible con OpenAI: regional, vLLM u Ollama, pasarela propia. Precios con CUSTOM_PRICE_IN_PER_M y CUSTOM_PRICE_OUT_PER_M</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Orden de proveedores y respaldo</h2>
+        <p>Para cada llamada el runtime arma una lista de intentos con tres fuentes, cada una agrega solo los proveedores que faltan: MODEL_PROVIDER_ORDER_&lt;ROL&gt; (el rol del agente en mayúsculas, o PLAN, CONSULT, SYNTHESIZE), luego preferred_providers de la solicitud y por último MODEL_PROVIDER_ORDER global (por defecto deepseek, anthropic, custom). Así, todo proveedor configurado y permitido es un respaldo.</p>
+        <p>Un fallo transitorio (timeout, límite de tasa, 5xx) se reintenta en el mismo proveedor PROVIDER_RETRIES veces (1 por defecto, con PROVIDER_RETRY_BACKOFF_S) antes de pasar al siguiente. PROVIDER_TIMEOUT_S acota cada intento. La respuesta indica qué proveedor y modelo contestaron y cuáles fallaron antes. La política de la organización puede cambiar el modelo por rol, pero solo de un proveedor ya configurado y permitido.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash"># Runtime (agent-runtime)
+SIMULATION=false                 # true: scripted engine, no network, no cost
+DEEPSEEK_API_KEY=...             # at least one provider is enough
+ANTHROPIC_API_KEY=...
+CUSTOM_LLM_BASE_URL=https://llm.internal.example/v1   # OpenAI-compatible
+MODEL_PROVIDER_ORDER=anthropic,deepseek,custom
+MODEL_PROVIDER_ORDER_LEGAL=anthropic                  # per role / task
+ALLOWED_PROVIDERS=anthropic,custom                    # operator ceiling
+RUNTIME_TOKEN=&lt;shared secret&gt;    # same value in the backend
+
+# Backend
+RUNTIME_URL=http://runtime:8000
+BUDGET_USD=50                    # organization budget
+REQUEST_BUDGET_CAP_USD=...       # per-request cap
+AGENT_BUDGET_USD=...             # per-agent cap</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Política de datos: ALLOWED_PROVIDERS</h2>
+        <p>La política de datos se aplica antes de enviar nada. La lista efectiva es el ALLOWED_PROVIDERS del operador intersectado con el allowed_providers de la solicitud. Un proveedor fuera de la lista ni se llama ni se usa como respaldo, y una solicitud puede reducir el techo del operador pero nunca ampliarlo.</p>
+        <p>El backend completa allowed_providers desde la política de modelos de cada organización (owner y admin pueden editarla y cada cambio queda auditado). Si la intersección queda vacía envía un valor centinela que ningún proveedor cumple, así que el runtime rechaza la llamada en lugar de ampliar el conjunto. Los fallos son explícitos, nunca silenciosos:</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-json">{
+  &quot;detail&quot;: {
+    &quot;code&quot;: &quot;no_allowed_provider&quot;,
+    &quot;message&quot;: &quot;...&quot;,
+    &quot;providers_tried&quot;: [],
+    &quot;allowed_providers&quot;: [&quot;anthropic&quot;],
+    &quot;configured_providers&quot;: [&quot;deepseek&quot;]
+  }
+}</code></pre>
+        
+        <aside class="tip"><b>Consejo.</b> no_allowed_provider devuelve HTTP 422 y no se envía nada. all_providers_failed devuelve HTTP 502 y lista providers_tried.</aside>
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">Qué sale del proceso y redacción</h2>
+        <p>A un proveedor solo llegan los prompts de cada llamada: el texto de la solicitud del usuario, la persona, responsabilidades y herramientas del agente, salidas de tareas dependientes, memoria del agente, contenido externo, resultados de herramientas ya filtrados por el backend y preguntas de consulta o síntesis. Credenciales, connection_id, URLs de API y tokens no forman parte del contrato, así que no pueden enviarse.</p>
+        <p>Los secretos se redactan dos veces. El backend redacta primero los resultados de herramientas; el módulo redact del runtime es la segunda barrera y cubre claves privadas, JWT, tokens de GitHub, AWS y Google, claves de API, tokens bearer, asignaciones tipo password, URLs con tokens y números de tarjeta válidos por Luhn. Se aplica a la entrada del prompt y a la salida del modelo, y los mensajes de error de los proveedores también pasan por él. El contenido externo, las salidas de dependencias y la memoria se insertan solo en el prompt de usuario, dentro de bloques marcados como datos no confiables con la instrucción de no obedecerlos. El system prompt se arma solo con persona, responsabilidades y herramientas que da el backend.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Herramientas: el modelo pide, el backend ejecuta</h2>
+        <p>Una solicitud de herramienta es una propuesta. El backend revisa la lista de herramientas del agente, el esquema de argumentos, restricciones como dominios permitidos, el motor de políticas y el nivel de autonomía, y puede crear una aprobación para una persona. Solo entonces el tool gateway ejecuta la herramienta, con credenciales de la bóveda cifrada que nunca salen del backend. El resultado vuelve al modelo redactado y delimitado como datos no confiables.</p>
+        <p>Las acciones con efectos externos irreversibles, como enviar un correo, siempre requieren una decisión humana, sea cual sea la autonomía del agente. Una acción aprobada se reclama como máximo una vez, así que un reinicio no puede ejecutarla dos veces. Las herramientas sin conexión usan adaptadores falsos en memoria, que es como funciona la simulación de punta a punta.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-json">{
+  &quot;tool_requests&quot;: [
+    { &quot;tool&quot;: &quot;email&quot;, &quot;action&quot;: &quot;send&quot;,
+      &quot;args&quot;: { &quot;to&quot;: &quot;customer@example.com&quot;, &quot;subject&quot;: &quot;Proposal&quot; } }
+  ]
+}</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Sandbox de código</h2>
+        <p>La herramienta code, acción run, permite que un agente pida ejecutar Python. Está desactivada por defecto y cada ejecución se convierte en una aprobación de alto riesgo que muestra el código completo, los archivos de entrada, el propósito y los límites; nada puede saltarse ese paso. La aprobación queda ligada a un hash del código y al SHA-256 de cada entrada, así que cambiar cualquiera exige una aprobación nueva.</p>
+        <p>Tras la aprobación el backend envía la ejecución a un runner aparte que inicia un contenedor desechable sin red, con raíz de solo lectura, usuario no root, todas las capabilities eliminadas, límites de CPU, memoria y procesos, un timeout, topes de salida y una lista de tipos de archivo permitidos. El entorno del runner no se reenvía, así que ningún secreto llega al código. El kill switch, la pausa o el modo de solo lectura abortan una ejecución en curso. Requiere SANDBOX_URL y SANDBOX_TOKEN en el backend; el runner monta el socket de Docker, que equivale a root en ese host.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">Contabilidad de costos y presupuestos</h2>
+        <p>Los precios viven en una sola tabla, model_prices.json, en USD por millón de tokens, embebida en el backend y copiada byte a byte en el runtime; una prueba en cada servicio exige que coincidan. Un modelo ausente de la tabla se cobra a una tarifa por defecto conservadora y se avisa una vez en el log. PRICE_IN_PER_M y PRICE_OUT_PER_M fuerzan una tarifa para todos los proveedores, y la tabla no es una afirmación de lo que cobra tu propio contrato con el proveedor.</p>
+        <p>Antes de cada llamada al modelo el backend reserva la estimación máxima contra la solicitud, el agente y la organización, y luego registra el mayor entre el costo que reporta el runtime y su propio recálculo, de modo que no depende de la exactitud del runtime. El gasto se lee de un ledger en Postgres. /v1/estimate da un rango antes de ejecutar, nunca una cifra única. Límites:</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Control</th><th scope="col">Dónde se aplica</th><th scope="col">Efecto al excederse</th></tr></thead><tbody><tr><th scope="row"><code>Presupuesto de la organización (BUDGET_USD)</code></th><td>Backend, antes de cada llamada al modelo</td><td>La tarea falla con un mensaje explícito y un evento; no se reanuda desde la API</td></tr><tr><th scope="row"><code>Tope por solicitud (REQUEST_BUDGET_CAP_USD)</code></th><td>Backend</td><td>La solicitud se pausa con budget.exceeded; subir el tope para continuar</td></tr><tr><th scope="row"><code>Tope por agente (AGENT_BUDGET_USD)</code></th><td>Backend</td><td>El agente se pausa; subir el tope para continuar</td></tr><tr><th scope="row"><code>COST_CONFIRM_THRESHOLD_USD</code></th><td>Backend, tras /v1/estimate</td><td>Una persona confirma el costo estimado antes de ejecutar</td></tr><tr><th scope="row"><code>MAX_PARALLEL_PER_ORG</code></th><td>Cola del backend</td><td>Las llamadas esperan en una cola con prioridad</td></tr></tbody></table></div>
+        
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="cards"><li><a href="/docs/arquitectura/"><b>Arquitectura de AI Workforce OS</b><span>Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.</span></a></li><li><a href="/docs/configuracion/"><b>Referencia de configuración</b><span>Referencia de variables de entorno de AI Workforce OS: servidor, base de datos, autenticación, presupuesto, recompensas, proveedores de modelo y build.</span></a></li><li><a href="/docs/formato-de-habilidades/"><b>Formato de habilidades</b><span>Cómo se define una habilidad: carpeta con SKILL.md, frontmatter, límites, ciclo de vida, revisión, importación y cómo llega al modelo.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Empieza ahora</h2>
+      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+      <a href="/docs/">Documentación</a>
+      <a href="/guia/">Guía de uso</a>
+      <a href="#top">Volver arriba</a>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,354 @@
+{
+  "id": "skills-format",
+  "slug": {
+    "es": "formato-de-habilidades",
+    "en": "skills-format"
+  },
+  "related": [
+    "agent-runtime",
+    "api-reference",
+    "architecture"
+  ],
+  "es": {
+    "title": "Formato de habilidades",
+    "metaTitle": "Formato de habilidades (SKILL.md) de los agentes",
+    "description": "Cómo se define una habilidad: carpeta con SKILL.md, frontmatter, límites, ciclo de vida, revisión, importación y cómo llega al modelo.",
+    "intro": "Una habilidad es conocimiento reutilizable que un agente puede cargar cuando lo necesita. Usa el formato abierto Agent Skills: una carpeta con un archivo SKILL.md y recursos opcionales de texto. Es texto de prompt más una herramienta del gateway, así que funciona igual con cualquier proveedor de modelos.",
+    "sections": [
+      {
+        "h": "Qué es un paquete de habilidad",
+        "paras": [
+          "Un paquete es una carpeta cuyo único archivo obligatorio es SKILL.md: un bloque de frontmatter YAML seguido de instrucciones en markdown. Puede incluir archivos de apoyo como plantillas, ejemplos, documentos de referencia o scripts, siempre como texto.",
+          "Los archivos de cada versión se guardan en el drive de la organización, en /Shared/Skills/<nombre>/v<n>/, y la base de datos guarda el manifiesto (ruta, tamaño y sha256 de cada archivo). Las versiones son inmutables: restaurar una versión antigua crea una versión nueva."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "client-email/\n├── SKILL.md\n├── templates/\n│   └── follow-up.md\n└── examples/\n    └── collection.txt"
+        }
+      },
+      {
+        "h": "Frontmatter de SKILL.md",
+        "paras": [
+          "El analizador entiende solo un subconjunto pequeño de YAML: escalares, cadenas con comillas, bloques con > o |, listas en línea o en bloque y un nivel de mapa anidado para metadata. No admite anclas, etiquetas, combinaciones ni código, y rechaza tabuladores en la sangría.",
+          "SKILL.md debe ser UTF-8 válido, empezar con una línea --- y cerrar el bloque con otra. Las instrucciones después del frontmatter no pueden estar vacías."
+        ],
+        "table": {
+          "head": [
+            "Campo",
+            "Obligatorio",
+            "Regla o límite"
+          ],
+          "rows": [
+            [
+              "name",
+              "Sí",
+              "Patrón ^[a-z0-9-]{1,64}$. Único por organización e inmutable."
+            ],
+            [
+              "description",
+              "Sí",
+              "Hasta 1024 caracteres. Es lo que ve el agente para decidir si usa la habilidad."
+            ],
+            [
+              "license",
+              "No",
+              "Texto libre."
+            ],
+            [
+              "compatibility",
+              "No",
+              "Texto libre; se conserva al exportar."
+            ],
+            [
+              "allowed-tools",
+              "No",
+              "Hasta 20 entradas. Es informativo: nunca concede nada."
+            ],
+            [
+              "metadata",
+              "No",
+              "Mapa de clave a texto, hasta 30 entradas (por ejemplo category)."
+            ]
+          ]
+        },
+        "tip": "Otras claves de primer nivel de tipo escalar se conservan al importar y exportar, de modo que un viaje de ida y vuelta no pierde datos."
+      },
+      {
+        "h": "Ejemplo completo comentado",
+        "paras": [
+          "Este es el paquete inicial client-email en inglés, tal como se envía con el backend. Los límites de la sección anterior se cumplen: el nombre usa minúsculas y guiones, la descripción es breve y metadata lleva la categoría y la marca de incluida de serie."
+        ],
+        "code": {
+          "lang": "yaml",
+          "text": "---\nname: client-email\ndescription: \"Write a clear email to a client: subject, brief context, a concrete request or answer and the next step. Use it for replies, follow-ups, friendly collections and announcements.\"\nmetadata:\n  category: communication\n  builtin: \"true\"\n---\n\n# Client email\n\n## When to use it\nTo write replies, follow-ups or notices to clients.\n\n## Steps\n1. Identify the goal in one sentence: inform, ask, confirm, collect or apologize.\n2. Specific subject (at most 8 words) with the topic and, if relevant, the date or reference.\n3. First paragraph: the answer or request. Then the minimum context.\n4. Close with a single next step, who does it and by when.\n5. Adjust the tone: warm and professional; in complaints acknowledge the problem first; in collections be firm and kind.\n\n## Quality criteria\n- Under 150 words unless more is needed.\n- No figure, date or commitment that is not in the task data.\n- Check names, amounts and attachments mentioned.\n\n## Limits\nLeave the email as a draft; sending it is decided by a person or by the organization policy."
+        }
+      },
+      {
+        "h": "Límites del paquete",
+        "paras": [
+          "Estos topes se validan al crear, editar e importar. Una violación devuelve un código de error estable, por ejemplo file_too_large, too_many_files o zip_bomb."
+        ],
+        "table": {
+          "head": [
+            "Límite",
+            "Valor"
+          ],
+          "rows": [
+            [
+              "Tamaño total de una versión",
+              "2 MB"
+            ],
+            [
+              "Tamaño de un archivo",
+              "512 KB"
+            ],
+            [
+              "Archivos por habilidad (incluye SKILL.md)",
+              "40"
+            ],
+            [
+              "Entradas revisadas de un zip",
+              "300"
+            ],
+            [
+              "Profundidad de ruta",
+              "4 niveles, segmentos con [A-Za-z0-9._-]"
+            ],
+            [
+              "Extensiones admitidas",
+              "md, txt, csv, json, yaml, yml, py, js, sh (solo texto UTF-8, sin bytes NUL)"
+            ],
+            [
+              "Razón de compresión por entrada de zip",
+              "100 a 1"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Habilidades iniciales incluidas",
+        "paras": [
+          "El backend incluye un catálogo de habilidades iniciales como datos embebidos en el binario, en español y en inglés y con el mismo formato que una importación, bajo builtin/<idioma>/<nombre>/ (hoy 55 por idioma, entre ellas bank-reconciliation, b2b-proposal, service-contract-review, month-end-close, client-email y project-plan).",
+          "La primera vez que una organización usa la biblioteca se crean activas, en el idioma de la organización. Si la organización ya tiene alguna habilidad, incluso borrada, se deja como está, y las que se borraron no se vuelven a crear. Las plantillas de rol declaran default_skills (solo nombres) y los agentes de ese rol las reciben sin necesidad de una asignación."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "backend/internal/skills/builtin/\n├── es/<nombre>/SKILL.md\n└── en/<nombre>/SKILL.md"
+        }
+      },
+      {
+        "h": "Ciclo de vida y estados",
+        "paras": [
+          "Una habilidad tiene uno de cuatro estados: draft, in_review, active o disabled. Quien tiene el permiso skills:write (miembros) crea borradores, edita e importa. Solo quien tiene skills:review (administradores) revisa, activa, desactiva y borra. Una revisión indica la versión que el revisor leyó (si no, stale_review) y vuelve a comprobar los hashes de los archivos antes de activar.",
+          "Una importación siempre entra en in_review. Si un miembro edita una habilidad activa, la nueva versión queda en in_review y los agentes siguen usando la versión aprobada; si la edita un administrador, la edición es la revisión y queda activa. Un rechazo devuelve a borrador (o deja activa la versión aprobada anterior) con una nota. Borrar es lógico: crear otra con el mismo nombre la recupera con una versión nueva."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "create (member)  → draft ──submit──▶ in_review ──approve (admin)──▶ active\nimport (member)  → in_review (always)\nreject → draft, or stays active with the previous approved version\ndisable / approve again · delete (soft)"
+        }
+      },
+      {
+        "h": "Escaneo e importación y exportación",
+        "paras": [
+          "Al guardar cada versión se escanea el paquete y se guardan advertencias para el revisor: injection (el puntaje de inyección de cada archivo supera el umbral), script (archivos ejecutables como texto), allowed_tools (se declaró allowed-tools) e import_note. El escaneo informa; no decide por sí solo. El revisor ve todo antes de aprobar.",
+          "Se puede importar un .zip o un SKILL.md suelto. La validación es estricta: se rechazan rutas con .. o absolutas, barras invertidas, letras de unidad, enlaces simbólicos y archivos especiales, entradas cifradas, duplicados sin distinguir mayúsculas y bombas de compresión. Una única carpeta envoltorio se quita y se ignoran __MACOSX y .DS_Store. La importación desde una URL no está implementada a propósito, porque exigiría un descargador seguro frente a SSRF.",
+          "La exportación devuelve un zip determinista con el diseño estándar (<nombre>/SKILL.md más recursos, sin bits ejecutables) o solo SKILL.md. Importar de nuevo una exportación da las mismas instrucciones, descripción, metadatos y archivos."
+        ],
+        "code": {
+          "lang": "http",
+          "text": "POST /skills/import           # .zip or SKILL.md\nGET  /skills/{id}/export      # deterministic zip\nPOST /skills/{id}/submit      # draft → in_review\nPOST /skills/{id}/review      # approve or reject (skills:review)"
+        }
+      },
+      {
+        "h": "Asignación a agentes",
+        "paras": [
+          "La asignación vincula una habilidad con un agente (tabla skill_assignments) mediante PUT y DELETE sobre /agents/{id}/skills/{skillId}, con el permiso de escritura de agentes. Además existen los valores por defecto de rol: los nombres en default_skills de la plantilla de rol llegan a todos los agentes de ese rol sin una fila de asignación.",
+          "Una habilidad solo se sirve a un agente si está asignada (o es predeterminada de su rol) y su versión aprobada está activa y habilitada. Ante cualquier otra situación, la carga se deniega con skill_not_available."
+        ]
+      },
+      {
+        "h": "Cómo llegan las habilidades al modelo",
+        "paras": [
+          "Divulgación progresiva en dos pasos. En cada ejecución, el backend añade a la solicitud solo el nombre y la descripción de las habilidades servibles del agente, con topes: como máximo 12 habilidades, 240 caracteres por descripción y 3000 caracteres en total. El runtime las presenta como líneas del prompt con la regla de que una habilidad guía cómo trabajar y nunca concede herramientas, conexiones, permisos, autonomía ni aprobaciones.",
+          "Si una habilidad aplica, el agente la pide con una solicitud de herramienta. El Tool Gateway la sirve como herramienta de lectura nativa (con kill switch, pausa y auditoría) y responde con el cuerpo de la versión aprobada sin frontmatter más la lista de archivos; con file devuelve un recurso concreto.",
+          "El texto viaja por su propio canal (loaded_skills) como configuración confiable de la organización, entre delimitadores propios y no como datos no confiables, porque una persona aprobó esa versión exacta. Aun así se limpia (caracteres invisibles, credenciales, delimitadores falsificados), se acota (24 000 caracteres por respuesta, 4 habilidades cargadas por tarea) y se puntúa contra inyección. Los scripts son texto inerte: ejecutarlos exige la herramienta de código con aprobación humana."
+        ],
+        "code": {
+          "lang": "json",
+          "text": "{ \"tool\": \"skill\", \"action\": \"load\", \"args\": { \"name\": \"client-email\", \"file\": \"templates/follow-up.md\" } }"
+        }
+      }
+    ]
+  },
+  "en": {
+    "title": "Skills format",
+    "metaTitle": "Agent skills format (SKILL.md)",
+    "description": "How a skill is defined: a folder with SKILL.md, frontmatter, limits, lifecycle, review, import and export, and how it reaches the model.",
+    "intro": "A skill is reusable know-how that an agent can load when it needs it. It uses the open Agent Skills format: a folder with a SKILL.md file and optional text resources. It is plain prompt text plus one gateway tool, so it works the same with every model provider.",
+    "sections": [
+      {
+        "h": "What a skill package is",
+        "paras": [
+          "A package is a folder whose only required file is SKILL.md: a YAML frontmatter block followed by markdown instructions. It may include supporting files such as templates, examples, reference documents or scripts, always as text.",
+          "The files of each version are stored in the organization's drive, at /Shared/Skills/<name>/v<n>/, and the database keeps the manifest (path, size and sha256 of each file). Versions are immutable: restoring an old version creates a new one."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "client-email/\n├── SKILL.md\n├── templates/\n│   └── follow-up.md\n└── examples/\n    └── collection.txt"
+        }
+      },
+      {
+        "h": "SKILL.md frontmatter",
+        "paras": [
+          "The parser understands only a small subset of YAML: scalars, quoted strings, blocks with > or |, inline or block lists and one level of nested map for metadata. It does not support anchors, tags, merges or code, and it rejects tabs in indentation.",
+          "SKILL.md must be valid UTF-8, start with a --- line and close the block with another. The instructions after the frontmatter cannot be empty."
+        ],
+        "table": {
+          "head": [
+            "Field",
+            "Required",
+            "Rule or limit"
+          ],
+          "rows": [
+            [
+              "name",
+              "Yes",
+              "Pattern ^[a-z0-9-]{1,64}$. Unique per organization and immutable."
+            ],
+            [
+              "description",
+              "Yes",
+              "Up to 1024 characters. It is what the agent sees to decide whether to use the skill."
+            ],
+            [
+              "license",
+              "No",
+              "Free text."
+            ],
+            [
+              "compatibility",
+              "No",
+              "Free text; preserved on export."
+            ],
+            [
+              "allowed-tools",
+              "No",
+              "Up to 20 entries. Informational: it never grants anything."
+            ],
+            [
+              "metadata",
+              "No",
+              "Key-to-text map, up to 30 entries (for example category)."
+            ]
+          ]
+        },
+        "tip": "Other top-level scalar keys are preserved on import and export, so a round trip does not lose data."
+      },
+      {
+        "h": "Complete annotated example",
+        "paras": [
+          "This is the client-email starter package in English, as shipped with the backend. The limits from the previous section hold: the name uses lowercase and hyphens, the description is short, and metadata carries the category and the built-in marker."
+        ],
+        "code": {
+          "lang": "yaml",
+          "text": "---\nname: client-email\ndescription: \"Write a clear email to a client: subject, brief context, a concrete request or answer and the next step. Use it for replies, follow-ups, friendly collections and announcements.\"\nmetadata:\n  category: communication\n  builtin: \"true\"\n---\n\n# Client email\n\n## When to use it\nTo write replies, follow-ups or notices to clients.\n\n## Steps\n1. Identify the goal in one sentence: inform, ask, confirm, collect or apologize.\n2. Specific subject (at most 8 words) with the topic and, if relevant, the date or reference.\n3. First paragraph: the answer or request. Then the minimum context.\n4. Close with a single next step, who does it and by when.\n5. Adjust the tone: warm and professional; in complaints acknowledge the problem first; in collections be firm and kind.\n\n## Quality criteria\n- Under 150 words unless more is needed.\n- No figure, date or commitment that is not in the task data.\n- Check names, amounts and attachments mentioned.\n\n## Limits\nLeave the email as a draft; sending it is decided by a person or by the organization policy."
+        }
+      },
+      {
+        "h": "Package limits",
+        "paras": [
+          "These caps are validated on create, edit and import. A violation returns a stable error code, for example file_too_large, too_many_files or zip_bomb."
+        ],
+        "table": {
+          "head": [
+            "Limit",
+            "Value"
+          ],
+          "rows": [
+            [
+              "Total size of a version",
+              "2 MB"
+            ],
+            [
+              "Size of one file",
+              "512 KB"
+            ],
+            [
+              "Files per skill (including SKILL.md)",
+              "40"
+            ],
+            [
+              "Zip entries inspected",
+              "300"
+            ],
+            [
+              "Path depth",
+              "4 levels, segments with [A-Za-z0-9._-]"
+            ],
+            [
+              "Allowed extensions",
+              "md, txt, csv, json, yaml, yml, py, js, sh (UTF-8 text only, no NUL bytes)"
+            ],
+            [
+              "Compression ratio per zip entry",
+              "100 to 1"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Built-in starter skills",
+        "paras": [
+          "The backend ships a catalog of starter skills as data embedded in the binary, in Spanish and English and in the same format as an import, under builtin/<language>/<name>/ (currently 55 per language, including bank-reconciliation, b2b-proposal, service-contract-review, month-end-close, client-email and project-plan).",
+          "The first time an organization uses the library they are created as active, in the organization's language. If the organization already has any skill, even a deleted one, it is left as is, and deleted starters are not re-created. Role templates declare default_skills (names only) and agents of that role receive them without needing an assignment."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "backend/internal/skills/builtin/\n├── es/<nombre>/SKILL.md\n└── en/<nombre>/SKILL.md"
+        }
+      },
+      {
+        "h": "Lifecycle and statuses",
+        "paras": [
+          "A skill is in one of four statuses: draft, in_review, active or disabled. Holders of the skills:write permission (members) create drafts, edit and import. Only holders of skills:review (administrators) review, activate, disable and delete. A review names the version the reviewer read (otherwise stale_review) and re-verifies the file hashes before activating.",
+          "An import always enters in_review. If a member edits an active skill, the new version lands in in_review and agents keep using the approved version; if an administrator edits it, the edit is the review and it becomes active. A rejection returns to draft (or leaves the previous approved version active) with a note. Deletion is soft: creating another skill with the same name brings it back with a new version."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "create (member)  → draft ──submit──▶ in_review ──approve (admin)──▶ active\nimport (member)  → in_review (always)\nreject → draft, or stays active with the previous approved version\ndisable / approve again · delete (soft)"
+        }
+      },
+      {
+        "h": "Scanning, import and export",
+        "paras": [
+          "When each version is saved, the package is scanned and warnings are stored for the reviewer: injection (a file's injection score exceeds the threshold), script (files that are executable as text), allowed_tools (allowed-tools was declared) and import_note. The scan informs; it does not decide on its own. The reviewer sees everything before approving.",
+          "A .zip or a single SKILL.md can be imported. Validation is strict: paths with .. or absolute ones, backslashes, drive letters, symlinks and special files, encrypted entries, case-insensitive duplicates and zip bombs are rejected. A single wrapper folder is stripped and __MACOSX and .DS_Store are ignored. Import from a URL is deliberately not implemented, because it would need an SSRF-safe fetcher.",
+          "Export returns a deterministic zip in the standard layout (<name>/SKILL.md plus resources, no executable bits) or only SKILL.md. Importing an export again gives the same instructions, description, metadata and files."
+        ],
+        "code": {
+          "lang": "http",
+          "text": "POST /skills/import           # .zip or SKILL.md\nGET  /skills/{id}/export      # deterministic zip\nPOST /skills/{id}/submit      # draft → in_review\nPOST /skills/{id}/review      # approve or reject (skills:review)"
+        }
+      },
+      {
+        "h": "Assignment to agents",
+        "paras": [
+          "Assignment links a skill to an agent (skill_assignments table) through PUT and DELETE on /agents/{id}/skills/{skillId}, with the agents write permission. There are also role defaults: names in a role template's default_skills reach every agent of that role without an assignment row.",
+          "A skill is served to an agent only if it is assigned (or is a default of its role) and its approved version is active and enabled. In any other situation the load is denied with skill_not_available."
+        ]
+      },
+      {
+        "h": "How skills reach the model",
+        "paras": [
+          "Progressive disclosure in two steps. On every run, the backend adds to the request only the name and description of the agent's servable skills, with caps: at most 12 skills, 240 characters per description and 3000 characters in total. The runtime renders them as prompt lines with the rule that a skill guides how to work and never grants tools, connections, permissions, autonomy or approvals.",
+          "If a skill applies, the agent asks for it with a tool request. The Tool Gateway serves it as a native read tool (subject to the kill switch, pause and audit) and answers with the approved version's body without frontmatter plus the file list; with file it returns one specific resource.",
+          "The text travels in its own channel (loaded_skills) as trusted organization configuration, inside dedicated delimiters and not as untrusted data, because a person approved that exact version. It is still cleaned (invisible characters, credentials, forged delimiters), bounded (24,000 characters per answer, 4 loaded skills per task) and scored for injection. Scripts are inert text: running them requires the code tool with human approval."
+        ],
+        "code": {
+          "lang": "json",
+          "text": "{ \"tool\": \"skill\", \"action\": \"load\", \"args\": { \"name\": \"client-email\", \"file\": \"templates/follow-up.md\" } }"
+        }
+      }
+    ]
+  }
+}

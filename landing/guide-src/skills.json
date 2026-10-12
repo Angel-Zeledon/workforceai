@@ -1,0 +1,147 @@
+{
+  "id": "skills",
+  "slug": { "es": "habilidades", "en": "skills" },
+  "related": ["projects", "settings", "getting-started"],
+  "es": {
+    "title": "Habilidades: conocimiento reutilizable para tus agentes",
+    "metaTitle": "Habilidades: saber hacer reutilizable | AI Workforce OS",
+    "description": "Explora la biblioteca de Habilidades, crea o importa las tuyas, apruébalas y asígnalas a un agente para que trabaje a tu manera.",
+    "intro": "Una habilidad es una guía escrita que un agente consulta mientras trabaja, por ejemplo cómo redactar un informe semanal o cómo conciliar un extracto bancario. Escribes el método una vez y cualquier agente puede usarlo. La biblioteca ya trae 55 habilidades de arranque.",
+    "sections": [
+      {
+        "h": "¿Qué es una habilidad y qué NO hace?",
+        "paras": [
+          "Cada habilidad tiene un nombre, una descripción de cuándo usarla e instrucciones paso a paso. Puede incluir archivos de apoyo, como plantillas o ejemplos.",
+          "Al agente solo le llegan el nombre y la descripción en cada tarea. El texto completo lo recibe únicamente si lo pide. Y una habilidad nunca le da herramientas, conexiones ni permisos: solo le da conocimiento. Lo que un agente puede hacer lo siguen decidiendo su rol y tu organización, y las acciones sensibles siguen pidiendo tu aprobación."
+        ]
+      },
+      {
+        "h": "¿Qué trae la biblioteca desde el primer día?",
+        "paras": [
+          "Son 55 habilidades de arranque, en español y en inglés, ya activas. Cubren ventas, finanzas, legal, recursos humanos, soporte, producto, datos e ingeniería. Algunos ejemplos: conciliación bancaria, calificación de leads, revisión de NDA, descripción de puesto, respuesta de soporte, requisitos de producto, explicación de consultas SQL y checklist de revisión de código.",
+          "En las tarjetas llevan la etiqueta Incluida. Léelas, úsalas tal cual o toma una como modelo para escribir la tuya."
+        ]
+      },
+      {
+        "h": "¿Cómo encuentro una habilidad?",
+        "steps": [
+          "Abre Habilidades en el menú.",
+          "Escribe una palabra del tema en Buscar habilidades, por ejemplo «informe» o «ventas». La lista se filtra al instante.",
+          "Usa los filtros de estado: Todas, Activas, En revisión, Borradores o Desactivadas. Cada filtro muestra cuántas hay.",
+          "Haz clic en una tarjeta para abrirla. Ahí ves su estado, su origen (Incluida, Creada, Importada o De una tarea), su versión y cuántos agentes la tienen."
+        ],
+        "tip": "Las habilidades en revisión se abren directo en la pestaña Revisión."
+      },
+      {
+        "h": "¿Cómo leo una habilidad antes de usarla?",
+        "paras": [
+          "Dentro de una habilidad hay cuatro pestañas: Contenido, Revisión, Versiones y Agentes. Contenido muestra la descripción, las instrucciones y los archivos de apoyo. Revisión muestra todo lo que recibiría un agente, junto con los avisos del análisis automático, por ejemplo si el texto parece intentar saltarse reglas o si incluye un script.",
+          "Los scripts se guardan como texto y nunca se ejecutan por sí solos. Puedes descargar cualquier habilidad como .zip o como SKILL.md."
+        ]
+      },
+      {
+        "h": "¿Cómo creo una habilidad propia?",
+        "steps": [
+          "Pulsa Nueva habilidad.",
+          "Escribe el Nombre en minúsculas, números y guiones, por ejemplo conciliacion-bancaria. No se puede cambiar después.",
+          "Completa la Descripción: cuándo usarla. Es lo único que el agente ve en cada tarea, así que di qué hace y cuándo conviene.",
+          "Escribe las Instrucciones en Markdown. Si quieres, añade archivos de apoyo, ejemplos y criterios de calidad.",
+          "Pulsa Crear borrador. Después, desde su ficha, pulsa Enviar a revisión."
+        ],
+        "tip": "Cada vez que editas y guardas se crea una versión nueva. Las anteriores se conservan y puedes restaurarlas desde Versiones."
+      },
+      {
+        "h": "¿Cómo importo una habilidad que ya tengo?",
+        "steps": [
+          "Pulsa Importar y elige un archivo .zip o .md con una habilidad en formato SKILL.md.",
+          "Si ya existe una con ese nombre, la app te pide otro y puedes elegir Importar con este nombre.",
+          "Al terminar, la habilidad queda En revisión y se abre en la pestaña Revisión. Léela completa antes de activarla."
+        ]
+      },
+      {
+        "h": "¿Cómo la activo y se la doy a un agente?",
+        "paras": [
+          "Solo llega a un agente lo que una persona aprobó. Un borrador o una habilidad en revisión no se entrega a nadie. Aprobar o desactivar requiere un administrador; crear, importar y enviar a revisión requieren permiso de escritura en habilidades."
+        ],
+        "steps": [
+          "Un administrador abre la pestaña Revisión, lee el contenido y los avisos, y pulsa Aprobar y activar. También puede Rechazar con una nota, que la devuelve a borrador.",
+          "Abre la habilidad activa y entra en la pestaña Agentes.",
+          "Elige un agente en Elegir agente y pulsa Asignar.",
+          "Para retirarla, pulsa Quitar junto al agente."
+        ],
+        "tip": "Si editas una habilidad activa, los agentes siguen usando la versión aprobada hasta que se apruebe la nueva. Los agentes de un rol que la trae por defecto también la reciben."
+      }
+    ]
+  },
+  "en": {
+    "title": "Skills: reusable know-how for your agents",
+    "metaTitle": "Skills: reusable know-how for agents | AI Workforce OS",
+    "description": "Browse the Skills library, create or import your own, approve them and assign them to an agent so it works the way you want.",
+    "intro": "A skill is a written guide an agent consults while working, for example how to write a weekly report or how to reconcile a bank statement. You write the method once and any agent can use it. The library already comes with 55 starter skills.",
+    "sections": [
+      {
+        "h": "What is a skill, and what does it NOT do?",
+        "paras": [
+          "Each skill has a name, a description of when to use it and step-by-step instructions. It can include supporting files, such as templates or examples.",
+          "The agent only receives the name and description on each task. It gets the full text only if it asks for it. And a skill never gives an agent tools, connections or permissions: it only gives knowledge. What an agent can do is still decided by its role and your organization, and sensitive actions still ask for your approval."
+        ]
+      },
+      {
+        "h": "What does the library include from day one?",
+        "paras": [
+          "There are 55 starter skills, in Spanish and English, already active. They cover sales, finance, legal, human resources, support, product, data and engineering. A few examples: bank reconciliation, lead qualification, NDA review, job description, support reply, product requirements, SQL query explainer and code review checklist.",
+          "On the cards they carry the Built-in label. Read them, use them as they are, or take one as a model for writing your own."
+        ]
+      },
+      {
+        "h": "How do I find a skill?",
+        "steps": [
+          "Open Skills in the menu.",
+          "Type a word about the topic in Search skills, for example \"report\" or \"sales\". The list filters instantly.",
+          "Use the status filters: All, Active, In review, Drafts or Disabled. Each filter shows how many there are.",
+          "Click a card to open it. There you see its status, its source (Built-in, Created, Imported or From a task), its version and how many agents have it."
+        ],
+        "tip": "Skills that are in review open straight on the Review tab."
+      },
+      {
+        "h": "How do I read a skill before using it?",
+        "paras": [
+          "Inside a skill there are four tabs: Content, Review, Versions and Agents. Content shows the description, the instructions and the supporting files. Review shows everything an agent would receive, together with the warnings from the automatic scan, for example if the text seems to try to bypass rules or if it includes a script.",
+          "Scripts are stored as text and never run on their own. You can download any skill as a .zip or as a SKILL.md."
+        ]
+      },
+      {
+        "h": "How do I create a skill of my own?",
+        "steps": [
+          "Click New skill.",
+          "Type the Name in lowercase letters, numbers and hyphens, for example bank-reconciliation. It cannot be changed later.",
+          "Fill in the Description: when to use it. It is the only thing the agent sees on each task, so say what it does and when it fits.",
+          "Write the Instructions in Markdown. If you want, add supporting files, examples and quality criteria.",
+          "Click Create draft. Then, from its page, click Send for review."
+        ],
+        "tip": "Every time you edit and save, a new version is created. The earlier ones are kept and you can restore them from Versions."
+      },
+      {
+        "h": "How do I import a skill I already have?",
+        "steps": [
+          "Click Import and choose a .zip or .md file with a skill in SKILL.md format.",
+          "If one with that name already exists, the app asks for another and you can choose Import with this name.",
+          "When it finishes, the skill is In review and opens on the Review tab. Read it in full before activating it."
+        ]
+      },
+      {
+        "h": "How do I activate it and give it to an agent?",
+        "paras": [
+          "Only what a person approved reaches an agent. A draft or a skill in review is delivered to nobody. Approving or disabling requires an administrator; creating, importing and sending for review require write permission on skills."
+        ],
+        "steps": [
+          "An administrator opens the Review tab, reads the content and the warnings, and clicks Approve and activate. They can also Reject with a note, which sends it back to draft.",
+          "Open the active skill and go to the Agents tab.",
+          "Choose an agent from the list and click Assign.",
+          "To take it back, click Remove next to the agent."
+        ],
+        "tip": "If you edit an active skill, agents keep using the approved version until the new one is approved. Agents in a role that includes the skill by default also receive it."
+      }
+    ]
+  }
+}

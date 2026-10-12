@@ -488,3 +488,21 @@ func TestRewardsDisabledPaysNothing(t *testing.T) {
 		t.Fatalf("balance = %d", w.Balance)
 	}
 }
+
+func TestWelcomeCoinsAreGrantedOncePerOrganization(t *testing.T) {
+	f := newFixture(t)
+	f.svc.WelcomeCoins = 1000
+	for i := 0; i < 3; i++ { // repeated opens never pay twice
+		st, err := f.svc.State(f.ctx, "org-a")
+		if err != nil || st.Wallet.Balance != 1000 {
+			t.Fatalf("open %d: %v balance %d, want 1000", i, err, st.Wallet.Balance)
+		}
+	}
+	if st, _ := f.svc.State(f.ctx, "org-b"); st.Wallet.Balance != 1000 {
+		t.Fatalf("a second organization gets its own welcome grant, got %d", st.Wallet.Balance)
+	}
+	f.svc.WelcomeCoins = 0
+	if st, _ := f.svc.State(f.ctx, "org-c"); st.Wallet.Balance != 0 {
+		t.Fatalf("0 turns the grant off, got %d", st.Wallet.Balance)
+	}
+}

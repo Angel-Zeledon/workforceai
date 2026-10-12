@@ -1,0 +1,828 @@
+{
+  "id": "api-reference",
+  "slug": {
+    "es": "referencia-api",
+    "en": "api-reference"
+  },
+  "related": [
+    "architecture",
+    "auth-and-tenancy",
+    "configuration"
+  ],
+  "es": {
+    "title": "Referencia de la API",
+    "metaTitle": "Referencia de la API REST y WebSocket",
+    "description": "Autenticación, formato de errores y rutas de /api/v1: peticiones, tareas, aprobaciones, agentes, proyectos, skills, tienda, drive y WebSocket.",
+    "intro": "El backend en Go expone una API REST bajo /api/v1 y un WebSocket en /ws. Esta referencia resume la autenticación, las convenciones y las rutas principales tal como están registradas en el router; los cuerpos de ejemplo son representativos y no exhaustivos.",
+    "sections": [
+      {
+        "h": "URL base y versionado",
+        "paras": [
+          "Todas las rutas REST cuelgan de /api/v1; la versión forma parte de la ruta. El WebSocket (/ws) y el health check raíz (/healthz) están fuera de ese prefijo. Los cuerpos son JSON (UTF-8), salvo las subidas de archivos del drive, que usan el cuerpo crudo.",
+          "Con AUTH_ENABLED=false (modo demo) no se exige autenticación y todo opera sobre una organización fija. Con autenticación activa, todas las rutas excepto /healthz, /auth/* y el callback OAuth exigen un token. Los ejemplos usan localhost:8080; sustituye por tu host."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Base URL (local default)\nhttp://localhost:8080/api/v1\n# WebSocket (outside /api/v1)\nws://localhost:8080/ws\n\n# Health (no auth)\ncurl http://localhost:8080/healthz\n# {\"status\":\"ok\",\"runtime\":\"up\",\"runtime_mode\":\"simulation\"}"
+        }
+      },
+      {
+        "h": "Autenticación",
+        "paras": [
+          "El inicio de sesión devuelve un token de acceso (JWT, 15 minutos por defecto) que se envía en la cabecera Authorization: Bearer. El token de refresco nunca va en el cuerpo JSON: se guarda en una cookie HttpOnly y SameSite=Strict llamada wfai_refresh, limitada a la ruta /api/v1/auth. Los endpoints que usan esa cookie (refresh y logout) exigen además la cabecera X-WFAI-CSRF.",
+          "La organización sale del token, nunca de un parámetro. Los roles son owner, admin, member y viewer, y cada ruta exige un permiso concreto. El WebSocket acepta el token como ?access_token=."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Log in: the access token is in the body, the refresh token in an HttpOnly cookie\ncurl -i -X POST http://localhost:8080/api/v1/auth/login \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"email\":\"you@example.com\",\"password\":\"<password>\"}'\n# {\"token_type\":\"Bearer\",\"access_token\":\"<token>\",\"expires_in\":900,\n#  \"expires_at\":\"...\",\"user\":{...},\"org_id\":\"<org id>\",\"role\":\"owner\"}\n\n# Call the API with the access token\ncurl http://localhost:8080/api/v1/agents -H 'Authorization: Bearer <token>'\n\n# Renew the session (cookie + CSRF header)\ncurl -X POST http://localhost:8080/api/v1/auth/refresh \\\n  -b 'wfai_refresh=<cookie value>' -H 'X-WFAI-CSRF: 1'"
+        },
+        "table": {
+          "head": [
+            "Método y ruta",
+            "Descripción"
+          ],
+          "rows": [
+            [
+              "POST /auth/register",
+              "Crea organización y usuario owner. Cuerpo: email, password, name, org_name."
+            ],
+            [
+              "POST /auth/login",
+              "Inicia sesión. Cuerpo: email, password, org_id opcional."
+            ],
+            [
+              "POST /auth/refresh",
+              "Rota el refresh token (cookie + X-WFAI-CSRF) y devuelve un nuevo token de acceso."
+            ],
+            [
+              "POST /auth/logout",
+              "Cierra la sesión actual y borra la cookie. Responde 204."
+            ],
+            [
+              "POST /auth/logout-all",
+              "Revoca todas las sesiones del usuario."
+            ],
+            [
+              "POST /auth/switch-org",
+              "Nueva sesión en otra organización. Cuerpo: org_id."
+            ],
+            [
+              "GET /auth/me, GET /auth/config",
+              "Usuario actual; configuración pública (si hay login)."
+            ],
+            [
+              "GET/POST /auth/members, PATCH/DELETE /auth/members/{id}",
+              "Listar, agregar, cambiar el rol o quitar miembros."
+            ],
+            [
+              "GET/POST /invitations, DELETE /invitations/{id}",
+              "Gestión de invitaciones. POST /auth/invitations/accept las acepta."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Errores, límites y convenciones",
+        "paras": [
+          "Los errores devuelven JSON con un código HTTP significativo. La mayoría de las rutas usan {\"error\": \"mensaje\"}; las de conexiones y controles agregan un campo code estable; las rutas de autenticación y las fallas de permisos usan {\"error\": {\"code\", \"message\"}}. Un 500 no expone el detalle interno.",
+          "No hay paginación global. Cada listado define sus propios parámetros: GET /activity acepta limit (100 por defecto, máximo 1000); GET /conversations/{id}/messages acepta limit (máximo 200) y before, y publica las cabeceras X-Has-More y X-Next-Before; los chats y el historial usan limit y offset; la memoria acepta limit y q. Los cuerpos JSON están limitados a 1 MiB por defecto (413 al excederlo). Las rutas de autenticación tienen límites de tasa por IP (429)."
+        ],
+        "table": {
+          "head": [
+            "Código",
+            "Significado"
+          ],
+          "rows": [
+            [
+              "400",
+              "Cuerpo o parámetros inválidos."
+            ],
+            [
+              "401",
+              "Falta el token o es inválido o expiró."
+            ],
+            [
+              "403",
+              "El rol no tiene el permiso, o falla la verificación CSRF."
+            ],
+            [
+              "404",
+              "Recurso inexistente en tu organización."
+            ],
+            [
+              "409",
+              "Conflicto de estado (por ejemplo, una versión esperada distinta)."
+            ],
+            [
+              "413",
+              "Cuerpo demasiado grande."
+            ],
+            [
+              "429",
+              "Límite de tasa de autenticación."
+            ]
+          ]
+        },
+        "tip": "POST /messages, POST /shop/purchases y otras operaciones con efectos aceptan Idempotency-Key; un reintento devuelve el primer resultado con la cabecera Idempotent-Replayed."
+      },
+      {
+        "h": "Peticiones, chat, tareas y reportes",
+        "paras": [
+          "POST /requests es asíncrono: responde 202 con el request_id y el avance llega por WebSocket. budget_cap_usd es opcional y fija un tope duro para esa petición."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Submit a request (asynchronous: 202 + id, progress arrives over WebSocket)\ncurl -X POST http://localhost:8080/api/v1/requests \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{\"text\":\"Prepare a $50,000 proposal for ACME\",\"budget_cap_usd\":5}'\n# 202 {\"request_id\":\"<id>\"}\n\n# Chat message to the office (idempotent with the header)\ncurl -X POST http://localhost:8080/api/v1/messages \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -H 'Idempotency-Key: 7d1e...' \\\n  -d '{\"conversation\":\"office\",\"text\":\"Who is free today?\"}'\n# 202 turn object; replies arrive as chat.message events"
+        },
+        "table": {
+          "head": [
+            "Método y ruta",
+            "Descripción"
+          ],
+          "rows": [
+            [
+              "POST /requests",
+              "Crea una petición. Cuerpo: text, budget_cap_usd opcional."
+            ],
+            [
+              "GET /requests, GET /requests/{id}",
+              "Listar y ver el detalle (tareas y costo)."
+            ],
+            [
+              "GET /requests/{id}/cost, /estimate",
+              "Costo acumulado y estimación previa."
+            ],
+            [
+              "POST /requests/{id}/confirm, PUT /requests/{id}/budget",
+              "Confirmar una estimación; cambiar el tope."
+            ],
+            [
+              "POST /messages",
+              "Mensaje de chat. Cuerpo: conversation (office por defecto), text, attachments."
+            ],
+            [
+              "GET /conversations, GET /conversations/{id}/messages",
+              "Conversaciones y mensajes."
+            ],
+            [
+              "POST /conversations/{id}/messages",
+              "Publicar en una conversación concreta."
+            ],
+            [
+              "GET /tasks, GET /tasks/{id}",
+              "Tareas; filtros agent_id y status."
+            ],
+            [
+              "GET /tasks/{id}/intervention, POST /tasks/{id}/steer, /reassign",
+              "Intervenir una tarea en curso."
+            ],
+            [
+              "GET /reports, GET /reports/{id}",
+              "Reportes finales."
+            ],
+            [
+              "GET /activity, GET /metrics, GET /budget",
+              "Actividad, métricas y presupuesto."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Aprobaciones y agentes",
+        "paras": [
+          "Decidir una aprobación es una acción privilegiada: solo admin u owner. Con aprobar se puede pedir además un permiso permanente (always_allow) para acciones internas y reversibles. Una aprobación puede exigir dos personas distintas."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# List pending approvals\ncurl 'http://localhost:8080/api/v1/approvals?status=pending' \\\n  -H 'Authorization: Bearer <token>'\n\n# Approve (admin or owner)\ncurl -X POST http://localhost:8080/api/v1/approvals/<id>/decision \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{\"decision\":\"approve\",\"note\":\"ok\"}'\n# 200 the updated approval; \"decision\" is \"approve\" or \"reject\""
+        },
+        "table": {
+          "head": [
+            "Método y ruta",
+            "Descripción"
+          ],
+          "rows": [
+            [
+              "GET /approvals",
+              "Lista; filtro status (pending, approved, rejected)."
+            ],
+            [
+              "POST /approvals/{id}/decision",
+              "Cuerpo: decision (approve o reject), note, always_allow, always_allow_any_agent, always_allow_days."
+            ],
+            [
+              "POST /approvals/batch",
+              "Decidir varias aprobaciones de un proyecto."
+            ],
+            [
+              "GET /agents, GET /agents/{id}, GET /agents/{id}/detail",
+              "Agentes: estado, herramientas, permisos y autonomía."
+            ],
+            [
+              "GET/PUT /agents/{id}/profile, GET /agents/{id}/traces",
+              "Perfil de trabajo versionado y trazas de razonamiento."
+            ],
+            [
+              "GET /agents/{id}/memory, DELETE /agents/{id}/memory/{docId}",
+              "Memoria a largo plazo."
+            ],
+            [
+              "GET /role-templates, POST /agents/from-template",
+              "Contratar un agente desde una plantilla."
+            ],
+            [
+              "PUT /agents/{id}/budget, POST /agents/{id}/control",
+              "Presupuesto y pausa o reanudación."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Proyectos y skills",
+        "paras": [
+          "Un proyecto es un plan de varios nodos con presupuesto. El ciclo es crear un borrador, editar el plan, estimar y validar, y lanzar. Las skills son instrucciones reutilizables, versionadas y con revisión antes de quedar activas."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Create a draft project, then launch it\ncurl -X POST http://localhost:8080/api/v1/projects/draft \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{ ...project fields... }'\ncurl -X POST http://localhost:8080/api/v1/projects/<id>/launch \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{}'"
+        },
+        "table": {
+          "head": [
+            "Método y ruta",
+            "Descripción"
+          ],
+          "rows": [
+            [
+              "GET /projects, POST /projects/draft, POST /projects/from-template",
+              "Listar y crear borradores."
+            ],
+            [
+              "GET /projects/{id}, /snapshot, /health, /approvals",
+              "Estado, salud y aprobaciones del proyecto."
+            ],
+            [
+              "PATCH /projects/{id}/plan, POST /estimate, /validate, /launch",
+              "Editar, estimar, validar y lanzar."
+            ],
+            [
+              "POST /projects/{id}/control, PUT /projects/{id}/budget",
+              "Controlar la ejecución y fijar el presupuesto."
+            ],
+            [
+              "POST /projects/{id}/nodes/{nodeId}/retry, /skip, /replan",
+              "Recuperar un nodo."
+            ],
+            [
+              "GET/POST /project-templates, GET/PUT/DELETE /project-templates/{id}",
+              "Plantillas con versiones."
+            ],
+            [
+              "GET/POST /skills, GET/PUT /skills/{id}",
+              "Catálogo y edición de skills."
+            ],
+            [
+              "POST /skills/{id}/submit, /review, /disable",
+              "Flujo de revisión; review y disable requieren permiso de revisor."
+            ],
+            [
+              "GET/PUT/DELETE /agents/{id}/skills[/{skillId}]",
+              "Asignar skills a un agente."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Tienda, recompensas y drive",
+        "paras": [
+          "Las tareas y proyectos terminados pagan monedas una sola vez. La tienda gasta monedas de forma atómica y auditada. El drive guarda los archivos de la organización con versiones, papelera y permisos."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "curl http://localhost:8080/api/v1/rewards/wallet -H 'Authorization: Bearer <token>'\ncurl -X POST http://localhost:8080/api/v1/shop/purchases \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{\"item_id\":\"<item id>\",\"idempotency_key\":\"<unique key>\"}'"
+        },
+        "table": {
+          "head": [
+            "Método y ruta",
+            "Descripción"
+          ],
+          "rows": [
+            [
+              "GET /rewards/wallet, /rewards/ledger, /rewards/rules",
+              "Saldo, movimientos y reglas de pago."
+            ],
+            [
+              "GET /shop/catalog, GET /shop/state",
+              "Catálogo y estado (inventario, equipado)."
+            ],
+            [
+              "POST /shop/purchases",
+              "Comprar. Cuerpo: item_id, idempotency_key."
+            ],
+            [
+              "PUT/DELETE /agents/{id}/equipment/{slot}",
+              "Equipar o quitar un objeto del personaje."
+            ],
+            [
+              "PUT/DELETE /office/items/{slot}",
+              "Colocar o retirar un objeto de la oficina."
+            ],
+            [
+              "GET /drive/list, /drive/search, /drive/usage, /drive/trash",
+              "Explorar el drive."
+            ],
+            [
+              "PUT /drive/upload?path=",
+              "Subir o versionar un archivo (cuerpo crudo)."
+            ],
+            [
+              "GET /drive/files/{id}, /content, /text, /preview, /versions, /diff",
+              "Leer un archivo y su historial."
+            ],
+            [
+              "POST /drive/folders, /drive/files/{id}/move, DELETE /drive/files/{id}",
+              "Organizar y borrar (a la papelera)."
+            ]
+          ]
+        },
+        "tip": "El código de drive.go contiene más rutas (restaurar versiones, etiquetas, permisos en /drive/grants); la lista completa está en el router."
+      },
+      {
+        "h": "Conexiones, controles y ajustes",
+        "paras": [
+          "Las conexiones guardan credenciales cifradas de servicios externos; sin CONNECTIONS_KEK no se pueden guardar credenciales reales. Los controles permiten pausar agentes, poner la organización en solo lectura o activar un kill switch."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Pause or resume one agent\ncurl -X POST http://localhost:8080/api/v1/agents/<id>/control \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{\"action\":\"pause\",\"drain\":\"graceful\",\"reason\":\"maintenance\"}'\n\n# Organization kill switch (level: none | freeze | lockdown)\ncurl -X POST http://localhost:8080/api/v1/org/controls/kill-switch \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{\"level\":\"freeze\",\"reason\":\"incident\"}'"
+        },
+        "table": {
+          "head": [
+            "Método y ruta",
+            "Descripción"
+          ],
+          "rows": [
+            [
+              "GET /connection-providers, GET/POST /connections",
+              "Proveedores disponibles y conexiones."
+            ],
+            [
+              "PATCH /connections/{id}, PUT /connections/{id}/credential",
+              "Editar y guardar la credencial (solo escritura)."
+            ],
+            [
+              "POST /connections/{id}/oauth/start, /test",
+              "Iniciar OAuth y probar la conexión."
+            ],
+            [
+              "GET /connections/oauth/callback",
+              "Callback público de OAuth, verificado por un estado de un solo uso."
+            ],
+            [
+              "GET/PUT /org/controls, POST /org/controls/kill-switch, /release",
+              "Modo solo lectura y kill switch (none, freeze, lockdown)."
+            ],
+            [
+              "GET/PUT /org/operating-hours, /org/anomaly-settings",
+              "Horario operativo y ajustes de anomalías."
+            ],
+            [
+              "GET/PUT /org/settings, GET /onboarding, POST /onboarding",
+              "Ajustes de la organización y onboarding."
+            ],
+            [
+              "GET/PUT /settings/llm, PUT /settings/llm/providers/{provider}",
+              "Credenciales propias de modelo (owner o admin)."
+            ],
+            [
+              "GET/PUT /settings/model-policy, /settings/code-execution",
+              "Política de modelos y ejecución de código."
+            ],
+            [
+              "GET /audit, /audit/export, /audit/verify",
+              "Auditoría encadenada, exportación y verificación."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "WebSocket y health",
+        "paras": [
+          "GET /ws abre el canal de eventos de la organización. Al conectar envía hello con la lista de agentes y luego cada evento de dominio. El cliente solo lee: el servidor ignora los mensajes que recibe, no hay suscripciones por tema ni replay. Si el token expira, el servidor cierra con el código 4401 y el cliente debe reconectar con un token nuevo.",
+          "GET /healthz y GET /api/v1/healthz no requieren autenticación. Devuelven status, runtime (up o down) y, si el runtime responde, runtime_mode (simulation o live)."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Browsers cannot set headers on a WebSocket: pass the token in the query string\nwscat -c 'ws://localhost:8080/ws?access_token=<token>'\n\n< {\"id\":\"...\",\"type\":\"hello\",\"ts\":\"...\",\"org_id\":\"<org id>\",\"payload\":{\"agents\":[...]}}\n< {\"id\":\"...\",\"type\":\"agent.state_changed\",\"org_id\":\"<org id>\",\"agent_id\":\"sales\",\"payload\":{...}}\n\n# Frame shape\n{ \"id\": \"<uuid>\", \"type\": \"<event.type>\", \"ts\": \"<RFC 3339>\",\n  \"org_id\": \"<org id>\", \"agent_id\": \"<optional>\", \"payload\": { } }"
+        }
+      }
+    ]
+  },
+  "en": {
+    "title": "API Reference",
+    "metaTitle": "REST and WebSocket API reference",
+    "description": "Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.",
+    "intro": "The Go backend exposes a REST API under /api/v1 and a WebSocket at /ws. This reference summarizes authentication, conventions and the main routes as registered in the router; example bodies are representative, not exhaustive.",
+    "sections": [
+      {
+        "h": "Base URL and versioning",
+        "paras": [
+          "All REST routes hang under /api/v1; the version is part of the path. The WebSocket (/ws) and the root health check (/healthz) live outside that prefix. Bodies are JSON (UTF-8), except drive uploads, which use the raw body.",
+          "With AUTH_ENABLED=false (demo mode) no authentication is required and everything runs on a fixed organization. With authentication on, every route except /healthz, /auth/* and the OAuth callback requires a token. Examples use localhost:8080; substitute your host."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Base URL (local default)\nhttp://localhost:8080/api/v1\n# WebSocket (outside /api/v1)\nws://localhost:8080/ws\n\n# Health (no auth)\ncurl http://localhost:8080/healthz\n# {\"status\":\"ok\",\"runtime\":\"up\",\"runtime_mode\":\"simulation\"}"
+        }
+      },
+      {
+        "h": "Authentication",
+        "paras": [
+          "Login returns an access token (a JWT, 15 minutes by default) sent in the Authorization: Bearer header. The refresh token never appears in the JSON body: it lives in an HttpOnly, SameSite=Strict cookie named wfai_refresh, scoped to the /api/v1/auth path. Endpoints that use that cookie (refresh and logout) also require the X-WFAI-CSRF header.",
+          "The organization comes from the token, never from a parameter. Roles are owner, admin, member and viewer, and each route requires a specific permission. The WebSocket accepts the token as ?access_token=."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Log in: the access token is in the body, the refresh token in an HttpOnly cookie\ncurl -i -X POST http://localhost:8080/api/v1/auth/login \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"email\":\"you@example.com\",\"password\":\"<password>\"}'\n# {\"token_type\":\"Bearer\",\"access_token\":\"<token>\",\"expires_in\":900,\n#  \"expires_at\":\"...\",\"user\":{...},\"org_id\":\"<org id>\",\"role\":\"owner\"}\n\n# Call the API with the access token\ncurl http://localhost:8080/api/v1/agents -H 'Authorization: Bearer <token>'\n\n# Renew the session (cookie + CSRF header)\ncurl -X POST http://localhost:8080/api/v1/auth/refresh \\\n  -b 'wfai_refresh=<cookie value>' -H 'X-WFAI-CSRF: 1'"
+        },
+        "table": {
+          "head": [
+            "Method and path",
+            "Description"
+          ],
+          "rows": [
+            [
+              "POST /auth/register",
+              "Creates an organization and an owner user. Body: email, password, name, org_name."
+            ],
+            [
+              "POST /auth/login",
+              "Signs in. Body: email, password, optional org_id."
+            ],
+            [
+              "POST /auth/refresh",
+              "Rotates the refresh token (cookie + X-WFAI-CSRF) and returns a new access token."
+            ],
+            [
+              "POST /auth/logout",
+              "Ends the current session and clears the cookie. Returns 204."
+            ],
+            [
+              "POST /auth/logout-all",
+              "Revokes all of the user's sessions."
+            ],
+            [
+              "POST /auth/switch-org",
+              "New session in another organization. Body: org_id."
+            ],
+            [
+              "GET /auth/me, GET /auth/config",
+              "Current user; public configuration (whether login is on)."
+            ],
+            [
+              "GET/POST /auth/members, PATCH/DELETE /auth/members/{id}",
+              "List, add, change the role of, or remove members."
+            ],
+            [
+              "GET/POST /invitations, DELETE /invitations/{id}",
+              "Invitation management. POST /auth/invitations/accept accepts them."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Errors, limits and conventions",
+        "paras": [
+          "Errors return JSON with a meaningful HTTP status. Most routes use {\"error\": \"message\"}; connections and controls add a stable code field; authentication routes and permission failures use {\"error\": {\"code\", \"message\"}}. A 500 does not expose internal detail.",
+          "There is no global pagination. Each listing defines its own parameters: GET /activity accepts limit (default 100, maximum 1000); GET /conversations/{id}/messages accepts limit (maximum 200) and before, and sets the X-Has-More and X-Next-Before headers; chats and history use limit and offset; memory accepts limit and q. JSON bodies are capped at 1 MiB by default (413 when exceeded). Authentication routes have per-IP rate limits (429)."
+        ],
+        "table": {
+          "head": [
+            "Code",
+            "Meaning"
+          ],
+          "rows": [
+            [
+              "400",
+              "Invalid body or parameters."
+            ],
+            [
+              "401",
+              "Missing, invalid or expired token."
+            ],
+            [
+              "403",
+              "The role lacks the permission, or the CSRF check failed."
+            ],
+            [
+              "404",
+              "Resource does not exist in your organization."
+            ],
+            [
+              "409",
+              "State conflict (for example, a different expected version)."
+            ],
+            [
+              "413",
+              "Body too large."
+            ],
+            [
+              "429",
+              "Authentication rate limit."
+            ]
+          ]
+        },
+        "tip": "POST /messages, POST /shop/purchases and other side-effecting operations accept Idempotency-Key; a retry returns the first result with the Idempotent-Replayed header."
+      },
+      {
+        "h": "Requests, chat, tasks and reports",
+        "paras": [
+          "POST /requests is asynchronous: it answers 202 with the request_id and progress arrives over the WebSocket. budget_cap_usd is optional and sets a hard cap for that request."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Submit a request (asynchronous: 202 + id, progress arrives over WebSocket)\ncurl -X POST http://localhost:8080/api/v1/requests \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{\"text\":\"Prepare a $50,000 proposal for ACME\",\"budget_cap_usd\":5}'\n# 202 {\"request_id\":\"<id>\"}\n\n# Chat message to the office (idempotent with the header)\ncurl -X POST http://localhost:8080/api/v1/messages \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -H 'Idempotency-Key: 7d1e...' \\\n  -d '{\"conversation\":\"office\",\"text\":\"Who is free today?\"}'\n# 202 turn object; replies arrive as chat.message events"
+        },
+        "table": {
+          "head": [
+            "Method and path",
+            "Description"
+          ],
+          "rows": [
+            [
+              "POST /requests",
+              "Creates a request. Body: text, optional budget_cap_usd."
+            ],
+            [
+              "GET /requests, GET /requests/{id}",
+              "List and detail (tasks and cost)."
+            ],
+            [
+              "GET /requests/{id}/cost, /estimate",
+              "Accumulated cost and upfront estimate."
+            ],
+            [
+              "POST /requests/{id}/confirm, PUT /requests/{id}/budget",
+              "Confirm an estimate; change the cap."
+            ],
+            [
+              "POST /messages",
+              "Chat message. Body: conversation (office by default), text, attachments."
+            ],
+            [
+              "GET /conversations, GET /conversations/{id}/messages",
+              "Conversations and messages."
+            ],
+            [
+              "POST /conversations/{id}/messages",
+              "Post to a specific conversation."
+            ],
+            [
+              "GET /tasks, GET /tasks/{id}",
+              "Tasks; filters agent_id and status."
+            ],
+            [
+              "GET /tasks/{id}/intervention, POST /tasks/{id}/steer, /reassign",
+              "Intervene in a running task."
+            ],
+            [
+              "GET /reports, GET /reports/{id}",
+              "Final reports."
+            ],
+            [
+              "GET /activity, GET /metrics, GET /budget",
+              "Activity, metrics and budget."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Approvals and agents",
+        "paras": [
+          "Deciding an approval is a privileged action: admin or owner only. When approving, you can also request a standing permission (always_allow) for internal, reversible actions. An approval can require two distinct people."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# List pending approvals\ncurl 'http://localhost:8080/api/v1/approvals?status=pending' \\\n  -H 'Authorization: Bearer <token>'\n\n# Approve (admin or owner)\ncurl -X POST http://localhost:8080/api/v1/approvals/<id>/decision \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{\"decision\":\"approve\",\"note\":\"ok\"}'\n# 200 the updated approval; \"decision\" is \"approve\" or \"reject\""
+        },
+        "table": {
+          "head": [
+            "Method and path",
+            "Description"
+          ],
+          "rows": [
+            [
+              "GET /approvals",
+              "List; status filter (pending, approved, rejected)."
+            ],
+            [
+              "POST /approvals/{id}/decision",
+              "Body: decision (approve or reject), note, always_allow, always_allow_any_agent, always_allow_days."
+            ],
+            [
+              "POST /approvals/batch",
+              "Decide several approvals of a project."
+            ],
+            [
+              "GET /agents, GET /agents/{id}, GET /agents/{id}/detail",
+              "Agents: state, tools, permissions and autonomy."
+            ],
+            [
+              "GET/PUT /agents/{id}/profile, GET /agents/{id}/traces",
+              "Versioned work profile and reasoning traces."
+            ],
+            [
+              "GET /agents/{id}/memory, DELETE /agents/{id}/memory/{docId}",
+              "Long-term memory."
+            ],
+            [
+              "GET /role-templates, POST /agents/from-template",
+              "Hire an agent from a template."
+            ],
+            [
+              "PUT /agents/{id}/budget, POST /agents/{id}/control",
+              "Budget and pause or resume."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Projects and skills",
+        "paras": [
+          "A project is a multi-node plan with a budget. The cycle is create a draft, edit the plan, estimate and validate, then launch. Skills are reusable instructions, versioned and reviewed before they become active."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Create a draft project, then launch it\ncurl -X POST http://localhost:8080/api/v1/projects/draft \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{ ...project fields... }'\ncurl -X POST http://localhost:8080/api/v1/projects/<id>/launch \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{}'"
+        },
+        "table": {
+          "head": [
+            "Method and path",
+            "Description"
+          ],
+          "rows": [
+            [
+              "GET /projects, POST /projects/draft, POST /projects/from-template",
+              "List and create drafts."
+            ],
+            [
+              "GET /projects/{id}, /snapshot, /health, /approvals",
+              "Project state, health and approvals."
+            ],
+            [
+              "PATCH /projects/{id}/plan, POST /estimate, /validate, /launch",
+              "Edit, estimate, validate and launch."
+            ],
+            [
+              "POST /projects/{id}/control, PUT /projects/{id}/budget",
+              "Control execution and set the budget."
+            ],
+            [
+              "POST /projects/{id}/nodes/{nodeId}/retry, /skip, /replan",
+              "Recover a node."
+            ],
+            [
+              "GET/POST /project-templates, GET/PUT/DELETE /project-templates/{id}",
+              "Templates with versions."
+            ],
+            [
+              "GET/POST /skills, GET/PUT /skills/{id}",
+              "Skill catalog and editing."
+            ],
+            [
+              "POST /skills/{id}/submit, /review, /disable",
+              "Review workflow; review and disable need the reviewer permission."
+            ],
+            [
+              "GET/PUT/DELETE /agents/{id}/skills[/{skillId}]",
+              "Assign skills to an agent."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Shop, rewards and drive",
+        "paras": [
+          "Finished tasks and projects pay coins exactly once. The shop spends coins atomically and with an audit entry. The drive stores the organization's files with versions, a trash and grants."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "curl http://localhost:8080/api/v1/rewards/wallet -H 'Authorization: Bearer <token>'\ncurl -X POST http://localhost:8080/api/v1/shop/purchases \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{\"item_id\":\"<item id>\",\"idempotency_key\":\"<unique key>\"}'"
+        },
+        "table": {
+          "head": [
+            "Method and path",
+            "Description"
+          ],
+          "rows": [
+            [
+              "GET /rewards/wallet, /rewards/ledger, /rewards/rules",
+              "Balance, ledger and payout rules."
+            ],
+            [
+              "GET /shop/catalog, GET /shop/state",
+              "Catalog and state (inventory, equipped)."
+            ],
+            [
+              "POST /shop/purchases",
+              "Buy. Body: item_id, idempotency_key."
+            ],
+            [
+              "PUT/DELETE /agents/{id}/equipment/{slot}",
+              "Equip or remove a character item."
+            ],
+            [
+              "PUT/DELETE /office/items/{slot}",
+              "Place or remove an office item."
+            ],
+            [
+              "GET /drive/list, /drive/search, /drive/usage, /drive/trash",
+              "Browse the drive."
+            ],
+            [
+              "PUT /drive/upload?path=",
+              "Upload or version a file (raw body)."
+            ],
+            [
+              "GET /drive/files/{id}, /content, /text, /preview, /versions, /diff",
+              "Read a file and its history."
+            ],
+            [
+              "POST /drive/folders, /drive/files/{id}/move, DELETE /drive/files/{id}",
+              "Organize and delete (to the trash)."
+            ]
+          ]
+        },
+        "tip": "The drive handlers register more routes (restore versions, tags, grants under /drive/grants); the router has the full list."
+      },
+      {
+        "h": "Connections, controls and settings",
+        "paras": [
+          "Connections store encrypted credentials for external services; without CONNECTIONS_KEK no real credentials can be saved. Controls let you pause agents, put the organization in read-only mode or trigger a kill switch."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Pause or resume one agent\ncurl -X POST http://localhost:8080/api/v1/agents/<id>/control \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{\"action\":\"pause\",\"drain\":\"graceful\",\"reason\":\"maintenance\"}'\n\n# Organization kill switch (level: none | freeze | lockdown)\ncurl -X POST http://localhost:8080/api/v1/org/controls/kill-switch \\\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\\n  -d '{\"level\":\"freeze\",\"reason\":\"incident\"}'"
+        },
+        "table": {
+          "head": [
+            "Method and path",
+            "Description"
+          ],
+          "rows": [
+            [
+              "GET /connection-providers, GET/POST /connections",
+              "Available providers and connections."
+            ],
+            [
+              "PATCH /connections/{id}, PUT /connections/{id}/credential",
+              "Edit and store the credential (write-only)."
+            ],
+            [
+              "POST /connections/{id}/oauth/start, /test",
+              "Start OAuth and test the connection."
+            ],
+            [
+              "GET /connections/oauth/callback",
+              "Public OAuth callback, verified by a single-use state."
+            ],
+            [
+              "GET/PUT /org/controls, POST /org/controls/kill-switch, /release",
+              "Read-only mode and kill switch (none, freeze, lockdown)."
+            ],
+            [
+              "GET/PUT /org/operating-hours, /org/anomaly-settings",
+              "Operating hours and anomaly settings."
+            ],
+            [
+              "GET/PUT /org/settings, GET /onboarding, POST /onboarding",
+              "Organization settings and onboarding."
+            ],
+            [
+              "GET/PUT /settings/llm, PUT /settings/llm/providers/{provider}",
+              "Bring-your-own model credentials (owner or admin)."
+            ],
+            [
+              "GET/PUT /settings/model-policy, /settings/code-execution",
+              "Model policy and code execution."
+            ],
+            [
+              "GET /audit, /audit/export, /audit/verify",
+              "Chained audit trail, export and verification."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "WebSocket and health",
+        "paras": [
+          "GET /ws opens the organization's event channel. On connect it sends hello with the agent list and then every domain event. The client only reads: the server ignores incoming messages, and there are no topic subscriptions or replay. If the token expires, the server closes with code 4401 and the client must reconnect with a fresh token.",
+          "GET /healthz and GET /api/v1/healthz need no authentication. They return status, runtime (up or down) and, when the runtime answers, runtime_mode (simulation or live)."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Browsers cannot set headers on a WebSocket: pass the token in the query string\nwscat -c 'ws://localhost:8080/ws?access_token=<token>'\n\n< {\"id\":\"...\",\"type\":\"hello\",\"ts\":\"...\",\"org_id\":\"<org id>\",\"payload\":{\"agents\":[...]}}\n< {\"id\":\"...\",\"type\":\"agent.state_changed\",\"org_id\":\"<org id>\",\"agent_id\":\"sales\",\"payload\":{...}}\n\n# Frame shape\n{ \"id\": \"<uuid>\", \"type\": \"<event.type>\", \"ts\": \"<RFC 3339>\",\n  \"org_id\": \"<org id>\", \"agent_id\": \"<optional>\", \"payload\": { } }"
+        }
+      }
+    ]
+  }
+}

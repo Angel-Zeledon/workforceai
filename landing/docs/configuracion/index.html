@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Variables de entorno: backend, runtime y frontend</title>
+  <meta name="description" content="Referencia de variables de entorno de AI Workforce OS: servidor, base de datos, autenticación, presupuesto, recompensas, proveedores de modelo y build.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/docs/configuracion/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/configuracion/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/configuration/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/configuracion/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:title" content="Variables de entorno: backend, runtime y frontend">
+  <meta property="og:description" content="Referencia de variables de entorno de AI Workforce OS: servidor, base de datos, autenticación, presupuesto, recompensas, proveedores de modelo y build.">
+  <meta property="og:url" content="https://workforceai.es/docs/configuracion/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Variables de entorno: backend, runtime y frontend">
+  <meta name="twitter:description" content="Referencia de variables de entorno de AI Workforce OS: servidor, base de datos, autenticación, presupuesto, recompensas, proveedores de modelo y build.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Documentación","item":"https://workforceai.es/docs/"},{"@type":"ListItem","position":3,"name":"Referencia de configuración","item":"https://workforceai.es/docs/configuracion/"}]},{"@type":"TechArticle","headline":"Referencia de configuración","description":"Referencia de variables de entorno de AI Workforce OS: servidor, base de datos, autenticación, presupuesto, recompensas, proveedores de modelo y build.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/docs/configuracion/","url":"https://workforceai.es/docs/configuracion/","dateModified":"2026-10-12","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="/">Inicio</a>
+        <a href="/docs/">Documentación</a>
+        <a href="/guia/">Guía de uso</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Idioma">
+          <a href="/docs/configuracion/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/docs/configuration/" hreflang="en" lang="en" >EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap wide">
+      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li><a href="/docs/">Documentación</a></li><li aria-current="page">Referencia de configuración</li></ol></nav>
+      <article>
+        <h1>Referencia de configuración</h1>
+        <p class="lead">Toda la configuración se lee del entorno. El backend (Go) carga y valida sus variables al arrancar y se niega a iniciar con valores incoherentes; el runtime (Python) lee las suyas al usarlas; el frontend solo tiene argumentos de build. Los valores por defecto de esta página provienen del código.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">Cómo se carga la configuración</a></li><li><a href="#s2">Servidor y base de datos</a></li><li><a href="#s3">Autenticación, CORS y proxy</a></li><li><a href="#s4">Presupuesto, costo y límites de ejecución</a></li><li><a href="#s5">Recompensas y monedas</a></li><li><a href="#s6">Runtime: proveedores de modelo y claves</a></li><li><a href="#s7">Conexiones, correo, sandbox y almacenamiento</a></li><li><a href="#s8">Límites de tasa</a></li><li><a href="#s9">Frontend: argumentos de build</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">Cómo se carga la configuración</h2>
+        <p>El backend lee el entorno en config.Load y llama a Validate antes de arrancar. Los booleanos aceptan los valores de strconv.ParseBool (true, false, 1, 0...) y un valor inválido aborta el arranque. En las variables numéricas y de duración, un valor ausente, no numérico o menor o igual que cero se sustituye por el valor por defecto. Las duraciones usan la sintaxis de Go (30s, 5m, 1h). Las listas van separadas por comas.</p>
+        <p>En la columna Obligatoria, «Sí» significa que el proceso no arranca sin la variable; «Condicional» indica que depende de otra variable; «No» significa que hay un valor por defecto o que la función se desactiva.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">Servidor y base de datos</h2>
+        
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Variable</th><th scope="col">Por defecto</th><th scope="col">Obligatoria</th><th scope="col">Significado</th></tr></thead><tbody><tr><th scope="row"><code>PORT</code></th><td>8080</td><td>No</td><td>Puerto HTTP del backend.</td></tr><tr><th scope="row"><code>DATABASE_URL</code></th><td>vacío</td><td>Condicional</td><td>URL de Postgres. Sin ella el backend corre en memoria (demos). Obligatoria con AUTH_ENABLED=true.</td></tr><tr><th scope="row"><code>MIGRATE_DATABASE_URL</code></th><td>vacío</td><td>No</td><td>Conexión de propietario (DDL) usada solo para aplicar migraciones. Vacía: se usa DATABASE_URL.</td></tr><tr><th scope="row"><code>DB_APP_ROLE</code></th><td>app_user</td><td>No</td><td>Rol sin privilegios y sin BYPASSRLS al que cambia cada conexión (SET ROLE), base del aislamiento por RLS. Vacío desactiva el cambio.</td></tr><tr><th scope="row"><code>REDIS_URL</code></th><td>vacío</td><td>No</td><td>URL de Redis (contraseña incluida en la URL).</td></tr><tr><th scope="row"><code>RUNTIME_URL</code></th><td>http://localhost:8000</td><td>No</td><td>URL interna del runtime de agentes.</td></tr><tr><th scope="row"><code>RUNTIME_TOKEN</code></th><td>vacío</td><td>No</td><td>Secreto compartido backend-runtime. Se recomienda en producción: el backend avisa si está vacío.</td></tr><tr><th scope="row"><code>READ_HEADER_TIMEOUT</code></th><td>10s</td><td>No</td><td>Tiempo máximo para leer las cabeceras de la petición.</td></tr><tr><th scope="row"><code>READ_TIMEOUT</code></th><td>30s</td><td>No</td><td>Tiempo máximo de lectura de la petición.</td></tr><tr><th scope="row"><code>WRITE_TIMEOUT</code></th><td>60s</td><td>No</td><td>Tiempo máximo por petición REST (no se aplica al WebSocket).</td></tr><tr><th scope="row"><code>IDLE_TIMEOUT</code></th><td>120s</td><td>No</td><td>Tiempo de inactividad de conexiones keep-alive.</td></tr><tr><th scope="row"><code>MAX_BODY_BYTES</code></th><td>1048576</td><td>No</td><td>Tamaño máximo del cuerpo de una petición.</td></tr><tr><th scope="row"><code>APP_ENV</code></th><td>vacío</td><td>No</td><td>Con el valor production, el backend avisa si la clave KEK procede del entorno.</td></tr><tr><th scope="row"><code>TRACE_RETENTION_DAYS</code></th><td>30</td><td>No</td><td>Días que se conservan las trazas de auditoría; se purgan cada hora.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Autenticación, CORS y proxy</h2>
+        <p>Con AUTH_ENABLED=false el backend funciona en modo demo (organización fija, sin login). Con AUTH_ENABLED=true activa JWT, RBAC y aislamiento por organización: el org_id sale del token. Validate rechaza JWT_SECRET de menos de 32 bytes, la ausencia de DATABASE_URL y un asterisco en ALLOWED_ORIGINS.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Variable</th><th scope="col">Por defecto</th><th scope="col">Obligatoria</th><th scope="col">Significado</th></tr></thead><tbody><tr><th scope="row"><code>AUTH_ENABLED</code></th><td>false</td><td>No</td><td>Activa cuentas, JWT, RBAC y multi-tenencia. El compose de producción lo fija a true.</td></tr><tr><th scope="row"><code>JWT_SECRET</code></th><td>vacío</td><td>Condicional</td><td>Clave de firma de los tokens de acceso; mínimo 32 bytes; obligatoria con AUTH_ENABLED=true. Rotarla invalida las sesiones.</td></tr><tr><th scope="row"><code>ALLOWED_ORIGINS</code></th><td>vacío</td><td>Condicional</td><td>Lista de orígenes permitidos para CORS y WebSocket, sin barra final. Vacía sin auth equivale a *; vacía con auth, solo mismo origen. No admite * con auth.</td></tr><tr><th scope="row"><code>AUTH_COOKIE_SECURE</code></th><td>true</td><td>No</td><td>Atributo Secure de la cookie del refresh token. Solo se desactiva en desarrollo local con HTTP plano.</td></tr><tr><th scope="row"><code>AUTH_COOKIE_NAME</code></th><td>vacío</td><td>No</td><td>Nombre de la cookie, para evitar colisiones entre stacks que comparten host.</td></tr><tr><th scope="row"><code>TRUSTED_PROXIES</code></th><td>vacío</td><td>No</td><td>CIDR o IP de proxies cuyo X-Forwarded-For se respeta (por ejemplo para el rate limiting). Un valor inválido aborta el arranque.</td></tr><tr><th scope="row"><code>ENABLE_DEMO_RESET</code></th><td>false</td><td>No</td><td>Registra POST /api/v1/demo/reset. Debe quedar en false en producción.</td></tr><tr><th scope="row"><code>KILL_SWITCH</code></th><td>vacío</td><td>No</td><td>freeze o lockdown: anulación global que ninguna llamada de API puede levantar. Se relee con SIGHUP.</td></tr><tr><th scope="row"><code>UI_BASE_URL</code></th><td>vacío</td><td>No</td><td>URL del frontend a la que se redirige el navegador tras el callback OAuth.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Presupuesto, costo y límites de ejecución</h2>
+        <p>Estas variables controlan el gasto y la concurrencia del orquestador. Para las variables numéricas de tope, 0 desactiva el límite correspondiente. Los valores por defecto de las ventanas de contexto y de calidad son internos del backend y se omiten aquí.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Variable</th><th scope="col">Por defecto</th><th scope="col">Obligatoria</th><th scope="col">Significado</th></tr></thead><tbody><tr><th scope="row"><code>BUDGET_USD</code></th><td>50</td><td>No</td><td>Tope de gasto en USD. El compose de producción lo fija en 25 si no se define.</td></tr><tr><th scope="row"><code>REQUEST_BUDGET_CAP_USD</code></th><td>0</td><td>No</td><td>Tope de gasto por solicitud.</td></tr><tr><th scope="row"><code>AGENT_BUDGET_USD</code></th><td>0</td><td>No</td><td>Tope de gasto por agente.</td></tr><tr><th scope="row"><code>COST_CONFIRM_THRESHOLD_USD</code></th><td>1.0</td><td>No</td><td>Costo estimado por encima del cual se pide confirmación.</td></tr><tr><th scope="row"><code>BUDGET_PAUSE_TIMEOUT</code></th><td>30m</td><td>No</td><td>Tiempo que una solicitud queda pausada por presupuesto.</td></tr><tr><th scope="row"><code>PRICE_IN_PER_M / PRICE_OUT_PER_M</code></th><td>tabla interna</td><td>No</td><td>Fuerzan la tarifa en USD por millón de tokens (entrada y salida) para el cálculo de costo.</td></tr><tr><th scope="row"><code>APPROVAL_ACTIONS</code></th><td>send_proposal,send_contract</td><td>No</td><td>Acciones que exigen aprobación humana.</td></tr><tr><th scope="row"><code>APPROVAL_TIMEOUT</code></th><td>30m</td><td>No</td><td>Tiempo de espera de una aprobación.</td></tr><tr><th scope="row"><code>STANDING_APPROVAL_DAYS</code></th><td>30</td><td>No</td><td>Duración de una aprobación permanente por proyecto (máximo 90).</td></tr><tr><th scope="row"><code>MAX_PARALLEL / MAX_PARALLEL_PER_ORG</code></th><td>4 / 8</td><td>No</td><td>Tareas simultáneas en total y por organización.</td></tr><tr><th scope="row"><code>MAX_PLAN_DEPTH</code></th><td>30</td><td>No</td><td>Profundidad máxima de un plan.</td></tr><tr><th scope="row"><code>TASK_TIMEOUT</code></th><td>120s</td><td>No</td><td>Tiempo máximo de una tarea.</td></tr><tr><th scope="row"><code>TASK_RETRIES / TASK_MAX_ATTEMPTS</code></th><td>3 / 2</td><td>No</td><td>Reintentos y número máximo de intentos por tarea.</td></tr><tr><th scope="row"><code>TASK_RETRY_BACKOFF</code></th><td>2s</td><td>No</td><td>Espera entre reintentos.</td></tr><tr><th scope="row"><code>PROJECT_MAX_NODES / PROJECT_MAX_CHILDREN_PER_GROUP / PROJECT_MAX_ACTIVE</code></th><td>20000 / 200 / 20</td><td>No</td><td>Límites de tamaño de proyectos y de proyectos activos.</td></tr><tr><th scope="row"><code>PLANNER_MAX_PHASES / PLANNER_MAX_TASKS_PER_PHASE / PLANNER_CONCURRENCY</code></th><td>12 / 40 / 3</td><td>No</td><td>Cotas del planificador.</td></tr><tr><th scope="row"><code>EMAIL_HOLD_SECONDS</code></th><td>60</td><td>No</td><td>Ventana de cancelación de un envío de correo. El mínimo obligatorio es 60 s: valores menores se elevan, nunca se respetan.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Recompensas y monedas</h2>
+        <p>El sistema de monedas premia el trabajo completado. REWARDS_RULES permite sustituir las reglas con un JSON cuyos campos coinciden con los nombres de abajo; los valores inválidos se rechazan y el backend vuelve a las reglas por defecto en lugar de aplicar una economía a medias. REWARDS_WELCOME_COINS concede una sola vez monedas de bienvenida a cada organización en su primer uso.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-json">{
+  &quot;enabled&quot;: true,
+  &quot;base&quot;: { &quot;S&quot;: 5, &quot;M&quot;: 10, &quot;L&quot;: 20, &quot;XL&quot;: 40 },
+  &quot;default_complexity&quot;: &quot;M&quot;,
+  &quot;first_try_bonus_pct&quot;: 50,
+  &quot;rework_pct&quot;: 50,
+  &quot;project_base&quot;: 20,
+  &quot;project_per_task&quot;: 2,
+  &quot;project_max&quot;: 100,
+  &quot;min_project_tasks&quot;: 2
+}</code></pre>
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Variable</th><th scope="col">Por defecto</th><th scope="col">Obligatoria</th><th scope="col">Significado</th></tr></thead><tbody><tr><th scope="row"><code>REWARDS_ENABLED</code></th><td>true</td><td>No</td><td>false, 0 u off desactivan por completo la obtención de monedas.</td></tr><tr><th scope="row"><code>REWARDS_RULES</code></th><td>vacío</td><td>No</td><td>JSON con reglas: enabled, base (S, M, L, XL), default_complexity, first_try_bonus_pct, rework_pct, project_base, project_per_task, project_max, min_project_tasks.</td></tr><tr><th scope="row"><code>REWARDS_WELCOME_COINS</code></th><td>1000</td><td>No</td><td>Monedas de bienvenida que recibe cada organización una única vez en su primer uso. 0 lo desactiva.</td></tr></tbody></table></div>
+        <aside class="tip"><b>Consejo.</b> El ejemplo muestra las reglas por defecto. Basta con incluir en REWARDS_RULES los campos que se quieran cambiar.</aside>
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">Runtime: proveedores de modelo y claves</h2>
+        <p>El runtime exige al menos un proveedor configurado, salvo con SIMULATION=true. Soporta deepseek, anthropic y un endpoint compatible con OpenAI (custom). Ante error, timeout o límite de tasa reintenta y pasa al siguiente proveedor permitido. Con ALLOWED_PROVIDERS ningún dato llega a un proveedor excluido, ni siquiera como respaldo. Las claves de proveedor son secretos: no las incluya en imágenes ni en el repositorio.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Variable</th><th scope="col">Por defecto</th><th scope="col">Obligatoria</th><th scope="col">Significado</th></tr></thead><tbody><tr><th scope="row"><code>SIMULATION</code></th><td>false</td><td>No</td><td>true usa el motor simulado, sin claves ni costo. Lo lee el runtime.</td></tr><tr><th scope="row"><code>DEEPSEEK_API_KEY / DEEPSEEK_MODEL</code></th><td>deepseek/deepseek-chat</td><td>Condicional</td><td>Clave y modelo de DeepSeek.</td></tr><tr><th scope="row"><code>ANTHROPIC_API_KEY / ANTHROPIC_MODEL</code></th><td>anthropic/claude-sonnet-5-5</td><td>Condicional</td><td>Clave y modelo de Anthropic.</td></tr><tr><th scope="row"><code>CUSTOM_LLM_BASE_URL</code></th><td>vacío</td><td>Condicional</td><td>URL base de un endpoint compatible con OpenAI. Activa el proveedor custom.</td></tr><tr><th scope="row"><code>CUSTOM_LLM_API_KEY / CUSTOM_LLM_MODEL</code></th><td>vacío</td><td>No</td><td>Clave opcional y nombre del modelo del endpoint custom.</td></tr><tr><th scope="row"><code>CUSTOM_PRICE_IN_PER_M / CUSTOM_PRICE_OUT_PER_M</code></th><td>tarifa Sonnet</td><td>No</td><td>USD por millón de tokens del endpoint custom; puede ser 0 para un modelo local.</td></tr><tr><th scope="row"><code>MODEL</code></th><td>vacío</td><td>No</td><td>Variable heredada: proveedor/modelo aplica a ese proveedor; un nombre sin prefijo aplica al primario.</td></tr><tr><th scope="row"><code>MODEL_PROVIDER_ORDER</code></th><td>deepseek,anthropic,custom</td><td>No</td><td>Orden global de respaldo. También existe MODEL_PROVIDER_ORDER_&lt;ROL&gt; por rol de agente o por PLAN, CONSULT y SYNTHESIZE.</td></tr><tr><th scope="row"><code>ALLOWED_PROVIDERS</code></th><td>vacío</td><td>No</td><td>Techo del operador: solo estos proveedores pueden recibir datos. Vacío significa todos los configurados.</td></tr><tr><th scope="row"><code>PROVIDER_RETRIES</code></th><td>1</td><td>No</td><td>Reintentos en el mismo proveedor antes de pasar al siguiente.</td></tr><tr><th scope="row"><code>PROVIDER_RETRY_BACKOFF_S</code></th><td>1.0</td><td>No</td><td>Espera entre reintentos, en segundos.</td></tr><tr><th scope="row"><code>PROVIDER_TIMEOUT_S</code></th><td>120</td><td>No</td><td>Timeout por llamada al proveedor, en segundos.</td></tr><tr><th scope="row"><code>DEP_CONTEXT_TOKEN_BUDGET</code></th><td>8000</td><td>No</td><td>Presupuesto de tokens del contexto de dependencias en el runtime (red de seguridad; el backend ya lo aplica).</td></tr><tr><th scope="row"><code>SYNTH_PROMPT_TOKEN_BUDGET</code></th><td>24000</td><td>No</td><td>Presupuesto de tokens del prompt de síntesis en el runtime.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Conexiones, correo, sandbox y almacenamiento</h2>
+        <p>Sin CONNECTIONS_KEK no se puede guardar ninguna credencial real: el sistema falla cerrado, y las conexiones simuladas siguen funcionando. La KEK es base64 de 32 bytes aleatorios; CONNECTIONS_KEK_PREVIOUS permite descifrar claves de datos antiguas durante una rotación. El sandbox de código es opcional y requiere el servicio sandbox-runner, que recibe acceso al socket de Docker; lea antes la documentación de seguridad.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Variable</th><th scope="col">Por defecto</th><th scope="col">Obligatoria</th><th scope="col">Significado</th></tr></thead><tbody><tr><th scope="row"><code>CONNECTIONS_KEK</code></th><td>vacío</td><td>No</td><td>Clave de cifrado de credenciales de conexiones (base64 de 32 bytes).</td></tr><tr><th scope="row"><code>CONNECTIONS_KEK_PREVIOUS</code></th><td>vacío</td><td>No</td><td>KEK anterior, solo durante una rotación.</td></tr><tr><th scope="row"><code>GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET</code></th><td>vacío</td><td>No</td><td>Aplicación OAuth propia de Google para las conexiones.</td></tr><tr><th scope="row"><code>LINKEDIN_OAUTH_CLIENT_ID / LINKEDIN_OAUTH_CLIENT_SECRET</code></th><td>vacío</td><td>No</td><td>Aplicación OAuth propia de LinkedIn.</td></tr><tr><th scope="row"><code>OAUTH_REDIRECT_URL</code></th><td>http://localhost:8080/api/v1/connections/oauth/callback</td><td>No</td><td>URL pública del callback OAuth; debe coincidir con la registrada en el proveedor.</td></tr><tr><th scope="row"><code>GITHUB_API_URL</code></th><td>api.github.com</td><td>No</td><td>Base de la API de GitHub (por ejemplo para GitHub Enterprise).</td></tr><tr><th scope="row"><code>SANDBOX_URL / SANDBOX_TOKEN</code></th><td>vacío</td><td>No</td><td>Dirección y token del sandbox-runner. Sin ellas el sandbox queda desactivado.</td></tr><tr><th scope="row"><code>SANDBOX_IMAGE / SANDBOX_RUNTIME / SANDBOX_SECCOMP_PROFILE</code></th><td>vacío</td><td>No</td><td>Imagen, runtime de contenedor y perfil seccomp del sandbox-runner.</td></tr><tr><th scope="row"><code>S3_ENDPOINT / S3_BUCKET / S3_REGION / S3_PREFIX / S3_USE_PATH_STYLE</code></th><td>vacío</td><td>No</td><td>Almacenamiento de objetos compatible con S3 para el Drive. Sin endpoint y bucket se usa Postgres o memoria.</td></tr><tr><th scope="row"><code>S3_ACCESS_KEY / S3_SECRET_KEY</code></th><td>vacío</td><td>No</td><td>Credenciales S3.</td></tr><tr><th scope="row"><code>DRIVE_MAX_FILE_MB / DRIVE_QUOTA_MB</code></th><td>límites internos</td><td>No</td><td>Tamaño máximo por archivo y cuota por organización, en MB.</td></tr><tr><th scope="row"><code>VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT</code></th><td>vacío</td><td>No</td><td>Las tres activan Web Push; sin ellas queda desactivado.</td></tr><tr><th scope="row"><code>PUSH_ALLOWED_HOSTS</code></th><td>vacío</td><td>No</td><td>Lista de hosts de push permitidos.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Límites de tasa</h2>
+        <p>Los límites de tasa de autenticación y comandos están integrados en el backend y la configuración actual no expone variables para ajustarlos. Lo que sí se configura es TRUSTED_PROXIES: solo la cabecera X-Forwarded-For de esos proxies se usa para identificar al cliente, de modo que detrás de Caddy conviene indicar la red del proxy, y sin ella la IP del cliente será la del proxy.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">Frontend: argumentos de build</h2>
+        <p>El frontend se compila con output standalone. Las variables NEXT_PUBLIC_* se incorporan en tiempo de build como argumentos del Dockerfile (ARG), no se leen en ejecución. Dejarlas vacías produce el comportamiento recomendado de un solo dominio: rutas relativas /api/v1 y WebSocket derivado de window.location.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash">docker build \
+  --build-arg NEXT_PUBLIC_API_URL=https://app.example.com/api/v1 \
+  --build-arg NEXT_PUBLIC_WS_URL=wss://app.example.com/ws \
+  -t aiworkforce-frontend ./frontend</code></pre>
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Argumento de build</th><th scope="col">Por defecto</th><th scope="col">Obligatoria</th><th scope="col">Significado</th></tr></thead><tbody><tr><th scope="row"><code>NEXT_PUBLIC_API_URL</code></th><td>vacío</td><td>No</td><td>URL base absoluta de la API (por ejemplo https://app.example.com/api/v1). Vacía: ruta relativa.</td></tr><tr><th scope="row"><code>NEXT_PUBLIC_WS_URL</code></th><td>vacío</td><td>No</td><td>URL absoluta del WebSocket (wss://app.example.com/ws). Vacía: se deriva de window.location.</td></tr><tr><th scope="row"><code>NEXT_PUBLIC_MOCK</code></th><td>vacío</td><td>No</td><td>true ejecuta el frontend con datos simulados, sin backend.</td></tr></tbody></table></div>
+        
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="cards"><li><a href="/docs/despliegue/"><b>Despliegue en producción</b><span>Guía para desplegar AI Workforce OS con Docker Compose: Caddy con TLS automático, Postgres, Redis, backups, actualizaciones y rollback.</span></a></li><li><a href="/docs/autenticacion-y-multitenencia/"><b>Autenticación y multitenencia</b><span>Cómo cuentas, sesiones, roles, invitaciones y row-level security de Postgres aíslan las organizaciones en AI Workforce OS.</span></a></li><li><a href="/docs/runtime-de-agentes/"><b>Runtime de agentes</b><span>El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Empieza ahora</h2>
+      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+      <a href="/docs/">Documentación</a>
+      <a href="/guia/">Guía de uso</a>
+      <a href="#top">Volver arriba</a>
+    </div>
+  </footer>
+</body>
+</html>

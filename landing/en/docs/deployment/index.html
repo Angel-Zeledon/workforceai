@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Production deployment with Docker Compose and Caddy</title>
+  <meta name="description" content="How to deploy AI Workforce OS with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/en/docs/deployment/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/despliegue/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/deployment/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/despliegue/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta property="og:title" content="Production deployment with Docker Compose and Caddy">
+  <meta property="og:description" content="How to deploy AI Workforce OS with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.">
+  <meta property="og:url" content="https://workforceai.es/en/docs/deployment/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Production deployment with Docker Compose and Caddy">
+  <meta name="twitter:description" content="How to deploy AI Workforce OS with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Production deployment","item":"https://workforceai.es/en/docs/deployment/"}]},{"@type":"TechArticle","headline":"Production deployment","description":"How to deploy AI Workforce OS with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/deployment/","url":"https://workforceai.es/en/docs/deployment/","dateModified":"2026-10-12","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="/en/">Home</a>
+        <a href="/en/docs/">Documentation</a>
+        <a href="/en/guide/">User guide</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Language">
+          <a href="/docs/despliegue/" hreflang="es" lang="es" >ES</a>
+          <a href="/en/docs/deployment/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap wide">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/docs/">Documentation</a></li><li aria-current="page">Production deployment</li></ol></nav>
+      <article>
+        <h1>Production deployment</h1>
+        <p class="lead">AI Workforce OS is deployed with a standalone production compose file: Caddy terminates TLS and routes to the frontend (Next.js) and the backend (Go); the backend talks to the agent runtime (Python), Postgres and Redis. This guide covers installation, operation and the reduced layout used for a single-host demo.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">Topology</a></li><li><a href="#s2">Requirements</a></li><li><a href="#s3">Step-by-step installation</a></li><li><a href="#s4">Generating secrets and validating the configuration</a></li><li><a href="#s5">Starting and checking health</a></li><li><a href="#s6">Updating, migrations and rollback</a></li><li><a href="#s7">Postgres backups and restore</a></li><li><a href="#s8">Go-live checklist</a></li><li><a href="#s9">Image publishing in CI</a></li><li><a href="#s10">Reduced single-host layout</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">Topology</h2>
+        <p>docker-compose.prod.yml is standalone: it is not combined with the development docker-compose.yml. It uses a single domain. Caddy sends /api/* and /ws to the backend (internal port 8080) and everything else to the frontend (internal port 3000).</p>
+        <p>Only Caddy publishes ports (80, 443 TCP and 443 UDP). Postgres, Redis, the runtime, the backend and the frontend live on the internal network, declared with internal: true and therefore with no internet access. The runtime also joins the egress network so it can call model provider APIs. Caddy uses the edge network plus internal.</p>
+        <p>The frontend is built with relative paths (/api/v1) and derives the WebSocket URL from window.location (wss:// under HTTPS), so a single-domain deployment does not need baked NEXT_PUBLIC_* variables.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Service</th><th scope="col">Image or source</th><th scope="col">Networks</th><th scope="col">Limits (compose)</th></tr></thead><tbody><tr><th scope="row"><code>caddy</code></th><td>caddy:2.10.2-alpine</td><td>edge, internal</td><td>256 MB, 0.5 CPU</td></tr><tr><th scope="row"><code>postgres</code></th><td>postgres:16.6-alpine (pgdata volume)</td><td>internal</td><td>1 GB, 1 CPU</td></tr><tr><th scope="row"><code>redis</code></th><td>redis:7.4.2-alpine (AOF, redisdata volume)</td><td>internal</td><td>384 MB, 0.5 CPU</td></tr><tr><th scope="row"><code>agent-runtime</code></th><td>ghcr.io/OWNER/aiworkforce-agent-runtime:TAG</td><td>internal, egress</td><td>768 MB, 1 CPU</td></tr><tr><th scope="row"><code>backend</code></th><td>ghcr.io/OWNER/aiworkforce-backend:TAG</td><td>internal</td><td>512 MB, 1 CPU</td></tr><tr><th scope="row"><code>frontend</code></th><td>ghcr.io/OWNER/aiworkforce-frontend:TAG</td><td>internal</td><td>512 MB, 1 CPU</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">Requirements</h2>
+        
+        <ol class="steps" aria-label="Steps"><li>A Linux server with Docker Engine and the Docker Compose v2 plugin, with ports 80 and 443 open in the firewall.</li><li>A domain with an A record (and AAAA if you have IPv6) pointing to the server. Let's Encrypt fails if DNS does not resolve yet.</li><li>Access to the images on GHCR. If the packages are private, run docker login ghcr.io with a token that has read:packages. Alternative: build locally with --build.</li><li>At least one model provider credential for the runtime (see the configuration page).</li></ol>
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Step-by-step installation</h2>
+        <p>The commands use example.com as the domain and OWNER and TAG as placeholders. All state lives in named volumes; the .env.prod file stays out of git (the repository .gitignore already ignores .env.*).</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash">git clone &lt;repo-url&gt; &amp;&amp; cd &lt;repo&gt;
+cp .env.prod.example .env.prod
+chmod 600 .env.prod
+
+# Edit: DOMAIN, ACME_EMAIL, ALLOWED_ORIGINS, OWNER, TAG, provider keys...
+$EDITOR .env.prod</code></pre>
+        
+        <aside class="tip"><b>Tip.</b> If passwords contain special characters, DATABASE_URL and REDIS_URL break because they embed the passwords in the URL. Use hex secrets or percent-encode them.</aside>
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Generating secrets and validating the configuration</h2>
+        <p>Generate a different value for POSTGRES_PASSWORD, REDIS_PASSWORD and JWT_SECRET. The backend requires JWT_SECRET to be at least 32 bytes when authentication is on. The production compose sets AUTH_ENABLED to true. Defining RUNTIME_TOKEN is also recommended: a secret shared between backend and runtime (the backend warns when it is empty).</p>
+        <p>Variables marked as required in the compose file (DOMAIN, ACME_EMAIL, POSTGRES_PASSWORD, REDIS_PASSWORD, OWNER, TAG, JWT_SECRET, ALLOWED_ORIGINS, DEEPSEEK_API_KEY) make the validation command fail when missing.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash">openssl rand -hex 32   # repeat for POSTGRES_PASSWORD, REDIS_PASSWORD, JWT_SECRET and RUNTIME_TOKEN
+
+# Validate before starting (fails if a required variable is missing)
+docker compose -f docker-compose.prod.yml --env-file .env.prod config -q</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Starting and checking health</h2>
+        <p>Every service defines a healthcheck and dependencies use condition: service_healthy, so the start order is Postgres and Redis, runtime, backend, and finally frontend and Caddy. The backend exposes /healthz and so does the runtime. Caddy obtains and renews the certificate automatically.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash">C=&quot;docker compose -f docker-compose.prod.yml --env-file .env.prod&quot;
+
+$C pull          # option A: images published by CI
+# $C build       # option B: build locally
+$C up -d
+$C ps            # every service should become healthy
+curl -fsS https://example.com/ -o /dev/null &amp;&amp; echo OK
+$C logs -f backend</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">Updating, migrations and rollback</h2>
+        <p>To update, change TAG to a sha-&lt;short&gt; value published by CI and bring the stack up again. Always take a pg_dump before deploying a version that carries migrations.</p>
+        <p>The backend applies embedded SQL migrations at startup, forward-only (schema_migrations table, no down migrations). If the new version fails and the schema has already changed, there are two paths: restore the previous dump and go back to the old TAG (data written afterwards is lost), or ship a new corrective migration, which is preferable once new data exists. If the migration only added columns or tables, the previous TAG usually keeps working without touching the database.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash"># 1) backup (see Backups)
+# 2) point to the new tag
+sed -i 's/^TAG=.*/TAG=sha-&lt;NEW&gt;/' .env.prod
+$C pull
+$C up -d
+
+# Rollback without schema changes: restore the previous TAG
+sed -i 's/^TAG=.*/TAG=sha-&lt;PREVIOUS&gt;/' .env.prod
+$C pull &amp;&amp; $C up -d
+
+# Applied migrations
+$C exec postgres psql -U workforce -d workforce -c 'select * from schema_migrations order by applied_at'</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Postgres backups and restore</h2>
+        <p>Postgres is the system of record. Redis keeps an AOF in the redisdata volume and should be treated as a cache and queue. Schedule pg_dump with cron, copy the files off the server and test a restore at least once.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash">mkdir -p backups
+$C exec -T postgres sh -c 'pg_dump -U &quot;$POSTGRES_USER&quot; -d &quot;$POSTGRES_DB&quot; -Fc' \
+  &gt; backups/workforce-$(date +%F-%H%M).dump
+
+# Restore
+$C stop backend
+$C exec -T postgres sh -c 'dropdb -U &quot;$POSTGRES_USER&quot; --if-exists &quot;$POSTGRES_DB&quot; &amp;&amp; createdb -U &quot;$POSTGRES_USER&quot; &quot;$POSTGRES_DB&quot;'
+$C exec -T postgres sh -c 'pg_restore -U &quot;$POSTGRES_USER&quot; -d &quot;$POSTGRES_DB&quot; --no-owner' &lt; backups/FILE.dump
+$C start backend</code></pre>
+        
+        <aside class="tip"><b>Tip.</b> docker compose down keeps the volumes. Do not use -v unless you want to delete the data.</aside>
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Go-live checklist</h2>
+        
+        <ol class="steps" aria-label="Steps"><li>DNS points to the server, 80 and 443 are open and docker compose ps only shows published ports on caddy.</li><li>.env.prod has 600 permissions and is outside git.</li><li>JWT_SECRET, POSTGRES_PASSWORD and REDIS_PASSWORD are unique and random (32 bytes hex or more).</li><li>ALLOWED_ORIGINS is exactly https://example.com; AUTH_ENABLED is true; ENABLE_DEMO_RESET is false; SIMULATION is false.</li><li>At least one valid model provider is set, ALLOWED_PROVIDERS reflects the company data policy and BUDGET_USD is defined.</li><li>TAG points to a specific sha-&lt;short&gt; (not latest) that passed CI.</li><li>All services are healthy, login works and the WebSocket connects at wss://example.com/ws.</li><li>The Postgres backup is scheduled and a restore has been tested.</li><li>Logs rotate (json-file, 10 MB times 5 files, already configured) and memory and CPU limits fit the host.</li></ol>
+        
+        
+        <aside class="tip"><b>Tip.</b> The current compose only passes DEEPSEEK_API_KEY, ANTHROPIC_API_KEY, MODEL, RUNTIME_TOKEN and ALLOWED_PROVIDERS to the runtime, and DEEPSEEK_API_KEY is required. To use a custom endpoint or other runtime variables, add them to the agent-runtime service in the compose file.</aside>
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">Image publishing in CI</h2>
+        <p>The .github/workflows/ci.yml workflow builds and tests backend, runtime and frontend, runs govulncheck and npm audit (non-blocking), hadolint, a smoke test and Playwright E2E. On a push to main, the publish job pushes the three images (aiworkforce-backend, aiworkforce-agent-runtime, aiworkforce-frontend) to GHCR with the tags sha-&lt;short&gt; and latest, using GITHUB_TOKEN with packages: write.</p>
+        <p>In the repository you must allow GITHUB_TOKEN to write packages and, after the first publish, link the packages to the repository and adjust their visibility. The repository variables NEXT_PUBLIC_API_URL and NEXT_PUBLIC_WS_URL must stay undefined for a single-domain deployment.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s10" aria-labelledby="h10">
+        <h2 id="h10">Reduced single-host layout</h2>
+        <p>The deploy/vps directory holds the layout used for a public demo on a shared server that already runs its own Caddy owning ports 80 and 443. There the compose publishes no ports: the edge services (backend, frontend and the static landing) join the existing Caddy network under unique aliases, and everything else stays on a private network.</p>
+        <p>This is a demo setup, not a production one: the runtime runs in SIMULATION mode (no keys, no cost), there is no Postgres or Redis (in-memory storage), AUTH_ENABLED is false and ENABLE_DEMO_RESET is true. The frontend is built with absolute NEXT_PUBLIC_API_URL and NEXT_PUBLIC_WS_URL, and the app site adds X-Robots-Tag noindex. Routes /api/* and /ws go to the backend and the rest to the frontend, as in the production Caddyfile. The deploy.sh script does pull, a low-priority build and up -d --wait.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">example.com        -&gt; landing (static)
+app.example.com    -&gt; /api/* and /ws -&gt; backend:8080 ; rest -&gt; frontend:3000
+(existing Caddy terminates TLS; this project publishes no ports)</code></pre>
+        
+        
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/configuration/"><b>Configuration reference</b><span>Environment variable reference for AI Workforce OS: server, database, auth, budget, rewards, model providers and frontend build arguments.</span></a></li><li><a href="/en/docs/security-model/"><b>Security model</b><span>How an agent's blast radius is limited: credential vault, human approvals, caps, kill switch, audit, RLS and sandbox. With the current limits stated.</span></a></li><li><a href="/en/docs/architecture/"><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Start now</h2>
+      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+      <a href="/en/docs/">Documentation</a>
+      <a href="/en/guide/">User guide</a>
+      <a href="#top">Back to top</a>
+    </div>
+  </footer>
+</body>
+</html>

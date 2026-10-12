@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent skills format (SKILL.md)</title>
+  <meta name="description" content="How a skill is defined: a folder with SKILL.md, frontmatter, limits, lifecycle, review, import and export, and how it reaches the model.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/en/docs/skills-format/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/formato-de-habilidades/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/skills-format/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/formato-de-habilidades/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta property="og:title" content="Agent skills format (SKILL.md)">
+  <meta property="og:description" content="How a skill is defined: a folder with SKILL.md, frontmatter, limits, lifecycle, review, import and export, and how it reaches the model.">
+  <meta property="og:url" content="https://workforceai.es/en/docs/skills-format/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Agent skills format (SKILL.md)">
+  <meta name="twitter:description" content="How a skill is defined: a folder with SKILL.md, frontmatter, limits, lifecycle, review, import and export, and how it reaches the model.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Skills format","item":"https://workforceai.es/en/docs/skills-format/"}]},{"@type":"TechArticle","headline":"Skills format","description":"How a skill is defined: a folder with SKILL.md, frontmatter, limits, lifecycle, review, import and export, and how it reaches the model.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/skills-format/","url":"https://workforceai.es/en/docs/skills-format/","dateModified":"2026-10-12","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="/en/">Home</a>
+        <a href="/en/docs/">Documentation</a>
+        <a href="/en/guide/">User guide</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Language">
+          <a href="/docs/formato-de-habilidades/" hreflang="es" lang="es" >ES</a>
+          <a href="/en/docs/skills-format/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap wide">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/docs/">Documentation</a></li><li aria-current="page">Skills format</li></ol></nav>
+      <article>
+        <h1>Skills format</h1>
+        <p class="lead">A skill is reusable know-how that an agent can load when it needs it. It uses the open Agent Skills format: a folder with a SKILL.md file and optional text resources. It is plain prompt text plus one gateway tool, so it works the same with every model provider.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">What a skill package is</a></li><li><a href="#s2">SKILL.md frontmatter</a></li><li><a href="#s3">Complete annotated example</a></li><li><a href="#s4">Package limits</a></li><li><a href="#s5">Built-in starter skills</a></li><li><a href="#s6">Lifecycle and statuses</a></li><li><a href="#s7">Scanning, import and export</a></li><li><a href="#s8">Assignment to agents</a></li><li><a href="#s9">How skills reach the model</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">What a skill package is</h2>
+        <p>A package is a folder whose only required file is SKILL.md: a YAML frontmatter block followed by markdown instructions. It may include supporting files such as templates, examples, reference documents or scripts, always as text.</p>
+        <p>The files of each version are stored in the organization's drive, at /Shared/Skills/&lt;name&gt;/v&lt;n&gt;/, and the database keeps the manifest (path, size and sha256 of each file). Versions are immutable: restoring an old version creates a new one.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">client-email/
+├── SKILL.md
+├── templates/
+│   └── follow-up.md
+└── examples/
+    └── collection.txt</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">SKILL.md frontmatter</h2>
+        <p>The parser understands only a small subset of YAML: scalars, quoted strings, blocks with &gt; or |, inline or block lists and one level of nested map for metadata. It does not support anchors, tags, merges or code, and it rejects tabs in indentation.</p>
+        <p>SKILL.md must be valid UTF-8, start with a --- line and close the block with another. The instructions after the frontmatter cannot be empty.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Field</th><th scope="col">Required</th><th scope="col">Rule or limit</th></tr></thead><tbody><tr><th scope="row"><code>name</code></th><td>Yes</td><td>Pattern ^[a-z0-9-]{1,64}$. Unique per organization and immutable.</td></tr><tr><th scope="row"><code>description</code></th><td>Yes</td><td>Up to 1024 characters. It is what the agent sees to decide whether to use the skill.</td></tr><tr><th scope="row"><code>license</code></th><td>No</td><td>Free text.</td></tr><tr><th scope="row"><code>compatibility</code></th><td>No</td><td>Free text; preserved on export.</td></tr><tr><th scope="row"><code>allowed-tools</code></th><td>No</td><td>Up to 20 entries. Informational: it never grants anything.</td></tr><tr><th scope="row"><code>metadata</code></th><td>No</td><td>Key-to-text map, up to 30 entries (for example category).</td></tr></tbody></table></div>
+        <aside class="tip"><b>Tip.</b> Other top-level scalar keys are preserved on import and export, so a round trip does not lose data.</aside>
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Complete annotated example</h2>
+        <p>This is the client-email starter package in English, as shipped with the backend. The limits from the previous section hold: the name uses lowercase and hyphens, the description is short, and metadata carries the category and the built-in marker.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-yaml">---
+name: client-email
+description: &quot;Write a clear email to a client: subject, brief context, a concrete request or answer and the next step. Use it for replies, follow-ups, friendly collections and announcements.&quot;
+metadata:
+  category: communication
+  builtin: &quot;true&quot;
+---
+
+# Client email
+
+## When to use it
+To write replies, follow-ups or notices to clients.
+
+## Steps
+1. Identify the goal in one sentence: inform, ask, confirm, collect or apologize.
+2. Specific subject (at most 8 words) with the topic and, if relevant, the date or reference.
+3. First paragraph: the answer or request. Then the minimum context.
+4. Close with a single next step, who does it and by when.
+5. Adjust the tone: warm and professional; in complaints acknowledge the problem first; in collections be firm and kind.
+
+## Quality criteria
+- Under 150 words unless more is needed.
+- No figure, date or commitment that is not in the task data.
+- Check names, amounts and attachments mentioned.
+
+## Limits
+Leave the email as a draft; sending it is decided by a person or by the organization policy.</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Package limits</h2>
+        <p>These caps are validated on create, edit and import. A violation returns a stable error code, for example file_too_large, too_many_files or zip_bomb.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Limit</th><th scope="col">Value</th></tr></thead><tbody><tr><th scope="row"><code>Total size of a version</code></th><td>2 MB</td></tr><tr><th scope="row"><code>Size of one file</code></th><td>512 KB</td></tr><tr><th scope="row"><code>Files per skill (including SKILL.md)</code></th><td>40</td></tr><tr><th scope="row"><code>Zip entries inspected</code></th><td>300</td></tr><tr><th scope="row"><code>Path depth</code></th><td>4 levels, segments with [A-Za-z0-9._-]</td></tr><tr><th scope="row"><code>Allowed extensions</code></th><td>md, txt, csv, json, yaml, yml, py, js, sh (UTF-8 text only, no NUL bytes)</td></tr><tr><th scope="row"><code>Compression ratio per zip entry</code></th><td>100 to 1</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Built-in starter skills</h2>
+        <p>The backend ships a catalog of starter skills as data embedded in the binary, in Spanish and English and in the same format as an import, under builtin/&lt;language&gt;/&lt;name&gt;/ (currently 55 per language, including bank-reconciliation, b2b-proposal, service-contract-review, month-end-close, client-email and project-plan).</p>
+        <p>The first time an organization uses the library they are created as active, in the organization's language. If the organization already has any skill, even a deleted one, it is left as is, and deleted starters are not re-created. Role templates declare default_skills (names only) and agents of that role receive them without needing an assignment.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">backend/internal/skills/builtin/
+├── es/&lt;nombre&gt;/SKILL.md
+└── en/&lt;nombre&gt;/SKILL.md</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">Lifecycle and statuses</h2>
+        <p>A skill is in one of four statuses: draft, in_review, active or disabled. Holders of the skills:write permission (members) create drafts, edit and import. Only holders of skills:review (administrators) review, activate, disable and delete. A review names the version the reviewer read (otherwise stale_review) and re-verifies the file hashes before activating.</p>
+        <p>An import always enters in_review. If a member edits an active skill, the new version lands in in_review and agents keep using the approved version; if an administrator edits it, the edit is the review and it becomes active. A rejection returns to draft (or leaves the previous approved version active) with a note. Deletion is soft: creating another skill with the same name brings it back with a new version.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">create (member)  → draft ──submit──▶ in_review ──approve (admin)──▶ active
+import (member)  → in_review (always)
+reject → draft, or stays active with the previous approved version
+disable / approve again · delete (soft)</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Scanning, import and export</h2>
+        <p>When each version is saved, the package is scanned and warnings are stored for the reviewer: injection (a file's injection score exceeds the threshold), script (files that are executable as text), allowed_tools (allowed-tools was declared) and import_note. The scan informs; it does not decide on its own. The reviewer sees everything before approving.</p>
+        <p>A .zip or a single SKILL.md can be imported. Validation is strict: paths with .. or absolute ones, backslashes, drive letters, symlinks and special files, encrypted entries, case-insensitive duplicates and zip bombs are rejected. A single wrapper folder is stripped and __MACOSX and .DS_Store are ignored. Import from a URL is deliberately not implemented, because it would need an SSRF-safe fetcher.</p>
+        <p>Export returns a deterministic zip in the standard layout (&lt;name&gt;/SKILL.md plus resources, no executable bits) or only SKILL.md. Importing an export again gives the same instructions, description, metadata and files.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-http">POST /skills/import           # .zip or SKILL.md
+GET  /skills/{id}/export      # deterministic zip
+POST /skills/{id}/submit      # draft → in_review
+POST /skills/{id}/review      # approve or reject (skills:review)</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Assignment to agents</h2>
+        <p>Assignment links a skill to an agent (skill_assignments table) through PUT and DELETE on /agents/{id}/skills/{skillId}, with the agents write permission. There are also role defaults: names in a role template's default_skills reach every agent of that role without an assignment row.</p>
+        <p>A skill is served to an agent only if it is assigned (or is a default of its role) and its approved version is active and enabled. In any other situation the load is denied with skill_not_available.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">How skills reach the model</h2>
+        <p>Progressive disclosure in two steps. On every run, the backend adds to the request only the name and description of the agent's servable skills, with caps: at most 12 skills, 240 characters per description and 3000 characters in total. The runtime renders them as prompt lines with the rule that a skill guides how to work and never grants tools, connections, permissions, autonomy or approvals.</p>
+        <p>If a skill applies, the agent asks for it with a tool request. The Tool Gateway serves it as a native read tool (subject to the kill switch, pause and audit) and answers with the approved version's body without frontmatter plus the file list; with file it returns one specific resource.</p>
+        <p>The text travels in its own channel (loaded_skills) as trusted organization configuration, inside dedicated delimiters and not as untrusted data, because a person approved that exact version. It is still cleaned (invisible characters, credentials, forged delimiters), bounded (24,000 characters per answer, 4 loaded skills per task) and scored for injection. Scripts are inert text: running them requires the code tool with human approval.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-json">{ &quot;tool&quot;: &quot;skill&quot;, &quot;action&quot;: &quot;load&quot;, &quot;args&quot;: { &quot;name&quot;: &quot;client-email&quot;, &quot;file&quot;: &quot;templates/follow-up.md&quot; } }</code></pre>
+        
+        
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/agent-runtime/"><b>Agent runtime</b><span>The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.</span></a></li><li><a href="/en/docs/api-reference/"><b>API Reference</b><span>Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.</span></a></li><li><a href="/en/docs/architecture/"><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Start now</h2>
+      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+      <a href="/en/docs/">Documentation</a>
+      <a href="/en/guide/">User guide</a>
+      <a href="#top">Back to top</a>
+    </div>
+  </footer>
+</body>
+</html>

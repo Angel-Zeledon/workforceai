@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Architecture: backend, runtime and realtime</title>
+  <meta name="description" content="Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/en/docs/architecture/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/arquitectura/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/architecture/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/arquitectura/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta property="og:title" content="Architecture: backend, runtime and realtime">
+  <meta property="og:description" content="Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.">
+  <meta property="og:url" content="https://workforceai.es/en/docs/architecture/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Architecture: backend, runtime and realtime">
+  <meta name="twitter:description" content="Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"AI Workforce OS Architecture","item":"https://workforceai.es/en/docs/architecture/"}]},{"@type":"TechArticle","headline":"AI Workforce OS Architecture","description":"Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/architecture/","url":"https://workforceai.es/en/docs/architecture/","dateModified":"2026-10-12","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="/en/">Home</a>
+        <a href="/en/docs/">Documentation</a>
+        <a href="/en/guide/">User guide</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Language">
+          <a href="/docs/arquitectura/" hreflang="es" lang="es" >ES</a>
+          <a href="/en/docs/architecture/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap wide">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/docs/">Documentation</a></li><li aria-current="page">AI Workforce OS Architecture</li></ol></nav>
+      <article>
+        <h1>AI Workforce OS Architecture</h1>
+        <p class="lead">AI Workforce OS separates deciding from doing: a Go backend is the source of truth, a Python runtime only reasons with the LLM, and a Next.js frontend draws the office from events. This page explains how the pieces fit and how a request travels end to end.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">Components</a></li><li><a href="#s2">Backend and runtime boundary</a></li><li><a href="#s3">Request flow</a></li><li><a href="#s4">Realtime channel</a></li><li><a href="#s5">Data model at a glance</a></li><li><a href="#s6">Multi-tenancy</a></li><li><a href="#s7">Simulation versus real AI</a></li><li><a href="#s8">Deployment and edge</a></li><li><a href="#s9">Repository layout</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">Components</h2>
+        <p>The system is five processes plus an optional proxy. All business state lives in the backend; the runtime keeps no state between calls.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Component</th><th scope="col">Technology</th><th scope="col">Responsibility</th></tr></thead><tbody><tr><th scope="row"><code>Frontend</code></th><td>Next.js, React Three Fiber</td><td>3D office and dashboard mode. Consumes REST and the WebSocket; every animation derives from real events.</td></tr><tr><th scope="row"><code>Backend</code></th><td>Go, chi</td><td>REST API /api/v1, WebSocket /ws, orchestrator, approvals, audit, budget, authentication and RBAC.</td></tr><tr><th scope="row"><code>Agent runtime</code></th><td>Python, FastAPI</td><td>Receives a task and context, calls the LLM provider and returns a structured result. Swappable engine.</td></tr><tr><th scope="row"><code>Postgres</code></th><td>PostgreSQL</td><td>Data for all organizations, protected by row-level security. Numbered SQL migrations.</td></tr><tr><th scope="row"><code>Redis</code></th><td>Redis</td><td>Event pub/sub to the WebSocket hub and rate limits. Optional: without Redis, delivery is local in-process.</td></tr><tr><th scope="row"><code>Caddy</code></th><td>Caddy</td><td>Production proxy: automatic TLS, sends /api/* and /ws to the backend and everything else to the frontend.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">Backend and runtime boundary</h2>
+        <p>The core rule: the runtime never talks to Postgres, Redis or external systems. It receives a task with its context and returns a result, tool requests and usage; it only contacts the LLM provider. The backend decides permissions, autonomy and budget, and executes the tools.</p>
+        <p>The backend calls the runtime over HTTP with JSON. If RUNTIME_TOKEN is set on both sides, calls carry that shared secret. The AI engine sits behind an interface of its own, so CrewAI can be replaced without touching the backend.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Runtime endpoint</th><th scope="col">Use</th></tr></thead><tbody><tr><th scope="row"><code>POST /v1/plan, /v1/plan-phases, /v1/plan-phase, /v1/replan</code></th><td>Break a request or project into tasks with dependencies.</td></tr><tr><th scope="row"><code>POST /v1/run-task</code></th><td>Run a task; returns output, consults, tool_requests and usage.</td></tr><tr><th scope="row"><code>POST /v1/consult</code></th><td>Agent-to-agent consultation.</td></tr><tr><th scope="row"><code>POST /v1/review</code></th><td>Quality review of a result.</td></tr><tr><th scope="row"><code>POST /v1/synthesize</code></th><td>Write the consolidated report.</td></tr><tr><th scope="row"><code>POST /v1/route, /v1/chat-reply</code></th><td>Route a chat message and generate an agent reply.</td></tr><tr><th scope="row"><code>POST /v1/estimate, /v1/summarize, /v1/context-sizes</code></th><td>Cost estimation, summaries and context sizes.</td></tr><tr><th scope="row"><code>GET /healthz</code></th><td>Status and mode: simulation or live.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Request flow</h2>
+        <p>A request follows this path: the user's ask reaches the orchestrator, which asks the runtime for a plan, validates it and creates tasks; each task is assigned to an agent that uses tools, sensitive actions wait for human approval, and a report is synthesized at the end.</p>
+        <ol class="steps" aria-label="Steps"><li>The user submits text with POST /api/v1/requests (or through chat, which routes it). The backend answers 202 with request_id and emits request.received.</li><li>The orchestrator asks the runtime for a plan. The backend validates agents, dependencies and limits before accepting it, then emits plan.created and task.created.</li><li>Tasks run respecting depends_on. Each one changes the agent state (agent.state_changed) and may trigger agent consultations (message.sent) and a quality review (task.reviewed).</li><li>Tools requested by the runtime go through the autonomy policy and permissions. If approval is needed a pending record is created and the task enters awaiting_approval.</li><li>A user with permission decides with POST /api/v1/approvals/{id}/decision. The task resumes or is blocked.</li><li>When all tasks finish, the runtime synthesizes the report; the backend emits report.created and request.completed.</li><li>In parallel, per-request cost is recorded and the budget is enforced: budget.warning and budget.exceeded can pause execution.</li></ol>
+        <pre class="code" tabindex="0"><code class="lang-text">POST /api/v1/requests {&quot;text&quot;: &quot;...&quot;}      -&gt; 202 {&quot;request_id&quot;: &quot;...&quot;}
+  orchestrator -&gt; runtime POST /v1/plan          -&gt; tasks + depends_on
+  backend validates the plan                     -&gt; plan.created, task.created*
+  per task: runtime POST /v1/run-task            -&gt; output, consults, tool_requests, usage
+  tool_requests -&gt; policy/autonomy check         -&gt; approval.requested (if needed)
+  POST /api/v1/approvals/{id}/decision           -&gt; approval.resolved, task resumes
+  runtime POST /v1/synthesize                    -&gt; report.created, request.completed</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Realtime channel</h2>
+        <p>GET /ws opens one WebSocket per organization. The backend publishes each event to Redis (channel aiworkforce:events) and a hub forwards the frame only to clients whose org_id matches; a frame without org_id is dropped. Without REDIS_URL the hub receives events locally.</p>
+        <p>On connect a hello event carries the agent list, followed by domain events. The server pings every 30 s, closes if no pong arrives within 60 s and drops slow clients (256-frame queue). With authentication on, the socket closes with code 4401 when the token expires so the client reconnects. There is no replay: after reconnecting, the client reloads state over REST.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-json">{
+  &quot;id&quot;: &quot;&lt;uuid&gt;&quot;,
+  &quot;type&quot;: &quot;task.completed&quot;,
+  &quot;ts&quot;: &quot;2026-01-01T12:03:22Z&quot;,
+  &quot;org_id&quot;: &quot;&lt;org id&gt;&quot;,
+  &quot;agent_id&quot;: &quot;sales&quot;,
+  &quot;payload&quot;: { &quot;task&quot;: { &quot;id&quot;: &quot;...&quot;, &quot;status&quot;: &quot;done&quot; } }
+}</code></pre>
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Group</th><th scope="col">Event types</th></tr></thead><tbody><tr><th scope="row"><code>Connection</code></th><td>hello, error, metrics.updated, activity.logged</td></tr><tr><th scope="row"><code>Requests</code></th><td>request.received, request.queued, request.dequeued, request.resumed, request.status_changed, request.completed, plan.created, report.created</td></tr><tr><th scope="row"><code>Tasks</code></th><td>task.created, task.started, task.completed, task.failed, task.blocked, task.retrying, task.reviewed, task.steered, task.reassigned</td></tr><tr><th scope="row"><code>Agents and chat</code></th><td>agent.created, agent.state_changed, message.sent, chat.message, chat.typing, route.decided</td></tr><tr><th scope="row"><code>Approvals</code></th><td>approval.requested, approval.progress, approval.reminder, approval.resolved</td></tr><tr><th scope="row"><code>Costs</code></th><td>cost.estimated, budget.warning, budget.exceeded, budget.resumed, provider.no_balance</td></tr><tr><th scope="row"><code>Projects</code></th><td>project.created, project.launched, project.delta, project.status_changed, project.budget_warning, project.plan_change_*</td></tr><tr><th scope="row"><code>Rewards</code></th><td>coins.earned, shop.purchased, item.equipped, item.unequipped, office.item_placed, office.item_removed</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Data model at a glance</h2>
+        <p>Tables live in Postgres and every business table carries org_id. This is the summary view; the full schema is in the numbered migrations.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Entity</th><th scope="col">Main tables</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope="row"><code>Organizations and users</code></th><td>organizations, users, memberships, refresh_tokens, invitations</td><td>Roles per membership: owner, admin, member, viewer.</td></tr><tr><th scope="row"><code>Agents</code></th><td>agents, agent_profiles, agent_settings, agent_controls</td><td>State, tools, permissions and autonomy level.</td></tr><tr><th scope="row"><code>Requests and tasks</code></th><td>requests, tasks, request_runs, task_checkpoints, reports</td><td>Task states: pending, running, blocked, awaiting_approval, done, failed.</td></tr><tr><th scope="row"><code>Approvals</code></th><td>approvals, standing_approvals, approval_executions</td><td>Support double approval and per-project standing permissions.</td></tr><tr><th scope="row"><code>Projects</code></th><td>projects, project_templates, plan_changes</td><td>Plans with nodes, budget and template versions.</td></tr><tr><th scope="row"><code>Memory</code></th><td>memories, memory_docs</td><td>Long-term memory per agent.</td></tr><tr><th scope="row"><code>Skills</code></th><td>skills, skill_versions, skill_assignments</td><td>Versioned, with a review workflow.</td></tr><tr><th scope="row"><code>Rewards</code></th><td>coin_wallets, coin_ledger, shop_inventory, shop_equipment, shop_office</td><td>Coins for finished work and character and office items.</td></tr><tr><th scope="row"><code>Governance and cost</code></th><td>audit_logs, audit_chain_heads, usage_entries, budget_caps</td><td>Chained audit trail and usage records.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">Multi-tenancy</h2>
+        <p>Each account creates its own organization and the org_id travels inside the access token; it is never taken from client input. The HTTP layer puts it in the request context and every query is filtered by it.</p>
+        <p>As defense in depth, Postgres enforces row-level security. Each transaction sets app.org_id with set_config and the policies read that function; if the value is missing, queries return no rows (fail closed). The application connects with a non-owner role (DB_APP_ROLE, default app_user, without BYPASSRLS), and migrations use a separate connection (MIGRATE_DATABASE_URL). The WebSocket hub also filters by organization.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Simulation versus real AI</h2>
+        <p>The runtime's HTTP contract is the same in both modes; the engine changes. In simulation (the default, with no key or with SIMULATION=true) the runtime returns scripted results with simulated latencies, with no network and no cost. In live mode it uses the configured provider and the runtime's GET /healthz reports mode: live and the provider.</p>
+        <p>If a provider is configured but the live engine cannot start, the runtime answers in simulation with status degraded and a warning; there is no silent fallback. The backend reflects the mode in its own /healthz as runtime_mode.</p>
+        
+        
+        
+        <aside class="tip"><b>Tip.</b> SIMULATION=true always wins: no network calls are made even when keys are present.</aside>
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Deployment and edge</h2>
+        <p>docker-compose.yml starts postgres, redis, object storage, agent-runtime, backend and frontend; demo and production variants exist. In production Caddy terminates TLS, adds security headers and routes by path: /api/* and /ws to the backend, everything else to the frontend. Agent code execution uses a separate sandbox image and runner.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">Repository layout</h2>
+        <p>The backend is layered: api depends on application, which depends on domain; infrastructure implements the ports.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">backend/            Go (chi): domain, application, api, events, auth, projects,
+                    drive, skills, memory, rewards, connections, controls, audit
+  cmd/server/       main.go: composition root (wires every service)
+  internal/         domain/ application/ api/ infrastructure/{postgres,redis,runtime,memory}
+  internal/infrastructure/postgres/migrations/   numbered SQL migrations
+agent-runtime/      Python FastAPI (+ CrewAI engine, simulation engine)
+  app/              main.py, engine.py, simulation.py, crewai_engine.py, routing.py ...
+frontend/           Next.js + React Three Fiber (src/app, src/components, src/lib)
+e2e/                Playwright (UI + WebSocket contract)
+sandbox/            code-execution runner image
+deploy/ Caddyfile   production edge (TLS, reverse proxy)
+docker-compose.yml  dev / accounts stack; docker-compose.demo.yml, docker-compose.prod.yml
+docs/               SPEC.md and architecture/*.md
+landing/            this public site</code></pre>
+        
+        
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/api-reference/"><b>API Reference</b><span>Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.</span></a></li><li><a href="/en/docs/agent-runtime/"><b>Agent runtime</b><span>The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.</span></a></li><li><a href="/en/docs/security-model/"><b>Security model</b><span>How an agent's blast radius is limited: credential vault, human approvals, caps, kill switch, audit, RLS and sandbox. With the current limits stated.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Start now</h2>
+      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+      <a href="/en/docs/">Documentation</a>
+      <a href="/en/guide/">User guide</a>
+      <a href="#top">Back to top</a>
+    </div>
+  </footer>
+</body>
+</html>

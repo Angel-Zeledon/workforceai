@@ -1,0 +1,328 @@
+{
+  "id": "deployment",
+  "slug": {
+    "es": "despliegue",
+    "en": "deployment"
+  },
+  "related": [
+    "configuration",
+    "security-model",
+    "architecture"
+  ],
+  "es": {
+    "title": "Despliegue en producción",
+    "metaTitle": "Despliegue en producción con Docker Compose y Caddy",
+    "description": "Guía para desplegar AI Workforce OS con Docker Compose: Caddy con TLS automático, Postgres, Redis, backups, actualizaciones y rollback.",
+    "intro": "AI Workforce OS se despliega con un compose de producción independiente: Caddy termina TLS y enruta hacia el frontend (Next.js) y el backend (Go); el backend habla con el runtime de agentes (Python), Postgres y Redis. Esta guía cubre la instalación, la operación y el layout reducido que se usa para una demo en un solo servidor.",
+    "sections": [
+      {
+        "h": "Topología",
+        "paras": [
+          "El archivo docker-compose.prod.yml es independiente: no se combina con el docker-compose.yml de desarrollo. Usa un solo dominio. Caddy envía /api/* y /ws al backend (puerto 8080 interno) y todo lo demás al frontend (puerto 3000 interno).",
+          "Solo Caddy publica puertos (80, 443 TCP y 443 UDP). Postgres, Redis, runtime, backend y frontend viven en la red internal, declarada con internal: true y por tanto sin salida a internet. El runtime se une además a la red egress para llamar a las APIs de los proveedores de modelo. Caddy usa la red edge más internal.",
+          "El frontend se construye con rutas relativas (/api/v1) y deriva la URL del WebSocket de window.location (wss:// bajo HTTPS), así que en un despliegue de un solo dominio no hace falta hornear variables NEXT_PUBLIC_*."
+        ],
+        "table": {
+          "head": [
+            "Servicio",
+            "Imagen o origen",
+            "Redes",
+            "Límites (compose)"
+          ],
+          "rows": [
+            [
+              "caddy",
+              "caddy:2.10.2-alpine",
+              "edge, internal",
+              "256 MB, 0.5 CPU"
+            ],
+            [
+              "postgres",
+              "postgres:16.6-alpine (volumen pgdata)",
+              "internal",
+              "1 GB, 1 CPU"
+            ],
+            [
+              "redis",
+              "redis:7.4.2-alpine (AOF, volumen redisdata)",
+              "internal",
+              "384 MB, 0.5 CPU"
+            ],
+            [
+              "agent-runtime",
+              "ghcr.io/OWNER/aiworkforce-agent-runtime:TAG",
+              "internal, egress",
+              "768 MB, 1 CPU"
+            ],
+            [
+              "backend",
+              "ghcr.io/OWNER/aiworkforce-backend:TAG",
+              "internal",
+              "512 MB, 1 CPU"
+            ],
+            [
+              "frontend",
+              "ghcr.io/OWNER/aiworkforce-frontend:TAG",
+              "internal",
+              "512 MB, 1 CPU"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Requisitos",
+        "steps": [
+          "Servidor Linux con Docker Engine y el plugin Docker Compose v2, con los puertos 80 y 443 abiertos en el firewall.",
+          "Un dominio con registro DNS A (y AAAA si hay IPv6) que apunte al servidor. Let's Encrypt falla si el DNS aún no resuelve.",
+          "Acceso a las imágenes en GHCR. Si los paquetes son privados, ejecute docker login ghcr.io con un token con permiso read:packages. Alternativa: construir localmente con --build.",
+          "Al menos una credencial de proveedor de modelo para el runtime (ver la página de configuración)."
+        ]
+      },
+      {
+        "h": "Instalación paso a paso",
+        "paras": [
+          "Los comandos usan example.com como dominio y OWNER y TAG como marcadores. Todo el estado vive en volúmenes con nombre; el archivo .env.prod queda fuera de git (el .gitignore del repositorio ya ignora .env.*)."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "git clone <repo-url> && cd <repo>\ncp .env.prod.example .env.prod\nchmod 600 .env.prod\n\n# Edit: DOMAIN, ACME_EMAIL, ALLOWED_ORIGINS, OWNER, TAG, provider keys...\n$EDITOR .env.prod"
+        },
+        "tip": "Si las contraseñas llevan caracteres especiales, DATABASE_URL y REDIS_URL se rompen porque las incluyen en la URL. Use secretos en hex o codifíquelos con percent-encoding."
+      },
+      {
+        "h": "Generar secretos y validar la configuración",
+        "paras": [
+          "Genere un valor distinto para POSTGRES_PASSWORD, REDIS_PASSWORD y JWT_SECRET. El backend exige que JWT_SECRET tenga al menos 32 bytes cuando la autenticación está activa. El compose de producción fija AUTH_ENABLED a true. Se recomienda definir también RUNTIME_TOKEN, un secreto compartido entre backend y runtime (el backend avisa si está vacío).",
+          "Las variables marcadas como obligatorias en el compose (DOMAIN, ACME_EMAIL, POSTGRES_PASSWORD, REDIS_PASSWORD, OWNER, TAG, JWT_SECRET, ALLOWED_ORIGINS, DEEPSEEK_API_KEY) hacen fallar el comando de validación si faltan."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "openssl rand -hex 32   # repeat for POSTGRES_PASSWORD, REDIS_PASSWORD, JWT_SECRET and RUNTIME_TOKEN\n\n# Validate before starting (fails if a required variable is missing)\ndocker compose -f docker-compose.prod.yml --env-file .env.prod config -q"
+        }
+      },
+      {
+        "h": "Arranque y comprobación de salud",
+        "paras": [
+          "Cada servicio define un healthcheck y las dependencias usan condition: service_healthy, de modo que el orden de arranque es Postgres y Redis, runtime, backend, y por último frontend y Caddy. El backend expone /healthz y el runtime también. Caddy obtiene y renueva el certificado automáticamente."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "C=\"docker compose -f docker-compose.prod.yml --env-file .env.prod\"\n\n$C pull          # option A: images published by CI\n# $C build       # option B: build locally\n$C up -d\n$C ps            # every service should become healthy\ncurl -fsS https://example.com/ -o /dev/null && echo OK\n$C logs -f backend"
+        }
+      },
+      {
+        "h": "Actualizar, migraciones y rollback",
+        "paras": [
+          "Para actualizar, cambie TAG por un valor sha-<corto> publicado por CI y vuelva a levantar. Haga siempre un pg_dump antes de desplegar una versión con migraciones.",
+          "El backend aplica migraciones SQL embebidas al arrancar, solo hacia adelante (tabla schema_migrations, sin migraciones down). Si la versión nueva falla y el esquema ya cambió, hay dos caminos: restaurar el dump previo y volver al TAG anterior (se pierden los datos escritos después), o desplegar una migración correctiva nueva, preferible si ya hay datos nuevos. Si la migración solo añadió columnas o tablas, el TAG anterior suele seguir funcionando sin tocar la base."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# 1) backup (see Backups)\n# 2) point to the new tag\nsed -i 's/^TAG=.*/TAG=sha-<NEW>/' .env.prod\n$C pull\n$C up -d\n\n# Rollback without schema changes: restore the previous TAG\nsed -i 's/^TAG=.*/TAG=sha-<PREVIOUS>/' .env.prod\n$C pull && $C up -d\n\n# Applied migrations\n$C exec postgres psql -U workforce -d workforce -c 'select * from schema_migrations order by applied_at'"
+        }
+      },
+      {
+        "h": "Backups y restauración de Postgres",
+        "paras": [
+          "Postgres es el dato maestro. Redis guarda AOF en el volumen redisdata y debe tratarse como caché y cola. Programe el pg_dump con cron, copie los archivos fuera del servidor y pruebe la restauración al menos una vez."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "mkdir -p backups\n$C exec -T postgres sh -c 'pg_dump -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -Fc' \\\n  > backups/workforce-$(date +%F-%H%M).dump\n\n# Restore\n$C stop backend\n$C exec -T postgres sh -c 'dropdb -U \"$POSTGRES_USER\" --if-exists \"$POSTGRES_DB\" && createdb -U \"$POSTGRES_USER\" \"$POSTGRES_DB\"'\n$C exec -T postgres sh -c 'pg_restore -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" --no-owner' < backups/FILE.dump\n$C start backend"
+        },
+        "tip": "docker compose down conserva los volúmenes. No use -v salvo que quiera borrar los datos."
+      },
+      {
+        "h": "Checklist de salida a producción",
+        "steps": [
+          "DNS apunta al servidor, 80 y 443 están abiertos y docker compose ps solo muestra puertos publicados en caddy.",
+          ".env.prod tiene permisos 600 y está fuera de git.",
+          "JWT_SECRET, POSTGRES_PASSWORD y REDIS_PASSWORD son únicos y aleatorios (32 bytes hex o más).",
+          "ALLOWED_ORIGINS es exactamente https://example.com; AUTH_ENABLED es true; ENABLE_DEMO_RESET es false; SIMULATION es false.",
+          "Hay al menos un proveedor de modelo válido, ALLOWED_PROVIDERS refleja la política de datos de la empresa y BUDGET_USD está definido.",
+          "TAG apunta a un sha-<corto> concreto (no latest) que pasó el CI.",
+          "Todos los servicios están healthy, el login funciona y el WebSocket conecta en wss://example.com/ws.",
+          "El backup de Postgres está programado y la restauración se probó.",
+          "Los logs rotan (json-file, 10 MB por 5 archivos, ya configurado) y los límites de memoria y CPU se ajustan al host."
+        ],
+        "tip": "El compose actual solo pasa al runtime DEEPSEEK_API_KEY, ANTHROPIC_API_KEY, MODEL, RUNTIME_TOKEN y ALLOWED_PROVIDERS, y DEEPSEEK_API_KEY es obligatoria. Para usar un endpoint custom u otras variables del runtime hay que añadirlas al servicio agent-runtime del compose."
+      },
+      {
+        "h": "Publicación de imágenes en CI",
+        "paras": [
+          "El workflow .github/workflows/ci.yml compila y prueba backend, runtime y frontend, ejecuta govulncheck y npm audit (no bloqueantes), hadolint, un smoke test y los E2E con Playwright. En un push a main, el job publish sube a GHCR las tres imágenes (aiworkforce-backend, aiworkforce-agent-runtime, aiworkforce-frontend) con los tags sha-<corto> y latest, usando el GITHUB_TOKEN con permiso packages: write.",
+          "En el repositorio hay que permitir que el GITHUB_TOKEN escriba paquetes y, tras la primera publicación, enlazar los paquetes al repositorio y ajustar su visibilidad. Las variables de repositorio NEXT_PUBLIC_API_URL y NEXT_PUBLIC_WS_URL deben quedar sin definir en un despliegue de un solo dominio."
+        ]
+      },
+      {
+        "h": "Layout reducido en un solo servidor",
+        "paras": [
+          "El directorio deploy/vps contiene el layout que se usa para una demo pública en un servidor compartido que ya tiene un Caddy propio dueño de los puertos 80 y 443. Allí el compose no publica ningún puerto: los servicios de borde (backend, frontend y la landing estática) se unen a la red del Caddy existente con alias únicos, y el resto permanece en una red privada.",
+          "Es una configuración de demo, no de producción: el runtime corre en modo SIMULATION (sin claves ni costo), no hay Postgres ni Redis (almacenamiento en memoria), AUTH_ENABLED es false y ENABLE_DEMO_RESET es true. El frontend se construye con NEXT_PUBLIC_API_URL y NEXT_PUBLIC_WS_URL absolutos, y el sitio de la app añade X-Robots-Tag noindex. Las rutas /api/* y /ws van al backend y lo demás al frontend, igual que en el Caddyfile de producción. El script deploy.sh hace pull, build con baja prioridad y up -d --wait."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "example.com        -> landing (static)\napp.example.com    -> /api/* and /ws -> backend:8080 ; rest -> frontend:3000\n(existing Caddy terminates TLS; this project publishes no ports)"
+        }
+      }
+    ]
+  },
+  "en": {
+    "title": "Production deployment",
+    "metaTitle": "Production deployment with Docker Compose and Caddy",
+    "description": "How to deploy AI Workforce OS with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.",
+    "intro": "AI Workforce OS is deployed with a standalone production compose file: Caddy terminates TLS and routes to the frontend (Next.js) and the backend (Go); the backend talks to the agent runtime (Python), Postgres and Redis. This guide covers installation, operation and the reduced layout used for a single-host demo.",
+    "sections": [
+      {
+        "h": "Topology",
+        "paras": [
+          "docker-compose.prod.yml is standalone: it is not combined with the development docker-compose.yml. It uses a single domain. Caddy sends /api/* and /ws to the backend (internal port 8080) and everything else to the frontend (internal port 3000).",
+          "Only Caddy publishes ports (80, 443 TCP and 443 UDP). Postgres, Redis, the runtime, the backend and the frontend live on the internal network, declared with internal: true and therefore with no internet access. The runtime also joins the egress network so it can call model provider APIs. Caddy uses the edge network plus internal.",
+          "The frontend is built with relative paths (/api/v1) and derives the WebSocket URL from window.location (wss:// under HTTPS), so a single-domain deployment does not need baked NEXT_PUBLIC_* variables."
+        ],
+        "table": {
+          "head": [
+            "Service",
+            "Image or source",
+            "Networks",
+            "Limits (compose)"
+          ],
+          "rows": [
+            [
+              "caddy",
+              "caddy:2.10.2-alpine",
+              "edge, internal",
+              "256 MB, 0.5 CPU"
+            ],
+            [
+              "postgres",
+              "postgres:16.6-alpine (pgdata volume)",
+              "internal",
+              "1 GB, 1 CPU"
+            ],
+            [
+              "redis",
+              "redis:7.4.2-alpine (AOF, redisdata volume)",
+              "internal",
+              "384 MB, 0.5 CPU"
+            ],
+            [
+              "agent-runtime",
+              "ghcr.io/OWNER/aiworkforce-agent-runtime:TAG",
+              "internal, egress",
+              "768 MB, 1 CPU"
+            ],
+            [
+              "backend",
+              "ghcr.io/OWNER/aiworkforce-backend:TAG",
+              "internal",
+              "512 MB, 1 CPU"
+            ],
+            [
+              "frontend",
+              "ghcr.io/OWNER/aiworkforce-frontend:TAG",
+              "internal",
+              "512 MB, 1 CPU"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Requirements",
+        "steps": [
+          "A Linux server with Docker Engine and the Docker Compose v2 plugin, with ports 80 and 443 open in the firewall.",
+          "A domain with an A record (and AAAA if you have IPv6) pointing to the server. Let's Encrypt fails if DNS does not resolve yet.",
+          "Access to the images on GHCR. If the packages are private, run docker login ghcr.io with a token that has read:packages. Alternative: build locally with --build.",
+          "At least one model provider credential for the runtime (see the configuration page)."
+        ]
+      },
+      {
+        "h": "Step-by-step installation",
+        "paras": [
+          "The commands use example.com as the domain and OWNER and TAG as placeholders. All state lives in named volumes; the .env.prod file stays out of git (the repository .gitignore already ignores .env.*)."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "git clone <repo-url> && cd <repo>\ncp .env.prod.example .env.prod\nchmod 600 .env.prod\n\n# Edit: DOMAIN, ACME_EMAIL, ALLOWED_ORIGINS, OWNER, TAG, provider keys...\n$EDITOR .env.prod"
+        },
+        "tip": "If passwords contain special characters, DATABASE_URL and REDIS_URL break because they embed the passwords in the URL. Use hex secrets or percent-encode them."
+      },
+      {
+        "h": "Generating secrets and validating the configuration",
+        "paras": [
+          "Generate a different value for POSTGRES_PASSWORD, REDIS_PASSWORD and JWT_SECRET. The backend requires JWT_SECRET to be at least 32 bytes when authentication is on. The production compose sets AUTH_ENABLED to true. Defining RUNTIME_TOKEN is also recommended: a secret shared between backend and runtime (the backend warns when it is empty).",
+          "Variables marked as required in the compose file (DOMAIN, ACME_EMAIL, POSTGRES_PASSWORD, REDIS_PASSWORD, OWNER, TAG, JWT_SECRET, ALLOWED_ORIGINS, DEEPSEEK_API_KEY) make the validation command fail when missing."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "openssl rand -hex 32   # repeat for POSTGRES_PASSWORD, REDIS_PASSWORD, JWT_SECRET and RUNTIME_TOKEN\n\n# Validate before starting (fails if a required variable is missing)\ndocker compose -f docker-compose.prod.yml --env-file .env.prod config -q"
+        }
+      },
+      {
+        "h": "Starting and checking health",
+        "paras": [
+          "Every service defines a healthcheck and dependencies use condition: service_healthy, so the start order is Postgres and Redis, runtime, backend, and finally frontend and Caddy. The backend exposes /healthz and so does the runtime. Caddy obtains and renews the certificate automatically."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "C=\"docker compose -f docker-compose.prod.yml --env-file .env.prod\"\n\n$C pull          # option A: images published by CI\n# $C build       # option B: build locally\n$C up -d\n$C ps            # every service should become healthy\ncurl -fsS https://example.com/ -o /dev/null && echo OK\n$C logs -f backend"
+        }
+      },
+      {
+        "h": "Updating, migrations and rollback",
+        "paras": [
+          "To update, change TAG to a sha-<short> value published by CI and bring the stack up again. Always take a pg_dump before deploying a version that carries migrations.",
+          "The backend applies embedded SQL migrations at startup, forward-only (schema_migrations table, no down migrations). If the new version fails and the schema has already changed, there are two paths: restore the previous dump and go back to the old TAG (data written afterwards is lost), or ship a new corrective migration, which is preferable once new data exists. If the migration only added columns or tables, the previous TAG usually keeps working without touching the database."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# 1) backup (see Backups)\n# 2) point to the new tag\nsed -i 's/^TAG=.*/TAG=sha-<NEW>/' .env.prod\n$C pull\n$C up -d\n\n# Rollback without schema changes: restore the previous TAG\nsed -i 's/^TAG=.*/TAG=sha-<PREVIOUS>/' .env.prod\n$C pull && $C up -d\n\n# Applied migrations\n$C exec postgres psql -U workforce -d workforce -c 'select * from schema_migrations order by applied_at'"
+        }
+      },
+      {
+        "h": "Postgres backups and restore",
+        "paras": [
+          "Postgres is the system of record. Redis keeps an AOF in the redisdata volume and should be treated as a cache and queue. Schedule pg_dump with cron, copy the files off the server and test a restore at least once."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "mkdir -p backups\n$C exec -T postgres sh -c 'pg_dump -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -Fc' \\\n  > backups/workforce-$(date +%F-%H%M).dump\n\n# Restore\n$C stop backend\n$C exec -T postgres sh -c 'dropdb -U \"$POSTGRES_USER\" --if-exists \"$POSTGRES_DB\" && createdb -U \"$POSTGRES_USER\" \"$POSTGRES_DB\"'\n$C exec -T postgres sh -c 'pg_restore -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" --no-owner' < backups/FILE.dump\n$C start backend"
+        },
+        "tip": "docker compose down keeps the volumes. Do not use -v unless you want to delete the data."
+      },
+      {
+        "h": "Go-live checklist",
+        "steps": [
+          "DNS points to the server, 80 and 443 are open and docker compose ps only shows published ports on caddy.",
+          ".env.prod has 600 permissions and is outside git.",
+          "JWT_SECRET, POSTGRES_PASSWORD and REDIS_PASSWORD are unique and random (32 bytes hex or more).",
+          "ALLOWED_ORIGINS is exactly https://example.com; AUTH_ENABLED is true; ENABLE_DEMO_RESET is false; SIMULATION is false.",
+          "At least one valid model provider is set, ALLOWED_PROVIDERS reflects the company data policy and BUDGET_USD is defined.",
+          "TAG points to a specific sha-<short> (not latest) that passed CI.",
+          "All services are healthy, login works and the WebSocket connects at wss://example.com/ws.",
+          "The Postgres backup is scheduled and a restore has been tested.",
+          "Logs rotate (json-file, 10 MB times 5 files, already configured) and memory and CPU limits fit the host."
+        ],
+        "tip": "The current compose only passes DEEPSEEK_API_KEY, ANTHROPIC_API_KEY, MODEL, RUNTIME_TOKEN and ALLOWED_PROVIDERS to the runtime, and DEEPSEEK_API_KEY is required. To use a custom endpoint or other runtime variables, add them to the agent-runtime service in the compose file."
+      },
+      {
+        "h": "Image publishing in CI",
+        "paras": [
+          "The .github/workflows/ci.yml workflow builds and tests backend, runtime and frontend, runs govulncheck and npm audit (non-blocking), hadolint, a smoke test and Playwright E2E. On a push to main, the publish job pushes the three images (aiworkforce-backend, aiworkforce-agent-runtime, aiworkforce-frontend) to GHCR with the tags sha-<short> and latest, using GITHUB_TOKEN with packages: write.",
+          "In the repository you must allow GITHUB_TOKEN to write packages and, after the first publish, link the packages to the repository and adjust their visibility. The repository variables NEXT_PUBLIC_API_URL and NEXT_PUBLIC_WS_URL must stay undefined for a single-domain deployment."
+        ]
+      },
+      {
+        "h": "Reduced single-host layout",
+        "paras": [
+          "The deploy/vps directory holds the layout used for a public demo on a shared server that already runs its own Caddy owning ports 80 and 443. There the compose publishes no ports: the edge services (backend, frontend and the static landing) join the existing Caddy network under unique aliases, and everything else stays on a private network.",
+          "This is a demo setup, not a production one: the runtime runs in SIMULATION mode (no keys, no cost), there is no Postgres or Redis (in-memory storage), AUTH_ENABLED is false and ENABLE_DEMO_RESET is true. The frontend is built with absolute NEXT_PUBLIC_API_URL and NEXT_PUBLIC_WS_URL, and the app site adds X-Robots-Tag noindex. Routes /api/* and /ws go to the backend and the rest to the frontend, as in the production Caddyfile. The deploy.sh script does pull, a low-priority build and up -d --wait."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "example.com        -> landing (static)\napp.example.com    -> /api/* and /ws -> backend:8080 ; rest -> frontend:3000\n(existing Caddy terminates TLS; this project publishes no ports)"
+        }
+      }
+    ]
+  }
+}

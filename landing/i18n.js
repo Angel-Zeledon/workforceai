@@ -7,8 +7,8 @@
  */
 window.I18N = {
   es: {
-    "meta.title": "AI Workforce OS: tu equipo de empleados de IA, a la vista y bajo tu control",
-    "meta.description": "Una oficina virtual 3D donde los empleados son agentes de IA persistentes. Pides en lenguaje natural, los ves colaborar, apruebas lo sensible y recibes un reporte. Acceso anticipado.",
+    "meta.title": "AI Workforce OS: tu equipo de IA, a la vista y bajo control",
+    "meta.description": "Una oficina virtual 3D donde los empleados son agentes de IA. Pides en lenguaje natural, los ves colaborar y apruebas lo sensible. Acceso anticipado.",
     "meta.ogTitle": "AI Workforce OS: tu equipo de empleados de IA, a la vista y bajo tu control",
     "meta.ogDescription": "Pides, ves colaborar a tus empleados de IA y apruebas lo sensible. Con costo estimado, topes de gasto y credenciales fuera del modelo.",
 
@@ -23,9 +23,11 @@ window.I18N = {
     "nav.trust": "Seguridad",
     "nav.status": "Estado actual",
     "nav.faq": "Preguntas",
-    "cta.early": "Pedir acceso anticipado",
-    "cta.early.short": "Acceso anticipado",
-    "cta.demo": "Ver la demo",
+    "nav.guide": "Guía",
+    "nav.docs": "Docs",
+    "cta.early": "Crear cuenta",
+    "cta.early.short": "Crear cuenta",
+    "cta.demo": "Entrar",
 
     "hero.title": "Tu equipo de empleados de IA, a la vista y bajo tu control.",
     "hero.sub": "Una oficina virtual donde le pides trabajo en lenguaje natural a Ventas, Legal, Contabilidad, Análisis, Operaciones, RR. HH. y tu Asistente. Los ves colaborar en vivo, apruebas lo sensible y recibes un reporte.",
@@ -37,7 +39,7 @@ window.I18N = {
     "stage.caption": "Animación ilustrativa del escenario de $50,000 con los colores, estados y mensajes de la app. No es una grabación. Marketing, Datos, Soporte y Compras son roles de ejemplo: hoy la app trae siete empleados.",
     "stage.pause": "Pausar animación",
     "stage.play": "Reanudar animación",
-    "stage.office": "Oficina demo",
+    "stage.office": "Oficina de ejemplo",
     "stage.sim": "Simulación",
     "stage.active": "Activas",
     "stage.approvals": "Aprobaciones",
@@ -200,7 +202,7 @@ window.I18N = {
 
     "status.title": "Estado actual",
     "status.lead": "Claro y sin adornos: qué funciona hoy, qué se está construyendo y qué solo está planeado.",
-    "st.demo": "Demo",
+    "st.demo": "Simulación",
     "st.dev": "En desarrollo",
     "st.soon": "Próximamente",
     "st.1.t": "Oficina 3D, dashboard, proyectos, aprobaciones y costos",
@@ -218,7 +220,7 @@ window.I18N = {
 
     "faq.title": "Preguntas frecuentes",
     "faq.q1": "¿Esto usa IA de verdad hoy?",
-    "faq.a1": "Por defecto no: sin clave de API corre en modo simulación, con resultados guionados. Al configurar la clave, usa un modelo real. Si pruebas la demo, ya sabes qué esperar.",
+    "faq.a1": "Por defecto no: sin clave de API corre en modo simulación, con resultados guionados. Al configurar la clave, usa un modelo real. Cuando crees tu cuenta, ya sabes qué esperar.",
     "faq.q2": "¿Puede enviar correos o mensajes por mí?",
     "faq.a2": "El flujo existe para Gmail y siempre pide tu aprobación, pero con cuentas reales aún no está probado. No lo uses todavía con correo importante. WhatsApp y otros canales están planeados, no construidos.",
     "faq.q3": "¿Qué pasa con mis datos y mis claves?",
@@ -232,16 +234,29 @@ window.I18N = {
     "faq.q7": "¿Sirve para una empresa grande?",
     "faq.a7": "Hoy no. Está pensado para equipos pequeños y profesionales hispanohablantes. Faltan SSO, auditoría exportable y durabilidad ante reinicios, entre otras cosas.",
 
-    "final.title": "Acceso anticipado",
-    "final.d": "Estamos dejando entrar a un grupo pequeño. Escríbenos y te contamos cómo probarlo. No pedimos datos en esta página.",
+    "final.title": "Crea tu cuenta",
+    "final.d": "Regístrate con tu correo y el nombre de tu empresa y llegas a tu propia oficina, separada de las demás. Todavía no hay precios: estamos en acceso anticipado y aprendiendo de cómo se usa. Esta página no recoge datos; el registro ocurre en la app.",
 
-    "footer.line": "AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como demo funcionan en modo simulación.",
-    "footer.top": "Volver arriba"
+    "use.title": "Cómo usarla, en cuatro pasos",
+    "use.lead": "Crea tu cuenta y en cinco minutos ya habrás pedido, visto trabajar y aprobado tu primera tarea.",
+    "use.1.t": "Pide",
+    "use.1.d": "Escribe lo que necesitas en la barra de abajo de la oficina, como se lo pedirías a un jefe de equipo. También hay atajos para probar.",
+    "use.2.t": "Mira",
+    "use.2.d": "Tus empleados de IA se reparten el trabajo y lo ves pasar en vivo: quién hace qué, cuánto cuesta y en qué punto va.",
+    "use.3.t": "Aprueba",
+    "use.3.d": "Lo sensible se detiene y espera tu decisión. Apruebas o rechazas desde la bandeja; nada importante sale sin ti.",
+    "use.4.t": "Recibe",
+    "use.4.d": "Obtienes un reporte, y cada tarea terminada suma monedas para vestir a tu equipo y decorar la oficina.",
+    "use.cta": "Leer la guía de uso completa",
+    "footer.line": "AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.",
+    "footer.top": "Volver arriba",
+    "footer.guide": "Guía de uso",
+    "footer.docs": "Documentación"
   },
 
   en: {
-    "meta.title": "AI Workforce OS: your team of AI employees, in plain sight and under your control",
-    "meta.description": "A 3D virtual office where employees are persistent AI agents. Ask in plain language, watch them collaborate, approve what is sensitive and get a report. Early access.",
+    "meta.title": "AI Workforce OS: your AI team, in plain sight and in control",
+    "meta.description": "A 3D virtual office where the employees are AI agents. Ask in plain language, watch them collaborate and approve what is sensitive. Early access.",
     "meta.ogTitle": "AI Workforce OS: your team of AI employees, in plain sight and under your control",
     "meta.ogDescription": "Ask, watch your AI employees collaborate and approve what is sensitive. With cost estimates, spending caps and credentials kept away from the model.",
 
@@ -256,9 +271,11 @@ window.I18N = {
     "nav.trust": "Security",
     "nav.status": "Current status",
     "nav.faq": "FAQ",
-    "cta.early": "Request early access",
-    "cta.early.short": "Early access",
-    "cta.demo": "See the demo",
+    "nav.guide": "Guide",
+    "nav.docs": "Docs",
+    "cta.early": "Create account",
+    "cta.early.short": "Create account",
+    "cta.demo": "Sign in",
 
     "hero.title": "Your team of AI employees, in plain sight and under your control.",
     "hero.sub": "A virtual office where you ask Sales, Legal, Accounting, Analysis, Operations, HR and your Assistant for work in plain language. Watch them collaborate live, approve what is sensitive and receive a report.",
@@ -270,7 +287,7 @@ window.I18N = {
     "stage.caption": "Illustrative animation of the $50,000 scenario, with the app's colors, states and messages. Not a recording. Marketing, Data, Support and Procurement are example roles: today the app ships seven employees.",
     "stage.pause": "Pause animation",
     "stage.play": "Resume animation",
-    "stage.office": "Demo office",
+    "stage.office": "Example office",
     "stage.sim": "Simulation",
     "stage.active": "Active",
     "stage.approvals": "Approvals",
@@ -451,7 +468,7 @@ window.I18N = {
 
     "faq.title": "Frequently asked questions",
     "faq.q1": "Does this use real AI today?",
-    "faq.a1": "Not by default: without an API key it runs in simulation mode, with scripted results. Once you set the key, it uses a real model. If you try the demo, you know what to expect.",
+    "faq.a1": "Not by default: without an API key it runs in simulation mode, with scripted results. Once you set the key, it uses a real model. Once you create your account, you know what to expect.",
     "faq.q2": "Can it send emails or messages for me?",
     "faq.a2": "The flow exists for Gmail and always asks for your approval, but it has not been tested with real accounts. Do not use it with important email yet. WhatsApp and other channels are planned, not built.",
     "faq.q3": "What happens to my data and my keys?",
@@ -465,10 +482,23 @@ window.I18N = {
     "faq.q7": "Is it suitable for a large company?",
     "faq.a7": "Not today. It is aimed at small teams and Spanish-speaking professionals. SSO, exportable audit and resilience to restarts are among the things still missing.",
 
-    "final.title": "Early access",
-    "final.d": "We are letting in a small group. Write to us and we will tell you how to try it. This page does not collect any data.",
+    "final.title": "Create your account",
+    "final.d": "Sign up with your email and your company name and you land in your own office, separate from everyone else's. There are no prices yet: we are in early access and learning how it is used. This page collects no data; signing up happens in the app.",
 
-    "footer.line": "AI Workforce OS is a project under development. This page describes its status to date; capabilities listed as demo run in simulation mode.",
-    "footer.top": "Back to top"
+    "use.title": "How to use it, in four steps",
+    "use.lead": "Create your account and in five minutes you will have asked for something, watched it get done and approved your first task.",
+    "use.1.t": "Ask",
+    "use.1.d": "Type what you need in the bar at the bottom of the office, the way you would ask a team lead. There are shortcuts to try.",
+    "use.2.t": "Watch",
+    "use.2.d": "Your AI employees split the work and you see it happen live: who does what, what it costs and how far along it is.",
+    "use.3.t": "Approve",
+    "use.3.d": "Anything sensitive stops and waits for your decision. You approve or reject from the tray; nothing important leaves without you.",
+    "use.4.t": "Receive",
+    "use.4.d": "You get a report, and every finished task earns coins to dress your team and decorate the office.",
+    "use.cta": "Read the full user guide",
+    "footer.line": "AI Workforce OS is a project under development. This page describes its status to date; capabilities listed as simulation use scripted responses, with no real AI.",
+    "footer.top": "Back to top",
+    "footer.guide": "User guide",
+    "footer.docs": "Documentation"
   }
 };

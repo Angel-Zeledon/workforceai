@@ -1,19 +1,15 @@
 /*
  * Landing configuration. The ONLY place where the CTAs are changed.
- * No forms and no analytics: the buttons are plain links.
+ * No forms and no analytics: the buttons are plain links to the app's own signup and login screens.
  */
 window.LANDING_CONFIG = {
-  // Public demo (open app in simulation mode, no real AI and no credentials).
-  DEMO_URL: "https://app.workforceai.es",
+  // The app (personal accounts: every signup creates its own organization).
+  APP_URL: "https://app.workforceai.es",
+  SIGNUP_URL: "https://app.workforceai.es/register",
+  LOGIN_URL: "https://app.workforceai.es/login",
 
-  // Contact / early access email. Empty = the contact button points to the demo.
+  // Contact email (footer / structured data).
   CONTACT_EMAIL: "info@workforceai.es",
-
-  // Subject of the early access email, per language.
-  CONTACT_SUBJECT: {
-    es: "Acceso anticipado a AI Workforce OS",
-    en: "Early access to AI Workforce OS",
-  },
 
   // Canonical site URL (Open Graph / SEO).
   SITE_URL: "https://workforceai.es",

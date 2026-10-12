@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Documentación técnica | AI Workforce OS</title>
+  <meta name="description" content="Arquitectura, referencia de la API, autenticación y multitenencia, runtime de agentes, habilidades, seguridad, despliegue y configuración.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/docs/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:title" content="Documentación técnica | AI Workforce OS">
+  <meta property="og:description" content="Arquitectura, referencia de la API, autenticación y multitenencia, runtime de agentes, habilidades, seguridad, despliegue y configuración.">
+  <meta property="og:url" content="https://workforceai.es/docs/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Documentación técnica | AI Workforce OS">
+  <meta name="twitter:description" content="Arquitectura, referencia de la API, autenticación y multitenencia, runtime de agentes, habilidades, seguridad, despliegue y configuración.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Documentación","item":"https://workforceai.es/docs/"}]},{"@type":"CollectionPage","name":"Documentación técnica de AI Workforce OS","description":"Arquitectura, referencia de la API, autenticación y multitenencia, runtime de agentes, habilidades, seguridad, despliegue y configuración.","inLanguage":"es","url":"https://workforceai.es/docs/","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"},"mainEntity":{"@type":"ItemList","itemListElement":[{"@type":"ListItem","position":1,"name":"Arquitectura de AI Workforce OS","url":"https://workforceai.es/docs/arquitectura/"},{"@type":"ListItem","position":2,"name":"Referencia de la API","url":"https://workforceai.es/docs/referencia-api/"},{"@type":"ListItem","position":3,"name":"Autenticación y multitenencia","url":"https://workforceai.es/docs/autenticacion-y-multitenencia/"},{"@type":"ListItem","position":4,"name":"Runtime de agentes","url":"https://workforceai.es/docs/runtime-de-agentes/"},{"@type":"ListItem","position":5,"name":"Formato de habilidades","url":"https://workforceai.es/docs/formato-de-habilidades/"},{"@type":"ListItem","position":6,"name":"Modelo de seguridad","url":"https://workforceai.es/docs/modelo-de-seguridad/"},{"@type":"ListItem","position":7,"name":"Despliegue en producción","url":"https://workforceai.es/docs/despliegue/"},{"@type":"ListItem","position":8,"name":"Referencia de configuración","url":"https://workforceai.es/docs/configuracion/"}]}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="/">Inicio</a>
+        <a href="/docs/">Documentación</a>
+        <a href="/guia/">Guía de uso</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Idioma">
+          <a href="/docs/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/docs/" hreflang="en" lang="en" >EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap narrow">
+      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li aria-current="page">Documentación</li></ol></nav>
+      <h1>Documentación técnica de AI Workforce OS</h1>
+      <p class="lead">Para quien quiere entender, desplegar o integrar AI Workforce OS: cómo está construido, qué expone la API, cómo se aíslan las cuentas, cómo se despliega y qué se puede configurar. Todo describe lo que el código hace hoy.</p>
+      <ol class="cards index"><li><a href="/docs/arquitectura/"><span class="n">1</span><b>Arquitectura de AI Workforce OS</b><span>Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.</span></a></li><li><a href="/docs/referencia-api/"><span class="n">2</span><b>Referencia de la API</b><span>Autenticación, formato de errores y rutas de /api/v1: peticiones, tareas, aprobaciones, agentes, proyectos, skills, tienda, drive y WebSocket.</span></a></li><li><a href="/docs/autenticacion-y-multitenencia/"><span class="n">3</span><b>Autenticación y multitenencia</b><span>Cómo cuentas, sesiones, roles, invitaciones y row-level security de Postgres aíslan las organizaciones en AI Workforce OS.</span></a></li><li><a href="/docs/runtime-de-agentes/"><span class="n">4</span><b>Runtime de agentes</b><span>El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.</span></a></li><li><a href="/docs/formato-de-habilidades/"><span class="n">5</span><b>Formato de habilidades</b><span>Cómo se define una habilidad: carpeta con SKILL.md, frontmatter, límites, ciclo de vida, revisión, importación y cómo llega al modelo.</span></a></li><li><a href="/docs/modelo-de-seguridad/"><span class="n">6</span><b>Modelo de seguridad</b><span>Cómo se limita el daño de un agente: bóveda de credenciales, aprobaciones humanas, topes, kill switch, auditoría, RLS y sandbox. Con sus límites actuales.</span></a></li><li><a href="/docs/despliegue/"><span class="n">7</span><b>Despliegue en producción</b><span>Guía para desplegar AI Workforce OS con Docker Compose: Caddy con TLS automático, Postgres, Redis, backups, actualizaciones y rollback.</span></a></li><li><a href="/docs/configuracion/"><span class="n">8</span><b>Referencia de configuración</b><span>Referencia de variables de entorno de AI Workforce OS: servidor, base de datos, autenticación, presupuesto, recompensas, proveedores de modelo y build.</span></a></li></ol>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Empieza ahora</h2>
+      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+      <a href="/docs/">Documentación</a>
+      <a href="/guia/">Guía de uso</a>
+      <a href="#top">Volver arriba</a>
+    </div>
+  </footer>
+</body>
+</html>

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
@@ -40,6 +41,10 @@ type Service struct {
 	Classifier TaskClassifier
 	Rejected   Rejections
 	Log        *slog.Logger
+
+	// WelcomeCoins is granted once to every organization the first time it opens the shop or office (0 = no grant).
+	WelcomeCoins int64
+	welcomed     sync.Map // org id -> struct{}: organizations already checked in this process
 }
 
 // ---- earning ----
@@ -101,6 +106,19 @@ func (s *Service) GrantWelcome(ctx context.Context, org string, amount int64) {
 	}, "")
 }
 
+// ensureWelcome grants the welcome coins the first time an organization is seen. The ledger key makes the grant
+// idempotent across restarts and replicas; the map only avoids a database round trip on every request.
+func (s *Service) ensureWelcome(ctx context.Context, org string) {
+	if s.WelcomeCoins <= 0 || !s.Rules.Enabled {
+		return
+	}
+	if _, done := s.welcomed.Load(org); done {
+		return
+	}
+	s.GrantWelcome(ctx, org, s.WelcomeCoins)
+	s.welcomed.Store(org, struct{}{})
+}
+
 func (s *Service) earn(ctx context.Context, org string, e Entry, requestID string) {
 	ctx = application.WithOrg(context.WithoutCancel(ctx), org)
 	stored, w, applied, err := s.Store.Earn(ctx, org, e)
@@ -131,6 +149,7 @@ type State struct {
 func (s *Service) State(ctx context.Context, org string) (State, error) {
 	var st State
 	var err error
+	s.ensureWelcome(ctx, org)
 	if st.Wallet, err = s.Store.Wallet(ctx, org); err != nil {
 		return st, err
 	}

@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Formato de habilidades (SKILL.md) de los agentes</title>
+  <meta name="description" content="Cómo se define una habilidad: carpeta con SKILL.md, frontmatter, límites, ciclo de vida, revisión, importación y cómo llega al modelo.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/docs/formato-de-habilidades/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/formato-de-habilidades/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/skills-format/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/formato-de-habilidades/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:title" content="Formato de habilidades (SKILL.md) de los agentes">
+  <meta property="og:description" content="Cómo se define una habilidad: carpeta con SKILL.md, frontmatter, límites, ciclo de vida, revisión, importación y cómo llega al modelo.">
+  <meta property="og:url" content="https://workforceai.es/docs/formato-de-habilidades/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Formato de habilidades (SKILL.md) de los agentes">
+  <meta name="twitter:description" content="Cómo se define una habilidad: carpeta con SKILL.md, frontmatter, límites, ciclo de vida, revisión, importación y cómo llega al modelo.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Documentación","item":"https://workforceai.es/docs/"},{"@type":"ListItem","position":3,"name":"Formato de habilidades","item":"https://workforceai.es/docs/formato-de-habilidades/"}]},{"@type":"TechArticle","headline":"Formato de habilidades","description":"Cómo se define una habilidad: carpeta con SKILL.md, frontmatter, límites, ciclo de vida, revisión, importación y cómo llega al modelo.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/docs/formato-de-habilidades/","url":"https://workforceai.es/docs/formato-de-habilidades/","dateModified":"2026-10-12","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="/">Inicio</a>
+        <a href="/docs/">Documentación</a>
+        <a href="/guia/">Guía de uso</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Idioma">
+          <a href="/docs/formato-de-habilidades/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/docs/skills-format/" hreflang="en" lang="en" >EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap wide">
+      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li><a href="/docs/">Documentación</a></li><li aria-current="page">Formato de habilidades</li></ol></nav>
+      <article>
+        <h1>Formato de habilidades</h1>
+        <p class="lead">Una habilidad es conocimiento reutilizable que un agente puede cargar cuando lo necesita. Usa el formato abierto Agent Skills: una carpeta con un archivo SKILL.md y recursos opcionales de texto. Es texto de prompt más una herramienta del gateway, así que funciona igual con cualquier proveedor de modelos.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">Qué es un paquete de habilidad</a></li><li><a href="#s2">Frontmatter de SKILL.md</a></li><li><a href="#s3">Ejemplo completo comentado</a></li><li><a href="#s4">Límites del paquete</a></li><li><a href="#s5">Habilidades iniciales incluidas</a></li><li><a href="#s6">Ciclo de vida y estados</a></li><li><a href="#s7">Escaneo e importación y exportación</a></li><li><a href="#s8">Asignación a agentes</a></li><li><a href="#s9">Cómo llegan las habilidades al modelo</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">Qué es un paquete de habilidad</h2>
+        <p>Un paquete es una carpeta cuyo único archivo obligatorio es SKILL.md: un bloque de frontmatter YAML seguido de instrucciones en markdown. Puede incluir archivos de apoyo como plantillas, ejemplos, documentos de referencia o scripts, siempre como texto.</p>
+        <p>Los archivos de cada versión se guardan en el drive de la organización, en /Shared/Skills/&lt;nombre&gt;/v&lt;n&gt;/, y la base de datos guarda el manifiesto (ruta, tamaño y sha256 de cada archivo). Las versiones son inmutables: restaurar una versión antigua crea una versión nueva.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">client-email/
+├── SKILL.md
+├── templates/
+│   └── follow-up.md
+└── examples/
+    └── collection.txt</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">Frontmatter de SKILL.md</h2>
+        <p>El analizador entiende solo un subconjunto pequeño de YAML: escalares, cadenas con comillas, bloques con &gt; o |, listas en línea o en bloque y un nivel de mapa anidado para metadata. No admite anclas, etiquetas, combinaciones ni código, y rechaza tabuladores en la sangría.</p>
+        <p>SKILL.md debe ser UTF-8 válido, empezar con una línea --- y cerrar el bloque con otra. Las instrucciones después del frontmatter no pueden estar vacías.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Campo</th><th scope="col">Obligatorio</th><th scope="col">Regla o límite</th></tr></thead><tbody><tr><th scope="row"><code>name</code></th><td>Sí</td><td>Patrón ^[a-z0-9-]{1,64}$. Único por organización e inmutable.</td></tr><tr><th scope="row"><code>description</code></th><td>Sí</td><td>Hasta 1024 caracteres. Es lo que ve el agente para decidir si usa la habilidad.</td></tr><tr><th scope="row"><code>license</code></th><td>No</td><td>Texto libre.</td></tr><tr><th scope="row"><code>compatibility</code></th><td>No</td><td>Texto libre; se conserva al exportar.</td></tr><tr><th scope="row"><code>allowed-tools</code></th><td>No</td><td>Hasta 20 entradas. Es informativo: nunca concede nada.</td></tr><tr><th scope="row"><code>metadata</code></th><td>No</td><td>Mapa de clave a texto, hasta 30 entradas (por ejemplo category).</td></tr></tbody></table></div>
+        <aside class="tip"><b>Consejo.</b> Otras claves de primer nivel de tipo escalar se conservan al importar y exportar, de modo que un viaje de ida y vuelta no pierde datos.</aside>
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Ejemplo completo comentado</h2>
+        <p>Este es el paquete inicial client-email en inglés, tal como se envía con el backend. Los límites de la sección anterior se cumplen: el nombre usa minúsculas y guiones, la descripción es breve y metadata lleva la categoría y la marca de incluida de serie.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-yaml">---
+name: client-email
+description: &quot;Write a clear email to a client: subject, brief context, a concrete request or answer and the next step. Use it for replies, follow-ups, friendly collections and announcements.&quot;
+metadata:
+  category: communication
+  builtin: &quot;true&quot;
+---
+
+# Client email
+
+## When to use it
+To write replies, follow-ups or notices to clients.
+
+## Steps
+1. Identify the goal in one sentence: inform, ask, confirm, collect or apologize.
+2. Specific subject (at most 8 words) with the topic and, if relevant, the date or reference.
+3. First paragraph: the answer or request. Then the minimum context.
+4. Close with a single next step, who does it and by when.
+5. Adjust the tone: warm and professional; in complaints acknowledge the problem first; in collections be firm and kind.
+
+## Quality criteria
+- Under 150 words unless more is needed.
+- No figure, date or commitment that is not in the task data.
+- Check names, amounts and attachments mentioned.
+
+## Limits
+Leave the email as a draft; sending it is decided by a person or by the organization policy.</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Límites del paquete</h2>
+        <p>Estos topes se validan al crear, editar e importar. Una violación devuelve un código de error estable, por ejemplo file_too_large, too_many_files o zip_bomb.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Límite</th><th scope="col">Valor</th></tr></thead><tbody><tr><th scope="row"><code>Tamaño total de una versión</code></th><td>2 MB</td></tr><tr><th scope="row"><code>Tamaño de un archivo</code></th><td>512 KB</td></tr><tr><th scope="row"><code>Archivos por habilidad (incluye SKILL.md)</code></th><td>40</td></tr><tr><th scope="row"><code>Entradas revisadas de un zip</code></th><td>300</td></tr><tr><th scope="row"><code>Profundidad de ruta</code></th><td>4 niveles, segmentos con [A-Za-z0-9._-]</td></tr><tr><th scope="row"><code>Extensiones admitidas</code></th><td>md, txt, csv, json, yaml, yml, py, js, sh (solo texto UTF-8, sin bytes NUL)</td></tr><tr><th scope="row"><code>Razón de compresión por entrada de zip</code></th><td>100 a 1</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Habilidades iniciales incluidas</h2>
+        <p>El backend incluye un catálogo de habilidades iniciales como datos embebidos en el binario, en español y en inglés y con el mismo formato que una importación, bajo builtin/&lt;idioma&gt;/&lt;nombre&gt;/ (hoy 55 por idioma, entre ellas bank-reconciliation, b2b-proposal, service-contract-review, month-end-close, client-email y project-plan).</p>
+        <p>La primera vez que una organización usa la biblioteca se crean activas, en el idioma de la organización. Si la organización ya tiene alguna habilidad, incluso borrada, se deja como está, y las que se borraron no se vuelven a crear. Las plantillas de rol declaran default_skills (solo nombres) y los agentes de ese rol las reciben sin necesidad de una asignación.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">backend/internal/skills/builtin/
+├── es/&lt;nombre&gt;/SKILL.md
+└── en/&lt;nombre&gt;/SKILL.md</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">Ciclo de vida y estados</h2>
+        <p>Una habilidad tiene uno de cuatro estados: draft, in_review, active o disabled. Quien tiene el permiso skills:write (miembros) crea borradores, edita e importa. Solo quien tiene skills:review (administradores) revisa, activa, desactiva y borra. Una revisión indica la versión que el revisor leyó (si no, stale_review) y vuelve a comprobar los hashes de los archivos antes de activar.</p>
+        <p>Una importación siempre entra en in_review. Si un miembro edita una habilidad activa, la nueva versión queda en in_review y los agentes siguen usando la versión aprobada; si la edita un administrador, la edición es la revisión y queda activa. Un rechazo devuelve a borrador (o deja activa la versión aprobada anterior) con una nota. Borrar es lógico: crear otra con el mismo nombre la recupera con una versión nueva.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">create (member)  → draft ──submit──▶ in_review ──approve (admin)──▶ active
+import (member)  → in_review (always)
+reject → draft, or stays active with the previous approved version
+disable / approve again · delete (soft)</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Escaneo e importación y exportación</h2>
+        <p>Al guardar cada versión se escanea el paquete y se guardan advertencias para el revisor: injection (el puntaje de inyección de cada archivo supera el umbral), script (archivos ejecutables como texto), allowed_tools (se declaró allowed-tools) e import_note. El escaneo informa; no decide por sí solo. El revisor ve todo antes de aprobar.</p>
+        <p>Se puede importar un .zip o un SKILL.md suelto. La validación es estricta: se rechazan rutas con .. o absolutas, barras invertidas, letras de unidad, enlaces simbólicos y archivos especiales, entradas cifradas, duplicados sin distinguir mayúsculas y bombas de compresión. Una única carpeta envoltorio se quita y se ignoran __MACOSX y .DS_Store. La importación desde una URL no está implementada a propósito, porque exigiría un descargador seguro frente a SSRF.</p>
+        <p>La exportación devuelve un zip determinista con el diseño estándar (&lt;nombre&gt;/SKILL.md más recursos, sin bits ejecutables) o solo SKILL.md. Importar de nuevo una exportación da las mismas instrucciones, descripción, metadatos y archivos.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-http">POST /skills/import           # .zip or SKILL.md
+GET  /skills/{id}/export      # deterministic zip
+POST /skills/{id}/submit      # draft → in_review
+POST /skills/{id}/review      # approve or reject (skills:review)</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Asignación a agentes</h2>
+        <p>La asignación vincula una habilidad con un agente (tabla skill_assignments) mediante PUT y DELETE sobre /agents/{id}/skills/{skillId}, con el permiso de escritura de agentes. Además existen los valores por defecto de rol: los nombres en default_skills de la plantilla de rol llegan a todos los agentes de ese rol sin una fila de asignación.</p>
+        <p>Una habilidad solo se sirve a un agente si está asignada (o es predeterminada de su rol) y su versión aprobada está activa y habilitada. Ante cualquier otra situación, la carga se deniega con skill_not_available.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">Cómo llegan las habilidades al modelo</h2>
+        <p>Divulgación progresiva en dos pasos. En cada ejecución, el backend añade a la solicitud solo el nombre y la descripción de las habilidades servibles del agente, con topes: como máximo 12 habilidades, 240 caracteres por descripción y 3000 caracteres en total. El runtime las presenta como líneas del prompt con la regla de que una habilidad guía cómo trabajar y nunca concede herramientas, conexiones, permisos, autonomía ni aprobaciones.</p>
+        <p>Si una habilidad aplica, el agente la pide con una solicitud de herramienta. El Tool Gateway la sirve como herramienta de lectura nativa (con kill switch, pausa y auditoría) y responde con el cuerpo de la versión aprobada sin frontmatter más la lista de archivos; con file devuelve un recurso concreto.</p>
+        <p>El texto viaja por su propio canal (loaded_skills) como configuración confiable de la organización, entre delimitadores propios y no como datos no confiables, porque una persona aprobó esa versión exacta. Aun así se limpia (caracteres invisibles, credenciales, delimitadores falsificados), se acota (24 000 caracteres por respuesta, 4 habilidades cargadas por tarea) y se puntúa contra inyección. Los scripts son texto inerte: ejecutarlos exige la herramienta de código con aprobación humana.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-json">{ &quot;tool&quot;: &quot;skill&quot;, &quot;action&quot;: &quot;load&quot;, &quot;args&quot;: { &quot;name&quot;: &quot;client-email&quot;, &quot;file&quot;: &quot;templates/follow-up.md&quot; } }</code></pre>
+        
+        
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="cards"><li><a href="/docs/runtime-de-agentes/"><b>Runtime de agentes</b><span>El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.</span></a></li><li><a href="/docs/referencia-api/"><b>Referencia de la API</b><span>Autenticación, formato de errores y rutas de /api/v1: peticiones, tareas, aprobaciones, agentes, proyectos, skills, tienda, drive y WebSocket.</span></a></li><li><a href="/docs/arquitectura/"><b>Arquitectura de AI Workforce OS</b><span>Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Empieza ahora</h2>
+      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+      <a href="/docs/">Documentación</a>
+      <a href="/guia/">Guía de uso</a>
+      <a href="#top">Volver arriba</a>
+    </div>
+  </footer>
+</body>
+</html>

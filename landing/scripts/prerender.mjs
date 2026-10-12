@@ -3,14 +3,15 @@
  * real text. Writes TWO pages from the one template (index.html keeps its data-i18n keys, so this is idempotent):
  *   /index.html     Spanish (canonical https://workforceai.es/)
  *   /en/index.html  English (canonical https://workforceai.es/en/), assets as root-absolute paths
- * plus sitemap.xml. Run after editing texts:
- *   node landing/scripts/prerender.mjs
+ * (sitemap.xml is written by build-guide.mjs). Run after editing texts:
+ *   node landing/scripts/build.mjs
  * No dependencies.
  */
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
+import { loadPages, guidePath, pagePath } from "./guide-lib.mjs";
 
 const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SITE = "https://workforceai.es";
@@ -20,6 +21,8 @@ const DICT = ctx.window.I18N;
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const escAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
+const GUIDE = loadPages();
+const DOCS = loadPages("docs");
 const PAGES = {
   es: { file: "index.html", url: SITE + "/", locale: "es_ES" },
   en: { file: "en/index.html", url: SITE + "/en/", locale: "en_US" },
@@ -44,6 +47,11 @@ function bake(template, lang) {
     for (const pair of spec.split(",")) { const [attr, k] = pair.split(":"); tag = setAttr(tag, attr, get(k)); }
     return tag;
   });
+
+  // Links into the guide (language-specific URLs).
+  html = html.replace(/<a\b[^>]*\bdata-guide="([^"]+)"[^>]*>/g, (tag, id) => setAttr(tag, "href", guidePath(id, lang, GUIDE)));
+
+  html = html.replace(/<a\b[^>]*\bdata-docs="([^"]+)"[^>]*>/g, (tag, id) => setAttr(tag, "href", pagePath(id, lang, DOCS, "docs")));
 
   // Page identity: language, canonical, social URL and locale, which language link is current.
   const page = PAGES[lang];
@@ -81,22 +89,4 @@ let en = bake(template, "en");
 en = en.replace(/\b(href|src)="(?![a-z][a-z0-9+.-]*:|#|\/)([^"]*)"/g, '$1="/$2"');
 fs.mkdirSync(path.join(dir, "en"), { recursive: true });
 fs.writeFileSync(path.join(dir, PAGES.en.file), en);
-
-// Sitemap: both languages, each pointing at the other (hreflang).
-const today = new Date().toISOString().slice(0, 10);
-const alt = `    <xhtml:link rel="alternate" hreflang="es" href="${PAGES.es.url}"/>\n    <xhtml:link rel="alternate" hreflang="en" href="${PAGES.en.url}"/>\n    <xhtml:link rel="alternate" hreflang="x-default" href="${PAGES.es.url}"/>`;
-fs.writeFileSync(path.join(dir, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  <url>
-    <loc>${PAGES.es.url}</loc>
-    <lastmod>${today}</lastmod>
-${alt}
-  </url>
-  <url>
-    <loc>${PAGES.en.url}</loc>
-    <lastmod>${today}</lastmod>
-${alt}
-  </url>
-</urlset>
-`);
-console.log("Wrote index.html (es), en/index.html (en) and sitemap.xml.");
+console.log("Wrote index.html (es) and en/index.html (en).");

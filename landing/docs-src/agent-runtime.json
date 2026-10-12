@@ -1,0 +1,368 @@
+{
+  "id": "agent-runtime",
+  "slug": {
+    "es": "runtime-de-agentes",
+    "en": "agent-runtime"
+  },
+  "related": [
+    "architecture",
+    "configuration",
+    "skills-format"
+  ],
+  "es": {
+    "title": "Runtime de agentes",
+    "metaTitle": "Runtime de agentes y proveedores | AI Workforce OS",
+    "description": "El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.",
+    "intro": "El runtime de agentes es un servicio en Python (FastAPI y CrewAI) que convierte una tarea y su contexto en un resultado estructurado. Solo habla con proveedores de modelo. Todo lo que tiene efectos, como herramientas, credenciales, aprobaciones y ejecución de código, queda en el backend en Go.",
+    "sections": [
+      {
+        "h": "Rol y contrato HTTP",
+        "paras": [
+          "El backend llama al runtime por HTTP con una tarea, el perfil del agente y el contexto que armó. El runtime devuelve una salida estructurada validada y, si el agente quiere actuar, una lista de tool_requests. Nunca ejecuta una herramienta ni llama a un sistema externo. Así la frontera de confianza queda en un solo lugar: el modelo puede ser engañado por texto no confiable, pero solo puede proponer.",
+          "Cuando RUNTIME_TOKEN está definido en ambos servicios, el runtime exige una cabecera Authorization bearer en todas las rutas salvo /healthz, comparada en tiempo constante. Es opcional para no romper despliegues existentes; defínelo en producción. Los endpoints principales son:"
+        ],
+        "table": {
+          "head": [
+            "Endpoint",
+            "Propósito"
+          ],
+          "rows": [
+            [
+              "POST /v1/plan, /v1/plan-phases, /v1/plan-phase, /v1/replan",
+              "Convierten una solicitud en un plan de tareas para los agentes disponibles"
+            ],
+            [
+              "POST /v1/run-task",
+              "Ejecuta una tarea para un agente; devuelve salida estructurada y tool_requests opcionales"
+            ],
+            [
+              "POST /v1/consult, /v1/review, /v1/synthesize, /v1/summarize",
+              "Consultas entre agentes, revisión, informe final, resúmenes"
+            ],
+            [
+              "POST /v1/route, /v1/chat-reply",
+              "Enrutamiento de chat y respuestas conversacionales"
+            ],
+            [
+              "POST /v1/estimate",
+              "Rango de costo antes de ejecutar; no llama al modelo"
+            ],
+            [
+              "POST /v1/provider-test",
+              "Una llamada real pequeña para probar la clave de una organización"
+            ],
+            [
+              "GET /healthz",
+              "Estado, modo (simulation o live), proveedor configurado y por defecto; nunca claves"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Simulación y modo real",
+        "paras": [
+          "SIMULATION=true selecciona un motor guionado. Devuelve planes, resultados, conteos de tokens y costos plausibles con latencia simulada (SIM_LATENCY_SCALE=0 elimina la espera). No necesita claves, no hace llamadas de red y no cuesta nada. También ignora la política de proveedores porque ningún dato sale del proceso. El mismo motor se usa cuando no hay ningún proveedor configurado, y entonces /healthz informa el modo simulation.",
+          "En modo real un motor CrewAI corre un agente, una tarea y un crew por rol, con la salida validada contra un esquema StructuredOutput. Los campos que solo existen en modo real (provider, model, usage.failed_providers) se omiten en simulación, así que el contrato no cambia. SIMULATION=true siempre gana, incluso sobre la clave propia de una organización."
+        ]
+      },
+      {
+        "h": "Proveedores de modelo",
+        "paras": [
+          "Se admiten tres proveedores y se necesita al menos uno configurado: deepseek, anthropic y custom, un endpoint compatible con OpenAI que puede ser regional, un vLLM u Ollama local o tu propia pasarela. Un modelo custom se pasa como openai/<nombre>. Un modelo sin costo, como uno local, puede tarificarse en 0 con las variables de precio custom.",
+          "Las organizaciones también pueden traer su propia clave. Se sella con la clave de datos de la organización (AES-256-GCM, envuelta por CONNECTIONS_KEK), ningún endpoint la devuelve salvo sus últimos cuatro caracteres, y viaja en claro solo por el salto interno, autenticado con token, del backend al runtime."
+        ],
+        "table": {
+          "head": [
+            "Proveedor",
+            "Configuración",
+            "Notas"
+          ],
+          "rows": [
+            [
+              "deepseek",
+              "DEEPSEEK_API_KEY, DEEPSEEK_MODEL",
+              "API de terceros; modelo por defecto deepseek/deepseek-chat"
+            ],
+            [
+              "anthropic",
+              "ANTHROPIC_API_KEY, ANTHROPIC_MODEL",
+              "API de terceros; el modelo por defecto está en el README del runtime"
+            ],
+            [
+              "custom",
+              "CUSTOM_LLM_BASE_URL (obligatoria), CUSTOM_LLM_API_KEY, CUSTOM_LLM_MODEL",
+              "Cualquier endpoint compatible con OpenAI: regional, vLLM u Ollama, pasarela propia. Precios con CUSTOM_PRICE_IN_PER_M y CUSTOM_PRICE_OUT_PER_M"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Orden de proveedores y respaldo",
+        "paras": [
+          "Para cada llamada el runtime arma una lista de intentos con tres fuentes, cada una agrega solo los proveedores que faltan: MODEL_PROVIDER_ORDER_<ROL> (el rol del agente en mayúsculas, o PLAN, CONSULT, SYNTHESIZE), luego preferred_providers de la solicitud y por último MODEL_PROVIDER_ORDER global (por defecto deepseek, anthropic, custom). Así, todo proveedor configurado y permitido es un respaldo.",
+          "Un fallo transitorio (timeout, límite de tasa, 5xx) se reintenta en el mismo proveedor PROVIDER_RETRIES veces (1 por defecto, con PROVIDER_RETRY_BACKOFF_S) antes de pasar al siguiente. PROVIDER_TIMEOUT_S acota cada intento. La respuesta indica qué proveedor y modelo contestaron y cuáles fallaron antes. La política de la organización puede cambiar el modelo por rol, pero solo de un proveedor ya configurado y permitido."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Runtime (agent-runtime)\nSIMULATION=false                 # true: scripted engine, no network, no cost\nDEEPSEEK_API_KEY=...             # at least one provider is enough\nANTHROPIC_API_KEY=...\nCUSTOM_LLM_BASE_URL=https://llm.internal.example/v1   # OpenAI-compatible\nMODEL_PROVIDER_ORDER=anthropic,deepseek,custom\nMODEL_PROVIDER_ORDER_LEGAL=anthropic                  # per role / task\nALLOWED_PROVIDERS=anthropic,custom                    # operator ceiling\nRUNTIME_TOKEN=<shared secret>    # same value in the backend\n\n# Backend\nRUNTIME_URL=http://runtime:8000\nBUDGET_USD=50                    # organization budget\nREQUEST_BUDGET_CAP_USD=...       # per-request cap\nAGENT_BUDGET_USD=...             # per-agent cap"
+        }
+      },
+      {
+        "h": "Política de datos: ALLOWED_PROVIDERS",
+        "paras": [
+          "La política de datos se aplica antes de enviar nada. La lista efectiva es el ALLOWED_PROVIDERS del operador intersectado con el allowed_providers de la solicitud. Un proveedor fuera de la lista ni se llama ni se usa como respaldo, y una solicitud puede reducir el techo del operador pero nunca ampliarlo.",
+          "El backend completa allowed_providers desde la política de modelos de cada organización (owner y admin pueden editarla y cada cambio queda auditado). Si la intersección queda vacía envía un valor centinela que ningún proveedor cumple, así que el runtime rechaza la llamada en lugar de ampliar el conjunto. Los fallos son explícitos, nunca silenciosos:"
+        ],
+        "code": {
+          "lang": "json",
+          "text": "{\n  \"detail\": {\n    \"code\": \"no_allowed_provider\",\n    \"message\": \"...\",\n    \"providers_tried\": [],\n    \"allowed_providers\": [\"anthropic\"],\n    \"configured_providers\": [\"deepseek\"]\n  }\n}"
+        },
+        "tip": "no_allowed_provider devuelve HTTP 422 y no se envía nada. all_providers_failed devuelve HTTP 502 y lista providers_tried."
+      },
+      {
+        "h": "Qué sale del proceso y redacción",
+        "paras": [
+          "A un proveedor solo llegan los prompts de cada llamada: el texto de la solicitud del usuario, la persona, responsabilidades y herramientas del agente, salidas de tareas dependientes, memoria del agente, contenido externo, resultados de herramientas ya filtrados por el backend y preguntas de consulta o síntesis. Credenciales, connection_id, URLs de API y tokens no forman parte del contrato, así que no pueden enviarse.",
+          "Los secretos se redactan dos veces. El backend redacta primero los resultados de herramientas; el módulo redact del runtime es la segunda barrera y cubre claves privadas, JWT, tokens de GitHub, AWS y Google, claves de API, tokens bearer, asignaciones tipo password, URLs con tokens y números de tarjeta válidos por Luhn. Se aplica a la entrada del prompt y a la salida del modelo, y los mensajes de error de los proveedores también pasan por él. El contenido externo, las salidas de dependencias y la memoria se insertan solo en el prompt de usuario, dentro de bloques marcados como datos no confiables con la instrucción de no obedecerlos. El system prompt se arma solo con persona, responsabilidades y herramientas que da el backend."
+        ]
+      },
+      {
+        "h": "Herramientas: el modelo pide, el backend ejecuta",
+        "paras": [
+          "Una solicitud de herramienta es una propuesta. El backend revisa la lista de herramientas del agente, el esquema de argumentos, restricciones como dominios permitidos, el motor de políticas y el nivel de autonomía, y puede crear una aprobación para una persona. Solo entonces el tool gateway ejecuta la herramienta, con credenciales de la bóveda cifrada que nunca salen del backend. El resultado vuelve al modelo redactado y delimitado como datos no confiables.",
+          "Las acciones con efectos externos irreversibles, como enviar un correo, siempre requieren una decisión humana, sea cual sea la autonomía del agente. Una acción aprobada se reclama como máximo una vez, así que un reinicio no puede ejecutarla dos veces. Las herramientas sin conexión usan adaptadores falsos en memoria, que es como funciona la simulación de punta a punta."
+        ],
+        "code": {
+          "lang": "json",
+          "text": "{\n  \"tool_requests\": [\n    { \"tool\": \"email\", \"action\": \"send\",\n      \"args\": { \"to\": \"customer@example.com\", \"subject\": \"Proposal\" } }\n  ]\n}"
+        }
+      },
+      {
+        "h": "Sandbox de código",
+        "paras": [
+          "La herramienta code, acción run, permite que un agente pida ejecutar Python. Está desactivada por defecto y cada ejecución se convierte en una aprobación de alto riesgo que muestra el código completo, los archivos de entrada, el propósito y los límites; nada puede saltarse ese paso. La aprobación queda ligada a un hash del código y al SHA-256 de cada entrada, así que cambiar cualquiera exige una aprobación nueva.",
+          "Tras la aprobación el backend envía la ejecución a un runner aparte que inicia un contenedor desechable sin red, con raíz de solo lectura, usuario no root, todas las capabilities eliminadas, límites de CPU, memoria y procesos, un timeout, topes de salida y una lista de tipos de archivo permitidos. El entorno del runner no se reenvía, así que ningún secreto llega al código. El kill switch, la pausa o el modo de solo lectura abortan una ejecución en curso. Requiere SANDBOX_URL y SANDBOX_TOKEN en el backend; el runner monta el socket de Docker, que equivale a root en ese host."
+        ]
+      },
+      {
+        "h": "Contabilidad de costos y presupuestos",
+        "paras": [
+          "Los precios viven en una sola tabla, model_prices.json, en USD por millón de tokens, embebida en el backend y copiada byte a byte en el runtime; una prueba en cada servicio exige que coincidan. Un modelo ausente de la tabla se cobra a una tarifa por defecto conservadora y se avisa una vez en el log. PRICE_IN_PER_M y PRICE_OUT_PER_M fuerzan una tarifa para todos los proveedores, y la tabla no es una afirmación de lo que cobra tu propio contrato con el proveedor.",
+          "Antes de cada llamada al modelo el backend reserva la estimación máxima contra la solicitud, el agente y la organización, y luego registra el mayor entre el costo que reporta el runtime y su propio recálculo, de modo que no depende de la exactitud del runtime. El gasto se lee de un ledger en Postgres. /v1/estimate da un rango antes de ejecutar, nunca una cifra única. Límites:"
+        ],
+        "table": {
+          "head": [
+            "Control",
+            "Dónde se aplica",
+            "Efecto al excederse"
+          ],
+          "rows": [
+            [
+              "Presupuesto de la organización (BUDGET_USD)",
+              "Backend, antes de cada llamada al modelo",
+              "La tarea falla con un mensaje explícito y un evento; no se reanuda desde la API"
+            ],
+            [
+              "Tope por solicitud (REQUEST_BUDGET_CAP_USD)",
+              "Backend",
+              "La solicitud se pausa con budget.exceeded; subir el tope para continuar"
+            ],
+            [
+              "Tope por agente (AGENT_BUDGET_USD)",
+              "Backend",
+              "El agente se pausa; subir el tope para continuar"
+            ],
+            [
+              "COST_CONFIRM_THRESHOLD_USD",
+              "Backend, tras /v1/estimate",
+              "Una persona confirma el costo estimado antes de ejecutar"
+            ],
+            [
+              "MAX_PARALLEL_PER_ORG",
+              "Cola del backend",
+              "Las llamadas esperan en una cola con prioridad"
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "en": {
+    "title": "Agent runtime",
+    "metaTitle": "Agent runtime: providers, simulation, cost | AI Workforce OS",
+    "description": "The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.",
+    "intro": "The agent runtime is a Python service (FastAPI and CrewAI) that turns a task and its context into a structured result. It talks only to model providers. Everything with side effects, such as tools, credentials, approvals and running code, stays in the Go backend.",
+    "sections": [
+      {
+        "h": "Role and HTTP contract",
+        "paras": [
+          "The backend calls the runtime over HTTP with a task, the agent profile and the context it assembled. The runtime returns validated structured output and, if the agent wants to act, a list of tool_requests. It never executes a tool and never calls an external system. This keeps the trust boundary in one place: the model may be misled by untrusted text, but it can only propose.",
+          "When RUNTIME_TOKEN is set in both services, the runtime requires an Authorization bearer header on every route except /healthz, compared in constant time. It is optional so existing deployments do not break; set it in production. The main endpoints are:"
+        ],
+        "table": {
+          "head": [
+            "Endpoint",
+            "Purpose"
+          ],
+          "rows": [
+            [
+              "POST /v1/plan, /v1/plan-phases, /v1/plan-phase, /v1/replan",
+              "Turn a request into a plan of tasks for the available agents"
+            ],
+            [
+              "POST /v1/run-task",
+              "Run one task for one agent; returns structured output and optional tool_requests"
+            ],
+            [
+              "POST /v1/consult, /v1/review, /v1/synthesize, /v1/summarize",
+              "Agent-to-agent questions, review, final report, summaries"
+            ],
+            [
+              "POST /v1/route, /v1/chat-reply",
+              "Chat routing and conversational replies"
+            ],
+            [
+              "POST /v1/estimate",
+              "Cost range before running; does not call the model"
+            ],
+            [
+              "POST /v1/provider-test",
+              "One small real call to test an organization's key"
+            ],
+            [
+              "GET /healthz",
+              "Status, mode (simulation or live), configured and default provider; never keys"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Simulation and live mode",
+        "paras": [
+          "SIMULATION=true selects a scripted engine. It returns plausible plans, results, token counts and costs with simulated latency (SIM_LATENCY_SCALE=0 removes the delay). It needs no keys, makes no network calls and costs nothing. It also ignores the provider policy because no data leaves the process. The same engine is used when no provider is configured at all, and /healthz then reports mode simulation.",
+          "In live mode a CrewAI engine runs one agent, task and crew per role, with output validated against a StructuredOutput schema. Fields that exist only in live mode (provider, model, usage.failed_providers) are omitted in simulation, so the contract does not change. SIMULATION=true always wins, including over an organization's own key."
+        ]
+      },
+      {
+        "h": "Model providers",
+        "paras": [
+          "Three providers are supported and at least one must be configured: deepseek, anthropic and custom, an OpenAI-compatible endpoint that can be regional, a local vLLM or Ollama, or your own gateway. A custom model is passed as openai/<name>. A model that costs nothing, such as a local one, can be priced at 0 with the custom price variables.",
+          "Organizations can also bring their own key. It is sealed with the organization's data key (AES-256-GCM, wrapped by CONNECTIONS_KEK), is never returned by any endpoint beyond its last four characters, and travels in clear only on the internal, token-authenticated hop from the backend to the runtime."
+        ],
+        "table": {
+          "head": [
+            "Provider",
+            "Configuration",
+            "Notes"
+          ],
+          "rows": [
+            [
+              "deepseek",
+              "DEEPSEEK_API_KEY, DEEPSEEK_MODEL",
+              "Third-party API; default model deepseek/deepseek-chat"
+            ],
+            [
+              "anthropic",
+              "ANTHROPIC_API_KEY, ANTHROPIC_MODEL",
+              "Third-party API; see the runtime README for the default model"
+            ],
+            [
+              "custom",
+              "CUSTOM_LLM_BASE_URL (required), CUSTOM_LLM_API_KEY, CUSTOM_LLM_MODEL",
+              "Any OpenAI-compatible endpoint: regional, vLLM or Ollama, own gateway. Prices via CUSTOM_PRICE_IN_PER_M and CUSTOM_PRICE_OUT_PER_M"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Provider order and fallback",
+        "paras": [
+          "For each call the runtime builds an attempt list from three sources, each adding only the providers not yet listed: MODEL_PROVIDER_ORDER_<ROLE> (the agent role in capitals, or PLAN, CONSULT, SYNTHESIZE), then the request's preferred_providers, then the global MODEL_PROVIDER_ORDER (default deepseek, anthropic, custom). Every configured and permitted provider is therefore a fallback.",
+          "A transient failure (timeout, rate limit, 5xx) is retried on the same provider PROVIDER_RETRIES times (default 1, with PROVIDER_RETRY_BACKOFF_S) before moving to the next. PROVIDER_TIMEOUT_S bounds each attempt. The response reports which provider and model answered and which ones failed first. Per-role models can be overridden by the organization policy, but only for a provider that is already configured and allowed."
+        ],
+        "code": {
+          "lang": "bash",
+          "text": "# Runtime (agent-runtime)\nSIMULATION=false                 # true: scripted engine, no network, no cost\nDEEPSEEK_API_KEY=...             # at least one provider is enough\nANTHROPIC_API_KEY=...\nCUSTOM_LLM_BASE_URL=https://llm.internal.example/v1   # OpenAI-compatible\nMODEL_PROVIDER_ORDER=anthropic,deepseek,custom\nMODEL_PROVIDER_ORDER_LEGAL=anthropic                  # per role / task\nALLOWED_PROVIDERS=anthropic,custom                    # operator ceiling\nRUNTIME_TOKEN=<shared secret>    # same value in the backend\n\n# Backend\nRUNTIME_URL=http://runtime:8000\nBUDGET_USD=50                    # organization budget\nREQUEST_BUDGET_CAP_USD=...       # per-request cap\nAGENT_BUDGET_USD=...             # per-agent cap"
+        }
+      },
+      {
+        "h": "Data policy: ALLOWED_PROVIDERS",
+        "paras": [
+          "The data policy is applied before anything is sent. The effective list is the operator's ALLOWED_PROVIDERS intersected with the allowed_providers in the request. A provider outside the list is neither called nor used as a fallback, and a request can narrow the operator ceiling but never widen it.",
+          "The backend fills allowed_providers from each organization's model policy (owner and admin can edit it, and every change is audited). If the intersection is empty it sends a sentinel value that no provider matches, so the runtime refuses the call instead of widening the set. Failures are explicit, never silent:"
+        ],
+        "code": {
+          "lang": "json",
+          "text": "{\n  \"detail\": {\n    \"code\": \"no_allowed_provider\",\n    \"message\": \"...\",\n    \"providers_tried\": [],\n    \"allowed_providers\": [\"anthropic\"],\n    \"configured_providers\": [\"deepseek\"]\n  }\n}"
+        },
+        "tip": "no_allowed_provider returns HTTP 422 and nothing is sent. all_providers_failed returns HTTP 502 and lists providers_tried."
+      },
+      {
+        "h": "What leaves the process and redaction",
+        "paras": [
+          "Only the prompts of each call reach a provider: the user's request text, the agent's persona, responsibilities and tool list, outputs of dependency tasks, agent memory, external content, tool results that the backend already filtered, and consult or synthesis questions. Credentials, connection ids, API URLs and tokens are not part of the contract, so they cannot be sent.",
+          "Secrets are redacted twice. The backend redacts tool results first; the runtime's redact module is the second barrier and covers private keys, JWTs, GitHub, AWS and Google tokens, API keys, bearer tokens, password-style assignments, URLs carrying tokens and Luhn-valid card numbers. It applies to prompt input and to model output, and provider error messages pass through it too. External content, dependency outputs and memory are inserted only in the user prompt, inside blocks marked as untrusted data with an instruction not to obey them. The system prompt is built only from backend-supplied persona, responsibilities and tools."
+        ]
+      },
+      {
+        "h": "Tools: the model asks, the backend executes",
+        "paras": [
+          "A tool request is a proposal. The backend checks the agent's tool list, the argument schema, constraints such as allowed domains, the policy engine and the autonomy level, and may create an approval for a person. Only then does the tool gateway run the tool, using credentials from the encrypted vault that never leave the backend. The result is returned to the model redacted and delimited as untrusted data.",
+          "Actions with irreversible external effects, such as sending an email, always require a human decision, regardless of the agent's autonomy. An approved action is claimed at most once, so a restart cannot run it twice. Tools without a connection use in-memory fake adapters, which is how simulation works end to end."
+        ],
+        "code": {
+          "lang": "json",
+          "text": "{\n  \"tool_requests\": [\n    { \"tool\": \"email\", \"action\": \"send\",\n      \"args\": { \"to\": \"customer@example.com\", \"subject\": \"Proposal\" } }\n  ]\n}"
+        }
+      },
+      {
+        "h": "Code sandbox",
+        "paras": [
+          "The code tool, action run, lets an agent ask to execute Python. It is off by default and every run becomes a high-risk approval showing the full code, input files, purpose and limits; nothing can skip that step. The approval is bound to a hash of the code and the SHA-256 of every input, so changing either requires a new approval.",
+          "After approval the backend sends the run to a separate runner that starts a disposable container with no network, a read-only root, a non-root user, all capabilities dropped, CPU, memory and process limits, a timeout, output caps and an allow-list of output file types. The runner's environment is not forwarded, so no secrets reach the code. Kill switch, pause or read-only mode abort a running job. It needs SANDBOX_URL and SANDBOX_TOKEN in the backend; the runner mounts the Docker socket, which is root-equivalent on that host."
+        ]
+      },
+      {
+        "h": "Cost accounting and budgets",
+        "paras": [
+          "Prices live in one table, model_prices.json, in USD per million tokens, embedded in the backend and copied byte for byte into the runtime; a test in each service enforces that they match. A model missing from the table is billed at a conservative default and logged once. PRICE_IN_PER_M and PRICE_OUT_PER_M force a rate for every provider, and the table is not a statement of what your own provider contract charges.",
+          "Before each model call the backend reserves the maximum estimate against the request, the agent and the organization, then records the greater of the runtime's reported cost and its own recalculation, so it does not depend on the runtime's accuracy. Spending is read from a ledger in Postgres. /v1/estimate gives a range before running, never a single figure. Limits:"
+        ],
+        "table": {
+          "head": [
+            "Control",
+            "Where it applies",
+            "Effect when exceeded"
+          ],
+          "rows": [
+            [
+              "Organization budget (BUDGET_USD)",
+              "Backend, before each model call",
+              "Task fails with an explicit message and an event; not resumable from the API"
+            ],
+            [
+              "Request cap (REQUEST_BUDGET_CAP_USD)",
+              "Backend",
+              "Request pauses with budget.exceeded; raise the cap to continue"
+            ],
+            [
+              "Agent cap (AGENT_BUDGET_USD)",
+              "Backend",
+              "Agent pauses; raise the cap to continue"
+            ],
+            [
+              "COST_CONFIRM_THRESHOLD_USD",
+              "Backend, after /v1/estimate",
+              "A person confirms the estimated cost before the run starts"
+            ],
+            [
+              "MAX_PARALLEL_PER_ORG",
+              "Backend queue",
+              "Calls wait in a priority queue"
+            ]
+          ]
+        }
+      }
+    ]
+  }
+}

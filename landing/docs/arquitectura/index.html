@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arquitectura: backend, runtime y tiempo real</title>
+  <meta name="description" content="Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/docs/arquitectura/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/arquitectura/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/architecture/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/arquitectura/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:title" content="Arquitectura: backend, runtime y tiempo real">
+  <meta property="og:description" content="Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.">
+  <meta property="og:url" content="https://workforceai.es/docs/arquitectura/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Arquitectura: backend, runtime y tiempo real">
+  <meta name="twitter:description" content="Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Documentación","item":"https://workforceai.es/docs/"},{"@type":"ListItem","position":3,"name":"Arquitectura de AI Workforce OS","item":"https://workforceai.es/docs/arquitectura/"}]},{"@type":"TechArticle","headline":"Arquitectura de AI Workforce OS","description":"Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/docs/arquitectura/","url":"https://workforceai.es/docs/arquitectura/","dateModified":"2026-10-12","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="/">Inicio</a>
+        <a href="/docs/">Documentación</a>
+        <a href="/guia/">Guía de uso</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Idioma">
+          <a href="/docs/arquitectura/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/docs/architecture/" hreflang="en" lang="en" >EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap wide">
+      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li><a href="/docs/">Documentación</a></li><li aria-current="page">Arquitectura de AI Workforce OS</li></ol></nav>
+      <article>
+        <h1>Arquitectura de AI Workforce OS</h1>
+        <p class="lead">AI Workforce OS separa la decisión de la ejecución: un backend en Go es la fuente de verdad, un runtime en Python solo razona con el LLM y un frontend en Next.js dibuja la oficina a partir de eventos. Esta página describe cómo encajan las piezas y cómo viaja una petición de punta a punta.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">Componentes</a></li><li><a href="#s2">Fronteras entre backend y runtime</a></li><li><a href="#s3">Flujo de una petición</a></li><li><a href="#s4">Canal en tiempo real</a></li><li><a href="#s5">Modelo de datos</a></li><li><a href="#s6">Multi-tenencia</a></li><li><a href="#s7">Simulación frente a IA real</a></li><li><a href="#s8">Despliegue y borde</a></li><li><a href="#s9">Estructura del repositorio</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">Componentes</h2>
+        <p>El sistema son cinco procesos más un proxy opcional. Todo el estado de negocio vive en el backend; el runtime no guarda estado entre llamadas.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Componente</th><th scope="col">Tecnología</th><th scope="col">Responsabilidad</th></tr></thead><tbody><tr><th scope="row"><code>Frontend</code></th><td>Next.js, React Three Fiber</td><td>Oficina 3D y modo dashboard. Consume REST y el WebSocket; toda animación deriva de eventos reales.</td></tr><tr><th scope="row"><code>Backend</code></th><td>Go, chi</td><td>API REST /api/v1, WebSocket /ws, orquestador, aprobaciones, auditoría, presupuesto, autenticación y RBAC.</td></tr><tr><th scope="row"><code>Agent runtime</code></th><td>Python, FastAPI</td><td>Recibe tarea y contexto, llama al proveedor LLM y devuelve resultado estructurado. Motor intercambiable.</td></tr><tr><th scope="row"><code>Postgres</code></th><td>PostgreSQL</td><td>Datos de todas las organizaciones, con row-level security. Migraciones SQL numeradas.</td></tr><tr><th scope="row"><code>Redis</code></th><td>Redis</td><td>Pub/sub de eventos hacia el hub WebSocket y límites de tasa. Opcional: sin Redis hay entrega local en proceso.</td></tr><tr><th scope="row"><code>Caddy</code></th><td>Caddy</td><td>Proxy de producción: TLS automático, envía /api/* y /ws al backend y el resto al frontend.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">Fronteras entre backend y runtime</h2>
+        <p>La regla central: el runtime nunca habla con Postgres, Redis ni sistemas externos. Recibe una tarea con su contexto y devuelve un resultado, solicitudes de herramientas y consumo; solo contacta al proveedor del LLM. El backend decide permisos, autonomía y presupuesto, y ejecuta las herramientas.</p>
+        <p>El backend llama al runtime por HTTP con JSON. Si se define RUNTIME_TOKEN en ambos lados, las llamadas llevan ese secreto compartido. El motor de IA queda detrás de una interfaz propia, de modo que CrewAI puede reemplazarse sin tocar el backend.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Endpoint del runtime</th><th scope="col">Uso</th></tr></thead><tbody><tr><th scope="row"><code>POST /v1/plan, /v1/plan-phases, /v1/plan-phase, /v1/replan</code></th><td>Descomponer una petición o proyecto en tareas con dependencias.</td></tr><tr><th scope="row"><code>POST /v1/run-task</code></th><td>Ejecutar una tarea; devuelve output, consultas, tool_requests y usage.</td></tr><tr><th scope="row"><code>POST /v1/consult</code></th><td>Consulta entre agentes.</td></tr><tr><th scope="row"><code>POST /v1/review</code></th><td>Revisión de calidad de un resultado.</td></tr><tr><th scope="row"><code>POST /v1/synthesize</code></th><td>Redactar el reporte consolidado.</td></tr><tr><th scope="row"><code>POST /v1/route, /v1/chat-reply</code></th><td>Enrutar un mensaje de chat y generar la respuesta de un agente.</td></tr><tr><th scope="row"><code>POST /v1/estimate, /v1/summarize, /v1/context-sizes</code></th><td>Estimación de costo, resúmenes y tamaños de contexto.</td></tr><tr><th scope="row"><code>GET /healthz</code></th><td>Estado y modo: simulation o live.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Flujo de una petición</h2>
+        <p>Una petición recorre este camino: la solicitud del usuario llega al orquestador, que pide un plan al runtime, lo valida y crea tareas; cada tarea se asigna a un agente que usa herramientas, las acciones sensibles esperan aprobación humana y al final se sintetiza un reporte.</p>
+        <ol class="steps" aria-label="Pasos"><li>El usuario envía el texto con POST /api/v1/requests (o por el chat, que lo enruta). El backend responde 202 con request_id y emite request.received.</li><li>El orquestador pide el plan al runtime. El backend valida agentes existentes, dependencias y límites antes de aceptarlo y emite plan.created y task.created.</li><li>Las tareas se ejecutan respetando depends_on. Cada una cambia el estado del agente (agent.state_changed) y puede generar consultas entre agentes (message.sent) y una revisión de calidad (task.reviewed).</li><li>Las herramientas que pide el runtime pasan por la política de autonomía y los permisos. Si hace falta aprobación se crea un registro pendiente y la tarea queda en awaiting_approval.</li><li>Un usuario con permiso decide con POST /api/v1/approvals/{id}/decision. La tarea continúa o se bloquea.</li><li>Cuando todas las tareas terminan, el runtime sintetiza el reporte; el backend emite report.created y request.completed.</li><li>En paralelo se registra el costo por petición y se aplica el presupuesto: budget.warning y budget.exceeded pueden pausar la ejecución.</li></ol>
+        <pre class="code" tabindex="0"><code class="lang-text">POST /api/v1/requests {&quot;text&quot;: &quot;...&quot;}      -&gt; 202 {&quot;request_id&quot;: &quot;...&quot;}
+  orchestrator -&gt; runtime POST /v1/plan          -&gt; tasks + depends_on
+  backend validates the plan                     -&gt; plan.created, task.created*
+  per task: runtime POST /v1/run-task            -&gt; output, consults, tool_requests, usage
+  tool_requests -&gt; policy/autonomy check         -&gt; approval.requested (if needed)
+  POST /api/v1/approvals/{id}/decision           -&gt; approval.resolved, task resumes
+  runtime POST /v1/synthesize                    -&gt; report.created, request.completed</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Canal en tiempo real</h2>
+        <p>GET /ws abre un WebSocket por organización. El backend publica cada evento en Redis (canal aiworkforce:events) y un hub reenvía el cuadro solo a los clientes cuyo org_id coincide; un cuadro sin org_id se descarta. Sin REDIS_URL el hub recibe los eventos de forma local.</p>
+        <p>Al conectar llega un evento hello con la lista de agentes. Después llegan los eventos de dominio. El servidor envía ping cada 30 s, cierra si no hay pong en 60 s y descarta a los clientes lentos (cola de 256 cuadros). Con autenticación activa el socket se cierra con el código 4401 cuando expira el token, para que el cliente reconecte. No hay replay: tras reconectar, el cliente recarga el estado por REST.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-json">{
+  &quot;id&quot;: &quot;&lt;uuid&gt;&quot;,
+  &quot;type&quot;: &quot;task.completed&quot;,
+  &quot;ts&quot;: &quot;2026-01-01T12:03:22Z&quot;,
+  &quot;org_id&quot;: &quot;&lt;org id&gt;&quot;,
+  &quot;agent_id&quot;: &quot;sales&quot;,
+  &quot;payload&quot;: { &quot;task&quot;: { &quot;id&quot;: &quot;...&quot;, &quot;status&quot;: &quot;done&quot; } }
+}</code></pre>
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Grupo</th><th scope="col">Tipos de evento</th></tr></thead><tbody><tr><th scope="row"><code>Conexión</code></th><td>hello, error, metrics.updated, activity.logged</td></tr><tr><th scope="row"><code>Peticiones</code></th><td>request.received, request.queued, request.dequeued, request.resumed, request.status_changed, request.completed, plan.created, report.created</td></tr><tr><th scope="row"><code>Tareas</code></th><td>task.created, task.started, task.completed, task.failed, task.blocked, task.retrying, task.reviewed, task.steered, task.reassigned</td></tr><tr><th scope="row"><code>Agentes y chat</code></th><td>agent.created, agent.state_changed, message.sent, chat.message, chat.typing, route.decided</td></tr><tr><th scope="row"><code>Aprobaciones</code></th><td>approval.requested, approval.progress, approval.reminder, approval.resolved</td></tr><tr><th scope="row"><code>Costos</code></th><td>cost.estimated, budget.warning, budget.exceeded, budget.resumed, provider.no_balance</td></tr><tr><th scope="row"><code>Proyectos</code></th><td>project.created, project.launched, project.delta, project.status_changed, project.budget_warning, project.plan_change_*</td></tr><tr><th scope="row"><code>Recompensas</code></th><td>coins.earned, shop.purchased, item.equipped, item.unequipped, office.item_placed, office.item_removed</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Modelo de datos</h2>
+        <p>Las tablas viven en Postgres y todas las de negocio llevan org_id. Esta es la vista resumida; el esquema completo está en las migraciones numeradas.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Entidad</th><th scope="col">Tablas principales</th><th scope="col">Notas</th></tr></thead><tbody><tr><th scope="row"><code>Organizaciones y usuarios</code></th><td>organizations, users, memberships, refresh_tokens, invitations</td><td>Roles por membresía: owner, admin, member, viewer.</td></tr><tr><th scope="row"><code>Agentes</code></th><td>agents, agent_profiles, agent_settings, agent_controls</td><td>Estado, herramientas, permisos y nivel de autonomía.</td></tr><tr><th scope="row"><code>Peticiones y tareas</code></th><td>requests, tasks, request_runs, task_checkpoints, reports</td><td>Estados de tarea: pending, running, blocked, awaiting_approval, done, failed.</td></tr><tr><th scope="row"><code>Aprobaciones</code></th><td>approvals, standing_approvals, approval_executions</td><td>Soportan doble aprobación y permisos permanentes por proyecto.</td></tr><tr><th scope="row"><code>Proyectos</code></th><td>projects, project_templates, plan_changes</td><td>Planes con nodos, presupuesto y versiones de plantilla.</td></tr><tr><th scope="row"><code>Memoria</code></th><td>memories, memory_docs</td><td>Memoria a largo plazo por agente.</td></tr><tr><th scope="row"><code>Habilidades</code></th><td>skills, skill_versions, skill_assignments</td><td>Versionadas, con flujo de revisión.</td></tr><tr><th scope="row"><code>Recompensas</code></th><td>coin_wallets, coin_ledger, shop_inventory, shop_equipment, shop_office</td><td>Monedas por trabajo terminado y objetos de personaje y oficina.</td></tr><tr><th scope="row"><code>Gobierno y costo</code></th><td>audit_logs, audit_chain_heads, usage_entries, budget_caps</td><td>Auditoría encadenada y registro de consumo.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">Multi-tenencia</h2>
+        <p>Cada cuenta crea su propia organización y el org_id viaja dentro del token de acceso; nunca se toma de la entrada del cliente. La capa HTTP lo coloca en el contexto de la petición y todas las consultas se filtran por él.</p>
+        <p>Como defensa en profundidad, Postgres aplica row-level security. Cada transacción fija app.org_id con set_config y las políticas usan esa función; si el valor falta, la consulta no devuelve filas (falla cerrado). La aplicación se conecta con un rol sin privilegios de propietario (DB_APP_ROLE, por defecto app_user, sin BYPASSRLS), y las migraciones usan una conexión aparte (MIGRATE_DATABASE_URL). El hub del WebSocket también filtra por organización.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Simulación frente a IA real</h2>
+        <p>El contrato HTTP del runtime es el mismo en ambos modos; cambia el motor. En simulación (por defecto, sin clave o con SIMULATION=true) el runtime devuelve resultados guionados con latencias simuladas, sin red y sin costo. En modo live usa el proveedor configurado y GET /healthz del runtime informa mode: live y el proveedor.</p>
+        <p>Si hay un proveedor configurado pero el motor real no arranca, el runtime responde en simulación con status degraded y un aviso; no hay fallback silencioso. El backend refleja el modo en su propio /healthz como runtime_mode.</p>
+        
+        
+        
+        <aside class="tip"><b>Consejo.</b> SIMULATION=true siempre gana: no se hace ninguna llamada de red, incluso con claves presentes.</aside>
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Despliegue y borde</h2>
+        <p>docker-compose.yml levanta postgres, redis, almacenamiento de objetos, agent-runtime, backend y frontend; existen variantes de demo y producción. En producción Caddy termina TLS, agrega cabeceras de seguridad y enruta por ruta: /api/* y /ws al backend, todo lo demás al frontend. La ejecución de código de los agentes usa una imagen y un runner de sandbox separados.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">Estructura del repositorio</h2>
+        <p>El backend sigue capas donde api depende de application y esta de domain; la infraestructura implementa los puertos.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">backend/            Go (chi): domain, application, api, events, auth, projects,
+                    drive, skills, memory, rewards, connections, controls, audit
+  cmd/server/       main.go: composition root (wires every service)
+  internal/         domain/ application/ api/ infrastructure/{postgres,redis,runtime,memory}
+  internal/infrastructure/postgres/migrations/   numbered SQL migrations
+agent-runtime/      Python FastAPI (+ CrewAI engine, simulation engine)
+  app/              main.py, engine.py, simulation.py, crewai_engine.py, routing.py ...
+frontend/           Next.js + React Three Fiber (src/app, src/components, src/lib)
+e2e/                Playwright (UI + WebSocket contract)
+sandbox/            code-execution runner image
+deploy/ Caddyfile   production edge (TLS, reverse proxy)
+docker-compose.yml  dev / accounts stack; docker-compose.demo.yml, docker-compose.prod.yml
+docs/               SPEC.md and architecture/*.md
+landing/            this public site</code></pre>
+        
+        
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="cards"><li><a href="/docs/referencia-api/"><b>Referencia de la API</b><span>Autenticación, formato de errores y rutas de /api/v1: peticiones, tareas, aprobaciones, agentes, proyectos, skills, tienda, drive y WebSocket.</span></a></li><li><a href="/docs/runtime-de-agentes/"><b>Runtime de agentes</b><span>El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.</span></a></li><li><a href="/docs/modelo-de-seguridad/"><b>Modelo de seguridad</b><span>Cómo se limita el daño de un agente: bóveda de credenciales, aprobaciones humanas, topes, kill switch, auditoría, RLS y sandbox. Con sus límites actuales.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Empieza ahora</h2>
+      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+      <a href="/docs/">Documentación</a>
+      <a href="/guia/">Guía de uso</a>
+      <a href="#top">Volver arriba</a>
+    </div>
+  </footer>
+</body>
+</html>

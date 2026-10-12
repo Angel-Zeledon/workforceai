@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auth, roles y aislamiento por organización | AI Workforce OS</title>
+  <meta name="description" content="Cómo cuentas, sesiones, roles, invitaciones y row-level security de Postgres aíslan las organizaciones en AI Workforce OS.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/docs/autenticacion-y-multitenencia/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/autenticacion-y-multitenencia/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/auth-and-tenancy/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/autenticacion-y-multitenencia/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:title" content="Auth, roles y aislamiento por organización | AI Workforce OS">
+  <meta property="og:description" content="Cómo cuentas, sesiones, roles, invitaciones y row-level security de Postgres aíslan las organizaciones en AI Workforce OS.">
+  <meta property="og:url" content="https://workforceai.es/docs/autenticacion-y-multitenencia/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Auth, roles y aislamiento por organización | AI Workforce OS">
+  <meta name="twitter:description" content="Cómo cuentas, sesiones, roles, invitaciones y row-level security de Postgres aíslan las organizaciones en AI Workforce OS.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Documentación","item":"https://workforceai.es/docs/"},{"@type":"ListItem","position":3,"name":"Autenticación y multitenencia","item":"https://workforceai.es/docs/autenticacion-y-multitenencia/"}]},{"@type":"TechArticle","headline":"Autenticación y multitenencia","description":"Cómo cuentas, sesiones, roles, invitaciones y row-level security de Postgres aíslan las organizaciones en AI Workforce OS.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/docs/autenticacion-y-multitenencia/","url":"https://workforceai.es/docs/autenticacion-y-multitenencia/","dateModified":"2026-10-12","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="/">Inicio</a>
+        <a href="/docs/">Documentación</a>
+        <a href="/guia/">Guía de uso</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Idioma">
+          <a href="/docs/autenticacion-y-multitenencia/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/docs/auth-and-tenancy/" hreflang="en" lang="en" >EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap wide">
+      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li><a href="/docs/">Documentación</a></li><li aria-current="page">Autenticación y multitenencia</li></ol></nav>
+      <article>
+        <h1>Autenticación y multitenencia</h1>
+        <p class="lead">AI Workforce OS puede correr abierto, con una organización fija, o con cuentas, roles y aislamiento por organización. Esta página describe el servicio de autenticación del backend en Go: cómo funcionan cuentas y sesiones, qué puede hacer cada rol y cómo Postgres hace cumplir la frontera entre organizaciones.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">Dos modos: AUTH_ENABLED false y true</a></li><li><a href="#s2">Cuentas y registro</a></li><li><a href="#s3">Login, bloqueo y límites de tasa</a></li><li><a href="#s4">Sesiones: token de acceso y refresh rotatorio</a></li><li><a href="#s5">Roles y permisos (RBAC)</a></li><li><a href="#s6">Organizaciones, miembros y cambio de organización</a></li><li><a href="#s7">Invitaciones</a></li><li><a href="#s8">Aislamiento con row-level security de Postgres</a></li><li><a href="#s9">Referencia de endpoints</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">Dos modos: AUTH_ENABLED false y true</h2>
+        <p>Con AUTH_ENABLED=false (el valor por defecto) no hay login. La API está abierta y cada solicitud usa una única organización demo fija. Está pensado para desarrollo local y demos, y el servidor registra una advertencia al arrancar. No lo expongas a una red.</p>
+        <p>Con AUTH_ENABLED=true la API exige un token de acceso bearer en las rutas protegidas, resuelve un rol en cada solicitud y limita todo acceso a la base de datos a la organización de quien llama. La validación de arranque rechaza la configuración si JWT_SECRET tiene menos de 32 bytes, si falta DATABASE_URL o si ALLOWED_ORIGINS contiene un comodín.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash"># Auth enabled
+AUTH_ENABLED=true
+JWT_SECRET=&lt;at least 32 random bytes&gt;
+DATABASE_URL=postgres://...         # required with auth
+MIGRATE_DATABASE_URL=postgres://... # owner/DDL role, runs migrations
+DB_APP_ROLE=app_user                # default
+ALLOWED_ORIGINS=https://app.example.com   # no wildcard when auth is on
+TRUSTED_PROXIES=10.0.0.0/8          # honour X-Forwarded-For for IP limits
+AUTH_COOKIE_SECURE=true             # default; false only for plain-http dev
+AUTH_COOKIE_NAME=wfai_refresh       # optional override</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">Cuentas y registro</h2>
+        <p>Registrarse crea en un solo paso un usuario, una organización nueva y una membresía de owner, y abre una sesión. La organización parte con el presupuesto por defecto configurado para organizaciones nuevas. Los correos se normalizan (recorte y minúsculas) antes de cualquier búsqueda o almacenamiento, de modo que Ana@Example.com y ana@example.com son la misma cuenta.</p>
+        <p>Las contraseñas se almacenan con Argon2id (64 MiB, 3 iteraciones, 2 carriles por defecto). Los hashes creados con parámetros más débiles se recalculan en el siguiente login correcto. La entrada se valida con estas reglas:</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Campo</th><th scope="col">Regla</th></tr></thead><tbody><tr><th scope="row"><code>email</code></th><td>Se recorta y pasa a minúsculas; máximo 254 caracteres; debe ser una dirección simple con un punto en el dominio</td></tr><tr><th scope="row"><code>password</code></th><td>10 a 128 caracteres; fuera de una lista corta de contraseñas comunes; distinta del correo o de su parte local; no un solo carácter repetido; al menos dos clases entre minúsculas, mayúsculas, dígitos y símbolos</td></tr><tr><th scope="row"><code>name</code></th><td>1 a 100 caracteres, sin caracteres de control</td></tr><tr><th scope="row"><code>org_name</code></th><td>2 a 100 caracteres, sin caracteres de control; el slug se deriva de él más un sufijo aleatorio</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Login, bloqueo y límites de tasa</h2>
+        <p>Los fallos de login se cuentan por cuenta. Tras cinco contraseñas erróneas la cuenta se bloquea 15 minutos y los intentos siguientes devuelven un error de bloqueo con la hora de desbloqueo. Los correos desconocidos se verifican contra un hash ficticio, de modo que una cuenta inexistente cuesta lo mismo que una contraseña errónea, lo que limita la enumeración de cuentas.</p>
+        <p>La limitación es por capas: un limitador por correo que no depende de si la cuenta existe y limitadores por IP en los endpoints sin autenticar. Los contadores viven en Redis cuando está disponible, por lo que sobreviven a reinicios, y en memoria en caso contrario. Los límites por IP solo respetan X-Forwarded-For de las direcciones listadas en TRUSTED_PROXIES. Los valores por defecto son:</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Límite</th><th scope="col">Por defecto</th><th scope="col">Clave</th></tr></thead><tbody><tr><th scope="row"><code>Intentos de login</code></th><td>10 por 15 min</td><td>Correo (con hash), exista o no la cuenta</td></tr><tr><th scope="row"><code>POST /login</code></th><td>20 por 15 min</td><td>IP del cliente</td></tr><tr><th scope="row"><code>POST /register y /invitations/accept</code></th><td>5 por hora</td><td>IP del cliente</td></tr><tr><th scope="row"><code>POST /refresh y /logout</code></th><td>60 por 15 min</td><td>IP del cliente</td></tr><tr><th scope="row"><code>Endpoints autenticados de auth e invitaciones</code></th><td>120 por min</td><td>Usuario</td></tr><tr><th scope="row"><code>Contraseñas erróneas antes del bloqueo</code></th><td>5, bloqueo de 15 min</td><td>Cuenta</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Sesiones: token de acceso y refresh rotatorio</h2>
+        <p>Una sesión tiene dos partes. El token de acceso es un JWT firmado con HMAC y de vida corta (15 minutos por defecto) que lleva usuario, organización y rol, y se envía como bearer. El refresh token es un valor aleatorio opaco, válido 30 días por defecto, guardado en el servidor solo como hash SHA-256 y entregado en una cookie HttpOnly, SameSite=Strict (wfai_refresh) limitada a /api/v1/auth, con el atributo Secure activo por defecto. Nunca aparece en un cuerpo JSON.</p>
+        <p>Refresh y logout actúan sobre la cookie ambiental, así que exigen la cabecera propia X-WFAI-CSRF y rechazan solicitudes cross-site según Sec-Fetch-Site y Origin. Cada refresh rota el token dentro de una familia. Presentar un token ya usado revoca la familia completa, lo que detecta robos. Logout revoca la familia; logout-all revoca todos los refresh tokens del usuario en todas sus organizaciones.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-http">POST /api/v1/auth/login
+Content-Type: application/json
+
+{&quot;email&quot;:&quot;ana@example.com&quot;,&quot;password&quot;:&quot;...&quot;,&quot;org_id&quot;:&quot;(optional)&quot;}
+
+200 OK
+Set-Cookie: wfai_refresh=...; Path=/api/v1/auth; HttpOnly; SameSite=Strict; Secure
+{&quot;token_type&quot;:&quot;Bearer&quot;,&quot;access_token&quot;:&quot;...&quot;,&quot;expires_in&quot;:900,
+ &quot;user&quot;:{...},&quot;org_id&quot;:&quot;...&quot;,&quot;role&quot;:&quot;owner&quot;}</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Roles y permisos (RBAC)</h2>
+        <p>Cada membresía tiene un rol: owner, admin, member o viewer. Un rol es un conjunto de permisos con nombre recurso:acción, y cada rol es un superconjunto estricto del inferior. Por defecto el rol se vuelve a leer de la base de datos en cada solicitud, así que degradar o quitar a un miembro surte efecto de inmediato y no al expirar el token de acceso (la opción TrustTokenClaims cambia esto por ausencia de estado).</p>
+        <p>Los cambios de rol siguen dos reglas. Un owner puede asignar cualquier rol; un admin solo asigna y gestiona roles inferiores a admin; nadie puede otorgar un rol superior al suyo. El último owner no puede eliminarse. Los agentes nunca tienen permisos de aprobación como artifacts:approve.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Rol</th><th scope="col">Añade sobre el rol inferior</th></tr></thead><tbody><tr><th scope="row"><code>viewer</code></th><td>Solo lectura: miembros, agentes, tareas, solicitudes, conversaciones, aprobaciones, informes, memorias, actividad, métricas, artefactos, archivos, habilidades, tienda</td></tr><tr><th scope="row"><code>member</code></th><td>Crear solicitudes y tareas, escribir en conversaciones, escribir memorias, crear/editar/comentar/exportar artefactos, escribir archivos y habilidades, comprar en la tienda, leer conexiones</td></tr><tr><th scope="row"><code>admin</code></th><td>Gestionar la organización, invitar y gestionar miembros, escribir agentes, gestionar tareas, decidir aprobaciones, leer la auditoría, gestionar conexiones y permisos, pausa y kill switch, aprobar/borrar artefactos, borrar archivos, revisar habilidades, borrar conversaciones</td></tr><tr><th scope="row"><code>owner</code></th><td>Eliminar la organización, facturación, liberar el kill switch, editar la política de aprobaciones (policy:manage)</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">Organizaciones, miembros y cambio de organización</h2>
+        <p>Un usuario puede pertenecer a varias organizaciones, con un rol distinto en cada una. GET /me devuelve el usuario y la lista de organizaciones con nombre y rol. POST /switch-org abre una sesión nueva en otra organización a la que el usuario pertenece, y conviene descartar el refresh token anterior. Pedir una organización sin membresía devuelve forbidden.</p>
+        <p>Los miembros se listan, se agregan por correo (un usuario existente), se les cambia el rol y se eliminan solo dentro de la organización de quien actúa; los objetivos de otras organizaciones se reportan como no encontrados. Quitar a un miembro también revoca sus refresh tokens de esa organización.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Invitaciones</h2>
+        <p>Admins y owners crean invitaciones para un correo y un rol que pueden asignar. El servidor guarda solo el SHA-256 del token de un solo uso y devuelve el texto plano una única vez, al crear. El servidor no envía correo: quien invita comparte el enlace, que el frontend sirve en /invite. Una invitación nueva a la misma dirección revoca la pendiente anterior, y los enlaces expiran a los 7 días por defecto.</p>
+        <p>Aceptar es público y recibe el token. Una persona nueva indica nombre y contraseña. Una cuenta existente debe demostrar la propiedad con su contraseña actual, con el mismo bloqueo que el login. Los tokens desconocidos, expirados, revocados y usados fallan sin revelar cuál es el caso. Si quien invitó fue degradado o eliminado, la invitación deja de funcionar. Creación, revocación y aceptación quedan en la auditoría, guardando solo el dominio del correo.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Aislamiento con row-level security de Postgres</h2>
+        <p>Los roles deciden qué puede hacer un usuario; la row-level security decide qué filas existen para él. Cada tabla de tenant tiene una política tenant_isolation que compara org_id con app_current_org(), y FORCE ROW LEVEL SECURITY la aplica incluso al dueño de la tabla. Cada solicitud corre en una transacción que empieza con set_config('app.org_id', ..., true). El ajuste es local a la transacción, así que una conexión del pool no puede arrastrar un tenant a otra solicitud.</p>
+        <p>Falla cerrado: con app.org_id sin definir, ninguna fila es visible ni escribible. El servidor se conecta con credenciales de dueño y cambia a app_user en cada conexión (DB_APP_ROLE), un rol que no es superusuario, no tiene BYPASSRLS y no es dueño de ninguna tabla. El log de auditoría es de solo anexado para ese rol (UPDATE y DELETE revocados). Las migraciones corren con MIGRATE_DATABASE_URL, aparte.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-text">-- One transaction per request, scoped to the caller's organization
+SELECT set_config('app.org_id', '&lt;org id&gt;', true);   -- == SET LOCAL
+
+CREATE POLICY tenant_isolation ON agents
+  USING      (org_id = app_current_org())
+  WITH CHECK (org_id = app_current_org());</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">Referencia de endpoints</h2>
+        <p>El router de auth se monta en /api/v1/auth y el de invitaciones bajo el mismo prefijo. Los permisos se comprueban en un middleware antes del handler; el servicio vuelve a comprobar la membresía actual de quien actúa en cada operación sobre miembros.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Endpoint</th><th scope="col">Acceso</th></tr></thead><tbody><tr><th scope="row"><code>POST /api/v1/auth/register, /login, /refresh, /logout</code></th><td>Público (refresh y logout usan la cookie más X-WFAI-CSRF)</td></tr><tr><th scope="row"><code>POST /api/v1/auth/invitations/accept</code></th><td>Público, token en el cuerpo</td></tr><tr><th scope="row"><code>GET /api/v1/auth/config</code></th><td>Público, indica si auth y registro están activos</td></tr><tr><th scope="row"><code>GET /me, POST /logout-all, POST /switch-org</code></th><td>Cualquier usuario autenticado</td></tr><tr><th scope="row"><code>GET/POST/PATCH/DELETE /members</code></th><td>members:read, members:invite, members:manage; un miembro puede salirse solo</td></tr><tr><th scope="row"><code>GET/POST/DELETE /invitations</code></th><td>members:read para listar, members:invite para crear y revocar</td></tr></tbody></table></div>
+        <aside class="tip"><b>Consejo.</b> Consulta la referencia de la API para la lista completa de rutas y el modelo de seguridad para el análisis de amenazas.</aside>
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="cards"><li><a href="/docs/referencia-api/"><b>Referencia de la API</b><span>Autenticación, formato de errores y rutas de /api/v1: peticiones, tareas, aprobaciones, agentes, proyectos, skills, tienda, drive y WebSocket.</span></a></li><li><a href="/docs/modelo-de-seguridad/"><b>Modelo de seguridad</b><span>Cómo se limita el daño de un agente: bóveda de credenciales, aprobaciones humanas, topes, kill switch, auditoría, RLS y sandbox. Con sus límites actuales.</span></a></li><li><a href="/docs/configuracion/"><b>Referencia de configuración</b><span>Referencia de variables de entorno de AI Workforce OS: servidor, base de datos, autenticación, presupuesto, recompensas, proveedores de modelo y build.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Empieza ahora</h2>
+      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+      <a href="/docs/">Documentación</a>
+      <a href="/guia/">Guía de uso</a>
+      <a href="#top">Volver arriba</a>
+    </div>
+  </footer>
+</body>
+</html>

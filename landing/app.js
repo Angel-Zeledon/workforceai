@@ -10,16 +10,12 @@
     return document.documentElement.lang === "en" ? "en" : "es";
   }
 
-  function applyCtas(lang) {
-    var subject = encodeURIComponent((CFG.CONTACT_SUBJECT || {})[lang] || "");
-    var mail = "mailto:" + (CFG.CONTACT_EMAIL || "") + "?subject=" + subject;
+  function applyCtas() {
     document.querySelectorAll("[data-cta]").forEach(function (a) {
       var kind = a.getAttribute("data-cta");
-      if (kind === "contact") a.setAttribute("href", CFG.CONTACT_EMAIL ? mail : (CFG.DEMO_URL || "#"));
-      if (kind === "demo") {
-        a.setAttribute("href", CFG.DEMO_URL || "#");
-        a.setAttribute("rel", "noopener");
-      }
+      if (kind === "signup") a.setAttribute("href", CFG.SIGNUP_URL || "#");
+      if (kind === "login") a.setAttribute("href", CFG.LOGIN_URL || "#");
+      a.setAttribute("rel", "noopener");
     });
   }
 
@@ -44,7 +40,7 @@
         el.setAttribute(p[0], t(lang, p[1]));
       });
     });
-    applyCtas(lang);
+    applyCtas();
     document.dispatchEvent(new Event("langchange"));
   }
 

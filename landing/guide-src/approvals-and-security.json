@@ -1,0 +1,188 @@
+{
+  "id": "approvals-and-security",
+  "slug": { "es": "aprobaciones-y-seguridad", "en": "approvals-and-security" },
+  "image": {
+    "file": "approvals.webp",
+    "alt": {
+      "es": "Bandeja de aprobaciones pendientes con los botones Aprobar y Rechazar sobre la oficina 3D.",
+      "en": "Tray of pending approvals with Approve and Reject buttons over the 3D office."
+    }
+  },
+  "related": ["getting-started", "settings", "projects"],
+  "es": {
+    "title": "Aprobaciones y seguridad: tú mantienes el control",
+    "metaTitle": "Aprobaciones y seguridad | AI Workforce OS",
+    "description": "Aprende a aprobar acciones sensibles, poner topes de gasto, controlar permisos por empleado y detener todo de inmediato si hace falta.",
+    "intro": "Tus empleados de IA preparan y proponen, pero las decisiones delicadas son tuyas. Esta guía te muestra dónde decides, cómo limitas el gasto y los permisos, y cómo frenar todo con un clic.",
+    "sections": [
+      {
+        "h": "¿Cuándo me pide permiso un empleado?",
+        "paras": [
+          "Cuando un agente quiere hacer algo que necesita tu visto bueno, como enviar un correo o crear un evento, aparece un aviso y el agente espera en el escritorio de aprobaciones de la oficina. Nada sigue sin tu decisión.",
+          "Cada aviso indica quién lo pide, qué acción es, el detalle y un nivel de riesgo. Un agente puede pedir aprobación, pero nunca darla: eso siempre lo hace una persona, sin importar el rol del agente.",
+          "Si tu rol puede ver una aprobación pero no decidirla, la tarjeta te lo dice y no muestra los botones."
+        ]
+      },
+      {
+        "h": "¿Cómo apruebo o rechazo una acción?",
+        "steps": [
+          "Abre la bandeja «Aprobaciones pendientes». Se despliega sola cuando llega una nueva y puedes ocultarla o mostrarla cuando quieras.",
+          "Lee el título, el detalle y el riesgo de la tarjeta.",
+          "Pulsa Aprobar para que el agente continúe, o Rechazar para frenar esa acción.",
+          "Si estás fuera de la oficina, abre la pantalla Aprobaciones desde el móvil y decide ahí. Allí puedes activar las notificaciones, que solo muestran el título y el riesgo; la decisión la tomas dentro, con tu sesión."
+        ],
+        "tip": "Algunas aprobaciones piden a dos personas distintas; la tarjeta móvil muestra cuántas van."
+      },
+      {
+        "h": "¿Puedo dejar de aprobar lo repetitivo?",
+        "paras": [
+          "En acciones internas de un proyecto que se pueden deshacer, la tarjeta ofrece la casilla «Permitir siempre esta clase de acción en este proyecto». Puedes extenderla a los demás agentes del proyecto y revocarla después en la pestaña Aprobaciones del proyecto.",
+          "Enviar, publicar, pagar, borrar y ejecutar código siempre pedirán aprobación. Los correos, además, esperan una ventana corta tras aprobarlos para que puedas cancelar el envío; una vez enviado, no se puede deshacer."
+        ]
+      },
+      {
+        "h": "¿Cuánto va a costar y cómo pongo un tope?",
+        "paras": [
+          "Antes de ejecutar un pedido que pueda tocar conexiones con escritura, la revisión de plan te muestra un costo estimado (con su valor máximo probable) y el tiempo aproximado. Es una estimación, no una factura."
+        ],
+        "steps": [
+          "Abre Ajustes y entra en Seguridad.",
+          "Baja hasta «Topes de gasto». La tabla muestra el ámbito (organización, empleado, proyecto, conexión o herramienta), el periodo, lo usado y el tope.",
+          "Revisa la columna «Al llegar»: cada tope puede avisar, pausar y preguntar, o bloquear.",
+          "En Conexiones, la pestaña Límites añade usos por día, escrituras por día y un presupuesto mensual por conexión."
+        ]
+      },
+      {
+        "h": "¿Dónde se guardan mis claves?",
+        "paras": [
+          "Las claves y secretos de tus conexiones se envían una sola vez y se guardan cifrados en el servidor en una bóveda. La pantalla nunca vuelve a mostrártelos.",
+          "El modelo de IA tampoco los ve: las herramientas las ejecuta el backend, no el modelo. Con IA real, el texto de las tareas sí viaja al proveedor de modelo que configures, así que revisa sus condiciones antes de usar datos sensibles. No contamos con certificaciones de seguridad."
+        ]
+      },
+      {
+        "h": "¿Cómo decido qué puede hacer cada empleado?",
+        "paras": [
+          "Conectar una cuenta no es conceder acceso: cada permiso se asigna por separado, siguiendo el mínimo privilegio. Hoy el flujo de Gmail está probado en simulación; con cuentas reales aún está menos probado."
+        ],
+        "steps": [
+          "Abre Ajustes y entra en Conexiones.",
+          "Pulsa conectar una cuenta y sigue el asistente: nombre, tipo de conexión y qué podrá hacer.",
+          "Abre la pestaña «Permisos por empleado». Las filas son empleados y las columnas conexiones; haz clic en una celda para ver o cambiar sus permisos.",
+          "Los permisos de escritura se conceden aparte y, si hay más de un administrador, otra persona debe aprobar la concesión.",
+          "Consulta «Qué puede hacer cada empleado» y el «Registro de uso» para ver qué ocurrió."
+        ]
+      },
+      {
+        "h": "¿Cómo uso el Centro de seguridad?",
+        "paras": [
+          "Seguridad y control reúne los frenos de la oficina. Desde ahí puedes:"
+        ],
+        "steps": [
+          "Activar el «Modo solo lectura global»: los empleados siguen leyendo y proponiendo, pero no envían ni modifican nada.",
+          "Pausar a un empleado, o detener una herramienta para todos sin tocar el resto. Un empleado en pausa se reanuda donde se quedó.",
+          "Definir el «Horario de operación»: fuera de él el trabajo nuevo espera a la vista y se reanuda cuando abre la oficina. Las aprobaciones y el interruptor de emergencia siguen funcionando.",
+          "Revisar las «Alertas de actividad inusual»: reglas simples que avisan, por ejemplo, ante un gasto disparado o muchas aprobaciones rechazadas. Por sí solas no bloquean nada, salvo que actives el congelado automático (viene apagado)."
+        ]
+      },
+      {
+        "h": "¿Cómo detengo todo en una emergencia?",
+        "paras": [
+          "El botón «Detener todo» está en Ajustes y en el Centro de seguridad. Nada se borra. Cualquier administrador puede detener; solo el dueño puede levantar el bloqueo."
+        ],
+        "steps": [
+          "Pulsa «Detener todo» y elige un nivel: «Todo detenido» (no empieza nada nuevo y se bloquea el uso de las conexiones, pero las cuentas siguen conectadas) o «Bloqueo total» (además suspende todas las conexiones y cancela los envíos en espera).",
+          "Escribe un motivo si quieres y confirma con «Sí, detener todo».",
+          "Para reanudar, el dueño abre Seguridad, escribe el motivo y pulsa «Levantar bloqueo». Las acciones en espera volverán a pedir aprobación."
+        ]
+      }
+    ]
+  },
+  "en": {
+    "title": "Approvals and security: you stay in control",
+    "metaTitle": "Approvals and security | AI Workforce OS",
+    "description": "Learn to approve sensitive actions, set spend limits, control permissions per employee and stop everything at once if you need to.",
+    "intro": "Your AI employees prepare and propose, but the delicate decisions are yours. This guide shows where you decide, how you limit spending and permissions, and how to halt everything with one click.",
+    "sections": [
+      {
+        "h": "When does an employee ask for permission?",
+        "paras": [
+          "When an agent wants to do something that needs your go-ahead, such as sending an email or creating an event, a notice appears and the agent waits at the approvals desk in the office. Nothing continues without your decision.",
+          "Each notice shows who is asking, which action it is, the details and a risk level. An agent can ask for approval but never give it: a person always does, whatever the agent's role.",
+          "If your role can see an approval but not decide it, the card says so and hides the buttons."
+        ]
+      },
+      {
+        "h": "How do I approve or reject an action?",
+        "steps": [
+          "Open the pending approvals tray. It unfolds by itself when a new one arrives, and you can hide or show it whenever you like.",
+          "Read the card's title, details and risk.",
+          "Press Approve to let the agent continue, or Reject to stop that action.",
+          "Away from the office? Open the Approvals screen on your phone and decide there. You can turn on notifications, which only show the title and the risk; you make the decision inside, with your session."
+        ],
+        "tip": "Some approvals need two different people; the mobile card shows how many have been received."
+      },
+      {
+        "h": "Can I stop approving repetitive things?",
+        "paras": [
+          "For internal, reversible actions in a project, the card offers a checkbox: Always allow this kind of action in this project. You can extend it to the project's other agents and revoke it later in the project's Approvals tab.",
+          "Sending, publishing, paying, deleting and running code will always ask for approval. Emails also wait a short window after you approve them so you can cancel the send; once sent, it cannot be undone."
+        ]
+      },
+      {
+        "h": "How much will it cost, and how do I set a cap?",
+        "paras": [
+          "Before running a request that may touch connections with write access, the plan review shows an estimated cost (with its likely upper value) and the approximate time. It is an estimate, not an invoice."
+        ],
+        "steps": [
+          "Open Settings and go into Security.",
+          "Scroll to Spend limits. The table shows the scope (organization, employee, project, connection or tool), the period, what has been used and the limit.",
+          "Check the When reached column: each limit can warn, pause and ask, or block.",
+          "In Connections, the Limits tab adds uses per day, writes per day and a monthly budget for each connection."
+        ]
+      },
+      {
+        "h": "Where are my keys stored?",
+        "paras": [
+          "The keys and secrets for your connections are sent once and stored encrypted on the server, in a vault. The screen never shows them to you again.",
+          "The AI model never sees them either: tools are run by the backend, not by the model. With real AI, the text of tasks does travel to the model provider you configure, so check their terms before using sensitive data. We hold no security certifications."
+        ]
+      },
+      {
+        "h": "How do I decide what each employee can do?",
+        "paras": [
+          "Connecting an account is not granting access: each permission is assigned separately, following least privilege. Today the Gmail flow is tested in simulation; with real accounts it is still less tested."
+        ],
+        "steps": [
+          "Open Settings and go into Connections.",
+          "Connect an account and follow the wizard: name, connection type and what it will be able to do.",
+          "Open the Permissions by employee tab. Rows are employees and columns are connections; click a cell to view or change its permissions.",
+          "Write permissions are granted separately and, if there is more than one admin, another person must approve the grant.",
+          "Check What each employee can do and the Usage log to see what happened."
+        ]
+      },
+      {
+        "h": "How do I use the Security center?",
+        "paras": [
+          "Security and control gathers the office's brakes. From there you can:"
+        ],
+        "steps": [
+          "Turn on Global read-only mode: employees keep reading and proposing, but send and change nothing.",
+          "Pause an employee, or stop one tool for everyone without touching the rest. A paused employee resumes where they left off.",
+          "Set the Operating hours: outside them, new work waits in plain sight and resumes when the office opens. Approvals and the emergency switch keep working.",
+          "Review the Unusual activity alerts: simple rules that warn you, for example, about a spend spike or many rejected approvals. On their own they block nothing, unless you turn on automatic freezing (off by default)."
+        ]
+      },
+      {
+        "h": "How do I stop everything in an emergency?",
+        "paras": [
+          "The Stop everything button is in Settings and in the Security center. Nothing is deleted. Any admin can stop; only the owner can lift the lock."
+        ],
+        "steps": [
+          "Press Stop everything and pick a level: Everything stopped (nothing new starts and connection use is blocked, but accounts stay connected) or Full lockdown (also suspends all connections and cancels pending sends).",
+          "Type a reason if you like and confirm with Yes, stop everything.",
+          "To resume, the owner opens Security, writes a reason and presses Lift lock. Pending actions will ask for approval again."
+        ]
+      }
+    ]
+  }
+}

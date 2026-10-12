@@ -1,0 +1,165 @@
+{
+  "id": "getting-started",
+  "slug": {
+    "es": "primeros-pasos",
+    "en": "getting-started"
+  },
+  "image": {
+    "file": "office.webp",
+    "alt": {
+      "es": "La oficina 3D de AI Workforce OS con los empleados agentes en sus escritorios y la barra de pedidos abajo.",
+      "en": "The AI Workforce OS 3D office with agent employees at their desks and the request bar at the bottom."
+    }
+  },
+  "related": [
+    "the-office",
+    "approvals-and-security",
+    "projects"
+  ],
+  "es": {
+    "title": "Primeros pasos: tus primeros 5 minutos",
+    "metaTitle": "Primeros pasos con AI Workforce OS",
+    "description": "Crea tu cuenta, pide algo a tu oficina, aprueba lo delicado, lee el reporte y gana monedas. Todo en unos 5 minutos.",
+    "intro": "AI Workforce OS es una oficina virtual en 3D donde los empleados son agentes de IA. Tú pides lo que necesitas con tus palabras, ellos se reparten el trabajo y tú decides lo importante. Esta guía te lleva por el primer recorrido completo.",
+    "sections": [
+      {
+        "h": "¿Qué necesito para empezar?",
+        "paras": [
+          "Solo una cuenta. Entra a app.workforceai.es, elige «Crear cuenta» y escribe tu nombre, el nombre de tu empresa, tu correo y una contraseña (mínimo 10 caracteres). Llegas a tu propia oficina, separada de las demás. Por ahora la IA corre en modo simulación: las respuestas son guionadas y realistas, no hay un modelo real detrás, no tiene costo y no te pide ninguna clave.",
+          "Que sea una simulación no cambia cómo se usa. El flujo es el mismo que tendrías con un modelo real: pides, los agentes colaboran, tú apruebas y recibes un reporte. Por eso es buena forma de aprender antes de conectar nada."
+        ],
+        "tip": "Tu oficina empieza con 1,000 monedas de bienvenida: ya puedes estrenar la Tienda."
+      },
+      {
+        "h": "¿Cómo le pido algo a mi oficina?",
+        "paras": [
+          "Al abrir la app llegas a la vista Oficina: una escena 3D con tu equipo. En la parte de abajo hay una barra de texto para hablar con toda la oficina, como lo harías con un jefe de equipo."
+        ],
+        "steps": [
+          "Encima de la barra verás botones de ejemplo, como \"Propuesta de $50,000\", \"Ventas a la baja\", \"Contratar 2 personas\", \"Finanzas\" y \"Saludar\". Pulsa uno para probar con un solo clic.",
+          "Si prefieres escribir, usa la barra que dice \"Escribe a la oficina: saluda, pregunta o pide algo…\" y pulsa Enviar.",
+          "Puedes saludar, preguntar o pedir una tarea. Responde quien corresponda; si es una tarea, la oficina te explica a quién se la asigna y por qué."
+        ],
+        "tip": "Para tu primera prueba, empieza con \"Propuesta de $50,000\" y observa quién toma cada tarea."
+      },
+      {
+        "h": "¿Cómo veo a los empleados colaborar?",
+        "paras": [
+          "Cada persona de la escena es un agente y se mueve según lo que hace: escribe en su escritorio, se junta con otros para planear o espera tu aprobación."
+        ],
+        "steps": [
+          "Mira la oficina: arrastra para rotarla, usa la rueda para acercar y clic derecho para moverte.",
+          "Revisa el cuadro \"Actividad en vivo\", arriba a la izquierda. Ahí aparecen las tareas que empiezan y lo que hacen los agentes.",
+          "Junto a la barra de pedidos verás \"En curso\" con el estado actual: planificando, ejecutando o esperando tu aprobación.",
+          "Haz clic en un empleado para abrir su panel, ver su trabajo y hablar directamente con él."
+        ]
+      },
+      {
+        "h": "¿Qué hago cuando algo necesita mi aprobación?",
+        "paras": [
+          "Cuando un agente quiere hacer algo delicado, se detiene y espera en el escritorio de aprobaciones. Nada sigue sin tu decisión."
+        ],
+        "steps": [
+          "Busca el aviso de aprobaciones pendientes, abajo a la izquierda de la oficina. También verás el contador \"Aprobaciones\" en la barra superior.",
+          "Lee el detalle de lo que el agente quiere hacer.",
+          "Pulsa Aprobar para que continúe o Rechazar para detenerlo.",
+          "Si lo prefieres, decide desde el Dashboard, en la sección Aprobaciones."
+        ],
+        "tip": "Rechazar es una respuesta válida: es justo para eso que existe el paso humano."
+      },
+      {
+        "h": "¿Dónde leo el reporte y cómo gano monedas?",
+        "paras": [
+          "Cuando una solicitud se completa, se genera un reporte. Para leerlo, cambia a Dashboard con el interruptor Oficina / Dashboard de la barra superior y abre la sección Reportes.",
+          "El trabajo terminado también te da monedas. Las verás en el contador \"Monedas\" de la barra superior. No son dinero y no se compran: solo se ganan con trabajo terminado, y sirven para la tienda de la oficina."
+        ],
+        "steps": [
+          "Espera a que la solicitud pase a Completada.",
+          "Pulsa Dashboard en la barra superior.",
+          "Abre Reportes y elige el reporte de tu pedido para leerlo.",
+          "Mira el contador de monedas para ver lo que ganaste."
+        ]
+      },
+      {
+        "h": "¿Qué sigue después?",
+        "paras": [
+          "Prueba con tus propias frases y observa cómo cambia el reparto de tareas. Si te pierdes, el botón \"?\" de la barra superior abre un recorrido guiado de cada pantalla.",
+          "Ten presente el estado real del producto: está en acceso anticipado y la IA funciona en simulación hasta que se configure un proveedor de modelo. Lo que ves es lo que ya está construido, sin promesas añadidas."
+        ]
+      }
+    ]
+  },
+  "en": {
+    "title": "Getting started: your first 5 minutes",
+    "metaTitle": "Getting started with AI Workforce OS",
+    "description": "Create your account, ask your office for something, approve what is sensitive, read the report and earn coins. About 5 minutes, nothing to set up.",
+    "intro": "AI Workforce OS is a 3D virtual office where the employees are AI agents. You ask for what you need in your own words, they split the work, and you decide the important parts. This guide walks you through the first full run.",
+    "sections": [
+      {
+        "h": "What do I need to get started?",
+        "paras": [
+          "Just an account. Go to app.workforceai.es, choose “Create account” and enter your name, your company name, your email and a password (at least 10 characters). You land in your own office, separate from everyone else’s. For now the AI runs in simulation mode: responses are scripted and realistic, there is no real model behind it, it costs nothing and it never asks for a key.",
+          "Being a simulation does not change how you use it. The flow is the same you would have with a real model: you ask, agents collaborate, you approve, and you get a report. That makes it a good way to learn before connecting anything."
+        ],
+        "tip": "Your office starts with 1,000 welcome coins, so you can try the Shop right away."
+      },
+      {
+        "h": "How do I ask my office for something?",
+        "paras": [
+          "When the app opens you land on the Office view: a 3D scene with your team. At the bottom there is a text bar to talk to the whole office, the way you would talk to a team lead."
+        ],
+        "steps": [
+          "Above the bar you will see example buttons such as \"$50,000 proposal\", \"Sales are down\", \"Hire 2 people\", \"Finance\" and \"Say hi\". Press one to try it with a single click.",
+          "If you prefer to type, use the bar that says \"Write to the office: say hi, ask or request something…\" and press Send.",
+          "You can say hi, ask a question or request a task. Whoever is relevant answers; if it is a task, the office explains who gets it and why."
+        ],
+        "tip": "For your first try, start with \"$50,000 proposal\" and watch who takes each task."
+      },
+      {
+        "h": "How do I watch the employees collaborate?",
+        "paras": [
+          "Each person in the scene is an agent and moves according to what they are doing: typing at their desk, meeting others to plan, or waiting for your approval."
+        ],
+        "steps": [
+          "Look around the office: drag to rotate, scroll to zoom and right-click to pan.",
+          "Check the \"Live activity\" box at the top left. Tasks that start and what the agents do show up there.",
+          "Next to the request bar you will see \"In progress\" with the current state: planning, running or waiting for your approval.",
+          "Click an employee to open their panel, see their work and talk to them directly."
+        ]
+      },
+      {
+        "h": "What do I do when something needs my approval?",
+        "paras": [
+          "When an agent wants to do something sensitive, it stops and waits at the approvals desk. Nothing continues without your decision."
+        ],
+        "steps": [
+          "Look for the pending approvals notice at the bottom left of the office. The \"Approvals\" counter in the top bar also shows it.",
+          "Read the details of what the agent wants to do.",
+          "Press Approve to let it continue or Reject to stop it.",
+          "If you prefer, decide from the Dashboard, in the Approvals section."
+        ],
+        "tip": "Rejecting is a valid answer: that is exactly why the human step exists."
+      },
+      {
+        "h": "Where do I read the report and how do I earn coins?",
+        "paras": [
+          "When a request completes, a report is generated. To read it, switch to Dashboard with the Office / Dashboard toggle in the top bar and open the Reports section.",
+          "Finished work also earns you coins. You will see them in the \"Coins\" counter in the top bar. They are not money and cannot be bought: they are only earned by finished work, and they are used in the office shop."
+        ],
+        "steps": [
+          "Wait for the request to reach Completed.",
+          "Press Dashboard in the top bar.",
+          "Open Reports and pick the report for your request to read it.",
+          "Look at the coin counter to see what you earned."
+        ]
+      },
+      {
+        "h": "What comes next?",
+        "paras": [
+          "Try your own phrases and watch how the task split changes. If you get lost, the \"?\" button in the top bar opens a guided tour of each screen.",
+          "Keep the real state of the product in mind: it is in early access and the AI runs in simulation until a model provider is configured. What you see is what is already built, with no extra promises."
+        ]
+      }
+    ]
+  }
+}

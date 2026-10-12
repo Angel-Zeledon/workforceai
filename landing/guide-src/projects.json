@@ -1,0 +1,173 @@
+{
+  "id": "projects",
+  "slug": {
+    "es": "proyectos",
+    "en": "projects"
+  },
+  "image": {
+    "file": "projects.webp",
+    "alt": {
+      "es": "Pantalla de Proyectos de AI Workforce OS con tarjetas de proyecto, barra de avance y plantillas disponibles.",
+      "en": "AI Workforce OS Projects screen with project cards, a progress bar and available templates."
+    }
+  },
+  "related": [
+    "getting-started",
+    "skills",
+    "approvals-and-security"
+  ],
+  "es": {
+    "title": "Proyectos: trabajo grande, con seguimiento",
+    "metaTitle": "Proyectos: trabajo grande con seguimiento | AI Workforce OS",
+    "description": "Aprende a crear un proyecto, revisar su plan, lanzarlo con presupuesto y seguir el avance de tus agentes desde una sola pantalla.",
+    "intro": "Un pedido corto basta para una tarea suelta. Cuando el trabajo es grande, usa un proyecto: reúne objetivos, tareas repartidas entre tus empleados, aprobaciones y presupuesto, y te deja ver cuánto falta en todo momento. AI Workforce OS está en acceso anticipado y hoy corre en modo simulación, con resultados guionados.",
+    "sections": [
+      {
+        "h": "¿Qué es un proyecto y cuándo me conviene?",
+        "paras": [
+          "Un proyecto es un plan con varios objetivos. Cada objetivo se divide en tareas, y cada tarea la hace un agente. Algunas tareas son pasos humanos: una aprobación o un hito que solo tú puedes dar por bueno.",
+          "Úsalo cuando el trabajo tenga muchas partes, cuando varios agentes deban trabajar en paralelo o cuando quieras fijar un presupuesto antes de empezar. Para algo pequeño, pídelo directamente en el chat."
+        ]
+      },
+      {
+        "h": "¿Cómo creo un proyecto?",
+        "steps": [
+          "Abre Proyectos y pulsa Nuevo proyecto.",
+          "Escribe el Objetivo del proyecto con tus palabras, por ejemplo el lanzamiento de una campaña. O elige una plantilla en el selector Plantilla; con Sin plantilla (plan libre) el plan se arma a partir de tu objetivo.",
+          "Si elegiste una plantilla, completa sus parámetros. A la derecha verás una vista previa del plan: cuántas tareas tendrá, cuántas aprobaciones humanas, cuánto puede avanzar en paralelo y un costo estimado.",
+          "Si quieres, escribe un presupuesto en USD. Si lo dejas vacío, se sugiere uno a partir de la estimación.",
+          "Pulsa Crear borrador."
+        ],
+        "tip": "Crear el borrador no gasta nada de tu presupuesto: el proyecto todavía no ha empezado."
+      },
+      {
+        "h": "¿Cómo reviso el plan antes de lanzarlo?",
+        "paras": [
+          "El borrador te muestra el Plan del proyecto: cada objetivo con sus tareas y el agente asignado. Todavía es tuyo para ajustar."
+        ],
+        "steps": [
+          "Cambia el título de una tarea o el agente que la hace. Puedes añadir criterios de aceptación, uno por línea.",
+          "Mira la Estimación: un costo probable (P50), uno pesimista (P90) y la duración estimada.",
+          "En Revisión de calidad elige si quieres revisar los resultados: No revisar, Solo si el agente duda o Siempre. Cada revisión cuenta en el presupuesto.",
+          "Fíjate en que la validación diga que todo está bien y escribe el Presupuesto aprobado. Si queda por debajo del costo probable, la app te avisa y debes confirmar el riesgo.",
+          "Pulsa Lanzar proyecto."
+        ]
+      },
+      {
+        "h": "¿Cómo sigo el avance y lo controlo?",
+        "paras": [
+          "Con el proyecto en marcha, una barra cuenta las tareas terminadas sobre el total. Mírala primero para saber si va como esperabas. Las tarjetas de la lista también muestran el estado, las aprobaciones pendientes, los fallos y el gasto frente al presupuesto.",
+          "Según el estado verás Pausar, Reanudar o Cancelar. Cancelar pide confirmación y detiene las tareas que no hayan terminado."
+        ]
+      },
+      {
+        "h": "¿Qué muestra cada pestaña del proyecto?",
+        "paras": [
+          "Las pestañas siguen un orden de trabajo: primero detectas, luego actúas."
+        ],
+        "steps": [
+          "Salud: te dice si hay un problema.",
+          "Mapa: te muestra dónde está.",
+          "Kanban y Carriles por agente: para actuar sobre las tareas.",
+          "Línea de tiempo: para replanificar.",
+          "Delegación: quién le pidió trabajo a quién.",
+          "Aprobaciones: lo que debes autorizar. Las acciones sensibles siguen pidiendo tu visto bueno, igual que en el resto de la app.",
+          "Cambios de plan: los ajustes propuestos al plan.",
+          "Costos: lo que se ha gastado."
+        ]
+      },
+      {
+        "h": "¿Cómo parto de una plantilla o guardo la mía?",
+        "steps": [
+          "En la lista de Proyectos verás las primeras plantillas. Pulsa Usar plantilla para abrir el asistente con esa plantilla elegida, o Ver todas para la biblioteca completa.",
+          "En la Biblioteca de plantillas puedes buscar por nombre o descripción, usar una, duplicarla para adaptarla o crear una con Nueva plantilla.",
+          "Para repetir un trabajo que ya hiciste, abre ese proyecto y pulsa Guardar como plantilla. Se conserva la estructura; no se copian resultados ni costos."
+        ]
+      },
+      {
+        "h": "¿Qué pasa cuando el proyecto termina?",
+        "paras": [
+          "Si el proyecto termina bien y con al menos dos tareas hechas, tu organización recibe monedas de bonificación. El bono crece con las tareas terminadas, tiene un tope y se paga una sola vez. Un proyecto cancelado o fallido no lo recibe.",
+          "Las monedas se ganan solo con trabajo terminado, no se compran con dinero y se gastan en objetos cosméticos de la tienda. No cambian lo que los agentes pueden hacer."
+        ]
+      }
+    ]
+  },
+  "en": {
+    "title": "Projects: big work, with follow-up",
+    "metaTitle": "Projects: big work with follow-up | AI Workforce OS",
+    "description": "Learn to create a project, review its plan, launch it with a budget and follow your agents' progress from a single screen.",
+    "intro": "A short request is enough for a single task. When the work is big, use a project: it brings together objectives, tasks split among your employees, approvals and budget, and lets you see how much is left at any moment. AI Workforce OS is in early access and today runs in simulation mode, with scripted results.",
+    "sections": [
+      {
+        "h": "What is a project and when should I use one?",
+        "paras": [
+          "A project is a plan with several objectives. Each objective is split into tasks, and an agent does each task. Some tasks are human steps: an approval or a milestone that only you can sign off.",
+          "Use one when the work has many parts, when several agents should work in parallel, or when you want to set a budget before starting. For something small, just ask in the chat."
+        ]
+      },
+      {
+        "h": "How do I create a project?",
+        "steps": [
+          "Open Projects and click New project.",
+          "Write the Project goal in your own words, for example launching a campaign. Or pick a template in the Template selector; with No template (free plan) the plan is built from your goal.",
+          "If you chose a template, fill in its parameters. On the right you get a preview of the plan: how many tasks it will have, how many human approvals, how much can run in parallel and an estimated cost.",
+          "If you want, type a budget in USD. If you leave it empty, one is suggested from the estimate.",
+          "Click Create draft."
+        ],
+        "tip": "Creating the draft costs none of your budget: the project has not started yet."
+      },
+      {
+        "h": "How do I review the plan before launching?",
+        "paras": [
+          "The draft shows you the Project plan: each objective with its tasks and the assigned agent. It is still yours to adjust."
+        ],
+        "steps": [
+          "Change a task's title or the agent that does it. You can add acceptance criteria, one per line.",
+          "Look at the Estimate: a likely cost (P50), a pessimistic one (P90) and the estimated duration.",
+          "Under Quality review choose whether to review results: Do not review, Only if the agent is unsure or Always. Each review counts against the budget.",
+          "Check that validation says everything is fine and enter the Approved budget. If it is below the likely cost, the app warns you and you must confirm the risk.",
+          "Click Launch project."
+        ]
+      },
+      {
+        "h": "How do I follow progress and stay in control?",
+        "paras": [
+          "Once the project is running, a bar counts finished tasks over the total. Check it first to see whether it is going as you expected. The cards in the list also show the status, pending approvals, failures and spend against budget.",
+          "Depending on the status you will see Pause, Resume or Cancel. Cancel asks for confirmation and stops the tasks that have not finished."
+        ]
+      },
+      {
+        "h": "What does each project tab show?",
+        "paras": [
+          "The tabs follow a working order: first you spot, then you act."
+        ],
+        "steps": [
+          "Health: tells you whether there is a problem.",
+          "Map: shows you where it is.",
+          "Kanban and Agent lanes: for acting on tasks.",
+          "Timeline: for replanning.",
+          "Delegation: who asked whom for work.",
+          "Approvals: what you must authorize. Sensitive actions still ask for your go-ahead, as everywhere else in the app.",
+          "Plan changes: adjustments proposed to the plan.",
+          "Costs: what has been spent."
+        ]
+      },
+      {
+        "h": "How do I start from a template or save my own?",
+        "steps": [
+          "On the Projects list you will see the first templates. Click Use template to open the wizard with that template chosen, or See all for the full library.",
+          "In the Template library you can search by name or description, use one, duplicate it to adapt it, or create one with New template.",
+          "To repeat work you already did, open that project and click Save as template. The structure is kept; results and costs are not copied."
+        ]
+      },
+      {
+        "h": "What happens when the project finishes?",
+        "paras": [
+          "If the project finishes successfully with at least two tasks done, your organization receives bonus coins. The bonus grows with the finished tasks, has a cap and is paid only once. A cancelled or failed project does not get it.",
+          "Coins are earned only by finished work, cannot be bought with money and are spent on cosmetic items in the shop. They do not change what agents can do."
+        ]
+      }
+    ]
+  }
+}

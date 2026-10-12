@@ -1,14 +1,35 @@
-# AI Workforce OS - public DEMO on the shared VPS (alongside stockai).
+# AI Workforce OS on the shared VPS (alongside stockai).
 #   workforceai.es      -> landing (static)
-#   app.workforceai.es  -> app (frontend + backend + runtime in SIMULATION mode)
+#   app.workforceai.es  -> app: personal accounts (signup / login), one organization per account,
+#                          frontend + backend + Postgres + runtime
 #
 # TLS and routing come from the EXISTING Caddy of the stockai project, which owns ports 80/443.
 # This project never publishes ports: its edge services join that Caddy's network (`faro_default`)
 # under unique `wf-*` aliases, and everything else stays on a private network.
-# Demo scope: in-memory store (no Postgres/Redis), simulation runtime (no API keys, no cost).
+# Accounts need Postgres (users, organizations and tenant isolation live there). Secrets come from ./.env, which is
+# NOT in git (create it once on the server): POSTGRES_PASSWORD and JWT_SECRET (>= 32 bytes), e.g. `openssl rand -hex 32`.
+# The runtime stays in SIMULATION mode (no model API keys, no cost) until a provider key is configured.
 name: workforceai
 
 services:
+  wf-postgres:
+    image: postgres:16.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: workforce
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD in deploy/vps/.env}
+      POSTGRES_DB: workforce
+    volumes:
+      - wf-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workforce -d workforce"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    mem_limit: 384m
+    networks: [internal]
+
   wf-runtime:
     build: ../../agent-runtime
     restart: unless-stopped
@@ -23,15 +44,21 @@ services:
     depends_on:
       wf-runtime:
         condition: service_healthy
+      wf-postgres:
+        condition: service_healthy
     environment:
       PORT: "8080"
       RUNTIME_URL: http://wf-runtime:8000
       BUDGET_USD: "5"
       UI_BASE_URL: https://app.workforceai.es
       ALLOWED_ORIGINS: https://app.workforceai.es
-      # Open public demo (decided by the owner): no login, fixed demo org, resettable.
-      AUTH_ENABLED: "false"
-      ENABLE_DEMO_RESET: "true"
+      DATABASE_URL: postgres://workforce:${POSTGRES_PASSWORD}@wf-postgres:5432/workforce?sslmode=disable
+      # Personal accounts: signup creates an organization (the user is its owner); every organization is isolated.
+      AUTH_ENABLED: "true"
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET in deploy/vps/.env (>= 32 bytes)}
+      ENABLE_DEMO_RESET: "false"
+      # Caddy (stockai project) is the only proxy in front: trust its X-Forwarded-For so rate limits count real client IPs.
+      TRUSTED_PROXIES: 172.16.1.0/24
     mem_limit: 256m
     networks: [internal, edge]
 
@@ -50,6 +77,9 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     networks: [edge]
+
+volumes:
+  wf-pgdata: {}
 
 networks:
   internal: {}

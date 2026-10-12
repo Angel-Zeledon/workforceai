@@ -332,14 +332,14 @@ func wireRewards(log *slog.Logger, pg *postgres.Store, store application.Store, 
 	if proj != nil {
 		svc.Classifier = proj
 	}
-	// The demo office starts with coins to spend (REWARDS_DEMO_COINS, default 1000; 0 turns it off).
-	demoCoins := int64(1000)
-	if v := strings.TrimSpace(os.Getenv("REWARDS_DEMO_COINS")); v != "" {
+	// Every organization starts with coins to spend (REWARDS_WELCOME_COINS, default 1000; 0 turns it off).
+	// The grant happens lazily, the first time the organization opens the shop or the office.
+	svc.WelcomeCoins = 1000
+	if v := strings.TrimSpace(os.Getenv("REWARDS_WELCOME_COINS")); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n >= 0 {
-			demoCoins = n
+			svc.WelcomeCoins = n
 		}
 	}
-	svc.GrantWelcome(context.Background(), domain.DemoOrgID, demoCoins)
 	return svc
 }
 

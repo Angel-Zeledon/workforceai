@@ -1,0 +1,166 @@
+{
+  "id": "shop-and-coins",
+  "slug": {
+    "es": "tienda-y-monedas",
+    "en": "shop-and-coins"
+  },
+  "related": [
+    "the-office",
+    "getting-started",
+    "settings"
+  ],
+  "es": {
+    "title": "Monedas y Tienda: decora tu oficina con lo que gana tu equipo",
+    "metaTitle": "Monedas y Tienda de AI Workforce OS",
+    "description": "Aprende cómo se ganan las monedas con trabajo terminado y cómo usarlas en la Tienda para vestir a tus agentes y decorar tu oficina.",
+    "intro": "Cada vez que tu equipo de agentes termina trabajo, tu organización gana monedas. En la Tienda las gastas en objetos para los personajes y para la oficina. Es una parte divertida de la app, y es solo estética.",
+    "sections": [
+      {
+        "h": "¿Cómo gano monedas?",
+        "paras": [
+          "Las monedas se ganan solo con trabajo terminado. No hay forma de comprarlas con dinero, ni de pagar para tener más.",
+          "Cada cuenta nueva empieza con 1000 monedas de bienvenida, así que puedes probar la Tienda desde el primer minuto. Después, tu saldo sube cuando un agente termina una tarea o cuando se termina un proyecto."
+        ],
+        "tip": "Tu saldo aparece arriba en la pantalla Tienda, junto a lo que has ganado y gastado en total."
+      },
+      {
+        "h": "¿Cuánto pagan las tareas y los proyectos?",
+        "paras": [
+          "Con la configuración por defecto, cada tarea paga según su tamaño: S paga 5 monedas, M paga 10, L paga 20 y XL paga 40. Si una tarea no tiene tamaño indicado, se cuenta como M.",
+          "Si una revisión de calidad aprueba el resultado a la primera, la tarea paga un 50% extra. Si la revisión pidió corregirlo y la tarea terminó después, paga la mitad de su valor base.",
+          "Cuando un proyecto termina bien, paga un bono de finalización: 20 monedas más 2 por cada tarea terminada, con un tope de 100. El proyecto necesita al menos 2 tareas terminadas para recibirlo.",
+          "No pagan nada las tareas que fallaron, se saltaron, se cancelaron o quedaron bloqueadas, las que tuvieron una aprobación rechazada, ni los hitos o pasos humanos, porque ahí no hubo trabajo de un agente."
+        ]
+      },
+      {
+        "h": "¿Cómo encuentro un objeto en la Tienda?",
+        "paras": [
+          "La Tienda tiene varios cientos de objetos, así que conviene filtrar. Siempre aparecen ordenados del más barato al más caro."
+        ],
+        "steps": [
+          "Abre Tienda desde el menú de la app.",
+          "Elige un grupo: Personajes para la ropa y los accesorios de tus agentes, u Oficina para decorar el espacio.",
+          "Pulsa una categoría para ver solo esa. En Personajes hay Trajes, Sombreros, Gafas, Auriculares, Cuello, Insignias y Compañeros. En Oficina hay Plantas, Lámparas, Alfombras, Cafetera, Pósteres, Librerías, Acuarios, Arcade, Trofeos y Vistas.",
+          "Pulsa Todo para volver a ver el grupo completo. Si una lista es larga, usa Mostrar más para cargar el resto."
+        ],
+        "tip": "Al cambiar de grupo, las categorías vuelven a Todo."
+      },
+      {
+        "h": "¿Cómo compro un objeto?",
+        "paras": [
+          "Cada tarjeta muestra una vista previa, la rareza (Común, Raro o Épico), una descripción y el precio."
+        ],
+        "steps": [
+          "Revisa tu saldo de monedas arriba en la pantalla.",
+          "Busca un objeto que quieras y pulsa Comprar.",
+          "Si cuesta más de lo que tienes, el botón está desactivado y la tarjeta dice cuántas monedas te faltan.",
+          "Tras comprarlo, el objeto va a tu inventario. No se aplica solo: la tarjeta muestra En tu inventario y un acceso a Equipar desde el inventario."
+        ]
+      },
+      {
+        "h": "¿Cómo uso lo que compré?",
+        "paras": [
+          "Todo lo comprado vive en la pestaña Inventario. Desde ahí decides quién lo lleva o dónde va."
+        ],
+        "steps": [
+          "Abre la pestaña Inventario.",
+          "Para un objeto de personaje, elige el agente en el selector Personaje y pulsa Equipar. Para sacarlo, pulsa Quitar. Verás quién lo lleva en Lo lleva.",
+          "Para un objeto de oficina, pulsa Colocar y aparecerá en tu oficina. Pulsa Retirar para sacarlo de ahí.",
+          "Vuelve a la oficina para ver el resultado en 3D."
+        ],
+        "tip": "Si un objeto ya es tuyo, la Tienda lo marca como Ya lo tienes."
+      },
+      {
+        "h": "¿Dónde veo cuándo ganó o gastó monedas mi equipo?",
+        "paras": [
+          "Abre la pestaña Historial. Es una lista con cuándo, qué pasó, qué agente lo ganó, cuántas monedas y cuál quedó siendo tu saldo.",
+          "Cada línea dice la razón: monedas de bienvenida, tarea terminada, tarea aprobada a la primera, tarea terminada tras corregirla, proyecto terminado o una compra. También hay un resumen de lo ganado por agente."
+        ]
+      },
+      {
+        "h": "¿Los objetos cambian lo que hacen mis agentes?",
+        "paras": [
+          "No. Los objetos son solo cosméticos. Un sombrero o una lámpara hacen que la oficina se vea mejor, pero no cambian lo que un agente puede hacer, ni sus permisos, ni su calidad de trabajo.",
+          "Piensa en las monedas como un reconocimiento por el trabajo terminado, no como una herramienta para dar más poder a los agentes."
+        ]
+      }
+    ]
+  },
+  "en": {
+    "title": "Coins and the Shop: decorate your office with what your team earns",
+    "metaTitle": "Coins and the Shop in AI Workforce OS",
+    "description": "Learn how coins are earned by finished work and how to spend them in the Shop to dress your agents and decorate your office.",
+    "intro": "Every time your team of agents finishes work, your organization earns coins. In the Shop you spend them on items for the characters and for the office. It is a fun part of the app, and it is purely cosmetic.",
+    "sections": [
+      {
+        "h": "How do I earn coins?",
+        "paras": [
+          "Coins are earned only by finished work. There is no way to buy them with money, or to pay to get more.",
+          "Every new account starts with 1000 welcome coins, so you can try the Shop from the first minute. After that, your balance goes up when an agent finishes a task or when a project is completed."
+        ],
+        "tip": "Your balance is shown at the top of the Shop screen, next to the totals you have earned and spent."
+      },
+      {
+        "h": "How much do tasks and projects pay?",
+        "paras": [
+          "With the default settings, each task pays by size: S pays 5 coins, M pays 10, L pays 20 and XL pays 40. A task with no size set counts as M.",
+          "If a quality review approves the result on the first try, the task pays 50% extra. If the review asked for rework and the task finished afterwards, it pays half of its base value.",
+          "When a project finishes successfully, it pays a completion bonus: 20 coins plus 2 for each finished task, capped at 100. The project needs at least 2 finished tasks to get it.",
+          "Nothing is paid for tasks that failed, were skipped, were cancelled or got blocked, for tasks with a rejected approval, or for milestones and human steps, because no agent did any work there."
+        ]
+      },
+      {
+        "h": "How do I find an item in the Shop?",
+        "paras": [
+          "The Shop has several hundred items, so filtering helps. They are always sorted from cheapest to most expensive."
+        ],
+        "steps": [
+          "Open Shop from the app menu.",
+          "Pick a group: Characters for your agents' outfits and accessories, or Office to decorate the space.",
+          "Click a category to see only that one. Under Characters you will find Outfits, Hats, Glasses, Headphones, Neckwear, Badges and Companions. Under Office you will find Plants, Lamps, Rugs, Coffee machine, Posters, Bookshelves, Aquariums, Arcade, Trophies and Views.",
+          "Click All to see the whole group again. If a list is long, use Show more to load the rest."
+        ],
+        "tip": "When you switch group, the categories go back to All."
+      },
+      {
+        "h": "How do I buy an item?",
+        "paras": [
+          "Each card shows a preview, the rarity (Common, Rare or Epic), a description and the price."
+        ],
+        "steps": [
+          "Check your coin balance at the top of the screen.",
+          "Find an item you like and press Buy.",
+          "If it costs more than you have, the button is disabled and the card tells you how many coins you are missing.",
+          "After you buy it, the item goes to your inventory. It is not applied by itself: the card shows In your inventory and a link to Equip from inventory."
+        ]
+      },
+      {
+        "h": "How do I use what I bought?",
+        "paras": [
+          "Everything you buy lives in the Inventory tab. From there you decide who wears it or where it goes."
+        ],
+        "steps": [
+          "Open the Inventory tab.",
+          "For a character item, choose the agent in the Character selector and press Equip. To undo it, press Take off. You will see who wears it under Worn by.",
+          "For an office item, press Place and it appears in your office. Press Remove to take it out.",
+          "Go back to the office to see the result in 3D."
+        ],
+        "tip": "If you already own an item, the Shop marks it as You own it."
+      },
+      {
+        "h": "Where can I see when my team earned or spent coins?",
+        "paras": [
+          "Open the History tab. It is a list with when it happened, what happened, which agent earned it, how many coins, and what your balance was after that.",
+          "Each line states the reason: welcome coins, task finished, task approved on the first try, task finished after rework, project finished or a purchase. There is also a summary of coins earned by agent."
+        ]
+      },
+      {
+        "h": "Do items change what my agents do?",
+        "paras": [
+          "No. Items are cosmetic only. A hat or a lamp makes the office look better, but it does not change what an agent can do, its permissions or the quality of its work.",
+          "Think of coins as recognition for finished work, not as a way to give agents more power."
+        ]
+      }
+    ]
+  }
+}

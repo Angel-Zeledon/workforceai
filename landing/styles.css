@@ -423,3 +423,13 @@ details p{padding:0 0 20px;color:var(--ink2);max-width:62ch}
   .motion .steps.in .chip.attn{animation:st-chip 2s ease-in-out 1s infinite}
   @keyframes st-chip{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 }
+
+/* "How to use it" on the home page */
+.usage{list-style:none;counter-reset:u;margin:28px 0 0;padding:0;display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.usage li{counter-increment:u;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 18px 18px}
+.usage li::before{content:counter(u);display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-weight:600;font-size:.9rem;margin-bottom:12px}
+.usage h3{font-size:1.1rem;margin:0 0 6px}
+.usage p{margin:0;color:var(--ink2);line-height:1.6;font-size:.95rem}
+.usage-cta{margin-top:26px}
+.site-footer .wrap{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}
+.site-footer .wrap>p{flex:1 1 100%}

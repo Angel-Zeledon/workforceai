@@ -1,0 +1,183 @@
+{
+  "id": "settings",
+  "slug": { "es": "ajustes", "en": "settings" },
+  "related": ["approvals-and-security", "skills", "getting-started"],
+  "es": {
+    "title": "Ajustes: configura tu oficina en un solo lugar",
+    "metaTitle": "Ajustes de la oficina | AI Workforce OS",
+    "description": "Recorre el centro de Ajustes: personaliza la oficina, contrata empleados, usa plantillas, conecta herramientas e invita a tu equipo.",
+    "intro": "Ajustes reúne en una pantalla todo lo que antes estaba escondido en el menú del engranaje. Cada tarjeta abre su área como una página propia, con una ruta de migas arriba.",
+    "sections": [
+      {
+        "h": "¿Cómo me muevo por Ajustes?",
+        "paras": [
+          "Abre Ajustes desde la barra lateral. Verás tarjetas agrupadas en Espacio de trabajo, Seguridad y Cuenta, cada una con una línea que explica para qué sirve.",
+          "Al pulsar una tarjeta, esa área se abre como una página y arriba aparece una ruta como «Ajustes > Ajustes de la oficina». No hay botón Cerrar."
+        ],
+        "steps": [
+          "Pulsa una tarjeta para abrir su página.",
+          "Para volver, usa la flecha de atrás de la ruta de migas o el botón Atrás del navegador.",
+          "También puedes pulsar otra sección en la barra lateral y cambiarás de pantalla directamente."
+        ],
+        "tip": "Si quieres una visita guiada, el botón «?» de la barra superior abre un recorrido de esta pantalla."
+      },
+      {
+        "h": "¿Cómo personalizo la oficina?",
+        "paras": [
+          "La tarjeta «Ajustes de la oficina» sirve para que la oficina se vea y hable a tu manera. Conviene hacerlo primero."
+        ],
+        "steps": [
+          "Abre «Ajustes de la oficina».",
+          "En Idioma, elige el idioma de la interfaz.",
+          "En Etiquetas, activa o apaga «Mostrar nombres» y las «Burbujas de actividad», y ajusta el «Tamaño de etiquetas».",
+          "Activa «Reducir animaciones» si prefieres menos movimiento.",
+          "En Empleados, personaliza cada empleado por separado."
+        ]
+      },
+      {
+        "h": "¿Cómo contrato a un empleado desde una plantilla?",
+        "paras": [
+          "«Contratar desde plantilla» añade un nuevo empleado de IA a partir de una plantilla de puesto. El nuevo agente empieza con autonomía mínima y nunca puede aprobar por su cuenta.",
+          "Solo los administradores pueden usarlo; si la tarjeta se ve atenuada, tu rol no lo permite."
+        ],
+        "steps": [
+          "Abre la tarjeta «Contratar desde plantilla».",
+          "Elige una profesión de la lista.",
+          "Escribe un nombre para el nuevo agente, o déjalo vacío porque es opcional.",
+          "Pulsa Contratar. Si la oficina está llena o ya existe un agente con ese nombre, verás un aviso."
+        ]
+      },
+      {
+        "h": "¿Cómo pongo a trabajar un equipo prediseñado?",
+        "paras": [
+          "La galería de «Plantillas» ofrece flujos de trabajo listos, con dependencias y pasos en paralelo. Es el camino más rápido si prefieres no armar el equipo desde cero, y tú sigues aprobando lo importante."
+        ],
+        "steps": [
+          "Abre la tarjeta «Plantillas».",
+          "Filtra por categoría: Todas, Ventas, Finanzas o Asistente.",
+          "Revisa los pasos y el orden de ejecución de la plantilla que te interese y pulsa «Usar plantilla».",
+          "Completa los datos obligatorios y pulsa «Iniciar flujo».",
+          "Sigue el avance en la oficina."
+        ]
+      },
+      {
+        "h": "¿Dónde conecto herramientas y reviso la seguridad?",
+        "paras": [
+          "«Conexiones» es donde enlazas correo, calendario y otras herramientas para que los agentes trabajen con tus datos. Conectar no es conceder: los permisos se asignan por empleado.",
+          "«Seguridad» reúne permisos, topes de gasto, horario de operación y los frenos de la oficina. Revísalo antes de dejar que los agentes actúen por su cuenta.",
+          "La tarjeta «Detener todo» frena de inmediato la actividad externa de todos los agentes. Solo un administrador puede activarla; si ya está activa, muestra el nivel y te lleva a Seguridad. Para el detalle, lee la guía de aprobaciones y seguridad."
+        ],
+        "tip": "Las integraciones reales aún se están probando; consulta la sección Estado actual del sitio."
+      },
+      {
+        "h": "¿Cómo describo mi empresa para que el equipo la conozca?",
+        "paras": [
+          "Si tu espacio lo admite, verás una tarjeta de configuración inicial. Mientras esté pendiente se llama «Configura tu oficina»: eliges tu tipo de negocio y dejas listo a tu equipo en un minuto. Después aparece como «Ajustes del equipo», donde puedes cambiar el tono regional y programar un resumen diario.",
+          "Su objetivo es que el equipo trabaje con el contexto de tu empresa."
+        ]
+      },
+      {
+        "h": "¿Cómo invito a personas y gestiono mi cuenta?",
+        "paras": [
+          "En el grupo Cuenta ves con qué nombre, correo y rol iniciaste sesión. La tarjeta «Miembros e invitaciones» aparece si tu rol lo permite. Los roles son Dueño, Administrador, Miembro y Solo lectura, y los agentes nunca pueden aprobar, sin importar el rol."
+        ],
+        "steps": [
+          "Abre «Miembros e invitaciones».",
+          "En «Invitar a alguien», elige el rol y pulsa «Crear invitación».",
+          "Copia el enlace y compártelo con la persona. Solo se muestra una vez y caduca en 7 días.",
+          "Cambia el rol de un miembro, quítalo o revoca una invitación pendiente desde la misma lista.",
+          "Cuando termines, pulsa «Cerrar sesión» para salir en este dispositivo."
+        ]
+      }
+    ]
+  },
+  "en": {
+    "title": "Settings: configure your office in one place",
+    "metaTitle": "Office settings | AI Workforce OS",
+    "description": "Tour the Settings hub: customize the office, hire employees, use team templates, connect tools and invite your team.",
+    "intro": "Settings gathers on one screen everything that used to hide in the gear menu. Each card opens its area as a page of its own, with a breadcrumb at the top.",
+    "sections": [
+      {
+        "h": "How do I get around Settings?",
+        "paras": [
+          "Open Settings from the sidebar. You will see cards grouped into Workspace, Security and Account, each with a line explaining what it is for.",
+          "When you press a card, that area opens as a page and a breadcrumb such as Settings > Office settings appears at the top. There is no Close button."
+        ],
+        "steps": [
+          "Press a card to open its page.",
+          "To go back, use the back arrow in the breadcrumb or your browser's Back button.",
+          "You can also click another section in the sidebar and you will switch screens directly."
+        ],
+        "tip": "If you want a guided visit, the ? button in the top bar opens a tour of this screen."
+      },
+      {
+        "h": "How do I customize the office?",
+        "paras": [
+          "The Office settings card makes the office look and speak your way. It is worth doing first."
+        ],
+        "steps": [
+          "Open Office settings.",
+          "Under Language, pick the interface language.",
+          "Under Labels, turn Show names and Activity bubbles on or off, and adjust the Label size.",
+          "Turn on Reduce animations if you prefer less motion.",
+          "Under Employees, customize each employee separately."
+        ]
+      },
+      {
+        "h": "How do I hire an employee from a template?",
+        "paras": [
+          "Hire from template adds a new AI employee from a role template. The new agent starts with minimal autonomy and can never approve on its own.",
+          "Only admins can use it; if the card looks dimmed, your role does not allow it."
+        ],
+        "steps": [
+          "Open the Hire from template card.",
+          "Pick a profession from the list.",
+          "Type a name for the new agent, or leave it empty because it is optional.",
+          "Press Hire. If the office is full or an agent with that name already exists, you will see a notice."
+        ]
+      },
+      {
+        "h": "How do I put a ready-made team to work?",
+        "paras": [
+          "The Templates gallery offers ready workflows, with dependencies and steps that run in parallel. It is the fastest route if you would rather not build the team from scratch, and you still approve what matters."
+        ],
+        "steps": [
+          "Open the Templates card.",
+          "Filter by category: All, Sales, Finance or Assistant.",
+          "Review the steps and the execution order of the template you like and press Use template.",
+          "Fill in the required fields and press Start workflow.",
+          "Follow the progress in the office."
+        ]
+      },
+      {
+        "h": "Where do I connect tools and review security?",
+        "paras": [
+          "Connections is where you link email, calendar and other tools so agents can work with your data. Connecting is not granting: permissions are assigned per employee.",
+          "Security gathers permissions, spend limits, operating hours and the office's brakes. Review it before letting agents act on their own.",
+          "The Stop everything card immediately halts all external activity by every agent. Only an admin can trigger it; if it is already active, it shows the level and takes you to Security. For the details, read the approvals and security guide."
+        ],
+        "tip": "Real integrations are still being tested; see the Current status section of the site."
+      },
+      {
+        "h": "How do I describe my company so the team knows it?",
+        "paras": [
+          "If your workspace supports it, you will see an initial setup card. While it is pending it is called Set up your office: you pick your business type and get your team ready in a minute. Afterwards it appears as Team settings, where you can change the regional tone and schedule a daily briefing.",
+          "The goal is for the team to work with your company's context."
+        ]
+      },
+      {
+        "h": "How do I invite people and manage my account?",
+        "paras": [
+          "In the Account group you see the name, email and role you are signed in with. The Members and invitations card appears if your role allows it. The roles are Owner, Admin, Member and Read only, and agents can never approve, whatever the role."
+        ],
+        "steps": [
+          "Open Members and invitations.",
+          "Under Invite someone, choose the role and press Create invitation.",
+          "Copy the link and share it with the person. It is shown only once and expires in 7 days.",
+          "Change a member's role, remove them or revoke a pending invitation from the same list.",
+          "When you finish, press Log out to end the session on this device."
+        ]
+      }
+    ]
+  }
+}

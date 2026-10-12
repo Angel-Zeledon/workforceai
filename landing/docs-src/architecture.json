@@ -1,0 +1,534 @@
+{
+  "id": "architecture",
+  "slug": {
+    "es": "arquitectura",
+    "en": "architecture"
+  },
+  "related": [
+    "api-reference",
+    "agent-runtime",
+    "security-model"
+  ],
+  "es": {
+    "title": "Arquitectura de AI Workforce OS",
+    "metaTitle": "Arquitectura: backend, runtime y tiempo real",
+    "description": "Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.",
+    "intro": "AI Workforce OS separa la decisión de la ejecución: un backend en Go es la fuente de verdad, un runtime en Python solo razona con el LLM y un frontend en Next.js dibuja la oficina a partir de eventos. Esta página describe cómo encajan las piezas y cómo viaja una petición de punta a punta.",
+    "sections": [
+      {
+        "h": "Componentes",
+        "paras": [
+          "El sistema son cinco procesos más un proxy opcional. Todo el estado de negocio vive en el backend; el runtime no guarda estado entre llamadas."
+        ],
+        "table": {
+          "head": [
+            "Componente",
+            "Tecnología",
+            "Responsabilidad"
+          ],
+          "rows": [
+            [
+              "Frontend",
+              "Next.js, React Three Fiber",
+              "Oficina 3D y modo dashboard. Consume REST y el WebSocket; toda animación deriva de eventos reales."
+            ],
+            [
+              "Backend",
+              "Go, chi",
+              "API REST /api/v1, WebSocket /ws, orquestador, aprobaciones, auditoría, presupuesto, autenticación y RBAC."
+            ],
+            [
+              "Agent runtime",
+              "Python, FastAPI",
+              "Recibe tarea y contexto, llama al proveedor LLM y devuelve resultado estructurado. Motor intercambiable."
+            ],
+            [
+              "Postgres",
+              "PostgreSQL",
+              "Datos de todas las organizaciones, con row-level security. Migraciones SQL numeradas."
+            ],
+            [
+              "Redis",
+              "Redis",
+              "Pub/sub de eventos hacia el hub WebSocket y límites de tasa. Opcional: sin Redis hay entrega local en proceso."
+            ],
+            [
+              "Caddy",
+              "Caddy",
+              "Proxy de producción: TLS automático, envía /api/* y /ws al backend y el resto al frontend."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Fronteras entre backend y runtime",
+        "paras": [
+          "La regla central: el runtime nunca habla con Postgres, Redis ni sistemas externos. Recibe una tarea con su contexto y devuelve un resultado, solicitudes de herramientas y consumo; solo contacta al proveedor del LLM. El backend decide permisos, autonomía y presupuesto, y ejecuta las herramientas.",
+          "El backend llama al runtime por HTTP con JSON. Si se define RUNTIME_TOKEN en ambos lados, las llamadas llevan ese secreto compartido. El motor de IA queda detrás de una interfaz propia, de modo que CrewAI puede reemplazarse sin tocar el backend."
+        ],
+        "table": {
+          "head": [
+            "Endpoint del runtime",
+            "Uso"
+          ],
+          "rows": [
+            [
+              "POST /v1/plan, /v1/plan-phases, /v1/plan-phase, /v1/replan",
+              "Descomponer una petición o proyecto en tareas con dependencias."
+            ],
+            [
+              "POST /v1/run-task",
+              "Ejecutar una tarea; devuelve output, consultas, tool_requests y usage."
+            ],
+            [
+              "POST /v1/consult",
+              "Consulta entre agentes."
+            ],
+            [
+              "POST /v1/review",
+              "Revisión de calidad de un resultado."
+            ],
+            [
+              "POST /v1/synthesize",
+              "Redactar el reporte consolidado."
+            ],
+            [
+              "POST /v1/route, /v1/chat-reply",
+              "Enrutar un mensaje de chat y generar la respuesta de un agente."
+            ],
+            [
+              "POST /v1/estimate, /v1/summarize, /v1/context-sizes",
+              "Estimación de costo, resúmenes y tamaños de contexto."
+            ],
+            [
+              "GET /healthz",
+              "Estado y modo: simulation o live."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Flujo de una petición",
+        "paras": [
+          "Una petición recorre este camino: la solicitud del usuario llega al orquestador, que pide un plan al runtime, lo valida y crea tareas; cada tarea se asigna a un agente que usa herramientas, las acciones sensibles esperan aprobación humana y al final se sintetiza un reporte."
+        ],
+        "steps": [
+          "El usuario envía el texto con POST /api/v1/requests (o por el chat, que lo enruta). El backend responde 202 con request_id y emite request.received.",
+          "El orquestador pide el plan al runtime. El backend valida agentes existentes, dependencias y límites antes de aceptarlo y emite plan.created y task.created.",
+          "Las tareas se ejecutan respetando depends_on. Cada una cambia el estado del agente (agent.state_changed) y puede generar consultas entre agentes (message.sent) y una revisión de calidad (task.reviewed).",
+          "Las herramientas que pide el runtime pasan por la política de autonomía y los permisos. Si hace falta aprobación se crea un registro pendiente y la tarea queda en awaiting_approval.",
+          "Un usuario con permiso decide con POST /api/v1/approvals/{id}/decision. La tarea continúa o se bloquea.",
+          "Cuando todas las tareas terminan, el runtime sintetiza el reporte; el backend emite report.created y request.completed.",
+          "En paralelo se registra el costo por petición y se aplica el presupuesto: budget.warning y budget.exceeded pueden pausar la ejecución."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "POST /api/v1/requests {\"text\": \"...\"}      -> 202 {\"request_id\": \"...\"}\n  orchestrator -> runtime POST /v1/plan          -> tasks + depends_on\n  backend validates the plan                     -> plan.created, task.created*\n  per task: runtime POST /v1/run-task            -> output, consults, tool_requests, usage\n  tool_requests -> policy/autonomy check         -> approval.requested (if needed)\n  POST /api/v1/approvals/{id}/decision           -> approval.resolved, task resumes\n  runtime POST /v1/synthesize                    -> report.created, request.completed"
+        }
+      },
+      {
+        "h": "Canal en tiempo real",
+        "paras": [
+          "GET /ws abre un WebSocket por organización. El backend publica cada evento en Redis (canal aiworkforce:events) y un hub reenvía el cuadro solo a los clientes cuyo org_id coincide; un cuadro sin org_id se descarta. Sin REDIS_URL el hub recibe los eventos de forma local.",
+          "Al conectar llega un evento hello con la lista de agentes. Después llegan los eventos de dominio. El servidor envía ping cada 30 s, cierra si no hay pong en 60 s y descarta a los clientes lentos (cola de 256 cuadros). Con autenticación activa el socket se cierra con el código 4401 cuando expira el token, para que el cliente reconecte. No hay replay: tras reconectar, el cliente recarga el estado por REST."
+        ],
+        "code": {
+          "lang": "json",
+          "text": "{\n  \"id\": \"<uuid>\",\n  \"type\": \"task.completed\",\n  \"ts\": \"2026-01-01T12:03:22Z\",\n  \"org_id\": \"<org id>\",\n  \"agent_id\": \"sales\",\n  \"payload\": { \"task\": { \"id\": \"...\", \"status\": \"done\" } }\n}"
+        },
+        "table": {
+          "head": [
+            "Grupo",
+            "Tipos de evento"
+          ],
+          "rows": [
+            [
+              "Conexión",
+              "hello, error, metrics.updated, activity.logged"
+            ],
+            [
+              "Peticiones",
+              "request.received, request.queued, request.dequeued, request.resumed, request.status_changed, request.completed, plan.created, report.created"
+            ],
+            [
+              "Tareas",
+              "task.created, task.started, task.completed, task.failed, task.blocked, task.retrying, task.reviewed, task.steered, task.reassigned"
+            ],
+            [
+              "Agentes y chat",
+              "agent.created, agent.state_changed, message.sent, chat.message, chat.typing, route.decided"
+            ],
+            [
+              "Aprobaciones",
+              "approval.requested, approval.progress, approval.reminder, approval.resolved"
+            ],
+            [
+              "Costos",
+              "cost.estimated, budget.warning, budget.exceeded, budget.resumed, provider.no_balance"
+            ],
+            [
+              "Proyectos",
+              "project.created, project.launched, project.delta, project.status_changed, project.budget_warning, project.plan_change_*"
+            ],
+            [
+              "Recompensas",
+              "coins.earned, shop.purchased, item.equipped, item.unequipped, office.item_placed, office.item_removed"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Modelo de datos",
+        "paras": [
+          "Las tablas viven en Postgres y todas las de negocio llevan org_id. Esta es la vista resumida; el esquema completo está en las migraciones numeradas."
+        ],
+        "table": {
+          "head": [
+            "Entidad",
+            "Tablas principales",
+            "Notas"
+          ],
+          "rows": [
+            [
+              "Organizaciones y usuarios",
+              "organizations, users, memberships, refresh_tokens, invitations",
+              "Roles por membresía: owner, admin, member, viewer."
+            ],
+            [
+              "Agentes",
+              "agents, agent_profiles, agent_settings, agent_controls",
+              "Estado, herramientas, permisos y nivel de autonomía."
+            ],
+            [
+              "Peticiones y tareas",
+              "requests, tasks, request_runs, task_checkpoints, reports",
+              "Estados de tarea: pending, running, blocked, awaiting_approval, done, failed."
+            ],
+            [
+              "Aprobaciones",
+              "approvals, standing_approvals, approval_executions",
+              "Soportan doble aprobación y permisos permanentes por proyecto."
+            ],
+            [
+              "Proyectos",
+              "projects, project_templates, plan_changes",
+              "Planes con nodos, presupuesto y versiones de plantilla."
+            ],
+            [
+              "Memoria",
+              "memories, memory_docs",
+              "Memoria a largo plazo por agente."
+            ],
+            [
+              "Habilidades",
+              "skills, skill_versions, skill_assignments",
+              "Versionadas, con flujo de revisión."
+            ],
+            [
+              "Recompensas",
+              "coin_wallets, coin_ledger, shop_inventory, shop_equipment, shop_office",
+              "Monedas por trabajo terminado y objetos de personaje y oficina."
+            ],
+            [
+              "Gobierno y costo",
+              "audit_logs, audit_chain_heads, usage_entries, budget_caps",
+              "Auditoría encadenada y registro de consumo."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Multi-tenencia",
+        "paras": [
+          "Cada cuenta crea su propia organización y el org_id viaja dentro del token de acceso; nunca se toma de la entrada del cliente. La capa HTTP lo coloca en el contexto de la petición y todas las consultas se filtran por él.",
+          "Como defensa en profundidad, Postgres aplica row-level security. Cada transacción fija app.org_id con set_config y las políticas usan esa función; si el valor falta, la consulta no devuelve filas (falla cerrado). La aplicación se conecta con un rol sin privilegios de propietario (DB_APP_ROLE, por defecto app_user, sin BYPASSRLS), y las migraciones usan una conexión aparte (MIGRATE_DATABASE_URL). El hub del WebSocket también filtra por organización."
+        ]
+      },
+      {
+        "h": "Simulación frente a IA real",
+        "paras": [
+          "El contrato HTTP del runtime es el mismo en ambos modos; cambia el motor. En simulación (por defecto, sin clave o con SIMULATION=true) el runtime devuelve resultados guionados con latencias simuladas, sin red y sin costo. En modo live usa el proveedor configurado y GET /healthz del runtime informa mode: live y el proveedor.",
+          "Si hay un proveedor configurado pero el motor real no arranca, el runtime responde en simulación con status degraded y un aviso; no hay fallback silencioso. El backend refleja el modo en su propio /healthz como runtime_mode."
+        ],
+        "tip": "SIMULATION=true siempre gana: no se hace ninguna llamada de red, incluso con claves presentes."
+      },
+      {
+        "h": "Despliegue y borde",
+        "paras": [
+          "docker-compose.yml levanta postgres, redis, almacenamiento de objetos, agent-runtime, backend y frontend; existen variantes de demo y producción. En producción Caddy termina TLS, agrega cabeceras de seguridad y enruta por ruta: /api/* y /ws al backend, todo lo demás al frontend. La ejecución de código de los agentes usa una imagen y un runner de sandbox separados."
+        ]
+      },
+      {
+        "h": "Estructura del repositorio",
+        "paras": [
+          "El backend sigue capas donde api depende de application y esta de domain; la infraestructura implementa los puertos."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "backend/            Go (chi): domain, application, api, events, auth, projects,\n                    drive, skills, memory, rewards, connections, controls, audit\n  cmd/server/       main.go: composition root (wires every service)\n  internal/         domain/ application/ api/ infrastructure/{postgres,redis,runtime,memory}\n  internal/infrastructure/postgres/migrations/   numbered SQL migrations\nagent-runtime/      Python FastAPI (+ CrewAI engine, simulation engine)\n  app/              main.py, engine.py, simulation.py, crewai_engine.py, routing.py ...\nfrontend/           Next.js + React Three Fiber (src/app, src/components, src/lib)\ne2e/                Playwright (UI + WebSocket contract)\nsandbox/            code-execution runner image\ndeploy/ Caddyfile   production edge (TLS, reverse proxy)\ndocker-compose.yml  dev / accounts stack; docker-compose.demo.yml, docker-compose.prod.yml\ndocs/               SPEC.md and architecture/*.md\nlanding/            this public site"
+        }
+      }
+    ]
+  },
+  "en": {
+    "title": "AI Workforce OS Architecture",
+    "metaTitle": "Architecture: backend, runtime and realtime",
+    "description": "Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.",
+    "intro": "AI Workforce OS separates deciding from doing: a Go backend is the source of truth, a Python runtime only reasons with the LLM, and a Next.js frontend draws the office from events. This page explains how the pieces fit and how a request travels end to end.",
+    "sections": [
+      {
+        "h": "Components",
+        "paras": [
+          "The system is five processes plus an optional proxy. All business state lives in the backend; the runtime keeps no state between calls."
+        ],
+        "table": {
+          "head": [
+            "Component",
+            "Technology",
+            "Responsibility"
+          ],
+          "rows": [
+            [
+              "Frontend",
+              "Next.js, React Three Fiber",
+              "3D office and dashboard mode. Consumes REST and the WebSocket; every animation derives from real events."
+            ],
+            [
+              "Backend",
+              "Go, chi",
+              "REST API /api/v1, WebSocket /ws, orchestrator, approvals, audit, budget, authentication and RBAC."
+            ],
+            [
+              "Agent runtime",
+              "Python, FastAPI",
+              "Receives a task and context, calls the LLM provider and returns a structured result. Swappable engine."
+            ],
+            [
+              "Postgres",
+              "PostgreSQL",
+              "Data for all organizations, protected by row-level security. Numbered SQL migrations."
+            ],
+            [
+              "Redis",
+              "Redis",
+              "Event pub/sub to the WebSocket hub and rate limits. Optional: without Redis, delivery is local in-process."
+            ],
+            [
+              "Caddy",
+              "Caddy",
+              "Production proxy: automatic TLS, sends /api/* and /ws to the backend and everything else to the frontend."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Backend and runtime boundary",
+        "paras": [
+          "The core rule: the runtime never talks to Postgres, Redis or external systems. It receives a task with its context and returns a result, tool requests and usage; it only contacts the LLM provider. The backend decides permissions, autonomy and budget, and executes the tools.",
+          "The backend calls the runtime over HTTP with JSON. If RUNTIME_TOKEN is set on both sides, calls carry that shared secret. The AI engine sits behind an interface of its own, so CrewAI can be replaced without touching the backend."
+        ],
+        "table": {
+          "head": [
+            "Runtime endpoint",
+            "Use"
+          ],
+          "rows": [
+            [
+              "POST /v1/plan, /v1/plan-phases, /v1/plan-phase, /v1/replan",
+              "Break a request or project into tasks with dependencies."
+            ],
+            [
+              "POST /v1/run-task",
+              "Run a task; returns output, consults, tool_requests and usage."
+            ],
+            [
+              "POST /v1/consult",
+              "Agent-to-agent consultation."
+            ],
+            [
+              "POST /v1/review",
+              "Quality review of a result."
+            ],
+            [
+              "POST /v1/synthesize",
+              "Write the consolidated report."
+            ],
+            [
+              "POST /v1/route, /v1/chat-reply",
+              "Route a chat message and generate an agent reply."
+            ],
+            [
+              "POST /v1/estimate, /v1/summarize, /v1/context-sizes",
+              "Cost estimation, summaries and context sizes."
+            ],
+            [
+              "GET /healthz",
+              "Status and mode: simulation or live."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Request flow",
+        "paras": [
+          "A request follows this path: the user's ask reaches the orchestrator, which asks the runtime for a plan, validates it and creates tasks; each task is assigned to an agent that uses tools, sensitive actions wait for human approval, and a report is synthesized at the end."
+        ],
+        "steps": [
+          "The user submits text with POST /api/v1/requests (or through chat, which routes it). The backend answers 202 with request_id and emits request.received.",
+          "The orchestrator asks the runtime for a plan. The backend validates agents, dependencies and limits before accepting it, then emits plan.created and task.created.",
+          "Tasks run respecting depends_on. Each one changes the agent state (agent.state_changed) and may trigger agent consultations (message.sent) and a quality review (task.reviewed).",
+          "Tools requested by the runtime go through the autonomy policy and permissions. If approval is needed a pending record is created and the task enters awaiting_approval.",
+          "A user with permission decides with POST /api/v1/approvals/{id}/decision. The task resumes or is blocked.",
+          "When all tasks finish, the runtime synthesizes the report; the backend emits report.created and request.completed.",
+          "In parallel, per-request cost is recorded and the budget is enforced: budget.warning and budget.exceeded can pause execution."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "POST /api/v1/requests {\"text\": \"...\"}      -> 202 {\"request_id\": \"...\"}\n  orchestrator -> runtime POST /v1/plan          -> tasks + depends_on\n  backend validates the plan                     -> plan.created, task.created*\n  per task: runtime POST /v1/run-task            -> output, consults, tool_requests, usage\n  tool_requests -> policy/autonomy check         -> approval.requested (if needed)\n  POST /api/v1/approvals/{id}/decision           -> approval.resolved, task resumes\n  runtime POST /v1/synthesize                    -> report.created, request.completed"
+        }
+      },
+      {
+        "h": "Realtime channel",
+        "paras": [
+          "GET /ws opens one WebSocket per organization. The backend publishes each event to Redis (channel aiworkforce:events) and a hub forwards the frame only to clients whose org_id matches; a frame without org_id is dropped. Without REDIS_URL the hub receives events locally.",
+          "On connect a hello event carries the agent list, followed by domain events. The server pings every 30 s, closes if no pong arrives within 60 s and drops slow clients (256-frame queue). With authentication on, the socket closes with code 4401 when the token expires so the client reconnects. There is no replay: after reconnecting, the client reloads state over REST."
+        ],
+        "code": {
+          "lang": "json",
+          "text": "{\n  \"id\": \"<uuid>\",\n  \"type\": \"task.completed\",\n  \"ts\": \"2026-01-01T12:03:22Z\",\n  \"org_id\": \"<org id>\",\n  \"agent_id\": \"sales\",\n  \"payload\": { \"task\": { \"id\": \"...\", \"status\": \"done\" } }\n}"
+        },
+        "table": {
+          "head": [
+            "Group",
+            "Event types"
+          ],
+          "rows": [
+            [
+              "Connection",
+              "hello, error, metrics.updated, activity.logged"
+            ],
+            [
+              "Requests",
+              "request.received, request.queued, request.dequeued, request.resumed, request.status_changed, request.completed, plan.created, report.created"
+            ],
+            [
+              "Tasks",
+              "task.created, task.started, task.completed, task.failed, task.blocked, task.retrying, task.reviewed, task.steered, task.reassigned"
+            ],
+            [
+              "Agents and chat",
+              "agent.created, agent.state_changed, message.sent, chat.message, chat.typing, route.decided"
+            ],
+            [
+              "Approvals",
+              "approval.requested, approval.progress, approval.reminder, approval.resolved"
+            ],
+            [
+              "Costs",
+              "cost.estimated, budget.warning, budget.exceeded, budget.resumed, provider.no_balance"
+            ],
+            [
+              "Projects",
+              "project.created, project.launched, project.delta, project.status_changed, project.budget_warning, project.plan_change_*"
+            ],
+            [
+              "Rewards",
+              "coins.earned, shop.purchased, item.equipped, item.unequipped, office.item_placed, office.item_removed"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Data model at a glance",
+        "paras": [
+          "Tables live in Postgres and every business table carries org_id. This is the summary view; the full schema is in the numbered migrations."
+        ],
+        "table": {
+          "head": [
+            "Entity",
+            "Main tables",
+            "Notes"
+          ],
+          "rows": [
+            [
+              "Organizations and users",
+              "organizations, users, memberships, refresh_tokens, invitations",
+              "Roles per membership: owner, admin, member, viewer."
+            ],
+            [
+              "Agents",
+              "agents, agent_profiles, agent_settings, agent_controls",
+              "State, tools, permissions and autonomy level."
+            ],
+            [
+              "Requests and tasks",
+              "requests, tasks, request_runs, task_checkpoints, reports",
+              "Task states: pending, running, blocked, awaiting_approval, done, failed."
+            ],
+            [
+              "Approvals",
+              "approvals, standing_approvals, approval_executions",
+              "Support double approval and per-project standing permissions."
+            ],
+            [
+              "Projects",
+              "projects, project_templates, plan_changes",
+              "Plans with nodes, budget and template versions."
+            ],
+            [
+              "Memory",
+              "memories, memory_docs",
+              "Long-term memory per agent."
+            ],
+            [
+              "Skills",
+              "skills, skill_versions, skill_assignments",
+              "Versioned, with a review workflow."
+            ],
+            [
+              "Rewards",
+              "coin_wallets, coin_ledger, shop_inventory, shop_equipment, shop_office",
+              "Coins for finished work and character and office items."
+            ],
+            [
+              "Governance and cost",
+              "audit_logs, audit_chain_heads, usage_entries, budget_caps",
+              "Chained audit trail and usage records."
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Multi-tenancy",
+        "paras": [
+          "Each account creates its own organization and the org_id travels inside the access token; it is never taken from client input. The HTTP layer puts it in the request context and every query is filtered by it.",
+          "As defense in depth, Postgres enforces row-level security. Each transaction sets app.org_id with set_config and the policies read that function; if the value is missing, queries return no rows (fail closed). The application connects with a non-owner role (DB_APP_ROLE, default app_user, without BYPASSRLS), and migrations use a separate connection (MIGRATE_DATABASE_URL). The WebSocket hub also filters by organization."
+        ]
+      },
+      {
+        "h": "Simulation versus real AI",
+        "paras": [
+          "The runtime's HTTP contract is the same in both modes; the engine changes. In simulation (the default, with no key or with SIMULATION=true) the runtime returns scripted results with simulated latencies, with no network and no cost. In live mode it uses the configured provider and the runtime's GET /healthz reports mode: live and the provider.",
+          "If a provider is configured but the live engine cannot start, the runtime answers in simulation with status degraded and a warning; there is no silent fallback. The backend reflects the mode in its own /healthz as runtime_mode."
+        ],
+        "tip": "SIMULATION=true always wins: no network calls are made even when keys are present."
+      },
+      {
+        "h": "Deployment and edge",
+        "paras": [
+          "docker-compose.yml starts postgres, redis, object storage, agent-runtime, backend and frontend; demo and production variants exist. In production Caddy terminates TLS, adds security headers and routes by path: /api/* and /ws to the backend, everything else to the frontend. Agent code execution uses a separate sandbox image and runner."
+        ]
+      },
+      {
+        "h": "Repository layout",
+        "paras": [
+          "The backend is layered: api depends on application, which depends on domain; infrastructure implements the ports."
+        ],
+        "code": {
+          "lang": "text",
+          "text": "backend/            Go (chi): domain, application, api, events, auth, projects,\n                    drive, skills, memory, rewards, connections, controls, audit\n  cmd/server/       main.go: composition root (wires every service)\n  internal/         domain/ application/ api/ infrastructure/{postgres,redis,runtime,memory}\n  internal/infrastructure/postgres/migrations/   numbered SQL migrations\nagent-runtime/      Python FastAPI (+ CrewAI engine, simulation engine)\n  app/              main.py, engine.py, simulation.py, crewai_engine.py, routing.py ...\nfrontend/           Next.js + React Three Fiber (src/app, src/components, src/lib)\ne2e/                Playwright (UI + WebSocket contract)\nsandbox/            code-execution runner image\ndeploy/ Caddyfile   production edge (TLS, reverse proxy)\ndocker-compose.yml  dev / accounts stack; docker-compose.demo.yml, docker-compose.prod.yml\ndocs/               SPEC.md and architecture/*.md\nlanding/            this public site"
+        }
+      }
+    ]
+  }
+}

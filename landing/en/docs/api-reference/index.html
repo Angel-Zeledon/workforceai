@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>REST and WebSocket API reference</title>
+  <meta name="description" content="Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://workforceai.es/en/docs/api-reference/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/docs/referencia-api/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/api-reference/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/referencia-api/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta property="og:title" content="REST and WebSocket API reference">
+  <meta property="og:description" content="Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.">
+  <meta property="og:url" content="https://workforceai.es/en/docs/api-reference/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="REST and WebSocket API reference">
+  <meta name="twitter:description" content="Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"API Reference","item":"https://workforceai.es/en/docs/api-reference/"}]},{"@type":"TechArticle","headline":"API Reference","description":"Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/api-reference/","url":"https://workforceai.es/en/docs/api-reference/","dateModified":"2026-10-12","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/favicon.svg"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="/en/">Home</a>
+        <a href="/en/docs/">Documentation</a>
+        <a href="/en/guide/">User guide</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Language">
+          <a href="/docs/referencia-api/" hreflang="es" lang="es" >ES</a>
+          <a href="/en/docs/api-reference/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap wide">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/docs/">Documentation</a></li><li aria-current="page">API Reference</li></ol></nav>
+      <article>
+        <h1>API Reference</h1>
+        <p class="lead">The Go backend exposes a REST API under /api/v1 and a WebSocket at /ws. This reference summarizes authentication, conventions and the main routes as registered in the router; example bodies are representative, not exhaustive.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">Base URL and versioning</a></li><li><a href="#s2">Authentication</a></li><li><a href="#s3">Errors, limits and conventions</a></li><li><a href="#s4">Requests, chat, tasks and reports</a></li><li><a href="#s5">Approvals and agents</a></li><li><a href="#s6">Projects and skills</a></li><li><a href="#s7">Shop, rewards and drive</a></li><li><a href="#s8">Connections, controls and settings</a></li><li><a href="#s9">WebSocket and health</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">Base URL and versioning</h2>
+        <p>All REST routes hang under /api/v1; the version is part of the path. The WebSocket (/ws) and the root health check (/healthz) live outside that prefix. Bodies are JSON (UTF-8), except drive uploads, which use the raw body.</p>
+        <p>With AUTH_ENABLED=false (demo mode) no authentication is required and everything runs on a fixed organization. With authentication on, every route except /healthz, /auth/* and the OAuth callback requires a token. Examples use localhost:8080; substitute your host.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash"># Base URL (local default)
+http://localhost:8080/api/v1
+# WebSocket (outside /api/v1)
+ws://localhost:8080/ws
+
+# Health (no auth)
+curl http://localhost:8080/healthz
+# {&quot;status&quot;:&quot;ok&quot;,&quot;runtime&quot;:&quot;up&quot;,&quot;runtime_mode&quot;:&quot;simulation&quot;}</code></pre>
+        
+        
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">Authentication</h2>
+        <p>Login returns an access token (a JWT, 15 minutes by default) sent in the Authorization: Bearer header. The refresh token never appears in the JSON body: it lives in an HttpOnly, SameSite=Strict cookie named wfai_refresh, scoped to the /api/v1/auth path. Endpoints that use that cookie (refresh and logout) also require the X-WFAI-CSRF header.</p>
+        <p>The organization comes from the token, never from a parameter. Roles are owner, admin, member and viewer, and each route requires a specific permission. The WebSocket accepts the token as ?access_token=.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash"># Log in: the access token is in the body, the refresh token in an HttpOnly cookie
+curl -i -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{&quot;email&quot;:&quot;you@example.com&quot;,&quot;password&quot;:&quot;&lt;password&gt;&quot;}'
+# {&quot;token_type&quot;:&quot;Bearer&quot;,&quot;access_token&quot;:&quot;&lt;token&gt;&quot;,&quot;expires_in&quot;:900,
+#  &quot;expires_at&quot;:&quot;...&quot;,&quot;user&quot;:{...},&quot;org_id&quot;:&quot;&lt;org id&gt;&quot;,&quot;role&quot;:&quot;owner&quot;}
+
+# Call the API with the access token
+curl http://localhost:8080/api/v1/agents -H 'Authorization: Bearer &lt;token&gt;'
+
+# Renew the session (cookie + CSRF header)
+curl -X POST http://localhost:8080/api/v1/auth/refresh \
+  -b 'wfai_refresh=&lt;cookie value&gt;' -H 'X-WFAI-CSRF: 1'</code></pre>
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>POST /auth/register</code></th><td>Creates an organization and an owner user. Body: email, password, name, org_name.</td></tr><tr><th scope="row"><code>POST /auth/login</code></th><td>Signs in. Body: email, password, optional org_id.</td></tr><tr><th scope="row"><code>POST /auth/refresh</code></th><td>Rotates the refresh token (cookie + X-WFAI-CSRF) and returns a new access token.</td></tr><tr><th scope="row"><code>POST /auth/logout</code></th><td>Ends the current session and clears the cookie. Returns 204.</td></tr><tr><th scope="row"><code>POST /auth/logout-all</code></th><td>Revokes all of the user's sessions.</td></tr><tr><th scope="row"><code>POST /auth/switch-org</code></th><td>New session in another organization. Body: org_id.</td></tr><tr><th scope="row"><code>GET /auth/me, GET /auth/config</code></th><td>Current user; public configuration (whether login is on).</td></tr><tr><th scope="row"><code>GET/POST /auth/members, PATCH/DELETE /auth/members/{id}</code></th><td>List, add, change the role of, or remove members.</td></tr><tr><th scope="row"><code>GET/POST /invitations, DELETE /invitations/{id}</code></th><td>Invitation management. POST /auth/invitations/accept accepts them.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Errors, limits and conventions</h2>
+        <p>Errors return JSON with a meaningful HTTP status. Most routes use {&quot;error&quot;: &quot;message&quot;}; connections and controls add a stable code field; authentication routes and permission failures use {&quot;error&quot;: {&quot;code&quot;, &quot;message&quot;}}. A 500 does not expose internal detail.</p>
+        <p>There is no global pagination. Each listing defines its own parameters: GET /activity accepts limit (default 100, maximum 1000); GET /conversations/{id}/messages accepts limit (maximum 200) and before, and sets the X-Has-More and X-Next-Before headers; chats and history use limit and offset; memory accepts limit and q. JSON bodies are capped at 1 MiB by default (413 when exceeded). Authentication routes have per-IP rate limits (429).</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Code</th><th scope="col">Meaning</th></tr></thead><tbody><tr><th scope="row"><code>400</code></th><td>Invalid body or parameters.</td></tr><tr><th scope="row"><code>401</code></th><td>Missing, invalid or expired token.</td></tr><tr><th scope="row"><code>403</code></th><td>The role lacks the permission, or the CSRF check failed.</td></tr><tr><th scope="row"><code>404</code></th><td>Resource does not exist in your organization.</td></tr><tr><th scope="row"><code>409</code></th><td>State conflict (for example, a different expected version).</td></tr><tr><th scope="row"><code>413</code></th><td>Body too large.</td></tr><tr><th scope="row"><code>429</code></th><td>Authentication rate limit.</td></tr></tbody></table></div>
+        <aside class="tip"><b>Tip.</b> POST /messages, POST /shop/purchases and other side-effecting operations accept Idempotency-Key; a retry returns the first result with the Idempotent-Replayed header.</aside>
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Requests, chat, tasks and reports</h2>
+        <p>POST /requests is asynchronous: it answers 202 with the request_id and progress arrives over the WebSocket. budget_cap_usd is optional and sets a hard cap for that request.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash"># Submit a request (asynchronous: 202 + id, progress arrives over WebSocket)
+curl -X POST http://localhost:8080/api/v1/requests \
+  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
+  -d '{&quot;text&quot;:&quot;Prepare a $50,000 proposal for ACME&quot;,&quot;budget_cap_usd&quot;:5}'
+# 202 {&quot;request_id&quot;:&quot;&lt;id&gt;&quot;}
+
+# Chat message to the office (idempotent with the header)
+curl -X POST http://localhost:8080/api/v1/messages \
+  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: 7d1e...' \
+  -d '{&quot;conversation&quot;:&quot;office&quot;,&quot;text&quot;:&quot;Who is free today?&quot;}'
+# 202 turn object; replies arrive as chat.message events</code></pre>
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>POST /requests</code></th><td>Creates a request. Body: text, optional budget_cap_usd.</td></tr><tr><th scope="row"><code>GET /requests, GET /requests/{id}</code></th><td>List and detail (tasks and cost).</td></tr><tr><th scope="row"><code>GET /requests/{id}/cost, /estimate</code></th><td>Accumulated cost and upfront estimate.</td></tr><tr><th scope="row"><code>POST /requests/{id}/confirm, PUT /requests/{id}/budget</code></th><td>Confirm an estimate; change the cap.</td></tr><tr><th scope="row"><code>POST /messages</code></th><td>Chat message. Body: conversation (office by default), text, attachments.</td></tr><tr><th scope="row"><code>GET /conversations, GET /conversations/{id}/messages</code></th><td>Conversations and messages.</td></tr><tr><th scope="row"><code>POST /conversations/{id}/messages</code></th><td>Post to a specific conversation.</td></tr><tr><th scope="row"><code>GET /tasks, GET /tasks/{id}</code></th><td>Tasks; filters agent_id and status.</td></tr><tr><th scope="row"><code>GET /tasks/{id}/intervention, POST /tasks/{id}/steer, /reassign</code></th><td>Intervene in a running task.</td></tr><tr><th scope="row"><code>GET /reports, GET /reports/{id}</code></th><td>Final reports.</td></tr><tr><th scope="row"><code>GET /activity, GET /metrics, GET /budget</code></th><td>Activity, metrics and budget.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Approvals and agents</h2>
+        <p>Deciding an approval is a privileged action: admin or owner only. When approving, you can also request a standing permission (always_allow) for internal, reversible actions. An approval can require two distinct people.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash"># List pending approvals
+curl 'http://localhost:8080/api/v1/approvals?status=pending' \
+  -H 'Authorization: Bearer &lt;token&gt;'
+
+# Approve (admin or owner)
+curl -X POST http://localhost:8080/api/v1/approvals/&lt;id&gt;/decision \
+  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
+  -d '{&quot;decision&quot;:&quot;approve&quot;,&quot;note&quot;:&quot;ok&quot;}'
+# 200 the updated approval; &quot;decision&quot; is &quot;approve&quot; or &quot;reject&quot;</code></pre>
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /approvals</code></th><td>List; status filter (pending, approved, rejected).</td></tr><tr><th scope="row"><code>POST /approvals/{id}/decision</code></th><td>Body: decision (approve or reject), note, always_allow, always_allow_any_agent, always_allow_days.</td></tr><tr><th scope="row"><code>POST /approvals/batch</code></th><td>Decide several approvals of a project.</td></tr><tr><th scope="row"><code>GET /agents, GET /agents/{id}, GET /agents/{id}/detail</code></th><td>Agents: state, tools, permissions and autonomy.</td></tr><tr><th scope="row"><code>GET/PUT /agents/{id}/profile, GET /agents/{id}/traces</code></th><td>Versioned work profile and reasoning traces.</td></tr><tr><th scope="row"><code>GET /agents/{id}/memory, DELETE /agents/{id}/memory/{docId}</code></th><td>Long-term memory.</td></tr><tr><th scope="row"><code>GET /role-templates, POST /agents/from-template</code></th><td>Hire an agent from a template.</td></tr><tr><th scope="row"><code>PUT /agents/{id}/budget, POST /agents/{id}/control</code></th><td>Budget and pause or resume.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">Projects and skills</h2>
+        <p>A project is a multi-node plan with a budget. The cycle is create a draft, edit the plan, estimate and validate, then launch. Skills are reusable instructions, versioned and reviewed before they become active.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash"># Create a draft project, then launch it
+curl -X POST http://localhost:8080/api/v1/projects/draft \
+  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
+  -d '{ ...project fields... }'
+curl -X POST http://localhost:8080/api/v1/projects/&lt;id&gt;/launch \
+  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' -d '{}'</code></pre>
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /projects, POST /projects/draft, POST /projects/from-template</code></th><td>List and create drafts.</td></tr><tr><th scope="row"><code>GET /projects/{id}, /snapshot, /health, /approvals</code></th><td>Project state, health and approvals.</td></tr><tr><th scope="row"><code>PATCH /projects/{id}/plan, POST /estimate, /validate, /launch</code></th><td>Edit, estimate, validate and launch.</td></tr><tr><th scope="row"><code>POST /projects/{id}/control, PUT /projects/{id}/budget</code></th><td>Control execution and set the budget.</td></tr><tr><th scope="row"><code>POST /projects/{id}/nodes/{nodeId}/retry, /skip, /replan</code></th><td>Recover a node.</td></tr><tr><th scope="row"><code>GET/POST /project-templates, GET/PUT/DELETE /project-templates/{id}</code></th><td>Templates with versions.</td></tr><tr><th scope="row"><code>GET/POST /skills, GET/PUT /skills/{id}</code></th><td>Skill catalog and editing.</td></tr><tr><th scope="row"><code>POST /skills/{id}/submit, /review, /disable</code></th><td>Review workflow; review and disable need the reviewer permission.</td></tr><tr><th scope="row"><code>GET/PUT/DELETE /agents/{id}/skills[/{skillId}]</code></th><td>Assign skills to an agent.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Shop, rewards and drive</h2>
+        <p>Finished tasks and projects pay coins exactly once. The shop spends coins atomically and with an audit entry. The drive stores the organization's files with versions, a trash and grants.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash">curl http://localhost:8080/api/v1/rewards/wallet -H 'Authorization: Bearer &lt;token&gt;'
+curl -X POST http://localhost:8080/api/v1/shop/purchases \
+  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
+  -d '{&quot;item_id&quot;:&quot;&lt;item id&gt;&quot;,&quot;idempotency_key&quot;:&quot;&lt;unique key&gt;&quot;}'</code></pre>
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /rewards/wallet, /rewards/ledger, /rewards/rules</code></th><td>Balance, ledger and payout rules.</td></tr><tr><th scope="row"><code>GET /shop/catalog, GET /shop/state</code></th><td>Catalog and state (inventory, equipped).</td></tr><tr><th scope="row"><code>POST /shop/purchases</code></th><td>Buy. Body: item_id, idempotency_key.</td></tr><tr><th scope="row"><code>PUT/DELETE /agents/{id}/equipment/{slot}</code></th><td>Equip or remove a character item.</td></tr><tr><th scope="row"><code>PUT/DELETE /office/items/{slot}</code></th><td>Place or remove an office item.</td></tr><tr><th scope="row"><code>GET /drive/list, /drive/search, /drive/usage, /drive/trash</code></th><td>Browse the drive.</td></tr><tr><th scope="row"><code>PUT /drive/upload?path=</code></th><td>Upload or version a file (raw body).</td></tr><tr><th scope="row"><code>GET /drive/files/{id}, /content, /text, /preview, /versions, /diff</code></th><td>Read a file and its history.</td></tr><tr><th scope="row"><code>POST /drive/folders, /drive/files/{id}/move, DELETE /drive/files/{id}</code></th><td>Organize and delete (to the trash).</td></tr></tbody></table></div>
+        <aside class="tip"><b>Tip.</b> The drive handlers register more routes (restore versions, tags, grants under /drive/grants); the router has the full list.</aside>
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Connections, controls and settings</h2>
+        <p>Connections store encrypted credentials for external services; without CONNECTIONS_KEK no real credentials can be saved. Controls let you pause agents, put the organization in read-only mode or trigger a kill switch.</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash"># Pause or resume one agent
+curl -X POST http://localhost:8080/api/v1/agents/&lt;id&gt;/control \
+  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
+  -d '{&quot;action&quot;:&quot;pause&quot;,&quot;drain&quot;:&quot;graceful&quot;,&quot;reason&quot;:&quot;maintenance&quot;}'
+
+# Organization kill switch (level: none | freeze | lockdown)
+curl -X POST http://localhost:8080/api/v1/org/controls/kill-switch \
+  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
+  -d '{&quot;level&quot;:&quot;freeze&quot;,&quot;reason&quot;:&quot;incident&quot;}'</code></pre>
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /connection-providers, GET/POST /connections</code></th><td>Available providers and connections.</td></tr><tr><th scope="row"><code>PATCH /connections/{id}, PUT /connections/{id}/credential</code></th><td>Edit and store the credential (write-only).</td></tr><tr><th scope="row"><code>POST /connections/{id}/oauth/start, /test</code></th><td>Start OAuth and test the connection.</td></tr><tr><th scope="row"><code>GET /connections/oauth/callback</code></th><td>Public OAuth callback, verified by a single-use state.</td></tr><tr><th scope="row"><code>GET/PUT /org/controls, POST /org/controls/kill-switch, /release</code></th><td>Read-only mode and kill switch (none, freeze, lockdown).</td></tr><tr><th scope="row"><code>GET/PUT /org/operating-hours, /org/anomaly-settings</code></th><td>Operating hours and anomaly settings.</td></tr><tr><th scope="row"><code>GET/PUT /org/settings, GET /onboarding, POST /onboarding</code></th><td>Organization settings and onboarding.</td></tr><tr><th scope="row"><code>GET/PUT /settings/llm, PUT /settings/llm/providers/{provider}</code></th><td>Bring-your-own model credentials (owner or admin).</td></tr><tr><th scope="row"><code>GET/PUT /settings/model-policy, /settings/code-execution</code></th><td>Model policy and code execution.</td></tr><tr><th scope="row"><code>GET /audit, /audit/export, /audit/verify</code></th><td>Chained audit trail, export and verification.</td></tr></tbody></table></div>
+        
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">WebSocket and health</h2>
+        <p>GET /ws opens the organization's event channel. On connect it sends hello with the agent list and then every domain event. The client only reads: the server ignores incoming messages, and there are no topic subscriptions or replay. If the token expires, the server closes with code 4401 and the client must reconnect with a fresh token.</p>
+        <p>GET /healthz and GET /api/v1/healthz need no authentication. They return status, runtime (up or down) and, when the runtime answers, runtime_mode (simulation or live).</p>
+        
+        <pre class="code" tabindex="0"><code class="lang-bash"># Browsers cannot set headers on a WebSocket: pass the token in the query string
+wscat -c 'ws://localhost:8080/ws?access_token=&lt;token&gt;'
+
+&lt; {&quot;id&quot;:&quot;...&quot;,&quot;type&quot;:&quot;hello&quot;,&quot;ts&quot;:&quot;...&quot;,&quot;org_id&quot;:&quot;&lt;org id&gt;&quot;,&quot;payload&quot;:{&quot;agents&quot;:[...]}}
+&lt; {&quot;id&quot;:&quot;...&quot;,&quot;type&quot;:&quot;agent.state_changed&quot;,&quot;org_id&quot;:&quot;&lt;org id&gt;&quot;,&quot;agent_id&quot;:&quot;sales&quot;,&quot;payload&quot;:{...}}
+
+# Frame shape
+{ &quot;id&quot;: &quot;&lt;uuid&gt;&quot;, &quot;type&quot;: &quot;&lt;event.type&gt;&quot;, &quot;ts&quot;: &quot;&lt;RFC 3339&gt;&quot;,
+  &quot;org_id&quot;: &quot;&lt;org id&gt;&quot;, &quot;agent_id&quot;: &quot;&lt;optional&gt;&quot;, &quot;payload&quot;: { } }</code></pre>
+        
+        
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/architecture/"><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li><li><a href="/en/docs/auth-and-tenancy/"><b>Authentication and multi-tenancy</b><span>How accounts, sessions, roles, invitations and Postgres row-level security isolate organizations in AI Workforce OS.</span></a></li><li><a href="/en/docs/configuration/"><b>Configuration reference</b><span>Environment variable reference for AI Workforce OS: server, database, auth, budget, rewards, model providers and frontend build arguments.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Start now</h2>
+      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+      <a href="/en/docs/">Documentation</a>
+      <a href="/en/guide/">User guide</a>
+      <a href="#top">Back to top</a>
+    </div>
+  </footer>
+</body>
+</html>

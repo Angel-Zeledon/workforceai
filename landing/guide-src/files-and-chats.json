@@ -1,0 +1,167 @@
+{
+  "id": "files-and-chats",
+  "slug": { "es": "archivos-y-chats", "en": "files-and-chats" },
+  "related": ["getting-started", "projects", "the-office"],
+  "es": {
+    "title": "Chats y Archivos: retoma conversaciones y encuentra lo que se produjo",
+    "metaTitle": "Chats y Archivos en AI Workforce OS",
+    "description": "Encuentra conversaciones con tus agentes, escribe desde Chats y organiza, sube, busca y recupera archivos con versiones y papelera.",
+    "intro": "Dos pantallas guardan la memoria de tu oficina. Chats conserva todo lo que has hablado con el equipo. Archivos reúne los documentos que crean tus agentes y los que subes tú, con versiones para que nada se pierda.",
+    "sections": [
+      {
+        "h": "¿Cómo encuentro una conversación?",
+        "paras": [
+          "En Chats ves tus conversaciones agrupadas. General muestra todo en orden: lo que escribiste a la oficina y lo que escribiste a cada agente."
+        ],
+        "steps": [
+          "Abre Chats desde el menú de la app.",
+          "En la lista Conversaciones, pulsa General para verlo todo, o pulsa un agente para ver solo su hilo. Los agentes con actividad más reciente aparecen primero y un número indica los mensajes sin leer.",
+          "Para buscar, escribe una palabra en Buscar en títulos y mensajes. La lista se reemplaza por los Resultados, con la coincidencia resaltada.",
+          "Pulsa Borrar búsqueda para volver a la lista normal."
+        ],
+        "tip": "Si no hay coincidencias, la app te lo dice y te sugiere probar con otra palabra."
+      },
+      {
+        "h": "¿Cómo escribo y envío un mensaje?",
+        "steps": [
+          "Elige General o un agente en la lista.",
+          "Escribe tu mensaje en la caja de abajo y envíalo.",
+          "En General, la oficina lo recibe y lo enruta al agente adecuado. En el hilo de un agente, le llega directo a él.",
+          "Bajo tus mensajes verás a qué agentes se enviaron. Lo que escribes a un agente también aparece en General.",
+          "Cuando termines, pulsa Oficina para volver a la vista donde los agentes trabajan en tiempo real."
+        ],
+        "tip": "En el hilo de un agente, Ver en la oficina te lleva a su escritorio."
+      },
+      {
+        "h": "¿Qué son las conversaciones anteriores?",
+        "paras": [
+          "Cuando le pides un trabajo a la oficina, su conversación queda guardada en Conversaciones anteriores. Haz clic en una para leerla. Es de solo lectura: para seguir hablando, escribe en General o a un agente.",
+          "Los mensajes que dieron origen a un trabajo traen los botones Ver informe y Ver proyecto, para ir directo al resultado.",
+          "En un trabajo pasado puedes Renombrar, Archivar o Eliminar la conversación. Archivar la saca de la lista; Ver archivadas las muestra de nuevo y Restaurar las devuelve. Eliminar pide confirmación y borra la conversación y sus mensajes para siempre."
+        ]
+      },
+      {
+        "h": "¿Cómo abro una carpeta y un archivo?",
+        "paras": [
+          "En Archivos viven los documentos que tus agentes crean y los que subes tú. Empiezas en Inicio, con las carpetas Escritorios de agentes, Proyectos, Clientes y Compartido."
+        ],
+        "steps": [
+          "Abre Archivos desde el menú.",
+          "Pulsa una carpeta para entrar. Verás una tabla con Nombre, Último cambio, Versión, Tamaño y Actualizado.",
+          "Pulsa un archivo para abrirlo en el panel de la derecha. Los textos y los CSV se previsualizan ahí mismo; otros tipos dicen que no hay vista previa y los puedes abrir con Descargar.",
+          "Usa la ruta de carpetas de arriba para volver: pulsa cualquier tramo para subir hasta esa carpeta, o Inicio para regresar a la raíz."
+        ],
+        "tip": "Una columna indica si el último cambio lo hizo un agente, una persona o el sistema."
+      },
+      {
+        "h": "¿Cómo subo mis propios archivos?",
+        "steps": [
+          "Entra primero en una carpeta. En Inicio no se puede subir.",
+          "Pulsa Subir y elige uno o varios archivos. También puedes arrastrarlos desde tu computadora a la pantalla.",
+          "Suelta los archivos cuando veas el aviso con la ruta de destino y espera a que termine de subir.",
+          "Tus agentes podrán leerlos desde esa carpeta."
+        ]
+      },
+      {
+        "h": "¿Cómo busco por nombre o por contenido?",
+        "paras": [
+          "Escribe una palabra en Buscar en archivos y pulsa Enter. La búsqueda mira los nombres y también el texto dentro de los archivos, y cada resultado muestra un fragmento.",
+          "Pulsa un resultado para ir a su carpeta. Pulsa Cerrar para volver a la lista. Si no hay coincidencias, verás Sin resultados."
+        ]
+      },
+      {
+        "h": "¿Cómo recupero una versión anterior o un archivo borrado?",
+        "paras": [
+          "Cada vez que una persona o un agente cambia un archivo, se guarda una versión. Y nada se borra de golpe: Mover a la papelera solo lo manda a la Papelera."
+        ],
+        "steps": [
+          "Para ver versiones, abre un archivo y mira el Historial de versiones. Pulsa una (v1, v2...) para ver cómo era entonces.",
+          "Si prefieres esa, pulsa Restaurar. Se crea una versión nueva con ese contenido; el historial nunca se borra.",
+          "Para recuperar un archivo eliminado, pulsa Papelera arriba y luego Restaurar junto al archivo. Vuelve a su carpeta.",
+          "Pulsa Papelera otra vez para regresar a tus archivos."
+        ]
+      }
+    ]
+  },
+  "en": {
+    "title": "Chats and Files: pick up conversations and find what was produced",
+    "metaTitle": "Chats and Files in AI Workforce OS",
+    "description": "Find conversations with your agents, write from Chats, and browse, upload, search and recover files with versions and a trash.",
+    "intro": "Two screens hold your office's memory. Chats keeps everything you have said to your team. Files gathers the documents your agents create and the ones you upload, with versions so nothing gets lost.",
+    "sections": [
+      {
+        "h": "How do I find a conversation?",
+        "paras": [
+          "In Chats your conversations are grouped. General shows everything in order: what you wrote to the office and what you wrote to each agent."
+        ],
+        "steps": [
+          "Open Chats from the app menu.",
+          "In the Conversations list, click General to see everything, or click an agent to see only its thread. Agents with the most recent activity come first and a number shows unread messages.",
+          "To search, type a word in Search titles and messages. The list is replaced by Results, with the match highlighted.",
+          "Click Clear search to go back to the normal list."
+        ],
+        "tip": "If nothing matches, the app tells you so and suggests trying another word."
+      },
+      {
+        "h": "How do I write and send a message?",
+        "steps": [
+          "Choose General or an agent in the list.",
+          "Type your message in the box at the bottom and send it.",
+          "In General, the office receives it and routes it to the right agent. In an agent's thread, it goes straight to that agent.",
+          "Under your messages you will see which agents they were sent to. What you write to an agent also shows up in General.",
+          "When you are done, click Office to go back to the view where the agents work in real time."
+        ],
+        "tip": "In an agent's thread, See in the office takes you to its desk."
+      },
+      {
+        "h": "What are past conversations?",
+        "paras": [
+          "When you ask the office for a piece of work, its conversation is kept under Past conversations. Click one to read it. It is read only: to keep talking, write in General or to an agent.",
+          "Messages that started a job have the buttons View report and View project, to jump straight to the result.",
+          "On a past job you can Rename, Archive or Delete the conversation. Archive takes it out of the list; Show archived brings those back into view and Restore returns one to the list. Delete asks for confirmation and removes the conversation and its messages for good."
+        ]
+      },
+      {
+        "h": "How do I open a folder and a file?",
+        "paras": [
+          "Files holds the documents your agents create and the ones you upload. You start at Home, with the folders Agent desks, Projects, Clients and Shared."
+        ],
+        "steps": [
+          "Open Files from the menu.",
+          "Click a folder to go in. You will see a table with Name, Last change, Version, Size and Updated.",
+          "Click a file to open it in the panel on the right. Text files and CSVs are previewed right there; other types say there is no preview and you can open them with Download.",
+          "Use the folder path at the top to go back: click any part of it to jump up to that folder, or Home to return to the root."
+        ],
+        "tip": "A column shows whether the last change was made by an agent, a person or the system."
+      },
+      {
+        "h": "How do I upload my own files?",
+        "steps": [
+          "Open a folder first. You cannot upload at Home.",
+          "Click Upload and pick one or more files. You can also drag them from your computer onto the screen.",
+          "Drop the files when you see the notice with the destination path, and wait for the upload to finish.",
+          "Your agents will be able to read them from that folder."
+        ]
+      },
+      {
+        "h": "How do I search by name or by content?",
+        "paras": [
+          "Type a word in Search files and press Enter. The search looks at file names and also at the text inside files, and each result shows a snippet.",
+          "Click a result to jump to its folder. Click Close to go back to the list. If nothing matches, you will see No results."
+        ]
+      },
+      {
+        "h": "How do I recover an earlier version or a deleted file?",
+        "paras": [
+          "Every time a person or an agent changes a file, a version is saved. And nothing disappears at once: Move to trash only sends a file to the Trash."
+        ],
+        "steps": [
+          "To see versions, open a file and look at Version history. Click one (v1, v2...) to see how it looked then.",
+          "If you prefer that one, click Restore. A new version is created with that content; the history is never erased.",
+          "To get back a deleted file, click Trash at the top and then Restore next to the file. It returns to its folder.",
+          "Click Trash again to go back to your files."
+        ]
+      }
+    ]
+  }
+}
