@@ -341,3 +341,17 @@ func (s *Service) Delete(ctx context.Context, org, agentID, id, actor string) er
 // Reset forgets everything of an organization (the demo reset: the tasks the
 // memories point to are gone too).
 func (s *Service) Reset(ctx context.Context, org string) error { return s.cfg.Docs.Clear(ctx, org) }
+
+// RememberNote stores a fact a person told the agent to keep (/recordar). It
+// goes through the same cleaning as the agent's own notes: a text with a secret
+// or an injection pattern is refused, not stored.
+func (s *Service) RememberNote(ctx context.Context, org, agentID, text string) error {
+	notes := s.CleanNotes([]string{text})
+	if len(notes) == 0 {
+		return fmt.Errorf("%w: the note is empty, too long or unsafe", domain.ErrInvalid)
+	}
+	n, now := notes[0], time.Now().UTC()
+	id := fmt.Sprintf("note_user_%s_%d", agentID, now.UnixNano())
+	return s.cfg.Docs.Upsert(ctx, org, Doc{ID: id, Kind: KindNote, Ref: "memory:" + id, Title: capRunes(n, 120), Body: n,
+		AgentID: agentID, Scope: ScopeAgent, CreatedAt: now, UpdatedAt: now})
+}

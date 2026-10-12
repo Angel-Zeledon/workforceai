@@ -15,6 +15,7 @@ from .providers import ProviderError, configured_providers, default_provider
 from .replan import ReplanRequest, ReplanResponse
 from .redact import redact_any, redact_secrets
 from .security import build_trace
+from .commands import context_sizes, marker_lang
 from .models import (
     ChatReplyRequest,
     ChatReplyResponse,
@@ -34,6 +35,9 @@ from .models import (
     RunTaskRequest,
     RunTaskResponse,
     RunTrace,
+    SummarizeRequest,
+    SummarizeResponse,
+    ContextSizesResponse,
     SynthesizeRequest,
     SynthesizeResponse,
 )
@@ -48,6 +52,14 @@ def scrub_run_task(resp: RunTaskResponse) -> RunTaskResponse:
     for key in ("output", "consults", "tool_requests"):
         data[key] = redact_any(data[key])
     return RunTaskResponse(**data)
+
+
+def _with_marker_lang(req, text: str):
+    """[[lang:xx]] (slash commands: the alias the person typed) overrides the organization locale for this call."""
+    loc = marker_lang(text)
+    if loc and getattr(req, "locale", None) != loc:
+        return req.model_copy(update={"locale": loc})
+    return req
 
 
 def create_app(engine: AgentEngine | None = None) -> FastAPI:
@@ -100,6 +112,7 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
 
     @app.post("/v1/plan", response_model=PlanResponse, response_model_exclude_none=True)
     async def plan(req: PlanRequest):
+        req = _with_marker_lang(req, req.request_text)
         return await guarded(eng().plan(req))
 
     @app.post("/v1/plan-phases", response_model=PlanPhasesResponse, response_model_exclude_none=True)
@@ -116,6 +129,7 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
 
     @app.post("/v1/run-task", response_model=RunTaskResponse, response_model_exclude_none=True)
     async def run_task(req: RunTaskRequest):
+        req = _with_marker_lang(req, req.context.request_text)
         resp = await guarded(eng().run_task(req))
         out = scrub_run_task(resp)
         if req.want_trace:  # V2 thought audit: the prompt exactly as built (same builders the engine uses), redacted
@@ -138,7 +152,17 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
 
     @app.post("/v1/synthesize", response_model=SynthesizeResponse, response_model_exclude_none=True)
     async def synthesize(req: SynthesizeRequest):
+        req = _with_marker_lang(req, req.request_text)
         return await guarded(eng().synthesize(req))
+
+    @app.post("/v1/summarize", response_model=SummarizeResponse, response_model_exclude_none=True)
+    async def summarize(req: SummarizeRequest):
+        resp = await guarded(eng().summarize(req))
+        return resp.model_copy(update={"text": redact_secrets(resp.text)})
+
+    @app.post("/v1/context-sizes", response_model=ContextSizesResponse)
+    async def context_sizes_endpoint(req: RunTaskRequest):
+        return context_sizes(req)  # builders only: no model is ever called
 
     @app.post("/v1/route", response_model=RouteResponse, response_model_exclude_none=True)
     async def route(req: RouteRequest):

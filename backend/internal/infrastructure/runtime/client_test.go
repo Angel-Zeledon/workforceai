@@ -39,6 +39,43 @@ func TestClientSendsTokenAndMergesPolicy(t *testing.T) {
 	}
 }
 
+// K1: the slash commands' two runtime calls speak the Python contract (paths and field names).
+func TestClientSummarizeAndContextSizes(t *testing.T) {
+	var paths []string
+	var bodies []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var b map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&b)
+		paths, bodies = append(paths, r.URL.Path), append(bodies, b)
+		if r.URL.Path == "/v1/summarize" {
+			_, _ = w.Write([]byte(`{"text":"resumen","usage":{"model":"m","input_tokens":10,"output_tokens":3,"cost_usd":0.001,"duration_ms":5}}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"segments":[{"key":"profile","label":"p","tokens":7}],"total_tokens":7}`))
+	}))
+	defer srv.Close()
+	c := New(srv.URL)
+	var _ application.SummaryRuntime = c
+	var _ application.ContextSizeRuntime = c
+	s, err := c.Summarize(context.Background(), application.SummarizeRequest{Mode: "compact", Locale: "en", PreviousSummary: "antes",
+		Messages: []application.ChatHistoryItem{{From: "user", Text: "hola"}}})
+	if err != nil || s.Text != "resumen" || s.Usage.InputTokens != 10 || s.Usage.CostUSD != 0.001 {
+		t.Fatalf("summarize: %+v %v", s, err)
+	}
+	sizes, err := c.ContextSizes(context.Background(), application.RunTaskRequest{})
+	if err != nil || sizes.TotalTokens != 7 || sizes.Segments[0].Key != "profile" {
+		t.Fatalf("context sizes: %+v %v", sizes, err)
+	}
+	if paths[0] != "/v1/summarize" || paths[1] != "/v1/context-sizes" {
+		t.Fatalf("paths: %v", paths)
+	}
+	m := bodies[0]
+	msgs, _ := m["messages"].([]any)
+	if m["mode"] != "compact" || m["locale"] != "en" || m["previous_summary"] != "antes" || len(msgs) != 1 || msgs[0].(map[string]any)["from"] != "user" {
+		t.Fatalf("summarize body: %v", m)
+	}
+}
+
 func TestClientWithoutTokenOrPolicySendsPlainBody(t *testing.T) {
 	var auth string
 	var body map[string]any

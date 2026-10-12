@@ -89,6 +89,8 @@ type Deps struct {
 	// Chats serves the chat history (chat_history.go): the enriched GET /conversations,
 	// rename/archive/delete and /chats/*. Optional: nil keeps the plain list.
 	Chats *application.ChatHistory
+	// Commands serves the slash commands (commands.go): /commands, /commands/run ... Optional.
+	Commands *CommandsDeps
 	// Push serves /push/* (push.go); nil disables Web Push. Rec audits
 	// subscription changes (optional).
 	Push *push.Service
@@ -115,6 +117,7 @@ type server struct {
 	origins  originPolicy
 	upgrader websocket.Upgrader
 	seeded   sync.Map // org id -> struct{}: orgs whose agents were verified
+	cmds     *commandsState
 }
 
 // NewRouter builds the chi router.
@@ -181,6 +184,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountRewards(r)
 			s.mountPush(r)
 			s.mountV2(r)
+			s.mountCommands(r)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}

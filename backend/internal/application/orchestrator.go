@@ -40,8 +40,9 @@ type Orchestrator struct {
 	standing *StandingService
 	code     CodeRunner // optional: approval-gated code sandbox (code_flow.go)
 
-	chatIdem idemCache // Idempotency-Key of POST /messages (chat.go)
-	chatQ    chatQueue // per-conversation FIFO of chat turns (chat.go)
+	chatIdem idemCache        // Idempotency-Key of POST /messages (chat.go)
+	chatQ    chatQueue        // per-conversation FIFO of chat turns (chat.go)
+	convCtx  ConvContextStore // /clear and /compact: what the model still sees of a conversation (commands_support.go)
 
 	ctxSrc   ContextSource   // optional: artifact text for project tasks (context_flow.go)
 	wsSrc    WorkspaceSource // optional: the agent's drive folders (workspace_flow.go)

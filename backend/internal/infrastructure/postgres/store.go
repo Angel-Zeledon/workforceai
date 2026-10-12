@@ -672,6 +672,11 @@ func (s *Store) ListMemory(ctx context.Context, orgID, agentID string) ([]domain
 	}, `SELECT key, value, scope FROM memories WHERE org_id=$1 AND agent_id=$2 ORDER BY scope, key`, orgID, agentID)
 }
 
+// DeleteMemory implements application.MemoryDeleter.
+func (s *Store) DeleteMemory(ctx context.Context, orgID, agentID, scope, key string) error {
+	return s.exec(ctx, orgID, `DELETE FROM memories WHERE org_id=$1 AND agent_id=$2 AND scope=$3 AND key=$4`, orgID, agentID, scope, key)
+}
+
 // ---- events / activity / audit ----
 
 func (s *Store) SaveEvent(ctx context.Context, orgID string, e domain.Event) error {

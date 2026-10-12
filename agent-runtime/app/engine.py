@@ -26,6 +26,8 @@ from .models import (
     RouteResponse,
     RunTaskRequest,
     RunTaskResponse,
+    SummarizeRequest,
+    SummarizeResponse,
     SynthesizeRequest,
     SynthesizeResponse,
 )
@@ -144,6 +146,16 @@ class AgentEngine(abc.ABC):
         return ChatReplyResponse(text=text, kind=kind, consult=consult,
                                  usage=Usage(model="simulation-claude-sonnet", input_tokens=0, output_tokens=0,
                                              cost_usd=0.0, duration_ms=0))
+
+    async def summarize(self, req: SummarizeRequest) -> SummarizeResponse:
+        """Slash commands: compact / meeting conclusion / daily summary. Default: deterministic extractive summary."""
+        from .commands import sim_summary, sim_usage_tokens
+        from .models import Usage
+
+        text = sim_summary(req)
+        n_in, n_out = sim_usage_tokens(req, text)
+        return SummarizeResponse(text=text, usage=Usage(model="simulation-claude-sonnet", input_tokens=n_in,
+                                                       output_tokens=n_out, cost_usd=estimate_cost(n_in, n_out), duration_ms=0))
 
     async def estimate(self, req: "EstimateRequest") -> "EstimateResponse":
         """Cost range for a plan, before running it. Never calls the LLM."""

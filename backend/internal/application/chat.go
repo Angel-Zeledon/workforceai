@@ -450,6 +450,7 @@ func (o *Orchestrator) chatHistory(ctx context.Context, t *chatTurn) []ChatHisto
 			mine = m.TS
 		}
 	}
+	msgs, summary := o.applyConvContext(ctx, t.conv, msgs) // /clear and /compact
 	out := make([]ChatHistoryItem, 0, len(msgs))
 	for _, m := range msgs {
 		if m.From == "system" || (m.Kind != domain.MsgChat && m.Kind != domain.MsgAnswer) {
@@ -462,6 +463,9 @@ func (o *Orchestrator) chatHistory(ctx context.Context, t *chatTurn) []ChatHisto
 	}
 	if len(out) > chatHistoryLimit {
 		out = out[len(out)-chatHistoryLimit:]
+	}
+	if summary != nil { // the summary of /compact replaces what came before; it does not count against the window
+		out = append([]ChatHistoryItem{*summary}, out...)
 	}
 	return out
 }

@@ -40,6 +40,7 @@ type Store struct {
 	cfg           configState                        // organization settings and schedules (config.go)
 	modelPolicies map[string]application.ModelPolicy // org -> model policy (modelpolicy.go)
 	usage         []domain.UsageEntry
+	convCtx       map[convCtxKey]application.ConvContext   // /clear and /compact (conv_context.go)
 	caps          map[string]domain.BudgetCap              // scope/id
 	runMeta       map[string][]byte                        // request id -> JSON run meta (runs.go)
 	checkpoints   map[string][]byte                        // task id -> JSON checkpoint (runs.go)
@@ -494,6 +495,14 @@ func (s *Store) ListMemory(_ context.Context, _, agentID string) ([]domain.Memor
 	}
 	slices.SortFunc(out, func(a, b domain.Memory) int { return compare(a.Scope+a.Key, b.Scope+b.Key) })
 	return out, nil
+}
+
+// DeleteMemory implements application.MemoryDeleter.
+func (s *Store) DeleteMemory(_ context.Context, _, agentID, scope, key string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.memories[agentID], scope+"/"+key)
+	return nil
 }
 
 func compare(a, b string) int {

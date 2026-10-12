@@ -177,6 +177,18 @@ func (c *Client) ChatReply(ctx context.Context, in application.ChatReplyRequest)
 	return
 }
 
+// Summarize implements application.SummaryRuntime (POST /v1/summarize).
+func (c *Client) Summarize(ctx context.Context, in application.SummarizeRequest) (out application.SummarizeResponse, err error) {
+	err = c.do(ctx, http.MethodPost, "/v1/summarize", in, &out)
+	return
+}
+
+// ContextSizes implements application.ContextSizeRuntime (POST /v1/context-sizes).
+func (c *Client) ContextSizes(ctx context.Context, in application.RunTaskRequest) (out application.ContextSizesResponse, err error) {
+	err = c.do(ctx, http.MethodPost, "/v1/context-sizes", in, &out)
+	return
+}
+
 func (c *Client) Health(ctx context.Context) (string, error) {
 	var h struct {
 		Status string `json:"status"`
