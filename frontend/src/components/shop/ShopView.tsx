@@ -9,6 +9,8 @@ import { Btn, Empty, useAgentName } from "../ui";
 import { toast } from "@/lib/toast";
 import { CoinIcon } from "./Coin";
 import { ItemPreview } from "./ItemPreview";
+import { go } from "@/lib/navBridge";
+import { useOfficeLayout } from "@/lib/officeLayout";
 
 type Tab = "shop" | "mine" | "history";
 type Group = "character" | "office";
@@ -93,6 +95,14 @@ function ItemCard({ item, mode, onOpenInventory }: { item: ShopItem; mode: "shop
               <Btn kind="ok" data-testid={`shop-equip-${item.id}`} disabled={busy || !agents[target]} onClick={() => run(() => rw().equipItem(target, item.id), t("toast.equipped"))}>{t("shop.equip")}</Btn>
             )}
           </div>
+        ) : item.slot === "piece" || item.slot === "desk" || item.slot === "chair" ? (
+          // furniture of the office editor: it is placed and styled there, not in a fixed slot
+          <Btn kind="ok" data-testid={`shop-edit-${item.id}`} onClick={() => {
+            const ed = useOfficeLayout.getState();
+            go("/");
+            ed.startEdit();
+            if (item.slot === "piece") ed.startPlacing(item.id); else ed.setTab("desks");
+          }}>{t("shop.placeEditor")}</Btn>
         ) : placed ? (
           <Btn data-testid={`shop-remove-${item.id}`} disabled={busy} onClick={() => run(() => rw().remove(item.slot))}>{t("shop.remove")}</Btn>
         ) : (

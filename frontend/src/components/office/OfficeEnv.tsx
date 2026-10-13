@@ -10,6 +10,10 @@ import { roleMeta, MEETING_CENTER, USER_POS } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { deskOf, seatOf } from "./registry";
 import { CAFE_CENTER } from "./officeState";
+import { effective, useOfficeLayout } from "@/lib/officeLayout";
+import { MOOD_BASE, type FloorKind, type LightMix } from "@/lib/officeLayoutModel";
+import { useRewards } from "@/lib/rewards";
+import { ChairMesh, DeskSet } from "./Furniture";
 
 export const DESK_H = 0.72;
 
@@ -60,6 +64,81 @@ function useConcrete() {
     return t;
   }, []);
 }
+
+const floorCache = new Map<FloorKind, THREE.CanvasTexture>();
+function noise(g: CanvasRenderingContext2D, S: number, amp: number) {
+  const img = g.getImageData(0, 0, S, S);
+  for (let i = 0; i < img.data.length; i += 4) { const n = (Math.random() - 0.5) * amp; img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n; }
+  g.putImageData(img, 0, 0);
+}
+/** Floor material textures (light base colors: the layout's tint multiplies them). Concrete keeps its own generator. */
+function floorTexture(kind: FloorKind): THREE.CanvasTexture {
+  const hit = floorCache.get(kind);
+  if (hit) return hit;
+  const S = 512;
+  const c = document.createElement("canvas");
+  c.width = c.height = S;
+  const g = c.getContext("2d")!;
+  let repeat: [number, number] = [14, 10];
+  if (kind === "wood") {
+    // long boards with grain and staggered joints
+    const rows = 8, h = S / rows;
+    for (let r = 0; r < rows; r++) {
+      const shade = 168 + Math.round(Math.random() * 26);
+      g.fillStyle = `rgb(${shade + 14},${shade - 4},${shade - 38})`; g.fillRect(0, r * h, S, h);
+      g.strokeStyle = "rgba(90,55,25,0.12)"; g.lineWidth = 1;
+      for (let k = 0; k < 9; k++) { const y = r * h + 3 + Math.random() * (h - 6); g.beginPath(); g.moveTo(0, y); for (let x = 0; x <= S; x += 64) g.lineTo(x, y + Math.sin(x / 90 + k) * 1.4); g.stroke(); }
+      g.fillStyle = "rgba(60,35,15,0.45)"; g.fillRect(0, r * h, S, 1.5);
+      const jx = (r * 173) % S; g.fillRect(jx, r * h, 1.5, h);
+    }
+    repeat = [9, 7];
+  } else if (kind === "parquet") {
+    // herringbone: pairs of blocks at right angles
+    const bw = 64, bh = 16;
+    for (let y = -bh; y < S + bh; y += bh) for (let x = -bw; x < S + bw; x += bh) {
+      const shade = 150 + Math.round(Math.random() * 40);
+      g.fillStyle = `rgb(${shade + 28},${shade - 2},${shade - 50})`;
+      const horizontal = ((x / bh + y / bh) / 4) % 2 < 1;
+      if (horizontal) g.fillRect(x, y, bw, bh); else g.fillRect(x, y, bh, bw);
+    }
+    g.strokeStyle = "rgba(60,35,15,0.35)"; g.lineWidth = 1;
+    for (let k = 0; k <= S; k += bh) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k, S); g.stroke(); g.beginPath(); g.moveTo(0, k); g.lineTo(S, k); g.stroke(); }
+    repeat = [8, 6];
+  } else if (kind === "carpet") {
+    g.fillStyle = "#b9bec6"; g.fillRect(0, 0, S, S);
+    noise(g, S, 34);
+    g.fillStyle = "rgba(255,255,255,0.07)"; for (let y = 0; y < S; y += 3) g.fillRect(0, y, S, 1);
+    repeat = [12, 9];
+  } else if (kind === "tile") {
+    g.fillStyle = "#e9edf1"; g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(${150 + Math.random() * 60},${160 + Math.random() * 60},${170 + Math.random() * 60},0.06)`; g.fillRect(Math.random() * S, Math.random() * S, 90, 90); }
+    g.fillStyle = "rgba(95,108,125,0.55)"; g.fillRect(0, 0, S, 3); g.fillRect(0, 0, 3, S); g.fillRect(0, S / 2, S, 2); g.fillRect(S / 2, 0, 2, S);
+    repeat = [9, 7];
+  } else { // marble
+    g.fillStyle = "#eceef1"; g.fillRect(0, 0, S, S);
+    for (let k = 0; k < 14; k++) {
+      g.strokeStyle = `rgba(${90 + Math.random() * 40},${100 + Math.random() * 40},${118 + Math.random() * 40},${0.12 + Math.random() * 0.2})`;
+      g.lineWidth = 0.6 + Math.random() * 1.8; g.beginPath();
+      let x = Math.random() * S, y = 0; g.moveTo(x, y);
+      while (y < S) { y += 18 + Math.random() * 26; x += (Math.random() - 0.5) * 70; g.lineTo(x, y); }
+      g.stroke();
+    }
+    noise(g, S, 6);
+    g.fillStyle = "rgba(110,120,135,0.35)"; g.fillRect(0, 0, S, 2); g.fillRect(0, 0, 2, S);
+    repeat = [7, 5];
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(repeat[0], repeat[1]);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  floorCache.set(kind, t);
+  return t;
+}
+const FLOOR_FINISH: Record<FloorKind, { rough: number; metal: number }> = {
+  concrete: { rough: 0.78, metal: 0 }, wood: { rough: 0.55, metal: 0 }, parquet: { rough: 0.5, metal: 0 },
+  carpet: { rough: 1, metal: 0 }, tile: { rough: 0.3, metal: 0.05 }, marble: { rough: 0.2, metal: 0.1 },
+};
 
 /** Degradado radial neutro para el suelo exterior (reemplaza al "cielo"): claro al centro, más tenue hacia los bordes. */
 function useBackdrop() {
@@ -184,7 +263,14 @@ function Desk({ id, index }: { id: string; index: number }) {
   const progTrack = useRef<THREE.Mesh>(null!);
   const progFill = useRef<THREE.Mesh>(null!);
   const meta = roleMeta(agent?.role);
-  const [dx, dz] = deskOf({ id, role: agent?.role || "" }, index);
+  const cfg = useOfficeLayout((s) => effective(s).desks[id]);
+  const editing = useOfficeLayout((s) => s.editing);
+  const catalog = useRewards((s) => s.catalog);
+  const deskItem = cfg?.desk ? catalog.find((i) => i.id === cfg.desk) : undefined;
+  const chairItem = cfg?.chair ? catalog.find((i) => i.id === cfg.chair) : undefined;
+  const ghost = useOfficeLayout((s) => (s.deskGhost?.id === id ? s.deskGhost : null));
+  const home = deskOf({ id, role: agent?.role || "" }, index);
+  const [dx, dz] = ghost ? [ghost.x, ghost.z] : home;
   const [sx, sz] = seatOf([dx, dz]);
   useFrame(({ clock }) => {
     const S = useStore.getState();
@@ -219,16 +305,8 @@ function Desk({ id, index }: { id: string; index: number }) {
     <group position={[dx, 0, dz]}>
       {/* alfombra técnica del puesto: panel plano en un tono casi neutro del rol */}
       <RoundedBox args={[3.5, 0.02, 2.6]} radius={0.01} smoothness={2} position={[0.1, 0.011, 0.95]} receiveShadow><meshStandardMaterial color="#c4cbd6" roughness={1} /></RoundedBox>
-      {/* escritorio: tablero de madera clara mate, canto fino, patas de acero grafito */}
-      <RoundedBox args={[2.2, 0.06, 0.95]} radius={0.015} smoothness={3} castShadow receiveShadow position={[0, T - 0.03, 0]}><meshStandardMaterial color={OAK} roughness={0.8} /></RoundedBox>
-      <mesh position={[0, T - 0.075, 0.44]}><boxGeometry args={[2.18, 0.03, 0.03]} /><meshStandardMaterial color={meta.color} roughness={0.6} /></mesh>
-      <mesh castShadow position={[0, T - 0.32, -0.4]}><boxGeometry args={[2.0, 0.5, 0.025]} /><meshStandardMaterial color={GRAPHITE_L} roughness={0.85} /></mesh>
-      {[-1.02, 1.02].map((s) => (
-        <group key={s}>
-          <mesh castShadow position={[s, (T - 0.06) / 2, 0.33]}><boxGeometry args={[0.05, T - 0.06, 0.05]} /><meshStandardMaterial color={GRAPHITE} roughness={0.5} metalness={0.3} /></mesh>
-          <mesh castShadow position={[s, (T - 0.06) / 2, -0.33]}><boxGeometry args={[0.05, T - 0.06, 0.05]} /><meshStandardMaterial color={GRAPHITE} roughness={0.5} metalness={0.3} /></mesh>
-        </group>
-      ))}
+      {/* escritorio: tablero, canto en el color del rol, panel frontal y patas (estilo elegido en el editor) */}
+      <DeskSet item={deskItem} accent={meta.color}>
       {/* monitor (pantalla hacia +z) */}
       <group position={[0, T, -0.12]}>
         <mesh castShadow position={[0, 0.01, 0]}><boxGeometry args={[0.26, 0.02, 0.18]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
@@ -247,13 +325,15 @@ function Desk({ id, index }: { id: string; index: number }) {
       <RoundedBox args={[0.46, 0.02, 0.16]} radius={0.01} smoothness={2} castShadow position={[0, T + 0.01, 0.25]}><meshStandardMaterial color="#d9dde3" /></RoundedBox>
       <RoundedBox args={[0.07, 0.025, 0.11]} radius={0.012} smoothness={2} castShadow position={[0.4, T + 0.0125, 0.25]}><meshStandardMaterial color="#d9dde3" /></RoundedBox>
       <DeskProp role={agent.role} accent={meta.color} />
-      {/* silla de oficina: asiento y respaldo grafito, base de acero */}
-      <group position={[sx - dx, 0, sz - dz]}>
-        <mesh castShadow position={[0, 0.3, 0]}><cylinderGeometry args={[0.31, 0.3, 0.08, 28]} /><meshStandardMaterial color={GRAPHITE_L} roughness={0.9} /></mesh>
-        <RoundedBox args={[0.54, 0.5, 0.07]} radius={0.03} smoothness={3} castShadow position={[0, 0.65, 0.33]}><meshStandardMaterial color={GRAPHITE} roughness={0.9} /></RoundedBox>
-        <mesh position={[0, 0.14, 0]}><cylinderGeometry args={[0.035, 0.035, 0.22, 10]} /><meshStandardMaterial color={STEEL} metalness={0.4} roughness={0.5} /></mesh>
-        <mesh position={[0, 0.03, 0]}><cylinderGeometry args={[0.26, 0.28, 0.035, 5]} /><meshStandardMaterial color={GRAPHITE} metalness={0.3} roughness={0.6} /></mesh>
-      </group>
+      </DeskSet>
+      {/* silla de oficina (estilo elegido en el editor) */}
+      <group position={[sx - dx, 0, sz - dz]}><ChairMesh item={chairItem} /></group>
+      {editing && (
+        <mesh position={[0, 0.7, 0.55]} onPointerDown={(ev) => { ev.stopPropagation(); const st = useOfficeLayout.getState(); if (st.placing) return; st.select({ kind: "desk", id }); st.setDragging(true); }}
+          onPointerOver={() => { document.body.style.cursor = "grab"; }} onPointerOut={() => { document.body.style.cursor = ""; }}>
+          <boxGeometry args={[2.4, 1.4, 2.2]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      )}
       <FloorSign pos={[0, 0.03, -0.95]} text={meta.label} color={meta.color} />
     </group>
   );
@@ -378,9 +458,10 @@ function GlassBand({ length, horizontal = true }: { length: number; horizontal?:
 }
 
 function Wall({ args, position, children }: { args: [number, number, number]; position: [number, number, number]; children?: React.ReactNode }) {
+  const color = useOfficeLayout((s) => effective(s).walls.color);
   return (
     <group position={position}>
-      <RoundedBox args={args} radius={0.03} smoothness={2} castShadow receiveShadow><meshStandardMaterial color={WALL} roughness={0.95} /></RoundedBox>
+      <RoundedBox args={args} radius={0.03} smoothness={2} castShadow receiveShadow><meshStandardMaterial color={color} roughness={0.95} /></RoundedBox>
       {children}
     </group>
   );
@@ -402,17 +483,29 @@ function Rack({ position, rotation = 0 }: { position: [number, number, number]; 
   );
 }
 
-interface LightPreset { bg: string; fog: string; amb: number; ambColor: string; hemi: number; hemiSky: string; hemiGround: string; sun: number; sunColor: string }
-// "ambient" is the base look (soft neutral daylight); "day" (lights on) is brighter and flatter for UI readability; "night" is dim and cool slate.
-const LIGHT_PRESETS: Record<"ambient" | "day" | "night", LightPreset> = {
-  ambient: { bg: "#8d97a7", fog: "#8d97a7", amb: 0.95, ambColor: "#f5f7fb", hemi: 0.85, hemiSky: "#f3f6fb", hemiGround: "#c6ccd5", sun: 1.55, sunColor: "#fff8ee" },
-  day: { bg: "#9ca6b5", fog: "#9ca6b5", amb: 1.45, ambColor: "#ffffff", hemi: 1.15, hemiSky: "#ffffff", hemiGround: "#d6dbe2", sun: 1.9, sunColor: "#ffffff" },
-  night: { bg: "#151a24", fog: "#151a24", amb: 0.5, ambColor: "#b3bdd0", hemi: 0.5, hemiSky: "#9aa7c2", hemiGround: "#2a3140", sun: 0.55, sunColor: "#b9c4de" },
-};
+const WARM = new THREE.Color("#ffb878"), COOL = new THREE.Color("#b8d4ff");
+/** Mixes a color toward warm (temp < 0) or cool (temp > 0): the lighting-temperature slider of the editor. */
+function tint(out: THREE.Color, hex: string, temp: number) {
+  out.set(hex);
+  if (temp < 0) out.lerp(WARM, Math.min(1, -temp) * 0.5);
+  else if (temp > 0) out.lerp(COOL, Math.min(1, temp) * 0.5);
+  return out;
+}
 
-/** Scene lights, background and fog driven by the `lighting` preference, eased toward the target preset. */
-function LightRig() {
+/** The mix the room should have now: the organization's mood (layout) tuned by temperature and brightness, plus the user's own day / night toggle. */
+function useLightTarget(): LightMix & { temp: number } {
   const mode = usePreferences((s) => s.prefs.lighting);
+  const light = useOfficeLayout((s) => effective(s).light);
+  return useMemo(() => {
+    const base = MOOD_BASE[mode === "night" ? "night" : light.mood] ?? MOOD_BASE.natural;
+    const k = light.brightness * (mode === "day" ? 1.4 : 1); // "day" = lights on: brighter and flatter, as before
+    return { ...base, amb: base.amb * k, hemi: base.hemi * k, sun: base.sun * k, temp: mode === "night" ? 0 : light.temp };
+  }, [mode, light.mood, light.brightness, light.temp]);
+}
+
+/** Scene lights, background and fog driven by the layout's light and the `lighting` preference, eased toward the target. */
+function LightRig() {
+  const target = useLightTarget();
   const amb = useRef<THREE.AmbientLight>(null);
   const hemi = useRef<THREE.HemisphereLight>(null);
   const sun = useRef<THREE.DirectionalLight>(null);
@@ -420,28 +513,34 @@ function LightRig() {
   const fog = useRef<THREE.Fog>(null);
   const tmp = useMemo(() => new THREE.Color(), []);
   useFrame((_, dt) => {
-    const p = LIGHT_PRESETS[mode] ?? LIGHT_PRESETS.ambient;
+    const p = target;
     const reduce = usePreferences.getState().prefs.reduceMotion;
     const k = reduce ? 1 : 1 - Math.exp(-Math.min(dt, 0.1) * 4);
-    if (amb.current) { amb.current.intensity += (p.amb - amb.current.intensity) * k; amb.current.color.lerp(tmp.set(p.ambColor), k); }
+    if (amb.current) { amb.current.intensity += (p.amb - amb.current.intensity) * k; amb.current.color.lerp(tint(tmp, p.ambColor, p.temp), k); }
     if (hemi.current) {
       hemi.current.intensity += (p.hemi - hemi.current.intensity) * k;
-      hemi.current.color.lerp(tmp.set(p.hemiSky), k);
+      hemi.current.color.lerp(tint(tmp, p.hemiSky, p.temp), k);
       hemi.current.groundColor.lerp(tmp.set(p.hemiGround), k);
     }
-    if (sun.current) { sun.current.intensity += (p.sun - sun.current.intensity) * k; sun.current.color.lerp(tmp.set(p.sunColor), k); }
+    if (sun.current) {
+      sun.current.intensity += (p.sun - sun.current.intensity) * k;
+      sun.current.color.lerp(tint(tmp, p.sunColor, p.temp), k);
+      sun.current.position.x += (p.sunPos[0] - sun.current.position.x) * k;
+      sun.current.position.y += (p.sunPos[1] - sun.current.position.y) * k;
+      sun.current.position.z += (p.sunPos[2] - sun.current.position.z) * k;
+    }
     if (bg.current) bg.current.lerp(tmp.set(p.bg), k);
-    if (fog.current) fog.current.color.lerp(tmp.set(p.fog), k);
+    if (fog.current) fog.current.color.lerp(tmp.set(p.bg), k);
   });
-  const init = LIGHT_PRESETS[mode] ?? LIGHT_PRESETS.ambient;
+  const init = target;
   return (
     <>
       <color ref={bg} attach="background" args={[init.bg]} />
-      <fog ref={fog} attach="fog" args={[init.fog, 40, 105]} />
+      <fog ref={fog} attach="fog" args={[init.bg, 40, 105]} />
       <ambientLight ref={amb} intensity={init.amb} color={init.ambColor} />
       <hemisphereLight ref={hemi} args={[init.hemiSky, init.hemiGround, init.hemi]} />
       <directionalLight
-        ref={sun} castShadow position={[10, 18, 12]} intensity={init.sun} color={init.sunColor}
+        ref={sun} castShadow position={init.sunPos} intensity={init.sun} color={init.sunColor}
         shadow-mapSize={[2048, 2048]} shadow-bias={-0.0005} shadow-radius={7}
         shadow-camera-left={-18} shadow-camera-right={18} shadow-camera-top={14} shadow-camera-bottom={-14} shadow-camera-near={1} shadow-camera-far={60}
       />
@@ -453,6 +552,11 @@ export function OfficeEnv() {
   const order = useStore((s) => s.agentOrder);
   const concrete = useConcrete();
   const backdrop = useBackdrop();
+  const layoutFloor = useOfficeLayout((s) => effective(s).floor);
+  const walls = useOfficeLayout((s) => effective(s).walls);
+  const floorMap = layoutFloor.kind === "concrete" ? concrete : floorTexture(layoutFloor.kind);
+  const finish = FLOOR_FINISH[layoutFloor.kind];
+  const skirt = useMemo(() => mix(walls.color, "#000000", 0.1), [walls.color]);
   return (
     <>
       <LightRig />
@@ -460,17 +564,17 @@ export function OfficeEnv() {
       {/* fondo: disco con degradado neutro (sin cielo) y losa de hormigón pulido */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.42, 0]} receiveShadow><circleGeometry args={[95, 64]} /><meshStandardMaterial map={backdrop} roughness={1} /></mesh>
       <RoundedBox args={[29, 0.4, 21]} radius={0.04} smoothness={3} position={[0, -0.22, 0]} receiveShadow castShadow><meshStandardMaterial color="#8d97a6" roughness={0.9} /></RoundedBox>
-      <RoundedBox args={[28.4, 0.1, 20.4]} radius={0.02} smoothness={2} position={[0, -0.03, 0]} receiveShadow><meshStandardMaterial map={concrete} roughness={0.78} /></RoundedBox>
+      <RoundedBox args={[28.4, 0.1, 20.4]} radius={0.02} smoothness={2} position={[0, -0.03, 0]} receiveShadow><meshStandardMaterial map={floorMap} color={layoutFloor.tint} roughness={finish.rough} metalness={finish.metal} /></RoundedBox>
 
       {/* paredes bajas con ventanal y zócalo */}
       <Wall args={[28.4, 3, 0.3]} position={[0, 1.5, -10]}>
         <group position={[-3.4, 0.35, 0.17]}><GlassBand length={20.6} /></group>
-        <mesh position={[0, -1.25, 0.16]}><boxGeometry args={[28.4, 0.5, 0.04]} /><meshStandardMaterial color={SKIRT} roughness={0.9} /></mesh>
-        <mesh position={[0, 1.46, 0.16]}><boxGeometry args={[28.4, 0.08, 0.04]} /><meshStandardMaterial color={GRAPHITE} roughness={0.6} /></mesh>
+        <mesh position={[0, -1.25, 0.16]}><boxGeometry args={[28.4, 0.5, 0.04]} /><meshStandardMaterial color={skirt} roughness={0.9} /></mesh>
+        <mesh position={[0, 1.46, 0.16]}><boxGeometry args={[28.4, 0.08, 0.04]} /><meshStandardMaterial color={walls.trim} roughness={0.6} /></mesh>
       </Wall>
       <Wall args={[0.3, 3, 20.4]} position={[-14.2, 1.5, 0]}>
-        <mesh position={[0.16, -1.25, 0]}><boxGeometry args={[0.04, 0.5, 20.4]} /><meshStandardMaterial color={SKIRT} roughness={0.9} /></mesh>
-        <mesh position={[0.16, 1.46, 0]}><boxGeometry args={[0.04, 0.08, 20.4]} /><meshStandardMaterial color={GRAPHITE} roughness={0.6} /></mesh>
+        <mesh position={[0.16, -1.25, 0]}><boxGeometry args={[0.04, 0.5, 20.4]} /><meshStandardMaterial color={skirt} roughness={0.9} /></mesh>
+        <mesh position={[0.16, 1.46, 0]}><boxGeometry args={[0.04, 0.08, 20.4]} /><meshStandardMaterial color={walls.trim} roughness={0.6} /></mesh>
         <group position={[0.17, 0.35, 0]}><GlassBand length={17} horizontal={false} /></group>
       </Wall>
 

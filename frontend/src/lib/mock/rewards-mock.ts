@@ -19,6 +19,9 @@ export class MockRewards {
   private equip = new Map<string, string>(); // "agent|slot" -> item
   private office = new Map<string, string>();
   private earnedBy: Record<string, number> = {};
+  /** The office layout document (docs/architecture/office-editor.md): kept in memory in the demo. */
+  private layout: unknown = null;
+  private layoutVersion = 0;
   private seq = 0;
 
   private emit: Emit;
@@ -34,7 +37,7 @@ export class MockRewards {
 
   matches(seg: string[]) {
     const [r0, r1, r2] = seg;
-    return r0 === "rewards" || r0 === "shop" || (r0 === "agents" && r2 === "equipment") || (r0 === "office" && r1 === "items");
+    return r0 === "rewards" || r0 === "shop" || (r0 === "agents" && r2 === "equipment") || (r0 === "office" && (r1 === "items" || r1 === "layout"));
   }
 
   private push(e: Omit<LedgerEntry, "id" | "seq" | "balance_after" | "created_at">): LedgerEntry {
@@ -97,6 +100,16 @@ export class MockRewards {
         this.equip.delete(`${r1}|${r3}`);
         this.emit("item.unequipped", { agent_id: r1, slot: r3 }, r1);
         return {};
+      }
+    }
+    if (r0 === "office" && r1 === "layout") {
+      if (method === "GET") return { layout: this.layout, version: this.layoutVersion };
+      if (method === "PUT") {
+        if (Number(body?.base_version) !== this.layoutVersion) throw new Error("PUT /office/layout -> 409");
+        this.layout = body?.layout ?? null;
+        this.layoutVersion += 1;
+        this.emit("office.layout_updated", { version: this.layoutVersion, actor: "user" });
+        return { layout: this.layout, version: this.layoutVersion };
       }
     }
     if (r0 === "office" && r1 === "items") {

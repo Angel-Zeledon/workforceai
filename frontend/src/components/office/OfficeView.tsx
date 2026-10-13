@@ -10,6 +10,8 @@ import { CommandBar } from "../CommandBar";
 import { ProjectPill } from "../projects/ProjectPill";
 import { LightingToggle } from "../OfficeSettings";
 import { FirstRunHint } from "../nav/ui2";
+import { EditOfficeButton, OfficeEditor } from "./OfficeEditor";
+import { useOfficeLayout } from "@/lib/officeLayout";
 
 const OfficeScene = dynamic(() => import("./OfficeScene"), {
   ssr: false,
@@ -22,6 +24,16 @@ export function OfficeView() {
   const selected = useStore((s) => s.selectedAgentId);
   const pendingApprovals = useStore((s) => Object.values(s.approvals).some((a) => a.status === "pending"));
   const viewerOpen = useFileViewer((s) => !!s.ref);
+  const editing = useOfficeLayout((s) => s.editing);
+  if (editing) {
+    // the editor owns the stage: the activity feed, trays and chat bar would only get in the way
+    return (
+      <>
+        <div className="absolute inset-0 isolate"><OfficeScene /></div>
+        <OfficeEditor />
+      </>
+    );
+  }
   return (
     <>
       <div data-tour="office.scene" className="absolute inset-0 isolate"><OfficeScene /></div>
@@ -43,6 +55,7 @@ export function OfficeView() {
       {/* Same box as the office scene but above the chat: in-scene popups that must stay clickable (approvals desk card). */}
       <div id="office-popups" className="pointer-events-none absolute inset-0 z-20" />
       <div data-tour="office.lighting" className="pointer-events-none absolute right-4 top-4 z-40 flex items-start gap-2" style={{ right: `calc(${selected ? "var(--panel-w, 420px) + 16px" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})` }}>
+        <EditOfficeButton />
         <LightingToggle />
       </div>
       {selected && <div data-tour="office.agentPanel" className="pointer-events-none absolute bottom-0 right-0 top-0 z-30"><WorkspaceHost id={selected} /></div>}

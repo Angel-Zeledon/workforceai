@@ -1,5 +1,7 @@
 import { useId } from "react";
 import type { ShopItem } from "@/lib/rewards";
+import { FurnitureArt } from "./FurnitureArt";
+import { mountOf } from "../office/furnitureStyle";
 import { badgeSpec, cansSpec, darken, glassesSpec, hash, hatShape, lighten, luma, mix, outfitSpec, scarfSpec, type HatSpec } from "../office/itemStyle";
 
 const SKIN = "#e8b894", HAIR = "#4a3020", INK = "#2c323b";
@@ -257,6 +259,9 @@ export function ItemPreview({ item, size = 72 }: { item: ShopItem; size?: number
       art = (<g {...s}><rect x="8" y="12" width="48" height="40" rx="3" fill={night ? c1 : "#cfe3f3"} />{id === "view_aurora" ? <path d="M8 36c10-16 18-8 26-18 6 6 14 4 22-2v22H8z" fill={c2} opacity=".6" stroke="none" /> : id === "view_beach" ? (<><rect x="8" y="34" width="48" height="18" fill={c2} stroke="none" /><rect x="8" y="26" width="48" height="8" fill={c1} stroke="none" /></>) : id === "view_forest" ? (<><path d="M14 52l8-20 8 20zM30 52l10-26 10 26z" fill={c1} stroke="none" /></>) : (<><rect x="14" y="30" width="8" height="22" fill={night ? "#3a4560" : c1} stroke="none" /><rect x="24" y="22" width="9" height="30" fill={night ? "#3a4560" : c2 === "#f4f1ea" ? "#9fb0d8" : c2} stroke="none" /><rect x="36" y="34" width="8" height="18" fill={night ? "#3a4560" : c1} stroke="none" />{night && <><circle cx="28" cy="28" r="1" fill="#f2c94c" stroke="none" /><circle cx="40" cy="40" r="1" fill="#f2c94c" stroke="none" /></>}</>)}<path d="M32 12v40M8 32h48" /></g>);
       break;
     }
+    case "desk": case "chair": case "table": case "sofa": case "cabinet": case "divider": case "whiteboard": case "appliance": case "light":
+      art = <FurnitureArt item={item} />;
+      break;
     default:
       art = <circle cx="32" cy="32" r="14" fill={c1} {...s} />;
   }
@@ -271,7 +276,7 @@ export function ItemPreview({ item, size = 72 }: { item: ShopItem; size?: number
       </defs>
       <rect x="1.5" y="1.5" width="61" height="61" rx="14" fill={`url(#bg${uid})`} />
       {item.rarity !== "common" && <rect x="1.5" y="1.5" width="61" height="61" rx="14" fill="none" stroke={glow} strokeOpacity={item.rarity === "epic" ? 0.8 : 0.5} strokeWidth={item.rarity === "epic" ? 1.6 : 1.1} />}
-      {!character && <ellipse cx="32" cy="57" rx="17" ry="2.6" fill="#1a2233" opacity=".14" />}
+      {!character && mountOf(item) === "floor" && <ellipse cx="32" cy="57" rx="17" ry="2.6" fill="#1a2233" opacity=".14" />}
       {art}
       {item.rarity === "epic" && <g fill="#fff" opacity=".9"><path d="M54 9l1.2 3 3 1.2-3 1.2L54 17.4l-1.2-3-3-1.2 3-1.2z" /><path d="M10 14l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" opacity=".7" /></g>}
     </svg>

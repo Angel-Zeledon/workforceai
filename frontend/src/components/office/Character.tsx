@@ -15,6 +15,7 @@ import { approvalsSpot, cafeSpot, meetingSeat, zoneFor } from "./officeState";
 import { getSignals } from "./officeSignals";
 import { BodyWear, Buddy, HeadWear, OutfitWear, suppressesAccessory, useOutfit, useWorn } from "./Worn";
 import { AISLE_Z, deskOf, feetPos, headPos, seatOf, standOf, visitorOf } from "./registry";
+import { effective, useOfficeLayout } from "@/lib/officeLayout";
 
 const SEATED = new Set<AgentState>(["thinking", "working", "waiting", "reviewing", "blocked", "awaiting_approval"]);
 const ACTIVE_TASK = new Set(["pending", "running", "awaiting_approval"]);
@@ -99,7 +100,9 @@ export function Character({ id, index }: { id: string; index: number }) {
   const view = useAgentView(id);
   // Role defaults overridden by the user's per-employee customization (color, skin, hairstyle, accessory).
   const meta = { ...roleMeta(agent0?.role), color: view.color, skin: view.skin, hairStyle: view.hairStyle, accessory: view.accessory };
-  const desk = useMemo(() => deskOf({ id, role: agent0?.role || "" }, index), [id, agent0?.role, index]);
+  // a desk moved in the office editor: the character walks to its new place
+  const deskCfg = useOfficeLayout((s) => effective(s).desks[id]);
+  const desk = useMemo(() => deskOf({ id, role: agent0?.role || "" }, index), [id, agent0?.role, index, deskCfg?.x, deskCfg?.z]); // eslint-disable-line react-hooks/exhaustive-deps
   const own = useMemo(() => ({ seat: seatOf(desk), stand: standOf(desk) }), [desk]);
 
   const root = useRef<THREE.Group>(null!);
@@ -128,6 +131,7 @@ export function Character({ id, index }: { id: string; index: number }) {
   // Per-character seed (from the id): phase/tempo/timers differ so the office never moves in unison.
   const sim = useRef<Sim | null>(null);
   if (!sim.current) sim.current = makeSim(id, own.seat);
+  const ownSeen = useRef(own);
 
   const worn = useWorn(id);
   const skin = meta.skin, hair = meta.hair;
@@ -145,6 +149,7 @@ export function Character({ id, index }: { id: string; index: number }) {
     const ag = S.agents[id];
     if (!ag || !root.current) return;
     const sm = sim.current!;
+    if (ownSeen.current !== own) { ownSeen.current = own; sm.place = ""; } // the desk moved: plan a new route
     if (!sm.inited) {
       sm.inited = true;
       const start = SEATED.has(ag.state) ? own.seat : own.stand;

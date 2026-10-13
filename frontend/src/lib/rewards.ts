@@ -29,7 +29,7 @@ export class ShopError extends Error {
   constructor(public code: string) { super(code); }
 }
 
-export const SHOP_FRAMES = ["coins.earned", "shop.purchased", "item.equipped", "item.unequipped", "office.item_placed", "office.item_removed"];
+export const SHOP_FRAMES = ["coins.earned", "shop.purchased", "item.equipped", "item.unequipped", "office.item_placed", "office.item_removed", "office.layout_updated"];
 export const isRewardsFrame = (type: string) => SHOP_FRAMES.includes(type);
 
 const EMPTY_WALLET: Wallet = { balance: 0, earned_total: 0, spent_total: 0 };
@@ -142,6 +142,9 @@ export const useRewards = create<RewardsState>((set, get) => ({
         });
         break;
       }
+      case "office.layout_updated":
+        void import("./officeLayout").then((m) => m.applyLayoutFrame(f.type));
+        break;
       case "office.item_placed": {
         const slot = String(p.slot ?? ""), item = String(p.item_id ?? "");
         if (slot && item) set((s) => ({ office: { ...s.office, [slot]: item } }));
@@ -197,4 +200,4 @@ export const useShopNav = create<{ open: boolean; show: () => void; close: () =>
 
 /** Category order of the Shop screen and its i18n label keys (listed explicitly in es.json/en.json). */
 export const CHARACTER_CATEGORIES = ["outfit", "hat", "glasses", "headphones", "scarf", "badge", "buddy"] as const;
-export const OFFICE_CATEGORIES = ["plant", "lamp", "rug", "coffee", "poster", "shelf", "aquarium", "arcade", "trophy", "window"] as const;
+export const OFFICE_CATEGORIES = ["desk", "chair", "table", "sofa", "cabinet", "divider", "whiteboard", "appliance", "light", "plant", "lamp", "rug", "coffee", "poster", "shelf", "aquarium", "arcade", "trophy", "window"] as const;

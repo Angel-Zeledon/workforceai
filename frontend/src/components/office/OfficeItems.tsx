@@ -3,6 +3,10 @@ import { useMemo } from "react";
 import * as THREE from "three";
 import { RoundedBox } from "@react-three/drei";
 import { useRewards, type ShopItem } from "@/lib/rewards";
+import { LEGACY_SLOTS } from "@/lib/officeLayoutModel";
+import { effective, useOfficeLayout } from "@/lib/officeLayout";
+import { PieceMesh } from "./Furniture";
+import { isLegacyCategory, pieceInfo } from "./pieceInfo";
 
 /**
  * Shop items placed in the office (docs/architecture/rewards.md). Every office slot has a fixed spot, so no editor is
@@ -12,22 +16,8 @@ const OAK = "#d9c4a3";
 const GRAPHITE = "#3a414c";
 const STEEL = "#b3bac4";
 
-type V3 = [number, number, number];
-/** Floor spot and facing (rotation about Y) of each office slot. The north wall is at z = -10, the glass band behind it. */
-export const OFFICE_SLOTS: Record<string, { pos: V3; rot?: number }> = {
-  shelf_1: { pos: [-10.2, 0, -9.3] },
-  plant_1: { pos: [-7.6, 0, -9.0] },
-  poster_1: { pos: [-5.4, 0, -9.0] },
-  aquarium_1: { pos: [-3.0, 0, -9.2] },
-  lamp_1: { pos: [-0.6, 0, -9.0] },
-  poster_2: { pos: [1.4, 0, -9.0] },
-  plant_2: { pos: [3.0, 0, -9.0] },
-  trophy_1: { pos: [13.0, 0, 2.6], rot: -Math.PI / 2 },
-  arcade_1: { pos: [13.2, 0, 5.4], rot: -Math.PI / 2 },
-  rug_1: { pos: [-2.5, 0, 4.2] },
-  coffee_1: { pos: [11.0, 0.95, -0.35], rot: -Math.PI / 2 },
-  window_1: { pos: [-3.4, 1.85, -9.797] },
-};
+/** Floor spot and facing of each legacy office slot (shared with the editor, which copies them into pieces). */
+export const OFFICE_SLOTS = LEGACY_SLOTS;
 
 const m = (color: string, extra: Partial<THREE.MeshStandardMaterialParameters> = {}) => <meshStandardMaterial color={color} roughness={0.75} {...extra} />;
 const mb = (color: string) => <meshBasicMaterial color={color} toneMapped={false} />;
@@ -355,7 +345,8 @@ function WindowItem({ item }: { item: ShopItem }) {
   );
 }
 
-function ItemMesh({ item }: { item: ShopItem }) {
+/** The model of any office item: the original categories live in this file, the editor's furniture in Furniture.tsx. */
+export function ItemMesh({ item }: { item: ShopItem }) {
   switch (item.category) {
     case "plant": return <PlantItem item={item} />;
     case "lamp": return <LampItem item={item} />;
@@ -367,23 +358,59 @@ function ItemMesh({ item }: { item: ShopItem }) {
     case "arcade": return <ArcadeItem item={item} />;
     case "trophy": return <TrophyItem item={item} />;
     case "window": return <WindowItem item={item} />;
-    default: return null;
+    default: return isLegacyCategory(item.category) ? null : <PieceMesh item={item} />;
   }
 }
 
-/** Everything the organization placed in the office (one item per slot). */
+/** Real light sources are expensive: only the first few light pieces actually illuminate the room (the rest still glow). */
+const MAX_PIECE_LIGHTS = 8;
+
+/** Everything the organization placed in the office: free pieces once a layout exists, the 12 fixed slots before that. */
 export function OfficeItems() {
   const office = useRewards((s) => s.office);
   const catalog = useRewards((s) => s.catalog);
+  const layout = useOfficeLayout(effective);
+  const editing = useOfficeLayout((s) => s.editing);
+
+  const byId = new Map(catalog.map((i) => [i.id, i] as const));
+  if (!layout.seeded) {
+    return (
+      <>
+        {Object.entries(office).map(([slot, id]) => {
+          const spot = OFFICE_SLOTS[slot];
+          const item = byId.get(id);
+          if (!spot || !item) return null;
+          return (
+            <group key={slot} position={spot.pos} rotation={[0, spot.rot ?? 0, 0]} userData={{ slot, item: id }}>
+              <ItemMesh item={item} />
+            </group>
+          );
+        })}
+      </>
+    );
+  }
+  let lights = 0;
   return (
     <>
-      {Object.entries(office).map(([slot, id]) => {
-        const spot = OFFICE_SLOTS[slot];
-        const item = catalog.find((i) => i.id === id);
-        if (!spot || !item) return null;
+      {/* the view behind the glass stays a fixed slot */}
+      {office.window_1 && byId.get(office.window_1) && (
+        <group position={OFFICE_SLOTS.window_1.pos}><ItemMesh item={byId.get(office.window_1)!} /></group>
+      )}
+      {layout.pieces.map((p) => {
+        const item = byId.get(p.item);
+        if (!item) return null;
+        const info = pieceInfo(item);
+        const lit = info.light && lights < MAX_PIECE_LIGHTS;
+        if (lit) lights++;
+        const y = p.y ?? info.y;
         return (
-          <group key={slot} position={spot.pos} rotation={[0, spot.rot ?? 0, 0]} userData={{ slot, item: id }}>
+          <group key={p.uid} position={[p.x, y, p.z]} rotation={[0, p.rot, 0]} scale={p.s}
+            userData={{ piece: p.uid, item: p.item }}
+            onPointerDown={editing ? (ev) => { ev.stopPropagation(); const st = useOfficeLayout.getState(); if (st.placing) return; st.select({ kind: "piece", uid: p.uid }); st.setDragging(true); } : undefined}
+            onPointerOver={editing ? () => { document.body.style.cursor = "grab"; } : undefined}
+            onPointerOut={editing ? () => { document.body.style.cursor = ""; } : undefined}>
             <ItemMesh item={item} />
+            {lit && info.light && <pointLight position={[0, info.mount === "ceiling" ? -0.3 : 1.2, 0]} intensity={info.light.intensity} distance={info.light.distance} color={info.light.color} />}
           </group>
         );
       })}
