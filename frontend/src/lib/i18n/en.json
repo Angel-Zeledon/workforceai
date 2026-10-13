@@ -3150,5 +3150,6 @@
   "oe.a.windows": "Glass windows",
   "oe.light.title": "Light",
   "oe.light.dim": "Dim",
-  "oe.light.bright": "Bright"
+  "oe.light.bright": "Bright",
+  "hud.activityHide": "Minimize activity"
 }

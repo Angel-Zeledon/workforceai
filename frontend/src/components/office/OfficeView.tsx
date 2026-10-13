@@ -1,6 +1,8 @@
 "use client";
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
+import { Icon } from "../icons";
 import { useT } from "@/lib/i18n";
 import { useFileViewer } from "@/lib/fileView";
 import { ActivityFeed } from "../ActivityFeed";
@@ -17,12 +19,21 @@ const OfficeScene = dynamic(() => import("./OfficeScene"), {
   loading: () => <div className="flex h-full items-center justify-center text-sm font-medium text-mute">…</div>,
 });
 
+const ACTIVITY_KEY = "aiw.office.activity.collapsed";
+/** The live-activity window can be folded into a small pill; the choice is remembered in this browser. */
+function useActivityCollapsed(): [boolean, (v: boolean) => void] {
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => { try { setCollapsed(localStorage.getItem(ACTIVITY_KEY) === "1"); } catch { /* private mode */ } }, []);
+  return [collapsed, (v) => { setCollapsed(v); try { localStorage.setItem(ACTIVITY_KEY, v ? "1" : "0"); } catch { /* private mode */ } }];
+}
+
 /** The 3D office with its overlays (activity, approvals, command bar, agent panel). */
 export function OfficeView() {
   const { t } = useT();
   const selected = useStore((s) => s.selectedAgentId);
   const pendingApprovals = useStore((s) => Object.values(s.approvals).some((a) => a.status === "pending"));
   const viewerOpen = useFileViewer((s) => !!s.ref);
+  const [folded, setFolded] = useActivityCollapsed();
   const editing = useOfficeLayout((s) => s.editing);
   if (editing) {
     // the editor owns the stage: the activity feed, trays and chat bar would only get in the way
@@ -37,10 +48,21 @@ export function OfficeView() {
     <>
       <div data-tour="office.scene" className="absolute inset-0 isolate"><OfficeScene /></div>
       <div className="pointer-events-none absolute left-4 top-4 w-[330px] max-w-[calc(100vw-32px)] sm:max-w-[40vw]">
-        <div data-tour="office.activity" className="hidden rounded-xl border border-line bg-panel/95 p-3 shadow-soft backdrop-blur sm:block">
-          <div className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{t("hud.liveActivity")}</div>
-          <ActivityFeed limit={7} compact />
-        </div>
+        {folded ? (
+          <button type="button" data-testid="activity-expand" onClick={() => setFolded(false)}
+            className="pointer-events-auto hidden items-center gap-2 rounded-full border border-line bg-panel/95 px-3.5 py-1.5 text-[11.5px] font-semibold text-ink2 shadow-soft backdrop-blur transition hover:bg-panel2 sm:inline-flex">
+            <Icon name="pulse" size={14} />{t("hud.liveActivity")}<Icon name="chevron" size={13} className="rotate-90 text-mute" />
+          </button>
+        ) : (
+          <div data-tour="office.activity" className="hidden rounded-xl border border-line bg-panel/95 p-3 shadow-soft backdrop-blur sm:block">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{t("hud.liveActivity")}</div>
+              <button type="button" data-testid="activity-collapse" onClick={() => setFolded(true)} aria-label={t("hud.activityHide")} title={t("hud.activityHide")}
+                className="pointer-events-auto -mr-1 rounded-md p-1 text-mute transition hover:bg-panel2 hover:text-ink"><Icon name="chevron" size={14} className="-rotate-90" /></button>
+            </div>
+            <ActivityFeed limit={7} compact />
+          </div>
+        )}
         <ProjectPill />
       </div>
       {/* Right above the command bar it talks about, clear of the lighting controls at the top. */}

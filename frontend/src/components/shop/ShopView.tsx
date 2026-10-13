@@ -8,7 +8,18 @@ import { useStore } from "@/lib/store";
 import { Btn, Empty, useAgentName } from "../ui";
 import { toast } from "@/lib/toast";
 import { CoinIcon } from "./Coin";
-import { ItemPreview } from "./ItemPreview";
+import dynamic from "next/dynamic";
+import { ItemThumb } from "./ItemThumb";
+import { lighten, mix } from "../office/itemStyle";
+
+const ThumbStudio = dynamic(() => import("./ThumbStudio").then((m) => m.ThumbStudio), { ssr: false });
+
+/** The stage an item stands on: a soft spotlight in the item's own color, deeper for rarer items. */
+function stageStyle(item: ShopItem): React.CSSProperties {
+  const c = item.color || "#8f78c9";
+  const edge = item.rarity === "epic" ? mix(c, "#7c4dff", 0.4) : item.rarity === "rare" ? mix(c, "#3b82f6", 0.3) : c;
+  return { background: `radial-gradient(ellipse 85% 70% at 50% 34%, ${lighten(c, 0.9)} 0%, ${lighten(c, 0.68)} 48%, ${mix(edge, "#7d8aa6", 0.3)} 135%)` };
+}
 import { go } from "@/lib/navBridge";
 import { useOfficeLayout } from "@/lib/officeLayout";
 
@@ -54,8 +65,8 @@ function ItemCard({ item, mode, onOpenInventory }: { item: ShopItem; mode: "shop
 
   return (
     <article data-testid={`shop-item-${item.id}`} data-owned={owned} data-category={item.category} className={`group relative flex flex-col gap-2.5 rounded-2xl border bg-panel p-3 shadow-soft transition duration-150 hover:-translate-y-0.5 hover:shadow-pop ${RARITY_CARD[item.rarity] ?? RARITY_CARD.common}`}>
-      <div className="relative mx-auto w-full overflow-hidden rounded-xl">
-        <div className="mx-auto w-[112px] transition-transform duration-200 group-hover:scale-[1.04]"><ItemPreview item={item} size={112} /></div>
+      <div className={`relative mx-auto flex w-full items-center justify-center overflow-hidden rounded-xl py-3 ring-1 ring-inset ring-black/5 ${item.rarity === "epic" ? "shop-sheen" : ""}`} style={stageStyle(item)}>
+        <div className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.06]"><ItemThumb item={item} size={148} /></div>
         {owned && <span className="absolute right-1.5 top-1.5 rounded-full bg-ok/90 px-2 py-0.5 text-[10px] font-semibold text-white shadow-soft">{t("shop.inInventory")}</span>}
       </div>
       <div className="min-w-0">
@@ -187,6 +198,7 @@ export function ShopView() {
 
   return (
     <div data-testid="shop-view" className="flex h-full min-h-0 flex-col bg-bg">
+      <ThumbStudio />
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-panel px-5 py-3">
         <h1 className="font-display text-xl font-semibold text-ink">{t("shop.title")}</h1>
         <div data-tour="shop.wallet" data-testid="shop-wallet" data-balance={wallet.balance} className="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-100/70 px-3 py-1">

@@ -133,3 +133,11 @@ button:not(:disabled):active, a.ac-press:active { transform: scale(0.985); }
 .wf-curtain-label { animation: wf-curtain-label .62s cubic-bezier(.2,.8,.2,1) both; }
 @media (prefers-reduced-motion: reduce) { .wf-splash-mark, .wf-splash-bar, .wf-splash-line { animation: none !important; } .wf-curtain, .wf-curtain-label { display: none; } }
 .wf-splash[data-reduce="1"] .wf-splash-mark, .wf-splash[data-reduce="1"] .wf-splash-bar { animation: none !important; }
+
+/* shop thumbnails: the render fades in, epic cards get a slow sheen */
+@keyframes thumb-in { from { opacity: 0; transform: translateY(4px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes shop-sheen { 0% { transform: translateX(-130%); } 55%, 100% { transform: translateX(230%); } }
+.shop-sheen { position: relative; overflow: hidden; }
+.shop-sheen::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.5) 50%, transparent 58%); animation: shop-sheen 4.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .shop-sheen::after { animation: none; opacity: 0; } }
+[data-reduce="1"] .shop-sheen::after { animation: none; opacity: 0; }

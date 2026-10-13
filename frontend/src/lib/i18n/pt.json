@@ -3151,5 +3151,6 @@
   "oe.a.windows": "Janelas de vidro",
   "oe.light.title": "Luz",
   "oe.light.dim": "Suave",
-  "oe.light.bright": "Intensa"
+  "oe.light.bright": "Intensa",
+  "hud.activityHide": "Minimizar atividade"
 }

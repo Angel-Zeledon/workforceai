@@ -3150,5 +3150,6 @@
   "oe.a.windows": "Ventanales de cristal",
   "oe.light.title": "Luz",
   "oe.light.dim": "Tenue",
-  "oe.light.bright": "Intensa"
+  "oe.light.bright": "Intensa",
+  "hud.activityHide": "Minimizar actividad"
 }

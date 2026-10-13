@@ -10,7 +10,11 @@ import { DEFAULT_LAYOUT, FIXTURES, FIXTURE_IDS, FLOOR_KINDS, FLOOR_TINTS, MOODS,
 import { Btn, useAgentName } from "../ui";
 import { Icon } from "../icons";
 import { ErrorLine } from "../connections/shared";
+import dynamic from "next/dynamic";
+import { ItemThumb } from "../shop/ItemThumb";
 import { ItemPreview } from "../shop/ItemPreview";
+
+const ThumbStudio = dynamic(() => import("../shop/ThumbStudio").then((m) => m.ThumbStudio), { ssr: false });
 import { pieceInfo } from "./pieceInfo";
 import { roleMeta } from "@/lib/meta";
 
@@ -201,7 +205,7 @@ function SelectedPiece() {
   return (
     <div data-testid="oe-selected" className="space-y-3 rounded-xl border border-accent/40 bg-accent-soft/40 p-3">
       <div className="flex items-center gap-3">
-        <ItemPreview item={item} size={48} />
+        <ItemThumb item={item} size={56} />
         <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-semibold text-ink">{itemName(item, locale)}</div><div className="text-[11px] text-mute">{t("oe.f.selected")}</div></div>
       </div>
       <Range label={t("oe.f.scale")} value={p.s} min={0.6} max={1.6} step={0.05} onChange={(v) => mutate((l) => withPiece(l, p.uid, { s: v }), `s:${p.uid}`)} />
@@ -315,7 +319,7 @@ function FurnitureTab() {
               {shown.map((it) => (
                 <button key={it.id} type="button" data-testid={`oe-stock-${it.id}`} aria-pressed={placing === it.id} onClick={() => useOfficeLayout.getState().startPlacing(placing === it.id ? null : it.id)}
                   className={`group flex flex-col items-center gap-1 rounded-xl border p-1.5 text-center transition ${placing === it.id ? "border-accent bg-accent-soft ring-2 ring-accent/30" : "border-line bg-panel hover:-translate-y-0.5 hover:border-line-strong hover:shadow-soft"}`}>
-                  <ItemPreview item={it} size={64} />
+                  <ItemThumb item={it} size={72} />
                   <span className="line-clamp-2 text-[10.5px] font-medium leading-tight text-ink2">{itemName(it, locale)}</span>
                 </button>
               ))}
@@ -460,6 +464,7 @@ export function OfficeEditor() {
   const hint = placing ? t("oe.hint.placing") : sel ? t("oe.hint.drag") : t("oe.hint.idle");
   return (
     <>
+      <ThumbStudio />
       <div data-testid="office-editor" className="pointer-events-auto absolute bottom-4 left-4 top-4 z-40 flex w-[348px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-pop">
         <header className="border-b border-line px-4 pb-0 pt-3">
           <div className="flex items-center justify-between">
