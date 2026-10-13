@@ -13,10 +13,12 @@ import { ItemPreview } from "./ItemPreview";
 type Tab = "shop" | "mine" | "history";
 type Group = "character" | "office";
 
-const RARITY_STYLE: Record<string, string> = {
-  common: "border-line-strong text-ink2",
-  rare: "border-info/40 bg-info/10 text-info",
-  epic: "border-violet-500/40 bg-violet-100 text-violet-700",
+/** Rarity shows as a quiet dot + word, and as the card's edge: epic items get a soft violet glow. */
+const RARITY_DOT: Record<string, string> = { common: "bg-slate-400", rare: "bg-sky-500", epic: "bg-violet-500" };
+const RARITY_CARD: Record<string, string> = {
+  common: "border-line",
+  rare: "border-sky-300/60",
+  epic: "border-violet-400/60 shadow-[0_0_0_1px_rgba(139,92,246,.18),0_6px_22px_-8px_rgba(139,92,246,.45)]",
 };
 
 function Price({ n }: { n: number }) {
@@ -49,16 +51,17 @@ function ItemCard({ item, mode, onOpenInventory }: { item: ShopItem; mode: "shop
   const rw = useRewards.getState;
 
   return (
-    <article data-testid={`shop-item-${item.id}`} data-owned={owned} data-category={item.category} className="flex flex-col gap-2 rounded-xl border border-line bg-panel p-3 shadow-soft">
-      <div className="flex items-start gap-3">
-        <ItemPreview item={item} size={64} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-[13px] font-semibold leading-tight text-ink">{itemName(item, locale)}</h3>
-            <Price n={item.price} />
-          </div>
-          <span className={`mt-1 inline-block rounded-full border px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide ${RARITY_STYLE[item.rarity]}`}>{t(`shop.rarity.${item.rarity}`)}</span>
+    <article data-testid={`shop-item-${item.id}`} data-owned={owned} data-category={item.category} className={`group relative flex flex-col gap-2.5 rounded-2xl border bg-panel p-3 shadow-soft transition duration-150 hover:-translate-y-0.5 hover:shadow-pop ${RARITY_CARD[item.rarity] ?? RARITY_CARD.common}`}>
+      <div className="relative mx-auto w-full overflow-hidden rounded-xl">
+        <div className="mx-auto w-[112px] transition-transform duration-200 group-hover:scale-[1.04]"><ItemPreview item={item} size={112} /></div>
+        {owned && <span className="absolute right-1.5 top-1.5 rounded-full bg-ok/90 px-2 py-0.5 text-[10px] font-semibold text-white shadow-soft">{t("shop.inInventory")}</span>}
+      </div>
+      <div className="min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-[13.5px] font-semibold leading-tight text-ink">{itemName(item, locale)}</h3>
+          <Price n={item.price} />
         </div>
+        <span className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-medium text-mute"><i className={`h-1.5 w-1.5 rounded-full ${RARITY_DOT[item.rarity] ?? RARITY_DOT.common}`} />{t(`shop.rarity.${item.rarity}`)}</span>
       </div>
       <p className="text-[11.5px] leading-snug text-mute">{itemDesc(item, locale)}</p>
       <div className="mt-auto flex flex-col gap-1.5">
@@ -213,7 +216,7 @@ export function ShopView() {
               </div>
             </div>
             {items.length === 0 ? <Empty>{tab === "mine" ? t("shop.mineEmpty") : t("shop.empty")}</Empty> : (
-              <div data-tour="shop.grid" data-testid="shop-grid" className="ac-stagger grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
+              <div data-tour="shop.grid" data-testid="shop-grid" className="ac-stagger grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3.5">
                 {items.slice(0, limit).map((it) => <ItemCard key={it.id} item={it} mode={tab === "mine" ? "inventory" : "shop"} onOpenInventory={() => setTab("mine")} />)}
               </div>
             )}

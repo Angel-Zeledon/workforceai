@@ -13,7 +13,7 @@ import {
 } from "./gestures";
 import { approvalsSpot, cafeSpot, meetingSeat, zoneFor } from "./officeState";
 import { getSignals } from "./officeSignals";
-import { BodyWear, Buddy, HeadWear, suppressesAccessory, useOutfitColor, useWorn } from "./Worn";
+import { BodyWear, Buddy, HeadWear, OutfitWear, suppressesAccessory, useOutfit, useWorn } from "./Worn";
 import { AISLE_Z, deskOf, feetPos, headPos, seatOf, standOf, visitorOf } from "./registry";
 
 const SEATED = new Set<AgentState>(["thinking", "working", "waiting", "reviewing", "blocked", "awaiting_approval"]);
@@ -111,6 +111,7 @@ export function Character({ id, index }: { id: string; index: number }) {
   const lHip = useRef<THREE.Group>(null!); const rHip = useRef<THREE.Group>(null!);
   const lKnee = useRef<THREE.Group>(null!); const rKnee = useRef<THREE.Group>(null!);
   const mouth = useRef<THREE.Mesh>(null!);
+  const brows = useRef<THREE.Group>(null!);
   const eyes = useRef<THREE.Group>(null!);
   const docRef = useRef<THREE.Mesh>(null!);
   const dots = useRef<THREE.Group>(null!);
@@ -129,11 +130,13 @@ export function Character({ id, index }: { id: string; index: number }) {
   if (!sim.current) sim.current = makeSim(id, own.seat);
 
   const worn = useWorn(id);
-  const outfit = useOutfitColor(worn);
   const skin = meta.skin, hair = meta.hair;
-  const blazer = outfit ?? meta.color;
-  const sleeve = blazer;
-  const pants = "#9a7a5c", shoe = "#6b4a36";
+  // The cut of the outfit decides which parts show the jacket color and which the shirt (vest, overalls) and the trousers.
+  const outfit = useOutfit(worn, meta.color);
+  const blazer = outfit.style === "overalls" ? outfit.shirt : outfit.color;
+  const sleeve = outfit.style === "vest" || outfit.style === "overalls" ? outfit.shirt : outfit.color;
+  const pants = outfit.pants, shoe = "#6b4a36";
+  const showShirt = outfit.style === "blazer" || outfit.style === "cardigan" || outfit.style === "vest" || outfit.style === "trench";
   const noseCol = useMemo(() => "#" + new THREE.Color(skin).multiplyScalar(0.9).getHexString(), [skin]);
 
   useFrame((state, dtRaw) => {
@@ -337,6 +340,11 @@ export function Character({ id, index }: { id: string; index: number }) {
     const eyeOpen = st === "blocked" ? 0.6 : 1;
     mouth.current.scale.y = talking ? 0.5 + Math.abs(Math.sin(sm.t * 13)) * 1.2 : st === "completed" ? 0.7 : st === "error" ? 0.9 : 0.45;
     mouth.current.scale.x = st === "completed" ? 2.3 : st === "error" ? 1.0 : 1.6;
+    // eyebrows follow the mood: lifted when done, drawn together and down when blocked or failing
+    const browLift = st === "completed" ? 0.012 : st === "blocked" || st === "error" ? -0.004 : st === "awaiting_approval" ? 0.008 : 0;
+    const browTilt = st === "blocked" || st === "error" ? 0.28 : st === "thinking" ? -0.1 : 0;
+    brows.current.position.y += (browLift - brows.current.position.y) * Math.min(1, dt * 8);
+    brows.current.children.forEach((b, i) => { const t = (i ? -1 : 1) * browTilt; b.rotation.z += (t + (i ? 0.05 : -0.05) - b.rotation.z) * Math.min(1, dt * 8); });
     if (reduce) eyes.current.scale.y = eyeOpen;
     else if (sm.t > sm.blinkAt) {
       eyes.current.scale.y = 0.1;
@@ -419,8 +427,11 @@ export function Character({ id, index }: { id: string; index: number }) {
             <capsuleGeometry args={[0.2, 0.04, 6, 14]} />
             <meshStandardMaterial color={blazer} roughness={0.8} />
           </mesh>
-          <mesh position={[0, 0.14, 0.165]} scale={[1, 1.25, 0.3]}><sphereGeometry args={[0.1, 12, 10]} /><meshStandardMaterial color="#fffaf0" roughness={0.9} /></mesh>
-          {meta.tie && (
+          {showShirt && <mesh position={[0, 0.14, 0.165]} scale={[1, 1.25, 0.3]}><sphereGeometry args={[0.1, 12, 10]} /><meshStandardMaterial color={outfit.shirt} roughness={0.9} /></mesh>}
+          <OutfitWear o={outfit} fallback={meta.color} />
+          {/* neck: hides the gap between the head and the collar */}
+          <mesh position={[0, 0.33, 0]}><cylinderGeometry args={[0.05, 0.06, 0.07, 12]} /><meshStandardMaterial color={skin} roughness={0.8} /></mesh>
+          {meta.tie && outfit.style === "blazer" && (
             <group position={[0, 0.3, 0.19]}>
               <mesh><sphereGeometry args={[0.03, 8, 8]} /><meshStandardMaterial color={blazer} /></mesh>
               <mesh position={[0.05, 0, 0]} scale={[1.4, 1, 0.6]}><sphereGeometry args={[0.04, 8, 8]} /><meshStandardMaterial color={blazer} /></mesh>
@@ -437,11 +448,11 @@ export function Character({ id, index }: { id: string; index: number }) {
           {/* brazos redondos */}
           {([[0.24, lSh, lEl], [-0.24, rSh, rEl]] as const).map(([x, shRef, elRef], i) => (
             <group key={i} ref={shRef} position={[x, 0.28, 0]}>
-              <mesh position={[0, 0, 0]}><sphereGeometry args={[0.072, 12, 10]} /><meshStandardMaterial color={blazer} roughness={0.8} /></mesh>
-              <mesh castShadow position={[0, -0.1, 0]}><capsuleGeometry args={[0.07, 0.1, 4, 10]} /><meshStandardMaterial color={blazer} roughness={0.8} /></mesh>
+              <mesh position={[0, 0, 0]}><sphereGeometry args={[0.072, 12, 10]} /><meshStandardMaterial color={sleeve} roughness={0.8} /></mesh>
+              <mesh castShadow position={[0, -0.1, 0]}><capsuleGeometry args={[0.07, 0.1, 4, 10]} /><meshStandardMaterial color={sleeve} roughness={0.8} /></mesh>
               <group ref={elRef} position={[0, -0.2, 0]}>
-                <mesh position={[0, 0, 0]}><sphereGeometry args={[0.064, 12, 10]} /><meshStandardMaterial color={blazer} roughness={0.8} /></mesh>
-                <mesh castShadow position={[0, -0.1, 0]}><capsuleGeometry args={[0.062, 0.06, 4, 10]} /><meshStandardMaterial color={blazer} roughness={0.8} /></mesh>
+                <mesh position={[0, 0, 0]}><sphereGeometry args={[0.064, 12, 10]} /><meshStandardMaterial color={sleeve} roughness={0.8} /></mesh>
+                <mesh castShadow position={[0, -0.1, 0]}><capsuleGeometry args={[0.062, 0.06, 4, 10]} /><meshStandardMaterial color={sleeve} roughness={0.8} /></mesh>
                 {/* shirt cuff and a thumb: the hand reads as a hand without losing its round shape */}
                 <mesh position={[0, -0.166, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.066, 0.013, 8, 18]} /><meshStandardMaterial color="#fffaf0" roughness={0.9} /></mesh>
                 <mesh castShadow position={[0, -0.215, 0]}><sphereGeometry args={[0.075, 12, 10]} /><meshStandardMaterial color={skin} roughness={0.8} /></mesh>
@@ -477,6 +488,10 @@ export function Character({ id, index }: { id: string; index: number }) {
               {/* catchlights: a tiny highlight makes the eyes look alive */}
               <mesh position={[0.065, 0.012, 0.159]}><sphereGeometry args={[0.0075, 8, 6]} /><meshBasicMaterial color="#ffffff" /></mesh>
               <mesh position={[-0.051, 0.012, 0.159]}><sphereGeometry args={[0.0075, 8, 6]} /><meshBasicMaterial color="#ffffff" /></mesh>
+            </group>
+            <group ref={brows}>
+              <mesh position={[0.058, 0.208, 0.15]} rotation={[0.2, 0, -0.05]} scale={[1.7, 0.5, 0.6]}><capsuleGeometry args={[0.011, 0.02, 4, 6]} /><meshStandardMaterial color={hair} roughness={0.9} /></mesh>
+              <mesh position={[-0.058, 0.208, 0.15]} rotation={[0.2, 0, 0.05]} scale={[1.7, 0.5, 0.6]}><capsuleGeometry args={[0.011, 0.02, 4, 6]} /><meshStandardMaterial color={hair} roughness={0.9} /></mesh>
             </group>
             <mesh position={[0, 0.128, 0.162]} scale={[1, 0.85, 0.8]}><sphereGeometry args={[0.019, 10, 8]} /><meshStandardMaterial color={noseCol} roughness={0.8} /></mesh>
             <mesh position={[0.163, 0.145, -0.005]} scale={[0.45, 1, 0.8]}><sphereGeometry args={[0.04, 10, 8]} /><meshStandardMaterial color={skin} roughness={0.8} /></mesh>
