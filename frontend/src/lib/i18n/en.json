@@ -3203,5 +3203,22 @@
   "att.pick.attach": "Attach",
   "att.pick.here": "Save here",
   "att.pick.newFolder": "New folder here",
-  "att.pick.create": "Create"
+  "att.pick.create": "Create",
+  "web.title": "Web tool (search and page reading)",
+  "web.help": "Lets agents holding the web tool search the internet and read public pages. Everything they bring back arrives as untrusted data with its source URL, and every call is audited and counted. Off by default.",
+  "web.enable": "Let agents use the web",
+  "web.noSearch": "This server has no search provider configured: agents cannot search, but they can still read URLs a person gives them.",
+  "web.operator": "The platform operator limits which sites can be reached; your organization's list can only restrict further.",
+  "web.mode": "Which sites they may use",
+  "web.mode.allowlist": "Only the allowed domains (recommended)",
+  "web.mode.open": "Any public site, except the blocked ones",
+  "web.allowed": "Allowed domains (one per line)",
+  "web.blocked": "Blocked domains (one per line)",
+  "web.domainsHint": "Subdomains are included. Example: example.com",
+  "web.perTask": "Maximum calls per task (0 = {n})",
+  "web.perDay": "Maximum calls per day (0 = {n}; platform ceiling {max})",
+  "web.usage": "Today: {searches} searches, {fetches} page reads ({calls} of {limit}).",
+  "web.saved": "Saved.",
+  "web.save": "Save",
+  "web.refresh": "Refresh"
 }

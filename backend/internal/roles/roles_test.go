@@ -30,7 +30,7 @@ func legacySeed() []domain.Agent {
 			[]string{"Márgenes y costos", "Facturación", "Presupuestos"}, []string{"ledger", "spreadsheet"}, []string{"read:finance"}),
 		mk("analyst", "Nadia Ortega", "Analista", "Análisis de datos, rentabilidad y métricas del negocio.",
 			"Analista curiosa que formula hipótesis y las contrasta con evidencia.",
-			[]string{"Análisis de rentabilidad", "Métricas", "Hipótesis y evidencia"}, []string{"bi", "spreadsheet", "code"}, []string{"read:analytics"}),
+			[]string{"Análisis de rentabilidad", "Métricas", "Hipótesis y evidencia"}, []string{"bi", "spreadsheet", "code", "web"}, []string{"read:analytics"}),
 		mk("operations", "Iván Duarte", "Operaciones", "Capacidad operativa, logística y entrega.",
 			"Responsable de operaciones pragmático, piensa en capacidad y plazos.",
 			[]string{"Capacidad", "Planificación de entrega", "Proveedores"}, []string{"planner", "inventory"}, []string{"read:operations"}),
@@ -146,6 +146,20 @@ func TestFinanceTreasuryIsAnalysisOnly(t *testing.T) {
 	for _, a := range SeedAgents() {
 		if a.Role == "finance_treasury" {
 			t.Fatal("the demo seed must stay at 7 agents")
+		}
+	}
+}
+
+// Only research-like roles hold the web tool by default (an admin can grant it to others).
+func TestOnlyResearchRolesGetTheWebTool(t *testing.T) {
+	want := map[string]bool{"data_analyst": true, "analyst": true}
+	for _, tpl := range All() {
+		has := false
+		for _, tool := range tpl.Tools {
+			has = has || tool == "web"
+		}
+		if has != want[tpl.ID] {
+			t.Errorf("role %s: web tool = %v, want %v", tpl.ID, has, want[tpl.ID])
 		}
 	}
 }

@@ -42,6 +42,7 @@ type Orchestrator struct {
 	// standing (optional) remembers "always allow this internal, reversible action in this project" (standing.go).
 	standing *StandingService
 	code     CodeRunner // optional: approval-gated code sandbox (code_flow.go)
+	web      WebRunner  // optional: web search and fetch, served as reads between turns (web_flow.go)
 
 	chatIdem idemCache        // Idempotency-Key of POST /messages (chat.go)
 	chatQ    chatQueue        // per-conversation FIFO of chat turns (chat.go)
@@ -794,6 +795,10 @@ func (o *Orchestrator) handleTools(ctx context.Context, rs *run, t *domain.Task,
 func (o *Orchestrator) handleToolsFrom(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, reqs []ToolRequest, start int) Outcome {
 	for i := start; i < len(reqs); i++ {
 		tr := reqs[i]
+		if isWebTool(tr) { // a read served between turns by webReads; it is never an action
+			o.webSkipped(ctx, t, agent, tr)
+			continue
+		}
 		if isCodeRun(tr) { // never auto-approved: see code_flow.go
 			if out := o.handleCodeRun(ctx, rs, t, agent, tr, i, reqs); out != OutcomeDone {
 				return out

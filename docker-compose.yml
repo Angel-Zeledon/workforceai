@@ -109,6 +109,13 @@ services:
       SANDBOX_TOKEN: ${SANDBOX_TOKEN:-}
       SANDBOX_MAX_RUNTIME_SECONDS: ${SANDBOX_MAX_RUNTIME_SECONDS:-60}
       SANDBOX_MAX_RUNS_PER_DAY: ${SANDBOX_MAX_RUNS_PER_DAY:-20}
+      # Web tool (docs/architecture/agent-web.md): search is unavailable until a provider is set; fetch works without.
+      WEB_SEARCH_PROVIDER: ${WEB_SEARCH_PROVIDER:-}
+      WEB_SEARCH_API_KEY: ${WEB_SEARCH_API_KEY:-}
+      WEB_SEARCH_URL: ${WEB_SEARCH_URL:-}
+      WEB_SEARCH_COST_USD: ${WEB_SEARCH_COST_USD:-0.005}
+      WEB_MAX_CALLS_PER_DAY: ${WEB_MAX_CALLS_PER_DAY:-200}
+      WEB_ALLOWED_HOSTS: ${WEB_ALLOWED_HOSTS:-}
     depends_on:
       postgres:
         condition: service_healthy

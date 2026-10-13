@@ -64,7 +64,8 @@
     "spreadsheet",
     "calculator",
     "artifacts",
-    "code"
+    "code",
+    "web"
   ],
   "permissions": [
     "read:analytics"

@@ -135,6 +135,9 @@ var KnownTools = map[string]bool{
 	// The code sandbox (docs/architecture/code-sandbox.md): "code" lets an agent REQUEST code.run;
 	// every run needs a human approval and the org must enable it.
 	"code": true,
+	// The web tool (docs/architecture/agent-web.md): search and fetch public pages. Off for every organization until
+	// an owner/admin enables it; only research-like roles get the grant by default.
+	"web": true,
 }
 
 // KnownProviders are the connection providers a template may recommend

@@ -30,6 +30,7 @@ import (
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/sandbox"
+	"aiworkforce/backend/internal/webtool"
 	"aiworkforce/backend/internal/skills"
 	"aiworkforce/backend/internal/tenantdata"
 )
@@ -82,6 +83,8 @@ type Deps struct {
 	// says whether a runner is configured. Optional.
 	Sandbox          *sandbox.Service
 	SandboxAvailable bool
+	// Web serves /settings/web (web.go): the web tool setting and today's usage. Optional.
+	Web *webtool.Service
 	// Skills serves /skills/* and /agents/{id}/skills (skills.go). Optional.
 	Skills *skills.Service
 	// Memory serves /agents/{id}/memory (memory.go): the long-term memory. Optional.
@@ -186,6 +189,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountArtifacts(r)
 			s.mountDrive(r)
 			s.mountCode(r)
+			s.mountWeb(r)
 			s.mountSkills(r)
 			s.mountMemory(r)
 			s.mountRewards(r)

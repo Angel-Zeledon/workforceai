@@ -206,6 +206,7 @@ const maxReadsPerRound = 5
 // delimited as untrusted data and are handed to the runtime as external
 // content; the task becomes tainted. Write requests are never run here.
 func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, in RunTaskRequest, resp RunTaskResponse) RunTaskResponse {
+	resp = o.webReads(ctx, rs, t, agent, in, resp) // web search/fetch: its own reads (web_flow.go)
 	gw := o.conn.gw
 	if gw == nil {
 		return resp

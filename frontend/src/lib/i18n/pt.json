@@ -3204,5 +3204,22 @@
   "att.pick.attach": "Anexar",
   "att.pick.here": "Salvar aqui",
   "att.pick.newFolder": "Nova pasta aqui",
-  "att.pick.create": "Criar"
+  "att.pick.create": "Criar",
+  "web.title": "Ferramenta web (busca e leitura de paginas)",
+  "web.help": "Permite que os agentes com a ferramenta web pesquisem na internet e leiam paginas publicas. Tudo o que trazem chega como dado nao confiavel, com a URL de origem, e cada chamada fica na auditoria e e contada. Desligada por padrao.",
+  "web.enable": "Permitir que os agentes usem a web",
+  "web.noSearch": "Este servidor nao tem um provedor de busca configurado: os agentes nao podem pesquisar, mas podem ler URLs que uma pessoa informar.",
+  "web.operator": "O operador da plataforma limita os sites alcancaveis; a lista da sua organizacao so pode restringir mais.",
+  "web.mode": "Quais sites podem usar",
+  "web.mode.allowlist": "Somente os dominios permitidos (recomendado)",
+  "web.mode.open": "Qualquer site publico, exceto os bloqueados",
+  "web.allowed": "Dominios permitidos (um por linha)",
+  "web.blocked": "Dominios bloqueados (um por linha)",
+  "web.domainsHint": "Inclui os subdominios. Exemplo: exemplo.com",
+  "web.perTask": "Maximo de chamadas por tarefa (0 = {n})",
+  "web.perDay": "Maximo de chamadas por dia (0 = {n}; teto da plataforma {max})",
+  "web.usage": "Hoje: {searches} buscas, {fetches} leituras ({calls} de {limit}).",
+  "web.saved": "Salvo.",
+  "web.save": "Salvar",
+  "web.refresh": "Atualizar"
 }
