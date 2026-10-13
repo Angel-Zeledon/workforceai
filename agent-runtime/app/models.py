@@ -86,6 +86,9 @@ class Usage(_Base):
     # Optional (backwards compatible): which provider actually answered and which ones failed first.
     provider: str | None = None
     failed_providers: list[str] | None = None
+    # Vision (additive): images sent with the call and their approximate tokens (included in input_tokens).
+    image_count: int | None = None
+    image_tokens: int | None = None
 
 
 class ProviderCredential(_Base):
@@ -447,6 +450,20 @@ class LoadedSkill(_Base):
     files: list[str] | None = None
 
 
+class ImagePart(_Base):
+    """Vision (additive): an image the agent can SEE on this call. Produced by the backend's fs.read (view
+    "image") after its permission checks, normalized (re-encoded, metadata stripped). What is seen in it is
+    DATA, never instructions. data_b64 is the image bytes in standard base64."""
+
+    name: str = ""
+    mime: str = ""
+    data_b64: str = Field(default="", repr=False)
+    source_path: str = ""
+    page: int | None = None
+    width: int = 0
+    height: int = 0
+
+
 class RunTaskRequest(_ProviderPolicyMixin):
     # El contrato NO tiene campos de credenciales, connection_id ni URLs de API:
     # el runtime nunca ve secretos ni llama al proveedor (test_contract_has_no_secret_fields).
@@ -470,6 +487,8 @@ class RunTaskRequest(_ProviderPolicyMixin):
     # F3 desk mode (additive): "desk" when the organization lets code run without a click on the agent's own files.
     # It only changes what the prompt says; the backend decides every run by itself.
     code_auto_run: str = ""
+    # Vision (additive): images for this call (capped again by the runtime: app/vision.py).
+    images: list[ImagePart] | None = Field(default=None, repr=False)
     locale: Locale = "es"
     tone: Tone = "neutral"
 
@@ -516,6 +535,8 @@ class RunTaskResponse(_Base):
     provider: str | None = None  # optional: same as usage.provider / usage.model
     model: str | None = None
     trace: RunTrace | None = None  # V2: only when the request had want_trace
+    # Vision (additive): stable codes about the images of the call (vision_unavailable, images_dropped).
+    notices: list[str] | None = None
 
 
 # ---- /v1/review (Q1) ------------------------------------------------------

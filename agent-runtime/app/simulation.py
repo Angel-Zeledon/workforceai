@@ -14,6 +14,7 @@ from .commands import marker_draft, marker_meeting, sim_summary, sim_usage_token
 from .formats import EXT, requested_format
 from .engine import AgentEngine, estimate_cost
 from .routing import assigned_reason, compose_reply, owner_role
+from .vision import sim_image_lines
 from .models import (
     ChatReplyRequest,
     ChatReplyResponse,
@@ -371,6 +372,7 @@ class SimulationEngine(AgentEngine):
             out.evidence.append(c.TEXTS["evidence_deps"].format(n=n_dep))
         if n_ext:
             out.evidence.append(c.TEXTS["evidence_ext"].format(n=n_ext))
+        out.evidence += sim_image_lines(req)  # vision: acknowledged in text, never analyzed
 
         usage = self._usage(f"{req.task.id}|{role}", ms,
                             in_range=(1400 + 600 * n_dep, 3600 + 900 * n_dep))

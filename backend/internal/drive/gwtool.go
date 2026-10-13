@@ -62,7 +62,7 @@ func Specs() []struct {
 		ReadOnly                  bool
 	}{
 		{ActList, "path?", "List a folder (the folders you can use at /)", true},
-		{ActRead, "path | file_id, version?, offset?, max_chars?", "Read the text of a file (bounded, returned as delimited data)", true},
+		{ActRead, `path | file_id, version?, offset?, max_chars?, pages? (pdf: "3-5"), view? ("image")`, `Read the text of a file (bounded, returned as delimited data; PDFs with [page N] markers). An image, or view:"image" with pages on a PDF, is attached for the agent to see`, true},
 		{ActSearch, "query, path?, limit?", "Search names and text in the folders you can read", true},
 		{ActWrite, "path, content, message?, expected_version?, tags?", "Create a text file or add a version (free in your desk and your projects)", false},
 		{ActWriteDocument, "path (.xlsx|.docx|.pdf|.md|.csv), document, message?, tags?", "Create a real office document from a structured document (sheets for xlsx; title + blocks for docx/pdf); same zones and approvals as write", false},
@@ -141,7 +141,7 @@ func (t *GatewayTool) Run(ctx context.Context, c application.GatewayCall, approv
 		}
 		return application.NativeResult{Status: "failed", Code: rr.Code, Summary: t.inline(rr.Summary)}
 	}
-	res := application.NativeResult{Status: "succeeded", Summary: t.inline(rr.Summary)}
+	res := application.NativeResult{Status: "succeeded", Summary: t.inline(rr.Summary), Images: rr.Images}
 	if t.Notify != nil {
 		p, _ := rr.Data["path"].(string)
 		if p == "" {

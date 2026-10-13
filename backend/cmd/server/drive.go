@@ -104,7 +104,8 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 			rec.Audit(application.WithOrg(actx, org), domain.AuditLog{Actor: e.Actor.ID, Action: e.Action, Entity: e.Entity, EntityID: e.EntityID, Details: d})
 		}})
 	if cw.gw != nil {
-		tool := &drive.GatewayTool{FS: &drive.AgentFS{Svc: svc, Projects: projectDirectory{store: pstore}}, Suspects: cw.sus,
+		tool := &drive.GatewayTool{FS: &drive.AgentFS{Svc: svc, Projects: projectDirectory{store: pstore}, Render: renderFromEnv(log),
+			Vision: drive.VisionLimitsFromEnv()}, Suspects: cw.sus,
 			AgentTools: func(actx context.Context, org, agentID string) ([]string, error) {
 				a, err := store.GetAgent(application.WithOrg(actx, org), org, agentID)
 				if err != nil {

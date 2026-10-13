@@ -42,6 +42,7 @@ func main() {
 	srv, err := runnerd.New(runnerd.Config{
 		Token:          os.Getenv("SANDBOX_TOKEN"),
 		Image:          os.Getenv("SANDBOX_IMAGE"),
+		RenderImage:    os.Getenv("SANDBOX_RENDER_IMAGE"),
 		Runtime:        os.Getenv("SANDBOX_RUNTIME"),
 		SeccompProfile: os.Getenv("SANDBOX_SECCOMP_PROFILE"),
 		MaxConcurrent:  envInt("SANDBOX_MAX_CONCURRENT", 2),

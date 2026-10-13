@@ -372,3 +372,47 @@ def temperature_for(provider: str, creativity: str = "") -> float:
     low, med, high = _TEMPERATURES.get(provider, (0.1, DEFAULT_TEMPERATURE, 0.8))
     value = (low, med, high)[level]
     return round(max(0.0, min(value, _TEMPERATURE_MAX.get(provider, 1.0))), 2)
+
+
+# ---- Vision: which provider/model can SEE images ------------------------------------------------
+# Data policy first, capability second: vision_candidates() only ever filters the list candidates()
+# already restricted with allowed_providers / ALLOWED_PROVIDERS / byo_only, so an image is never sent
+# to a provider the organization did not allow. Kimi and custom endpoints vary by deployment: they are
+# off unless the operator says otherwise (KIMI_VISION / CUSTOM_LLM_VISION = true).
+ERR_NO_VISION_PROVIDER = "no_vision_provider"  # stable: no allowed provider can see images (the call goes on as text)
+
+_VISION_DEFAULT = {"anthropic": True, "openai": True, "deepseek": False, "kimi": False, "custom": False}
+_VISION_ENV = {"kimi": "KIMI_VISION", "custom": "CUSTOM_LLM_VISION", "deepseek": "DEEPSEEK_VISION"}
+# OpenAI models without image input (the gpt-4o / gpt-4.1 / gpt-5 / o-series families see images).
+_OPENAI_TEXT_ONLY = re.compile(r"^(gpt-3\.5|gpt-4-0613|gpt-4-32k|o1-mini|o3-mini|text-|davinci|babbage)", re.I)
+_ANTHROPIC_TEXT_ONLY = re.compile(r"^claude-(instant|2)", re.I)
+
+
+def _truthy_env(name: str) -> bool | None:
+    raw = (os.getenv(name) or "").strip().lower()
+    if not raw:
+        return None
+    return raw in {"1", "true", "yes", "on", "si"}
+
+
+def vision_capable(cfg: ProviderConfig) -> bool:
+    """Whether this provider + model accepts images (anthropic: yes; openai gpt-4.1/4o/5: yes; deepseek-chat: no;
+    kimi/custom: KIMI_VISION / CUSTOM_LLM_VISION, default no)."""
+    env = _VISION_ENV.get(cfg.id)
+    forced = _truthy_env(env) if env else None
+    if forced is not None:
+        return forced
+    if not _VISION_DEFAULT.get(cfg.id, False):
+        return False
+    name = (cfg.model or "").split("/")[-1]
+    if cfg.id == "openai":
+        return not _OPENAI_TEXT_ONLY.match(name)
+    if cfg.id == "anthropic":
+        return not _ANTHROPIC_TEXT_ONLY.match(name)
+    return True
+
+
+def vision_candidates(configs: list[ProviderConfig], policy: ProviderPolicy) -> list[ProviderConfig]:
+    """The failover list of candidates() (data policy applied: may raise no_allowed_provider) restricted to
+    vision-capable providers, in the same order. Empty = nobody allowed can see images."""
+    return [c for c in candidates(configs, policy) if vision_capable(c)]

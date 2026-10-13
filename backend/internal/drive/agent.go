@@ -10,8 +10,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/officedoc"
+	"aiworkforce/backend/internal/pdftext"
 )
 
 // ProjectRef names a project an agent works on.
@@ -51,6 +53,11 @@ const (
 type AgentFS struct {
 	Svc      *Service
 	Projects ProjectDirectory
+	// Render (optional) is the sandbox render capability (PDF pages and images
+	// as pixels, vision.go); nil: images use the Go fallback, PDF pages cannot be seen.
+	Render Renderer
+	// Vision bounds what a visual read attaches (zero: defaults).
+	Vision VisionLimits
 }
 
 // Plan is the verdict about an agent action BEFORE running it (pure: no writes).
@@ -487,6 +494,9 @@ type RunResult struct {
 	// AuthoredByOthers is true when the text came from files not written by this agent.
 	AuthoredByOthers bool
 	Data             map[string]any
+	// Images the agent asked to see (fs.read on an image, or view:"image" on a
+	// PDF); described in Text, forwarded to the runtime as image parts.
+	Images []application.ImagePart
 }
 
 func failure(err error) RunResult {
@@ -680,16 +690,33 @@ func (a *AgentFS) runRead(ctx context.Context, agentID string, args map[string]a
 	if err != nil {
 		return failure(err)
 	}
+	if r, ok := a.readVisual(ctx, agentID, f, args); ok { // images and PDF pages as pixels (vision.go)
+		return r
+	}
 	ver, _ := argInt(args, "version")
 	off, _ := argInt(args, "offset")
 	mx, _ := argInt(args, "max_chars")
-	res, err := a.Svc.ReadText(ctx, f, ver, off, mx)
+	var pages []int
+	if spec := strings.TrimSpace(argStr(args, "pages")); spec != "" && isPDFName(f.Name) {
+		p, err := pdftext.ParsePages(spec, 0)
+		if err != nil {
+			return RunResult{Code: "invalid_args", Summary: "invalid_args: " + err.(*pdftext.Error).Msg}
+		}
+		pages = p
+	}
+	res, err := a.Svc.ReadTextPages(ctx, f, ver, off, mx, pages)
 	if err != nil {
 		return failure(err)
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "path: %s\nversion: %d (current %d)\nmime: %s\nsize: %s\nupdated_by: %s:%s\n", f.Path, res.Version.Version, f.CurrentVersion, f.Mime, human(f.Size), f.UpdatedBy.Kind, f.UpdatedBy.ID)
+	if isPDFName(f.Name) {
+		b.WriteString(a.pdfReadLines(res.Info))
+	}
 	if !res.Info.Extracted {
+		if res.Info.Code != "" {
+			fmt.Fprintf(&b, "code: %s\n", res.Info.Code)
+		}
 		fmt.Fprintf(&b, "text: not available (%s)\n", res.Info.Note)
 		return RunResult{OK: true, Summary: fmt.Sprintf("%s: text not available", f.Path), Text: b.String(), SourceNote: "fs.read " + f.Path,
 			AuthoredByOthers: f.UpdatedBy != AgentP(agentID), Data: map[string]any{"file_id": f.ID, "version": res.Version.Version}}

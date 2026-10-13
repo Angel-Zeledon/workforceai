@@ -487,6 +487,8 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 
 	in := o.buildRunRequest(ctx, rs, t, agent)
 	o.decorateRun(ctx, &in)
+	// Vision: images the user attached to the chat message, read as the agent.
+	o.firstPassImages(ctx, rs, &t, agent, &in)
 	spec := o.reviewSpecOf(ctx, t) // Q1: off (zero spec) unless the project enabled the review
 	if len(spec.Criteria) > 0 {
 		in.Task.Acceptance = spec.Criteria
@@ -552,6 +554,7 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 	}
 	resp = o.connectionReads(ctx, rs, &t, agent, in, resp)
 	resp.Output.Normalize()
+	o.visionNotices(ctx, rs, t, agent, &resp.Output, resp.Notices)
 	if agent.Role == AuditorRole {
 		enforceAuditEvidence(&resp.Output) // never "verified" without evidence references
 	}

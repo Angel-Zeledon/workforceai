@@ -151,6 +151,16 @@ services:
     entrypoint: ["true"]
     restart: "no"
 
+  # Render image (docs/architecture/agent-vision-pdf.md): PDF pages and images to
+  # pixels for the agents' vision, in the same isolated containers. Fixed program,
+  # no user code.
+  sandbox-render-image:
+    profiles: ["sandbox"]
+    build: ./sandbox/render
+    image: wfai-sandbox-render:1
+    entrypoint: ["true"]
+    restart: "no"
+
   sandbox-runner:
     profiles: ["sandbox"]
     build:
@@ -159,6 +169,8 @@ services:
     environment:
       SANDBOX_TOKEN: ${SANDBOX_TOKEN:-}  # required: the runner refuses to start without it
       SANDBOX_IMAGE: wfai-sandbox-python:1
+      # Empty disables POST /v1/render (agents then cannot see scanned PDF pages).
+      SANDBOX_RENDER_IMAGE: ${SANDBOX_RENDER_IMAGE:-wfai-sandbox-render:1}
       SANDBOX_RUNTIME: ${SANDBOX_RUNTIME:-}
       SANDBOX_MAX_RUNTIME_SECONDS: ${SANDBOX_MAX_RUNTIME_SECONDS:-60}
       SANDBOX_MEMORY_MB: ${SANDBOX_MEMORY_MB:-512}
@@ -168,6 +180,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - sandbox-image
+      - sandbox-render-image
     # No published ports: only the backend reaches it, on the internal network.
 
 volumes:

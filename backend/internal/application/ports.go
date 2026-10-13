@@ -367,6 +367,9 @@ type RunTaskRequest struct {
 	// for agents holding the code tool. It only changes what the prompt tells the
 	// agent; the backend decides every run on its own (code_auto.go).
 	CodeAutoRun string `json:"code_auto_run,omitempty"`
+	// Images (vision, additive, omitted when empty): images the agent can SEE on
+	// this call, produced by fs.read (view "image") through the Tool Gateway.
+	Images []ImagePart `json:"images,omitempty"`
 }
 
 type ConsultRequestItem struct {
@@ -399,6 +402,8 @@ type RunTaskResponse struct {
 	// Trace (V2, additive): the redacted prompt as the runtime built it; only
 	// present when WantTrace was set. Never stored as is: the tracer redacts, splits and bounds it.
 	Trace *RunTrace `json:"trace,omitempty"`
+	// Notices (vision, additive): stable codes about images (vision_unavailable, images_dropped).
+	Notices []string `json:"notices,omitempty"`
 }
 
 // RunTrace is the prompt of a run-task call as the runtime builds it.

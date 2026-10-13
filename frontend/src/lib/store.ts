@@ -149,6 +149,7 @@ export const useStore = create<State>((set, get) => ({
     if (isConnectionsFrame(f.type)) { useConnections.getState().applyFrame(f); return; }
     if (isRewardsFrame(f.type)) { useRewards.getState().applyFrame(f); return; }
     if (f.type === "provider.no_balance") useProviderAlert.setState({ noBalance: true });
+    if (f.type === "provider.no_vision") useProviderAlert.setState({ noVision: true });
     if (f.type === "hello") { useArtifacts.getState().load(); useConnections.getState().applyFrame(f); void useRewards.getState().load(); }
     if (isCostFrame(f.type)) useCost.getState().applyFrame(f);
     const p = f.payload || {};
@@ -323,8 +324,11 @@ export function typingIn(typing: Record<string, Record<string, number>>, conv: s
 }
 
 
-/** The model provider ran out of balance (event provider.no_balance): AppShell shows what to do. */
-export const useProviderAlert = create<{ noBalance: boolean; dismiss: () => void }>((set) => ({
+/** The model provider ran out of balance (event provider.no_balance), or no allowed provider can see images
+ * (event provider.no_vision, code vision_unavailable): AppShell shows what happened and what to do. */
+export const useProviderAlert = create<{ noBalance: boolean; noVision: boolean; dismiss: () => void; dismissVision: () => void }>((set) => ({
   noBalance: false,
+  noVision: false,
   dismiss: () => set({ noBalance: false }),
+  dismissVision: () => set({ noVision: false }),
 }));

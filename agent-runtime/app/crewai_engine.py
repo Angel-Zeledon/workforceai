@@ -62,6 +62,14 @@ from .providers import (
     policy_from_request,
     scrub,
     temperature_for,
+    vision_candidates,
+)
+from .vision import (
+    NOTICE_VISION_UNAVAILABLE,
+    build_vision_messages,
+    estimate_image_tokens,
+    prepare_images,
+    unavailable_note,
 )
 from .review import build_review_prompt, normalize_review
 from .routing import compose_reply, detect_locale, rules_route, validate_route
@@ -261,10 +269,13 @@ class CrewAIEngine(AgentEngine):
                              cost_usd=estimate_cost(i, o, cfg.model, cfg.id), duration_ms=ms,
                              provider=cfg.id)
 
-    def _kickoff(self, *, policy: ProviderPolicy | None = None, **kw) -> tuple[Any, Usage]:
+    def _kickoff(self, *, policy: ProviderPolicy | None = None, order: list[ProviderConfig] | None = None,
+                 once: Any = None, **kw) -> tuple[Any, Usage]:
         """Failover wrapper: data policy first (before anything is sent), then providers in order.
-        Transient errors are retried on the same provider; any failure then moves to the next one."""
-        order = candidates(self.providers, policy or ProviderPolicy())
+        Transient errors are retried on the same provider; any failure then moves to the next one.
+        order (already policy-filtered, e.g. vision_candidates) and once (the single call) are optional."""
+        order = order if order is not None else candidates(self.providers, policy or ProviderPolicy())
+        once = once or self._kickoff_once
         failed: list[str] = []
         broke: list[str] = []  # providers whose account has no balance left
         last: BaseException | None = None
@@ -272,7 +283,7 @@ class CrewAIEngine(AgentEngine):
             attempt = 0
             while True:
                 try:
-                    parsed, usage = self._kickoff_once(cfg, **kw)
+                    parsed, usage = once(cfg, **kw)
                     if failed:
                         log.warning("provider failover: %s failed, answered by %s (%s)",
                                     ",".join(failed), cfg.id, cfg.model)
@@ -393,17 +404,66 @@ class CrewAIEngine(AgentEngine):
 
     async def run_task(self, req: RunTaskRequest) -> RunTaskResponse:
         # El system prompt (persona/reglas) va en backstory; los datos no confiables solo en la descripcion.
+        policy = policy_from_request(req, req.agent.role)
+        description = build_task_prompt(req)
+        images, notices = prepare_images(req.images)
+        if images:
+            # Vision: only providers the data policy allows AND that can see images (vision_candidates
+            # raises no_allowed_provider exactly like a text call would).
+            order = vision_candidates(self.providers, policy)
+            if order:
+                res, usage = await asyncio.to_thread(
+                    self._kickoff, order=order, once=self._vision_once,
+                    system=build_system_prompt(req.agent, req.locale, req.tone), user=description, images=images,
+                    schema=TaskResult, creativity=req.agent.creativity, locale=req.locale)
+                out = StructuredOutput.model_validate(res.output.model_dump())
+                return RunTaskResponse(output=out, consults=res.consults, tool_requests=res.tool_requests, usage=usage,
+                                       provider=usage.provider, model=usage.model, notices=notices or None)
+            # Nobody allowed can see images: never send them elsewhere; say so and go on with the text.
+            log.warning("vision: no allowed provider can see images; continuing with text only")
+            notices.append(NOTICE_VISION_UNAVAILABLE)
+            description += unavailable_note(images, req.locale)
         res, usage = await self._run(
             role=req.agent.title or req.agent.role,
             goal=f"Completar la tarea asignada como {req.agent.title or req.agent.role}",
             backstory=build_system_prompt(req.agent, req.locale, req.tone),
-            description=build_task_prompt(req),
+            description=description,
             expected="JSON con output (StructuredOutput), consults y tool_requests",
-            schema=TaskResult, policy=policy_from_request(req, req.agent.role), creativity=req.agent.creativity)
+            schema=TaskResult, policy=policy, creativity=req.agent.creativity)
         out = StructuredOutput.model_validate(res.output.model_dump())  # validacion estricta
         return RunTaskResponse(output=out, consults=res.consults,
                                tool_requests=res.tool_requests, usage=usage,
-                               provider=usage.provider, model=usage.model)
+                               provider=usage.provider, model=usage.model, notices=notices or None)
+
+    def _vision_once(self, cfg: ProviderConfig, *, system: str, user: str, images: list, schema: type[BaseModel],
+                     max_tokens: int | None = None, creativity: str = "", locale: str = "es") -> tuple[Any, Usage]:
+        """One multimodal call: the images go as content blocks (OpenAI-style data URLs; CrewAI's native
+        Anthropic provider converts them), each preceded by its untrusted-data label. A fresh LLM per call
+        (never cached: the images belong to one organization, and the usage counter is per call)."""
+        llm = self._LLM(**self._llm_kwargs(cfg, max_tokens, temperature_for(cfg.id, creativity)))
+        messages = build_vision_messages(system, user + json_instructions(schema), images, locale)
+        t0 = time.monotonic()
+        raw = llm.call(messages)
+        text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
+        try:
+            parsed = parse_json_output(text, schema)
+        except ValueError:  # one retry on invalid JSON, like the text path
+            raw = llm.call(messages)
+            text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
+            parsed = parse_json_output(text, schema)
+        ms = int((time.monotonic() - t0) * 1000)
+        img_tokens = sum(estimate_image_tokens(i) for i in images)
+        summary = getattr(llm, "get_token_usage_summary", None)
+        m = summary() if callable(summary) else None
+        i = int(getattr(m, "prompt_tokens", 0) or 0)
+        o = int(getattr(m, "completion_tokens", 0) or 0)
+        if i <= 0:  # the provider gave no usage: estimate (text at ~4 chars/token plus the images)
+            i = (len(system) + len(user)) // 4 + img_tokens
+        if o <= 0:
+            o = max(1, len(text) // 4)
+        return parsed, Usage(model=cfg.model, input_tokens=i, output_tokens=o,
+                             cost_usd=estimate_cost(i, o, cfg.model, cfg.id), duration_ms=ms, provider=cfg.id,
+                             image_count=len(images), image_tokens=img_tokens)
 
     async def review(self, req: ReviewRequest) -> ReviewResponse:
         """Quality review (Q1): the reviewer persona (internal auditor or neutral) judges ONE output."""

@@ -36,6 +36,10 @@ type Config struct {
 	Token string
 	// Image is the pinned sandbox image (default wfai-sandbox-python:1).
 	Image string
+	// RenderImage is the pinned render image (PDF pages and images to pixels,
+	// render.go). Empty: POST /v1/render answers 503 render_unavailable.
+	// Env SANDBOX_RENDER_IMAGE (build: docker build -t wfai-sandbox-render:1 sandbox/render).
+	RenderImage string
 	// Runtime is the OCI runtime of the containers ("" = Docker's default,
 	// "runsc" = gVisor when installed). Env SANDBOX_RUNTIME.
 	Runtime string
@@ -105,6 +109,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, map[string]string{"status": "ok"}) })
 	mux.HandleFunc("POST /v1/run", s.auth(s.handleRun))
+	mux.HandleFunc("POST /v1/render", s.auth(s.handleRender))
 	mux.HandleFunc("POST /v1/runs/{id}/abort", s.auth(s.handleAbort))
 	mux.HandleFunc("POST /v1/abort-all", s.auth(s.handleAbortAll))
 	return mux

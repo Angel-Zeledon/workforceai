@@ -102,6 +102,8 @@ type GatewayOutcome struct {
 	// Trusted are blocks of ORGANIZATION configuration (an active, human-approved
 	// skill), delivered to the runtime in their own channel, never as untrusted data.
 	Trusted []TrustedBlock
+	// Images an agent asked to see (fs.read view "image"); described in Blocks.
+	Images []ImagePart
 	// ConnectionID is internal: it is never forwarded to the runtime.
 	ConnectionID string
 	Pending      *GatewayPending
@@ -156,6 +158,8 @@ type NativeResult struct {
 	InjectionSuspected bool
 	// Trusted: see GatewayOutcome.Trusted.
 	Trusted []TrustedBlock
+	// Images: see GatewayOutcome.Images.
+	Images []ImagePart
 }
 
 // TrustedBlock is approved organization configuration returned by a native

@@ -8,6 +8,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.11.0
+	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/xuri/excelize/v2 v2.11.0
 	golang.org/x/crypto v0.53.0

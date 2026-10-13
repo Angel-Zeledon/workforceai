@@ -412,6 +412,12 @@ const (
 // ReadText extracts the text of a version (0 = current) and returns the window
 // [offset, offset+maxChars). It never returns more than MaxReadChars.
 func (s *Service) ReadText(ctx context.Context, f File, version, offset, maxChars int) (TextResult, error) {
+	return s.ReadTextPages(ctx, f, version, offset, maxChars, nil)
+}
+
+// ReadTextPages is ReadText limited to some pages of a PDF (nil = all pages;
+// ignored for other types).
+func (s *Service) ReadTextPages(ctx context.Context, f File, version, offset, maxChars int, pages []int) (TextResult, error) {
 	if maxChars <= 0 {
 		maxChars = DefaultReadChars
 	}
@@ -422,11 +428,16 @@ func (s *Service) ReadText(ctx context.Context, f File, version, offset, maxChar
 		return TextResult{}, err
 	}
 	defer rc.Close()
-	data, err := io.ReadAll(io.LimitReader(rc, MaxExtractBytes+1))
+	data, err := io.ReadAll(io.LimitReader(rc, readLimit(f.Name)+1))
 	if err != nil {
 		return TextResult{}, err
 	}
-	x := Extract(f.Name, data, readExtractCap)
+	var x Extracted
+	if pages != nil && isPDFName(f.Name) {
+		x = extractPDF(data, readExtractCap, pages)
+	} else {
+		x = Extract(f.Name, data, readExtractCap)
+	}
 	res := TextResult{File: f, Version: v, Info: x, Offset: offset}
 	if !x.Extracted {
 		return res, nil

@@ -38,6 +38,13 @@ type Extracted struct {
 	TotalChars int `json:"total_chars,omitempty"`
 	// Note explains limits in plain English (not user-facing copy).
 	Note string `json:"note,omitempty"`
+	// PDF (additive): declared page count, scanned (empty or very thin text
+	// layer), pages without text, and the stable code of a failed extraction
+	// (pdf_too_large | pdf_encrypted | pdf_invalid | pdf_timeout | pdf_busy).
+	Pages      int    `json:"pages,omitempty"`
+	Scanned    bool   `json:"scanned,omitempty"`
+	ImagePages []int  `json:"image_pages,omitempty"`
+	Code       string `json:"code,omitempty"`
 }
 
 // Extract turns file bytes into bounded text for reading and indexing. It
@@ -61,7 +68,7 @@ func Extract(name string, data []byte, maxChars int) Extracted {
 		return extractDOCX(data, maxChars)
 	}
 	if strings.EqualFold(t.mime, "application/pdf") {
-		return Extracted{Kind: "none", Note: "pdf: binary file, text is not extracted"}
+		return extractPDF(data, maxChars, nil)
 	}
 	return Extracted{Kind: "none", Note: "binary file: not extracted"}
 }

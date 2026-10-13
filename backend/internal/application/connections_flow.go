@@ -241,6 +241,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 		taint := rs.taintOf(t.ID)
 		var blocks []string
 		var trusted []TrustedBlock
+		var images []ImagePart
 		for i, tr := range reads {
 			if i >= maxReadsPerRound {
 				break
@@ -252,6 +253,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 			case out.Decision == "allowed" && out.Status == "succeeded":
 				blocks = append(blocks, out.Blocks...)
 				trusted = append(trusted, out.Trusted...)
+				images = append(images, out.Images...)
 				rs.ext.mu.Lock()
 				taint.tainted = taint.tainted || out.Tainted
 				taint.suspected = taint.suspected || out.InjectionSuspected
@@ -275,6 +277,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 		}
 		in2 := in
 		in2.ExternalContent = append(append([]string{}, in.ExternalContent...), blocks...)
+		withImages(&in2, images)
 		in2.LoadedSkills = append([]TrustedBlock{}, in.LoadedSkills...)
 		for _, tb := range trusted {
 			addLoadedSkill(&in2, tb)
@@ -295,6 +298,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 			return fin()
 		}
 		o.recordUsage(ctx, rs, t.ID, agent.ID, domain.UsageRunTask, next.Usage, next.ToolRequests, res)
+		next.Notices = mergeNotices(resp.Notices, next.Notices)
 		resp, in = next, in2
 		resp.Output.Normalize()
 	}
