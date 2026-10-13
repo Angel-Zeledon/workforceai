@@ -1,16 +1,21 @@
 import type { ShopItem } from "@/lib/rewards";
-import type { Layout, Piece } from "@/lib/officeLayoutModel";
-import { MEETING_CENTER, USER_POS } from "@/lib/meta";
+import { FIXTURES, FIXTURE_IDS, ZONE_DEFAULTS, ZONE_NAMES, ZONE_SIZE, type FixtureId, type Layout, type Piece, type ZoneName } from "@/lib/officeLayoutModel";
 import { WALKWAY, bounds, deskBox, insideFloor, overlap, type Box } from "@/lib/officeGeometry";
-import { CAFE_CENTER } from "./officeState";
 import { pieceInfo } from "./pieceInfo";
 
-/** The three fixed rooms (meeting, approvals, cafeteria): nothing is built over them. */
-export const ZONES: Box[] = [
-  { x: MEETING_CENTER[0], z: MEETING_CENTER[1], w: 7.8, d: 7.4, rot: 0 },
-  { x: USER_POS[0], z: USER_POS[2] + 0.5, w: 5.6, d: 4.8, rot: 0 },
-  { x: CAFE_CENTER[0] + 0.1, z: CAFE_CENTER[1], w: 4.1, d: 4.6, rot: 0 },
-];
+/** Floor box of a room (where it stands now: moved by the organization or in its built-in place). */
+export function zoneBox(name: ZoneName, layout: Layout, at?: { x: number; z: number }): Box {
+  const c = at ?? layout.zones[name] ?? { x: ZONE_DEFAULTS[name][0], z: ZONE_DEFAULTS[name][1] };
+  const s = ZONE_SIZE[name];
+  return { x: c.x + s.dx, z: c.z + s.dz, w: s.w, d: s.d, rot: 0 };
+}
+/** Floor box of a built-in decoration, or null when the organization took it away. */
+export function fixtureBox(id: FixtureId, layout: Layout, at?: { x: number; z: number; rot?: number }): Box | null {
+  const c = layout.fixtures[id];
+  if (!at && c?.hidden) return null;
+  const f = FIXTURES[id];
+  return { x: at?.x ?? c?.x ?? f.x, z: at?.z ?? c?.z ?? f.z, w: f.w, d: f.d, rot: at?.rot ?? c?.rot ?? f.rot };
+}
 
 /** Footprint of a placed piece (scale and rotation applied). */
 export function pieceBox(p: Pick<Piece, "x" | "z" | "rot" | "s">, item: ShopItem): Box {
@@ -18,11 +23,13 @@ export function pieceBox(p: Pick<Piece, "x" | "z" | "rot" | "s">, item: ShopItem
   return { x: p.x, z: p.z, w: info.w * p.s, d: info.d * p.s, rot: p.rot };
 }
 
-/** Everything a floor piece or a desk must not overlap, except the thing being moved. */
+/** Everything a floor piece, desk, room or decoration must not overlap, except the thing being moved. Rooms may cross the walkway. */
 export function floorObstacles(
-  layout: Layout, catalog: ShopItem[], deskPos: Record<string, [number, number]>, skip: { piece?: string; desk?: string },
+  layout: Layout, catalog: ShopItem[], deskPos: Record<string, [number, number]>, skip: { piece?: string; desk?: string; zone?: ZoneName; fixture?: FixtureId },
 ): Box[] {
-  const out: Box[] = [...ZONES, WALKWAY];
+  const out: Box[] = skip.zone ? [] : [WALKWAY];
+  for (const n of ZONE_NAMES) if (n !== skip.zone) out.push(zoneBox(n, layout));
+  for (const id of FIXTURE_IDS) { if (id === skip.fixture) continue; const b = fixtureBox(id, layout); if (b) out.push(b); }
   for (const p of layout.pieces) {
     if (p.uid === skip.piece) continue;
     const item = catalog.find((i) => i.id === p.item);

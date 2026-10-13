@@ -47,9 +47,9 @@ const CAFE_SPOTS: { dx: number; dz: number; yaw: number }[] = [
   { dx: 0.95, dz: -1.2, yaw: Math.PI / 2 }, { dx: 0.95, dz: -0.4, yaw: Math.PI / 2 }, { dx: 0.95, dz: 0.4, yaw: Math.PI / 2 }, { dx: 0.95, dz: 1.2, yaw: Math.PI / 2 },
   { dx: -0.6, dz: -0.95, yaw: 0 }, { dx: -0.6, dz: 0.95, yaw: Math.PI },
 ];
-export function cafeSpot(k: number): { pos: [number, number]; yaw: number } {
+export function cafeSpot(k: number, center: readonly [number, number] = CAFE_CENTER): { pos: [number, number]; yaw: number } {
   const o = CAFE_SPOTS[Math.abs(k) % CAFE_SPOTS.length];
-  return { pos: [CAFE_CENTER[0] + o.dx, CAFE_CENTER[1] + o.dz], yaw: o.yaw };
+  return { pos: [center[0] + o.dx, center[1] + o.dz], yaw: o.yaw };
 }
 
 const APPR_OFFSETS = [0, 0.9, -0.9, 1.8, -1.8];

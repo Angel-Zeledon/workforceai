@@ -2,13 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { LOCALES, langName, useT, type Locale } from "@/lib/i18n";
-import { resolveAgent, usePreferences, type LabelSize, type Lighting } from "@/lib/preferences";
+import { resolveAgent, usePreferences, type LabelSize } from "@/lib/preferences";
 import { AgentCustomizer } from "./AgentCustomizer";
 import { Icon, type IconName } from "./icons";
 import { usePageMode } from "./nav/pageMode";
-
-const MODES: Lighting[] = ["ambient", "day", "night"];
-const MODE_ICON: Record<Lighting, IconName> = { ambient: "contrast", day: "sun", night: "moon" };
 
 function Seg<T extends string>({ value, options, onChange, testid, label, compact }: { value: T; options: { v: T; label: string; icon?: IconName }[]; onChange: (v: T) => void; testid: string; label?: string; compact?: boolean }) {
   return (
@@ -19,19 +16,6 @@ function Seg<T extends string>({ value, options, onChange, testid, label, compac
           {o.icon ? <Icon name={o.icon} size={13} className={`inline-block align-[-2px] ${compact ? "sm:mr-1.5" : "mr-1.5"}`} /> : null}<span className={compact ? "hidden sm:inline" : ""}>{o.label}</span>
         </button>
       ))}
-    </div>
-  );
-}
-
-/** HUD lighting switch: ambient / lights on / night. Exposes data-mode with the active mode. */
-export function LightingToggle() {
-  const { t } = useT();
-  const lighting = usePreferences((s) => s.prefs.lighting);
-  const set = usePreferences((s) => s.set);
-  return (
-    <div data-testid="lighting-toggle" data-mode={lighting} title={t("light.title")} className="pointer-events-auto">
-      <Seg compact value={lighting} testid="lighting-option" label={t("light.title")} onChange={(v) => set({ lighting: v })}
-        options={MODES.map((m) => ({ v: m, label: t(`light.${m}`), icon: MODE_ICON[m] }))} />
     </div>
   );
 }

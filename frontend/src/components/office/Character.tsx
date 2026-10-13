@@ -5,7 +5,8 @@ import { Billboard } from "@react-three/drei";
 import * as THREE from "three";
 import { useStore } from "@/lib/store";
 import { usePreferences, useAgentView } from "@/lib/preferences";
-import { roleMeta, MEETING_CENTER, USER_POS } from "@/lib/meta";
+import { roleMeta } from "@/lib/meta";
+import { cafeCenter, meetingCenter, userPos } from "./zones";
 import type { AgentState } from "@/lib/types";
 import {
   EVENT_GESTURES, GESTURE_DURATION, KEYS, WALK_SPEED, applyGesture, blinkDelay, clamp, computePose, createRng, fidgetDelay,
@@ -20,7 +21,7 @@ import { effective, useOfficeLayout } from "@/lib/officeLayout";
 const SEATED = new Set<AgentState>(["thinking", "working", "waiting", "reviewing", "blocked", "awaiting_approval"]);
 const ACTIVE_TASK = new Set(["pending", "running", "awaiting_approval"]);
 /** Where the assistant hands the finished report to the user (in front of the approvals desk, clear of furniture). */
-const DELIVER_POS: [number, number] = [USER_POS[0] - 1.6, USER_POS[2] - 1.1];
+const deliverPos = (): [number, number] => { const u = userPos(); return [u[0] - 1.6, u[2] - 1.1]; };
 const BODY_SCALE = 1.2;
 /** Beyond this squared camera distance fidgets and event gestures are skipped (cheap LOD). */
 const FAR_D2 = 24 * 24;
@@ -179,6 +180,7 @@ export function Character({ id, index }: { id: string; index: number }) {
       }
     }
     const sig = getSignals();
+    const USER_POS = userPos();
     const zone = zoneFor({
       state: st, budgetPaused: sig.cafeSlot.has(id), planning: sig.meetingSlot.has(id), approvalPending: sig.apprSlot.has(id),
     });
@@ -193,17 +195,17 @@ export function Character({ id, index }: { id: string; index: number }) {
       face = Math.atan2(tgt[0] - dest[0], tgt[1] - dest[1]);
     } else if (zone === "cafeteria") {
       // budget cap reached: waits for the cap to be raised with a coffee (the agent is paused, not failing)
-      const cs = cafeSpot(sig.cafeSlot.get(id) ?? 0);
+      const cs = cafeSpot(sig.cafeSlot.get(id) ?? 0, cafeCenter());
       place = `cafe:${sig.cafeSlot.get(id)}`; dest = cs.pos; face = cs.yaw;
     } else if (zone === "meeting") {
-      const ms = meetingSeat([MEETING_CENTER[0], MEETING_CENTER[1]], sig.meetingSlot.get(id) ?? 0);
+      const ms = meetingSeat(meetingCenter(), sig.meetingSlot.get(id) ?? 0);
       place = `meeting:${sig.meetingSlot.get(id)}`; dest = ms.pos; face = ms.yaw;
     } else if (zone === "approvals") {
       place = `appr:${sig.apprSlot.get(id)}`; dest = approvalsSpot(USER_POS, sig.apprSlot.get(id) ?? 0); face = 0;
     } else if (SEATED.has(st) || (st === "idle" && sm.hasTask)) { place = "seat"; dest = own.seat; }
     else if (st === "completed" && ag.role === "assistant") {
       // the final report is handed to the user (request.completed -> assistant "completed")
-      place = "deliver"; dest = DELIVER_POS;
+      place = "deliver"; dest = deliverPos();
       face = Math.atan2(USER_POS[0] - dest[0], USER_POS[2] - dest[1]);
     }
 

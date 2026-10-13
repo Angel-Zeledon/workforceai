@@ -37,12 +37,31 @@ type Layout struct {
 	Desks  map[string]Desk `json:"desks,omitempty"`
 	Pieces []Piece         `json:"pieces"`
 	Seeded bool            `json:"seeded,omitempty"`
+	// Zones moves the three rooms (meeting, approvals, cafe); Fixtures moves or hides the original decoration.
+	Zones    map[string]Spot    `json:"zones,omitempty"`
+	Fixtures map[string]Fixture `json:"fixtures,omitempty"`
+}
+
+// Spot is a position on the floor plan.
+type Spot struct {
+	X float64 `json:"x"`
+	Z float64 `json:"z"`
+}
+
+// Fixture is one of the built-in decorations (plants, rack): moved, turned or taken away.
+type Fixture struct {
+	X      float64 `json:"x"`
+	Z      float64 `json:"z"`
+	Rot    float64 `json:"rot,omitempty"`
+	Hidden bool    `json:"hidden,omitempty"`
 }
 
 // LayoutWalls colors the walls (hex).
 type LayoutWalls struct {
 	Color string `json:"color,omitempty"`
 	Trim  string `json:"trim,omitempty"`
+	// Windows turns the glass bands of the walls on (default) or off (solid walls).
+	Windows *bool `json:"windows,omitempty"`
 }
 
 // LayoutFloor is the floor material and its tint.
@@ -81,6 +100,8 @@ var (
 	hexColor = regexp.MustCompile(`^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$`)
 	uidRe    = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
+	zoneNames  = map[string]bool{"meeting": true, "approvals": true, "cafe": true}
+	fixtureIDs = map[string]bool{"plant_a": true, "plant_b": true, "plant_c": true, "plant_d": true, "rack": true}
 	floorKinds = map[string]bool{"concrete": true, "wood": true, "parquet": true, "carpet": true, "tile": true, "marble": true}
 	moods      = map[string]bool{"natural": true, "warm": true, "cool": true, "sunset": true, "night": true}
 )
@@ -145,6 +166,22 @@ func Validate(c *Catalog, l *Layout) error {
 		}
 		if li.Brightness != nil && !inRange(*li.Brightness, 0.5, 1.5) {
 			return invalidf("light brightness must be within 0.5..1.5")
+		}
+	}
+	for name, z := range l.Zones {
+		if !zoneNames[name] {
+			return invalidf("unknown room %q", clip(name, 20))
+		}
+		if !inRange(z.X, -maxCoord, maxCoord) || !inRange(z.Z, -maxCoord, maxCoord) {
+			return invalidf("room %q is out of range", name)
+		}
+	}
+	for id, f := range l.Fixtures {
+		if !fixtureIDs[id] {
+			return invalidf("unknown fixture %q", clip(id, 20))
+		}
+		if !inRange(f.X, -maxCoord, maxCoord) || !inRange(f.Z, -maxCoord, maxCoord) || !inRange(f.Rot, -1000, 1000) {
+			return invalidf("fixture %q is out of range", id)
 		}
 	}
 	if len(l.Desks) > MaxDesks {

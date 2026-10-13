@@ -6,7 +6,7 @@ import { useStore } from "@/lib/store";
 import { useCan } from "@/lib/session";
 import { itemName, useRewards, type ShopItem } from "@/lib/rewards";
 import { effective, pieceOf, useOfficeLayout, withPiece, withoutPiece } from "@/lib/officeLayout";
-import { DEFAULT_LAYOUT, FLOOR_KINDS, FLOOR_TINTS, MOODS, TRIM_COLORS, WALL_COLORS, isHex, type FloorKind, type Layout, type Mood } from "@/lib/officeLayoutModel";
+import { DEFAULT_LAYOUT, FIXTURES, FIXTURE_IDS, FLOOR_KINDS, FLOOR_TINTS, MOODS, TRIM_COLORS, WALL_COLORS, ZONE_NAMES, isHex, type FixtureId, type FloorKind, type Layout, type Mood, type ZoneName } from "@/lib/officeLayoutModel";
 import { Btn, useAgentName } from "../ui";
 import { Icon } from "../icons";
 import { ErrorLine } from "../connections/shared";
@@ -80,7 +80,53 @@ const FLOOR_SWATCH: Record<FloorKind, string> = {
   tile: "linear-gradient(#e9edf1,#e9edf1) padding-box, repeating-linear-gradient(0deg,#9aa6b4 0 1px,transparent 1px 14px), repeating-linear-gradient(90deg,#9aa6b4 0 1px,transparent 1px 14px)",
   marble: "linear-gradient(115deg,#f1f2f5 40%,#c8ced8 41% 42%,#f1f2f5 43% 70%,#b6bdc9 71% 72%,#f1f2f5 73%)",
 };
+/** The temperature each preset starts at, so the bar shows where it sits (warm to the left, cool to the right). */
+const MOOD_TEMP: Record<Mood, number> = { natural: 0, warm: -0.35, cool: 0.35, sunset: -0.25, night: 0 };
 const MOOD_ICON: Record<Mood, "sun" | "moon" | "contrast" | "flag" | "pulse"> = { natural: "sun", warm: "flag", cool: "pulse", sunset: "contrast", night: "moon" };
+
+/** Light mood presets plus two bars: temperature (warm to cool) and brightness. Edits the draft in the editor, saves right away outside it. */
+export function LightControls() {
+  const { t } = useT();
+  const light = useOfficeLayout((s) => effective(s).light);
+  const setLight = useOfficeLayout((s) => s.setLight);
+  return (
+    <div className="space-y-3" data-testid="light-controls">
+      <div className="grid grid-cols-5 gap-1.5">
+        {MOODS.map((m) => (
+          <button key={m} type="button" data-testid={`oe-mood-${m}`} aria-pressed={light.mood === m} onClick={() => setLight({ mood: m, temp: MOOD_TEMP[m] })}
+            className={`flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10.5px] font-medium transition ${light.mood === m ? "border-accent bg-accent-soft text-accent" : "border-line text-ink2 hover:bg-panel2"}`}>
+            <Icon name={MOOD_ICON[m]} size={16} />{t(`oe.mood.${m}`)}
+          </button>
+        ))}
+      </div>
+      <Range testid="oe-temp" label={t("oe.a.temp")} value={light.temp} min={-1} max={1} step={0.05} left={t("oe.a.warm")} right={t("oe.a.cool")} onChange={(v) => setLight({ temp: v })} />
+      <Range testid="oe-brightness" label={t("oe.a.brightness")} value={light.brightness} min={0.5} max={1.5} step={0.05} left={t("oe.light.dim")} right={t("oe.light.bright")} onChange={(v) => setLight({ brightness: v })} />
+    </div>
+  );
+}
+
+/** HUD button of the office: the room's light, one click away (replaces the old ambient / lights on / night switch). */
+export function LightButton() {
+  const { t } = useT();
+  const can = useCan("shop:buy");
+  const [open, setOpen] = useState(false);
+  if (!can) return null;
+  return (
+    <div className="pointer-events-auto relative">
+      <button type="button" data-testid="office-light" aria-expanded={open} onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 rounded-lg border border-line bg-panel/95 px-3 py-2 text-xs font-semibold text-ink shadow-soft backdrop-blur transition hover:bg-panel2">
+        <Icon name="sun" size={15} />{t("oe.light.title")}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-[300px] rounded-xl border border-line bg-panel p-4 shadow-pop">
+          <div className="mb-3 flex items-center justify-between"><h3 className="text-[13px] font-semibold text-ink">{t("oe.a.light")}</h3>
+            <button type="button" onClick={() => setOpen(false)} aria-label={t("oe.cancel")} className="rounded-md p-1 text-mute hover:bg-panel2 hover:text-ink"><Icon name="x" size={14} /></button></div>
+          <LightControls />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AmbienceTab() {
   const { t, locale } = useT();
@@ -96,6 +142,11 @@ function AmbienceTab() {
       <Section title={t("oe.a.walls")}>
         <Swatches colors={WALL_COLORS} value={layout.walls.color} label={(c) => t("oe.a.swatch", { c })} onPick={(c) => set((l) => ({ ...l, walls: { ...l.walls, color: c } }), "wall")} />
         <ColorField value={layout.walls.color} label={t("oe.a.custom")} onPick={(c) => set((l) => ({ ...l, walls: { ...l.walls, color: c } }), "wall")} />
+        <button type="button" data-testid="oe-windows" role="switch" aria-checked={layout.walls.windows} onClick={() => set((l) => ({ ...l, walls: { ...l.walls, windows: !l.walls.windows } }))}
+          className="flex w-full items-center justify-between rounded-lg border border-line px-3 py-2 text-[12px] font-medium text-ink2 transition hover:bg-panel2">
+          <span>{t("oe.a.windows")}</span>
+          <span className={`flex h-5 w-9 items-center rounded-full px-0.5 transition ${layout.walls.windows ? "bg-accent" : "bg-line-strong"}`}><i className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${layout.walls.windows ? "translate-x-4" : ""}`} /></span>
+        </button>
         <div className="pt-1 text-[11.5px] text-mute">{t("oe.a.trim")}</div>
         <Swatches colors={TRIM_COLORS} value={layout.walls.trim} label={(c) => t("oe.a.swatch", { c })} onPick={(c) => set((l) => ({ ...l, walls: { ...l.walls, trim: c } }), "trim")} />
       </Section>
@@ -114,20 +165,7 @@ function AmbienceTab() {
         <Swatches colors={FLOOR_TINTS} value={layout.floor.tint} label={(c) => t("oe.a.swatch", { c })} onPick={(c) => set((l) => ({ ...l, floor: { ...l.floor, tint: c } }), "tint")} />
       </Section>
 
-      <Section title={t("oe.a.light")}>
-        <div className="grid grid-cols-5 gap-1.5">
-          {MOODS.map((m) => (
-            <button key={m} type="button" data-testid={`oe-mood-${m}`} aria-pressed={layout.light.mood === m} onClick={() => set((l) => ({ ...l, light: { ...l.light, mood: m, temp: 0 } }))}
-              className={`flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10.5px] font-medium transition ${layout.light.mood === m ? "border-accent bg-accent-soft text-accent" : "border-line text-ink2 hover:bg-panel2"}`}>
-              <Icon name={MOOD_ICON[m]} size={16} />{t(`oe.mood.${m}`)}
-            </button>
-          ))}
-        </div>
-        <Range testid="oe-temp" label={t("oe.a.temp")} value={layout.light.temp} min={-1} max={1} step={0.05} left={t("oe.a.warm")} right={t("oe.a.cool")}
-          onChange={(v) => set((l) => ({ ...l, light: { ...l.light, temp: v } }), "temp")} />
-        <Range testid="oe-brightness" label={t("oe.a.brightness")} value={layout.light.brightness} min={0.5} max={1.5} step={0.05}
-          onChange={(v) => set((l) => ({ ...l, light: { ...l.light, brightness: v } }), "bright")} />
-      </Section>
+      <Section title={t("oe.a.light")}><LightControls /></Section>
 
       {views.length > 0 && (
         <Section title={t("oe.a.view")}>
@@ -176,6 +214,73 @@ function SelectedPiece() {
   );
 }
 
+const zoneName = (t: (k: string) => string, z: ZoneName) => t(`oe.zone.${z}`);
+const fixtureName = (t: (k: string) => string, id: FixtureId) => t(id === "rack" ? "oe.fx.rack" : "oe.fx.plant");
+
+/** Rooms and the original plants / rack: selected here or in the 3D view, dragged to move. */
+function RoomsSection() {
+  const { t } = useT();
+  const layout = useOfficeLayout((s) => s.draft) as Layout;
+  const sel = useOfficeLayout((s) => s.selection);
+  const mutate = useOfficeLayout((s) => s.mutate);
+  const select = useOfficeLayout((s) => s.select);
+  const row = (active: boolean) => `flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left text-[12px] transition ${active ? "border-accent bg-accent-soft text-accent" : "border-transparent text-ink2 hover:bg-panel2"}`;
+  return (
+    <Section title={t("oe.f.rooms")}>
+      <p className="text-[11.5px] leading-snug text-mute">{t("oe.z.hint")}</p>
+      <ul className="space-y-0.5">
+        {ZONE_NAMES.map((z) => {
+          const moved = !!layout.zones[z];
+          return (
+            <li key={z} className="flex items-center gap-1">
+              <button type="button" data-testid={`oe-zone-${z}`} onClick={() => select({ kind: "zone", id: z })} className={row(sel?.kind === "zone" && sel.id === z)}><span>{zoneName(t, z)}</span>{moved && <span className="text-[10.5px] text-mute">{t("oe.d.moved")}</span>}</button>
+              {moved && <button type="button" onClick={() => mutate((l) => { const zs = { ...l.zones }; delete zs[z]; return { ...l, zones: zs }; })} className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent-soft">{t("oe.z.reset")}</button>}
+            </li>
+          );
+        })}
+        {FIXTURE_IDS.map((id, i) => {
+          const hidden = !!layout.fixtures[id]?.hidden;
+          return (
+            <li key={id} className="flex items-center gap-1">
+              <button type="button" data-testid={`oe-fixture-${id}`} disabled={hidden} onClick={() => select({ kind: "fixture", id })} className={`${row(sel?.kind === "fixture" && sel.id === id)} disabled:opacity-50`}>
+                <span>{fixtureName(t, id)}{id !== "rack" ? ` ${i + 1}` : ""}</span>{hidden && <span className="text-[10.5px] text-mute">{t("oe.fx.hidden")}</span>}
+              </button>
+              {hidden && <button type="button" onClick={() => mutate((l) => { const fx = { ...l.fixtures }; delete fx[id]; return { ...l, fixtures: fx }; })} className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent-soft">{t("oe.fx.show")}</button>}
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
+}
+
+/** Controls of the selected room or original decoration. */
+function SelectedOther() {
+  const { t } = useT();
+  const sel = useOfficeLayout((s) => s.selection);
+  const mutate = useOfficeLayout((s) => s.mutate);
+  if (sel?.kind === "fixture") {
+    const id = sel.id;
+    const rot = () => mutate((l) => ({ ...l, fixtures: { ...l.fixtures, [id]: { ...(l.fixtures[id] ?? { x: FIXTURES[id].x, z: FIXTURES[id].z }), rot: (l.fixtures[id]?.rot ?? FIXTURES[id].rot) + Math.PI / 2 } } }), `rot:${id}`);
+    return (
+      <div data-testid="oe-selected" className="space-y-3 rounded-xl border border-accent/40 bg-accent-soft/40 p-3">
+        <div className="text-[13px] font-semibold text-ink">{fixtureName(t, id)}</div>
+        <div className="flex gap-2">
+          <Btn onClick={rot}>{t("oe.f.rotate")} (R)</Btn>
+          <Btn kind="danger" onClick={() => { mutate((l) => ({ ...l, fixtures: { ...l.fixtures, [id]: { ...(l.fixtures[id] ?? { x: FIXTURES[id].x, z: FIXTURES[id].z }), hidden: true } } })); useOfficeLayout.getState().select(null); }}>{t("oe.f.remove")}</Btn>
+        </div>
+      </div>
+    );
+  }
+  if (sel?.kind === "zone") return (
+    <div data-testid="oe-selected" className="space-y-1 rounded-xl border border-accent/40 bg-accent-soft/40 p-3">
+      <div className="text-[13px] font-semibold text-ink">{zoneName(t, sel.id)}</div>
+      <p className="text-[11.5px] text-mute">{t("oe.z.hint")}</p>
+    </div>
+  );
+  return null;
+}
+
 function FurnitureTab() {
   const { t, locale } = useT();
   const layout = useOfficeLayout((s) => s.draft) as Layout;
@@ -191,6 +296,7 @@ function FurnitureTab() {
   return (
     <div className="space-y-5">
       <SelectedPiece />
+      <SelectedOther />
       <Section title={t("oe.f.inventory")}>
         {stock.length === 0 ? (
           <div className="space-y-2 rounded-xl border border-dashed border-line-strong p-4 text-center text-[12px] text-mute">
@@ -237,6 +343,7 @@ function FurnitureTab() {
           </ul>
         )}
       </Section>
+      <RoomsSection />
     </div>
   );
 }

@@ -13,11 +13,13 @@ is unchanged.
 ```jsonc
 {
   "v": 1,
-  "walls":  { "color": "#f3f4f7", "trim": "#3a414c" },              // hex colors
+  "walls":  { "color": "#f3f4f7", "trim": "#3a414c", "windows": true },  // hex colors; windows: glass bands on (default) or solid walls
   "floor":  { "kind": "concrete", "tint": "#e7eaee" },               // kind: concrete|wood|parquet|carpet|tile|marble
   "light":  { "mood": "natural", "temp": 0, "brightness": 1 },       // mood: natural|warm|cool|sunset|night (preset); temp -1 warm .. +1 cool; brightness 0.5..1.5
   "desks":  { "<agent_id>": { "x": -9.5, "z": -4, "desk": "desk_walnut", "chair": "chair_mesh_teal" } },  // every field optional
   "pieces": [ { "uid": "p_k3j2", "item": "sofa_chesterfield", "x": 2.5, "z": 3, "rot": 1.5708, "s": 1, "y": 0 } ],
+  "zones":    { "meeting": { "x": 9.5, "z": -6.2 }, "approvals": { "x": 9.5, "z": 5.4 }, "cafe": { "x": 9.2, "z": 1.2 } },   // the three rooms moved (center of each)
+  "fixtures": { "plant_a": { "x": -12.8, "z": -8.6, "rot": 0, "hidden": false }, "rack": { "x": -12.9, "z": -0.5, "rot": 1.5708 } }, // plant_a..plant_d, rack: the built-in decoration moved, turned or taken away
   "seeded": true                                                      // legacy slot items were copied into `pieces`
 }
 ```
@@ -75,3 +77,9 @@ export function ChairMesh(props: { item?: ShopItem }): JSX.Element;    // undefi
 * `OfficeEditor` (HUD + 3D interaction): placement ghost with snap, drag, rotate (R), delete (Del), grid, collision (red ghost), a no-build band along the walkway.
 * Characters read their desk through `deskOf`, which now honors `layout.desks[agent].x/z`.
 * Permissions: the editor needs `shop:buy`; everyone else sees the saved layout.
+
+## Light
+
+The room's light comes only from `layout.light` (mood preset, `temp`, `brightness`); the old per-user ambient / lights on /
+night switch is gone. The HUD "Light" button edits it outside edit mode and saves right away (debounced, rebasing on a
+conflict); inside the editor the same controls edit the draft.

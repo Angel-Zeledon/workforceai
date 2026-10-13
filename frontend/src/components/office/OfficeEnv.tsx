@@ -6,12 +6,11 @@ import * as THREE from "three";
 import { useStore } from "@/lib/store";
 import { useCost } from "@/lib/cost";
 import { usePreferences } from "@/lib/preferences";
-import { roleMeta, MEETING_CENTER, USER_POS } from "@/lib/meta";
+import { roleMeta } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { deskOf, seatOf } from "./registry";
-import { CAFE_CENTER } from "./officeState";
 import { effective, useOfficeLayout } from "@/lib/officeLayout";
-import { MOOD_BASE, type FloorKind, type LightMix } from "@/lib/officeLayoutModel";
+import { FIXTURES, FIXTURE_IDS, MOOD_BASE, ZONE_DEFAULTS, ZONE_SIZE, type FixtureId, type FloorKind, type LightMix, type ZoneName } from "@/lib/officeLayoutModel";
 import { useRewards } from "@/lib/rewards";
 import { ChairMesh, DeskSet } from "./Furniture";
 
@@ -339,10 +338,32 @@ function Desk({ id, index }: { id: string; index: number }) {
   );
 }
 
+/** Where a room is: moved by the organization (the dragged preview while it is being moved) or in its built-in place. */
+function useZone(name: ZoneName): [number, number] {
+  const z = useOfficeLayout((s) => effective(s).zones[name]);
+  const g = useOfficeLayout((s) => (s.zoneGhost?.id === name ? s.zoneGhost : null));
+  return g ? [g.x, g.z] : z ? [z.x, z.z] : ZONE_DEFAULTS[name];
+}
+
+/** In edit mode the whole room is one grab handle (its floor footprint, a little taller than the furniture). */
+function ZoneHit({ name }: { name: ZoneName }) {
+  const editing = useOfficeLayout((s) => s.editing);
+  if (!editing) return null;
+  const z = ZONE_SIZE[name];
+  return (
+    <mesh position={[z.dx, 0.5, z.dz]}
+      onPointerDown={(ev) => { ev.stopPropagation(); const st = useOfficeLayout.getState(); if (st.placing) return; st.select({ kind: "zone", id: name }); st.setDragging(true); }}
+      onPointerOver={() => { document.body.style.cursor = "grab"; }} onPointerOut={() => { document.body.style.cursor = ""; }}>
+      <boxGeometry args={[z.w, 1, z.d]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
+  );
+}
+
 function MeetingRoom() {
-  const [cx, cz] = MEETING_CENTER;
+  const [cx, cz] = useZone("meeting");
   return (
     <group position={[cx, 0, cz]}>
+      <ZoneHit name="meeting" />
       <RoundedBox args={[7.6, 0.02, 7.2]} radius={0.01} smoothness={2} position={[0, 0.011, 0]} receiveShadow><meshStandardMaterial color="#cfd6df" roughness={1} /></RoundedBox>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.024, 0]}><ringGeometry args={[3.0, 3.05, 64]} /><meshStandardMaterial color="#8d99ab" roughness={1} /></mesh>
       <mesh castShadow receiveShadow position={[0, 0.66, 0]}><cylinderGeometry args={[1.45, 1.45, 0.06, 48]} /><meshStandardMaterial color={OAK} roughness={0.8} /></mesh>
@@ -378,9 +399,10 @@ function ApprovalsZone() {
     pulse.current.scale.setScalar(has ? 1 + Math.sin(t * 2.2) * 0.04 * k : 1);
     stack.current.position.y = DESK_H + 0.14 + (has ? Math.abs(Math.sin(t * 2.4)) * 0.05 * k : 0);
   });
-  const [ux, , uz] = USER_POS;
+  const [ux, uz] = useZone("approvals");
   return (
     <group position={[ux, 0, uz]}>
+      <ZoneHit name="approvals" />
       <RoundedBox args={[5.4, 0.02, 4.6]} radius={0.01} smoothness={2} position={[0, 0.011, 0.5]} receiveShadow><meshStandardMaterial color="#d5dae1" roughness={1} /></RoundedBox>
       <mesh ref={pulse} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0.4]}><ringGeometry args={[2.4, 2.45, 64]} /><meshBasicMaterial color="#b98a34" transparent opacity={0.3} toneMapped={false} /></mesh>
       <RoundedBox args={[2.4, 0.06, 1.0]} radius={0.015} smoothness={3} castShadow receiveShadow position={[0, DESK_H - 0.03, 0.1]}><meshStandardMaterial color={OAK} roughness={0.8} /></RoundedBox>
@@ -406,7 +428,7 @@ function ApprovalsZone() {
 /** Small coffee corner where agents whose work is paused by a budget cap wait (see officeState.zoneFor). */
 function Cafeteria() {
   const { t } = useT();
-  const [cx, cz] = CAFE_CENTER;
+  const [cx, cz] = useZone("cafe");
   const led = useRef<THREE.MeshBasicMaterial>(null!);
   useFrame(({ clock }) => {
     const paused = Object.keys(useCost.getState().alerts).length > 0;
@@ -415,6 +437,7 @@ function Cafeteria() {
   });
   return (
     <group position={[cx, 0, cz]}>
+      <ZoneHit name="cafe" />
       <RoundedBox args={[3.9, 0.02, 4.4]} radius={0.01} smoothness={2} position={[0.1, 0.011, 0]} receiveShadow><meshStandardMaterial color="#e1d8c8" roughness={1} /></RoundedBox>
       {/* counter along the east edge */}
       <RoundedBox args={[0.7, 0.9, 3.8]} radius={0.03} smoothness={3} castShadow receiveShadow position={[1.75, 0.45, 0]}><meshStandardMaterial color={GRAPHITE_L} roughness={0.8} /></RoundedBox>
@@ -444,7 +467,7 @@ function Cafeteria() {
 function GlassBand({ length, horizontal = true }: { length: number; horizontal?: boolean }) {
   const n = Math.max(1, Math.round(length / 2.6));
   const pane = length / n;
-  const H = 1.55;
+  const H = 1.2;
   return (
     <group rotation={[0, horizontal ? 0 : Math.PI / 2, 0]}>
       <mesh position={[0, 0, 0]}><boxGeometry args={[length, H, 0.06]} /><meshStandardMaterial color={GLASS} emissive={GLASS} emissiveIntensity={0.18} roughness={0.2} /></mesh>
@@ -487,20 +510,19 @@ const WARM = new THREE.Color("#ffb878"), COOL = new THREE.Color("#b8d4ff");
 /** Mixes a color toward warm (temp < 0) or cool (temp > 0): the lighting-temperature slider of the editor. */
 function tint(out: THREE.Color, hex: string, temp: number) {
   out.set(hex);
-  if (temp < 0) out.lerp(WARM, Math.min(1, -temp) * 0.5);
-  else if (temp > 0) out.lerp(COOL, Math.min(1, temp) * 0.5);
+  if (temp < 0) out.lerp(WARM, Math.min(1, -temp) * 0.8);
+  else if (temp > 0) out.lerp(COOL, Math.min(1, temp) * 0.8);
   return out;
 }
 
-/** The mix the room should have now: the organization's mood (layout) tuned by temperature and brightness, plus the user's own day / night toggle. */
+/** The mix the room should have now: the organization's mood (layout) tuned by the temperature and brightness bars. */
 function useLightTarget(): LightMix & { temp: number } {
-  const mode = usePreferences((s) => s.prefs.lighting);
   const light = useOfficeLayout((s) => effective(s).light);
   return useMemo(() => {
-    const base = MOOD_BASE[mode === "night" ? "night" : light.mood] ?? MOOD_BASE.natural;
-    const k = light.brightness * (mode === "day" ? 1.4 : 1); // "day" = lights on: brighter and flatter, as before
-    return { ...base, amb: base.amb * k, hemi: base.hemi * k, sun: base.sun * k, temp: mode === "night" ? 0 : light.temp };
-  }, [mode, light.mood, light.brightness, light.temp]);
+    const base = MOOD_BASE[light.mood] ?? MOOD_BASE.natural;
+    const k = light.brightness;
+    return { ...base, amb: base.amb * k, hemi: base.hemi * k, sun: base.sun * k, temp: light.mood === "night" ? 0 : light.temp };
+  }, [light.mood, light.brightness, light.temp]);
 }
 
 /** Scene lights, background and fog driven by the layout's light and the `lighting` preference, eased toward the target. */
@@ -548,6 +570,34 @@ function LightRig() {
   );
 }
 
+/** The built-in plants and rack: they can be moved, turned or taken away in the office editor. */
+function Fixtures() {
+  const cfg = useOfficeLayout((s) => effective(s).fixtures);
+  const editing = useOfficeLayout((s) => s.editing);
+  return (
+    <>
+      {FIXTURE_IDS.map((id) => {
+        const base = FIXTURES[id];
+        const c = cfg[id];
+        if (c?.hidden) return null;
+        const x = c?.x ?? base.x, z = c?.z ?? base.z, rot = c?.rot ?? base.rot;
+        return (
+          <group key={id} position={[x, 0, z]} rotation={[0, rot, 0]}>
+            {id === "rack" ? <Rack position={[0, 0, 0]} /> : <Plant position={[0, 0, 0]} s={base.s} tint={base.tint} />}
+            {editing && (
+              <mesh position={[0, 0.9, 0]}
+                onPointerDown={(ev) => { ev.stopPropagation(); const st = useOfficeLayout.getState(); if (st.placing) return; st.select({ kind: "fixture", id: id as FixtureId }); st.setDragging(true); }}
+                onPointerOver={() => { document.body.style.cursor = "grab"; }} onPointerOut={() => { document.body.style.cursor = ""; }}>
+                <boxGeometry args={[base.w + 0.2, 1.8, base.d + 0.2]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} />
+              </mesh>
+            )}
+          </group>
+        );
+      })}
+    </>
+  );
+}
+
 export function OfficeEnv() {
   const order = useStore((s) => s.agentOrder);
   const concrete = useConcrete();
@@ -568,21 +618,17 @@ export function OfficeEnv() {
 
       {/* paredes bajas con ventanal y zócalo */}
       <Wall args={[28.4, 3, 0.3]} position={[0, 1.5, -10]}>
-        <group position={[-3.4, 0.35, 0.17]}><GlassBand length={20.6} /></group>
+        {walls.windows && <group position={[-3.4, 0.4, 0.17]}><GlassBand length={20.6} /></group>}
         <mesh position={[0, -1.25, 0.16]}><boxGeometry args={[28.4, 0.5, 0.04]} /><meshStandardMaterial color={skirt} roughness={0.9} /></mesh>
         <mesh position={[0, 1.46, 0.16]}><boxGeometry args={[28.4, 0.08, 0.04]} /><meshStandardMaterial color={walls.trim} roughness={0.6} /></mesh>
       </Wall>
       <Wall args={[0.3, 3, 20.4]} position={[-14.2, 1.5, 0]}>
         <mesh position={[0.16, -1.25, 0]}><boxGeometry args={[0.04, 0.5, 20.4]} /><meshStandardMaterial color={skirt} roughness={0.9} /></mesh>
         <mesh position={[0.16, 1.46, 0]}><boxGeometry args={[0.04, 0.08, 20.4]} /><meshStandardMaterial color={walls.trim} roughness={0.6} /></mesh>
-        <group position={[0.17, 0.35, 0]}><GlassBand length={17} horizontal={false} /></group>
+        {walls.windows && <group position={[0.17, 0.4, 0]}><GlassBand length={17} horizontal={false} /></group>}
       </Wall>
 
-      <Plant position={[-12.8, 0, -8.6]} s={1.5} />
-      <Plant position={[-12.8, 0, 8.4]} tint="#8aa28c" s={1.1} />
-      <Plant position={[4.4, 0, -8.8]} s={1.2} tint="#8ba08d" />
-      <Plant position={[12.8, 0, 8.6]} s={1.3} tint="#7a9680" />
-      <Rack position={[-12.9, 0, -0.5]} rotation={Math.PI / 2} />
+      <Fixtures />
 
       {order.map((id, i) => <Desk key={id} id={id} index={i} />)}
       <MeetingRoom />

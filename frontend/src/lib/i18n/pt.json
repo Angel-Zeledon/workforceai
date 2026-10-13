@@ -3137,5 +3137,19 @@
   "shop.cat.whiteboard": "Quadros",
   "shop.cat.appliance": "Equipamentos",
   "shop.cat.light": "Luzes",
-  "shop.placeEditor": "Colocar no escritório"
+  "shop.placeEditor": "Colocar no escritório",
+  "oe.zone.meeting": "Sala de reuniões",
+  "oe.zone.approvals": "Área de aprovações",
+  "oe.zone.cafe": "Cafeteria",
+  "oe.fx.plant": "Planta",
+  "oe.fx.rack": "Rack técnico",
+  "oe.f.rooms": "Salas e decoração original",
+  "oe.z.hint": "Arraste uma sala pelo chão para movê-la.",
+  "oe.z.reset": "Voltar ao lugar",
+  "oe.fx.show": "Recolocar",
+  "oe.fx.hidden": "Removida",
+  "oe.a.windows": "Janelas de vidro",
+  "oe.light.title": "Luz",
+  "oe.light.dim": "Suave",
+  "oe.light.bright": "Intensa"
 }

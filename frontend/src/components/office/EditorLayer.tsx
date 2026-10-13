@@ -6,17 +6,17 @@ import * as THREE from "three";
 import { useRewards, type ShopItem } from "@/lib/rewards";
 import { useStore } from "@/lib/store";
 import { effective, pieceOf, useOfficeLayout, withPiece, withoutPiece } from "@/lib/officeLayout";
-import { newUid, type Layout } from "@/lib/officeLayoutModel";
+import { FIXTURES, ZONE_DEFAULTS, newUid, type FixtureId, type Layout, type ZoneName } from "@/lib/officeLayoutModel";
 import { GRID, corners, deskBox, snap, wallSnap, type Box } from "@/lib/officeGeometry";
 import { deskOf } from "./registry";
 import { ItemMesh } from "./OfficeItems";
-import { floorObstacles, fits, fitsOnWall, pieceBox } from "./editorWorld";
+import { fixtureBox, floorObstacles, fits, fitsOnWall, pieceBox, zoneBox } from "./editorWorld";
 import { pieceInfo, type PieceInfo } from "./pieceInfo";
 
 const OK = "#3fae7d", BAD = "#e0524a", SEL = "#4f7fe0";
 
 interface Ghost { item: ShopItem; x: number; z: number; rot: number; y: number; valid: boolean }
-interface Drag { kind: "piece" | "desk"; id: string; snapshot: Layout; off: { x: number; z: number } | null; moved: boolean; valid: boolean; last: { x: number; z: number } }
+interface Drag { kind: "piece" | "desk" | "zone" | "fixture"; id: string; snapshot: Layout; off: { x: number; z: number } | null; moved: boolean; valid: boolean; last: { x: number; z: number } }
 
 /** Outline of a footprint on the floor. */
 function Frame({ box, color }: { box: Box; color: string }) {
@@ -64,6 +64,7 @@ function Inner() {
   const dragging = useOfficeLayout((s) => s.dragging);
   const grid = useOfficeLayout((s) => s.grid);
   const deskGhost = useOfficeLayout((s) => s.deskGhost);
+  const zoneGhost = useOfficeLayout((s) => s.zoneGhost);
   const catalog = useRewards((s) => s.catalog);
   const order = useStore((s) => s.agentOrder);
   const agents = useStore((s) => s.agents);
@@ -123,6 +124,30 @@ function Inner() {
         d.valid = c.valid; d.last = { x: c.x, z: c.z };
         useOfficeLayout.setState({ draft: withPiece(d.snapshot, p.uid, { x: c.x, z: c.z, rot: c.rot, ...(info.mount !== "floor" ? { y: p.y ?? info.y } : {}) }) });
         setSelValid(c.valid);
+      } else if (d.kind === "zone") {
+        const name = d.id as ZoneName;
+        const home = d.snapshot.zones[name] ?? { x: ZONE_DEFAULTS[name][0], z: ZONE_DEFAULTS[name][1] };
+        if (!d.off) d.off = { x: home.x - fp.x, z: home.z - fp.z };
+        const x = st.grid ? snap(fp.x + d.off.x) : fp.x + d.off.x, z = st.grid ? snap(fp.z + d.off.z) : fp.z + d.off.z;
+        const deskPos = Object.fromEntries(order.map((id, i) => [id, deskOf({ id, role: agents[id]?.role || "" }, i)]));
+        const valid = fits(zoneBox(name, d.snapshot, { x, z }), floorObstacles(d.snapshot, catalog, deskPos, { zone: name }));
+        d.moved = d.moved || Math.hypot(x - home.x, z - home.z) > 0.01;
+        d.valid = valid; d.last = { x, z };
+        useOfficeLayout.setState({ zoneGhost: { id: name, x, z, valid } });
+        setSelValid(valid);
+      } else if (d.kind === "fixture") {
+        const id = d.id as FixtureId;
+        const cur = d.snapshot.fixtures[id];
+        const hx = cur?.x ?? FIXTURES[id].x, hz = cur?.z ?? FIXTURES[id].z, rot = cur?.rot ?? FIXTURES[id].rot;
+        if (!d.off) d.off = { x: hx - fp.x, z: hz - fp.z };
+        const x = st.grid ? snap(fp.x + d.off.x) : fp.x + d.off.x, z = st.grid ? snap(fp.z + d.off.z) : fp.z + d.off.z;
+        const deskPos = Object.fromEntries(order.map((i, k) => [i, deskOf({ id: i, role: agents[i]?.role || "" }, k)]));
+        const box = fixtureBox(id, d.snapshot, { x, z, rot })!;
+        const valid = fits(box, floorObstacles(d.snapshot, catalog, deskPos, { fixture: id }));
+        d.moved = d.moved || Math.hypot(x - hx, z - hz) > 0.01;
+        d.valid = valid; d.last = { x, z };
+        useOfficeLayout.setState({ draft: { ...d.snapshot, fixtures: { ...d.snapshot.fixtures, [id]: { ...(cur || {}), x, z, rot } } } });
+        setSelValid(valid);
       } else {
         const cur = effective({ draft: d.snapshot, layout: d.snapshot });
         const a = agents[d.id];
@@ -143,6 +168,12 @@ function Inner() {
       if (d) {
         drag.current = null;
         if (d.kind === "piece") {
+          if (d.moved && d.valid) useOfficeLayout.setState({ past: [...st.past, d.snapshot].slice(-80), future: [] });
+          else useOfficeLayout.setState({ draft: d.snapshot });
+        } else if (d.kind === "zone") {
+          useOfficeLayout.setState({ zoneGhost: null });
+          if (d.moved && d.valid) st.mutate((l) => ({ ...l, zones: { ...l.zones, [d.id]: { x: d.last.x, z: d.last.z } } }));
+        } else if (d.kind === "fixture") {
           if (d.moved && d.valid) useOfficeLayout.setState({ past: [...st.past, d.snapshot].slice(-80), future: [] });
           else useOfficeLayout.setState({ draft: d.snapshot });
         } else {
@@ -196,9 +227,11 @@ function Inner() {
           const fp = lastFp.current, it = item(st.placing);
           if (fp && it) { const info = pieceInfo(it); const c = candidate(info, fp.x, fp.z, rot.current, 1, st.grid, st.draft as Layout, catalog, {}); setGhost({ item: it, x: c.x, z: c.z, rot: c.rot, y: info.y, valid: c.valid }); }
         } else if (st.selection?.kind === "piece") rotateSelected(Math.PI / 2);
+        else if (st.selection?.kind === "fixture") rotateFixture(st.selection.id, Math.PI / 2);
         return;
       }
       if ((k === "delete" || k === "backspace") && st.selection?.kind === "piece") { const uid = st.selection.uid; st.mutate((l) => withoutPiece(l, uid)); st.select(null); return; }
+      if ((k === "delete" || k === "backspace") && st.selection?.kind === "fixture") { const id = st.selection.id; st.mutate((l) => ({ ...l, fixtures: { ...l.fixtures, [id]: { ...(l.fixtures[id] ?? { x: FIXTURES[id].x, z: FIXTURES[id].z }), hidden: true } } })); st.select(null); return; }
       const arrows: Record<string, [number, number]> = { arrowleft: [-1, 0], arrowright: [1, 0], arrowup: [0, -1], arrowdown: [0, 1] };
       if (arrows[k] && st.selection?.kind === "piece") { ev.preventDefault(); nudge(arrows[k][0] * GRID, arrows[k][1] * GRID); }
     };
@@ -218,6 +251,15 @@ function Inner() {
     if (!c.valid) return;
     st.mutate((d) => withPiece(d, uid, { x: info.mount === "wall" ? c.x : x, z: info.mount === "wall" ? c.z : z, rot: info.mount === "wall" ? c.rot : r }), `move:${uid}`);
   }
+  function rotateFixture(id: FixtureId, by: number) {
+    const st = useOfficeLayout.getState();
+    const l = st.draft as Layout;
+    const cur = l.fixtures[id];
+    const rot = (cur?.rot ?? FIXTURES[id].rot) + by;
+    const deskPos = Object.fromEntries(order.map((i, k) => [i, deskOf({ id: i, role: agents[i]?.role || "" }, k)]));
+    const box = fixtureBox(id, l, { x: cur?.x ?? FIXTURES[id].x, z: cur?.z ?? FIXTURES[id].z, rot });
+    if (box && fits(box, floorObstacles(l, catalog, deskPos, { fixture: id }))) st.mutate((d) => ({ ...d, fixtures: { ...d.fixtures, [id]: { ...(cur || { x: FIXTURES[id].x, z: FIXTURES[id].z }), rot } } }), `rot:${id}`);
+  }
   function rotateSelected(by: number) { const s = useOfficeLayout.getState().selection; if (s?.kind === "piece") { const p = pieceOf(useOfficeLayout.getState().draft as Layout, s.uid); if (p) tryMove(s.uid, { rot: p.rot + by }); } }
   function nudge(dx: number, dz: number) { const s = useOfficeLayout.getState().selection; if (s?.kind === "piece") { const p = pieceOf(useOfficeLayout.getState().draft as Layout, s.uid); if (p) tryMove(s.uid, { x: p.x + dx, z: p.z + dz }); } }
 
@@ -228,11 +270,13 @@ function Inner() {
       const p = pieceOf(draft, selection.uid), it = p && item(p.item);
       return p && it ? pieceBox(p, it) : null;
     }
+    if (selection.kind === "zone") return zoneBox(selection.id, draft, zoneGhost?.id === selection.id ? zoneGhost : undefined);
+    if (selection.kind === "fixture") return fixtureBox(selection.id, draft, { x: draft.fixtures[selection.id]?.x ?? FIXTURES[selection.id].x, z: draft.fixtures[selection.id]?.z ?? FIXTURES[selection.id].z, rot: draft.fixtures[selection.id]?.rot ?? FIXTURES[selection.id].rot });
     const a = agents[selection.id];
     const [x, z] = deskGhost?.id === selection.id ? [deskGhost.x, deskGhost.z] : deskOf({ id: selection.id, role: a?.role || "" }, Math.max(0, order.indexOf(selection.id)));
     return deskBox(x, z);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, draft, deskGhost, catalog, agents, order]);
+  }, [selection, draft, deskGhost, zoneGhost, catalog, agents, order]);
 
   const ghostBox: Box | null = ghost && placing ? { x: ghost.x, z: ghost.z, w: pieceInfo(ghost.item).w, d: pieceInfo(ghost.item).d, rot: ghost.rot } : null;
   useEffect(() => { if (!placing) setGhost(null); else rot.current = 0; }, [placing]);

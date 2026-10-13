@@ -3136,5 +3136,19 @@
   "shop.cat.whiteboard": "Pizarras",
   "shop.cat.appliance": "Equipamiento",
   "shop.cat.light": "Luces",
-  "shop.placeEditor": "Colocar en la oficina"
+  "shop.placeEditor": "Colocar en la oficina",
+  "oe.zone.meeting": "Sala de reuniones",
+  "oe.zone.approvals": "Zona de aprobaciones",
+  "oe.zone.cafe": "Cafetería",
+  "oe.fx.plant": "Planta",
+  "oe.fx.rack": "Armario técnico",
+  "oe.f.rooms": "Salas y decoración original",
+  "oe.z.hint": "Arrastra una sala por el suelo para moverla.",
+  "oe.z.reset": "Volver a su sitio",
+  "oe.fx.show": "Volver a poner",
+  "oe.fx.hidden": "Quitada",
+  "oe.a.windows": "Ventanales de cristal",
+  "oe.light.title": "Luz",
+  "oe.light.dim": "Tenue",
+  "oe.light.bright": "Intensa"
 }

@@ -1,4 +1,4 @@
-import { MEETING_CENTER, USER_POS } from "@/lib/meta";
+import { meetingCenter, userPos } from "./zones";
 
 /** Registro de etiquetas DOM (nombres, burbujas y tarjetas) que el solver de pantalla coloca sin solaparlas. */
 export interface LabelEntry {
@@ -9,9 +9,9 @@ export interface LabelEntry {
 }
 export const labelEntries = new Map<string, LabelEntry>();
 
-/** World anchors of the office zones (popups hover above them). */
+/** World anchors of the office zones (popups hover above them); they follow the rooms when the organization moves them. */
 export const FIXED_ANCHORS: Record<string, [number, number, number]> = {
-  user: [USER_POS[0], 1.7, USER_POS[2] - 0.2],
-  approvals: [USER_POS[0], 1.6, USER_POS[2] - 0.95],
-  meeting: [MEETING_CENTER[0], 1.3, MEETING_CENTER[1]],
+  get user(): [number, number, number] { const u = userPos(); return [u[0], 1.7, u[2] - 0.2]; },
+  get approvals(): [number, number, number] { const u = userPos(); return [u[0], 1.6, u[2] - 0.95]; },
+  get meeting(): [number, number, number] { const c = meetingCenter(); return [c[0], 1.3, c[1]]; },
 };

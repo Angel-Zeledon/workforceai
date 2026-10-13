@@ -314,3 +314,23 @@ func TestMemStoreLayoutContract(t *testing.T) {
 		t.Fatalf("wins=%d version=%d", wins.Load(), v)
 	}
 }
+
+func TestValidateRoomsFixturesAndWindows(t *testing.T) {
+	cat, _ := rewards.ParseCatalog([]byte(layoutCatalog))
+	off := false
+	ok := rewards.Layout{V: 1, Walls: &rewards.LayoutWalls{Windows: &off}, Zones: map[string]rewards.Spot{"cafe": {X: 1, Z: 2}}, Fixtures: map[string]rewards.Fixture{"rack": {X: 3, Z: 4, Hidden: true}}}
+	if err := rewards.Validate(cat, &ok); err != nil {
+		t.Fatalf("valid rooms/fixtures: %v", err)
+	}
+	for name, l := range map[string]rewards.Layout{
+		"unknown room":    {V: 1, Zones: map[string]rewards.Spot{"garage": {}}},
+		"room too far":    {V: 1, Zones: map[string]rewards.Spot{"meeting": {X: 99}}},
+		"unknown fixture": {V: 1, Fixtures: map[string]rewards.Fixture{"statue": {}}},
+		"fixture too far": {V: 1, Fixtures: map[string]rewards.Fixture{"plant_a": {Z: -99}}},
+	} {
+		l := l
+		if err := rewards.Validate(cat, &l); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+}

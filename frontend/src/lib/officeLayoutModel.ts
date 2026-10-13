@@ -6,14 +6,22 @@ export type FloorKind = "concrete" | "wood" | "parquet" | "carpet" | "tile" | "m
 export type Mood = "natural" | "warm" | "cool" | "sunset" | "night";
 export interface DeskCfg { x?: number; z?: number; desk?: string; chair?: string }
 export interface Piece { uid: string; item: string; x: number; z: number; rot: number; s: number; y?: number }
+export type ZoneName = "meeting" | "approvals" | "cafe";
+export type FixtureId = "plant_a" | "plant_b" | "plant_c" | "plant_d" | "rack";
+export interface Spot { x: number; z: number }
+export interface FixtureCfg { x: number; z: number; rot?: number; hidden?: boolean }
 export interface Layout {
   v: 1;
-  walls: { color: string; trim: string };
+  walls: { color: string; trim: string; windows: boolean };
   floor: { kind: FloorKind; tint: string };
   light: { mood: Mood; temp: number; brightness: number };
   desks: Record<string, DeskCfg>;
   pieces: Piece[];
   seeded?: boolean;
+  /** The three rooms moved from their built-in place (center of each room). */
+  zones: Partial<Record<ZoneName, Spot>>;
+  /** The built-in decoration (plants, rack) moved, turned or taken away. */
+  fixtures: Partial<Record<FixtureId, FixtureCfg>>;
 }
 
 export const FLOOR_KINDS: FloorKind[] = ["concrete", "wood", "parquet", "carpet", "tile", "marble"];
@@ -21,11 +29,13 @@ export const MOODS: Mood[] = ["natural", "warm", "cool", "sunset", "night"];
 
 export const DEFAULT_LAYOUT: Layout = {
   v: 1,
-  walls: { color: "#f3f4f7", trim: "#3a414c" },
+  walls: { color: "#f3f4f7", trim: "#3a414c", windows: true },
   floor: { kind: "concrete", tint: "#ffffff" },
   light: { mood: "natural", temp: 0, brightness: 1 },
   desks: {},
   pieces: [],
+  zones: {},
+  fixtures: {},
 };
 
 /** Wall palettes: soft, lived-in tones first, then bolder ones. */
@@ -43,13 +53,24 @@ export function normalizeLayout(raw: unknown): Layout {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, any>;
   const out: Layout = {
     v: 1,
-    walls: { color: hex(r.walls?.color, DEFAULT_LAYOUT.walls.color), trim: hex(r.walls?.trim, DEFAULT_LAYOUT.walls.trim) },
+    walls: { color: hex(r.walls?.color, DEFAULT_LAYOUT.walls.color), trim: hex(r.walls?.trim, DEFAULT_LAYOUT.walls.trim), windows: r.walls?.windows !== false },
     floor: { kind: FLOOR_KINDS.includes(r.floor?.kind) ? r.floor.kind : "concrete", tint: hex(r.floor?.tint, "#ffffff") },
     light: { mood: MOODS.includes(r.light?.mood) ? r.light.mood : "natural", temp: num(r.light?.temp, -1, 1, 0), brightness: num(r.light?.brightness, 0.5, 1.5, 1) },
     desks: {},
     pieces: [],
+    zones: {},
+    fixtures: {},
   };
   if (r.seeded) out.seeded = true;
+  if (r.zones && typeof r.zones === "object") {
+    for (const name of ZONE_NAMES) { const z = r.zones[name]; if (z && Number.isFinite(z.x) && Number.isFinite(z.z)) out.zones[name] = { x: z.x, z: z.z }; }
+  }
+  if (r.fixtures && typeof r.fixtures === "object") {
+    for (const id of Object.keys(FIXTURES) as FixtureId[]) {
+      const f = r.fixtures[id];
+      if (f && Number.isFinite(f.x) && Number.isFinite(f.z)) out.fixtures[id] = { x: f.x, z: f.z, ...(Number.isFinite(f.rot) && f.rot ? { rot: f.rot } : {}), ...(f.hidden ? { hidden: true } : {}) };
+    }
+  }
   if (r.desks && typeof r.desks === "object") {
     for (const [id, d] of Object.entries(r.desks as Record<string, any>)) {
       if (!d || typeof d !== "object") continue;
@@ -105,3 +126,22 @@ export const LEGACY_SLOTS: Record<string, { pos: [number, number, number]; rot?:
   coffee_1: { pos: [11.0, 0.95, -0.35], rot: -Math.PI / 2 },
   window_1: { pos: [-3.4, 1.85, -9.797] },
 };
+
+export const ZONE_NAMES: ZoneName[] = ["meeting", "approvals", "cafe"];
+/** Where the three rooms stand until the organization moves them (the center of each room). */
+export const ZONE_DEFAULTS: Record<ZoneName, [number, number]> = { meeting: [9.5, -6.2], approvals: [9.5, 5.4], cafe: [9.2, 1.2] };
+/** Footprint of each room on the floor plan, relative to its center (`dx`, `dz`). */
+export const ZONE_SIZE: Record<ZoneName, { w: number; d: number; dx: number; dz: number }> = {
+  meeting: { w: 7.8, d: 7.4, dx: 0, dz: 0 },
+  approvals: { w: 5.6, d: 4.8, dx: 0, dz: 0.5 },
+  cafe: { w: 4.1, d: 4.6, dx: 0.1, dz: 0 },
+};
+/** The built-in decoration: where it stands, its scale and tint, and how much floor it takes. */
+export const FIXTURES: Record<FixtureId, { x: number; z: number; rot: number; s: number; tint?: string; w: number; d: number }> = {
+  plant_a: { x: -12.8, z: -8.6, rot: 0, s: 1.5, w: 0.8, d: 0.8 },
+  plant_b: { x: -12.8, z: 8.4, rot: 0, s: 1.1, tint: "#8aa28c", w: 0.6, d: 0.6 },
+  plant_c: { x: 4.4, z: -8.8, rot: 0, s: 1.2, tint: "#8ba08d", w: 0.7, d: 0.7 },
+  plant_d: { x: 12.8, z: 8.6, rot: 0, s: 1.3, tint: "#7a9680", w: 0.7, d: 0.7 },
+  rack: { x: -12.9, z: -0.5, rot: Math.PI / 2, s: 1, w: 0.9, d: 0.8 },
+};
+export const FIXTURE_IDS = Object.keys(FIXTURES) as FixtureId[];

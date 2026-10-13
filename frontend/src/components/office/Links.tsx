@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useStore, type Link } from "@/lib/store";
-import { USER_POS } from "@/lib/meta";
+import { userPos } from "./zones";
 import { headPos } from "./registry";
 import { LINK_KIND } from "./kinds";
 
@@ -14,7 +14,7 @@ const tmpA = new THREE.Vector3();
 const tmpB = new THREE.Vector3();
 
 function endpoint(id: string, out: THREE.Vector3) {
-  if (id === "user" || id === "all" || id === "system") return out.set(USER_POS[0], 1.5, USER_POS[2] - 1.4);
+  if (id === "user" || id === "all" || id === "system") { const u = userPos(); return out.set(u[0], 1.5, u[2] - 1.4); }
   const h = headPos.get(id);
   return h ? out.copy(h).setY(h.y + 0.55) : null;
 }

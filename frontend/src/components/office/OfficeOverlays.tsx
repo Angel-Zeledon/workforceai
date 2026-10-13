@@ -5,7 +5,7 @@ import { useStore } from "@/lib/store";
 import { useCost } from "@/lib/cost";
 import { useProjects } from "@/lib/projects/store";
 import { usePreferences } from "@/lib/preferences";
-import { USER_POS } from "@/lib/meta";
+import { userPos } from "./zones";
 import { useT } from "@/lib/i18n";
 import { ApprovalCard } from "../ApprovalsTray";
 import { readable, useAgentColor, useAgentName } from "../ui";
@@ -30,7 +30,7 @@ function useArrived(): string[] {
       sig.apprSlot.forEach((slot, id) => {
         const f = feetPos.get(id);
         if (!f) return;
-        const [sx, sz] = approvalsSpot(USER_POS, slot);
+        const [sx, sz] = approvalsSpot(userPos(), slot);
         if (Math.hypot(f.x - sx, f.z - sz) < 0.6) next.push(id);
       });
       setArrived((cur) => (cur.length === next.length && cur.every((v, i) => v === next[i]) ? cur : next));

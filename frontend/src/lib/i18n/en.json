@@ -3136,5 +3136,19 @@
   "shop.cat.whiteboard": "Whiteboards",
   "shop.cat.appliance": "Equipment",
   "shop.cat.light": "Lights",
-  "shop.placeEditor": "Place in the office"
+  "shop.placeEditor": "Place in the office",
+  "oe.zone.meeting": "Meeting room",
+  "oe.zone.approvals": "Approvals area",
+  "oe.zone.cafe": "Cafeteria",
+  "oe.fx.plant": "Plant",
+  "oe.fx.rack": "Server rack",
+  "oe.f.rooms": "Rooms and original decor",
+  "oe.z.hint": "Drag a room across the floor to move it.",
+  "oe.z.reset": "Back to its spot",
+  "oe.fx.show": "Put back",
+  "oe.fx.hidden": "Removed",
+  "oe.a.windows": "Glass windows",
+  "oe.light.title": "Light",
+  "oe.light.dim": "Dim",
+  "oe.light.bright": "Bright"
 }
