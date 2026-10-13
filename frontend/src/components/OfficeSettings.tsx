@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
-import { LOCALES, useT, type Locale } from "@/lib/i18n";
+import { LOCALES, langName, useT, type Locale } from "@/lib/i18n";
 import { resolveAgent, usePreferences, type LabelSize, type Lighting } from "@/lib/preferences";
 import { AgentCustomizer } from "./AgentCustomizer";
 import { Icon, type IconName } from "./icons";
@@ -78,7 +78,7 @@ export function OfficeSettingsPanel({ onClose }: { onClose: () => void }) {
           <section className="mb-4">
             <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-mute">{t("settings.language")}</div>
             <Seg<Locale> value={locale} testid="language-option" label={t("settings.language")} onChange={(v) => set({ locale: v })}
-              options={LOCALES.map((l) => ({ v: l, label: t(`lang.${l}`) }))} />
+              options={LOCALES.map((l) => ({ v: l, label: langName(l) }))} />
           </section>
 
           <section className="mb-4 space-y-1">

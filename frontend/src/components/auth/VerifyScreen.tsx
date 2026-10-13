@@ -24,7 +24,7 @@ export function VerifyScreen() {
     started.current = true;
     const token = new URLSearchParams(window.location.search).get("token") ?? "";
     verifyEmail(token)
-      .then(() => router.replace("/"))
+      .then((r) => router.replace(r.mfaRequired ? "/login" : "/")) // with a second factor the link only proves the address
       .catch(() => setPhase("bad"));
   }, [status, router]);
 

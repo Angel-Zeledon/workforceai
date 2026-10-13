@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fmtUsd, useT } from "@/lib/i18n";
-import { trOr, type Locale } from "@/lib/i18n-core";
+import { LOCALES, langName, trOr, type Locale } from "@/lib/i18n-core";
 import { browserTimeZone, orgApi, type OnboardResult, type OnboardingPack, type ToneCode } from "@/lib/orgConfigApi";
 import { Modal } from "@/components/templates/Modal";
 import { BriefingFields, type BriefingValue } from "./BriefingFields";
@@ -98,8 +98,7 @@ export function OnboardingWizard({ onClose, onDone }: { onClose: () => void; onD
             {t("onb.style.language")}
             <select data-testid="onb-locale" value={locale} onChange={(e) => setLocale(e.target.value as Locale)}
               className="rounded-xl border border-line-strong bg-panel px-3 py-2 text-sm font-semibold outline-none focus:border-accent">
-              <option value="es">{t("lang.es")}</option>
-              <option value="en">{t("lang.en")}</option>
+              {LOCALES.map((l) => <option key={l} value={l}>{langName(l)}</option>)}
             </select>
           </label>
           <label className="flex flex-col gap-1 text-[12px] font-semibold">

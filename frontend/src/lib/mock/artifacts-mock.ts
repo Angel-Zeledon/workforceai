@@ -126,7 +126,7 @@ export class MockArtifacts {
     const t = nowIso();
     const meta: ArtifactMeta = {
       schema_version: `aiw.${p.kind}/1`, status: "draft", head_version: 1, created_by: { kind: "system", id: "seed" }, last_author: { kind: "system", id: "seed" },
-      progress: 100, build_state: "done", locale: getLocale(), depends_on_artifacts: [], pending_proposals: 0, tainted: false, locked: false,
+      progress: 100, build_state: "done", locale: getLocale() === "en" ? "en" : "es", depends_on_artifacts: [], pending_proposals: 0, tainted: false, locked: false,
       size_bytes: JSON.stringify(content).length, attachments: [], created_at: t, updated_at: t, ...p,
     };
     const item: Item = { meta, content, versions: [{ info: { artifact_id: meta.id, version: 1, base_version: null, author: meta.created_by, source: "create", summary: L("Versión inicial", "Initial version"), created_at: t }, content: clone(content) }] };
@@ -348,7 +348,7 @@ export class MockArtifacts {
     const agent: string | undefined = body?.agent_id;
     const content = body?.content ?? (tpl ? tpl.build() : blank(kind));
     const base = agent ? this.agentOwned(agent) : { created_by: { kind: "user" as const, id: "me" }, last_author: { kind: "user" as const, id: "me" }, attachments: [] };
-    const it = this.mk({ id: uid("art"), kind: tpl?.kind ?? kind, title: String(body?.title || tpl?.title()[getLocale()] || ""), ...base, created_by: { kind: "user", id: "me" } }, content);
+    const it = this.mk({ id: uid("art"), kind: tpl?.kind ?? kind, title: String(body?.title || tpl?.title()[getLocale() === "en" ? "en" : "es"] || ""), ...base, created_by: { kind: "user", id: "me" } }, content);
     if (agent) it.meta.attachments = [{ agent_id: agent, mode: "read" }]; // opened by a human in an agent desk: read by default (sec. 2.2)
     this.emit("artifact.created", { artifact: this.pub(it.meta.id), open_in_workspace: false });
     return this.full(it.meta.id);

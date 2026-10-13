@@ -2,7 +2,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n";
-import { acceptInvitation, AuthError, bootstrapAuth, login, loginPath, register, resendVerification, safeReturnPath, useSession } from "@/lib/session";
+import { acceptInvitation, AuthError, bootstrapAuth, login, loginPath, register, resendVerification, safeReturnPath, useSession, verifyMfa } from "@/lib/session";
 import { Btn } from "../ui";
 import { ErrorLine, inputCls } from "../connections/shared";
 import { Brand } from "../landing/Brand";
@@ -18,9 +18,11 @@ function errorKey(e: unknown): string {
     case "email_not_verified": return "auth.err.emailNotVerified";
     case "trial_expired": return "auth.err.trialExpired";
     case "rate_limited": return "auth.err.rateLimited";
+    case "invalid_mfa_code": return "auth.err.mfaCode";
     case "email_taken": return "auth.err.emailTaken";
     case "already_member": return "auth.err.alreadyMember";
     case "invalid_token": return "auth.err.invite";
+    case "token_expired": return "auth.err.mfaExpired";
     case "validation_failed": return e.fields?.password ? "auth.err.password" : "auth.err.validation";
   }
   return "auth.err.generic";
@@ -54,6 +56,9 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   const [sent, setSent] = useState<{ email: string; emailSent: boolean } | null>(null);
   const [unverified, setUnverified] = useState(false); // login answered "verify your e-mail first"
   const [cooldown, setCooldown] = useState(0);
+  // Password accepted but the account has a second factor: the code is asked for before any session opens.
+  const [mfa, setMfa] = useState<{ token: string } | null>(null);
+  const [code, setCode] = useState("");
   const [resent, setResent] = useState(false);
   // Where to go after signing in (e.g. /approvals/<id> from a notification); only same-origin paths.
   // null until read from the URL, so a signed-in visitor is not sent to "/" first.
@@ -89,15 +94,36 @@ export function AuthScreen({ mode }: { mode: Mode }) {
     e.preventDefault();
     setBusy(true); setErr(null); setUnverified(false);
     try {
-      if (mode === "login") await login(email, password);
-      else if (mode === "register") {
+      if (mode === "login") {
+        const r = await login(email, password);
+        if (r.mfaRequired) { setMfa({ token: r.token }); setPassword(""); setBusy(false); return; }
+      } else if (mode === "register") {
         const r = await register({ email, password, name, org_name: org, locale });
         if (r.verificationRequired) { setSent({ email: r.email, emailSent: r.emailSent }); setCooldown(60); setBusy(false); return; }
-      } else await acceptInvitation({ token, password, ...(name.trim() ? { name } : {}) });
+      } else {
+        const r = await acceptInvitation({ token, password, ...(name.trim() ? { name } : {}) });
+        if (r.mfaRequired) { setMfa({ token: r.token }); setPassword(""); setBusy(false); return; }
+      }
       router.replace(next ?? "/");
     } catch (x) {
       if (x instanceof AuthError && x.code === "email_not_verified") setUnverified(true);
       setErr(t(errorKey(x)));
+      setBusy(false);
+    }
+  };
+
+  const submitCode = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!mfa) return;
+    setBusy(true); setErr(null);
+    try {
+      await verifyMfa(mfa.token, code);
+      router.replace(next ?? "/");
+    } catch (x) {
+      // An expired challenge cannot be retried: start again from the password.
+      const gone = x instanceof AuthError && x.code === "invalid_token";
+      if (gone) { setMfa(null); setCode(""); }
+      setErr(t(gone ? "auth.err.mfaExpired" : errorKey(x)));
       setBusy(false);
     }
   };
@@ -125,7 +151,21 @@ export function AuthScreen({ mode }: { mode: Mode }) {
         </div>
       </aside>
       <div className="flex items-center justify-center px-4 py-10 sm:px-8">
-      {sent ? (
+      {mfa ? (
+        <form onSubmit={submitCode} data-testid="auth-mfa" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-7 shadow-soft sm:p-8">
+          <a href="/welcome" className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.mfa.title")}</h1>
+          <p className="text-sm leading-relaxed text-ink2">{t("auth.mfa.body")}</p>
+          <Field label={t("auth.mfa.code")}>
+            <input data-testid="auth-mfa-code" autoFocus required inputMode="text" autoComplete="one-time-code" spellCheck={false}
+              className={inputCls} value={code} onChange={(e) => setCode(e.target.value)} />
+          </Field>
+          <p className="text-[11px] text-mute">{t("auth.mfa.hint")}</p>
+          <ErrorLine msg={err} />
+          <Btn type="submit" kind="primary" disabled={busy || code.trim() === ""} className="w-full py-2" data-testid="auth-mfa-submit">{t("auth.mfa.submit")}</Btn>
+          <div className="pt-1 text-xs"><button type="button" className="text-accent hover:underline" onClick={() => { setMfa(null); setCode(""); setErr(null); }}>{t("auth.mfa.back")}</button></div>
+        </form>
+      ) : sent ? (
         <div data-testid="auth-sent" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-7 shadow-soft sm:p-8">
           <a href="/welcome" className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.sent.title")}</h1>
@@ -163,6 +203,9 @@ export function AuthScreen({ mode }: { mode: Mode }) {
             className={inputCls} value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         {mode !== "login" && <p className="text-[11px] text-mute">{t("auth.passwordHint")}</p>}
+        {mode === "login" && flags.passwordReset && (
+          <div className="text-right text-xs"><a className="text-accent hover:underline" href="/forgot" data-testid="auth-to-forgot">{t("auth.forgot.link")}</a></div>
+        )}
         <ErrorLine msg={err} />
         {unverified && (
           <div className="flex items-center gap-2 text-xs">

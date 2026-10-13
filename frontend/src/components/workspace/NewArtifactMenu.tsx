@@ -71,7 +71,7 @@ export function NewArtifactMenu({ deskId }: { deskId: string }) {
           {templates.map((tp) => (
             <button key={tp.id} type="button" disabled={busy} data-testid={`ws-new-template-${tp.id}`} onClick={() => run(() => create(deskId, { kind: tp.kind, title: "", template_id: tp.id, locale }))}
               className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-[11.5px] text-ink hover:bg-accent/10 disabled:opacity-50">
-              <KindIcon kind={tp.kind} size={13} />{tp.title[locale]}
+              <KindIcon kind={tp.kind} size={13} />{tp.title[locale === "en" ? "en" : "es"]}
             </button>
           ))}
           <label className="mt-1 block cursor-pointer rounded-lg border-t border-line px-2 pb-1 pt-2 text-[11.5px] font-semibold text-accent hover:underline">

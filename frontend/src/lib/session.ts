@@ -13,9 +13,9 @@ import { create } from "zustand";
 import { API_URL, MOCK } from "./config";
 
 export type SessionStatus = "loading" | "disabled" | "anonymous" | "authenticated";
-export interface SessionUser { id: string; email: string; name: string; /** Set only for trial accounts: when they stop working (ISO). */ trial_expires_at?: string }
+export interface SessionUser { id: string; email: string; name: string; /** Set only for trial accounts: when they stop working (ISO). */ trial_expires_at?: string; /** True when the account has a second factor. */ mfa_enabled?: boolean }
 /** What the backend offers: e-mail verification for new accounts, and "try it without signing up". */
-export interface AuthFlags { verification: boolean; trial: boolean }
+export interface AuthFlags { verification: boolean; trial: boolean; passwordReset: boolean }
 export interface TrialAccount { email: string; password: string; expires_at: string }
 export interface OrgRef { org_id: string; role: string; name?: string }
 
@@ -35,7 +35,7 @@ interface SessionState {
 }
 
 export const useSession = create<SessionState>(() => ({
-  flags: { verification: false, trial: false },
+  flags: { verification: false, trial: false, passwordReset: false },
   status: "loading", user: null, orgId: null, role: null, permissions: [], orgs: [],
 }));
 
@@ -123,7 +123,7 @@ async function decideMode(): Promise<SessionStatus> {
     // An older backend without the endpoint is an open demo.
     const cfg = res.ok ? await res.json() : null;
     enabled = cfg?.enabled === true;
-    if (enabled) useSession.setState({ flags: { verification: cfg?.verification === true, trial: cfg?.trial === true } });
+    if (enabled) useSession.setState({ flags: { verification: cfg?.verification === true, trial: cfg?.trial === true, passwordReset: cfg?.password_reset === true } });
   } catch { enabled = false; }
   if (!enabled) { useSession.setState({ status: "disabled" }); return "disabled"; }
   dropLegacyStore();
@@ -136,9 +136,15 @@ async function decideMode(): Promise<SessionStatus> {
 
 export const authEnabled = () => useSession.getState().status !== "disabled";
 
-async function begin(path: string, body: unknown) {
-  adopt(await post<SessionPayload>(path, body));
+/** A sign-in either opens a session or, when the account has a second factor, asks for it first. */
+export type SignInResult = { mfaRequired: false } | { mfaRequired: true; token: string };
+
+async function begin(path: string, body: unknown): Promise<SignInResult> {
+  const data = await post<SessionPayload & { mfa_required?: boolean; mfa_token?: string }>(path, body);
+  if (data.mfa_required && data.mfa_token) return { mfaRequired: true, token: data.mfa_token };
+  adopt(data);
   await loadMe();
+  return { mfaRequired: false };
 }
 
 export const login = (email: string, password: string) => begin("/auth/login", { email, password });
@@ -158,6 +164,34 @@ export const resendVerification = (email: string, locale?: string) => post<Recor
 /** Mints a throwaway account ("try it without signing up"); the password is shown once and never retrievable. */
 export const createTrial = (locale?: string) => post<TrialAccount>("/auth/trial", { locale });
 export const acceptInvitation = (b: { token: string; password: string; name?: string }) => begin("/auth/invitations/accept", b);
+
+/** Second step of a sign-in: a code from the authenticator app, or a recovery code. */
+export const verifyMfa = (token: string, code: string) => begin("/auth/mfa/verify", { mfa_token: token, code });
+
+/** E-mails a reset link; the answer never says whether the address has an account. */
+export const forgotPassword = (email: string, locale?: string) => post<Record<string, never>>("/auth/password/forgot", { email, locale });
+/** Sets a new password with the link's token. It does not sign anyone in. */
+export const resetPassword = (token: string, password: string) => post<Record<string, never>>("/auth/password/reset", { token, password });
+
+/** Two-factor enrolment (signed in). */
+export interface MfaSetup { secret: string; otpauth_uri: string }
+export async function mfaSetup(): Promise<MfaSetup> { return post<MfaSetup>("/auth/mfa/setup", {}, await accessToken()); }
+/** Confirms the first code and returns the recovery codes, which are shown only this once. */
+export async function mfaEnable(code: string): Promise<string[]> {
+  const r = await post<{ recovery_codes: string[] }>("/auth/mfa/enable", { code }, await accessToken());
+  await loadMe();
+  return r.recovery_codes;
+}
+export async function mfaDisable(password: string, code: string): Promise<void> {
+  await post("/auth/mfa/disable", { password, code }, await accessToken());
+  await loadMe();
+}
+/** Ends the session on every device (the current one included). */
+export async function logoutEverywhere() {
+  const tok = await accessToken();
+  clear();
+  try { await post("/auth/logout-all", {}, tok); } catch { /* already gone */ }
+}
 
 export async function logout() {
   clear();
@@ -216,7 +250,7 @@ export const useCan = (perm: string) => useSession((s) => s.status !== "authenti
 export function safeReturnPath(raw: string | null | undefined): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\") || /[\u0000-\u001f]/.test(raw)) return "/";
   const path = raw.split(/[?#]/)[0];
-  if (["/login", "/register", "/invite"].includes(path)) return "/";
+  if (["/login", "/register", "/invite", "/forgot", "/reset", "/verify"].includes(path)) return "/";
   return raw;
 }
 

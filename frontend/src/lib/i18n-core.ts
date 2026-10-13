@@ -1,29 +1,30 @@
 import es from "./i18n/es.json";
 import en from "./i18n/en.json";
+import pt from "./i18n/pt.json";
 
-/** i18n ligero (sin rutas /es /en): catálogos planos es.json / en.json, español por defecto. */
-export type Locale = "es" | "en";
-export const LOCALES: Locale[] = ["es", "en"];
-const CATALOGS: Record<Locale, Record<string, string>> = { es, en };
-const INTL_TAG: Record<Locale, string> = { es: "es-MX", en: "en-US" };
+/** i18n ligero (sin rutas /es /en): catálogos planos es.json / en.json / pt.json, español por defecto. */
+export type Locale = "es" | "en" | "pt";
+export const LOCALES: Locale[] = ["es", "en", "pt"];
+const CATALOGS: Record<Locale, Record<string, string>> = { es, en, pt };
+const INTL_TAG: Record<Locale, string> = { es: "es-MX", en: "en-US", pt: "pt-BR" };
 
 let current: Locale = "es";
 export const getLocale = (): Locale => current;
 export const setCurrentLocale = (l: Locale) => { current = l; };
 
-/** Español salvo que el navegador sea claramente inglés. */
+/** Español salvo que el navegador sea claramente inglés o portugués. */
 export function detectLocale(): Locale {
   try {
     const langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]) || [];
     const first = (langs[0] || "es").toLowerCase();
-    return first.startsWith("en") ? "en" : "es";
+    return first.startsWith("en") ? "en" : first.startsWith("pt") ? "pt" : "es";
   } catch { return "es"; }
 }
 
 export type Vars = Record<string, string | number>;
-/** t("clave", {n: 2}). Con `count` busca clave_one / clave_other. Si falta la clave cae a español y luego a la clave. */
+/** t("clave", {n: 2}). Con `count` busca clave_one / clave_other. Si falta la clave cae a español (pt -> es -> clave), nunca muestra la clave cruda si existe en es. */
 export function tr(key: string, vars?: Vars, locale: Locale = current): string {
-  const cat = CATALOGS[locale];
+  const cat = CATALOGS[locale] ?? CATALOGS.es;
   let k = key;
   if (vars && typeof vars.count === "number") {
     const plural = `${key}_${vars.count === 1 ? "one" : "other"}`;
@@ -38,6 +39,10 @@ export const hasKey = (key: string, locale: Locale = current) => key in CATALOGS
 export const trOr = (key: string, fallback: string) => (hasKey(key) ? tr(key) : fallback);
 
 const intlTag = () => INTL_TAG[current];
+/** BCP-47 tag for Intl of the current UI locale (es-MX, en-US, pt-BR). */
+export const intlLocale = () => INTL_TAG[current];
+/** Native name of a language ("Español", "English", "Português") regardless of the UI locale. */
+export const langName = (l: Locale) => tr(`lang.${l}`, undefined, l);
 export const fmtNumber = (n: number, digits = 0) =>
   new Intl.NumberFormat(intlTag(), { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
 export const fmtUsd = (n: number | undefined) => `$${fmtNumber(n ?? 0, 2)}`;

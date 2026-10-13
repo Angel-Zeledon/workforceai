@@ -1,4 +1,4 @@
-// Verifies es.json and en.json have identical keys and that every statically used key exists.
+// Verifies es.json / en.json have identical keys, pt.json mirrors es.json (same keys, same {placeholders}) and that every statically used key exists.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -9,6 +9,23 @@ const esK = new Set(Object.keys(es)), enK = new Set(Object.keys(en));
 let bad = 0;
 for (const k of esK) if (!enK.has(k)) { console.error(`missing in en: ${k}`); bad++; }
 for (const k of enK) if (!esK.has(k)) { console.error(`missing in es: ${k}`); bad++; }
+
+// pt-BR: must have exactly the keys of es.json (lang.pt is allowed as the pt-only language name until the lead merges it) and the same multiset of {placeholders}.
+const ptFile = path.join(dir, "pt.json");
+let ptN = 0;
+if (!fs.existsSync(ptFile)) { console.error("missing pt.json"); bad++; }
+else {
+  const pt = JSON.parse(fs.readFileSync(ptFile, "utf8"));
+  const ptOnly = new Set(["lang.pt"]);
+  const ph = (v) => (String(v).match(/\{\w+\}/g) || []).sort().join(",");
+  ptN = Object.keys(pt).length;
+  for (const k of esK) {
+    if (!(k in pt)) { console.error(`missing in pt: ${k}`); bad++; continue; }
+    if (typeof pt[k] !== "string" || !pt[k].trim()) { console.error(`empty pt value: ${k}`); bad++; continue; }
+    if (ph(es[k]) !== ph(pt[k])) { console.error(`placeholder mismatch in pt: ${k}  es=[${ph(es[k])}] pt=[${ph(pt[k])}]`); bad++; }
+  }
+  for (const k of Object.keys(pt)) if (!esK.has(k) && !ptOnly.has(k)) { console.error(`extra key in pt: ${k}`); bad++; }
+}
 
 function walk(d, out = []) {
   for (const f of fs.readdirSync(d, { withFileTypes: true })) {
@@ -41,5 +58,5 @@ if (fs.existsSync(giantFile)) {
     }
   }
 }
-console.log(`giant=${giantN} es=${esK.size} en=${enK.size} used=${used.size} problems=${bad}`);
+console.log(`giant=${giantN} es=${esK.size} en=${enK.size} pt=${ptN} used=${used.size} problems=${bad}`);
 process.exit(bad ? 1 : 0);

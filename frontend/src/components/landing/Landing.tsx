@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useT } from "@/lib/i18n";
+import { LOCALES, useT } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import { Brand } from "./Brand";
 
@@ -104,9 +104,9 @@ export function Landing() {
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <div role="group" aria-label={t("land.lang")} className="hidden items-center rounded-md border border-line text-[11px] font-semibold sm:flex">
-              {(["es", "en"] as const).map((l) => (
+              {LOCALES.map((l, i) => (
                 <button key={l} type="button" aria-pressed={locale === l} onClick={() => setPref({ locale: l })}
-                  className={`px-2 py-1 ${locale === l ? "bg-navy text-white" : "text-mute hover:text-ink"} ${l === "es" ? "rounded-l" : "rounded-r"}`}>{l.toUpperCase()}</button>
+                  className={`px-2 py-1 ${locale === l ? "bg-navy text-white" : "text-mute hover:text-ink"} ${i === 0 ? "rounded-l" : i === LOCALES.length - 1 ? "rounded-r" : ""}`}>{l.toUpperCase()}</button>
               ))}
             </div>
             <a href="/login" data-testid="land-login" className="hidden text-sm font-medium text-ink hover:text-accent sm:inline">{t("land.nav.login")}</a>

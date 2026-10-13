@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useArtifacts, type StoredArtifact } from "@/lib/artifacts";
-import { fmtTime, getLocale, useT } from "@/lib/i18n";
+import { fmtTime, intlLocale, useT } from "@/lib/i18n";
 
 interface Ev { id: string; title: string; start: string; end: string; attendees?: string[]; location?: string; status: "proposed" | "confirmed"; source?: string }
 interface AgendaContent { schema: "aiw.agenda/1"; events: Ev[] }
@@ -43,7 +43,7 @@ export function AgendaView({ art, readOnly }: { art: StoredArtifact; readOnly?: 
   }, [focusId, c]);
 
   if (!c) return <div className="p-4 text-xs text-mute">…</div>;
-  const tag = getLocale() === "en" ? "en-US" : "es-MX";
+  const tag = intlLocale();
   const dayLabel = (iso: string) => new Intl.DateTimeFormat(tag, { weekday: "long", day: "numeric", month: "short" }).format(new Date(iso));
   const save = (events: Ev[]) => edit(art.id, { ...c, events });
   const patch = (id: string, p: Partial<Ev>) => save(c.events.map((e) => (e.id === id ? { ...e, ...p } : e)));

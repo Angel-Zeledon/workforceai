@@ -7,7 +7,7 @@ import {
   GENERAL, agentBadges, convForThread, dayKey, highlightParts, isChatConv, mergeById, preview, threadFromPath, threadOf, threadPath, turnAgents,
   type ThreadMsg,
 } from "@/lib/chatsLogic";
-import { getLocale, trOr, useT } from "@/lib/i18n";
+import { intlLocale, trOr, useT } from "@/lib/i18n";
 import { usePreferences, useAgentView } from "@/lib/preferences";
 import { startRealtime } from "@/lib/ws";
 import { useFileViewer } from "@/lib/fileView";
@@ -73,7 +73,7 @@ function shortTime(iso: string): string {
   const d = new Date(iso), now = new Date();
   if (isNaN(+d) || d.getFullYear() < 2000) return ""; // the backend sends a zero time for a thread without messages
   const days = Math.floor((+new Date(now.getFullYear(), now.getMonth(), now.getDate()) - +new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
-  const loc = getLocale();
+  const loc = intlLocale();
   if (days <= 0) return fmtTime(iso);
   if (days === 1) return new Intl.RelativeTimeFormat(loc, { numeric: "auto" }).format(-1, "day");
   if (days < 7) return new Intl.DateTimeFormat(loc, { weekday: "short" }).format(d);
@@ -84,7 +84,7 @@ function dayLabel(iso: string, t: (k: string) => string): string {
   const days = Math.floor((+new Date(now.getFullYear(), now.getMonth(), now.getDate()) - +new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
   if (days <= 0) return t("chats.today");
   if (days === 1) return t("chats.yesterday");
-  return new Intl.DateTimeFormat(getLocale(), { weekday: "long", day: "numeric", month: "long", ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}) }).format(d);
+  return new Intl.DateTimeFormat(intlLocale(), { weekday: "long", day: "numeric", month: "long", ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}) }).format(d);
 }
 
 function Skeleton({ rows = 5, kind }: { rows?: number; kind: "list" | "thread" }) {
