@@ -2,6 +2,7 @@
  * Builds the static, JS-free content pages from JSON sources, in Spanish and English:
  *   guide-src/*.json -> /guia/ and /en/guide/   (user guide)
  *   docs-src/*.json  -> /docs/ and /en/docs/    (technical documentation: code blocks and tables)
+ *   trust-src/*.json -> /confianza/ and /en/trust/ (security, data protection, subprocessors)
  * and writes sitemap.xml for the whole site (home + both collections, with hreflang alternates).
  *   node landing/scripts/build-guide.mjs     (build.mjs runs prerender first, then this)
  */
@@ -36,6 +37,11 @@ const UI = {
       desc: "Arquitectura, referencia de la API, autenticación y multitenencia, runtime de agentes, habilidades, seguridad, despliegue y configuración.",
       intro: "Para quien quiere entender, desplegar o integrar AI Workforce OS: cómo está construido, qué expone la API, cómo se aíslan las cuentas, cómo se despliega y qué se puede configurar. Todo describe lo que el código hace hoy.",
     },
+    trust: {
+      name: "Confianza", title: "Centro de confianza de AI Workforce OS", meta: "Centro de confianza | AI Workforce OS",
+      desc: "Seguridad, protección de datos, subprocesadores y divulgación de vulnerabilidades, descritos tal como existen hoy y sin certificaciones declaradas.",
+      intro: "Lo que revisa un equipo de seguridad o de compras antes de confiarnos datos: qué controles existen, cómo tratamos los datos, qué proveedores intervienen y cómo reportar una vulnerabilidad. Describimos lo que hay hoy, incluidas las brechas.",
+    },
   },
   en: {
     skip: "Skip to content", navLabel: "Main", crumbLabel: "Breadcrumb", home: "Home", langLabel: "Language",
@@ -52,6 +58,11 @@ const UI = {
       name: "Documentation", title: "AI Workforce OS technical documentation", meta: "Technical documentation | AI Workforce OS",
       desc: "Architecture, API reference, authentication and multi-tenancy, agent runtime, skills, security, deployment and configuration.",
       intro: "For anyone who wants to understand, deploy or integrate AI Workforce OS: how it is built, what the API exposes, how accounts are isolated, how it is deployed and what can be configured. Everything describes what the code does today.",
+    },
+    trust: {
+      name: "Trust", title: "AI Workforce OS trust center", meta: "Trust center | AI Workforce OS",
+      desc: "Security, data protection, subprocessors and vulnerability disclosure, described as they exist today with no certifications claimed.",
+      intro: "What a security or procurement team reviews before trusting us with data: which controls exist, how we handle data, which providers are involved and how to report a vulnerability. We describe what exists today, gaps included.",
     },
   },
 };
@@ -117,6 +128,7 @@ function chrome(lang, selfPath, altPath, body) {
         <a href="${home[lang]}">${u.home}</a>
         <a href="${rootOf("docs", lang)}">${u.docs.name}</a>
         <a href="${rootOf("guide", lang)}">${u.guide.name}</a>
+        <a href="${rootOf("trust", lang)}">${u.trust.name}</a>
       </nav>
       <div class="bar-end">
         <div class="lang" role="group" aria-label="${u.langLabel}">
@@ -146,6 +158,7 @@ ${body}
       <p>${u.footer}</p>
       <a href="${rootOf("docs", lang)}">${u.docs.name}</a>
       <a href="${rootOf("guide", lang)}">${u.guide.name}</a>
+      <a href="${rootOf("trust", lang)}">${u.trust.name}</a>
       <a href="#top">${u.top}</a>
     </div>
   </footer>

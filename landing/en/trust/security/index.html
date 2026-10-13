@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Workforce OS security: controls and limits</title>
+  <meta name="description" content="Which security controls exist today in AI Workforce OS, verified in the code, and which ones we do not have yet. No certifications claimed.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#f7f9fb">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico?v=3" sizes="any">
+  <link rel="icon" href="/favicon-32.png?v=3" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3">
+  <link rel="manifest" href="/manifest.webmanifest?v=3">
+  <meta name="apple-mobile-web-app-title" content="Workforce">
+  <link rel="canonical" href="https://workforceai.es/en/trust/security/">
+  <link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/seguridad/">
+  <link rel="alternate" hreflang="en" href="https://workforceai.es/en/trust/security/">
+  <link rel="alternate" hreflang="x-default" href="https://workforceai.es/confianza/seguridad/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="AI Workforce OS">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta property="og:title" content="AI Workforce OS security: controls and limits">
+  <meta property="og:description" content="Which security controls exist today in AI Workforce OS, verified in the code, and which ones we do not have yet. No certifications claimed.">
+  <meta property="og:url" content="https://workforceai.es/en/trust/security/">
+  <meta property="og:image" content="https://workforceai.es/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AI Workforce OS security: controls and limits">
+  <meta name="twitter:description" content="Which security controls exist today in AI Workforce OS, verified in the code, and which ones we do not have yet. No certifications claimed.">
+  <meta name="twitter:image" content="https://workforceai.es/img/og.png">
+  <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/guide.css">
+  <link rel="stylesheet" href="/theme.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Trust","item":"https://workforceai.es/en/trust/"},{"@type":"ListItem","position":3,"name":"Security at AI Workforce OS","item":"https://workforceai.es/en/trust/security/"}]},{"@type":"TechArticle","headline":"Security at AI Workforce OS","description":"Which security controls exist today in AI Workforce OS, verified in the code, and which ones we do not have yet. No certifications claimed.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/trust/security/","url":"https://workforceai.es/en/trust/security/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+</head>
+<body class="guide" id="top">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap bar-row">
+      <a class="brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <span>AI Workforce OS</span>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="/en/">Home</a>
+        <a href="/en/docs/">Documentation</a>
+        <a href="/en/guide/">User guide</a>
+        <a href="/en/trust/">Trust</a>
+      </nav>
+      <div class="bar-end">
+        <div class="lang" role="group" aria-label="Language">
+          <a href="/confianza/seguridad/" hreflang="es" lang="es" >ES</a>
+          <a href="/en/trust/security/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="guide-main">
+    <div class="wrap narrow">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/trust/">Trust</a></li><li aria-current="page">Security at AI Workforce OS</li></ol></nav>
+      <article>
+        <h1>Security at AI Workforce OS</h1>
+        <p class="lead">This page summarizes the security controls that are implemented today, as can be checked in the code and in the deployment configuration, and ends with a table of what we do not have yet. We hold no certifications (neither SOC 2 nor ISO 27001) and we do not claim compliance with any framework. If your procurement team needs more detail, write to info@workforceai.es.</p>
+        
+        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">How to read this page</a></li><li><a href="#s2">Isolation between organizations</a></li><li><a href="#s3">Authentication and sessions</a></li><li><a href="#s4">Roles and permissions</a></li><li><a href="#s5">Credential vault</a></li><li><a href="#s6">Human approvals</a></li><li><a href="#s7">Spending caps and operating controls</a></li><li><a href="#s8">Verifiable audit log</a></li><li><a href="#s9">Data to AI models and untrusted content</a></li><li><a href="#s10">Encryption in transit, backups and development</a></li><li><a href="#s11">What we do not have yet</a></li></ol></nav>
+
+      <section class="g-sec" id="s1" aria-labelledby="h1">
+        <h2 id="h1">How to read this page</h2>
+        <p>We describe only what exists. When something depends on configuration (for example e-mail verification or the vault encryption key) we say so explicitly. The current public deployment shares a single server and, according to its configuration in the repository, the agent runtime runs in simulation mode: it sends no data to any model provider until a real AI key is configured.</p>
+        <p>The design starts from the premise that a language model can be fooled by untrusted text. That is why damage is limited with deterministic controls in the backend (Go) and not with instructions in the prompt. We do not promise that the model is never influenced; we promise that the blast radius is bounded to what the backend authorizes.</p>
+        
+        
+        
+        <aside class="tip"><b>Tip.</b> More technical detail in the documentation: security model and authentication and multi-organization.</aside>
+      </section>
+
+      <section class="g-sec" id="s2" aria-labelledby="h2">
+        <h2 id="h2">Isolation between organizations</h2>
+        <p>Tables holding organization data use Postgres row-level security. Each request runs in a transaction that sets the organization with a transaction-local setting, and policies filter on it; FORCE ROW LEVEL SECURITY applies it even to the table owner.</p>
+        <p>The system fails closed: if the organization is not set, no row is visible or writable. The server connects with a role that is not a superuser, has no BYPASSRLS and owns no tables. An integration test covers isolation between organizations. This is logical isolation inside one database, not separate instances per customer.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s3" aria-labelledby="h3">
+        <h2 id="h3">Authentication and sessions</h2>
+        <p>Passwords are stored with Argon2id (64 MiB, 3 iterations, 2 lanes by default) and are rehashed at the next login if they were created with weaker parameters. Passwords must be 10 to 128 characters long, use at least two character classes, and common passwords are rejected.</p>
+        <p>After 5 wrong passwords the account is locked for 15 minutes. There are rate limits per e-mail and per IP (for example 10 login attempts per 15 minutes per e-mail, 20 per IP, and 5 sign-ups per hour per IP), kept in Redis when available or in memory otherwise. For non-existent accounts an equivalent hash is computed so that response time does not reveal whether an e-mail exists.</p>
+        <p>The access token is a JWT valid 15 minutes by default. The refresh token is opaque, lasts 30 days by default, is stored on the server only as a SHA-256 hash and travels in an HttpOnly, SameSite=Strict cookie. Every refresh rotates the token within a family; presenting an already-used token revokes the whole family. Refresh and logout require a dedicated anti-CSRF header.</p>
+        <p>E-mail verification with a single-use link (valid 24 hours) exists but is optional: it is turned on with EMAIL_VERIFICATION=true and requires a configured SMTP server. Trial accounts are disposable and stop working after 24 hours.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s4" aria-labelledby="h4">
+        <h2 id="h4">Roles and permissions</h2>
+        <p>Each membership has one of four roles: owner, admin, member or viewer, and each is a strict superset of the one below. Permissions have the form resource:action and are checked on the server before each operation. By default the role is read from the database on every request, so demoting or removing a member takes effect immediately.</p>
+        <p>Nobody can assign a role higher than their own, the last owner cannot be removed and an agent never holds approval permissions. A user can belong to several organizations with a different role in each.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s5" aria-labelledby="h5">
+        <h2 id="h5">Credential vault</h2>
+        <p>Integration credentials (OAuth tokens, API keys) are encrypted with AES-256-GCM in an envelope scheme: a key-encryption key (KEK) kept outside the database wraps a per-organization data key, and that key encrypts each secret with a random nonce. The authenticated data includes organization, credential, version and kind, so a ciphertext copied to another row or organization does not decrypt.</p>
+        <p>Without a configured KEK (CONNECTIONS_KEK) the vault fails closed: it neither stores nor reads real credentials. Several KEKs are accepted so they can be rotated. Revoking a connection suspends it, calls the provider's revocation endpoint and destroys the ciphertext. The language model never sees a secret: the contract between backend and runtime has no credential fields.</p>
+        <p>An organization's own AI keys (bring your own key) are stored with the same envelope encryption.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s6" aria-labelledby="h6">
+        <h2 id="h6">Human approvals</h2>
+        <p>An agent can request an action but can never approve it. People with the admin or owner role approve; the role comes from the session token. Each approval is bound by hash to the exact arguments, is consumed once, is re-validated before execution and expires (48 hours by default; expiring counts as a rejection).</p>
+        <p>There are four autonomy levels per agent (suggest, approve_each, rules, autonomous); the default level requires approval for any action with an external effect. An organization can add rules such as amount thresholds, forbidden actions, new recipients or dual approval, in which two distinct people are needed and the requester never approves.</p>
+        <p>Known limitation: there is no finer-grained permission for deciding high-risk approvals today; deciding equals being admin or owner. The option that prevents self-approval ships turned off for compatibility with one-person teams.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s7" aria-labelledby="h7">
+        <h2 id="h7">Spending caps and operating controls</h2>
+        <p>Before each runtime call the maximum estimated cost is reserved against the request, the agent and the organization, and afterwards it is reconciled with the larger of the cost reported by the runtime and the cost recomputed by the backend. When a cap is reached the request or agent pauses and a person decides whether to raise it. There are also anti-loop limits: delegation depth, tasks per request, retries, time per task and a per-organization queue.</p>
+        <p>Operating hours are a weekly schedule with a time zone that prevents starting new work outside open hours. Anomaly detection v1 applies four explainable rules (spend spike, burst of tool requests, serial rejected approvals and new recipient domains) and records each finding in the audit log; on its own it does not block, and automatic freezing is optional and off by default.</p>
+        <p>Read-only mode (organization-wide or per agent) denies external effects. The kill switch has two levels, freeze and lockdown: any admin or owner can trigger it, only an owner can lift it and with a written reason; it can also be imposed through an environment variable. Held actions go back to the approval queue and must be approved again. A call already sent to the runtime finishes even if the kill switch is triggered.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s8" aria-labelledby="h8">
+        <h2 id="h8">Verifiable audit log</h2>
+        <p>The audit log is a hash chain per organization: each entry includes the SHA-256 of the previous one, so modifying, deleting, reordering or inserting an entry breaks the chain from that point on. A verification endpoint recomputes the chain and an export endpoint returns the log as JSONL or CSV (admin or owner permission). For the application role the log is append-only: UPDATE and DELETE are revoked.</p>
+        <p>Before being chained, each entry goes through a scrubber that keeps only metadata: it replaces content fields and credential-looking keys with [redacted], masks embedded secrets and truncates long texts. Authentication, policy decisions, approvals, tool executions and control changes are audited, among others.</p>
+        <p>The export is a plain dump, with no external signature or anchoring of the chain head. Today there is no automatic purge of the audit log.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s9" aria-labelledby="h9">
+        <h2 id="h9">Data to AI models and untrusted content</h2>
+        <p>Before text reaches the model, the runtime and the backend mask credentials, one-time codes and card numbers, and all external content (e-mails, API responses, files) is normalized, markdown images and links are neutralized and it is wrapped in a block delimited as data. A heuristic injection score flags the task and raises its approval; it is a signal, not a barrier. The barrier is permissions, approvals and limits.</p>
+        <p>Each organization can set an allow-list of AI providers, on top of the ceiling defined by the deployment operator (ALLOWED_PROVIDERS). An excluded provider is neither called nor used as a fallback. Organizations can bring their own AI key and require that only that key is used (no fallback to the platform's keys), or point to their own OpenAI-compatible endpoint. The providers the system recognizes are deepseek, anthropic, openai, kimi and custom. Details on the subprocessors page.</p>
+        <p>Code that an agent wants to run is a high-risk request that a person must approve. It runs in a container with no network, a read-only file system, no capabilities and resource limits. Known limitation: the executor mounts the Docker socket, which is equivalent to administrator access to the host; we do not recommend it beyond a single trusted host.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s10" aria-labelledby="h10">
+        <h2 id="h10">Encryption in transit, backups and development</h2>
+        <p>Public traffic arrives over HTTPS: a Caddy proxy terminates TLS with automatic certificates and sends the Strict-Transport-Security header (one year) on the site and the application. The application also adds X-Content-Type-Options, X-Frame-Options DENY and Referrer-Policy. We have not had the TLS configuration externally assessed. Between containers, on a private network of the same server, the connection to Postgres does not use TLS (sslmode=disable). We have not verified encryption at rest of the hosting provider's disks.</p>
+        <p>Backups: a cron job runs once a day (03:30, server time) a gzip-compressed Postgres dump. It is stored on the same server with restrictive permissions, kept for 14 days, and the script fails with a message if the file is suspiciously small. One restore has been tested. There is no off-server copy and no formal recovery time or recovery point objective.</p>
+        <p>Development: the repository runs in CI the build, tests, a race detector on key packages, a Dockerfile linter, govulncheck and npm audit (the last two do not block integration). Deployments use images tagged by commit.</p>
+        
+        
+        
+        
+      </section>
+
+      <section class="g-sec" id="s11" aria-labelledby="h11">
+        <h2 id="h11">What we do not have yet</h2>
+        <p>An honest status of the capabilities procurement teams usually ask for. Where we say it does not exist, it does not exist; where we say in development, it is not available today. We give no dates because none is committed.</p>
+        
+        
+        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Capability</th><th scope="col">Status today</th><th scope="col">Detail</th></tr></thead><tbody><tr><th scope="row"><code>SOC 2 / ISO 27001</code></th><td>Does not exist</td><td>No certifications or external audit. They appear in the internal plan as a later phase, with no approved date or budget.</td></tr><tr><th scope="row"><code>SSO (SAML/OIDC) and SCIM</code></th><td>Does not exist</td><td>E-mail and password, with optional two-step verification. The OIDC that exists is used solely to connect LinkedIn as an integration.</td></tr><tr><th scope="row"><code>Organization-wide mandatory MFA</code></th><td>Does not exist</td><td>Each person can turn on an authenticator app (TOTP) with recovery codes, but an organization cannot require it of all its members.</td></tr><tr><th scope="row"><code>Password recovery by e-mail</code></th><td>Built, not yet switched on</td><td>The single-use link (1 hour) is built, but it needs outgoing e-mail configured, which the public deployment does not have yet.</td></tr><tr><th scope="row"><code>Complete export and erasure of an organization's or person's data</code></th><td>In development</td><td>Partial exports exist (audit, traces, artifacts, skills). For the rest, send a request to info@workforceai.es.</td></tr><tr><th scope="row"><code>Choice of data residency</code></th><td>Does not exist</td><td>A single shared server; its location is not verified on this page. Region cannot be chosen.</td></tr><tr><th scope="row"><code>External signing or anchoring of the audit log</code></th><td>Does not exist</td><td>The hash chain is verifiable, but its head is not anchored outside the system.</td></tr><tr><th scope="row"><code>Encryption keys in a KMS</code></th><td>Does not exist</td><td>The KEK is supplied through an environment variable (CONNECTIONS_KEK); rotation with several KEKs is supported.</td></tr><tr><th scope="row"><code>External penetration test</code></th><td>Does not exist</td><td>Only our own automated tests and dependency scanners in CI.</td></tr><tr><th scope="row"><code>Off-server backups and periodic restore tests</code></th><td>Does not exist</td><td>Nightly dumps live on the same server; one restore was tested, with no test schedule.</td></tr><tr><th scope="row"><code>High availability and multiple replicas</code></th><td>Does not exist</td><td>A single instance; some counters and semaphores are per process.</td></tr><tr><th scope="row"><code>Public status page with incident history</code></th><td>Does not exist</td><td>The Current status section of the site describes what works, not availability.</td></tr><tr><th scope="row"><code>Published legal documents (privacy, terms, DPA)</code></th><td>Under review</td><td>Drafts exist pending review by a lawyer; they are not published yet.</td></tr><tr><th scope="row"><code>Strong isolation of the code executor</code></th><td>Partial</td><td>A restricted container, but with access to the host's Docker socket.</td></tr></tbody></table></div>
+        <aside class="tip"><b>Tip.</b> To report a vulnerability, see the vulnerability disclosure page or write to info@workforceai.es.</aside>
+      </section>
+      </article>
+      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/trust/subprocessors/"><b>Subprocessors</b><span>Third parties that may process customer data in AI Workforce OS: hosting, AI model providers, e-mail and payments, with their purpose and data involved.</span></a></li><li><a href="/en/trust/data-protection/"><b>Data protection</b><span>What data AI Workforce OS stores, where, for how long, how it reaches AI providers, and how to exercise your rights today.</span></a></li><li><a href="/en/trust/vulnerability-disclosure/"><b>Vulnerability disclosure</b><span>How to report a security vulnerability in AI Workforce OS, what is in scope, our safe-harbor rules and what you can expect from us.</span></a></li></ul></section>
+    </div>
+  </main>
+  <section class="guide-cta" aria-labelledby="cta-h">
+    <div class="wrap narrow">
+      <h2 id="cta-h">Start now</h2>
+      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
+      <div class="cta-row">
+        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
+        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+      <a href="/en/docs/">Documentation</a>
+      <a href="/en/guide/">User guide</a>
+      <a href="/en/trust/">Trust</a>
+      <a href="#top">Back to top</a>
+    </div>
+  </footer>
+</body>
+</html>

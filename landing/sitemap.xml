@@ -266,4 +266,74 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/docs/configuration/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/docs/configuracion/"/>
   </url>
+  <url>
+    <loc>https://workforceai.es/confianza/</loc>
+    <lastmod>2026-10-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/trust/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/confianza/"/>
+  </url>
+  <url>
+    <loc>https://workforceai.es/en/trust/</loc>
+    <lastmod>2026-10-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/trust/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/confianza/"/>
+  </url>
+  <url>
+    <loc>https://workforceai.es/confianza/seguridad/</loc>
+    <lastmod>2026-10-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/seguridad/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/trust/security/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/confianza/seguridad/"/>
+  </url>
+  <url>
+    <loc>https://workforceai.es/en/trust/security/</loc>
+    <lastmod>2026-10-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/seguridad/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/trust/security/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/confianza/seguridad/"/>
+  </url>
+  <url>
+    <loc>https://workforceai.es/confianza/proteccion-de-datos/</loc>
+    <lastmod>2026-10-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/proteccion-de-datos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/trust/data-protection/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/confianza/proteccion-de-datos/"/>
+  </url>
+  <url>
+    <loc>https://workforceai.es/en/trust/data-protection/</loc>
+    <lastmod>2026-10-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/proteccion-de-datos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/trust/data-protection/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/confianza/proteccion-de-datos/"/>
+  </url>
+  <url>
+    <loc>https://workforceai.es/confianza/subprocesadores/</loc>
+    <lastmod>2026-10-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/subprocesadores/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/trust/subprocessors/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/confianza/subprocesadores/"/>
+  </url>
+  <url>
+    <loc>https://workforceai.es/en/trust/subprocessors/</loc>
+    <lastmod>2026-10-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/subprocesadores/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/trust/subprocessors/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/confianza/subprocesadores/"/>
+  </url>
+  <url>
+    <loc>https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/</loc>
+    <lastmod>2026-10-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/trust/vulnerability-disclosure/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/"/>
+  </url>
+  <url>
+    <loc>https://workforceai.es/en/trust/vulnerability-disclosure/</loc>
+    <lastmod>2026-10-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/trust/vulnerability-disclosure/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/"/>
+  </url>
 </urlset>

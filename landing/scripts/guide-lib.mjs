@@ -19,6 +19,11 @@ export const COLLECTIONS = {
     root: { es: "/docs/", en: "/en/docs/" },
     order: ["architecture", "api-reference", "auth-and-tenancy", "agent-runtime", "skills-format", "security-model", "deployment", "configuration"],
   },
+  trust: {
+    src: "trust-src",
+    root: { es: "/confianza/", en: "/en/trust/" },
+    order: ["security-overview", "data-protection", "subprocessors", "vulnerability-disclosure"],
+  },
 };
 
 export function loadPages(coll = "guide") {

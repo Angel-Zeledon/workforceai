@@ -1,0 +1,255 @@
+{
+  "id": "subprocessors",
+  "slug": {
+    "es": "subprocesadores",
+    "en": "subprocessors"
+  },
+  "related": [
+    "security-overview",
+    "data-protection"
+  ],
+  "es": {
+    "title": "Subprocesadores",
+    "metaTitle": "Subprocesadores de AI Workforce OS",
+    "description": "Terceros que pueden tratar datos de clientes en AI Workforce OS: alojamiento, proveedores de modelos de IA, correo y pagos, con su finalidad y datos.",
+    "intro": "Esta página lista los terceros que pueden tocar datos de clientes, para qué y cuándo. Donde no hemos verificado un dato, como la ubicación de un proveedor, lo decimos como no verificado en lugar de suponerlo. La lista se deriva del código y de la configuración de despliegue del repositorio; si cambia, esta página debe actualizarse.",
+    "sections": [
+      {
+        "h": "Cómo leer la lista",
+        "paras": [
+          "Los proveedores de modelos de IA solo reciben datos cuando la organización, o el operador del despliegue, activa IA real configurando una clave. Sin clave, el runtime corre en modo simulación y no sale ningún dato hacia ellos. En el despliegue público actual, según su configuración en el repositorio, el runtime está en modo simulación.",
+          "El operador del despliegue fija un techo de proveedores permitidos (ALLOWED_PROVIDERS) y cada organización puede restringir aún más su lista. Un proveedor excluido ni se llama ni se usa como respaldo."
+        ]
+      },
+      {
+        "h": "Subprocesadores y terceros",
+        "table": {
+          "head": [
+            "Tercero",
+            "Finalidad",
+            "Datos involucrados",
+            "Ubicación",
+            "Cuándo aplica"
+          ],
+          "rows": [
+            [
+              "Proveedor del servidor privado virtual (VPS)",
+              "Alojamiento de la aplicación, la base de datos Postgres y los respaldos",
+              "Todos los datos que la organización guarda en el producto, y los volcados nocturnos",
+              "No verificado en esta página (nombre y país del proveedor por confirmar)",
+              "Siempre, en el despliegue alojado por nosotros"
+            ],
+            [
+              "DeepSeek",
+              "Modelo de lenguaje para ejecutar tareas de los agentes",
+              "Texto de la tarea, contexto, memoria y contenido que se envía en el prompt, con credenciales enmascaradas",
+              "No verificado",
+              "Solo si se activa IA real y el proveedor está permitido"
+            ],
+            [
+              "Anthropic",
+              "Modelo de lenguaje (Claude) para ejecutar tareas de los agentes",
+              "Igual que arriba",
+              "No verificado",
+              "Solo si se activa IA real y el proveedor está permitido"
+            ],
+            [
+              "OpenAI",
+              "Modelo de lenguaje para ejecutar tareas de los agentes",
+              "Igual que arriba",
+              "No verificado",
+              "Solo si se activa IA real y el proveedor está permitido"
+            ],
+            [
+              "Kimi (Moonshot AI)",
+              "Modelo de lenguaje para ejecutar tareas de los agentes",
+              "Igual que arriba",
+              "No verificado",
+              "Solo si se activa IA real y el proveedor está permitido"
+            ],
+            [
+              "Endpoint personalizado (custom)",
+              "Modelo de lenguaje en un servicio compatible con OpenAI que elige el cliente u operador (regional, local o pasarela propia)",
+              "Igual que arriba",
+              "Lo decide quien lo configura",
+              "Solo si se configura; no es un tercero nuestro"
+            ],
+            [
+              "Proveedor de correo (servidor SMTP)",
+              "Envío de correos transaccionales, hoy solo la verificación de cuenta",
+              "Dirección de correo del usuario y el enlace de verificación",
+              "No seleccionado ni verificado",
+              "Solo si el operador configura SMTP y activa la verificación de correo"
+            ],
+            [
+              "Proveedor de pagos",
+              "Cobro de suscripciones",
+              "Ninguno hoy: no hay cobro",
+              "No seleccionado todavía",
+              "No aplica hasta que se seleccione"
+            ],
+            [
+              "Servicios de notificaciones push del navegador",
+              "Entregar avisos web push a los navegadores que se suscriben",
+              "Dirección de la suscripción y contenido del aviso, cifrado según el estándar Web Push",
+              "Depende del navegador del usuario",
+              "Solo si el usuario activa las notificaciones"
+            ],
+            [
+              "Almacenamiento de objetos compatible con S3",
+              "Guardar archivos de la unidad de archivos del producto",
+              "Archivos que los usuarios suben o los agentes generan",
+              "Lo decide quien lo configura",
+              "Solo si el operador configura S3_ENDPOINT y S3_BUCKET; no está en el despliegue público descrito"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Servicios que conecta el cliente",
+        "paras": [
+          "Las integraciones disponibles son Gmail, Google Calendar, Google Drive, Slack, GitHub, LinkedIn y una API personalizada. Cuando una organización las conecta, los datos viajan entre el producto y esos servicios por decisión y con las credenciales de la organización, bajo sus propios acuerdos con ellos. No los listamos como subprocesadores nuestros porque los elige y contrata el cliente. La integración con Gmail funciona en simulación; con cuentas reales todavía no está probada.",
+          "El código y las imágenes del producto se alojan en GitHub y su registro de contenedores, que no reciben datos de clientes. La emisión de certificados TLS la hace el proveedor de certificados que usa nuestro proxy (Let's Encrypt, según la guía de despliegue) y solo conoce nombres de dominio."
+        ]
+      },
+      {
+        "h": "Cómo restringir adónde van los datos",
+        "steps": [
+          "No configurar ninguna clave de IA: el producto funciona en simulación y no sale ningún dato hacia proveedores de modelos.",
+          "Usar la política de modelos de la organización (Ajustes, política de modelos) para permitir solo los proveedores que su política interna acepte; lo que no esté en la lista no se llama ni como respaldo.",
+          "Traer su propia clave de IA y exigir que solo se use esa, de modo que la plataforma no recurra a sus claves.",
+          "Apuntar a un endpoint propio compatible con OpenAI (por ejemplo un modelo local o una pasarela regional) como proveedor custom."
+        ],
+        "tip": "Para organizaciones con requisitos de residencia de datos: hoy no podemos garantizar una región. Consúltanos en info@workforceai.es antes de activar IA real."
+      },
+      {
+        "h": "Cambios en la lista",
+        "paras": [
+          "Aún no tenemos un proceso formal de aviso previo de cambios de subprocesadores. La intención es avisar por correo a los clientes con un plazo razonable antes de añadir uno, y el borrador del acuerdo de encargo de tratamiento (DPA), pendiente de revisión legal, contempla un mecanismo de autorización y objeción. Hasta entonces, escribe a info@workforceai.es para recibir avisos."
+        ]
+      }
+    ]
+  },
+  "en": {
+    "title": "Subprocessors",
+    "metaTitle": "AI Workforce OS subprocessors",
+    "description": "Third parties that may process customer data in AI Workforce OS: hosting, AI model providers, e-mail and payments, with their purpose and data involved.",
+    "intro": "This page lists the third parties that may touch customer data, for what purpose and when. Where we have not verified something, such as a provider's location, we say it is not verified rather than assume it. The list is derived from the code and the deployment configuration in the repository; if they change, this page must be updated.",
+    "sections": [
+      {
+        "h": "How to read the list",
+        "paras": [
+          "AI model providers receive data only when the organization, or the deployment operator, turns on real AI by configuring a key. Without a key, the runtime runs in simulation mode and no data goes to them. In the current public deployment, according to its configuration in the repository, the runtime is in simulation mode.",
+          "The deployment operator sets a ceiling of allowed providers (ALLOWED_PROVIDERS) and each organization can restrict its own list further. An excluded provider is neither called nor used as a fallback."
+        ]
+      },
+      {
+        "h": "Subprocessors and third parties",
+        "table": {
+          "head": [
+            "Third party",
+            "Purpose",
+            "Data involved",
+            "Location",
+            "When it applies"
+          ],
+          "rows": [
+            [
+              "Virtual private server (VPS) provider",
+              "Hosting of the application, the Postgres database and the backups",
+              "All data the organization stores in the product, and the nightly dumps",
+              "Not verified on this page (provider name and country to be confirmed)",
+              "Always, in the deployment hosted by us"
+            ],
+            [
+              "DeepSeek",
+              "Language model to run agent tasks",
+              "Task text, context, memory and content sent in the prompt, with credentials masked",
+              "Not verified",
+              "Only if real AI is turned on and the provider is allowed"
+            ],
+            [
+              "Anthropic",
+              "Language model (Claude) to run agent tasks",
+              "Same as above",
+              "Not verified",
+              "Only if real AI is turned on and the provider is allowed"
+            ],
+            [
+              "OpenAI",
+              "Language model to run agent tasks",
+              "Same as above",
+              "Not verified",
+              "Only if real AI is turned on and the provider is allowed"
+            ],
+            [
+              "Kimi (Moonshot AI)",
+              "Language model to run agent tasks",
+              "Same as above",
+              "Not verified",
+              "Only if real AI is turned on and the provider is allowed"
+            ],
+            [
+              "Custom endpoint",
+              "Language model on an OpenAI-compatible service chosen by the customer or operator (regional, local or own gateway)",
+              "Same as above",
+              "Decided by whoever configures it",
+              "Only if configured; not a third party of ours"
+            ],
+            [
+              "E-mail provider (SMTP server)",
+              "Sending transactional e-mail, today only account verification",
+              "The user's e-mail address and the verification link",
+              "Not selected or verified",
+              "Only if the operator configures SMTP and turns on e-mail verification"
+            ],
+            [
+              "Payments provider",
+              "Charging subscriptions",
+              "None today: there is no billing",
+              "Not selected yet",
+              "Does not apply until one is selected"
+            ],
+            [
+              "Browser push notification services",
+              "Delivering web push notices to subscribed browsers",
+              "Subscription address and notice content, encrypted per the Web Push standard",
+              "Depends on the user's browser",
+              "Only if the user enables notifications"
+            ],
+            [
+              "S3-compatible object storage",
+              "Storing files of the product's file drive",
+              "Files that users upload or agents generate",
+              "Decided by whoever configures it",
+              "Only if the operator sets S3_ENDPOINT and S3_BUCKET; not in the public deployment described"
+            ]
+          ]
+        }
+      },
+      {
+        "h": "Services the customer connects",
+        "paras": [
+          "The available integrations are Gmail, Google Calendar, Google Drive, Slack, GitHub, LinkedIn and a custom API. When an organization connects them, data flows between the product and those services by the organization's decision and with its credentials, under its own agreements with them. We do not list them as our subprocessors because the customer chooses and contracts them. The Gmail integration works in simulation; with real accounts it is not yet tested.",
+          "The product's code and images are hosted on GitHub and its container registry, which receive no customer data. TLS certificates are issued by the certificate authority our proxy uses (Let's Encrypt, according to the deployment guide) and it only learns domain names."
+        ]
+      },
+      {
+        "h": "How to restrict where data goes",
+        "steps": [
+          "Configure no AI key: the product works in simulation and no data goes to model providers.",
+          "Use the organization's model policy (Settings, model policy) to allow only the providers your internal policy accepts; anything not on the list is neither called nor used as a fallback.",
+          "Bring your own AI key and require that only that key is used, so the platform does not fall back to its own keys.",
+          "Point to your own OpenAI-compatible endpoint (for example a local model or a regional gateway) as the custom provider."
+        ],
+        "tip": "For organizations with data residency requirements: today we cannot guarantee a region. Contact us at info@workforceai.es before turning on real AI."
+      },
+      {
+        "h": "Changes to the list",
+        "paras": [
+          "We do not yet have a formal process for advance notice of subprocessor changes. The intention is to notify customers by e-mail with reasonable notice before adding one, and the draft data processing agreement (DPA), pending legal review, includes an authorization and objection mechanism. Until then, write to info@workforceai.es to receive notices."
+        ]
+      }
+    ]
+  }
+}
