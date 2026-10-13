@@ -63,12 +63,13 @@ services:
       # E-mail verification of new accounts. Turn on in ./.env (EMAIL_VERIFICATION=true) once the SMTP_* values are set there;
       # the backend refuses to start with verification on and no working SMTP, so a half-configured server cannot lock people out.
       EMAIL_VERIFICATION: ${EMAIL_VERIFICATION:-false}
-      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_HOST: ${SMTP_HOST:-smtp.hostinger.com}
       SMTP_PORT: ${SMTP_PORT:-465}
-      SMTP_USER: ${SMTP_USER:-}
+      SMTP_USER: ${SMTP_USER:-no-reply@workforceai.es}
+      # The password is a secret: it lives only in ./.env on the server (never in this repository).
       SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-}
-      SMTP_TLS: ${SMTP_TLS:-}
+      SMTP_FROM: ${SMTP_FROM:-no-reply@workforceai.es}
+      SMTP_TLS: ${SMTP_TLS:-tls}
       # Caddy (stockai project) is the only proxy in front: trust its X-Forwarded-For so rate limits count real client IPs.
       TRUSTED_PROXIES: 172.16.1.0/24
     mem_limit: 256m
