@@ -14,6 +14,7 @@ import type { FileRef } from "@/lib/types";
 import { CommandCard } from "./commands/CommandCard";
 import { useSlashComposer } from "./commands/useSlashComposer";
 import { surfaceOf } from "@/lib/commands/logic";
+import { AttachMenu, AttachmentTray, DrivePicker, DropOverlay, MAX_FILES, useAttachments } from "./attachments";
 
 const EMPTY: ChatMessage[] = [];
 
@@ -191,20 +192,6 @@ export async function sendChat(conv: string, text: string, from = "user", attach
   }
 }
 
-/** Where attachments go: one folder per message under /Shared/Chat (agents can read /Shared). */
-async function uploadAttachments(files: File[]): Promise<FileRef[]> {
-  const batch = Math.random().toString(36).slice(2, 8);
-  const out: FileRef[] = [];
-  for (const f of files) {
-    const path = `/Shared/Chat/${batch}/${f.name.replace(/[\\/]/g, "_")}`;
-    const r = await drive.upload(path, f);
-    out.push({ file_id: r.file.id, path: r.file.path, name: r.file.name, mime: r.file.mime, size: r.file.size, version: r.file.current_version, action: "attach" });
-  }
-  return out;
-}
-
-const MAX_ATTACH = 5;
-
 export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, autoFocus = false, general = false }: { conv: string; placeholder: string; testId?: string; submitTestId?: string; onSent?: () => void; autoFocus?: boolean; general?: boolean }) {
   const { t } = useT();
   const [text, setTextRaw] = useState("");
@@ -212,9 +199,14 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
   const setText = (v: string, c?: number) => { setTextRaw(v); setCaret(c ?? v.length); };
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [picked, setPicked] = useState<File[]>([]);
+  const att = useAttachments(conv);
+  const [drag, setDrag] = useState(false);
+  const [picker, setPicker] = useState<null | "files" | "folder">(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const dirRef = useRef<HTMLInputElement>(null);
+  const dragDepth = useRef(0);
+  const picked = att.items; // attachments of this message (they upload as soon as they are added)
   const draft = useStore((s) => s.drafts[conv]);
   const setDraft = useStore((s) => s.setDraft);
   useEffect(() => {
@@ -226,52 +218,48 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
     if (!picked.length && sc.submit()) return;
-    const v = text.trim() || (picked.length ? t("chat.attach.defaultText") : "");
-    if (!v || busy) return;
+    const v = text.trim() || (att.refs.length ? t("chat.attach.defaultText") : "");
+    if (!v || busy || att.uploading) return;
     setBusy(true); setErr("");
     try {
-      let refs: FileRef[] = [];
-      if (picked.length) {
-        try { refs = await uploadAttachments(picked); } catch (x) { setErr(x instanceof DriveError ? t("chat.attach.error", { code: x.code }) : t("chat.attach.error", { code: "upload" })); setBusy(false); return; }
-      }
+      const refs: FileRef[] = att.refs;
       await sendChat(conv, v, "user", refs.map((r) => r.path), refs);
-      setText(""); setPicked([]); onSent?.();
+      setText(""); att.clear(); onSent?.();
     } catch { setErr(t("chat.sendError")); }
     setBusy(false);
   };
   return (
     <>
-    <form onSubmit={submit} className="relative flex flex-col gap-1">
+    <form onSubmit={submit} className="relative flex flex-col gap-1"
+      onDragEnter={(e) => { if (e.dataTransfer.types.includes("Files")) { dragDepth.current++; setDrag(true); } }}
+      onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }}
+      onDragLeave={() => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDrag(false); }}
+      onDrop={(e) => { if (!e.dataTransfer.files.length) return; e.preventDefault(); dragDepth.current = 0; setDrag(false); if (att.addFiles(Array.from(e.dataTransfer.files))) setErr(t("att.err.tooMany", { n: MAX_FILES })); }}>
+      {drag && <DropOverlay dest={att.dest} />}
       {sc.menu}
       {sc.suggestionChip}
       {sc.chips}
-      {picked.length > 0 && (
-        <ul data-testid="chat-attachments" className="flex flex-wrap gap-1.5">
-          {picked.map((f, i) => (
-            <li key={`${f.name}${i}`} className="flex max-w-[200px] items-center gap-1 rounded-md border border-line bg-panel2 py-0.5 pl-2 pr-1 text-[11px] text-ink2">
-              <span className="truncate">{f.name}</span>
-              <button type="button" aria-label={t("chat.attach.remove", { name: f.name })} onClick={() => setPicked((p) => p.filter((_, j) => j !== i))} className="rounded p-0.5 text-mute hover:bg-mute/10 hover:text-ink"><Icon name="x" size={11} /></button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <AttachmentTray items={att.items} onRemove={att.remove} />
       <div className="flex items-center gap-2">
-        <input ref={fileRef} type="file" multiple data-testid="chat-attach-input" className="hidden" onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) setPicked((p) => [...p, ...fs].slice(0, MAX_ATTACH)); e.target.value = ""; }} />
-        <button type="button" data-testid="chat-attach" title={t("chat.attach.title")} aria-label={t("chat.attach.title")} disabled={busy || picked.length >= MAX_ATTACH} onClick={() => fileRef.current?.click()}
-          className="rounded-lg border border-line bg-panel2 p-2 text-mute hover:border-accent hover:text-ink disabled:opacity-40"><Icon name="plus" size={14} /></button>
+        <input ref={fileRef} type="file" multiple data-testid="chat-attach-input" className="hidden" onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length && att.addFiles(fs)) setErr(t("att.err.tooMany", { n: MAX_FILES })); e.target.value = ""; }} />
+        <input ref={dirRef} type="file" multiple className="hidden" data-testid="chat-attach-dir" {...({ webkitdirectory: "", directory: "" } as Record<string, string>)} onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length && att.addFiles(fs, true)) setErr(t("att.err.tooMany", { n: MAX_FILES })); e.target.value = ""; }} />
+        <AttachMenu dest={att.dest} full={att.full} disabled={busy} onUpload={() => fileRef.current?.click()} onFolderUpload={() => dirRef.current?.click()} onDrive={() => setPicker("files")} onPickDest={() => setPicker("folder")} />
         <input
           ref={inputRef} data-testid={testId} value={text} onChange={(e) => { setText(e.target.value, e.target.selectionStart ?? e.target.value.length); sc.clearErr(); }}
-          onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? 0)} onKeyDown={sc.onKeyDown} {...sc.aria} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus} autoComplete="off"
+          onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
+          onPaste={(e) => { const fs = Array.from(e.clipboardData.files); if (fs.length) { e.preventDefault(); const named = fs.map((f, i) => (f.name && f.name !== "image.png" ? f : new File([f], `captura-${new Date().toTimeString().slice(0, 8).replace(/:/g, "")}${fs.length > 1 ? `-${i + 1}` : ""}.${(f.type.split("/")[1] || "png").replace("jpeg", "jpg")}`, { type: f.type }))); if (att.addFiles(named)) setErr(t("att.err.tooMany", { n: MAX_FILES })); } }} onKeyDown={sc.onKeyDown} {...sc.aria} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus} autoComplete="off"
           className="min-w-0 flex-1 rounded-lg border border-line bg-panel2 px-3 py-2 text-[13px] text-ink outline-none placeholder:text-mute"
         />
         <button type="button" data-testid="cmd-help" title={t("cmds.help.button")} aria-label={t("cmds.help.button")} onClick={sc.openHelp}
           className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[12px] font-semibold text-mute hover:border-accent hover:text-ink">?</button>
-        <Btn data-testid={submitTestId} type="submit" kind="primary" disabled={busy || sc.running || (!text.trim() && !picked.length)}><span className="flex items-center gap-1.5"><Icon name="arrow" size={13} />{busy ? t("cmd.sending") : t("cmd.send")}</span></Btn>
+        <Btn data-testid={submitTestId} type="submit" kind="primary" disabled={busy || sc.running || att.uploading || (!text.trim() && !att.refs.length)}><span className="flex items-center gap-1.5"><Icon name="arrow" size={13} />{busy ? t("cmd.sending") : t("cmd.send")}</span></Btn>
       </div>
+      {picked.length > 0 && <div className="text-[10.5px] text-mute">{t("att.savedIn", { path: att.dest })}</div>}
       {sc.status}
       {(err || sc.err) && <div role="alert" data-testid="cmd-error" className="text-[11px] text-err">{err || sc.err}</div>}
     </form>
     {sc.dialogs}
+    {picker && <DrivePicker mode={picker} start={picker === "folder" ? att.dest : "/Shared"} onClose={() => setPicker(null)} onFiles={att.addDrive} onFolder={att.setDest} />}
     </>
   );
 }

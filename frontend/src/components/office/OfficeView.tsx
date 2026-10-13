@@ -70,7 +70,7 @@ export function OfficeView() {
         <FirstRunHint id="office" title={t("hint.office.title")} body={t("hint.office.body")} />
       </div>
       <div data-tour="office.approvals" className="pointer-events-none absolute bottom-[96px] left-4"><ApprovalsTray /></div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-4" style={{ paddingRight: `calc(${selected ? "var(--panel-w, 420px)" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})`, paddingLeft: pendingApprovals ? 352 : 16 }}>
+      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-40 flex justify-center px-4" style={{ paddingRight: `calc(${selected ? "var(--panel-w, 420px)" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})`, paddingLeft: pendingApprovals ? 352 : 16 }}>
         <CommandBar />
       </div>
       {/* Same box as the office scene but above the chat: in-scene popups that must stay clickable (approvals desk card). */}
