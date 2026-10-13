@@ -204,7 +204,7 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
   const att = useAttachments(conv);
   const [drag, setDrag] = useState(false);
   const [picker, setPicker] = useState<null | "files" | "folder">(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const dirRef = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
@@ -218,6 +218,13 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
   }, [draft, conv, setDraft]);
   const editCtx = useFileViewer((s) => (s.editInChat ? s.ref : null));
   const setEditInChat = useFileViewer((s) => s.setEditInChat);
+  // the box grows with what is typed (up to ~8 lines) and shrinks back when it is sent
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, [text]);
   const sc = useSlashComposer({ conv, surface: surfaceOf(conv, general), text, caret, setText, inputRef, onSent });
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
@@ -259,15 +266,20 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
         </div>
       )}
       <AttachmentTray items={att.items} onRemove={att.remove} />
-      <div className="flex items-center gap-2">
+      <div className="flex items-end gap-2">
         <input ref={fileRef} type="file" multiple data-testid="chat-attach-input" className="hidden" onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length && att.addFiles(fs)) setErr(t("att.err.tooMany", { n: MAX_FILES })); e.target.value = ""; }} />
         <input ref={dirRef} type="file" multiple className="hidden" data-testid="chat-attach-dir" {...({ webkitdirectory: "", directory: "" } as Record<string, string>)} onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length && att.addFiles(fs, true)) setErr(t("att.err.tooMany", { n: MAX_FILES })); e.target.value = ""; }} />
         <AttachMenu dest={att.dest} full={att.full} disabled={busy} onUpload={() => fileRef.current?.click()} onFolderUpload={() => dirRef.current?.click()} onDrive={() => setPicker("files")} onPickDest={() => setPicker("folder")} />
-        <input
+        <textarea
           ref={inputRef} data-testid={testId} value={text} onChange={(e) => { setText(e.target.value, e.target.selectionStart ?? e.target.value.length); sc.clearErr(); }}
           onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
-          onPaste={(e) => { const fs = Array.from(e.clipboardData.files); if (fs.length) { e.preventDefault(); const named = fs.map((f, i) => (f.name && f.name !== "image.png" ? f : new File([f], `captura-${new Date().toTimeString().slice(0, 8).replace(/:/g, "")}${fs.length > 1 ? `-${i + 1}` : ""}.${(f.type.split("/")[1] || "png").replace("jpeg", "jpg")}`, { type: f.type }))); if (att.addFiles(named)) setErr(t("att.err.tooMany", { n: MAX_FILES })); } }} onKeyDown={sc.onKeyDown} {...sc.aria} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus} autoComplete="off"
-          className="min-w-0 flex-1 rounded-lg border border-line bg-panel2 px-3 py-2 text-[13px] text-ink outline-none placeholder:text-mute"
+          onPaste={(e) => { const fs = Array.from(e.clipboardData.files); if (fs.length) { e.preventDefault(); const named = fs.map((f, i) => (f.name && f.name !== "image.png" ? f : new File([f], `captura-${new Date().toTimeString().slice(0, 8).replace(/:/g, "")}${fs.length > 1 ? `-${i + 1}` : ""}.${(f.type.split("/")[1] || "png").replace("jpeg", "jpg")}`, { type: f.type }))); if (att.addFiles(named)) setErr(t("att.err.tooMany", { n: MAX_FILES })); } }} onKeyDown={(e) => {
+            sc.onKeyDown(e);
+            if (e.defaultPrevented) return;
+            // Enter sends, Shift+Enter makes a new line (and an IME composition keeps its own Enter)
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void submit(); }
+          }} {...sc.aria} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus} rows={1}
+          className="max-h-[200px] min-h-[38px] min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-line bg-panel2 px-3 py-2 text-[13px] leading-[1.45] text-ink outline-none placeholder:text-mute"
         />
         <button type="button" data-testid="cmd-help" title={t("cmds.help.button")} aria-label={t("cmds.help.button")} onClick={sc.openHelp}
           className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[12px] font-semibold text-mute hover:border-accent hover:text-ink">?</button>

@@ -25,7 +25,7 @@ interface Pick { text: string; caret: number }
  * help panel and contextual suggestions. The composer keeps its own text; this hook decides what to show and do with it.
  */
 export function useSlashComposer({ conv, surface, text, caret, setText, inputRef, onSent }: {
-  conv: string; surface: Surface; text: string; caret: number; setText: (t: string, caret?: number) => void; inputRef: RefObject<HTMLInputElement | null>; onSent?: () => void;
+  conv: string; surface: Surface; text: string; caret: number; setText: (t: string, caret?: number) => void; inputRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>; onSent?: () => void;
 }) {
   const { t, locale } = useT();
   const lang = locale as Lang;
@@ -162,7 +162,7 @@ export function useSlashComposer({ conv, surface, text, caret, setText, inputRef
   const cancel = () => { setPending(null); addCard(conv, { kind: "message", text: t("cmds.cancelled"), command: pending?.cmd.id }); inputRef.current?.focus(); };
 
   // ---- keyboard ----
-  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (!showMenu) return;
     if (e.key === "Escape") { e.preventDefault(); setDismissed(text); return; }
     if (entries.length === 0) return;
