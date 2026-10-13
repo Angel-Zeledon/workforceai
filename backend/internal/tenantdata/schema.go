@@ -40,6 +40,10 @@ var GlobalTables = map[string]string{
 // because every useful column is a secret or a one-time handshake value.
 var ExcludedFromExport = map[string]string{
 	"oauth_states": "in-flight OAuth handshakes: hashed state and sealed PKCE verifier only",
+	// The passage index (migration 690) is derived data: a copy of the text of
+	// the drive files (exported themselves) plus provider embeddings. Purged with
+	// the organization; doc_index_state / doc_index_settings / doc_embed_usage are exported.
+	"doc_chunks": "derived search index of the drive files (rebuilt from them; the files are exported)",
 }
 
 // RedactedColumns is the explicit denylist ("table.column") of secrets that

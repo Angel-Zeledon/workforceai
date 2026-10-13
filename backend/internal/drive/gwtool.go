@@ -65,8 +65,8 @@ func Specs() []struct {
 		ReadOnly                  bool
 	}{
 		{ActList, "path?", "List a folder (the folders you can use at /)", true},
-		{ActRead, `path | file_id, version?, offset?, max_chars?, pages? (pdf: "3-5"), view? ("image")`, `Read the text of a file (bounded, returned as delimited data; PDFs with [page N] markers). An image, or view:"image" with pages on a PDF, is attached for the agent to see`, true},
-		{ActSearch, "query, path?, limit?", "Search names and text in the folders you can read", true},
+		{ActRead, `path | file_id, version?, offset?, max_chars?, page?, range?, pages? (pdf: "3-5"), view? ("image")`, `Read the text of a file (bounded, returned as delimited data; PDFs with [page N] markers); page/range open the text around a search hit. An image, or view:"image" with pages on a PDF, is attached for the agent to see`, true},
+		{ActSearch, "query, path?, limit?, mode? (keyword|semantic|hybrid)", "Search passages (with path, page or line, snippet) and names in the folders you can read", true},
 		{ActWrite, "path, content, message?, expected_version?, tags?", "Create a text file or add a version (free in your desk and your projects)", false},
 		{ActWriteDocument, "path (.xlsx|.docx|.pdf|.md|.csv), document, message?, tags?", "Create a real office document from a structured document (sheets for xlsx; title + blocks for docx/pdf); same zones and approvals as write", false},
 		{ActEdit, "path | file_id, expected_version, ops, message?", "Precise edit of an existing text, docx or xlsx file: a list of operations applied all-or-nothing as a new version; same zones and approvals as write", false},

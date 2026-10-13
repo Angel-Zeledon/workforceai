@@ -22,6 +22,7 @@ import (
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/docindex"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
@@ -79,6 +80,9 @@ type Deps struct {
 	Artifacts *artifacts.Service
 	// Drive serves /drive/* (drive.go): the organization's files. Optional.
 	Drive *drive.Service
+	// DocIndex serves /drive/passages, /drive/index/status and /settings/doc-index (docsearch.go):
+	// passage search with citations over the drive (capability 6). Optional.
+	DocIndex *docindex.Service
 	// Sandbox serves /settings/code-execution and /code-runs (code.go); SandboxAvailable
 	// says whether a runner is configured. Optional.
 	Sandbox          *sandbox.Service
@@ -188,6 +192,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountDrive(r)
+			s.mountDocSearch(r)
 			s.mountCode(r)
 			s.mountWeb(r)
 			s.mountSkills(r)

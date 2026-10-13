@@ -58,6 +58,9 @@ type AgentFS struct {
 	Render Renderer
 	// Vision bounds what a visual read attaches (zero: defaults).
 	Vision VisionLimits
+	// Chunks (optional) answers fs.search with cited passages (internal/docindex).
+	// nil keeps the file-level search over names and extracted text.
+	Chunks ChunkSearcher
 }
 
 // Plan is the verdict about an agent action BEFORE running it (pure: no writes).
@@ -277,6 +280,11 @@ func (a *AgentFS) Plan(ctx context.Context, agentID, action string, args map[str
 	case ActSearch:
 		if strings.TrimSpace(argStr(args, "query")) == "" {
 			return deny("invalid_args", "query is required")
+		}
+		switch strings.ToLower(argStr(args, "mode")) {
+		case "", SearchKeyword, SearchSemantic, SearchHybrid:
+		default:
+			return deny("invalid_args", "mode must be keyword, semantic or hybrid")
 		}
 		if p := argStr(args, "path"); p != "" {
 			c, err := CleanPath(p)
@@ -700,8 +708,10 @@ func (a *AgentFS) runRead(ctx context.Context, agentID string, args map[string]a
 		return r
 	}
 	ver, _ := argInt(args, "version")
-	off, _ := argInt(args, "offset")
-	mx, _ := argInt(args, "max_chars")
+	off, mx, winNote, ok := a.readWindow(ctx, f, args)
+	if !ok {
+		return RunResult{Code: "invalid_args", Summary: "invalid_args: page must be a positive integer and range must be \"start-end\" character offsets"}
+	}
 	var pages []int
 	if spec := strings.TrimSpace(argStr(args, "pages")); spec != "" && isPDFName(f.Name) {
 		p, err := pdftext.ParsePages(spec, 0)
@@ -716,6 +726,9 @@ func (a *AgentFS) runRead(ctx context.Context, agentID string, args map[string]a
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "path: %s\nversion: %d (current %d)\nmime: %s\nsize: %s\nupdated_by: %s:%s\n", f.Path, res.Version.Version, f.CurrentVersion, f.Mime, human(f.Size), f.UpdatedBy.Kind, f.UpdatedBy.ID)
+	if winNote != "" {
+		fmt.Fprintf(&b, "window: %s\n", winNote)
+	}
 	if isPDFName(f.Name) {
 		b.WriteString(a.pdfReadLines(res.Info))
 	}
@@ -749,7 +762,16 @@ func (a *AgentFS) runSearch(ctx context.Context, agentID string, args map[string
 	under := a.readableRoots(ctx, org, sc)
 	if p := argStr(args, "path"); p != "" {
 		c, _ := CleanPath(p)
-		under = []string{c}
+		under = scopeUnder(under, c) // never wider than what the agent can read
+	}
+	if a.Chunks != nil && strings.TrimSpace(argStr(args, "query")) != "" {
+		cl, _ := argInt(args, "limit")
+		if cl <= 0 || cl > 20 {
+			cl = 8
+		}
+		if rr, ok := a.runChunkSearch(ctx, agentID, args, under, cl); ok {
+			return rr
+		}
 	}
 	lim, _ := argInt(args, "limit")
 	if lim <= 0 || lim > 10 {

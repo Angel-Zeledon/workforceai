@@ -11,6 +11,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/config"
 	"aiworkforce/backend/internal/controls"
+	"aiworkforce/backend/internal/docindex"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/infrastructure/postgres"
@@ -88,8 +89,9 @@ func (d projectDirectory) AgentProjects(ctx context.Context, org, agentID string
 // wireDrive builds the drive (folders, files and versions; bytes in the object
 // store) and serves the agents' fs.* tools through the Tool Gateway.
 func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *postgres.Store, store application.Store, rec *application.Recorder,
-	cw connWiring, pstore projects.Store, objects objstore.Store, orch *application.Orchestrator) *drive.Service {
+	cw connWiring, pstore projects.Store, objects objstore.Store, orch *application.Orchestrator) (*drive.Service, *docindex.Service) {
 
+	var doc *docindex.Service // passage index (docindex.go): fed by the drive audit, searched by fs.search
 	var dstore drive.Store = drive.NewMemStore()
 	if pg != nil {
 		dstore = &postgres.DriveStore{S: pg}
@@ -102,10 +104,14 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 				d[k] = v
 			}
 			rec.Audit(application.WithOrg(actx, org), domain.AuditLog{Actor: e.Actor.ID, Action: e.Action, Entity: e.Entity, EntityID: e.EntityID, Details: d})
+			if doc != nil {
+				doc.OnDriveAudit(org, e.Action, e.Entity, e.EntityID) // new version, restore, trash: (re)index or drop
+			}
 		}})
+	doc = newDocIndex(log, pg, svc, cfg.App.OrgID)
 	if cw.gw != nil {
 		tool := &drive.GatewayTool{FS: &drive.AgentFS{Svc: svc, Projects: projectDirectory{store: pstore}, Render: renderFromEnv(log),
-			Vision: drive.VisionLimitsFromEnv()}, Suspects: cw.sus,
+			Vision: drive.VisionLimitsFromEnv(), Chunks: doc}, Suspects: cw.sus,
 			AgentTools: func(actx context.Context, org, agentID string) ([]string, error) {
 				a, err := store.GetAgent(application.WithOrg(actx, org), org, agentID)
 				if err != nil {
@@ -126,7 +132,7 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 	}
 	log.Info("drive ready", "agents_tool", drive.ToolName, "max_file_bytes", svc.Limits().MaxFileBytes, "quota_bytes", svc.Limits().QuotaBytes,
 		"object_store", fmt.Sprintf("%T", objects))
-	return svc
+	return svc, doc
 }
 
 // driveWorkspace resolves the folders an agent works in for a request: its

@@ -8,6 +8,8 @@ import { Btn, Empty, Loading } from "../ui";
 import { EmptyState } from "../nav/ui2";
 import { Icon } from "../icons";
 import { useAgentName } from "../ui";
+import { docSearch, type Passage, type PassageResult } from "@/lib/docsearch";
+import { IndexStatusChip, PassageResults } from "./PassageSearch";
 
 const ROOTS = new Set(["Agents", "Projects", "Clients", "Shared"]);
 /** The four well-known roots are translated; every other folder keeps its own name. */
@@ -23,6 +25,10 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
   const [selected, setSelected] = useState<DriveFile | null>(null);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<Hit[] | null>(null);
+  // search by meaning (passages with page and snippet); off = the classic search by name and text
+  const [meaning, setMeaning] = useState(true);
+  const [passages, setPassages] = useState<PassageResult | null>(null);
+  const [focus, setFocus] = useState<{ start: number; page?: number } | null>(null);
   const [trash, setTrash] = useState<DriveFile[] | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -54,8 +60,19 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
     }
   };
   const search = async () => {
-    if (!query.trim()) { setHits(null); return; }
+    if (!query.trim()) { setHits(null); setPassages(null); return; }
+    if (meaning) {
+      const r = await docSearch.passages(query.trim()).catch(() => null);
+      if (r?.enabled) { setHits(null); setPassages(r); return; } // index off or unreachable: classic search below
+    }
+    setPassages(null);
     setHits(await drive.search(query.trim()).catch(() => []));
+  };
+  const openPassage = async (p: Passage) => {
+    setPassages(null);
+    setPath(parentOf(p.path));
+    const f = await drive.file(p.file_id).catch(() => null);
+    if (f) { setSelected(f); setFocus({ start: p.start, page: p.page }); }
   };
   const crumbs = path === "/" ? [] : path.split("/").filter(Boolean);
   const canUpload = path !== "/";
@@ -78,9 +95,12 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
               </span>
             ))}
           </nav>
+          <IndexStatusChip path={path} refresh={touched} />
           <div className="ml-auto flex items-center gap-2">
+            <button type="button" data-testid="drive-meaning" aria-pressed={meaning} title={t("drive.meaning.help")} onClick={() => setMeaning(!meaning)}
+              className={`rounded-lg border px-2 py-1.5 text-[11px] ${meaning ? "border-accent bg-accent/10 text-accent" : "border-line text-mute hover:text-ink"}`}>{t("drive.meaning.toggle")}</button>
             <input data-tour="files.search" data-testid="drive-search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") search(); }}
-              placeholder={t("drive.searchPlaceholder")} className="w-56 rounded-lg border border-line bg-panel2 px-3 py-1.5 text-xs outline-none focus:border-accent" />
+              placeholder={meaning ? t("drive.meaning.placeholder") : t("drive.searchPlaceholder")} className="w-56 rounded-lg border border-line bg-panel2 px-3 py-1.5 text-xs outline-none focus:border-accent" />
             <span data-tour="files.trash" className="inline-flex"><Btn data-testid="drive-trash" onClick={async () => setTrash(trash ? null : (await drive.trash().catch(() => ({ files: [] }))).files)}>{t("drive.trash")}</Btn></span>
             <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) upload(e.target.files); e.target.value = ""; }} />
             <span data-tour="files.upload" className="inline-flex"><Btn kind="primary" data-testid="drive-upload" className="inline-flex items-center gap-1" disabled={!canUpload || busy} onClick={() => fileInput.current?.click()}>
@@ -91,7 +111,9 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
         {error && <div data-testid="drive-error" className="mx-5 mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-700">{error}</div>}
         {drag && <div className="mx-5 mt-3 rounded-xl border-2 border-dashed border-accent px-4 py-6 text-center text-sm text-accent">{t("drive.dropHere", { path })}</div>}
         <div data-tour="files.list" className="min-h-0 flex-1 overflow-y-auto p-5">
-          {hits ? (
+          {passages ? (
+            <PassageResults result={passages} onOpen={openPassage} onClose={() => setPassages(null)} />
+          ) : hits ? (
             <SearchResults hits={hits} onOpen={async (h) => { setHits(null); setPath(parentOf(h.path)); }} onClose={() => setHits(null)} />
           ) : trash ? (
             <TrashList files={trash} onRestore={async (f) => { await drive.restore(f.id); setTrash((await drive.trash()).files); load(); }} />
@@ -99,11 +121,11 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
             <Loading rows={5} />
           ) : (
             <FileTable listing={listing} path={path} selected={selected?.id ?? null}
-              onFolder={(p) => { setPath(p); setSelected(null); }} onFile={setSelected} canUpload={canUpload} onUpload={() => fileInput.current?.click()} />
+              onFolder={(p) => { setPath(p); setSelected(null); }} onFile={(f) => { setSelected(f); setFocus(null); }} canUpload={canUpload} onUpload={() => fileInput.current?.click()} />
           )}
         </div>
       </div>
-      {selected && <FilePane file={selected} onClose={() => setSelected(null)} onChanged={() => { load(); }} onDeleted={() => { setSelected(null); load(); }} />}
+      {selected && <FilePane file={selected} focus={focus} onClearFocus={() => setFocus(null)} onClose={() => { setSelected(null); setFocus(null); }} onChanged={() => { load(); }} onDeleted={() => { setSelected(null); load(); }} />}
     </div>
   );
 }
@@ -195,9 +217,17 @@ function Preview({ file, text }: { file: DriveFile; text: string }) {
   return <pre data-testid="drive-preview-text" className="whitespace-pre-wrap break-words font-mono text-[11.5px] leading-relaxed text-ink">{text}</pre>;
 }
 
-function FilePane({ file, onClose, onChanged, onDeleted }: { file: DriveFile; onClose: () => void; onChanged: () => void; onDeleted: () => void }) {
+function FilePane({ file, focus, onClearFocus, onClose, onChanged, onDeleted }: {
+  file: DriveFile; focus?: { start: number; page?: number } | null; onClearFocus?: () => void; onClose: () => void; onChanged: () => void; onDeleted: () => void;
+}) {
   const { t } = useT();
   const [text, setText] = useState<string | null>(null);
+  // opened from a passage: the extracted text around it (also for docx/xlsx/pdf), from just before the hit
+  const [focusText, setFocusText] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focus) { setFocusText(null); return; }
+    docSearch.textAt(file.id, Math.max(0, focus.start - 200)).then(setFocusText).catch(() => setFocusText(null));
+  }, [file.id, focus]);
   const [versions, setVersions] = useState<DriveVersion[]>([]);
   const [shown, setShown] = useState(0);
   const textual = isTextual(file);
@@ -225,7 +255,15 @@ function FilePane({ file, onClose, onChanged, onDeleted }: { file: DriveFile; on
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {shown > 0 && <div className="mb-2 rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800">{t("drive.viewingVersion", { v: shown })}</div>}
-        {textual ? (text === null ? <Empty>{t("drive.loading")}</Empty> : <Preview file={file} text={text} />) : <Empty>{t("drive.noPreview")}</Empty>}
+        {focus && focusText !== null ? (
+          <div data-testid="drive-focus">
+            <div className="mb-2 flex items-center justify-between gap-2 rounded bg-accent/10 px-2 py-1 text-[11px] text-accent">
+              <span>{focus.page ? t("drive.meaning.fromPage", { n: focus.page }) : t("drive.meaning.fromPassage")}</span>
+              <button type="button" className="underline" onClick={onClearFocus}>{t("drive.meaning.wholeFile")}</button>
+            </div>
+            <pre className="whitespace-pre-wrap break-words font-mono text-[11.5px] leading-relaxed text-ink">{focusText}</pre>
+          </div>
+        ) : textual ? (text === null ? <Empty>{t("drive.loading")}</Empty> : <Preview file={file} text={text} />) : <Empty>{t("drive.noPreview")}</Empty>}
       </div>
       <div className="max-h-[38%] overflow-y-auto border-t border-line p-4">
         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-mute">{t("drive.history")}</h3>
