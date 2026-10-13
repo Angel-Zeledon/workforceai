@@ -31,6 +31,7 @@ import (
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/sandbox"
 	"aiworkforce/backend/internal/skills"
+	"aiworkforce/backend/internal/tenantdata"
 )
 
 // Deps are the collaborators of the HTTP layer.
@@ -102,6 +103,8 @@ type Deps struct {
 	Profiles *application.ProfileService
 	V2       application.V2Store
 	Tracer   *application.Tracer
+	// TenantData serves /org/export and /org/deletion (tenantdata.go): GDPR export and deletion. Optional.
+	TenantData *tenantdata.Service
 	// AllowedOrigins is the CORS/WebSocket origin allow-list (see originPolicy).
 	AllowedOrigins []string
 	// EnableDemoReset registers POST /api/v1/demo/reset (admin role when auth is on).
@@ -189,6 +192,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountPush(r)
 			s.mountV2(r)
 			s.mountCommands(r)
+			s.mountTenantData(r)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}

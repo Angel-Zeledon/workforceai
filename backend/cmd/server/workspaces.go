@@ -14,6 +14,7 @@ import (
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/gateway"
 	"aiworkforce/backend/internal/infrastructure/postgres"
+	"aiworkforce/backend/internal/objstore"
 	"aiworkforce/backend/internal/projects"
 )
 
@@ -23,6 +24,7 @@ type workspaceWiring struct {
 	artifacts *artifacts.Service
 	drive     *drive.Service
 	sandbox   sandboxWiring
+	objects   objstore.Store // where file bytes live (S3, Postgres bytea or memory)
 }
 
 // projectLookup lets the artifacts service name a project without importing the
@@ -106,5 +108,5 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	}
 	orch.SetFileResolver(driveFileResolver{drive: dsvc}) // chat: file cards and attachments
 	orch.SetWorkspaceSource(dws)                         // F1: agents know their drive folders (and find their work kit)
-	return workspaceWiring{pstore: pstore, projects: psvc, artifacts: asvc, drive: dsvc, sandbox: wireSandbox(log, pg, rec, cw, orch, dsvc)}
+	return workspaceWiring{pstore: pstore, projects: psvc, artifacts: asvc, drive: dsvc, sandbox: wireSandbox(log, pg, rec, cw, orch, dsvc), objects: objects}
 }

@@ -234,6 +234,8 @@ func run(log *slog.Logger) error {
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
+	// GDPR export / deletion of the organization and the purge janitor (internal/tenantdata).
+	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	if cfg.AuthEnabled {
 		if strings.HasPrefix(cfg.JWTSecret, "dev-only-insecure") {
 			log.Warn("JWT_SECRET is the local development default from docker-compose.yml: set your own secret before exposing this server")

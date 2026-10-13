@@ -18,14 +18,15 @@ import { PageModeCtx } from "../nav/pageMode";
 import { ConnectionsView } from "../connections/ConnectionsView";
 import { SecurityCenter } from "../security/SecurityCenter";
 import { AccountSecurity } from "./AccountSecurity";
+import { DataPrivacy } from "./DataPrivacy";
 
 /** Sub-pages of Settings. The URL (/settings?s=...) says which one is open, so the browser's Back button and the
  *  sidebar both just work: nothing needs a "Close" button. */
-const SUBS = ["office", "hire", "templates", "members", "kill", "connections", "security", "account"] as const;
+const SUBS = ["office", "hire", "templates", "members", "kill", "connections", "security", "account", "data"] as const;
 type Sub = (typeof SUBS)[number];
 const SUB_TITLE: Record<Sub, string> = {
   office: "settings.title", hire: "hire.open", templates: "tpl.open", members: "members.title",
-  kill: "ctl.killswitch.title", connections: "nav.connections", security: "nav.security", account: "mfa.rowTitle",
+  kill: "ctl.killswitch.title", connections: "nav.connections", security: "nav.security", account: "mfa.rowTitle", data: "data.title",
 };
 
 function Row({ icon, title, body, onClick, testid, disabled, danger, tour }: { tour?: string; icon: IconName; title: string; body: string; onClick: () => void; testid: string; disabled?: boolean; danger?: boolean }) {
@@ -77,6 +78,7 @@ export function SettingsView() {
             {sub === "connections" && (loaded ? <ConnectionsView /> : <PageSkeleton />)}
             {sub === "security" && (loaded ? <SecurityCenter /> : <PageSkeleton />)}
             {sub === "account" && <AccountSecurity />}
+            {sub === "data" && <DataPrivacy />}
             {sub === "office" && <OfficeSettingsPanel onClose={() => open(null)} />}
             {sub === "hire" && <HireFromTemplateDialog onClose={() => open(null)} />}
             {sub === "templates" && <TemplateGallery onClose={() => open(null)} />}
@@ -111,6 +113,7 @@ export function SettingsView() {
               <span className="block truncate">{session.user?.email} · {t(`members.roles.${session.role}`)}</span>
             </div>
             <Row testid="settings-account" icon="shield" title={t("mfa.rowTitle")} body={t("mfa.rowBody")} onClick={() => open("account")} />
+            <Row testid="settings-data" icon="layout" title={t("data.title")} body={t("settings.page.data")} onClick={() => open("data")} />
             {canMembers && <Row testid="settings-members" icon="users" title={t("members.title")} body={t("settings.page.members")} onClick={() => open("members")} />}
             <Row testid="settings-logout" icon="power" title={t("auth.logout")} body={t("settings.page.logout")} onClick={() => { logout().then(() => { window.location.href = "/login"; }); }} />
           </Section>
