@@ -1,11 +1,12 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { fmtDateTime, useT } from "@/lib/i18n";
-import { codeApi, type CodeRun, type CodeSettings } from "@/lib/codeApi";
+import { codeApi, type CodeRun, type CodeSettings, type CodeSettingsInput } from "@/lib/codeApi";
+import { DeskModeSetting } from "../code/DeskModeSetting";
 import { useStore } from "@/lib/store";
 import { Btn, Card } from "../ui";
 import { ErrorLine, errText, inputCls, useViewer } from "../connections/shared";
-import { CodeRunResult } from "../code/CodeRunView";
+import { CodeListing, CodeRunResult } from "../code/CodeRunView";
 
 /** Per-organization switch for agents running code (off by default), its limits, and the history of runs. */
 export function CodeExecutionCard() {
@@ -25,10 +26,15 @@ export function CodeExecutionCard() {
   useEffect(load, [load]);
   if (!cfg) return null;
 
-  const save = async (next: CodeSettings) => {
+  const save = async (next: CodeSettings, patch: Partial<CodeSettingsInput> = {}) => {
     setErr(null); setSaved(false);
-    try { setCfg(await codeApi.putSettings({ enabled: next.enabled, max_runs_per_day: next.max_runs_per_day, max_runtime_seconds: next.max_runtime_seconds })); setSaved(true); }
-    catch (e) { setErr(errText(e)); }
+    try {
+      // the desk-mode fields always travel with the rest: a PUT without them would turn desk mode off
+      setCfg(await codeApi.putSettings({ enabled: next.enabled, max_runs_per_day: next.max_runs_per_day, max_runtime_seconds: next.max_runtime_seconds,
+        auto_run: next.auto_run ?? "off", auto_max_code_bytes: next.auto_max_code_bytes, auto_max_input_bytes: next.auto_max_input_bytes,
+        auto_max_runs_per_task: next.auto_max_runs_per_task, ...patch }));
+      setSaved(true);
+    } catch (e) { setErr(errText(e)); }
   };
   const num = (v: string) => Math.max(0, Math.floor(Number(v) || 0));
 
@@ -53,6 +59,7 @@ export function CodeExecutionCard() {
             </label>
           </div>
           <p className="text-[11px] text-mute">{t("code.settings.zero")}</p>
+          <DeskModeSetting cfg={cfg} isAdmin={isAdmin} save={(patch) => save(cfg, patch)} />
           {saved && <p data-testid="ctl-code-saved" className="text-emerald-700">{t("code.settings.saved")}</p>}
           <ErrorLine msg={err} />
           <div>
@@ -68,7 +75,17 @@ export function CodeExecutionCard() {
                       <span className="min-w-0 truncate"><span className="font-semibold">{agents[r.agent_id]?.name ?? r.agent_id}</span> · {r.purpose}</span>
                       <span className="shrink-0 text-[11px] text-mute">{t(`code.status.${r.status}`)} · {fmtDateTime(r.created_at)}</span>
                     </button>
-                    {open === r.id && <div className="mt-2"><CodeRunResult run={r} /></div>}
+                    {open === r.id && (
+                      <div className="mt-2 space-y-2">
+                        <CodeRunResult run={r} />
+                        {r.auto_run && ( // nobody read this code before it ran: show it so it can be reviewed now
+                          <div data-testid="ctl-code-run-code">
+                            <p className="mb-1 text-[11.5px]"><span className="font-semibold">{t("code.purpose")}: </span>{r.purpose}</p>
+                            <CodeListing code={r.code} maxHeight="max-h-52" />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

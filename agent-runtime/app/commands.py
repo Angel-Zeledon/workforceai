@@ -140,7 +140,7 @@ def context_sizes(req: RunTaskRequest) -> ContextSizesResponse:
     task = build_task_prompt(req)
     skills = "\n".join(skill_lines(getattr(req, "skills", None)) + loaded_skill_lines(getattr(req, "loaded_skills", None)))
     files = "\n".join(workspace_lines(req.workspace, ctx.request_text)) if req.workspace is not None else ""
-    code = "\n".join(code_lines(req.agent) or [])
+    code = "\n".join(code_lines(req.agent, getattr(req, "code_auto_run", "") or "") or [])
     memory = wrap_untrusted("memoria del agente", [{"scope": m.scope, "key": m.key, "value": m.value}
                                                    for m in ctx.memory]) if ctx.memory else ""
     dep_texts = fit_texts([_as_text(d.output) for d in ctx.dependency_outputs], dep_budget_tokens())

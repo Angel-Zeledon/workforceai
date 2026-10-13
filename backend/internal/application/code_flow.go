@@ -58,11 +58,15 @@ func (o *Orchestrator) handleCodeRun(ctx context.Context, rs *run, t *domain.Tas
 	}
 	org := o.org(ctx)
 	apID := newID()
+	scope := o.codeScope(ctx, rs, t, agent, pv) // nil unless the organization opted into desk mode
 	plan, err := o.code.Prepare(ctx, CodeRunInput{Org: org, AgentID: agent.ID, TaskID: t.ID, RequestID: rs.req.ID, OnBehalfOf: ActorFrom(ctx, ""),
-		ApprovalID: apID, Args: tr.Args})
+		ApprovalID: apID, Args: tr.Args, Scope: scope})
 	if err != nil {
 		o.codeDenied(ctx, t, agent, codeErrCode(err))
 		return OutcomeDone
+	}
+	if plan.Auto { // opt-in desk mode and every condition met (code_auto.go); never true by default
+		return o.codeRunAuto(ctx, rs, t, agent, tr, apID, plan, scope)
 	}
 	ap := domain.Approval{ID: apID, TaskID: t.ID, AgentID: agent.ID, Action: codeApprovalAction, Risk: "high", Title: plan.Title, Details: plan.Details,
 		Context: plan.Card}
@@ -148,15 +152,28 @@ func (o *Orchestrator) codeAwait(ctx context.Context, rs *run, t *domain.Task, a
 	}
 	o.setState(ctx, agent.ID, domain.StateWorking, "Ejecutando código aprobado: "+t.Title, &tid, 85)
 	out := o.code.Execute(ctx, org, CodeExec{ApprovalID: decision.ID, ArgsHash: argsHash, Approvers: approverIDs(decision)})
-	o.finishExecution(ctx, decision.ID, out.Status)
+	return o.codeFinish(ctx, rs, t, agent, out, decision.ID, approverIDs(decision), false)
+}
+
+// codeFinish audits the outcome of a run and hands its result to the agent. auto
+// marks a desk-mode run (no approval): its audit entries carry auto_run=true.
+func (o *Orchestrator) codeFinish(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, out CodeOutcome, approvalID string, approvers []string, auto bool) Outcome {
+	tid := t.ID
+	o.finishExecution(ctx, approvalID, out.Status)
 	if out.Status == "denied" {
-		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.denied", Entity: "task", EntityID: t.ID,
-			Details: map[string]any{"tool": CodeToolName, "action": CodeActionRun, "reason": out.DenyReason, "approval_id": decision.ID}})
+		d := map[string]any{"tool": CodeToolName, "action": CodeActionRun, "reason": out.DenyReason, "approval_id": approvalID}
+		if auto {
+			d["auto_run"] = true
+		}
+		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.denied", Entity: "task", EntityID: t.ID, Details: d})
 		noteTask(t, "Código aprobado pero no ejecutado (%s)", out.DenyReason)
 	} else {
-		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.executed", Entity: "task", EntityID: t.ID,
-			Details: map[string]any{"tool": CodeToolName, "action": CodeActionRun, "status": out.Status, "approval_id": decision.ID,
-				"approvers": approverIDs(decision), "exit_code": out.ExitCode, "outputs": out.OutputRefs}})
+		d := map[string]any{"tool": CodeToolName, "action": CodeActionRun, "status": out.Status, "approval_id": approvalID,
+			"approvers": approvers, "exit_code": out.ExitCode, "outputs": out.OutputRefs}
+		if auto {
+			d["auto_run"] = true
+		}
+		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.executed", Entity: "task", EntityID: t.ID, Details: d})
 		noteTask(t, "code.run: %s", out.Summary)
 		o.codeFollowUp(ctx, rs, t, agent, out)
 	}

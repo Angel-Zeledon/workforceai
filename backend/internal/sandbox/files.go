@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 	"sync"
 
 	"aiworkforce/backend/internal/domain"
@@ -35,8 +36,8 @@ type MemoryFiles struct {
 }
 
 type memFile struct {
-	Name, Agent, Folder string
-	Data                []byte
+	Name, Agent, Folder, Path string
+	Data                      []byte
 }
 
 // NewMemoryFiles creates an empty MemoryFiles.
@@ -54,6 +55,14 @@ func (m *MemoryFiles) Read(_ context.Context, org, id string) (string, io.ReadCl
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	f, ok := m.files[org+"/"+id]
+	if !ok && strings.HasPrefix(id, "/") { // a drive-like path (PutAt)
+		for k, g := range m.files {
+			if strings.HasPrefix(k, org+"/") && g.Path == id {
+				f, ok = g, true
+				break
+			}
+		}
+	}
 	if !ok {
 		return "", nil, domain.ErrNotFound
 	}

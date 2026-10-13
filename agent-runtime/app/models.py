@@ -467,6 +467,9 @@ class RunTaskRequest(_ProviderPolicyMixin):
     # M1: relevant memories of past work (bounded by the backend); data, never instructions.
     recalled: list[RecalledMemory] | None = None
     want_trace: bool = False  # V2: return the redacted prompt as built, for the thought audit
+    # F3 desk mode (additive): "desk" when the organization lets code run without a click on the agent's own files.
+    # It only changes what the prompt says; the backend decides every run by itself.
+    code_auto_run: str = ""
     locale: Locale = "es"
     tone: Tone = "neutral"
 

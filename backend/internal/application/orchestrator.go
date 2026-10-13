@@ -626,14 +626,15 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 	}
 	recalled := o.recallFor(ctx, rs, t)
 	return RunTaskRequest{
-		Recalled:  recalled,
-		Task:      RunTaskInfo{ID: t.ID, Title: t.Title, Description: t.Description, AgentID: t.AgentID},
-		Agent:     RunAgentInfo{ID: agent.ID, Role: agent.Role, Title: agent.Title, Persona: agent.Persona, Responsibilities: agent.Responsibilities, Tools: agent.Tools, Area: areaOf(agent.Role, rs.style.Locale)},
-		Context:   rc,
-		Locale:    rs.style.Locale,
-		Tone:      rs.style.ToneFor(t.AgentID),
-		Workspace: o.workspaceFor(ctx, rs, agent),
-		Skills:    o.skillsFor(ctx, agent.ID),
+		CodeAutoRun: o.codeAutoRunHint(ctx, agent),
+		Recalled:    recalled,
+		Task:        RunTaskInfo{ID: t.ID, Title: t.Title, Description: t.Description, AgentID: t.AgentID},
+		Agent:       RunAgentInfo{ID: agent.ID, Role: agent.Role, Title: agent.Title, Persona: agent.Persona, Responsibilities: agent.Responsibilities, Tools: agent.Tools, Area: areaOf(agent.Role, rs.style.Locale)},
+		Context:     rc,
+		Locale:      rs.style.Locale,
+		Tone:        rs.style.ToneFor(t.AgentID),
+		Workspace:   o.workspaceFor(ctx, rs, agent),
+		Skills:      o.skillsFor(ctx, agent.ID),
 	}
 }
 

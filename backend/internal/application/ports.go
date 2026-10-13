@@ -363,6 +363,10 @@ type RunTaskRequest struct {
 	// WantTrace (V2, additive): ask the runtime to return the redacted prompt it
 	// built, for the thought audit. Only set when the organization stores prompts.
 	WantTrace bool `json:"want_trace,omitempty"`
+	// CodeAutoRun (additive, omitted unless "desk"): the organization's code mode
+	// for agents holding the code tool. It only changes what the prompt tells the
+	// agent; the backend decides every run on its own (code_auto.go).
+	CodeAutoRun string `json:"code_auto_run,omitempty"`
 }
 
 type ConsultRequestItem struct {

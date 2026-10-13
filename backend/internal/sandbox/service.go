@@ -102,12 +102,22 @@ func (s *Service) PutSettings(ctx context.Context, org, actor string, in Setting
 	if in.MaxRunsPerDay < 0 || in.MaxRuntimeSeconds < 0 || in.MaxRuntimeSeconds > HardMaxTimeoutSeconds {
 		return Settings{}, fmt.Errorf("%w: invalid limits", domain.ErrInvalid)
 	}
+	prev, err := s.Store.GetSettings(ctx, org)
+	if err != nil {
+		return Settings{}, err
+	}
+	acked := in.AcknowledgeRisk
+	if err := validateAuto(&in, prev); err != nil {
+		return Settings{}, err
+	}
 	in.UpdatedBy, in.UpdatedAt = actor, s.now()
 	if err := s.Store.PutSettings(ctx, org, in); err != nil {
 		return Settings{}, err
 	}
 	s.audit(ctx, org, actor, "code.settings.updated", org, map[string]any{"enabled": in.Enabled,
-		"max_runs_per_day": in.MaxRunsPerDay, "max_runtime_seconds": in.MaxRuntimeSeconds})
+		"max_runs_per_day": in.MaxRunsPerDay, "max_runtime_seconds": in.MaxRuntimeSeconds,
+		"auto_run": in.AutoRun, "previous_auto_run": prev.AutoRun, "risk_acknowledged": acked,
+		"auto_max_code_bytes": in.AutoMaxCodeBytes, "auto_max_input_bytes": in.AutoMaxInputBytes, "auto_max_runs_per_task": in.AutoMaxRunsPerTask})
 	return in, nil
 }
 
@@ -257,9 +267,16 @@ func (s *Service) Prepare(ctx context.Context, in application.CodeRunInput) (app
 		infos = append(infos, i.Info)
 	}
 	lim := s.effectiveLimits(st)
+	// Desk mode (opt-in, autorun.go): decide whether this run may skip the approval.
+	var autoReason, autoDetail string
+	if m, _ := normalizeAutoRun(st.AutoRun); m == AutoDesk {
+		autoReason, autoDetail = s.autoCheck(ctx, in.Org, st, in.Scope, in.AgentID, in.TaskID, req.Code, req.InputFiles, infos)
+	}
+	auto := st.AutoRun == AutoDesk && autoReason == ""
 	run := Run{ID: newRunID(), OrgID: in.Org, AgentID: in.AgentID, TaskID: in.TaskID, RequestID: in.RequestID, OnBehalfOf: in.OnBehalfOf,
 		ApprovalID: in.ApprovalID, Language: req.Language, Code: req.Code, CodeHash: CodeHash(req.Code), Hash: Hash(req, infos),
-		Purpose: req.Purpose, ExpectedOutputs: req.ExpectedOutputs, Inputs: infos, Limits: lim, Status: StatusAwaiting, CreatedAt: s.now()}
+		Purpose: req.Purpose, ExpectedOutputs: req.ExpectedOutputs, Inputs: infos, Limits: lim, Status: StatusAwaiting, CreatedAt: s.now(),
+		AutoRun: auto, AutoFallback: autoReason}
 	if run.ExpectedOutputs == nil {
 		run.ExpectedOutputs = []string{}
 	}
@@ -270,18 +287,29 @@ func (s *Service) Prepare(ctx context.Context, in application.CodeRunInput) (app
 		return application.CodePlan{}, &Error{Code: CodeUnavailable, Detail: err.Error()}
 	}
 	s.audit(ctx, in.Org, in.AgentID, "code.run.requested", run.ID, map[string]any{"code_hash": run.CodeHash, "args_hash": run.Hash,
-		"approval_id": run.ApprovalID, "task_id": run.TaskID, "inputs": inputRefs(infos), "limits": lim, "lines": strings.Count(run.Code, "\n") + 1})
+		"approval_id": run.ApprovalID, "task_id": run.TaskID, "inputs": inputRefs(infos), "limits": lim, "lines": strings.Count(run.Code, "\n") + 1,
+		"auto_run": auto, "approval_reason": autoReason})
 	files := make([]map[string]any, 0, len(infos))
 	for _, i := range infos {
 		files = append(files, map[string]any{"name": i.Name, "size": i.Size})
 	}
-	return application.CodePlan{
+	plan := application.CodePlan{
 		RunID: run.ID, ArgsHash: run.Hash,
 		Title:   fmt.Sprintf("Run Python code (%d lines)", strings.Count(run.Code, "\n")+1),
 		Details: fmt.Sprintf("code.run: %s | code_hash=%s | inputs=%d | timeout=%ds | network=none", truncateRunes(run.Purpose, 200), run.CodeHash[:12], len(infos), lim.TimeoutSeconds),
 		Card: map[string]any{"kind": "code_run", "run_id": run.ID, "code_hash": run.CodeHash, "args_hash": run.Hash, "purpose": run.Purpose,
 			"input_files": files, "expected_outputs": run.ExpectedOutputs, "limits": lim, "language": run.Language},
-	}, nil
+		Auto: auto,
+	}
+	if auto {
+		plan.Card["auto_run"] = true
+	}
+	if autoReason != "" { // desk mode is on but this run needs a person: say why
+		txt := autoFallbackText(autoReason, autoDetail)
+		plan.Card["approval_reason"], plan.Card["approval_reason_text"] = autoReason, txt
+		plan.Details += " | approval needed because: " + txt
+	}
+	return plan, nil
 }
 
 func inputRefs(in []InputInfo) []map[string]any {
@@ -328,7 +356,7 @@ func (s *Service) deny(ctx context.Context, org string, run Run, code string) ap
 		s.log().Warn("sandbox: close run", "run", run.ID, "err", err)
 	} else if ok {
 		s.audit(ctx, org, run.AgentID, "code.run.denied", run.ID, map[string]any{"reason": code, "code_hash": run.CodeHash,
-			"approval_id": run.ApprovalID, "task_id": run.TaskID})
+			"approval_id": run.ApprovalID, "task_id": run.TaskID, "auto_run": run.AutoRun})
 		s.emit(ctx, org, "code.run.finished", map[string]any{"run_id": run.ID, "status": StatusDenied, "reason": code, "agent_id": run.AgentID})
 	}
 	return application.CodeOutcome{Status: "denied", DenyReason: code, Summary: "code was approved but not run: " + code}
@@ -380,6 +408,19 @@ func (s *Service) Execute(ctx context.Context, org string, ex application.CodeEx
 			return s.deny(ctx, org, run, CodeInputsChanged) // the file changed after the approval
 		}
 	}
+	if run.AutoRun { // desk mode: the conditions must STILL hold now, checked against the inputs just read
+		if m, _ := normalizeAutoRun(st.AutoRun); m != AutoDesk {
+			return s.deny(ctx, org, run, CodeAutoNotAllowed)
+		}
+		infos := make([]InputInfo, 0, len(ins))
+		for _, in := range ins {
+			infos = append(infos, in.Info)
+		}
+		if reason, _ := s.autoCheck(ctx, org, st, ex.Scope, run.AgentID, run.TaskID, run.Code, ids, infos); reason != "" {
+			return s.deny(ctx, org, run, CodeAutoNotAllowed+":"+reason)
+		}
+		ex.Approvers = []string{application.AutoApprover}
+	}
 	// Last gate, atomic: the run starts at most once.
 	began, err := s.Store.BeginRun(ctx, org, run.ID, ex.ApprovalID, ex.Approvers, s.now())
 	if err != nil {
@@ -390,7 +431,7 @@ func (s *Service) Execute(ctx context.Context, org string, ex application.CodeEx
 	}
 	run.Approvers = ex.Approvers
 	s.audit(ctx, org, run.AgentID, "code.run.started", run.ID, map[string]any{"code_hash": run.CodeHash, "args_hash": run.Hash,
-		"approval_id": ex.ApprovalID, "approvers": ex.Approvers, "task_id": run.TaskID, "inputs": inputRefs(run.Inputs), "limits": run.Limits})
+		"approval_id": ex.ApprovalID, "approvers": ex.Approvers, "task_id": run.TaskID, "inputs": inputRefs(run.Inputs), "limits": run.Limits, "auto_run": run.AutoRun})
 
 	req := RunRequest{RunID: run.ID, OrgID: org, Code: run.Code, Limits: run.Limits}
 	for _, in := range ins {
@@ -533,7 +574,7 @@ func (s *Service) finish(ctx context.Context, org string, run Run, resp RunRespo
 	s.audit(ctx, org, run.AgentID, "code.run.finished", run.ID, map[string]any{"status": run.Status, "reason": run.DenyReason, "exit_code": run.ExitCode,
 		"duration_ms": run.DurationMS, "code_hash": run.CodeHash, "args_hash": run.Hash, "approval_id": run.ApprovalID, "approvers": run.Approvers,
 		"task_id": run.TaskID, "inputs": inputRefs(run.Inputs), "outputs": run.Outputs, "dropped": dropped,
-		"stdout_bytes": len(resp.Stdout), "stderr_bytes": len(resp.Stderr)})
+		"stdout_bytes": len(resp.Stdout), "stderr_bytes": len(resp.Stderr), "auto_run": run.AutoRun})
 	s.emit(ctx, org, "code.run.finished", map[string]any{"run_id": run.ID, "status": run.Status, "exit_code": run.ExitCode, "duration_ms": run.DurationMS,
 		"agent_id": run.AgentID, "task_id": run.TaskID, "code_hash": run.CodeHash, "outputs": outNames})
 	out := application.CodeOutcome{Status: run.Status, DenyReason: run.DenyReason, ExitCode: exit, OutputRefs: refs}

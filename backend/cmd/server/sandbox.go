@@ -57,7 +57,7 @@ func wireSandbox(log *slog.Logger, pg *postgres.Store, rec *application.Recorder
 		svc.Files, svc.Sink = df, df
 	}
 	orch.SetCodeRunner(svc)
-	log.Info("code sandbox ready: every run needs a human approval", "runner", url)
+	log.Info("code sandbox ready: every run needs a human approval unless the organization opted into desk mode", "runner", url)
 	return sandboxWiring{svc: svc, available: true}
 }
 

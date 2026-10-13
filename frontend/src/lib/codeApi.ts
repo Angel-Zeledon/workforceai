@@ -11,11 +11,20 @@ export interface CodeRun {
   status: CodeRunStatus; deny_reason?: string; approvers?: string[]; exit_code?: number; duration_ms: number;
   stdout: string; stderr: string; stdout_truncated: boolean; stderr_truncated: boolean; outputs: CodeOutput[];
   created_at: string; started_at?: string; finished_at?: string;
+  /** Desk mode: the run started without a human approval. auto_fallback: why a desk-mode request still needed one. */
+  auto_run?: boolean; auto_fallback?: string;
 }
+export type CodeAutoRun = "off" | "desk";
 export interface CodeSettings {
   enabled: boolean; max_runs_per_day: number; max_runtime_seconds: number;
   available: boolean; ceiling_runs_per_day: number; ceiling_runtime_seconds: number;
+  /** "off" (default: every run needs approval) | "desk" (runs on the agent's own files start without approval). */
+  auto_run?: CodeAutoRun;
+  auto_max_code_bytes?: number; auto_max_input_bytes?: number; auto_max_runs_per_task?: number;
+  auto_effective_code_bytes?: number; auto_effective_input_bytes?: number; auto_effective_runs_per_task?: number;
 }
+/** What a PUT carries. Turning desk mode on needs acknowledge_risk (the server refuses otherwise). */
+export type CodeSettingsInput = Pick<CodeSettings, "enabled" | "max_runs_per_day" | "max_runtime_seconds" | "auto_run" | "auto_max_code_bytes" | "auto_max_input_bytes" | "auto_max_runs_per_task"> & { acknowledge_risk?: boolean };
 
 const TERMINAL: CodeRunStatus[] = ["succeeded", "failed", "timeout", "aborted", "rejected", "denied"];
 export const isFinished = (s: CodeRunStatus) => TERMINAL.includes(s);
@@ -25,7 +34,7 @@ const norm = (r: CodeRun): CodeRun => ({ ...r, inputs: r.inputs ?? [], outputs: 
 
 export const codeApi = {
   settings: () => call<CodeSettings>("GET", "/settings/code-execution"),
-  putSettings: (s: Pick<CodeSettings, "enabled" | "max_runs_per_day" | "max_runtime_seconds">) => call<CodeSettings>("PUT", "/settings/code-execution", s),
+  putSettings: (s: CodeSettingsInput) => call<CodeSettings>("PUT", "/settings/code-execution", s),
   runs: async (limit = 20) => {
     const x = await call<CodeRun[]>("GET", `/code-runs?limit=${limit}`);
     return Array.isArray(x) ? x.map(norm) : [];

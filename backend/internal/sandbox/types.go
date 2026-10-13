@@ -329,6 +329,11 @@ type Run struct {
 	ExpectedOutputs []string    `json:"expected_outputs"`
 	Inputs          []InputInfo `json:"inputs"`
 	Limits          Limits      `json:"limits"`
+	// AutoRun is true when the run started without a human approval (desk mode,
+	// autorun.go). AutoFallback is the stable reason a desk-mode request still
+	// needed an approval ("" otherwise).
+	AutoRun      bool   `json:"auto_run,omitempty"`
+	AutoFallback string `json:"auto_fallback,omitempty"`
 
 	Status     string   `json:"status"`
 	DenyReason string   `json:"deny_reason,omitempty"`
@@ -353,10 +358,19 @@ type Settings struct {
 	Enabled bool `json:"enabled"`
 	// MaxRunsPerDay and MaxRuntimeSeconds lower the platform ceilings for this
 	// organization (0 = use the platform value).
-	MaxRunsPerDay     int       `json:"max_runs_per_day"`
-	MaxRuntimeSeconds int       `json:"max_runtime_seconds"`
-	UpdatedBy         string    `json:"updated_by,omitempty"`
-	UpdatedAt         time.Time `json:"updated_at,omitempty"`
+	MaxRunsPerDay     int `json:"max_runs_per_day"`
+	MaxRuntimeSeconds int `json:"max_runtime_seconds"`
+	// AutoRun (autorun.go): "off" (default, every run needs a human) or "desk"
+	// (runs confined to the agent's own files start without one). The caps below
+	// apply to desk mode only (0 = default).
+	AutoRun            string `json:"auto_run,omitempty"`
+	AutoMaxCodeBytes   int    `json:"auto_max_code_bytes,omitempty"`
+	AutoMaxInputBytes  int64  `json:"auto_max_input_bytes,omitempty"`
+	AutoMaxRunsPerTask int    `json:"auto_max_runs_per_task,omitempty"`
+	// AcknowledgeRisk is request-only (never stored): turning desk mode on needs it.
+	AcknowledgeRisk bool      `json:"acknowledge_risk,omitempty"`
+	UpdatedBy       string    `json:"updated_by,omitempty"`
+	UpdatedAt       time.Time `json:"updated_at,omitempty"`
 }
 
 // ---- runner wire protocol (backend <-> sandbox-runner) ----

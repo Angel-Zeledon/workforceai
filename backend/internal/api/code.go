@@ -28,6 +28,16 @@ type codeSettingsView struct {
 	Enabled           bool `json:"enabled"`
 	MaxRunsPerDay     int  `json:"max_runs_per_day"`
 	MaxRuntimeSeconds int  `json:"max_runtime_seconds"`
+	// AutoRun is "off" (every run needs approval) or "desk" (runs confined to the
+	// agent's own files start without one; docs/architecture/code-sandbox.md).
+	AutoRun            string `json:"auto_run"`
+	AutoMaxCodeBytes   int    `json:"auto_max_code_bytes"`
+	AutoMaxInputBytes  int64  `json:"auto_max_input_bytes"`
+	AutoMaxRunsPerTask int    `json:"auto_max_runs_per_task"`
+	// Effective desk-mode caps (defaults applied).
+	AutoEffectiveCodeBytes   int   `json:"auto_effective_code_bytes"`
+	AutoEffectiveInputBytes  int64 `json:"auto_effective_input_bytes"`
+	AutoEffectiveRunsPerTask int   `json:"auto_effective_runs_per_task"`
 	// Available: a sandbox runner is configured on the server (without it
 	// nothing runs even when enabled).
 	Available bool `json:"available"`
@@ -42,7 +52,11 @@ func (s *server) codeSettingsView(in sandbox.Settings) codeSettingsView {
 	if perDay <= 0 {
 		perDay = sandbox.DefaultMaxRunsPerDay
 	}
+	mode, _ := sandbox.NormalizeAutoRun(in.AutoRun)
+	cb, ib, pt := in.AutoCaps()
 	return codeSettingsView{Enabled: in.Enabled, MaxRunsPerDay: in.MaxRunsPerDay, MaxRuntimeSeconds: in.MaxRuntimeSeconds,
+		AutoRun: mode, AutoMaxCodeBytes: in.AutoMaxCodeBytes, AutoMaxInputBytes: in.AutoMaxInputBytes, AutoMaxRunsPerTask: in.AutoMaxRunsPerTask,
+		AutoEffectiveCodeBytes: cb, AutoEffectiveInputBytes: ib, AutoEffectiveRunsPerTask: pt,
 		Available: s.SandboxAvailable, CeilingRunsPerDay: perDay, CeilingRuntimeSeconds: ceil.TimeoutSeconds}
 }
 
@@ -62,7 +76,9 @@ func (s *server) putCodeSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, err := s.Sandbox.PutSettings(r.Context(), s.org(r), s.actor(r), sandbox.Settings{Enabled: in.Enabled,
-		MaxRunsPerDay: in.MaxRunsPerDay, MaxRuntimeSeconds: in.MaxRuntimeSeconds})
+		MaxRunsPerDay: in.MaxRunsPerDay, MaxRuntimeSeconds: in.MaxRuntimeSeconds,
+		AutoRun: in.AutoRun, AutoMaxCodeBytes: in.AutoMaxCodeBytes, AutoMaxInputBytes: in.AutoMaxInputBytes,
+		AutoMaxRunsPerTask: in.AutoMaxRunsPerTask, AcknowledgeRisk: in.AcknowledgeRisk})
 	if err != nil {
 		s.fail(w, err)
 		return

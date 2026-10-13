@@ -21,6 +21,10 @@ type CodeRunInput struct {
 	// ApprovalID is the id the approval card will have; the run is bound to it.
 	ApprovalID string
 	Args       map[string]any
+	// Scope (desk mode, code_auto.go) is what the backend itself knows about where
+	// this agent may read without a human: never taken from the runtime. nil =
+	// every run needs approval.
+	Scope *CodeScope
 }
 
 // CodePlan is what a human must approve (structured, no secrets).
@@ -31,6 +35,10 @@ type CodePlan struct {
 	Details  string
 	// Card is the approval context (metadata; the full code is fetched by id).
 	Card map[string]any
+	// Auto: the organization is in desk mode and the run met every condition: it
+	// starts without an approval (the orchestrator calls Execute with the same
+	// ApprovalID). Always false when the organization did not opt in.
+	Auto bool
 }
 
 // CodeExec asks to run an approved plan. The run is found by ApprovalID (the
@@ -39,6 +47,8 @@ type CodePlan struct {
 type CodeExec struct {
 	ApprovalID, ArgsHash string
 	Approvers            []string
+	// Scope is re-sent for a desk-mode run so the sandbox re-checks it at the time of use.
+	Scope *CodeScope
 }
 
 // CodeOutcome is the redacted result of a run, handed back to the orchestrator.

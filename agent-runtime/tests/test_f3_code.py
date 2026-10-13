@@ -35,6 +35,19 @@ def test_simulation_asks_for_code_only_with_the_marker():
     assert sim_code_request(_req(["code"], title=f"Analiza {SIM_CODE_MARKER}", external_content=["<untrusted_data>x</untrusted_data>"])) is None
 
 
+def test_prompt_tells_the_truth_for_each_code_mode():
+    off = build_task_prompt(_req(["code"]))
+    assert "SIEMPRE necesita la aprobacion de una persona" in off and "MODO ESCRITORIO" not in off
+    assert build_task_prompt(_req(["code"], code_auto_run="")) == off  # the default prompt does not change
+    desk = build_task_prompt(_req(["code"], code_auto_run="desk"))
+    assert "MODO ESCRITORIO" in desk and "SIEMPRE necesita la aprobacion de una persona" not in desk
+    assert "tu escritorio" in desk and "una persona debe aprobarlo" in desk  # the fallback is explained
+    assert "SIN red ni secretos" in desk
+    # an unknown value is not desk mode, and an agent without the tool never hears about the mode
+    assert "MODO ESCRITORIO" not in build_task_prompt(_req(["code"], code_auto_run="full"))
+    assert "MODO ESCRITORIO" not in build_task_prompt(_req(["fs"], code_auto_run="desk"))
+
+
 def test_run_task_in_simulation_returns_the_code_request():
     eng = SimulationEngine(latency_scale=0)
     res = asyncio.run(eng.run_task(_req(["code"], title=f"Analiza {SIM_CODE_MARKER}")))

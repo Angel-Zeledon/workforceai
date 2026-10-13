@@ -54,6 +54,18 @@ function Text({ label, text, truncated, testid }: { label: string; text: string;
   );
 }
 
+/** Desk mode: this run started without a human approval (the code below stays here to be reviewed). */
+export function AutoRunBadge() {
+  const { t } = useT();
+  return <span data-testid="code-run-auto-badge" className="inline-block rounded-full border border-amber-500/60 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-900">{t("code.auto.badge")}</span>;
+}
+
+/** Why a desk-mode request still needed an approval (stable code from the backend, translated). */
+function ApprovalReason({ code }: { code: string }) {
+  const { t } = useT();
+  return <p data-testid="code-run-reason" className="text-[12px]"><span className="font-semibold">{t("code.auto.reasonIntro")}: </span>{t(`code.auto.reason.${code}`)}</p>;
+}
+
 /** The outcome of a run: status, exit code, stdout/stderr (as text) and the files it produced. */
 export function CodeRunResult({ run }: { run: CodeRun }) {
   const { t } = useT();
@@ -61,6 +73,7 @@ export function CodeRunResult({ run }: { run: CodeRun }) {
   const cls = run.status === "succeeded" ? "text-emerald-700" : run.status === "running" || run.status === "awaiting_approval" ? "text-amber-700" : "text-red-700";
   return (
     <div data-testid="code-run-result" data-status={run.status} className="space-y-2 text-[12px]">
+      {run.auto_run && <AutoRunBadge />}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className={`font-semibold ${cls}`} data-testid="code-run-status">{t(`code.status.${run.status}`)}</span>
         {run.exit_code !== undefined && isFinished(run.status) && <span className="text-mute">{t("code.exit", { code: run.exit_code })}</span>}
@@ -104,6 +117,7 @@ export function CodeRunView({ approvalId, status, compact = false }: { approvalI
         <div role="note" data-testid="code-run-warning" className="rounded-md border border-amber-500/50 bg-amber-50 p-2 text-[11.5px] leading-snug text-amber-900">
           {t("code.warning", { seconds: l.timeout_seconds, memory: l.memory_mb })}
         </div>
+        {run.auto_fallback && <ApprovalReason code={run.auto_fallback} />}
         <p className="text-[12px]"><span className="font-semibold">{t("code.purpose")}: </span><span data-testid="code-run-purpose">{run.purpose}</span></p>
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-mute">{t("code.inputs")}</div>
