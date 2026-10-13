@@ -7,8 +7,8 @@ import { useStore } from "@/lib/store";
 import { useDriveNav } from "@/lib/drive";
 import { Icon } from "../icons";
 import { useAgentName } from "../ui";
-import { sendChat } from "../chat/ChatThread";
 import { FileBadge } from "./FileCard";
+import { AskForChange } from "./AskForChange";
 import { Markdown } from "./markdown";
 import { parseCsv } from "@/lib/csv";
 import { CodeView, DiffView, DocView, ImageView, JsonView, PdfBytesView, SheetView, TableView } from "./viewers";
@@ -27,6 +27,7 @@ export function FileViewerPanel() {
   const [editing, setEditing] = useState(false);
   // the agent that touched this path last (file.activity) refreshes the panel
   const touched = useStore((s) => (ref ? Object.values(s.files).find((f) => f.path === ref.path)?.ts : 0));
+  const rev = useFileViewer((s) => s.rev); // an Undo in a chat card changed this file
 
   const reload = useCallback(async () => {
     if (!ref) return;
@@ -41,6 +42,7 @@ export function FileViewerPanel() {
   }, [ref]);
   useEffect(() => { setLoad({ state: "loading" }); setVersion(0); setShowDiff(false); setEditing(false); reload(); }, [ref?.path, ref?.file_id, reload]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (touched) reload(); }, [touched, reload]);
+  useEffect(() => { if (rev) reload(); }, [rev, reload]);
   useEffect(() => {
     if (!ref) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !editing) close(); };
@@ -89,7 +91,7 @@ export function FileViewerPanel() {
           : <Body file={file} kind={kind} version={shown} latest={current} showDiff={showDiff} />)}
       </div>
 
-      {file && <AskBar file={file} versions={load.state === "ok" ? load.versions : []} />}
+      {file && <AskForChange file={file} versions={load.state === "ok" ? load.versions : []} />}
     </aside>
   );
 }
@@ -101,6 +103,8 @@ function Toolbar({ file, kind, version, shown, showDiff, editing, onVersion, onD
   const { t } = useT();
   const show = useDriveNav((s) => s.show);
   const close = useFileViewer((s) => s.close);
+  const editInChat = useFileViewer((s) => s.editInChat);
+  const setEditInChat = useFileViewer((s) => s.setEditInChat);
   const textual = TEXTUAL.includes(kind);
   const nums = useMemo(() => Array.from({ length: file.current_version }, (_, i) => file.current_version - i), [file.current_version]);
   return (
@@ -124,6 +128,12 @@ function Toolbar({ file, kind, version, shown, showDiff, editing, onVersion, onD
         </button>
       )}
       <span className="flex-1" />
+      {kind !== "pdf" && kind !== "image" && kind !== "other" && (
+        <button type="button" data-testid="viewer-edit-in-chat" aria-pressed={editInChat} title={t("fileviewer.editInChatTitle")} onClick={() => setEditInChat(!editInChat)}
+          className={`rounded-md border px-2 py-1 font-medium ${editInChat ? "border-accent bg-accent/10 text-accent-hover" : "border-line text-ink2 hover:border-accent"}`}>
+          {editInChat ? t("fileviewer.editInChatOn") : t("fileviewer.editInChat")}
+        </button>
+      )}
       <button type="button" data-testid="viewer-download" onClick={() => drive.download(file).catch(() => {})} className="rounded-md border border-line px-2 py-1 font-medium text-ink2 hover:border-accent">{t("fileviewer.download")}</button>
       <button type="button" data-testid="viewer-open-files" onClick={() => { close(); show(file.path.split("/").slice(0, -1).join("/") || "/"); }}
         className="rounded-md border border-line px-2 py-1 font-medium text-ink2 hover:border-accent">{t("fileviewer.openInFiles")}</button>
@@ -259,49 +269,5 @@ function Editor({ file, kind, onDone }: { file: DriveFile; kind: string; onDone:
         <span className="ml-auto text-[10.5px] text-mute">{t("fileviewer.saveHint", { v: file.current_version + 1 })}</span>
       </div>
     </form>
-  );
-}
-
-/** "Ask for changes" / comment: a chat message to the agent that made the file, with the file attached (the agent reads it with fs.read). */
-function AskBar({ file, versions }: { file: DriveFile; versions: DriveVersion[] }) {
-  const { t } = useT();
-  const name = useAgentName();
-  const agents = useStore((s) => s.agents);
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState<{ to: string; kind: "change" | "comment" } | null>(null);
-  const [err, setErr] = useState("");
-  // the agent that wrote the file; else the office decides
-  const owner = [...versions].sort((a, b) => b.version - a.version).find((v) => v.author.kind === "agent" && agents[v.author.id])?.author.id ?? null;
-  const conv = owner ? `agent:${owner}` : "office";
-  useEffect(() => { setSent(null); setText(""); setErr(""); }, [file.id]);
-
-  const send = async (kind: "change" | "comment") => {
-    const v = text.trim();
-    if (!v || busy) return;
-    setBusy(true); setErr("");
-    const body = t(kind === "change" ? "fileviewer.askText" : "fileviewer.commentText", { name: file.name, path: file.path, v: file.current_version, text: v });
-    try {
-      await sendChat(conv, body, "user", [file.path]);
-      setText(""); setSent({ to: owner ?? "all", kind });
-    } catch { setErr(t("chat.sendError")); }
-    setBusy(false);
-  };
-  return (
-    <div className="border-t border-line bg-panel p-3">
-      <form onSubmit={(e) => { e.preventDefault(); send("change"); }} className="flex flex-col gap-1.5">
-        <label htmlFor="viewer-ask" className="text-[11px] font-semibold text-ink2">
-          {owner ? t("fileviewer.askLabel", { name: name(owner).split(" ")[0] }) : t("fileviewer.askLabelTeam")}
-        </label>
-        <div className="flex gap-1.5">
-          <input id="viewer-ask" data-testid="viewer-ask-input" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("fileviewer.askPlaceholder")} autoComplete="off"
-            className="min-w-0 flex-1 rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[12.5px] text-ink outline-none placeholder:text-mute focus:border-accent" />
-          <button type="submit" data-testid="viewer-ask-send" disabled={busy || !text.trim()} className="whitespace-nowrap rounded-md border border-accent bg-accent px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-accent-hover disabled:opacity-40">{t("fileviewer.askSend")}</button>
-          <button type="button" data-testid="viewer-comment-send" disabled={busy || !text.trim()} onClick={() => send("comment")} className="whitespace-nowrap rounded-md border border-line px-2.5 py-1.5 text-xs font-medium text-ink2 hover:border-accent disabled:opacity-40">{t("fileviewer.comment")}</button>
-        </div>
-      </form>
-      {sent && <div role="status" data-testid="viewer-ask-sent" className="mt-1.5 text-[11px] text-ok">{t(sent.kind === "change" ? "fileviewer.askSent" : "fileviewer.commentSent", { name: sent.to === "all" ? t("common.everyone") : name(sent.to).split(" ")[0] })}</div>}
-      {err && <div role="alert" className="mt-1.5 text-[11px] text-err">{err}</div>}
-    </div>
   );
 }

@@ -55,4 +55,9 @@ type FileRef struct {
 	Size    int64  `json:"size,omitempty"`
 	Version int    `json:"version,omitempty"`
 	Action  string `json:"action,omitempty"`
+	// Set when Action is "edit" (fs.edit): the version before the edit and the
+	// lines added and removed, so the chat can show the change with Keep / Undo.
+	FromVersion int `json:"from_version,omitempty"`
+	Added       int `json:"added,omitempty"`
+	Removed     int `json:"removed,omitempty"`
 }

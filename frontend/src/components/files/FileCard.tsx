@@ -2,6 +2,7 @@
 import { useT } from "@/lib/i18n";
 import { fileKind, fmtBytes, useFileViewer, type FileKind } from "@/lib/fileView";
 import type { FileRef } from "@/lib/types";
+import { FileEditCard } from "./FileEditCard";
 
 const BADGE: Record<FileKind, { label: string; cls: string }> = {
   markdown: { label: "MD", cls: "bg-info/15 text-info" },
@@ -50,5 +51,5 @@ export function FileCard({ f, mine = false }: { f: FileRef; mine?: boolean }) {
 
 export function FileCards({ files, mine = false }: { files?: FileRef[]; mine?: boolean }) {
   if (!files?.length) return null;
-  return <div data-testid="file-cards" className="flex w-full flex-col items-stretch">{files.map((f) => <FileCard key={f.file_id || f.path} f={f} mine={mine} />)}</div>;
+  return <div data-testid="file-cards" className="flex w-full flex-col items-stretch">{files.map((f) => (f.action === "edit" && f.from_version ? <FileEditCard key={f.file_id || f.path} f={f} /> : <FileCard key={f.file_id || f.path} f={f} mine={mine} />))}</div>;
 }

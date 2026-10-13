@@ -114,6 +114,9 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 				return a.Tools, nil
 			},
 			// file.activity: which file an agent just listed/read/searched/wrote (path only).
+			NotifyEdit: func(_ context.Context, _, _, taskID, path string, from, to, added, removed int) {
+				orch.NoteTaskEdit(taskID, path, application.EditNote{From: from, To: to, Added: added, Removed: removed})
+			},
 			Notify: func(actx context.Context, org, agentID, taskID, action, path string) {
 				rec.Emit(application.WithOrg(actx, org), application.Action{Type: "file.activity", AgentID: agentID, Entity: "file", SkipAudit: true,
 					Payload: map[string]any{"agent_id": agentID, "task_id": taskID, "action": action, "path": path}})

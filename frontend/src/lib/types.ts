@@ -74,7 +74,9 @@ export type ChatConversationId = string;
 export interface FileRef {
   file_id?: string; path: string; name: string; mime?: string; size?: number; version?: number;
   /** write: produced by an agent; attach: attached by the user */
-  action?: "write" | "attach" | string;
+  action?: "write" | "attach" | "edit" | string;
+  /** edit (fs.edit): the version before the edit and the lines added / removed, for the chat card with Keep / Undo */
+  from_version?: number; added?: number; removed?: number;
 }
 export interface ChatMessage {
   /** result of a slash command, rendered as a system card (local to this browser) */

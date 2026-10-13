@@ -100,7 +100,7 @@ const (
 var standingActions = map[string]map[string]bool{
 	"documents":   {"draft": true, "create": true, "update": true, "edit": true, "append": true},
 	"spreadsheet": {"create": true, "update": true, "write": true, "edit": true, "append": true, "set_cell": true, "recalculate": true},
-	"fs":          {"write": true, "write_document": true, "move": true}, // the drive: versioned files; delete is excluded below
+	"fs":          {"write": true, "write_document": true, "edit": true, "move": true}, // the drive: versioned files; delete is excluded below
 }
 
 // standingForbidden is a second barrier on the verb: external or irreversible

@@ -35,6 +35,7 @@ type chatFiles struct {
 	res FileResolver
 	mu  sync.Mutex
 	by  map[string][]string // task id -> written paths (in order, unique)
+	ed  map[string]map[string]EditNote // task id -> path -> last fs.edit of it (agent edit)
 }
 
 // NoteTaskFile records that an agent wrote or moved a file while running a task.
@@ -93,6 +94,7 @@ func (o *Orchestrator) resolveFiles(ctx context.Context, paths []string, action 
 // Only requests born in a chat; tasks that wrote nothing say nothing.
 func (o *Orchestrator) chatTaskFiles(ctx context.Context, rs *run, t domain.Task, agent domain.Agent) {
 	paths := o.takeTaskFiles(t.ID)
+	edits := o.takeTaskEdits(t.ID)
 	l := rs.chat
 	if l == nil || len(paths) == 0 {
 		return
@@ -103,6 +105,11 @@ func (o *Orchestrator) chatTaskFiles(ctx context.Context, rs *run, t domain.Task
 	refs := o.resolveFiles(ctx, paths, "write")
 	if len(refs) == 0 {
 		return
+	}
+	for i := range refs { // an fs.edit shows as an edit card with Keep / Undo
+		if n, ok := edits[refs[i].Path]; ok && n.To == refs[i].Version {
+			refs[i].Action, refs[i].FromVersion, refs[i].Added, refs[i].Removed = "edit", n.From, n.Added, n.Removed
+		}
 	}
 	reply := l.replyTo
 	o.chatStore(ctx, domain.Message{ID: newID(), ConversationID: l.conv, From: agent.ID, To: "user", Kind: domain.MsgChat,
@@ -134,4 +141,37 @@ func attachmentNote(loc string, refs []domain.FileRef) string {
 	}
 	b.WriteString("\n[/attachments]")
 	return b.String()
+}
+
+// EditNote is what an fs.edit changed (paths and numbers, never content).
+type EditNote struct{ From, To, Added, Removed int }
+
+// NoteTaskEdit records an fs.edit of a task: the chat message of the task then
+// shows the file as an edit (version From -> To, lines added and removed).
+func (o *Orchestrator) NoteTaskEdit(taskID, p string, n EditNote) {
+	if taskID == "" || p == "" {
+		return
+	}
+	f := &o.files
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.ed == nil || len(f.ed) >= maxFileTracked {
+		f.ed = map[string]map[string]EditNote{}
+	}
+	if f.ed[taskID] == nil {
+		f.ed[taskID] = map[string]EditNote{}
+	}
+	if old, ok := f.ed[taskID][p]; ok { // several edits of one file in a task: one card, first version to last
+		n.From, n.Added, n.Removed = old.From, old.Added+n.Added, old.Removed+n.Removed
+	}
+	f.ed[taskID][p] = n
+}
+
+func (o *Orchestrator) takeTaskEdits(taskID string) map[string]EditNote {
+	f := &o.files
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	v := f.ed[taskID]
+	delete(f.ed, taskID)
+	return v
 }

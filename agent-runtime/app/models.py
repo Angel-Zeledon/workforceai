@@ -508,7 +508,9 @@ class ToolRequest(_Base):
         default_factory=dict,
         description=("Arguments of the tool. Office files: tool=fs, action=write_document, args={path:'/Agents/x/file.xlsx|.docx|.pdf', "
                      "document:{sheets:[{name,columns:[{header,type}],rows:[[...]]}]} for xlsx, or {title,blocks:[{type:heading|paragraph|"
-                     "bullets|table,...}]} for docx/pdf}; never binary content."))
+                     "bullets|table,...}]} for docx/pdf}; never binary content. Change an existing file: tool=fs, action=edit, "
+                     "args={path, expected_version, ops:[{op:replace,old,new}|{op:insert_after,anchor,text}|{op:delete,text}|{op:append,text}; "
+                     "docx: replace|set_heading|append_paragraph; xlsx: set_cell|add_row|rename_sheet]}."))
     risk: Risk = "low"
 
 

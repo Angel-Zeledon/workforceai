@@ -82,6 +82,8 @@ type Plan struct {
 	// could not be built (reported to the agent by Run, which writes nothing).
 	data   []byte
 	docErr string
+	// edit is the decoded fs.edit call (see edit.go).
+	edit *editPlan
 }
 
 type scope struct {
@@ -241,7 +243,7 @@ const (
 
 // IsWriteAction reports whether the action changes the drive.
 func IsWriteAction(action string) bool {
-	return action == ActWrite || action == ActWriteDocument || action == ActMove || action == ActDelete
+	return action == ActWrite || action == ActWriteDocument || action == ActEdit || action == ActMove || action == ActDelete
 }
 
 // Plan decides what an action needs. It is pure and is evaluated again at
@@ -290,6 +292,8 @@ func (a *AgentFS) Plan(ctx context.Context, agentID, action string, args map[str
 		return a.planWrite(ctx, org, sc, args)
 	case ActWriteDocument:
 		return a.planWriteDocument(ctx, org, sc, args)
+	case ActEdit:
+		return a.planEdit(ctx, org, sc, args)
 	case ActMove:
 		return a.planMove(ctx, org, sc, args)
 	case ActDelete:
@@ -567,6 +571,8 @@ func (a *AgentFS) Run(ctx context.Context, agentID, action string, args map[stri
 		}
 		sum := fmt.Sprintf("wrote %s (version %d, %d bytes)", res.File.Path, res.File.CurrentVersion, res.File.Size)
 		return RunResult{OK: true, Summary: sum, Data: map[string]any{"file_id": res.File.ID, "path": res.File.Path, "version": res.File.CurrentVersion, "created": res.Created}}
+	case ActEdit:
+		return a.runEdit(ctx, agentID, pl, args)
 	case ActMove:
 		f, err := a.targetFile(ctx, args, "path")
 		if err != nil {

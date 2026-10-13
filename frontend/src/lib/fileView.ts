@@ -41,11 +41,21 @@ export const fmtBytes = (n = 0) => (n < 1024 ? `${n} B` : n < 1 << 20 ? `${(n / 
 
 interface ViewerState {
   ref: FileRef | null;
+  /** "Edit this file in chat": messages sent from the chat carry the open file as context */
+  editInChat: boolean;
+  /** bumped when something changed the open file from outside the panel (Undo in a chat card) */
+  rev: number;
   open: (r: FileRef) => void;
   close: () => void;
+  setEditInChat: (on: boolean) => void;
+  touch: () => void;
 }
 export const useFileViewer = create<ViewerState>((set) => ({
   ref: null,
-  open: (ref) => set({ ref }),
-  close: () => set({ ref: null }),
+  editInChat: false,
+  rev: 0,
+  open: (ref) => set((s) => ({ ref, editInChat: s.ref?.path === ref.path ? s.editInChat : false })),
+  close: () => set({ ref: null, editInChat: false }),
+  setEditInChat: (editInChat) => set({ editInChat }),
+  touch: () => set((s) => ({ rev: s.rev + 1 })),
 }));

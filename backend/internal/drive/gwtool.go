@@ -31,6 +31,9 @@ type GatewayTool struct {
 	// AgentTools returns the tool labels of an agent (nil = no label check).
 	// An error or an unknown agent denies (fail closed).
 	AgentTools func(ctx context.Context, org, agentID string) ([]string, error)
+	// NotifyEdit (optional) is told about every successful fs.edit (paths and
+	// numbers only), so the chat can show the change with Keep / Undo.
+	NotifyEdit func(ctx context.Context, org, agentID, taskID, path string, from, to, added, removed int)
 	// Notify (optional) is told about every successful action (path only, never
 	// content), so the office can show which file an agent is working on.
 	Notify func(ctx context.Context, org, agentID, taskID, action, path string)
@@ -46,7 +49,7 @@ func (t *GatewayTool) SideEffect(action string) (bool, bool) {
 	switch action {
 	case ActList, ActRead, ActSearch:
 		return false, true
-	case ActWrite, ActWriteDocument, ActMove, ActDelete:
+	case ActWrite, ActWriteDocument, ActEdit, ActMove, ActDelete:
 		return true, true
 	}
 	return false, false
@@ -66,6 +69,7 @@ func Specs() []struct {
 		{ActSearch, "query, path?, limit?", "Search names and text in the folders you can read", true},
 		{ActWrite, "path, content, message?, expected_version?, tags?", "Create a text file or add a version (free in your desk and your projects)", false},
 		{ActWriteDocument, "path (.xlsx|.docx|.pdf|.md|.csv), document, message?, tags?", "Create a real office document from a structured document (sheets for xlsx; title + blocks for docx/pdf); same zones and approvals as write", false},
+		{ActEdit, "path | file_id, expected_version, ops, message?", "Precise edit of an existing text, docx or xlsx file: a list of operations applied all-or-nothing as a new version; same zones and approvals as write", false},
 		{ActMove, "path, to", "Move or rename a file (free inside your desk and projects)", false},
 		{ActDelete, "path", "Move a file to the trash (needs approval)", false},
 	}
@@ -147,7 +151,16 @@ func (t *GatewayTool) Run(ctx context.Context, c application.GatewayCall, approv
 		if p == "" {
 			p = argStr(c.Args, "path")
 		}
-		if action == ActWriteDocument {
+		if action == ActWriteDocument || action == ActEdit {
+			if action == ActEdit && t.NotifyEdit != nil {
+				from, _ := rr.Data["previous_version"].(int)
+				to, _ := rr.Data["version"].(int)
+				ad, _ := rr.Data["added"].(int)
+				rm, _ := rr.Data["removed"].(int)
+				if to > from {
+					t.NotifyEdit(ctx, c.Org, c.AgentID, c.TaskID, p, from, to, ad, rm)
+				}
+			}
 			action = ActWrite // the office and the chat only know "write"
 		}
 		t.Notify(ctx, c.Org, c.AgentID, c.TaskID, action, p)

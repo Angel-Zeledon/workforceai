@@ -14,6 +14,8 @@ import type { FileRef } from "@/lib/types";
 import { CommandCard } from "./commands/CommandCard";
 import { useSlashComposer } from "./commands/useSlashComposer";
 import { surfaceOf } from "@/lib/commands/logic";
+import { withOpenFile } from "@/lib/fileEdit";
+import { useFileViewer } from "@/lib/fileView";
 import { AttachMenu, AttachmentTray, DrivePicker, DropOverlay, MAX_FILES, useAttachments } from "./attachments";
 
 const EMPTY: ChatMessage[] = [];
@@ -214,6 +216,8 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
     setText(draft); setDraft(conv, "");
     inputRef.current?.focus();
   }, [draft, conv, setDraft]);
+  const editCtx = useFileViewer((s) => (s.editInChat ? s.ref : null));
+  const setEditInChat = useFileViewer((s) => s.setEditInChat);
   const sc = useSlashComposer({ conv, surface: surfaceOf(conv, general), text, caret, setText, inputRef, onSent });
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
@@ -222,8 +226,17 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
     if (!v || busy || att.uploading) return;
     setBusy(true); setErr("");
     try {
-      const refs: FileRef[] = att.refs;
-      await sendChat(conv, v, "user", refs.map((r) => r.path), refs);
+      let refs: FileRef[] = att.refs;
+      let body = v;
+      const vw = useFileViewer.getState(); // "Edit this file in chat": the open file travels as context (path + version)
+      if (vw.editInChat && vw.ref) {
+        const cur = await drive.byPath(vw.ref.path).catch(() => null);
+        if (cur) {
+          const c = withOpenFile(v, refs, { ...vw.ref, file_id: cur.id, version: cur.current_version, mime: cur.mime }, t("fileviewer.editInChatHint", { name: cur.name, path: cur.path, v: cur.current_version }));
+          body = c.text; refs = c.refs;
+        }
+      }
+      await sendChat(conv, body, "user", refs.map((r) => r.path), refs);
       setText(""); att.clear(); onSent?.();
     } catch { setErr(t("chat.sendError")); }
     setBusy(false);
@@ -239,6 +252,12 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
       {sc.menu}
       {sc.suggestionChip}
       {sc.chips}
+      {editCtx && (
+        <div data-testid="chat-edit-context" className="flex items-center gap-2 rounded-md bg-accent-soft px-2 py-1 text-[11px] text-accent-hover">
+          <span className="min-w-0 flex-1 truncate">{t("chat.editingFile", { name: editCtx.name })}</span>
+          <button type="button" onClick={() => setEditInChat(false)} className="shrink-0 font-semibold underline-offset-2 hover:underline">{t("chat.editingFileOff")}</button>
+        </div>
+      )}
       <AttachmentTray items={att.items} onRemove={att.remove} />
       <div className="flex items-center gap-2">
         <input ref={fileRef} type="file" multiple data-testid="chat-attach-input" className="hidden" onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length && att.addFiles(fs)) setErr(t("att.err.tooMany", { n: MAX_FILES })); e.target.value = ""; }} />
