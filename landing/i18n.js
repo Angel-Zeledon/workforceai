@@ -199,7 +199,7 @@ window.I18N = {
     "t4.t": "Mínimo privilegio",
     "t4.d": "Un empleado solo usa las conexiones y capacidades que le autorizas, y cada permiso queda registrado.",
     "trust.not.t": "Lo que no afirmamos",
-    "trust.not.d": "No tenemos certificaciones (ni SOC 2 ni ISO) y no estamos listos para entornos empresariales regulados. Hoy no hay inicio de sesión único (SSO), ni exportación de auditoría, ni ejecuciones que sobrevivan a un reinicio del servidor.",
+    "trust.not.d": "No tenemos certificaciones (ni SOC 2 ni ISO) y no estamos listos para entornos empresariales regulados. Hoy no hay inicio de sesión único (SSO), la bitácora se puede exportar pero sin firma ni anclaje externo, y las ejecuciones en curso no sobreviven a un reinicio del servidor.",
 
     "status.title": "Estado actual",
     "status.lead": "Claro y sin adornos: qué funciona hoy, qué se está construyendo y qué solo está planeado.",
@@ -217,7 +217,7 @@ window.I18N = {
     "st.5.t": "Más profesiones",
     "st.5.d": "Diseño en papel; ningún rol nuevo está construido todavía.",
     "st.6.t": "Resistencia y empresa",
-    "st.6.d": "Ejecuciones que sobreviven a un reinicio, SSO y exportación de auditoría no existen todavía.",
+    "st.6.d": "Ejecuciones que sobreviven a un reinicio y SSO no existen todavía. La auditoría se exporta, pero sin firma externa.",
 
     "faq.title": "Preguntas frecuentes",
     "faq.q1": "¿Esto usa IA de verdad hoy?",
@@ -233,7 +233,7 @@ window.I18N = {
     "faq.q6": "¿Cuánto cuesta?",
     "faq.a6": "Todavía no hay precios. Estamos abriendo acceso anticipado para aprender de uso real antes de fijarlos.",
     "faq.q7": "¿Sirve para una empresa grande?",
-    "faq.a7": "Hoy no. Está pensado para equipos pequeños y profesionales hispanohablantes. Faltan SSO, auditoría exportable y durabilidad ante reinicios, entre otras cosas.",
+    "faq.a7": "Hoy no. Está pensado para equipos pequeños y profesionales hispanohablantes. Faltan SSO, firma externa de la auditoría y durabilidad ante reinicios, entre otras cosas.",
 
     "final.title": "Crea tu cuenta",
     "final.d": "Regístrate con tu correo y el nombre de tu empresa y llegas a tu propia oficina, separada de las demás. Todavía no hay precios: estamos en acceso anticipado y aprendiendo de cómo se usa. Esta página no recoge datos; el registro ocurre en la app.",
@@ -448,7 +448,7 @@ window.I18N = {
     "t4.t": "Least privilege",
     "t4.d": "An employee only uses the connections and capabilities you authorize, and every permission is recorded.",
     "trust.not.t": "What we do not claim",
-    "trust.not.d": "We hold no certifications (neither SOC 2 nor ISO) and we are not ready for regulated enterprise environments. Today there is no single sign-on (SSO), no audit export, and runs in progress do not survive a server restart.",
+    "trust.not.d": "We hold no certifications (neither SOC 2 nor ISO) and we are not ready for regulated enterprise environments. Today there is no single sign-on (SSO), the audit log can be exported but without a signature or external anchoring, and runs in progress do not survive a server restart.",
 
     "status.title": "Current status",
     "status.lead": "Plainly: what works today, what is being built and what is only planned.",
@@ -466,7 +466,7 @@ window.I18N = {
     "st.5.t": "More professions",
     "st.5.d": "Design on paper; no new role has been built yet.",
     "st.6.t": "Resilience and enterprise",
-    "st.6.d": "Runs that survive a restart, SSO and audit export do not exist yet.",
+    "st.6.d": "Runs that survive a restart and SSO do not exist yet. The audit log can be exported, but without an external signature.",
 
     "faq.title": "Frequently asked questions",
     "faq.q1": "Does this use real AI today?",
@@ -482,7 +482,7 @@ window.I18N = {
     "faq.q6": "How much does it cost?",
     "faq.a6": "There is no pricing yet. We are opening early access to learn from real use before setting it.",
     "faq.q7": "Is it suitable for a large company?",
-    "faq.a7": "Not today. It is aimed at small teams and Spanish-speaking professionals. SSO, exportable audit and resilience to restarts are among the things still missing.",
+    "faq.a7": "Not today. It is aimed at small teams and Spanish-speaking professionals. SSO, an externally signed audit log and resilience to restarts are among the things still missing.",
 
     "final.title": "Create your account",
     "final.d": "Sign up with your email and your company name and you land in your own office, separate from everyone else's. There are no prices yet: we are in early access and learning how it is used. This page collects no data; signing up happens in the app.",
