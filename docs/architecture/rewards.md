@@ -25,6 +25,10 @@ an agent can do or how fast it works.
 | REST API | `backend/internal/api/rewards.go` (see `08-api.md` section 20) |
 | WS events | `coins.earned`, `shop.purchased`, `item.equipped`, `item.unequipped`, `office.item_placed`, `office.item_removed` (see `03-eventos-realtime.md`) |
 
+Office furniture can also be freely arranged with the office editor (layout document, `GET/PUT /office/layout`, event
+`office.layout_updated`, catalog slots `piece`/`desk`/`chair` that `Place`/`Remove` reject): see
+[office-editor.md](office-editor.md). Buying and ownership are unchanged.
+
 Without `DATABASE_URL` an in-memory store with the same code path is used.
 
 ## Ledger and wallet

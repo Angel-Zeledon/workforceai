@@ -15412,6 +15412,1698 @@
     "en": "Soft green for steady work."
    },
    "color": "#5f7a4a"
+  },
+  {
+   "id": "desk_scandinavian",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 90,
+   "rarity": "common",
+   "name": {
+    "es": "Escritorio nórdico de roble",
+    "en": "Scandinavian oak desk"
+   },
+   "description": {
+    "es": "Roble claro, líneas limpias y patas inclinadas.",
+    "en": "Pale oak, clean lines and splayed legs."
+   },
+   "color": "#e3cfa9",
+   "color2": "#f2eee6"
+  },
+  {
+   "id": "desk_walnut",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 120,
+   "rarity": "common",
+   "name": {
+    "es": "Escritorio de nogal",
+    "en": "Walnut desk"
+   },
+   "description": {
+    "es": "Nogal oscuro con laterales macizos.",
+    "en": "Dark walnut with solid side panels."
+   },
+   "color": "#6b4a36",
+   "color2": "#3a2a20"
+  },
+  {
+   "id": "desk_white_lacquer",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 100,
+   "rarity": "common",
+   "name": {
+    "es": "Escritorio laca blanca",
+    "en": "White lacquer desk"
+   },
+   "description": {
+    "es": "Acabado brillante y patas de trineo.",
+    "en": "Glossy finish on sled legs."
+   },
+   "color": "#f4f4f1",
+   "color2": "#c9ced6"
+  },
+  {
+   "id": "desk_black_steel",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 120,
+   "rarity": "common",
+   "name": {
+    "es": "Escritorio acero negro",
+    "en": "Black steel desk"
+   },
+   "description": {
+    "es": "Tablero negro mate y estructura de acero.",
+    "en": "Matte black top on a steel frame."
+   },
+   "color": "#2b2f36",
+   "color2": "#8a929e"
+  },
+  {
+   "id": "desk_bamboo",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Escritorio de bambú",
+    "en": "Bamboo desk"
+   },
+   "description": {
+    "es": "Ligero, resistente y de tono dorado.",
+    "en": "Light, sturdy and golden."
+   },
+   "color": "#c8a85c",
+   "color2": "#8a6a2c"
+  },
+  {
+   "id": "desk_birch",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Escritorio abedul y varilla",
+    "en": "Birch hairpin desk"
+   },
+   "description": {
+    "es": "Contrachapado de abedul con patas de varilla.",
+    "en": "Birch plywood on hairpin legs."
+   },
+   "color": "#e8d4a8",
+   "color2": "#2f333a"
+  },
+  {
+   "id": "desk_pastel_mint",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Escritorio menta",
+    "en": "Mint desk"
+   },
+   "description": {
+    "es": "Un toque fresco para empezar el día.",
+    "en": "A fresh start to the day."
+   },
+   "color": "#bfe3d4",
+   "color2": "#f6f3ec"
+  },
+  {
+   "id": "desk_pastel_pink",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Escritorio rosa pastel",
+    "en": "Pastel pink desk"
+   },
+   "description": {
+    "es": "Suave, alegre y con laterales a juego.",
+    "en": "Soft and cheerful with matching sides."
+   },
+   "color": "#f4c6d3",
+   "color2": "#f7efe8"
+  },
+  {
+   "id": "desk_pastel_sky",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Escritorio cielo",
+    "en": "Sky blue desk"
+   },
+   "description": {
+    "es": "Azul pastel con patas de trineo.",
+    "en": "Pastel blue on sled legs."
+   },
+   "color": "#bcd7f0",
+   "color2": "#f4efe6"
+  },
+  {
+   "id": "desk_industrial_pipe",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 240,
+   "rarity": "rare",
+   "name": {
+    "es": "Escritorio industrial de tubo",
+    "en": "Industrial pipe desk"
+   },
+   "description": {
+    "es": "Madera rústica sobre tubería negra.",
+    "en": "Rustic wood on black pipework."
+   },
+   "color": "#7a5a3c",
+   "color2": "#2c2f33"
+  },
+  {
+   "id": "desk_glass",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 280,
+   "rarity": "rare",
+   "name": {
+    "es": "Escritorio de cristal",
+    "en": "Glass-top desk"
+   },
+   "description": {
+    "es": "Tablero de vidrio templado y marco cromado.",
+    "en": "Tempered glass top with a chrome frame."
+   },
+   "color": "#bfe0ec",
+   "color2": "#c9ced6"
+  },
+  {
+   "id": "desk_standing",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 320,
+   "rarity": "rare",
+   "name": {
+    "es": "Escritorio elevable",
+    "en": "Standing desk"
+   },
+   "description": {
+    "es": "Más alto, para trabajar de pie.",
+    "en": "Taller, for working on your feet."
+   },
+   "color": "#e9e6df",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "desk_l_shaped",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 360,
+   "rarity": "rare",
+   "name": {
+    "es": "Escritorio en L",
+    "en": "L-shaped desk"
+   },
+   "description": {
+    "es": "Tablero con ala lateral para más espacio.",
+    "en": "A return wing for extra room."
+   },
+   "color": "#d9c4a3",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "desk_gamer",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 420,
+   "rarity": "rare",
+   "name": {
+    "es": "Escritorio gamer",
+    "en": "Gaming desk"
+   },
+   "description": {
+    "es": "Estructura en X con luz LED bajo el canto.",
+    "en": "X frame with an LED strip under the edge."
+   },
+   "color": "#1d2128",
+   "color2": "#3ee0ff"
+  },
+  {
+   "id": "desk_marble",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 780,
+   "rarity": "epic",
+   "name": {
+    "es": "Escritorio de mármol",
+    "en": "Marble desk"
+   },
+   "description": {
+    "es": "Tablero de mármol con vetas y patas doradas.",
+    "en": "Veined marble on gilded legs."
+   },
+   "color": "#eceae6",
+   "color2": "#c9a24a"
+  },
+  {
+   "id": "desk_executive",
+   "kind": "office",
+   "category": "desk",
+   "slot": "desk",
+   "price": 1100,
+   "rarity": "epic",
+   "name": {
+    "es": "Escritorio de dirección",
+    "en": "Executive desk"
+   },
+   "description": {
+    "es": "Caoba lacada con cajoneras y detalles en latón.",
+    "en": "Lacquered mahogany with drawers and brass trim."
+   },
+   "color": "#4a2c20",
+   "color2": "#c9a24a"
+  },
+  {
+   "id": "chair_mesh_graphite",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Silla de malla grafito",
+    "en": "Graphite mesh chair"
+   },
+   "description": {
+    "es": "Respaldo transpirable y reposabrazos.",
+    "en": "Breathable back with armrests."
+   },
+   "color": "#3f4752",
+   "color2": "#b3bac4"
+  },
+  {
+   "id": "chair_mesh_teal",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Silla de malla turquesa",
+    "en": "Teal mesh chair"
+   },
+   "description": {
+    "es": "La clásica de oficina, en color.",
+    "en": "The office classic, in color."
+   },
+   "color": "#2fa6a0",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "chair_stool_oak",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Taburete de roble",
+    "en": "Oak stool"
+   },
+   "description": {
+    "es": "Sencillo, de madera y sin respaldo.",
+    "en": "Plain wood, no backrest."
+   },
+   "color": "#d9c4a3",
+   "color2": "#8a6a4a"
+  },
+  {
+   "id": "chair_wood_classic",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Silla de madera",
+    "en": "Wooden chair"
+   },
+   "description": {
+    "es": "Cuatro patas, respaldo de listones.",
+    "en": "Four legs and a slatted back."
+   },
+   "color": "#b88a5a",
+   "color2": "#7a5636"
+  },
+  {
+   "id": "chair_ball_blue",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Pelota de equilibrio",
+    "en": "Balance ball seat"
+   },
+   "description": {
+    "es": "Para sentarse activo y no aburrirse.",
+    "en": "Sit actively and stay awake."
+   },
+   "color": "#4a86e0",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "chair_cube_mint",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Cubo de espuma menta",
+    "en": "Mint foam cube"
+   },
+   "description": {
+    "es": "Asiento bajo y blando con funda lavable.",
+    "en": "Low, soft seat with a washable cover."
+   },
+   "color": "#9fd9c2",
+   "color2": "#e9f4ef"
+  },
+  {
+   "id": "chair_bean_bag",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Puf sillón",
+    "en": "Bean bag"
+   },
+   "description": {
+    "es": "Se adapta a ti; ideal para las lluvias de ideas.",
+    "en": "Molds to you; great for brainstorms."
+   },
+   "color": "#e8855a",
+   "color2": "#c76a42"
+  },
+  {
+   "id": "chair_ergo_orange",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Silla ergonómica naranja",
+    "en": "Orange ergonomic chair"
+   },
+   "description": {
+    "es": "Apoyacabezas, malla y brazos.",
+    "en": "Headrest, mesh and arms."
+   },
+   "color": "#f08a3c",
+   "color2": "#2c323b"
+  },
+  {
+   "id": "chair_kneeling_birch",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 150,
+   "rarity": "rare",
+   "name": {
+    "es": "Silla de rodillas",
+    "en": "Kneeling chair"
+   },
+   "description": {
+    "es": "Postura abierta, estructura de abedul.",
+    "en": "Open posture on a birch frame."
+   },
+   "color": "#e0c9a0",
+   "color2": "#2f333a"
+  },
+  {
+   "id": "chair_gaming_red",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Silla gamer roja",
+    "en": "Red gaming chair"
+   },
+   "description": {
+    "es": "Respaldo alto con alas y cojín cervical.",
+    "en": "Tall winged back with a neck pillow."
+   },
+   "color": "#d23b3b",
+   "color2": "#1d2128"
+  },
+  {
+   "id": "chair_velvet_emerald",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 230,
+   "rarity": "rare",
+   "name": {
+    "es": "Sillón de terciopelo",
+    "en": "Emerald velvet chair"
+   },
+   "description": {
+    "es": "Verde esmeralda con patas de latón.",
+    "en": "Emerald green on brass legs."
+   },
+   "color": "#1f7a5c",
+   "color2": "#c9a24a"
+  },
+  {
+   "id": "chair_shell_white",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 180,
+   "rarity": "common",
+   "name": {
+    "es": "Silla concha blanca",
+    "en": "White shell chair"
+   },
+   "description": {
+    "es": "Carcasa moldeada y patas de roble.",
+    "en": "Molded shell on oak legs."
+   },
+   "color": "#f2f2ee",
+   "color2": "#c4aa84"
+  },
+  {
+   "id": "chair_executive_leather",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 520,
+   "rarity": "epic",
+   "name": {
+    "es": "Sillón de dirección de cuero",
+    "en": "Leather executive chair"
+   },
+   "description": {
+    "es": "Cuero, respaldo alto y base cromada.",
+    "en": "Leather, high back and chrome base."
+   },
+   "color": "#3b2a22",
+   "color2": "#c0c6cf"
+  },
+  {
+   "id": "chair_throne_gold",
+   "kind": "office",
+   "category": "chair",
+   "slot": "chair",
+   "price": 900,
+   "rarity": "epic",
+   "name": {
+    "es": "Trono dorado",
+    "en": "Golden throne"
+   },
+   "description": {
+    "es": "Para quien manda: oro, carmesí y corona.",
+    "en": "For the one in charge: gold, crimson and a crown."
+   },
+   "color": "#d9a82e",
+   "color2": "#7b1f34"
+  },
+  {
+   "id": "table_coffee_oak",
+   "kind": "office",
+   "category": "table",
+   "slot": "piece",
+   "price": 45,
+   "rarity": "common",
+   "name": {
+    "es": "Mesa de centro de roble",
+    "en": "Oak coffee table"
+   },
+   "description": {
+    "es": "Baja, con balda inferior.",
+    "en": "Low, with a lower shelf."
+   },
+   "color": "#d9c4a3",
+   "color2": "#8a6a4a"
+  },
+  {
+   "id": "table_side_round",
+   "kind": "office",
+   "category": "table",
+   "slot": "piece",
+   "price": 35,
+   "rarity": "common",
+   "name": {
+    "es": "Mesa auxiliar redonda",
+    "en": "Round side table"
+   },
+   "description": {
+    "es": "Pequeña, para el café o la lámpara.",
+    "en": "Small, for a coffee or a lamp."
+   },
+   "color": "#f4f1ea",
+   "color2": "#2f333a"
+  },
+  {
+   "id": "table_console",
+   "kind": "office",
+   "category": "table",
+   "slot": "piece",
+   "price": 95,
+   "rarity": "common",
+   "name": {
+    "es": "Mesa consola",
+    "en": "Console table"
+   },
+   "description": {
+    "es": "Estrecha y alta, perfecta para pasillos.",
+    "en": "Slim and tall, made for hallways."
+   },
+   "color": "#d9c4a3",
+   "color2": "#2c323b"
+  },
+  {
+   "id": "table_high_bar",
+   "kind": "office",
+   "category": "table",
+   "slot": "piece",
+   "price": 110,
+   "rarity": "common",
+   "name": {
+    "es": "Mesa alta de bar",
+    "en": "High bar table"
+   },
+   "description": {
+    "es": "Para reuniones rápidas de pie.",
+    "en": "For quick stand-up meetings."
+   },
+   "color": "#f4f1ea",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "table_round_white",
+   "kind": "office",
+   "category": "table",
+   "slot": "piece",
+   "price": 160,
+   "rarity": "common",
+   "name": {
+    "es": "Mesa redonda blanca",
+    "en": "White round table"
+   },
+   "description": {
+    "es": "Pedestal central y laca brillante.",
+    "en": "Central pedestal in glossy lacquer."
+   },
+   "color": "#f6f6f3",
+   "color2": "#c9ced6"
+  },
+  {
+   "id": "table_glass_coffee",
+   "kind": "office",
+   "category": "table",
+   "slot": "piece",
+   "price": 150,
+   "rarity": "common",
+   "name": {
+    "es": "Mesa de centro de cristal",
+    "en": "Glass coffee table"
+   },
+   "description": {
+    "es": "Vidrio transparente sobre patas en X.",
+    "en": "Clear glass on an X base."
+   },
+   "color": "#cfe6ee",
+   "color2": "#2c323b"
+  },
+  {
+   "id": "table_meeting_long",
+   "kind": "office",
+   "category": "table",
+   "slot": "piece",
+   "price": 320,
+   "rarity": "rare",
+   "name": {
+    "es": "Mesa de reuniones",
+    "en": "Meeting table"
+   },
+   "description": {
+    "es": "Cabe todo el equipo, con caballetes de acero.",
+    "en": "Seats the whole team on steel trestles."
+   },
+   "color": "#c9ad82",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "table_nesting_hex",
+   "kind": "office",
+   "category": "table",
+   "slot": "piece",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Mesa hexagonal",
+    "en": "Hexagon table"
+   },
+   "description": {
+    "es": "Baja y modular; se combina con otras.",
+    "en": "Low and modular; pairs with others."
+   },
+   "color": "#f2b44a",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "table_marble_round",
+   "kind": "office",
+   "category": "table",
+   "slot": "piece",
+   "price": 560,
+   "rarity": "epic",
+   "name": {
+    "es": "Mesa redonda de mármol",
+    "en": "Round marble table"
+   },
+   "description": {
+    "es": "Mármol blanco veteado sobre pie dorado.",
+    "en": "Veined white marble on a gilded base."
+   },
+   "color": "#eceae6",
+   "color2": "#c9a24a"
+  },
+  {
+   "id": "table_pingpong",
+   "kind": "office",
+   "category": "table",
+   "slot": "piece",
+   "price": 420,
+   "rarity": "rare",
+   "name": {
+    "es": "Mesa de ping-pong",
+    "en": "Ping-pong table"
+   },
+   "description": {
+    "es": "Con red incluida; la pausa también cuenta.",
+    "en": "Net included; breaks count too."
+   },
+   "color": "#2f6b8f",
+   "color2": "#e9eef5"
+  },
+  {
+   "id": "sofa_pouf_coral",
+   "kind": "office",
+   "category": "sofa",
+   "slot": "piece",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Pouf coral",
+    "en": "Coral pouf"
+   },
+   "description": {
+    "es": "Redondo y blando, sirve de asiento o reposapiés.",
+    "en": "Round and soft; a seat or a footrest."
+   },
+   "color": "#ee7a62",
+   "color2": "#d9604a"
+  },
+  {
+   "id": "sofa_bench_oak",
+   "kind": "office",
+   "category": "sofa",
+   "slot": "piece",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Banco de roble",
+    "en": "Oak bench"
+   },
+   "description": {
+    "es": "Dos plazas sin respaldo.",
+    "en": "Seats two, no backrest."
+   },
+   "color": "#d9c4a3",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "sofa_armchair_mustard",
+   "kind": "office",
+   "category": "sofa",
+   "slot": "piece",
+   "price": 120,
+   "rarity": "common",
+   "name": {
+    "es": "Butaca mostaza",
+    "en": "Mustard armchair"
+   },
+   "description": {
+    "es": "Compacta, con brazos acolchados.",
+    "en": "Compact with padded arms."
+   },
+   "color": "#d9a82e",
+   "color2": "#f1d98a"
+  },
+  {
+   "id": "sofa_two_seater_grey",
+   "kind": "office",
+   "category": "sofa",
+   "slot": "piece",
+   "price": 150,
+   "rarity": "common",
+   "name": {
+    "es": "Sofá gris de dos plazas",
+    "en": "Grey two-seater"
+   },
+   "description": {
+    "es": "Discreto y cómodo, con patas metálicas.",
+    "en": "Understated and comfy on metal legs."
+   },
+   "color": "#8a929e",
+   "color2": "#b3bac4"
+  },
+  {
+   "id": "sofa_modular_mint",
+   "kind": "office",
+   "category": "sofa",
+   "slot": "piece",
+   "price": 180,
+   "rarity": "common",
+   "name": {
+    "es": "Sofá modular menta",
+    "en": "Mint modular sofa"
+   },
+   "description": {
+    "es": "Módulos sueltos para armar a tu gusto.",
+    "en": "Loose modules to arrange your way."
+   },
+   "color": "#9fd9c2",
+   "color2": "#e9f4ef"
+  },
+  {
+   "id": "sofa_loveseat_velvet",
+   "kind": "office",
+   "category": "sofa",
+   "slot": "piece",
+   "price": 280,
+   "rarity": "rare",
+   "name": {
+    "es": "Loveseat de terciopelo",
+    "en": "Velvet loveseat"
+   },
+   "description": {
+    "es": "Terciopelo rosa con brazos redondeados.",
+    "en": "Pink velvet with rolled arms."
+   },
+   "color": "#d97aa0",
+   "color2": "#f0b8cf"
+  },
+  {
+   "id": "sofa_leather_brown",
+   "kind": "office",
+   "category": "sofa",
+   "slot": "piece",
+   "price": 340,
+   "rarity": "rare",
+   "name": {
+    "es": "Sofá de cuero marrón",
+    "en": "Brown leather sofa"
+   },
+   "description": {
+    "es": "Tres plazas, de los que duran.",
+    "en": "Three seats, built to last."
+   },
+   "color": "#7b4a2e",
+   "color2": "#a06a44"
+  },
+  {
+   "id": "sofa_corner_blue",
+   "kind": "office",
+   "category": "sofa",
+   "slot": "piece",
+   "price": 380,
+   "rarity": "rare",
+   "name": {
+    "es": "Sofá rinconera azul",
+    "en": "Blue corner sofa"
+   },
+   "description": {
+    "es": "Con chaise longue para estirar las piernas.",
+    "en": "With a chaise to stretch out."
+   },
+   "color": "#4a6fb0",
+   "color2": "#6f8fcb"
+  },
+  {
+   "id": "sofa_egg_chair",
+   "kind": "office",
+   "category": "sofa",
+   "slot": "piece",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Sillón huevo",
+    "en": "Egg chair"
+   },
+   "description": {
+    "es": "Una cápsula giratoria para desconectar.",
+    "en": "A cozy pod to switch off in."
+   },
+   "color": "#e9e4d8",
+   "color2": "#e8855a"
+  },
+  {
+   "id": "sofa_chesterfield",
+   "kind": "office",
+   "category": "sofa",
+   "slot": "piece",
+   "price": 680,
+   "rarity": "epic",
+   "name": {
+    "es": "Sofá chesterfield",
+    "en": "Chesterfield sofa"
+   },
+   "description": {
+    "es": "Cuero capitoné con brazos enrollados.",
+    "en": "Tufted leather with rolled arms."
+   },
+   "color": "#6b2f2f",
+   "color2": "#8a4a3a"
+  },
+  {
+   "id": "cabinet_filing_grey",
+   "kind": "office",
+   "category": "cabinet",
+   "slot": "piece",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Archivador de cuatro cajones",
+    "en": "Four-drawer filing cabinet"
+   },
+   "description": {
+    "es": "Metálico, con tiradores y etiqueta.",
+    "en": "Metal, with pulls and label holders."
+   },
+   "color": "#8a929e",
+   "color2": "#c0c6cf"
+  },
+  {
+   "id": "cabinet_bookcase_low",
+   "kind": "office",
+   "category": "cabinet",
+   "slot": "piece",
+   "price": 95,
+   "rarity": "common",
+   "name": {
+    "es": "Librería baja",
+    "en": "Low bookcase"
+   },
+   "description": {
+    "es": "Altura de cintura y dos baldas.",
+    "en": "Waist-high with two shelves."
+   },
+   "color": "#d9c4a3",
+   "color2": "#8a6a4a"
+  },
+  {
+   "id": "cabinet_locker_blue",
+   "kind": "office",
+   "category": "cabinet",
+   "slot": "piece",
+   "price": 110,
+   "rarity": "common",
+   "name": {
+    "es": "Taquilla azul",
+    "en": "Blue locker"
+   },
+   "description": {
+    "es": "Tres puertas con ventilación.",
+    "en": "Three vented doors."
+   },
+   "color": "#4a86c9",
+   "color2": "#2f5f94"
+  },
+  {
+   "id": "cabinet_bookcase_tall",
+   "kind": "office",
+   "category": "cabinet",
+   "slot": "piece",
+   "price": 140,
+   "rarity": "common",
+   "name": {
+    "es": "Librería alta",
+    "en": "Tall bookcase"
+   },
+   "description": {
+    "es": "Cinco baldas con espacio para todo.",
+    "en": "Five shelves with room for everything."
+   },
+   "color": "#c4aa84",
+   "color2": "#6b4a36"
+  },
+  {
+   "id": "cabinet_storage_cubes",
+   "kind": "office",
+   "category": "cabinet",
+   "slot": "piece",
+   "price": 75,
+   "rarity": "common",
+   "name": {
+    "es": "Estantería de cubos",
+    "en": "Cube storage"
+   },
+   "description": {
+    "es": "Huecos con cajas de colores.",
+    "en": "Cubbies with colorful bins."
+   },
+   "color": "#f4f1ea",
+   "color2": "#f2b44a"
+  },
+  {
+   "id": "cabinet_drawers_rolling",
+   "kind": "office",
+   "category": "cabinet",
+   "slot": "piece",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Cajonera con ruedas",
+    "en": "Rolling drawers"
+   },
+   "description": {
+    "es": "Cabe bajo la mesa y se mueve sola.",
+    "en": "Fits under a desk and rolls away."
+   },
+   "color": "#3a414c",
+   "color2": "#b3bac4"
+  },
+  {
+   "id": "cabinet_sideboard_walnut",
+   "kind": "office",
+   "category": "cabinet",
+   "slot": "piece",
+   "price": 220,
+   "rarity": "rare",
+   "name": {
+    "es": "Aparador de nogal",
+    "en": "Walnut sideboard"
+   },
+   "description": {
+    "es": "Tres puertas y patas cónicas.",
+    "en": "Three doors on tapered legs."
+   },
+   "color": "#8a5a3c",
+   "color2": "#c9a24a"
+  },
+  {
+   "id": "cabinet_wardrobe_white",
+   "kind": "office",
+   "category": "cabinet",
+   "slot": "piece",
+   "price": 250,
+   "rarity": "rare",
+   "name": {
+    "es": "Armario blanco",
+    "en": "White wardrobe"
+   },
+   "description": {
+    "es": "Dos puertas lacadas y mucho fondo.",
+    "en": "Two lacquered doors and plenty of depth."
+   },
+   "color": "#f4f4f1",
+   "color2": "#c9ced6"
+  },
+  {
+   "id": "cabinet_credenza_teak",
+   "kind": "office",
+   "category": "cabinet",
+   "slot": "piece",
+   "price": 300,
+   "rarity": "rare",
+   "name": {
+    "es": "Credenza de teca",
+    "en": "Teak credenza"
+   },
+   "description": {
+    "es": "Larga y baja, de estilo años 60.",
+    "en": "Long and low, sixties style."
+   },
+   "color": "#b5733c",
+   "color2": "#c9a24a"
+  },
+  {
+   "id": "cabinet_glass_display",
+   "kind": "office",
+   "category": "cabinet",
+   "slot": "piece",
+   "price": 540,
+   "rarity": "epic",
+   "name": {
+    "es": "Vitrina",
+    "en": "Glass display cabinet"
+   },
+   "description": {
+    "es": "Para exhibir lo que más orgullo da.",
+    "en": "To show off what you are proud of."
+   },
+   "color": "#5a3a2a",
+   "color2": "#cfe6ee"
+  },
+  {
+   "id": "divider_fabric_grey",
+   "kind": "office",
+   "category": "divider",
+   "slot": "piece",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Panel de tela gris",
+    "en": "Grey fabric panel"
+   },
+   "description": {
+    "es": "Separa sin cerrar el espacio.",
+    "en": "Divides without closing the room."
+   },
+   "color": "#8a929e",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "divider_screen_folding",
+   "kind": "office",
+   "category": "divider",
+   "slot": "piece",
+   "price": 90,
+   "rarity": "common",
+   "name": {
+    "es": "Biombo plegable",
+    "en": "Folding screen"
+   },
+   "description": {
+    "es": "Tres hojas de madera y papel.",
+    "en": "Three panels of wood and paper."
+   },
+   "color": "#f1e6cc",
+   "color2": "#7a5636"
+  },
+  {
+   "id": "divider_wood_slats",
+   "kind": "office",
+   "category": "divider",
+   "slot": "piece",
+   "price": 120,
+   "rarity": "common",
+   "name": {
+    "es": "Celosía de madera",
+    "en": "Wood slat divider"
+   },
+   "description": {
+    "es": "Listones verticales que dejan pasar la luz.",
+    "en": "Vertical slats that let the light through."
+   },
+   "color": "#c9ad82",
+   "color2": "#6b4a36"
+  },
+  {
+   "id": "divider_cube_shelf",
+   "kind": "office",
+   "category": "divider",
+   "slot": "piece",
+   "price": 110,
+   "rarity": "common",
+   "name": {
+    "es": "Estantería divisoria",
+    "en": "Cube shelf divider"
+   },
+   "description": {
+    "es": "Huecos abiertos para libros y plantas.",
+    "en": "Open cubbies for books and plants."
+   },
+   "color": "#f4f1ea",
+   "color2": "#d9a82e"
+  },
+  {
+   "id": "divider_glass_panel",
+   "kind": "office",
+   "category": "divider",
+   "slot": "piece",
+   "price": 160,
+   "rarity": "common",
+   "name": {
+    "es": "Mampara de cristal",
+    "en": "Glass partition"
+   },
+   "description": {
+    "es": "Aísla del ruido sin tapar la vista.",
+    "en": "Cuts noise without blocking the view."
+   },
+   "color": "#bfe0ec",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "divider_felt_acoustic",
+   "kind": "office",
+   "category": "divider",
+   "slot": "piece",
+   "price": 180,
+   "rarity": "rare",
+   "name": {
+    "es": "Panel acústico de fieltro",
+    "en": "Felt acoustic panel"
+   },
+   "description": {
+    "es": "Absorbe el eco y amortigua las voces.",
+    "en": "Soaks up echo and hushes voices."
+   },
+   "color": "#7a8fa8",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "divider_plant_boxes",
+   "kind": "office",
+   "category": "divider",
+   "slot": "piece",
+   "price": 240,
+   "rarity": "rare",
+   "name": {
+    "es": "Jardineras divisorias",
+    "en": "Planter divider"
+   },
+   "description": {
+    "es": "Cajones con plantas y enrejado.",
+    "en": "Planter boxes with a trellis."
+   },
+   "color": "#8a6a4a",
+   "color2": "#4f8a62"
+  },
+  {
+   "id": "divider_living_wall",
+   "kind": "office",
+   "category": "divider",
+   "slot": "piece",
+   "price": 620,
+   "rarity": "epic",
+   "name": {
+    "es": "Muro vegetal",
+    "en": "Living wall"
+   },
+   "description": {
+    "es": "Un jardín vertical con riego propio.",
+    "en": "A vertical garden that waters itself."
+   },
+   "color": "#4f8a62",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "whiteboard_classic",
+   "kind": "office",
+   "category": "whiteboard",
+   "slot": "piece",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Pizarra blanca",
+    "en": "Whiteboard"
+   },
+   "description": {
+    "es": "Marco de aluminio y bandeja con rotuladores.",
+    "en": "Aluminium frame with a marker tray."
+   },
+   "color": "#f4f6f8",
+   "color2": "#b3bac4"
+  },
+  {
+   "id": "whiteboard_cork",
+   "kind": "office",
+   "category": "whiteboard",
+   "slot": "piece",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Corcho",
+    "en": "Cork board"
+   },
+   "description": {
+    "es": "Notas y chinchetas por todas partes.",
+    "en": "Notes and pins everywhere."
+   },
+   "color": "#c9a06a",
+   "color2": "#8a6a4a"
+  },
+  {
+   "id": "whiteboard_chalkboard",
+   "kind": "office",
+   "category": "whiteboard",
+   "slot": "piece",
+   "price": 85,
+   "rarity": "common",
+   "name": {
+    "es": "Pizarra de tiza",
+    "en": "Chalkboard"
+   },
+   "description": {
+    "es": "Verde oscuro con marco de madera.",
+    "en": "Deep green in a wooden frame."
+   },
+   "color": "#2f4a3c",
+   "color2": "#b88a5a"
+  },
+  {
+   "id": "whiteboard_kanban",
+   "kind": "office",
+   "category": "whiteboard",
+   "slot": "piece",
+   "price": 190,
+   "rarity": "rare",
+   "name": {
+    "es": "Tablero kanban",
+    "en": "Kanban board"
+   },
+   "description": {
+    "es": "Tres columnas y notas adhesivas.",
+    "en": "Three columns and sticky notes."
+   },
+   "color": "#f4f6f8",
+   "color2": "#f2c94c"
+  },
+  {
+   "id": "whiteboard_glass",
+   "kind": "office",
+   "category": "whiteboard",
+   "slot": "piece",
+   "price": 220,
+   "rarity": "rare",
+   "name": {
+    "es": "Pizarra de cristal",
+    "en": "Glass whiteboard"
+   },
+   "description": {
+    "es": "Superficie lisa que se borra al instante.",
+    "en": "A smooth surface that wipes clean."
+   },
+   "color": "#cfe6ee",
+   "color2": "#5a95e8"
+  },
+  {
+   "id": "whiteboard_smart",
+   "kind": "office",
+   "category": "whiteboard",
+   "slot": "piece",
+   "price": 700,
+   "rarity": "epic",
+   "name": {
+    "es": "Pizarra inteligente",
+    "en": "Smart board"
+   },
+   "description": {
+    "es": "Pantalla táctil con la hoja de ruta.",
+    "en": "A touch screen with the roadmap."
+   },
+   "color": "#1d2128",
+   "color2": "#4cd9a6"
+  },
+  {
+   "id": "appliance_printer",
+   "kind": "office",
+   "category": "appliance",
+   "slot": "piece",
+   "price": 120,
+   "rarity": "common",
+   "name": {
+    "es": "Impresora con mueble",
+    "en": "Printer with stand"
+   },
+   "description": {
+    "es": "Láser en su propio mueble con bandeja.",
+    "en": "Laser printer on its own stand."
+   },
+   "color": "#e9eef5",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "appliance_shredder",
+   "kind": "office",
+   "category": "appliance",
+   "slot": "piece",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Destructora de papel",
+    "en": "Paper shredder"
+   },
+   "description": {
+    "es": "Lo confidencial no deja rastro.",
+    "en": "Confidential stays confidential."
+   },
+   "color": "#2c323b",
+   "color2": "#b3bac4"
+  },
+  {
+   "id": "appliance_coat_rack",
+   "kind": "office",
+   "category": "appliance",
+   "slot": "piece",
+   "price": 50,
+   "rarity": "common",
+   "name": {
+    "es": "Perchero",
+    "en": "Coat rack"
+   },
+   "description": {
+    "es": "De pie, con ganchos y paragüero.",
+    "en": "Freestanding with hooks."
+   },
+   "color": "#6b4a36",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "appliance_recycling_bin",
+   "kind": "office",
+   "category": "appliance",
+   "slot": "piece",
+   "price": 40,
+   "rarity": "common",
+   "name": {
+    "es": "Papeleras de reciclaje",
+    "en": "Recycling bins"
+   },
+   "description": {
+    "es": "Dos contenedores para separar.",
+    "en": "Two bins for sorting."
+   },
+   "color": "#4cb987",
+   "color2": "#5a95e8"
+  },
+  {
+   "id": "appliance_water_cooler",
+   "kind": "office",
+   "category": "appliance",
+   "slot": "piece",
+   "price": 150,
+   "rarity": "common",
+   "name": {
+    "es": "Dispensador de agua",
+    "en": "Water cooler"
+   },
+   "description": {
+    "es": "Con garrafa y grifo frío.",
+    "en": "With a jug and a cold tap."
+   },
+   "color": "#e9eef5",
+   "color2": "#5ab4e8"
+  },
+  {
+   "id": "appliance_air_purifier",
+   "kind": "office",
+   "category": "appliance",
+   "slot": "piece",
+   "price": 130,
+   "rarity": "common",
+   "name": {
+    "es": "Purificador de aire",
+    "en": "Air purifier"
+   },
+   "description": {
+    "es": "Silencioso, filtra el aire de la oficina.",
+    "en": "Quiet, keeps the office air clean."
+   },
+   "color": "#f4f6f8",
+   "color2": "#8ab4d8"
+  },
+  {
+   "id": "appliance_fridge",
+   "kind": "office",
+   "category": "appliance",
+   "slot": "piece",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Nevera",
+    "en": "Fridge"
+   },
+   "description": {
+    "es": "Dos puertas, para el almuerzo del equipo.",
+    "en": "Two doors for the team's lunch."
+   },
+   "color": "#d9dee5",
+   "color2": "#8a929e"
+  },
+  {
+   "id": "appliance_copier",
+   "kind": "office",
+   "category": "appliance",
+   "slot": "piece",
+   "price": 340,
+   "rarity": "rare",
+   "name": {
+    "es": "Fotocopiadora",
+    "en": "Photocopier"
+   },
+   "description": {
+    "es": "Multifunción con panel táctil.",
+    "en": "Multifunction with a touch panel."
+   },
+   "color": "#d9dee5",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "appliance_safe",
+   "kind": "office",
+   "category": "appliance",
+   "slot": "piece",
+   "price": 300,
+   "rarity": "rare",
+   "name": {
+    "es": "Caja fuerte",
+    "en": "Safe"
+   },
+   "description": {
+    "es": "Acero macizo y cerradura de dial.",
+    "en": "Solid steel with a dial lock."
+   },
+   "color": "#4a525e",
+   "color2": "#d9a82e"
+  },
+  {
+   "id": "appliance_vending",
+   "kind": "office",
+   "category": "appliance",
+   "slot": "piece",
+   "price": 420,
+   "rarity": "rare",
+   "name": {
+    "es": "Máquina expendedora",
+    "en": "Vending machine"
+   },
+   "description": {
+    "es": "Snacks y bebidas a un botón.",
+    "en": "Snacks and drinks at the push of a button."
+   },
+   "color": "#d9534f",
+   "color2": "#f2c94c"
+  },
+  {
+   "id": "light_sconce_brass",
+   "kind": "office",
+   "category": "light",
+   "slot": "piece",
+   "price": 60,
+   "rarity": "common",
+   "name": {
+    "es": "Aplique de latón",
+    "en": "Brass wall sconce"
+   },
+   "description": {
+    "es": "Luz cálida contra la pared.",
+    "en": "Warm light against the wall."
+   },
+   "color": "#c9a24a",
+   "color2": "#ffd9a0"
+  },
+  {
+   "id": "light_pendant_cone",
+   "kind": "office",
+   "category": "light",
+   "slot": "piece",
+   "price": 70,
+   "rarity": "common",
+   "name": {
+    "es": "Lámpara colgante cónica",
+    "en": "Cone pendant"
+   },
+   "description": {
+    "es": "Una pantalla metálica que cuelga del techo.",
+    "en": "A metal shade hanging from the ceiling."
+   },
+   "color": "#2f333a",
+   "color2": "#ffe2b0"
+  },
+  {
+   "id": "light_table_lamp",
+   "kind": "office",
+   "category": "light",
+   "slot": "piece",
+   "price": 55,
+   "rarity": "common",
+   "name": {
+    "es": "Lámpara de mesa",
+    "en": "Table lamp"
+   },
+   "description": {
+    "es": "Con su mesita redonda.",
+    "en": "Comes with its own little table."
+   },
+   "color": "#f2b44a",
+   "color2": "#d9c4a3"
+  },
+  {
+   "id": "light_string_lights",
+   "kind": "office",
+   "category": "light",
+   "slot": "piece",
+   "price": 80,
+   "rarity": "common",
+   "name": {
+    "es": "Guirnalda de luces",
+    "en": "String lights"
+   },
+   "description": {
+    "es": "Bombillas pequeñas para un rincón acogedor.",
+    "en": "Small bulbs for a cozy corner."
+   },
+   "color": "#ffd9a0",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "light_floor_uplight",
+   "kind": "office",
+   "category": "light",
+   "slot": "piece",
+   "price": 90,
+   "rarity": "common",
+   "name": {
+    "es": "Lámpara de pie de luz indirecta",
+    "en": "Uplight floor lamp"
+   },
+   "description": {
+    "es": "Ilumina el techo y suaviza la sala.",
+    "en": "Washes the ceiling and softens the room."
+   },
+   "color": "#e9eef5",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "light_pendant_globe",
+   "kind": "office",
+   "category": "light",
+   "slot": "piece",
+   "price": 120,
+   "rarity": "common",
+   "name": {
+    "es": "Colgante globo",
+    "en": "Globe pendant"
+   },
+   "description": {
+    "es": "Esfera de cristal opal con luz difusa.",
+    "en": "An opal glass globe with soft light."
+   },
+   "color": "#f4f1ea",
+   "color2": "#c9a24a"
+  },
+  {
+   "id": "light_neon_sign",
+   "kind": "office",
+   "category": "light",
+   "slot": "piece",
+   "price": 260,
+   "rarity": "rare",
+   "name": {
+    "es": "Letrero de neón",
+    "en": "Neon sign"
+   },
+   "description": {
+    "es": "Un rayo brillante para la pared.",
+    "en": "A glowing bolt for the wall."
+   },
+   "color": "#ee4fa0",
+   "color2": "#3a414c"
+  },
+  {
+   "id": "light_arc_floor",
+   "kind": "office",
+   "category": "light",
+   "slot": "piece",
+   "price": 210,
+   "rarity": "rare",
+   "name": {
+    "es": "Lámpara de arco",
+    "en": "Arc floor lamp"
+   },
+   "description": {
+    "es": "Cuelga sobre el sofá con base de mármol.",
+    "en": "Arches over the sofa on a marble base."
+   },
+   "color": "#e9eef5",
+   "color2": "#b3bac4"
+  },
+  {
+   "id": "light_moon",
+   "kind": "office",
+   "category": "light",
+   "slot": "piece",
+   "price": 380,
+   "rarity": "rare",
+   "name": {
+    "es": "Luna de pared",
+    "en": "Moon lamp"
+   },
+   "description": {
+    "es": "Un satélite que brilla en la pared.",
+    "en": "A little moon glowing on the wall."
+   },
+   "color": "#f4e4b0",
+   "color2": "#8a929e"
+  },
+  {
+   "id": "light_chandelier",
+   "kind": "office",
+   "category": "light",
+   "slot": "piece",
+   "price": 720,
+   "rarity": "epic",
+   "name": {
+    "es": "Lámpara de araña",
+    "en": "Chandelier"
+   },
+   "description": {
+    "es": "Cristal, latón y una docena de velas.",
+    "en": "Crystal, brass and a dozen candles."
+   },
+   "color": "#e8cf8a",
+   "color2": "#c9a24a"
   }
  ]
 }

@@ -2,6 +2,7 @@ package rewards
 
 import (
 	"context"
+	"encoding/json"
 	"sort"
 	"sync"
 	"time"
@@ -38,6 +39,12 @@ type Store interface {
 	// SetPlaced puts item in the office slot ("" empties it).
 	SetPlaced(ctx context.Context, org, slot, item string) error
 	Office(ctx context.Context, org string) ([]Placed, error)
+
+	// GetLayout returns the office layout document and its version (nil, 0 when none was saved).
+	GetLayout(ctx context.Context, org string) (doc json.RawMessage, version int, err error)
+	// SaveLayout stores doc as version base+1 only if the stored version is base (0 when none): an atomic
+	// compare-and-set. A stale base returns *LayoutConflictError carrying the current document.
+	SaveLayout(ctx context.Context, org string, doc json.RawMessage, base int, actor string) (version int, err error)
 }
 
 type memOrg struct {
@@ -48,6 +55,8 @@ type memOrg struct {
 	equip   map[[2]string]string // agent,slot -> item
 	office  map[string]string
 	perAgnt map[string]int64
+	layout  json.RawMessage
+	lver    int
 }
 
 // MemStore is the in-memory Store (no DATABASE_URL, tests).
@@ -218,4 +227,31 @@ func (m *MemStore) Office(_ context.Context, org string) ([]Placed, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Slot < out[j].Slot })
 	return out, nil
+}
+
+// GetLayout implements Store.
+func (m *MemStore) GetLayout(_ context.Context, org string) (json.RawMessage, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	o := m.org(org)
+	if o.lver == 0 {
+		return nil, 0, nil
+	}
+	return append(json.RawMessage(nil), o.layout...), o.lver, nil
+}
+
+// SaveLayout implements Store.
+func (m *MemStore) SaveLayout(_ context.Context, org string, doc json.RawMessage, base int, _ string) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	o := m.org(org)
+	if o.lver != base {
+		ce := &LayoutConflictError{Version: o.lver}
+		if o.lver > 0 {
+			ce.Layout = append(json.RawMessage(nil), o.layout...)
+		}
+		return 0, ce
+	}
+	o.layout, o.lver = append(json.RawMessage(nil), doc...), base+1
+	return o.lver, nil
 }

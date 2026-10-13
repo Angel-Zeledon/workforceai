@@ -210,3 +210,46 @@ func (s *Store) Office(ctx context.Context, org string) ([]rewards.Placed, error
 		return p, err
 	}, `SELECT slot, item_id FROM shop_office WHERE org_id=$1 ORDER BY slot`, org)
 }
+
+// GetLayout implements rewards.Store.
+func (s *Store) GetLayout(ctx context.Context, org string) (json.RawMessage, int, error) {
+	var doc []byte
+	var v int
+	err := s.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT doc, version FROM office_layout WHERE org_id=$1`, org).Scan(&doc, &v)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, 0, nil
+	}
+	return doc, v, err
+}
+
+// SaveLayout implements rewards.Store: a compare-and-set on the version, atomic under concurrency (the first
+// save races on the primary key, later ones on the version predicate of the UPDATE).
+func (s *Store) SaveLayout(ctx context.Context, org string, doc json.RawMessage, base int, actor string) (int, error) {
+	var out int
+	err := s.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
+		var err error
+		if base == 0 {
+			err = tx.QueryRow(ctx, `INSERT INTO office_layout (org_id, doc, version, updated_by) VALUES ($1,$2,1,$3)
+				ON CONFLICT (org_id) DO NOTHING RETURNING version`, org, []byte(doc), actor).Scan(&out)
+		} else {
+			err = tx.QueryRow(ctx, `UPDATE office_layout SET doc=$2, version=version+1, updated_at=now(), updated_by=$4
+				WHERE org_id=$1 AND version=$3 RETURNING version`, org, []byte(doc), base, actor).Scan(&out)
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		ce := &rewards.LayoutConflictError{}
+		var cur []byte
+		switch err := tx.QueryRow(ctx, `SELECT doc, version FROM office_layout WHERE org_id=$1`, org).Scan(&cur, &ce.Version); {
+		case errors.Is(err, pgx.ErrNoRows):
+		case err != nil:
+			return err
+		default:
+			ce.Layout = cur
+		}
+		return ce
+	})
+	return out, err
+}

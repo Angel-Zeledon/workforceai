@@ -16,6 +16,17 @@ const (
 	KindOffice    = "office"
 )
 
+// Office slots used through the layout only (docs/architecture/office-editor.md): Place/Remove do not apply to them.
+const (
+	SlotPiece  = "piece" // free placement
+	SlotDesk   = "desk"  // workstation desk style
+	SlotChair  = "chair" // workstation chair style
+	slotWindow = "window_1"
+)
+
+// layoutSlot tells whether an office slot belongs to the layout editor rather than to a legacy fixed spot.
+func layoutSlot(slot string) bool { return slot == SlotPiece || slot == SlotDesk || slot == SlotChair }
+
 // Text is a localized string (es default, en).
 type Text struct {
 	ES string `json:"es"`
@@ -67,12 +78,33 @@ func ParseCatalog(b []byte) (*Catalog, error) {
 		case it.Name.ES == "" || it.Name.EN == "":
 			return nil, fmt.Errorf("catalog: item %q lacks a name in es/en", it.ID)
 		}
+		if err := checkSlot(it); err != nil {
+			return nil, err
+		}
 		if _, dup := c.byID[it.ID]; dup {
 			return nil, fmt.Errorf("catalog: duplicate item %q", it.ID)
 		}
 		c.byID[it.ID] = it
 	}
 	return &c, nil
+}
+
+// checkSlot keeps the layout slots consistent: they exist for office items only, and desk/chair slots hold
+// exactly the desk/chair categories.
+func checkSlot(it Item) error {
+	if it.Kind == KindCharacter && layoutSlot(it.Slot) {
+		return fmt.Errorf("catalog: character item %q uses the office slot %q", it.ID, it.Slot)
+	}
+	if it.Kind != KindOffice {
+		return nil
+	}
+	switch {
+	case it.Slot == SlotDesk && it.Category != "desk", it.Slot == SlotChair && it.Category != "chair":
+		return fmt.Errorf("catalog: item %q in slot %q must be of category %q", it.ID, it.Slot, it.Slot)
+	case it.Slot == SlotPiece && (it.Category == "desk" || it.Category == "chair"):
+		return fmt.Errorf("catalog: item %q of category %q cannot be a piece", it.ID, it.Category)
+	}
+	return nil
 }
 
 // Item returns an item by id.

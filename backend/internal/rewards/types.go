@@ -100,7 +100,9 @@ var (
 
 // Error codes of the purchase endpoint (stable, the UI translates them).
 const (
-	CodeInsufficient = "insufficient_coins"
-	CodeAlreadyOwned = "already_owned"
-	CodeNotOwned     = "not_owned"
+	CodeInsufficient   = "insufficient_coins"
+	CodeAlreadyOwned   = "already_owned"
+	CodeNotOwned       = "not_owned"
+	CodeLayoutConflict = "layout_conflict"
+	CodeInvalidLayout  = "invalid"
 )

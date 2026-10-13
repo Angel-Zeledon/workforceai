@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -32,6 +33,44 @@ func (s *server) mountRewards(r chi.Router) {
 	r.With(buy).Delete("/agents/{id}/equipment/{slot}", s.shopUnequip)
 	r.With(buy).Put("/office/items/{slot}", s.shopPlace)
 	r.With(buy).Delete("/office/items/{slot}", s.shopRemove)
+	r.With(read).Get("/office/layout", s.officeLayout)
+	r.With(buy).Put("/office/layout", s.officeLayoutSave)
+}
+
+func (s *server) officeLayout(w http.ResponseWriter, r *http.Request) {
+	d, err := s.Rewards.GetLayout(r.Context(), s.org(r))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, d)
+}
+
+// officeLayoutSave replaces the layout if base_version is the stored version; a stale one answers 409
+// layout_conflict with the current document. Validation errors are 400 with code "invalid".
+func (s *server) officeLayoutSave(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Layout      json.RawMessage `json:"layout"`
+		BaseVersion int             `json:"base_version"`
+	}
+	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	d, err := s.Rewards.SaveLayout(r.Context(), s.org(r), s.actor(r), body.Layout, body.BaseVersion)
+	if err != nil {
+		if ce, ok := rewards.AsConflict(err); ok {
+			writeJSON(w, http.StatusConflict, map[string]any{"error": ce.Error(), "code": rewards.CodeLayoutConflict, "version": ce.Version, "layout": ce.Layout})
+			return
+		}
+		if errors.Is(err, domain.ErrInvalid) {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error(), "code": rewards.CodeInvalidLayout})
+			return
+		}
+		s.rewardsFail(w, err)
+		return
+	}
+	writeJSON(w, 200, d)
 }
 
 // rewardsFail maps rewards errors; the stable code travels in the body.

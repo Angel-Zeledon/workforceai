@@ -2,6 +2,7 @@ package rewards
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -143,6 +144,9 @@ type State struct {
 	Equipment   []Equipped       `json:"equipment"`
 	Office      []Placed         `json:"office"`
 	RulesActive Rules            `json:"rules"`
+	// Layout is the office layout document (null when none was saved) and its version.
+	Layout        json.RawMessage `json:"layout"`
+	LayoutVersion int             `json:"layout_version"`
 }
 
 // State returns the wallet, the inventory and the equipped/placed items.
@@ -163,6 +167,9 @@ func (s *Service) State(ctx context.Context, org string) (State, error) {
 		return st, err
 	}
 	if st.Office, err = s.Store.Office(ctx, org); err != nil {
+		return st, err
+	}
+	if st.Layout, st.LayoutVersion, err = s.Store.GetLayout(ctx, org); err != nil {
 		return st, err
 	}
 	st.RulesActive = s.Rules
@@ -269,6 +276,9 @@ func (s *Service) Place(ctx context.Context, org, actor, itemID string) (Placed,
 	if !ok || it.Kind != KindOffice {
 		return Placed{}, fmt.Errorf("%w: not an office item", domain.ErrInvalid)
 	}
+	if layoutSlot(it.Slot) {
+		return Placed{}, fmt.Errorf("%w: %s items are used through the office layout, not placed in a slot", domain.ErrInvalid, it.Slot)
+	}
 	if has, err := s.owned(ctx, org, itemID); err != nil {
 		return Placed{}, err
 	} else if !has {
@@ -285,7 +295,7 @@ func (s *Service) Place(ctx context.Context, org, actor, itemID string) (Placed,
 
 // Remove empties an office slot.
 func (s *Service) Remove(ctx context.Context, org, actor, slot string) error {
-	if !validSlot(s.Catalog, KindOffice, slot) {
+	if layoutSlot(slot) || !validSlot(s.Catalog, KindOffice, slot) {
 		return fmt.Errorf("%w: unknown slot", domain.ErrInvalid)
 	}
 	if err := s.Store.SetPlaced(ctx, org, slot, ""); err != nil {
