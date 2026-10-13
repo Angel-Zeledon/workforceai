@@ -240,6 +240,11 @@ func TestLLMValidation(t *testing.T) {
 			t.Errorf("%s: status %d, want 200", name, code)
 		}
 	}
+	// Two of the cases above write the same provider (kimi) and map iteration order is random, so the last write
+	// would be arbitrary: write the custom-URL one again, last, to make the check below deterministic.
+	if code := e.status("PUT", "/api/v1/settings/llm/providers/kimi", "", map[string]any{"api_key": fakeKey, "model": "kimi-k2-0905-preview", "base_url": "https://api.moonshot.cn/v1/"}); code != 200 {
+		t.Errorf("kimi custom url (final write): status %d, want 200", code)
+	}
 	_, body := e.do("GET", "/api/v1/settings/llm", "", nil, nil)
 	var v application.LLMView
 	_ = json.Unmarshal(body, &v)
