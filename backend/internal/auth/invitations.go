@@ -241,6 +241,11 @@ func (s *Service) AcceptInvitation(ctx context.Context, in AcceptInput, meta Cli
 		return nil, err
 	}
 	s.audit(ctx, inv.OrgID, u.ID, "invitation.accepted", inv.ID, map[string]any{"role": inv.Role, "new_user": newUser != nil, "invited_by": inv.InvitedBy})
+	if newUser == nil {
+		if err := s.mfaGate(ctx, u, inv.OrgID); err != nil { // joined, but the session still needs the second factor
+			return nil, err
+		}
+	}
 	return s.issueSession(ctx, u, m, uuid.NewString(), meta)
 }
 

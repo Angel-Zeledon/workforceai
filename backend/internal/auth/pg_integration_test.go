@@ -50,6 +50,7 @@ func pgConn(t *testing.T) *pgx.Conn {
 		"../infrastructure/postgres/migrations/300_invitations.sql",
 		"../infrastructure/postgres/migrations/610_email_verification.sql",
 		"../infrastructure/postgres/migrations/620_trial_accounts.sql",
+		"../infrastructure/postgres/migrations/630_mfa_and_reset.sql",
 	} {
 		b, err := os.ReadFile(f)
 		if err != nil {

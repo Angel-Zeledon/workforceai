@@ -239,7 +239,7 @@ func run(log *slog.Logger) error {
 			log.Warn("JWT_SECRET is the local development default from docker-compose.yml: set your own secret before exposing this server")
 		}
 		var authMailer mailer.Mailer
-		if cfg.EmailVerification {
+		if cfg.EmailVerification || cfg.EmailDevLog || cfg.SMTP.Host != "" {
 			if cfg.EmailDevLog {
 				authMailer = mailer.Log{Log: log}
 			} else {
@@ -249,9 +249,14 @@ func run(log *slog.Logger) error {
 				}
 				authMailer = sm
 			}
-			log.Info("email verification is ON for new accounts")
+			if cfg.EmailVerification {
+				log.Info("email verification is ON for new accounts")
+			} else {
+				log.Warn("EMAIL_VERIFICATION is off: anyone can register without proving they own the address")
+			}
+			log.Info("password reset by e-mail is available")
 		} else {
-			log.Warn("EMAIL_VERIFICATION is off: anyone can register without proving they own the address")
+			log.Warn("no SMTP configured: new accounts are not verified and passwords cannot be reset by e-mail")
 		}
 		svc, err := auth.NewService(auth.Config{
 			RequireVerification: cfg.EmailVerification, Mailer: authMailer, AppURL: cfg.UIBaseURL,

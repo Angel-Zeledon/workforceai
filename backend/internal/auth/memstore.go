@@ -18,6 +18,7 @@ type MemoryStore struct {
 	tokens      map[string]*RefreshToken // by hash
 	invitations map[string]*Invitation   // by id
 	verifs      map[string]*memVerif     // by token hash
+	mfa         map[string]MFARecord     // by user id
 }
 
 type memVerif struct {
@@ -25,9 +26,12 @@ type memVerif struct {
 	Used bool
 }
 
+var _ = (*MemoryStore)(nil)
+
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
 		verifs:      map[string]*memVerif{},
+		mfa:         map[string]MFARecord{},
 		users:       map[string]User{},
 		emails:      map[string]string{},
 		orgs:        map[string]Org{},
@@ -410,8 +414,11 @@ func (s *MemoryStore) AcceptInvitation(_ context.Context, tokenHash string, newU
 func (s *MemoryStore) CreateEmailVerification(_ context.Context, v EmailVerification) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if v.Purpose == "" {
+		v.Purpose = purposeVerify
+	}
 	for _, o := range s.verifs {
-		if o.UserID == v.UserID {
+		if o.UserID == v.UserID && o.Purpose == v.Purpose {
 			o.Used = true
 		}
 	}
@@ -419,19 +426,35 @@ func (s *MemoryStore) CreateEmailVerification(_ context.Context, v EmailVerifica
 	return nil
 }
 
-func (s *MemoryStore) ConsumeEmailVerification(_ context.Context, tokenHash string, now time.Time) (User, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+// checkToken validates a token without changing it (callers hold the lock).
+func (s *MemoryStore) checkToken(tokenHash, purpose string, now time.Time) (*memVerif, User, error) {
 	v, ok := s.verifs[tokenHash]
-	if !ok || v.Used {
-		return User{}, ErrInvalidToken
+	if !ok || v.Used || v.Purpose != purpose {
+		return nil, User{}, ErrInvalidToken
 	}
 	if !v.ExpiresAt.After(now) {
-		return User{}, ErrTokenExpired
+		return nil, User{}, ErrTokenExpired
 	}
 	u, ok := s.users[v.UserID]
 	if !ok {
-		return User{}, ErrInvalidToken
+		return nil, User{}, ErrInvalidToken
+	}
+	return v, u, nil
+}
+
+func (s *MemoryStore) PeekEmailToken(_ context.Context, tokenHash, purpose string, now time.Time) (User, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, u, err := s.checkToken(tokenHash, purpose, now)
+	return u, err
+}
+
+func (s *MemoryStore) ConsumeEmailVerification(_ context.Context, tokenHash, purpose string, now time.Time) (User, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v, u, err := s.checkToken(tokenHash, purpose, now)
+	if err != nil {
+		return User{}, err
 	}
 	v.Used = true
 	if u.VerifiedAt.IsZero() {
@@ -439,4 +462,59 @@ func (s *MemoryStore) ConsumeEmailVerification(_ context.Context, tokenHash stri
 		s.users[u.ID] = u
 	}
 	return u, nil
+}
+
+func (s *MemoryStore) GetMFA(_ context.Context, userID string) (MFARecord, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r, ok := s.mfa[userID]
+	if !ok {
+		return MFARecord{}, ErrNotFound
+	}
+	r.RecoveryHashes = append([]string(nil), r.RecoveryHashes...)
+	return r, nil
+}
+
+func (s *MemoryStore) SaveMFA(_ context.Context, r MFARecord) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r.RecoveryHashes = append([]string(nil), r.RecoveryHashes...)
+	s.mfa[r.UserID] = r
+	return nil
+}
+
+func (s *MemoryStore) UseMFAStep(_ context.Context, userID string, step int64) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r, ok := s.mfa[userID]
+	if !ok || r.LastStep >= step {
+		return false, nil
+	}
+	r.LastStep = step
+	s.mfa[userID] = r
+	return true, nil
+}
+
+func (s *MemoryStore) ConsumeRecoveryCode(_ context.Context, userID, codeHash string) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r, ok := s.mfa[userID]
+	if !ok {
+		return false, nil
+	}
+	for i, h := range r.RecoveryHashes {
+		if h == codeHash {
+			r.RecoveryHashes = append(append([]string(nil), r.RecoveryHashes[:i]...), r.RecoveryHashes[i+1:]...)
+			s.mfa[userID] = r
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (s *MemoryStore) DeleteMFA(_ context.Context, userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.mfa, userID)
+	return nil
 }

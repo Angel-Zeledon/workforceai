@@ -37,6 +37,7 @@ func (e *VerificationRequiredError) Error() string { return "auth: email verific
 type EmailVerification struct {
 	TokenHash string
 	UserID    string
+	Purpose   string // "verify" or "reset"
 	ExpiresAt time.Time
 	CreatedAt time.Time
 }
@@ -62,7 +63,7 @@ func (s *Service) sendVerification(ctx context.Context, u User, locale string) e
 	}
 	now := s.now()
 	ttl := s.cfg.VerifyTTL
-	if err := s.store.CreateEmailVerification(ctx, EmailVerification{TokenHash: hash, UserID: u.ID, ExpiresAt: now.Add(ttl), CreatedAt: now}); err != nil {
+	if err := s.store.CreateEmailVerification(ctx, EmailVerification{TokenHash: hash, UserID: u.ID, Purpose: purposeVerify, ExpiresAt: now.Add(ttl), CreatedAt: now}); err != nil {
 		return err
 	}
 	link := strings.TrimRight(s.cfg.AppURL, "/") + "/verify?token=" + url.QueryEscape(token)
@@ -75,7 +76,7 @@ func (s *Service) Verify(ctx context.Context, token string, meta ClientMeta) (*S
 	if token == "" || len(token) > 256 {
 		return nil, ErrInvalidToken
 	}
-	u, err := s.store.ConsumeEmailVerification(ctx, hashToken(token), s.now())
+	u, err := s.store.ConsumeEmailVerification(ctx, hashToken(token), purposeVerify, s.now())
 	if err != nil {
 		return nil, err
 	}

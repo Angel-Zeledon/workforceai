@@ -227,7 +227,7 @@ func emailAndTrialContract(t *testing.T, st Store) {
 	}
 
 	// Tokens: unknown, valid (once), replaced by a newer one, expired.
-	if _, err := st.ConsumeEmailVerification(bg, hashToken("nope"), now); !errors.Is(err, ErrInvalidToken) {
+	if _, err := st.ConsumeEmailVerification(bg, hashToken("nope"), "verify", now); !errors.Is(err, ErrInvalidToken) {
 		t.Fatalf("unknown token: %v", err)
 	}
 	h1 := hashToken("t1-" + randomHex(4))
@@ -238,23 +238,95 @@ func emailAndTrialContract(t *testing.T, st Store) {
 	if err := st.CreateEmailVerification(bg, EmailVerification{TokenHash: h2, UserID: u.ID, ExpiresAt: now.Add(time.Hour), CreatedAt: now}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.ConsumeEmailVerification(bg, h1, now); !errors.Is(err, ErrInvalidToken) {
+	if _, err := st.ConsumeEmailVerification(bg, h1, "verify", now); !errors.Is(err, ErrInvalidToken) {
 		t.Fatalf("a replaced token must be dead: %v", err)
 	}
-	got, err := st.ConsumeEmailVerification(bg, h2, now)
+	got, err := st.ConsumeEmailVerification(bg, h2, "verify", now)
 	if err != nil || got.ID != u.ID || got.VerifiedAt.IsZero() {
 		t.Fatalf("consume: %+v %v", got, err)
 	}
 	if again, _ := st.UserByID(bg, u.ID); again.VerifiedAt.IsZero() {
 		t.Fatal("the user must stay verified")
 	}
-	if _, err := st.ConsumeEmailVerification(bg, h2, now); !errors.Is(err, ErrInvalidToken) {
+	if _, err := st.ConsumeEmailVerification(bg, h2, "verify", now); !errors.Is(err, ErrInvalidToken) {
 		t.Fatalf("second use: %v", err)
 	}
 	h3 := hashToken("t3-" + randomHex(4))
 	_ = st.CreateEmailVerification(bg, EmailVerification{TokenHash: h3, UserID: tr.ID, ExpiresAt: now.Add(time.Minute), CreatedAt: now})
-	if _, err := st.ConsumeEmailVerification(bg, h3, now.Add(2*time.Minute)); !errors.Is(err, ErrTokenExpired) {
+	if _, err := st.ConsumeEmailVerification(bg, h3, "verify", now.Add(2*time.Minute)); !errors.Is(err, ErrTokenExpired) {
 		t.Fatalf("expired token: %v", err)
+	}
+
+	// Purposes: a reset token is invisible to the verify purpose, a new token retires only its own purpose, and Peek changes nothing.
+	hr := hashToken("r1-" + randomHex(4))
+	if err := st.CreateEmailVerification(bg, EmailVerification{TokenHash: hr, UserID: tr.ID, Purpose: "reset", ExpiresAt: now.Add(time.Hour), CreatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	hv := hashToken("v-" + randomHex(4))
+	if err := st.CreateEmailVerification(bg, EmailVerification{TokenHash: hv, UserID: tr.ID, Purpose: "verify", ExpiresAt: now.Add(time.Hour), CreatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.ConsumeEmailVerification(bg, hr, "verify", now); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("a reset token must not be usable as a verify token: %v", err)
+	}
+	if got, err := st.PeekEmailToken(bg, hr, "reset", now); err != nil || got.ID != tr.ID {
+		t.Fatalf("peek: %+v %v", got, err)
+	}
+	if got, err := st.PeekEmailToken(bg, hr, "reset", now); err != nil || got.ID != tr.ID {
+		t.Fatalf("peek must not consume: %v", err)
+	}
+	if _, err := st.ConsumeEmailVerification(bg, hr, "reset", now); err != nil {
+		t.Fatalf("consume reset: %v", err)
+	}
+	if _, err := st.PeekEmailToken(bg, hr, "reset", now); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("a consumed token must not peek: %v", err)
+	}
+	if _, err := st.ConsumeEmailVerification(bg, hv, "verify", now); err != nil {
+		t.Fatalf("the verify token must survive the reset: %v", err)
+	}
+
+	// Two-factor records.
+	if _, err := st.GetMFA(bg, u.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("no mfa yet: %v", err)
+	}
+	rec := MFARecord{UserID: u.ID, SecretEnc: "enc", EnabledAt: now, LastStep: 5, RecoveryHashes: []string{"a", "b", "c"}}
+	if err := st.SaveMFA(bg, rec); err != nil {
+		t.Fatal(err)
+	}
+	mrec, merr := st.GetMFA(bg, u.ID)
+	if merr != nil || !mrec.Enabled() || mrec.SecretEnc != "enc" || mrec.LastStep != 5 || len(mrec.RecoveryHashes) != 3 {
+		t.Fatalf("mfa round trip: %+v %v", mrec, merr)
+	}
+	if ok, _ := st.UseMFAStep(bg, u.ID, 5); ok {
+		t.Fatal("the same step must be refused")
+	}
+	if ok, _ := st.UseMFAStep(bg, u.ID, 6); !ok {
+		t.Fatal("a later step must be accepted")
+	}
+	if ok, _ := st.UseMFAStep(bg, u.ID, 6); ok {
+		t.Fatal("and then only once")
+	}
+	if ok, _ := st.ConsumeRecoveryCode(bg, u.ID, "b"); !ok {
+		t.Fatal("recovery code b")
+	}
+	if ok, _ := st.ConsumeRecoveryCode(bg, u.ID, "b"); ok {
+		t.Fatal("recovery codes work once")
+	}
+	if g2, _ := st.GetMFA(bg, u.ID); len(g2.RecoveryHashes) != 2 {
+		t.Fatalf("recovery hashes left: %v", g2.RecoveryHashes)
+	}
+	pending := MFARecord{UserID: u.ID, SecretEnc: "enc2"}
+	if err := st.SaveMFA(bg, pending); err != nil {
+		t.Fatal(err)
+	}
+	if g3, _ := st.GetMFA(bg, u.ID); g3.Enabled() || g3.SecretEnc != "enc2" || len(g3.RecoveryHashes) != 0 {
+		t.Fatalf("restarting enrolment must reset the record: %+v", g3)
+	}
+	if err := st.DeleteMFA(bg, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.GetMFA(bg, u.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("deleted: %v", err)
 	}
 }
 

@@ -117,9 +117,21 @@ type Store interface {
 	// (ErrAlreadyMember) and marks the invitation accepted by m.UserID.
 	AcceptInvitation(ctx context.Context, tokenHash string, newUser *User, m Membership, now time.Time) error
 
-	// Email verification. CreateEmailVerification invalidates the user's other pending tokens.
+	// One-time e-mail tokens (address verification and password reset; EmailVerification.Purpose says which).
+	// CreateEmailVerification invalidates the user's other pending tokens OF THE SAME PURPOSE.
 	CreateEmailVerification(ctx context.Context, v EmailVerification) error
-	// ConsumeEmailVerification atomically uses the token: ErrInvalidToken (unknown or already used) or ErrTokenExpired;
-	// otherwise it marks the user verified (if not yet) and returns the user.
-	ConsumeEmailVerification(ctx context.Context, tokenHash string, now time.Time) (User, error)
+	// ConsumeEmailVerification atomically uses the token: ErrInvalidToken (unknown, already used or another purpose) or
+	// ErrTokenExpired; otherwise it marks the user verified (if not yet) and returns the user.
+	ConsumeEmailVerification(ctx context.Context, tokenHash, purpose string, now time.Time) (User, error)
+	// PeekEmailToken checks a token like ConsumeEmailVerification but changes nothing; it returns the user.
+	PeekEmailToken(ctx context.Context, tokenHash, purpose string, now time.Time) (User, error)
+
+	// Two-factor authentication. GetMFA returns ErrNotFound when the user never started enrolment.
+	GetMFA(ctx context.Context, userID string) (MFARecord, error)
+	SaveMFA(ctx context.Context, r MFARecord) error // upsert
+	// UseMFAStep records an accepted TOTP step; false when that step (or a later one) was already used.
+	UseMFAStep(ctx context.Context, userID string, step int64) (bool, error)
+	// ConsumeRecoveryCode removes a recovery-code hash; false when it is not (or no longer) there.
+	ConsumeRecoveryCode(ctx context.Context, userID, codeHash string) (bool, error)
+	DeleteMFA(ctx context.Context, userID string) error
 }

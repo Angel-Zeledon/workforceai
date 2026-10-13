@@ -58,6 +58,8 @@ type Config struct {
 	TrialTTL          time.Duration // default 24h
 	TrialGlobalPerDay int           // accounts minted per day, all addresses together (default 300)
 	TrialEmailDomain  string        // domain of the generated addresses (default "prueba.invalid")
+	// MFAKey (optional, >= 32 bytes) encrypts TOTP secrets at rest; by default a key derived from Secret is used.
+	MFAKey []byte
 	// Logf (optional) receives operational notes that must not reach the caller (e.g. delivery failures).
 	Logf func(format string, args ...any)
 
@@ -152,6 +154,8 @@ type UserView struct {
 	Name  string `json:"name"`
 	// TrialExpiresAt is set only for trial accounts: when the account stops working.
 	TrialExpiresAt *time.Time `json:"trial_expires_at,omitempty"`
+	// MFAEnabled is filled by Me only.
+	MFAEnabled bool `json:"mfa_enabled,omitempty"`
 }
 
 func userView(u User) UserView {
@@ -299,6 +303,9 @@ func (s *Service) Login(ctx context.Context, in LoginInput, meta ClientMeta) (*S
 	if s.verifyEnabled() && u.VerifiedAt.IsZero() {
 		return nil, ErrEmailNotVerified
 	}
+	if err := s.mfaGate(ctx, u, in.OrgID); err != nil {
+		return nil, err
+	}
 	m, err := s.pickMembership(ctx, u.ID, in.OrgID)
 	if err != nil {
 		return nil, err
@@ -404,7 +411,9 @@ func (s *Service) Me(ctx context.Context, p Principal) (UserView, error) {
 	if err != nil {
 		return UserView{}, err
 	}
-	return userView(u), nil
+	v := userView(u)
+	v.MFAEnabled = s.MFAEnabled(ctx, u.ID)
+	return v, nil
 }
 
 func (s *Service) accessFor(u User, m Membership) (string, time.Time, error) {

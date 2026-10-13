@@ -154,9 +154,12 @@ func (h *Handler) Routes() http.Handler {
 	r.With(lim("refresh", h.cfg.RefreshLimit)).Post("/refresh", h.refresh)
 	r.With(lim("refresh", h.cfg.RefreshLimit)).Post("/logout", h.logout)
 	r.With(lim("trial", h.cfg.TrialLimit)).Post("/trial", h.trial)
+	r.With(lim("mfa", h.cfg.LoginLimit)).Post("/mfa/verify", h.mfaVerify)
+	r.With(lim("pwd-forgot", h.cfg.RegisterLimit)).Post("/password/forgot", h.forgotPassword)
+	r.With(lim("pwd-reset", h.cfg.RegisterLimit)).Post("/password/reset", h.resetPassword)
 	r.With(lim("verify", h.cfg.RegisterLimit)).Post("/verify", h.verify)
 	r.With(lim("verify-resend", h.cfg.RegisterLimit)).Post("/verify/resend", h.resendVerification)
-	r.Get("/config", AuthConfigHandlerV(true, h.svc.cfg.RequireVerification, h.svc.cfg.TrialEnabled))
+	r.Get("/config", AuthConfigHandlerV(true, h.svc.cfg.RequireVerification, h.svc.cfg.TrialEnabled, h.svc.PasswordResetEnabled()))
 	// Accepting is public (the invitee may not have an account yet); throttled like registration.
 	r.With(lim("invite-accept", h.cfg.RegisterLimit)).Post("/invitations/accept", h.acceptInvitation)
 
@@ -167,6 +170,9 @@ func (h *Handler) Routes() http.Handler {
 		}
 		r.Get("/me", h.me)
 		r.Post("/logout-all", h.logoutAll)
+		r.Post("/mfa/setup", h.mfaSetup)
+		r.Post("/mfa/enable", h.mfaEnable)
+		r.Post("/mfa/disable", h.mfaDisable)
 		r.Post("/switch-org", h.switchOrg)
 		r.With(RequirePermission(PermMembersRead)).Get("/members", h.listMembers)
 		r.With(RequirePermission(PermMembersInvite)).Post("/members", h.addMember)
@@ -250,6 +256,97 @@ func (h *Handler) trial(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store") // it carries a password
 	writeJSON(w, http.StatusCreated, acct)
+}
+
+func (h *Handler) forgotPassword(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Email  string `json:"email"`
+		Locale string `json:"locale"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if err := h.svc.ForgotPassword(r.Context(), in.Email, in.Locale); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent) // the same answer whether or not the address has an account
+}
+
+func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if err := h.svc.ResetPassword(r.Context(), in.Token, in.Password); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	h.clearRefreshCookie(w)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) mfaVerify(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		MFAToken string `json:"mfa_token"`
+		Code     string `json:"code"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	s, err := h.svc.VerifyMFA(r.Context(), in.MFAToken, in.Code, h.meta(r))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	h.writeSession(w, http.StatusOK, s)
+}
+
+func (h *Handler) mfaSetup(w http.ResponseWriter, r *http.Request) {
+	p, _ := PrincipalFrom(r.Context())
+	info, err := h.svc.MFASetup(r.Context(), p.UserID)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, info)
+}
+
+func (h *Handler) mfaEnable(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Code string `json:"code"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	p, _ := PrincipalFrom(r.Context())
+	codes, err := h.svc.MFAEnable(r.Context(), p.UserID, in.Code)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]any{"recovery_codes": codes}) // shown once
+}
+
+func (h *Handler) mfaDisable(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Password string `json:"password"`
+		Code     string `json:"code"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	p, _ := PrincipalFrom(r.Context())
+	if err := h.svc.MFADisable(r.Context(), p.UserID, in.Password, in.Code); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) verify(w http.ResponseWriter, r *http.Request) {
@@ -416,13 +513,13 @@ func (h *Handler) removeMember(w http.ResponseWriter, r *http.Request) {
 // AuthConfigHandler serves the public GET /api/v1/auth/config, which tells the
 // frontend whether to show the login (auth on) or the open demo (auth off).
 func AuthConfigHandler(enabled bool) http.HandlerFunc {
-	return AuthConfigHandlerV(enabled, false, false)
+	return AuthConfigHandlerV(enabled, false, false, false)
 }
 
 // AuthConfigHandlerV also tells the UI whether new accounts must verify their e-mail.
-func AuthConfigHandlerV(enabled, verification, trial bool) http.HandlerFunc {
+func AuthConfigHandlerV(enabled, verification, trial, passwordReset bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{"enabled": enabled, "registration": enabled, "verification": verification, "trial": trial})
+		writeJSON(w, http.StatusOK, map[string]any{"enabled": enabled, "registration": enabled, "verification": verification, "trial": trial, "password_reset": passwordReset, "mfa": enabled})
 	}
 }
 
@@ -496,7 +593,11 @@ func writeServiceError(w http.ResponseWriter, err error) {
 	var ve *ValidationError
 	var le *LockedError
 	var re *RateLimitedError
+	var mr *MFARequiredError
 	switch {
+	case errors.As(err, &mr):
+		// Not a failure: the password was right and the client must now present the second factor.
+		writeJSON(w, http.StatusOK, map[string]any{"mfa_required": true, "mfa_token": mr.Token})
 	case errors.As(err, &ve):
 		var b errorBody
 		b.Error.Code, b.Error.Message, b.Error.Fields = "validation_failed", "invalid input", ve.Fields
@@ -513,6 +614,12 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many requests")
 	case errors.Is(err, ErrInvalidCredentials):
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid email or password")
+	case errors.Is(err, ErrMFAInvalidCode):
+		writeError(w, http.StatusUnauthorized, "invalid_mfa_code", "invalid or already used code")
+	case errors.Is(err, ErrMFAAlreadyEnabled):
+		writeError(w, http.StatusConflict, "mfa_already_enabled", "two-factor authentication is already on")
+	case errors.Is(err, ErrMFANotPending):
+		writeError(w, http.StatusConflict, "mfa_not_pending", "start the setup first")
 	case errors.Is(err, ErrTrialExpired):
 		writeError(w, http.StatusForbidden, "trial_expired", "this trial account has expired")
 	case errors.Is(err, ErrTrialDisabled):

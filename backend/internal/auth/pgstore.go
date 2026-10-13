@@ -350,26 +350,29 @@ func (s *PGStore) RevokeOrgUserTokens(ctx context.Context, orgID, userID string,
 	return err
 }
 
-// CreateEmailVerification stores a new token and retires the user's other pending ones.
+// CreateEmailVerification stores a new one-time token and retires the user's other pending ones of the same purpose.
 func (s *PGStore) CreateEmailVerification(ctx context.Context, v EmailVerification) error {
+	if v.Purpose == "" {
+		v.Purpose = purposeVerify
+	}
 	return s.inTx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE email_verifications SET used_at = $2 WHERE user_id = $1 AND used_at IS NULL`, v.UserID, v.CreatedAt); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE email_verifications SET used_at = $3 WHERE user_id = $1 AND purpose = $2 AND used_at IS NULL`, v.UserID, v.Purpose, v.CreatedAt); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `INSERT INTO email_verifications (token_hash, user_id, expires_at, created_at) VALUES ($1,$2,$3,$4)`,
-			v.TokenHash, v.UserID, v.ExpiresAt, v.CreatedAt)
+		_, err := tx.Exec(ctx, `INSERT INTO email_verifications (token_hash, user_id, purpose, expires_at, created_at) VALUES ($1,$2,$3,$4,$5)`,
+			v.TokenHash, v.UserID, v.Purpose, v.ExpiresAt, v.CreatedAt)
 		return err
 	})
 }
 
-// ConsumeEmailVerification uses a token exactly once (the row is locked while it is checked) and marks the user verified.
-func (s *PGStore) ConsumeEmailVerification(ctx context.Context, tokenHash string, now time.Time) (User, error) {
+// useEmailToken checks (and, when consume is true, uses) a token. The row is locked while it is checked.
+func (s *PGStore) useEmailToken(ctx context.Context, tokenHash, purpose string, now time.Time, consume bool) (User, error) {
 	var u User
 	err := s.inTx(ctx, func(tx pgx.Tx) error {
 		var userID string
 		var expires time.Time
 		var used *time.Time
-		if err := tx.QueryRow(ctx, `SELECT user_id, expires_at, used_at FROM email_verifications WHERE token_hash = $1 FOR UPDATE`, tokenHash).Scan(&userID, &expires, &used); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT user_id, expires_at, used_at FROM email_verifications WHERE token_hash = $1 AND purpose = $2 FOR UPDATE`, tokenHash, purpose).Scan(&userID, &expires, &used); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrInvalidToken
 			}
@@ -381,11 +384,13 @@ func (s *PGStore) ConsumeEmailVerification(ctx context.Context, tokenHash string
 		if !expires.After(now) {
 			return ErrTokenExpired
 		}
-		if _, err := tx.Exec(ctx, `UPDATE email_verifications SET used_at = $2 WHERE token_hash = $1`, tokenHash, now); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `UPDATE users SET email_verified_at = COALESCE(email_verified_at, $2) WHERE id = $1`, userID, now); err != nil {
-			return err
+		if consume {
+			if _, err := tx.Exec(ctx, `UPDATE email_verifications SET used_at = $2 WHERE token_hash = $1`, tokenHash, now); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(ctx, `UPDATE users SET email_verified_at = COALESCE(email_verified_at, $2) WHERE id = $1`, userID, now); err != nil {
+				return err
+			}
 		}
 		var err error
 		u, err = scanUser(tx.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE id = $1`, userID))
@@ -395,4 +400,53 @@ func (s *PGStore) ConsumeEmailVerification(ctx context.Context, tokenHash string
 		return User{}, err
 	}
 	return u, nil
+}
+
+func (s *PGStore) ConsumeEmailVerification(ctx context.Context, tokenHash, purpose string, now time.Time) (User, error) {
+	return s.useEmailToken(ctx, tokenHash, purpose, now, true)
+}
+
+func (s *PGStore) PeekEmailToken(ctx context.Context, tokenHash, purpose string, now time.Time) (User, error) {
+	return s.useEmailToken(ctx, tokenHash, purpose, now, false)
+}
+
+func (s *PGStore) GetMFA(ctx context.Context, userID string) (MFARecord, error) {
+	r := MFARecord{UserID: userID}
+	var enabled *time.Time
+	err := s.db.QueryRow(ctx, `SELECT secret_enc, enabled_at, last_step, recovery_hashes FROM user_mfa WHERE user_id = $1`, userID).
+		Scan(&r.SecretEnc, &enabled, &r.LastStep, &r.RecoveryHashes)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return MFARecord{}, ErrNotFound
+	}
+	if err != nil {
+		return MFARecord{}, err
+	}
+	r.EnabledAt = timeOrZero(enabled)
+	return r, nil
+}
+
+func (s *PGStore) SaveMFA(ctx context.Context, r MFARecord) error {
+	if r.RecoveryHashes == nil {
+		r.RecoveryHashes = []string{}
+	}
+	_, err := s.db.Exec(ctx, `INSERT INTO user_mfa (user_id, secret_enc, enabled_at, last_step, recovery_hashes) VALUES ($1,$2,$3,$4,$5)
+		ON CONFLICT (user_id) DO UPDATE SET secret_enc = EXCLUDED.secret_enc, enabled_at = EXCLUDED.enabled_at,
+		last_step = EXCLUDED.last_step, recovery_hashes = EXCLUDED.recovery_hashes`,
+		r.UserID, r.SecretEnc, nullTime(r.EnabledAt), r.LastStep, r.RecoveryHashes)
+	return err
+}
+
+func (s *PGStore) UseMFAStep(ctx context.Context, userID string, step int64) (bool, error) {
+	tag, err := s.db.Exec(ctx, `UPDATE user_mfa SET last_step = $2 WHERE user_id = $1 AND last_step < $2`, userID, step)
+	return tag.RowsAffected() == 1, err
+}
+
+func (s *PGStore) ConsumeRecoveryCode(ctx context.Context, userID, codeHash string) (bool, error) {
+	tag, err := s.db.Exec(ctx, `UPDATE user_mfa SET recovery_hashes = array_remove(recovery_hashes, $2) WHERE user_id = $1 AND $2 = ANY(recovery_hashes)`, userID, codeHash)
+	return tag.RowsAffected() == 1, err
+}
+
+func (s *PGStore) DeleteMFA(ctx context.Context, userID string) error {
+	_, err := s.db.Exec(ctx, `DELETE FROM user_mfa WHERE user_id = $1`, userID)
+	return err
 }
