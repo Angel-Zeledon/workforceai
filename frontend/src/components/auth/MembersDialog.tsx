@@ -72,7 +72,7 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
 
       <ul className="mt-3 divide-y divide-line rounded-xl border border-line" data-testid="members-list">
         {members.map((m) => (
-          <li key={m.user_id} data-testid="member-row" className="flex items-center gap-3 px-3 py-2 text-xs">
+          <li key={m.user_id} data-testid="member-row" className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 text-xs">
             <span className="min-w-0 flex-1">
               <b className="block truncate text-[13px] text-ink">{m.name}{m.user_id === me?.id ? ` · ${t("members.you")}` : ""}</b>
               <span className="truncate text-mute">{m.email}</span>
@@ -99,7 +99,7 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
         <div className="mt-4 rounded-xl border border-line bg-panel2 p-3">
           <h3 className="text-sm font-semibold">{t("members.invite.title")}</h3>
           <div className="mt-2 flex flex-wrap gap-2">
-            <input data-testid="invite-email" type="email" placeholder={t("auth.email")} className={`${inputCls} min-w-[200px] flex-1`} value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input data-testid="invite-email" type="email" placeholder={t("auth.email")} className={`${inputCls} min-w-0 basis-full flex-1 sm:basis-auto sm:min-w-[200px]`} value={email} onChange={(e) => setEmail(e.target.value)} />
             <select data-testid="invite-role" aria-label={t("members.role")} className={`${inputCls} !w-auto`} value={role} onChange={(e) => setRole(e.target.value)}>
               {assignable(myRole).map((r) => <option key={r} value={r}>{t(`members.roles.${r}`)}</option>)}
             </select>
@@ -122,7 +122,7 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
           <h3 className="text-sm font-semibold">{t("members.invites")}</h3>
           <ul className="mt-2 divide-y divide-line rounded-xl border border-line" data-testid="invites-list">
             {invites.map((i) => (
-              <li key={i.id} data-testid="invite-row" data-status={i.status} className="flex items-center gap-3 px-3 py-2 text-xs">
+              <li key={i.id} data-testid="invite-row" data-status={i.status} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 text-xs">
                 <span className="min-w-0 flex-1 truncate">{i.email} · {t(`members.roles.${i.role}`)}</span>
                 <span className="text-mute">{t(`members.status.${i.status}`)}</span>
                 {canInvite && i.status === "pending" && assignable(myRole).includes(i.role as never) && (

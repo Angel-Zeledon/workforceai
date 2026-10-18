@@ -40,7 +40,7 @@ export function ProjectDetailView() {
 
   return (
     <div className="flex h-full min-h-0">
-      <div className="min-w-0 flex-1 space-y-4 overflow-y-auto p-6">
+      <div className="min-w-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <button type="button" data-testid="project-back" onClick={close} className="text-[11px] font-semibold text-accent hover:underline">‹ {t("pv.back")}</button>
@@ -74,7 +74,7 @@ export function ProjectDetailView() {
             <div data-tour="projects.tabs" className="flex flex-wrap items-center gap-1.5" role="tablist">
               {PROJECT_TABS.map((k: ProjectTab) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`pv-tab-${k}`} onClick={() => setTab(k)}
-                  className={`rounded-md border px-3.5 py-1.5 text-xs font-semibold transition ${tab === k ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel text-mute hover:text-ink"}`}>
+                  className={`rounded-md border px-3.5 py-2.5 text-xs font-semibold transition md:py-1.5 ${tab === k ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel text-mute hover:text-ink"}`}>
                   {t(`pv.tab.${k}`)}
                   {k === "changes" && pendingChanges > 0 && <span data-testid="plan-changes-badge" className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-black">{pendingChanges}</span>}
                   {k === "approvals" && pendingApprovals > 0 && <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-black">{pendingApprovals}</span>}

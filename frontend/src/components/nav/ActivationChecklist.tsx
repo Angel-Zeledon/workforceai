@@ -83,7 +83,7 @@ export function ActivationChecklist() {
   return (
     <div ref={wrap} className="relative">
       <button type="button" data-testid="activation-pill" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen((o) => !o)}
-        title={t("act.title")} className="flex h-8 items-center gap-1.5 rounded-lg border border-accent/30 bg-accent-soft px-2.5 text-[11.5px] font-semibold text-accent transition hover:border-accent">
+        title={t("act.title")} className="flex h-10 items-center gap-1.5 rounded-lg sm:h-8 border border-accent/30 bg-accent-soft px-2.5 text-[11.5px] font-semibold text-accent transition hover:border-accent">
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" strokeOpacity=".25" strokeWidth="2" />
           <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray={`${(count / STEPS.length) * 39} 39`} transform="rotate(-90 8 8)" /></svg>
         <span className="hidden sm:inline">{t("act.title")}</span>
@@ -91,7 +91,7 @@ export function ActivationChecklist() {
       </button>
       {open && (
         <div role="dialog" aria-label={t("act.title")} data-testid="activation-panel"
-          className="ac-pop absolute right-0 top-full z-[70] mt-2 w-[330px] max-w-[calc(100vw-24px)] rounded-xl border border-line bg-panel p-3 text-ink shadow-float">
+          className="ac-pop fixed inset-x-3 top-14 z-[70] max-h-[calc(100dvh-4.5rem)] overflow-y-auto sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[330px] rounded-xl border border-line bg-panel p-3 text-ink shadow-float">
           <div className="mb-2 flex items-baseline justify-between px-1">
             <b className="text-[13.5px]">{t("act.title")}</b>
             <span className="text-[11px] text-mute">{t("act.progress", { n: count, total: STEPS.length })}</span>
@@ -106,12 +106,12 @@ export function ActivationChecklist() {
                   <span className={`block text-[12.5px] font-semibold ${done[s.id] ? "line-through" : ""}`}>{t(`act.${s.id}.t`)}</span>
                   <span className="block text-[11.5px] leading-snug text-mute">{t(`act.${s.id}.d`)}</span>
                 </span>
-                {!done[s.id] && <button type="button" onClick={() => run(s.id)} className="shrink-0 rounded-md border border-line px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent-soft">{t(`act.${s.id}.a`)}</button>}
+                {!done[s.id] && <button type="button" onClick={() => run(s.id)} className="shrink-0 rounded-md border border-line px-2.5 py-2 text-[11px] sm:px-2 sm:py-1 font-semibold text-accent hover:bg-accent-soft">{t(`act.${s.id}.a`)}</button>}
               </li>
             ))}
           </ul>
           <button type="button" data-testid="activation-hide" onClick={() => { put(key(uid, "dismissed")); setDismissed(true); setOpen(false); }}
-            className="mt-2 w-full rounded-md px-2 py-1.5 text-center text-[11px] font-medium text-mute hover:bg-panel2 hover:text-ink">{t("act.hide")}</button>
+            className="mt-2 w-full rounded-md px-2 py-2.5 text-center text-[11px] font-medium text-mute hover:bg-panel2 hover:text-ink">{t("act.hide")}</button>
         </div>
       )}
     </div>

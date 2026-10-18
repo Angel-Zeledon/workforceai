@@ -91,7 +91,7 @@ export function ApprovalsTray() {
         <span className="text-[10px] text-amber-700/70">{open ? t("common.hide") : t("common.show")}</span>
       </button>
       {open && (
-        <div className="max-h-[46vh] space-y-2 overflow-y-auto rounded-md border border-line bg-panel/95 p-2 shadow-xl backdrop-blur">
+        <div className="max-h-[46dvh] space-y-2 overflow-y-auto rounded-md border border-line bg-panel/95 p-2 shadow-xl backdrop-blur">
           {pending.map((a) => <ApprovalCard key={a.id} a={a} />)}
         </div>
       )}

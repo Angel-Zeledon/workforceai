@@ -29,7 +29,7 @@ export function HelpPanel({ commands, onPick, onClose }: { commands: Command[]; 
   };
   return createPortal(
     <div data-reduce={reduce ? "1" : "0"} className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 p-0 sm:items-center sm:p-4" onKeyDown={onKey} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label={t("cmds.help.title")} data-testid="cmd-help-panel" className="ac-pop flex max-h-[88vh] w-full max-w-2xl flex-col rounded-t-2xl border border-line-strong bg-panel shadow-float sm:rounded-2xl">
+      <div role="dialog" aria-modal="true" aria-label={t("cmds.help.title")} data-testid="cmd-help-panel" className="ac-pop flex max-h-[88dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-line-strong bg-panel shadow-float sm:rounded-2xl">
         <header className="flex items-center gap-2 border-b border-line px-4 py-3">
           <h2 className="flex-1 font-display text-[15px] font-semibold text-ink">{t("cmds.help.title")}</h2>
           <button ref={close} type="button" aria-label={t("cmds.help.close")} data-testid="cmd-help-close" onClick={onClose} className="rounded-md p-1 text-mute hover:bg-mute/10 hover:text-ink"><Icon name="x" size={16} /></button>

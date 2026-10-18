@@ -97,7 +97,7 @@ function ItemCard({ item, mode, onOpenInventory }: { item: ShopItem; mode: "shop
         ) : item.kind === "character" ? (
           <div className="flex flex-wrap items-center gap-1.5">
             <select aria-label={t("shop.forAgent")} data-testid={`shop-agent-${item.id}`} value={target} onChange={(e) => setAgent(e.target.value)}
-              className="min-w-0 flex-1 rounded-md border border-line bg-panel2 px-2 py-1.5 text-xs outline-none focus:border-accent">
+              className="min-h-10 min-w-0 flex-1 rounded-md border border-line bg-panel2 px-2 py-1.5 text-xs outline-none focus:border-accent">
               {order.map((id) => <option key={id} value={id}>{name(id)}</option>)}
             </select>
             {target && equip[target]?.[item.slot] === item.id ? (
@@ -153,7 +153,7 @@ function History() {
         </div>
       )}
       {ledger.length === 0 ? <Empty>{t("shop.history.empty")}</Empty> : (
-        <div className="overflow-hidden rounded-xl border border-line bg-panel">
+        <div className="overflow-x-auto rounded-xl border border-line bg-panel">
           <table className="w-full text-left text-xs">
             <thead className="bg-panel2 text-[10.5px] uppercase tracking-wide text-mute">
               <tr><th className="px-3 py-2 font-semibold">{t("shop.history.when")}</th><th className="px-3 py-2 font-semibold">{t("shop.history.what")}</th><th className="px-3 py-2 font-semibold">{t("shop.history.agent")}</th><th className="px-3 py-2 text-right font-semibold">{t("shop.history.amount")}</th><th className="px-3 py-2 text-right font-semibold">{t("shop.history.balance")}</th></tr>
@@ -199,7 +199,7 @@ export function ShopView() {
   return (
     <div data-testid="shop-view" className="flex h-full min-h-0 flex-col bg-bg">
       <ThumbStudio />
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-panel px-5 py-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-panel px-4 py-3 sm:px-5">
         <h1 className="font-display text-xl font-semibold text-ink">{t("shop.title")}</h1>
         <div data-tour="shop.wallet" data-testid="shop-wallet" data-balance={wallet.balance} className="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-100/70 px-3 py-1">
           <CoinIcon size={18} />
@@ -209,42 +209,42 @@ export function ShopView() {
         <div className="hidden text-[11px] text-mute md:block">
           {t("shop.earnedTotal")} <b className="font-mono text-ink2">{fmtNumber(wallet.earned_total, 0)}</b> · {t("shop.spentTotal")} <b className="font-mono text-ink2">{fmtNumber(wallet.spent_total, 0)}</b>
         </div>
-        <div data-tour="shop.tabs" role="tablist" className="ml-auto flex rounded-lg border border-line bg-panel2 p-0.5 text-xs font-medium">
+        <div data-tour="shop.tabs" role="tablist" className="flex w-full rounded-lg border border-line bg-panel2 p-0.5 text-xs font-medium sm:ml-auto sm:w-auto">
           {(["shop", "mine", "history"] as const).map((k) => (
             <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`shop-tab-${k}`} onClick={() => setTab(k)}
-              className={`rounded-md px-3 py-1.5 transition ${tab === k ? "bg-panel text-ink shadow-pop ring-1 ring-line" : "text-mute hover:text-ink"}`}>{t(`shop.tab.${k}`)}</button>
+              className={`min-h-10 flex-1 rounded-md px-3 py-1.5 transition sm:flex-none ${tab === k ? "bg-panel text-ink shadow-pop ring-1 ring-line" : "text-mute hover:text-ink"}`}>{t(`shop.tab.${k}`)}</button>
           ))}
         </div>
       </div>
-      <p data-tour="shop.rule" data-testid="shop-rule" className="border-b border-line bg-amber-100/40 px-5 py-1.5 text-[11.5px] text-amber-800">{t("shop.rule")}</p>
+      <p data-tour="shop.rule" data-testid="shop-rule" className="border-b border-line bg-amber-100/40 px-4 py-1.5 sm:px-5 text-[11.5px] text-amber-800">{t("shop.rule")}</p>
 
-      <div data-tour="shop.content" className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+      <div data-tour="shop.content" className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5">
         {tab === "history" ? <History /> : (
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
               <div data-tour="shop.groups" className="flex rounded-lg border border-line bg-panel p-0.5 text-xs font-medium">
                 {(["character", "office"] as const).map((g) => (
                   <button key={g} type="button" data-testid={`shop-group-${g}`} aria-pressed={group === g} onClick={() => { setGroup(g); setCat("all"); }}
-                    className={`rounded-md px-3 py-1.5 transition ${group === g ? "bg-accent-soft text-accent" : "text-mute hover:text-ink"}`}>{t(`shop.group.${g}`)}</button>
+                    className={`min-h-10 rounded-md px-3 py-1.5 transition ${group === g ? "bg-accent-soft text-accent" : "text-mute hover:text-ink"}`}>{t(`shop.group.${g}`)}</button>
                 ))}
               </div>
               <div data-tour="shop.categories" className="flex flex-wrap gap-1.5">
                 {["all", ...cats].map((c) => (
                   <button key={c} type="button" data-testid={`shop-cat-${c}`} aria-pressed={cat === c} onClick={() => setCat(c)}
-                    className={`rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition ${cat === c ? "border-accent/40 bg-accent-soft text-accent" : "border-line bg-panel text-ink2 hover:bg-panel2"}`}>
+                    className={`min-h-10 rounded-full border px-3 py-1 text-[11.5px] font-medium transition ${cat === c ? "border-accent/40 bg-accent-soft text-accent" : "border-line bg-panel text-ink2 hover:bg-panel2"}`}>
                     {c === "all" ? t("shop.cat.all") : t(`shop.cat.${c}`)}
                   </button>
                 ))}
               </div>
             </div>
             {items.length === 0 ? <Empty>{tab === "mine" ? t("shop.mineEmpty") : t("shop.empty")}</Empty> : (
-              <div data-tour="shop.grid" data-testid="shop-grid" className="ac-stagger grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3.5">
+              <div data-tour="shop.grid" data-testid="shop-grid" className="ac-stagger grid grid-cols-[repeat(auto-fill,minmax(min(210px,100%),1fr))] gap-3.5">
                 {items.slice(0, limit).map((it) => <ItemCard key={it.id} item={it} mode={tab === "mine" ? "inventory" : "shop"} onOpenInventory={() => setTab("mine")} />)}
               </div>
             )}
             {items.length > limit && (
               <div className="mt-4 flex justify-center">
-                <button type="button" data-testid="shop-more" onClick={() => setLimit((n) => n + PAGE)} className="rounded-lg border border-line bg-panel px-4 py-2 text-xs font-semibold text-ink hover:bg-panel2">
+                <button type="button" data-testid="shop-more" onClick={() => setLimit((n) => n + PAGE)} className="min-h-10 rounded-lg border border-line bg-panel px-4 py-2 text-xs font-semibold text-ink hover:bg-panel2">
                   {t("shop.more", { n: items.length - limit })}
                 </button>
               </div>

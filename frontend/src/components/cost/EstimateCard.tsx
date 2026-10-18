@@ -24,7 +24,7 @@ export function EstimateCard({ requestId, compact = false }: { requestId: string
         <div className="mt-0.5 text-[11px] text-mute">{t(`cost.estimate.basis.${est.basis}`)}</div>
       </div>
       {!compact && (
-        <table className="w-full">
+        <div className="overflow-x-auto"><table className="w-full">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wide text-mute">
               <th className="pb-1 font-semibold">{t("cost.estimate.task")}</th>
@@ -45,7 +45,7 @@ export function EstimateCard({ requestId, compact = false }: { requestId: string
               <td className="py-1.5 text-right font-mono text-mute">{usdRange(est.synthesis.min_usd, est.synthesis.max_usd)}</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
       )}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-mute">
         <span>{t("cost.estimate.spent", { amount: usd(spent) })}</span>

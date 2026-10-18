@@ -34,7 +34,7 @@ export function CommandMenu({ id, items, active, onPick, onHover, label, emptyTe
     <div data-reduce={reduce ? "1" : "0"} className="absolute inset-x-0 bottom-full z-30 mb-2">
       <ul
         ref={ref} id={id} role="listbox" aria-label={label} data-testid="cmd-menu"
-        className="ac-pop max-h-[min(340px,48vh)] overflow-y-auto overscroll-contain rounded-xl border border-line-strong bg-panel p-1 shadow-float"
+        className="ac-pop max-h-[min(340px,48dvh)] overflow-y-auto overscroll-contain rounded-xl border border-line-strong bg-panel p-1 shadow-float"
       >
         {items.length === 0 && emptyText && <li role="presentation" className="px-3 py-2 text-[12px] text-mute">{emptyText}</li>}
         {items.map((it, i) => {

@@ -44,7 +44,7 @@ export function CostsView() {
         </Card>
       </div>
       <Progress value={pct} color={pct > 95 ? "#a63232" : pct > 80 ? "#a86208" : "#2f7d55"} />
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-3 [&>*]:min-w-0">
         {rows.map((r) => (
           <Card key={r.title} title={r.title}>
             <div className="space-y-2.5">

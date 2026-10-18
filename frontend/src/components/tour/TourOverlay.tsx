@@ -142,10 +142,10 @@ export function TourOverlay() {
       )}
       <div ref={cardRef} tabIndex={-1} data-testid="tour-card"
         className="flex flex-col rounded-xl border border-line bg-panel p-4 shadow-float outline-none"
-        style={{ position: "fixed", maxHeight: "calc(100vh - 24px)", ...cardStyle, ...(topOverride !== null && !narrow ? { top: topOverride } : null) }}>
+        style={{ position: "fixed", maxHeight: "calc(100dvh - 24px)", ...cardStyle, ...(topOverride !== null && !narrow ? { top: topOverride } : null) }}>
         <div className="mb-1.5 flex items-start gap-2.5">
           <div className="flex-1 text-[14px] font-bold text-ink">{copyOf(active, locale, step.title)}</div>
-          <button type="button" onClick={stop} aria-label={t("tour.close")} title={t("tour.close")} className="rounded p-0.5 text-mute hover:text-ink"><Icon name="x" size={15} /></button>
+          <button type="button" onClick={stop} aria-label={t("tour.close")} title={t("tour.close")} className="-m-2 rounded p-2.5 text-mute hover:text-ink"><Icon name="x" size={15} /></button>
         </div>
         <div className="mb-3.5 min-h-0 overflow-y-auto overscroll-contain">
           <p className="m-0 whitespace-pre-line text-[12.5px] leading-[1.65] text-ink2">{copyOf(active, locale, step.body)}</p>
@@ -154,11 +154,11 @@ export function TourOverlay() {
           <span className="font-mono text-[11px] text-mute">{position + 1} / {total}</span>
           <div className="flex-1" />
           {position > 0 && (
-            <button type="button" onClick={back} data-testid="tour-back" className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-panel2">
+            <button type="button" onClick={back} data-testid="tour-back" className="inline-flex items-center gap-1.5 min-h-10 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-panel2">
               <Icon name="back" size={13} /> {t("tour.back")}
             </button>
           )}
-          <button type="button" onClick={next} data-testid="tour-next" className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-xs font-bold text-white hover:bg-accent-hover">
+          <button type="button" onClick={next} data-testid="tour-next" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-xs font-bold text-white hover:bg-accent-hover">
             {isLast ? t("tour.finish") : t("tour.next")}
             {!isLast && <Icon name="arrow" size={13} />}
           </button>

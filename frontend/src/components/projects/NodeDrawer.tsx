@@ -38,10 +38,10 @@ export function NodeDrawer() {
     return x ? <button type="button" onClick={() => select(nid)} className="block w-full truncate rounded-lg bg-panel2 px-2 py-1 text-left text-[11px] text-ink hover:bg-mute/[0.12]">{title(x)}</button> : null;
   };
   return (
-    <aside data-testid="node-drawer" className="ac-pop h-full w-[340px] shrink-0 space-y-3 overflow-y-auto border-l-2 border-line bg-panel p-4 shadow-soft">
+    <aside data-testid="node-drawer" className="ac-pop fixed inset-y-0 right-0 z-40 h-dvh w-full max-w-[340px] shrink-0 space-y-3 overflow-y-auto border-l-2 lg:static lg:z-auto lg:h-full lg:w-[340px] lg:max-w-none border-line bg-panel p-4 shadow-soft">
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-display text-[15px] font-semibold leading-snug text-ink">{title(n)}</h3>
-        <button type="button" data-testid="node-drawer-close" onClick={() => select(null)} className="rounded-md border border-line px-2 text-xs font-semibold text-mute hover:text-ink" aria-label={t("common.close")}>×</button>
+        <button type="button" data-testid="node-drawer-close" onClick={() => select(null)} className="min-h-[40px] min-w-[40px] rounded-md border border-line px-2 text-xs font-semibold text-mute hover:text-ink lg:min-h-0 lg:min-w-0" aria-label={t("common.close")}>×</button>
       </div>
       <div className="flex flex-wrap items-center gap-2"><StatePill state={n.state} retrying={n.state === "ready" && n.attempt > 0} /><AgentChip id={n.agent_id} /><span className="text-[10px] font-semibold uppercase text-mute">{t(`pv.kind.${n.kind}`)}</span></div>
       <dl className="grid grid-cols-2 gap-2 text-[11px]">

@@ -77,7 +77,7 @@ export function AgentPanel({ id }: { id: string }) {
           <div className="flex shrink-0 items-center gap-1.5">
             <SectionWheel items={TABS.map((tb) => ({ id: tb, icon: TAB_ICON[tb], label: t(`panel.tab.${tb}`), testid: `panel-tab-${tb}` }))} value={tab} onChange={setTab}
               hubAvatar={<Avatar id={id} size={52} />} ariaLabel={t("panel.nav.label")} />
-            <button onClick={() => select(null)} className="rounded-md p-1.5 text-mute hover:bg-mute/10 hover:text-ink" aria-label={t("common.close")}><Icon name="x" size={16} /></button>
+            <button onClick={() => select(null)} className="flex min-h-10 min-w-10 items-center justify-center rounded-md p-1.5 text-mute hover:bg-mute/10 hover:text-ink md:min-h-0 md:min-w-0" aria-label={t("common.close")}><Icon name="x" size={16} /></button>
           </div>
         </div>
         <div className="mt-3 flex items-center gap-2"><StateBadge state={agent.state} /><span className="truncate text-xs text-ink2">{agent.activity}</span></div>

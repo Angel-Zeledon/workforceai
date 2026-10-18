@@ -41,7 +41,7 @@ function ProjectList() {
   useEffect(() => { loadTemplates(); }, [loadTemplates]);
   const list = Object.values(projects).sort((a, b) => b.created_at.localeCompare(a.created_at));
   return (
-    <div className="mx-auto max-w-[1180px] space-y-6 p-6">
+    <div className="mx-auto max-w-[1180px] space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-semibold text-ink">{t("pv.title")}</h1>

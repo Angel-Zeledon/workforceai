@@ -38,7 +38,7 @@ export function CollabRail({ art }: { art: StoredArtifact }) {
   const btn = "rounded-md border border-line bg-panel px-2 py-0.5 text-[11px] font-semibold hover:border-accent";
 
   return (
-    <aside data-testid="art-collab" className="w-[260px] shrink-0 space-y-3 overflow-y-auto border-l border-line bg-panel2/40 p-2">
+    <aside data-testid="art-collab" className="max-h-[40dvh] w-full shrink-0 space-y-3 overflow-y-auto border-t border-line bg-panel2/40 p-2 md:max-h-none md:w-[260px] md:border-l md:border-t-0">
       {error && <div role="alert" data-testid="collab-error" className="rounded-lg border border-red-400/70 bg-red-100/70 px-2 py-1 text-[11px] text-ink">{t(error === "conflict" ? "collab.conflict" : "collab.failed")}</div>}
       <section>
         <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-mute">{t("collab.proposals")}</h4>

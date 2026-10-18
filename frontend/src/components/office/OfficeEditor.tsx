@@ -26,7 +26,7 @@ export function EditOfficeButton() {
   if (editing || !can) return null;
   return (
     <button type="button" data-testid="office-edit" onClick={() => useOfficeLayout.getState().startEdit()}
-      className="pointer-events-auto flex items-center gap-2 rounded-lg border border-line bg-panel/95 px-3 py-2 text-xs font-semibold text-ink shadow-soft backdrop-blur transition hover:bg-panel2">
+      className="pointer-events-auto flex min-h-10 items-center gap-2 rounded-lg border border-line bg-panel/95 px-3 py-2 text-xs font-semibold text-ink shadow-soft backdrop-blur transition hover:bg-panel2">
       <Icon name="edit" size={15} />{t("oe.edit")}
     </button>
   );
@@ -118,13 +118,13 @@ export function LightButton() {
   return (
     <div className="pointer-events-auto relative">
       <button type="button" data-testid="office-light" aria-expanded={open} onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-lg border border-line bg-panel/95 px-3 py-2 text-xs font-semibold text-ink shadow-soft backdrop-blur transition hover:bg-panel2">
+        className="flex min-h-10 items-center gap-2 rounded-lg border border-line bg-panel/95 px-3 py-2 text-xs font-semibold text-ink shadow-soft backdrop-blur transition hover:bg-panel2">
         <Icon name="sun" size={15} />{t("oe.light.title")}
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[300px] rounded-xl border border-line bg-panel p-4 shadow-pop">
+        <div className="absolute right-0 top-full z-50 mt-2 max-h-[calc(100dvh-6rem)] w-[300px] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-line bg-panel p-4 shadow-pop">
           <div className="mb-3 flex items-center justify-between"><h3 className="text-[13px] font-semibold text-ink">{t("oe.a.light")}</h3>
-            <button type="button" onClick={() => setOpen(false)} aria-label={t("oe.cancel")} className="rounded-md p-1 text-mute hover:bg-panel2 hover:text-ink"><Icon name="x" size={14} /></button></div>
+            <button type="button" onClick={() => setOpen(false)} aria-label={t("oe.cancel")} className="-m-1.5 rounded-md p-2.5 text-mute hover:bg-panel2 hover:text-ink"><Icon name="x" size={14} /></button></div>
           <LightControls />
         </div>
       )}
@@ -465,16 +465,16 @@ export function OfficeEditor() {
   return (
     <>
       <ThumbStudio />
-      <div data-testid="office-editor" className="pointer-events-auto absolute bottom-4 left-4 top-4 z-40 flex w-[348px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-pop">
+      <div data-testid="office-editor" className="pointer-events-auto absolute inset-x-0 bottom-0 z-40 flex max-h-[45dvh] flex-col overflow-hidden rounded-t-2xl border-b-0 pb-[env(safe-area-inset-bottom)] md:inset-x-auto md:bottom-4 md:left-4 md:top-4 md:max-h-none md:w-[348px] md:rounded-2xl md:border-b md:pb-0 border border-line bg-panel shadow-pop">
         <header className="border-b border-line px-4 pb-0 pt-3">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-[15px] font-semibold text-ink">{t("oe.title")}</h2>
-            <button type="button" onClick={() => st().cancel()} aria-label={t("oe.cancel")} className="rounded-md p-1 text-mute hover:bg-panel2 hover:text-ink"><Icon name="x" size={16} /></button>
+            <button type="button" onClick={() => st().cancel()} aria-label={t("oe.cancel")} className="-m-1.5 rounded-md p-2.5 text-mute hover:bg-panel2 hover:text-ink"><Icon name="x" size={16} /></button>
           </div>
           <div role="tablist" className="mt-2 flex gap-1">
             {TABS.map((k) => (
               <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`oe-tab-${k}`} onClick={() => st().setTab(k)}
-                className={`-mb-px border-b-2 px-3 py-2 text-[12.5px] font-medium transition ${tab === k ? "border-accent text-accent" : "border-transparent text-mute hover:text-ink"}`}>{t(`oe.tab.${k}`)}</button>
+                className={`-mb-px min-h-10 border-b-2 px-3 py-2 text-[12.5px] font-medium transition ${tab === k ? "border-accent text-accent" : "border-transparent text-mute hover:text-ink"}`}>{t(`oe.tab.${k}`)}</button>
             ))}
           </div>
         </header>
@@ -491,12 +491,12 @@ export function OfficeEditor() {
             </div>
           )}
           <div className="flex items-center gap-1.5">
-            <button type="button" disabled={!canUndo} onClick={() => st().undo()} aria-label={t("oe.undo")} title={`${t("oe.undo")} (Ctrl+Z)`} data-testid="oe-undo" className="rounded-md border border-line-strong bg-panel p-1.5 text-ink2 transition hover:bg-panel2 disabled:opacity-40"><Icon name="back" size={15} /></button>
-            <button type="button" disabled={!canRedo} onClick={() => st().redo()} aria-label={t("oe.redo")} title={`${t("oe.redo")} (Ctrl+Y)`} data-testid="oe-redo" className="rounded-md border border-line-strong bg-panel p-1.5 text-ink2 transition hover:bg-panel2 disabled:opacity-40"><Icon name="back" size={15} className="-scale-x-100" /></button>
-            <button type="button" aria-pressed={grid} onClick={() => st().toggleGrid()} aria-label={t("oe.grid")} title={t("oe.grid")} className={`rounded-md border p-1.5 transition ${grid ? "border-accent/40 bg-accent-soft text-accent" : "border-line-strong bg-panel text-ink2 hover:bg-panel2"}`}><Icon name="grid" size={15} /></button>
+            <button type="button" disabled={!canUndo} onClick={() => st().undo()} aria-label={t("oe.undo")} title={`${t("oe.undo")} (Ctrl+Z)`} data-testid="oe-undo" className="min-h-10 min-w-10 rounded-md border border-line-strong bg-panel p-1.5 text-ink2 transition hover:bg-panel2 disabled:opacity-40"><Icon name="back" size={15} /></button>
+            <button type="button" disabled={!canRedo} onClick={() => st().redo()} aria-label={t("oe.redo")} title={`${t("oe.redo")} (Ctrl+Y)`} data-testid="oe-redo" className="min-h-10 min-w-10 rounded-md border border-line-strong bg-panel p-1.5 text-ink2 transition hover:bg-panel2 disabled:opacity-40"><Icon name="back" size={15} className="-scale-x-100" /></button>
+            <button type="button" aria-pressed={grid} onClick={() => st().toggleGrid()} aria-label={t("oe.grid")} title={t("oe.grid")} className={`flex min-h-10 min-w-10 items-center justify-center rounded-md border p-1.5 transition ${grid ? "border-accent/40 bg-accent-soft text-accent" : "border-line-strong bg-panel text-ink2 hover:bg-panel2"}`}><Icon name="grid" size={15} /></button>
             <span className="flex-1" />
-            <Btn onClick={() => st().cancel()} data-testid="oe-cancel">{t("oe.cancel")}</Btn>
-            <Btn kind="primary" disabled={saving} onClick={() => void st().save()} data-testid="oe-save">{saving ? t("oe.saving") : dirty ? t("oe.save") : t("oe.done")}</Btn>
+            <Btn className="min-h-10" onClick={() => st().cancel()} data-testid="oe-cancel">{t("oe.cancel")}</Btn>
+            <Btn className="min-h-10" kind="primary" disabled={saving} onClick={() => void st().save()} data-testid="oe-save">{saving ? t("oe.saving") : dirty ? t("oe.save") : t("oe.done")}</Btn>
           </div>
         </footer>
       </div>

@@ -58,7 +58,7 @@ export function NewArtifactMenu({ deskId }: { deskId: string }) {
     <div ref={box} className="relative">
       <button type="button" data-testid="ws-tab-new" aria-label={t("menu.new")} title={t("menu.new")} onClick={() => setOpen(!open)} className="flex h-7 w-7 items-center justify-center rounded-md border border-line bg-panel text-base font-semibold text-accent hover:border-accent">+</button>
       {open && (
-        <div className="ac-pop absolute left-0 top-9 z-50 max-h-[70vh] w-[260px] overflow-y-auto rounded-xl border border-line bg-panel p-2 shadow-pop">
+        <div className="ac-pop absolute left-0 top-9 z-50 max-h-[70dvh] w-[260px] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-line bg-panel p-2 shadow-pop">
           <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-mute">{t("menu.kinds")}</div>
           {orderedKinds(agent?.role).map(({ kind, suggested }) => (
             <button key={kind} type="button" disabled={busy} data-testid={`ws-new-kind-${kind}`} data-suggested={suggested ? "true" : "false"}

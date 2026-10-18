@@ -70,7 +70,7 @@ export function FileViewerPanel() {
           </div>
           <div className="truncate font-mono text-[10px] text-mute">{ref.path}</div>
         </div>
-        <button type="button" data-testid="viewer-close" aria-label={t("fileviewer.close")} title={t("fileviewer.close")} onClick={close} className="rounded-md p-1.5 text-mute hover:bg-panel2 hover:text-ink">
+        <button type="button" data-testid="viewer-close" aria-label={t("fileviewer.close")} title={t("fileviewer.close")} onClick={close} className="flex min-h-10 min-w-10 items-center justify-center rounded-md p-1.5 text-mute hover:bg-panel2 hover:text-ink">
           <Icon name="x" size={15} />
         </button>
       </header>

@@ -145,7 +145,7 @@ export function ApprovalsMobile({ focusId }: { focusId?: string }) {
   const sorted = (items ?? []).slice().sort((a, b) => (a.id === focusId ? -1 : b.id === focusId ? 1 : +new Date(b.created_at) - +new Date(a.created_at)));
   const focusGone = !!focusId && items !== null && !items.some((a) => a.id === focusId);
   return (
-    <main className="mx-auto min-h-screen max-w-xl space-y-3 bg-bg px-4 pb-10 pt-5" data-testid="approvals-page">
+    <main className="mx-auto min-h-dvh max-w-xl space-y-3 bg-bg px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5" data-testid="approvals-page">
       <header>
         <h1 className="text-xl font-bold text-ink">{t("approvals.mobile.title")}</h1>
         <p className="text-[13px] text-mute">{t("approvals.mobile.subtitle")}</p>

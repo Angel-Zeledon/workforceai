@@ -83,7 +83,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
         <Kpi label={t("dash.kpi.errors")} value={m?.errors ?? 0} color={(m?.errors ?? 0) > 0 ? "#b4443c" : undefined} />
         <Kpi label={t("dash.kpi.activeAgents")} value={`${active}/${order.length}`} />
       </div>
-      <div className="grid gap-5 xl:grid-cols-3">
+      <div className="grid gap-5 xl:grid-cols-3 [&>*]:min-w-0">
         <Card title={t("dash.team")} className="xl:col-span-2" right={<button className="text-[11px] text-accent" onClick={() => go("agents")}>{t("dash.viewAll")}</button>}>
           <div data-tour="dashboard.team" className="grid gap-2 md:grid-cols-2">
             {order.map((id) => {
@@ -151,7 +151,7 @@ function Requests() {
   const statusLabel = (st: string) => trOr(`dash.reqStatus.${st}`, st);
   if (!list.length) return <Empty>{t("dash.requests.empty")}</Empty>;
   return (
-    <div className="grid gap-5 xl:grid-cols-[340px_1fr]">
+    <div className="grid gap-5 xl:grid-cols-[340px_1fr] [&>*]:min-w-0">
       <Card title={t("dash.requests.title")}>
         <ul className="space-y-1.5">
           {list.map((r) => (
@@ -276,7 +276,7 @@ function Agents() {
             <div className="flex items-start justify-between"><div><div className="text-base font-semibold text-ink">{v.name}</div><div className="text-xs text-mute">{v.title}</div></div><StateBadge state={a.state} /></div>
             <p className="mt-2 text-xs text-ink2">{a.activity}</p>
             {a.progress > 0 && <div className="mt-2"><Progress value={a.progress} /></div>}
-            <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
               {[[t("dash.agents.done"), a.metrics.tasks_completed], [t("dash.agents.pend"), a.metrics.tasks_pending], [t("dash.agents.avg"), `${a.metrics.avg_seconds}s`], [t("common.cost"), fmtUsd(a.metrics.cost_usd)]].map(([k, v]) => (
                 <div key={k as string} className="rounded bg-panel2 py-1.5"><div className="text-[9px] uppercase text-mute">{k}</div><div className="font-mono text-[12px] text-ink">{v}</div></div>
               ))}
@@ -299,7 +299,7 @@ function Conversations() {
   const cur = conversations[sel ?? list[0]?.id ?? ""];
   if (!list.length) return <Empty>{t("dash.conversations.empty")}</Empty>;
   return (
-    <div className="grid gap-5 xl:grid-cols-[340px_1fr]">
+    <div className="grid gap-5 xl:grid-cols-[340px_1fr] [&>*]:min-w-0">
       <Card title={t("dash.conversations.title")}>
         <ul className="space-y-1.5">
           {list.map((c) => (
@@ -320,7 +320,7 @@ function Approvals() {
   const approvals = Object.values(useStore((s) => s.approvals)).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
   const pend = approvals.filter((a) => a.status === "pending"), done = approvals.filter((a) => a.status !== "pending");
   return (
-    <div className="grid gap-5 xl:grid-cols-2">
+    <div className="grid gap-5 xl:grid-cols-2 [&>*]:min-w-0">
       <Card title={t("dash.approvals.pending", { count: pend.length })}>{pend.length ? <div className="space-y-2">{pend.map((a) => <ApprovalCard key={a.id} a={a} />)}</div> : <Empty>{t("dash.approvals.nonePending")}</Empty>}</Card>
       <Card title={t("dash.approvals.history")}>{done.length ? <div className="space-y-2">{done.map((a) => <ApprovalCard key={a.id} a={a} compact />)}</div> : <Empty>{t("dash.approvals.noDecisions")}</Empty>}</Card>
     </div>
@@ -334,7 +334,7 @@ function Reports() {
   const cur = reports.find((r) => r.id === sel) ?? reports[0];
   if (!reports.length) return <Empty>{t("dash.reports.empty")}</Empty>;
   return (
-    <div className="grid gap-5 xl:grid-cols-[320px_1fr]">
+    <div className="grid gap-5 xl:grid-cols-[320px_1fr] [&>*]:min-w-0">
       <Card title={t("dash.reports.title")}><ul className="space-y-1.5">{reports.map((r) => (
         <li key={r.id}><button onClick={() => setSel(r.id)} className={`w-full rounded-md border p-2.5 text-left ${cur?.id === r.id ? "border-accent bg-accent/10" : "border-line bg-panel2 hover:border-line-strong"}`}>
           <div className="line-clamp-2 text-[12.5px] font-semibold text-ink">{r.title}</div><div className="mt-1 text-[10px] text-mute">{timeAgo(r.created_at)} · {fmtUsd(r.cost_usd)}</div>
@@ -358,7 +358,7 @@ function Costs() {
   const failed = Object.values(tasks).filter((t) => t.status === "failed" || t.status === "blocked");
   const pct = m ? Math.min(100, (m.cost_usd / Math.max(0.01, m.budget_usd)) * 100) : 0;
   return (
-    <div className="grid gap-5 xl:grid-cols-2">
+    <div className="grid gap-5 xl:grid-cols-2 [&>*]:min-w-0">
       <Card title={tt("dash.costs.budget")}>
         <div className="flex items-end justify-between"><div className="font-mono text-3xl text-ink">{fmtUsd(m?.cost_usd)}</div><div className="text-xs text-mute">{tt("dash.costs.of", { budget: fmtUsd(m?.budget_usd) })}</div></div>
         <div className="mt-3"><Progress value={pct} color={pct > 80 ? "#b4443c" : pct > 50 ? "#a86208" : "#2f7d55"} /></div>

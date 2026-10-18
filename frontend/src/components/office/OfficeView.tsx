@@ -47,7 +47,7 @@ export function OfficeView() {
   return (
     <>
       <div data-tour="office.scene" className="absolute inset-0 isolate"><OfficeScene /></div>
-      <div className="pointer-events-none absolute left-4 top-4 w-[330px] max-w-[calc(100vw-32px)] sm:max-w-[40vw]">
+      <div className="pointer-events-none absolute left-4 top-[max(1rem,env(safe-area-inset-top))] w-[330px] max-w-[calc(100vw-32px)] sm:max-w-[40vw]">
         {folded ? (
           <button type="button" data-testid="activity-expand" onClick={() => setFolded(false)}
             className="pointer-events-auto hidden items-center gap-2 rounded-full border border-line bg-panel/95 px-3.5 py-1.5 text-[11.5px] font-semibold text-ink2 shadow-soft backdrop-blur transition hover:bg-panel2 sm:inline-flex">
@@ -69,13 +69,13 @@ export function OfficeView() {
       <div className="pointer-events-none absolute bottom-[140px] left-1/2 z-30 hidden w-[min(460px,40vw)] -translate-x-1/2 lg:block">
         <FirstRunHint id="office" title={t("hint.office.title")} body={t("hint.office.body")} />
       </div>
-      <div data-tour="office.approvals" className="pointer-events-none absolute bottom-[96px] left-4"><ApprovalsTray /></div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-40 flex justify-center px-4" style={{ paddingRight: `calc(${selected ? "var(--panel-w, 420px)" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})`, paddingLeft: pendingApprovals ? 352 : 16 }}>
+      <div data-tour="office.approvals" className="pointer-events-none absolute bottom-[calc(96px+env(safe-area-inset-bottom))] left-4 max-w-[calc(100%-2rem)]"><ApprovalsTray /></div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex justify-center px-4 md:pl-[var(--cb-l)] md:pr-[var(--cb-r)]" style={{ "--cb-r": `calc(${selected ? "var(--panel-w, 420px)" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})`, "--cb-l": pendingApprovals ? "352px" : "16px" } as React.CSSProperties}>
         <CommandBar />
       </div>
       {/* Same box as the office scene but above the chat: in-scene popups that must stay clickable (approvals desk card). */}
       <div id="office-popups" className="pointer-events-none absolute inset-0 z-20" />
-      <div data-tour="office.lighting" className="pointer-events-none absolute right-4 top-4 z-40 flex items-start gap-2" style={{ right: `calc(${selected ? "var(--panel-w, 420px) + 16px" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})` }}>
+      <div data-tour="office.lighting" className={`pointer-events-none absolute right-[var(--hud-r)] top-[max(1rem,env(safe-area-inset-top))] z-40 flex max-w-[calc(100%-2rem)] items-start gap-2 ${selected ? "max-md:hidden" : ""}`} style={{ "--hud-r": `calc(${selected ? "var(--panel-w, 420px) + 16px" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})` } as React.CSSProperties}>
         <EditOfficeButton />
         <LightButton />
       </div>

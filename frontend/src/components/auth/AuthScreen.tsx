@@ -129,11 +129,11 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   };
 
   if (status === "loading" || status === "disabled") {
-    return <div data-testid="auth-loading" className="flex min-h-screen items-center justify-center text-sm text-mute">{t("auth.loading")}</div>;
+    return <div data-testid="auth-loading" className="flex min-h-dvh items-center justify-center text-sm text-mute">{t("auth.loading")}</div>;
   }
   const title = t(`auth.${mode}.title`);
   return (
-    <main className="grid min-h-screen bg-bg lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+    <main className="grid min-h-dvh bg-bg lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="relative hidden flex-col justify-between gap-10 overflow-hidden bg-navy p-12 text-white lg:flex">
         <div aria-hidden className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)", backgroundSize: "56px 56px" }} />
         <a href="/welcome" className="relative w-fit" aria-label="AI Workforce OS"><Brand tone="light" /></a>
@@ -152,7 +152,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
       </aside>
       <div className="flex items-center justify-center px-4 py-10 sm:px-8">
       {mfa ? (
-        <form onSubmit={submitCode} data-testid="auth-mfa" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-7 shadow-soft sm:p-8">
+        <form onSubmit={submitCode} data-testid="auth-mfa" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
           <a href="/welcome" className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.mfa.title")}</h1>
           <p className="text-sm leading-relaxed text-ink2">{t("auth.mfa.body")}</p>
@@ -162,24 +162,24 @@ export function AuthScreen({ mode }: { mode: Mode }) {
           </Field>
           <p className="text-[11px] text-mute">{t("auth.mfa.hint")}</p>
           <ErrorLine msg={err} />
-          <Btn type="submit" kind="primary" disabled={busy || code.trim() === ""} className="w-full py-2" data-testid="auth-mfa-submit">{t("auth.mfa.submit")}</Btn>
-          <div className="pt-1 text-xs"><button type="button" className="text-accent hover:underline" onClick={() => { setMfa(null); setCode(""); setErr(null); }}>{t("auth.mfa.back")}</button></div>
+          <Btn type="submit" kind="primary" disabled={busy || code.trim() === ""} className="w-full min-h-10 py-2" data-testid="auth-mfa-submit">{t("auth.mfa.submit")}</Btn>
+          <div className="text-xs"><button type="button" className="inline-block py-2 text-accent hover:underline" onClick={() => { setMfa(null); setCode(""); setErr(null); }}>{t("auth.mfa.back")}</button></div>
         </form>
       ) : sent ? (
-        <div data-testid="auth-sent" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-7 shadow-soft sm:p-8">
+        <div data-testid="auth-sent" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
           <a href="/welcome" className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.sent.title")}</h1>
           <p className="text-sm leading-relaxed text-ink2">{t(sent.emailSent ? "auth.sent.body" : "auth.sent.failed", { email: sent.email })}</p>
           <p className="text-xs text-mute">{t("auth.sent.hint")}</p>
           <ErrorLine msg={err} />
           {resent && <p role="status" className="text-xs font-medium text-ok">{t("auth.resent")}</p>}
-          <Btn kind="primary" disabled={cooldown > 0} onClick={() => resend(sent.email)} className="w-full py-2" data-testid="auth-resend">
+          <Btn kind="primary" disabled={cooldown > 0} onClick={() => resend(sent.email)} className="w-full min-h-10 py-2" data-testid="auth-resend">
             {cooldown > 0 ? t("auth.resendIn", { n: cooldown }) : t("auth.resend")}
           </Btn>
-          <div className="pt-1 text-xs"><a className="text-accent hover:underline" href="/login">{t("auth.toLogin")}</a></div>
+          <div className="text-xs"><a className="inline-block py-2 text-accent hover:underline" href="/login">{t("auth.toLogin")}</a></div>
         </div>
       ) : (
-      <form onSubmit={submit} data-testid={`auth-${mode}`} className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-7 shadow-soft sm:p-8">
+      <form onSubmit={submit} data-testid={`auth-${mode}`} className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
         <a href="/welcome" className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
         <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{title}</h1>
         {mode === "invite" && <p className="text-xs text-mute">{t("auth.invite.body")}</p>}
@@ -204,27 +204,27 @@ export function AuthScreen({ mode }: { mode: Mode }) {
         </Field>
         {mode !== "login" && <p className="text-[11px] text-mute">{t("auth.passwordHint")}</p>}
         {mode === "login" && flags.passwordReset && (
-          <div className="text-right text-xs"><a className="text-accent hover:underline" href="/forgot" data-testid="auth-to-forgot">{t("auth.forgot.link")}</a></div>
+          <div className="text-right text-xs"><a className="inline-block py-2 text-accent hover:underline" href="/forgot" data-testid="auth-to-forgot">{t("auth.forgot.link")}</a></div>
         )}
         <ErrorLine msg={err} />
         {unverified && (
           <div className="flex items-center gap-2 text-xs">
-            <button type="button" disabled={cooldown > 0} onClick={() => resend(email)} data-testid="auth-resend" className="font-semibold text-accent hover:underline disabled:text-mute disabled:no-underline">
+            <button type="button" disabled={cooldown > 0} onClick={() => resend(email)} data-testid="auth-resend" className="py-2 font-semibold text-accent hover:underline disabled:text-mute disabled:no-underline">
               {cooldown > 0 ? t("auth.resendIn", { n: cooldown }) : t("auth.resend")}
             </button>
             {resent && <span role="status" className="text-ok">{t("auth.resent")}</span>}
           </div>
         )}
-        <Btn type="submit" kind="primary" disabled={busy || (mode === "invite" && !token)} className="w-full py-2" data-testid="auth-submit">
+        <Btn type="submit" kind="primary" disabled={busy || (mode === "invite" && !token)} className="w-full min-h-10 py-2" data-testid="auth-submit">
           {t(`auth.${mode}.submit`)}
         </Btn>
-        <div className="flex justify-between pt-1 text-xs">
-          {mode !== "login" && <a className="text-accent hover:underline" href={withNext("/login", next ?? "/")} data-testid="auth-to-login">{t("auth.toLogin")}</a>}
-          {mode !== "register" && <a className="text-accent hover:underline" href={withNext("/register", next ?? "/")} data-testid="auth-to-register">{t("auth.toRegister")}</a>}
+        <div className="flex flex-wrap justify-between gap-x-4 text-xs">
+          {mode !== "login" && <a className="inline-block py-2 text-accent hover:underline" href={withNext("/login", next ?? "/")} data-testid="auth-to-login">{t("auth.toLogin")}</a>}
+          {mode !== "register" && <a className="inline-block py-2 text-accent hover:underline" href={withNext("/register", next ?? "/")} data-testid="auth-to-register">{t("auth.toRegister")}</a>}
         </div>
         {flags.trial && mode !== "invite" && (
           <div className="border-t border-line pt-3 text-center text-xs text-mute">
-            <a className="font-medium text-accent hover:underline" href="/prueba" data-testid="auth-to-trial">{t("auth.toTrial")}</a>
+            <a className="inline-block py-2 font-medium text-accent hover:underline" href="/prueba" data-testid="auth-to-trial">{t("auth.toTrial")}</a>
           </div>
         )}
       </form>
@@ -247,5 +247,5 @@ export function AuthGate({ children }: { children: ReactNode }) {
     if (status === "anonymous") router.replace(loginPath(window.location.pathname + window.location.search));
   }, [status, router]);
   if (status === "disabled" || status === "authenticated") return <>{children}</>;
-  return <div data-testid="auth-loading" className="flex min-h-screen items-center justify-center text-sm text-mute">{t("auth.loading")}</div>;
+  return <div data-testid="auth-loading" className="flex min-h-dvh items-center justify-center text-sm text-mute">{t("auth.loading")}</div>;
 }

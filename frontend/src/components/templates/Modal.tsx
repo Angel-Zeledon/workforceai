@@ -27,15 +27,15 @@ export function Modal({ title, onClose, children, testid, wide = false }: {
   // As a page (see nav/pageMode): inline body under the breadcrumb, nothing covers the sidebar.
   if (page) return <div data-testid={testid} role="region" aria-label={title} className={`mx-auto w-full px-5 py-5 ${wide ? "max-w-4xl" : "max-w-xl"}`}>{children}</div>;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/35 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/35 p-3 sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} data-testid={testid}
-        className={`pointer-events-auto flex max-h-[88vh] w-full flex-col overflow-hidden rounded-xl border border-line bg-panel text-ink shadow-float outline-none ${wide ? "max-w-4xl" : "max-w-xl"}`}>
+        className={`pointer-events-auto flex max-h-[88dvh] w-full flex-col overflow-hidden rounded-xl border border-line bg-panel text-ink shadow-float outline-none ${wide ? "max-w-4xl" : "max-w-xl"}`}>
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
           <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
           <button type="button" data-testid={`${testid}-close`} onClick={onClose} aria-label={t("common.close")}
-            className="rounded-md border border-line px-2.5 py-1 text-xs font-medium text-ink2 hover:bg-panel2 hover:text-ink">{t("common.close")}</button>
+            className="min-h-10 rounded-md border border-line px-3 py-1 text-xs font-medium text-ink2 sm:min-h-0 sm:px-2.5 hover:bg-panel2 hover:text-ink">{t("common.close")}</button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
       </div>
     </div>
   );

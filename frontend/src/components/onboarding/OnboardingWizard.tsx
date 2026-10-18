@@ -55,7 +55,7 @@ export function OnboardingWizard({ onClose, onDone }: { onClose: () => void; onD
       <Modal title={t("onb.done.title")} onClose={onClose} testid="onb-wizard">
         <p data-testid="onb-done" className="mb-4 text-sm">{t("onb.done.body", { agents: result.agents_configured.length, memory: result.memory_seeded })}</p>
         {result.schedule && <p className="mb-4 text-sm text-mute">{t("onb.done.briefing")}</p>}
-        <div className="flex justify-end"><button type="button" data-testid="onb-done-close" onClick={onClose} className="rounded-md bg-accent px-5 py-2 text-xs font-semibold text-white">{t("common.close")}</button></div>
+        <div className="flex justify-end"><button type="button" data-testid="onb-done-close" onClick={onClose} className="min-h-10 rounded-md bg-accent px-5 py-2 text-xs font-semibold text-white">{t("common.close")}</button></div>
       </Modal>
     );
   }
@@ -126,13 +126,13 @@ export function OnboardingWizard({ onClose, onDone }: { onClose: () => void; onD
 
       <div className="mt-6 flex items-center justify-between">
         <button type="button" data-testid="onb-back" disabled={step === 0 || busy} onClick={() => setStep(step - 1)}
-          className="rounded-md border border-line px-4 py-2 text-xs font-semibold text-mute hover:text-ink disabled:opacity-40">{t("onb.back")}</button>
+          className="min-h-10 rounded-md border border-line px-4 py-2 text-xs font-semibold text-mute hover:text-ink disabled:opacity-40">{t("onb.back")}</button>
         {step < STEPS - 1 ? (
           <button type="button" data-testid="onb-next" disabled={step === 0 && !packKey} onClick={() => setStep(step + 1)}
-            className="rounded-md bg-accent px-5 py-2 text-xs font-semibold text-white disabled:opacity-50">{t("onb.next")}</button>
+            className="min-h-10 rounded-md bg-accent px-5 py-2 text-xs font-semibold text-white disabled:opacity-50">{t("onb.next")}</button>
         ) : (
           <button type="button" data-testid="onb-finish" disabled={busy || !packKey} onClick={() => void finish()}
-            className="rounded-md bg-accent px-5 py-2 text-xs font-semibold text-white disabled:opacity-50">{busy ? t("onb.finishing") : t("onb.finish")}</button>
+            className="min-h-10 rounded-md bg-accent px-5 py-2 text-xs font-semibold text-white disabled:opacity-50">{busy ? t("onb.finishing") : t("onb.finish")}</button>
         )}
       </div>
     </Modal>

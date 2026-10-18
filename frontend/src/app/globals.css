@@ -41,6 +41,12 @@ body { font-variant-numeric: tabular-nums; }
 ::-webkit-scrollbar-thumb { background: rgb(var(--line-strong)); border-radius: 8px; border: 2px solid rgb(var(--bg)); }
 ::-webkit-scrollbar-thumb:hover { background: rgb(var(--mute) / 0.6); }
 canvas { outline: none; display: block; }
+body { overflow-x: clip; }
+/* Mobile: 16px fields avoid the iOS focus-zoom and give 40px tap targets; dvh-safe full-height helpers. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]), select, textarea { font-size: 16px; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]), select { min-height: 40px; }
+}
 select { color-scheme: light; }
 input::placeholder, textarea::placeholder { color: rgb(var(--mute) / 0.75); }
 ::selection { background: rgb(var(--accent) / 0.18); }

@@ -16,12 +16,12 @@ export function Toaster() {
   const items = useToasts((s) => s.items);
   const dismiss = useToasts((s) => s.dismiss);
   return (
-    <div aria-live="polite" role="status" data-testid="toaster" className="pointer-events-none fixed inset-x-0 bottom-5 z-[120] flex flex-col items-center gap-2 px-4">
+    <div aria-live="polite" role="status" data-testid="toaster" className="pointer-events-none fixed inset-x-0 bottom-5 z-[120] flex flex-col items-center gap-2 px-3 pb-[env(safe-area-inset-bottom)]">
       {items.map((it) => (
-        <div key={it.id} data-testid="toast" data-kind={it.kind} className={`ac-toast pointer-events-auto flex max-w-md items-center gap-2.5 rounded-lg border bg-panel px-4 py-2.5 text-[13px] font-medium text-ink shadow-float ${STYLE[it.kind].border}`}>
+        <div key={it.id} data-testid="toast" data-kind={it.kind} className={`ac-toast pointer-events-auto flex w-full max-w-md items-center sm:w-auto gap-2.5 rounded-lg border bg-panel px-4 py-2.5 text-[13px] font-medium text-ink shadow-float ${STYLE[it.kind].border}`}>
           <Icon name={STYLE[it.kind].icon} size={16} className={STYLE[it.kind].text} />
           <span>{it.text}</span>
-          <button type="button" aria-label={t("common.close")} onClick={() => dismiss(it.id)} className="ml-1 text-mute hover:text-ink"><Icon name="x" size={14} /></button>
+          <button type="button" aria-label={t("common.close")} onClick={() => dismiss(it.id)} className="-my-2 -mr-2 ml-1 p-2.5 text-mute hover:text-ink"><Icon name="x" size={14} /></button>
         </div>
       ))}
     </div>

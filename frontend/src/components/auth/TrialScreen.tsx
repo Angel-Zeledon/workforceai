@@ -41,7 +41,7 @@ function CopyField({ id, label, value }: { id: string; label: string; value: str
         <input id={id} readOnly value={value} data-testid={id} onFocus={(e) => e.currentTarget.select()}
           className="w-full rounded-md border border-line-strong bg-panel2 py-2 pl-3 pr-10 font-mono text-[14px] tracking-wide text-ink outline-none focus:border-accent" />
         <button type="button" onClick={copy} aria-label={copied ? t("trial.copied") : t("trial.copy")} title={copied ? t("trial.copied") : t("trial.copy")}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1.5 text-mute hover:bg-panel hover:text-ink"><Icon name={copied ? "check" : "doc"} size={15} /></button>
+          className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-2.5 text-mute hover:bg-panel hover:text-ink"><Icon name={copied ? "check" : "doc"} size={15} /></button>
       </div>
     </div>
   );
@@ -90,8 +90,8 @@ export function TrialScreen() {
 
   const left = acct ? Date.parse(acct.expires_at) - Date.now() : 0;
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-4 py-10">
-      <div data-testid="trial" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-7 shadow-soft sm:p-8">
+    <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
+      <div data-testid="trial" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
         <a href="/welcome" className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
         <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("trial.title")}</h1>
         {!acct && !err && <p role="status" className="text-sm text-mute">{t("trial.creating")}</p>}
@@ -100,7 +100,7 @@ export function TrialScreen() {
             <p className="text-[13px] leading-relaxed text-ink2">{t("trial.body", { time: leftText(left, t) })}</p>
             <CopyField id="trial-user" label={t("trial.user")} value={acct.email} />
             <CopyField id="trial-password" label={t("auth.password")} value={acct.password} />
-            <button type="button" onClick={copyBoth} className="text-xs font-medium text-accent hover:underline">{t("trial.copyBoth")}</button>
+            <button type="button" onClick={copyBoth} className="py-2 text-xs font-medium text-accent hover:underline">{t("trial.copyBoth")}</button>
             <div role="note" className="flex gap-2 rounded-lg border border-warn/30 bg-warn/10 px-3 py-2.5 text-[12.5px] leading-snug text-warn">
               <Icon name="alert" size={16} className="mt-0.5 shrink-0" />
               <span>{t("trial.warn")}</span>
@@ -112,10 +112,10 @@ export function TrialScreen() {
           </>
         )}
         <ErrorLine msg={err} />
-        {acct && <Btn kind="primary" disabled={!saved || entering} onClick={enter} className="w-full py-2" data-testid="trial-enter">{t("trial.enter")}</Btn>}
-        <div className="flex justify-between pt-1 text-xs">
-          <a className="text-accent hover:underline" href="/register">{t("trial.toRegister")}</a>
-          <a className="text-accent hover:underline" href="/login">{t("auth.toLogin")}</a>
+        {acct && <Btn kind="primary" disabled={!saved || entering} onClick={enter} className="w-full min-h-10 py-2" data-testid="trial-enter">{t("trial.enter")}</Btn>}
+        <div className="flex flex-wrap justify-between gap-x-4 text-xs">
+          <a className="inline-block py-2 text-accent hover:underline" href="/register">{t("trial.toRegister")}</a>
+          <a className="inline-block py-2 text-accent hover:underline" href="/login">{t("auth.toLogin")}</a>
         </div>
       </div>
     </main>

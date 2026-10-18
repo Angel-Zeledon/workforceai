@@ -206,7 +206,7 @@ export function DrivePicker({ mode, start = "/Shared", onClose, onFiles, onFolde
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label={mode === "files" ? t("att.pick.titleFiles") : t("att.pick.titleFolder")} data-testid="drive-picker"
       className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-pop">
+      <div className="flex max-h-[80dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-pop">
         <header className="flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="text-[14px] font-semibold text-ink">{mode === "files" ? t("att.pick.titleFiles") : t("att.pick.titleFolder")}</h2>
           <button type="button" onClick={onClose} aria-label={t("att.close")} className="rounded-md p-1 text-mute hover:bg-panel2 hover:text-ink"><Icon name="x" size={16} /></button>
@@ -292,7 +292,7 @@ export function AttachMenu({ dest, full, onUpload, onFolderUpload, onDrive, onPi
       <button type="button" data-testid="chat-attach" title={t("chat.attach.title")} aria-label={t("chat.attach.title")} aria-haspopup="menu" aria-expanded={open} disabled={disabled} onClick={() => setOpen((v) => !v)}
         className="rounded-lg border border-line bg-panel2 p-2 text-mute hover:border-accent hover:text-ink disabled:opacity-40"><Icon name="plus" size={14} /></button>
       {open && (
-        <div role="menu" className="absolute bottom-full left-0 z-50 mb-2 w-[270px] rounded-xl border border-line bg-panel p-1.5 shadow-pop">
+        <div role="menu" className="absolute bottom-full left-0 z-50 mb-2 w-[270px] max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-panel p-1.5 shadow-pop">
           {item(t("att.menu.upload"), t("att.menu.uploadHint", { n: MAX_FILES, mb: MAX_BYTES >> 20 }), onUpload, "attach-upload", "plus")}
           {item(t("att.menu.folder"), t("att.menu.folderHint"), onFolderUpload, "attach-folder", "folder")}
           {item(t("att.menu.drive"), t("att.menu.driveHint"), onDrive, "attach-drive", "layers")}

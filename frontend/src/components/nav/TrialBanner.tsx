@@ -26,7 +26,7 @@ export function TrialBanner() {
       <span className="font-semibold">{t("trialBanner.label")}</span>
       <span>{h > 0 ? t("trial.left.hm", { h, m }) : t("trial.left.m", { m })}</span>
       <button type="button" onClick={() => { void logout().then(() => { window.location.href = "/register"; }); }}
-        className="rounded-md border border-current px-2.5 py-0.5 font-semibold hover:bg-white/40">{t("trialBanner.keep")}</button>
+        className="rounded-md border border-current px-3 py-1.5 sm:px-2.5 sm:py-0.5 font-semibold hover:bg-white/40">{t("trialBanner.keep")}</button>
     </div>
   );
 }

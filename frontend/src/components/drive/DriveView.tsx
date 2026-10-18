@@ -82,7 +82,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
       onDragOver={(e) => { if (canUpload) { e.preventDefault(); setDrag(true); } }} onDragLeave={() => setDrag(false)}
       onDrop={(e) => { e.preventDefault(); setDrag(false); if (canUpload && e.dataTransfer.files.length) upload(e.dataTransfer.files); }}>
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-5 py-3">
+        <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-3 py-3 sm:px-5">
           <div data-tour="files.header" className="mr-3"><h1 className="font-display text-xl font-semibold text-ink">{t("drive.title")}</h1><p className="text-[12px] text-mute">{t("drive.page.desc")}</p></div>
           <nav data-tour="files.crumbs" data-testid="drive-crumbs" className="flex flex-wrap items-center gap-1 text-sm">
             <button type="button" className="rounded px-1.5 py-0.5 text-mute hover:bg-panel2 hover:text-ink" onClick={() => { setPath("/"); setSelected(null); setTrash(null); }}>{t("drive.root")}</button>
@@ -96,11 +96,11 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
             ))}
           </nav>
           <IndexStatusChip path={path} refresh={touched} />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             <button type="button" data-testid="drive-meaning" aria-pressed={meaning} title={t("drive.meaning.help")} onClick={() => setMeaning(!meaning)}
-              className={`rounded-lg border px-2 py-1.5 text-[11px] ${meaning ? "border-accent bg-accent/10 text-accent" : "border-line text-mute hover:text-ink"}`}>{t("drive.meaning.toggle")}</button>
+              className={`min-h-10 rounded-lg border px-2 py-1.5 text-[11px] sm:min-h-0 ${meaning ? "border-accent bg-accent/10 text-accent" : "border-line text-mute hover:text-ink"}`}>{t("drive.meaning.toggle")}</button>
             <input data-tour="files.search" data-testid="drive-search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") search(); }}
-              placeholder={meaning ? t("drive.meaning.placeholder") : t("drive.searchPlaceholder")} className="w-56 rounded-lg border border-line bg-panel2 px-3 py-1.5 text-xs outline-none focus:border-accent" />
+              placeholder={meaning ? t("drive.meaning.placeholder") : t("drive.searchPlaceholder")} className="min-h-10 w-full rounded-lg border border-line bg-panel2 px-3 py-1.5 text-base outline-none focus:border-accent sm:min-h-0 sm:w-56 sm:text-xs" />
             <span data-tour="files.trash" className="inline-flex"><Btn data-testid="drive-trash" onClick={async () => setTrash(trash ? null : (await drive.trash().catch(() => ({ files: [] }))).files)}>{t("drive.trash")}</Btn></span>
             <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) upload(e.target.files); e.target.value = ""; }} />
             <span data-tour="files.upload" className="inline-flex"><Btn kind="primary" data-testid="drive-upload" className="inline-flex items-center gap-1" disabled={!canUpload || busy} onClick={() => fileInput.current?.click()}>
@@ -110,7 +110,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
         </div>
         {error && <div data-testid="drive-error" className="mx-5 mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-700">{error}</div>}
         {drag && <div className="mx-5 mt-3 rounded-xl border-2 border-dashed border-accent px-4 py-6 text-center text-sm text-accent">{t("drive.dropHere", { path })}</div>}
-        <div data-tour="files.list" className="min-h-0 flex-1 overflow-y-auto p-5">
+        <div data-tour="files.list" className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-5">
           {passages ? (
             <PassageResults result={passages} onOpen={openPassage} onClose={() => setPassages(null)} />
           ) : hits ? (
@@ -240,7 +240,7 @@ function FilePane({ file, focus, onClearFocus, onClose, onChanged, onDeleted }: 
     drive.text(file.id, shown).then((r) => setText(r.text)).catch(() => setText(null));
   }, [file.id, file.current_version, shown, textual]);
   return (
-    <aside data-tour="files.pane" data-testid="drive-file-pane" className="flex w-[420px] min-w-[320px] flex-col border-l border-line bg-panel">
+    <aside data-tour="files.pane" data-testid="drive-file-pane" className="flex flex-col border-l border-line bg-panel max-md:fixed max-md:inset-0 max-md:z-40 max-md:h-dvh max-md:w-full max-md:border-l-0 md:w-[420px] md:min-w-[320px]">
       <div className="flex items-start gap-2 border-b border-line p-4">
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium text-ink">{file.name}</div>

@@ -24,8 +24,8 @@ export function ForgotScreen() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-4 py-10">
-      <div data-testid="forgot" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-7 shadow-soft sm:p-8">
+    <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
+      <div data-testid="forgot" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
         <a href="/welcome" className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
         {sent ? (
           <>
@@ -40,10 +40,10 @@ export function ForgotScreen() {
               <input data-testid="forgot-email" type="email" required autoComplete="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />
             </label>
             <ErrorLine msg={err} />
-            <Btn type="submit" kind="primary" disabled={busy} className="w-full py-2" data-testid="forgot-submit">{t("auth.forgot.submit")}</Btn>
+            <Btn type="submit" kind="primary" disabled={busy} className="w-full min-h-10 py-2" data-testid="forgot-submit">{t("auth.forgot.submit")}</Btn>
           </form>
         )}
-        <div className="pt-1 text-xs"><a className="text-accent hover:underline" href="/login">{t("auth.toLogin")}</a></div>
+        <div className="text-xs"><a className="inline-block py-2 text-accent hover:underline" href="/login">{t("auth.toLogin")}</a></div>
       </div>
     </main>
   );

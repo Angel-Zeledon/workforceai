@@ -69,7 +69,7 @@ export function TemplateLibrary() {
   const chip = (active: boolean) => `rounded-full border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel text-mute hover:text-ink"}`;
 
   return (
-    <div data-testid="template-library" className="mx-auto max-w-[1180px] space-y-5 p-6">
+    <div data-testid="template-library" className="mx-auto max-w-[1180px] space-y-5 p-4 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <button type="button" data-testid="tpl-back" onClick={() => setView("list")} className="text-[11px] font-semibold text-accent hover:underline">‹ {t("tpl.lib.back")}</button>

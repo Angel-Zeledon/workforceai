@@ -38,7 +38,7 @@ function NavLink({ href, icon, label, testid, active, collapsed, onNavigate, bad
 }) {
   return (
     <Link href={href} prefetch={false} data-testid={testid} data-active={active} aria-current={active ? "page" : undefined} title={collapsed ? label : undefined} onClick={onNavigate}
-      className={`group relative flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-150 ${active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"} ${collapsed ? "justify-center px-0" : ""}`}>
+      className={`group relative flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-150 ${active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"} ${collapsed ? "justify-center px-0" : ""}`}>
       {active && <span aria-hidden className="absolute inset-y-1.5 left-0 w-[3px] rounded-r bg-[#5eead4]" />}
       <Icon name={icon} size={18} className="shrink-0 transition-transform duration-150 group-hover:scale-110" />
       {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
@@ -68,7 +68,7 @@ function Sidebar({ section, collapsed, onToggle, onNavigate }: { section: string
         <NavLink href="/settings" icon="settings" label={t("nav.settings")} testid="nav-settings" active={section === "settings"} collapsed={collapsed} onNavigate={onNavigate} />
         {onToggle && (
           <button type="button" onClick={onToggle} data-testid="sidebar-toggle" title={collapsed ? t("nav.expand") : t("nav.collapse")} aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
-            className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-[12px] text-white/50 transition hover:bg-white/5 hover:text-white ${collapsed ? "justify-center px-0" : ""}`}>
+            className={`flex min-h-10 w-full items-center gap-3 rounded-md px-3 py-2 text-[12px] text-white/50 transition hover:bg-white/5 hover:text-white ${collapsed ? "justify-center px-0" : ""}`}>
             <Icon name="sidebar" size={17} className={`transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`} />
             {!collapsed && <span>{t("nav.collapse")}</span>}
           </button>
@@ -112,20 +112,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   const title = section === "dashboard" ? t("mode.dashboard") : section === "settings" ? t("nav.settings") : t(SECTIONS.find((s) => s.id === section)?.label ?? "nav.office");
 
   return (
-    <div data-reduce={reduce ? "1" : "0"} className="flex h-screen w-screen overflow-hidden bg-bg text-ink">
+    <div data-reduce={reduce ? "1" : "0"} className="flex h-dvh w-full overflow-hidden bg-bg text-ink">
       <aside className={`hidden shrink-0 transition-[width] duration-200 ease-out md:block ${collapsed ? "w-[64px]" : "w-[224px]"}`}>
         <Sidebar section={section} collapsed={collapsed} onToggle={toggleCollapsed} />
       </aside>
       {drawer && (
         <div className="fixed inset-0 z-[80] md:hidden" data-testid="nav-drawer">
           <button type="button" aria-label={t("nav.close")} className="absolute inset-0 bg-navy/50 ac-fade" onClick={() => setDrawer(false)} />
-          <aside className="ac-slide-left absolute inset-y-0 left-0 w-[260px] shadow-float"><Sidebar section={section} collapsed={false} onNavigate={() => setDrawer(false)} /></aside>
+          <aside className="ac-slide-left absolute inset-y-0 left-0 w-[260px] max-w-[85vw] shadow-float"><Sidebar section={section} collapsed={false} onNavigate={() => setDrawer(false)} /></aside>
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="relative z-[55] flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line bg-panel px-3 sm:px-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <button type="button" data-testid="nav-open" aria-label={t("nav.open")} title={t("nav.open")} onClick={() => setDrawer(true)} className="rounded-md p-1.5 text-ink2 transition hover:bg-panel2 md:hidden"><Icon name="menu" size={20} /></button>
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <button type="button" data-testid="nav-open" aria-label={t("nav.open")} title={t("nav.open")} onClick={() => setDrawer(true)} className="-ml-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-ink2 transition hover:bg-panel2 md:hidden"><Icon name="menu" size={20} /></button>
             <div data-tour="shell.title" className="min-w-0 leading-tight">
               <div className="truncate text-[14px] font-semibold tracking-tight">{title}</div>
               <OrgIndicator className="truncate text-[10.5px] text-mute" />
@@ -142,7 +142,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </button>
             )}
           </div>
-          <div className="flex items-center gap-x-3 text-[11px] text-mute">
+          <div className="flex shrink-0 items-center gap-x-2 text-[11px] text-mute sm:gap-x-3">
             {metrics && (
               <div data-tour="shell.metrics" className="hidden items-center gap-3 border-r border-line pr-3 sm:flex sm:gap-4 sm:pr-4">
                 <span className="hidden 2xl:inline">{t("hud.active")} <b className="font-mono font-medium text-ink">{metrics.tasks_active}</b></span>

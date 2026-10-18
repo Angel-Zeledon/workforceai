@@ -56,7 +56,7 @@ export function DraftEditor() {
   };
 
   return (
-    <div data-testid="draft-editor" className="grid gap-5 xl:grid-cols-3">
+    <div data-testid="draft-editor" className="grid gap-5 xl:grid-cols-3 [&>*]:min-w-0">
       <div className="space-y-4 xl:col-span-2">
         {inputs && <InputsCard projectId={p.id} inputs={inputs} onChange={setInputs} proceed={proceed} onProceed={setProceed} />}
         <Card title={t("pv.draft.plan")} right={<span data-testid="draft-node-count" data-count={count} className="font-mono text-[11px] text-mute">{t("pv.card.nodes", { count })}</span>}>
@@ -163,8 +163,8 @@ function DraftRow({ n, agents, onChange }: { n: ProjectNode; agents: string[]; o
       <span className="w-14 shrink-0 text-[9px] font-semibold uppercase tracking-wide text-mute">{t(`pv.kind.${n.kind}`)}</span>
       <input data-testid="draft-node-title-input" value={text} onChange={(e) => setText(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
         className="min-w-0 flex-1 rounded-lg border border-line-strong bg-panel px-2 py-1 text-[12px] text-ink outline-none focus:border-accent" />
-      {human ? <span className="w-[110px] shrink-0 text-[11px] text-mute">{t("pv.human")}</span> : (
-        <select data-testid="draft-node-agent-select" value={n.agent_id ?? ""} onChange={(e) => onChange({ agent_id: e.target.value })} className="w-[110px] shrink-0 rounded-lg border border-line-strong bg-panel px-1 py-1 text-[11px] text-ink">
+      {human ? <span className="w-[88px] shrink-0 sm:w-[110px] text-[11px] text-mute">{t("pv.human")}</span> : (
+        <select data-testid="draft-node-agent-select" value={n.agent_id ?? ""} onChange={(e) => onChange({ agent_id: e.target.value })} className="w-[88px] shrink-0 sm:w-[110px] rounded-lg border border-line-strong bg-panel px-1 py-1 text-[11px] text-ink">
           {!n.agent_id && <option value="">—</option>}
           {agents.map((a) => <option key={a} value={a}>{agentName(a).split(" ")[0]}</option>)}
         </select>

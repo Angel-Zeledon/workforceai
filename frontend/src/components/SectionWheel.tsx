@@ -91,7 +91,7 @@ export function SectionWheel<T extends string>({ items, value, onChange, hubAvat
     if (narrow) {
       return (
         <button key={it.id} type="button" {...common} title={it.label}
-          className={`${base} w-full justify-start gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium ${active ? "border-accent/30 bg-accent-soft text-accent" : "border-transparent text-ink hover:bg-panel2"}`}>
+          className={`${base} min-h-11 w-full justify-start gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium ${active ? "border-accent/30 bg-accent-soft text-accent" : "border-transparent text-ink hover:bg-panel2"}`}>
           <Icon name={it.icon} size={17} /><span className="flex-1">{it.label}</span>{active && <Icon name="check" size={15} />}
         </button>
       );
@@ -111,7 +111,7 @@ export function SectionWheel<T extends string>({ items, value, onChange, hubAvat
         aria-label={`${ariaLabel}: ${items[cur].label}`} title={ariaLabel}
         onClick={() => (open ? close() : openWheel())}
         onKeyDown={(e) => { if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "ArrowRight" || e.key === "ArrowLeft")) { e.preventDefault(); openWheel(); } }}
-        className={`relative z-[42] flex shrink-0 items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-[11.5px] font-semibold transition ${open ? "border-accent bg-accent-soft text-accent" : "border-line bg-panel2 text-ink2 hover:border-accent hover:text-accent"}`}>
+        className={`relative z-[42] flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-[11.5px] font-semibold transition ${open ? "border-accent bg-accent-soft text-accent" : "border-line bg-panel2 text-ink2 hover:border-accent hover:text-accent"}`}>
         <span className={`flex h-6 w-6 items-center justify-center rounded-full ${open ? "bg-accent text-white" : "bg-panel text-accent ring-1 ring-line"}`}><Icon name={items[cur].icon} size={13} /></span>
         <span data-testid="panel-nav-current" className="max-w-[96px] truncate pl-1">{items[cur].label}</span>
         <Icon name="down" size={12} className={open ? "rotate-180" : ""} />
@@ -121,7 +121,7 @@ export function SectionWheel<T extends string>({ items, value, onChange, hubAvat
       <div className={`absolute inset-0 z-40 ${open ? "" : "invisible pointer-events-none"}`} aria-hidden={!open}>
         <div className={`absolute inset-0 bg-panel/85 backdrop-blur-[3px] ${reduce ? "" : "transition-opacity duration-150 motion-reduce:transition-none"} ${open ? "opacity-100" : "opacity-0"}`} onClick={() => close()} />
         {narrow ? (
-          <div className={`absolute inset-x-0 bottom-0 max-h-[80%] overflow-y-auto rounded-t-2xl border-t border-line bg-panel p-2 pb-4 shadow-float ${open && !reduce ? "ac-pop" : ""}`}>
+          <div className={`absolute inset-x-0 bottom-0 max-h-[80%] overflow-y-auto rounded-t-2xl border-t border-line bg-panel p-2 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-float ${open && !reduce ? "ac-pop" : ""}`}>
             <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-line-strong" aria-hidden />
             <div id="panel-section-nav" ref={list} role="tablist" aria-label={ariaLabel} aria-orientation="vertical" onKeyDown={onListKey} className="space-y-0.5">
               {items.map(wheelItem)}

@@ -35,7 +35,7 @@ export function TemplateGallery({ onClose, onStarted }: { onClose: () => void; o
         <div className="mb-4 flex flex-wrap gap-1.5" role="tablist" aria-label={t("tpl.title")}>
           {categories.map((c) => (
             <button key={c} type="button" role="tab" aria-selected={category === c} data-testid={`wf-template-category-${c}`} onClick={() => setCategory(c)}
-              className={`rounded-md border px-3 py-1 text-[11px] font-semibold ${category === c ? "border-accent/30 bg-accent-soft text-accent" : "border-line text-mute hover:text-ink"}`}>
+              className={`min-h-10 rounded-md border px-3 py-2 text-[11px] sm:min-h-0 sm:py-1 font-semibold ${category === c ? "border-accent/30 bg-accent-soft text-accent" : "border-line text-mute hover:text-ink"}`}>
               {c === "all" ? t("tpl.category.all") : trOr(`tpl.category.${c}`, c)}
             </button>
           ))}
@@ -56,7 +56,7 @@ export function TemplateGallery({ onClose, onStarted }: { onClose: () => void; o
                 {tpl.parallel_steps > 0 && <span className="text-accent">{t("tpl.parallel", { count: tpl.parallel_steps })}</span>}
               </div>
               <button type="button" data-testid={`wf-template-run-${tpl.key}`} onClick={() => setSelected(tpl)}
-                className="self-start rounded-md bg-accent px-4 py-1.5 text-xs font-semibold text-white">{t("tpl.run")}</button>
+                className="min-h-10 self-start rounded-md bg-accent px-4 py-1.5 text-xs font-semibold text-white">{t("tpl.run")}</button>
             </li>
           ))}
         </ul>

@@ -279,11 +279,11 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
             // Enter sends, Shift+Enter makes a new line (and an IME composition keeps its own Enter)
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void submit(); }
           }} {...sc.aria} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus} rows={1}
-          className="max-h-[200px] min-h-[38px] min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-line bg-panel2 px-3 py-2 text-[13px] leading-[1.45] text-ink outline-none placeholder:text-mute"
+          className="max-h-[200px] min-h-[40px] min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-line bg-panel2 px-3 py-2 text-base sm:text-[13px] leading-[1.45] text-ink outline-none placeholder:text-mute"
         />
         <button type="button" data-testid="cmd-help" title={t("cmds.help.button")} aria-label={t("cmds.help.button")} onClick={sc.openHelp}
-          className="rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[12px] font-semibold text-mute hover:border-accent hover:text-ink">?</button>
-        <Btn data-testid={submitTestId} type="submit" kind="primary" disabled={busy || sc.running || att.uploading || (!text.trim() && !att.refs.length)}><span className="flex items-center gap-1.5"><Icon name="arrow" size={13} />{busy ? t("cmd.sending") : t("cmd.send")}</span></Btn>
+          className="min-h-10 min-w-10 rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[12px] font-semibold text-mute hover:border-accent hover:text-ink sm:min-h-0 sm:min-w-0">?</button>
+        <Btn data-testid={submitTestId} type="submit" kind="primary" className="min-h-10 sm:min-h-0" disabled={busy || sc.running || att.uploading || (!text.trim() && !att.refs.length)}><span className="flex items-center gap-1.5"><Icon name="arrow" size={13} />{busy ? t("cmd.sending") : t("cmd.send")}</span></Btn>
       </div>
       {picked.length > 0 && <div className="text-[10.5px] text-mute">{t("att.savedIn", { path: att.dest })}</div>}
       {sc.status}

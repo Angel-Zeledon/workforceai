@@ -71,7 +71,7 @@ export function AgentChip({ id, small }: { id: string | null; small?: boolean })
 export function Modal({ children, onClose, testId, wide }: { children: ReactNode; onClose: () => void; testId?: string; wide?: boolean }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div data-testid={testId} className={`ac-pop max-h-[90vh] w-full overflow-y-auto rounded-xl border border-line bg-panel p-5 shadow-soft ${wide ? "max-w-[720px]" : "max-w-[480px]"}`}>{children}</div>
+      <div data-testid={testId} className={`ac-pop max-h-[90vh] max-h-[90dvh] w-full overflow-y-auto rounded-xl border border-line bg-panel p-5 shadow-soft ${wide ? "max-w-[720px]" : "max-w-[480px]"}`}>{children}</div>
     </div>
   );
 }

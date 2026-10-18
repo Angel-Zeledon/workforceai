@@ -35,7 +35,7 @@ export function BriefingFields({ value, onChange, testid = "onb-brief" }: { valu
         <div className="flex flex-wrap gap-1.5">
           {[1, 2, 3, 4, 5, 6, 0].map((d) => (
             <button key={d} type="button" aria-pressed={value.weekdays.includes(d)} data-testid={`${testid}-day-${d}`} onClick={() => toggleDay(d)}
-              className={`rounded-md border px-3 py-1 text-[11px] font-semibold ${value.weekdays.includes(d) ? "border-accent/30 bg-accent-soft text-accent" : "border-line text-mute hover:text-ink"}`}>
+              className={`min-h-10 rounded-md border px-3 py-2 text-[11px] sm:min-h-0 sm:py-1 font-semibold ${value.weekdays.includes(d) ? "border-accent/30 bg-accent-soft text-accent" : "border-line text-mute hover:text-ink"}`}>
               {t(`onb.day.${d}`)}
             </button>
           ))}

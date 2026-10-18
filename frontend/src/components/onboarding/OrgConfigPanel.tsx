@@ -78,16 +78,16 @@ export function OrgConfigPanel({ onClose }: { onClose: () => void }) {
             </label>
           )}
           {briefing?.next_run_at && briefing.enabled && <p className="text-[12px] text-mute">{t("cfg.brief.next", { when: fmtDateTime(briefing.next_run_at) })}</p>}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {briefing ? (
               <>
-                <button type="button" data-testid="cfg-brief-save" className="rounded-md bg-accent px-4 py-1.5 text-xs font-semibold text-white"
+                <button type="button" data-testid="cfg-brief-save" className="min-h-10 rounded-md bg-accent px-4 py-1.5 text-xs font-semibold text-white"
                   onClick={() => void run(() => orgApi.updateSchedule(briefing.id, { hour: briefing.hour, minute: briefing.minute, timezone: briefing.timezone, weekdays: briefing.weekdays, enabled: briefing.enabled }))}>{t("cfg.brief.save")}</button>
-                <button type="button" data-testid="cfg-brief-delete" className="rounded-md border border-line px-4 py-1.5 text-xs font-semibold text-mute hover:text-ink"
+                <button type="button" data-testid="cfg-brief-delete" className="min-h-10 rounded-md border border-line px-4 py-1.5 text-xs font-semibold text-mute hover:text-ink"
                   onClick={() => void run(() => orgApi.deleteSchedule(briefing.id))}>{t("cfg.brief.delete")}</button>
               </>
             ) : (
-              <button type="button" data-testid="cfg-brief-create" className="rounded-md bg-accent px-4 py-1.5 text-xs font-semibold text-white"
+              <button type="button" data-testid="cfg-brief-create" className="min-h-10 rounded-md bg-accent px-4 py-1.5 text-xs font-semibold text-white"
                 onClick={() => void run(() => orgApi.createSchedule({ hour: draft.hour, minute: draft.minute, timezone: draft.timezone || "UTC", weekdays: draft.weekdays }))}>{t("cfg.brief.create")}</button>
             )}
           </div>

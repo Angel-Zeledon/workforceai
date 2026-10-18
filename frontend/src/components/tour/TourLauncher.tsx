@@ -21,7 +21,7 @@ export function TourLauncher({ section }: { section: SectionId }) {
   const label = running ? t("tour.close") : `${t("tour.launch")}: ${name}`;
   return (
     <button type="button" data-testid="tour-launch" aria-pressed={running} onClick={() => (running ? stop() : start(tour.id))} title={label} aria-label={label}
-      className={`relative z-[9100] inline-flex h-8 w-8 items-center justify-center rounded-lg border transition ${running ? "border-accent bg-accent-soft text-accent" : "border-line text-mute hover:border-line-strong hover:text-ink"}`}>
+      className={`relative z-[9100] inline-flex h-10 w-10 items-center sm:h-8 sm:w-8 justify-center rounded-lg border transition ${running ? "border-accent bg-accent-soft text-accent" : "border-line text-mute hover:border-line-strong hover:text-ink"}`}>
       <Icon name="help" size={16} />
     </button>
   );

@@ -70,7 +70,7 @@ export function AgentLanes() {
         const hm = Math.max(1, ...hist);
         return (
           <div key={id} data-testid={`lane-${id === HUMAN ? "human" : id}`} className="flex overflow-hidden rounded-xl border border-line bg-panel shadow-pop">
-            <div className="w-[150px] shrink-0 border-r border-line bg-panel2 p-2.5">
+            <div className="w-[132px] shrink-0 border-r sm:w-[150px] border-line bg-panel2 p-2.5">
               <div className="flex items-center gap-1.5 text-[12px] font-semibold text-ink"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />{id === HUMAN ? t("pv.human") : agentName(id).split(" ")[0]}</div>
               <div data-testid={`lane-load-${id === HUMAN ? "human" : id}`} data-active={active} data-queued={queued} className="mt-0.5 text-[10px] text-mute">{t("pv.lanes.load", { active, queued })}</div>
               <svg width={110} height={18} className="mt-1">

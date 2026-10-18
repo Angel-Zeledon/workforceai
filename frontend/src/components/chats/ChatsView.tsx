@@ -611,7 +611,7 @@ export function ChatsView({ agentId }: { agentId?: string }) {
       {/* ---- right: the open thread ---- */}
       <section aria-label={t("chats.conversation")} className={`${showThread ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-1 flex-col bg-bg`}>
         <header data-tour="chats.header" className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-panel px-4 py-2.5">
-          <button type="button" data-testid="chats-back" onClick={back} aria-label={t("chats.back")} className="rounded-md p-1.5 text-ink2 hover:bg-panel2 md:hidden"><Glyph name="back" size={16} /></button>
+          <button type="button" data-testid="chats-back" onClick={back} aria-label={t("chats.back")} className="flex min-h-10 min-w-10 items-center justify-center rounded-md p-1.5 text-ink2 hover:bg-panel2 md:hidden"><Glyph name="back" size={16} /></button>
           {sel.kind === "thread" ? (
             <>
               {sel.key === GENERAL ? <GeneralAvatar size={32} /> : <Avatar id={sel.key} size={32} />}

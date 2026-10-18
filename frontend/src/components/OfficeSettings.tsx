@@ -53,10 +53,10 @@ export function OfficeSettingsPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className={page ? undefined : "pointer-events-auto fixed inset-0 z-[54]"} onMouseDown={page ? undefined : (e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={ref} tabIndex={-1} role="dialog" aria-label={t("settings.title")} data-testid="office-settings-panel"
-        className={page ? "mx-auto w-full max-w-xl p-5 outline-none" : "ac-pop absolute right-3 top-[60px] max-h-[calc(100vh-76px)] w-[330px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-xl border border-line bg-panel p-4 shadow-float outline-none"}>
+        className={page ? "mx-auto w-full max-w-xl p-5 outline-none" : "ac-pop absolute right-3 top-[60px] max-sm:left-3 max-h-[calc(100dvh-76px)] w-[330px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-xl border border-line bg-panel p-4 shadow-float outline-none"}>
           <div className={`mb-3 flex items-center justify-between ${page ? "hidden" : ""}`}>
             <h3 className="text-[15px] font-semibold tracking-tight text-ink">{t("settings.title")}</h3>
-            <button type="button" onClick={onClose} aria-label={t("common.close")} className="rounded-md p-1 text-mute hover:bg-mute/10 hover:text-ink"><Icon name="x" size={15} /></button>
+            <button type="button" onClick={onClose} aria-label={t("common.close")} className="flex min-h-10 min-w-10 items-center justify-center rounded-md p-1 text-mute hover:bg-mute/10 hover:text-ink sm:min-h-0 sm:min-w-0"><Icon name="x" size={15} /></button>
           </div>
 
           <section className="mb-4">

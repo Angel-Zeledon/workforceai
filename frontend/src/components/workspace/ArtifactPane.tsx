@@ -144,13 +144,13 @@ export function ArtifactPane({ id, deskId, focused, onFocus }: { id: string; des
         )}
         {remoteAhead && saveState !== "conflict" && <div className="text-[11px] font-semibold text-amber-700">{t("art.remoteAhead")}</div>}
       </header>
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 max-md:flex-col">
         <div className="min-h-0 min-w-0 flex-1">
           {art.content === undefined ? <div className="p-6 text-center text-xs text-mute">…</div> : <ArtifactBody art={art} />}
         </div>
         {showCollab && !MOCK && <CollabRail art={art} />}
         {showHistory && (
-          <aside className="w-[220px] shrink-0 overflow-y-auto border-l border-line bg-panel2/40 p-2">
+          <aside className="max-h-[40dvh] w-full shrink-0 overflow-y-auto border-t border-line bg-panel2/40 p-2 md:max-h-none md:w-[220px] md:border-l md:border-t-0">
             <h4 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-mute">{t("art.history")}</h4>
             <ul className="space-y-1.5">
               {versions.map((v) => (

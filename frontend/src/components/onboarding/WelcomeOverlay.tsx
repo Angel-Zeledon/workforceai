@@ -75,7 +75,7 @@ export function WelcomeOverlay() {
   return (
     <div className="fixed inset-0 z-[8800] flex items-center justify-center bg-ink/45 p-4 ac-fade" data-testid="welcome" onMouseDown={(e) => { if (e.target === e.currentTarget) close(false); }}>
       <div ref={card} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t("welcome.aria")}
-        className="wf-welcome relative w-full max-w-md overflow-hidden rounded-2xl border border-line bg-panel p-6 text-center shadow-float outline-none focus-visible:shadow-float">
+        className="wf-welcome relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overflow-x-hidden rounded-2xl border border-line bg-panel p-6 text-center shadow-float outline-none focus-visible:shadow-float">
         {!noMotion && balance > 0 && (
           <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-full overflow-hidden">
             {Array.from({ length: COINS }).map((_, i) => (
@@ -108,8 +108,8 @@ export function WelcomeOverlay() {
         </ol>
 
         <div className="relative mt-5 flex flex-col gap-2 sm:flex-row-reverse">
-          <button type="button" data-testid="welcome-start" onClick={() => close(false)} className="flex-1 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-hover">{t("welcome.start")}</button>
-          <button type="button" data-testid="welcome-tour" onClick={() => close(true)} className="flex-1 rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-panel2">{t("welcome.tour")}</button>
+          <button type="button" data-testid="welcome-start" onClick={() => close(false)} className="min-h-10 flex-1 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-hover">{t("welcome.start")}</button>
+          <button type="button" data-testid="welcome-tour" onClick={() => close(true)} className="min-h-10 flex-1 rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-panel2">{t("welcome.tour")}</button>
         </div>
       </div>
     </div>

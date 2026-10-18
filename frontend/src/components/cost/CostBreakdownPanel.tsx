@@ -68,7 +68,7 @@ export function CostBreakdownPanel() {
         </div>
 
         {rows.length === 0 ? <Empty>{t("cost.breakdown.empty")}</Empty> : (
-          <table className="w-full text-[12px]">
+          <div className="overflow-x-auto"><table className="w-full text-[12px]">
             <thead>
               <tr className="text-left text-[10px] uppercase tracking-wide text-mute">
                 <th className="pb-1 font-semibold">{t("cost.breakdown.col.name")}</th>
@@ -96,7 +96,7 @@ export function CostBreakdownPanel() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
 
         {tab === "tool" && breakdown && rows.length > 0 && (
@@ -153,7 +153,7 @@ export function BudgetLimitsPanel() {
           })}
         </div>
         <div className="text-[11px] text-mute">{t("cost.limits.period", { date: fmtDateTime(status.defaults.period_start) })}</div>
-        <table className="w-full">
+        <div className="overflow-x-auto"><table className="w-full">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wide text-mute">
               <th className="pb-1 font-semibold">{t("cost.estimate.agent")}</th>
@@ -191,7 +191,7 @@ export function BudgetLimitsPanel() {
               );
             })}
           </tbody>
-        </table>
+        </table></div>
         {err && <div role="alert" className="text-red-700">{err}</div>}
       </div>
     </Card>

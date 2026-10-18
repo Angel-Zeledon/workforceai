@@ -136,7 +136,7 @@ export function TemplateBuilder() {
 
   return (
     <FocusCtx.Provider value={{ register: inserter.register }}>
-      <div data-testid="template-builder" className="mx-auto max-w-[1280px] space-y-4 p-6">
+      <div data-testid="template-builder" className="mx-auto max-w-[1280px] space-y-4 p-4 md:p-6">
         {/* header */}
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>

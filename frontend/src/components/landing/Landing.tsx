@@ -95,31 +95,31 @@ export function Landing() {
   const close = () => setOpen(false);
 
   return (
-    <div data-testid="landing" className="min-h-screen bg-panel text-ink">
+    <div data-testid="landing" className="min-h-dvh bg-panel text-ink">
       <header className="sticky top-0 z-30 border-b border-line bg-panel/95 backdrop-blur">
-        <div className={`${wrap} flex h-16 items-center gap-6`}>
+        <div className={`${wrap} flex h-16 items-center gap-3 sm:gap-6`}>
           <a href="#top" aria-label="AI Workforce OS"><Brand /></a>
           <nav aria-label={t("land.nav.aria")} className="ml-6 hidden items-center gap-6 md:flex">
             {links.map(([h, k]) => <a key={h} href={h} className="text-sm text-ink2 transition hover:text-ink">{t(k)}</a>)}
           </nav>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <div role="group" aria-label={t("land.lang")} className="hidden items-center rounded-md border border-line text-[11px] font-semibold sm:flex">
               {LOCALES.map((l, i) => (
                 <button key={l} type="button" aria-pressed={locale === l} onClick={() => setPref({ locale: l })}
-                  className={`px-2 py-1 ${locale === l ? "bg-navy text-white" : "text-mute hover:text-ink"} ${i === 0 ? "rounded-l" : i === LOCALES.length - 1 ? "rounded-r" : ""}`}>{l.toUpperCase()}</button>
+                  className={`px-2 py-1 sm:min-h-9 ${locale === l ? "bg-navy text-white" : "text-mute hover:text-ink"} ${i === 0 ? "rounded-l" : i === LOCALES.length - 1 ? "rounded-r" : ""}`}>{l.toUpperCase()}</button>
               ))}
             </div>
             <a href="/login" data-testid="land-login" className="hidden text-sm font-medium text-ink hover:text-accent sm:inline">{t("land.nav.login")}</a>
-            <a href="/register" data-testid="land-signup" className="inline-flex items-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover">{t("land.nav.signup")}</a>
-            <button type="button" aria-label={t("land.nav.menu")} aria-expanded={open} onClick={() => setOpen(!open)} className="rounded-md border border-line p-2 md:hidden">
+            <a href="/register" data-testid="land-signup" className="inline-flex min-h-10 items-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover">{t("land.nav.signup")}</a>
+            <button type="button" aria-label={t("land.nav.menu")} aria-expanded={open} onClick={() => setOpen(!open)} className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-line md:hidden">
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
             </button>
           </div>
         </div>
         {open && (
           <nav aria-label={t("land.nav.aria")} className="border-t border-line bg-panel px-5 pb-4 md:hidden">
-            {links.map(([h, k]) => <a key={h} href={h} onClick={close} className="block border-b border-line py-3 text-sm text-ink">{t(k)}</a>)}
-            <a href="/login" className="block py-3 text-sm font-medium text-ink">{t("land.nav.login")}</a>
+            {links.map(([h, k]) => <a key={h} href={h} onClick={close} className="block border-b border-line py-3.5 text-sm text-ink">{t(k)}</a>)}
+            <a href="/login" className="block py-3.5 text-sm font-medium text-ink">{t("land.nav.login")}</a>
           </nav>
         )}
       </header>
@@ -156,7 +156,7 @@ export function Landing() {
         </section>
 
         {/* Product */}
-        <section id="producto" className="scroll-mt-16 py-20 sm:py-28">
+        <section id="producto" className="scroll-mt-16 py-16 sm:py-28">
           <div className={wrap}>
             <p className={eyebrow}>{t("land.feat.eyebrow")}</p>
             <h2 className={`${h2} max-w-3xl`}>{t("land.feat.title")}</h2>
@@ -241,7 +241,7 @@ export function Landing() {
       </main>
 
       <footer className="border-t border-line bg-panel">
-        <div className={`${wrap} grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr]`}>
+        <div className={`${wrap} grid gap-8 py-10 sm:grid-cols-2 sm:py-12 md:grid-cols-[1.4fr_1fr_1fr]`}>
           <div>
             <Brand />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-mute">{t("land.foot.tag")}</p>
@@ -249,14 +249,14 @@ export function Landing() {
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-ink">{t("land.foot.product")}</h4>
             <ul className="mt-4 space-y-2.5 text-sm text-mute">
-              {links.map(([h, k]) => <li key={h}><a href={h} className="hover:text-ink">{t(k)}</a></li>)}
+              {links.map(([h, k]) => <li key={h}><a href={h} className="inline-block py-1 hover:text-ink">{t(k)}</a></li>)}
             </ul>
           </div>
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-ink">{t("land.foot.account")}</h4>
             <ul className="mt-4 space-y-2.5 text-sm text-mute">
-              <li><a href="/login" className="hover:text-ink">{t("land.nav.login")}</a></li>
-              <li><a href="/register" className="hover:text-ink">{t("land.nav.signup")}</a></li>
+              <li><a href="/login" className="inline-block py-1 hover:text-ink">{t("land.nav.login")}</a></li>
+              <li><a href="/register" className="inline-block py-1 hover:text-ink">{t("land.nav.signup")}</a></li>
             </ul>
           </div>
         </div>

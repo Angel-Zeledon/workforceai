@@ -128,7 +128,7 @@ function DrivePicker({ item, onClose, onChoose }: { item: ProjectInputItem; onCl
   const toggle = (p: string) => setSel((s) => (s.includes(p) ? s.filter((x) => x !== p) : single ? [p] : [...s, p]));
   return (
     <div data-testid="input-drive-picker" role="dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
-      <div className="max-h-[80vh] w-full max-w-md overflow-auto rounded-2xl bg-panel p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[80vh] max-h-[80dvh] w-full max-w-md overflow-auto rounded-2xl bg-panel p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="text-sm font-semibold text-ink">{t("pv.inputs.pickTitle", { label: item.label })}</div>
         <div className="mt-1 font-mono text-[11px] text-mute">{path}</div>
         {path !== "/" && <button className="mt-1 text-[11px] text-accent" onClick={() => setPath(parentOf(path))}>← {t("pv.inputs.up")}</button>}

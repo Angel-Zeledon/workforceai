@@ -195,7 +195,7 @@ export function SecurityCenter() {
           </div>
         </Section>
         <Section id="ctl-limits" title={t("ctl.limits.title")}>
-          <table data-testid="ctl-limits-table" className="w-full border-collapse text-xs">
+          <div className="overflow-x-auto"><table data-testid="ctl-limits-table" className="w-full border-collapse text-xs">
             <thead><tr className="border-b border-line text-left text-[11px] font-semibold uppercase tracking-wide text-mute">{["scope", "period", "used", "limit", "onHit"].map((h) => <th key={h} className="px-2 py-1.5">{t(`ctl.limits.col.${h}`)}</th>)}</tr></thead>
             <tbody>
               {spend.map((s) => (
@@ -209,7 +209,7 @@ export function SecurityCenter() {
               ))}
               {spend.length === 0 && <tr><td colSpan={5} className="px-2 py-4 text-center text-mute">{t("ctl.limits.empty")}</td></tr>}
             </tbody>
-          </table>
+          </table></div>
         </Section>
         <OperatingHoursCard />
         <CodeExecutionCard />
