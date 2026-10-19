@@ -77,11 +77,13 @@ function ApprovalItem({ a, focused, onDone }: { a: Approval; focused: boolean; o
   const { t } = useT();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
-  const decide = async (d: "approve" | "reject") => {
+  const decide = async (d: "approve" | "reject", scope?: "session" | "project") => {
     setBusy(true); setErr(false);
-    try { await call("POST", `/approvals/${encodeURIComponent(a.id)}/decision`, { decision: d }); onDone(); }
+    try { await call("POST", `/approvals/${encodeURIComponent(a.id)}/decision`, scope ? { decision: d, scope } : { decision: d }); onDone(); }
     catch { setErr(true); setBusy(false); }
   };
+  // Only internal, reversible actions of a project can be remembered (the server checks it again).
+  const canRemember = !!a.standing_eligible && !!a.project_id;
   const total = a.required_approvals ?? 1;
   const done = a.decisions?.length ?? 0;
   return (
@@ -108,10 +110,18 @@ function ApprovalItem({ a, focused, onDone }: { a: Approval; focused: boolean; o
       )}
       <div className="mt-4 grid grid-cols-2 gap-3">
         <button type="button" data-testid={`approval-approve-${a.id}`} disabled={busy} onClick={() => decide("approve")}
-          className="min-h-[48px] rounded-md border border-ok/40 bg-ok/10 text-sm font-semibold text-ok disabled:opacity-40">{t("approvals.approve")}</button>
+          className="min-h-[48px] rounded-md border border-ok/40 bg-ok/10 text-sm font-semibold text-ok disabled:opacity-40">{canRemember ? t("approvals.approveOnce") : t("approvals.approve")}</button>
         <button type="button" data-testid={`approval-reject-${a.id}`} disabled={busy} onClick={() => decide("reject")}
           className="min-h-[48px] rounded-md border border-err/40 bg-err/10 text-sm font-semibold text-err disabled:opacity-40">{t("approvals.reject")}</button>
       </div>
+      {canRemember && (
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <button type="button" data-testid={`approval-session-${a.id}`} disabled={busy} onClick={() => decide("approve", "session")}
+            className="min-h-[44px] rounded-md border border-ok/30 text-[13px] font-semibold text-ok disabled:opacity-40">{t("approvals.approveSession")}</button>
+          <button type="button" data-testid={`approval-project-${a.id}`} disabled={busy} onClick={() => decide("approve", "project")}
+            className="min-h-[44px] rounded-md border border-ok/30 text-[13px] font-semibold text-ok disabled:opacity-40">{t("approvals.approveProject")}</button>
+        </div>
+      )}
       {err && <p role="alert" className="mt-2 text-[12px] text-err">{t("approvals.decideError")}</p>}
     </li>
   );

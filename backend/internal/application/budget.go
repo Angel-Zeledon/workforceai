@@ -40,6 +40,9 @@ type Budget struct {
 	observer AnomalyObserver
 	// spend is the incremental org spend counter (spend.go).
 	spend spendCounter
+	// OrgCapFor (optional) returns a stricter HARD cap for one organization, 0 = none: the free plan
+	// (internal/notify). The strictest positive of it and Config.BudgetUSD applies.
+	OrgCapFor func(ctx context.Context, org string) float64
 }
 
 // NewBudget builds the manager. Config zero values disable the optional caps.
@@ -54,6 +57,20 @@ func bkey(org string, scope domain.BudgetScope, id string) string {
 }
 
 func (b *Budget) org(ctx context.Context) string { return OrgFrom(ctx, b.cfg.OrgID) }
+
+// orgCap is the organization-wide cap in force: Config.BudgetUSD, tightened by the plan of the organization.
+func (b *Budget) orgCap(ctx context.Context, org string) float64 {
+	c := b.cfg.BudgetUSD
+	if b.OrgCapFor != nil {
+		if p := b.OrgCapFor(ctx, org); p > 0 && (c <= 0 || p < c) {
+			c = p
+		}
+	}
+	return c
+}
+
+// OrgCap exposes the organization cap in force (0 = none).
+func (b *Budget) OrgCap(ctx context.Context) float64 { return b.orgCap(ctx, b.org(ctx)) }
 
 // Exceeded describes the limit that blocked a reservation. It is the data
 // behind the budget.exceeded event and the user-facing explanation.
@@ -190,7 +207,7 @@ func (b *Budget) Reserve(ctx context.Context, requestID, agentID string, estimat
 	checks := []check{
 		{domain.ScopeRequest, requestID, caps["request/"+requestID], reqSpent, requestID, agentID},
 		{domain.ScopeAgent, agentID, agCap, agSpent, requestID, agentID},
-		{domain.ScopeOrg, org, b.cfg.BudgetUSD, used, requestID, agentID},
+		{domain.ScopeOrg, org, b.orgCap(ctx, org), used, requestID, agentID},
 	}
 	var keys []string
 	for _, c := range checks {
@@ -263,9 +280,9 @@ func (b *Budget) checkWarnings(ctx context.Context, org, requestID, agentID stri
 			ws = append(ws, w{domain.ScopeAgent, agentID, c, agentSpend(usage, agentID, PeriodStart(time.Now()))})
 		}
 	}
-	if b.cfg.BudgetUSD > 0 {
+	if oc := b.orgCap(ctx, org); oc > 0 {
 		if used, err := b.OrgSpent(ctx, org); err == nil {
-			ws = append(ws, w{domain.ScopeOrg, org, b.cfg.BudgetUSD, used})
+			ws = append(ws, w{domain.ScopeOrg, org, oc, used})
 		}
 	}
 	for _, x := range ws {
@@ -494,7 +511,7 @@ func (b *Budget) Status(ctx context.Context) (BudgetStatus, error) {
 		return st, err
 	}
 	since := PeriodStart(time.Now())
-	st.Org.BudgetUSD, st.Org.UsedUSD = b.cfg.BudgetUSD, used
+	st.Org.BudgetUSD, st.Org.UsedUSD = b.orgCap(ctx, org), used
 	st.Defaults.RequestCapUSD, st.Defaults.AgentCapUSD = b.cfg.RequestBudgetCapUSD, b.cfg.AgentBudgetCapUSD
 	st.Defaults.ConfirmThresholdUSD, st.Defaults.PeriodStart = b.cfg.ConfirmThresholdUSD, since
 	st.Agents, st.Pauses = []AgentBudget{}, []PauseInfo{}

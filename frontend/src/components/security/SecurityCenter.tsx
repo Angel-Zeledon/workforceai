@@ -13,6 +13,7 @@ import { KillSwitchDialog } from "./KillSwitchDialog";
 import { OperatingHoursCard } from "./OperatingHoursCard";
 import { CodeExecutionCard } from "./CodeExecutionCard";
 import { WebToolCard } from "./WebToolCard";
+import { NotifySettingsCard } from "../approvals/NotifySettingsCard";
 import { DocSearchCard } from "./DocSearchCard";
 
 function Section({ id, title, children, right }: { id: string; title: string; children: ReactNode; right?: ReactNode }) {
@@ -214,6 +215,7 @@ export function SecurityCenter() {
         <OperatingHoursCard />
         <CodeExecutionCard />
         <WebToolCard />
+        <NotifySettingsCard />
         <DocSearchCard />
         <SimulationCard />
       </div>

@@ -30,6 +30,7 @@ import (
 	"aiworkforce/backend/internal/peoplechat"
 	"aiworkforce/backend/internal/presence"
 	"aiworkforce/backend/internal/projects"
+	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/sandbox"
@@ -121,6 +122,11 @@ type Deps struct {
 	Presence   *presence.Hub
 	PeopleChat *peoplechat.Service
 	// <<< human presence
+	// ---- BEGIN approvals-notify (docs/architecture/approvals-notify.md) ----
+	// Notify serves /notify/* (signed approval links, channel settings) and /plan/usage; Daily-goal
+	// reads Rewards. Optional: nil leaves those routes unmounted.
+	Notify *notify.Service
+	// ---- END approvals-notify ----
 	// AllowedOrigins is the CORS/WebSocket origin allow-list (see originPolicy).
 	AllowedOrigins []string
 	// EnableDemoReset registers POST /api/v1/demo/reset (admin role when auth is on).
@@ -166,6 +172,7 @@ func NewRouter(d Deps) http.Handler {
 		// The OAuth callback is public (the browser comes back from the provider
 		// without a bearer token); it is verified by its single-use state.
 		s.mountOAuthCallback(r)
+		s.mountNotifyPublic(r) // approvals-notify: the public landing page of the signed links
 		r.Group(func(r chi.Router) {
 			r.Use(s.authenticate, s.tenant)
 			r.With(s.can(auth.PermAgentsRead)).Get("/agents", s.listAgents)
@@ -208,6 +215,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountMemory(r)
 			s.mountRewards(r)
 			s.mountPush(r)
+			s.mountNotify(r) // approvals-notify: channel settings, plan usage, daily goal
 			s.mountV2(r)
 			s.mountCommands(r)
 			s.mountTenantData(r)
@@ -440,12 +448,28 @@ func (s *server) decide(w http.ResponseWriter, r *http.Request) {
 		AlwaysAllow         bool `json:"always_allow"`
 		AlwaysAllowAnyAgent bool `json:"always_allow_any_agent"`
 		AlwaysAllowDays     int  `json:"always_allow_days"`
+		// Scope is the three-way choice of the approval card (approvals-notify.md): "once" (default),
+		// "session" (a standing approval of SessionStandingTTL) or "project" (the usual standing
+		// approval). It only applies when approving and reuses the standing approvals; it is
+		// shorthand for always_allow, so every eligibility rule stays in one place.
+		Scope string `json:"scope"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
 		return
 	}
 	id := chi.URLParam(r, "id")
+	var sessionTTL time.Duration
+	switch strings.ToLower(strings.TrimSpace(body.Scope)) {
+	case "", "once":
+	case "session":
+		body.AlwaysAllow, sessionTTL = true, application.SessionStandingTTL
+	case "project":
+		body.AlwaysAllow = true
+	default:
+		codeErr(w, http.StatusBadRequest, "invalid", "scope must be once, session or project")
+		return
+	}
 	if body.AlwaysAllow && (s.Standing == nil || !strings.EqualFold(body.Decision, "approve")) {
 		codeErr(w, http.StatusBadRequest, "invalid", "always_allow only applies when approving, and standing approvals must be enabled")
 		return
@@ -461,7 +485,7 @@ func (s *server) decide(w http.ResponseWriter, r *http.Request) {
 	}
 	// The approval itself is already decided; the standing permission is a separate,
 	// stricter step. If it is refused (not eligible) the approval stands and says why.
-	st, err := s.Standing.Grant(r.Context(), application.StandingGrantInput{ApprovalID: id, AnyAgent: body.AlwaysAllowAnyAgent, Days: body.AlwaysAllowDays})
+	st, err := s.Standing.Grant(r.Context(), application.StandingGrantInput{ApprovalID: id, AnyAgent: body.AlwaysAllowAnyAgent, Days: body.AlwaysAllowDays, TTL: sessionTTL})
 	if err != nil {
 		writeJSON(w, 200, decidedApproval{Approval: ap, StandingError: err.Error()})
 		return

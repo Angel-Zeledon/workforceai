@@ -1,7 +1,10 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
+import { orgApi } from "@/lib/orgConfigApi";
+import { connApi } from "@/lib/connections/api";
+import { notifyApi, type DailyGoal } from "@/lib/notifyApi";
 import { useRewards } from "@/lib/rewards";
 import { useSession } from "@/lib/session";
 import { go } from "@/lib/navBridge";
@@ -9,43 +12,49 @@ import { toast } from "@/lib/toast";
 import { Icon, type IconName } from "../icons";
 
 /**
- * "Primeros pasos": four real actions that show the product working (ask, meet an employee, decide an approval, spend
- * the welcome coins). Progress comes from what the user actually did, not from clicking a box. Each step, once done,
- * stays done (remembered per account), and the whole pill disappears when everything is complete.
+ * "Primeros pasos": four real steps that take an account from empty to working: (1) tell the office about the business,
+ * (2) connect a tool, (3) choose how much freedom the team has, (4) ask the first task. Progress comes from what the
+ * account really has (the organization settings, an active connection, an agent above "suggest", a request), not from
+ * clicking a box. Each step, once done, stays done (remembered per account), and the pill disappears when all are done.
  */
-type StepId = "ask" | "meet" | "approve" | "shop";
+type StepId = "context" | "connect" | "autonomy" | "task";
 const STEPS: { id: StepId; icon: IconName }[] = [
-  { id: "ask", icon: "chat" },
-  { id: "meet", icon: "users" },
-  { id: "approve", icon: "shield" },
-  { id: "shop", icon: "bag" },
+  { id: "context", icon: "flag" },
+  { id: "connect", icon: "plug" },
+  { id: "autonomy", icon: "shield" },
+  { id: "task", icon: "chat" },
 ];
 const key = (uid: string, s: string) => `wf.act.${uid}.${s}`;
 const get = (k: string) => { try { return localStorage.getItem(k) === "1"; } catch { return false; } };
 const put = (k: string) => { try { localStorage.setItem(k, "1"); } catch { /* storage unavailable: progress is just not remembered */ } };
 
-export function ActivationChecklist() {
+function ActivationPill() {
   const { t } = useT();
   const uid = useSession((s) => s.user?.id ?? "anon");
   const asked = useStore((s) => Object.keys(s.requests).length > 0);
-  const decided = useStore((s) => Object.values(s.approvals).some((a) => a.status !== "pending"));
-  const selected = useStore((s) => s.selectedAgentId);
-  const bought = useRewards((s) => Object.keys(s.owned).length > 0);
-  const [done, setDone] = useState<Record<StepId, boolean>>({ ask: false, meet: false, approve: false, shop: false });
+  const freer = useStore((s) => Object.values(s.agents).some((a) => a.autonomy === "rules" || a.autonomy === "autonomous"));
+  const [configured, setConfigured] = useState(false); // the office was set up: business type, tone and the autonomy of the pack
+  const [connected, setConnected] = useState(false);
+  const [done, setDone] = useState<Record<StepId, boolean>>({ context: false, connect: false, autonomy: false, task: false });
   const [dismissed, setDismissed] = useState(true); // hidden until we know (avoids a flash)
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const announced = useRef(false);
 
-  useEffect(() => { void useRewards.getState().load(); }, []);
+  // What the account really has. Best effort: an older backend or a missing permission just leaves the step open.
+  const refresh = useCallback(() => {
+    orgApi.settings().then((o) => setConfigured(!!(o.onboarding_completed || (o.configured && o.business_type)))).catch(() => {});
+    connApi.list().then((l) => setConnected(l.some((c) => c.status === "active"))).catch(() => {});
+  }, []);
+  useEffect(() => { refresh(); }, [refresh, uid]);
   // Load what this account already completed.
   useEffect(() => {
-    setDone({ ask: get(key(uid, "ask")), meet: get(key(uid, "meet")), approve: get(key(uid, "approve")), shop: get(key(uid, "shop")) });
+    setDone({ context: get(key(uid, "context")), connect: get(key(uid, "connect")), autonomy: get(key(uid, "autonomy")), task: get(key(uid, "task")) });
     setDismissed(get(key(uid, "dismissed")));
     announced.current = false;
   }, [uid]);
   // Remember each step the moment its real condition becomes true.
-  const live: Record<StepId, boolean> = useMemo(() => ({ ask: asked, meet: !!selected, approve: decided, shop: bought }), [asked, selected, decided, bought]);
+  const live: Record<StepId, boolean> = useMemo(() => ({ context: configured, connect: connected, autonomy: configured || freer, task: asked }), [configured, connected, freer, asked]);
   useEffect(() => {
     setDone((d) => {
       const next = { ...d };
@@ -76,13 +85,14 @@ export function ActivationChecklist() {
 
   const run = (id: StepId) => {
     setOpen(false);
-    if (id === "shop") { go("/shop"); return; }
+    if (id === "context") { go("/settings"); return; }
+    if (id === "connect") { go("/settings?s=connections"); return; }
     go("/");
-    if (id === "ask") setTimeout(() => document.querySelector<HTMLInputElement>('[data-testid="command-input"]')?.focus(), 450);
+    if (id === "task") setTimeout(() => document.querySelector<HTMLInputElement>('[data-testid="command-input"]')?.focus(), 450);
   };
   return (
     <div ref={wrap} className="relative">
-      <button type="button" data-testid="activation-pill" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen((o) => !o)}
+      <button type="button" data-testid="activation-pill" aria-expanded={open} aria-haspopup="dialog" onClick={() => { if (!open) refresh(); setOpen((o) => !o); }}
         title={t("act.title")} className="flex h-10 items-center gap-1.5 rounded-lg sm:h-8 border border-accent/30 bg-accent-soft px-2.5 text-[11.5px] font-semibold text-accent transition hover:border-accent">
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" strokeOpacity=".25" strokeWidth="2" />
           <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray={`${(count / STEPS.length) * 39} 39`} transform="rotate(-90 8 8)" /></svg>
@@ -115,5 +125,42 @@ export function ActivationChecklist() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Daily goal: one mini-goal per day, paid in coins by the server only when real work was finished (rewards/daily.go).
+ * Shows the progress; hidden when the server has the goal off or the rewards system is unavailable.
+ */
+function DailyGoalChip() {
+  const { t } = useT();
+  const [g, setG] = useState<DailyGoal | null>(null);
+  const earnTick = useRewards((s) => s.earnTick); // a coin was just earned: the progress may have moved
+  useEffect(() => {
+    let live = true;
+    notifyApi.dailyGoal().then((d) => { if (live) setG(d); }).catch(() => { if (live) setG(null); });
+    return () => { live = false; };
+  }, [earnTick]);
+  if (!g || !g.enabled) return null;
+  const shown = Math.min(g.progress, g.target);
+  const pct = Math.round((shown / g.target) * 100);
+  return (
+    <span data-testid="daily-goal" data-done={g.done ? "1" : "0"} title={`${t("daily.title")}: ${t(`daily.goal.${g.id}`)}. ${t("daily.tip")}`}
+      className={`hidden h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[11.5px] font-semibold md:flex ${g.done ? "border-ok/40 bg-ok/10 text-ok" : "border-amber-300 bg-amber-100/70 text-amber-800"}`}>
+      <Icon name={g.done ? "check" : "bag"} size={12} />
+      <span className="max-w-[170px] truncate">{t(`daily.goal.${g.id}`)}</span>
+      <span className="font-mono">{g.done ? t("daily.done") : `${shown}/${g.target}`}</span>
+      {!g.done && <span className="relative h-1 w-8 overflow-hidden rounded-full bg-black/10" aria-hidden><span className="absolute inset-y-0 left-0 bg-amber-500" style={{ width: `${pct}%` }} /></span>}
+      {!g.done && <span className="font-mono">{t("daily.reward", { coins: g.reward })}</span>}
+    </span>
+  );
+}
+
+export function ActivationChecklist() {
+  return (
+    <>
+      <DailyGoalChip />
+      <ActivationPill />
+    </>
   );
 }

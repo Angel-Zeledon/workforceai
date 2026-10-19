@@ -508,3 +508,35 @@ func TestResetClearsLedgerAndRequestCapsButKeepsAgentCaps(t *testing.T) {
 		t.Fatalf("caps after reset: %+v", caps)
 	}
 }
+
+// A plan can tighten the organization cap (free plan): the strictest cap wins, it is hard, and a plan
+// that returns 0 changes nothing.
+func TestOrgCapForPlanIsHardAndStrictestWins(t *testing.T) {
+	h := newHarness(t, &fakeRuntime{plan: proposalPlan()}, func(c *application.Config) { c.BudgetUSD = 5 })
+	ctx := context.Background()
+	b := h.orch.Budget()
+	if r, ex, _ := b.Reserve(ctx, "r1", "sales", 1.50); ex != nil {
+		t.Fatalf("no plan hook: must fit under 5 USD: %v", ex)
+	} else {
+		r.Release()
+	}
+	b.OrgCapFor = func(context.Context, string) float64 { return 1 }
+	_, ex, _ := b.Reserve(ctx, "r1", "sales", 1.50)
+	if ex == nil || ex.Scope != domain.ScopeOrg || !near(ex.CapUSD, 1) || ex.Resumable() {
+		t.Fatalf("the free plan cap must block: %+v", ex)
+	}
+	if r, ex, _ := b.Reserve(ctx, "r1", "sales", 1.00); ex != nil {
+		t.Fatalf("exact fit passes: %v", ex)
+	} else {
+		r.Release()
+	}
+	// A looser plan never loosens the operator cap.
+	b.OrgCapFor = func(context.Context, string) float64 { return 50 }
+	if _, ex, _ := b.Reserve(ctx, "r1", "sales", 6); ex == nil || !near(ex.CapUSD, 5) {
+		t.Fatalf("operator cap must still apply: %+v", ex)
+	}
+	st, err := b.Status(ctx)
+	if err != nil || !near(st.Org.BudgetUSD, 5) || !near(b.OrgCap(ctx), 5) {
+		t.Fatalf("status: %+v %v", st.Org, err)
+	}
+}
