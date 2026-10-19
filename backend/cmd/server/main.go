@@ -243,6 +243,9 @@ func run(log *slog.Logger) error {
 	} else if n > 0 {
 		log.Info("resumed in-progress requests", "count", n)
 	}
+	// Held tasks (outside the working hours of their agent): Recover above resumed their requests and the gate
+	// holds them again until the same opening; the watcher resumes the ones whose opening passed unattended.
+	holdsDone := startHoldWatcher(ctx, orch, store, 30*time.Second)
 	// Launched projects whose request was resumed are already live; the others
 	// (their request finished while the process was down) settle their status.
 	if ws.projects != nil {
@@ -347,6 +350,10 @@ func run(log *slog.Logger) error {
 		defer cancel()
 		_ = srv.Shutdown(sctx)
 		orch.Wait()
+		select { // the hold watcher stops with ctx
+		case <-holdsDone:
+		case <-sctx.Done():
+		}
 	}
 	return nil
 }

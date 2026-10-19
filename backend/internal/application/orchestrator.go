@@ -58,7 +58,7 @@ type Orchestrator struct {
 
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
 
-	// >>> organization model hooks (delegation_hook.go, hold.go, escalation_hook.go): optional, zero value = off
+	// >>> organization model hooks (delegation_hook.go, hold.go): optional, zero value = off
 	hooks delegationHooks
 	hold  holdState
 	// <<<
