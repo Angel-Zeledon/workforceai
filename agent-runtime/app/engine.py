@@ -51,6 +51,15 @@ def _load_prices() -> tuple[dict[str, tuple[float, float]], tuple[float, float]]
 
 
 MODEL_PRICES, (PRICE_IN_PER_M, PRICE_OUT_PER_M) = _load_prices()
+
+
+def _load_cached_prices() -> dict[str, float]:
+    """USD per million of input tokens served from the provider prompt cache (optional `cached_input`)."""
+    data = json.loads(PRICES_FILE.read_text(encoding="utf-8"))
+    return {k.lower(): float(v["cached_input"]) for k, v in data["models"].items() if float(v.get("cached_input") or 0) > 0}
+
+
+CACHED_PRICES = _load_cached_prices()
 _warned_models: set[str] = set()
 
 
@@ -80,10 +89,25 @@ def _price_for(model: str | None, provider: str | None = None) -> tuple[float, f
     return PRICE_IN_PER_M, PRICE_OUT_PER_M
 
 
+def _cached_price_for(model: str | None, provider: str | None, p_in: float) -> float:
+    """Cache-hit input price. Falls back to the normal input price when the model lists none, when a rate is
+    forced by env (PRICE_IN_PER_M / custom endpoint) or when the listed price is not lower (same rule as the
+    backend's cachedPriceFor)."""
+    if _env_price("PRICE_IN_PER_M", "PRICE_OUT_PER_M") or provider == "custom":
+        return p_in
+    c = CACHED_PRICES.get((model or "").split("/")[-1].lower())
+    return c if c is not None and c < p_in else p_in
+
+
 def estimate_cost(input_tokens: int, output_tokens: int, model: str | None = None,
-                  provider: str | None = None) -> float:
+                  provider: str | None = None, cached_tokens: int = 0) -> float:
+    """`input_tokens` is the TOTAL prompt size and already includes `cached_tokens` (the cache hits): the
+    cached part is billed at the cache price and only the remainder at the normal input price, so a token is
+    never counted twice."""
     p_in, p_out = _price_for(model, provider)
-    return round(input_tokens * p_in / 1e6 + output_tokens * p_out / 1e6, 5)
+    cached = max(0, min(int(cached_tokens or 0), input_tokens))
+    p_c = _cached_price_for(model, provider, p_in)
+    return round((input_tokens - cached) * p_in / 1e6 + cached * p_c / 1e6 + output_tokens * p_out / 1e6, 5)
 
 
 class AgentEngine(abc.ABC):

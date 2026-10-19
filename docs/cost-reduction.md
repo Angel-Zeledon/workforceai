@@ -89,4 +89,21 @@ Estimacion global para un pedido trivial en vivo: de ~(1+N) llamadas de ~115k to
 - Validar en vivo (una sola corrida) y, si `usage` baja a ~1 pasada, activar `LLM_DIRECT_CALL=true` por defecto: elimina el envoltorio ReAct de CrewAI por completo. Se dejo apagado porque el camino directo no se pudo probar contra un proveedor real sin gastar tokens.
 - `infrastructure/runtime/client.go` (fuera de alcance) trata el 402 como error 4xx no reintentable; el backend lo detecta por el texto `call_budget_exceeded`. Seria mas limpio mapearlo a un error tipado.
 - La guarda del planificador (`ReservePlanner`, 6k+6k tokens fijos) y del chat no usa el payload real todavia.
-- Cache de prompt (Anthropic/DeepSeek) del bloque estatico de sistema: no implementado.
+- Cache de prompt: el runtime ya mide los aciertos de cache (ver seccion 8); falta estructurar el prompt para que el bloque estatico de sistema sea un prefijo estable y los aciertos sean frecuentes.
+
+## 8. Cache de prompt y reintentos con tope refrescado
+
+**Medicion y costo.** El runtime devuelve `usage.cached_tokens` (mismo nombre que lee el backend) y lo aplica en su calculo de costo (`estimate_cost(..., cached_tokens)`). Convencion unica: `input_tokens` es el prompt TOTAL e incluye los cacheados; el costo es `(input - cached) x input + cached x cached_input + output x output`, asi que nada se cuenta dos veces. Si el modelo no tiene `cached_input` en `model_prices.json`, un precio forzado (`PRICE_IN_PER_M`) o el proveedor `custom`, los aciertos se cobran al precio normal de entrada.
+
+| Proveedor | Campo de usage | Tratamiento |
+|---|---|---|
+| OpenAI / Kimi | `prompt_tokens_details.cached_tokens` | ya incluido en `prompt_tokens` |
+| DeepSeek | `prompt_cache_hit_tokens` | ya incluido en `prompt_tokens` |
+| Anthropic | `cache_read_input_tokens` | acierto; `input_tokens` NO lo incluye, se suma |
+| Anthropic | `cache_creation_input_tokens` | escritura de cache: NO es acierto y no se descuenta; cuenta como entrada normal (la prima de 1.25x no se itemiza) |
+
+CrewAI/litellm entregan el dato como `cached_prompt_tokens`; `app/usage_tokens.py` lo normaliza (y tambien lee los campos crudos). Limite conocido: si una ruta nativa de Anthropic reportara `prompt_tokens` sin la lectura de cache y la lectura fuera menor que el resto del prompt, el total quedaria subestimado; confirmar con UNA corrida en vivo (no se hizo ninguna aqui).
+
+**Precios.** Verificados el 2026-10-19 en paginas oficiales: DeepSeek (cache-hit en hora punta: Flash 0.006, V4 Pro 0.044), Anthropic (aciertos: 0.025x en Fable 5.1, 0.05x en Opus 5.5 y Sonnet 5.5, 0.1x en el resto) y OpenAI (tier Standard). Los `cached_input` de Kimi siguen siendo un supuesto: la pagina oficial ya no lista los modelos kimi-k2-*. La nota de `model_prices.json` lo dice.
+
+**Reintentos con tope refrescado.** Cada reintento rehace la llamada completa; con cache el prefijo repetido se cobra a precio de acierto, pero el tope de gasto debe reservar el peor caso sin descuento (el descuento no esta garantizado) y volver a evaluarse con el gasto real acumulado antes de cada reintento, de modo que un reintento nunca se apoya en un saldo ya consumido por el intento anterior. El tope se refresca con el uso real (incluido `cached_tokens`) tras cada intento.
