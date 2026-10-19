@@ -49,6 +49,9 @@ func wireOrgChart(pg *postgres.Store, store application.Store, authStore auth.St
 	if proj != nil {
 		inner = proj
 	}
+	orch.SetDelegation(svc.Checker()) // delegation rules (organization.md, section 3)
+	svc.OnChange = orch.WakeHeld      // an edited schedule or rule releases held work at once
+	orch.SetHoldStore(&application.MemoryHolds{})
 	orch.SetTaskGate(orgchart.TaskGate{Inner: inner, Svc: svc})
 	return svc
 }

@@ -43,6 +43,10 @@ type Budget struct {
 	// OrgCapFor (optional) returns a stricter HARD cap for one organization, 0 = none: the free plan
 	// (internal/notify). The strictest positive of it and Config.BudgetUSD applies.
 	OrgCapFor func(ctx context.Context, org string) float64
+	// DepartmentLimitsFor (optional) returns the monthly spend limit per department tag (governance
+	// department_limits). Like an agent cap, a department over its limit pauses its agents' calls until the
+	// limit is raised; when an agent has both caps the strictest one wins (budget_dept.go).
+	DepartmentLimitsFor func(ctx context.Context, org string) map[string]float64
 }
 
 // NewBudget builds the manager. Config zero values disable the optional caps.
@@ -209,7 +213,14 @@ func (b *Budget) Reserve(ctx context.Context, requestID, agentID string, estimat
 		{domain.ScopeAgent, agentID, agCap, agSpent, requestID, agentID},
 		{domain.ScopeOrg, org, b.orgCap(ctx, org), used, requestID, agentID},
 	}
+	if dc, ok, err := b.departmentCheck(ctx, org, agentID); err != nil {
+		return nil, nil, err
+	} else if ok {
+		checks = append(checks, check{domain.ScopeDepartment, dc.name, dc.limit, dc.spent, requestID, agentID})
+	}
 	var keys []string
+	var blocked *Exceeded
+	blockedRoom := 0.0
 	for _, c := range checks {
 		if c.cap <= 0 {
 			continue
@@ -218,10 +229,17 @@ func (b *Budget) Reserve(ctx context.Context, requestID, agentID string, estimat
 		held := b.reserved[k]
 		// Tolerance: float noise must not flip a call that fits exactly.
 		if c.spent+held+estimate > c.cap+1e-9 {
-			return nil, &Exceeded{Scope: c.scope, ScopeID: c.id, RequestID: requestID, AgentID: agentID,
-				CapUSD: c.cap, SpentUSD: c.spent, ReservedUSD: held, NeededUSD: c.spent + held + estimate}, nil
+			// Several limits may block the same call: the strictest one (least room left) is the one reported.
+			if room := c.cap - c.spent - held; blocked == nil || room < blockedRoom {
+				blocked, blockedRoom = &Exceeded{Scope: c.scope, ScopeID: c.id, RequestID: requestID, AgentID: agentID,
+					CapUSD: c.cap, SpentUSD: c.spent, ReservedUSD: held, NeededUSD: c.spent + held + estimate}, room
+			}
+			continue
 		}
 		keys = append(keys, k)
+	}
+	if blocked != nil {
+		return nil, blocked, nil
 	}
 	for _, k := range keys {
 		b.reserved[k] += estimate
@@ -279,6 +297,9 @@ func (b *Budget) checkWarnings(ctx context.Context, org, requestID, agentID stri
 		if usage, err := b.store.ListUsage(ctx, org); err == nil {
 			ws = append(ws, w{domain.ScopeAgent, agentID, c, agentSpend(usage, agentID, PeriodStart(time.Now()))})
 		}
+	}
+	if dc, ok, err := b.departmentCheck(ctx, org, agentID); err == nil && ok {
+		ws = append(ws, w{domain.ScopeDepartment, dc.name, dc.limit, dc.spent})
 	}
 	if oc := b.orgCap(ctx, org); oc > 0 {
 		if used, err := b.OrgSpent(ctx, org); err == nil {
@@ -486,7 +507,9 @@ type BudgetStatus struct {
 		PeriodStart         time.Time `json:"period_start"`
 	} `json:"defaults"`
 	Agents []AgentBudget `json:"agents"`
-	Pauses []PauseInfo   `json:"pauses"`
+	// Departments (additive) is the month state of each department with a limit or with agents tagged to it.
+	Departments []DepartmentBudget `json:"departments"`
+	Pauses      []PauseInfo        `json:"pauses"`
 }
 
 // Status reports limits, spend, reservations and active pauses.
@@ -517,6 +540,7 @@ func (b *Budget) Status(ctx context.Context) (BudgetStatus, error) {
 	st.Agents, st.Pauses = []AgentBudget{}, []PauseInfo{}
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	st.Departments = b.departmentStatus(ctx, org, agents, usage, since)
 	st.Org.ReservedUSD = b.reserved[bkey(org, domain.ScopeOrg, org)]
 	for _, a := range agents {
 		_, paused := b.pauses[bkey(org, domain.ScopeAgent, a.ID)]
@@ -535,6 +559,8 @@ func (b *Budget) Status(ctx context.Context) (BudgetStatus, error) {
 				}
 			case domain.ScopeAgent:
 				spent = agentSpend(usage, p.ScopeID, since)
+			case domain.ScopeDepartment:
+				spent = deptSpend(usage, agentsOfDept(agents, p.ScopeID), since)
 			}
 			if spent > 0 {
 				cur.NeededUSD += spent - cur.SpentUSD

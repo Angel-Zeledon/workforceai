@@ -48,6 +48,9 @@ type GateDecision struct {
 	Action   GateAction
 	Reason   string
 	Summary  string // GateComplete: summary stored as the task output
+	// Until (GateHold, optional) is the moment the gate will let the task go (the next opening of a working
+	// schedule): the orchestrator sleeps until then and records a durable hold (hold.go).
+	Until    time.Time
 	Approval GateApprovalSpec
 }
 
@@ -80,7 +83,13 @@ func (o *Orchestrator) projectGate(ctx context.Context, rs *run, t domain.Task) 
 	held := false
 	resume := func() {}
 	defer func() { resume() }()
+	defer func() {
+		if held && ctx.Err() == nil { // a shutdown keeps the hold: the restart wakes it at the same opening
+			o.holdRelease(ctx, t.ID)
+		}
+	}()
 	for {
+		wake := o.holdWakeChan() // fetched BEFORE asking, so a change in between is never missed
 		d := g.GateTask(ctx, org, t)
 		if d.Action != GateHold {
 			resume() // back from a pause: take a scheduler slot before continuing
@@ -104,10 +113,9 @@ func (o *Orchestrator) projectGate(ctx context.Context, rs *run, t domain.Task) 
 				o.rec.Audit(ctx, domain.AuditLog{Actor: "system", Action: "task.paused", Entity: "task", EntityID: t.ID,
 					Details: map[string]any{"reason": d.Reason, "agent_id": t.AgentID}})
 			}
-			select {
-			case <-ctx.Done():
+			o.holdRecord(ctx, t, d) // durable wake-up (hold.go); no-op without Until or without a store
+			if !o.holdSleep(ctx, wake, d) {
 				return OutcomeFailed, true
-			case <-time.After(gatePoll):
 			}
 		case GateAbort:
 			o.blockTask(ctx, rs, t, d.Reason)
@@ -208,7 +216,7 @@ func (o *Orchestrator) blockTask(ctx context.Context, rs *run, t domain.Task, wh
 		o.log.Warn("update task", "err", err)
 	}
 	o.rec.Emit(ctx, Action{Type: domain.EvTaskBlocked, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
-		Payload: map[string]any{"task": t}, Text: fmt.Sprintf("Tarea bloqueada (%s): %s", why, t.Title)})
+		Payload: map[string]any{"task": t, "reason": why}, Text: fmt.Sprintf("Tarea bloqueada (%s): %s", why, t.Title)})
 	o.emitMetrics(ctx)
 }
 

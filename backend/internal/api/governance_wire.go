@@ -23,13 +23,15 @@ type GovernanceDeps struct {
 	Purger    *governance.Purger
 	Webhooks  *webhooks.Service
 	Audit     governance.AuditSource // nil when the audit trail is not configured
+	// OnLimitChange (optional) runs after a department limit changed.
+	OnLimitChange func()
 }
 
 // governanceHandler adapts the router to the governance package (tenancy, permissions, audit).
 func (s *server) governanceHandler() *governance.Handler {
 	g := s.Governance
 	h := &governance.Handler{
-		Tokens: g.Tokens, Admin: g.Admin, Reports: g.Reports, Retention: g.Retention, Purger: g.Purger, Webhooks: g.Webhooks, Audit: g.Audit,
+		Tokens: g.Tokens, Admin: g.Admin, Reports: g.Reports, Retention: g.Retention, Purger: g.Purger, Webhooks: g.Webhooks, Audit: g.Audit, OnLimitChange: g.OnLimitChange,
 		Env: governance.Env{
 			Org:    s.org,
 			Actor:  func(r *http.Request) string { return application.ActorFrom(r.Context(), "user") },

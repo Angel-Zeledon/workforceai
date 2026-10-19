@@ -244,6 +244,7 @@ func (s *Service) ApplyIndustry(ctx context.Context, key string, in ApplyInput) 
 		}
 		res.Rules++
 	}
+	s.invalidate(org)
 
 	// sample projects: once per organization and template
 	if !in.SkipProjects && s.Templates != nil && !hadApplied {

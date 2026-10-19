@@ -274,6 +274,7 @@ func (s *Service) CreateRule(ctx context.Context, in RuleInput) (Rule, error) {
 	if err := s.Store.PutRule(ctx, org, r); err != nil {
 		return Rule{}, err
 	}
+	s.invalidate(org)
 	s.audit(ctx, "delegation.rule_created", "delegation_rule", r.ID, map[string]any{"from": r.From, "to": r.To, "effect": r.Effect, "approval": r.RequireApproval})
 	return r, nil
 }
@@ -283,6 +284,7 @@ func (s *Service) DeleteRule(ctx context.Context, id string) error {
 	if err := s.Store.DeleteRule(ctx, s.org(ctx), id); err != nil {
 		return err
 	}
+	s.invalidate(s.org(ctx))
 	s.audit(ctx, "delegation.rule_deleted", "delegation_rule", id, nil)
 	return nil
 }

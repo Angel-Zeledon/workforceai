@@ -362,6 +362,12 @@ func (o *Orchestrator) announceExceeded(ctx context.Context, rs *run, ex *Exceed
 			tid = &ex.TaskID
 		}
 		o.setState(ctx, ex.AgentID, domain.StateBlocked, "Pausado: tope de presupuesto del agente", tid, 0)
+	case domain.ScopeDepartment:
+		var tid *string
+		if ex.TaskID != "" {
+			tid = &ex.TaskID
+		}
+		o.setState(ctx, ex.AgentID, domain.StateBlocked, "Pausado: límite mensual del departamento "+ex.ScopeID, tid, 0)
 	}
 	o.sendMessage(ctx, rs, "system", "user", "chat", msg, nil)
 	o.emitMetrics(ctx)
@@ -375,6 +381,9 @@ func (o *Orchestrator) exceededMessage(ex *Exceeded) string {
 	case domain.ScopeAgent:
 		return fmt.Sprintf("Agente %s en pausa: gastó $%.2f de su tope mensual de $%.2f y la siguiente llamada necesita llegar a $%.2f. Sube el tope para continuar.",
 			ex.AgentID, ex.SpentUSD, ex.CapUSD, ex.NeededUSD)
+	case domain.ScopeDepartment:
+		return fmt.Sprintf("Departamento %s en pausa: gastó $%.2f de su límite mensual de $%.2f y la siguiente llamada necesita llegar a $%.2f. Sube el límite del departamento para continuar.",
+			ex.ScopeID, ex.SpentUSD, ex.CapUSD, ex.NeededUSD)
 	}
 	return fmt.Sprintf("Presupuesto de la organización agotado: gastado $%.2f de $%.2f. No se inician más llamadas.", ex.SpentUSD, ex.CapUSD)
 }

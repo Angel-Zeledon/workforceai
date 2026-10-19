@@ -20,7 +20,7 @@ import (
 // without it the governance routes are not mounted. RETENTION_JOB=off disables the purge job (policies can be
 // edited, previewed and run by hand, but nothing runs on its own).
 func wireGovernance(ctx context.Context, log *slog.Logger, pg *postgres.Store, store application.Store, rec *application.Recorder,
-	auditSvc *application.AuditService, sealer webhooks.Sealer, wh *webhooks.Service, deps *api.Deps) {
+	auditSvc *application.AuditService, orch *application.Orchestrator, sealer webhooks.Sealer, wh *webhooks.Service, deps *api.Deps) {
 	if pg == nil {
 		return
 	}
@@ -45,6 +45,16 @@ func wireGovernance(ctx context.Context, log *slog.Logger, pg *postgres.Store, s
 	g := &api.GovernanceDeps{Tokens: &governance.TokenService{Store: gs}, Admin: gs, Reports: gs, Retention: gs, Purger: purger, Webhooks: wh}
 	if auditSvc != nil { // avoid a non-nil interface holding a nil pointer
 		g.Audit = auditSvc
+	}
+	if orch != nil { // department monthly limits are enforced by the budget guard (budget_dept.go)
+		orch.Budget().DepartmentLimitsFor = func(c context.Context, org string) map[string]float64 {
+			m, err := gs.DepartmentLimits(c, org)
+			if err != nil {
+				return nil
+			}
+			return m
+		}
+		g.OnLimitChange = orch.Budget().Wake
 	}
 	deps.Governance = g
 }

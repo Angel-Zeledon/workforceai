@@ -216,6 +216,26 @@ func (o *Orchestrator) AmendRun(ctx context.Context, requestID string, a RunAmen
 			return AmendResult{}, fmt.Errorf("%w: task %s is both dropped and re-queued", domain.ErrInvalid, id)
 		}
 	}
+	if o.hooks.deleg != nil { // delegation rules (delegation_hook.go): deny only, the plan change was approved by a human
+		agents := o.agentMap(ctx)
+		targets := map[string]bool{}
+		for _, n := range a.Add {
+			targets[n.AgentID] = true
+		}
+		for _, e := range a.Edit {
+			if e.AgentID != nil {
+				targets[*e.AgentID] = true
+			}
+		}
+		for ag := range targets {
+			if ag == "" {
+				continue
+			}
+			if _, err := o.enforceDelegation(ctx, ActorFrom(ctx, ""), agents, ag, "request", requestID, true); err != nil {
+				return AmendResult{}, err
+			}
+		}
+	}
 	newIDs := map[string]string{}
 	for _, n := range a.Add {
 		if n.Key == "" || strings.TrimSpace(n.Title) == "" {
