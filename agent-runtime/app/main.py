@@ -17,6 +17,7 @@ from .providers import ProviderError, config_from_credential, configured_provide
 from .replan import ReplanRequest, ReplanResponse
 from .redact import redact_any, redact_secrets
 from .security import build_trace
+from .cost_control import CallBudgetError
 from .commands import context_sizes, marker_lang
 from .models import (
     ChatReplyRequest,
@@ -131,6 +132,9 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
             return await coro
         except HTTPException:
             raise
+        except CallBudgetError as exc:  # the pre-call guard: nothing was sent to the provider
+            log.warning("call budget guard: %s", exc)
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail()) from exc
         except ProviderError as exc:  # stable, explicit: never a silent fallback
             log.warning("provider error code=%s tried=%s", exc.code, exc.tried)
             raise HTTPException(status_code=exc.status_code, detail=exc.detail()) from exc
