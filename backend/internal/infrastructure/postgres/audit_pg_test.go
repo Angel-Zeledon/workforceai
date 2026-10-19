@@ -432,3 +432,59 @@ func TestPushSubscriptionsAreIsolatedByRLS(t *testing.T) {
 		t.Fatal("RLS must refuse writing a subscription of another organization")
 	}
 }
+
+// Migration 782: retention removes old entries only through audit_purge_through, which records a checkpoint so the
+// remaining chain still verifies.
+func TestAuditPurgeThroughKeepsTheChainVerifiable(t *testing.T) {
+	st := testStore(t).Store
+	ctx := context.Background()
+	seedOrg(t, st, "org-a")
+	seedOrg(t, st, "org-b")
+	addAudits(t, st, "org-a", 12)
+	purge := func(org string, through int64) (n int64, err error) {
+		err = st.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
+			return tx.QueryRow(ctx, `SELECT audit_purge_through($1,$2)`, org, through).Scan(&n)
+		})
+		return
+	}
+
+	if n, err := purge("org-a", 7); err != nil || n != 7 {
+		t.Fatalf("purge: %d %v", n, err)
+	}
+	cp, err := st.AuditCheckpoint(ctx, "org-a")
+	if err != nil || cp.Seq != 7 || cp.Hash == "" {
+		t.Fatalf("checkpoint %+v %v", cp, err)
+	}
+	if rep := verifyOrg(t, st, "org-a", nil); !rep.OK || rep.Checked != 5 || rep.FirstSeq != 8 || rep.CheckpointSeq != 7 {
+		t.Fatalf("report %+v", rep)
+	}
+	addAudits(t, st, "org-a", 2) // appends keep working and keep the checkpoint
+	if rep := verifyOrg(t, st, "org-a", nil); !rep.OK || rep.HeadSeq != 14 {
+		t.Fatalf("report after appends %+v", rep)
+	}
+	if n, err := purge("org-a", 5); err != nil || n != 0 {
+		t.Fatalf("an older seq is a no-op: %d %v", n, err)
+	}
+	if _, err := purge("org-a", 14); err == nil {
+		t.Fatal("the head of the chain must never be removed")
+	}
+	if _, err := purge("org-b", 1); err != nil {
+		t.Fatalf("an organization without a chain is a no-op: %v", err)
+	}
+	// the function works only for the organization of the transaction
+	err = st.WithOrgTx(ctx, "org-b", func(tx pgx.Tx) error {
+		var n int64
+		return tx.QueryRow(ctx, `SELECT audit_purge_through('org-a', 9)`).Scan(&n)
+	})
+	if err == nil {
+		t.Fatal("another organization's trail must not be purgeable")
+	}
+	// the head trigger still refuses to move the checkpoint by hand
+	err = st.WithOrgTx(ctx, "org-a", func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE audit_chain_heads SET checkpoint_seq = 10, checkpoint_hash = 'x' WHERE org_id = 'org-a'`)
+		return err
+	})
+	if err == nil {
+		t.Fatal("the checkpoint can only move inside audit_purge_through")
+	}
+}

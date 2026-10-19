@@ -138,6 +138,10 @@ func (c chainSource) Head(ctx context.Context) (domain.AuditHead, bool, error) {
 	return c.st.AuditHead(ctx, c.org)
 }
 
+func (c chainSource) Checkpoint(ctx context.Context) (domain.AuditHead, error) {
+	return c.st.AuditCheckpoint(ctx, c.org)
+}
+
 // VerifyChain verifies one organization's chain straight from a store (used by
 // the "ctl audit-verify" command, without an API or a Recorder).
 func VerifyChain(ctx context.Context, st AuditStore, orgID string, anchor *domain.AuditHead) (audit.Report, error) {

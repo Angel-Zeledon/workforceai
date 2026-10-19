@@ -664,3 +664,73 @@ func TestAuditExportZipAndBadFormat(t *testing.T) {
 		t.Fatalf("bad format: %v", err)
 	}
 }
+
+// auditRet adds the optional audit purge to memRet.
+type auditRet struct {
+	*memRet
+	audit      []time.Time // chained entries of org "A" (the last one is the head)
+	purgedCall int
+}
+
+func (a *auditRet) due(cutoff time.Time) int {
+	n := 0
+	for i, ts := range a.audit {
+		if i < len(a.audit)-1 && ts.Before(cutoff) { // the head never goes
+			n++
+		}
+	}
+	return n
+}
+
+func (a *auditRet) CountAudit(_ context.Context, org string, cutoff time.Time) (int, error) {
+	if org != "A" {
+		return 0, nil
+	}
+	return a.due(cutoff), nil
+}
+
+func (a *auditRet) PurgeAudit(_ context.Context, org string, cutoff time.Time, limit int) (int, error) {
+	if org != "A" {
+		return 0, nil
+	}
+	a.purgedCall++
+	n := a.due(cutoff)
+	if n > limit {
+		n = limit
+	}
+	a.audit = a.audit[n:]
+	return n, nil
+}
+
+func TestRetentionPurgesTheAuditTrailWhenTheStoreCanAndKeepsTheHead(t *testing.T) {
+	t0 := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	a := &auditRet{memRet: newMemRet()}
+	for _, d := range []int{900, 800, 500, 10, 1} { // days old
+		a.audit = append(a.audit, t0.AddDate(0, 0, -d))
+	}
+	var audited map[string]any
+	p := &Purger{Store: a, Now: func() time.Time { return t0 }, Batch: 1, Audit: func(_ context.Context, _, action string, d map[string]any) {
+		if action == "retention.purged" {
+			audited = d
+		}
+	}}
+	pol := RetentionPolicy{Enabled: true, AuditDays: 365}
+	pv, err := p.Preview(context.Background(), "A", pol)
+	if err != nil || pv.AuditEntries != 3 || pv.AuditSkipped || a.purgedCall != 0 {
+		t.Fatalf("preview %+v %v (calls %d)", pv, err, a.purgedCall)
+	}
+	res, err := p.RunNow(context.Background(), "A", pol)
+	if err != nil || res.AuditEntries != 1 || !res.Capped || len(a.audit) != 4 {
+		t.Fatalf("batched run %+v %v left %d", res, err, len(a.audit))
+	}
+	if audited["audit_entries"] != 1 {
+		t.Fatalf("audit of the purge: %+v", audited)
+	}
+	p.Batch = 100
+	if res, _ = p.RunNow(context.Background(), "A", pol); res.AuditEntries != 2 || len(a.audit) != 2 {
+		t.Fatalf("second run %+v left %d", res, len(a.audit))
+	}
+	if res, _ = p.RunNow(context.Background(), "A", pol); res.AuditEntries != 0 || len(a.audit) != 2 {
+		t.Fatalf("nothing else is due: %+v", res)
+	}
+}

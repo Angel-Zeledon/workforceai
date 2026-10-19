@@ -140,6 +140,22 @@ func (s *Store) AuditChain(ctx context.Context, orgID string, after int64, limit
 		`SELECT `+auditCols+` FROM audit_logs WHERE org_id=$1 AND seq IS NOT NULL AND seq > $2 ORDER BY seq LIMIT $3`, orgID, after, limit)
 }
 
+// AuditCheckpoint returns the last entry removed by retention (migration 782); seq 0 when nothing was purged.
+func (s *Store) AuditCheckpoint(ctx context.Context, orgID string) (domain.AuditHead, error) {
+	h, err := one(ctx, s, orgID, func(r scanner) (domain.AuditHead, error) {
+		var h domain.AuditHead
+		err := r.Scan(&h.Seq, &h.Hash)
+		return h, err
+	}, `SELECT checkpoint_seq, checkpoint_hash FROM audit_chain_heads WHERE org_id=$1`, orgID)
+	if err != nil {
+		if mapErr(err) == domain.ErrNotFound {
+			return domain.AuditHead{}, nil
+		}
+		return domain.AuditHead{}, err
+	}
+	return h, nil
+}
+
 // AuditHead returns the recorded chain head.
 func (s *Store) AuditHead(ctx context.Context, orgID string) (domain.AuditHead, bool, error) {
 	h, err := one(ctx, s, orgID, func(r scanner) (domain.AuditHead, error) {

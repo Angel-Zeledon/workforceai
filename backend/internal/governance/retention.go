@@ -50,7 +50,11 @@ type PurgeResult struct {
 	Messages      int       `json:"messages"`
 	Conversations int       `json:"conversations"`
 	FilesTrashed  int       `json:"files_trashed"`
-	// AuditSkipped is always true when audit_days is set: the hash-chained trail is never deleted by this job.
+	// AuditEntries is how many hash-chained audit entries were (or, in a preview, would be) removed. The head of
+	// the chain always stays and the chain keeps verifying from a checkpoint (migration 782).
+	AuditEntries int `json:"audit_entries"`
+	// AuditSkipped is true when audit_days is set but the store cannot purge the chained trail (no AuditRetention):
+	// then nothing of it is deleted.
 	AuditSkipped bool `json:"audit_skipped"`
 	// Capped is true when a batch limit stopped the run: the rest follows in the next run.
 	Capped bool `json:"capped"`
@@ -72,6 +76,17 @@ type RetentionStore interface {
 	// TrashFiles moves at most limit live files not updated since cutoff to the trash (recoverable).
 	TrashFiles(ctx context.Context, org string, cutoff time.Time, limit int) (int, error)
 	SaveResult(ctx context.Context, org string, at time.Time, r PurgeResult) error
+}
+
+// AuditRetention is the optional part of a RetentionStore that can purge the hash-chained audit trail. The purge
+// is atomic and records a checkpoint in the same transaction (audit_purge_through, migration 782), so
+// audit.Verify keeps passing on what is left.
+type AuditRetention interface {
+	// CountAudit reports how many chained entries older than cutoff a purge would remove now.
+	CountAudit(ctx context.Context, org string, cutoff time.Time) (int, error)
+	// PurgeAudit removes at most limit of the oldest chained entries older than cutoff, never the head, and
+	// returns how many were removed.
+	PurgeAudit(ctx context.Context, org string, cutoff time.Time, limit int) (int, error)
 }
 
 // OrgLister lists organizations.
@@ -135,7 +150,8 @@ func (p *Purger) RunNow(ctx context.Context, org string, pol RetentionPolicy) (P
 // run is the single place that decides what may be deleted.
 func (p *Purger) run(ctx context.Context, org string, pol RetentionPolicy, dry, ignoreEnabled bool) (PurgeResult, error) {
 	now := p.now()
-	res := PurgeResult{DryRun: dry, At: now, AuditSkipped: pol.AuditDays > 0}
+	ar, canAudit := p.Store.(AuditRetention)
+	res := PurgeResult{DryRun: dry, At: now, AuditSkipped: pol.AuditDays > 0 && !canAudit}
 	if org == "" || p.Protected[org] {
 		return res, fmt.Errorf("%w: organization is protected", ErrInvalid)
 	}
@@ -180,9 +196,27 @@ func (p *Purger) run(ctx context.Context, org string, pol RetentionPolicy, dry, 
 			res.Capped = res.Capped || n >= limit
 		}
 	}
-	if !dry && p.Audit != nil && (res.Messages+res.Conversations+res.FilesTrashed) > 0 {
+	if pol.AuditDays > 0 && canAudit {
+		c := cutoff(now, pol.AuditDays)
+		if dry {
+			n, err := ar.CountAudit(ctx, org, c)
+			if err != nil {
+				return res, err
+			}
+			res.AuditEntries = n
+		} else {
+			n, err := ar.PurgeAudit(ctx, org, c, limit)
+			if err != nil {
+				return res, err
+			}
+			res.AuditEntries = n
+			res.Capped = res.Capped || n >= limit
+		}
+	}
+	if !dry && p.Audit != nil && (res.Messages+res.Conversations+res.FilesTrashed+res.AuditEntries) > 0 {
 		p.Audit(ctx, org, "retention.purged", map[string]any{"messages": res.Messages, "conversations": res.Conversations,
-			"files_trashed": res.FilesTrashed, "chats_days": pol.ChatsDays, "files_days": pol.FilesDays, "capped": res.Capped})
+			"files_trashed": res.FilesTrashed, "audit_entries": res.AuditEntries, "chats_days": pol.ChatsDays, "files_days": pol.FilesDays,
+			"audit_days": pol.AuditDays, "capped": res.Capped})
 	}
 	return res, nil
 }
@@ -221,8 +255,8 @@ func (p *Purger) Tick(ctx context.Context) {
 			continue
 		}
 		_ = p.Store.SaveResult(ctx, org, res.At, res)
-		if res.Messages+res.Conversations+res.FilesTrashed > 0 {
-			p.log().Info("retention: purged", "org", org, "messages", res.Messages, "conversations", res.Conversations, "files", res.FilesTrashed)
+		if res.Messages+res.Conversations+res.FilesTrashed+res.AuditEntries > 0 {
+			p.log().Info("retention: purged", "org", org, "messages", res.Messages, "conversations", res.Conversations, "files", res.FilesTrashed, "audit_entries", res.AuditEntries)
 		}
 	}
 }

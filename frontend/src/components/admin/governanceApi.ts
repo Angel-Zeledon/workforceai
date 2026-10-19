@@ -50,7 +50,7 @@ export interface DepartmentSpend { name: string; agents: number; month_spend_usd
 export interface RetentionPolicy {
   enabled: boolean; chats_days: number; files_days: number; audit_days: number; last_run_at?: string; last_result?: PurgeResult;
 }
-export interface PurgeResult { dry_run: boolean; at: string; messages: number; conversations: number; files_trashed: number; audit_skipped: boolean; capped: boolean }
+export interface PurgeResult { dry_run: boolean; at: string; messages: number; conversations: number; files_trashed: number; audit_skipped: boolean; audit_entries?: number; capped: boolean }
 export interface Overview { month_start: string; agents: AgentSpend[]; departments: DepartmentSpend[]; retention: RetentionPolicy; tokens_active: number; webhooks: number }
 export interface UsageRow { key: string; label: string; department?: string; requests: number; calls: number; input_tokens: number; output_tokens: number; cost_usd: number; share_pct: number }
 export interface UsageReport { by: string; from: string; to: string; rows: UsageRow[]; total: UsageRow }

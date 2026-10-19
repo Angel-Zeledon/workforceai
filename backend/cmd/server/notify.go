@@ -12,6 +12,7 @@ import (
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/config"
+	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/infrastructure/postgres"
 	"aiworkforce/backend/internal/mailer"
 	"aiworkforce/backend/internal/notify"
@@ -30,9 +31,10 @@ func wireNotify(log *slog.Logger, cfg config.Config, pg *postgres.Store, store a
 	var settings notify.SettingsStore = notify.NewMemSettings()
 	var replay notify.ReplayStore = notify.NewMemReplay()
 	var planStore notify.PlanStore = notify.NewMemPlans()
+	var outbox notify.OutboxStore = notify.NewMemOutbox()
 	if pg != nil {
-		db := &notify.PG{DB: pg}
-		settings, replay, planStore = db, db, db
+		db := &notify.PG{DB: pg, Log: log}
+		settings, replay, planStore, outbox = db, db, db, db
 	}
 	freeCap := 0.0
 	if v := strings.TrimSpace(os.Getenv("FREE_PLAN_CAP_USD")); v != "" {
@@ -49,7 +51,7 @@ func wireNotify(log *slog.Logger, cfg config.Config, pg *postgres.Store, store a
 		log.Info("free plan with a hard spend cap is ON", "cap_usd", freeCap)
 	}
 
-	svc := &notify.Service{Settings: settings, Replay: replay, Plans: plans, Log: log,
+	svc := &notify.Service{Settings: settings, Replay: replay, Plans: plans, Log: log, Outbox: outbox,
 		Approvals: notify.ApprovalsAdapter{Approvals: approvals, Store: store},
 		PublicURL: strings.TrimRight(firstNonEmpty(os.Getenv("NOTIFY_PUBLIC_URL"), cfg.UIBaseURL), "/"),
 		AppURL:    strings.TrimRight(cfg.UIBaseURL, "/"),
@@ -59,6 +61,10 @@ func wireNotify(log *slog.Logger, cfg config.Config, pg *postgres.Store, store a
 			}
 			return ""
 		},
+	}
+	if v := strings.ToLower(strings.TrimSpace(os.Getenv("NOTIFY_OUTBOX"))); v == "off" || v == "false" || v == "0" {
+		svc.Outbox = nil // messages are sent once, inline, as before migration 784
+		log.Warn("NOTIFY_OUTBOX=off: notifications are not queued and failed ones are not retried")
 	}
 	if h, err := strconv.Atoi(strings.TrimSpace(os.Getenv("NOTIFY_LINK_TTL_HOURS"))); err == nil && h > 0 {
 		svc.TTL = time.Duration(h) * time.Hour
@@ -96,6 +102,37 @@ func wireNotify(log *slog.Logger, cfg config.Config, pg *postgres.Store, store a
 		return plans.Status(ctx, org, cfg.App.BudgetUSD, st.Org.UsedUSD, st.Org.ReservedUSD), true
 	}
 	return svc
+}
+
+// startNotifyJobs binds the vault (it exists after wireNotify) and starts the background jobs of the notifications:
+// the outbox worker (retries) and the monthly reset of the plan caps (PlanResetter). The vault seals the Slack/Teams
+// URLs and the queued payloads; without a key they stay in the clear, as before migrations 783 and 784.
+//
+//	NOTIFY_OUTBOX=off   send notifications once, inline, without the retry queue
+//	PLAN_RESET_JOB=off  do not reset the plan caps on the 1st of the month
+func startNotifyJobs(ctx context.Context, log *slog.Logger, svc *notify.Service, sealer notify.Sealer, lister application.OrgLister,
+	orch *application.Orchestrator, rec *application.Recorder) {
+	svc.Sealer = sealer
+	if db, ok := svc.Settings.(*notify.PG); ok {
+		db.Sealer = sealer
+	}
+	if lister == nil {
+		return
+	}
+	svc.StartOutbox(ctx, lister)
+	if v := strings.ToLower(strings.TrimSpace(os.Getenv("PLAN_RESET_JOB"))); v == "off" || v == "false" || v == "0" {
+		log.Warn("PLAN_RESET_JOB=off: plan caps are not reset on the 1st of the month")
+		return
+	}
+	r := &notify.PlanResetter{Plans: svc.Plans, Orgs: lister, Log: log,
+		Spend: func(c context.Context, org string) (float64, error) {
+			st, err := orch.Budget().Status(application.WithOrg(c, org))
+			return st.Org.UsedUSD, err
+		},
+		Audit: func(c context.Context, org, action string, d map[string]any) {
+			rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: "system", Action: action, Entity: "plan", EntityID: org, Details: d})
+		}}
+	r.Start(ctx, time.Hour)
 }
 
 func firstNonEmpty(v ...string) string {
