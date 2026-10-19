@@ -447,7 +447,8 @@ func (s *Service) identityOf(ctx context.Context, c Config, cl Claims) (auth.Fed
 			return auth.FederatedIdentity{}, auth.ErrForbidden
 		}
 	}
-	return auth.FederatedIdentity{OrgID: c.OrgID, Email: email, Name: cl.Name, Provider: "oidc", Role: c.DefaultRole, JIT: c.JIT}, nil
+	jit, role := s.joinRules(ctx, c)
+	return auth.FederatedIdentity{OrgID: c.OrgID, Email: email, Name: cl.Name, Provider: "oidc", Role: role, JIT: jit}, nil
 }
 
 func (s *Service) redeemCode(ctx context.Context, c Config, d Discovery, code, verifier string) (string, error) {
@@ -511,7 +512,7 @@ func (s *Service) Exchange(ctx context.Context, code string) (auth.FederatedIden
 			return auth.FederatedIdentity{}, auth.ErrForbidden
 		}
 	}
-	id.JIT, id.Role = c.JIT, c.DefaultRole
+	id.JIT, id.Role = s.joinRules(ctx, c)
 	return id, nil
 }
 

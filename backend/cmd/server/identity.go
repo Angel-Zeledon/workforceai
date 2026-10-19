@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
@@ -23,6 +25,8 @@ type identityWiring struct {
 	scim *scim.Service
 	// base URLs shown to administrators and registered at the identity provider.
 	ssoBase, scimBase string
+	// janitor purges abandoned login records and re-checks verified domains; run it with startJanitor.
+	janitor *sso.Janitor
 }
 
 // wireIdentity builds the services. Call it before auth.NewService (the auth service takes the sso service as its
@@ -67,7 +71,8 @@ func wireIdentity(pg *postgres.Store, authStore auth.Store, v *vault.Vault, rec 
 	if err != nil {
 		return nil, err
 	}
-	return &identityWiring{sso: so, scim: sc, ssoBase: redirect, scimBase: api + "/scim/v2"}, nil
+	jan := &sso.Janitor{Store: ss, Audit: audit}
+	return &identityWiring{sso: so, scim: sc, ssoBase: redirect, scimBase: api + "/scim/v2", janitor: jan}, nil
 }
 
 // routes returns the three handlers mounted by the router's "enterprise identity" block.
@@ -78,4 +83,23 @@ func (w *identityWiring) routes(svc *auth.Service, hc sso.HandlerConfig, sc scim
 	hc.Extra = func(r chi.Router) { sh.AdminRoutes(r) }
 	h := sso.NewHandler(w.sso, hc)
 	return h.PublicRoutes(), h.AdminRoutes(), sh.Routes()
+}
+
+// startJanitor sweeps once an hour until ctx ends (each domain is re-checked at most once per Janitor.Recheck).
+func (w *identityWiring) startJanitor(ctx context.Context, log *slog.Logger) {
+	w.janitor.Log = log
+	go func() {
+		t := time.NewTicker(time.Hour)
+		defer t.Stop()
+		for {
+			if rep := w.janitor.RunOnce(ctx); rep.Lapsed+rep.Revoked+rep.Errors > 0 {
+				log.Info("sso janitor", "checked", rep.Checked, "lapsed", rep.Lapsed, "recovered", rep.Recovered, "revoked", rep.Revoked, "errors", rep.Errors)
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+			}
+		}
+	}()
 }

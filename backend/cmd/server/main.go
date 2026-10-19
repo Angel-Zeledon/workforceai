@@ -290,8 +290,10 @@ func run(log *slog.Logger) error {
 		if err != nil {
 			return err
 		}
+		idw.startJanitor(ctx, log)
 		svc, err := auth.NewService(auth.Config{
 			Policy: idw.sso, // per-organization sign-in policy (require MFA, enforce SSO)
+			AutoJoin: idw.sso, // join the organization that verified your e-mail domain, once the address is proven
 			RequireVerification: cfg.EmailVerification, Mailer: authMailer, AppURL: cfg.UIBaseURL,
 			TrialEnabled: cfg.TrialEnabled, TrialTTL: time.Duration(cfg.TrialTTLHours) * time.Hour, TrialGlobalPerDay: cfg.TrialGlobalPerDay, TrialEmailDomain: cfg.TrialEmailDomain,
 			Logf:                func(f string, a ...any) { log.Warn(fmt.Sprintf(f, a...)) },
