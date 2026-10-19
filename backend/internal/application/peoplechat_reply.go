@@ -44,7 +44,7 @@ func (o *Orchestrator) PeopleChatReply(ctx context.Context, agentID, text string
 		Intent: domain.IntentQuestion, Topic: "general", ResponderRole: domain.RolePrimary,
 		Agents: o.routeAgents(agents, style.Locale), History: history, Locale: style.Locale, Tone: style.ToneFor(agent.ID),
 	}
-	res, ex := o.chatReserve(ctx, agent.ID)
+	res, ex := o.chatReserve(ctx, agent.ID, domain.UsageChat, req)
 	if ex != nil {
 		return "", ex
 	}
