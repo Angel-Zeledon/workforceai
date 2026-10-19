@@ -241,8 +241,17 @@ func (o *Orchestrator) reserveFor(ctx context.Context, requestID string, kind do
 // explains what happened and the call resumes as soon as the cap is raised.
 // The organization budget is not resumable: it fails with errBudget.
 func (o *Orchestrator) reserveOrPause(ctx context.Context, rs *run, agentID, taskID string, kind domain.UsageKind) (*Reservation, error) {
+	return o.reserveOrPauseSized(ctx, rs, agentID, taskID, kind, 0)
+}
+
+// reserveOrPauseSized is reserveOrPause with the size of the call known from its real payload (call_guard.go):
+// a positive sizedUSD replaces the per-task estimate.
+func (o *Orchestrator) reserveOrPauseSized(ctx context.Context, rs *run, agentID, taskID string, kind domain.UsageKind, sizedUSD float64) (*Reservation, error) {
 	org := o.org(ctx)
 	est := o.reserveFor(ctx, rs.req.ID, kind, taskID)
+	if sizedUSD > 0 {
+		est = sizedUSD
+	}
 	var timer *time.Timer
 	armed := false // the timeout/reminder of this pause were set up
 	var timerC, remindC <-chan time.Time

@@ -19,7 +19,18 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from .cost_control import (
+    CallBudgetError,
+    crew_max_iter,
+    crew_max_retry_limit,
+    direct_call_enabled,
+    max_tokens_for,
+    non_reasoning_model,
+    preflight,
+    reasoning_kwargs,
+)
 from .engine import AgentEngine, estimate_cost
+from .fast_path import try_fast_plan
 from .hier_plan import normalize_phase_tasks, normalize_phases
 from .models import (
     ChatReplyRequest,
@@ -118,10 +129,34 @@ def native_structured_output(cfg: ProviderConfig) -> bool:
     return cfg.id in ("anthropic", "openai")
 
 
+MAX_SCHEMA_DESCRIPTION_CHARS = 320  # longer prose is dropped from the schema sent in the prompt
+
+
+def _compact_schema(node: Any) -> Any:
+    """The JSON Schema without prose: "title" and "description" repeat what the field names and the task rules
+    already say (the ToolRequest.args description alone was ~900 chars). Keys named title/description that are
+    real properties are kept."""
+    if isinstance(node, dict):
+        props = node.get("properties") if isinstance(node.get("properties"), dict) else None
+        out = {}
+        for k, v in node.items():
+            if k == "title" and not isinstance(v, (dict, list)):
+                continue
+            if k == "description" and isinstance(v, str) and len(v) > MAX_SCHEMA_DESCRIPTION_CHARS:
+                continue
+            out[k] = {pk: _compact_schema(pv) for pk, pv in v.items()} if (k == "properties" and props is not None) \
+                else _compact_schema(v)
+        return out
+    if isinstance(node, list):
+        return [_compact_schema(x) for x in node]
+    return node
+
+
 def json_instructions(schema: type[BaseModel]) -> str:
     """Prompt-side contract for providers without structured output."""
     return ("\n\nResponde SOLO con un objeto JSON valido (sin texto antes ni despues, sin ```), "
-            "que cumpla exactamente este JSON Schema:\n" + json.dumps(schema.model_json_schema(), ensure_ascii=False))
+            "que cumpla exactamente este JSON Schema:\n"
+            + json.dumps(_compact_schema(schema.model_json_schema()), ensure_ascii=False, separators=(",", ":")))
 
 
 class _ConsultAnswer(BaseModel):
@@ -197,8 +232,10 @@ class CrewAIEngine(AgentEngine):
 
     @staticmethod
     def _llm_kwargs(cfg: ProviderConfig, max_tokens: int | None, temperature: float | None) -> dict[str, Any]:
-        kw: dict[str, Any] = {"model": cfg.model, "api_key": cfg.api_key, "temperature": temperature,
-                              "max_tokens": max_tokens or 4096, "timeout": PROVIDER_TIMEOUT_S}
+        # No reasoning/thinking unless LLM_REASONING is set (cost_control): a reasoning alias maps to the plain model.
+        kw: dict[str, Any] = {"model": non_reasoning_model(cfg.model), "api_key": cfg.api_key, "temperature": temperature,
+                              "max_tokens": max_tokens or max_tokens_for("default"), "timeout": PROVIDER_TIMEOUT_S}
+        kw.update(reasoning_kwargs(cfg.id, cfg.model))
         if temperature is None or (cfg.id == "openai" and fixed_temperature_model(cfg.model)):
             kw.pop("temperature")  # reasoning models only accept their default
         if cfg.id in ("deepseek", "kimi"):
@@ -206,7 +243,7 @@ class CrewAIEngine(AgentEngine):
             # around char 13k). JSON mode guarantees syntactically valid JSON (the schema still goes in
             # the instructions). Moonshot's Kimi has the same json_object mode and no json_schema.
             kw["response_format"] = {"type": "json_object"}
-            kw["max_tokens"] = max(kw["max_tokens"], 8192)
+            # (the old floor of 8192 output tokens is gone: every kind of call has its own env-configurable cap)
         if cfg.base_url:
             kw["base_url"] = cfg.base_url
         if cfg.id == "openai":
@@ -239,7 +276,10 @@ class CrewAIEngine(AgentEngine):
                       expected: str, schema: type[BaseModel], max_tokens: int | None = None,
                       creativity: str = "") -> tuple[Any, Usage]:
         agent = self._Agent(role=role, goal=goal, backstory=backstory, llm=self._llm_for(cfg, max_tokens, creativity),
-                            tools=[], allow_delegation=False, verbose=False)
+                            tools=[], allow_delegation=False, verbose=False,
+                            # A tool-less agent answers in one pass. The framework default (25 iterations) re-sends the
+                            # whole growing conversation on every format retry: the main source of the ~76k input tokens.
+                            max_iter=crew_max_iter(), max_retry_limit=crew_max_retry_limit(), reasoning=False)
         if native_structured_output(cfg):
             task = self._Task(description=description, expected_output=expected,
                               agent=agent, output_pydantic=schema)
@@ -269,18 +309,68 @@ class CrewAIEngine(AgentEngine):
                              cost_usd=estimate_cost(i, o, cfg.model, cfg.id), duration_ms=ms,
                              provider=cfg.id)
 
+    def _direct_once(self, cfg: ProviderConfig, *, role: str, goal: str, backstory: str, description: str,
+                     expected: str, schema: type[BaseModel], max_tokens: int | None = None,
+                     creativity: str = "") -> tuple[Any, Usage]:
+        """LLM_DIRECT_CALL=true: ONE plain chat completion (system + user), JSON parsed and validated here.
+        No Agent/Task/Crew, no ReAct wrapper, no iterations. Same contract as _kickoff_once."""
+        llm = self._LLM(**self._llm_kwargs(cfg, max_tokens, temperature_for(cfg.id, creativity)))
+        messages = [{"role": "system", "content": backstory},
+                    {"role": "user", "content": f"{description}\n\n{expected}{json_instructions(schema)}"}]
+        t0 = time.monotonic()
+        raw = llm.call(messages)
+        text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
+        try:
+            parsed = parse_json_output(text, schema)
+        except ValueError:  # one retry on invalid JSON, like the crew path
+            raw = llm.call(messages)
+            text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
+            parsed = parse_json_output(text, schema)
+        ms = int((time.monotonic() - t0) * 1000)
+        summary = getattr(llm, "get_token_usage_summary", None)
+        m = summary() if callable(summary) else None
+        i = int(getattr(m, "prompt_tokens", 0) or 0)
+        o = int(getattr(m, "completion_tokens", 0) or 0)
+        if i <= 0:
+            i = (len(backstory) + len(description) + len(expected)) // 4
+        if o <= 0:
+            o = max(1, len(text) // 4)
+        return parsed, Usage(model=cfg.model, input_tokens=i, output_tokens=o,
+                             cost_usd=estimate_cost(i, o, cfg.model, cfg.id), duration_ms=ms, provider=cfg.id)
+
+    @staticmethod
+    def _prompt_texts(cfg: ProviderConfig, kw: dict[str, Any]) -> list[str]:
+        """Every string the call will send, for the pre-call estimate (the schema goes in the prompt for
+        providers without native structured output)."""
+        texts = [str(kw.get(k) or "") for k in ("backstory", "description", "expected", "system", "user")]
+        schema = kw.get("schema")
+        if schema is not None and not native_structured_output(cfg):
+            texts.append(json_instructions(schema))
+        return texts
+
     def _kickoff(self, *, policy: ProviderPolicy | None = None, order: list[ProviderConfig] | None = None,
                  once: Any = None, **kw) -> tuple[Any, Usage]:
         """Failover wrapper: data policy first (before anything is sent), then providers in order.
         Transient errors are retried on the same provider; any failure then moves to the next one.
         order (already policy-filtered, e.g. vision_candidates) and once (the single call) are optional."""
         order = order if order is not None else candidates(self.providers, policy or ProviderPolicy())
-        once = once or self._kickoff_once
+        once = once or (self._direct_once if direct_call_enabled() else self._kickoff_once)
+        kind = kw.pop("kind", "") or "default"
+        allowance = kw.pop("max_cost_usd", 0.0) or 0.0
+        kw["max_tokens"] = kw.get("max_tokens") or max_tokens_for(kind)
+        over: CallBudgetError | None = None  # the pre-call guard refused every provider tried so far
         failed: list[str] = []
         broke: list[str] = []  # providers whose account has no balance left
         last: BaseException | None = None
         for cfg in order:
             attempt = 0
+            try:  # budget guard BEFORE sending: a provider whose worst case crosses the allowance is skipped
+                preflight(kind=kind, model=cfg.model, provider=cfg.id, prompt_texts=self._prompt_texts(cfg, kw),
+                          max_tokens=kw["max_tokens"], allowance_usd=allowance)
+            except CallBudgetError as exc:
+                log.warning("provider %s skipped by the budget guard: %s", cfg.id, exc)
+                over = over or exc
+                continue
             while True:
                 try:
                     parsed, usage = once(cfg, **kw)
@@ -306,6 +396,8 @@ class CrewAIEngine(AgentEngine):
                                 scrub(str(exc), order)[:200])
                     failed.append(cfg.id)
                     break
+        if over is not None and not failed:
+            raise over
         if failed and len(broke) == len(failed):
             raise ProviderError(
                 ERR_NO_BALANCE,
@@ -322,6 +414,8 @@ class CrewAIEngine(AgentEngine):
 
     # -------------------------------------------------------------- API
     async def plan(self, req: PlanRequest) -> PlanResponse:
+        if (fast := try_fast_plan(req)) is not None:  # simple request: one task, no planning call (PLANNER_FAST_PATH)
+            return fast
         agents = [{"id": a.id, "role": a.role, "title": a.title, "responsibilities": a.responsibilities}
                   for a in req.agents]
         desc = (
@@ -338,7 +432,7 @@ class CrewAIEngine(AgentEngine):
             goal="Planificar el trabajo de la empresa asignando tareas a los agentes correctos",
             backstory=system_rules(req.locale, req.tone), description=desc,
             expected="JSON con objectives, tasks y clarifying_questions", schema=PlanResponse,
-            policy=policy_from_request(req, "plan"))
+            policy=policy_from_request(req, "plan"), kind="plan", max_cost_usd=req.max_cost_usd)
         valid = {a.id for a in req.agents}
         if valid:
             plan.tasks = [t for t in plan.tasks if t.agent_id in valid]
@@ -368,7 +462,7 @@ class CrewAIEngine(AgentEngine):
             goal="Planificar por fases un proyecto grande de la empresa",
             backstory=system_rules(req.locale, req.tone), description=desc,
             expected="JSON con objectives, phases y clarifying_questions", schema=PlanPhasesResponse,
-            policy=policy_from_request(req, "plan"), max_tokens=2048)
+            policy=policy_from_request(req, "plan"), kind="plan_phases", max_cost_usd=req.max_cost_usd)
         res.phases = normalize_phases(res.phases, req.max_phases)
         if not res.phases:
             raise ValueError("el plan generado no contiene fases validas")
@@ -395,7 +489,7 @@ class CrewAIEngine(AgentEngine):
             goal="Descomponer una fase de un proyecto grande en tareas asignadas a los agentes correctos",
             backstory=system_rules(req.locale, req.tone), description=desc,
             expected="JSON con tasks", schema=PlanPhaseResponse,
-            policy=policy_from_request(req, "plan"), max_tokens=6144)
+            policy=policy_from_request(req, "plan"), kind="plan_phase", max_cost_usd=req.max_cost_usd)
         res.tasks = normalize_phase_tasks(res.tasks, req.agents, req.max_tasks)
         if not res.tasks:
             raise ValueError("la fase generada no contiene tareas validas")
@@ -415,7 +509,8 @@ class CrewAIEngine(AgentEngine):
                 res, usage = await asyncio.to_thread(
                     self._kickoff, order=order, once=self._vision_once,
                     system=build_system_prompt(req.agent, req.locale, req.tone), user=description, images=images,
-                    schema=TaskResult, creativity=req.agent.creativity, locale=req.locale)
+                    schema=TaskResult, creativity=req.agent.creativity, locale=req.locale, kind="run_task",
+                    max_cost_usd=req.max_cost_usd)
                 out = StructuredOutput.model_validate(res.output.model_dump())
                 return RunTaskResponse(output=out, consults=res.consults, tool_requests=res.tool_requests, usage=usage,
                                        provider=usage.provider, model=usage.model, notices=notices or None)
@@ -429,7 +524,8 @@ class CrewAIEngine(AgentEngine):
             backstory=build_system_prompt(req.agent, req.locale, req.tone),
             description=description,
             expected="JSON con output (StructuredOutput), consults y tool_requests",
-            schema=TaskResult, policy=policy, creativity=req.agent.creativity)
+            schema=TaskResult, policy=policy, creativity=req.agent.creativity, kind="run_task",
+            max_cost_usd=req.max_cost_usd)
         out = StructuredOutput.model_validate(res.output.model_dump())  # validacion estricta
         return RunTaskResponse(output=out, consults=res.consults,
                                tool_requests=res.tool_requests, usage=usage,
@@ -474,7 +570,7 @@ class CrewAIEngine(AgentEngine):
             backstory=build_system_prompt(persona, req.locale, req.tone) if persona else system_rules(req.locale, req.tone),
             description=build_review_prompt(req),
             expected="JSON con verdict, reasons, criteria y evidence", schema=_ReviewLLM,
-            policy=policy_from_request(req, "review"), max_tokens=1500)
+            policy=policy_from_request(req, "review"), kind="review", max_cost_usd=req.max_cost_usd)
         data = normalize_review(res.model_dump(), req)
         return ReviewResponse(**data, usage=usage, provider=usage.provider, model=usage.model)
 
@@ -485,7 +581,7 @@ class CrewAIEngine(AgentEngine):
             description=build_consult_prompt(req.from_agent_id, req.to_agent_id, req.question,
                                              req.context, req.locale, req.tone),
             expected="JSON con answer", schema=_ConsultAnswer,
-            policy=policy_from_request(req, "consult"))
+            policy=policy_from_request(req, "consult"), kind="consult", max_cost_usd=req.max_cost_usd)
         return ConsultResponse(answer=res.answer, usage=usage, provider=usage.provider, model=usage.model)
 
     async def synthesize(self, req: SynthesizeRequest) -> SynthesizeResponse:
@@ -495,7 +591,7 @@ class CrewAIEngine(AgentEngine):
             description=build_synthesis_prompt(req.request_text, req.outputs, req.locale, req.tone,
                                            req.stage, req.part, req.parts),
             expected="JSON con title, summary y sections", schema=_Synth,
-            policy=policy_from_request(req, "synthesize"))
+            policy=policy_from_request(req, "synthesize"), kind="synthesize", max_cost_usd=req.max_cost_usd)
         return SynthesizeResponse(title=res.title, summary=res.summary, sections=res.sections,
                                   provider=usage.provider, model=usage.model)
 
@@ -508,7 +604,8 @@ class CrewAIEngine(AgentEngine):
         res, usage = await self._run(
             role="Asistente Ejecutiva", goal="Resumir con fidelidad, sin inventar datos",
             backstory=system_rules(req.locale, req.tone), description=build_summarize_prompt(req),
-            expected="JSON con text", schema=_SummaryLLM, policy=policy_from_request(req, "summarize"), max_tokens=2000)
+            expected="JSON con text", schema=_SummaryLLM, policy=policy_from_request(req, "summarize"), kind="summarize",
+            max_cost_usd=req.max_cost_usd)
         text = (res.text or "").strip()
         if not text:
             raise ValueError("empty summary")
@@ -523,7 +620,7 @@ class CrewAIEngine(AgentEngine):
                 backstory=system_rules(req.locale, req.tone),
                 description=build_route_prompt(req.text, req.conversation, req.agents, req.history, req.locale),
                 expected="JSON con intent, topic, primary_agent_id, contributor_agent_ids y reasons",
-                schema=_RouteLLM, policy=policy_from_request(req, "route"), max_tokens=300)
+                schema=_RouteLLM, policy=policy_from_request(req, "route"), kind="route")
             out = validate_route(res.model_dump(), req)
             rules = rules_route(req)
             if rules.consult is not None:  # wrong-area asks (1:1 or addressed by name) follow the deterministic rules
@@ -546,7 +643,7 @@ class CrewAIEngine(AgentEngine):
             role=req.agent.title or req.agent.role, goal="Responder en el chat de la oficina como una persona",
             backstory=build_chat_system_prompt(req.agent, detect_locale(req.text, req.locale), req.tone),
             description=build_chat_prompt(req), expected="JSON con text y, si aplica, consult",
-            schema=_ChatLLM, policy=policy_from_request(req, req.agent.role), max_tokens=350)
+            schema=_ChatLLM, policy=policy_from_request(req, req.agent.role), kind="chat", max_cost_usd=req.max_cost_usd)
         text = (res.text or "").strip()
         if not text:
             raise ValueError("empty chat reply")

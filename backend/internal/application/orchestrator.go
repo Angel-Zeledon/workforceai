@@ -495,6 +495,14 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 	} else {
 		spec = ReviewSpec{}
 	}
+	// Live runtime: re-check the budget with the real payload BEFORE the call and tell the runtime how much it may cost.
+	res, in.MaxCostUSD, err = o.sizeReservation(ctx, rs, t.AgentID, t.ID, domain.UsageRunTask, res, in)
+	if err != nil {
+		if ctx.Err() == nil {
+			o.failTask(ctx, rs, t, err)
+		}
+		return OutcomeFailed
+	}
 	var resp RunTaskResponse
 	attempt := 1
 	for { // W2: task-level retry of transient runtime failures (recovery.go)
@@ -523,6 +531,12 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 				return OutcomeFailed
 			}
 			res = next
+			if res, in.MaxCostUSD, err = o.sizeReservation(ctx, rs, t.AgentID, t.ID, domain.UsageRunTask, res, in); err != nil {
+				if ctx.Err() == nil {
+					o.failTask(ctx, rs, t, err)
+				}
+				return OutcomeFailed
+			}
 			continue
 		}
 		if err == nil {
@@ -663,12 +677,16 @@ func (o *Orchestrator) handleConsults(ctx context.Context, rs *run, t *domain.Ta
 		o.setState(ctx, to.ID, domain.StateTalking, "Respondiendo a "+from.Name, prev.CurrentTaskID, prev.Progress)
 
 		var ans ConsultResponse
+		creq := ConsultRequest{FromAgentID: from.ID, ToAgentID: to.ID, Question: c.Question,
+			Locale: rs.style.Locale, Tone: rs.style.ToneFor(to.ID),
+			Context: fmt.Sprintf("Solicitud: %s\nTarea: %s\nResumen parcial: %s", rs.req.Text, t.Title, t.Output.Summary)}
 		cres, err := o.reserveOrPause(ctx, rs, to.ID, t.ID, domain.UsageConsult)
 		if err == nil {
+			cres, creq.MaxCostUSD, err = o.sizeReservation(ctx, rs, to.ID, t.ID, domain.UsageConsult, cres, creq)
+		}
+		if err == nil {
 			err = o.call(ctx, "consult", func(cc context.Context) (err error) {
-				ans, err = o.rt.Consult(cc, ConsultRequest{FromAgentID: from.ID, ToAgentID: to.ID, Question: c.Question,
-					Locale: rs.style.Locale, Tone: rs.style.ToneFor(to.ID),
-					Context: fmt.Sprintf("Solicitud: %s\nTarea: %s\nResumen parcial: %s", rs.req.Text, t.Title, t.Output.Summary)})
+				ans, err = o.rt.Consult(cc, creq)
 				return err
 			})
 		}
@@ -941,6 +959,11 @@ func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.
 func (o *Orchestrator) failTask(ctx context.Context, rs *run, t domain.Task, cause error) {
 	if errors.Is(cause, errBudget) {
 		o.stopForBudget(ctx, rs, t)
+		return
+	}
+	if strings.Contains(cause.Error(), "call_budget_exceeded") { // the runtime's pre-call guard refused it: nothing was spent
+		o.stopTask(ctx, rs, t, "call_budget",
+			"la llamada costaría más de lo que permite el tope de presupuesto (se estimó antes de enviarla y no se envió): sube el tope o simplifica la tarea")
 		return
 	}
 	if errors.Is(cause, ErrProviderNoBalance) {

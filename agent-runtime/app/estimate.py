@@ -20,6 +20,7 @@ from typing import Literal
 
 from pydantic import Field, field_validator
 
+from .cost_control import max_tokens_for
 from .engine import _price_for, estimate_cost
 from .models import Locale, _Base, normalize_locale
 
@@ -36,16 +37,16 @@ SIM_SYNTH_IN = (1400, 3600)  # synthesize uses the default _usage ranges
 SIM_SYNTH_OUT = (450, 1300)
 
 # --- live heuristics ---
-LIVE_PROMPT_OVERHEAD_TOKENS = 700  # system rules + persona + schema instructions
+LIVE_PROMPT_OVERHEAD_TOKENS = 2500  # system rules + persona + tool manuals + JSON schema + framework wrapper (measured: tests/test_cost_control.py)
 LIVE_DEP_TOKENS = (300, 1500)  # per dependency output (the backend truncates to 6000 in total)
 LIVE_DEP_TOKENS_CAP = 6000
 LIVE_MEMORY_TOKENS = (0, 2000)
 LIVE_OUT_MIN = 300
-LIVE_MAX_TOKENS = 4096  # LLM max_tokens configured in CrewAIEngine
+LIVE_MAX_TOKENS = 4096  # kept for importers; the estimate itself uses the per-kind caps of cost_control.max_tokens_for
 LIVE_MAX_CONSULTS = 3
 LIVE_MAX_ATTEMPTS = 2  # one retry on invalid JSON
 LIVE_CONSULT_IN = (400, 2000)
-LIVE_CONSULT_OUT = (100, 800)
+LIVE_CONSULT_OUT = (100, 800)  # upper bound = the consult cap (cost_control MAX_TOKENS_CONSULT)
 CHARS_PER_TOKEN = 3.5
 
 
@@ -120,8 +121,9 @@ def _task_range(model: str | None, mode: str, t: EstimateTaskIn) -> TaskEstimate
     deps_max = min(LIVE_DEP_TOKENS[1] * n, LIVE_DEP_TOKENS_CAP)
     in_min = LIVE_PROMPT_OVERHEAD_TOKENS + text_tokens + deps_min + LIVE_MEMORY_TOKENS[0]
     in_max = LIVE_PROMPT_OVERHEAD_TOKENS + text_tokens + deps_max + LIVE_MEMORY_TOKENS[1]
+    out_cap = max_tokens_for("run_task")
     lo = _cost(model, in_min, LIVE_OUT_MIN)
-    one_call_hi = _cost(model, in_max, LIVE_MAX_TOKENS)
+    one_call_hi = _cost(model, in_max, out_cap)
     consult_hi = LIVE_MAX_CONSULTS * _cost(model, LIVE_CONSULT_IN[1], LIVE_CONSULT_OUT[1])
     hi = LIVE_MAX_ATTEMPTS * one_call_hi + consult_hi
     return TaskEstimate(
@@ -129,7 +131,7 @@ def _task_range(model: str | None, mode: str, t: EstimateTaskIn) -> TaskEstimate
         input_tokens_min=in_min,
         input_tokens_max=LIVE_MAX_ATTEMPTS * in_max + LIVE_MAX_CONSULTS * LIVE_CONSULT_IN[1],
         output_tokens_min=LIVE_OUT_MIN,
-        output_tokens_max=LIVE_MAX_ATTEMPTS * LIVE_MAX_TOKENS + LIVE_MAX_CONSULTS * LIVE_CONSULT_OUT[1])
+        output_tokens_max=LIVE_MAX_ATTEMPTS * out_cap + LIVE_MAX_CONSULTS * LIVE_CONSULT_OUT[1])
 
 
 def _synthesis_range(model: str | None, mode: str, n_tasks: int) -> CostRange:
@@ -139,7 +141,7 @@ def _synthesis_range(model: str | None, mode: str, n_tasks: int) -> CostRange:
     tin_min = LIVE_PROMPT_OVERHEAD_TOKENS + 300 * n_tasks
     tin_max = LIVE_PROMPT_OVERHEAD_TOKENS + 1500 * n_tasks
     return CostRange(min_usd=round(_cost(model, tin_min, LIVE_OUT_MIN), 5),
-                     max_usd=round(LIVE_MAX_ATTEMPTS * _cost(model, tin_max, LIVE_MAX_TOKENS), 5))
+                     max_usd=round(LIVE_MAX_ATTEMPTS * _cost(model, tin_max, max_tokens_for("synthesize")), 5))
 
 
 def estimate_plan(req: EstimateRequest, *, mode: str, model: str | None) -> EstimateResponse:

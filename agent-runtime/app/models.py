@@ -128,6 +128,10 @@ class _ProviderPolicyMixin(_Base):
     role_models: dict[str, str] | None = None
     provider_credentials: list[ProviderCredential] | None = Field(default=None, repr=False)
     byo_only: bool = False
+    # Cost guard (additive): the most this ONE call may cost (USD). The runtime estimates the call before sending
+    # it (prompt tokens + max_tokens at the shared price table) and refuses it (HTTP 402, code
+    # call_budget_exceeded) when the estimate is above. 0 / absent = no cap sent.
+    max_cost_usd: float = Field(default=0.0, ge=0.0)
 
 
 # ---- /v1/plan -------------------------------------------------------------
@@ -506,11 +510,9 @@ class ToolRequest(_Base):
     action: str
     args: dict[str, Any] = Field(
         default_factory=dict,
-        description=("Arguments of the tool. Office files: tool=fs, action=write_document, args={path:'/Agents/x/file.xlsx|.docx|.pdf', "
-                     "document:{sheets:[{name,columns:[{header,type}],rows:[[...]]}]} for xlsx, or {title,blocks:[{type:heading|paragraph|"
-                     "bullets|table,...}]} for docx/pdf}; never binary content. Change an existing file: tool=fs, action=edit, "
-                     "args={path, expected_version, ops:[{op:replace,old,new}|{op:insert_after,anchor,text}|{op:delete,text}|{op:append,text}; "
-                     "docx: replace|set_heading|append_paragraph; xlsx: set_cell|add_row|rename_sheet]}."))
+        description=("Tool arguments. Office files: tool=fs, action=write_document, args={path:'/Agents/x/file.xlsx|.docx|.pdf', "
+                     "document:{sheets:[...]} (xlsx) or {title,blocks:[...]} (docx/pdf)}, never binary. Change a file: "
+                     "action=edit, args={path, expected_version, ops:[...]}. Formats are in the workspace rules."))
     risk: Risk = "low"
 
 

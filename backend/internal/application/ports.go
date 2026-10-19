@@ -370,6 +370,11 @@ type RunTaskRequest struct {
 	// Images (vision, additive, omitted when empty): images the agent can SEE on
 	// this call, produced by fs.read (view "image") through the Tool Gateway.
 	Images []ImagePart `json:"images,omitempty"`
+
+	// MaxCostUSD (additive, omitted when 0): the most this one call may cost. The runtime estimates the call before
+	// sending it to the model and refuses it (HTTP 402 call_budget_exceeded) when it would cross this. Set from the
+	// budget reservation of the call (call_guard.go).
+	MaxCostUSD float64 `json:"max_cost_usd,omitempty"`
 }
 
 type ConsultRequestItem struct {
@@ -419,6 +424,11 @@ type ConsultRequest struct {
 	Context     string `json:"context"`
 	Locale      string `json:"locale,omitempty"`
 	Tone        string `json:"tone,omitempty"`
+
+	// MaxCostUSD (additive, omitted when 0): the most this one call may cost. The runtime estimates the call before
+	// sending it to the model and refuses it (HTTP 402 call_budget_exceeded) when it would cross this. Set from the
+	// budget reservation of the call (call_guard.go).
+	MaxCostUSD float64 `json:"max_cost_usd,omitempty"`
 }
 
 type ConsultResponse struct {
@@ -443,6 +453,11 @@ type SynthesizeRequest struct {
 	Stage string `json:"stage,omitempty"`
 	Part  int    `json:"part,omitempty"`
 	Parts int    `json:"parts,omitempty"`
+
+	// MaxCostUSD (additive, omitted when 0): the most this one call may cost. The runtime estimates the call before
+	// sending it to the model and refuses it (HTTP 402 call_budget_exceeded) when it would cross this. Set from the
+	// budget reservation of the call (call_guard.go).
+	MaxCostUSD float64 `json:"max_cost_usd,omitempty"`
 }
 
 type SynthesizeResponse struct {

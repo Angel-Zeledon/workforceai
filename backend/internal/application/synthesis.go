@@ -46,6 +46,9 @@ func (o *Orchestrator) synthesize(ctx context.Context, rs *run, outs []SynthOutp
 func (o *Orchestrator) synthCall(ctx context.Context, rs *run, in SynthesizeRequest) (SynthesizeResponse, bool) {
 	var syn SynthesizeResponse
 	synRes, err := o.reserveOrPause(ctx, rs, assistantID, "", domain.UsageSynthesize)
+	if err == nil {
+		synRes, in.MaxCostUSD, err = o.sizeReservation(ctx, rs, assistantID, "", domain.UsageSynthesize, synRes, in)
+	}
 	if err != nil {
 		if ctx.Err() == nil {
 			o.failRequest(ctx, rs, assistantID, "No pude consolidar el informe", err)
