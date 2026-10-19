@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
@@ -130,5 +131,41 @@ func TestStandingApprovalAPIPermissions(t *testing.T) {
 	}
 	if c := e.status("DELETE", "/api/v1/projects/proj1/standing-approvals/x", "", nil); c != 401 {
 		t.Errorf("anonymous revoke = %d", c)
+	}
+}
+
+// The three-way choice of the approval card (once / session / project) reuses the standing approvals.
+func TestApprovalScopeOnceSessionProject(t *testing.T) {
+	e := newEnv(t, opts{standing: true})
+	decide := func(action, scope string) (code int, st *application.StandingApproval) {
+		ap := e.pendingStanding("spreadsheet", action, "medium", true)
+		resp, body := e.do("POST", "/api/v1/approvals/"+ap.ID+"/decision", "", map[string]any{"decision": "approve", "scope": scope}, nil)
+		var out struct {
+			Standing *application.StandingApproval `json:"standing"`
+		}
+		_ = json.Unmarshal(body, &out)
+		return resp.StatusCode, out.Standing
+	}
+	if c, st := decide("update", "once"); c != 200 || st != nil {
+		t.Fatalf("once: %d %+v", c, st)
+	}
+	c, sess := decide("write", "session")
+	if c != 200 || sess == nil || sess.Status != "active" {
+		t.Fatalf("session: %d %+v", c, sess)
+	}
+	if d := sess.ExpiresAt.Sub(sess.CreatedAt); d > 9*time.Hour || d < 7*time.Hour {
+		t.Fatalf("session grant lasts %v, want about 8h", d)
+	}
+	c, proj := decide("append", "project")
+	if c != 200 || proj == nil || proj.ExpiresAt.Sub(proj.CreatedAt) < 24*time.Hour {
+		t.Fatalf("project: %d %+v", c, proj)
+	}
+	ap := e.pendingStanding("spreadsheet", "edit", "medium", true)
+	if c := e.status("POST", "/api/v1/approvals/"+ap.ID+"/decision", "", map[string]any{"decision": "approve", "scope": "forever"}); c != http.StatusBadRequest {
+		t.Errorf("unknown scope = %d", c)
+	}
+	// Rejecting with a remembered scope is a client error, like always_allow.
+	if c := e.status("POST", "/api/v1/approvals/"+ap.ID+"/decision", "", map[string]any{"decision": "reject", "scope": "session"}); c != http.StatusBadRequest {
+		t.Errorf("reject + session = %d", c)
 	}
 }

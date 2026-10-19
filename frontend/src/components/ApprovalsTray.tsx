@@ -19,12 +19,16 @@ export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approv
   const canDecide = useCan("approvals:decide");
   // "Always allow this kind of action in this project": only offered when the server marked the approval as an
   // internal, reversible action of a project. The server checks it again; it never covers external actions.
+  // The three choices of the card: approve once (default) / approve and remember for this session or this project / deny.
   const [always, setAlways] = useState(false);
+  const [remember, setRemember] = useState<"session" | "project">("project");
   const [anyAgent, setAnyAgent] = useState(false);
   const decide = async (d: "approve" | "reject") => {
     setBusy(true); setErr("");
-    try { await api.decide(a.id, d, undefined, d === "approve" && always ? { anyAgent } : undefined); } catch { setErr(t("approvals.decideError")); setBusy(false); }
+    try { await api.decide(a.id, d, undefined, d === "approve" && always ? { anyAgent, scope: remember } : undefined); } catch { setErr(t("approvals.decideError")); setBusy(false); }
   };
+  const canRemember = !!a.standing_eligible && !!a.project_id;
+  const approveLabel = !canRemember ? t("approvals.approve") : !always ? t("approvals.approveOnce") : remember === "session" ? t("approvals.approveSession") : t("approvals.approveProject");
   const pending = a.status === "pending";
   return (
     <div data-testid={pending ? (scope === "office" ? `office-approval-card-${a.id}` : `approval-${a.id}`) : undefined} className="rounded-md border border-line bg-panel2 p-3">
@@ -39,23 +43,33 @@ export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approv
         <div data-testid={scope === "office" ? "office-approval-no-permission" : "approval-no-permission"} className="mt-2 text-[11px] text-mute">{t("approvals.noPermission")}</div>
       ) : pending ? (
         <>
-        {a.standing_eligible && a.project_id && (
+        {canRemember && (
           <div className="mt-2 space-y-1 text-[11px] text-ink2">
             <label className="flex items-center gap-1.5 font-semibold">
               <input type="checkbox" data-testid={`approval-always-${a.id}`} checked={always} disabled={busy} onChange={(e) => setAlways(e.target.checked)} />
               {t("approvals.always.label")}
             </label>
             {always && (
+              <div role="radiogroup" aria-label={t("approvals.scope.label")} className="ml-5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {(["session", "project"] as const).map((sc) => (
+                  <label key={sc} className="flex items-center gap-1.5">
+                    <input type="radio" name={`approval-scope-${a.id}`} data-testid={`approval-scope-${a.id}-${sc}`} checked={remember === sc} disabled={busy} onChange={() => setRemember(sc)} />
+                    {t(`approvals.scope.${sc}`)}
+                  </label>
+                ))}
+              </div>
+            )}
+            {always && remember === "project" && (
               <label className="ml-5 flex items-center gap-1.5">
                 <input type="checkbox" data-testid={`approval-always-any-${a.id}`} checked={anyAgent} disabled={busy} onChange={(e) => setAnyAgent(e.target.checked)} />
                 {t("approvals.always.anyAgent")}
               </label>
             )}
-            {always && <p className="ml-5 text-mute">{t("approvals.always.hint")}</p>}
+            {always && <p className="ml-5 text-mute">{remember === "session" ? t("approvals.scope.sessionHint") : t("approvals.always.hint")}</p>}
           </div>
         )}
         <div className="mt-2.5 flex items-center gap-2">
-          <Btn kind="ok" disabled={busy} onClick={() => decide("approve")}>{t("approvals.approve")}</Btn>
+          <Btn kind="ok" disabled={busy} data-testid={`approve-btn-${a.id}`} onClick={() => decide("approve")}>{approveLabel}</Btn>
           <Btn kind="danger" disabled={busy} onClick={() => decide("reject")}>{t("approvals.reject")}</Btn>
           {err && <span className="text-[11px] text-red-700">{err}</span>}
         </div>

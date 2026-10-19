@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"time"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
@@ -46,6 +47,11 @@ type Service struct {
 	// WelcomeCoins is granted once to every organization the first time it opens the shop or office (0 = no grant).
 	WelcomeCoins int64
 	welcomed     sync.Map // org id -> struct{}: organizations already checked in this process
+
+	// Daily turns the daily goal on (REWARDS_DAILY_GOAL, default on in main); off, nothing changes in the economy.
+	Daily bool
+	// Clock (optional) replaces time.Now for the daily goal (tests).
+	Clock func() time.Time
 }
 
 // ---- earning ----
@@ -82,6 +88,7 @@ func (s *Service) OnTaskCompleted(ctx context.Context, org string, t domain.Task
 		Kind: KindEarn, Amount: p.Amount, Reason: p.Reason, RefKind: RefTask, RefID: t.ID,
 		Title: clip(t.Title, 140), AgentID: t.AgentID, Actor: "system", Detail: detail, IdemKey: "earn:task:" + t.ID,
 	}, t.RequestID)
+	s.checkDaily(ctx, org) // the daily goal counts finished work only: it can only have been reached by this payment
 }
 
 // OnProjectDone pays the completion bonus of a project once.

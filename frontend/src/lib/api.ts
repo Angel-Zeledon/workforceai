@@ -72,9 +72,10 @@ export const api = {
   postRequest: (text: string) => call<{ request_id: string }>("POST", "/requests", { text }),
   sendMessage: (convId: string, text: string) => call<unknown>("POST", `/conversations/${convId}/messages`, { text }),
   /** `always` (approve only) also stores a standing approval for this kind of action in the approval's project;
-   * the server refuses it unless the action is internal and reversible, and says so in `standing_error`. */
-  decide: (id: string, decision: "approve" | "reject", note?: string, always?: { anyAgent: boolean }) =>
+   * `scope` is "session" (about 8 hours) or "project" (the default when `always` is given). The server refuses
+   * both unless the action is internal and reversible, and says so in `standing_error`. */
+  decide: (id: string, decision: "approve" | "reject", note?: string, always?: { anyAgent: boolean; scope?: "session" | "project" }) =>
     call<{ standing?: StandingApproval; standing_error?: string }>("POST", `/approvals/${id}/decision`,
-      always ? { decision, note, always_allow: true, always_allow_any_agent: always.anyAgent } : { decision, note }),
+      always ? { decision, note, always_allow: true, always_allow_any_agent: always.anyAgent, scope: always.scope ?? "project" } : { decision, note }),
   reset: () => call<unknown>("POST", "/demo/reset"),
 };

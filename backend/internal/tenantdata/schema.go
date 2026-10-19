@@ -64,6 +64,8 @@ var RedactedColumns = map[string]string{
 	"push_subscriptions.endpoint":         "Web Push capability URL",
 	"push_subscriptions.p256dh":           "Web Push encryption key",
 	"push_subscriptions.auth":             "Web Push auth secret",
+	"notify_settings.slack_webhook":       "Slack incoming-webhook URL (the path is a secret)",
+	"notify_settings.teams_webhook":       "Teams incoming-webhook URL (the path is a secret)",
 }
 
 // BlobColumns are the bytea columns that hold the organization's own file

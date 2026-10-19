@@ -180,7 +180,13 @@ type StandingGrantInput struct {
 	ApprovalID string
 	AnyAgent   bool // widen from this agent to every agent of the project
 	Days       int  // 0 = the configured default
+	// TTL (> 0) overrides Days with a short validity: "approve for this session" is a standing approval
+	// that lasts SessionStandingTTL, capped at one day. Same eligibility, same revocation.
+	TTL time.Duration
 }
+
+// SessionStandingTTL is how long "approve for this session" lasts.
+const SessionStandingTTL = 8 * time.Hour
 
 // Grant stores the standing approval for a just-approved approval. The server
 // decides eligibility from the stored approval, never from the client.
@@ -218,6 +224,9 @@ func (s *StandingService) Grant(ctx context.Context, in StandingGrantInput) (Sta
 	actor := ActorFrom(ctx, "user")
 	st := StandingApproval{ID: newID(), ProjectID: ap.ProjectID, AgentID: agent, Tool: ap.Tool, Action: ap.Action, ApprovalID: ap.ID,
 		CreatedBy: actor, CreatedAt: now, ExpiresAt: now.Add(time.Duration(s.days(in.Days)) * 24 * time.Hour)}
+	if in.TTL > 0 {
+		st.ExpiresAt = now.Add(min(in.TTL, 24*time.Hour))
+	}
 	if err := s.Store.CreateStanding(ctx, org, st); err != nil {
 		return StandingApproval{}, err
 	}
