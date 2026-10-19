@@ -1,0 +1,949 @@
+{
+  "schema": "aiw.industry_template/1",
+  "key": "ecommerce_store",
+  "version": 1,
+  "category": "commerce",
+  "name_key": "name",
+  "description_key": "desc",
+  "disclaimer_key": "disclaimer",
+  "subsidiaries": 0,
+  "demo_set": "ecommerce_store",
+  "departments": [
+    {
+      "key": "store",
+      "name_key": "d_store",
+      "parent": "",
+      "cost_center": "CC-100",
+      "head": "store_manager"
+    },
+    {
+      "key": "catalog",
+      "name_key": "d_catalog",
+      "parent": "store",
+      "cost_center": "CC-200",
+      "head": "catalog_mgr"
+    },
+    {
+      "key": "fulfillment",
+      "name_key": "d_fulfillment",
+      "parent": "store",
+      "cost_center": "CC-300",
+      "head": "fulfillment_lead"
+    },
+    {
+      "key": "support",
+      "name_key": "d_support",
+      "parent": "store",
+      "cost_center": "CC-400",
+      "head": "support_lead"
+    },
+    {
+      "key": "marketing",
+      "name_key": "d_marketing",
+      "parent": "store",
+      "cost_center": "CC-500",
+      "head": "growth_lead"
+    },
+    {
+      "key": "finance",
+      "name_key": "d_finance",
+      "parent": "store",
+      "cost_center": "CC-600",
+      "head": "finance_lead"
+    },
+    {
+      "key": "tech",
+      "name_key": "d_tech",
+      "parent": "store",
+      "cost_center": "CC-700",
+      "head": "dev"
+    }
+  ],
+  "agents": [
+    {
+      "key": "store_manager",
+      "role": "project_manager",
+      "department": "store",
+      "name_key": "a_store_manager_name",
+      "title_key": "a_store_manager_title",
+      "responsibility_keys": [
+        "a_store_manager_r1",
+        "a_store_manager_r2",
+        "a_store_manager_r3",
+        "a_store_manager_r4"
+      ],
+      "tools": [
+        "fs",
+        "artifacts",
+        "calendar",
+        "docs"
+      ],
+      "reports_to": "owner",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "18:00"
+      },
+      "budget_usd": 60,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "catalog_mgr",
+      "role": "operations",
+      "department": "catalog",
+      "name_key": "a_catalog_mgr_name",
+      "title_key": "a_catalog_mgr_title",
+      "responsibility_keys": [
+        "a_catalog_mgr_r1",
+        "a_catalog_mgr_r2",
+        "a_catalog_mgr_r3",
+        "a_catalog_mgr_r4"
+      ],
+      "tools": [
+        "fs",
+        "inventory"
+      ],
+      "reports_to": "store_manager",
+      "escalation": "store_manager",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 55,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "fulfillment_lead",
+      "role": "operations",
+      "department": "fulfillment",
+      "name_key": "a_fulfillment_lead_name",
+      "title_key": "a_fulfillment_lead_title",
+      "responsibility_keys": [
+        "a_fulfillment_lead_r1",
+        "a_fulfillment_lead_r2",
+        "a_fulfillment_lead_r3",
+        "a_fulfillment_lead_r4"
+      ],
+      "tools": [
+        "fs",
+        "planner",
+        "inventory"
+      ],
+      "reports_to": "store_manager",
+      "escalation": "store_manager",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "start": "07:00",
+        "end": "16:00"
+      },
+      "budget_usd": 70,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "support_lead",
+      "role": "assistant",
+      "department": "support",
+      "name_key": "a_support_lead_name",
+      "title_key": "a_support_lead_title",
+      "responsibility_keys": [
+        "a_support_lead_r1",
+        "a_support_lead_r2",
+        "a_support_lead_r3",
+        "a_support_lead_r4"
+      ],
+      "tools": [
+        "fs",
+        "calendar",
+        "docs"
+      ],
+      "reports_to": "store_manager",
+      "escalation": "store_manager",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "start": "00:00",
+        "end": "24:00"
+      },
+      "budget_usd": 90,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "support_night",
+      "role": "assistant",
+      "department": "support",
+      "name_key": "a_support_night_name",
+      "title_key": "a_support_night_title",
+      "responsibility_keys": [
+        "a_support_night_r1",
+        "a_support_night_r2",
+        "a_support_night_r3",
+        "a_support_night_r4"
+      ],
+      "tools": [
+        "fs",
+        "docs"
+      ],
+      "reports_to": "support_lead",
+      "escalation": "support_lead",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "start": "22:00",
+        "end": "06:00"
+      },
+      "budget_usd": 45,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "growth_lead",
+      "role": "sales",
+      "department": "marketing",
+      "name_key": "a_growth_lead_name",
+      "title_key": "a_growth_lead_title",
+      "responsibility_keys": [
+        "a_growth_lead_r1",
+        "a_growth_lead_r2",
+        "a_growth_lead_r3",
+        "a_growth_lead_r4"
+      ],
+      "tools": [
+        "fs",
+        "crm",
+        "email",
+        "proposal_builder"
+      ],
+      "reports_to": "store_manager",
+      "escalation": "store_manager",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 65,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "insights",
+      "role": "data_analyst",
+      "department": "marketing",
+      "name_key": "a_insights_name",
+      "title_key": "a_insights_title",
+      "responsibility_keys": [
+        "a_insights_r1",
+        "a_insights_r2",
+        "a_insights_r3",
+        "a_insights_r4"
+      ],
+      "tools": [
+        "fs",
+        "bi",
+        "spreadsheet",
+        "calculator"
+      ],
+      "reports_to": "growth_lead",
+      "escalation": "growth_lead",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "10:00",
+        "end": "19:00"
+      },
+      "budget_usd": 60,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "finance_lead",
+      "role": "accounting",
+      "department": "finance",
+      "name_key": "a_finance_lead_name",
+      "title_key": "a_finance_lead_title",
+      "responsibility_keys": [
+        "a_finance_lead_r1",
+        "a_finance_lead_r2",
+        "a_finance_lead_r3",
+        "a_finance_lead_r4"
+      ],
+      "tools": [
+        "fs",
+        "ledger",
+        "spreadsheet"
+      ],
+      "reports_to": "store_manager",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "17:00"
+      },
+      "budget_usd": 70,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "dev",
+      "role": "software_engineer",
+      "department": "tech",
+      "name_key": "a_dev_name",
+      "title_key": "a_dev_title",
+      "responsibility_keys": [
+        "a_dev_r1",
+        "a_dev_r2",
+        "a_dev_r3",
+        "a_dev_r4"
+      ],
+      "tools": [
+        "fs",
+        "repo_read",
+        "docs",
+        "artifacts"
+      ],
+      "reports_to": "store_manager",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "10:00",
+        "end": "19:00"
+      },
+      "budget_usd": 80,
+      "autonomy": "approve_each"
+    }
+  ],
+  "delegation": [
+    {
+      "from": "any_agent",
+      "to": "owner",
+      "effect": "allow",
+      "approval": true,
+      "approver": "owner",
+      "note_key": "rule_1"
+    },
+    {
+      "from": "owner",
+      "to": "any_agent",
+      "effect": "allow",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_2"
+    },
+    {
+      "from": "any_agent",
+      "to": "any_agent",
+      "effect": "allow",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_3"
+    },
+    {
+      "from": "dept:support",
+      "to": "dept:finance",
+      "effect": "allow",
+      "approval": true,
+      "approver": "finance_lead",
+      "note_key": "rule_4"
+    },
+    {
+      "from": "dept:marketing",
+      "to": "dept:catalog",
+      "effect": "allow",
+      "approval": true,
+      "approver": "catalog_mgr",
+      "note_key": "rule_5"
+    },
+    {
+      "from": "agent:support_night",
+      "to": "dept:tech",
+      "effect": "deny",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_6"
+    }
+  ],
+  "projects": [
+    {
+      "key": "seasonal_campaign",
+      "name_key": "p_seasonal_campaign",
+      "description_key": "p_seasonal_campaign_desc",
+      "steps": [
+        {
+          "key": "history",
+          "title_key": "s_seasonal_campaign_history",
+          "description_key": "s_seasonal_campaign_history_d",
+          "agent": "insights",
+          "depends_on": []
+        },
+        {
+          "key": "stock",
+          "title_key": "s_seasonal_campaign_stock",
+          "description_key": "s_seasonal_campaign_stock_d",
+          "agent": "fulfillment_lead",
+          "depends_on": []
+        },
+        {
+          "key": "offer",
+          "title_key": "s_seasonal_campaign_offer",
+          "description_key": "s_seasonal_campaign_offer_d",
+          "agent": "catalog_mgr",
+          "depends_on": [
+            "history",
+            "stock"
+          ]
+        },
+        {
+          "key": "margin",
+          "title_key": "s_seasonal_campaign_margin",
+          "description_key": "s_seasonal_campaign_margin_d",
+          "agent": "finance_lead",
+          "depends_on": [
+            "offer"
+          ]
+        },
+        {
+          "key": "messages",
+          "title_key": "s_seasonal_campaign_messages",
+          "description_key": "s_seasonal_campaign_messages_d",
+          "agent": "growth_lead",
+          "depends_on": [
+            "margin"
+          ]
+        },
+        {
+          "key": "prep_support",
+          "title_key": "s_seasonal_campaign_prep_support",
+          "description_key": "s_seasonal_campaign_prep_support_d",
+          "agent": "support_lead",
+          "depends_on": [
+            "offer"
+          ]
+        },
+        {
+          "key": "launch",
+          "title_key": "s_seasonal_campaign_launch",
+          "description_key": "s_seasonal_campaign_launch_d",
+          "agent": "store_manager",
+          "depends_on": [
+            "messages",
+            "prep_support"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "product_launch",
+      "name_key": "p_product_launch",
+      "description_key": "p_product_launch_desc",
+      "steps": [
+        {
+          "key": "listing",
+          "title_key": "s_product_launch_listing",
+          "description_key": "s_product_launch_listing_d",
+          "agent": "catalog_mgr",
+          "depends_on": []
+        },
+        {
+          "key": "inventory",
+          "title_key": "s_product_launch_inventory",
+          "description_key": "s_product_launch_inventory_d",
+          "agent": "fulfillment_lead",
+          "depends_on": []
+        },
+        {
+          "key": "site",
+          "title_key": "s_product_launch_site",
+          "description_key": "s_product_launch_site_d",
+          "agent": "dev",
+          "depends_on": [
+            "listing"
+          ]
+        },
+        {
+          "key": "cost",
+          "title_key": "s_product_launch_cost",
+          "description_key": "s_product_launch_cost_d",
+          "agent": "finance_lead",
+          "depends_on": [
+            "listing"
+          ]
+        },
+        {
+          "key": "promo",
+          "title_key": "s_product_launch_promo",
+          "description_key": "s_product_launch_promo_d",
+          "agent": "growth_lead",
+          "depends_on": [
+            "site",
+            "cost"
+          ]
+        },
+        {
+          "key": "go_live",
+          "title_key": "s_product_launch_go_live",
+          "description_key": "s_product_launch_go_live_d",
+          "agent": "store_manager",
+          "depends_on": [
+            "promo",
+            "inventory"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "returns_review",
+      "name_key": "p_returns_review",
+      "description_key": "p_returns_review_desc",
+      "steps": [
+        {
+          "key": "tickets",
+          "title_key": "s_returns_review_tickets",
+          "description_key": "s_returns_review_tickets_d",
+          "agent": "support_lead",
+          "depends_on": []
+        },
+        {
+          "key": "rates",
+          "title_key": "s_returns_review_rates",
+          "description_key": "s_returns_review_rates_d",
+          "agent": "insights",
+          "depends_on": []
+        },
+        {
+          "key": "cost",
+          "title_key": "s_returns_review_cost",
+          "description_key": "s_returns_review_cost_d",
+          "agent": "finance_lead",
+          "depends_on": [
+            "tickets"
+          ]
+        },
+        {
+          "key": "actions",
+          "title_key": "s_returns_review_actions",
+          "description_key": "s_returns_review_actions_d",
+          "agent": "catalog_mgr",
+          "depends_on": [
+            "rates",
+            "cost"
+          ]
+        },
+        {
+          "key": "review",
+          "title_key": "s_returns_review_review",
+          "description_key": "s_returns_review_review_d",
+          "agent": "store_manager",
+          "depends_on": [
+            "actions"
+          ]
+        }
+      ]
+    }
+  ],
+  "i18n": {
+    "en": {
+      "a_catalog_mgr_name": "Julián",
+      "a_catalog_mgr_r1": "Keeps product pages, images and variants complete.",
+      "a_catalog_mgr_r2": "Proposes price changes with their rationale.",
+      "a_catalog_mgr_r3": "Watches products out of stock or without margin.",
+      "a_catalog_mgr_r4": "Publishes changes only after approval.",
+      "a_catalog_mgr_title": "Catalog manager",
+      "a_dev_name": "Iván",
+      "a_dev_r1": "Reads the store code and proposes improvements.",
+      "a_dev_r2": "Documents payment, shipping and inventory integrations.",
+      "a_dev_r3": "Prepares small changes for human review.",
+      "a_dev_r4": "Never deploys to production on its own.",
+      "a_dev_title": "Store developer",
+      "a_finance_lead_name": "Mónica",
+      "a_finance_lead_r1": "Reconciles payment-gateway payouts with orders.",
+      "a_finance_lead_r2": "Prepares the monthly close and cash flow.",
+      "a_finance_lead_r3": "Computes margins by product and channel.",
+      "a_finance_lead_r4": "Hands taxes over to a licensed accountant.",
+      "a_finance_lead_title": "Finance lead",
+      "a_fulfillment_lead_name": "Rodrigo",
+      "a_fulfillment_lead_r1": "Plans order picking and dispatch.",
+      "a_fulfillment_lead_r2": "Tracks inventory and raises restock alerts.",
+      "a_fulfillment_lead_r3": "Follows carriers and delivery incidents.",
+      "a_fulfillment_lead_r4": "Coordinates returns with customer support.",
+      "a_fulfillment_lead_title": "Fulfillment lead",
+      "a_growth_lead_name": "Carolina",
+      "a_growth_lead_r1": "Plans email campaigns and seasonal promotions.",
+      "a_growth_lead_r2": "Segments customers in the CRM.",
+      "a_growth_lead_r3": "Drafts messages and offers for approval.",
+      "a_growth_lead_r4": "Respects opt-outs and contact consent.",
+      "a_growth_lead_title": "Growth lead",
+      "a_insights_name": "Bruno",
+      "a_insights_r1": "Analyzes sales, conversion and repeat purchase by channel.",
+      "a_insights_r2": "Measures each campaign's result.",
+      "a_insights_r3": "Spots products with abnormal return rates.",
+      "a_insights_r4": "Explains figures along with their limits.",
+      "a_insights_title": "Sales data analyst",
+      "a_store_manager_name": "Paola",
+      "a_store_manager_r1": "Coordinates campaigns, launches and daily operations.",
+      "a_store_manager_r2": "Reviews the board of orders, returns and tickets.",
+      "a_store_manager_r3": "Prepares the daily sales summary for the owner.",
+      "a_store_manager_r4": "Escalates pricing decisions and crises to the owner.",
+      "a_store_manager_title": "Store manager",
+      "a_support_lead_name": "Daniela",
+      "a_support_lead_r1": "Answers order, shipping and product questions at any hour.",
+      "a_support_lead_r2": "Triages tickets by urgency and topic.",
+      "a_support_lead_r3": "Prepares refunds for approval; never executes them alone.",
+      "a_support_lead_r4": "Escalates serious complaints to the store manager.",
+      "a_support_lead_title": "Customer support (round the clock)",
+      "a_support_night_name": "Tomás",
+      "a_support_night_r1": "Covers nights and weekends with answers from the playbook.",
+      "a_support_night_r2": "Leaves clear hand-off notes for the day shift.",
+      "a_support_night_r3": "Flags urgent orders (deadline, safety) for the morning.",
+      "a_support_night_r4": "Never promises refunds or deadlines outside policy.",
+      "a_support_night_title": "Night and weekend support",
+      "d_catalog": "Catalog and pricing",
+      "d_finance": "Finance",
+      "d_fulfillment": "Fulfillment and shipping",
+      "d_marketing": "Marketing and growth",
+      "d_store": "Store management",
+      "d_support": "Customer support",
+      "d_tech": "Technology",
+      "desc": "Store with catalog, fulfillment, 24/7 support, marketing, finance and tech, with agents and projects for campaigns, product launches and returns.",
+      "disclaimer": "Agents assist with operations; refunds, prices, taxes and sensitive messages require human approval and review by a professional (accounting or tax) where relevant.",
+      "name": "E-commerce store",
+      "p_product_launch": "New product launch",
+      "p_product_launch_desc": "Catalog entry, inventory, storefront, communication and support.",
+      "p_returns_review": "Monthly returns review",
+      "p_returns_review_desc": "Analyzes return reasons, cost and improvement actions.",
+      "p_seasonal_campaign": "Seasonal campaign",
+      "p_seasonal_campaign_desc": "Pick products, set the offer, communicate and measure the result.",
+      "rule_1": "Assigning work to the owner needs the owner's approval.",
+      "rule_2": "The owner may assign to any agent.",
+      "rule_3": "Agents coordinate with each other by default.",
+      "rule_4": "Refunds requested by support go through finance.",
+      "rule_5": "Marketing requests catalog changes with the manager's approval.",
+      "rule_6": "The night shift does not assign work to tech; it leaves a hand-off note.",
+      "s_product_launch_cost": "Confirm cost and margin",
+      "s_product_launch_cost_d": "Verify product, shipping and fee costs.",
+      "s_product_launch_go_live": "Go live",
+      "s_product_launch_go_live_d": "Manager approval and go-live.",
+      "s_product_launch_inventory": "Receive inventory",
+      "s_product_launch_inventory_d": "Record receipt and warehouse location.",
+      "s_product_launch_listing": "Create the product page",
+      "s_product_launch_listing_d": "Complete copy, images, variants and price.",
+      "s_product_launch_promo": "Prepare the communication",
+      "s_product_launch_promo_d": "Write the announcement and email for the customer base.",
+      "s_product_launch_site": "Test the storefront page",
+      "s_product_launch_site_d": "Check loading, cart and payment methods.",
+      "s_returns_review_actions": "Propose improvement actions",
+      "s_returns_review_actions_d": "Changes to page, packaging or supplier.",
+      "s_returns_review_cost": "Estimate return cost",
+      "s_returns_review_cost_d": "Refunds, return shipping and write-offs.",
+      "s_returns_review_rates": "Compute return rates",
+      "s_returns_review_rates_d": "Rate by product, channel and carrier.",
+      "s_returns_review_review": "Present to the owner",
+      "s_returns_review_review_d": "Summary with pending decisions.",
+      "s_returns_review_tickets": "Summarize return tickets",
+      "s_returns_review_tickets_d": "Group reasons and repeated cases.",
+      "s_seasonal_campaign_history": "Analyze previous sales",
+      "s_seasonal_campaign_history_d": "Identify the best-performing products and channels.",
+      "s_seasonal_campaign_launch": "Approve and launch",
+      "s_seasonal_campaign_launch_d": "Final review by the manager and go-live.",
+      "s_seasonal_campaign_margin": "Validate the margin",
+      "s_seasonal_campaign_margin_d": "Compute margin per product with the proposed offer.",
+      "s_seasonal_campaign_messages": "Write emails and ads",
+      "s_seasonal_campaign_messages_d": "Prepare messages for the manager's approval.",
+      "s_seasonal_campaign_offer": "Set prices and offer",
+      "s_seasonal_campaign_offer_d": "Propose discounts that protect margin.",
+      "s_seasonal_campaign_prep_support": "Brief the support team",
+      "s_seasonal_campaign_prep_support_d": "Update answers and the playbook for the campaign.",
+      "s_seasonal_campaign_stock": "Check available inventory",
+      "s_seasonal_campaign_stock_d": "Confirm stock and restock lead times."
+    },
+    "es": {
+      "a_catalog_mgr_name": "Julián",
+      "a_catalog_mgr_r1": "Mantiene fichas de producto, imágenes y variantes completas.",
+      "a_catalog_mgr_r2": "Propone cambios de precio con su justificación.",
+      "a_catalog_mgr_r3": "Vigila productos sin stock o sin margen.",
+      "a_catalog_mgr_r4": "Publica cambios solo tras aprobación.",
+      "a_catalog_mgr_title": "Responsable de catálogo",
+      "a_dev_name": "Iván",
+      "a_dev_r1": "Revisa el código de la tienda en modo lectura y propone mejoras.",
+      "a_dev_r2": "Documenta integraciones de pago, envíos e inventario.",
+      "a_dev_r3": "Prepara cambios pequeños para revisión humana.",
+      "a_dev_r4": "Nunca despliega a producción por su cuenta.",
+      "a_dev_title": "Desarrollador de la tienda",
+      "a_finance_lead_name": "Mónica",
+      "a_finance_lead_r1": "Concilia pagos de pasarelas con pedidos.",
+      "a_finance_lead_r2": "Prepara el cierre mensual y el flujo de caja.",
+      "a_finance_lead_r3": "Calcula márgenes por producto y canal.",
+      "a_finance_lead_r4": "Pasa los impuestos a un contador con licencia.",
+      "a_finance_lead_title": "Responsable de finanzas",
+      "a_fulfillment_lead_name": "Rodrigo",
+      "a_fulfillment_lead_r1": "Planifica la preparación y salida de pedidos.",
+      "a_fulfillment_lead_r2": "Controla inventario y alerta de reposición.",
+      "a_fulfillment_lead_r3": "Da seguimiento a transportistas e incidencias de entrega.",
+      "a_fulfillment_lead_r4": "Coordina devoluciones con atención al cliente.",
+      "a_fulfillment_lead_title": "Responsable de logística",
+      "a_growth_lead_name": "Carolina",
+      "a_growth_lead_r1": "Planifica campañas de correo y promociones de temporada.",
+      "a_growth_lead_r2": "Segmenta clientes en el CRM.",
+      "a_growth_lead_r3": "Redacta mensajes y ofertas para aprobación.",
+      "a_growth_lead_r4": "Respeta bajas y consentimiento de contacto.",
+      "a_growth_lead_title": "Responsable de crecimiento",
+      "a_insights_name": "Bruno",
+      "a_insights_r1": "Analiza ventas, conversión y recompra por canal.",
+      "a_insights_r2": "Mide el resultado de cada campaña.",
+      "a_insights_r3": "Detecta productos con devoluciones anómalas.",
+      "a_insights_r4": "Explica las cifras con sus límites.",
+      "a_insights_title": "Analista de datos de ventas",
+      "a_store_manager_name": "Paola",
+      "a_store_manager_r1": "Coordina campañas, lanzamientos y la operación diaria.",
+      "a_store_manager_r2": "Revisa el tablero de pedidos, devoluciones y tickets.",
+      "a_store_manager_r3": "Prepara el resumen diario de ventas para el dueño.",
+      "a_store_manager_r4": "Escala decisiones de precio o crisis al dueño.",
+      "a_store_manager_title": "Gerente de la tienda",
+      "a_support_lead_name": "Daniela",
+      "a_support_lead_r1": "Responde consultas de pedidos, envíos y productos a cualquier hora.",
+      "a_support_lead_r2": "Clasifica tickets por urgencia y tema.",
+      "a_support_lead_r3": "Prepara reembolsos para aprobación; nunca los ejecuta sola.",
+      "a_support_lead_r4": "Escala quejas graves a la gerente.",
+      "a_support_lead_title": "Atención al cliente (turno continuo)",
+      "a_support_night_name": "Tomás",
+      "a_support_night_r1": "Cubre la noche y los fines de semana con respuestas del manual.",
+      "a_support_night_r2": "Deja notas de traspaso claras para el turno de día.",
+      "a_support_night_r3": "Marca pedidos urgentes (alergia, fecha límite) para la mañana.",
+      "a_support_night_r4": "No promete reembolsos ni plazos fuera de política.",
+      "a_support_night_title": "Atención nocturna y fines de semana",
+      "d_catalog": "Catálogo y precios",
+      "d_finance": "Finanzas",
+      "d_fulfillment": "Logística y envíos",
+      "d_marketing": "Marketing y crecimiento",
+      "d_store": "Dirección de la tienda",
+      "d_support": "Atención al cliente",
+      "d_tech": "Tecnología",
+      "desc": "Tienda con catálogo, logística, atención 24/7, marketing, finanzas y tecnología, con agentes y proyectos de campaña, lanzamiento de producto y devoluciones.",
+      "disclaimer": "Los agentes asisten con la operación; reembolsos, precios, impuestos y comunicaciones sensibles requieren aprobación humana y revisión de un profesional (contable o fiscal) cuando aplique.",
+      "name": "Tienda en línea",
+      "p_product_launch": "Lanzamiento de un producto nuevo",
+      "p_product_launch_desc": "Alta en catálogo, inventario, tienda, comunicación y soporte.",
+      "p_returns_review": "Revisión de devoluciones del mes",
+      "p_returns_review_desc": "Analiza motivos de devolución, costo y acciones de mejora.",
+      "p_seasonal_campaign": "Campaña de temporada",
+      "p_seasonal_campaign_desc": "Selecciona productos, define oferta, comunica y mide el resultado.",
+      "rule_1": "Asignar trabajo al dueño necesita su aprobación.",
+      "rule_2": "El dueño puede asignar a cualquier agente.",
+      "rule_3": "Los agentes se coordinan entre sí por defecto.",
+      "rule_4": "Los reembolsos que pide atención pasan por finanzas.",
+      "rule_5": "Marketing pide cambios de catálogo con visto bueno del responsable.",
+      "rule_6": "El turno nocturno no asigna trabajo a tecnología; deja nota de traspaso.",
+      "s_product_launch_cost": "Confirmar costo y margen",
+      "s_product_launch_cost_d": "Verificar costo de producto, envío y comisiones.",
+      "s_product_launch_go_live": "Publicar",
+      "s_product_launch_go_live_d": "Aprobación de la gerente y publicación.",
+      "s_product_launch_inventory": "Recibir inventario",
+      "s_product_launch_inventory_d": "Registrar entrada y ubicación en almacén.",
+      "s_product_launch_listing": "Crear la ficha de producto",
+      "s_product_launch_listing_d": "Completar texto, imágenes, variantes y precio.",
+      "s_product_launch_promo": "Preparar la comunicación",
+      "s_product_launch_promo_d": "Redactar anuncio y correo para la base de clientes.",
+      "s_product_launch_site": "Probar la página en la tienda",
+      "s_product_launch_site_d": "Revisar carga, carrito y medios de pago.",
+      "s_returns_review_actions": "Proponer acciones de mejora",
+      "s_returns_review_actions_d": "Cambios de ficha, embalaje o proveedor.",
+      "s_returns_review_cost": "Estimar el costo de las devoluciones",
+      "s_returns_review_cost_d": "Reembolsos, envío de vuelta y merma.",
+      "s_returns_review_rates": "Calcular tasa de devolución",
+      "s_returns_review_rates_d": "Tasa por producto, canal y transportista.",
+      "s_returns_review_review": "Presentar al dueño",
+      "s_returns_review_review_d": "Resumen con decisiones pendientes.",
+      "s_returns_review_tickets": "Resumir tickets de devolución",
+      "s_returns_review_tickets_d": "Agrupar motivos y casos repetidos.",
+      "s_seasonal_campaign_history": "Analizar ventas anteriores",
+      "s_seasonal_campaign_history_d": "Identificar productos y canales con mejor resultado.",
+      "s_seasonal_campaign_launch": "Aprobar y lanzar",
+      "s_seasonal_campaign_launch_d": "Revisión final de la gerente y publicación.",
+      "s_seasonal_campaign_margin": "Validar el margen",
+      "s_seasonal_campaign_margin_d": "Calcular margen por producto con la oferta propuesta.",
+      "s_seasonal_campaign_messages": "Redactar correos y anuncios",
+      "s_seasonal_campaign_messages_d": "Preparar mensajes para aprobación de la gerente.",
+      "s_seasonal_campaign_offer": "Definir precios y oferta",
+      "s_seasonal_campaign_offer_d": "Proponer descuentos que respeten el margen.",
+      "s_seasonal_campaign_prep_support": "Preparar al equipo de atención",
+      "s_seasonal_campaign_prep_support_d": "Actualizar respuestas y manual para la campaña.",
+      "s_seasonal_campaign_stock": "Verificar inventario disponible",
+      "s_seasonal_campaign_stock_d": "Confirmar existencias y plazos de reposición."
+    },
+    "pt": {
+      "a_catalog_mgr_name": "Julián",
+      "a_catalog_mgr_r1": "Mantém fichas de produto, imagens e variações completas.",
+      "a_catalog_mgr_r2": "Propõe alterações de preço com a justificativa.",
+      "a_catalog_mgr_r3": "Monitora produtos sem estoque ou sem margem.",
+      "a_catalog_mgr_r4": "Publica alterações somente após aprovação.",
+      "a_catalog_mgr_title": "Responsável pelo catálogo",
+      "a_dev_name": "Iván",
+      "a_dev_r1": "Lê o código da loja e propõe melhorias.",
+      "a_dev_r2": "Documenta integrações de pagamento, envio e estoque.",
+      "a_dev_r3": "Prepara pequenas alterações para revisão humana.",
+      "a_dev_r4": "Nunca faz deploy em produção por conta própria.",
+      "a_dev_title": "Desenvolvedor da loja",
+      "a_finance_lead_name": "Mónica",
+      "a_finance_lead_r1": "Concilia repasses das plataformas de pagamento com os pedidos.",
+      "a_finance_lead_r2": "Prepara o fechamento mensal e o fluxo de caixa.",
+      "a_finance_lead_r3": "Calcula margens por produto e canal.",
+      "a_finance_lead_r4": "Encaminha os impostos a um contador habilitado.",
+      "a_finance_lead_title": "Responsável por finanças",
+      "a_fulfillment_lead_name": "Rodrigo",
+      "a_fulfillment_lead_r1": "Planeja a separação e a expedição de pedidos.",
+      "a_fulfillment_lead_r2": "Controla o estoque e alerta sobre reposição.",
+      "a_fulfillment_lead_r3": "Acompanha transportadoras e ocorrências de entrega.",
+      "a_fulfillment_lead_r4": "Coordena devoluções com o atendimento.",
+      "a_fulfillment_lead_title": "Responsável pela logística",
+      "a_growth_lead_name": "Carolina",
+      "a_growth_lead_r1": "Planeja campanhas de e-mail e promoções sazonais.",
+      "a_growth_lead_r2": "Segmenta clientes no CRM.",
+      "a_growth_lead_r3": "Redige mensagens e ofertas para aprovação.",
+      "a_growth_lead_r4": "Respeita descadastros e consentimento de contato.",
+      "a_growth_lead_title": "Responsável por crescimento",
+      "a_insights_name": "Bruno",
+      "a_insights_r1": "Analisa vendas, conversão e recompra por canal.",
+      "a_insights_r2": "Mede o resultado de cada campanha.",
+      "a_insights_r3": "Detecta produtos com devoluções anormais.",
+      "a_insights_r4": "Explica os números com seus limites.",
+      "a_insights_title": "Analista de dados de vendas",
+      "a_store_manager_name": "Paola",
+      "a_store_manager_r1": "Coordena campanhas, lançamentos e a operação diária.",
+      "a_store_manager_r2": "Revisa o painel de pedidos, devoluções e chamados.",
+      "a_store_manager_r3": "Prepara o resumo diário de vendas para o dono.",
+      "a_store_manager_r4": "Escala decisões de preço ou crises ao dono.",
+      "a_store_manager_title": "Gerente da loja",
+      "a_support_lead_name": "Daniela",
+      "a_support_lead_r1": "Responde dúvidas de pedidos, envios e produtos a qualquer hora.",
+      "a_support_lead_r2": "Classifica chamados por urgência e tema.",
+      "a_support_lead_r3": "Prepara reembolsos para aprovação; nunca os executa sozinha.",
+      "a_support_lead_r4": "Escala reclamações graves à gerente.",
+      "a_support_lead_title": "Atendimento ao cliente (turno contínuo)",
+      "a_support_night_name": "Tomás",
+      "a_support_night_r1": "Cobre a noite e os fins de semana com respostas do manual.",
+      "a_support_night_r2": "Deixa notas de passagem claras para o turno do dia.",
+      "a_support_night_r3": "Sinaliza pedidos urgentes (prazo, segurança) para a manhã.",
+      "a_support_night_r4": "Nunca promete reembolsos ou prazos fora da política.",
+      "a_support_night_title": "Atendimento noturno e fins de semana",
+      "d_catalog": "Catálogo e preços",
+      "d_finance": "Finanças",
+      "d_fulfillment": "Logística e envios",
+      "d_marketing": "Marketing e crescimento",
+      "d_store": "Direção da loja",
+      "d_support": "Atendimento ao cliente",
+      "d_tech": "Tecnologia",
+      "desc": "Loja com catálogo, logística, atendimento 24/7, marketing, finanças e tecnologia, com agentes e projetos de campanha, lançamento de produto e devoluções.",
+      "disclaimer": "Os agentes auxiliam na operação; reembolsos, preços, impostos e mensagens sensíveis exigem aprovação humana e revisão de um profissional (contábil ou fiscal) quando aplicável.",
+      "name": "Loja virtual",
+      "p_product_launch": "Lançamento de um novo produto",
+      "p_product_launch_desc": "Cadastro no catálogo, estoque, loja, comunicação e suporte.",
+      "p_returns_review": "Revisão de devoluções do mês",
+      "p_returns_review_desc": "Analisa motivos de devolução, custo e ações de melhoria.",
+      "p_seasonal_campaign": "Campanha sazonal",
+      "p_seasonal_campaign_desc": "Seleciona produtos, define a oferta, comunica e mede o resultado.",
+      "rule_1": "Atribuir trabalho ao dono precisa da aprovação dele.",
+      "rule_2": "O dono pode atribuir a qualquer agente.",
+      "rule_3": "Os agentes se coordenam entre si por padrão.",
+      "rule_4": "Os reembolsos pedidos pelo atendimento passam pelas finanças.",
+      "rule_5": "O marketing pede mudanças no catálogo com aval do responsável.",
+      "rule_6": "O turno noturno não atribui trabalho à tecnologia; deixa nota de passagem.",
+      "s_product_launch_cost": "Confirmar custo e margem",
+      "s_product_launch_cost_d": "Verificar custo do produto, frete e taxas.",
+      "s_product_launch_go_live": "Publicar",
+      "s_product_launch_go_live_d": "Aprovação da gerente e publicação.",
+      "s_product_launch_inventory": "Receber o estoque",
+      "s_product_launch_inventory_d": "Registrar a entrada e a localização no armazém.",
+      "s_product_launch_listing": "Criar a ficha do produto",
+      "s_product_launch_listing_d": "Completar texto, imagens, variações e preço.",
+      "s_product_launch_promo": "Preparar a comunicação",
+      "s_product_launch_promo_d": "Redigir o anúncio e o e-mail para a base de clientes.",
+      "s_product_launch_site": "Testar a página na loja",
+      "s_product_launch_site_d": "Revisar carregamento, carrinho e meios de pagamento.",
+      "s_returns_review_actions": "Propor ações de melhoria",
+      "s_returns_review_actions_d": "Mudanças na ficha, embalagem ou fornecedor.",
+      "s_returns_review_cost": "Estimar o custo das devoluções",
+      "s_returns_review_cost_d": "Reembolsos, frete de volta e perdas.",
+      "s_returns_review_rates": "Calcular a taxa de devolução",
+      "s_returns_review_rates_d": "Taxa por produto, canal e transportadora.",
+      "s_returns_review_review": "Apresentar ao dono",
+      "s_returns_review_review_d": "Resumo com decisões pendentes.",
+      "s_returns_review_tickets": "Resumir chamados de devolução",
+      "s_returns_review_tickets_d": "Agrupar motivos e casos repetidos.",
+      "s_seasonal_campaign_history": "Analisar vendas anteriores",
+      "s_seasonal_campaign_history_d": "Identificar os produtos e canais de melhor resultado.",
+      "s_seasonal_campaign_launch": "Aprovar e lançar",
+      "s_seasonal_campaign_launch_d": "Revisão final da gerente e publicação.",
+      "s_seasonal_campaign_margin": "Validar a margem",
+      "s_seasonal_campaign_margin_d": "Calcular a margem por produto com a oferta proposta.",
+      "s_seasonal_campaign_messages": "Redigir e-mails e anúncios",
+      "s_seasonal_campaign_messages_d": "Preparar mensagens para aprovação da gerente.",
+      "s_seasonal_campaign_offer": "Definir preços e oferta",
+      "s_seasonal_campaign_offer_d": "Propor descontos que preservem a margem.",
+      "s_seasonal_campaign_prep_support": "Preparar o time de atendimento",
+      "s_seasonal_campaign_prep_support_d": "Atualizar respostas e manual para a campanha.",
+      "s_seasonal_campaign_stock": "Verificar o estoque disponível",
+      "s_seasonal_campaign_stock_d": "Confirmar estoque e prazos de reposição."
+    }
+  }
+}

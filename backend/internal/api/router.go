@@ -34,6 +34,7 @@ import (
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/sandbox"
+	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/webtool"
 	"aiworkforce/backend/internal/skills"
 	"aiworkforce/backend/internal/tenantdata"
@@ -95,6 +96,9 @@ type Deps struct {
 	SandboxAvailable bool
 	// Web serves /settings/web (web.go): the web tool setting and today's usage. Optional.
 	Web *webtool.Service
+	// >>> corporate organization model (orgchart.go): departments, org chart, job descriptions, delegation, industries. Optional.
+	OrgChart *orgchart.Service
+	// <<< corporate organization model
 	// Skills serves /skills/* and /agents/{id}/skills (skills.go). Optional.
 	Skills *skills.Service
 	// Memory serves /agents/{id}/memory (memory.go): the long-term memory. Optional.
@@ -227,6 +231,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountDocSearch(r)
 			s.mountCode(r)
 			s.mountWeb(r)
+			s.mountOrgChart(r) // corporate organization model
 			s.mountSkills(r)
 			s.mountMemory(r)
 			s.mountRewards(r)

@@ -10,6 +10,7 @@ import type {
 } from "../types";
 import { MockArtifacts } from "./artifacts-mock";
 import { MockOrgConfig } from "./orgconfig-mock";
+import { MockOrgChart } from "./orgchart-mock";
 import { MockConnections } from "./connections-mock";
 import { MockChat } from "./chat-mock";
 import { MockChatHistory } from "./chats-mock";
@@ -137,6 +138,7 @@ export class MockBackend {
   private specs = new Map<string, TaskSpec>();
   private running = new Map<string, number>(); // agent -> number of tasks running
   private orgCfg = new MockOrgConfig(); // workflow templates, onboarding, org settings and schedules
+  private orgChart = new MockOrgChart(() => this.agents); // >>> org <<< departments, org chart, job descriptions, delegation, industries
   private art = new MockArtifacts((t, p, a) => this.emit(t, p, a), (ms) => this.wait(ms)); // workspaces: artifact.* endpoints/events
   private chat = new MockChat({
     emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agent: (id) => this.agents.find((a) => a.id === id), agents: () => this.agents,
@@ -534,6 +536,9 @@ export class MockBackend {
     if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
+    // >>> org
+    if (this.orgChart.matches(seg)) return this.orgChart.handle(method, seg, body, q);
+    // <<< org
     if (this.orgCfg.matches(seg)) return this.orgCfg.handle(method, seg, body, (text) => this.handle("POST", "/requests", { text }));
     if (this.conns.matches(r0, r2)) return this.conns.handle(method, seg, q, body);
     if (method === "GET") {

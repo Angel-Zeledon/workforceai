@@ -1,0 +1,1002 @@
+{
+  "schema": "aiw.industry_template/1",
+  "key": "multinational_group",
+  "version": 1,
+  "category": "group",
+  "name_key": "name",
+  "description_key": "desc",
+  "disclaimer_key": "disclaimer",
+  "subsidiaries": 3,
+  "demo_set": "multinational_group",
+  "departments": [
+    {
+      "key": "hq",
+      "name_key": "d_hq",
+      "parent": "",
+      "cost_center": "CC-100",
+      "head": "group_pm"
+    },
+    {
+      "key": "group_finance",
+      "name_key": "d_group_finance",
+      "parent": "hq",
+      "cost_center": "CC-110",
+      "head": "group_controller"
+    },
+    {
+      "key": "group_legal",
+      "name_key": "d_group_legal",
+      "parent": "hq",
+      "cost_center": "CC-120",
+      "head": "group_counsel"
+    },
+    {
+      "key": "group_audit",
+      "name_key": "d_group_audit",
+      "parent": "hq",
+      "cost_center": "CC-130",
+      "head": "group_auditor"
+    },
+    {
+      "key": "sub_mx",
+      "name_key": "d_sub_mx",
+      "parent": "hq",
+      "cost_center": "CC-210",
+      "head": "mx_controller"
+    },
+    {
+      "key": "sub_br",
+      "name_key": "d_sub_br",
+      "parent": "hq",
+      "cost_center": "CC-220",
+      "head": "br_controller"
+    },
+    {
+      "key": "sub_es",
+      "name_key": "d_sub_es",
+      "parent": "hq",
+      "cost_center": "CC-230",
+      "head": "es_controller"
+    }
+  ],
+  "agents": [
+    {
+      "key": "group_pm",
+      "role": "project_manager",
+      "department": "hq",
+      "name_key": "a_group_pm_name",
+      "title_key": "a_group_pm_title",
+      "responsibility_keys": [
+        "a_group_pm_r1",
+        "a_group_pm_r2",
+        "a_group_pm_r3",
+        "a_group_pm_r4"
+      ],
+      "tools": [
+        "fs",
+        "artifacts",
+        "calendar",
+        "docs"
+      ],
+      "reports_to": "owner",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:30",
+        "end": "17:30"
+      },
+      "budget_usd": 70,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "group_controller",
+      "role": "accounting",
+      "department": "group_finance",
+      "name_key": "a_group_controller_name",
+      "title_key": "a_group_controller_title",
+      "responsibility_keys": [
+        "a_group_controller_r1",
+        "a_group_controller_r2",
+        "a_group_controller_r3",
+        "a_group_controller_r4"
+      ],
+      "tools": [
+        "fs",
+        "ledger",
+        "spreadsheet"
+      ],
+      "reports_to": "group_pm",
+      "escalation": "group_pm",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "17:00"
+      },
+      "budget_usd": 110,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "treasury",
+      "role": "finance_treasury",
+      "department": "group_finance",
+      "name_key": "a_treasury_name",
+      "title_key": "a_treasury_title",
+      "responsibility_keys": [
+        "a_treasury_r1",
+        "a_treasury_r2",
+        "a_treasury_r3",
+        "a_treasury_r4"
+      ],
+      "tools": [
+        "fs",
+        "spreadsheet",
+        "calculator"
+      ],
+      "reports_to": "group_controller",
+      "escalation": "group_controller",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "17:00"
+      },
+      "budget_usd": 60,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "group_analyst",
+      "role": "data_analyst",
+      "department": "group_finance",
+      "name_key": "a_group_analyst_name",
+      "title_key": "a_group_analyst_title",
+      "responsibility_keys": [
+        "a_group_analyst_r1",
+        "a_group_analyst_r2",
+        "a_group_analyst_r3",
+        "a_group_analyst_r4"
+      ],
+      "tools": [
+        "fs",
+        "bi",
+        "spreadsheet",
+        "calculator"
+      ],
+      "reports_to": "group_controller",
+      "escalation": "group_controller",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 70,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "group_counsel",
+      "role": "legal",
+      "department": "group_legal",
+      "name_key": "a_group_counsel_name",
+      "title_key": "a_group_counsel_title",
+      "responsibility_keys": [
+        "a_group_counsel_r1",
+        "a_group_counsel_r2",
+        "a_group_counsel_r3",
+        "a_group_counsel_r4"
+      ],
+      "tools": [
+        "fs",
+        "contract_review",
+        "docs"
+      ],
+      "reports_to": "group_pm",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 90,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "group_auditor",
+      "role": "internal_auditor",
+      "department": "group_audit",
+      "name_key": "a_group_auditor_name",
+      "title_key": "a_group_auditor_title",
+      "responsibility_keys": [
+        "a_group_auditor_r1",
+        "a_group_auditor_r2",
+        "a_group_auditor_r3",
+        "a_group_auditor_r4"
+      ],
+      "tools": [
+        "fs_read"
+      ],
+      "reports_to": "group_pm",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "10:00",
+        "end": "16:00"
+      },
+      "budget_usd": 45,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "hr_global",
+      "role": "hr",
+      "department": "hq",
+      "name_key": "a_hr_global_name",
+      "title_key": "a_hr_global_title",
+      "responsibility_keys": [
+        "a_hr_global_r1",
+        "a_hr_global_r2",
+        "a_hr_global_r3",
+        "a_hr_global_r4"
+      ],
+      "tools": [
+        "fs",
+        "ats",
+        "email"
+      ],
+      "reports_to": "group_pm",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "17:00"
+      },
+      "budget_usd": 50,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "mx_controller",
+      "role": "accounting",
+      "department": "sub_mx",
+      "name_key": "a_mx_controller_name",
+      "title_key": "a_mx_controller_title",
+      "responsibility_keys": [
+        "a_mx_controller_r1",
+        "a_mx_controller_r2",
+        "a_mx_controller_r3",
+        "a_mx_controller_r4"
+      ],
+      "tools": [
+        "fs",
+        "ledger",
+        "spreadsheet"
+      ],
+      "reports_to": "group_controller",
+      "escalation": "group_controller",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "17:00"
+      },
+      "budget_usd": 75,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "br_controller",
+      "role": "accounting",
+      "department": "sub_br",
+      "name_key": "a_br_controller_name",
+      "title_key": "a_br_controller_title",
+      "responsibility_keys": [
+        "a_br_controller_r1",
+        "a_br_controller_r2",
+        "a_br_controller_r3",
+        "a_br_controller_r4"
+      ],
+      "tools": [
+        "fs",
+        "ledger",
+        "spreadsheet"
+      ],
+      "reports_to": "group_controller",
+      "escalation": "group_controller",
+      "schedule": {
+        "timezone": "America/Sao_Paulo",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "17:00"
+      },
+      "budget_usd": 75,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "es_controller",
+      "role": "accounting",
+      "department": "sub_es",
+      "name_key": "a_es_controller_name",
+      "title_key": "a_es_controller_title",
+      "responsibility_keys": [
+        "a_es_controller_r1",
+        "a_es_controller_r2",
+        "a_es_controller_r3",
+        "a_es_controller_r4"
+      ],
+      "tools": [
+        "fs",
+        "ledger",
+        "spreadsheet"
+      ],
+      "reports_to": "group_controller",
+      "escalation": "group_controller",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:30",
+        "end": "17:30"
+      },
+      "budget_usd": 75,
+      "autonomy": "approve_each"
+    }
+  ],
+  "delegation": [
+    {
+      "from": "any_agent",
+      "to": "owner",
+      "effect": "allow",
+      "approval": true,
+      "approver": "owner",
+      "note_key": "rule_1"
+    },
+    {
+      "from": "owner",
+      "to": "any_agent",
+      "effect": "allow",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_2"
+    },
+    {
+      "from": "any_agent",
+      "to": "any_agent",
+      "effect": "allow",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_3"
+    },
+    {
+      "from": "dept:hq",
+      "to": "dept:sub_mx",
+      "effect": "allow",
+      "approval": true,
+      "approver": "group_controller",
+      "note_key": "rule_4"
+    },
+    {
+      "from": "dept:sub_mx",
+      "to": "dept:sub_br",
+      "effect": "deny",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_5"
+    },
+    {
+      "from": "dept:sub_br",
+      "to": "dept:sub_es",
+      "effect": "deny",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_6"
+    },
+    {
+      "from": "dept:sub_es",
+      "to": "dept:sub_mx",
+      "effect": "deny",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_7"
+    }
+  ],
+  "projects": [
+    {
+      "key": "group_close",
+      "name_key": "p_group_close",
+      "description_key": "p_group_close_desc",
+      "steps": [
+        {
+          "key": "mx_close",
+          "title_key": "s_group_close_mx_close",
+          "description_key": "s_group_close_mx_close_d",
+          "agent": "mx_controller",
+          "depends_on": []
+        },
+        {
+          "key": "br_close",
+          "title_key": "s_group_close_br_close",
+          "description_key": "s_group_close_br_close_d",
+          "agent": "br_controller",
+          "depends_on": []
+        },
+        {
+          "key": "es_close",
+          "title_key": "s_group_close_es_close",
+          "description_key": "s_group_close_es_close_d",
+          "agent": "es_controller",
+          "depends_on": []
+        },
+        {
+          "key": "fx",
+          "title_key": "s_group_close_fx",
+          "description_key": "s_group_close_fx_d",
+          "agent": "treasury",
+          "depends_on": []
+        },
+        {
+          "key": "consolidate",
+          "title_key": "s_group_close_consolidate",
+          "description_key": "s_group_close_consolidate_d",
+          "agent": "group_controller",
+          "depends_on": [
+            "mx_close",
+            "br_close",
+            "es_close",
+            "fx"
+          ]
+        },
+        {
+          "key": "audit",
+          "title_key": "s_group_close_audit",
+          "description_key": "s_group_close_audit_d",
+          "agent": "group_auditor",
+          "depends_on": [
+            "consolidate"
+          ]
+        },
+        {
+          "key": "dashboard",
+          "title_key": "s_group_close_dashboard",
+          "description_key": "s_group_close_dashboard_d",
+          "agent": "group_analyst",
+          "depends_on": [
+            "consolidate"
+          ]
+        },
+        {
+          "key": "report",
+          "title_key": "s_group_close_report",
+          "description_key": "s_group_close_report_d",
+          "agent": "group_pm",
+          "depends_on": [
+            "audit",
+            "dashboard"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "market_entry",
+      "name_key": "p_market_entry",
+      "description_key": "p_market_entry_desc",
+      "steps": [
+        {
+          "key": "market",
+          "title_key": "s_market_entry_market",
+          "description_key": "s_market_entry_market_d",
+          "agent": "group_analyst",
+          "depends_on": []
+        },
+        {
+          "key": "legal",
+          "title_key": "s_market_entry_legal",
+          "description_key": "s_market_entry_legal_d",
+          "agent": "group_counsel",
+          "depends_on": []
+        },
+        {
+          "key": "people",
+          "title_key": "s_market_entry_people",
+          "description_key": "s_market_entry_people_d",
+          "agent": "hr_global",
+          "depends_on": [
+            "market"
+          ]
+        },
+        {
+          "key": "budget",
+          "title_key": "s_market_entry_budget",
+          "description_key": "s_market_entry_budget_d",
+          "agent": "treasury",
+          "depends_on": [
+            "market",
+            "legal"
+          ]
+        },
+        {
+          "key": "go",
+          "title_key": "s_market_entry_go",
+          "description_key": "s_market_entry_go_d",
+          "agent": "group_pm",
+          "depends_on": [
+            "people",
+            "budget"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "intercompany_rec",
+      "name_key": "p_intercompany_rec",
+      "description_key": "p_intercompany_rec_desc",
+      "steps": [
+        {
+          "key": "mx",
+          "title_key": "s_intercompany_rec_mx",
+          "description_key": "s_intercompany_rec_mx_d",
+          "agent": "mx_controller",
+          "depends_on": []
+        },
+        {
+          "key": "br",
+          "title_key": "s_intercompany_rec_br",
+          "description_key": "s_intercompany_rec_br_d",
+          "agent": "br_controller",
+          "depends_on": []
+        },
+        {
+          "key": "es",
+          "title_key": "s_intercompany_rec_es",
+          "description_key": "s_intercompany_rec_es_d",
+          "agent": "es_controller",
+          "depends_on": []
+        },
+        {
+          "key": "match",
+          "title_key": "s_intercompany_rec_match",
+          "description_key": "s_intercompany_rec_match_d",
+          "agent": "group_controller",
+          "depends_on": [
+            "mx",
+            "br",
+            "es"
+          ]
+        },
+        {
+          "key": "test",
+          "title_key": "s_intercompany_rec_test",
+          "description_key": "s_intercompany_rec_test_d",
+          "agent": "group_auditor",
+          "depends_on": [
+            "match"
+          ]
+        }
+      ]
+    }
+  ],
+  "i18n": {
+    "en": {
+      "a_br_controller_name": "Thiago",
+      "a_br_controller_r1": "Keeps local books in Brazilian reais.",
+      "a_br_controller_r2": "Prepares the reporting package for the group.",
+      "a_br_controller_r3": "Flags local tax matters to a licensed accountant.",
+      "a_br_controller_r4": "Answers the group controller's questions.",
+      "a_br_controller_title": "Brazil subsidiary controller",
+      "a_es_controller_name": "Alba",
+      "a_es_controller_r1": "Keeps local books in euros.",
+      "a_es_controller_r2": "Prepares the reporting package for the group.",
+      "a_es_controller_r3": "Flags local tax matters to a licensed accountant.",
+      "a_es_controller_r4": "Answers the group controller's questions.",
+      "a_es_controller_title": "Spain subsidiary controller",
+      "a_group_analyst_name": "Renata",
+      "a_group_analyst_r1": "Compares performance and margins across subsidiaries.",
+      "a_group_analyst_r2": "Normalizes data from different systems and currencies.",
+      "a_group_analyst_r3": "Builds dashboards for management.",
+      "a_group_analyst_r4": "States how each figure was converted.",
+      "a_group_analyst_title": "Group data analyst",
+      "a_group_auditor_name": "Emilio",
+      "a_group_auditor_r1": "Reviews each subsidiary's controls with read-only access.",
+      "a_group_auditor_r2": "Samples intercompany reconciliations.",
+      "a_group_auditor_r3": "Reports findings directly to the owner.",
+      "a_group_auditor_r4": "Follows up on corrective actions.",
+      "a_group_auditor_title": "Group internal auditor",
+      "a_group_controller_name": "Arturo",
+      "a_group_controller_r1": "Consolidates the three subsidiaries' statements into the group currency.",
+      "a_group_controller_r2": "Eliminates intercompany balances and documents differences.",
+      "a_group_controller_r3": "Sets the group's close calendar and accounting policies.",
+      "a_group_controller_r4": "Requests local accountant review in each country.",
+      "a_group_controller_title": "Group controller",
+      "a_group_counsel_name": "Cristina",
+      "a_group_counsel_r1": "Maintains the group's contract and powers register.",
+      "a_group_counsel_r2": "Drafts intercompany agreements.",
+      "a_group_counsel_r3": "Coordinates outside counsel in each country.",
+      "a_group_counsel_r4": "Flags regulatory differences between countries.",
+      "a_group_counsel_title": "Group legal counsel",
+      "a_group_pm_name": "Laura",
+      "a_group_pm_r1": "Coordinates close calendars and projects across subsidiaries.",
+      "a_group_pm_r2": "Manages time zones and hand-offs between teams.",
+      "a_group_pm_r3": "Prepares the weekly report for management.",
+      "a_group_pm_r4": "Escalates cross-country decisions to the owner.",
+      "a_group_pm_title": "Group project director",
+      "a_hr_global_name": "Patricia",
+      "a_hr_global_r1": "Maintains common people policies and local differences.",
+      "a_hr_global_r2": "Coordinates hiring across countries.",
+      "a_hr_global_r3": "Protects personal data according to each country.",
+      "a_hr_global_r4": "Sends communications only after approval.",
+      "a_hr_global_title": "Group HR lead",
+      "a_mx_controller_name": "Gabriela",
+      "a_mx_controller_r1": "Keeps local books in Mexican pesos.",
+      "a_mx_controller_r2": "Prepares the reporting package for the group.",
+      "a_mx_controller_r3": "Flags local tax matters to a licensed accountant.",
+      "a_mx_controller_r4": "Answers the group controller's questions.",
+      "a_mx_controller_title": "Mexico subsidiary controller",
+      "a_treasury_name": "Nicolás",
+      "a_treasury_r1": "Forecasts cash flow per subsidiary and consolidated.",
+      "a_treasury_r2": "Computes exchange-rate exposure.",
+      "a_treasury_r3": "Proposes inter-company transfers for approval.",
+      "a_treasury_r4": "Never moves money without human approval.",
+      "a_treasury_title": "Group treasurer",
+      "d_group_audit": "Group audit",
+      "d_group_finance": "Group finance",
+      "d_group_legal": "Group legal",
+      "d_hq": "Group HQ",
+      "d_sub_br": "Subsidiary Brazil",
+      "d_sub_es": "Subsidiary Spain",
+      "d_sub_mx": "Subsidiary Mexico",
+      "desc": "Headquarters with group finance, legal and audit, and three subsidiaries (Mexico, Brazil and Spain), each with a local controller, plus projects for the group close, market entry and intercompany reconciliation.",
+      "disclaimer": "Agents help with drafts and consolidation; licensed accountants, tax advisers and lawyers in each country must review local rules, taxes and contracts before any filing or signature. Sample data, not advice.",
+      "name": "SME group with 3 subsidiaries",
+      "p_group_close": "Group consolidated close",
+      "p_group_close_desc": "Each subsidiary closes its month, the group consolidates, eliminates intercompany and reviews.",
+      "p_intercompany_rec": "Intercompany reconciliation",
+      "p_intercompany_rec_desc": "Matches balances across subsidiaries, explains differences and proposes adjustments.",
+      "p_market_entry": "New market entry",
+      "p_market_entry_desc": "Analysis, legal aspects, people and financial plan for a new subsidiary.",
+      "rule_1": "Assigning work to the owner requires their approval.",
+      "rule_2": "The owner may assign to any agent.",
+      "rule_3": "Agents coordinate by default.",
+      "rule_4": "Work from HQ to a subsidiary goes through the group controller.",
+      "rule_5": "Subsidiaries do not assign work to each other; they ask HQ.",
+      "rule_6": "Brazil does not assign directly to Spain.",
+      "rule_7": "Spain does not assign directly to Mexico.",
+      "s_group_close_audit": "Internal audit review",
+      "s_group_close_audit_d": "Test samples and reconciliations of the consolidation.",
+      "s_group_close_br_close": "Brazil close",
+      "s_group_close_br_close_d": "Close local books and send the package.",
+      "s_group_close_consolidate": "Consolidate and eliminate intercompany",
+      "s_group_close_consolidate_d": "Merge the three packages in the group currency.",
+      "s_group_close_dashboard": "Management dashboard",
+      "s_group_close_dashboard_d": "Compare subsidiaries and explain variances.",
+      "s_group_close_es_close": "Spain close",
+      "s_group_close_es_close_d": "Close local books and send the package.",
+      "s_group_close_fx": "Closing exchange rates",
+      "s_group_close_fx_d": "Set rates and compute translation differences.",
+      "s_group_close_mx_close": "Mexico close",
+      "s_group_close_mx_close_d": "Close local books and send the package.",
+      "s_group_close_report": "Final report to the owner",
+      "s_group_close_report_d": "Deliver after local accountants' review.",
+      "s_intercompany_rec_br": "Brazil balances",
+      "s_intercompany_rec_br_d": "Extract balances with the other subsidiaries.",
+      "s_intercompany_rec_es": "Spain balances",
+      "s_intercompany_rec_es_d": "Extract balances with the other subsidiaries.",
+      "s_intercompany_rec_match": "Match and explain differences",
+      "s_intercompany_rec_match_d": "Convert at the closing rate and list open items.",
+      "s_intercompany_rec_mx": "Mexico balances",
+      "s_intercompany_rec_mx_d": "Extract balances with the other subsidiaries.",
+      "s_intercompany_rec_test": "Audit test",
+      "s_intercompany_rec_test_d": "Review large and aged items.",
+      "s_market_entry_budget": "Budget and funding",
+      "s_market_entry_budget_d": "Initial investment and 24-month cash flow.",
+      "s_market_entry_go": "Owner decision",
+      "s_market_entry_go_d": "Summary with risks and investment approval.",
+      "s_market_entry_legal": "Legal form and contracts",
+      "s_market_entry_legal_d": "Incorporation options with local counsel.",
+      "s_market_entry_market": "Market analysis",
+      "s_market_entry_market_d": "Country size, competition and risks.",
+      "s_market_entry_people": "People plan",
+      "s_market_entry_people_d": "Profiles, labor costs and hiring calendar."
+    },
+    "es": {
+      "a_br_controller_name": "Thiago",
+      "a_br_controller_r1": "Lleva la contabilidad local en reales.",
+      "a_br_controller_r2": "Prepara el paquete de reporte para el grupo.",
+      "a_br_controller_r3": "Señala temas fiscales locales a un contador con licencia.",
+      "a_br_controller_r4": "Responde las preguntas de la contraloría del grupo.",
+      "a_br_controller_title": "Contador da filial Brasil",
+      "a_es_controller_name": "Alba",
+      "a_es_controller_r1": "Lleva la contabilidad local en euros.",
+      "a_es_controller_r2": "Prepara el paquete de reporte para el grupo.",
+      "a_es_controller_r3": "Señala temas fiscales locales a un contador con licencia.",
+      "a_es_controller_r4": "Responde las preguntas de la contraloría del grupo.",
+      "a_es_controller_title": "Contable de la filial España",
+      "a_group_analyst_name": "Renata",
+      "a_group_analyst_r1": "Compara desempeño y márgenes entre filiales.",
+      "a_group_analyst_r2": "Normaliza datos de distintos sistemas y monedas.",
+      "a_group_analyst_r3": "Construye tableros para la dirección.",
+      "a_group_analyst_r4": "Indica cómo se convirtió cada cifra.",
+      "a_group_analyst_title": "Analista de datos del grupo",
+      "a_group_auditor_name": "Emilio",
+      "a_group_auditor_r1": "Revisa en solo lectura los controles de cada filial.",
+      "a_group_auditor_r2": "Prueba conciliaciones intercompañía por muestreo.",
+      "a_group_auditor_r3": "Reporta hallazgos directamente al dueño.",
+      "a_group_auditor_r4": "Da seguimiento a las acciones correctivas.",
+      "a_group_auditor_title": "Auditor interno del grupo",
+      "a_group_controller_name": "Arturo",
+      "a_group_controller_r1": "Consolida los estados de las tres filiales a la moneda del grupo.",
+      "a_group_controller_r2": "Elimina saldos intercompañía y documenta diferencias.",
+      "a_group_controller_r3": "Define el calendario y las políticas contables del grupo.",
+      "a_group_controller_r4": "Pide revisión de contador local en cada país.",
+      "a_group_controller_title": "Contralor del grupo",
+      "a_group_counsel_name": "Cristina",
+      "a_group_counsel_r1": "Mantiene el registro de contratos y poderes del grupo.",
+      "a_group_counsel_r2": "Prepara borradores de contratos intercompañía.",
+      "a_group_counsel_r3": "Coordina a los abogados externos de cada país.",
+      "a_group_counsel_r4": "Marca diferencias normativas entre países.",
+      "a_group_counsel_title": "Asesora jurídica del grupo",
+      "a_group_pm_name": "Laura",
+      "a_group_pm_r1": "Coordina los calendarios de cierre y proyectos entre filiales.",
+      "a_group_pm_r2": "Maneja los husos horarios y los traspasos entre equipos.",
+      "a_group_pm_r3": "Prepara el informe semanal para la dirección.",
+      "a_group_pm_r4": "Escala decisiones entre países al dueño.",
+      "a_group_pm_title": "Directora de proyectos del grupo",
+      "a_hr_global_name": "Patricia",
+      "a_hr_global_r1": "Mantiene políticas de personal comunes y diferencias locales.",
+      "a_hr_global_r2": "Coordina contrataciones entre países.",
+      "a_hr_global_r3": "Protege datos personales conforme a cada país.",
+      "a_hr_global_r4": "Envía comunicaciones solo tras aprobación.",
+      "a_hr_global_title": "Responsable de personal del grupo",
+      "a_mx_controller_name": "Gabriela",
+      "a_mx_controller_r1": "Lleva la contabilidad local en pesos mexicanos.",
+      "a_mx_controller_r2": "Prepara el paquete de reporte para el grupo.",
+      "a_mx_controller_r3": "Señala temas fiscales locales a un contador con licencia.",
+      "a_mx_controller_r4": "Responde las preguntas de la contraloría del grupo.",
+      "a_mx_controller_title": "Contadora de la filial México",
+      "a_treasury_name": "Nicolás",
+      "a_treasury_r1": "Proyecta el flujo de caja por filial y consolidado.",
+      "a_treasury_r2": "Calcula la exposición a tipo de cambio.",
+      "a_treasury_r3": "Propone transferencias entre filiales para aprobación.",
+      "a_treasury_r4": "Nunca mueve dinero sin aprobación humana.",
+      "a_treasury_title": "Tesorero del grupo",
+      "d_group_audit": "Auditoría del grupo",
+      "d_group_finance": "Finanzas del grupo",
+      "d_group_legal": "Jurídico del grupo",
+      "d_hq": "Group HQ",
+      "d_sub_br": "Filial Brasil",
+      "d_sub_es": "Filial España",
+      "d_sub_mx": "Filial México",
+      "desc": "Casa matriz con finanzas, jurídico y auditoría de grupo, y tres filiales (México, Brasil y España), cada una con su contador local, más proyectos de cierre de grupo, entrada a un mercado y conciliación intercompañía.",
+      "disclaimer": "Los agentes apoyan con borradores y consolidación; contadores, fiscalistas y abogados con licencia de cada país deben revisar normas locales, impuestos y contratos antes de cualquier presentación o firma. Datos de ejemplo, no asesoría.",
+      "name": "Pyme multinacional con 3 filiales",
+      "p_group_close": "Cierre consolidado del grupo",
+      "p_group_close_desc": "Cada filial cierra su mes, el grupo consolida, elimina intercompañía y revisa.",
+      "p_intercompany_rec": "Conciliación intercompañía",
+      "p_intercompany_rec_desc": "Cruza saldos entre filiales, explica diferencias y propone ajustes.",
+      "p_market_entry": "Entrada a un mercado nuevo",
+      "p_market_entry_desc": "Análisis, aspectos jurídicos, personal y plan financiero de una nueva filial.",
+      "rule_1": "Asignar trabajo al dueño requiere su aprobación.",
+      "rule_2": "El dueño puede asignar a cualquier agente.",
+      "rule_3": "Los agentes se coordinan por defecto.",
+      "rule_4": "Trabajo de la matriz a una filial pasa por el contralor del grupo.",
+      "rule_5": "Las filiales no se asignan trabajo directamente entre sí; lo piden a la matriz.",
+      "rule_6": "Brasil no asigna directamente a España.",
+      "rule_7": "España no asigna directamente a México.",
+      "s_group_close_audit": "Revisión de auditoría interna",
+      "s_group_close_audit_d": "Probar muestras y conciliaciones del consolidado.",
+      "s_group_close_br_close": "Cierre de Brasil",
+      "s_group_close_br_close_d": "Cerrar libros locales y enviar el paquete.",
+      "s_group_close_consolidate": "Consolidar y eliminar intercompañía",
+      "s_group_close_consolidate_d": "Unir los tres paquetes en la moneda del grupo.",
+      "s_group_close_dashboard": "Tablero de dirección",
+      "s_group_close_dashboard_d": "Comparar filiales y explicar variaciones.",
+      "s_group_close_es_close": "Cierre de España",
+      "s_group_close_es_close_d": "Cerrar libros locales y enviar el paquete.",
+      "s_group_close_fx": "Tipos de cambio de cierre",
+      "s_group_close_fx_d": "Fijar tipos y calcular diferencias de conversión.",
+      "s_group_close_mx_close": "Cierre de México",
+      "s_group_close_mx_close_d": "Cerrar libros locales y enviar el paquete.",
+      "s_group_close_report": "Informe final al dueño",
+      "s_group_close_report_d": "Entregar tras revisión de contadores locales.",
+      "s_intercompany_rec_br": "Saldos de Brasil",
+      "s_intercompany_rec_br_d": "Extraer saldos con las demás filiales.",
+      "s_intercompany_rec_es": "Saldos de España",
+      "s_intercompany_rec_es_d": "Extraer saldos con las demás filiales.",
+      "s_intercompany_rec_match": "Cruzar y explicar diferencias",
+      "s_intercompany_rec_match_d": "Convertir al tipo de cierre y listar partidas abiertas.",
+      "s_intercompany_rec_mx": "Saldos de México",
+      "s_intercompany_rec_mx_d": "Extraer saldos con las demás filiales.",
+      "s_intercompany_rec_test": "Prueba de auditoría",
+      "s_intercompany_rec_test_d": "Revisar partidas grandes y antiguas.",
+      "s_market_entry_budget": "Presupuesto y financiamiento",
+      "s_market_entry_budget_d": "Inversión inicial y flujo de caja a 24 meses.",
+      "s_market_entry_go": "Decisión del dueño",
+      "s_market_entry_go_d": "Resumen con riesgos y aprobación de la inversión.",
+      "s_market_entry_legal": "Forma jurídica y contratos",
+      "s_market_entry_legal_d": "Opciones de constitución con asesor local.",
+      "s_market_entry_market": "Análisis del mercado",
+      "s_market_entry_market_d": "Tamaño, competencia y riesgos del país.",
+      "s_market_entry_people": "Plan de personal",
+      "s_market_entry_people_d": "Perfiles, costos laborales y calendario de contratación."
+    },
+    "pt": {
+      "a_br_controller_name": "Thiago",
+      "a_br_controller_r1": "Mantém a contabilidade local em reais.",
+      "a_br_controller_r2": "Prepara o pacote de reporte para o grupo.",
+      "a_br_controller_r3": "Encaminha temas fiscais locais a um contador habilitado.",
+      "a_br_controller_r4": "Responde às perguntas da controladoria do grupo.",
+      "a_br_controller_title": "Controller da subsidiária Brasil",
+      "a_es_controller_name": "Alba",
+      "a_es_controller_r1": "Mantém a contabilidade local em euros.",
+      "a_es_controller_r2": "Prepara o pacote de reporte para o grupo.",
+      "a_es_controller_r3": "Encaminha temas fiscais locais a um contador habilitado.",
+      "a_es_controller_r4": "Responde às perguntas da controladoria do grupo.",
+      "a_es_controller_title": "Controller da subsidiária Espanha",
+      "a_group_analyst_name": "Renata",
+      "a_group_analyst_r1": "Compara desempenho e margens entre subsidiárias.",
+      "a_group_analyst_r2": "Normaliza dados de diferentes sistemas e moedas.",
+      "a_group_analyst_r3": "Constrói painéis para a diretoria.",
+      "a_group_analyst_r4": "Indica como cada valor foi convertido.",
+      "a_group_analyst_title": "Analista de dados do grupo",
+      "a_group_auditor_name": "Emilio",
+      "a_group_auditor_r1": "Revisa os controles de cada subsidiária em modo somente leitura.",
+      "a_group_auditor_r2": "Testa conciliações intercompany por amostragem.",
+      "a_group_auditor_r3": "Reporta achados diretamente ao dono.",
+      "a_group_auditor_r4": "Acompanha as ações corretivas.",
+      "a_group_auditor_title": "Auditor interno do grupo",
+      "a_group_controller_name": "Arturo",
+      "a_group_controller_r1": "Consolida as demonstrações das três subsidiárias na moeda do grupo.",
+      "a_group_controller_r2": "Elimina saldos intercompany e documenta diferenças.",
+      "a_group_controller_r3": "Define o calendário e as políticas contábeis do grupo.",
+      "a_group_controller_r4": "Solicita revisão de contador local em cada país.",
+      "a_group_controller_title": "Controller do grupo",
+      "a_group_counsel_name": "Cristina",
+      "a_group_counsel_r1": "Mantém o registro de contratos e procurações do grupo.",
+      "a_group_counsel_r2": "Prepara minutas de contratos intercompany.",
+      "a_group_counsel_r3": "Coordena os advogados externos de cada país.",
+      "a_group_counsel_r4": "Sinaliza diferenças normativas entre países.",
+      "a_group_counsel_title": "Assessora jurídica do grupo",
+      "a_group_pm_name": "Laura",
+      "a_group_pm_r1": "Coordena calendários de fechamento e projetos entre subsidiárias.",
+      "a_group_pm_r2": "Gerencia fusos horários e passagens entre equipes.",
+      "a_group_pm_r3": "Prepara o relatório semanal para a diretoria.",
+      "a_group_pm_r4": "Escala decisões entre países ao dono.",
+      "a_group_pm_title": "Diretora de projetos do grupo",
+      "a_hr_global_name": "Patricia",
+      "a_hr_global_r1": "Mantém políticas de pessoas comuns e diferenças locais.",
+      "a_hr_global_r2": "Coordena contratações entre países.",
+      "a_hr_global_r3": "Protege dados pessoais conforme cada país.",
+      "a_hr_global_r4": "Envia comunicações somente após aprovação.",
+      "a_hr_global_title": "Responsável de pessoas do grupo",
+      "a_mx_controller_name": "Gabriela",
+      "a_mx_controller_r1": "Mantém a contabilidade local em pesos mexicanos.",
+      "a_mx_controller_r2": "Prepara o pacote de reporte para o grupo.",
+      "a_mx_controller_r3": "Encaminha temas fiscais locais a um contador habilitado.",
+      "a_mx_controller_r4": "Responde às perguntas da controladoria do grupo.",
+      "a_mx_controller_title": "Controller da subsidiária México",
+      "a_treasury_name": "Nicolás",
+      "a_treasury_r1": "Projeta o fluxo de caixa por subsidiária e consolidado.",
+      "a_treasury_r2": "Calcula a exposição cambial.",
+      "a_treasury_r3": "Propõe transferências entre subsidiárias para aprovação.",
+      "a_treasury_r4": "Nunca movimenta dinheiro sem aprovação humana.",
+      "a_treasury_title": "Tesoureiro do grupo",
+      "d_group_audit": "Auditoria do grupo",
+      "d_group_finance": "Finanças do grupo",
+      "d_group_legal": "Jurídico do grupo",
+      "d_hq": "Group HQ",
+      "d_sub_br": "Subsidiária Brasil",
+      "d_sub_es": "Subsidiária Espanha",
+      "d_sub_mx": "Subsidiária México",
+      "desc": "Matriz com finanças, jurídico e auditoria do grupo e três subsidiárias (México, Brasil e Espanha), cada uma com seu controller local, além de projetos de fechamento do grupo, entrada em mercado e conciliação intercompany.",
+      "disclaimer": "Os agentes apoiam com rascunhos e consolidação; contadores, tributaristas e advogados habilitados em cada país devem revisar normas locais, impostos e contratos antes de qualquer entrega ou assinatura. Dados de exemplo, não é consultoria.",
+      "name": "PME multinacional com 3 subsidiárias",
+      "p_group_close": "Fechamento consolidado do grupo",
+      "p_group_close_desc": "Cada subsidiária fecha seu mês; o grupo consolida, elimina intercompany e revisa.",
+      "p_intercompany_rec": "Conciliação intercompany",
+      "p_intercompany_rec_desc": "Cruza saldos entre subsidiárias, explica diferenças e propõe ajustes.",
+      "p_market_entry": "Entrada em um novo mercado",
+      "p_market_entry_desc": "Análise, aspectos jurídicos, pessoas e plano financeiro de uma nova subsidiária.",
+      "rule_1": "Atribuir trabalho ao dono requer a aprovação dele.",
+      "rule_2": "O dono pode atribuir a qualquer agente.",
+      "rule_3": "Os agentes se coordenam por padrão.",
+      "rule_4": "Trabalho da matriz para uma subsidiária passa pelo controller do grupo.",
+      "rule_5": "As subsidiárias não atribuem trabalho entre si; pedem à matriz.",
+      "rule_6": "O Brasil não atribui diretamente à Espanha.",
+      "rule_7": "A Espanha não atribui diretamente ao México.",
+      "s_group_close_audit": "Revisão da auditoria interna",
+      "s_group_close_audit_d": "Testar amostras e conciliações do consolidado.",
+      "s_group_close_br_close": "Fechamento do Brasil",
+      "s_group_close_br_close_d": "Fechar livros locais e enviar o pacote.",
+      "s_group_close_consolidate": "Consolidar e eliminar intercompany",
+      "s_group_close_consolidate_d": "Unir os três pacotes na moeda do grupo.",
+      "s_group_close_dashboard": "Painel da diretoria",
+      "s_group_close_dashboard_d": "Comparar subsidiárias e explicar variações.",
+      "s_group_close_es_close": "Fechamento da Espanha",
+      "s_group_close_es_close_d": "Fechar livros locais e enviar o pacote.",
+      "s_group_close_fx": "Taxas de câmbio de fechamento",
+      "s_group_close_fx_d": "Definir taxas e calcular diferenças de conversão.",
+      "s_group_close_mx_close": "Fechamento do México",
+      "s_group_close_mx_close_d": "Fechar livros locais e enviar o pacote.",
+      "s_group_close_report": "Relatório final ao dono",
+      "s_group_close_report_d": "Entregar após revisão dos contadores locais.",
+      "s_intercompany_rec_br": "Saldos do Brasil",
+      "s_intercompany_rec_br_d": "Extrair saldos com as demais subsidiárias.",
+      "s_intercompany_rec_es": "Saldos da Espanha",
+      "s_intercompany_rec_es_d": "Extrair saldos com as demais subsidiárias.",
+      "s_intercompany_rec_match": "Cruzar e explicar diferenças",
+      "s_intercompany_rec_match_d": "Converter pela taxa de fechamento e listar itens em aberto.",
+      "s_intercompany_rec_mx": "Saldos do México",
+      "s_intercompany_rec_mx_d": "Extrair saldos com as demais subsidiárias.",
+      "s_intercompany_rec_test": "Teste de auditoria",
+      "s_intercompany_rec_test_d": "Revisar itens grandes e antigos.",
+      "s_market_entry_budget": "Orçamento e financiamento",
+      "s_market_entry_budget_d": "Investimento inicial e fluxo de caixa de 24 meses.",
+      "s_market_entry_go": "Decisão do dono",
+      "s_market_entry_go_d": "Resumo com riscos e aprovação do investimento.",
+      "s_market_entry_legal": "Forma jurídica e contratos",
+      "s_market_entry_legal_d": "Opções de constituição com assessor local.",
+      "s_market_entry_market": "Análise de mercado",
+      "s_market_entry_market_d": "Tamanho, concorrência e riscos do país.",
+      "s_market_entry_people": "Plano de pessoas",
+      "s_market_entry_people_d": "Perfis, custos trabalhistas e calendário de contratação."
+    }
+  }
+}

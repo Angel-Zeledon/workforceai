@@ -60,6 +60,9 @@ type Agent struct {
 	Permissions   []string     `json:"permissions"`
 	Autonomy      string       `json:"autonomy"` // suggest|approve_each|rules|autonomous
 	Metrics       AgentMetrics `json:"metrics"`
+	// Department is a plain string tag (the department NAME, or null): the organization model
+	// (internal/orgchart) keeps it in sync with the department the agent belongs to.
+	Department *string `json:"department"`
 
 	// Internal data sent to the runtime; not part of the public API.
 	Persona          string   `json:"-"`

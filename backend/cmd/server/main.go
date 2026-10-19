@@ -205,6 +205,9 @@ func run(log *slog.Logger) error {
 	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy)
 	skillsSvc := wireSkills(cfg, log, pg, store, rec, orch, orgCfg, cw, ws.drive)
 	webSvc := wireWeb(log, pg, rec, cw, orch)
+	// >>> corporate organization model (orgchart.go): installed after the projects gate, which it wraps
+	orgChartSvc := wireOrgChart(pg, store, authStore, rec, orch, ws.projects, cfg.App.OrgID)
+	// <<< corporate organization model
 	// Passage index (capability 6): embeddings provider, data policy, budget and locale, then the worker.
 	bindDocIndex(ctx, log, ws.docIndex, store, rec, orch, modelPolicy, llmSvc, orgCfg)
 
@@ -254,6 +257,7 @@ func run(log *slog.Logger) error {
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
 	deps.Presence, deps.PeopleChat = wirePeople(ctx, pg, pub, queries) // human presence + people chat
 	// GDPR export / deletion of the organization and the purge janitor (internal/tenantdata).
+	deps.OrgChart = orgChartSvc // corporate organization model
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	// Governance: API tokens, reports, retention job, webhooks (internal/governance, internal/webhooks).
 	wireGovernance(ctx, log, pg, store, rec, auditSvc, cw.vault, whSvc, &deps)

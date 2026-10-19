@@ -271,13 +271,13 @@ func (s *Store) Reset(ctx context.Context, orgID string) error {
 
 // ---- agents ----
 
-const agentCols = `id, name, role, title, description, persona, responsibilities, state, activity, current_task_id, progress, tools, permissions, autonomy`
+const agentCols = `id, name, role, title, description, persona, responsibilities, state, activity, current_task_id, progress, tools, permissions, autonomy, department`
 
 func scanAgent(r scanner) (domain.Agent, error) {
 	var a domain.Agent
 	var resp, tools, perms []byte
 	var state string
-	err := r.Scan(&a.ID, &a.Name, &a.Role, &a.Title, &a.Description, &a.Persona, &resp, &state, &a.Activity, &a.CurrentTaskID, &a.Progress, &tools, &perms, &a.Autonomy)
+	err := r.Scan(&a.ID, &a.Name, &a.Role, &a.Title, &a.Description, &a.Persona, &resp, &state, &a.Activity, &a.CurrentTaskID, &a.Progress, &tools, &perms, &a.Autonomy, &a.Department)
 	a.State = domain.AgentState(state)
 	unmarshal(resp, &a.Responsibilities)
 	unmarshal(tools, &a.Tools)

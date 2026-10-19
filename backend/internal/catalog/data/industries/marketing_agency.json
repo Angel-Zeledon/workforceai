@@ -1,0 +1,935 @@
+{
+  "schema": "aiw.industry_template/1",
+  "key": "marketing_agency",
+  "version": 1,
+  "category": "agency",
+  "name_key": "name",
+  "description_key": "desc",
+  "disclaimer_key": "disclaimer",
+  "subsidiaries": 0,
+  "demo_set": "marketing_agency",
+  "departments": [
+    {
+      "key": "management",
+      "name_key": "d_management",
+      "parent": "",
+      "cost_center": "CC-100",
+      "head": "agency_pm"
+    },
+    {
+      "key": "strategy",
+      "name_key": "d_strategy",
+      "parent": "management",
+      "cost_center": "CC-200",
+      "head": "strategist"
+    },
+    {
+      "key": "creative",
+      "name_key": "d_creative",
+      "parent": "management",
+      "cost_center": "CC-300",
+      "head": "content_lead"
+    },
+    {
+      "key": "media",
+      "name_key": "d_media",
+      "parent": "management",
+      "cost_center": "CC-400",
+      "head": "media_buyer"
+    },
+    {
+      "key": "accounts",
+      "name_key": "d_accounts",
+      "parent": "management",
+      "cost_center": "CC-500",
+      "head": "account_exec"
+    },
+    {
+      "key": "analytics",
+      "name_key": "d_analytics",
+      "parent": "management",
+      "cost_center": "CC-600",
+      "head": "perf_analyst"
+    },
+    {
+      "key": "finance",
+      "name_key": "d_finance",
+      "parent": "management",
+      "cost_center": "CC-700",
+      "head": "agency_accountant"
+    }
+  ],
+  "agents": [
+    {
+      "key": "agency_pm",
+      "role": "project_manager",
+      "department": "management",
+      "name_key": "a_agency_pm_name",
+      "title_key": "a_agency_pm_title",
+      "responsibility_keys": [
+        "a_agency_pm_r1",
+        "a_agency_pm_r2",
+        "a_agency_pm_r3",
+        "a_agency_pm_r4"
+      ],
+      "tools": [
+        "fs",
+        "artifacts",
+        "calendar",
+        "docs"
+      ],
+      "reports_to": "owner",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "America/Bogota",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "18:00"
+      },
+      "budget_usd": 60,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "strategist",
+      "role": "analyst",
+      "department": "strategy",
+      "name_key": "a_strategist_name",
+      "title_key": "a_strategist_title",
+      "responsibility_keys": [
+        "a_strategist_r1",
+        "a_strategist_r2",
+        "a_strategist_r3",
+        "a_strategist_r4"
+      ],
+      "tools": [
+        "fs",
+        "web",
+        "spreadsheet"
+      ],
+      "reports_to": "agency_pm",
+      "escalation": "agency_pm",
+      "schedule": {
+        "timezone": "America/Bogota",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 80,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "content_lead",
+      "role": "assistant",
+      "department": "creative",
+      "name_key": "a_content_lead_name",
+      "title_key": "a_content_lead_title",
+      "responsibility_keys": [
+        "a_content_lead_r1",
+        "a_content_lead_r2",
+        "a_content_lead_r3",
+        "a_content_lead_r4"
+      ],
+      "tools": [
+        "fs",
+        "calendar",
+        "docs"
+      ],
+      "reports_to": "agency_pm",
+      "escalation": "agency_pm",
+      "schedule": {
+        "timezone": "America/Bogota",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "17:00"
+      },
+      "budget_usd": 55,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "copywriter",
+      "role": "education",
+      "department": "creative",
+      "name_key": "a_copywriter_name",
+      "title_key": "a_copywriter_title",
+      "responsibility_keys": [
+        "a_copywriter_r1",
+        "a_copywriter_r2",
+        "a_copywriter_r3",
+        "a_copywriter_r4"
+      ],
+      "tools": [
+        "fs",
+        "artifacts",
+        "docs"
+      ],
+      "reports_to": "content_lead",
+      "escalation": "content_lead",
+      "schedule": {
+        "timezone": "America/Bogota",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 50,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "media_buyer",
+      "role": "data_analyst",
+      "department": "media",
+      "name_key": "a_media_buyer_name",
+      "title_key": "a_media_buyer_title",
+      "responsibility_keys": [
+        "a_media_buyer_r1",
+        "a_media_buyer_r2",
+        "a_media_buyer_r3",
+        "a_media_buyer_r4"
+      ],
+      "tools": [
+        "fs",
+        "spreadsheet",
+        "calculator"
+      ],
+      "reports_to": "agency_pm",
+      "escalation": "agency_pm",
+      "schedule": {
+        "timezone": "America/Bogota",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "17:00"
+      },
+      "budget_usd": 90,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "account_exec",
+      "role": "sales",
+      "department": "accounts",
+      "name_key": "a_account_exec_name",
+      "title_key": "a_account_exec_title",
+      "responsibility_keys": [
+        "a_account_exec_r1",
+        "a_account_exec_r2",
+        "a_account_exec_r3",
+        "a_account_exec_r4"
+      ],
+      "tools": [
+        "fs",
+        "crm",
+        "email",
+        "proposal_builder"
+      ],
+      "reports_to": "agency_pm",
+      "escalation": "agency_pm",
+      "schedule": {
+        "timezone": "America/Bogota",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 65,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "perf_analyst",
+      "role": "data_analyst",
+      "department": "analytics",
+      "name_key": "a_perf_analyst_name",
+      "title_key": "a_perf_analyst_title",
+      "responsibility_keys": [
+        "a_perf_analyst_r1",
+        "a_perf_analyst_r2",
+        "a_perf_analyst_r3",
+        "a_perf_analyst_r4"
+      ],
+      "tools": [
+        "fs",
+        "bi",
+        "spreadsheet",
+        "artifacts"
+      ],
+      "reports_to": "agency_pm",
+      "escalation": "agency_pm",
+      "schedule": {
+        "timezone": "America/Bogota",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 75,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "seo_dev",
+      "role": "software_engineer",
+      "department": "analytics",
+      "name_key": "a_seo_dev_name",
+      "title_key": "a_seo_dev_title",
+      "responsibility_keys": [
+        "a_seo_dev_r1",
+        "a_seo_dev_r2",
+        "a_seo_dev_r3",
+        "a_seo_dev_r4"
+      ],
+      "tools": [
+        "fs",
+        "repo_read",
+        "docs"
+      ],
+      "reports_to": "perf_analyst",
+      "escalation": "agency_pm",
+      "schedule": {
+        "timezone": "America/Bogota",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "10:00",
+        "end": "19:00"
+      },
+      "budget_usd": 60,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "agency_accountant",
+      "role": "accounting",
+      "department": "finance",
+      "name_key": "a_agency_accountant_name",
+      "title_key": "a_agency_accountant_title",
+      "responsibility_keys": [
+        "a_agency_accountant_r1",
+        "a_agency_accountant_r2",
+        "a_agency_accountant_r3",
+        "a_agency_accountant_r4"
+      ],
+      "tools": [
+        "fs",
+        "ledger",
+        "spreadsheet"
+      ],
+      "reports_to": "agency_pm",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "America/Bogota",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "16:00"
+      },
+      "budget_usd": 50,
+      "autonomy": "approve_each"
+    }
+  ],
+  "delegation": [
+    {
+      "from": "any_agent",
+      "to": "owner",
+      "effect": "allow",
+      "approval": true,
+      "approver": "owner",
+      "note_key": "rule_1"
+    },
+    {
+      "from": "owner",
+      "to": "any_agent",
+      "effect": "allow",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_2"
+    },
+    {
+      "from": "any_agent",
+      "to": "any_agent",
+      "effect": "allow",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_3"
+    },
+    {
+      "from": "dept:accounts",
+      "to": "dept:media",
+      "effect": "allow",
+      "approval": true,
+      "approver": "media_buyer",
+      "note_key": "rule_4"
+    },
+    {
+      "from": "dept:creative",
+      "to": "dept:media",
+      "effect": "deny",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_5"
+    },
+    {
+      "from": "dept:media",
+      "to": "dept:finance",
+      "effect": "allow",
+      "approval": true,
+      "approver": "agency_accountant",
+      "note_key": "rule_6"
+    }
+  ],
+  "projects": [
+    {
+      "key": "campaign_launch",
+      "name_key": "p_campaign_launch",
+      "description_key": "p_campaign_launch_desc",
+      "steps": [
+        {
+          "key": "brief",
+          "title_key": "s_campaign_launch_brief",
+          "description_key": "s_campaign_launch_brief_d",
+          "agent": "strategist",
+          "depends_on": []
+        },
+        {
+          "key": "calendar",
+          "title_key": "s_campaign_launch_calendar",
+          "description_key": "s_campaign_launch_calendar_d",
+          "agent": "content_lead",
+          "depends_on": [
+            "brief"
+          ]
+        },
+        {
+          "key": "copy",
+          "title_key": "s_campaign_launch_copy",
+          "description_key": "s_campaign_launch_copy_d",
+          "agent": "copywriter",
+          "depends_on": [
+            "brief"
+          ]
+        },
+        {
+          "key": "media_plan",
+          "title_key": "s_campaign_launch_media_plan",
+          "description_key": "s_campaign_launch_media_plan_d",
+          "agent": "media_buyer",
+          "depends_on": [
+            "brief"
+          ]
+        },
+        {
+          "key": "tracking",
+          "title_key": "s_campaign_launch_tracking",
+          "description_key": "s_campaign_launch_tracking_d",
+          "agent": "seo_dev",
+          "depends_on": [
+            "brief"
+          ]
+        },
+        {
+          "key": "approval",
+          "title_key": "s_campaign_launch_approval",
+          "description_key": "s_campaign_launch_approval_d",
+          "agent": "account_exec",
+          "depends_on": [
+            "calendar",
+            "copy",
+            "media_plan",
+            "tracking"
+          ]
+        },
+        {
+          "key": "go_live",
+          "title_key": "s_campaign_launch_go_live",
+          "description_key": "s_campaign_launch_go_live_d",
+          "agent": "agency_pm",
+          "depends_on": [
+            "approval"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "monthly_report",
+      "name_key": "p_monthly_report",
+      "description_key": "p_monthly_report_desc",
+      "steps": [
+        {
+          "key": "data",
+          "title_key": "s_monthly_report_data",
+          "description_key": "s_monthly_report_data_d",
+          "agent": "perf_analyst",
+          "depends_on": []
+        },
+        {
+          "key": "spend",
+          "title_key": "s_monthly_report_spend",
+          "description_key": "s_monthly_report_spend_d",
+          "agent": "agency_accountant",
+          "depends_on": []
+        },
+        {
+          "key": "insights",
+          "title_key": "s_monthly_report_insights",
+          "description_key": "s_monthly_report_insights_d",
+          "agent": "strategist",
+          "depends_on": [
+            "data"
+          ]
+        },
+        {
+          "key": "media_view",
+          "title_key": "s_monthly_report_media_view",
+          "description_key": "s_monthly_report_media_view_d",
+          "agent": "media_buyer",
+          "depends_on": [
+            "data",
+            "spend"
+          ]
+        },
+        {
+          "key": "deck",
+          "title_key": "s_monthly_report_deck",
+          "description_key": "s_monthly_report_deck_d",
+          "agent": "account_exec",
+          "depends_on": [
+            "insights",
+            "media_view"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "new_client_pitch",
+      "name_key": "p_new_client_pitch",
+      "description_key": "p_new_client_pitch_desc",
+      "steps": [
+        {
+          "key": "research",
+          "title_key": "s_new_client_pitch_research",
+          "description_key": "s_new_client_pitch_research_d",
+          "agent": "strategist",
+          "depends_on": []
+        },
+        {
+          "key": "idea",
+          "title_key": "s_new_client_pitch_idea",
+          "description_key": "s_new_client_pitch_idea_d",
+          "agent": "copywriter",
+          "depends_on": [
+            "research"
+          ]
+        },
+        {
+          "key": "media",
+          "title_key": "s_new_client_pitch_media",
+          "description_key": "s_new_client_pitch_media_d",
+          "agent": "media_buyer",
+          "depends_on": [
+            "research"
+          ]
+        },
+        {
+          "key": "pricing",
+          "title_key": "s_new_client_pitch_pricing",
+          "description_key": "s_new_client_pitch_pricing_d",
+          "agent": "agency_accountant",
+          "depends_on": [
+            "idea",
+            "media"
+          ]
+        },
+        {
+          "key": "proposal",
+          "title_key": "s_new_client_pitch_proposal",
+          "description_key": "s_new_client_pitch_proposal_d",
+          "agent": "account_exec",
+          "depends_on": [
+            "pricing"
+          ]
+        }
+      ]
+    }
+  ],
+  "i18n": {
+    "en": {
+      "a_account_exec_name": "Felipe",
+      "a_account_exec_r1": "Is the client's contact and gathers their requests.",
+      "a_account_exec_r2": "Prepares proposals and renewals.",
+      "a_account_exec_r3": "Chases pending approvals.",
+      "a_account_exec_r4": "Passes scope changes to the project director.",
+      "a_account_exec_title": "Account executive",
+      "a_agency_accountant_name": "Beatriz",
+      "a_agency_accountant_r1": "Drafts invoices per client and project.",
+      "a_agency_accountant_r2": "Tracks media spend per account.",
+      "a_agency_accountant_r3": "Prepares the monthly close and cash flow.",
+      "a_agency_accountant_r4": "Hands taxes to a licensed accountant.",
+      "a_agency_accountant_title": "Agency accountant",
+      "a_agency_pm_name": "Adriana",
+      "a_agency_pm_r1": "Plans deliverables, resources and deadlines per account.",
+      "a_agency_pm_r2": "Runs the weekly status meeting.",
+      "a_agency_pm_r3": "Spots delays and rebalances workload.",
+      "a_agency_pm_r4": "Escalates scope or budget conflicts to the owner.",
+      "a_agency_pm_title": "Project director",
+      "a_content_lead_name": "Isabela",
+      "a_content_lead_r1": "Maintains each client's editorial calendar.",
+      "a_content_lead_r2": "Organizes briefs, approvals and versions.",
+      "a_content_lead_r3": "Checks tone and brand guide before review.",
+      "a_content_lead_r4": "Requests human review of all public content.",
+      "a_content_lead_title": "Content coordinator",
+      "a_copywriter_name": "Santiago",
+      "a_copywriter_r1": "Writes copy for ads, emails and social posts.",
+      "a_copywriter_r2": "Proposes several versions for A/B tests.",
+      "a_copywriter_r3": "Avoids unsupported claims.",
+      "a_copywriter_r4": "Adapts messages to Spanish, English and Portuguese.",
+      "a_copywriter_title": "Copywriter",
+      "a_media_buyer_name": "Valentina",
+      "a_media_buyer_r1": "Proposes budget split by channel.",
+      "a_media_buyer_r2": "Computes cost per result and break-even points.",
+      "a_media_buyer_r3": "Recommends bid changes without spending on its own.",
+      "a_media_buyer_r4": "Reports spend deviations right away.",
+      "a_media_buyer_title": "Media planner",
+      "a_perf_analyst_name": "Lorena",
+      "a_perf_analyst_r1": "Consolidates campaign metrics in per-client dashboards.",
+      "a_perf_analyst_r2": "Writes the monthly report with findings and recommendations.",
+      "a_perf_analyst_r3": "Validates data quality before reporting.",
+      "a_perf_analyst_r4": "Separates correlation from causation.",
+      "a_perf_analyst_title": "Performance analyst",
+      "a_seo_dev_name": "Esteban",
+      "a_seo_dev_r1": "Audits client sites with read-only access.",
+      "a_seo_dev_r2": "Documents technical SEO and tagging fixes.",
+      "a_seo_dev_r3": "Prepares small changes for human review.",
+      "a_seo_dev_r4": "Does not publish changes without approval.",
+      "a_seo_dev_title": "Web developer and technical SEO",
+      "a_strategist_name": "Gabriel",
+      "a_strategist_r1": "Researches market, competitors and audiences from public sources.",
+      "a_strategist_r2": "Writes the strategic brief and key messages.",
+      "a_strategist_r3": "Defines measurable goals with the client.",
+      "a_strategist_r4": "States which figures are estimates.",
+      "a_strategist_title": "Brand strategist",
+      "d_accounts": "Accounts and clients",
+      "d_analytics": "Analytics and web",
+      "d_creative": "Creative and content",
+      "d_finance": "Admin and finance",
+      "d_management": "Agency management",
+      "d_media": "Paid media",
+      "d_strategy": "Strategy",
+      "desc": "Agency with strategy, creative, media, accounts, analytics and finance, with agents and projects for a campaign launch, the monthly report and a new-client pitch.",
+      "disclaimer": "Agents prepare drafts and analyses; a professional must review public messages, advertising claims, contracts and financial figures before they go to the client.",
+      "name": "Marketing agency",
+      "p_campaign_launch": "Campaign launch",
+      "p_campaign_launch_desc": "From the brief to content, media and go-live.",
+      "p_monthly_report": "Monthly client report",
+      "p_monthly_report_desc": "Data, spend, analysis and client presentation.",
+      "p_new_client_pitch": "New-client pitch",
+      "p_new_client_pitch_desc": "Research, creative idea, media plan, costs and final proposal.",
+      "rule_1": "Assigning work to the owner requires their approval.",
+      "rule_2": "The owner may assign to any agent.",
+      "rule_3": "Agents coordinate freely by default.",
+      "rule_4": "Accounts requests media changes with the planner's approval.",
+      "rule_5": "Creative does not assign work or spend to paid media.",
+      "rule_6": "Media requests payments from finance with the accountant's approval.",
+      "s_campaign_launch_approval": "Client approval",
+      "s_campaign_launch_approval_d": "Bundle pieces and plan, and request sign-off.",
+      "s_campaign_launch_brief": "Write the brief",
+      "s_campaign_launch_brief_d": "Goals, audience, messages and budget.",
+      "s_campaign_launch_calendar": "Content calendar",
+      "s_campaign_launch_calendar_d": "Plan pieces, channels and dates.",
+      "s_campaign_launch_copy": "Write the copy",
+      "s_campaign_launch_copy_d": "Ad and email versions for testing.",
+      "s_campaign_launch_go_live": "Go live",
+      "s_campaign_launch_go_live_d": "Coordinate publishing and early monitoring.",
+      "s_campaign_launch_media_plan": "Media plan",
+      "s_campaign_launch_media_plan_d": "Split the budget and project results.",
+      "s_campaign_launch_tracking": "Set up tracking",
+      "s_campaign_launch_tracking_d": "Tags and conversion goals.",
+      "s_monthly_report_data": "Consolidate campaign data",
+      "s_monthly_report_data_d": "Gather metrics from all channels and validate them.",
+      "s_monthly_report_deck": "Build the presentation",
+      "s_monthly_report_deck_d": "Combine analysis and recommendations for the client.",
+      "s_monthly_report_insights": "Write the findings",
+      "s_monthly_report_insights_d": "Results, learnings and recommendations.",
+      "s_monthly_report_media_view": "Media adjustments",
+      "s_monthly_report_media_view_d": "Propose spend changes for next month.",
+      "s_monthly_report_spend": "Reconcile media spend",
+      "s_monthly_report_spend_d": "Compare reported spend against invoices.",
+      "s_new_client_pitch_idea": "Develop the creative idea",
+      "s_new_client_pitch_idea_d": "Concept, messages and sample pieces.",
+      "s_new_client_pitch_media": "Sketch the media plan",
+      "s_new_client_pitch_media_d": "Channels, budget and expected results.",
+      "s_new_client_pitch_pricing": "Compute fees and costs",
+      "s_new_client_pitch_pricing_d": "Hours, margins and payment terms.",
+      "s_new_client_pitch_proposal": "Assemble and send the proposal",
+      "s_new_client_pitch_proposal_d": "Director's review before sending.",
+      "s_new_client_pitch_research": "Research the client and market",
+      "s_new_client_pitch_research_d": "Competitors, audiences and opportunities."
+    },
+    "es": {
+      "a_account_exec_name": "Felipe",
+      "a_account_exec_r1": "Es el contacto del cliente y recoge sus solicitudes.",
+      "a_account_exec_r2": "Prepara propuestas y renovaciones.",
+      "a_account_exec_r3": "Da seguimiento a aprobaciones pendientes.",
+      "a_account_exec_r4": "Traslada al director cambios de alcance.",
+      "a_account_exec_title": "Ejecutivo de cuentas",
+      "a_agency_accountant_name": "Beatriz",
+      "a_agency_accountant_r1": "Emite borradores de facturas por cliente y proyecto.",
+      "a_agency_accountant_r2": "Controla gastos de medios por cuenta.",
+      "a_agency_accountant_r3": "Prepara el cierre mensual y el flujo de caja.",
+      "a_agency_accountant_r4": "Pasa los impuestos a un contador con licencia.",
+      "a_agency_accountant_title": "Contadora de la agencia",
+      "a_agency_pm_name": "Adriana",
+      "a_agency_pm_r1": "Planifica entregas, recursos y plazos de cada cuenta.",
+      "a_agency_pm_r2": "Corre la reunión semanal de estado.",
+      "a_agency_pm_r3": "Detecta retrasos y reasigna carga de trabajo.",
+      "a_agency_pm_r4": "Escala conflictos de alcance o presupuesto al dueño.",
+      "a_agency_pm_title": "Directora de proyectos",
+      "a_content_lead_name": "Isabela",
+      "a_content_lead_r1": "Mantiene el calendario editorial de cada cliente.",
+      "a_content_lead_r2": "Organiza briefs, aprobaciones y versiones.",
+      "a_content_lead_r3": "Verifica tono y guía de marca antes de revisión.",
+      "a_content_lead_r4": "Pide revisión humana de todo contenido público.",
+      "a_content_lead_title": "Coordinadora de contenido",
+      "a_copywriter_name": "Santiago",
+      "a_copywriter_r1": "Escribe textos para anuncios, correos y redes.",
+      "a_copywriter_r2": "Propone varias versiones para pruebas A/B.",
+      "a_copywriter_r3": "Evita afirmaciones sin sustento.",
+      "a_copywriter_r4": "Adapta mensajes a español, inglés y portugués.",
+      "a_copywriter_title": "Redactor creativo",
+      "a_media_buyer_name": "Valentina",
+      "a_media_buyer_r1": "Propone la distribución de presupuesto por canal.",
+      "a_media_buyer_r2": "Calcula costo por resultado y puntos de equilibrio.",
+      "a_media_buyer_r3": "Recomienda ajustes de pujas sin ejecutar gastos por sí sola.",
+      "a_media_buyer_r4": "Reporta desviaciones de gasto al instante.",
+      "a_media_buyer_title": "Planificadora de medios",
+      "a_perf_analyst_name": "Lorena",
+      "a_perf_analyst_r1": "Consolida métricas de campañas en tableros por cliente.",
+      "a_perf_analyst_r2": "Redacta el informe mensual con hallazgos y recomendaciones.",
+      "a_perf_analyst_r3": "Valida la calidad de los datos antes de reportar.",
+      "a_perf_analyst_r4": "Distingue correlación de causalidad.",
+      "a_perf_analyst_title": "Analista de desempeño",
+      "a_seo_dev_name": "Esteban",
+      "a_seo_dev_r1": "Audita sitios de clientes en modo lectura.",
+      "a_seo_dev_r2": "Documenta correcciones técnicas de SEO y etiquetado.",
+      "a_seo_dev_r3": "Prepara cambios pequeños para revisión humana.",
+      "a_seo_dev_r4": "No publica cambios sin aprobación.",
+      "a_seo_dev_title": "Desarrollador web y SEO técnico",
+      "a_strategist_name": "Gabriel",
+      "a_strategist_r1": "Investiga mercado, competencia y audiencias con fuentes públicas.",
+      "a_strategist_r2": "Redacta el planteamiento estratégico y los mensajes clave.",
+      "a_strategist_r3": "Define objetivos medibles con el cliente.",
+      "a_strategist_r4": "Indica qué datos son estimaciones.",
+      "a_strategist_title": "Estratega de marca",
+      "d_accounts": "Cuentas y clientes",
+      "d_analytics": "Analítica y web",
+      "d_creative": "Creatividad y contenido",
+      "d_finance": "Administración y finanzas",
+      "d_management": "Dirección de la agencia",
+      "d_media": "Medios pagados",
+      "d_strategy": "Estrategia",
+      "desc": "Agencia con estrategia, creatividad, medios, cuentas, analítica y finanzas, con agentes y proyectos de lanzamiento de campaña, reporte mensual y propuesta a un cliente nuevo.",
+      "disclaimer": "Los agentes preparan borradores y análisis; un profesional debe revisar mensajes públicos, afirmaciones publicitarias, contratos y cifras financieras antes de enviarlos al cliente.",
+      "name": "Agencia de marketing",
+      "p_campaign_launch": "Lanzamiento de una campaña",
+      "p_campaign_launch_desc": "Del planteamiento al contenido, los medios y la salida al aire.",
+      "p_monthly_report": "Informe mensual de un cliente",
+      "p_monthly_report_desc": "Datos, gasto, análisis y presentación al cliente.",
+      "p_new_client_pitch": "Propuesta para un cliente nuevo",
+      "p_new_client_pitch_desc": "Investigación, idea creativa, plan de medios, costos y propuesta final.",
+      "rule_1": "Asignar trabajo al dueño requiere su aprobación.",
+      "rule_2": "El dueño puede asignar a cualquier agente.",
+      "rule_3": "Los agentes se coordinan libremente por defecto.",
+      "rule_4": "Cuentas pide cambios de medios con visto bueno de la planificadora.",
+      "rule_5": "Creatividad no asigna trabajo ni gasto a medios pagados.",
+      "rule_6": "Medios solicita pagos a finanzas con visto bueno de la contadora.",
+      "s_campaign_launch_approval": "Aprobación del cliente",
+      "s_campaign_launch_approval_d": "Reunir piezas y plan, y pedir visto bueno.",
+      "s_campaign_launch_brief": "Redactar el planteamiento",
+      "s_campaign_launch_brief_d": "Objetivos, público, mensajes y presupuesto.",
+      "s_campaign_launch_calendar": "Calendario de contenido",
+      "s_campaign_launch_calendar_d": "Planificar piezas, canales y fechas.",
+      "s_campaign_launch_copy": "Escribir los textos",
+      "s_campaign_launch_copy_d": "Versiones de anuncios y correos para pruebas.",
+      "s_campaign_launch_go_live": "Salida al aire",
+      "s_campaign_launch_go_live_d": "Coordinar la publicación y el monitoreo inicial.",
+      "s_campaign_launch_media_plan": "Plan de medios",
+      "s_campaign_launch_media_plan_d": "Distribuir presupuesto y proyectar resultados.",
+      "s_campaign_launch_tracking": "Configurar mediciones",
+      "s_campaign_launch_tracking_d": "Etiquetas y objetivos de conversión.",
+      "s_monthly_report_data": "Consolidar datos de campañas",
+      "s_monthly_report_data_d": "Reunir métricas de todos los canales y validarlas.",
+      "s_monthly_report_deck": "Armar la presentación",
+      "s_monthly_report_deck_d": "Integrar análisis y recomendaciones para el cliente.",
+      "s_monthly_report_insights": "Redactar hallazgos",
+      "s_monthly_report_insights_d": "Resultados, aprendizajes y recomendaciones.",
+      "s_monthly_report_media_view": "Ajustes de medios",
+      "s_monthly_report_media_view_d": "Proponer cambios de inversión para el mes siguiente.",
+      "s_monthly_report_spend": "Conciliar el gasto en medios",
+      "s_monthly_report_spend_d": "Comparar gasto reportado contra facturas.",
+      "s_new_client_pitch_idea": "Desarrollar la idea creativa",
+      "s_new_client_pitch_idea_d": "Concepto, mensajes y ejemplos de piezas.",
+      "s_new_client_pitch_media": "Esbozar el plan de medios",
+      "s_new_client_pitch_media_d": "Canales, presupuesto y resultados esperados.",
+      "s_new_client_pitch_pricing": "Calcular honorarios y costos",
+      "s_new_client_pitch_pricing_d": "Horas, márgenes y condiciones de pago.",
+      "s_new_client_pitch_proposal": "Armar y enviar la propuesta",
+      "s_new_client_pitch_proposal_d": "Revisión del director antes del envío.",
+      "s_new_client_pitch_research": "Investigar al cliente y su mercado",
+      "s_new_client_pitch_research_d": "Competencia, audiencias y oportunidades."
+    },
+    "pt": {
+      "a_account_exec_name": "Felipe",
+      "a_account_exec_r1": "É o contato do cliente e reúne os pedidos dele.",
+      "a_account_exec_r2": "Prepara propostas e renovações.",
+      "a_account_exec_r3": "Acompanha aprovações pendentes.",
+      "a_account_exec_r4": "Repassa mudanças de escopo ao diretor de projetos.",
+      "a_account_exec_title": "Executivo de contas",
+      "a_agency_accountant_name": "Beatriz",
+      "a_agency_accountant_r1": "Emite rascunhos de faturas por cliente e projeto.",
+      "a_agency_accountant_r2": "Controla gastos de mídia por conta.",
+      "a_agency_accountant_r3": "Prepara o fechamento mensal e o fluxo de caixa.",
+      "a_agency_accountant_r4": "Encaminha os impostos a um contador habilitado.",
+      "a_agency_accountant_title": "Contadora da agência",
+      "a_agency_pm_name": "Adriana",
+      "a_agency_pm_r1": "Planeja entregas, recursos e prazos de cada conta.",
+      "a_agency_pm_r2": "Conduz a reunião semanal de status.",
+      "a_agency_pm_r3": "Detecta atrasos e reequilibra a carga de trabalho.",
+      "a_agency_pm_r4": "Escala conflitos de escopo ou orçamento ao dono.",
+      "a_agency_pm_title": "Diretora de projetos",
+      "a_content_lead_name": "Isabela",
+      "a_content_lead_r1": "Mantém o calendário editorial de cada cliente.",
+      "a_content_lead_r2": "Organiza briefings, aprovações e versões.",
+      "a_content_lead_r3": "Verifica tom e guia de marca antes da revisão.",
+      "a_content_lead_r4": "Solicita revisão humana de todo conteúdo público.",
+      "a_content_lead_title": "Coordenadora de conteúdo",
+      "a_copywriter_name": "Santiago",
+      "a_copywriter_r1": "Escreve textos para anúncios, e-mails e redes.",
+      "a_copywriter_r2": "Propõe várias versões para testes A/B.",
+      "a_copywriter_r3": "Evita alegações sem comprovação.",
+      "a_copywriter_r4": "Adapta mensagens para espanhol, inglês e português.",
+      "a_copywriter_title": "Redator criativo",
+      "a_media_buyer_name": "Valentina",
+      "a_media_buyer_r1": "Propõe a distribuição de orçamento por canal.",
+      "a_media_buyer_r2": "Calcula custo por resultado e pontos de equilíbrio.",
+      "a_media_buyer_r3": "Recomenda ajustes de lances sem executar gastos sozinha.",
+      "a_media_buyer_r4": "Reporta desvios de gasto imediatamente.",
+      "a_media_buyer_title": "Planejadora de mídia",
+      "a_perf_analyst_name": "Lorena",
+      "a_perf_analyst_r1": "Consolida métricas de campanhas em painéis por cliente.",
+      "a_perf_analyst_r2": "Redige o relatório mensal com achados e recomendações.",
+      "a_perf_analyst_r3": "Valida a qualidade dos dados antes de reportar.",
+      "a_perf_analyst_r4": "Distingue correlação de causalidade.",
+      "a_perf_analyst_title": "Analista de desempenho",
+      "a_seo_dev_name": "Esteban",
+      "a_seo_dev_r1": "Audita sites de clientes com acesso somente leitura.",
+      "a_seo_dev_r2": "Documenta correções técnicas de SEO e marcação.",
+      "a_seo_dev_r3": "Prepara pequenas alterações para revisão humana.",
+      "a_seo_dev_r4": "Não publica alterações sem aprovação.",
+      "a_seo_dev_title": "Desenvolvedor web e SEO técnico",
+      "a_strategist_name": "Gabriel",
+      "a_strategist_r1": "Pesquisa mercado, concorrência e públicos em fontes públicas.",
+      "a_strategist_r2": "Redige o planejamento estratégico e as mensagens-chave.",
+      "a_strategist_r3": "Define metas mensuráveis com o cliente.",
+      "a_strategist_r4": "Indica quais dados são estimativas.",
+      "a_strategist_title": "Estrategista de marca",
+      "d_accounts": "Contas e clientes",
+      "d_analytics": "Análise e web",
+      "d_creative": "Criação e conteúdo",
+      "d_finance": "Administração e finanças",
+      "d_management": "Direção da agência",
+      "d_media": "Mídia paga",
+      "d_strategy": "Estratégia",
+      "desc": "Agência com estratégia, criação, mídia, contas, análise e finanças, com agentes e projetos de lançamento de campanha, relatório mensal e proposta a um novo cliente.",
+      "disclaimer": "Os agentes preparam rascunhos e análises; um profissional deve revisar mensagens públicas, alegações publicitárias, contratos e números financeiros antes do envio ao cliente.",
+      "name": "Agência de marketing",
+      "p_campaign_launch": "Lançamento de uma campanha",
+      "p_campaign_launch_desc": "Do briefing ao conteúdo, à mídia e ao go-live.",
+      "p_monthly_report": "Relatório mensal de um cliente",
+      "p_monthly_report_desc": "Dados, gasto, análise e apresentação ao cliente.",
+      "p_new_client_pitch": "Proposta para um novo cliente",
+      "p_new_client_pitch_desc": "Pesquisa, ideia criativa, plano de mídia, custos e proposta final.",
+      "rule_1": "Atribuir trabalho ao dono requer a aprovação dele.",
+      "rule_2": "O dono pode atribuir a qualquer agente.",
+      "rule_3": "Os agentes se coordenam livremente por padrão.",
+      "rule_4": "Contas pede mudanças de mídia com aval da planejadora.",
+      "rule_5": "A criação não atribui trabalho nem gasto à mídia paga.",
+      "rule_6": "A mídia solicita pagamentos às finanças com aval da contadora.",
+      "s_campaign_launch_approval": "Aprovação do cliente",
+      "s_campaign_launch_approval_d": "Reunir peças e plano, e pedir aprovação.",
+      "s_campaign_launch_brief": "Redigir o briefing",
+      "s_campaign_launch_brief_d": "Metas, público, mensagens e orçamento.",
+      "s_campaign_launch_calendar": "Calendário de conteúdo",
+      "s_campaign_launch_calendar_d": "Planejar peças, canais e datas.",
+      "s_campaign_launch_copy": "Escrever os textos",
+      "s_campaign_launch_copy_d": "Versões de anúncios e e-mails para testes.",
+      "s_campaign_launch_go_live": "Entrada no ar",
+      "s_campaign_launch_go_live_d": "Coordenar a publicação e o monitoramento inicial.",
+      "s_campaign_launch_media_plan": "Plano de mídia",
+      "s_campaign_launch_media_plan_d": "Distribuir o orçamento e projetar resultados.",
+      "s_campaign_launch_tracking": "Configurar mensurações",
+      "s_campaign_launch_tracking_d": "Tags e metas de conversão.",
+      "s_monthly_report_data": "Consolidar dados das campanhas",
+      "s_monthly_report_data_d": "Reunir métricas de todos os canais e validá-las.",
+      "s_monthly_report_deck": "Montar a apresentação",
+      "s_monthly_report_deck_d": "Integrar análise e recomendações para o cliente.",
+      "s_monthly_report_insights": "Redigir os achados",
+      "s_monthly_report_insights_d": "Resultados, aprendizados e recomendações.",
+      "s_monthly_report_media_view": "Ajustes de mídia",
+      "s_monthly_report_media_view_d": "Propor mudanças de investimento para o mês seguinte.",
+      "s_monthly_report_spend": "Conciliar o gasto em mídia",
+      "s_monthly_report_spend_d": "Comparar gasto reportado com as faturas.",
+      "s_new_client_pitch_idea": "Desenvolver a ideia criativa",
+      "s_new_client_pitch_idea_d": "Conceito, mensagens e exemplos de peças.",
+      "s_new_client_pitch_media": "Esboçar o plano de mídia",
+      "s_new_client_pitch_media_d": "Canais, orçamento e resultados esperados.",
+      "s_new_client_pitch_pricing": "Calcular honorários e custos",
+      "s_new_client_pitch_pricing_d": "Horas, margens e condições de pagamento.",
+      "s_new_client_pitch_proposal": "Montar e enviar a proposta",
+      "s_new_client_pitch_proposal_d": "Revisão do diretor antes do envio.",
+      "s_new_client_pitch_research": "Pesquisar o cliente e o mercado",
+      "s_new_client_pitch_research_d": "Concorrência, públicos e oportunidades."
+    }
+  }
+}

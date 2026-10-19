@@ -1,0 +1,962 @@
+{
+  "schema": "aiw.industry_template/1",
+  "key": "accounting_firm",
+  "version": 1,
+  "category": "professional_services",
+  "name_key": "name",
+  "description_key": "desc",
+  "disclaimer_key": "disclaimer",
+  "subsidiaries": 0,
+  "demo_set": "accounting_firm",
+  "departments": [
+    {
+      "key": "practice",
+      "name_key": "d_practice",
+      "parent": "",
+      "cost_center": "CC-100",
+      "head": "practice_manager"
+    },
+    {
+      "key": "tax",
+      "name_key": "d_tax",
+      "parent": "practice",
+      "cost_center": "CC-200",
+      "head": "tax_lead"
+    },
+    {
+      "key": "bookkeeping",
+      "name_key": "d_bookkeeping",
+      "parent": "practice",
+      "cost_center": "CC-300",
+      "head": "books_lead"
+    },
+    {
+      "key": "payroll",
+      "name_key": "d_payroll",
+      "parent": "practice",
+      "cost_center": "CC-400",
+      "head": "payroll_lead"
+    },
+    {
+      "key": "audit",
+      "name_key": "d_audit",
+      "parent": "practice",
+      "cost_center": "CC-500",
+      "head": "auditor"
+    },
+    {
+      "key": "clients",
+      "name_key": "d_clients",
+      "parent": "practice",
+      "cost_center": "CC-600",
+      "head": "client_mgr"
+    },
+    {
+      "key": "advisory",
+      "name_key": "d_advisory",
+      "parent": "practice",
+      "cost_center": "CC-700",
+      "head": "analyst_lead"
+    }
+  ],
+  "agents": [
+    {
+      "key": "practice_manager",
+      "role": "project_manager",
+      "department": "practice",
+      "name_key": "a_practice_manager_name",
+      "title_key": "a_practice_manager_title",
+      "responsibility_keys": [
+        "a_practice_manager_r1",
+        "a_practice_manager_r2",
+        "a_practice_manager_r3",
+        "a_practice_manager_r4"
+      ],
+      "tools": [
+        "fs",
+        "artifacts",
+        "calendar",
+        "docs"
+      ],
+      "reports_to": "owner",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "18:00"
+      },
+      "budget_usd": 60,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "tax_lead",
+      "role": "accounting",
+      "department": "tax",
+      "name_key": "a_tax_lead_name",
+      "title_key": "a_tax_lead_title",
+      "responsibility_keys": [
+        "a_tax_lead_r1",
+        "a_tax_lead_r2",
+        "a_tax_lead_r3",
+        "a_tax_lead_r4"
+      ],
+      "tools": [
+        "fs",
+        "ledger",
+        "spreadsheet"
+      ],
+      "reports_to": "practice_manager",
+      "escalation": "practice_manager",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "17:00"
+      },
+      "budget_usd": 90,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "tax_prep",
+      "role": "accounting",
+      "department": "tax",
+      "name_key": "a_tax_prep_name",
+      "title_key": "a_tax_prep_title",
+      "responsibility_keys": [
+        "a_tax_prep_r1",
+        "a_tax_prep_r2",
+        "a_tax_prep_r3",
+        "a_tax_prep_r4"
+      ],
+      "tools": [
+        "fs",
+        "spreadsheet"
+      ],
+      "reports_to": "tax_lead",
+      "escalation": "tax_lead",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 60,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "books_lead",
+      "role": "accounting",
+      "department": "bookkeeping",
+      "name_key": "a_books_lead_name",
+      "title_key": "a_books_lead_title",
+      "responsibility_keys": [
+        "a_books_lead_r1",
+        "a_books_lead_r2",
+        "a_books_lead_r3",
+        "a_books_lead_r4"
+      ],
+      "tools": [
+        "fs",
+        "ledger",
+        "spreadsheet"
+      ],
+      "reports_to": "practice_manager",
+      "escalation": "practice_manager",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "17:00"
+      },
+      "budget_usd": 80,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "reconciler",
+      "role": "finance_treasury",
+      "department": "bookkeeping",
+      "name_key": "a_reconciler_name",
+      "title_key": "a_reconciler_title",
+      "responsibility_keys": [
+        "a_reconciler_r1",
+        "a_reconciler_r2",
+        "a_reconciler_r3",
+        "a_reconciler_r4"
+      ],
+      "tools": [
+        "fs",
+        "spreadsheet",
+        "calculator"
+      ],
+      "reports_to": "books_lead",
+      "escalation": "books_lead",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "17:00"
+      },
+      "budget_usd": 50,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "payroll_lead",
+      "role": "hr",
+      "department": "payroll",
+      "name_key": "a_payroll_lead_name",
+      "title_key": "a_payroll_lead_title",
+      "responsibility_keys": [
+        "a_payroll_lead_r1",
+        "a_payroll_lead_r2",
+        "a_payroll_lead_r3",
+        "a_payroll_lead_r4"
+      ],
+      "tools": [
+        "fs",
+        "email"
+      ],
+      "reports_to": "practice_manager",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "16:00"
+      },
+      "budget_usd": 45,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "auditor",
+      "role": "internal_auditor",
+      "department": "audit",
+      "name_key": "a_auditor_name",
+      "title_key": "a_auditor_title",
+      "responsibility_keys": [
+        "a_auditor_r1",
+        "a_auditor_r2",
+        "a_auditor_r3",
+        "a_auditor_r4"
+      ],
+      "tools": [
+        "fs_read"
+      ],
+      "reports_to": "practice_manager",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "10:00",
+        "end": "16:00"
+      },
+      "budget_usd": 40,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "client_mgr",
+      "role": "sales",
+      "department": "clients",
+      "name_key": "a_client_mgr_name",
+      "title_key": "a_client_mgr_title",
+      "responsibility_keys": [
+        "a_client_mgr_r1",
+        "a_client_mgr_r2",
+        "a_client_mgr_r3",
+        "a_client_mgr_r4"
+      ],
+      "tools": [
+        "fs",
+        "crm",
+        "email"
+      ],
+      "reports_to": "practice_manager",
+      "escalation": "practice_manager",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "start": "09:00",
+        "end": "19:00"
+      },
+      "budget_usd": 55,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "analyst_lead",
+      "role": "data_analyst",
+      "department": "advisory",
+      "name_key": "a_analyst_lead_name",
+      "title_key": "a_analyst_lead_title",
+      "responsibility_keys": [
+        "a_analyst_lead_r1",
+        "a_analyst_lead_r2",
+        "a_analyst_lead_r3",
+        "a_analyst_lead_r4"
+      ],
+      "tools": [
+        "fs",
+        "bi",
+        "spreadsheet",
+        "calculator"
+      ],
+      "reports_to": "practice_manager",
+      "escalation": "practice_manager",
+      "schedule": {
+        "timezone": "America/Mexico_City",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 70,
+      "autonomy": "approve_each"
+    }
+  ],
+  "delegation": [
+    {
+      "from": "any_agent",
+      "to": "owner",
+      "effect": "allow",
+      "approval": true,
+      "approver": "owner",
+      "note_key": "rule_1"
+    },
+    {
+      "from": "owner",
+      "to": "any_agent",
+      "effect": "allow",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_2"
+    },
+    {
+      "from": "any_agent",
+      "to": "any_agent",
+      "effect": "allow",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_3"
+    },
+    {
+      "from": "dept:clients",
+      "to": "dept:tax",
+      "effect": "allow",
+      "approval": true,
+      "approver": "tax_lead",
+      "note_key": "rule_4"
+    },
+    {
+      "from": "agent:client_mgr",
+      "to": "dept:payroll",
+      "effect": "deny",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_5"
+    },
+    {
+      "from": "dept:audit",
+      "to": "any_agent",
+      "effect": "allow",
+      "approval": true,
+      "approver": "practice_manager",
+      "note_key": "rule_6"
+    }
+  ],
+  "projects": [
+    {
+      "key": "monthly_close",
+      "name_key": "p_monthly_close",
+      "description_key": "p_monthly_close_desc",
+      "steps": [
+        {
+          "key": "collect",
+          "title_key": "s_monthly_close_collect",
+          "description_key": "s_monthly_close_collect_d",
+          "agent": "client_mgr",
+          "depends_on": []
+        },
+        {
+          "key": "bank_rec",
+          "title_key": "s_monthly_close_bank_rec",
+          "description_key": "s_monthly_close_bank_rec_d",
+          "agent": "reconciler",
+          "depends_on": [
+            "collect"
+          ]
+        },
+        {
+          "key": "post",
+          "title_key": "s_monthly_close_post",
+          "description_key": "s_monthly_close_post_d",
+          "agent": "books_lead",
+          "depends_on": [
+            "collect"
+          ]
+        },
+        {
+          "key": "payroll",
+          "title_key": "s_monthly_close_payroll",
+          "description_key": "s_monthly_close_payroll_d",
+          "agent": "payroll_lead",
+          "depends_on": [
+            "collect"
+          ]
+        },
+        {
+          "key": "review",
+          "title_key": "s_monthly_close_review",
+          "description_key": "s_monthly_close_review_d",
+          "agent": "auditor",
+          "depends_on": [
+            "bank_rec",
+            "post"
+          ]
+        },
+        {
+          "key": "report",
+          "title_key": "s_monthly_close_report",
+          "description_key": "s_monthly_close_report_d",
+          "agent": "analyst_lead",
+          "depends_on": [
+            "review"
+          ]
+        },
+        {
+          "key": "deliver",
+          "title_key": "s_monthly_close_deliver",
+          "description_key": "s_monthly_close_deliver_d",
+          "agent": "practice_manager",
+          "depends_on": [
+            "report",
+            "payroll"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "annual_return",
+      "name_key": "p_annual_return",
+      "description_key": "p_annual_return_desc",
+      "steps": [
+        {
+          "key": "intake",
+          "title_key": "s_annual_return_intake",
+          "description_key": "s_annual_return_intake_d",
+          "agent": "client_mgr",
+          "depends_on": []
+        },
+        {
+          "key": "classify",
+          "title_key": "s_annual_return_classify",
+          "description_key": "s_annual_return_classify_d",
+          "agent": "tax_prep",
+          "depends_on": [
+            "intake"
+          ]
+        },
+        {
+          "key": "scenarios",
+          "title_key": "s_annual_return_scenarios",
+          "description_key": "s_annual_return_scenarios_d",
+          "agent": "analyst_lead",
+          "depends_on": [
+            "intake"
+          ]
+        },
+        {
+          "key": "compute",
+          "title_key": "s_annual_return_compute",
+          "description_key": "s_annual_return_compute_d",
+          "agent": "tax_lead",
+          "depends_on": [
+            "classify",
+            "scenarios"
+          ]
+        },
+        {
+          "key": "verify",
+          "title_key": "s_annual_return_verify",
+          "description_key": "s_annual_return_verify_d",
+          "agent": "auditor",
+          "depends_on": [
+            "compute"
+          ]
+        },
+        {
+          "key": "plan",
+          "title_key": "s_annual_return_plan",
+          "description_key": "s_annual_return_plan_d",
+          "agent": "practice_manager",
+          "depends_on": [
+            "verify"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "client_onboarding",
+      "name_key": "p_client_onboarding",
+      "description_key": "p_client_onboarding_desc",
+      "steps": [
+        {
+          "key": "proposal",
+          "title_key": "s_client_onboarding_proposal",
+          "description_key": "s_client_onboarding_proposal_d",
+          "agent": "client_mgr",
+          "depends_on": []
+        },
+        {
+          "key": "engagement",
+          "title_key": "s_client_onboarding_engagement",
+          "description_key": "s_client_onboarding_engagement_d",
+          "agent": "practice_manager",
+          "depends_on": [
+            "proposal"
+          ]
+        },
+        {
+          "key": "books",
+          "title_key": "s_client_onboarding_books",
+          "description_key": "s_client_onboarding_books_d",
+          "agent": "books_lead",
+          "depends_on": [
+            "engagement"
+          ]
+        },
+        {
+          "key": "calendar",
+          "title_key": "s_client_onboarding_calendar",
+          "description_key": "s_client_onboarding_calendar_d",
+          "agent": "tax_lead",
+          "depends_on": [
+            "engagement"
+          ]
+        },
+        {
+          "key": "payroll",
+          "title_key": "s_client_onboarding_payroll",
+          "description_key": "s_client_onboarding_payroll_d",
+          "agent": "payroll_lead",
+          "depends_on": [
+            "engagement"
+          ]
+        },
+        {
+          "key": "kickoff",
+          "title_key": "s_client_onboarding_kickoff",
+          "description_key": "s_client_onboarding_kickoff_d",
+          "agent": "client_mgr",
+          "depends_on": [
+            "books",
+            "calendar",
+            "payroll"
+          ]
+        }
+      ]
+    }
+  ],
+  "i18n": {
+    "en": {
+      "a_analyst_lead_name": "Mateo",
+      "a_analyst_lead_r1": "Builds revenue, cost and cash dashboards for clients.",
+      "a_analyst_lead_r2": "Computes indicators and simple scenarios.",
+      "a_analyst_lead_r3": "Explains the figures to the client in plain language.",
+      "a_analyst_lead_r4": "States the assumptions and limits of each analysis.",
+      "a_analyst_lead_title": "Financial advisory analyst",
+      "a_auditor_name": "Gonzalo",
+      "a_auditor_r1": "Reviews deliverable quality with read-only access.",
+      "a_auditor_r2": "Tests samples of entries and reconciliations.",
+      "a_auditor_r3": "Reports findings and control risks straight to the owner.",
+      "a_auditor_r4": "Follows up on agreed fixes.",
+      "a_auditor_title": "Internal auditor",
+      "a_books_lead_name": "Andrés",
+      "a_books_lead_r1": "Posts and reviews clients' monthly journal entries.",
+      "a_books_lead_r2": "Prepares the monthly trial balance and statements.",
+      "a_books_lead_r3": "Coordinates the monthly close with reconciliations and payroll.",
+      "a_books_lead_r4": "Flags differences that need professional judgment.",
+      "a_books_lead_title": "Bookkeeping lead",
+      "a_client_mgr_name": "Sofía",
+      "a_client_mgr_r1": "Handles client requests and collects documents.",
+      "a_client_mgr_r2": "Drafts service proposals and renewals.",
+      "a_client_mgr_r3": "Follows up on fee collection with a courteous tone.",
+      "a_client_mgr_r4": "Escalates complaints or legal topics to the practice manager.",
+      "a_client_mgr_title": "Client service executive",
+      "a_payroll_lead_name": "Fernanda",
+      "a_payroll_lead_r1": "Prepares payroll runs for the clients who contract it.",
+      "a_payroll_lead_r2": "Checks hires, leavers and period incidents.",
+      "a_payroll_lead_r3": "Sends payslips only after human approval.",
+      "a_payroll_lead_r4": "Protects employees' personal data.",
+      "a_payroll_lead_title": "Payroll lead",
+      "a_practice_manager_name": "Valeria",
+      "a_practice_manager_r1": "Plans the firm's workload and assigns an owner for each client.",
+      "a_practice_manager_r2": "Tracks tax deadlines and delivery dates.",
+      "a_practice_manager_r3": "Prepares the weekly summary for the partners.",
+      "a_practice_manager_r4": "Escalates blockers and risk decisions to the owner.",
+      "a_practice_manager_title": "Practice manager",
+      "a_reconciler_name": "Camila",
+      "a_reconciler_r1": "Reconciles bank accounts against the ledger.",
+      "a_reconciler_r2": "Identifies items in transit and unsupported movements.",
+      "a_reconciler_r3": "Computes balances and exchange differences in the spreadsheet.",
+      "a_reconciler_r4": "Hands over the reconciliation for the lead's sign-off.",
+      "a_reconciler_title": "Reconciliation analyst",
+      "a_tax_lead_name": "Ricardo",
+      "a_tax_lead_r1": "Reviews draft returns before they go to a licensed accountant.",
+      "a_tax_lead_r2": "Calculates periodic taxes from client data.",
+      "a_tax_lead_r3": "Maintains each client's tax calendar.",
+      "a_tax_lead_r4": "Documents the assumptions and sources of every calculation.",
+      "a_tax_lead_title": "Tax lead",
+      "a_tax_prep_name": "Lucía",
+      "a_tax_prep_r1": "Sorts receipts and invoices for the return.",
+      "a_tax_prep_r2": "Fills draft returns with validated data.",
+      "a_tax_prep_r3": "Spots missing documents and requests them through client service.",
+      "a_tax_prep_r4": "Prepares the file for tax review.",
+      "a_tax_prep_title": "Return preparer",
+      "d_advisory": "Advisory and analysis",
+      "d_audit": "Audit and control",
+      "d_bookkeeping": "Bookkeeping",
+      "d_clients": "Client service",
+      "d_payroll": "Payroll and HR",
+      "d_practice": "Firm management",
+      "d_tax": "Tax",
+      "desc": "Firm with tax, bookkeeping, payroll, audit and client-service areas, a starting team of agents and projects for the monthly close, the annual return and client onboarding.",
+      "disclaimer": "Agents assist and prepare drafts: a licensed accountant or tax adviser must review and sign every return, financial statement or calculation before it is filed. Sample data, not tax advice.",
+      "name": "Accounting firm",
+      "p_annual_return": "Annual tax return for a client",
+      "p_annual_return_desc": "From the client file to the draft return and its filing plan.",
+      "p_client_onboarding": "New client onboarding",
+      "p_client_onboarding_desc": "Proposal, engagement, bookkeeping, tax and payroll setup, and kickoff.",
+      "p_monthly_close": "Monthly close for a client",
+      "p_monthly_close_desc": "Collects documents, reconciles, posts, reviews and delivers the month's statements.",
+      "rule_1": "An agent assigning work to the owner needs the owner's approval.",
+      "rule_2": "The owner may assign work to any agent.",
+      "rule_3": "Agents may coordinate with each other.",
+      "rule_4": "Client service requests tax work with the tax lead's approval.",
+      "rule_5": "Client service does not assign work directly to payroll.",
+      "rule_6": "Audit requests to other areas go through the practice manager.",
+      "s_annual_return_classify": "Classify income and expenses",
+      "s_annual_return_classify_d": "Separate deductible and non-deductible items per tax criteria.",
+      "s_annual_return_compute": "Compute the draft tax",
+      "s_annual_return_compute_d": "Compute the tax from the classification and the chosen scenario.",
+      "s_annual_return_intake": "Receive the client file",
+      "s_annual_return_intake_d": "Gather receipts, certificates and prior returns.",
+      "s_annual_return_plan": "Filing plan",
+      "s_annual_return_plan_d": "Set the filing date and the licensed accountant's signature.",
+      "s_annual_return_scenarios": "Analyze deduction scenarios",
+      "s_annual_return_scenarios_d": "Compare simple deduction and advance-payment scenarios.",
+      "s_annual_return_verify": "Verify the calculation",
+      "s_annual_return_verify_d": "Independent check of figures and support.",
+      "s_client_onboarding_books": "Set up bookkeeping",
+      "s_client_onboarding_books_d": "Create the chart of accounts and opening balances.",
+      "s_client_onboarding_calendar": "Client tax calendar",
+      "s_client_onboarding_calendar_d": "Define obligations and due dates.",
+      "s_client_onboarding_engagement": "Engagement letter",
+      "s_client_onboarding_engagement_d": "Draft the letter and get the owner's approval.",
+      "s_client_onboarding_kickoff": "Kickoff meeting",
+      "s_client_onboarding_kickoff_d": "Introduce the team, dates and contact channels.",
+      "s_client_onboarding_payroll": "Payroll setup",
+      "s_client_onboarding_payroll_d": "Register employees and frequency with personal-data controls.",
+      "s_client_onboarding_proposal": "Draft the service proposal",
+      "s_client_onboarding_proposal_d": "Draft scope, fees and calendar.",
+      "s_monthly_close_bank_rec": "Reconcile banks",
+      "s_monthly_close_bank_rec_d": "Reconcile each bank account against the ledger.",
+      "s_monthly_close_collect": "Collect the month's documents",
+      "s_monthly_close_collect_d": "Ask the client for invoices, bank statements and payroll of the period.",
+      "s_monthly_close_deliver": "Deliver after the accountant's review",
+      "s_monthly_close_deliver_d": "Send the package only after a licensed accountant has reviewed it.",
+      "s_monthly_close_payroll": "Check the period payroll",
+      "s_monthly_close_payroll_d": "Check that payroll matches the books.",
+      "s_monthly_close_post": "Post the month's entries",
+      "s_monthly_close_post_d": "Post purchases, sales and expenses with their support.",
+      "s_monthly_close_report": "Prepare the client report",
+      "s_monthly_close_report_d": "Summarize the month's results, indicators and alerts.",
+      "s_monthly_close_review": "Control review",
+      "s_monthly_close_review_d": "Test a sample of entries and reconciliations."
+    },
+    "es": {
+      "a_analyst_lead_name": "Mateo",
+      "a_analyst_lead_r1": "Construye tableros de ingresos, costos y flujo para los clientes.",
+      "a_analyst_lead_r2": "Calcula indicadores y escenarios simples.",
+      "a_analyst_lead_r3": "Explica las cifras en lenguaje claro para el cliente.",
+      "a_analyst_lead_r4": "Marca supuestos y límites de cada análisis.",
+      "a_analyst_lead_title": "Analista de asesoría financiera",
+      "a_auditor_name": "Gonzalo",
+      "a_auditor_r1": "Revisa con acceso de solo lectura la calidad de los entregables.",
+      "a_auditor_r2": "Prueba muestras de asientos y conciliaciones.",
+      "a_auditor_r3": "Reporta hallazgos y riesgos de control directamente al dueño.",
+      "a_auditor_r4": "Da seguimiento a las correcciones acordadas.",
+      "a_auditor_title": "Auditor interno",
+      "a_books_lead_name": "Andrés",
+      "a_books_lead_r1": "Registra y revisa los asientos contables mensuales de los clientes.",
+      "a_books_lead_r2": "Prepara balanza de comprobación y estados del mes.",
+      "a_books_lead_r3": "Coordina el cierre mensual con conciliaciones y nómina.",
+      "a_books_lead_r4": "Señala diferencias que requieren criterio profesional.",
+      "a_books_lead_title": "Responsable de contabilidad",
+      "a_client_mgr_name": "Sofía",
+      "a_client_mgr_r1": "Atiende solicitudes de clientes y recopila documentos.",
+      "a_client_mgr_r2": "Prepara propuestas de servicios y renovaciones.",
+      "a_client_mgr_r3": "Da seguimiento a cobranza de honorarios con tono cordial.",
+      "a_client_mgr_r4": "Escala quejas o temas legales a la coordinadora.",
+      "a_client_mgr_title": "Ejecutiva de atención a clientes",
+      "a_payroll_lead_name": "Fernanda",
+      "a_payroll_lead_r1": "Prepara el cálculo de nómina de los clientes que lo contratan.",
+      "a_payroll_lead_r2": "Verifica altas, bajas e incidencias del periodo.",
+      "a_payroll_lead_r3": "Envía los recibos solo después de la aprobación humana.",
+      "a_payroll_lead_r4": "Protege los datos personales de empleados.",
+      "a_payroll_lead_title": "Responsable de nómina",
+      "a_practice_manager_name": "Valeria",
+      "a_practice_manager_r1": "Planifica la carga de trabajo del despacho y asigna responsables por cliente.",
+      "a_practice_manager_r2": "Vigila los vencimientos fiscales y los plazos de entrega.",
+      "a_practice_manager_r3": "Prepara el resumen semanal para los socios.",
+      "a_practice_manager_r4": "Escala bloqueos y decisiones de riesgo al dueño.",
+      "a_practice_manager_title": "Coordinadora del despacho",
+      "a_reconciler_name": "Camila",
+      "a_reconciler_r1": "Concilia cuentas bancarias contra el libro mayor.",
+      "a_reconciler_r2": "Identifica partidas en tránsito y movimientos sin soporte.",
+      "a_reconciler_r3": "Calcula saldos y diferencias de cambio con la hoja de cálculo.",
+      "a_reconciler_r4": "Entrega la conciliación firmada por el responsable.",
+      "a_reconciler_title": "Analista de conciliaciones",
+      "a_tax_lead_name": "Ricardo",
+      "a_tax_lead_r1": "Revisa los borradores de declaraciones antes de pasarlos a un contador con licencia.",
+      "a_tax_lead_r2": "Calcula impuestos periódicos con los datos del cliente.",
+      "a_tax_lead_r3": "Mantiene el calendario fiscal de cada cliente.",
+      "a_tax_lead_r4": "Documenta los supuestos y las fuentes de cada cálculo.",
+      "a_tax_lead_title": "Responsable fiscal",
+      "a_tax_prep_name": "Lucía",
+      "a_tax_prep_r1": "Clasifica comprobantes y facturas para la declaración.",
+      "a_tax_prep_r2": "Llena los borradores de declaración con los datos validados.",
+      "a_tax_prep_r3": "Detecta documentos faltantes y los pide al área de clientes.",
+      "a_tax_prep_r4": "Prepara el expediente para la revisión fiscal.",
+      "a_tax_prep_title": "Preparadora de declaraciones",
+      "d_advisory": "Asesoría y análisis",
+      "d_audit": "Auditoría y control",
+      "d_bookkeeping": "Contabilidad",
+      "d_clients": "Atención a clientes",
+      "d_payroll": "Nómina y personal",
+      "d_practice": "Dirección del despacho",
+      "d_tax": "Fiscal",
+      "desc": "Despacho con áreas fiscal, contabilidad, nómina, auditoría y atención a clientes, con un equipo inicial de agentes y proyectos de cierre mensual, declaración anual y alta de clientes.",
+      "disclaimer": "Los agentes asisten y preparan borradores: un contador público o asesor fiscal con licencia debe revisar y firmar toda declaración, estado financiero o cálculo antes de presentarlo. Los datos son de ejemplo, no asesoría fiscal.",
+      "name": "Despacho contable",
+      "p_annual_return": "Declaración anual de un cliente",
+      "p_annual_return_desc": "Del expediente al borrador de declaración y su calendario de presentación.",
+      "p_client_onboarding": "Alta de un cliente nuevo",
+      "p_client_onboarding_desc": "Propuesta, contrato, configuración contable, fiscal y de nómina, y arranque.",
+      "p_monthly_close": "Cierre contable mensual de un cliente",
+      "p_monthly_close_desc": "Recopila documentos, concilia, registra, revisa y entrega los estados del mes.",
+      "rule_1": "Un agente que quiera asignar trabajo al dueño necesita su aprobación.",
+      "rule_2": "El dueño puede asignar trabajo a cualquier agente.",
+      "rule_3": "Los agentes pueden coordinarse entre sí.",
+      "rule_4": "Atención a clientes pide trabajo fiscal con visto bueno del responsable fiscal.",
+      "rule_5": "Atención a clientes no asigna trabajo directo a nómina.",
+      "rule_6": "Las solicitudes de auditoría a otras áreas pasan por la coordinadora.",
+      "s_annual_return_classify": "Clasificar ingresos y gastos",
+      "s_annual_return_classify_d": "Separar conceptos deducibles y no deducibles según criterio fiscal.",
+      "s_annual_return_compute": "Calcular el borrador de impuesto",
+      "s_annual_return_compute_d": "Calcular el impuesto con la clasificación y el escenario elegido.",
+      "s_annual_return_intake": "Recibir el expediente del cliente",
+      "s_annual_return_intake_d": "Reunir comprobantes, constancias y declaraciones previas.",
+      "s_annual_return_plan": "Plan de presentación",
+      "s_annual_return_plan_d": "Definir fecha de presentación y firma del contador con licencia.",
+      "s_annual_return_scenarios": "Analizar escenarios de deducciones",
+      "s_annual_return_scenarios_d": "Comparar escenarios simples de deducciones y pagos provisionales.",
+      "s_annual_return_verify": "Verificar el cálculo",
+      "s_annual_return_verify_d": "Revisión independiente de cifras y soportes.",
+      "s_client_onboarding_books": "Configurar contabilidad",
+      "s_client_onboarding_books_d": "Crear catálogo de cuentas y saldos iniciales.",
+      "s_client_onboarding_calendar": "Calendario fiscal del cliente",
+      "s_client_onboarding_calendar_d": "Definir obligaciones y vencimientos.",
+      "s_client_onboarding_engagement": "Carta de compromiso",
+      "s_client_onboarding_engagement_d": "Redactar la carta y obtener la aprobación del dueño.",
+      "s_client_onboarding_kickoff": "Reunión de arranque",
+      "s_client_onboarding_kickoff_d": "Presentar al equipo, fechas y canales de contacto.",
+      "s_client_onboarding_payroll": "Alta de nómina",
+      "s_client_onboarding_payroll_d": "Registrar empleados y periodicidad con control de datos personales.",
+      "s_client_onboarding_proposal": "Preparar la propuesta de servicios",
+      "s_client_onboarding_proposal_d": "Armar alcance, honorarios y calendario.",
+      "s_monthly_close_bank_rec": "Conciliar bancos",
+      "s_monthly_close_bank_rec_d": "Conciliar cada cuenta bancaria contra el mayor.",
+      "s_monthly_close_collect": "Recopilar documentos del mes",
+      "s_monthly_close_collect_d": "Pedir al cliente facturas, estados de cuenta y nómina del periodo.",
+      "s_monthly_close_deliver": "Entregar tras revisión del contador",
+      "s_monthly_close_deliver_d": "Enviar el paquete solo con la revisión de un contador con licencia.",
+      "s_monthly_close_payroll": "Validar la nómina del periodo",
+      "s_monthly_close_payroll_d": "Verificar que la nómina coincida con los registros.",
+      "s_monthly_close_post": "Registrar asientos del mes",
+      "s_monthly_close_post_d": "Registrar compras, ventas y gastos con su soporte.",
+      "s_monthly_close_report": "Preparar informe para el cliente",
+      "s_monthly_close_report_d": "Resumir resultados, indicadores y alertas del mes.",
+      "s_monthly_close_review": "Revisión de control",
+      "s_monthly_close_review_d": "Probar una muestra de asientos y conciliaciones."
+    },
+    "pt": {
+      "a_analyst_lead_name": "Mateo",
+      "a_analyst_lead_r1": "Constrói painéis de receitas, custos e fluxo de caixa para os clientes.",
+      "a_analyst_lead_r2": "Calcula indicadores e cenários simples.",
+      "a_analyst_lead_r3": "Explica os números ao cliente em linguagem clara.",
+      "a_analyst_lead_r4": "Registra as premissas e os limites de cada análise.",
+      "a_analyst_lead_title": "Analista de consultoria financeira",
+      "a_auditor_name": "Gonzalo",
+      "a_auditor_r1": "Revisa a qualidade das entregas com acesso somente leitura.",
+      "a_auditor_r2": "Testa amostras de lançamentos e conciliações.",
+      "a_auditor_r3": "Reporta achados e riscos de controle diretamente ao dono.",
+      "a_auditor_r4": "Acompanha as correções combinadas.",
+      "a_auditor_title": "Auditor interno",
+      "a_books_lead_name": "Andrés",
+      "a_books_lead_r1": "Registra e revisa os lançamentos contábeis mensais dos clientes.",
+      "a_books_lead_r2": "Prepara o balancete e as demonstrações do mês.",
+      "a_books_lead_r3": "Coordena o fechamento mensal com conciliações e folha.",
+      "a_books_lead_r4": "Sinaliza diferenças que exigem julgamento profissional.",
+      "a_books_lead_title": "Responsável pela contabilidade",
+      "a_client_mgr_name": "Sofía",
+      "a_client_mgr_r1": "Atende solicitações de clientes e coleta documentos.",
+      "a_client_mgr_r2": "Prepara propostas de serviços e renovações.",
+      "a_client_mgr_r3": "Acompanha a cobrança de honorários com tom cordial.",
+      "a_client_mgr_r4": "Escala reclamações ou temas jurídicos à coordenadora.",
+      "a_client_mgr_title": "Executiva de atendimento a clientes",
+      "a_payroll_lead_name": "Fernanda",
+      "a_payroll_lead_r1": "Prepara o cálculo da folha dos clientes contratantes.",
+      "a_payroll_lead_r2": "Verifica admissões, desligamentos e ocorrências do período.",
+      "a_payroll_lead_r3": "Envia os holerites somente após aprovação humana.",
+      "a_payroll_lead_r4": "Protege os dados pessoais dos funcionários.",
+      "a_payroll_lead_title": "Responsável pela folha",
+      "a_practice_manager_name": "Valeria",
+      "a_practice_manager_r1": "Planeja a carga de trabalho do escritório e define responsáveis por cliente.",
+      "a_practice_manager_r2": "Acompanha os prazos fiscais e as datas de entrega.",
+      "a_practice_manager_r3": "Prepara o resumo semanal para os sócios.",
+      "a_practice_manager_r4": "Escala bloqueios e decisões de risco ao dono.",
+      "a_practice_manager_title": "Coordenadora do escritório",
+      "a_reconciler_name": "Camila",
+      "a_reconciler_r1": "Concilia contas bancárias com o razão.",
+      "a_reconciler_r2": "Identifica itens em trânsito e movimentos sem comprovação.",
+      "a_reconciler_r3": "Calcula saldos e diferenças cambiais na planilha.",
+      "a_reconciler_r4": "Entrega a conciliação para aprovação do responsável.",
+      "a_reconciler_title": "Analista de conciliações",
+      "a_tax_lead_name": "Ricardo",
+      "a_tax_lead_r1": "Revisa os rascunhos de declarações antes de enviá-los a um contador habilitado.",
+      "a_tax_lead_r2": "Calcula os tributos periódicos com os dados do cliente.",
+      "a_tax_lead_r3": "Mantém o calendário fiscal de cada cliente.",
+      "a_tax_lead_r4": "Documenta as premissas e as fontes de cada cálculo.",
+      "a_tax_lead_title": "Responsável fiscal",
+      "a_tax_prep_name": "Lucía",
+      "a_tax_prep_r1": "Classifica comprovantes e notas para a declaração.",
+      "a_tax_prep_r2": "Preenche os rascunhos de declaração com os dados validados.",
+      "a_tax_prep_r3": "Identifica documentos faltantes e os solicita ao atendimento.",
+      "a_tax_prep_r4": "Prepara o dossiê para a revisão fiscal.",
+      "a_tax_prep_title": "Preparadora de declarações",
+      "d_advisory": "Consultoria e análise",
+      "d_audit": "Auditoria e controle",
+      "d_bookkeeping": "Contabilidade",
+      "d_clients": "Atendimento a clientes",
+      "d_payroll": "Folha de pagamento e pessoal",
+      "d_practice": "Direção do escritório",
+      "d_tax": "Fiscal",
+      "desc": "Escritório com áreas fiscal, contabilidade, folha de pagamento, auditoria e atendimento a clientes, com equipe inicial de agentes e projetos de fechamento mensal, declaração anual e entrada de clientes.",
+      "disclaimer": "Os agentes auxiliam e preparam rascunhos: um contador ou consultor tributário habilitado deve revisar e assinar toda declaração, demonstração financeira ou cálculo antes de entregá-lo. Dados de exemplo, não é consultoria tributária.",
+      "name": "Escritório de contabilidade",
+      "p_annual_return": "Declaração anual de um cliente",
+      "p_annual_return_desc": "Do dossiê ao rascunho da declaração e ao plano de entrega.",
+      "p_client_onboarding": "Entrada de um novo cliente",
+      "p_client_onboarding_desc": "Proposta, contrato, configuração contábil, fiscal e de folha, e kickoff.",
+      "p_monthly_close": "Fechamento contábil mensal de um cliente",
+      "p_monthly_close_desc": "Coleta documentos, concilia, registra, revisa e entrega as demonstrações do mês.",
+      "rule_1": "Um agente que atribua trabalho ao dono precisa da aprovação dele.",
+      "rule_2": "O dono pode atribuir trabalho a qualquer agente.",
+      "rule_3": "Os agentes podem se coordenar entre si.",
+      "rule_4": "O atendimento pede trabalho fiscal com aval do responsável fiscal.",
+      "rule_5": "O atendimento não atribui trabalho diretamente à folha.",
+      "rule_6": "Os pedidos da auditoria a outras áreas passam pela coordenadora.",
+      "s_annual_return_classify": "Classificar receitas e despesas",
+      "s_annual_return_classify_d": "Separar itens dedutíveis e não dedutíveis conforme critério fiscal.",
+      "s_annual_return_compute": "Calcular o rascunho do imposto",
+      "s_annual_return_compute_d": "Calcular o imposto com a classificação e o cenário escolhido.",
+      "s_annual_return_intake": "Receber o dossiê do cliente",
+      "s_annual_return_intake_d": "Reunir comprovantes, informes e declarações anteriores.",
+      "s_annual_return_plan": "Plano de entrega",
+      "s_annual_return_plan_d": "Definir a data de entrega e a assinatura do contador habilitado.",
+      "s_annual_return_scenarios": "Analisar cenários de deduções",
+      "s_annual_return_scenarios_d": "Comparar cenários simples de deduções e pagamentos antecipados.",
+      "s_annual_return_verify": "Verificar o cálculo",
+      "s_annual_return_verify_d": "Verificação independente de valores e comprovantes.",
+      "s_client_onboarding_books": "Configurar a contabilidade",
+      "s_client_onboarding_books_d": "Criar o plano de contas e os saldos iniciais.",
+      "s_client_onboarding_calendar": "Calendário fiscal do cliente",
+      "s_client_onboarding_calendar_d": "Definir obrigações e vencimentos.",
+      "s_client_onboarding_engagement": "Carta de compromisso",
+      "s_client_onboarding_engagement_d": "Redigir a carta e obter a aprovação do dono.",
+      "s_client_onboarding_kickoff": "Reunião de kickoff",
+      "s_client_onboarding_kickoff_d": "Apresentar equipe, datas e canais de contato.",
+      "s_client_onboarding_payroll": "Cadastro da folha",
+      "s_client_onboarding_payroll_d": "Cadastrar funcionários e periodicidade com controle de dados pessoais.",
+      "s_client_onboarding_proposal": "Preparar a proposta de serviços",
+      "s_client_onboarding_proposal_d": "Montar escopo, honorários e calendário.",
+      "s_monthly_close_bank_rec": "Conciliar bancos",
+      "s_monthly_close_bank_rec_d": "Conciliar cada conta bancária com o razão.",
+      "s_monthly_close_collect": "Coletar documentos do mês",
+      "s_monthly_close_collect_d": "Solicitar ao cliente notas, extratos e folha do período.",
+      "s_monthly_close_deliver": "Entregar após revisão do contador",
+      "s_monthly_close_deliver_d": "Enviar o pacote somente após revisão de um contador habilitado.",
+      "s_monthly_close_payroll": "Validar a folha do período",
+      "s_monthly_close_payroll_d": "Verificar se a folha confere com os registros.",
+      "s_monthly_close_post": "Lançar os registros do mês",
+      "s_monthly_close_post_d": "Lançar compras, vendas e despesas com comprovantes.",
+      "s_monthly_close_report": "Preparar o relatório do cliente",
+      "s_monthly_close_report_d": "Resumir resultados, indicadores e alertas do mês.",
+      "s_monthly_close_review": "Revisão de controle",
+      "s_monthly_close_review_d": "Testar uma amostra de lançamentos e conciliações."
+    }
+  }
+}
