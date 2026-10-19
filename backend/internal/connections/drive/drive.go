@@ -252,7 +252,7 @@ func (l *live) text(ctx context.Context, f File) (string, int, int64, error) {
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, maxTextBytes))
 	if resp.StatusCode/100 != 2 {
-		return "", resp.StatusCode, int64(len(raw)), &connections.ProviderError{Status: resp.StatusCode, Code: connections.StatusCode(resp.StatusCode),
+		return "", resp.StatusCode, int64(len(raw)), &connections.ProviderError{Status: resp.StatusCode, Code: connections.ClassifyResponse(resp.StatusCode, resp.Header, raw),
 			RetryAfter: connections.RetryAfter(resp.Header)}
 	}
 	return string(raw), resp.StatusCode, int64(len(raw)), nil

@@ -34,6 +34,42 @@ func StatusCode(st int) string {
 	return CodeProviderError
 }
 
+// ClassifyResponse maps a failed provider response to a stable code. Unlike
+// StatusCode it also looks at the signals providers use to say "slow down" on
+// a 403 (Google's rateLimitExceeded family, GitHub's exhausted primary or
+// secondary limit): those must back off, not be reported as a missing scope.
+// The body is only inspected for a fixed set of reason strings and is never
+// returned.
+func ClassifyResponse(st int, h http.Header, raw []byte) string {
+	code := StatusCode(st)
+	if st != http.StatusForbidden {
+		return code
+	}
+	if h.Get("X-RateLimit-Remaining") == "0" || h.Get("Retry-After") != "" {
+		return "rate_limited"
+	}
+	var e struct {
+		Error struct {
+			Status string `json:"status"`
+			Errors []struct {
+				Reason string `json:"reason"`
+			} `json:"errors"`
+		} `json:"error"`
+	}
+	if json.Unmarshal(raw, &e) == nil {
+		if e.Error.Status == "RESOURCE_EXHAUSTED" {
+			return "rate_limited"
+		}
+		for _, r := range e.Error.Errors {
+			switch r.Reason {
+			case "rateLimitExceeded", "userRateLimitExceeded", "dailyLimitExceeded", "quotaExceeded", "sharingRateLimitExceeded":
+				return "rate_limited"
+			}
+		}
+	}
+	return code
+}
+
 // RetryAfter reads a Retry-After header in seconds.
 func RetryAfter(h http.Header) time.Duration {
 	if n, err := strconv.Atoi(h.Get("Retry-After")); err == nil && n > 0 {
@@ -77,7 +113,7 @@ func DoJSON(ctx context.Context, h Handle, method, rawURL string, q url.Values, 
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBytes))
 	if resp.StatusCode/100 != 2 {
-		return resp.StatusCode, int64(len(raw)), &ProviderError{Status: resp.StatusCode, Code: StatusCode(resp.StatusCode), RetryAfter: RetryAfter(resp.Header)}
+		return resp.StatusCode, int64(len(raw)), &ProviderError{Status: resp.StatusCode, Code: ClassifyResponse(resp.StatusCode, resp.Header, raw), RetryAfter: RetryAfter(resp.Header)}
 	}
 	if out != nil && len(raw) > 0 {
 		if err := json.Unmarshal(raw, out); err != nil {
