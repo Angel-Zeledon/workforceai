@@ -89,18 +89,18 @@ func (s *PGStore) PutPolicy(ctx context.Context, p Policy) error {
 func (s *PGStore) ListDomains(ctx context.Context, org string) ([]Domain, error) {
 	var out []Domain
 	err := s.tx(ctx, org, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT domain, token, created_at, verified_at, last_check_at FROM org_domains WHERE org_id = $1 ORDER BY domain`, org)
+		rows, err := tx.Query(ctx, `SELECT domain, token, created_at, verified_at, last_check_at, lapsed_since FROM org_domains WHERE org_id = $1 ORDER BY domain`, org)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			d := Domain{OrgID: org}
-			var v, l *time.Time
-			if err := rows.Scan(&d.Domain, &d.Token, &d.CreatedAt, &v, &l); err != nil {
+			var v, l, ls *time.Time
+			if err := rows.Scan(&d.Domain, &d.Token, &d.CreatedAt, &v, &l, &ls); err != nil {
 				return err
 			}
-			d.VerifiedAt, d.LastCheck = zt(v), zt(l)
+			d.VerifiedAt, d.LastCheck, d.LapsedSince = zt(v), zt(l), zt(ls)
 			out = append(out, d)
 		}
 		return rows.Err()
@@ -110,15 +110,15 @@ func (s *PGStore) ListDomains(ctx context.Context, org string) ([]Domain, error)
 
 func (s *PGStore) GetDomain(ctx context.Context, org, domain string) (Domain, error) {
 	d := Domain{OrgID: org, Domain: domain}
-	var v, l *time.Time
+	var v, l, ls *time.Time
 	err := s.tx(ctx, org, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT token, created_at, verified_at, last_check_at FROM org_domains WHERE org_id = $1 AND domain = $2`, org, domain).
-			Scan(&d.Token, &d.CreatedAt, &v, &l)
+		return tx.QueryRow(ctx, `SELECT token, created_at, verified_at, last_check_at, lapsed_since FROM org_domains WHERE org_id = $1 AND domain = $2`, org, domain).
+			Scan(&d.Token, &d.CreatedAt, &v, &l, &ls)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Domain{}, ErrNotFound
 	}
-	d.VerifiedAt, d.LastCheck = zt(v), zt(l)
+	d.VerifiedAt, d.LastCheck, d.LapsedSince = zt(v), zt(l), zt(ls)
 	return d, err
 }
 
@@ -212,4 +212,71 @@ func (s *PGStore) ConsumePending(ctx context.Context, kind, hash string, now tim
 func (s *PGStore) PurgeExpired(ctx context.Context, now time.Time) error {
 	_, err := s.db.Exec(ctx, `DELETE FROM sso_pending WHERE expires_at < $1`, now)
 	return err
+}
+
+func (s *PGStore) ListVerified(ctx context.Context) ([]VerifiedRef, error) {
+	rows, err := s.db.Query(ctx, `SELECT org_id, domain FROM verified_domains ORDER BY domain`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []VerifiedRef
+	for rows.Next() {
+		var r VerifiedRef
+		if err := rows.Scan(&r.OrgID, &r.Domain); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+func (s *PGStore) SetDomainLapsed(ctx context.Context, org, domain string, since time.Time) error {
+	var v *time.Time
+	if !since.IsZero() {
+		v = &since
+	}
+	return s.tx(ctx, org, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE org_domains SET lapsed_since = $3 WHERE org_id = $1 AND domain = $2`, org, domain, v)
+		return err
+	})
+}
+
+func (s *PGStore) RevokeVerification(ctx context.Context, org, domain string) error {
+	return s.tx(ctx, org, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `UPDATE org_domains SET verified_at = NULL, lapsed_since = NULL WHERE org_id = $1 AND domain = $2`, org, domain)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+		_, err = tx.Exec(ctx, `DELETE FROM verified_domains WHERE domain = $1 AND org_id = $2`, domain, org)
+		return err
+	})
+}
+
+func (s *PGStore) GetAutoJoin(ctx context.Context, org string) (AutoJoin, error) {
+	a := AutoJoin{OrgID: org, Role: auth.RoleViewer}
+	var role string
+	err := s.tx(ctx, org, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT enabled, role, updated_by, updated_at FROM org_auto_join WHERE org_id = $1`, org).
+			Scan(&a.Enabled, &role, &a.UpdatedBy, &a.UpdatedAt)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return AutoJoin{OrgID: org, Role: auth.RoleViewer}, nil
+	}
+	if err == nil {
+		a.Role = auth.Role(role)
+	}
+	return a, err
+}
+
+func (s *PGStore) PutAutoJoin(ctx context.Context, a AutoJoin) error {
+	return s.tx(ctx, a.OrgID, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `INSERT INTO org_auto_join (org_id, enabled, role, updated_by, updated_at) VALUES ($1,$2,$3,$4,$5)
+			ON CONFLICT (org_id) DO UPDATE SET enabled=EXCLUDED.enabled, role=EXCLUDED.role, updated_by=EXCLUDED.updated_by, updated_at=EXCLUDED.updated_at`,
+			a.OrgID, a.Enabled, string(a.Role), a.UpdatedBy, a.UpdatedAt)
+		return err
+	})
 }

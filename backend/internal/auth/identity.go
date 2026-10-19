@@ -27,6 +27,13 @@ type PolicyProvider interface {
 	OrgPolicy(ctx context.Context, orgID string) (OrgPolicy, error)
 }
 
+// AutoJoiner decides, for an address the caller has already proven, which organization lets this person in on its own
+// (the one that verified the e-mail domain and turned auto-join on) and with which role. internal/sso implements it.
+// ok=false with a nil error is the ordinary "no"; an error means the lookup failed, and nobody is joined.
+type AutoJoiner interface {
+	AutoJoinFor(ctx context.Context, email string) (orgID string, role Role, ok bool, err error)
+}
+
 var (
 	// ErrSSORequired: the organization enforces single sign-on and this login used a password.
 	ErrSSORequired = errors.New("auth: this organization requires single sign-on")
@@ -217,4 +224,36 @@ func (s *Service) SignInFederated(ctx context.Context, id FederatedIdentity, met
 			Details: map[string]any{"provider": id.Provider}})
 	}
 	return s.issueSession(ctx, u, m, uuid.NewString(), meta)
+}
+
+// autoJoin adds u to the organization that auto-joins its e-mail domain. It runs only after the address is PROVEN (the
+// verification link was just consumed): joining on a typed, unconfirmed address would let anybody enter an organization by
+// registering with one of its addresses. Failures never block the sign-in; they are logged.
+func (s *Service) autoJoin(ctx context.Context, u User) {
+	if s.cfg.AutoJoin == nil {
+		return
+	}
+	org, role, ok, err := s.cfg.AutoJoin.AutoJoinFor(ctx, u.Email)
+	if err != nil {
+		s.cfg.Logf("auth: auto-join lookup failed: %v", err)
+		return
+	}
+	if !ok || org == "" {
+		return
+	}
+	if !role.Valid() || role == RoleOwner {
+		role = RoleViewer
+	}
+	if _, err := s.store.GetMembership(ctx, org, u.ID); err == nil {
+		return // already a member
+	}
+	err = s.store.AddMembership(ctx, Membership{OrgID: org, UserID: u.ID, Role: role, CreatedAt: s.now()})
+	if err != nil && !errors.Is(err, ErrAlreadyMember) {
+		s.cfg.Logf("auth: auto-join failed: %v", err)
+		return
+	}
+	if err == nil && s.cfg.Audit != nil {
+		s.cfg.Audit(ctx, AuditEvent{OrgID: org, Actor: u.ID, Action: "user.auto_joined", Entity: "user", EntityID: u.ID,
+			Details: map[string]any{"role": string(role), "via": "verified_domain"}})
+	}
 }

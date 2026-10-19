@@ -3,6 +3,7 @@ package sso
 import (
 	"context"
 	"errors"
+	"sort"
 	"sync"
 	"time"
 
@@ -50,6 +51,22 @@ type Domain struct {
 	CreatedAt  time.Time `json:"created_at"`
 	VerifiedAt time.Time `json:"verified_at,omitempty"`
 	LastCheck  time.Time `json:"last_check_at,omitempty"`
+	// LapsedSince is set by the janitor when the DNS challenge record of a verified domain is gone; the verification is
+	// revoked once it has been missing for longer than the grace period. Zero = the record was there at the last check.
+	LapsedSince time.Time `json:"lapsed_since,omitempty"`
+}
+
+// VerifiedRef points at one verified domain without reading tenant tables (the janitor walks these).
+type VerifiedRef struct{ OrgID, Domain string }
+
+// AutoJoin is the per-organization auto-join setting: people whose e-mail address is on a domain the organization has
+// verified join it on their own, with Role. Off by default.
+type AutoJoin struct {
+	OrgID     string
+	Enabled   bool
+	Role      auth.Role // admin, member or viewer (default viewer); never owner
+	UpdatedBy string
+	UpdatedAt time.Time
 }
 
 // Verified reports whether the DNS challenge was completed.
@@ -91,6 +108,15 @@ type Store interface {
 	TouchDomainCheck(ctx context.Context, orgID, domain string, at time.Time) error
 	// OrgForVerifiedDomain is the pre-tenant lookup behind "sign in with SSO" (ErrNotFound).
 	OrgForVerifiedDomain(ctx context.Context, domain string) (string, error)
+	// ListVerified lists every verified domain of every organization (the pre-tenant index; no secret in it).
+	ListVerified(ctx context.Context) ([]VerifiedRef, error)
+	// SetDomainLapsed records (or, with a zero time, clears) the moment the challenge record went missing.
+	SetDomainLapsed(ctx context.Context, orgID, domain string, since time.Time) error
+	// RevokeVerification un-verifies a domain: it leaves the verified index at once, the organization keeps the row.
+	RevokeVerification(ctx context.Context, orgID, domain string) error
+
+	GetAutoJoin(ctx context.Context, orgID string) (AutoJoin, error) // zero value (disabled, viewer) when none
+	PutAutoJoin(ctx context.Context, a AutoJoin) error
 
 	SavePending(ctx context.Context, p Pending) error
 	// ConsumePending atomically returns and deletes a record: a value can be redeemed once. ErrNotFound when unknown,
@@ -107,12 +133,13 @@ type MemStore struct {
 	domains  map[[2]string]Domain
 	verified map[string]string
 	pending  map[[2]string]Pending
+	autoJoin map[string]AutoJoin
 }
 
 // NewMemStore builds an empty MemStore.
 func NewMemStore() *MemStore {
 	return &MemStore{configs: map[string]Config{}, policies: map[string]Policy{}, domains: map[[2]string]Domain{},
-		verified: map[string]string{}, pending: map[[2]string]Pending{}}
+		verified: map[string]string{}, pending: map[[2]string]Pending{}, autoJoin: map[string]AutoJoin{}}
 }
 
 func (m *MemStore) GetConfig(_ context.Context, org string) (Config, error) {
@@ -265,5 +292,59 @@ func (m *MemStore) PurgeExpired(_ context.Context, now time.Time) error {
 			delete(m.pending, k)
 		}
 	}
+	return nil
+}
+
+func (m *MemStore) ListVerified(_ context.Context) ([]VerifiedRef, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]VerifiedRef, 0, len(m.verified))
+	for d, o := range m.verified {
+		out = append(out, VerifiedRef{OrgID: o, Domain: d})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Domain < out[j].Domain })
+	return out, nil
+}
+
+func (m *MemStore) SetDomainLapsed(_ context.Context, org, dom string, since time.Time) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	d, ok := m.domains[[2]string{org, dom}]
+	if !ok {
+		return ErrNotFound
+	}
+	d.LapsedSince = since
+	m.domains[[2]string{org, dom}] = d
+	return nil
+}
+
+func (m *MemStore) RevokeVerification(_ context.Context, org, dom string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	d, ok := m.domains[[2]string{org, dom}]
+	if !ok {
+		return ErrNotFound
+	}
+	d.VerifiedAt, d.LapsedSince = time.Time{}, time.Time{}
+	m.domains[[2]string{org, dom}] = d
+	if m.verified[dom] == org {
+		delete(m.verified, dom)
+	}
+	return nil
+}
+
+func (m *MemStore) GetAutoJoin(_ context.Context, org string) (AutoJoin, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if a, ok := m.autoJoin[org]; ok {
+		return a, nil
+	}
+	return AutoJoin{OrgID: org, Role: auth.RoleViewer}, nil
+}
+
+func (m *MemStore) PutAutoJoin(_ context.Context, a AutoJoin) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.autoJoin[a.OrgID] = a
 	return nil
 }

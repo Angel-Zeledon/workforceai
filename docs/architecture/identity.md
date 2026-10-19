@@ -83,7 +83,17 @@ _aiworkforce-challenge.example.com   TXT   "aiworkforce-verification=<token>"
 * `verified_domains` (domain -> org id) is the only pre-tenant lookup; it holds no secret.
 
 Auto-join: with `jit` on, SSO sign-in creates the account and membership (role = configured default, never owner) but only for
-an address on a verified domain. Password sign-up auto-join by domain is **not** implemented (follow-up).
+an address on a verified domain.
+
+Auto-join by domain (`GET|PUT /identity/auto-join {enabled, role}`, `org_auto_join`, migration 780): off by default; the role is
+`admin`, `member` or `viewer` (default viewer, never owner) and turning it on needs a verified domain. Password sign-ups join
+only when they **open the verification link** (`auth.Service.Verify` -> `AutoJoiner`), never at registration, so a typed address
+proves nothing; SCIM-deprovisioned accounts stay out. For SSO the setting also acts as JIT when the SSO config has `jit` off.
+
+Re-check (migration 781, `sso.Janitor`, hourly sweep started from `cmd/server`): the DNS challenge record of every verified domain
+is re-read at most once per 24 h. A missing record sets `lapsed_since` (grace period 7 days, the domain keeps working); a
+record that stays gone revokes the verification (it leaves `verified_domains`, so SSO routing and auto-join stop). A DNS failure
+(timeout, SERVFAIL) is not a lapse. The same sweep calls `PurgeExpired` on abandoned login records.
 
 ## 4. Sign-in policy
 
@@ -122,14 +132,14 @@ the secret is AES-256-GCM encrypted at rest and bound to the user id; QR/secret 
 * Groups are the three assignable roles (`admin`, `member`, `viewer`); membership of a group = holding the role. Removing someone
   from a group demotes to `viewer` (least privilege). Groups cannot be created with other names or deleted.
 
-## 7. Data and migrations (700-703)
+## 7. Data and migrations (700-703, 780-781)
 
 | Table | RLS | Notes |
 | --- | --- | --- |
 | `org_sso_configs`, `org_identity_policy`, `org_domains`, `scim_users` | yes (`tenant_isolation`, as 202) | all access via `auth.WithOrgTx` |
 | `verified_domains`, `sso_pending`, `scim_tokens` | no, by design | read before the tenant is known (domain routing, callback, bearer token). They hold no secret: domain -> org id, hashed single-use values, token hash. Written only by `internal/sso` and `internal/scim` |
 
-Down migrations: `backend/migrations/down/700..703_*_down.sql`.
+Down migrations: `backend/migrations/down/700..703_*_down.sql`, `780`, `781`. `org_auto_join` has RLS (`tenant_isolation`).
 
 ## 8. Operations
 
@@ -146,8 +156,5 @@ Down migrations: `backend/migrations/down/700..703_*_down.sql`.
   the standard library does not provide, and a hand-rolled one is the classic source of signature-wrapping vulnerabilities.
   Plan: add a vetted library (e.g. `crewjam/saml`) behind the same `Identity` seam (`auth.FederatedIdentity`) so everything after
   the assertion (domain check, JIT, gate, exchange code, policy) is reused.
-* Auto-join by verified domain for password sign-ups (today: SSO JIT only).
 * Back-channel logout / session revocation from the IdP, SCIM bulk and sorting, `/Me`.
-* A janitor calling `sso.Store.PurgeExpired` (rows are deleted when redeemed; abandoned ones linger minutes to days).
-* Automatic re-check of verified domains (a lapsed domain keeps its verification today).
 * Integration tests against a real Postgres for migrations 700-703 (unit tests use the in-memory stores).

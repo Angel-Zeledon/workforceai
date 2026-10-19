@@ -69,6 +69,8 @@ func (h *Handler) AdminRoutes() http.Handler {
 	r.Post("/domains", h.addDomain)
 	r.Post("/domains/{domain}/verify", h.verifyDomain)
 	r.Delete("/domains/{domain}", h.removeDomain)
+	r.Get("/auto-join", h.getAutoJoin)
+	r.Put("/auto-join", h.putAutoJoin)
 	r.Get("/policy", h.getPolicy)
 	r.Put("/policy", h.putPolicy)
 	if h.cfg.Extra != nil {
@@ -190,6 +192,8 @@ func (h *Handler) fail(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusUnprocessableEntity, "challenge_missing", err.Error())
 	case errors.Is(err, ErrDomainTaken):
 		writeErr(w, http.StatusConflict, "domain_taken", err.Error())
+	case errors.Is(err, ErrAutoJoinNeedsDomain):
+		writeErr(w, http.StatusConflict, "auto_join_needs_domain", err.Error())
 	case errors.Is(err, ErrDomainInUse), errors.Is(err, ErrPolicyNeedsSSO):
 		writeErr(w, http.StatusConflict, "conflict", err.Error())
 	case errors.Is(err, ErrNotFound):
@@ -317,4 +321,33 @@ func (h *Handler) putPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, policyBody{RequireMFA: p.RequireMFA, EnforceSSO: p.EnforceSSO})
+}
+
+type autoJoinBody struct {
+	Enabled bool      `json:"enabled"`
+	Role    auth.Role `json:"role"`
+}
+
+func (h *Handler) getAutoJoin(w http.ResponseWriter, r *http.Request) {
+	org, _ := h.actor(r)
+	v, err := h.svc.GetAutoJoin(r.Context(), org)
+	if err != nil {
+		h.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
+}
+
+func (h *Handler) putAutoJoin(w http.ResponseWriter, r *http.Request) {
+	var in autoJoinBody
+	if !decode(w, r, &in) {
+		return
+	}
+	org, user := h.actor(r)
+	v, err := h.svc.SetAutoJoin(r.Context(), org, user, in.Enabled, in.Role)
+	if err != nil {
+		h.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
 }

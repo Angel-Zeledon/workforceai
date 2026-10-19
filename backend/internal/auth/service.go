@@ -62,6 +62,9 @@ type Config struct {
 	MFAKey []byte
 	// Policy (optional) supplies the per-organization sign-in policy (require MFA, enforce SSO), see identity.go.
 	Policy PolicyProvider
+	// AutoJoin (optional) lets a person whose address was just proven (verification link) join the organization that
+	// verified their e-mail domain, if that organization turned auto-join on. Nil = never.
+	AutoJoin AutoJoiner
 	// Logf (optional) receives operational notes that must not reach the caller (e.g. delivery failures).
 	Logf func(format string, args ...any)
 
