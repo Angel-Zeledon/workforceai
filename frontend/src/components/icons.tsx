@@ -40,6 +40,7 @@ const P: Record<string, string> = {
   menu: "M4 7h16M4 12h16M4 17h16",
   sidebar: "M4 5h16v14H4zM9 5v14M15 10l-2 2 2 2",
   shrink: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
+  calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h2M14 14h2", // meetings
 };
 
 export type IconName = keyof typeof P;

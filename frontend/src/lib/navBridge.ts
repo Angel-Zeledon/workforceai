@@ -14,6 +14,7 @@ export const SECTIONS = [
   { id: "office", href: "/", label: "nav.office", icon: "office" },
   { id: "chats", href: "/chats", label: "nav.chats", icon: "chat" },
   { id: "projects", href: "/projects", label: "nav.projects", icon: "folder" },
+  { id: "meetings", href: "/meetings", label: "nav.meetings", icon: "calendar" }, // meetings
   { id: "drive", href: "/files", label: "nav.drive", icon: "doc" },
   { id: "skills", href: "/skills", label: "nav.skills", icon: "layers" },
   { id: "shop", href: "/shop", label: "nav.shop", icon: "bag" },
@@ -24,6 +25,7 @@ export function sectionOf(pathname: string): SectionId {
   if (pathname.startsWith("/dashboard")) return "dashboard";
   if (pathname.startsWith("/chats")) return "chats";
   if (pathname.startsWith("/projects")) return "projects";
+  if (pathname.startsWith("/meetings")) return "meetings"; // meetings
   if (pathname.startsWith("/files")) return "drive";
   if (pathname.startsWith("/skills")) return "skills";
   if (pathname.startsWith("/shop")) return "shop";

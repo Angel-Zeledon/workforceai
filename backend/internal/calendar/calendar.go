@@ -56,7 +56,10 @@ type Input struct {
 }
 
 // Busy is one busy block.
-type Busy struct{ Start, End time.Time }
+type Busy struct {
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
+}
 
 // Client is one connected calendar.
 type Client interface {
@@ -117,7 +120,10 @@ func MergeBusy(in []Busy) []Busy {
 }
 
 // Slot is a free window.
-type Slot struct{ Start, End time.Time }
+type Slot struct {
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
+}
 
 // FreeSlots returns the windows of at least `length` inside [from, to) where nobody in
 // `busy` is busy. Slots are cut on `step` boundaries from `from` (e.g. 30 minutes).

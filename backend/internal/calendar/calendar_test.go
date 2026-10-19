@@ -129,6 +129,12 @@ func TestMicrosoftEventsCreateAndSchedule(t *testing.T) {
 	if createBody["isOnlineMeeting"] != true || createBody["onlineMeetingProvider"] != "teamsForBusiness" {
 		t.Fatalf("teams link must be requested: %v", createBody)
 	}
+	if _, ok := createBody["attendees"]; ok {
+		t.Fatalf("Graph would e-mail every attendee: guests go in the body, not in the attendee list: %v", createBody)
+	}
+	if body, _ := createBody["body"].(map[string]any); body == nil || !strings.Contains(body["content"].(string), "Guests: a@x.com") {
+		t.Fatalf("guests listed in the body: %v", createBody["body"])
+	}
 	fb, err := m.FreeBusy(context.Background(), t0, t0.Add(8*time.Hour), []string{"bob@x.com"})
 	if err != nil {
 		t.Fatal(err)

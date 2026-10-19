@@ -119,12 +119,12 @@ func (m *Microsoft) body(in Input, conference bool) map[string]any {
 	if in.Location != "" {
 		b["location"] = map[string]string{"displayName": in.Location}
 	}
-	var at []map[string]any
-	for _, a := range cleanAddrs(in.Attendees) {
-		at = append(at, map[string]any{"type": "required", "emailAddress": map[string]string{"address": a}})
-	}
-	if len(at) > 0 {
-		b["attendees"] = at
+	// Microsoft Graph e-mails an invitation to every attendee added to an event and has no switch to
+	// prevent it (Google has sendUpdates=none). Nothing is sent to other people from this screen, so the
+	// guests are written in the body of the event instead of in its attendee list.
+	if guests := cleanAddrs(in.Attendees); len(guests) > 0 {
+		content = strings.TrimSpace(content + "\n\nGuests: " + strings.Join(guests, ", "))
+		b["body"] = map[string]string{"contentType": "text", "content": content}
 	}
 	if conference && in.Conference == ConfTeams {
 		b["isOnlineMeeting"] = true
