@@ -35,6 +35,7 @@ var (
 	_ RetentionStore = (*PgStore)(nil)
 	_ ReportStore    = (*PgStore)(nil)
 	_ AdminStore     = (*PgStore)(nil)
+	_ AuditRetention = (*PgStore)(nil)
 )
 
 // ---- tokens ----
@@ -165,6 +166,39 @@ func (p *PgStore) ClaimDue(ctx context.Context, org string, now time.Time, every
 		return err
 	})
 	return pol, ok, err
+}
+
+// auditDue selects the chained entries of the organization that retention may remove: after the checkpoint, before
+// the head (the newest entry always stays) and older than the cutoff. Timestamps strictly increase along the chain,
+// so they always form a prefix.
+const auditDue = `SELECT seq FROM audit_logs
+	WHERE org_id=$1 AND seq IS NOT NULL AND ts < $2
+	  AND seq > (SELECT checkpoint_seq FROM audit_chain_heads WHERE org_id=$1)
+	  AND seq < (SELECT seq FROM audit_chain_heads WHERE org_id=$1)`
+
+func (p *PgStore) CountAudit(ctx context.Context, org string, cutoff time.Time) (int, error) {
+	var n int
+	err := p.DB.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT count(*) FROM (`+auditDue+`) d`, org, cutoff).Scan(&n)
+	})
+	return n, err
+}
+
+// PurgeAudit removes the oldest due entries through audit_purge_through (migration 782): the function deletes
+// them and records the checkpoint in one transaction, the only way the append-only trail can shrink.
+func (p *PgStore) PurgeAudit(ctx context.Context, org string, cutoff time.Time, limit int) (int, error) {
+	var n int64
+	err := p.DB.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
+		var through *int64
+		if err := tx.QueryRow(ctx, `SELECT max(seq) FROM (`+auditDue+` ORDER BY seq LIMIT $3) d`, org, cutoff, limit).Scan(&through); err != nil {
+			return err
+		}
+		if through == nil {
+			return nil
+		}
+		return tx.QueryRow(ctx, `SELECT audit_purge_through($1, $2)`, org, *through).Scan(&n)
+	})
+	return int(n), err
 }
 
 func (p *PgStore) CountChats(ctx context.Context, org string, cutoff time.Time) (int, int, error) {

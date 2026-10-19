@@ -36,6 +36,12 @@ UI: `ApprovalsTray.tsx` (casilla "recordar" + elección sesión/proyecto, el bot
   y solo los hosts de cada producto (`hooks.slack.com`, `*.webhook.office.com`, `*.logic.azure.com`,
   `*.powerplatform.com`): el notificador no puede apuntarse a una dirección interna (SSRF). Se revalida al
   enviar. La URL es un secreto: la API nunca la devuelve (solo dónde apunta) y el export de datos la redacta.
+  **Selladas con la bóveda** (migración 783): con clave de bóveda la URL se guarda cifrada con la clave de datos de la
+  organización en `slack_webhook_enc` / `teams_webhook_enc` (`vault.Seal`, propósitos `notify-webhook-slack|teams`, así
+  una URL de Slack no abre como Teams ni en otra organización) y las columnas en claro quedan en `''`. Las filas
+  anteriores se leen una vez y se sellan solas (`UPDATE` solo si la columna sellada sigue vacía). Sin clave de bóveda
+  todo sigue como antes (URL en la columna en claro). Si un valor sellado no se puede abrir (clave retirada) el canal
+  queda apagado y se registra sin el secreto; un admin lo vuelve a guardar.
 - `min_risk` (desde qué riesgo avisar), `links_enabled`, `locale` (es/en/pt) del aviso.
 
 API (permiso `approvals:decide`): `GET/PUT /notify/settings`, `POST /notify/test`.
@@ -66,6 +72,23 @@ Los avisos salen de un decorador del publicador de eventos (`notify.Observer`, c
 plano: `approval.requested` y, para el plan, `budget.exceeded` de la organización. Un fallo del canal se registra
 y nunca bloquea la aprobación.
 
+### Cola de salida con reintentos (`notify_outbox`, migración 784)
+
+Los avisos (correo, Slack, Teams) ya no se envían en línea: `Service` escribe una fila por mensaje y destino en
+`notify_outbox`, hace el primer intento enseguida y un trabajador (`Service.StartOutbox`, cada 10 s por las
+organizaciones con filas pendientes y un barrido cada 2 min que recoge lo que dejó un reinicio u otra réplica) reintenta.
+- Arrendamiento con `FOR UPDATE SKIP LOCKED` (mueve `next_attempt_at` 2 min mientras un trabajador la tiene): dos réplicas
+  nunca toman la misma fila; un trabajador que muere la deja para el siguiente intento.
+- Espera exponencial con jitter (30 s, 2 min, 10 min, 1 h, 6 h) y hasta 6 intentos; después `status = 'dead'` (carta
+  muerta, con `last_error`, sin la URL). Es definitivo de inmediato (`dead`) lo que no puede mejorar con reintentos:
+  dirección no permitida, canal o destinatario quitados, o respuesta 4xx (salvo 408, 425 y 429).
+- La URL del webhook **no** se guarda en la fila: se lee de los ajustes al enviar, así que quitar un canal o un
+  destinatario detiene lo que quedaba en cola. El `payload` (puede llevar enlaces firmados) se sella con la bóveda
+  (`sealed = true`, propósito `notify-outbox`) y, si el sellado falla, no se encola en claro: se envía en línea una vez.
+  Al enviarse bien la fila suelta el payload; sent y dead se borran a los 30 días.
+- `POST /notify/test` sigue siendo síncrono (el admin necesita la respuesta). `NOTIFY_OUTBOX=off` vuelve al envío en
+  línea de un solo intento. Sin Postgres se usa una cola en memoria (reintenta, no sobrevive a un reinicio).
+
 ## 3. Plan gratis con tope DURO
 
 - `policy/spendcap.go`: funciones puras (`CapAllows`, `EffectiveCap`, `EvaluateCap`). El tope es duro: si
@@ -77,7 +100,16 @@ y nunca bloquea la aprobación.
   de la organización); `notify.Observer` además manda un aviso por los canales (una vez al día).
 - Qué organización es gratis: `org_plans` (migración 721) por organización; sin fila, el valor de despliegue
   `FREE_PLAN_CAP_USD` (> 0 = toda organización sin plan es gratis con ese tope; sin definir = ningún plan con
-  tope y nada cambia). El tope cuenta el gasto de toda la vida de la organización.
+  tope y nada cambia). El tope se reinicia cada mes natural UTC (migración 785): `org_plans.spend_base_usd` es el gasto
+  de toda la vida al empezar el periodo (`period_start`) y el plan solo cuenta `vida - base`. Al presupuesto
+  (`OrgCapFor`, que compara con el gasto de toda la vida) se le da `base + tope`; `GET /plan/usage` muestra el mes
+  (gastado y tope menos la base). `notify.PlanResetter` (cada hora, `PLAN_RESET_JOB=off` lo apaga) recorre las
+  organizaciones con fila en `org_plans`; el `UPDATE ... WHERE period_start IS NULL OR period_start < <día 1>` es la
+  reclamación, así que réplicas y reinicios nunca reinician dos veces. La primera pasada solo sella `period_start`
+  (no cambia la base: nadie se desbloquea de golpe). Al reiniciar se borra `cap_notified_at` (el aviso de tope se puede
+  volver a mandar) y se audita `plan.period_reset`. **Límite**: una organización sin fila (valor por defecto
+  `FREE_PLAN_CAP_USD`) no tiene dónde guardar la base y sigue contando toda la vida. `provider` / `provider_ref`
+  (migración 785) son reservas para un proveedor de pagos; nada los lee ni cobra a nadie.
 - `GET /plan/usage` (`metrics:read`) alimenta `PlanCapBanner` (en `TrialBanner.tsx`): barra, texto
   `gastado · estimado · tope`, aviso al 80 % y estado "en pausa".
 
@@ -103,12 +135,13 @@ se muestra al lado como una pastilla.
 
 ## Variables
 
-`NOTIFY_PUBLIC_URL`, `NOTIFY_LINK_SECRET`, `NOTIFY_LINK_TTL_HOURS`, `FREE_PLAN_CAP_USD`, `REWARDS_DAILY_GOAL`.
+`NOTIFY_PUBLIC_URL`, `NOTIFY_LINK_SECRET`, `NOTIFY_LINK_TTL_HOURS`, `FREE_PLAN_CAP_USD`, `REWARDS_DAILY_GOAL`,
+`NOTIFY_OUTBOX` (`off` = sin cola), `PLAN_RESET_JOB` (`off` = sin reinicio mensual).
 
 ## Pendiente
 
-- Cifrar las URLs de webhook con la bóveda (hoy: texto en una columna con RLS, redactada en el export y
-  enmascarada en la API).
-- Reinicio mensual del tope y un checkout real para pasar de gratis a pago (hoy solo se informa).
-- Reintentos con cola para los webhooks y el correo (hoy: un intento, error en el log).
+- Un checkout real para pasar de gratis a pago (hoy solo se informa).
+- Reinicio mensual para las organizaciones en el plan por defecto sin fila en `org_plans`.
+- Ver y reenviar las cartas muertas de `notify_outbox` desde la consola (hoy: solo la tabla y el log).
+- Sellar con la bóveda también la columna en claro de filas antiguas que nadie vuelva a leer (se sellan al leerlas).
 - Pantalla para cambiar el plan de una organización (hoy: tabla `org_plans` o `FREE_PLAN_CAP_USD`).

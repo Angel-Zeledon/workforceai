@@ -2,6 +2,7 @@ package notify
 
 import (
 	"context"
+	"math"
 	"sync"
 	"time"
 
@@ -14,6 +15,11 @@ type Plan struct {
 	Plan          string     `json:"plan"`
 	CapUSD        float64    `json:"cap_usd"`
 	CapNotifiedAt *time.Time `json:"cap_notified_at,omitempty"`
+	// PeriodStart is the 1st of the month (UTC) of the current period; nil until PlanResetter has seen the plan.
+	PeriodStart *time.Time `json:"period_start,omitempty"`
+	// SpendBaseUSD is the lifetime spend of the organization when the period started: the plan only counts
+	// lifetime - SpendBaseUSD (migration 785).
+	SpendBaseUSD float64 `json:"-"`
 }
 
 // Hard reports whether the plan has a hard spend cap.
@@ -25,6 +31,11 @@ type PlanStore interface {
 	PutPlan(ctx context.Context, p Plan, by string) error
 	// MarkCapNotified records that the "cap reached" notice was sent at t.
 	MarkCapNotified(ctx context.Context, org string, t time.Time) error
+	// ResetPeriod starts the period at periodStart if the plan's period began earlier, recording lifetimeUSD as the
+	// new base and clearing the "cap reached" mark. It is atomic: it returns true for exactly one caller per period.
+	// A plan whose period was never set only gets its period_start (base and mark are kept, so nobody is unlocked
+	// by the first run). A missing plan returns false.
+	ResetPeriod(ctx context.Context, org string, periodStart time.Time, lifetimeUSD float64) (bool, error)
 }
 
 // Plans resolves the plan of an organization and answers the two questions the
@@ -104,7 +115,8 @@ func (s *Plans) OrgCap(ctx context.Context, org string) float64 {
 		if p.CapUSD <= 0 {
 			return 1e-9 // a free plan with a broken cap blocks everything instead of allowing everything
 		}
-		return p.CapUSD
+		// The budget compares this with the lifetime spend, so the allowance of the month sits on top of the base.
+		return p.SpendBaseUSD + p.CapUSD
 	}
 	return 0
 }
@@ -120,10 +132,26 @@ type Usage struct {
 func (s *Plans) Status(ctx context.Context, org string, operatorCap, spent, reserved float64) Usage {
 	p := s.Resolve(ctx, org)
 	capUSD := policy.EffectiveCap(operatorCap, 0)
+	base := 0.0
 	if p.Hard() {
-		capUSD = policy.EffectiveCap(operatorCap, p.CapUSD)
+		// Both caps are lifetime numbers (the operator cap is not monthly); the plan's own is base + monthly cap.
+		// The card shows the month: spent and cap are both moved down by the base.
+		planCap := p.CapUSD
+		if planCap > 0 {
+			planCap += p.SpendBaseUSD
+		}
+		capUSD = policy.EffectiveCap(operatorCap, planCap)
+		if capUSD > 0 {
+			base = math.Min(p.SpendBaseUSD, spent)
+		}
 	}
-	return Usage{CapStatus: policy.EvaluateCap(p.Plan, p.Hard(), capUSD, spent, reserved), OperatorCapUSD: operatorCap}
+	if base > 0 {
+		capUSD = math.Max(capUSD-base, 0)
+		if capUSD == 0 {
+			capUSD = 1e-9 // the operator cap is already used up: still exhausted, never unlimited
+		}
+	}
+	return Usage{CapStatus: policy.EvaluateCap(p.Plan, p.Hard(), capUSD, spent-base, reserved), OperatorCapUSD: operatorCap}
 }
 
 // MemPlans is the in-memory PlanStore.
@@ -147,6 +175,21 @@ func (m *MemPlans) PutPlan(_ context.Context, p Plan, _ string) error {
 	m.m[p.OrgID] = p
 	m.mu.Unlock()
 	return nil
+}
+
+func (m *MemPlans) ResetPeriod(_ context.Context, org string, start time.Time, lifetime float64) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p, ok := m.m[org]
+	if !ok || (p.PeriodStart != nil && !p.PeriodStart.Before(start)) {
+		return false, nil
+	}
+	if p.PeriodStart != nil {
+		p.SpendBaseUSD, p.CapNotifiedAt = lifetime, nil
+	}
+	p.PeriodStart = &start
+	m.m[org] = p
+	return true, nil
 }
 
 func (m *MemPlans) MarkCapNotified(_ context.Context, org string, t time.Time) error {

@@ -51,9 +51,19 @@ type Service struct {
 	AgentName func(ctx context.Context, org, id string) string
 	Log       *slog.Logger
 	Now       func() time.Time
+	// Outbox (optional) is the durable retry queue (migration 784): Notify and NotifyCap queue messages and the worker
+	// (StartOutbox) sends them with retries. Without it they are sent once, inline, as before.
+	Outbox OutboxStore
+	// Sealer (optional) seals the queued payloads.
+	Sealer Sealer
+	// MaxAttempts bounds the tries of one message (default MaxOutboxAttempts).
+	MaxAttempts int
+	// Jitter (optional) returns a value in [0,1) for the retry spread; default 0.5.
+	Jitter func() float64
 
 	capMu   sync.Mutex
 	capSent map[string]time.Time
+	hot     sync.Map // organizations with queued messages
 }
 
 func (s *Service) now() time.Time {
@@ -170,30 +180,34 @@ func (s *Service) Notify(ctx context.Context, org string, ap domain.Approval) {
 	if st.EmailEnabled && s.Mail != nil {
 		for _, to := range st.EmailTo {
 			m := s.message(ctx, org, st, ap, to)
-			if err := s.Mail.Send(ctx, mailer.Message{To: to, Subject: m.Subject(), Text: m.PlainText(), HTML: m.HTMLBody()}); err != nil {
-				s.log().Warn("notify: e-mail", "org", org, "err", err)
-			}
+			s.sendEmail(ctx, org, to, mailer.Message{Subject: m.Subject(), Text: m.PlainText(), HTML: m.HTMLBody()})
 		}
 	}
 	if st.SlackWebhook != "" || st.TeamsWebhook != "" {
 		s.chat(ctx, org, st, s.message(ctx, org, st, ap, "chat"))
 	}
+	s.flush(ctx, org)
 }
 
-// chat posts m to the Slack and Teams webhooks of st.
+// flush makes the first attempt of what was just queued right away; retries are the worker's job.
+func (s *Service) flush(ctx context.Context, org string) {
+	if s.Outbox != nil {
+		if _, err := s.ProcessOutbox(ctx, org); err != nil {
+			s.log().Warn("notify: outbox", "org", org, "err", err)
+		}
+	}
+}
+
+// chat sends m to the Slack and Teams webhooks of st (through the outbox when there is one).
 func (s *Service) chat(ctx context.Context, org string, st Settings, m Message) {
 	if st.SlackWebhook != "" {
 		if body, err := m.SlackPayload(); err == nil {
-			if err := s.post(ctx, KindSlack, st.SlackWebhook, body); err != nil {
-				s.log().Warn("notify: slack", "org", org, "err", err)
-			}
+			s.sendChat(ctx, org, KindSlack, st.SlackWebhook, body)
 		}
 	}
 	if st.TeamsWebhook != "" {
 		if body, err := m.TeamsPayload(); err == nil {
-			if err := s.post(ctx, KindTeams, st.TeamsWebhook, body); err != nil {
-				s.log().Warn("notify: teams", "org", org, "err", err)
-			}
+			s.sendChat(ctx, org, KindTeams, st.TeamsWebhook, body)
 		}
 	}
 }
@@ -216,7 +230,7 @@ func (s *Service) post(ctx context.Context, kind, hook string, body []byte) erro
 	defer res.Body.Close()
 	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 4096))
 	if res.StatusCode >= 300 {
-		return fmt.Errorf("webhook answered %d", res.StatusCode)
+		return &httpStatusError{Code: res.StatusCode}
 	}
 	return nil
 }
@@ -247,12 +261,11 @@ func (s *Service) NotifyCap(ctx context.Context, org string, u Usage) {
 	m := Message{Locale: st.Locale, Open: s.appURL(), Notice: fmt.Sprintf("%s (%.2f / %.2f USD)", tr(st.Locale, "capBody"), u.SpentUSD, u.CapUSD)}
 	if st.EmailEnabled && s.Mail != nil {
 		for _, to := range st.EmailTo {
-			if err := s.Mail.Send(ctx, mailer.Message{To: to, Subject: m.Subject(), Text: m.PlainText(), HTML: m.HTMLBody()}); err != nil {
-				s.log().Warn("notify: cap e-mail", "org", org, "err", err)
-			}
+			s.sendEmail(ctx, org, to, mailer.Message{Subject: m.Subject(), Text: m.PlainText(), HTML: m.HTMLBody()})
 		}
 	}
 	s.chat(ctx, org, st, m)
+	s.flush(ctx, org)
 }
 
 // SendTest posts a harmless test message to the configured channels and

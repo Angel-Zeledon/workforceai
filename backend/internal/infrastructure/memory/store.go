@@ -560,6 +560,7 @@ var _ interface {
 	QueryAudit(context.Context, string, domain.AuditQuery) (domain.AuditPage, error)
 	AuditChain(context.Context, string, int64, int) ([]domain.AuditLog, error)
 	AuditHead(context.Context, string) (domain.AuditHead, bool, error)
+	AuditCheckpoint(context.Context, string) (domain.AuditHead, error)
 } = (*Store)(nil)
 
 // QueryAudit filters and pages the audit trail of one organization.
@@ -628,6 +629,11 @@ func (s *Store) AuditHead(_ context.Context, orgID string) (domain.AuditHead, bo
 	defer s.mu.Unlock()
 	h, ok := s.auditHeads[orgID]
 	return h, ok, nil
+}
+
+// AuditCheckpoint: the in-memory store never purges audit entries, so there is no checkpoint.
+func (s *Store) AuditCheckpoint(context.Context, string) (domain.AuditHead, error) {
+	return domain.AuditHead{}, nil
 }
 
 // UnsafeMutateAudit lets tests simulate tampering with stored entries (the

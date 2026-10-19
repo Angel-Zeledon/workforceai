@@ -79,6 +79,8 @@ type AuditStore interface {
 	// AuditChain returns chained entries with seq > after, ascending.
 	AuditChain(ctx context.Context, orgID string, after int64, limit int) ([]domain.AuditLog, error)
 	AuditHead(ctx context.Context, orgID string) (domain.AuditHead, bool, error)
+	// AuditCheckpoint returns the last entry removed by retention (seq 0: nothing purged), where Verify starts.
+	AuditCheckpoint(ctx context.Context, orgID string) (domain.AuditHead, error)
 }
 
 // Publisher fans events out (Redis pub/sub -> WS hub).

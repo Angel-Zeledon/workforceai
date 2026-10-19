@@ -119,6 +119,14 @@ type Source interface {
 	Head(ctx context.Context) (domain.AuditHead, bool, error)
 }
 
+// CheckpointSource is optionally implemented by a Source whose organization may have purged old entries
+// (retention, migration 782). Checkpoint returns the last removed entry (seq, hash), or seq 0 when nothing was
+// purged. Verify then starts right after it: the first remaining entry must have seq = checkpoint.Seq + 1 and
+// prev_hash = checkpoint.Hash.
+type CheckpointSource interface {
+	Checkpoint(ctx context.Context) (domain.AuditHead, error)
+}
+
 // Report is the outcome of an integrity verification.
 type Report struct {
 	OK          bool   `json:"ok"`
@@ -128,6 +136,8 @@ type Report struct {
 	HeadSeq     int64  `json:"head_seq"`
 	HeadHash    string `json:"head_hash"`
 	BrokenAtSeq int64  `json:"broken_at_seq,omitempty"`
+	// CheckpointSeq is the seq of the last entry removed by retention (0: nothing was purged); the walk starts after it.
+	CheckpointSeq int64 `json:"checkpoint_seq,omitempty"`
 	// Reason is one of: gap, prev_hash_mismatch, hash_mismatch, head_mismatch,
 	// anchor_mismatch, org_mismatch.
 	Reason string `json:"reason,omitempty"`
@@ -145,7 +155,18 @@ const verifyPage = 1000
 func Verify(ctx context.Context, orgID string, src Source, anchor *domain.AuditHead) (Report, error) {
 	var rep Report
 	var prev domain.AuditHead // seq 0, hash ""
-	after := int64(0)
+	if cs, ok := src.(CheckpointSource); ok {
+		cp, err := cs.Checkpoint(ctx)
+		if err != nil {
+			return rep, err
+		}
+		if cp.Seq > 0 {
+			prev = domain.AuditHead{Seq: cp.Seq, Hash: cp.Hash}
+			rep.CheckpointSeq = cp.Seq
+		}
+	}
+	checkpoint := prev
+	after := prev.Seq
 	for {
 		page, err := src.Chain(ctx, after, verifyPage)
 		if err != nil {
@@ -203,7 +224,19 @@ func Verify(ctx context.Context, orgID string, src Source, anchor *domain.AuditH
 		rep.Reason, rep.BrokenAtSeq, rep.Detail = "head_mismatch", prev.Seq+1, "entries exist but no chain head is recorded"
 		return rep, nil
 	}
-	if anchor != nil && !rep.AnchorChecked {
+	if anchor != nil && !rep.AnchorChecked && checkpoint.Seq > 0 && anchor.Seq <= checkpoint.Seq {
+		// The anchored entry was purged by retention. At the checkpoint itself the hash can still be compared;
+		// before it nothing is left to compare (not a failure: the checkpoint is the proof of the purged prefix).
+		if anchor.Seq == checkpoint.Seq {
+			rep.AnchorChecked = true
+			if !strings.EqualFold(checkpoint.Hash, anchor.Hash) {
+				rep.Reason, rep.BrokenAtSeq = "anchor_mismatch", anchor.Seq
+				rep.Detail = "checkpoint hash differs from the externally stored anchor"
+				return rep, nil
+			}
+		}
+	}
+	if anchor != nil && !rep.AnchorChecked && !(checkpoint.Seq > 0 && anchor.Seq < checkpoint.Seq) {
 		rep.Reason, rep.BrokenAtSeq = "anchor_mismatch", anchor.Seq
 		rep.Detail = fmt.Sprintf("anchor seq %d is beyond the end of the chain (%d): entries were removed", anchor.Seq, prev.Seq)
 		return rep, nil

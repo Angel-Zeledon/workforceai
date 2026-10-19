@@ -55,9 +55,21 @@ Safety rules, all enforced in `Purger.run` (the one place that deletes), not onl
    cutoff and has no messages left.
 5. Files are never hard-deleted: they go to the Drive trash (`deleted_at`, `deleted_by = system/retention`) and can be
    restored. Old file versions stay append-only.
-6. Audit is never deleted by this job. The trail is append-only and hash-chained; removing the head of the chain breaks
-   `audit.Verify`. `audit_days` is stored and reported (`audit_skipped`), and purging it needs a checkpoint design
-   (see "What remains").
+6. Audit (`audit_days`, migration 782): the trail stays append-only for the application role. The job removes old
+   chained entries only through `audit_purge_through(org, seq)`, a `SECURITY DEFINER` function that works only for the
+   organization of the transaction, never removes the head of the chain (the newest entry stays), reads the hash of the
+   last removed entry from the table itself and stores it as the organization's **checkpoint**
+   (`audit_chain_heads.checkpoint_seq/checkpoint_hash`, plus `purged_total`) in the same transaction as the delete. The
+   head trigger lets the checkpoint move forward only inside that function and never during an append. The job picks the
+   oldest entries older than the cutoff (timestamps strictly increase along the chain, so they are a prefix), at most
+   one batch per run, and counts them in `audit_entries` (also in the `retention.purged` audit entry and in the
+   preview). `audit.Verify` starts at the checkpoint: the first remaining entry must have `seq = checkpoint_seq + 1` and
+   `prev_hash = checkpoint_hash`, so editing, inserting, reordering or truncating what is left still breaks the chain
+   (`Report.checkpoint_seq` says where it started). An external anchor older than the checkpoint cannot be compared and
+   is not a failure; one at the checkpoint is compared with the checkpoint hash. `audit_skipped` is now true only when
+   the store cannot purge the chained trail (it does not implement `governance.AuditRetention`). Entries written before
+   the chain existed (`seq` NULL) are never purged. What the checkpoint cannot prove is the content of the purged
+   prefix: keep an export or an external anchor if you need that evidence.
 7. Scheduling: a run is claimed atomically (`UPDATE ... SET next_run_at ... WHERE enabled AND next_run_at <= now()`),
    so replicas never purge the same organization twice. Saving a policy delays the first run by an hour so a
    mistake can be fixed. The job runs hourly, each organization at most once per 24 h. `RETENTION_JOB=off` disables it.
@@ -103,8 +115,7 @@ queue drops with a warning) into the outbox `webhook_deliveries`.
 
 ## What remains
 
-* Audit retention: a chain-safe purge needs a checkpoint (seq, hash) stored when the head is trimmed and a
-  `Verify` that starts from it, plus a DELETE path through `app_purging_org`-style owner access.
+* The console still words `audit_days` as "stored only"; it should show `audit_entries` of the preview and last run.
 * Department limits are reported and flagged but not yet enforced by the budget service (agent caps are).
 * The department tag is a string; replace the free text with a picker once real departments exist.
 * The sidebar highlight and page title of `/admin` use the office defaults (`sectionOf` lives in `navBridge.ts`).

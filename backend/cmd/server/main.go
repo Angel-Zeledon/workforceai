@@ -162,6 +162,12 @@ func run(log *slog.Logger) error {
 		return err
 	}
 
+	// Notifications that need the vault: sealed webhook URLs, the retry queue and the monthly plan reset.
+	{
+		lister, _ := store.(application.OrgLister)
+		startNotifyJobs(ctx, log, notifySvc, cw.vault, lister, orch, rec)
+	}
+
 	// Bring-your-own-model: the organization's own provider key (sealed with its data key) is merged
 	// into every runtime call; without a choice the platform default (DeepSeek) applies.
 	var llmSvc *application.LLMService

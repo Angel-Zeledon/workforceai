@@ -377,3 +377,94 @@ func TestIdentifiersAreNotMangledByTheSecretMasker(t *testing.T) {
 		t.Fatalf("ids stay, card numbers in text are masked: %v", out)
 	}
 }
+
+// cpChain is a chain whose first entries were purged by retention: it exposes the checkpoint.
+type cpChain struct {
+	*chain
+	cp domain.AuditHead
+}
+
+func (c *cpChain) Checkpoint(context.Context) (domain.AuditHead, error) { return c.cp, nil }
+
+// purged simulates audit_purge_through(through): the entries up to it disappear and their last hash is the checkpoint.
+func purged(c *chain, through int64) *cpChain {
+	cp := domain.AuditHead{Seq: through, Hash: c.rows[through-1].Hash}
+	c.rows = c.rows[through:]
+	return &cpChain{chain: c, cp: cp}
+}
+
+func verifyCP(t *testing.T, c *cpChain, anchor *domain.AuditHead) audit.Report {
+	t.Helper()
+	rep, err := audit.Verify(context.Background(), c.org, c, anchor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rep
+}
+
+func TestVerifyStartsAtTheCheckpointAfterARetentionPurge(t *testing.T) {
+	c := purged(filled(8), 5)
+	rep := verifyCP(t, c, nil)
+	if !rep.OK || rep.Checked != 3 || rep.FirstSeq != 6 || rep.CheckpointSeq != 5 || rep.HeadSeq != 8 {
+		t.Fatalf("purged chain must verify from the checkpoint: %+v", rep)
+	}
+}
+
+func TestPurgedChainStillDetectsTampering(t *testing.T) {
+	c := purged(filled(8), 5)
+	c.rows[1].Actor = "mallory"
+	if rep := verifyCP(t, c, nil); rep.OK || rep.BrokenAtSeq != 7 || rep.Reason != "hash_mismatch" {
+		t.Fatalf("edit after the checkpoint: %+v", rep)
+	}
+
+	// removing the entry right after the checkpoint is a gap, not a silent shrink
+	c = purged(filled(8), 5)
+	c.rows = c.rows[1:]
+	if rep := verifyCP(t, c, nil); rep.OK || rep.Reason != "gap" {
+		t.Fatalf("missing first entry: %+v", rep)
+	}
+
+	// a forged checkpoint hash no longer links to the first remaining entry
+	c = purged(filled(8), 5)
+	c.cp.Hash = "00"
+	if rep := verifyCP(t, c, nil); rep.OK || rep.Reason != "prev_hash_mismatch" || rep.BrokenAtSeq != 6 {
+		t.Fatalf("forged checkpoint: %+v", rep)
+	}
+
+	// truncating the tail is still caught by the head
+	c = purged(filled(8), 5)
+	c.rows = c.rows[:2]
+	if rep := verifyCP(t, c, nil); rep.OK || rep.Reason != "head_mismatch" {
+		t.Fatalf("truncated tail: %+v", rep)
+	}
+}
+
+func TestAnchorsAndCheckpointsCombine(t *testing.T) {
+	c := filled(8)
+	anchor3 := &domain.AuditHead{Seq: 3, Hash: c.rows[2].Hash}
+	anchor5 := &domain.AuditHead{Seq: 5, Hash: c.rows[4].Hash}
+	anchor7 := &domain.AuditHead{Seq: 7, Hash: c.rows[6].Hash}
+	p := purged(c, 5)
+	if rep := verifyCP(t, p, anchor7); !rep.OK || !rep.AnchorChecked {
+		t.Fatalf("anchor after the checkpoint: %+v", rep)
+	}
+	if rep := verifyCP(t, p, anchor5); !rep.OK || !rep.AnchorChecked {
+		t.Fatalf("anchor at the checkpoint compares against its hash: %+v", rep)
+	}
+	if rep := verifyCP(t, p, &domain.AuditHead{Seq: 5, Hash: "ff"}); rep.OK || rep.Reason != "anchor_mismatch" {
+		t.Fatalf("wrong anchor at the checkpoint: %+v", rep)
+	}
+	if rep := verifyCP(t, p, anchor3); !rep.OK || rep.AnchorChecked {
+		t.Fatalf("an anchor inside the purged prefix cannot be compared and is not a failure: %+v", rep)
+	}
+	if rep := verifyCP(t, p, &domain.AuditHead{Seq: 99, Hash: "aa"}); rep.OK || rep.Reason != "anchor_mismatch" {
+		t.Fatalf("an anchor beyond the end is still a failure: %+v", rep)
+	}
+}
+
+func TestChainWithoutCheckpointBehavesAsBefore(t *testing.T) {
+	c := &cpChain{chain: filled(4)}
+	if rep := verifyCP(t, c, nil); !rep.OK || rep.CheckpointSeq != 0 || rep.FirstSeq != 1 {
+		t.Fatalf("%+v", rep)
+	}
+}
