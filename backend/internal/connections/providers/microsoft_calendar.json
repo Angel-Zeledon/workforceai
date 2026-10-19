@@ -1,0 +1,42 @@
+{
+  "id": "microsoft_calendar",
+  "version": 1,
+  "label_key": "provider.microsoft_calendar.name",
+  "phase": "available",
+  "auth": [
+    {
+      "method": "oauth2_pkce",
+      "authorize_url": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+      "token_url": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+      "identity_scopes": ["openid", "email", "offline_access", "User.Read"],
+      "extra_params": { "response_mode": "query", "prompt": "select_account" }
+    }
+  ],
+  "capabilities": {
+    "calendar.freebusy": {
+      "class": "read",
+      "scopes": ["Calendars.Read"],
+      "tools": [],
+      "risk": "low",
+      "side_effects": false,
+      "default": true,
+      "label_key": "conn.cap.calendar.freebusy"
+    },
+    "calendar.sync": {
+      "class": "write",
+      "scopes": ["Calendars.ReadWrite"],
+      "tools": [],
+      "risk": "medium",
+      "side_effects": true,
+      "reversibility": "compensating",
+      "default": false,
+      "label_key": "conn.cap.calendar.sync",
+      "scope_overreach": "Used only by the Meetings screen, on behalf of a person: it writes the meetings that person schedules and reads busy times. No agent tool exists for it."
+    }
+  },
+  "never_offered": ["calendar.share", "calendar.settings"],
+  "identity": { "userinfo_url": "https://graph.microsoft.com/v1.0/me", "account_field": "mail" },
+  "resource_filters": [],
+  "default_limits": { "per_minute": 30, "per_hour": 600, "per_day": 2000, "write_per_day": 200, "max_items_per_call": 100, "max_bytes_per_day": 10000000 },
+  "untrusted_sources": ["event.subject", "event.body", "event.location", "event.organizer", "event.attendees"]
+}

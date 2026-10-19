@@ -94,7 +94,7 @@ func ParseArgs(c Command, rest string, o ParseOpts) map[string]any {
 	if rest == "" {
 		return out
 	}
-	if c.ID == "meeting" {
+	if c.ID == "meeting" || c.ID == "room" || c.ID == "schedule" { // agents before the colon, topic after
 		return parseMeeting(rest, o)
 	}
 	toks := tokenize(rest)

@@ -123,6 +123,10 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 	} else {
 		log.Info("GOOGLE_OAUTH_CLIENT_ID/SECRET not set: Google OAuth (Gmail, Calendar, Drive) is unavailable (bring your own OAuth app); simulated connections work")
 	}
+	// meetings: Google Calendar / Microsoft 365 for the Meetings screen (cmd/server/meetings.go)
+	if err := addMeetingCalendarProviders(log, providers, apps, cfg.OAuthRedirectURL); err != nil {
+		return connWiring{}, err
+	}
 	adminCount := func(ctx context.Context, org string) int {
 		if authStore == nil {
 			return 1
