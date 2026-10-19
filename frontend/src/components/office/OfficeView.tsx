@@ -13,6 +13,7 @@ import { ProjectPill } from "../projects/ProjectPill";
 import { FirstRunHint } from "../nav/ui2";
 import { EditOfficeButton, LightButton, OfficeEditor } from "./OfficeEditor";
 import { useOfficeLayout } from "@/lib/officeLayout";
+import { PresenceHost } from "../presence/PresenceHost";
 
 const OfficeScene = dynamic(() => import("./OfficeScene"), {
   ssr: false,
@@ -79,6 +80,7 @@ export function OfficeView() {
         <EditOfficeButton />
         <LightButton />
       </div>
+      <PresenceHost /> {/* human presence: who is online, status, "start conversation" */}
       {selected && <div data-tour="office.agentPanel" className="pointer-events-none absolute bottom-0 right-0 top-0 z-30"><WorkspaceHost id={selected} /></div>}
       {!selected && <div className="pointer-events-none absolute bottom-4 right-4 hidden rounded-md border border-line bg-panel/80 px-3 py-1.5 text-[10px] font-semibold text-mute md:block">{t("hud.cameraHint")}</div>}
     </>

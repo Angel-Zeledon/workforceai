@@ -19,6 +19,9 @@ import { FileViewerPanel } from "../files/FileViewerPanel";
 import { ReportView } from "../ReportView";
 import { Icon } from "../icons";
 import { readable, useAgentColor, useAgentName } from "../ui";
+import { PeopleChatsList } from "./PeopleChatsList"; // people chat (presence.md)
+import { PeopleChatPane } from "./PeopleChatPane";
+import { usePeopleChat } from "./peopleChatStore";
 
 // ---------------------------------------------------------------------------------------------
 // Chat history: General (the whole office) and one thread per agent, side by side. Both read the
@@ -445,7 +448,9 @@ export function ChatsView({ agentId }: { agentId?: string }) {
   useEffect(() => { hydrate(); }, [hydrate]);
 
   // the URL follows the selection without remounting (and back/forward work)
+  const peopleOpen = usePeopleChat((s) => s.activeId); // a people channel is open (replaces the thread on the right)
   const navigate = useCallback((next: Sel) => {
+    void usePeopleChat.getState().open(null);
     setSel(next);
     setShowThread(true);
     if (typeof window !== "undefined" && next.kind === "thread") {
@@ -587,6 +592,7 @@ export function ChatsView({ agentId }: { agentId?: string }) {
                   <ThreadRow key={x.key} info={x} active={sel.kind === "thread" && sel.key === x.key} onPick={() => navigate({ kind: "thread", key: x.key })} />
                 ))}
               </section>
+              <PeopleChatsList onPicked={() => setShowThread(true)} />
               <section aria-label={t("chats.past")} data-testid="chats-past" data-tour="chats.past" className="mt-4">
                 <div className="flex items-center justify-between px-2 pb-1">
                   <h2 className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{showArchived ? t("chats.archived") : t("chats.past")}</h2>
@@ -609,7 +615,12 @@ export function ChatsView({ agentId }: { agentId?: string }) {
       </aside>
 
       {/* ---- right: the open thread ---- */}
-      <section aria-label={t("chats.conversation")} className={`${showThread ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-1 flex-col bg-bg`}>
+      {peopleOpen && (
+        <div className={`${showThread ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-1`}>
+          <PeopleChatPane onBack={() => { void usePeopleChat.getState().open(null); setShowThread(false); }} />
+        </div>
+      )}
+      <section aria-label={t("chats.conversation")} className={`${peopleOpen ? "hidden" : showThread ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-1 flex-col bg-bg`}>
         <header data-tour="chats.header" className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-panel px-4 py-2.5">
           <button type="button" data-testid="chats-back" onClick={back} aria-label={t("chats.back")} className="flex min-h-10 min-w-10 items-center justify-center rounded-md p-1.5 text-ink2 hover:bg-panel2 md:hidden"><Glyph name="back" size={16} /></button>
           {sel.kind === "thread" ? (

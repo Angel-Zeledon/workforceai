@@ -330,6 +330,9 @@ type Event struct {
 	OrgID   string    `json:"org_id"`
 	AgentID string    `json:"agent_id,omitempty"`
 	Payload any       `json:"payload"`
+	// Audience (additive) limits delivery to the sockets of these user ids inside the
+	// organization (private chat messages); empty = the whole organization. The hub strips it.
+	Audience []string `json:"audience,omitempty"`
 }
 
 // Event type names (WS contract).

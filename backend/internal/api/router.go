@@ -27,6 +27,8 @@ import (
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
 	"aiworkforce/backend/internal/memory"
+	"aiworkforce/backend/internal/peoplechat"
+	"aiworkforce/backend/internal/presence"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/rewards"
@@ -115,6 +117,10 @@ type Deps struct {
 	// --- governance (BEGIN): admin console, reports, retention, API tokens, webhooks (governance_wire.go) ---
 	Governance *GovernanceDeps
 	// --- governance (END) ---
+	// >>> human presence (docs/architecture/presence.md); both optional, nil leaves the routes and the ws hooks off.
+	Presence   *presence.Hub
+	PeopleChat *peoplechat.Service
+	// <<< human presence
 	// AllowedOrigins is the CORS/WebSocket origin allow-list (see originPolicy).
 	AllowedOrigins []string
 	// EnableDemoReset registers POST /api/v1/demo/reset (admin role when auth is on).
@@ -206,6 +212,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountCommands(r)
 			s.mountTenantData(r)
 			s.mountGovernance(r) // governance (single line)
+			s.mountPresence(r) // human presence + people chat (presence_people.go)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}

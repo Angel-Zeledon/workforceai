@@ -2,6 +2,7 @@ import { MOCK, WS_URL } from "./config";
 import { useStore } from "./store";
 import { wsUrl } from "./session";
 import type { WsFrame } from "./types";
+import { setSocketSender, tapFrame } from "@/components/presence/tap";
 
 let started = false;
 let stopped = false;
@@ -40,11 +41,16 @@ export function startRealtime() {
     const url = await wsUrl(WS_URL);
     if (stopped) return;
     try { ws = new WebSocket(url); } catch { schedule(); return; }
-    ws.onopen = () => { retry = 0; setConnected(true); loadAll(); };
-    ws.onmessage = (ev) => {
-      try { apply(JSON.parse(ev.data as string) as WsFrame); } catch { /* ignore malformed frame */ }
+    const sock = ws;
+    ws.onopen = () => {
+      retry = 0; setConnected(true); loadAll();
+      // human presence: lets the presence / people-chat stores send frames and (re)load their snapshot
+      setSocketSender((f) => { if (sock.readyState !== WebSocket.OPEN) return false; sock.send(JSON.stringify(f)); return true; });
     };
-    ws.onclose = () => { setConnected(false); schedule(); };
+    ws.onmessage = (ev) => {
+      try { const f = JSON.parse(ev.data as string) as WsFrame; apply(f); tapFrame(f); } catch { /* ignore malformed frame */ }
+    };
+    ws.onclose = () => { setSocketSender(null); setConnected(false); schedule(); };
     ws.onerror = () => { try { ws?.close(); } catch { /* noop */ } };
   };
   loadAll();
