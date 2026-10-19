@@ -54,6 +54,22 @@ type Config struct {
 	Ceiling sandbox.Limits
 	// WorkMB is the size of the /work tmpfs (default 256).
 	WorkMB int
+	// RenderExec selects how render jobs run: "docker" (default, a disposable
+	// container per job, needs the Docker socket) or "local" (the fixed render
+	// program as a child process of this service, which must itself run in a
+	// locked-down container; no Docker at all, /v1/run answers 501). Env RENDER_EXEC.
+	RenderExec string
+	// RenderProgram is the fixed command of the local mode (default
+	// python -B /opt/render/render.py). Injectable for tests.
+	RenderProgram []string
+	// RenderWorkDir is where local jobs get their scratch dirs (default /work).
+	RenderWorkDir string
+	// RenderEnv is extra environment for the local child (tests only).
+	RenderEnv []string
+	// RenderTimeout is the hard wall-clock limit of a render job (default 45 s).
+	RenderTimeout time.Duration
+	// RenderMemoryMB is RLIMIT_AS of the local child where the OS has it (default 704).
+	RenderMemoryMB int
 	// Grace is added to the timeout before the container is killed from outside.
 	Grace time.Duration
 	Log   *slog.Logger
@@ -68,6 +84,21 @@ func (c *Config) defaults() {
 	}
 	if c.MaxConcurrent <= 0 {
 		c.MaxConcurrent = 2
+		if c.RenderExec == RenderExecLocal {
+			c.MaxConcurrent = 1 // one small container: jobs queue instead of competing for its memory
+		}
+	}
+	if c.RenderTimeout <= 0 {
+		c.RenderTimeout = renderTimeout
+	}
+	if c.RenderMemoryMB <= 0 {
+		c.RenderMemoryMB = 704
+	}
+	if len(c.RenderProgram) == 0 {
+		c.RenderProgram = []string{"python", "-B", "/opt/render/render.py"}
+	}
+	if c.RenderWorkDir == "" {
+		c.RenderWorkDir = "/work"
 	}
 	c.Ceiling = c.Ceiling.Clamp(sandbox.DefaultLimits())
 	if c.WorkMB <= 0 {
@@ -99,6 +130,13 @@ type active struct {
 func New(cfg Config) (*Server, error) {
 	if len(cfg.Token) < 16 {
 		return nil, errors.New("runnerd: SANDBOX_TOKEN must be set (at least 16 characters)")
+	}
+	switch cfg.RenderExec = strings.ToLower(strings.TrimSpace(cfg.RenderExec)); cfg.RenderExec {
+	case "", RenderExecDocker:
+		cfg.RenderExec = RenderExecDocker
+	case RenderExecLocal:
+	default:
+		return nil, fmt.Errorf("runnerd: RENDER_EXEC must be docker or local, got %q", cfg.RenderExec)
 	}
 	cfg.defaults()
 	return &Server{cfg: cfg, sem: make(chan struct{}, cfg.MaxConcurrent), running: map[string]*active{}}, nil
@@ -137,6 +175,10 @@ var idRe = regexp.MustCompile(`^[A-Za-z0-9_-]{6,64}$`)
 const maxRequestBytes = 64 << 20
 
 func (s *Server) handleRun(w http.ResponseWriter, r *http.Request) {
+	if s.local() {
+		writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "code runs are not available: this service runs in RENDER_EXEC=local mode (renders only, no Docker)"})
+		return
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBytes)
 	var req sandbox.RunRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -190,7 +232,9 @@ func (s *Server) handleAbort(w http.ResponseWriter, r *http.Request) {
 	if a != nil {
 		a.cancel("aborted")
 	}
-	s.kill(containerName(id))
+	if !s.local() {
+		s.kill(containerName(id))
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"aborted": a != nil})
 }
 
@@ -213,7 +257,7 @@ func (s *Server) AbortAll(org string) int {
 	for _, a := range as {
 		a.cancel("aborted")
 	}
-	if org == "" {
+	if org == "" && !s.local() {
 		s.KillOrphans()
 	}
 	return len(as)
@@ -222,6 +266,9 @@ func (s *Server) AbortAll(org string) int {
 // KillOrphans removes sandbox containers that no run of this process owns
 // (call at startup: a crashed runner must not leave code running).
 func (s *Server) KillOrphans() {
+	if s.local() {
+		return // no Docker here; stale scratch dirs are swept by CleanScratch
+	}
 	out, err := exec.Command(s.cfg.DockerBin, "ps", "-q", "--filter", "label=wfai.sandbox=1").Output()
 	if err != nil {
 		return

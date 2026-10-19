@@ -23,7 +23,8 @@ import time
 
 from PIL import Image, ImageOps
 
-W = "/work"
+# Scratch dir: /work in the docker mode; the local mode (RENDER_EXEC=local) gives each job its own dir.
+W = os.environ.get("RENDER_WORK") or "/work"
 MAX_PIXELS = 40_000_000
 Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 

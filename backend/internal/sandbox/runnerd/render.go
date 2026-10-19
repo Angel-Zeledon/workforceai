@@ -37,7 +37,7 @@ const (
 )
 
 func (s *Server) handleRender(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.RenderImage == "" {
+	if !s.local() && s.cfg.RenderImage == "" {
 		writeJSON(w, http.StatusServiceUnavailable, sandbox.RenderResponse{Status: sandbox.RenderUnavailable, Code: "render_unavailable",
 			Message: "no render image configured on the runner (SANDBOX_RENDER_IMAGE)"})
 		return
@@ -156,6 +156,9 @@ func (s *Server) render(ctx context.Context, req sandbox.RenderRequest) sandbox.
 		return failed("render_failed", "could not prepare the input")
 	}
 	maxOut := int64(len(job.Pages)+1)*int64(job.MaxBytes) + (1 << 20)
+	if s.local() {
+		return s.renderLocal(ctx, job, input, maxOut)
+	}
 	stdout := &capBuffer{max: maxOut, over: make(chan struct{})}
 	var stderr bytes.Buffer
 	cmd := exec.Command(s.cfg.DockerBin, s.RenderDockerArgs(req)...)
