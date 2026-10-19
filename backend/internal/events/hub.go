@@ -14,6 +14,7 @@ import (
 type Client struct {
 	Send chan []byte
 	org  string
+	user string // "" for clients registered without an identity (they never get addressed frames)
 }
 
 // Hub fans raw JSON frames out to the connected clients of the frame's
@@ -30,8 +31,12 @@ func NewHub(log *slog.Logger) *Hub {
 }
 
 // Register adds a client that only receives frames of orgID.
-func (h *Hub) Register(orgID string) *Client {
-	c := &Client{Send: make(chan []byte, 256), org: orgID}
+func (h *Hub) Register(orgID string) *Client { return h.RegisterUser(orgID, "") }
+
+// RegisterUser adds a client of orgID that also receives the frames addressed to userID
+// (frames with an "audience", e.g. private chat messages).
+func (h *Hub) RegisterUser(orgID, userID string) *Client {
+	c := &Client{Send: make(chan []byte, 256), org: orgID, user: userID}
 	h.mu.Lock()
 	h.clients[c] = struct{}{}
 	h.mu.Unlock()
@@ -51,17 +56,31 @@ func (h *Hub) Unregister(c *Client) {
 // are dropped.
 func (h *Hub) Broadcast(frame []byte) {
 	var head struct {
-		OrgID string `json:"org_id"`
+		OrgID    string   `json:"org_id"`
+		Audience []string `json:"audience"`
 	}
 	if err := json.Unmarshal(frame, &head); err != nil || head.OrgID == "" {
 		h.log.Warn("dropping frame without org_id")
 		return
+	}
+	var allow map[string]struct{}
+	if len(head.Audience) > 0 {
+		allow = make(map[string]struct{}, len(head.Audience))
+		for _, u := range head.Audience {
+			allow[u] = struct{}{}
+		}
+		frame = stripAudience(frame)
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for c := range h.clients {
 		if c.org != head.OrgID {
 			continue
+		}
+		if allow != nil {
+			if _, ok := allow[c.user]; !ok || c.user == "" {
+				continue
+			}
 		}
 		select {
 		case c.Send <- frame:
@@ -71,6 +90,20 @@ func (h *Hub) Broadcast(frame []byte) {
 			close(c.Send)
 		}
 	}
+}
+
+// stripAudience removes the "audience" field so clients never learn who else received the frame.
+func stripAudience(frame []byte) []byte {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(frame, &m); err != nil {
+		return frame
+	}
+	delete(m, "audience")
+	out, err := json.Marshal(m)
+	if err != nil {
+		return frame
+	}
+	return out
 }
 
 // Run forwards frames from a subscription (Redis) to the clients until ctx ends.

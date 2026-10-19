@@ -237,6 +237,7 @@ func run(log *slog.Logger) error {
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
+	deps.Presence, deps.PeopleChat = wirePeople(ctx, pg, pub, queries) // human presence + people chat
 	// GDPR export / deletion of the organization and the purge janitor (internal/tenantdata).
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	if cfg.AuthEnabled {

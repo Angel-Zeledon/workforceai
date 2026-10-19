@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
+	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 )
 
@@ -30,8 +31,20 @@ func (s *server) ws(w http.ResponseWriter, r *http.Request) {
 
 	// Register before building hello so no event is missed in between.
 	org := s.org(r)
-	client := s.Hub.Register(org)
+	// >>> human presence: the socket knows its person (addressed chat frames) and joins the presence hub.
+	uid := ""
+	if p, ok := auth.PrincipalFrom(r.Context()); ok {
+		uid = p.UserID
+	} else if s.Presence != nil || s.PeopleChat != nil {
+		uid = demoUser
+	}
+	client := s.Hub.RegisterUser(org, uid)
 	defer s.Hub.Unregister(client)
+	if s.Presence != nil && uid != "" {
+		s.Presence.Join(org, uid, s.personName(r.Context(), org, uid))
+		defer s.Presence.Leave(org, uid)
+	}
+	// <<< human presence
 
 	agents, err := s.Queries.Agents(r.Context())
 	if err != nil {
@@ -51,9 +64,14 @@ func (s *server) ws(w http.ResponseWriter, r *http.Request) {
 		defer close(gone)
 		_ = conn.SetReadDeadline(time.Now().Add(pongWait))
 		conn.SetPongHandler(func(string) error { return conn.SetReadDeadline(time.Now().Add(pongWait)) })
+		conn.SetReadLimit(4096) // human presence: client frames are tiny (position, status)
 		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
+			_, msg, err := conn.ReadMessage()
+			if err != nil {
 				return
+			}
+			if s.Presence != nil && uid != "" {
+				_ = s.Presence.Handle(org, uid, msg) // bad frames are ignored; identity is the socket's, never the frame's
 			}
 		}
 	}()

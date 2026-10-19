@@ -19,6 +19,7 @@ import { CoinAnnouncer } from "../shop/Coin";
 import { EditorLayer } from "./EditorLayer";
 import { useOfficeLayout } from "@/lib/officeLayout";
 import { useRewards } from "@/lib/rewards";
+import { PeopleLayer } from "../presence/PeopleLayer";
 
 const VIEW = { pos: new THREE.Vector3(7, 16, 19), target: new THREE.Vector3(0.5, 0.4, -0.3) };
 /** The editor looks down on the floor plan so the grid and the footprints read clearly. */
@@ -107,6 +108,7 @@ export default function OfficeScene() {
           <OfficeItems />
           <EditorLayer />
           <CoinFloats />
+          <PeopleLayer /> {/* human presence: the people of the office walk next to the agents */}
         </Suspense>
         <LabelSolver />
         <Rig />
