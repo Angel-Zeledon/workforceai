@@ -60,6 +60,14 @@ hours it answers `GateHold` with the reason and the next opening, so the task wa
 and runs when the window opens; the inner gate (project pause/cancel, human gates) keeps priority. Jobs are cached for 15 s
 and the cache is invalidated by every save. `GET /agents/{id}/availability?at=<RFC3339>` answers `{open, next_open, timezone}`.
 
+**Holds (760).** A held task with a known opening (`GateDecision.Until`) sleeps on a timer until then (it does not poll the gate) and wakes
+early when a schedule or rule is edited (`WakeHeld`). Each hold is persisted in `schedule_holds` (`org_id, task_id, request_id, agent_id,
+reason, wake_at`; `postgres.HoldStore`, memory without a database: then holds do not survive a restart), so a restart loses nothing:
+* On start `Orchestrator.Recover` resumes the request; the gate holds the task again until the same opening (or runs it if the
+  window is open) and the stale row is replaced or removed. A shutdown keeps the hold; a finished or cancelled task removes it.
+* `StartHoldWatcher` (every 30 s, started in `cmd/server/main.go`, stopped with the server context) resumes requests whose
+  `wake_at` passed with no goroutine running them and drops holds whose task or request is no longer live.
+
 ## 3. Delegation rules
 
 `delegation_rules` (753); `GET/POST /org/delegation/rules`, `DELETE /org/delegation/rules/{id}`,
@@ -102,7 +110,7 @@ deny rule at least), 3 sample projects and the name of a demo dataset, plus a di
 ## 5. Permissions and data
 
 Reads need `agents:read`; every change needs `org:manage`. All tables have Row-Level Security by `org_id` (`app_current_org()`), like the rest.
-Migrations 750-754 are idempotent and have rollbacks in `backend/migrations/down/` (the rollback of 750 keeps the `agents.department` column).
+Migrations 750-754 and 760 are idempotent and have rollbacks in `backend/migrations/down/` (the rollback of 750 keeps the `agents.department` column).
 
 ## 6. What is not enforced yet
 

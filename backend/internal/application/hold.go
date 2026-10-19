@@ -13,7 +13,7 @@ import (
 // moment (GateDecision.Until: the next opening of the working schedule of its agent), the orchestrator
 //   - sleeps until then on a timer instead of asking the gate every 100 ms (a weekend is not 4 million
 //     lookups), and wakes early when WakeHeld is called (a schedule was edited);
-//   - writes the hold to a HoldStore (migration 760), so the wake-up survives a restart: Recover brings the
+//   - writes the hold to a HoldStore (migration 760, postgres.HoldStore), so the wake-up survives a restart: Recover brings the
 //     request back, the gate holds it again until the same opening, and WakeDueHolds (a watcher) resumes the
 //     requests whose opening passed while nobody was running them.
 // Holds without Until (a paused project) keep the short poll as before.
@@ -151,6 +151,28 @@ func (o *Orchestrator) holdRelease(ctx context.Context, taskID string) {
 	}
 }
 
+// holdReleaseRequest drops the persisted holds of a request that is about to be resumed. The hold of the
+// previous process would otherwise outlive the wait: the new run is not "held" when the gate lets the task
+// through at once, and nobody would remove the row.
+func (o *Orchestrator) holdReleaseRequest(ctx context.Context, requestID string) {
+	st := o.holdStore()
+	if st == nil {
+		return
+	}
+	org := o.org(ctx)
+	hs, err := st.ListHolds(ctx, org)
+	if err != nil {
+		return
+	}
+	for _, h := range hs {
+		if h.RequestID == requestID {
+			if err := st.DeleteHold(ctx, org, h.TaskID); err != nil {
+				o.log.Warn("delete hold", "task", h.TaskID, "err", err)
+			}
+		}
+	}
+}
+
 // Holds lists the durable holds of the organization of ctx (what is waiting for a working window).
 func (o *Orchestrator) Holds(ctx context.Context) []Hold {
 	st := o.holdStore()
@@ -208,12 +230,15 @@ func (o *Orchestrator) WakeDueHolds(ctx context.Context, orgs []string) int {
 }
 
 // StartHoldWatcher runs WakeDueHolds every `every` (default 30 s) until ctx ends. orgs lists the
-// organizations to look at on each pass.
-func (o *Orchestrator) StartHoldWatcher(ctx context.Context, every time.Duration, orgs func() []string) {
+// organizations to look at on each pass. The returned channel is closed once the watcher has stopped
+// (after ctx ended), so a shutdown can wait for it.
+func (o *Orchestrator) StartHoldWatcher(ctx context.Context, every time.Duration, orgs func() []string) <-chan struct{} {
 	if every <= 0 {
 		every = 30 * time.Second
 	}
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		tk := time.NewTicker(every)
 		defer tk.Stop()
 		for {
@@ -229,4 +254,5 @@ func (o *Orchestrator) StartHoldWatcher(ctx context.Context, every time.Duration
 			}
 		}
 	}()
+	return done
 }

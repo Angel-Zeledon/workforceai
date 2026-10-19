@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"time"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
@@ -51,7 +52,30 @@ func wireOrgChart(pg *postgres.Store, store application.Store, authStore auth.St
 	}
 	orch.SetDelegation(svc.Checker()) // delegation rules (organization.md, section 3)
 	svc.OnChange = orch.WakeHeld      // an edited schedule or rule releases held work at once
-	orch.SetHoldStore(&application.MemoryHolds{})
+	orch.SetHoldStore(holdStoreFor(pg))
 	orch.SetTaskGate(orgchart.TaskGate{Inner: inner, Svc: svc})
 	return svc
+}
+
+// holdStoreFor picks the store of schedule holds: Postgres (migration 760) when there is a database, memory
+// otherwise (the holds then do not survive a restart).
+func holdStoreFor(pg *postgres.Store) application.HoldStore {
+	if pg != nil {
+		return &postgres.HoldStore{S: pg}
+	}
+	return &application.MemoryHolds{}
+}
+
+// startHoldWatcher resumes, every 30 s, the held tasks whose opening passed with nobody running them (the
+// process restarted across the opening). Organizations are listed on each pass, so new ones are included.
+// The returned channel closes when the watcher stopped (ctx ended).
+func startHoldWatcher(ctx context.Context, orch *application.Orchestrator, store application.Store, every time.Duration) <-chan struct{} {
+	return orch.StartHoldWatcher(ctx, every, func() []string {
+		if l, ok := store.(application.OrgLister); ok {
+			if ids, err := l.ListOrgIDs(ctx); err == nil {
+				return ids
+			}
+		}
+		return nil
+	})
 }

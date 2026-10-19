@@ -374,6 +374,7 @@ func (o *Orchestrator) Recover(ctx context.Context, orgs []string) (int, error) 
 // returns true when a run was started (the run untracks itself).
 func (o *Orchestrator) recoverRequest(ctx context.Context, req domain.Request) bool {
 	org := o.org(ctx)
+	o.holdReleaseRequest(ctx, req.ID) // the resumed run records its holds again if the gate still holds it
 	rs, err := o.rebuildRun(ctx, req)
 	if err != nil {
 		o.log.Warn("recover request", "request", req.ID, "err", err)
