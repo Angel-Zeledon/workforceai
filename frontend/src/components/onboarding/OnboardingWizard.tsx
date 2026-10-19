@@ -6,6 +6,8 @@ import { browserTimeZone, orgApi, type OnboardResult, type OnboardingPack, type 
 import { Modal } from "@/components/templates/Modal";
 import { BriefingFields, type BriefingValue } from "./BriefingFields";
 import { ToneSelect } from "./ToneSelect";
+import { IndustryField } from "./IndustryField";
+import { orgChartApi } from "@/lib/orgChartApi";
 
 const STEPS = 3;
 
@@ -22,6 +24,8 @@ export function OnboardingWizard({ onClose, onDone }: { onClose: () => void; onD
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OnboardResult | null>(null);
+  const [industry, setIndustry] = useState(""); // optional company template (organization model)
+  const [industryFailed, setIndustryFailed] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -42,6 +46,9 @@ export function OnboardingWizard({ onClose, onDone }: { onClose: () => void; onD
         pack_key: packKey, locale, tone,
         briefing: { enabled: brief.enabled, hour: brief.hour, minute: brief.minute, timezone: brief.timezone || "UTC", weekdays: brief.weekdays },
       });
+      // >>> org: the optional company template never blocks the wizard
+      if (industry) { try { await orgChartApi.applyIndustry(industry, { locale }); } catch { setIndustryFailed(true); } }
+      // <<< org
       setResult(r);
       onDone(r);
     } catch (e) {
@@ -55,6 +62,7 @@ export function OnboardingWizard({ onClose, onDone }: { onClose: () => void; onD
       <Modal title={t("onb.done.title")} onClose={onClose} testid="onb-wizard">
         <p data-testid="onb-done" className="mb-4 text-sm">{t("onb.done.body", { agents: result.agents_configured.length, memory: result.memory_seeded })}</p>
         {result.schedule && <p className="mb-4 text-sm text-mute">{t("onb.done.briefing")}</p>}
+        {industryFailed && <p role="status" data-testid="onb-industry-failed" className="mb-4 text-sm text-amber-700">{t("org.onb.industryFailed")}</p>}
         <div className="flex justify-end"><button type="button" data-testid="onb-done-close" onClick={onClose} className="rounded-md bg-accent px-5 py-2 text-xs font-semibold text-white">{t("common.close")}</button></div>
       </Modal>
     );
@@ -119,6 +127,7 @@ export function OnboardingWizard({ onClose, onDone }: { onClose: () => void; onD
           </label>
           {brief.enabled && <BriefingFields value={brief} onChange={setBrief} />}
           {pack && <p className="text-[11px] text-mute">{t("onb.pack.recommendedHint", { count: pack.templates.length })}</p>}
+          <IndustryField value={industry} onChange={setIndustry} locale={locale} />
         </div>
       )}
 

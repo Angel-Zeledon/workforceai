@@ -5,6 +5,7 @@ import { trOr } from "@/lib/i18n-core";
 import { orgApi, type WorkflowTemplate } from "@/lib/orgConfigApi";
 import { Modal } from "./Modal";
 import { TemplateRunDialog } from "./TemplateRunDialog";
+import { IndustryTemplates } from "./IndustryTemplates";
 
 /** Gallery of workflow templates (data served by GET /workflow-templates). */
 export function TemplateGallery({ onClose, onStarted }: { onClose: () => void; onStarted?: () => void }) {
@@ -15,6 +16,7 @@ export function TemplateGallery({ onClose, onStarted }: { onClose: () => void; o
   const [category, setCategory] = useState("all");
   const [selected, setSelected] = useState<WorkflowTemplate | null>(null);
   const [started, setStarted] = useState(false);
+  const [view, setView] = useState<"workflows" | "industries">("workflows");
 
   useEffect(() => {
     let alive = true;
@@ -30,6 +32,16 @@ export function TemplateGallery({ onClose, onStarted }: { onClose: () => void; o
   return (
     <>
       <Modal title={t("tpl.title")} onClose={onClose} testid="wf-template-gallery" wide>
+        {/* >>> org: Workflows | Industries switch */}
+        <div role="tablist" aria-label={t("tpl.title")} className="mb-4 flex gap-1.5">
+          {(["workflows", "industries"] as const).map((v) => (
+            <button key={v} type="button" role="tab" aria-selected={view === v} data-testid={`tpl-view-${v}`} onClick={() => setView(v)}
+              className={`rounded-md border px-3 py-1 text-[12px] font-semibold ${view === v ? "border-accent/30 bg-accent-soft text-accent" : "border-line text-mute hover:text-ink"}`}>{t(`org.tpl.view.${v}`)}</button>
+          ))}
+        </div>
+        {view === "industries" && <IndustryTemplates />}
+        {/* <<< org */}
+        <div hidden={view !== "workflows"}>
         <p className="mb-4 text-sm text-mute">{t("tpl.subtitle")}</p>
         {started && <div role="status" data-testid="wf-template-started" className="mb-3 rounded-xl border border-emerald-400/50 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700">{t("tpl.run.started")}</div>}
         <div className="mb-4 flex flex-wrap gap-1.5" role="tablist" aria-label={t("tpl.title")}>
@@ -60,6 +72,7 @@ export function TemplateGallery({ onClose, onStarted }: { onClose: () => void; o
             </li>
           ))}
         </ul>
+        </div>
       </Modal>
       {selected && (
         <TemplateRunDialog template={selected} onClose={() => setSelected(null)}
