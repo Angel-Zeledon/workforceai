@@ -23,6 +23,8 @@ type Config struct {
 	Tasks      TaskMaker
 	Files      FileSaver
 	Agents     Agents
+	// People lists the members of the organization for the attendee picker (optional).
+	People People
 	// Audit records who did what (ids and counts only, never notes or minutes text).
 	Audit func(ctx context.Context, org, actor, action, entity, id string, details map[string]any)
 	// Emit tells the UI something changed.

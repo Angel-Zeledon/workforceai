@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+
 	"aiworkforce/backend/internal/events"
 )
 
@@ -20,6 +22,15 @@ type Config struct {
 	ExitRadius      float64       // distance at which they stop being near (default 3.2 m)
 	Bounds          Bounds
 	Now             func() time.Time
+	// LeaveGrace is how long the last socket of a person may be gone before presence.left is announced; a
+	// reconnect inside it (the websocket is renewed every WSMaxAge) is invisible to the others. Default 8s,
+	// negative disables the grace (immediate leave).
+	LeaveGrace time.Duration
+	// Registry is the directory shared by the replicas (nil: this replica only). Replica identifies this process in it.
+	Registry Registry
+	Replica  string
+	// SyncEvery is how often the live entries are refreshed in the registry (default 10s; its TTL must be larger).
+	SyncEvery time.Duration
 }
 
 func (c *Config) defaults() {
@@ -43,6 +54,15 @@ func (c *Config) defaults() {
 	}
 	if c.Now == nil {
 		c.Now = time.Now
+	}
+	if c.LeaveGrace == 0 {
+		c.LeaveGrace = 8 * time.Second
+	}
+	if c.SyncEvery <= 0 {
+		c.SyncEvery = 10 * time.Second
+	}
+	if c.Replica == "" {
+		c.Replica = uuid.NewString()
 	}
 }
 
@@ -78,6 +98,8 @@ type entry struct {
 	sentX, sentZ float64
 	dirty        bool
 	near         map[string]bool
+	// leaveAt: the last socket is gone and the leave is announced at this time unless the person reconnects
+	leaveAt time.Time
 }
 
 // Hub is the registry of people online, one namespace per organization.
@@ -90,6 +112,8 @@ type Hub struct {
 
 	hookMu sync.RWMutex
 	hook   func(org string, p Proximity)
+
+	lastSync time.Time
 }
 
 // New builds a hub that publishes its events through pub (the same bus as the rest of the system).
@@ -150,6 +174,7 @@ func (h *Hub) Join(org, user, name string) Person {
 	}
 	e.conns++
 	e.lastActive = now
+	e.leaveAt = time.Time{} // a reconnect inside the grace period cancels the pending leave: nobody sees a flicker
 	var evs []outEvent
 	if first {
 		e.sentAt, e.sentX, e.sentZ = now, e.p.X, e.p.Z
@@ -160,15 +185,18 @@ func (h *Hub) Join(org, user, name string) Person {
 	p := e.p
 	h.mu.Unlock()
 	h.emit(org, evs, nil)
+	h.regPut(org, p)
 	return p
 }
 
-// Leave unregisters one socket; the last one removes the person, announces presence.left and ends their proximities.
+// Leave unregisters one socket. When the last one goes, the person stays visible for LeaveGrace (so a websocket
+// reconnect does not flicker leave/join); Sweep then removes them, announces presence.left and ends their
+// proximities. With the grace disabled the removal is immediate.
 func (h *Hub) Leave(org, user string) {
+	now := h.cfg.Now()
 	h.mu.Lock()
-	users := h.orgs[org]
-	e := users[user]
-	if e == nil {
+	e := h.orgs[org][user]
+	if e == nil || e.conns <= 0 {
 		h.mu.Unlock()
 		return
 	}
@@ -177,6 +205,20 @@ func (h *Hub) Leave(org, user string) {
 		h.mu.Unlock()
 		return
 	}
+	if h.cfg.LeaveGrace > 0 {
+		e.leaveAt = now.Add(h.cfg.LeaveGrace)
+		h.mu.Unlock()
+		return
+	}
+	evs, hooks := h.remove(org, user, e)
+	h.mu.Unlock()
+	h.finishLeave(org, user, evs, hooks)
+}
+
+// remove deletes e and ends its proximities (lock held). The presence.left event is added by finishLeave, which
+// first asks the registry whether another replica still holds the person.
+func (h *Hub) remove(org, user string, e *entry) ([]outEvent, []Proximity) {
+	users := h.orgs[org]
 	delete(users, user)
 	var evs []outEvent
 	var hooks []Proximity
@@ -191,8 +233,15 @@ func (h *Hub) Leave(org, user string) {
 	if len(users) == 0 {
 		delete(h.orgs, org)
 	}
-	evs = append(evs, outEvent{events.EvPresenceLeft, map[string]string{"user_id": user}})
-	h.mu.Unlock()
+	return evs, hooks
+}
+
+// finishLeave runs outside the lock: it drops the registry entry and announces presence.left unless the person is
+// still connected through another replica.
+func (h *Hub) finishLeave(org, user string, evs []outEvent, hooks []Proximity) {
+	if !h.stillElsewhere(org, user) {
+		evs = append(evs, outEvent{events.EvPresenceLeft, map[string]string{"user_id": user}})
+	}
 	h.emit(org, evs, hooks)
 }
 
@@ -355,10 +404,20 @@ func (h *Hub) Sweep() {
 		hooks []Proximity
 	}
 	var out []batch
+	type gone struct {
+		org, user string
+		b         batch
+	}
+	var leaving []gone
 	h.mu.Lock()
 	for org, users := range h.orgs {
 		b := batch{org: org}
-		for _, e := range users {
+		for id, e := range users {
+			if e.conns <= 0 && !e.leaveAt.IsZero() && !now.Before(e.leaveAt) {
+				evs, hk := h.remove(org, id, e)
+				leaving = append(leaving, gone{org: org, user: id, b: batch{org: org, evs: evs, hooks: hk}})
+				continue
+			}
 			if e.dirty && now.Sub(e.sentAt) >= h.cfg.MoveMinInterval {
 				evs, hk := h.flush(org, e, now)
 				b.evs, b.hooks = append(b.evs, evs...), append(b.hooks, hk...)
@@ -378,6 +437,10 @@ func (h *Hub) Sweep() {
 	for _, b := range out {
 		h.emit(b.org, b.evs, b.hooks)
 	}
+	for _, g := range leaving {
+		h.finishLeave(g.org, g.user, g.b.evs, g.b.hooks)
+	}
+	h.syncRegistry(now)
 }
 
 // Run sweeps until ctx ends.
@@ -394,13 +457,22 @@ func (h *Hub) Run(ctx context.Context) {
 	}
 }
 
-// Snapshot lists the people online in org (never another organization's), ordered by name.
+// Snapshot lists the people online in org (never another organization's), ordered by name. With a shared registry
+// it also lists the people connected through other replicas.
 func (h *Hub) Snapshot(org string) []Person {
 	h.mu.Lock()
-	defer h.mu.Unlock()
 	out := make([]Person, 0, len(h.orgs[org]))
+	have := map[string]bool{}
 	for _, e := range h.orgs[org] {
 		out = append(out, e.p)
+		have[e.p.UserID] = true
+	}
+	h.mu.Unlock()
+	for _, r := range h.remotes(org) {
+		if !have[r.Person.UserID] {
+			have[r.Person.UserID] = true
+			out = append(out, r.Person)
+		}
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Name != out[j].Name {
@@ -411,11 +483,103 @@ func (h *Hub) Snapshot(org string) []Person {
 	return out
 }
 
-// Online reports whether user has a socket in org.
+// Online reports whether user has a socket in org (on this replica or, with a registry, on another one).
 func (h *Hub) Online(org, user string) bool {
 	h.mu.Lock()
-	defer h.mu.Unlock()
-	return h.orgs[org][user] != nil
+	local := h.orgs[org][user] != nil
+	h.mu.Unlock()
+	if local {
+		return true
+	}
+	for _, r := range h.remotes(org) {
+		if r.Person.UserID == user {
+			return true
+		}
+	}
+	return false
+}
+
+// ---- shared registry (best effort: a registry failure never breaks presence, it degrades to this replica) ----
+
+func (h *Hub) regCtx() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 2*time.Second)
+}
+
+func (h *Hub) regPut(org string, p Person) {
+	if h.cfg.Registry == nil {
+		return
+	}
+	ctx, cancel := h.regCtx()
+	defer cancel()
+	_ = h.cfg.Registry.Put(ctx, org, h.cfg.Replica, p)
+}
+
+// remotes lists the registry entries held by OTHER replicas.
+func (h *Hub) remotes(org string) []Remote {
+	if h.cfg.Registry == nil {
+		return nil
+	}
+	ctx, cancel := h.regCtx()
+	defer cancel()
+	list, err := h.cfg.Registry.List(ctx, org)
+	if err != nil {
+		return nil
+	}
+	out := list[:0]
+	for _, r := range list {
+		if r.Replica != h.cfg.Replica {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// stillElsewhere: another replica holds user (also drops this replica's own entry when the person is gone here).
+func (h *Hub) stillElsewhere(org, user string) bool {
+	if h.cfg.Registry == nil {
+		return false
+	}
+	h.mu.Lock()
+	local := h.orgs[org][user] != nil
+	h.mu.Unlock()
+	if !local {
+		ctx, cancel := h.regCtx()
+		_ = h.cfg.Registry.Delete(ctx, org, h.cfg.Replica, user)
+		cancel()
+	}
+	for _, r := range h.remotes(org) {
+		if r.Person.UserID == user {
+			return true
+		}
+	}
+	return false
+}
+
+// syncRegistry refreshes the TTL of every live local entry, at most every SyncEvery.
+func (h *Hub) syncRegistry(now time.Time) {
+	if h.cfg.Registry == nil {
+		return
+	}
+	h.mu.Lock()
+	if now.Sub(h.lastSync) < h.cfg.SyncEvery {
+		h.mu.Unlock()
+		return
+	}
+	h.lastSync = now
+	type row struct {
+		org string
+		p   Person
+	}
+	var rows []row
+	for org, users := range h.orgs {
+		for _, e := range users {
+			rows = append(rows, row{org, e.p})
+		}
+	}
+	h.mu.Unlock()
+	for _, r := range rows {
+		h.regPut(r.org, r.p)
+	}
 }
 
 func round2(v float64) float64 { return float64(int(v*100+sign(v)*0.5)) / 100 }

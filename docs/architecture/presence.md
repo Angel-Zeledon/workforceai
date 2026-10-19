@@ -38,7 +38,7 @@ Paquete `backend/internal/peoplechat`, migracion `730_people_chat.sql` (down en 
 - **Miembros** (`pc_members`): personas **y agentes**. `last_read_seq` por miembro. El canal `org` es implicito para toda persona (la fila con el marcador se crea al primer acceso).
 - **Mensajes** (`pc_messages`): solo `INSERT` para la aplicacion (sin editar ni borrar). `seq` por canal se reparte con `UPDATE ... last_seq+1` en la misma transaccion.
 - **No leidos**: `unread = last_seq - last_read_seq`; `mentions_unread` cuenta los mensajes ajenos que te mencionan. Escribir en un canal avanza tu marcador. Frontend: `chats/peopleLogic.ts` (idempotente por `seq`, el canal abierto y enfocado se lee al llegar).
-- **Menciones**: `@nombre.apellido`, `@nombre_apellido`, `@id`, o el nombre solo si es inequivoco; sin acentos ni mayusculas; un correo no es mencion. Se resuelven contra los miembros del canal (en `org`: el directorio). Un agente miembro mencionado dispara `Service.OnAgentMention` (punto de enlace con el orquestador; sin cablear todavia) y puede responder con `PostAsAgent`.
+- **Menciones**: `@nombre.apellido`, `@nombre_apellido`, `@id`, o el nombre solo si es inequivoco; sin acentos ni mayusculas; un correo no es mencion. Se resuelven contra los miembros del canal (en `org`: el directorio). Un agente miembro mencionado dispara `Service.OnAgentMention` (cableado en `cmd/server/people.go` con `peoplechat.MentionResponder`: una respuesta corta con tope de coste via `Orchestrator.PeopleChatReply`, limitada por canal; un mensaje de agente nunca dispara a otro) y puede responder con `PostAsAgent`.
 
 ### Permisos (`rules.go`, probados en `peoplechat_test.go`)
 
@@ -73,9 +73,9 @@ Un canal ajeno responde 404 (no se revela que existe). Un viewer solo lee. Un ad
 
 ## 5. Pendiente / limites conocidos
 
-- Con varias replicas el estado de presencia es por replica (los eventos si viajan por Redis): falta un registro compartido (hash con TTL en Redis).
-- Al reconectar el socket (cada `WSMaxAge`) hay un `left`/`joined` breve; conviene un periodo de gracia en `Leave`.
+- Con Redis el estado de presencia se comparte entre replicas (`presence.RedisRegistry`); sin Redis es por replica.
+- Periodo de gracia en `Leave` (`PRESENCE_LEAVE_GRACE`, p. ej. `8s`; `-1s` lo desactiva) para no emitir `left`/`joined` al reconectar el socket.
 - Los avatares no esquivan muebles (solo el limite del suelo); `editorWorld.ts` tiene las huellas para colisiones.
-- El stream de llamada (voz/video) y el cableado de `OnAgentMention` con el orquestador.
+- El stream de llamada (voz/video).
 - Insignia de no leidos en la navegacion principal (`usePeopleUnread` ya la expone).
 - Persistir el estado elegido entre sesiones y respetar horarios (calendario).

@@ -53,6 +53,7 @@ func (s *server) mountMeetings(r chi.Router) {
 	r.With(read).Get("/meetings", s.listMeetings)
 	r.With(write).Post("/meetings", s.createMeeting)
 	r.With(read).Get("/meetings/rooms", s.meetingRooms)
+	r.With(read).Get("/meetings/directory", s.meetingDirectory)
 	r.With(read).Get("/meetings/settings", s.getMeetingSettings)
 	r.With(s.can(auth.PermOrgManage)).Put("/meetings/settings", s.putMeetingSettings)
 	r.With(s.can(auth.PermConnectionsRead)).Get("/meetings/calendars", s.meetingCalendars)
