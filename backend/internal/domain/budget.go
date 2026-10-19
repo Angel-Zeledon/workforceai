@@ -27,6 +27,8 @@ const (
 	ScopeOrg     BudgetScope = "org"
 	ScopeRequest BudgetScope = "request"
 	ScopeAgent   BudgetScope = "agent"
+	// ScopeDepartment is the monthly spend limit of a department (governance department_limits).
+	ScopeDepartment BudgetScope = "department"
 )
 
 // UsageKind is the kind of runtime call a usage entry records.

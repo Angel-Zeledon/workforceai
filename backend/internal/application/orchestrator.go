@@ -58,6 +58,11 @@ type Orchestrator struct {
 
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
 
+	// >>> organization model hooks (delegation_hook.go, hold.go, escalation_hook.go): optional, zero value = off
+	hooks delegationHooks
+	hold  holdState
+	// <<<
+
 	queue      orgQueue        // per-org slots for runtime calls (orgqueue.go)
 	queuedMu   sync.Mutex      // guards queuedSeen
 	queuedSeen map[string]bool // requests already announced as queued
@@ -137,6 +142,15 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	agents, err := o.store.ListAgents(ctx, o.org(ctx))
 	if err != nil {
 		return "", err
+	}
+	if preset != nil && o.hooks.deleg != nil { // delegation rules: a preset plan (/assign, projects, meetings) is refused up front
+		known := make(map[string]domain.Agent, len(agents))
+		for _, a := range agents {
+			known[a.ID] = a
+		}
+		if err := o.checkPlanDelegation(ctx, ActorFrom(ctx, ""), known, *preset); err != nil {
+			return "", err
+		}
 	}
 	now := time.Now().UTC()
 	req := domain.Request{ID: newID(), Text: text, Status: domain.RequestPlanning, CreatedAt: now}
@@ -391,6 +405,9 @@ func (o *Orchestrator) createTasks(ctx context.Context, rs *run, plan PlanRespon
 		}
 	}
 
+	if err := o.checkPlanDelegation(ctx, rs.requestedBy, rs.agents, plan); err != nil { // delegation rules (delegation_hook.go)
+		return nil, err
+	}
 	now := time.Now().UTC()
 	tasks := make([]domain.Task, 0, len(plan.Tasks))
 	for _, pt := range plan.Tasks {
@@ -418,6 +435,9 @@ func (o *Orchestrator) createTasks(ctx context.Context, rs *run, plan PlanRespon
 		}
 		rs.touch(agent)
 		tasks = append(tasks, t)
+		if o.hooks.deleg != nil { // audit the decision of every task (a denial never gets here)
+			_, _ = o.enforceDelegation(ctx, rs.requestedBy, rs.agents, agent, "task", t.ID, true)
+		}
 	}
 	if err := o.store.UpdateRequest(ctx, o.org(ctx), rs.req); err != nil {
 		return nil, err
@@ -452,6 +472,9 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 
 	if !o.admitTask(ctx, rs, t) {
 		return OutcomeFailed // kill switch / pause never released before shutdown
+	}
+	if out, handled := o.delegationApproval(ctx, rs, t); handled {
+		return out // the rule of the delegation asks a named approver first (delegation_hook.go)
 	}
 	if out, handled := o.projectGate(ctx, rs, t); handled {
 		return out // project paused/cancelled, human gate or milestone (projects_hooks.go)
@@ -667,6 +690,10 @@ func (o *Orchestrator) handleConsults(ctx context.Context, rs *run, t *domain.Ta
 		if t.Depth+1 > o.cfg.MaxDepth {
 			o.rec.Audit(ctx, domain.AuditLog{Actor: from.ID, Action: "delegation.depth_exceeded", Entity: "task", EntityID: t.ID,
 				Details: map[string]any{"to": to.ID, "depth": t.Depth + 1, "max": o.cfg.MaxDepth}})
+			continue
+		}
+		if _, derr := o.enforceDelegation(ctx, from.ID, rs.agents, to.ID, "task", t.ID, true); derr != nil { // agent to agent (delegation_hook.go)
+			o.rec.Audit(ctx, domain.AuditLog{Actor: from.ID, Action: "consult.rejected", Entity: "task", EntityID: t.ID, Details: map[string]any{"to": to.ID, "reason": "delegation"}})
 			continue
 		}
 		rs.touch(to.ID)
@@ -980,7 +1007,7 @@ func (o *Orchestrator) failTask(ctx context.Context, rs *run, t domain.Task, cau
 	o.setState(ctx, t.AgentID, domain.StateError, "Error: "+truncate(cause.Error(), 120), &tid, 0)
 	o.reportError(ctx, t.AgentID, fmt.Sprintf("la tarea %q falló: %v", t.Title, cause))
 	o.rec.Emit(ctx, Action{Type: domain.EvTaskFailed, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
-		Payload: map[string]any{"task": t}, Text: fmt.Sprintf("Tarea fallida: %s", t.Title)})
+		Payload: map[string]any{"task": t, "error": truncate(cause.Error(), 300)}, Text: fmt.Sprintf("Tarea fallida: %s", t.Title)})
 	o.emitMetrics(ctx)
 }
 

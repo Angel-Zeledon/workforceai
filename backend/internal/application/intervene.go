@@ -285,6 +285,9 @@ func (o *Orchestrator) Reassign(ctx context.Context, taskID, agentID string) (do
 	if err := o.canTake(ctx, t, a); err != nil {
 		return t, err
 	}
+	if _, err := o.enforceDelegation(ctx, ActorFrom(ctx, ""), o.agentMap(ctx), a.ID, "task", t.ID, true); err != nil { // delegation rules
+		return t, err
+	}
 	from := t.AgentID
 	actor := ActorFrom(ctx, "user")
 	t.AgentID = a.ID
@@ -320,4 +323,15 @@ func (o *Orchestrator) withRouteSkills(ctx context.Context, agents []RouteAgent)
 		agents[i].Skills = skills[agents[i].ID]
 	}
 	return agents
+}
+
+// agentMap lists the agents of the organization by id (delegation_hook.go).
+func (o *Orchestrator) agentMap(ctx context.Context) map[string]domain.Agent {
+	out := map[string]domain.Agent{}
+	if as, err := o.store.ListAgents(ctx, o.org(ctx)); err == nil {
+		for _, a := range as {
+			out[a.ID] = a
+		}
+	}
+	return out
 }

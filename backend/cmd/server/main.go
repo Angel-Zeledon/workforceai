@@ -261,7 +261,7 @@ func run(log *slog.Logger) error {
 	deps.OrgChart = orgChartSvc // corporate organization model
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	// Governance: API tokens, reports, retention job, webhooks (internal/governance, internal/webhooks).
-	wireGovernance(ctx, log, pg, store, rec, auditSvc, cw.vault, whSvc, &deps)
+	wireGovernance(ctx, log, pg, store, rec, auditSvc, orch, cw.vault, whSvc, &deps)
 	if cfg.AuthEnabled {
 		if strings.HasPrefix(cfg.JWTSecret, "dev-only-insecure") {
 			log.Warn("JWT_SECRET is the local development default from docker-compose.yml: set your own secret before exposing this server")

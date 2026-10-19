@@ -44,6 +44,8 @@ type Handler struct {
 	// Policies returns the read-only policy overview shown in the console (approval rules, model policy...).
 	Policies func(ctx context.Context, org string) (map[string]any, error)
 	Now      func() time.Time
+	// OnLimitChange (optional) is called after a department limit changed (wakes the calls paused on it).
+	OnLimitChange func()
 }
 
 func (h *Handler) now() time.Time {
@@ -229,6 +231,9 @@ func (h *Handler) putDepartmentLimit(w http.ResponseWriter, r *http.Request) {
 	if err := h.Admin.SetDepartmentLimit(r.Context(), h.Env.Org(r), d, body.MonthlyUSD, h.Env.Actor(r)); err != nil {
 		h.fail(w, err)
 		return
+	}
+	if h.OnLimitChange != nil {
+		h.OnLimitChange()
 	}
 	h.audit(r, "governance.department_limit_set", "department", d, map[string]any{"monthly_usd": body.MonthlyUSD})
 	writeJSON(w, 200, map[string]any{"department": d, "monthly_usd": body.MonthlyUSD})

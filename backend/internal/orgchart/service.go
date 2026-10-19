@@ -59,9 +59,13 @@ type Service struct {
 	Audit      func(ctx context.Context, a domain.AuditLog)
 	DefaultOrg string
 	Now        func() time.Time
+	// OnChange (optional) is called after the model changed in a way that can release held work (a
+	// schedule or a rule was edited): the orchestrator asks its gates again at once (application.WakeHeld).
+	OnChange func()
 
 	mu    sync.Mutex
 	cache map[string]jobCache
+	snaps map[string]snapshot // delegation lookups (enforce.go)
 }
 
 type jobCache struct {
@@ -102,7 +106,11 @@ func (s *Service) writer() (AgentWriter, error) {
 func (s *Service) invalidate(org string) {
 	s.mu.Lock()
 	delete(s.cache, org)
+	delete(s.snaps, org)
 	s.mu.Unlock()
+	if s.OnChange != nil {
+		s.OnChange()
+	}
 }
 
 // ---- people ----
@@ -243,6 +251,7 @@ func (s *Service) putDepartment(ctx context.Context, id string, in DepartmentInp
 	if err := s.Store.PutDepartment(ctx, org, d); err != nil {
 		return Department{}, err
 	}
+	s.invalidate(org)
 	if cur != nil && cur.Name != d.Name {
 		if err := s.retag(ctx, id, &d.Name); err != nil {
 			return Department{}, err
@@ -615,6 +624,7 @@ func (s *Service) PutPlacement(ctx context.Context, userID string, in PlacementI
 	if err := s.Store.PutPlacement(ctx, org, p); err != nil {
 		return Placement{}, err
 	}
+	s.invalidate(org)
 	s.audit(ctx, "person.placed", "person", userID, map[string]any{"department_id": p.DepartmentID, "title": title, "reports_to": in.ReportsTo.Key()})
 	return p, nil
 }
@@ -685,7 +695,11 @@ func (g TaskGate) GateTask(ctx context.Context, org string, t domain.Task) appli
 		if av.NextOpen != nil {
 			reason += " (next window " + av.NextOpen.Format(time.RFC3339) + ")"
 		}
-		return application.GateDecision{Action: application.GateHold, Reason: reason}
+		d := application.GateDecision{Action: application.GateHold, Reason: reason}
+		if av.NextOpen != nil {
+			d.Until = *av.NextOpen
+		}
+		return d
 	}
 	return d
 }
