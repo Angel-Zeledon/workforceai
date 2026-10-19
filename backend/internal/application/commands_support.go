@@ -170,7 +170,7 @@ func (o *Orchestrator) Summarize(ctx context.Context, agentID string, in Summari
 	if !ok {
 		return SummaryResult{Text: LocalSummary(in), Source: "local"}, nil
 	}
-	res, ex := o.chatReserve(ctx, agentID)
+	res, ex := o.chatReserve(ctx, agentID, UsageSummarize, in)
 	if ex != nil {
 		return SummaryResult{}, ex
 	}

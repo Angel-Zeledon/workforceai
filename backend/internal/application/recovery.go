@@ -31,6 +31,48 @@ var ErrNonRetryable = errors.New("non-retryable")
 // top up the account or choose another model in Settings -> AI model.
 var ErrProviderNoBalance = errors.New("el proveedor de IA se quedó sin saldo")
 
+// ErrCallBudgetExceeded: the runtime's pre-call guard refused the call (HTTP 402 call_budget_exceeded): its
+// worst case was above the allowance the backend gave it, and nothing was sent to the model. Match it with
+// errors.Is; errors.As(*RuntimeError) gives the numbers.
+var ErrCallBudgetExceeded = errors.New("la llamada superaba el tope de presupuesto y no se envió")
+
+// Stable codes of the runtime error body ({"detail": {"code": ...}}) the backend acts on.
+const (
+	RuntimeCodeCallBudget = "call_budget_exceeded"
+	RuntimeCodeNoBalance  = "provider_no_balance"
+)
+
+// RuntimeError is a non-2xx answer of the agent-runtime. Errors.Is works against ErrNonRetryable (4xx other
+// than 408/429), ErrProviderNoBalance and ErrCallBudgetExceeded, chosen from the stable machine code of the
+// body, never from message text.
+type RuntimeError struct {
+	Path   string
+	Status int
+	Code   string // detail.code of the body ("" when the body has none)
+	Body   string // truncated body, for logs
+	// Call-budget numbers (only for RuntimeCodeCallBudget, zero otherwise).
+	EstimatedUSD, AllowanceUSD float64
+}
+
+func (e *RuntimeError) Error() string {
+	return fmt.Sprintf("runtime %s: status %d: %s", e.Path, e.Status, e.Body)
+}
+
+// Unwrap lets errors.Is reach the sentinels.
+func (e *RuntimeError) Unwrap() []error {
+	var out []error
+	if sc := e.Status; sc >= 400 && sc < 500 && sc != 408 && sc != 429 {
+		out = append(out, ErrNonRetryable) // retrying the same request cannot help
+	}
+	switch e.Code {
+	case RuntimeCodeNoBalance:
+		out = append(out, ErrProviderNoBalance)
+	case RuntimeCodeCallBudget:
+		out = append(out, ErrCallBudgetExceeded)
+	}
+	return out
+}
+
 // retryableTaskErr: a transient runtime failure (error, timeout, invalid
 // structured output) is retried; budget caps, cancellation and permanent
 // request errors are not.

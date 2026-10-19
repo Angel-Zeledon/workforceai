@@ -395,6 +395,8 @@ type Usage struct {
 	Provider     string  `json:"provider,omitempty"`
 	InputTokens  int     `json:"input_tokens"`
 	OutputTokens int     `json:"output_tokens"`
+	// CachedTokens (additive): the part of InputTokens served from the provider's prompt cache.
+	CachedTokens int     `json:"cached_tokens,omitempty"`
 	CostUSD      float64 `json:"cost_usd"`
 	DurationMS   int     `json:"duration_ms"`
 }

@@ -104,14 +104,7 @@ func (c *Client) do(ctx context.Context, method, path string, in, out any) error
 		return fmt.Errorf("runtime %s: %w", path, err)
 	}
 	if resp.StatusCode/100 != 2 {
-		err := fmt.Errorf("runtime %s: status %d: %s", path, resp.StatusCode, truncate(string(data), 300))
-		if sc := resp.StatusCode; sc >= 400 && sc < 500 && sc != http.StatusRequestTimeout && sc != http.StatusTooManyRequests {
-			err = fmt.Errorf("%w: %w", err, application.ErrNonRetryable) // retrying the same request cannot help
-		}
-		if bytes.Contains(data, []byte(`"provider_no_balance"`)) {
-			err = fmt.Errorf("%w: %w", err, application.ErrProviderNoBalance)
-		}
-		return err
+		return parseRuntimeError(path, resp.StatusCode, data)
 	}
 	if out == nil {
 		return nil
@@ -229,6 +222,23 @@ func (c *Client) TestProvider(ctx context.Context, cred application.RuntimeCrede
 	defer cancel()
 	err := c.do(ctx, http.MethodPost, "/v1/provider-test", map[string]any{"credential": cred}, &out)
 	return out, err
+}
+
+// parseRuntimeError turns a non-2xx answer into a typed *application.RuntimeError. The machine code comes from
+// the JSON body ({"detail": {"code": "...", ...}}, FastAPI's shape); the body's text is never matched.
+func parseRuntimeError(path string, status int, data []byte) error {
+	e := &application.RuntimeError{Path: path, Status: status, Body: truncate(string(data), 300)}
+	var b struct {
+		Detail struct {
+			Code         string  `json:"code"`
+			EstimatedUSD float64 `json:"estimated_usd"`
+			AllowanceUSD float64 `json:"allowance_usd"`
+		} `json:"detail"`
+	}
+	if json.Unmarshal(data, &b) == nil {
+		e.Code, e.EstimatedUSD, e.AllowanceUSD = b.Detail.Code, b.Detail.EstimatedUSD, b.Detail.AllowanceUSD
+	}
+	return e
 }
 
 func truncate(s string, n int) string {

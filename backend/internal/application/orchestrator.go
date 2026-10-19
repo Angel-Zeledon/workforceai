@@ -554,9 +554,17 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 		if !ok {
 			return out
 		}
+		o.applyGuidance(ctx, &in) // notes sent while it failed ride on the retry
+		// The retry is a NEW call: size it from its real payload again and refresh the allowance sent to the
+		// runtime, so a retry can never cross the cap the first attempt was checked against.
+		if next, in.MaxCostUSD, err = o.sizeReservation(ctx, rs, t.AgentID, t.ID, domain.UsageRunTask, next, in); err != nil {
+			if ctx.Err() == nil {
+				o.failTask(ctx, rs, t, err)
+			}
+			return OutcomeFailed
+		}
 		res = next
 		attempt++
-		o.applyGuidance(ctx, &in) // notes sent while it failed ride on the retry
 	}
 	o.recordUsage(ctx, rs, t.ID, t.AgentID, domain.UsageRunTask, resp.Usage, resp.ToolRequests, res)
 	resp.Output.Normalize()
@@ -961,14 +969,14 @@ func (o *Orchestrator) failTask(ctx context.Context, rs *run, t domain.Task, cau
 		o.stopForBudget(ctx, rs, t)
 		return
 	}
-	if strings.Contains(cause.Error(), "call_budget_exceeded") { // the runtime's pre-call guard refused it: nothing was spent
+	if errors.Is(cause, ErrCallBudgetExceeded) { // the runtime guard refused it (typed 402): nothing was sent
 		o.stopTask(ctx, rs, t, "call_budget",
 			"la llamada costaría más de lo que permite el tope de presupuesto (se estimó antes de enviarla y no se envió): sube el tope o simplifica la tarea")
 		return
 	}
 	if errors.Is(cause, ErrProviderNoBalance) {
 		o.stopTask(ctx, rs, t, "provider_no_balance",
-			"tu proveedor de IA se quedó sin saldo: recarga la cuenta o elige otro modelo en Ajustes → Modelo de IA (o escribe /modelo); las tareas pendientes quedan en espera")
+			providerNoBalanceMsg)
 		return
 	}
 	fin := time.Now().UTC()

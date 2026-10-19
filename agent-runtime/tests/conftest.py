@@ -13,6 +13,18 @@ os.environ.setdefault("DISABLE_DEFAULT_LLM_KEY", "1")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+# Order-dependent pollution (found with test_byo_llm.py before test_engine_selection.py): importing CrewAI/litellm
+# calls dotenv.load_dotenv(), which walks UP the directory tree, finds a developer's real .env and copies its
+# DEEPSEEK_API_KEY / SIMULATION into os.environ for the rest of the session. A test run must never read a real
+# .env (nor risk a real key), so loading is disabled before anything imports it.
+try:  # pragma: no cover - dotenv is a dependency of crewai/litellm, absent only without them
+    import dotenv
+
+    dotenv.load_dotenv = lambda *a, **k: False
+    dotenv.main.load_dotenv = dotenv.load_dotenv
+except ImportError:
+    pass
+
 from app.main import create_app  # noqa: E402
 from app.simulation import SimulationEngine  # noqa: E402
 
@@ -20,6 +32,15 @@ AGENTS = [
     {"id": i, "role": i, "title": i.title(), "responsibilities": "r"}
     for i in ("sales", "hr", "legal", "accounting", "analyst", "operations", "assistant")
 ]
+
+
+@pytest.fixture(autouse=True)
+def _restore_environ():
+    """Whatever a test (or a lazily imported library) writes to os.environ is undone afterwards."""
+    before = dict(os.environ)
+    yield
+    os.environ.clear()
+    os.environ.update(before)
 
 
 @pytest.fixture

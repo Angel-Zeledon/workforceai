@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"math"
 	"os"
 	"strconv"
@@ -39,7 +40,21 @@ var defaultCallMaxTokens = map[domain.UsageKind]int{
 	domain.UsageSynthesize: 6000,
 	domain.UsageReview:     1500,
 	domain.UsagePlan:       3000,
+	UsagePlanPhases:        2048,
+	UsagePlanPhase:         4096,
+	UsageReplan:            3000,
+	domain.UsageChat:       350,
+	UsageSummarize:         2000,
 }
+
+// Call kinds that have an output cap (same names and defaults as agent-runtime/app/cost_control.py) but are
+// recorded in the ledger as "plan" (planner calls) or "chat".
+const (
+	UsagePlanPhases domain.UsageKind = "plan_phases"
+	UsagePlanPhase  domain.UsageKind = "plan_phase"
+	UsageReplan     domain.UsageKind = "replan"
+	UsageSummarize  domain.UsageKind = "summarize"
+)
 
 // callMaxTokens is the output cap of one call kind (MAX_TOKENS_<KIND>, like the runtime).
 func callMaxTokens(kind domain.UsageKind) int {
@@ -64,7 +79,19 @@ func payloadTokens(payload any) int {
 
 // callEstimateUSD is the worst case of ONE call of this kind with this payload.
 func callEstimateUSD(model string, kind domain.UsageKind, payload any) float64 {
-	return recalcCost(model, payloadTokens(payload)+guardPromptOverheadTokens, callMaxTokens(kind))
+	return recalcCost(model, payloadTokens(payload)+promptOverhead(kind), callMaxTokens(kind))
+}
+
+// promptOverhead is the fixed prompt the runtime adds around the payload for this kind of call. Chat-sized
+// calls (chat, summarize) carry no tool manuals; the planner calls carry the agent list and the planning rules.
+func promptOverhead(kind domain.UsageKind) int {
+	switch kind {
+	case domain.UsageChat, UsageSummarize:
+		return 700
+	case domain.UsagePlan, UsagePlanPhases, UsagePlanPhase, UsageReplan:
+		return 1200
+	}
+	return guardPromptOverheadTokens
 }
 
 // liveEstimate reports whether the request was estimated from tokens (a live runtime). Simulated and fallback
@@ -113,4 +140,19 @@ func (o *Orchestrator) sizeReservation(ctx context.Context, rs *run, agentID, ta
 		res = next
 	}
 	return res, res.Allowance(), nil
+}
+
+// providerNoBalanceMsg is what a person reads when the model provider account has no money left.
+const providerNoBalanceMsg = "tu proveedor de IA se quedó sin saldo: recarga la cuenta o elige otro modelo en Ajustes → Modelo de IA (o escribe /modelo); las tareas pendientes quedan en espera"
+
+// NoteProviderNoBalance tells the UI (event provider.no_balance: the "out of balance" banner) when err is the
+// runtime typed provider_no_balance answer, for calls that belong to no task (chat, project planner), where
+// the failure would otherwise look like a generic error. It reports whether err was that error.
+func (o *Orchestrator) NoteProviderNoBalance(ctx context.Context, agentID string, err error) bool {
+	if !errors.Is(err, ErrProviderNoBalance) {
+		return false
+	}
+	o.rec.Emit(ctx, Action{Type: EvProviderNoBalance, AgentID: agentID, Entity: "org", EntityID: o.org(ctx),
+		Payload: map[string]any{"reason": "provider_no_balance"}, Text: providerNoBalanceMsg})
+	return true
 }

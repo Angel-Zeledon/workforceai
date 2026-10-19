@@ -47,3 +47,25 @@ func TestAllowanceIsTheReservationPlusSlack(t *testing.T) {
 		t.Fatalf("allowance %v", a)
 	}
 }
+
+func TestCachedTokensBillAtTheDiscountedPrice(t *testing.T) {
+	full := recalcCostCached("deepseek-chat", 100000, 0, 1000)
+	cached := recalcCostCached("deepseek-chat", 100000, 80000, 1000)
+	if !(cached < full) {
+		t.Fatalf("cached=%v full=%v", cached, full)
+	}
+	if recalcCost("deepseek-chat", 100000, 1000) != full {
+		t.Fatal("recalcCost must equal the no-cache case")
+	}
+	if recalcCostCached("deepseek-chat", 100, 500, 0) != recalcCostCached("deepseek-chat", 100, 100, 0) {
+		t.Fatal("cached tokens are clamped to the prompt size")
+	}
+}
+
+func TestPlannerCallsAreSizedByKindAndPayload(t *testing.T) {
+	small := callEstimateUSD("deepseek-chat", domain.UsagePlan, map[string]string{"g": "x"})
+	big := callEstimateUSD("deepseek-chat", domain.UsagePlan, map[string]string{"g": strings.Repeat("meta ", 20000)})
+	if !(big > small && small > 0) {
+		t.Fatalf("small=%v big=%v", small, big)
+	}
+}
