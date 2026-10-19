@@ -190,6 +190,9 @@ func run(log *slog.Logger) error {
 	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy)
 	skillsSvc := wireSkills(cfg, log, pg, store, rec, orch, orgCfg, cw, ws.drive)
 	webSvc := wireWeb(log, pg, rec, cw, orch)
+	// >>> corporate organization model (orgchart.go): installed after the projects gate, which it wraps
+	orgChartSvc := wireOrgChart(pg, store, authStore, rec, orch, ws.projects, cfg.App.OrgID)
+	// <<< corporate organization model
 	// Passage index (capability 6): embeddings provider, data policy, budget and locale, then the worker.
 	bindDocIndex(ctx, log, ws.docIndex, store, rec, orch, modelPolicy, llmSvc, orgCfg)
 
@@ -238,6 +241,7 @@ func run(log *slog.Logger) error {
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
 	// GDPR export / deletion of the organization and the purge janitor (internal/tenantdata).
+	deps.OrgChart = orgChartSvc // corporate organization model
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	if cfg.AuthEnabled {
 		if strings.HasPrefix(cfg.JWTSecret, "dev-only-insecure") {

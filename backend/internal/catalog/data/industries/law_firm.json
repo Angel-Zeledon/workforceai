@@ -1,0 +1,900 @@
+{
+  "schema": "aiw.industry_template/1",
+  "key": "law_firm",
+  "version": 1,
+  "category": "professional_services",
+  "name_key": "name",
+  "description_key": "desc",
+  "disclaimer_key": "disclaimer",
+  "subsidiaries": 0,
+  "demo_set": "law_firm",
+  "departments": [
+    {
+      "key": "partners",
+      "name_key": "d_partners",
+      "parent": "",
+      "cost_center": "CC-100",
+      "head": "matter_manager"
+    },
+    {
+      "key": "litigation",
+      "name_key": "d_litigation",
+      "parent": "partners",
+      "cost_center": "CC-200",
+      "head": "litigator"
+    },
+    {
+      "key": "corporate",
+      "name_key": "d_corporate",
+      "parent": "partners",
+      "cost_center": "CC-300",
+      "head": "corp_counsel"
+    },
+    {
+      "key": "compliance",
+      "name_key": "d_compliance",
+      "parent": "partners",
+      "cost_center": "CC-400",
+      "head": "compliance_officer"
+    },
+    {
+      "key": "intake",
+      "name_key": "d_intake",
+      "parent": "partners",
+      "cost_center": "CC-500",
+      "head": "intake_mgr"
+    },
+    {
+      "key": "billing",
+      "name_key": "d_billing",
+      "parent": "partners",
+      "cost_center": "CC-600",
+      "head": "billing_lead"
+    },
+    {
+      "key": "research",
+      "name_key": "d_research",
+      "parent": "partners",
+      "cost_center": "CC-700",
+      "head": "researcher"
+    }
+  ],
+  "agents": [
+    {
+      "key": "matter_manager",
+      "role": "project_manager",
+      "department": "partners",
+      "name_key": "a_matter_manager_name",
+      "title_key": "a_matter_manager_title",
+      "responsibility_keys": [
+        "a_matter_manager_r1",
+        "a_matter_manager_r2",
+        "a_matter_manager_r3",
+        "a_matter_manager_r4"
+      ],
+      "tools": [
+        "fs",
+        "artifacts",
+        "calendar",
+        "docs"
+      ],
+      "reports_to": "owner",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 60,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "litigator",
+      "role": "legal",
+      "department": "litigation",
+      "name_key": "a_litigator_name",
+      "title_key": "a_litigator_title",
+      "responsibility_keys": [
+        "a_litigator_r1",
+        "a_litigator_r2",
+        "a_litigator_r3",
+        "a_litigator_r4"
+      ],
+      "tools": [
+        "fs",
+        "contract_review",
+        "docs"
+      ],
+      "reports_to": "matter_manager",
+      "escalation": "matter_manager",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "19:00"
+      },
+      "budget_usd": 100,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "litigation_assoc",
+      "role": "legal",
+      "department": "litigation",
+      "name_key": "a_litigation_assoc_name",
+      "title_key": "a_litigation_assoc_title",
+      "responsibility_keys": [
+        "a_litigation_assoc_r1",
+        "a_litigation_assoc_r2",
+        "a_litigation_assoc_r3",
+        "a_litigation_assoc_r4"
+      ],
+      "tools": [
+        "fs",
+        "docs"
+      ],
+      "reports_to": "litigator",
+      "escalation": "litigator",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 50,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "corp_counsel",
+      "role": "legal",
+      "department": "corporate",
+      "name_key": "a_corp_counsel_name",
+      "title_key": "a_corp_counsel_title",
+      "responsibility_keys": [
+        "a_corp_counsel_r1",
+        "a_corp_counsel_r2",
+        "a_corp_counsel_r3",
+        "a_corp_counsel_r4"
+      ],
+      "tools": [
+        "fs",
+        "contract_review",
+        "docs"
+      ],
+      "reports_to": "matter_manager",
+      "escalation": "matter_manager",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "budget_usd": 100,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "contract_reviewer",
+      "role": "legal",
+      "department": "corporate",
+      "name_key": "a_contract_reviewer_name",
+      "title_key": "a_contract_reviewer_title",
+      "responsibility_keys": [
+        "a_contract_reviewer_r1",
+        "a_contract_reviewer_r2",
+        "a_contract_reviewer_r3",
+        "a_contract_reviewer_r4"
+      ],
+      "tools": [
+        "fs",
+        "contract_review"
+      ],
+      "reports_to": "corp_counsel",
+      "escalation": "corp_counsel",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "17:00"
+      },
+      "budget_usd": 60,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "compliance_officer",
+      "role": "internal_auditor",
+      "department": "compliance",
+      "name_key": "a_compliance_officer_name",
+      "title_key": "a_compliance_officer_title",
+      "responsibility_keys": [
+        "a_compliance_officer_r1",
+        "a_compliance_officer_r2",
+        "a_compliance_officer_r3",
+        "a_compliance_officer_r4"
+      ],
+      "tools": [
+        "fs_read"
+      ],
+      "reports_to": "matter_manager",
+      "escalation": "owner",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "10:00",
+        "end": "16:00"
+      },
+      "budget_usd": 40,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "intake_mgr",
+      "role": "sales",
+      "department": "intake",
+      "name_key": "a_intake_mgr_name",
+      "title_key": "a_intake_mgr_title",
+      "responsibility_keys": [
+        "a_intake_mgr_r1",
+        "a_intake_mgr_r2",
+        "a_intake_mgr_r3",
+        "a_intake_mgr_r4"
+      ],
+      "tools": [
+        "fs",
+        "crm",
+        "email"
+      ],
+      "reports_to": "matter_manager",
+      "escalation": "matter_manager",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "start": "09:00",
+        "end": "19:00"
+      },
+      "budget_usd": 55,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "billing_lead",
+      "role": "accounting",
+      "department": "billing",
+      "name_key": "a_billing_lead_name",
+      "title_key": "a_billing_lead_title",
+      "responsibility_keys": [
+        "a_billing_lead_r1",
+        "a_billing_lead_r2",
+        "a_billing_lead_r3",
+        "a_billing_lead_r4"
+      ],
+      "tools": [
+        "fs",
+        "ledger",
+        "spreadsheet"
+      ],
+      "reports_to": "matter_manager",
+      "escalation": "matter_manager",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "17:00"
+      },
+      "budget_usd": 50,
+      "autonomy": "approve_each"
+    },
+    {
+      "key": "researcher",
+      "role": "analyst",
+      "department": "research",
+      "name_key": "a_researcher_name",
+      "title_key": "a_researcher_title",
+      "responsibility_keys": [
+        "a_researcher_r1",
+        "a_researcher_r2",
+        "a_researcher_r3",
+        "a_researcher_r4"
+      ],
+      "tools": [
+        "fs",
+        "web"
+      ],
+      "reports_to": "matter_manager",
+      "escalation": "matter_manager",
+      "schedule": {
+        "timezone": "Europe/Madrid",
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "08:00",
+        "end": "18:00"
+      },
+      "budget_usd": 70,
+      "autonomy": "suggest"
+    }
+  ],
+  "delegation": [
+    {
+      "from": "any_agent",
+      "to": "owner",
+      "effect": "allow",
+      "approval": true,
+      "approver": "owner",
+      "note_key": "rule_1"
+    },
+    {
+      "from": "owner",
+      "to": "any_agent",
+      "effect": "allow",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_2"
+    },
+    {
+      "from": "any_agent",
+      "to": "any_agent",
+      "effect": "allow",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_3"
+    },
+    {
+      "from": "dept:intake",
+      "to": "dept:litigation",
+      "effect": "allow",
+      "approval": true,
+      "approver": "matter_manager",
+      "note_key": "rule_4"
+    },
+    {
+      "from": "dept:billing",
+      "to": "dept:litigation",
+      "effect": "deny",
+      "approval": false,
+      "approver": "",
+      "note_key": "rule_5"
+    }
+  ],
+  "projects": [
+    {
+      "key": "litigation_case",
+      "name_key": "p_litigation_case",
+      "description_key": "p_litigation_case_desc",
+      "steps": [
+        {
+          "key": "intake",
+          "title_key": "s_litigation_case_intake",
+          "description_key": "s_litigation_case_intake_d",
+          "agent": "intake_mgr",
+          "depends_on": []
+        },
+        {
+          "key": "research",
+          "title_key": "s_litigation_case_research",
+          "description_key": "s_litigation_case_research_d",
+          "agent": "researcher",
+          "depends_on": [
+            "intake"
+          ]
+        },
+        {
+          "key": "evidence",
+          "title_key": "s_litigation_case_evidence",
+          "description_key": "s_litigation_case_evidence_d",
+          "agent": "litigation_assoc",
+          "depends_on": [
+            "intake"
+          ]
+        },
+        {
+          "key": "draft",
+          "title_key": "s_litigation_case_draft",
+          "description_key": "s_litigation_case_draft_d",
+          "agent": "litigator",
+          "depends_on": [
+            "research",
+            "evidence"
+          ]
+        },
+        {
+          "key": "compliance",
+          "title_key": "s_litigation_case_compliance",
+          "description_key": "s_litigation_case_compliance_d",
+          "agent": "compliance_officer",
+          "depends_on": [
+            "draft"
+          ]
+        },
+        {
+          "key": "plan",
+          "title_key": "s_litigation_case_plan",
+          "description_key": "s_litigation_case_plan_d",
+          "agent": "matter_manager",
+          "depends_on": [
+            "compliance"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "contract_negotiation",
+      "name_key": "p_contract_negotiation",
+      "description_key": "p_contract_negotiation_desc",
+      "steps": [
+        {
+          "key": "scan",
+          "title_key": "s_contract_negotiation_scan",
+          "description_key": "s_contract_negotiation_scan_d",
+          "agent": "contract_reviewer",
+          "depends_on": []
+        },
+        {
+          "key": "precedents",
+          "title_key": "s_contract_negotiation_precedents",
+          "description_key": "s_contract_negotiation_precedents_d",
+          "agent": "researcher",
+          "depends_on": []
+        },
+        {
+          "key": "redline",
+          "title_key": "s_contract_negotiation_redline",
+          "description_key": "s_contract_negotiation_redline_d",
+          "agent": "corp_counsel",
+          "depends_on": [
+            "scan",
+            "precedents"
+          ]
+        },
+        {
+          "key": "ethics",
+          "title_key": "s_contract_negotiation_ethics",
+          "description_key": "s_contract_negotiation_ethics_d",
+          "agent": "compliance_officer",
+          "depends_on": [
+            "redline"
+          ]
+        },
+        {
+          "key": "sign_off",
+          "title_key": "s_contract_negotiation_sign_off",
+          "description_key": "s_contract_negotiation_sign_off_d",
+          "agent": "matter_manager",
+          "depends_on": [
+            "ethics"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "client_intake",
+      "name_key": "p_client_intake",
+      "description_key": "p_client_intake_desc",
+      "steps": [
+        {
+          "key": "enquiry",
+          "title_key": "s_client_intake_enquiry",
+          "description_key": "s_client_intake_enquiry_d",
+          "agent": "intake_mgr",
+          "depends_on": []
+        },
+        {
+          "key": "conflicts",
+          "title_key": "s_client_intake_conflicts",
+          "description_key": "s_client_intake_conflicts_d",
+          "agent": "compliance_officer",
+          "depends_on": [
+            "enquiry"
+          ]
+        },
+        {
+          "key": "fees",
+          "title_key": "s_client_intake_fees",
+          "description_key": "s_client_intake_fees_d",
+          "agent": "billing_lead",
+          "depends_on": [
+            "enquiry"
+          ]
+        },
+        {
+          "key": "letter",
+          "title_key": "s_client_intake_letter",
+          "description_key": "s_client_intake_letter_d",
+          "agent": "corp_counsel",
+          "depends_on": [
+            "conflicts",
+            "fees"
+          ]
+        },
+        {
+          "key": "open",
+          "title_key": "s_client_intake_open",
+          "description_key": "s_client_intake_open_d",
+          "agent": "matter_manager",
+          "depends_on": [
+            "letter"
+          ]
+        }
+      ]
+    }
+  ],
+  "i18n": {
+    "en": {
+      "a_billing_lead_name": "Héctor",
+      "a_billing_lead_r1": "Turns recorded hours into draft invoices.",
+      "a_billing_lead_r2": "Reconciles received payments and retainers.",
+      "a_billing_lead_r3": "Flags overdue invoices for follow-up.",
+      "a_billing_lead_r4": "Sends invoices only with the partner's approval.",
+      "a_billing_lead_title": "Billing lead",
+      "a_compliance_officer_name": "Marcos",
+      "a_compliance_officer_r1": "Reviews compliance with internal policies with read access.",
+      "a_compliance_officer_r2": "Checks professional secrecy and data handling.",
+      "a_compliance_officer_r3": "Reports incidents straight to the owner.",
+      "a_compliance_officer_r4": "Follows up on corrective measures.",
+      "a_compliance_officer_title": "Compliance officer",
+      "a_contract_reviewer_name": "Irene",
+      "a_contract_reviewer_r1": "Reviews contracts against a list of key clauses.",
+      "a_contract_reviewer_r2": "Flags deviations and risks with their location.",
+      "a_contract_reviewer_r3": "Proposes alternative wording for approval.",
+      "a_contract_reviewer_r4": "Logs the result in the matter file.",
+      "a_contract_reviewer_title": "Contract reviewer",
+      "a_corp_counsel_name": "Daniel",
+      "a_corp_counsel_r1": "Prepares drafts of commercial contracts and minutes.",
+      "a_corp_counsel_r2": "Compares versions and negotiates clauses within approved limits.",
+      "a_corp_counsel_r3": "Keeps the contract register and expiry dates.",
+      "a_corp_counsel_r4": "Requests human review of every risk clause.",
+      "a_corp_counsel_title": "Corporate counsel",
+      "a_intake_mgr_name": "Natalia",
+      "a_intake_mgr_r1": "Receives enquiries from prospective clients and collects basic data.",
+      "a_intake_mgr_r2": "Starts the conflict-of-interest check.",
+      "a_intake_mgr_r3": "Drafts fee proposals for approval.",
+      "a_intake_mgr_r4": "Never promises outcomes or gives legal opinions.",
+      "a_intake_mgr_title": "Intake manager",
+      "a_litigation_assoc_name": "Paula",
+      "a_litigation_assoc_r1": "Compiles each case's files and exhibits.",
+      "a_litigation_assoc_r2": "Checks deadlines and filing formats.",
+      "a_litigation_assoc_r3": "Drafts client updates in plain language.",
+      "a_litigation_assoc_r4": "Asks the litigator about any substantive doubt.",
+      "a_litigation_assoc_title": "Litigation paralegal",
+      "a_litigator_name": "Alejandro",
+      "a_litigator_r1": "Drafts claims, replies and briefs for review.",
+      "a_litigator_r2": "Organizes evidence and the case chronology.",
+      "a_litigator_r3": "Prepares hearing summaries.",
+      "a_litigator_r4": "Never files anything without a lawyer's approval.",
+      "a_litigator_title": "Litigation associate",
+      "a_matter_manager_name": "Elena",
+      "a_matter_manager_r1": "Keeps the matter board with deadlines and owners.",
+      "a_matter_manager_r2": "Schedules hearings and procedural deadlines.",
+      "a_matter_manager_r3": "Prepares the weekly report for the partners.",
+      "a_matter_manager_r4": "Escalates calendar conflicts and risks to the managing partner.",
+      "a_matter_manager_title": "Matter manager",
+      "a_researcher_name": "Clara",
+      "a_researcher_r1": "Searches statutes, rulings and case law in public sources.",
+      "a_researcher_r2": "Summarizes findings with verifiable citations.",
+      "a_researcher_r3": "States confidence and any unconfirmed sources.",
+      "a_researcher_r4": "Delivers memos for the lawyer's review.",
+      "a_researcher_title": "Legal researcher",
+      "d_billing": "Billing and collections",
+      "d_compliance": "Compliance and ethics",
+      "d_corporate": "Corporate and contracts",
+      "d_intake": "Client intake",
+      "d_litigation": "Litigation",
+      "d_partners": "Partners and matter management",
+      "d_research": "Legal research",
+      "desc": "Firm with litigation, corporate, compliance, client intake and billing, with support agents and projects for cases, contracts and conflict checks.",
+      "disclaimer": "Agents help with drafts and research and do not give legal advice: a licensed lawyer must review and approve every filing, contract and piece of advice before it is sent.",
+      "name": "Law firm",
+      "p_client_intake": "New client intake",
+      "p_client_intake_desc": "Initial enquiry, conflicts, fees and opening the file.",
+      "p_contract_negotiation": "Contract review and negotiation",
+      "p_contract_negotiation_desc": "Clause analysis, proposed changes and final approval.",
+      "p_litigation_case": "Preparing a litigation case",
+      "p_litigation_case_desc": "From analyzing the dispute to the draft filing and hearing plan.",
+      "rule_1": "Assigning work to the managing partner requires their approval.",
+      "rule_2": "The managing partner may assign to any agent.",
+      "rule_3": "Agents coordinate freely by default.",
+      "rule_4": "Intake passes matters to litigation only with the matter manager's approval.",
+      "rule_5": "Billing does not assign work to the litigation team.",
+      "s_client_intake_conflicts": "Check conflicts of interest",
+      "s_client_intake_conflicts_d": "Cross parties against current and former clients.",
+      "s_client_intake_enquiry": "Log the initial enquiry",
+      "s_client_intake_enquiry_d": "Capture client data and the type of matter.",
+      "s_client_intake_fees": "Prepare the fee proposal",
+      "s_client_intake_fees_d": "Estimate a fee range with clear assumptions.",
+      "s_client_intake_letter": "Engagement letter",
+      "s_client_intake_letter_d": "Draft the letter for the lawyer's review.",
+      "s_client_intake_open": "Open the matter file",
+      "s_client_intake_open_d": "Create the file, calendar and owners.",
+      "s_contract_negotiation_ethics": "Conflict and confidentiality check",
+      "s_contract_negotiation_ethics_d": "Check there is no conflict with other clients.",
+      "s_contract_negotiation_precedents": "Look up applicable criteria",
+      "s_contract_negotiation_precedents_d": "Research criteria on the risky clauses.",
+      "s_contract_negotiation_redline": "Propose changes",
+      "s_contract_negotiation_redline_d": "Draft changes and alternatives with their rationale.",
+      "s_contract_negotiation_scan": "Review key clauses",
+      "s_contract_negotiation_scan_d": "Compare the contract with the key-clause list.",
+      "s_contract_negotiation_sign_off": "Partner approval and sending",
+      "s_contract_negotiation_sign_off_d": "Coordinate the human approval and send to the client.",
+      "s_litigation_case_compliance": "Ethics and confidentiality review",
+      "s_litigation_case_compliance_d": "Check professional secrecy and sensitive data.",
+      "s_litigation_case_draft": "Draft the filing",
+      "s_litigation_case_draft_d": "Prepare the filing from the research and evidence.",
+      "s_litigation_case_evidence": "Organize the evidence",
+      "s_litigation_case_evidence_d": "Index documents and build the chronology.",
+      "s_litigation_case_intake": "Check conflicts and accept the matter",
+      "s_litigation_case_intake_d": "Review the parties involved and register the matter.",
+      "s_litigation_case_plan": "Hearing plan and calendar",
+      "s_litigation_case_plan_d": "Set dates, owners and the lawyer's final review.",
+      "s_litigation_case_research": "Research the applicable law",
+      "s_litigation_case_research_d": "Gather relevant statutes and rulings with sources."
+    },
+    "es": {
+      "a_billing_lead_name": "Héctor",
+      "a_billing_lead_r1": "Convierte horas registradas en borradores de facturas.",
+      "a_billing_lead_r2": "Concilia pagos recibidos y anticipos.",
+      "a_billing_lead_r3": "Señala facturas vencidas para seguimiento.",
+      "a_billing_lead_r4": "Envía facturas solo con aprobación del socio.",
+      "a_billing_lead_title": "Responsable de facturación",
+      "a_compliance_officer_name": "Marcos",
+      "a_compliance_officer_r1": "Revisa con acceso de lectura el cumplimiento de políticas internas.",
+      "a_compliance_officer_r2": "Verifica el secreto profesional y el manejo de datos.",
+      "a_compliance_officer_r3": "Reporta incidencias directamente al dueño.",
+      "a_compliance_officer_r4": "Da seguimiento a medidas correctivas.",
+      "a_compliance_officer_title": "Oficial de cumplimiento",
+      "a_contract_reviewer_name": "Irene",
+      "a_contract_reviewer_r1": "Revisa contratos contra una lista de cláusulas clave.",
+      "a_contract_reviewer_r2": "Marca desviaciones y riesgos con su ubicación.",
+      "a_contract_reviewer_r3": "Propone redacciones alternativas para aprobación.",
+      "a_contract_reviewer_r4": "Registra el resultado en el expediente.",
+      "a_contract_reviewer_title": "Revisora de contratos",
+      "a_corp_counsel_name": "Daniel",
+      "a_corp_counsel_r1": "Prepara borradores de contratos mercantiles y actas.",
+      "a_corp_counsel_r2": "Compara versiones y negocia cláusulas dentro de los límites aprobados.",
+      "a_corp_counsel_r3": "Lleva el registro de contratos y vencimientos.",
+      "a_corp_counsel_r4": "Pide revisión humana de toda cláusula de riesgo.",
+      "a_corp_counsel_title": "Asesor corporativo",
+      "a_intake_mgr_name": "Natalia",
+      "a_intake_mgr_r1": "Recibe consultas de posibles clientes y recopila datos básicos.",
+      "a_intake_mgr_r2": "Lanza la verificación de conflictos de interés.",
+      "a_intake_mgr_r3": "Prepara propuestas de honorarios para aprobación.",
+      "a_intake_mgr_r4": "No promete resultados ni da opinión legal.",
+      "a_intake_mgr_title": "Responsable de admisión",
+      "a_litigation_assoc_name": "Paula",
+      "a_litigation_assoc_r1": "Compila expedientes y anexos de cada caso.",
+      "a_litigation_assoc_r2": "Verifica plazos y formatos de presentación.",
+      "a_litigation_assoc_r3": "Redacta notificaciones a clientes en lenguaje claro.",
+      "a_litigation_assoc_r4": "Consulta al litigante ante cualquier duda de fondo.",
+      "a_litigation_assoc_title": "Asistente jurídica de litigio",
+      "a_litigator_name": "Alejandro",
+      "a_litigator_r1": "Redacta borradores de demandas, contestaciones y escritos para revisión.",
+      "a_litigator_r2": "Organiza pruebas y cronologías del caso.",
+      "a_litigator_r3": "Prepara resúmenes de audiencia.",
+      "a_litigator_r4": "Nunca presenta escritos sin aprobación de un abogado.",
+      "a_litigator_title": "Abogado de litigio",
+      "a_matter_manager_name": "Elena",
+      "a_matter_manager_r1": "Lleva el tablero de asuntos con plazos y responsables.",
+      "a_matter_manager_r2": "Agenda audiencias y vencimientos procesales.",
+      "a_matter_manager_r3": "Prepara el reporte semanal para los socios.",
+      "a_matter_manager_r4": "Escala conflictos de agenda y riesgos al socio director.",
+      "a_matter_manager_title": "Gestora de asuntos",
+      "a_researcher_name": "Clara",
+      "a_researcher_r1": "Busca normas, criterios y jurisprudencia en fuentes públicas.",
+      "a_researcher_r2": "Resume hallazgos con citas verificables.",
+      "a_researcher_r3": "Indica el grado de confianza y las fuentes no confirmadas.",
+      "a_researcher_r4": "Entrega memorandos para revisión del abogado.",
+      "a_researcher_title": "Investigadora jurídica",
+      "d_billing": "Facturación y cobranza",
+      "d_compliance": "Cumplimiento y ética",
+      "d_corporate": "Corporativo y contratos",
+      "d_intake": "Admisión de clientes",
+      "d_litigation": "Litigio",
+      "d_partners": "Socios y gestión de asuntos",
+      "d_research": "Investigación jurídica",
+      "desc": "Despacho con litigio, corporativo, cumplimiento, admisión de clientes y facturación, con agentes de apoyo y proyectos de caso, contratos y verificación de conflictos.",
+      "disclaimer": "Los agentes apoyan con borradores e investigación y no ofrecen asesoría legal: un abogado con licencia debe revisar y aprobar cada escrito, contrato y consejo antes de enviarlo.",
+      "name": "Despacho jurídico",
+      "p_client_intake": "Admisión de un cliente nuevo",
+      "p_client_intake_desc": "Consulta inicial, conflictos, honorarios y apertura del expediente.",
+      "p_contract_negotiation": "Revisión y negociación de un contrato",
+      "p_contract_negotiation_desc": "Análisis de cláusulas, propuesta de cambios y aprobación final.",
+      "p_litigation_case": "Preparación de un caso de litigio",
+      "p_litigation_case_desc": "Del análisis del conflicto al borrador de escrito y el plan de audiencia.",
+      "rule_1": "Asignar trabajo al socio director requiere su aprobación.",
+      "rule_2": "El socio director puede asignar a cualquier agente.",
+      "rule_3": "Los agentes se coordinan libremente por defecto.",
+      "rule_4": "Admisión solo pasa asuntos a litigio con visto bueno de la gestora.",
+      "rule_5": "Facturación no asigna trabajo al equipo de litigio.",
+      "s_client_intake_conflicts": "Verificar conflictos de interés",
+      "s_client_intake_conflicts_d": "Cruzar partes contra clientes actuales y anteriores.",
+      "s_client_intake_enquiry": "Registrar la consulta inicial",
+      "s_client_intake_enquiry_d": "Capturar datos del cliente y el tipo de asunto.",
+      "s_client_intake_fees": "Preparar propuesta de honorarios",
+      "s_client_intake_fees_d": "Calcular un rango de honorarios con supuestos claros.",
+      "s_client_intake_letter": "Carta de encargo",
+      "s_client_intake_letter_d": "Redactar la carta para revisión del abogado.",
+      "s_client_intake_open": "Abrir el expediente",
+      "s_client_intake_open_d": "Crear el expediente, el calendario y los responsables.",
+      "s_contract_negotiation_ethics": "Control de conflictos y confidencialidad",
+      "s_contract_negotiation_ethics_d": "Verificar que no haya conflicto con otros clientes.",
+      "s_contract_negotiation_precedents": "Buscar criterios aplicables",
+      "s_contract_negotiation_precedents_d": "Investigar criterios sobre las cláusulas riesgosas.",
+      "s_contract_negotiation_redline": "Proponer cambios",
+      "s_contract_negotiation_redline_d": "Redactar cambios y alternativas con su justificación.",
+      "s_contract_negotiation_scan": "Revisar cláusulas clave",
+      "s_contract_negotiation_scan_d": "Comparar el contrato con la lista de cláusulas clave.",
+      "s_contract_negotiation_sign_off": "Aprobación del socio y envío",
+      "s_contract_negotiation_sign_off_d": "Coordinar la aprobación humana y enviar al cliente.",
+      "s_litigation_case_compliance": "Revisión ética y de confidencialidad",
+      "s_litigation_case_compliance_d": "Comprobar secreto profesional y datos sensibles.",
+      "s_litigation_case_draft": "Redactar el borrador del escrito",
+      "s_litigation_case_draft_d": "Preparar el escrito con base en la investigación y las pruebas.",
+      "s_litigation_case_evidence": "Organizar las pruebas",
+      "s_litigation_case_evidence_d": "Indexar documentos y construir la cronología.",
+      "s_litigation_case_intake": "Verificar conflictos y admitir el asunto",
+      "s_litigation_case_intake_d": "Revisar partes involucradas y registrar el asunto.",
+      "s_litigation_case_plan": "Plan de audiencia y calendario",
+      "s_litigation_case_plan_d": "Fijar fechas, responsables y revisión final del abogado.",
+      "s_litigation_case_research": "Investigar la normativa aplicable",
+      "s_litigation_case_research_d": "Reunir normas y criterios relevantes con fuentes."
+    },
+    "pt": {
+      "a_billing_lead_name": "Héctor",
+      "a_billing_lead_r1": "Converte horas registradas em rascunhos de faturas.",
+      "a_billing_lead_r2": "Concilia pagamentos recebidos e adiantamentos.",
+      "a_billing_lead_r3": "Sinaliza faturas vencidas para acompanhamento.",
+      "a_billing_lead_r4": "Envia faturas somente com aprovação do sócio.",
+      "a_billing_lead_title": "Responsável pelo faturamento",
+      "a_compliance_officer_name": "Marcos",
+      "a_compliance_officer_r1": "Revisa o cumprimento das políticas internas com acesso de leitura.",
+      "a_compliance_officer_r2": "Verifica o sigilo profissional e o tratamento de dados.",
+      "a_compliance_officer_r3": "Reporta ocorrências diretamente ao dono.",
+      "a_compliance_officer_r4": "Acompanha as medidas corretivas.",
+      "a_compliance_officer_title": "Oficial de compliance",
+      "a_contract_reviewer_name": "Irene",
+      "a_contract_reviewer_r1": "Revisa contratos com base em uma lista de cláusulas-chave.",
+      "a_contract_reviewer_r2": "Sinaliza desvios e riscos com a respectiva localização.",
+      "a_contract_reviewer_r3": "Propõe redações alternativas para aprovação.",
+      "a_contract_reviewer_r4": "Registra o resultado no dossiê do caso.",
+      "a_contract_reviewer_title": "Revisora de contratos",
+      "a_corp_counsel_name": "Daniel",
+      "a_corp_counsel_r1": "Prepara minutas de contratos comerciais e atas.",
+      "a_corp_counsel_r2": "Compara versões e negocia cláusulas dentro dos limites aprovados.",
+      "a_corp_counsel_r3": "Mantém o registro de contratos e vencimentos.",
+      "a_corp_counsel_r4": "Solicita revisão humana de toda cláusula de risco.",
+      "a_corp_counsel_title": "Advogado societário",
+      "a_intake_mgr_name": "Natalia",
+      "a_intake_mgr_r1": "Recebe consultas de potenciais clientes e coleta dados básicos.",
+      "a_intake_mgr_r2": "Inicia a verificação de conflito de interesses.",
+      "a_intake_mgr_r3": "Prepara propostas de honorários para aprovação.",
+      "a_intake_mgr_r4": "Nunca promete resultados nem emite opinião jurídica.",
+      "a_intake_mgr_title": "Responsável pela admissão",
+      "a_litigation_assoc_name": "Paula",
+      "a_litigation_assoc_r1": "Compila os autos e anexos de cada caso.",
+      "a_litigation_assoc_r2": "Verifica prazos e formatos de protocolo.",
+      "a_litigation_assoc_r3": "Redige comunicados a clientes em linguagem clara.",
+      "a_litigation_assoc_r4": "Consulta o advogado em qualquer dúvida de mérito.",
+      "a_litigation_assoc_title": "Assistente jurídica de contencioso",
+      "a_litigator_name": "Alejandro",
+      "a_litigator_r1": "Redige minutas de petições, contestações e peças para revisão.",
+      "a_litigator_r2": "Organiza provas e a cronologia do caso.",
+      "a_litigator_r3": "Prepara resumos de audiência.",
+      "a_litigator_r4": "Nunca protocola peças sem a aprovação de um advogado.",
+      "a_litigator_title": "Advogado de contencioso",
+      "a_matter_manager_name": "Elena",
+      "a_matter_manager_r1": "Mantém o quadro de casos com prazos e responsáveis.",
+      "a_matter_manager_r2": "Agenda audiências e prazos processuais.",
+      "a_matter_manager_r3": "Prepara o relatório semanal para os sócios.",
+      "a_matter_manager_r4": "Escala conflitos de agenda e riscos ao sócio diretor.",
+      "a_matter_manager_title": "Gestora de casos",
+      "a_researcher_name": "Clara",
+      "a_researcher_r1": "Busca normas, precedentes e jurisprudência em fontes públicas.",
+      "a_researcher_r2": "Resume achados com citações verificáveis.",
+      "a_researcher_r3": "Indica o grau de confiança e as fontes não confirmadas.",
+      "a_researcher_r4": "Entrega memorandos para revisão do advogado.",
+      "a_researcher_title": "Pesquisadora jurídica",
+      "d_billing": "Faturamento e cobrança",
+      "d_compliance": "Compliance e ética",
+      "d_corporate": "Societário e contratos",
+      "d_intake": "Admissão de clientes",
+      "d_litigation": "Contencioso",
+      "d_partners": "Sócios e gestão de casos",
+      "d_research": "Pesquisa jurídica",
+      "desc": "Escritório com contencioso, societário, compliance, admissão de clientes e faturamento, com agentes de apoio e projetos de caso, contratos e verificação de conflitos.",
+      "disclaimer": "Os agentes apoiam com minutas e pesquisa e não prestam aconselhamento jurídico: um advogado habilitado deve revisar e aprovar cada peça, contrato e orientação antes do envio.",
+      "name": "Escritório de advocacia",
+      "p_client_intake": "Admissão de um novo cliente",
+      "p_client_intake_desc": "Consulta inicial, conflitos, honorários e abertura do dossiê.",
+      "p_contract_negotiation": "Revisão e negociação de um contrato",
+      "p_contract_negotiation_desc": "Análise de cláusulas, propostas de alteração e aprovação final.",
+      "p_litigation_case": "Preparação de um caso de contencioso",
+      "p_litigation_case_desc": "Da análise do conflito à minuta da peça e ao plano de audiência.",
+      "rule_1": "Atribuir trabalho ao sócio diretor requer a aprovação dele.",
+      "rule_2": "O sócio diretor pode atribuir a qualquer agente.",
+      "rule_3": "Os agentes se coordenam livremente por padrão.",
+      "rule_4": "A admissão só passa casos ao contencioso com aval da gestora.",
+      "rule_5": "O faturamento não atribui trabalho à equipe de contencioso.",
+      "s_client_intake_conflicts": "Verificar conflitos de interesse",
+      "s_client_intake_conflicts_d": "Cruzar partes com clientes atuais e anteriores.",
+      "s_client_intake_enquiry": "Registrar a consulta inicial",
+      "s_client_intake_enquiry_d": "Registrar dados do cliente e o tipo de caso.",
+      "s_client_intake_fees": "Preparar a proposta de honorários",
+      "s_client_intake_fees_d": "Estimar uma faixa de honorários com premissas claras.",
+      "s_client_intake_letter": "Carta de contratação",
+      "s_client_intake_letter_d": "Redigir a carta para revisão do advogado.",
+      "s_client_intake_open": "Abrir o dossiê",
+      "s_client_intake_open_d": "Criar o dossiê, a agenda e os responsáveis.",
+      "s_contract_negotiation_ethics": "Controle de conflitos e sigilo",
+      "s_contract_negotiation_ethics_d": "Verificar se não há conflito com outros clientes.",
+      "s_contract_negotiation_precedents": "Buscar critérios aplicáveis",
+      "s_contract_negotiation_precedents_d": "Pesquisar critérios sobre as cláusulas de risco.",
+      "s_contract_negotiation_redline": "Propor alterações",
+      "s_contract_negotiation_redline_d": "Redigir alterações e alternativas com a justificativa.",
+      "s_contract_negotiation_scan": "Revisar cláusulas-chave",
+      "s_contract_negotiation_scan_d": "Comparar o contrato com a lista de cláusulas-chave.",
+      "s_contract_negotiation_sign_off": "Aprovação do sócio e envio",
+      "s_contract_negotiation_sign_off_d": "Coordenar a aprovação humana e enviar ao cliente.",
+      "s_litigation_case_compliance": "Revisão ética e de sigilo",
+      "s_litigation_case_compliance_d": "Conferir sigilo profissional e dados sensíveis.",
+      "s_litigation_case_draft": "Redigir a minuta da peça",
+      "s_litigation_case_draft_d": "Preparar a peça com base na pesquisa e nas provas.",
+      "s_litigation_case_evidence": "Organizar as provas",
+      "s_litigation_case_evidence_d": "Indexar documentos e construir a cronologia.",
+      "s_litigation_case_intake": "Verificar conflitos e aceitar o caso",
+      "s_litigation_case_intake_d": "Revisar as partes envolvidas e registrar o caso.",
+      "s_litigation_case_plan": "Plano de audiência e agenda",
+      "s_litigation_case_plan_d": "Definir datas, responsáveis e revisão final do advogado.",
+      "s_litigation_case_research": "Pesquisar a legislação aplicável",
+      "s_litigation_case_research_d": "Reunir normas e precedentes relevantes com fontes."
+    }
+  }
+}

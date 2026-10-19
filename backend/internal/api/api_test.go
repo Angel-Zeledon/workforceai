@@ -24,6 +24,7 @@ import (
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/infrastructure/memory"
 	"aiworkforce/backend/internal/objstore"
+	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/sandbox"
@@ -118,6 +119,7 @@ type opts struct {
 	standing       bool // mount the standing per-project approvals (standing_api_test.go)
 	llm            bool // mount bring-your-own-model credentials (llm_api_test.go)
 	llmNoKEK       bool // ... with no encryption key configured
+	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
 }
 
 type env struct {
@@ -176,6 +178,10 @@ func newEnv(t *testing.T, o opts) *env {
 		d.Web = &webtool.Service{Store: webtool.NewMemoryStore(), Fetcher: &webtool.Fetcher{}, CeilingPerDay: 50, Audit: func(c context.Context, org, actor, action, entity, id string, det map[string]any) {
 			rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: entity, EntityID: id, Details: det})
 		}}
+	}
+	if o.orgchart {
+		d.OrgChart = &orgchart.Service{Store: orgchart.NewMemoryStore(), Agents: mem, Writer: mem, DefaultOrg: cfg.OrgID,
+			Audit: func(c context.Context, a domain.AuditLog) { rec.Audit(c, a) }}
 	}
 	if o.skills {
 		d.Skills = skills.New(skills.Config{Store: skills.NewMemStore(), Drive: d.Drive, OrgID: cfg.OrgID, Log: log,
