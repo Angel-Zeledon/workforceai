@@ -783,11 +783,12 @@ func (s *Service) replanTasks(ctx context.Context, rec Record, d Detail, def Nod
 			req.Dependents = append(req.Dependents, application.ReplanNode{ID: n.ID, Title: n.Title})
 		}
 	}
-	res, ex := s.cfg.Orch.ReservePlanner(ctx)
+	res, ex := s.cfg.Orch.ReservePlanner(ctx, application.UsageReplan, req)
 	if ex != nil {
 		return fallback
 	}
 	resp, err := rp.Replan(ctx, req)
+	s.cfg.Orch.NoteProviderNoBalance(ctx, "assistant", err)
 	usage := application.Usage{}
 	if resp.Usage != nil {
 		usage = *resp.Usage

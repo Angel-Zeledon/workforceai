@@ -24,6 +24,9 @@ type modelPrice struct {
 	Provider string  `json:"provider"`
 	Input    float64 `json:"input"`
 	Output   float64 `json:"output"`
+	// CachedInput is the price of input tokens served from the provider's prompt cache (cache hits); 0 = not
+	// listed, and cache hits then bill at the full Input price.
+	CachedInput float64 `json:"cached_input"`
 }
 
 type priceFile struct {
@@ -34,6 +37,23 @@ type priceFile struct {
 // priceTable maps a model name (without "provider/") to (input, output);
 // defaultPrice is the conservative rate for unknown models and simulation.
 var priceTable, defaultPrice = mustLoadPrices(modelPricesJSON)
+
+// cachedPriceTable maps a model name to its cache-hit input price (only models that list one).
+var cachedPriceTable = mustLoadCachedPrices(modelPricesJSON)
+
+func mustLoadCachedPrices(raw []byte) map[string]float64 {
+	var f priceFile
+	if err := json.Unmarshal(raw, &f); err != nil {
+		panic("model_prices.json: " + err.Error())
+	}
+	out := map[string]float64{}
+	for k, v := range f.Models {
+		if v.CachedInput > 0 {
+			out[strings.ToLower(k)] = v.CachedInput
+		}
+	}
+	return out
+}
 
 func mustLoadPrices(raw []byte) (map[string][2]float64, [2]float64) {
 	var f priceFile
@@ -87,8 +107,32 @@ func priceFor(model string) (float64, float64) {
 
 // recalcCost prices a call from its token counts, rounded like the runtime (5 decimals).
 func recalcCost(model string, inTokens, outTokens int) float64 {
+	return recalcCostCached(model, inTokens, 0, outTokens)
+}
+
+// cachedPriceFor is the USD per million of input tokens served from the prompt cache. A forced rate
+// (PRICE_IN_PER_M) or a model without a listed cache price bills cache hits at the full input price.
+func cachedPriceFor(model string) float64 {
+	pin, _ := priceFor(model)
+	if _, err := strconv.ParseFloat(os.Getenv("PRICE_IN_PER_M"), 64); err == nil {
+		return pin
+	}
+	key := strings.ToLower(model)
+	if i := strings.LastIndex(key, "/"); i >= 0 {
+		key = key[i+1:]
+	}
+	if c, ok := cachedPriceTable[key]; ok && c < pin {
+		return c
+	}
+	return pin
+}
+
+// recalcCostCached is recalcCost when cachedTokens of the inTokens were cache hits (billed at the discounted
+// price). inTokens is the TOTAL prompt size, cache hits included.
+func recalcCostCached(model string, inTokens, cachedTokens, outTokens int) float64 {
 	pin, pout := priceFor(model)
-	c := float64(inTokens)*pin/1e6 + float64(outTokens)*pout/1e6
+	cachedTokens = max(0, min(cachedTokens, inTokens))
+	c := float64(inTokens-cachedTokens)*pin/1e6 + float64(cachedTokens)*cachedPriceFor(model)/1e6 + float64(outTokens)*pout/1e6
 	return math.Round(c*1e5) / 1e5
 }
 

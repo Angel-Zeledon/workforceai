@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"aiworkforce/backend/internal/application"
+	"aiworkforce/backend/internal/domain"
 )
 
 // Hierarchical planning of projects created from a goal (W4):
@@ -180,10 +181,10 @@ func invalidf(format string, a ...any) error {
 
 // call runs one planner call under a timeout, reserving budget before it and
 // recording its usage in the cost ledger afterwards (spend caps apply).
-func (s *Service) call(ctx context.Context, j *planJob, timeout func() (context.Context, context.CancelFunc), fn func(context.Context) (*application.Usage, error)) error {
+func (s *Service) call(ctx context.Context, j *planJob, kind domain.UsageKind, payload any, timeout func() (context.Context, context.CancelFunc), fn func(context.Context) (*application.Usage, error)) error {
 	var res *application.Reservation
 	if s.cfg.Orch != nil {
-		r, ex := s.cfg.Orch.ReservePlanner(ctx)
+		r, ex := s.cfg.Orch.ReservePlanner(ctx, kind, payload)
 		if ex != nil {
 			return errPlannerBudget
 		}
@@ -192,6 +193,9 @@ func (s *Service) call(ctx context.Context, j *planJob, timeout func() (context.
 	cctx, cancel := timeout()
 	defer cancel()
 	u, err := fn(cctx)
+	if s.cfg.Orch != nil {
+		s.cfg.Orch.NoteProviderNoBalance(ctx, "assistant", err) // the UI shows "out of balance", not a generic failure
+	}
 	var usage application.Usage
 	if u != nil {
 		usage = *u
@@ -207,10 +211,11 @@ func (s *Service) call(ctx context.Context, j *planJob, timeout func() (context.
 
 func (s *Service) planFlat(ctx context.Context, j *planJob, goal, locale string, pa []application.PlanAgent, known map[string]bool) (Template, error) {
 	var resp application.PlanResponse
-	err := s.call(ctx, j, func() (context.Context, context.CancelFunc) { return context.WithTimeout(ctx, flatPlanTimeout) },
+	preq := application.PlanRequest{RequestText: goal, Agents: pa, Locale: locale}
+	err := s.call(ctx, j, domain.UsagePlan, preq, func() (context.Context, context.CancelFunc) { return context.WithTimeout(ctx, flatPlanTimeout) },
 		func(c context.Context) (*application.Usage, error) {
 			var err error
-			resp, err = s.cfg.Runtime.Plan(c, application.PlanRequest{RequestText: goal, Agents: pa, Locale: locale})
+			resp, err = s.cfg.Runtime.Plan(c, preq)
 			return resp.Usage, err
 		})
 	if err != nil {
@@ -247,10 +252,11 @@ func (s *Service) planFlat(ctx context.Context, j *planJob, goal, locale string,
 func (s *Service) planHierarchical(ctx context.Context, j *planJob, hp application.HierarchicalPlanner, goal, locale string, pa []application.PlanAgent, known map[string]bool) (Template, PlannerInfo, error) {
 	lim := s.cfg.Limits
 	var pr application.PlanPhasesResponse
-	err := s.call(ctx, j, func() (context.Context, context.CancelFunc) { return context.WithTimeout(ctx, lim.PhasesTimeout) },
+	phReq := application.PlanPhasesRequest{RequestText: goal, Agents: pa, MaxPhases: lim.MaxPhases, Locale: locale}
+	err := s.call(ctx, j, application.UsagePlanPhases, phReq, func() (context.Context, context.CancelFunc) { return context.WithTimeout(ctx, lim.PhasesTimeout) },
 		func(c context.Context) (*application.Usage, error) {
 			var err error
-			pr, err = hp.PlanPhases(c, application.PlanPhasesRequest{RequestText: goal, Agents: pa, MaxPhases: lim.MaxPhases, Locale: locale})
+			pr, err = hp.PlanPhases(c, phReq)
 			return pr.Usage, err
 		})
 	if err != nil {
@@ -289,11 +295,12 @@ func (s *Service) planHierarchical(ctx context.Context, j *planJob, hp applicati
 			ph := phases[i]
 			target := min(taskTargetBySize[ph.Size], lim.MaxTasksPerPhase)
 			var resp application.PlanPhaseResponse
-			err := s.call(ctx, j, func() (context.Context, context.CancelFunc) { return context.WithTimeout(ctx, lim.PhaseTimeout) },
+			pReq := application.PlanPhaseRequest{RequestText: goal, Phase: ph, OtherPhases: brief, Agents: pa,
+				TargetTasks: target, MaxTasks: lim.MaxTasksPerPhase, Locale: locale}
+			err := s.call(ctx, j, application.UsagePlanPhase, pReq, func() (context.Context, context.CancelFunc) { return context.WithTimeout(ctx, lim.PhaseTimeout) },
 				func(c context.Context) (*application.Usage, error) {
 					var err error
-					resp, err = hp.PlanPhase(c, application.PlanPhaseRequest{RequestText: goal, Phase: ph, OtherPhases: brief, Agents: pa,
-						TargetTasks: target, MaxTasks: lim.MaxTasksPerPhase, Locale: locale})
+					resp, err = hp.PlanPhase(c, pReq)
 					return resp.Usage, err
 				})
 			if err == nil {

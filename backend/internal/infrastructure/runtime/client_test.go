@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"errors"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -94,5 +95,27 @@ func TestClientWithoutTokenOrPolicySendsPlainBody(t *testing.T) {
 	}
 	if _, ok := body["allowed_providers"]; ok {
 		t.Fatalf("empty policy must add nothing: %v", body)
+	}
+}
+
+func TestParseRuntimeErrorUsesTheMachineCode(t *testing.T) {
+	e := parseRuntimeError("/x", 402, []byte(`{"detail":{"code":"call_budget_exceeded","estimated_usd":2.5,"allowance_usd":1}}`))
+	if !errors.Is(e, application.ErrCallBudgetExceeded) || !errors.Is(e, application.ErrNonRetryable) {
+		t.Fatalf("budget: %v", e)
+	}
+	var re *application.RuntimeError
+	if !errors.As(e, &re) || re.EstimatedUSD != 2.5 || re.AllowanceUSD != 1 {
+		t.Fatalf("numbers: %+v", re)
+	}
+	nb := parseRuntimeError("/x", 402, []byte(`{"detail":{"code":"provider_no_balance"}}`))
+	if !errors.Is(nb, application.ErrProviderNoBalance) {
+		t.Fatalf("no balance: %v", nb)
+	}
+	// Message text alone must not classify the error.
+	if errors.Is(parseRuntimeError("/x", 500, []byte(`provider_no_balance call_budget_exceeded`)), application.ErrProviderNoBalance) {
+		t.Fatal("text must not match")
+	}
+	if errors.Is(parseRuntimeError("/x", 429, []byte(`{}`)), application.ErrNonRetryable) {
+		t.Fatal("429 is retryable")
 	}
 }

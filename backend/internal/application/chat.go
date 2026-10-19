@@ -693,7 +693,7 @@ func (o *Orchestrator) chatSpeak(ctx context.Context, t *chatTurn, agent domain.
 		}
 	}
 
-	res, ex := o.chatReserve(ctx, agent.ID)
+	res, ex := o.chatReserve(ctx, agent.ID, domain.UsageChat, req)
 	if ex != nil {
 		o.chatBudgetNotice(ctx, t, ex)
 		return ChatReplyResponse{}, speakStop
@@ -715,6 +715,7 @@ func (o *Orchestrator) chatSpeak(ctx context.Context, t *chatTurn, agent domain.
 		if ctx.Err() != nil {
 			return ChatReplyResponse{}, speakStop
 		}
+		o.NoteProviderNoBalance(ctx, agent.ID, err) // "out of balance" banner instead of a silent canned reply
 		o.log.Warn("chat reply failed, using canned reply", "agent", agent.ID, "err", err)
 		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "chat.reply_fallback", Entity: "conversation", EntityID: t.conv,
 			Details: map[string]any{"turn_id": t.id, "error": truncate(err.Error(), 200)}})
@@ -837,14 +838,11 @@ func (o *Orchestrator) chatTalking(ctx context.Context, agentID string) func() {
 	}
 }
 
-// chatReserveUSD is what one chat reply holds while it runs.
-func chatReserveUSD() float64 { return recalcCost("", 900, 350) }
-
 // chatReserve holds budget for one reply. Chat calls belong to no request, so
 // the agent cap and the organization limit apply (the ledger is the source of
 // truth: the organization total also counts chat spend).
-func (o *Orchestrator) chatReserve(ctx context.Context, agentID string) (*Reservation, *Exceeded) {
-	est := chatReserveUSD()
+func (o *Orchestrator) chatReserve(ctx context.Context, agentID string, kind domain.UsageKind, payload any) (*Reservation, *Exceeded) {
+	est := callEstimateUSD("", kind, payload) // the real payload plus the output cap of this kind (call_guard.go)
 	org := o.org(ctx)
 	if o.cfg.BudgetUSD > 0 {
 		used, err := o.store.OrgCost(ctx, org)
@@ -895,7 +893,7 @@ func (o *Orchestrator) chatRecordCost(ctx context.Context, agentID string, u Usa
 }
 
 func (o *Orchestrator) chatLedger(ctx context.Context, agentID string, u Usage) {
-	entry := domain.UsageEntry{AgentID: agentID, Kind: domain.UsageChat, Model: u.Model, InputTokens: u.InputTokens, OutputTokens: u.OutputTokens}
+	entry := domain.UsageEntry{AgentID: agentID, Kind: domain.UsageChat, Model: u.Model, InputTokens: u.InputTokens, CachedTokens: u.CachedTokens, OutputTokens: u.OutputTokens}
 	cost, err := o.budget.Record(ctx, "", entry, u.CostUSD)
 	if err != nil {
 		o.log.Warn("record chat usage", "err", err)

@@ -234,7 +234,7 @@ func (b *Budget) Reserve(ctx context.Context, requestID, agentID string, estimat
 // greater of the runtime's number and the backend's own recalculation.
 func (b *Budget) Record(ctx context.Context, requestID string, u domain.UsageEntry, runtimeCost float64) (float64, error) {
 	org := b.org(ctx)
-	cost := math.Max(runtimeCost, recalcCost(u.Model, u.InputTokens, u.OutputTokens))
+	cost := math.Max(runtimeCost, recalcCostCached(u.Model, u.InputTokens, u.CachedTokens, u.OutputTokens))
 	u.ID, u.RequestID, u.CostUSD = newID(), requestID, cost
 	if u.TS.IsZero() {
 		u.TS = time.Now().UTC()

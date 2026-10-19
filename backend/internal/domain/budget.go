@@ -52,7 +52,10 @@ type UsageEntry struct {
 	Model        string    `json:"model"`
 	InputTokens  int       `json:"input_tokens"`
 	OutputTokens int       `json:"output_tokens"`
-	CostUSD      float64   `json:"cost_usd"`
+	// CachedTokens (additive): how many of InputTokens were prompt-cache hits, billed at the discounted
+	// price. Kept in memory and in the audit trail; the SQL ledger stores the discounted cost_usd.
+	CachedTokens int     `json:"cached_tokens,omitempty"`
+	CostUSD      float64 `json:"cost_usd"`
 	// Tools are the tool requests produced by this call ("tool.action"); the
 	// per-tool breakdown splits the call cost among them.
 	Tools []string  `json:"tools"`
