@@ -184,7 +184,7 @@ GET    /meetings?from&to&status&room&mine=1        POST /meetings {title,start,e
 GET    /meetings/{id}   PATCH /meetings/{id}       POST /meetings/{id}/start|end|cancel|brief|sync
 GET    /meetings/{id}/ics
 GET    /meetings/{id}/minutes  POST (notes|file_path)  PUT (summary,decisions,action_items)  POST .../minutes/tasks {indexes}
-GET    /meetings/rooms   GET|PUT /meetings/settings
+GET    /meetings/rooms   GET /meetings/directory (attendee picker)   GET|PUT /meetings/settings
 GET    /meetings/calendars   GET /meetings/calendar-events?from&to   POST /meetings/free-busy
 GET|POST /meetings/feeds   DELETE /meetings/feeds/{id}
 GET    /calendar/feed/{token}.ics                   (public)

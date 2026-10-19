@@ -89,6 +89,7 @@ func run(log *slog.Logger) error {
 			defer rc.Close()
 			pub = events.FallbackBus{Primary: rc, Fallback: local, Log: log}
 			locker = rc
+			presenceScripter = rc.Scripter() // shared presence registry (cmd/server/people.go)
 			limiter = auth.NewRedisLimiter(rc.Scripter(), "aiworkforce:rl:")
 			go hub.Run(ctx, rc.Subscribe(ctx))
 		}
@@ -256,7 +257,10 @@ func run(log *slog.Logger) error {
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
-	deps.Presence, deps.PeopleChat = wirePeople(ctx, pg, pub, queries) // human presence + people chat
+	deps.Presence, deps.PeopleChat = wirePeople(ctx, pg, pub, queries, orch) // human presence + people chat
+	if meetingsSvc != nil && deps.PeopleChat != nil {
+		meetingsSvc.People = meetingPeople{dir: deps.PeopleChat.Store} // attendee picker: the same directory as the people chat
+	}
 	// GDPR export / deletion of the organization and the purge janitor (internal/tenantdata).
 	deps.OrgChart = orgChartSvc // corporate organization model
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)

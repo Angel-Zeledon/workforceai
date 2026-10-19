@@ -52,7 +52,7 @@ func (c *clock) now() time.Time      { return c.t }
 func (c *clock) add(d time.Duration) { c.t = c.t.Add(d) }
 func newTest() (*Hub, *fakeBus, *clock) {
 	b, c := &fakeBus{}, &clock{t: time.Date(2026, 10, 19, 9, 0, 0, 0, time.UTC)}
-	return New(b, Config{Now: c.now}), b, c
+	return New(b, Config{Now: c.now, LeaveGrace: -1}), b, c
 }
 
 func TestNextNearHysteresis(t *testing.T) {
