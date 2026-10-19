@@ -137,11 +137,13 @@ async function decideMode(): Promise<SessionStatus> {
 export const authEnabled = () => useSession.getState().status !== "disabled";
 
 /** A sign-in either opens a session or, when the account has a second factor, asks for it first. */
-export type SignInResult = { mfaRequired: false } | { mfaRequired: true; token: string };
+export type SignInResult = { mfaRequired: false; enrollToken?: string } | { mfaRequired: true; token: string };
 
 async function begin(path: string, body: unknown): Promise<SignInResult> {
-  const data = await post<SessionPayload & { mfa_required?: boolean; mfa_token?: string }>(path, body);
+  const data = await post<SessionPayload & { mfa_required?: boolean; mfa_token?: string; mfa_enrollment_required?: boolean }>(path, body);
   if (data.mfa_required && data.mfa_token) return { mfaRequired: true, token: data.mfa_token };
+  // The organization requires two-step verification and this account has none: no session yet, enrol first.
+  if (data.mfa_enrollment_required && data.mfa_token) return { mfaRequired: false, enrollToken: data.mfa_token };
   adopt(data);
   await loadMe();
   return { mfaRequired: false };
@@ -167,6 +169,19 @@ export const acceptInvitation = (b: { token: string; password: string; name?: st
 
 /** Second step of a sign-in: a code from the authenticator app, or a recovery code. */
 export const verifyMfa = (token: string, code: string) => begin("/auth/mfa/verify", { mfa_token: token, code });
+
+/** Finishes a single sign-in: redeems the one-time code the identity provider flow left in the login URL. */
+export const ssoExchange = (code: string) => begin("/auth/sso/exchange", { code });
+
+/** Forced enrolment (the organization requires two-step verification), done with the token login returned, before any session. */
+export const mfaEnrollSetup = (token: string) => post<MfaSetup>("/auth/mfa/enroll/setup", { mfa_token: token });
+/** Confirms the first code: opens the session login withheld and returns the recovery codes (shown only this once). */
+export async function mfaEnrollEnable(token: string, code: string): Promise<string[]> {
+  const r = await post<{ session: SessionPayload; recovery_codes: string[] }>("/auth/mfa/enroll/enable", { mfa_token: token, code });
+  adopt(r.session);
+  await loadMe();
+  return r.recovery_codes;
+}
 
 /** E-mails a reset link; the answer never says whether the address has an account. */
 export const forgotPassword = (email: string, locale?: string) => post<Record<string, never>>("/auth/password/forgot", { email, locale });

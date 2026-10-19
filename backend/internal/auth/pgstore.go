@@ -107,6 +107,15 @@ func (s *PGStore) CreateAccount(ctx context.Context, u User, o Org, m Membership
 	return err
 }
 
+func (s *PGStore) CreateUser(ctx context.Context, u User) error {
+	_, err := s.db.Exec(ctx, `INSERT INTO users (id, email, name, password_hash, email_verified_at, trial_expires_at) VALUES ($1,$2,$3,$4,$5,$6)`,
+		u.ID, u.Email, u.Name, u.PasswordHash, nullTime(u.VerifiedAt), nullTime(u.TrialExpiresAt))
+	if _, ok := isUnique(err); ok {
+		return ErrEmailTaken
+	}
+	return err
+}
+
 func (s *PGStore) UserByEmail(ctx context.Context, email string) (User, error) {
 	return scanUser(s.db.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE lower(email) = lower($1)`, email))
 }

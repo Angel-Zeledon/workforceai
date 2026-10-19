@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n";
-import { acceptInvitation, AuthError, bootstrapAuth, login, loginPath, register, resendVerification, safeReturnPath, useSession, verifyMfa } from "@/lib/session";
+import { acceptInvitation, AuthError, bootstrapAuth, login, loginPath, register, resendVerification, safeReturnPath, ssoExchange, useSession, verifyMfa } from "@/lib/session";
 import { Btn } from "../ui";
 import { ErrorLine, inputCls } from "../connections/shared";
 import { Brand } from "../landing/Brand";
+import { MfaEnroll } from "./MfaEnroll";
+import { SsoSignIn, ssoErrorKey, useSsoAvailable } from "./SsoSignIn";
 
 type Mode = "login" | "register" | "invite";
 
@@ -19,6 +21,8 @@ function errorKey(e: unknown): string {
     case "trial_expired": return "auth.err.trialExpired";
     case "rate_limited": return "auth.err.rateLimited";
     case "invalid_mfa_code": return "auth.err.mfaCode";
+    case "sso_required": return "idn.signin.err.ssoRequired";
+    case "mfa_required_by_org": return "idn.mfa.requiredByOrg";
     case "email_taken": return "auth.err.emailTaken";
     case "already_member": return "auth.err.alreadyMember";
     case "invalid_token": return "auth.err.invite";
@@ -59,6 +63,10 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   // Password accepted but the account has a second factor: the code is asked for before any session opens.
   const [mfa, setMfa] = useState<{ token: string } | null>(null);
   const [code, setCode] = useState("");
+  // The organization requires two-step verification and the account has none: enrol before any session opens.
+  const [enroll, setEnroll] = useState<{ token: string } | null>(null);
+  const ssoOn = useSsoAvailable(mode === "login" ? email : "");
+  const exchanged = useRef(false);
   const [resent, setResent] = useState(false);
   // Where to go after signing in (e.g. /approvals/<id> from a notification); only same-origin paths.
   // null until read from the URL, so a signed-in visitor is not sent to "/" first.
@@ -71,8 +79,24 @@ export function AuthScreen({ mode }: { mode: Mode }) {
     setNext(safeReturnPath(q.get("next")));
   }, [mode]);
   useEffect(() => {
-    if (next !== null && (status === "disabled" || status === "authenticated")) router.replace(next);
-  }, [status, router, next]);
+    if (next !== null && !enroll && (status === "disabled" || status === "authenticated")) router.replace(next);
+  }, [status, router, next, enroll]);
+
+  // Back from the identity provider: ?sso_code= is redeemed once (and removed from the URL at once), ?sso_error= is shown.
+  useEffect(() => {
+    if (mode !== "login" || exchanged.current) return;
+    const q = new URLSearchParams(window.location.search);
+    const sc = q.get("sso_code"), se = q.get("sso_error");
+    if (!sc && !se) return;
+    exchanged.current = true;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (se) { setErr(t(ssoErrorKey(se))); return; }
+    setBusy(true);
+    ssoExchange(sc as string).then(() => router.replace(next ?? "/")).catch((x) => {
+      setErr(t(x instanceof AuthError && x.code === "sso_required" ? "idn.signin.err.ssoRequired" : "idn.signin.err.state")); setBusy(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -97,6 +121,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
       if (mode === "login") {
         const r = await login(email, password);
         if (r.mfaRequired) { setMfa({ token: r.token }); setPassword(""); setBusy(false); return; }
+        if (r.enrollToken) { setEnroll({ token: r.enrollToken }); setPassword(""); setBusy(false); return; }
       } else if (mode === "register") {
         const r = await register({ email, password, name, org_name: org, locale });
         if (r.verificationRequired) { setSent({ email: r.email, emailSent: r.emailSent }); setCooldown(60); setBusy(false); return; }
@@ -151,7 +176,9 @@ export function AuthScreen({ mode }: { mode: Mode }) {
         </div>
       </aside>
       <div className="flex items-center justify-center px-4 py-10 sm:px-8">
-      {mfa ? (
+      {enroll ? (
+        <MfaEnroll token={enroll.token} onDone={() => router.replace(next ?? "/")} onCancel={() => { setEnroll(null); setErr(null); }} />
+      ) : mfa ? (
         <form onSubmit={submitCode} data-testid="auth-mfa" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
           <a href="/welcome" className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.mfa.title")}</h1>
@@ -222,6 +249,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
           {mode !== "login" && <a className="inline-block py-2 text-accent hover:underline" href={withNext("/login", next ?? "/")} data-testid="auth-to-login">{t("auth.toLogin")}</a>}
           {mode !== "register" && <a className="inline-block py-2 text-accent hover:underline" href={withNext("/register", next ?? "/")} data-testid="auth-to-register">{t("auth.toRegister")}</a>}
         </div>
+        {mode === "login" && ssoOn && <SsoSignIn email={email} onError={setErr} />}
         {flags.trial && mode !== "invite" && (
           <div className="border-t border-line pt-3 text-center text-xs text-mute">
             <a className="inline-block py-2 font-medium text-accent hover:underline" href="/prueba" data-testid="auth-to-trial">{t("auth.toTrial")}</a>

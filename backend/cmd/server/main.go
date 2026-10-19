@@ -17,6 +17,8 @@ import (
 	"aiworkforce/backend/internal/api"
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/scim"
+	"aiworkforce/backend/internal/sso"
 	"aiworkforce/backend/internal/config"
 	"aiworkforce/backend/internal/counters"
 	"aiworkforce/backend/internal/domain"
@@ -279,7 +281,12 @@ func run(log *slog.Logger) error {
 		} else {
 			log.Warn("no SMTP configured: new accounts are not verified and passwords cannot be reset by e-mail")
 		}
+		idw, err := wireIdentity(pg, authStore, cw.vault, rec, cfg.UIBaseURL)
+		if err != nil {
+			return err
+		}
 		svc, err := auth.NewService(auth.Config{
+			Policy: idw.sso, // per-organization sign-in policy (require MFA, enforce SSO)
 			RequireVerification: cfg.EmailVerification, Mailer: authMailer, AppURL: cfg.UIBaseURL,
 			TrialEnabled: cfg.TrialEnabled, TrialTTL: time.Duration(cfg.TrialTTLHours) * time.Hour, TrialGlobalPerDay: cfg.TrialGlobalPerDay, TrialEmailDomain: cfg.TrialEmailDomain,
 			Logf:                func(f string, a ...any) { log.Warn(fmt.Sprintf(f, a...)) },
@@ -297,8 +304,12 @@ func run(log *slog.Logger) error {
 		deps.Auth = svc
 		ah := auth.NewHandler(svc, auth.HandlerConfig{Limiter: limiter, TrustedProxies: cfg.TrustedProxies, FailOpen: true,
 			CookieName: cfg.AuthCookieName, CookieSecure: cfg.AuthCookieSecure, AllowedOrigins: cfg.AllowedOrigins,
+			SSO:        idw.sso,
 			TrialLimit: auth.Limit{Max: cfg.TrialPerIPPerDay, Window: 24 * time.Hour}})
 		deps.AuthRoutes, deps.InvitationRoutes = ah.Routes(), ah.InvitationRoutes()
+		deps.SSORoutes, deps.IdentityRoutes, deps.SCIMRoutes = idw.routes(svc,
+			sso.HandlerConfig{Limiter: limiter, TrustedProxies: cfg.TrustedProxies, FailOpen: true},
+			scim.HandlerConfig{Limiter: limiter, TrustedProxies: cfg.TrustedProxies, FailOpen: true})
 		deps.WSMaxAge = 15 * time.Minute // = default access token lifetime
 	} else {
 		log.Warn("AUTH_ENABLED=false: the API is open and uses the fixed demo organization (development only)")

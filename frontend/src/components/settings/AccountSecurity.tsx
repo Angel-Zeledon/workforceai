@@ -37,7 +37,7 @@ export function AccountSecurity() {
 
   const fail = (x: unknown) => {
     const c = x instanceof AuthError ? x.code : "";
-    setErr(t(c === "invalid_mfa_code" ? "auth.err.mfaCode" : c === "invalid_credentials" ? "auth.err.credentials" : c === "account_locked" ? "auth.err.locked" : c === "rate_limited" ? "auth.err.rateLimited" : "auth.err.generic"));
+    setErr(t(c === "invalid_mfa_code" ? "auth.err.mfaCode" : c === "invalid_credentials" ? "auth.err.credentials" : c === "account_locked" ? "auth.err.locked" : c === "rate_limited" ? "auth.err.rateLimited" : c === "mfa_required_by_org" ? "idn.mfa.requiredByOrg" : "auth.err.generic"));
   };
   const run = async (fn: () => Promise<void>) => { setBusy(true); setErr(null); try { await fn(); } catch (x) { fail(x); } setBusy(false); };
 

@@ -70,6 +70,9 @@ type Deps struct {
 	AuthRoutes http.Handler
 	// InvitationRoutes (auth on) is mounted at /api/v1/invitations.
 	InvitationRoutes http.Handler
+	// Enterprise identity (docs/architecture/identity.md). All optional; they exist only when auth is on.
+	// SSORoutes (public) -> /api/v1/sso, IdentityRoutes (org admins) -> /api/v1/identity, SCIMRoutes (IdP bearer token) -> /api/v1/scim/v2.
+	SSORoutes, IdentityRoutes, SCIMRoutes http.Handler
 	// Conns, Controls and Gateway serve the connections / controls endpoints
 	// (see connections.go and controls.go). All optional: when nil the routes
 	// are not mounted and the API is exactly as before.
@@ -169,6 +172,19 @@ func NewRouter(d Deps) http.Handler {
 			// Open demo: the frontend asks here whether to show the login.
 			r.Get("/auth/config", auth.AuthConfigHandler(false))
 		}
+		// ---- enterprise identity: SSO, verified domains, policy, SCIM (own auth inside each handler) ----
+		if d.AuthEnabled {
+			if d.SSORoutes != nil {
+				r.Mount("/sso", d.SSORoutes)
+			}
+			if d.IdentityRoutes != nil {
+				r.Mount("/identity", d.IdentityRoutes)
+			}
+			if d.SCIMRoutes != nil {
+				r.Mount("/scim/v2", d.SCIMRoutes)
+			}
+		}
+		// ---- end enterprise identity ----
 		// The OAuth callback is public (the browser comes back from the provider
 		// without a bearer token); it is verified by its single-use state.
 		s.mountOAuthCallback(r)
