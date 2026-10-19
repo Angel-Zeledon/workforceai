@@ -30,6 +30,7 @@ import (
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/roles"
+	"aiworkforce/backend/internal/webhooks"
 )
 
 func main() {
@@ -102,6 +103,11 @@ func run(log *slog.Logger) error {
 	// they were published and pays them in the background (internal/rewards).
 	rewardsObs := &rewards.Observer{Inner: pub}
 	pub = rewardsObs
+
+	// --- governance (BEGIN): public webhook events (request.done, approval.requested, report.created) ---
+	whSvc := &webhooks.Service{Log: log}
+	pub = webhooks.Publisher{Inner: pub, Svc: whSvc}
+	// --- governance (END) ---
 
 	rt := runtime.New(cfg.RuntimeURL).WithToken(os.Getenv("RUNTIME_TOKEN"))
 	if os.Getenv("RUNTIME_TOKEN") == "" {
@@ -239,6 +245,8 @@ func run(log *slog.Logger) error {
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
 	// GDPR export / deletion of the organization and the purge janitor (internal/tenantdata).
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
+	// Governance: API tokens, reports, retention job, webhooks (internal/governance, internal/webhooks).
+	wireGovernance(ctx, log, pg, store, rec, auditSvc, cw.vault, whSvc, &deps)
 	if cfg.AuthEnabled {
 		if strings.HasPrefix(cfg.JWTSecret, "dev-only-insecure") {
 			log.Warn("JWT_SECRET is the local development default from docker-compose.yml: set your own secret before exposing this server")
