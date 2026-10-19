@@ -30,6 +30,7 @@ from .cost_control import (
     reasoning_kwargs,
 )
 from .engine import AgentEngine, estimate_cost
+from .usage_tokens import tokens_from_metrics
 from .fast_path import try_fast_plan
 from .hier_plan import normalize_phase_tasks, normalize_phases
 from .models import (
@@ -303,11 +304,10 @@ class CrewAIEngine(AgentEngine):
                     parsed = parse_json_output(getattr(result, "raw", "") or "", schema)
         ms = int((time.monotonic() - t0) * 1000)
         m = getattr(result, "token_usage", None)
-        i = int(getattr(m, "prompt_tokens", 0) or 0)
-        o = int(getattr(m, "completion_tokens", 0) or 0)
+        i, c, o = tokens_from_metrics(m, cfg.id)
         return parsed, Usage(model=cfg.model, input_tokens=i, output_tokens=o,
-                             cost_usd=estimate_cost(i, o, cfg.model, cfg.id), duration_ms=ms,
-                             provider=cfg.id)
+                             cost_usd=estimate_cost(i, o, cfg.model, cfg.id, c), duration_ms=ms,
+                             provider=cfg.id, cached_tokens=c or None)
 
     def _direct_once(self, cfg: ProviderConfig, *, role: str, goal: str, backstory: str, description: str,
                      expected: str, schema: type[BaseModel], max_tokens: int | None = None,
@@ -329,14 +329,14 @@ class CrewAIEngine(AgentEngine):
         ms = int((time.monotonic() - t0) * 1000)
         summary = getattr(llm, "get_token_usage_summary", None)
         m = summary() if callable(summary) else None
-        i = int(getattr(m, "prompt_tokens", 0) or 0)
-        o = int(getattr(m, "completion_tokens", 0) or 0)
+        i, c, o = tokens_from_metrics(m, cfg.id)
         if i <= 0:
-            i = (len(backstory) + len(description) + len(expected)) // 4
+            i, c = (len(backstory) + len(description) + len(expected)) // 4, 0
         if o <= 0:
             o = max(1, len(text) // 4)
         return parsed, Usage(model=cfg.model, input_tokens=i, output_tokens=o,
-                             cost_usd=estimate_cost(i, o, cfg.model, cfg.id), duration_ms=ms, provider=cfg.id)
+                             cost_usd=estimate_cost(i, o, cfg.model, cfg.id, c), duration_ms=ms, provider=cfg.id,
+                             cached_tokens=c or None)
 
     @staticmethod
     def _prompt_texts(cfg: ProviderConfig, kw: dict[str, Any]) -> list[str]:
@@ -551,15 +551,14 @@ class CrewAIEngine(AgentEngine):
         img_tokens = sum(estimate_image_tokens(i) for i in images)
         summary = getattr(llm, "get_token_usage_summary", None)
         m = summary() if callable(summary) else None
-        i = int(getattr(m, "prompt_tokens", 0) or 0)
-        o = int(getattr(m, "completion_tokens", 0) or 0)
+        i, c, o = tokens_from_metrics(m, cfg.id)
         if i <= 0:  # the provider gave no usage: estimate (text at ~4 chars/token plus the images)
-            i = (len(system) + len(user)) // 4 + img_tokens
+            i, c = (len(system) + len(user)) // 4 + img_tokens, 0
         if o <= 0:
             o = max(1, len(text) // 4)
         return parsed, Usage(model=cfg.model, input_tokens=i, output_tokens=o,
-                             cost_usd=estimate_cost(i, o, cfg.model, cfg.id), duration_ms=ms, provider=cfg.id,
-                             image_count=len(images), image_tokens=img_tokens)
+                             cost_usd=estimate_cost(i, o, cfg.model, cfg.id, c), duration_ms=ms, provider=cfg.id,
+                             cached_tokens=c or None, image_count=len(images), image_tokens=img_tokens)
 
     async def review(self, req: ReviewRequest) -> ReviewResponse:
         """Quality review (Q1): the reviewer persona (internal auditor or neutral) judges ONE output."""
