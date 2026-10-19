@@ -26,6 +26,7 @@ import (
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
+	"aiworkforce/backend/internal/meetings" // meetings-block
 	"aiworkforce/backend/internal/memory"
 	"aiworkforce/backend/internal/peoplechat"
 	"aiworkforce/backend/internal/presence"
@@ -90,6 +91,10 @@ type Deps struct {
 	// DocIndex serves /drive/passages, /drive/index/status and /settings/doc-index (docsearch.go):
 	// passage search with citations over the drive (capability 6). Optional.
 	DocIndex *docindex.Service
+	// --- meetings (BEGIN) --- docs/architecture/meetings.md
+	// Meetings serves /meetings/* (meetings.go) and the public ICS feed /calendar/feed/{token}.ics. Optional.
+	Meetings *meetings.Service
+	// --- meetings (END) ---
 	// Sandbox serves /settings/code-execution and /code-runs (code.go); SandboxAvailable
 	// says whether a runner is configured. Optional.
 	Sandbox          *sandbox.Service
@@ -193,6 +198,7 @@ func NewRouter(d Deps) http.Handler {
 		// without a bearer token); it is verified by its single-use state.
 		s.mountOAuthCallback(r)
 		s.mountNotifyPublic(r) // approvals-notify: the public landing page of the signed links
+		s.mountMeetingsPublic(r) // meetings: public ICS feed (secret token in the URL)
 		r.Group(func(r chi.Router) {
 			r.Use(s.authenticate, s.tenant)
 			r.With(s.can(auth.PermAgentsRead)).Get("/agents", s.listAgents)
@@ -229,6 +235,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountArtifacts(r)
 			s.mountDrive(r)
 			s.mountDocSearch(r)
+			s.mountMeetings(r) // meetings
 			s.mountCode(r)
 			s.mountWeb(r)
 			s.mountOrgChart(r) // corporate organization model

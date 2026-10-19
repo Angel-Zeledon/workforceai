@@ -210,6 +210,7 @@ func run(log *slog.Logger) error {
 	// <<< corporate organization model
 	// Passage index (capability 6): embeddings provider, data policy, budget and locale, then the worker.
 	bindDocIndex(ctx, log, ws.docIndex, store, rec, orch, modelPolicy, llmSvc, orgCfg)
+	meetingsSvc := wireMeetings(log, pg, store, rec, orch, cw, ws.drive) // meetings
 
 	// Standing per-project approvals: "always allow this internal, reversible action in this project".
 	var standingSvc *application.StandingService
@@ -253,6 +254,8 @@ func run(log *slog.Logger) error {
 		Standing: standingSvc,
 		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
+		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
 	deps.Presence, deps.PeopleChat = wirePeople(ctx, pg, pub, queries) // human presence + people chat

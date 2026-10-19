@@ -1,0 +1,43 @@
+{
+  "id": "google_calendar_sync",
+  "version": 1,
+  "label_key": "provider.google_calendar_sync.name",
+  "phase": "available",
+  "auth": [
+    {
+      "method": "oauth2_pkce",
+      "authorize_url": "https://accounts.google.com/o/oauth2/v2/auth",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "revoke_url": "https://oauth2.googleapis.com/revoke",
+      "identity_scopes": ["openid", "email"],
+      "extra_params": { "access_type": "offline", "prompt": "consent" }
+    }
+  ],
+  "capabilities": {
+    "calendar.freebusy": {
+      "class": "read",
+      "scopes": ["https://www.googleapis.com/auth/calendar.freebusy"],
+      "tools": [],
+      "risk": "low",
+      "side_effects": false,
+      "default": true,
+      "label_key": "conn.cap.calendar.freebusy"
+    },
+    "calendar.sync": {
+      "class": "write",
+      "scopes": ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.freebusy"],
+      "tools": [],
+      "risk": "medium",
+      "side_effects": true,
+      "reversibility": "compensating",
+      "default": false,
+      "label_key": "conn.cap.calendar.sync",
+      "scope_overreach": "Used only by the Meetings screen, on behalf of a person: it writes the meetings that person schedules and reads busy times. No agent tool exists for it."
+    }
+  },
+  "never_offered": ["calendar.share", "calendar.settings"],
+  "identity": { "userinfo_url": "https://openidconnect.googleapis.com/v1/userinfo", "account_field": "email" },
+  "resource_filters": [],
+  "default_limits": { "per_minute": 30, "per_hour": 600, "per_day": 2000, "write_per_day": 200, "max_items_per_call": 100, "max_bytes_per_day": 10000000 },
+  "untrusted_sources": ["event.summary", "event.description", "event.location", "event.organizer", "event.attendees"]
+}
