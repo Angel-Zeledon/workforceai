@@ -112,11 +112,24 @@ func (s *Service) challengeMAC(payload string) []byte {
 }
 
 func (s *Service) newChallenge(userID, orgID string, now time.Time) string {
+	return s.newChallengeP(userID, orgID, "", now)
+}
+
+// newChallengeP mints a challenge for a purpose ("" = second-factor verification, "enroll" = forced enrolment). The
+// purpose is inside the MAC, so a token for one use can never be replayed for the other.
+func (s *Service) newChallengeP(userID, orgID, purpose string, now time.Time) string {
 	payload := userID + "|" + orgID + "|" + strconv.FormatInt(now.Add(mfaChallengeTTL).Unix(), 10)
+	if purpose != "" {
+		payload += "|" + purpose
+	}
 	return b64url.EncodeToString([]byte(payload)) + "." + b64url.EncodeToString(s.challengeMAC(payload))
 }
 
 func (s *Service) parseChallenge(tok string, now time.Time) (userID, orgID string, err error) {
+	return s.parseChallengeP(tok, "", now)
+}
+
+func (s *Service) parseChallengeP(tok, purpose string, now time.Time) (userID, orgID string, err error) {
 	parts := strings.Split(tok, ".")
 	if len(parts) != 2 || len(tok) > 400 {
 		return "", "", ErrInvalidToken
@@ -127,7 +140,7 @@ func (s *Service) parseChallenge(tok string, now time.Time) (userID, orgID strin
 		return "", "", ErrInvalidToken
 	}
 	f := strings.Split(string(pb), "|")
-	if len(f) != 3 {
+	if purpose == "" && len(f) != 3 || purpose != "" && (len(f) != 4 || f[3] != purpose) {
 		return "", "", ErrInvalidToken
 	}
 	exp, err := strconv.ParseInt(f[2], 10, 64)
@@ -226,6 +239,11 @@ func (s *Service) MFADisable(ctx context.Context, userID, password, code string)
 	}
 	if ok, _, verr := s.hasher.Verify(password, u.PasswordHash); verr != nil || !ok {
 		return ErrInvalidCredentials
+	}
+	if req, perr := s.mfaRequiredElsewhere(ctx, u.ID); perr != nil {
+		return perr
+	} else if req {
+		return ErrMFARequiredByOrg
 	}
 	if err := s.checkSecondFactor(ctx, u.ID, code); err != nil {
 		return err

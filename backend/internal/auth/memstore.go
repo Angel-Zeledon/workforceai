@@ -59,6 +59,17 @@ func (s *MemoryStore) CreateAccount(_ context.Context, u User, o Org, m Membersh
 	return nil
 }
 
+func (s *MemoryStore) CreateUser(_ context.Context, u User) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.emails[u.Email]; ok {
+		return ErrEmailTaken
+	}
+	s.users[u.ID] = u
+	s.emails[u.Email] = u.ID
+	return nil
+}
+
 func (s *MemoryStore) UserByEmail(_ context.Context, email string) (User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

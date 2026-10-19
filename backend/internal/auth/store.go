@@ -67,6 +67,8 @@ type Store interface {
 	// owner membership. Returns ErrEmailTaken or ErrSlugTaken on conflicts.
 	CreateAccount(ctx context.Context, u User, o Org, m Membership) error
 
+	// CreateUser inserts a bare account with no organization (federated sign-in and SCIM). ErrEmailTaken on a duplicate.
+	CreateUser(ctx context.Context, u User) error
 	UserByEmail(ctx context.Context, email string) (User, error) // ErrNotFound
 	UserByID(ctx context.Context, id string) (User, error)       // ErrNotFound
 	// OrgName returns the display name of an organization (ErrNotFound).

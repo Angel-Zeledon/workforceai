@@ -36,6 +36,8 @@ type HandlerConfig struct {
 	// AllowedOrigins is the browser origin allow-list (same list as CORS) used to
 	// reject cross-site refresh/logout requests. The request's own host is always allowed.
 	AllowedOrigins []string
+	// SSO (optional) redeems the single-use code of a finished SSO sign-in: POST /auth/sso/exchange.
+	SSO SSOExchanger
 }
 
 const (
@@ -155,6 +157,11 @@ func (h *Handler) Routes() http.Handler {
 	r.With(lim("refresh", h.cfg.RefreshLimit)).Post("/logout", h.logout)
 	r.With(lim("trial", h.cfg.TrialLimit)).Post("/trial", h.trial)
 	r.With(lim("mfa", h.cfg.LoginLimit)).Post("/mfa/verify", h.mfaVerify)
+	r.With(lim("mfa", h.cfg.LoginLimit)).Post("/mfa/enroll/setup", h.mfaEnrollSetup)
+	r.With(lim("mfa", h.cfg.LoginLimit)).Post("/mfa/enroll/enable", h.mfaEnrollEnable)
+	if h.cfg.SSO != nil {
+		r.With(lim("sso", h.cfg.LoginLimit)).Post("/sso/exchange", h.ssoExchange)
+	}
 	r.With(lim("pwd-forgot", h.cfg.RegisterLimit)).Post("/password/forgot", h.forgotPassword)
 	r.With(lim("pwd-reset", h.cfg.RegisterLimit)).Post("/password/reset", h.resetPassword)
 	r.With(lim("verify", h.cfg.RegisterLimit)).Post("/verify", h.verify)
@@ -298,6 +305,62 @@ func (h *Handler) mfaVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s, err := h.svc.VerifyMFA(r.Context(), in.MFAToken, in.Code, h.meta(r))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	h.writeSession(w, http.StatusOK, s)
+}
+
+func (h *Handler) mfaEnrollSetup(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		MFAToken string `json:"mfa_token"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	info, err := h.svc.MFAEnrollSetup(r.Context(), in.MFAToken)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, info)
+}
+
+func (h *Handler) mfaEnrollEnable(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		MFAToken string `json:"mfa_token"`
+		Code     string `json:"code"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	sess, codes, err := h.svc.MFAEnrollComplete(r.Context(), in.MFAToken, in.Code, h.meta(r))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	h.setRefreshCookie(w, sess.RefreshToken)
+	view := *sess
+	view.RefreshToken = ""
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]any{"session": view, "recovery_codes": codes}) // codes are shown once
+}
+
+func (h *Handler) ssoExchange(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Code string `json:"code"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	id, err := h.cfg.SSO.Exchange(r.Context(), in.Code)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	s, err := h.svc.SignInFederated(r.Context(), id, h.meta(r))
 	if err != nil {
 		writeServiceError(w, err)
 		return
@@ -594,10 +657,22 @@ func writeServiceError(w http.ResponseWriter, err error) {
 	var le *LockedError
 	var re *RateLimitedError
 	var mr *MFARequiredError
+	var me *MFAEnrollmentRequiredError
 	switch {
 	case errors.As(err, &mr):
 		// Not a failure: the password was right and the client must now present the second factor.
 		writeJSON(w, http.StatusOK, map[string]any{"mfa_required": true, "mfa_token": mr.Token})
+	case errors.As(err, &me):
+		// Not a session: the organization requires a second factor and the user has none yet.
+		if me.Token == "" {
+			writeError(w, http.StatusForbidden, "mfa_enrollment_required", "this organization requires two-factor authentication: set it up first")
+		} else {
+			writeJSON(w, http.StatusOK, map[string]any{"mfa_enrollment_required": true, "mfa_token": me.Token})
+		}
+	case errors.Is(err, ErrSSORequired):
+		writeError(w, http.StatusForbidden, "sso_required", "this organization requires single sign-on")
+	case errors.Is(err, ErrMFARequiredByOrg):
+		writeError(w, http.StatusForbidden, "mfa_required_by_org", "an organization you belong to requires two-factor authentication")
 	case errors.As(err, &ve):
 		var b errorBody
 		b.Error.Code, b.Error.Message, b.Error.Fields = "validation_failed", "invalid input", ve.Fields

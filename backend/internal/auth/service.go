@@ -60,6 +60,8 @@ type Config struct {
 	TrialEmailDomain  string        // domain of the generated addresses (default "prueba.invalid")
 	// MFAKey (optional, >= 32 bytes) encrypts TOTP secrets at rest; by default a key derived from Secret is used.
 	MFAKey []byte
+	// Policy (optional) supplies the per-organization sign-in policy (require MFA, enforce SSO), see identity.go.
+	Policy PolicyProvider
 	// Logf (optional) receives operational notes that must not reach the caller (e.g. delivery failures).
 	Logf func(format string, args ...any)
 
@@ -303,11 +305,14 @@ func (s *Service) Login(ctx context.Context, in LoginInput, meta ClientMeta) (*S
 	if s.verifyEnabled() && u.VerifiedAt.IsZero() {
 		return nil, ErrEmailNotVerified
 	}
-	if err := s.mfaGate(ctx, u, in.OrgID); err != nil {
-		return nil, err
-	}
 	m, err := s.pickMembership(ctx, u.ID, in.OrgID)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.enforcePolicy(ctx, u, m, true); err != nil {
+		return nil, err
+	}
+	if err := s.mfaGate(ctx, u, in.OrgID); err != nil {
 		return nil, err
 	}
 	return s.issueSession(ctx, u, m, uuid.NewString(), meta)
@@ -598,6 +603,9 @@ func (s *Service) SwitchOrg(ctx context.Context, actor Principal, orgID string, 
 	}
 	u, err := s.store.UserByID(ctx, actor.UserID)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.enforcePolicy(ctx, u, m, false); err != nil {
 		return nil, err
 	}
 	return s.issueSession(ctx, u, m, uuid.NewString(), meta)
