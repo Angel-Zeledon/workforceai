@@ -116,6 +116,7 @@ export function AdminMenu() {
                 trailing={onboarding.pending ? badge(t("admin.pending"), "bg-accent-soft text-accent") : undefined} onClick={run(onboarding.open)} />
             )}
             <Item icon="edit" testid="office-settings" label={t("settings.title")} onClick={run(() => go("/settings?s=office"))} />
+            {isAdmin && <Item icon="grid" testid="admin-console-open" label={t("adm.title")} onClick={run(() => go("/admin"))} />}
           </Group>
           <Group title={t("admin.group.safety")}>
             <Item icon="shield" testid="nav-security" label={t("nav.security")}
