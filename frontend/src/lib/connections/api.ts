@@ -12,6 +12,13 @@ export function errCode(e: unknown): string {
 }
 
 export interface TestResult { status: "ok" | "failed"; latency_ms: number; account_label: string | null; granted_capabilities: string[]; error_code?: string }
+/** The server answers {ok, code, status: <connection status>}; the mock answers {status: "ok"|"failed"}. Accept both,
+ *  otherwise a healthy live connection (status "active") would be shown as a failed test. */
+export function normalizeTest(r: TestResult & { ok?: boolean; code?: string }): TestResult {
+  const ok = typeof r.ok === "boolean" ? r.ok : r.status === "ok";
+  return { status: ok ? "ok" : "failed", latency_ms: r.latency_ms ?? 0, account_label: r.account_label ?? null,
+    granted_capabilities: r.granted_capabilities ?? [], error_code: ok ? undefined : (r.error_code ?? r.code) };
+}
 export interface CreateConnectionInput {
   provider: string; kind: "oauth2" | "api_key"; label: string; capabilities: string[];
   resource_scope?: Record<string, string[] | number>;
@@ -32,7 +39,7 @@ export const connApi = {
   /** Mock only: simulates the provider redirect landing on the callback. */
   oauthSimulateCallback: (id: string, denyScopes = false) => call<Connection>("GET", `/connections/oauth/callback?connection_id=${id}${denyScopes ? "&deny_scopes=1" : ""}`),
   rotate: (id: string, secret: string) => call<Connection>("PUT", `/connections/${id}/credential`, { secret }),
-  test: (id: string) => call<TestResult>("POST", `/connections/${id}/test`),
+  test: (id: string) => call<TestResult & { ok?: boolean; code?: string }>("POST", `/connections/${id}/test`).then(normalizeTest),
   suspend: (id: string) => call<Connection>("POST", `/connections/${id}/suspend`),
   resume: (id: string) => call<Connection>("POST", `/connections/${id}/resume`),
   revoke: (id: string, confirmName: string) => call<Connection>("POST", `/connections/${id}/revoke`, { confirm_name: confirmName }),

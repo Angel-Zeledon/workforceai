@@ -114,6 +114,20 @@ func (m Manifest) ScopesFor(caps []string, method AuthMethod) []string {
 	return out
 }
 
+// NormalizeScope folds the aliases a provider may answer with onto the form we
+// request. Google accepts "email" and "profile" but reports them back as
+// https://www.googleapis.com/auth/userinfo.email / .profile, which must not be
+// mistaken for a broader grant.
+func NormalizeScope(s string) string {
+	switch s {
+	case "https://www.googleapis.com/auth/userinfo.email":
+		return "email"
+	case "https://www.googleapis.com/auth/userinfo.profile":
+		return "profile"
+	}
+	return s
+}
+
 // CapabilitiesGrantedBy returns which of `requested` are covered by the scopes
 // the provider really granted (the user may untick scopes on the consent screen).
 func (m Manifest) CapabilitiesGrantedBy(requested, granted []string) []string {

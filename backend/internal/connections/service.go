@@ -593,8 +593,12 @@ func (s *Service) OAuthCallback(ctx context.Context, code, state, providerErr st
 	m := p.Manifest()
 	am, _ := m.AuthMethodFor("oauth2_pkce")
 	allowed := m.ScopesFor(c.RequestedCapabilities, am)
+	allowedNorm := make([]string, len(allowed))
+	for i, a := range allowed {
+		allowedNorm[i] = NormalizeScope(a)
+	}
 	for _, sc := range bundle.Scopes {
-		if !slices.Contains(allowed, sc) {
+		if !slices.Contains(allowedNorm, NormalizeScope(sc)) {
 			// The token is broader than requested (would break read/write
 			// separation): refuse it and close it at the provider.
 			_ = p.Revoke(ctx, app, firstNonEmpty(bundle.RefreshToken, bundle.Access.Value))
@@ -637,7 +641,8 @@ func firstNonEmpty(a, b string) string {
 }
 
 func (s *Service) uiPath(id, q string) string {
-	return strings.TrimRight(s.UIBase, "/") + "/connections/" + id + "?" + q
+	// The UI has no /connections/{id} page: connections live under Settings.
+	return strings.TrimRight(s.UIBase, "/") + "/settings?s=connections&connection=" + id + "&" + q
 }
 
 // AddCapabilities requests more capabilities (incremental consent). The
@@ -797,6 +802,9 @@ func (s *Service) Test(ctx context.Context, org, id, actor string) (TestResult, 
 	}
 	c.LastTestedAt = &now
 	c.LastTestStatus = "ok"
+	if res.OK {
+		c.LastErrorCode = "" // a healthy test clears the stale code of an earlier failure
+	}
 	if !res.OK {
 		c.LastTestStatus, c.LastErrorCode = "failed", res.Code
 		if res.Code == CodeReauthRequired && c.Status == StatusActive {

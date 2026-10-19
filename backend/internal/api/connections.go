@@ -321,7 +321,7 @@ func (s *server) testConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c, _ := s.Conns.Get(r.Context(), s.org(r), id)
-	writeJSON(w, 200, map[string]any{"status": c.Status, "ok": res.OK, "code": res.Code, "latency_ms": res.LatencyMS,
+	writeJSON(w, 200, map[string]any{"status": c.Status, "ok": res.OK, "code": res.Code, "error_code": res.Code, "latency_ms": res.LatencyMS,
 		"account_label": c.AccountLabel, "granted_capabilities": c.GrantedCapabilities})
 }
 
