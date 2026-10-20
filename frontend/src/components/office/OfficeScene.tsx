@@ -1,6 +1,6 @@
 "use client";
 import { Suspense, useEffect, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
@@ -30,13 +30,31 @@ function Rig() {
   const ref = useRef<OrbitControlsImpl>(null);
   const editing = useOfficeLayout((s) => s.editing);
   const dragging = useOfficeLayout((s) => s.dragging);
+  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
+  const aspect = useThree((s) => s.size.width / Math.max(1, s.size.height));
+  // A phone held upright shows a narrow slice of the floor plan: back the camera off and widen the lens
+  // so the office fits, and let one finger pan and two fingers pinch/rotate (rotating with one finger
+  // fought the page and made the office impossible to move around).
+  const narrow = aspect < 0.9;
+  const back = narrow ? 1 + Math.min(0.55, (0.9 - aspect) * 1.2) : 1;
+  useEffect(() => {
+    const fov = narrow ? Math.min(52, 32 + (0.9 - aspect) * 40) : 32;
+    if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+    const c = ref.current;
+    if (!c || editing) return;
+    // frame the office for this aspect ratio (also when the phone is rotated)
+    const dir = VIEW.pos.clone().sub(VIEW.target).multiplyScalar(back);
+    c.object.position.copy(c.target.clone().add(dir));
+    c.update();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a change of shape reframes the view
+  }, [narrow]);
   const tween = useRef<{ t: number; fromPos: THREE.Vector3; fromTarget: THREE.Vector3; to: typeof VIEW } | null>(null);
   const first = useRef(true);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
     const c = ref.current;
     if (!c) return;
-    tween.current = { t: 0, fromPos: c.object.position.clone(), fromTarget: c.target.clone(), to: editing ? EDIT : VIEW };
+    tween.current = { t: 0, fromPos: c.object.position.clone(), fromTarget: c.target.clone(), to: editing ? EDIT : { pos: VIEW.target.clone().add(VIEW.pos.clone().sub(VIEW.target).multiplyScalar(back)), target: VIEW.target } };
   }, [editing]);
   useFrame((_, dt) => {
     const c = ref.current;
@@ -50,7 +68,7 @@ function Rig() {
       if (tw.t >= 1) tween.current = null;
     } else {
       const t = c.target;
-      const wide = useOfficeLayout.getState().editing;
+      const wide = useOfficeLayout.getState().editing || narrow;
       t.x = THREE.MathUtils.clamp(t.x, wide ? -10 : -7, wide ? 10 : 7);
       t.z = THREE.MathUtils.clamp(t.z, wide ? -8 : -5, wide ? 8 : 6);
       t.y = THREE.MathUtils.clamp(t.y, 0, 1.2);
@@ -62,10 +80,12 @@ function Rig() {
       target={[0.5, 0.4, -0.3]}
       enabled={!dragging}
       enableDamping dampingFactor={0.08}
-      minDistance={editing ? 8 : 11} maxDistance={editing ? 38 : 30}
+      minDistance={editing ? 8 : narrow ? 7 : 11} maxDistance={(editing ? 38 : 30) * back}
       minPolarAngle={editing ? 0.08 : 0.55} maxPolarAngle={editing ? 1.2 : 1.1}
-      minAzimuthAngle={editing ? -1.4 : -0.7} maxAzimuthAngle={editing ? 1.4 : 0.7}
-      panSpeed={0.7} rotateSpeed={0.45} zoomSpeed={0.7}
+      minAzimuthAngle={editing || narrow ? -1.4 : -0.7} maxAzimuthAngle={editing || narrow ? 1.4 : 0.7}
+      panSpeed={narrow ? 1 : 0.7} rotateSpeed={0.45} zoomSpeed={0.7}
+      screenSpacePanning={!narrow}
+      touches={{ ONE: narrow ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE }}
     />
   );
 }
