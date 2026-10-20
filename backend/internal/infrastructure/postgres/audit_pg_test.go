@@ -2,9 +2,12 @@ package postgres
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -435,8 +438,48 @@ func TestPushSubscriptionsAreIsolatedByRLS(t *testing.T) {
 
 // Migration 782: retention removes old entries only through audit_purge_through, which records a checkpoint so the
 // remaining chain still verifies.
+// testStorePublic opens a store on a throwaway DATABASE instead of a throwaway schema: audit_purge_through
+// pins search_path to public (it is SECURITY DEFINER), so it can only be exercised where the migrations
+// land in public, exactly like production.
+func testStorePublic(t *testing.T) *Store {
+	t.Helper()
+	raw := os.Getenv("TEST_DATABASE_URL")
+	if raw == "" {
+		t.Skip("TEST_DATABASE_URL not set")
+	}
+	ctx := context.Background()
+	admin, err := pgx.Connect(ctx, raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := make([]byte, 4)
+	_, _ = rand.Read(b)
+	db := "pubtest_" + hex.EncodeToString(b)
+	if _, err := admin.Exec(ctx, "CREATE DATABASE "+db); err != nil {
+		admin.Close(ctx)
+		t.Fatal(err)
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u.Path = "/" + db
+	st, err := Open(ctx, Options{URL: u.String(), AppRole: "app_user"})
+	if err != nil {
+		_, _ = admin.Exec(ctx, "DROP DATABASE "+db+" WITH (FORCE)")
+		admin.Close(ctx)
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		st.Close()
+		_, _ = admin.Exec(ctx, "DROP DATABASE "+db+" WITH (FORCE)")
+		admin.Close(ctx)
+	})
+	return st
+}
+
 func TestAuditPurgeThroughKeepsTheChainVerifiable(t *testing.T) {
-	st := testStore(t).Store
+	st := testStorePublic(t)
 	ctx := context.Background()
 	seedOrg(t, st, "org-a")
 	seedOrg(t, st, "org-b")

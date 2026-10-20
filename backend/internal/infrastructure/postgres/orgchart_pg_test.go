@@ -29,7 +29,7 @@ func TestOrgChartStorePostgres(t *testing.T) {
 	if err := oc.PutDepartment(ctx, "org-oc1", d); err != nil {
 		t.Fatal(err)
 	}
-	if err := oc.PutDepartment(ctx, "org-oc1", orgchart.Department{ID: "fin", Name: "Finance", ParentID: "hq", CreatedAt: now, UpdatedAt: now}); err != nil {
+	if err := oc.PutDepartment(ctx, "org-oc1", orgchart.Department{ID: "fin", Name: "Finance", ParentID: "hq", CreatedAt: now.Add(time.Millisecond), UpdatedAt: now}); err != nil {
 		t.Fatal(err)
 	}
 	if err := oc.PutDepartment(ctx, "org-oc1", orgchart.Department{ID: "dup", Name: "finance", CreatedAt: now, UpdatedAt: now}); err == nil {
