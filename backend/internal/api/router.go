@@ -49,6 +49,9 @@ type Deps struct {
 	Approvals *application.Approvals
 	// Standing serves "always allow this kind of action in this project" (standing.go). Optional.
 	Standing *application.StandingService
+	// DevilsAdvocate serves /approvals/{id}/counterargument (devils_advocate.go): the advisory review of a
+	// high-risk approval. Optional: nil leaves the routes unmounted.
+	DevilsAdvocate *application.DevilsAdvocate
 	// Audit serves GET /audit, /audit/export and /audit/verify; Policy-related
 	// rules are served from OrgConfig (/policy/rules). Both optional.
 	Audit   *application.AuditService
@@ -231,6 +234,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountProjects(r)
 			s.mountProjectInputs(r)
 			s.mountStanding(r)
+			s.mountDevilsAdvocate(r)
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountDrive(r)

@@ -43,6 +43,7 @@ var defaultCallMaxTokens = map[domain.UsageKind]int{
 	UsagePlanPhases:        2048,
 	UsagePlanPhase:         4096,
 	UsageReplan:            3000,
+	UsageCounterargument:   1200,
 	domain.UsageChat:       350,
 	UsageSummarize:         2000,
 }
@@ -53,7 +54,9 @@ const (
 	UsagePlanPhases domain.UsageKind = "plan_phases"
 	UsagePlanPhase  domain.UsageKind = "plan_phase"
 	UsageReplan     domain.UsageKind = "replan"
-	UsageSummarize  domain.UsageKind = "summarize"
+	// UsageCounterargument is the devil's advocate review of a high-risk approval (B8); priced like a planner call.
+	UsageCounterargument domain.UsageKind = "counterargument"
+	UsageSummarize       domain.UsageKind = "summarize"
 )
 
 // callMaxTokens is the output cap of one call kind (MAX_TOKENS_<KIND>, like the runtime).
@@ -88,7 +91,7 @@ func promptOverhead(kind domain.UsageKind) int {
 	switch kind {
 	case domain.UsageChat, UsageSummarize:
 		return 700
-	case domain.UsagePlan, UsagePlanPhases, UsagePlanPhase, UsageReplan:
+	case domain.UsagePlan, UsagePlanPhases, UsagePlanPhase, UsageReplan, UsageCounterargument:
 		return 1200
 	}
 	return guardPromptOverheadTokens
