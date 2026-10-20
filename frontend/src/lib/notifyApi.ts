@@ -24,10 +24,15 @@ export interface DailyGoal {
   date: string; id: string; target: number; progress: number; reward: number; done: boolean; reached: boolean; enabled: boolean; resets_at: string;
 }
 
+/** A notification that ran out of attempts (outbox dead letter). The payload never leaves the server. */
+export interface DeadLetter { id: string; channel: "email" | "slack" | "teams"; recipient?: string; attempts: number; last_error: string; created_at: string }
+
 export const notifyApi = {
   settings: () => call<NotifySettings>("GET", "/notify/settings"),
   save: (b: NotifyInput) => call<NotifySettings>("PUT", "/notify/settings", b),
   test: () => call<{ sent: Record<string, "ok" | "failed"> }>("POST", "/notify/test"),
   planUsage: () => call<PlanUsage>("GET", "/plan/usage"),
+  deadLetters: () => call<{ items: DeadLetter[]; enabled: boolean }>("GET", "/notify/outbox/dead"),
+  retryDead: (id: string) => call<{ id: string; status: string }>("POST", `/notify/outbox/dead/${encodeURIComponent(id)}/retry`),
   dailyGoal: () => call<DailyGoal>("GET", "/rewards/daily-goal"),
 };

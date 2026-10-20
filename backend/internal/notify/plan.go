@@ -192,6 +192,17 @@ func (m *MemPlans) ResetPeriod(_ context.Context, org string, start time.Time, l
 	return true, nil
 }
 
+// StampDefaultPlan implements PlanStamper.
+func (m *MemPlans) StampDefaultPlan(_ context.Context, org string, capUSD float64, start time.Time) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.m[org]; ok {
+		return false, nil
+	}
+	m.m[org] = Plan{OrgID: org, Plan: policy.PlanFree, CapUSD: capUSD, PeriodStart: &start}
+	return true, nil
+}
+
 func (m *MemPlans) MarkCapNotified(_ context.Context, org string, t time.Time) error {
 	m.mu.Lock()
 	if p, ok := m.m[org]; ok { // only an explicit plan keeps the mark; the default plan is deduplicated in memory

@@ -94,6 +94,77 @@ type OutboxStore interface {
 	Prune(ctx context.Context, org string, before time.Time) (int, error)
 }
 
+// DeadLetterStore is the optional OutboxStore capability behind the admin view of dead messages.
+type DeadLetterStore interface {
+	// ListDead returns the dead rows of org, newest first (at most limit).
+	ListDead(ctx context.Context, org string, limit int) ([]OutboxItem, error)
+	// Requeue returns a dead row to pending with attempts reset to 0, due at now. It returns false when the row does
+	// not exist or is not dead (already retried, or sent): the UPDATE is the claim, so a double click retries once.
+	Requeue(ctx context.Context, org, id string, now time.Time) (bool, error)
+}
+
+// DeadLetter is what the admin console shows of a dead row. The payload (it can carry signed links) never leaves.
+type DeadLetter struct {
+	ID        string    `json:"id"`
+	Channel   string    `json:"channel"`
+	Recipient string    `json:"recipient,omitempty"`
+	Attempts  int       `json:"attempts"`
+	LastError string    `json:"last_error"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// DeadLetterLimit bounds the list.
+const DeadLetterLimit = 100
+
+var errDeadLettersOff = fmt.Errorf("%w: the notification queue does not keep dead letters here", domain.ErrInvalid)
+
+func toDeadLetter(it OutboxItem) DeadLetter {
+	return DeadLetter{ID: it.ID, Channel: it.Channel, Recipient: it.Recipient, Attempts: it.Attempts, LastError: it.LastError, CreatedAt: it.CreatedAt}
+}
+
+// ListDeadLetters lists the dead messages of the organization.
+func (s *Service) ListDeadLetters(ctx context.Context, org string) ([]DeadLetter, error) {
+	st, ok := s.Outbox.(DeadLetterStore)
+	if !ok {
+		return nil, errDeadLettersOff
+	}
+	items, err := st.ListDead(ctx, org, DeadLetterLimit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]DeadLetter, 0, len(items))
+	for _, it := range items {
+		out = append(out, toDeadLetter(it))
+	}
+	return out, nil
+}
+
+// RetryDeadLetter puts a dead message back in the queue (attempts reset) and wakes the worker. ErrNotFound when the
+// message does not exist in this organization or is not dead.
+func (s *Service) RetryDeadLetter(ctx context.Context, org, id string) (DeadLetter, error) {
+	st, ok := s.Outbox.(DeadLetterStore)
+	if !ok {
+		return DeadLetter{}, errDeadLettersOff
+	}
+	dl := DeadLetter{ID: id}
+	if items, err := st.ListDead(ctx, org, DeadLetterLimit); err == nil {
+		for _, it := range items {
+			if it.ID == id {
+				dl = toDeadLetter(it)
+			}
+		}
+	}
+	done, err := st.Requeue(ctx, org, id, s.now())
+	if err != nil {
+		return DeadLetter{}, err
+	}
+	if !done {
+		return DeadLetter{}, domain.ErrNotFound
+	}
+	s.hot.Store(org, struct{}{})
+	return dl, nil
+}
+
 type emailPayload struct {
 	Subject string `json:"subject"`
 	Text    string `json:"text"`
@@ -432,6 +503,31 @@ func (m *MemOutbox) Prune(_ context.Context, org string, before time.Time) (int,
 	return n, nil
 }
 
+func (m *MemOutbox) ListDead(_ context.Context, org string, limit int) ([]OutboxItem, error) {
+	var out []OutboxItem
+	for _, r := range m.Rows(org) {
+		if r.Status == OutboxDead {
+			out = append(out, r)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
+}
+
+func (m *MemOutbox) Requeue(_ context.Context, org, id string, now time.Time) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	r, ok := m.rows[okey(org, id)]
+	if !ok || r.Status != OutboxDead {
+		return false, nil
+	}
+	r.Status, r.Attempts, r.NextAttemptAt, r.LastError = OutboxPending, 0, now, ""
+	return true, nil
+}
+
 // Rows returns a copy of the rows of org, oldest first (tests and diagnostics).
 func (m *MemOutbox) Rows(org string) []OutboxItem {
 	m.mu.Lock()
@@ -510,4 +606,36 @@ func (p *PG) Prune(ctx context.Context, org string, before time.Time) (int, erro
 		return err
 	})
 	return n, err
+}
+
+func (p *PG) ListDead(ctx context.Context, org string, limit int) ([]OutboxItem, error) {
+	var out []OutboxItem
+	err := p.DB.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT id, channel, recipient, attempts, last_error, created_at FROM notify_outbox
+			WHERE org_id=$1 AND status='dead' ORDER BY created_at DESC LIMIT $2`, org, limit)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			it := OutboxItem{OrgID: org, Status: OutboxDead}
+			if err := rows.Scan(&it.ID, &it.Channel, &it.Recipient, &it.Attempts, &it.LastError, &it.CreatedAt); err != nil {
+				return err
+			}
+			out = append(out, it)
+		}
+		return rows.Err()
+	})
+	return out, err
+}
+
+func (p *PG) Requeue(ctx context.Context, org, id string, now time.Time) (bool, error) {
+	done := false
+	err := p.DB.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `UPDATE notify_outbox SET status='pending', attempts=0, next_attempt_at=$3, last_error='', sent_at=NULL
+			WHERE org_id=$1 AND id=$2 AND status='dead'`, org, id, now)
+		done = err == nil && tag.RowsAffected() == 1
+		return err
+	})
+	return done, err
 }

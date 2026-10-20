@@ -19,8 +19,11 @@ type OrgLister interface {
 // (PlanStore.ResetPeriod), so replicas, restarts and repeated sweeps never reset a month twice. A missed month is not
 // a problem: the next sweep catches up (the base is the lifetime spend at that moment).
 //
-// Only organizations with an explicit org_plans row are reset. An organization on the deployment default
-// (FREE_PLAN_CAP_USD, no row) keeps counting its lifetime spend.
+// An organization on the deployment default (FREE_PLAN_CAP_USD, no org_plans row) has nowhere to keep its base, so the
+// first sweep creates its row (PlanStamper: same free plan and cap as the default, period_start = this month, base 0).
+// Like the first stamp of an explicit plan, that grants nothing: the org keeps counting its lifetime spend until the
+// next month, when the normal reset applies. The insert is ON CONFLICT DO NOTHING, so replicas and an admin PutPlan
+// racing with it are safe. Note the row pins the cap in force when it was created.
 type PlanResetter struct {
 	Plans *Plans
 	Orgs  OrgLister
@@ -52,8 +55,15 @@ func PeriodStart(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
 }
 
+// PlanStamper is the optional PlanStore capability to create the row of an organization that is on the default plan.
+type PlanStamper interface {
+	// StampDefaultPlan inserts a free plan with capUSD and period_start = periodStart (base 0) if org has no row.
+	// It returns true for exactly one caller; an existing row is left untouched.
+	StampDefaultPlan(ctx context.Context, org string, capUSD float64, periodStart time.Time) (bool, error)
+}
+
 // ResetReport says what one sweep did.
-type ResetReport struct{ Checked, Reset, Errors int }
+type ResetReport struct{ Checked, Reset, Stamped, Errors int }
 
 // RunOnce sweeps every organization once.
 func (r *PlanResetter) RunOnce(ctx context.Context) ResetReport {
@@ -77,8 +87,26 @@ func (r *PlanResetter) RunOnce(ctx context.Context) ResetReport {
 			rep.Errors++
 			continue
 		}
-		if !ok || (pl.PeriodStart != nil && !pl.PeriodStart.Before(start)) {
-			continue // no explicit plan, or this month already started
+		if !ok {
+			// default plan: create the row so the next months can be reset
+			st, canStamp := r.Plans.Store.(PlanStamper)
+			if !canStamp || r.Plans.DefaultFreeCapUSD <= 0 {
+				continue
+			}
+			done, err := st.StampDefaultPlan(ctx, org, r.Plans.DefaultFreeCapUSD, start)
+			if err != nil {
+				r.log().Warn("plan reset: stamp default plan", "org", org, "err", err)
+				rep.Errors++
+				continue
+			}
+			if done {
+				r.Plans.Invalidate(org)
+				rep.Stamped++
+			}
+			continue
+		}
+		if pl.PeriodStart != nil && !pl.PeriodStart.Before(start) {
+			continue // this month already started
 		}
 		rep.Checked++
 		spent, err := r.Spend(ctx, org)
@@ -121,8 +149,8 @@ func (r *PlanResetter) Start(ctx context.Context, interval time.Duration) {
 		t := time.NewTicker(interval)
 		defer t.Stop()
 		for {
-			if rep := r.RunOnce(ctx); rep.Reset+rep.Errors > 0 {
-				r.log().Info("plan reset", "checked", rep.Checked, "reset", rep.Reset, "errors", rep.Errors)
+			if rep := r.RunOnce(ctx); rep.Reset+rep.Stamped+rep.Errors > 0 {
+				r.log().Info("plan reset", "checked", rep.Checked, "reset", rep.Reset, "stamped", rep.Stamped, "errors", rep.Errors)
 			}
 			select {
 			case <-ctx.Done():

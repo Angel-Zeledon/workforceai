@@ -154,6 +154,42 @@ type API struct {
 	Usage func(ctx context.Context, org string) (operatorCap, spent, reserved float64, err error)
 	Fail  func(w http.ResponseWriter, err error)
 	Write func(w http.ResponseWriter, status int, v any)
+	// Audit (optional) records an administrative action of the request's actor.
+	Audit func(r *http.Request, action, entity, entityID string, details map[string]any)
+	// URLParam reads a path parameter (chi.URLParam in the API layer).
+	URLParam func(r *http.Request, name string) string
+}
+
+// DeadLetters: GET /notify/outbox/dead - the messages that ran out of attempts.
+func (a API) DeadLetters(w http.ResponseWriter, r *http.Request) {
+	if a.Svc.Outbox == nil {
+		a.Write(w, 200, map[string]any{"items": []DeadLetter{}, "enabled": false})
+		return
+	}
+	items, err := a.Svc.ListDeadLetters(r.Context(), a.Org(r))
+	if err != nil {
+		a.Fail(w, err)
+		return
+	}
+	a.Write(w, 200, map[string]any{"items": items, "enabled": true})
+}
+
+// RetryDeadLetter: POST /notify/outbox/dead/{id}/retry - back to pending with attempts reset; audited.
+func (a API) RetryDeadLetter(w http.ResponseWriter, r *http.Request) {
+	if a.Svc.Outbox == nil {
+		a.Fail(w, errDeadLettersOff)
+		return
+	}
+	id := a.URLParam(r, "id")
+	dl, err := a.Svc.RetryDeadLetter(r.Context(), a.Org(r), id)
+	if err != nil {
+		a.Fail(w, err)
+		return
+	}
+	if a.Audit != nil {
+		a.Audit(r, "notify.outbox_retry", "notify_outbox", id, map[string]any{"channel": dl.Channel, "previous_attempts": dl.Attempts})
+	}
+	a.Write(w, 200, map[string]any{"id": id, "status": OutboxPending})
 }
 
 // GetSettings: GET /notify/settings.

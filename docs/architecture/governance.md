@@ -69,7 +69,7 @@ Safety rules, all enforced in `Purger.run` (the one place that deletes), not onl
    is not a failure; one at the checkpoint is compared with the checkpoint hash. `audit_skipped` is now true only when
    the store cannot purge the chained trail (it does not implement `governance.AuditRetention`). Entries written before
    the chain existed (`seq` NULL) are never purged. What the checkpoint cannot prove is the content of the purged
-   prefix: keep an export or an external anchor if you need that evidence.
+   prefix: keep an export or an external anchor if you need that evidence. The console shows `audit_entries` in the preview and run result.
 7. Scheduling: a run is claimed atomically (`UPDATE ... SET next_run_at ... WHERE enabled AND next_run_at <= now()`),
    so replicas never purge the same organization twice. Saving a policy delays the first run by an hour so a
    mistake can be fixed. The job runs hourly, each organization at most once per 24 h. `RETENTION_JOB=off` disables it.
@@ -115,7 +115,6 @@ queue drops with a warning) into the outbox `webhook_deliveries`.
 
 ## What remains
 
-* The console still words `audit_days` as "stored only"; it should show `audit_entries` of the preview and last run.
 * Department limits are reported and flagged but not yet enforced by the budget service (agent caps are).
 * The department tag is a string; replace the free text with a picker once real departments exist.
 * The sidebar highlight and page title of `/admin` use the office defaults (`sectionOf` lives in `navBridge.ts`).

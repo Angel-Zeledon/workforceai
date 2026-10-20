@@ -188,3 +188,15 @@ func (p *PG) ResetPeriod(ctx context.Context, org string, periodStart time.Time,
 	})
 	return done, err
 }
+
+// StampDefaultPlan implements PlanStamper. DO NOTHING on conflict makes it idempotent and safe between replicas.
+func (p *PG) StampDefaultPlan(ctx context.Context, org string, capUSD float64, periodStart time.Time) (bool, error) {
+	done := false
+	err := p.DB.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `INSERT INTO org_plans (org_id, plan, cap_usd, period_start, updated_by) VALUES ($1,'free',$2,$3,'plan-resetter')
+			ON CONFLICT (org_id) DO NOTHING`, org, capUSD, periodStart.UTC())
+		done = err == nil && tag.RowsAffected() == 1
+		return err
+	})
+	return done, err
+}
