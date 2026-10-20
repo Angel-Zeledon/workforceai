@@ -163,10 +163,11 @@ func Rank(items []Item, q Query, now time.Time, limit int) []Item {
 	return out
 }
 
-// Multi combines several retrievers (full-text today; full-text plus a
-// semantic one over pgvector later) with reciprocal-rank fusion, so scores of
-// different kinds never have to be comparable. One retriever failing does not
-// hide the others.
+// Multi combines several retrievers (full-text plus the semantic one) with
+// reciprocal-rank fusion, so scores of different kinds never have to be
+// comparable. One retriever failing does not hide the others, and when only
+// one of them found anything (no embedder, the query could not be embedded,
+// nothing close in meaning) its ranking is returned untouched.
 type Multi struct {
 	Retrievers []Retriever
 }
@@ -182,6 +183,7 @@ func (m *Multi) Retrieve(ctx context.Context, org string, q Query) ([]Item, erro
 	score := map[string]float64{}
 	byRef := map[string]Item{}
 	var firstErr error
+	var lists [][]Item
 	ok := 0
 	for _, r := range m.Retrievers {
 		items, err := r.Retrieve(ctx, org, q)
@@ -192,6 +194,9 @@ func (m *Multi) Retrieve(ctx context.Context, org string, q Query) ([]Item, erro
 			continue
 		}
 		ok++
+		if len(items) > 0 {
+			lists = append(lists, items)
+		}
 		for i, it := range items {
 			score[it.Ref] += 1 / (k + float64(i+1))
 			if _, seen := byRef[it.Ref]; !seen {
@@ -201,6 +206,13 @@ func (m *Multi) Retrieve(ctx context.Context, org string, q Query) ([]Item, erro
 	}
 	if ok == 0 && firstErr != nil {
 		return nil, firstErr
+	}
+	if len(lists) == 1 { // a single ranking: nothing to fuse, keep its scores
+		out := lists[0]
+		if q.Limit > 0 && len(out) > q.Limit {
+			out = out[:q.Limit]
+		}
+		return out, nil
 	}
 	out := make([]Item, 0, len(byRef))
 	for ref, it := range byRef {

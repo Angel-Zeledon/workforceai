@@ -27,7 +27,16 @@ func wireMemory(ctx context.Context, log *slog.Logger, pg *postgres.Store, store
 	if ws.drive != nil {
 		fts.Files = &memory.DriveFiles{FS: &drive.AgentFS{Svc: ws.drive, Projects: projectDirectory{store: ws.pstore}}}
 	}
-	cfg := memory.Config{Docs: docs, Retriever: &memory.Multi{Retrievers: []memory.Retriever{fts}}, Suspects: cw.sus, Log: log,
+	retrievers := []memory.Retriever{fts}
+	var embedder memory.Embedder
+	if vs, ok := docs.(memory.VecStore); ok && ws.docIndex != nil {
+		// Search by meaning: the same embedder, data policy and daily token cap
+		// as the drive passage index (EMBEDDINGS_*); without a provider the
+		// semantic leg returns nothing and the memory stays keyword only.
+		embedder = ws.docIndex
+		retrievers = append(retrievers, &memory.Semantic{Docs: docs, Vecs: vs, Embedder: embedder, Suspects: cw.sus})
+	}
+	cfg := memory.Config{Docs: docs, Embedder: embedder, Retriever: &memory.Multi{Retrievers: retrievers}, Suspects: cw.sus, Log: log,
 		Audit: func(actx context.Context, org, actor, action, id string, d map[string]any) {
 			rec.Audit(application.WithOrg(actx, org), domain.AuditLog{Actor: actor, Action: action, Entity: "memory", EntityID: id, Details: d})
 		}}

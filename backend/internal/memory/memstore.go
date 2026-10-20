@@ -34,9 +34,19 @@ func (m *MemStore) Upsert(_ context.Context, org string, d Doc) error {
 			delete(m.docs, k)
 		}
 	}
-	if old, ok := m.docs[key(org, d.ID)]; ok {
+	old, had := m.docs[key(org, d.ID)]
+	if had {
 		d.Suppressed = old.Suppressed
 		d.CreatedAt = old.CreatedAt
+	}
+	// Like Postgres: a new vector wins; an unchanged text keeps its vector; a changed one loses it.
+	d.EmbedHash = ContentHash(d)
+	switch {
+	case len(d.Vec) > 0:
+	case had && old.EmbedHash == d.EmbedHash:
+		d.Vec, d.EmbedModel = old.Vec, old.EmbedModel
+	default:
+		d.Vec, d.EmbedModel = nil, ""
 	}
 	m.docs[key(org, d.ID)] = d
 	return nil
@@ -151,5 +161,70 @@ func (m *MemStore) Clear(_ context.Context, org string) error {
 			delete(m.docs, k)
 		}
 	}
+	return nil
+}
+
+var _ VecStore = (*MemStore)(nil)
+
+// Candidates implements VecStore.
+func (m *MemStore) Candidates(_ context.Context, org string, q VecQuery) ([]VecCandidate, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var docs []Doc
+	for k, d := range m.docs {
+		if strings.HasPrefix(k, org+"|") && len(d.Vec) > 0 && d.EmbedModel == q.Model && visible(d, q.AgentID) &&
+			(!q.OnlyAgent || d.AgentID == q.AgentID) && (q.ExcludeRequest == "" || d.RequestID != q.ExcludeRequest) {
+			docs = append(docs, d)
+		}
+	}
+	sort.Slice(docs, func(i, j int) bool {
+		if !docs[i].UpdatedAt.Equal(docs[j].UpdatedAt) {
+			return docs[i].UpdatedAt.After(docs[j].UpdatedAt)
+		}
+		return docs[i].ID < docs[j].ID
+	})
+	if q.Limit > 0 && len(docs) > q.Limit {
+		docs = docs[:q.Limit]
+	}
+	out := make([]VecCandidate, len(docs))
+	for i, d := range docs {
+		out[i] = VecCandidate{ID: d.ID, Vec: d.Vec}
+	}
+	return out, nil
+}
+
+// Unembedded implements VecStore.
+func (m *MemStore) Unembedded(_ context.Context, org, model string, limit int) ([]Doc, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []Doc
+	for k, d := range m.docs {
+		if strings.HasPrefix(k, org+"|") && !d.Suppressed && (len(d.Vec) == 0 || d.EmbedModel != model) {
+			d.Vec = nil
+			out = append(out, d)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if !out[i].UpdatedAt.Equal(out[j].UpdatedAt) {
+			return out[i].UpdatedAt.After(out[j].UpdatedAt)
+		}
+		return out[i].ID < out[j].ID
+	})
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
+}
+
+// SetEmbedding implements VecStore.
+func (m *MemStore) SetEmbedding(_ context.Context, org, id, hash, model string, vec []float32) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	d, ok := m.docs[key(org, id)]
+	if !ok || d.EmbedHash != hash {
+		return nil // gone or changed since: the next write embeds it
+	}
+	d.Vec, d.EmbedModel = vec, model
+	m.docs[key(org, id)] = d
 	return nil
 }
