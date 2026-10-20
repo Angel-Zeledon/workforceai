@@ -33,4 +33,4 @@ La cuenta de DeepSeek quedó en -0.04 USD ("Insufficient Balance"). Para seguir:
 ## Pendiente después
 - Pulir monedas: revisar los 63 artículos y probar de punta a punta los bonos de proyecto y de calidad.
 - Probar los conectores reales (Gmail, Google, LinkedIn, Slack) con cuentas de verdad.
-- Búsqueda por significado (pgvector) para la memoria.
+- Búsqueda por significado para la memoria: hecha sin pgvector (migración 786, `docs/architecture/04-memoria.md` §6.1). Falta probar el test de Postgres con `TEST_DATABASE_URL` y activar `EMBEDDINGS_*` en producción.
