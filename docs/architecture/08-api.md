@@ -893,3 +893,7 @@ Estados HTTP: 200 (`ok`, `needs_confirmation`, `started`), 400 (`invalid_args`, 
 Los destructivos (`stop`, `undo`, `memory borrar|olvidar`) devuelven `needs_confirmation` hasta que se repite con `confirm:true`. `/correo` y `/linkedin` solo crean una solicitud cuyo agente redacta un borrador; enviarlo pasa por aprobación humana como cualquier acción externa. Los comandos que llaman al modelo (`compact`, `daily-summary`, `meeting`, `assign`, entregables, borradores) pasan por la reserva de presupuesto y el libro de uso como cualquier tarea.
 
 Runtime (aditivo): `POST /v1/summarize` (compact/meeting/daily; sirve con modelos sin salida estructurada) y `POST /v1/context-sizes` (segmentos del prompt sin llamar al modelo). Migración `600_conversation_context` (`conversation_contexts`, RLS): `/clear` y `/compact` guardan una época y un resumen por conversación; el historial completo se conserva.
+
+## 25. Puntaje de calidad y casos dorados (B11)
+
+Puntaje orientativo por agente con la metodología en la respuesta (componentes, pesos, tamaños de muestra, `insufficient_data` bajo el mínimo), ventana móvil y tendencia. Solo lectura sobre señales existentes; nunca cambia autonomía ni permisos. Rutas: `GET /quality/agents`, `GET /agents/{id}/quality`, `GET|POST /agents/{id}/golden-cases`, `PUT|DELETE /golden-cases/{id}`, `GET|POST /golden-cases/{id}/runs` (lectura `agents:read`, escritura `agents:write`, escrituras auditadas). Contrato y metodología completos: `docs/architecture/quality-score.md`. Migración `789_quality_golden`.
