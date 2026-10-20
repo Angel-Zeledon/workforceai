@@ -260,8 +260,15 @@ func run(log *slog.Logger) error {
 		}
 	}
 
+	// Proactive suggestions (B2): failed tasks become suggestions a person accepts or dismisses; accepting submits a normal request.
+	var initiativeSvc *application.InitiativeService
+	if is, ok := store.(application.InitiativeStore); ok {
+		initiativeSvc = &application.InitiativeService{Store: is, Submit: orch, Rec: rec, Cfg: cfg.App}
+		orch.SetInitiative(initiativeSvc)
+	}
+
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
-		Standing: standingSvc,
+		Standing: standingSvc, Initiative: initiativeSvc,
 		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,

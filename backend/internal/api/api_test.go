@@ -117,6 +117,7 @@ type opts struct {
 	writeGate      func(ctx context.Context, org string) error
 	rewards        bool // mount coins and shop (rewards_api_test.go)
 	standing       bool // mount the standing per-project approvals (standing_api_test.go)
+	initiative     bool // mount the proactive suggestions (initiative_api_test.go)
 	llm            bool // mount bring-your-own-model credentials (llm_api_test.go)
 	llmNoKEK       bool // ... with no encryption key configured
 	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
@@ -133,6 +134,7 @@ type env struct {
 	code  *sandbox.Service
 	coins *rewards.Service
 	llm   *llmEnv
+	init  *application.InitiativeService
 }
 
 func newEnv(t *testing.T, o opts) *env {
@@ -193,6 +195,9 @@ func newEnv(t *testing.T, o opts) *env {
 	if o.standing {
 		d.Standing = &application.StandingService{Store: mem, Core: spy, Projects: standingProjects{}, Rec: rec, Cfg: cfg, Days: 7}
 	}
+	if o.initiative {
+		d.Initiative = &application.InitiativeService{Store: mem, Submit: orch, Rec: rec, Cfg: cfg}
+	}
 	var lenv *llmEnv
 	if o.llm {
 		lenv = attachLLM(&d, mem, rec, cfg, o.llmNoKEK)
@@ -230,7 +235,7 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	ts.Start()
 	t.Cleanup(ts.Close)
-	return &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr, code: d.Sandbox, coins: coins, llm: lenv}
+	return &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr, code: d.Sandbox, coins: coins, llm: lenv, init: d.Initiative}
 }
 
 func (e *env) do(method, path, token string, body any, hdr map[string]string) (*http.Response, []byte) {

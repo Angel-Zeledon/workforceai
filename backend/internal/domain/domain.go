@@ -357,6 +357,7 @@ const (
 	EvTaskCompleted    = "task.completed"
 	EvTaskFailed       = "task.failed"
 	EvTaskBlocked      = "task.blocked"
+	EvInitiativeRaised = "initiative.raised"
 	EvMessageSent      = "message.sent"
 	EvApprovalRequest  = "approval.requested"
 	EvApprovalResolved = "approval.resolved"

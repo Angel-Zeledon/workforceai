@@ -47,7 +47,8 @@ type Store struct {
 	executions    map[string]application.ApprovalExecution // approval id -> executed action (runs.go)
 	llm           llmState                                 // bring-your-own-model credentials (llmcreds.go)
 	standing      standingState                            // standing per-project approvals (standing.go)
-	v2            v2State                                  // work profiles, traces, steer notes (v2.go)
+	initiative    initiativeState                          // proactive suggestions and their budget (initiative.go)
+	v2            v2State                                // work profiles, traces, steer notes (v2.go)
 	hist          chatHistState                            // chat history: archive, custom titles, read markers (chat_history.go)
 }
 

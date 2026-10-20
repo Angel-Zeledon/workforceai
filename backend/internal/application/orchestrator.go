@@ -54,6 +54,8 @@ type Orchestrator struct {
 	skillSrc SkillSource     // optional: the agent's active skills (skills_flow.go)
 	memSrc   MemorySource    // optional: long-term memory (memory_flow.go)
 
+	initiative InitiativeRaiser // optional: failed tasks become suggestions (initiative.go)
+
 	v2 v2State // work profiles, thought audit and intervention (intervene.go); zero value = off
 
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
@@ -1017,7 +1019,13 @@ func (o *Orchestrator) failTask(ctx context.Context, rs *run, t domain.Task, cau
 	o.rec.Emit(ctx, Action{Type: domain.EvTaskFailed, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
 		Payload: map[string]any{"task": t, "error": truncate(cause.Error(), 300)}, Text: fmt.Sprintf("Tarea fallida: %s", t.Title)})
 	o.emitMetrics(ctx)
+	if o.initiative != nil { // proactive suggestion only; a person decides (initiative.go)
+		o.initiative.TaskFailed(ctx, t, cause)
+	}
 }
+
+// SetInitiative installs the proactive-suggestion hook (nil removes it).
+func (o *Orchestrator) SetInitiative(r InitiativeRaiser) { o.initiative = r }
 
 // stopForBudget stops a task that never ran because the organization budget is
 // exhausted: it did not fail (nothing was tried), it is blocked, and only the
