@@ -63,6 +63,8 @@ export function AdminRetention() {
           <div data-testid="adm-ret-result" className="rounded-lg border border-line bg-panel2/50 p-3">
             <b className="text-[12.5px] text-ink">{res.title}</b>
             <p className="mt-1 text-[12.5px]">{t("adm.ret.result", { messages: res.r.messages, conversations: res.r.conversations, files: res.r.files_trashed })}</p>
+            {res.r.audit_entries !== undefined && <p data-testid="adm-ret-audit" className="mt-1 text-[12.5px]">{t("adm.ret.auditResult", { n: res.r.audit_entries })}</p>}
+            {res.r.audit_skipped && <p className="mt-1 text-[12px] text-warn">{t("adm.ret.auditSkipped")}</p>}
             {res.r.capped && <p className="mt-1 text-[12px] text-warn">{t("adm.ret.capped")}</p>}
           </div>
         )}

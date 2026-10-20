@@ -86,6 +86,10 @@ organizaciones con filas pendientes y un barrido cada 2 min que recoge lo que de
   destinatario detiene lo que quedaba en cola. El `payload` (puede llevar enlaces firmados) se sella con la bóveda
   (`sealed = true`, propósito `notify-outbox`) y, si el sellado falla, no se encola en claro: se envía en línea una vez.
   Al enviarse bien la fila suelta el payload; sent y dead se borran a los 30 días.
+- Cartas muertas: `GET /notify/outbox/dead` (últimas 100, sin payload) y `POST /notify/outbox/dead/{id}/retry` (`approvals:decide`,
+  como el resto de `/notify/*`; bajo RLS de la organización). Reenviar devuelve la fila a `pending` con `attempts = 0`, vence ya y se audita
+  `notify.outbox_retry`; el `UPDATE ... WHERE status = 'dead'` es la reclamación (un doble clic reenvía una vez; otra fila o tenant = 404).
+  La consola las muestra en la pestaña "Cola de notificaciones" (`AdminNotifyQueue`).
 - `POST /notify/test` sigue siendo síncrono (el admin necesita la respuesta). `NOTIFY_OUTBOX=off` vuelve al envío en
   línea de un solo intento. Sin Postgres se usa una cola en memoria (reintenta, no sobrevive a un reinicio).
 
@@ -107,8 +111,11 @@ organizaciones con filas pendientes y un barrido cada 2 min que recoge lo que de
   organizaciones con fila en `org_plans`; el `UPDATE ... WHERE period_start IS NULL OR period_start < <día 1>` es la
   reclamación, así que réplicas y reinicios nunca reinician dos veces. La primera pasada solo sella `period_start`
   (no cambia la base: nadie se desbloquea de golpe). Al reiniciar se borra `cap_notified_at` (el aviso de tope se puede
-  volver a mandar) y se audita `plan.period_reset`. **Límite**: una organización sin fila (valor por defecto
-  `FREE_PLAN_CAP_USD`) no tiene dónde guardar la base y sigue contando toda la vida. `provider` / `provider_ref`
+  volver a mandar) y se audita `plan.period_reset`. Una organización sin fila (valor por defecto
+  `FREE_PLAN_CAP_USD`) recibe una en la primera pasada (`PlanStamper.StampDefaultPlan`: `INSERT ... ON CONFLICT DO NOTHING`, plan `free`,
+  `cap_usd` = el valor por defecto de ese momento, `period_start` = día 1, base 0, `updated_by = plan-resetter`): sin cupo extra, igual que el
+  sellado de un plan explícito, y desde el mes siguiente se reinicia como cualquier otro. Esa fila fija el tope vigente al crearla (cambiar
+  `FREE_PLAN_CAP_USD` después no la cambia; se edita en `org_plans`). Sin `FREE_PLAN_CAP_USD` no se crea nada. `provider` / `provider_ref`
   (migración 785) son reservas para un proveedor de pagos; nada los lee ni cobra a nadie.
 - `GET /plan/usage` (`metrics:read`) alimenta `PlanCapBanner` (en `TrialBanner.tsx`): barra, texto
   `gastado · estimado · tope`, aviso al 80 % y estado "en pausa".
@@ -141,7 +148,5 @@ se muestra al lado como una pastilla.
 ## Pendiente
 
 - Un checkout real para pasar de gratis a pago (hoy solo se informa).
-- Reinicio mensual para las organizaciones en el plan por defecto sin fila en `org_plans`.
-- Ver y reenviar las cartas muertas de `notify_outbox` desde la consola (hoy: solo la tabla y el log).
 - Sellar con la bóveda también la columna en claro de filas antiguas que nadie vuelva a leer (se sellan al leerlas).
 - Pantalla para cambiar el plan de una organización (hoy: tabla `org_plans` o `FREE_PLAN_CAP_USD`).

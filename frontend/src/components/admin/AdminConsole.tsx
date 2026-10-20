@@ -7,13 +7,14 @@ import { PageHeader, PageSkeleton } from "../nav/ui2";
 import { ApiAccess } from "../settings/ApiAccess";
 import { AdminAudit } from "./AdminAudit";
 import { AdminMembers } from "./AdminMembers";
+import { AdminNotifyQueue } from "./AdminNotifyQueue";
 import { AdminPolicies } from "./AdminPolicies";
 import { AdminReports } from "./AdminReports";
 import { AdminRetention } from "./AdminRetention";
 import { AdminSpend } from "./AdminSpend";
 import { Notice } from "./AdminParts";
 
-const TABS = ["spend", "members", "reports", "audit", "retention", "api", "policies"] as const;
+const TABS = ["spend", "members", "reports", "audit", "retention", "queue", "api", "policies"] as const;
 type Tab = (typeof TABS)[number];
 
 function Inner() {
@@ -48,6 +49,7 @@ function Inner() {
               {tab === "reports" && <AdminReports />}
               {tab === "audit" && <AdminAudit />}
               {tab === "retention" && <AdminRetention />}
+              {tab === "queue" && <AdminNotifyQueue />}
               {tab === "api" && <ApiAccess />}
               {tab === "policies" && <AdminPolicies />}
             </div>
