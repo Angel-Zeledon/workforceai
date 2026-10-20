@@ -23,6 +23,7 @@ import { AgentPauseToggle } from "./agent/AgentPauseToggle";
 import { DeskFiles } from "./drive/DeskFiles";
 import { MemoryTab } from "./agent/MemoryTab";
 import { AgentSkillsCard } from "./skills/AgentSkillsCard";
+import { QualityCard } from "./quality/QualityCard";
 import { SaveAsSkillButton } from "./skills/SaveAsSkillButton";
 
 const TABS = ["chat", "state", "tasks", "chats", "memory", "reports", "files", "activity", "profile", "thoughts"] as const;
@@ -87,7 +88,7 @@ export function AgentPanel({ id }: { id: string }) {
       <div role="tabpanel" aria-label={t(`panel.tab.${tab}`)} className={tab === "chat" ? "min-h-0 flex-1" : "min-h-0 flex-1 space-y-3 overflow-y-auto p-4"}>
         {tab === "chat" && <AgentChat id={id} />}
         {error && !detail && <Empty>{t("panel.loadError")}</Empty>}
-        {tab === "profile" && <><Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card><ProfileSheet id={id} /><AgentSkillsCard id={id} /></>}
+        {tab === "profile" && <><Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card><ProfileSheet id={id} /><QualityCard id={id} /><AgentSkillsCard id={id} /></>}
         {tab === "thoughts" && <ThoughtAudit id={id} />}
         {tab === "state" && (
           <>

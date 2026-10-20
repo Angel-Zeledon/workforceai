@@ -12,9 +12,10 @@ import { ReportView } from "../ReportView";
 import { DashboardFiles } from "../workspace/DashboardFiles";
 import { BudgetLimitsPanel, CostBreakdownPanel } from "../cost/CostBreakdownPanel";
 import { EstimateCard } from "../cost/EstimateCard";
+import { QualityOverview } from "../quality/QualityOverview";
 import { Card, Dot, Empty, Progress, ReasonChip, StateBadge, TaskBadge, readable, timeAgo, useAgentColor, useAgentName } from "../ui";
 
-const SECTIONS = ["overview", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "costs"] as const;
+const SECTIONS = ["overview", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "quality", "costs"] as const;
 type Section = (typeof SECTIONS)[number];
 
 function Kpi({ label, value, sub, color = "#151b26" }: { label: string; value: string | number; sub?: string; color?: string }) {
@@ -53,6 +54,7 @@ export function Dashboard() {
         {section === "approvals" && <Approvals />}
         {section === "reports" && <Reports />}
         {section === "files" && <DashboardFiles />}
+        {section === "quality" && <QualityOverview />}
         {section === "costs" && <Costs />}
       </div>
     </div>

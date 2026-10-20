@@ -16,6 +16,7 @@ import { MockChat } from "./chat-mock";
 import { MockChatHistory } from "./chats-mock";
 import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
+import { mockQuality } from "./quality-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
 
@@ -553,6 +554,10 @@ export class MockBackend {
           recent_activity: this.activity.filter((a) => a.agent_id === r1).slice(0, 20),
         };
       }
+      // Quality score (B11): the demo has no history to score, so it answers honestly with "insufficient data".
+      if (r0 === "quality" && r1 === "agents") return mockQuality(this.agents);
+      if (r0 === "agents" && r1 && r2 === "quality") { const a = mockQuality(this.agents.filter((x) => x.id === r1)); return { methodology: a.methodology, generated_at: a.generated_at, agent: a.agents[0] }; }
+      if (r0 === "agents" && r1 && r2 === "golden-cases") return [];
       if (r0 === "agents" && r1 && r2 === "profile" && seg[3] === "versions") return [];
       if (r0 === "agents" && r1 && r2 === "profile") {
         return { agent_id: r1, instructions: "", creativity: "medium", skills: [], tone: "", version: 0, role_skills: [], limits: { instructions_max: 4000, skills_max: 20, skill_max_len: 40 } };
