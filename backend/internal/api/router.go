@@ -49,6 +49,8 @@ type Deps struct {
 	Approvals *application.Approvals
 	// Standing serves "always allow this kind of action in this project" (standing.go). Optional.
 	Standing *application.StandingService
+	// Initiative serves the proactive suggestions and their budget (initiative.go). Optional.
+	Initiative *application.InitiativeService
 	// Audit serves GET /audit, /audit/export and /audit/verify; Policy-related
 	// rules are served from OrgConfig (/policy/rules). Both optional.
 	Audit   *application.AuditService
@@ -231,6 +233,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountProjects(r)
 			s.mountProjectInputs(r)
 			s.mountStanding(r)
+			s.mountInitiative(r)
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountDrive(r)

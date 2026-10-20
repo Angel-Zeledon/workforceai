@@ -4035,5 +4035,22 @@
   "adm.dead.col.time": "Created",
   "adm.dead.col.channel": "Channel",
   "adm.dead.col.to": "Recipient",
-  "adm.dead.col.error": "Last error"
+  "adm.dead.col.error": "Last error",
+  "initiative.title": "Suggestions from your team",
+  "initiative.empty": "Nothing to suggest right now.",
+  "initiative.from": "{agent} suggests",
+  "initiative.accept": "Yes, go ahead",
+  "initiative.dismiss": "Not now",
+  "initiative.hint": "A suggestion does nothing by itself. If you accept, it becomes a normal request that follows the usual approvals, spending limits and controls.",
+  "initiative.noPermission": "You cannot act on suggestions.",
+  "initiative.accepted": "Done: the request was created.",
+  "initiative.dismissed": "Suggestion dismissed.",
+  "initiative.error": "That did not work. Try again.",
+  "initiative.budget.title": "Initiative budget",
+  "initiative.budget.help": "How many suggestions your employees may raise on their own. Suggestions cost nothing until you accept one; the work it starts counts toward your spending limits like any request.",
+  "initiative.budget.enabled": "Let employees make suggestions",
+  "initiative.budget.daily": "Per day",
+  "initiative.budget.monthly": "Per month",
+  "initiative.budget.save": "Save",
+  "initiative.budget.saved": "Saved."
 }
