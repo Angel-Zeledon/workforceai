@@ -3,10 +3,12 @@
 // in the drive and the lessons agents declared) is indexed and retrieved when
 // a new task needs it, so work done weeks ago is not lost in a large project.
 //
-// Retrieval goes through the Retriever interface. Today the only
-// implementation is full-text (Postgres FTS, Spanish first); a semantic
-// retriever over pgvector will be a second Retriever combined with Multi, with
-// no change in the callers (the orchestrator, the memory.search tool, the API).
+// Retrieval goes through the Retriever interface: full-text (Postgres FTS,
+// Spanish first) and, when an embeddings provider is configured, a semantic
+// retriever (cosine over embeddings stored as real[], no pgvector) combined
+// with Multi by reciprocal-rank fusion, with no change in the callers (the
+// orchestrator, the memory.search tool, the API). Without a provider, or when
+// embedding fails, retrieval is full-text only.
 //
 // Permissions: drive files are retrieved only under the folders the agent may
 // read (drive.AgentFS.ReadableRoots, the same scope as fs.search); documents
@@ -63,6 +65,13 @@ type Doc struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	Suppressed  bool      `json:"-"`
+
+	// Embedding of the document (semantic.go). Vec is set by the writer to
+	// store a new vector and is only read back by VecStore; EmbedModel and
+	// EmbedHash tell what is stored ("" when the document has no vector).
+	Vec        []float32 `json:"-"`
+	EmbedModel string    `json:"-"`
+	EmbedHash  string    `json:"-"`
 }
 
 // Item is one retrieved memory: a document or a drive file.

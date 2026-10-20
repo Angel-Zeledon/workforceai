@@ -146,5 +146,16 @@ CREATE INDEX mem_vec_customer ON memories USING hnsw (embedding vector_cosine_op
 ```
 Reglas de seguridad: **toda** consulta vectorial lleva `WHERE org_id=$1 AND customer_id=$2` (o `agent_id`) *antes* del `ORDER BY embedding <=> $q`; la funcion de repo `SemanticSearch(a MemoryAddress, ...)` exige `MemoryAddress` igual que `Read`. Con HNSW y filtros muy selectivos, usar `SET LOCAL hnsw.ef_search` alto o particionar por org grande; si el filtro devuelve pocos candidatos, caer a escaneo exacto. Embeddings se generan en Go (puerto `Embedder`, no en el runtime), con `embedding_model` versionado para reindexar.
 
+### 6.1 Implementado: busqueda por significado sin pgvector (migracion 786)
+
+La memoria de largo plazo (`memory_docs`, ver `memory.md`) ya se busca tambien por significado. Produccion es `postgres:16` sin la extension, asi que se uso el mismo enfoque del indice de documentos del drive (690): `embedding real[]` + `embed_model` + `embed_hash`, y el coseno se calcula en el backend sobre los candidatos que el agente puede ver (tope `DOCINDEX_SEMANTIC_CANDIDATES`, 3000). El diseno con `vector(1536)` de arriba sigue siendo la salida si el volumen lo pide.
+
+- **Escritura**: `RememberTask` / `RememberReport` / `/recordar` embeben titulo + cuerpo **despues** de quitar secretos (nunca sale un secreto al proveedor; la consulta tambien se limpia). Es de mejor esfuerzo: sin proveedor, con la politica de datos en contra, con el tope diario de tokens (`EMBEDDINGS_DAILY_TOKENS`, tabla `doc_embed_usage`) o el presupuesto agotado, o si el proveedor falla, el documento se guarda sin vector y sigue buscandose por palabras. Se reutiliza `docindex.Service.EmbedTexts` (mismo resolvedor, politica, topes y libro de uso que el drive).
+- **Vector vigente**: un documento con el mismo texto conserva su vector al reindexar (hash del texto); si el texto cambia el vector se descarta, nunca queda uno viejo. Solo se comparan vectores del mismo modelo.
+- **Pendientes**: `Service.EmbedPending` embebe lo que quedo sin vector (documentos previos a la migracion, tope alcanzado, caida del proveedor). Corre al terminar el backfill del arranque y de forma perezosa (como mucho una vez cada 10 min por organizacion) cuando un agente consulta la memoria.
+- **Lectura**: `memory.Multi` fusiona la ruta de palabras (`FTS`) y la semantica (`Semantic`) con reciprocal-rank fusion (`1/(60+rango)`), sin comparar puntajes de distinta naturaleza. Sin embebedor, con el tope agotado o si falla embeber la consulta, la ruta semantica no devuelve nada y se responde solo por palabras. Se ignora lo que tenga coseno < 0.25. Los archivos del drive siguen en la ruta de palabras (su ranking semantico vive en `fs.search`).
+- **Aislamiento**: los candidatos salen con `org_id` + RLS, solo alcance `org` o notas del propio agente, nunca suprimidos; se vuelve a validar al leer cada documento.
+- Reversa: `backend/migrations/down/786_memory_embeddings_down.sql` (los vectores son datos derivados).
+
 ## 7. Metricas
 `memory_context_tokens`, `memory_hits/misses`, `memory_writes_rejected_total{reason}`, `cross_scope_blocked_total` (debe ser 0 en funcionamiento normal; > 0 dispara `security.alert`).

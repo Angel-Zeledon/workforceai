@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"aiworkforce/backend/internal/application"
@@ -18,6 +19,9 @@ import (
 type Config struct {
 	Docs      DocStore
 	Retriever Retriever
+	// Embedder embeds new documents so they can be found by meaning (nil or
+	// refusing: they are stored without a vector and found by keyword).
+	Embedder Embedder
 	// Suspects redacts the exact secrets the server knows (optional).
 	Suspects *sanitize.Suspects
 	// ProjectOf tells the project a request belongs to ("" when it is not a
@@ -32,7 +36,11 @@ type Config struct {
 
 // Service is the long-term memory: it indexes finished work, retrieves what is
 // relevant for a task and lets people see and delete what an agent remembers.
-type Service struct{ cfg Config }
+type Service struct {
+	cfg   Config
+	topMu sync.Mutex
+	topAt map[string]time.Time // last lazy embedding top-up per organization
+}
 
 var _ application.MemorySource = (*Service)(nil)
 
@@ -160,15 +168,20 @@ func (s *Service) RememberTask(ctx context.Context, org string, t domain.Task, r
 	d.Body = s.scrub(d.Body)
 	d.Title = s.scrub(d.Title)
 	d.ProjectID, d.ProjectName = s.project(ctx, org, t.RequestID)
-	if err := s.cfg.Docs.Upsert(ctx, org, d); err != nil {
-		s.cfg.Log.Warn("memory: index task", "task", t.ID, "err", err)
-	}
+	docs := []*Doc{&d}
 	for i, n := range s.CleanNotes(t.Output.MemoryNotes) {
-		nd := Doc{ID: fmt.Sprintf("note_%s_%d", t.ID, i+1), Kind: KindNote, Ref: fmt.Sprintf("memory:%s.%d", t.ID, i+1), Title: capRunes(n, 120), Body: n,
+		docs = append(docs, &Doc{ID: fmt.Sprintf("note_%s_%d", t.ID, i+1), Kind: KindNote, Ref: fmt.Sprintf("memory:%s.%d", t.ID, i+1), Title: capRunes(n, 120), Body: n,
 			AgentID: t.AgentID, Scope: ScopeAgent, ProjectID: d.ProjectID, ProjectName: d.ProjectName, RequestID: t.RequestID,
-			SourceRef: application.TaskRef(t.ID), CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt}
-		if err := s.cfg.Docs.Upsert(ctx, org, nd); err != nil {
-			s.cfg.Log.Warn("memory: store note", "task", t.ID, "err", err)
+			SourceRef: application.TaskRef(t.ID), CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt})
+	}
+	s.embedDocs(ctx, org, docs...) // one provider call for the task and its notes
+	for i, doc := range docs {
+		if err := s.cfg.Docs.Upsert(ctx, org, *doc); err != nil {
+			if i == 0 {
+				s.cfg.Log.Warn("memory: index task", "task", t.ID, "err", err)
+			} else {
+				s.cfg.Log.Warn("memory: store note", "task", t.ID, "err", err)
+			}
 		}
 	}
 }
@@ -178,6 +191,7 @@ func (s *Service) RememberReport(ctx context.Context, org string, r domain.Repor
 	d := ReportDoc(r)
 	d.Body, d.Title = s.scrub(d.Body), s.scrub(d.Title)
 	d.ProjectID, d.ProjectName = s.project(ctx, org, r.RequestID)
+	s.embedDocs(ctx, org, &d)
 	if err := s.cfg.Docs.Upsert(ctx, org, d); err != nil {
 		s.cfg.Log.Warn("memory: index report", "report", r.ID, "err", err)
 	}
@@ -229,6 +243,7 @@ func (s *Service) Backfill(ctx context.Context, org string, src BackfillSource, 
 		s.RememberReport(ctx, org, r)
 		n++
 	}
+	s.EmbedPending(ctx, org, 500) // vectors the cap or the provider refused earlier
 	return n
 }
 
@@ -253,6 +268,7 @@ func (s *Service) Recall(ctx context.Context, org string, q application.MemoryRe
 	if s.cfg.Retriever == nil || strings.TrimSpace(q.Text) == "" {
 		return nil
 	}
+	s.topUp(ctx, org)
 	pid, _ := s.project(ctx, org, q.RequestID)
 	query := Query{AgentID: q.AgentID, Text: q.Text, Limit: MaxItems * 2, ExcludeRequest: q.RequestID, PreferProject: pid}
 	if pid != "" && s.cfg.ProjectPath != nil {
@@ -352,6 +368,8 @@ func (s *Service) RememberNote(ctx context.Context, org, agentID, text string) e
 	}
 	n, now := notes[0], time.Now().UTC()
 	id := fmt.Sprintf("note_user_%s_%d", agentID, now.UnixNano())
-	return s.cfg.Docs.Upsert(ctx, org, Doc{ID: id, Kind: KindNote, Ref: "memory:" + id, Title: capRunes(n, 120), Body: n,
-		AgentID: agentID, Scope: ScopeAgent, CreatedAt: now, UpdatedAt: now})
+	d := Doc{ID: id, Kind: KindNote, Ref: "memory:" + id, Title: capRunes(n, 120), Body: n,
+		AgentID: agentID, Scope: ScopeAgent, CreatedAt: now, UpdatedAt: now}
+	s.embedDocs(ctx, org, &d)
+	return s.cfg.Docs.Upsert(ctx, org, d)
 }
