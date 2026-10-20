@@ -362,16 +362,23 @@ class CrewAIEngine(AgentEngine):
         failed: list[str] = []
         broke: list[str] = []  # providers whose account has no balance left
         last: BaseException | None = None
+        spent = 0.0  # USD already burned by failed attempts of THIS call (exc.usage.cost_usd when the error carries it)
         for cfg in order:
             attempt = 0
-            try:  # budget guard BEFORE sending: a provider whose worst case crosses the allowance is skipped
-                preflight(kind=kind, model=cfg.model, provider=cfg.id, prompt_texts=self._prompt_texts(cfg, kw),
-                          max_tokens=kw["max_tokens"], allowance_usd=allowance)
-            except CallBudgetError as exc:
-                log.warning("provider %s skipped by the budget guard: %s", cfg.id, exc)
-                over = over or exc
-                continue
             while True:
+                try:  # budget guard BEFORE every send, against what is left after the failed attempts so far
+                    left = allowance - spent if allowance > 0 else 0.0
+                    if allowance > 0 and left <= 0:
+                        left = 1e-12  # nothing left: any estimate is above it
+                    preflight(kind=kind, model=cfg.model, provider=cfg.id,
+                              prompt_texts=self._prompt_texts(cfg, kw), max_tokens=kw["max_tokens"],
+                              allowance_usd=left)
+                except CallBudgetError as exc:
+                    log.warning("provider %s skipped by the budget guard (spent $%.4f): %s", cfg.id, spent, exc)
+                    over = over or exc
+                    if attempt:
+                        failed.append(cfg.id)
+                    break
                 try:
                     parsed, usage = once(cfg, **kw)
                     if failed:
@@ -381,6 +388,7 @@ class CrewAIEngine(AgentEngine):
                     return parsed, usage
                 except Exception as exc:
                     last = exc
+                    spent += float(getattr(getattr(exc, "usage", None), "cost_usd", 0) or 0)
                     if is_no_balance(exc):
                         log.warning("provider %s has no balance left", cfg.id)
                         failed.append(cfg.id)
@@ -396,7 +404,7 @@ class CrewAIEngine(AgentEngine):
                                 scrub(str(exc), order)[:200])
                     failed.append(cfg.id)
                     break
-        if over is not None and not failed:
+        if over is not None and (not failed or spent > 0):
             raise over
         if failed and len(broke) == len(failed):
             raise ProviderError(
