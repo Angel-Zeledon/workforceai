@@ -133,7 +133,8 @@ func TestQualitySignalsAndGoldenCasesPostgres(t *testing.T) {
 	if err != nil || len(runs) != 3 || runs[0].CreatedAt.Before(runs[2].CreatedAt) {
 		t.Fatalf("runs: %v %+v", err, runs)
 	}
-	rep, _ = svc.ForAgent(ctxA, agent, 30)
+	// The runs above were stamped at the frozen clock's now, which is the exclusive end of the window: read one second later.
+	rep, _ = qualitySvc(env, now.Add(time.Second)).ForAgent(ctxA, agent, 30)
 	if g := rep.Agents[0].Counts; g.GoldenRuns != 3 || g.GoldenPassed != 2 || rep.Agents[0].GoldenSet != 1 {
 		t.Fatalf("golden: %+v", g)
 	}
