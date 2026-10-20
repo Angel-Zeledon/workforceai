@@ -7,6 +7,7 @@ import { resolveAgent, usePreferences } from "@/lib/preferences";
 import type { Task } from "@/lib/types";
 import { ActivityFeed } from "../ActivityFeed";
 import { ApprovalCard } from "../ApprovalsTray";
+import { InitiativePanel } from "../initiative/InitiativePanel";
 import { ConversationThread } from "../Conversation";
 import { ReportView } from "../ReportView";
 import { DashboardFiles } from "../workspace/DashboardFiles";
@@ -106,6 +107,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
           <Card title={t("dash.pendingApprovals")}>
             {approvals.length ? <div className="space-y-2">{approvals.map((a) => <ApprovalCard key={a.id} a={a} compact />)}</div> : <Empty>{t("dash.nothingToApprove")}</Empty>}
           </Card>
+          <InitiativePanel />
           <Card title={t("hud.liveActivity")}><ActivityFeed limit={12} compact /></Card>
         </div>
       </div>

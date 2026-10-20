@@ -4035,5 +4035,22 @@
   "adm.dead.col.time": "Creada",
   "adm.dead.col.channel": "Canal",
   "adm.dead.col.to": "Destinatario",
-  "adm.dead.col.error": "Último error"
+  "adm.dead.col.error": "Último error",
+  "initiative.title": "Sugerencias de tu equipo",
+  "initiative.empty": "No hay nada que sugerir por ahora.",
+  "initiative.from": "{agent} sugiere",
+  "initiative.accept": "Sí, adelante",
+  "initiative.dismiss": "Ahora no",
+  "initiative.hint": "Una sugerencia no hace nada por sí sola. Si la aceptas, se convierte en una solicitud normal que sigue las aprobaciones, los límites de gasto y los controles de siempre.",
+  "initiative.noPermission": "No puedes actuar sobre las sugerencias.",
+  "initiative.accepted": "Listo: se creó la solicitud.",
+  "initiative.dismissed": "Sugerencia descartada.",
+  "initiative.error": "No funcionó. Inténtalo de nuevo.",
+  "initiative.budget.title": "Presupuesto de iniciativa",
+  "initiative.budget.help": "Cuántas sugerencias pueden hacer tus empleados por su cuenta. Una sugerencia no cuesta nada hasta que aceptas una; el trabajo que inicia cuenta para tus límites de gasto como cualquier solicitud.",
+  "initiative.budget.enabled": "Permitir que los empleados hagan sugerencias",
+  "initiative.budget.daily": "Por día",
+  "initiative.budget.monthly": "Por mes",
+  "initiative.budget.save": "Guardar",
+  "initiative.budget.saved": "Guardado."
 }
