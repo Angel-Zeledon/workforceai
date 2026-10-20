@@ -7,6 +7,7 @@ import { useT } from "@/lib/i18n";
 import { useCan } from "@/lib/session";
 import { Btn, Dot, RiskBadge, useAgentColor, useAgentName } from "./ui";
 import { CodeRunView } from "./code/CodeRunView";
+import { DevilsAdvocate } from "./approvals/DevilsAdvocate";
 
 /** `scope="office"` is the card shown over the approvals desk in the 3D office: same decision call and permission
  * checks, different test ids so the tray's `approval-<id>` selectors stay unique. */
@@ -30,6 +31,8 @@ export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approv
   const canRemember = !!a.standing_eligible && !!a.project_id;
   const approveLabel = !canRemember ? t("approvals.approve") : !always ? t("approvals.approveOnce") : remember === "session" ? t("approvals.approveSession") : t("approvals.approveProject");
   const pending = a.status === "pending";
+  // Same rule as the server (IsHighRiskApproval): the risk the policy engine stored, or a double approval.
+  const highRisk = a.risk === "high" || (a.required_approvals ?? 1) >= 2;
   return (
     <div data-testid={pending ? (scope === "office" ? `office-approval-card-${a.id}` : `approval-${a.id}`) : undefined} className="rounded-md border border-line bg-panel2 p-3">
       <div className="mb-1 flex items-center justify-between gap-2">
@@ -43,6 +46,7 @@ export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approv
         <div data-testid={scope === "office" ? "office-approval-no-permission" : "approval-no-permission"} className="mt-2 text-[11px] text-mute">{t("approvals.noPermission")}</div>
       ) : pending ? (
         <>
+        {highRisk && <DevilsAdvocate approvalId={a.id} />}
         {canRemember && (
           <div className="mt-2 space-y-1 text-[11px] text-ink2">
             <label className="flex items-center gap-1.5 font-semibold">

@@ -4035,5 +4035,14 @@
   "adm.dead.col.time": "Creada",
   "adm.dead.col.channel": "Canal",
   "adm.dead.col.to": "Destinatario",
-  "adm.dead.col.error": "Último error"
+  "adm.dead.col.error": "Último error",
+  "approvals.devil.title": "Abogado del diablo",
+  "approvals.devil.advisory": "Segunda opinión consultiva: argumenta la postura contraria. No aprueba ni rechaza nada; decides tú.",
+  "approvals.devil.loading": "Preparando la postura contraria...",
+  "approvals.devil.risks": "Qué podría salir mal",
+  "approvals.devil.checks": "Qué verificar antes de decidir",
+  "approvals.devil.retry": "Reintentar",
+  "approvals.devil.error.unavailable": "No se pudo preparar la revisión ahora. Puedes decidir esta aprobación sin ella.",
+  "approvals.devil.error.blocked": "La revisión está en pausa (interruptor de emergencia o agente pausado). Puedes decidir sin ella.",
+  "approvals.devil.error.budget": "La revisión no cabe en el tope de gasto actual. Puedes decidir sin ella."
 }

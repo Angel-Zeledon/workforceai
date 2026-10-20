@@ -40,6 +40,12 @@ export interface Approval {
   tool?: string; project_id?: string; standing_eligible?: boolean;
 }
 
+/** Devil's advocate (B8): the advisory review of a high-risk approval. Never a decision. */
+export interface Counterargument {
+  approval_id: string; counterargument: string; risks: string[]; checks: string[];
+  advisory: boolean; cached?: boolean; cost_usd: number; created_at: string; model?: string;
+}
+
 /** "Always allow this kind of action in this project" (docs/architecture/06-permisos-autonomia.md). */
 export interface StandingApproval {
   id: string; project_id: string; agent_id: string; tool: string; action: string; approval_id?: string;

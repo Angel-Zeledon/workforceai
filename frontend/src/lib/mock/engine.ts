@@ -133,6 +133,7 @@ export class MockBackend {
   private errorsCount = 0;
   private budget = 50;
   private decisions = new Map<string, (d: "approve" | "reject") => void>();
+  private counter = new Map<string, Record<string, unknown>>();
   /** agent id -> active budget pause (GET /budget `pauses`) */
   private pauses = new Map<string, { scope: "agent"; scope_id: string; request_id: string; since: string; cap_usd: number; spent_usd: number; needed_usd: number; waiters: number }>();
   private specs = new Map<string, TaskSpec>();
@@ -162,7 +163,7 @@ export class MockBackend {
   private seed() {
     this.agents = SEED_AGENTS.map((a) => ({ ...a, metrics: { ...a.metrics }, state: "idle" as AgentState, activity: "Disponible", current_task_id: null, progress: 0 }));
     this.tasks = []; this.requests = []; this.conversations = []; this.messages = {}; this.approvals = [];
-    this.reports = []; this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.specs.clear(); this.running.clear();
+    this.reports = []; this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
   }
 
   // ---- realtime -----------------------------------------------------------------------------
@@ -592,6 +593,17 @@ export class MockBackend {
         this.log(null, "message.sent", `Intervención del usuario: ${text}`);
         this.replyToUser(conv, target).catch(() => {});
         return m;
+      }
+      if (r0 === "approvals" && r1 && r2 === "counterargument") { // devil's advocate (B8): canned, advisory, cached per approval
+        const ap = this.approvals.find((a) => a.id === r1);
+        if (!ap) throw new Error("not found");
+        const cached = this.counter.get(r1);
+        if (cached) return { ...cached, cached: true };
+        const c = { approval_id: r1, advisory: true, counterargument: `Postura contraria a "${ap.title}": hacerlo ahora puede ser prematuro, y una acción de riesgo alto es difícil de deshacer.`,
+          risks: ["Los datos del detalle podrían estar desactualizados.", "El alcance real puede ser mayor que el del título."],
+          checks: ["Verifica la fuente de los datos.", "Pregunta si hay una opción de menor riesgo (borrador, prueba con un caso)."], cost_usd: 0.004, created_at: nowIso() };
+        this.counter.set(r1, c);
+        return c;
       }
       if (r0 === "approvals" && r1 && r2 === "decision") {
         const res = this.decisions.get(r1);
