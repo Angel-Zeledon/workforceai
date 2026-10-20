@@ -4053,5 +4053,14 @@
   "initiative.budget.daily": "Por dia",
   "initiative.budget.monthly": "Por mês",
   "initiative.budget.save": "Salvar",
-  "initiative.budget.saved": "Salvo."
+  "initiative.budget.saved": "Salvo.",
+  "approvals.devil.title": "Advogado do diabo",
+  "approvals.devil.advisory": "Segunda opinião consultiva: argumenta a posição contrária. Não aprova nem rejeita nada; quem decide é você.",
+  "approvals.devil.loading": "Preparando a posição contrária...",
+  "approvals.devil.risks": "O que poderia dar errado",
+  "approvals.devil.checks": "O que verificar antes de decidir",
+  "approvals.devil.retry": "Tentar de novo",
+  "approvals.devil.error.unavailable": "Não foi possível preparar a revisão agora. Você pode decidir esta aprovação sem ela.",
+  "approvals.devil.error.blocked": "A revisão está em pausa (interruptor de emergência ou agente pausado). Você pode decidir sem ela.",
+  "approvals.devil.error.budget": "A revisão não cabe no teto de gastos atual. Você pode decidir sem ela."
 }

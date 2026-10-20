@@ -15,6 +15,7 @@ from .engine import AgentEngine, _truthy, select_engine
 from .estimate import EstimateRequest, EstimateResponse
 from .providers import ProviderError, config_from_credential, configured_providers, default_provider, scrub
 from .replan import ReplanRequest, ReplanResponse
+from .devils_advocate import CounterargumentRequest, CounterargumentResponse
 from .redact import redact_any, redact_secrets
 from .security import build_trace
 from .cost_control import CallBudgetError
@@ -181,6 +182,12 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
         resp = await guarded(eng_for(req).review(req))
         data = redact_any(resp.model_dump(exclude={"usage"}))  # nothing with the shape of a credential leaves the runtime
         return ReviewResponse(**data, usage=resp.usage)
+
+    @app.post("/v1/counterargument", response_model=CounterargumentResponse, response_model_exclude_none=True)
+    async def counterargument(req: CounterargumentRequest):
+        resp = await guarded(eng_for(req).counterargument(req))
+        data = redact_any(resp.model_dump(exclude={"usage"}))  # nothing with the shape of a credential leaves the runtime
+        return CounterargumentResponse(**data, usage=resp.usage)
 
     @app.post("/v1/estimate", response_model=EstimateResponse)
     async def estimate(req: EstimateRequest):

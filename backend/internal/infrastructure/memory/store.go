@@ -48,7 +48,8 @@ type Store struct {
 	llm           llmState                                 // bring-your-own-model credentials (llmcreds.go)
 	standing      standingState                            // standing per-project approvals (standing.go)
 	initiative    initiativeState                          // proactive suggestions and their budget (initiative.go)
-	v2            v2State                                // work profiles, traces, steer notes (v2.go)
+	counter       counterargumentState                     // devil's advocate reviews, cached per approval (counterarguments.go)
+	v2            v2State                                 // work profiles, traces, steer notes (v2.go)
 	hist          chatHistState                            // chat history: archive, custom titles, read markers (chat_history.go)
 }
 
@@ -67,6 +68,7 @@ func (s *Store) clear() {
 	s.hist = chatHistState{}
 	s.usage = nil
 	s.runMeta, s.checkpoints = map[string][]byte{}, map[string][]byte{}
+	s.counter.byKey = nil
 	s.executions = map[string]application.ApprovalExecution{}
 	s.v2.traces, s.v2.steer = nil, nil // execution data; profiles are configuration and survive a reset
 	// Request caps are execution data; agent caps are configuration and survive a reset.

@@ -189,6 +189,12 @@ class _ReviewLLM(BaseModel):
     evidence: list[str] = Field(default_factory=list)
 
 
+class _CounterargumentLLM(BaseModel):
+    counterargument: str
+    risks: list[str] = Field(default_factory=list)
+    checks: list[str] = Field(default_factory=list)
+
+
 class _Synth(BaseModel):
     title: str
     summary: str
@@ -601,6 +607,20 @@ class CrewAIEngine(AgentEngine):
             policy=policy_from_request(req, "review"), kind="review", max_cost_usd=req.max_cost_usd)
         data = normalize_review(res.model_dump(), req)
         return ReviewResponse(**data, usage=usage, provider=usage.provider, model=usage.model)
+
+    async def counterargument(self, req):
+        """Devil's advocate (B8): argues against ONE high-risk approval. Advisory: the model never decides anything."""
+        from .devils_advocate import CounterargumentResponse, build_counterargument_prompt, normalize_counterargument
+
+        res, usage = await self._run(
+            role="Abogado del diablo", goal="Exponer la postura contraria y lo que podria salir mal antes de aprobar, sin decidir",
+            backstory=system_rules(req.locale, req.tone), description=build_counterargument_prompt(req),
+            expected="JSON con counterargument, risks y checks", schema=_CounterargumentLLM,
+            policy=policy_from_request(req, "counterargument"), kind="counterargument", max_cost_usd=req.max_cost_usd)
+        data = normalize_counterargument(res.model_dump())
+        if not data["counterargument"]:
+            raise ValueError("empty counterargument")
+        return CounterargumentResponse(**data, usage=usage, provider=usage.provider, model=usage.model)
 
     async def consult(self, req: ConsultRequest) -> ConsultResponse:
         res, usage = await self._run(

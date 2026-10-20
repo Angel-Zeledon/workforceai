@@ -118,6 +118,7 @@ type opts struct {
 	rewards        bool // mount coins and shop (rewards_api_test.go)
 	standing       bool // mount the standing per-project approvals (standing_api_test.go)
 	initiative     bool // mount the proactive suggestions (initiative_api_test.go)
+	advocate       *advocateStub // mount the devil's advocate review with this runtime (devils_advocate_api_test.go)
 	llm            bool // mount bring-your-own-model credentials (llm_api_test.go)
 	llmNoKEK       bool // ... with no encryption key configured
 	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
@@ -197,6 +198,9 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	if o.initiative {
 		d.Initiative = &application.InitiativeService{Store: mem, Submit: orch, Rec: rec, Cfg: cfg}
+	}
+	if o.advocate != nil {
+		d.DevilsAdvocate = &application.DevilsAdvocate{Store: mem, Core: spy, Runtime: o.advocate, Budget: orch, Rec: rec, Cfg: cfg}
 	}
 	var lenv *llmEnv
 	if o.llm {

@@ -4052,5 +4052,14 @@
   "initiative.budget.daily": "Per day",
   "initiative.budget.monthly": "Per month",
   "initiative.budget.save": "Save",
-  "initiative.budget.saved": "Saved."
+  "initiative.budget.saved": "Saved.",
+  "approvals.devil.title": "Devil's advocate",
+  "approvals.devil.advisory": "Advisory second opinion: it argues the opposite position. It approves and rejects nothing; you decide.",
+  "approvals.devil.loading": "Preparing the opposing view...",
+  "approvals.devil.risks": "What could go wrong",
+  "approvals.devil.checks": "What to check before deciding",
+  "approvals.devil.retry": "Retry",
+  "approvals.devil.error.unavailable": "The review could not be prepared right now. You can still decide this approval without it.",
+  "approvals.devil.error.blocked": "The review is paused (kill switch or paused agent). You can decide without it.",
+  "approvals.devil.error.budget": "The review does not fit the current spending cap. You can decide without it."
 }

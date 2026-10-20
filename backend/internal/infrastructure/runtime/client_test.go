@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"aiworkforce/backend/internal/application"
@@ -74,6 +75,34 @@ func TestClientSummarizeAndContextSizes(t *testing.T) {
 	msgs, _ := m["messages"].([]any)
 	if m["mode"] != "compact" || m["locale"] != "en" || m["previous_summary"] != "antes" || len(msgs) != 1 || msgs[0].(map[string]any)["from"] != "user" {
 		t.Fatalf("summarize body: %v", m)
+	}
+}
+
+// B8: the devil's advocate call speaks the Python contract and carries no secret-looking field.
+func TestClientCounterargumentSpeaksTheContract(t *testing.T) {
+	var path string
+	var body map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path = r.URL.Path
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		_, _ = w.Write([]byte(`{"counterargument":"c","risks":["r"],"checks":["k"],"usage":{"model":"m","input_tokens":1,"output_tokens":1,"cost_usd":0.1,"duration_ms":1}}`))
+	}))
+	defer srv.Close()
+	out, err := New(srv.URL).Counterargument(context.Background(), application.CounterargumentRequest{Locale: "en",
+		Approval: application.CounterargumentBrief{Action: "email.send", Title: "t", Details: "d", Risk: "high", RequiredApprovals: 2}})
+	if err != nil || out.Counterargument != "c" || len(out.Risks) != 1 || out.Usage == nil || out.Usage.CostUSD != 0.1 {
+		t.Fatalf("response = %+v %v", out, err)
+	}
+	ap, _ := body["approval"].(map[string]any)
+	if path != "/v1/counterargument" || body["locale"] != "en" || ap["risk"] != "high" || ap["required_approvals"] != float64(2) {
+		t.Fatalf("request = %s %v", path, body)
+	}
+	for k := range ap {
+		for _, bad := range []string{"token", "secret", "password", "credential", "key"} {
+			if strings.Contains(k, bad) {
+				t.Errorf("approval brief field %q looks like a credential", k)
+			}
+		}
 	}
 }
 

@@ -33,6 +33,7 @@ DEFAULT_MAX_TOKENS: dict[str, int] = {
     "route": 300,
     "chat": 350,
     "replan": 3000,
+    "counterargument": 1200,
     "default": 3000,
 }
 

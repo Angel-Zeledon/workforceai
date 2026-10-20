@@ -155,6 +155,12 @@ class AgentEngine(abc.ABC):
 
         return sim_replan(req)
 
+    async def counterargument(self, req):
+        """Devil's advocate for a high-risk approval (B8, advisory only). Default: the deterministic simulated reviewer."""
+        from .devils_advocate import sim_counterargument
+
+        return sim_counterargument(req)
+
     async def route(self, req: RouteRequest) -> RouteResponse:
         """Who should answer a chat message (docs/architecture/chat-routing.md). Default: the rules."""
         from .routing import rules_route

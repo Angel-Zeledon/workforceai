@@ -1,7 +1,7 @@
 import { API_URL, MOCK } from "./config";
 import { authFetch } from "./session";
 import type {
-  Agent, AgentDetail, Approval, ChatMessage, Conversation, Message, Metrics, Report, Request, StandingApproval, Task, ActivityItem,
+  Agent, AgentDetail, Approval, ChatMessage, Counterargument, Conversation, Message, Metrics, Report, Request, StandingApproval, Task, ActivityItem,
 } from "./types";
 
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -77,5 +77,7 @@ export const api = {
   decide: (id: string, decision: "approve" | "reject", note?: string, always?: { anyAgent: boolean; scope?: "session" | "project" }) =>
     call<{ standing?: StandingApproval; standing_error?: string }>("POST", `/approvals/${id}/decision`,
       always ? { decision, note, always_allow: true, always_allow_any_agent: always.anyAgent, scope: always.scope ?? "project" } : { decision, note }),
+  /** Devil's advocate (B8): generates the advisory review of a high-risk approval on the first call and returns the cached one afterwards. */
+  counterargument: (id: string, locale?: string) => call<Counterargument>("POST", `/approvals/${id}/counterargument`, locale ? { locale } : {}),
   reset: () => call<unknown>("POST", "/demo/reset"),
 };

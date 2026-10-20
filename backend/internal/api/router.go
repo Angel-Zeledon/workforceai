@@ -51,6 +51,9 @@ type Deps struct {
 	Standing *application.StandingService
 	// Initiative serves the proactive suggestions and their budget (initiative.go). Optional.
 	Initiative *application.InitiativeService
+	// DevilsAdvocate serves /approvals/{id}/counterargument (devils_advocate.go): the advisory review of a
+	// high-risk approval. Optional: nil leaves the routes unmounted.
+	DevilsAdvocate *application.DevilsAdvocate
 	// Audit serves GET /audit, /audit/export and /audit/verify; Policy-related
 	// rules are served from OrgConfig (/policy/rules). Both optional.
 	Audit   *application.AuditService
@@ -234,6 +237,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountProjectInputs(r)
 			s.mountStanding(r)
 			s.mountInitiative(r)
+			s.mountDevilsAdvocate(r)
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountDrive(r)

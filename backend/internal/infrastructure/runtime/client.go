@@ -74,6 +74,8 @@ var (
 	_ application.Estimator   = (*Client)(nil)
 	_ application.ChatRuntime = (*Client)(nil)
 	_ application.Reviewer    = (*Client)(nil)
+
+	_ application.CounterargumentRuntime = (*Client)(nil)
 	_ application.LLMTester   = (*Client)(nil)
 )
 
@@ -156,6 +158,12 @@ func (c *Client) Synthesize(ctx context.Context, in application.SynthesizeReques
 // Review implements application.Reviewer (POST /v1/review).
 func (c *Client) Review(ctx context.Context, in application.ReviewRequest) (out application.ReviewResponse, err error) {
 	err = c.do(ctx, http.MethodPost, "/v1/review", in, &out)
+	return
+}
+
+// Counterargument implements application.CounterargumentRuntime (POST /v1/counterargument).
+func (c *Client) Counterargument(ctx context.Context, in application.CounterargumentRequest) (out application.CounterargumentResponse, err error) {
+	err = c.do(ctx, http.MethodPost, "/v1/counterargument", in, &out)
 	return
 }
 
