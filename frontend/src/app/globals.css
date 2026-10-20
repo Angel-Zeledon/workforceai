@@ -46,6 +46,8 @@ body { overflow-x: clip; }
 @media (max-width: 767px) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]), select, textarea { font-size: 16px; }
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]), select { min-height: 40px; }
+  /* The typed text stays 16px (smaller makes iOS zoom on focus); the hint can be smaller so a long one fits on one line. */
+  input::placeholder, textarea::placeholder { font-size: 13px; }
 }
 select { color-scheme: light; }
 input::placeholder, textarea::placeholder { color: rgb(var(--mute) / 0.75); }
