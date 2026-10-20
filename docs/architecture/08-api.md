@@ -893,3 +893,17 @@ Estados HTTP: 200 (`ok`, `needs_confirmation`, `started`), 400 (`invalid_args`, 
 Los destructivos (`stop`, `undo`, `memory borrar|olvidar`) devuelven `needs_confirmation` hasta que se repite con `confirm:true`. `/correo` y `/linkedin` solo crean una solicitud cuyo agente redacta un borrador; enviarlo pasa por aprobación humana como cualquier acción externa. Los comandos que llaman al modelo (`compact`, `daily-summary`, `meeting`, `assign`, entregables, borradores) pasan por la reserva de presupuesto y el libro de uso como cualquier tarea.
 
 Runtime (aditivo): `POST /v1/summarize` (compact/meeting/daily; sirve con modelos sin salida estructurada) y `POST /v1/context-sizes` (segmentos del prompt sin llamar al modelo). Migración `600_conversation_context` (`conversation_contexts`, RLS): `/clear` y `/compact` guardan una época y un resumen por conversación; el historial completo se conserva.
+
+## 25. Sugerencias proactivas (B2)
+
+Los empleados avisan solos ("la tarea X falló, ¿la reviso?") con un presupuesto de iniciativa limitado. Una sugerencia es solo una notificación: aceptarla crea una solicitud normal (igual que `POST /requests`), así que aprobaciones, topes de gasto, kill-switch, modo solo lectura, pausa y auditoría se aplican igual. Los agentes no pueden aceptar ni aprobar. Diseño: `docs/architecture/initiative.md`. Migración `787_initiatives` (`initiatives`, `initiative_settings`, RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/initiatives?status=&limit=` | `requests:read` | `[{id, agent_id, signal, signal_key, title, body, prompt, status: pending\|accepted\|dismissed, created_at, resolved_at?, resolved_by?, request_id?}]`, más nueva primero; `400` si `status` es desconocido |
+| POST | `/initiatives/{id}/accept` | `requests:create` | `202` con la sugerencia (`request_id` de la solicitud creada). `409` si ya estaba resuelta; si la solicitud es rechazada (kill-switch, delegación...) el error se devuelve y la sugerencia sigue pendiente |
+| POST | `/initiatives/{id}/dismiss` | `requests:create` | `200`; `409` si ya estaba resuelta; `404` si no es de la organización |
+| GET | `/settings/initiative` | `requests:read` | `{enabled, daily_limit, monthly_limit, agent_daily?{agent_id: n}}` (por defecto activo, 3 por día, 30 por mes) |
+| PUT | `/settings/initiative` | `org:manage` | mismo cuerpo; límites 0..1000 (`400` si no), `agent_daily` sobrescribe el tope diario de un agente (0 lo silencia). Auditado (`initiative.settings_changed`) |
+
+Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditoría: `initiative.raised`, `initiative.accepted`, `initiative.dismissed`, `initiative.settings_changed`.
