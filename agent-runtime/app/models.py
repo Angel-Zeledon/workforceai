@@ -493,8 +493,6 @@ class RunTaskRequest(_ProviderPolicyMixin):
     # F3 desk mode (additive): "desk" when the organization lets code run without a click on the agent's own files.
     # It only changes what the prompt says; the backend decides every run by itself.
     code_auto_run: str = ""
-    # Prompt-cache hits, INCLUDED in input_tokens (additive; None = unknown/none). Same JSON name the backend reads.
-    cached_tokens: int | None = None
     # Vision (additive): images for this call (capped again by the runtime: app/vision.py).
     images: list[ImagePart] | None = Field(default=None, repr=False)
     locale: Locale = "es"

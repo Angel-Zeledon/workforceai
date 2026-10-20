@@ -82,3 +82,51 @@ def test_provider_switch_is_refused_after_a_spent_attempt(monkeypatch):
     with pytest.raises(cc.CallBudgetError):
         eng._kickoff(order=[a, b], max_cost_usd=one * 1.1, **KW)
     assert calls == ["anthropic"]
+
+
+# --- the spend of a REAL failed attempt reaches the allowance (not only the fakes above) -------------------
+
+class _Metrics:
+    prompt_tokens, completion_tokens, cached_prompt_tokens = 4000, 800, 0
+
+
+def _direct_engine(llm_cls):
+    class Eng(CrewAIEngine):
+        def __init__(self):
+            self.providers, self._llms, self._LLM = [], {}, llm_cls
+
+        def _llm_kwargs(self, cfg, max_tokens, temperature):
+            return {}
+
+    return Eng()
+
+
+def test_direct_call_whose_json_retry_also_fails_reports_what_it_burned():
+    class BadJson:  # answers twice with something that is not the schema
+        def call(self, messages):
+            return "not json"
+
+        def get_token_usage_summary(self):
+            return _Metrics()
+
+    cfg = ProviderConfig(id="anthropic", model="anthropic/claude-sonnet-5-5", api_key="k")
+    with pytest.raises(ValueError) as ei:
+        _direct_engine(BadJson)._direct_once(cfg, role="r", goal="g", backstory="b", description="d", expected="e",
+                                             schema=TaskResult)
+    u = ei.value.usage
+    assert (u.input_tokens, u.output_tokens) == (4000, 800) and u.cost_usd > 0 and u.provider == "anthropic"
+
+
+def test_direct_call_that_fails_before_any_tokens_carries_no_usage():
+    class Down:
+        def call(self, messages):
+            raise ConnectionError("refused")
+
+        def get_token_usage_summary(self):
+            return type("M", (), {"prompt_tokens": 0, "completion_tokens": 0, "cached_prompt_tokens": 0})()
+
+    cfg = ProviderConfig(id="anthropic", model="anthropic/claude-sonnet-5-5", api_key="k")
+    with pytest.raises(ConnectionError) as ei:
+        _direct_engine(Down)._direct_once(cfg, role="r", goal="g", backstory="b", description="d", expected="e",
+                                          schema=TaskResult)
+    assert getattr(ei.value, "usage", None) is None  # nothing burned: the retry keeps its full allowance

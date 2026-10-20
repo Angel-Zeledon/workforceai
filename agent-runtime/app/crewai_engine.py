@@ -273,6 +273,18 @@ class CrewAIEngine(AgentEngine):
                 "latency_ms": int((time.monotonic() - t0) * 1000)}
 
     # ------------------------------------------------------------ nucleo
+    @staticmethod
+    def _spent(exc: BaseException, cfg: ProviderConfig, metrics: Any, t0: float) -> BaseException:
+        """Attach to a failed attempt the tokens it already burned (the first answer of a JSON retry, say), so
+        _kickoff can charge them against the call's allowance before it retries or falls back."""
+        i, c, o = tokens_from_metrics(metrics, cfg.id)
+        if i > 0 or o > 0:
+            exc.usage = Usage(model=cfg.model, input_tokens=i, output_tokens=o,  # type: ignore[attr-defined]
+                              cost_usd=estimate_cost(i, o, cfg.model, cfg.id, c),
+                              duration_ms=int((time.monotonic() - t0) * 1000), provider=cfg.id,
+                              cached_tokens=c or None)
+        return exc
+
     def _kickoff_once(self, cfg: ProviderConfig, *, role: str, goal: str, backstory: str, description: str,
                       expected: str, schema: type[BaseModel], max_tokens: int | None = None,
                       creativity: str = "") -> tuple[Any, Usage]:
@@ -298,10 +310,15 @@ class CrewAIEngine(AgentEngine):
             try:
                 parsed = parse_json_output(getattr(result, "raw", "") or "", schema)
             except ValueError:
-                result = crew.kickoff()
-                parsed = getattr(result, "pydantic", None)
-                if parsed is None:
-                    parsed = parse_json_output(getattr(result, "raw", "") or "", schema)
+                first = getattr(result, "token_usage", None)
+                try:
+                    result = crew.kickoff()
+                    parsed = getattr(result, "pydantic", None)
+                    if parsed is None:
+                        parsed = parse_json_output(getattr(result, "raw", "") or "", schema)
+                except Exception as exc:
+                    self._spent(exc, cfg, getattr(result, "token_usage", None) or first, t0)
+                    raise
         ms = int((time.monotonic() - t0) * 1000)
         m = getattr(result, "token_usage", None)
         i, c, o = tokens_from_metrics(m, cfg.id)
@@ -318,16 +335,20 @@ class CrewAIEngine(AgentEngine):
         messages = [{"role": "system", "content": backstory},
                     {"role": "user", "content": f"{description}\n\n{expected}{json_instructions(schema)}"}]
         t0 = time.monotonic()
-        raw = llm.call(messages)
-        text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
+        summary = getattr(llm, "get_token_usage_summary", None)
         try:
-            parsed = parse_json_output(text, schema)
-        except ValueError:  # one retry on invalid JSON, like the crew path
             raw = llm.call(messages)
             text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
-            parsed = parse_json_output(text, schema)
+            try:
+                parsed = parse_json_output(text, schema)
+            except ValueError:  # one retry on invalid JSON, like the crew path
+                raw = llm.call(messages)
+                text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
+                parsed = parse_json_output(text, schema)
+        except Exception as exc:
+            self._spent(exc, cfg, summary() if callable(summary) else None, t0)
+            raise
         ms = int((time.monotonic() - t0) * 1000)
-        summary = getattr(llm, "get_token_usage_summary", None)
         m = summary() if callable(summary) else None
         i, c, o = tokens_from_metrics(m, cfg.id)
         if i <= 0:
