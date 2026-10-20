@@ -25,6 +25,7 @@ import (
 	"aiworkforce/backend/internal/infrastructure/memory"
 	"aiworkforce/backend/internal/objstore"
 	"aiworkforce/backend/internal/orgchart"
+	"aiworkforce/backend/internal/quality"
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/sandbox"
@@ -122,6 +123,7 @@ type opts struct {
 	llm            bool // mount bring-your-own-model credentials (llm_api_test.go)
 	llmNoKEK       bool // ... with no encryption key configured
 	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
+	quality        bool // mount the quality score and golden cases (quality_api_test.go)
 }
 
 type env struct {
@@ -185,6 +187,13 @@ func newEnv(t *testing.T, o opts) *env {
 	if o.orgchart {
 		d.OrgChart = &orgchart.Service{Store: orgchart.NewMemoryStore(), Agents: mem, Writer: mem, DefaultOrg: cfg.OrgID,
 			Audit: func(c context.Context, a domain.AuditLog) { rec.Audit(c, a) }}
+	}
+	if o.quality {
+		d.Quality = quality.New(quality.Config{Store: quality.NewMemStore(), Signals: quality.StoreSignals{Store: spy}, OrgID: cfg.OrgID, Log: log,
+			Agents: func(c context.Context, org string) ([]domain.Agent, error) { return spy.ListAgents(c, org) },
+			Audit: func(c context.Context, org, actor, action, id string, det map[string]any) {
+				rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: "quality_case", EntityID: id, Details: det})
+			}})
 	}
 	if o.skills {
 		d.Skills = skills.New(skills.Config{Store: skills.NewMemStore(), Drive: d.Drive, OrgID: cfg.OrgID, Log: log,

@@ -909,3 +909,7 @@ Los empleados avisan solos ("la tarea X falló, ¿la reviso?") con un presupuest
 | PUT | `/settings/initiative` | `org:manage` | mismo cuerpo; límites 0..1000 (`400` si no), `agent_daily` sobrescribe el tope diario de un agente (0 lo silencia). Auditado (`initiative.settings_changed`) |
 
 Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditoría: `initiative.raised`, `initiative.accepted`, `initiative.dismissed`, `initiative.settings_changed`.
+
+## 26. Puntaje de calidad y casos dorados (B11)
+
+Puntaje orientativo por agente con la metodología en la respuesta (componentes, pesos, tamaños de muestra, `insufficient_data` bajo el mínimo), ventana móvil y tendencia. Solo lectura sobre señales existentes; nunca cambia autonomía ni permisos. Rutas: `GET /quality/agents`, `GET /agents/{id}/quality`, `GET|POST /agents/{id}/golden-cases`, `PUT|DELETE /golden-cases/{id}`, `GET|POST /golden-cases/{id}/runs` (lectura `agents:read`, escritura `agents:write`, escrituras auditadas). Contrato y metodología completos: `docs/architecture/quality-score.md`. Migración `789_quality_golden`.
