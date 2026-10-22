@@ -47,6 +47,8 @@ interface State {
   links: Link[];
   /** bumps on events relevant to an agent, used to refresh its detail panel */
   agentTick: Record<string, number>;
+  /** bumps when an agent's trust ladder changed (agent.autonomy_changed, trust.proposal): the trust card reloads */
+  trustTick: Record<string, number>;
   /** last file each agent touched in the drive (file.activity): path only, never content */
   files: Record<string, FileActivity>;
   setMode: (m: "office" | "dashboard") => void;
@@ -93,7 +95,7 @@ export const useStore = create<State>((set, get) => ({
   connected: false, loaded: false, mode: "office", selectedAgentId: null,
   agents: {}, agentOrder: [], tasks: {}, requests: {}, plans: {}, conversations: {}, messages: {}, chat: {}, routes: {}, lastTurnId: null, typing: {}, drafts: {},
   setDraft: (conv, text) => set((s) => ({ drafts: { ...s.drafts, [conv]: text } })),
-  approvals: {}, reports: {}, activity: [], errors: [], metrics: null, links: [], agentTick: {}, files: {},
+  approvals: {}, reports: {}, activity: [], errors: [], metrics: null, links: [], agentTick: {}, trustTick: {}, files: {},
 
   setMode: (mode) => set({ mode }),
   select: (selectedAgentId) => set({ selectedAgentId }),
@@ -306,6 +308,18 @@ export const useStore = create<State>((set, get) => ({
       case "metrics.updated":
         if (p.metrics) set({ metrics: p.metrics });
         break;
+      case "agent.autonomy_changed": case "trust.proposal": {
+        // trust ladder (B1): the new level shows at once; the trust card reloads its evidence
+        const id = String(p.agent_id ?? f.agent_id ?? "");
+        if (!id) break;
+        set((s) => {
+          const a = s.agents[id];
+          const lvl = p.to as Agent["autonomy"] | undefined;
+          const agents = a && f.type === "agent.autonomy_changed" && lvl ? { ...s.agents, [id]: { ...a, autonomy: lvl } } : s.agents;
+          return { agents, trustTick: { ...s.trustTick, [id]: (s.trustTick[id] || 0) + 1 } };
+        });
+        break;
+      }
       case "file.activity": {
         const agent = String(p.agent_id ?? f.agent_id ?? "");
         if (!agent || typeof p.path !== "string") break;

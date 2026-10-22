@@ -17,6 +17,7 @@ import { MockChatHistory } from "./chats-mock";
 import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
 import { mockQuality } from "./quality-mock";
+import { mockTrust } from "./trust-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
 
@@ -559,6 +560,10 @@ export class MockBackend {
       if (r0 === "quality" && r1 === "agents") return mockQuality(this.agents);
       if (r0 === "agents" && r1 && r2 === "quality") { const a = mockQuality(this.agents.filter((x) => x.id === r1)); return { methodology: a.methodology, generated_at: a.generated_at, agent: a.agents[0] }; }
       if (r0 === "agents" && r1 && r2 === "golden-cases") return [];
+      // Trust ladder (B1): no decision history in the demo, so every agent is honestly on probation.
+      if (r0 === "agents" && r1 && r2 === "trust" && seg[3] === "proposals") return [];
+      if (r0 === "agents" && r1 && r2 === "trust") return mockTrust(this.agent(r1));
+      if (r0 === "trust" && r1 === "agents") { const all = this.agents.map((a) => mockTrust(a)); return { methodology: all[0]?.methodology, generated_at: new Date().toISOString(), agents: all.map((x) => x.agent) }; }
       if (r0 === "agents" && r1 && r2 === "profile" && seg[3] === "versions") return [];
       if (r0 === "agents" && r1 && r2 === "profile") {
         return { agent_id: r1, instructions: "", creativity: "medium", skills: [], tone: "", version: 0, role_skills: [], limits: { instructions_max: 4000, skills_max: 20, skill_max_len: 40 } };
@@ -587,6 +592,7 @@ export class MockBackend {
       if (r0 === "healthz") return { status: "ok", mode: "simulation" };
     }
     if (method === "POST") {
+      if (r0 === "agents" && r1 && r2 === "trust" && seg[3] === "evaluate") { const x = mockTrust(this.agent(r1)); return { methodology: x.methodology, agent: x.agent }; }
       if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : []);
       if (r0 === "requests") { const id = await this.startRequest(String(body?.text || "").trim()); return { request_id: id }; }
       if (r0 === "conversations" && r1 && r2 === "messages") {

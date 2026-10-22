@@ -38,6 +38,9 @@ const KNOWN_TYPES = new Set([
   "item.unequipped",
   "office.item_placed",
   "office.item_removed",
+  // Trust ladder (additive, docs/architecture/trust-ladder.md)
+  "agent.autonomy_changed",
+  "trust.proposal",
 ]);
 
 const AGENT_STATES = [
