@@ -358,6 +358,11 @@ const (
 	EvTaskFailed       = "task.failed"
 	EvTaskBlocked      = "task.blocked"
 	EvInitiativeRaised = "initiative.raised"
+	// EvAutonomyChanged: an agent's autonomy level changed (a human accepted a promotion or a demotion, or the
+	// trust ladder demoted it automatically); EvTrustProposal: a promotion or demotion was suggested or resolved
+	// (docs/architecture/trust-ladder.md, additive).
+	EvAutonomyChanged  = "agent.autonomy_changed"
+	EvTrustProposal    = "trust.proposal"
 	EvMessageSent      = "message.sent"
 	EvApprovalRequest  = "approval.requested"
 	EvApprovalResolved = "approval.resolved"

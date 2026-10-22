@@ -913,3 +913,26 @@ Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditor
 ## 26. Puntaje de calidad y casos dorados (B11)
 
 Puntaje orientativo por agente con la metodología en la respuesta (componentes, pesos, tamaños de muestra, `insufficient_data` bajo el mínimo), ventana móvil y tendencia. Solo lectura sobre señales existentes; nunca cambia autonomía ni permisos. Rutas: `GET /quality/agents`, `GET /agents/{id}/quality`, `GET|POST /agents/{id}/golden-cases`, `PUT|DELETE /golden-cases/{id}`, `GET|POST /golden-cases/{id}/runs` (lectura `agents:read`, escritura `agents:write`, escrituras auditadas). Contrato y metodología completos: `docs/architecture/quality-score.md`. Migración `789_quality_golden`.
+
+## 27. Ascensos por confianza: autonomía ganada (B1)
+
+Escalera de confianza por agente: periodo de prueba, evidencia desde que llegó a su nivel (aprobaciones, denegaciones de
+política, tareas, calidad B11) y una de tres salidas: **proponer** un ascenso de un nivel (nunca sobre el techo del rol;
+lo acepta una persona), **proponer** un descenso, o **aplicar** un descenso automático por incidente (reversible 7 días).
+Toda respuesta lleva `methodology` con los umbrales. Diseño completo: `docs/architecture/trust-ladder.md`. Migración
+`791_agent_trust` (`agent_trust`, `trust_proposals`, RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/agents/{id}/trust` | `agents:read` | `{methodology, generated_at, agent}`; `agent` = `{agent_id, name, role, level, ceiling, tracking_since, level_since, evidence_since, counts{approved, rejected, high_risk_rejected, recent_rejected, policy_denials, tasks_done, tasks_failed, tasks_blocked}, quality{score, trend}\|null, recommendation: none\|promote\|demote\|demote_auto\|probation\|at_ceiling\|cooldown\|gathering, target?, next_level?, at_ceiling, probation{active, until, decisions, min_decisions, days}, criteria[{key, value, threshold, op, status: met\|unmet\|not_available}], triggers[{key, value, threshold, op, auto, fired}], progress (0..1), pending (propuesta)\|null, last_change\|null, can_revert}`. Empieza a seguir al agente la primera vez. `404` si no existe |
+| GET | `/trust/agents` | `agents:read` | `{methodology, generated_at, agents:[...]}` (los que tienen propuesta pendiente primero) |
+| GET | `/agents/{id}/trust/proposals?limit=` | `agents:read` | Historial, más nuevo primero: `[{id, agent_id, kind: promotion\|demotion, from_level, to_level, status: pending\|accepted\|declined\|applied\|reverted\|superseded, auto, reasons[], evidence{since, counts, quality?, criteria, triggers, ceiling, methodology_version}, created_at, resolved_at?, resolved_by?, note?}]` |
+| POST | `/agents/{id}/trust/evaluate` | `agents:write` | Evalúa ahora (lo mismo hace el servidor solo tras `approval.resolved`, `task.completed`, `task.failed`, `agent.created`). `{methodology, agent}`. Nunca sube autonomía |
+| POST | `/trust/proposals/{id}/accept` | `agents:write` + `approvals:decide` | Cuerpo opcional `{note}`. Aplica la propuesta pendiente tras revalidar evidencia, nivel y techo. `403` agentes/`system`/rol bajo (auditado `trust.decision_refused`); `409` con `code` `kill_switch_active` \| `read_only_mode` \| `agent_paused` al subir, `evidence_changed` si ya no se sostiene, o si no está pendiente |
+| POST | `/trust/proposals/{id}/decline` | `agents:write` + `approvals:decide` | `{note}` opcional. Un ascenso rechazado no se vuelve a proponer desde ese nivel en 7 días |
+| POST | `/trust/proposals/{id}/revert` | `agents:write` + `approvals:decide` | Deshace un descenso automático (`status: applied`, `auto: true`) de los últimos 7 días si el agente sigue en ese nivel; es una subida, así que aplican los mismos controles `409` |
+
+Eventos WS: `agent.autonomy_changed` `{agent_id, from, to, direction, source, proposal_id, reasons}` y `trust.proposal`
+`{proposal_id, agent_id, kind, status, from?, to?}`. Auditoría: `trust.promotion_suggested`, `trust.demotion_suggested`,
+`agent.autonomy_changed`, `trust.proposal_declined`, `trust.decision_refused`, `trust.reset`. `POST /demo/reset` devuelve a
+su nivel inicial a los agentes que la escalera movió.

@@ -33,6 +33,7 @@ import (
 	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/roles"
+	"aiworkforce/backend/internal/trust"
 	"aiworkforce/backend/internal/webhooks"
 )
 
@@ -111,6 +112,11 @@ func run(log *slog.Logger) error {
 	// they were published and pays them in the background (internal/rewards).
 	rewardsObs := &rewards.Observer{Inner: pub}
 	pub = rewardsObs
+
+	// Trust ladder (B1): after an approval is resolved, a task ends or an agent is hired, the observer re-evaluates
+	// that agent in the background (suggested promotions, automatic demotions). Bound once the service exists.
+	trustObs := &trust.Observer{Inner: pub}
+	pub = trustObs
 
 	// --- governance (BEGIN): public webhook events (request.done, approval.requested, report.created) ---
 	whSvc := &webhooks.Service{Log: log}
@@ -235,6 +241,10 @@ func run(log *slog.Logger) error {
 	}
 	rewardsSvc := wireRewards(log, pg, store, rec, ws.projects)
 	qualitySvc := wireQuality(cfg, log, pg, store, rec)
+	trustSvc := wireTrust(cfg, log, pg, store, rec, cw.ctl, qualitySvc)
+	if trustSvc != nil {
+		trustObs.Bind(trustSvc)
+	}
 	chats := wireChatHistory(cfg.App, store, rec, ws.projects)
 	rewardsObs.Bind(rewardsSvc)
 	// Slash commands: /clear and /compact keep their state in the conversation context store.
@@ -278,7 +288,7 @@ func run(log *slog.Logger) error {
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Standing: standingSvc, Initiative: initiativeSvc, DevilsAdvocate: devilsSvc,
-		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Trust: trustSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
