@@ -7,22 +7,28 @@ import { fileURLToPath } from "node:url";
 export const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SITE = "https://workforceai.es";
 
-/** Two collections of static pages built from JSON sources. `order` is the reading order (ids). */
+/**
+ * Three collections of static pages built from JSON sources. `order` is the reading order (ids) and drives
+ * previous/next; `groups` splits that order into the sidebar sections (labels live in build-guide.mjs).
+ */
 export const COLLECTIONS = {
   guide: {
     src: "guide-src",
     root: { es: "/guia/", en: "/en/guide/" },
-    order: ["getting-started", "the-office", "projects", "skills", "shop-and-coins", "files-and-chats", "approvals-and-security", "settings"],
+    order: ["getting-started", "the-office", "projects", "files-and-chats", "approvals-and-security", "skills", "shop-and-coins", "settings"],
+    groups: { start: ["getting-started", "the-office"], work: ["projects", "files-and-chats", "approvals-and-security"], tune: ["skills", "shop-and-coins", "settings"] },
   },
   docs: {
     src: "docs-src",
     root: { es: "/docs/", en: "/en/docs/" },
-    order: ["architecture", "api-reference", "auth-and-tenancy", "agent-runtime", "skills-format", "security-model", "deployment", "configuration"],
+    order: ["architecture", "agent-runtime", "api-reference", "auth-and-tenancy", "skills-format", "deployment", "configuration", "security-model"],
+    groups: { concepts: ["architecture", "agent-runtime"], integrate: ["api-reference", "auth-and-tenancy", "skills-format"], operate: ["deployment", "configuration", "security-model"] },
   },
   trust: {
     src: "trust-src",
     root: { es: "/confianza/", en: "/en/trust/" },
-    order: ["security-overview", "data-protection", "subprocessors", "vulnerability-disclosure"],
+    order: ["security-overview", "vulnerability-disclosure", "data-protection", "subprocessors"],
+    groups: { security: ["security-overview", "vulnerability-disclosure"], data: ["data-protection", "subprocessors"] },
   },
 };
 
