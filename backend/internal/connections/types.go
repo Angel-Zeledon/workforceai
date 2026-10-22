@@ -134,6 +134,9 @@ type Connection struct {
 	OAuthClientID        string `json:"oauth_client_id,omitempty"`
 	OAuthClientSecretEnc []byte `json:"-"`
 
+	// Source configures a generic HTTP source (provider custom_api only).
+	Source *Source `json:"source,omitempty"`
+
 	// Filled by the service for responses.
 	Credential  *vault.Meta `json:"credential"`
 	GrantsCount int         `json:"grants_count"`

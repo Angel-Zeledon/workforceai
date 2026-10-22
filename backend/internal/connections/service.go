@@ -50,6 +50,10 @@ type Config struct {
 	Now    func() time.Time
 	// Transport is the base HTTP transport of provider calls (tests).
 	Transport http.RoundTripper
+	// SourceTransport is the base transport of generic HTTP sources (custom_api):
+	// their URL is chosen by an admin, so production wires a transport whose
+	// dialer refuses private addresses. Nil falls back to Transport.
+	SourceTransport http.RoundTripper
 	// OnRevoke runs when a connection stops being usable (suspend/revoke) so
 	// held actions can be cancelled.
 	OnRevoke func(ctx context.Context, org, connID, reason string)
@@ -227,6 +231,27 @@ type CreateInput struct {
 	// own app", self-hosted). Both or none. The secret is write-only.
 	OAuthClientID     string
 	OAuthClientSecret *vault.Secret
+	// Source configures a generic HTTP source (custom_api only).
+	Source *Source
+}
+
+// SourceProvider is the provider whose connections carry a Source.
+const SourceProvider = "custom_api"
+
+// normSource validates the source of a provider: required shape for
+// custom_api, refused for every other provider.
+func normSource(provider string, src *Source) (*Source, error) {
+	if src == nil {
+		return nil, nil
+	}
+	if provider != SourceProvider {
+		return nil, invalid("only %s connections take a source", SourceProvider)
+	}
+	n, err := src.Normalize()
+	if err != nil {
+		return nil, err
+	}
+	return &n, nil
 }
 
 var secretlessKinds = map[string]bool{"oauth2": true, "api_key": true}
@@ -254,6 +279,10 @@ func (s *Service) Create(ctx context.Context, org string, in CreateInput) (Conne
 	if m.ClassOf(in.Capabilities) == "mixed" {
 		return Connection{}, invalid("read_write_must_be_separate: create one connection for reading and another for writing")
 	}
+	src, err := normSource(in.Provider, in.Source)
+	if err != nil {
+		return Connection{}, err
+	}
 	if in.Mode == "" {
 		in.Mode = ModeLive
 	}
@@ -273,7 +302,7 @@ func (s *Service) Create(ctx context.Context, org string, in CreateInput) (Conne
 	c := Connection{ID: newID(), OrgID: org, Provider: in.Provider, Kind: in.Kind, Label: label, Mode: in.Mode,
 		Status: StatusPending, Class: m.ClassOf(in.Capabilities), RequestedCapabilities: in.Capabilities,
 		GrantedCapabilities: []string{}, ProviderScopes: []string{}, ResourceScope: in.ResourceScope, Limits: m.DefaultLimits,
-		CreatedBy: in.Actor, CreatedAt: now, UpdatedAt: now, ExpiresAt: in.ExpiresAt}
+		CreatedBy: in.Actor, CreatedAt: now, UpdatedAt: now, ExpiresAt: in.ExpiresAt, Source: src}
 	if c.Limits.OnExceed == "" {
 		c.Limits.OnExceed = "deny"
 	}
@@ -429,7 +458,9 @@ type PatchInput struct {
 	Limits        *Limits
 	ResourceScope *ResourceScope
 	ReadOnly      *bool
-	Actor         string
+	// Source replaces the whole source configuration (custom_api only).
+	Source *Source
+	Actor  string
 }
 
 // Patch updates label, limits, resource scope and the read-only switch.
@@ -460,11 +491,18 @@ func (s *Service) Patch(ctx context.Context, org, id string, in PatchInput) (Con
 	if in.ReadOnly != nil {
 		c.ReadOnly = *in.ReadOnly
 	}
+	if in.Source != nil {
+		src, err := normSource(c.Provider, in.Source)
+		if err != nil {
+			return Connection{}, err
+		}
+		c.Source = src
+	}
 	c.UpdatedAt = s.Now().UTC()
 	if err := s.Store.UpdateConnection(ctx, c); err != nil {
 		return Connection{}, err
 	}
-	s.Audit(ctx, org, in.Actor, "connection.updated", "connection", id, map[string]any{"read_only": c.ReadOnly})
+	s.Audit(ctx, org, in.Actor, "connection.updated", "connection", id, map[string]any{"read_only": c.ReadOnly, "source_changed": in.Source != nil})
 	s.Emit(ctx, org, "connection.updated", map[string]any{"connection": s.brief(c)})
 	return s.view(ctx, c), nil
 }
@@ -737,6 +775,8 @@ func (s *Service) accessToken(ctx context.Context, c Connection) (string, error)
 type authTransport struct {
 	base  http.RoundTripper
 	token func(ctx context.Context) (string, error)
+	// auth says where the token goes (zero value: Authorization: Bearer).
+	auth SourceAuth
 }
 
 func (t authTransport) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -745,7 +785,16 @@ func (t authTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 	r2 := r.Clone(r.Context())
-	r2.Header.Set("Authorization", "Bearer "+tok)
+	switch t.auth.Style {
+	case AuthHeader:
+		r2.Header.Set(t.auth.Name, tok)
+	case AuthQuery:
+		q := r2.URL.Query()
+		q.Set(t.auth.Name, tok)
+		r2.URL.RawQuery = q.Encode()
+	default:
+		r2.Header.Set("Authorization", "Bearer "+tok)
+	}
 	base := t.base
 	if base == nil {
 		base = http.DefaultTransport
@@ -755,6 +804,10 @@ func (t authTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return nil, err
 		}
+		var pe *ProviderError
+		if errors.As(err, &pe) {
+			return nil, &ProviderError{Code: pe.Code} // a classified dial refusal (address_not_allowed); never the address
+		}
 		return nil, &ProviderError{Code: CodeProviderError}
 	}
 	return resp, nil
@@ -762,9 +815,16 @@ func (t authTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // Handle builds the provider handle of a connection.
 func (s *Service) Handle(c Connection) Handle {
-	h := Handle{Org: c.OrgID, ConnectionID: c.ID, Mode: c.Mode, ResourceScope: c.ResourceScope}
+	h := Handle{Org: c.OrgID, ConnectionID: c.ID, Mode: c.Mode, ResourceScope: c.ResourceScope, Source: c.Source}
 	if c.Mode == ModeLive {
-		h.HTTP = &http.Client{Timeout: 20 * time.Second, Transport: authTransport{base: s.Transport,
+		base, auth := s.Transport, SourceAuth{}
+		if c.Source != nil {
+			auth = c.Source.Auth
+			if s.SourceTransport != nil {
+				base = s.SourceTransport
+			}
+		}
+		h.HTTP = &http.Client{Timeout: 20 * time.Second, Transport: authTransport{base: base, auth: auth,
 			token: func(ctx context.Context) (string, error) { return s.accessToken(ctx, c) }},
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	}

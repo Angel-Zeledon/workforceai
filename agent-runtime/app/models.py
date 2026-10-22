@@ -470,6 +470,28 @@ class ImagePart(_Base):
     height: int = 0
 
 
+class SourceEndpoint(_Base):
+    """A named read query of a generic source (admin-written organization configuration)."""
+
+    name: str
+    description: str = ""
+    params: list[str] = Field(default_factory=list)
+
+
+class SourceRef(_Base):
+    """A platform the agent may query through a connection granted to it (backend: gateway.SourcesFor).
+    Metadata only: the runtime never sees a credential, a connection id nor a URL; the agent asks for the
+    read in tool_requests and the backend runs it, returning the data as delimited untrusted content."""
+
+    alias: str
+    label: str = ""
+    provider: str = ""
+    description: str = ""
+    tools: list[str] = Field(default_factory=list)
+    endpoints: list[SourceEndpoint] = Field(default_factory=list)
+    simulated: bool = False
+
+
 class RunTaskRequest(_ProviderPolicyMixin):
     # El contrato NO tiene campos de credenciales, connection_id ni URLs de API:
     # el runtime nunca ve secretos ni llama al proveedor (test_contract_has_no_secret_fields).
@@ -485,6 +507,8 @@ class RunTaskRequest(_ProviderPolicyMixin):
     # S1: active skills of the agent (name + description) and the ones it loaded this task.
     skills: list[SkillRef] | None = None
     loaded_skills: list[LoadedSkill] | None = None
+    # Sources (additive): the platforms this agent may query, with their read tools and named endpoints.
+    sources: list[SourceRef] | None = None
     # V2: notes a human sent to steer this task. Additional guidance, never authority (security.py).
     human_guidance: list[str] | None = None
     # M1: relevant memories of past work (bounded by the backend); data, never instructions.

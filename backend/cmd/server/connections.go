@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"aiworkforce/backend/internal/config"
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/connections/calendar"
+	"aiworkforce/backend/internal/connections/customapi"
 	"aiworkforce/backend/internal/connections/drive"
 	"aiworkforce/backend/internal/connections/github"
 	"aiworkforce/backend/internal/connections/gmail"
@@ -106,7 +109,16 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 	if err != nil {
 		return connWiring{}, err
 	}
-	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal, "google_drive": drv, "github": gh, "slack": sl, "linkedin": li}
+	capi, err := customapi.New()
+	if err != nil {
+		return connWiring{}, err
+	}
+	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal, "google_drive": drv, "github": gh, "slack": sl, "linkedin": li,
+		connections.SourceProvider: capi}
+	allowPrivate, _ := strconv.ParseBool(strings.TrimSpace(os.Getenv("CUSTOM_API_ALLOW_PRIVATE")))
+	if allowPrivate {
+		log.Warn("CUSTOM_API_ALLOW_PRIVATE=true: generic API sources may reach private addresses (only for self-hosted installs on a trusted network)")
+	}
 	apps := map[string]connections.OAuthApp{}
 	if cfg.LinkedInClientID != "" && cfg.LinkedInClientSecret != "" {
 		apps["linkedin"] = connections.OAuthApp{ClientID: cfg.LinkedInClientID, ClientSecret: cfg.LinkedInClientSecret, RedirectURL: cfg.OAuthRedirectURL}
@@ -144,7 +156,8 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 		return n
 	}
 	cs, err := connections.NewService(connections.Config{Store: cstore, Vault: v, Apps: apps, Suspects: sus,
-		Providers: providers, Audit: audit, Emit: emit, AdminCount: adminCount, UIBase: cfg.UIBaseURL, RedirectURL: cfg.OAuthRedirectURL})
+		Providers: providers, Audit: audit, Emit: emit, AdminCount: adminCount, UIBase: cfg.UIBaseURL, RedirectURL: cfg.OAuthRedirectURL,
+		SourceTransport: customapi.Transport(allowPrivate)})
 	if err != nil {
 		return connWiring{}, err
 	}

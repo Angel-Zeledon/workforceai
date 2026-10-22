@@ -232,3 +232,33 @@ type PlanReviewer interface {
 	// Forget drops a review that nobody answered (timeout, cancellation).
 	Forget(org, requestID string)
 }
+
+// SourceLister (optional, implemented by the Tool Gateway) lists what an agent
+// may consult: the read tools of the connections granted to it. It feeds the
+// "sources" block of the run so the agent knows which platforms it can query
+// and how, instead of guessing tool names. Metadata written by admins only:
+// never a credential, a connection id or a URL.
+type SourceLister interface {
+	SourcesFor(ctx context.Context, org, agentID string) []SourceRef
+}
+
+// SourceRef is one platform an agent may query.
+type SourceRef struct {
+	// Alias is what the agent passes as connection_alias.
+	Alias string `json:"alias"`
+	Label string `json:"label"`
+	// Provider is the provider id (google_gmail, custom_api, ...).
+	Provider    string           `json:"provider"`
+	Description string           `json:"description,omitempty"`
+	Tools       []string         `json:"tools"` // "tool.action" reads
+	Endpoints   []SourceEndpoint `json:"endpoints,omitempty"`
+	// Simulated: the connection answers with sample data, not the real platform.
+	Simulated bool `json:"simulated,omitempty"`
+}
+
+// SourceEndpoint is a named query of a generic source.
+type SourceEndpoint struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
+	Params      []string `json:"params,omitempty"`
+}

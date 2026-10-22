@@ -163,13 +163,15 @@ func (s *server) createConnection(w http.ResponseWriter, r *http.Request) {
 		// Bring your own OAuth app (self-hosted). The secret is write-only.
 		OAuthClientID     string `json:"oauth_client_id"`
 		OAuthClientSecret string `json:"oauth_client_secret"`
+		// Source: the generic HTTP source of a custom_api connection.
+		Source *connections.Source `json:"source"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.connErr(w, err)
 		return
 	}
 	in := connections.CreateInput{Provider: body.Provider, Kind: body.Kind, Label: body.Label, Capabilities: body.Capabilities,
-		ResourceScope: body.ResourceScope, Mode: body.Mode, ExpiresAt: body.ExpiresAt, Actor: s.actor(r)}
+		ResourceScope: body.ResourceScope, Mode: body.Mode, ExpiresAt: body.ExpiresAt, Source: body.Source, Actor: s.actor(r)}
 	if body.Secret != "" {
 		sec := vault.SecretFromString(body.Secret)
 		defer sec.Zero()
@@ -218,13 +220,14 @@ func (s *server) patchConnection(w http.ResponseWriter, r *http.Request) {
 		Limits        *connections.Limits        `json:"limits"`
 		ResourceScope *connections.ResourceScope `json:"resource_scope"`
 		ReadOnly      *bool                      `json:"read_only"`
+		Source        *connections.Source        `json:"source"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.connErr(w, err)
 		return
 	}
 	c, err := s.Conns.Patch(r.Context(), s.org(r), id, connections.PatchInput{Label: body.Label, Limits: body.Limits,
-		ResourceScope: body.ResourceScope, ReadOnly: body.ReadOnly, Actor: s.actor(r)})
+		ResourceScope: body.ResourceScope, ReadOnly: body.ReadOnly, Source: body.Source, Actor: s.actor(r)})
 	if err != nil {
 		s.connErr(w, err)
 		return

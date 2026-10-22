@@ -372,6 +372,10 @@ type RunTaskRequest struct {
 	// Images (vision, additive, omitted when empty): images the agent can SEE on
 	// this call, produced by fs.read (view "image") through the Tool Gateway.
 	Images []ImagePart `json:"images,omitempty"`
+	// Sources (additive, omitted when empty): the platforms this agent may query
+	// through its connection grants, with the read tools and named endpoints to
+	// use. Admin-written metadata: never a credential, connection id or URL.
+	Sources []SourceRef `json:"sources,omitempty"`
 
 	// MaxCostUSD (additive, omitted when 0): the most this one call may cost. The runtime estimates the call before
 	// sending it to the model and refuses it (HTTP 402 call_budget_exceeded) when it would cross this. Set from the

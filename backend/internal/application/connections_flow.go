@@ -199,6 +199,16 @@ func (o *Orchestrator) reviewPlanSince(ctx context.Context, rs *run, tasks []dom
 	}
 }
 
+// sourcesFor lists the platforms the agent may query (nil without a gateway
+// that can tell).
+func (o *Orchestrator) sourcesFor(ctx context.Context, agentID string) []SourceRef {
+	sl, ok := o.conn.gw.(SourceLister)
+	if !ok {
+		return nil
+	}
+	return sl.SourcesFor(ctx, o.org(ctx), agentID)
+}
+
 const maxReadsPerRound = 5
 
 // connectionReads executes the connection-backed READ tool requests of a task

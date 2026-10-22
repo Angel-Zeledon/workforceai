@@ -89,6 +89,8 @@ type Handle struct {
 	Mode          string
 	ResourceScope ResourceScope
 	HTTP          *http.Client
+	// Source is the configuration of a generic HTTP source (custom_api).
+	Source *Source
 }
 
 // Item is one normalized result item. Meta is trusted structure (ids, dates,

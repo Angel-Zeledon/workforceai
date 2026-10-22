@@ -41,6 +41,9 @@ const (
 	// CodeExecutionUnavailable: the execution ledger could not be reached, so an
 	// approved action is not run (it could not be guaranteed to run only once).
 	CodeExecutionUnavailable = "execution_record_unavailable"
+	// CodeSourceAliasRequired: the agent holds several generic sources and did
+	// not say which one (connection_alias) to query.
+	CodeSourceAliasRequired = "source_alias_required"
 )
 
 // Gateway wires connections, controls and the sanitizer.
@@ -242,6 +245,10 @@ func (g *Gateway) resolve(ctx context.Context, c application.GatewayCall, t targ
 	}
 	if len(cands) == 0 {
 		return candidate{}, connections.CodeScopeNotGranted
+	}
+	if alias == "" && len(cands) > 1 && t.provider.ID == connections.SourceProvider {
+		// Generic sources are different systems: never answer from an arbitrary one.
+		return candidate{}, CodeSourceAliasRequired
 	}
 	sort.SliceStable(cands, func(i, j int) bool { return cands[i].grant.IsDefault && !cands[j].grant.IsDefault })
 	return cands[0], ""

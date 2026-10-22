@@ -686,6 +686,7 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 		Tone:        rs.style.ToneFor(t.AgentID),
 		Workspace:   o.workspaceFor(ctx, rs, agent),
 		Skills:      o.skillsFor(ctx, agent.ID),
+		Sources:     o.sourcesFor(ctx, agent.ID),
 	}
 }
 
