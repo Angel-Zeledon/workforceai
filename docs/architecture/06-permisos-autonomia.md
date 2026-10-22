@@ -113,6 +113,14 @@ Invariantes (no configurables):
 3. Un agente no puede cambiar su propia autonomia, permisos ni reglas.
 4. Cualquier `deny` de regla gana a `allow`.
 
+**Autonomía ganada (B1, `trust-ladder.md`).** El nivel no se sube a mano: la escalera de confianza (`internal/trust`)
+propone subir **un** nivel cuando el historial lo respalda (≥ 20 decisiones, ≥ 95 % aprobadas, sin rechazos de alto riesgo
+ni denegaciones de política, tras un periodo de prueba) y solo un `admin`/`owner` lo acepta; nunca por encima del techo
+del rol (plantilla y nivel de riesgo). Un incidente (acción de alto riesgo rechazada, 3 rechazos en 72 h, 3 denegaciones
+de política) baja un nivel automáticamente, reversible 7 días. Implementación actual del invariante 2: el permiso
+`agents:set_autonomy` no existe aún como tal; se exige `agents:write` **y** `approvals:decide`, se audita como
+`agent.autonomy_changed` y se emite el evento del mismo nombre.
+
 ### 3.1 Reglas (`autonomy_rules`)
 ```json
 [
