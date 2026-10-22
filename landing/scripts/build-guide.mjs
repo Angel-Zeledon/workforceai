@@ -84,6 +84,7 @@ const NAV_LABEL = {
   "auth-and-tenancy": { es: "Autenticación y cuentas", en: "Auth and tenancy" },
   deployment: { es: "Despliegue", en: "Deployment" },
   configuration: { es: "Configuración", en: "Configuration" },
+  "security-overview": { es: "Resumen de seguridad", en: "Security overview" },
 };
 const navLabel = (p, lang) => NAV_LABEL[p.id]?.[lang] || plain(p[lang].title).split(/:\s/)[0];
 const COLL_ICON = { docs: "book", guide: "compass", trust: "shield" };
