@@ -3,10 +3,12 @@ import { useRef, useState } from "react";
 import { MOCK } from "@/lib/config";
 import { useT } from "@/lib/i18n";
 import { connApi, type CreateConnectionInput, type TestResult } from "@/lib/connections/api";
+import { CUSTOM_API, draftToSource, emptySourceDraft, hasErrors, validateSource, type SourceDraft } from "@/lib/connections/apiSource";
 import { useConnections } from "@/lib/connections/store";
 import type { CapabilityDef, Connection, ProviderDef } from "@/lib/connections/types";
 import { useStore } from "@/lib/store";
 import { Btn } from "../ui";
+import { AuthStyleFields, SourceFields } from "./ApiSourceForm";
 import { ErrorLine, errText, Field, inputCls, Modal } from "./shared";
 
 const STEPS = 5;
@@ -32,18 +34,39 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
   const [conn, setConn] = useState<Connection | null>(null);
   const [test, setTest] = useState<TestResult | null>(null);
   const [assign, setAssign] = useState<string[]>([]);
+  // custom_api ("Other platform (API)"): the read-only HTTP source. Never holds the API key.
+  const [src, setSrc] = useState<SourceDraft>(emptySourceDraft);
+  const [srcShowErrors, setSrcShowErrors] = useState(false);
+  const [simulated, setSimulated] = useState(false);
   const idRef = useRef<HTMLInputElement>(null);
   const secretRef = useRef<HTMLInputElement>(null);
+  const isCustom = prov?.id === CUSTOM_API;
+  const liveAvailable = prov?.live_available !== false;
+  // errors appear after the first attempt and then follow the typing (they vanish once fixed)
+  const srcErrors = srcShowErrors ? validateSource(src) : null;
 
   const visibleCaps = (p: ProviderDef): CapabilityDef[] => p.capabilities.filter((c) => !p.split_read_write || c.profile === profile);
   const chooseProvider = (p: ProviderDef) => {
     setProv(p); setErr(null);
     const prof = "read" as const; setProfile(prof);
-    setCaps(p.capabilities.filter((c) => c.default && (!p.split_read_write || c.profile === prof)).map((c) => c.id));
+    const custom = p.id === CUSTOM_API;
+    // custom_api is read-only by design: every read capability, nothing to pick
+    setCaps(custom ? p.capabilities.filter((c) => !c.side_effects).map((c) => c.id)
+      : p.capabilities.filter((c) => c.default && (!p.split_read_write || c.profile === prof)).map((c) => c.id));
     setFilters(Object.fromEntries(p.resource_filters.filter((f) => f.default !== undefined).map((f) => [f.key, String(f.default)])));
-    setLabel(t(`conn.provider.${p.id}`));
+    setLabel(custom ? "" : t(`conn.provider.${p.id}`));
+    setSrc(emptySourceDraft()); setSrcShowErrors(false); setSimulated(p.live_available === false);
     setStep(2);
   };
+  // custom_api skips the resource-filter step (it has none): 1 -> 2 -> 4 -> 5
+  const next = () => {
+    if (isCustom && step === 2) {
+      if (hasErrors(validateSource(src), { ignoreAuth: true })) { setSrcShowErrors(true); setErr(t("conn.src.fixErrors")); return; }
+      setErr(null); setStep(4); return;
+    }
+    setStep(step + 1);
+  };
+  const back = () => setStep(isCustom && step === 4 ? 2 : step - 1);
   const chooseProfile = (p: "read" | "write") => {
     if (!prov) return;
     setProfile(p);
@@ -73,12 +96,18 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
 
   const authorize = async () => {
     if (!prov) return;
+    if (isCustom) {
+      // validate before touching the key, so a typo in the source does not wipe what the owner pasted
+      if (hasErrors(validateSource(src))) { setSrcShowErrors(true); setErr(t("conn.src.fixErrors")); return; }
+      if (!simulated && !(secretRef.current?.value ?? "")) { setErr(t("conn.src.keyMissing")); return; }
+    }
     setBusy(true); setErr(null);
     // Read the secret values from the DOM, wipe the inputs, and only then talk to the network.
     const idVal = idRef.current?.value ?? "";
     const secretVal = secretRef.current?.value ?? "";
     if (secretRef.current) secretRef.current.value = "";
     const base: CreateConnectionInput = { provider: prov.id, kind: wantsOAuth ? "oauth2" : "api_key", label: label.trim() || t(`conn.provider.${prov.id}`), capabilities: caps, resource_scope: resourceScope() };
+    if (isCustom) { base.source = draftToSource(src); base.mode = simulated ? "simulated" : "live"; }
     try {
       let created: Connection;
       if (wantsOAuth) {
@@ -87,7 +116,8 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
         if (MOCK) created = await connApi.oauthSimulateCallback(created.id, denyScope);
         else { window.location.href = start.auth_url; return; }
       } else {
-        created = await connApi.create({ ...base, secret: secretVal });
+        // simulated mode stores no secret: nothing is sent
+        created = await connApi.create(isCustom && simulated ? base : { ...base, secret: secretVal });
       }
       await useConnections.getState().loadConnections();
       await finish(created);
@@ -114,7 +144,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
       <div data-testid={`conn-wizard-step-${step}`} data-step={step}>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold">{t("conn.wizard.title")}</h2>
-          <span className="text-[11px] font-semibold text-mute">{t("conn.wizard.step", { n: step, total: STEPS })}</span>
+          <span className="text-[11px] font-semibold text-mute">{t("conn.wizard.step", isCustom ? { n: step >= 4 ? step - 1 : step, total: STEPS - 1 } : { n: step, total: STEPS })}</span>
         </div>
 
         {step === 1 && (
@@ -133,7 +163,18 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {step === 2 && prov && (
+        {step === 2 && prov && isCustom && (
+          <div data-testid="conn-src-form" className="space-y-3">
+            <p className="text-xs text-mute">{t("conn.src.intro")}</p>
+            <Field label={t("conn.wizard.label")}>
+              <input data-testid="conn-label-input" className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} placeholder={t("conn.src.labelPlaceholder")} />
+            </Field>
+            <SourceFields draft={src} setDraft={(fn) => setSrc(fn)} errors={srcErrors} />
+            <p data-testid="conn-src-readonly-note" className="rounded-xl border border-line bg-panel2 px-3 py-2 text-[11px] text-mute">{t("conn.src.readOnlyNote")}</p>
+          </div>
+        )}
+
+        {step === 2 && prov && !isCustom && (
           <div className="space-y-3">
             <Field label={t("conn.wizard.label")}>
               <input data-testid="conn-label-input" className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} />
@@ -207,6 +248,21 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
                 )}
                 <Btn data-testid="conn-oauth-start" kind="primary" disabled={busy} onClick={authorize}>{busy ? t("conn.working") : t("conn.oauth.authorize")}</Btn>
               </>
+            ) : isCustom ? (
+              <>
+                <AuthStyleFields draft={src} setDraft={(fn) => setSrc(fn)} errors={srcErrors} />
+                <label className="flex items-start gap-2 text-xs">
+                  <input type="checkbox" className="mt-0.5" data-testid="conn-src-simulated" checked={simulated} disabled={!liveAvailable} onChange={(e) => setSimulated(e.target.checked)} />
+                  <span>{t("conn.src.simulated")}</span>
+                </label>
+                {!liveAvailable && <p className="text-[11px] text-mute">{t("conn.src.simulatedOnly")}</p>}
+                {!simulated && (
+                  <Field label={t("conn.apiKey.label")}>
+                    <input ref={secretRef} data-testid="conn-secret-input" data-sensitive type="password" autoComplete="off" data-1p-ignore data-lpignore="true" className={inputCls} />
+                  </Field>
+                )}
+                <Btn data-testid="conn-secret-submit" kind="primary" disabled={busy} onClick={authorize}>{busy ? t("conn.working") : t("conn.apiKey.save")}</Btn>
+              </>
             ) : (
               <>
                 <Field label={t("conn.apiKey.label")}>
@@ -248,8 +304,8 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
 
         {step !== 4 && step !== 5 && step !== 1 && <div className="mt-4"><ErrorLine msg={err} /></div>}
         <div className="mt-5 flex items-center justify-between">
-          <Btn onClick={step === 1 || step === 5 ? onClose : () => setStep(step - 1)} disabled={busy}>{step === 1 || step === 5 ? t("common.close") : t("common.back")}</Btn>
-          {step >= 2 && step <= 3 && <Btn data-testid="conn-wizard-next" kind="primary" disabled={!canNext} onClick={() => setStep(step + 1)}>{t("conn.wizard.next")}</Btn>}
+          <Btn onClick={step === 1 || step === 5 ? onClose : back} disabled={busy}>{step === 1 || step === 5 ? t("common.close") : t("common.back")}</Btn>
+          {step >= 2 && step <= 3 && <Btn data-testid="conn-wizard-next" kind="primary" disabled={!canNext} onClick={next}>{t("conn.wizard.next")}</Btn>}
           {step === 5 && <Btn data-testid="conn-wizard-done" kind="primary" disabled={busy} onClick={done}>{t("conn.wizard.done")}</Btn>}
         </div>
       </div>

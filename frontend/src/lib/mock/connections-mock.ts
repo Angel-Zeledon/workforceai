@@ -9,6 +9,7 @@ import type {
   AgentControl, ConnLimits, Connection, Decision, EmailDraft, Grant, Human, OrgControls, PlanReview,
   ProviderDef, SpendLimitStatus, UsageRow,
 } from "../connections/types";
+import { CUSTOM_API, sourceErrorCode } from "../connections/apiSource";
 
 export class MockError extends Error {
   constructor(public status: number, public code: string) { super(code); }
@@ -71,8 +72,10 @@ const PROVIDERS: ProviderDef[] = [
     resource_filters: [],
   },
   {
-    id: "generic_api", auth: ["api_key"], available: true, phase: "C1",
-    capabilities: [{ id: "api.read", risk: "low", side_effects: false, default: true }],
+    // Mirrors backend/internal/connections/providers/custom_api.json: a generic read-only HTTP source ("Other platform (API)").
+    // Agents call it as tool `api`, action `get`, with an endpoint name or a path under source.base_url.
+    id: "custom_api", auth: ["api_key"], available: true, phase: "C1",
+    capabilities: [{ id: "api.read", risk: "low", side_effects: false, default: true, profile: "read", tools: ["api.get"] }],
     resource_filters: [],
   },
   { id: "gitlab", auth: ["api_key"], available: false, phase: "C4", capabilities: [{ id: "repo.read", risk: "low", side_effects: false, default: true }], resource_filters: [] },
@@ -170,7 +173,8 @@ export class MockConnections {
   private requireRole(roles: Human["role"][]) { if (!roles.includes(this.viewer().role)) fail(403, "forbidden_role"); }
   private conn(id: string): Connection { return this.connections.find((c) => c.id === id) ?? fail(404, "not_found"); }
   private pub(c: Connection): Connection {
-    return { ...c, grants_count: this.grants.filter((g) => g.connection_id === c.id && g.status !== "revoked").length, credential: c.credential ? { ...c.credential } : null };
+    return { ...c, grants_count: this.grants.filter((g) => g.connection_id === c.id && g.status !== "revoked").length, credential: c.credential ? { ...c.credential } : null,
+      ...(c.source ? { source: JSON.parse(JSON.stringify(c.source)) } : {}) };
   }
   private log(connId: string, agent: string | null, tool: string, cap: string, decision: Decision, deny: string | null, ref: string | null, items: number | null = null, tainted = false) {
     const row: UsageRow = {
@@ -476,6 +480,11 @@ export class MockConnections {
           if (typeof body?.label === "string") c.label = body.label;
           if (typeof body?.read_only === "boolean") c.read_only = body.read_only;
           if (body?.limits) c.limits = { ...c.limits, ...body.limits };
+          if (body?.source !== undefined) {
+            // custom_api only; full replace, validated like on create (400 with the usual error shape)
+            if (c.provider !== CUSTOM_API || sourceErrorCode(body.source)) fail(400, "invalid_source");
+            c.source = JSON.parse(JSON.stringify(body.source));
+          }
           this.changed(c); return this.pub(c);
         }
       }
@@ -558,14 +567,22 @@ export class MockConnections {
     const kind = body?.kind === "api_key" ? "api_key" : "oauth2";
     if (!prov.auth.includes(kind === "api_key" ? "api_key" : "oauth2_byo_app")) fail(422, "auth_method_unsupported");
     const writes = caps.some((x) => isWriteCap(prov.id, x));
+    // custom_api: the read-only HTTP source is required and validated (it never carries the secret)
+    if (prov.id === CUSTOM_API && sourceErrorCode(body?.source)) fail(400, "invalid_source");
+    const simulated = body?.mode === "simulated";
     const c: Connection = {
-      id: uid("cn"), provider: prov.id, kind, label, account_label: null, mode: "simulated", status: "pending", status_reason: null,
+      // the mock never talks to a real provider: only an explicit "live" is reported as live
+      id: uid("cn"), provider: prov.id, kind, label, account_label: null, mode: body?.mode === "live" ? "live" : "simulated", status: "pending", status_reason: null,
       profile: prov.split_read_write ? (profiles.has("write") ? "write" : "read") : undefined,
       requested_capabilities: caps, granted_capabilities: [], resource_scope: body?.resource_scope ?? {}, credential: null,
       limits: { per_day: 2000, write_per_day: writes ? 20 : 0, max_items_per_call: 50 }, read_only: false, grants_count: 0,
       last_tested_at: null, last_used_at: null, created_at: nowIso(), revoked_at: null,
+      ...(prov.id === CUSTOM_API ? { source: JSON.parse(JSON.stringify(body.source)) } : {}),
     };
-    if (kind === "oauth2") {
+    if (simulated && kind === "api_key") {
+      // simulated connections store no secret and answer with sample data
+      c.status = "active"; c.granted_capabilities = [...caps]; c.account_label = "simulated@example.test";
+    } else if (kind === "oauth2") {
       // "Bring your own OAuth app": the client id is public metadata; the client secret is write-only and is dropped right here.
       const id = String(body?.oauth_client_id ?? "").trim(), sec = String(body?.oauth_client_secret ?? "");
       if (!id || sec.length < 8) fail(422, "oauth_app_required");
