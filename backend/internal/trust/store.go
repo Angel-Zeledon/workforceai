@@ -56,13 +56,13 @@ type Proposal struct {
 
 // Evidence is the snapshot stored with a proposal: what the ladder saw when it made it.
 type Evidence struct {
-	Since      time.Time   `json:"since"`
-	Counts     Counts      `json:"counts"`
-	Quality    *Quality    `json:"quality,omitempty"`
-	Criteria   []Criterion `json:"criteria"`
-	Triggers   []Trigger   `json:"triggers"`
-	Ceiling    string      `json:"ceiling"`
-	Version    int         `json:"methodology_version"`
+	Since    time.Time   `json:"since"`
+	Counts   Counts      `json:"counts"`
+	Quality  *Quality    `json:"quality,omitempty"`
+	Criteria []Criterion `json:"criteria"`
+	Triggers []Trigger   `json:"triggers"`
+	Ceiling  string      `json:"ceiling"`
+	Version  int         `json:"methodology_version"`
 }
 
 // Store persists records and proposals (MemStore here; postgres.TrustStore with migration 791).
