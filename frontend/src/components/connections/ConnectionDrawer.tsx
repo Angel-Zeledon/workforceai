@@ -3,9 +3,11 @@ import { useRef, useState } from "react";
 import { MOCK } from "@/lib/config";
 import { fmtDateTime, useT } from "@/lib/i18n";
 import { connApi, type TestResult } from "@/lib/connections/api";
+import { CUSTOM_API } from "@/lib/connections/apiSource";
 import { useConnections } from "@/lib/connections/store";
 import { useStore } from "@/lib/store";
 import { Btn } from "../ui";
+import { ApiSourceSection } from "./ApiSourceForm";
 import { CapChip, ErrorLine, errText, inputCls, Modal, StatusBadge, useViewer } from "./shared";
 
 const REVOKE_STEPS = ["suspend", "cancel", "provider", "destroy", "grants", "audit"] as const;
@@ -108,6 +110,7 @@ export function ConnectionDrawer({ id, onClose }: { id: string; onClose: () => v
               <p className="mt-1 text-mute">{Object.entries(c.resource_scope).map(([k, v]) => `${t(`conn.filter.${k}`)}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" · ")}</p>
             )}
           </section>
+          {c.provider === CUSTOM_API && <ApiSourceSection key={c.id} c={c} canEdit={isAdmin && live} />}
           <section>
             <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-mute">{t("conn.drawer.credential")}</h3>
             {c.credential ? (
