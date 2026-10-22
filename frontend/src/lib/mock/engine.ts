@@ -538,6 +538,9 @@ export class MockBackend {
     if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
+    // org/controls belongs to the connections mock (kill switch, viewer role). The org chart and org config mocks match
+    // every other org/* path, so it is routed first or the Connections screen never learns who the viewer is.
+    if (r0 === "org" && seg[1] === "controls") return this.conns.handle(method, seg, q, body);
     // >>> org
     if (this.orgChart.matches(seg)) return this.orgChart.handle(method, seg, body, q);
     // <<< org
