@@ -40,6 +40,7 @@ import (
 	"aiworkforce/backend/internal/webtool"
 	"aiworkforce/backend/internal/skills"
 	"aiworkforce/backend/internal/tenantdata"
+	"aiworkforce/backend/internal/trust"
 )
 
 // Deps are the collaborators of the HTTP layer.
@@ -119,6 +120,8 @@ type Deps struct {
 	Rewards *rewards.Service
 	// Quality serves /quality/agents, /agents/{id}/quality and the golden cases (quality.go): the advisory score. Optional.
 	Quality *quality.Service
+	// Trust serves /agents/{id}/trust, /trust/agents and /trust/proposals/* (trust.go): the trust ladder (B1). Optional.
+	Trust *trust.Service
 	// Chats serves the chat history (chat_history.go): the enriched GET /conversations,
 	// rename/archive/delete and /chats/*. Optional: nil keeps the plain list.
 	Chats *application.ChatHistory
@@ -253,6 +256,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountMemory(r)
 			s.mountRewards(r)
 			s.mountQuality(r)
+			s.mountTrust(r)
 			s.mountPush(r)
 			s.mountNotify(r) // approvals-notify: channel settings, plan usage, daily goal
 			s.mountV2(r)
@@ -579,6 +583,12 @@ func (s *server) reset(w http.ResponseWriter, r *http.Request) {
 	}
 	if s.Memory != nil {
 		if err := s.Memory.Reset(r.Context(), s.org(r)); err != nil {
+			s.fail(w, err)
+			return
+		}
+	}
+	if s.Trust != nil { // agents the trust ladder moved go back to their seed level
+		if err := s.Trust.Reset(r.Context()); err != nil {
 			s.fail(w, err)
 			return
 		}

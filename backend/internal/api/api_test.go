@@ -29,6 +29,7 @@ import (
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/sandbox"
+	"aiworkforce/backend/internal/trust"
 	"aiworkforce/backend/internal/webtool"
 	"aiworkforce/backend/internal/skills"
 )
@@ -124,6 +125,9 @@ type opts struct {
 	llmNoKEK       bool // ... with no encryption key configured
 	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
 	quality        bool // mount the quality score and golden cases (quality_api_test.go)
+	trust          bool // mount the trust ladder (trust_api_test.go)
+	trustBlocked   *string          // controls code the trust ladder sees when raising autonomy ("" = allowed)
+	trustClock     func() time.Time // the trust ladder's clock (nil = real time)
 }
 
 type env struct {
@@ -193,6 +197,16 @@ func newEnv(t *testing.T, o opts) *env {
 			Agents: func(c context.Context, org string) ([]domain.Agent, error) { return spy.ListAgents(c, org) },
 			Audit: func(c context.Context, org, actor, action, id string, det map[string]any) {
 				rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: "quality_case", EntityID: id, Details: det})
+			}})
+	}
+	if o.trust {
+		d.Trust = trust.New(trust.Config{Store: trust.NewMemStore(), Signals: trust.StoreSignals{Store: spy, Audit: mem}, Agents: spy,
+			SetAutonomy: mem.SetAgentAutonomy, Rec: rec, OrgID: cfg.OrgID, Log: log, Now: o.trustClock,
+			Blocked: func(context.Context, string, string) string {
+				if o.trustBlocked != nil {
+					return *o.trustBlocked
+				}
+				return ""
 			}})
 	}
 	if o.skills {
