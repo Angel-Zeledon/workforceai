@@ -12,92 +12,132 @@
   "es": {
     "title": "Seguridad en AI Workforce OS",
     "metaTitle": "Seguridad de AI Workforce OS: controles y límites",
-    "description": "Qué controles de seguridad existen hoy en AI Workforce OS, verificados en el código, y qué todavía no tenemos. Sin certificaciones declaradas.",
-    "intro": "Esta página resume los controles de seguridad que están implementados hoy, tal como se pueden comprobar en el código y en la configuración de despliegue, y termina con una tabla de lo que todavía no tenemos. No contamos con certificaciones (ni SOC 2 ni ISO 27001) y no afirmamos cumplimiento de ningún marco. Si tu equipo de compras necesita más detalle, escribe a info@workforceai.es.",
+    "description": "Los controles de seguridad que existen hoy en AI Workforce OS, verificados en el código, y los que todavía no tenemos. Sin certificaciones declaradas.",
+    "intro": "Estos son los controles de seguridad que existen hoy, tal como se pueden comprobar en el código y en la configuración de despliegue. Al final hay una tabla con lo que todavía no tenemos. No tenemos certificaciones (ni SOC 2 ni ISO 27001) ni afirmamos cumplir ningún marco.",
     "sections": [
       {
         "h": "Cómo leer esta página",
         "paras": [
-          "Describimos únicamente lo que existe. Cuando algo depende de una configuración (por ejemplo la verificación de correo o la clave de cifrado de la bóveda) lo decimos expresamente. El despliegue público actual comparte un único servidor y, según su configuración en el repositorio, el runtime de agentes corre en modo simulación: no envía datos a ningún proveedor de modelos hasta que se configure una clave de IA real.",
-          "El diseño parte de la premisa de que un modelo de lenguaje puede ser engañado por texto no confiable. Por eso el daño se limita con controles deterministas en el backend (Go) y no con instrucciones en el prompt. No prometemos que el modelo nunca sea influido; prometemos que el radio de daño queda acotado a lo que el backend autoriza."
+          "Solo describimos lo que existe. Cuando un control depende de la configuración del operador, lo decimos. El diseño parte de que un modelo de lenguaje puede ser engañado por texto no confiable, así que el daño se limita con controles deterministas en el backend (Go) y no con instrucciones en el prompt: no prometemos que el modelo nunca sea influido, sino que solo puede hacer lo que el backend autoriza.",
+          "El despliegue público actual corre en un único servidor compartido. Según su configuración en el repositorio, el runtime de agentes está en modo simulación (no envía nada a proveedores de modelos) y la bóveda no tiene clave de cifrado configurada, así que no guarda credenciales reales."
         ],
-        "tip": "Más detalle técnico en la documentación: modelo de seguridad y autenticación y multi-organización."
+        "tip": "Más detalle técnico en la documentación: modelo de seguridad, y autenticación y multitenencia."
       },
       {
         "h": "Aislamiento entre organizaciones",
         "paras": [
-          "Las tablas con datos de una organización usan seguridad a nivel de fila (row-level security) de Postgres. Cada petición corre en una transacción que fija la organización con un ajuste local a esa transacción, y las políticas filtran por ella; FORCE ROW LEVEL SECURITY lo aplica incluso al dueño de la tabla.",
-          "El sistema falla cerrado: si la organización no está definida, ninguna fila es visible ni escribible. El servidor se conecta con un rol sin privilegios de superusuario ni BYPASSRLS y que no es dueño de las tablas. Existe una prueba de integración de aislamiento entre organizaciones. Esto es aislamiento lógico dentro de una misma base de datos, no instancias separadas por cliente."
+          "Las tablas con datos de una organización usan seguridad a nivel de fila (row-level security) de Postgres con `FORCE ROW LEVEL SECURITY`. Cada petición corre en una transacción que fija la organización con un ajuste local (`app.org_id`) y las políticas filtran por él. Si no está definido, no se ve ni se escribe ninguna fila.",
+          "El servidor trabaja con un rol (`app_user`) que no es superusuario, no tiene `BYPASSRLS` y no es dueño de las tablas. Hay pruebas de integración que comprueban el aislamiento entre dos organizaciones. Es aislamiento lógico dentro de una misma base de datos, no una instancia por cliente."
         ]
       },
       {
-        "h": "Autenticación y sesiones",
-        "paras": [
-          "Las contraseñas se guardan con Argon2id (64 MiB, 3 iteraciones, 2 carriles por defecto) y se recalculan en el siguiente login si se crearon con parámetros más débiles. Se exigen entre 10 y 128 caracteres, al menos dos clases de caracteres y se rechazan contraseñas comunes.",
-          "Tras 5 contraseñas erróneas la cuenta se bloquea 15 minutos. Hay límites de tasa por correo y por IP (por ejemplo 10 intentos de login por 15 minutos por correo, 20 por IP, y 5 registros por hora por IP), guardados en Redis si está disponible o en memoria si no. Para cuentas inexistentes se calcula un hash equivalente para no revelar si un correo existe.",
-          "El token de acceso es un JWT de 15 minutos por defecto. El token de refresco es opaco, dura 30 días por defecto, se guarda en el servidor solo como hash SHA-256 y viaja en una cookie HttpOnly, SameSite=Strict. Cada refresco rota el token dentro de una familia; presentar un token ya usado revoca toda la familia. Refresh y logout exigen una cabecera anti-CSRF propia.",
-          "La verificación de correo con enlace de un solo uso (válido 24 horas) existe, pero es opcional: se activa con EMAIL_VERIFICATION=true y requiere un servidor SMTP configurado. Las cuentas de prueba son desechables y dejan de funcionar a las 24 horas."
+        "h": "Inicio de sesión y sesiones",
+        "list": [
+          "Contraseñas con Argon2id (64 MiB, 3 iteraciones, 2 hilos), que se recalculan en el siguiente inicio de sesión si se crearon con parámetros más débiles.",
+          "Entre 10 y 128 caracteres y al menos dos clases de caracteres. Se rechazan la propia dirección de correo y una lista corta de contraseñas comunes.",
+          "Tras 5 intentos fallidos (contraseña o código de verificación) la cuenta se bloquea 15 minutos. Hay además límites de tasa por correo, por IP y por usuario en el inicio de sesión, el registro, la verificación en dos pasos, la recuperación de contraseña y el SSO.",
+          "Para cuentas inexistentes se calcula un hash equivalente, de modo que el tiempo de respuesta no revela si un correo existe.",
+          "El token de acceso es un JWT de 15 minutos. El de refresco es opaco, dura 30 días, se guarda solo como hash SHA-256 y viaja en una cookie `HttpOnly`, `Secure` y `SameSite=Strict`. Cada uso lo rota y reutilizar uno ya usado revoca toda la familia.",
+          "Renovar la sesión y cerrarla exigen la cabecera `X-WFAI-CSRF` y un origen permitido.",
+          "La verificación de correo (enlace de un solo uso, 24 horas) es opcional: se activa con `EMAIL_VERIFICATION=true` y necesita SMTP. La recuperación de contraseña usa un enlace de un solo uso válido 1 hora y cierra todas las sesiones abiertas."
         ]
+      },
+      {
+        "h": "Identidad para empresas: SSO, MFA y SCIM",
+        "list": [
+          "Inicio de sesión único con cualquier proveedor OpenID Connect (Okta, Entra ID, Google Workspace…): flujo de código con PKCE, `state` y `nonce`, y tokens firmados solo con RS256 o ES256. El secreto de cliente se guarda cifrado en la bóveda.",
+          "Dominios verificados con un registro DNS TXT, que se vuelve a comprobar cada 24 horas. El SSO y la creación de cuentas por dominio solo funcionan con dominios verificados.",
+          "Verificación en dos pasos con app de autenticación (TOTP) y 8 códigos de recuperación. Una organización puede exigirla a todos sus miembros: quien no la tenga debe activarla antes de recibir sesión.",
+          "Una organización puede imponer el SSO y desactivar el inicio de sesión con contraseña. Los owners conservan la contraseña como acceso de emergencia.",
+          "Aprovisionamiento SCIM 2.0 (usuarios y grupos) con un token por organización guardado como hash. Desactivar a una persona quita su membresía y revoca sus sesiones en esa organización al momento."
+        ],
+        "note": "La política de MFA o SSO obligatorio se comprueba al iniciar sesión con contraseña y al cambiar de organización; las sesiones que ya estaban abiertas no se cierran al activarla. SAML no está implementado."
       },
       {
         "h": "Roles y permisos",
         "paras": [
-          "Cada membresía tiene uno de cuatro roles: owner, admin, member o viewer, y cada uno es un superconjunto estricto del inferior. Los permisos tienen la forma recurso:acción y se comprueban en el servidor antes de cada operación. Por defecto el rol se lee de la base de datos en cada petición, así que degradar o quitar a un miembro surte efecto de inmediato.",
-          "Nadie puede asignar un rol superior al suyo, el último owner no puede eliminarse y un agente nunca tiene permisos de aprobación. Un usuario puede pertenecer a varias organizaciones con un rol distinto en cada una."
+          "Cada membresía tiene uno de cuatro roles: owner, admin, member o viewer, cada uno un superconjunto estricto del anterior. Los permisos tienen la forma `recurso:acción` y se comprueban en el servidor antes de cada operación. El rol se lee de la base de datos en cada petición, así que degradar o quitar a un miembro surte efecto al instante.",
+          "Un admin solo puede asignar los roles member y viewer y no puede cambiar su propio rol, y el último owner no puede eliminarse ni degradarse. Una persona puede pertenecer a varias organizaciones con un rol distinto en cada una. No hay roles personalizados."
         ]
       },
       {
-        "h": "Bóveda de credenciales",
+        "h": "Bóveda de secretos",
         "paras": [
-          "Las credenciales de las integraciones (tokens OAuth, claves de API) se cifran con AES-256-GCM en un esquema de sobre: una clave de cifrado de claves (KEK) que está fuera de la base de datos envuelve una clave de datos por organización, y esta cifra cada secreto con un nonce aleatorio. Los datos autenticados incluyen organización, credencial, versión y tipo, de modo que un texto cifrado copiado a otra fila u organización no se descifra.",
-          "Sin KEK configurada (CONNECTIONS_KEK) la bóveda falla cerrada: no guarda ni lee credenciales reales. Se admiten varias KEK para rotarlas. Revocar una conexión la suspende, llama al endpoint de revocación del proveedor y destruye el texto cifrado. El modelo de lenguaje nunca ve un secreto: el contrato entre el backend y el runtime no tiene campos de credencial.",
-          "Las claves de IA propias de una organización (traiga su propia clave) se guardan con el mismo cifrado de sobre."
+          "Los tokens OAuth, las claves de API de las integraciones y las claves de IA propias se cifran con AES-256-GCM en un esquema de sobre: una clave de cifrado de claves (KEK) que vive fuera de la base de datos envuelve una clave de datos por organización, y esta cifra cada secreto con un nonce aleatorio. Los datos autenticados atan cada texto cifrado a su organización y a su uso, de modo que copiado a otra fila u organización no se descifra.",
+          "Sin `CONNECTIONS_KEK` la bóveda falla cerrada: no guarda ni lee secretos reales. La KEK se rota con `CONNECTIONS_KEK_PREVIOUS` y las claves de datos también pueden rotarse. Revocar una conexión OAuth la suspende, llama al endpoint de revocación del proveedor y destruye el texto cifrado; si el proveedor falla, se reintenta.",
+          "Las credenciales de las integraciones nunca viajan al runtime de agentes ni al modelo. La clave de IA propia de una organización sí se envía al runtime para llamar al proveedor, nunca dentro del prompt. Con la misma bóveda se cifran el secreto de cliente SSO, los secretos de firma de webhooks y las URL de avisos de Slack y Teams."
         ]
       },
       {
         "h": "Aprobaciones humanas",
         "paras": [
-          "Un agente puede pedir una acción pero nunca aprobarla. Aprueban personas con rol admin u owner; el rol sale del token de sesión. Cada aprobación queda ligada por hash a los argumentos exactos, se consume una sola vez, se revalida antes de ejecutar y caduca (48 horas por defecto; caducar cuenta como rechazo).",
-          "Hay cuatro niveles de autonomía por agente (suggest, approve_each, rules, autonomous); el nivel por defecto exige aprobación para cualquier acción con efecto externo. Una organización puede añadir reglas como umbrales de monto, acciones prohibidas, destinatarios nuevos o doble aprobación, en la que se necesitan dos personas distintas y quien hizo la solicitud nunca aprueba.",
-          "Limitación conocida: hoy no existe un permiso más fino para decidir aprobaciones de alto riesgo; decidir equivale a ser admin u owner. La opción que impide autoaprobarse viene apagada por compatibilidad con equipos de una persona."
-        ]
+          "Un agente puede pedir una acción, pero nunca aprobarla. Deciden personas con rol admin u owner. Cada aprobación queda ligada por hash a los argumentos exactos, se consume una sola vez y se vuelve a validar antes de ejecutar. Caduca a los 30 minutos por defecto (`APPROVAL_TIMEOUT`) y caducar cuenta como rechazo; las aprobaciones de proyectos no caducan por defecto y envían recordatorios cada hora.",
+          "Hay cuatro niveles de autonomía por agente (`suggest`, `approve_each`, `rules`, `autonomous`). Las acciones de integraciones con efectos externos e irreversibles siempre piden aprobación, y un correo aprobado espera al menos 60 segundos antes de salir, durante los que todavía se puede cancelar. Cada organización puede añadir reglas:"
+        ],
+        "list": [
+          "umbrales de monto y acciones prohibidas;",
+          "aprobación obligatoria para destinatarios nuevos;",
+          "un rol mínimo más alto para decidir ciertas acciones;",
+          "doble aprobación, con dos personas distintas y sin que decida quien pidió la acción;",
+          "aprobar por sesión (8 horas) o por proyecto (30 días), solo para acciones internas, reversibles y de riesgo bajo o medio."
+        ],
+        "note": "También se puede aprobar desde el correo, Slack o Teams con enlaces firmados (HMAC-SHA256), de un solo uso y válidos 24 horas. Abrir el enlace no decide nada: hace falta confirmar. Estos enlaces nunca se ofrecen para acciones de alto riesgo, doble aprobación, rol mínimo o ejecución de código. La opción que impide aprobar tus propias solicitudes viene apagada, salvo con doble aprobación."
       },
       {
         "h": "Topes de gasto y controles de operación",
         "paras": [
-          "Antes de cada llamada al runtime se reserva el costo máximo estimado contra la solicitud, el agente y la organización, y después se concilia con el mayor valor entre el costo informado por el runtime y el recalculado por el backend. Al llegar al tope la solicitud o el agente se pausa y una persona decide si lo sube. También hay límites contra bucles: profundidad de delegación, tareas por solicitud, reintentos, tiempo por tarea y una cola por organización.",
-          "El horario de operación es una agenda semanal con zona horaria que impide empezar trabajo nuevo fuera de las horas abiertas. La detección de anomalías v1 aplica cuatro reglas explicables (pico de gasto, ráfaga de peticiones de herramientas, aprobaciones rechazadas en serie y dominios de destinatario nuevos) y registra cada hallazgo en la auditoría; por sí sola no bloquea, y el congelamiento automático es opcional y viene apagado.",
-          "El modo solo lectura (de la organización o de un agente) deniega los efectos externos. El kill switch tiene dos niveles, freeze y lockdown: cualquier admin u owner puede activarlo, solo un owner puede levantarlo y con un motivo escrito; también puede imponerse por variable de entorno. Las acciones retenidas vuelven a la cola de aprobación y se deben aprobar de nuevo. Una llamada ya enviada al runtime termina aunque se active el kill switch."
+          "Antes de cada llamada al runtime se reserva el costo máximo estimado contra la solicitud, el agente y la organización, y después se concilia con el mayor valor entre el costo informado por el runtime y el recalculado por el backend. Al llegar a un tope, el trabajo se pausa hasta que una persona decida. Cada llamada lleva además su propio tope de costo, y hay límites de profundidad de delegación, reintentos, tiempo por llamada y llamadas en paralelo por organización.",
+          "El horario de operación impide empezar trabajo nuevo fuera de las horas abiertas. La detección de anomalías aplica cuatro reglas explicables (pico de gasto, ráfaga de peticiones de herramientas, aprobaciones rechazadas en serie y dominios de destinatario nuevos) y registra cada hallazgo; no bloquea por sí sola y el congelamiento automático viene apagado.",
+          "El modo solo lectura, de la organización o de un agente, deniega los efectos externos. El kill switch tiene dos niveles, freeze y lockdown: cualquier admin u owner puede activarlo, solo un owner puede levantarlo y con un motivo escrito. El operador también puede imponerlo con `KILL_SWITCH`, y entonces ninguna llamada a la API lo levanta. Las acciones retenidas vuelven a la cola de aprobación; una llamada ya enviada al runtime termina."
         ]
       },
       {
         "h": "Auditoría verificable",
         "paras": [
-          "La auditoría es una cadena de hash por organización: cada entrada incluye el SHA-256 de la anterior, de modo que modificar, borrar, reordenar o insertar una entrada rompe la cadena desde ese punto. Un endpoint de verificación recalcula la cadena y un endpoint de exportación entrega el registro en JSONL o CSV (permiso de admin u owner). Para el rol de aplicación el registro es de solo anexado: UPDATE y DELETE están revocados.",
-          "Antes de encadenarse, cada entrada pasa por un depurador que guarda solo metadatos: reemplaza campos de contenido y claves con aspecto de credencial por [redacted], enmascara secretos incrustados y trunca textos largos. Se auditan, entre otros, la autenticación, las decisiones de política, las aprobaciones, las ejecuciones de herramientas y los cambios de controles.",
-          "La exportación es un volcado simple, sin firma ni anclaje externo de la cabeza de la cadena. Hoy no hay una purga automática del registro de auditoría."
+          "La auditoría es una cadena de hash por organización: cada entrada incluye el SHA-256 de la anterior, así que modificar, borrar, reordenar o insertar una entrada rompe la cadena. Para el rol de la aplicación es de solo anexado (`UPDATE` y `DELETE` revocados, más disparadores). Antes de encadenarse, cada entrada pasa por un depurador que sustituye el contenido y las claves con aspecto de credencial por `[redacted]` y trunca los textos largos.",
+          "Se auditan, entre otros, las aprobaciones, las ejecuciones y denegaciones de herramientas, las decisiones de política, los cambios de controles, los cambios de identidad (SSO, MFA, recuperación de contraseña, invitaciones) y las exportaciones y borrados. El inicio y cierre de sesión con contraseña todavía no se auditan."
+        ],
+        "list": [
+          "Verificación: `GET /api/v1/audit/verify` recalcula la cadena. Si guardas fuera del sistema la cabeza de la cadena (número y hash), puedes pasarla como ancla para detectar incluso una reescritura completa.",
+          "Exportación para admins y owners en JSONL, CSV o un ZIP que incluye el resultado de la verificación. La exportación no va firmada.",
+          "Retención opcional: un owner puede purgar entradas de más de 365 días como mínimo. La cadena sigue siendo verificable desde un punto de control, pero el contenido purgado ya no se puede probar: guarda una exportación si lo necesitas."
         ]
       },
       {
         "h": "Datos hacia modelos de IA y contenido no confiable",
         "paras": [
-          "Antes de que el texto llegue al modelo, el runtime y el backend enmascaran credenciales, códigos de un solo uso y tarjetas, y todo contenido externo (correos, respuestas de API, archivos) se normaliza, se neutralizan imágenes y enlaces de markdown y se envuelve en un bloque delimitado como datos. Una puntuación heurística de inyección marca la tarea y eleva la aprobación; es una señal, no una barrera. La barrera son los permisos, las aprobaciones y los límites.",
-          "Cada organización puede fijar una lista de proveedores de IA permitidos, además del techo que define el operador del despliegue (ALLOWED_PROVIDERS). Un proveedor excluido no se llama ni se usa como respaldo. Las organizaciones pueden traer su propia clave de IA y exigir que solo se use esa (sin recurrir a las claves de la plataforma), o apuntar a un endpoint compatible con OpenAI propio. Los proveedores que el sistema reconoce son deepseek, anthropic, openai, kimi y custom. Detalle en la página de subprocesadores.",
-          "El código que un agente quiere ejecutar es una solicitud de alto riesgo que una persona debe aprobar. Se ejecuta en un contenedor sin red, con sistema de archivos de solo lectura, sin capacidades y con límites de recursos. Limitación conocida: el ejecutor monta el socket de Docker, lo que equivale a acceso de administrador del host; no lo recomendamos más allá de un único host de confianza."
+          "Antes de que el texto llegue al modelo se enmascaran credenciales y números de tarjeta, y el backend enmascara además códigos de un solo uso. El contenido externo (correos, respuestas de API, archivos, páginas web) se normaliza, se neutralizan sus imágenes y enlaces markdown y se envuelve en un bloque delimitado como datos. Una puntuación heurística de inyección marca la tarea y añade motivos de aprobación a las acciones con efectos; es una señal, no la barrera. La barrera son los permisos, las aprobaciones y los límites.",
+          "El operador fija un techo de proveedores de IA (`ALLOWED_PROVIDERS`) y cada organización puede restringirlo más; un proveedor excluido no se llama ni como respaldo. Una organización puede usar su propia clave de IA, y mientras esté activa solo responde esa clave, o apuntar a un endpoint propio compatible con OpenAI.",
+          "La navegación web de los agentes viene apagada por organización. Cuando se activa, las peticiones salen del backend con una protección contra SSRF que bloquea direcciones privadas, de loopback y de enlace local en el momento de conectar; los webhooks salientes usan la misma protección y solo admiten HTTPS."
         ]
       },
       {
-        "h": "Cifrado en tránsito, respaldos y desarrollo",
+        "h": "Ejecución de código",
         "paras": [
-          "El tráfico público llega por HTTPS: un proxy Caddy termina TLS con certificados automáticos y envía la cabecera Strict-Transport-Security (un año) en el sitio y en la aplicación. La aplicación añade además X-Content-Type-Options, X-Frame-Options DENY y Referrer-Policy. No hemos hecho una evaluación externa de la configuración TLS. Entre contenedores, en una red privada del mismo servidor, la conexión a Postgres no usa TLS (sslmode=disable). No hemos verificado el cifrado en reposo de los discos del proveedor de alojamiento.",
-          "Respaldos: un cron ejecuta una vez al día (03:30, hora del servidor) un volcado de Postgres comprimido con gzip. Se guarda en el mismo servidor con permisos restrictivos, se conservan 14 días y el script falla con un mensaje si el archivo resulta sospechosamente pequeño. Se probó una restauración. No hay copia fuera del servidor ni un objetivo formal de tiempo o punto de recuperación.",
-          "Desarrollo: el repositorio ejecuta en CI compilación, pruebas, detector de carreras en paquetes clave, linter de Dockerfiles, govulncheck y npm audit (estos dos últimos no bloquean la integración). Los despliegues usan imágenes etiquetadas por commit."
+          "El código que un agente quiere ejecutar es una acción de alto riesgo que una persona debe aprobar. Existe un modo opcional, apagado por defecto, en el que el código que solo toca los archivos del propio agente se ejecuta sin aprobación; activarlo exige `org:manage` y una confirmación explícita del riesgo, y queda auditado.",
+          "El código corre en un contenedor sin red, con sistema de archivos de solo lectura, sin capacidades, sin escalada de privilegios, con usuario sin privilegios y con límites de procesos, memoria y CPU. gVisor es opcional."
+        ],
+        "warning": "El servicio ejecutor monta el socket de Docker del host, lo que equivale a acceso de administrador al host. Recomendamos usarlo solo en un host de confianza dedicado. No forma parte del despliegue público."
+      },
+      {
+        "h": "Cifrado en tránsito y cabeceras",
+        "paras": [
+          "El tráfico público llega por HTTPS: el proxy Caddy termina TLS con certificados automáticos y envía `Strict-Transport-Security` de un año en el sitio y en la aplicación. En la aplicación añade `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` y `Referrer-Policy`. Los archivos subidos por usuarios y los artefactos se sirven con una CSP `sandbox` para que no puedan ejecutar código en el origen de la aplicación.",
+          "Entre contenedores, dentro de una red privada del mismo servidor, la conexión a Postgres no usa TLS (`sslmode=disable`). Los secretos van cifrados a nivel de aplicación, pero no hemos verificado el cifrado en reposo de los discos del proveedor de alojamiento."
+        ],
+        "note": "Todavía no hay una Content-Security-Policy global en la aplicación y no hemos hecho una evaluación externa de la configuración TLS."
+      },
+      {
+        "h": "Respaldos y desarrollo",
+        "paras": [
+          "Un cron hace cada noche (03:30, hora del servidor) un volcado de Postgres comprimido. Se guarda en el mismo servidor con permisos restrictivos y se conserva 14 días; el script falla con un mensaje si el archivo es sospechosamente pequeño. No hay copia fuera del servidor ni un objetivo formal de tiempo o punto de recuperación.",
+          "La integración continua compila y prueba el backend y el runtime, compila el frontend y ejecuta el detector de carreras en paquetes clave, pruebas end-to-end, un linter de Dockerfiles, `govulncheck` y `npm audit` (estos dos últimos no bloquean). Las imágenes se publican etiquetadas por commit."
         ]
       },
       {
         "h": "Lo que todavía no tenemos",
         "paras": [
-          "Estado honesto de las capacidades que suelen pedir los equipos de compras. Donde decimos que no existe, no existe; donde decimos en desarrollo, no está disponible hoy. No damos fechas porque no hay ninguna comprometida."
+          "Estado honesto de lo que suelen pedir los equipos de compras. Donde dice que no existe, no existe; donde dice parcial, leer el detalle. No damos fechas porque no hay ninguna comprometida."
         ],
         "table": {
           "head": [
@@ -109,42 +149,7 @@
             [
               "SOC 2 / ISO 27001",
               "No existe",
-              "Sin certificaciones ni auditoría externa. Figuran en el plan interno como fase posterior, sin fecha ni presupuesto aprobados."
-            ],
-            [
-              "SSO (SAML/OIDC) y SCIM",
-              "No existe",
-              "Correo y contraseña, con verificación en dos pasos opcional. El OIDC que existe sirve únicamente para conectar LinkedIn como integración."
-            ],
-            [
-              "Autenticación multifactor obligatoria por organización",
-              "No existe",
-              "Cada persona puede activar una app de autenticación (TOTP) con códigos de recuperación, pero la organización no puede exigirla a todos sus miembros."
-            ],
-            [
-              "Recuperación de contraseña por correo",
-              "Implementada, pendiente de activar",
-              "El enlace de un solo uso (1 hora) está construido, pero depende de tener correo saliente configurado, que el despliegue público aún no tiene."
-            ],
-            [
-              "Exportación y borrado completos de datos de una organización o persona",
-              "En desarrollo",
-              "Existen exportaciones parciales (auditoría, trazas, artefactos, habilidades). Para el resto, solicitud por correo a info@workforceai.es."
-            ],
-            [
-              "Elección de residencia de datos",
-              "No existe",
-              "Un único servidor compartido; su ubicación no está verificada en esta página. No se puede elegir región."
-            ],
-            [
-              "Firma o anclaje externo de la auditoría",
-              "No existe",
-              "La cadena de hash es verificable, pero su cabeza no se ancla fuera del sistema."
-            ],
-            [
-              "Claves de cifrado en un KMS",
-              "No existe",
-              "La KEK se entrega por variable de entorno (CONNECTIONS_KEK); admite rotación con varias KEK."
+              "Sin certificaciones ni auditoría externa."
             ],
             [
               "Prueba de penetración externa",
@@ -152,29 +157,69 @@
               "Solo pruebas automáticas propias y escáneres de dependencias en CI."
             ],
             [
+              "SSO con SAML",
+              "No existe",
+              "El SSO es solo OpenID Connect."
+            ],
+            [
+              "Roles personalizados",
+              "No existe",
+              "Cuatro roles fijos."
+            ],
+            [
+              "Comprobación contra contraseñas filtradas",
+              "No existe",
+              "Solo una lista corta de contraseñas comunes."
+            ],
+            [
+              "Autoservicio para exportar o borrar una cuenta individual",
+              "No existe",
+              "La exportación y el borrado son por organización; para una cuenta, solicitud a info@workforceai.es."
+            ],
+            [
+              "Elección de residencia de datos",
+              "No existe",
+              "Un único servidor; no se puede elegir región."
+            ],
+            [
+              "Claves de cifrado en un KMS",
+              "No existe",
+              "La KEK se entrega por variable de entorno (`CONNECTIONS_KEK`)."
+            ],
+            [
+              "Exportación de auditoría firmada o anclada fuera",
+              "Parcial",
+              "La verificación acepta un ancla que guardes tú; la plataforma no firma ni ancla la cabeza de la cadena."
+            ],
+            [
               "Respaldos fuera del servidor y pruebas periódicas de restauración",
               "No existe",
-              "Los volcados nocturnos viven en el mismo servidor; se probó una restauración, sin calendario de pruebas."
+              "Los volcados nocturnos viven en el mismo servidor."
             ],
             [
-              "Alta disponibilidad y varias réplicas",
+              "Alta disponibilidad",
               "No existe",
-              "Una sola instancia; algunos contadores y semáforos son por proceso."
+              "Una sola instancia."
             ],
             [
-              "Página pública de estado con historial de incidentes",
+              "Escaneo de secretos y análisis estático en CI",
               "No existe",
-              "La sección Estado actual del sitio describe qué funciona, no la disponibilidad."
+              "Hay `govulncheck`, `npm audit` y linter de Dockerfiles, pero no escaneo de secretos ni CodeQL."
+            ],
+            [
+              "Página pública de estado",
+              "No existe",
+              "Sin historial público de incidentes ni de disponibilidad."
             ],
             [
               "Documentos legales publicados (privacidad, términos, DPA)",
               "En revisión",
-              "Hay borradores pendientes de revisión por un abogado; aún no están publicados."
+              "Borradores pendientes de revisión por un abogado."
             ],
             [
               "Aislamiento fuerte del ejecutor de código",
               "Parcial",
-              "Contenedor restringido, pero con acceso al socket de Docker del host."
+              "Contenedor restringido, pero el ejecutor tiene acceso al socket de Docker del host."
             ]
           ]
         },
@@ -185,92 +230,132 @@
   "en": {
     "title": "Security at AI Workforce OS",
     "metaTitle": "AI Workforce OS security: controls and limits",
-    "description": "Which security controls exist today in AI Workforce OS, verified in the code, and which ones we do not have yet. No certifications claimed.",
-    "intro": "This page summarizes the security controls that are implemented today, as can be checked in the code and in the deployment configuration, and ends with a table of what we do not have yet. We hold no certifications (neither SOC 2 nor ISO 27001) and we do not claim compliance with any framework. If your procurement team needs more detail, write to info@workforceai.es.",
+    "description": "The security controls that exist today in AI Workforce OS, verified in the code, and the ones we do not have yet. No certifications claimed.",
+    "intro": "These are the security controls that exist today, as they can be checked in the code and in the deployment configuration. At the end there is a table of what we do not have yet. We hold no certifications (neither SOC 2 nor ISO 27001) and we do not claim compliance with any framework.",
     "sections": [
       {
         "h": "How to read this page",
         "paras": [
-          "We describe only what exists. When something depends on configuration (for example e-mail verification or the vault encryption key) we say so explicitly. The current public deployment shares a single server and, according to its configuration in the repository, the agent runtime runs in simulation mode: it sends no data to any model provider until a real AI key is configured.",
-          "The design starts from the premise that a language model can be fooled by untrusted text. That is why damage is limited with deterministic controls in the backend (Go) and not with instructions in the prompt. We do not promise that the model is never influenced; we promise that the blast radius is bounded to what the backend authorizes."
+          "We only describe what exists. When a control depends on the operator's configuration, we say so. The design assumes that a language model can be fooled by untrusted text, so damage is limited with deterministic controls in the backend (Go) and not with instructions in the prompt: we do not promise that the model is never influenced, only that it can do nothing the backend does not authorize.",
+          "The current public deployment runs on a single shared server. According to its configuration in the repository, the agent runtime is in simulation mode (it sends nothing to model providers) and the vault has no encryption key configured, so it stores no real credentials."
         ],
-        "tip": "More technical detail in the documentation: security model and authentication and multi-organization."
+        "tip": "More technical detail in the documentation: security model, and authentication and multi-tenancy."
       },
       {
         "h": "Isolation between organizations",
         "paras": [
-          "Tables holding organization data use Postgres row-level security. Each request runs in a transaction that sets the organization with a transaction-local setting, and policies filter on it; FORCE ROW LEVEL SECURITY applies it even to the table owner.",
-          "The system fails closed: if the organization is not set, no row is visible or writable. The server connects with a role that is not a superuser, has no BYPASSRLS and owns no tables. An integration test covers isolation between organizations. This is logical isolation inside one database, not separate instances per customer."
+          "Tables holding an organization's data use Postgres row-level security with `FORCE ROW LEVEL SECURITY`. Each request runs in a transaction that sets the organization with a local setting (`app.org_id`) and the policies filter on it. If it is not set, no row is visible or writable.",
+          "The server works with a role (`app_user`) that is not a superuser, has no `BYPASSRLS` and owns no tables. Integration tests check isolation between two organizations. This is logical isolation inside one database, not an instance per customer."
         ]
       },
       {
-        "h": "Authentication and sessions",
-        "paras": [
-          "Passwords are stored with Argon2id (64 MiB, 3 iterations, 2 lanes by default) and are rehashed at the next login if they were created with weaker parameters. Passwords must be 10 to 128 characters long, use at least two character classes, and common passwords are rejected.",
-          "After 5 wrong passwords the account is locked for 15 minutes. There are rate limits per e-mail and per IP (for example 10 login attempts per 15 minutes per e-mail, 20 per IP, and 5 sign-ups per hour per IP), kept in Redis when available or in memory otherwise. For non-existent accounts an equivalent hash is computed so that response time does not reveal whether an e-mail exists.",
-          "The access token is a JWT valid 15 minutes by default. The refresh token is opaque, lasts 30 days by default, is stored on the server only as a SHA-256 hash and travels in an HttpOnly, SameSite=Strict cookie. Every refresh rotates the token within a family; presenting an already-used token revokes the whole family. Refresh and logout require a dedicated anti-CSRF header.",
-          "E-mail verification with a single-use link (valid 24 hours) exists but is optional: it is turned on with EMAIL_VERIFICATION=true and requires a configured SMTP server. Trial accounts are disposable and stop working after 24 hours."
+        "h": "Sign-in and sessions",
+        "list": [
+          "Passwords hashed with Argon2id (64 MiB, 3 iterations, 2 threads), rehashed at the next sign-in if they were created with weaker parameters.",
+          "10 to 128 characters and at least two character classes. The account's own e-mail address and a short list of common passwords are rejected.",
+          "After 5 failed attempts (password or verification code) the account is locked for 15 minutes. There are also rate limits per e-mail, per IP and per user on sign-in, sign-up, two-step verification, password recovery and SSO.",
+          "For non-existent accounts an equivalent hash is computed, so response time does not reveal whether an e-mail exists.",
+          "The access token is a 15-minute JWT. The refresh token is opaque, lasts 30 days, is stored only as a SHA-256 hash and travels in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie. Every use rotates it, and reusing an already-used token revokes the whole family.",
+          "Renewing and ending a session require the `X-WFAI-CSRF` header and an allowed origin.",
+          "E-mail verification (single-use link, 24 hours) is optional: it is turned on with `EMAIL_VERIFICATION=true` and needs SMTP. Password recovery uses a single-use link valid for 1 hour and closes every open session."
         ]
+      },
+      {
+        "h": "Enterprise identity: SSO, MFA and SCIM",
+        "list": [
+          "Single sign-on with any OpenID Connect provider (Okta, Entra ID, Google Workspace…): code flow with PKCE, `state` and `nonce`, and tokens signed only with RS256 or ES256. The client secret is stored encrypted in the vault.",
+          "Domains verified with a DNS TXT record, re-checked every 24 hours. SSO and domain-based account creation only work with verified domains.",
+          "Two-step verification with an authenticator app (TOTP) and 8 recovery codes. An organization can require it of all its members: anyone without it must enroll before getting a session.",
+          "An organization can enforce SSO and turn off password sign-in. Owners keep their password as emergency access.",
+          "SCIM 2.0 provisioning (users and groups) with one token per organization stored as a hash. Deactivating a person removes their membership and revokes their sessions in that organization at once."
+        ],
+        "note": "The required MFA or SSO policy is checked at password sign-in and when switching organizations; sessions that were already open are not closed when it is turned on. SAML is not implemented."
       },
       {
         "h": "Roles and permissions",
         "paras": [
-          "Each membership has one of four roles: owner, admin, member or viewer, and each is a strict superset of the one below. Permissions have the form resource:action and are checked on the server before each operation. By default the role is read from the database on every request, so demoting or removing a member takes effect immediately.",
-          "Nobody can assign a role higher than their own, the last owner cannot be removed and an agent never holds approval permissions. A user can belong to several organizations with a different role in each."
+          "Each membership has one of four roles: owner, admin, member or viewer, each a strict superset of the one below. Permissions have the form `resource:action` and are checked on the server before each operation. The role is read from the database on every request, so demoting or removing a member takes effect immediately.",
+          "An admin can only assign the member and viewer roles and cannot change their own role, and the last owner cannot be removed or demoted. A person can belong to several organizations with a different role in each. There are no custom roles."
         ]
       },
       {
-        "h": "Credential vault",
+        "h": "Secrets vault",
         "paras": [
-          "Integration credentials (OAuth tokens, API keys) are encrypted with AES-256-GCM in an envelope scheme: a key-encryption key (KEK) kept outside the database wraps a per-organization data key, and that key encrypts each secret with a random nonce. The authenticated data includes organization, credential, version and kind, so a ciphertext copied to another row or organization does not decrypt.",
-          "Without a configured KEK (CONNECTIONS_KEK) the vault fails closed: it neither stores nor reads real credentials. Several KEKs are accepted so they can be rotated. Revoking a connection suspends it, calls the provider's revocation endpoint and destroys the ciphertext. The language model never sees a secret: the contract between backend and runtime has no credential fields.",
-          "An organization's own AI keys (bring your own key) are stored with the same envelope encryption."
+          "OAuth tokens, integration API keys and an organization's own AI keys are encrypted with AES-256-GCM in an envelope scheme: a key-encryption key (KEK) that lives outside the database wraps a per-organization data key, and that key encrypts each secret with a random nonce. The authenticated data binds each ciphertext to its organization and purpose, so if it is copied to another row or organization it does not decrypt.",
+          "Without `CONNECTIONS_KEK` the vault fails closed: it neither stores nor reads real secrets. The KEK is rotated with `CONNECTIONS_KEK_PREVIOUS` and data keys can be rotated too. Revoking an OAuth connection suspends it, calls the provider's revocation endpoint and destroys the ciphertext; if the provider fails, it is retried.",
+          "Integration credentials never travel to the agent runtime or the model. An organization's own AI key is sent to the runtime to call the provider, never inside the prompt. The same vault encrypts the SSO client secret, webhook signing secrets and the Slack and Teams notice URLs."
         ]
       },
       {
         "h": "Human approvals",
         "paras": [
-          "An agent can request an action but can never approve it. People with the admin or owner role approve; the role comes from the session token. Each approval is bound by hash to the exact arguments, is consumed once, is re-validated before execution and expires (48 hours by default; expiring counts as a rejection).",
-          "There are four autonomy levels per agent (suggest, approve_each, rules, autonomous); the default level requires approval for any action with an external effect. An organization can add rules such as amount thresholds, forbidden actions, new recipients or dual approval, in which two distinct people are needed and the requester never approves.",
-          "Known limitation: there is no finer-grained permission for deciding high-risk approvals today; deciding equals being admin or owner. The option that prevents self-approval ships turned off for compatibility with one-person teams."
-        ]
+          "An agent can request an action but can never approve it. People with the admin or owner role decide. Each approval is bound by hash to the exact arguments, is consumed once and is re-validated before execution. It expires after 30 minutes by default (`APPROVAL_TIMEOUT`) and expiring counts as a rejection; project approvals do not expire by default and send hourly reminders.",
+          "There are four autonomy levels per agent (`suggest`, `approve_each`, `rules`, `autonomous`). Integration actions with external, irreversible effects always ask for approval, and an approved e-mail waits at least 60 seconds before going out, during which it can still be cancelled. Each organization can add rules:"
+        ],
+        "list": [
+          "amount thresholds and forbidden actions;",
+          "mandatory approval for new recipients;",
+          "a higher minimum role to decide certain actions;",
+          "dual approval, with two different people and never the requester;",
+          "approval for a session (8 hours) or a project (30 days), only for internal, reversible, low or medium risk actions."
+        ],
+        "note": "Approvals can also be decided from e-mail, Slack or Teams with signed links (HMAC-SHA256), single-use and valid for 24 hours. Opening the link decides nothing: a confirmation is required. These links are never offered for high-risk actions, dual approval, a minimum role or code execution. The option that prevents approving your own requests is off by default, except with dual approval."
       },
       {
         "h": "Spending caps and operating controls",
         "paras": [
-          "Before each runtime call the maximum estimated cost is reserved against the request, the agent and the organization, and afterwards it is reconciled with the larger of the cost reported by the runtime and the cost recomputed by the backend. When a cap is reached the request or agent pauses and a person decides whether to raise it. There are also anti-loop limits: delegation depth, tasks per request, retries, time per task and a per-organization queue.",
-          "Operating hours are a weekly schedule with a time zone that prevents starting new work outside open hours. Anomaly detection v1 applies four explainable rules (spend spike, burst of tool requests, serial rejected approvals and new recipient domains) and records each finding in the audit log; on its own it does not block, and automatic freezing is optional and off by default.",
-          "Read-only mode (organization-wide or per agent) denies external effects. The kill switch has two levels, freeze and lockdown: any admin or owner can trigger it, only an owner can lift it and with a written reason; it can also be imposed through an environment variable. Held actions go back to the approval queue and must be approved again. A call already sent to the runtime finishes even if the kill switch is triggered."
+          "Before each runtime call the maximum estimated cost is reserved against the request, the agent and the organization, and afterwards it is reconciled with the larger of the cost reported by the runtime and the cost recomputed by the backend. When a cap is reached, work pauses until a person decides. Each call also carries its own cost cap, and there are limits on delegation depth, retries, time per call and parallel calls per organization.",
+          "Operating hours prevent starting new work outside open hours. Anomaly detection applies four explainable rules (spend spike, burst of tool requests, serial rejected approvals and new recipient domains) and records each finding; it does not block on its own and automatic freezing is off by default.",
+          "Read-only mode, for the organization or an agent, denies external effects. The kill switch has two levels, freeze and lockdown: any admin or owner can trigger it, only an owner can lift it and with a written reason. The operator can also impose it with `KILL_SWITCH`, and then no API call can lift it. Held actions go back to the approval queue; a call already sent to the runtime finishes."
         ]
       },
       {
         "h": "Verifiable audit log",
         "paras": [
-          "The audit log is a hash chain per organization: each entry includes the SHA-256 of the previous one, so modifying, deleting, reordering or inserting an entry breaks the chain from that point on. A verification endpoint recomputes the chain and an export endpoint returns the log as JSONL or CSV (admin or owner permission). For the application role the log is append-only: UPDATE and DELETE are revoked.",
-          "Before being chained, each entry goes through a scrubber that keeps only metadata: it replaces content fields and credential-looking keys with [redacted], masks embedded secrets and truncates long texts. Authentication, policy decisions, approvals, tool executions and control changes are audited, among others.",
-          "The export is a plain dump, with no external signature or anchoring of the chain head. Today there is no automatic purge of the audit log."
+          "The audit log is a hash chain per organization: each entry includes the SHA-256 of the previous one, so modifying, deleting, reordering or inserting an entry breaks the chain. For the application role it is append-only (`UPDATE` and `DELETE` revoked, plus triggers). Before being chained, each entry goes through a scrubber that replaces content and credential-looking keys with `[redacted]` and truncates long texts.",
+          "Audited events include approvals, tool executions and denials, policy decisions, control changes, identity changes (SSO, MFA, password recovery, invitations) and exports and deletions. Password sign-in and sign-out are not audited yet."
+        ],
+        "list": [
+          "Verification: `GET /api/v1/audit/verify` recomputes the chain. If you keep the chain head (number and hash) outside the system, you can pass it as an anchor to detect even a complete rewrite.",
+          "Export for admins and owners as JSONL, CSV or a ZIP that includes the verification result. The export is not signed.",
+          "Optional retention: an owner can purge entries older than at least 365 days. The chain stays verifiable from a checkpoint, but the purged content can no longer be proven: keep an export if you need it."
         ]
       },
       {
         "h": "Data to AI models and untrusted content",
         "paras": [
-          "Before text reaches the model, the runtime and the backend mask credentials, one-time codes and card numbers, and all external content (e-mails, API responses, files) is normalized, markdown images and links are neutralized and it is wrapped in a block delimited as data. A heuristic injection score flags the task and raises its approval; it is a signal, not a barrier. The barrier is permissions, approvals and limits.",
-          "Each organization can set an allow-list of AI providers, on top of the ceiling defined by the deployment operator (ALLOWED_PROVIDERS). An excluded provider is neither called nor used as a fallback. Organizations can bring their own AI key and require that only that key is used (no fallback to the platform's keys), or point to their own OpenAI-compatible endpoint. The providers the system recognizes are deepseek, anthropic, openai, kimi and custom. Details on the subprocessors page.",
-          "Code that an agent wants to run is a high-risk request that a person must approve. It runs in a container with no network, a read-only file system, no capabilities and resource limits. Known limitation: the executor mounts the Docker socket, which is equivalent to administrator access to the host; we do not recommend it beyond a single trusted host."
+          "Before text reaches the model, credentials and card numbers are masked, and the backend also masks one-time codes. External content (e-mails, API responses, files, web pages) is normalized, its markdown images and links are neutralized and it is wrapped in a block delimited as data. A heuristic injection score flags the task and adds approval reasons to actions with effects; it is a signal, not the barrier. The barrier is permissions, approvals and limits.",
+          "The operator sets a ceiling of AI providers (`ALLOWED_PROVIDERS`) and each organization can narrow it further; an excluded provider is not called, not even as a fallback. An organization can use its own AI key, and while it is active only that key answers, or point to its own OpenAI-compatible endpoint.",
+          "Agent web browsing is off per organization by default. When it is on, requests leave from the backend with SSRF protection that blocks private, loopback and link-local addresses at connection time; outgoing webhooks use the same protection and accept HTTPS only."
         ]
       },
       {
-        "h": "Encryption in transit, backups and development",
+        "h": "Code execution",
         "paras": [
-          "Public traffic arrives over HTTPS: a Caddy proxy terminates TLS with automatic certificates and sends the Strict-Transport-Security header (one year) on the site and the application. The application also adds X-Content-Type-Options, X-Frame-Options DENY and Referrer-Policy. We have not had the TLS configuration externally assessed. Between containers, on a private network of the same server, the connection to Postgres does not use TLS (sslmode=disable). We have not verified encryption at rest of the hosting provider's disks.",
-          "Backups: a cron job runs once a day (03:30, server time) a gzip-compressed Postgres dump. It is stored on the same server with restrictive permissions, kept for 14 days, and the script fails with a message if the file is suspiciously small. One restore has been tested. There is no off-server copy and no formal recovery time or recovery point objective.",
-          "Development: the repository runs in CI the build, tests, a race detector on key packages, a Dockerfile linter, govulncheck and npm audit (the last two do not block integration). Deployments use images tagged by commit."
+          "Code an agent wants to run is a high-risk action that a person must approve. There is an optional mode, off by default, in which code that only touches the agent's own files runs without approval; turning it on requires `org:manage` and an explicit risk acknowledgement, and it is audited.",
+          "Code runs in a container with no network, a read-only file system, no capabilities, no privilege escalation, an unprivileged user and limits on processes, memory and CPU. gVisor is optional."
+        ],
+        "warning": "The executor service mounts the host's Docker socket, which is equivalent to administrator access to the host. We recommend running it only on a dedicated, trusted host. It is not part of the public deployment."
+      },
+      {
+        "h": "Encryption in transit and headers",
+        "paras": [
+          "Public traffic arrives over HTTPS: the Caddy proxy terminates TLS with automatic certificates and sends a one-year `Strict-Transport-Security` header on the site and the application. On the application it adds `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy`. Files uploaded by users and artifacts are served with a `sandbox` CSP so they cannot run code on the application's origin.",
+          "Between containers, inside a private network on the same server, the connection to Postgres does not use TLS (`sslmode=disable`). Secrets are encrypted at the application level, but we have not verified encryption at rest of the hosting provider's disks."
+        ],
+        "note": "There is no global Content-Security-Policy on the application yet, and the TLS configuration has not been externally assessed."
+      },
+      {
+        "h": "Backups and development",
+        "paras": [
+          "A cron job takes a compressed Postgres dump every night (03:30, server time). It is stored on the same server with restrictive permissions and kept for 14 days; the script fails with a message if the file is suspiciously small. There is no off-server copy and no formal recovery time or recovery point objective.",
+          "Continuous integration builds and tests the backend and the runtime, builds the frontend and runs the race detector on key packages, end-to-end tests, a Dockerfile linter, `govulncheck` and `npm audit` (the last two do not block). Images are published tagged by commit."
         ]
       },
       {
         "h": "What we do not have yet",
         "paras": [
-          "An honest status of the capabilities procurement teams usually ask for. Where we say it does not exist, it does not exist; where we say in development, it is not available today. We give no dates because none is committed."
+          "An honest status of what procurement teams usually ask for. Where it says it does not exist, it does not exist; where it says partial, read the detail. We give no dates because none is committed."
         ],
         "table": {
           "head": [
@@ -282,42 +367,7 @@
             [
               "SOC 2 / ISO 27001",
               "Does not exist",
-              "No certifications or external audit. They appear in the internal plan as a later phase, with no approved date or budget."
-            ],
-            [
-              "SSO (SAML/OIDC) and SCIM",
-              "Does not exist",
-              "E-mail and password, with optional two-step verification. The OIDC that exists is used solely to connect LinkedIn as an integration."
-            ],
-            [
-              "Organization-wide mandatory MFA",
-              "Does not exist",
-              "Each person can turn on an authenticator app (TOTP) with recovery codes, but an organization cannot require it of all its members."
-            ],
-            [
-              "Password recovery by e-mail",
-              "Built, not yet switched on",
-              "The single-use link (1 hour) is built, but it needs outgoing e-mail configured, which the public deployment does not have yet."
-            ],
-            [
-              "Complete export and erasure of an organization's or person's data",
-              "In development",
-              "Partial exports exist (audit, traces, artifacts, skills). For the rest, send a request to info@workforceai.es."
-            ],
-            [
-              "Choice of data residency",
-              "Does not exist",
-              "A single shared server; its location is not verified on this page. Region cannot be chosen."
-            ],
-            [
-              "External signing or anchoring of the audit log",
-              "Does not exist",
-              "The hash chain is verifiable, but its head is not anchored outside the system."
-            ],
-            [
-              "Encryption keys in a KMS",
-              "Does not exist",
-              "The KEK is supplied through an environment variable (CONNECTIONS_KEK); rotation with several KEKs is supported."
+              "No certifications or external audit."
             ],
             [
               "External penetration test",
@@ -325,29 +375,69 @@
               "Only our own automated tests and dependency scanners in CI."
             ],
             [
+              "SAML SSO",
+              "Does not exist",
+              "SSO is OpenID Connect only."
+            ],
+            [
+              "Custom roles",
+              "Does not exist",
+              "Four fixed roles."
+            ],
+            [
+              "Breached-password check",
+              "Does not exist",
+              "Only a short list of common passwords."
+            ],
+            [
+              "Self-service export or deletion of an individual account",
+              "Does not exist",
+              "Export and deletion work per organization; for an account, send a request to info@workforceai.es."
+            ],
+            [
+              "Choice of data residency",
+              "Does not exist",
+              "A single server; a region cannot be chosen."
+            ],
+            [
+              "Encryption keys in a KMS",
+              "Does not exist",
+              "The KEK is supplied through an environment variable (`CONNECTIONS_KEK`)."
+            ],
+            [
+              "Signed or externally anchored audit export",
+              "Partial",
+              "Verification accepts an anchor you keep yourself; the platform does not sign or anchor the chain head."
+            ],
+            [
               "Off-server backups and periodic restore tests",
               "Does not exist",
-              "Nightly dumps live on the same server; one restore was tested, with no test schedule."
+              "Nightly dumps live on the same server."
             ],
             [
-              "High availability and multiple replicas",
+              "High availability",
               "Does not exist",
-              "A single instance; some counters and semaphores are per process."
+              "A single instance."
             ],
             [
-              "Public status page with incident history",
+              "Secret scanning and static analysis in CI",
               "Does not exist",
-              "The Current status section of the site describes what works, not availability."
+              "There are `govulncheck`, `npm audit` and a Dockerfile linter, but no secret scanning or CodeQL."
+            ],
+            [
+              "Public status page",
+              "Does not exist",
+              "No public incident or availability history."
             ],
             [
               "Published legal documents (privacy, terms, DPA)",
               "Under review",
-              "Drafts exist pending review by a lawyer; they are not published yet."
+              "Drafts pending review by a lawyer."
             ],
             [
               "Strong isolation of the code executor",
               "Partial",
-              "A restricted container, but with access to the host's Docker socket."
+              "A restricted container, but the executor has access to the host's Docker socket."
             ]
           ]
         },
