@@ -6,41 +6,54 @@
   },
   "related": [
     "auth-and-tenancy",
-    "agent-runtime",
-    "architecture"
+    "configuration",
+    "agent-runtime"
   ],
   "es": {
     "title": "Modelo de seguridad",
     "metaTitle": "Modelo de seguridad de AI Workforce OS",
-    "description": "Cómo se limita el daño de un agente: bóveda de credenciales, aprobaciones humanas, topes, kill switch, auditoría, RLS y sandbox. Con sus límites actuales.",
-    "intro": "El diseño parte de una premisa: el modelo de lenguaje puede ser engañado, porque procesa texto no confiable y tiene capacidad de actuar. Por eso el daño se acota con controles deterministas en el backend (Go), no con instrucciones en el prompt. Esta página describe lo que está implementado y, al final, lo que no.",
+    "description": "Cómo se limita el daño que puede hacer un agente: bóveda de credenciales, aprobaciones, topes, kill switch, auditoría, RLS y sandbox, con sus límites.",
+    "intro": "Un modelo de lenguaje puede ser engañado: procesa texto no confiable y tiene capacidad de actuar. Por eso AI Workforce OS acota el daño con controles deterministas en el backend (Go), no con instrucciones en el prompt. Esta página es para quien evalúa o opera la plataforma: describe lo que está implementado y, al final, lo que no.",
     "sections": [
       {
         "h": "Principios de diseño",
         "paras": [
-          "Cada agente produce solo solicitudes de herramienta. Quien decide si se ejecutan es el backend, que evalúa en orden: permisos del rol, concesiones de la conexión, límites, nivel de autonomía y aprobaciones. El runtime de agentes no recibe credenciales ni puede alterar la identidad con la que se actúa.",
-          "La autoridad efectiva es la intersección entre lo que puede quien originó el trabajo y lo que puede el agente. Delegar nunca amplía poder, y la profundidad de delegación está acotada (5 por defecto). Todo lo que falla o no se puede leer se trata como denegado (falla cerrado)."
+          "Los agentes solo producen solicitudes de herramienta; quien decide si se ejecutan es el backend. El Tool Gateway revisa cada solicitud en este orden:"
         ],
+        "list": [
+          "Controles: kill switch, pausa del agente, modo solo lectura y herramientas o acciones apagadas.",
+          "La concesión (grant) de la conexión para ese agente.",
+          "Validación: estado de la conexión, capacidad concedida, riesgo máximo del grant y límites de uso.",
+          "Búsqueda de secretos en los argumentos que van a salir.",
+          "Motivos de aprobación: el motor de políticas reúne todos los veredictos y se queda con el más estricto (denegar gana a aprobar, y aprobar gana a permitir)."
+        ],
+        "note": "El runtime de agentes nunca recibe credenciales de conexiones. Si una organización guarda su propia clave de modelo, esa clave sí viaja al runtime en cada llamada, porque es quien llama al proveedor.",
         "tip": "No se promete que el modelo nunca sea influido por un texto malicioso. Se promete que el radio de daño queda limitado a lo que el backend autoriza."
       },
       {
         "h": "Bóveda de credenciales",
         "paras": [
-          "Las credenciales de las conexiones (tokens OAuth, claves de API) se guardan cifradas con AES-256-GCM en un esquema de sobre: una clave de cifrado de claves (KEK) fuera de la base de datos envuelve una clave de datos (DEK) por organización, y la DEK cifra cada secreto con un nonce aleatorio. Los datos autenticados adicionales incluyen organización, credencial, versión y tipo, de modo que un texto cifrado copiado a otra fila u organización no se descifra.",
-          "Sin KEK configurada (CONNECTIONS_KEK, 32 bytes en base64) la bóveda falla cerrada: no guarda ni lee credenciales reales. Se admiten varias KEK a la vez para rotarlas; las credenciales admiten rotación con versiones activas y retiradas. Revocar una conexión suspende su uso, llama al endpoint de revocación del proveedor y destruye el texto cifrado (crypto-shredding).",
-          "El modelo nunca ve un secreto: el contrato entre el backend y el runtime no tiene campos de credencial, la API solo devuelve metadatos y una pista corta, y los valores literales cargados en memoria se registran en un redactor que los enmascara en logs, auditoría y salidas."
+          "Las credenciales de las conexiones (tokens OAuth, claves de API) y las claves de modelo propias de cada organización se guardan cifradas con AES-256-GCM en un esquema de sobre. Una clave de cifrado de claves (KEK) fuera de la base de datos envuelve una clave de datos (DEK) versionada por organización, y la DEK cifra cada secreto con un nonce aleatorio. Los datos autenticados adicionales incluyen organización, registro, versión y tipo, así que un texto cifrado copiado a otra fila u organización no se descifra.",
+          "Sin KEK (`CONNECTIONS_KEK`, 32 bytes en base64) la bóveda falla cerrada: no guarda ni lee credenciales reales. Puede cargar varias KEK a la vez para rotarlas (`CONNECTIONS_KEK_PREVIOUS`), y cada credencial tiene versiones activas y retiradas."
+        ],
+        "list": [
+          "La API solo devuelve metadatos y, para secretos de 20 bytes o más, los 4 últimos caracteres como pista.",
+          "Revocar una conexión suspende su uso, llama al endpoint de revocación del proveedor y destruye el texto cifrado. Si el proveedor no responde, el texto cifrado se conserva hasta que un reintento lo consiga.",
+          "Los valores exactos de los secretos en uso se registran en un redactor que los enmascara en las salidas de herramientas. La auditoría enmascara además todo lo que tiene forma de credencial."
         ],
         "code": {
           "lang": "text",
-          "text": "KEK (outside the DB, CONNECTIONS_KEK)\n  └─ wraps → per-organization DEK (versioned)\n       └─ AES-256-GCM(secret, random nonce, AAD = org|credential|version|kind)"
-        }
+          "text": "KEK (outside the DB, CONNECTIONS_KEK)\n  └─ wraps → per-organization DEK (versioned)\n       └─ AES-256-GCM(secret, random nonce, AAD = org|record|version|kind)"
+        },
+        "warning": "Guarda la KEK aparte de los backups de la base de datos. Si la pierdes, las credenciales cifradas son irrecuperables; si se filtra junto con un backup, quedan expuestas."
       },
       {
         "h": "Aprobaciones humanas",
         "paras": [
-          "Un agente puede pedir una acción; nunca puede aprobarla. Las aprobaciones las toman personas con rol admin u owner, y el rol se toma del token de sesión, no del cuerpo de la petición. Cada aprobación queda ligada por hash a los argumentos exactos aprobados, se consume una sola vez y se revalida antes de ejecutar, porque las reglas pudieron cambiar mientras esperaba. Caduca (48 horas por defecto) y una caducidad cuenta como rechazo.",
-          "Hay un suelo que ninguna regla de organización debilita: riesgo alto declarado, acciones de la lista de aprobación obligatoria y agentes en los niveles suggest o approve_each. Encima, la organización puede añadir reglas: umbrales de monto, acciones prohibidas, destinatarios nuevos, categorías sensibles, rol exigido según monto o acción y doble aprobación.",
-          "En la doble aprobación se necesitan dos humanos distintos con el rol requerido, la misma persona no puede aprobar dos veces y quien hizo la solicitud nunca aprueba. Un solo rechazo de una persona autorizada es definitivo. Si la acción se ejecuta tras una reanudación del servidor, la aprobación se reclama de forma atómica para que se ejecute como máximo una vez."
+          "Un agente puede pedir una acción, nunca aprobarla. Deciden las personas con rol admin u owner, y el rol sale del token de sesión, no del cuerpo de la petición. Cada aprobación queda ligada por hash a los argumentos exactos aprobados, se consume una sola vez y se revalida antes de ejecutar, porque las reglas pudieron cambiar mientras esperaba.",
+          "Una aprobación de una solicitud interactiva caduca a los 30 minutos (`APPROVAL_TIMEOUT`), y la caducidad cuenta como rechazo. Las de proyectos no caducan por defecto: el sistema recuerda cada hora que siguen pendientes.",
+          "Hay un suelo que ninguna regla de la organización debilita: riesgo alto declarado, acciones de la lista de aprobación obligatoria (`APPROVAL_ACTIONS`) y agentes en los niveles `suggest` o `approve_each`. Encima, la organización puede añadir reglas: umbrales de monto, acciones prohibidas, destinatarios nuevos, categorías sensibles, rol exigido según monto o acción y doble aprobación.",
+          "La doble aprobación exige dos personas distintas con el rol requerido, y quien hizo la solicitud no puede aprobar. Un solo rechazo de una persona autorizada es definitivo. Si la acción se ejecuta tras reiniciar el servidor, la aprobación se reclama de forma atómica para que se ejecute como máximo una vez."
         ],
         "table": {
           "head": [
@@ -49,36 +62,67 @@
           ],
           "rows": [
             [
-              "suggest",
-              "El agente solo propone; no se ejecuta nada."
+              "`suggest`",
+              "Toda acción con efecto externo espera una aprobación; aprobada, se ejecuta. Hoy se comporta igual que `approve_each`."
             ],
             [
-              "approve_each",
-              "Toda acción con efecto externo espera una aprobación (nivel por defecto)."
+              "`approve_each`",
+              "Toda acción con efecto externo espera una aprobación."
             ],
             [
-              "rules",
-              "Se ejecuta sola si coincide una regla allow y ninguna deny; si no, pide aprobación."
+              "`rules`",
+              "Se ejecuta sin aprobación salvo que lo exija el suelo o una regla de la organización. Hoy se comporta igual que `autonomous`."
             ],
             [
-              "autonomous",
-              "Ejecuta sin aprobar, salvo acciones de aprobación obligatoria, riesgo alto o efectos hacia destinatarios nuevos."
+              "`autonomous`",
+              "Se ejecuta sin aprobación salvo el suelo, las reglas de la organización, las capacidades marcadas como de aprobación obligatoria y las tareas marcadas por sospecha de inyección."
+            ]
+          ]
+        },
+        "note": "Cada plantilla de rol o paquete de onboarding fija el nivel inicial de sus agentes."
+      },
+      {
+        "h": "Mínimo privilegio en conexiones",
+        "paras": [
+          "Una acción con una conexión externa pasa tres filtros en serie: la capacidad que declara el proveedor, la concesión que la organización da a un agente concreto, y la política y aprobación de la propia acción. Un grant solo puede estrechar lo que permite la conexión. El patrón recomendado es separar una conexión de solo lectura de otra de escritura.",
+          "Los límites se calculan sobre la tabla de uso en Postgres, así que sobreviven a reinicios. Un agente no puede cambiar su propia autonomía, permisos ni reglas, y cualquier regla de denegación gana a una de permiso."
+        ],
+        "table": {
+          "head": [
+            "Límite",
+            "Conexión",
+            "Grant"
+          ],
+          "rows": [
+            [
+              "Llamadas por minuto, hora y día",
+              "Sí",
+              "Sí"
+            ],
+            [
+              "Escrituras por día",
+              "Sí",
+              "Sí"
+            ],
+            [
+              "Bytes por día",
+              "Sí",
+              "No"
+            ],
+            [
+              "Presupuesto mensual (últimos 30 días)",
+              "Sí",
+              "No"
             ]
           ]
         }
       },
       {
-        "h": "Mínimo privilegio en conexiones",
-        "paras": [
-          "Una acción con una conexión externa debe pasar tres filtros en serie: la capacidad que declara el proveedor, la concesión (grant) que da la organización a un agente concreto, y la política y aprobación de la acción. Cada grant solo puede estrechar lo que permite la conexión. El patrón recomendado es separar una conexión de solo lectura de otra de escritura.",
-          "Cada conexión y cada grant admiten límites por minuto, hora y día, escrituras por día, bytes por día y presupuesto mensual. Esos contadores se calculan sobre la tabla de uso en Postgres, así que sobreviven a reinicios. Un agente no puede cambiar su propia autonomía, permisos ni reglas, y cualquier regla deny gana a una allow."
-        ]
-      },
-      {
         "h": "Topes de gasto, horario y anomalías",
         "paras": [
-          "Antes de cada llamada al runtime se reserva el costo máximo estimado contra la solicitud, el agente y la organización, y después se concilia con el mayor valor entre el costo informado por el runtime y el recalculado por el backend. Al llegar al tope, la solicitud o el agente se pausa y un humano decide si sube el tope. También hay límites estructurales contra bucles: profundidad de delegación, tareas por solicitud, reintentos, tiempo por tarea y por solicitud, y una cola por organización (8 llamadas simultáneas por defecto).",
-          "El horario de operación es una agenda semanal con zona horaria que solo impide empezar trabajo nuevo fuera de las horas abiertas; no bloquea aprobaciones ni lo ya admitido. La detección de anomalías v1 aplica cuatro reglas explicables y registra cada hallazgo en la auditoría. Por sí sola nunca bloquea; el congelamiento automático es opcional y viene apagado."
+          "Antes de cada llamada al runtime se reserva el costo máximo estimado contra la solicitud, el agente, el departamento y la organización. Después se concilia con el mayor valor entre el costo que informa el runtime y el que recalcula el backend. Al llegar al tope de la solicitud, del agente o del departamento, el trabajo se pausa y una persona decide si sube el tope; el tope de la organización hace fallar la llamada.",
+          "Hay además límites estructurales contra bucles: profundidad de delegación (5), reintentos por tarea, tiempo por tarea, tamaño de planes y proyectos, y una cola por organización (8 llamadas simultáneas por defecto).",
+          "El horario de operación es una agenda semanal con zona horaria que solo impide empezar trabajo nuevo fuera de horas; no bloquea aprobaciones ni lo ya admitido. La detección de anomalías aplica cuatro reglas explicables, cada una con una pausa de 15 minutos entre avisos, y registra cada hallazgo en la auditoría. Por sí sola nunca bloquea: el congelamiento automático es opcional y viene apagado."
         ],
         "table": {
           "head": [
@@ -87,20 +131,20 @@
           ],
           "rows": [
             [
-              "spend_spike",
-              "El gasto de la hora actual es al menos 4 veces el promedio horario de las 24 h previas y no menos de 2 USD."
+              "`spend_spike`",
+              "El gasto de la hora actual es al menos 4 veces el promedio horario de las 24 h previas y no menos de 2 USD (necesita 3 h de historial)."
             ],
             [
-              "tool_request_burst",
+              "`tool_request_burst`",
               "Un agente pide 40 o más herramientas en 60 segundos."
             ],
             [
-              "rejected_approvals",
+              "`rejected_approvals`",
               "Se rechazan 5 o más aprobaciones en 1 hora."
             ],
             [
-              "new_recipient_domains",
-              "Aparecen 3 o más dominios de destinatario nunca vistos en 1 hora."
+              "`new_recipient_domains`",
+              "Aparecen 3 o más dominios de destinatario nunca vistos en 1 hora (cuenta a partir de 5 dominios conocidos)."
             ]
           ]
         }
@@ -108,8 +152,8 @@
       {
         "h": "Kill switch y modo solo lectura",
         "paras": [
-          "El kill switch tiene dos niveles. Activarlo lo puede hacer cualquier admin u owner; levantarlo exige el permiso de liberación (owner) y un motivo escrito. También puede imponerse con la variable de entorno KILL_SWITCH (freeze o lockdown), que ninguna llamada de API puede levantar: hay que quitarla y recargar.",
-          "Además existen la pausa por agente (graceful deja terminar la llamada en curso; immediate lo detiene todo), el modo solo lectura de la organización o de un agente, y el apagado por herramienta o por acción (por ejemplo email o email.send). En solo lectura los agentes siguen leyendo y proponiendo, pero se deniegan los efectos. Las acciones retenidas vuelven a la cola de aprobación y se deben aprobar de nuevo: nada se ejecuta por inercia al levantar."
+          "El kill switch tiene dos niveles. Cualquier admin u owner puede activarlo; levantarlo exige el rol owner y un motivo escrito. También puede imponerse con la variable de entorno `KILL_SWITCH` (`freeze` o `lockdown`), que ninguna llamada de API puede levantar: hay que quitarla y recargar el proceso.",
+          "Hay controles más finos: pausar un agente (deniega sus nuevas llamadas de herramienta y trabajo nuevo), el modo solo lectura de la organización o de un agente (sigue leyendo y proponiendo, pero se deniegan los efectos) y apagar una herramienta o una acción concreta, por ejemplo `email` o `email.send`. Las acciones retenidas vuelven a la cola de aprobación y hay que aprobarlas de nuevo: nada se ejecuta por inercia al levantar un control."
         ],
         "table": {
           "head": [
@@ -119,18 +163,18 @@
           ],
           "rows": [
             [
-              "none",
+              "`none`",
               "Operación normal.",
               "No aplica"
             ],
             [
-              "freeze",
-              "No se inicia trabajo nuevo y el Tool Gateway deniega todo uso de conexiones, lecturas incluidas.",
+              "`freeze`",
+              "No empieza trabajo nuevo, el Tool Gateway deniega todo uso de conexiones (lecturas incluidas) y las acciones retenidas vuelven a la cola de aprobación.",
               "owner, con motivo escrito"
             ],
             [
-              "lockdown",
-              "Freeze, además de suspender todas las conexiones y cancelar acciones retenidas.",
+              "`lockdown`",
+              "Todo lo de `freeze` y, además, suspende todas las conexiones.",
               "owner, con motivo escrito; las conexiones se reanudan después"
             ]
           ]
@@ -139,75 +183,111 @@
       {
         "h": "Registro de auditoría",
         "paras": [
-          "La auditoría es una cadena de hash por organización: cada entrada incluye el hash de la anterior (SHA-256 sobre una representación canónica con secuencia, actor, acción, entidad y detalles). Modificar, borrar, reordenar o insertar una entrada rompe la cadena desde ese punto, y el truncado del final se detecta contra la cabeza de la cadena. Un endpoint de verificación recalcula la cadena.",
-          "Antes de encadenarse, cada entrada pasa por un depurador que guarda solo metadatos: reemplaza campos de contenido (cuerpos, argumentos, asuntos, resúmenes) y claves con aspecto de credencial por [redacted], enmascara secretos incrustados y trunca textos largos. Se auditan, entre otros, la autenticación, decisiones de política, aprobaciones, ejecuciones de herramientas, cambios de controles y presupuestos."
+          "La auditoría es una cadena de hash por organización: cada entrada incluye el hash de la anterior (SHA-256 sobre una representación canónica con secuencia, organización, fecha, actor, acción, entidad y detalles). Modificar, borrar, reordenar o insertar una entrada rompe la cadena desde ese punto, y un truncado del final se detecta contra la cabeza de la cadena.",
+          "Antes de encadenarse, cada entrada pasa por un depurador que guarda solo metadatos: sustituye los campos de contenido (cuerpos, argumentos, asuntos, resúmenes) y las claves con aspecto de credencial por `[redacted]`, enmascara secretos incrustados y recorta los textos a 300 caracteres. Se auditan, entre otros, la autenticación, las decisiones de política, las aprobaciones, las ejecuciones de herramientas y los cambios de controles y presupuestos."
         ],
         "code": {
           "lang": "http",
-          "text": "GET /audit          # query\nGET /audit/export   # JSONL or CSV\nGET /audit/verify   # recomputes the hash chain"
-        }
+          "text": "GET /api/v1/audit                      # query\nGET /api/v1/audit/export?format=jsonl  # or format=csv\nGET /api/v1/audit/verify               # recomputes the hash chain"
+        },
+        "tip": "Guarda fuera del servidor la secuencia y el hash de la cabeza de vez en cuando. `GET /api/v1/audit/verify` acepta `anchor_seq` y `anchor_hash` para comprobar la cadena contra ese ancla."
       },
       {
-        "h": "Aislamiento por organización, autenticación y límites",
+        "h": "Aislamiento por organización e identidad",
         "paras": [
-          "Las tablas con datos de organización usan seguridad a nivel de fila (RLS) en Postgres: cada transacción fija la organización con set_config en el ámbito de la transacción y las políticas filtran por ella. Un caso de prueba de integración cubre el aislamiento entre organizaciones.",
-          "Los tokens de acceso duran 15 minutos y los de refresco 30 días por defecto. Tras 5 intentos fallidos la cuenta se bloquea 15 minutos, y el inicio de sesión tiene además un límite de 10 intentos por ventana de 15 minutos (en Redis si está disponible; en memoria si no). Para cuentas inexistentes se calcula el mismo hash de contraseña, de modo que el tiempo de respuesta no revela si el usuario existe."
+          "Las tablas con datos de organización usan seguridad a nivel de fila (RLS) en Postgres. Cada transacción fija la organización con `set_config` en el ámbito de la transacción, las políticas filtran por ella y la aplicación se conecta con un rol sin `BYPASSRLS`. Una prueba de integración cubre el aislamiento entre organizaciones."
+        ],
+        "list": [
+          "Los tokens de acceso duran 15 minutos y los de refresco 30 días.",
+          "Tras 5 intentos fallidos la cuenta se bloquea 15 minutos. El inicio de sesión admite además 10 intentos cada 15 minutos por correo y 20 por IP (en Redis si está disponible; si no, en memoria).",
+          "Para cuentas inexistentes se calcula igualmente un hash de contraseña, de modo que el tiempo de respuesta no revela si el usuario existe.",
+          "Hay inicio de sesión único con OIDC (con PKCE), dominios verificados, una política de acceso que puede exigir MFA o SSO, MFA con TOTP y aprovisionamiento SCIM 2.0."
         ]
       },
       {
         "h": "Contenido no confiable y sandbox de código",
         "paras": [
-          "Todo lo que viene de fuera (correos, respuestas de APIs, archivos) pasa por una tubería determinista antes de llegar al modelo: se normaliza el texto (NFKC, sin caracteres invisibles), se enmascaran credenciales, códigos de un solo uso y tarjetas, se neutralizan imágenes y enlaces de markdown, se trunca, se puntúa con heurísticas de inyección y se envuelve en un bloque delimitado como datos. Un puntaje alto marca la tarea y eleva la aprobación de sus acciones. El puntaje es una señal, no una barrera; la barrera son los permisos, las aprobaciones y los límites.",
-          "El código que un agente quiere ejecutar es una solicitud de alto riesgo: se muestra completo a una persona, y solo tras su aprobación el backend lo envía al ejecutor. El contenedor no tiene red, usa sistema de archivos raíz de solo lectura, usuario sin privilegios, todas las capacidades eliminadas, límites de CPU, memoria y procesos, tiempo máximo, topes de salida y una lista de extensiones permitidas. No recibe variables de entorno del ejecutor ni acceso al drive o al backend. Cambiar el código o una entrada exige una nueva aprobación, y el kill switch aborta una ejecución en curso."
+          "Todo lo que viene de fuera (correos, respuestas de APIs, archivos) pasa por una tubería determinista antes de llegar al modelo: se normaliza el texto (NFKC, sin caracteres invisibles), se enmascaran credenciales, códigos de un solo uso y números de tarjeta, se neutralizan imágenes y enlaces de markdown, se recorta (4000 caracteres por defecto), se puntúa con heurísticas de inyección y se envuelve como datos en un bloque delimitado. Un puntaje alto marca la tarea y obliga a aprobar sus acciones. El puntaje es una señal, no una barrera: la barrera son los permisos, las aprobaciones y los límites.",
+          "El código que un agente quiere ejecutar se muestra completo a una persona, y el backend solo lo envía al ejecutor tras su aprobación. Cambiar el código o una entrada exige una aprobación nueva, y el kill switch aborta una ejecución en curso."
+        ],
+        "list": [
+          "Contenedor sin red (`--network none`) y con sistema de archivos raíz de solo lectura.",
+          "Usuario sin privilegios, todas las capacidades eliminadas y `no-new-privileges`.",
+          "Límites de CPU, memoria y procesos, tiempo máximo y topes de salida, con una lista de extensiones permitidas para los archivos generados.",
+          "Ninguna variable de entorno del ejecutor y ningún acceso directo al Drive ni al backend."
         ],
         "code": {
           "lang": "text",
-          "text": "<untrusted_data id=\"a91f3c\" source=\"email:inbound\" trust=\"external_untrusted\">\n...sanitized content...\n</untrusted_data id=\"a91f3c\">"
-        }
+          "text": "<untrusted_data id=\"msg-18c2f\" source=\"tool:email.read\" from=\"client@example.com\" trust=\"external_untrusted\">\nsubject: ...\nbody: ...sanitized content...\n</untrusted_data>"
+        },
+        "warning": "El modo escritorio es opcional y viene apagado. Si una organización lo activa (exige reconocer el riesgo de forma explícita), el código limitado a los archivos del propio agente se ejecuta sin aprobación, con topes más pequeños."
       },
       {
         "h": "Lo que no está cubierto",
         "paras": [
-          "No hay certificaciones (ni SOC 2 ni ISO) y el proyecto no está listo para entornos empresariales regulados. No hay inicio de sesión único (SSO). La exportación de auditoría es un volcado simple en JSONL o CSV, sin firma ni anclaje externo de la cabeza de la cadena.",
-          "Límites conocidos: la recuperación tras un reinicio supone una sola instancia; con varias réplicas, los semáforos y varios contadores son por proceso o de último escritor. Una llamada ya enviada al runtime termina aunque se active el kill switch. Algunos estados viven en la memoria del proceso. La permisología fina approvals:decide:high no existe: hoy decidir equivale a ser admin u owner. La opción forbid_self_approval viene apagada por compatibilidad con equipos de una persona.",
-          "El sandbox de código monta el socket de Docker en el ejecutor, lo que equivale a acceso de administrador del host. Para algo más que un único host de confianza se recomienda un demonio dedicado, sin root o remoto, y un runtime como gVisor. Fuera de alcance por ahora: claves propias de modelo por organización guardadas en la bóveda, deshacer acciones y topes de gasto unificados por conexión o herramienta."
+          "No hay certificaciones (ni SOC 2 ni ISO) y el proyecto no está preparado para entornos empresariales regulados. Esta es la lista de límites conocidos:"
         ],
-        "tip": "Si evalúas el proyecto para producción, trata esta página como el punto de partida de una revisión propia y no como una garantía."
+        "list": [
+          "El inicio de sesión único es solo OIDC: SAML no está implementado.",
+          "La exportación de auditoría es un volcado en JSONL o CSV sin firma, y nada ancla la cabeza de la cadena fuera del servidor de forma automática.",
+          "La recuperación tras un reinicio supone una sola instancia: con varias réplicas, la cola por organización, las reservas de presupuesto y algunos contadores son por proceso o de último escritor.",
+          "Una llamada ya enviada al runtime termina aunque se active el kill switch.",
+          "No existe un permiso de aprobación por nivel de riesgo: decidir equivale a ser admin u owner. La prohibición de autoaprobarse viene apagada (salvo con doble aprobación) por compatibilidad con equipos de una persona.",
+          "Los límites de tasa HTTP de autenticación dejan pasar las peticiones si su almacén falla.",
+          "El `Caddyfile` de producción no define `Content-Security-Policy`.",
+          "No se pueden deshacer acciones externas. Sí hay una ventana de 60 a 300 segundos para cancelar un correo y restauración de versiones de archivos del Drive.",
+          "No hay un tope de gasto unificado entre modelo y conexiones, ni topes por herramienta."
+        ],
+        "warning": "El servicio `sandbox-runner` (perfil `sandbox` del compose de desarrollo) monta el socket de Docker, lo que equivale a acceso de administrador al host. Para algo más que un único host de confianza, usa un demonio dedicado, sin root o remoto, y un runtime como gVisor (`SANDBOX_RUNTIME=runsc`).",
+        "tip": "Si evalúas el proyecto para producción, trata esta página como el punto de partida de tu propia revisión, no como una garantía."
       }
     ]
   },
   "en": {
     "title": "Security model",
     "metaTitle": "AI Workforce OS security model",
-    "description": "How an agent's blast radius is limited: credential vault, human approvals, caps, kill switch, audit, RLS and sandbox. With the current limits stated.",
-    "intro": "The design starts from one premise: a language model can be tricked, because it processes untrusted text and can act. So damage is bounded by deterministic controls in the backend (Go), not by prompt instructions. This page describes what is implemented and, at the end, what is not.",
+    "description": "How the damage an agent can do is bounded: credential vault, approvals, caps, kill switch, audit log, RLS and sandbox, with the current limits.",
+    "intro": "A language model can be tricked: it processes untrusted text and it can act. That is why AI Workforce OS bounds damage with deterministic controls in the backend (Go), not with prompt instructions. This page is for anyone evaluating or operating the platform: it describes what is implemented and, at the end, what is not.",
     "sections": [
       {
         "h": "Design principles",
         "paras": [
-          "Agents only produce tool requests. The backend decides whether they run, evaluating in order: role permissions, connection grants, limits, autonomy level and approvals. The agent runtime receives no credentials and cannot alter the identity under which actions are taken.",
-          "Effective authority is the intersection of what the originator of the work can do and what the agent can do. Delegation never widens power, and delegation depth is bounded (5 by default). Anything that fails or cannot be read is treated as denied (fail closed)."
+          "Agents only produce tool requests; the backend decides whether they run. The Tool Gateway checks every request in this order:"
         ],
+        "list": [
+          "Controls: kill switch, agent pause, read-only mode and tools or actions switched off.",
+          "The connection grant for that agent.",
+          "Validation: connection status, granted capability, the grant's maximum risk and usage limits.",
+          "A scan for secrets in the outgoing arguments.",
+          "Approval reasons: the policy engine collects every verdict and keeps the strictest (deny beats approval, and approval beats allow)."
+        ],
+        "note": "The agent runtime never receives connection credentials. If an organization stores its own model key, that key does travel to the runtime on each call, because the runtime is what calls the provider.",
         "tip": "There is no promise that the model will never be influenced by malicious text. The promise is that the blast radius stays limited to what the backend authorizes."
       },
       {
         "h": "Credentials vault",
         "paras": [
-          "Connection credentials (OAuth tokens, API keys) are stored encrypted with AES-256-GCM in an envelope scheme: a key-encryption key (KEK) held outside the database wraps a per-organization data key (DEK), and the DEK encrypts each secret with a random nonce. The additional authenticated data includes organization, credential, version and kind, so a ciphertext copied to another row or organization does not decrypt.",
-          "Without a configured KEK (CONNECTIONS_KEK, 32 bytes in base64) the vault fails closed: it neither stores nor reads live credentials. Several KEKs can be loaded at once to rotate them, and credentials support rotation with active and retired versions. Revoking a connection suspends its use, calls the provider's revocation endpoint and destroys the ciphertext (crypto-shredding).",
-          "The model never sees a secret: the contract between the backend and the runtime has no credential fields, the API returns only metadata and a short hint, and exact secret values loaded in memory are registered with a redactor that masks them in logs, audit entries and outputs."
+          "Connection credentials (OAuth tokens, API keys) and each organization's own model keys are stored encrypted with AES-256-GCM in an envelope scheme. A key-encryption key (KEK) held outside the database wraps a versioned per-organization data key (DEK), and the DEK encrypts each secret with a random nonce. The additional authenticated data includes organization, record, version and kind, so a ciphertext copied to another row or organization does not decrypt.",
+          "Without a KEK (`CONNECTIONS_KEK`, 32 bytes in base64) the vault fails closed: it neither stores nor reads live credentials. It can load several KEKs at once for rotation (`CONNECTIONS_KEK_PREVIOUS`), and each credential has active and retired versions."
+        ],
+        "list": [
+          "The API returns only metadata and, for secrets of 20 bytes or more, the last 4 characters as a hint.",
+          "Revoking a connection suspends its use, calls the provider's revocation endpoint and destroys the ciphertext. If the provider does not answer, the ciphertext is kept until a retry succeeds.",
+          "The exact values of secrets in use are registered with a redactor that masks them in tool outputs. The audit log also masks anything shaped like a credential."
         ],
         "code": {
           "lang": "text",
-          "text": "KEK (outside the DB, CONNECTIONS_KEK)\n  └─ wraps → per-organization DEK (versioned)\n       └─ AES-256-GCM(secret, random nonce, AAD = org|credential|version|kind)"
-        }
+          "text": "KEK (outside the DB, CONNECTIONS_KEK)\n  └─ wraps → per-organization DEK (versioned)\n       └─ AES-256-GCM(secret, random nonce, AAD = org|record|version|kind)"
+        },
+        "warning": "Keep the KEK apart from the database backups. If you lose it, the encrypted credentials cannot be recovered; if it leaks together with a backup, they are exposed."
       },
       {
         "h": "Human approvals",
         "paras": [
-          "An agent can request an action; it can never grant approval. Approvals are made by people with the admin or owner role, and the role is read from the session token, not from the request body. Each approval is bound by hash to the exact arguments approved, is consumed once and is revalidated before execution, because rules may have changed while it waited. It expires (48 hours by default) and an expiry counts as a rejection.",
-          "There is a floor that no organization rule can weaken: declared high risk, actions on the mandatory-approval list and agents at the suggest or approve_each levels. On top of it, an organization can add rules: amount thresholds, forbidden actions, new recipients, sensitive categories, required role by amount or action, and dual approval.",
-          "Dual approval requires two distinct humans holding the required role, the same person cannot approve twice and the person who made the request never approves. A single rejection from an authorized person is final. If the action runs after a server restart, the approval is claimed atomically so that it executes at most once."
+          "An agent can request an action, never approve it. People with the admin or owner role decide, and the role comes from the session token, not from the request body. Each approval is bound by hash to the exact arguments approved, is consumed once and is revalidated before execution, because rules may have changed while it waited.",
+          "An approval for an interactive request expires after 30 minutes (`APPROVAL_TIMEOUT`), and an expiry counts as a rejection. Project approvals do not expire by default: the system sends an hourly reminder while they are pending.",
+          "There is a floor no organization rule can weaken: declared high risk, actions on the mandatory-approval list (`APPROVAL_ACTIONS`) and agents at the `suggest` or `approve_each` levels. On top of it, an organization can add rules: amount thresholds, forbidden actions, new recipients, sensitive categories, required role by amount or action, and dual approval.",
+          "Dual approval requires two distinct people holding the required role, and the person who made the request cannot approve. A single rejection from an authorized person is final. If the action runs after a server restart, the approval is claimed atomically so that it executes at most once."
         ],
         "table": {
           "head": [
@@ -216,36 +296,67 @@
           ],
           "rows": [
             [
-              "suggest",
-              "The agent only proposes; nothing is executed."
+              "`suggest`",
+              "Every action with an external effect waits for approval; once approved, it runs. Today it behaves exactly like `approve_each`."
             ],
             [
-              "approve_each",
-              "Every action with an external effect waits for approval (the default level)."
+              "`approve_each`",
+              "Every action with an external effect waits for approval."
             ],
             [
-              "rules",
-              "Runs on its own if an allow rule matches and no deny rule does; otherwise asks for approval."
+              "`rules`",
+              "Runs without approval unless the floor or an organization rule requires one. Today it behaves exactly like `autonomous`."
             ],
             [
-              "autonomous",
-              "Runs without approval, except mandatory-approval actions, high risk or effects toward new recipients."
+              "`autonomous`",
+              "Runs without approval except for the floor, organization rules, capabilities marked as always requiring approval and tasks flagged for suspected injection."
+            ]
+          ]
+        },
+        "note": "Each role template or onboarding pack sets the initial level of its agents."
+      },
+      {
+        "h": "Least privilege for connections",
+        "paras": [
+          "An action through an external connection passes three filters in series: the capability the provider declares, the grant the organization gives to a specific agent, and the policy and approval of the action itself. A grant can only narrow what the connection allows. The recommended pattern is to keep a read-only connection separate from a write one.",
+          "Limits are computed from the usage table in Postgres, so they survive restarts. An agent cannot change its own autonomy, permissions or rules, and any deny rule beats an allow rule."
+        ],
+        "table": {
+          "head": [
+            "Limit",
+            "Connection",
+            "Grant"
+          ],
+          "rows": [
+            [
+              "Calls per minute, hour and day",
+              "Yes",
+              "Yes"
+            ],
+            [
+              "Writes per day",
+              "Yes",
+              "Yes"
+            ],
+            [
+              "Bytes per day",
+              "Yes",
+              "No"
+            ],
+            [
+              "Monthly budget (last 30 days)",
+              "Yes",
+              "No"
             ]
           ]
         }
       },
       {
-        "h": "Least privilege for connections",
-        "paras": [
-          "An action through an external connection must pass three filters in series: the capability the provider declares, the grant the organization gives to a specific agent, and the policy and approval of the action itself. A grant can only narrow what the connection allows. The recommended pattern is to keep a read-only connection separate from a write one.",
-          "Each connection and each grant supports limits per minute, hour and day, writes per day, bytes per day and a monthly budget. These counters are computed from the usage table in Postgres, so they survive restarts. An agent cannot change its own autonomy, permissions or rules, and any deny rule beats an allow rule."
-        ]
-      },
-      {
         "h": "Spending caps, hours and anomalies",
         "paras": [
-          "Before every runtime call, the maximum estimated cost is reserved against the request, the agent and the organization, and afterwards reconciled using the higher of the cost reported by the runtime and the one recomputed by the backend. When a cap is reached, the request or the agent is paused and a human decides whether to raise it. Structural limits also guard against loops: delegation depth, tasks per request, retries, time per task and per request, and a per-organization queue (8 concurrent calls by default).",
-          "Operating hours are a weekly schedule with a time zone that only prevents starting new work outside open hours; it does not block approvals or work already admitted. Anomaly detection v1 applies four explainable rules and records every finding in the audit log. On its own it never blocks; automatic freeze is optional and ships disabled."
+          "Before every runtime call, the maximum estimated cost is reserved against the request, the agent, the department and the organization. Afterwards it is reconciled using the higher of the cost the runtime reports and the one the backend recomputes. When a request, agent or department cap is reached, the work pauses and a person decides whether to raise it; the organization cap makes the call fail.",
+          "Structural limits also guard against loops: delegation depth (5), retries per task, time per task, plan and project size, and a per-organization queue (8 concurrent calls by default).",
+          "Operating hours are a weekly schedule with a time zone that only prevents starting new work outside open hours; it does not block approvals or work already admitted. Anomaly detection applies four explainable rules, each with a 15-minute cooldown between alerts, and records every finding in the audit log. On its own it never blocks: automatic freeze is optional and ships disabled."
         ],
         "table": {
           "head": [
@@ -254,20 +365,20 @@
           ],
           "rows": [
             [
-              "spend_spike",
-              "Spend in the current hour is at least 4 times the hourly average of the previous 24 h and at least 2 USD."
+              "`spend_spike`",
+              "Spend in the current hour is at least 4 times the hourly average of the previous 24 h and at least 2 USD (needs 3 h of history)."
             ],
             [
-              "tool_request_burst",
+              "`tool_request_burst`",
               "An agent requests 40 or more tools within 60 seconds."
             ],
             [
-              "rejected_approvals",
+              "`rejected_approvals`",
               "5 or more approvals are rejected within 1 hour."
             ],
             [
-              "new_recipient_domains",
-              "3 or more never-seen recipient domains appear within 1 hour."
+              "`new_recipient_domains`",
+              "3 or more never-seen recipient domains appear within 1 hour (counted once 5 domains are known)."
             ]
           ]
         }
@@ -275,8 +386,8 @@
       {
         "h": "Kill switch and read-only mode",
         "paras": [
-          "The kill switch has two levels. Any admin or owner can activate it; lifting it requires the release permission (owner) and a written reason. It can also be imposed with the KILL_SWITCH environment variable (freeze or lockdown), which no API call can lift: the variable must be removed and the configuration reloaded.",
-          "Beyond it there are per-agent pause (graceful lets the call in flight finish; immediate stops everything), read-only mode for the organization or an agent, and switching off a tool or a single action (for example email or email.send). In read-only mode agents keep reading and proposing, but effects are denied. Held actions return to the approval queue and must be approved again: nothing runs by inertia when a control is lifted."
+          "The kill switch has two levels. Any admin or owner can activate it; lifting it requires the owner role and a written reason. It can also be imposed with the `KILL_SWITCH` environment variable (`freeze` or `lockdown`), which no API call can lift: the variable must be removed and the process reloaded.",
+          "There are finer controls: pausing an agent (it denies the agent's new tool calls and new work), read-only mode for the organization or an agent (it keeps reading and proposing, but effects are denied) and switching off a tool or a single action, for example `email` or `email.send`. Held actions return to the approval queue and must be approved again: nothing runs by inertia when a control is lifted."
         ],
         "table": {
           "head": [
@@ -286,18 +397,18 @@
           ],
           "rows": [
             [
-              "none",
+              "`none`",
               "Normal operation.",
               "Not applicable"
             ],
             [
-              "freeze",
-              "No new work starts and the Tool Gateway denies all connection use, reads included.",
+              "`freeze`",
+              "No new work starts, the Tool Gateway denies all connection use (reads included) and held actions return to the approval queue.",
               "owner, with a written reason"
             ],
             [
-              "lockdown",
-              "Freeze, plus suspending every connection and cancelling held actions.",
+              "`lockdown`",
+              "Everything in `freeze`, plus suspending every connection.",
               "owner, with a written reason; connections are resumed afterwards"
             ]
           ]
@@ -306,39 +417,62 @@
       {
         "h": "Audit log",
         "paras": [
-          "Audit is a per-organization hash chain: each entry includes the hash of the previous one (SHA-256 over a canonical representation with sequence, actor, action, entity and details). Changing, deleting, reordering or inserting an entry breaks the chain from that point, and truncating the tail is detected against the chain head. A verification endpoint recomputes the chain.",
-          "Before being chained, every entry goes through a scrubber that keeps metadata only: it replaces content fields (bodies, arguments, subjects, summaries) and credential-like keys with [redacted], masks embedded secrets and truncates long strings. Audited events include authentication, policy decisions, approvals, tool executions, and changes to controls and budgets."
+          "The audit log is a per-organization hash chain: each entry includes the hash of the previous one (SHA-256 over a canonical representation with sequence, organization, timestamp, actor, action, entity and details). Changing, deleting, reordering or inserting an entry breaks the chain from that point, and truncating the tail is detected against the chain head.",
+          "Before being chained, every entry goes through a scrubber that keeps metadata only: it replaces content fields (bodies, arguments, subjects, summaries) and credential-like keys with `[redacted]`, masks embedded secrets and cuts strings to 300 characters. Audited events include authentication, policy decisions, approvals, tool executions, and changes to controls and budgets."
         ],
         "code": {
           "lang": "http",
-          "text": "GET /audit          # query\nGET /audit/export   # JSONL or CSV\nGET /audit/verify   # recomputes the hash chain"
-        }
+          "text": "GET /api/v1/audit                      # query\nGET /api/v1/audit/export?format=jsonl  # or format=csv\nGET /api/v1/audit/verify               # recomputes the hash chain"
+        },
+        "tip": "Every so often, store the chain head's sequence and hash off the server. `GET /api/v1/audit/verify` accepts `anchor_seq` and `anchor_hash` to check the chain against that anchor."
       },
       {
-        "h": "Tenant isolation, authentication and limits",
+        "h": "Tenant isolation and identity",
         "paras": [
-          "Tables holding organization data use row-level security (RLS) in Postgres: each transaction sets the organization with a transaction-scoped set_config and the policies filter by it. An integration test covers isolation between organizations.",
-          "Access tokens last 15 minutes and refresh tokens 30 days by default. After 5 failed attempts the account is locked for 15 minutes, and login also has a limit of 10 attempts per 15-minute window (in Redis when available, in memory otherwise). For nonexistent accounts the same password hash is computed, so response time does not reveal whether the user exists."
+          "Tables holding organization data use row-level security (RLS) in Postgres. Each transaction sets the organization with a transaction-scoped `set_config`, the policies filter by it and the application connects with a role without `BYPASSRLS`. An integration test covers isolation between organizations."
+        ],
+        "list": [
+          "Access tokens last 15 minutes and refresh tokens 30 days.",
+          "After 5 failed attempts the account is locked for 15 minutes. Sign-in also allows 10 attempts per 15 minutes per email and 20 per IP (in Redis when available, in memory otherwise).",
+          "For nonexistent accounts a password hash is still computed, so response time does not reveal whether the user exists.",
+          "There is single sign-on with OIDC (with PKCE), verified domains, a sign-in policy that can require MFA or SSO, TOTP MFA and SCIM 2.0 provisioning."
         ]
       },
       {
         "h": "Untrusted content and the code sandbox",
         "paras": [
-          "Everything that comes from outside (emails, API responses, files) goes through a deterministic pipeline before reaching the model: text is normalized (NFKC, invisible characters removed), credentials, one-time codes and card numbers are masked, markdown images and links are neutralized, the text is truncated, scored with injection heuristics and wrapped in a delimited block as data. A high score flags the task and raises approval for its actions. The score is a signal, not a barrier; the barrier is permissions, approvals and limits.",
-          "Code an agent wants to run is a high-risk request: it is shown in full to a person, and only after approval does the backend send it to the runner. The container has no network, a read-only root filesystem, an unprivileged user, all capabilities dropped, CPU, memory and process limits, a hard timeout, output caps and an extension allow-list. It receives none of the runner's environment variables and no access to the drive or the backend. Changing the code or an input requires a new approval, and the kill switch aborts a run in progress."
+          "Everything that comes from outside (emails, API responses, files) goes through a deterministic pipeline before reaching the model: text is normalized (NFKC, invisible characters removed), credentials, one-time codes and card numbers are masked, markdown images and links are neutralized, the text is cut (4,000 characters by default), scored with injection heuristics and wrapped as data in a delimited block. A high score flags the task and forces approval of its actions. The score is a signal, not a barrier: the barrier is permissions, approvals and limits.",
+          "Code an agent wants to run is shown in full to a person, and the backend only sends it to the runner after approval. Changing the code or an input requires a new approval, and the kill switch aborts a run in progress."
+        ],
+        "list": [
+          "Container without network (`--network none`) and with a read-only root filesystem.",
+          "Unprivileged user, all capabilities dropped and `no-new-privileges`.",
+          "CPU, memory and process limits, a hard timeout and output caps, with an extension allow-list for generated files.",
+          "None of the runner's environment variables and no direct access to the Drive or the backend."
         ],
         "code": {
           "lang": "text",
-          "text": "<untrusted_data id=\"a91f3c\" source=\"email:inbound\" trust=\"external_untrusted\">\n...sanitized content...\n</untrusted_data id=\"a91f3c\">"
-        }
+          "text": "<untrusted_data id=\"msg-18c2f\" source=\"tool:email.read\" from=\"client@example.com\" trust=\"external_untrusted\">\nsubject: ...\nbody: ...sanitized content...\n</untrusted_data>"
+        },
+        "warning": "Desk mode is optional and ships disabled. If an organization turns it on (which requires an explicit risk acknowledgement), code confined to the agent's own files runs without approval, under smaller caps."
       },
       {
         "h": "What is not covered",
         "paras": [
-          "There are no certifications (neither SOC 2 nor ISO) and the project is not ready for regulated enterprise environments. There is no single sign-on (SSO). Audit export is a plain JSONL or CSV dump, with no signature and no external anchoring of the chain head.",
-          "Known limits: recovery after a restart assumes a single instance; with several replicas, semaphores and several counters are per process or last-writer-wins. A call already sent to the runtime finishes even if the kill switch is activated. Some state lives in process memory. The finer permission approvals:decide:high does not exist: deciding today equals being admin or owner. The forbid_self_approval option ships disabled for compatibility with one-person teams.",
-          "The code sandbox mounts the Docker socket in the runner, which is equivalent to root access on the host. For anything beyond a single trusted host, use a dedicated rootless or remote daemon and a runtime such as gVisor. Out of scope for now: per-organization model keys stored in the vault, undoing actions, and unified spending caps per connection or tool."
+          "There are no certifications (neither SOC 2 nor ISO) and the project is not ready for regulated enterprise environments. These are the known limits:"
         ],
+        "list": [
+          "Single sign-on is OIDC only: SAML is not implemented.",
+          "Audit export is an unsigned JSONL or CSV dump, and nothing anchors the chain head off the server automatically.",
+          "Recovery after a restart assumes a single instance: with several replicas, the per-organization queue, budget reservations and some counters are per process or last-writer-wins.",
+          "A call already sent to the runtime finishes even if the kill switch is activated.",
+          "There is no per-risk approval permission: deciding equals being admin or owner. The ban on self-approval ships disabled (except with dual approval) for compatibility with one-person teams.",
+          "The HTTP rate limits on authentication let requests through if their store fails.",
+          "The production `Caddyfile` does not set a `Content-Security-Policy`.",
+          "External actions cannot be undone. There is a 60 to 300 second window to cancel an email, and Drive file versions can be restored.",
+          "There is no spending cap unified across model and connections, and no per-tool cap."
+        ],
+        "warning": "The `sandbox-runner` service (the `sandbox` profile of the development compose file) mounts the Docker socket, which is equivalent to root access on the host. For anything beyond a single trusted host, use a dedicated rootless or remote daemon and a runtime such as gVisor (`SANDBOX_RUNTIME=runsc`).",
         "tip": "If you are evaluating the project for production, treat this page as the starting point of your own review, not as a guarantee."
       }
     ]
