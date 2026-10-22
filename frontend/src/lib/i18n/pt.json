@@ -983,7 +983,7 @@
   "conn.src.descriptionPlaceholder": "ex.: Estoque, pedidos e clientes do ERP",
   "conn.src.readOnlyNote": "Somente leitura: os funcionários só farão consultas (GET); nunca vão criar, alterar nem apagar nada.",
   "conn.src.endpoints": "Endpoints (opcional)",
-  "conn.src.endpointsHelp": "Sem endpoints, os funcionários podem consultar qualquer caminho sob a URL base. Se você definir alguns, eles os verão com nome e descrição para saber o que consultar.",
+  "conn.src.endpointsHelp": "Sem endpoints, os funcionários podem consultar qualquer caminho sob a URL base. Se você definir alguns, só poderão consultar esses, e os verão com nome e descrição para saber o que pedir.",
   "conn.src.endpoint.name": "Nome",
   "conn.src.endpoint.path": "Caminho",
   "conn.src.endpoint.description": "Para que serve",

@@ -983,7 +983,7 @@
   "conn.src.descriptionPlaceholder": "e.g. Inventory, orders and customers from the ERP",
   "conn.src.readOnlyNote": "Read-only: employees will only run lookups (GET); they will never create, change or delete anything.",
   "conn.src.endpoints": "Endpoints (optional)",
-  "conn.src.endpointsHelp": "With no endpoints, employees may query any path under the base URL. If you define some, they see them by name and description so they know what to ask for.",
+  "conn.src.endpointsHelp": "With no endpoints, employees may query any path under the base URL. If you define some, they can only query those, and they see them by name and description so they know what to ask for.",
   "conn.src.endpoint.name": "Name",
   "conn.src.endpoint.path": "Path",
   "conn.src.endpoint.description": "What it's for",
