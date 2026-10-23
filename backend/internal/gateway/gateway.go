@@ -623,8 +623,7 @@ func (g *Gateway) run(ctx context.Context, c application.GatewayCall, t target, 
 		g.remember(c.Org, c.TaskID, seenTexts)
 		out.Blocks, out.Tainted, out.InjectionSuspected = blocks, true, suspected
 		if suspected {
-			g.Emit(ctx, c.Org, "security.alert", map[string]any{"kind": "prompt_injection_suspected", "agent_id": c.AgentID, "tool": c.Tool, "connection_id": cd.conn.ID})
-			g.Audit(ctx, c.Org, c.AgentID, "security.injection_suspected", "connection", cd.conn.ID, map[string]any{"tool": c.Tool, "task_id": c.TaskID})
+			g.injectionAlert(ctx, c, "connection", cd.conn.ID)
 		}
 		if len(res.Items) > 0 {
 			out.Summary = fmt.Sprintf("%d item(s) returned as delimited untrusted data", len(res.Items))
@@ -665,6 +664,24 @@ func (g *Gateway) fail(ctx context.Context, c application.GatewayCall, t target,
 	}
 	g.usage(ctx, c, t, cd, connections.Usage{Decision: "allowed", Status: "failed", ErrorCode: code, LatencyMS: lat, ProviderState: pe.Status, Tainted: c.Tainted})
 	return application.GatewayOutcome{Decision: "allowed", Status: "failed", DenyReason: code, Summary: "provider call failed: " + code, ConnectionID: cd.conn.ID}
+}
+
+// injectionAlert makes a suspected prompt injection visible (B10, docs/architecture/
+// shield.md): the realtime security.alert drives the shield in the office, and the
+// security.injection_suspected audit entry is what the security log lists. Both
+// carry ids only (agent, task, request, tool, connection): never the third-party
+// text that triggered the detector. The content was already wrapped as delimited
+// untrusted data and every write of the task now needs a human (approvalReasons).
+func (g *Gateway) injectionAlert(ctx context.Context, c application.GatewayCall, source, connID string) {
+	g.Emit(ctx, c.Org, "security.alert", map[string]any{"kind": "prompt_injection_suspected", "agent_id": c.AgentID, "tool": c.Tool,
+		"action": strings.ToLower(c.Action), "task_id": c.TaskID, "request_id": c.RequestID, "connection_id": connID, "source": source,
+		"treated_as_data": true})
+	entity, id := "connection", connID
+	if source != "connection" {
+		entity, id = "tool", c.Tool
+	}
+	g.Audit(ctx, c.Org, c.AgentID, "security.injection_suspected", entity, id, map[string]any{"tool": c.Tool, "action": strings.ToLower(c.Action),
+		"task_id": c.TaskID, "request_id": c.RequestID, "source": source, "treated_as_data": true})
 }
 
 func fieldLimit(name string) int {

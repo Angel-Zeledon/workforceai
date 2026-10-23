@@ -106,8 +106,7 @@ func (g *Gateway) executeNative(ctx context.Context, c application.GatewayCall, 
 		out.Status, out.DenyReason = "failed", res.Code
 	}
 	if res.InjectionSuspected {
-		g.Emit(ctx, c.Org, "security.alert", map[string]any{"kind": "prompt_injection_suspected", "agent_id": c.AgentID, "tool": c.Tool})
-		g.Audit(ctx, c.Org, c.AgentID, "security.injection_suspected", "tool", c.Tool, map[string]any{"tool": c.Tool, "task_id": c.TaskID})
+		g.injectionAlert(ctx, c, "native", "")
 	}
 	if approved && c.ApprovalID != "" {
 		if out.Status == "succeeded" {
