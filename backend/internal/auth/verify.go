@@ -88,6 +88,14 @@ func (s *Service) Verify(ctx context.Context, token string, meta ClientMeta) (*S
 	if s.cfg.Audit != nil {
 		s.cfg.Audit(ctx, AuditEvent{OrgID: m.OrgID, Actor: u.ID, Action: "user.email_verified", Entity: "user", EntityID: u.ID})
 	}
+	// The address is verified whatever happens next; the session is only issued under the same rules as a password
+	// login (enforced single sign-on, required or enabled second factor).
+	if err := s.enforcePolicy(ctx, u, m, true); err != nil {
+		return nil, err
+	}
+	if err := s.mfaGate(ctx, u, m.OrgID); err != nil {
+		return nil, err
+	}
 	return s.issueSession(ctx, u, m, uuid.NewString(), meta)
 }
 

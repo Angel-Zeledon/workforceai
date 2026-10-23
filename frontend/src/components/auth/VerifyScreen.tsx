@@ -23,9 +23,11 @@ export function VerifyScreen() {
     if (status === "loading" || started.current) return;
     started.current = true;
     const token = new URLSearchParams(window.location.search).get("token") ?? "";
+    // With a second factor (or one the organization requires but the user has not set up yet), or with single sign-on
+    // enforced, the link only proves the address: the session comes from a normal sign-in.
     verifyEmail(token)
-      .then((r) => router.replace(r.mfaRequired ? "/login" : "/")) // with a second factor the link only proves the address
-      .catch(() => setPhase("bad"));
+      .then((r) => router.replace(r.mfaRequired || r.enrollToken ? "/login" : "/"))
+      .catch((x) => (x instanceof AuthError && x.code === "sso_required" ? router.replace("/login") : setPhase("bad")));
   }, [status, router]);
 
   const resend = async (e: FormEvent) => {
