@@ -55,6 +55,9 @@ type Deps struct {
 	// DevilsAdvocate serves /approvals/{id}/counterargument (devils_advocate.go): the advisory review of a
 	// high-risk approval. Optional: nil leaves the routes unmounted.
 	DevilsAdvocate *application.DevilsAdvocate
+	// Debates serves /debates (debates.go): team debates before a decision (B5). Optional: nil leaves the routes
+	// unmounted.
+	Debates *application.Debates
 	// Audit serves GET /audit, /audit/export and /audit/verify; Policy-related
 	// rules are served from OrgConfig (/policy/rules). Both optional.
 	Audit   *application.AuditService
@@ -241,6 +244,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountStanding(r)
 			s.mountInitiative(r)
 			s.mountDevilsAdvocate(r)
+			s.mountDebates(r)
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountDrive(r)
@@ -394,10 +398,15 @@ func (s *server) createRequest(w http.ResponseWriter, r *http.Request) {
 		Text string `json:"text"`
 		// BudgetCapUSD is the optional hard cap of this request (0 = configured default).
 		BudgetCapUSD float64 `json:"budget_cap_usd"`
+		// Debate (B5, optional): the team debates the plan's decision before it runs (adds the [[debate]] marker).
+		Debate bool `json:"debate"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
 		return
+	}
+	if body.Debate && strings.TrimSpace(body.Text) != "" {
+		body.Text = application.WithDebateMarker(body.Text)
 	}
 	id, err := s.Orch.Submit(application.WithBudgetCap(r.Context(), body.BudgetCapUSD), body.Text)
 	if err != nil {

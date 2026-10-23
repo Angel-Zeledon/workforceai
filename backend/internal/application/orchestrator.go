@@ -55,6 +55,7 @@ type Orchestrator struct {
 	memSrc   MemorySource    // optional: long-term memory (memory_flow.go)
 
 	initiative InitiativeRaiser // optional: failed tasks become suggestions (initiative.go)
+	debates    DebateRunner     // optional: team debate before a flagged decision (orchestrator_debate.go)
 
 	v2 v2State // work profiles, thought audit and intervention (intervene.go); zero value = off
 
@@ -112,6 +113,8 @@ type run struct {
 	projOwned   atomic.Bool // the request belongs to a project (recovery.go): its human waits never expire
 	gate        *RunGate    // human gate in progress before the start (persisted in the run meta; guarded by mu)
 	maxParallel int         // per-request override of Config.MaxParallel (WithRunParallel); 0 = config
+	// debateNote is the team debate recalled by the deciding task (orchestrator_debate.go; guarded by mu).
+	debateNote map[string]RecalledMemory
 }
 
 func (r *run) touch(agentID string) {
@@ -243,6 +246,7 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 	if !o.confirmEstimate(ctx, rs, tasks) {
 		return // cancelled or not confirmed: the request is already failed with an explanation
 	}
+	o.debateBeforeDecision(ctx, rs, plan, tasks) // B5: at most one advisory debate; never blocks the plan
 	o.setRequestStatus(ctx, rs, domain.RequestRunning)
 	o.setState(ctx, assistantID, domain.StateWaiting, "Coordinando al equipo", nil, 30)
 	o.execute(ctx, rs, tasks, func(c context.Context, t domain.Task) Outcome { return o.runTask(c, rs, t) })
@@ -676,6 +680,9 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 		rc.Memory = append(rc.Memory, MemoryEntry{Scope: m.Scope, Key: m.Key, Value: m.Value})
 	}
 	recalled := o.recallFor(ctx, rs, t)
+	if note, ok := rs.debateNoteFor(t.ID); ok { // B5: the team debate, as untrusted recalled data
+		recalled = append(recalled, note)
+	}
 	return RunTaskRequest{
 		CodeAutoRun: o.codeAutoRunHint(ctx, agent),
 		Recalled:    recalled,

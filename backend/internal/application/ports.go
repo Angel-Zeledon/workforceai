@@ -176,6 +176,9 @@ type PlannedTask struct {
 	DependsOn   []string `json:"depends_on"`
 	// Reason is the optional human explanation of why this agent got the task.
 	Reason string `json:"reason,omitempty"`
+	// Decision (B5, additive) flags the task that takes a high-impact decision: before the plan runs, the team
+	// debates it (orchestrator_debate.go). Old runtimes omit it.
+	Decision bool `json:"decision,omitempty"`
 }
 
 type PlanResponse struct {
