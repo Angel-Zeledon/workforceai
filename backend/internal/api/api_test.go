@@ -207,6 +207,7 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	if o.initiative {
 		d.Initiative = &application.InitiativeService{Store: mem, Submit: orch, Rec: rec, Cfg: cfg}
+		d.InitiativeScanner = &application.InitiativeScanner{Svc: d.Initiative, Core: mem}
 	}
 	if o.advocate != nil {
 		d.DevilsAdvocate = &application.DevilsAdvocate{Store: mem, Core: spy, Runtime: o.advocate, Budget: orch, Rec: rec, Cfg: cfg}

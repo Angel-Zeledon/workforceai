@@ -140,6 +140,23 @@ func (s *Service) Overview(ctx context.Context, windowDays int) (Report, error) 
 	return rep, nil
 }
 
+// Changes feeds the quality_drop signal of proactive employees (application/initiative_signals.go): the agents
+// scored in both the current and the previous default window. Agents without enough data in either window are
+// left out, so a drop is never inferred from missing data.
+func (s *Service) Changes(ctx context.Context) ([]application.QualityChange, error) {
+	rep, err := s.Overview(ctx, 0)
+	if err != nil {
+		return nil, err
+	}
+	out := []application.QualityChange{}
+	for _, a := range rep.Agents {
+		if a.Score != nil && a.Previous != nil {
+			out = append(out, application.QualityChange{AgentID: a.AgentID, Score: *a.Score, Previous: *a.Previous})
+		}
+	}
+	return out, nil
+}
+
 // ForAgent scores one agent (the report holds a single entry); unknown agents are not found.
 func (s *Service) ForAgent(ctx context.Context, agentID string, windowDays int) (Report, error) {
 	rep, err := s.Overview(ctx, windowDays)

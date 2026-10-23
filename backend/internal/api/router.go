@@ -52,6 +52,8 @@ type Deps struct {
 	Standing *application.StandingService
 	// Initiative serves the proactive suggestions and their budget (initiative.go). Optional.
 	Initiative *application.InitiativeService
+	// InitiativeScanner evaluates the metric signals on demand (POST /initiatives/scan). Optional.
+	InitiativeScanner *application.InitiativeScanner
 	// DevilsAdvocate serves /approvals/{id}/counterargument (devils_advocate.go): the advisory review of a
 	// high-risk approval. Optional: nil leaves the routes unmounted.
 	DevilsAdvocate *application.DevilsAdvocate

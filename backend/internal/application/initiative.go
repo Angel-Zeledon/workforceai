@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -43,6 +44,8 @@ const (
 	maxInitiativeTitle       = 160
 	maxInitiativeBody        = 1000
 	maxInitiativePrompt      = 4000
+	maxInitiativeParams      = 12
+	maxInitiativeParam       = 200
 )
 
 // Initiative is one suggestion raised by an agent.
@@ -61,6 +64,9 @@ type Initiative struct {
 	ResolvedAt *time.Time `json:"resolved_at,omitempty"`
 	ResolvedBy string     `json:"resolved_by,omitempty"`
 	RequestID  string     `json:"request_id,omitempty"`
+	// Params (additive, migration 800) are the values behind the text (amounts, names, periods) so a client can
+	// render the suggestion in the viewer's language; Title/Body stay as the organization-locale fallback.
+	Params map[string]string `json:"params,omitempty"`
 }
 
 // InitiativeSettings is the initiative budget of an organization.
@@ -70,11 +76,15 @@ type InitiativeSettings struct {
 	MonthlyLimit int  `json:"monthly_limit"`
 	// AgentDaily overrides, per agent, how many suggestions it may raise per day (0 = the agent is muted).
 	AgentDaily map[string]int `json:"agent_daily,omitempty"`
+	// Signals (additive, migration 800) switches each metric signal on or off and holds its thresholds
+	// (initiative_signals.go). Always filled on read; on write nil keeps what was stored.
+	Signals *SignalSettings `json:"signals,omitempty"`
 }
 
 // DefaultInitiativeSettings is what an organization has until an admin changes it.
 func DefaultInitiativeSettings() InitiativeSettings {
-	return InitiativeSettings{Enabled: true, DailyLimit: DefaultInitiativeDaily, MonthlyLimit: DefaultInitiativeMonthly}
+	sig := DefaultSignalSettings()
+	return InitiativeSettings{Enabled: true, DailyLimit: DefaultInitiativeDaily, MonthlyLimit: DefaultInitiativeMonthly, Signals: &sig}
 }
 
 // InitiativeStore persists suggestions and settings (memory and Postgres implement it).
@@ -138,6 +148,10 @@ type RaiseInput struct {
 	Title     string
 	Body      string
 	Prompt    string
+	// Dedupe overrides the service window for this signal (0 = InitiativeService.Dedupe).
+	Dedupe time.Duration
+	// Params are stored with the suggestion for localized rendering (bounded by cleanParams).
+	Params map[string]string
 }
 
 // RaiseOutcome says whether a suggestion was stored and, when not, why: disabled | duplicate | daily_limit |
@@ -157,6 +171,10 @@ func (s *InitiativeService) Settings(ctx context.Context) (InitiativeSettings, e
 	if !ok {
 		return DefaultInitiativeSettings(), nil
 	}
+	if st.Signals == nil {
+		sig := DefaultSignalSettings()
+		st.Signals = &sig
+	}
 	return st, nil
 }
 
@@ -174,11 +192,25 @@ func (s *InitiativeService) PutSettings(ctx context.Context, in InitiativeSettin
 		clean[id] = n
 	}
 	in.AgentDaily = clean
+	if in.Signals == nil {
+		cur, err := s.Settings(ctx)
+		if err != nil {
+			return InitiativeSettings{}, err
+		}
+		in.Signals = cur.Signals
+	} else {
+		sig := *in.Signals
+		if err := sig.Validate(); err != nil {
+			return InitiativeSettings{}, err
+		}
+		in.Signals = &sig
+	}
 	if err := s.Store.PutInitiativeSettings(ctx, s.org(ctx), in); err != nil {
 		return InitiativeSettings{}, err
 	}
 	s.audit(ctx, ActorFrom(ctx, "user"), "initiative.settings_changed", "settings", map[string]any{
-		"enabled": in.Enabled, "daily_limit": in.DailyLimit, "monthly_limit": in.MonthlyLimit, "agent_overrides": len(in.AgentDaily)})
+		"enabled": in.Enabled, "daily_limit": in.DailyLimit, "monthly_limit": in.MonthlyLimit, "agent_overrides": len(in.AgentDaily),
+		"signals": in.Signals.AuditDetails()})
 	return in, nil
 }
 
@@ -201,7 +233,10 @@ func (s *InitiativeService) Raise(ctx context.Context, in RaiseInput) (RaiseOutc
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := s.now()
-	dedupe := s.Dedupe
+	dedupe := in.Dedupe
+	if dedupe <= 0 {
+		dedupe = s.Dedupe
+	}
 	if dedupe <= 0 {
 		dedupe = DefaultInitiativeDedupe
 	}
@@ -230,7 +265,7 @@ func (s *InitiativeService) Raise(ctx context.Context, in RaiseInput) (RaiseOutc
 		}
 	}
 	it := Initiative{ID: newID(), AgentID: in.AgentID, Signal: in.Signal, SignalKey: in.SignalKey, Title: in.Title, Body: in.Body,
-		Prompt: in.Prompt, Status: InitiativePending, CreatedAt: now}
+		Prompt: in.Prompt, Status: InitiativePending, CreatedAt: now, Params: cleanParams(in.Params)}
 	if err := s.Store.CreateInitiative(ctx, org, it); err != nil {
 		return RaiseOutcome{}, err
 	}
@@ -310,6 +345,28 @@ func (s *InitiativeService) audit(ctx context.Context, actor, action, entityID s
 		return
 	}
 	s.Rec.Audit(ctx, domain.AuditLog{Actor: actor, Action: action, Entity: "initiative", EntityID: entityID, Details: details})
+}
+
+// cleanParams bounds the parameters stored with a suggestion (nil when there are none).
+func cleanParams(in map[string]string) map[string]string {
+	keys := make([]string, 0, len(in))
+	for k := range in {
+		if strings.TrimSpace(k) != "" {
+			keys = append(keys, k)
+		}
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	sort.Strings(keys)
+	out := map[string]string{}
+	for _, k := range keys {
+		if len(out) == maxInitiativeParams {
+			break
+		}
+		out[clip(k, 40)] = clip(in[k], maxInitiativeParam)
+	}
+	return out
 }
 
 func clip(s string, n int) string {
