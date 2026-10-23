@@ -18,6 +18,7 @@ import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
 import { mockQuality } from "./quality-mock";
 import { MockShield } from "./shield-mock";
+import { MockRehearsal } from "./rehearsal-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
 
@@ -160,6 +161,7 @@ export class MockBackend {
   private roles = new MockRoles(); // role templates + hiring from a template
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
   private shield = new MockShield((t, p, a) => this.emit(t, p, a), () => this.agents, ORG); // B10: security.alert demo, /audit security log, traces
+  private rehearsal = new MockRehearsal((t, p, a) => this.emit(t, p, a)); // B9: rehearsal switches, would-have-done log, verdicts
 
   constructor() { this.seed(); }
 
@@ -251,10 +253,11 @@ export class MockBackend {
   private emitTask(type: string, t: Task) { this.emit(type, { task: { ...t }, ...(type === "task.created" && t.assigned_reason ? { assigned_reason: t.assigned_reason } : {}) }, t.agent_id); this.art.onTask(type, t); }
 
   // ---- orchestrator -------------------------------------------------------------------------
-  private async startRequest(text: string): Promise<string> {
+  private async startRequest(text: string, rehearsal = false): Promise<string> {
     const req: Request = { id: uid("req"), text, status: "planning", created_at: nowIso(), report_id: null, cost_usd: 0 };
     this.requests.unshift(req);
-    this.emit("request.received", { request_id: req.id, text });
+    if (rehearsal) this.rehearsal.markRequest(req.id); // B9: nothing this request would send is sent
+    this.emit("request.received", { request_id: req.id, text, ...(rehearsal ? { rehearsal: true } : {}) });
     this.art.onRequest(text);
     this.log("assistant", "request.received", `Nueva solicitud: ${text}`);
     const conv: Conversation = { id: uid("conv"), title: `Solicitud: ${text.slice(0, 48)}`, participants: ["assistant"], request_id: req.id, last_message_at: nowIso() };
@@ -444,7 +447,13 @@ export class MockBackend {
       return;
     }
 
-    if (spec.approval) {
+    const rehearsing = spec.approval ? this.rehearsal.rehearsing(id, task.request_id) : "";
+    if (spec.approval && rehearsing) {
+      // B9: in a rehearsal the action is recorded as "would have done" and not executed; no approval is asked.
+      this.rehearsal.record(rehearsing, task.request_id, task.id, id, spec.approval);
+      this.log(id, "tool.rehearsed", tr("mock.act.rehearsed", { title: spec.approval.title }));
+    }
+    if (spec.approval && !rehearsing) {
       const ap: Approval = {
         id: uid("appr"), task_id: task.id, agent_id: id, action: spec.approval.action, title: spec.approval.title,
         details: spec.approval.details, risk: spec.approval.risk, status: "pending", created_at: nowIso(), resolved_at: null,
@@ -479,6 +488,7 @@ export class MockBackend {
     // finish
     const cost = +(0.03 + Math.random() * 0.09).toFixed(4);
     task.output = fullOutput(spec.out);
+    if (rehearsing && spec.approval) task.output = { ...task.output, summary: tr("mock.task.rehearsed", { title: spec.approval.title }), evidence: [...task.output.evidence, tr("mock.act.rehearsed", { title: spec.approval.title })] };
     task.status = "done"; task.finished_at = nowIso();
     this.bump(id, -1);
     const a = this.agent(id);
@@ -545,6 +555,7 @@ export class MockBackend {
     // <<< org
     if (this.orgCfg.matches(seg)) return this.orgCfg.handle(method, seg, body, (text) => this.handle("POST", "/requests", { text }));
     if (this.shield.matches(method, seg)) return this.shield.handle(method, seg, q);
+    if (this.rehearsal.matches(method, seg)) return this.rehearsal.handle(method, seg, q, body);
     if (this.conns.matches(r0, r2)) return this.conns.handle(method, seg, q, body);
     if (method === "GET") {
       if (r0 === "agents" && !r1) return this.agents;
@@ -591,7 +602,7 @@ export class MockBackend {
     }
     if (method === "POST") {
       if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : []);
-      if (r0 === "requests") { const id = await this.startRequest(String(body?.text || "").trim()); return { request_id: id }; }
+      if (r0 === "requests") { const id = await this.startRequest(String(body?.text || "").trim(), body?.rehearsal === true); return { request_id: id }; }
       if (r0 === "conversations" && r1 && r2 === "messages") {
         const conv = this.conversations.find((c) => c.id === r1);
         if (!conv) throw new Error("conversation not found");
@@ -624,6 +635,7 @@ export class MockBackend {
         this.roles.reset();
         this.conns.reset();
         this.shield.reset();
+        this.rehearsal.reset();
         this.decisions.clear();
         this.seed();
         this.emit("hello", { agents: this.agents });

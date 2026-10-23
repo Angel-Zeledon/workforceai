@@ -17,6 +17,7 @@ import { NotifySettingsCard } from "../approvals/NotifySettingsCard";
 import { InitiativeBudgetCard } from "../initiative/InitiativePanel";
 import { DocSearchCard } from "./DocSearchCard";
 import { ShieldLogCard } from "./ShieldLogCard";
+import { RehearsalCenterCard } from "../rehearsal/RehearsalCenterCard";
 import { simulateInjection } from "@/lib/shield";
 
 function Section({ id, title, children, right }: { id: string; title: string; children: ReactNode; right?: ReactNode }) {
@@ -185,6 +186,7 @@ export function SecurityCenter() {
       <div className="space-y-4">
         <GlobalState />
         <ShieldLogCard />
+        <RehearsalCenterCard />
         <div className="grid gap-4 lg:grid-cols-2"><ToolSwitches /><AgentPauses /></div>
         <Section id="ctl-plan-review" title={t("ctl.plan.title")}>
           <p className="mb-2 text-xs text-mute">{t("ctl.plan.help")}</p>

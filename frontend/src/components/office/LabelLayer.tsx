@@ -11,6 +11,7 @@ import { etaShort } from "./officeState";
 import { LINK_KIND } from "./kinds";
 import { readable, useAgentColor, useAgentName } from "../ui";
 import { useT } from "@/lib/i18n";
+import { useRehearsal } from "@/lib/rehearsal";
 
 const BUBBLE_TTL = 7000;
 const KIND = LINK_KIND;
@@ -33,6 +34,7 @@ function AgentTag({ id }: { id: string }) {
   const prog = useTaskProgress(id);
   const energy = useEnergy(id);
   const ref = useRegister(`agent:${id}`, "agent", id);
+  const rehearsing = useRehearsal((s) => !!s.enabled[id]); // B9: "Ensayo" chip over the desk
   if (!agent) return null;
   const meta = { color: view.color };
   const scale = labelSize === "s" ? 0.85 : labelSize === "l" ? 1.2 : 1;
@@ -41,7 +43,7 @@ function AgentTag({ id }: { id: string }) {
   const exp = selected || hover;
   const busy = ["working", "reviewing", "thinking", "awaiting_approval"].includes(agent.state) && agent.progress > 0;
   const attention = ["awaiting_approval", "error", "blocked", "completed"].includes(agent.state);
-  const fw = (52 + (showNames ? view.label.length * 7.4 : 0) + (agent.state === "idle" ? 0 : sm.label.length * 5.6 + 10) + (prog ? 58 : 0) + (showEnergyChip ? 62 : 0)) * scale;
+  const fw = (52 + (showNames ? view.label.length * 7.4 : 0) + (agent.state === "idle" ? 0 : sm.label.length * 5.6 + 10) + (prog ? 58 : 0) + (showEnergyChip ? 62 : 0) + (rehearsing ? 54 : 0)) * scale;
   return (
     <div
       ref={ref}
@@ -80,6 +82,7 @@ function AgentTag({ id }: { id: string }) {
               </div>
             )}
             {energy?.paused && <div className="mt-1 text-[10px] font-semibold text-amber-700">{t("office.energy.paused")}</div>}
+            {rehearsing && <div data-testid={`office-rehearsal-${id}`} className="mt-1 text-[10px] font-semibold text-accent">{t("rehearsal.office.note")}</div>}
             <EnergyBar id={id} />
             {busy && (
               <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-mute/15">
@@ -101,6 +104,7 @@ function AgentTag({ id }: { id: string }) {
               </span>
             )}
             {showEnergyChip && <span className="group-data-[tier=mini]:hidden"><EnergyBar id={id} compact /></span>}
+            {rehearsing && <span data-testid={`office-rehearsal-chip-${id}`} className="rounded-full bg-accent-soft px-1.5 py-[2px] text-[9px] font-semibold uppercase leading-none tracking-wide text-accent group-data-[tier=mini]:hidden">{t("rehearsal.badge")}</span>}
           </div>
         )}
       </div>

@@ -21,6 +21,7 @@ import { ProfileSheet } from "./agent/ProfileSheet";
 import { ThoughtAudit } from "./agent/ThoughtAudit";
 import { TaskIntervention } from "./agent/TaskIntervention";
 import { AgentPauseToggle } from "./agent/AgentPauseToggle";
+import { RehearsalToggle } from "./rehearsal/RehearsalToggle";
 import { DeskFiles } from "./drive/DeskFiles";
 import { MemoryTab } from "./agent/MemoryTab";
 import { AgentSkillsCard } from "./skills/AgentSkillsCard";
@@ -91,7 +92,7 @@ export function AgentPanel({ id }: { id: string }) {
         </div>
         <div className="mt-3 flex items-center gap-2"><StateBadge state={agent.state} /><span className="truncate text-xs text-ink2">{agent.activity}</span></div>
         {agent.progress > 0 && <div className="mt-2"><Progress value={agent.progress} color={sm.color} /></div>}
-        <div className="mt-2"><AgentPauseToggle id={id} /></div>
+        <div className="mt-2 flex flex-wrap items-center gap-2"><AgentPauseToggle id={id} /><RehearsalToggle id={id} /></div>
       </div>
       <div role="tabpanel" aria-label={t(`panel.tab.${tab}`)} className={tab === "chat" ? "min-h-0 flex-1" : "min-h-0 flex-1 space-y-3 overflow-y-auto p-4"}>
         {tab === "chat" && <AgentChat id={id} />}
