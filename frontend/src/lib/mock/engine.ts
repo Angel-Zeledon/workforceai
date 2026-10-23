@@ -17,6 +17,8 @@ import { MockChatHistory } from "./chats-mock";
 import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
 import { mockQuality } from "./quality-mock";
+import { MockInitiatives } from "./initiative-mock";
+import { METRIC_SIGNALS, SIGNAL_FIELDS } from "../initiativeLogic";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
 
@@ -157,6 +159,8 @@ export class MockBackend {
   private cmds = new MockCommands({ agents: () => this.agents, chatCount: (c) => this.chat.all()[c]?.length ?? 0, startRequest: (t) => this.startRequest(t) }); // slash commands
   private rewards = new MockRewards((t, p, a) => this.emit(t, p, a)); // coins + shop: earned only when a task finishes
   private roles = new MockRoles(); // role templates + hiring from a template
+  // proactive suggestions (B2): one per metric signal; accepting starts a normal mock request
+  private initiatives = new MockInitiatives((text) => this.startRequest(text), { signals: METRIC_SIGNALS, fields: SIGNAL_FIELDS });
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
 
   constructor() { this.seed(); }
@@ -537,6 +541,7 @@ export class MockBackend {
     if (this.cmds.matches(seg)) return this.cmds.handle(method, seg, q, body);
     if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
+    if (this.initiatives.matches(seg)) return this.initiatives.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
     // >>> org
     if (this.orgChart.matches(seg)) return this.orgChart.handle(method, seg, body, q);
@@ -620,6 +625,7 @@ export class MockBackend {
         this.art.reset();
         this.roles.reset();
         this.conns.reset();
+        this.initiatives.reset();
         this.decisions.clear();
         this.seed();
         this.emit("hello", { agents: this.agents });
