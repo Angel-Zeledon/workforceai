@@ -39,6 +39,7 @@ import (
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/webtool"
 	"aiworkforce/backend/internal/skills"
+	"aiworkforce/backend/internal/slackapp"
 	"aiworkforce/backend/internal/tenantdata"
 )
 
@@ -147,6 +148,9 @@ type Deps struct {
 	// reads Rewards. Optional: nil leaves those routes unmounted.
 	Notify *notify.Service
 	// ---- END approvals-notify ----
+	// Slack serves the two-way Slack channel for humans (slack_mount.go): the signed public request URLs, the
+	// settings card and the account link. Optional: nil leaves the routes unmounted.
+	Slack *slackapp.Service
 	// AllowedOrigins is the CORS/WebSocket origin allow-list (see originPolicy).
 	AllowedOrigins []string
 	// EnableDemoReset registers POST /api/v1/demo/reset (admin role when auth is on).
@@ -206,6 +210,7 @@ func NewRouter(d Deps) http.Handler {
 		// without a bearer token); it is verified by its single-use state.
 		s.mountOAuthCallback(r)
 		s.mountNotifyPublic(r) // approvals-notify: the public landing page of the signed links
+		s.mountSlackPublic(r)  // Slack channel: request URLs authenticated by the Slack signature
 		s.mountMeetingsPublic(r) // meetings: public ICS feed (secret token in the URL)
 		r.Group(func(r chi.Router) {
 			r.Use(s.authenticate, s.tenant)
@@ -255,6 +260,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountQuality(r)
 			s.mountPush(r)
 			s.mountNotify(r) // approvals-notify: channel settings, plan usage, daily goal
+			s.mountSlack(r)  // Slack channel: settings card and account link
 			s.mountV2(r)
 			s.mountCommands(r)
 			s.mountTenantData(r)
