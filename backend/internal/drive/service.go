@@ -326,6 +326,15 @@ func (s *Service) FolderByPath(ctx context.Context, path string) (Folder, error)
 	return f, mapStore(err, "folder")
 }
 
+// FolderByID returns an active folder by id (a folder in the trash is not found).
+func (s *Service) FolderByID(ctx context.Context, id string) (Folder, error) {
+	f, err := s.cfg.Store.FolderByID(ctx, s.org(ctx), id)
+	if err == nil && f.DeletedAt != nil {
+		return Folder{}, notFound("folder %s not found", id)
+	}
+	return f, mapStore(err, "folder")
+}
+
 // ---- files: read ----
 
 // GetFile returns the metadata of a file (also a deleted one, for the trash).
