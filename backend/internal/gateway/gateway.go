@@ -61,6 +61,9 @@ type Gateway struct {
 	// approved action runs at most once across restarts and instances. Without
 	// it only the in-memory record of this process applies.
 	Executions application.ExecutionLedger
+	// Rehearsal (optional, B9) answers whether the agent or the request is in
+	// rehearsal; GatewayCall.Rehearsal is honored without it (rehearsal.go).
+	Rehearsal application.RehearsalPolicy
 
 	mu        sync.Mutex
 	seen      map[string]map[string]bool // org/task -> addresses seen in external content
@@ -365,6 +368,11 @@ func (g *Gateway) Execute(ctx context.Context, c application.GatewayCall) applic
 	t, ok := g.lookup(c.Tool, c.Action)
 	if !ok {
 		return application.GatewayOutcome{Decision: "denied", DenyReason: connections.CodeInvalidArgs}
+	}
+	// B9: a rehearsal never writes, approved or not. Checked before anything
+	// that could execute, schedule, hold or queue the call.
+	if t.spec.SideEffects && g.rehearsing(ctx, c) {
+		return g.rehearseConnection(ctx, c, t)
 	}
 	approved := c.ApprovedArgsHash != ""
 	if !approved { // the approved re-execution is the same request: count it once
@@ -870,6 +878,12 @@ func (g *Gateway) sendHold(ctx context.Context, h connections.Hold) bool {
 		return false
 	}
 	cd := candidate{conn: conn, grant: gr}
+	if g.rehearsing(ctx, call) {
+		// B9: the agent went into rehearsal while its send waited out the window:
+		// nothing goes out; the item returns to the queue for a human decision.
+		g.requeue(ctx, h, CodeRehearsal)
+		return false
+	}
 	if code := g.validate(ctx, call, t, cd, true); code != "" {
 		if code == controls.CodeUnavailable {
 			return false // transient: retry on the next tick

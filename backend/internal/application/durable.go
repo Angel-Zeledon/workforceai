@@ -58,6 +58,8 @@ type RunMeta struct {
 	RequestedBy    string   `json:"requested_by"`
 	ConversationID string   `json:"conversation_id"`
 	ReadOnly       bool     `json:"read_only"`
+	// Rehearsal (B9): the request runs as a rehearsal; it stays one after a restart.
+	Rehearsal      bool     `json:"rehearsal,omitempty"`
 	RemovedTaskIDs []string `json:"removed_task_ids"`
 	// MaxParallel is the per-request parallelism override (WithRunParallel); 0 = Config.MaxParallel.
 	MaxParallel int `json:"max_parallel,omitempty"`
@@ -219,12 +221,12 @@ func (o *Orchestrator) saveRunMeta(ctx context.Context, rs *run) {
 		return
 	}
 	rs.ext.mu.Lock()
-	ro := rs.ext.readOnly
+	ro, rh := rs.ext.readOnly, rs.ext.rehearsal
 	rs.ext.mu.Unlock()
 	rs.mu.Lock()
 	gate := rs.gate
 	rs.mu.Unlock()
-	m := RunMeta{RequestID: rs.req.ID, RequestedBy: rs.requestedBy, ConversationID: rs.convID, ReadOnly: ro, MaxParallel: rs.maxParallel,
+	m := RunMeta{RequestID: rs.req.ID, RequestedBy: rs.requestedBy, ConversationID: rs.convID, ReadOnly: ro, Rehearsal: rh, MaxParallel: rs.maxParallel,
 		RemovedTaskIDs: append([]string{}, rs.removed...), Gate: gate, Chat: chatMeta(rs.chat), UpdatedAt: time.Now().UTC()}
 	if err := o.durable.runs.PutRunMeta(context.WithoutCancel(ctx), o.org(ctx), m); err != nil {
 		o.log.Warn("save run meta", "request", rs.req.ID, "err", err)
@@ -390,7 +392,10 @@ func (o *Orchestrator) recoverRequest(ctx context.Context, req domain.Request) b
 		if meta.ConversationID != "" {
 			rs.convID = meta.ConversationID
 		}
-		rs.ext.readOnly = meta.ReadOnly
+		rs.ext.readOnly, rs.ext.rehearsal = meta.ReadOnly, meta.Rehearsal
+		if meta.Rehearsal {
+			o.rehearsal.MarkRequest(org, req.ID)
+		}
 		rs.chat = meta.Chat.link() // the report (or the failure) is echoed into the chat that asked
 	}
 	gated := metaErr == nil && meta.Gate != nil && beforeStartStatus(req.Status)

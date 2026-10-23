@@ -40,6 +40,9 @@ func (g *Gateway) denyNative(ctx context.Context, c application.GatewayCall, cod
 
 // executeNative runs a native tool call.
 func (g *Gateway) executeNative(ctx context.Context, c application.GatewayCall, nt application.NativeTool, side bool) application.GatewayOutcome {
+	if side && g.rehearsing(ctx, c) { // B9: a rehearsal never writes (rehearsal.go)
+		return g.rehearseNative(ctx, c, nt)
+	}
 	approved := c.ApprovedArgsHash != ""
 	if !approved {
 		g.Controls.ObserveToolRequest(ctx, c.Org, c.AgentID)

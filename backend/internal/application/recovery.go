@@ -285,7 +285,10 @@ func (o *Orchestrator) applyMeta(ctx context.Context, rs *run) {
 	if meta.ConversationID != "" {
 		rs.convID = meta.ConversationID
 	}
-	rs.ext.readOnly = meta.ReadOnly
+	rs.ext.readOnly, rs.ext.rehearsal = meta.ReadOnly, meta.Rehearsal
+	if meta.Rehearsal {
+		o.rehearsal.MarkRequest(o.org(ctx), rs.req.ID)
+	}
 	rs.chat = meta.Chat.link()
 }
 
