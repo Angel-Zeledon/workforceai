@@ -31,6 +31,7 @@ import (
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/notify"
+	"aiworkforce/backend/internal/slackapp"
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/trust"
@@ -108,6 +109,10 @@ func run(log *slog.Logger) error {
 	notifyObs := &notify.Observer{Inner: pub}
 	pub = notifyObs
 
+	// Two-way Slack channel for humans: posts approval requests with buttons and keeps them up to date (bound later).
+	slackObs := &slackapp.Observer{Inner: pub}
+	pub = slackObs
+
 	// Coins: the observer sees task.completed / project.status_changed after
 	// they were published and pays them in the background (internal/rewards).
 	rewardsObs := &rewards.Observer{Inner: pub}
@@ -184,6 +189,9 @@ func run(log *slog.Logger) error {
 
 	approvals.Observer = cw.ctl
 	orch.SetAnomalyObserver(cw.ctl)
+
+	// Slack channel (bring-your-own app, secrets sealed with the vault; people mapped through the accounts).
+	slackSvc := wireSlack(log, cfg, pg, store, approvals, authStore, cw.ctl, cw.vault, rec, slackObs)
 
 	// Approval rules and the policy engine (organization rules as data, applied
 	// to every tool request) and the tamper-evident audit trail.
@@ -318,6 +326,7 @@ func run(log *slog.Logger) error {
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
+	deps.Slack = slackSvc
 	deps.Presence, deps.PeopleChat = wirePeople(ctx, pg, pub, queries, orch) // human presence + people chat
 	if meetingsSvc != nil && deps.PeopleChat != nil {
 		meetingsSvc.People = meetingPeople{dir: deps.PeopleChat.Store} // attendee picker: the same directory as the people chat

@@ -14,6 +14,7 @@ import { OperatingHoursCard } from "./OperatingHoursCard";
 import { CodeExecutionCard } from "./CodeExecutionCard";
 import { WebToolCard } from "./WebToolCard";
 import { NotifySettingsCard } from "../approvals/NotifySettingsCard";
+import { SlackChannelCard } from "../approvals/SlackChannelCard";
 import { InitiativeBudgetCard } from "../initiative/InitiativePanel";
 import { DocSearchCard } from "./DocSearchCard";
 import { ShieldLogCard } from "./ShieldLogCard";
@@ -225,6 +226,7 @@ export function SecurityCenter() {
         <CodeExecutionCard />
         <WebToolCard />
         <NotifySettingsCard />
+        <SlackChannelCard />
         <InitiativeBudgetCard />
         <DocSearchCard />
         <SimulationCard />

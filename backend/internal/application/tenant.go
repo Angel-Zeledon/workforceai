@@ -59,6 +59,20 @@ func ActorRoleFrom(ctx context.Context, def string) string {
 	return def
 }
 
+type channelKey struct{}
+
+// WithChannel records the channel a human decision came through ("slack"; empty = the app). Approvals add it to
+// their audit entries; it never changes what the actor may do.
+func WithChannel(ctx context.Context, channel string) context.Context {
+	return context.WithValue(ctx, channelKey{}, channel)
+}
+
+// ChannelFrom returns the channel of ctx ("" = the app).
+func ChannelFrom(ctx context.Context) string {
+	c, _ := ctx.Value(channelKey{}).(string)
+	return c
+}
+
 // WithRequestID tags everything done under ctx with the request it belongs to,
 // so that audit entries can be filtered by request.
 func WithRequestID(ctx context.Context, id string) context.Context {
