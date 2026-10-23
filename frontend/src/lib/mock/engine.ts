@@ -18,6 +18,7 @@ import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
 import { mockQuality } from "./quality-mock";
 import { mockTrust } from "./trust-mock";
+import { MockRituals } from "./rituals-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
 
@@ -159,6 +160,10 @@ export class MockBackend {
   private rewards = new MockRewards((t, p, a) => this.emit(t, p, a)); // coins + shop: earned only when a task finishes
   private roles = new MockRoles(); // role templates + hiring from a template
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
+  private rituals = new MockRituals({
+    agents: () => this.agents, tasks: () => this.tasks, approvals: () => this.approvals,
+    emit: (t, p, a) => this.emit(t, p, a), note: (text) => this.chat.note("system", "user", "chat", text),
+  }); // B4: daily stand-up and weekly retro (/rituals/*, ritual.held)
 
   constructor() { this.seed(); }
 
@@ -536,6 +541,7 @@ export class MockBackend {
       return res;
     }
     if (this.cmds.matches(seg)) return this.cmds.handle(method, seg, q, body);
+    if (this.rituals.matches(seg)) return this.rituals.handle(method, seg, body, q);
     if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
@@ -629,6 +635,7 @@ export class MockBackend {
         this.art.reset();
         this.roles.reset();
         this.conns.reset();
+        this.rituals.reset();
         this.decisions.clear();
         this.seed();
         this.emit("hello", { agents: this.agents });

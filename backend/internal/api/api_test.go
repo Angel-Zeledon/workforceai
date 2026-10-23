@@ -27,6 +27,7 @@ import (
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/quality"
 	"aiworkforce/backend/internal/rewards"
+	"aiworkforce/backend/internal/rituals"
 	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/sandbox"
 	"aiworkforce/backend/internal/trust"
@@ -128,6 +129,7 @@ type opts struct {
 	trust          bool // mount the trust ladder (trust_api_test.go)
 	trustBlocked   *string          // controls code the trust ladder sees when raising autonomy ("" = allowed)
 	trustClock     func() time.Time // the trust ladder's clock (nil = real time)
+	rituals        bool // mount the stand-up and retro (rituals_api_test.go)
 }
 
 type env struct {
@@ -208,6 +210,14 @@ func newEnv(t *testing.T, o opts) *env {
 				}
 				return ""
 			}})
+	}
+	if o.rituals {
+		d.Rituals = rituals.New(rituals.Config{Store: rituals.NewMemStore(), Core: spy, OrgID: cfg.OrgID, Log: log,
+			Guard:    orch.AdmitRitual,
+			Notice:   func(c context.Context, text string) error { return orch.PostSystemNotice(c, domain.ChatOffice, text) },
+			Emit:     rec.Emit,
+			Audit:    rec.Audit,
+			Profiles: &application.ProfileService{Store: mem, Core: spy, Tones: mem, Rec: rec, Config: cfg}})
 	}
 	if o.skills {
 		d.Skills = skills.New(skills.Config{Store: skills.NewMemStore(), Drive: d.Drive, OrgID: cfg.OrgID, Log: log,
