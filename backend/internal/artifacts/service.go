@@ -41,6 +41,10 @@ type Config struct {
 	Asker     Asker
 	Projects  ProjectLookup
 	OrgID     string
+	// CustomerOf (B12, optional) resolves the customer a request is scoped to. With it, the artifacts handed to a
+	// customer-scoped task (W3 references, B6 cell citations) must belong to that customer; an error closes the
+	// gate (nothing is handed). nil: the customer in ctx (application.WithCustomer) is used.
+	CustomerOf func(ctx context.Context, org, requestID string) (string, error)
 	// AutoRecalc recomputes dependent sheets when a source artifact changes (default on).
 	DisableAutoRecalc bool
 	Now               func() time.Time
@@ -319,6 +323,13 @@ func (s *Service) create(ctx context.Context, actor Actor, in CreateInput, o cre
 	if agent != "" {
 		if _, err := s.cfg.Core.GetAgent(ctx, org, agent); err != nil {
 			return Artifact{}, fmt.Errorf("%w: unknown agent %q", domain.ErrInvalid, agent)
+		}
+	}
+	// B12: what is produced for a customer-scoped request is that customer's (best effort: an untagged artifact
+	// never reaches a customer-scoped task, so a failed lookup only fails closed).
+	if in.CustomerID == "" && o.reqID != "" && s.cfg.CustomerOf != nil {
+		if cid, err := s.cfg.CustomerOf(ctx, org, o.reqID); err == nil {
+			in.CustomerID = cid
 		}
 	}
 	now := s.now()

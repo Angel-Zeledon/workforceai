@@ -83,7 +83,8 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 		seedDemoShared(ctx, dsvc, cfg.App.OrgID, log)
 	}
 	asvc := artifacts.New(artifacts.Config{Store: astore, Collab: collab, Blobs: blobs, WriteGate: readOnlyGate(cw.ctl), Rec: rec, Core: store, Asker: orch, OrgID: cfg.App.OrgID, Log: log,
-		Projects: projectLookup(func(ctx context.Context, id string) (string, string, error) { return psvc.Info(ctx, id) })})
+		Projects:   projectLookup(func(ctx context.Context, id string) (string, string, error) { return psvc.Info(ctx, id) }),
+		CustomerOf: customerOf(cust)}) // B12: referenced artifacts and cell citations stay inside the task's customer
 	pcfg := projects.Config{Store: pstore, Orch: orch, Core: store, Approvals: approvals, Rec: rec, Runtime: rt, Guard: guard, Sink: deliverableSink{next: asvc, drive: dsvc, log: log}, OrgID: cfg.App.OrgID, MaxAttempts: max(1, cfg.App.TaskMaxAttempts), Log: log, Limits: cfg.Projects}
 	// W5 monitor tuning (all optional): PROJECT_POLL_MS (active period),
 	// PROJECT_POLL_IDLE_MAX_MS (idle backoff ceiling), PROJECT_BUDGET_WARN_PCT (1-100).
@@ -102,6 +103,7 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	}
 	pcfg.SynthTokenBudget, pcfg.SynthMaxGroups = cfg.App.SynthTokenBudget, cfg.App.SynthMaxGroups
 	pcfg.CustomerActive = customerActive(cust) // B12: projects scoped to a customer
+	pcfg.ArtifactCustomer = asvc.CustomerOfArtifact // B12: a customer's plan may only reference that customer's artifacts
 	if orgCfg != nil {
 		pcfg.Catalog = orgCfg.Catalog()
 		pcfg.LocaleFor = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }

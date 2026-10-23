@@ -112,6 +112,9 @@ func (s *Service) newChange(ctx context.Context, id string, sp changeSpec) (Plan
 	if err != nil {
 		return PlanChange{}, err
 	}
+	if err := s.checkChangedRefs(ctx, rec, plan.nodes); err != nil { // B12: no other customer's artifacts
+		return PlanChange{}, err
+	}
 	ch.Impact, ch.Risk = plan.impact, riskOf(plan.impact)
 	agent := sp.approvalAgent
 	if agent == "" {

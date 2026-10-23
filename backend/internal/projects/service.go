@@ -80,6 +80,10 @@ type Config struct {
 	// CustomerActive (B12, optional) accepts a customer id a project can be scoped to (it exists and is
 	// not archived). nil: projects cannot be scoped to customers.
 	CustomerActive func(ctx context.Context, org, customerID string) error
+	// ArtifactCustomer (B12, optional) is the customer an artifact is tagged with ("" = none, domain.ErrNotFound
+	// when it does not exist). A customer-scoped project may only reference ("artifact:<id>") artifacts of its own
+	// customer; without it such references are refused (customer_refs.go).
+	ArtifactCustomer func(ctx context.Context, org, artifactID string) (string, error)
 }
 
 // Service is the projects use case layer.
@@ -348,6 +352,10 @@ func (s *Service) CreateDraft(ctx context.Context, in NewProject) (Record, error
 		if err := s.cfg.CustomerActive(ctx, org, in.CustomerID); err != nil {
 			return Record{}, err
 		}
+		// B12: a reference in the goal to another customer's artifact is refused before anything is planned.
+		if err := s.checkArtifactRefs(ctx, Record{OrgID: org, CustomerID: in.CustomerID, Goal: goal}); err != nil {
+			return Record{}, err
+		}
 	}
 	locale := s.locale(ctx, in.Locale)
 	pid := "prj-" + strings.ReplaceAll(uuid.NewString(), "-", "")[:12]
@@ -401,6 +409,9 @@ func (s *Service) CreateDraft(ctx context.Context, in NewProject) (Record, error
 	rec.CustomerID = in.CustomerID
 	if rec.BudgetUSD <= 0 {
 		rec.BudgetUSD = defaultBudget(rec.Estimate)
+	}
+	if err := s.checkArtifactRefs(ctx, rec); err != nil { // B12: the template's texts too
+		return Record{}, err
 	}
 	if err := s.cfg.Store.Put(ctx, rec); err != nil {
 		return rec, err
@@ -577,6 +588,9 @@ func (s *Service) PatchPlan(ctx context.Context, id string, ops []PlanOp) (int, 
 					n.DelegationChain = []string{*a}
 				}
 			}
+		}
+		if err := s.checkArtifactRefs(ctx, *r); err != nil { // B12: a renamed task may now reference an artifact
+			return err
 		}
 		r.StructureVersion++
 		if r.Planner != nil {
