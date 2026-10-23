@@ -1,0 +1,5 @@
+# Generated files that tests compare byte for byte: keep LF in every checkout
+# (core.autocrlf=true on Windows would otherwise turn them into CRLF).
+backend/internal/projects/giant_i18n.json text eol=lf
+agent-runtime/app/model_prices.json text eol=lf
+backend/internal/application/model_prices.json text eol=lf
