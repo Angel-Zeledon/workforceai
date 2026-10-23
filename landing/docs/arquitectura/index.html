@@ -6,7 +6,8 @@
   <title>Arquitectura: backend, runtime y tiempo real</title>
   <meta name="description" content="Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -31,176 +32,205 @@
   <meta name="twitter:description" content="Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Documentación","item":"https://workforceai.es/docs/"},{"@type":"ListItem","position":3,"name":"Arquitectura de AI Workforce OS","item":"https://workforceai.es/docs/arquitectura/"}]},{"@type":"TechArticle","headline":"Arquitectura de AI Workforce OS","description":"Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/docs/arquitectura/","url":"https://workforceai.es/docs/arquitectura/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=b5a2c05468">
+  <script src="/docs.js?v=2e2073da11" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Documentación","item":"https://workforceai.es/docs/"},{"@type":"ListItem","position":3,"name":"Arquitectura de AI Workforce OS","item":"https://workforceai.es/docs/arquitectura/"}]},{"@type":"TechArticle","headline":"Arquitectura de AI Workforce OS","description":"Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/docs/arquitectura/","url":"https://workforceai.es/docs/arquitectura/","dateModified":"2026-10-22","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Saltar al contenido</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/" aria-label="AI Workforce OS">
+<body class="dx dx-docs" id="top">
+  <a class="dx-skip" href="#main">Saltar al contenido</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menú"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/" aria-label="AI Workforce OS">
         <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Principal">
-        <a href="/">Inicio</a>
-        <a href="/docs/">Documentación</a>
-        <a href="/guia/">Guía de uso</a>
-        <a href="/confianza/">Confianza</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Idioma">
+      <nav class="dx-tabs" aria-label="Secciones del sitio"><a href="/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentación</span></a><a href="/guia/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Guía de uso</span></a><a href="/confianza/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Confianza</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Buscar en la documentación…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Buscar en la documentación…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Idioma">
           <a href="/docs/arquitectura/" hreflang="es" lang="es" aria-current="true">ES</a>
-          <a href="/en/docs/architecture/" hreflang="en" lang="en" >EN</a>
+          <a href="/en/docs/architecture/" hreflang="en" lang="en">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap wide">
-      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li><a href="/docs/">Documentación</a></li><li aria-current="page">Arquitectura de AI Workforce OS</li></ol></nav>
-      <article>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Documentación">
+      <div class="dx-side-head">
+        <span>Menú</span>
+        <a class="dx-side-close" href="#top" aria-label="Cerrar menú"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
+      </div>
+      <nav class="dx-colls" aria-label="Secciones del sitio"><a href="/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentación</span></a><a href="/guia/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Guía de uso</span></a><a href="/confianza/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Confianza</span></a></nav>
+      <nav class="dx-pages" aria-label="Documentación">
+        <ul class="dx-list">
+          <li><a href="/docs/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Introducción</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-concepts">Conceptos</p>
+        <ul class="dx-list" aria-labelledby="g-docs-concepts">
+          <li><a href="/docs/arquitectura/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><span>Arquitectura</span></a></li>
+          <li><a href="/docs/runtime-de-agentes/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg><span>Runtime de agentes</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-integrate">Integra</p>
+        <ul class="dx-list" aria-labelledby="g-docs-integrate">
+          <li><a href="/docs/referencia-api/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg><span>Referencia de la API</span></a></li>
+          <li><a href="/docs/autenticacion-y-multitenencia/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg><span>Autenticación y cuentas</span></a></li>
+          <li><a href="/docs/formato-de-habilidades/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><path d="M17.25 13.5v7.5M13.5 17.25H21"/></svg><span>Formato de habilidades</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-operate">Opera</p>
+        <ul class="dx-list" aria-labelledby="g-docs-operate">
+          <li><a href="/docs/despliegue/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></svg><span>Despliegue</span></a></li>
+          <li><a href="/docs/configuracion/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span>Configuración</span></a></li>
+          <li><a href="/docs/modelo-de-seguridad/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Modelo de seguridad</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Idioma">
+          <a href="/docs/arquitectura/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/docs/architecture/" hreflang="en" lang="en">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Ruta de navegación"><ol><li><a href="/docs/">Documentación</a></li><li><span>Conceptos</span></li></ol></nav>
         <h1>Arquitectura de AI Workforce OS</h1>
-        <p class="lead">AI Workforce OS separa la decisión de la ejecución: un backend en Go es la fuente de verdad, un runtime en Python solo razona con el LLM y un frontend en Next.js dibuja la oficina a partir de eventos. Esta página describe cómo encajan las piezas y cómo viaja una petición de punta a punta.</p>
+        <p class="dx-lead">AI Workforce OS separa la decisión de la ejecución: un backend en Go es la fuente de verdad, un runtime en Python solo razona con el modelo y un frontend en Next.js dibuja la oficina a partir de eventos. Esta página es para quien despliega, extiende o audita el sistema: cómo encajan las piezas y cómo viaja una petición de punta a punta.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>7 min de lectura</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">En esta página</summary>
+        <ol><li><a href="#componentes">Componentes</a></li><li><a href="#fronteras-entre-backend-y-runtime">Fronteras entre backend y runtime</a></li><li><a href="#flujo-de-una-peticion">Flujo de una petición</a></li><li><a href="#canal-en-tiempo-real">Canal en tiempo real</a></li><li><a href="#modelo-de-datos">Modelo de datos</a></li><li><a href="#multi-tenencia">Multi-tenencia</a></li><li><a href="#simulacion-frente-a-ia-real">Simulación frente a IA real</a></li><li><a href="#despliegue-y-borde">Despliegue y borde</a></li><li><a href="#estructura-del-repositorio">Estructura del repositorio</a></li></ol>
+        <a class="dx-toc-top" href="#top">Volver arriba</a>
+      </details>
+      <div class="dx-body">
         
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">Componentes</a></li><li><a href="#s2">Fronteras entre backend y runtime</a></li><li><a href="#s3">Flujo de una petición</a></li><li><a href="#s4">Canal en tiempo real</a></li><li><a href="#s5">Modelo de datos</a></li><li><a href="#s6">Multi-tenencia</a></li><li><a href="#s7">Simulación frente a IA real</a></li><li><a href="#s8">Despliegue y borde</a></li><li><a href="#s9">Estructura del repositorio</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">Componentes</h2>
-        <p>El sistema son cinco procesos más un proxy opcional. Todo el estado de negocio vive en el backend; el runtime no guarda estado entre llamadas.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Componente</th><th scope="col">Tecnología</th><th scope="col">Responsabilidad</th></tr></thead><tbody><tr><th scope="row"><code>Frontend</code></th><td>Next.js, React Three Fiber</td><td>Oficina 3D y modo dashboard. Consume REST y el WebSocket; toda animación deriva de eventos reales.</td></tr><tr><th scope="row"><code>Backend</code></th><td>Go, chi</td><td>API REST /api/v1, WebSocket /ws, orquestador, aprobaciones, auditoría, presupuesto, autenticación y RBAC.</td></tr><tr><th scope="row"><code>Agent runtime</code></th><td>Python, FastAPI</td><td>Recibe tarea y contexto, llama al proveedor LLM y devuelve resultado estructurado. Motor intercambiable.</td></tr><tr><th scope="row"><code>Postgres</code></th><td>PostgreSQL</td><td>Datos de todas las organizaciones, con row-level security. Migraciones SQL numeradas.</td></tr><tr><th scope="row"><code>Redis</code></th><td>Redis</td><td>Pub/sub de eventos hacia el hub WebSocket y límites de tasa. Opcional: sin Redis hay entrega local en proceso.</td></tr><tr><th scope="row"><code>Caddy</code></th><td>Caddy</td><td>Proxy de producción: TLS automático, envía /api/* y /ws al backend y el resto al frontend.</td></tr></tbody></table></div>
-        
+        <section class="dx-sec" aria-labelledby="componentes">
+        <h2 id="componentes">Componentes<a class="dx-anchor" href="#componentes" aria-label="Enlace a la sección «Componentes»">#</a></h2>
+        <p>Todo el estado de negocio vive en el backend; el runtime no guarda estado entre llamadas. Postgres, Redis, el almacenamiento de objetos y el sandbox son opcionales en desarrollo y tienen un modo de reserva.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Tabla: Componentes"><table><thead><tr><th scope="col">Componente</th><th scope="col">Tecnología</th><th scope="col">Responsabilidad</th></tr></thead><tbody><tr><th scope="row">Frontend</th><td>Next.js, React Three Fiber</td><td>Oficina 3D y modo dashboard. Consume REST y el WebSocket; toda animación deriva de eventos reales.</td></tr><tr><th scope="row">Backend</th><td>Go, chi</td><td>API REST <code>/api/v1</code>, WebSocket <code>/ws</code>, orquestador, aprobaciones, auditoría, presupuesto, autenticación y RBAC.</td></tr><tr><th scope="row">Agent runtime</th><td>Python, FastAPI, CrewAI</td><td>Recibe tarea y contexto, llama al proveedor del modelo y devuelve un resultado estructurado.</td></tr><tr><th scope="row">Postgres</th><td>PostgreSQL</td><td>Datos de todas las organizaciones, con row-level security y migraciones SQL numeradas. Sin <code>DATABASE_URL</code> el backend corre en memoria para demos.</td></tr><tr><th scope="row">Redis</th><td>Redis</td><td>Pub/sub de eventos hacia el hub WebSocket, bloqueos y límites de tasa. Sin <code>REDIS_URL</code> los eventos y bloqueos son locales al proceso.</td></tr><tr><th scope="row">Almacenamiento de objetos</th><td>Compatible con S3 (RustFS en desarrollo)</td><td>Bytes de los archivos del drive. Sin <code>S3_ENDPOINT</code> y <code>S3_BUCKET</code> se guardan en Postgres.</td></tr><tr><th scope="row">Sandbox runner</th><td>Go, Docker</td><td>Ejecuta en contenedores desechables y sin red el código que un agente pidió y alguien aprobó. Solo con <code>SANDBOX_URL</code> y <code>SANDBOX_TOKEN</code>.</td></tr><tr><th scope="row">Caddy</th><td>Caddy</td><td>Proxy de producción: TLS automático, envía <code>/api/*</code> y <code>/ws</code> al backend y el resto al frontend.</td></tr></tbody></table></div>
       </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">Fronteras entre backend y runtime</h2>
-        <p>La regla central: el runtime nunca habla con Postgres, Redis ni sistemas externos. Recibe una tarea con su contexto y devuelve un resultado, solicitudes de herramientas y consumo; solo contacta al proveedor del LLM. El backend decide permisos, autonomía y presupuesto, y ejecuta las herramientas.</p>
-        <p>El backend llama al runtime por HTTP con JSON. Si se define RUNTIME_TOKEN en ambos lados, las llamadas llevan ese secreto compartido. El motor de IA queda detrás de una interfaz propia, de modo que CrewAI puede reemplazarse sin tocar el backend.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Endpoint del runtime</th><th scope="col">Uso</th></tr></thead><tbody><tr><th scope="row"><code>POST /v1/plan, /v1/plan-phases, /v1/plan-phase, /v1/replan</code></th><td>Descomponer una petición o proyecto en tareas con dependencias.</td></tr><tr><th scope="row"><code>POST /v1/run-task</code></th><td>Ejecutar una tarea; devuelve output, consultas, tool_requests y usage.</td></tr><tr><th scope="row"><code>POST /v1/consult</code></th><td>Consulta entre agentes.</td></tr><tr><th scope="row"><code>POST /v1/review</code></th><td>Revisión de calidad de un resultado.</td></tr><tr><th scope="row"><code>POST /v1/synthesize</code></th><td>Redactar el reporte consolidado.</td></tr><tr><th scope="row"><code>POST /v1/route, /v1/chat-reply</code></th><td>Enrutar un mensaje de chat y generar la respuesta de un agente.</td></tr><tr><th scope="row"><code>POST /v1/estimate, /v1/summarize, /v1/context-sizes</code></th><td>Estimación de costo, resúmenes y tamaños de contexto.</td></tr><tr><th scope="row"><code>GET /healthz</code></th><td>Estado y modo: simulation o live.</td></tr></tbody></table></div>
-        
+        <section class="dx-sec" aria-labelledby="fronteras-entre-backend-y-runtime">
+        <h2 id="fronteras-entre-backend-y-runtime">Fronteras entre backend y runtime<a class="dx-anchor" href="#fronteras-entre-backend-y-runtime" aria-label="Enlace a la sección «Fronteras entre backend y runtime»">#</a></h2>
+        <p>La regla central: el runtime nunca habla con Postgres, Redis ni sistemas externos. Recibe una tarea con su contexto y devuelve un resultado, solicitudes de herramientas y consumo; solo contacta al proveedor del modelo. El backend decide permisos, autonomía y presupuesto, y es el único que ejecuta herramientas.</p>
+        <p>El backend llama al runtime por HTTP con JSON en <code>RUNTIME_URL</code>. Si <code>RUNTIME_TOKEN</code> está definido en ambos lados, cada llamada lleva ese secreto como token bearer. El motor de IA queda detrás de una interfaz propia (<code>AgentEngine</code>), de modo que CrewAI puede reemplazarse sin tocar el backend.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Tabla: Fronteras entre backend y runtime"><table><thead><tr><th scope="col">Endpoint del runtime</th><th scope="col">Uso</th></tr></thead><tbody><tr><th scope="row"><code>POST /v1/plan</code>, <code>/v1/plan-phases</code>, <code>/v1/plan-phase</code>, <code>/v1/replan</code></th><td>Descomponer una petición o un proyecto en tareas con dependencias.</td></tr><tr><th scope="row"><code>POST /v1/run-task</code></th><td>Ejecutar una tarea; devuelve <code>output</code>, <code>consults</code>, <code>tool_requests</code> y <code>usage</code>.</td></tr><tr><th scope="row"><code>POST /v1/consult</code>, <code>/v1/review</code>, <code>/v1/counterargument</code></th><td>Consulta entre agentes, revisión de calidad y contraargumento para aprobaciones de alto riesgo.</td></tr><tr><th scope="row"><code>POST /v1/synthesize</code>, <code>/v1/summarize</code></th><td>Reporte consolidado y resúmenes.</td></tr><tr><th scope="row"><code>POST /v1/route</code>, <code>/v1/chat-reply</code></th><td>Enrutar un mensaje de chat y generar la respuesta de un agente.</td></tr><tr><th scope="row"><code>POST /v1/estimate</code>, <code>/v1/context-sizes</code>, <code>/v1/provider-test</code></th><td>Estimación de costo, tamaño del prompt y prueba de la clave de una organización.</td></tr><tr><th scope="row"><code>GET /healthz</code></th><td>Estado y modo: <code>simulation</code> o <code>live</code>.</td></tr></tbody></table></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>El runtime de agentes tiene su propia página con el contrato completo, los proveedores y la política de datos.</p></div></div>
       </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">Flujo de una petición</h2>
-        <p>Una petición recorre este camino: la solicitud del usuario llega al orquestador, que pide un plan al runtime, lo valida y crea tareas; cada tarea se asigna a un agente que usa herramientas, las acciones sensibles esperan aprobación humana y al final se sintetiza un reporte.</p>
-        <ol class="steps" aria-label="Pasos"><li>El usuario envía el texto con POST /api/v1/requests (o por el chat, que lo enruta). El backend responde 202 con request_id y emite request.received.</li><li>El orquestador pide el plan al runtime. El backend valida agentes existentes, dependencias y límites antes de aceptarlo y emite plan.created y task.created.</li><li>Las tareas se ejecutan respetando depends_on. Cada una cambia el estado del agente (agent.state_changed) y puede generar consultas entre agentes (message.sent) y una revisión de calidad (task.reviewed).</li><li>Las herramientas que pide el runtime pasan por la política de autonomía y los permisos. Si hace falta aprobación se crea un registro pendiente y la tarea queda en awaiting_approval.</li><li>Un usuario con permiso decide con POST /api/v1/approvals/{id}/decision. La tarea continúa o se bloquea.</li><li>Cuando todas las tareas terminan, el runtime sintetiza el reporte; el backend emite report.created y request.completed.</li><li>En paralelo se registra el costo por petición y se aplica el presupuesto: budget.warning y budget.exceeded pueden pausar la ejecución.</li></ol>
-        <pre class="code" tabindex="0"><code class="lang-text">POST /api/v1/requests {&quot;text&quot;: &quot;...&quot;}      -&gt; 202 {&quot;request_id&quot;: &quot;...&quot;}
+        <section class="dx-sec" aria-labelledby="flujo-de-una-peticion">
+        <h2 id="flujo-de-una-peticion">Flujo de una petición<a class="dx-anchor" href="#flujo-de-una-peticion" aria-label="Enlace a la sección «Flujo de una petición»">#</a></h2>
+        <p>La solicitud del usuario llega al orquestador, que pide un plan al runtime, lo valida y crea tareas. Cada tarea la ejecuta un agente que puede pedir herramientas; las acciones sensibles esperan aprobación humana y al final se sintetiza un reporte.</p>
+        <ol class="dx-steps" aria-label="Pasos"><li>El usuario envía el texto con <code>POST /api/v1/requests</code> (o por el chat, que lo enruta). El backend responde <code>202</code> con <code>request_id</code> y emite <code>request.received</code>.</li><li>El orquestador pide el plan al runtime y lo valida antes de aceptarlo: claves duplicadas, dependencias desconocidas o circulares y profundidad máxima. Luego emite <code>plan.created</code> y <code>task.created</code>.</li><li>Las tareas se ejecutan respetando <code>depends_on</code>. Cada una cambia el estado del agente (<code>agent.state_changed</code>) y puede generar consultas entre agentes (<code>message.sent</code>) y una revisión de calidad (<code>task.reviewed</code>).</li><li>Las herramientas que pide el runtime pasan por la política de autonomía y los permisos. Si hace falta aprobación, se crea un registro pendiente (<code>approval.requested</code>) y la tarea queda en <code>awaiting_approval</code>.</li><li>Un usuario con permiso decide con <code>POST /api/v1/approvals/{id}/decision</code>. La tarea continúa o se bloquea.</li><li>Cuando todas las tareas terminan, el runtime sintetiza el reporte y el backend emite <code>report.created</code> y <code>request.completed</code>.</li><li>En paralelo se registra el costo de cada llamada y se aplica el presupuesto: <code>budget.warning</code> avisa y <code>budget.exceeded</code> pausa la ejecución.</li></ol>
+        <figure class="dx-code" data-lang="text">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Secuencia resumida</span><span class="dx-code-lang">Texto</span></figcaption>
+          <pre tabindex="0" aria-label="Código Texto"><code>POST /api/v1/requests {&quot;text&quot;: &quot;...&quot;}      -&gt; 202 {&quot;request_id&quot;: &quot;...&quot;}
   orchestrator -&gt; runtime POST /v1/plan          -&gt; tasks + depends_on
   backend validates the plan                     -&gt; plan.created, task.created*
   per task: runtime POST /v1/run-task            -&gt; output, consults, tool_requests, usage
   tool_requests -&gt; policy/autonomy check         -&gt; approval.requested (if needed)
   POST /api/v1/approvals/{id}/decision           -&gt; approval.resolved, task resumes
   runtime POST /v1/synthesize                    -&gt; report.created, request.completed</code></pre>
-        
-        
+        </figure>
       </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">Canal en tiempo real</h2>
-        <p>GET /ws abre un WebSocket por organización. El backend publica cada evento en Redis (canal aiworkforce:events) y un hub reenvía el cuadro solo a los clientes cuyo org_id coincide; un cuadro sin org_id se descarta. Sin REDIS_URL el hub recibe los eventos de forma local.</p>
-        <p>Al conectar llega un evento hello con la lista de agentes. Después llegan los eventos de dominio. El servidor envía ping cada 30 s, cierra si no hay pong en 60 s y descarta a los clientes lentos (cola de 256 cuadros). Con autenticación activa el socket se cierra con el código 4401 cuando expira el token, para que el cliente reconecte. No hay replay: tras reconectar, el cliente recarga el estado por REST.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-json">{
-  &quot;id&quot;: &quot;&lt;uuid&gt;&quot;,
-  &quot;type&quot;: &quot;task.completed&quot;,
-  &quot;ts&quot;: &quot;2026-01-01T12:03:22Z&quot;,
-  &quot;org_id&quot;: &quot;&lt;org id&gt;&quot;,
-  &quot;agent_id&quot;: &quot;sales&quot;,
-  &quot;payload&quot;: { &quot;task&quot;: { &quot;id&quot;: &quot;...&quot;, &quot;status&quot;: &quot;done&quot; } }
-}</code></pre>
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Grupo</th><th scope="col">Tipos de evento</th></tr></thead><tbody><tr><th scope="row"><code>Conexión</code></th><td>hello, error, metrics.updated, activity.logged</td></tr><tr><th scope="row"><code>Peticiones</code></th><td>request.received, request.queued, request.dequeued, request.resumed, request.status_changed, request.completed, plan.created, report.created</td></tr><tr><th scope="row"><code>Tareas</code></th><td>task.created, task.started, task.completed, task.failed, task.blocked, task.retrying, task.reviewed, task.steered, task.reassigned</td></tr><tr><th scope="row"><code>Agentes y chat</code></th><td>agent.created, agent.state_changed, message.sent, chat.message, chat.typing, route.decided</td></tr><tr><th scope="row"><code>Aprobaciones</code></th><td>approval.requested, approval.progress, approval.reminder, approval.resolved</td></tr><tr><th scope="row"><code>Costos</code></th><td>cost.estimated, budget.warning, budget.exceeded, budget.resumed, provider.no_balance</td></tr><tr><th scope="row"><code>Proyectos</code></th><td>project.created, project.launched, project.delta, project.status_changed, project.budget_warning, project.plan_change_*</td></tr><tr><th scope="row"><code>Recompensas</code></th><td>coins.earned, shop.purchased, item.equipped, item.unequipped, office.item_placed, office.item_removed</td></tr></tbody></table></div>
-        
+        <section class="dx-sec" aria-labelledby="canal-en-tiempo-real">
+        <h2 id="canal-en-tiempo-real">Canal en tiempo real<a class="dx-anchor" href="#canal-en-tiempo-real" aria-label="Enlace a la sección «Canal en tiempo real»">#</a></h2>
+        <p><code>GET /ws</code> abre un WebSocket por organización. El backend publica cada evento en Redis (canal <code>aiworkforce:events</code>) y un hub reenvía el cuadro solo a los clientes cuyo <code>org_id</code> coincide; un cuadro sin <code>org_id</code> se descarta. Un cuadro con <code>audience</code> llega solo a esos usuarios.</p>
+        <p>Al conectar llega un evento <code>hello</code> con la lista de agentes y después los eventos de dominio. El cliente debe recargar el estado por REST tras reconectar, porque no hay replay.</p>
+        <ul class="dx-ul"><li>El servidor envía ping cada 30 s y cierra si no recibe pong en 60 s.</li><li>Un cliente lento, con 256 cuadros en cola, se desconecta.</li><li>Con autenticación activa, el socket se cierra con el código <code>4401</code> a los 15 minutos (la vida por defecto del token de acceso) para que el cliente reconecte con un token nuevo.</li></ul>
+        <figure class="dx-code" data-lang="json">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Cuadro de evento</span><span class="dx-code-lang">JSON</span></figcaption>
+          <pre tabindex="0" aria-label="Código JSON"><code><span class="tk-punct">{</span>
+  <span class="tk-key">&quot;id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;&lt;uuid&gt;&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;type&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;task.completed&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;ts&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;2026-01-01T12:03:22Z&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;org_id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;&lt;org id&gt;&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;agent_id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;sales&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;payload&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">{</span> <span class="tk-key">&quot;task&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">{</span> <span class="tk-key">&quot;id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;...&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;status&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;done&quot;</span> <span class="tk-punct">}</span> <span class="tk-punct">}</span>
+<span class="tk-punct">}</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Tabla: Canal en tiempo real"><table><thead><tr><th scope="col">Grupo</th><th scope="col">Tipos de evento</th></tr></thead><tbody><tr><th scope="row">Conexión</th><td><code>hello</code>, <code>error</code>, <code>metrics.updated</code>, <code>activity.logged</code></td></tr><tr><th scope="row">Peticiones</th><td><code>request.received</code>, <code>request.queued</code>, <code>request.dequeued</code>, <code>request.resumed</code>, <code>request.status_changed</code>, <code>request.completed</code>, <code>plan.created</code>, <code>report.created</code></td></tr><tr><th scope="row">Tareas</th><td><code>task.created</code>, <code>task.started</code>, <code>task.completed</code>, <code>task.failed</code>, <code>task.blocked</code>, <code>task.retrying</code>, <code>task.reviewed</code>, <code>task.steered</code>, <code>task.reassigned</code></td></tr><tr><th scope="row">Agentes y chat</th><td><code>agent.created</code>, <code>agent.state_changed</code>, <code>message.sent</code>, <code>chat.message</code>, <code>chat.typing</code>, <code>route.decided</code>, <code>initiative.raised</code></td></tr><tr><th scope="row">Aprobaciones</th><td><code>approval.requested</code>, <code>approval.progress</code>, <code>approval.reminder</code>, <code>approval.resolved</code></td></tr><tr><th scope="row">Costos</th><td><code>cost.estimated</code>, <code>budget.warning</code>, <code>budget.exceeded</code>, <code>budget.resumed</code>, <code>provider.no_balance</code></td></tr><tr><th scope="row">Proyectos</th><td><code>project.created</code>, <code>project.launched</code>, <code>project.delta</code>, <code>project.status_changed</code>, <code>project.budget_warning</code>, <code>project.plan_change_*</code></td></tr><tr><th scope="row">Recompensas y oficina</th><td><code>coins.earned</code>, <code>shop.purchased</code>, <code>item.equipped</code>, <code>item.unequipped</code>, <code>office.item_placed</code>, <code>office.item_removed</code>, <code>office.layout_updated</code></td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Nota</p><p>La tabla agrupa los eventos principales; algunos módulos emiten tipos adicionales con el mismo formato de cuadro.</p></div></div>
       </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">Modelo de datos</h2>
-        <p>Las tablas viven en Postgres y todas las de negocio llevan org_id. Esta es la vista resumida; el esquema completo está en las migraciones numeradas.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Entidad</th><th scope="col">Tablas principales</th><th scope="col">Notas</th></tr></thead><tbody><tr><th scope="row"><code>Organizaciones y usuarios</code></th><td>organizations, users, memberships, refresh_tokens, invitations</td><td>Roles por membresía: owner, admin, member, viewer.</td></tr><tr><th scope="row"><code>Agentes</code></th><td>agents, agent_profiles, agent_settings, agent_controls</td><td>Estado, herramientas, permisos y nivel de autonomía.</td></tr><tr><th scope="row"><code>Peticiones y tareas</code></th><td>requests, tasks, request_runs, task_checkpoints, reports</td><td>Estados de tarea: pending, running, blocked, awaiting_approval, done, failed.</td></tr><tr><th scope="row"><code>Aprobaciones</code></th><td>approvals, standing_approvals, approval_executions</td><td>Soportan doble aprobación y permisos permanentes por proyecto.</td></tr><tr><th scope="row"><code>Proyectos</code></th><td>projects, project_templates, plan_changes</td><td>Planes con nodos, presupuesto y versiones de plantilla.</td></tr><tr><th scope="row"><code>Memoria</code></th><td>memories, memory_docs</td><td>Memoria a largo plazo por agente.</td></tr><tr><th scope="row"><code>Habilidades</code></th><td>skills, skill_versions, skill_assignments</td><td>Versionadas, con flujo de revisión.</td></tr><tr><th scope="row"><code>Recompensas</code></th><td>coin_wallets, coin_ledger, shop_inventory, shop_equipment, shop_office</td><td>Monedas por trabajo terminado y objetos de personaje y oficina.</td></tr><tr><th scope="row"><code>Gobierno y costo</code></th><td>audit_logs, audit_chain_heads, usage_entries, budget_caps</td><td>Auditoría encadenada y registro de consumo.</td></tr></tbody></table></div>
-        
+        <section class="dx-sec" aria-labelledby="modelo-de-datos">
+        <h2 id="modelo-de-datos">Modelo de datos<a class="dx-anchor" href="#modelo-de-datos" aria-label="Enlace a la sección «Modelo de datos»">#</a></h2>
+        <p>Las tablas viven en Postgres y todas las de negocio llevan <code>org_id</code>. Esta es la vista resumida; el esquema completo está en las migraciones numeradas de <code>backend/internal/infrastructure/postgres/migrations/</code>.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Tabla: Modelo de datos"><table><thead><tr><th scope="col">Entidad</th><th scope="col">Tablas principales</th><th scope="col">Notas</th></tr></thead><tbody><tr><th scope="row">Organizaciones y usuarios</th><td><code>organizations</code>, <code>users</code>, <code>memberships</code>, <code>refresh_tokens</code>, <code>invitations</code></td><td>Roles por membresía: <code>owner</code>, <code>admin</code>, <code>member</code>, <code>viewer</code>.</td></tr><tr><th scope="row">Agentes</th><td><code>agents</code>, <code>agent_profiles</code>, <code>agent_settings</code>, <code>agent_controls</code></td><td>Estado, herramientas, permisos y nivel de autonomía.</td></tr><tr><th scope="row">Peticiones y tareas</th><td><code>requests</code>, <code>tasks</code>, <code>request_runs</code>, <code>task_checkpoints</code>, <code>reports</code></td><td>Estados de tarea: <code>pending</code>, <code>running</code>, <code>blocked</code>, <code>awaiting_approval</code>, <code>done</code>, <code>failed</code>.</td></tr><tr><th scope="row">Aprobaciones</th><td><code>approvals</code>, <code>standing_approvals</code>, <code>approval_executions</code></td><td>Doble aprobación, permisos permanentes por proyecto y ejecución única de lo aprobado.</td></tr><tr><th scope="row">Proyectos</th><td><code>projects</code>, <code>project_templates</code>, <code>plan_changes</code></td><td>Planes con nodos, presupuesto y versiones de plantilla.</td></tr><tr><th scope="row">Memoria</th><td><code>memories</code>, <code>memory_docs</code></td><td>Memoria a largo plazo por agente.</td></tr><tr><th scope="row">Habilidades</th><td><code>skills</code>, <code>skill_versions</code>, <code>skill_assignments</code></td><td>Versionadas, con flujo de revisión.</td></tr><tr><th scope="row">Recompensas</th><td><code>coin_wallets</code>, <code>coin_ledger</code>, <code>shop_inventory</code>, <code>shop_equipment</code>, <code>shop_office</code></td><td>Monedas por trabajo terminado y objetos de personaje y oficina.</td></tr><tr><th scope="row">Gobierno y costo</th><td><code>audit_logs</code>, <code>audit_chain_heads</code>, <code>usage_entries</code>, <code>budget_caps</code></td><td>Auditoría encadenada, ledger de consumo y topes.</td></tr></tbody></table></div>
       </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">Multi-tenencia</h2>
-        <p>Cada cuenta crea su propia organización y el org_id viaja dentro del token de acceso; nunca se toma de la entrada del cliente. La capa HTTP lo coloca en el contexto de la petición y todas las consultas se filtran por él.</p>
-        <p>Como defensa en profundidad, Postgres aplica row-level security. Cada transacción fija app.org_id con set_config y las políticas usan esa función; si el valor falta, la consulta no devuelve filas (falla cerrado). La aplicación se conecta con un rol sin privilegios de propietario (DB_APP_ROLE, por defecto app_user, sin BYPASSRLS), y las migraciones usan una conexión aparte (MIGRATE_DATABASE_URL). El hub del WebSocket también filtra por organización.</p>
-        
-        
-        
-        
+        <section class="dx-sec" aria-labelledby="multi-tenencia">
+        <h2 id="multi-tenencia">Multi-tenencia<a class="dx-anchor" href="#multi-tenencia" aria-label="Enlace a la sección «Multi-tenencia»">#</a></h2>
+        <p>El <code>org_id</code> viaja dentro del token de acceso y nunca se toma de la entrada del cliente. La capa HTTP lo coloca en el contexto de la petición y todas las consultas se filtran por él. Un usuario puede pertenecer a varias organizaciones y cambia de una a otra abriendo una sesión nueva.</p>
+        <p>Como defensa en profundidad, Postgres aplica row-level security:</p>
+        <ul class="dx-ul"><li>Cada transacción fija <code>app.org_id</code> con <code>set_config(..., true)</code>, local a la transacción; las políticas comparan <code>org_id</code> con <code>app_current_org()</code>.</li><li>Si el valor falta, la consulta no ve ni escribe filas: falla cerrado.</li><li>La aplicación hace <code>SET ROLE</code> a un rol sin privilegios de propietario (<code>DB_APP_ROLE</code>, por defecto <code>app_user</code>, sin <code>BYPASSRLS</code>); las migraciones usan <code>MIGRATE_DATABASE_URL</code>.</li><li>El hub del WebSocket también filtra por organización.</li></ul>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>La página de autenticación y multitenencia detalla roles, sesiones y las políticas de RLS.</p></div></div>
       </section>
-
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">Simulación frente a IA real</h2>
-        <p>El contrato HTTP del runtime es el mismo en ambos modos; cambia el motor. En simulación (por defecto, sin clave o con SIMULATION=true) el runtime devuelve resultados guionados con latencias simuladas, sin red y sin costo. En modo live usa el proveedor configurado y GET /healthz del runtime informa mode: live y el proveedor.</p>
-        <p>Si hay un proveedor configurado pero el motor real no arranca, el runtime responde en simulación con status degraded y un aviso; no hay fallback silencioso. El backend refleja el modo en su propio /healthz como runtime_mode.</p>
-        
-        
-        
-        <aside class="tip"><b>Consejo.</b> SIMULATION=true siempre gana: no se hace ninguna llamada de red, incluso con claves presentes.</aside>
+        <section class="dx-sec" aria-labelledby="simulacion-frente-a-ia-real">
+        <h2 id="simulacion-frente-a-ia-real">Simulación frente a IA real<a class="dx-anchor" href="#simulacion-frente-a-ia-real" aria-label="Enlace a la sección «Simulación frente a IA real»">#</a></h2>
+        <p>El contrato HTTP del runtime es el mismo en ambos modos; cambia el motor. En simulación (con <code>SIMULATION=true</code> o sin ningún proveedor configurado) el runtime devuelve resultados guionados con latencias simuladas, sin red y sin costo. En modo real usa los proveedores configurados y su <code>GET /healthz</code> informa <code>mode: live</code> y el proveedor.</p>
+        <p>Si hay un proveedor configurado pero el motor real no arranca, el runtime responde en simulación con <code>status: degraded</code> y un aviso; no hay fallback silencioso. El backend refleja el modo en su propio <code>GET /healthz</code> como <code>runtime_mode</code>.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Estado del backend</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Código Bash"><code><span class="tk-fn">curl</span> http://localhost:8080/healthz
+<span class="tk-com"># {&quot;status&quot;:&quot;ok&quot;,&quot;runtime&quot;:&quot;up&quot;,&quot;runtime_mode&quot;:&quot;simulation&quot;}</span></code></pre>
+        </figure>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p><code>SIMULATION=true</code> siempre gana: no se hace ninguna llamada de red, incluso con claves presentes.</p></div></div>
       </section>
-
-      <section class="g-sec" id="s8" aria-labelledby="h8">
-        <h2 id="h8">Despliegue y borde</h2>
-        <p>docker-compose.yml levanta postgres, redis, almacenamiento de objetos, agent-runtime, backend y frontend; existen variantes de demo y producción. En producción Caddy termina TLS, agrega cabeceras de seguridad y enruta por ruta: /api/* y /ws al backend, todo lo demás al frontend. La ejecución de código de los agentes usa una imagen y un runner de sandbox separados.</p>
-        
-        
-        
-        
+        <section class="dx-sec" aria-labelledby="despliegue-y-borde">
+        <h2 id="despliegue-y-borde">Despliegue y borde<a class="dx-anchor" href="#despliegue-y-borde" aria-label="Enlace a la sección «Despliegue y borde»">#</a></h2>
+        <p>Hay tres archivos de Compose:</p>
+        <ul class="dx-ul"><li><code>docker-compose.yml</code>: desarrollo con cuentas. Levanta <code>postgres</code>, <code>redis</code>, <code>objects</code> (almacenamiento S3), <code>agent-runtime</code>, <code>backend</code> y <code>frontend</code>; el sandbox runner está en el perfil <code>sandbox</code>.</li><li><code>docker-compose.demo.yml</code>: se combina con el anterior para el modo demo abierto (<code>AUTH_ENABLED=false</code>).</li><li><code>docker-compose.prod.yml</code>: producción. <code>caddy</code>, <code>postgres</code>, <code>redis</code>, <code>agent-runtime</code>, <code>backend</code> y <code>frontend</code>; solo Caddy publica puertos (80 y 443).</li></ul>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Nota</p><p>En producción Caddy termina TLS, agrega cabeceras de seguridad (HSTS, <code>X-Content-Type-Options</code>, <code>X-Frame-Options</code>, <code>Referrer-Policy</code>) y enruta por ruta: <code>/api/*</code> y <code>/ws</code> al backend, todo lo demás al frontend.</p></div></div>
       </section>
-
-      <section class="g-sec" id="s9" aria-labelledby="h9">
-        <h2 id="h9">Estructura del repositorio</h2>
-        <p>El backend sigue capas donde api depende de application y esta de domain; la infraestructura implementa los puertos.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-text">backend/            Go (chi): domain, application, api, events, auth, projects,
-                    drive, skills, memory, rewards, connections, controls, audit
+        <section class="dx-sec" aria-labelledby="estructura-del-repositorio">
+        <h2 id="estructura-del-repositorio">Estructura del repositorio<a class="dx-anchor" href="#estructura-del-repositorio" aria-label="Enlace a la sección «Estructura del repositorio»">#</a></h2>
+        <p>El backend sigue capas: <code>api</code> depende de <code>application</code>, que depende de <code>domain</code>; <code>infrastructure</code> implementa los puertos.</p>
+        <figure class="dx-code" data-lang="text">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Texto</span></figcaption>
+          <pre tabindex="0" aria-label="Código Texto"><code>backend/            Go (chi)
   cmd/server/       main.go: composition root (wires every service)
-  internal/         domain/ application/ api/ infrastructure/{postgres,redis,runtime,memory}
+  cmd/sandbox-runner/  code-execution runner
+  internal/         domain/ application/ api/ auth/ events/ projects/ drive/
+                    skills/ memory/ rewards/ connections/ controls/ audit/ ...
+  internal/infrastructure/{postgres,redis,runtime,memory}
   internal/infrastructure/postgres/migrations/   numbered SQL migrations
-agent-runtime/      Python FastAPI (+ CrewAI engine, simulation engine)
-  app/              main.py, engine.py, simulation.py, crewai_engine.py, routing.py ...
+agent-runtime/      Python FastAPI (CrewAI engine, simulation engine)
+  app/              main.py, engine.py, simulation.py, crewai_engine.py, providers.py ...
 frontend/           Next.js + React Three Fiber (src/app, src/components, src/lib)
-e2e/                Playwright (UI + WebSocket contract)
-sandbox/            code-execution runner image
-deploy/ Caddyfile   production edge (TLS, reverse proxy)
-docker-compose.yml  dev / accounts stack; docker-compose.demo.yml, docker-compose.prod.yml
+e2e/                Playwright
+sandbox/            sandbox container images
+Caddyfile           production edge (TLS, reverse proxy)
+docker-compose.yml  dev stack; docker-compose.demo.yml, docker-compose.prod.yml
 docs/               SPEC.md and architecture/*.md
 landing/            this public site</code></pre>
-        
-        
+        </figure>
       </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="cards"><li><a href="/docs/referencia-api/"><b>Referencia de la API</b><span>Autenticación, formato de errores y rutas de /api/v1: peticiones, tareas, aprobaciones, agentes, proyectos, skills, tienda, drive y WebSocket.</span></a></li><li><a href="/docs/runtime-de-agentes/"><b>Runtime de agentes</b><span>El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.</span></a></li><li><a href="/docs/modelo-de-seguridad/"><b>Modelo de seguridad</b><span>Cómo se limita el daño de un agente: bóveda de credenciales, aprobaciones humanas, topes, kill switch, auditoría, RLS y sandbox. Con sus límites actuales.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Empieza ahora</h2>
-      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Probar sin registrarte</a>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="dx-cards dx-cards-sm"><li><a href="/docs/referencia-api/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg><b>Referencia de la API</b><span>Autenticación, tokens de API, errores y rutas de /api/v1: peticiones, tareas, aprobaciones, agentes, proyectos, skills, tienda, drive y WebSocket.</span></a></li><li><a href="/docs/runtime-de-agentes/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg><b>Runtime de agentes</b><span>El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.</span></a></li><li><a href="/docs/autenticacion-y-multitenencia/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg><b>Autenticación y multitenencia</b><span>Cuentas, sesiones, doble factor, roles, invitaciones y row-level security de Postgres: cómo AI Workforce OS aísla cada organización.</span></a></li><li><a href="/docs/despliegue/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></svg><b>Despliegue en producción</b><span>Despliega AI Workforce OS en tu servidor con Docker Compose: Caddy con TLS automático, Postgres, Redis, copias de seguridad, actualizaciones y rollback.</span></a></li></ul></section>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
-      <a href="/docs/">Documentación</a>
-      <a href="/guia/">Guía de uso</a>
-      <a href="/confianza/">Confianza</a>
-      <a href="#top">Volver arriba</a>
-    </div>
-  </footer>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Paginación">
+        <a class="dx-prev" href="/docs/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Anterior</span><b>Documentación</b></a>
+        <a class="dx-next" href="/docs/runtime-de-agentes/" rel="next"><span>Siguiente<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>Runtime de agentes</b></a>
+      </nav>
+      
+      <footer class="dx-foot">
+        <p>AI Workforce OS es un proyecto en desarrollo. Esta documentación describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+        <div class="dx-foot-links">
+          <a href="/">AI Workforce OS</a>
+          <a href="/docs/">Documentación</a>
+          <a href="/guia/">Guía de uso</a>
+          <a href="/confianza/">Confianza</a>
+          <a href="#top">Volver arriba</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

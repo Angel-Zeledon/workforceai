@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La oficina 3D y el Dashboard | AI Workforce OS</title>
-  <meta name="description" content="Mueve la cámara, abre el panel de un empleado, sigue la actividad, cambia la luz y alterna entre la oficina y el Dashboard con sus indicadores.">
+  <meta name="description" content="Mueve la cámara, habla con un empleado, sigue la actividad, ajusta la luz, redecora la oficina y lee los indicadores del Dashboard.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,140 +24,172 @@
   <meta property="og:locale" content="es_ES">
   <meta property="og:locale:alternate" content="en_US">
   <meta property="og:title" content="La oficina 3D y el Dashboard | AI Workforce OS">
-  <meta property="og:description" content="Mueve la cámara, abre el panel de un empleado, sigue la actividad, cambia la luz y alterna entre la oficina y el Dashboard con sus indicadores.">
+  <meta property="og:description" content="Mueve la cámara, habla con un empleado, sigue la actividad, ajusta la luz, redecora la oficina y lee los indicadores del Dashboard.">
   <meta property="og:url" content="https://workforceai.es/guia/la-oficina/">
   <meta property="og:image" content="https://workforceai.es/img/dashboard.webp">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="La oficina 3D y el Dashboard | AI Workforce OS">
-  <meta name="twitter:description" content="Mueve la cámara, abre el panel de un empleado, sigue la actividad, cambia la luz y alterna entre la oficina y el Dashboard con sus indicadores.">
+  <meta name="twitter:description" content="Mueve la cámara, habla con un empleado, sigue la actividad, ajusta la luz, redecora la oficina y lee los indicadores del Dashboard.">
   <meta name="twitter:image" content="https://workforceai.es/img/dashboard.webp">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Guía de uso","item":"https://workforceai.es/guia/"},{"@type":"ListItem","position":3,"name":"La oficina 3D y el Dashboard","item":"https://workforceai.es/guia/la-oficina/"}]},{"@type":"TechArticle","headline":"La oficina 3D y el Dashboard","description":"Mueve la cámara, abre el panel de un empleado, sigue la actividad, cambia la luz y alterna entre la oficina y el Dashboard con sus indicadores.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/guia/la-oficina/","url":"https://workforceai.es/guia/la-oficina/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"},"image":"https://workforceai.es/img/dashboard.webp"}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=b5a2c05468">
+  <script src="/docs.js?v=2e2073da11" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Guía de uso","item":"https://workforceai.es/guia/"},{"@type":"ListItem","position":3,"name":"La oficina 3D y el Dashboard","item":"https://workforceai.es/guia/la-oficina/"}]},{"@type":"TechArticle","headline":"La oficina 3D y el Dashboard","description":"Mueve la cámara, habla con un empleado, sigue la actividad, ajusta la luz, redecora la oficina y lee los indicadores del Dashboard.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/guia/la-oficina/","url":"https://workforceai.es/guia/la-oficina/","dateModified":"2026-10-22","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"},"image":"https://workforceai.es/img/dashboard.webp"}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Saltar al contenido</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/" aria-label="AI Workforce OS">
+<body class="dx dx-guide" id="top">
+  <a class="dx-skip" href="#main">Saltar al contenido</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menú"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/" aria-label="AI Workforce OS">
         <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Principal">
-        <a href="/">Inicio</a>
-        <a href="/docs/">Documentación</a>
-        <a href="/guia/">Guía de uso</a>
-        <a href="/confianza/">Confianza</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Idioma">
+      <nav class="dx-tabs" aria-label="Secciones del sitio"><a href="/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentación</span></a><a href="/guia/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Guía de uso</span></a><a href="/confianza/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Confianza</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Buscar en la documentación…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Buscar en la documentación…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Idioma">
           <a href="/guia/la-oficina/" hreflang="es" lang="es" aria-current="true">ES</a>
-          <a href="/en/guide/the-office/" hreflang="en" lang="en" >EN</a>
+          <a href="/en/guide/the-office/" hreflang="en" lang="en">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap narrow">
-      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li><a href="/guia/">Guía de uso</a></li><li aria-current="page">La oficina 3D y el Dashboard</li></ol></nav>
-      <article>
-        <h1>La oficina 3D y el Dashboard</h1>
-        <p class="lead">Tu equipo de agentes trabaja en dos vistas del mismo sistema: la oficina 3D, para ver y pedir, y el Dashboard, para revisar cifras y tablas. Esta guía te muestra cómo moverte por ambas.</p>
-        <figure class="shot"><img src="/img/dashboard.webp" width="1600" height="1000" decoding="async" alt="El Dashboard de AI Workforce OS con indicadores, tarjetas del equipo, aprobaciones pendientes y actividad en vivo."></figure>
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">¿Cómo muevo la cámara de la oficina?</a></li><li><a href="#s2">¿Qué hacen los empleados que veo moverse?</a></li><li><a href="#s3">¿Cómo abro el panel de un empleado?</a></li><li><a href="#s4">¿Cómo sigo la actividad y las aprobaciones desde la oficina?</a></li><li><a href="#s5">¿Cómo cambio la iluminación?</a></li><li><a href="#s6">¿Cómo paso al Dashboard y qué muestra?</a></li><li><a href="#s7">¿Qué significan los números de la barra superior?</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">¿Cómo muevo la cámara de la oficina?</h2>
-        <p>La oficina es una escena 3D y tú controlas el punto de vista con el mouse. En la esquina inferior derecha verás un recordatorio de los gestos mientras no tengas a ningún empleado seleccionado.</p>
-        <ol class="steps" aria-label="Pasos"><li>Arrastra con el botón izquierdo para rotar la escena.</li><li>Usa la rueda del mouse para acercar o alejar.</li><li>Mantén el clic derecho y arrastra para mover la vista de lado.</li></ol>
-        
-        
-        <aside class="tip"><b>Consejo.</b> Acércate a un escritorio para ver mejor qué está haciendo cada agente.</aside>
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">¿Qué hacen los empleados que veo moverse?</h2>
-        <p>Cada persona es un agente y su comportamiento refleja su trabajo real en el sistema: escribe en su escritorio, se junta con otros a planear o espera en el escritorio de aprobaciones cuando necesita tu permiso.</p>
-        <p>No tienes que programarlos ni vigilarlos. Pides algo en la barra de abajo y la oficina se reparte el trabajo.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">¿Cómo abro el panel de un empleado?</h2>
-        <p>Si quieres hablar con un agente concreto en lugar de con toda la oficina, usa su panel.</p>
-        <ol class="steps" aria-label="Pasos"><li>Haz clic en el empleado dentro de la escena.</li><li>Se abre su panel a la derecha, con su trabajo, sus archivos y una conversación directa con él.</li><li>Escribe ahí lo que quieras preguntarle o pedirle.</li><li>Cuando termines, cierra el panel para volver a ver la oficina completa.</li></ol>
-        
-        
-        <aside class="tip"><b>Consejo.</b> Desde el Dashboard también puedes llegar aquí: al hacer clic en la tarjeta de un agente, vuelves a la oficina con ese agente seleccionado.</aside>
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">¿Cómo sigo la actividad y las aprobaciones desde la oficina?</h2>
-        <p>Arriba a la izquierda está el cuadro &quot;Actividad en vivo&quot;: muestra tareas que empiezan, archivos que se tocan y mensajes entre agentes. Es la forma más rápida de confirmar que tu pedido avanza.</p>
-        <p>Abajo a la izquierda aparece la zona de aprobaciones cuando hay algo pendiente. Un agente que necesita tu permiso espera en el escritorio de aprobaciones, y ahí puedes pulsar Aprobar o Rechazar.</p>
-        
-        
-        
-        <aside class="tip"><b>Consejo.</b> El cuadro de actividad se oculta en pantallas pequeñas; en ese caso, usa el Dashboard.</aside>
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">¿Cómo cambio la iluminación?</h2>
-        <p>En la esquina superior derecha de la oficina está el control &quot;Iluminación de la oficina&quot;. Tiene tres modos:</p>
-        <ol class="steps" aria-label="Pasos"><li>Ambiente: la luz general de la escena.</li><li>Luz prendida: una oficina iluminada, como de día.</li><li>Noche: un ambiente oscuro, más cómodo si trabajas con poca luz.</li></ol>
-        
-        
-        <aside class="tip"><b>Consejo.</b> Es solo visual. No cambia nada del trabajo de los agentes.</aside>
-      </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">¿Cómo paso al Dashboard y qué muestra?</h2>
-        <p>En la barra superior, el interruptor Oficina / Dashboard te lleva de una vista a otra. El Dashboard es la misma operación, pero en cifras y tablas. A la izquierda tiene secciones: Resumen, Solicitudes y plan, Tareas, Agentes, Conversaciones, Aprobaciones, Reportes, Archivos y Costos y errores.</p>
-        <p>En Resumen verás tarjetas con los indicadores: Solicitudes, Tareas activas, Tareas hechas, Aprobaciones, Costo con su porcentaje del presupuesto, Errores y Agentes activos. Si el costo o los errores cambian de color, conviene revisarlos. Debajo está el Equipo, con una tarjeta por agente, su estado y lo que hace ahora (Ver todos abre la sección Agentes), y a un lado las aprobaciones pendientes y la actividad en vivo.</p>
-        <ol class="steps" aria-label="Pasos"><li>Pulsa Dashboard en la barra superior.</li><li>Empieza por Resumen y revisa los indicadores.</li><li>Abre la sección que necesites, por ejemplo Aprobaciones o Reportes.</li><li>Pulsa Oficina cuando quieras volver a pedir cosas y ver a los agentes moverse.</li></ol>
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">¿Qué significan los números de la barra superior?</h2>
-        <p>La barra superior te acompaña en todas las pantallas. Muestra las Aprobaciones pendientes (el número cambia de color cuando hay alguna), el Costo acumulado y un contador de Monedas. Las monedas se ganan con trabajo terminado, no son dinero y no se compran. También verás si la conexión está En vivo o Reconectando.</p>
-        <p>Mientras la IA corre en simulación, no hay un modelo real detrás y por eso no hay un gasto real asociado.</p>
-        
-        
-        
-        
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="cards"><li><a href="/guia/primeros-pasos/"><b>Primeros pasos: tus primeros 5 minutos</b><span>Crea tu cuenta, pide algo a tu oficina, aprueba lo delicado, lee el reporte y gana monedas. Todo en unos 5 minutos.</span></a></li><li><a href="/guia/proyectos/"><b>Proyectos: trabajo grande, con seguimiento</b><span>Aprende a crear un proyecto, revisar su plan, lanzarlo con presupuesto y seguir el avance de tus agentes desde una sola pantalla.</span></a></li><li><a href="/guia/tienda-y-monedas/"><b>Monedas y Tienda: decora tu oficina con lo que gana tu equipo</b><span>Aprende cómo se ganan las monedas con trabajo terminado y cómo usarlas en la Tienda para vestir a tus agentes y decorar tu oficina.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Empieza ahora</h2>
-      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Probar sin registrarte</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Guía de uso">
+      <div class="dx-side-head">
+        <span>Menú</span>
+        <a class="dx-side-close" href="#top" aria-label="Cerrar menú"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
-      <a href="/docs/">Documentación</a>
-      <a href="/guia/">Guía de uso</a>
-      <a href="/confianza/">Confianza</a>
-      <a href="#top">Volver arriba</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Secciones del sitio"><a href="/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentación</span></a><a href="/guia/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Guía de uso</span></a><a href="/confianza/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Confianza</span></a></nav>
+      <nav class="dx-pages" aria-label="Guía de uso">
+        <ul class="dx-list">
+          <li><a href="/guia/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Introducción</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-start">Empieza</p>
+        <ul class="dx-list" aria-labelledby="g-guide-start">
+          <li><a href="/guia/primeros-pasos/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.2 3.5-5.2 3.5v-7Z"/></svg><span>Primeros pasos</span></a></li>
+          <li><a href="/guia/la-oficina/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M15.5 9h2a2 2 0 0 1 2 2v10M3 21h18M8.5 7h3M8.5 11h3M8.5 15h3"/></svg><span>La oficina 3D y el Dashboard</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-work">Trabajo diario</p>
+        <ul class="dx-list" aria-labelledby="g-guide-work">
+          <li><a href="/guia/proyectos/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v7M12 7.5v10M16 7.5v4"/></svg><span>Proyectos</span></a></li>
+          <li><a href="/guia/archivos-y-chats/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 15a2 2 0 0 1-2 2H8.5L4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10Z"/><path d="M8 8h8M8 12h5"/></svg><span>Chats y Archivos</span></a></li>
+          <li><a href="/guia/aprobaciones-y-seguridad/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg><span>Aprobaciones y seguridad</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-tune">Personaliza</p>
+        <ul class="dx-list" aria-labelledby="g-guide-tune">
+          <li><a href="/guia/habilidades/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 3.5 12.9 8l4.6 1.9-4.6 1.9L11 16.4l-1.9-4.6L4.5 9.9 9.1 8 11 3.5Z"/><path d="m18.5 14.5.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z"/></svg><span>Habilidades</span></a></li>
+          <li><a href="/guia/tienda-y-monedas/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v4.5c0 1.7 2.7 3 6 3 .7 0 1.4-.1 2-.2M15 7v2"/><ellipse cx="15" cy="13.5" rx="6" ry="3"/><path d="M9 13.5V18c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg><span>Monedas y Tienda</span></a></li>
+          <li><a href="/guia/ajustes/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><span>Ajustes</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Idioma">
+          <a href="/guia/la-oficina/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/guide/the-office/" hreflang="en" lang="en">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Ruta de navegación"><ol><li><a href="/guia/">Guía de uso</a></li><li><span>Empieza</span></li></ol></nav>
+        <h1>La oficina 3D y el Dashboard</h1>
+        <p class="dx-lead">Tu equipo trabaja en dos vistas del mismo sistema: la oficina 3D, para pedir trabajo y ver a los agentes, y el Dashboard, para revisar cifras y tablas. Aquí aprendes a moverte por las dos y a dejar la oficina a tu gusto.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>4 min de lectura</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">En esta página</summary>
+        <ol><li><a href="#mueve-la-camara">Mueve la cámara</a></li><li><a href="#entiende-lo-que-hacen-los-empleados">Entiende lo que hacen los empleados</a></li><li><a href="#habla-con-un-empleado">Habla con un empleado</a></li><li><a href="#sigue-la-actividad-y-las-aprobaciones">Sigue la actividad y las aprobaciones</a></li><li><a href="#ajusta-la-luz">Ajusta la luz</a></li><li><a href="#redecora-la-oficina">Redecora la oficina</a></li><li><a href="#pasa-al-dashboard">Pasa al Dashboard</a></li><li><a href="#lee-la-barra-superior">Lee la barra superior</a></li></ol>
+        <a class="dx-toc-top" href="#top">Volver arriba</a>
+      </details>
+      <div class="dx-body">
+        <figure class="dx-shot"><img src="/img/dashboard.webp" width="1600" height="1000" decoding="async" alt="El Dashboard de AI Workforce OS con indicadores, tarjetas del equipo, aprobaciones pendientes y actividad en vivo."></figure>
+        <section class="dx-sec" aria-labelledby="mueve-la-camara">
+        <h2 id="mueve-la-camara">Mueve la cámara<a class="dx-anchor" href="#mueve-la-camara" aria-label="Enlace a la sección «Mueve la cámara»">#</a></h2>
+        <p>La oficina es una escena 3D y tú eliges el punto de vista. Mientras no tengas a un empleado seleccionado, la esquina inferior derecha te recuerda los gestos del mouse.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Tabla: Mueve la cámara"><table><thead><tr><th scope="col">Acción</th><th scope="col">Con mouse</th><th scope="col">Con el teléfono en vertical</th></tr></thead><tbody><tr><th scope="row">Rotar la vista</th><td>Arrastra con el botón izquierdo</td><td>Gira dos dedos sobre la pantalla</td></tr><tr><th scope="row">Acercar o alejar</th><td>Usa la rueda</td><td>Pellizca con dos dedos</td></tr><tr><th scope="row">Desplazar la vista</th><td>Mantén el clic derecho y arrastra</td><td>Arrastra con un dedo</td></tr></tbody></table></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>Acércate a un escritorio para ver mejor qué está haciendo cada agente.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="entiende-lo-que-hacen-los-empleados">
+        <h2 id="entiende-lo-que-hacen-los-empleados">Entiende lo que hacen los empleados<a class="dx-anchor" href="#entiende-lo-que-hacen-los-empleados" aria-label="Enlace a la sección «Entiende lo que hacen los empleados»">#</a></h2>
+        <p>Cada persona es un agente, y lo que hace en la escena refleja su trabajo real: escribe en su escritorio, se reúne con otros para planear o espera en la zona de aprobaciones cuando necesita tu permiso.</p>
+        <p>Su estado, por ejemplo Trabajando, Revisando, Bloqueado o Esperando aprobación, también aparece en las tarjetas del Equipo del Dashboard.</p>
+      </section>
+        <section class="dx-sec" aria-labelledby="habla-con-un-empleado">
+        <h2 id="habla-con-un-empleado">Habla con un empleado<a class="dx-anchor" href="#habla-con-un-empleado" aria-label="Enlace a la sección «Habla con un empleado»">#</a></h2>
+        <p>Para hablar con un agente concreto en lugar de con toda la oficina, usa su panel.</p>
+        <ol class="dx-steps" aria-label="Pasos"><li>Haz clic en el empleado dentro de la escena.</li><li>Escríbele en la pestaña «Chat» del panel que se abre a la derecha.</li><li>Recorre las otras pestañas para ver su «Estado», sus «Tareas», sus «Reportes», sus «Archivos» o su «Perfil».</li><li>Cierra el panel para volver a ver la oficina completa.</li></ol>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>En «Tareas», una tarea terminada ofrece «Guardar como habilidad» para reutilizar ese método.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="sigue-la-actividad-y-las-aprobaciones">
+        <h2 id="sigue-la-actividad-y-las-aprobaciones">Sigue la actividad y las aprobaciones<a class="dx-anchor" href="#sigue-la-actividad-y-las-aprobaciones" aria-label="Enlace a la sección «Sigue la actividad y las aprobaciones»">#</a></h2>
+        <p>Arriba a la izquierda está el cuadro «Actividad en vivo», con lo que hace cada agente paso a paso. Puedes minimizarlo con su flecha y volver a abrirlo cuando quieras.</p>
+        <p>Abajo a la izquierda aparece la bandeja de aprobaciones cuando hay algo pendiente. Se abre sola al llegar una nueva, puedes ocultarla o mostrarla, y en la escena el agente espera en la zona de aprobaciones con su tarjeta para «Aprobar» o «Rechazar».</p>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>En pantallas pequeñas el cuadro de actividad no aparece; usa el Dashboard para seguirla.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="ajusta-la-luz">
+        <h2 id="ajusta-la-luz">Ajusta la luz<a class="dx-anchor" href="#ajusta-la-luz" aria-label="Enlace a la sección «Ajusta la luz»">#</a></h2>
+        <p>El botón «Luz», arriba a la derecha, cambia la iluminación de toda la oficina. Los cambios se guardan al momento.</p>
+        <ol class="dx-steps" aria-label="Pasos"><li>Pulsa «Luz».</li><li>Elige un ambiente: «Natural», «Cálida», «Fría», «Atardecer» o «Noche».</li><li>Ajusta la barra «Temperatura», de cálida a fría, y la barra «Brillo», de tenue a intensa.</li><li>Cierra el panel con la X.</li></ol>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>La luz es solo visual: no cambia nada del trabajo de los agentes.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="redecora-la-oficina">
+        <h2 id="redecora-la-oficina">Redecora la oficina<a class="dx-anchor" href="#redecora-la-oficina" aria-label="Enlace a la sección «Redecora la oficina»">#</a></h2>
+        <p>Con «Editar oficina», al lado de «Luz», colocas los muebles que compraste en la Tienda y cambias el ambiente. Necesitas un rol que pueda gastar monedas (Miembro o superior).</p>
+        <ol class="dx-steps" aria-label="Pasos"><li>Pulsa «Editar oficina».</li><li>En «Muebles», elige una pieza de «Tus muebles» y haz clic en la oficina para colocarla. La tecla R la gira y Esc cancela.</li><li>Arrastra lo que ya está colocado para moverlo; Supr lo quita.</li><li>En «Puestos», elige el estilo de los escritorios y las sillas.</li><li>En «Ambiente», cambia paredes, suelo, iluminación y la vista desde el ventanal.</li><li>Pulsa «Guardar» para conservar los cambios o «Descartar» para salir sin guardarlos.</li></ol>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>Si otra persona cambió la oficina mientras editabas, pulsa «Recargar» para ver sus cambios.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="pasa-al-dashboard">
+        <h2 id="pasa-al-dashboard">Pasa al Dashboard<a class="dx-anchor" href="#pasa-al-dashboard" aria-label="Enlace a la sección «Pasa al Dashboard»">#</a></h2>
+        <p>El selector Oficina / Dashboard de la barra superior cambia de vista. El Dashboard muestra la misma operación en cifras y tablas, con estas secciones a la izquierda:</p>
+        <ol class="dx-steps" aria-label="Pasos"><li>Pulsa «Dashboard» en la barra superior.</li><li>Empieza por «Resumen»: Solicitudes, Tareas activas, Tareas hechas, Aprobaciones, Costo (con su porcentaje del presupuesto), Errores y Agentes activos.</li><li>Abre la sección que necesites.</li><li>Pulsa «Oficina» para volver a pedir trabajo y ver a los agentes.</li></ol>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Tabla: Pasa al Dashboard"><table><thead><tr><th scope="col">Sección</th><th scope="col">Qué encuentras</th></tr></thead><tbody><tr><th scope="row">Resumen</th><td>Indicadores, el Equipo con el estado de cada agente, aprobaciones pendientes y actividad en vivo</td></tr><tr><th scope="row">Solicitudes y plan</th><td>Cada pedido con su plan de tareas y su estado</td></tr><tr><th scope="row">Tareas</th><td>Todas las tareas y su estado</td></tr><tr><th scope="row">Agentes</th><td>Una ficha por agente con sus tareas hechas y pendientes y su autonomía</td></tr><tr><th scope="row">Conversaciones</th><td>Las conversaciones del equipo</td></tr><tr><th scope="row">Aprobaciones</th><td>Las decisiones pendientes, para aprobar o rechazar</td></tr><tr><th scope="row">Reportes</th><td>Los reportes de las solicitudes completadas</td></tr><tr><th scope="row">Archivos</th><td>Los archivos de la oficina</td></tr><tr><th scope="row">Calidad</th><td>Un puntaje orientativo por empleado, que nunca cambia su autonomía ni sus permisos</td></tr><tr><th scope="row">Costos y errores</th><td>Costo por agente y por solicitud, «Límites de presupuesto» y errores y bloqueos</td></tr></tbody></table></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>Si Aprobaciones, Costo o Errores cambian de color, conviene revisarlos.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="lee-la-barra-superior">
+        <h2 id="lee-la-barra-superior">Lee la barra superior<a class="dx-anchor" href="#lee-la-barra-superior" aria-label="Enlace a la sección «Lee la barra superior»">#</a></h2>
+        <p>La barra superior te acompaña en todas las pantallas. Según el ancho de tu pantalla, muestra:</p>
+        <ul class="dx-ul"><li>Aprobaciones: cuántas hay pendientes; el número cambia de color cuando hay alguna.</li><li>Costo: lo gastado hasta ahora.</li><li>La meta del día, por ejemplo «Termina 1 tarea hoy», con su progreso y su premio en monedas.</li><li>«Primeros pasos», mientras te queden pasos de la lista de inicio.</li><li>El botón «?», que abre un tour guiado de la pantalla actual.</li><li>Monedas: tu saldo; púlsalo para abrir la Tienda.</li><li>En vivo o Reconectando…: el estado de la conexión.</li></ul>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Nota</p><p>Si la IA corre en modo simulación, no hay un modelo real detrás y el costo que ves no corresponde a un gasto real con un proveedor.</p></div></div>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="dx-cards dx-cards-sm"><li><a href="/guia/primeros-pasos/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.2 3.5-5.2 3.5v-7Z"/></svg><b>Primeros pasos: tus primeros 5 minutos</b><span>Crea tu cuenta, pide tu primera tarea, decide una aprobación, lee el reporte y gana tus primeras monedas en unos 5 minutos.</span></a></li><li><a href="/guia/proyectos/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v7M12 7.5v10M16 7.5v4"/></svg><b>Proyectos: trabajo grande, con seguimiento</b><span>Crea un proyecto, revisa su plan y su costo estimado, lánzalo con un presupuesto y sigue el avance de tus agentes desde una sola pantalla.</span></a></li><li><a href="/guia/tienda-y-monedas/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v4.5c0 1.7 2.7 3 6 3 .7 0 1.4-.1 2-.2M15 7v2"/><ellipse cx="15" cy="13.5" rx="6" ry="3"/><path d="M9 13.5V18c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg><b>Monedas y Tienda: decora tu oficina con lo que gana tu equipo</b><span>Aprende cómo se ganan las monedas con trabajo terminado y cómo gastarlas en la Tienda para vestir a tus agentes y decorar tu oficina.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Paginación">
+        <a class="dx-prev" href="/guia/primeros-pasos/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Anterior</span><b>Primeros pasos: tus primeros 5 minutos</b></a>
+        <a class="dx-next" href="/guia/proyectos/" rel="next"><span>Siguiente<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>Proyectos: trabajo grande, con seguimiento</b></a>
+      </nav>
+      <section class="dx-cta" aria-labelledby="cta-h">
+        <div>
+          <h2 id="cta-h">Pruébalo en tu propia oficina</h2>
+          <p>Crea tu cuenta y llegas a una oficina con tu equipo de IA. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
+        </div>
+        <div class="dx-cta-row">
+          <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+          <a class="dx-btn dx-btn-ghost" href="https://app.workforceai.es/prueba" rel="noopener">Probar sin registrarte</a>
+        </div>
+      </section>
+      <footer class="dx-foot">
+        <p>AI Workforce OS es un proyecto en desarrollo. Esta documentación describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+        <div class="dx-foot-links">
+          <a href="/">AI Workforce OS</a>
+          <a href="/docs/">Documentación</a>
+          <a href="/guia/">Guía de uso</a>
+          <a href="/confianza/">Confianza</a>
+          <a href="#top">Volver arriba</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

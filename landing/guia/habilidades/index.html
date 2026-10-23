@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Habilidades: saber hacer reutilizable | AI Workforce OS</title>
-  <meta name="description" content="Explora la biblioteca de Habilidades, crea o importa las tuyas, apruébalas y asígnalas a un agente para que trabaje a tu manera.">
+  <meta name="description" content="Explora las habilidades incluidas, crea o importa las tuyas, apruébalas y asígnalas a un agente para que trabaje con tu método.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,139 +24,167 @@
   <meta property="og:locale" content="es_ES">
   <meta property="og:locale:alternate" content="en_US">
   <meta property="og:title" content="Habilidades: saber hacer reutilizable | AI Workforce OS">
-  <meta property="og:description" content="Explora la biblioteca de Habilidades, crea o importa las tuyas, apruébalas y asígnalas a un agente para que trabaje a tu manera.">
+  <meta property="og:description" content="Explora las habilidades incluidas, crea o importa las tuyas, apruébalas y asígnalas a un agente para que trabaje con tu método.">
   <meta property="og:url" content="https://workforceai.es/guia/habilidades/">
   <meta property="og:image" content="https://workforceai.es/img/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Habilidades: saber hacer reutilizable | AI Workforce OS">
-  <meta name="twitter:description" content="Explora la biblioteca de Habilidades, crea o importa las tuyas, apruébalas y asígnalas a un agente para que trabaje a tu manera.">
+  <meta name="twitter:description" content="Explora las habilidades incluidas, crea o importa las tuyas, apruébalas y asígnalas a un agente para que trabaje con tu método.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Guía de uso","item":"https://workforceai.es/guia/"},{"@type":"ListItem","position":3,"name":"Habilidades: conocimiento reutilizable para tus agentes","item":"https://workforceai.es/guia/habilidades/"}]},{"@type":"TechArticle","headline":"Habilidades: conocimiento reutilizable para tus agentes","description":"Explora la biblioteca de Habilidades, crea o importa las tuyas, apruébalas y asígnalas a un agente para que trabaje a tu manera.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/guia/habilidades/","url":"https://workforceai.es/guia/habilidades/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=b5a2c05468">
+  <script src="/docs.js?v=2e2073da11" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Guía de uso","item":"https://workforceai.es/guia/"},{"@type":"ListItem","position":3,"name":"Habilidades: conocimiento reutilizable para tus agentes","item":"https://workforceai.es/guia/habilidades/"}]},{"@type":"TechArticle","headline":"Habilidades: conocimiento reutilizable para tus agentes","description":"Explora las habilidades incluidas, crea o importa las tuyas, apruébalas y asígnalas a un agente para que trabaje con tu método.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/guia/habilidades/","url":"https://workforceai.es/guia/habilidades/","dateModified":"2026-10-22","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Saltar al contenido</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/" aria-label="AI Workforce OS">
+<body class="dx dx-guide" id="top">
+  <a class="dx-skip" href="#main">Saltar al contenido</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menú"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/" aria-label="AI Workforce OS">
         <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Principal">
-        <a href="/">Inicio</a>
-        <a href="/docs/">Documentación</a>
-        <a href="/guia/">Guía de uso</a>
-        <a href="/confianza/">Confianza</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Idioma">
+      <nav class="dx-tabs" aria-label="Secciones del sitio"><a href="/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentación</span></a><a href="/guia/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Guía de uso</span></a><a href="/confianza/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Confianza</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Buscar en la documentación…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Buscar en la documentación…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Idioma">
           <a href="/guia/habilidades/" hreflang="es" lang="es" aria-current="true">ES</a>
-          <a href="/en/guide/skills/" hreflang="en" lang="en" >EN</a>
+          <a href="/en/guide/skills/" hreflang="en" lang="en">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap narrow">
-      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li><a href="/guia/">Guía de uso</a></li><li aria-current="page">Habilidades: conocimiento reutilizable para tus agentes</li></ol></nav>
-      <article>
-        <h1>Habilidades: conocimiento reutilizable para tus agentes</h1>
-        <p class="lead">Una habilidad es una guía escrita que un agente consulta mientras trabaja, por ejemplo cómo redactar un informe semanal o cómo conciliar un extracto bancario. Escribes el método una vez y cualquier agente puede usarlo. La biblioteca ya trae 55 habilidades de arranque.</p>
-        
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">¿Qué es una habilidad y qué NO hace?</a></li><li><a href="#s2">¿Qué trae la biblioteca desde el primer día?</a></li><li><a href="#s3">¿Cómo encuentro una habilidad?</a></li><li><a href="#s4">¿Cómo leo una habilidad antes de usarla?</a></li><li><a href="#s5">¿Cómo creo una habilidad propia?</a></li><li><a href="#s6">¿Cómo importo una habilidad que ya tengo?</a></li><li><a href="#s7">¿Cómo la activo y se la doy a un agente?</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">¿Qué es una habilidad y qué NO hace?</h2>
-        <p>Cada habilidad tiene un nombre, una descripción de cuándo usarla e instrucciones paso a paso. Puede incluir archivos de apoyo, como plantillas o ejemplos.</p>
-        <p>Al agente solo le llegan el nombre y la descripción en cada tarea. El texto completo lo recibe únicamente si lo pide. Y una habilidad nunca le da herramientas, conexiones ni permisos: solo le da conocimiento. Lo que un agente puede hacer lo siguen decidiendo su rol y tu organización, y las acciones sensibles siguen pidiendo tu aprobación.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">¿Qué trae la biblioteca desde el primer día?</h2>
-        <p>Son 55 habilidades de arranque, en español y en inglés, ya activas. Cubren ventas, finanzas, legal, recursos humanos, soporte, producto, datos e ingeniería. Algunos ejemplos: conciliación bancaria, calificación de leads, revisión de NDA, descripción de puesto, respuesta de soporte, requisitos de producto, explicación de consultas SQL y checklist de revisión de código.</p>
-        <p>En las tarjetas llevan la etiqueta Incluida. Léelas, úsalas tal cual o toma una como modelo para escribir la tuya.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">¿Cómo encuentro una habilidad?</h2>
-        
-        <ol class="steps" aria-label="Pasos"><li>Abre Habilidades en el menú.</li><li>Escribe una palabra del tema en Buscar habilidades, por ejemplo «informe» o «ventas». La lista se filtra al instante.</li><li>Usa los filtros de estado: Todas, Activas, En revisión, Borradores o Desactivadas. Cada filtro muestra cuántas hay.</li><li>Haz clic en una tarjeta para abrirla. Ahí ves su estado, su origen (Incluida, Creada, Importada o De una tarea), su versión y cuántos agentes la tienen.</li></ol>
-        
-        
-        <aside class="tip"><b>Consejo.</b> Las habilidades en revisión se abren directo en la pestaña Revisión.</aside>
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">¿Cómo leo una habilidad antes de usarla?</h2>
-        <p>Dentro de una habilidad hay cuatro pestañas: Contenido, Revisión, Versiones y Agentes. Contenido muestra la descripción, las instrucciones y los archivos de apoyo. Revisión muestra todo lo que recibiría un agente, junto con los avisos del análisis automático, por ejemplo si el texto parece intentar saltarse reglas o si incluye un script.</p>
-        <p>Los scripts se guardan como texto y nunca se ejecutan por sí solos. Puedes descargar cualquier habilidad como .zip o como SKILL.md.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">¿Cómo creo una habilidad propia?</h2>
-        
-        <ol class="steps" aria-label="Pasos"><li>Pulsa Nueva habilidad.</li><li>Escribe el Nombre en minúsculas, números y guiones, por ejemplo conciliacion-bancaria. No se puede cambiar después.</li><li>Completa la Descripción: cuándo usarla. Es lo único que el agente ve en cada tarea, así que di qué hace y cuándo conviene.</li><li>Escribe las Instrucciones en Markdown. Si quieres, añade archivos de apoyo, ejemplos y criterios de calidad.</li><li>Pulsa Crear borrador. Después, desde su ficha, pulsa Enviar a revisión.</li></ol>
-        
-        
-        <aside class="tip"><b>Consejo.</b> Cada vez que editas y guardas se crea una versión nueva. Las anteriores se conservan y puedes restaurarlas desde Versiones.</aside>
-      </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">¿Cómo importo una habilidad que ya tengo?</h2>
-        
-        <ol class="steps" aria-label="Pasos"><li>Pulsa Importar y elige un archivo .zip o .md con una habilidad en formato SKILL.md.</li><li>Si ya existe una con ese nombre, la app te pide otro y puedes elegir Importar con este nombre.</li><li>Al terminar, la habilidad queda En revisión y se abre en la pestaña Revisión. Léela completa antes de activarla.</li></ol>
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">¿Cómo la activo y se la doy a un agente?</h2>
-        <p>Solo llega a un agente lo que una persona aprobó. Un borrador o una habilidad en revisión no se entrega a nadie. Aprobar o desactivar requiere un administrador; crear, importar y enviar a revisión requieren permiso de escritura en habilidades.</p>
-        <ol class="steps" aria-label="Pasos"><li>Un administrador abre la pestaña Revisión, lee el contenido y los avisos, y pulsa Aprobar y activar. También puede Rechazar con una nota, que la devuelve a borrador.</li><li>Abre la habilidad activa y entra en la pestaña Agentes.</li><li>Elige un agente en Elegir agente y pulsa Asignar.</li><li>Para retirarla, pulsa Quitar junto al agente.</li></ol>
-        
-        
-        <aside class="tip"><b>Consejo.</b> Si editas una habilidad activa, los agentes siguen usando la versión aprobada hasta que se apruebe la nueva. Los agentes de un rol que la trae por defecto también la reciben.</aside>
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="cards"><li><a href="/guia/proyectos/"><b>Proyectos: trabajo grande, con seguimiento</b><span>Aprende a crear un proyecto, revisar su plan, lanzarlo con presupuesto y seguir el avance de tus agentes desde una sola pantalla.</span></a></li><li><a href="/guia/ajustes/"><b>Ajustes: configura tu oficina en un solo lugar</b><span>Recorre el centro de Ajustes: personaliza la oficina, contrata empleados, usa plantillas, conecta herramientas e invita a tu equipo.</span></a></li><li><a href="/guia/primeros-pasos/"><b>Primeros pasos: tus primeros 5 minutos</b><span>Crea tu cuenta, pide algo a tu oficina, aprueba lo delicado, lee el reporte y gana monedas. Todo en unos 5 minutos.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Empieza ahora</h2>
-      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Probar sin registrarte</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Guía de uso">
+      <div class="dx-side-head">
+        <span>Menú</span>
+        <a class="dx-side-close" href="#top" aria-label="Cerrar menú"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
-      <a href="/docs/">Documentación</a>
-      <a href="/guia/">Guía de uso</a>
-      <a href="/confianza/">Confianza</a>
-      <a href="#top">Volver arriba</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Secciones del sitio"><a href="/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentación</span></a><a href="/guia/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Guía de uso</span></a><a href="/confianza/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Confianza</span></a></nav>
+      <nav class="dx-pages" aria-label="Guía de uso">
+        <ul class="dx-list">
+          <li><a href="/guia/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Introducción</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-start">Empieza</p>
+        <ul class="dx-list" aria-labelledby="g-guide-start">
+          <li><a href="/guia/primeros-pasos/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.2 3.5-5.2 3.5v-7Z"/></svg><span>Primeros pasos</span></a></li>
+          <li><a href="/guia/la-oficina/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M15.5 9h2a2 2 0 0 1 2 2v10M3 21h18M8.5 7h3M8.5 11h3M8.5 15h3"/></svg><span>La oficina 3D y el Dashboard</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-work">Trabajo diario</p>
+        <ul class="dx-list" aria-labelledby="g-guide-work">
+          <li><a href="/guia/proyectos/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v7M12 7.5v10M16 7.5v4"/></svg><span>Proyectos</span></a></li>
+          <li><a href="/guia/archivos-y-chats/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 15a2 2 0 0 1-2 2H8.5L4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10Z"/><path d="M8 8h8M8 12h5"/></svg><span>Chats y Archivos</span></a></li>
+          <li><a href="/guia/aprobaciones-y-seguridad/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg><span>Aprobaciones y seguridad</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-tune">Personaliza</p>
+        <ul class="dx-list" aria-labelledby="g-guide-tune">
+          <li><a href="/guia/habilidades/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 3.5 12.9 8l4.6 1.9-4.6 1.9L11 16.4l-1.9-4.6L4.5 9.9 9.1 8 11 3.5Z"/><path d="m18.5 14.5.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z"/></svg><span>Habilidades</span></a></li>
+          <li><a href="/guia/tienda-y-monedas/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v4.5c0 1.7 2.7 3 6 3 .7 0 1.4-.1 2-.2M15 7v2"/><ellipse cx="15" cy="13.5" rx="6" ry="3"/><path d="M9 13.5V18c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg><span>Monedas y Tienda</span></a></li>
+          <li><a href="/guia/ajustes/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><span>Ajustes</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Idioma">
+          <a href="/guia/habilidades/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/guide/skills/" hreflang="en" lang="en">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Ruta de navegación"><ol><li><a href="/guia/">Guía de uso</a></li><li><span>Personaliza</span></li></ol></nav>
+        <h1>Habilidades: conocimiento reutilizable para tus agentes</h1>
+        <p class="dx-lead">Una habilidad es una guía escrita que un agente consulta mientras trabaja, por ejemplo cómo conciliar un extracto bancario o cómo redactar un informe semanal. Aquí aprendes a encontrarlas, escribir o importar las tuyas, aprobarlas y dárselas a un agente.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>4 min de lectura</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">En esta página</summary>
+        <ol><li><a href="#entiende-que-hace-una-habilidad">Entiende qué hace una habilidad</a></li><li><a href="#explora-las-habilidades-incluidas">Explora las habilidades incluidas</a></li><li><a href="#encuentra-una-habilidad">Encuentra una habilidad</a></li><li><a href="#lee-una-habilidad-antes-de-usarla">Lee una habilidad antes de usarla</a></li><li><a href="#crea-una-habilidad-propia">Crea una habilidad propia</a></li><li><a href="#importa-una-habilidad-que-ya-tienes">Importa una habilidad que ya tienes</a></li><li><a href="#activala-y-asignala-a-un-agente">Actívala y asígnala a un agente</a></li></ol>
+        <a class="dx-toc-top" href="#top">Volver arriba</a>
+      </details>
+      <div class="dx-body">
+        
+        <section class="dx-sec" aria-labelledby="entiende-que-hace-una-habilidad">
+        <h2 id="entiende-que-hace-una-habilidad">Entiende qué hace una habilidad<a class="dx-anchor" href="#entiende-que-hace-una-habilidad" aria-label="Enlace a la sección «Entiende qué hace una habilidad»">#</a></h2>
+        <p>Cada habilidad tiene un nombre, una descripción de cuándo usarla e instrucciones paso a paso. Puede incluir archivos de apoyo, ejemplos de entrada y salida y criterios de calidad.</p>
+        <p>En cada tarea, el agente solo ve el nombre y la descripción de sus habilidades. El texto completo lo recibe únicamente si lo pide.</p>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Nota</p><p>Una habilidad solo aporta conocimiento: nunca da herramientas, conexiones ni permisos. Eso lo siguen decidiendo el rol del agente y tu organización, y las acciones sensibles siguen pidiendo tu aprobación.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="explora-las-habilidades-incluidas">
+        <h2 id="explora-las-habilidades-incluidas">Explora las habilidades incluidas<a class="dx-anchor" href="#explora-las-habilidades-incluidas" aria-label="Enlace a la sección «Explora las habilidades incluidas»">#</a></h2>
+        <p>La biblioteca empieza con 55 habilidades incluidas, ya activas y escritas en español o en inglés. Llevan la etiqueta «Incluida» y cubren ventas, finanzas, legal, recursos humanos, soporte, producto, datos e ingeniería. Por ejemplo:</p>
+        <ul class="dx-ul"><li>Conciliación bancaria y cierre de mes.</li><li>Calificación de leads y preparación de llamadas de venta.</li><li>Revisión de NDA y de contratos de servicio.</li><li>Descripción de puesto y preguntas de entrevista.</li><li>Respuesta de soporte y gestión de quejas.</li><li>Requisitos de producto, explicación de consultas SQL y checklist de revisión de código.</li></ul>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>Los roles de tus agentes ya traen algunas asignadas; en su ficha aparecen como «Del rol».</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="encuentra-una-habilidad">
+        <h2 id="encuentra-una-habilidad">Encuentra una habilidad<a class="dx-anchor" href="#encuentra-una-habilidad" aria-label="Enlace a la sección «Encuentra una habilidad»">#</a></h2>
+        <ol class="dx-steps" aria-label="Pasos"><li>Abre «Habilidades» en el menú lateral.</li><li>Escribe un tema en «Buscar habilidades…», por ejemplo «informe» o «ventas». La lista se filtra al instante.</li><li>Filtra por estado con «Todas», «Activas», «En revisión», «Borradores» o «Desactivadas»; cada filtro muestra cuántas hay.</li><li>Haz clic en una tarjeta para abrirla y ver su estado, su origen («Incluida», «Creada», «Importada» o «De una tarea»), su versión y cuántos agentes la tienen.</li></ol>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>Las habilidades en revisión se abren directamente en la pestaña «Revisión».</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="lee-una-habilidad-antes-de-usarla">
+        <h2 id="lee-una-habilidad-antes-de-usarla">Lee una habilidad antes de usarla<a class="dx-anchor" href="#lee-una-habilidad-antes-de-usarla" aria-label="Enlace a la sección «Lee una habilidad antes de usarla»">#</a></h2>
+        <p>Cada habilidad tiene cuatro pestañas:</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Tabla: Lee una habilidad antes de usarla"><table><thead><tr><th scope="col">Pestaña</th><th scope="col">Qué muestra</th></tr></thead><tbody><tr><th scope="row">Contenido</th><td>La descripción, las instrucciones y los archivos de apoyo</td></tr><tr><th scope="row">Revisión</th><td>Todo lo que recibiría un agente, con los «Avisos del análisis»</td></tr><tr><th scope="row">Versiones</th><td>Cada versión guardada, con la opción «Restaurar»</td></tr><tr><th scope="row">Agentes</th><td>Quién la tiene y si le llega «Asignada» o «Del rol»</td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Nota</p><p>El análisis avisa, por ejemplo, de una «Posible inyección de instrucciones» o de que la habilidad «Contiene un script». Los scripts se guardan como texto y nunca se ejecutan por sí solos: hacerlo requiere <code>code.run</code> con aprobación humana.</p></div></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>Puedes llevarte cualquier habilidad con «Descargar .zip» o «Descargar SKILL.md».</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="crea-una-habilidad-propia">
+        <h2 id="crea-una-habilidad-propia">Crea una habilidad propia<a class="dx-anchor" href="#crea-una-habilidad-propia" aria-label="Enlace a la sección «Crea una habilidad propia»">#</a></h2>
+        <p>Puedes escribirla desde cero o partir de un trabajo ya hecho: en la pestaña «Tareas» del panel de un agente, una tarea terminada ofrece «Guardar como habilidad», que prellena el borrador.</p>
+        <ol class="dx-steps" aria-label="Pasos"><li>Pulsa «Nueva habilidad».</li><li>Escribe el «Nombre» en minúsculas, números y guiones, por ejemplo <code>conciliacion-bancaria</code>. No se puede cambiar después.</li><li>Completa la «Descripción: cuándo usarla». Es lo único que el agente ve en cada tarea, así que di qué hace y cuándo conviene.</li><li>Escribe las «Instrucciones» en Markdown y, si quieres, añade «Archivos de apoyo», «Ejemplos» y «Criterios de calidad».</li><li>Pulsa «Crear borrador» y, desde su ficha, «Enviar a revisión».</li></ol>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Nota</p><p>Los archivos de apoyo deben ser texto (md, txt, csv, json, yaml, py, js o sh), de hasta 512 KB cada uno y 2 MB en total.</p></div></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>Cada guardado crea una versión nueva; las anteriores se conservan y puedes restaurarlas desde «Versiones».</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="importa-una-habilidad-que-ya-tienes">
+        <h2 id="importa-una-habilidad-que-ya-tienes">Importa una habilidad que ya tienes<a class="dx-anchor" href="#importa-una-habilidad-que-ya-tienes" aria-label="Enlace a la sección «Importa una habilidad que ya tienes»">#</a></h2>
+        <ol class="dx-steps" aria-label="Pasos"><li>Pulsa «Importar» y elige un archivo .zip o .md con una habilidad en formato SKILL.md.</li><li>Si ya existe una con ese nombre, escribe otro y pulsa «Importar con este nombre».</li><li>Lee la habilidad completa en la pestaña «Revisión», donde se abre al terminar: queda «En revisión» hasta que alguien la apruebe.</li></ol>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Nota</p><p>Un .zip debe tener SKILL.md en su raíz y pesar como máximo 4 MB.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="activala-y-asignala-a-un-agente">
+        <h2 id="activala-y-asignala-a-un-agente">Actívala y asígnala a un agente<a class="dx-anchor" href="#activala-y-asignala-a-un-agente" aria-label="Enlace a la sección «Actívala y asígnala a un agente»">#</a></h2>
+        <p>Solo llega a un agente lo que una persona aprobó: un borrador o una habilidad en revisión no se entrega a nadie. Esto es lo que puede hacer cada rol:</p>
+        <ol class="dx-steps" aria-label="Pasos"><li>Como administrador, abre la pestaña «Revisión», lee el contenido y los avisos y pulsa «Aprobar y activar». «Rechazar» la devuelve a borrador con tu nota.</li><li>Abre la habilidad activa y entra en la pestaña «Agentes».</li><li>Elige un agente en «Elegir agente…» y pulsa «Asignar».</li><li>Para retirarla, pulsa «Quitar» junto al agente.</li></ol>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Tabla: Actívala y asígnala a un agente"><table><thead><tr><th scope="col">Acción</th><th scope="col">Quién puede</th></tr></thead><tbody><tr><th scope="row">Leer y descargar habilidades</th><td>Todos los roles</td></tr><tr><th scope="row">Crear, importar y enviar a revisión</th><td>Miembro, Administrador y Dueño</td></tr><tr><th scope="row">Aprobar, desactivar o eliminar</th><td>Administrador y Dueño</td></tr><tr><th scope="row">Asignar a un agente o quitársela</th><td>Administrador y Dueño</td></tr></tbody></table></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>Si editas una habilidad activa, los agentes siguen usando la versión aprobada hasta que se apruebe la nueva.</p></div></div>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="dx-cards dx-cards-sm"><li><a href="/guia/proyectos/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v7M12 7.5v10M16 7.5v4"/></svg><b>Proyectos: trabajo grande, con seguimiento</b><span>Crea un proyecto, revisa su plan y su costo estimado, lánzalo con un presupuesto y sigue el avance de tus agentes desde una sola pantalla.</span></a></li><li><a href="/guia/ajustes/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><b>Ajustes: configura tu oficina en un solo lugar</b><span>Personaliza la oficina, contrata empleados, elige el modelo de IA, conecta herramientas, protege tu cuenta e invita a tu equipo desde Ajustes.</span></a></li><li><a href="/guia/primeros-pasos/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.2 3.5-5.2 3.5v-7Z"/></svg><b>Primeros pasos: tus primeros 5 minutos</b><span>Crea tu cuenta, pide tu primera tarea, decide una aprobación, lee el reporte y gana tus primeras monedas en unos 5 minutos.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Paginación">
+        <a class="dx-prev" href="/guia/aprobaciones-y-seguridad/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Anterior</span><b>Aprobaciones y seguridad: tú mantienes el control</b></a>
+        <a class="dx-next" href="/guia/tienda-y-monedas/" rel="next"><span>Siguiente<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>Monedas y Tienda: decora tu oficina con lo que gana tu equipo</b></a>
+      </nav>
+      <section class="dx-cta" aria-labelledby="cta-h">
+        <div>
+          <h2 id="cta-h">Pruébalo en tu propia oficina</h2>
+          <p>Crea tu cuenta y llegas a una oficina con tu equipo de IA. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
+        </div>
+        <div class="dx-cta-row">
+          <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+          <a class="dx-btn dx-btn-ghost" href="https://app.workforceai.es/prueba" rel="noopener">Probar sin registrarte</a>
+        </div>
+      </section>
+      <footer class="dx-foot">
+        <p>AI Workforce OS es un proyecto en desarrollo. Esta documentación describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+        <div class="dx-foot-links">
+          <a href="/">AI Workforce OS</a>
+          <a href="/docs/">Documentación</a>
+          <a href="/guia/">Guía de uso</a>
+          <a href="/confianza/">Confianza</a>
+          <a href="#top">Volver arriba</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

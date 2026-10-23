@@ -6,7 +6,8 @@
   <title>Documentación técnica | AI Workforce OS</title>
   <meta name="description" content="Arquitectura, referencia de la API, autenticación y multitenencia, runtime de agentes, habilidades, seguridad, despliegue y configuración.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -31,61 +32,177 @@
   <meta name="twitter:description" content="Arquitectura, referencia de la API, autenticación y multitenencia, runtime de agentes, habilidades, seguridad, despliegue y configuración.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Documentación","item":"https://workforceai.es/docs/"}]},{"@type":"CollectionPage","name":"Documentación técnica de AI Workforce OS","description":"Arquitectura, referencia de la API, autenticación y multitenencia, runtime de agentes, habilidades, seguridad, despliegue y configuración.","inLanguage":"es","url":"https://workforceai.es/docs/","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"},"mainEntity":{"@type":"ItemList","itemListElement":[{"@type":"ListItem","position":1,"name":"Arquitectura de AI Workforce OS","url":"https://workforceai.es/docs/arquitectura/"},{"@type":"ListItem","position":2,"name":"Referencia de la API","url":"https://workforceai.es/docs/referencia-api/"},{"@type":"ListItem","position":3,"name":"Autenticación y multitenencia","url":"https://workforceai.es/docs/autenticacion-y-multitenencia/"},{"@type":"ListItem","position":4,"name":"Runtime de agentes","url":"https://workforceai.es/docs/runtime-de-agentes/"},{"@type":"ListItem","position":5,"name":"Formato de habilidades","url":"https://workforceai.es/docs/formato-de-habilidades/"},{"@type":"ListItem","position":6,"name":"Modelo de seguridad","url":"https://workforceai.es/docs/modelo-de-seguridad/"},{"@type":"ListItem","position":7,"name":"Despliegue en producción","url":"https://workforceai.es/docs/despliegue/"},{"@type":"ListItem","position":8,"name":"Referencia de configuración","url":"https://workforceai.es/docs/configuracion/"}]}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=b5a2c05468">
+  <script src="/docs.js?v=2e2073da11" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Documentación","item":"https://workforceai.es/docs/"}]},{"@type":"CollectionPage","name":"Documentación técnica de AI Workforce OS","description":"Arquitectura, referencia de la API, autenticación y multitenencia, runtime de agentes, habilidades, seguridad, despliegue y configuración.","inLanguage":"es","url":"https://workforceai.es/docs/","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"},"mainEntity":{"@type":"ItemList","itemListElement":[{"@type":"ListItem","position":1,"name":"Arquitectura de AI Workforce OS","url":"https://workforceai.es/docs/arquitectura/"},{"@type":"ListItem","position":2,"name":"Runtime de agentes","url":"https://workforceai.es/docs/runtime-de-agentes/"},{"@type":"ListItem","position":3,"name":"Referencia de la API","url":"https://workforceai.es/docs/referencia-api/"},{"@type":"ListItem","position":4,"name":"Autenticación y multitenencia","url":"https://workforceai.es/docs/autenticacion-y-multitenencia/"},{"@type":"ListItem","position":5,"name":"Formato de habilidades","url":"https://workforceai.es/docs/formato-de-habilidades/"},{"@type":"ListItem","position":6,"name":"Despliegue en producción","url":"https://workforceai.es/docs/despliegue/"},{"@type":"ListItem","position":7,"name":"Referencia de configuración","url":"https://workforceai.es/docs/configuracion/"},{"@type":"ListItem","position":8,"name":"Modelo de seguridad","url":"https://workforceai.es/docs/modelo-de-seguridad/"}]}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Saltar al contenido</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/" aria-label="AI Workforce OS">
+<body class="dx dx-docs" id="top">
+  <a class="dx-skip" href="#main">Saltar al contenido</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menú"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/" aria-label="AI Workforce OS">
         <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Principal">
-        <a href="/">Inicio</a>
-        <a href="/docs/">Documentación</a>
-        <a href="/guia/">Guía de uso</a>
-        <a href="/confianza/">Confianza</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Idioma">
+      <nav class="dx-tabs" aria-label="Secciones del sitio"><a href="/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentación</span></a><a href="/guia/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Guía de uso</span></a><a href="/confianza/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Confianza</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Buscar en la documentación…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Buscar en la documentación…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Idioma">
           <a href="/docs/" hreflang="es" lang="es" aria-current="true">ES</a>
-          <a href="/en/docs/" hreflang="en" lang="en" >EN</a>
+          <a href="/en/docs/" hreflang="en" lang="en">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap narrow">
-      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li aria-current="page">Documentación</li></ol></nav>
-      <h1>Documentación técnica de AI Workforce OS</h1>
-      <p class="lead">Para quien quiere entender, desplegar o integrar AI Workforce OS: cómo está construido, qué expone la API, cómo se aíslan las cuentas, cómo se despliega y qué se puede configurar. Todo describe lo que el código hace hoy.</p>
-      <ol class="cards index"><li><a href="/docs/arquitectura/"><span class="n">1</span><b>Arquitectura de AI Workforce OS</b><span>Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.</span></a></li><li><a href="/docs/referencia-api/"><span class="n">2</span><b>Referencia de la API</b><span>Autenticación, formato de errores y rutas de /api/v1: peticiones, tareas, aprobaciones, agentes, proyectos, skills, tienda, drive y WebSocket.</span></a></li><li><a href="/docs/autenticacion-y-multitenencia/"><span class="n">3</span><b>Autenticación y multitenencia</b><span>Cómo cuentas, sesiones, roles, invitaciones y row-level security de Postgres aíslan las organizaciones en AI Workforce OS.</span></a></li><li><a href="/docs/runtime-de-agentes/"><span class="n">4</span><b>Runtime de agentes</b><span>El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.</span></a></li><li><a href="/docs/formato-de-habilidades/"><span class="n">5</span><b>Formato de habilidades</b><span>Cómo se define una habilidad: carpeta con SKILL.md, frontmatter, límites, ciclo de vida, revisión, importación y cómo llega al modelo.</span></a></li><li><a href="/docs/modelo-de-seguridad/"><span class="n">6</span><b>Modelo de seguridad</b><span>Cómo se limita el daño de un agente: bóveda de credenciales, aprobaciones humanas, topes, kill switch, auditoría, RLS y sandbox. Con sus límites actuales.</span></a></li><li><a href="/docs/despliegue/"><span class="n">7</span><b>Despliegue en producción</b><span>Guía para desplegar AI Workforce OS con Docker Compose: Caddy con TLS automático, Postgres, Redis, backups, actualizaciones y rollback.</span></a></li><li><a href="/docs/configuracion/"><span class="n">8</span><b>Referencia de configuración</b><span>Referencia de variables de entorno de AI Workforce OS: servidor, base de datos, autenticación, presupuesto, recompensas, proveedores de modelo y build.</span></a></li></ol>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Empieza ahora</h2>
-      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Probar sin registrarte</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Documentación">
+      <div class="dx-side-head">
+        <span>Menú</span>
+        <a class="dx-side-close" href="#top" aria-label="Cerrar menú"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
+      <nav class="dx-colls" aria-label="Secciones del sitio"><a href="/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentación</span></a><a href="/guia/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Guía de uso</span></a><a href="/confianza/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Confianza</span></a></nav>
+      <nav class="dx-pages" aria-label="Documentación">
+        <ul class="dx-list">
+          <li><a href="/docs/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Introducción</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-concepts">Conceptos</p>
+        <ul class="dx-list" aria-labelledby="g-docs-concepts">
+          <li><a href="/docs/arquitectura/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><span>Arquitectura</span></a></li>
+          <li><a href="/docs/runtime-de-agentes/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg><span>Runtime de agentes</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-integrate">Integra</p>
+        <ul class="dx-list" aria-labelledby="g-docs-integrate">
+          <li><a href="/docs/referencia-api/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg><span>Referencia de la API</span></a></li>
+          <li><a href="/docs/autenticacion-y-multitenencia/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg><span>Autenticación y cuentas</span></a></li>
+          <li><a href="/docs/formato-de-habilidades/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><path d="M17.25 13.5v7.5M13.5 17.25H21"/></svg><span>Formato de habilidades</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-operate">Opera</p>
+        <ul class="dx-list" aria-labelledby="g-docs-operate">
+          <li><a href="/docs/despliegue/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></svg><span>Despliegue</span></a></li>
+          <li><a href="/docs/configuracion/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span>Configuración</span></a></li>
+          <li><a href="/docs/modelo-de-seguridad/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Modelo de seguridad</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Idioma">
+          <a href="/docs/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/docs/" hreflang="en" lang="en">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <div class="dx-home">
+      <header class="dx-hero">
+        <nav class="dx-crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li><span aria-current="page">Documentación</span></li></ol></nav>
+        <p class="dx-eyebrow"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentación</span><span class="dx-dot" aria-hidden="true">·</span><span>8 páginas</span></p>
+        <h1>Documentación técnica de AI Workforce OS</h1>
+        <p class="dx-lead">Para quien quiere entender, desplegar o integrar AI Workforce OS: cómo está construido, qué expone la API, cómo se aíslan las cuentas y qué se puede configurar. Todo describe lo que el código hace hoy.</p>
+        <button class="dx-hero-search" type="button" data-search hidden aria-label="Buscar en la documentación…" aria-keyshortcuts="Control+K Meta+K /"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span>Buscar en la documentación…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd></button>
+        <div class="dx-hero-actions">
+          <a class="dx-btn dx-btn-primary" href="/docs/arquitectura/">Empieza aquí<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          <a class="dx-btn dx-btn-ghost" href="/docs/referencia-api/">Referencia de la API</a>
+          <a class="dx-btn dx-btn-ghost" href="/docs/despliegue/">Despliegue</a>
+        </div>
+      </header>
+      <section class="dx-group-sec" id="grp-concepts" aria-labelledby="grp-concepts-h">
+        <div class="dx-group-head"><h2 id="grp-concepts-h">Conceptos</h2><p>Cómo está construido y cómo razonan los agentes.</p></div>
+        <ul class="dx-cards">
+            <li><a href="/docs/arquitectura/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg></span>
+              <b>Arquitectura de AI Workforce OS</b>
+              <span>Componentes, flujo de una petición, canal WebSocket, modelo de datos, multi-tenencia con RLS y diferencia entre simulación y modo real.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+            <li><a href="/docs/runtime-de-agentes/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg></span>
+              <b>Runtime de agentes</b>
+              <span>El runtime Python de agentes: contrato HTTP, simulación vs real, proveedores y respaldo, política de datos, herramientas, sandbox y presupuestos.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+        </ul>
+      </section>
+      <section class="dx-group-sec" id="grp-integrate" aria-labelledby="grp-integrate-h">
+        <div class="dx-group-head"><h2 id="grp-integrate-h">Integra</h2><p>La API, la autenticación y el formato de habilidades.</p></div>
+        <ul class="dx-cards">
+            <li><a href="/docs/referencia-api/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg></span>
+              <b>Referencia de la API</b>
+              <span>Autenticación, tokens de API, errores y rutas de /api/v1: peticiones, tareas, aprobaciones, agentes, proyectos, skills, tienda, drive y WebSocket.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+            <li><a href="/docs/autenticacion-y-multitenencia/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg></span>
+              <b>Autenticación y multitenencia</b>
+              <span>Cuentas, sesiones, doble factor, roles, invitaciones y row-level security de Postgres: cómo AI Workforce OS aísla cada organización.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+            <li><a href="/docs/formato-de-habilidades/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><path d="M17.25 13.5v7.5M13.5 17.25H21"/></svg></span>
+              <b>Formato de habilidades</b>
+              <span>Cómo se escribe una habilidad: carpeta con SKILL.md, frontmatter, límites, ciclo de revisión, importación, exportación y cómo llega al modelo.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+        </ul>
+      </section>
+      <section class="dx-group-sec" id="grp-operate" aria-labelledby="grp-operate-h">
+        <div class="dx-group-head"><h2 id="grp-operate-h">Opera</h2><p>Despliegue, configuración y modelo de seguridad.</p></div>
+        <ul class="dx-cards">
+            <li><a href="/docs/despliegue/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></svg></span>
+              <b>Despliegue en producción</b>
+              <span>Despliega AI Workforce OS en tu servidor con Docker Compose: Caddy con TLS automático, Postgres, Redis, copias de seguridad, actualizaciones y rollback.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+            <li><a href="/docs/configuracion/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
+              <b>Referencia de configuración</b>
+              <span>Todas las variables de entorno de AI Workforce OS con su valor por defecto: servidor, autenticación, presupuesto, proveedores de modelo y build.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+            <li><a href="/docs/modelo-de-seguridad/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg></span>
+              <b>Modelo de seguridad</b>
+              <span>Cómo se limita el daño que puede hacer un agente: bóveda de credenciales, aprobaciones, topes, kill switch, auditoría, RLS y sandbox, con sus límites.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+        </ul>
+      </section>
+      <section class="dx-group-sec" aria-labelledby="explore-h">
+        <div class="dx-group-head"><h2 id="explore-h">Explora también</h2></div>
+        <ul class="dx-cards dx-cards-coll">
+          <li><a href="/guia/"><span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg></span><b>Guía de uso</b><span>Cómo usar la app, pantalla por pantalla.</span><span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></li>
+          <li><a href="/confianza/"><span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg></span><b>Confianza</b><span>Seguridad, datos y proveedores, sin adornos.</span><span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></li>
+        </ul>
+      </section>
+      <section class="dx-cta" aria-labelledby="cta-h">
+        <div>
+          <h2 id="cta-h">Pruébalo en tu propia oficina</h2>
+          <p>Crea tu cuenta y llegas a una oficina con tu equipo de IA. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
+        </div>
+        <div class="dx-cta-row">
+          <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+          <a class="dx-btn dx-btn-ghost" href="https://app.workforceai.es/prueba" rel="noopener">Probar sin registrarte</a>
+        </div>
+      </section>
+      <footer class="dx-foot">
+        <p>AI Workforce OS es un proyecto en desarrollo. Esta documentación describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+        <div class="dx-foot-links">
+          <a href="/">AI Workforce OS</a>
+          <a href="/docs/">Documentación</a>
+          <a href="/guia/">Guía de uso</a>
+          <a href="/confianza/">Confianza</a>
+          <a href="#top">Volver arriba</a>
+        </div>
+      </footer>
     </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
-      <a href="/docs/">Documentación</a>
-      <a href="/guia/">Guía de uso</a>
-      <a href="/confianza/">Confianza</a>
-      <a href="#top">Volver arriba</a>
-    </div>
-  </footer>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

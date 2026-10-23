@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI Workforce OS security model</title>
-  <meta name="description" content="How an agent's blast radius is limited: credential vault, human approvals, caps, kill switch, audit, RLS and sandbox. With the current limits stated.">
+  <meta name="description" content="How the damage an agent can do is bounded: credential vault, approvals, caps, kill switch, audit log, RLS and sandbox, with the current limits.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,182 +24,201 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
   <meta property="og:title" content="AI Workforce OS security model">
-  <meta property="og:description" content="How an agent's blast radius is limited: credential vault, human approvals, caps, kill switch, audit, RLS and sandbox. With the current limits stated.">
+  <meta property="og:description" content="How the damage an agent can do is bounded: credential vault, approvals, caps, kill switch, audit log, RLS and sandbox, with the current limits.">
   <meta property="og:url" content="https://workforceai.es/en/docs/security-model/">
   <meta property="og:image" content="https://workforceai.es/img/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="AI Workforce OS security model">
-  <meta name="twitter:description" content="How an agent's blast radius is limited: credential vault, human approvals, caps, kill switch, audit, RLS and sandbox. With the current limits stated.">
+  <meta name="twitter:description" content="How the damage an agent can do is bounded: credential vault, approvals, caps, kill switch, audit log, RLS and sandbox, with the current limits.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Security model","item":"https://workforceai.es/en/docs/security-model/"}]},{"@type":"TechArticle","headline":"Security model","description":"How an agent's blast radius is limited: credential vault, human approvals, caps, kill switch, audit, RLS and sandbox. With the current limits stated.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/security-model/","url":"https://workforceai.es/en/docs/security-model/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=b5a2c05468">
+  <script src="/docs.js?v=2e2073da11" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Security model","item":"https://workforceai.es/en/docs/security-model/"}]},{"@type":"TechArticle","headline":"Security model","description":"How the damage an agent can do is bounded: credential vault, approvals, caps, kill switch, audit log, RLS and sandbox, with the current limits.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/security-model/","url":"https://workforceai.es/en/docs/security-model/","dateModified":"2026-10-22","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/en/" aria-label="AI Workforce OS">
+<body class="dx dx-docs" id="top">
+  <a class="dx-skip" href="#main">Skip to content</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/en/" aria-label="AI Workforce OS">
         <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="/en/">Home</a>
-        <a href="/en/docs/">Documentation</a>
-        <a href="/en/guide/">User guide</a>
-        <a href="/en/trust/">Trust</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Language">
-          <a href="/docs/modelo-de-seguridad/" hreflang="es" lang="es" >ES</a>
+      <nav class="dx-tabs" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Language">
+          <a href="/docs/modelo-de-seguridad/" hreflang="es" lang="es">ES</a>
           <a href="/en/docs/security-model/" hreflang="en" lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap wide">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/docs/">Documentation</a></li><li aria-current="page">Security model</li></ol></nav>
-      <article>
-        <h1>Security model</h1>
-        <p class="lead">The design starts from one premise: a language model can be tricked, because it processes untrusted text and can act. So damage is bounded by deterministic controls in the backend (Go), not by prompt instructions. This page describes what is implemented and, at the end, what is not.</p>
-        
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">Design principles</a></li><li><a href="#s2">Credentials vault</a></li><li><a href="#s3">Human approvals</a></li><li><a href="#s4">Least privilege for connections</a></li><li><a href="#s5">Spending caps, hours and anomalies</a></li><li><a href="#s6">Kill switch and read-only mode</a></li><li><a href="#s7">Audit log</a></li><li><a href="#s8">Tenant isolation, authentication and limits</a></li><li><a href="#s9">Untrusted content and the code sandbox</a></li><li><a href="#s10">What is not covered</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">Design principles</h2>
-        <p>Agents only produce tool requests. The backend decides whether they run, evaluating in order: role permissions, connection grants, limits, autonomy level and approvals. The agent runtime receives no credentials and cannot alter the identity under which actions are taken.</p>
-        <p>Effective authority is the intersection of what the originator of the work can do and what the agent can do. Delegation never widens power, and delegation depth is bounded (5 by default). Anything that fails or cannot be read is treated as denied (fail closed).</p>
-        
-        
-        
-        <aside class="tip"><b>Tip.</b> There is no promise that the model will never be influenced by malicious text. The promise is that the blast radius stays limited to what the backend authorizes.</aside>
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">Credentials vault</h2>
-        <p>Connection credentials (OAuth tokens, API keys) are stored encrypted with AES-256-GCM in an envelope scheme: a key-encryption key (KEK) held outside the database wraps a per-organization data key (DEK), and the DEK encrypts each secret with a random nonce. The additional authenticated data includes organization, credential, version and kind, so a ciphertext copied to another row or organization does not decrypt.</p>
-        <p>Without a configured KEK (CONNECTIONS_KEK, 32 bytes in base64) the vault fails closed: it neither stores nor reads live credentials. Several KEKs can be loaded at once to rotate them, and credentials support rotation with active and retired versions. Revoking a connection suspends its use, calls the provider's revocation endpoint and destroys the ciphertext (crypto-shredding).</p>
-        <p>The model never sees a secret: the contract between the backend and the runtime has no credential fields, the API returns only metadata and a short hint, and exact secret values loaded in memory are registered with a redactor that masks them in logs, audit entries and outputs.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-text">KEK (outside the DB, CONNECTIONS_KEK)
-  └─ wraps → per-organization DEK (versioned)
-       └─ AES-256-GCM(secret, random nonce, AAD = org|credential|version|kind)</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">Human approvals</h2>
-        <p>An agent can request an action; it can never grant approval. Approvals are made by people with the admin or owner role, and the role is read from the session token, not from the request body. Each approval is bound by hash to the exact arguments approved, is consumed once and is revalidated before execution, because rules may have changed while it waited. It expires (48 hours by default) and an expiry counts as a rejection.</p>
-        <p>There is a floor that no organization rule can weaken: declared high risk, actions on the mandatory-approval list and agents at the suggest or approve_each levels. On top of it, an organization can add rules: amount thresholds, forbidden actions, new recipients, sensitive categories, required role by amount or action, and dual approval.</p>
-        <p>Dual approval requires two distinct humans holding the required role, the same person cannot approve twice and the person who made the request never approves. A single rejection from an authorized person is final. If the action runs after a server restart, the approval is claimed atomically so that it executes at most once.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Autonomy level</th><th scope="col">Behavior</th></tr></thead><tbody><tr><th scope="row"><code>suggest</code></th><td>The agent only proposes; nothing is executed.</td></tr><tr><th scope="row"><code>approve_each</code></th><td>Every action with an external effect waits for approval (the default level).</td></tr><tr><th scope="row"><code>rules</code></th><td>Runs on its own if an allow rule matches and no deny rule does; otherwise asks for approval.</td></tr><tr><th scope="row"><code>autonomous</code></th><td>Runs without approval, except mandatory-approval actions, high risk or effects toward new recipients.</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">Least privilege for connections</h2>
-        <p>An action through an external connection must pass three filters in series: the capability the provider declares, the grant the organization gives to a specific agent, and the policy and approval of the action itself. A grant can only narrow what the connection allows. The recommended pattern is to keep a read-only connection separate from a write one.</p>
-        <p>Each connection and each grant supports limits per minute, hour and day, writes per day, bytes per day and a monthly budget. These counters are computed from the usage table in Postgres, so they survive restarts. An agent cannot change its own autonomy, permissions or rules, and any deny rule beats an allow rule.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">Spending caps, hours and anomalies</h2>
-        <p>Before every runtime call, the maximum estimated cost is reserved against the request, the agent and the organization, and afterwards reconciled using the higher of the cost reported by the runtime and the one recomputed by the backend. When a cap is reached, the request or the agent is paused and a human decides whether to raise it. Structural limits also guard against loops: delegation depth, tasks per request, retries, time per task and per request, and a per-organization queue (8 concurrent calls by default).</p>
-        <p>Operating hours are a weekly schedule with a time zone that only prevents starting new work outside open hours; it does not block approvals or work already admitted. Anomaly detection v1 applies four explainable rules and records every finding in the audit log. On its own it never blocks; automatic freeze is optional and ships disabled.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Rule</th><th scope="col">Fires when</th></tr></thead><tbody><tr><th scope="row"><code>spend_spike</code></th><td>Spend in the current hour is at least 4 times the hourly average of the previous 24 h and at least 2 USD.</td></tr><tr><th scope="row"><code>tool_request_burst</code></th><td>An agent requests 40 or more tools within 60 seconds.</td></tr><tr><th scope="row"><code>rejected_approvals</code></th><td>5 or more approvals are rejected within 1 hour.</td></tr><tr><th scope="row"><code>new_recipient_domains</code></th><td>3 or more never-seen recipient domains appear within 1 hour.</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">Kill switch and read-only mode</h2>
-        <p>The kill switch has two levels. Any admin or owner can activate it; lifting it requires the release permission (owner) and a written reason. It can also be imposed with the KILL_SWITCH environment variable (freeze or lockdown), which no API call can lift: the variable must be removed and the configuration reloaded.</p>
-        <p>Beyond it there are per-agent pause (graceful lets the call in flight finish; immediate stops everything), read-only mode for the organization or an agent, and switching off a tool or a single action (for example email or email.send). In read-only mode agents keep reading and proposing, but effects are denied. Held actions return to the approval queue and must be approved again: nothing runs by inertia when a control is lifted.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Level</th><th scope="col">Effect</th><th scope="col">Who lifts it</th></tr></thead><tbody><tr><th scope="row"><code>none</code></th><td>Normal operation.</td><td>Not applicable</td></tr><tr><th scope="row"><code>freeze</code></th><td>No new work starts and the Tool Gateway denies all connection use, reads included.</td><td>owner, with a written reason</td></tr><tr><th scope="row"><code>lockdown</code></th><td>Freeze, plus suspending every connection and cancelling held actions.</td><td>owner, with a written reason; connections are resumed afterwards</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">Audit log</h2>
-        <p>Audit is a per-organization hash chain: each entry includes the hash of the previous one (SHA-256 over a canonical representation with sequence, actor, action, entity and details). Changing, deleting, reordering or inserting an entry breaks the chain from that point, and truncating the tail is detected against the chain head. A verification endpoint recomputes the chain.</p>
-        <p>Before being chained, every entry goes through a scrubber that keeps metadata only: it replaces content fields (bodies, arguments, subjects, summaries) and credential-like keys with [redacted], masks embedded secrets and truncates long strings. Audited events include authentication, policy decisions, approvals, tool executions, and changes to controls and budgets.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-http">GET /audit          # query
-GET /audit/export   # JSONL or CSV
-GET /audit/verify   # recomputes the hash chain</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s8" aria-labelledby="h8">
-        <h2 id="h8">Tenant isolation, authentication and limits</h2>
-        <p>Tables holding organization data use row-level security (RLS) in Postgres: each transaction sets the organization with a transaction-scoped set_config and the policies filter by it. An integration test covers isolation between organizations.</p>
-        <p>Access tokens last 15 minutes and refresh tokens 30 days by default. After 5 failed attempts the account is locked for 15 minutes, and login also has a limit of 10 attempts per 15-minute window (in Redis when available, in memory otherwise). For nonexistent accounts the same password hash is computed, so response time does not reveal whether the user exists.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s9" aria-labelledby="h9">
-        <h2 id="h9">Untrusted content and the code sandbox</h2>
-        <p>Everything that comes from outside (emails, API responses, files) goes through a deterministic pipeline before reaching the model: text is normalized (NFKC, invisible characters removed), credentials, one-time codes and card numbers are masked, markdown images and links are neutralized, the text is truncated, scored with injection heuristics and wrapped in a delimited block as data. A high score flags the task and raises approval for its actions. The score is a signal, not a barrier; the barrier is permissions, approvals and limits.</p>
-        <p>Code an agent wants to run is a high-risk request: it is shown in full to a person, and only after approval does the backend send it to the runner. The container has no network, a read-only root filesystem, an unprivileged user, all capabilities dropped, CPU, memory and process limits, a hard timeout, output caps and an extension allow-list. It receives none of the runner's environment variables and no access to the drive or the backend. Changing the code or an input requires a new approval, and the kill switch aborts a run in progress.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-text">&lt;untrusted_data id=&quot;a91f3c&quot; source=&quot;email:inbound&quot; trust=&quot;external_untrusted&quot;&gt;
-...sanitized content...
-&lt;/untrusted_data id=&quot;a91f3c&quot;&gt;</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s10" aria-labelledby="h10">
-        <h2 id="h10">What is not covered</h2>
-        <p>There are no certifications (neither SOC 2 nor ISO) and the project is not ready for regulated enterprise environments. There is no single sign-on (SSO). Audit export is a plain JSONL or CSV dump, with no signature and no external anchoring of the chain head.</p>
-        <p>Known limits: recovery after a restart assumes a single instance; with several replicas, semaphores and several counters are per process or last-writer-wins. A call already sent to the runtime finishes even if the kill switch is activated. Some state lives in process memory. The finer permission approvals:decide:high does not exist: deciding today equals being admin or owner. The forbid_self_approval option ships disabled for compatibility with one-person teams.</p>
-        <p>The code sandbox mounts the Docker socket in the runner, which is equivalent to root access on the host. For anything beyond a single trusted host, use a dedicated rootless or remote daemon and a runtime such as gVisor. Out of scope for now: per-organization model keys stored in the vault, undoing actions, and unified spending caps per connection or tool.</p>
-        
-        
-        
-        <aside class="tip"><b>Tip.</b> If you are evaluating the project for production, treat this page as the starting point of your own review, not as a guarantee.</aside>
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/auth-and-tenancy/"><b>Authentication and multi-tenancy</b><span>How accounts, sessions, roles, invitations and Postgres row-level security isolate organizations in AI Workforce OS.</span></a></li><li><a href="/en/docs/agent-runtime/"><b>Agent runtime</b><span>The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.</span></a></li><li><a href="/en/docs/architecture/"><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Start now</h2>
-      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Documentation">
+      <div class="dx-side-head">
+        <span>Menu</span>
+        <a class="dx-side-close" href="#top" aria-label="Close menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a href="/en/docs/">Documentation</a>
-      <a href="/en/guide/">User guide</a>
-      <a href="/en/trust/">Trust</a>
-      <a href="#top">Back to top</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <nav class="dx-pages" aria-label="Documentation">
+        <ul class="dx-list">
+          <li><a href="/en/docs/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Overview</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-concepts">Concepts</p>
+        <ul class="dx-list" aria-labelledby="g-docs-concepts">
+          <li><a href="/en/docs/architecture/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><span>Architecture</span></a></li>
+          <li><a href="/en/docs/agent-runtime/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg><span>Agent runtime</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-integrate">Integrate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-integrate">
+          <li><a href="/en/docs/api-reference/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg><span>API Reference</span></a></li>
+          <li><a href="/en/docs/auth-and-tenancy/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg><span>Auth and tenancy</span></a></li>
+          <li><a href="/en/docs/skills-format/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><path d="M17.25 13.5v7.5M13.5 17.25H21"/></svg><span>Skills format</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-operate">Operate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-operate">
+          <li><a href="/en/docs/deployment/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></svg><span>Deployment</span></a></li>
+          <li><a href="/en/docs/configuration/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span>Configuration</span></a></li>
+          <li><a href="/en/docs/security-model/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Security model</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Language">
+          <a href="/docs/modelo-de-seguridad/" hreflang="es" lang="es">ES</a>
+          <a href="/en/docs/security-model/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/docs/">Documentation</a></li><li><span>Operate</span></li></ol></nav>
+        <h1>Security model</h1>
+        <p class="dx-lead">A language model can be tricked: it processes untrusted text and it can act. That is why AI Workforce OS bounds damage with deterministic controls in the backend (Go), not with prompt instructions. This page is for anyone evaluating or operating the platform: it describes what is implemented and, at the end, what is not.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>10 min read</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">On this page</summary>
+        <ol><li><a href="#design-principles">Design principles</a></li><li><a href="#credentials-vault">Credentials vault</a></li><li><a href="#human-approvals">Human approvals</a></li><li><a href="#least-privilege-for-connections">Least privilege for connections</a></li><li><a href="#spending-caps-hours-and-anomalies">Spending caps, hours and anomalies</a></li><li><a href="#kill-switch-and-read-only-mode">Kill switch and read-only mode</a></li><li><a href="#audit-log">Audit log</a></li><li><a href="#tenant-isolation-and-identity">Tenant isolation and identity</a></li><li><a href="#untrusted-content-and-the-code-sandbox">Untrusted content and the code sandbox</a></li><li><a href="#what-is-not-covered">What is not covered</a></li></ol>
+        <a class="dx-toc-top" href="#top">Back to top</a>
+      </details>
+      <div class="dx-body">
+        
+        <section class="dx-sec" aria-labelledby="design-principles">
+        <h2 id="design-principles">Design principles<a class="dx-anchor" href="#design-principles" aria-label="Link to the “Design principles” section">#</a></h2>
+        <p>Agents only produce tool requests; the backend decides whether they run. The Tool Gateway checks every request in this order:</p>
+        <ul class="dx-ul"><li>Controls: kill switch, agent pause, read-only mode and tools or actions switched off.</li><li>The connection grant for that agent.</li><li>Validation: connection status, granted capability, the grant's maximum risk and usage limits.</li><li>A scan for secrets in the outgoing arguments.</li><li>Approval reasons: the policy engine collects every verdict and keeps the strictest (deny beats approval, and approval beats allow).</li></ul>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>The agent runtime never receives connection credentials. If an organization stores its own model key, that key does travel to the runtime on each call, because the runtime is what calls the provider.</p></div></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>There is no promise that the model will never be influenced by malicious text. The promise is that the blast radius stays limited to what the backend authorizes.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="credentials-vault">
+        <h2 id="credentials-vault">Credentials vault<a class="dx-anchor" href="#credentials-vault" aria-label="Link to the “Credentials vault” section">#</a></h2>
+        <p>Connection credentials (OAuth tokens, API keys) and each organization's own model keys are stored encrypted with AES-256-GCM in an envelope scheme. A key-encryption key (KEK) held outside the database wraps a versioned per-organization data key (DEK), and the DEK encrypts each secret with a random nonce. The additional authenticated data includes organization, record, version and kind, so a ciphertext copied to another row or organization does not decrypt.</p>
+        <p>Without a KEK (<code>CONNECTIONS_KEK</code>, 32 bytes in base64) the vault fails closed: it neither stores nor reads live credentials. It can load several KEKs at once for rotation (<code>CONNECTIONS_KEK_PREVIOUS</code>), and each credential has active and retired versions.</p>
+        <ul class="dx-ul"><li>The API returns only metadata and, for secrets of 20 bytes or more, the last 4 characters as a hint.</li><li>Revoking a connection suspends its use, calls the provider's revocation endpoint and destroys the ciphertext. If the provider does not answer, the ciphertext is kept until a retry succeeds.</li><li>The exact values of secrets in use are registered with a redactor that masks them in tool outputs. The audit log also masks anything shaped like a credential.</li></ul>
+        <figure class="dx-code" data-lang="text">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Text</span></figcaption>
+          <pre tabindex="0" aria-label="Text code"><code>KEK (outside the DB, CONNECTIONS_KEK)
+  └─ wraps → per-organization DEK (versioned)
+       └─ AES-256-GCM(secret, random nonce, AAD = org|record|version|kind)</code></pre>
+        </figure>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>Keep the KEK apart from the database backups. If you lose it, the encrypted credentials cannot be recovered; if it leaks together with a backup, they are exposed.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="human-approvals">
+        <h2 id="human-approvals">Human approvals<a class="dx-anchor" href="#human-approvals" aria-label="Link to the “Human approvals” section">#</a></h2>
+        <p>An agent can request an action, never approve it. People with the admin or owner role decide, and the role comes from the session token, not from the request body. Each approval is bound by hash to the exact arguments approved, is consumed once and is revalidated before execution, because rules may have changed while it waited.</p>
+        <p>An approval for an interactive request expires after 30 minutes (<code>APPROVAL_TIMEOUT</code>), and an expiry counts as a rejection. Project approvals do not expire by default: the system sends an hourly reminder while they are pending.</p>
+        <p>There is a floor no organization rule can weaken: declared high risk, actions on the mandatory-approval list (<code>APPROVAL_ACTIONS</code>) and agents at the <code>suggest</code> or <code>approve_each</code> levels. On top of it, an organization can add rules: amount thresholds, forbidden actions, new recipients, sensitive categories, required role by amount or action, and dual approval.</p>
+        <p>Dual approval requires two distinct people holding the required role, and the person who made the request cannot approve. A single rejection from an authorized person is final. If the action runs after a server restart, the approval is claimed atomically so that it executes at most once.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Human approvals"><table><thead><tr><th scope="col">Autonomy level</th><th scope="col">Behavior</th></tr></thead><tbody><tr><th scope="row"><code>suggest</code></th><td>Every action with an external effect waits for approval; once approved, it runs. Today it behaves exactly like <code>approve_each</code>.</td></tr><tr><th scope="row"><code>approve_each</code></th><td>Every action with an external effect waits for approval.</td></tr><tr><th scope="row"><code>rules</code></th><td>Runs without approval unless the floor or an organization rule requires one. Today it behaves exactly like <code>autonomous</code>.</td></tr><tr><th scope="row"><code>autonomous</code></th><td>Runs without approval except for the floor, organization rules, capabilities marked as always requiring approval and tasks flagged for suspected injection.</td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>Each role template or onboarding pack sets the initial level of its agents.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="least-privilege-for-connections">
+        <h2 id="least-privilege-for-connections">Least privilege for connections<a class="dx-anchor" href="#least-privilege-for-connections" aria-label="Link to the “Least privilege for connections” section">#</a></h2>
+        <p>An action through an external connection passes three filters in series: the capability the provider declares, the grant the organization gives to a specific agent, and the policy and approval of the action itself. A grant can only narrow what the connection allows. The recommended pattern is to keep a read-only connection separate from a write one.</p>
+        <p>Limits are computed from the usage table in Postgres, so they survive restarts. An agent cannot change its own autonomy, permissions or rules, and any deny rule beats an allow rule.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Least privilege for connections"><table><thead><tr><th scope="col">Limit</th><th scope="col">Connection</th><th scope="col">Grant</th></tr></thead><tbody><tr><th scope="row">Calls per minute, hour and day</th><td>Yes</td><td>Yes</td></tr><tr><th scope="row">Writes per day</th><td>Yes</td><td>Yes</td></tr><tr><th scope="row">Bytes per day</th><td>Yes</td><td>No</td></tr><tr><th scope="row">Monthly budget (last 30 days)</th><td>Yes</td><td>No</td></tr></tbody></table></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="spending-caps-hours-and-anomalies">
+        <h2 id="spending-caps-hours-and-anomalies">Spending caps, hours and anomalies<a class="dx-anchor" href="#spending-caps-hours-and-anomalies" aria-label="Link to the “Spending caps, hours and anomalies” section">#</a></h2>
+        <p>Before every runtime call, the maximum estimated cost is reserved against the request, the agent, the department and the organization. Afterwards it is reconciled using the higher of the cost the runtime reports and the one the backend recomputes. When a request, agent or department cap is reached, the work pauses and a person decides whether to raise it; the organization cap makes the call fail.</p>
+        <p>Structural limits also guard against loops: delegation depth (5), retries per task, time per task, plan and project size, and a per-organization queue (8 concurrent calls by default).</p>
+        <p>Operating hours are a weekly schedule with a time zone that only prevents starting new work outside open hours; it does not block approvals or work already admitted. Anomaly detection applies four explainable rules, each with a 15-minute cooldown between alerts, and records every finding in the audit log. On its own it never blocks: automatic freeze is optional and ships disabled.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Spending caps, hours and anomalies"><table><thead><tr><th scope="col">Rule</th><th scope="col">Fires when</th></tr></thead><tbody><tr><th scope="row"><code>spend_spike</code></th><td>Spend in the current hour is at least 4 times the hourly average of the previous 24 h and at least 2 USD (needs 3 h of history).</td></tr><tr><th scope="row"><code>tool_request_burst</code></th><td>An agent requests 40 or more tools within 60 seconds.</td></tr><tr><th scope="row"><code>rejected_approvals</code></th><td>5 or more approvals are rejected within 1 hour.</td></tr><tr><th scope="row"><code>new_recipient_domains</code></th><td>3 or more never-seen recipient domains appear within 1 hour (counted once 5 domains are known).</td></tr></tbody></table></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="kill-switch-and-read-only-mode">
+        <h2 id="kill-switch-and-read-only-mode">Kill switch and read-only mode<a class="dx-anchor" href="#kill-switch-and-read-only-mode" aria-label="Link to the “Kill switch and read-only mode” section">#</a></h2>
+        <p>The kill switch has two levels. Any admin or owner can activate it; lifting it requires the owner role and a written reason. It can also be imposed with the <code>KILL_SWITCH</code> environment variable (<code>freeze</code> or <code>lockdown</code>), which no API call can lift: the variable must be removed and the process reloaded.</p>
+        <p>There are finer controls: pausing an agent (it denies the agent's new tool calls and new work), read-only mode for the organization or an agent (it keeps reading and proposing, but effects are denied) and switching off a tool or a single action, for example <code>email</code> or <code>email.send</code>. Held actions return to the approval queue and must be approved again: nothing runs by inertia when a control is lifted.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Kill switch and read-only mode"><table><thead><tr><th scope="col">Level</th><th scope="col">Effect</th><th scope="col">Who lifts it</th></tr></thead><tbody><tr><th scope="row"><code>none</code></th><td>Normal operation.</td><td>Not applicable</td></tr><tr><th scope="row"><code>freeze</code></th><td>No new work starts, the Tool Gateway denies all connection use (reads included) and held actions return to the approval queue.</td><td>owner, with a written reason</td></tr><tr><th scope="row"><code>lockdown</code></th><td>Everything in <code>freeze</code>, plus suspending every connection.</td><td>owner, with a written reason; connections are resumed afterwards</td></tr></tbody></table></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="audit-log">
+        <h2 id="audit-log">Audit log<a class="dx-anchor" href="#audit-log" aria-label="Link to the “Audit log” section">#</a></h2>
+        <p>The audit log is a per-organization hash chain: each entry includes the hash of the previous one (SHA-256 over a canonical representation with sequence, organization, timestamp, actor, action, entity and details). Changing, deleting, reordering or inserting an entry breaks the chain from that point, and truncating the tail is detected against the chain head.</p>
+        <p>Before being chained, every entry goes through a scrubber that keeps metadata only: it replaces content fields (bodies, arguments, subjects, summaries) and credential-like keys with <code>[redacted]</code>, masks embedded secrets and cuts strings to 300 characters. Audited events include authentication, policy decisions, approvals, tool executions, and changes to controls and budgets.</p>
+        <figure class="dx-code" data-lang="http">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">HTTP</span></figcaption>
+          <pre tabindex="0" aria-label="HTTP code"><code><span class="tk-kw">GET</span> <span class="tk-path">/api/v1/audit</span>                      <span class="tk-com"># query</span>
+<span class="tk-kw">GET</span> <span class="tk-path">/api/v1/audit/export?format=jsonl</span>  <span class="tk-com"># or format=csv</span>
+<span class="tk-kw">GET</span> <span class="tk-path">/api/v1/audit/verify</span>               <span class="tk-com"># recomputes the hash chain</span></code></pre>
+        </figure>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>Every so often, store the chain head's sequence and hash off the server. <code>GET /api/v1/audit/verify</code> accepts <code>anchor_seq</code> and <code>anchor_hash</code> to check the chain against that anchor.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="tenant-isolation-and-identity">
+        <h2 id="tenant-isolation-and-identity">Tenant isolation and identity<a class="dx-anchor" href="#tenant-isolation-and-identity" aria-label="Link to the “Tenant isolation and identity” section">#</a></h2>
+        <p>Tables holding organization data use row-level security (RLS) in Postgres. Each transaction sets the organization with a transaction-scoped <code>set_config</code>, the policies filter by it and the application connects with a role without <code>BYPASSRLS</code>. An integration test covers isolation between organizations.</p>
+        <ul class="dx-ul"><li>Access tokens last 15 minutes and refresh tokens 30 days.</li><li>After 5 failed attempts the account is locked for 15 minutes. Sign-in also allows 10 attempts per 15 minutes per email and 20 per IP (in Redis when available, in memory otherwise).</li><li>For nonexistent accounts a password hash is still computed, so response time does not reveal whether the user exists.</li><li>There is single sign-on with OIDC (with PKCE), verified domains, a sign-in policy that can require MFA or SSO, TOTP MFA and SCIM 2.0 provisioning.</li></ul>
+      </section>
+        <section class="dx-sec" aria-labelledby="untrusted-content-and-the-code-sandbox">
+        <h2 id="untrusted-content-and-the-code-sandbox">Untrusted content and the code sandbox<a class="dx-anchor" href="#untrusted-content-and-the-code-sandbox" aria-label="Link to the “Untrusted content and the code sandbox” section">#</a></h2>
+        <p>Everything that comes from outside (emails, API responses, files) goes through a deterministic pipeline before reaching the model: text is normalized (NFKC, invisible characters removed), credentials, one-time codes and card numbers are masked, markdown images and links are neutralized, the text is cut (4,000 characters by default), scored with injection heuristics and wrapped as data in a delimited block. A high score flags the task and forces approval of its actions. The score is a signal, not a barrier: the barrier is permissions, approvals and limits.</p>
+        <p>Code an agent wants to run is shown in full to a person, and the backend only sends it to the runner after approval. Changing the code or an input requires a new approval, and the kill switch aborts a run in progress.</p>
+        <ul class="dx-ul"><li>Container without network (<code>--network none</code>) and with a read-only root filesystem.</li><li>Unprivileged user, all capabilities dropped and <code>no-new-privileges</code>.</li><li>CPU, memory and process limits, a hard timeout and output caps, with an extension allow-list for generated files.</li><li>None of the runner's environment variables and no direct access to the Drive or the backend.</li></ul>
+        <figure class="dx-code" data-lang="text">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Text</span></figcaption>
+          <pre tabindex="0" aria-label="Text code"><code>&lt;untrusted_data id=&quot;msg-18c2f&quot; source=&quot;tool:email.read&quot; from=&quot;client@example.com&quot; trust=&quot;external_untrusted&quot;&gt;
+subject: ...
+body: ...sanitized content...
+&lt;/untrusted_data&gt;</code></pre>
+        </figure>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>Desk mode is optional and ships disabled. If an organization turns it on (which requires an explicit risk acknowledgement), code confined to the agent's own files runs without approval, under smaller caps.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="what-is-not-covered">
+        <h2 id="what-is-not-covered">What is not covered<a class="dx-anchor" href="#what-is-not-covered" aria-label="Link to the “What is not covered” section">#</a></h2>
+        <p>There are no certifications (neither SOC 2 nor ISO) and the project is not ready for regulated enterprise environments. These are the known limits:</p>
+        <ul class="dx-ul"><li>Single sign-on is OIDC only: SAML is not implemented.</li><li>Audit export is an unsigned JSONL or CSV dump, and nothing anchors the chain head off the server automatically.</li><li>Recovery after a restart assumes a single instance: with several replicas, the per-organization queue, budget reservations and some counters are per process or last-writer-wins.</li><li>A call already sent to the runtime finishes even if the kill switch is activated.</li><li>There is no per-risk approval permission: deciding equals being admin or owner. The ban on self-approval ships disabled (except with dual approval) for compatibility with one-person teams.</li><li>The HTTP rate limits on authentication let requests through if their store fails.</li><li>The production <code>Caddyfile</code> does not set a <code>Content-Security-Policy</code>.</li><li>External actions cannot be undone. There is a 60 to 300 second window to cancel an email, and Drive file versions can be restored.</li><li>There is no spending cap unified across model and connections, and no per-tool cap.</li></ul>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>If you are evaluating the project for production, treat this page as the starting point of your own review, not as a guarantee.</p></div></div>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>The <code>sandbox-runner</code> service (the <code>sandbox</code> profile of the development compose file) mounts the Docker socket, which is equivalent to root access on the host. For anything beyond a single trusted host, use a dedicated rootless or remote daemon and a runtime such as gVisor (<code>SANDBOX_RUNTIME=runsc</code>).</p></div></div>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="dx-cards dx-cards-sm"><li><a href="/en/docs/auth-and-tenancy/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg><b>Authentication and multi-tenancy</b><span>Accounts, sessions, two-factor auth, roles, invitations and Postgres row-level security: how AI Workforce OS isolates each organization.</span></a></li><li><a href="/en/docs/configuration/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><b>Configuration reference</b><span>Every AI Workforce OS environment variable with its default: server, authentication, budget, model providers and frontend build arguments.</span></a></li><li><a href="/en/docs/agent-runtime/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg><b>Agent runtime</b><span>The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Pagination">
+        <a class="dx-prev" href="/en/docs/configuration/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Previous</span><b>Configuration reference</b></a>
+        
+      </nav>
+      
+      <footer class="dx-foot">
+        <p>AI Workforce OS is a project in development. This documentation describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+        <div class="dx-foot-links">
+          <a href="/en/">AI Workforce OS</a>
+          <a href="/en/docs/">Documentation</a>
+          <a href="/en/guide/">User guide</a>
+          <a href="/en/trust/">Trust</a>
+          <a href="#top">Back to top</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

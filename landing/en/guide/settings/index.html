@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Office settings | AI Workforce OS</title>
-  <meta name="description" content="Tour the Settings hub: customize the office, hire employees, use team templates, connect tools and invite your team.">
+  <meta name="description" content="Customize the office, hire employees, choose the AI model, connect tools, protect your account and invite your team from Settings.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,141 +24,178 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
   <meta property="og:title" content="Office settings | AI Workforce OS">
-  <meta property="og:description" content="Tour the Settings hub: customize the office, hire employees, use team templates, connect tools and invite your team.">
+  <meta property="og:description" content="Customize the office, hire employees, choose the AI model, connect tools, protect your account and invite your team from Settings.">
   <meta property="og:url" content="https://workforceai.es/en/guide/settings/">
   <meta property="og:image" content="https://workforceai.es/img/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Office settings | AI Workforce OS">
-  <meta name="twitter:description" content="Tour the Settings hub: customize the office, hire employees, use team templates, connect tools and invite your team.">
+  <meta name="twitter:description" content="Customize the office, hire employees, choose the AI model, connect tools, protect your account and invite your team from Settings.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"User guide","item":"https://workforceai.es/en/guide/"},{"@type":"ListItem","position":3,"name":"Settings: configure your office in one place","item":"https://workforceai.es/en/guide/settings/"}]},{"@type":"TechArticle","headline":"Settings: configure your office in one place","description":"Tour the Settings hub: customize the office, hire employees, use team templates, connect tools and invite your team.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/guide/settings/","url":"https://workforceai.es/en/guide/settings/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=b5a2c05468">
+  <script src="/docs.js?v=2e2073da11" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"User guide","item":"https://workforceai.es/en/guide/"},{"@type":"ListItem","position":3,"name":"Settings: configure your office in one place","item":"https://workforceai.es/en/guide/settings/"}]},{"@type":"TechArticle","headline":"Settings: configure your office in one place","description":"Customize the office, hire employees, choose the AI model, connect tools, protect your account and invite your team from Settings.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/guide/settings/","url":"https://workforceai.es/en/guide/settings/","dateModified":"2026-10-22","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/en/" aria-label="AI Workforce OS">
+<body class="dx dx-guide" id="top">
+  <a class="dx-skip" href="#main">Skip to content</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/en/" aria-label="AI Workforce OS">
         <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="/en/">Home</a>
-        <a href="/en/docs/">Documentation</a>
-        <a href="/en/guide/">User guide</a>
-        <a href="/en/trust/">Trust</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Language">
-          <a href="/guia/ajustes/" hreflang="es" lang="es" >ES</a>
+      <nav class="dx-tabs" aria-label="Site sections"><a href="/en/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Language">
+          <a href="/guia/ajustes/" hreflang="es" lang="es">ES</a>
           <a href="/en/guide/settings/" hreflang="en" lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap narrow">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/guide/">User guide</a></li><li aria-current="page">Settings: configure your office in one place</li></ol></nav>
-      <article>
-        <h1>Settings: configure your office in one place</h1>
-        <p class="lead">Settings gathers on one screen everything that used to hide in the gear menu. Each card opens its area as a page of its own, with a breadcrumb at the top.</p>
-        
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">How do I get around Settings?</a></li><li><a href="#s2">How do I customize the office?</a></li><li><a href="#s3">How do I hire an employee from a template?</a></li><li><a href="#s4">How do I put a ready-made team to work?</a></li><li><a href="#s5">Where do I connect tools and review security?</a></li><li><a href="#s6">How do I describe my company so the team knows it?</a></li><li><a href="#s7">How do I invite people and manage my account?</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">How do I get around Settings?</h2>
-        <p>Open Settings from the sidebar. You will see cards grouped into Workspace, Security and Account, each with a line explaining what it is for.</p>
-        <p>When you press a card, that area opens as a page and a breadcrumb such as Settings &gt; Office settings appears at the top. There is no Close button.</p>
-        <ol class="steps" aria-label="Steps"><li>Press a card to open its page.</li><li>To go back, use the back arrow in the breadcrumb or your browser's Back button.</li><li>You can also click another section in the sidebar and you will switch screens directly.</li></ol>
-        
-        
-        <aside class="tip"><b>Tip.</b> If you want a guided visit, the ? button in the top bar opens a tour of this screen.</aside>
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">How do I customize the office?</h2>
-        <p>The Office settings card makes the office look and speak your way. It is worth doing first.</p>
-        <ol class="steps" aria-label="Steps"><li>Open Office settings.</li><li>Under Language, pick the interface language.</li><li>Under Labels, turn Show names and Activity bubbles on or off, and adjust the Label size.</li><li>Turn on Reduce animations if you prefer less motion.</li><li>Under Employees, customize each employee separately.</li></ol>
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">How do I hire an employee from a template?</h2>
-        <p>Hire from template adds a new AI employee from a role template. The new agent starts with minimal autonomy and can never approve on its own.</p>
-        <p>Only admins can use it; if the card looks dimmed, your role does not allow it.</p>
-        <ol class="steps" aria-label="Steps"><li>Open the Hire from template card.</li><li>Pick a profession from the list.</li><li>Type a name for the new agent, or leave it empty because it is optional.</li><li>Press Hire. If the office is full or an agent with that name already exists, you will see a notice.</li></ol>
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">How do I put a ready-made team to work?</h2>
-        <p>The Templates gallery offers ready workflows, with dependencies and steps that run in parallel. It is the fastest route if you would rather not build the team from scratch, and you still approve what matters.</p>
-        <ol class="steps" aria-label="Steps"><li>Open the Templates card.</li><li>Filter by category: All, Sales, Finance or Assistant.</li><li>Review the steps and the execution order of the template you like and press Use template.</li><li>Fill in the required fields and press Start workflow.</li><li>Follow the progress in the office.</li></ol>
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">Where do I connect tools and review security?</h2>
-        <p>Connections is where you link email, calendar and other tools so agents can work with your data. Connecting is not granting: permissions are assigned per employee.</p>
-        <p>Security gathers permissions, spend limits, operating hours and the office's brakes. Review it before letting agents act on their own.</p>
-        <p>The Stop everything card immediately halts all external activity by every agent. Only an admin can trigger it; if it is already active, it shows the level and takes you to Security. For the details, read the approvals and security guide.</p>
-        
-        
-        
-        <aside class="tip"><b>Tip.</b> Real integrations are still being tested; see the Current status section of the site.</aside>
-      </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">How do I describe my company so the team knows it?</h2>
-        <p>If your workspace supports it, you will see an initial setup card. While it is pending it is called Set up your office: you pick your business type and get your team ready in a minute. Afterwards it appears as Team settings, where you can change the regional tone and schedule a daily briefing.</p>
-        <p>The goal is for the team to work with your company's context.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">How do I invite people and manage my account?</h2>
-        <p>In the Account group you see the name, email and role you are signed in with. The Members and invitations card appears if your role allows it. The roles are Owner, Admin, Member and Read only, and agents can never approve, whatever the role.</p>
-        <ol class="steps" aria-label="Steps"><li>Open Members and invitations.</li><li>Under Invite someone, choose the role and press Create invitation.</li><li>Copy the link and share it with the person. It is shown only once and expires in 7 days.</li><li>Change a member's role, remove them or revoke a pending invitation from the same list.</li><li>When you finish, press Log out to end the session on this device.</li></ol>
-        
-        
-        
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/guide/approvals-and-security/"><b>Approvals and security: you stay in control</b><span>Learn to approve sensitive actions, set spend limits, control permissions per employee and stop everything at once if you need to.</span></a></li><li><a href="/en/guide/skills/"><b>Skills: reusable know-how for your agents</b><span>Browse the Skills library, create or import your own, approve them and assign them to an agent so it works the way you want.</span></a></li><li><a href="/en/guide/getting-started/"><b>Getting started: your first 5 minutes</b><span>Create your account, ask your office for something, approve what is sensitive, read the report and earn coins. About 5 minutes, nothing to set up.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Start now</h2>
-      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="User guide">
+      <div class="dx-side-head">
+        <span>Menu</span>
+        <a class="dx-side-close" href="#top" aria-label="Close menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a href="/en/docs/">Documentation</a>
-      <a href="/en/guide/">User guide</a>
-      <a href="/en/trust/">Trust</a>
-      <a href="#top">Back to top</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Site sections"><a href="/en/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <nav class="dx-pages" aria-label="User guide">
+        <ul class="dx-list">
+          <li><a href="/en/guide/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Overview</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-start">Get started</p>
+        <ul class="dx-list" aria-labelledby="g-guide-start">
+          <li><a href="/en/guide/getting-started/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.2 3.5-5.2 3.5v-7Z"/></svg><span>Getting started</span></a></li>
+          <li><a href="/en/guide/the-office/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M15.5 9h2a2 2 0 0 1 2 2v10M3 21h18M8.5 7h3M8.5 11h3M8.5 15h3"/></svg><span>The 3D office and the Dashboard</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-work">Everyday work</p>
+        <ul class="dx-list" aria-labelledby="g-guide-work">
+          <li><a href="/en/guide/projects/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v7M12 7.5v10M16 7.5v4"/></svg><span>Projects</span></a></li>
+          <li><a href="/en/guide/files-and-chats/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 15a2 2 0 0 1-2 2H8.5L4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10Z"/><path d="M8 8h8M8 12h5"/></svg><span>Chats and Files</span></a></li>
+          <li><a href="/en/guide/approvals-and-security/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg><span>Approvals and security</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-tune">Customize</p>
+        <ul class="dx-list" aria-labelledby="g-guide-tune">
+          <li><a href="/en/guide/skills/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 3.5 12.9 8l4.6 1.9-4.6 1.9L11 16.4l-1.9-4.6L4.5 9.9 9.1 8 11 3.5Z"/><path d="m18.5 14.5.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z"/></svg><span>Skills</span></a></li>
+          <li><a href="/en/guide/shop-and-coins/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v4.5c0 1.7 2.7 3 6 3 .7 0 1.4-.1 2-.2M15 7v2"/><ellipse cx="15" cy="13.5" rx="6" ry="3"/><path d="M9 13.5V18c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg><span>Coins and the Shop</span></a></li>
+          <li><a href="/en/guide/settings/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><span>Settings</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Language">
+          <a href="/guia/ajustes/" hreflang="es" lang="es">ES</a>
+          <a href="/en/guide/settings/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/guide/">User guide</a></li><li><span>Customize</span></li></ol></nav>
+        <h1>Settings: configure your office in one place</h1>
+        <p class="dx-lead">Settings brings together your office's configuration, its security and your account on one screen. Here you learn what each card does and how to use the ones you will need most.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>5 min read</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">On this page</summary>
+        <ol><li><a href="#find-your-way-around-settings">Find your way around Settings</a></li><li><a href="#customize-the-office">Customize the office</a></li><li><a href="#hire-an-employee">Hire an employee</a></li><li><a href="#put-a-ready-made-flow-to-work">Put a ready-made flow to work</a></li><li><a href="#describe-your-company-and-choose-the-ai-model">Describe your company and choose the AI model</a></li><li><a href="#connect-tools-and-review-security">Connect tools and review security</a></li><li><a href="#protect-your-account">Protect your account</a></li><li><a href="#export-your-data-or-delete-the-organization">Export your data or delete the organization</a></li><li><a href="#invite-people-and-manage-roles">Invite people and manage roles</a></li></ol>
+        <a class="dx-toc-top" href="#top">Back to top</a>
+      </details>
+      <div class="dx-body">
+        
+        <section class="dx-sec" aria-labelledby="find-your-way-around-settings">
+        <h2 id="find-your-way-around-settings">Find your way around Settings<a class="dx-anchor" href="#find-your-way-around-settings" aria-label="Link to the “Find your way around Settings” section">#</a></h2>
+        <p>Open “Settings” at the bottom of the side menu. You will see cards grouped into Workspace, Safety and Account; some appear dimmed if your role cannot use them.</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Press a card to open its page. At the top you will see a path like “Settings &gt; Office settings”.</li><li>To go back, use the arrow in the path or your browser's Back button.</li></ol>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Find your way around Settings"><table><thead><tr><th scope="col">Card</th><th scope="col">Group</th><th scope="col">What it is for</th></tr></thead><tbody><tr><th scope="row">Office settings</th><td>Workspace</td><td>Language, labels, motion and each employee's look</td></tr><tr><th scope="row">Hire from template</th><td>Workspace</td><td>Adding an AI employee from a role template</td></tr><tr><th scope="row">Templates</th><td>Workspace</td><td>Ready-made workflows to put to work</td></tr><tr><th scope="row">Connections</th><td>Workspace</td><td>Email, calendar and other tools your team can use</td></tr><tr><th scope="row">Set up your office / Team settings</th><td>Workspace</td><td>Your company's context, tone, daily briefing and AI model</td></tr><tr><th scope="row">Security</th><td>Safety</td><td>Permissions, spend limits, plan review and the office's brakes</td></tr><tr><th scope="row">Single sign-on and identity</th><td>Safety</td><td>SSO, verified domains, required MFA and SCIM</td></tr><tr><th scope="row">Stop everything</th><td>Safety</td><td>Immediately stopping all external activity by every agent</td></tr><tr><th scope="row">Account security</th><td>Account</td><td>Two-step verification and signing out of all your sessions</td></tr><tr><th scope="row">Data &amp; privacy</th><td>Account</td><td>Exporting your data or deleting the organization</td></tr><tr><th scope="row">Members and invitations</th><td>Account</td><td>Inviting people and managing their roles</td></tr><tr><th scope="row">Sign out</th><td>Account</td><td>Leaving on this device</td></tr></tbody></table></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>The “?” button in the top bar opens a guided tour of this screen.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="customize-the-office">
+        <h2 id="customize-the-office">Customize the office<a class="dx-anchor" href="#customize-the-office" aria-label="Link to the “Customize the office” section">#</a></h2>
+        <ol class="dx-steps" aria-label="Steps"><li>Open “Office settings”.</li><li>In “Language”, choose Español, English or Português for the interface.</li><li>In “Labels”, turn “Show names” and “Activity bubbles” on or off, and adjust the “Label size”.</li><li>Turn on “Reduce animations” if you prefer less motion.</li><li>In “Employees”, change each one's name, nickname, job title, color, skin tone, hairstyle or accessory.</li></ol>
+      </section>
+        <section class="dx-sec" aria-labelledby="hire-an-employee">
+        <h2 id="hire-an-employee">Hire an employee<a class="dx-anchor" href="#hire-an-employee" aria-label="Link to the “Hire an employee” section">#</a></h2>
+        <p>“Hire from template” adds an AI employee from a role template. The new agent starts with minimal autonomy and can never approve on its own. Only admins can use it.</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Open “Hire from template”.</li><li>Pick a profession from the list.</li><li>Type a name for the new agent, or leave it empty since it is optional.</li><li>Press “Hire”.</li></ol>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>If the office is full or an agent with that name already exists, the app tells you and does not hire.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="put-a-ready-made-flow-to-work">
+        <h2 id="put-a-ready-made-flow-to-work">Put a ready-made flow to work<a class="dx-anchor" href="#put-a-ready-made-flow-to-work" aria-label="Link to the “Put a ready-made flow to work” section">#</a></h2>
+        <p>“Templates” opens the “Workflow template gallery”: flows with dependencies and parallel steps that your team runs while you approve what matters.</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Open “Templates”.</li><li>Filter by category, for example “Sales” or “Finance”, or leave “All”.</li><li>Review the steps of the template you are interested in and press “Use template”.</li><li>Fill in the required details and press “Start flow”.</li><li>Follow the progress in the office.</li></ol>
+      </section>
+        <section class="dx-sec" aria-labelledby="describe-your-company-and-choose-the-ai-model">
+        <h2 id="describe-your-company-and-choose-the-ai-model">Describe your company and choose the AI model<a class="dx-anchor" href="#describe-your-company-and-choose-the-ai-model" aria-label="Link to the “Describe your company and choose the AI model” section">#</a></h2>
+        <p>If your workspace supports it, you will see the “Set up your office” card until you complete it, and “Team settings” afterwards.</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Open “Set up your office” and go through its steps: “Business type”, “Language and tone” and “Daily briefing”. Press “Finish”.</li><li>Later, in “Team settings”, change the “Regional tone” of the office or of each agent and schedule the “Daily briefing”.</li><li>In “AI model”, use the included model or press “Use my own key” to connect your OpenAI, Claude, Kimi, DeepSeek or other compatible account.</li><li>Paste your “API key”, press “Test connection” and then “Save”.</li></ol>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>If the server has no model configured, the AI runs in simulation mode, with scripted answers. Your key is stored encrypted and is never shown again.</p></div></div>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>With your own key, the provider bills you directly for what your agents use.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="connect-tools-and-review-security">
+        <h2 id="connect-tools-and-review-security">Connect tools and review security<a class="dx-anchor" href="#connect-tools-and-review-security" aria-label="Link to the “Connect tools and review security” section">#</a></h2>
+        <p>“Connections” is where you link email, calendar and other tools so agents can work with your data. Connecting is not granting: permissions are assigned per employee.</p>
+        <p>“Security” gathers permissions, spend limits, plan review, operating hours and the office's brakes. “Stop everything” immediately stops all external activity by every agent: only an admin can turn it on and, if it is already on, the card shows the level and takes you to Security.</p>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>The step-by-step for permissions, limits and brakes is in the approvals and security guide.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="protect-your-account">
+        <h2 id="protect-your-account">Protect your account<a class="dx-anchor" href="#protect-your-account" aria-label="Link to the “Protect your account” section">#</a></h2>
+        <ol class="dx-steps" aria-label="Steps"><li>Open “Account security” and press “Turn on” under “Two-step verification”.</li><li>Scan the QR code with your authenticator app, enter the code it shows and press “Confirm and turn on”.</li><li>Keep the recovery codes somewhere safe and press “I've saved them”.</li><li>If you lost a device, press “Sign out everywhere”.</li></ol>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>Admins can set up single sign-on with Okta, Entra ID or Google, verify domains, require MFA and provision users with SCIM from “Single sign-on and identity”.</p></div></div>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>Recovery codes are not shown again: without them and without your phone you will not be able to sign in.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="export-your-data-or-delete-the-organization">
+        <h2 id="export-your-data-or-delete-the-organization">Export your data or delete the organization<a class="dx-anchor" href="#export-your-data-or-delete-the-organization" aria-label="Link to the “Export your data or delete the organization” section">#</a></h2>
+        <ol class="dx-steps" aria-label="Steps"><li>Open “Data &amp; privacy”.</li><li>Press “Export my organization's data” to download a ZIP with all your data and the drive's files. It never contains secrets, and you can generate one export per hour.</li><li>To close the account, press “Delete my organization”, type the organization's name and your password, and confirm.</li><li>If you change your mind, press “Cancel the deletion” before the period ends.</li></ol>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>Exporting is available to the Owner and admins; deleting, only to the Owner.</p></div></div>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>The organization is permanently deleted 7 days after you confirm, with its agents, conversations, projects, files, connections and members, and no copy is kept. Export anything you want to keep first.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="invite-people-and-manage-roles">
+        <h2 id="invite-people-and-manage-roles">Invite people and manage roles<a class="dx-anchor" href="#invite-people-and-manage-roles" aria-label="Link to the “Invite people and manage roles” section">#</a></h2>
+        <p>In the Account group you see the name, email and role you signed in with. Agents can never approve, whatever the role. These are the roles for people:</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Open “Members and invitations”.</li><li>In “Invite someone”, enter the email, choose the role and press “Create invitation”.</li><li>Copy the link and share it with the person: it is shown only once and expires in 7 days.</li><li>Change a member's role, remove them or revoke a pending invitation from the same screen.</li></ol>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Invite people and manage roles"><table><thead><tr><th scope="col">Role</th><th scope="col">What it can do</th></tr></thead><tbody><tr><th scope="row">Read only</th><td>See the office, chats, files, skills and the Shop, without changing anything</td></tr><tr><th scope="row">Member</th><td>All of the above, plus ask for work, write in chats, upload files, create skills and spend coins</td></tr><tr><th scope="row">Admin</th><td>All of the above, plus decide approvals, hire agents, manage connections and permissions, approve skills, invite people and stop everything</td></tr><tr><th scope="row">Owner</th><td>Everything above, plus lift emergency locks, delete the organization and assign any role</td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>An admin can only invite and manage Members and Read only users; the Owner can assign any role.</p></div></div>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="dx-cards dx-cards-sm"><li><a href="/en/guide/approvals-and-security/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg><b>Approvals and security: you stay in control</b><span>Decide approvals, understand each employee's autonomy, set spend limits, restrict permissions and stop all activity at once if you need to.</span></a></li><li><a href="/en/guide/skills/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 3.5 12.9 8l4.6 1.9-4.6 1.9L11 16.4l-1.9-4.6L4.5 9.9 9.1 8 11 3.5Z"/><path d="m18.5 14.5.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z"/></svg><b>Skills: reusable know-how for your agents</b><span>Browse the built-in skills, create or import your own, approve them and assign them to an agent so it works with your method.</span></a></li><li><a href="/en/guide/getting-started/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.2 3.5-5.2 3.5v-7Z"/></svg><b>Getting started: your first 5 minutes</b><span>Create your account, ask for your first task, decide an approval, read the report and earn your first coins in about 5 minutes.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Pagination">
+        <a class="dx-prev" href="/en/guide/shop-and-coins/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Previous</span><b>Coins and the Shop: decorate your office with what your team earns</b></a>
+        
+      </nav>
+      <section class="dx-cta" aria-labelledby="cta-h">
+        <div>
+          <h2 id="cta-h">Try it in your own office</h2>
+          <p>Create your account and land in an office with your AI team. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
+        </div>
+        <div class="dx-cta-row">
+          <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+          <a class="dx-btn dx-btn-ghost" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+        </div>
+      </section>
+      <footer class="dx-foot">
+        <p>AI Workforce OS is a project in development. This documentation describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+        <div class="dx-foot-links">
+          <a href="/en/">AI Workforce OS</a>
+          <a href="/en/docs/">Documentation</a>
+          <a href="/en/guide/">User guide</a>
+          <a href="/en/trust/">Trust</a>
+          <a href="#top">Back to top</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>
