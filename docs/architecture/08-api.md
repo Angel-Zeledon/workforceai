@@ -923,3 +923,13 @@ El veredicto del auditor interno (`output.metrics.audit_status` de sus tareas, y
 | GET | `/requests/{id}/audit` | `requests:read` | `{request_id, status: verified\|inconsistency\|unverified\|none, audits: [{task_id, title, agent_id, status, summary, findings[], evidence[], compared, inconsistencies, confidence, finished_at?}]}`. Solo tareas terminadas; estado agregado: `inconsistency` si alguna, `verified` si todas, `none` sin auditorías. `404` si la solicitud no es de la organización |
 
 Aditivo en `GET /projects/{id}`: cada nodo que sea una auditoría terminada trae `audit` con la misma forma que un elemento de `audits` (ausente en los demás). `GET /tasks` y `GET /tasks/{id}` ya devolvían `output.metrics.audit_status` sin cambios.
+
+## 28. Nómina de IA y retorno (B15)
+
+Costo de IA medido por empleado junto a las horas humanas **estimadas** de su trabajo terminado, con la metodología en cada respuesta. Sin tarifa de la organización no hay montos de tiempo humano (`null`). Diseño: `docs/architecture/ai-payroll-roi.md`. Migración `796_roi_settings` (`roi_settings`, RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/roi?window_days=` | `metrics:read` | `{generated_at, methodology: {kind: "estimate", window_days, from, to, counted, excluded[], default_minutes, default_minutes_source: assumption\|org, role_minutes, hourly_rate_usd\|null, rate_source: org\|unset, ai_cost_basis}, org: Figures, agents: [Figures + {agent_id, role, minutes_per_task, minutes_source: role\|default\|assumption}]}`. `Figures = {tasks_counted, excluded_rework, excluded_failed, excluded_skipped, est_minutes, est_hours, ai_cost_usd, est_human_cost_usd\|null, ai_cost_per_est_hour_usd\|null}`. Ventana 1..365 (por defecto 30) |
+| GET | `/settings/roi` | `metrics:read` | `{hourly_rate_usd\|null, default_minutes, role_minutes{rol: min}, updated_by?, updated_at?, saved, default_assumed_minutes, max_minutes, max_hourly_rate_usd}` (`saved: false` = nunca configurado, se usa el supuesto de 30 min) |
+| PUT | `/settings/roi` | `org:manage` | `{hourly_rate_usd\|null, default_minutes, role_minutes}`; minutos 0..480, tarifa 0..10000 (`<= 0` o `null` la borra), `400` si no. Auditado (`roi.settings_changed`) |

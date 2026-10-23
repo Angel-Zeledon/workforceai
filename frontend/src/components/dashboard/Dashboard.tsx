@@ -13,6 +13,7 @@ import { ReportView } from "../ReportView";
 import { DashboardFiles } from "../workspace/DashboardFiles";
 import { BudgetLimitsPanel, CostBreakdownPanel } from "../cost/CostBreakdownPanel";
 import { EstimateCard } from "../cost/EstimateCard";
+import { RoiPanel } from "../cost/RoiPanel";
 import { QualityOverview } from "../quality/QualityOverview";
 import { AuditDetail } from "../quality/AuditStamp";
 import { taskAuditOf } from "@/lib/auditLogic";
@@ -382,6 +383,7 @@ function Costs() {
         ))}</tbody></table> : <Empty>{tt("dash.costs.noRequests")}</Empty>}
       </Card>
       <div className="xl:col-span-2"><CostBreakdownPanel /></div>
+      <div className="xl:col-span-2"><RoiPanel /></div>
       <BudgetLimitsPanel />
       <Card title={tt("dash.costs.errorsTitle", { count: errors.length + failed.length })}>
         {errors.length + failed.length === 0 ? <Empty>{tt("dash.costs.noErrors")}</Empty> : (

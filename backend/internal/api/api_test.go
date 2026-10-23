@@ -124,6 +124,7 @@ type opts struct {
 	llmNoKEK       bool // ... with no encryption key configured
 	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
 	quality        bool // mount the quality score and golden cases (quality_api_test.go)
+	roi            bool // mount the AI payroll / return report (roi_api_test.go)
 }
 
 type env struct {
@@ -207,6 +208,9 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	if o.initiative {
 		d.Initiative = &application.InitiativeService{Store: mem, Submit: orch, Rec: rec, Cfg: cfg}
+	}
+	if o.roi {
+		d.ROI = &application.ROIService{Store: mem, Core: spy, Rec: rec, Cfg: cfg}
 	}
 	if o.advocate != nil {
 		d.DevilsAdvocate = &application.DevilsAdvocate{Store: mem, Core: spy, Runtime: o.advocate, Budget: orch, Rec: rec, Cfg: cfg}

@@ -16,6 +16,7 @@ import { MockChat } from "./chat-mock";
 import { MockChatHistory } from "./chats-mock";
 import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
+import { MockRoi } from "./roi-mock";
 import { mockQuality } from "./quality-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
@@ -181,6 +182,7 @@ export class MockBackend {
   private cmds = new MockCommands({ agents: () => this.agents, chatCount: (c) => this.chat.all()[c]?.length ?? 0, startRequest: (t) => this.startRequest(t) }); // slash commands
   private rewards = new MockRewards((t, p, a) => this.emit(t, p, a)); // coins + shop: earned only when a task finishes
   private roles = new MockRoles(); // role templates + hiring from a template
+  private roi = new MockRoi({ agents: () => this.agents, tasks: () => this.tasks }); // B15: AI payroll / estimated hours
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
 
   constructor() { this.seed(); }
@@ -561,6 +563,7 @@ export class MockBackend {
       return res;
     }
     if (this.cmds.matches(seg)) return this.cmds.handle(method, seg, q, body);
+    if (this.roi.matches(seg)) return this.roi.handle(method, seg, q, body);
     if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
@@ -649,6 +652,7 @@ export class MockBackend {
         this.gen++;
         this.art.reset();
         this.roles.reset();
+        this.roi.reset();
         this.conns.reset();
         this.decisions.clear();
         this.seed();

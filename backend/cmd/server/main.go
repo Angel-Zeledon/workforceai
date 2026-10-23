@@ -276,7 +276,13 @@ func run(log *slog.Logger) error {
 		orch.SetInitiative(initiativeSvc)
 	}
 
-	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
+	// AI payroll and return (B15): AI cost per agent next to the estimated human time, with the org's own model.
+	var roiSvc *application.ROIService
+	if rs, ok := store.(application.ROIStore); ok {
+		roiSvc = &application.ROIService{Store: rs, Core: store, Rec: rec, Cfg: cfg.App}
+	}
+
+	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, ROI: roiSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Standing: standingSvc, Initiative: initiativeSvc, DevilsAdvocate: devilsSvc,
 		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,

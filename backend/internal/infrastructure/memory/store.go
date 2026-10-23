@@ -48,6 +48,7 @@ type Store struct {
 	llm           llmState                                 // bring-your-own-model credentials (llmcreds.go)
 	standing      standingState                            // standing per-project approvals (standing.go)
 	initiative    initiativeState                          // proactive suggestions and their budget (initiative.go)
+	roi           map[string]application.ROISettings       // AI payroll / return model by org (roi.go)
 	counter       counterargumentState                     // devil's advocate reviews, cached per approval (counterarguments.go)
 	v2            v2State                                 // work profiles, traces, steer notes (v2.go)
 	hist          chatHistState                            // chat history: archive, custom titles, read markers (chat_history.go)
