@@ -65,6 +65,8 @@ type Orchestrator struct {
 
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
 
+	stateMu sync.Map // org|agent -> *sync.Mutex: serializes setState of one agent (see setState)
+
 	// >>> organization model hooks (delegation_hook.go, hold.go): optional, zero value = off
 	hooks delegationHooks
 	hold  holdState
@@ -1146,13 +1148,48 @@ func (o *Orchestrator) setRequestStatus(ctx context.Context, rs *run, st domain.
 	o.rec.Audit(ctx, domain.AuditLog{Actor: "system", Action: "request.status." + string(st), Entity: "request", EntityID: r.ID})
 }
 
+// setState records what an agent is doing. One agent can work on tasks of
+// several requests at once and its state is a single slot: a task of another
+// request finishing (or the release at the end of its request) must not hide
+// that the agent is waiting on a human for a still-pending approval. Live and
+// under load, request B's "completed"/"Disponible" overwrote request A's
+// "awaiting approval" and the agent showed idle with an approval open.
 func (o *Orchestrator) setState(ctx context.Context, agentID string, st domain.AgentState, activity string, taskID *string, progress int) {
 	ctx = context.WithoutCancel(ctx)
-	if err := o.store.UpdateAgentState(ctx, o.org(ctx), agentID, st, activity, taskID, progress); err != nil {
+	org := o.org(ctx)
+	mu, _ := o.stateMu.LoadOrStore(org+"|"+agentID, &sync.Mutex{})
+	mu.(*sync.Mutex).Lock()
+	defer mu.(*sync.Mutex).Unlock()
+	if st != domain.StateAwaitingApproval && st != domain.StateError && o.awaitingOtherTask(ctx, org, agentID, taskID) {
+		return
+	}
+	if err := o.store.UpdateAgentState(ctx, org, agentID, st, activity, taskID, progress); err != nil {
 		o.log.Warn("update agent state", "agent", agentID, "err", err)
 	}
 	o.rec.Emit(ctx, Action{Type: domain.EvAgentState, AgentID: agentID, SkipAudit: true,
 		Payload: map[string]any{"agent_id": agentID, "state": st, "activity": activity, "task_id": taskID, "progress": progress}})
+}
+
+// awaitingOtherTask says whether the agent is waiting on a human for a task
+// other than taskID whose approval is still pending (its state must stay).
+func (o *Orchestrator) awaitingOtherTask(ctx context.Context, org, agentID string, taskID *string) bool {
+	a, err := o.store.GetAgent(ctx, org, agentID)
+	if err != nil || a.State != domain.StateAwaitingApproval || a.CurrentTaskID == nil {
+		return false
+	}
+	if taskID != nil && *taskID == *a.CurrentTaskID {
+		return false // the same task moves on (approved, rejected, expired)
+	}
+	ps, err := o.store.ListApprovals(ctx, org, string(domain.ApprovalPending))
+	if err != nil {
+		return false
+	}
+	for _, p := range ps {
+		if p.TaskID == *a.CurrentTaskID {
+			return true
+		}
+	}
+	return false
 }
 
 // releaseAgents returns involved agents to idle once the request is over.

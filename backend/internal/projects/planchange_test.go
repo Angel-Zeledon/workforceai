@@ -304,7 +304,12 @@ func TestSuggestedFollowUpsAreBoundedForTheWholeProject(t *testing.T) {
 		}
 	}
 	e.launch(id, budgetBig)
-	e.approveAll(id, func(d projects.Detail) bool { return d.Project.Status == projects.StatusDone })
+	// The derived status reads "done" as soon as the last task finishes, which
+	// can be before the monitor's next tick turns the suggestions into proposals
+	// (under load the whole plan ran before the first tick: 0 suggestions). The
+	// monitor persists the final status (and audits project.done) only in a tick
+	// that found no suggestion left to consume: wait for that.
+	e.approveAll(id, func(d projects.Detail) bool { return d.Project.Status == projects.StatusDone && hasAudit(e, "project.done") })
 	list, _ := e.svc.ListChanges(e.ctx, id)
 	total := 0
 	for _, c := range list {
