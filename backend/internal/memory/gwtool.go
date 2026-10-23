@@ -28,6 +28,9 @@ const (
 type GatewayTool struct {
 	Svc      *Service
 	Suspects *sanitize.Suspects
+	// CustomerOf (optional, B12) tells the customer the call's request is scoped to: the search then
+	// only sees that customer's memories and files. An error refuses the call (fail closed).
+	CustomerOf func(ctx context.Context, org, requestID string) (string, error)
 }
 
 var _ application.NativeTool = (*GatewayTool)(nil)
@@ -63,6 +66,10 @@ func (t *GatewayTool) Assess(_ context.Context, c application.GatewayCall) appli
 // Run implements application.NativeTool.
 func (t *GatewayTool) Run(ctx context.Context, c application.GatewayCall, _ bool) application.NativeResult {
 	ctx = application.WithOrg(ctx, c.Org)
+	ctx, ok := application.ScopeCustomer(ctx, t.CustomerOf, c.Org, c.RequestID)
+	if !ok {
+		return application.NativeResult{Status: "failed", Code: "customer_scope_unknown", Summary: "customer_scope_unknown"}
+	}
 	var b strings.Builder
 	foreign := false
 	summary := ""

@@ -221,6 +221,8 @@ type Summary struct {
 	ObjectivesCnt int        `json:"objectives_count"`
 	// RequestID is the orchestrator request behind a launched project (additive).
 	RequestID string `json:"request_id,omitempty"`
+	// CustomerID is the customer the project works for (B12, additive).
+	CustomerID string `json:"customer_id,omitempty"`
 	// BudgetWarnPct is the highest budget early-warning threshold already crossed
 	// (percent of the approved budget, e.g. 80); 0 when none (additive, W5).
 	BudgetWarnPct float64 `json:"budget_warn_pct,omitempty"`
@@ -457,6 +459,8 @@ type NewProject struct {
 	Params     map[string]string `json:"params,omitempty"`
 	BudgetUSD  float64           `json:"budget_usd,omitempty"`
 	Locale     string            `json:"locale,omitempty"`
+	// CustomerID (B12, optional) scopes the project to one customer of the organization.
+	CustomerID string `json:"customer_id,omitempty"`
 }
 
 type LaunchBody struct {
@@ -556,6 +560,9 @@ type Record struct {
 	Estimate         *Estimate         `json:"estimate"`
 	StructureVersion int               `json:"structure_version"`
 	RequestID        string            `json:"request_id,omitempty"`
+	// CustomerID (B12) is the customer the project works for ("" = none). It is set at creation and the
+	// project's request is scoped to it at launch.
+	CustomerID string `json:"customer_id,omitempty"`
 	// Decisions maps a gate task id to "approved" or "rejected".
 	Decisions  map[string]string `json:"decisions,omitempty"`
 	Error      string            `json:"error,omitempty"`

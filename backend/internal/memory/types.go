@@ -19,6 +19,7 @@ package memory
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"aiworkforce/backend/internal/domain"
@@ -51,20 +52,23 @@ const (
 
 // Doc is an indexed document (task output, report or note).
 type Doc struct {
-	ID          string    `json:"id"`
-	Kind        string    `json:"kind"` // task | report | note
-	Ref         string    `json:"ref"`  // task:<id> | report:<id> | memory:<task id>.<n>
-	Title       string    `json:"title"`
-	Body        string    `json:"body"`
-	AgentID     string    `json:"agent_id"`
-	Scope       string    `json:"scope"`
-	ProjectID   string    `json:"project_id,omitempty"`
-	ProjectName string    `json:"project_name,omitempty"`
-	RequestID   string    `json:"request_id,omitempty"`
-	SourceRef   string    `json:"source_ref,omitempty"` // a note points to the task it came from
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	Suppressed  bool      `json:"-"`
+	ID          string `json:"id"`
+	Kind        string `json:"kind"` // task | report | note
+	Ref         string `json:"ref"`  // task:<id> | report:<id> | memory:<task id>.<n>
+	Title       string `json:"title"`
+	Body        string `json:"body"`
+	AgentID     string `json:"agent_id"`
+	Scope       string `json:"scope"`
+	ProjectID   string `json:"project_id,omitempty"`
+	ProjectName string `json:"project_name,omitempty"`
+	RequestID   string `json:"request_id,omitempty"`
+	SourceRef   string `json:"source_ref,omitempty"` // a note points to the task it came from
+	// CustomerID is the customer the work was done for (B12, "" = none): a customer-scoped task only
+	// ever recalls documents of its own customer (see VisibleToCustomer).
+	CustomerID string    `json:"customer_id,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	Suppressed bool      `json:"-"`
 
 	// Embedding of the document (semantic.go). Vec is set by the writer to
 	// store a new vector and is only read back by VecStore; EmbedModel and
@@ -111,6 +115,9 @@ type Query struct {
 	PreferPath    string
 	// OnlyAgent restricts to what the agent itself produced (the Memory tab list).
 	OnlyAgent bool
+	// CustomerID (B12) restricts to the documents of that customer (plus the notes a person wrote
+	// for the agent); "" = not scoped. Drive files follow application.CustomerFrom(ctx).
+	CustomerID string
 }
 
 // Retriever finds the memories relevant to a query for one agent of an
@@ -124,7 +131,8 @@ type SearchParams struct {
 	Terms          []string
 	AgentID        string
 	ExcludeRequest string
-	OnlyAgent      bool // only documents produced by AgentID
+	OnlyAgent      bool   // only documents produced by AgentID
+	CustomerID     string // B12: only documents of this customer (see VisibleToCustomer); "" = all
 	Limit          int
 }
 
@@ -159,3 +167,17 @@ type FileSource interface {
 
 // ErrNotFound is returned when a document does not exist (or is hidden).
 var ErrNotFound = domain.ErrNotFound
+
+// VisibleToCustomer is the customer isolation of the memory (B12): a task without a customer sees
+// everything it saw before; a task for a customer sees only the documents of that customer, plus the
+// notes a PERSON wrote for the agent without a customer (firm-wide instructions given by /recordar),
+// never anything an agent produced for another customer or outside any customer.
+func VisibleToCustomer(d Doc, customerID string) bool {
+	if customerID == "" {
+		return true
+	}
+	return d.CustomerID == customerID || d.CustomerID == "" && d.Kind == KindNote && strings.HasPrefix(d.ID, UserNotePrefix)
+}
+
+// UserNotePrefix starts the id of a note a person wrote (RememberNote).
+const UserNotePrefix = "note_user_"

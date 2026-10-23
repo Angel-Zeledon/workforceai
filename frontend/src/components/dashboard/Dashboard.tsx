@@ -18,9 +18,10 @@ import { RoiPanel } from "../cost/RoiPanel";
 import { QualityOverview } from "../quality/QualityOverview";
 import { AuditDetail } from "../quality/AuditStamp";
 import { taskAuditOf } from "@/lib/auditLogic";
+import { CustomerDistrict } from "../customers/CustomerDistrict";
 import { Card, Dot, Empty, Progress, ReasonChip, StateBadge, TaskBadge, readable, timeAgo, useAgentColor, useAgentName } from "../ui";
 
-const SECTIONS = ["overview", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "quality", "costs"] as const;
+const SECTIONS = ["overview", "customers", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "quality", "costs"] as const;
 type Section = (typeof SECTIONS)[number];
 
 function Kpi({ label, value, sub, color = "#151b26" }: { label: string; value: string | number; sub?: string; color?: string }) {
@@ -52,6 +53,7 @@ export function Dashboard() {
       </nav>
       <div className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">
         {section === "overview" && <Overview go={setSection} />}
+        {section === "customers" && <CustomerDistrict />}
         {section === "requests" && <Requests />}
         {section === "tasks" && <Tasks />}
         {section === "agents" && <Agents />}

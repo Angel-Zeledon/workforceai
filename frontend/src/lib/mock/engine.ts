@@ -26,6 +26,7 @@ import { MockShield } from "./shield-mock";
 import { MockRehearsal } from "./rehearsal-mock";
 import { MockInitiatives } from "./initiative-mock";
 import { METRIC_SIGNALS, SIGNAL_FIELDS } from "../initiativeLogic";
+import { MockCustomers } from "./customers-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
 import type { RequestAudit, TaskAudit } from "../auditLogic";
@@ -178,6 +179,7 @@ export class MockBackend {
   private running = new Map<string, number>(); // agent -> number of tasks running
   private orgCfg = new MockOrgConfig(); // workflow templates, onboarding, org settings and schedules
   private orgChart = new MockOrgChart(() => this.agents); // >>> org <<< departments, org chart, job descriptions, delegation, industries
+  private customers = new MockCustomers(() => this.agents, () => this.requests); // B12: customer district (buildings, clones, scoped requests)
   private art = new MockArtifacts((t, p, a) => this.emit(t, p, a), (ms) => this.wait(ms)); // workspaces: artifact.* endpoints/events
   private chat = new MockChat({
     emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agent: (id) => this.agents.find((a) => a.id === id), agents: () => this.agents,
@@ -635,6 +637,7 @@ export class MockBackend {
     if (r0 === "org" && seg[1] === "controls") return this.conns.handle(method, seg, q, body);
     // >>> org
     if (this.orgChart.matches(seg)) return this.orgChart.handle(method, seg, body, q);
+    if (this.customers.matches(seg)) return this.customers.handle(method, seg, q, body);
     // <<< org
     if (this.orgCfg.matches(seg)) return this.orgCfg.handle(method, seg, body, (text) => this.handle("POST", "/requests", { text }));
     if (this.shield.matches(method, seg)) return this.shield.handle(method, seg, q);
@@ -700,7 +703,13 @@ export class MockBackend {
     if (method === "POST") {
       if (r0 === "agents" && r1 && r2 === "trust" && seg[3] === "evaluate") { const x = mockTrust(this.agent(r1)); return { methodology: x.methodology, agent: x.agent }; }
       if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : []);
-      if (r0 === "requests") { const id = await this.startRequest(String(body?.text || "").trim(), body?.rehearsal === true); return { request_id: id }; }
+      if (r0 === "requests") {
+        const cid = body?.customer_id ? String(body.customer_id) : "";
+        if (cid && !this.customers.hasCustomer(cid)) throw new Error("customer not found");
+        const id = await this.startRequest(String(body?.text || "").trim(), body?.rehearsal === true);
+        if (cid) this.customers.linkRequest(id, cid); // B12: the request is scoped to the customer
+        return { request_id: id };
+      }
       if (r0 === "conversations" && r1 && r2 === "messages") {
         const conv = this.conversations.find((c) => c.id === r1);
         if (!conv) throw new Error("conversation not found");

@@ -54,8 +54,10 @@ type Orchestrator struct {
 	files    chatFiles        // files agents wrote per task and the resolver of paths (chat_files.go)
 	skillSrc SkillSource      // optional: the agent's active skills (skills_flow.go)
 	memSrc   MemorySource     // optional: long-term memory (memory_flow.go)
+	// customers (optional) scopes requests to one customer of the organization (customer.go, B12).
+	customers CustomerScope
 
-	initiative InitiativeRaiser // optional: failed tasks become suggestions (initiative.go)
+	initiative InitiativeRaiser  // optional: failed tasks become suggestions (initiative.go)
 	rehearsal  *RehearsalService // optional: per-agent rehearsal switch and the "would have done" log (rehearsal.go)
 
 	v2 v2State // work profiles, thought audit and intervention (intervene.go); zero value = off
@@ -114,6 +116,7 @@ type run struct {
 	projOwned   atomic.Bool // the request belongs to a project (recovery.go): its human waits never expire
 	gate        *RunGate    // human gate in progress before the start (persisted in the run meta; guarded by mu)
 	maxParallel int         // per-request override of Config.MaxParallel (WithRunParallel); 0 = config
+	customer    string      // the customer the request is scoped to (customer.go); "" = none
 }
 
 func (r *run) touch(agentID string) {
@@ -158,6 +161,10 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	}
 	now := time.Now().UTC()
 	req := domain.Request{ID: newID(), Text: text, Status: domain.RequestPlanning, CreatedAt: now}
+	// B12: the customer scope is stored BEFORE the request exists, so no task can ever run unscoped.
+	if err := o.linkCustomer(ctx, req.ID); err != nil {
+		return "", err
+	}
 	if err := o.store.CreateRequest(ctx, o.org(ctx), req); err != nil {
 		return "", err
 	}
@@ -181,6 +188,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 		o.rehearsal.MarkRequest(o.org(ctx), req.ID)
 		received["rehearsal"] = true
 	}
+	rs.customer = CustomerFrom(ctx)
 	o.rec.Emit(ctx, Action{Type: domain.EvRequestReceived, Entity: "request", EntityID: req.ID,
 		Payload: received, Text: "Nueva solicitud: " + truncate(text, 100)})
 	o.sendMessage(ctx, rs, "user", assistantID, "chat", text, nil)
@@ -191,6 +199,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	// The background run keeps the lifetime of the orchestrator but carries the
 	// tenant of the request that started it.
 	rctx := WithRequestID(WithOrg(o.base, o.org(ctx)), req.ID)
+	rctx = WithCustomer(rctx, rs.customer)               // B12: the run works for this customer (tools re-resolve it from the request id)
 	rctx = WithWorkPriority(rctx, WorkPriorityFrom(ctx)) // queue priority (orgqueue.go)
 	o.track(req.ID)
 	o.wg.Add(1)
@@ -215,7 +224,7 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 		err = o.call(ctx, "plan", func(c context.Context) (err error) {
 			agents := make([]PlanAgent, 0, len(rs.agents))
 			skills := o.skillsByAgent(c)
-			for _, a := range sortedAgents(rs.agents) {
+			for _, a := range o.plannerAgents(c, rs, sortedAgents(rs.agents)) {
 				pa := NewPlanAgent(a, rs.style.Locale)
 				pa.Skills = skills[a.ID]
 				agents = append(agents, pa)

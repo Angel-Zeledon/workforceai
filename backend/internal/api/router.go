@@ -22,28 +22,29 @@ import (
 	"aiworkforce/backend/internal/away"
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/controls"
-	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/docindex"
+	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
 	"aiworkforce/backend/internal/meetings" // meetings-block
 	"aiworkforce/backend/internal/memory"
+	"aiworkforce/backend/internal/notify"
+	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/peoplechat"
 	"aiworkforce/backend/internal/presence"
 	"aiworkforce/backend/internal/projects"
-	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/quality"
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/rituals"
 	"aiworkforce/backend/internal/sandbox"
-	"aiworkforce/backend/internal/orgchart"
-	"aiworkforce/backend/internal/webtool"
 	"aiworkforce/backend/internal/skills"
 	"aiworkforce/backend/internal/slackapp"
 	"aiworkforce/backend/internal/tenantdata"
 	"aiworkforce/backend/internal/trust"
+	"aiworkforce/backend/internal/webtool"
 )
 
 // Deps are the collaborators of the HTTP layer.
@@ -135,6 +136,8 @@ type Deps struct {
 	Rituals *rituals.Service
 	// Away serves /away-summary (away.go): "while you were away", what happened since the caller's last visit. Optional.
 	Away *away.Service
+	// Customers serves /customers/* (customers.go): the customer district, clones and scoped folders (B12). Optional.
+	Customers *customers.Service
 	// Chats serves the chat history (chat_history.go): the enriched GET /conversations,
 	// rename/archive/delete and /chats/*. Optional: nil keeps the plain list.
 	Chats *application.ChatHistory
@@ -224,8 +227,8 @@ func NewRouter(d Deps) http.Handler {
 		// The OAuth callback is public (the browser comes back from the provider
 		// without a bearer token); it is verified by its single-use state.
 		s.mountOAuthCallback(r)
-		s.mountNotifyPublic(r) // approvals-notify: the public landing page of the signed links
-		s.mountSlackPublic(r)  // Slack channel: request URLs authenticated by the Slack signature
+		s.mountNotifyPublic(r)   // approvals-notify: the public landing page of the signed links
+		s.mountSlackPublic(r)    // Slack channel: request URLs authenticated by the Slack signature
 		s.mountMeetingsPublic(r) // meetings: public ICS feed (secret token in the URL)
 		r.Group(func(r chi.Router) {
 			r.Use(s.authenticate, s.tenant)
@@ -281,6 +284,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountTrust(r)
 			s.mountRituals(r)
 			s.mountAway(r)
+			s.mountCustomers(r)
 			s.mountPush(r)
 			s.mountNotify(r) // approvals-notify: channel settings, plan usage, daily goal
 			s.mountSlack(r)  // Slack channel: settings card and account link
@@ -288,7 +292,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountCommands(r)
 			s.mountTenantData(r)
 			s.mountGovernance(r) // governance (single line)
-			s.mountPresence(r) // human presence + people chat (presence_people.go)
+			s.mountPresence(r)   // human presence + people chat (presence_people.go)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}
@@ -425,12 +429,15 @@ func (s *server) createRequest(w http.ResponseWriter, r *http.Request) {
 		BudgetCapUSD float64 `json:"budget_cap_usd"`
 		// Rehearsal (B9, optional): run the request without executing any side effect (rehearsal.go).
 		Rehearsal bool `json:"rehearsal"`
+		// CustomerID (B12, optional) scopes the request to one customer: its tasks only ever see that
+		// customer's memories and files. The orchestrator stores the scope before the request exists.
+		CustomerID string `json:"customer_id"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
 		return
 	}
-	ctx := application.WithBudgetCap(r.Context(), body.BudgetCapUSD)
+	ctx := application.WithCustomer(application.WithBudgetCap(r.Context(), body.BudgetCapUSD), body.CustomerID)
 	if body.Rehearsal {
 		ctx = application.WithRehearsal(ctx, true)
 	}

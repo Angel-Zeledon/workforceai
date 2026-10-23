@@ -77,6 +77,9 @@ type Config struct {
 	// Changes persists plan changes (Q2). Default: the Store when it implements
 	// ChangeStore (Postgres), otherwise memory.
 	Changes ChangeStore
+	// CustomerActive (B12, optional) accepts a customer id a project can be scoped to (it exists and is
+	// not archived). nil: projects cannot be scoped to customers.
+	CustomerActive func(ctx context.Context, org, customerID string) error
 }
 
 // Service is the projects use case layer.
@@ -337,6 +340,15 @@ func (s *Service) CreateDraft(ctx context.Context, in NewProject) (Record, error
 		return Record{}, fmt.Errorf("%w: budget_usd must be between 0 and 1000000", domain.ErrInvalid)
 	}
 	org := s.org(ctx)
+	in.CustomerID = strings.TrimSpace(in.CustomerID)
+	if in.CustomerID != "" { // B12: a project for one customer (its request is scoped at launch)
+		if s.cfg.CustomerActive == nil {
+			return Record{}, fmt.Errorf("%w: customers are not available", domain.ErrInvalid)
+		}
+		if err := s.cfg.CustomerActive(ctx, org, in.CustomerID); err != nil {
+			return Record{}, err
+		}
+	}
 	locale := s.locale(ctx, in.Locale)
 	pid := "prj-" + strings.ReplaceAll(uuid.NewString(), "-", "")[:12]
 	var (
@@ -386,13 +398,14 @@ func (s *Service) CreateDraft(ctx context.Context, in NewProject) (Record, error
 	}
 	rec.Estimate = estimatePlanWith(rec.Nodes, rec.Objectives, s.estimator(ctx, rec.Planner))
 	rec.BudgetUSD = in.BudgetUSD
+	rec.CustomerID = in.CustomerID
 	if rec.BudgetUSD <= 0 {
 		rec.BudgetUSD = defaultBudget(rec.Estimate)
 	}
 	if err := s.cfg.Store.Put(ctx, rec); err != nil {
 		return rec, err
 	}
-	s.audit(ctx, "project.created", pid, map[string]any{"template": tpl.ID, "nodes": len(leaves(rec.Nodes))})
+	s.audit(ctx, "project.created", pid, map[string]any{"template": tpl.ID, "nodes": len(leaves(rec.Nodes)), "customer_id": rec.CustomerID})
 	d, _ := s.detailOf(ctx, rec)
 	s.emit(ctx, "project.created", pid, map[string]any{"project": d.Project, "nodes": d.Nodes, "objectives": d.Objectives, "planning": d.Planning, "estimate": rec.Estimate, "planner": d.Planner})
 	if job != nil && info.Status == PlannerRunning {

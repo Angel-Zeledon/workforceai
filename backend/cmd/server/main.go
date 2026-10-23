@@ -17,8 +17,6 @@ import (
 	"aiworkforce/backend/internal/api"
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
-	"aiworkforce/backend/internal/scim"
-	"aiworkforce/backend/internal/sso"
 	"aiworkforce/backend/internal/config"
 	"aiworkforce/backend/internal/counters"
 	"aiworkforce/backend/internal/domain"
@@ -28,12 +26,14 @@ import (
 	redisinfra "aiworkforce/backend/internal/infrastructure/redis"
 	"aiworkforce/backend/internal/infrastructure/runtime"
 	"aiworkforce/backend/internal/mailer"
+	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
-	"aiworkforce/backend/internal/notify"
-	"aiworkforce/backend/internal/slackapp"
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/roles"
+	"aiworkforce/backend/internal/scim"
+	"aiworkforce/backend/internal/slackapp"
+	"aiworkforce/backend/internal/sso"
 	"aiworkforce/backend/internal/trust"
 	"aiworkforce/backend/internal/webhooks"
 )
@@ -223,7 +223,9 @@ func run(log *slog.Logger) error {
 	}
 
 	// Projects (whole workflows with parallel work) and agent workspaces (artifacts).
-	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy)
+	custSvc := newCustomers(cfg, log, pg, store, rec, orch, cw) // B12 customer district (consulted by the drive and the projects)
+	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy, custSvc)
+	bindCustomers(custSvc, ws, store)
 	skillsSvc := wireSkills(cfg, log, pg, store, rec, orch, orgCfg, cw, ws.drive)
 	webSvc := wireWeb(log, pg, rec, cw, orch)
 	// >>> corporate organization model (orgchart.go): installed after the projects gate, which it wraps
@@ -322,7 +324,7 @@ func run(log *slog.Logger) error {
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, ROI: roiSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Standing: standingSvc, Initiative: initiativeSvc, InitiativeScanner: initiativeScan, DevilsAdvocate: devilsSvc, Rehearsal: rehearsalSvc,
-		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Trust: trustSvc, Rituals: ritualsSvc, Away: awaySvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Trust: trustSvc, Rituals: ritualsSvc, Away: awaySvc, Customers: custSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
@@ -366,8 +368,8 @@ func run(log *slog.Logger) error {
 		}
 		idw.startJanitor(ctx, log)
 		svc, err := auth.NewService(auth.Config{
-			Policy: idw.sso, // per-organization sign-in policy (require MFA, enforce SSO)
-			AutoJoin: idw.sso, // join the organization that verified your e-mail domain, once the address is proven
+			Policy:              idw.sso, // per-organization sign-in policy (require MFA, enforce SSO)
+			AutoJoin:            idw.sso, // join the organization that verified your e-mail domain, once the address is proven
 			RequireVerification: cfg.EmailVerification, Mailer: authMailer, AppURL: cfg.UIBaseURL,
 			TrialEnabled: cfg.TrialEnabled, TrialTTL: time.Duration(cfg.TrialTTLHours) * time.Hour, TrialGlobalPerDay: cfg.TrialGlobalPerDay, TrialEmailDomain: cfg.TrialEmailDomain,
 			Logf:                func(f string, a ...any) { log.Warn(fmt.Sprintf(f, a...)) },

@@ -37,6 +37,9 @@ type GatewayTool struct {
 	// Notify (optional) is told about every successful action (path only, never
 	// content), so the office can show which file an agent is working on.
 	Notify func(ctx context.Context, org, agentID, taskID, action, path string)
+	// CustomerOf (optional) tells the customer the call's request is scoped to (B12): the call then
+	// runs under the customer isolation of customer_scope.go. An error refuses the call (fail closed).
+	CustomerOf func(ctx context.Context, org, requestID string) (string, error)
 }
 
 var _ application.NativeTool = (*GatewayTool)(nil)
@@ -100,6 +103,10 @@ func (t *GatewayTool) Assess(ctx context.Context, c application.GatewayCall) app
 	if !t.labelsOK(ctx, c.Org, c.AgentID, action) {
 		return application.NativeAssessment{DenyCode: "tool_not_granted"}
 	}
+	ctx, ok := application.ScopeCustomer(ctx, t.CustomerOf, c.Org, c.RequestID)
+	if !ok {
+		return application.NativeAssessment{DenyCode: "customer_scope_unknown"}
+	}
 	pl := t.FS.Plan(ctx, c.AgentID, action, c.Args)
 	if pl.Deny != "" {
 		if !IsWriteAction(action) && readSoft[pl.Deny] {
@@ -135,6 +142,10 @@ func (t *GatewayTool) Run(ctx context.Context, c application.GatewayCall, approv
 	action := strings.ToLower(c.Action)
 	if !t.labelsOK(ctx, c.Org, c.AgentID, action) {
 		return application.NativeResult{Status: "failed", Code: "tool_not_granted", Summary: "tool_not_granted"}
+	}
+	ctx, ok := application.ScopeCustomer(ctx, t.CustomerOf, c.Org, c.RequestID)
+	if !ok {
+		return application.NativeResult{Status: "failed", Code: "customer_scope_unknown", Summary: "customer_scope_unknown"}
 	}
 	rr := t.FS.Run(ctx, c.AgentID, action, c.Args, approved)
 	read := !IsWriteAction(action)

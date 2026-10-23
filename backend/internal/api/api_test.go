@@ -20,6 +20,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/away"
+	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
@@ -31,9 +32,9 @@ import (
 	"aiworkforce/backend/internal/rituals"
 	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/sandbox"
+	"aiworkforce/backend/internal/skills"
 	"aiworkforce/backend/internal/trust"
 	"aiworkforce/backend/internal/webtool"
-	"aiworkforce/backend/internal/skills"
 )
 
 const goodPW = "Correct-Horse-9"
@@ -119,36 +120,38 @@ type opts struct {
 	drive          bool // mount the drive (drive_api_test.go); writeGate applies to it too
 	skills         bool // mount the skill library (skills_api_test.go); implies the drive
 	writeGate      func(ctx context.Context, org string) error
-	rewards        bool // mount coins and shop (rewards_api_test.go)
-	standing       bool // mount the standing per-project approvals (standing_api_test.go)
-	initiative     bool // mount the proactive suggestions (initiative_api_test.go)
-	advocate       *advocateStub // mount the devil's advocate review with this runtime (devils_advocate_api_test.go)
-	llm            bool // mount bring-your-own-model credentials (llm_api_test.go)
-	llmNoKEK       bool // ... with no encryption key configured
-	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
-	quality        bool // mount the quality score and golden cases (quality_api_test.go)
-	trust          bool // mount the trust ladder (trust_api_test.go)
-	trustBlocked   *string          // controls code the trust ladder sees when raising autonomy ("" = allowed)
-	trustClock     func() time.Time // the trust ladder's clock (nil = real time)
-	rituals        bool // mount the stand-up and retro (rituals_api_test.go)
-	away           bool // mount "while you were away" with a 500 ms visit gap (away_api_test.go)
-	rehearsal      bool // mount the rehearsal API (rehearsal_api_test.go)
+	rewards        bool                // mount coins and shop (rewards_api_test.go)
+	standing       bool                // mount the standing per-project approvals (standing_api_test.go)
+	initiative     bool                // mount the proactive suggestions (initiative_api_test.go)
+	advocate       *advocateStub       // mount the devil's advocate review with this runtime (devils_advocate_api_test.go)
+	llm            bool                // mount bring-your-own-model credentials (llm_api_test.go)
+	llmNoKEK       bool                // ... with no encryption key configured
+	orgchart       bool                // mount the corporate organization model (orgchart_api_test.go)
+	quality        bool                // mount the quality score and golden cases (quality_api_test.go)
+	trust          bool                // mount the trust ladder (trust_api_test.go)
+	trustBlocked   *string             // controls code the trust ladder sees when raising autonomy ("" = allowed)
+	trustClock     func() time.Time    // the trust ladder's clock (nil = real time)
+	rituals        bool                // mount the stand-up and retro (rituals_api_test.go)
+	away           bool                // mount "while you were away" with a 500 ms visit gap (away_api_test.go)
+	rehearsal      bool                // mount the rehearsal API (rehearsal_api_test.go)
 	runtime        application.Runtime // overrides fakeRuntime{} (nil: the default)
-	roi            bool // mount the AI payroll / return report (roi_api_test.go)
+	roi            bool                // mount the AI payroll / return report (roi_api_test.go)
+	customers      bool                // mount the customer district and scope requests (customers_api_test.go)
 }
 
 type env struct {
-	t     *testing.T
-	srv   *httptest.Server
-	svc   *auth.Service
-	spy   *orgSpy
-	hub   *events.Hub
-	store *memory.Store
-	appr  *application.Approvals
-	code  *sandbox.Service
-	coins *rewards.Service
-	llm   *llmEnv
-	init  *application.InitiativeService
+	t         *testing.T
+	srv       *httptest.Server
+	svc       *auth.Service
+	spy       *orgSpy
+	hub       *events.Hub
+	store     *memory.Store
+	appr      *application.Approvals
+	code      *sandbox.Service
+	coins     *rewards.Service
+	llm       *llmEnv
+	init      *application.InitiativeService
+	custAudit *[]string // customer audit actions (customers_api_test.go)
 }
 
 func newEnv(t *testing.T, o opts) *env {
@@ -231,6 +234,19 @@ func newEnv(t *testing.T, o opts) *env {
 	if o.away {
 		d.Away = away.New(away.Config{Marks: away.NewMemMarks(), History: mem, OrgID: cfg.OrgID, Log: log, Gap: awayTestGap})
 	}
+	var custAudit *[]string
+	if o.customers {
+		acts := []string{}
+		custAudit = &acts
+		d.Customers = customers.New(customers.Config{Store: customers.NewMemStore(), OrgID: cfg.OrgID, Log: log,
+			Agents: func(c context.Context, org string) ([]domain.Agent, error) { return spy.ListAgents(c, org) },
+			Audit: func(c context.Context, org, actor, action, id string, det map[string]any) {
+				*custAudit = append(*custAudit, action)
+				rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: "customer", EntityID: id, Details: det})
+			}})
+		orch.SetCustomerScope(d.Customers)
+		d.Customers.SetWork(customerTestWork{store: spy})
+	}
 	if o.skills {
 		d.Skills = skills.New(skills.Config{Store: skills.NewMemStore(), Drive: d.Drive, OrgID: cfg.OrgID, Log: log,
 			AgentRole: func(c context.Context, org, id string) (string, error) {
@@ -292,7 +308,9 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	ts.Start()
 	t.Cleanup(ts.Close)
-	return &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr, code: d.Sandbox, coins: coins, llm: lenv, init: d.Initiative}
+	e := &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr, code: d.Sandbox, coins: coins, llm: lenv, init: d.Initiative}
+	e.custAudit = custAudit
+	return e
 }
 
 func (e *env) do(method, path, token string, body any, hdr map[string]string) (*http.Response, []byte) {
