@@ -27,6 +27,7 @@ import (
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/quality"
 	"aiworkforce/backend/internal/rewards"
+	"aiworkforce/backend/internal/rituals"
 	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/sandbox"
 	"aiworkforce/backend/internal/webtool"
@@ -124,6 +125,7 @@ type opts struct {
 	llmNoKEK       bool // ... with no encryption key configured
 	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
 	quality        bool // mount the quality score and golden cases (quality_api_test.go)
+	rituals        bool // mount the stand-up and retro (rituals_api_test.go)
 }
 
 type env struct {
@@ -194,6 +196,14 @@ func newEnv(t *testing.T, o opts) *env {
 			Audit: func(c context.Context, org, actor, action, id string, det map[string]any) {
 				rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: "quality_case", EntityID: id, Details: det})
 			}})
+	}
+	if o.rituals {
+		d.Rituals = rituals.New(rituals.Config{Store: rituals.NewMemStore(), Core: spy, OrgID: cfg.OrgID, Log: log,
+			Guard:    orch.AdmitRitual,
+			Notice:   func(c context.Context, text string) error { return orch.PostSystemNotice(c, domain.ChatOffice, text) },
+			Emit:     rec.Emit,
+			Audit:    rec.Audit,
+			Profiles: &application.ProfileService{Store: mem, Core: spy, Tones: mem, Rec: rec, Config: cfg}})
 	}
 	if o.skills {
 		d.Skills = skills.New(skills.Config{Store: skills.NewMemStore(), Drive: d.Drive, OrgID: cfg.OrgID, Log: log,

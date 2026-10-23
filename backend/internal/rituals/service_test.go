@@ -59,9 +59,18 @@ func newEnv(t *testing.T, mut ...func(*rituals.Config)) *env {
 			}
 			return application.GuardVerdict{Allowed: true}
 		},
-		Notice: func(_ context.Context, text string) error { e.mu.Lock(); e.notes = append(e.notes, text); e.mu.Unlock(); return nil },
-		Emit:   func(_ context.Context, a application.Action) { e.mu.Lock(); e.events = append(e.events, a); e.mu.Unlock() },
-		Audit:  func(_ context.Context, a domain.AuditLog) { e.mu.Lock(); e.audits = append(e.audits, a); e.mu.Unlock() },
+		Notice: func(_ context.Context, text string) error {
+			e.mu.Lock()
+			e.notes = append(e.notes, text)
+			e.mu.Unlock()
+			return nil
+		},
+		Emit: func(_ context.Context, a application.Action) {
+			e.mu.Lock()
+			e.events = append(e.events, a)
+			e.mu.Unlock()
+		},
+		Audit: func(_ context.Context, a domain.AuditLog) { e.mu.Lock(); e.audits = append(e.audits, a); e.mu.Unlock() },
 		Summarize: func(_ context.Context, in application.SummarizeRequest) (application.SummaryResult, error) {
 			e.sumCall++
 			if e.summary != nil {
@@ -328,7 +337,7 @@ func TestRetroProposalsFromOwnSignals(t *testing.T) {
 	e := newEnv(t, func(c *rituals.Config) {
 		c.Quality = func(context.Context) (map[string]rituals.QualitySnapshot, error) {
 			return map[string]rituals.QualitySnapshot{
-				"sales":   {Score: &score, Level: quality.LevelFair, Trend: quality.TrendDown},
+				"sales":      {Score: &score, Level: quality.LevelFair, Trend: quality.TrendDown},
 				"accounting": {Score: &score, Level: quality.LevelFair, Trend: quality.TrendStable},
 			}, nil
 		}
@@ -444,7 +453,9 @@ type fakeProfiles struct {
 	in   []application.ProfileInput
 }
 
-func (f *fakeProfiles) Get(context.Context, string) (application.ProfileView, error) { return f.view, nil }
+func (f *fakeProfiles) Get(context.Context, string) (application.ProfileView, error) {
+	return f.view, nil
+}
 func (f *fakeProfiles) Update(_ context.Context, _ string, in application.ProfileInput) (application.ProfileView, error) {
 	if f.fail != nil {
 		return application.ProfileView{}, f.fail

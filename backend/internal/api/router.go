@@ -35,6 +35,7 @@ import (
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/quality"
 	"aiworkforce/backend/internal/rewards"
+	"aiworkforce/backend/internal/rituals"
 	"aiworkforce/backend/internal/sandbox"
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/webtool"
@@ -119,6 +120,8 @@ type Deps struct {
 	Rewards *rewards.Service
 	// Quality serves /quality/agents, /agents/{id}/quality and the golden cases (quality.go): the advisory score. Optional.
 	Quality *quality.Service
+	// Rituals serves /rituals/* and /settings/rituals (rituals.go): the daily stand-up and the weekly retro. Optional.
+	Rituals *rituals.Service
 	// Chats serves the chat history (chat_history.go): the enriched GET /conversations,
 	// rename/archive/delete and /chats/*. Optional: nil keeps the plain list.
 	Chats *application.ChatHistory
@@ -253,6 +256,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountMemory(r)
 			s.mountRewards(r)
 			s.mountQuality(r)
+			s.mountRituals(r)
 			s.mountPush(r)
 			s.mountNotify(r) // approvals-notify: channel settings, plan usage, daily goal
 			s.mountV2(r)
