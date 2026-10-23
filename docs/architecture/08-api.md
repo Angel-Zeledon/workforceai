@@ -41,6 +41,7 @@ Extension compatible de `GET /metrics`: ademas de `{tasks_active, tasks_done, ap
 | `POST /requests/{id}/clarify` `{answers:[{question,answer}]}` | Responde `clarifying_questions` del plan | `requests:create` |
 | `GET /requests/{id}/timeline` | Eventos causales ordenados (`events` por `correlation_id`) | `tasks:read` |
 | `GET /requests/{id}/cost` | Desglose por tarea/agente/modelo | `reports:read` |
+| `GET /reports/{id}/evidence` | Cadena de evidencia (B6): citas comprobadas de las tareas del informe, verificadas primero (`evidence-chain.md`) | `reports:read` |
 | `POST /tasks/{id}/retry` | Reintento manual de `failed`/`blocked` | `tasks:cancel` |
 | `POST /tasks/{id}/cancel` | Cancela una tarea | `tasks:cancel` |
 | `GET /tasks/{id}/interactions` | Trazas (`agent_interactions`), con cuerpos solo para `audit:read` | `audit:read` |
