@@ -19,6 +19,8 @@ import { MockRewards } from "./rewards-mock";
 import { mockQuality } from "./quality-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
+import { demoEvidence } from "./evidence-mock";
+import type { ReportEvidence } from "../evidenceLogic";
 
 /** Card of the draft an agent leaves on its desk after a task (the mock drive creates the same path). */
 const draftRef = (agentId: string, title: string): FileRef => {
@@ -77,7 +79,7 @@ export function buildPlan(text: string): TaskSpec[] {
         out: out({ summary: "Contrato aceptable con dos ajustes: tope de penalización y cláusula de cambio de alcance.", findings: ["Penalización 2%/semana con tope 10% (aceptable)", "Falta cláusula de cambio de alcance", "Propiedad intelectual sin conflictos"], recommendations: ["Agregar cláusula de cambio de alcance", "Limitar responsabilidad al monto del contrato"], confidence: 0.82 }) },
       { key: "t3", agent: "accounting", title: "Calcular margen real de la propuesta", desc: "Recalcular el margen con costos de capacidad y descuentos.", secs: 6, deps: ["t1"], activities: ["Cargando costos directos", "Aplicando descuento por volumen", "Recalculando margen"],
         consult: { to: "operations", q: "¿Cuál es el costo real de capacidad adicional para esta entrega?", a: "Dos contrataciones senior, cerca de $7,800 al mes cargado." },
-        out: out({ summary: "El margen real es 24%, no 31%: el costo de capacidad adicional lo reduce 7 puntos.", findings: ["Margen presentado: 31%", "Margen real tras capacidad: 24%", "Sigue sobre el mínimo de 22%"], metrics: { margen_presentado: "31%", margen_real: "24%", costo_capacidad_mensual: "$7,800" }, evidence: ["Libro mayor Q3", "Costo cargado por hora $48"], recommendations: ["Aprobar solo si el margen se mantiene ≥ 22%"], confidence: 0.9 }) },
+        out: out({ summary: "El margen real es 24%, no 31%: el costo de capacidad adicional lo reduce 7 puntos.", findings: ["Margen presentado: 31%", "Margen real tras capacidad: 24%", "Sigue sobre el mínimo de 22%", "Costo de capacidad adicional: $7,800 al mes"], metrics: { margen_presentado: "31%", margen_real: "24%", costo_capacidad_mensual: "$7,800" }, evidence: ["Libro mayor Q3", "Costo cargado por hora $48"], recommendations: ["Aprobar solo si el margen se mantiene ≥ 22%"], confidence: 0.9 }) },
       { key: "t4", agent: "analyst", title: "Analizar rentabilidad y escenarios", desc: "Modelar escenarios optimista, base y adverso.", secs: 7, deps: ["t1"], activities: ["Construyendo modelo de rentabilidad", "Corriendo escenarios", "Calculando sensibilidad"],
         consult: { to: "accounting", q: "¿Confirmas el margen del 24% para el escenario base?", a: "Confirmado: 24% tras costos de capacidad y descuento por volumen." },
         out: out({ summary: "Escenario base rentable (24%); el adverso cae a 17% si el retraso supera 3 semanas.", findings: ["Base: 24% margen, retorno en 5 meses", "Adverso: 17% si hay retraso > 3 semanas", "Optimista: 28%"], hypotheses: ["El retraso depende de la velocidad de contratación"], metrics: { base: "24%", adverso: "17%", optimista: "28%" }, recommendations: ["Incluir hitos con pago parcial"], confidence: 0.78 }) },
@@ -130,6 +132,7 @@ export class MockBackend {
   private messages: Record<string, Message[]> = {};
   private approvals: Approval[] = [];
   private reports: Report[] = [];
+  private evidence = new Map<string, ReportEvidence>(); // B6: report id -> checked citations (demo scenario)
   private activity: ActivityItem[] = [];
   private errorsCount = 0;
   private budget = 50;
@@ -164,7 +167,7 @@ export class MockBackend {
   private seed() {
     this.agents = SEED_AGENTS.map((a) => ({ ...a, metrics: { ...a.metrics }, state: "idle" as AgentState, activity: "Disponible", current_task_id: null, progress: 0 }));
     this.tasks = []; this.requests = []; this.conversations = []; this.messages = {}; this.approvals = [];
-    this.reports = []; this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
+    this.reports = []; this.evidence?.clear(); this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
   }
 
   // ---- realtime -----------------------------------------------------------------------------
@@ -383,6 +386,7 @@ export class MockBackend {
       contributors, cost_usd: cost, created_at: nowIso(),
     };
     this.reports.unshift(report);
+    if (is50k) this.evidence.set(report.id, demoEvidence(report, tasks, (id) => this.specs.get(id)?.key));
     this.emit("report.created", { report }, "assistant");
     req.report_id = report.id; req.status = "done"; req.cost_usd = cost;
     this.emit("request.completed", { request_id: req.id, report_id: report.id }, "assistant");
@@ -580,6 +584,11 @@ export class MockBackend {
       }
       if (r0 === "approvals") { const st = q.get("status"); return this.approvals.filter((a) => !st || a.status === st); }
       if (r0 === "reports" && !r1) return this.reports;
+      if (r0 === "reports" && r1 && r2 === "evidence") { // B6 evidence chain
+        const rep = this.reports.find((r) => r.id === r1);
+        if (!rep) throw new Error("mock: report not found");
+        return this.evidence.get(r1) ?? { report_id: r1, request_id: rep.request_id, citations: [], verified: 0, total: 0 };
+      }
       if (r0 === "reports" && r1) return this.reports.find((r) => r.id === r1);
       if (r0 === "activity") return this.activity.slice(0, Number(q.get("limit") || 100));
       if (r0 === "metrics") return this.metrics();

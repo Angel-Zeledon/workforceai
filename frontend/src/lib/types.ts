@@ -14,6 +14,8 @@ export interface StructuredOutput {
   summary: string; findings: string[]; metrics: Record<string, string | number>;
   hypotheses: string[]; evidence: string[]; recommendations: string[];
   confidence: number; suggested_tasks: string[];
+  /** B6 evidence chain: figures and their sources, checked by the backend (optional, additive) */
+  citations?: import("./evidenceLogic").Citation[];
 }
 export type TaskStatus = "pending" | "running" | "blocked" | "awaiting_approval" | "done" | "failed";
 export interface Task {

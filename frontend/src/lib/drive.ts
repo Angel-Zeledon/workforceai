@@ -123,6 +123,9 @@ function mockDrive() {
   put("/Shared/Politicas/politica-de-descuentos.md", "# Política de descuentos\n\nHasta 10% sin aprobación; más requiere Dirección.\n", human);
   put("/Shared/Finanzas/saldos-bancarios.csv", "cuenta,banco,saldo\nOperativa,BAC,128400\nNómina,BN,56300\nUSD,BCR,40200\n", human);
   put("/Clients/Grupo Alfa/brief.md", "# Brief Grupo Alfa\n\nRediseño completo, presupuesto USD 50,000, entrega en 8 semanas.\n", human);
+  // B6 demo: the capacity cost the accountant cites is in version 2 of this file (version 1 had an older figure)
+  put("/Shared/Finanzas/costo-capacidad.csv", "concepto,mensual\nPerfil senior ops,3600\nPerfil senior ops,3600\n", human);
+  put("/Shared/Finanzas/costo-capacidad.csv", "concepto,mensual\nPerfil senior ops (cargado),3900\nPerfil senior ops (cargado),3900\nTotal capacidad adicional,7800\n", human, "costo cargado");
 
   /** Each finished task leaves its draft on the agent's desk, as the simulated runtime does. */
   const drafted = new Set<string>(); // one draft per task: later edits by people are not overwritten
