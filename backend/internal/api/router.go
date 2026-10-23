@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,6 +34,7 @@ import (
 	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/peoplechat"
+	"aiworkforce/backend/internal/portal"
 	"aiworkforce/backend/internal/presence"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
@@ -138,6 +140,12 @@ type Deps struct {
 	Away *away.Service
 	// Customers serves /customers/* (customers.go): the customer district, clones and scoped folders (B12). Optional.
 	Customers *customers.Service
+	// Portal serves the client portal (portal.go): branding, share links and the public read-only page.
+	// PortalLimiter throttles the public endpoints per client address (TrustedProxies decides when
+	// X-Forwarded-For is honoured); nil = an in-process limiter. Optional: nil Portal leaves the routes off.
+	Portal         *portal.Service
+	PortalLimiter  auth.Limiter
+	TrustedProxies []netip.Prefix
 	// Chats serves the chat history (chat_history.go): the enriched GET /conversations,
 	// rename/archive/delete and /chats/*. Optional: nil keeps the plain list.
 	Chats *application.ChatHistory
@@ -230,6 +238,7 @@ func NewRouter(d Deps) http.Handler {
 		s.mountNotifyPublic(r)   // approvals-notify: the public landing page of the signed links
 		s.mountSlackPublic(r)    // Slack channel: request URLs authenticated by the Slack signature
 		s.mountMeetingsPublic(r) // meetings: public ICS feed (secret token in the URL)
+		s.mountPortalPublic(r)   // client portal: the read-only page of a share link (token in the body)
 		r.Group(func(r chi.Router) {
 			r.Use(s.authenticate, s.tenant)
 			r.With(s.can(auth.PermAgentsRead)).Get("/agents", s.listAgents)
@@ -285,6 +294,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountRituals(r)
 			s.mountAway(r)
 			s.mountCustomers(r)
+			s.mountPortal(r)
 			s.mountPush(r)
 			s.mountNotify(r) // approvals-notify: channel settings, plan usage, daily goal
 			s.mountSlack(r)  // Slack channel: settings card and account link

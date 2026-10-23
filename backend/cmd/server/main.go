@@ -329,6 +329,8 @@ func run(log *slog.Logger) error {
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
 	deps.Slack = slackSvc
+	// Client portal (B13): read-only share links of a project with the firm's branding.
+	deps.Portal, deps.PortalLimiter, deps.TrustedProxies = wirePortal(cfg, pg, rec, ws.projects, ws.artifacts, authStore), limiter, cfg.TrustedProxies
 	deps.Presence, deps.PeopleChat = wirePeople(ctx, pg, pub, queries, orch) // human presence + people chat
 	if meetingsSvc != nil && deps.PeopleChat != nil {
 		meetingsSvc.People = meetingPeople{dir: deps.PeopleChat.Store} // attendee picker: the same directory as the people chat

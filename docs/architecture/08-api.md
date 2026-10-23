@@ -1061,3 +1061,29 @@ Clientes del despacho, clones de agente por cliente y alcance por cliente de sol
 | DELETE | `/customers/{id}/folders/{folder_id}` | `files:grant` | `204` |
 
 Aditivo en rutas existentes: `POST /requests` acepta `customer_id` (`404` cliente desconocido, `409` archivado; en ambos casos no se crea la solicitud); `POST /projects` acepta `customer_id` y los resúmenes de proyecto lo devuelven. Herramientas de agente: `fs.*` y `memory.search` responden `customer_scope_unknown` si el alcance no se puede resolver y `customer_isolation` al intentar escribir fuera del cliente. Auditoría: `customer.created|updated|archived`, `customer.clone.created|deleted`, `customer.folder.linked|unlinked`, `customer.request.scoped`.
+
+## 37. Portal del cliente (B13)
+
+Enlace de sólo lectura con el avance de UN proyecto y la marca del despacho. El token (256 bits) se muestra una sola vez; se guarda su SHA-256. La vista pública es una allowlist (`portal.View`): título, estado grueso, avance, etapas y tareas (sólo título y estado), entregables aprobados que el despacho eligió y fecha de última actualización; nunca costos, agentes, instrucciones, aprobaciones, notas internas, conexiones ni ids. Diseño completo: `docs/architecture/client-portal.md`. Migración `798_client_portal` (`portal_branding`, `portal_links`, RLS por organización + política de sólo lectura por hash del token).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/portal/branding` | `agents:read` | `{display_name, accent_color, has_logo, updated_by, updated_at}` (vacío si no hay) |
+| PUT | `/portal/branding` `{display_name, accent_color}` | `org:manage` | `display_name` ≤ 80; `accent_color` `#rrggbb` o vacío (`400` si no). Auditado (`portal_branding.updated`) |
+| GET | `/portal/branding/logo` | `agents:read` | la imagen (`image/png` o `image/jpeg`); `404 no_logo` |
+| PUT | `/portal/branding/logo` (cuerpo = imagen) | `org:manage` | PNG/JPEG/GIF ≤ 2 MB; se re-codifica a ≤ 512 px sin metadatos; `400` si no es una imagen válida, `413` si es mayor. Auditado |
+| DELETE | `/portal/branding/logo` | `org:manage` | auditado |
+| GET | `/projects/{id}/portal-links` | `org:manage` | `[{id, project_id, label, title, deliverable_ids[], created_by, created_at, updated_at, expires_at, revoked_at, revoked_by?, first_viewed_at, last_viewed_at, status: active\|expired\|revoked}]`, más nuevo primero; nunca el token; `404` si el proyecto no es de la organización |
+| GET | `/projects/{id}/portal-links/candidates` | `org:manage` | entregables del proyecto `[{id, title, kind, status, completed, updated_at}]` (`completed` = `approved`/`sent`; los archivados no salen) |
+| POST | `/projects/{id}/portal-links` `{label, title, expires_in_days, deliverable_ids[]}` | `org:manage` | `201` con el enlace y `token` (única vez, `Cache-Control: no-store`). `expires_in_days` 0 = no vence, máx. 365; `deliverable_ids` deben ser artefactos del proyecto (`400`); máx. 20 activos por proyecto (`409`). Auditado (`portal_link.created`) |
+| PUT | `/projects/{id}/portal-links/{lid}` `{label, title, deliverable_ids[]}` | `org:manage` | edita lo compartido; el token y el vencimiento no cambian; `409` si está revocado. Auditado |
+| DELETE | `/projects/{id}/portal-links/{lid}` | `org:manage` | revoca (idempotente) y devuelve el enlace. Auditado (`portal_link.revoked`) |
+
+Públicas (sin sesión; el token es la credencial y va en el **cuerpo**, nunca en la URL; 60 peticiones/min por dirección; `no-store`, `no-referrer`, `X-Robots-Tag: noindex`, `X-Frame-Options: DENY`, CSP `default-src 'none'`):
+
+| Método | Ruta | Notas |
+|---|---|---|
+| POST | `/public/portal/view` `{token}` | `200` `{firm{name, accent_color, has_logo}, project{title, title_key?, title_params?, status, progress_pct, tasks_done, tasks_total}, milestones[{title, title_key?, title_params?, status, progress_pct, tasks[{title, title_key?, title_params?, status}]}], deliverables[{title, kind, completed_at}], updated_at, generated_at, expires_at}`. `404 link_unavailable` para token desconocido, vencido o revocado (indistinguibles); `429 rate_limited`. La primera visita se audita (`portal_link.first_viewed`) |
+| POST | `/public/portal/logo` `{token}` | el logotipo del despacho del enlace; `404` como arriba o `no_logo` |
+
+Página: `/portal#<token>` (el fragmento no se envía al servidor). Estados públicos: proyecto `planning`, `in_progress`, `on_hold`, `completed`, `closed`; tarea `pending`, `in_progress`, `done`.
