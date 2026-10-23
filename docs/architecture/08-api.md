@@ -913,3 +913,22 @@ Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditor
 ## 26. Puntaje de calidad y casos dorados (B11)
 
 Puntaje orientativo por agente con la metodología en la respuesta (componentes, pesos, tamaños de muestra, `insufficient_data` bajo el mínimo), ventana móvil y tendencia. Solo lectura sobre señales existentes; nunca cambia autonomía ni permisos. Rutas: `GET /quality/agents`, `GET /agents/{id}/quality`, `GET|POST /agents/{id}/golden-cases`, `PUT|DELETE /golden-cases/{id}`, `GET|POST /golden-cases/{id}/runs` (lectura `agents:read`, escritura `agents:write`, escrituras auditadas). Contrato y metodología completos: `docs/architecture/quality-score.md`. Migración `789_quality_golden`.
+
+## 27. Distrito de clientes (B12)
+
+Clientes del despacho, clones de agente por cliente y alcance por cliente de solicitudes, proyectos y carpetas. Una tarea de un cliente solo recuerda y lee lo de ese cliente (más `/Shared` y las notas que una persona escribió al agente); lo aplica el backend al resolver el cliente desde el id de la solicitud. Diseño y tabla de aislamiento: `docs/architecture/customer-district.md`. Migración `797_customers` (`customers`, `customer_assignments`, `customer_links`, `memory_docs.customer_id`; RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/customers?include_archived=1` | `requests:read` | `[{id, name, tax_id, color, notes, folder_path, archived, archived_at?, created_at, updated_at}]` por nombre |
+| POST | `/customers` `{name, tax_id?, color?, notes?}` | `requests:create` | `201`; crea `/Clients/<nombre>`. `400` nombre vacío o > 120, color no `#rrggbb`; `409` nombre repetido entre activos |
+| GET | `/customers/district` | `requests:read` | `{generated_at, customers: [{customer, status: on_track\|waiting_approval\|blocked\|idle, projects_active, approvals_waiting, failed, assignments}]}` |
+| GET | `/customers/{id}` | `requests:read` | `{customer, status, projects_active, approvals_waiting, failed, assignments: [...], projects: [{id, name, status, light, tasks_done, tasks_total, awaiting, failed}], requests: [{id, text, status, created_at}], folder_path}` |
+| PUT | `/customers/{id}` | `requests:create` | solo los campos dados; `409` si está archivado |
+| DELETE | `/customers/{id}` | `agents:write` | `204`; archiva (no admite trabajo nuevo; sus datos siguen aislados) |
+| POST | `/customers/{id}/assignments` `{agent_id, display_name?}` | `files:grant` | `201` `{id, customer_id, agent_id, display_name, created_at}`; nombre por omisión "<título del agente> · <cliente>"; `404` agente desconocido; `409` repetido o cliente archivado |
+| DELETE | `/customers/{id}/assignments/{assignment_id}` | `files:grant` | `204` |
+| POST | `/customers/{id}/folders` `{folder_id}` | `files:grant` | `201`; la carpeta (no de primer nivel) y todo lo que cuelga de ella pasa a ser del cliente; `409` si ya es de otro |
+| DELETE | `/customers/{id}/folders/{folder_id}` | `files:grant` | `204` |
+
+Aditivo en rutas existentes: `POST /requests` acepta `customer_id` (`404` cliente desconocido, `409` archivado; en ambos casos no se crea la solicitud); `POST /projects` acepta `customer_id` y los resúmenes de proyecto lo devuelven. Herramientas de agente: `fs.*` y `memory.search` responden `customer_scope_unknown` si el alcance no se puede resolver y `customer_isolation` al intentar escribir fuera del cliente. Auditoría: `customer.created|updated|archived`, `customer.clone.created|deleted`, `customer.folder.linked|unlinked`, `customer.request.scoped`.
