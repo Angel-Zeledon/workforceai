@@ -207,6 +207,7 @@ func (o *Orchestrator) codeFollowUp(ctx context.Context, rs *run, t *domain.Task
 	}
 	o.recordUsage(ctx, rs, t.ID, agent.ID, domain.UsageRunTask, next.Usage, next.ToolRequests, res)
 	next.Output.Normalize()
+	o.checkCitations(ctx, rs, *t, in, &next.Output) // B6
 	if t.Output != nil {
 		next.Output.Evidence = append(append([]string{}, t.Output.Evidence...), next.Output.Evidence...)
 	}

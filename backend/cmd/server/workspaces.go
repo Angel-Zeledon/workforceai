@@ -104,6 +104,8 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	}
 	psvc = projects.New(ctx, pcfg)
 	orch.SetContextSource(asvc) // W3: referenced artifacts reach project tasks as delimited data
+	// B6: cell citations of the evidence chain are checked against the artifact
+	orch.SetCitationResolver(asvc)
 	dws := driveWorkspace{drive: dsvc, pstore: pstore, store: store}
 	if orgCfg != nil {
 		dws.locale = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }

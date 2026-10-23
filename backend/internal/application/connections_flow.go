@@ -32,6 +32,7 @@ type runExt struct {
 	mu       sync.Mutex
 	readOnly bool                  // the human marked the request "no external actions"
 	taint    map[string]*taskTaint // task id -> what it read
+	seen     map[string]*taskSeen  // task id -> ids of what its reads returned (evidence.go)
 }
 
 type taskTaint struct {
@@ -261,6 +262,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 					taint.conns = append(taint.conns, out.ConnectionID)
 				}
 				rs.ext.mu.Unlock()
+				rs.recordSources(t.ID, out.Sources, time.Now().UTC()) // B6: what citations may point to
 			default:
 				reason := out.DenyReason
 				if reason == "" {

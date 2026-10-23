@@ -101,7 +101,7 @@ func (g *Gateway) executeNative(ctx context.Context, c application.GatewayCall, 
 	}
 	res := nt.Run(ctx, c, approved)
 	out := application.GatewayOutcome{Decision: "allowed", Status: res.Status, Summary: res.Summary, Blocks: res.Blocks,
-		Tainted: res.Tainted, InjectionSuspected: res.InjectionSuspected, Trusted: res.Trusted, Images: res.Images}
+		Tainted: res.Tainted, InjectionSuspected: res.InjectionSuspected, Trusted: res.Trusted, Images: res.Images, Sources: res.Sources}
 	if res.Status != "succeeded" {
 		out.Status, out.DenyReason = "failed", res.Code
 	}

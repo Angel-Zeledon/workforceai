@@ -228,4 +228,9 @@ func TestImagePartFollowsPermissions(t *testing.T) {
 	if res.Status != "succeeded" || len(res.Images) != 1 || !res.Tainted || len(res.Blocks) != 1 || !strings.Contains(res.Blocks[0], "untrusted") {
 		t.Fatalf("granted image: status=%s images=%d tainted=%v blocks=%q", res.Status, len(res.Images), res.Tainted, res.Blocks)
 	}
+	// B6: a successful read names the file version it returned, for the evidence chain.
+	if len(res.Sources) != 1 || res.Sources[0].Kind != application.SourceFile || res.Sources[0].FileID == "" ||
+		res.Sources[0].Path != "/Clients/Acme/foto.png" || res.Sources[0].Version != 1 {
+		t.Fatalf("read sources: %+v", res.Sources)
+	}
 }

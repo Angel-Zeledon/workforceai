@@ -106,9 +106,13 @@ type GatewayOutcome struct {
 	Images []ImagePart
 	// ConnectionID is internal: it is never forwarded to the runtime.
 	ConnectionID string
-	Pending      *GatewayPending
-	HoldID       string
-	HoldUntil    *time.Time
+	// Sources (B6) are the structured ids of what a successful read returned
+	// (connector items, the drive file version, memory refs): the evidence chain
+	// checks the citations of the task against them. Never sent to the runtime.
+	Sources   []ReadSource
+	Pending   *GatewayPending
+	HoldID    string
+	HoldUntil *time.Time
 }
 
 // ToolGateway executes connection-backed tools with the credential and
@@ -160,6 +164,29 @@ type NativeResult struct {
 	Trusted []TrustedBlock
 	// Images: see GatewayOutcome.Images.
 	Images []ImagePart
+	// Sources: see GatewayOutcome.Sources.
+	Sources []ReadSource
+}
+
+// ReadSource kinds (B6).
+const (
+	SourceConn   = "conn"   // an item returned by a connector read (email, event, file, issue...)
+	SourceFile   = "file"   // a drive file version read with fs.read
+	SourceRecall = "recall" // a memory ref returned by memory.search (task:, report:, memory:, file:)
+)
+
+// ReadSource is one thing a task read through the Tool Gateway (B6). Ids only:
+// the content stays where it already was (the untrusted block for the runtime).
+type ReadSource struct {
+	Kind     string
+	Tool     string // conn: the tool name the agent used (email, calendar...)
+	Provider string // conn: provider id (gmail, google_calendar...)
+	ItemID   string // conn: the item id as the runtime saw it in the block
+	FileID   string // file
+	Path     string // file
+	Version  int    // file
+	Ref      string // recall: task:<id> | report:<id> | memory:<id> | file:/path
+	Title    string // recall: title of the memory
 }
 
 // TrustedBlock is approved organization configuration returned by a native
