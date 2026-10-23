@@ -913,3 +913,23 @@ Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditor
 ## 26. Puntaje de calidad y casos dorados (B11)
 
 Puntaje orientativo por agente con la metodología en la respuesta (componentes, pesos, tamaños de muestra, `insufficient_data` bajo el mínimo), ventana móvil y tendencia. Solo lectura sobre señales existentes; nunca cambia autonomía ni permisos. Rutas: `GET /quality/agents`, `GET /agents/{id}/quality`, `GET|POST /agents/{id}/golden-cases`, `PUT|DELETE /golden-cases/{id}`, `GET|POST /golden-cases/{id}/runs` (lectura `agents:read`, escritura `agents:write`, escrituras auditadas). Contrato y metodología completos: `docs/architecture/quality-score.md`. Migración `789_quality_golden`.
+
+## 27. Slack de doble vía para personas (A6)
+
+La organización conecta **su propia app de Slack** (signing secret + token del bot, guardados solo sellados con la bóveda; sin clave de bóveda, `409 vault_required`). Las aprobaciones llegan al canal con botones Aprobar / Rechazar y cualquiera consulta con un comando (`/oficina estado`, `/oficina pendientes`, `/oficina vincular <código>`, `/oficina desvincular`; también `status`, `pending`, `link`, `unlink`, `pendentes`). Slack nunca amplía permisos: la decisión pasa por `application.Approvals.Decide` con el id y el rol **actual** de la persona vinculada (las mismas reglas que `POST /approvals/{id}/decision`). Diseño y modelo de seguridad: `docs/architecture/channels.md`. Código: `backend/internal/slackapp`. Migración `801_slack_app` (5 tablas, RLS por organización). No es el conector de Slack de los agentes (`internal/connections/slack`) y no comparte credenciales con él.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| POST | `/channels/slack/{org}/interactions` | público, firma de Slack | Request URL de Interactivity. `413` cuerpo > 64 KB, `404` organización sin app, `401` firma inválida o fuera de la ventana de 5 min, `403` otro espacio de trabajo. `200` inmediato; la decisión sigue en segundo plano y responde por `response_url` (solo `https://hooks.slack.com`) |
+| POST | `/channels/slack/{org}/commands` | público, firma de Slack | Request URL del comando. Mismas comprobaciones; responde JSON efímero (`response_type: ephemeral`) |
+| GET | `/channels/slack/settings` | `org:manage` | `{enabled, configured, signing_secret_set, bot_token_set, bot_token_last4?, team_id?, team_name?, channel_id, min_risk, locale, email_matching, high_risk_in_app, verified_at?, interactions_url, commands_url, command, scopes[], vault_available, accounts_available}`. Los secretos nunca se devuelven |
+| PUT | `/channels/slack/settings` | `org:manage` | `{enabled?, signing_secret?, bot_token?, channel_id?, min_risk?, locale?, email_matching?, high_risk_in_app?}`. Un token nuevo se comprueba con `auth.test` (`400 slack_auth_failed` + `slack_error`) y fija el `team_id` aceptado. `enabled:true` exige ambos secretos. Auditado (`channel.slack.settings_updated`, sin secretos) |
+| DELETE | `/channels/slack/settings` | `org:manage` | Desconecta: borra secretos, vínculos, códigos y referencias. Auditado (`channel.slack.disconnected`) |
+| POST | `/channels/slack/test` | `org:manage` | `{ok, team_id?, team_name?, posted, error?}`: `auth.test` y, si hay canal, un mensaje de prueba. `409 not_configured` sin token |
+| GET | `/channels/slack/link` | `approvals:read` | `{linked, links:[{team_id, slack_user_id, user_id, method, created_at}]}` del usuario que llama |
+| POST | `/channels/slack/link-code` | `approvals:read` | `{code: "ABCD-EFGH", expires_at, command}`: un solo uso, 10 min, se guarda solo su hash; uno nuevo reemplaza al anterior. `Cache-Control: no-store` |
+| DELETE | `/channels/slack/link` | `approvals:read` | `{removed}`: quita los vínculos del usuario que llama. Auditado |
+
+Resultado de cada botón (auditado como `channel.slack.decision` con `channel: "slack"`, `decision`, `outcome`, `slack_team`, `slack_user`, `identity`): `approved`, `rejected`, `partial` (doble aprobación, 1 de 2), `unlinked`, `not_member`, `forbidden` (rol sin `approvals:decide`), `role_too_low`, `self_approval`, `already_approved_by_you`, `not_pending`, `kill_switch`, `read_only`, `needs_app` (riesgo alto u `code.run`), `disabled`, `not_found`, `failed`. Las entradas `approval.approved|rejected|partial|decision_refused` de una decisión desde Slack llevan además `channel: "slack"`. Otras auditorías: `channel.slack.linked`, `channel.slack.link_refused`, `channel.slack.link_code_issued`, `channel.slack.unlinked`, `channel.slack.tested`.
+
+Variables: `SLACK_CHANNEL=off` no monta el canal; las URL públicas usan `NOTIFY_PUBLIC_URL` (o `UI_BASE_URL`).
