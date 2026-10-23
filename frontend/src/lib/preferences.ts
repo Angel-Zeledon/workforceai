@@ -25,6 +25,8 @@ export interface Prefs {
   reduceMotion: boolean;
   /** short speech bubbles over the agents (task / step / plan phase) */
   showBubbles: boolean;
+  /** office light follows the viewer's local time (dawn / day / dusk / night) instead of the room's mood (B5) */
+  lightAuto: boolean;
   agents: Record<string, AgentPrefs>;
 }
 
@@ -38,7 +40,7 @@ export interface PreferencesBackend {
 }
 
 const KEY = "aiwos.preferences.v1";
-export const DEFAULT_PREFS: Prefs = { version: 1, locale: "es", lighting: "ambient", showNames: true, labelSize: "m", reduceMotion: false, showBubbles: true, agents: {} };
+export const DEFAULT_PREFS: Prefs = { version: 1, locale: "es", lighting: "ambient", showNames: true, labelSize: "m", reduceMotion: false, showBubbles: true, lightAuto: false, agents: {} };
 
 export const localBackend: PreferencesBackend = {
   load() {
