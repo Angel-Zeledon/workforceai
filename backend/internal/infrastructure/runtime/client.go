@@ -76,6 +76,7 @@ var (
 	_ application.Reviewer    = (*Client)(nil)
 
 	_ application.CounterargumentRuntime = (*Client)(nil)
+	_ application.DebateRuntime          = (*Client)(nil)
 	_ application.LLMTester   = (*Client)(nil)
 )
 
@@ -164,6 +165,12 @@ func (c *Client) Review(ctx context.Context, in application.ReviewRequest) (out 
 // Counterargument implements application.CounterargumentRuntime (POST /v1/counterargument).
 func (c *Client) Counterargument(ctx context.Context, in application.CounterargumentRequest) (out application.CounterargumentResponse, err error) {
 	err = c.do(ctx, http.MethodPost, "/v1/counterargument", in, &out)
+	return
+}
+
+// Debate implements application.DebateRuntime (POST /v1/debate): one bounded team debate (B5).
+func (c *Client) Debate(ctx context.Context, in application.DebateRequest) (out application.DebateResponse, err error) {
+	err = c.do(ctx, http.MethodPost, "/v1/debate", in, &out)
 	return
 }
 
