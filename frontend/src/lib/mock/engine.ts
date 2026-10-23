@@ -19,6 +19,7 @@ import { MockRewards } from "./rewards-mock";
 import { mockQuality } from "./quality-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
+import type { RequestAudit, TaskAudit } from "../auditLogic";
 
 /** Card of the draft an agent leaves on its desk after a task (the mock drive creates the same path). */
 const draftRef = (agentId: string, title: string): FileRef => {
@@ -116,6 +117,27 @@ export function buildPlan(text: string): TaskSpec[] {
   ];
 }
 
+/** B7 demo: the internal auditor's stamp of a finished request, one kind per scenario (fixed demo figures taken from
+ * the scenario outputs above). The $50,000 proposal shows an inconsistency, the sales drop a verification and the
+ * hiring plan "not verified"; anything else has no audit. */
+export function demoRequestAudit(req: Request, tasks: Task[]): RequestAudit | null {
+  const t = req.text.toLowerCase();
+  const kind = /50[, ]?000|propuesta|cliente|cotiz|proposal|\bquote/.test(t) ? "p50k"
+    : /ventas|bajaron|bajó|cayeron|caída|sales (dropped|fell)|sales are down/.test(t) ? "sales"
+    : /contrat|vacante|personal|reclut|\bhire\b|hiring|vacanc/.test(t) ? "hire" : null;
+  if (!kind) return null;
+  const ref = (key: string) => tasks.find((x) => buildPlan(req.text).find((s) => s.key === key)?.title === x.title)?.id ?? key;
+  const base = { task_id: `${req.id}#audit`, title: tr("mock.audit.title"), agent_id: "assistant", finished_at: nowIso() };
+  const audit: TaskAudit = kind === "p50k"
+    ? { ...base, status: "inconsistency", summary: tr("mock.audit.p50k.summary"), findings: [tr("mock.audit.p50k.f1"), tr("mock.audit.p50k.f2")],
+      evidence: [`task:${ref("t1")}.metrics.margen_estimado=31%`, `task:${ref("t3")}.metrics.margen_real=24%`, `task:${ref("t4")}.metrics.base=24%`], compared: 2, inconsistencies: 1, confidence: 0.85 }
+    : kind === "sales"
+      ? { ...base, status: "verified", summary: tr("mock.audit.sales.summary"), findings: [tr("mock.audit.sales.f1"), tr("mock.audit.sales.f2")],
+        evidence: [`task:${ref("b1")}.metrics.variacion=-14%`, `task:${ref("b3")}.summary=-14%`, `task:${ref("b1")}.metrics.leads=-18%`, `task:${ref("b2")}.summary=-18%`], compared: 2, inconsistencies: 0, confidence: 0.9 }
+      : { ...base, status: "unverified", summary: tr("mock.audit.hire.summary"), findings: [tr("mock.audit.hire.f1")], evidence: [], compared: 0, inconsistencies: 0, confidence: 0.4 };
+  return { request_id: req.id, status: audit.status, audits: [audit] };
+}
+
 const fullOutput = (o: Partial<StructuredOutput>): StructuredOutput => ({
   summary: "", findings: [], metrics: {}, hypotheses: [], evidence: [], recommendations: [], confidence: 0.8, suggested_tasks: [], ...o,
 });
@@ -130,6 +152,8 @@ export class MockBackend {
   private messages: Record<string, Message[]> = {};
   private approvals: Approval[] = [];
   private reports: Report[] = [];
+  /** B7: the internal auditor's stamp per request (GET /requests/{id}/audit) */
+  private audits = new Map<string, RequestAudit>();
   private activity: ActivityItem[] = [];
   private errorsCount = 0;
   private budget = 50;
@@ -164,7 +188,7 @@ export class MockBackend {
   private seed() {
     this.agents = SEED_AGENTS.map((a) => ({ ...a, metrics: { ...a.metrics }, state: "idle" as AgentState, activity: "Disponible", current_task_id: null, progress: 0 }));
     this.tasks = []; this.requests = []; this.conversations = []; this.messages = {}; this.approvals = [];
-    this.reports = []; this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
+    this.reports = []; this.audits.clear(); this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
   }
 
   // ---- realtime -----------------------------------------------------------------------------
@@ -382,6 +406,8 @@ export class MockBackend {
       sections: tasks.filter((t) => t.agent_id !== "assistant").map((t) => ({ heading: `${this.agent(t.agent_id).title}: ${t.title}`, body: body(t) })),
       contributors, cost_usd: cost, created_at: nowIso(),
     };
+    const audit = demoRequestAudit(req, tasks);
+    if (audit) this.audits.set(req.id, audit);
     this.reports.unshift(report);
     this.emit("report.created", { report }, "assistant");
     req.report_id = report.id; req.status = "done"; req.cost_usd = cost;
@@ -570,6 +596,10 @@ export class MockBackend {
       }
       if (r0 === "tasks" && r1) return this.tasks.find((t) => t.id === r1);
       if (r0 === "requests" && !r1) return this.requests;
+      if (r0 === "requests" && r1 && r2 === "audit") {
+        if (!this.requests.some((r) => r.id === r1)) throw new Error(`GET /requests/${r1}/audit -> 404`);
+        return this.audits.get(r1) ?? { request_id: r1, status: "none", audits: [] };
+      }
       if (r0 === "requests" && r1) {
         return { request: this.requests.find((r) => r.id === r1), tasks: this.tasks.filter((t) => t.request_id === r1) };
       }

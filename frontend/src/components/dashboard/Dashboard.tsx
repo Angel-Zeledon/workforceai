@@ -14,6 +14,8 @@ import { DashboardFiles } from "../workspace/DashboardFiles";
 import { BudgetLimitsPanel, CostBreakdownPanel } from "../cost/CostBreakdownPanel";
 import { EstimateCard } from "../cost/EstimateCard";
 import { QualityOverview } from "../quality/QualityOverview";
+import { AuditDetail } from "../quality/AuditStamp";
+import { taskAuditOf } from "@/lib/auditLogic";
 import { Card, Dot, Empty, Progress, ReasonChip, StateBadge, TaskBadge, readable, timeAgo, useAgentColor, useAgentName } from "../ui";
 
 const SECTIONS = ["overview", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "quality", "costs"] as const;
@@ -246,7 +248,7 @@ function Tasks() {
                   <tr key={`${t.id}-o`} className="border-b border-line/60 bg-bg/50"><td colSpan={6} className="p-3 text-[12px] text-ink2">
                     <p className="mb-2 text-mute">{t.description}</p>
                     <ReasonChip agentId={t.agent_id} reason={t.assigned_reason} className="mb-2" />
-                    {t.output ? (<div className="space-y-1"><div className="font-semibold text-ink">{t.output.summary}</div>{t.output.findings.map((f, i) => <div key={i}>• {f}</div>)}
+                    {t.output ? (<div className="space-y-1">{(() => { const a = taskAuditOf(t); return a ? <AuditDetail audit={a} testId={`task-audit-${t.id}`} /> : null; })()}<div className="font-semibold text-ink">{t.output.summary}</div>{t.output.findings.map((f, i) => <div key={i}>• {f}</div>)}
                       {Object.keys(t.output.metrics).length > 0 && <div className="flex flex-wrap gap-2 pt-1">{Object.entries(t.output.metrics).map(([k, v]) => <span key={k} className="rounded bg-mute/[0.08] px-2 py-0.5 font-mono text-[11px]">{k}: {String(v)}</span>)}</div>}
                       {t.output.recommendations.length > 0 && <div className="pt-1 text-mute">{tt("dash.tasks.recommendations")}: {t.output.recommendations.join(" · ")}</div>}
                       <div className="text-mute">{tt("common.confidence")} {Math.round(t.output.confidence * 100)}%</div></div>) : <span className="text-mute">{tt("dash.tasks.noOutput")}</span>}

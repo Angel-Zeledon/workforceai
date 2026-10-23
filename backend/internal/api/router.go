@@ -217,6 +217,7 @@ func NewRouter(d Deps) http.Handler {
 			r.With(s.can(auth.PermRequestsCreate)).Post("/requests", s.createRequest)
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests", s.listRequests)
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}", s.getRequest)
+			r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}/audit", s.getRequestAudit)
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations", s.listConversations)
 			s.mountChatHistory(r)
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations/{id}/messages", s.listMessages)
@@ -424,6 +425,16 @@ func (s *server) getRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	d.Tasks = list(d.Tasks)
 	writeJSON(w, 200, s.withCost(r, d))
+}
+
+// getRequestAudit: GET /requests/{id}/audit, the internal auditor's stamp of a request (B7).
+func (s *server) getRequestAudit(w http.ResponseWriter, r *http.Request) {
+	v, err := s.Queries.RequestAudit(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, v)
 }
 
 func (s *server) listConversations(w http.ResponseWriter, r *http.Request) {

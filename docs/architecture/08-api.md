@@ -913,3 +913,13 @@ Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditor
 ## 26. Puntaje de calidad y casos dorados (B11)
 
 Puntaje orientativo por agente con la metodología en la respuesta (componentes, pesos, tamaños de muestra, `insufficient_data` bajo el mínimo), ventana móvil y tendencia. Solo lectura sobre señales existentes; nunca cambia autonomía ni permisos. Rutas: `GET /quality/agents`, `GET /agents/{id}/quality`, `GET|POST /agents/{id}/golden-cases`, `PUT|DELETE /golden-cases/{id}`, `GET|POST /golden-cases/{id}/runs` (lectura `agents:read`, escritura `agents:write`, escrituras auditadas). Contrato y metodología completos: `docs/architecture/quality-score.md`. Migración `789_quality_golden`.
+
+## 27. Sello del auditor interno (B7)
+
+El veredicto del auditor interno (`output.metrics.audit_status` de sus tareas, ya endurecido por `enforceAuditEvidence`) como sello legible. Solo lectura; no calcula veredictos propios. Diseño: `docs/architecture/internal-auditor.md`. Sin migración.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/requests/{id}/audit` | `requests:read` | `{request_id, status: verified\|inconsistency\|unverified\|none, audits: [{task_id, title, agent_id, status, summary, findings[], evidence[], compared, inconsistencies, confidence, finished_at?}]}`. Solo tareas terminadas; estado agregado: `inconsistency` si alguna, `verified` si todas, `none` sin auditorías. `404` si la solicitud no es de la organización |
+
+Aditivo en `GET /projects/{id}`: cada nodo que sea una auditoría terminada trae `audit` con la misma forma que un elemento de `audits` (ausente en los demás). `GET /tasks` y `GET /tasks/{id}` ya devolvían `output.metrics.audit_status` sin cambios.
