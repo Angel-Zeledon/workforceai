@@ -48,11 +48,12 @@ type Orchestrator struct {
 	chatQ    chatQueue        // per-conversation FIFO of chat turns (chat.go)
 	convCtx  ConvContextStore // /clear and /compact: what the model still sees of a conversation (commands_support.go)
 
-	ctxSrc   ContextSource   // optional: artifact text for project tasks (context_flow.go)
-	wsSrc    WorkspaceSource // optional: the agent's drive folders (workspace_flow.go)
-	files    chatFiles       // files agents wrote per task and the resolver of paths (chat_files.go)
-	skillSrc SkillSource     // optional: the agent's active skills (skills_flow.go)
-	memSrc   MemorySource    // optional: long-term memory (memory_flow.go)
+	ctxSrc   ContextSource    // optional: artifact text for project tasks (context_flow.go)
+	citeRes  CitationResolver // optional: artifact cells for the evidence chain (evidence.go)
+	wsSrc    WorkspaceSource  // optional: the agent's drive folders (workspace_flow.go)
+	files    chatFiles        // files agents wrote per task and the resolver of paths (chat_files.go)
+	skillSrc SkillSource      // optional: the agent's active skills (skills_flow.go)
+	memSrc   MemorySource     // optional: long-term memory (memory_flow.go)
 
 	initiative InitiativeRaiser // optional: failed tasks become suggestions (initiative.go)
 	rehearsal  *RehearsalService // optional: per-agent rehearsal switch and the "would have done" log (rehearsal.go)
@@ -608,6 +609,7 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 	}
 	resp = o.connectionReads(ctx, rs, &t, agent, in, resp)
 	resp.Output.Normalize()
+	o.checkCitations(ctx, rs, t, in, &resp.Output) // B6: every cited source must be one the task really saw
 	o.visionNotices(ctx, rs, t, agent, &resp.Output, resp.Notices)
 	if agent.Role == AuditorRole {
 		enforceAuditEvidence(&resp.Output) // never "verified" without evidence references

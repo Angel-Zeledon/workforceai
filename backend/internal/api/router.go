@@ -242,6 +242,7 @@ func NewRouter(d Deps) http.Handler {
 			r.With(s.can(auth.PermApprovalsDecide)).Post("/approvals/{id}/decision", s.decide)
 			r.With(s.can(auth.PermReportsRead)).Get("/reports", s.listReports)
 			r.With(s.can(auth.PermReportsRead)).Get("/reports/{id}", s.getReport)
+			r.With(s.can(auth.PermReportsRead)).Get("/reports/{id}/evidence", s.reportEvidence) // B6 evidence chain
 			r.With(s.can(auth.PermActivityRead)).Get("/activity", s.activity)
 			r.With(s.can(auth.PermMetricsRead)).Get("/metrics", s.metrics)
 			s.mountOrgConfig(r)
@@ -579,6 +580,17 @@ func (s *server) listReports(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) getReport(w http.ResponseWriter, r *http.Request) {
 	v, err := s.Store.GetReport(r.Context(), s.org(r), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, v)
+}
+
+// reportEvidence is GET /reports/{id}/evidence (B6): the checked citations of
+// the tasks behind the report.
+func (s *server) reportEvidence(w http.ResponseWriter, r *http.Request) {
+	v, err := s.Queries.ReportEvidence(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
 		s.fail(w, err)
 		return

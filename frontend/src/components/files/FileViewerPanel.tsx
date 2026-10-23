@@ -40,7 +40,8 @@ export function FileViewerPanel() {
       setLoad({ state: "error", code: e instanceof DriveError ? e.code : "unavailable" });
     }
   }, [ref]);
-  useEffect(() => { setLoad({ state: "loading" }); setVersion(0); setShowDiff(false); setEditing(false); reload(); }, [ref?.path, ref?.file_id, reload]); // eslint-disable-line react-hooks/exhaustive-deps
+  // B6: a figure's source opens at the exact version the task read; anything else opens the latest
+  useEffect(() => { setLoad({ state: "loading" }); setVersion(ref?.action === "evidence" && ref.version ? ref.version : 0); setShowDiff(false); setEditing(false); reload(); }, [ref?.path, ref?.file_id, reload]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (touched) reload(); }, [touched, reload]);
   useEffect(() => { if (rev) reload(); }, [rev, reload]);
   useEffect(() => {

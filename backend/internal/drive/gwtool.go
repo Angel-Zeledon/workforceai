@@ -165,6 +165,13 @@ func (t *GatewayTool) Run(ctx context.Context, c application.GatewayCall, approv
 		}
 		t.Notify(ctx, c.Org, c.AgentID, c.TaskID, action, p)
 	}
+	if action == ActRead { // B6: which file version the task read, for the evidence chain
+		if id, _ := rr.Data["file_id"].(string); id != "" {
+			v, _ := rr.Data["version"].(int)
+			p, _ := rr.Data["path"].(string)
+			res.Sources = []application.ReadSource{{Kind: application.SourceFile, FileID: id, Path: p, Version: v}}
+		}
+	}
 	if rr.Text != "" {
 		blk, suspected := t.block(action, rr.SourceNote, rr.Text)
 		res.Blocks = []string{blk}

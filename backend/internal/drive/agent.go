@@ -738,7 +738,7 @@ func (a *AgentFS) runRead(ctx context.Context, agentID string, args map[string]a
 		}
 		fmt.Fprintf(&b, "text: not available (%s)\n", res.Info.Note)
 		return RunResult{OK: true, Summary: fmt.Sprintf("%s: text not available", f.Path), Text: b.String(), SourceNote: "fs.read " + f.Path,
-			AuthoredByOthers: f.UpdatedBy != AgentP(agentID), Data: map[string]any{"file_id": f.ID, "version": res.Version.Version}}
+			AuthoredByOthers: f.UpdatedBy != AgentP(agentID), Data: map[string]any{"file_id": f.ID, "path": f.Path, "version": res.Version.Version}}
 	}
 	fmt.Fprintf(&b, "extraction: %s", res.Info.Kind)
 	if res.Info.Note != "" {
@@ -750,7 +750,7 @@ func (a *AgentFS) runRead(ctx context.Context, agentID string, args map[string]a
 		fmt.Fprintf(&b, "\n[truncated: characters %d-%d shown; call fs.read again with offset=%d for the next part]", res.Offset, res.Offset+res.Returned, res.NextStart)
 	}
 	return RunResult{OK: true, Summary: fmt.Sprintf("read %s (version %d, %d chars)", f.Path, res.Version.Version, res.Returned), Text: b.String(), SourceNote: "fs.read " + f.Path,
-		AuthoredByOthers: f.UpdatedBy != AgentP(agentID), Data: map[string]any{"file_id": f.ID, "version": res.Version.Version}}
+		AuthoredByOthers: f.UpdatedBy != AgentP(agentID), Data: map[string]any{"file_id": f.ID, "path": f.Path, "version": res.Version.Version}}
 }
 
 func (a *AgentFS) runSearch(ctx context.Context, agentID string, args map[string]any) RunResult {

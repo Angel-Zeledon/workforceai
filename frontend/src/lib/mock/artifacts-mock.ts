@@ -181,6 +181,12 @@ export class MockArtifacts {
       { key: "reason", type: "textarea", label: L("Motivo", "Reason"), required: false },
       { key: "ok", type: "checkbox", label: L("Verifiqué la política", "I checked the policy"), required: true },
     ], answers: null, answered_by: null });
+    // B6 demo: the sheet the accountant's "24% real margin" of the $50,000 proposal is cited from (cell B7)
+    this.mk({ id: "art_demo_margin", kind: "sheet", title: L("Margen de la propuesta Grupo Alfa", "Grupo Alfa proposal margin"), ...acc }, sheetOf("Margen", [
+      { a: L("Ingreso de la propuesta", "Proposal revenue"), v: 50000 }, { a: L("Costo directo", "Direct cost"), v: 24800 },
+      { a: L("Comisiones y descuento", "Commissions and discount"), v: 9700 }, { a: L("Costo de capacidad adicional", "Extra capacity cost"), v: 3500 },
+      { a: L("Utilidad", "Profit"), f: "=B2-B3-B4-B5", v: 12000 }, { a: L("Margen real", "Real margin"), f: "=B6/B2", v: 0.24, fmt: "0%" },
+    ]));
     this.mk({ id: "art_demo_candidates", kind: "table", title: L("Candidatos", "Candidates"), ...this.agentOwned("hr") }, TEMPLATES.find((t) => t.id === "hiring_pipeline")!.build());
     // live "Financial close": three sheets built in parallel
     this.runClose().catch(() => { /* cancelled by reset */ });

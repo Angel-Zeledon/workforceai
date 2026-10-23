@@ -241,7 +241,18 @@ AUDITOR_TASK_RULES = (
     "metrics.audit_status = verified | inconsistency | unverified. 'verified' SOLO si citas en evidence, para cada "
     "cifra comparada, de que tarea (ref) y de que campo salio, con al menos dos fuentes. Si no hay cifras "
     "comparables usa 'unverified'. Si dos cifras que deben coincidir no coinciden usa 'inconsistency' y "
-    "detalla en findings cuales y por cuanto. Nunca des por verificado algo que no comparaste."
+    "detalla en findings cuales y por cuanto. Nunca des por verificado algo que no comparaste. Pon tambien cada "
+    "cifra comparada en citations (value, label, ref de la tarea)."
+)
+
+# B6 evidence chain: the figures of an output point to where they came from. The backend verifies every ref
+# against what this task really saw and discards the rest, so an invented ref only shows up as "unverified".
+CITATION_RULE = (
+    "CITAS: por cada cifra clave (montos, porcentajes, conteos) agrega en citations {value: la cifra como la escribiste, "
+    "label: que es, ref: su origen}. Origenes validos, SOLO si los viste en esta tarea: task:<id> (dependencias o tareas "
+    "del proyecto), report:/memory:/file: de la memoria, file:<ruta> leido con fs read, cell:<artefacto>!<hoja>!<A1> "
+    "de un artefacto recibido, conn:<herramienta>:<id> (id del bloque untrusted_data). Nunca inventes un origen: el "
+    "backend verifica cada uno y marca los demas como no verificados. Sin origen, no se cita."
 )
 
 
@@ -671,6 +682,14 @@ def memory_block(recalled) -> list[str]:
     return ["", wrap_untrusted("memoria relevante de trabajo previo", items)] if items else []
 
 
+def _has_citable_sources(req: RunTaskRequest) -> bool:
+    """Dependencies, project context or read results: data whose figures can be cited (B6)."""
+    ctx = req.context
+    pc = ctx.project_context
+    return bool(ctx.dependency_outputs or (pc is not None and (pc.index or pc.artifacts))
+                or req.external_content or getattr(req, "untrusted", None))
+
+
 def build_task_prompt(req: RunTaskRequest) -> str:
     """Prompt de usuario: tarea + datos delimitados."""
     ctx = req.context
@@ -696,6 +715,8 @@ def build_task_prompt(req: RunTaskRequest) -> str:
     lines += ["", *memory_lines()]
     if src := source_lines(getattr(req, "sources", None)):
         lines += ["", *src]
+    if _has_citable_sources(req):  # B6: only when there is something to cite (keeps trivial prompts small)
+        lines += ["", CITATION_RULE]
     sk = skill_lines(getattr(req, "skills", None))
     if sk:
         lines += ["", *sk]
@@ -749,7 +770,7 @@ def build_task_prompt(req: RunTaskRequest) -> str:
     lines += [
         "",
         "Entrega el resultado estructurado (summary, findings, metrics, hypotheses, evidence, "
-        "recommendations, confidence 0-1, suggested_tasks, memory_notes opcional), mas consults a otros agentes y "
+        "recommendations, confidence 0-1, suggested_tasks, memory_notes opcional, citations opcional), mas consults a otros agentes y "
         "tool_requests si aplica.",
         language_rule(req.locale, req.tone),
     ]

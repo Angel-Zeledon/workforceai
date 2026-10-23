@@ -280,6 +280,7 @@ func (o *Orchestrator) rework(ctx context.Context, rs *run, t *domain.Task, agen
 	resp.Output.Normalize()
 	resp = o.connectionReads(ctx, rs, t, agent, rin, resp)
 	resp.Output.Normalize()
+	o.checkCitations(ctx, rs, *t, rin, &resp.Output) // B6
 	if agent.Role == AuditorRole {
 		enforceAuditEvidence(&resp.Output)
 	}

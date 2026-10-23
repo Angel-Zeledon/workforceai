@@ -142,6 +142,10 @@ func TestGatewayToolValidatesAndReturnsDelimitedData(t *testing.T) {
 	if res.Status != "succeeded" || !strings.Contains(res.Blocks[0], "Plan de ventas") {
 		t.Fatalf("open by ref: %+v", res)
 	}
+	// B6: the refs the agent saw travel as structured sources (never to the runtime).
+	if len(res.Sources) != 1 || res.Sources[0].Kind != application.SourceRecall || res.Sources[0].Ref != "task:t1" {
+		t.Fatalf("sources: %+v", res.Sources)
+	}
 }
 
 // /recordar: a person's fact becomes a private note of that agent; an unsafe one is refused.

@@ -637,6 +637,7 @@ func (g *Gateway) run(ctx context.Context, c application.GatewayCall, t target, 
 		blocks, suspected, seenTexts := g.sanitizeItems(c, t, cd, res.Items)
 		g.remember(c.Org, c.TaskID, seenTexts)
 		out.Blocks, out.Tainted, out.InjectionSuspected = blocks, true, suspected
+		out.Sources = g.itemSources(c, t, res.Items)
 		if suspected {
 			g.injectionAlert(ctx, c, "connection", cd.conn.ID)
 		}
@@ -742,6 +743,21 @@ func (g *Gateway) sanitizeItems(c application.GatewayCall, t target, cd candidat
 		blocks = append(blocks, sanitize.Wrap(sanitize.SanitizeInline(it.ID, 60, sanitize.Options{Suspects: g.Suspects}), source, from, strings.TrimSpace(b.String())))
 	}
 	return blocks, suspected, seen
+}
+
+// itemSources lists the ids of the items a read returned (B6), sanitized exactly
+// like the id attribute of their untrusted blocks, so a citation written from
+// what the runtime saw ("conn:<tool>:<id>") matches. Ids only, never content.
+func (g *Gateway) itemSources(c application.GatewayCall, t target, items []connections.Item) []application.ReadSource {
+	out := make([]application.ReadSource, 0, len(items))
+	for _, it := range items {
+		id := sanitize.SanitizeInline(it.ID, 60, sanitize.Options{Suspects: g.Suspects})
+		if strings.TrimSpace(id) == "" {
+			continue
+		}
+		out = append(out, application.ReadSource{Kind: application.SourceConn, Tool: strings.ToLower(c.Tool), Provider: t.provider.ID, ItemID: id})
+	}
+	return out
 }
 
 func sortedKeys(m map[string]any) []string {
