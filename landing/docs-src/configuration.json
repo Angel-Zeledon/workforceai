@@ -502,6 +502,12 @@
               "KEK anterior, solo mientras dura una rotación."
             ],
             [
+              "`CUSTOM_API_ALLOW_PRIVATE`",
+              "false",
+              "No",
+              "Si es true, las fuentes de API genéricas (`custom_api`) pueden llegar a direcciones privadas, como un ERP en tu red local. Solo para instalaciones propias en una red de confianza; nunca cambia la regla de solo GET."
+            ],
+            [
               "`GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`",
               "vacío",
               "No",
@@ -1186,6 +1192,12 @@
               "empty",
               "No",
               "Previous KEK, only while a rotation is in progress."
+            ],
+            [
+              "`CUSTOM_API_ALLOW_PRIVATE`",
+              "false",
+              "No",
+              "When true, generic API sources (`custom_api`) may reach private addresses, such as an ERP on your LAN. Only for self-hosted installs on a trusted network; it never changes the GET-only rule."
             ],
             [
               "`GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`",

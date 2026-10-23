@@ -476,6 +476,17 @@
         "warning": "Sin `CONNECTIONS_KEK` el servidor no puede guardar credenciales reales: esas rutas responden 503 `kek_missing` y solo funcionan las conexiones simuladas. Las claves propias de modelo (`/settings/llm`) también lo necesitan."
       },
       {
+        "h": "Fuentes de API genéricas",
+        "paras": [
+          "Fuentes de API genéricas: una conexión `custom_api` con un objeto `source` convierte cualquier plataforma con API HTTP y clave (un ERP, un CRM, una API interna) en algo que los agentes consultan sin escribir un adaptador. Solo envía GET; si defines `endpoints`, solo esos se pueden llamar y solo viajan los parámetros listados. Los agentes la piden como `api.get` con `connection_alias` y reciben el resultado como datos no confiables. Cada tarea le dice al agente qué fuentes tiene concedidas."
+        ],
+        "code": {
+          "lang": "bash",
+          "title": "Crear una fuente de API de solo lectura",
+          "text": "curl -X POST http://localhost:8080/api/v1/connections \\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\n  -d '{\"provider\":\"custom_api\",\"kind\":\"api_key\",\"label\":\"ERP\",\"secret\":\"<api-key>\",\n       \"source\":{\"base_url\":\"https://erp.example.com/api\",\n                 \"auth\":{\"style\":\"header\",\"name\":\"X-API-Key\"},\n                 \"description\":\"Inventory, orders and customers\",\n                 \"endpoints\":[{\"name\":\"stock\",\"path\":\"/products/{sku}/stock\",\"params\":[\"warehouse\"]}]}}'\n\n# What an agent asks for (the backend runs it; the agent never sees the key):\n# {\"tool\":\"api\",\"action\":\"get\",\"args\":{\"connection_alias\":\"erp\",\"endpoint\":\"stock\",\"params\":{\"sku\":\"A-1\"}}}"
+        }
+      },
+      {
         "h": "WebSocket y health",
         "paras": [
           "`GET /ws` abre el canal de eventos de tu organización. Al conectar recibes `hello` con la lista de agentes y luego cada evento de dominio; un evento con audiencia solo llega a los usuarios indicados. No hay suscripciones por tema ni replay: tras reconectar, recarga el estado por REST.",
@@ -955,6 +966,17 @@
           ]
         },
         "warning": "Without `CONNECTIONS_KEK` the server cannot store real credentials: those routes answer 503 `kek_missing` and only simulated connections work. Bring-your-own model keys (`/settings/llm`) need it too."
+      },
+      {
+        "h": "Generic API sources",
+        "paras": [
+          "Generic API sources: a `custom_api` connection with a `source` object turns any platform with an HTTP API and a key (an ERP, a CRM, an internal API) into something agents can query without writing an adapter. It only sends GET; if you define `endpoints`, only those can be called and only the listed parameters travel. Agents ask for it as `api.get` with `connection_alias` and get the result back as untrusted data. Every task tells the agent which sources it has been granted."
+        ],
+        "code": {
+          "lang": "bash",
+          "title": "Create a read-only API source",
+          "text": "curl -X POST http://localhost:8080/api/v1/connections \\n  -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' \\n  -d '{\"provider\":\"custom_api\",\"kind\":\"api_key\",\"label\":\"ERP\",\"secret\":\"<api-key>\",\n       \"source\":{\"base_url\":\"https://erp.example.com/api\",\n                 \"auth\":{\"style\":\"header\",\"name\":\"X-API-Key\"},\n                 \"description\":\"Inventory, orders and customers\",\n                 \"endpoints\":[{\"name\":\"stock\",\"path\":\"/products/{sku}/stock\",\"params\":[\"warehouse\"]}]}}'\n\n# What an agent asks for (the backend runs it; the agent never sees the key):\n# {\"tool\":\"api\",\"action\":\"get\",\"args\":{\"connection_alias\":\"erp\",\"endpoint\":\"stock\",\"params\":{\"sku\":\"A-1\"}}}"
+        }
       },
       {
         "h": "WebSocket and health",
