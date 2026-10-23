@@ -17,6 +17,7 @@ import { MockChatHistory } from "./chats-mock";
 import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
 import { mockQuality } from "./quality-mock";
+import { mockAway, mockAwayDismiss, overnightApproval } from "./away-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
 
@@ -135,6 +136,7 @@ export class MockBackend {
   private budget = 50;
   private decisions = new Map<string, (d: "approve" | "reject") => void>();
   private counter = new Map<string, Record<string, unknown>>();
+  private awaySeeded = false; // "while you were away" (B3): the overnight approval is added once per page load
   /** agent id -> active budget pause (GET /budget `pauses`) */
   private pauses = new Map<string, { scope: "agent"; scope_id: string; request_id: string; since: string; cap_usd: number; spent_usd: number; needed_usd: number; waiters: number }>();
   private specs = new Map<string, TaskSpec>();
@@ -176,6 +178,30 @@ export class MockBackend {
   private frame(type: string, payload: unknown, agent_id?: string): WsFrame {
     return { id: uid("evt"), type, ts: nowIso(), org_id: ORG, ...(agent_id ? { agent_id } : {}), payload };
   }
+  /** GET /away-summary, POST /away-summary/heartbeat|dismiss (B3): a simulated night, see away-mock.ts. */
+  private awaySummary(method: string, sub: string | undefined, q: URLSearchParams) {
+    if (method === "POST") {
+      if (sub === "dismiss") mockAwayDismiss();
+      return { last_seen_at: nowIso(), visit_started_at: nowIso() };
+    }
+    if (!this.awaySeeded && this.agents.length) {
+      this.awaySeeded = true;
+      const agent = this.agents.find((x) => x.id !== "assistant") ?? this.agents[0];
+      const ap = overnightApproval(agent.id, uid("appr"), new Date(Date.now() - 3 * 3600_000).toISOString());
+      this.approvals.unshift(ap);
+      this.emit("approval.requested", { approval: { ...ap } }, agent.id);
+      this.decisions.set(ap.id, (d) => {
+        ap.status = d === "approve" ? "approved" : "rejected"; ap.resolved_at = nowIso();
+        this.emit("approval.resolved", { approval: { ...ap } }, agent.id);
+        this.log(agent.id, "approval.resolved", `${ap.title}: ${d === "approve" ? "aprobada" : "rechazada"}`);
+        this.pushMetrics();
+      });
+      this.pushMetrics();
+    }
+    const h = q.get("min_hours");
+    return mockAway(this.agents, this.approvals, h === null ? undefined : Number(h));
+  }
+
   private emit(type: string, payload: unknown, agent_id?: string) {
     const f = this.frame(type, payload, agent_id);
     this.listeners.forEach((l) => l(f));
@@ -543,6 +569,7 @@ export class MockBackend {
     // <<< org
     if (this.orgCfg.matches(seg)) return this.orgCfg.handle(method, seg, body, (text) => this.handle("POST", "/requests", { text }));
     if (this.conns.matches(r0, r2)) return this.conns.handle(method, seg, q, body);
+    if (r0 === "away-summary") return this.awaySummary(method, r1, q);
     if (method === "GET") {
       if (r0 === "agents" && !r1) return this.agents;
       if (r0 === "agents" && r1 && r2 === "detail") {
