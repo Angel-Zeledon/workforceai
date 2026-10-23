@@ -64,6 +64,61 @@ def _merge_skills(self):
     return self
 
 
+MAX_CITATIONS = 30
+MAX_CITATION_VALUE = 40
+MAX_CITATION_LABEL = 120
+MAX_CITATION_REF = 300
+
+
+def _one_line(v: Any, n: int) -> str:
+    return " ".join(str(v if v is not None else "").split())[:n]
+
+
+class Citation(_Base):
+    """B6 evidence chain: one figure of the output and the reference of where it came from.
+
+    Only value/label/ref travel: the backend checks the ref against what the task really saw and sets the
+    status and the source itself (whatever else a model writes here is ignored)."""
+    value: str
+    label: str = ""
+    ref: str
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def _value(cls, v: Any) -> str:
+        return _one_line(v, MAX_CITATION_VALUE)
+
+    @field_validator("label", mode="before")
+    @classmethod
+    def _label(cls, v: Any) -> str:
+        return _one_line(v, MAX_CITATION_LABEL)
+
+    @field_validator("ref", mode="before")
+    @classmethod
+    def _ref(cls, v: Any) -> str:
+        return _one_line(v, MAX_CITATION_REF)
+
+
+def clean_citations(value: Any) -> list[dict[str, Any]]:
+    """Keeps the well-formed citations (a figure and a ref), at most MAX_CITATIONS. A malformed item is
+    dropped instead of failing the whole output: citations are optional evidence, never a reason to lose work."""
+    if not isinstance(value, (list, tuple)):
+        return []
+    out: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, Citation):
+            item = item.model_dump()
+        if not isinstance(item, dict):
+            continue
+        val, ref = _one_line(item.get("value"), MAX_CITATION_VALUE), _one_line(item.get("ref"), MAX_CITATION_REF)
+        if not val or not ref or not any(ch.isdigit() for ch in val):
+            continue
+        out.append({"value": val, "label": item.get("label") or "", "ref": ref})
+        if len(out) >= MAX_CITATIONS:
+            break
+    return out
+
+
 class StructuredOutput(_Base):
     summary: str
     findings: list[str] = Field(default_factory=list)
@@ -75,6 +130,13 @@ class StructuredOutput(_Base):
     suggested_tasks: list[str] = Field(default_factory=list)
     # M1: short lessons/facts worth remembering for later work (the backend stores a few; never secrets).
     memory_notes: list[str] = Field(default_factory=list)
+    # B6: where the key figures came from ({value, label, ref}); optional, verified by the backend.
+    citations: list[Citation] = Field(default_factory=list)
+
+    @field_validator("citations", mode="before")
+    @classmethod
+    def _citations(cls, v: Any) -> list[dict[str, Any]]:
+        return clean_citations(v)
 
 
 class Usage(_Base):
