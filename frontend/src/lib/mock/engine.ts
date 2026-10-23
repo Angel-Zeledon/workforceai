@@ -19,6 +19,7 @@ import { MockRewards } from "./rewards-mock";
 import { mockQuality } from "./quality-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
+import { MockDebates } from "./debates-mock";
 
 /** Card of the draft an agent leaves on its desk after a task (the mock drive creates the same path). */
 const draftRef = (agentId: string, title: string): FileRef => {
@@ -158,6 +159,9 @@ export class MockBackend {
   private rewards = new MockRewards((t, p, a) => this.emit(t, p, a)); // coins + shop: earned only when a task finishes
   private roles = new MockRoles(); // role templates + hiring from a template
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
+  private debates = new MockDebates({ emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agents: () => this.agents }); // B5 team debates
+  /** request id -> the person asked for a debate ([[debate]]) or the request is a decision between alternatives */
+  private debateWanted = new Map<string, ReturnType<typeof MockDebates.wants>>();
 
   constructor() { this.seed(); }
 
@@ -165,6 +169,7 @@ export class MockBackend {
     this.agents = SEED_AGENTS.map((a) => ({ ...a, metrics: { ...a.metrics }, state: "idle" as AgentState, activity: "Disponible", current_task_id: null, progress: 0 }));
     this.tasks = []; this.requests = []; this.conversations = []; this.messages = {}; this.approvals = [];
     this.reports = []; this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
+    this.debates?.reset(); this.debateWanted?.clear();
   }
 
   // ---- realtime -----------------------------------------------------------------------------
@@ -249,8 +254,11 @@ export class MockBackend {
   private emitTask(type: string, t: Task) { this.emit(type, { task: { ...t }, ...(type === "task.created" && t.assigned_reason ? { assigned_reason: t.assigned_reason } : {}) }, t.agent_id); this.art.onTask(type, t); }
 
   // ---- orchestrator -------------------------------------------------------------------------
-  private async startRequest(text: string): Promise<string> {
+  private async startRequest(raw: string): Promise<string> {
+    const want = MockDebates.wants(raw);
+    const text = MockDebates.strip(raw); // the [[debate]] marker is an instruction to the backend, not part of the request
     const req: Request = { id: uid("req"), text, status: "planning", created_at: nowIso(), report_id: null, cost_usd: 0 };
+    if (want.marked || want.decision) this.debateWanted.set(req.id, want);
     this.requests.unshift(req);
     this.emit("request.received", { request_id: req.id, text });
     this.art.onRequest(text);
@@ -338,6 +346,18 @@ export class MockBackend {
     }
     this.setState("assistant", "waiting", "Coordinando al equipo", null, 0);
     this.pushMetrics();
+
+    // B5: one advisory debate before the decision (the last task that is not the assistant's), like the backend
+    const want = this.debateWanted.get(req.id);
+    if (want) {
+      this.debateWanted.delete(req.id);
+      const decider = [...tasks].reverse().find((t) => t.agent_id !== "assistant") ?? tasks[tasks.length - 1];
+      const ids = want.ids.length ? want.ids : Array.from(new Set([decider.agent_id, ...tasks.map((t) => t.agent_id)])).filter((a) => a !== "assistant");
+      this.setState("assistant", "working", "Moderando el debate del equipo", null, 32);
+      const d = await this.debates.run({ topic: decider.title, agentIds: ids, trigger: want.marked ? "user_request" : "planner_decision", requestId: req.id, taskId: decider.id });
+      this.sendMessage(conv, "assistant", "user", "chat", MockDebates.chatLine(d));
+      this.setState("assistant", "waiting", "Coordinando al equipo", null, 0);
+    }
 
     // scheduler: run tasks whose dependencies are done, in parallel
     const started = new Set<string>();
@@ -535,6 +555,7 @@ export class MockBackend {
       return res;
     }
     if (this.cmds.matches(seg)) return this.cmds.handle(method, seg, q, body);
+    if (this.debates.matches(seg)) return this.debates.handle(method, seg, q, body);
     if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);

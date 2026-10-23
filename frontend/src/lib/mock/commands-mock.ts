@@ -111,7 +111,7 @@ export class MockCommands {
         const ids = Array.isArray(a.agents) ? (a.agents as string[]).map((n) => agentOf(n)?.id ?? agents.find((x) => x.id === n || x.role === n)?.id ?? n).join(",") : "";
         const text = `[[debate${ids ? ":" + ids : ""}]] ${a.topic || ""}`.trim();
         const id = await this.host.startRequest(text);
-        return { status: "started", result: { kind: "request", title: pick(lang, "El equipo va a debatir", "The team will debate"), text: a.topic || "", request_id: id, href: "/meetings?tab=debates" } };
+        return { status: "started", result: { kind: "request", title: pick(lang, "El equipo va a debatir", "The team will debate"), text: a.topic || "", request_id: id, href: "/meetings?view=debates" } };
       }
       case "pending": return msg(pick(lang, "No tienes aprobaciones pendientes.", "You have no pending approvals."));
       case "search":
