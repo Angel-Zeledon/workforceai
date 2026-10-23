@@ -189,6 +189,14 @@ INSTRUCTIONS_REMINDER = (
 )
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _FORGED_RULES = re.compile(r"reglas inquebrantables", re.I)
+_BLOCK_DELIMITERS = ("<<<", ">>>", "</untrusted_data>", "<untrusted_data")
+
+
+def _defuse_blocks(text: str) -> str:
+    """Admin/organization text cannot forge a block delimiter nor impersonate the fixed rules header."""
+    for d in _BLOCK_DELIMITERS:
+        text = text.replace(d, "[delimitador]")
+    return _FORGED_RULES.sub("reglas (citado)", text)
 
 
 def _clean_trusted_text(text: Any, limit: int) -> str:
@@ -516,6 +524,11 @@ def _one_line(text: Any, limit: int) -> str:
     return _neutralize(redact_secrets(t))
 
 
+def _admin_line(text: Any, limit: int) -> str:
+    """Admin-written text (skill descriptions, source labels...) on one bounded line, defused."""
+    return _defuse_blocks(_one_line(text, limit))
+
+
 def skill_lines(skills) -> list[str]:
     """The list the agent sees on every run: names and descriptions only. The full text comes with a
     skill.load tool request (served by the backend in a second pass)."""
@@ -525,7 +538,7 @@ def skill_lines(skills) -> list[str]:
     lines = [
         "HABILIDADES DISPONIBLES (biblioteca aprobada de la organizacion; aqui solo ves nombre y descripcion):",
     ]
-    lines += [f"- {s.name}: {_one_line(s.description, MAX_SKILL_DESC_CHARS)}" for s in refs]
+    lines += [f"- {s.name}: {_admin_line(s.description, MAX_SKILL_DESC_CHARS)}" for s in refs]
     lines += [
         "Si una habilidad aplica a la tarea, pide su contenido con tool_requests: "
         "{\"tool\": \"skill\", \"action\": \"load\", \"args\": {\"name\": \"<nombre>\"}} "
@@ -556,10 +569,7 @@ def loaded_skill_lines(loaded) -> list[str]:
             break
         body = _CONTROL.sub("", str(l.text or ""))[:min(MAX_LOADED_SKILL_CHARS, room)]
         room -= len(body)
-        body = _neutralize(redact_secrets(body))
-        for d in ("<<<", ">>>", "</untrusted_data>", "<untrusted_data"):
-            body = body.replace(d, "[delimitador]")
-        body = _FORGED_RULES.sub("reglas (citado)", body)
+        body = _defuse_blocks(_neutralize(redact_secrets(body)))
         file_ = l.file if (l.file and _SKILL_FILE.match(l.file) and ".." not in l.file) else ""
         head = f'<<<HABILIDAD nombre="{l.name}" version={int(l.version or 0)}' + (f' archivo="{file_}"' if file_ else "") + ">"
         lines += ["", head, body, ">>>"]
@@ -575,14 +585,6 @@ _ALIAS = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
 _TOOL = re.compile(r"^[a-z][a-z0-9_]{0,30}\.[a-z][a-z0-9_]{0,40}$")
 _ENDPOINT = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
 _PARAM = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]{0,63}$")
-
-
-def _source_text(text: Any, limit: int) -> str:
-    """Admin-written source text on one line that cannot forge a delimiter nor the fixed rules header."""
-    t = _one_line(text, limit)
-    for d in ("<<<", ">>>", "</untrusted_data>", "<untrusted_data"):
-        t = t.replace(d, "[delimitador]")
-    return _FORGED_RULES.sub("reglas (citado)", t)
 
 
 def _source_example(s, ep) -> str:
@@ -610,16 +612,16 @@ def source_lines(sources) -> list[str]:
         tools = [t for t in (s.tools or []) if _TOOL.match(t)]
         if not tools:
             continue
-        label = _source_text(s.label, 80) or s.alias
+        label = _admin_line(s.label, 80) or s.alias
         head = f"- {s.alias} ({label}"
         head += ", datos simulados)" if s.simulated else ")"
-        desc = _source_text(s.description, MAX_SOURCE_DESC_CHARS)
+        desc = _admin_line(s.description, MAX_SOURCE_DESC_CHARS)
         block = [head + (f": {desc}" if desc else "")]
         if "api.get" in tools:
             eps = [e for e in (s.endpoints or []) if _ENDPOINT.match(getattr(e, "name", "") or "")][:MAX_SOURCE_ENDPOINTS]
             for e in eps:
                 ps = ", ".join(p for p in (e.params or []) if _PARAM.match(p))
-                d = _source_text(e.description, 200)
+                d = _admin_line(e.description, 200)
                 block.append(f"    endpoint {e.name}({ps})" + (f": {d}" if d else ""))
             if not eps:
                 block.append("    sin endpoints con nombre: cualquier ruta GET relativa a esta API (args.path, p. ej. \"/orders\").")

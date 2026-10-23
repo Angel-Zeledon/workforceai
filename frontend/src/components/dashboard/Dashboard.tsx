@@ -4,6 +4,7 @@ import { useStore } from "@/lib/store";
 import { trOr, useT } from "@/lib/i18n";
 import { fmtTime, fmtUsd, roleMeta, taskStatusLabel, TASK_STATUS_COLOR } from "@/lib/meta";
 import { resolveAgent, usePreferences } from "@/lib/preferences";
+import { openInOffice } from "@/lib/navBridge";
 import type { Task } from "@/lib/types";
 import { ActivityFeed } from "../ActivityFeed";
 import { ApprovalCard } from "../ApprovalsTray";
@@ -75,7 +76,6 @@ function Overview({ go }: { go: (s: Section) => void }) {
   const tasksMap = useStore((s) => s.tasks);
   const approvals = Object.values(approvalsMap).filter((a) => a.status === "pending");
   const select = useStore((s) => s.select);
-  const setMode = useStore((s) => s.setMode);
   const active = Object.values(agents).filter((a) => !["idle", "completed"].includes(a.state)).length;
   const budgetPct = m ? Math.min(100, (m.cost_usd / Math.max(0.01, m.budget_usd)) * 100) : 0;
   return (
@@ -97,7 +97,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
               const meta = roleMeta(a.role);
               const v = resolveAgent(a, agentPrefs[id]);
               return (
-                <button key={id} onClick={() => { select(id); setMode("office"); }} className="rounded-md border border-line bg-panel2 p-3 text-left transition hover:border-line-strong">
+                <button key={id} onClick={() => openInOffice(id, select)} className="rounded-md border border-line bg-panel2 p-3 text-left transition hover:border-line-strong">
                   <div className="flex items-center justify-between"><span className="flex items-center gap-2 text-[13px] font-semibold text-ink"><Dot color={v.color} />{v.name}</span><StateBadge state={a.state} /></div>
                   <div className="mt-1 truncate text-[11px] text-mute">{v.title}</div>
                   <div className="mt-1.5 truncate text-[11.5px] text-ink2">{a.activity || "—"}</div>
@@ -270,7 +270,6 @@ function Agents() {
   const agentPrefs = usePreferences((s) => s.prefs.agents);
   const order = useStore((s) => s.agentOrder);
   const select = useStore((s) => s.select);
-  const setMode = useStore((s) => s.setMode);
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {order.map((id) => {
@@ -289,7 +288,7 @@ function Agents() {
               ))}
             </div>
             <div className="mt-3 flex items-center justify-between text-[11px] text-mute"><span>{t("dash.agents.autonomy")}: {a.autonomy}</span>
-              <button className="text-accent" onClick={() => { select(id); setMode("office"); }}>{t("dash.agents.viewInOffice")}</button></div>
+              <button className="text-accent" onClick={() => openInOffice(id, select)}>{t("dash.agents.viewInOffice")}</button></div>
           </Card>
         );
       })}
