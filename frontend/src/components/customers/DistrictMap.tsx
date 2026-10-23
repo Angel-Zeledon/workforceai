@@ -85,10 +85,19 @@ export function DistrictMap({ items, onOpen }: { items: DistrictItem[]; onOpen: 
                 <text x={x + 14} y={y - H - 37} textAnchor="middle" fontSize={10} fontWeight={700} fill="#fff">{it.approvals_waiting}</text>
               </g>
             )}
-            <text x={x} y={y + hh + 16} textAnchor="middle" fontSize={13} fontWeight={600} fill="currentColor" className="text-ink">{short(c.name)}</text>
           </g>
         );
       })}
+      {/* names in a last layer: a back building's name must not hide behind the building in front of it. The halo
+          (stroke painted under the fill) keeps them readable over any facade; clicks fall through to the building. */}
+      <g pointerEvents="none" aria-hidden>
+        {layout.lots.map((l) => (
+          <text key={`n${l.index}`} x={l.x} y={l.y + hh + 16} textAnchor="middle" fontSize={13} fontWeight={600}
+            fill="currentColor" stroke="var(--panel, #fff)" strokeWidth={4} strokeLinejoin="round" paintOrder="stroke" className="text-ink">
+            {short(items[l.index].customer.name)}
+          </text>
+        ))}
+      </g>
     </svg>
   );
 }
