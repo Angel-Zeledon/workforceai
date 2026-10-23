@@ -8,6 +8,11 @@
 # under unique `wf-*` aliases, and everything else stays on a private network.
 # Accounts need Postgres (users, organizations and tenant isolation live there). Secrets come from ./.env, which is
 # NOT in git (create it once on the server): POSTGRES_PASSWORD and JWT_SECRET (>= 32 bytes), e.g. `openssl rand -hex 32`.
+# Optional in ./.env: RUNTIME_TOKEN (`openssl rand -hex 32`, shared backend -> runtime secret) and CONNECTIONS_KEK
+# (`openssl rand -base64 32`, the connection vault key; without it only simulated connections work and no real
+# credential is stored). Back CONNECTIONS_KEK up OUTSIDE the server (password manager): backup.sh dumps only the
+# database, and the stored credentials cannot be decrypted without the key. To rotate it, move the current value to
+# CONNECTIONS_KEK_PREVIOUS and put a new one in CONNECTIONS_KEK.
 # The runtime stays in SIMULATION mode (no model API keys, no cost) until a provider key is configured.
 name: workforceai
 
@@ -35,6 +40,8 @@ services:
     restart: unless-stopped
     environment:
       SIMULATION: "true"
+      # Shared secret with the backend; empty = unauthenticated calls (the backend logs a warning).
+      RUNTIME_TOKEN: ${RUNTIME_TOKEN:-}
     mem_limit: 768m
     networks: [internal]
 
@@ -49,6 +56,7 @@ services:
     environment:
       PORT: "8080"
       RUNTIME_URL: http://wf-runtime:8000
+      RUNTIME_TOKEN: ${RUNTIME_TOKEN:-}
       BUDGET_USD: "5"
       UI_BASE_URL: https://app.workforceai.es
       ALLOWED_ORIGINS: https://app.workforceai.es
@@ -72,6 +80,12 @@ services:
       SMTP_TLS: ${SMTP_TLS:-tls}
       # Caddy (stockai project) is the only proxy in front: trust its X-Forwarded-For so rate limits count real client IPs.
       TRUSTED_PROXIES: 172.16.1.0/24
+      # Connection vault key, only from ./.env (never a value here). See the header for generation and backup.
+      CONNECTIONS_KEK: ${CONNECTIONS_KEK:-}
+      CONNECTIONS_KEK_PREVIOUS: ${CONNECTIONS_KEK_PREVIOUS:-}
+      # Generic API sources may reach private/LAN addresses only when true (docs/architecture/integrations-credentials.md
+      # sec. 18.8). This is a shared VPS: keep it false.
+      CUSTOM_API_ALLOW_PRIVATE: ${CUSTOM_API_ALLOW_PRIVATE:-false}
     mem_limit: 256m
     networks: [internal, edge]
 

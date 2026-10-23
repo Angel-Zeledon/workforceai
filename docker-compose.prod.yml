@@ -30,7 +30,11 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    networks: [edge, internal]
+    networks:
+      edge: {}
+      internal:
+        # Fixed address so the backend can trust exactly this proxy (TRUSTED_PROXIES).
+        ipv4_address: 172.31.250.10
     depends_on:
       backend:
         condition: service_healthy
@@ -130,6 +134,17 @@ services:
       JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET (min. 32 chars)}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?define ALLOWED_ORIGINS (ej. https://app.ejemplo.com)}
       ENABLE_DEMO_RESET: ${ENABLE_DEMO_RESET:-false}
+      # Caddy is the only proxy in front of the backend: honour X-Forwarded-For only from its fixed
+      # address on `internal`, so auth rate limits count real client IPs instead of the proxy's.
+      # If another proxy/CDN sits in front of Caddy, append its ranges (and keep 172.31.250.10).
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-172.31.250.10}
+      # Connection vault key (docs/architecture/integrations-credentials.md). Empty = only simulated
+      # connections; no real credential is stored (fails closed). See .env.prod.example.
+      CONNECTIONS_KEK: ${CONNECTIONS_KEK:-}
+      CONNECTIONS_KEK_PREVIOUS: ${CONNECTIONS_KEK_PREVIOUS:-}
+      # Generic API sources may reach private/LAN addresses only when explicitly true
+      # (self-hosted on a trusted network; integrations-credentials.md sec. 18.8). Keep false.
+      CUSTOM_API_ALLOW_PRIVATE: ${CUSTOM_API_ALLOW_PRIVATE:-false}
     networks: [internal]
     depends_on:
       postgres:
@@ -176,6 +191,13 @@ networks:
   egress:
   internal:
     internal: true
+    # Pinned subnet so Caddy has a stable address the backend can trust (TRUSTED_PROXIES).
+    # If it overlaps a network already on the host, change it here, in Caddy's ipv4_address
+    # and in TRUSTED_PROXIES together. Changing it on an existing install needs
+    # `docker compose down` (volumes are kept) before `up`.
+    ipam:
+      config:
+        - subnet: 172.31.250.0/24
 
 volumes:
   pgdata:
