@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title data-i18n="meta.title">AI Workforce OS: tu equipo de IA, a la vista y bajo control</title>
-  <meta name="description" content="Una oficina virtual 3D donde los empleados son agentes de IA. Pides en lenguaje natural, los ves colaborar y apruebas lo sensible. Acceso anticipado." data-i18n-attr="content:meta.description">
+  <meta name="description" content="Una oficina virtual 3D con empleados de IA. Pides en lenguaje natural, los ves trabajar en paralelo y apruebas lo sensible. Acceso anticipado." data-i18n-attr="content:meta.description">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#f7f9fb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#060d18" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="icon" href="favicon.ico?v=3" sizes="any">
@@ -19,8 +20,8 @@
   <meta property="og:site_name" content="AI Workforce OS">
   <meta property="og:locale" content="es_ES">
   <meta property="og:locale:alternate" content="en_US">
-  <meta property="og:title" content="AI Workforce OS: tu equipo de empleados de IA, a la vista y bajo tu control" data-i18n-attr="content:meta.ogTitle">
-  <meta property="og:description" content="Pides, ves colaborar a tus empleados de IA y apruebas lo sensible. Con costo estimado, topes de gasto y credenciales fuera del modelo." data-i18n-attr="content:meta.ogDescription">
+  <meta property="og:title" content="AI Workforce OS: empleados de IA que trabajan a la vista" data-i18n-attr="content:meta.ogTitle">
+  <meta property="og:description" content="Pides, ves a tus empleados de IA trabajar en paralelo y apruebas lo sensible. Con costo estimado, topes de gasto y credenciales fuera del modelo." data-i18n-attr="content:meta.ogDescription">
   <link rel="canonical" href="https://workforceai.es/">
   <link rel="alternate" hreflang="es" href="https://workforceai.es/">
   <link rel="alternate" hreflang="en" href="https://workforceai.es/en/">
@@ -30,318 +31,536 @@
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="AI Workforce OS: tu equipo de empleados de IA, a la vista y bajo tu control" data-i18n-attr="content:meta.ogTitle">
-  <meta name="twitter:description" content="Pides, ves colaborar a tus empleados de IA y apruebas lo sensible. Con costo estimado, topes de gasto y credenciales fuera del modelo." data-i18n-attr="content:meta.ogDescription">
+  <meta name="twitter:title" content="AI Workforce OS: empleados de IA que trabajan a la vista" data-i18n-attr="content:meta.ogTitle">
+  <meta name="twitter:description" content="Pides, ves a tus empleados de IA trabajar en paralelo y apruebas lo sensible. Con costo estimado, topes de gasto y credenciales fuera del modelo." data-i18n-attr="content:meta.ogDescription">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
-  <script type="application/ld+json" data-ld>{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png","email":"info@workforceai.es"},{"@type":"WebSite","@id":"https://workforceai.es/#website","url":"https://workforceai.es/","name":"AI Workforce OS","inLanguage":["es","en"],"publisher":{"@id":"https://workforceai.es/#org"}},{"@type":"SoftwareApplication","name":"AI Workforce OS","url":"https://workforceai.es/","inLanguage":"es","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Una oficina virtual 3D donde los empleados son agentes de IA. Pides en lenguaje natural, los ves colaborar y apruebas lo sensible. Acceso anticipado.","image":"https://workforceai.es/img/og.png","publisher":{"@id":"https://workforceai.es/#org"}}]}</script>
+  <script type="application/ld+json" data-ld>{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png","email":"info@workforceai.es"},{"@type":"WebSite","@id":"https://workforceai.es/#website","url":"https://workforceai.es/","name":"AI Workforce OS","inLanguage":["es","en"],"publisher":{"@id":"https://workforceai.es/#org"}},{"@type":"SoftwareApplication","name":"AI Workforce OS","url":"https://workforceai.es/","inLanguage":"es","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Una oficina virtual 3D con empleados de IA. Pides en lenguaje natural, los ves trabajar en paralelo y apruebas lo sensible. Acceso anticipado.","image":"https://workforceai.es/img/og.png","publisher":{"@id":"https://workforceai.es/#org"}}]}</script>
 
   <link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="home.css">
+  <script>document.documentElement.classList.add("js")</script>
 </head>
-<body>
+<body class="home">
   <a class="skip" href="#main" data-i18n="a11y.skip">Saltar al contenido</a>
 
-  <header class="site-header">
+  <header class="site-header" data-header>
     <div class="wrap bar-row">
       <a class="brand" href="#top" data-i18n-aria="a11y.home" aria-label="AI Workforce OS, inicio">
-        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" data-i18n-aria="a11y.nav" aria-label="Principal">
+      <nav class="nav" data-nav data-i18n-aria="a11y.nav" aria-label="Principal">
         <a href="#como" data-i18n="nav.how">Cómo funciona</a>
         <a href="#control" data-i18n="nav.control">Control</a>
         <a href="#equipo" data-i18n="nav.team">Equipo</a>
         <a href="#confianza" data-i18n="nav.trust">Seguridad</a>
-        <a href="#estado" data-i18n="nav.status">Estado actual</a>
-        <a href="#faq" data-i18n="nav.faq">Preguntas</a>
+        <a href="#estado" data-i18n="nav.status">Estado</a>
         <a data-docs="index" href="/docs/" data-i18n="nav.docs">Docs</a>
         <a data-guide="index" href="/guia/" data-i18n="nav.guide">Guía</a>
+        <span class="nav-ind" aria-hidden="true"></span>
       </nav>
       <div class="bar-end">
         <div class="lang" role="group" data-i18n-aria="a11y.lang" aria-label="Idioma">
           <a href="/" hreflang="es" lang="es" data-lang="es" aria-current="true">ES</a>
           <a href="/en/" hreflang="en" lang="en" data-lang="en">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" data-cta="signup" href="https://app.workforceai.es/register"><span class="long" data-i18n="cta.early">Crear cuenta</span><span class="short" data-i18n="cta.early.short">Crear cuenta</span></a>
+        <a class="btn btn-primary btn-sm bar-cta" data-cta="signup" href="https://app.workforceai.es/register" data-i18n="cta.early.short">Crear cuenta</a>
+        <details class="mnav" data-mnav>
+          <summary data-i18n-aria="nav.menu" aria-label="Abrir o cerrar el menú"><span class="burger" aria-hidden="true"><i></i><i></i><i></i></span></summary>
+          <div class="mnav-panel">
+            <nav data-i18n-aria="a11y.nav" aria-label="Principal">
+              <a href="#como" data-i18n="nav.how">Cómo funciona</a>
+              <a href="#control" data-i18n="nav.control">Control</a>
+              <a href="#equipo" data-i18n="nav.team">Equipo</a>
+              <a href="#confianza" data-i18n="nav.trust">Seguridad</a>
+              <a href="#estado" data-i18n="nav.status">Estado</a>
+              <a href="#faq" data-i18n="nav.faq">Preguntas</a>
+              <a data-docs="index" href="/docs/" data-i18n="nav.docs">Docs</a>
+              <a data-guide="index" href="/guia/" data-i18n="nav.guide">Guía</a>
+            </nav>
+            <div class="mnav-cta">
+              <a class="btn btn-primary" data-cta="signup" href="https://app.workforceai.es/register" data-i18n="cta.early">Crear cuenta</a>
+              <a class="btn btn-ghost" data-cta="login" href="https://app.workforceai.es/login" data-i18n="cta.demo">Entrar</a>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
+    <span class="scroll-prog" aria-hidden="true"></span>
   </header>
 
   <main id="main">
+    <!-- HERO -->
     <section class="hero" id="top">
-      <div class="wrap">
-        <h1 data-i18n="hero.title">Tu equipo de empleados de IA, a la vista y bajo tu control.</h1>
-        <p class="lead hero-sub" data-i18n="hero.sub">Una oficina virtual donde le pides trabajo en lenguaje natural a Ventas, Legal, Contabilidad, Análisis, Operaciones, RR. HH. y tu Asistente. Los ves colaborar en vivo, apruebas lo sensible y recibes un reporte.</p>
-        <div class="actions">
-          <a class="btn btn-primary" data-cta="signup" href="https://app.workforceai.es/register" data-i18n="cta.early">Crear cuenta</a>
-          <a class="btn btn-ghost" data-cta="login" href="https://app.workforceai.es/login" data-i18n="cta.demo">Entrar</a>
-          <a class="btn btn-ghost" data-cta="trial" href="https://app.workforceai.es/prueba" data-i18n="cta.trial">Probar sin registrarte</a>
+      <div class="hero-bg" aria-hidden="true"><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span><span class="hero-grid"></span></div>
+      <div class="wrap hero-in">
+        <p class="eyebrow"><span class="eb-dot" aria-hidden="true"></span><span data-i18n="hero.eyebrow">Acceso anticipado</span><span class="eb-sep" aria-hidden="true"></span><span class="eb-2" data-i18n="hero.eyebrow2">Funciona sin clave de IA</span></p>
+        <h1 data-i18n-html="hero.title">Empleados de IA que trabajan a la vista. <span class="hl">Tú decides lo importante.</span></h1>
+        <p class="lead hero-sub" data-i18n="hero.sub">Pídele trabajo en lenguaje natural a Ventas, Legal, Contabilidad, Análisis, Operaciones, RR. HH. y tu Asistente. Míralos repartirse la tarea en una oficina 3D, aprueba lo sensible y recibe un reporte con lo que se hizo y lo que costó.</p>
+        <div class="actions hero-actions">
+          <a class="btn btn-primary btn-lg btn-arrow" data-cta="signup" href="https://app.workforceai.es/register"><span data-i18n="cta.early">Crear cuenta</span><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a class="btn btn-ghost btn-lg" data-cta="trial" href="https://app.workforceai.es/prueba" data-i18n="cta.trial">Probar sin registrarte</a>
         </div>
-        <p class="fine" data-i18n="hero.note">Hoy funciona en modo simulación, sin clave de IA. Todavía no hay precios: estamos abriendo acceso anticipado.</p>
-        <figure class="window hero-shot">
-          <div class="window-bar st-bar" aria-hidden="true">
-            <i></i><i></i><i></i>
-            <span class="st-org"><b class="st-logo"></b><span data-i18n="stage.office">Oficina de ejemplo</span></span>
-            <span class="st-metrics"><span data-i18n="stage.active">Activas</span> <b data-count="active">0</b><span data-i18n="stage.approvals">Aprobaciones</span> <b data-count="approvals">0</b></span>
-            <span class="st-sim" data-i18n="stage.sim">Simulación</span>
-          </div>
-          <div class="stage" data-stage role="img" data-i18n-aria="stage.aria" aria-label="Animación ilustrativa: la Asistente reparte la propuesta de $50,000 entre Ventas, Contabilidad, Legal, Análisis, Marketing y Compras; se consultan entre sí; Ventas pide tu aprobación antes de enviar y la Asistente entrega el reporte.">
-            <div class="st-scene" aria-hidden="true">
-              <div class="st-wall"></div>
-              <div class="st-sun"></div>
-              <div class="st-room"><span data-i18n="stage.meeting">Sala de reuniones</span></div>
-              <span class="plant" style="--x:3;--y:38"></span>
-              <span class="plant" style="--x:97;--y:44"></span>
-              <div class="ag" data-id="sales" data-state="idle" style="--x:33;--y:42;--mx:20;--my:22;--c:#f4895a;--skin:#f2c09a;--hair:#7a4020"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>V</b><span class="nm">Valeria</span><span class="st"></span></span></div>
-              <div class="ag" data-id="analyst" data-state="idle" style="--x:46;--y:42;--mx:50;--my:22;--c:#45b8cc;--skin:#c98f68;--hair:#1c1410"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>N</b><span class="nm">Nadia</span><span class="st"></span></span></div>
-              <div class="ag" data-id="accounting" data-state="idle" style="--x:59;--y:42;--mx:80;--my:22;--c:#4cb987;--skin:#f0c8a4;--hair:#8a8f98"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>T</b><span class="nm">Tomás</span><span class="st"></span></span></div>
-              <div class="ag" data-extra data-id="marketing" data-state="idle" style="--x:72;--y:42;--mx:20;--my:36;--c:#e2665f;--skin:#eabf98;--hair:#5a2e1a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>L</b><span class="nm">Lucía</span><span class="st"></span></span></div>
-              <div class="ag" data-id="hr" data-state="idle" style="--x:20;--y:66;--mx:20;--my:45;--c:#ee7aa8;--skin:#a8734f;--hair:#16110d"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>M</b><span class="nm">Marcos</span><span class="st"></span></span></div>
-              <div class="ag" data-id="legal" data-state="idle" style="--x:33;--y:66;--mx:50;--my:45;--c:#9577d6;--skin:#edc29b;--hair:#2a1a12"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>E</b><span class="nm">Elena</span><span class="st"></span></span></div>
-              <div class="ag" data-id="operations" data-state="idle" style="--x:46;--y:66;--mx:80;--my:45;--c:#e8b53a;--skin:#d9a07a;--hair:#2b2b2b"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>I</b><span class="nm">Iván</span><span class="st"></span></span></div>
-              <div class="ag" data-extra data-id="data" data-state="idle" style="--x:59;--y:66;--mx:50;--my:52;--c:#6c7ee0;--skin:#c58c63;--hair:#3a2a1e"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>D</b><span class="nm">Diego</span><span class="st"></span></span></div>
-              <div class="ag" data-id="assistant" data-state="idle" style="--x:84;--y:46;--mx:24;--my:67;--c:#5a95e8;--skin:#e8b995;--hair:#7a4a2a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>S</b><span class="nm">Sofía</span><span class="st"></span></span></div>
-              <div class="ag" data-extra data-id="support" data-state="idle" style="--x:8;--y:66;--mx:20;--my:68;--c:#3fb5a3;--skin:#f1c7a3;--hair:#b0602a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>C</b><span class="nm">Camila</span><span class="st"></span></span></div>
-              <div class="ag" data-extra data-id="procurement" data-state="idle" style="--x:72;--y:66;--mx:50;--my:68;--c:#a3b84a;--skin:#d6a07c;--hair:#1f1a16"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>R</b><span class="nm">Rafael</span><span class="st"></span></span></div>
-              <span class="st-vig"></span>
-              <div class="st-zone"><span class="st-you" data-i18n="stage.you">Tú</span><span data-i18n="stage.zone">Zona de aprobaciones</span></div>
-              <svg class="st-links"></svg>
-              <div class="st-bubbles"></div>
-              <section class="st-feed"><h4 data-i18n="stage.feed">Actividad en vivo</h4><ol></ol></section>
-              <div class="st-appr">
-                <span class="st-appr-k"><span data-i18n="appr.title">Aprobación requerida</span><em data-i18n="appr.risk">Riesgo medio</em></span>
-                <strong data-i18n="appr.action">Enviar propuesta al cliente</strong>
-                <small data-i18n="appr.by">Lo pide Valeria Ríos · Ventas</small>
-                <span class="st-appr-b"><span class="no" data-i18n="appr.reject">Rechazar</span><span class="yes" data-i18n="appr.approve">Aprobar</span></span>
-                <span class="st-appr-ok" data-i18n="appr.done">Aprobada por ti</span>
-              </div>
-              <div class="st-report"><b data-i18n="report.t">Reporte listo</b><span data-i18n="report.d">Propuesta enviada, margen revisado y cláusulas aprobadas por Legal.</span></div>
-              <div class="st-cmd"><span class="st-chev">›</span><span class="st-input" data-placeholder="Dile a tu empresa qué necesitas…" data-i18n-attr="data-placeholder:stage.placeholder"></span><span class="st-send" data-i18n="stage.send">Enviar</span></div>
+        <p class="hero-login"><span data-i18n="hero.have">¿Ya tienes cuenta?</span> <a data-cta="login" href="https://app.workforceai.es/login" data-i18n="cta.demo">Entrar</a></p>
+        <p class="fine hero-note" data-i18n="hero.note">Hoy funciona en modo simulación sin clave de IA, o en vivo con tu propia clave. Todavía no hay precios: estamos en acceso anticipado.</p>
+
+        <div class="shot-wrap">
+          <figure class="window hero-shot">
+            <div class="window-bar st-bar" aria-hidden="true">
+              <i></i><i></i><i></i>
+              <span class="st-org"><b class="st-logo"></b><span data-i18n="stage.office">Oficina de ejemplo</span></span>
+              <span class="st-metrics"><span data-i18n="stage.active">Activas</span> <b data-count="active">0</b><span data-i18n="stage.approvals">Aprobaciones</span> <b data-count="approvals">0</b></span>
+              <span class="st-sim"><span class="st-live" aria-hidden="true"></span><span data-i18n="stage.sim">Simulación</span></span>
             </div>
-          </div>
-          <figcaption class="st-cap">
-            <span data-i18n="stage.caption">Animación ilustrativa del escenario de $50,000 con los colores, estados y mensajes de la app. No es una grabación. Marketing, Datos, Soporte y Compras son roles de ejemplo: hoy la app trae siete empleados.</span>
-            <span class="st-ctl"><button type="button" class="st-toggle" data-sound="fx" aria-pressed="false"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path class="i-on" d="M11 5.5a3.5 3.5 0 0 1 0 5M12.6 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="i-off" d="M11 6l4 4M15 6l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="stage.sound">Sonido</span></button><button type="button" class="st-toggle" data-sound="music" aria-pressed="false"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M6 12V3.5l7-1.5v8.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="4.5" cy="12" r="2" fill="currentColor"/><circle cx="11.5" cy="10.5" r="2" fill="currentColor"/><path class="i-off" d="M2 2l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="stage.music">Música</span></button><button type="button" class="st-toggle" data-stage-toggle aria-pressed="false"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path class="i-pause" d="M5 3v10M11 3v10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path class="i-play" d="M5 3l8 5-8 5z" fill="currentColor"/></svg><span data-i18n="stage.pause">Pausar animación</span></button></span>
-          </figcaption>
-        </figure>
+            <div class="stage" data-stage role="img" data-i18n-aria="stage.aria" aria-label="Animación ilustrativa: la Asistente reparte la propuesta de $50,000 entre Ventas, Contabilidad, Legal, Análisis, Marketing y Compras; se consultan entre sí; Ventas pide tu aprobación antes de enviar y la Asistente entrega el reporte.">
+              <div class="st-scene" aria-hidden="true">
+                <div class="st-wall"></div>
+                <div class="st-sun"></div>
+                <div class="st-room"><span data-i18n="stage.meeting">Sala de reuniones</span></div>
+                <span class="plant" style="--x:3;--y:38"></span>
+                <span class="plant" style="--x:97;--y:44"></span>
+                <div class="ag" data-id="sales" data-state="idle" style="--x:33;--y:42;--mx:20;--my:22;--c:#f4895a;--skin:#f2c09a;--hair:#7a4020"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>V</b><span class="nm">Valeria</span><span class="st"></span></span></div>
+                <div class="ag" data-id="analyst" data-state="idle" style="--x:46;--y:42;--mx:50;--my:22;--c:#45b8cc;--skin:#c98f68;--hair:#1c1410"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>N</b><span class="nm">Nadia</span><span class="st"></span></span></div>
+                <div class="ag" data-id="accounting" data-state="idle" style="--x:59;--y:42;--mx:80;--my:22;--c:#4cb987;--skin:#f0c8a4;--hair:#8a8f98"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>T</b><span class="nm">Tomás</span><span class="st"></span></span></div>
+                <div class="ag" data-extra data-id="marketing" data-state="idle" style="--x:72;--y:42;--mx:20;--my:36;--c:#e2665f;--skin:#eabf98;--hair:#5a2e1a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>L</b><span class="nm">Lucía</span><span class="st"></span></span></div>
+                <div class="ag" data-id="hr" data-state="idle" style="--x:20;--y:66;--mx:20;--my:45;--c:#ee7aa8;--skin:#a8734f;--hair:#16110d"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>M</b><span class="nm">Marcos</span><span class="st"></span></span></div>
+                <div class="ag" data-id="legal" data-state="idle" style="--x:33;--y:66;--mx:50;--my:45;--c:#9577d6;--skin:#edc29b;--hair:#2a1a12"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>E</b><span class="nm">Elena</span><span class="st"></span></span></div>
+                <div class="ag" data-id="operations" data-state="idle" style="--x:46;--y:66;--mx:80;--my:45;--c:#e8b53a;--skin:#d9a07a;--hair:#2b2b2b"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>I</b><span class="nm">Iván</span><span class="st"></span></span></div>
+                <div class="ag" data-extra data-id="data" data-state="idle" style="--x:59;--y:66;--mx:50;--my:52;--c:#6c7ee0;--skin:#c58c63;--hair:#3a2a1e"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>D</b><span class="nm">Diego</span><span class="st"></span></span></div>
+                <div class="ag" data-id="assistant" data-state="idle" style="--x:84;--y:46;--mx:24;--my:67;--c:#5a95e8;--skin:#e8b995;--hair:#7a4a2a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>S</b><span class="nm">Sofía</span><span class="st"></span></span></div>
+                <div class="ag" data-extra data-id="support" data-state="idle" style="--x:8;--y:66;--mx:20;--my:68;--c:#3fb5a3;--skin:#f1c7a3;--hair:#b0602a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>C</b><span class="nm">Camila</span><span class="st"></span></span></div>
+                <div class="ag" data-extra data-id="procurement" data-state="idle" style="--x:72;--y:66;--mx:50;--my:68;--c:#a3b84a;--skin:#d6a07c;--hair:#1f1a16"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>R</b><span class="nm">Rafael</span><span class="st"></span></span></div>
+                <span class="st-vig"></span>
+                <div class="st-zone"><span class="st-you" data-i18n="stage.you">Tú</span><span data-i18n="stage.zone">Zona de aprobaciones</span></div>
+                <svg class="st-links"></svg>
+                <div class="st-bubbles"></div>
+                <section class="st-feed"><h4 data-i18n="stage.feed">Actividad en vivo</h4><ol></ol></section>
+                <div class="st-appr">
+                  <span class="st-appr-k"><span data-i18n="appr.title">Aprobación requerida</span><em data-i18n="appr.risk">Riesgo medio</em></span>
+                  <strong data-i18n="appr.action">Enviar propuesta al cliente</strong>
+                  <small data-i18n="appr.by">Lo pide Valeria Ríos · Ventas</small>
+                  <span class="st-appr-b"><span class="no" data-i18n="appr.reject">Rechazar</span><span class="yes" data-i18n="appr.approve">Aprobar</span></span>
+                  <span class="st-appr-ok"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="appr.done">Aprobada por ti</span></span>
+                </div>
+                <div class="st-report"><b><svg viewBox="0 0 16 16" width="13" height="13"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="report.t">Reporte listo</span></b><span data-i18n="report.d">Propuesta enviada, margen revisado y cláusulas aprobadas por Legal.</span></div>
+                <div class="st-cmd"><span class="st-chev">›</span><span class="st-input" data-placeholder="" data-i18n-attr="data-placeholder:stage.placeholder"></span><span class="st-send" data-i18n="stage.send">Enviar</span></div>
+                <span class="st-cursor"><svg viewBox="0 0 20 20" width="20" height="20"><path d="M4 2.5l11.5 9-5.2.6 3 5.6-2.4 1.2-3-5.7L4 17z" fill="#0a1628" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg></span>
+              </div>
+            </div>
+            <ol class="st-chapters" data-chapters data-i18n-aria="stage.chapters" aria-label="Capítulos de la animación">
+              <li><button type="button" data-ch="0"><span class="ch-bar"><i></i></span><span data-i18n="stage.ch1">Pides</span></button></li>
+              <li><button type="button" data-ch="1"><span class="ch-bar"><i></i></span><span data-i18n="stage.ch2">Se planifica</span></button></li>
+              <li><button type="button" data-ch="2"><span class="ch-bar"><i></i></span><span data-i18n="stage.ch3">Trabajan en paralelo</span></button></li>
+              <li><button type="button" data-ch="3"><span class="ch-bar"><i></i></span><span data-i18n="stage.ch4">Apruebas</span></button></li>
+              <li><button type="button" data-ch="4"><span class="ch-bar"><i></i></span><span data-i18n="stage.ch5">Reporte</span></button></li>
+            </ol>
+            <figcaption class="st-cap">
+              <span data-i18n="stage.caption">Animación ilustrativa del escenario de $50,000, con los colores, estados y mensajes de la app; no es una grabación. Marketing, Soporte y Compras son roles de ejemplo: la app trae siete empleados base y plantillas para sumar más.</span>
+              <span class="st-ctl"><button type="button" class="st-toggle" data-sound="fx" aria-pressed="false"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path class="i-on" d="M11 5.5a3.5 3.5 0 0 1 0 5M12.6 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="i-off" d="M11 6l4 4M15 6l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="stage.sound">Sonido</span></button><button type="button" class="st-toggle" data-sound="music" aria-pressed="false"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M6 12V3.5l7-1.5v8.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="4.5" cy="12" r="2" fill="currentColor"/><circle cx="11.5" cy="10.5" r="2" fill="currentColor"/><path class="i-off" d="M2 2l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="stage.music">Música</span></button><button type="button" class="st-toggle" data-stage-toggle aria-pressed="false"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path class="i-pause" d="M5 3v10M11 3v10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path class="i-play" d="M5 3l8 5-8 5z" fill="currentColor"/></svg><span data-i18n="stage.pause">Pausar animación</span></button></span>
+            </figcaption>
+          </figure>
+        </div>
+
+        <div class="facts reveal">
+          <p class="facts-k" data-i18n="facts.k">Lo que trae hoy</p>
+          <ul data-stagger>
+            <li><b data-countup="7">7</b><span data-i18n="facts.1">empleados base, cada uno con rol, herramientas y memoria</span></li>
+            <li><b data-countup="6">+6</b><span data-i18n="facts.2">profesiones más para contratar desde plantilla</span></li>
+            <li><b data-countup="4">4</b><span data-i18n="facts.3">proveedores de IA con tu clave: OpenAI, Claude, Kimi o DeepSeek</span></li>
+            <li><b>0</b><span data-i18n="facts.4">claves que ve el modelo: viven en una bóveda cifrada</span></li>
+          </ul>
+        </div>
       </div>
     </section>
 
-    <section class="section problem" aria-labelledby="problem-h">
+    <!-- PROBLEM -->
+    <section class="section problem" id="problema" aria-labelledby="problem-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="problem-h" data-i18n="problem.title">Los agentes de IA suelen trabajar a puerta cerrada.</h2>
-          <p class="lead" data-i18n="problem.lead">Le encargas una tarea y recibes un resultado. Lo que pasó en medio es una caja negra.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="problem.kicker">El problema</p>
+          <h2 id="problem-h" data-i18n="problem.title">La mayoría de los agentes de IA trabajan a puerta cerrada.</h2>
+          <p class="lead" data-i18n="problem.lead">Les das una tarea y te devuelven un resultado. Lo que pasó en medio queda en una caja negra.</p>
         </div>
-        <div class="questions reveal">
-          <div><h3 data-i18n="problem.q1">¿Qué hicieron?</h3><p data-i18n="problem.a1">Un historial de mensajes no te dice quién tocó qué, ni qué se envió afuera.</p></div>
-          <div><h3 data-i18n="problem.q2">¿Cuánto gastaron?</h3><p data-i18n="problem.a2">El costo aparece después, en una factura, cuando ya no puedes decidir nada.</p></div>
-          <div><h3 data-i18n="problem.q3">¿Lo hicieron bien?</h3><p data-i18n="problem.a3">Sin ver el proceso ni a quién consultaron, revisar el resultado es adivinar.</p></div>
+        <div class="questions reveal" data-stagger>
+          <div class="q"><span class="q-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><h3 data-i18n="problem.q1">¿Qué hicieron?</h3><p data-i18n="problem.a1">Un historial de mensajes no te dice quién tocó qué, ni qué salió hacia afuera.</p></div>
+          <div class="q"><span class="q-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="3.5" y="6" width="17" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 10h17M7 14.5h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><h3 data-i18n="problem.q2">¿Cuánto gastaron?</h3><p data-i18n="problem.a2">El costo llega después, en una factura, cuando ya no puedes decidir nada.</p></div>
+          <div class="q"><span class="q-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .8-1 1.5v.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.05" fill="currentColor"/></svg></span><h3 data-i18n="problem.q3">¿Lo hicieron bien?</h3><p data-i18n="problem.a3">Si no ves el proceso ni a quién consultaron, revisar el resultado es adivinar.</p></div>
         </div>
-        <p class="reveal pull" data-i18n="problem.close">AI Workforce OS parte de lo contrario: todo lo que hace un empleado de IA es visible, tiene tope de gasto y espera tu decisión cuando importa.</p>
+        <p class="pull reveal" data-i18n="problem.close">AI Workforce OS parte de lo contrario: todo lo que hace un empleado de IA se ve, tiene un tope de gasto y se detiene a esperarte cuando importa.</p>
       </div>
     </section>
 
+    <!-- HOW IT WORKS -->
     <section class="section alt" id="como" aria-labelledby="how-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="how-h" data-i18n="how.title">Cómo funciona</h2>
-          <p class="lead" data-i18n="how.lead">Tres pasos, y tú sigues al mando en cada uno.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="how.kicker">Cómo funciona</p>
+          <h2 id="how-h" data-i18n="how.title">De una frase a un reporte, sin soltar el control.</h2>
+          <p class="lead" data-i18n="how.lead">Escribes lo que necesitas. La Asistente arma el plan, el equipo trabaja en paralelo, tú apruebas lo sensible y recibes el resultado.</p>
         </div>
-        <ol class="steps reveal">
-          <li><span class="step-n" aria-hidden="true">1</span><h3 data-i18n="how.s1.t">Pides</h3><span class="chip" style="--c:#5a95e8;--s:#6d5bb5"><b>S</b>Sofía<i data-i18n="state.thinking">Pensando</i></span><p data-i18n-html="how.s1.d">Escribes lo que necesitas como se lo dirías a un colega: <em>“prepara una propuesta de $50,000”</em>. Antes de ejecutar puedes ver una estimación de costo.</p></li>
-          <li><span class="step-n" aria-hidden="true">2</span><h3 data-i18n="how.s2.t">Ves colaborar</h3><span class="chip" style="--c:#4cb987;--s:#2b6cb0"><b>T</b>Tomás<i data-i18n="state.working">Trabajando</i></span><p data-i18n-html="how.s2.d">La Asistente arma el plan. Cada empleado toma su parte, consulta a los demás y trabaja en paralelo cuando el plan lo permite. Lo ves pasar en la oficina.</p></li>
-          <li><span class="step-n" aria-hidden="true">3</span><h3 data-i18n="how.s3.t">Apruebas</h3><span class="chip attn" style="--c:#f4895a;--s:#a86208"><b>V</b>Valeria<i data-i18n="state.awaiting_approval">Esperando aprobación</i></span><p data-i18n-html="how.s3.d">Antes de enviar una propuesta o iniciar una contratación, el empleado se detiene y te pide el visto bueno. Al final recibes un reporte con lo que se hizo y lo que costó.</p></li>
+        <ol class="flow reveal" data-stagger>
+          <li class="fl">
+            <div class="fl-vis fv-ask" aria-hidden="true"><span class="fv-input"><span class="fv-chev">›</span><span class="fv-text" data-i18n="how.example">Prepara una propuesta de $50,000</span></span></div>
+            <span class="fl-n" aria-hidden="true">01</span><h3 data-i18n="f1.t">Pides</h3><p data-i18n="f1.d">En lenguaje natural, como a un colega. Antes de ejecutar ves un costo estimado.</p>
+          </li>
+          <li class="fl">
+            <div class="fl-vis fv-plan" aria-hidden="true"><span class="fv-root" data-i18n="how.plan">Plan · 6 tareas</span><svg viewBox="0 0 120 34" preserveAspectRatio="none"><path d="M60 0V10M60 10H18V30M60 10H102V30M60 10V30" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg><span class="fv-kids"><i style="--c:#f4895a"></i><i style="--c:#4cb987"></i><i style="--c:#9577d6"></i></span></div>
+            <span class="fl-n" aria-hidden="true">02</span><h3 data-i18n="f2.t">Se planifica</h3><p data-i18n="f2.d">La Asistente divide el trabajo en tareas con dependencias y las reparte.</p>
+          </li>
+          <li class="fl">
+            <div class="fl-vis fv-par" aria-hidden="true"><i style="--c:#f4895a;--w:.82;--d:0s"></i><i style="--c:#4cb987;--w:.64;--d:.25s"></i><i style="--c:#9577d6;--w:.9;--d:.5s"></i><i style="--c:#45b8cc;--w:.5;--d:.75s"></i></div>
+            <span class="fl-n" aria-hidden="true">03</span><h3 data-i18n="f3.t">Trabajan en paralelo</h3><p data-i18n="f3.d">Lo que no depende de otra cosa corre a la vez, y se consultan entre ellos.</p>
+          </li>
+          <li class="fl">
+            <div class="fl-vis fv-appr" aria-hidden="true"><span class="fv-card"><span class="fv-k" data-i18n="appr.title">Aprobación requerida</span><span class="fv-btns"><span data-i18n="appr.reject">Rechazar</span><span class="yes" data-i18n="appr.approve">Aprobar</span></span></span></div>
+            <span class="fl-n" aria-hidden="true">04</span><h3 data-i18n="f4.t">Apruebas</h3><p data-i18n="f4.d">Antes de enviar algo afuera, el empleado se detiene y te pide el visto bueno.</p>
+          </li>
+          <li class="fl">
+            <div class="fl-vis fv-rep" aria-hidden="true"><span class="fv-doc"><i></i><i></i><i></i><b><svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="how.ok">Listo</span></b></span></div>
+            <span class="fl-n" aria-hidden="true">05</span><h3 data-i18n="f5.t">Recibes el reporte</h3><p data-i18n="f5.d">Qué se hizo, quién participó y cuánto costó, en un solo lugar.</p>
+          </li>
         </ol>
       </div>
     </section>
 
+    <!-- SCREENSHOTS -->
     <section class="section" id="app" aria-labelledby="shots-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="shots-h" data-i18n="shots.title">La app real, no una maqueta</h2>
-          <p class="lead" data-i18n="shots.lead">Capturas de la aplicación corriendo en modo simulación. Lo que ves en pantalla sale de eventos reales del sistema.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="shots.kicker">La app real</p>
+          <h2 id="shots-h" data-i18n="shots.title">Capturas de la app, no maquetas.</h2>
+          <p class="lead" data-i18n="shots.lead">Lo que ves en pantalla sale de eventos reales del sistema. Estas capturas son del modo simulación.</p>
         </div>
-        <div class="shots">
-          <figure class="window wide reveal">
-            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-            <img src="img/office.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Oficina 3D con los empleados de IA y la barra para escribir una solicitud." data-i18n-alt="shots.office.alt">
-            <figcaption><strong data-i18n="shots.office.t">Oficina</strong> <span data-i18n="shots.office.d">Quién trabaja, quién consulta a quién y quién espera tu aprobación, de un vistazo.</span></figcaption>
-          </figure>
-          <figure class="window wide reveal">
-            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-            <img src="img/approvals.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Bandeja de aprobaciones con acciones pendientes de decisión humana." data-i18n-alt="shots.appr.alt">
-            <figcaption><strong data-i18n="shots.appr.t">Aprobaciones</strong> <span data-i18n="shots.appr.d">Las acciones sensibles esperan tu decisión: aprobar o rechazar.</span></figcaption>
-          </figure>
-          <figure class="window reveal">
-            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-            <img src="img/dashboard.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Modo dashboard con indicadores, tareas y actividad de los empleados." data-i18n-alt="shots.dash.alt">
-            <figcaption><strong data-i18n="shots.dash.t">Dashboard</strong> <span data-i18n="shots.dash.d">Para quien prefiere listas: tareas, costos, conversaciones y actividad.</span></figcaption>
-          </figure>
-          <figure class="window reveal">
-            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-            <img src="img/projects.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Plan del proyecto Cierre financiero del trimestre, con tareas por empleado, estimación de costo y botón para lanzar." data-i18n-alt="shots.proj.alt">
-            <figcaption><strong data-i18n="shots.proj.t">Proyectos</strong> <span data-i18n="shots.proj.d">El plan de un cierre trimestral: balance general y estado de resultados en paralelo, costo estimado antes de lanzar y una compuerta de aprobación humana.</span></figcaption>
-          </figure>
+        <div class="show reveal" data-show>
+          <div class="show-tabs" role="tablist" data-i18n-aria="shots.tabs" aria-label="Pantallas de la app">
+            <button type="button" role="tab" id="tab-office" aria-controls="pan-office" aria-selected="true"><span class="tab-bar"><i></i></span><strong data-i18n="shots.office.t">Oficina</strong><span data-i18n="shots.office.d">Quién trabaja, quién consulta a quién y quién espera tu aprobación, de un vistazo.</span></button>
+            <button type="button" role="tab" id="tab-appr" aria-controls="pan-appr" aria-selected="false" tabindex="-1"><span class="tab-bar"><i></i></span><strong data-i18n="shots.appr.t">Aprobaciones</strong><span data-i18n="shots.appr.d">Las acciones sensibles esperan tu decisión: aprobar o rechazar.</span></button>
+            <button type="button" role="tab" id="tab-proj" aria-controls="pan-proj" aria-selected="false" tabindex="-1"><span class="tab-bar"><i></i></span><strong data-i18n="shots.proj.t">Proyectos</strong><span data-i18n="shots.proj.d">El plan de un cierre trimestral: tareas en paralelo, costo estimado antes de lanzar y una compuerta de aprobación humana.</span></button>
+            <button type="button" role="tab" id="tab-dash" aria-controls="pan-dash" aria-selected="false" tabindex="-1"><span class="tab-bar"><i></i></span><strong data-i18n="shots.dash.t">Dashboard</strong><span data-i18n="shots.dash.d">Para quien prefiere listas: tareas, costos, conversaciones y actividad.</span></button>
+          </div>
+          <div class="show-panels">
+            <figure class="window show-pan" id="pan-office" role="tabpanel" aria-labelledby="tab-office">
+              <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+              <img src="img/office.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Oficina 3D con los empleados de IA y la barra para escribir una solicitud." data-i18n-alt="shots.office.alt">
+              <figcaption><strong data-i18n="shots.office.t">Oficina</strong> <span data-i18n="shots.office.d">Quién trabaja, quién consulta a quién y quién espera tu aprobación, de un vistazo.</span></figcaption>
+            </figure>
+            <figure class="window show-pan" id="pan-appr" role="tabpanel" aria-labelledby="tab-appr">
+              <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+              <img src="img/approvals.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Bandeja de aprobaciones con acciones pendientes de decisión humana." data-i18n-alt="shots.appr.alt">
+              <figcaption><strong data-i18n="shots.appr.t">Aprobaciones</strong> <span data-i18n="shots.appr.d">Las acciones sensibles esperan tu decisión: aprobar o rechazar.</span></figcaption>
+            </figure>
+            <figure class="window show-pan" id="pan-proj" role="tabpanel" aria-labelledby="tab-proj">
+              <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+              <img src="img/projects.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Plan del proyecto Cierre financiero del trimestre, con tareas por empleado, estimación de costo y botón para lanzar." data-i18n-alt="shots.proj.alt">
+              <figcaption><strong data-i18n="shots.proj.t">Proyectos</strong> <span data-i18n="shots.proj.d">El plan de un cierre trimestral: tareas en paralelo, costo estimado antes de lanzar y una compuerta de aprobación humana.</span></figcaption>
+            </figure>
+            <figure class="window show-pan" id="pan-dash" role="tabpanel" aria-labelledby="tab-dash">
+              <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+              <img src="img/dashboard.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Modo dashboard con indicadores, tareas y actividad de los empleados." data-i18n-alt="shots.dash.alt">
+              <figcaption><strong data-i18n="shots.dash.t">Dashboard</strong> <span data-i18n="shots.dash.d">Para quien prefiere listas: tareas, costos, conversaciones y actividad.</span></figcaption>
+            </figure>
+          </div>
         </div>
       </div>
     </section>
 
+    <!-- CONTROL (bento) -->
     <section class="section alt" id="control" aria-labelledby="control-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="control-h" data-i18n="control.title">Lo que ya está construido, y por qué importa</h2>
-          <p class="lead" data-i18n="control.lead">Estas capacidades existen hoy en el código de la app. Las que dependen de integraciones reales se detallan en “Estado actual”.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="control.kicker">Control</p>
+          <h2 id="control-h" data-i18n="control.title">Tú pones los límites. El backend los hace cumplir.</h2>
+          <p class="lead" data-i18n="control.lead">Estas capacidades existen hoy en el código de la app. Lo que depende de integraciones reales está en «Estado actual».</p>
         </div>
-        <dl class="features reveal">
-          <div><dt data-i18n="c.office.t">Oficina 3D con el trabajo en vivo</dt><dd data-i18n="c.office.d">Cada movimiento sale de eventos reales: quién trabaja, quién consulta a quién, quién espera. Si prefieres listas, hay modo dashboard.</dd></div>
-          <div><dt data-i18n="c.appr.t">Aprobaciones humanas en acciones sensibles</dt><dd data-i18n="c.appr.d">Enviar una propuesta o un contrato requiere tu decisión. Los agentes pueden pedir aprobación; nunca darla. Eliges cuánta autonomía tiene cada empleado: sugerir, aprobar cada acción, reglas o autónomo.</dd></div>
-          <div><dt data-i18n="c.cost.t">Costo estimado antes de ejecutar, y topes</dt><dd data-i18n="c.cost.d">Ves una estimación antes de correr una solicitud. Hay topes por solicitud, por empleado y por organización; al llegar al tope el trabajo se pausa y tú decides si continúa.</dd></div>
-          <div><dt data-i18n="c.vault.t">Credenciales fuera del modelo</dt><dd data-i18n="c.vault.d">Las claves viven en una bóveda cifrada (AES-256-GCM). El modelo de IA nunca las ve: las herramientas las ejecuta el backend, no el modelo.</dd></div>
-          <div><dt data-i18n="c.kill.t">Kill-switch y modo solo lectura</dt><dd data-i18n="c.kill.d">Congela la actividad o pasa toda la oficina a solo lectura. También puedes pausar a un empleado o apagar una herramienta concreta.</dd></div>
-          <div><dt data-i18n="c.audit.t">Auditoría</dt><dd data-i18n="c.audit.d">Cada acción relevante se registra en una bitácora que la aplicación solo puede escribir, no editar ni borrar.</dd></div>
-          <div><dt data-i18n="c.proj.t">Proyectos enteros, con trabajo en paralelo</dt><dd data-i18n="c.proj.d">Un proyecto se reparte en tareas con dependencias. Lo que no depende de otra cosa corre a la vez. Mira el ejemplo de abajo.</dd></div>
-          <div><dt data-i18n="c.tpl.t">Plantillas de workflow y paquetes por tipo de negocio</dt><dd data-i18n="c.tpl.d">Cinco plantillas (propuesta, cliente nuevo, cobranza, cierre de mes y resumen diario) y cuatro paquetes (agencia, comercio, servicios profesionales y general) que fijan reglas y nivel de autonomía.</dd></div>
-          <div><dt data-i18n="c.es.t">Español nativo, con tonos regionales</dt><dd data-i18n="c.es.d">Interfaz y empleados pensados en español, con tono regional configurable. Incluye plantillas fiscales de ejemplo para México y España, marcadas como ejemplo.</dd></div>
-        </dl>
+        <div class="bento">
+          <article class="card c-appr reveal">
+            <div class="viz viz-appr" aria-hidden="true">
+              <div class="va-card">
+                <span class="va-k"><span data-i18n="appr.title">Aprobación requerida</span><em data-i18n="appr.risk">Riesgo medio</em></span>
+                <strong data-i18n="appr.action">Enviar propuesta al cliente</strong>
+                <small data-i18n="appr.by">Lo pide Valeria Ríos · Ventas</small>
+                <span class="va-b"><span data-i18n="appr.reject">Rechazar</span><span class="yes" data-i18n="appr.approve">Aprobar</span></span>
+                <span class="va-ok"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="appr.done">Aprobada por ti</span></span>
+                <span class="va-cursor"><svg viewBox="0 0 20 20" width="18" height="18"><path d="M4 2.5l11.5 9-5.2.6 3 5.6-2.4 1.2-3-5.7L4 17z" fill="#0a1628" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg></span>
+              </div>
+              <div class="va-auto">
+                <span class="va-auto-k" data-i18n="auto.k">Autonomía por empleado</span>
+                <span class="seg"><span class="seg-ind"></span><span data-i18n="auto.1">Sugerir</span><span data-i18n="auto.2">Aprobar cada acción</span><span data-i18n="auto.3">Reglas</span><span data-i18n="auto.4">Autónomo</span></span>
+              </div>
+            </div>
+            <h3 data-i18n="c.appr.t">Aprobaciones humanas en lo sensible</h3><p data-i18n="c.appr.d">Enviar una propuesta o un contrato requiere tu decisión. Los agentes pueden pedir aprobación; nunca darla. Y eliges cuánta autonomía tiene cada empleado.</p>
+          </article>
+          <article class="card c-cost reveal">
+            <div class="viz viz-cost" aria-hidden="true">
+              <span class="vc-k" data-i18n="cost.k">Gasto de la solicitud</span>
+              <span class="vc-meter"><i class="vc-fill"></i><i class="vc-cap"><b data-i18n="cost.cap">Tope</b></i></span>
+              <span class="vc-paused"><span class="vc-dot"></span><span data-i18n="cost.paused">En pausa · decides tú</span></span>
+            </div>
+            <h3 data-i18n="c.cost.t">Costo estimado y topes</h3><p data-i18n="c.cost.d">Ves un rango estimado antes de ejecutar. Hay topes por solicitud, por empleado y por organización; al tocar el de una solicitud o un empleado, el trabajo se pausa y tú decides si sigue.</p>
+          </article>
+          <article class="card c-kill reveal">
+            <div class="viz viz-kill" aria-hidden="true">
+              <span class="vk-sw"><i></i></span>
+              <span class="vk-lbl"><span class="vk-on" data-i18n="kill.on">Activa</span><span class="vk-off" data-i18n="kill.off">Congelada</span></span>
+              <span class="vk-dots"><i style="--c:#f4895a"></i><i style="--c:#4cb987"></i><i style="--c:#9577d6"></i><i style="--c:#45b8cc"></i><i style="--c:#e8b53a"></i><i style="--c:#5a95e8"></i></span>
+            </div>
+            <h3 data-i18n="c.kill.t">Kill-switch y solo lectura</h3><p data-i18n="c.kill.d">Congela toda la actividad o pasa la oficina a solo lectura. También puedes pausar a un empleado o apagar una herramienta concreta.</p>
+          </article>
+          <article class="card c-audit reveal">
+            <div class="viz viz-audit" aria-hidden="true">
+              <span class="vl"><b>approval.requested</b><code>a3f9…</code></span>
+              <span class="vl"><b>approval.resolved</b><code>7c21…</code></span>
+              <span class="vl"><b>tool.executed</b><code>0be4…</code></span>
+              <span class="vl"><b>report.created</b><code>e81d…</code></span>
+            </div>
+            <h3 data-i18n="c.audit.t">Bitácora de auditoría</h3><p data-i18n="c.audit.d">Cada acción relevante queda en una bitácora encadenada por hash que la app solo puede añadir, no editar ni borrar. Se exporta y se verifica.</p>
+          </article>
+          <article class="card c-vault reveal">
+            <div class="viz viz-vault" aria-hidden="true">
+              <span class="vv-node vv-model"><span data-i18n="vault.model">Modelo de IA</span></span>
+              <span class="vv-wall"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 5l14 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>
+              <span class="vv-node vv-vault"><svg viewBox="0 0 24 24" width="16" height="16"><rect x="5" y="10.5" width="14" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span data-i18n="vault.vault">Bóveda</span></span>
+            </div>
+            <h3 data-i18n="c.vault.t">Credenciales fuera del modelo</h3><p data-i18n="c.vault.d">Las claves viven en una bóveda cifrada (AES-256-GCM). El modelo de IA nunca las ve: las herramientas las ejecuta el backend.</p>
+          </article>
+          <article class="card c-proj reveal">
+            <div class="viz viz-proj" aria-hidden="true"><i style="--c:#5a95e8;--l:0;--w:.22"></i><i style="--c:#4cb987;--l:.25;--w:.4"></i><i style="--c:#4cb987;--l:.25;--w:.4"></i><i style="--c:#45b8cc;--l:.68;--w:.18"></i><i style="--c:#a86208;--l:.88;--w:.12"></i></div>
+            <h3 data-i18n="c.proj.t">Proyectos con trabajo en paralelo</h3><p data-i18n="c.proj.d">Un proyecto se reparte en tareas con dependencias; lo que no depende de otra cosa corre a la vez.</p>
+            <a class="more" href="#paralelo"><span data-i18n="c.proj.more">Ver el ejemplo</span><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 3v9M4 8.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          </article>
+          <article class="card c-tpl reveal">
+            <div class="viz viz-tpl" aria-hidden="true"><span data-i18n="tpl.1">Propuesta</span><span data-i18n="tpl.2">Cliente nuevo</span><span data-i18n="tpl.3">Cobranza</span><span data-i18n="tpl.4">Cierre de mes</span><span data-i18n="tpl.5">Resumen diario</span></div>
+            <h3 data-i18n="c.tpl.t">Plantillas y paquetes por negocio</h3><p data-i18n="c.tpl.d">Cinco plantillas de workflow y cuatro paquetes (agencia, comercio, servicios profesionales y general) que fijan reglas y autonomía.</p>
+          </article>
+          <article class="card c-es reveal">
+            <div class="viz viz-es" aria-hidden="true"><span class="ve-b" lang="es">Español</span><span class="ve-b" lang="en">English</span><span class="ve-b">MX · ES</span></div>
+            <h3 data-i18n="c.es.t">Pensado en español</h3><p data-i18n="c.es.d">Interfaz y empleados en español (y en inglés), con tono regional configurable. Trae plantillas fiscales de ejemplo para México y España, marcadas como ejemplo.</p>
+          </article>
+        </div>
       </div>
     </section>
 
+    <!-- PARALLEL LANES -->
     <section class="section" id="paralelo" aria-labelledby="lanes-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="lanes-h" data-i18n="lanes.title">Un proyecto, varios empleados a la vez</h2>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="lanes.kicker">Trabajo en paralelo</p>
+          <h2 id="lanes-h" data-i18n="lanes.title">Un proyecto, varios empleados a la vez.</h2>
           <p class="lead" data-i18n="lanes.lead">Ejemplo: el cierre financiero del trimestre, como en la captura de Proyectos. El Contador no espera a terminar una cosa para empezar la otra.</p>
         </div>
         <figure class="lanes reveal" role="img" tabindex="0" data-i18n-aria="lanes.alt" aria-label="Diagrama: la Asistente arma el plan; el Contador hace el balance general y el estado de resultados al mismo tiempo; el Analista consolida cuando ambos terminan; tú apruebas el envío y llega el reporte.">
-          <div class="lane-grid" aria-hidden="true">
-            <div class="lane-label" data-i18n="lanes.assistant">Asistente</div>
-            <div class="lane-track"><span class="bar b-plan" data-i18n="lanes.plan">Arma el plan</span><span class="bar b-rep" data-i18n="lanes.report">Reporte</span></div>
+          <div class="lane-scroll">
+            <div class="lane-grid" aria-hidden="true">
+              <div class="lane-label" data-i18n="lanes.assistant">Asistente</div>
+              <div class="lane-track"><span class="bar b-plan" data-i18n="lanes.plan">Arma el plan</span><span class="bar b-rep" data-i18n="lanes.report">Reporte</span></div>
 
-            <div class="lane-label" data-i18n="lanes.accounting">Contador</div>
-            <div class="lane-track two">
-              <span class="bar b-bal" data-i18n="lanes.balance">Balance general</span>
-              <span class="bar b-pnl" data-i18n="lanes.pnl">Estado de resultados</span>
-              <span class="bracket" data-i18n="lanes.parallel">En paralelo</span>
+              <div class="lane-label" data-i18n="lanes.accounting">Contador</div>
+              <div class="lane-track two">
+                <span class="bar b-bal" data-i18n="lanes.balance">Balance general</span>
+                <span class="bar b-pnl" data-i18n="lanes.pnl">Estado de resultados</span>
+                <span class="bracket" data-i18n="lanes.parallel">En paralelo</span>
+              </div>
+
+              <div class="lane-label" data-i18n="lanes.analyst">Analista</div>
+              <div class="lane-track"><span class="wait" data-i18n="lanes.wait">Espera a ambos</span><span class="bar b-ana" data-i18n="lanes.consolidate">Consolida hallazgos</span></div>
+
+              <div class="lane-label" data-i18n="lanes.you">Tú</div>
+              <div class="lane-track"><span class="bar b-you" data-i18n="lanes.approve">Apruebas el envío</span></div>
+              <span class="playhead"><i></i></span>
             </div>
-
-            <div class="lane-label" data-i18n="lanes.analyst">Analista</div>
-            <div class="lane-track"><span class="wait" data-i18n="lanes.wait">Espera a ambos</span><span class="bar b-ana" data-i18n="lanes.consolidate">Consolida hallazgos</span></div>
-
-            <div class="lane-label" data-i18n="lanes.you">Tú</div>
-            <div class="lane-track"><span class="bar b-you" data-i18n="lanes.approve">Apruebas el envío</span></div>
           </div>
           <figcaption data-i18n="lanes.tag">Diagrama ilustrativo del flujo; no es una captura.</figcaption>
         </figure>
       </div>
     </section>
 
+    <!-- TEAM -->
     <section class="section alt" id="equipo" aria-labelledby="team-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="team-h" data-i18n="team.title">El equipo</h2>
-          <p class="lead" data-i18n="team.lead">Siete empleados con rol y herramientas propias. Cada uno es persistente: tiene memoria y un historial de lo que hizo.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="team.kicker">El equipo</p>
+          <h2 id="team-h" data-i18n="team.title">Siete empleados de base. Más, cuando los necesites.</h2>
+          <p class="lead" data-i18n="team.lead">Cada uno tiene su rol, sus herramientas, memoria y un historial de lo que hizo. Y puedes contratar otras profesiones desde plantillas.</p>
         </div>
-        <ul class="roles reveal">
-          <li style="--c:#5a95e8"><span class="av" aria-hidden="true">S</span><p class="who">Sofía Lara</p><h3 data-i18n="r.assistant.t">Asistente</h3><p data-i18n="r.assistant.d">Planifica, coordina al equipo y consolida el reporte final.</p></li>
+        <ul class="roles reveal" data-stagger>
+          <li class="lead-role" style="--c:#5a95e8"><span class="av" aria-hidden="true">S</span><p class="who">Sofía Lara</p><h3 data-i18n="r.assistant.t">Asistente</h3><p data-i18n="r.assistant.d">Planifica, coordina al equipo y consolida el reporte final.</p></li>
           <li style="--c:#f4895a"><span class="av" aria-hidden="true">V</span><p class="who">Valeria Ríos</p><h3 data-i18n="r.sales.t">Ventas</h3><p data-i18n="r.sales.d">Analiza al cliente y prepara propuestas.</p></li>
           <li style="--c:#9577d6"><span class="av" aria-hidden="true">E</span><p class="who">Elena Castro</p><h3 data-i18n="r.legal.t">Legal</h3><p data-i18n="r.legal.d">Revisa contratos y señala riesgos.</p></li>
           <li style="--c:#4cb987"><span class="av" aria-hidden="true">T</span><p class="who">Tomás Vidal</p><h3 data-i18n="r.accounting.t">Contabilidad</h3><p data-i18n="r.accounting.d">Calcula márgenes y arma estados financieros.</p></li>
           <li style="--c:#45b8cc"><span class="av" aria-hidden="true">N</span><p class="who">Nadia Ortega</p><h3 data-i18n="r.analyst.t">Análisis</h3><p data-i18n="r.analyst.d">Evalúa rentabilidad y saca hallazgos de los datos.</p></li>
           <li style="--c:#e8b53a"><span class="av" aria-hidden="true">I</span><p class="who">Iván Duarte</p><h3 data-i18n="r.ops.t">Operaciones</h3><p data-i18n="r.ops.d">Revisa capacidad, entregas y necesidades de personal.</p></li>
           <li style="--c:#ee7aa8"><span class="av" aria-hidden="true">M</span><p class="who">Marcos Peña</p><h3 data-i18n="r.hr.t">RR. HH.</h3><p data-i18n="r.hr.d">Prepara procesos de contratación y perfiles.</p></li>
-          <li class="soon"><h3 data-i18n="team.soon.t">Próximamente, más profesiones</h3><p data-i18n="team.soon.d">Estamos diseñando los roles como configuración para sumar profesiones sin reescribir el motor. Es una propuesta de diseño; aún no está construida.</p></li>
+          <li class="more-roles"><span class="av av-plus" aria-hidden="true">+6</span><h3 data-i18n="team.more.t">Contrata desde plantilla</h3><p data-i18n="team.more.d">Profesiones descritas como configuración, con su riesgo y sus aprobaciones:</p>
+            <ul class="pros"><li data-i18n="pro.1">Analista de datos</li><li data-i18n="pro.2">Diseño educativo</li><li data-i18n="pro.3">Finanzas y tesorería (solo análisis)</li><li data-i18n="pro.4">Auditoría interna</li><li data-i18n="pro.5">Project manager</li><li data-i18n="pro.6">Ingeniería de software</li></ul>
+          </li>
         </ul>
-        <p class="fine" data-i18n="team.note">Los empleados preparan y organizan. No dan asesoría legal, fiscal ni médica: esas decisiones son de un profesional humano.</p>
+        <p class="fine team-note" data-i18n="team.note">Los empleados preparan y organizan. No dan asesoría legal, fiscal ni médica: esas decisiones son de un profesional humano.</p>
       </div>
     </section>
 
-    <section class="section" id="confianza" aria-labelledby="trust-h">
+    <!-- SECURITY -->
+    <section class="section sec" id="confianza" aria-labelledby="trust-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="trust-h" data-i18n="trust.title">Seguridad y confianza</h2>
-          <p class="lead" data-i18n="trust.lead">Principios de diseño que puedes revisar en la arquitectura. No son certificaciones.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="trust.kicker">Seguridad</p>
+          <h2 id="trust-h" data-i18n="trust.title">El modelo propone. El backend decide.</h2>
+          <p class="lead" data-i18n="trust.lead">Principios de diseño que puedes revisar en la documentación técnica. No son certificaciones.</p>
         </div>
-        <dl class="features two reveal">
-          <div><dt data-i18n="t1.t">El backend decide, el modelo propone</dt><dd data-i18n="t1.d">El motor de IA devuelve resultados y solicitudes de herramienta. Quien decide si se ejecutan, se aprueban o se rechazan es el backend.</dd></div>
-          <div><dt data-i18n="t2.t">El contenido externo es dato, no instrucción</dt><dd data-i18n="t2.d">Los correos y documentos que lee un empleado se tratan como datos delimitados, para que no puedan darle órdenes al sistema.</dd></div>
-          <div><dt data-i18n="t3.t">Aislamiento por organización</dt><dd data-i18n="t3.d">Los datos llevan el identificador de su organización y la base de datos aplica seguridad por filas, con un rol de aplicación sin acceso para saltársela.</dd></div>
-          <div><dt data-i18n="t4.t">Mínimo privilegio</dt><dd data-i18n="t4.d">Un empleado solo usa las conexiones y capacidades que le autorizas, y cada permiso queda registrado.</dd></div>
-        </dl>
-        <aside class="reveal callout">
+        <div class="sec-grid">
+          <div class="sec-viz reveal" aria-hidden="true">
+            <div class="sv-rail"><span class="sv-pkt"><i></i></span></div>
+            <div class="sv-row sv-ext"><span class="sv-box"><svg viewBox="0 0 24 24" width="16" height="16"><rect x="3.5" y="5.5" width="17" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span data-i18n="sec.ext">Correo entrante</span></span><span class="sv-tag" data-i18n="sec.data">dato, no instrucción</span></div>
+            <div class="sv-row sv-model"><span class="sv-box"><span class="sv-spark"></span><span data-i18n="sec.model">Modelo de IA</span></span><span class="sv-tag sv-mono" data-i18n="sec.propose">propone: enviar propuesta</span></div>
+            <div class="sv-row sv-be">
+              <span class="sv-box sv-big"><b data-i18n="sec.backend">Backend</b>
+                <span class="sv-checks"><span class="sv-c c1"><i></i><span data-i18n="sec.c1">Permisos</span></span><span class="sv-c c2"><i></i><span data-i18n="sec.c2">Tope de gasto</span></span><span class="sv-c c3"><i></i><span data-i18n="sec.c3">Tu aprobación</span></span></span>
+              </span>
+              <span class="sv-vault"><svg viewBox="0 0 24 24" width="15" height="15"><rect x="5" y="10.5" width="14" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span data-i18n="sec.vault">Bóveda</span></span>
+            </div>
+            <div class="sv-row sv-out"><span class="sv-box sv-done"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="sec.tool">Se ejecuta y queda en la bitácora</span></span></div>
+          </div>
+          <dl class="principles reveal" data-stagger>
+            <div><dt data-i18n="t1.t">El backend decide, el modelo propone</dt><dd data-i18n="t1.d">El motor de IA devuelve resultados y solicitudes de herramienta. Quien decide si se ejecutan, se aprueban o se rechazan es el backend.</dd></div>
+            <div><dt data-i18n="t2.t">El contenido externo es dato, no instrucción</dt><dd data-i18n="t2.d">Los correos y documentos que lee un empleado se tratan como datos delimitados, para que no puedan darle órdenes al sistema.</dd></div>
+            <div><dt data-i18n="t3.t">Aislamiento por organización</dt><dd data-i18n="t3.d">Los datos llevan el identificador de su organización y la base de datos aplica seguridad por filas, con un rol de aplicación que no puede saltársela.</dd></div>
+            <div><dt data-i18n="t4.t">Mínimo privilegio</dt><dd data-i18n="t4.d">Un empleado solo usa las conexiones y capacidades que le autorizas, y cada permiso queda registrado.</dd></div>
+          </dl>
+        </div>
+        <aside class="callout reveal">
           <h3 data-i18n="trust.not.t">Lo que no afirmamos</h3>
-          <p data-i18n="trust.not.d">No tenemos certificaciones (ni SOC 2 ni ISO) y no estamos listos para entornos empresariales regulados. Hoy no hay inicio de sesión único (SSO), la bitácora se puede exportar pero sin firma ni anclaje externo, y las ejecuciones en curso no sobreviven a un reinicio del servidor.</p>
+          <p data-i18n="trust.not.d">No tenemos certificaciones (ni SOC 2 ni ISO 27001) ni lo hemos validado con empresas reguladas. No hay inicio de sesión por SAML (el SSO es por OIDC), la bitácora se exporta y se verifica pero sin firma ni anclaje externo, y la recuperación tras un reinicio supone una sola instancia del servidor.</p>
+          <a class="more" data-trust="index" href="/confianza/"><span data-i18n="trust.more">Ver el centro de confianza</span><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
         </aside>
       </div>
     </section>
 
+    <!-- STATUS -->
     <section class="section alt" id="estado" aria-labelledby="status-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="status-h" data-i18n="status.title">Estado actual</h2>
-          <p class="lead" data-i18n="status.lead">Claro y sin adornos: qué funciona hoy, qué se está construyendo y qué solo está planeado.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="status.kicker">Estado actual</p>
+          <h2 id="status-h" data-i18n="status.title">Qué funciona hoy, sin adornos.</h2>
+          <p class="lead" data-i18n="status.lead">Lo actualizamos cuando algo cambia. Revisado en octubre de 2026.</p>
         </div>
-        <ul class="status reveal">
-          <li><span class="badge demo" data-i18n="st.demo">Simulación</span><div><h3 data-i18n="st.1.t">Oficina 3D, dashboard, proyectos, aprobaciones y costos</h3><p data-i18n="st.1.d">Funcionan de punta a punta en modo simulación: respuestas guionadas y realistas, sin clave de IA y sin costo.</p></div></li>
-          <li><span class="badge dev" data-i18n="st.dev">En desarrollo</span><div><h3 data-i18n="st.2.t">IA real</h3><p data-i18n="st.2.d">Se activa al configurar una clave de API del proveedor de modelo. La ruta existe, pero la hemos probado menos que la simulación.</p></div></li>
-          <li><span class="badge dev" data-i18n="st.dev">En desarrollo</span><div><h3 data-i18n="st.3.t">Gmail</h3><p data-i18n="st.3.d">El flujo con permisos y envío diferido funciona en simulación. Con cuentas reales de Gmail aún no está probado.</p></div></li>
-          <li><span class="badge soon" data-i18n="st.soon">Próximamente</span><div><h3 data-i18n="st.4.t">Otras integraciones (WhatsApp, calendario, etc.)</h3><p data-i18n="st.4.d">Planeadas. Hoy no existen.</p></div></li>
-          <li><span class="badge soon" data-i18n="st.soon">Próximamente</span><div><h3 data-i18n="st.5.t">Más profesiones</h3><p data-i18n="st.5.d">Diseño en papel; ningún rol nuevo está construido todavía.</p></div></li>
-          <li><span class="badge soon" data-i18n="st.soon">Próximamente</span><div><h3 data-i18n="st.6.t">Resistencia y empresa</h3><p data-i18n="st.6.d">Ejecuciones que sobreviven a un reinicio y SSO no existen todavía. La auditoría se exporta, pero sin firma externa.</p></div></li>
-        </ul>
+        <div class="board">
+          <section class="col col-ok reveal" aria-labelledby="col1-h">
+            <h3 id="col1-h"><span class="dot" aria-hidden="true"></span><span data-i18n="st.col1">Funciona hoy</span></h3>
+            <ul data-stagger>
+              <li><h4 data-i18n="st.1.t">Oficina 3D, dashboard, proyectos, aprobaciones y costos</h4><p data-i18n="st.1.d">De punta a punta en modo simulación: respuestas guionadas y realistas, sin clave de IA y sin costo.</p></li>
+              <li><h4 data-i18n="st.2.t">IA real con tu propia clave</h4><p data-i18n="st.2.d">OpenAI, Claude, Kimi, DeepSeek o un endpoint compatible. Funciona, pero la hemos probado menos que la simulación.</p></li>
+              <li><h4 data-i18n="st.3.t">Cuentas y oficinas separadas</h4><p data-i18n="st.3.d">Registro con correo, cuenta de prueba de 24 horas e invitaciones con roles (owner, admin, member, viewer).</p></li>
+              <li><h4 data-i18n="st.4.t">Trabajo que sobrevive a un reinicio</h4><p data-i18n="st.4.d">Las solicitudes en curso y las aprobaciones pendientes se retoman al arrancar, con una sola instancia del servidor.</p></li>
+            </ul>
+          </section>
+          <section class="col col-dev reveal" aria-labelledby="col2-h">
+            <h3 id="col2-h"><span class="dot" aria-hidden="true"></span><span data-i18n="st.col2">Construido, falta probarlo en real</span></h3>
+            <ul data-stagger>
+              <li><h4 data-i18n="st.5.t">Conectores: Gmail, Google Calendar y Drive, Slack, LinkedIn y GitHub</h4><p data-i18n="st.5.d">Con permisos y aprobación antes de enviar. Aún no probados con cuentas reales: no los uses todavía con datos importantes.</p></li>
+              <li><h4 data-i18n="st.6.t">SSO por OIDC, dominios verificados y SCIM</h4><p data-i18n="st.6.d">Implementados en el código; todavía no validados con clientes.</p></li>
+            </ul>
+          </section>
+          <section class="col col-soon reveal" aria-labelledby="col3-h">
+            <h3 id="col3-h"><span class="dot" aria-hidden="true"></span><span data-i18n="st.col3">Planeado</span></h3>
+            <ul data-stagger>
+              <li><h4 data-i18n="st.7.t">WhatsApp y otros canales de mensajería</h4><p data-i18n="st.7.d">Diseñados en papel. Hoy no existen.</p></li>
+              <li><h4 data-i18n="st.8.t">SAML y recuperación con varias instancias</h4><p data-i18n="st.8.d">Pendientes. Hoy el SSO es solo OIDC y la recuperación supone un solo servidor.</p></li>
+              <li><h4 data-i18n="st.9.t">Precios</h4><p data-i18n="st.9.d">Aún no hay. Primero queremos aprender del uso real.</p></li>
+            </ul>
+          </section>
+        </div>
       </div>
     </section>
 
+    <!-- GETTING STARTED -->
     <section class="section" id="usar" aria-labelledby="use-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="use-h" data-i18n="use.title">Cómo usarla, en cuatro pasos</h2>
-          <p class="lead" data-i18n="use.lead">Crea tu cuenta y en cinco minutos ya habrás pedido, visto trabajar y aprobado tu primera tarea.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="use.kicker">Primeros pasos</p>
+          <h2 id="use-h" data-i18n="use.title">Tu primera tarea, en cinco minutos.</h2>
+          <p class="lead" data-i18n="use.lead">Crea tu cuenta y en cinco minutos habrás pedido algo, visto trabajar al equipo y aprobado tu primera acción.</p>
         </div>
-        <ol class="usage">
-          <li><h3 data-i18n="use.1.t">Pide</h3><p data-i18n="use.1.d">Escribe lo que necesitas en la barra de abajo de la oficina, como se lo pedirías a un jefe de equipo. También hay atajos para probar.</p></li>
-          <li><h3 data-i18n="use.2.t">Mira</h3><p data-i18n="use.2.d">Tus empleados de IA se reparten el trabajo y lo ves pasar en vivo: quién hace qué, cuánto cuesta y en qué punto va.</p></li>
-          <li><h3 data-i18n="use.3.t">Aprueba</h3><p data-i18n="use.3.d">Lo sensible se detiene y espera tu decisión. Apruebas o rechazas desde la bandeja; nada importante sale sin ti.</p></li>
-          <li><h3 data-i18n="use.4.t">Recibe</h3><p data-i18n="use.4.d">Obtienes un reporte, y cada tarea terminada suma monedas para vestir a tu equipo y decorar la oficina.</p></li>
+        <ol class="usage reveal" data-stagger>
+          <li><span class="u-n" aria-hidden="true">1</span><h3 data-i18n="use.1.t">Pide</h3><p data-i18n="use.1.d">Escribe lo que necesitas en la barra de la oficina, como se lo pedirías a un jefe de equipo. También hay atajos para probar.</p></li>
+          <li><span class="u-n" aria-hidden="true">2</span><h3 data-i18n="use.2.t">Mira</h3><p data-i18n="use.2.d">Tus empleados de IA se reparten el trabajo y lo ves pasar en vivo: quién hace qué, cuánto cuesta y en qué punto va.</p></li>
+          <li><span class="u-n" aria-hidden="true">3</span><h3 data-i18n="use.3.t">Aprueba</h3><p data-i18n="use.3.d">Lo sensible se detiene y espera tu decisión. Apruebas o rechazas desde la bandeja; nada importante sale sin ti.</p></li>
+          <li><span class="u-n" aria-hidden="true">4</span><h3 data-i18n="use.4.t">Recibe</h3><p data-i18n="use.4.d">Obtienes un reporte, y cada tarea terminada suma monedas para vestir a tu equipo y decorar la oficina.</p></li>
         </ol>
-        <p class="usage-cta"><a class="btn btn-primary" data-guide="getting-started" href="/guia/primeros-pasos/" data-i18n="use.cta">Leer la guía de uso completa</a></p>
+        <p class="usage-cta reveal"><a class="btn btn-ghost btn-arrow" data-guide="getting-started" href="/guia/primeros-pasos/"><span data-i18n="use.cta">Leer la guía de uso completa</span><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a></p>
       </div>
     </section>
 
+    <!-- FAQ -->
     <section class="section alt" id="faq" aria-labelledby="faq-h">
-      <div class="wrap narrow">
-        <h2 id="faq-h" data-i18n="faq.title">Preguntas frecuentes</h2>
-        <div class="faq">
-          <details><summary data-i18n="faq.q1">¿Esto usa IA de verdad hoy?</summary><p data-i18n="faq.a1">Por defecto no: sin clave de API corre en modo simulación, con resultados guionados. Al configurar la clave, usa un modelo real. Cuando crees tu cuenta, ya sabes qué esperar.</p></details>
-          <details><summary data-i18n="faq.q2">¿Puede enviar correos o mensajes por mí?</summary><p data-i18n="faq.a2">El flujo existe para Gmail y siempre pide tu aprobación, pero con cuentas reales aún no está probado. No lo uses todavía con correo importante. WhatsApp y otros canales están planeados, no construidos.</p></details>
+      <div class="wrap faq-wrap">
+        <div class="head reveal">
+          <p class="kicker" data-i18n="faq.kicker">Preguntas</p>
+          <h2 id="faq-h" data-i18n="faq.title">Preguntas frecuentes</h2>
+        </div>
+        <div class="faq reveal">
+          <details><summary data-i18n="faq.q1">¿Esto usa IA de verdad?</summary><p data-i18n="faq.a1">Depende de ti. Sin clave corre en modo simulación, con resultados guionados y sin costo. Con tu propia clave de OpenAI, Claude, Kimi o DeepSeek usa un modelo real; esa ruta funciona, pero la hemos probado menos que la simulación.</p></details>
+          <details><summary data-i18n="faq.q2">¿Puede enviar correos o mensajes por mí?</summary><p data-i18n="faq.a2">Los conectores de Gmail, Google Calendar y Drive, Slack, LinkedIn y GitHub existen y siempre piden tu aprobación antes de enviar, pero aún no están probados con cuentas reales. No los uses todavía con correo importante. WhatsApp está planeado, no construido.</p></details>
           <details><summary data-i18n="faq.q3">¿Qué pasa con mis datos y mis claves?</summary><p data-i18n="faq.a3">Las claves van a una bóveda cifrada y el modelo no las ve. Con IA real, el texto de las tareas se envía al proveedor de modelo que configures; revisa sus condiciones antes de usar datos sensibles.</p></details>
           <details><summary data-i18n="faq.q4">¿Puede un agente aprobar algo por su cuenta?</summary><p data-i18n="faq.a4">No. Un agente puede pedir aprobación, pero la decisión es siempre de una persona. Tú ajustas qué requiere aprobación y cuánta autonomía tiene cada empleado.</p></details>
-          <details><summary data-i18n="faq.q5">¿Reemplaza a mi equipo?</summary><p data-i18n="faq.a5">No es la propuesta. Es un equipo de apoyo que prepara, organiza y consulta; las decisiones importantes siguen siendo tuyas. No sustituye a un abogado, contador ni otro profesional.</p></details>
-          <details><summary data-i18n="faq.q6">¿Cuánto cuesta?</summary><p data-i18n="faq.a6">Todavía no hay precios. Estamos abriendo acceso anticipado para aprender de uso real antes de fijarlos.</p></details>
-          <details><summary data-i18n="faq.q7">¿Sirve para una empresa grande?</summary><p data-i18n="faq.a7">Hoy no. Está pensado para equipos pequeños y profesionales hispanohablantes. Faltan SSO, firma externa de la auditoría y durabilidad ante reinicios, entre otras cosas.</p></details>
+          <details><summary data-i18n="faq.q5">¿Reemplaza a mi equipo?</summary><p data-i18n="faq.a5">No es la idea. Es un equipo de apoyo que prepara, organiza y consulta; las decisiones importantes siguen siendo tuyas. No sustituye a un abogado, a un contador ni a otro profesional.</p></details>
+          <details><summary data-i18n="faq.q8">¿Qué es «Probar sin registrarte»?</summary><p data-i18n="faq.a8">Una cuenta de prueba desechable, con su propia oficina, que deja de funcionar a las 24 horas. No pide correo: el usuario y la contraseña se muestran una sola vez.</p></details>
+          <details><summary data-i18n="faq.q6">¿Cuánto cuesta?</summary><p data-i18n="faq.a6">Todavía no hay precios. Estamos en acceso anticipado para aprender del uso real antes de fijarlos.</p></details>
+          <details><summary data-i18n="faq.q7">¿Sirve para una empresa grande?</summary><p data-i18n="faq.a7">Todavía no. Ya hay SSO por OIDC, SCIM y recuperación tras reinicios, pero no tenemos certificaciones ni SAML y no lo hemos validado con empresas grandes. Hoy está pensado para equipos pequeños y profesionales hispanohablantes.</p></details>
         </div>
       </div>
     </section>
 
+    <!-- FINAL CTA -->
     <section class="final" id="final" aria-labelledby="final-h">
-      <div class="wrap">
-        <h2 id="final-h" data-i18n="final.title">Crea tu cuenta</h2>
-        <p class="lead" data-i18n="final.d">Regístrate con tu correo y el nombre de tu empresa y llegas a tu propia oficina, separada de las demás. Todavía no hay precios: estamos en acceso anticipado y aprendiendo de cómo se usa. Esta página no recoge datos; el registro ocurre en la app.</p>
+      <div class="final-bg" aria-hidden="true"><span class="orb f1"></span><span class="orb f2"></span></div>
+      <div class="wrap final-in reveal">
+        <div class="final-avs" aria-hidden="true"><span style="--c:#5a95e8">S</span><span style="--c:#f4895a">V</span><span style="--c:#9577d6">E</span><span style="--c:#4cb987">T</span><span style="--c:#45b8cc">N</span><span style="--c:#e8b53a">I</span><span style="--c:#ee7aa8">M</span></div>
+        <h2 id="final-h" data-i18n="final.title">Pide tu primera tarea hoy.</h2>
+        <p class="lead" data-i18n="final.d">Crea tu cuenta con tu correo y el nombre de tu empresa: llegas a tu propia oficina, separada de las demás. Todavía no hay precios; estamos en acceso anticipado. Esta página no recoge datos: el registro ocurre en la app.</p>
         <div class="actions">
-          <a class="btn btn-invert" data-cta="signup" href="https://app.workforceai.es/register" data-i18n="cta.early">Crear cuenta</a>
-          <a class="btn btn-outline-invert" data-cta="login" href="https://app.workforceai.es/login" data-i18n="cta.demo">Entrar</a>
+          <a class="btn btn-invert btn-lg btn-arrow" data-cta="signup" href="https://app.workforceai.es/register"><span data-i18n="cta.early">Crear cuenta</span><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a class="btn btn-outline-invert btn-lg" data-cta="trial" href="https://app.workforceai.es/prueba" data-i18n="cta.trial">Probar sin registrarte</a>
+          <a class="btn btn-text-invert btn-lg" data-cta="login" href="https://app.workforceai.es/login" data-i18n="cta.demo">Entrar</a>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer">
+  <footer class="site-footer home-foot">
     <div class="wrap">
-      <p data-i18n="footer.line">AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
-      <a data-docs="index" href="/docs/" data-i18n="footer.docs">Documentación</a>
-      <a data-guide="index" href="/guia/" data-i18n="footer.guide">Guía de uso</a>
-      <a href="#top" data-i18n="footer.top">Volver arriba</a>
+      <div class="foot-grid">
+        <div class="foot-brand">
+          <a class="brand" href="#top" data-i18n-aria="a11y.home" aria-label="AI Workforce OS, inicio"><svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/></svg><span>AI Workforce OS</span></a>
+          <p data-i18n="footer.tag">Una oficina virtual donde tus empleados de IA trabajan a la vista y tú decides lo importante.</p>
+        </div>
+        <nav class="foot-col" aria-labelledby="fp-h">
+          <h2 id="fp-h" data-i18n="footer.product">Producto</h2>
+          <a href="#como" data-i18n="nav.how">Cómo funciona</a>
+          <a href="#control" data-i18n="nav.control">Control</a>
+          <a href="#equipo" data-i18n="nav.team">Equipo</a>
+          <a href="#estado" data-i18n="nav.status">Estado</a>
+          <a href="#faq" data-i18n="nav.faq">Preguntas</a>
+        </nav>
+        <nav class="foot-col" aria-labelledby="fr-h">
+          <h2 id="fr-h" data-i18n="footer.res">Recursos</h2>
+          <a data-guide="index" href="/guia/" data-i18n="footer.guide">Guía de uso</a>
+          <a data-docs="index" href="/docs/" data-i18n="footer.docs">Documentación</a>
+          <a data-trust="index" href="/confianza/" data-i18n="nav.trustCenter">Centro de confianza</a>
+        </nav>
+        <div class="foot-col">
+          <h2 data-i18n="footer.contact">Contacto</h2>
+          <a href="mailto:info@workforceai.es">info@workforceai.es</a>
+          <div class="lang" role="group" data-i18n-aria="a11y.lang" aria-label="Idioma">
+            <a href="/" hreflang="es" lang="es" data-lang="es" aria-current="true">ES</a>
+            <a href="/en/" hreflang="en" lang="en" data-lang="en">EN</a>
+          </div>
+        </div>
+      </div>
+      <div class="foot-base">
+        <p data-i18n="footer.line">AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; lo marcado como simulación usa respuestas guionadas, sin IA real.</p>
+        <a href="#top" data-i18n="footer.top">Volver arriba</a>
+      </div>
     </div>
   </footer>
 

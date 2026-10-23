@@ -23,6 +23,7 @@ const escAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
 const GUIDE = loadPages();
 const DOCS = loadPages("docs");
+const TRUST = loadPages("trust");
 const PAGES = {
   es: { file: "index.html", url: SITE + "/", locale: "es_ES" },
   en: { file: "en/index.html", url: SITE + "/en/", locale: "en_US" },
@@ -52,6 +53,7 @@ function bake(template, lang) {
   html = html.replace(/<a\b[^>]*\bdata-guide="([^"]+)"[^>]*>/g, (tag, id) => setAttr(tag, "href", guidePath(id, lang, GUIDE)));
 
   html = html.replace(/<a\b[^>]*\bdata-docs="([^"]+)"[^>]*>/g, (tag, id) => setAttr(tag, "href", pagePath(id, lang, DOCS, "docs")));
+  html = html.replace(/<a\b[^>]*\bdata-trust="([^"]+)"[^>]*>/g, (tag, id) => setAttr(tag, "href", pagePath(id, lang, TRUST, "trust")));
 
   // Page identity: language, canonical, social URL and locale, which language link is current.
   const page = PAGES[lang];
