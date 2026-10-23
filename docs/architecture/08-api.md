@@ -454,7 +454,7 @@ Ningún payload contiene secretos ni contenido de mensajes (salvo `tool_call` en
 | `agent.control_changed` | `{agent_id, control, read_only?, by, reason?}` |
 | `tool_call.hold_changed` | `{hold_id, status, reason?, hold_until?, tool_call: EmailDraft}` |
 | `plan.review_requested`, `plan.approved`, `plan.rejected` | `{request_id, preflight}` |
-| `security.alert` | `{kind:"prompt_injection_suspected" o "secret_detected", agent_id, tool, ...}` |
+| `security.alert` | `{kind:"prompt_injection_suspected" o "secret_detected", agent_id, tool, ...}`; para `prompt_injection_suspected` (B10, aditivo): `{agent_id, task_id, request_id, tool, action, source:"connection"\|"native"\|"web", connection_id?, treated_as_data:true}`, nunca el texto del tercero (sec. 27) |
 
 ### 13.7 Contrato Go -> runtime (extensión aditiva)
 
@@ -913,3 +913,7 @@ Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditor
 ## 26. Puntaje de calidad y casos dorados (B11)
 
 Puntaje orientativo por agente con la metodología en la respuesta (componentes, pesos, tamaños de muestra, `insufficient_data` bajo el mínimo), ventana móvil y tendencia. Solo lectura sobre señales existentes; nunca cambia autonomía ni permisos. Rutas: `GET /quality/agents`, `GET /agents/{id}/quality`, `GET|POST /agents/{id}/golden-cases`, `PUT|DELETE /golden-cases/{id}`, `GET|POST /golden-cases/{id}/runs` (lectura `agents:read`, escritura `agents:write`, escrituras auditadas). Contrato y metodología completos: `docs/architecture/quality-score.md`. Migración `789_quality_golden`.
+
+## 27. Escudo visible (B10)
+
+Sin endpoints nuevos. Cuando el detector marca como intento de dar órdenes un contenido que leyó un agente (conexión, herramienta nativa o web), el backend emite `security.alert` (`kind:"prompt_injection_suspected"`, payload de la sec. 13.6) y audita `security.injection_suspected` (actor = agente, `details {tool, action, task_id, request_id, source, treated_as_data}`). El registro de seguridad de la UI es `GET /audit?type=security.injection_suspected&limit=50` (sec. 14.2, `audit:read`). Sólo identificadores: ni el evento ni la auditoría llevan el texto del tercero. Detalle: `docs/architecture/shield.md`.

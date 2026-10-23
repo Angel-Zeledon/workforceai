@@ -64,7 +64,7 @@ SPEC: `{ id, type, ts, org_id, agent_id?, payload }`. **[CAMBIO] aditivo y compa
 | `customer.created|updated` | `{customer}` | Dominio | 2 |
 | `notification.created` | `{notification}` | Para el usuario destino | 2 |
 | `integration.inbound` | `{channel, conversation_id, message_id}` | Llega email/WhatsApp (ya sanitizado) | 4 |
-| `security.alert` | `{kind, agent_id?, detail}` | Inyeccion detectada, intento denegado (07) | 2 |
+| `security.alert` | `{kind, agent_id?, detail}`; `prompt_injection_suspected` lleva `{agent_id, task_id, request_id, tool, action, source, treated_as_data}` (shield.md) | Inyeccion detectada, intento denegado (07); la oficina muestra el escudo (B10) | 2 |
 | `chat.message` | `{id, conversation, turn_id, from, to, kind, text, reply_to, ts, request_id?, files?}` | Mensaje del usuario o de un agente/sistema en `office` o `agent:<id>` (chat-routing.md). `files?` (aditivo) = `[{file_id, path, name, mime, size, version, action}]` referencias a archivos del drive (`write` producido por el agente, `attach` adjunto del usuario), nunca contenido; el frontend las muestra como tarjetas que abren el visor | 1 |
 | `chat.typing` | `{conversation, turn_id, agent_id, on}` | Un agente prepara su respuesta (siempre par on/off) | 1 |
 | `route.decided` | `{turn_id, conversation, intent, topic, responders:[{agent_id, role, reason}], source, consult?}` | El router decidió quién responde; `intent=task` sigue con `request.received`/`plan.created` | 1 |
