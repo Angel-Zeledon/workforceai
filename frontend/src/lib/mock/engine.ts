@@ -17,6 +17,7 @@ import { MockChatHistory } from "./chats-mock";
 import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
 import { mockQuality } from "./quality-mock";
+import { MockCustomers } from "./customers-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
 
@@ -141,6 +142,7 @@ export class MockBackend {
   private running = new Map<string, number>(); // agent -> number of tasks running
   private orgCfg = new MockOrgConfig(); // workflow templates, onboarding, org settings and schedules
   private orgChart = new MockOrgChart(() => this.agents); // >>> org <<< departments, org chart, job descriptions, delegation, industries
+  private customers = new MockCustomers(() => this.agents, () => this.requests); // B12: customer district (buildings, clones, scoped requests)
   private art = new MockArtifacts((t, p, a) => this.emit(t, p, a), (ms) => this.wait(ms)); // workspaces: artifact.* endpoints/events
   private chat = new MockChat({
     emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agent: (id) => this.agents.find((a) => a.id === id), agents: () => this.agents,
@@ -540,6 +542,7 @@ export class MockBackend {
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
     // >>> org
     if (this.orgChart.matches(seg)) return this.orgChart.handle(method, seg, body, q);
+    if (this.customers.matches(seg)) return this.customers.handle(method, seg, q, body);
     // <<< org
     if (this.orgCfg.matches(seg)) return this.orgCfg.handle(method, seg, body, (text) => this.handle("POST", "/requests", { text }));
     if (this.conns.matches(r0, r2)) return this.conns.handle(method, seg, q, body);
@@ -588,7 +591,13 @@ export class MockBackend {
     }
     if (method === "POST") {
       if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : []);
-      if (r0 === "requests") { const id = await this.startRequest(String(body?.text || "").trim()); return { request_id: id }; }
+      if (r0 === "requests") {
+        const cid = body?.customer_id ? String(body.customer_id) : "";
+        if (cid && !this.customers.hasCustomer(cid)) throw new Error("customer not found");
+        const id = await this.startRequest(String(body?.text || "").trim());
+        if (cid) this.customers.linkRequest(id, cid); // B12: the request is scoped to the customer
+        return { request_id: id };
+      }
       if (r0 === "conversations" && r1 && r2 === "messages") {
         const conv = this.conversations.find((c) => c.id === r1);
         if (!conv) throw new Error("conversation not found");
