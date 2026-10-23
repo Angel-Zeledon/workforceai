@@ -156,6 +156,7 @@ type ChatTurn struct {
 // chatTurn is the in-memory state of one turn.
 type chatTurn struct {
 	conv, id, text, userMsgID string
+	userTS                    time.Time // when the user's message was stamped; replies sort after it
 	loc                       string
 	style                     RunStyle
 	agents                    []domain.Agent
@@ -171,6 +172,34 @@ type chatTurn struct {
 type handoff struct {
 	From, To, Intent, Text string
 }
+
+// replyTS stamps a message of the turn (reply, consult, notice): now, but always after the user's
+// message at the microsecond precision of the stores. Threads order by (ts, id) with random ids, so
+// a reply stamped in the same tick (an instant fallback, or Windows' coarse clock) could otherwise
+// sort before the message it answers. 2µs keeps it strictly after whether the store truncates or
+// rounds to microseconds. It waits for the clock (at most one tick) instead of stamping ahead of it,
+// so later "now" stamps (a mark-as-read, the next message) still compare correctly; only a clock
+// that jumped backwards gets the floor itself.
+func (t *chatTurn) replyTS() time.Time {
+	if t.userTS.IsZero() {
+		return time.Now().UTC()
+	}
+	floor := t.userTS.Truncate(time.Microsecond).Add(2 * time.Microsecond)
+	for {
+		now := time.Now().UTC()
+		gap := floor.Sub(now)
+		if gap <= 0 {
+			return now
+		}
+		if gap > maxReplyClockWait {
+			return floor
+		}
+		time.Sleep(gap)
+	}
+}
+
+// maxReplyClockWait bounds replyTS's wait: a coarse clock tick is ~16ms at worst.
+const maxReplyClockWait = 50 * time.Millisecond
 
 func chatLocale(s RunStyle) string {
 	if strings.HasPrefix(strings.ToLower(s.Locale), "en") {
@@ -325,8 +354,9 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	if err := o.ensureChatConv(ctx, t); err != nil {
 		return ChatTurn{}, err
 	}
+	t.userTS = time.Now().UTC()
 	m := domain.Message{ID: t.userMsgID, ConversationID: conversation, From: "user", To: to, Kind: domain.MsgChat, Text: text,
-		TS: time.Now().UTC(), TurnID: t.id}
+		TS: t.userTS, TurnID: t.id}
 	if att := attachmentsFrom(ctx); len(att) > 0 {
 		if len(att) > maxAttachments {
 			att = att[:maxAttachments]
@@ -729,7 +759,7 @@ func (o *Orchestrator) chatSpeak(ctx context.Context, t *chatTurn, agent domain.
 	}
 	resp.Text = strings.TrimSpace(resp.Text)
 	m := domain.Message{ID: newID(), ConversationID: t.conv, From: agent.ID, To: to, Kind: kind, Text: resp.Text,
-		TS: time.Now().UTC(), TurnID: t.id}
+		TS: t.replyTS(), TurnID: t.id}
 	if kind != domain.MsgAnswer { // an answer replies to a colleague, not to the user
 		reply := t.userMsgID
 		m.ReplyTo = &reply
@@ -750,7 +780,7 @@ func (o *Orchestrator) chatConsult(ctx context.Context, t *chatTurn, from domain
 	}
 	reply := t.userMsgID
 	m := domain.Message{ID: newID(), ConversationID: t.conv, From: from.ID, To: to.ID, Kind: domain.MsgConsult, Text: truncate(question, 400),
-		TS: time.Now().UTC(), TurnID: t.id, ReplyTo: &reply}
+		TS: t.replyTS(), TurnID: t.id, ReplyTo: &reply}
 	o.chatStore(ctx, m, "")
 	req := o.chatReplyRequest(t, to, route, RouteResponder{AgentID: to.ID, Role: domain.RoleContributor}, 1, nil)
 	req.Consult = &ChatConsultIn{FromAgentID: from.ID, Question: question}
@@ -922,7 +952,7 @@ func (o *Orchestrator) chatBudgetNotice(ctx context.Context, t *chatTurn, ex *Ex
 func (o *Orchestrator) chatSystem(ctx context.Context, t *chatTurn, text string) {
 	reply := t.userMsgID
 	o.chatStore(ctx, domain.Message{ID: newID(), ConversationID: t.conv, From: "system", To: "user", Kind: domain.MsgChat, Text: text,
-		TS: time.Now().UTC(), TurnID: t.id, ReplyTo: &reply}, "")
+		TS: t.replyTS(), TurnID: t.id, ReplyTo: &reply}, "")
 }
 
 // chatStore persists a message and publishes chat.message.

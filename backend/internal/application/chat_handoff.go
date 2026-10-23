@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"aiworkforce/backend/internal/domain"
 )
@@ -99,7 +98,7 @@ func (o *Orchestrator) chatLimitSay(ctx context.Context, t *chatTurn, agent doma
 	}
 	reply := t.userMsgID
 	o.chatStore(ctx, domain.Message{ID: newID(), ConversationID: t.conv, From: agent.ID, To: "user", Kind: domain.MsgChat, Text: text,
-		TS: time.Now().UTC(), TurnID: t.id, ReplyTo: &reply}, "")
+		TS: t.replyTS(), TurnID: t.id, ReplyTo: &reply}, "")
 	return true
 }
 
