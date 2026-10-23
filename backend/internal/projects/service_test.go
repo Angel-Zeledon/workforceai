@@ -351,7 +351,15 @@ func TestPauseResumeCancel(t *testing.T) {
 	if _, err := e.svc.Control(e.ctx, id, "resume"); err != nil {
 		t.Fatal(err)
 	}
-	e.waitFor("progress after resume", func() bool { return rt.hasStarted("Elaborar la propuesta principal") })
+	// Cancel only once both tasks of the second wave reached the runtime: a task
+	// the gate admitted just before the cancel is in flight and may still start
+	// its call afterwards (running work finishes, as with pause), so cancelling
+	// mid-admission made the "no new work" check below flaky under load. After
+	// them only the approval gate and the final report remain, which the cancel
+	// must stop.
+	e.waitFor("progress after resume", func() bool {
+		return rt.hasStarted("Elaborar la propuesta principal") && rt.hasStarted("Calcular el impacto financiero")
+	})
 
 	if _, err := e.svc.Control(e.ctx, id, "cancel"); err != nil {
 		t.Fatal(err)

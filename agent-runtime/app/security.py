@@ -189,22 +189,22 @@ INSTRUCTIONS_REMINDER = (
 )
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _FORGED_RULES = re.compile(r"reglas inquebrantables", re.I)
-_BLOCK_DELIMITERS = ("<<<", ">>>", "</untrusted_data>", "<untrusted_data")
+# The <<< >>> blocks of trusted text (instructions, skills) and the <untrusted_data> tags of
+# connection results, in any case and with stray spaces ("< / UNTRUSTED_DATA").
+_BLOCK_DELIMITERS = re.compile(r"<<<|>>>|<\s*/?\s*untrusted_data", re.I)
 
 
 def _defuse_blocks(text: str) -> str:
     """Admin/organization text cannot forge a block delimiter nor impersonate the fixed rules header."""
-    for d in _BLOCK_DELIMITERS:
-        text = text.replace(d, "[delimitador]")
-    return _FORGED_RULES.sub("reglas (citado)", text)
+    return _FORGED_RULES.sub("reglas (citado)", _BLOCK_DELIMITERS.sub("[delimitador]", text))
 
 
 def _clean_trusted_text(text: Any, limit: int) -> str:
     """Trusted-but-untouchable text: bounded, no control characters, no secrets, cannot forge the
-    delimiters of untrusted blocks nor impersonate the fixed rules header."""
+    delimiters of untrusted blocks, cannot close its own <<< >>> block (nor open another one or an
+    <untrusted_data> block) and cannot impersonate the fixed rules header."""
     t = _CONTROL.sub("", str(text or "")).strip()[:limit]
-    t = _neutralize(redact_secrets(t))
-    return _FORGED_RULES.sub("reglas (citado)", t)
+    return _defuse_blocks(_neutralize(redact_secrets(t)))
 
 
 def clean_instructions(text: Any) -> str:
