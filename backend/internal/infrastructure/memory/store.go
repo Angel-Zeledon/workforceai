@@ -51,7 +51,8 @@ type Store struct {
 	roi           map[string]application.ROISettings       // AI payroll / return model by org (roi.go)
 	counter       counterargumentState                     // devil's advocate reviews, cached per approval (counterarguments.go)
 	rehearsal     rehearsalState                           // B9 rehearsal switches and "would have done" actions (rehearsal.go)
-	v2            v2State                                 // work profiles, traces, steer notes (v2.go)
+	debates       debateState                              // team debates (debates.go)
+	v2            v2State                                  // work profiles, traces, steer notes (v2.go)
 	hist          chatHistState                            // chat history: archive, custom titles, read markers (chat_history.go)
 }
 
@@ -72,6 +73,7 @@ func (s *Store) clear() {
 	s.runMeta, s.checkpoints = map[string][]byte{}, map[string][]byte{}
 	s.counter.byKey = nil
 	s.rehearsal.actions = nil // execution data; the per-agent switches are configuration and survive a reset
+	s.debates.byOrg = nil
 	s.executions = map[string]application.ApprovalExecution{}
 	s.v2.traces, s.v2.steer = nil, nil // execution data; profiles are configuration and survive a reset
 	// Request caps are execution data; agent caps are configuration and survive a reset.

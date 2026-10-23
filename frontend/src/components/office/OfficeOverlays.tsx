@@ -13,7 +13,7 @@ import { feetPos } from "./registry";
 import { useRegister } from "./useRegister";
 import { getSignals } from "./officeSignals";
 import {
-  BUBBLE_GAP_MS, BUBBLE_SHOW_MS, approvalsSpot, phaseFor, pickBubble, stepBubbles, type Bubble, type BubbleState,
+  BUBBLE_GAP_MS, BUBBLE_SHOW_MS, approvalsSpot, phaseFor, pickBubble, stepBubbles, truncateText, type Bubble, type BubbleState,
 } from "./officeState";
 
 // ---------------------------------------------------------------------------------------------
@@ -79,10 +79,12 @@ export function MeetingTag() {
   const sig = useSignalsTick();
   const ref = useRegister("popup:meeting", "popup", "meeting");
   if (!sig.meetingSlot.size) return null;
+  const debating = !!sig.debate;
   return (
     <div ref={ref} data-h={26} data-w={190} data-tier="popup" className="pointer-events-none absolute left-0 top-0 origin-bottom" style={{ opacity: 0 }}>
-      <div data-testid="office-meeting-tag" className="ac-pop rounded-full border border-line-strong bg-white px-3 py-1 font-sans text-[10.5px] font-semibold tracking-tight text-ink shadow-soft">
-        <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#5a7fd0]" />{t("office.planning.title")}
+      <div data-testid="office-meeting-tag" data-debate={debating ? sig.debate!.id : undefined} title={debating ? sig.debate!.topic : undefined}
+        className="ac-pop rounded-full border border-line-strong bg-white px-3 py-1 font-sans text-[10.5px] font-semibold tracking-tight text-ink shadow-soft">
+        <span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${debating ? "bg-[#c2410c]" : "bg-[#5a7fd0]"}`} />{t(debating ? "office.debate.title" : "office.planning.title")}
       </div>
     </div>
   );
@@ -98,7 +100,9 @@ function useSignalsTick() {
       useCost.subscribe(() => { const n = getSignals(); if (n !== last.current) { last.current = n; force((v) => v + 1); } }),
       useProjects.subscribe(() => { const n = getSignals(); if (n !== last.current) { last.current = n; force((v) => v + 1); } }),
     ];
-    return () => unsubs.forEach((u) => u());
+    // a debate's playback moves with the clock, not with the store: look again every second
+    const i = setInterval(() => { const n = getSignals(); if (n !== last.current) { last.current = n; force((v) => v + 1); } }, 1000);
+    return () => { unsubs.forEach((u) => u()); clearInterval(i); };
   }, []);
   return last.current;
 }
@@ -146,7 +150,14 @@ export function SpeechLayer() {
       const meeting: typeof cands = [], rest: typeof cands = [];
       for (const id of S.agentOrder) {
         const ag = S.agents[id];
-        if (!ag || talking.has(id)) continue;
+        if (!ag) continue;
+        // team debate (B5): the speaker says the current turn, the rest of the table listens (no other bubble)
+        if (sig.debate?.seats.includes(id)) {
+          const d = sig.debate;
+          meeting.push({ id, bubble: d.speaker === id && d.text ? { key: `debate:${d.id}:${d.turn}`, kind: "debate", text: truncateText(d.text, 90), live: true } : null });
+          continue;
+        }
+        if (talking.has(id)) continue;
         let line: { text: string; kind: string; ageMs: number } | null = null;
         for (let i = S.links.length - 1; i >= 0; i--) {
           const l = S.links[i];

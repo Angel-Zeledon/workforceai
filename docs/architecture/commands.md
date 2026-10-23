@@ -205,6 +205,8 @@ requests), the system notice posted by `clear`/`compact`, and the exported docum
   same prompt builders as `run-task`, without calling the LLM.
 * Markers in request text (honored by the live prompts and by the simulation, deterministically):
   `[[format:xlsx|docx|pdf]]`, `[[meeting:<agent ids>]]`, `[[lang:es|en]]`, `[[draft:email|linkedin]]`.
+  `[[debate]]` / `[[debate:<agent ids>]]` (`/debatir`, B5) is read by the backend, which has the team debate the plan's
+  decision before it runs (docs/architecture/team-debates.md); the runtime only strips it.
 
 ## Storage
 

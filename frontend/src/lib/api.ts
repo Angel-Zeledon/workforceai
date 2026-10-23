@@ -1,7 +1,7 @@
 import { API_URL, MOCK } from "./config";
 import { authFetch } from "./session";
 import type {
-  Agent, AgentDetail, Approval, ChatMessage, Counterargument, Conversation, Message, Metrics, Report, Request, StandingApproval, Task, ActivityItem,
+  Agent, AgentDetail, Approval, ChatMessage, Counterargument, Conversation, Debate, Message, Metrics, Report, Request, StandingApproval, Task, ActivityItem,
 } from "./types";
 
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -81,5 +81,9 @@ export const api = {
       always ? { decision, note, always_allow: true, always_allow_any_agent: always.anyAgent, scope: always.scope ?? "project" } : { decision, note }),
   /** Devil's advocate (B8): generates the advisory review of a high-risk approval on the first call and returns the cached one afterwards. */
   counterargument: (id: string, locale?: string) => call<Counterargument>("POST", `/approvals/${id}/counterargument`, locale ? { locale } : {}),
+  /** Team debates (B5): newest first; advisory, the transcript is untrusted model output. */
+  debates: async (requestId?: string) => list<Debate>(await call("GET", `/debates${requestId ? `?request_id=${encodeURIComponent(requestId)}` : ""}`)),
+  debate: (id: string) => call<Debate>("GET", `/debates/${encodeURIComponent(id)}`),
+  startDebate: (body: { topic: string; details?: string; options?: string[]; agent_ids?: string[]; locale?: string }) => call<Debate>("POST", "/debates", body),
   reset: () => call<unknown>("POST", "/demo/reset"),
 };

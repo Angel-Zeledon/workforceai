@@ -6,7 +6,8 @@ import { useStore } from "@/lib/store";
 import { useCan } from "@/lib/session";
 import { itemName, useRewards, type ShopItem } from "@/lib/rewards";
 import { effective, pieceOf, useOfficeLayout, withPiece, withoutPiece } from "@/lib/officeLayout";
-import { DEFAULT_LAYOUT, FIXTURES, FIXTURE_IDS, FLOOR_KINDS, FLOOR_TINTS, MOODS, TRIM_COLORS, WALL_COLORS, ZONE_NAMES, isHex, type FixtureId, type FloorKind, type Layout, type Mood, type ZoneName } from "@/lib/officeLayoutModel";
+import { DEFAULT_LAYOUT, FIXTURES, FIXTURE_IDS, FLOOR_KINDS, FLOOR_TINTS, MOODS, TRIM_COLORS, WALL_COLORS, ZONE_NAMES, dayPhase, isHex, localHour, type FixtureId, type FloorKind, type Layout, type Mood, type ZoneName } from "@/lib/officeLayoutModel";
+import { usePreferences } from "@/lib/preferences";
 import { Btn, useAgentName } from "../ui";
 import { Icon } from "../icons";
 import { ErrorLine } from "../connections/shared";
@@ -93,12 +94,14 @@ export function LightControls() {
   const { t } = useT();
   const light = useOfficeLayout((s) => effective(s).light);
   const setLight = useOfficeLayout((s) => s.setLight);
+  const auto = usePreferences((s) => s.prefs.lightAuto);
   return (
     <div className="space-y-3" data-testid="light-controls">
       <div className="grid grid-cols-5 gap-1.5">
         {MOODS.map((m) => (
-          <button key={m} type="button" data-testid={`oe-mood-${m}`} aria-pressed={light.mood === m} onClick={() => setLight({ mood: m, temp: MOOD_TEMP[m] })}
-            className={`flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10.5px] font-medium transition ${light.mood === m ? "border-accent bg-accent-soft text-accent" : "border-line text-ink2 hover:bg-panel2"}`}>
+          <button key={m} type="button" data-testid={`oe-mood-${m}`} aria-pressed={!auto && light.mood === m}
+            onClick={() => { if (auto) usePreferences.getState().set({ lightAuto: false }); setLight({ mood: m, temp: MOOD_TEMP[m] }); }}
+            className={`flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10.5px] font-medium transition ${!auto && light.mood === m ?"border-accent bg-accent-soft text-accent" : "border-line text-ink2 hover:bg-panel2"}`}>
             <Icon name={MOOD_ICON[m]} size={16} />{t(`oe.mood.${m}`)}
           </button>
         ))}
@@ -109,12 +112,31 @@ export function LightControls() {
   );
 }
 
+/**
+ * "Automatic (real time)": a per-viewer preference (B5). On, the room follows the viewer's local hour (dawn, day,
+ * dusk, night); off (the default), it keeps the organization's mood exactly as before. Picking a mood turns it off.
+ */
+export function AutoLightToggle() {
+  const { t } = useT();
+  const auto = usePreferences((s) => s.prefs.lightAuto);
+  const set = usePreferences((s) => s.set);
+  const phase = dayPhase(localHour(new Date()));
+  return (
+    <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-line px-2.5 py-2 text-[11.5px] text-ink2 hover:bg-panel2">
+      <input type="checkbox" data-testid="oe-light-auto" checked={auto} onChange={(e) => set({ lightAuto: e.target.checked })} className="mt-0.5 accent-accent" />
+      <span>
+        <span className="block font-semibold text-ink">{t("oe.light.auto")}</span>
+        <span className="block text-mute">{auto ? t("oe.light.autoNow", { phase: t(`oe.light.phase.${phase}`) }) : t("oe.light.autoHint")}</span>
+      </span>
+    </label>
+  );
+}
+
 /** HUD button of the office: the room's light, one click away (replaces the old ambient / lights on / night switch). */
 export function LightButton() {
   const { t } = useT();
   const can = useCan("shop:buy");
   const [open, setOpen] = useState(false);
-  if (!can) return null;
   return (
     <div className="pointer-events-auto relative">
       <button type="button" data-testid="office-light" aria-expanded={open} onClick={() => setOpen((v) => !v)}
@@ -125,7 +147,10 @@ export function LightButton() {
         <div className="absolute right-0 top-full z-50 mt-2 max-h-[calc(100dvh-6rem)] w-[300px] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-line bg-panel p-4 shadow-pop">
           <div className="mb-3 flex items-center justify-between"><h3 className="text-[13px] font-semibold text-ink">{t("oe.a.light")}</h3>
             <button type="button" onClick={() => setOpen(false)} aria-label={t("oe.cancel")} className="-m-1.5 rounded-md p-2.5 text-mute hover:bg-panel2 hover:text-ink"><Icon name="x" size={14} /></button></div>
-          <LightControls />
+          <div className="space-y-3">
+            <AutoLightToggle />
+            {can && <LightControls />}
+          </div>
         </div>
       )}
     </div>

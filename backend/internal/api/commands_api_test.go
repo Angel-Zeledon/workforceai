@@ -664,6 +664,17 @@ func TestCommandsDeliverablesMeetingAssignDrafts(t *testing.T) {
 	e.fails(e.member, map[string]any{"raw": "/reunion ventas fantasma: tema", "context": officeCtx}, 400, "unknown_agent")
 	e.fails(e.member, map[string]any{"raw": "/reunion ventas legal", "context": officeCtx}, 400, "missing_arg")
 
+	// debate (B5): the request is marked so the team debates the decision before the plan runs
+	e.ok(e.member, map[string]any{"raw": "/debatir ventas contabilidad: subir precio 2027", "context": officeCtx})
+	if p := e.lastPlan("subir precio 2027"); !strings.Contains(p, "[[debate:sales,accounting]]") || !strings.Contains(p, "[[lang:es]]") {
+		t.Fatalf("debate plan text: %q", p)
+	}
+	e.ok(e.member, map[string]any{"raw": "/debate pick a logistics vendor", "context": officeCtx})
+	if p := e.lastPlan("pick a logistics vendor"); !strings.Contains(p, "[[debate]]") || !strings.Contains(p, "[[lang:en]]") {
+		t.Fatalf("debate in English: %q", p)
+	}
+	e.fails(e.member, map[string]any{"raw": "/debatir ventas: tema", "context": officeCtx}, 400, "bad_participants")
+
 	// assign: a direct task, no planner involved
 	n := len(e.rt.planTexts())
 	out = e.ok(e.member, map[string]any{"raw": "/encargar @sales prepara la cotización de Acme", "context": officeCtx})

@@ -27,6 +27,7 @@ func init() {
 		cmdHandlers[id] = handler{run: func(c *cmdCall) (*cmdResult, *cmdFail) { return cmdDeliverable(c, id) }}
 	}
 	cmdHandlers["meeting"] = handler{run: cmdMeeting}
+	cmdHandlers["debate"] = handler{run: cmdDebate}
 	cmdHandlers["assign"] = handler{run: cmdAssign}
 	cmdHandlers["project"] = handler{run: cmdProject}
 	cmdHandlers["daily-summary"] = handler{run: cmdDaily}
@@ -96,6 +97,31 @@ func cmdMeeting(c *cmdCall) (*cmdResult, *cmdFail) {
 		"Meeting between %s about: %s. Each one gives their area's position with risks and proposals; the assistant writes the conclusion (agreements, disagreements and next steps)."),
 		strings.Join(names, ", "), topic)
 	return c.submit(c.marks("[[meeting:"+strings.Join(ids, ",")+"]]") + " " + body)
+}
+
+// ---- debate (B5) ----
+
+// cmdDebate submits the topic as a request marked [[debate]] / [[debate:a,b]]: before the plan runs the team
+// debates the decision (advisory; docs/architecture/team-debates.md), then the plan goes on with its approvals.
+func cmdDebate(c *cmdCall) (*cmdResult, *cmdFail) {
+	var ids []string
+	for _, ref := range c.list("agents") {
+		a := c.agentRef(ref)
+		if a == nil {
+			return nil, fail(http.StatusBadRequest, "unknown_agent", fmt.Sprintf("No encuentro al agente «%s».", ref), fmt.Sprintf("I cannot find the agent “%s”.", ref))
+		}
+		if a.ID != "assistant" && !slices.Contains(ids, a.ID) {
+			ids = append(ids, a.ID)
+		}
+	}
+	if len(ids) == 1 || len(ids) > application.DebateMaxParticipants {
+		return nil, fail(http.StatusBadRequest, "bad_participants", "Nombra de 2 a 4 agentes, o ninguno para que elija la asistente.", "Name 2 to 4 agents, or none and the assistant picks them.")
+	}
+	mark := "[[debate]]"
+	if len(ids) > 0 {
+		mark = "[[debate:" + strings.Join(ids, ",") + "]]"
+	}
+	return c.submit(c.marks(mark) + " " + c.str("topic"))
 }
 
 // ---- assign ----

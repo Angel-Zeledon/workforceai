@@ -8,6 +8,7 @@ import { Icon } from "../icons";
 import { EmptyState, PageHeader } from "../nav/ui2";
 import { meetingsApi, type CalEvent, type Meeting, type MeetingSettings, type RoomState } from "./api";
 import { CalendarPanel } from "./CalendarPanel";
+import { DebatesPanel } from "./DebatesPanel";
 import { filterMeetings, type MeetingFilter } from "./logic";
 import { MeetingsList } from "./MeetingsList";
 import { RoomsBoard } from "./RoomsBoard";
@@ -16,7 +17,7 @@ import { RoomView } from "./RoomView";
 import { ScheduleDialog, type Prefill } from "./ScheduleDialog";
 import { ErrorBar, errText } from "./shared";
 
-type Tab = "meetings" | "rooms" | "rituals" | "calendar";
+type Tab = "meetings" | "rooms" | "rituals" | "calendar" | "debates";
 const FILTERS: MeetingFilter[] = ["upcoming", "live", "past", "all"];
 const DAY = 24 * 3600 * 1000;
 
@@ -30,7 +31,7 @@ export function MeetingsView() {
   const router = useRouter();
   const params = useSearchParams();
   const canWrite = useCan("requests:create");
-  const [tab, setTab] = useState<Tab>(params.get("view") === "rituals" ? "rituals" : "meetings"); // ?view=rituals opens the stand-up / retro tab
+  const [tab, setTab] = useState<Tab>(() => (params.get("view") === "rituals" ? "rituals" : params.get("view") === "debates" ? "debates" : "meetings")); // ?view=rituals (stand-up / retro) or ?view=debates (from /debatir)
   const [filter, setFilter] = useState<MeetingFilter>("upcoming");
   const [mine, setMine] = useState(false);
   const [list, setList] = useState<Meeting[] | null>(null);
@@ -89,7 +90,7 @@ export function MeetingsView() {
         ) : undefined} />
 
       <div className="flex flex-wrap items-center gap-1 border-b border-line bg-panel px-5 py-2" role="tablist">
-        {(["meetings", "rooms", "rituals", "calendar"] as Tab[]).map((k) => (
+        {(["meetings", "rooms", "rituals", "calendar", "debates"] as Tab[]).map((k) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`meetings-tab-${k}`} onClick={() => setTab(k)}
             className={`rounded-md px-3 py-1.5 text-xs font-medium ${tab === k ? "bg-accent-soft text-accent" : "text-mute hover:bg-panel2 hover:text-ink"}`}>
             {t(`meetings.tab.${k}`)}{k === "rooms" && liveCount > 0 ? <span className="ml-1.5 rounded-full bg-ok/15 px-1.5 text-[10px] text-ok">{liveCount}</span> : null}
@@ -119,6 +120,7 @@ export function MeetingsView() {
           {tab === "rooms" && <RoomsBoard rooms={rooms} settings={settings} onOpenMeeting={(id) => go(`open=${encodeURIComponent(id)}`)} onOpenRoom={(room) => setDialog({ instant: true, room })} />}
           {tab === "rituals" && <RitualsPanel />}
           {tab === "calendar" && <CalendarPanel settings={settings} onSettings={setSettings} />}
+          {tab === "debates" && <DebatesPanel />}
         </div>
       </div>
 

@@ -48,6 +48,17 @@ export interface Counterargument {
   advisory: boolean; cached?: boolean; cost_usd: number; created_at: string; model?: string;
 }
 
+/** Team debate (B5, docs/architecture/team-debates.md): advisory, and every turn is untrusted model output. */
+export type DebateTurnKind = "position" | "objection" | "synthesis";
+export interface DebateTurn { seq: number; agent_id: string; kind: DebateTurnKind; text: string }
+export interface Debate {
+  id: string; topic: string; trigger: "planner_decision" | "user_request"; request_id?: string; task_id?: string;
+  options: string[]; participants: string[]; turns: DebateTurn[];
+  synthesis: { choice: string; rationale: string; dissent: string[] };
+  status: "done" | "failed" | "running"; fail_code?: string; max_turns: number; locale?: string; model?: string; provider?: string;
+  cost_usd: number; created_by?: string; created_at: string; advisory: boolean; untrusted: boolean;
+}
+
 /** "Always allow this kind of action in this project" (docs/architecture/06-permisos-autonomia.md). */
 export interface StandingApproval {
   id: string; project_id: string; agent_id: string; tool: string; action: string; approval_id?: string;

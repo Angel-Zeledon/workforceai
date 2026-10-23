@@ -68,6 +68,9 @@ type Deps struct {
 	DevilsAdvocate *application.DevilsAdvocate
 	// Rehearsal serves the rehearsal switches, the "would have done" log and the human verdicts (rehearsal.go, B9). Optional.
 	Rehearsal *application.RehearsalService
+	// Debates serves /debates (debates.go): team debates before a decision (B5). Optional: nil leaves the routes
+	// unmounted.
+	Debates *application.Debates
 	// Audit serves GET /audit, /audit/export and /audit/verify; Policy-related
 	// rules are served from OrgConfig (/policy/rules). Both optional.
 	Audit   *application.AuditService
@@ -278,6 +281,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountROI(r)
 			s.mountDevilsAdvocate(r)
 			s.mountRehearsal(r)
+			s.mountDebates(r)
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountDrive(r)
@@ -442,10 +446,15 @@ func (s *server) createRequest(w http.ResponseWriter, r *http.Request) {
 		// CustomerID (B12, optional) scopes the request to one customer: its tasks only ever see that
 		// customer's memories and files. The orchestrator stores the scope before the request exists.
 		CustomerID string `json:"customer_id"`
+		// Debate (B5, optional): the team debates the plan's decision before it runs (adds the [[debate]] marker).
+		Debate bool `json:"debate"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
 		return
+	}
+	if body.Debate && strings.TrimSpace(body.Text) != "" {
+		body.Text = application.WithDebateMarker(body.Text)
 	}
 	ctx := application.WithCustomer(application.WithBudgetCap(r.Context(), body.BudgetCapUSD), body.CustomerID)
 	if body.Rehearsal {

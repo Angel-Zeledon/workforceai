@@ -233,6 +233,9 @@ class PlanTask(_Base):
     depends_on: list[str] = Field(default_factory=list)
     # Optional, human-readable: why this agent got this task (shown in the chat). Omitted when unknown.
     reason: str | None = None
+    # B5 (additive): this task takes a high-impact decision; the backend has the team debate it before the plan
+    # runs (advisory; the decision still goes through approvals). At most one task per plan.
+    decision: bool | None = None
 
 
 class PlanResponse(_Base):

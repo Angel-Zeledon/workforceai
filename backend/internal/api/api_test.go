@@ -138,6 +138,7 @@ type opts struct {
 	roi            bool                // mount the AI payroll / return report (roi_api_test.go)
 	customers      bool                // mount the customer district and scope requests (customers_api_test.go)
 	portal         bool                // mount the client portal (portal_api_test.go); implies ws
+	debater        *debaterStub        // mount the team debates with this runtime (debates_api_test.go)
 }
 
 type env struct {
@@ -274,6 +275,9 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	if o.advocate != nil {
 		d.DevilsAdvocate = &application.DevilsAdvocate{Store: mem, Core: spy, Runtime: o.advocate, Budget: orch, Rec: rec, Cfg: cfg}
+	}
+	if o.debater != nil {
+		d.Debates = &application.Debates{Store: mem, Agents: spy, Runtime: o.debater, Budget: orch, Rec: rec, Cfg: cfg}
 	}
 	var lenv *llmEnv
 	if o.llm {
