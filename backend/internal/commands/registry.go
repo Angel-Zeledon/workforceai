@@ -172,6 +172,12 @@ var all = []Command{
 		Example:     L{"/reunion ventas legal contabilidad: precios 2027", "/meeting sales legal accounting: 2027 pricing"}, Group: GroupOffice, Icon: "users",
 		Args:       []Arg{{Name: "agents", Kind: KindAgent, Variadic: true}, {Name: "topic", Kind: KindText, Required: true}},
 		Permission: "requests:create", UsesLLM: true, Surfaces: allSurfaces},
+	{ID: "debate", Aliases: Aliases{ES: []string{"debatir"}, EN: []string{"debate"}},
+		Title:       L{"Debatir antes de decidir", "Debate before deciding"},
+		Description: L{"El equipo debate la decisión en la sala de reuniones (posturas, objeciones y una síntesis consultiva) y luego sigue el plan; nada se aprueba solo.", "The team debates the decision in the meeting room (positions, objections and an advisory synthesis), then the plan goes on; nothing gets approved by itself."},
+		Example:     L{"/debatir ventas contabilidad: ¿subimos el precio en 2027?", "/debate sales accounting: should we raise prices in 2027?"}, Group: GroupOffice, Icon: "users",
+		Args:       []Arg{{Name: "agents", Kind: KindAgent, Variadic: true}, {Name: "topic", Kind: KindText, Required: true}},
+		Permission: "requests:create", UsesLLM: true, Surfaces: allSurfaces},
 	// ---- meetings (docs/architecture/meetings.md) ----
 	{ID: "room", Aliases: Aliases{ES: []string{"sala", "junta"}, EN: []string{"room", "huddle"}},
 		Title:       L{"Abrir una sala de reuniones", "Open a meeting room"},

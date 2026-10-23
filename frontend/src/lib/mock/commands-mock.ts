@@ -107,6 +107,12 @@ export class MockCommands {
         const id = await this.host.startRequest(text);
         return { status: "started", result: { kind: "request", title: pick(lang, "Empecé a trabajar en esto", "I started working on this"), text: text, request_id: id, href: "/chats" } };
       }
+      case "debate": { // B5: the request is marked; the mock engine plays the debate before the plan runs
+        const ids = Array.isArray(a.agents) ? (a.agents as string[]).map((n) => agentOf(n)?.id ?? agents.find((x) => x.id === n || x.role === n)?.id ?? n).join(",") : "";
+        const text = `[[debate${ids ? ":" + ids : ""}]] ${a.topic || ""}`.trim();
+        const id = await this.host.startRequest(text);
+        return { status: "started", result: { kind: "request", title: pick(lang, "El equipo va a debatir", "The team will debate"), text: a.topic || "", request_id: id, href: "/meetings?tab=debates" } };
+      }
       case "pending": return msg(pick(lang, "No tienes aprobaciones pendientes.", "You have no pending approvals."));
       case "search":
         return { status: "ok", result: { kind: "table", title: pick(lang, `Resultados para "${a.query}"`, `Results for "${a.query}"`), columns: [pick(lang, "Dónde", "Where"), pick(lang, "Texto", "Text")], rows: [[pick(lang, "Chat", "Chat"), pick(lang, "…mencionó el contrato…", "…mentioned the contract…")], ["Drive", "Contrato-marco.pdf"]] } };
