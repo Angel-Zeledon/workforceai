@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  BUBBLE_SHOW_MS, DEBATE_GATHER_MS, DEBATE_LINGER_MS, DEBATE_TURN_MS, DEBATE_WAIT_MAX_MS, debateSeats, debateStage, liveDebate, stepBubbles,
+  BUBBLE_SHOW_MS, DEBATE_GATHER_MS, DEBATE_LINGER_MS, DEBATE_TURN_MS, DEBATE_WAIT_MAX_MS, debateSeats, debateStage, liveDebate, stepBubbles, zoneFor,
 } from "./officeState.ts";
 
 const turns = [
@@ -36,6 +36,15 @@ test("debate: the newest active debate wins and the moderator sits first", () =>
   assert.equal(liveDebate([a], DEBATE_WAIT_MAX_MS * 2), null);
   assert.deepEqual(debateSeats(clock({ participants: ["sales", "assistant", "legal"] }), "assistant"), ["assistant", "sales", "legal"]);
   assert.deepEqual(debateSeats(clock(), null), ["sales", "legal"]);
+});
+
+test("debate seats win over a finished or busy state, not over a block, an approval or a budget pause", () => {
+  const base = { budgetPaused: false, planning: true, approvalPending: false, debating: true };
+  for (const state of ["completed", "working", "talking", "idle", "error"]) assert.equal(zoneFor({ ...base, state }), "meeting", state);
+  assert.equal(zoneFor({ ...base, state: "blocked" }), "desk");
+  assert.equal(zoneFor({ ...base, state: "awaiting_approval", approvalPending: true }), "approvals");
+  assert.equal(zoneFor({ ...base, state: "working", budgetPaused: true }), "cafeteria");
+  assert.equal(zoneFor({ ...base, state: "completed", debating: false }), "desk"); // unchanged without a debate
 });
 
 test("debate bubbles follow the debate clock: no quiet gap, no repeat", () => {

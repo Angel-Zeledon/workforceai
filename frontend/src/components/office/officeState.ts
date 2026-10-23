@@ -20,6 +20,8 @@ export interface ZoneInput {
   planning: boolean;
   /** the agent has a pending tool/action approval of its own */
   approvalPending: boolean;
+  /** the agent sits at a team debate being played in the meeting room (B5) */
+  debating?: boolean;
 }
 
 /**
@@ -28,6 +30,9 @@ export interface ZoneInput {
  * just finished, failed or are in a conversation keep their normal behavior.
  */
 export function zoneFor(i: ZoneInput): Zone {
+  // a team debate is short and visible: its seats win over a finished/busy state (not over a budget pause, a block
+  // or an approval the agent waits on)
+  if (i.debating && !i.budgetPaused && i.state !== "blocked" && i.state !== "awaiting_approval") return "meeting";
   if (i.state === "completed" || i.state === "error" || i.state === "talking") return "desk";
   if (i.budgetPaused) return "cafeteria";
   if (i.planning && i.state !== "blocked" && i.state !== "awaiting_approval") return "meeting";

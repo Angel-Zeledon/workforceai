@@ -102,7 +102,7 @@ function DebateCard({ d }: { d: Debate }) {
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-mute">
             <span>{t(`debates.trigger.${d.trigger}`)}</span>
             {d.created_at && <span>· {fmtDateTimeShort(d.created_at)}</span>}
-            {d.status === "done" && <span>· {t("debates.turns", { count: d.turns.length, max: d.max_turns })}</span>}
+            {d.status === "done" && <span>· {t("debates.turns", { n: d.turns.length, max: d.max_turns })}</span>}
             {d.cost_usd > 0 && <span>· ${d.cost_usd.toFixed(3)}</span>}
           </div>
         </div>

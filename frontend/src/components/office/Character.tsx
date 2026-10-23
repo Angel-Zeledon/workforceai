@@ -184,6 +184,7 @@ export function Character({ id, index }: { id: string; index: number }) {
     const USER_POS = userPos();
     const zone = zoneFor({
       state: st, budgetPaused: sig.cafeSlot.has(id), planning: sig.meetingSlot.has(id), approvalPending: sig.apprSlot.has(id),
+      debating: !!sig.debate?.seats.includes(id) && sig.meetingSlot.has(id),
     });
     let place = "stand";
     let dest: [number, number] = own.stand;
