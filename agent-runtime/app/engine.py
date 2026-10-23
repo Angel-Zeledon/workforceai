@@ -161,6 +161,12 @@ class AgentEngine(abc.ABC):
 
         return sim_counterargument(req)
 
+    async def debate(self, req):
+        """Team debate before a decision (B5, advisory only). Default: the deterministic simulated debate."""
+        from .debate import sim_debate
+
+        return sim_debate(req)
+
     async def route(self, req: RouteRequest) -> RouteResponse:
         """Who should answer a chat message (docs/architecture/chat-routing.md). Default: the rules."""
         from .routing import rules_route

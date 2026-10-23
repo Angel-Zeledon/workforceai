@@ -10,7 +10,7 @@ import re
 
 from . import review as rv
 from . import sim_content as sc
-from .commands import marker_draft, marker_meeting, sim_summary, sim_usage_tokens, strip_markers
+from .commands import is_decision_request, marker_draft, marker_meeting, sim_summary, sim_usage_tokens, strip_markers
 from .formats import EXT, requested_format
 from .engine import AgentEngine, estimate_cost
 from .routing import assigned_reason, compose_reply, owner_role
@@ -306,6 +306,11 @@ class SimulationEngine(AgentEngine):
             a = req.agents[0]
             key, title = c.TEXTS["fallback_task"]
             tasks = [PlanTask(key=key, title=title, description=req.request_text, agent_id=a.id)]
+        if is_decision_request(req.request_text):
+            # B5: a choice between alternatives -> the last task that is not the assistant's takes the decision
+            # (the backend has the team debate it first; deterministic: same text, same flag)
+            decider = next((t for t in reversed(tasks) if by_role.get("assistant") != t.agent_id and t.agent_id != "assistant"), tasks[-1])
+            decider.decision = True
         return PlanResponse(objectives=list(spec["objectives"]), tasks=tasks,
                             clarifying_questions=list(spec["questions"]))
 

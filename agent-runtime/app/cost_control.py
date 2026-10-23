@@ -34,6 +34,7 @@ DEFAULT_MAX_TOKENS: dict[str, int] = {
     "chat": 350,
     "replan": 3000,
     "counterargument": 1200,
+    "debate": 1600,
     "default": 3000,
 }
 
