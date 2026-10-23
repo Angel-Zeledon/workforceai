@@ -908,8 +908,15 @@ Los empleados avisan solos ("la tarea X falló, ¿la reviso?") con un presupuest
 | POST | `/initiatives/{id}/dismiss` | `requests:create` | `200`; `409` si ya estaba resuelta; `404` si no es de la organización |
 | GET | `/settings/initiative` | `requests:read` | `{enabled, daily_limit, monthly_limit, agent_daily?{agent_id: n}}` (por defecto activo, 3 por día, 30 por mes) |
 | PUT | `/settings/initiative` | `org:manage` | mismo cuerpo; límites 0..1000 (`400` si no), `agent_daily` sobrescribe el tope diario de un agente (0 lo silencia). Auditado (`initiative.settings_changed`) |
+| POST | `/initiatives/scan` | `org:manage` | Evalúa ahora las señales de métricas de la organización. `200` `{raised, results: [{signal, signal_key, agent_id?, raised, reason?: disabled\|duplicate\|daily_limit\|monthly_limit\|agent_limit\|controls\|no_agent\|error, initiative_id?}]}`. Auditado (`initiative.scanned`). Ruta presente solo si el servidor tiene el escáner |
 
 Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditoría: `initiative.raised`, `initiative.accepted`, `initiative.dismissed`, `initiative.settings_changed`.
+
+**Señales de métricas (aditivo, migración `800_initiative_signals`).** Detección determinista (sin modelo) de `metric_change` (margen/ventas/caja en hojas y tablas), `spend_pace` (ritmo del gasto del mes frente a lo disponible bajo el tope), `approval_aging` (aprobaciones que esperan) y `quality_drop` (puntaje B11 frente a la ventana anterior); detalle en `initiative.md`. Campos nuevos:
+
+- Sugerencia: `params?: {clave: texto}` con los valores detrás del texto (p. ej. `metric_change`: `artifact, column, period, previous, current, change, direction: up|down, unit: pct|points, metric`; `spend_pace`: `spent, projected, available, pace, month`; `approval_aging`: `count, hours, oldest, age`; `quality_drop`: `agent, previous, current, drop`). Ausente en sugerencias sin parámetros (tareas fallidas).
+- Ajustes: `signals: {metric_change: {enabled, change_pct 1..1000 (10), margin_points 0.5..100 (3)}, spend_pace: {enabled, pace_pct 50..500 (100), min_days 1..27 (3)}, approval_aging: {enabled, min_age_hours 1..720 (24), min_count 1..100 (1)}, quality_drop: {enabled, drop_points 1..100 (10)}}`, siempre presente en `GET`. En `PUT`, `signals` se combina con lo guardado (se puede mandar solo lo que cambia) y si falta se conserva; un umbral fuera de rango es `400`. El detalle de auditoría de `initiative.settings_changed` incluye `signals`.
+- Barrido periódico cada `INITIATIVE_SCAN_INTERVAL` (por defecto `15m`; `0`/`off` lo apaga).
 
 ## 26. Puntaje de calidad y casos dorados (B11)
 

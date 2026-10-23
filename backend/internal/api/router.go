@@ -57,6 +57,8 @@ type Deps struct {
 	Initiative *application.InitiativeService
 	// ROI serves the AI payroll and return report and its model (roi.go, B15). Optional.
 	ROI *application.ROIService
+	// InitiativeScanner evaluates the metric signals on demand (POST /initiatives/scan). Optional.
+	InitiativeScanner *application.InitiativeScanner
 	// DevilsAdvocate serves /approvals/{id}/counterargument (devils_advocate.go): the advisory review of a
 	// high-risk approval. Optional: nil leaves the routes unmounted.
 	DevilsAdvocate *application.DevilsAdvocate

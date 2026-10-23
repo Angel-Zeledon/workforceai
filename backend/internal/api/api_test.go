@@ -243,6 +243,7 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	if o.initiative {
 		d.Initiative = &application.InitiativeService{Store: mem, Submit: orch, Rec: rec, Cfg: cfg}
+		d.InitiativeScanner = &application.InitiativeScanner{Svc: d.Initiative, Core: mem}
 	}
 	if o.rehearsal {
 		d.Rehearsal = &application.RehearsalService{Store: mem, Runs: mem, Rec: rec, Cfg: cfg}

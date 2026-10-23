@@ -14,21 +14,33 @@ import (
 
 var _ application.InitiativeStore = (*Store)(nil)
 
-const initiativeCols = `id, agent_id, signal, signal_key, title, body, prompt, status, created_at, resolved_at, resolved_by, request_id`
+// params comes from migration 800.
+const initiativeCols = `id, agent_id, signal, signal_key, title, body, prompt, status, created_at, resolved_at, resolved_by, request_id, params`
 
 func scanInitiative(r scanner) (application.Initiative, error) {
 	var it application.Initiative
 	var st string
+	var params []byte
 	err := r.Scan(&it.ID, &it.AgentID, &it.Signal, &it.SignalKey, &it.Title, &it.Body, &it.Prompt, &st, &it.CreatedAt,
-		&it.ResolvedAt, &it.ResolvedBy, &it.RequestID)
+		&it.ResolvedAt, &it.ResolvedBy, &it.RequestID, &params)
 	it.Status = application.InitiativeStatus(st)
+	if err == nil && len(params) > 0 {
+		_ = json.Unmarshal(params, &it.Params)
+		if len(it.Params) == 0 {
+			it.Params = nil
+		}
+	}
 	return it, err
 }
 
 func (s *Store) CreateInitiative(ctx context.Context, orgID string, it application.Initiative) error {
-	return s.exec(ctx, orgID, `INSERT INTO initiatives (org_id, id, agent_id, signal, signal_key, title, body, prompt, status, created_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-		orgID, it.ID, it.AgentID, it.Signal, it.SignalKey, it.Title, it.Body, it.Prompt, string(it.Status), it.CreatedAt)
+	params := it.Params
+	if params == nil {
+		params = map[string]string{}
+	}
+	return s.exec(ctx, orgID, `INSERT INTO initiatives (org_id, id, agent_id, signal, signal_key, title, body, prompt, status, created_at, params)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+		orgID, it.ID, it.AgentID, it.Signal, it.SignalKey, it.Title, it.Body, it.Prompt, string(it.Status), it.CreatedAt, jb(params))
 }
 
 func (s *Store) ListInitiatives(ctx context.Context, orgID string, status application.InitiativeStatus, limit int) ([]application.Initiative, error) {
@@ -89,12 +101,12 @@ func (s *Store) HasInitiativeSignal(ctx context.Context, orgID, signal, key stri
 }
 
 func (s *Store) GetInitiativeSettings(ctx context.Context, orgID string) (application.InitiativeSettings, bool, error) {
-	var raw []byte
+	var raw, rawSignals []byte
 	v, err := one(ctx, s, orgID, func(r scanner) (application.InitiativeSettings, error) {
 		var v application.InitiativeSettings
-		err := r.Scan(&v.Enabled, &v.DailyLimit, &v.MonthlyLimit, &raw)
+		err := r.Scan(&v.Enabled, &v.DailyLimit, &v.MonthlyLimit, &raw, &rawSignals)
 		return v, err
-	}, `SELECT enabled, daily_limit, monthly_limit, agent_daily FROM initiative_settings WHERE org_id=$1`, orgID)
+	}, `SELECT enabled, daily_limit, monthly_limit, agent_daily, signals FROM initiative_settings WHERE org_id=$1`, orgID)
 	if err = mapErr(err); errors.Is(err, domain.ErrNotFound) {
 		return application.InitiativeSettings{}, false, nil
 	} else if err != nil {
@@ -103,6 +115,12 @@ func (s *Store) GetInitiativeSettings(ctx context.Context, orgID string) (applic
 	if len(raw) > 0 {
 		_ = json.Unmarshal(raw, &v.AgentDaily)
 	}
+	// Rows from before migration 800 hold '{}': the defaults fill whatever was never saved.
+	sig := application.DefaultSignalSettings()
+	if len(rawSignals) > 0 {
+		_ = json.Unmarshal(rawSignals, &sig)
+	}
+	v.Signals = &sig
 	return v, true, nil
 }
 
@@ -110,9 +128,13 @@ func (s *Store) PutInitiativeSettings(ctx context.Context, orgID string, v appli
 	if v.AgentDaily == nil {
 		v.AgentDaily = map[string]int{}
 	}
-	return s.exec(ctx, orgID, `INSERT INTO initiative_settings (org_id, enabled, daily_limit, monthly_limit, agent_daily, updated_at)
-		VALUES ($1,$2,$3,$4,$5,now())
+	var signals any = map[string]any{}
+	if v.Signals != nil {
+		signals = v.Signals
+	}
+	return s.exec(ctx, orgID, `INSERT INTO initiative_settings (org_id, enabled, daily_limit, monthly_limit, agent_daily, signals, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,now())
 		ON CONFLICT (org_id) DO UPDATE SET enabled=EXCLUDED.enabled, daily_limit=EXCLUDED.daily_limit,
-			monthly_limit=EXCLUDED.monthly_limit, agent_daily=EXCLUDED.agent_daily, updated_at=now()`,
-		orgID, v.Enabled, v.DailyLimit, v.MonthlyLimit, jb(v.AgentDaily))
+			monthly_limit=EXCLUDED.monthly_limit, agent_daily=EXCLUDED.agent_daily, signals=EXCLUDED.signals, updated_at=now()`,
+		orgID, v.Enabled, v.DailyLimit, v.MonthlyLimit, jb(v.AgentDaily), jb(signals))
 }

@@ -308,8 +308,12 @@ func run(log *slog.Logger) error {
 		roiSvc = &application.ROIService{Store: rs, Core: store, Rec: rec, Cfg: cfg.App}
 	}
 
+	// Metric signals (margin / sales / cash in sheets, spend pace, aging approvals, quality drop): same budget, same path.
+	initiativeScan := wireInitiativeScanner(initiativeSvc, store, orch, ws.artifacts, qualitySvc, cw.ctl, orgCfg)
+	startInitiativeScan(ctx, log, initiativeScan, store, cfg.App.OrgID, initiativeScanInterval(log))
+
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, ROI: roiSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
-		Standing: standingSvc, Initiative: initiativeSvc, DevilsAdvocate: devilsSvc, Rehearsal: rehearsalSvc,
+		Standing: standingSvc, Initiative: initiativeSvc, InitiativeScanner: initiativeScan, DevilsAdvocate: devilsSvc, Rehearsal: rehearsalSvc,
 		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Trust: trustSvc, Rituals: ritualsSvc, Away: awaySvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,

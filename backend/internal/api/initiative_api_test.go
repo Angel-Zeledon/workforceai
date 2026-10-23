@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/domain"
 )
 
 func (e *env) raiseInitiative(agent, key string) application.Initiative {
@@ -121,5 +123,73 @@ func TestInitiativeAPIPermissionsAndTenancy(t *testing.T) {
 	}
 	if c := e.status("POST", "/api/v1/initiatives/"+id+"/dismiss", member, nil); c != 200 {
 		t.Errorf("member dismiss = %d", c)
+	}
+}
+
+// Metric signals (migration 800): GET always carries them, a PUT may send only what changes (merged), an old
+// client that omits them keeps them, bad thresholds are 400.
+func TestInitiativeAPISignalSettings(t *testing.T) {
+	e := newEnv(t, opts{initiative: true})
+	var s application.InitiativeSettings
+	_, body := e.do("GET", "/api/v1/settings/initiative", "", nil, nil)
+	_ = json.Unmarshal(body, &s)
+	if s.Signals == nil || !s.Signals.MetricChange.Enabled || s.Signals.SpendPace.PacePct != application.DefaultSpendPacePct {
+		t.Fatalf("default signals = %s", body)
+	}
+	resp, body := e.do("PUT", "/api/v1/settings/initiative", "",
+		[]byte(`{"enabled":true,"daily_limit":3,"monthly_limit":30,"signals":{"spend_pace":{"enabled":false},"quality_drop":{"drop_points":15}}}`), nil)
+	s = application.InitiativeSettings{}
+	_ = json.Unmarshal(body, &s)
+	if resp.StatusCode != 200 || s.Signals.SpendPace.Enabled || s.Signals.SpendPace.PacePct != application.DefaultSpendPacePct ||
+		s.Signals.QualityDrop.DropPoints != 15 || !s.Signals.QualityDrop.Enabled || !s.Signals.MetricChange.Enabled {
+		t.Fatalf("partial signals put = %d %s", resp.StatusCode, body)
+	}
+	// An older client (no "signals") keeps them.
+	resp, body = e.do("PUT", "/api/v1/settings/initiative", "", []byte(`{"enabled":true,"daily_limit":2,"monthly_limit":20}`), nil)
+	s = application.InitiativeSettings{}
+	_ = json.Unmarshal(body, &s)
+	if resp.StatusCode != 200 || s.DailyLimit != 2 || s.Signals.SpendPace.Enabled || s.Signals.QualityDrop.DropPoints != 15 {
+		t.Fatalf("put without signals = %d %s", resp.StatusCode, body)
+	}
+	for _, bad := range []string{
+		`{"enabled":true,"daily_limit":3,"monthly_limit":30,"signals":{"metric_change":{"change_pct":0}}}`,
+		`{"enabled":true,"daily_limit":3,"monthly_limit":30,"signals":{"approval_aging":{"min_age_hours":5000}}}`,
+		`{"enabled":true,"daily_limit":3,"monthly_limit":30,"signals":{"spend_pace":{"min_days":40}}}`,
+	} {
+		if c := e.status("PUT", "/api/v1/settings/initiative", "", []byte(bad)); c != 400 {
+			t.Errorf("%s = %d, want 400", bad, c)
+		}
+	}
+}
+
+// POST /initiatives/scan evaluates the signals now; only org:manage may call it.
+func TestInitiativeAPIScan(t *testing.T) {
+	e := newEnv(t, opts{auth: true, initiative: true})
+	owner := e.register("owner@example.com", "Acme")
+	member := e.member(owner, "member@example.com", auth.RoleMember)
+	old := time.Now().Add(-30 * time.Hour)
+	if err := e.store.CreateApproval(context.Background(), owner.OrgID, domain.Approval{ID: "ap-old", AgentID: "sales", Title: "Enviar propuesta",
+		Risk: "high", Status: domain.ApprovalPending, CreatedAt: old}); err != nil {
+		t.Fatal(err)
+	}
+	if c := e.status("POST", "/api/v1/initiatives/scan", member, nil); c != 403 {
+		t.Errorf("member scan = %d, want 403", c)
+	}
+	resp, body := e.do("POST", "/api/v1/initiatives/scan", owner.AccessToken, nil, nil)
+	var out struct {
+		Raised  int                      `json:"raised"`
+		Results []application.ScanResult `json:"results"`
+	}
+	_ = json.Unmarshal(body, &out)
+	if resp.StatusCode != 200 || out.Raised != 1 || len(out.Results) != 1 || out.Results[0].Signal != application.SignalApprovalAging ||
+		out.Results[0].AgentID != "assistant" {
+		t.Fatalf("scan = %d %s", resp.StatusCode, body)
+	}
+	// The same oldest approval is not suggested twice inside the window.
+	_, body = e.do("POST", "/api/v1/initiatives/scan", owner.AccessToken, nil, nil)
+	out.Raised, out.Results = 0, nil
+	_ = json.Unmarshal(body, &out)
+	if out.Raised != 0 || len(out.Results) != 1 || out.Results[0].Reason != "duplicate" {
+		t.Fatalf("second scan = %s", body)
 	}
 }
