@@ -47,7 +47,7 @@ window.I18N = {
     "facts.k": "Lo que trae hoy",
     "facts.1": "empleados base, cada uno con rol, herramientas y memoria",
     "facts.2": "profesiones más para contratar desde plantilla",
-    "facts.3": "proveedores de IA con tu clave: OpenAI, Claude, Kimi o DeepSeek",
+    "facts.3": "proveedores de IA con tu clave: OpenAI, Claude, Kimi o DeepSeek, y cualquiera compatible con OpenAI",
     "facts.4": "claves que ve el modelo: viven en una bóveda cifrada",
 
     "stage.aria": "Animación ilustrativa: la Asistente reparte la propuesta de $50,000 entre Ventas, Contabilidad, Legal, Análisis, Marketing y Compras; se consultan entre sí; Ventas pide tu aprobación antes de enviar y la Asistente entrega el reporte.",
@@ -376,7 +376,7 @@ window.I18N = {
     "facts.k": "What ships today",
     "facts.1": "base employees, each with a role, tools and memory",
     "facts.2": "more professions you can hire from a template",
-    "facts.3": "AI providers with your key: OpenAI, Claude, Kimi or DeepSeek",
+    "facts.3": "AI providers with your key: OpenAI, Claude, Kimi or DeepSeek, plus any OpenAI-compatible one",
     "facts.4": "keys the model sees: they live in an encrypted vault",
 
     "stage.aria": "Illustrative animation: the Assistant splits the $50,000 proposal among Sales, Accounting, Legal, Analysis, Marketing and Procurement; they consult each other; Sales asks for your approval before sending and the Assistant delivers the report.",
