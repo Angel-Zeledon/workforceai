@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Getting started with AI Workforce OS</title>
-  <meta name="description" content="Create your account, ask your office for something, approve what is sensitive, read the report and earn coins. About 5 minutes, nothing to set up.">
+  <meta name="description" content="Create your account, ask for your first task, decide an approval, read the report and earn your first coins in about 5 minutes.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,130 +24,162 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
   <meta property="og:title" content="Getting started with AI Workforce OS">
-  <meta property="og:description" content="Create your account, ask your office for something, approve what is sensitive, read the report and earn coins. About 5 minutes, nothing to set up.">
+  <meta property="og:description" content="Create your account, ask for your first task, decide an approval, read the report and earn your first coins in about 5 minutes.">
   <meta property="og:url" content="https://workforceai.es/en/guide/getting-started/">
   <meta property="og:image" content="https://workforceai.es/img/office.webp">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Getting started with AI Workforce OS">
-  <meta name="twitter:description" content="Create your account, ask your office for something, approve what is sensitive, read the report and earn coins. About 5 minutes, nothing to set up.">
+  <meta name="twitter:description" content="Create your account, ask for your first task, decide an approval, read the report and earn your first coins in about 5 minutes.">
   <meta name="twitter:image" content="https://workforceai.es/img/office.webp">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"User guide","item":"https://workforceai.es/en/guide/"},{"@type":"ListItem","position":3,"name":"Getting started: your first 5 minutes","item":"https://workforceai.es/en/guide/getting-started/"}]},{"@type":"TechArticle","headline":"Getting started: your first 5 minutes","description":"Create your account, ask your office for something, approve what is sensitive, read the report and earn coins. About 5 minutes, nothing to set up.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/guide/getting-started/","url":"https://workforceai.es/en/guide/getting-started/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"},"image":"https://workforceai.es/img/office.webp"}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=b5a2c05468">
+  <script src="/docs.js?v=2e2073da11" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"User guide","item":"https://workforceai.es/en/guide/"},{"@type":"ListItem","position":3,"name":"Getting started: your first 5 minutes","item":"https://workforceai.es/en/guide/getting-started/"}]},{"@type":"TechArticle","headline":"Getting started: your first 5 minutes","description":"Create your account, ask for your first task, decide an approval, read the report and earn your first coins in about 5 minutes.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/guide/getting-started/","url":"https://workforceai.es/en/guide/getting-started/","dateModified":"2026-10-22","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"},"image":"https://workforceai.es/img/office.webp"}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/en/" aria-label="AI Workforce OS">
+<body class="dx dx-guide" id="top">
+  <a class="dx-skip" href="#main">Skip to content</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/en/" aria-label="AI Workforce OS">
         <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="/en/">Home</a>
-        <a href="/en/docs/">Documentation</a>
-        <a href="/en/guide/">User guide</a>
-        <a href="/en/trust/">Trust</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Language">
-          <a href="/guia/primeros-pasos/" hreflang="es" lang="es" >ES</a>
+      <nav class="dx-tabs" aria-label="Site sections"><a href="/en/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Language">
+          <a href="/guia/primeros-pasos/" hreflang="es" lang="es">ES</a>
           <a href="/en/guide/getting-started/" hreflang="en" lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap narrow">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/guide/">User guide</a></li><li aria-current="page">Getting started: your first 5 minutes</li></ol></nav>
-      <article>
-        <h1>Getting started: your first 5 minutes</h1>
-        <p class="lead">AI Workforce OS is a 3D virtual office where the employees are AI agents. You ask for what you need in your own words, they split the work, and you decide the important parts. This guide walks you through the first full run.</p>
-        <figure class="shot"><img src="/img/office.webp" width="1600" height="1000" decoding="async" alt="The AI Workforce OS 3D office with agent employees at their desks and the request bar at the bottom."></figure>
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">What do I need to get started?</a></li><li><a href="#s2">How do I ask my office for something?</a></li><li><a href="#s3">How do I watch the employees collaborate?</a></li><li><a href="#s4">What do I do when something needs my approval?</a></li><li><a href="#s5">Where do I read the report and how do I earn coins?</a></li><li><a href="#s6">What comes next?</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">What do I need to get started?</h2>
-        <p>Just an account. Go to app.workforceai.es, choose “Create account” and enter your name, your company name, your email and a password (at least 10 characters). You land in your own office, separate from everyone else’s. For now the AI runs in simulation mode: responses are scripted and realistic, there is no real model behind it, it costs nothing and it never asks for a key.</p>
-        <p>Being a simulation does not change how you use it. The flow is the same you would have with a real model: you ask, agents collaborate, you approve, and you get a report. That makes it a good way to learn before connecting anything.</p>
-        
-        
-        
-        <aside class="tip"><b>Tip.</b> Want to look around before signing up? “Try it without signing up” gives you a trial username and password that expire after 24 hours. Your office starts with 1,000 welcome coins.</aside>
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">How do I ask my office for something?</h2>
-        <p>When the app opens you land on the Office view: a 3D scene with your team. At the bottom there is a text bar to talk to the whole office, the way you would talk to a team lead.</p>
-        <ol class="steps" aria-label="Steps"><li>Above the bar you will see example buttons such as &quot;$50,000 proposal&quot;, &quot;Sales are down&quot;, &quot;Hire 2 people&quot;, &quot;Finance&quot; and &quot;Say hi&quot;. Press one to try it with a single click.</li><li>If you prefer to type, use the bar that says &quot;Write to the office: say hi, ask or request something…&quot; and press Send.</li><li>You can say hi, ask a question or request a task. Whoever is relevant answers; if it is a task, the office explains who gets it and why.</li></ol>
-        
-        
-        <aside class="tip"><b>Tip.</b> For your first try, start with &quot;$50,000 proposal&quot; and watch who takes each task.</aside>
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">How do I watch the employees collaborate?</h2>
-        <p>Each person in the scene is an agent and moves according to what they are doing: typing at their desk, meeting others to plan, or waiting for your approval.</p>
-        <ol class="steps" aria-label="Steps"><li>Look around the office: drag to rotate, scroll to zoom and right-click to pan.</li><li>Check the &quot;Live activity&quot; box at the top left. Tasks that start and what the agents do show up there.</li><li>Next to the request bar you will see &quot;In progress&quot; with the current state: planning, running or waiting for your approval.</li><li>Click an employee to open their panel, see their work and talk to them directly.</li></ol>
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">What do I do when something needs my approval?</h2>
-        <p>When an agent wants to do something sensitive, it stops and waits at the approvals desk. Nothing continues without your decision.</p>
-        <ol class="steps" aria-label="Steps"><li>Look for the pending approvals notice at the bottom left of the office. The &quot;Approvals&quot; counter in the top bar also shows it.</li><li>Read the details of what the agent wants to do.</li><li>Press Approve to let it continue or Reject to stop it.</li><li>If you prefer, decide from the Dashboard, in the Approvals section.</li></ol>
-        
-        
-        <aside class="tip"><b>Tip.</b> Rejecting is a valid answer: that is exactly why the human step exists.</aside>
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">Where do I read the report and how do I earn coins?</h2>
-        <p>When a request completes, a report is generated. To read it, switch to Dashboard with the Office / Dashboard toggle in the top bar and open the Reports section.</p>
-        <p>Finished work also earns you coins. You will see them in the &quot;Coins&quot; counter in the top bar. They are not money and cannot be bought: they are only earned by finished work, and they are used in the office shop.</p>
-        <ol class="steps" aria-label="Steps"><li>Wait for the request to reach Completed.</li><li>Press Dashboard in the top bar.</li><li>Open Reports and pick the report for your request to read it.</li><li>Look at the coin counter to see what you earned.</li></ol>
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">What comes next?</h2>
-        <p>Try your own phrases and watch how the task split changes. If you get lost, the &quot;?&quot; button in the top bar opens a guided tour of each screen.</p>
-        <p>Keep the real state of the product in mind: it is in early access and the AI runs in simulation until a model provider is configured. What you see is what is already built, with no extra promises.</p>
-        
-        
-        
-        
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/guide/the-office/"><b>The 3D office and the Dashboard</b><span>Move the camera, open an employee's panel, follow the activity, change the lighting and switch between the office and the Dashboard with its indicators.</span></a></li><li><a href="/en/guide/approvals-and-security/"><b>Approvals and security: you stay in control</b><span>Learn to approve sensitive actions, set spend limits, control permissions per employee and stop everything at once if you need to.</span></a></li><li><a href="/en/guide/projects/"><b>Projects: big work, with follow-up</b><span>Learn to create a project, review its plan, launch it with a budget and follow your agents' progress from a single screen.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Start now</h2>
-      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="User guide">
+      <div class="dx-side-head">
+        <span>Menu</span>
+        <a class="dx-side-close" href="#top" aria-label="Close menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a href="/en/docs/">Documentation</a>
-      <a href="/en/guide/">User guide</a>
-      <a href="/en/trust/">Trust</a>
-      <a href="#top">Back to top</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Site sections"><a href="/en/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <nav class="dx-pages" aria-label="User guide">
+        <ul class="dx-list">
+          <li><a href="/en/guide/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Overview</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-start">Get started</p>
+        <ul class="dx-list" aria-labelledby="g-guide-start">
+          <li><a href="/en/guide/getting-started/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.2 3.5-5.2 3.5v-7Z"/></svg><span>Getting started</span></a></li>
+          <li><a href="/en/guide/the-office/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M15.5 9h2a2 2 0 0 1 2 2v10M3 21h18M8.5 7h3M8.5 11h3M8.5 15h3"/></svg><span>The 3D office and the Dashboard</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-work">Everyday work</p>
+        <ul class="dx-list" aria-labelledby="g-guide-work">
+          <li><a href="/en/guide/projects/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v7M12 7.5v10M16 7.5v4"/></svg><span>Projects</span></a></li>
+          <li><a href="/en/guide/files-and-chats/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 15a2 2 0 0 1-2 2H8.5L4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10Z"/><path d="M8 8h8M8 12h5"/></svg><span>Chats and Files</span></a></li>
+          <li><a href="/en/guide/approvals-and-security/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg><span>Approvals and security</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-tune">Customize</p>
+        <ul class="dx-list" aria-labelledby="g-guide-tune">
+          <li><a href="/en/guide/skills/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 3.5 12.9 8l4.6 1.9-4.6 1.9L11 16.4l-1.9-4.6L4.5 9.9 9.1 8 11 3.5Z"/><path d="m18.5 14.5.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z"/></svg><span>Skills</span></a></li>
+          <li><a href="/en/guide/shop-and-coins/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v4.5c0 1.7 2.7 3 6 3 .7 0 1.4-.1 2-.2M15 7v2"/><ellipse cx="15" cy="13.5" rx="6" ry="3"/><path d="M9 13.5V18c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg><span>Coins and the Shop</span></a></li>
+          <li><a href="/en/guide/settings/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><span>Settings</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Language">
+          <a href="/guia/primeros-pasos/" hreflang="es" lang="es">ES</a>
+          <a href="/en/guide/getting-started/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/guide/">User guide</a></li><li><span>Get started</span></li></ol></nav>
+        <h1>Getting started: your first 5 minutes</h1>
+        <p class="dx-lead">AI Workforce OS is a 3D virtual office where the employees are AI agents. In about five minutes you will create your account, ask for your first task, decide an approval and read the report the team leaves behind.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>3 min read</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">On this page</summary>
+        <ol><li><a href="#create-your-account">Create your account</a></li><li><a href="#ask-for-your-first-task">Ask for your first task</a></li><li><a href="#watch-the-team-collaborate">Watch the team collaborate</a></li><li><a href="#decide-your-first-approval">Decide your first approval</a></li><li><a href="#read-the-report-and-check-your-coins">Read the report and check your coins</a></li><li><a href="#complete-the-getting-started-list">Complete the Getting started list</a></li></ol>
+        <a class="dx-toc-top" href="#top">Back to top</a>
+      </details>
+      <div class="dx-body">
+        <figure class="dx-shot"><img src="/img/office.webp" width="1600" height="1000" decoding="async" alt="The AI Workforce OS 3D office with agent employees at their desks and the request bar at the bottom."></figure>
+        <section class="dx-sec" aria-labelledby="create-your-account">
+        <h2 id="create-your-account">Create your account<a class="dx-anchor" href="#create-your-account" aria-label="Link to the “Create your account” section">#</a></h2>
+        <p>Every new account creates its own organization, separate from everyone else's, and you become its Owner. The office starts with 1,000 welcome coins for the Shop.</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Open app.workforceai.es and press “Create a new account”.</li><li>Enter “Your name”, “Your company name”, “E-mail” and a “Password” of at least 10 characters.</li><li>Press “Create account”.</li><li>If you receive a confirmation e-mail, open its link within 24 hours to enter your office.</li></ol>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>If you want to look around before signing up, press “Or try it without signing up” (when available) to get a trial username and password valid for 24 hours.</p></div></div>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>A trial account's work is lost when it expires; create an account if you want to keep it.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="ask-for-your-first-task">
+        <h2 id="ask-for-your-first-task">Ask for your first task<a class="dx-anchor" href="#ask-for-your-first-task" aria-label="Link to the “Ask for your first task” section">#</a></h2>
+        <p>When you sign in you land on the Office: a 3D scene with your team and, at the bottom, a bar to talk to the whole office the way you would talk to a team lead.</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Press one of the shortcuts above the bar: “Say hi”, “Finance”, “$50,000 proposal”, “Sales are down” or “Hire 2 people”.</li><li>Or type your request in the bar “Write to the office: say hi, ask or request something…” and press “Send”.</li><li>Read the answer in the office chat, right above the bar. If it is a task, you will see who it was assigned to and why.</li></ol>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>If the server has no model provider configured, the AI runs in simulation mode: answers are scripted, there is no model cost, and the flow is the same as with a real model.</p></div></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>Start with “$50,000 proposal”: it always asks for an approval, so you go through the whole flow.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="watch-the-team-collaborate">
+        <h2 id="watch-the-team-collaborate">Watch the team collaborate<a class="dx-anchor" href="#watch-the-team-collaborate" aria-label="Link to the “Watch the team collaborate” section">#</a></h2>
+        <p>Each person in the scene is an agent and moves according to what they are doing: working at their desk, meeting others to plan, or waiting in the approvals area.</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Check the “Live activity” box at the top left to follow every step the agents take.</li><li>Look at the status in the office chat header: “In progress: planning”, “running” or “waiting for your approval”.</li><li>Click an employee to open their panel, see their work and write to them directly.</li></ol>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>Drag to rotate the view, use the scroll wheel to zoom and hold the right button to pan.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="decide-your-first-approval">
+        <h2 id="decide-your-first-approval">Decide your first approval<a class="dx-anchor" href="#decide-your-first-approval" aria-label="Link to the “Decide your first approval” section">#</a></h2>
+        <p>When an agent wants to do something sensitive, it stops and waits for your decision. Nothing continues until you decide.</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Open the pending approvals tray at the bottom left of the office.</li><li>Read what the agent wants to do and its risk level.</li><li>Press “Approve” to let it continue or “Reject” to stop it.</li></ol>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>Deciding approvals requires the Admin or Owner role. If your role cannot, the card tells you so and shows no buttons.</p></div></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>Rejecting is a valid answer too: that is what the human step is for.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="read-the-report-and-check-your-coins">
+        <h2 id="read-the-report-and-check-your-coins">Read the report and check your coins<a class="dx-anchor" href="#read-the-report-and-check-your-coins" aria-label="Link to the “Read the report and check your coins” section">#</a></h2>
+        <p>When a request completes, a report is generated, and every finished task adds coins to your organization. Coins are not money and cannot be bought: they are only earned by finished work and spent in the Shop.</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Press “Dashboard” in the Office / Dashboard switch of the top bar.</li><li>Open “Reports” and pick the report for your request.</li><li>Look at the “Coins” counter in the top bar and press it to open the Shop.</li></ol>
+      </section>
+        <section class="dx-sec" aria-labelledby="complete-the-getting-started-list">
+        <h2 id="complete-the-getting-started-list">Complete the Getting started list<a class="dx-anchor" href="#complete-the-getting-started-list" aria-label="Link to the “Complete the Getting started list” section">#</a></h2>
+        <p>While you have steps left, the top bar shows the “Getting started” button. It holds four tasks that prepare your office for real work, and each one ticks itself when you complete it:</p>
+        <ul class="dx-ul"><li>“Tell your office about your business”: business type, tone and language, from Settings.</li><li>“Connect a tool”: e-mail, calendar, files or others.</li><li>“Choose how much freedom your team has”: from “suggest” to “autonomous”.</li><li>“Ask for your first task”.</li></ul>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>The “?” button in the top bar opens a guided tour of the screen you are on.</p></div></div>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="dx-cards dx-cards-sm"><li><a href="/en/guide/the-office/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M15.5 9h2a2 2 0 0 1 2 2v10M3 21h18M8.5 7h3M8.5 11h3M8.5 15h3"/></svg><b>The 3D office and the Dashboard</b><span>Move the camera, talk to an employee, follow the activity, adjust the light, redecorate the office and read the Dashboard indicators.</span></a></li><li><a href="/en/guide/approvals-and-security/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg><b>Approvals and security: you stay in control</b><span>Decide approvals, understand each employee's autonomy, set spend limits, restrict permissions and stop all activity at once if you need to.</span></a></li><li><a href="/en/guide/projects/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v7M12 7.5v10M16 7.5v4"/></svg><b>Projects: big work, tracked</b><span>Create a project, review its plan and estimated cost, launch it with a budget and follow your agents' progress from a single screen.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Pagination">
+        <a class="dx-prev" href="/en/guide/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Previous</span><b>User guide</b></a>
+        <a class="dx-next" href="/en/guide/the-office/" rel="next"><span>Next<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>The 3D office and the Dashboard</b></a>
+      </nav>
+      <section class="dx-cta" aria-labelledby="cta-h">
+        <div>
+          <h2 id="cta-h">Try it in your own office</h2>
+          <p>Create your account and land in an office with your AI team. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
+        </div>
+        <div class="dx-cta-row">
+          <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+          <a class="dx-btn dx-btn-ghost" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+        </div>
+      </section>
+      <footer class="dx-foot">
+        <p>AI Workforce OS is a project in development. This documentation describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+        <div class="dx-foot-links">
+          <a href="/en/">AI Workforce OS</a>
+          <a href="/en/docs/">Documentation</a>
+          <a href="/en/guide/">User guide</a>
+          <a href="/en/trust/">Trust</a>
+          <a href="#top">Back to top</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

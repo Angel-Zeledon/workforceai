@@ -12,76 +12,101 @@
   "es": {
     "title": "Monedas y Tienda: decora tu oficina con lo que gana tu equipo",
     "metaTitle": "Monedas y Tienda de AI Workforce OS",
-    "description": "Aprende cómo se ganan las monedas con trabajo terminado y cómo usarlas en la Tienda para vestir a tus agentes y decorar tu oficina.",
-    "intro": "Cada vez que tu equipo de agentes termina trabajo, tu organización gana monedas. En la Tienda las gastas en objetos para los personajes y para la oficina. Es una parte divertida de la app, y es solo estética.",
+    "description": "Aprende cómo se ganan las monedas con trabajo terminado y cómo gastarlas en la Tienda para vestir a tus agentes y decorar tu oficina.",
+    "intro": "Cada vez que tu equipo de agentes termina trabajo, tu organización gana monedas. En la Tienda las cambias por objetos para tus agentes y tu oficina. Aquí aprendes cómo se ganan, cómo comprar y cómo usar lo que compras.",
     "sections": [
       {
-        "h": "¿Cómo gano monedas?",
+        "h": "Gana monedas",
         "paras": [
-          "Las monedas se ganan solo con trabajo terminado. No hay forma de comprarlas con dinero, ni de pagar para tener más.",
-          "Cada cuenta nueva empieza con 1000 monedas de bienvenida, así que puedes probar la Tienda desde el primer minuto. Después, tu saldo sube cuando un agente termina una tarea o cuando se termina un proyecto."
+          "Las monedas se ganan solo con trabajo terminado: no se compran con dinero ni hay forma de pagar para tener más. Cada organización nueva empieza con 1,000 monedas de bienvenida, y después el saldo sube por tres vías:"
         ],
-        "tip": "Tu saldo aparece arriba en la pantalla Tienda, junto a lo que has ganado y gastado en total."
+        "list": [
+          "Cuando un agente termina una tarea.",
+          "Cuando un proyecto termina bien.",
+          "Cuando cumples la meta del día."
+        ],
+        "tip": "Tu saldo aparece arriba en la Tienda, junto a lo que has ganado y gastado en total."
       },
       {
-        "h": "¿Cuánto pagan las tareas y los proyectos?",
+        "h": "Consulta cuánto paga cada tarea",
         "paras": [
-          "Con la configuración por defecto, cada tarea paga según su tamaño: S paga 5 monedas, M paga 10, L paga 20 y XL paga 40. Si una tarea no tiene tamaño indicado, se cuenta como M.",
-          "Si una revisión de calidad aprueba el resultado a la primera, la tarea paga un 50% extra. Si la revisión pidió corregirlo y la tarea terminó después, paga la mitad de su valor base.",
-          "Cuando un proyecto termina bien, paga un bono de finalización: 20 monedas más 2 por cada tarea terminada, con un tope de 100. El proyecto necesita al menos 2 tareas terminadas para recibirlo.",
-          "No pagan nada las tareas que fallaron, se saltaron, se cancelaron o quedaron bloqueadas, las que tuvieron una aprobación rechazada, ni los hitos o pasos humanos, porque ahí no hubo trabajo de un agente."
-        ]
+          "Con la configuración por defecto, cada tarea paga según su tamaño. Si no tiene tamaño indicado, cuenta como M."
+        ],
+        "table": {
+          "head": ["Tamaño", "Monedas"],
+          "rows": [
+            ["S", "5"],
+            ["M", "10"],
+            ["L", "20"],
+            ["XL", "40"]
+          ]
+        },
+        "list": [
+          "Si una revisión de calidad aprueba el resultado a la primera, la tarea paga un 50 % extra.",
+          "Si la revisión pidió corregirla, la tarea paga la mitad de su valor.",
+          "Un proyecto que termina bien con al menos 2 tareas hechas paga un bono único de 20 monedas más 2 por tarea terminada, con un tope de 100."
+        ],
+        "note": "No pagan las tareas fallidas, saltadas, canceladas o bloqueadas, las que tuvieron una aprobación rechazada ni los hitos o pasos humanos. Quien opera el servidor puede cambiar estos valores."
       },
       {
-        "h": "¿Cómo encuentro un objeto en la Tienda?",
+        "h": "Cumple la meta del día",
         "paras": [
-          "La Tienda tiene varios cientos de objetos, así que conviene filtrar. Siempre aparecen ordenados del más barato al más caro."
+          "En la barra superior verás una meta diaria, por ejemplo «Termina 1 tarea hoy» o «Logra 1 tarea aprobada a la primera», con su progreso y su premio. La meta cambia cada día y es la misma para todos.",
+          "Solo cuenta trabajo que ya se pagó con las reglas normales, y cada día se paga una sola vez. Cuando la cumples, el chip muestra «Cumplida hoy»."
+        ],
+        "tip": "La meta se muestra en pantallas medianas o grandes, y no aparece si el sistema de monedas está apagado."
+      },
+      {
+        "h": "Encuentra un objeto",
+        "paras": [
+          "La Tienda tiene cerca de mil objetos, siempre ordenados del más barato al más caro."
         ],
         "steps": [
-          "Abre Tienda desde el menú de la app.",
-          "Elige un grupo: Personajes para la ropa y los accesorios de tus agentes, u Oficina para decorar el espacio.",
-          "Pulsa una categoría para ver solo esa. En Personajes hay Trajes, Sombreros, Gafas, Auriculares, Cuello, Insignias y Compañeros. En Oficina hay Plantas, Lámparas, Alfombras, Cafetera, Pósteres, Librerías, Acuarios, Arcade, Trofeos y Vistas.",
-          "Pulsa Todo para volver a ver el grupo completo. Si una lista es larga, usa Mostrar más para cargar el resto."
+          "Abre «Tienda» en el menú lateral.",
+          "Elige un grupo: «Personajes», para la ropa y los accesorios de tus agentes, u «Oficina», para muebles y decoración.",
+          "Pulsa una categoría. En Personajes hay Trajes, Sombreros, Gafas, Auriculares, Cuello, Insignias y Compañeros. En Oficina hay Escritorios, Sillas, Mesas, Sofás, Armarios, Divisorias, Pizarras, Equipamiento, Luces, Plantas, Lámparas, Alfombras, Cafetera, Pósteres, Librerías, Acuarios, Arcade, Trofeos y Vistas.",
+          "Pulsa «Todo» para ver el grupo completo, y «Mostrar más» si la lista es larga."
         ],
-        "tip": "Al cambiar de grupo, las categorías vuelven a Todo."
+        "tip": "Al cambiar de grupo, la categoría vuelve a «Todo»."
       },
       {
-        "h": "¿Cómo compro un objeto?",
+        "h": "Compra un objeto",
         "paras": [
           "Cada tarjeta muestra una vista previa, la rareza (Común, Raro o Épico), una descripción y el precio."
         ],
         "steps": [
-          "Revisa tu saldo de monedas arriba en la pantalla.",
-          "Busca un objeto que quieras y pulsa Comprar.",
-          "Si cuesta más de lo que tienes, el botón está desactivado y la tarjeta dice cuántas monedas te faltan.",
-          "Tras comprarlo, el objeto va a tu inventario. No se aplica solo: la tarjeta muestra En tu inventario y un acceso a Equipar desde el inventario."
+          "Revisa tu saldo de monedas arriba en la Tienda.",
+          "Pulsa «Comprar» en el objeto que quieras. Si no te alcanza, el botón está desactivado y la tarjeta dice cuántas monedas te faltan.",
+          "Pulsa «Equipar desde el inventario» para usarlo: la compra va a tu inventario y no se aplica sola."
+        ],
+        "note": "Comprar, equipar y colocar requieren el rol de Miembro o superior. Con Solo lectura puedes ver la Tienda, pero no gastar."
+      },
+      {
+        "h": "Usa lo que compraste",
+        "paras": [
+          "Todo lo que compras vive en la pestaña «Inventario». La acción de cada tarjeta depende del tipo de objeto:"
+        ],
+        "table": {
+          "head": ["Tipo de objeto", "Cómo se usa"],
+          "rows": [
+            ["Ropa y accesorios de personaje", "Elige al agente en «Personaje» y pulsa «Equipar»; «Quitar» se lo saca"],
+            ["Plantas, lámparas, alfombras, cafetera, pósteres, librerías, acuarios, arcade, trofeos y vistas", "Pulsa «Colocar» para ponerlo en su sitio de la oficina y «Retirar» para sacarlo"],
+            ["Mesas, sofás, armarios, divisorias, pizarras, equipamiento y luces", "Pulsa «Colocar en la oficina»: se abre el editor para ponerlo donde quieras"],
+            ["Escritorios y sillas", "Pulsa «Colocar en la oficina»: se abre la pestaña «Puestos» del editor para elegir su estilo"]
+          ]
+        },
+        "tip": "En la tarjeta, «Lo lleva» te dice qué agentes llevan un objeto y «Colocado en la oficina» que ya está en su sitio."
+      },
+      {
+        "h": "Revisa el historial de monedas",
+        "paras": [
+          "La pestaña «Historial» muestra cada movimiento con «Cuándo», «Qué», «Agente», «Monedas» y «Saldo», y debajo un resumen «Ganadas por agente». Cada línea dice su razón: monedas de bienvenida, tarea terminada, tarea aprobada a la primera, tarea terminada tras corregirla, proyecto terminado, meta del día cumplida o una compra."
         ]
       },
       {
-        "h": "¿Cómo uso lo que compré?",
+        "h": "Entiende qué cambian los objetos",
         "paras": [
-          "Todo lo comprado vive en la pestaña Inventario. Desde ahí decides quién lo lleva o dónde va."
-        ],
-        "steps": [
-          "Abre la pestaña Inventario.",
-          "Para un objeto de personaje, elige el agente en el selector Personaje y pulsa Equipar. Para sacarlo, pulsa Quitar. Verás quién lo lleva en Lo lleva.",
-          "Para un objeto de oficina, pulsa Colocar y aparecerá en tu oficina. Pulsa Retirar para sacarlo de ahí.",
-          "Vuelve a la oficina para ver el resultado en 3D."
-        ],
-        "tip": "Si un objeto ya es tuyo, la Tienda lo marca como Ya lo tienes."
-      },
-      {
-        "h": "¿Dónde veo cuándo ganó o gastó monedas mi equipo?",
-        "paras": [
-          "Abre la pestaña Historial. Es una lista con cuándo, qué pasó, qué agente lo ganó, cuántas monedas y cuál quedó siendo tu saldo.",
-          "Cada línea dice la razón: monedas de bienvenida, tarea terminada, tarea aprobada a la primera, tarea terminada tras corregirla, proyecto terminado o una compra. También hay un resumen de lo ganado por agente."
-        ]
-      },
-      {
-        "h": "¿Los objetos cambian lo que hacen mis agentes?",
-        "paras": [
-          "No. Los objetos son solo cosméticos. Un sombrero o una lámpara hacen que la oficina se vea mejor, pero no cambian lo que un agente puede hacer, ni sus permisos, ni su calidad de trabajo.",
-          "Piensa en las monedas como un reconocimiento por el trabajo terminado, no como una herramienta para dar más poder a los agentes."
+          "Nada del trabajo. Los objetos son solo estéticos: un sombrero o una lámpara cambian cómo se ve la oficina, pero no lo que un agente puede hacer, ni sus permisos, ni la calidad de su trabajo. Piensa en las monedas como un reconocimiento por el trabajo terminado."
         ]
       }
     ]
@@ -90,75 +115,100 @@
     "title": "Coins and the Shop: decorate your office with what your team earns",
     "metaTitle": "Coins and the Shop in AI Workforce OS",
     "description": "Learn how coins are earned by finished work and how to spend them in the Shop to dress your agents and decorate your office.",
-    "intro": "Every time your team of agents finishes work, your organization earns coins. In the Shop you spend them on items for the characters and for the office. It is a fun part of the app, and it is purely cosmetic.",
+    "intro": "Every time your team of agents finishes work, your organization earns coins. In the Shop you trade them for items for your agents and your office. Here you learn how coins are earned, how to buy and how to use what you buy.",
     "sections": [
       {
-        "h": "How do I earn coins?",
+        "h": "Earn coins",
         "paras": [
-          "Coins are earned only by finished work. There is no way to buy them with money, or to pay to get more.",
-          "Every new account starts with 1000 welcome coins, so you can try the Shop from the first minute. After that, your balance goes up when an agent finishes a task or when a project is completed."
+          "Coins are only earned by finished work: they cannot be bought with money and there is no way to pay for more. Every new organization starts with 1,000 welcome coins, and after that the balance grows in three ways:"
         ],
-        "tip": "Your balance is shown at the top of the Shop screen, next to the totals you have earned and spent."
+        "list": [
+          "When an agent finishes a task.",
+          "When a project finishes successfully.",
+          "When you reach the daily goal."
+        ],
+        "tip": "Your balance shows at the top of the Shop, next to your total earned and spent."
       },
       {
-        "h": "How much do tasks and projects pay?",
+        "h": "Check what each task pays",
         "paras": [
-          "With the default settings, each task pays by size: S pays 5 coins, M pays 10, L pays 20 and XL pays 40. A task with no size set counts as M.",
-          "If a quality review approves the result on the first try, the task pays 50% extra. If the review asked for rework and the task finished afterwards, it pays half of its base value.",
-          "When a project finishes successfully, it pays a completion bonus: 20 coins plus 2 for each finished task, capped at 100. The project needs at least 2 finished tasks to get it.",
-          "Nothing is paid for tasks that failed, were skipped, were cancelled or got blocked, for tasks with a rejected approval, or for milestones and human steps, because no agent did any work there."
-        ]
+          "With the default settings, each task pays according to its size. A task with no size counts as M."
+        ],
+        "table": {
+          "head": ["Size", "Coins"],
+          "rows": [
+            ["S", "5"],
+            ["M", "10"],
+            ["L", "20"],
+            ["XL", "40"]
+          ]
+        },
+        "list": [
+          "If a quality review approves the result on the first try, the task pays 50% extra.",
+          "If the review asked for rework, the task pays half its value.",
+          "A project that finishes successfully with at least 2 tasks done pays a one-time bonus of 20 coins plus 2 per finished task, capped at 100."
+        ],
+        "note": "Failed, skipped, cancelled or blocked tasks, tasks with a rejected approval, and milestones or human steps pay nothing. Whoever runs the server can change these values."
       },
       {
-        "h": "How do I find an item in the Shop?",
+        "h": "Reach the daily goal",
         "paras": [
-          "The Shop has several hundred items, so filtering helps. They are always sorted from cheapest to most expensive."
+          "In the top bar you will see a daily goal, for example “Finish 1 task today” or “Get 1 task approved on the first try”, with its progress and reward. The goal changes every day and is the same for everyone.",
+          "It only counts work already paid by the normal rules, and each day pays once at most. When you reach it, the chip shows “Done today”."
+        ],
+        "tip": "The goal shows on medium or large screens, and does not appear if the coin system is turned off."
+      },
+      {
+        "h": "Find an item",
+        "paras": [
+          "The Shop has close to a thousand items, always sorted from cheapest to most expensive."
         ],
         "steps": [
-          "Open Shop from the app menu.",
-          "Pick a group: Characters for your agents' outfits and accessories, or Office to decorate the space.",
-          "Click a category to see only that one. Under Characters you will find Outfits, Hats, Glasses, Headphones, Neckwear, Badges and Companions. Under Office you will find Plants, Lamps, Rugs, Coffee machine, Posters, Bookshelves, Aquariums, Arcade, Trophies and Views.",
-          "Click All to see the whole group again. If a list is long, use Show more to load the rest."
+          "Open “Shop” in the side menu.",
+          "Pick a group: “Characters”, for your agents' clothes and accessories, or “Office”, for furniture and decor.",
+          "Press a category. Characters has Outfits, Hats, Glasses, Headphones, Neckwear, Badges and Companions. Office has Desks, Chairs, Tables, Sofas, Cabinets, Dividers, Whiteboards, Equipment, Lights, Plants, Lamps, Rugs, Coffee machine, Posters, Bookshelves, Aquariums, Arcade, Trophies and Views.",
+          "Press “All” to see the whole group, and “Show more” if the list is long."
         ],
-        "tip": "When you switch group, the categories go back to All."
+        "tip": "When you switch groups, the category goes back to “All”."
       },
       {
-        "h": "How do I buy an item?",
+        "h": "Buy an item",
         "paras": [
           "Each card shows a preview, the rarity (Common, Rare or Epic), a description and the price."
         ],
         "steps": [
-          "Check your coin balance at the top of the screen.",
-          "Find an item you like and press Buy.",
-          "If it costs more than you have, the button is disabled and the card tells you how many coins you are missing.",
-          "After you buy it, the item goes to your inventory. It is not applied by itself: the card shows In your inventory and a link to Equip from inventory."
+          "Check your coin balance at the top of the Shop.",
+          "Press “Buy” on the item you want. If you cannot afford it, the button is disabled and the card says how many coins you are missing.",
+          "Press “Equip from inventory” to use it: the purchase goes to your inventory and is not applied on its own."
+        ],
+        "note": "Buying, equipping and placing require the Member role or above. With Read only you can browse the Shop but not spend."
+      },
+      {
+        "h": "Use what you bought",
+        "paras": [
+          "Everything you buy lives in the “Inventory” tab. The action on each card depends on the kind of item:"
+        ],
+        "table": {
+          "head": ["Kind of item", "How to use it"],
+          "rows": [
+            ["Character clothes and accessories", "Pick the agent in “Character” and press “Equip”; “Take off” removes it"],
+            ["Plants, lamps, rugs, coffee machine, posters, bookshelves, aquariums, arcade, trophies and views", "Press “Place” to put it in its spot in the office and “Remove” to take it away"],
+            ["Tables, sofas, cabinets, dividers, whiteboards, equipment and lights", "Press “Place in the office”: the editor opens so you can put it wherever you like"],
+            ["Desks and chairs", "Press “Place in the office”: the editor's “Workstations” tab opens so you can choose their style"]
+          ]
+        },
+        "tip": "On the card, “Worn by” tells you which agents wear an item and “Placed in the office” that it is already in place."
+      },
+      {
+        "h": "Review the coin history",
+        "paras": [
+          "The “History” tab lists every movement with “When”, “What”, “Agent”, “Coins” and “Balance”, and below it an “Earned by agent” summary. Each line gives its reason: welcome coins, task finished, task approved on the first try, task finished after rework, project finished, daily goal reached or a purchase."
         ]
       },
       {
-        "h": "How do I use what I bought?",
+        "h": "Understand what items change",
         "paras": [
-          "Everything you buy lives in the Inventory tab. From there you decide who wears it or where it goes."
-        ],
-        "steps": [
-          "Open the Inventory tab.",
-          "For a character item, choose the agent in the Character selector and press Equip. To undo it, press Take off. You will see who wears it under Worn by.",
-          "For an office item, press Place and it appears in your office. Press Remove to take it out.",
-          "Go back to the office to see the result in 3D."
-        ],
-        "tip": "If you already own an item, the Shop marks it as You own it."
-      },
-      {
-        "h": "Where can I see when my team earned or spent coins?",
-        "paras": [
-          "Open the History tab. It is a list with when it happened, what happened, which agent earned it, how many coins, and what your balance was after that.",
-          "Each line states the reason: welcome coins, task finished, task approved on the first try, task finished after rework, project finished or a purchase. There is also a summary of coins earned by agent."
-        ]
-      },
-      {
-        "h": "Do items change what my agents do?",
-        "paras": [
-          "No. Items are cosmetic only. A hat or a lamp makes the office look better, but it does not change what an agent can do, its permissions or the quality of its work.",
-          "Think of coins as recognition for finished work, not as a way to give agents more power."
+          "Nothing about the work. Items are cosmetic only: a hat or a lamp changes how the office looks, but not what an agent can do, its permissions or the quality of its work. Think of coins as recognition for finished work."
         ]
       }
     ]

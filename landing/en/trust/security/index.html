@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI Workforce OS security: controls and limits</title>
-  <meta name="description" content="Which security controls exist today in AI Workforce OS, verified in the code, and which ones we do not have yet. No certifications claimed.">
+  <meta name="description" content="The security controls that exist today in AI Workforce OS, verified in the code, and the ones we do not have yet. No certifications claimed.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,190 +24,187 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
   <meta property="og:title" content="AI Workforce OS security: controls and limits">
-  <meta property="og:description" content="Which security controls exist today in AI Workforce OS, verified in the code, and which ones we do not have yet. No certifications claimed.">
+  <meta property="og:description" content="The security controls that exist today in AI Workforce OS, verified in the code, and the ones we do not have yet. No certifications claimed.">
   <meta property="og:url" content="https://workforceai.es/en/trust/security/">
   <meta property="og:image" content="https://workforceai.es/img/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="AI Workforce OS security: controls and limits">
-  <meta name="twitter:description" content="Which security controls exist today in AI Workforce OS, verified in the code, and which ones we do not have yet. No certifications claimed.">
+  <meta name="twitter:description" content="The security controls that exist today in AI Workforce OS, verified in the code, and the ones we do not have yet. No certifications claimed.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Trust","item":"https://workforceai.es/en/trust/"},{"@type":"ListItem","position":3,"name":"Security at AI Workforce OS","item":"https://workforceai.es/en/trust/security/"}]},{"@type":"TechArticle","headline":"Security at AI Workforce OS","description":"Which security controls exist today in AI Workforce OS, verified in the code, and which ones we do not have yet. No certifications claimed.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/trust/security/","url":"https://workforceai.es/en/trust/security/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=b5a2c05468">
+  <script src="/docs.js?v=2e2073da11" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Trust","item":"https://workforceai.es/en/trust/"},{"@type":"ListItem","position":3,"name":"Security at AI Workforce OS","item":"https://workforceai.es/en/trust/security/"}]},{"@type":"TechArticle","headline":"Security at AI Workforce OS","description":"The security controls that exist today in AI Workforce OS, verified in the code, and the ones we do not have yet. No certifications claimed.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/trust/security/","url":"https://workforceai.es/en/trust/security/","dateModified":"2026-10-22","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/en/" aria-label="AI Workforce OS">
+<body class="dx dx-trust" id="top">
+  <a class="dx-skip" href="#main">Skip to content</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/en/" aria-label="AI Workforce OS">
         <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="/en/">Home</a>
-        <a href="/en/docs/">Documentation</a>
-        <a href="/en/guide/">User guide</a>
-        <a href="/en/trust/">Trust</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Language">
-          <a href="/confianza/seguridad/" hreflang="es" lang="es" >ES</a>
+      <nav class="dx-tabs" aria-label="Site sections"><a href="/en/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Language">
+          <a href="/confianza/seguridad/" hreflang="es" lang="es">ES</a>
           <a href="/en/trust/security/" hreflang="en" lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap narrow">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/trust/">Trust</a></li><li aria-current="page">Security at AI Workforce OS</li></ol></nav>
-      <article>
-        <h1>Security at AI Workforce OS</h1>
-        <p class="lead">This page summarizes the security controls that are implemented today, as can be checked in the code and in the deployment configuration, and ends with a table of what we do not have yet. We hold no certifications (neither SOC 2 nor ISO 27001) and we do not claim compliance with any framework. If your procurement team needs more detail, write to info@workforceai.es.</p>
-        
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">How to read this page</a></li><li><a href="#s2">Isolation between organizations</a></li><li><a href="#s3">Authentication and sessions</a></li><li><a href="#s4">Roles and permissions</a></li><li><a href="#s5">Credential vault</a></li><li><a href="#s6">Human approvals</a></li><li><a href="#s7">Spending caps and operating controls</a></li><li><a href="#s8">Verifiable audit log</a></li><li><a href="#s9">Data to AI models and untrusted content</a></li><li><a href="#s10">Encryption in transit, backups and development</a></li><li><a href="#s11">What we do not have yet</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">How to read this page</h2>
-        <p>We describe only what exists. When something depends on configuration (for example e-mail verification or the vault encryption key) we say so explicitly. The current public deployment shares a single server and, according to its configuration in the repository, the agent runtime runs in simulation mode: it sends no data to any model provider until a real AI key is configured.</p>
-        <p>The design starts from the premise that a language model can be fooled by untrusted text. That is why damage is limited with deterministic controls in the backend (Go) and not with instructions in the prompt. We do not promise that the model is never influenced; we promise that the blast radius is bounded to what the backend authorizes.</p>
-        
-        
-        
-        <aside class="tip"><b>Tip.</b> More technical detail in the documentation: security model and authentication and multi-organization.</aside>
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">Isolation between organizations</h2>
-        <p>Tables holding organization data use Postgres row-level security. Each request runs in a transaction that sets the organization with a transaction-local setting, and policies filter on it; FORCE ROW LEVEL SECURITY applies it even to the table owner.</p>
-        <p>The system fails closed: if the organization is not set, no row is visible or writable. The server connects with a role that is not a superuser, has no BYPASSRLS and owns no tables. An integration test covers isolation between organizations. This is logical isolation inside one database, not separate instances per customer.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">Authentication and sessions</h2>
-        <p>Passwords are stored with Argon2id (64 MiB, 3 iterations, 2 lanes by default) and are rehashed at the next login if they were created with weaker parameters. Passwords must be 10 to 128 characters long, use at least two character classes, and common passwords are rejected.</p>
-        <p>After 5 wrong passwords the account is locked for 15 minutes. There are rate limits per e-mail and per IP (for example 10 login attempts per 15 minutes per e-mail, 20 per IP, and 5 sign-ups per hour per IP), kept in Redis when available or in memory otherwise. For non-existent accounts an equivalent hash is computed so that response time does not reveal whether an e-mail exists.</p>
-        <p>The access token is a JWT valid 15 minutes by default. The refresh token is opaque, lasts 30 days by default, is stored on the server only as a SHA-256 hash and travels in an HttpOnly, SameSite=Strict cookie. Every refresh rotates the token within a family; presenting an already-used token revokes the whole family. Refresh and logout require a dedicated anti-CSRF header.</p>
-        <p>E-mail verification with a single-use link (valid 24 hours) exists but is optional: it is turned on with EMAIL_VERIFICATION=true and requires a configured SMTP server. Trial accounts are disposable and stop working after 24 hours.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">Roles and permissions</h2>
-        <p>Each membership has one of four roles: owner, admin, member or viewer, and each is a strict superset of the one below. Permissions have the form resource:action and are checked on the server before each operation. By default the role is read from the database on every request, so demoting or removing a member takes effect immediately.</p>
-        <p>Nobody can assign a role higher than their own, the last owner cannot be removed and an agent never holds approval permissions. A user can belong to several organizations with a different role in each.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">Credential vault</h2>
-        <p>Integration credentials (OAuth tokens, API keys) are encrypted with AES-256-GCM in an envelope scheme: a key-encryption key (KEK) kept outside the database wraps a per-organization data key, and that key encrypts each secret with a random nonce. The authenticated data includes organization, credential, version and kind, so a ciphertext copied to another row or organization does not decrypt.</p>
-        <p>Without a configured KEK (CONNECTIONS_KEK) the vault fails closed: it neither stores nor reads real credentials. Several KEKs are accepted so they can be rotated. Revoking a connection suspends it, calls the provider's revocation endpoint and destroys the ciphertext. The language model never sees a secret: the contract between backend and runtime has no credential fields.</p>
-        <p>An organization's own AI keys (bring your own key) are stored with the same envelope encryption.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">Human approvals</h2>
-        <p>An agent can request an action but can never approve it. People with the admin or owner role approve; the role comes from the session token. Each approval is bound by hash to the exact arguments, is consumed once, is re-validated before execution and expires (48 hours by default; expiring counts as a rejection).</p>
-        <p>There are four autonomy levels per agent (suggest, approve_each, rules, autonomous); the default level requires approval for any action with an external effect. An organization can add rules such as amount thresholds, forbidden actions, new recipients or dual approval, in which two distinct people are needed and the requester never approves.</p>
-        <p>Known limitation: there is no finer-grained permission for deciding high-risk approvals today; deciding equals being admin or owner. The option that prevents self-approval ships turned off for compatibility with one-person teams.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">Spending caps and operating controls</h2>
-        <p>Before each runtime call the maximum estimated cost is reserved against the request, the agent and the organization, and afterwards it is reconciled with the larger of the cost reported by the runtime and the cost recomputed by the backend. When a cap is reached the request or agent pauses and a person decides whether to raise it. There are also anti-loop limits: delegation depth, tasks per request, retries, time per task and a per-organization queue.</p>
-        <p>Operating hours are a weekly schedule with a time zone that prevents starting new work outside open hours. Anomaly detection v1 applies four explainable rules (spend spike, burst of tool requests, serial rejected approvals and new recipient domains) and records each finding in the audit log; on its own it does not block, and automatic freezing is optional and off by default.</p>
-        <p>Read-only mode (organization-wide or per agent) denies external effects. The kill switch has two levels, freeze and lockdown: any admin or owner can trigger it, only an owner can lift it and with a written reason; it can also be imposed through an environment variable. Held actions go back to the approval queue and must be approved again. A call already sent to the runtime finishes even if the kill switch is triggered.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s8" aria-labelledby="h8">
-        <h2 id="h8">Verifiable audit log</h2>
-        <p>The audit log is a hash chain per organization: each entry includes the SHA-256 of the previous one, so modifying, deleting, reordering or inserting an entry breaks the chain from that point on. A verification endpoint recomputes the chain and an export endpoint returns the log as JSONL or CSV (admin or owner permission). For the application role the log is append-only: UPDATE and DELETE are revoked.</p>
-        <p>Before being chained, each entry goes through a scrubber that keeps only metadata: it replaces content fields and credential-looking keys with [redacted], masks embedded secrets and truncates long texts. Authentication, policy decisions, approvals, tool executions and control changes are audited, among others.</p>
-        <p>The export is a plain dump, with no external signature or anchoring of the chain head. Today there is no automatic purge of the audit log.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s9" aria-labelledby="h9">
-        <h2 id="h9">Data to AI models and untrusted content</h2>
-        <p>Before text reaches the model, the runtime and the backend mask credentials, one-time codes and card numbers, and all external content (e-mails, API responses, files) is normalized, markdown images and links are neutralized and it is wrapped in a block delimited as data. A heuristic injection score flags the task and raises its approval; it is a signal, not a barrier. The barrier is permissions, approvals and limits.</p>
-        <p>Each organization can set an allow-list of AI providers, on top of the ceiling defined by the deployment operator (ALLOWED_PROVIDERS). An excluded provider is neither called nor used as a fallback. Organizations can bring their own AI key and require that only that key is used (no fallback to the platform's keys), or point to their own OpenAI-compatible endpoint. The providers the system recognizes are deepseek, anthropic, openai, kimi and custom. Details on the subprocessors page.</p>
-        <p>Code that an agent wants to run is a high-risk request that a person must approve. It runs in a container with no network, a read-only file system, no capabilities and resource limits. Known limitation: the executor mounts the Docker socket, which is equivalent to administrator access to the host; we do not recommend it beyond a single trusted host.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s10" aria-labelledby="h10">
-        <h2 id="h10">Encryption in transit, backups and development</h2>
-        <p>Public traffic arrives over HTTPS: a Caddy proxy terminates TLS with automatic certificates and sends the Strict-Transport-Security header (one year) on the site and the application. The application also adds X-Content-Type-Options, X-Frame-Options DENY and Referrer-Policy. We have not had the TLS configuration externally assessed. Between containers, on a private network of the same server, the connection to Postgres does not use TLS (sslmode=disable). We have not verified encryption at rest of the hosting provider's disks.</p>
-        <p>Backups: a cron job runs once a day (03:30, server time) a gzip-compressed Postgres dump. It is stored on the same server with restrictive permissions, kept for 14 days, and the script fails with a message if the file is suspiciously small. One restore has been tested. There is no off-server copy and no formal recovery time or recovery point objective.</p>
-        <p>Development: the repository runs in CI the build, tests, a race detector on key packages, a Dockerfile linter, govulncheck and npm audit (the last two do not block integration). Deployments use images tagged by commit.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s11" aria-labelledby="h11">
-        <h2 id="h11">What we do not have yet</h2>
-        <p>An honest status of the capabilities procurement teams usually ask for. Where we say it does not exist, it does not exist; where we say in development, it is not available today. We give no dates because none is committed.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Capability</th><th scope="col">Status today</th><th scope="col">Detail</th></tr></thead><tbody><tr><th scope="row"><code>SOC 2 / ISO 27001</code></th><td>Does not exist</td><td>No certifications or external audit. They appear in the internal plan as a later phase, with no approved date or budget.</td></tr><tr><th scope="row"><code>SSO (SAML/OIDC) and SCIM</code></th><td>Does not exist</td><td>E-mail and password, with optional two-step verification. The OIDC that exists is used solely to connect LinkedIn as an integration.</td></tr><tr><th scope="row"><code>Organization-wide mandatory MFA</code></th><td>Does not exist</td><td>Each person can turn on an authenticator app (TOTP) with recovery codes, but an organization cannot require it of all its members.</td></tr><tr><th scope="row"><code>Password recovery by e-mail</code></th><td>Built, not yet switched on</td><td>The single-use link (1 hour) is built, but it needs outgoing e-mail configured, which the public deployment does not have yet.</td></tr><tr><th scope="row"><code>Complete export and erasure of an organization's or person's data</code></th><td>In development</td><td>Partial exports exist (audit, traces, artifacts, skills). For the rest, send a request to info@workforceai.es.</td></tr><tr><th scope="row"><code>Choice of data residency</code></th><td>Does not exist</td><td>A single shared server; its location is not verified on this page. Region cannot be chosen.</td></tr><tr><th scope="row"><code>External signing or anchoring of the audit log</code></th><td>Does not exist</td><td>The hash chain is verifiable, but its head is not anchored outside the system.</td></tr><tr><th scope="row"><code>Encryption keys in a KMS</code></th><td>Does not exist</td><td>The KEK is supplied through an environment variable (CONNECTIONS_KEK); rotation with several KEKs is supported.</td></tr><tr><th scope="row"><code>External penetration test</code></th><td>Does not exist</td><td>Only our own automated tests and dependency scanners in CI.</td></tr><tr><th scope="row"><code>Off-server backups and periodic restore tests</code></th><td>Does not exist</td><td>Nightly dumps live on the same server; one restore was tested, with no test schedule.</td></tr><tr><th scope="row"><code>High availability and multiple replicas</code></th><td>Does not exist</td><td>A single instance; some counters and semaphores are per process.</td></tr><tr><th scope="row"><code>Public status page with incident history</code></th><td>Does not exist</td><td>The Current status section of the site describes what works, not availability.</td></tr><tr><th scope="row"><code>Published legal documents (privacy, terms, DPA)</code></th><td>Under review</td><td>Drafts exist pending review by a lawyer; they are not published yet.</td></tr><tr><th scope="row"><code>Strong isolation of the code executor</code></th><td>Partial</td><td>A restricted container, but with access to the host's Docker socket.</td></tr></tbody></table></div>
-        <aside class="tip"><b>Tip.</b> To report a vulnerability, see the vulnerability disclosure page or write to info@workforceai.es.</aside>
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/trust/subprocessors/"><b>Subprocessors</b><span>Third parties that may process customer data in AI Workforce OS: hosting, AI model providers, e-mail and payments, with their purpose and data involved.</span></a></li><li><a href="/en/trust/data-protection/"><b>Data protection</b><span>What data AI Workforce OS stores, where, for how long, how it reaches AI providers, and how to exercise your rights today.</span></a></li><li><a href="/en/trust/vulnerability-disclosure/"><b>Vulnerability disclosure</b><span>How to report a security vulnerability in AI Workforce OS, what is in scope, our safe-harbor rules and what you can expect from us.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Start now</h2>
-      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Trust">
+      <div class="dx-side-head">
+        <span>Menu</span>
+        <a class="dx-side-close" href="#top" aria-label="Close menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a href="/en/docs/">Documentation</a>
-      <a href="/en/guide/">User guide</a>
-      <a href="/en/trust/">Trust</a>
-      <a href="#top">Back to top</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Site sections"><a href="/en/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <nav class="dx-pages" aria-label="Trust">
+        <ul class="dx-list">
+          <li><a href="/en/trust/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Overview</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-trust-security">Security</p>
+        <ul class="dx-list" aria-labelledby="g-trust-security">
+          <li><a href="/en/trust/security/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2.2"/><path d="M8 10.5v-3a4 4 0 0 1 8 0v3M12 14.5V17"/></svg><span>Security overview</span></a></li>
+          <li><a href="/en/trust/vulnerability-disclosure/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="7.5" y="8" width="9" height="12.5" rx="4.5"/><path d="M9.5 8V6.5a2.5 2.5 0 0 1 5 0V8M3.5 13.5h4M16.5 13.5h4M4.5 8.5l3 2M19.5 8.5l-3 2M4.5 19l3-2M19.5 19l-3-2M12 11.5v9"/></svg><span>Vulnerability disclosure</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-trust-data">Data</p>
+        <ul class="dx-list" aria-labelledby="g-trust-data">
+          <li><a href="/en/trust/data-protection/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/></svg><span>Data protection</span></a></li>
+          <li><a href="/en/trust/subprocessors/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5V12M12 12l-5.3 5.2M12 12l5.3 5.2"/></svg><span>Subprocessors</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Language">
+          <a href="/confianza/seguridad/" hreflang="es" lang="es">ES</a>
+          <a href="/en/trust/security/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/trust/">Trust</a></li><li><span>Security</span></li></ol></nav>
+        <h1>Security at AI Workforce OS</h1>
+        <p class="dx-lead">These are the security controls that exist today, as they can be checked in the code and in the deployment configuration. At the end there is a table of what we do not have yet. We hold no certifications (neither SOC 2 nor ISO 27001) and we do not claim compliance with any framework.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>11 min read</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">On this page</summary>
+        <ol><li><a href="#how-to-read-this-page">How to read this page</a></li><li><a href="#isolation-between-organizations">Isolation between organizations</a></li><li><a href="#sign-in-and-sessions">Sign-in and sessions</a></li><li><a href="#enterprise-identity-sso-mfa-and-scim">Enterprise identity: SSO, MFA and SCIM</a></li><li><a href="#roles-and-permissions">Roles and permissions</a></li><li><a href="#secrets-vault">Secrets vault</a></li><li><a href="#human-approvals">Human approvals</a></li><li><a href="#spending-caps-and-operating-controls">Spending caps and operating controls</a></li><li><a href="#verifiable-audit-log">Verifiable audit log</a></li><li><a href="#data-to-ai-models-and-untrusted-content">Data to AI models and untrusted content</a></li><li><a href="#code-execution">Code execution</a></li><li><a href="#encryption-in-transit-and-headers">Encryption in transit and headers</a></li><li><a href="#backups-and-development">Backups and development</a></li><li><a href="#what-we-do-not-have-yet">What we do not have yet</a></li></ol>
+        <a class="dx-toc-top" href="#top">Back to top</a>
+      </details>
+      <div class="dx-body">
+        
+        <section class="dx-sec" aria-labelledby="how-to-read-this-page">
+        <h2 id="how-to-read-this-page">How to read this page<a class="dx-anchor" href="#how-to-read-this-page" aria-label="Link to the “How to read this page” section">#</a></h2>
+        <p>We only describe what exists. When a control depends on the operator's configuration, we say so. The design assumes that a language model can be fooled by untrusted text, so damage is limited with deterministic controls in the backend (Go) and not with instructions in the prompt: we do not promise that the model is never influenced, only that it can do nothing the backend does not authorize.</p>
+        <p>The current public deployment runs on a single shared server. According to its configuration in the repository, the agent runtime is in simulation mode (it sends nothing to model providers) and the vault has no encryption key configured, so it stores no real credentials.</p>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>More technical detail in the documentation: security model, and authentication and multi-tenancy.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="isolation-between-organizations">
+        <h2 id="isolation-between-organizations">Isolation between organizations<a class="dx-anchor" href="#isolation-between-organizations" aria-label="Link to the “Isolation between organizations” section">#</a></h2>
+        <p>Tables holding an organization's data use Postgres row-level security with <code>FORCE ROW LEVEL SECURITY</code>. Each request runs in a transaction that sets the organization with a local setting (<code>app.org_id</code>) and the policies filter on it. If it is not set, no row is visible or writable.</p>
+        <p>The server works with a role (<code>app_user</code>) that is not a superuser, has no <code>BYPASSRLS</code> and owns no tables. Integration tests check isolation between two organizations. This is logical isolation inside one database, not an instance per customer.</p>
+      </section>
+        <section class="dx-sec" aria-labelledby="sign-in-and-sessions">
+        <h2 id="sign-in-and-sessions">Sign-in and sessions<a class="dx-anchor" href="#sign-in-and-sessions" aria-label="Link to the “Sign-in and sessions” section">#</a></h2>
+        <ul class="dx-ul"><li>Passwords hashed with Argon2id (64 MiB, 3 iterations, 2 threads), rehashed at the next sign-in if they were created with weaker parameters.</li><li>10 to 128 characters and at least two character classes. The account's own e-mail address and a short list of common passwords are rejected.</li><li>After 5 failed attempts (password or verification code) the account is locked for 15 minutes. There are also rate limits per e-mail, per IP and per user on sign-in, sign-up, two-step verification, password recovery and SSO.</li><li>For non-existent accounts an equivalent hash is computed, so response time does not reveal whether an e-mail exists.</li><li>The access token is a 15-minute JWT. The refresh token is opaque, lasts 30 days, is stored only as a SHA-256 hash and travels in an <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Strict</code> cookie. Every use rotates it, and reusing an already-used token revokes the whole family.</li><li>Renewing and ending a session require the <code>X-WFAI-CSRF</code> header and an allowed origin.</li><li>E-mail verification (single-use link, 24 hours) is optional: it is turned on with <code>EMAIL_VERIFICATION=true</code> and needs SMTP. Password recovery uses a single-use link valid for 1 hour and closes every open session.</li></ul>
+      </section>
+        <section class="dx-sec" aria-labelledby="enterprise-identity-sso-mfa-and-scim">
+        <h2 id="enterprise-identity-sso-mfa-and-scim">Enterprise identity: SSO, MFA and SCIM<a class="dx-anchor" href="#enterprise-identity-sso-mfa-and-scim" aria-label="Link to the “Enterprise identity: SSO, MFA and SCIM” section">#</a></h2>
+        <ul class="dx-ul"><li>Single sign-on with any OpenID Connect provider (Okta, Entra ID, Google Workspace…): code flow with PKCE, <code>state</code> and <code>nonce</code>, and tokens signed only with RS256 or ES256. The client secret is stored encrypted in the vault.</li><li>Domains verified with a DNS TXT record, re-checked every 24 hours. SSO and domain-based account creation only work with verified domains.</li><li>Two-step verification with an authenticator app (TOTP) and 8 recovery codes. An organization can require it of all its members: anyone without it must enroll before getting a session.</li><li>An organization can enforce SSO and turn off password sign-in. Owners keep their password as emergency access.</li><li>SCIM 2.0 provisioning (users and groups) with one token per organization stored as a hash. Deactivating a person removes their membership and revokes their sessions in that organization at once.</li></ul>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>The required MFA or SSO policy is checked at password sign-in and when switching organizations; sessions that were already open are not closed when it is turned on. SAML is not implemented.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="roles-and-permissions">
+        <h2 id="roles-and-permissions">Roles and permissions<a class="dx-anchor" href="#roles-and-permissions" aria-label="Link to the “Roles and permissions” section">#</a></h2>
+        <p>Each membership has one of four roles: owner, admin, member or viewer, each a strict superset of the one below. Permissions have the form <code>resource:action</code> and are checked on the server before each operation. The role is read from the database on every request, so demoting or removing a member takes effect immediately.</p>
+        <p>An admin can only assign the member and viewer roles and cannot change their own role, and the last owner cannot be removed or demoted. A person can belong to several organizations with a different role in each. There are no custom roles.</p>
+      </section>
+        <section class="dx-sec" aria-labelledby="secrets-vault">
+        <h2 id="secrets-vault">Secrets vault<a class="dx-anchor" href="#secrets-vault" aria-label="Link to the “Secrets vault” section">#</a></h2>
+        <p>OAuth tokens, integration API keys and an organization's own AI keys are encrypted with AES-256-GCM in an envelope scheme: a key-encryption key (KEK) that lives outside the database wraps a per-organization data key, and that key encrypts each secret with a random nonce. The authenticated data binds each ciphertext to its organization and purpose, so if it is copied to another row or organization it does not decrypt.</p>
+        <p>Without <code>CONNECTIONS_KEK</code> the vault fails closed: it neither stores nor reads real secrets. The KEK is rotated with <code>CONNECTIONS_KEK_PREVIOUS</code> and data keys can be rotated too. Revoking an OAuth connection suspends it, calls the provider's revocation endpoint and destroys the ciphertext; if the provider fails, it is retried.</p>
+        <p>Integration credentials never travel to the agent runtime or the model. An organization's own AI key is sent to the runtime to call the provider, never inside the prompt. The same vault encrypts the SSO client secret, webhook signing secrets and the Slack and Teams notice URLs.</p>
+      </section>
+        <section class="dx-sec" aria-labelledby="human-approvals">
+        <h2 id="human-approvals">Human approvals<a class="dx-anchor" href="#human-approvals" aria-label="Link to the “Human approvals” section">#</a></h2>
+        <p>An agent can request an action but can never approve it. People with the admin or owner role decide. Each approval is bound by hash to the exact arguments, is consumed once and is re-validated before execution. It expires after 30 minutes by default (<code>APPROVAL_TIMEOUT</code>) and expiring counts as a rejection; project approvals do not expire by default and send hourly reminders.</p>
+        <p>There are four autonomy levels per agent (<code>suggest</code>, <code>approve_each</code>, <code>rules</code>, <code>autonomous</code>). Integration actions with external, irreversible effects always ask for approval, and an approved e-mail waits at least 60 seconds before going out, during which it can still be cancelled. Each organization can add rules:</p>
+        <ul class="dx-ul"><li>amount thresholds and forbidden actions;</li><li>mandatory approval for new recipients;</li><li>a higher minimum role to decide certain actions;</li><li>dual approval, with two different people and never the requester;</li><li>approval for a session (8 hours) or a project (30 days), only for internal, reversible, low or medium risk actions.</li></ul>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>Approvals can also be decided from e-mail, Slack or Teams with signed links (HMAC-SHA256), single-use and valid for 24 hours. Opening the link decides nothing: a confirmation is required. These links are never offered for high-risk actions, dual approval, a minimum role or code execution. The option that prevents approving your own requests is off by default, except with dual approval.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="spending-caps-and-operating-controls">
+        <h2 id="spending-caps-and-operating-controls">Spending caps and operating controls<a class="dx-anchor" href="#spending-caps-and-operating-controls" aria-label="Link to the “Spending caps and operating controls” section">#</a></h2>
+        <p>Before each runtime call the maximum estimated cost is reserved against the request, the agent and the organization, and afterwards it is reconciled with the larger of the cost reported by the runtime and the cost recomputed by the backend. When a cap is reached, work pauses until a person decides. Each call also carries its own cost cap, and there are limits on delegation depth, retries, time per call and parallel calls per organization.</p>
+        <p>Operating hours prevent starting new work outside open hours. Anomaly detection applies four explainable rules (spend spike, burst of tool requests, serial rejected approvals and new recipient domains) and records each finding; it does not block on its own and automatic freezing is off by default.</p>
+        <p>Read-only mode, for the organization or an agent, denies external effects. The kill switch has two levels, freeze and lockdown: any admin or owner can trigger it, only an owner can lift it and with a written reason. The operator can also impose it with <code>KILL_SWITCH</code>, and then no API call can lift it. Held actions go back to the approval queue; a call already sent to the runtime finishes.</p>
+      </section>
+        <section class="dx-sec" aria-labelledby="verifiable-audit-log">
+        <h2 id="verifiable-audit-log">Verifiable audit log<a class="dx-anchor" href="#verifiable-audit-log" aria-label="Link to the “Verifiable audit log” section">#</a></h2>
+        <p>The audit log is a hash chain per organization: each entry includes the SHA-256 of the previous one, so modifying, deleting, reordering or inserting an entry breaks the chain. For the application role it is append-only (<code>UPDATE</code> and <code>DELETE</code> revoked, plus triggers). Before being chained, each entry goes through a scrubber that replaces content and credential-looking keys with <code>[redacted]</code> and truncates long texts.</p>
+        <p>Audited events include approvals, tool executions and denials, policy decisions, control changes, identity changes (SSO, MFA, password recovery, invitations) and exports and deletions. Password sign-in and sign-out are not audited yet.</p>
+        <ul class="dx-ul"><li>Verification: <code>GET /api/v1/audit/verify</code> recomputes the chain. If you keep the chain head (number and hash) outside the system, you can pass it as an anchor to detect even a complete rewrite.</li><li>Export for admins and owners as JSONL, CSV or a ZIP that includes the verification result. The export is not signed.</li><li>Optional retention: an owner can purge entries older than at least 365 days. The chain stays verifiable from a checkpoint, but the purged content can no longer be proven: keep an export if you need it.</li></ul>
+      </section>
+        <section class="dx-sec" aria-labelledby="data-to-ai-models-and-untrusted-content">
+        <h2 id="data-to-ai-models-and-untrusted-content">Data to AI models and untrusted content<a class="dx-anchor" href="#data-to-ai-models-and-untrusted-content" aria-label="Link to the “Data to AI models and untrusted content” section">#</a></h2>
+        <p>Before text reaches the model, credentials and card numbers are masked, and the backend also masks one-time codes. External content (e-mails, API responses, files, web pages) is normalized, its markdown images and links are neutralized and it is wrapped in a block delimited as data. A heuristic injection score flags the task and adds approval reasons to actions with effects; it is a signal, not the barrier. The barrier is permissions, approvals and limits.</p>
+        <p>The operator sets a ceiling of AI providers (<code>ALLOWED_PROVIDERS</code>) and each organization can narrow it further; an excluded provider is not called, not even as a fallback. An organization can use its own AI key, and while it is active only that key answers, or point to its own OpenAI-compatible endpoint.</p>
+        <p>Agent web browsing is off per organization by default. When it is on, requests leave from the backend with SSRF protection that blocks private, loopback and link-local addresses at connection time; outgoing webhooks use the same protection and accept HTTPS only.</p>
+      </section>
+        <section class="dx-sec" aria-labelledby="code-execution">
+        <h2 id="code-execution">Code execution<a class="dx-anchor" href="#code-execution" aria-label="Link to the “Code execution” section">#</a></h2>
+        <p>Code an agent wants to run is a high-risk action that a person must approve. There is an optional mode, off by default, in which code that only touches the agent's own files runs without approval; turning it on requires <code>org:manage</code> and an explicit risk acknowledgement, and it is audited.</p>
+        <p>Code runs in a container with no network, a read-only file system, no capabilities, no privilege escalation, an unprivileged user and limits on processes, memory and CPU. gVisor is optional.</p>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>The executor service mounts the host's Docker socket, which is equivalent to administrator access to the host. We recommend running it only on a dedicated, trusted host. It is not part of the public deployment.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="encryption-in-transit-and-headers">
+        <h2 id="encryption-in-transit-and-headers">Encryption in transit and headers<a class="dx-anchor" href="#encryption-in-transit-and-headers" aria-label="Link to the “Encryption in transit and headers” section">#</a></h2>
+        <p>Public traffic arrives over HTTPS: the Caddy proxy terminates TLS with automatic certificates and sends a one-year <code>Strict-Transport-Security</code> header on the site and the application. On the application it adds <code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options: DENY</code> and <code>Referrer-Policy</code>. Files uploaded by users and artifacts are served with a <code>sandbox</code> CSP so they cannot run code on the application's origin.</p>
+        <p>Between containers, inside a private network on the same server, the connection to Postgres does not use TLS (<code>sslmode=disable</code>). Secrets are encrypted at the application level, but we have not verified encryption at rest of the hosting provider's disks.</p>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>There is no global Content-Security-Policy on the application yet, and the TLS configuration has not been externally assessed.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="backups-and-development">
+        <h2 id="backups-and-development">Backups and development<a class="dx-anchor" href="#backups-and-development" aria-label="Link to the “Backups and development” section">#</a></h2>
+        <p>A cron job takes a compressed Postgres dump every night (03:30, server time). It is stored on the same server with restrictive permissions and kept for 14 days; the script fails with a message if the file is suspiciously small. There is no off-server copy and no formal recovery time or recovery point objective.</p>
+        <p>Continuous integration builds and tests the backend and the runtime, builds the frontend and runs the race detector on key packages, end-to-end tests, a Dockerfile linter, <code>govulncheck</code> and <code>npm audit</code> (the last two do not block). Images are published tagged by commit.</p>
+      </section>
+        <section class="dx-sec" aria-labelledby="what-we-do-not-have-yet">
+        <h2 id="what-we-do-not-have-yet">What we do not have yet<a class="dx-anchor" href="#what-we-do-not-have-yet" aria-label="Link to the “What we do not have yet” section">#</a></h2>
+        <p>An honest status of what procurement teams usually ask for. Where it says it does not exist, it does not exist; where it says partial, read the detail. We give no dates because none is committed.</p>
+        <div class="dx-table is-tall" role="region" tabindex="0" aria-label="Table: What we do not have yet"><table><thead><tr><th scope="col">Capability</th><th scope="col">Status today</th><th scope="col">Detail</th></tr></thead><tbody><tr><th scope="row">SOC 2 / ISO 27001</th><td>Does not exist</td><td>No certifications or external audit.</td></tr><tr><th scope="row">External penetration test</th><td>Does not exist</td><td>Only our own automated tests and dependency scanners in CI.</td></tr><tr><th scope="row">SAML SSO</th><td>Does not exist</td><td>SSO is OpenID Connect only.</td></tr><tr><th scope="row">Custom roles</th><td>Does not exist</td><td>Four fixed roles.</td></tr><tr><th scope="row">Breached-password check</th><td>Does not exist</td><td>Only a short list of common passwords.</td></tr><tr><th scope="row">Self-service export or deletion of an individual account</th><td>Does not exist</td><td>Export and deletion work per organization; for an account, send a request to info@workforceai.es.</td></tr><tr><th scope="row">Choice of data residency</th><td>Does not exist</td><td>A single server; a region cannot be chosen.</td></tr><tr><th scope="row">Encryption keys in a KMS</th><td>Does not exist</td><td>The KEK is supplied through an environment variable (<code>CONNECTIONS_KEK</code>).</td></tr><tr><th scope="row">Signed or externally anchored audit export</th><td>Partial</td><td>Verification accepts an anchor you keep yourself; the platform does not sign or anchor the chain head.</td></tr><tr><th scope="row">Off-server backups and periodic restore tests</th><td>Does not exist</td><td>Nightly dumps live on the same server.</td></tr><tr><th scope="row">High availability</th><td>Does not exist</td><td>A single instance.</td></tr><tr><th scope="row">Secret scanning and static analysis in CI</th><td>Does not exist</td><td>There are <code>govulncheck</code>, <code>npm audit</code> and a Dockerfile linter, but no secret scanning or CodeQL.</td></tr><tr><th scope="row">Public status page</th><td>Does not exist</td><td>No public incident or availability history.</td></tr><tr><th scope="row">Published legal documents (privacy, terms, DPA)</th><td>Under review</td><td>Drafts pending review by a lawyer.</td></tr><tr><th scope="row">Strong isolation of the code executor</th><td>Partial</td><td>A restricted container, but the executor has access to the host's Docker socket.</td></tr></tbody></table></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>To report a vulnerability, see the vulnerability disclosure page or write to info@workforceai.es.</p></div></div>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="dx-cards dx-cards-sm"><li><a href="/en/trust/subprocessors/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5V12M12 12l-5.3 5.2M12 12l5.3 5.2"/></svg><b>Subprocessors</b><span>Third parties that may process customer data in AI Workforce OS: hosting, AI models, e-mail and optional services, with what data and when.</span></a></li><li><a href="/en/trust/data-protection/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/></svg><b>Data protection</b><span>What data AI Workforce OS stores, where, for how long, when it reaches AI providers and how to export or delete it today.</span></a></li><li><a href="/en/trust/vulnerability-disclosure/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="7.5" y="8" width="9" height="12.5" rx="4.5"/><path d="M9.5 8V6.5a2.5 2.5 0 0 1 5 0V8M3.5 13.5h4M16.5 13.5h4M4.5 8.5l3 2M19.5 8.5l-3 2M4.5 19l3-2M19.5 19l-3-2M12 11.5v9"/></svg><b>Vulnerability disclosure</b><span>How to report a vulnerability in AI Workforce OS: contact, scope, safe harbor for good-faith research and what you can expect from us.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Pagination">
+        <a class="dx-prev" href="/en/trust/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Previous</span><b>Trust</b></a>
+        <a class="dx-next" href="/en/trust/vulnerability-disclosure/" rel="next"><span>Next<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>Vulnerability disclosure</b></a>
+      </nav>
+      
+      <footer class="dx-foot">
+        <p>AI Workforce OS is a project in development. This documentation describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+        <div class="dx-foot-links">
+          <a href="/en/">AI Workforce OS</a>
+          <a href="/en/docs/">Documentation</a>
+          <a href="/en/guide/">User guide</a>
+          <a href="/en/trust/">Trust</a>
+          <a href="#top">Back to top</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

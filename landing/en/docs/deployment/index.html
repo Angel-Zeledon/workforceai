@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Production deployment with Docker Compose and Caddy</title>
-  <meta name="description" content="How to deploy AI Workforce OS with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.">
+  <meta name="description" content="Deploy AI Workforce OS on your own server with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,205 +24,254 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
   <meta property="og:title" content="Production deployment with Docker Compose and Caddy">
-  <meta property="og:description" content="How to deploy AI Workforce OS with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.">
+  <meta property="og:description" content="Deploy AI Workforce OS on your own server with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.">
   <meta property="og:url" content="https://workforceai.es/en/docs/deployment/">
   <meta property="og:image" content="https://workforceai.es/img/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Production deployment with Docker Compose and Caddy">
-  <meta name="twitter:description" content="How to deploy AI Workforce OS with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.">
+  <meta name="twitter:description" content="Deploy AI Workforce OS on your own server with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Production deployment","item":"https://workforceai.es/en/docs/deployment/"}]},{"@type":"TechArticle","headline":"Production deployment","description":"How to deploy AI Workforce OS with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/deployment/","url":"https://workforceai.es/en/docs/deployment/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=b5a2c05468">
+  <script src="/docs.js?v=2e2073da11" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Production deployment","item":"https://workforceai.es/en/docs/deployment/"}]},{"@type":"TechArticle","headline":"Production deployment","description":"Deploy AI Workforce OS on your own server with Docker Compose: Caddy with automatic TLS, Postgres, Redis, backups, updates and rollback.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/deployment/","url":"https://workforceai.es/en/docs/deployment/","dateModified":"2026-10-22","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/en/" aria-label="AI Workforce OS">
+<body class="dx dx-docs" id="top">
+  <a class="dx-skip" href="#main">Skip to content</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/en/" aria-label="AI Workforce OS">
         <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="/en/">Home</a>
-        <a href="/en/docs/">Documentation</a>
-        <a href="/en/guide/">User guide</a>
-        <a href="/en/trust/">Trust</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Language">
-          <a href="/docs/despliegue/" hreflang="es" lang="es" >ES</a>
+      <nav class="dx-tabs" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Language">
+          <a href="/docs/despliegue/" hreflang="es" lang="es">ES</a>
           <a href="/en/docs/deployment/" hreflang="en" lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap wide">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/docs/">Documentation</a></li><li aria-current="page">Production deployment</li></ol></nav>
-      <article>
-        <h1>Production deployment</h1>
-        <p class="lead">AI Workforce OS is deployed with a standalone production compose file: Caddy terminates TLS and routes to the frontend (Next.js) and the backend (Go); the backend talks to the agent runtime (Python), Postgres and Redis. This guide covers installation, operation and the reduced layout used for a single-host demo.</p>
-        
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">Topology</a></li><li><a href="#s2">Requirements</a></li><li><a href="#s3">Step-by-step installation</a></li><li><a href="#s4">Generating secrets and validating the configuration</a></li><li><a href="#s5">Starting and checking health</a></li><li><a href="#s6">Updating, migrations and rollback</a></li><li><a href="#s7">Postgres backups and restore</a></li><li><a href="#s8">Go-live checklist</a></li><li><a href="#s9">Image publishing in CI</a></li><li><a href="#s10">Reduced single-host layout</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">Topology</h2>
-        <p>docker-compose.prod.yml is standalone: it is not combined with the development docker-compose.yml. It uses a single domain. Caddy sends /api/* and /ws to the backend (internal port 8080) and everything else to the frontend (internal port 3000).</p>
-        <p>Only Caddy publishes ports (80, 443 TCP and 443 UDP). Postgres, Redis, the runtime, the backend and the frontend live on the internal network, declared with internal: true and therefore with no internet access. The runtime also joins the egress network so it can call model provider APIs. Caddy uses the edge network plus internal.</p>
-        <p>The frontend is built with relative paths (/api/v1) and derives the WebSocket URL from window.location (wss:// under HTTPS), so a single-domain deployment does not need baked NEXT_PUBLIC_* variables.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Service</th><th scope="col">Image or source</th><th scope="col">Networks</th><th scope="col">Limits (compose)</th></tr></thead><tbody><tr><th scope="row"><code>caddy</code></th><td>caddy:2.10.2-alpine</td><td>edge, internal</td><td>256 MB, 0.5 CPU</td></tr><tr><th scope="row"><code>postgres</code></th><td>postgres:16.6-alpine (pgdata volume)</td><td>internal</td><td>1 GB, 1 CPU</td></tr><tr><th scope="row"><code>redis</code></th><td>redis:7.4.2-alpine (AOF, redisdata volume)</td><td>internal</td><td>384 MB, 0.5 CPU</td></tr><tr><th scope="row"><code>agent-runtime</code></th><td>ghcr.io/OWNER/aiworkforce-agent-runtime:TAG</td><td>internal, egress</td><td>768 MB, 1 CPU</td></tr><tr><th scope="row"><code>backend</code></th><td>ghcr.io/OWNER/aiworkforce-backend:TAG</td><td>internal</td><td>512 MB, 1 CPU</td></tr><tr><th scope="row"><code>frontend</code></th><td>ghcr.io/OWNER/aiworkforce-frontend:TAG</td><td>internal</td><td>512 MB, 1 CPU</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">Requirements</h2>
-        
-        <ol class="steps" aria-label="Steps"><li>A Linux server with Docker Engine and the Docker Compose v2 plugin, with ports 80 and 443 open in the firewall.</li><li>A domain with an A record (and AAAA if you have IPv6) pointing to the server. Let's Encrypt fails if DNS does not resolve yet.</li><li>Access to the images on GHCR. If the packages are private, run docker login ghcr.io with a token that has read:packages. Alternative: build locally with --build.</li><li>At least one model provider credential for the runtime (see the configuration page).</li></ol>
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">Step-by-step installation</h2>
-        <p>The commands use example.com as the domain and OWNER and TAG as placeholders. All state lives in named volumes; the .env.prod file stays out of git (the repository .gitignore already ignores .env.*).</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash">git clone &lt;repo-url&gt; &amp;&amp; cd &lt;repo&gt;
-cp .env.prod.example .env.prod
-chmod 600 .env.prod
-
-# Edit: DOMAIN, ACME_EMAIL, ALLOWED_ORIGINS, OWNER, TAG, provider keys...
-$EDITOR .env.prod</code></pre>
-        
-        <aside class="tip"><b>Tip.</b> If passwords contain special characters, DATABASE_URL and REDIS_URL break because they embed the passwords in the URL. Use hex secrets or percent-encode them.</aside>
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">Generating secrets and validating the configuration</h2>
-        <p>Generate a different value for POSTGRES_PASSWORD, REDIS_PASSWORD and JWT_SECRET. The backend requires JWT_SECRET to be at least 32 bytes when authentication is on. The production compose sets AUTH_ENABLED to true. Defining RUNTIME_TOKEN is also recommended: a secret shared between backend and runtime (the backend warns when it is empty).</p>
-        <p>Variables marked as required in the compose file (DOMAIN, ACME_EMAIL, POSTGRES_PASSWORD, REDIS_PASSWORD, OWNER, TAG, JWT_SECRET, ALLOWED_ORIGINS, DEEPSEEK_API_KEY) make the validation command fail when missing.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash">openssl rand -hex 32   # repeat for POSTGRES_PASSWORD, REDIS_PASSWORD, JWT_SECRET and RUNTIME_TOKEN
-
-# Validate before starting (fails if a required variable is missing)
-docker compose -f docker-compose.prod.yml --env-file .env.prod config -q</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">Starting and checking health</h2>
-        <p>Every service defines a healthcheck and dependencies use condition: service_healthy, so the start order is Postgres and Redis, runtime, backend, and finally frontend and Caddy. The backend exposes /healthz and so does the runtime. Caddy obtains and renews the certificate automatically.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash">C=&quot;docker compose -f docker-compose.prod.yml --env-file .env.prod&quot;
-
-$C pull          # option A: images published by CI
-# $C build       # option B: build locally
-$C up -d
-$C ps            # every service should become healthy
-curl -fsS https://example.com/ -o /dev/null &amp;&amp; echo OK
-$C logs -f backend</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">Updating, migrations and rollback</h2>
-        <p>To update, change TAG to a sha-&lt;short&gt; value published by CI and bring the stack up again. Always take a pg_dump before deploying a version that carries migrations.</p>
-        <p>The backend applies embedded SQL migrations at startup, forward-only (schema_migrations table, no down migrations). If the new version fails and the schema has already changed, there are two paths: restore the previous dump and go back to the old TAG (data written afterwards is lost), or ship a new corrective migration, which is preferable once new data exists. If the migration only added columns or tables, the previous TAG usually keeps working without touching the database.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash"># 1) backup (see Backups)
-# 2) point to the new tag
-sed -i 's/^TAG=.*/TAG=sha-&lt;NEW&gt;/' .env.prod
-$C pull
-$C up -d
-
-# Rollback without schema changes: restore the previous TAG
-sed -i 's/^TAG=.*/TAG=sha-&lt;PREVIOUS&gt;/' .env.prod
-$C pull &amp;&amp; $C up -d
-
-# Applied migrations
-$C exec postgres psql -U workforce -d workforce -c 'select * from schema_migrations order by applied_at'</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">Postgres backups and restore</h2>
-        <p>Postgres is the system of record. Redis keeps an AOF in the redisdata volume and should be treated as a cache and queue. Schedule pg_dump with cron, copy the files off the server and test a restore at least once.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash">mkdir -p backups
-$C exec -T postgres sh -c 'pg_dump -U &quot;$POSTGRES_USER&quot; -d &quot;$POSTGRES_DB&quot; -Fc' \
-  &gt; backups/workforce-$(date +%F-%H%M).dump
-
-# Restore
-$C stop backend
-$C exec -T postgres sh -c 'dropdb -U &quot;$POSTGRES_USER&quot; --if-exists &quot;$POSTGRES_DB&quot; &amp;&amp; createdb -U &quot;$POSTGRES_USER&quot; &quot;$POSTGRES_DB&quot;'
-$C exec -T postgres sh -c 'pg_restore -U &quot;$POSTGRES_USER&quot; -d &quot;$POSTGRES_DB&quot; --no-owner' &lt; backups/FILE.dump
-$C start backend</code></pre>
-        
-        <aside class="tip"><b>Tip.</b> docker compose down keeps the volumes. Do not use -v unless you want to delete the data.</aside>
-      </section>
-
-      <section class="g-sec" id="s8" aria-labelledby="h8">
-        <h2 id="h8">Go-live checklist</h2>
-        
-        <ol class="steps" aria-label="Steps"><li>DNS points to the server, 80 and 443 are open and docker compose ps only shows published ports on caddy.</li><li>.env.prod has 600 permissions and is outside git.</li><li>JWT_SECRET, POSTGRES_PASSWORD and REDIS_PASSWORD are unique and random (32 bytes hex or more).</li><li>ALLOWED_ORIGINS is exactly https://example.com; AUTH_ENABLED is true; ENABLE_DEMO_RESET is false; SIMULATION is false.</li><li>At least one valid model provider is set, ALLOWED_PROVIDERS reflects the company data policy and BUDGET_USD is defined.</li><li>TAG points to a specific sha-&lt;short&gt; (not latest) that passed CI.</li><li>All services are healthy, login works and the WebSocket connects at wss://example.com/ws.</li><li>The Postgres backup is scheduled and a restore has been tested.</li><li>Logs rotate (json-file, 10 MB times 5 files, already configured) and memory and CPU limits fit the host.</li></ol>
-        
-        
-        <aside class="tip"><b>Tip.</b> The current compose only passes DEEPSEEK_API_KEY, ANTHROPIC_API_KEY, MODEL, RUNTIME_TOKEN and ALLOWED_PROVIDERS to the runtime, and DEEPSEEK_API_KEY is required. To use a custom endpoint or other runtime variables, add them to the agent-runtime service in the compose file.</aside>
-      </section>
-
-      <section class="g-sec" id="s9" aria-labelledby="h9">
-        <h2 id="h9">Image publishing in CI</h2>
-        <p>The .github/workflows/ci.yml workflow builds and tests backend, runtime and frontend, runs govulncheck and npm audit (non-blocking), hadolint, a smoke test and Playwright E2E. On a push to main, the publish job pushes the three images (aiworkforce-backend, aiworkforce-agent-runtime, aiworkforce-frontend) to GHCR with the tags sha-&lt;short&gt; and latest, using GITHUB_TOKEN with packages: write.</p>
-        <p>In the repository you must allow GITHUB_TOKEN to write packages and, after the first publish, link the packages to the repository and adjust their visibility. The repository variables NEXT_PUBLIC_API_URL and NEXT_PUBLIC_WS_URL must stay undefined for a single-domain deployment.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s10" aria-labelledby="h10">
-        <h2 id="h10">Reduced single-host layout</h2>
-        <p>The deploy/vps directory holds the layout used for a public demo on a shared server that already runs its own Caddy owning ports 80 and 443. There the compose publishes no ports: the edge services (backend, frontend and the static landing) join the existing Caddy network under unique aliases, and everything else stays on a private network.</p>
-        <p>This is a demo setup, not a production one: the runtime runs in SIMULATION mode (no keys, no cost), there is no Postgres or Redis (in-memory storage), AUTH_ENABLED is false and ENABLE_DEMO_RESET is true. The frontend is built with absolute NEXT_PUBLIC_API_URL and NEXT_PUBLIC_WS_URL, and the app site adds X-Robots-Tag noindex. Routes /api/* and /ws go to the backend and the rest to the frontend, as in the production Caddyfile. The deploy.sh script does pull, a low-priority build and up -d --wait.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-text">example.com        -&gt; landing (static)
-app.example.com    -&gt; /api/* and /ws -&gt; backend:8080 ; rest -&gt; frontend:3000
-(existing Caddy terminates TLS; this project publishes no ports)</code></pre>
-        
-        
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/configuration/"><b>Configuration reference</b><span>Environment variable reference for AI Workforce OS: server, database, auth, budget, rewards, model providers and frontend build arguments.</span></a></li><li><a href="/en/docs/security-model/"><b>Security model</b><span>How an agent's blast radius is limited: credential vault, human approvals, caps, kill switch, audit, RLS and sandbox. With the current limits stated.</span></a></li><li><a href="/en/docs/architecture/"><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Start now</h2>
-      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Documentation">
+      <div class="dx-side-head">
+        <span>Menu</span>
+        <a class="dx-side-close" href="#top" aria-label="Close menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a href="/en/docs/">Documentation</a>
-      <a href="/en/guide/">User guide</a>
-      <a href="/en/trust/">Trust</a>
-      <a href="#top">Back to top</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <nav class="dx-pages" aria-label="Documentation">
+        <ul class="dx-list">
+          <li><a href="/en/docs/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Overview</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-concepts">Concepts</p>
+        <ul class="dx-list" aria-labelledby="g-docs-concepts">
+          <li><a href="/en/docs/architecture/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><span>Architecture</span></a></li>
+          <li><a href="/en/docs/agent-runtime/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg><span>Agent runtime</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-integrate">Integrate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-integrate">
+          <li><a href="/en/docs/api-reference/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg><span>API Reference</span></a></li>
+          <li><a href="/en/docs/auth-and-tenancy/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg><span>Auth and tenancy</span></a></li>
+          <li><a href="/en/docs/skills-format/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><path d="M17.25 13.5v7.5M13.5 17.25H21"/></svg><span>Skills format</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-operate">Operate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-operate">
+          <li><a href="/en/docs/deployment/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></svg><span>Deployment</span></a></li>
+          <li><a href="/en/docs/configuration/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span>Configuration</span></a></li>
+          <li><a href="/en/docs/security-model/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Security model</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Language">
+          <a href="/docs/despliegue/" hreflang="es" lang="es">ES</a>
+          <a href="/en/docs/deployment/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/docs/">Documentation</a></li><li><span>Operate</span></li></ol></nav>
+        <h1>Production deployment</h1>
+        <p class="dx-lead">This guide takes AI Workforce OS to your own Linux server with the repository's production compose file: Caddy terminates TLS and routes to the frontend (Next.js) and the backend (Go), which talks to the agent runtime (Python), Postgres and Redis. It covers installation, day-to-day operation (updates, migrations, backups) and the reduced layout of the public demo.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>6 min read</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">On this page</summary>
+        <ol><li><a href="#topology">Topology</a></li><li><a href="#requirements">Requirements</a></li><li><a href="#step-by-step-installation">Step-by-step installation</a></li><li><a href="#generating-secrets-and-validating-the-configuration">Generating secrets and validating the configuration</a></li><li><a href="#starting-and-checking-health">Starting and checking health</a></li><li><a href="#updating-migrations-and-rollback">Updating, migrations and rollback</a></li><li><a href="#postgres-backups-and-restore">Postgres backups and restore</a></li><li><a href="#go-live-checklist">Go-live checklist</a></li><li><a href="#image-publishing-in-ci">Image publishing in CI</a></li><li><a href="#reduced-layout-on-a-shared-server">Reduced layout on a shared server</a></li></ol>
+        <a class="dx-toc-top" href="#top">Back to top</a>
+      </details>
+      <div class="dx-body">
+        
+        <section class="dx-sec" aria-labelledby="topology">
+        <h2 id="topology">Topology<a class="dx-anchor" href="#topology" aria-label="Link to the “Topology” section">#</a></h2>
+        <p><code>docker-compose.prod.yml</code> is standalone: it is not combined with the development <code>docker-compose.yml</code>. It serves a single domain. Caddy sends <code>/api/*</code> and <code>/ws</code> to the backend (internal port 8080) and everything else to the frontend (internal port 3000).</p>
+        <p>Only Caddy publishes ports: 80, 443 TCP and 443 UDP. Every other service lives on the <code>internal</code> network, declared with <code>internal: true</code> and therefore without internet access. The runtime also joins the <code>egress</code> network to call model provider APIs, and Caddy joins the <code>edge</code> network.</p>
+        <p>The frontend uses relative paths (<code>/api/v1</code>) and derives the WebSocket URL from <code>window.location</code> (<code>wss://</code> under HTTPS), so a single-domain deployment does not need any baked <code>NEXT_PUBLIC_*</code> variables.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Topology"><table><thead><tr><th scope="col">Service</th><th scope="col">Image or source</th><th scope="col">Networks</th><th scope="col">Limits (compose)</th></tr></thead><tbody><tr><th scope="row"><code>caddy</code></th><td><code>caddy:2.10.2-alpine</code></td><td><code>edge</code>, <code>internal</code></td><td>256 MB, 0.5 CPU</td></tr><tr><th scope="row"><code>postgres</code></th><td><code>postgres:16.6-alpine</code> (<code>pgdata</code> volume)</td><td><code>internal</code></td><td>1 GB, 1 CPU</td></tr><tr><th scope="row"><code>redis</code></th><td><code>redis:7.4.2-alpine</code> (AOF, <code>redisdata</code> volume)</td><td><code>internal</code></td><td>384 MB, 0.5 CPU</td></tr><tr><th scope="row"><code>agent-runtime</code></th><td><code>ghcr.io/OWNER/aiworkforce-agent-runtime:TAG</code></td><td><code>internal</code>, <code>egress</code></td><td>768 MB, 1 CPU</td></tr><tr><th scope="row"><code>backend</code></th><td><code>ghcr.io/OWNER/aiworkforce-backend:TAG</code></td><td><code>internal</code></td><td>512 MB, 1 CPU</td></tr><tr><th scope="row"><code>frontend</code></th><td><code>ghcr.io/OWNER/aiworkforce-frontend:TAG</code></td><td><code>internal</code></td><td>512 MB, 1 CPU</td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>The <code>Caddyfile</code> adds <code>Strict-Transport-Security</code> (one year, including subdomains), <code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options: DENY</code> and <code>Referrer-Policy: strict-origin-when-cross-origin</code> to every response, and removes the <code>Server</code> header.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="requirements">
+        <h2 id="requirements">Requirements<a class="dx-anchor" href="#requirements" aria-label="Link to the “Requirements” section">#</a></h2>
+        <ul class="dx-ul"><li>A Linux server with Docker Engine and the Docker Compose v2 plugin, with ports 80 and 443 open in the firewall.</li><li>A domain with a DNS <code>A</code> record (and <code>AAAA</code> if you have IPv6) pointing to the server. Let's Encrypt fails if DNS does not resolve yet.</li><li>Access to the images on GHCR. If the packages are private, run <code>docker login ghcr.io</code> with a token that has <code>read:packages</code>. Alternative: build the images on the server itself with <code>--build</code>.</li><li>A DeepSeek key: the production compose file requires <code>DEEPSEEK_API_KEY</code>. The Anthropic key is optional.</li></ul>
+      </section>
+        <section class="dx-sec" aria-labelledby="step-by-step-installation">
+        <h2 id="step-by-step-installation">Step-by-step installation<a class="dx-anchor" href="#step-by-step-installation" aria-label="Link to the “Step-by-step installation” section">#</a></h2>
+        <p>The examples use <code>example.com</code> as the domain and <code>OWNER</code> and <code>TAG</code> as placeholders. All state lives in named volumes, and <code>.env.prod</code> stays out of git: the repository <code>.gitignore</code> already ignores <code>.env.*</code>.</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Clone the repository on the server and copy the <code>.env.prod.example</code> template to <code>.env.prod</code>.</li><li>Restrict its permissions with <code>chmod 600 .env.prod</code>.</li><li>Fill in the variables. The block below shows a complete minimal <code>.env.prod</code>.</li></ol>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-fn">git</span> clone &lt;repo-url&gt; <span class="tk-punct">&amp;&amp;</span> <span class="tk-fn">cd</span> &lt;repo&gt;
+<span class="tk-fn">cp</span> .env.prod.example .env.prod
+<span class="tk-fn">chmod</span> 600 .env.prod
+<span class="tk-var">$EDITOR</span> .env.prod</code></pre>
+        </figure>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">.env.prod</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-com"># Domain and TLS</span>
+<span class="tk-var">DOMAIN</span>=example.com
+<span class="tk-var">ACME_EMAIL</span>=ops@example.com
+<span class="tk-var">ALLOWED_ORIGINS</span>=https://example.com
+
+<span class="tk-com"># Images published by CI</span>
+<span class="tk-var">OWNER</span>=acme
+<span class="tk-var">TAG</span>=sha-1a2b3c4
+
+<span class="tk-com"># Secrets: a different openssl rand -hex 32 value for each</span>
+<span class="tk-var">POSTGRES_PASSWORD</span>=...
+<span class="tk-var">REDIS_PASSWORD</span>=...
+<span class="tk-var">JWT_SECRET</span>=...
+<span class="tk-var">RUNTIME_TOKEN</span>=...
+
+<span class="tk-com"># Spending and demo</span>
+<span class="tk-var">BUDGET_USD</span>=25
+<span class="tk-var">ENABLE_DEMO_RESET</span>=false
+
+<span class="tk-com"># Model providers</span>
+<span class="tk-var">DEEPSEEK_API_KEY</span>=sk-...
+<span class="tk-var">ANTHROPIC_API_KEY</span>=
+<span class="tk-var">ALLOWED_PROVIDERS</span>=</code></pre>
+        </figure>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>The template ships filler values such as <code>CAMBIAR_openssl_rand_hex_32</code>. If you keep them, anyone who reads them in the repository can sign tokens or log into the database. Replace each one with your own random secret.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="generating-secrets-and-validating-the-configuration">
+        <h2 id="generating-secrets-and-validating-the-configuration">Generating secrets and validating the configuration<a class="dx-anchor" href="#generating-secrets-and-validating-the-configuration" aria-label="Link to the “Generating secrets and validating the configuration” section">#</a></h2>
+        <p>Generate a different value for <code>POSTGRES_PASSWORD</code>, <code>REDIS_PASSWORD</code>, <code>JWT_SECRET</code> and <code>RUNTIME_TOKEN</code>. The backend does not start if <code>JWT_SECRET</code> is shorter than 32 bytes, and the production compose file sets <code>AUTH_ENABLED=true</code>. <code>RUNTIME_TOKEN</code> is not in the template, but you should add it: the compose file passes it to both backend and runtime, and without it calls between them are not authenticated.</p>
+        <p>The compose file's required variables make validation fail when missing: <code>DOMAIN</code>, <code>ACME_EMAIL</code>, <code>POSTGRES_PASSWORD</code>, <code>REDIS_PASSWORD</code>, <code>OWNER</code>, <code>TAG</code>, <code>JWT_SECRET</code>, <code>ALLOWED_ORIGINS</code> and <code>DEEPSEEK_API_KEY</code>.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-fn">openssl</span> rand <span class="tk-flag">-hex</span> 32   <span class="tk-com"># repeat for POSTGRES_PASSWORD, REDIS_PASSWORD, JWT_SECRET and RUNTIME_TOKEN</span>
+
+<span class="tk-com"># Validate before starting (fails if a required variable is missing)</span>
+<span class="tk-fn">docker</span> compose <span class="tk-flag">-f</span> docker-compose.prod.yml <span class="tk-flag">--env-file</span> .env.prod config <span class="tk-flag">-q</span></code></pre>
+        </figure>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>Use hex secrets. <code>DATABASE_URL</code> and <code>REDIS_URL</code> embed the passwords in the URL, and an unencoded special character breaks them.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="starting-and-checking-health">
+        <h2 id="starting-and-checking-health">Starting and checking health<a class="dx-anchor" href="#starting-and-checking-health" aria-label="Link to the “Starting and checking health” section">#</a></h2>
+        <p>Every service defines a healthcheck and dependencies use <code>condition: service_healthy</code>. Postgres, Redis and the runtime start first; the backend waits for all three, the frontend for the backend and Caddy for both. The backend and the runtime expose <code>/healthz</code>. Caddy obtains and renews the certificate automatically.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-var">C</span>=<span class="tk-str">&quot;docker compose -f docker-compose.prod.yml --env-file .env.prod&quot;</span>
+
+<span class="tk-var">$C</span> pull          <span class="tk-com"># option A: images published by CI</span>
+<span class="tk-com"># $C build       # option B: build on the server</span>
+<span class="tk-var">$C</span> up <span class="tk-flag">-d</span>
+<span class="tk-var">$C</span> ps            <span class="tk-com"># every service should become healthy</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-fsS</span> https://example.com/ <span class="tk-flag">-o</span> /dev/null <span class="tk-punct">&amp;&amp;</span> <span class="tk-fn">echo</span> OK
+<span class="tk-var">$C</span> logs <span class="tk-flag">-f</span> backend</code></pre>
+        </figure>
+      </section>
+        <section class="dx-sec" aria-labelledby="updating-migrations-and-rollback">
+        <h2 id="updating-migrations-and-rollback">Updating, migrations and rollback<a class="dx-anchor" href="#updating-migrations-and-rollback" aria-label="Link to the “Updating, migrations and rollback” section">#</a></h2>
+        <p>To update, change <code>TAG</code> to a <code>sha-&lt;short&gt;</code> value published by CI and bring the stack up again. Always take a <code>pg_dump</code> before deploying a version that carries migrations.</p>
+        <p>At startup the backend applies the missing embedded SQL migrations, in order and inside a single transaction, and records each one in the <code>schema_migrations</code> table. It never rolls migrations back on its own: the <code>backend/migrations/down/</code> directory holds rollback scripts you apply by hand.</p>
+        <p>If the new version fails and the schema has already changed, you have two paths: restore the previous dump and go back to the old <code>TAG</code> (you lose what was written afterwards), or ship a new corrective migration, which is preferable once new data exists. If the migration only added columns or tables, the previous <code>TAG</code> usually keeps working without touching the database.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-com"># 1) backup (see the next section)</span>
+<span class="tk-com"># 2) point to the new tag</span>
+<span class="tk-fn">sed</span> <span class="tk-flag">-i</span> <span class="tk-str">'s/^TAG=.*/TAG=sha-&lt;NEW&gt;/'</span> .env.prod
+<span class="tk-var">$C</span> pull
+<span class="tk-var">$C</span> up <span class="tk-flag">-d</span>
+
+<span class="tk-com"># Rollback without schema changes: go back to the previous TAG</span>
+<span class="tk-fn">sed</span> <span class="tk-flag">-i</span> <span class="tk-str">'s/^TAG=.*/TAG=sha-&lt;PREVIOUS&gt;/'</span> .env.prod
+<span class="tk-var">$C</span> pull <span class="tk-punct">&amp;&amp;</span> <span class="tk-var">$C</span> up <span class="tk-flag">-d</span>
+
+<span class="tk-com"># Applied migrations</span>
+<span class="tk-var">$C</span> exec <span class="tk-fn">postgres</span> sh <span class="tk-flag">-c</span> <span class="tk-str">'psql -U &quot;$POSTGRES_USER&quot; -d &quot;$POSTGRES_DB&quot; -c &quot;select * from schema_migrations order by applied_at&quot;'</span></code></pre>
+        </figure>
+      </section>
+        <section class="dx-sec" aria-labelledby="postgres-backups-and-restore">
+        <h2 id="postgres-backups-and-restore">Postgres backups and restore<a class="dx-anchor" href="#postgres-backups-and-restore" aria-label="Link to the “Postgres backups and restore” section">#</a></h2>
+        <p>Postgres is the system of record. Redis keeps an AOF in the <code>redisdata</code> volume, but treat it as a cache and queue. Schedule <code>pg_dump</code> with cron, copy the files off the server and test a restore at least once.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-fn">mkdir</span> <span class="tk-flag">-p</span> backups
+<span class="tk-var">$C</span> exec <span class="tk-flag">-T</span> postgres sh <span class="tk-flag">-c</span> <span class="tk-str">'pg_dump -U &quot;$POSTGRES_USER&quot; -d &quot;$POSTGRES_DB&quot; -Fc'</span> <span class="tk-punct">\</span>
+  &gt; backups/workforce-$(<span class="tk-fn">date</span> +%F-%H%M).dump
+
+<span class="tk-com"># Restore</span>
+<span class="tk-var">$C</span> stop backend
+<span class="tk-var">$C</span> exec <span class="tk-flag">-T</span> postgres sh <span class="tk-flag">-c</span> <span class="tk-str">'dropdb -U &quot;$POSTGRES_USER&quot; --if-exists &quot;$POSTGRES_DB&quot; &amp;&amp; createdb -U &quot;$POSTGRES_USER&quot; &quot;$POSTGRES_DB&quot;'</span>
+<span class="tk-var">$C</span> exec <span class="tk-flag">-T</span> postgres sh <span class="tk-flag">-c</span> <span class="tk-str">'pg_restore -U &quot;$POSTGRES_USER&quot; -d &quot;$POSTGRES_DB&quot; --no-owner'</span> &lt; backups/FILE.dump
+<span class="tk-var">$C</span> start backend</code></pre>
+        </figure>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p><code>docker compose down -v</code> deletes the volumes, and with them the database and the certificates. Without <code>-v</code>, <code>down</code> keeps them.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="go-live-checklist">
+        <h2 id="go-live-checklist">Go-live checklist<a class="dx-anchor" href="#go-live-checklist" aria-label="Link to the “Go-live checklist” section">#</a></h2>
+        <ul class="dx-ul"><li>DNS points to the server, 80 and 443 are open and <code>docker compose ps</code> only shows published ports on <code>caddy</code>.</li><li><code>.env.prod</code> has <code>600</code> permissions and is outside git.</li><li><code>JWT_SECRET</code>, <code>POSTGRES_PASSWORD</code>, <code>REDIS_PASSWORD</code> and <code>RUNTIME_TOKEN</code> are unique and random (32 hex bytes or more).</li><li><code>ALLOWED_ORIGINS</code> is exactly <code>https://example.com</code> and <code>ENABLE_DEMO_RESET</code> is <code>false</code>.</li><li>The provider key is valid, <code>ALLOWED_PROVIDERS</code> reflects the company data policy and <code>BUDGET_USD</code> holds the cap you want.</li><li><code>TAG</code> points to a specific <code>sha-&lt;short&gt;</code> that passed CI, not to <code>latest</code>.</li><li>Every service is healthy, sign-in works and the WebSocket connects at <code>wss://example.com/ws</code>.</li><li>The Postgres backup is scheduled and a restore has been tested.</li><li>Logs rotate (<code>json-file</code> driver, 10 MB times 5 files, already configured) and the memory and CPU limits fit the host.</li></ul>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>The compose file passes a fixed set of variables to the backend, and only <code>DEEPSEEK_API_KEY</code>, <code>ANTHROPIC_API_KEY</code>, <code>MODEL</code>, <code>RUNTIME_TOKEN</code> and <code>ALLOWED_PROVIDERS</code> to the runtime. To use live connections (<code>CONNECTIONS_KEK</code>), <code>TRUSTED_PROXIES</code>, email verification or other model providers, add those variables to the <code>environment</code> block of the matching service.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="image-publishing-in-ci">
+        <h2 id="image-publishing-in-ci">Image publishing in CI<a class="dx-anchor" href="#image-publishing-in-ci" aria-label="Link to the “Image publishing in CI” section">#</a></h2>
+        <p>The <code>.github/workflows/ci.yml</code> workflow builds and tests backend, runtime and frontend, runs <code>govulncheck</code> and <code>npm audit</code> (non-blocking), <code>hadolint</code>, a smoke test and Playwright E2E. On every push to <code>main</code> that passes, the <code>publish</code> job pushes three images to GHCR (<code>aiworkforce-backend</code>, <code>aiworkforce-agent-runtime</code> and <code>aiworkforce-frontend</code>) tagged <code>sha-&lt;short&gt;</code> and <code>latest</code>, using <code>GITHUB_TOKEN</code> with <code>packages: write</code>.</p>
+        <p>In the repository settings, allow <code>GITHUB_TOKEN</code> to write packages and, after the first publish, adjust the packages' visibility. For a single-domain deployment, leave the repository variables <code>NEXT_PUBLIC_API_URL</code> and <code>NEXT_PUBLIC_WS_URL</code> undefined.</p>
+      </section>
+        <section class="dx-sec" aria-labelledby="reduced-layout-on-a-shared-server">
+        <h2 id="reduced-layout-on-a-shared-server">Reduced layout on a shared server<a class="dx-anchor" href="#reduced-layout-on-a-shared-server" aria-label="Link to the “Reduced layout on a shared server” section">#</a></h2>
+        <p><code>deploy/vps</code> holds the public demo layout, built for a server that already runs its own Caddy owning ports 80 and 443. That compose file publishes no ports: backend, frontend and the static landing join the existing Caddy's network (declared as external) and everything else stays on a private network.</p>
+        <p>It has real accounts: Postgres, <code>AUTH_ENABLED=true</code>, trial accounts (<code>TRIAL_ENABLED=true</code>), <code>ENABLE_DEMO_RESET=false</code> and <code>TRUSTED_PROXIES</code> pointing at the Caddy network. It has no Redis, so events and rate limits live in process memory. The runtime runs with <code>SIMULATION=true</code>, with no keys and no cost.</p>
+        <p>The frontend is built with absolute <code>NEXT_PUBLIC_API_URL</code> and <code>NEXT_PUBLIC_WS_URL</code>, and the app site adds <code>X-Robots-Tag: noindex, nofollow</code>. <code>deploy.sh</code> runs <code>git pull</code>, builds at low priority and runs <code>up -d --wait</code>; <code>backup.sh</code>, meant for a daily cron job, saves a compressed <code>pg_dump</code> and deletes those older than 14 days.</p>
+        <figure class="dx-code" data-lang="text">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Text</span></figcaption>
+          <pre tabindex="0" aria-label="Text code"><code>example.com        -&gt; landing (static)
+app.example.com    -&gt; /api/* and /ws -&gt; wf-backend:8080 ; rest -&gt; wf-frontend:3000
+(the existing Caddy terminates TLS; this project publishes no ports)</code></pre>
+        </figure>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="dx-cards dx-cards-sm"><li><a href="/en/docs/configuration/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><b>Configuration reference</b><span>Every AI Workforce OS environment variable with its default: server, authentication, budget, model providers and frontend build arguments.</span></a></li><li><a href="/en/docs/security-model/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><b>Security model</b><span>How the damage an agent can do is bounded: credential vault, approvals, caps, kill switch, audit log, RLS and sandbox, with the current limits.</span></a></li><li><a href="/en/docs/architecture/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Pagination">
+        <a class="dx-prev" href="/en/docs/skills-format/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Previous</span><b>Skills format</b></a>
+        <a class="dx-next" href="/en/docs/configuration/" rel="next"><span>Next<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>Configuration reference</b></a>
+      </nav>
+      
+      <footer class="dx-foot">
+        <p>AI Workforce OS is a project in development. This documentation describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+        <div class="dx-foot-links">
+          <a href="/en/">AI Workforce OS</a>
+          <a href="/en/docs/">Documentation</a>
+          <a href="/en/guide/">User guide</a>
+          <a href="/en/trust/">Trust</a>
+          <a href="#top">Back to top</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

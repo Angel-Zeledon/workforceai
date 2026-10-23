@@ -19,160 +19,246 @@
   "es": {
     "title": "La oficina 3D y el Dashboard",
     "metaTitle": "La oficina 3D y el Dashboard | AI Workforce OS",
-    "description": "Mueve la cámara, abre el panel de un empleado, sigue la actividad, cambia la luz y alterna entre la oficina y el Dashboard con sus indicadores.",
-    "intro": "Tu equipo de agentes trabaja en dos vistas del mismo sistema: la oficina 3D, para ver y pedir, y el Dashboard, para revisar cifras y tablas. Esta guía te muestra cómo moverte por ambas.",
+    "description": "Mueve la cámara, habla con un empleado, sigue la actividad, ajusta la luz, redecora la oficina y lee los indicadores del Dashboard.",
+    "intro": "Tu equipo trabaja en dos vistas del mismo sistema: la oficina 3D, para pedir trabajo y ver a los agentes, y el Dashboard, para revisar cifras y tablas. Aquí aprendes a moverte por las dos y a dejar la oficina a tu gusto.",
     "sections": [
       {
-        "h": "¿Cómo muevo la cámara de la oficina?",
+        "h": "Mueve la cámara",
         "paras": [
-          "La oficina es una escena 3D y tú controlas el punto de vista con el mouse. En la esquina inferior derecha verás un recordatorio de los gestos mientras no tengas a ningún empleado seleccionado."
+          "La oficina es una escena 3D y tú eliges el punto de vista. Mientras no tengas a un empleado seleccionado, la esquina inferior derecha te recuerda los gestos del mouse."
         ],
-        "steps": [
-          "Arrastra con el botón izquierdo para rotar la escena.",
-          "Usa la rueda del mouse para acercar o alejar.",
-          "Mantén el clic derecho y arrastra para mover la vista de lado."
-        ],
+        "table": {
+          "head": ["Acción", "Con mouse", "Con el teléfono en vertical"],
+          "rows": [
+            ["Rotar la vista", "Arrastra con el botón izquierdo", "Gira dos dedos sobre la pantalla"],
+            ["Acercar o alejar", "Usa la rueda", "Pellizca con dos dedos"],
+            ["Desplazar la vista", "Mantén el clic derecho y arrastra", "Arrastra con un dedo"]
+          ]
+        },
         "tip": "Acércate a un escritorio para ver mejor qué está haciendo cada agente."
       },
       {
-        "h": "¿Qué hacen los empleados que veo moverse?",
+        "h": "Entiende lo que hacen los empleados",
         "paras": [
-          "Cada persona es un agente y su comportamiento refleja su trabajo real en el sistema: escribe en su escritorio, se junta con otros a planear o espera en el escritorio de aprobaciones cuando necesita tu permiso.",
-          "No tienes que programarlos ni vigilarlos. Pides algo en la barra de abajo y la oficina se reparte el trabajo."
+          "Cada persona es un agente, y lo que hace en la escena refleja su trabajo real: escribe en su escritorio, se reúne con otros para planear o espera en la zona de aprobaciones cuando necesita tu permiso.",
+          "Su estado, por ejemplo Trabajando, Revisando, Bloqueado o Esperando aprobación, también aparece en las tarjetas del Equipo del Dashboard."
         ]
       },
       {
-        "h": "¿Cómo abro el panel de un empleado?",
+        "h": "Habla con un empleado",
         "paras": [
-          "Si quieres hablar con un agente concreto en lugar de con toda la oficina, usa su panel."
+          "Para hablar con un agente concreto en lugar de con toda la oficina, usa su panel."
         ],
         "steps": [
           "Haz clic en el empleado dentro de la escena.",
-          "Se abre su panel a la derecha, con su trabajo, sus archivos y una conversación directa con él.",
-          "Escribe ahí lo que quieras preguntarle o pedirle.",
-          "Cuando termines, cierra el panel para volver a ver la oficina completa."
+          "Escríbele en la pestaña «Chat» del panel que se abre a la derecha.",
+          "Recorre las otras pestañas para ver su «Estado», sus «Tareas», sus «Reportes», sus «Archivos» o su «Perfil».",
+          "Cierra el panel para volver a ver la oficina completa."
         ],
-        "tip": "Desde el Dashboard también puedes llegar aquí: al hacer clic en la tarjeta de un agente, vuelves a la oficina con ese agente seleccionado."
+        "tip": "En «Tareas», una tarea terminada ofrece «Guardar como habilidad» para reutilizar ese método."
       },
       {
-        "h": "¿Cómo sigo la actividad y las aprobaciones desde la oficina?",
+        "h": "Sigue la actividad y las aprobaciones",
         "paras": [
-          "Arriba a la izquierda está el cuadro \"Actividad en vivo\": muestra tareas que empiezan, archivos que se tocan y mensajes entre agentes. Es la forma más rápida de confirmar que tu pedido avanza.",
-          "Abajo a la izquierda aparece la zona de aprobaciones cuando hay algo pendiente. Un agente que necesita tu permiso espera en el escritorio de aprobaciones, y ahí puedes pulsar Aprobar o Rechazar."
+          "Arriba a la izquierda está el cuadro «Actividad en vivo», con lo que hace cada agente paso a paso. Puedes minimizarlo con su flecha y volver a abrirlo cuando quieras.",
+          "Abajo a la izquierda aparece la bandeja de aprobaciones cuando hay algo pendiente. Se abre sola al llegar una nueva, puedes ocultarla o mostrarla, y en la escena el agente espera en la zona de aprobaciones con su tarjeta para «Aprobar» o «Rechazar»."
         ],
-        "tip": "El cuadro de actividad se oculta en pantallas pequeñas; en ese caso, usa el Dashboard."
+        "tip": "En pantallas pequeñas el cuadro de actividad no aparece; usa el Dashboard para seguirla."
       },
       {
-        "h": "¿Cómo cambio la iluminación?",
+        "h": "Ajusta la luz",
         "paras": [
-          "En la esquina superior derecha de la oficina está el control \"Iluminación de la oficina\". Tiene tres modos:"
+          "El botón «Luz», arriba a la derecha, cambia la iluminación de toda la oficina. Los cambios se guardan al momento."
         ],
         "steps": [
-          "Ambiente: la luz general de la escena.",
-          "Luz prendida: una oficina iluminada, como de día.",
-          "Noche: un ambiente oscuro, más cómodo si trabajas con poca luz."
+          "Pulsa «Luz».",
+          "Elige un ambiente: «Natural», «Cálida», «Fría», «Atardecer» o «Noche».",
+          "Ajusta la barra «Temperatura», de cálida a fría, y la barra «Brillo», de tenue a intensa.",
+          "Cierra el panel con la X."
         ],
-        "tip": "Es solo visual. No cambia nada del trabajo de los agentes."
+        "tip": "La luz es solo visual: no cambia nada del trabajo de los agentes."
       },
       {
-        "h": "¿Cómo paso al Dashboard y qué muestra?",
+        "h": "Redecora la oficina",
         "paras": [
-          "En la barra superior, el interruptor Oficina / Dashboard te lleva de una vista a otra. El Dashboard es la misma operación, pero en cifras y tablas. A la izquierda tiene secciones: Resumen, Solicitudes y plan, Tareas, Agentes, Conversaciones, Aprobaciones, Reportes, Archivos y Costos y errores.",
-          "En Resumen verás tarjetas con los indicadores: Solicitudes, Tareas activas, Tareas hechas, Aprobaciones, Costo con su porcentaje del presupuesto, Errores y Agentes activos. Si el costo o los errores cambian de color, conviene revisarlos. Debajo está el Equipo, con una tarjeta por agente, su estado y lo que hace ahora (Ver todos abre la sección Agentes), y a un lado las aprobaciones pendientes y la actividad en vivo."
+          "Con «Editar oficina», al lado de «Luz», colocas los muebles que compraste en la Tienda y cambias el ambiente. Necesitas un rol que pueda gastar monedas (Miembro o superior)."
         ],
         "steps": [
-          "Pulsa Dashboard en la barra superior.",
-          "Empieza por Resumen y revisa los indicadores.",
-          "Abre la sección que necesites, por ejemplo Aprobaciones o Reportes.",
-          "Pulsa Oficina cuando quieras volver a pedir cosas y ver a los agentes moverse."
-        ]
+          "Pulsa «Editar oficina».",
+          "En «Muebles», elige una pieza de «Tus muebles» y haz clic en la oficina para colocarla. La tecla R la gira y Esc cancela.",
+          "Arrastra lo que ya está colocado para moverlo; Supr lo quita.",
+          "En «Puestos», elige el estilo de los escritorios y las sillas.",
+          "En «Ambiente», cambia paredes, suelo, iluminación y la vista desde el ventanal.",
+          "Pulsa «Guardar» para conservar los cambios o «Descartar» para salir sin guardarlos."
+        ],
+        "tip": "Si otra persona cambió la oficina mientras editabas, pulsa «Recargar» para ver sus cambios."
       },
       {
-        "h": "¿Qué significan los números de la barra superior?",
+        "h": "Pasa al Dashboard",
         "paras": [
-          "La barra superior te acompaña en todas las pantallas. Muestra las Aprobaciones pendientes (el número cambia de color cuando hay alguna), el Costo acumulado y un contador de Monedas. Las monedas se ganan con trabajo terminado, no son dinero y no se compran. También verás si la conexión está En vivo o Reconectando.",
-          "Mientras la IA corre en simulación, no hay un modelo real detrás y por eso no hay un gasto real asociado."
-        ]
+          "El selector Oficina / Dashboard de la barra superior cambia de vista. El Dashboard muestra la misma operación en cifras y tablas, con estas secciones a la izquierda:"
+        ],
+        "table": {
+          "head": ["Sección", "Qué encuentras"],
+          "rows": [
+            ["Resumen", "Indicadores, el Equipo con el estado de cada agente, aprobaciones pendientes y actividad en vivo"],
+            ["Solicitudes y plan", "Cada pedido con su plan de tareas y su estado"],
+            ["Tareas", "Todas las tareas y su estado"],
+            ["Agentes", "Una ficha por agente con sus tareas hechas y pendientes y su autonomía"],
+            ["Conversaciones", "Las conversaciones del equipo"],
+            ["Aprobaciones", "Las decisiones pendientes, para aprobar o rechazar"],
+            ["Reportes", "Los reportes de las solicitudes completadas"],
+            ["Archivos", "Los archivos de la oficina"],
+            ["Calidad", "Un puntaje orientativo por empleado, que nunca cambia su autonomía ni sus permisos"],
+            ["Costos y errores", "Costo por agente y por solicitud, «Límites de presupuesto» y errores y bloqueos"]
+          ]
+        },
+        "steps": [
+          "Pulsa «Dashboard» en la barra superior.",
+          "Empieza por «Resumen»: Solicitudes, Tareas activas, Tareas hechas, Aprobaciones, Costo (con su porcentaje del presupuesto), Errores y Agentes activos.",
+          "Abre la sección que necesites.",
+          "Pulsa «Oficina» para volver a pedir trabajo y ver a los agentes."
+        ],
+        "tip": "Si Aprobaciones, Costo o Errores cambian de color, conviene revisarlos."
+      },
+      {
+        "h": "Lee la barra superior",
+        "paras": [
+          "La barra superior te acompaña en todas las pantallas. Según el ancho de tu pantalla, muestra:"
+        ],
+        "list": [
+          "Aprobaciones: cuántas hay pendientes; el número cambia de color cuando hay alguna.",
+          "Costo: lo gastado hasta ahora.",
+          "La meta del día, por ejemplo «Termina 1 tarea hoy», con su progreso y su premio en monedas.",
+          "«Primeros pasos», mientras te queden pasos de la lista de inicio.",
+          "El botón «?», que abre un tour guiado de la pantalla actual.",
+          "Monedas: tu saldo; púlsalo para abrir la Tienda.",
+          "En vivo o Reconectando…: el estado de la conexión."
+        ],
+        "note": "Si la IA corre en modo simulación, no hay un modelo real detrás y el costo que ves no corresponde a un gasto real con un proveedor."
       }
     ]
   },
   "en": {
     "title": "The 3D office and the Dashboard",
     "metaTitle": "The 3D office and the Dashboard | AI Workforce OS",
-    "description": "Move the camera, open an employee's panel, follow the activity, change the lighting and switch between the office and the Dashboard with its indicators.",
-    "intro": "Your team of agents works in two views of the same system: the 3D office, to watch and ask, and the Dashboard, to review numbers and tables. This guide shows you how to move around both.",
+    "description": "Move the camera, talk to an employee, follow the activity, adjust the light, redecorate the office and read the Dashboard indicators.",
+    "intro": "Your team works in two views of the same system: the 3D office, to ask for work and watch the agents, and the Dashboard, to review numbers and tables. Here you learn to move around both and make the office your own.",
     "sections": [
       {
-        "h": "How do I move the office camera?",
+        "h": "Move the camera",
         "paras": [
-          "The office is a 3D scene and you control the point of view with the mouse. In the bottom right corner you will see a reminder of the gestures while no employee is selected."
+          "The office is a 3D scene and you choose the point of view. While no employee is selected, the bottom right corner reminds you of the mouse gestures."
         ],
-        "steps": [
-          "Drag with the left button to rotate the scene.",
-          "Use the mouse wheel to zoom in or out.",
-          "Hold the right button and drag to pan the view sideways."
-        ],
+        "table": {
+          "head": ["Action", "With a mouse", "With a phone held upright"],
+          "rows": [
+            ["Rotate the view", "Drag with the left button", "Twist two fingers on the screen"],
+            ["Zoom in or out", "Use the scroll wheel", "Pinch with two fingers"],
+            ["Pan the view", "Hold the right button and drag", "Drag with one finger"]
+          ]
+        },
         "tip": "Get close to a desk to see better what each agent is doing."
       },
       {
-        "h": "What are the moving employees doing?",
+        "h": "Understand what the employees are doing",
         "paras": [
-          "Each person is an agent and their behavior reflects their real work in the system: typing at their desk, meeting others to plan, or waiting at the approvals desk when they need your permission.",
-          "You do not have to program or watch them. You ask for something in the bar at the bottom and the office splits the work."
+          "Each person is an agent, and what they do in the scene reflects their real work: typing at their desk, meeting others to plan, or waiting in the approvals area when they need your permission.",
+          "Their status, for example Working, Reviewing, Blocked or Awaiting approval, also shows on the Team cards of the Dashboard."
         ]
       },
       {
-        "h": "How do I open an employee's panel?",
+        "h": "Talk to an employee",
         "paras": [
-          "If you want to talk to one specific agent instead of the whole office, use their panel."
+          "To talk to one specific agent instead of the whole office, use their panel."
         ],
         "steps": [
           "Click the employee in the scene.",
-          "Their panel opens on the right, with their work, their files and a direct conversation with them.",
-          "Type there whatever you want to ask or request.",
-          "When you are done, close the panel to see the whole office again."
+          "Write to them in the “Chat” tab of the panel that opens on the right.",
+          "Go through the other tabs to see their “Status”, “Tasks”, “Reports”, “Files” or “Profile”.",
+          "Close the panel to see the whole office again."
         ],
-        "tip": "You can also get here from the Dashboard: clicking an agent's card takes you back to the office with that agent selected."
+        "tip": "In “Tasks”, a finished task offers “Save as skill” so you can reuse that method."
       },
       {
-        "h": "How do I follow activity and approvals from the office?",
+        "h": "Follow activity and approvals",
         "paras": [
-          "At the top left is the \"Live activity\" box: it shows tasks starting, files being touched and messages between agents. It is the quickest way to confirm your request is moving.",
-          "At the bottom left, the approvals zone appears when something is pending. An agent that needs your permission waits at the approvals desk, and there you can press Approve or Reject."
+          "At the top left is the “Live activity” box, with what each agent does step by step. You can minimize it with its arrow and open it again whenever you want.",
+          "At the bottom left, the approvals tray appears when something is pending. It opens by itself when a new one arrives, you can hide or show it, and in the scene the agent waits in the approvals area with its card to “Approve” or “Reject”."
         ],
-        "tip": "The activity box is hidden on small screens; in that case, use the Dashboard."
+        "tip": "On small screens the activity box does not appear; use the Dashboard to follow it."
       },
       {
-        "h": "How do I change the lighting?",
+        "h": "Adjust the light",
         "paras": [
-          "In the top right corner of the office is the \"Office lighting\" control. It has three modes:"
+          "The “Light” button at the top right changes the lighting of the whole office. Changes are saved right away."
         ],
         "steps": [
-          "Ambient: the scene's general light.",
-          "Lights on: a lit office, like daytime.",
-          "Night: a dark mood, more comfortable if you work in low light."
+          "Press “Light”.",
+          "Pick a mood: “Natural”, “Warm”, “Cool”, “Sunset” or “Night”.",
+          "Adjust the “Temperature” slider, from warm to cool, and the “Brightness” slider, from dim to bright.",
+          "Close the panel with the X."
         ],
-        "tip": "It is visual only. It changes nothing about the agents' work."
+        "tip": "The light is visual only: it changes nothing about the agents' work."
       },
       {
-        "h": "How do I switch to the Dashboard and what does it show?",
+        "h": "Redecorate the office",
         "paras": [
-          "In the top bar, the Office / Dashboard toggle takes you from one view to the other. The Dashboard is the same operation, but as numbers and tables. On the left it has sections: Overview, Requests & plan, Tasks, Agents, Conversations, Approvals, Reports, Files and Costs & errors.",
-          "Overview shows indicator cards: Requests, Active tasks, Tasks done, Approvals, Cost with its percentage of the budget, Errors and Active agents. If cost or errors change color, it is worth a look. Below is the Team, with one card per agent, its status and what it is doing now (View all opens the Agents section), and beside it the pending approvals and live activity."
+          "With “Edit office”, next to “Light”, you place the furniture you bought in the Shop and change the ambience. You need a role that can spend coins (Member or above)."
         ],
         "steps": [
-          "Press Dashboard in the top bar.",
-          "Start with Overview and review the indicators.",
-          "Open the section you need, for example Approvals or Reports.",
-          "Press Office when you want to ask for things again and watch the agents move."
-        ]
+          "Press “Edit office”.",
+          "In “Furniture”, pick a piece from “Your furniture” and click in the office to place it. The R key rotates it and Esc cancels.",
+          "Drag anything already placed to move it; Del removes it.",
+          "In “Workstations”, choose the style of the desks and chairs.",
+          "In “Ambience”, change walls, floor, lighting and the view from the window.",
+          "Press “Save” to keep your changes or “Discard” to leave without saving them."
+        ],
+        "tip": "If someone else changed the office while you were editing, press “Reload” to see their changes."
       },
       {
-        "h": "What do the numbers in the top bar mean?",
+        "h": "Switch to the Dashboard",
         "paras": [
-          "The top bar stays with you on every screen. It shows pending Approvals (the number changes color when there are any), accumulated Cost and a Coins counter. Coins are earned by finished work, are not money and cannot be bought. You will also see whether the connection is Live or Reconnecting.",
-          "While the AI runs in simulation, there is no real model behind it, so there is no real spending attached."
-        ]
+          "The Office / Dashboard switch in the top bar changes the view. The Dashboard shows the same operation as numbers and tables, with these sections on the left:"
+        ],
+        "table": {
+          "head": ["Section", "What you find"],
+          "rows": [
+            ["Overview", "Indicators, the Team with each agent's status, pending approvals and live activity"],
+            ["Requests & plan", "Each request with its task plan and status"],
+            ["Tasks", "Every task and its status"],
+            ["Agents", "One card per agent with its done and pending tasks and its autonomy"],
+            ["Conversations", "The team's conversations"],
+            ["Approvals", "Pending decisions, to approve or reject"],
+            ["Reports", "The reports of completed requests"],
+            ["Files", "The office files"],
+            ["Quality", "An advisory score per employee, which never changes its autonomy or permissions"],
+            ["Costs & errors", "Cost per agent and per request, “Budget limits”, and errors and blocks"]
+          ]
+        },
+        "steps": [
+          "Press “Dashboard” in the top bar.",
+          "Start with “Overview”: Requests, Active tasks, Tasks done, Approvals, Cost (with its share of the budget), Errors and Active agents.",
+          "Open the section you need.",
+          "Press “Office” to ask for work again and watch the agents."
+        ],
+        "tip": "If Approvals, Cost or Errors change color, they are worth a look."
+      },
+      {
+        "h": "Read the top bar",
+        "paras": [
+          "The top bar stays with you on every screen. Depending on your screen width, it shows:"
+        ],
+        "list": [
+          "Approvals: how many are pending; the number changes color when there are any.",
+          "Cost: what has been spent so far.",
+          "The daily goal, for example “Finish 1 task today”, with its progress and its coin reward.",
+          "“Getting started”, while you have steps left in the starter list.",
+          "The “?” button, which opens a guided tour of the current screen.",
+          "Coins: your balance; press it to open the Shop.",
+          "Live or Reconnecting…: the connection status."
+        ],
+        "note": "If the AI runs in simulation mode, there is no real model behind it and the cost you see is not real spending with a provider."
       }
     ]
   }
