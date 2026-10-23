@@ -21,6 +21,7 @@ import (
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/controls"
+	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/docindex"
 	"aiworkforce/backend/internal/drive"
@@ -119,6 +120,8 @@ type Deps struct {
 	Rewards *rewards.Service
 	// Quality serves /quality/agents, /agents/{id}/quality and the golden cases (quality.go): the advisory score. Optional.
 	Quality *quality.Service
+	// Customers serves /customers/* (customers.go): the customer district, clones and scoped folders (B12). Optional.
+	Customers *customers.Service
 	// Chats serves the chat history (chat_history.go): the enriched GET /conversations,
 	// rename/archive/delete and /chats/*. Optional: nil keeps the plain list.
 	Chats *application.ChatHistory
@@ -253,6 +256,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountMemory(r)
 			s.mountRewards(r)
 			s.mountQuality(r)
+			s.mountCustomers(r)
 			s.mountPush(r)
 			s.mountNotify(r) // approvals-notify: channel settings, plan usage, daily goal
 			s.mountV2(r)
@@ -394,12 +398,15 @@ func (s *server) createRequest(w http.ResponseWriter, r *http.Request) {
 		Text string `json:"text"`
 		// BudgetCapUSD is the optional hard cap of this request (0 = configured default).
 		BudgetCapUSD float64 `json:"budget_cap_usd"`
+		// CustomerID (B12, optional) scopes the request to one customer: its tasks only ever see that
+		// customer's memories and files. The orchestrator stores the scope before the request exists.
+		CustomerID string `json:"customer_id"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
 		return
 	}
-	id, err := s.Orch.Submit(application.WithBudgetCap(r.Context(), body.BudgetCapUSD), body.Text)
+	id, err := s.Orch.Submit(application.WithCustomer(application.WithBudgetCap(r.Context(), body.BudgetCapUSD), body.CustomerID), body.Text)
 	if err != nil {
 		s.fail(w, err)
 		return

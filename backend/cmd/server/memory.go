@@ -25,7 +25,7 @@ func wireMemory(ctx context.Context, log *slog.Logger, pg *postgres.Store, store
 	}
 	fts := &memory.FTS{Docs: docs}
 	if ws.drive != nil {
-		fts.Files = &memory.DriveFiles{FS: &drive.AgentFS{Svc: ws.drive, Projects: projectDirectory{store: ws.pstore}}}
+		fts.Files = &memory.DriveFiles{FS: &drive.AgentFS{Svc: ws.drive, Projects: projectDirectory{store: ws.pstore}, Customers: customerDirectory(ws.customers)}}
 	}
 	retrievers := []memory.Retriever{fts}
 	var embedder memory.Embedder
@@ -37,6 +37,7 @@ func wireMemory(ctx context.Context, log *slog.Logger, pg *postgres.Store, store
 		retrievers = append(retrievers, &memory.Semantic{Docs: docs, Vecs: vs, Embedder: embedder, Suspects: cw.sus})
 	}
 	cfg := memory.Config{Docs: docs, Embedder: embedder, Retriever: &memory.Multi{Retrievers: retrievers}, Suspects: cw.sus, Log: log,
+		CustomerOf: customerOf(ws.customers), // B12: a customer-scoped task recalls only that customer's work
 		Audit: func(actx context.Context, org, actor, action, id string, d map[string]any) {
 			rec.Audit(application.WithOrg(actx, org), domain.AuditLog{Actor: actor, Action: action, Entity: "memory", EntityID: id, Details: d})
 		}}
@@ -57,7 +58,7 @@ func wireMemory(ctx context.Context, log *slog.Logger, pg *postgres.Store, store
 	}
 	svc := memory.New(cfg)
 	if cw.gw != nil {
-		cw.gw.AddNative(&memory.GatewayTool{Svc: svc, Suspects: cw.sus})
+		cw.gw.AddNative(&memory.GatewayTool{Svc: svc, Suspects: cw.sus, CustomerOf: customerOf(ws.customers)})
 	}
 	orch.SetMemorySource(svc)
 	go func() { // backfill: idempotent, bounded, never blocks the start

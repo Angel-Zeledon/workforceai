@@ -11,6 +11,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/config"
 	"aiworkforce/backend/internal/controls"
+	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/docindex"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
@@ -89,7 +90,7 @@ func (d projectDirectory) AgentProjects(ctx context.Context, org, agentID string
 // wireDrive builds the drive (folders, files and versions; bytes in the object
 // store) and serves the agents' fs.* tools through the Tool Gateway.
 func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *postgres.Store, store application.Store, rec *application.Recorder,
-	cw connWiring, pstore projects.Store, objects objstore.Store, orch *application.Orchestrator) (*drive.Service, *docindex.Service) {
+	cw connWiring, pstore projects.Store, objects objstore.Store, orch *application.Orchestrator, cust *customers.Service) (*drive.Service, *docindex.Service) {
 
 	var doc *docindex.Service // passage index (docindex.go): fed by the drive audit, searched by fs.search
 	var dstore drive.Store = drive.NewMemStore()
@@ -111,7 +112,8 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 	doc = newDocIndex(log, pg, svc, cfg.App.OrgID)
 	if cw.gw != nil {
 		tool := &drive.GatewayTool{FS: &drive.AgentFS{Svc: svc, Projects: projectDirectory{store: pstore}, Render: renderFromEnv(log),
-			Vision: drive.VisionLimitsFromEnv(), Chunks: doc}, Suspects: cw.sus,
+			Vision: drive.VisionLimitsFromEnv(), Chunks: doc, Customers: customerDirectory(cust)}, Suspects: cw.sus,
+			CustomerOf: customerOf(cust), // B12: fs.* of a customer-scoped request stay inside that customer
 			AgentTools: func(actx context.Context, org, agentID string) ([]string, error) {
 				a, err := store.GetAgent(application.WithOrg(actx, org), org, agentID)
 				if err != nil {
@@ -144,6 +146,8 @@ type driveWorkspace struct {
 	pstore projects.Store
 	store  application.Store                // the agent's role (work kit)
 	locale func(ctx context.Context) string // organization language (default "es")
+	// customerOf (B12, optional) resolves the customer of a request: its agents get their per-customer desk.
+	customerOf func(ctx context.Context, org, requestID string) (string, error)
 }
 
 func (d driveWorkspace) Workspace(ctx context.Context, org, agentID, requestID string) *application.RunWorkspace {
@@ -152,6 +156,12 @@ func (d driveWorkspace) Workspace(ctx context.Context, org, agentID, requestID s
 	if f, err := d.drive.EnsureOwnedFolder(ctx, drive.RootAgents, agentID, agentID); err == nil {
 		ws.Desk = f.Path
 		d.seedDesk(ctx, org, agentID, f.Path)
+	}
+	if d.customerOf != nil && requestID != "" {
+		// B12: a clone works in its per-customer desk (the general desk is closed to customer-scoped tasks).
+		if cid, err := d.customerOf(ctx, org, requestID); err == nil && cid != "" {
+			ws.Desk = drive.CustomerDesk(agentID, cid)
+		}
 	}
 	if requestID == "" || d.pstore == nil {
 		return ws

@@ -11,6 +11,7 @@ import (
 	"aiworkforce/backend/internal/artifacts"
 	"aiworkforce/backend/internal/config"
 	"aiworkforce/backend/internal/controls"
+	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/docindex"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/gateway"
@@ -27,6 +28,7 @@ type workspaceWiring struct {
 	sandbox   sandboxWiring
 	objects   objstore.Store // where file bytes live (S3, Postgres bytea or memory)
 	docIndex  *docindex.Service // passage search over the drive (bound and started in main)
+	customers *customers.Service // B12 customer district (nil: no customers)
 }
 
 // projectLookup lets the artifacts service name a project without importing the
@@ -56,7 +58,8 @@ func readOnlyGate(ctl *controls.Service) func(ctx context.Context, org string) e
 // orchestrator tasks) and the artifacts service (agent workspaces), with
 // Postgres storage when a database is configured and memory otherwise.
 func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg *postgres.Store, store application.Store, rt application.Runtime,
-	rec *application.Recorder, approvals *application.Approvals, orch *application.Orchestrator, orgCfg *application.OrgConfig, cw connWiring, modelPolicy *application.ModelPolicyService) workspaceWiring {
+	rec *application.Recorder, approvals *application.Approvals, orch *application.Orchestrator, orgCfg *application.OrgConfig, cw connWiring, modelPolicy *application.ModelPolicyService,
+	cust *customers.Service) workspaceWiring {
 
 	var pstore projects.Store = projects.NewMemStore()
 	var astore artifacts.Store = artifacts.NewMemStore()
@@ -75,7 +78,7 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 		guard = gateway.Guard{G: cw.gw}
 	}
 	var psvc *projects.Service
-	dsvc, docIdx := wireDrive(ctx, cfg, log, pg, store, rec, cw, pstore, objects, orch)
+	dsvc, docIdx := wireDrive(ctx, cfg, log, pg, store, rec, cw, pstore, objects, orch, cust)
 	if cfg.EnableDemoReset { // demo/dev deployments only: the demo company gets business documents
 		seedDemoShared(ctx, dsvc, cfg.App.OrgID, log)
 	}
@@ -98,17 +101,18 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 		pcfg.ModelFor = func(ctx context.Context, role string) string { return modelPolicy.Runtime(ctx).RoleModels[role] }
 	}
 	pcfg.SynthTokenBudget, pcfg.SynthMaxGroups = cfg.App.SynthTokenBudget, cfg.App.SynthMaxGroups
+	pcfg.CustomerActive = customerActive(cust) // B12: projects scoped to a customer
 	if orgCfg != nil {
 		pcfg.Catalog = orgCfg.Catalog()
 		pcfg.LocaleFor = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }
 	}
 	psvc = projects.New(ctx, pcfg)
 	orch.SetContextSource(asvc) // W3: referenced artifacts reach project tasks as delimited data
-	dws := driveWorkspace{drive: dsvc, pstore: pstore, store: store}
+	dws := driveWorkspace{drive: dsvc, pstore: pstore, store: store, customerOf: customerOf(cust)}
 	if orgCfg != nil {
 		dws.locale = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }
 	}
 	orch.SetFileResolver(driveFileResolver{drive: dsvc}) // chat: file cards and attachments
 	orch.SetWorkspaceSource(dws)                         // F1: agents know their drive folders (and find their work kit)
-	return workspaceWiring{pstore: pstore, projects: psvc, artifacts: asvc, drive: dsvc, sandbox: wireSandbox(log, pg, rec, cw, orch, dsvc), objects: objects, docIndex: docIdx}
+	return workspaceWiring{pstore: pstore, projects: psvc, artifacts: asvc, drive: dsvc, sandbox: wireSandbox(log, pg, rec, cw, orch, dsvc), objects: objects, docIndex: docIdx, customers: cust}
 }

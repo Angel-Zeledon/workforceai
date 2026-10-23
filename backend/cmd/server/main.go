@@ -209,7 +209,9 @@ func run(log *slog.Logger) error {
 	}
 
 	// Projects (whole workflows with parallel work) and agent workspaces (artifacts).
-	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy)
+	custSvc := newCustomers(cfg, log, pg, store, rec, orch, cw) // B12 customer district (consulted by the drive and the projects)
+	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy, custSvc)
+	bindCustomers(custSvc, ws, store)
 	skillsSvc := wireSkills(cfg, log, pg, store, rec, orch, orgCfg, cw, ws.drive)
 	webSvc := wireWeb(log, pg, rec, cw, orch)
 	// >>> corporate organization model (orgchart.go): installed after the projects gate, which it wraps
@@ -278,7 +280,7 @@ func run(log *slog.Logger) error {
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Standing: standingSvc, Initiative: initiativeSvc, DevilsAdvocate: devilsSvc,
-		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Customers: custSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}

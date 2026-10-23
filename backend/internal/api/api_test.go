@@ -22,6 +22,7 @@ import (
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
+	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/infrastructure/memory"
 	"aiworkforce/backend/internal/objstore"
 	"aiworkforce/backend/internal/orgchart"
@@ -124,6 +125,7 @@ type opts struct {
 	llmNoKEK       bool // ... with no encryption key configured
 	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
 	quality        bool // mount the quality score and golden cases (quality_api_test.go)
+	customers      bool // mount the customer district and scope requests (customers_api_test.go)
 }
 
 type env struct {
@@ -138,6 +140,7 @@ type env struct {
 	coins *rewards.Service
 	llm   *llmEnv
 	init  *application.InitiativeService
+	custAudit *[]string // customer audit actions (customers_api_test.go)
 }
 
 func newEnv(t *testing.T, o opts) *env {
@@ -195,6 +198,19 @@ func newEnv(t *testing.T, o opts) *env {
 				rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: "quality_case", EntityID: id, Details: det})
 			}})
 	}
+	var custAudit *[]string
+	if o.customers {
+		acts := []string{}
+		custAudit = &acts
+		d.Customers = customers.New(customers.Config{Store: customers.NewMemStore(), OrgID: cfg.OrgID, Log: log,
+			Agents: func(c context.Context, org string) ([]domain.Agent, error) { return spy.ListAgents(c, org) },
+			Audit: func(c context.Context, org, actor, action, id string, det map[string]any) {
+				*custAudit = append(*custAudit, action)
+				rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: "customer", EntityID: id, Details: det})
+			}})
+		orch.SetCustomerScope(d.Customers)
+		d.Customers.SetWork(customerTestWork{store: spy})
+	}
 	if o.skills {
 		d.Skills = skills.New(skills.Config{Store: skills.NewMemStore(), Drive: d.Drive, OrgID: cfg.OrgID, Log: log,
 			AgentRole: func(c context.Context, org, id string) (string, error) {
@@ -248,7 +264,9 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	ts.Start()
 	t.Cleanup(ts.Close)
-	return &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr, code: d.Sandbox, coins: coins, llm: lenv, init: d.Initiative}
+	e := &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr, code: d.Sandbox, coins: coins, llm: lenv, init: d.Initiative}
+	e.custAudit = custAudit
+	return e
 }
 
 func (e *env) do(method, path, token string, body any, hdr map[string]string) (*http.Response, []byte) {
