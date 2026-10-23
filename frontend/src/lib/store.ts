@@ -6,6 +6,7 @@ import { useArtifacts } from "./artifacts";
 import { isCostFrame, useCost } from "./cost";
 import { isRewardsFrame, useRewards } from "./rewards";
 import { isConnectionsFrame, useConnections } from "./connections/store";
+import { isShieldFrame, useShield } from "./shield";
 import type {
   ActivityItem, Agent, Approval, ChatMessage, Conversation, ErrorItem, Message, Metrics, PlanTask,
   Report, Request, RouteDecision, Task, WsFrame,
@@ -152,6 +153,7 @@ export const useStore = create<State>((set, get) => ({
     if (f.type === "provider.no_vision") useProviderAlert.setState({ noVision: true });
     if (f.type === "hello") { useArtifacts.getState().load(); useConnections.getState().applyFrame(f); void useRewards.getState().load(); }
     if (isCostFrame(f.type)) useCost.getState().applyFrame(f);
+    if (isShieldFrame(f.type)) { useShield.getState().applyFrame(f); return; } // B10: shield over the desk + notice
     const p = f.payload || {};
     const tick = (s: State, ids: (string | null | undefined)[]) => {
       const t = { ...s.agentTick };

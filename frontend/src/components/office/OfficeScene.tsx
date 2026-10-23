@@ -14,6 +14,7 @@ import { startProjectsRealtime } from "@/lib/projects/store";
 import { LabelLayer } from "./LabelLayer";
 import { LabelSolver } from "./LabelSolver";
 import { CoinFloats } from "./CoinFloats";
+import { ShieldFloats } from "./ShieldFloats";
 import { OfficeItems } from "./OfficeItems";
 import { CoinAnnouncer } from "../shop/Coin";
 import { EditorLayer } from "./EditorLayer";
@@ -128,6 +129,7 @@ export default function OfficeScene() {
           <OfficeItems />
           <EditorLayer />
           <CoinFloats />
+          <ShieldFloats /> {/* B10: a shield over the agent whose read content tried to give it orders */}
           <PeopleLayer /> {/* human presence: the people of the office walk next to the agents */}
         </Suspense>
         <LabelSolver />

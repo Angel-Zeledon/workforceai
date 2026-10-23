@@ -17,6 +17,7 @@ import { MockChatHistory } from "./chats-mock";
 import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
 import { mockQuality } from "./quality-mock";
+import { MockShield } from "./shield-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
 
@@ -158,6 +159,7 @@ export class MockBackend {
   private rewards = new MockRewards((t, p, a) => this.emit(t, p, a)); // coins + shop: earned only when a task finishes
   private roles = new MockRoles(); // role templates + hiring from a template
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
+  private shield = new MockShield((t, p, a) => this.emit(t, p, a), () => this.agents, ORG); // B10: security.alert demo, /audit security log, traces
 
   constructor() { this.seed(); }
 
@@ -542,6 +544,7 @@ export class MockBackend {
     if (this.orgChart.matches(seg)) return this.orgChart.handle(method, seg, body, q);
     // <<< org
     if (this.orgCfg.matches(seg)) return this.orgCfg.handle(method, seg, body, (text) => this.handle("POST", "/requests", { text }));
+    if (this.shield.matches(method, seg)) return this.shield.handle(method, seg, q);
     if (this.conns.matches(r0, r2)) return this.conns.handle(method, seg, q, body);
     if (method === "GET") {
       if (r0 === "agents" && !r1) return this.agents;
@@ -620,6 +623,7 @@ export class MockBackend {
         this.art.reset();
         this.roles.reset();
         this.conns.reset();
+        this.shield.reset();
         this.decisions.clear();
         this.seed();
         this.emit("hello", { agents: this.agents });

@@ -4134,5 +4134,20 @@
   "quality.golden.runResult": "{passed} de {total} verificações",
   "quality.golden.error": "Não foi possível salvar o caso.",
   "quality.golden.invalidChecks": "Cada linha deve ser \"contains: texto\" ou \"not_contains: texto\".",
-  "dash.section.quality": "Qualidade"
+  "dash.section.quality": "Qualidade",
+  "shield.alert.title": "Escudo ativado",
+  "shield.alert.body": "{agent} leu conteúdo externo ({source}) que tentava lhe dar ordens. Foi tratado como dados e não foi obedecido.",
+  "shield.alert.safe": "Qualquer envio ou pagamento dessa tarefa agora aguarda sua aprovação. Ficou registrado na auditoria.",
+  "shield.alert.openThoughts": "Ver auditoria de raciocínio",
+  "shield.alert.openLog": "Registro de segurança",
+  "shield.thoughts.focus": "Destacada: a tarefa em que foi detectado conteúdo que tentava dar ordens.",
+  "shield.thoughts.notListed": "(O registro ainda não aparece aqui ou não foi salvo.)",
+  "shield.log.title": "Escudo: tentativas de dar ordens aos agentes",
+  "shield.log.help": "Cada vez que um e-mail, página ou arquivo lido por um agente parecia lhe dar instruções. O conteúdo foi tratado como dados, nunca como ordens, e as ações dessa tarefa passaram a exigir aprovação. Fonte: a auditoria (o texto não é armazenado).",
+  "shield.log.row": "Conteúdo de {source} tratado como dados; não foi obedecido.",
+  "shield.log.empty": "Nenhuma tentativa registrada.",
+  "shield.log.restricted": "Somente quem pode ler a auditoria vê este registro.",
+  "shield.log.error": "Não foi possível carregar o registro de segurança.",
+  "shield.log.refresh": "Atualizar",
+  "shield.sim.trigger": "Simular e-mail que tenta dar ordens"
 }

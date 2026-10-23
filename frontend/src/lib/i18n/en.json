@@ -4133,5 +4133,20 @@
   "quality.golden.runResult": "{passed} of {total} checks",
   "quality.golden.error": "Could not save the case.",
   "quality.golden.invalidChecks": "Each line must be \"contains: text\" or \"not_contains: text\".",
-  "dash.section.quality": "Quality"
+  "dash.section.quality": "Quality",
+  "shield.alert.title": "Shield up",
+  "shield.alert.body": "{agent} read external content ({source}) that tried to give it orders. It was treated as data and not obeyed.",
+  "shield.alert.safe": "Any send or payment from that task now waits for your approval. It was recorded in the audit trail.",
+  "shield.alert.openThoughts": "Open thought audit",
+  "shield.alert.openLog": "Security log",
+  "shield.thoughts.focus": "Highlighted: the task where content trying to give orders was detected.",
+  "shield.thoughts.notListed": "(Its record is not listed here yet or was not stored.)",
+  "shield.log.title": "Shield: attempts to give agents orders",
+  "shield.log.help": "Every time an email, page or file an agent read looked like it was giving it instructions. The content was treated as data, never as orders, and that task's actions started requiring approval. Source: the audit trail (the text is not stored).",
+  "shield.log.row": "Content from {source} treated as data; not obeyed.",
+  "shield.log.empty": "No attempts recorded.",
+  "shield.log.restricted": "Only people who can read the audit trail see this log.",
+  "shield.log.error": "The security log could not be loaded.",
+  "shield.log.refresh": "Refresh",
+  "shield.sim.trigger": "Simulate an email that tries to give orders"
 }

@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 import { fmtUsd, stateMeta } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { useAgentView } from "@/lib/preferences";
+import { useAgentFocus } from "@/lib/agentFocus";
 import { AgentCustomizer } from "./AgentCustomizer";
 import type { AgentDetail } from "@/lib/types";
 import { ActivityFeed } from "./ActivityFeed";
@@ -43,9 +44,16 @@ export function AgentPanel({ id }: { id: string }) {
   const [openConv, setOpenConv] = useState<string | null>(null);
   const [openReport, setOpenReport] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [focusTask, setFocusTask] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setDetail(null); setTab("chat"); setOpenConv(null); setOpenReport(null); }, [id]);
+  useEffect(() => { setDetail(null); setTab("chat"); setOpenConv(null); setOpenReport(null); setFocusTask(""); }, [id]);
+  // B10: the shield notice opens this panel on the thought audit of the task whose read content tried to give orders
+  const focus = useAgentFocus((s) => s.req);
+  useEffect(() => {
+    if (!focus || focus.agentId !== id) return;
+    setTab(focus.tab); setFocusTask(focus.taskId); useAgentFocus.getState().clear();
+  }, [id, focus]);
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
@@ -89,7 +97,7 @@ export function AgentPanel({ id }: { id: string }) {
         {tab === "chat" && <AgentChat id={id} />}
         {error && !detail && <Empty>{t("panel.loadError")}</Empty>}
         {tab === "profile" && <><Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card><ProfileSheet id={id} /><QualityCard id={id} /><AgentSkillsCard id={id} /></>}
-        {tab === "thoughts" && <ThoughtAudit id={id} />}
+        {tab === "thoughts" && <ThoughtAudit id={id} focusTaskId={focusTask} />}
         {tab === "state" && (
           <>
             <Card title={t("panel.currentTask")}>
