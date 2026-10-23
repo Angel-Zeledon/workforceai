@@ -19,6 +19,7 @@ import (
 	"aiworkforce/backend/internal/api"
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/away"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
@@ -124,6 +125,7 @@ type opts struct {
 	llmNoKEK       bool // ... with no encryption key configured
 	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
 	quality        bool // mount the quality score and golden cases (quality_api_test.go)
+	away           bool // mount "while you were away" with a 500 ms visit gap (away_api_test.go)
 }
 
 type env struct {
@@ -194,6 +196,9 @@ func newEnv(t *testing.T, o opts) *env {
 			Audit: func(c context.Context, org, actor, action, id string, det map[string]any) {
 				rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: "quality_case", EntityID: id, Details: det})
 			}})
+	}
+	if o.away {
+		d.Away = away.New(away.Config{Marks: away.NewMemMarks(), History: mem, OrgID: cfg.OrgID, Log: log, Gap: awayTestGap})
 	}
 	if o.skills {
 		d.Skills = skills.New(skills.Config{Store: skills.NewMemStore(), Drive: d.Drive, OrgID: cfg.OrgID, Log: log,
