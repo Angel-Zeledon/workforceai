@@ -124,6 +124,7 @@ type opts struct {
 	llmNoKEK       bool // ... with no encryption key configured
 	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
 	quality        bool // mount the quality score and golden cases (quality_api_test.go)
+	portal         bool // mount the client portal (portal_api_test.go); implies ws
 }
 
 type env struct {
@@ -168,8 +169,11 @@ func newEnv(t *testing.T, o opts) *env {
 		orch.SetV2(mem, pr, tr)
 		d.Profiles, d.V2, d.Tracer, d.Rec = pr, mem, tr, rec
 	}
-	if o.ws {
+	if o.ws || o.portal {
 		attachWorkspaces(&d, spy, rec, appr, orch, log, ctx, o.writeGate)
+	}
+	if o.portal {
+		attachPortal(&d, rec)
 	}
 	if o.drive || o.skills {
 		d.Drive = drive.New(drive.Config{Store: drive.NewMemStore(), Objects: objstore.NewMemory(), OrgID: cfg.OrgID, WriteGate: o.writeGate, Log: log})
