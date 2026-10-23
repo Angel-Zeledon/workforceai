@@ -134,6 +134,7 @@ type opts struct {
 	away           bool // mount "while you were away" with a 500 ms visit gap (away_api_test.go)
 	rehearsal      bool // mount the rehearsal API (rehearsal_api_test.go)
 	runtime        application.Runtime // overrides fakeRuntime{} (nil: the default)
+	roi            bool // mount the AI payroll / return report (roi_api_test.go)
 }
 
 type env struct {
@@ -246,6 +247,9 @@ func newEnv(t *testing.T, o opts) *env {
 	if o.rehearsal {
 		d.Rehearsal = &application.RehearsalService{Store: mem, Runs: mem, Rec: rec, Cfg: cfg}
 		orch.SetRehearsal(d.Rehearsal)
+	}
+	if o.roi {
+		d.ROI = &application.ROIService{Store: mem, Core: spy, Rec: rec, Cfg: cfg}
 	}
 	if o.advocate != nil {
 		d.DevilsAdvocate = &application.DevilsAdvocate{Store: mem, Core: spy, Runtime: o.advocate, Budget: orch, Rec: rec, Cfg: cfg}

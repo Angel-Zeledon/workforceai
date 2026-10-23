@@ -9,6 +9,7 @@ import { RehearsalReport } from "./rehearsal/RehearsalReport";
 function ReportRehearsal({ requestId }: { requestId: string }) {
   return requestId ? <RehearsalReport requestId={requestId} /> : null;
 }
+import { RequestAuditStamp } from "./quality/AuditStamp";
 
 export function ReportView({ r }: { r: Report }) {
   const { t } = useT();
@@ -26,6 +27,7 @@ export function ReportView({ r }: { r: Report }) {
           </span>
         </div>
       </header>
+      {r.request_id && <RequestAuditStamp requestId={r.request_id} />}
       <div className="rounded-md border border-accent/30 bg-accent/5 p-3 text-[13px] leading-relaxed text-ink2">
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-accent">{t("report.executiveSummary")}</div>
         {r.summary}

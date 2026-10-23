@@ -5,6 +5,7 @@ import { useCan } from "@/lib/session";
 import { explainNode, fmtDuration, isDoneState } from "@/lib/projects/calc";
 import { useProjects } from "@/lib/projects/store";
 import { Btn } from "../ui";
+import { AuditDetail } from "../quality/AuditStamp";
 import { AgentChip, StatePill, fmtMoney, useNodeTitle } from "./shared";
 
 /** Right-hand panel for the selected node: facts, dependencies in/out and a deterministic "why is it blocked?". */
@@ -65,6 +66,7 @@ export function NodeDrawer() {
           <ul className="mt-0.5 list-disc space-y-0.5 pl-4">{n.review.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
         </div>
       )}
+      {n.audit && <AuditDetail audit={n.audit} testId="node-audit" />}
       {n.superseded && <div data-testid="node-superseded" className="rounded-xl bg-panel2 px-2 py-1 text-[11px] text-mute">{t(`pv.changes.superseded.${n.superseded}`)}</div>}
       {n.skipped && <div data-testid="node-skipped" className="rounded-xl bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800">{t("pv.recover.skipped", { reason: n.skip_reason ?? "" })}</div>}
       {canRecover && (n.state === "failed" || n.state === "blocked") && (

@@ -12,6 +12,7 @@ package projects
 import (
 	"time"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/demodata"
 	"aiworkforce/backend/internal/domain"
 )
@@ -102,6 +103,9 @@ type Node struct {
 	// of its quality review (Q1, additive).
 	Acceptance []string       `json:"acceptance,omitempty"`
 	Review     *domain.Review `json:"review,omitempty"`
+	// Audit is the internal auditor's stamp when this node is a finished audit
+	// task (B7, additive): verified | inconsistency | unverified with findings.
+	Audit *application.TaskAudit `json:"audit,omitempty"`
 	// PlanChangeID is the plan change that added this node (Q2, additive).
 	PlanChangeID string `json:"plan_change_id,omitempty"`
 	// Superseded is "replaced" or "removed" when a plan change took the node out

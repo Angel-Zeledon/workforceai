@@ -55,6 +55,8 @@ type Deps struct {
 	Standing *application.StandingService
 	// Initiative serves the proactive suggestions and their budget (initiative.go). Optional.
 	Initiative *application.InitiativeService
+	// ROI serves the AI payroll and return report and its model (roi.go, B15). Optional.
+	ROI *application.ROIService
 	// DevilsAdvocate serves /approvals/{id}/counterargument (devils_advocate.go): the advisory review of a
 	// high-risk approval. Optional: nil leaves the routes unmounted.
 	DevilsAdvocate *application.DevilsAdvocate
@@ -228,12 +230,14 @@ func NewRouter(d Deps) http.Handler {
 			r.With(s.can(auth.PermRequestsCreate)).Post("/requests", s.createRequest)
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests", s.listRequests)
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}", s.getRequest)
+			r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}/audit", s.getRequestAudit)
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations", s.listConversations)
 			s.mountChatHistory(r)
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations/{id}/messages", s.listMessages)
 			r.With(s.can(auth.PermConversationsPost)).Post("/messages", s.postChat)
 			r.With(s.can(auth.PermConversationsPost)).Post("/conversations/{id}/messages", s.postMessage)
 			r.With(s.can(auth.PermApprovalsRead)).Get("/approvals", s.listApprovals)
+			r.With(s.can(auth.PermApprovalsRead)).Get("/approvals/inbox", s.getApprovalInbox)
 			// Deciding approvals is a privileged action: admin/owner only.
 			r.With(s.can(auth.PermApprovalsDecide)).Post("/approvals/{id}/decision", s.decide)
 			r.With(s.can(auth.PermReportsRead)).Get("/reports", s.listReports)
@@ -251,6 +255,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountProjectInputs(r)
 			s.mountStanding(r)
 			s.mountInitiative(r)
+			s.mountROI(r)
 			s.mountDevilsAdvocate(r)
 			s.mountRehearsal(r)
 			s.mountRoles(r)
@@ -445,6 +450,16 @@ func (s *server) getRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	d.Tasks = list(d.Tasks)
 	writeJSON(w, 200, s.withCost(r, d))
+}
+
+// getRequestAudit: GET /requests/{id}/audit, the internal auditor's stamp of a request (B7).
+func (s *server) getRequestAudit(w http.ResponseWriter, r *http.Request) {
+	v, err := s.Queries.RequestAudit(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, v)
 }
 
 func (s *server) listConversations(w http.ResponseWriter, r *http.Request) {

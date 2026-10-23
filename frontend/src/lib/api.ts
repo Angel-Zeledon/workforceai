@@ -67,6 +67,8 @@ export const api = {
   approvals: async () => list<Approval>(await call("GET", "/approvals")),
   reports: async () => list<Report>(await call("GET", "/reports")),
   report: (id: string) => call<Report>("GET", `/reports/${id}`),
+  /** B7: the internal auditor's stamp of a request (raw; parse with parseRequestAudit). */
+  requestAudit: (requestId: string) => call<unknown>("GET", `/requests/${encodeURIComponent(requestId)}/audit`),
   activity: async () => list<ActivityItem>(await call("GET", "/activity?limit=100")),
   metrics: () => call<Metrics>("GET", "/metrics"),
   postRequest: (text: string) => call<{ request_id: string }>("POST", "/requests", { text }),

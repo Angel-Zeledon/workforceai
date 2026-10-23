@@ -986,3 +986,31 @@ Los agentes muestran qué habrían enviado o pagado sin hacerlo. Aditivo; migrac
 `RehearsalAction = {id, request_id, task_id, agent_id, tool, action, source:"gateway"|"simulated"|"code", scope:"request"|"agent", would_decision:"allowed"|"needs_approval"|"denied", deny_reason?, risk, reversibility?, account?, recipients[], amount?, flags[], preview{clave: texto saneado}, args_hash, verdict, verdict_by?, verdict_at?, created_at}`.
 
 Eventos WS: `rehearsal.recorded {id, request_id, task_id, agent_id, tool, action, would_decision, scope}` (sin vista previa), `rehearsal.agent_changed {agent_id, enabled, by}`, `rehearsal.verdict {id, request_id, agent_id, tool, action, verdict, would_decision, by}`. `request.received` lleva `rehearsal:true` cuando aplica. Auditoría: `tool.rehearsed` (orquestador y Tool Gateway). En el gateway, una llamada con efecto de un ensayo devuelve `Decision:"rehearsed"` y nunca se ejecuta, ni con aprobación; aprobar desde la bandeja un envío re-encolado de un agente en ensayo responde el código `rehearsal_mode`. Detalle y garantías: `docs/architecture/rehearsal.md`.
+
+## 32. Sello del auditor interno (B7)
+
+El veredicto del auditor interno (`output.metrics.audit_status` de sus tareas, ya endurecido por `enforceAuditEvidence`) como sello legible. Solo lectura; no calcula veredictos propios. Diseño: `docs/architecture/internal-auditor.md`. Sin migración.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/requests/{id}/audit` | `requests:read` | `{request_id, status: verified\|inconsistency\|unverified\|none, audits: [{task_id, title, agent_id, status, summary, findings[], evidence[], compared, inconsistencies, confidence, finished_at?}]}`. Solo tareas terminadas; estado agregado: `inconsistency` si alguna, `verified` si todas, `none` sin auditorías. `404` si la solicitud no es de la organización |
+
+Aditivo en `GET /projects/{id}`: cada nodo que sea una auditoría terminada trae `audit` con la misma forma que un elemento de `audits` (ausente en los demás). `GET /tasks` y `GET /tasks/{id}` ya devolvían `output.metrics.audit_status` sin cambios.
+
+## 33. Nómina de IA y retorno (B15)
+
+Costo de IA medido por empleado junto a las horas humanas **estimadas** de su trabajo terminado, con la metodología en cada respuesta. Sin tarifa de la organización no hay montos de tiempo humano (`null`). Diseño: `docs/architecture/ai-payroll-roi.md`. Migración `796_roi_settings` (`roi_settings`, RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/roi?window_days=` | `metrics:read` | `{generated_at, methodology: {kind: "estimate", window_days, from, to, counted, excluded[], default_minutes, default_minutes_source: assumption\|org, role_minutes, hourly_rate_usd\|null, rate_source: org\|unset, ai_cost_basis}, org: Figures, agents: [Figures + {agent_id, role, minutes_per_task, minutes_source: role\|default\|assumption}]}`. `Figures = {tasks_counted, excluded_rework, excluded_failed, excluded_skipped, est_minutes, est_hours, ai_cost_usd, est_human_cost_usd\|null, ai_cost_per_est_hour_usd\|null}`. Ventana 1..365 (por defecto 30) |
+| GET | `/settings/roi` | `metrics:read` | `{hourly_rate_usd\|null, default_minutes, role_minutes{rol: min}, updated_by?, updated_at?, saved, default_assumed_minutes, max_minutes, max_hourly_rate_usd}` (`saved: false` = nunca configurado, se usa el supuesto de 30 min) |
+| PUT | `/settings/roi` | `org:manage` | `{hourly_rate_usd\|null, default_minutes, role_minutes}`; minutos 0..480, tarifa 0..10000 (`<= 0` o `null` la borra), `400` si no. Auditado (`roi.settings_changed`) |
+
+## 34. Bandeja rápida de aprobaciones (B17)
+
+Una bandeja de todos los proyectos para decidir rápido. Solo lectura: decidir sigue en `POST /approvals/{id}/decision` y `POST /approvals/batch`. La revisión del abogado del diablo solo se lee de su caché. No hay deshacer en el servidor: la ventana de deshacer es del cliente. Diseño: `docs/architecture/approvals-inbox.md`. Sin migración.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/approvals/inbox` | `approvals:read` | `{generated_at, items: [Approval + {task_title?, request_id?, task_cost_usd, project_id?, project_name?, group_key?, counterargument?: {summary, risks[≤3]}, high_risk}], groups: [{key, project_id, project_name?, action, count, approval_ids[], batchable, reason?: "risk"}], suggestions: [{kind: "raise_notify_threshold", action, decided, approved, rate, window_days, max_risk}], rules: {suggest_window_days: 30, suggest_min_decisions: 20, suggest_rate: 0.95, undo: "client_side"}}`. Items: riesgo más alto primero, luego más antiguo. Grupo `batchable` = 2 o más pendientes de una acción en un proyecto, todas de riesgo bajo. Sugerencia: más del 95 % aprobadas con al menos 20 decisiones humanas en 30 días y nunca riesgo alto; es solo informativa |

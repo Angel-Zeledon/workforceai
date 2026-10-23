@@ -144,6 +144,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 					n.Attempt = a
 				}
 				n.Review = t.Output.Review
+				n.Audit = application.TaskAuditOf(t) // B7: nil unless this is a finished audit task
 				if sk, _ := t.Output.Metrics["skipped"].(bool); sk {
 					n.Skipped = true
 					n.SkipReason, _ = t.Output.Metrics["skip_reason"].(string)

@@ -37,6 +37,7 @@ type fakeRuntime struct {
 	review   func(n int, in application.ReviewRequest) application.ReviewResponse // Q1 reviewer (nil: always pass)
 	reviews  []application.ReviewRequest
 	suggest  func(title string) []string // suggested_tasks of a task output (nil: none)
+	shape    func(title string, out *domain.StructuredOutput) // edits a task output before it is returned (nil: none)
 }
 
 func newRT() *fakeRuntime { return &fakeRuntime{finished: map[string]int{}} }
@@ -74,8 +75,11 @@ func (f *fakeRuntime) RunTask(_ context.Context, in application.RunTaskRequest) 
 	if f.suggest != nil {
 		sug = f.suggest(in.Task.Title)
 	}
-	return application.RunTaskResponse{Output: domain.StructuredOutput{Summary: "hecho: " + in.Task.Title, Confidence: 0.9, SuggestedTasks: sug},
-		Usage: application.Usage{Model: "deepseek-chat", CostUSD: f.cost}}, nil
+	out := domain.StructuredOutput{Summary: "hecho: " + in.Task.Title, Confidence: 0.9, SuggestedTasks: sug}
+	if f.shape != nil {
+		f.shape(in.Task.Title, &out)
+	}
+	return application.RunTaskResponse{Output: out, Usage: application.Usage{Model: "deepseek-chat", CostUSD: f.cost}}, nil
 }
 
 func (f *fakeRuntime) Consult(context.Context, application.ConsultRequest) (application.ConsultResponse, error) {

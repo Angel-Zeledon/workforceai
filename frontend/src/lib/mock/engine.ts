@@ -16,6 +16,8 @@ import { MockChat } from "./chat-mock";
 import { MockChatHistory } from "./chats-mock";
 import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
+import { MockRoi } from "./roi-mock";
+import { MockInbox } from "./inbox-mock";
 import { mockQuality } from "./quality-mock";
 import { mockTrust } from "./trust-mock";
 import { MockRituals } from "./rituals-mock";
@@ -24,6 +26,7 @@ import { MockShield } from "./shield-mock";
 import { MockRehearsal } from "./rehearsal-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
+import type { RequestAudit, TaskAudit } from "../auditLogic";
 
 /** Card of the draft an agent leaves on its desk after a task (the mock drive creates the same path). */
 const draftRef = (agentId: string, title: string): FileRef => {
@@ -121,6 +124,27 @@ export function buildPlan(text: string): TaskSpec[] {
   ];
 }
 
+/** B7 demo: the internal auditor's stamp of a finished request, one kind per scenario (fixed demo figures taken from
+ * the scenario outputs above). The $50,000 proposal shows an inconsistency, the sales drop a verification and the
+ * hiring plan "not verified"; anything else has no audit. */
+export function demoRequestAudit(req: Request, tasks: Task[]): RequestAudit | null {
+  const t = req.text.toLowerCase();
+  const kind = /50[, ]?000|propuesta|cliente|cotiz|proposal|\bquote/.test(t) ? "p50k"
+    : /ventas|bajaron|bajó|cayeron|caída|sales (dropped|fell)|sales are down/.test(t) ? "sales"
+    : /contrat|vacante|personal|reclut|\bhire\b|hiring|vacanc/.test(t) ? "hire" : null;
+  if (!kind) return null;
+  const ref = (key: string) => tasks.find((x) => buildPlan(req.text).find((s) => s.key === key)?.title === x.title)?.id ?? key;
+  const base = { task_id: `${req.id}#audit`, title: tr("mock.audit.title"), agent_id: "assistant", finished_at: nowIso() };
+  const audit: TaskAudit = kind === "p50k"
+    ? { ...base, status: "inconsistency", summary: tr("mock.audit.p50k.summary"), findings: [tr("mock.audit.p50k.f1"), tr("mock.audit.p50k.f2")],
+      evidence: [`task:${ref("t1")}.metrics.margen_estimado=31%`, `task:${ref("t3")}.metrics.margen_real=24%`, `task:${ref("t4")}.metrics.base=24%`], compared: 2, inconsistencies: 1, confidence: 0.85 }
+    : kind === "sales"
+      ? { ...base, status: "verified", summary: tr("mock.audit.sales.summary"), findings: [tr("mock.audit.sales.f1"), tr("mock.audit.sales.f2")],
+        evidence: [`task:${ref("b1")}.metrics.variacion=-14%`, `task:${ref("b3")}.summary=-14%`, `task:${ref("b1")}.metrics.leads=-18%`, `task:${ref("b2")}.summary=-18%`], compared: 2, inconsistencies: 0, confidence: 0.9 }
+      : { ...base, status: "unverified", summary: tr("mock.audit.hire.summary"), findings: [tr("mock.audit.hire.f1")], evidence: [], compared: 0, inconsistencies: 0, confidence: 0.4 };
+  return { request_id: req.id, status: audit.status, audits: [audit] };
+}
+
 const fullOutput = (o: Partial<StructuredOutput>): StructuredOutput => ({
   summary: "", findings: [], metrics: {}, hypotheses: [], evidence: [], recommendations: [], confidence: 0.8, suggested_tasks: [], ...o,
 });
@@ -135,6 +159,8 @@ export class MockBackend {
   private messages: Record<string, Message[]> = {};
   private approvals: Approval[] = [];
   private reports: Report[] = [];
+  /** B7: the internal auditor's stamp per request (GET /requests/{id}/audit) */
+  private audits = new Map<string, RequestAudit>();
   private activity: ActivityItem[] = [];
   private errorsCount = 0;
   private budget = 50;
@@ -163,6 +189,14 @@ export class MockBackend {
   private cmds = new MockCommands({ agents: () => this.agents, chatCount: (c) => this.chat.all()[c]?.length ?? 0, startRequest: (t) => this.startRequest(t) }); // slash commands
   private rewards = new MockRewards((t, p, a) => this.emit(t, p, a)); // coins + shop: earned only when a task finishes
   private roles = new MockRoles(); // role templates + hiring from a template
+  private roi = new MockRoi({ agents: () => this.agents, tasks: () => this.tasks }); // B15: AI payroll / estimated hours
+  private inbox = new MockInbox({ approvals: () => this.approvals, tasks: () => this.tasks }); // B17: fast approvals inbox
+
+  /** POST /approvals/batch for a project of the projects demo (same body as the real API). */
+  private async projectsBatch(body: any) {
+    const { projectsMock } = await import("../projects/mock");
+    return projectsMock.decideBatch(String(body?.filter?.project_id ?? ""), { action: String(body?.filter?.action ?? ""), decision: body?.decision === "approve" ? "approve" : "reject", expected_count: Number(body?.expected_count), include_high: !!body?.include_high });
+  }
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
   private rituals = new MockRituals({
     agents: () => this.agents, tasks: () => this.tasks, approvals: () => this.approvals,
@@ -176,7 +210,7 @@ export class MockBackend {
   private seed() {
     this.agents = SEED_AGENTS.map((a) => ({ ...a, metrics: { ...a.metrics }, state: "idle" as AgentState, activity: "Disponible", current_task_id: null, progress: 0 }));
     this.tasks = []; this.requests = []; this.conversations = []; this.messages = {}; this.approvals = [];
-    this.reports = []; this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
+    this.reports = []; this.audits.clear(); this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
   }
 
   // ---- realtime -----------------------------------------------------------------------------
@@ -419,6 +453,8 @@ export class MockBackend {
       sections: tasks.filter((t) => t.agent_id !== "assistant").map((t) => ({ heading: `${this.agent(t.agent_id).title}: ${t.title}`, body: body(t) })),
       contributors, cost_usd: cost, created_at: nowIso(),
     };
+    const audit = demoRequestAudit(req, tasks);
+    if (audit) this.audits.set(req.id, audit);
     this.reports.unshift(report);
     this.emit("report.created", { report }, "assistant");
     req.report_id = report.id; req.status = "done"; req.cost_usd = cost;
@@ -580,6 +616,8 @@ export class MockBackend {
     }
     if (this.cmds.matches(seg)) return this.cmds.handle(method, seg, q, body);
     if (this.rituals.matches(seg)) return this.rituals.handle(method, seg, body, q);
+    if (this.roi.matches(seg)) return this.roi.handle(method, seg, q, body);
+    if (this.inbox.matches(method, seg)) return this.inbox.handle(method, seg, body, () => this.projectsBatch(body));
     if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
@@ -625,6 +663,10 @@ export class MockBackend {
       }
       if (r0 === "tasks" && r1) return this.tasks.find((t) => t.id === r1);
       if (r0 === "requests" && !r1) return this.requests;
+      if (r0 === "requests" && r1 && r2 === "audit") {
+        if (!this.requests.some((r) => r.id === r1)) throw new Error(`GET /requests/${r1}/audit -> 404`);
+        return this.audits.get(r1) ?? { request_id: r1, status: "none", audits: [] };
+      }
       if (r0 === "requests" && r1) {
         return { request: this.requests.find((r) => r.id === r1), tasks: this.tasks.filter((t) => t.request_id === r1) };
       }
@@ -675,6 +717,8 @@ export class MockBackend {
         this.gen++;
         this.art.reset();
         this.roles.reset();
+        this.roi.reset();
+        this.inbox.reset();
         this.conns.reset();
         this.rituals.reset();
         this.shield.reset();

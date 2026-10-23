@@ -1,4 +1,5 @@
 /** Project / workflow visualization contracts (docs/architecture/workflow-visualization.md). Additive: legacy Task/Request are untouched. */
+import type { TaskAudit } from "../auditLogic";
 
 export type NodeKind = "task" | "subtask" | "consult" | "group" | "milestone" | "gate" | "wait" | "review";
 export type NodeState =
@@ -51,6 +52,8 @@ export interface ProjectNode {
   /** Q1: checkable criteria the output is reviewed against, and the verdict of that review */
   acceptance?: string[];
   review?: NodeReview | null;
+  /** B7: the internal auditor's stamp when this node is a finished audit task */
+  audit?: TaskAudit | null;
   /** added by this plan change (Q2) */
   plan_change_id?: string;
   /** replaced or removed by a plan change: out of the plan, state is cancelled (Q2) */

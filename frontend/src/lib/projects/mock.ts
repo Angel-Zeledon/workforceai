@@ -11,6 +11,7 @@ import {
 } from "./calc";
 import { BUILTIN_TEMPLATES } from "./templates";
 import { MockTemplates } from "./mockTemplateStore";
+import type { TaskAudit } from "../auditLogic";
 import type {
   ControlAction, LaunchBody, NewProjectBody, PlanOp, ProjectApproval, ProjectDetail, ProjectFrame, ProjectHealth,
   ProjectNode, ProjectObjective, ProjectSummary, ProjectTemplate, SaveTemplateOpts, TemplateInput, TemplateNode, TemplatePreviewRequest,
@@ -34,6 +35,20 @@ interface MockProject {
   delegates: Map<string, NonNullable<TemplateNode["delegate"]>>;
   costFactor: Map<string, number>;
   budgetAck: boolean;
+}
+
+/** B7 demo: in the financial close, three nodes finish with the internal auditor's stamp, one of each kind
+ * (fixed demo figures; the real stamp comes from the auditor's task output, see docs/architecture/internal-auditor.md). */
+export function demoAudit(templateId: string | null, n: ProjectNode): TaskAudit | null {
+  if (templateId !== "tpl-financial-close") return null;
+  const key = n.id.slice(n.id.indexOf(":") + 1);
+  const base = { task_id: `${n.id}#audit`, title: tr("mock.audit.title"), agent_id: n.agent_id ?? "", confidence: 0.85, finished_at: iso() };
+  if (key === "c1") return { ...base, status: "inconsistency", summary: tr("mock.audit.fc.c1.summary"), findings: [tr("mock.audit.fc.c1.f1"), tr("mock.audit.fc.c1.f2")],
+    evidence: ["task:b3.metrics.net_income=48200", "task:a2.metrics.net_income=46900", "task:b1.metrics.revenue=312000", "task:b4.metrics.revenue=312000"], compared: 2, inconsistencies: 1 };
+  if (key === "b4") return { ...base, status: "verified", summary: tr("mock.audit.fc.b4.summary"), findings: [tr("mock.audit.fc.b4.f1"), tr("mock.audit.fc.b4.f2")],
+    evidence: ["task:b1.metrics.revenue=312000", "task:b4.metrics.revenue=312000", "task:b2.metrics.costs=263800", "task:b4.metrics.costs=263800"], compared: 2, inconsistencies: 0 };
+  if (key === "c2") return { ...base, status: "unverified", summary: tr("mock.audit.fc.c2.summary"), findings: [], evidence: [], compared: 0, inconsistencies: 0, confidence: 0.4 };
+  return null;
 }
 
 function resolveTitle(key: string, literal: string | undefined, params: Record<string, string>) {
@@ -362,7 +377,7 @@ export class ProjectsMock {
     }
     const n = mp.detail.nodes.find((x) => x.id === a.node_id);
     if (!n) return;
-    if (decision === "approve") { mp.approved.add(n.id); n.state = "done"; n.progress = 100; n.finished_at = iso(); }
+    if (decision === "approve") { mp.approved.add(n.id); n.state = "done"; n.progress = 100; n.finished_at = iso(); n.audit = demoAudit(p.template_id, n); }
     else { n.state = "blocked"; n.error = "rejected"; }
     n.rev++; mp.dirty.add(n.id);
   }
@@ -405,7 +420,7 @@ export class ProjectsMock {
         mp.failOnce.delete(n.id); n.state = "ready"; n.progress = 0; n.error = "timeout"; continue;
       }
       if (n.approval_action && !mp.approved.has(n.id) && n.kind !== "gate") { this.raiseApproval(mp, n, n.approval_action, "medium"); continue; }
-      n.state = "done"; n.finished_at = nowIso; n.error = null;
+      n.state = "done"; n.finished_at = nowIso; n.error = null; n.audit = demoAudit(mp.detail.project.template_id, n);
     }
     // 2) delegating parents resume when their subtasks are done
     for (const n of d.nodes) {
