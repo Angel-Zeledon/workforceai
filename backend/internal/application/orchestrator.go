@@ -55,6 +55,7 @@ type Orchestrator struct {
 	memSrc   MemorySource    // optional: long-term memory (memory_flow.go)
 
 	initiative InitiativeRaiser // optional: failed tasks become suggestions (initiative.go)
+	rehearsal  *RehearsalService // optional: per-agent rehearsal switch and the "would have done" log (rehearsal.go)
 
 	v2 v2State // work profiles, thought audit and intervention (intervene.go); zero value = off
 
@@ -173,8 +174,14 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	rs.requestedBy = ActorFrom(ctx, "")
 	rs.style = o.loadStyle(ctx)
 	rs.chat = chatLinkFrom(ctx)
+	received := map[string]any{"request_id": req.ID, "text": text}
+	if RehearsalFrom(ctx) { // B9: the whole request is a rehearsal (persisted in the run meta)
+		rs.ext.rehearsal = true
+		o.rehearsal.MarkRequest(o.org(ctx), req.ID)
+		received["rehearsal"] = true
+	}
 	o.rec.Emit(ctx, Action{Type: domain.EvRequestReceived, Entity: "request", EntityID: req.ID,
-		Payload: map[string]any{"request_id": req.ID, "text": text}, Text: "Nueva solicitud: " + truncate(text, 100)})
+		Payload: received, Text: "Nueva solicitud: " + truncate(text, 100)})
 	o.sendMessage(ctx, rs, "user", assistantID, "chat", text, nil)
 	o.emitMetrics(ctx)
 
@@ -858,6 +865,14 @@ func (o *Orchestrator) handleToolsFrom(ctx context.Context, rs *run, t *domain.T
 			o.webSkipped(ctx, t, agent, tr)
 			continue
 		}
+		// B9 rehearsal: every side-effect request is recorded as "would have done"
+		// and not executed (no approval is asked either). Reads keep their path.
+		if scope := o.rehearsalScope(ctx, rs, agent); scope != "" {
+			if route := o.routeOf(ctx, agent, tr); isCodeRun(tr) || route == RouteWrite || (route == RouteNone && o.rehearsalSideEffect(tr)) {
+				o.rehearseTool(ctx, rs, t, agent, tr, route, scope)
+				continue
+			}
+		}
 		if isCodeRun(tr) { // never auto-approved: see code_flow.go
 			if out := o.handleCodeRun(ctx, rs, t, agent, tr, i, reqs); out != OutcomeDone {
 				return out
@@ -977,6 +992,13 @@ func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.
 			return OutcomeBlocked
 		}
 		t.Status = domain.TaskRunning
+		if scope := o.rehearsalScope(ctx, rs, agent); scope != "" {
+			// B9: the agent (or request) went into rehearsal while the approval waited:
+			// the approval never overrides a rehearsal. Recorded, not executed.
+			o.rehearseTool(ctx, rs, t, agent, tr, RouteNone, scope)
+			o.setState(ctx, agent.ID, domain.StateWorking, "Ensayo, finalizando: "+t.Title, &tid, 90)
+			return OutcomeDone
+		}
 		// At most once: mark the checkpoint before recording the execution, so a
 		// restart in between never executes the approved action a second time,
 		// and claim the approval id in the execution ledger (any process).

@@ -16,6 +16,9 @@ import { WebToolCard } from "./WebToolCard";
 import { NotifySettingsCard } from "../approvals/NotifySettingsCard";
 import { InitiativeBudgetCard } from "../initiative/InitiativePanel";
 import { DocSearchCard } from "./DocSearchCard";
+import { ShieldLogCard } from "./ShieldLogCard";
+import { RehearsalCenterCard } from "../rehearsal/RehearsalCenterCard";
+import { simulateInjection } from "@/lib/shield";
 
 function Section({ id, title, children, right }: { id: string; title: string; children: ReactNode; right?: ReactNode }) {
   return <div data-testid={id}><Card title={title} right={right}>{children}</Card></div>;
@@ -156,7 +159,10 @@ function SimulationCard() {
         <span className="font-semibold">{t("ctl.sim.admins")}:</span>
         {([1, 2] as const).map((n) => <Btn key={n} data-testid={`ctl-sim-admins-${n}`} kind={controls.admin_count === n ? "primary" : "ghost"} onClick={async () => { await ctlApi.devAdmins(n); await reload(); }}>{n}</Btn>)}
       </div>
-      <div className="mt-2"><Btn data-testid="ctl-plan-simulate" onClick={async () => { await ctlApi.simulatePlan(); await useConnections.getState().loadPlans(); }}>{t("ctl.sim.plan")}</Btn></div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Btn data-testid="ctl-plan-simulate" onClick={async () => { await ctlApi.simulatePlan(); await useConnections.getState().loadPlans(); }}>{t("ctl.sim.plan")}</Btn>
+        <Btn data-testid="ctl-shield-simulate" onClick={() => void simulateInjection()}>{t("shield.sim.trigger")}</Btn>
+      </div>
     </Section>
   );
 }
@@ -179,6 +185,8 @@ export function SecurityCenter() {
       <p className="mb-4 text-xs text-mute">{t("ctl.subtitle")}</p>
       <div className="space-y-4">
         <GlobalState />
+        <ShieldLogCard />
+        <RehearsalCenterCard />
         <div className="grid gap-4 lg:grid-cols-2"><ToolSwitches /><AgentPauses /></div>
         <Section id="ctl-plan-review" title={t("ctl.plan.title")}>
           <p className="mb-2 text-xs text-mute">{t("ctl.plan.help")}</p>

@@ -239,6 +239,19 @@ func run(log *slog.Logger) error {
 			devilsSvc.Locale = func(c context.Context) string { return orgCfg.Locale(c, "") }
 		}
 	}
+	// Rehearsal (B9): agents show what they would have sent or paid without doing it. The Tool Gateway enforces it
+	// on its own (fail closed), so an approval, the outbox or a held send never turns a rehearsal into a real effect.
+	var rehearsalSvc *application.RehearsalService
+	if rs, ok := store.(application.RehearsalStore); ok {
+		rehearsalSvc = &application.RehearsalService{Store: rs, Rec: rec, Cfg: cfg.App, Suspects: cw.sus}
+		if runs, ok := store.(application.RunStore); ok {
+			rehearsalSvc.Runs = runs
+		}
+		orch.SetRehearsal(rehearsalSvc)
+		if cw.gw != nil {
+			cw.gw.Rehearsal = rehearsalSvc
+		}
+	}
 	rewardsSvc := wireRewards(log, pg, store, rec, ws.projects)
 	qualitySvc := wireQuality(cfg, log, pg, store, rec)
 	trustSvc := wireTrust(cfg, log, pg, store, rec, cw.ctl, qualitySvc)
@@ -290,7 +303,7 @@ func run(log *slog.Logger) error {
 	ritualsSvc := wireRituals(ctx, cfg, log, pg, store, rec, orch, orgCfg, qualitySvc, profiles)
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
-		Standing: standingSvc, Initiative: initiativeSvc, DevilsAdvocate: devilsSvc,
+		Standing: standingSvc, Initiative: initiativeSvc, DevilsAdvocate: devilsSvc, Rehearsal: rehearsalSvc,
 		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Trust: trustSvc, Rituals: ritualsSvc, Away: awaySvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,

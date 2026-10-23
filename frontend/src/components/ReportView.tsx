@@ -3,6 +3,12 @@ import type { Report } from "@/lib/types";
 import { fmtUsd } from "@/lib/meta";
 import { fmtDateTime, useT } from "@/lib/i18n";
 import { Dot, useAgentColor, useAgentName } from "./ui";
+import { RehearsalReport } from "./rehearsal/RehearsalReport";
+
+/** B9: the rehearsal report of the same request (renders nothing when the request rehearsed nothing). */
+function ReportRehearsal({ requestId }: { requestId: string }) {
+  return requestId ? <RehearsalReport requestId={requestId} /> : null;
+}
 
 export function ReportView({ r }: { r: Report }) {
   const { t } = useT();
@@ -30,6 +36,7 @@ export function ReportView({ r }: { r: Report }) {
           <p className="whitespace-pre-line text-[12.5px] leading-relaxed text-ink2">{s.body}</p>
         </section>
       ))}
+      <ReportRehearsal requestId={r.request_id} />
     </article>
   );
 }

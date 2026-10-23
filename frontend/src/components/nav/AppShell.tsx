@@ -24,6 +24,7 @@ import { ControlsBanner } from "../security/ControlsChrome";
 import { CostOverlays } from "../cost/CostOverlays";
 import { Icon, type IconName } from "../icons";
 import { Toaster } from "./Toaster";
+import { ShieldAlerts } from "../security/ShieldAlerts";
 import { TourLauncher } from "../tour/TourLauncher";
 import { TourOverlay } from "../tour/TourOverlay";
 import { WelcomeOverlay } from "../onboarding/WelcomeOverlay";
@@ -180,6 +181,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
       <Toaster />
+      <ShieldAlerts />
       <TourOverlay />
       {section === "office" && <WelcomeOverlay />}
     </div>

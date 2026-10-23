@@ -423,6 +423,9 @@ func (g *Gateway) OutboxApprove(ctx context.Context, org, id string, version int
 	if out.Decision == "denied" {
 		return OutboxItem{}, &DeniedError{Code: out.DenyReason}
 	}
+	if out.Decision == application.DecisionRehearsed { // B9: nothing was scheduled
+		return OutboxItem{}, &DeniedError{Code: CodeRehearsal}
+	}
 	g.Audit(ctx, org, actor, "outbox.approved", "connection", e.connID, map[string]any{"item_id": id, "version": version, "hold_id": out.HoldID})
 	if approvalID != "" && decide != nil {
 		_ = decide(approvalID) // already-resolved is fine: the first decision wins

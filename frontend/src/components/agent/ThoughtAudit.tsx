@@ -80,7 +80,7 @@ export function TraceDetail({ trace }: { trace: Trace }) {
   );
 }
 
-export function ThoughtStep({ agentId, trace }: { agentId: string; trace: Trace }) {
+export function ThoughtStep({ agentId, trace, focused = false }: { agentId: string; trace: Trace; focused?: boolean }) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<Trace | null>(null);
@@ -93,7 +93,7 @@ export function ThoughtStep({ agentId, trace }: { agentId: string; trace: Trace 
     }
   };
   return (
-    <div data-testid={`thought-step-${trace.id}`} className="rounded-md border border-line bg-panel2 p-2.5">
+    <div data-testid={`thought-step-${trace.id}`} data-focused={focused ? "true" : undefined} className={`rounded-md border bg-panel2 p-2.5 ${focused ? "border-accent ring-1 ring-accent/40" : "border-line"}`}>
       <button type="button" aria-expanded={open} onClick={toggle} className="block w-full text-left">
         <div className="flex items-center justify-between gap-2 text-[11px]">
           <span className="font-mono text-ink">{trace.provider}/{trace.model}</span>
@@ -110,7 +110,7 @@ export function ThoughtStep({ agentId, trace }: { agentId: string; trace: Trace 
 }
 
 /** Per-agent thought audit timeline. Admin/owner only (audit:read); everyone else sees a "restricted" notice. */
-export function ThoughtAudit({ id }: { id: string }) {
+export function ThoughtAudit({ id, focusTaskId = "" }: { id: string; focusTaskId?: string }) {
   const { t } = useT();
   const canAudit = useCan("audit:read");
   const canOrg = useCan("org:manage");
@@ -157,7 +157,8 @@ export function ThoughtAudit({ id }: { id: string }) {
       {err && <div role="alert" className="text-[11px] text-err">{err}</div>}
       {list && !list.store_prompts && <div className="text-[11px] text-mute">{t("thoughts.promptNotStored")}</div>}
       {list && traces.length === 0 && <Empty>{t("thoughts.empty")}</Empty>}
-      {traces.map((tr) => <ThoughtStep key={tr.id} agentId={id} trace={tr} />)}
+      {focusTaskId && <div role="note" data-testid="thought-shield-focus" className="rounded-md border border-accent/40 bg-accent-soft px-2.5 py-1.5 text-[11px] text-ink2">{t("shield.thoughts.focus")}{traces.some((tr) => tr.task_id === focusTaskId) ? "" : ` ${t("shield.thoughts.notListed")}`}</div>}
+      {traces.map((tr) => <ThoughtStep key={tr.id} agentId={id} trace={tr} focused={!!focusTaskId && tr.task_id === focusTaskId} />)}
       {more && <Btn data-testid="thought-load-more" onClick={loadMore}>{t("thoughts.loadMore")}</Btn>}
     </div>
   );

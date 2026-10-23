@@ -70,6 +70,33 @@ type GatewayCall struct {
 	// ApprovedArgsHash is set when executing after a human approval; it must
 	// equal the hash of the call's tool/action/args.
 	ApprovedArgsHash string
+	// Rehearsal (B9): the call belongs to a rehearsal. A side-effect call is then
+	// never executed, scheduled or held, even with an approval: the gateway only
+	// says what it would have done (GatewayOutcome.Rehearsal). Reads run normally.
+	Rehearsal bool
+}
+
+// RehearsalPreview is what the gateway would have done with a rehearsed write
+// (B9). It is computed with the same checks as a real call, without effects.
+type RehearsalPreview struct {
+	WouldDecision string // allowed | needs_approval | denied (domain.Would*)
+	DenyReason    string
+	Risk          string
+	Reversibility string
+	Account       string
+	Recipients    []string
+	Flags         []string
+}
+
+// DecisionRehearsed is the GatewayOutcome.Decision of a side-effect call that a
+// rehearsal stopped: nothing was executed.
+const DecisionRehearsed = "rehearsed"
+
+// RehearsalPolicy tells the Tool Gateway whether a call is part of a rehearsal
+// besides GatewayCall.Rehearsal (the agent's switch, a rehearsal request). An
+// error means "unknown" and the gateway treats the call as rehearsed (fail closed).
+type RehearsalPolicy interface {
+	Rehearsing(ctx context.Context, org, agentID, requestID string) (bool, error)
 }
 
 // GatewayPending describes what a human must approve (structured, no secrets).
@@ -109,6 +136,8 @@ type GatewayOutcome struct {
 	Pending      *GatewayPending
 	HoldID       string
 	HoldUntil    *time.Time
+	// Rehearsal is set when Decision is DecisionRehearsed (B9).
+	Rehearsal *RehearsalPreview
 }
 
 // ToolGateway executes connection-backed tools with the credential and

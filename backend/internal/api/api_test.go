@@ -132,6 +132,8 @@ type opts struct {
 	trustClock     func() time.Time // the trust ladder's clock (nil = real time)
 	rituals        bool // mount the stand-up and retro (rituals_api_test.go)
 	away           bool // mount "while you were away" with a 500 ms visit gap (away_api_test.go)
+	rehearsal      bool // mount the rehearsal API (rehearsal_api_test.go)
+	runtime        application.Runtime // overrides fakeRuntime{} (nil: the default)
 }
 
 type env struct {
@@ -164,7 +166,11 @@ func newEnv(t *testing.T, o opts) *env {
 	q := &application.Queries{Store: spy, Cfg: cfg}
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	orch := application.NewOrchestrator(ctx, cfg, spy, fakeRuntime{}, memory.NewLocker(), rec, appr, q, log)
+	var rt application.Runtime = fakeRuntime{}
+	if o.runtime != nil {
+		rt = o.runtime
+	}
+	orch := application.NewOrchestrator(ctx, cfg, spy, rt, memory.NewLocker(), rec, appr, q, log)
 
 	d := api.Deps{Cfg: cfg, Queries: q, Orch: orch, Approvals: appr, Store: spy, Runtime: fakeRuntime{}, Hub: hub, Log: log,
 		AuthEnabled: o.auth, AllowedOrigins: o.origins, EnableDemoReset: o.demoReset, MaxBodyBytes: o.maxBody, WSMaxAge: o.wsMaxAge}
@@ -236,6 +242,10 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	if o.initiative {
 		d.Initiative = &application.InitiativeService{Store: mem, Submit: orch, Rec: rec, Cfg: cfg}
+	}
+	if o.rehearsal {
+		d.Rehearsal = &application.RehearsalService{Store: mem, Runs: mem, Rec: rec, Cfg: cfg}
+		orch.SetRehearsal(d.Rehearsal)
 	}
 	if o.advocate != nil {
 		d.DevilsAdvocate = &application.DevilsAdvocate{Store: mem, Core: spy, Runtime: o.advocate, Budget: orch, Rec: rec, Cfg: cfg}

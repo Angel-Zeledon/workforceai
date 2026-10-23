@@ -7,6 +7,8 @@ import { isCostFrame, useCost } from "./cost";
 import { isRewardsFrame, useRewards } from "./rewards";
 import { isConnectionsFrame, useConnections } from "./connections/store";
 import { useRituals } from "./rituals";
+import { isShieldFrame, useShield } from "./shield";
+import { isRehearsalFrame, useRehearsal } from "./rehearsal";
 import type {
   ActivityItem, Agent, Approval, ChatMessage, Conversation, ErrorItem, Message, Metrics, PlanTask,
   Report, Request, RouteDecision, Task, WsFrame,
@@ -156,6 +158,9 @@ export const useStore = create<State>((set, get) => ({
     if (f.type === "hello") { useArtifacts.getState().load(); useConnections.getState().applyFrame(f); void useRewards.getState().load(); }
     if (isCostFrame(f.type)) useCost.getState().applyFrame(f);
     if (f.type === "ritual.held") useRituals.getState().applyFrame(f); // B4: participants walk to the meeting room
+    if (isShieldFrame(f.type)) { useShield.getState().applyFrame(f); return; } // B10: shield over the desk + notice
+    if (isRehearsalFrame(f.type)) { useRehearsal.getState().applyFrame(f); return; } // B9: rehearsal switches and log
+    if (f.type === "hello") void useRehearsal.getState().load();
     const p = f.payload || {};
     const tick = (s: State, ids: (string | null | undefined)[]) => {
       const t = { ...s.agentTick };

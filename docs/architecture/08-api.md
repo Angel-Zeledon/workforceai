@@ -454,7 +454,7 @@ Ningún payload contiene secretos ni contenido de mensajes (salvo `tool_call` en
 | `agent.control_changed` | `{agent_id, control, read_only?, by, reason?}` |
 | `tool_call.hold_changed` | `{hold_id, status, reason?, hold_until?, tool_call: EmailDraft}` |
 | `plan.review_requested`, `plan.approved`, `plan.rejected` | `{request_id, preflight}` |
-| `security.alert` | `{kind:"prompt_injection_suspected" o "secret_detected", agent_id, tool, ...}` |
+| `security.alert` | `{kind:"prompt_injection_suspected" o "secret_detected", agent_id, tool, ...}`; para `prompt_injection_suspected` (B10, aditivo): `{agent_id, task_id, request_id, tool, action, source:"connection"\|"native"\|"web", connection_id?, treated_as_data:true}`, nunca el texto del tercero (sec. 27) |
 
 ### 13.7 Contrato Go -> runtime (extensión aditiva)
 
@@ -965,3 +965,24 @@ Resumen de lo ocurrido desde la última visita de la persona que llama: conteos 
 | POST | `/away-summary/dismiss` | `activity:read` | cierra el resumen de la visita actual (vuelve a abrirse tras la próxima ausencia). `200` con la marca |
 
 Item: `{kind: approval|alert|task_failed|task_blocked|request_failed|request_completed|initiative|decision, ref, ref_id, title, detail?, code?, agent_id?, severity: high|medium|low|info, at, new?, repeats?, risk?, required_approvals?}`. `title` y `detail` son datos (títulos), nunca texto de interfaz; `code` es la clave para i18n. Heartbeat y dismiss no se auditan (son metadatos personales de presencia, no acciones).
+
+## 30. Escudo visible (B10)
+
+Sin endpoints nuevos. Cuando el detector marca como intento de dar órdenes un contenido que leyó un agente (conexión, herramienta nativa o web), el backend emite `security.alert` (`kind:"prompt_injection_suspected"`, payload de la sec. 13.6) y audita `security.injection_suspected` (actor = agente, `details {tool, action, task_id, request_id, source, treated_as_data}`). El registro de seguridad de la UI es `GET /audit?type=security.injection_suspected&limit=50` (sec. 14.2, `audit:read`). Sólo identificadores: ni el evento ni la auditoría llevan el texto del tercero. Detalle: `docs/architecture/shield.md`.
+
+## 31. Ensayo general (B9)
+
+Los agentes muestran qué habrían enviado o pagado sin hacerlo. Aditivo; migración `794_rehearsal`.
+
+| Método y ruta | Permiso | Notas |
+|---|---|---|
+| `POST /requests` `{text, budget_cap_usd?, rehearsal?:bool}` | `requests:create` | `rehearsal:true` = toda la solicitud en ensayo (persistido en la meta de la ejecución) |
+| `PUT /agents/{id}/rehearsal` `{enabled:bool}` | `controls:pause` | apagar (`enabled:false`) exige además `controls:release` (403 si no) |
+| `GET /rehearsal/agents` | `connections:read` | `{agents:[{agent_id, enabled, set_by?, updated_at?, actions, would_approve, would_reject, undecided}]}` (evidencia para ascensos) |
+| `GET /rehearsal/actions?request_id&agent_id&limit` | `approvals:read` | `{items:[RehearsalAction]}`, más reciente primero; `limit` 1..500 |
+| `GET /requests/{id}/rehearsal` | `requests:read` | `{request_id, rehearsal, actions:[RehearsalAction], summary:{total, would_approve, would_reject, undecided}}` |
+| `POST /rehearsal/actions/{id}/verdict` `{verdict:"would_approve"\|"would_reject"\|""}` | `approvals:decide` | sólo personas; `""` borra la marca |
+
+`RehearsalAction = {id, request_id, task_id, agent_id, tool, action, source:"gateway"|"simulated"|"code", scope:"request"|"agent", would_decision:"allowed"|"needs_approval"|"denied", deny_reason?, risk, reversibility?, account?, recipients[], amount?, flags[], preview{clave: texto saneado}, args_hash, verdict, verdict_by?, verdict_at?, created_at}`.
+
+Eventos WS: `rehearsal.recorded {id, request_id, task_id, agent_id, tool, action, would_decision, scope}` (sin vista previa), `rehearsal.agent_changed {agent_id, enabled, by}`, `rehearsal.verdict {id, request_id, agent_id, tool, action, verdict, would_decision, by}`. `request.received` lleva `rehearsal:true` cuando aplica. Auditoría: `tool.rehearsed` (orquestador y Tool Gateway). En el gateway, una llamada con efecto de un ensayo devuelve `Decision:"rehearsed"` y nunca se ejecuta, ni con aprobación; aprobar desde la bandeja un envío re-encolado de un agente en ensayo responde el código `rehearsal_mode`. Detalle y garantías: `docs/architecture/rehearsal.md`.

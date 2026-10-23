@@ -135,6 +135,13 @@ func (o *Orchestrator) codeAwait(ctx context.Context, rs *run, t *domain.Task, a
 		o.emitMetrics(ctx)
 		return OutcomeBlocked
 	}
+	if scope := o.rehearsalScope(ctx, rs, agent); scope != "" {
+		// B9: the agent (or request) went into rehearsal while the run waited: an approval never overrides it.
+		o.code.Abandon(ctx, org, ap.ID, "rehearsal_mode")
+		t.Status = domain.TaskRunning
+		o.rehearseTool(ctx, rs, t, agent, tr, RouteNone, scope)
+		return OutcomeDone
+	}
 	t.Status = domain.TaskRunning
 	// At most once: mark the checkpoint, then claim the approval id in the
 	// execution ledger (any process). The sandbox also starts a run only once.

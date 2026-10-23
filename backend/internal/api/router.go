@@ -58,6 +58,8 @@ type Deps struct {
 	// DevilsAdvocate serves /approvals/{id}/counterargument (devils_advocate.go): the advisory review of a
 	// high-risk approval. Optional: nil leaves the routes unmounted.
 	DevilsAdvocate *application.DevilsAdvocate
+	// Rehearsal serves the rehearsal switches, the "would have done" log and the human verdicts (rehearsal.go, B9). Optional.
+	Rehearsal *application.RehearsalService
 	// Audit serves GET /audit, /audit/export and /audit/verify; Policy-related
 	// rules are served from OrgConfig (/policy/rules). Both optional.
 	Audit   *application.AuditService
@@ -250,6 +252,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountStanding(r)
 			s.mountInitiative(r)
 			s.mountDevilsAdvocate(r)
+			s.mountRehearsal(r)
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountDrive(r)
@@ -406,12 +409,18 @@ func (s *server) createRequest(w http.ResponseWriter, r *http.Request) {
 		Text string `json:"text"`
 		// BudgetCapUSD is the optional hard cap of this request (0 = configured default).
 		BudgetCapUSD float64 `json:"budget_cap_usd"`
+		// Rehearsal (B9, optional): run the request without executing any side effect (rehearsal.go).
+		Rehearsal bool `json:"rehearsal"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
 		return
 	}
-	id, err := s.Orch.Submit(application.WithBudgetCap(r.Context(), body.BudgetCapUSD), body.Text)
+	ctx := application.WithBudgetCap(r.Context(), body.BudgetCapUSD)
+	if body.Rehearsal {
+		ctx = application.WithRehearsal(ctx, true)
+	}
+	id, err := s.Orch.Submit(ctx, body.Text)
 	if err != nil {
 		s.fail(w, err)
 		return
