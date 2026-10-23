@@ -7,9 +7,24 @@ import { isCostFrame, useCost } from "./cost";
 import { isRewardsFrame, useRewards } from "./rewards";
 import { isConnectionsFrame, useConnections } from "./connections/store";
 import type {
-  ActivityItem, Agent, Approval, ChatMessage, Conversation, ErrorItem, Message, Metrics, PlanTask,
+  ActivityItem, Agent, Approval, ChatMessage, Conversation, Debate, ErrorItem, Message, Metrics, PlanTask,
   Report, Request, RouteDecision, Task, WsFrame,
 } from "./types";
+import type { DebateClock } from "@/components/office/officeState";
+
+const DEBATE_CLOCK_TTL = 10 * 60_000;
+/** Keeps the clocks of recent debates only (the office plays one at a time; history lives in the meetings view). */
+function pruneClocks(c: Record<string, DebateClock>, now: number): Record<string, DebateClock> {
+  const out: Record<string, DebateClock> = {};
+  for (const [k, v] of Object.entries(c)) if (now - v.startedAt < DEBATE_CLOCK_TTL) out[k] = v;
+  return out;
+}
+const emptyDebate = (id: string, p: any): Debate => ({
+  id, topic: String(p.topic ?? ""), trigger: p.trigger === "planner_decision" ? "planner_decision" : "user_request", request_id: p.request_id || undefined,
+  task_id: p.task_id || undefined, options: [], participants: Array.isArray(p.participants) ? p.participants.map(String) : [], turns: [],
+  synthesis: { choice: "", rationale: "", dissent: [] }, status: "running", max_turns: Number(p.max_turns) || 0, cost_usd: 0,
+  created_at: new Date().toISOString(), advisory: true, untrusted: true,
+});
 
 /** file.activity: an agent listed, read, searched, wrote, moved or deleted a drive path. */
 export interface FileActivity { agent_id: string; task_id?: string; action: string; path: string; ts: number }
@@ -49,6 +64,11 @@ interface State {
   agentTick: Record<string, number>;
   /** last file each agent touched in the drive (file.activity): path only, never content */
   files: Record<string, FileActivity>;
+  /** team debates (B5) by id: advisory, the transcript is untrusted model output */
+  debates: Record<string, Debate>;
+  /** client clock of the debates seen live (debate.* frames): drives the meeting-room playback */
+  debateClocks: Record<string, DebateClock>;
+  loadDebates: () => Promise<void>;
   setMode: (m: "office" | "dashboard") => void;
   select: (id: string | null) => void;
   setConnected: (c: boolean) => void;
@@ -93,7 +113,11 @@ export const useStore = create<State>((set, get) => ({
   connected: false, loaded: false, mode: "office", selectedAgentId: null,
   agents: {}, agentOrder: [], tasks: {}, requests: {}, plans: {}, conversations: {}, messages: {}, chat: {}, routes: {}, lastTurnId: null, typing: {}, drafts: {},
   setDraft: (conv, text) => set((s) => ({ drafts: { ...s.drafts, [conv]: text } })),
-  approvals: {}, reports: {}, activity: [], errors: [], metrics: null, links: [], agentTick: {}, files: {},
+  approvals: {}, reports: {}, activity: [], errors: [], metrics: null, links: [], agentTick: {}, files: {}, debates: {}, debateClocks: {},
+  loadDebates: async () => {
+    // stored debates are authoritative; one still running is only known from its debate.started frame
+    try { const ds = await api.debates(); set((s) => ({ debates: { ...s.debates, ...byId(ds) } })); } catch { /* ignore */ }
+  },
 
   setMode: (mode) => set({ mode }),
   select: (selectedAgentId) => set({ selectedAgentId }),
@@ -306,6 +330,41 @@ export const useStore = create<State>((set, get) => ({
       case "metrics.updated":
         if (p.metrics) set({ metrics: p.metrics });
         break;
+      case "debate.started": {
+        const id = String(p.debate_id ?? "");
+        if (!id) break;
+        const now = Date.now();
+        const d = emptyDebate(id, p);
+        set((s) => ({
+          debates: { ...s.debates, [id]: s.debates[id] ?? d },
+          debateClocks: { ...pruneClocks(s.debateClocks, now), [id]: { id, status: "running", startedAt: now, doneAt: null, participants: d.participants, turns: [] } },
+        }));
+        break;
+      }
+      case "debate.completed": {
+        const d: Debate | undefined = p.debate;
+        if (!d?.id) break;
+        const now = Date.now();
+        set((s) => {
+          const prev = s.debateClocks[d.id];
+          const clock: DebateClock = { id: d.id, status: "done", startedAt: prev?.startedAt ?? now, doneAt: now, participants: d.participants || [], turns: d.turns || [] };
+          return { debates: { ...s.debates, [d.id]: d }, debateClocks: { ...pruneClocks(s.debateClocks, now), [d.id]: clock } };
+        });
+        break;
+      }
+      case "debate.failed": {
+        const id = String(p.debate_id ?? "");
+        if (!id) break;
+        set((s) => {
+          const cur = s.debates[id] ?? emptyDebate(id, p);
+          const prev = s.debateClocks[id];
+          return {
+            debates: { ...s.debates, [id]: { ...cur, status: "failed", fail_code: String(p.code ?? "") } },
+            debateClocks: prev ? { ...s.debateClocks, [id]: { ...prev, status: "failed" } } : s.debateClocks,
+          };
+        });
+        break;
+      }
       case "file.activity": {
         const agent = String(p.agent_id ?? f.agent_id ?? "");
         if (!agent || typeof p.path !== "string") break;

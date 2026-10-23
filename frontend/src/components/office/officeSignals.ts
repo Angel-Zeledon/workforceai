@@ -5,7 +5,7 @@ import { useStore } from "@/lib/store";
 import { useCost, type AgentBudget } from "@/lib/cost";
 import { useProjects } from "@/lib/projects/store";
 import type { Approval } from "@/lib/types";
-import { ZONE_CAP } from "./officeState";
+import { ZONE_CAP, debateSeats, liveDebate } from "./officeState";
 
 export interface Signals {
   /** agentId -> slot at the approvals desk (oldest pending approval first) */
@@ -22,10 +22,14 @@ export interface Signals {
   planningText: string;
   /** per-agent budget cap data (energy bar) */
   budgets: Map<string, AgentBudget>;
+  /** team debate being played in the meeting room (B5): who sits, who talks now and what they say */
+  debate: LiveDebate | null;
 }
 
+export interface LiveDebate { id: string; topic: string; seats: string[]; speaker: string | null; text: string; kind: string; turn: number; phase: string }
+
 const EMPTY: Signals = {
-  apprSlot: new Map(), apprOf: new Map(), cafeSlot: new Map(), meetingSlot: new Map(), phases: [], planningText: "", budgets: new Map(),
+  apprSlot: new Map(), apprOf: new Map(), cafeSlot: new Map(), meetingSlot: new Map(), phases: [], planningText: "", budgets: new Map(), debate: null,
 };
 
 const PLANNING_MAX_AGE = 5 * 60_000;
@@ -49,7 +53,11 @@ export function getSignals(): Signals {
   const S = useStore.getState();
   const C = useCost.getState();
   const P = useProjects.getState();
-  const k = [S.approvals, S.tasks, S.requests, S.plans, S.agentOrder, S.agents, C.alerts, C.status, P.projects, P.planningPhases];
+  // the debate playback moves with the clock: its stage (phase + turn) is part of the key, so the signals change
+  // exactly when the next turn starts or the team walks back
+  const ld = liveDebate(Object.values(S.debateClocks), Date.now());
+  const stageKey = ld ? `${ld.clock.id}:${ld.stage.phase}:${ld.stage.turn}` : "";
+  const k = [S.approvals, S.tasks, S.requests, S.plans, S.agentOrder, S.agents, C.alerts, C.status, P.projects, P.planningPhases, S.debates, stageKey];
   if (key.length && same(k, key)) return cached;
   key = k;
   cached = compute(S, C, P);
@@ -121,9 +129,17 @@ function compute(S: ReturnType<typeof useStore.getState>, C: ReturnType<typeof u
       for (const ti of info.titles) if (!phases.includes(ti)) phases.push(ti);
     }
   }
-  const planningOrdered = order.filter((id) => planningIds.has(id) && !paused.has(id));
-  const meetingSlot = slots(planningOrdered, ZONE_CAP.meeting);
+  // ---- team debate (B5): the debaters and the moderator take the meeting room first
+  let debate: LiveDebate | null = null;
+  const ld = liveDebate(Object.values(S.debateClocks), now);
+  if (ld) {
+    const seats = debateSeats(ld.clock, assistant).filter((id) => known(id) && !paused.has(id));
+    const d = S.debates[ld.clock.id];
+    debate = { id: ld.clock.id, topic: d?.topic ?? "", seats, speaker: ld.stage.speaker, text: ld.stage.text, kind: ld.stage.kind, turn: ld.stage.turn, phase: ld.stage.phase };
+  }
+  const planningOrdered = order.filter((id) => planningIds.has(id) && !paused.has(id) && !debate?.seats.includes(id));
+  const meetingSlot = slots([...(debate?.seats ?? []), ...planningOrdered], ZONE_CAP.meeting);
 
   if (!apprSlot.size && !cafeSlot.size && !meetingSlot.size && !budgets.size && !phases.length) return { ...EMPTY, planningText };
-  return { apprSlot, apprOf, cafeSlot, meetingSlot, phases: phases.slice(-24), planningText, budgets };
+  return { apprSlot, apprOf, cafeSlot, meetingSlot, phases: phases.slice(-24), planningText, budgets, debate };
 }

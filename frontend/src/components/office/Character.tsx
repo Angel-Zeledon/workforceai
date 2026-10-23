@@ -89,6 +89,7 @@ function makeSim(id: string, seat: [number, number]) {
     turnYaw: 0, turnUntil: 0, nextFid: 5, wasSel: false,
     leaveAt: 0, curDest: [0, 0] as [number, number], curFace: null as number | null,
     linkSrc: null as unknown, linkTs: 0, apprSrc: null as unknown, seenAppr: new Set<string>(),
+    debTurn: "", // last debate turn this character reacted to (B5)
   };
 }
 
@@ -287,6 +288,23 @@ export function Character({ id, index }: { id: string; index: number }) {
         }
         if (S.links.length) sm.linkTs = Math.max(sm.linkTs, S.links[S.links.length - 1].ts);
       }
+      // team debate (B5): at each new turn the listeners look at the speaker and sometimes nod; the speaker
+      // gestures toward the table. One string compare per frame; nothing at all with reduced motion or far away.
+      const deb = sig.debate;
+      if (deb && atZone === "meeting" && !walking && deb.speaker && deb.seats.includes(id)) {
+        const turnKey = `${deb.id}:${deb.turn}`;
+        if (sm.debTurn !== turnKey) {
+          sm.debTurn = turnKey;
+          if (deb.speaker !== id) {
+            const h = feetPos.get(deb.speaker);
+            if (sm.rng() < 0.35) startGesture(sm, "nod", null, false, false);
+            else if (h) startGesture(sm, "lookAt", Math.atan2(h.x - sm.pos.x, h.z - sm.pos.y), false, false);
+          } else if (sm.rng() < 0.6) {
+            const mc = meetingCenter();
+            startGesture(sm, "point", Math.atan2(mc[0] - sm.pos.x, mc[1] - sm.pos.y), false, false);
+          }
+        }
+      }
       if (sm.apprSrc !== S.approvals) {
         sm.apprSrc = S.approvals;
         for (const a of Object.values(S.approvals)) {
@@ -343,7 +361,7 @@ export function Character({ id, index }: { id: string; index: number }) {
     lKnee.current.rotation.x = c.lKneeX; rKnee.current.rotation.x = c.rKneeX;
 
     // face details: blink (double-blinks sometimes), tired eyes when blocked, wider smile when done
-    const talking = st === "talking";
+    const talking = st === "talking" || (!reduce && sig.debate?.speaker === id && atZone === "meeting");
     const eyeOpen = st === "blocked" ? 0.6 : 1;
     mouth.current.scale.y = talking ? 0.5 + Math.abs(Math.sin(sm.t * 13)) * 1.2 : st === "completed" ? 0.7 : st === "error" ? 0.9 : 0.45;
     mouth.current.scale.x = st === "completed" ? 2.3 : st === "error" ? 1.0 : 1.6;
