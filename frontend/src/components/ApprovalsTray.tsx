@@ -110,6 +110,7 @@ export function ApprovalsTray() {
       </button>
       {open && (
         <div className="max-h-[46dvh] space-y-2 overflow-y-auto rounded-md border border-line bg-panel/95 p-2 shadow-xl backdrop-blur">
+          {pending.length > 1 && <a href="/approvals/inbox" data-testid="approvals-open-inbox" className="block rounded-md border border-accent/30 bg-accent/5 px-2 py-1.5 text-center text-[11px] font-semibold text-accent">{t("approvalInbox.open", { count: pending.length })}</a>}
           {pending.map((a) => <ApprovalCard key={a.id} a={a} />)}
         </div>
       )}

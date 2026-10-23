@@ -17,6 +17,7 @@ import { MockChatHistory } from "./chats-mock";
 import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
 import { MockRoi } from "./roi-mock";
+import { MockInbox } from "./inbox-mock";
 import { mockQuality } from "./quality-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
@@ -183,6 +184,13 @@ export class MockBackend {
   private rewards = new MockRewards((t, p, a) => this.emit(t, p, a)); // coins + shop: earned only when a task finishes
   private roles = new MockRoles(); // role templates + hiring from a template
   private roi = new MockRoi({ agents: () => this.agents, tasks: () => this.tasks }); // B15: AI payroll / estimated hours
+  private inbox = new MockInbox({ approvals: () => this.approvals, tasks: () => this.tasks }); // B17: fast approvals inbox
+
+  /** POST /approvals/batch for a project of the projects demo (same body as the real API). */
+  private async projectsBatch(body: any) {
+    const { projectsMock } = await import("../projects/mock");
+    return projectsMock.decideBatch(String(body?.filter?.project_id ?? ""), { action: String(body?.filter?.action ?? ""), decision: body?.decision === "approve" ? "approve" : "reject", expected_count: Number(body?.expected_count), include_high: !!body?.include_high });
+  }
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
 
   constructor() { this.seed(); }
@@ -564,6 +572,7 @@ export class MockBackend {
     }
     if (this.cmds.matches(seg)) return this.cmds.handle(method, seg, q, body);
     if (this.roi.matches(seg)) return this.roi.handle(method, seg, q, body);
+    if (this.inbox.matches(method, seg)) return this.inbox.handle(method, seg, body, () => this.projectsBatch(body));
     if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
@@ -653,6 +662,7 @@ export class MockBackend {
         this.art.reset();
         this.roles.reset();
         this.roi.reset();
+        this.inbox.reset();
         this.conns.reset();
         this.decisions.clear();
         this.seed();

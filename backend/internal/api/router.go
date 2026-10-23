@@ -226,6 +226,7 @@ func NewRouter(d Deps) http.Handler {
 			r.With(s.can(auth.PermConversationsPost)).Post("/messages", s.postChat)
 			r.With(s.can(auth.PermConversationsPost)).Post("/conversations/{id}/messages", s.postMessage)
 			r.With(s.can(auth.PermApprovalsRead)).Get("/approvals", s.listApprovals)
+			r.With(s.can(auth.PermApprovalsRead)).Get("/approvals/inbox", s.getApprovalInbox)
 			// Deciding approvals is a privileged action: admin/owner only.
 			r.With(s.can(auth.PermApprovalsDecide)).Post("/approvals/{id}/decision", s.decide)
 			r.With(s.can(auth.PermReportsRead)).Get("/reports", s.listReports)
