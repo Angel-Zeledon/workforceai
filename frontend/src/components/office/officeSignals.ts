@@ -4,6 +4,7 @@
 import { useStore } from "@/lib/store";
 import { useCost, type AgentBudget } from "@/lib/cost";
 import { useProjects } from "@/lib/projects/store";
+import { useRituals } from "@/lib/rituals";
 import type { Approval } from "@/lib/types";
 import { ZONE_CAP } from "./officeState";
 
@@ -49,14 +50,15 @@ export function getSignals(): Signals {
   const S = useStore.getState();
   const C = useCost.getState();
   const P = useProjects.getState();
-  const k = [S.approvals, S.tasks, S.requests, S.plans, S.agentOrder, S.agents, C.alerts, C.status, P.projects, P.planningPhases];
+  const R = useRituals.getState();
+  const k = [S.approvals, S.tasks, S.requests, S.plans, S.agentOrder, S.agents, C.alerts, C.status, P.projects, P.planningPhases, R.gathering];
   if (key.length && same(k, key)) return cached;
   key = k;
-  cached = compute(S, C, P);
+  cached = compute(S, C, P, R.gathering?.ids ?? []);
   return cached;
 }
 
-function compute(S: ReturnType<typeof useStore.getState>, C: ReturnType<typeof useCost.getState>, P: ReturnType<typeof useProjects.getState>): Signals {
+function compute(S: ReturnType<typeof useStore.getState>, C: ReturnType<typeof useCost.getState>, P: ReturnType<typeof useProjects.getState>, ritualIds: string[] = []): Signals {
   const now = Date.now();
   const order = S.agentOrder;
   const known = (id: string) => !!S.agents[id];
@@ -121,6 +123,8 @@ function compute(S: ReturnType<typeof useStore.getState>, C: ReturnType<typeof u
       for (const ti of info.titles) if (!phases.includes(ti)) phases.push(ti);
     }
   }
+  // ---- rituals (B4): the stand-up / retro participants meet in the meeting room for a while (useRituals.gathering)
+  for (const id of ritualIds) if (known(id)) planningIds.add(id);
   const planningOrdered = order.filter((id) => planningIds.has(id) && !paused.has(id));
   const meetingSlot = slots(planningOrdered, ZONE_CAP.meeting);
 
