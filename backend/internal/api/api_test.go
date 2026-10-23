@@ -19,6 +19,7 @@ import (
 	"aiworkforce/backend/internal/api"
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/away"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
@@ -130,6 +131,7 @@ type opts struct {
 	trustBlocked   *string          // controls code the trust ladder sees when raising autonomy ("" = allowed)
 	trustClock     func() time.Time // the trust ladder's clock (nil = real time)
 	rituals        bool // mount the stand-up and retro (rituals_api_test.go)
+	away           bool // mount "while you were away" with a 500 ms visit gap (away_api_test.go)
 }
 
 type env struct {
@@ -218,6 +220,9 @@ func newEnv(t *testing.T, o opts) *env {
 			Emit:     rec.Emit,
 			Audit:    rec.Audit,
 			Profiles: &application.ProfileService{Store: mem, Core: spy, Tones: mem, Rec: rec, Config: cfg}})
+	}
+	if o.away {
+		d.Away = away.New(away.Config{Marks: away.NewMemMarks(), History: mem, OrgID: cfg.OrgID, Log: log, Gap: awayTestGap})
 	}
 	if o.skills {
 		d.Skills = skills.New(skills.Config{Store: skills.NewMemStore(), Drive: d.Drive, OrgID: cfg.OrgID, Log: log,

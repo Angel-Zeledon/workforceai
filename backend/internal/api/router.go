@@ -19,6 +19,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/artifacts"
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/away"
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
@@ -125,6 +126,8 @@ type Deps struct {
 	Trust *trust.Service
 	// Rituals serves /rituals/* and /settings/rituals (rituals.go): the daily stand-up and the weekly retro. Optional.
 	Rituals *rituals.Service
+	// Away serves /away-summary (away.go): "while you were away", what happened since the caller's last visit. Optional.
+	Away *away.Service
 	// Chats serves the chat history (chat_history.go): the enriched GET /conversations,
 	// rename/archive/delete and /chats/*. Optional: nil keeps the plain list.
 	Chats *application.ChatHistory
@@ -261,6 +264,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountQuality(r)
 			s.mountTrust(r)
 			s.mountRituals(r)
+			s.mountAway(r)
 			s.mountPush(r)
 			s.mountNotify(r) // approvals-notify: channel settings, plan usage, daily goal
 			s.mountV2(r)

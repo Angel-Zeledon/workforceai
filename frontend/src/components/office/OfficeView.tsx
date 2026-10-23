@@ -14,6 +14,7 @@ import { FirstRunHint } from "../nav/ui2";
 import { EditOfficeButton, LightButton, OfficeEditor } from "./OfficeEditor";
 import { useOfficeLayout } from "@/lib/officeLayout";
 import { PresenceHost } from "../presence/PresenceHost";
+import { AwayButton, AwayHost } from "../away/AwayHost";
 
 const OfficeScene = dynamic(() => import("./OfficeScene"), {
   ssr: false,
@@ -77,10 +78,12 @@ export function OfficeView() {
       {/* Same box as the office scene but above the chat: in-scene popups that must stay clickable (approvals desk card). */}
       <div id="office-popups" className="pointer-events-none absolute inset-0 z-20" />
       <div data-tour="office.lighting" className={`pointer-events-none absolute right-[var(--hud-r)] top-[max(1rem,env(safe-area-inset-top))] z-40 flex max-w-[calc(100%-2rem)] items-start gap-2 ${selected ? "max-md:hidden" : ""}`} style={{ "--hud-r": `calc(${selected ? "var(--panel-w, 420px) + 16px" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})` } as React.CSSProperties}>
+        <AwayButton />
         <EditOfficeButton />
         <LightButton />
       </div>
       <PresenceHost /> {/* human presence: who is online, status, "start conversation" */}
+      <AwayHost /> {/* "while you were away" sheet and the office timelapse (B3) */}
       {selected && <div data-tour="office.agentPanel" className="pointer-events-none absolute bottom-0 right-0 top-0 z-30"><WorkspaceHost id={selected} /></div>}
       {!selected && <div className="pointer-events-none absolute bottom-4 right-4 hidden rounded-md border border-line bg-panel/80 px-3 py-1.5 text-[10px] font-semibold text-mute md:block">{t("hud.cameraHint")}</div>}
     </>

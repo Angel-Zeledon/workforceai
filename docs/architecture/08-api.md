@@ -953,3 +953,15 @@ Cada agente cuenta qué hizo, qué hará y qué lo bloquea (de sus tareas y apro
 | PUT | `/settings/rituals` | `org:manage` | mismo cuerpo; `400` con zona, hora o días inválidos o retro con más de un día. Auditado (`ritual.settings_changed`) |
 
 Eventos: `ritual.held` `{ritual_id, kind, origin, agent_ids, proposals}` (la oficina lleva a esos agentes a la sala de reuniones ~45 s). Auditoría: `ritual.held`, `ritual.skipped`, `ritual.blocked`, `ritual.summary_skipped`, `ritual.proposal_accepted`, `ritual.proposal_dismissed`, `ritual.settings_changed`.
+
+## 29. Mientras no estabas (B3)
+
+Resumen de lo ocurrido desde la última visita de la persona que llama: conteos exactos, secciones ordenadas (alertas, problemas, terminado, sugerencias, aprobaciones resueltas), primero las aprobaciones que esa persona puede decidir, gasto del periodo y un timelapse de cambios de estado de los agentes. Se calcula al leer con datos que ya existen (log de eventos, aprobaciones pendientes, auditoría `request.status.failed`, libro de uso): **determinista y sin llamar a ningún modelo**, así que no gasta presupuesto ni lo detienen kill-switch o modo solo lectura. Diseño: `docs/architecture/away-summary.md`. Migración `792_away_marks` (`away_marks`, RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/away-summary?min_hours=` | `activity:read` | `{version, method: "deterministic", generated_at, first_visit, since, until, away_minutes, min_hours, clipped, dismissed, quiet, show, counts{...}, spend{usd, calls, top[]}, act_now[], sections[{key, total, items[]}], agents[], timelapse{available, total, sampled, frames[{at, agent_id, state, activity?}]}}`. `min_hours` 0..168 (por omisión 8 o `AWAY_SUMMARY_MIN_HOURS`) solo decide `show`; `400` si no es un número. Sin `approvals:read` no se listan aprobaciones; `act_now` solo trae las que la persona puede decidir (rol, sin autoaprobación, sin repetir en doble aprobación) |
+| POST | `/away-summary/heartbeat` | `activity:read` | la persona está mirando ahora; tras 30 min de silencio empieza una visita nueva. `200` `{last_seen_at, visit_started_at, away_since?, dismissed_at?}` |
+| POST | `/away-summary/dismiss` | `activity:read` | cierra el resumen de la visita actual (vuelve a abrirse tras la próxima ausencia). `200` con la marca |
+
+Item: `{kind: approval|alert|task_failed|task_blocked|request_failed|request_completed|initiative|decision, ref, ref_id, title, detail?, code?, agent_id?, severity: high|medium|low|info, at, new?, repeats?, risk?, required_approvals?}`. `title` y `detail` son datos (títulos), nunca texto de interfaz; `code` es la clave para i18n. Heartbeat y dismiss no se auditan (son metadatos personales de presencia, no acciones).

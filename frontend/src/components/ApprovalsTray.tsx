@@ -11,7 +11,7 @@ import { DevilsAdvocate } from "./approvals/DevilsAdvocate";
 
 /** `scope="office"` is the card shown over the approvals desk in the 3D office: same decision call and permission
  * checks, different test ids so the tray's `approval-<id>` selectors stay unique. */
-export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approval; compact?: boolean; scope?: "tray" | "office" }) {
+export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approval; compact?: boolean; scope?: "tray" | "office" | "away" }) {
   const { t } = useT();
   const name = useAgentName();
   const color = useAgentColor();
@@ -34,7 +34,7 @@ export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approv
   // Same rule as the server (IsHighRiskApproval): the risk the policy engine stored, or a double approval.
   const highRisk = a.risk === "high" || (a.required_approvals ?? 1) >= 2;
   return (
-    <div data-testid={pending ? (scope === "office" ? `office-approval-card-${a.id}` : `approval-${a.id}`) : undefined} className="rounded-md border border-line bg-panel2 p-3">
+    <div data-testid={pending ? (scope === "office" ? `office-approval-card-${a.id}` : scope === "away" ? `away-approval-card-${a.id}` : `approval-${a.id}`) : undefined} className="rounded-md border border-line bg-panel2 p-3">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-[11px] text-mute"><Dot color={color(a.agent_id)} />{name(a.agent_id)} · <span className="font-mono">{a.action}</span></span>
         <RiskBadge risk={a.risk} />
