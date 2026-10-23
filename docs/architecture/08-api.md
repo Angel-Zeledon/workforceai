@@ -913,3 +913,20 @@ Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditor
 ## 26. Puntaje de calidad y casos dorados (B11)
 
 Puntaje orientativo por agente con la metodología en la respuesta (componentes, pesos, tamaños de muestra, `insufficient_data` bajo el mínimo), ventana móvil y tendencia. Solo lectura sobre señales existentes; nunca cambia autonomía ni permisos. Rutas: `GET /quality/agents`, `GET /agents/{id}/quality`, `GET|POST /agents/{id}/golden-cases`, `PUT|DELETE /golden-cases/{id}`, `GET|POST /golden-cases/{id}/runs` (lectura `agents:read`, escritura `agents:write`, escrituras auditadas). Contrato y metodología completos: `docs/architecture/quality-score.md`. Migración `789_quality_golden`.
+
+## 27. Rituales: stand-up diario y retrospectiva semanal (B4)
+
+Cada agente cuenta qué hizo, qué hará y qué lo bloquea (de sus tareas y aprobaciones reales, sin modelo) y, una vez por semana, propone hasta 2 mejoras a su propio trabajo. Las propuestas solo las resuelve una persona; aceptar una nota la añade a las instrucciones del agente por el perfil de trabajo (nueva versión, auditada). Nunca da herramientas, permisos ni autonomía. Diseño: `docs/architecture/rituals.md`. Migración `793_rituals` (`rituals`, `ritual_proposals`, `ritual_settings`, RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/rituals?kind=standup\|retro&limit=` | `requests:read` | más nuevo primero (máx. 100, por defecto 30); `400` si `kind` es desconocido |
+| GET | `/rituals/{id}` | `requests:read` | `{id, kind, origin: scheduled\|manual, period_key?, status: held\|skipped, skip_reason?, locale, window_from, window_to, entries[{agent_id, name, role, done[], next[], blockers[], lines[], quiet, retro?}], absent[{agent_id, name, reason}], summary, summary_source: deterministic\|runtime\|local, created_by, held_at, proposals?}`; `404` si no es de la organización |
+| POST | `/rituals/{kind}/run` | `requests:create` | "Hacer stand-up ahora": `201` con el ritual. `409 {code: blocked}` con el kill-switch activo; `429 {code: limit}` tras 10 manuales del mismo tipo en el día (UTC); `403` si quien llama es un agente |
+| GET | `/rituals/proposals?status=&agent_id=&ritual_id=&limit=` | `requests:read` | `[{id, ritual_id, agent_id, kind: instruction_note\|skill_suggestion, signal: rejected_approvals\|reworks\|failed_tasks\|quality_score, title, text, evidence[], status, applied, created_at, resolved_at?, resolved_by?}]` |
+| POST | `/rituals/proposals/{id}/accept` | `agents:write` | `{proposal, applied, profile_version?}`; `409` si ya estaba resuelta; si la edición del perfil falla, el error vuelve y la propuesta sigue pendiente |
+| POST | `/rituals/proposals/{id}/dismiss` | `agents:write` | `200`; `409` si ya estaba resuelta |
+| GET | `/settings/rituals` | `requests:read` | `{timezone, standup{enabled, time "HH:MM", weekdays[0..6]}, retro{enabled, time, weekdays[uno]}, use_model}`; por defecto ambos apagados, 09:30 L-V y viernes 16:00, sin modelo |
+| PUT | `/settings/rituals` | `org:manage` | mismo cuerpo; `400` con zona, hora o días inválidos o retro con más de un día. Auditado (`ritual.settings_changed`) |
+
+Eventos: `ritual.held` `{ritual_id, kind, origin, agent_ids, proposals}` (la oficina lleva a esos agentes a la sala de reuniones ~45 s). Auditoría: `ritual.held`, `ritual.skipped`, `ritual.blocked`, `ritual.summary_skipped`, `ritual.proposal_accepted`, `ritual.proposal_dismissed`, `ritual.settings_changed`.
