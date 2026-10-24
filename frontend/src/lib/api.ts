@@ -62,8 +62,9 @@ export const api = {
     return list<any>(await call("GET", `/conversations/${conv}/messages?${q}`)).map((x) => toChatMessage(x, conv));
   },
   /** POST /messages: the backend decides who answers and replies over the WebSocket (chat.message / chat.typing / route.decided). */
-  postMessage: (conversation: string, text: string, attachments?: string[]) =>
-    call<{ message_id: string; turn_id: string }>("POST", "/messages", { conversation, text, ...(attachments?.length ? { attachments } : {}) }),
+  /** `customerId` (B12) scopes any request the turn creates to that customer (stored before the request exists). */
+  postMessage: (conversation: string, text: string, attachments?: string[], customerId?: string) =>
+    call<{ message_id: string; turn_id: string }>("POST", "/messages", { conversation, text, ...(attachments?.length ? { attachments } : {}), ...(customerId ? { customer_id: customerId } : {}) }),
   approvals: async () => list<Approval>(await call("GET", "/approvals")),
   reports: async () => list<Report>(await call("GET", "/reports")),
   report: (id: string) => call<Report>("GET", `/reports/${id}`),

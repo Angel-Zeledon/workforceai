@@ -723,6 +723,7 @@ export class MockBackend {
     }
     if (method === "POST") {
       if (r0 === "agents" && r1 && r2 === "trust" && seg[3] === "evaluate") { const x = mockTrust(this.agent(r1)); return { methodology: x.methodology, agent: x.agent }; }
+      if (r0 === "messages" && !r1 && body?.customer_id && !this.customers.hasCustomer(String(body.customer_id))) throw new Error("customer not found"); // B12
       if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : []);
       if (r0 === "requests") {
         const cid = body?.customer_id ? String(body.customer_id) : "";

@@ -115,6 +115,11 @@ export class MockCommands {
         const id = await this.host.startRequest(text);
         return { status: "started", result: { kind: "request", title: pick(lang, "El equipo va a debatir", "The team will debate"), text: a.topic || "", request_id: id, href: "/meetings?view=debates" } };
       }
+      case "customer": { // B12: the real backend scopes the request to the customer before it exists
+        const text = String(a.task || "").trim();
+        const id = await this.host.startRequest(text);
+        return { status: "started", result: { kind: "request", title: pick(lang, `Solicitud para ${a.customer}`, `Request for ${a.customer}`), text, request_id: id } };
+      }
       case "pending": return msg(pick(lang, "No tienes aprobaciones pendientes.", "You have no pending approvals."));
       case "search":
         return { status: "ok", result: { kind: "table", title: pick(lang, `Resultados para "${a.query}"`, `Results for "${a.query}"`), columns: [pick(lang, "Dónde", "Where"), pick(lang, "Texto", "Text")], rows: [[pick(lang, "Chat", "Chat"), pick(lang, "…mencionó el contrato…", "…mentioned the contract…")], ["Drive", "Contrato-marco.pdf"]] } };

@@ -27,6 +27,11 @@ export interface CustomerDetail {
   projects: CustomerProject[]; requests: CustomerRequest[]; folder_path: string;
 }
 
+/** Earlier work without a customer (before B12) that an admin may assign explicitly (audited, reversible). */
+export interface HistoryCandidates { projects: CustomerProject[]; requests: CustomerRequest[] }
+export type HistoryKind = "project" | "request" | "memory";
+export interface HistoryResult { kind: HistoryKind; ref_id: string; from: string; to: string; request_id?: string; memories: number; changed: boolean }
+
 const id = (s: string) => encodeURIComponent(s);
 
 export const customersApi = {
@@ -44,4 +49,7 @@ export const customersApi = {
   unlinkFolder: (cid: string, folderId: string) => call<unknown>("DELETE", `/customers/${id(cid)}/folders/${id(folderId)}`),
   /** A request scoped to the customer: its tasks only recall this customer's memory and files. */
   request: (cid: string, text: string) => call<{ request_id: string }>("POST", "/requests", { text, customer_id: cid }),
+  historyCandidates: () => call<HistoryCandidates>("GET", "/customers/history/candidates"),
+  /** Assigns earlier work to a customer; `cid` "" removes the customer again (undo). */
+  assignHistory: (kind: HistoryKind, refId: string, cid: string) => call<HistoryResult>("POST", "/customers/history", { kind, ref_id: refId, customer_id: cid }),
 };

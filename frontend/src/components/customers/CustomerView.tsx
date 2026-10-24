@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { trOr, useT } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { toast } from "@/lib/toast";
-import { customersApi, type CustomerDetail, type CustomerInput } from "@/lib/customersApi";
+import { customersApi, type CustomerDetail, type CustomerInput, type HistoryCandidates, type HistoryKind } from "@/lib/customersApi";
+import { useChatCustomer } from "@/lib/chatCustomer";
 import { customerColor, defaultCloneName, normalizeStatus, STATUS_COLOR } from "@/lib/customersLogic";
 import { Btn, Card, Dot, Empty, Loading, timeAgo, useAgentColor, useAgentName } from "../ui";
 import { CustomerForm } from "./CustomerForm";
@@ -37,11 +38,27 @@ export function CustomerView({ id, onBack, onChanged }: { id: string; onBack: ()
   const [agentId, setAgentId] = useState("");
   const [cloneName, setCloneName] = useState("");
 
+  const [earlier, setEarlier] = useState<HistoryCandidates | null>(null);
+  const [earlierOpen, setEarlierOpen] = useState(false);
+  const [earlierErr, setEarlierErr] = useState(false);
+  const setChatCustomer = useChatCustomer((s) => s.set);
+
   const load = useCallback(() => {
     setErr(false);
     customersApi.get(id).then(setD).catch(() => setErr(true));
   }, [id]);
   useEffect(load, [load]);
+  // B12: while this view is open the chat works for this customer (its requests are scoped to it).
+  const cust = d?.customer;
+  useEffect(() => {
+    if (!cust || cust.archived) return;
+    setChatCustomer({ id: cust.id, name: cust.name, color: customerColor(cust.color, cust.id) });
+    return () => { if (useChatCustomer.getState().customer?.id === cust.id) setChatCustomer(null); };
+  }, [cust, setChatCustomer]);
+  const loadEarlier = useCallback(() => {
+    setEarlierErr(false);
+    customersApi.historyCandidates().then(setEarlier).catch(() => setEarlierErr(true));
+  }, []);
 
   if (err) return <Empty action={<Btn onClick={onBack}>{t("customers.back")}</Btn>}>{t("customers.error.load")}</Empty>;
   if (!d) return <Loading rows={4} />;
@@ -77,6 +94,19 @@ export function CustomerView({ id, onBack, onChanged }: { id: string; onBack: ()
     try { await customersApi.removeAssignment(c.id, aid); load(); onChanged(); }
     catch { toast(t("customers.error.save"), "err"); }
   };
+  // Earlier work (before customers existed): assigned or removed explicitly, audited by the backend.
+  const moveHistory = async (kind: HistoryKind, refId: string, to: string) => {
+    if (!to && !window.confirm(t("customers.history.unassignConfirm", { name: c.name }))) return;
+    try {
+      const r = await customersApi.assignHistory(kind, refId, to);
+      toast(to ? t("customers.history.assigned", { count: r.memories }) : t("customers.history.unassigned"));
+      load(); onChanged();
+      if (earlierOpen) loadEarlier();
+    } catch (e) { toast(e instanceof Error && e.message ? e.message : t("customers.error.save"), "err"); }
+  };
+  const finishedProject = (st: string) => ["done", "failed", "cancelled", "draft"].includes(st);
+  const finishedRequest = (st: string) => st === "done" || st === "failed";
+  const smallBtn = "shrink-0 rounded px-2 py-1 text-[11px] text-accent hover:bg-accent-soft";
 
   return (
     <div data-testid="customers-view" className="space-y-4">
@@ -158,6 +188,10 @@ export function CustomerView({ id, onBack, onChanged }: { id: string; onBack: ()
                     {t("customers.projects.progress", { done: p.tasks_done, total: p.tasks_total })}
                     {p.awaiting > 0 && <span className="ml-2 text-warn">{t("customers.projects.awaiting", { count: p.awaiting })}</span>}
                     {p.failed > 0 && <span className="ml-2 text-err">{t("customers.projects.failed", { count: p.failed })}</span>}
+                    {finishedProject(p.status) && (
+                      <button type="button" data-testid={`customers-unassign-project-${p.id}`} className={`${smallBtn} ml-2`}
+                        onClick={() => void moveHistory("project", p.id, "")}>{t("customers.history.unassign")}</button>
+                    )}
                   </div>
                 </li>
               ))}
@@ -173,12 +207,49 @@ export function CustomerView({ id, onBack, onChanged }: { id: string; onBack: ()
                   <div className="line-clamp-2 text-[12.5px] text-ink">{r.text}</div>
                   <div className="mt-1 flex justify-between text-[10.5px] text-mute">
                     <span className="font-semibold uppercase tracking-wide">{trOr(`dash.reqStatus.${r.status}`, r.status)}</span>
-                    <span>{timeAgo(r.created_at)}</span>
+                    <span className="flex items-center gap-2">
+                      {finishedRequest(r.status) && (
+                        <button type="button" data-testid={`customers-unassign-request-${r.id}`} className={smallBtn}
+                          onClick={() => void moveHistory("request", r.id, "")}>{t("customers.history.unassign")}</button>
+                      )}
+                      {timeAgo(r.created_at)}
+                    </span>
                   </div>
                 </li>
               ))}
             </ul>
           ) : <Empty>{t("customers.requests.empty")}</Empty>}
+        </Card>
+
+        <Card title={t("customers.history.title")}>
+          <p className="text-[11.5px] text-ink2">{t("customers.history.help", { name: c.name })}</p>
+          {!earlierOpen ? (
+            <Btn data-testid="customers-history-open" className="mt-2" onClick={() => { setEarlierOpen(true); loadEarlier(); }}>{t("customers.history.show")}</Btn>
+          ) : earlierErr ? <Empty>{t("customers.history.error")}</Empty>
+            : !earlier ? <Loading rows={2} />
+            : !earlier.projects.length && !earlier.requests.length ? <Empty>{t("customers.history.empty")}</Empty>
+            : (
+              <ul data-testid="customers-history-list" className="mt-2 space-y-1.5">
+                {earlier.projects.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-2 rounded-md border border-line bg-panel2 px-2.5 py-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-[12.5px] font-semibold text-ink">{p.name}</div>
+                      <div className="text-[10.5px] text-mute">{t("customers.history.project")} · {trOr(`pv.status.${p.status}`, p.status)}</div>
+                    </div>
+                    <Btn data-testid={`customers-assign-project-${p.id}`} onClick={() => void moveHistory("project", p.id, c.id)}>{t("customers.history.assign")}</Btn>
+                  </li>
+                ))}
+                {earlier.requests.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-2 rounded-md border border-line bg-panel2 px-2.5 py-2">
+                    <div className="min-w-0">
+                      <div className="line-clamp-2 text-[12.5px] text-ink">{r.text}</div>
+                      <div className="text-[10.5px] text-mute">{t("customers.history.request")} · {timeAgo(r.created_at)}</div>
+                    </div>
+                    <Btn data-testid={`customers-assign-request-${r.id}`} onClick={() => void moveHistory("request", r.id, c.id)}>{t("customers.history.assign")}</Btn>
+                  </li>
+                ))}
+              </ul>
+            )}
         </Card>
       </div>
     </div>

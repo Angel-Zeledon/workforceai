@@ -117,8 +117,29 @@ export class MockCustomers {
     };
   }
 
+  /** Earlier work without a customer (B12 history): finished requests the district has not linked yet. */
+  private history(method: string, sub: string | undefined, body: any): unknown {
+    const linked = new Set([...Object.keys(this.requestLinks), ...Object.values(SEED_REQUESTS).flat().map((r) => r.id)]);
+    if (method === "GET" && sub === "candidates") {
+      const requests = this.requests().filter((r) => !linked.has(r.id) && (r.status === "done" || r.status === "failed")).slice(0, 30)
+        .map((r) => ({ id: r.id, text: r.text, status: r.status, created_at: r.created_at }));
+      return { projects: [], requests };
+    }
+    if (method === "POST" && !sub) {
+      const kind = String(body?.kind ?? ""), ref = String(body?.ref_id ?? ""), to = String(body?.customer_id ?? "");
+      if (kind !== "request") throw new Error("mock: only requests can be assigned in the demo");
+      const from = this.requestLinks[ref] ?? "";
+      if (to && !this.hasCustomer(to)) notFound();
+      if (from && to && from !== to) throw new Error("the request already belongs to another customer: remove that customer first");
+      if (to) this.requestLinks[ref] = to; else delete this.requestLinks[ref];
+      return { kind, ref_id: ref, from, to, memories: 0, changed: from !== to };
+    }
+    throw new Error(`mock: unsupported ${method} /customers/history`);
+  }
+
   handle(method: string, seg: string[], q: URLSearchParams, body: any): unknown {
     const [, cid, sub, subId] = seg;
+    if (cid === "history") return this.history(method, sub, body);
     if (method === "GET") {
       if (!cid) return this.customers.filter((c) => q.get("include_archived") === "1" || !c.archived);
       if (cid === "district") return this.district();
