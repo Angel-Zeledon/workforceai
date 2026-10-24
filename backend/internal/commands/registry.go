@@ -203,6 +203,13 @@ var all = []Command{
 		Example:     L{"/encargar @ventas prepara la cotización", "/assign @sales prepare the quote"}, Group: GroupOffice, Icon: "send",
 		Args:       []Arg{agentArg(true), {Name: "task", Kind: KindText, Required: true, Variadic: true}},
 		Permission: "requests:create", UsesLLM: true, Surfaces: allSurfaces},
+	// B12 (docs/architecture/customer-district.md): the request is scoped to the customer before it exists.
+	{ID: "customer", Aliases: Aliases{ES: []string{"cliente"}, EN: []string{"customer", "client"}},
+		Title:       L{"Trabajo para un cliente", "Work for a customer"},
+		Description: L{"Pide trabajo para un cliente del despacho: sus tareas solo ven la memoria y los archivos de ese cliente.", "Asks for work for one of the firm's customers: its tasks only see that customer's memory and files."},
+		Example:     L{"/cliente Ferretería López: concilia los bancos de octubre", "/customer Ferretería López: reconcile October's bank accounts"}, Group: GroupOffice, Icon: "user",
+		Args:       []Arg{{Name: "customer", Kind: KindText, Required: true}, {Name: "task", Kind: KindText, Required: true, Variadic: true}},
+		Permission: "requests:create", UsesLLM: true, Surfaces: allSurfaces},
 	{ID: "project", Aliases: Aliases{ES: []string{"proyecto"}, EN: []string{"project"}},
 		Title:       L{"Nuevo proyecto", "New project"},
 		Description: L{"Abre el asistente de proyectos, opcionalmente con una plantilla.", "Opens the project wizard, optionally with a template."},

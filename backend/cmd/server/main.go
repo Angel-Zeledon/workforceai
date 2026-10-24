@@ -289,6 +289,7 @@ func run(log *slog.Logger) error {
 		}
 	}
 	memorySvc := wireMemory(ctx, log, pg, store, rec, orch, cw, ws, orgIDs, cfg.App.OrgID)
+	bindCustomerHistory(custSvc, ws, store, memorySvc) // B12: earlier work is assigned to a customer explicitly, never silently
 	if n, err := orch.Recover(ctx, orgIDs); err != nil {
 		log.Warn("recover in-progress requests", "err", err)
 	} else if n > 0 {

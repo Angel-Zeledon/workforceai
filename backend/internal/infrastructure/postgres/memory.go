@@ -120,6 +120,25 @@ func (m *MemoryStore) Suppress(ctx context.Context, org, id, by string, at time.
 	return nil
 }
 
+var _ memory.CustomerRetagger = (*MemoryStore)(nil)
+
+// RetagCustomer implements memory.CustomerRetagger (B12): moves the documents of one request (or one document) from
+// one customer tag to another; only the documents tagged `from` change.
+func (m *MemoryStore) RetagCustomer(ctx context.Context, org string, sel memory.RetagSelector, from, to string) (int, error) {
+	col, ref := "request_id", sel.RequestID
+	if sel.DocID != "" {
+		col, ref = "id", sel.DocID
+	}
+	if ref == "" {
+		return 0, nil
+	}
+	tag, err := m.S.execTag(ctx, org, `UPDATE memory_docs SET customer_id=$4, updated_at=now() WHERE org_id=$1 AND `+col+`=$2 AND customer_id=$3`, org, ref, from, to)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 // Clear implements memory.DocStore (demo reset).
 func (m *MemoryStore) Clear(ctx context.Context, org string) error {
 	return m.S.exec(ctx, org, `DELETE FROM memory_docs WHERE org_id=$1`, org)

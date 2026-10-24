@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 
@@ -110,6 +111,66 @@ func TestCustomerScopedRequestIsLinkedBeforeItExists(t *testing.T) {
 	}
 	if len(planned[1]) <= 2 || len(planned[2]) <= 2 {
 		t.Fatalf("without clones every agent stays available: %v / %v", planned[1], planned[2])
+	}
+}
+
+// checkingCustomers adds the optional CustomerChecker to fakeCustomers.
+type checkingCustomers struct{ *fakeCustomers }
+
+func (c checkingCustomers) CheckCustomer(_ context.Context, _, id string) error {
+	if !c.known[id] {
+		return fmt.Errorf("%w: customer", domain.ErrNotFound)
+	}
+	return nil
+}
+
+// B12: a chat message sent for a customer (the chat's customer picker) scopes the request the turn creates, stored
+// before the request exists like POST /requests; a bad customer is refused before the message is stored.
+func TestChatBornRequestCarriesTheCustomer(t *testing.T) {
+	rt := newChatRuntime(fixedRoute("task", "sales", primary("assistant")))
+	rt.fakeRuntime.plan = func(application.PlanRequest) (application.PlanResponse, error) {
+		return application.PlanResponse{Objectives: []string{"conciliar"}, Tasks: []application.PlannedTask{{Key: "a", Title: "Conciliar bancos", AgentID: "sales"}}}, nil
+	}
+	h := newChat(t, rt, nil)
+	ctx := context.Background()
+
+	// Without customers configured a customer is refused, not ignored.
+	if _, err := h.orch.PostChat(application.WithCustomer(ctx, "cus_a"), "office", "concilia los bancos"); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("customers unavailable: %v", err)
+	}
+	fc := &fakeCustomers{store: h.store, known: map[string]bool{"cus_a": true}, links: map[string]string{}, assigned: map[string][]string{}, early: true}
+	h.orch.SetCustomerScope(checkingCustomers{fc})
+	before := len(h.messages("office"))
+	if _, err := h.orch.PostChat(application.WithCustomer(ctx, "cus_zzz"), "office", "concilia los bancos"); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("an unknown customer must be refused at once: %v", err)
+	}
+	if after := len(h.messages("office")); after != before {
+		t.Fatalf("a refused message must not be stored: %d -> %d", before, after)
+	}
+
+	if _, err := h.orch.PostChat(application.WithCustomer(ctx, "cus_a"), "office", "concilia los bancos de la ferretería"); err != nil {
+		t.Fatal(err)
+	}
+	h.orch.Wait()
+	h.say("office", "prepara el resumen general") // an unscoped message keeps the old behaviour
+	reqs, _ := h.store.ListRequests(ctx, domain.DemoOrgID)
+	if len(reqs) != 2 {
+		t.Fatalf("two chat-born requests expected: %+v", reqs)
+	}
+	scoped := 0
+	for _, r := range reqs {
+		got, _ := fc.CustomerOfRequest(ctx, "", r.ID)
+		switch {
+		case strings.Contains(r.Text, "ferretería") && got == "cus_a":
+			scoped++
+		case strings.Contains(r.Text, "general") && got != "":
+			t.Fatalf("an unscoped message must not scope its request: %q", got)
+		case strings.Contains(r.Text, "ferretería"):
+			t.Fatalf("the chat-born request must be scoped to cus_a: %q", got)
+		}
+	}
+	if scoped != 1 || !fc.early {
+		t.Fatalf("the scope must be stored before the request exists: scoped=%d early=%v", scoped, fc.early)
 	}
 }
 

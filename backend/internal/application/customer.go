@@ -44,8 +44,30 @@ type CustomerScope interface {
 	AssignedAgents(ctx context.Context, org, customerID string) ([]string, error)
 }
 
+// CustomerChecker is optionally implemented by the CustomerScope: it accepts a customer new work can be scoped
+// to (it exists and is not archived). The chat uses it to refuse a bad customer at once, before the turn runs
+// asynchronously (LinkRequest checks it again when the turn creates a request).
+type CustomerChecker interface {
+	CheckCustomer(ctx context.Context, org, customerID string) error
+}
+
 // SetCustomerScope installs the customer scope (nil removes it).
 func (o *Orchestrator) SetCustomerScope(c CustomerScope) { o.customers = c }
+
+// checkCustomer validates the customer in ctx ("" = none, always fine) for work that will be scoped later.
+func (o *Orchestrator) checkCustomer(ctx context.Context) error {
+	cid := CustomerFrom(ctx)
+	if cid == "" {
+		return nil
+	}
+	if o.customers == nil {
+		return fmt.Errorf("%w: customers are not available", domain.ErrInvalid)
+	}
+	if ch, ok := o.customers.(CustomerChecker); ok {
+		return ch.CheckCustomer(ctx, o.org(ctx), cid)
+	}
+	return nil
+}
 
 // linkCustomer stores the customer of a new request before it is created (so no task can ever run
 // unscoped). Without a customer in ctx it does nothing; with one but without a scope service it refuses.

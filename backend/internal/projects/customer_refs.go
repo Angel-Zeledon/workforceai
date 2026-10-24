@@ -69,6 +69,46 @@ func (s *Service) checkArtifactRefs(ctx context.Context, r Record) error {
 	return nil
 }
 
+// SetCustomer assigns (or, with "", removes) the customer of a project that is not running: a draft or a finished
+// project. It is the projects' half of an administrator assigning work done before the customer district existed
+// (internal/customers history.go, audited there and here). A running project keeps its scope: its tasks resolve
+// the customer from the request while they run. It returns the previous customer.
+func (s *Service) SetCustomer(ctx context.Context, id, customerID string) (string, error) {
+	customerID = strings.TrimSpace(customerID)
+	org := s.org(ctx)
+	if customerID != "" {
+		if s.cfg.CustomerActive == nil {
+			return "", fmt.Errorf("%w: customers are not available", domain.ErrInvalid)
+		}
+		if err := s.cfg.CustomerActive(ctx, org, customerID); err != nil {
+			return "", err
+		}
+	}
+	prev := ""
+	_, err := s.update(ctx, id, func(r *Record) error {
+		if r.Status != StatusDraft && !terminalStatus(r.Status) {
+			return fmt.Errorf("%w: the project is running: change its customer when it has finished", domain.ErrConflict)
+		}
+		prev = r.CustomerID
+		if r.Status == StatusDraft { // a draft will still run: its references must fit the new customer
+			next := *r
+			next.CustomerID = customerID
+			if err := s.checkArtifactRefs(ctx, next); err != nil {
+				return err
+			}
+		}
+		r.CustomerID = customerID
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if prev != customerID {
+		s.audit(ctx, "project.customer_changed", id, map[string]any{"from": prev, "to": customerID})
+	}
+	return prev, nil
+}
+
 // checkChangedRefs checks the plan a change would leave (nodes replace the record's).
 func (s *Service) checkChangedRefs(ctx context.Context, r Record, nodes []NodeDef) error {
 	r.Nodes = nodes

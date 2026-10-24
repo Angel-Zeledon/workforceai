@@ -159,8 +159,22 @@ func TestCustomerPlanRefusesOtherCustomersArtifacts(t *testing.T) {
 		t.Fatalf("A's own artifact (and a missing one) are fine: %v", err)
 	}
 	// Without a customer the old behaviour holds.
-	if _, err := svc.CreateDraft(bg, projects.NewProject{Goal: "resumen con artifact:art_bbbbbb1", TemplateID: "tpl-generic"}); err != nil {
+	plain, err := svc.CreateDraft(bg, projects.NewProject{Goal: "resumen con artifact:art_bbbbbb1", TemplateID: "tpl-generic"})
+	if err != nil {
 		t.Fatalf("an unscoped project keeps the old rule: %v", err)
+	}
+	// Assigning a customer to that draft later (history.go) applies the same rule.
+	if _, err := svc.SetCustomer(bg, plain.ID, "cus_a"); !isolation(err) {
+		t.Fatalf("a draft referencing B's artifact cannot become A's: %v", err)
+	}
+	if prev, err := svc.SetCustomer(bg, plain.ID, "cus_b"); err != nil || prev != "" {
+		t.Fatalf("a draft referencing B's artifact can become B's: %q %v", prev, err)
+	}
+	if prev, err := svc.SetCustomer(bg, plain.ID, ""); err != nil || prev != "cus_b" {
+		t.Fatalf("and back (undo): %q %v", prev, err)
+	}
+	if _, err := svc.SetCustomer(bg, plain.ID, "cus_zzz"); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("an unknown customer is refused: %v", err)
 	}
 
 	// A plan edit (a title reaches the task description).

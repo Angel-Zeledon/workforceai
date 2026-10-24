@@ -143,4 +143,17 @@ func TestMemoryCustomerIsolationPostgres(t *testing.T) {
 	if err != nil || got.CustomerID != "cus_a" {
 		t.Fatalf("customer_id round-trips: %+v %v", got, err)
 	}
+	// B12 history: an explicit retag moves only the documents tagged `from`, and back.
+	if n, err := m.RetagCustomer(ctx, "org-a", memory.RetagSelector{DocID: "task_g"}, "", "cus_a"); err != nil || n != 1 {
+		t.Fatalf("retag: %d %v", n, err)
+	}
+	if n, _ := m.RetagCustomer(ctx, "org-a", memory.RetagSelector{DocID: "task_b"}, "", "cus_a"); n != 0 {
+		t.Fatal("a document of another customer must not move")
+	}
+	if g, _ := m.Get(ctx, "org-a", "task_g"); g.CustomerID != "cus_a" {
+		t.Fatalf("retagged: %+v", g)
+	}
+	if n, err := m.RetagCustomer(ctx, "org-a", memory.RetagSelector{DocID: "task_g"}, "cus_a", ""); err != nil || n != 1 {
+		t.Fatalf("undo: %d %v", n, err)
+	}
 }

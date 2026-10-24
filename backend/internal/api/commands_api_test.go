@@ -16,6 +16,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/controls"
+	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
@@ -74,6 +75,7 @@ type cmdEnv struct {
 	owner, admin, member, viewer string
 	cfg                          application.Config
 	org                          string
+	cust                         *customers.Service
 }
 
 type cmdOpts struct {
@@ -82,6 +84,8 @@ type cmdOpts struct {
 	llmLim  auth.Limit
 	models  api.ModelCatalog
 	longMem api.LongMemory
+	// customers wires the customer district (B12); the service is returned in cmdEnv.cust.
+	customers bool
 }
 
 func newCmdEnv(t *testing.T, o cmdOpts) *cmdEnv {
@@ -140,6 +144,15 @@ func newCmdEnv(t *testing.T, o cmdOpts) *cmdEnv {
 	d.Rewards = &rewards.Service{Store: rewards.NewMemStore(), Catalog: cat, Rules: rewards.DefaultRules(), Rec: rec, Log: log,
 		Agents: func(c context.Context, org, id string) bool { _, err := mem.GetAgent(c, org, id); return err == nil }}
 
+	var cust *customers.Service
+	if o.customers {
+		cust = customers.New(customers.Config{Store: customers.NewMemStore(), OrgID: cfg.OrgID, Log: log,
+			Audit: func(c context.Context, org, actor, action, id string, det map[string]any) {
+				rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: "customer", EntityID: id, Details: det})
+			}})
+		orch.SetCustomerScope(cust)
+		d.Customers = cust
+	}
 	svc, err := auth.NewService(auth.Config{Store: auth.NewMemoryStore(), Secret: []byte("0123456789abcdef0123456789abcdef-test"),
 		PasswordParams: auth.PasswordParams{Memory: 8, Time: 1, Threads: 1, SaltLen: 16, KeyLen: 32}})
 	if err != nil {
@@ -150,7 +163,7 @@ func newCmdEnv(t *testing.T, o cmdOpts) *cmdEnv {
 	ts := httptest.NewServer(api.NewRouter(d))
 	t.Cleanup(ts.Close)
 	e := &env{t: t, srv: ts, svc: svc, store: mem, hub: hub, appr: appr}
-	ce := &cmdEnv{env: e, rt: rt, dr: dr, sk: sk, cfg: cfg}
+	ce := &cmdEnv{env: e, rt: rt, dr: dr, sk: sk, cfg: cfg, cust: cust}
 	owner := e.register("owner-cmd@example.com", "OwnerCmd")
 	ce.owner, ce.org = owner.AccessToken, owner.OrgID
 	ce.admin = e.member(owner, "admin-cmd@example.com", auth.RoleAdmin)

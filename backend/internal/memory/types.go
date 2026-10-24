@@ -160,6 +160,19 @@ type DocStore interface {
 	Clear(ctx context.Context, org string) error
 }
 
+// CustomerRetagger is implemented by the document stores that can move documents between customer tags (B12: a
+// person explicitly assigns work done before the customer district existed; never automatic).
+type CustomerRetagger interface {
+	// RetagCustomer changes the tag of the documents of sel tagged `from` to `to` and returns how many changed.
+	RetagCustomer(ctx context.Context, org string, sel RetagSelector, from, to string) (int, error)
+}
+
+// RetagSelector picks the documents of one request, or one document (DocID wins).
+type RetagSelector struct {
+	RequestID string
+	DocID     string
+}
+
 // FileSource retrieves the drive files an agent may read.
 type FileSource interface {
 	Files(ctx context.Context, org, agentID string, terms []string, limit int) ([]Item, error)

@@ -97,6 +97,15 @@ func ParseArgs(c Command, rest string, o ParseOpts) map[string]any {
 	if c.ID == "meeting" || c.ID == "room" || c.ID == "schedule" || c.ID == "debate" { // agents before the colon, topic after
 		return parseMeeting(rest, o)
 	}
+	if c.ID == "customer" { // "/cliente Ferretería López: tarea" (a name may have spaces) or "/cliente Lopez tarea"
+		if name, task, ok := strings.Cut(rest, ":"); ok && strings.TrimSpace(name) != "" {
+			out["customer"] = strings.TrimSpace(name)
+			if task = strings.TrimSpace(task); task != "" {
+				out["task"] = task
+			}
+			return out
+		}
+	}
 	toks := tokenize(rest)
 	hasAgent := false
 	for _, a := range c.Args {

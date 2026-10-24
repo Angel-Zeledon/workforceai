@@ -78,6 +78,7 @@ type Service struct {
 	mu      sync.RWMutex
 	folders Folders
 	work    Work
+	history History
 }
 
 var _ application.CustomerScope = (*Service)(nil)
@@ -509,6 +510,14 @@ func (s *Service) LinkRequest(ctx context.Context, org, requestID, customerID st
 	}
 	s.audit(ctx, org, actor, "customer.request.scoped", c.ID, map[string]any{"request_id": requestID})
 	return nil
+}
+
+var _ application.CustomerChecker = (*Service)(nil)
+
+// CheckCustomer implements application.CustomerChecker: new work (a chat turn) can be scoped to the customer.
+func (s *Service) CheckCustomer(ctx context.Context, org, customerID string) error {
+	_, err := s.Active(ctx, org, customerID)
+	return err
 }
 
 // CustomerOfRequest implements application.CustomerScope.

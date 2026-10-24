@@ -52,6 +52,26 @@ func (m *MemStore) Upsert(_ context.Context, org string, d Doc) error {
 	return nil
 }
 
+var _ CustomerRetagger = (*MemStore)(nil)
+
+// RetagCustomer implements CustomerRetagger.
+func (m *MemStore) RetagCustomer(_ context.Context, org string, sel RetagSelector, from, to string) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	n := 0
+	for k, d := range m.docs {
+		if !strings.HasPrefix(k, org+"|") || d.CustomerID != from {
+			continue
+		}
+		if (sel.DocID != "" && d.ID == sel.DocID) || (sel.DocID == "" && sel.RequestID != "" && d.RequestID == sel.RequestID) {
+			d.CustomerID = to
+			m.docs[k] = d
+			n++
+		}
+	}
+	return n, nil
+}
+
 func visible(d Doc, agentID string) bool {
 	return !d.Suppressed && (d.Scope == ScopeOrg || d.AgentID == agentID)
 }

@@ -334,6 +334,12 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 		return ChatTurn{}, fmt.Errorf("%w: conversation must be %q or %q", domain.ErrInvalid, domain.ChatOffice, domain.ChatAgentPrefix+"<agent id>")
 	}
 	org := o.org(ctx)
+	// B12: a message sent "for a customer" (the chat's customer picker, /cliente) scopes any request the turn
+	// creates. The customer is checked now, so a bad one is refused before anything is stored.
+	customer := CustomerFrom(ctx)
+	if err := o.checkCustomer(ctx); err != nil {
+		return ChatTurn{}, err
+	}
 	agents, err := o.store.ListAgents(ctx, org)
 	if err != nil {
 		return ChatTurn{}, err
@@ -375,6 +381,7 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	rctx := WithOrg(o.base, org)
 	rctx = WithActor(rctx, ActorFrom(ctx, ""))
 	rctx = WithActorRole(rctx, ActorRoleFrom(ctx, ""))
+	rctx = WithCustomer(rctx, customer) // B12: a request born in this turn is linked to the customer before it exists
 	// Turns of one conversation run one after the other, in the order the messages arrived: answers never
 	// interleave between turns and a follow-up always sees what the previous turn said.
 	key := org + "|" + conversation

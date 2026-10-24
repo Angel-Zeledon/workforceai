@@ -389,6 +389,25 @@ func (s *Service) Delete(ctx context.Context, org, agentID, id, actor string) er
 	return nil
 }
 
+// Doc returns one stored document (suppressed ones are not found).
+func (s *Service) Doc(ctx context.Context, org, id string) (Doc, error) {
+	d, err := s.cfg.Docs.Get(ctx, org, id)
+	if err != nil || d.Suppressed {
+		return Doc{}, ErrNotFound
+	}
+	return d, nil
+}
+
+// RetagCustomer moves documents between customer tags (B12, an explicit and audited decision of a person taken in
+// internal/customers; never automatic). It fails when the store cannot do it.
+func (s *Service) RetagCustomer(ctx context.Context, org string, sel RetagSelector, from, to string) (int, error) {
+	rt, ok := s.cfg.Docs.(CustomerRetagger)
+	if !ok {
+		return 0, fmt.Errorf("%w: this memory store cannot change customer tags", domain.ErrInvalid)
+	}
+	return rt.RetagCustomer(ctx, org, sel, from, to)
+}
+
 // Reset forgets everything of an organization (the demo reset: the tasks the
 // memories point to are gone too).
 func (s *Service) Reset(ctx context.Context, org string) error { return s.cfg.Docs.Clear(ctx, org) }

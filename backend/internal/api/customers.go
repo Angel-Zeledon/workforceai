@@ -11,7 +11,7 @@ import (
 
 // Customer district API (B12, docs/architecture/customer-district.md, 08-api.md). Reading follows requests:read;
 // creating and editing customers follows requests:create (whoever can ask work for a customer can register it);
-// clones and folder links change what an agent may read, so they follow files:grant (admins); archiving follows
+// clones, folder links and assigning earlier work change what an agent may read, so they follow files:grant (admins); archiving follows
 // agents:write. Every write is audited by the service. Agents never reach these endpoints.
 
 func (s *server) mountCustomers(r chi.Router) {
@@ -30,6 +30,33 @@ func (s *server) mountCustomers(r chi.Router) {
 	r.With(grant).Delete("/customers/{id}/assignments/{aid}", s.customersRemoveClone)
 	r.With(grant).Post("/customers/{id}/folders", s.customersLinkFolder)
 	r.With(grant).Delete("/customers/{id}/folders/{fid}", s.customersUnlinkFolder)
+	// Earlier work without a customer (before B12): assigned explicitly by an admin, audited and reversible.
+	r.With(grant).Get("/customers/history/candidates", s.customersHistoryCandidates)
+	r.With(grant).Post("/customers/history", s.customersAssignHistory)
+}
+
+func (s *server) customersHistoryCandidates(w http.ResponseWriter, r *http.Request) {
+	v, err := s.Customers.Candidates(r.Context())
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, v)
+}
+
+// customersAssignHistory: POST /customers/history {kind: project|request|memory, ref_id, customer_id} ("" undoes).
+func (s *server) customersAssignHistory(w http.ResponseWriter, r *http.Request) {
+	var in customers.HistoryInput
+	if err := s.decode(w, r, &in); err != nil {
+		s.fail(w, err)
+		return
+	}
+	res, err := s.Customers.AssignHistory(r.Context(), s.actor(r), in)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, res)
 }
 
 func (s *server) customersList(w http.ResponseWriter, r *http.Request) {
