@@ -127,7 +127,7 @@ func (p *PortalStore) MarkViewed(ctx context.Context, org, id string, at time.Ti
 	at = at.UTC().Truncate(time.Microsecond) // the precision of timestamptz, so the RETURNING comparison is exact
 	err := p.S.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `UPDATE portal_links SET first_viewed_at = COALESCE(first_viewed_at, $3), last_viewed_at = $3
-			WHERE org_id=$1 AND id=$2 AND (last_viewed_at IS NULL OR last_viewed_at <= $3 - interval '1 minute')
+			WHERE org_id=$1 AND id=$2 AND (last_viewed_at IS NULL OR last_viewed_at <= $3::timestamptz - interval '1 minute')
 			RETURNING first_viewed_at = $3`, org, id, at).Scan(&first)
 		if errors.Is(err, pgx.ErrNoRows) {
 			first = false
