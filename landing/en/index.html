@@ -457,7 +457,7 @@
           <section class="col col-dev reveal" aria-labelledby="col2-h">
             <h3 id="col2-h"><span class="dot" aria-hidden="true"></span><span data-i18n="st.col2">Built, not yet proven in real use</span></h3>
             <ul data-stagger>
-              <li><h4 data-i18n="st.5.t">Connectors: Gmail, Google Calendar and Drive, Slack, LinkedIn and GitHub</h4><p data-i18n="st.5.d">With permissions and approval before sending. Not yet tested with real accounts: do not use them with important data yet.</p></li>
+              <li><h4 data-i18n="st.5.t">Import data from any system</h4><p data-i18n="st.5.d">A generic API source the agents can query, data inboxes (a URL with a token that any software can send JSON, CSV or files to) and import from a link (CSV, JSON or Excel, once or on a schedule). No integrations tied to one product in this version.</p></li>
               <li><h4 data-i18n="st.6.t">OIDC single sign-on, verified domains and SCIM</h4><p data-i18n="st.6.d">Implemented in the code; not yet validated with customers.</p></li>
             </ul>
           </section>
@@ -500,7 +500,7 @@
         </div>
         <div class="faq reveal">
           <details><summary data-i18n="faq.q1">Does this use real AI?</summary><p data-i18n="faq.a1">That is up to you. Without a key it runs in simulation mode, with scripted results and no cost. With your own OpenAI, Claude, Kimi or DeepSeek key it uses a real model; that path works, but we have tested it less than the simulation.</p></details>
-          <details><summary data-i18n="faq.q2">Can it send emails or messages for me?</summary><p data-i18n="faq.a2">The Gmail, Google Calendar and Drive, Slack, LinkedIn and GitHub connectors exist and always ask for your approval before sending, but they have not been tested with real accounts. Do not use them with important email yet. WhatsApp is planned, not built.</p></details>
+          <details><summary data-i18n="faq.q2">Can it send emails or messages for me?</summary><p data-i18n="faq.a2">Not in this version. The agents prepare drafts and documents that you review and send. Connectors for specific products (Gmail, Google Calendar and Drive, Slack, LinkedIn, GitHub) exist in the code, but they are switched off in v1 and have not been tested with real accounts; they are turned on on request. WhatsApp is not built.</p></details>
           <details><summary data-i18n="faq.q3">What happens to my data and my keys?</summary><p data-i18n="faq.a3">Keys go into an encrypted vault and the model does not see them. With real AI, task text is sent to the model provider you configure; check its terms before using sensitive data.</p></details>
           <details><summary data-i18n="faq.q4">Can an agent approve something on its own?</summary><p data-i18n="faq.a4">No. An agent can ask for approval, but the decision is always a person's. You adjust what requires approval and how much autonomy each employee has.</p></details>
           <details><summary data-i18n="faq.q5">Does it replace my team?</summary><p data-i18n="faq.a5">That is not the idea. It is a support team that prepares, organizes and consults; important decisions stay yours. It does not replace a lawyer, an accountant or any other professional.</p></details>

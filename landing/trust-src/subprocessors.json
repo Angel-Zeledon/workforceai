@@ -39,6 +39,12 @@
               "Siempre, en el despliegue que operamos. El nombre del proveedor todavía no está publicado en esta página."
             ],
             [
+              "Google (API de Gemini)",
+              "Modelo de lenguaje (Gemini) para las tareas de los agentes; es el modelo incluido cuando el operador configura su clave",
+              "Igual que DeepSeek",
+              "Solo con una clave configurada y el proveedor permitido. Con la capa gratuita de Google, sus condiciones permiten usar el contenido para mejorar sus productos: para datos de clientes, usar una cuenta de pago"
+            ],
+            [
               "DeepSeek",
               "Modelo de lenguaje para las tareas de los agentes",
               "Texto de la tarea, contexto, memoria y documentos que van en el prompt, con credenciales enmascaradas",
@@ -164,6 +170,12 @@
               "Hosting the application, the Postgres database and the nightly backups",
               "Everything the organization stores in the product",
               "Always, in the deployment we operate. The provider's name is not published on this page yet."
+            ],
+            [
+              "Google (Gemini API)",
+              "Language model (Gemini) for the agents' tasks; it is the included model when the operator sets its key",
+              "Same as DeepSeek",
+              "Only with a configured key and the provider allowed. On Google's free tier, its terms allow using the content to improve its products: for customer data, use a paid account"
             ],
             [
               "DeepSeek",
