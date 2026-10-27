@@ -117,7 +117,7 @@ func (s *Service) audit(ctx context.Context, org string, p Principal, action, en
 
 func checkPrincipal(p Principal) error {
 	switch p.Kind {
-	case PrincipalHuman, PrincipalAgent, PrincipalSystem, PrincipalInbox:
+	case PrincipalHuman, PrincipalAgent, PrincipalSystem, PrincipalInbox, PrincipalLinkImport:
 		if strings.TrimSpace(p.ID) != "" {
 			return nil
 		}
