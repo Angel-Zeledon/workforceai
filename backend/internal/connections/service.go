@@ -57,6 +57,10 @@ type Config struct {
 	// OnRevoke runs when a connection stops being usable (suspend/revoke) so
 	// held actions can be cancelled.
 	OnRevoke func(ctx context.Context, org, connID, reason string)
+	// ProviderEnabled is the v1 switch of vendor-specific integrations (internal/integrations, VENDOR_INTEGRATIONS).
+	// A provider it refuses is absent from the catalog, cannot be connected, and its existing connections are kept
+	// but unusable. nil = every provider enabled (the server always wires it; nil is for package tests).
+	ProviderEnabled func(provider string) bool
 }
 
 // Service implements the connection use cases.
@@ -105,6 +109,19 @@ func NewService(c Config) (*Service, error) {
 // AdminCount returns how many humans can administer the organization.
 func (s *Service) AdminCount(ctx context.Context, org string) int {
 	return s.Config.AdminCount(ctx, org)
+}
+
+// ProviderEnabled reports whether a provider may be used (VENDOR_INTEGRATIONS, v1).
+func (s *Service) ProviderEnabled(provider string) bool {
+	return s.Config.ProviderEnabled == nil || s.Config.ProviderEnabled(provider)
+}
+
+// usable refuses a connection whose provider is switched off.
+func (s *Service) usable(c Connection) error {
+	if !s.ProviderEnabled(c.Provider) {
+		return ErrProviderDisabled
+	}
+	return nil
 }
 
 // Manifests returns the loaded provider manifests.
@@ -167,6 +184,9 @@ type CapabilityInfo struct {
 func (s *Service) Catalog() []ProviderInfo {
 	var out []ProviderInfo
 	for _, id := range s.sortedProviderIDs() {
+		if !s.ProviderEnabled(id) {
+			continue // v1: vendor-specific connectors are not offered unless VENDOR_INTEGRATIONS turns them on
+		}
 		m := s.manifests[id]
 		pi := ProviderInfo{ID: m.ID, LabelKey: m.LabelKey, Phase: m.Phase, Available: m.Phase == "available", Capabilities: []CapabilityInfo{},
 			ResourceFilters: []ResourceFilterInfo{}, Auth: []string{}, NeverOffered: m.NeverOffered, Limits: m.DefaultLimits, SplitReadWrite: true}
@@ -261,6 +281,9 @@ func (s *Service) Create(ctx context.Context, org string, in CreateInput) (Conne
 	m, ok := s.manifests[in.Provider]
 	if !ok {
 		return Connection{}, invalid("unknown provider %q", in.Provider)
+	}
+	if !s.ProviderEnabled(in.Provider) {
+		return Connection{}, ErrProviderDisabled
 	}
 	label := strings.TrimSpace(in.Label)
 	if label == "" || len(label) > 80 {
@@ -418,6 +441,7 @@ func (s *Service) view(ctx context.Context, c Connection) Connection {
 		}
 		c.Credential = &meta
 	}
+	c.ProviderDisabled = !s.ProviderEnabled(c.Provider)
 	if gs, err := s.Store.ListGrantsByConnection(ctx, c.OrgID, c.ID); err == nil {
 		for _, g := range gs {
 			if g.Status == GrantActive || g.Status == GrantPendingApproval {
@@ -562,6 +586,9 @@ func (s *Service) OAuthStart(ctx context.Context, org, id, userID string) (strin
 	if err != nil {
 		return "", time.Time{}, err
 	}
+	if err := s.usable(c); err != nil {
+		return "", time.Time{}, err
+	}
 	if c.Mode != ModeLive || c.Kind != "oauth2" {
 		return "", time.Time{}, invalid("connection does not use OAuth")
 	}
@@ -614,6 +641,9 @@ func (s *Service) OAuthCallback(ctx context.Context, code, state, providerErr st
 	}
 	if providerErr != "" || code == "" {
 		return fail("consent_denied")
+	}
+	if s.usable(c) != nil {
+		return fail(CodeProviderDisabled)
 	}
 	p, ok := s.Providers[c.Provider]
 	app := s.appFor(ctx, c)
@@ -688,6 +718,9 @@ func (s *Service) uiPath(id, q string) string {
 func (s *Service) AddCapabilities(ctx context.Context, org, id string, add []string, actor string) (Connection, error) {
 	c, err := s.Store.GetConnection(ctx, org, id)
 	if err != nil {
+		return Connection{}, err
+	}
+	if err := s.usable(c); err != nil {
 		return Connection{}, err
 	}
 	m := s.manifests[c.Provider]
@@ -833,6 +866,9 @@ func (s *Service) Handle(c Connection) Handle {
 
 // Executor returns the tool executor of a connection.
 func (s *Service) Executor(c Connection) (Executor, error) {
+	if err := s.usable(c); err != nil {
+		return nil, err
+	}
 	p, ok := s.Providers[c.Provider]
 	if !ok {
 		return nil, ErrUnknownProvider
@@ -846,6 +882,9 @@ func (s *Service) Executor(c Connection) (Executor, error) {
 func (s *Service) Test(ctx context.Context, org, id, actor string) (TestResult, error) {
 	c, err := s.Store.GetConnection(ctx, org, id)
 	if err != nil {
+		return TestResult{}, err
+	}
+	if err := s.usable(c); err != nil {
 		return TestResult{}, err
 	}
 	res := TestResult{OK: true, Account: c.AccountLabel}
@@ -928,6 +967,9 @@ func (s *Service) Resume(ctx context.Context, org, id, actor string) (Connection
 	}
 	if c.Status != StatusSuspended {
 		return Connection{}, fmt.Errorf("%w: connection is %s, not suspended", ErrConflict, c.Status)
+	}
+	if err := s.usable(c); err != nil {
+		return Connection{}, err
 	}
 	c.Status, c.StatusReason, c.UpdatedAt = StatusActive, "", s.Now().UTC()
 	if err := s.Store.UpdateConnection(ctx, c); err != nil {
@@ -1021,6 +1063,9 @@ func (s *Service) SweepRevocations(ctx context.Context, org string) {
 func (s *Service) RotateCredential(ctx context.Context, org, id string, secret vault.Secret, actor string, destroyPrevious bool) (Connection, error) {
 	c, err := s.Store.GetConnection(ctx, org, id)
 	if err != nil {
+		return Connection{}, err
+	}
+	if err := s.usable(c); err != nil {
 		return Connection{}, err
 	}
 	if c.Kind != "api_key" || c.Mode != ModeLive {

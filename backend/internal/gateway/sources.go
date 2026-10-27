@@ -29,7 +29,7 @@ func (g *Gateway) SourcesFor(ctx context.Context, org, agentID string) []applica
 			continue
 		}
 		cn, err := g.Conns.Store.GetConnection(ctx, org, gr.ConnectionID)
-		if err != nil || cn.Status != connections.StatusActive {
+		if err != nil || cn.Status != connections.StatusActive || !g.Conns.ProviderEnabled(cn.Provider) {
 			continue
 		}
 		m, ok := g.Conns.Manifest(cn.Provider)

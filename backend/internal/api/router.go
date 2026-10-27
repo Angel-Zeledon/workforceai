@@ -43,6 +43,7 @@ import (
 	"aiworkforce/backend/internal/rituals"
 	"aiworkforce/backend/internal/sandbox"
 	"aiworkforce/backend/internal/skills"
+	"aiworkforce/backend/internal/integrations"
 	"aiworkforce/backend/internal/slackapp"
 	"aiworkforce/backend/internal/tenantdata"
 	"aiworkforce/backend/internal/trust"
@@ -180,6 +181,10 @@ type Deps struct {
 	// Slack serves the two-way Slack channel for humans (slack_mount.go): the signed public request URLs, the
 	// settings card and the account link. Optional: nil leaves the routes unmounted.
 	Slack *slackapp.Service
+	// VendorIntegrations is the v1 switch of vendor-specific integrations (VENDOR_INTEGRATIONS, internal/integrations):
+	// it gates the Slack channel routes and is reported to the UI in GET /org/settings. nil = every vendor
+	// integration on (package tests); the server always sets it (default off).
+	VendorIntegrations *integrations.Policy
 	// AllowedOrigins is the CORS/WebSocket origin allow-list (see originPolicy).
 	AllowedOrigins []string
 	// EnableDemoReset registers POST /api/v1/demo/reset (admin role when auth is on).

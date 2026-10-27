@@ -14,6 +14,7 @@ import (
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/infrastructure/postgres"
+	"aiworkforce/backend/internal/integrations"
 	"aiworkforce/backend/internal/slackapp"
 	"aiworkforce/backend/internal/vault"
 )
@@ -25,6 +26,10 @@ import (
 //	SLACK_CHANNEL=off   do not mount the channel at all
 func wireSlack(log *slog.Logger, cfg config.Config, pg *postgres.Store, store application.Store, approvals *application.Approvals,
 	authStore auth.Store, ctl *controls.Service, v *vault.Vault, rec *application.Recorder, obs *slackapp.Observer) *slackapp.Service {
+	if !cfg.VendorIntegrations.Enabled(integrations.SlackChannel) {
+		log.Info("Slack channel disabled (VENDOR_INTEGRATIONS does not enable slack)")
+		return nil
+	}
 	if s := strings.ToLower(strings.TrimSpace(os.Getenv("SLACK_CHANNEL"))); s == "off" || s == "false" || s == "0" {
 		log.Info("Slack channel disabled (SLACK_CHANNEL=off)")
 		return nil
