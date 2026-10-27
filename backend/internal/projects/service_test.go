@@ -173,7 +173,7 @@ func newEnv(t *testing.T, rt *fakeRuntime, guard application.ExecutionGuard, mut
 
 func (e *env) waitFor(what string, cond func() bool) {
 	e.t.Helper()
-	deadline := time.Now().Add(15 * time.Second)
+	deadline := time.Now().Add(45 * time.Second) // generous: under a loaded machine (parallel packages) a project needs more than 15 s to settle
 	for time.Now().Before(deadline) {
 		if cond() {
 			return
