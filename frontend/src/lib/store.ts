@@ -9,6 +9,7 @@ import { isConnectionsFrame, useConnections } from "./connections/store";
 import { useRituals } from "./rituals";
 import { isShieldFrame, useShield } from "./shield";
 import { isRehearsalFrame, useRehearsal } from "./rehearsal";
+import { LINK_IMPORT_EVENT, useLinkImportsLive } from "./linkImportsApi";
 import type {
   ActivityItem, Agent, Approval, ChatMessage, Conversation, Debate, ErrorItem, Message, Metrics, PlanTask,
   Report, Request, RouteDecision, Task, WsFrame,
@@ -185,6 +186,7 @@ export const useStore = create<State>((set, get) => ({
     if (isShieldFrame(f.type)) { useShield.getState().applyFrame(f); return; } // B10: shield over the desk + notice
     if (isRehearsalFrame(f.type)) { useRehearsal.getState().applyFrame(f); return; } // B9: rehearsal switches and log
     if (f.type === "hello") void useRehearsal.getState().load();
+    if (f.type === LINK_IMPORT_EVENT) { useLinkImportsLive.getState().bump(); return; } // import from a link: new data landed
     const p = f.payload || {};
     const tick = (s: State, ids: (string | null | undefined)[]) => {
       const t = { ...s.agentTick };

@@ -9,6 +9,7 @@ import { ConnectionDrawer } from "./ConnectionDrawer";
 import { ConnectWizard } from "./ConnectWizard";
 import { GrantMatrix } from "./GrantMatrix";
 import { LimitsTab } from "./LimitsTab";
+import { LinkImportsSection } from "./LinkImportsSection";
 import { CapChip, StatusBadge, useViewer } from "./shared";
 import { UsageTable } from "./UsageTable";
 
@@ -83,6 +84,7 @@ export function ConnectionsView() {
             </div>
           )
         )}
+        {tab === "connections" && <LinkImportsSection />}
         {tab === "matrix" && <GrantMatrix />}
         {tab === "capabilities" && <CapabilitiesTab />}
         {tab === "usage" && <Card title={t("conn.tab.usage")}><UsageTable /></Card>}
