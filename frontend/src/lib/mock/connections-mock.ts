@@ -25,7 +25,7 @@ const ago = (min: number) => new Date(Date.now() - min * 60000).toISOString();
 
 // v1 (backend/internal/integrations): vendor-specific connectors are off, as in a deployment without VENDOR_INTEGRATIONS.
 // The demo keeps its seeded Gmail connections (flagged provider_disabled) so the evidence and audit stories still read.
-const VENDOR_PROVIDERS = new Set(["github", "google_calendar", "google_calendar_sync", "google_drive", "google_gmail", "linkedin", "microsoft_calendar", "slack"]);
+const VENDOR_PROVIDERS = new Set(["github", "google_calendar", "google_calendar_sync", "google_drive", "google_gmail", "linkedin", "microsoft_calendar", "slack", "gitlab", "microsoft_365"]);
 
 const PROVIDERS: ProviderDef[] = [
   {

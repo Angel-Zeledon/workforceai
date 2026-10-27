@@ -30,7 +30,9 @@ function ConnectionCard({ c, onOpen }: { c: Connection; onOpen: () => void }) {
           <div className="truncate text-sm font-semibold">{c.label}</div>
           <div className="truncate text-[11px] text-mute">{t(`conn.provider.${c.provider}`)} · <span data-testid="conn-account-label">{c.account_label ?? "—"}</span></div>
         </div>
-        <StatusBadge status={c.status} />
+        {c.provider_disabled
+          ? <span data-testid="conn-provider-disabled" title={t("conn.providerDisabledHint")} className="shrink-0 rounded-full bg-slate-500/15 px-2 py-[2px] text-[10px] font-semibold uppercase text-ink2">{t("conn.providerDisabled")}</span>
+          : <StatusBadge status={c.status} />}
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
         {c.granted_capabilities.map((cap) => <CapChip key={cap} cap={cap} risk={defs.find((d) => d.id === cap)?.risk ?? "low"} />)}
@@ -39,7 +41,6 @@ function ConnectionCard({ c, onOpen }: { c: Connection; onOpen: () => void }) {
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-mute">
         {c.mode === "simulated" && <span className="rounded-full bg-violet-500/15 px-2 font-semibold text-violet-700">{t("conn.mode.simulated")}</span>}
         {c.read_only && <span className="rounded-full bg-amber-500/15 px-2 font-semibold text-amber-700">{t("conn.readOnlyBadge")}</span>}
-        {c.provider_disabled && <span data-testid="conn-provider-disabled" title={t("conn.providerDisabledHint")} className="rounded-full bg-slate-500/15 px-2 font-semibold text-ink2">{t("conn.providerDisabled")}</span>}
         <span>{t("conn.grantsCount", { count: c.grants_count })}</span>
         {c.credential?.hint && <span data-testid="conn-credential-hint">…{c.credential.hint}</span>}
         {c.last_used_at && <span>{t("conn.lastUsed")} {fmtDateTime(c.last_used_at)}</span>}
