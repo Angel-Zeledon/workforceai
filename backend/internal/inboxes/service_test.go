@@ -153,7 +153,7 @@ func TestAuthenticateRotateRevoke(t *testing.T) {
 		"other inbox":   {c.ID, other.Token},
 		"wrong id":      {"ibx_unknown", c.Token},
 		"no prefix":     {c.ID, strings.TrimPrefix(c.Token, inboxes.TokenPrefix)},
-		"tampered last": {c.ID, c.Token[:len(c.Token)-1] + "A"},
+		"tampered last": {c.ID, tamperLast(c.Token)},
 	} {
 		if _, _, err := e.svc.Authenticate(ctx, tc[0], tc[1]); !errors.Is(err, inboxes.ErrUnauthorized) {
 			t.Fatalf("%s: %v", name, err)
@@ -586,4 +586,14 @@ func TestPushesListIsBounded(t *testing.T) {
 	if len(ps) != 2 {
 		t.Fatalf("limit: %d", len(ps))
 	}
+}
+
+// tamperLast changes the last character of a token to a different one (a fixed replacement would sometimes
+// equal the original character and leave the token valid).
+func tamperLast(tok string) string {
+	r := "A"
+	if strings.HasSuffix(tok, "A") {
+		r = "B"
+	}
+	return tok[:len(tok)-1] + r
 }
