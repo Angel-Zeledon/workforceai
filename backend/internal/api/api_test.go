@@ -140,6 +140,7 @@ type opts struct {
 	portal         bool                // mount the client portal (portal_api_test.go); implies ws
 	debater        *debaterStub        // mount the team debates with this runtime (debates_api_test.go)
 	inboxes        *inboxOpts          // mount the data inboxes (inboxes_api_test.go); implies the drive
+	deps           func(d *api.Deps)   // last word on the dependencies before the router is built (linkimports_api_test.go)
 }
 
 type env struct {
@@ -299,6 +300,9 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	if o.inboxes != nil {
 		attachInboxes(&d, rec, o.inboxes)
+	}
+	if o.deps != nil {
+		o.deps(&d)
 	}
 	var svc *auth.Service
 	if o.auth {

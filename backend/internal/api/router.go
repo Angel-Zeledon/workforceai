@@ -30,6 +30,7 @@ import (
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
 	"aiworkforce/backend/internal/inboxes"
+	"aiworkforce/backend/internal/linkimports"
 	"aiworkforce/backend/internal/meetings" // meetings-block
 	"aiworkforce/backend/internal/memory"
 	"aiworkforce/backend/internal/notify"
@@ -145,6 +146,8 @@ type Deps struct {
 	Away *away.Service
 	// Customers serves /customers/* (customers.go): the customer district, clones and scoped folders (B12). Optional.
 	Customers *customers.Service
+	// LinkImports serves /link-imports/* (linkimports.go): import from a link, once or on a schedule. Optional.
+	LinkImports *linkimports.Service
 	// Portal serves the client portal (portal.go): branding, share links and the public read-only page.
 	// PortalLimiter throttles the public endpoints per client address (TrustedProxies decides when
 	// X-Forwarded-For is honoured); nil = an in-process limiter. Optional: nil Portal leaves the routes off.
@@ -312,6 +315,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountRituals(r)
 			s.mountAway(r)
 			s.mountCustomers(r)
+			s.mountLinkImports(r) // import from a link (single line)
 			s.mountPortal(r)
 			s.mountInboxes(r) // data inboxes: admin routes
 			s.mountPush(r)
