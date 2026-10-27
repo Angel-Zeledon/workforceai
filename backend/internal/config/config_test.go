@@ -91,6 +91,21 @@ func TestInvalidValuesFailBoot(t *testing.T) {
 	}
 }
 
+// v1: vendor-specific integrations are off unless VENDOR_INTEGRATIONS turns them on.
+func TestVendorIntegrationsDefaultOff(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("VENDOR_INTEGRATIONS", "")
+	c := Load()
+	if c.VendorIntegrations.Any() || c.VendorIntegrations.Enabled("google_gmail") || !c.VendorIntegrations.Enabled("custom_api") {
+		t.Fatalf("default must be off for vendors and on for the generic API source: %+v", c.VendorIntegrations.State())
+	}
+	t.Setenv("VENDOR_INTEGRATIONS", "github,unknown_x")
+	c = Load()
+	if !c.VendorIntegrations.Enabled("github") || c.VendorIntegrations.Enabled("slack") || len(c.VendorIntegrationsUnknown) != 1 {
+		t.Fatalf("list: %+v unknown=%v", c.VendorIntegrations.State(), c.VendorIntegrationsUnknown)
+	}
+}
+
 func TestCostControlEnv(t *testing.T) {
 	clearEnv(t)
 	c := Load()

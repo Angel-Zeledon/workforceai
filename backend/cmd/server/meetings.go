@@ -167,6 +167,9 @@ var meetingProviderIDs = []string{meetingcal.GoogleID, meetingcal.MicrosoftID}
 func (c *meetingCalendars) List(ctx context.Context, org string) ([]meetings.CalendarInfo, error) {
 	var out []meetings.CalendarInfo
 	for _, p := range meetingProviderIDs {
+		if !c.conns.ProviderEnabled(p) {
+			continue // v1: vendor calendars are off unless VENDOR_INTEGRATIONS turns them on
+		}
 		cs, err := c.conns.List(ctx, org, p, connections.StatusActive)
 		if err != nil {
 			return nil, err
@@ -184,7 +187,7 @@ func (c *meetingCalendars) Client(ctx context.Context, org, id string) (calendar
 	if err != nil {
 		return nil, calendar.ErrNotConfigured
 	}
-	if (cn.Provider != meetingcal.GoogleID && cn.Provider != meetingcal.MicrosoftID) || cn.Status != connections.StatusActive {
+	if (cn.Provider != meetingcal.GoogleID && cn.Provider != meetingcal.MicrosoftID) || cn.Status != connections.StatusActive || cn.ProviderDisabled {
 		return nil, calendar.ErrNotConfigured
 	}
 	var inner calendar.Client

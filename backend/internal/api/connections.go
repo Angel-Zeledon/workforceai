@@ -38,6 +38,9 @@ func (s *server) connErr(w http.ResponseWriter, err error) {
 	case errors.Is(err, vault.ErrNoKEK):
 		codeErr(w, http.StatusServiceUnavailable, "kek_missing",
 			"credential storage is not configured (set CONNECTIONS_KEK); use mode=simulated")
+	case errors.Is(err, connections.ErrProviderDisabled):
+		codeErr(w, http.StatusForbidden, connections.CodeProviderDisabled,
+			"vendor-specific integrations are disabled in this deployment (VENDOR_INTEGRATIONS); use a generic import")
 	case errors.Is(err, connections.ErrOAuthUnavailable):
 		codeErr(w, http.StatusServiceUnavailable, "oauth_not_configured", err.Error())
 	case errors.Is(err, connections.ErrNeedsSecondApprover):

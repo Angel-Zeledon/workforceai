@@ -267,6 +267,9 @@ func (g *Gateway) validate(ctx context.Context, c application.GatewayCall, t tar
 	if c.ReadOnlyRequest && side {
 		return connections.CodeReadOnlyMode
 	}
+	if !g.Conns.ProviderEnabled(cd.conn.Provider) {
+		return connections.CodeProviderDisabled // v1: vendor-specific integration switched off (VENDOR_INTEGRATIONS)
+	}
 	switch cd.conn.Status {
 	case connections.StatusActive:
 	case connections.StatusNeedsReauth:
