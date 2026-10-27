@@ -112,6 +112,8 @@ func modelWindow(name string) int {
 		return 128000
 	case strings.Contains(n, "kimi") || strings.Contains(n, "moonshot"):
 		return 128000
+	case strings.Contains(n, "gemini"):
+		return 1048576
 	}
 	return 128000
 }
@@ -306,12 +308,13 @@ func cmdUsage(c *cmdCall) (*cmdResult, *cmdFail) {
 // byoWords are the providers of the bring-your-own-model settings (application.LLMService).
 var byoWords = map[string]string{
 	"deepseek": "deepseek", "anthropic": "anthropic", "claude": "anthropic", "openai": "openai", "gpt": "openai", "chatgpt": "openai",
-	"kimi": "kimi", "moonshot": "kimi", "custom": "custom",
+	"kimi": "kimi", "moonshot": "kimi", "gemini": "gemini", "google": "gemini", "custom": "custom",
 }
 
 var providerWords = map[string]string{
 	"deepseek": "deepseek", "anthropic": "anthropic", "claude": "anthropic",
 	"custom": "custom", "kimi": "custom", "moonshot": "custom", "openai": "custom", "gpt": "custom",
+	"gemini": "gemini", "google": "gemini",
 }
 
 func cmdModel(c *cmdCall) (*cmdResult, *cmdFail) {

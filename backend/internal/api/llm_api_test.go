@@ -72,13 +72,59 @@ func TestLLMDefaultIsThePlatformModel(t *testing.T) {
 	}
 	var v application.LLMView
 	_ = json.Unmarshal(body, &v)
-	if v.ActiveProvider != "deepseek" || !v.UsingPlatformModel || !v.EncryptionOn || len(v.Providers) != 5 {
+	if v.ActiveProvider != "deepseek" || !v.UsingPlatformModel || !v.EncryptionOn || len(v.Providers) != 6 {
 		t.Fatalf("view = %s", body)
 	}
 	for _, p := range v.Providers {
 		if p.Configured {
 			t.Errorf("%s configured by default", p.ID)
 		}
+	}
+}
+
+func TestLLMPlatformProviderFollowsTheOperatorSetting(t *testing.T) {
+	t.Setenv("PLATFORM_LLM_PROVIDER", "gemini")
+	e := newEnv(t, opts{llm: true})
+	_, body := e.do("GET", "/api/v1/settings/llm", "", nil, nil)
+	var v application.LLMView
+	_ = json.Unmarshal(body, &v)
+	if v.ActiveProvider != "gemini" || v.PlatformDefault != "gemini" || !v.UsingPlatformModel {
+		t.Fatalf("view = %s", body)
+	}
+	for _, p := range v.Providers {
+		if p.Platform != (p.ID == "gemini") {
+			t.Errorf("%s platform = %v", p.ID, p.Platform)
+		}
+	}
+	// Choosing the platform provider without an own key stores "no choice" (the runtime default answers).
+	resp, body := e.do("PUT", "/api/v1/settings/llm/active", "", map[string]any{"provider": "gemini"}, nil)
+	if resp.StatusCode != 200 {
+		t.Fatalf("active = %d %s", resp.StatusCode, body)
+	}
+	// An unknown or "custom" value falls back to DeepSeek.
+	t.Setenv("PLATFORM_LLM_PROVIDER", "custom")
+	_, body = e.do("GET", "/api/v1/settings/llm", "", nil, nil)
+	_ = json.Unmarshal(body, &v)
+	if v.PlatformDefault != "deepseek" {
+		t.Fatalf("custom as platform = %s", v.PlatformDefault)
+	}
+}
+
+func TestLLMGeminiKeyIsStoredWithTheGoogleEndpoint(t *testing.T) {
+	e := newEnv(t, opts{llm: true})
+	resp, body := e.do("PUT", "/api/v1/settings/llm/providers/gemini", "", map[string]any{"api_key": fakeKey, "model": "gemini-3.8-flash"}, nil)
+	if resp.StatusCode != 200 {
+		t.Fatalf("put = %d %s", resp.StatusCode, body)
+	}
+	var v application.LLMView
+	_ = json.Unmarshal(body, &v)
+	for _, p := range v.Providers {
+		if p.ID == "gemini" && (!p.Configured || p.Model != "gemini-3.8-flash" || p.BaseURL != "https://generativelanguage.googleapis.com/v1beta/openai") {
+			t.Fatalf("gemini = %+v", p)
+		}
+	}
+	if strings.Contains(string(body), fakeKey) {
+		t.Fatal("key leaked")
 	}
 }
 

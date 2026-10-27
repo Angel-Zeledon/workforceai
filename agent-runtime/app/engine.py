@@ -115,7 +115,7 @@ class AgentEngine(abc.ABC):
     solo devuelve tool_requests para que el backend decida."""
 
     mode: str  # "simulation" | "live"
-    provider: str = "simulation"  # simulation | deepseek | anthropic | openai | kimi | custom
+    provider: str = "simulation"  # simulation | deepseek | anthropic | openai | kimi | gemini | custom
 
     @abc.abstractmethod
     async def plan(self, req: PlanRequest) -> PlanResponse: ...

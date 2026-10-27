@@ -163,7 +163,7 @@ class ProviderCredential(_Base):
     provider: str
     api_key: SecretStr = Field(repr=False)
     model: str = ""  # bare model name ("gpt-4.1"); empty = the provider's default
-    base_url: str | None = None  # openai / kimi / custom
+    base_url: str | None = None  # openai / kimi / gemini / custom
     org_id: str = ""  # OpenAI organization id (optional)
     project_id: str = ""  # OpenAI project id (optional)
 
@@ -173,7 +173,7 @@ class _ProviderPolicyMixin(_Base):
 
     allowed_providers: provider ids this request's data may be sent to (e.g. ["anthropic"] to exclude
         DeepSeek). The runtime applies it BEFORE sending; an empty list means "none" and fails with
-        the stable error code no_allowed_provider (HTTP 422). Known ids: deepseek, anthropic, openai, kimi, custom.
+        the stable error code no_allowed_provider (HTTP 422). Known ids: deepseek, anthropic, openai, kimi, gemini, custom.
         The operator ceiling ALLOWED_PROVIDERS (env) is intersected with it, never widened.
     preferred_providers: try these first (in order); the other allowed providers remain as fallbacks.
     role_providers: per agent role, the provider order to try first (organization policy; the
@@ -896,7 +896,7 @@ class ContextSizesResponse(_Base):
 class HealthResponse(_Base):
     status: str
     mode: Literal["simulation", "live"]
-    provider: Literal["simulation", "deepseek", "anthropic", "openai", "kimi", "custom"] = "simulation"
+    provider: Literal["simulation", "deepseek", "anthropic", "openai", "kimi", "gemini", "custom"] = "simulation"
     # Set when a provider is configured but the live engine could not start: the runtime
     # is answering in simulation and status is "degraded" (never a silent fallback).
     warning: str | None = None

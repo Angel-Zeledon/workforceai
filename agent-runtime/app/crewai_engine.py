@@ -263,10 +263,11 @@ class CrewAIEngine(AgentEngine):
         kw.update(reasoning_kwargs(cfg.id, cfg.model))
         if temperature is None or (cfg.id == "openai" and fixed_temperature_model(cfg.model)):
             kw.pop("temperature")  # reasoning models only accept their default
-        if cfg.id in ("deepseek", "kimi"):
+        if cfg.id in ("deepseek", "kimi", "gemini"):
             # Live finding (DeepSeek): long consolidations came back as invalid JSON (unescaped quotes
             # around char 13k). JSON mode guarantees syntactically valid JSON (the schema still goes in
-            # the instructions). Moonshot's Kimi has the same json_object mode and no json_schema.
+            # the instructions). Moonshot's Kimi has the same json_object mode and no json_schema; Gemini's
+            # OpenAI-compatible endpoint takes json_object as well (verified live 2026-10-27).
             kw["response_format"] = {"type": "json_object"}
             # (the old floor of 8192 output tokens is gone: every kind of call has its own env-configurable cap)
         if cfg.base_url:

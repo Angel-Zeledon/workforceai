@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/url"
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -25,8 +26,16 @@ import (
 // ErrLLMEncryptionOff: no key encryption key is configured, so a key cannot be stored (fail closed).
 var ErrLLMEncryptionOff = errors.New("llm: encryption is not configured on this server (CONNECTIONS_KEK); provider keys cannot be stored")
 
-// platformProvider is the platform default: DeepSeek with the operator's key.
-const platformProvider = "deepseek"
+// platformProvider is the platform default, answered with the operator's key: PLATFORM_LLM_PROVIDER (any catalog
+// provider except custom; it must match the key the agent runtime has, e.g. gemini with GEMINI_API_KEY), DeepSeek
+// when unset or unknown. Read on every call so a test or an operator can change it without a rebuild.
+func platformProvider() string {
+	p := strings.ToLower(strings.TrimSpace(os.Getenv("PLATFORM_LLM_PROVIDER")))
+	if _, ok := llmInfo(p); ok && p != "custom" {
+		return p
+	}
+	return "deepseek"
+}
 
 // LLMProviderInfo is the catalog entry of a provider (what the settings screen renders).
 type LLMProviderInfo struct {
@@ -44,7 +53,7 @@ type LLMProviderInfo struct {
 
 // LLMCatalog lists the providers, in display order.
 var LLMCatalog = []LLMProviderInfo{
-	{ID: "deepseek", Label: "DeepSeek", Platform: true, Models: []string{"deepseek-chat", "deepseek-reasoner"},
+	{ID: "deepseek", Label: "DeepSeek", Models: []string{"deepseek-chat", "deepseek-reasoner"},
 		DefaultModel: "deepseek-chat", KeyURL: "https://platform.deepseek.com/api_keys"},
 	{ID: "anthropic", Label: "Claude (Anthropic)", Models: []string{"claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-4-5"},
 		DefaultModel: "claude-sonnet-5-5", KeyURL: "https://console.anthropic.com/settings/keys"},
@@ -53,6 +62,11 @@ var LLMCatalog = []LLMProviderInfo{
 	{ID: "kimi", Label: "Kimi (Moonshot)", Models: []string{"kimi-k2-0905-preview", "kimi-k2-turbo-preview", "kimi-k2-thinking", "kimi-latest"},
 		DefaultModel: "kimi-k2-0905-preview", DefaultBaseURL: "https://api.moonshot.ai/v1", SupportsBaseURL: true,
 		KeyURL: "https://platform.moonshot.ai/console/api-keys"},
+	// Google's OpenAI-compatible endpoint (the runtime reaches it like Kimi). gemini-3.5-flash is deprecated and
+	// routed by Google to 3.6 Flash. Prices: model_prices.json.
+	{ID: "gemini", Label: "Gemini (Google)", Models: []string{"gemini-3.6-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.1-pro-preview"},
+		DefaultModel: "gemini-3.6-flash", DefaultBaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", SupportsBaseURL: true,
+		KeyURL: "https://aistudio.google.com/app/apikey"},
 	{ID: "custom", Label: "OpenAI-compatible", Models: []string{}, SupportsBaseURL: true, RequiresBaseURL: true},
 }
 
@@ -230,11 +244,12 @@ func (s *LLMService) Get(ctx context.Context) (LLMView, error) {
 		byID[r.Provider] = r
 	}
 	if active == "" {
-		active = platformProvider
+		active = platformProvider()
 	}
-	v := LLMView{ActiveProvider: active, PlatformDefault: platformProvider, EncryptionOn: s.Sealer != nil && s.Sealer.Enabled(),
+	v := LLMView{ActiveProvider: active, PlatformDefault: platformProvider(), EncryptionOn: s.Sealer != nil && s.Sealer.Enabled(),
 		Providers: []LLMProviderView{}, Warnings: []string{}}
 	for _, info := range LLMCatalog {
+		info.Platform = info.ID == platformProvider()
 		pv := LLMProviderView{LLMProviderInfo: info, Model: info.DefaultModel, BaseURL: info.DefaultBaseURL}
 		if info.Models == nil {
 			pv.Models = []string{}
@@ -254,7 +269,7 @@ func (s *LLMService) Get(ctx context.Context) (LLMView, error) {
 		v.Providers = append(v.Providers, pv)
 	}
 	_, hasOwn := byID[active]
-	v.UsingPlatformModel = active == platformProvider && !hasOwn
+	v.UsingPlatformModel = active == platformProvider() && !hasOwn
 	return v, nil
 }
 
@@ -411,14 +426,14 @@ func (s *LLMService) Delete(ctx context.Context, provider string) (LLMView, erro
 	if err != nil {
 		return LLMView{}, err
 	}
-	reset := active == provider && provider != platformProvider
+	reset := active == provider && provider != platformProvider()
 	if reset {
 		if err := s.Store.PutLLMActive(ctx, org, "", ActorFrom(ctx, "user")); err != nil {
 			return LLMView{}, err
 		}
 	}
-	if active == provider && provider == platformProvider {
-		// deleting the organization's own DeepSeek key returns to the platform's DeepSeek: same provider id
+	if active == provider && provider == platformProvider() {
+		// deleting the organization's own key of the platform provider returns to the platform's: same provider id
 		reset = false
 	}
 	s.invalidate(org)
@@ -426,11 +441,11 @@ func (s *LLMService) Delete(ctx context.Context, provider string) (LLMView, erro
 	return s.Get(ctx)
 }
 
-// SetActive chooses the provider the organization's agents use. "" or "deepseek" without an own key is the platform default.
+// SetActive chooses the provider the organization's agents use. "" or the platform provider without an own key is the platform default.
 func (s *LLMService) SetActive(ctx context.Context, provider string) (LLMView, error) {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	if provider == "" {
-		provider = platformProvider
+		provider = platformProvider()
 	}
 	if _, ok := llmInfo(provider); !ok {
 		return LLMView{}, fmt.Errorf("%w: unknown provider %q", domain.ErrInvalid, provider)
@@ -441,7 +456,7 @@ func (s *LLMService) SetActive(ctx context.Context, provider string) (LLMView, e
 		return LLMView{}, err
 	}
 	has := slices.ContainsFunc(recs, func(r LLMCredentialRecord) bool { return r.Provider == provider })
-	if !has && provider != platformProvider {
+	if !has && provider != platformProvider() {
 		return LLMView{}, fmt.Errorf("%w: add an API key for %s before using it", domain.ErrInvalid, provider)
 	}
 	if s.Policy != nil {
@@ -451,7 +466,7 @@ func (s *LLMService) SetActive(ctx context.Context, provider string) (LLMView, e
 	}
 	before, _ := s.Store.GetLLMActive(ctx, org)
 	store := provider
-	if provider == platformProvider && !has {
+	if provider == platformProvider() && !has {
 		store = ""
 	}
 	if err := s.Store.PutLLMActive(ctx, org, store, ActorFrom(ctx, "user")); err != nil {
@@ -459,7 +474,7 @@ func (s *LLMService) SetActive(ctx context.Context, provider string) (LLMView, e
 	}
 	s.invalidate(org)
 	if before == "" {
-		before = platformProvider
+		before = platformProvider()
 	}
 	s.audit(ctx, "settings.llm_active_changed", provider, map[string]any{"before": before, "after": provider})
 	return s.Get(ctx)
@@ -510,7 +525,7 @@ func (s *LLMService) Test(ctx context.Context, provider string, in LLMInput) (LL
 	stored := false
 	if key == "" {
 		if prev == nil {
-			if provider == platformProvider {
+			if provider == platformProvider() {
 				return LLMTestResult{}, fmt.Errorf("%w: the platform's included model needs no test; enter your own key to test it", domain.ErrInvalid)
 			}
 			return LLMTestResult{}, fmt.Errorf("%w: enter an API key to test", domain.ErrInvalid)
@@ -579,7 +594,7 @@ func (s *LLMService) audit(ctx context.Context, action, provider string, details
 // Without a choice the policy is returned untouched (platform default).
 func (s *LLMService) Apply(ctx context.Context, p RuntimePolicy) RuntimePolicy {
 	c := s.load(ctx)
-	if c.active == "" || c.active == platformProvider && !c.byo {
+	if c.active == "" || c.active == platformProvider() && !c.byo {
 		return p
 	}
 	out := p
@@ -626,7 +641,7 @@ func (s *LLMService) read(ctx context.Context, org string) cachedLLM {
 	recs, err := s.Store.ListLLMCredentials(ctx, org)
 	if err != nil {
 		slog.Warn("llm credentials unavailable", "org", org, "err", err)
-		return cachedLLM{active: active, byo: active != platformProvider, creds: []RuntimeCredential{{Provider: active}}}
+		return cachedLLM{active: active, byo: active != platformProvider(), creds: []RuntimeCredential{{Provider: active}}}
 	}
 	for _, r := range recs {
 		if r.Provider != active {

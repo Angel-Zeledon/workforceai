@@ -48,7 +48,7 @@ function ProviderCard({ p, active, encryption, onChange, onError }: {
         {p.platform && !p.configured && <span data-testid="llm-badge-default" className="rounded bg-emerald-500/15 px-1.5 py-[2px] text-[10px] font-semibold uppercase text-emerald-800">{t("llm.included")}</span>}
         {p.configured && <span className="rounded bg-sky-500/15 px-1.5 py-[2px] text-[10px] font-semibold text-sky-800" data-testid={`llm-saved-${p.id}`}>{t("llm.keySaved", { last4: p.key_last4 || "····" })}</span>}
       </div>
-      <p className="mt-1 text-[12px] text-mute">{t(`llm.help.${p.id}`)}</p>
+      <p className="mt-1 text-[12px] text-mute">{p.platform ? t("llm.help.platform", { name: p.label }) : t(`llm.help.${p.id}`)}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         <button type="button" data-testid={`llm-use-${p.id}`} disabled={busy || active || (!p.configured && !p.platform)}
           onClick={() => void run(() => llmApi.use(p.id))}
@@ -141,7 +141,7 @@ export function ModelProviderSettings() {
       <h3 className="mb-1 flex flex-wrap items-center gap-2 font-display text-[15px] font-semibold">{t("llm.title")}
         {view.using_platform_model && <span data-testid="llm-default-badge" className="rounded bg-emerald-500/15 px-1.5 py-[2px] text-[10px] font-semibold uppercase text-emerald-800">{t("llm.defaultBadge", { name: platform?.label ?? "DeepSeek" })}</span>}
       </h3>
-      <p className="mb-3 text-[12px] text-mute">{t("llm.intro")}</p>
+      <p className="mb-3 text-[12px] text-mute">{t("llm.intro", { name: platform?.label ?? "DeepSeek" })}</p>
       {err && <div role="alert" data-testid="llm-error" className="mb-2 text-[12px] font-semibold text-red-600">{err}</div>}
       <div className="grid gap-3 sm:grid-cols-2">
         {view.providers.map((p) => (

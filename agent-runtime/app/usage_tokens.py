@@ -10,6 +10,9 @@ Raw provider fields:
   Anthropic                     usage.cache_read_input_tokens                    (input_tokens EXCLUDES them)
                                 usage.cache_creation_input_tokens: cache WRITES. Not a hit and not discounted
                                 (Anthropic charges a premium for them): counted as ordinary input.
+  Gemini (OpenAI-compatible)    completion_tokens EXCLUDES the thinking tokens, which are billed as output; they
+                                only show in total_tokens (prompt + completion + thoughts), so the gap is added
+                                to the output.
 """
 from __future__ import annotations
 
@@ -29,9 +32,16 @@ def _int(v: Any) -> int:
         return 0
 
 
+def _hidden_thoughts(usage: Any, prompt: int, completion: int) -> int:
+    """Tokens in total_tokens that neither prompt nor completion account for (Gemini's thinking), else 0."""
+    return max(0, _int(_get(usage, "total_tokens")) - prompt - completion)
+
+
 def tokens_from_raw_usage(usage: Any) -> tuple[int, int, int]:
     """(input_total, cached, output) from a raw provider `usage` object or dict (any supported provider)."""
     out = _int(_get(usage, "completion_tokens") or _get(usage, "output_tokens"))
+    if _get(usage, "completion_tokens") is not None and _get(usage, "completion_tokens_details") is None:
+        out += _hidden_thoughts(usage, _int(_get(usage, "prompt_tokens")), out)
     if _get(usage, "cache_read_input_tokens") is not None or _get(usage, "cache_creation_input_tokens") is not None:
         read, write = _int(_get(usage, "cache_read_input_tokens")), _int(_get(usage, "cache_creation_input_tokens"))
         return _int(_get(usage, "input_tokens")) + read + write, read, out  # Anthropic: input excludes both
@@ -55,4 +65,6 @@ def tokens_from_metrics(m: Any, provider: str = "") -> tuple[int, int, int]:
     cached = _int(_get(m, "cached_prompt_tokens") or _get(m, "cached_tokens"))
     if cached > inp:
         inp += cached
+    if provider == "gemini":  # thinking tokens are only in total_tokens (see the module docstring)
+        out += _hidden_thoughts(m, inp, out)
     return inp, cached, out
