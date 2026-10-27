@@ -346,16 +346,36 @@ _NO_BALANCE = re.compile(r"insufficient.?balance|insufficient_quota|exceeded you
 
 
 # Gemini answers a per-minute rate limit with the same "You exceeded your current quota" text as an empty account,
-# but adds "Please retry in 12.3s" / a retryDelay. Only "limit: 0" (the model is not in the key's plan) is final.
+# but adds "Please retry in 12.3s" / a retryDelay. That one is transient. It is final when the model is not in the
+# key's plan ("limit: 0") or the wait is long: the free tier's daily cap (live, 2026-10-27: 20 requests per day per
+# model) says "Please retry in 11h27m33s" / "retryDelay: '41253s'", and retrying in seconds cannot help.
 _RETRY_HINT = re.compile(r"retry in \d|retrydelay", re.I)
 _ZERO_LIMIT = re.compile(r"limit:\s*0\b", re.I)
+_RETRY_IN = re.compile(r"retry in\s+(?:(\d+)h)?\s*(?:(\d+)m(?!s))?\s*(?:([\d.]+)s)?", re.I)
+_RETRY_DELAY = re.compile(r"retrydelay\W+(\d+(?:\.\d+)?)s", re.I)
+_PER_DAY = re.compile(r"per\s?day", re.I)
+MAX_TRANSIENT_WAIT_S = 120.0
+
+
+def retry_after_s(text: str) -> float | None:
+    """The wait the provider asks for, in seconds ("retry in 1h2m3.5s" or retryDelay "3723s"); None if absent."""
+    m = _RETRY_DELAY.search(text)
+    if m:
+        return float(m.group(1))
+    m = _RETRY_IN.search(text)
+    if m and any(m.groups()):
+        h, mins, s = m.groups()
+        return int(h or 0) * 3600 + int(mins or 0) * 60 + float(s or 0)
+    return None
 
 
 def is_no_balance(exc: BaseException) -> bool:
-    """The provider account has no money left: never worth a retry on the same provider."""
+    """The provider account has no money (or quota) left for now: never worth a retry on the same provider."""
     text = f"{type(exc).__name__} {exc}"
-    if _RETRY_HINT.search(text) and not _ZERO_LIMIT.search(text):
-        return False  # a rate limit that tells us when to come back: transient
+    if _RETRY_HINT.search(text) and not _ZERO_LIMIT.search(text) and not _PER_DAY.search(text):
+        wait = retry_after_s(text)
+        if wait is None or wait <= MAX_TRANSIENT_WAIT_S:
+            return False  # a short rate limit that tells us when to come back: transient
     return bool(_NO_BALANCE.search(text))
 
 

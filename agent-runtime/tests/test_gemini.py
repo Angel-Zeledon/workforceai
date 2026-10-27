@@ -7,7 +7,7 @@ from app.cost_control import reasoning_kwargs
 from app.models import ProviderCredential
 from app.providers import (GEMINI_BASE_URL, KNOWN_PROVIDERS, ProviderConfig, ProviderPolicy, candidates,
                            config_from_credential, configured_providers, default_provider, is_no_balance,
-                           is_transient, litellm_model, temperature_for, vision_capable)
+                           is_transient, litellm_model, retry_after_s, temperature_for, vision_capable)
 from app.usage_tokens import tokens_from_metrics, tokens_from_raw_usage
 
 ENV = ("GEMINI_API_KEY", "GEMINI_MODEL", "GEMINI_BASE_URL", "DEEPSEEK_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY",
@@ -109,5 +109,16 @@ def test_gemini_rate_limit_is_transient_but_a_zero_limit_is_final():
                 "Quota exceeded for metric: generate_content_free_tier_requests, limit: 0, model: gemini-3.8-flash. "
                 "Please retry in 3s.")
     assert is_no_balance(zero)
+    # Free tier daily cap (live text, 2026-10-27): a long wait is final, not a retry.
+    daily = _Err("Error code: 429 - You exceeded your current quota, please check your plan and billing details. "
+                 "Quota exceeded for metric: generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash, "
+                 "description: Generate content requests per day limit exceeded on Free Tier.\n"
+                 "Please retry in 11h27m33.817252769s. {'retryDelay': '41253s'}")
+    assert is_no_balance(daily)
+    long_wait = _Err("429 You exceeded your current quota. Please retry in 5m2s.")
+    assert is_no_balance(long_wait)
+    assert retry_after_s("Please retry in 11h27m33.8s") == pytest.approx(11 * 3600 + 27 * 60 + 33.8)
+    assert retry_after_s("Please retry in 18.5s") == 18.5
+    assert retry_after_s("{'retryDelay': '41253s'}") == 41253
     busy = _Err("Error code: 503 - This model is currently experiencing high demand. Please try again later.")
     assert is_transient(busy) and not is_no_balance(busy)
