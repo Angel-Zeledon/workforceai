@@ -139,6 +139,7 @@ type opts struct {
 	customers      bool                // mount the customer district and scope requests (customers_api_test.go)
 	portal         bool                // mount the client portal (portal_api_test.go); implies ws
 	debater        *debaterStub        // mount the team debates with this runtime (debates_api_test.go)
+	deps           func(d *api.Deps)   // last word on the dependencies before the router is built (linkimports_api_test.go)
 }
 
 type env struct {
@@ -295,6 +296,9 @@ func newEnv(t *testing.T, o opts) *env {
 				return err == nil
 			}}
 		d.Rewards, d.Rec = coins, rec
+	}
+	if o.deps != nil {
+		o.deps(&d)
 	}
 	var svc *auth.Service
 	if o.auth {
