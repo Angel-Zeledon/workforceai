@@ -23,6 +23,10 @@ const uid = (p: string) => `${p}_${(++seq).toString(36)}`;
 const nowIso = () => new Date().toISOString();
 const ago = (min: number) => new Date(Date.now() - min * 60000).toISOString();
 
+// v1 (backend/internal/integrations): vendor-specific connectors are off, as in a deployment without VENDOR_INTEGRATIONS.
+// The demo keeps its seeded Gmail connections (flagged provider_disabled) so the evidence and audit stories still read.
+const VENDOR_PROVIDERS = new Set(["github", "google_calendar", "google_calendar_sync", "google_drive", "google_gmail", "linkedin", "microsoft_calendar", "slack"]);
+
 const PROVIDERS: ProviderDef[] = [
   {
     id: "google_gmail", auth: ["oauth2_byo_app"], available: true, phase: "C2", split_read_write: true,
@@ -137,6 +141,7 @@ export class MockConnections {
         requested_capabilities: ["mail.draft", "mail.send"], granted_capabilities: ["mail.draft", "mail.send"], resource_scope: {}, credential: cred(),
         oauth_client_id: "demo-app.apps.example", grants_count: 1, last_tested_at: ago(30) },
     ];
+    for (const c of this.connections) c.provider_disabled = VENDOR_PROVIDERS.has(c.provider);
     const g = (id: string, conn: string, caps: string[], extra: Partial<Grant> = {}): Grant => ({
       id, connection_id: conn, agent_id: "assistant", capabilities: caps, resource_scope: {}, constraints: {}, max_risk: caps.includes("mail.send") ? "high" : "low",
       valid_until: null, status: "active", granted_by: "u_ana", requested_by: "u_ana", approved_by: caps.some((c) => isWriteCap("google_gmail", c)) ? "u_luis" : null,
@@ -274,7 +279,7 @@ export class MockConnections {
   async handle(method: string, seg: string[], q: URLSearchParams, body: any): Promise<unknown> {
     const [r0, r1, r2, r3] = seg;
 
-    if (r0 === "connection-providers") return { items: PROVIDERS };
+    if (r0 === "connection-providers") return { items: PROVIDERS.filter((p) => !VENDOR_PROVIDERS.has(p.id)) };
 
     if (r0 === "dev") {
       if (r1 === "viewer" && method === "POST") {

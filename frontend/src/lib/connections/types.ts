@@ -86,6 +86,8 @@ export interface Connection {
   mode: "live" | "simulated";
   status: ConnStatus;
   status_reason: string | null;
+  /** Vendor-specific integration switched off for v1 (VENDOR_INTEGRATIONS): kept, but cannot be used. */
+  provider_disabled?: boolean;
   profile?: "read" | "write";
   requested_capabilities: string[];
   granted_capabilities: string[];

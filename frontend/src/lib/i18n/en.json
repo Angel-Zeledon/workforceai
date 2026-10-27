@@ -952,6 +952,8 @@
   "conn.noCaps": "No permissions granted",
   "conn.mode.simulated": "Simulated",
   "conn.readOnlyBadge": "Read-only",
+  "conn.providerDisabled": "Off in v1",
+  "conn.providerDisabledHint": "Vendor-specific integration: it is switched off in this version. The connection is kept and you can revoke it, but agents cannot use it.",
   "conn.grantsCount_one": "{count} employee with access",
   "conn.grantsCount_other": "{count} employees with access",
   "conn.lastUsed": "Last used",

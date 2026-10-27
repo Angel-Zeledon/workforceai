@@ -9,6 +9,10 @@ Status:
 | **Slack, two-way** (Approve / Reject buttons, slash command) | **implemented** (A6), not yet tried against a real workspace | `backend/internal/slackapp`, `08-api.md` section 35, migration 801 |
 | WhatsApp Business | design only (needs the owner's Meta business account) | this document, last section |
 
+**v1:** the two-way Slack channel is OFF unless the operator sets `VENDOR_INTEGRATIONS=on` (or a list that includes
+`slack`): its request URLs are not mounted and its settings endpoint answers `{available: false}`; the Security center
+hides the card. See `integrations-credentials.md`, section "v1: solo importaciones genéricas".
+
 The two-way Slack channel is a different thing from the **Slack connector of the agents**
 (`backend/internal/connections/slack`, a tool an agent uses through the Tool Gateway with its own vaulted credential and
 human approval on every post). The channel is for people; it has its own app, its own secrets and never shares them

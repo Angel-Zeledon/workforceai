@@ -37,6 +37,7 @@ function ConnectionCard({ c, onOpen }: { c: Connection; onOpen: () => void }) {
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-mute">
         {c.mode === "simulated" && <span className="rounded-full bg-violet-500/15 px-2 font-semibold text-violet-700">{t("conn.mode.simulated")}</span>}
         {c.read_only && <span className="rounded-full bg-amber-500/15 px-2 font-semibold text-amber-700">{t("conn.readOnlyBadge")}</span>}
+        {c.provider_disabled && <span data-testid="conn-provider-disabled" title={t("conn.providerDisabledHint")} className="rounded-full bg-slate-500/15 px-2 font-semibold text-ink2">{t("conn.providerDisabled")}</span>}
         <span>{t("conn.grantsCount", { count: c.grants_count })}</span>
         {c.credential?.hint && <span data-testid="conn-credential-hint">…{c.credential.hint}</span>}
         {c.last_used_at && <span>{t("conn.lastUsed")} {fmtDateTime(c.last_used_at)}</span>}

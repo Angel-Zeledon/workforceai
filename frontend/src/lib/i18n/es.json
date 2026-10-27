@@ -952,6 +952,8 @@
   "conn.noCaps": "Sin permisos concedidos",
   "conn.mode.simulated": "Simulada",
   "conn.readOnlyBadge": "Solo lectura",
+  "conn.providerDisabled": "Desactivada en v1",
+  "conn.providerDisabledHint": "Integración específica de un proveedor: está apagada en esta versión. La conexión se conserva y puedes revocarla, pero los agentes no pueden usarla.",
   "conn.grantsCount_one": "{count} empleado con acceso",
   "conn.grantsCount_other": "{count} empleados con acceso",
   "conn.lastUsed": "Último uso",

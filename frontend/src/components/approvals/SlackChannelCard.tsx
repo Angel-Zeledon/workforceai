@@ -42,7 +42,8 @@ export function SlackChannelCard() {
   const apply = useCallback((s: SlackSettings) => { setCfg(s); setSigning(""); setToken(""); }, []);
   const loadLinks = useCallback(() => slackApi.myLink().then((r) => setLinks(r.links)).catch(() => setLinks(null)), []);
   useEffect(() => {
-    slackApi.settings().then(apply).catch(() => setCfg(null)); // admins only (org:manage)
+    // admins only (org:manage). {available:false}: vendor integrations are off in this deployment (v1) -> no card.
+    slackApi.settings().then((s) => ((s as { available?: boolean }).available === false ? setCfg(null) : apply(s))).catch(() => setCfg(null));
     loadLinks();
   }, [apply, loadLinks]);
   if (!cfg && !links) return null;

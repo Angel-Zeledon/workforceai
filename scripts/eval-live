@@ -7,7 +7,7 @@ the provider, and the runtime's own estimate when the case has one.
 
 It spends real money, so it refuses to run unless:
   * --live is passed explicitly, and
-  * a provider key is present (ANTHROPIC_API_KEY, DEEPSEEK_API_KEY or CUSTOM_LLM_API_KEY), and
+  * a provider key is present (GEMINI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY or CUSTOM_LLM_API_KEY), and
   * the runtime's /healthz reports mode=live.
 
 Usage:
@@ -28,7 +28,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-KEYS = ("ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "CUSTOM_LLM_API_KEY")
+KEYS = ("GEMINI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "CUSTOM_LLM_API_KEY")
 
 
 def call(url: str, path: str, body: dict | None = None, timeout: float = 300) -> tuple[int, dict, float]:

@@ -10,6 +10,36 @@ Convenciones de esta spec (las mismas del repo):
 - Migraciones reales en `backend/internal/infrastructure/postgres/migrations/` (ids `TEXT`, `org_id TEXT`, RLS con `app_current_org()` y `FORCE ROW LEVEL SECURITY`). Esta feature quedó en `240_connections.sql` y `241_controls.sql` (los números provisionales 205/206 se renumeraron tras `210_cost_ledger.sql` y `230_org_config.sql`; ver sec. 18).
 - **`data-testid`**: el e2e cuenta `[data-testid^="agent-"]` y `[data-testid^="approval-"]`. Ningún id nuevo puede empezar con `agent-` ni `approval-`. Esta spec usa los prefijos `conn-` y `ctl-`.
 
+## v1: solo importaciones genéricas
+
+Decisión del dueño (2026-10-27): la v1 **no** incluye integraciones atadas a un producto concreto (Gmail, Google
+Calendar/Drive, GitHub, LinkedIn, calendario de Microsoft 365, Slack, ni el canal de Slack de dos vías). Si un cliente
+necesita una, se le construye como feature aparte. Lo que sí hay en v1 son formas **genéricas** de traer datos:
+
+| Vía | Dirección | Dónde |
+|---|---|---|
+| Fuente de API genérica (`custom_api`) | los agentes consultan, solo lectura | este documento, `08-api.md` |
+| Buzones de datos | cualquier software empuja JSON/CSV/archivos a una URL con token | `data-inboxes.md` |
+| Importar desde un enlace | el backend descarga un CSV/JSON/XLSX de una URL, una vez o programado | `link-imports.md` |
+| Subir archivos (unidad, chat, "Antes de empezar") | manual | `drive.md` |
+
+El código de los conectores de proveedor **se conserva** y se apaga con un interruptor del backend:
+
+| `VENDOR_INTEGRATIONS` | Efecto |
+|---|---|
+| vacío / `off` / `false` / `0` (por defecto) | todos apagados |
+| `on` / `true` / `1` / `all` | todos encendidos (comportamiento anterior a v1) |
+| lista, p. ej. `github,slack` | solo esos (`slack` cubre también el canal de dos vías) |
+
+Con un proveedor apagado: desaparece del catálogo (`GET /connection-providers`); crear, probar, conceder,
+re-autorizar o ejecutar responde `403 vendor_integrations_disabled`; las conexiones que ya existían se conservan y se
+listan con `provider_disabled: true` (se pueden revocar, no usar); el canal de Slack no monta sus URLs (404) y
+`GET /channels/slack/settings` responde `{available: false}`. `GET /org/settings` expone el estado en
+`vendor_integrations {enabled, all, providers}`. `custom_api` nunca se apaga. Código: `backend/internal/integrations`.
+
+Fuera del interruptor, a propósito: los avisos salientes de aprobaciones por webhook de Slack/Teams
+(`approvals-notify.md`) son un POST a una URL que pega el admin, no una integración con la cuenta del proveedor.
+
 ---
 
 ## 0. Decisiones (resumen)
