@@ -29,6 +29,7 @@ import (
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
+	"aiworkforce/backend/internal/inboxes"
 	"aiworkforce/backend/internal/meetings" // meetings-block
 	"aiworkforce/backend/internal/memory"
 	"aiworkforce/backend/internal/notify"
@@ -150,6 +151,13 @@ type Deps struct {
 	Portal         *portal.Service
 	PortalLimiter  auth.Limiter
 	TrustedProxies []netip.Prefix
+	// Inboxes serves the data inboxes (inboxes.go): admin routes under /data-inboxes and the public
+	// POST /inbox/{id} (bearer token only). InboxLimiter counts the public pushes per client address and per
+	// inbox (nil = an in-process limiter). InboxBaseURL is the public API base (".../api/v1") used to show the
+	// absolute push URL ("" = the UI composes it). Optional: nil Inboxes leaves the routes off.
+	Inboxes      *inboxes.Service
+	InboxLimiter auth.Limiter
+	InboxBaseURL string
 	// Chats serves the chat history (chat_history.go): the enriched GET /conversations,
 	// rename/archive/delete and /chats/*. Optional: nil keeps the plain list.
 	Chats *application.ChatHistory
@@ -247,6 +255,7 @@ func NewRouter(d Deps) http.Handler {
 		s.mountSlackPublic(r)    // Slack channel: request URLs authenticated by the Slack signature
 		s.mountMeetingsPublic(r) // meetings: public ICS feed (secret token in the URL)
 		s.mountPortalPublic(r)   // client portal: the read-only page of a share link (token in the body)
+		s.mountInboxesPublic(r)  // data inboxes: POST /inbox/{id}, Authorization: Bearer <inbox token>
 		r.Group(func(r chi.Router) {
 			r.Use(s.authenticate, s.tenant)
 			r.With(s.can(auth.PermAgentsRead)).Get("/agents", s.listAgents)
@@ -304,6 +313,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountAway(r)
 			s.mountCustomers(r)
 			s.mountPortal(r)
+			s.mountInboxes(r) // data inboxes: admin routes
 			s.mountPush(r)
 			s.mountNotify(r) // approvals-notify: channel settings, plan usage, daily goal
 			s.mountSlack(r)  // Slack channel: settings card and account link

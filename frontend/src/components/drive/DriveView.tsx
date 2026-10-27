@@ -135,6 +135,7 @@ function Author({ p }: { p: DriveFile["updated_by"] }) {
   const name = useAgentName();
   if (p.kind === "agent") return <span className="inline-flex items-center gap-1"><span className="rounded bg-accent/10 px-1 text-[10px] font-semibold uppercase text-accent">{t("drive.agent")}</span>{name(p.id)}</span>;
   if (p.kind === "system") return <span className="text-mute">{t("drive.system")}</span>;
+  if (p.kind === "inbox") return <span data-testid="drive-author-inbox" title={t("dataInbox.authorHint")} className="inline-flex items-center gap-1"><span className="rounded bg-amber-500/15 px-1 text-[10px] font-semibold uppercase text-amber-700">{t("dataInbox.author")}</span>{p.id}</span>;
   return <span>{t("drive.person")}</span>;
 }
 

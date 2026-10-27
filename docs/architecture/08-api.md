@@ -1102,3 +1102,27 @@ Antes de una decisión de alto impacto, de 2 a 4 agentes debaten en la sala de r
 | POST | `/requests` `{text, debate: true}` | `requests:create` | aditivo: añade la marca `[[debate]]`; el plan se debate antes de ejecutarse |
 
 Eventos: `debate.started` `{debate_id, topic, participants, trigger, request_id, task_id, max_turns}`, `debate.completed` `{debate}`, `debate.failed` `{debate_id, participants, code, request_id}`. Auditoría (metadatos, nunca el texto): `debate.completed` `{trigger, task_id, participants, turns, max_turns, model, cost_usd}`, `debate.failed` `{trigger, task_id, reason}`. Runtime (aditivo): `POST /v1/debate` `{topic, details, options, participants[{id, name, role, title, area}], moderator, max_turns, locale, tone, max_cost_usd}` → `{options, turns, synthesis, usage}`; `PlanTask.decision` (opcional) en `/v1/plan`.
+
+## 39. Buzones de datos (entrada genérica)
+
+Una URL y un token secreto a los que cualquier programa (scripts, exportaciones de un ERP, n8n/Zapier/Make, curl) envía JSON, CSV o archivos sin que la plataforma integre ese programa. Cada envío se guarda como un archivo **versionado** del drive con autor `{kind: "inbox", id}`; al leerlo, un agente lo ve como contenido de otros (marcado) y cualquier acción externa derivada pide aprobación humana. El token (`aiwi_` + 256 bits) se muestra una sola vez; se guarda su SHA-256 y sus últimos 4 caracteres (`token_hint`). Diseño, modelo de seguridad y límites: `docs/architecture/data-inboxes.md`. Migración `803_data_inboxes` (`data_inboxes`, `data_inbox_pushes`, RLS por organización + política de sólo lectura por hash del token; script de bajada).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/data-inboxes` | `org:manage` | `[{id, name, slug, folder, customer_id, allowed[json\|csv\|files], max_bytes, rate_per_min, token_hint, created_by, created_at, updated_at, rotated_at, revoked_at, revoked_by?, last_push_at, push_count, status: active\|revoked, folder_path, push_path, push_url}]`, más nuevo primero; nunca el token ni su hash |
+| POST | `/data-inboxes` `{name, folder?, customer_id?, allowed?, max_bytes?, rate_per_min?}` | `org:manage` | `201` con el buzón y `token` (única vez, `Cache-Control: no-store`). `folder` bajo `/Shared` o un `/Projects/<proyecto>` existente (vacío = `/Shared/Imports/<slug>`); con `customer_id`, relativa a la carpeta del cliente (vacío = `Imports/<slug>`). `allowed` vacío = `json, csv`; `max_bytes` 1 KB..`DRIVE_MAX_FILE_MB` (5 MB por defecto); `rate_per_min` 1..600 (30). `400 invalid`; `409` con 50 activos. Auditado (`inbox.created`) |
+| GET | `/data-inboxes/{id}` | `org:manage` | un buzón; `404 not_found` si no es de la organización |
+| PUT | `/data-inboxes/{id}` `{name, allowed, max_bytes, rate_per_min}` | `org:manage` | el destino, el cliente y el token no cambian; `409` si está revocado. Auditado (`inbox.updated`) |
+| POST | `/data-inboxes/{id}/rotate` | `org:manage` | `200` con el buzón y el `token` nuevo (única vez); el anterior deja de funcionar al instante; `409` si está revocado. Auditado (`inbox.token_rotated`) |
+| DELETE | `/data-inboxes/{id}` | `org:manage` | revoca para siempre (idempotente); los archivos quedan en el drive. Auditado (`inbox.revoked`) |
+| GET | `/data-inboxes/{id}/pushes?limit=` | `org:manage` | `[{id, inbox_id, status, size, received_at, files[{file_id, path, name, version, size, mime, kind, created, unchanged}]}]`, más nuevo primero (20 por defecto, 100 máx.); sólo metadatos |
+
+`push_url` sale de `PUBLIC_API_URL` (o `UI_BASE_URL` + `/api/v1`); vacío si no hay ninguna y la interfaz la arma con su propio origen.
+
+Pública (sin sesión, fuera del middleware de usuario; `no-store`, `nosniff`, `no-referrer`):
+
+| Método | Ruta | Notas |
+|---|---|---|
+| POST | `/inbox/{id}` | `Authorization: Bearer <token>` **sólo en la cabecera**. Cuerpo `application/json` (o `+json`, `application/x-ndjson`), `text/csv`, `text/tab-separated-values`, un tipo de archivo del drive, o `multipart/form-data` (hasta 20 partes de archivo; los campos sin archivo se ignoran). Cabeceras opcionales `X-Filename` (cuerpos crudos) y `X-Idempotency-Key` (≤ 200 ASCII). `201` `{push_id, inbox_id, received_at, size, files[...], replayed: false, ignored_fields?}`; `200` con `replayed: true` si la clave ya se vio. Errores `{code, error}`: `400 token_in_query` (token en la URL: rótalo), `401 unauthorized` (sin token, desconocido, revocado, rotado o de otro buzón: indistinguibles; `WWW-Authenticate: Bearer`), `429 rate_limited` (`Retry-After`; 600/min por dirección antes de autenticar y `rate_per_min` por buzón), `413 payload_too_large` (un `Content-Length` mayor se rechaza antes de leer; los cuerpos chunked se cortan), `415 kind_not_allowed` / `415 unsupported_media_type`, `400 bad_payload` (JSON inválido, multipart mal formado, vacío, `X-Filename` que no coincide), `409 push_in_progress` / `409 customer_unavailable`, `423 read_only_mode`, `503 kill_switch_active`, `507 quota_exceeded`, `503 unavailable` (limitador ilegible; falla cerrado) |
+
+Eventos: `inbox.data_received` `{inbox_id, inbox_name, push_id, customer_id, size, files[{file_id, path, name, size, mime, version}], received_at}`. Auditoría (metadatos, nunca el contenido ni el token): `inbox.push_received` `{push_id, size, files[{file_id, kind, mime, size, version, created}], customer_id, idempotency_key, ignored_fields}` con actor `inbox:<id>`, `inbox.push_refused` `{code}`.

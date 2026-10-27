@@ -335,6 +335,8 @@ func run(log *slog.Logger) error {
 	deps.VendorIntegrations = &cfg.VendorIntegrations // v1: vendor-specific integrations (VENDOR_INTEGRATIONS, default off)
 	// Client portal (B13): read-only share links of a project with the firm's branding.
 	deps.Portal, deps.PortalLimiter, deps.TrustedProxies = wirePortal(cfg, pg, rec, ws.projects, ws.artifacts, authStore), limiter, cfg.TrustedProxies
+	// Data inboxes: a URL + secret token any software can push JSON, CSV or files to; each push is a tainted drive file.
+	deps.Inboxes, deps.InboxLimiter, deps.InboxBaseURL = wireInboxes(cfg, pg, rec, cw.ctl, custSvc, ws.drive), limiter, inboxBaseURL(cfg.UIBaseURL)
 	deps.Presence, deps.PeopleChat = wirePeople(ctx, pg, pub, queries, orch) // human presence + people chat
 	if meetingsSvc != nil && deps.PeopleChat != nil {
 		meetingsSvc.People = meetingPeople{dir: deps.PeopleChat.Store} // attendee picker: the same directory as the people chat

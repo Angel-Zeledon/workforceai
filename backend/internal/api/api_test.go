@@ -139,6 +139,7 @@ type opts struct {
 	customers      bool                // mount the customer district and scope requests (customers_api_test.go)
 	portal         bool                // mount the client portal (portal_api_test.go); implies ws
 	debater        *debaterStub        // mount the team debates with this runtime (debates_api_test.go)
+	inboxes        *inboxOpts          // mount the data inboxes (inboxes_api_test.go); implies the drive
 }
 
 type env struct {
@@ -194,7 +195,7 @@ func newEnv(t *testing.T, o opts) *env {
 	if o.portal {
 		attachPortal(&d, rec)
 	}
-	if o.drive || o.skills {
+	if o.drive || o.skills || o.inboxes != nil {
 		d.Drive = drive.New(drive.Config{Store: drive.NewMemStore(), Objects: objstore.NewMemory(), OrgID: cfg.OrgID, WriteGate: o.writeGate, Log: log})
 	}
 	if o.code {
@@ -295,6 +296,9 @@ func newEnv(t *testing.T, o opts) *env {
 				return err == nil
 			}}
 		d.Rewards, d.Rec = coins, rec
+	}
+	if o.inboxes != nil {
+		attachInboxes(&d, rec, o.inboxes)
 	}
 	var svc *auth.Service
 	if o.auth {

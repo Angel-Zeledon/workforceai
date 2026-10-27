@@ -5,6 +5,7 @@ import { useConnections, type ConnTab } from "@/lib/connections/store";
 import type { Connection } from "@/lib/connections/types";
 import { Btn, Card, Empty } from "../ui";
 import { CapabilitiesTab } from "./CapabilitiesTab";
+import { DataInboxesTab } from "./DataInboxesTab";
 import { ConnectionDrawer } from "./ConnectionDrawer";
 import { ConnectWizard } from "./ConnectWizard";
 import { GrantMatrix } from "./GrantMatrix";
@@ -12,7 +13,7 @@ import { LimitsTab } from "./LimitsTab";
 import { CapChip, StatusBadge, useViewer } from "./shared";
 import { UsageTable } from "./UsageTable";
 
-const TABS: ConnTab[] = ["connections", "matrix", "capabilities", "usage", "limits"];
+const TABS: ConnTab[] = ["connections", "inboxes", "matrix", "capabilities", "usage", "limits"];
 const AGE_WARNING_DAYS = 180;
 
 function ConnectionCard({ c, onOpen }: { c: Connection; onOpen: () => void }) {
@@ -72,7 +73,7 @@ export function ConnectionsView() {
         {TABS.map((k) => (
           <button key={k} role="tab" aria-selected={tab === k} data-testid={`conn-tab-${k}`} onClick={() => setTab(k)}
             className={`rounded-md px-4 py-1.5 text-xs font-medium transition ${tab === k ? "bg-accent-soft text-accent" : "text-mute hover:text-ink"}`}>
-            {t(`conn.tab.${k}`)}
+            {k === "inboxes" ? t("dataInbox.tab") : t(`conn.tab.${k}`)}
           </button>
         ))}
       </div>
@@ -88,6 +89,7 @@ export function ConnectionsView() {
         {tab === "capabilities" && <CapabilitiesTab />}
         {tab === "usage" && <Card title={t("conn.tab.usage")}><UsageTable /></Card>}
         {tab === "limits" && <LimitsTab />}
+        {tab === "inboxes" && <DataInboxesTab isAdmin={isAdmin} />}
       </div>
       {wizard && <ConnectWizard onClose={() => setWizard(false)} />}
       {openId && connections[openId] && <ConnectionDrawer id={openId} onClose={() => setOpenId(null)} />}
