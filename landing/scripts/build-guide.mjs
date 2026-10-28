@@ -318,7 +318,7 @@ function head({ lang, title, description, path: pth, altPath, type = "article", 
   <meta name="twitter:title" content="${esc(title)}">
   <meta name="twitter:description" content="${esc(description)}">
   <meta name="twitter:image" content="${SITE}${image || "/img/og.png"}">
-  <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/plex-latin-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/guide.css?v=${V.css}">
   <script src="/docs.js?v=${V.js}" defer></script>
   <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>

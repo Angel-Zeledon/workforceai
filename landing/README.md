@@ -1,6 +1,6 @@
 # Landing de AI Workforce OS
 
-Sitio estático autocontenido: HTML + CSS + JS mínimo. Sin build, sin frameworks, sin CDNs (la fuente Inter va en `fonts/`), sin formularios y sin analítica.
+Sitio estático autocontenido: HTML + CSS + JS mínimo. Sin build, sin frameworks, sin CDNs (la fuente IBM Plex Sans va en `fonts/`, con su licencia OFL), sin formularios y sin analítica.
 
 ## Verla
 

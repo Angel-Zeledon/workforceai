@@ -3,19 +3,26 @@
  * redefines the tokens and refines shared components without touching the structure. Home-only styles live in home.css.
  *   Ink  #0a1628  (the navy of the robot and the app)      Paper #f7f9fb   Mist #f1f4f8
  *   Line #e1e7ee  (hairlines carry the structure)          Accent #0f766e  (the app's teal; the bright #2dd4bf only as a tiny "live" dot)
- * Type: Geist (self-hosted, SIL OFL), tight display sizes, calm body.
+ * Type: IBM Plex Sans (self-hosted, SIL OFL; fonts/IBMPlexSans-OFL.txt), sober display sizes, calm body.
  * Token names are shared with the guide/docs/trust pages: add new ones, do not rename existing ones.
  */
-@font-face{font-family:"Geist";font-weight:100 900;font-style:normal;font-display:swap;src:url(/fonts/Geist-Variable.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-weight:400;font-style:normal;font-display:swap;src:url(/fonts/plex-latin-400.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Sans";font-weight:400;font-style:normal;font-display:swap;src:url(/fonts/plex-latin-ext-400.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"IBM Plex Sans";font-weight:500;font-style:normal;font-display:swap;src:url(/fonts/plex-latin-500.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Sans";font-weight:500;font-style:normal;font-display:swap;src:url(/fonts/plex-latin-ext-500.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"IBM Plex Sans";font-weight:600;font-style:normal;font-display:swap;src:url(/fonts/plex-latin-600.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Sans";font-weight:600;font-style:normal;font-display:swap;src:url(/fonts/plex-latin-ext-600.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"IBM Plex Sans";font-weight:700;font-style:normal;font-display:swap;src:url(/fonts/plex-latin-700.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Sans";font-weight:700;font-style:normal;font-display:swap;src:url(/fonts/plex-latin-ext-700.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 
 :root{
-  --font:"Geist","Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --bg:#f7f9fb; --panel:#ffffff; --panel2:#f1f4f8;
   --line:#e1e7ee; --line-strong:#cbd4df;
   --ink:#0a1628; --ink2:#38485c; --mute:#5c6b7e;
   --accent:#0f766e; --accent-hover:#115e59; --accent-soft:#e3f2f0; --on-accent:#ffffff;
   --ok:#1f6f55; --ok-soft:#e1f1ea; --warn:#8a5206; --warn-soft:#f7edd8; --info:#2b6cb0; --info-soft:#e6eff8;
-  --final-bg:#f3f7ff; --final-ink:#0a1628; --final-mute:#38485c;
+  --final-bg:#ffffff; --final-ink:#0a1628; --final-mute:#38485c;
   --shadow:0 1px 0 rgb(10 22 40/.04),0 28px 56px -28px rgb(10 22 40/.32);
   --signal:#2dd4bf;
   --r:10px;
@@ -38,14 +45,14 @@
   }
 }
 
-body{font-family:var(--font);font-feature-settings:normal;letter-spacing:-.004em;line-height:1.62}
+body{font-family:var(--font);font-feature-settings:normal;letter-spacing:-.002em;line-height:1.62}
 h1,h2,h3{font-weight:600}
 ::selection{background:color-mix(in srgb,var(--accent) 24%,transparent)}
 
 /* Header: quiet glass, one hairline */
 .site-header{background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:saturate(1.5) blur(14px);backdrop-filter:saturate(1.5) blur(14px);border-bottom:1px solid var(--line)}
 .site-header .bar-row{height:64px}
-.brand{font-weight:600;letter-spacing:-.02em}
+.brand{font-weight:600;letter-spacing:-.009em}
 .nav a{color:var(--ink2);font-weight:450;transition:color .15s}
 .nav a:hover{color:var(--ink)}
 .lang{border-color:var(--line);border-radius:8px;background:transparent;padding:2px}
@@ -54,7 +61,7 @@ h1,h2,h3{font-weight:600}
 .lang a[aria-current]{background:var(--ink);color:var(--bg)}
 
 /* Buttons */
-.btn{border-radius:8px;font-weight:550;letter-spacing:-.006em;min-height:44px;padding:0 20px;transition:background .15s,border-color .15s,box-shadow .2s,transform .15s}
+.btn{border-radius:8px;font-weight:550;letter-spacing:-.004em;min-height:44px;padding:0 20px;transition:background .15s,border-color .15s,box-shadow .2s,transform .15s}
 .btn:active{transform:translateY(1px)}
 .btn-sm{min-height:36px;padding:0 14px}
 .btn-lg{min-height:50px;padding:0 24px;border-radius:10px}
@@ -70,7 +77,7 @@ h1,h2,h3{font-weight:600}
 .lead{color:var(--ink2);font-size:clamp(1.05rem,1.5vw,1.22rem);line-height:1.58}
 .fine{color:var(--mute);font-size:.9rem}
 
-.window{border-radius:14px;border-color:var(--line-strong);background:var(--panel);box-shadow:var(--shadow)}
+.window{border-radius:10px;border-color:var(--line-strong);background:var(--panel);box-shadow:var(--shadow)}
 .window-bar{background:var(--panel2);border-bottom-color:var(--line);padding:11px 14px}
 .window-bar i{background:color-mix(in srgb,var(--ink) 16%,transparent)}
 .window figcaption{border-top-color:var(--line);color:var(--mute)}
@@ -79,18 +86,18 @@ h1,h2,h3{font-weight:600}
 .section{padding:84px 0}
 @media (min-width:1200px){.section{padding:112px 0}}
 .section.alt{background:var(--panel);border-block:1px solid var(--line)}
-h2{font-size:clamp(1.85rem,3.9vw,2.85rem);line-height:1.06;letter-spacing:-.04em;font-weight:600}
-h3{letter-spacing:-.015em;font-weight:600}
+h2{font-size:clamp(1.85rem,3.9vw,2.85rem);line-height:1.06;letter-spacing:-.018em;font-weight:600}
+h3{letter-spacing:-.009em;font-weight:600}
 .head{margin-bottom:48px}
 
-summary{font-weight:550;letter-spacing:-.015em}
+summary{font-weight:550;letter-spacing:-.009em}
 
 .site-footer{border-top:1px solid var(--line);margin-top:0;padding:36px 0 48px}
 .site-footer a{color:var(--ink2);text-decoration:none}
 .site-footer a:hover{color:var(--ink);text-decoration:underline}
 
 /* Content pages (guide + docs) pick the same tokens; tune what is specific to them */
-.guide-main h1{letter-spacing:-.045em;font-weight:600}
+.guide-main h1{letter-spacing:-.02em;font-weight:600}
 .steps li{border-radius:0}
 .guide .steps li{border-radius:10px;background:var(--panel2);border-color:var(--line)}
 .guide .steps li::before{border-radius:8px;background:var(--ink);color:var(--bg)}
