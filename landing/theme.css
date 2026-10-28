@@ -15,7 +15,7 @@
   --ink:#0a1628; --ink2:#38485c; --mute:#5c6b7e;
   --accent:#0f766e; --accent-hover:#115e59; --accent-soft:#e3f2f0; --on-accent:#ffffff;
   --ok:#1f6f55; --ok-soft:#e1f1ea; --warn:#8a5206; --warn-soft:#f7edd8; --info:#2b6cb0; --info-soft:#e6eff8;
-  --final-bg:#0a1628; --final-ink:#f2f6fa; --final-mute:#a9b6c8;
+  --final-bg:#f3f7ff; --final-ink:#0a1628; --final-mute:#38485c;
   --shadow:0 1px 0 rgb(10 22 40/.04),0 28px 56px -28px rgb(10 22 40/.32);
   --signal:#2dd4bf;
   --r:10px;
