@@ -12,9 +12,9 @@ Para el runtime usa `agent-runtime/.venv/Scripts/python -m pytest`: el Python gl
 de otro proyecto (`forecasting/ForecastingCore`) y falla al recolectar.
 
 Pendiente:
-1. **Cuenta de Gemini de pago.** La clave está en la capa gratuita: 20 solicitudes por día y por modelo, y Google
-   puede usar el contenido para mejorar sus productos. Activar facturación y rotar la clave (se pegó en el chat).
-   Luego repetir `scripts/eval-live --live` completo.
+1. **Gemini en la capa gratuita, por decisión del dueño** (2026-10-28): unas 20 solicitudes por día y por modelo,
+   y Google puede usar el contenido para mejorar sus productos. Las evaluaciones en vivo tienen que caber en esa cuota,
+   así que hay pocos casos por día. Conviene rotar la clave igual, porque se pegó en el chat.
 2. `git push origin main` y redesplegar. En producción: definir `GEMINI_API_KEY` y dejar `VENDOR_INTEGRATIONS`
    vacío (las migraciones 802-804 se aplican solas al arrancar el backend).
 3. Backlog que queda (sin integraciones de proveedor): B14 calendario fiscal, B18 "enséñale una vez", B19 voz.
