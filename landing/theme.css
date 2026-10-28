@@ -1,9 +1,10 @@
 /*
  * Visual theme: cleaner, more technical, not neon. Loaded AFTER styles.css (and guide.css on content pages), so it
- * redefines the tokens and refines components without touching the structure.
+ * redefines the tokens and refines shared components without touching the structure. Home-only styles live in home.css.
  *   Ink  #0a1628  (the navy of the robot and the app)      Paper #f7f9fb   Mist #f1f4f8
  *   Line #e1e7ee  (hairlines carry the structure)          Accent #0f766e  (the app's teal; the bright #2dd4bf only as a tiny "live" dot)
  * Type: Geist (self-hosted, SIL OFL), tight display sizes, calm body.
+ * Token names are shared with the guide/docs/trust pages: add new ones, do not rename existing ones.
  */
 @font-face{font-family:"Geist";font-weight:100 900;font-style:normal;font-display:swap;src:url(/fonts/Geist-Variable.woff2) format("woff2")}
 
@@ -18,6 +19,10 @@
   --shadow:0 1px 0 rgb(10 22 40/.04),0 28px 56px -28px rgb(10 22 40/.32);
   --signal:#2dd4bf;
   --r:10px;
+  /* added for the home page; harmless elsewhere */
+  --accent-2:#2563eb;
+  --glow:rgb(15 118 110/.16); --glow-2:rgb(37 99 235/.12);
+  --ease:cubic-bezier(.2,.75,.2,1);
 }
 @media (prefers-color-scheme:dark){
   :root{
@@ -28,6 +33,8 @@
     --ok:#6fcf9f; --ok-soft:#10261c; --warn:#e3b765; --warn-soft:#2a2210; --info:#7fb4ec; --info-soft:#10233a;
     --final-bg:#0a1628; --final-ink:#e8eef6; --final-mute:#9fb0c6;
     --shadow:0 1px 0 rgb(255 255 255/.03),0 28px 56px -28px rgb(0 0 0/.7);
+    --accent-2:#8ab4ff;
+    --glow:rgb(95 201 187/.14); --glow-2:rgb(138 180 255/.12);
   }
 }
 
@@ -36,7 +43,7 @@ h1,h2,h3{font-weight:600}
 ::selection{background:color-mix(in srgb,var(--accent) 24%,transparent)}
 
 /* Header: quiet glass, one hairline */
-.site-header{background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.5) blur(14px);border-bottom:1px solid var(--line)}
+.site-header{background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:saturate(1.5) blur(14px);backdrop-filter:saturate(1.5) blur(14px);border-bottom:1px solid var(--line)}
 .site-header .bar-row{height:64px}
 .brand{font-weight:600;letter-spacing:-.02em}
 .nav a{color:var(--ink2);font-weight:450;transition:color .15s}
@@ -47,37 +54,26 @@ h1,h2,h3{font-weight:600}
 .lang a[aria-current]{background:var(--ink);color:var(--bg)}
 
 /* Buttons */
-.btn{border-radius:8px;font-weight:550;letter-spacing:-.006em;min-height:44px;padding:0 20px;transition:background .15s,border-color .15s,box-shadow .15s}
+.btn{border-radius:8px;font-weight:550;letter-spacing:-.006em;min-height:44px;padding:0 20px;transition:background .15s,border-color .15s,box-shadow .2s,transform .15s}
+.btn:active{transform:translateY(1px)}
 .btn-sm{min-height:36px;padding:0 14px}
+.btn-lg{min-height:50px;padding:0 24px;border-radius:10px}
 .btn-primary{background:var(--accent);color:var(--on-accent);box-shadow:inset 0 1px 0 rgb(255 255 255/.16),0 1px 2px rgb(10 22 40/.18)}
-.btn-primary:hover{background:var(--accent-hover);box-shadow:inset 0 1px 0 rgb(255 255 255/.16),0 4px 14px -4px rgb(15 118 110/.5)}
+.btn-primary:hover{background:var(--accent-hover);box-shadow:inset 0 1px 0 rgb(255 255 255/.16),0 6px 18px -6px rgb(15 118 110/.55)}
 .btn-ghost{background:transparent;color:var(--ink);border-color:var(--line-strong)}
 .btn-ghost:hover{border-color:var(--ink);background:var(--panel)}
 .btn-invert{background:#f2f6fa;color:#0a1628}
-.btn-invert:hover{background:#fff}
+.btn-invert:hover{background:#fff;box-shadow:0 8px 24px -8px rgb(255 255 255/.35)}
 .btn-outline-invert{color:#f2f6fa;border-color:#3b4d6a}
 .btn-outline-invert:hover{border-color:#9fb0c6}
 
-/* Hero: a faint measurement grid that fades out, and the framed live office as the one memorable thing */
-.hero{position:relative;overflow:clip;padding:72px 0 72px}
-.hero::before{content:"";position:absolute;inset:0;pointer-events:none;
-  background-image:radial-gradient(color-mix(in srgb,var(--ink) 18%,transparent) 1px,transparent 1.3px);background-size:24px 24px;
-  -webkit-mask-image:radial-gradient(75% 70% at 22% 18%,#000,transparent 78%);mask-image:radial-gradient(75% 70% at 22% 18%,#000,transparent 78%)}
-.hero>.wrap{position:relative;z-index:1}
-.hero h1{font-size:clamp(2.3rem,5.8vw,4.3rem);line-height:1.04;letter-spacing:-.042em;font-weight:600;max-width:16ch}
 .lead{color:var(--ink2);font-size:clamp(1.05rem,1.5vw,1.22rem);line-height:1.58}
-.hero-sub{margin-top:24px;max-width:56ch}
-.actions{margin-top:32px}
-.fine{display:flex;align-items:flex-start;gap:10px;color:var(--mute);font-size:.9rem}
-.hero .fine::before{content:"";flex:none;margin-top:.5em;width:7px;height:7px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 4px color-mix(in srgb,var(--signal) 22%,transparent)}
-.hero-shot{margin-top:56px}
+.fine{color:var(--mute);font-size:.9rem}
 
 .window{border-radius:14px;border-color:var(--line-strong);background:var(--panel);box-shadow:var(--shadow)}
 .window-bar{background:var(--panel2);border-bottom-color:var(--line);padding:11px 14px}
 .window-bar i{background:color-mix(in srgb,var(--ink) 16%,transparent)}
 .window figcaption{border-top-color:var(--line);color:var(--mute)}
-.st-sim{background:var(--accent-soft);color:var(--accent)}
-.st-logo{background:var(--ink);border-radius:5px}
 
 /* Sections: air and hairlines instead of boxes */
 .section{padding:84px 0}
@@ -86,45 +82,8 @@ h1,h2,h3{font-weight:600}
 h2{font-size:clamp(1.85rem,3.9vw,2.85rem);line-height:1.06;letter-spacing:-.04em;font-weight:600}
 h3{letter-spacing:-.015em;font-weight:600}
 .head{margin-bottom:48px}
-.questions>div{border-top:1px solid var(--line-strong)}
-.pull{border-left:2px solid var(--accent);font-weight:500;letter-spacing:-.02em}
 
-/* Steps: a sequence, so numbered; crisp square chips rather than soft circles */
-.step-n{border-radius:8px;background:var(--ink);color:var(--bg);font-weight:600;width:34px;height:34px;font-size:.9rem}
-.steps li{border-top-color:var(--line)}
-
-/* Capabilities, team, status */
-.features>div{border-top-color:var(--line)}
-.features dt{font-weight:600;letter-spacing:-.015em}
-.lanes{border-radius:14px;border-color:var(--line-strong);box-shadow:var(--shadow)}
-.lane-track{border-radius:8px}
-.roles li{border-color:var(--line-strong)}
-.roles .soon h3{color:var(--mute)}
-.callout{border-radius:var(--r);border-color:var(--line-strong);border-left:3px solid var(--warn)}
-.status{border-top-color:var(--line)}
-.status li{border-bottom-color:var(--line)}
-.badge{background:transparent;border:1px solid;font-weight:550;padding:2px 10px;font-size:.78rem}
-.badge.demo{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 38%,transparent);background:var(--ok-soft)}
-.badge.dev{color:var(--info);border-color:color-mix(in srgb,var(--info) 38%,transparent);background:var(--info-soft)}
-.badge.soon{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 38%,transparent);background:var(--warn-soft)}
-
-/* How to use it (home) */
-.usage li{border-radius:12px;border-color:var(--line);background:var(--panel2);padding:22px 20px 20px}
-.usage li::before{border-radius:8px;background:var(--ink);color:var(--bg);width:30px;height:30px}
-.usage h3{font-size:1.08rem}
-
-/* FAQ */
-.faq{border-top-color:var(--line-strong)}
-details{border-bottom-color:var(--line)}
 summary{font-weight:550;letter-spacing:-.015em}
-
-/* Final call: deep ink with a restrained teal light from the corner and a faint grid */
-.final{position:relative;overflow:clip;background:var(--final-bg)}
-.final::before{content:"";position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(55% 90% at 88% -10%,rgb(15 118 110/.45),transparent 62%),radial-gradient(rgb(255 255 255/.07) 1px,transparent 1.3px);
-  background-size:auto,24px 24px;
-  -webkit-mask-image:linear-gradient(180deg,#000 55%,transparent);mask-image:linear-gradient(180deg,#000 55%,transparent)}
-.final>.wrap{position:relative;z-index:1}
 
 .site-footer{border-top:1px solid var(--line);margin-top:0;padding:36px 0 48px}
 .site-footer a{color:var(--ink2);text-decoration:none}
@@ -141,5 +100,5 @@ summary{font-weight:550;letter-spacing:-.015em}
   background:radial-gradient(55% 120% at 88% -20%,rgb(15 118 110/.42),transparent 62%);}
 .guide .guide-cta>.wrap{position:relative;z-index:1}
 
-@media (max-width:640px){.hero{padding:44px 0 52px}.hero-shot{margin-top:40px}.section{padding:64px 0}}
+@media (max-width:640px){.section{padding:64px 0}}
 @media (prefers-reduced-motion:reduce){.btn,.nav a{transition:none}}

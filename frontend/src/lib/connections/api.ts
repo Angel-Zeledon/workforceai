@@ -1,6 +1,6 @@
 import { call } from "../api";
 import type {
-  AgentControl, Connection, EmailDraft, Grant, OrgControls, PlanReview, ProviderDef, SpendLimitStatus, UsageRow,
+  AgentControl, ApiSource, Connection, EmailDraft, Grant, OrgControls, PlanReview, ProviderDef, SpendLimitStatus, UsageRow,
 } from "./types";
 
 const items = <T>(x: any): T[] => (Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : []);
@@ -28,13 +28,18 @@ export interface CreateConnectionInput {
   oauth_client_secret?: string;
   /** WRITE-ONLY. Sent once in this call; callers must not keep it anywhere. */
   secret?: string;
+  /** "simulated" stores no secret and answers with sample data; the server defaults to "live". */
+  mode?: "live" | "simulated";
+  /** custom_api only: the read-only HTTP source. */
+  source?: ApiSource;
 }
 
 export const connApi = {
   providers: async () => items<ProviderDef>(await call("GET", "/connection-providers")),
   list: async () => items<Connection>(await call("GET", "/connections")),
   create: (b: CreateConnectionInput) => call<Connection>("POST", "/connections", b),
-  patch: (id: string, b: Partial<Pick<Connection, "label" | "read_only" | "limits">>) => call<Connection>("PATCH", `/connections/${id}`, b),
+  /** `source` (custom_api) is a full replace. */
+  patch: (id: string, b: Partial<Pick<Connection, "label" | "read_only" | "limits" | "source">>) => call<Connection>("PATCH", `/connections/${id}`, b),
   oauthStart: (id: string) => call<{ auth_url: string; expires_at: string }>("POST", `/connections/${id}/oauth/start`),
   /** Mock only: simulates the provider redirect landing on the callback. */
   oauthSimulateCallback: (id: string, denyScopes = false) => call<Connection>("GET", `/connections/oauth/callback?connection_id=${id}${denyScopes ? "&deny_scopes=1" : ""}`),

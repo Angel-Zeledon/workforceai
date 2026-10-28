@@ -23,10 +23,20 @@ var artifactRefRe = regexp.MustCompile(`artifact:([A-Za-z0-9][A-Za-z0-9_-]{5,63}
 // artifactRefs lists the artifact ids a task description references
 // ("artifact:<id>"), unique and capped.
 func artifactRefs(text string) []string {
+	ids := ArtifactRefIDs(text)
+	if len(ids) > maxContextArtifacts {
+		ids = ids[:maxContextArtifacts]
+	}
+	return ids
+}
+
+// ArtifactRefIDs lists every artifact id a text references ("artifact:<id>"), unique, in order. The projects
+// use it to refuse, at plan time, references a customer-scoped project may not receive (B12).
+func ArtifactRefIDs(text string) []string {
 	var ids []string
 	seen := map[string]bool{}
 	for _, m := range artifactRefRe.FindAllStringSubmatch(text, -1) {
-		if !seen[m[1]] && len(ids) < maxContextArtifacts {
+		if !seen[m[1]] {
 			seen[m[1]] = true
 			ids = append(ids, m[1])
 		}

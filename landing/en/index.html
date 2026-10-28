@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title data-i18n="meta.title">AI Workforce OS: your AI team, in plain sight and in control</title>
-  <meta name="description" content="A 3D virtual office where the employees are AI agents. Ask in plain language, watch them collaborate and approve what is sensitive. Early access." data-i18n-attr="content:meta.description">
+  <meta name="description" content="A 3D virtual office staffed by AI employees. Ask in plain language, watch them work in parallel and approve what is sensitive. Early access." data-i18n-attr="content:meta.description">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#f7f9fb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#060d18" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -19,8 +20,8 @@
   <meta property="og:site_name" content="AI Workforce OS">
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
-  <meta property="og:title" content="AI Workforce OS: your team of AI employees, in plain sight and under your control" data-i18n-attr="content:meta.ogTitle">
-  <meta property="og:description" content="Ask, watch your AI employees collaborate and approve what is sensitive. With cost estimates, spending caps and credentials kept away from the model." data-i18n-attr="content:meta.ogDescription">
+  <meta property="og:title" content="AI Workforce OS: AI employees that work in plain sight" data-i18n-attr="content:meta.ogTitle">
+  <meta property="og:description" content="Ask, watch your AI employees work in parallel and approve what is sensitive. With cost estimates, spending caps and credentials kept away from the model." data-i18n-attr="content:meta.ogDescription">
   <link rel="canonical" href="https://workforceai.es/en/">
   <link rel="alternate" hreflang="es" href="https://workforceai.es/">
   <link rel="alternate" hreflang="en" href="https://workforceai.es/en/">
@@ -30,318 +31,536 @@
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="AI Workforce OS: your team of AI employees, in plain sight and under your control" data-i18n-attr="content:meta.ogTitle">
-  <meta name="twitter:description" content="Ask, watch your AI employees collaborate and approve what is sensitive. With cost estimates, spending caps and credentials kept away from the model." data-i18n-attr="content:meta.ogDescription">
+  <meta name="twitter:title" content="AI Workforce OS: AI employees that work in plain sight" data-i18n-attr="content:meta.ogTitle">
+  <meta name="twitter:description" content="Ask, watch your AI employees work in parallel and approve what is sensitive. With cost estimates, spending caps and credentials kept away from the model." data-i18n-attr="content:meta.ogDescription">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
-  <script type="application/ld+json" data-ld>{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png","email":"info@workforceai.es"},{"@type":"WebSite","@id":"https://workforceai.es/#website","url":"https://workforceai.es/","name":"AI Workforce OS","inLanguage":["es","en"],"publisher":{"@id":"https://workforceai.es/#org"}},{"@type":"SoftwareApplication","name":"AI Workforce OS","url":"https://workforceai.es/en/","inLanguage":"en","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"A 3D virtual office where the employees are AI agents. Ask in plain language, watch them collaborate and approve what is sensitive. Early access.","image":"https://workforceai.es/img/og.png","publisher":{"@id":"https://workforceai.es/#org"}}]}</script>
+  <script type="application/ld+json" data-ld>{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png","email":"info@workforceai.es"},{"@type":"WebSite","@id":"https://workforceai.es/#website","url":"https://workforceai.es/","name":"AI Workforce OS","inLanguage":["es","en"],"publisher":{"@id":"https://workforceai.es/#org"}},{"@type":"SoftwareApplication","name":"AI Workforce OS","url":"https://workforceai.es/en/","inLanguage":"en","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"A 3D virtual office staffed by AI employees. Ask in plain language, watch them work in parallel and approve what is sensitive. Early access.","image":"https://workforceai.es/img/og.png","publisher":{"@id":"https://workforceai.es/#org"}}]}</script>
 
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/theme.css">
+  <link rel="stylesheet" href="/home.css">
+  <script>document.documentElement.classList.add("js")</script>
 </head>
-<body>
+<body class="home">
   <a class="skip" href="#main" data-i18n="a11y.skip">Skip to content</a>
 
-  <header class="site-header">
+  <header class="site-header" data-header>
     <div class="wrap bar-row">
       <a class="brand" href="#top" data-i18n-aria="a11y.home" aria-label="AI Workforce OS, home">
-        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+        <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" data-i18n-aria="a11y.nav" aria-label="Main">
+      <nav class="nav" data-nav data-i18n-aria="a11y.nav" aria-label="Main">
         <a href="#como" data-i18n="nav.how">How it works</a>
         <a href="#control" data-i18n="nav.control">Control</a>
         <a href="#equipo" data-i18n="nav.team">Team</a>
         <a href="#confianza" data-i18n="nav.trust">Security</a>
-        <a href="#estado" data-i18n="nav.status">Current status</a>
-        <a href="#faq" data-i18n="nav.faq">FAQ</a>
+        <a href="#estado" data-i18n="nav.status">Status</a>
         <a data-docs="index" href="/en/docs/" data-i18n="nav.docs">Docs</a>
         <a data-guide="index" href="/en/guide/" data-i18n="nav.guide">Guide</a>
+        <span class="nav-ind" aria-hidden="true"></span>
       </nav>
       <div class="bar-end">
         <div class="lang" role="group" data-i18n-aria="a11y.lang" aria-label="Language">
           <a href="/" hreflang="es" lang="es" data-lang="es">ES</a>
           <a href="/en/" hreflang="en" lang="en" data-lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" data-cta="signup" href="https://app.workforceai.es/register"><span class="long" data-i18n="cta.early">Create account</span><span class="short" data-i18n="cta.early.short">Create account</span></a>
+        <a class="btn btn-primary btn-sm bar-cta" data-cta="signup" href="https://app.workforceai.es/register" data-i18n="cta.early.short">Create account</a>
+        <details class="mnav" data-mnav>
+          <summary data-i18n-aria="nav.menu" aria-label="Open or close the menu"><span class="burger" aria-hidden="true"><i></i><i></i><i></i></span></summary>
+          <div class="mnav-panel">
+            <nav data-i18n-aria="a11y.nav" aria-label="Main">
+              <a href="#como" data-i18n="nav.how">How it works</a>
+              <a href="#control" data-i18n="nav.control">Control</a>
+              <a href="#equipo" data-i18n="nav.team">Team</a>
+              <a href="#confianza" data-i18n="nav.trust">Security</a>
+              <a href="#estado" data-i18n="nav.status">Status</a>
+              <a href="#faq" data-i18n="nav.faq">FAQ</a>
+              <a data-docs="index" href="/en/docs/" data-i18n="nav.docs">Docs</a>
+              <a data-guide="index" href="/en/guide/" data-i18n="nav.guide">Guide</a>
+            </nav>
+            <div class="mnav-cta">
+              <a class="btn btn-primary" data-cta="signup" href="https://app.workforceai.es/register" data-i18n="cta.early">Create account</a>
+              <a class="btn btn-ghost" data-cta="login" href="https://app.workforceai.es/login" data-i18n="cta.demo">Sign in</a>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
+    <span class="scroll-prog" aria-hidden="true"></span>
   </header>
 
   <main id="main">
+    <!-- HERO -->
     <section class="hero" id="top">
-      <div class="wrap">
-        <h1 data-i18n="hero.title">Your team of AI employees, in plain sight and under your control.</h1>
-        <p class="lead hero-sub" data-i18n="hero.sub">A virtual office where you ask Sales, Legal, Accounting, Analysis, Operations, HR and your Assistant for work in plain language. Watch them collaborate live, approve what is sensitive and receive a report.</p>
-        <div class="actions">
-          <a class="btn btn-primary" data-cta="signup" href="https://app.workforceai.es/register" data-i18n="cta.early">Create account</a>
-          <a class="btn btn-ghost" data-cta="login" href="https://app.workforceai.es/login" data-i18n="cta.demo">Sign in</a>
-          <a class="btn btn-ghost" data-cta="trial" href="https://app.workforceai.es/prueba" data-i18n="cta.trial">Try it without signing up</a>
+      <div class="hero-bg" aria-hidden="true"><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span><span class="hero-grid"></span></div>
+      <div class="wrap hero-in">
+        <p class="eyebrow"><span class="eb-dot" aria-hidden="true"></span><span data-i18n="hero.eyebrow">Early access</span><span class="eb-sep" aria-hidden="true"></span><span class="eb-2" data-i18n="hero.eyebrow2">Works without an AI key</span></p>
+        <h1 data-i18n-html="hero.title">AI employees that work in plain sight. <span class="hl">You decide what matters.</span></h1>
+        <p class="lead hero-sub" data-i18n="hero.sub">Ask Sales, Legal, Accounting, Analysis, Operations, HR and your Assistant for work in plain language. Watch them split it up in a 3D office, approve what is sensitive and get a report of what was done and what it cost.</p>
+        <div class="actions hero-actions">
+          <a class="btn btn-primary btn-lg btn-arrow" data-cta="signup" href="https://app.workforceai.es/register"><span data-i18n="cta.early">Create account</span><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a class="btn btn-ghost btn-lg" data-cta="trial" href="https://app.workforceai.es/prueba" data-i18n="cta.trial">Try it without signing up</a>
         </div>
-        <p class="fine" data-i18n="hero.note">It runs in simulation mode today, with no AI key. There is no pricing yet: we are opening early access.</p>
-        <figure class="window hero-shot">
-          <div class="window-bar st-bar" aria-hidden="true">
-            <i></i><i></i><i></i>
-            <span class="st-org"><b class="st-logo"></b><span data-i18n="stage.office">Example office</span></span>
-            <span class="st-metrics"><span data-i18n="stage.active">Active</span> <b data-count="active">0</b><span data-i18n="stage.approvals">Approvals</span> <b data-count="approvals">0</b></span>
-            <span class="st-sim" data-i18n="stage.sim">Simulation</span>
-          </div>
-          <div class="stage" data-stage role="img" data-i18n-aria="stage.aria" aria-label="Illustrative animation: the Assistant splits the $50,000 proposal among Sales, Accounting, Legal, Analysis, Marketing and Procurement; they consult each other; Sales asks for your approval before sending and the Assistant delivers the report.">
-            <div class="st-scene" aria-hidden="true">
-              <div class="st-wall"></div>
-              <div class="st-sun"></div>
-              <div class="st-room"><span data-i18n="stage.meeting">Meeting room</span></div>
-              <span class="plant" style="--x:3;--y:38"></span>
-              <span class="plant" style="--x:97;--y:44"></span>
-              <div class="ag" data-id="sales" data-state="idle" style="--x:33;--y:42;--mx:20;--my:22;--c:#f4895a;--skin:#f2c09a;--hair:#7a4020"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>V</b><span class="nm">Valeria</span><span class="st"></span></span></div>
-              <div class="ag" data-id="analyst" data-state="idle" style="--x:46;--y:42;--mx:50;--my:22;--c:#45b8cc;--skin:#c98f68;--hair:#1c1410"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>N</b><span class="nm">Nadia</span><span class="st"></span></span></div>
-              <div class="ag" data-id="accounting" data-state="idle" style="--x:59;--y:42;--mx:80;--my:22;--c:#4cb987;--skin:#f0c8a4;--hair:#8a8f98"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>T</b><span class="nm">Tomás</span><span class="st"></span></span></div>
-              <div class="ag" data-extra data-id="marketing" data-state="idle" style="--x:72;--y:42;--mx:20;--my:36;--c:#e2665f;--skin:#eabf98;--hair:#5a2e1a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>L</b><span class="nm">Lucía</span><span class="st"></span></span></div>
-              <div class="ag" data-id="hr" data-state="idle" style="--x:20;--y:66;--mx:20;--my:45;--c:#ee7aa8;--skin:#a8734f;--hair:#16110d"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>M</b><span class="nm">Marcos</span><span class="st"></span></span></div>
-              <div class="ag" data-id="legal" data-state="idle" style="--x:33;--y:66;--mx:50;--my:45;--c:#9577d6;--skin:#edc29b;--hair:#2a1a12"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>E</b><span class="nm">Elena</span><span class="st"></span></span></div>
-              <div class="ag" data-id="operations" data-state="idle" style="--x:46;--y:66;--mx:80;--my:45;--c:#e8b53a;--skin:#d9a07a;--hair:#2b2b2b"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>I</b><span class="nm">Iván</span><span class="st"></span></span></div>
-              <div class="ag" data-extra data-id="data" data-state="idle" style="--x:59;--y:66;--mx:50;--my:52;--c:#6c7ee0;--skin:#c58c63;--hair:#3a2a1e"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>D</b><span class="nm">Diego</span><span class="st"></span></span></div>
-              <div class="ag" data-id="assistant" data-state="idle" style="--x:84;--y:46;--mx:24;--my:67;--c:#5a95e8;--skin:#e8b995;--hair:#7a4a2a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>S</b><span class="nm">Sofía</span><span class="st"></span></span></div>
-              <div class="ag" data-extra data-id="support" data-state="idle" style="--x:8;--y:66;--mx:20;--my:68;--c:#3fb5a3;--skin:#f1c7a3;--hair:#b0602a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>C</b><span class="nm">Camila</span><span class="st"></span></span></div>
-              <div class="ag" data-extra data-id="procurement" data-state="idle" style="--x:72;--y:66;--mx:50;--my:68;--c:#a3b84a;--skin:#d6a07c;--hair:#1f1a16"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>R</b><span class="nm">Rafael</span><span class="st"></span></span></div>
-              <span class="st-vig"></span>
-              <div class="st-zone"><span class="st-you" data-i18n="stage.you">You</span><span data-i18n="stage.zone">Approvals zone</span></div>
-              <svg class="st-links"></svg>
-              <div class="st-bubbles"></div>
-              <section class="st-feed"><h4 data-i18n="stage.feed">Live activity</h4><ol></ol></section>
-              <div class="st-appr">
-                <span class="st-appr-k"><span data-i18n="appr.title">Approval required</span><em data-i18n="appr.risk">Medium risk</em></span>
-                <strong data-i18n="appr.action">Send proposal to the client</strong>
-                <small data-i18n="appr.by">Requested by Valeria Ríos · Sales</small>
-                <span class="st-appr-b"><span class="no" data-i18n="appr.reject">Reject</span><span class="yes" data-i18n="appr.approve">Approve</span></span>
-                <span class="st-appr-ok" data-i18n="appr.done">Approved by you</span>
-              </div>
-              <div class="st-report"><b data-i18n="report.t">Report ready</b><span data-i18n="report.d">Proposal sent, margin reviewed and clauses cleared by Legal.</span></div>
-              <div class="st-cmd"><span class="st-chev">›</span><span class="st-input" data-placeholder="Dile a tu empresa qué necesitas…" data-i18n-attr="data-placeholder:stage.placeholder"></span><span class="st-send" data-i18n="stage.send">Send</span></div>
+        <p class="hero-login"><span data-i18n="hero.have">Already have an account?</span> <a data-cta="login" href="https://app.workforceai.es/login" data-i18n="cta.demo">Sign in</a></p>
+        <p class="fine hero-note" data-i18n="hero.note">It runs in simulation mode with no AI key today, or live with your own key. There is no pricing yet: we are in early access.</p>
+
+        <div class="shot-wrap">
+          <figure class="window hero-shot">
+            <div class="window-bar st-bar" aria-hidden="true">
+              <i></i><i></i><i></i>
+              <span class="st-org"><b class="st-logo"></b><span data-i18n="stage.office">Example office</span></span>
+              <span class="st-metrics"><span data-i18n="stage.active">Active</span> <b data-count="active">0</b><span data-i18n="stage.approvals">Approvals</span> <b data-count="approvals">0</b></span>
+              <span class="st-sim"><span class="st-live" aria-hidden="true"></span><span data-i18n="stage.sim">Simulation</span></span>
             </div>
-          </div>
-          <figcaption class="st-cap">
-            <span data-i18n="stage.caption">Illustrative animation of the $50,000 scenario, with the app's colors, states and messages. Not a recording. Marketing, Data, Support and Procurement are example roles: today the app ships seven employees.</span>
-            <span class="st-ctl"><button type="button" class="st-toggle" data-sound="fx" aria-pressed="false"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path class="i-on" d="M11 5.5a3.5 3.5 0 0 1 0 5M12.6 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="i-off" d="M11 6l4 4M15 6l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="stage.sound">Sound</span></button><button type="button" class="st-toggle" data-sound="music" aria-pressed="false"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M6 12V3.5l7-1.5v8.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="4.5" cy="12" r="2" fill="currentColor"/><circle cx="11.5" cy="10.5" r="2" fill="currentColor"/><path class="i-off" d="M2 2l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="stage.music">Music</span></button><button type="button" class="st-toggle" data-stage-toggle aria-pressed="false"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path class="i-pause" d="M5 3v10M11 3v10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path class="i-play" d="M5 3l8 5-8 5z" fill="currentColor"/></svg><span data-i18n="stage.pause">Pause animation</span></button></span>
-          </figcaption>
-        </figure>
+            <div class="stage" data-stage role="img" data-i18n-aria="stage.aria" aria-label="Illustrative animation: the Assistant splits the $50,000 proposal among Sales, Accounting, Legal, Analysis, Marketing and Procurement; they consult each other; Sales asks for your approval before sending and the Assistant delivers the report.">
+              <div class="st-scene" aria-hidden="true">
+                <div class="st-wall"></div>
+                <div class="st-sun"></div>
+                <div class="st-room"><span data-i18n="stage.meeting">Meeting room</span></div>
+                <span class="plant" style="--x:3;--y:38"></span>
+                <span class="plant" style="--x:97;--y:44"></span>
+                <div class="ag" data-id="sales" data-state="idle" style="--x:33;--y:42;--mx:20;--my:22;--c:#f4895a;--skin:#f2c09a;--hair:#7a4020"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>V</b><span class="nm">Valeria</span><span class="st"></span></span></div>
+                <div class="ag" data-id="analyst" data-state="idle" style="--x:46;--y:42;--mx:50;--my:22;--c:#45b8cc;--skin:#c98f68;--hair:#1c1410"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>N</b><span class="nm">Nadia</span><span class="st"></span></span></div>
+                <div class="ag" data-id="accounting" data-state="idle" style="--x:59;--y:42;--mx:80;--my:22;--c:#4cb987;--skin:#f0c8a4;--hair:#8a8f98"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>T</b><span class="nm">Tomás</span><span class="st"></span></span></div>
+                <div class="ag" data-extra data-id="marketing" data-state="idle" style="--x:72;--y:42;--mx:20;--my:36;--c:#e2665f;--skin:#eabf98;--hair:#5a2e1a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>L</b><span class="nm">Lucía</span><span class="st"></span></span></div>
+                <div class="ag" data-id="hr" data-state="idle" style="--x:20;--y:66;--mx:20;--my:45;--c:#ee7aa8;--skin:#a8734f;--hair:#16110d"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>M</b><span class="nm">Marcos</span><span class="st"></span></span></div>
+                <div class="ag" data-id="legal" data-state="idle" style="--x:33;--y:66;--mx:50;--my:45;--c:#9577d6;--skin:#edc29b;--hair:#2a1a12"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>E</b><span class="nm">Elena</span><span class="st"></span></span></div>
+                <div class="ag" data-id="operations" data-state="idle" style="--x:46;--y:66;--mx:80;--my:45;--c:#e8b53a;--skin:#d9a07a;--hair:#2b2b2b"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>I</b><span class="nm">Iván</span><span class="st"></span></span></div>
+                <div class="ag" data-extra data-id="data" data-state="idle" style="--x:59;--y:66;--mx:50;--my:52;--c:#6c7ee0;--skin:#c58c63;--hair:#3a2a1e"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>D</b><span class="nm">Diego</span><span class="st"></span></span></div>
+                <div class="ag" data-id="assistant" data-state="idle" style="--x:84;--y:46;--mx:24;--my:67;--c:#5a95e8;--skin:#e8b995;--hair:#7a4a2a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>S</b><span class="nm">Sofía</span><span class="st"></span></span></div>
+                <div class="ag" data-extra data-id="support" data-state="idle" style="--x:8;--y:66;--mx:20;--my:68;--c:#3fb5a3;--skin:#f1c7a3;--hair:#b0602a"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>C</b><span class="nm">Camila</span><span class="st"></span></span></div>
+                <div class="ag" data-extra data-id="procurement" data-state="idle" style="--x:72;--y:66;--mx:50;--my:68;--c:#a3b84a;--skin:#d6a07c;--hair:#1f1a16"><span class="plate"></span><span class="desk"></span><span class="chair"></span><span class="char"></span><span class="tag"><b>R</b><span class="nm">Rafael</span><span class="st"></span></span></div>
+                <span class="st-vig"></span>
+                <div class="st-zone"><span class="st-you" data-i18n="stage.you">You</span><span data-i18n="stage.zone">Approvals zone</span></div>
+                <svg class="st-links"></svg>
+                <div class="st-bubbles"></div>
+                <section class="st-feed"><h4 data-i18n="stage.feed">Live activity</h4><ol></ol></section>
+                <div class="st-appr">
+                  <span class="st-appr-k"><span data-i18n="appr.title">Approval required</span><em data-i18n="appr.risk">Medium risk</em></span>
+                  <strong data-i18n="appr.action">Send proposal to the client</strong>
+                  <small data-i18n="appr.by">Requested by Valeria Ríos · Sales</small>
+                  <span class="st-appr-b"><span class="no" data-i18n="appr.reject">Reject</span><span class="yes" data-i18n="appr.approve">Approve</span></span>
+                  <span class="st-appr-ok"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="appr.done">Approved by you</span></span>
+                </div>
+                <div class="st-report"><b><svg viewBox="0 0 16 16" width="13" height="13"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="report.t">Report ready</span></b><span data-i18n="report.d">Proposal sent, margin reviewed and clauses cleared by Legal.</span></div>
+                <div class="st-cmd"><span class="st-chev">›</span><span class="st-input" data-placeholder="" data-i18n-attr="data-placeholder:stage.placeholder"></span><span class="st-send" data-i18n="stage.send">Send</span></div>
+                <span class="st-cursor"><svg viewBox="0 0 20 20" width="20" height="20"><path d="M4 2.5l11.5 9-5.2.6 3 5.6-2.4 1.2-3-5.7L4 17z" fill="#0a1628" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg></span>
+              </div>
+            </div>
+            <ol class="st-chapters" data-chapters data-i18n-aria="stage.chapters" aria-label="Animation chapters">
+              <li><button type="button" data-ch="0"><span class="ch-bar"><i></i></span><span data-i18n="stage.ch1">You ask</span></button></li>
+              <li><button type="button" data-ch="1"><span class="ch-bar"><i></i></span><span data-i18n="stage.ch2">Planning</span></button></li>
+              <li><button type="button" data-ch="2"><span class="ch-bar"><i></i></span><span data-i18n="stage.ch3">Parallel work</span></button></li>
+              <li><button type="button" data-ch="3"><span class="ch-bar"><i></i></span><span data-i18n="stage.ch4">You approve</span></button></li>
+              <li><button type="button" data-ch="4"><span class="ch-bar"><i></i></span><span data-i18n="stage.ch5">Report</span></button></li>
+            </ol>
+            <figcaption class="st-cap">
+              <span data-i18n="stage.caption">Illustrative animation of the $50,000 scenario, with the app's colors, states and messages; not a recording. Marketing, Support and Procurement are example roles: the app ships seven base employees and templates to add more.</span>
+              <span class="st-ctl"><button type="button" class="st-toggle" data-sound="fx" aria-pressed="false"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path class="i-on" d="M11 5.5a3.5 3.5 0 0 1 0 5M12.6 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="i-off" d="M11 6l4 4M15 6l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="stage.sound">Sound</span></button><button type="button" class="st-toggle" data-sound="music" aria-pressed="false"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M6 12V3.5l7-1.5v8.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="4.5" cy="12" r="2" fill="currentColor"/><circle cx="11.5" cy="10.5" r="2" fill="currentColor"/><path class="i-off" d="M2 2l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="stage.music">Music</span></button><button type="button" class="st-toggle" data-stage-toggle aria-pressed="false"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path class="i-pause" d="M5 3v10M11 3v10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path class="i-play" d="M5 3l8 5-8 5z" fill="currentColor"/></svg><span data-i18n="stage.pause">Pause animation</span></button></span>
+            </figcaption>
+          </figure>
+        </div>
+
+        <div class="facts reveal">
+          <p class="facts-k" data-i18n="facts.k">What ships today</p>
+          <ul data-stagger>
+            <li><b data-countup="7">7</b><span data-i18n="facts.1">base employees, each with a role, tools and memory</span></li>
+            <li><b data-countup="6">+6</b><span data-i18n="facts.2">more professions you can hire from a template</span></li>
+            <li><b data-countup="4">4</b><span data-i18n="facts.3">AI providers with your key: OpenAI, Claude, Kimi or DeepSeek, plus any OpenAI-compatible one</span></li>
+            <li><b>0</b><span data-i18n="facts.4">keys the model sees: they live in an encrypted vault</span></li>
+          </ul>
+        </div>
       </div>
     </section>
 
-    <section class="section problem" aria-labelledby="problem-h">
+    <!-- PROBLEM -->
+    <section class="section problem" id="problema" aria-labelledby="problem-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="problem-h" data-i18n="problem.title">AI agents usually work behind closed doors.</h2>
-          <p class="lead" data-i18n="problem.lead">You hand over a task and get a result. What happened in between is a black box.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="problem.kicker">The problem</p>
+          <h2 id="problem-h" data-i18n="problem.title">Most AI agents work behind closed doors.</h2>
+          <p class="lead" data-i18n="problem.lead">You hand over a task and get a result back. What happened in between stays in a black box.</p>
         </div>
-        <div class="questions reveal">
-          <div><h3 data-i18n="problem.q1">What did they do?</h3><p data-i18n="problem.a1">A message history does not tell you who touched what, or what was sent outside.</p></div>
-          <div><h3 data-i18n="problem.q2">How much did they spend?</h3><p data-i18n="problem.a2">The cost shows up later, on an invoice, when you can no longer decide anything.</p></div>
-          <div><h3 data-i18n="problem.q3">Did they do it right?</h3><p data-i18n="problem.a3">Without seeing the process or who they consulted, reviewing the result is guesswork.</p></div>
+        <div class="questions reveal" data-stagger>
+          <div class="q"><span class="q-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><h3 data-i18n="problem.q1">What did they do?</h3><p data-i18n="problem.a1">A message history does not tell you who touched what, or what was sent outside.</p></div>
+          <div class="q"><span class="q-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="3.5" y="6" width="17" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 10h17M7 14.5h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><h3 data-i18n="problem.q2">How much did they spend?</h3><p data-i18n="problem.a2">The cost shows up later, on an invoice, when you can no longer decide anything.</p></div>
+          <div class="q"><span class="q-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .8-1 1.5v.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.05" fill="currentColor"/></svg></span><h3 data-i18n="problem.q3">Did they get it right?</h3><p data-i18n="problem.a3">If you cannot see the process or who they consulted, reviewing the result is guesswork.</p></div>
         </div>
-        <p class="reveal pull" data-i18n="problem.close">AI Workforce OS starts from the opposite premise: everything an AI employee does is visible, has a spending cap and waits for your decision when it matters.</p>
+        <p class="pull reveal" data-i18n="problem.close">AI Workforce OS starts from the opposite premise: everything an AI employee does is visible, has a spending cap and stops to wait for you when it matters.</p>
       </div>
     </section>
 
+    <!-- HOW IT WORKS -->
     <section class="section alt" id="como" aria-labelledby="how-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="how-h" data-i18n="how.title">How it works</h2>
-          <p class="lead" data-i18n="how.lead">Three steps, and you stay in charge at each one.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="how.kicker">How it works</p>
+          <h2 id="how-h" data-i18n="how.title">From one sentence to a report, without letting go.</h2>
+          <p class="lead" data-i18n="how.lead">You write what you need. The Assistant builds the plan, the team works in parallel, you approve what is sensitive and you get the result.</p>
         </div>
-        <ol class="steps reveal">
-          <li><span class="step-n" aria-hidden="true">1</span><h3 data-i18n="how.s1.t">You ask</h3><span class="chip" style="--c:#5a95e8;--s:#6d5bb5"><b>S</b>Sofía<i data-i18n="state.thinking">Thinking</i></span><p data-i18n-html="how.s1.d">Write what you need the way you would tell a colleague: <em>“prepare a $50,000 proposal”</em>. Before running it you can see a cost estimate.</p></li>
-          <li><span class="step-n" aria-hidden="true">2</span><h3 data-i18n="how.s2.t">You watch them collaborate</h3><span class="chip" style="--c:#4cb987;--s:#2b6cb0"><b>T</b>Tomás<i data-i18n="state.working">Working</i></span><p data-i18n-html="how.s2.d">The Assistant builds the plan. Each employee takes their part, consults the others and works in parallel whenever the plan allows. You see it happen in the office.</p></li>
-          <li><span class="step-n" aria-hidden="true">3</span><h3 data-i18n="how.s3.t">You approve</h3><span class="chip attn" style="--c:#f4895a;--s:#a86208"><b>V</b>Valeria<i data-i18n="state.awaiting_approval">Awaiting approval</i></span><p data-i18n-html="how.s3.d">Before sending a proposal or starting a hire, the employee stops and asks for your go-ahead. At the end you get a report of what was done and what it cost.</p></li>
+        <ol class="flow reveal" data-stagger>
+          <li class="fl">
+            <div class="fl-vis fv-ask" aria-hidden="true"><span class="fv-input"><span class="fv-chev">›</span><span class="fv-text" data-i18n="how.example">Prepare a $50,000 proposal</span></span></div>
+            <span class="fl-n" aria-hidden="true">01</span><h3 data-i18n="f1.t">You ask</h3><p data-i18n="f1.d">In plain language, as you would ask a colleague. Before it runs you see a cost estimate.</p>
+          </li>
+          <li class="fl">
+            <div class="fl-vis fv-plan" aria-hidden="true"><span class="fv-root" data-i18n="how.plan">Plan · 6 tasks</span><svg viewBox="0 0 120 34" preserveAspectRatio="none"><path d="M60 0V10M60 10H18V30M60 10H102V30M60 10V30" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg><span class="fv-kids"><i style="--c:#f4895a"></i><i style="--c:#4cb987"></i><i style="--c:#9577d6"></i></span></div>
+            <span class="fl-n" aria-hidden="true">02</span><h3 data-i18n="f2.t">It gets planned</h3><p data-i18n="f2.d">The Assistant splits the work into tasks with dependencies and hands them out.</p>
+          </li>
+          <li class="fl">
+            <div class="fl-vis fv-par" aria-hidden="true"><i style="--c:#f4895a;--w:.82;--d:0s"></i><i style="--c:#4cb987;--w:.64;--d:.25s"></i><i style="--c:#9577d6;--w:.9;--d:.5s"></i><i style="--c:#45b8cc;--w:.5;--d:.75s"></i></div>
+            <span class="fl-n" aria-hidden="true">03</span><h3 data-i18n="f3.t">They work in parallel</h3><p data-i18n="f3.d">Whatever does not depend on something else runs at the same time, and they consult each other.</p>
+          </li>
+          <li class="fl">
+            <div class="fl-vis fv-appr" aria-hidden="true"><span class="fv-card"><span class="fv-k" data-i18n="appr.title">Approval required</span><span class="fv-btns"><span data-i18n="appr.reject">Reject</span><span class="yes" data-i18n="appr.approve">Approve</span></span></span></div>
+            <span class="fl-n" aria-hidden="true">04</span><h3 data-i18n="f4.t">You approve</h3><p data-i18n="f4.d">Before anything goes out, the employee stops and asks for your go-ahead.</p>
+          </li>
+          <li class="fl">
+            <div class="fl-vis fv-rep" aria-hidden="true"><span class="fv-doc"><i></i><i></i><i></i><b><svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="how.ok">Done</span></b></span></div>
+            <span class="fl-n" aria-hidden="true">05</span><h3 data-i18n="f5.t">You get the report</h3><p data-i18n="f5.d">What was done, who took part and what it cost, in one place.</p>
+          </li>
         </ol>
       </div>
     </section>
 
+    <!-- SCREENSHOTS -->
     <section class="section" id="app" aria-labelledby="shots-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="shots-h" data-i18n="shots.title">The real app, not a mockup</h2>
-          <p class="lead" data-i18n="shots.lead">Screenshots of the application running in simulation mode. What you see on screen comes from real system events.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="shots.kicker">The real app</p>
+          <h2 id="shots-h" data-i18n="shots.title">Screenshots of the app, not mockups.</h2>
+          <p class="lead" data-i18n="shots.lead">What you see on screen comes from real system events. These screenshots are from simulation mode.</p>
         </div>
-        <div class="shots">
-          <figure class="window wide reveal">
-            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-            <img src="/img/office.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="3D office with the AI employees and the bar to type a request." data-i18n-alt="shots.office.alt">
-            <figcaption><strong data-i18n="shots.office.t">Office</strong> <span data-i18n="shots.office.d">Who is working, who is consulting whom and who is waiting for your approval, at a glance.</span></figcaption>
-          </figure>
-          <figure class="window wide reveal">
-            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-            <img src="/img/approvals.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Approvals tray with actions waiting for a human decision." data-i18n-alt="shots.appr.alt">
-            <figcaption><strong data-i18n="shots.appr.t">Approvals</strong> <span data-i18n="shots.appr.d">Sensitive actions wait for your decision: approve or reject.</span></figcaption>
-          </figure>
-          <figure class="window reveal">
-            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-            <img src="/img/dashboard.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Dashboard mode with indicators, tasks and employee activity." data-i18n-alt="shots.dash.alt">
-            <figcaption><strong data-i18n="shots.dash.t">Dashboard</strong> <span data-i18n="shots.dash.d">For those who prefer lists: tasks, costs, conversations and activity.</span></figcaption>
-          </figure>
-          <figure class="window reveal">
-            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-            <img src="/img/projects.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Plan of the Quarterly financial close project, with tasks per employee, a cost estimate and a launch button." data-i18n-alt="shots.proj.alt">
-            <figcaption><strong data-i18n="shots.proj.t">Projects</strong> <span data-i18n="shots.proj.d">The plan for a quarterly close: balance sheet and income statement in parallel, estimated cost before launch and a human approval gate.</span></figcaption>
-          </figure>
+        <div class="show reveal" data-show>
+          <div class="show-tabs" role="tablist" data-i18n-aria="shots.tabs" aria-label="App screens">
+            <button type="button" role="tab" id="tab-office" aria-controls="pan-office" aria-selected="true"><span class="tab-bar"><i></i></span><strong data-i18n="shots.office.t">Office</strong><span data-i18n="shots.office.d">Who is working, who is consulting whom and who is waiting for your approval, at a glance.</span></button>
+            <button type="button" role="tab" id="tab-appr" aria-controls="pan-appr" aria-selected="false" tabindex="-1"><span class="tab-bar"><i></i></span><strong data-i18n="shots.appr.t">Approvals</strong><span data-i18n="shots.appr.d">Sensitive actions wait for your decision: approve or reject.</span></button>
+            <button type="button" role="tab" id="tab-proj" aria-controls="pan-proj" aria-selected="false" tabindex="-1"><span class="tab-bar"><i></i></span><strong data-i18n="shots.proj.t">Projects</strong><span data-i18n="shots.proj.d">The plan for a quarterly close: tasks in parallel, estimated cost before launch and a human approval gate.</span></button>
+            <button type="button" role="tab" id="tab-dash" aria-controls="pan-dash" aria-selected="false" tabindex="-1"><span class="tab-bar"><i></i></span><strong data-i18n="shots.dash.t">Dashboard</strong><span data-i18n="shots.dash.d">For those who prefer lists: tasks, costs, conversations and activity.</span></button>
+          </div>
+          <div class="show-panels">
+            <figure class="window show-pan" id="pan-office" role="tabpanel" aria-labelledby="tab-office">
+              <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+              <img src="/img/office.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="3D office with the AI employees and the bar to type a request." data-i18n-alt="shots.office.alt">
+              <figcaption><strong data-i18n="shots.office.t">Office</strong> <span data-i18n="shots.office.d">Who is working, who is consulting whom and who is waiting for your approval, at a glance.</span></figcaption>
+            </figure>
+            <figure class="window show-pan" id="pan-appr" role="tabpanel" aria-labelledby="tab-appr">
+              <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+              <img src="/img/approvals.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Approvals tray with actions waiting for a human decision." data-i18n-alt="shots.appr.alt">
+              <figcaption><strong data-i18n="shots.appr.t">Approvals</strong> <span data-i18n="shots.appr.d">Sensitive actions wait for your decision: approve or reject.</span></figcaption>
+            </figure>
+            <figure class="window show-pan" id="pan-proj" role="tabpanel" aria-labelledby="tab-proj">
+              <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+              <img src="/img/projects.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Plan of the Quarterly financial close project, with tasks per employee, a cost estimate and a launch button." data-i18n-alt="shots.proj.alt">
+              <figcaption><strong data-i18n="shots.proj.t">Projects</strong> <span data-i18n="shots.proj.d">The plan for a quarterly close: tasks in parallel, estimated cost before launch and a human approval gate.</span></figcaption>
+            </figure>
+            <figure class="window show-pan" id="pan-dash" role="tabpanel" aria-labelledby="tab-dash">
+              <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+              <img src="/img/dashboard.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Dashboard mode with indicators, tasks and employee activity." data-i18n-alt="shots.dash.alt">
+              <figcaption><strong data-i18n="shots.dash.t">Dashboard</strong> <span data-i18n="shots.dash.d">For those who prefer lists: tasks, costs, conversations and activity.</span></figcaption>
+            </figure>
+          </div>
         </div>
       </div>
     </section>
 
+    <!-- CONTROL (bento) -->
     <section class="section alt" id="control" aria-labelledby="control-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="control-h" data-i18n="control.title">What is already built, and why it matters</h2>
-          <p class="lead" data-i18n="control.lead">These capabilities exist in the app's code today. Anything that depends on real integrations is detailed under “Current status”.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="control.kicker">Control</p>
+          <h2 id="control-h" data-i18n="control.title">You set the limits. The backend enforces them.</h2>
+          <p class="lead" data-i18n="control.lead">These capabilities exist in the app's code today. Anything that depends on real integrations is listed under “Current status”.</p>
         </div>
-        <dl class="features reveal">
-          <div><dt data-i18n="c.office.t">A 3D office showing the work live</dt><dd data-i18n="c.office.d">Every movement comes from real events: who is working, who is consulting whom, who is waiting. If you prefer lists, there is a dashboard mode.</dd></div>
-          <div><dt data-i18n="c.appr.t">Human approvals on sensitive actions</dt><dd data-i18n="c.appr.d">Sending a proposal or a contract requires your decision. Agents can ask for approval; they can never give it. You choose each employee's autonomy: suggest, approve each action, rules or autonomous.</dd></div>
-          <div><dt data-i18n="c.cost.t">Estimated cost before running, and caps</dt><dd data-i18n="c.cost.d">You see an estimate before a request runs. There are caps per request, per employee and per organization; when a cap is reached the work pauses and you decide whether it continues.</dd></div>
-          <div><dt data-i18n="c.vault.t">Credentials kept away from the model</dt><dd data-i18n="c.vault.d">Keys live in an encrypted vault (AES-256-GCM). The AI model never sees them: the backend runs the tools, not the model.</dd></div>
-          <div><dt data-i18n="c.kill.t">Kill-switch and read-only mode</dt><dd data-i18n="c.kill.d">Freeze activity or put the whole office in read-only mode. You can also pause a single employee or switch off a specific tool.</dd></div>
-          <div><dt data-i18n="c.audit.t">Audit trail</dt><dd data-i18n="c.audit.d">Every relevant action is recorded in a log the application can only write to, not edit or delete.</dd></div>
-          <div><dt data-i18n="c.proj.t">Whole projects, with parallel work</dt><dd data-i18n="c.proj.d">A project is split into tasks with dependencies. Whatever does not depend on something else runs at the same time. See the example below.</dd></div>
-          <div><dt data-i18n="c.tpl.t">Workflow templates and packs by business type</dt><dd data-i18n="c.tpl.d">Five templates (proposal, new client, collections, month-end close and daily briefing) and four packs (agency, commerce, professional services and general) that set rules and autonomy levels.</dd></div>
-          <div><dt data-i18n="c.es.t">Native Spanish, with regional tones</dt><dd data-i18n="c.es.d">Interface and employees designed for Spanish, with a configurable regional tone. Includes sample tax templates for Mexico and Spain, labeled as examples.</dd></div>
-        </dl>
+        <div class="bento">
+          <article class="card c-appr reveal">
+            <div class="viz viz-appr" aria-hidden="true">
+              <div class="va-card">
+                <span class="va-k"><span data-i18n="appr.title">Approval required</span><em data-i18n="appr.risk">Medium risk</em></span>
+                <strong data-i18n="appr.action">Send proposal to the client</strong>
+                <small data-i18n="appr.by">Requested by Valeria Ríos · Sales</small>
+                <span class="va-b"><span data-i18n="appr.reject">Reject</span><span class="yes" data-i18n="appr.approve">Approve</span></span>
+                <span class="va-ok"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="appr.done">Approved by you</span></span>
+                <span class="va-cursor"><svg viewBox="0 0 20 20" width="18" height="18"><path d="M4 2.5l11.5 9-5.2.6 3 5.6-2.4 1.2-3-5.7L4 17z" fill="#0a1628" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg></span>
+              </div>
+              <div class="va-auto">
+                <span class="va-auto-k" data-i18n="auto.k">Autonomy per employee</span>
+                <span class="seg"><span class="seg-ind"></span><span data-i18n="auto.1">Suggest</span><span data-i18n="auto.2">Approve each action</span><span data-i18n="auto.3">Rules</span><span data-i18n="auto.4">Autonomous</span></span>
+              </div>
+            </div>
+            <h3 data-i18n="c.appr.t">Human approval on sensitive actions</h3><p data-i18n="c.appr.d">Sending a proposal or a contract requires your decision. Agents can ask for approval; they can never give it. And you choose how much autonomy each employee has.</p>
+          </article>
+          <article class="card c-cost reveal">
+            <div class="viz viz-cost" aria-hidden="true">
+              <span class="vc-k" data-i18n="cost.k">Request spend</span>
+              <span class="vc-meter"><i class="vc-fill"></i><i class="vc-cap"><b data-i18n="cost.cap">Cap</b></i></span>
+              <span class="vc-paused"><span class="vc-dot"></span><span data-i18n="cost.paused">Paused · your call</span></span>
+            </div>
+            <h3 data-i18n="c.cost.t">Cost estimates and caps</h3><p data-i18n="c.cost.d">You see an estimated range before anything runs. There are caps per request, per employee and per organization; when a request or employee cap is hit, the work pauses and you decide whether it continues.</p>
+          </article>
+          <article class="card c-kill reveal">
+            <div class="viz viz-kill" aria-hidden="true">
+              <span class="vk-sw"><i></i></span>
+              <span class="vk-lbl"><span class="vk-on" data-i18n="kill.on">Active</span><span class="vk-off" data-i18n="kill.off">Frozen</span></span>
+              <span class="vk-dots"><i style="--c:#f4895a"></i><i style="--c:#4cb987"></i><i style="--c:#9577d6"></i><i style="--c:#45b8cc"></i><i style="--c:#e8b53a"></i><i style="--c:#5a95e8"></i></span>
+            </div>
+            <h3 data-i18n="c.kill.t">Kill-switch and read-only mode</h3><p data-i18n="c.kill.d">Freeze all activity or put the office in read-only mode. You can also pause a single employee or switch off a specific tool.</p>
+          </article>
+          <article class="card c-audit reveal">
+            <div class="viz viz-audit" aria-hidden="true">
+              <span class="vl"><b>approval.requested</b><code>a3f9…</code></span>
+              <span class="vl"><b>approval.resolved</b><code>7c21…</code></span>
+              <span class="vl"><b>tool.executed</b><code>0be4…</code></span>
+              <span class="vl"><b>report.created</b><code>e81d…</code></span>
+            </div>
+            <h3 data-i18n="c.audit.t">Audit trail</h3><p data-i18n="c.audit.d">Every relevant action goes into a hash-chained log the app can only append to, never edit or delete. It can be exported and verified.</p>
+          </article>
+          <article class="card c-vault reveal">
+            <div class="viz viz-vault" aria-hidden="true">
+              <span class="vv-node vv-model"><span data-i18n="vault.model">AI model</span></span>
+              <span class="vv-wall"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 5l14 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>
+              <span class="vv-node vv-vault"><svg viewBox="0 0 24 24" width="16" height="16"><rect x="5" y="10.5" width="14" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span data-i18n="vault.vault">Vault</span></span>
+            </div>
+            <h3 data-i18n="c.vault.t">Credentials kept away from the model</h3><p data-i18n="c.vault.d">Keys live in an encrypted vault (AES-256-GCM). The AI model never sees them: the backend runs the tools.</p>
+          </article>
+          <article class="card c-proj reveal">
+            <div class="viz viz-proj" aria-hidden="true"><i style="--c:#5a95e8;--l:0;--w:.22"></i><i style="--c:#4cb987;--l:.25;--w:.4"></i><i style="--c:#4cb987;--l:.25;--w:.4"></i><i style="--c:#45b8cc;--l:.68;--w:.18"></i><i style="--c:#a86208;--l:.88;--w:.12"></i></div>
+            <h3 data-i18n="c.proj.t">Projects with parallel work</h3><p data-i18n="c.proj.d">A project is split into tasks with dependencies; whatever does not depend on something else runs at the same time.</p>
+            <a class="more" href="#paralelo"><span data-i18n="c.proj.more">See the example</span><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 3v9M4 8.5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          </article>
+          <article class="card c-tpl reveal">
+            <div class="viz viz-tpl" aria-hidden="true"><span data-i18n="tpl.1">Proposal</span><span data-i18n="tpl.2">New client</span><span data-i18n="tpl.3">Collections</span><span data-i18n="tpl.4">Month-end close</span><span data-i18n="tpl.5">Daily briefing</span></div>
+            <h3 data-i18n="c.tpl.t">Templates and business packs</h3><p data-i18n="c.tpl.d">Five workflow templates and four packs (agency, commerce, professional services and general) that set rules and autonomy.</p>
+          </article>
+          <article class="card c-es reveal">
+            <div class="viz viz-es" aria-hidden="true"><span class="ve-b" lang="es">Español</span><span class="ve-b" lang="en">English</span><span class="ve-b">MX · ES</span></div>
+            <h3 data-i18n="c.es.t">Built in Spanish first</h3><p data-i18n="c.es.d">Interface and employees in Spanish (and English), with a configurable regional tone. Ships sample tax templates for Mexico and Spain, labeled as examples.</p>
+          </article>
+        </div>
       </div>
     </section>
 
+    <!-- PARALLEL LANES -->
     <section class="section" id="paralelo" aria-labelledby="lanes-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="lanes-h" data-i18n="lanes.title">One project, several employees at once</h2>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="lanes.kicker">Parallel work</p>
+          <h2 id="lanes-h" data-i18n="lanes.title">One project, several employees at once.</h2>
           <p class="lead" data-i18n="lanes.lead">Example: the quarterly financial close, as in the Projects screenshot. The Accountant does not finish one thing before starting the other.</p>
         </div>
         <figure class="lanes reveal" role="img" tabindex="0" data-i18n-aria="lanes.alt" aria-label="Diagram: the Assistant builds the plan; the Accountant produces the balance sheet and the income statement at the same time; the Analyst consolidates when both finish; you approve sending and the report arrives.">
-          <div class="lane-grid" aria-hidden="true">
-            <div class="lane-label" data-i18n="lanes.assistant">Assistant</div>
-            <div class="lane-track"><span class="bar b-plan" data-i18n="lanes.plan">Builds the plan</span><span class="bar b-rep" data-i18n="lanes.report">Report</span></div>
+          <div class="lane-scroll">
+            <div class="lane-grid" aria-hidden="true">
+              <div class="lane-label" data-i18n="lanes.assistant">Assistant</div>
+              <div class="lane-track"><span class="bar b-plan" data-i18n="lanes.plan">Builds the plan</span><span class="bar b-rep" data-i18n="lanes.report">Report</span></div>
 
-            <div class="lane-label" data-i18n="lanes.accounting">Accountant</div>
-            <div class="lane-track two">
-              <span class="bar b-bal" data-i18n="lanes.balance">Balance sheet</span>
-              <span class="bar b-pnl" data-i18n="lanes.pnl">Income statement</span>
-              <span class="bracket" data-i18n="lanes.parallel">In parallel</span>
+              <div class="lane-label" data-i18n="lanes.accounting">Accountant</div>
+              <div class="lane-track two">
+                <span class="bar b-bal" data-i18n="lanes.balance">Balance sheet</span>
+                <span class="bar b-pnl" data-i18n="lanes.pnl">Income statement</span>
+                <span class="bracket" data-i18n="lanes.parallel">In parallel</span>
+              </div>
+
+              <div class="lane-label" data-i18n="lanes.analyst">Analyst</div>
+              <div class="lane-track"><span class="wait" data-i18n="lanes.wait">Waits for both</span><span class="bar b-ana" data-i18n="lanes.consolidate">Consolidates findings</span></div>
+
+              <div class="lane-label" data-i18n="lanes.you">You</div>
+              <div class="lane-track"><span class="bar b-you" data-i18n="lanes.approve">You approve sending</span></div>
+              <span class="playhead"><i></i></span>
             </div>
-
-            <div class="lane-label" data-i18n="lanes.analyst">Analyst</div>
-            <div class="lane-track"><span class="wait" data-i18n="lanes.wait">Waits for both</span><span class="bar b-ana" data-i18n="lanes.consolidate">Consolidates findings</span></div>
-
-            <div class="lane-label" data-i18n="lanes.you">You</div>
-            <div class="lane-track"><span class="bar b-you" data-i18n="lanes.approve">You approve sending</span></div>
           </div>
           <figcaption data-i18n="lanes.tag">Illustrative diagram of the flow; not a screenshot.</figcaption>
         </figure>
       </div>
     </section>
 
+    <!-- TEAM -->
     <section class="section alt" id="equipo" aria-labelledby="team-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="team-h" data-i18n="team.title">The team</h2>
-          <p class="lead" data-i18n="team.lead">Seven employees, each with their own role and tools. Each one is persistent: it has memory and a history of what it did.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="team.kicker">The team</p>
+          <h2 id="team-h" data-i18n="team.title">Seven employees to start. More when you need them.</h2>
+          <p class="lead" data-i18n="team.lead">Each one has a role, tools, memory and a history of what it did. And you can hire other professions from templates.</p>
         </div>
-        <ul class="roles reveal">
-          <li style="--c:#5a95e8"><span class="av" aria-hidden="true">S</span><p class="who">Sofía Lara</p><h3 data-i18n="r.assistant.t">Assistant</h3><p data-i18n="r.assistant.d">Plans, coordinates the team and consolidates the final report.</p></li>
+        <ul class="roles reveal" data-stagger>
+          <li class="lead-role" style="--c:#5a95e8"><span class="av" aria-hidden="true">S</span><p class="who">Sofía Lara</p><h3 data-i18n="r.assistant.t">Assistant</h3><p data-i18n="r.assistant.d">Plans, coordinates the team and consolidates the final report.</p></li>
           <li style="--c:#f4895a"><span class="av" aria-hidden="true">V</span><p class="who">Valeria Ríos</p><h3 data-i18n="r.sales.t">Sales</h3><p data-i18n="r.sales.d">Analyzes the client and prepares proposals.</p></li>
           <li style="--c:#9577d6"><span class="av" aria-hidden="true">E</span><p class="who">Elena Castro</p><h3 data-i18n="r.legal.t">Legal</h3><p data-i18n="r.legal.d">Reviews contracts and flags risks.</p></li>
           <li style="--c:#4cb987"><span class="av" aria-hidden="true">T</span><p class="who">Tomás Vidal</p><h3 data-i18n="r.accounting.t">Accounting</h3><p data-i18n="r.accounting.d">Calculates margins and builds financial statements.</p></li>
           <li style="--c:#45b8cc"><span class="av" aria-hidden="true">N</span><p class="who">Nadia Ortega</p><h3 data-i18n="r.analyst.t">Analysis</h3><p data-i18n="r.analyst.d">Assesses profitability and draws findings from data.</p></li>
           <li style="--c:#e8b53a"><span class="av" aria-hidden="true">I</span><p class="who">Iván Duarte</p><h3 data-i18n="r.ops.t">Operations</h3><p data-i18n="r.ops.d">Checks capacity, deliveries and staffing needs.</p></li>
           <li style="--c:#ee7aa8"><span class="av" aria-hidden="true">M</span><p class="who">Marcos Peña</p><h3 data-i18n="r.hr.t">HR</h3><p data-i18n="r.hr.d">Prepares hiring processes and role profiles.</p></li>
-          <li class="soon"><h3 data-i18n="team.soon.t">Coming soon: more professions</h3><p data-i18n="team.soon.d">We are designing roles as configuration so new professions can be added without rewriting the engine. This is a design proposal; it is not built yet.</p></li>
+          <li class="more-roles"><span class="av av-plus" aria-hidden="true">+6</span><h3 data-i18n="team.more.t">Hire from a template</h3><p data-i18n="team.more.d">Professions described as configuration, each with its risk level and approvals:</p>
+            <ul class="pros"><li data-i18n="pro.1">Data analyst</li><li data-i18n="pro.2">Instructional design</li><li data-i18n="pro.3">Finance and treasury (analysis only)</li><li data-i18n="pro.4">Internal audit</li><li data-i18n="pro.5">Project manager</li><li data-i18n="pro.6">Software engineering</li></ul>
+          </li>
         </ul>
-        <p class="fine" data-i18n="team.note">Employees prepare and organize. They do not give legal, tax or medical advice: those decisions belong to a human professional.</p>
+        <p class="fine team-note" data-i18n="team.note">Employees prepare and organize. They do not give legal, tax or medical advice: those decisions belong to a human professional.</p>
       </div>
     </section>
 
-    <section class="section" id="confianza" aria-labelledby="trust-h">
+    <!-- SECURITY -->
+    <section class="section sec" id="confianza" aria-labelledby="trust-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="trust-h" data-i18n="trust.title">Security and trust</h2>
-          <p class="lead" data-i18n="trust.lead">Design principles you can check in the architecture. They are not certifications.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="trust.kicker">Security</p>
+          <h2 id="trust-h" data-i18n="trust.title">The model proposes. The backend decides.</h2>
+          <p class="lead" data-i18n="trust.lead">Design principles you can check in the technical docs. They are not certifications.</p>
         </div>
-        <dl class="features two reveal">
-          <div><dt data-i18n="t1.t">The backend decides, the model proposes</dt><dd data-i18n="t1.d">The AI engine returns results and tool requests. The backend decides whether they run, need approval or are rejected.</dd></div>
-          <div><dt data-i18n="t2.t">External content is data, not instructions</dt><dd data-i18n="t2.d">Emails and documents an employee reads are handled as delimited data, so they cannot give orders to the system.</dd></div>
-          <div><dt data-i18n="t3.t">Isolation per organization</dt><dd data-i18n="t3.d">Data carries its organization identifier and the database enforces row-level security, using an application role that cannot bypass it.</dd></div>
-          <div><dt data-i18n="t4.t">Least privilege</dt><dd data-i18n="t4.d">An employee only uses the connections and capabilities you authorize, and every permission is recorded.</dd></div>
-        </dl>
-        <aside class="reveal callout">
+        <div class="sec-grid">
+          <div class="sec-viz reveal" aria-hidden="true">
+            <div class="sv-rail"><span class="sv-pkt"><i></i></span></div>
+            <div class="sv-row sv-ext"><span class="sv-box"><svg viewBox="0 0 24 24" width="16" height="16"><rect x="3.5" y="5.5" width="17" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span data-i18n="sec.ext">Incoming email</span></span><span class="sv-tag" data-i18n="sec.data">data, not instructions</span></div>
+            <div class="sv-row sv-model"><span class="sv-box"><span class="sv-spark"></span><span data-i18n="sec.model">AI model</span></span><span class="sv-tag sv-mono" data-i18n="sec.propose">proposes: send proposal</span></div>
+            <div class="sv-row sv-be">
+              <span class="sv-box sv-big"><b data-i18n="sec.backend">Backend</b>
+                <span class="sv-checks"><span class="sv-c c1"><i></i><span data-i18n="sec.c1">Permissions</span></span><span class="sv-c c2"><i></i><span data-i18n="sec.c2">Spending cap</span></span><span class="sv-c c3"><i></i><span data-i18n="sec.c3">Your approval</span></span></span>
+              </span>
+              <span class="sv-vault"><svg viewBox="0 0 24 24" width="15" height="15"><rect x="5" y="10.5" width="14" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span data-i18n="sec.vault">Vault</span></span>
+            </div>
+            <div class="sv-row sv-out"><span class="sv-box sv-done"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="sec.tool">Runs and is written to the audit log</span></span></div>
+          </div>
+          <dl class="principles reveal" data-stagger>
+            <div><dt data-i18n="t1.t">The backend decides, the model proposes</dt><dd data-i18n="t1.d">The AI engine returns results and tool requests. The backend decides whether they run, need approval or are rejected.</dd></div>
+            <div><dt data-i18n="t2.t">External content is data, not instructions</dt><dd data-i18n="t2.d">Emails and documents an employee reads are handled as delimited data, so they cannot give orders to the system.</dd></div>
+            <div><dt data-i18n="t3.t">Isolation per organization</dt><dd data-i18n="t3.d">Data carries its organization identifier and the database enforces row-level security, using an application role that cannot bypass it.</dd></div>
+            <div><dt data-i18n="t4.t">Least privilege</dt><dd data-i18n="t4.d">An employee only uses the connections and capabilities you authorize, and every permission is recorded.</dd></div>
+          </dl>
+        </div>
+        <aside class="callout reveal">
           <h3 data-i18n="trust.not.t">What we do not claim</h3>
-          <p data-i18n="trust.not.d">We hold no certifications (neither SOC 2 nor ISO) and we are not ready for regulated enterprise environments. Today there is no single sign-on (SSO), the audit log can be exported but without a signature or external anchoring, and runs in progress do not survive a server restart.</p>
+          <p data-i18n="trust.not.d">We hold no certifications (neither SOC 2 nor ISO 27001) and have not validated it with regulated companies. There is no SAML sign-in (SSO is OIDC), the audit log can be exported and verified but without a signature or external anchoring, and restart recovery assumes a single server instance.</p>
+          <a class="more" data-trust="index" href="/en/trust/"><span data-i18n="trust.more">Visit the trust center</span><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
         </aside>
       </div>
     </section>
 
+    <!-- STATUS -->
     <section class="section alt" id="estado" aria-labelledby="status-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="status-h" data-i18n="status.title">Current status</h2>
-          <p class="lead" data-i18n="status.lead">Plainly: what works today, what is being built and what is only planned.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="status.kicker">Current status</p>
+          <h2 id="status-h" data-i18n="status.title">What works today, plainly.</h2>
+          <p class="lead" data-i18n="status.lead">We update it when something changes. Last reviewed in October 2026.</p>
         </div>
-        <ul class="status reveal">
-          <li><span class="badge demo" data-i18n="st.demo">Demo</span><div><h3 data-i18n="st.1.t">3D office, dashboard, projects, approvals and costs</h3><p data-i18n="st.1.d">They work end to end in simulation mode: scripted, realistic responses, no AI key and no cost.</p></div></li>
-          <li><span class="badge dev" data-i18n="st.dev">In development</span><div><h3 data-i18n="st.2.t">Real AI</h3><p data-i18n="st.2.d">Turns on when you configure a model provider API key. The path exists, but we have tested it less than the simulation.</p></div></li>
-          <li><span class="badge dev" data-i18n="st.dev">In development</span><div><h3 data-i18n="st.3.t">Gmail</h3><p data-i18n="st.3.d">The flow with permissions and delayed sending works in simulation. It has not been tested with real Gmail accounts yet.</p></div></li>
-          <li><span class="badge soon" data-i18n="st.soon">Coming soon</span><div><h3 data-i18n="st.4.t">Other integrations (WhatsApp, calendar, etc.)</h3><p data-i18n="st.4.d">Planned. They do not exist today.</p></div></li>
-          <li><span class="badge soon" data-i18n="st.soon">Coming soon</span><div><h3 data-i18n="st.5.t">More professions</h3><p data-i18n="st.5.d">Design on paper; no new role has been built yet.</p></div></li>
-          <li><span class="badge soon" data-i18n="st.soon">Coming soon</span><div><h3 data-i18n="st.6.t">Resilience and enterprise</h3><p data-i18n="st.6.d">Runs that survive a restart and SSO do not exist yet. The audit log can be exported, but without an external signature.</p></div></li>
-        </ul>
+        <div class="board">
+          <section class="col col-ok reveal" aria-labelledby="col1-h">
+            <h3 id="col1-h"><span class="dot" aria-hidden="true"></span><span data-i18n="st.col1">Works today</span></h3>
+            <ul data-stagger>
+              <li><h4 data-i18n="st.1.t">3D office, dashboard, projects, approvals and costs</h4><p data-i18n="st.1.d">End to end in simulation mode: scripted, realistic responses, no AI key and no cost.</p></li>
+              <li><h4 data-i18n="st.2.t">Real AI with your own key</h4><p data-i18n="st.2.d">OpenAI, Claude, Kimi, DeepSeek or a compatible endpoint. It works, but we have tested it less than the simulation.</p></li>
+              <li><h4 data-i18n="st.3.t">Accounts and separate offices</h4><p data-i18n="st.3.d">Email sign-up, a 24-hour trial account and invitations with roles (owner, admin, member, viewer).</p></li>
+              <li><h4 data-i18n="st.4.t">Work that survives a restart</h4><p data-i18n="st.4.d">Requests in progress and pending approvals resume on startup, with a single server instance.</p></li>
+            </ul>
+          </section>
+          <section class="col col-dev reveal" aria-labelledby="col2-h">
+            <h3 id="col2-h"><span class="dot" aria-hidden="true"></span><span data-i18n="st.col2">Built, not yet proven in real use</span></h3>
+            <ul data-stagger>
+              <li><h4 data-i18n="st.5.t">Import data from any system</h4><p data-i18n="st.5.d">A generic API source the agents can query, data inboxes (a URL with a token that any software can send JSON, CSV or files to) and import from a link (CSV, JSON or Excel, once or on a schedule). No integrations tied to one product in this version.</p></li>
+              <li><h4 data-i18n="st.6.t">OIDC single sign-on, verified domains and SCIM</h4><p data-i18n="st.6.d">Implemented in the code; not yet validated with customers.</p></li>
+            </ul>
+          </section>
+          <section class="col col-soon reveal" aria-labelledby="col3-h">
+            <h3 id="col3-h"><span class="dot" aria-hidden="true"></span><span data-i18n="st.col3">Planned</span></h3>
+            <ul data-stagger>
+              <li><h4 data-i18n="st.7.t">WhatsApp and other messaging channels</h4><p data-i18n="st.7.d">Designed on paper. They do not exist today.</p></li>
+              <li><h4 data-i18n="st.8.t">SAML and multi-instance recovery</h4><p data-i18n="st.8.d">Pending. SSO is OIDC only today and recovery assumes a single server.</p></li>
+              <li><h4 data-i18n="st.9.t">Pricing</h4><p data-i18n="st.9.d">None yet. We want to learn from real use first.</p></li>
+            </ul>
+          </section>
+        </div>
       </div>
     </section>
 
+    <!-- GETTING STARTED -->
     <section class="section" id="usar" aria-labelledby="use-h">
       <div class="wrap">
-        <div class="head">
-          <h2 id="use-h" data-i18n="use.title">How to use it, in four steps</h2>
-          <p class="lead" data-i18n="use.lead">Create your account and in five minutes you will have asked for something, watched it get done and approved your first task.</p>
+        <div class="head reveal">
+          <p class="kicker" data-i18n="use.kicker">Getting started</p>
+          <h2 id="use-h" data-i18n="use.title">Your first task, in five minutes.</h2>
+          <p class="lead" data-i18n="use.lead">Create your account and within five minutes you will have asked for something, watched the team work and approved your first action.</p>
         </div>
-        <ol class="usage">
-          <li><h3 data-i18n="use.1.t">Ask</h3><p data-i18n="use.1.d">Type what you need in the bar at the bottom of the office, the way you would ask a team lead. There are shortcuts to try.</p></li>
-          <li><h3 data-i18n="use.2.t">Watch</h3><p data-i18n="use.2.d">Your AI employees split the work and you see it happen live: who does what, what it costs and how far along it is.</p></li>
-          <li><h3 data-i18n="use.3.t">Approve</h3><p data-i18n="use.3.d">Anything sensitive stops and waits for your decision. You approve or reject from the tray; nothing important leaves without you.</p></li>
-          <li><h3 data-i18n="use.4.t">Receive</h3><p data-i18n="use.4.d">You get a report, and every finished task earns coins to dress your team and decorate the office.</p></li>
+        <ol class="usage reveal" data-stagger>
+          <li><span class="u-n" aria-hidden="true">1</span><h3 data-i18n="use.1.t">Ask</h3><p data-i18n="use.1.d">Type what you need in the office bar, the way you would ask a team lead. There are shortcuts to try.</p></li>
+          <li><span class="u-n" aria-hidden="true">2</span><h3 data-i18n="use.2.t">Watch</h3><p data-i18n="use.2.d">Your AI employees split the work and you see it happen live: who does what, what it costs and how far along it is.</p></li>
+          <li><span class="u-n" aria-hidden="true">3</span><h3 data-i18n="use.3.t">Approve</h3><p data-i18n="use.3.d">Anything sensitive stops and waits for your decision. You approve or reject from the tray; nothing important leaves without you.</p></li>
+          <li><span class="u-n" aria-hidden="true">4</span><h3 data-i18n="use.4.t">Receive</h3><p data-i18n="use.4.d">You get a report, and every finished task earns coins to dress your team and decorate the office.</p></li>
         </ol>
-        <p class="usage-cta"><a class="btn btn-primary" data-guide="getting-started" href="/en/guide/getting-started/" data-i18n="use.cta">Read the full user guide</a></p>
+        <p class="usage-cta reveal"><a class="btn btn-ghost btn-arrow" data-guide="getting-started" href="/en/guide/getting-started/"><span data-i18n="use.cta">Read the full user guide</span><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a></p>
       </div>
     </section>
 
+    <!-- FAQ -->
     <section class="section alt" id="faq" aria-labelledby="faq-h">
-      <div class="wrap narrow">
-        <h2 id="faq-h" data-i18n="faq.title">Frequently asked questions</h2>
-        <div class="faq">
-          <details><summary data-i18n="faq.q1">Does this use real AI today?</summary><p data-i18n="faq.a1">Not by default: without an API key it runs in simulation mode, with scripted results. Once you set the key, it uses a real model. Once you create your account, you know what to expect.</p></details>
-          <details><summary data-i18n="faq.q2">Can it send emails or messages for me?</summary><p data-i18n="faq.a2">The flow exists for Gmail and always asks for your approval, but it has not been tested with real accounts. Do not use it with important email yet. WhatsApp and other channels are planned, not built.</p></details>
+      <div class="wrap faq-wrap">
+        <div class="head reveal">
+          <p class="kicker" data-i18n="faq.kicker">FAQ</p>
+          <h2 id="faq-h" data-i18n="faq.title">Frequently asked questions</h2>
+        </div>
+        <div class="faq reveal">
+          <details><summary data-i18n="faq.q1">Does this use real AI?</summary><p data-i18n="faq.a1">That is up to you. Without a key it runs in simulation mode, with scripted results and no cost. With your own OpenAI, Claude, Kimi or DeepSeek key it uses a real model; that path works, but we have tested it less than the simulation.</p></details>
+          <details><summary data-i18n="faq.q2">Can it send emails or messages for me?</summary><p data-i18n="faq.a2">Not in this version. The agents prepare drafts and documents that you review and send. Connectors for specific products (Gmail, Google Calendar and Drive, Slack, LinkedIn, GitHub) exist in the code, but they are switched off in v1 and have not been tested with real accounts; they are turned on on request. WhatsApp is not built.</p></details>
           <details><summary data-i18n="faq.q3">What happens to my data and my keys?</summary><p data-i18n="faq.a3">Keys go into an encrypted vault and the model does not see them. With real AI, task text is sent to the model provider you configure; check its terms before using sensitive data.</p></details>
           <details><summary data-i18n="faq.q4">Can an agent approve something on its own?</summary><p data-i18n="faq.a4">No. An agent can ask for approval, but the decision is always a person's. You adjust what requires approval and how much autonomy each employee has.</p></details>
-          <details><summary data-i18n="faq.q5">Does it replace my team?</summary><p data-i18n="faq.a5">That is not the idea. It is a support team that prepares, organizes and consults; important decisions stay yours. It does not replace a lawyer, accountant or any other professional.</p></details>
-          <details><summary data-i18n="faq.q6">How much does it cost?</summary><p data-i18n="faq.a6">There is no pricing yet. We are opening early access to learn from real use before setting it.</p></details>
-          <details><summary data-i18n="faq.q7">Is it suitable for a large company?</summary><p data-i18n="faq.a7">Not today. It is aimed at small teams and Spanish-speaking professionals. SSO, an externally signed audit log and resilience to restarts are among the things still missing.</p></details>
+          <details><summary data-i18n="faq.q5">Does it replace my team?</summary><p data-i18n="faq.a5">That is not the idea. It is a support team that prepares, organizes and consults; important decisions stay yours. It does not replace a lawyer, an accountant or any other professional.</p></details>
+          <details><summary data-i18n="faq.q8">What is “Try it without signing up”?</summary><p data-i18n="faq.a8">A throwaway trial account, with its own office, that stops working after 24 hours. It asks for no email: the username and password are shown once.</p></details>
+          <details><summary data-i18n="faq.q6">How much does it cost?</summary><p data-i18n="faq.a6">There is no pricing yet. We are in early access to learn from real use before setting it.</p></details>
+          <details><summary data-i18n="faq.q7">Is it suitable for a large company?</summary><p data-i18n="faq.a7">Not yet. OIDC single sign-on, SCIM and restart recovery exist, but we hold no certifications, there is no SAML and it has not been validated with large companies. Today it is aimed at small teams and Spanish-speaking professionals.</p></details>
         </div>
       </div>
     </section>
 
+    <!-- FINAL CTA -->
     <section class="final" id="final" aria-labelledby="final-h">
-      <div class="wrap">
-        <h2 id="final-h" data-i18n="final.title">Create your account</h2>
-        <p class="lead" data-i18n="final.d">Sign up with your email and your company name and you land in your own office, separate from everyone else's. There are no prices yet: we are in early access and learning how it is used. This page collects no data; signing up happens in the app.</p>
+      <div class="final-bg" aria-hidden="true"><span class="orb f1"></span><span class="orb f2"></span></div>
+      <div class="wrap final-in reveal">
+        <div class="final-avs" aria-hidden="true"><span style="--c:#5a95e8">S</span><span style="--c:#f4895a">V</span><span style="--c:#9577d6">E</span><span style="--c:#4cb987">T</span><span style="--c:#45b8cc">N</span><span style="--c:#e8b53a">I</span><span style="--c:#ee7aa8">M</span></div>
+        <h2 id="final-h" data-i18n="final.title">Ask for your first task today.</h2>
+        <p class="lead" data-i18n="final.d">Create your account with your email and your company name: you land in your own office, separate from everyone else's. There is no pricing yet; we are in early access. This page collects no data: signing up happens in the app.</p>
         <div class="actions">
-          <a class="btn btn-invert" data-cta="signup" href="https://app.workforceai.es/register" data-i18n="cta.early">Create account</a>
-          <a class="btn btn-outline-invert" data-cta="login" href="https://app.workforceai.es/login" data-i18n="cta.demo">Sign in</a>
+          <a class="btn btn-invert btn-lg btn-arrow" data-cta="signup" href="https://app.workforceai.es/register"><span data-i18n="cta.early">Create account</span><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a class="btn btn-outline-invert btn-lg" data-cta="trial" href="https://app.workforceai.es/prueba" data-i18n="cta.trial">Try it without signing up</a>
+          <a class="btn btn-text-invert btn-lg" data-cta="login" href="https://app.workforceai.es/login" data-i18n="cta.demo">Sign in</a>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer">
+  <footer class="site-footer home-foot">
     <div class="wrap">
-      <p data-i18n="footer.line">AI Workforce OS is a project under development. This page describes its status to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a data-docs="index" href="/en/docs/" data-i18n="footer.docs">Documentation</a>
-      <a data-guide="index" href="/en/guide/" data-i18n="footer.guide">User guide</a>
-      <a href="#top" data-i18n="footer.top">Back to top</a>
+      <div class="foot-grid">
+        <div class="foot-brand">
+          <a class="brand" href="#top" data-i18n-aria="a11y.home" aria-label="AI Workforce OS, home"><svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/></svg><span>AI Workforce OS</span></a>
+          <p data-i18n="footer.tag">A virtual office where your AI employees work in plain sight and you decide what matters.</p>
+        </div>
+        <nav class="foot-col" aria-labelledby="fp-h">
+          <h2 id="fp-h" data-i18n="footer.product">Product</h2>
+          <a href="#como" data-i18n="nav.how">How it works</a>
+          <a href="#control" data-i18n="nav.control">Control</a>
+          <a href="#equipo" data-i18n="nav.team">Team</a>
+          <a href="#estado" data-i18n="nav.status">Status</a>
+          <a href="#faq" data-i18n="nav.faq">FAQ</a>
+        </nav>
+        <nav class="foot-col" aria-labelledby="fr-h">
+          <h2 id="fr-h" data-i18n="footer.res">Resources</h2>
+          <a data-guide="index" href="/en/guide/" data-i18n="footer.guide">User guide</a>
+          <a data-docs="index" href="/en/docs/" data-i18n="footer.docs">Documentation</a>
+          <a data-trust="index" href="/en/trust/" data-i18n="nav.trustCenter">Trust center</a>
+        </nav>
+        <div class="foot-col">
+          <h2 data-i18n="footer.contact">Contact</h2>
+          <a href="mailto:info@workforceai.es">info@workforceai.es</a>
+          <div class="lang" role="group" data-i18n-aria="a11y.lang" aria-label="Language">
+            <a href="/" hreflang="es" lang="es" data-lang="es">ES</a>
+            <a href="/en/" hreflang="en" lang="en" data-lang="en" aria-current="true">EN</a>
+          </div>
+        </div>
+      </div>
+      <div class="foot-base">
+        <p data-i18n="footer.line">AI Workforce OS is a project under development. This page describes its status to date; anything marked as simulation uses scripted responses, with no real AI.</p>
+        <a href="#top" data-i18n="footer.top">Back to top</a>
+      </div>
     </div>
   </footer>
 

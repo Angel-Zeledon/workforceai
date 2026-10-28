@@ -12,8 +12,8 @@
   "es": {
     "title": "Protección de datos",
     "metaTitle": "Protección de datos en AI Workforce OS",
-    "description": "Qué datos guarda AI Workforce OS, dónde, cuánto tiempo, cómo salen hacia proveedores de IA y cómo ejercer tus derechos hoy.",
-    "intro": "Esta página explica qué datos guarda el producto, dónde viven, cuánto se conservan hoy, cómo pueden llegar a proveedores de modelos de IA y cómo ejercer tus derechos sobre ellos. Es una descripción técnica del estado actual, no una política legal: la política de privacidad y el acuerdo de encargo de tratamiento todavía están en revisión por un abogado y no están publicados.",
+    "description": "Qué datos guarda AI Workforce OS, dónde, cuánto tiempo, cuándo llegan a proveedores de IA y cómo exportarlos o borrarlos hoy.",
+    "intro": "Qué datos guarda el producto, dónde viven, cuánto se conservan, cuándo pueden llegar a un proveedor de modelos de IA y cómo exportarlos o borrarlos. Es una descripción técnica del estado actual, verificada en el código, no una política legal.",
     "sections": [
       {
         "h": "Qué datos guardamos",
@@ -21,43 +21,48 @@
           "head": [
             "Categoría",
             "Ejemplos",
-            "Notas"
+            "Cómo se protege"
           ],
           "rows": [
             [
               "Cuenta",
-              "Correo, nombre, hash Argon2id de la contraseña, membresías y roles",
-              "La contraseña nunca se guarda en claro; el token de refresco se guarda como hash."
+              "Correo, nombre, membresías y roles, verificación en dos pasos",
+              "Contraseña con hash Argon2id; token de refresco y códigos de recuperación como hash SHA-256; secreto TOTP cifrado con AES-256-GCM."
             ],
             [
-              "Contenido de trabajo de la organización",
-              "Solicitudes, tareas, conversaciones y mensajes, informes, memorias, artefactos, archivos de la unidad, habilidades",
-              "Lo escriben los usuarios o lo generan los agentes."
+              "Contenido de trabajo",
+              "Solicitudes, tareas, conversaciones, informes, memorias, artefactos, archivos de la unidad, habilidades",
+              "Lo escriben los usuarios o lo generan los agentes. Aislado por organización con seguridad a nivel de fila."
             ],
             [
               "Configuración y gobierno",
               "Agentes, aprobaciones, presupuestos, reglas, horarios, política de modelos",
-              ""
+              "Aislado por organización con seguridad a nivel de fila."
             ],
             [
-              "Credenciales de integraciones y claves de IA propias",
-              "Tokens OAuth, claves de API",
-              "Cifradas con AES-256-GCM; la API solo devuelve metadatos y una pista corta."
+              "Secretos de la organización",
+              "Tokens OAuth, claves de API, claves de IA propias, secreto de cliente SSO, secretos de webhooks",
+              "Cifrados con AES-256-GCM bajo una clave de datos por organización; la API solo devuelve metadatos."
+            ],
+            [
+              "Tokens de acceso",
+              "Tokens de la API pública y de SCIM",
+              "Solo se guarda su hash SHA-256; el token se muestra una vez."
             ],
             [
               "Auditoría y trazas",
-              "Registro encadenado por hash; trazas de llamadas a los agentes",
-              "La auditoría guarda metadatos, no contenido. Las trazas pueden incluir los prompts (activado por defecto, configurable por organización)."
+              "Registro encadenado por hash; trazas de las llamadas a los agentes",
+              "La auditoría guarda metadatos, no contenido. Las trazas incluyen los prompts salvo que la organización lo desactive."
             ],
             [
               "Suscripciones push",
               "Dirección de la suscripción del navegador",
-              "Solo si el usuario activa notificaciones; la dirección no se registra ni se devuelve por la API."
+              "Solo si el usuario activa notificaciones. No se registra en los logs ni la devuelve la API."
             ],
             [
               "Registros del servidor",
-              "Registros de contenedores",
-              "No hemos documentado su contenido ni su retención."
+              "Registros de los contenedores y del proxy",
+              "Todavía no hemos documentado su contenido ni su retención."
             ]
           ]
         }
@@ -65,91 +70,103 @@
       {
         "h": "Dónde viven los datos",
         "paras": [
-          "Los datos de la aplicación están en una base Postgres en un servidor privado virtual compartido. La ubicación del servidor no está verificada en esta página y hoy no se puede elegir región. Las copias de seguridad nocturnas se guardan en el mismo servidor. Una unidad de archivos con almacenamiento de objetos compatible con S3 es opcional y no forma parte del despliegue público descrito.",
-          "Cada organización queda aislada de las demás mediante seguridad a nivel de fila de Postgres. Es aislamiento lógico dentro de la misma base de datos."
-        ]
+          "Los datos de la aplicación están en una base Postgres en un único servidor privado virtual compartido. Los archivos de la unidad se guardan en la misma base salvo que el operador configure un almacenamiento de objetos compatible con S3, que el despliegue público no usa. Las copias de seguridad nocturnas se guardan en el mismo servidor.",
+          "Cada organización queda aislada de las demás mediante seguridad a nivel de fila de Postgres: es aislamiento lógico dentro de la misma base de datos, no una base por cliente."
+        ],
+        "note": "La ubicación del servidor no está publicada en esta página y hoy no se puede elegir región."
       },
       {
-        "h": "Retención hoy",
+        "h": "Cuánto se conservan",
         "table": {
           "head": [
             "Dato",
-            "Retención actual",
+            "Retención",
             "Cómo se borra"
           ],
           "rows": [
             [
               "Trazas de agentes",
-              "30 días por defecto (variable TRACE_RETENTION_DAYS)",
-              "Purga automática por organización al superar la ventana"
+              "30 días por defecto (`TRACE_RETENTION_DAYS`)",
+              "Purga automática al superar la ventana."
             ],
             [
-              "Registro de auditoría",
-              "Sin purga automática",
-              "Es de solo anexado para la aplicación; no hay herramienta de borrado hoy"
+              "Conversaciones, archivos y auditoría",
+              "Indefinida por defecto",
+              "Un owner puede activar una política de retención en Consola de administración, pestaña Retención y datos, con mínimos de 30 días para conversaciones y archivos y 365 para la auditoría. Los archivos van a la papelera, no se borran del todo."
             ],
             [
-              "Copias de seguridad",
-              "14 días",
-              "El script de respaldo elimina los volcados con más de 14 días"
-            ],
-            [
-              "Conversaciones y mensajes",
-              "Hasta que se borren",
-              "Un admin u owner puede borrar una conversación"
+              "Una conversación concreta",
+              "Hasta que se borre",
+              "Un admin u owner puede borrarla."
             ],
             [
               "Credenciales de una conexión",
               "Mientras la conexión esté activa",
-              "Al revocar la conexión se destruye el texto cifrado"
+              "Al revocar la conexión se destruye el texto cifrado."
             ],
             [
               "Cuentas de prueba",
               "Dejan de funcionar a las 24 horas",
-              "No hemos implementado el borrado automático de sus datos; se eliminan a petición"
+              "Se purgan automáticamente 7 días después de caducar, junto con su organización si no tiene otros miembros."
             ],
             [
-              "Resto de datos de la organización",
-              "Hasta que se soliciten su borrado",
-              "Por solicitud a info@workforceai.es mientras se construye el borrado completo"
+              "Organización eliminada",
+              "7 días de gracia tras la solicitud",
+              "Purga completa en una sola transacción; las cuentas que se quedan sin ninguna organización también se borran."
+            ],
+            [
+              "Copias de seguridad",
+              "14 días",
+              "El script de respaldo elimina los volcados con más de 14 días."
             ]
           ]
         },
         "paras": [
-          "Hoy no hay una retención configurable por organización salvo en las trazas. Los datos borrados de la base pueden permanecer en las copias de seguridad hasta 14 días."
+          "Lo que se borra de la base puede seguir en las copias de seguridad hasta 14 días. Al purgar una organización se guarda solo una lápida con el hash de su identificador, el motivo y la fecha, sin nombre ni datos personales."
         ]
       },
       {
-        "h": "Cómo salen los datos hacia proveedores de IA",
+        "h": "Cuándo llegan datos a un proveedor de IA",
         "paras": [
-          "Con IA real activada, el texto de la tarea, el contexto, la memoria y los documentos relevantes se envían en el prompt al proveedor de modelo elegido, tras enmascarar credenciales, códigos de un solo uso y tarjetas. Sin clave, el producto corre en simulación y no sale nada. Los proveedores que el sistema reconoce son deepseek, anthropic, openai, kimi y custom; consulta la página de subprocesadores.",
-          "AI Workforce OS no entrena modelos con tus datos. Lo que cada proveedor haga con los datos que recibe se rige por sus propios términos, que no hemos auditado."
+          "Con la IA real activada, el texto de la tarea, el contexto, la memoria y los documentos relevantes van en el prompt al proveedor de modelo elegido, después de enmascarar credenciales y números de tarjeta. Sin clave, el producto corre en simulación y no sale nada. El despliegue público actual está en simulación.",
+          "AI Workforce OS no entrena modelos con tus datos. Lo que cada proveedor hace con lo que recibe se rige por sus propios términos, que no hemos auditado. La lista completa está en la página de subprocesadores."
         ],
-        "steps": [
-          "Deja la plataforma sin clave de IA para mantener todo en simulación.",
+        "list": [
+          "Deja la plataforma sin clave de IA para que todo siga en simulación.",
           "Limita los proveedores permitidos en la política de modelos de la organización.",
-          "Usa tu propia clave de IA y exige que solo se use esa.",
-          "Usa un endpoint propio compatible con OpenAI, por ejemplo un modelo local.",
-          "Desactiva el guardado de prompts en las trazas de la organización si no quieres conservarlos."
+          "Usa tu propia clave de IA: mientras esté activa, solo responde esa clave y no se recurre a las de la plataforma.",
+          "Apunta a un endpoint propio compatible con OpenAI, por ejemplo un modelo local.",
+          "Desactiva el guardado de prompts en las trazas si no quieres conservarlos."
         ]
       },
       {
-        "h": "Tus derechos y cómo ejercerlos hoy",
+        "h": "Exportar y borrar los datos de una organización",
         "paras": [
-          "Si eres una persona cuyos datos trata el producto, puedes pedir acceso, rectificación, borrado, limitación, oposición y portabilidad. Cuando tus datos los trata una organización cliente, esa organización es la responsable y debemos canalizar tu petición a través de ella.",
-          "Hoy el medio es el correo electrónico a info@workforceai.es. Los endpoints de exportación y borrado completos de una organización o persona están en construcción y todavía no existen. Mientras tanto hay exportaciones parciales para administradores: auditoría (JSONL o CSV), trazas de un agente, artefactos y habilidades, y un admin u owner puede borrar conversaciones y quitar miembros. Intentamos responder dentro de los plazos legales aplicables, sin ofrecer un compromiso de nivel de servicio."
+          "En Ajustes, Datos y privacidad, un admin u owner puede descargar un ZIP con todos los datos de la organización: un archivo por tabla y los archivos de la unidad, con un manifiesto. Los secretos (hashes de contraseñas, textos cifrados, claves) se eliminan dentro de la base de datos antes de salir. Se permite una exportación por hora y queda registrada en la auditoría.",
+          "Desde la misma pantalla, un owner puede eliminar la organización escribiendo su nombre exacto y su contraseña. La purga se programa a 7 días; mientras tanto la organización sigue funcionando y cualquier owner puede cancelarla."
+        ],
+        "list": [
+          "Exportaciones parciales: auditoría (JSONL, CSV o un ZIP con verificación, para admins y owners), trazas de un agente, artefactos, habilidades e informe de uso.",
+          "Un admin u owner puede borrar conversaciones y quitar miembros; cualquier persona puede salir de una organización."
+        ]
+      },
+      {
+        "h": "Tus derechos como persona",
+        "paras": [
+          "Puedes pedir acceso, rectificación, borrado, limitación, oposición y portabilidad de tus datos. Cuando tus datos los trata una organización cliente, esa organización es la responsable y canalizamos la petición a través de ella.",
+          "Hoy no hay autoservicio para exportar o borrar una cuenta individual: tu cuenta se borra cuando se purga la última organización a la que perteneces. Para cualquier otra petición escribe a info@workforceai.es. Respondemos dentro de los plazos legales aplicables, sin un compromiso de nivel de servicio."
         ]
       },
       {
         "h": "Cuentas de prueba",
         "paras": [
-          "Las cuentas de prueba son desechables: se crean con una organización propia y una contraseña generada que se muestra una sola vez, y dejan de funcionar a las 24 horas (el inicio de sesión responde que la prueba expiró y la renovación de sesión se rechaza). No uses datos reales ni confidenciales en una prueba. Que la cuenta deje de funcionar no significa que sus datos se hayan borrado automáticamente: hoy se eliminan a petición."
+          "Las cuentas de prueba son desechables: se crean con una organización propia y una contraseña generada que se muestra una sola vez, dejan de funcionar a las 24 horas y se purgan automáticamente 7 días después. No uses datos reales ni confidenciales en una prueba."
         ]
       },
       {
         "h": "Documentos legales y contacto",
         "paras": [
-          "La política de privacidad, los términos del servicio y el acuerdo de encargo de tratamiento (DPA) están en borrador, pendientes de revisión por un abogado, y todavía no están publicados. Hasta entonces no podemos ofrecer un DPA firmado. Para cualquier consulta de protección de datos escribe a info@workforceai.es."
+          "La política de privacidad, los términos del servicio y el acuerdo de encargo de tratamiento (DPA) están en borrador, pendientes de revisión por un abogado, y todavía no están publicados. Hasta entonces no podemos firmar un DPA. Para cualquier consulta de protección de datos escribe a info@workforceai.es."
         ]
       }
     ]
@@ -157,8 +174,8 @@
   "en": {
     "title": "Data protection",
     "metaTitle": "Data protection at AI Workforce OS",
-    "description": "What data AI Workforce OS stores, where, for how long, how it reaches AI providers, and how to exercise your rights today.",
-    "intro": "This page explains what data the product stores, where it lives, how long it is kept today, how it can reach AI model providers and how to exercise your rights over it. It is a technical description of the current state, not a legal policy: the privacy policy and the data processing agreement are still under review by a lawyer and are not published.",
+    "description": "What data AI Workforce OS stores, where, for how long, when it reaches AI providers and how to export or delete it today.",
+    "intro": "What data the product stores, where it lives, how long it is kept, when it can reach an AI model provider and how to export or delete it. It is a technical description of the current state, verified in the code, not a legal policy.",
     "sections": [
       {
         "h": "What data we store",
@@ -166,43 +183,48 @@
           "head": [
             "Category",
             "Examples",
-            "Notes"
+            "How it is protected"
           ],
           "rows": [
             [
               "Account",
-              "E-mail, name, Argon2id password hash, memberships and roles",
-              "The password is never stored in clear; the refresh token is stored as a hash."
+              "E-mail, name, memberships and roles, two-step verification",
+              "Password hashed with Argon2id; refresh token and recovery codes stored as SHA-256 hashes; TOTP secret encrypted with AES-256-GCM."
             ],
             [
-              "Organization work content",
-              "Requests, tasks, conversations and messages, reports, memories, artifacts, drive files, skills",
-              "Written by users or generated by agents."
+              "Work content",
+              "Requests, tasks, conversations, reports, memories, artifacts, drive files, skills",
+              "Written by users or generated by agents. Isolated per organization with row-level security."
             ],
             [
               "Configuration and governance",
               "Agents, approvals, budgets, rules, schedules, model policy",
-              ""
+              "Isolated per organization with row-level security."
             ],
             [
-              "Integration credentials and own AI keys",
-              "OAuth tokens, API keys",
-              "Encrypted with AES-256-GCM; the API returns only metadata and a short hint."
+              "Organization secrets",
+              "OAuth tokens, API keys, own AI keys, SSO client secret, webhook secrets",
+              "Encrypted with AES-256-GCM under a per-organization data key; the API returns only metadata."
+            ],
+            [
+              "Access tokens",
+              "Public API and SCIM tokens",
+              "Only their SHA-256 hash is stored; the token is shown once."
             ],
             [
               "Audit and traces",
               "Hash-chained log; traces of agent calls",
-              "The audit log keeps metadata, not content. Traces may include prompts (on by default, configurable per organization)."
+              "The audit log keeps metadata, not content. Traces include prompts unless the organization turns it off."
             ],
             [
               "Push subscriptions",
               "The browser's subscription address",
-              "Only if the user enables notifications; the address is neither logged nor returned by the API."
+              "Only if the user enables notifications. Never written to logs or returned by the API."
             ],
             [
               "Server logs",
-              "Container logs",
-              "We have not documented their content or retention."
+              "Container and proxy logs",
+              "We have not documented their content or retention yet."
             ]
           ]
         }
@@ -210,91 +232,103 @@
       {
         "h": "Where the data lives",
         "paras": [
-          "Application data is in a Postgres database on a shared virtual private server. The server's location is not verified on this page and a region cannot be chosen today. Nightly backups are kept on the same server. A file drive with S3-compatible object storage is optional and is not part of the public deployment described.",
-          "Each organization is isolated from the others with Postgres row-level security. This is logical isolation inside the same database."
-        ]
+          "Application data is in a Postgres database on a single shared virtual private server. Drive files are stored in the same database unless the operator configures S3-compatible object storage, which the public deployment does not use. Nightly backups are kept on the same server.",
+          "Each organization is isolated from the others with Postgres row-level security: logical isolation inside one database, not a database per customer."
+        ],
+        "note": "The server's location is not published on this page and a region cannot be chosen today."
       },
       {
-        "h": "Retention today",
+        "h": "How long it is kept",
         "table": {
           "head": [
             "Data",
-            "Current retention",
+            "Retention",
             "How it is deleted"
           ],
           "rows": [
             [
               "Agent traces",
-              "30 days by default (variable TRACE_RETENTION_DAYS)",
-              "Automatic purge per organization once the window is exceeded"
+              "30 days by default (`TRACE_RETENTION_DAYS`)",
+              "Automatic purge once the window is exceeded."
             ],
             [
-              "Audit log",
-              "No automatic purge",
-              "It is append-only for the application; there is no deletion tool today"
+              "Conversations, files and audit log",
+              "Indefinite by default",
+              "An owner can turn on a retention policy in Administration console, Retention and data tab, with minimums of 30 days for conversations and files and 365 for the audit log. Files go to the trash, they are not hard-deleted."
             ],
             [
-              "Backups",
-              "14 days",
-              "The backup script removes dumps older than 14 days"
-            ],
-            [
-              "Conversations and messages",
+              "A single conversation",
               "Until deleted",
-              "An admin or owner can delete a conversation"
+              "An admin or owner can delete it."
             ],
             [
               "A connection's credentials",
               "While the connection is active",
-              "Revoking the connection destroys the ciphertext"
+              "Revoking the connection destroys the ciphertext."
             ],
             [
               "Trial accounts",
               "Stop working after 24 hours",
-              "Automatic deletion of their data is not implemented; they are removed on request"
+              "Purged automatically 7 days after expiry, together with their organization if it has no other members."
             ],
             [
-              "Rest of the organization's data",
-              "Until deletion is requested",
-              "On request to info@workforceai.es while full deletion is being built"
+              "Deleted organization",
+              "7-day grace period after the request",
+              "Full purge in a single transaction; accounts left without any organization are deleted too."
+            ],
+            [
+              "Backups",
+              "14 days",
+              "The backup script removes dumps older than 14 days."
             ]
           ]
         },
         "paras": [
-          "Today there is no per-organization configurable retention except for traces. Data deleted from the database may remain in backups for up to 14 days."
+          "Data deleted from the database may remain in backups for up to 14 days. Purging an organization keeps only a tombstone with the hash of its identifier, the reason and the date, with no name or personal data."
         ]
       },
       {
-        "h": "How data reaches AI providers",
+        "h": "When data reaches an AI provider",
         "paras": [
-          "With real AI turned on, the task text, context, memory and relevant documents are sent in the prompt to the chosen model provider, after masking credentials, one-time codes and card numbers. Without a key, the product runs in simulation and nothing leaves. The providers the system recognizes are deepseek, anthropic, openai, kimi and custom; see the subprocessors page.",
-          "AI Workforce OS does not train models on your data. What each provider does with the data it receives is governed by its own terms, which we have not audited."
+          "With real AI turned on, the task text, context, memory and relevant documents go in the prompt to the chosen model provider, after masking credentials and card numbers. Without a key, the product runs in simulation and nothing leaves. The current public deployment runs in simulation.",
+          "AI Workforce OS does not train models on your data. What each provider does with what it receives is governed by its own terms, which we have not audited. The full list is on the subprocessors page."
         ],
-        "steps": [
-          "Leave the platform without an AI key to keep everything in simulation.",
+        "list": [
+          "Leave the platform without an AI key so everything stays in simulation.",
           "Limit the allowed providers in the organization's model policy.",
-          "Use your own AI key and require that only that key is used.",
-          "Use your own OpenAI-compatible endpoint, for example a local model.",
-          "Turn off prompt storage in the organization's traces if you do not want to keep them."
+          "Use your own AI key: while it is active, only that key answers and the platform keys are never used as a fallback.",
+          "Point to your own OpenAI-compatible endpoint, for example a local model.",
+          "Turn off prompt storage in traces if you do not want to keep prompts."
         ]
       },
       {
-        "h": "Your rights and how to exercise them today",
+        "h": "Export and delete an organization's data",
         "paras": [
-          "If you are a person whose data the product processes, you can ask for access, rectification, erasure, restriction, objection and portability. When your data is processed by a customer organization, that organization is the controller and we must route your request through it.",
-          "Today the channel is e-mail to info@workforceai.es. The endpoints for complete export and erasure of an organization or person are being built and do not exist yet. In the meantime there are partial exports for administrators: audit log (JSONL or CSV), an agent's traces, artifacts and skills, and an admin or owner can delete conversations and remove members. We try to answer within the applicable legal deadlines, without offering a service-level commitment."
+          "In Settings, Data & privacy, an admin or owner can download a ZIP with all of the organization's data: one file per table plus the drive files, with a manifest. Secrets (password hashes, ciphertexts, keys) are stripped inside the database before anything leaves it. One export per hour is allowed and it is recorded in the audit log.",
+          "From the same screen, an owner can delete the organization by typing its exact name and their password. The purge is scheduled 7 days later; until then the organization keeps working and any owner can cancel it."
+        ],
+        "list": [
+          "Partial exports: audit log (JSONL, CSV or a ZIP with verification, for admins and owners), an agent's traces, artifacts, skills and usage report.",
+          "An admin or owner can delete conversations and remove members; anyone can leave an organization."
+        ]
+      },
+      {
+        "h": "Your rights as a person",
+        "paras": [
+          "You can ask for access, rectification, erasure, restriction, objection and portability of your data. When your data is processed by a customer organization, that organization is the controller and we route the request through it.",
+          "There is no self-service export or deletion of an individual account today: your account is deleted when the last organization you belong to is purged. For any other request write to info@workforceai.es. We answer within the applicable legal deadlines, without a service-level commitment."
         ]
       },
       {
         "h": "Trial accounts",
         "paras": [
-          "Trial accounts are disposable: they are created with their own organization and a generated password shown only once, and they stop working after 24 hours (login answers that the trial expired and session renewal is rejected). Do not use real or confidential data in a trial. An account that stops working does not mean its data was automatically deleted: today it is removed on request."
+          "Trial accounts are disposable: they are created with their own organization and a generated password shown only once, they stop working after 24 hours and are purged automatically 7 days later. Do not use real or confidential data in a trial."
         ]
       },
       {
         "h": "Legal documents and contact",
         "paras": [
-          "The privacy policy, the terms of service and the data processing agreement (DPA) are drafts pending review by a lawyer and are not published yet. Until then we cannot offer a signed DPA. For any data protection question write to info@workforceai.es."
+          "The privacy policy, the terms of service and the data processing agreement (DPA) are drafts pending review by a lawyer and are not published yet. Until then we cannot sign a DPA. For any data protection question write to info@workforceai.es."
         ]
       }
     ]

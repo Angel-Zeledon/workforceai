@@ -144,6 +144,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 					n.Attempt = a
 				}
 				n.Review = t.Output.Review
+				n.Audit = application.TaskAuditOf(t) // B7: nil unless this is a finished audit task
 				if sk, _ := t.Output.Metrics["skipped"].(bool); sk {
 					n.Skipped = true
 					n.SkipReason, _ = t.Output.Metrics["skip_reason"].(string)
@@ -222,7 +223,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 	c := countStates(nodes)
 	sum := Summary{ID: rec.ID, Name: rec.Name, NameKey: rec.NameKey, Goal: rec.Goal, Status: rec.Status, Control: rec.Control, TemplateID: rec.TemplateID,
 		BudgetUSD: rec.BudgetUSD, TasksDone: c.done, TasksTotal: c.total, Running: c.running, Awaiting: c.awaiting, Failed: c.failed, Light: "green",
-		CreatedAt: rec.CreatedAt, StartedAt: rec.StartedAt, FinishedAt: rec.FinishedAt, DeadlineAt: rec.DeadlineAt, ObjectivesCnt: len(rec.Objectives), RequestID: rec.RequestID, BudgetWarnPct: warnedPct(rec.BudgetWarned)}
+		CreatedAt: rec.CreatedAt, StartedAt: rec.StartedAt, FinishedAt: rec.FinishedAt, DeadlineAt: rec.DeadlineAt, ObjectivesCnt: len(rec.Objectives), RequestID: rec.RequestID, BudgetWarnPct: warnedPct(rec.BudgetWarned), CustomerID: rec.CustomerID}
 	if sum.Control == "" {
 		sum.Control = ControlActive
 	}

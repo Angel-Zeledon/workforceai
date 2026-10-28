@@ -48,17 +48,24 @@ type Orchestrator struct {
 	chatQ    chatQueue        // per-conversation FIFO of chat turns (chat.go)
 	convCtx  ConvContextStore // /clear and /compact: what the model still sees of a conversation (commands_support.go)
 
-	ctxSrc   ContextSource   // optional: artifact text for project tasks (context_flow.go)
-	wsSrc    WorkspaceSource // optional: the agent's drive folders (workspace_flow.go)
-	files    chatFiles       // files agents wrote per task and the resolver of paths (chat_files.go)
-	skillSrc SkillSource     // optional: the agent's active skills (skills_flow.go)
-	memSrc   MemorySource    // optional: long-term memory (memory_flow.go)
+	ctxSrc   ContextSource    // optional: artifact text for project tasks (context_flow.go)
+	citeRes  CitationResolver // optional: artifact cells for the evidence chain (evidence.go)
+	wsSrc    WorkspaceSource  // optional: the agent's drive folders (workspace_flow.go)
+	files    chatFiles        // files agents wrote per task and the resolver of paths (chat_files.go)
+	skillSrc SkillSource      // optional: the agent's active skills (skills_flow.go)
+	memSrc   MemorySource     // optional: long-term memory (memory_flow.go)
+	// customers (optional) scopes requests to one customer of the organization (customer.go, B12).
+	customers CustomerScope
 
-	initiative InitiativeRaiser // optional: failed tasks become suggestions (initiative.go)
+	initiative InitiativeRaiser  // optional: failed tasks become suggestions (initiative.go)
+	rehearsal  *RehearsalService // optional: per-agent rehearsal switch and the "would have done" log (rehearsal.go)
+	debates    DebateRunner      // optional: team debate before a flagged decision (orchestrator_debate.go)
 
 	v2 v2State // work profiles, thought audit and intervention (intervene.go); zero value = off
 
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
+
+	stateMu sync.Map // org|agent -> *sync.Mutex: serializes setState of one agent (see setState)
 
 	// >>> organization model hooks (delegation_hook.go, hold.go): optional, zero value = off
 	hooks delegationHooks
@@ -112,6 +119,9 @@ type run struct {
 	projOwned   atomic.Bool // the request belongs to a project (recovery.go): its human waits never expire
 	gate        *RunGate    // human gate in progress before the start (persisted in the run meta; guarded by mu)
 	maxParallel int         // per-request override of Config.MaxParallel (WithRunParallel); 0 = config
+	customer    string      // the customer the request is scoped to (customer.go); "" = none
+	// debateNote is the team debate recalled by the deciding task (orchestrator_debate.go; guarded by mu).
+	debateNote map[string]RecalledMemory
 }
 
 func (r *run) touch(agentID string) {
@@ -156,6 +166,10 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	}
 	now := time.Now().UTC()
 	req := domain.Request{ID: newID(), Text: text, Status: domain.RequestPlanning, CreatedAt: now}
+	// B12: the customer scope is stored BEFORE the request exists, so no task can ever run unscoped.
+	if err := o.linkCustomer(ctx, req.ID); err != nil {
+		return "", err
+	}
 	if err := o.store.CreateRequest(ctx, o.org(ctx), req); err != nil {
 		return "", err
 	}
@@ -173,8 +187,15 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	rs.requestedBy = ActorFrom(ctx, "")
 	rs.style = o.loadStyle(ctx)
 	rs.chat = chatLinkFrom(ctx)
+	received := map[string]any{"request_id": req.ID, "text": text}
+	if RehearsalFrom(ctx) { // B9: the whole request is a rehearsal (persisted in the run meta)
+		rs.ext.rehearsal = true
+		o.rehearsal.MarkRequest(o.org(ctx), req.ID)
+		received["rehearsal"] = true
+	}
+	rs.customer = CustomerFrom(ctx)
 	o.rec.Emit(ctx, Action{Type: domain.EvRequestReceived, Entity: "request", EntityID: req.ID,
-		Payload: map[string]any{"request_id": req.ID, "text": text}, Text: "Nueva solicitud: " + truncate(text, 100)})
+		Payload: received, Text: "Nueva solicitud: " + truncate(text, 100)})
 	o.sendMessage(ctx, rs, "user", assistantID, "chat", text, nil)
 	o.emitMetrics(ctx)
 
@@ -183,6 +204,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	// The background run keeps the lifetime of the orchestrator but carries the
 	// tenant of the request that started it.
 	rctx := WithRequestID(WithOrg(o.base, o.org(ctx)), req.ID)
+	rctx = WithCustomer(rctx, rs.customer)               // B12: the run works for this customer (tools re-resolve it from the request id)
 	rctx = WithWorkPriority(rctx, WorkPriorityFrom(ctx)) // queue priority (orgqueue.go)
 	o.track(req.ID)
 	o.wg.Add(1)
@@ -207,7 +229,7 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 		err = o.call(ctx, "plan", func(c context.Context) (err error) {
 			agents := make([]PlanAgent, 0, len(rs.agents))
 			skills := o.skillsByAgent(c)
-			for _, a := range sortedAgents(rs.agents) {
+			for _, a := range o.plannerAgents(c, rs, sortedAgents(rs.agents)) {
 				pa := NewPlanAgent(a, rs.style.Locale)
 				pa.Skills = skills[a.ID]
 				agents = append(agents, pa)
@@ -243,6 +265,7 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 	if !o.confirmEstimate(ctx, rs, tasks) {
 		return // cancelled or not confirmed: the request is already failed with an explanation
 	}
+	o.debateBeforeDecision(ctx, rs, plan, tasks) // B5: at most one advisory debate; never blocks the plan
 	o.setRequestStatus(ctx, rs, domain.RequestRunning)
 	o.setState(ctx, assistantID, domain.StateWaiting, "Coordinando al equipo", nil, 30)
 	o.execute(ctx, rs, tasks, func(c context.Context, t domain.Task) Outcome { return o.runTask(c, rs, t) })
@@ -601,6 +624,7 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 	}
 	resp = o.connectionReads(ctx, rs, &t, agent, in, resp)
 	resp.Output.Normalize()
+	o.checkCitations(ctx, rs, t, in, &resp.Output) // B6: every cited source must be one the task really saw
 	o.visionNotices(ctx, rs, t, agent, &resp.Output, resp.Notices)
 	if agent.Role == AuditorRole {
 		enforceAuditEvidence(&resp.Output) // never "verified" without evidence references
@@ -676,6 +700,9 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 		rc.Memory = append(rc.Memory, MemoryEntry{Scope: m.Scope, Key: m.Key, Value: m.Value})
 	}
 	recalled := o.recallFor(ctx, rs, t)
+	if note, ok := rs.debateNoteFor(t.ID); ok { // B5: the team debate, as untrusted recalled data
+		recalled = append(recalled, note)
+	}
 	return RunTaskRequest{
 		CodeAutoRun: o.codeAutoRunHint(ctx, agent),
 		Recalled:    recalled,
@@ -686,6 +713,7 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 		Tone:        rs.style.ToneFor(t.AgentID),
 		Workspace:   o.workspaceFor(ctx, rs, agent),
 		Skills:      o.skillsFor(ctx, agent.ID),
+		Sources:     o.sourcesFor(ctx, agent.ID),
 	}
 }
 
@@ -857,6 +885,14 @@ func (o *Orchestrator) handleToolsFrom(ctx context.Context, rs *run, t *domain.T
 			o.webSkipped(ctx, t, agent, tr)
 			continue
 		}
+		// B9 rehearsal: every side-effect request is recorded as "would have done"
+		// and not executed (no approval is asked either). Reads keep their path.
+		if scope := o.rehearsalScope(ctx, rs, agent); scope != "" {
+			if route := o.routeOf(ctx, agent, tr); isCodeRun(tr) || route == RouteWrite || (route == RouteNone && o.rehearsalSideEffect(tr)) {
+				o.rehearseTool(ctx, rs, t, agent, tr, route, scope)
+				continue
+			}
+		}
 		if isCodeRun(tr) { // never auto-approved: see code_flow.go
 			if out := o.handleCodeRun(ctx, rs, t, agent, tr, i, reqs); out != OutcomeDone {
 				return out
@@ -976,6 +1012,13 @@ func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.
 			return OutcomeBlocked
 		}
 		t.Status = domain.TaskRunning
+		if scope := o.rehearsalScope(ctx, rs, agent); scope != "" {
+			// B9: the agent (or request) went into rehearsal while the approval waited:
+			// the approval never overrides a rehearsal. Recorded, not executed.
+			o.rehearseTool(ctx, rs, t, agent, tr, RouteNone, scope)
+			o.setState(ctx, agent.ID, domain.StateWorking, "Ensayo, finalizando: "+t.Title, &tid, 90)
+			return OutcomeDone
+		}
 		// At most once: mark the checkpoint before recording the execution, so a
 		// restart in between never executes the approved action a second time,
 		// and claim the approval id in the execution ledger (any process).
@@ -1105,13 +1148,48 @@ func (o *Orchestrator) setRequestStatus(ctx context.Context, rs *run, st domain.
 	o.rec.Audit(ctx, domain.AuditLog{Actor: "system", Action: "request.status." + string(st), Entity: "request", EntityID: r.ID})
 }
 
+// setState records what an agent is doing. One agent can work on tasks of
+// several requests at once and its state is a single slot: a task of another
+// request finishing (or the release at the end of its request) must not hide
+// that the agent is waiting on a human for a still-pending approval. Live and
+// under load, request B's "completed"/"Disponible" overwrote request A's
+// "awaiting approval" and the agent showed idle with an approval open.
 func (o *Orchestrator) setState(ctx context.Context, agentID string, st domain.AgentState, activity string, taskID *string, progress int) {
 	ctx = context.WithoutCancel(ctx)
-	if err := o.store.UpdateAgentState(ctx, o.org(ctx), agentID, st, activity, taskID, progress); err != nil {
+	org := o.org(ctx)
+	mu, _ := o.stateMu.LoadOrStore(org+"|"+agentID, &sync.Mutex{})
+	mu.(*sync.Mutex).Lock()
+	defer mu.(*sync.Mutex).Unlock()
+	if st != domain.StateAwaitingApproval && st != domain.StateError && o.awaitingOtherTask(ctx, org, agentID, taskID) {
+		return
+	}
+	if err := o.store.UpdateAgentState(ctx, org, agentID, st, activity, taskID, progress); err != nil {
 		o.log.Warn("update agent state", "agent", agentID, "err", err)
 	}
 	o.rec.Emit(ctx, Action{Type: domain.EvAgentState, AgentID: agentID, SkipAudit: true,
 		Payload: map[string]any{"agent_id": agentID, "state": st, "activity": activity, "task_id": taskID, "progress": progress}})
+}
+
+// awaitingOtherTask says whether the agent is waiting on a human for a task
+// other than taskID whose approval is still pending (its state must stay).
+func (o *Orchestrator) awaitingOtherTask(ctx context.Context, org, agentID string, taskID *string) bool {
+	a, err := o.store.GetAgent(ctx, org, agentID)
+	if err != nil || a.State != domain.StateAwaitingApproval || a.CurrentTaskID == nil {
+		return false
+	}
+	if taskID != nil && *taskID == *a.CurrentTaskID {
+		return false // the same task moves on (approved, rejected, expired)
+	}
+	ps, err := o.store.ListApprovals(ctx, org, string(domain.ApprovalPending))
+	if err != nil {
+		return false
+	}
+	for _, p := range ps {
+		if p.TaskID == *a.CurrentTaskID {
+			return true
+		}
+	}
+	return false
 }
 
 // releaseAgents returns involved agents to idle once the request is over.

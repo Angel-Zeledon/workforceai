@@ -115,7 +115,7 @@ func (s *Store) GetInitiativeSettings(_ context.Context, orgID string) (applicat
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	v, ok := s.initiative.settings[orgID]
-	return v, ok, nil
+	return cloneInitiativeSettings(v), ok, nil
 }
 
 func (s *Store) PutInitiativeSettings(_ context.Context, orgID string, v application.InitiativeSettings) error {
@@ -124,6 +124,22 @@ func (s *Store) PutInitiativeSettings(_ context.Context, orgID string, v applica
 	if s.initiative.settings == nil {
 		s.initiative.settings = map[string]application.InitiativeSettings{}
 	}
-	s.initiative.settings[orgID] = v
+	s.initiative.settings[orgID] = cloneInitiativeSettings(v)
 	return nil
+}
+
+// cloneInitiativeSettings copies the map and the signals so callers never share state with the store.
+func cloneInitiativeSettings(v application.InitiativeSettings) application.InitiativeSettings {
+	if v.AgentDaily != nil {
+		m := make(map[string]int, len(v.AgentDaily))
+		for k, n := range v.AgentDaily {
+			m[k] = n
+		}
+		v.AgentDaily = m
+	}
+	if v.Signals != nil {
+		sig := *v.Signals
+		v.Signals = &sig
+	}
+	return v
 }

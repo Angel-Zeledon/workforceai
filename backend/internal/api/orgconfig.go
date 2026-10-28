@@ -9,6 +9,7 @@ import (
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/catalog"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/integrations"
 )
 
 // mountOrgConfig registers the (additive, v1) endpoints of workflow templates,
@@ -82,11 +83,14 @@ type settingsResponse struct {
 	application.OrgSettings
 	Tones   []string `json:"available_tones"`
 	Locales []string `json:"available_locales"`
+	// VendorIntegrations is the deployment's v1 switch (VENDOR_INTEGRATIONS): the UI hides vendor connector cards
+	// and the Slack channel card when it is off.
+	VendorIntegrations integrations.State `json:"vendor_integrations"`
 }
 
 func (s *server) settingsJSON(r *http.Request) (settingsResponse, error) {
 	st, err := s.OrgConfig.Settings(r.Context())
-	return settingsResponse{OrgSettings: st, Tones: catalog.Tones, Locales: catalog.Locales}, err
+	return settingsResponse{OrgSettings: st, Tones: catalog.Tones, Locales: catalog.Locales, VendorIntegrations: s.vendorState()}, err
 }
 
 func (s *server) onboardingStatus(w http.ResponseWriter, r *http.Request) {

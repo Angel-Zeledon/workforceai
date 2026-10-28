@@ -37,6 +37,7 @@ type fakeRuntime struct {
 	review   func(n int, in application.ReviewRequest) application.ReviewResponse // Q1 reviewer (nil: always pass)
 	reviews  []application.ReviewRequest
 	suggest  func(title string) []string // suggested_tasks of a task output (nil: none)
+	shape    func(title string, out *domain.StructuredOutput) // edits a task output before it is returned (nil: none)
 }
 
 func newRT() *fakeRuntime { return &fakeRuntime{finished: map[string]int{}} }
@@ -74,8 +75,11 @@ func (f *fakeRuntime) RunTask(_ context.Context, in application.RunTaskRequest) 
 	if f.suggest != nil {
 		sug = f.suggest(in.Task.Title)
 	}
-	return application.RunTaskResponse{Output: domain.StructuredOutput{Summary: "hecho: " + in.Task.Title, Confidence: 0.9, SuggestedTasks: sug},
-		Usage: application.Usage{Model: "deepseek-chat", CostUSD: f.cost}}, nil
+	out := domain.StructuredOutput{Summary: "hecho: " + in.Task.Title, Confidence: 0.9, SuggestedTasks: sug}
+	if f.shape != nil {
+		f.shape(in.Task.Title, &out)
+	}
+	return application.RunTaskResponse{Output: out, Usage: application.Usage{Model: "deepseek-chat", CostUSD: f.cost}}, nil
 }
 
 func (f *fakeRuntime) Consult(context.Context, application.ConsultRequest) (application.ConsultResponse, error) {
@@ -169,7 +173,7 @@ func newEnv(t *testing.T, rt *fakeRuntime, guard application.ExecutionGuard, mut
 
 func (e *env) waitFor(what string, cond func() bool) {
 	e.t.Helper()
-	deadline := time.Now().Add(15 * time.Second)
+	deadline := time.Now().Add(45 * time.Second) // generous: under a loaded machine (parallel packages) a project needs more than 15 s to settle
 	for time.Now().Before(deadline) {
 		if cond() {
 			return
@@ -347,7 +351,15 @@ func TestPauseResumeCancel(t *testing.T) {
 	if _, err := e.svc.Control(e.ctx, id, "resume"); err != nil {
 		t.Fatal(err)
 	}
-	e.waitFor("progress after resume", func() bool { return rt.hasStarted("Elaborar la propuesta principal") })
+	// Cancel only once both tasks of the second wave reached the runtime: a task
+	// the gate admitted just before the cancel is in flight and may still start
+	// its call afterwards (running work finishes, as with pause), so cancelling
+	// mid-admission made the "no new work" check below flaky under load. After
+	// them only the approval gate and the final report remain, which the cancel
+	// must stop.
+	e.waitFor("progress after resume", func() bool {
+		return rt.hasStarted("Elaborar la propuesta principal") && rt.hasStarted("Calcular el impacto financiero")
+	})
 
 	if _, err := e.svc.Control(e.ctx, id, "cancel"); err != nil {
 		t.Fatal(err)

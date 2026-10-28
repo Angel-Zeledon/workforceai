@@ -7,7 +7,7 @@ import type {
 } from "./types";
 
 export type SecurityView = null | "connections" | "security";
-export type ConnTab = "connections" | "matrix" | "usage" | "limits" | "capabilities";
+export type ConnTab = "connections" | "matrix" | "usage" | "limits" | "capabilities" | "inboxes";
 
 /** Frames handled here (routed from store.ts the same way artifact.* frames are). */
 export const isConnectionsFrame = (type: string) =>

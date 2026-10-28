@@ -41,6 +41,9 @@ const (
 	// CodeExecutionUnavailable: the execution ledger could not be reached, so an
 	// approved action is not run (it could not be guaranteed to run only once).
 	CodeExecutionUnavailable = "execution_record_unavailable"
+	// CodeSourceAliasRequired: the agent holds several generic sources and did
+	// not say which one (connection_alias) to query.
+	CodeSourceAliasRequired = "source_alias_required"
 )
 
 // Gateway wires connections, controls and the sanitizer.
@@ -61,6 +64,9 @@ type Gateway struct {
 	// approved action runs at most once across restarts and instances. Without
 	// it only the in-memory record of this process applies.
 	Executions application.ExecutionLedger
+	// Rehearsal (optional, B9) answers whether the agent or the request is in
+	// rehearsal; GatewayCall.Rehearsal is honored without it (rehearsal.go).
+	Rehearsal application.RehearsalPolicy
 
 	mu        sync.Mutex
 	seen      map[string]map[string]bool // org/task -> addresses seen in external content
@@ -243,6 +249,10 @@ func (g *Gateway) resolve(ctx context.Context, c application.GatewayCall, t targ
 	if len(cands) == 0 {
 		return candidate{}, connections.CodeScopeNotGranted
 	}
+	if alias == "" && len(cands) > 1 && t.provider.ID == connections.SourceProvider {
+		// Generic sources are different systems: never answer from an arbitrary one.
+		return candidate{}, CodeSourceAliasRequired
+	}
 	sort.SliceStable(cands, func(i, j int) bool { return cands[i].grant.IsDefault && !cands[j].grant.IsDefault })
 	return cands[0], ""
 }
@@ -256,6 +266,9 @@ func (g *Gateway) validate(ctx context.Context, c application.GatewayCall, t tar
 	}
 	if c.ReadOnlyRequest && side {
 		return connections.CodeReadOnlyMode
+	}
+	if !g.Conns.ProviderEnabled(cd.conn.Provider) {
+		return connections.CodeProviderDisabled // v1: vendor-specific integration switched off (VENDOR_INTEGRATIONS)
 	}
 	switch cd.conn.Status {
 	case connections.StatusActive:
@@ -365,6 +378,11 @@ func (g *Gateway) Execute(ctx context.Context, c application.GatewayCall) applic
 	t, ok := g.lookup(c.Tool, c.Action)
 	if !ok {
 		return application.GatewayOutcome{Decision: "denied", DenyReason: connections.CodeInvalidArgs}
+	}
+	// B9: a rehearsal never writes, approved or not. Checked before anything
+	// that could execute, schedule, hold or queue the call.
+	if t.spec.SideEffects && g.rehearsing(ctx, c) {
+		return g.rehearseConnection(ctx, c, t)
 	}
 	approved := c.ApprovedArgsHash != ""
 	if !approved { // the approved re-execution is the same request: count it once
@@ -622,9 +640,9 @@ func (g *Gateway) run(ctx context.Context, c application.GatewayCall, t target, 
 		blocks, suspected, seenTexts := g.sanitizeItems(c, t, cd, res.Items)
 		g.remember(c.Org, c.TaskID, seenTexts)
 		out.Blocks, out.Tainted, out.InjectionSuspected = blocks, true, suspected
+		out.Sources = g.itemSources(c, t, res.Items)
 		if suspected {
-			g.Emit(ctx, c.Org, "security.alert", map[string]any{"kind": "prompt_injection_suspected", "agent_id": c.AgentID, "tool": c.Tool, "connection_id": cd.conn.ID})
-			g.Audit(ctx, c.Org, c.AgentID, "security.injection_suspected", "connection", cd.conn.ID, map[string]any{"tool": c.Tool, "task_id": c.TaskID})
+			g.injectionAlert(ctx, c, "connection", cd.conn.ID)
 		}
 		if len(res.Items) > 0 {
 			out.Summary = fmt.Sprintf("%d item(s) returned as delimited untrusted data", len(res.Items))
@@ -665,6 +683,24 @@ func (g *Gateway) fail(ctx context.Context, c application.GatewayCall, t target,
 	}
 	g.usage(ctx, c, t, cd, connections.Usage{Decision: "allowed", Status: "failed", ErrorCode: code, LatencyMS: lat, ProviderState: pe.Status, Tainted: c.Tainted})
 	return application.GatewayOutcome{Decision: "allowed", Status: "failed", DenyReason: code, Summary: "provider call failed: " + code, ConnectionID: cd.conn.ID}
+}
+
+// injectionAlert makes a suspected prompt injection visible (B10, docs/architecture/
+// shield.md): the realtime security.alert drives the shield in the office, and the
+// security.injection_suspected audit entry is what the security log lists. Both
+// carry ids only (agent, task, request, tool, connection): never the third-party
+// text that triggered the detector. The content was already wrapped as delimited
+// untrusted data and every write of the task now needs a human (approvalReasons).
+func (g *Gateway) injectionAlert(ctx context.Context, c application.GatewayCall, source, connID string) {
+	g.Emit(ctx, c.Org, "security.alert", map[string]any{"kind": "prompt_injection_suspected", "agent_id": c.AgentID, "tool": c.Tool,
+		"action": strings.ToLower(c.Action), "task_id": c.TaskID, "request_id": c.RequestID, "connection_id": connID, "source": source,
+		"treated_as_data": true})
+	entity, id := "connection", connID
+	if source != "connection" {
+		entity, id = "tool", c.Tool
+	}
+	g.Audit(ctx, c.Org, c.AgentID, "security.injection_suspected", entity, id, map[string]any{"tool": c.Tool, "action": strings.ToLower(c.Action),
+		"task_id": c.TaskID, "request_id": c.RequestID, "source": source, "treated_as_data": true})
 }
 
 func fieldLimit(name string) int {
@@ -710,6 +746,21 @@ func (g *Gateway) sanitizeItems(c application.GatewayCall, t target, cd candidat
 		blocks = append(blocks, sanitize.Wrap(sanitize.SanitizeInline(it.ID, 60, sanitize.Options{Suspects: g.Suspects}), source, from, strings.TrimSpace(b.String())))
 	}
 	return blocks, suspected, seen
+}
+
+// itemSources lists the ids of the items a read returned (B6), sanitized exactly
+// like the id attribute of their untrusted blocks, so a citation written from
+// what the runtime saw ("conn:<tool>:<id>") matches. Ids only, never content.
+func (g *Gateway) itemSources(c application.GatewayCall, t target, items []connections.Item) []application.ReadSource {
+	out := make([]application.ReadSource, 0, len(items))
+	for _, it := range items {
+		id := sanitize.SanitizeInline(it.ID, 60, sanitize.Options{Suspects: g.Suspects})
+		if strings.TrimSpace(id) == "" {
+			continue
+		}
+		out = append(out, application.ReadSource{Kind: application.SourceConn, Tool: strings.ToLower(c.Tool), Provider: t.provider.ID, ItemID: id})
+	}
+	return out
 }
 
 func sortedKeys(m map[string]any) []string {
@@ -853,6 +904,12 @@ func (g *Gateway) sendHold(ctx context.Context, h connections.Hold) bool {
 		return false
 	}
 	cd := candidate{conn: conn, grant: gr}
+	if g.rehearsing(ctx, call) {
+		// B9: the agent went into rehearsal while its send waited out the window:
+		// nothing goes out; the item returns to the queue for a human decision.
+		g.requeue(ctx, h, CodeRehearsal)
+		return false
+	}
 	if code := g.validate(ctx, call, t, cd, true); code != "" {
 		if code == controls.CodeUnavailable {
 			return false // transient: retry on the next tick

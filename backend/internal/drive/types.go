@@ -24,11 +24,17 @@ const (
 	PrincipalHuman  = "human"
 	PrincipalAgent  = "agent"
 	PrincipalSystem = "system"
+	// PrincipalInbox is a data inbox (internal/inboxes): software outside the platform pushed the content.
+	// It is never a human, so whatever it wrote is untrusted data for every agent that reads it.
+	PrincipalInbox = "inbox"
+	// PrincipalLinkImport is a link import (internal/linkimports): the platform downloaded the content from a URL
+	// an administrator configured. Like an inbox, it is never a human: what it wrote is untrusted data.
+	PrincipalLinkImport = "link_import"
 )
 
 // Principal is who performed an action.
 type Principal struct {
-	Kind string `json:"kind"` // human | agent | system
+	Kind string `json:"kind"` // human | agent | system | inbox | link_import
 	ID   string `json:"id"`
 }
 
@@ -36,6 +42,12 @@ type Principal struct {
 func Human(id string) Principal  { return Principal{PrincipalHuman, id} }
 func AgentP(id string) Principal { return Principal{PrincipalAgent, id} }
 func System() Principal          { return Principal{PrincipalSystem, "system"} }
+
+// InboxP is the principal of a data inbox (its id).
+func InboxP(id string) Principal { return Principal{PrincipalInbox, id} }
+
+// LinkImportP is the principal of a link import (its id).
+func LinkImportP(id string) Principal { return Principal{PrincipalLinkImport, id} }
 
 // IsAgent reports whether p is an agent.
 func (p Principal) IsAgent() bool { return p.Kind == PrincipalAgent }

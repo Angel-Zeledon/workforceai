@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>REST and WebSocket API reference</title>
-  <meta name="description" content="Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.">
+  <meta name="description" content="Authentication, API tokens, errors and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,220 +24,368 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
   <meta property="og:title" content="REST and WebSocket API reference">
-  <meta property="og:description" content="Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.">
+  <meta property="og:description" content="Authentication, API tokens, errors and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.">
   <meta property="og:url" content="https://workforceai.es/en/docs/api-reference/">
   <meta property="og:image" content="https://workforceai.es/img/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="REST and WebSocket API reference">
-  <meta name="twitter:description" content="Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.">
+  <meta name="twitter:description" content="Authentication, API tokens, errors and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"API Reference","item":"https://workforceai.es/en/docs/api-reference/"}]},{"@type":"TechArticle","headline":"API Reference","description":"Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/api-reference/","url":"https://workforceai.es/en/docs/api-reference/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=597dac5ccb">
+  <script src="/docs.js?v=2317516bde" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"API Reference","item":"https://workforceai.es/en/docs/api-reference/"}]},{"@type":"TechArticle","headline":"API Reference","description":"Authentication, API tokens, errors and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/api-reference/","url":"https://workforceai.es/en/docs/api-reference/","dateModified":"2026-10-23","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/en/" aria-label="AI Workforce OS">
-        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+<body class="dx dx-docs" id="top">
+  <a class="dx-skip" href="#main">Skip to content</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="/en/">Home</a>
-        <a href="/en/docs/">Documentation</a>
-        <a href="/en/guide/">User guide</a>
-        <a href="/en/trust/">Trust</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Language">
-          <a href="/docs/referencia-api/" hreflang="es" lang="es" >ES</a>
+      <nav class="dx-tabs" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Language">
+          <a href="/docs/referencia-api/" hreflang="es" lang="es">ES</a>
           <a href="/en/docs/api-reference/" hreflang="en" lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap wide">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/docs/">Documentation</a></li><li aria-current="page">API Reference</li></ol></nav>
-      <article>
-        <h1>API Reference</h1>
-        <p class="lead">The Go backend exposes a REST API under /api/v1 and a WebSocket at /ws. This reference summarizes authentication, conventions and the main routes as registered in the router; example bodies are representative, not exhaustive.</p>
-        
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">Base URL and versioning</a></li><li><a href="#s2">Authentication</a></li><li><a href="#s3">Errors, limits and conventions</a></li><li><a href="#s4">Requests, chat, tasks and reports</a></li><li><a href="#s5">Approvals and agents</a></li><li><a href="#s6">Projects and skills</a></li><li><a href="#s7">Shop, rewards and drive</a></li><li><a href="#s8">Connections, controls and settings</a></li><li><a href="#s9">WebSocket and health</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">Base URL and versioning</h2>
-        <p>All REST routes hang under /api/v1; the version is part of the path. The WebSocket (/ws) and the root health check (/healthz) live outside that prefix. Bodies are JSON (UTF-8), except drive uploads, which use the raw body.</p>
-        <p>With AUTH_ENABLED=false (demo mode) no authentication is required and everything runs on a fixed organization. With authentication on, every route except /healthz, /auth/* and the OAuth callback requires a token. Examples use localhost:8080; substitute your host.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash"># Base URL (local default)
-http://localhost:8080/api/v1
-# WebSocket (outside /api/v1)
-ws://localhost:8080/ws
-
-# Health (no auth)
-curl http://localhost:8080/healthz
-# {&quot;status&quot;:&quot;ok&quot;,&quot;runtime&quot;:&quot;up&quot;,&quot;runtime_mode&quot;:&quot;simulation&quot;}</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">Authentication</h2>
-        <p>Login returns an access token (a JWT, 15 minutes by default) sent in the Authorization: Bearer header. The refresh token never appears in the JSON body: it lives in an HttpOnly, SameSite=Strict cookie named wfai_refresh, scoped to the /api/v1/auth path. Endpoints that use that cookie (refresh and logout) also require the X-WFAI-CSRF header.</p>
-        <p>The organization comes from the token, never from a parameter. Roles are owner, admin, member and viewer, and each route requires a specific permission. The WebSocket accepts the token as ?access_token=.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash"># Log in: the access token is in the body, the refresh token in an HttpOnly cookie
-curl -i -X POST http://localhost:8080/api/v1/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{&quot;email&quot;:&quot;you@example.com&quot;,&quot;password&quot;:&quot;&lt;password&gt;&quot;}'
-# {&quot;token_type&quot;:&quot;Bearer&quot;,&quot;access_token&quot;:&quot;&lt;token&gt;&quot;,&quot;expires_in&quot;:900,
-#  &quot;expires_at&quot;:&quot;...&quot;,&quot;user&quot;:{...},&quot;org_id&quot;:&quot;&lt;org id&gt;&quot;,&quot;role&quot;:&quot;owner&quot;}
-
-# Call the API with the access token
-curl http://localhost:8080/api/v1/agents -H 'Authorization: Bearer &lt;token&gt;'
-
-# Renew the session (cookie + CSRF header)
-curl -X POST http://localhost:8080/api/v1/auth/refresh \
-  -b 'wfai_refresh=&lt;cookie value&gt;' -H 'X-WFAI-CSRF: 1'</code></pre>
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>POST /auth/register</code></th><td>Creates an organization and an owner user. Body: email, password, name, org_name.</td></tr><tr><th scope="row"><code>POST /auth/login</code></th><td>Signs in. Body: email, password, optional org_id.</td></tr><tr><th scope="row"><code>POST /auth/refresh</code></th><td>Rotates the refresh token (cookie + X-WFAI-CSRF) and returns a new access token.</td></tr><tr><th scope="row"><code>POST /auth/logout</code></th><td>Ends the current session and clears the cookie. Returns 204.</td></tr><tr><th scope="row"><code>POST /auth/logout-all</code></th><td>Revokes all of the user's sessions.</td></tr><tr><th scope="row"><code>POST /auth/switch-org</code></th><td>New session in another organization. Body: org_id.</td></tr><tr><th scope="row"><code>GET /auth/me, GET /auth/config</code></th><td>Current user; public configuration (whether login is on).</td></tr><tr><th scope="row"><code>GET/POST /auth/members, PATCH/DELETE /auth/members/{id}</code></th><td>List, add, change the role of, or remove members.</td></tr><tr><th scope="row"><code>GET/POST /invitations, DELETE /invitations/{id}</code></th><td>Invitation management. POST /auth/invitations/accept accepts them.</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">Errors, limits and conventions</h2>
-        <p>Errors return JSON with a meaningful HTTP status. Most routes use {&quot;error&quot;: &quot;message&quot;}; connections and controls add a stable code field; authentication routes and permission failures use {&quot;error&quot;: {&quot;code&quot;, &quot;message&quot;}}. A 500 does not expose internal detail.</p>
-        <p>There is no global pagination. Each listing defines its own parameters: GET /activity accepts limit (default 100, maximum 1000); GET /conversations/{id}/messages accepts limit (maximum 200) and before, and sets the X-Has-More and X-Next-Before headers; chats and history use limit and offset; memory accepts limit and q. JSON bodies are capped at 1 MiB by default (413 when exceeded). Authentication routes have per-IP rate limits (429).</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Code</th><th scope="col">Meaning</th></tr></thead><tbody><tr><th scope="row"><code>400</code></th><td>Invalid body or parameters.</td></tr><tr><th scope="row"><code>401</code></th><td>Missing, invalid or expired token.</td></tr><tr><th scope="row"><code>403</code></th><td>The role lacks the permission, or the CSRF check failed.</td></tr><tr><th scope="row"><code>404</code></th><td>Resource does not exist in your organization.</td></tr><tr><th scope="row"><code>409</code></th><td>State conflict (for example, a different expected version).</td></tr><tr><th scope="row"><code>413</code></th><td>Body too large.</td></tr><tr><th scope="row"><code>429</code></th><td>Authentication rate limit.</td></tr></tbody></table></div>
-        <aside class="tip"><b>Tip.</b> POST /messages, POST /shop/purchases and other side-effecting operations accept Idempotency-Key; a retry returns the first result with the Idempotent-Replayed header.</aside>
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">Requests, chat, tasks and reports</h2>
-        <p>POST /requests is asynchronous: it answers 202 with the request_id and progress arrives over the WebSocket. budget_cap_usd is optional and sets a hard cap for that request.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash"># Submit a request (asynchronous: 202 + id, progress arrives over WebSocket)
-curl -X POST http://localhost:8080/api/v1/requests \
-  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
-  -d '{&quot;text&quot;:&quot;Prepare a $50,000 proposal for ACME&quot;,&quot;budget_cap_usd&quot;:5}'
-# 202 {&quot;request_id&quot;:&quot;&lt;id&gt;&quot;}
-
-# Chat message to the office (idempotent with the header)
-curl -X POST http://localhost:8080/api/v1/messages \
-  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
-  -H 'Idempotency-Key: 7d1e...' \
-  -d '{&quot;conversation&quot;:&quot;office&quot;,&quot;text&quot;:&quot;Who is free today?&quot;}'
-# 202 turn object; replies arrive as chat.message events</code></pre>
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>POST /requests</code></th><td>Creates a request. Body: text, optional budget_cap_usd.</td></tr><tr><th scope="row"><code>GET /requests, GET /requests/{id}</code></th><td>List and detail (tasks and cost).</td></tr><tr><th scope="row"><code>GET /requests/{id}/cost, /estimate</code></th><td>Accumulated cost and upfront estimate.</td></tr><tr><th scope="row"><code>POST /requests/{id}/confirm, PUT /requests/{id}/budget</code></th><td>Confirm an estimate; change the cap.</td></tr><tr><th scope="row"><code>POST /messages</code></th><td>Chat message. Body: conversation (office by default), text, attachments.</td></tr><tr><th scope="row"><code>GET /conversations, GET /conversations/{id}/messages</code></th><td>Conversations and messages.</td></tr><tr><th scope="row"><code>POST /conversations/{id}/messages</code></th><td>Post to a specific conversation.</td></tr><tr><th scope="row"><code>GET /tasks, GET /tasks/{id}</code></th><td>Tasks; filters agent_id and status.</td></tr><tr><th scope="row"><code>GET /tasks/{id}/intervention, POST /tasks/{id}/steer, /reassign</code></th><td>Intervene in a running task.</td></tr><tr><th scope="row"><code>GET /reports, GET /reports/{id}</code></th><td>Final reports.</td></tr><tr><th scope="row"><code>GET /activity, GET /metrics, GET /budget</code></th><td>Activity, metrics and budget.</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">Approvals and agents</h2>
-        <p>Deciding an approval is a privileged action: admin or owner only. When approving, you can also request a standing permission (always_allow) for internal, reversible actions. An approval can require two distinct people.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash"># List pending approvals
-curl 'http://localhost:8080/api/v1/approvals?status=pending' \
-  -H 'Authorization: Bearer &lt;token&gt;'
-
-# Approve (admin or owner)
-curl -X POST http://localhost:8080/api/v1/approvals/&lt;id&gt;/decision \
-  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
-  -d '{&quot;decision&quot;:&quot;approve&quot;,&quot;note&quot;:&quot;ok&quot;}'
-# 200 the updated approval; &quot;decision&quot; is &quot;approve&quot; or &quot;reject&quot;</code></pre>
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /approvals</code></th><td>List; status filter (pending, approved, rejected).</td></tr><tr><th scope="row"><code>POST /approvals/{id}/decision</code></th><td>Body: decision (approve or reject), note, always_allow, always_allow_any_agent, always_allow_days.</td></tr><tr><th scope="row"><code>POST /approvals/batch</code></th><td>Decide several approvals of a project.</td></tr><tr><th scope="row"><code>GET /agents, GET /agents/{id}, GET /agents/{id}/detail</code></th><td>Agents: state, tools, permissions and autonomy.</td></tr><tr><th scope="row"><code>GET/PUT /agents/{id}/profile, GET /agents/{id}/traces</code></th><td>Versioned work profile and reasoning traces.</td></tr><tr><th scope="row"><code>GET /agents/{id}/memory, DELETE /agents/{id}/memory/{docId}</code></th><td>Long-term memory.</td></tr><tr><th scope="row"><code>GET /role-templates, POST /agents/from-template</code></th><td>Hire an agent from a template.</td></tr><tr><th scope="row"><code>PUT /agents/{id}/budget, POST /agents/{id}/control</code></th><td>Budget and pause or resume.</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">Projects and skills</h2>
-        <p>A project is a multi-node plan with a budget. The cycle is create a draft, edit the plan, estimate and validate, then launch. Skills are reusable instructions, versioned and reviewed before they become active.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash"># Create a draft project, then launch it
-curl -X POST http://localhost:8080/api/v1/projects/draft \
-  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
-  -d '{ ...project fields... }'
-curl -X POST http://localhost:8080/api/v1/projects/&lt;id&gt;/launch \
-  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' -d '{}'</code></pre>
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /projects, POST /projects/draft, POST /projects/from-template</code></th><td>List and create drafts.</td></tr><tr><th scope="row"><code>GET /projects/{id}, /snapshot, /health, /approvals</code></th><td>Project state, health and approvals.</td></tr><tr><th scope="row"><code>PATCH /projects/{id}/plan, POST /estimate, /validate, /launch</code></th><td>Edit, estimate, validate and launch.</td></tr><tr><th scope="row"><code>POST /projects/{id}/control, PUT /projects/{id}/budget</code></th><td>Control execution and set the budget.</td></tr><tr><th scope="row"><code>POST /projects/{id}/nodes/{nodeId}/retry, /skip, /replan</code></th><td>Recover a node.</td></tr><tr><th scope="row"><code>GET/POST /project-templates, GET/PUT/DELETE /project-templates/{id}</code></th><td>Templates with versions.</td></tr><tr><th scope="row"><code>GET/POST /skills, GET/PUT /skills/{id}</code></th><td>Skill catalog and editing.</td></tr><tr><th scope="row"><code>POST /skills/{id}/submit, /review, /disable</code></th><td>Review workflow; review and disable need the reviewer permission.</td></tr><tr><th scope="row"><code>GET/PUT/DELETE /agents/{id}/skills[/{skillId}]</code></th><td>Assign skills to an agent.</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">Shop, rewards and drive</h2>
-        <p>Finished tasks and projects pay coins exactly once. The shop spends coins atomically and with an audit entry. The drive stores the organization's files with versions, a trash and grants.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash">curl http://localhost:8080/api/v1/rewards/wallet -H 'Authorization: Bearer &lt;token&gt;'
-curl -X POST http://localhost:8080/api/v1/shop/purchases \
-  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
-  -d '{&quot;item_id&quot;:&quot;&lt;item id&gt;&quot;,&quot;idempotency_key&quot;:&quot;&lt;unique key&gt;&quot;}'</code></pre>
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /rewards/wallet, /rewards/ledger, /rewards/rules</code></th><td>Balance, ledger and payout rules.</td></tr><tr><th scope="row"><code>GET /shop/catalog, GET /shop/state</code></th><td>Catalog and state (inventory, equipped).</td></tr><tr><th scope="row"><code>POST /shop/purchases</code></th><td>Buy. Body: item_id, idempotency_key.</td></tr><tr><th scope="row"><code>PUT/DELETE /agents/{id}/equipment/{slot}</code></th><td>Equip or remove a character item.</td></tr><tr><th scope="row"><code>PUT/DELETE /office/items/{slot}</code></th><td>Place or remove an office item.</td></tr><tr><th scope="row"><code>GET /drive/list, /drive/search, /drive/usage, /drive/trash</code></th><td>Browse the drive.</td></tr><tr><th scope="row"><code>PUT /drive/upload?path=</code></th><td>Upload or version a file (raw body).</td></tr><tr><th scope="row"><code>GET /drive/files/{id}, /content, /text, /preview, /versions, /diff</code></th><td>Read a file and its history.</td></tr><tr><th scope="row"><code>POST /drive/folders, /drive/files/{id}/move, DELETE /drive/files/{id}</code></th><td>Organize and delete (to the trash).</td></tr></tbody></table></div>
-        <aside class="tip"><b>Tip.</b> The drive handlers register more routes (restore versions, tags, grants under /drive/grants); the router has the full list.</aside>
-      </section>
-
-      <section class="g-sec" id="s8" aria-labelledby="h8">
-        <h2 id="h8">Connections, controls and settings</h2>
-        <p>Connections store encrypted credentials for external services; without CONNECTIONS_KEK no real credentials can be saved. Controls let you pause agents, put the organization in read-only mode or trigger a kill switch.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash"># Pause or resume one agent
-curl -X POST http://localhost:8080/api/v1/agents/&lt;id&gt;/control \
-  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
-  -d '{&quot;action&quot;:&quot;pause&quot;,&quot;drain&quot;:&quot;graceful&quot;,&quot;reason&quot;:&quot;maintenance&quot;}'
-
-# Organization kill switch (level: none | freeze | lockdown)
-curl -X POST http://localhost:8080/api/v1/org/controls/kill-switch \
-  -H 'Authorization: Bearer &lt;token&gt;' -H 'Content-Type: application/json' \
-  -d '{&quot;level&quot;:&quot;freeze&quot;,&quot;reason&quot;:&quot;incident&quot;}'</code></pre>
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /connection-providers, GET/POST /connections</code></th><td>Available providers and connections.</td></tr><tr><th scope="row"><code>PATCH /connections/{id}, PUT /connections/{id}/credential</code></th><td>Edit and store the credential (write-only).</td></tr><tr><th scope="row"><code>POST /connections/{id}/oauth/start, /test</code></th><td>Start OAuth and test the connection.</td></tr><tr><th scope="row"><code>GET /connections/oauth/callback</code></th><td>Public OAuth callback, verified by a single-use state.</td></tr><tr><th scope="row"><code>GET/PUT /org/controls, POST /org/controls/kill-switch, /release</code></th><td>Read-only mode and kill switch (none, freeze, lockdown).</td></tr><tr><th scope="row"><code>GET/PUT /org/operating-hours, /org/anomaly-settings</code></th><td>Operating hours and anomaly settings.</td></tr><tr><th scope="row"><code>GET/PUT /org/settings, GET /onboarding, POST /onboarding</code></th><td>Organization settings and onboarding.</td></tr><tr><th scope="row"><code>GET/PUT /settings/llm, PUT /settings/llm/providers/{provider}</code></th><td>Bring-your-own model credentials (owner or admin).</td></tr><tr><th scope="row"><code>GET/PUT /settings/model-policy, /settings/code-execution</code></th><td>Model policy and code execution.</td></tr><tr><th scope="row"><code>GET /audit, /audit/export, /audit/verify</code></th><td>Chained audit trail, export and verification.</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s9" aria-labelledby="h9">
-        <h2 id="h9">WebSocket and health</h2>
-        <p>GET /ws opens the organization's event channel. On connect it sends hello with the agent list and then every domain event. The client only reads: the server ignores incoming messages, and there are no topic subscriptions or replay. If the token expires, the server closes with code 4401 and the client must reconnect with a fresh token.</p>
-        <p>GET /healthz and GET /api/v1/healthz need no authentication. They return status, runtime (up or down) and, when the runtime answers, runtime_mode (simulation or live).</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash"># Browsers cannot set headers on a WebSocket: pass the token in the query string
-wscat -c 'ws://localhost:8080/ws?access_token=&lt;token&gt;'
-
-&lt; {&quot;id&quot;:&quot;...&quot;,&quot;type&quot;:&quot;hello&quot;,&quot;ts&quot;:&quot;...&quot;,&quot;org_id&quot;:&quot;&lt;org id&gt;&quot;,&quot;payload&quot;:{&quot;agents&quot;:[...]}}
-&lt; {&quot;id&quot;:&quot;...&quot;,&quot;type&quot;:&quot;agent.state_changed&quot;,&quot;org_id&quot;:&quot;&lt;org id&gt;&quot;,&quot;agent_id&quot;:&quot;sales&quot;,&quot;payload&quot;:{...}}
-
-# Frame shape
-{ &quot;id&quot;: &quot;&lt;uuid&gt;&quot;, &quot;type&quot;: &quot;&lt;event.type&gt;&quot;, &quot;ts&quot;: &quot;&lt;RFC 3339&gt;&quot;,
-  &quot;org_id&quot;: &quot;&lt;org id&gt;&quot;, &quot;agent_id&quot;: &quot;&lt;optional&gt;&quot;, &quot;payload&quot;: { } }</code></pre>
-        
-        
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/architecture/"><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li><li><a href="/en/docs/auth-and-tenancy/"><b>Authentication and multi-tenancy</b><span>How accounts, sessions, roles, invitations and Postgres row-level security isolate organizations in AI Workforce OS.</span></a></li><li><a href="/en/docs/configuration/"><b>Configuration reference</b><span>Environment variable reference for AI Workforce OS: server, database, auth, budget, rewards, model providers and frontend build arguments.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Start now</h2>
-      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Documentation">
+      <div class="dx-side-head">
+        <span>Menu</span>
+        <a class="dx-side-close" href="#top" aria-label="Close menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a href="/en/docs/">Documentation</a>
-      <a href="/en/guide/">User guide</a>
-      <a href="/en/trust/">Trust</a>
-      <a href="#top">Back to top</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <nav class="dx-pages" aria-label="Documentation">
+        <ul class="dx-list">
+          <li><a href="/en/docs/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Overview</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-concepts">Concepts</p>
+        <ul class="dx-list" aria-labelledby="g-docs-concepts">
+          <li><a href="/en/docs/architecture/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><span>Architecture</span></a></li>
+          <li><a href="/en/docs/agent-runtime/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg><span>Agent runtime</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-integrate">Integrate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-integrate">
+          <li><a href="/en/docs/api-reference/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg><span>API Reference</span></a></li>
+          <li><a href="/en/docs/auth-and-tenancy/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg><span>Auth and tenancy</span></a></li>
+          <li><a href="/en/docs/skills-format/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><path d="M17.25 13.5v7.5M13.5 17.25H21"/></svg><span>Skills format</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-operate">Operate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-operate">
+          <li><a href="/en/docs/deployment/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></svg><span>Deployment</span></a></li>
+          <li><a href="/en/docs/configuration/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span>Configuration</span></a></li>
+          <li><a href="/en/docs/security-model/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Security model</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Language">
+          <a href="/docs/referencia-api/" hreflang="es" lang="es">ES</a>
+          <a href="/en/docs/api-reference/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/docs/">Documentation</a></li><li><span>Integrate</span></li></ol></nav>
+        <h1>API Reference</h1>
+        <p class="dx-lead">The Go backend exposes a REST API under <code>/api/v1</code> and an event channel at <code>/ws</code>. This reference is for anyone integrating or automating: it covers authentication, error conventions and the main routes as registered in the router, with examples you can copy.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>9 min read</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">On this page</summary>
+        <ol><li><a href="#base-url-and-versioning">Base URL and versioning</a></li><li><a href="#authentication">Authentication</a></li><li><a href="#api-tokens-for-integrations">API tokens for integrations</a></li><li><a href="#errors-limits-and-conventions">Errors, limits and conventions</a></li><li><a href="#requests-chat-tasks-and-reports">Requests, chat, tasks and reports</a></li><li><a href="#approvals-and-agents">Approvals and agents</a></li><li><a href="#projects-and-skills">Projects and skills</a></li><li><a href="#shop-rewards-and-drive">Shop, rewards and drive</a></li><li><a href="#connections-controls-and-settings">Connections, controls and settings</a></li><li><a href="#generic-api-sources">Generic API sources</a></li><li><a href="#websocket-and-health">WebSocket and health</a></li></ol>
+        <a class="dx-toc-top" href="#top">Back to top</a>
+      </details>
+      <div class="dx-body">
+        
+        <section class="dx-sec" aria-labelledby="base-url-and-versioning">
+        <h2 id="base-url-and-versioning">Base URL and versioning<a class="dx-anchor" href="#base-url-and-versioning" aria-label="Link to the “Base URL and versioning” section">#</a></h2>
+        <p>All REST routes hang under <code>/api/v1</code>; the version is part of the path. The WebSocket (<code>/ws</code>) and the root health check (<code>/healthz</code>) live outside that prefix. Bodies are UTF-8 JSON, except drive uploads, which send the file as the raw body.</p>
+        <p>Examples use <code>localhost:8080</code>; substitute your host. Every route on this page is relative to <code>/api/v1</code> unless stated otherwise.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Base URL and health</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-com"># REST base URL (local default)</span>
+<span class="tk-fn">http</span>://localhost:8080/api/v1
+<span class="tk-com"># WebSocket (outside /api/v1)</span>
+<span class="tk-fn">ws</span>://localhost:8080/ws
+
+<span class="tk-com"># Health check: no token needed</span>
+<span class="tk-fn">curl</span> http://localhost:8080/healthz
+<span class="tk-com"># {&quot;status&quot;:&quot;ok&quot;,&quot;runtime&quot;:&quot;up&quot;,&quot;runtime_mode&quot;:&quot;simulation&quot;}</span></code></pre>
+        </figure>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>With <code>AUTH_ENABLED=false</code> (demo mode) the API requires no authentication and everything runs on one fixed organization. Do not expose that mode to a network.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="authentication">
+        <h2 id="authentication">Authentication<a class="dx-anchor" href="#authentication" aria-label="Link to the “Authentication” section">#</a></h2>
+        <p>With <code>AUTH_ENABLED=true</code>, every route requires a token except <code>/healthz</code>, the public <code>/auth/*</code> routes, the OAuth callback and a few links that carry their own secret (signed approval links and the calendar feed).</p>
+        <p>Login returns an access token (a JWT, 15 minutes) sent in the <code>Authorization: Bearer</code> header. The refresh token never appears in the JSON body: it travels in the HttpOnly, <code>SameSite=Strict</code> cookie <code>wfai_refresh</code>, scoped to the <code>/api/v1/auth</code> path. Refresh and logout act on that cookie, so they also require the <code>X-WFAI-CSRF</code> header.</p>
+        <p>The organization comes from the token, never from a parameter. Roles are <code>owner</code>, <code>admin</code>, <code>member</code> and <code>viewer</code>, and each route requires a specific permission.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Login and authenticated calls</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-com"># Sign in: access token in the body, refresh token in an HttpOnly cookie</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-i</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/auth/login <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;email&quot;:&quot;you@example.com&quot;,&quot;password&quot;:&quot;&lt;password&gt;&quot;}'</span>
+<span class="tk-com"># 200 {&quot;token_type&quot;:&quot;Bearer&quot;,&quot;access_token&quot;:&quot;&lt;token&gt;&quot;,&quot;expires_in&quot;:900,</span>
+<span class="tk-com">#      &quot;expires_at&quot;:&quot;...&quot;,&quot;user&quot;:{...},&quot;org_id&quot;:&quot;&lt;org id&gt;&quot;,&quot;role&quot;:&quot;owner&quot;}</span>
+
+<span class="tk-com"># Call the API with the access token</span>
+<span class="tk-fn">curl</span> http://localhost:8080/api/v1/agents <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span>
+
+<span class="tk-com"># Renew the session: cookie + CSRF header</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/auth/refresh <span class="tk-punct">\</span>
+  <span class="tk-flag">-b</span> <span class="tk-str">'wfai_refresh=&lt;cookie value&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'X-WFAI-CSRF: 1'</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Authentication"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>POST /auth/register</code></th><td>Creates an organization and an <code>owner</code> user. Body: <code>email</code>, <code>password</code>, <code>name</code>, <code>org_name</code>. Returns 201 with the session, or 202 with <code>verification_required</code> when email verification is on.</td></tr><tr><th scope="row"><code>POST /auth/login</code></th><td>Signs in. Body: <code>email</code>, <code>password</code>, optional <code>org_id</code>.</td></tr><tr><th scope="row"><code>POST /auth/mfa/verify</code></th><td>Completes a login that answered <code>mfa_required</code>. Body: <code>mfa_token</code>, <code>code</code>.</td></tr><tr><th scope="row"><code>POST /auth/refresh</code></th><td>Rotates the refresh token (cookie + <code>X-WFAI-CSRF</code>) and returns a new access token.</td></tr><tr><th scope="row"><code>POST /auth/logout</code></th><td>Ends the current session and clears the cookie. Returns 204.</td></tr><tr><th scope="row"><code>POST /auth/logout-all</code></th><td>Revokes all of the user's sessions. Returns 204.</td></tr><tr><th scope="row"><code>POST /auth/switch-org</code></th><td>Opens a session in another of the user's organizations. Body: <code>org_id</code>.</td></tr><tr><th scope="row"><code>GET /auth/me</code>, <code>GET /auth/config</code></th><td>User, role, permissions and organizations; public configuration (whether login, registration, verification, trial and MFA are on).</td></tr><tr><th scope="row"><code>GET</code>/<code>POST /auth/members</code>, <code>PATCH</code>/<code>DELETE /auth/members/{id}</code></th><td>List, add (<code>email</code>, <code>role</code>), change the role of, or remove members.</td></tr><tr><th scope="row"><code>GET</code>/<code>POST /invitations</code>, <code>DELETE /invitations/{id}</code></th><td>Invitation management. <code>POST /auth/invitations/accept</code> accepts them.</td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>If the user has two-step verification on, <code>POST /auth/login</code> answers 200 with <code>mfa_required</code> and an <code>mfa_token</code> instead of the session. Accounts, roles and sessions are covered in depth in Authentication and multi-tenancy.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="api-tokens-for-integrations">
+        <h2 id="api-tokens-for-integrations">API tokens for integrations<a class="dx-anchor" href="#api-tokens-for-integrations" aria-label="Link to the “API tokens for integrations” section">#</a></h2>
+        <p>For server-to-server integrations there is a separate API at <code>/api/public/v1</code>, authenticated with scoped API tokens instead of user sessions. The organization comes from the token. It needs Postgres; without it these routes are not mounted.</p>
+        <p>An admin creates, lists and revokes tokens with <code>POST</code>/<code>GET /governance/tokens</code> and <code>DELETE /governance/tokens/{id}</code>. Creation body: <code>name</code>, <code>scopes</code>, <code>expires_in_days</code>. Each token allows 120 requests per minute; beyond that it answers 429 with <code>Retry-After</code>.</p>
+        <ul class="dx-ul"><li><code>GET /agents</code>: scope <code>agents:read</code>.</li><li><code>GET /requests</code>, <code>GET /requests/{id}</code>: scope <code>requests:read</code> (also covered by <code>requests:write</code>).</li><li><code>POST /requests</code>: scope <code>requests:write</code>. Same body as the session API (<code>text</code>, <code>budget_cap_usd</code>); answers 202 with <code>request_id</code>.</li><li><code>GET /reports</code>, <code>GET /reports/{id}</code>: scope <code>reports:read</code>.</li><li><code>GET /usage</code>: scope <code>usage:read</code>.</li></ul>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Create and use a token</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-com"># Create a token (admin session); the plaintext is returned once</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/governance/tokens <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;session token&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;name&quot;:&quot;crm-sync&quot;,&quot;scopes&quot;:[&quot;requests:write&quot;,&quot;reports:read&quot;],&quot;expires_in_days&quot;:90}'</span>
+<span class="tk-com"># 201 {&quot;token&quot;:&quot;&lt;api token&gt;&quot;,&quot;item&quot;:{...},&quot;note&quot;:&quot;shown once&quot;}</span>
+
+<span class="tk-com"># Use it against the public API</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/public/v1/requests <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;api token&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;text&quot;:&quot;Summarize the open deals of this week&quot;}'</span>
+<span class="tk-com"># 202 {&quot;request_id&quot;:&quot;&lt;id&gt;&quot;}</span></code></pre>
+        </figure>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>The plaintext token is returned once, at creation. Store it in your secret manager; if it leaks, revoke it with <code>DELETE /governance/tokens/{id}</code>.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="errors-limits-and-conventions">
+        <h2 id="errors-limits-and-conventions">Errors, limits and conventions<a class="dx-anchor" href="#errors-limits-and-conventions" aria-label="Link to the “Errors, limits and conventions” section">#</a></h2>
+        <p>Errors return JSON with a meaningful HTTP status. There are three shapes depending on the route; a 500 never exposes internal detail.</p>
+        <ul class="dx-ul"><li>No global pagination: each listing defines its own parameters.</li><li><code>GET /activity</code> accepts <code>limit</code> (default 100, maximum 1000).</li><li><code>GET /conversations/{id}/messages</code> accepts <code>limit</code> (maximum 200) and <code>before</code>, and returns the <code>X-Has-More</code> and <code>X-Next-Before</code> headers.</li><li><code>GET /conversations</code> accepts <code>limit</code> and <code>offset</code> and returns <code>X-Has-More</code> and <code>X-Next-Offset</code>.</li><li><code>GET /rewards/ledger</code> accepts <code>limit</code> (default 50, maximum 200) and <code>before</code>; <code>GET /agents/{id}/memory</code> accepts <code>limit</code> and <code>q</code>.</li><li>JSON bodies are capped at 1 MiB by default (<code>MAX_BODY_BYTES</code>); beyond that the response is 413.</li><li>The public authentication routes have per-IP rate limits and answer 429 with <code>Retry-After</code>.</li></ul>
+        <figure class="dx-code" data-lang="json">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Error shapes</span><span class="dx-code-lang">JSON</span></figcaption>
+          <pre tabindex="0" aria-label="JSON code"><code>// Most routes
+<span class="tk-punct">{</span> <span class="tk-key">&quot;error&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;invalid input: text is required&quot;</span> <span class="tk-punct">}</span>
+
+// Some domains (connections<span class="tk-punct">,</span> controls<span class="tk-punct">,</span> drive<span class="tk-punct">,</span> shop...) add a stable code
+<span class="tk-punct">{</span> <span class="tk-key">&quot;error&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;conflict: not enough coins&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;code&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;insufficient_coins&quot;</span> <span class="tk-punct">}</span>
+
+// /auth/* routes and permission failures
+<span class="tk-punct">{</span> <span class="tk-key">&quot;error&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">{</span> <span class="tk-key">&quot;code&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;forbidden&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;message&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;insufficient permissions&quot;</span> <span class="tk-punct">}</span> <span class="tk-punct">}</span>
+
+// Auth validation (<span class="tk-num">422</span>) lists the fields that failed
+<span class="tk-punct">{</span> <span class="tk-key">&quot;error&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">{</span> <span class="tk-key">&quot;code&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;validation_failed&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;message&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;invalid input&quot;</span><span class="tk-punct">,</span>
+             <span class="tk-key">&quot;fields&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">{</span> <span class="tk-key">&quot;password&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;...&quot;</span> <span class="tk-punct">}</span> <span class="tk-punct">}</span> <span class="tk-punct">}</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Errors, limits and conventions"><table><thead><tr><th scope="col">Code</th><th scope="col">Meaning</th></tr></thead><tbody><tr><th scope="row">400</th><td>Invalid body or parameters.</td></tr><tr><th scope="row">401</th><td>Missing, invalid or expired token.</td></tr><tr><th scope="row">403</th><td>The role lacks the permission, or the CSRF check failed.</td></tr><tr><th scope="row">404</th><td>The resource does not exist in your organization.</td></tr><tr><th scope="row">409</th><td>State conflict (for example, a different expected version or insufficient coins).</td></tr><tr><th scope="row">413</th><td>Body too large.</td></tr><tr><th scope="row">422</th><td>Validation failed on the <code>/auth/*</code> routes; <code>fields</code> says which field failed.</td></tr><tr><th scope="row">429</th><td>Rate limit, or account locked after repeated failed logins.</td></tr><tr><th scope="row">503</th><td>Feature not configured on the server, for example <code>kek_missing</code> when saving credentials without <code>CONNECTIONS_KEK</code>.</td></tr></tbody></table></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p><code>POST /messages</code> and <code>POST /shop/purchases</code> accept the <code>Idempotency-Key</code> header: a retry with the same key returns the first result instead of repeating the action.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="requests-chat-tasks-and-reports">
+        <h2 id="requests-chat-tasks-and-reports">Requests, chat, tasks and reports<a class="dx-anchor" href="#requests-chat-tasks-and-reports" aria-label="Link to the “Requests, chat, tasks and reports” section">#</a></h2>
+        <p><code>POST /requests</code> is asynchronous: it answers 202 with the <code>request_id</code> and progress arrives over the WebSocket. <code>budget_cap_usd</code> is optional and sets a hard cap for that request. <code>GET /requests/{id}</code> returns the request with its tasks, plan and accumulated cost.</p>
+        <p>Request states: <code>planning</code>, <code>running</code>, <code>awaiting_approval</code>, <code>done</code>, <code>failed</code>. Task states: <code>pending</code>, <code>running</code>, <code>blocked</code>, <code>awaiting_approval</code>, <code>done</code>, <code>failed</code>.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Submit a request and a chat message</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-com"># Submit a request: asynchronous, progress arrives over the WebSocket</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/requests <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;text&quot;:&quot;Prepare a $50,000 proposal for ACME&quot;,&quot;budget_cap_usd&quot;:5}'</span>
+<span class="tk-com"># 202 {&quot;request_id&quot;:&quot;&lt;id&gt;&quot;}</span>
+
+<span class="tk-com"># Chat with the office (a retry with the same key returns the first turn)</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/messages <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Idempotency-Key: 7d1e...'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;conversation&quot;:&quot;office&quot;,&quot;text&quot;:&quot;Who is free today?&quot;}'</span>
+<span class="tk-com"># 202 turn object; replies arrive as chat.message events</span></code></pre>
+        </figure>
+        <figure class="dx-code" data-lang="json">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">GET /api/v1/requests/{id}</span><span class="dx-code-lang">JSON</span></figcaption>
+          <pre tabindex="0" aria-label="JSON code"><code><span class="tk-punct">{</span>
+  <span class="tk-key">&quot;id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;&lt;request id&gt;&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;text&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;Prepare a $50,000 proposal for ACME&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;status&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;running&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;created_at&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;2026-01-01T12:00:00Z&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;report_id&quot;</span><span class="tk-punct">:</span> <span class="tk-lit">null</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;cost_usd&quot;</span><span class="tk-punct">:</span> <span class="tk-num">0.0123</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;tasks&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">[</span>
+    <span class="tk-punct">{</span>
+      <span class="tk-key">&quot;id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;&lt;task id&gt;&quot;</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;request_id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;&lt;request id&gt;&quot;</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;workflow_id&quot;</span><span class="tk-punct">:</span> <span class="tk-lit">null</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;title&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;Draft the commercial proposal&quot;</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;description&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;...&quot;</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;agent_id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;sales&quot;</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;status&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;running&quot;</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;depends_on&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">[</span><span class="tk-punct">]</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;parent_task_id&quot;</span><span class="tk-punct">:</span> <span class="tk-lit">null</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;created_at&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;2026-01-01T12:00:02Z&quot;</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;started_at&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;2026-01-01T12:00:03Z&quot;</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;finished_at&quot;</span><span class="tk-punct">:</span> <span class="tk-lit">null</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;output&quot;</span><span class="tk-punct">:</span> <span class="tk-lit">null</span>
+    <span class="tk-punct">}</span>
+  <span class="tk-punct">]</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;plan&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">{</span>
+    <span class="tk-key">&quot;objectives&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">[</span><span class="tk-str">&quot;...&quot;</span><span class="tk-punct">]</span><span class="tk-punct">,</span>
+    <span class="tk-key">&quot;clarifying_questions&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">[</span><span class="tk-punct">]</span><span class="tk-punct">,</span>
+    <span class="tk-key">&quot;tasks&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">[</span>
+      <span class="tk-punct">{</span> <span class="tk-key">&quot;id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;&lt;task id&gt;&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;title&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;Draft the commercial proposal&quot;</span><span class="tk-punct">,</span>
+        <span class="tk-key">&quot;agent_id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;sales&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;depends_on&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">[</span><span class="tk-punct">]</span> <span class="tk-punct">}</span>
+    <span class="tk-punct">]</span>
+  <span class="tk-punct">}</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;budget_cap_usd&quot;</span><span class="tk-punct">:</span> <span class="tk-num">5</span>
+<span class="tk-punct">}</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Requests, chat, tasks and reports"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>POST /requests</code></th><td>Creates a request. Body: <code>text</code>, optional <code>budget_cap_usd</code>.</td></tr><tr><th scope="row"><code>GET /requests</code>, <code>GET /requests/{id}</code></th><td>List and detail (tasks, plan, cost and cap).</td></tr><tr><th scope="row"><code>GET /requests/{id}/cost</code>, <code>GET /requests/{id}/estimate</code></th><td>Cost breakdown and upfront estimate.</td></tr><tr><th scope="row"><code>POST /requests/{id}/confirm</code></th><td>Confirms or cancels an estimate. Body: <code>decision</code> (<code>proceed</code> or <code>cancel</code>), optional <code>budget_cap_usd</code>.</td></tr><tr><th scope="row"><code>PUT /requests/{id}/budget</code></th><td>Changes the cap (<code>budget_cap_usd</code>; 0 removes it). Admin or owner only.</td></tr><tr><th scope="row"><code>POST /messages</code></th><td>Chat message. Body: <code>conversation</code> (<code>office</code> by default, or <code>agent:&lt;id&gt;</code>), <code>text</code>, <code>attachments</code> (drive paths, up to 6). Returns 202.</td></tr><tr><th scope="row"><code>GET /conversations</code>, <code>GET /conversations/{id}/messages</code></th><td>Conversations and their messages.</td></tr><tr><th scope="row"><code>POST /conversations/{id}/messages</code></th><td>Posts to a specific conversation. Body: <code>text</code>. Returns 201.</td></tr><tr><th scope="row"><code>GET /tasks</code>, <code>GET /tasks/{id}</code></th><td>Tasks; filters <code>agent_id</code> and <code>status</code>.</td></tr><tr><th scope="row"><code>GET /tasks/{id}/intervention</code>, <code>POST /tasks/{id}/steer</code>, <code>POST /tasks/{id}/reassign</code></th><td>Intervene in a running task. Admin or owner only.</td></tr><tr><th scope="row"><code>GET /reports</code>, <code>GET /reports/{id}</code></th><td>Final reports.</td></tr><tr><th scope="row"><code>GET /activity</code>, <code>GET /metrics</code>, <code>GET /budget</code></th><td>Activity, metrics and budget status.</td></tr></tbody></table></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="approvals-and-agents">
+        <h2 id="approvals-and-agents">Approvals and agents<a class="dx-anchor" href="#approvals-and-agents" aria-label="Link to the “Approvals and agents” section">#</a></h2>
+        <p>Deciding an approval is a privileged action: admin or owner only. When approving you can also request a standing permission (<code>always_allow</code>) for internal, reversible actions; if it is not eligible, the approval stands and the response includes <code>standing_error</code>. An approval can require two distinct people (<code>required_approvals</code>).</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">List and decide approvals</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-com"># List pending approvals</span>
+<span class="tk-fn">curl</span> <span class="tk-str">'http://localhost:8080/api/v1/approvals?status=pending'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span>
+
+<span class="tk-com"># Approve (admin or owner)</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/approvals/&lt;id&gt;/decision <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;decision&quot;:&quot;approve&quot;,&quot;note&quot;:&quot;ok&quot;}'</span>
+<span class="tk-com"># 200 the updated approval; &quot;decision&quot; is &quot;approve&quot; or &quot;reject&quot;</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Approvals and agents"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /approvals</code></th><td>List; <code>status</code> filter (<code>pending</code>, <code>approved</code>, <code>rejected</code>).</td></tr><tr><th scope="row"><code>POST /approvals/{id}/decision</code></th><td>Body: <code>decision</code> (<code>approve</code> or <code>reject</code>), <code>note</code>, <code>scope</code> (<code>once</code>, <code>session</code>, <code>project</code>), <code>always_allow</code>, <code>always_allow_any_agent</code>, <code>always_allow_days</code>.</td></tr><tr><th scope="row"><code>POST /approvals/batch</code></th><td>Decides several approvals of a project. Body: <code>filter</code> (<code>project_id</code>, <code>action</code>), <code>decision</code>, <code>expected_count</code>, <code>include_high</code>.</td></tr><tr><th scope="row"><code>GET /agents</code>, <code>GET /agents/{id}</code>, <code>GET /agents/{id}/detail</code></th><td>Agents: state, tools, permissions and autonomy.</td></tr><tr><th scope="row"><code>GET</code>/<code>PUT /agents/{id}/profile</code>, <code>GET /agents/{id}/traces</code></th><td>Versioned work profile and reasoning traces (these need <code>audit:read</code>).</td></tr><tr><th scope="row"><code>GET /agents/{id}/memory</code>, <code>DELETE /agents/{id}/memory/{docId}</code></th><td>Long-term memory.</td></tr><tr><th scope="row"><code>GET /role-templates</code>, <code>POST /agents/from-template</code></th><td>Hire an agent from a role template.</td></tr><tr><th scope="row"><code>PUT /agents/{id}/budget</code>, <code>POST /agents/{id}/control</code></th><td>Monthly budget (<code>monthly_budget_usd</code>) and pause, resume or read-only.</td></tr></tbody></table></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="projects-and-skills">
+        <h2 id="projects-and-skills">Projects and skills<a class="dx-anchor" href="#projects-and-skills" aria-label="Link to the “Projects and skills” section">#</a></h2>
+        <p>A project is a multi-node plan with a budget. The cycle is create a draft, edit the plan, estimate and validate, then launch with an approved budget. Pausing, cancelling and changing the budget of a running project are admin actions.</p>
+        <p>Skills are reusable, versioned instructions. Members create and edit drafts; only an admin reviews, activates, disables or deletes them.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Create and launch a project</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-com"># Create a draft project</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/projects/draft <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;goal&quot;:&quot;Launch the spring campaign&quot;,&quot;budget_usd&quot;:200}'</span>
+<span class="tk-com"># 201 {&quot;project_id&quot;:&quot;&lt;id&gt;&quot;}</span>
+
+<span class="tk-com"># Launch it with an approved budget (required, greater than 0)</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/projects/&lt;id&gt;/launch <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;approved_budget_usd&quot;:200}'</span>
+<span class="tk-com"># 202 {&quot;ok&quot;:true,&quot;project&quot;:{...}}</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Projects and skills"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /projects</code>, <code>POST /projects/draft</code>, <code>POST /projects/from-template</code></th><td>List and create drafts. Body: <code>goal</code>, <code>template_id</code> (required for <code>from-template</code>), <code>params</code>, <code>budget_usd</code>.</td></tr><tr><th scope="row"><code>GET /projects/{id}</code>, <code>/snapshot</code>, <code>/health</code>, <code>/approvals</code></th><td>Project state, health and approvals.</td></tr><tr><th scope="row"><code>PATCH /projects/{id}/plan</code>, <code>POST /projects/{id}/estimate</code>, <code>/validate</code>, <code>/launch</code></th><td>Edit, estimate, validate and launch. <code>launch</code> requires <code>approved_budget_usd</code> greater than 0.</td></tr><tr><th scope="row"><code>POST /projects/{id}/control</code>, <code>PUT /projects/{id}/budget</code></th><td>Pause, resume or cancel (<code>action</code>) and set the budget (<code>budget_usd</code>).</td></tr><tr><th scope="row"><code>POST /projects/{id}/nodes/{nodeId}/retry</code>, <code>/skip</code>, <code>/replan</code></th><td>Recover a failed or blocked node.</td></tr><tr><th scope="row"><code>GET</code>/<code>POST /project-templates</code>, <code>GET</code>/<code>PUT</code>/<code>DELETE /project-templates/{id}</code></th><td>Templates with versions.</td></tr><tr><th scope="row"><code>GET</code>/<code>POST /skills</code>, <code>GET</code>/<code>PUT /skills/{id}</code></th><td>Skill catalog and editing.</td></tr><tr><th scope="row"><code>POST /skills/{id}/submit</code>, <code>/review</code>, <code>/disable</code></th><td>Review workflow; <code>review</code> and <code>disable</code> need <code>skills:review</code>.</td></tr><tr><th scope="row"><code>GET /agents/{id}/skills</code>, <code>PUT</code>/<code>DELETE /agents/{id}/skills/{skillId}</code></th><td>Assign skills to an agent.</td></tr></tbody></table></div>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>Launching a project starts spending against <code>approved_budget_usd</code>. Check <code>POST /projects/{id}/estimate</code> before you launch.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="shop-rewards-and-drive">
+        <h2 id="shop-rewards-and-drive">Shop, rewards and drive<a class="dx-anchor" href="#shop-rewards-and-drive" aria-label="Link to the “Shop, rewards and drive” section">#</a></h2>
+        <p>Finished work pays coins into the organization's wallet. A purchase is idempotent: the same <code>Idempotency-Key</code> (or <code>idempotency_key</code> in the body) returns the original result without charging again. Without enough balance the response is 409 with <code>insufficient_coins</code>.</p>
+        <p>The drive stores the organization's files with versions, a trash and per-folder grants. An upload creates the file (201) or adds a version to it (200); with <code>expected_version</code> you get 409 <code>version_conflict</code> if someone changed it first.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Wallet, purchase and upload</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-fn">curl</span> http://localhost:8080/api/v1/rewards/wallet <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span>
+
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/shop/purchases <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Idempotency-Key: &lt;unique key&gt;'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;item_id&quot;:&quot;&lt;item id&gt;&quot;}'</span>
+<span class="tk-com"># 201 first purchase; 200 when the same key is replayed</span>
+
+<span class="tk-com"># Upload a file to the drive (raw body)</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> PUT <span class="tk-str">'http://localhost:8080/api/v1/drive/upload?path=/Shared/plan.xlsx'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span> <span class="tk-flag">--data-binary</span> @plan.xlsx
+<span class="tk-com"># 201 created, 200 new version</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Shop, rewards and drive"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /rewards/wallet</code>, <code>/rewards/ledger</code>, <code>/rewards/rules</code></th><td>Balance, ledger and payout rules.</td></tr><tr><th scope="row"><code>GET /shop/catalog</code>, <code>GET /shop/state</code></th><td>Catalog and state (inventory, equipped, office).</td></tr><tr><th scope="row"><code>POST /shop/purchases</code></th><td>Buy. Body: <code>item_id</code>, optional <code>idempotency_key</code>. Returns 201, or 200 on a replay.</td></tr><tr><th scope="row"><code>PUT</code>/<code>DELETE /agents/{id}/equipment/{slot}</code></th><td>Equip or remove a character item. Body: <code>item_id</code>.</td></tr><tr><th scope="row"><code>PUT</code>/<code>DELETE /office/items/{slot}</code></th><td>Place or remove an office item.</td></tr><tr><th scope="row"><code>GET /drive/list</code>, <code>/drive/search</code>, <code>/drive/usage</code>, <code>/drive/trash</code></th><td>Browse the drive.</td></tr><tr><th scope="row"><code>PUT /drive/upload?path=</code></th><td>Upload or version a file (raw body). Optional: <code>message</code>, <code>expected_version</code>.</td></tr><tr><th scope="row"><code>GET /drive/files/{id}</code>, <code>/content</code>, <code>/text</code>, <code>/preview</code>, <code>/versions</code>, <code>/diff</code></th><td>Read a file and its history.</td></tr><tr><th scope="row"><code>POST /drive/folders</code>, <code>POST /drive/files/{id}/move</code>, <code>DELETE /drive/files/{id}</code></th><td>Organize and delete (to the trash).</td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>The drive has more routes: restoring versions and files, tags (<code>PUT /drive/files/{id}/tags</code>) and agent grants on folders (<code>/drive/grants</code>).</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="connections-controls-and-settings">
+        <h2 id="connections-controls-and-settings">Connections, controls and settings<a class="dx-anchor" href="#connections-controls-and-settings" aria-label="Link to the “Connections, controls and settings” section">#</a></h2>
+        <p>Connections store encrypted credentials for external services. Controls let you pause agents, put the organization in read-only mode or trigger a kill switch; lifting it (<code>POST /org/controls/release</code>) is owner-only.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Pause an agent and trigger the kill switch</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-com"># Pause one agent (action: pause | resume | read_only | read_write)</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/agents/&lt;id&gt;/control <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;action&quot;:&quot;pause&quot;,&quot;drain&quot;:&quot;graceful&quot;,&quot;reason&quot;:&quot;maintenance&quot;}'</span>
+
+<span class="tk-com"># Organization kill switch (level: freeze | lockdown)</span>
+<span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/org/controls/kill-switch <span class="tk-punct">\</span>
+  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>
+  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;level&quot;:&quot;freeze&quot;,&quot;reason&quot;:&quot;incident&quot;}'</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Connections, controls and settings"><table><thead><tr><th scope="col">Method and path</th><th scope="col">Description</th></tr></thead><tbody><tr><th scope="row"><code>GET /connection-providers</code>, <code>GET</code>/<code>POST /connections</code></th><td>Available providers and connections.</td></tr><tr><th scope="row"><code>PATCH /connections/{id}</code>, <code>PUT /connections/{id}/credential</code></th><td>Edit and store the credential (write-only).</td></tr><tr><th scope="row"><code>POST /connections/{id}/oauth/start</code>, <code>POST /connections/{id}/test</code></th><td>Start OAuth and test the connection.</td></tr><tr><th scope="row"><code>GET /connections/oauth/callback</code></th><td>Public OAuth callback, verified by a single-use state.</td></tr><tr><th scope="row"><code>GET</code>/<code>PUT /org/controls</code>, <code>POST /org/controls/kill-switch</code>, <code>/release</code></th><td>Organization mode (<code>normal</code>, <code>read_only</code>) and kill switch (<code>freeze</code>, <code>lockdown</code>).</td></tr><tr><th scope="row"><code>GET</code>/<code>PUT /org/operating-hours</code>, <code>/org/anomaly-settings</code></th><td>Operating hours and anomaly settings.</td></tr><tr><th scope="row"><code>GET</code>/<code>PUT /org/settings</code>, <code>GET</code>/<code>POST /onboarding</code></th><td>Organization settings and onboarding.</td></tr><tr><th scope="row"><code>GET /settings/llm</code>, <code>PUT</code>/<code>DELETE /settings/llm/providers/{provider}</code></th><td>Bring-your-own model credentials (owner or admin).</td></tr><tr><th scope="row"><code>GET</code>/<code>PUT /settings/model-policy</code>, <code>/settings/code-execution</code></th><td>Model policy and code execution (owner or admin).</td></tr><tr><th scope="row"><code>GET /audit</code>, <code>/audit/export</code>, <code>/audit/verify</code></th><td>Chained audit trail, export and verification (<code>audit:read</code>).</td></tr></tbody></table></div>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>Without <code>CONNECTIONS_KEK</code> the server cannot store real credentials: those routes answer 503 <code>kek_missing</code> and only simulated connections work. Bring-your-own model keys (<code>/settings/llm</code>) need it too.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="generic-api-sources">
+        <h2 id="generic-api-sources">Generic API sources<a class="dx-anchor" href="#generic-api-sources" aria-label="Link to the “Generic API sources” section">#</a></h2>
+        <p>Generic API sources: a <code>custom_api</code> connection with a <code>source</code> object turns any platform with an HTTP API and a key (an ERP, a CRM, an internal API) into something agents can query without writing an adapter. It only sends GET; if you define <code>endpoints</code>, only those can be called and only the listed parameters travel. Agents ask for it as <code>api.get</code> with <code>connection_alias</code> and get the result back as untrusted data. Every task tells the agent which sources it has been granted.</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Create a read-only API source</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/connections <span class="tk-punct">\</span>n  <span class="tk-flag">-H</span> <span class="tk-str">'Authorization: Bearer &lt;token&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'Content-Type: application/json'</span> <span class="tk-punct">\</span>n  <span class="tk-flag">-d</span> <span class="tk-str">'{&quot;provider&quot;:&quot;custom_api&quot;,&quot;kind&quot;:&quot;api_key&quot;,&quot;label&quot;:&quot;ERP&quot;,&quot;secret&quot;:&quot;&lt;api-key&gt;&quot;,
+       &quot;source&quot;:{&quot;base_url&quot;:&quot;https://erp.example.com/api&quot;,
+                 &quot;auth&quot;:{&quot;style&quot;:&quot;header&quot;,&quot;name&quot;:&quot;X-API-Key&quot;},
+                 &quot;description&quot;:&quot;Inventory, orders and customers&quot;,
+                 &quot;endpoints&quot;:[{&quot;name&quot;:&quot;stock&quot;,&quot;path&quot;:&quot;/products/{sku}/stock&quot;,&quot;params&quot;:[&quot;warehouse&quot;]}]}}'</span>
+
+<span class="tk-com"># What an agent asks for (the backend runs it; the agent never sees the key):</span>
+<span class="tk-com"># {&quot;tool&quot;:&quot;api&quot;,&quot;action&quot;:&quot;get&quot;,&quot;args&quot;:{&quot;connection_alias&quot;:&quot;erp&quot;,&quot;endpoint&quot;:&quot;stock&quot;,&quot;params&quot;:{&quot;sku&quot;:&quot;A-1&quot;}}}</span></code></pre>
+        </figure>
+      </section>
+        <section class="dx-sec" aria-labelledby="websocket-and-health">
+        <h2 id="websocket-and-health">WebSocket and health<a class="dx-anchor" href="#websocket-and-health" aria-label="Link to the “WebSocket and health” section">#</a></h2>
+        <p><code>GET /ws</code> opens your organization's event channel. On connect you receive <code>hello</code> with the agent list, then every domain event; an event with an audience reaches only the users it names. There are no topic subscriptions and no replay: after reconnecting, reload state over REST.</p>
+        <p>The server pings every 30 s and closes if no pong arrives within 60 s. From the client it only processes small presence frames (position, status) when that feature is on; everything else is ignored. With authentication on, the server closes the socket with code <code>4401</code> after 15 minutes (the access-token lifetime) and the client must reconnect with a fresh token.</p>
+        <p><code>GET /healthz</code> and <code>GET /api/v1/healthz</code> need no authentication. They return <code>status</code>, <code>runtime</code> (<code>up</code> or <code>down</code>) and, when the runtime answers, <code>runtime_mode</code> (<code>simulation</code> or <code>live</code>).</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Connect to the WebSocket</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-com"># Browsers cannot set headers on a WebSocket: pass the token in the query string</span>
+<span class="tk-fn">wscat</span> <span class="tk-flag">-c</span> <span class="tk-str">'ws://localhost:8080/ws?access_token=&lt;token&gt;'</span>
+
+&lt; {<span class="tk-str">&quot;id&quot;</span>:<span class="tk-str">&quot;...&quot;</span>,<span class="tk-str">&quot;type&quot;</span>:<span class="tk-str">&quot;hello&quot;</span>,<span class="tk-str">&quot;ts&quot;</span>:<span class="tk-str">&quot;...&quot;</span>,<span class="tk-str">&quot;org_id&quot;</span>:<span class="tk-str">&quot;&lt;org id&gt;&quot;</span>,<span class="tk-str">&quot;payload&quot;</span>:{<span class="tk-str">&quot;agents&quot;</span>:[...]}}
+&lt; {<span class="tk-str">&quot;id&quot;</span>:<span class="tk-str">&quot;...&quot;</span>,<span class="tk-str">&quot;type&quot;</span>:<span class="tk-str">&quot;agent.state_changed&quot;</span>,<span class="tk-str">&quot;ts&quot;</span>:<span class="tk-str">&quot;...&quot;</span>,<span class="tk-str">&quot;org_id&quot;</span>:<span class="tk-str">&quot;&lt;org id&gt;&quot;</span>,<span class="tk-str">&quot;agent_id&quot;</span>:<span class="tk-str">&quot;sales&quot;</span>,<span class="tk-str">&quot;payload&quot;</span>:{...}}
+
+<span class="tk-com"># Frame shape</span>
+{ <span class="tk-str">&quot;id&quot;</span>: <span class="tk-str">&quot;&lt;uuid&gt;&quot;</span>, <span class="tk-str">&quot;type&quot;</span>: <span class="tk-str">&quot;&lt;event.type&gt;&quot;</span>, <span class="tk-str">&quot;ts&quot;</span>: <span class="tk-str">&quot;&lt;RFC 3339&gt;&quot;</span>,
+  <span class="tk-str">&quot;org_id&quot;</span>: <span class="tk-str">&quot;&lt;org id&gt;&quot;</span>, <span class="tk-str">&quot;agent_id&quot;</span>: <span class="tk-str">&quot;&lt;optional&gt;&quot;</span>, <span class="tk-str">&quot;payload&quot;</span>: { } }</code></pre>
+        </figure>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="dx-cards dx-cards-sm"><li><a href="/en/docs/architecture/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li><li><a href="/en/docs/auth-and-tenancy/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg><b>Authentication and multi-tenancy</b><span>Accounts, sessions, two-factor auth, roles, invitations and Postgres row-level security: how AI Workforce OS isolates each organization.</span></a></li><li><a href="/en/docs/configuration/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><b>Configuration reference</b><span>Every AI Workforce OS environment variable with its default: server, authentication, budget, model providers and frontend build arguments.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Pagination">
+        <a class="dx-prev" href="/en/docs/agent-runtime/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Previous</span><b>Agent runtime</b></a>
+        <a class="dx-next" href="/en/docs/auth-and-tenancy/" rel="next"><span>Next<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>Authentication and multi-tenancy</b></a>
+      </nav>
+      
+      <footer class="dx-foot">
+        <p>AI Workforce OS is a project in development. This documentation describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+        <div class="dx-foot-links">
+          <a href="/en/">AI Workforce OS</a>
+          <a href="/en/docs/">Documentation</a>
+          <a href="/en/guide/">User guide</a>
+          <a href="/en/trust/">Trust</a>
+          <a href="#top">Back to top</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

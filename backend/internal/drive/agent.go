@@ -61,6 +61,9 @@ type AgentFS struct {
 	// Chunks (optional) answers fs.search with cited passages (internal/docindex).
 	// nil keeps the file-level search over names and extracted text.
 	Chunks ChunkSearcher
+	// Customers (optional) tells which customer owns which folder (customer_scope.go, B12). A call
+	// scoped to a customer without it is refused (fail closed).
+	Customers CustomerDirectory
 }
 
 // Plan is the verdict about an agent action BEFORE running it (pure: no writes).
@@ -93,6 +96,10 @@ type scope struct {
 	agent    string
 	projects map[string]bool
 	grants   []string
+	// customer is the customer the task works for ("" = not scoped); owned maps the folders owned
+	// by customers, deepest first (customer_scope.go). Both are empty for an unscoped task.
+	customer string
+	owned    []ownedPath
 }
 
 func (a *AgentFS) scopeOf(ctx context.Context, agentID string) (scope, error) {
@@ -113,6 +120,11 @@ func (a *AgentFS) scopeOf(ctx context.Context, agentID string) (scope, error) {
 	}
 	for _, g := range gs {
 		sc.grants = append(sc.grants, g.Path)
+	}
+	if sc.customer = customerFromCtx(ctx); sc.customer != "" {
+		if err := a.loadCustomerScope(ctx, org, &sc); err != nil {
+			return sc, err
+		}
 	}
 	return sc, nil
 }
@@ -164,7 +176,7 @@ func (a *AgentFS) grantedAnywhere(sc scope, p string) bool {
 }
 
 func canRead(z string) bool {
-	return z == ZoneDesk || z == ZoneProject || z == ZoneShared || z == ZoneGranted
+	return z == ZoneDesk || z == ZoneProject || z == ZoneShared || z == ZoneGranted || z == ZoneCustomer
 }
 
 func autoWrite(z string) bool { return z == ZoneDesk || z == ZoneProject }
@@ -173,6 +185,9 @@ func autoWrite(z string) bool { return z == ZoneDesk || z == ZoneProject }
 // desks, other projects).
 func (a *AgentFS) zoneAll(ctx context.Context, org string, sc scope, p string) string {
 	z := a.zone(ctx, org, sc, p)
+	if sc.customer != "" { // B12: a customer-scoped task never reaches another customer's data
+		return sc.customerZone(z, p)
+	}
 	if (z == ZoneOtherDesk || z == ZoneOtherProj || z == ZoneClients || z == ZoneOutside) && a.grantedAnywhere(sc, p) {
 		return ZoneGranted
 	}
@@ -377,7 +392,9 @@ func (a *AgentFS) planWrite(ctx context.Context, org string, sc scope, args map[
 		}
 	}
 	pl := Plan{Path: c, Bytes: len(content), Reversibility: "versioned", Risk: "medium"}
-	if z := a.zoneAll(ctx, org, sc, c); !autoWrite(z) {
+	if z := a.zoneAll(ctx, org, sc, c); sc.writeRefused(z) {
+		return deny(denyCustomerIsolation, "this task works for one customer: write only in that customer's folders or your desk for it")
+	} else if !autoWrite(z) {
 		pl.Approval, pl.Flags = true, []string{"outside_scope"}
 		if z == ZoneOtherDesk {
 			pl.Flags = append(pl.Flags, "other_agent_desk")
@@ -437,7 +454,9 @@ func (a *AgentFS) planWriteDocument(ctx context.Context, org string, sc scope, a
 		return deny("file_too_large", fmt.Sprintf("the file exceeds the limit of %d MB", a.Svc.cfg.Limits.MaxFileBytes>>20))
 	}
 	pl.data, pl.Bytes = data, len(data)
-	if z := a.zoneAll(ctx, org, sc, c); !autoWrite(z) {
+	if z := a.zoneAll(ctx, org, sc, c); sc.writeRefused(z) {
+		return deny(denyCustomerIsolation, "this task works for one customer: write only in that customer's folders or your desk for it")
+	} else if !autoWrite(z) {
 		pl.Approval, pl.Flags = true, []string{"outside_scope"}
 		if z == ZoneOtherDesk {
 			pl.Flags = append(pl.Flags, "other_agent_desk")
@@ -465,7 +484,11 @@ func (a *AgentFS) planMove(ctx context.Context, org string, sc scope, args map[s
 	}
 	dest := folder + "/" + name
 	pl := Plan{Path: f.Path, Reversibility: "versioned", Risk: "medium"}
-	if !autoWrite(zs) || !autoWrite(a.zoneAll(ctx, org, sc, dest)) {
+	zd := a.zoneAll(ctx, org, sc, dest)
+	if sc.writeRefused(zs) || sc.writeRefused(zd) {
+		return deny(denyCustomerIsolation, "this task works for one customer: move only inside that customer's folders")
+	}
+	if !autoWrite(zs) || !autoWrite(zd) {
 		pl.Approval = true
 		pl.Flags = []string{"outside_scope"}
 		if autoWrite(zs) {
@@ -483,6 +506,9 @@ func (a *AgentFS) planDelete(ctx context.Context, org string, sc scope, args map
 	zs := a.zoneAll(ctx, org, sc, f.Path)
 	if f.DeletedAt != nil || !(canRead(zs) || autoWrite(zs)) {
 		return deny("not_granted", "this file is outside the areas you can read")
+	}
+	if sc.writeRefused(zs) {
+		return deny(denyCustomerIsolation, "this task works for one customer: delete only in that customer's folders")
 	}
 	pl := Plan{Path: f.Path, Approval: true, Risk: "high", Reversibility: "trash", Flags: []string{"delete"}}
 	if !autoWrite(zs) {
@@ -621,6 +647,9 @@ func fileLine(f File) string {
 
 // readableRoots lists the folder paths the agent can read as search/list roots.
 func (a *AgentFS) readableRoots(ctx context.Context, org string, sc scope) []string {
+	if sc.customer != "" {
+		return a.customerRoots(sc)
+	}
 	roots := []string{JoinPath(RootAgents, sc.agent), "/" + RootShared}
 	if len(sc.projects) > 0 {
 		if top, err := a.Svc.cfg.Store.FolderByPath(ctx, org, "/"+RootProjects); err == nil {
@@ -665,7 +694,9 @@ func (a *AgentFS) runList(ctx context.Context, agentID, p string) RunResult {
 		for _, r := range roots {
 			if p == "/" || IsUnder(r, p) || IsUnder(p, r) {
 				tag := ""
-				if IsUnder(r, JoinPath(RootAgents, agentID)) {
+				if sc.customer != "" && r == CustomerDesk(agentID, sc.customer) {
+					tag = " (your desk for this customer: write freely)"
+				} else if IsUnder(r, JoinPath(RootAgents, agentID)) {
 					tag = " (your desk: write freely)"
 				} else if a.zone(ctx, org, sc, r) == ZoneProject {
 					tag = " (your project: write freely)"
@@ -686,6 +717,9 @@ func (a *AgentFS) runList(ctx context.Context, agentID, p string) RunResult {
 	}
 	others := false
 	for _, f := range l.Folders {
+		if sc.customer != "" && !canRead(a.zoneAll(ctx, org, sc, f.Path)) {
+			continue // B12: never name another customer's folders
+		}
 		fmt.Fprintf(&b, "[dir] %s/\n", f.Name)
 	}
 	for _, f := range l.Files {
@@ -738,7 +772,7 @@ func (a *AgentFS) runRead(ctx context.Context, agentID string, args map[string]a
 		}
 		fmt.Fprintf(&b, "text: not available (%s)\n", res.Info.Note)
 		return RunResult{OK: true, Summary: fmt.Sprintf("%s: text not available", f.Path), Text: b.String(), SourceNote: "fs.read " + f.Path,
-			AuthoredByOthers: f.UpdatedBy != AgentP(agentID), Data: map[string]any{"file_id": f.ID, "version": res.Version.Version}}
+			AuthoredByOthers: f.UpdatedBy != AgentP(agentID), Data: map[string]any{"file_id": f.ID, "path": f.Path, "version": res.Version.Version}}
 	}
 	fmt.Fprintf(&b, "extraction: %s", res.Info.Kind)
 	if res.Info.Note != "" {
@@ -750,7 +784,7 @@ func (a *AgentFS) runRead(ctx context.Context, agentID string, args map[string]a
 		fmt.Fprintf(&b, "\n[truncated: characters %d-%d shown; call fs.read again with offset=%d for the next part]", res.Offset, res.Offset+res.Returned, res.NextStart)
 	}
 	return RunResult{OK: true, Summary: fmt.Sprintf("read %s (version %d, %d chars)", f.Path, res.Version.Version, res.Returned), Text: b.String(), SourceNote: "fs.read " + f.Path,
-		AuthoredByOthers: f.UpdatedBy != AgentP(agentID), Data: map[string]any{"file_id": f.ID, "version": res.Version.Version}}
+		AuthoredByOthers: f.UpdatedBy != AgentP(agentID), Data: map[string]any{"file_id": f.ID, "path": f.Path, "version": res.Version.Version}}
 }
 
 func (a *AgentFS) runSearch(ctx context.Context, agentID string, args map[string]any) RunResult {
@@ -780,6 +814,15 @@ func (a *AgentFS) runSearch(ctx context.Context, agentID string, args map[string
 	hits, err := a.Svc.Retrieve(ctx, RetrieveQuery{Query: argStr(args, "query"), Under: under, Limit: lim})
 	if err != nil {
 		return failure(err)
+	}
+	if sc.customer != "" { // B12: a foreign customer's folder nested under a readable root stays out
+		kept := hits[:0]
+		for _, h := range hits {
+			if canRead(a.zoneAll(ctx, org, sc, h.Path)) {
+				kept = append(kept, h)
+			}
+		}
+		hits = kept
 	}
 	var b strings.Builder
 	others := false

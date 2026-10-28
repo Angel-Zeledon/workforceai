@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,27 +20,36 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/artifacts"
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/away"
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/controls"
-	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/docindex"
+	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
+	"aiworkforce/backend/internal/inboxes"
+	"aiworkforce/backend/internal/linkimports"
 	"aiworkforce/backend/internal/meetings" // meetings-block
 	"aiworkforce/backend/internal/memory"
+	"aiworkforce/backend/internal/notify"
+	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/peoplechat"
+	"aiworkforce/backend/internal/portal"
 	"aiworkforce/backend/internal/presence"
 	"aiworkforce/backend/internal/projects"
-	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/quality"
 	"aiworkforce/backend/internal/rewards"
+	"aiworkforce/backend/internal/rituals"
 	"aiworkforce/backend/internal/sandbox"
-	"aiworkforce/backend/internal/orgchart"
-	"aiworkforce/backend/internal/webtool"
 	"aiworkforce/backend/internal/skills"
+	"aiworkforce/backend/internal/integrations"
+	"aiworkforce/backend/internal/slackapp"
 	"aiworkforce/backend/internal/tenantdata"
+	"aiworkforce/backend/internal/trust"
+	"aiworkforce/backend/internal/webtool"
 )
 
 // Deps are the collaborators of the HTTP layer.
@@ -52,9 +62,18 @@ type Deps struct {
 	Standing *application.StandingService
 	// Initiative serves the proactive suggestions and their budget (initiative.go). Optional.
 	Initiative *application.InitiativeService
+	// ROI serves the AI payroll and return report and its model (roi.go, B15). Optional.
+	ROI *application.ROIService
+	// InitiativeScanner evaluates the metric signals on demand (POST /initiatives/scan). Optional.
+	InitiativeScanner *application.InitiativeScanner
 	// DevilsAdvocate serves /approvals/{id}/counterargument (devils_advocate.go): the advisory review of a
 	// high-risk approval. Optional: nil leaves the routes unmounted.
 	DevilsAdvocate *application.DevilsAdvocate
+	// Rehearsal serves the rehearsal switches, the "would have done" log and the human verdicts (rehearsal.go, B9). Optional.
+	Rehearsal *application.RehearsalService
+	// Debates serves /debates (debates.go): team debates before a decision (B5). Optional: nil leaves the routes
+	// unmounted.
+	Debates *application.Debates
 	// Audit serves GET /audit, /audit/export and /audit/verify; Policy-related
 	// rules are served from OrgConfig (/policy/rules). Both optional.
 	Audit   *application.AuditService
@@ -119,6 +138,29 @@ type Deps struct {
 	Rewards *rewards.Service
 	// Quality serves /quality/agents, /agents/{id}/quality and the golden cases (quality.go): the advisory score. Optional.
 	Quality *quality.Service
+	// Trust serves /agents/{id}/trust, /trust/agents and /trust/proposals/* (trust.go): the trust ladder (B1). Optional.
+	Trust *trust.Service
+	// Rituals serves /rituals/* and /settings/rituals (rituals.go): the daily stand-up and the weekly retro. Optional.
+	Rituals *rituals.Service
+	// Away serves /away-summary (away.go): "while you were away", what happened since the caller's last visit. Optional.
+	Away *away.Service
+	// Customers serves /customers/* (customers.go): the customer district, clones and scoped folders (B12). Optional.
+	Customers *customers.Service
+	// LinkImports serves /link-imports/* (linkimports.go): import from a link, once or on a schedule. Optional.
+	LinkImports *linkimports.Service
+	// Portal serves the client portal (portal.go): branding, share links and the public read-only page.
+	// PortalLimiter throttles the public endpoints per client address (TrustedProxies decides when
+	// X-Forwarded-For is honoured); nil = an in-process limiter. Optional: nil Portal leaves the routes off.
+	Portal         *portal.Service
+	PortalLimiter  auth.Limiter
+	TrustedProxies []netip.Prefix
+	// Inboxes serves the data inboxes (inboxes.go): admin routes under /data-inboxes and the public
+	// POST /inbox/{id} (bearer token only). InboxLimiter counts the public pushes per client address and per
+	// inbox (nil = an in-process limiter). InboxBaseURL is the public API base (".../api/v1") used to show the
+	// absolute push URL ("" = the UI composes it). Optional: nil Inboxes leaves the routes off.
+	Inboxes      *inboxes.Service
+	InboxLimiter auth.Limiter
+	InboxBaseURL string
 	// Chats serves the chat history (chat_history.go): the enriched GET /conversations,
 	// rename/archive/delete and /chats/*. Optional: nil keeps the plain list.
 	Chats *application.ChatHistory
@@ -147,6 +189,13 @@ type Deps struct {
 	// reads Rewards. Optional: nil leaves those routes unmounted.
 	Notify *notify.Service
 	// ---- END approvals-notify ----
+	// Slack serves the two-way Slack channel for humans (slack_mount.go): the signed public request URLs, the
+	// settings card and the account link. Optional: nil leaves the routes unmounted.
+	Slack *slackapp.Service
+	// VendorIntegrations is the v1 switch of vendor-specific integrations (VENDOR_INTEGRATIONS, internal/integrations):
+	// it gates the Slack channel routes and is reported to the UI in GET /org/settings. nil = every vendor
+	// integration on (package tests); the server always sets it (default off).
+	VendorIntegrations *integrations.Policy
 	// AllowedOrigins is the CORS/WebSocket origin allow-list (see originPolicy).
 	AllowedOrigins []string
 	// EnableDemoReset registers POST /api/v1/demo/reset (admin role when auth is on).
@@ -205,8 +254,11 @@ func NewRouter(d Deps) http.Handler {
 		// The OAuth callback is public (the browser comes back from the provider
 		// without a bearer token); it is verified by its single-use state.
 		s.mountOAuthCallback(r)
-		s.mountNotifyPublic(r) // approvals-notify: the public landing page of the signed links
+		s.mountNotifyPublic(r)   // approvals-notify: the public landing page of the signed links
+		s.mountSlackPublic(r)    // Slack channel: request URLs authenticated by the Slack signature
 		s.mountMeetingsPublic(r) // meetings: public ICS feed (secret token in the URL)
+		s.mountPortalPublic(r)   // client portal: the read-only page of a share link (token in the body)
+		s.mountInboxesPublic(r)  // data inboxes: POST /inbox/{id}, Authorization: Bearer <inbox token>
 		r.Group(func(r chi.Router) {
 			r.Use(s.authenticate, s.tenant)
 			r.With(s.can(auth.PermAgentsRead)).Get("/agents", s.listAgents)
@@ -217,16 +269,19 @@ func NewRouter(d Deps) http.Handler {
 			r.With(s.can(auth.PermRequestsCreate)).Post("/requests", s.createRequest)
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests", s.listRequests)
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}", s.getRequest)
+			r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}/audit", s.getRequestAudit)
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations", s.listConversations)
 			s.mountChatHistory(r)
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations/{id}/messages", s.listMessages)
 			r.With(s.can(auth.PermConversationsPost)).Post("/messages", s.postChat)
 			r.With(s.can(auth.PermConversationsPost)).Post("/conversations/{id}/messages", s.postMessage)
 			r.With(s.can(auth.PermApprovalsRead)).Get("/approvals", s.listApprovals)
+			r.With(s.can(auth.PermApprovalsRead)).Get("/approvals/inbox", s.getApprovalInbox)
 			// Deciding approvals is a privileged action: admin/owner only.
 			r.With(s.can(auth.PermApprovalsDecide)).Post("/approvals/{id}/decision", s.decide)
 			r.With(s.can(auth.PermReportsRead)).Get("/reports", s.listReports)
 			r.With(s.can(auth.PermReportsRead)).Get("/reports/{id}", s.getReport)
+			r.With(s.can(auth.PermReportsRead)).Get("/reports/{id}/evidence", s.reportEvidence) // B6 evidence chain
 			r.With(s.can(auth.PermActivityRead)).Get("/activity", s.activity)
 			r.With(s.can(auth.PermMetricsRead)).Get("/metrics", s.metrics)
 			s.mountOrgConfig(r)
@@ -240,7 +295,10 @@ func NewRouter(d Deps) http.Handler {
 			s.mountProjectInputs(r)
 			s.mountStanding(r)
 			s.mountInitiative(r)
+			s.mountROI(r)
 			s.mountDevilsAdvocate(r)
+			s.mountRehearsal(r)
+			s.mountDebates(r)
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountDrive(r)
@@ -253,13 +311,21 @@ func NewRouter(d Deps) http.Handler {
 			s.mountMemory(r)
 			s.mountRewards(r)
 			s.mountQuality(r)
+			s.mountTrust(r)
+			s.mountRituals(r)
+			s.mountAway(r)
+			s.mountCustomers(r)
+			s.mountLinkImports(r) // import from a link (single line)
+			s.mountPortal(r)
+			s.mountInboxes(r) // data inboxes: admin routes
 			s.mountPush(r)
 			s.mountNotify(r) // approvals-notify: channel settings, plan usage, daily goal
+			s.mountSlack(r)  // Slack channel: settings card and account link
 			s.mountV2(r)
 			s.mountCommands(r)
 			s.mountTenantData(r)
 			s.mountGovernance(r) // governance (single line)
-			s.mountPresence(r) // human presence + people chat (presence_people.go)
+			s.mountPresence(r)   // human presence + people chat (presence_people.go)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}
@@ -394,12 +460,26 @@ func (s *server) createRequest(w http.ResponseWriter, r *http.Request) {
 		Text string `json:"text"`
 		// BudgetCapUSD is the optional hard cap of this request (0 = configured default).
 		BudgetCapUSD float64 `json:"budget_cap_usd"`
+		// Rehearsal (B9, optional): run the request without executing any side effect (rehearsal.go).
+		Rehearsal bool `json:"rehearsal"`
+		// CustomerID (B12, optional) scopes the request to one customer: its tasks only ever see that
+		// customer's memories and files. The orchestrator stores the scope before the request exists.
+		CustomerID string `json:"customer_id"`
+		// Debate (B5, optional): the team debates the plan's decision before it runs (adds the [[debate]] marker).
+		Debate bool `json:"debate"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
 		return
 	}
-	id, err := s.Orch.Submit(application.WithBudgetCap(r.Context(), body.BudgetCapUSD), body.Text)
+	if body.Debate && strings.TrimSpace(body.Text) != "" {
+		body.Text = application.WithDebateMarker(body.Text)
+	}
+	ctx := application.WithCustomer(application.WithBudgetCap(r.Context(), body.BudgetCapUSD), body.CustomerID)
+	if body.Rehearsal {
+		ctx = application.WithRehearsal(ctx, true)
+	}
+	id, err := s.Orch.Submit(ctx, body.Text)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -424,6 +504,16 @@ func (s *server) getRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	d.Tasks = list(d.Tasks)
 	writeJSON(w, 200, s.withCost(r, d))
+}
+
+// getRequestAudit: GET /requests/{id}/audit, the internal auditor's stamp of a request (B7).
+func (s *server) getRequestAudit(w http.ResponseWriter, r *http.Request) {
+	v, err := s.Queries.RequestAudit(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, v)
 }
 
 func (s *server) listConversations(w http.ResponseWriter, r *http.Request) {
@@ -550,6 +640,17 @@ func (s *server) getReport(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, v)
 }
 
+// reportEvidence is GET /reports/{id}/evidence (B6): the checked citations of
+// the tasks behind the report.
+func (s *server) reportEvidence(w http.ResponseWriter, r *http.Request) {
+	v, err := s.Queries.ReportEvidence(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, v)
+}
+
 func (s *server) activity(w http.ResponseWriter, r *http.Request) {
 	limit := 100
 	if n, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && n > 0 {
@@ -579,6 +680,12 @@ func (s *server) reset(w http.ResponseWriter, r *http.Request) {
 	}
 	if s.Memory != nil {
 		if err := s.Memory.Reset(r.Context(), s.org(r)); err != nil {
+			s.fail(w, err)
+			return
+		}
+	}
+	if s.Trust != nil { // agents the trust ladder moved go back to their seed level
+		if err := s.Trust.Reset(r.Context()); err != nil {
 			s.fail(w, err)
 			return
 		}

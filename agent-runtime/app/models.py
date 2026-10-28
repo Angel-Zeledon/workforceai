@@ -64,6 +64,61 @@ def _merge_skills(self):
     return self
 
 
+MAX_CITATIONS = 30
+MAX_CITATION_VALUE = 40
+MAX_CITATION_LABEL = 120
+MAX_CITATION_REF = 300
+
+
+def _one_line(v: Any, n: int) -> str:
+    return " ".join(str(v if v is not None else "").split())[:n]
+
+
+class Citation(_Base):
+    """B6 evidence chain: one figure of the output and the reference of where it came from.
+
+    Only value/label/ref travel: the backend checks the ref against what the task really saw and sets the
+    status and the source itself (whatever else a model writes here is ignored)."""
+    value: str
+    label: str = ""
+    ref: str
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def _value(cls, v: Any) -> str:
+        return _one_line(v, MAX_CITATION_VALUE)
+
+    @field_validator("label", mode="before")
+    @classmethod
+    def _label(cls, v: Any) -> str:
+        return _one_line(v, MAX_CITATION_LABEL)
+
+    @field_validator("ref", mode="before")
+    @classmethod
+    def _ref(cls, v: Any) -> str:
+        return _one_line(v, MAX_CITATION_REF)
+
+
+def clean_citations(value: Any) -> list[dict[str, Any]]:
+    """Keeps the well-formed citations (a figure and a ref), at most MAX_CITATIONS. A malformed item is
+    dropped instead of failing the whole output: citations are optional evidence, never a reason to lose work."""
+    if not isinstance(value, (list, tuple)):
+        return []
+    out: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, Citation):
+            item = item.model_dump()
+        if not isinstance(item, dict):
+            continue
+        val, ref = _one_line(item.get("value"), MAX_CITATION_VALUE), _one_line(item.get("ref"), MAX_CITATION_REF)
+        if not val or not ref or not any(ch.isdigit() for ch in val):
+            continue
+        out.append({"value": val, "label": item.get("label") or "", "ref": ref})
+        if len(out) >= MAX_CITATIONS:
+            break
+    return out
+
+
 class StructuredOutput(_Base):
     summary: str
     findings: list[str] = Field(default_factory=list)
@@ -75,6 +130,13 @@ class StructuredOutput(_Base):
     suggested_tasks: list[str] = Field(default_factory=list)
     # M1: short lessons/facts worth remembering for later work (the backend stores a few; never secrets).
     memory_notes: list[str] = Field(default_factory=list)
+    # B6: where the key figures came from ({value, label, ref}); optional, verified by the backend.
+    citations: list[Citation] = Field(default_factory=list)
+
+    @field_validator("citations", mode="before")
+    @classmethod
+    def _citations(cls, v: Any) -> list[dict[str, Any]]:
+        return clean_citations(v)
 
 
 class Usage(_Base):
@@ -101,7 +163,7 @@ class ProviderCredential(_Base):
     provider: str
     api_key: SecretStr = Field(repr=False)
     model: str = ""  # bare model name ("gpt-4.1"); empty = the provider's default
-    base_url: str | None = None  # openai / kimi / custom
+    base_url: str | None = None  # openai / kimi / gemini / custom
     org_id: str = ""  # OpenAI organization id (optional)
     project_id: str = ""  # OpenAI project id (optional)
 
@@ -111,7 +173,7 @@ class _ProviderPolicyMixin(_Base):
 
     allowed_providers: provider ids this request's data may be sent to (e.g. ["anthropic"] to exclude
         DeepSeek). The runtime applies it BEFORE sending; an empty list means "none" and fails with
-        the stable error code no_allowed_provider (HTTP 422). Known ids: deepseek, anthropic, openai, kimi, custom.
+        the stable error code no_allowed_provider (HTTP 422). Known ids: deepseek, anthropic, openai, kimi, gemini, custom.
         The operator ceiling ALLOWED_PROVIDERS (env) is intersected with it, never widened.
     preferred_providers: try these first (in order); the other allowed providers remain as fallbacks.
     role_providers: per agent role, the provider order to try first (organization policy; the
@@ -171,6 +233,9 @@ class PlanTask(_Base):
     depends_on: list[str] = Field(default_factory=list)
     # Optional, human-readable: why this agent got this task (shown in the chat). Omitted when unknown.
     reason: str | None = None
+    # B5 (additive): this task takes a high-impact decision; the backend has the team debate it before the plan
+    # runs (advisory; the decision still goes through approvals). At most one task per plan.
+    decision: bool | None = None
 
 
 class PlanResponse(_Base):
@@ -470,6 +535,28 @@ class ImagePart(_Base):
     height: int = 0
 
 
+class SourceEndpoint(_Base):
+    """A named read query of a generic source (admin-written organization configuration)."""
+
+    name: str
+    description: str = ""
+    params: list[str] = Field(default_factory=list)
+
+
+class SourceRef(_Base):
+    """A platform the agent may query through a connection granted to it (backend: gateway.SourcesFor).
+    Metadata only: the runtime never sees a credential, a connection id nor a URL; the agent asks for the
+    read in tool_requests and the backend runs it, returning the data as delimited untrusted content."""
+
+    alias: str
+    label: str = ""
+    provider: str = ""
+    description: str = ""
+    tools: list[str] = Field(default_factory=list)
+    endpoints: list[SourceEndpoint] = Field(default_factory=list)
+    simulated: bool = False
+
+
 class RunTaskRequest(_ProviderPolicyMixin):
     # El contrato NO tiene campos de credenciales, connection_id ni URLs de API:
     # el runtime nunca ve secretos ni llama al proveedor (test_contract_has_no_secret_fields).
@@ -485,6 +572,8 @@ class RunTaskRequest(_ProviderPolicyMixin):
     # S1: active skills of the agent (name + description) and the ones it loaded this task.
     skills: list[SkillRef] | None = None
     loaded_skills: list[LoadedSkill] | None = None
+    # Sources (additive): the platforms this agent may query, with their read tools and named endpoints.
+    sources: list[SourceRef] | None = None
     # V2: notes a human sent to steer this task. Additional guidance, never authority (security.py).
     human_guidance: list[str] | None = None
     # M1: relevant memories of past work (bounded by the backend); data, never instructions.
@@ -807,7 +896,7 @@ class ContextSizesResponse(_Base):
 class HealthResponse(_Base):
     status: str
     mode: Literal["simulation", "live"]
-    provider: Literal["simulation", "deepseek", "anthropic", "openai", "kimi", "custom"] = "simulation"
+    provider: Literal["simulation", "deepseek", "anthropic", "openai", "kimi", "gemini", "custom"] = "simulation"
     # Set when a provider is configured but the live engine could not start: the runtime
     # is answering in simulation and status is "degraded" (never a silent fallback).
     warning: str | None = None

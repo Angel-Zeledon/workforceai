@@ -117,6 +117,9 @@ func (o *Orchestrator) webReads(ctx context.Context, rs *run, t *domain.Task, ag
 				rs.ext.mu.Unlock()
 				o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.executed", Entity: "task", EntityID: t.ID,
 					Details: map[string]any{"tool": WebToolName, "action": tr.Action, "status": "succeeded", "summary": out.Summary}})
+				if out.InjectionSuspected {
+					o.injectionAlert(ctx, rs, t, agent, WebToolName, tr.Action)
+				}
 				continue
 			}
 			reason := out.DenyReason

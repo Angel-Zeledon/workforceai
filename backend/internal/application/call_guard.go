@@ -44,6 +44,7 @@ var defaultCallMaxTokens = map[domain.UsageKind]int{
 	UsagePlanPhase:         4096,
 	UsageReplan:            3000,
 	UsageCounterargument:   1200,
+	UsageDebate:            1600,
 	domain.UsageChat:       350,
 	UsageSummarize:         2000,
 }
@@ -91,7 +92,7 @@ func promptOverhead(kind domain.UsageKind) int {
 	switch kind {
 	case domain.UsageChat, UsageSummarize:
 		return 700
-	case domain.UsagePlan, UsagePlanPhases, UsagePlanPhase, UsageReplan, UsageCounterargument:
+	case domain.UsagePlan, UsagePlanPhases, UsagePlanPhase, UsageReplan, UsageCounterargument, UsageDebate:
 		return 1200
 	}
 	return guardPromptOverheadTokens

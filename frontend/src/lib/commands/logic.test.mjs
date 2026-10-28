@@ -57,7 +57,7 @@ test("menu search matches both languages and shows the locale alias", () => {
 });
 
 test("registry covers the contract command ids", () => {
-  const ids = "clear compact context usage model memory pause resume stop status trace export excel word pdf presentation meeting assign project daily pending search file open email linkedin remember tone language template skill learn undo team hire permissions shop inventory help room schedule minutes".split(" ");
+  const ids = "clear compact context usage model memory pause resume stop status trace export excel word pdf presentation meeting assign project daily pending search file open email linkedin remember tone language template skill learn undo team hire permissions shop inventory help room schedule minutes debate customer".split(" ");
   for (const id of ids) assert.ok(get(id), id);
   assert.equal(C.length, ids.length);
 });

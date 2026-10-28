@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Divulgación de vulnerabilidades: AI Workforce OS</title>
-  <meta name="description" content="Cómo reportar una vulnerabilidad de seguridad en AI Workforce OS, qué está en alcance, nuestras reglas de puerto seguro y qué puedes esperar de nosotros.">
+  <meta name="description" content="Cómo reportar una vulnerabilidad en AI Workforce OS: contacto, alcance, puerto seguro para investigación de buena fe y qué puedes esperar de nosotros.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,123 +24,147 @@
   <meta property="og:locale" content="es_ES">
   <meta property="og:locale:alternate" content="en_US">
   <meta property="og:title" content="Divulgación de vulnerabilidades: AI Workforce OS">
-  <meta property="og:description" content="Cómo reportar una vulnerabilidad de seguridad en AI Workforce OS, qué está en alcance, nuestras reglas de puerto seguro y qué puedes esperar de nosotros.">
+  <meta property="og:description" content="Cómo reportar una vulnerabilidad en AI Workforce OS: contacto, alcance, puerto seguro para investigación de buena fe y qué puedes esperar de nosotros.">
   <meta property="og:url" content="https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/">
   <meta property="og:image" content="https://workforceai.es/img/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Divulgación de vulnerabilidades: AI Workforce OS">
-  <meta name="twitter:description" content="Cómo reportar una vulnerabilidad de seguridad en AI Workforce OS, qué está en alcance, nuestras reglas de puerto seguro y qué puedes esperar de nosotros.">
+  <meta name="twitter:description" content="Cómo reportar una vulnerabilidad en AI Workforce OS: contacto, alcance, puerto seguro para investigación de buena fe y qué puedes esperar de nosotros.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Confianza","item":"https://workforceai.es/confianza/"},{"@type":"ListItem","position":3,"name":"Divulgación de vulnerabilidades","item":"https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/"}]},{"@type":"TechArticle","headline":"Divulgación de vulnerabilidades","description":"Cómo reportar una vulnerabilidad de seguridad en AI Workforce OS, qué está en alcance, nuestras reglas de puerto seguro y qué puedes esperar de nosotros.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/","url":"https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=597dac5ccb">
+  <script src="/docs.js?v=2317516bde" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://workforceai.es/"},{"@type":"ListItem","position":2,"name":"Confianza","item":"https://workforceai.es/confianza/"},{"@type":"ListItem","position":3,"name":"Divulgación de vulnerabilidades","item":"https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/"}]},{"@type":"TechArticle","headline":"Divulgación de vulnerabilidades","description":"Cómo reportar una vulnerabilidad en AI Workforce OS: contacto, alcance, puerto seguro para investigación de buena fe y qué puedes esperar de nosotros.","inLanguage":"es","mainEntityOfPage":"https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/","url":"https://workforceai.es/confianza/divulgacion-de-vulnerabilidades/","dateModified":"2026-10-23","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Saltar al contenido</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/" aria-label="AI Workforce OS">
-        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+<body class="dx dx-trust" id="top">
+  <a class="dx-skip" href="#main">Saltar al contenido</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menú"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Principal">
-        <a href="/">Inicio</a>
-        <a href="/docs/">Documentación</a>
-        <a href="/guia/">Guía de uso</a>
-        <a href="/confianza/">Confianza</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Idioma">
+      <nav class="dx-tabs" aria-label="Secciones del sitio"><a href="/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentación</span></a><a href="/guia/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Guía de uso</span></a><a href="/confianza/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Confianza</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Buscar en la documentación…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Buscar en la documentación…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Idioma">
           <a href="/confianza/divulgacion-de-vulnerabilidades/" hreflang="es" lang="es" aria-current="true">ES</a>
-          <a href="/en/trust/vulnerability-disclosure/" hreflang="en" lang="en" >EN</a>
+          <a href="/en/trust/vulnerability-disclosure/" hreflang="en" lang="en">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Crear cuenta</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap narrow">
-      <nav class="crumbs" aria-label="Ruta de navegación"><ol><li><a href="/">Inicio</a></li><li><a href="/confianza/">Confianza</a></li><li aria-current="page">Divulgación de vulnerabilidades</li></ol></nav>
-      <article>
-        <h1>Divulgación de vulnerabilidades</h1>
-        <p class="lead">Si encontraste un problema de seguridad en AI Workforce OS, queremos saberlo. Somos una empresa pequeña: esta política es honesta sobre lo que podemos ofrecer. No tenemos un programa de recompensas ni compromisos de nivel de servicio, pero sí la intención de tomar en serio cada reporte.</p>
-        
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">En esta página</h2><ol><li><a href="#s1">Cómo reportar</a></li><li><a href="#s2">Alcance</a></li><li><a href="#s3">Puerto seguro</a></li><li><a href="#s4">Qué puedes esperar de nosotros</a></li><li><a href="#s5">Qué hacemos con los reportes</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">Cómo reportar</h2>
-        
-        <ol class="steps" aria-label="Pasos"><li>Escribe a info@workforceai.es con el asunto &quot;Vulnerabilidad&quot;. El mismo contacto figura en nuestro archivo security.txt (RFC 9116), disponible en /.well-known/security.txt del sitio.</li><li>Describe el problema, el componente afectado, los pasos para reproducirlo y el impacto que crees que tiene. Una prueba de concepto mínima ayuda.</li><li>No incluyas datos reales de terceros en el reporte. Si accediste a datos que no son tuyos por accidente, no los guardes y dínoslo.</li><li>Idiomas: español o inglés.</li></ol>
-        <pre class="code" tabindex="0"><code class="lang-text">Contact: mailto:info@workforceai.es
-Canonical: https://workforceai.es/.well-known/security.txt</code></pre>
-        
-        <aside class="tip"><b>Consejo.</b> Hoy no ofrecemos una clave PGP. Si necesitas enviar algo sensible, pídenos primero un canal cifrado por correo.</aside>
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">Alcance</h2>
-        <p>Dentro del alcance: el sitio público workforceai.es, la aplicación en app.workforceai.es y su API, y el código del producto (backend, runtime de agentes y frontend). Nos interesan especialmente: fugas entre organizaciones, evasión de autenticación o de permisos, evasión de aprobaciones, topes o kill switch, exposición de credenciales o secretos, y manipulación de la cadena de auditoría.</p>
-        <p>Fuera del alcance: servicios de terceros (proveedores de modelos de IA, hosting, correo, servicios que conecta el cliente), denegación de servicio y pruebas de carga, ingeniería social o phishing contra personas, acceso físico, escaneo automatizado masivo o ruidoso, spam, e informes que solo señalan la ausencia de una cabecera o buena práctica sin un impacto demostrable. Las cuentas de prueba son un espacio razonable para probar, pero no las uses para degradar el servicio.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">Puerto seguro</h2>
-        <p>Si actúas de buena fe y respetas esta política, no emprenderemos acciones legales contra ti ni te reportaremos a las autoridades por tu investigación. Buena fe significa: probar solo lo necesario para demostrar el problema, no acceder, modificar ni borrar datos de otras personas más allá de lo mínimo imprescindible, no degradar el servicio, no extorsionar, no publicar detalles antes de que podamos corregirlo y darnos un plazo razonable para hacerlo.</p>
-        <p>Este texto es una declaración de intención de una empresa pequeña, no un contrato, y no puede obligar a terceros (por ejemplo a nuestros proveedores). Está pendiente de revisión por un abogado.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">Qué puedes esperar de nosotros</h2>
-        <p>Estas son intenciones, no compromisos de nivel de servicio. Intentamos acusar recibo en pocos días hábiles, confirmar o descartar el problema tras investigarlo, mantenerte informado y avisarte cuando esté corregido. Los plazos de corrección dependen de la gravedad y de nuestra capacidad.</p>
-        <p>Coordinaremos contigo la publicación. Con tu permiso, te reconoceremos públicamente como quien lo reportó. No ofrecemos recompensas económicas hoy.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">Qué hacemos con los reportes</h2>
-        <p>Cada reporte se evalúa, se prioriza según el impacto y se corrige en el repositorio con una prueba de regresión cuando es posible. Si el hallazgo afecta datos de clientes, avisaremos a las organizaciones afectadas conforme a lo que exija la ley aplicable.</p>
-        <p>Para entender qué ya está cubierto y qué no, consulta la página de seguridad y el modelo de seguridad de la documentación técnica, incluida la sección de limitaciones conocidas.</p>
-        
-        
-        
-        
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="cards"><li><a href="/confianza/seguridad/"><b>Seguridad en AI Workforce OS</b><span>Qué controles de seguridad existen hoy en AI Workforce OS, verificados en el código, y qué todavía no tenemos. Sin certificaciones declaradas.</span></a></li><li><a href="/confianza/proteccion-de-datos/"><b>Protección de datos</b><span>Qué datos guarda AI Workforce OS, dónde, cuánto tiempo, cómo salen hacia proveedores de IA y cómo ejercer tus derechos hoy.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Empieza ahora</h2>
-      <p>Crea tu cuenta y llegas a tu propia oficina. Por ahora la IA corre en modo simulación: respuestas guionadas, sin costo y sin conectar nada.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Entrar</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Probar sin registrarte</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Confianza">
+      <div class="dx-side-head">
+        <span>Menú</span>
+        <a class="dx-side-close" href="#top" aria-label="Cerrar menú"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS es un proyecto en desarrollo. Esta página describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
-      <a href="/docs/">Documentación</a>
-      <a href="/guia/">Guía de uso</a>
-      <a href="/confianza/">Confianza</a>
-      <a href="#top">Volver arriba</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Secciones del sitio"><a href="/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentación</span></a><a href="/guia/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Guía de uso</span></a><a href="/confianza/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Confianza</span></a></nav>
+      <nav class="dx-pages" aria-label="Confianza">
+        <ul class="dx-list">
+          <li><a href="/confianza/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Introducción</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-trust-security">Seguridad</p>
+        <ul class="dx-list" aria-labelledby="g-trust-security">
+          <li><a href="/confianza/seguridad/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2.2"/><path d="M8 10.5v-3a4 4 0 0 1 8 0v3M12 14.5V17"/></svg><span>Resumen de seguridad</span></a></li>
+          <li><a href="/confianza/divulgacion-de-vulnerabilidades/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="7.5" y="8" width="9" height="12.5" rx="4.5"/><path d="M9.5 8V6.5a2.5 2.5 0 0 1 5 0V8M3.5 13.5h4M16.5 13.5h4M4.5 8.5l3 2M19.5 8.5l-3 2M4.5 19l3-2M19.5 19l-3-2M12 11.5v9"/></svg><span>Divulgación de vulnerabilidades</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-trust-data">Datos</p>
+        <ul class="dx-list" aria-labelledby="g-trust-data">
+          <li><a href="/confianza/proteccion-de-datos/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/></svg><span>Protección de datos</span></a></li>
+          <li><a href="/confianza/subprocesadores/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5V12M12 12l-5.3 5.2M12 12l5.3 5.2"/></svg><span>Subprocesadores</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Idioma">
+          <a href="/confianza/divulgacion-de-vulnerabilidades/" hreflang="es" lang="es" aria-current="true">ES</a>
+          <a href="/en/trust/vulnerability-disclosure/" hreflang="en" lang="en">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Crear cuenta</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Ruta de navegación"><ol><li><a href="/confianza/">Confianza</a></li><li><span>Seguridad</span></li></ol></nav>
+        <h1>Divulgación de vulnerabilidades</h1>
+        <p class="dx-lead">Si encontraste un problema de seguridad en AI Workforce OS, queremos saberlo. Somos un equipo pequeño: no hay programa de recompensas ni plazos garantizados, pero cada reporte se lee, se investiga y se responde.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>3 min de lectura</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">En esta página</summary>
+        <ol><li><a href="#como-reportar">Cómo reportar</a></li><li><a href="#que-esta-en-alcance">Qué está en alcance</a></li><li><a href="#que-esta-fuera-de-alcance">Qué está fuera de alcance</a></li><li><a href="#puerto-seguro">Puerto seguro</a></li><li><a href="#que-puedes-esperar-de-nosotros">Qué puedes esperar de nosotros</a></li><li><a href="#que-hacemos-con-cada-reporte">Qué hacemos con cada reporte</a></li></ol>
+        <a class="dx-toc-top" href="#top">Volver arriba</a>
+      </details>
+      <div class="dx-body">
+        
+        <section class="dx-sec" aria-labelledby="como-reportar">
+        <h2 id="como-reportar">Cómo reportar<a class="dx-anchor" href="#como-reportar" aria-label="Enlace a la sección «Cómo reportar»">#</a></h2>
+        <ol class="dx-steps" aria-label="Pasos"><li>Escribe a info@workforceai.es con el asunto &quot;Vulnerabilidad&quot;. Es el mismo contacto que publica nuestro <code>security.txt</code> (RFC 9116).</li><li>Describe el problema, el componente afectado, los pasos para reproducirlo y el impacto que crees que tiene. Una prueba de concepto mínima ayuda mucho.</li><li>No incluyas datos reales de terceros. Si accediste por accidente a datos que no son tuyos, no los conserves y cuéntanoslo en el reporte.</li></ol>
+        <figure class="dx-code" data-lang="text">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">https://workforceai.es/.well-known/security.txt</span><span class="dx-code-lang">Texto</span></figcaption>
+          <pre tabindex="0" aria-label="Código Texto"><code>Contact: mailto:info@workforceai.es
+Expires: 2027-10-13T00:00:00.000Z
+Preferred-Languages: es, en
+Canonical: https://workforceai.es/.well-known/security.txt
+Policy: https://workforceai.es/docs/modelo-de-seguridad/</code></pre>
+        </figure>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Nota</p><p>Hoy no publicamos una clave PGP. Si necesitas enviarnos algo sensible, escríbenos primero y acordamos un canal cifrado. Puedes escribir en español o en inglés.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="que-esta-en-alcance">
+        <h2 id="que-esta-en-alcance">Qué está en alcance<a class="dx-anchor" href="#que-esta-en-alcance" aria-label="Enlace a la sección «Qué está en alcance»">#</a></h2>
+        <p>Nos interesa especialmente: fugas de datos entre organizaciones, evasión de autenticación, SSO, MFA o permisos, evasión de aprobaciones, topes de gasto o kill switch, exposición de credenciales o secretos, abuso de enlaces de aprobación firmados, SSRF desde webhooks o herramientas web, y manipulación de la cadena de auditoría.</p>
+        <ul class="dx-ul"><li>El sitio público <code>workforceai.es</code>.</li><li>La aplicación en <code>app.workforceai.es</code>, su API (<code>/api/v1</code>), la API pública con tokens (<code>/api/public/v1</code>) y el WebSocket (<code>/ws</code>).</li><li>El código del producto: backend en Go, runtime de agentes en Python y frontend.</li></ul>
+      </section>
+        <section class="dx-sec" aria-labelledby="que-esta-fuera-de-alcance">
+        <h2 id="que-esta-fuera-de-alcance">Qué está fuera de alcance<a class="dx-anchor" href="#que-esta-fuera-de-alcance" aria-label="Enlace a la sección «Qué está fuera de alcance»">#</a></h2>
+        <ul class="dx-ul"><li>Servicios de terceros: proveedores de modelos de IA, alojamiento, correo y los servicios que conecta cada cliente.</li><li>Denegación de servicio, pruebas de carga y escaneo automatizado masivo o ruidoso.</li><li>Ingeniería social, phishing o acceso físico.</li><li>Spam y reportes que solo señalan la ausencia de una cabecera o buena práctica sin un impacto demostrable.</li></ul>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Consejo</p><p>Una cuenta de prueba es un buen lugar para investigar sin tocar datos de nadie. No la uses para degradar el servicio.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="puerto-seguro">
+        <h2 id="puerto-seguro">Puerto seguro<a class="dx-anchor" href="#puerto-seguro" aria-label="Enlace a la sección «Puerto seguro»">#</a></h2>
+        <p>Si actúas de buena fe y respetas esta política, no emprenderemos acciones legales contra ti ni te denunciaremos por tu investigación. Buena fe significa:</p>
+        <ul class="dx-ul"><li>Probar solo lo necesario para demostrar el problema.</li><li>No acceder, modificar ni borrar datos de otras personas más allá del mínimo imprescindible.</li><li>No degradar el servicio ni extorsionar.</li><li>No publicar detalles hasta que esté corregido, dándonos un plazo razonable para hacerlo.</li></ul>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Nota</p><p>Este texto es una declaración de intención, no un contrato, y no puede obligar a terceros como nuestros proveedores. Está pendiente de revisión por un abogado.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="que-puedes-esperar-de-nosotros">
+        <h2 id="que-puedes-esperar-de-nosotros">Qué puedes esperar de nosotros<a class="dx-anchor" href="#que-puedes-esperar-de-nosotros" aria-label="Enlace a la sección «Qué puedes esperar de nosotros»">#</a></h2>
+        <p>Son intenciones, no compromisos de nivel de servicio. Intentamos acusar recibo en pocos días hábiles, confirmar o descartar el problema tras investigarlo, mantenerte informado y avisarte cuando esté corregido. El plazo de corrección depende de la gravedad y de nuestra capacidad.</p>
+        <p>Coordinamos contigo la publicación y, si quieres, te reconocemos públicamente como quien lo reportó. Hoy no ofrecemos recompensas económicas.</p>
+      </section>
+        <section class="dx-sec" aria-labelledby="que-hacemos-con-cada-reporte">
+        <h2 id="que-hacemos-con-cada-reporte">Qué hacemos con cada reporte<a class="dx-anchor" href="#que-hacemos-con-cada-reporte" aria-label="Enlace a la sección «Qué hacemos con cada reporte»">#</a></h2>
+        <p>Evaluamos el impacto, priorizamos y corregimos en el repositorio, con una prueba de regresión cuando es posible. Si el hallazgo afectó datos de clientes, avisamos a las organizaciones afectadas según exija la ley aplicable.</p>
+        <p>Para saber qué controles existen y cuáles no, consulta la página de seguridad y el modelo de seguridad de la documentación técnica, que incluye sus limitaciones conocidas.</p>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Sigue leyendo</h2><ul class="dx-cards dx-cards-sm"><li><a href="/confianza/seguridad/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2.2"/><path d="M8 10.5v-3a4 4 0 0 1 8 0v3M12 14.5V17"/></svg><b>Seguridad en AI Workforce OS</b><span>Los controles de seguridad que existen hoy en AI Workforce OS, verificados en el código, y los que todavía no tenemos. Sin certificaciones declaradas.</span></a></li><li><a href="/confianza/proteccion-de-datos/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/></svg><b>Protección de datos</b><span>Qué datos guarda AI Workforce OS, dónde, cuánto tiempo, cuándo llegan a proveedores de IA y cómo exportarlos o borrarlos hoy.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Paginación">
+        <a class="dx-prev" href="/confianza/seguridad/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Anterior</span><b>Seguridad en AI Workforce OS</b></a>
+        <a class="dx-next" href="/confianza/proteccion-de-datos/" rel="next"><span>Siguiente<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>Protección de datos</b></a>
+      </nav>
+      
+      <footer class="dx-foot">
+        <p>AI Workforce OS es un proyecto en desarrollo. Esta documentación describe su estado a la fecha; las capacidades listadas como simulación usan respuestas guionadas, sin IA real.</p>
+        <div class="dx-foot-links">
+          <a href="/">AI Workforce OS</a>
+          <a href="/docs/">Documentación</a>
+          <a href="/guia/">Guía de uso</a>
+          <a href="/confianza/">Confianza</a>
+          <a href="#top">Volver arriba</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

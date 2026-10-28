@@ -19,6 +19,8 @@ import (
 	"aiworkforce/backend/internal/api"
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/away"
+	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
@@ -27,10 +29,12 @@ import (
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/quality"
 	"aiworkforce/backend/internal/rewards"
+	"aiworkforce/backend/internal/rituals"
 	"aiworkforce/backend/internal/roles"
 	"aiworkforce/backend/internal/sandbox"
-	"aiworkforce/backend/internal/webtool"
 	"aiworkforce/backend/internal/skills"
+	"aiworkforce/backend/internal/trust"
+	"aiworkforce/backend/internal/webtool"
 )
 
 const goodPW = "Correct-Horse-9"
@@ -116,28 +120,42 @@ type opts struct {
 	drive          bool // mount the drive (drive_api_test.go); writeGate applies to it too
 	skills         bool // mount the skill library (skills_api_test.go); implies the drive
 	writeGate      func(ctx context.Context, org string) error
-	rewards        bool // mount coins and shop (rewards_api_test.go)
-	standing       bool // mount the standing per-project approvals (standing_api_test.go)
-	initiative     bool // mount the proactive suggestions (initiative_api_test.go)
-	advocate       *advocateStub // mount the devil's advocate review with this runtime (devils_advocate_api_test.go)
-	llm            bool // mount bring-your-own-model credentials (llm_api_test.go)
-	llmNoKEK       bool // ... with no encryption key configured
-	orgchart       bool // mount the corporate organization model (orgchart_api_test.go)
-	quality        bool // mount the quality score and golden cases (quality_api_test.go)
+	rewards        bool                // mount coins and shop (rewards_api_test.go)
+	standing       bool                // mount the standing per-project approvals (standing_api_test.go)
+	initiative     bool                // mount the proactive suggestions (initiative_api_test.go)
+	advocate       *advocateStub       // mount the devil's advocate review with this runtime (devils_advocate_api_test.go)
+	llm            bool                // mount bring-your-own-model credentials (llm_api_test.go)
+	llmNoKEK       bool                // ... with no encryption key configured
+	orgchart       bool                // mount the corporate organization model (orgchart_api_test.go)
+	quality        bool                // mount the quality score and golden cases (quality_api_test.go)
+	trust          bool                // mount the trust ladder (trust_api_test.go)
+	trustBlocked   *string             // controls code the trust ladder sees when raising autonomy ("" = allowed)
+	trustClock     func() time.Time    // the trust ladder's clock (nil = real time)
+	rituals        bool                // mount the stand-up and retro (rituals_api_test.go)
+	away           bool                // mount "while you were away" with a 500 ms visit gap (away_api_test.go)
+	rehearsal      bool                // mount the rehearsal API (rehearsal_api_test.go)
+	runtime        application.Runtime // overrides fakeRuntime{} (nil: the default)
+	roi            bool                // mount the AI payroll / return report (roi_api_test.go)
+	customers      bool                // mount the customer district and scope requests (customers_api_test.go)
+	portal         bool                // mount the client portal (portal_api_test.go); implies ws
+	debater        *debaterStub        // mount the team debates with this runtime (debates_api_test.go)
+	inboxes        *inboxOpts          // mount the data inboxes (inboxes_api_test.go); implies the drive
+	deps           func(d *api.Deps)   // last word on the dependencies before the router is built (linkimports_api_test.go)
 }
 
 type env struct {
-	t     *testing.T
-	srv   *httptest.Server
-	svc   *auth.Service
-	spy   *orgSpy
-	hub   *events.Hub
-	store *memory.Store
-	appr  *application.Approvals
-	code  *sandbox.Service
-	coins *rewards.Service
-	llm   *llmEnv
-	init  *application.InitiativeService
+	t         *testing.T
+	srv       *httptest.Server
+	svc       *auth.Service
+	spy       *orgSpy
+	hub       *events.Hub
+	store     *memory.Store
+	appr      *application.Approvals
+	code      *sandbox.Service
+	coins     *rewards.Service
+	llm       *llmEnv
+	init      *application.InitiativeService
+	custAudit *[]string // customer audit actions (customers_api_test.go)
 }
 
 func newEnv(t *testing.T, o opts) *env {
@@ -156,7 +174,11 @@ func newEnv(t *testing.T, o opts) *env {
 	q := &application.Queries{Store: spy, Cfg: cfg}
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	orch := application.NewOrchestrator(ctx, cfg, spy, fakeRuntime{}, memory.NewLocker(), rec, appr, q, log)
+	var rt application.Runtime = fakeRuntime{}
+	if o.runtime != nil {
+		rt = o.runtime
+	}
+	orch := application.NewOrchestrator(ctx, cfg, spy, rt, memory.NewLocker(), rec, appr, q, log)
 
 	d := api.Deps{Cfg: cfg, Queries: q, Orch: orch, Approvals: appr, Store: spy, Runtime: fakeRuntime{}, Hub: hub, Log: log,
 		AuthEnabled: o.auth, AllowedOrigins: o.origins, EnableDemoReset: o.demoReset, MaxBodyBytes: o.maxBody, WSMaxAge: o.wsMaxAge}
@@ -168,10 +190,13 @@ func newEnv(t *testing.T, o opts) *env {
 		orch.SetV2(mem, pr, tr)
 		d.Profiles, d.V2, d.Tracer, d.Rec = pr, mem, tr, rec
 	}
-	if o.ws {
+	if o.ws || o.portal {
 		attachWorkspaces(&d, spy, rec, appr, orch, log, ctx, o.writeGate)
 	}
-	if o.drive || o.skills {
+	if o.portal {
+		attachPortal(&d, rec)
+	}
+	if o.drive || o.skills || o.inboxes != nil {
 		d.Drive = drive.New(drive.Config{Store: drive.NewMemStore(), Objects: objstore.NewMemory(), OrgID: cfg.OrgID, WriteGate: o.writeGate, Log: log})
 	}
 	if o.code {
@@ -195,6 +220,40 @@ func newEnv(t *testing.T, o opts) *env {
 				rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: "quality_case", EntityID: id, Details: det})
 			}})
 	}
+	if o.trust {
+		d.Trust = trust.New(trust.Config{Store: trust.NewMemStore(), Signals: trust.StoreSignals{Store: spy, Audit: mem}, Agents: spy,
+			SetAutonomy: mem.SetAgentAutonomy, Rec: rec, OrgID: cfg.OrgID, Log: log, Now: o.trustClock,
+			Blocked: func(context.Context, string, string) string {
+				if o.trustBlocked != nil {
+					return *o.trustBlocked
+				}
+				return ""
+			}})
+	}
+	if o.rituals {
+		d.Rituals = rituals.New(rituals.Config{Store: rituals.NewMemStore(), Core: spy, OrgID: cfg.OrgID, Log: log,
+			Guard:    orch.AdmitRitual,
+			Notice:   func(c context.Context, text string) error { return orch.PostSystemNotice(c, domain.ChatOffice, text) },
+			Emit:     rec.Emit,
+			Audit:    rec.Audit,
+			Profiles: &application.ProfileService{Store: mem, Core: spy, Tones: mem, Rec: rec, Config: cfg}})
+	}
+	if o.away {
+		d.Away = away.New(away.Config{Marks: away.NewMemMarks(), History: mem, OrgID: cfg.OrgID, Log: log, Gap: awayTestGap})
+	}
+	var custAudit *[]string
+	if o.customers {
+		acts := []string{}
+		custAudit = &acts
+		d.Customers = customers.New(customers.Config{Store: customers.NewMemStore(), OrgID: cfg.OrgID, Log: log,
+			Agents: func(c context.Context, org string) ([]domain.Agent, error) { return spy.ListAgents(c, org) },
+			Audit: func(c context.Context, org, actor, action, id string, det map[string]any) {
+				*custAudit = append(*custAudit, action)
+				rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: actor, Action: action, Entity: "customer", EntityID: id, Details: det})
+			}})
+		orch.SetCustomerScope(d.Customers)
+		d.Customers.SetWork(customerTestWork{store: spy})
+	}
 	if o.skills {
 		d.Skills = skills.New(skills.Config{Store: skills.NewMemStore(), Drive: d.Drive, OrgID: cfg.OrgID, Log: log,
 			AgentRole: func(c context.Context, org, id string) (string, error) {
@@ -207,9 +266,20 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	if o.initiative {
 		d.Initiative = &application.InitiativeService{Store: mem, Submit: orch, Rec: rec, Cfg: cfg}
+		d.InitiativeScanner = &application.InitiativeScanner{Svc: d.Initiative, Core: mem}
+	}
+	if o.rehearsal {
+		d.Rehearsal = &application.RehearsalService{Store: mem, Runs: mem, Rec: rec, Cfg: cfg}
+		orch.SetRehearsal(d.Rehearsal)
+	}
+	if o.roi {
+		d.ROI = &application.ROIService{Store: mem, Core: spy, Rec: rec, Cfg: cfg}
 	}
 	if o.advocate != nil {
 		d.DevilsAdvocate = &application.DevilsAdvocate{Store: mem, Core: spy, Runtime: o.advocate, Budget: orch, Rec: rec, Cfg: cfg}
+	}
+	if o.debater != nil {
+		d.Debates = &application.Debates{Store: mem, Agents: spy, Runtime: o.debater, Budget: orch, Rec: rec, Cfg: cfg}
 	}
 	var lenv *llmEnv
 	if o.llm {
@@ -227,6 +297,12 @@ func newEnv(t *testing.T, o opts) *env {
 				return err == nil
 			}}
 		d.Rewards, d.Rec = coins, rec
+	}
+	if o.inboxes != nil {
+		attachInboxes(&d, rec, o.inboxes)
+	}
+	if o.deps != nil {
+		o.deps(&d)
 	}
 	var svc *auth.Service
 	if o.auth {
@@ -248,7 +324,9 @@ func newEnv(t *testing.T, o opts) *env {
 	}
 	ts.Start()
 	t.Cleanup(ts.Close)
-	return &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr, code: d.Sandbox, coins: coins, llm: lenv, init: d.Initiative}
+	e := &env{t: t, srv: ts, svc: svc, spy: spy, hub: hub, store: mem, appr: appr, code: d.Sandbox, coins: coins, llm: lenv, init: d.Initiative}
+	e.custAudit = custAudit
+	return e
 }
 
 func (e *env) do(method, path, token string, body any, hdr map[string]string) (*http.Response, []byte) {

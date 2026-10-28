@@ -1,22 +1,23 @@
 {
   "id": "custom_api",
-  "version": 1,
+  "version": 2,
   "label_key": "provider.custom_api.name",
   "phase": "available",
-  "auth": [{ "method": "api_key", "secret_regex": "^[A-Za-z0-9._~+/=-]{8,512}$" }],
+  "auth": [{ "method": "api_key", "secret_regex": "^[A-Za-z0-9._~+/=:-]{8,512}$" }],
   "capabilities": {
     "api.read": {
       "class": "read",
       "scopes": [],
-      "tools": [],
+      "tools": ["api.get"],
       "risk": "low",
       "side_effects": false,
       "default": true,
-      "label_key": "conn.cap.api.read"
+      "label_key": "conn.cap.api.read",
+      "scope_overreach": "GET only, under the source's base URL; when the source lists endpoints only those are callable; give the source a read-only API key"
     }
   },
-  "never_offered": [],
+  "never_offered": ["api.write", "api.delete"],
   "resource_filters": [],
   "default_limits": { "per_minute": 30, "per_hour": 600, "per_day": 2000, "write_per_day": 0, "max_items_per_call": 25, "max_bytes_per_day": 5000000 },
-  "untrusted_sources": []
+  "untrusted_sources": ["response.body"]
 }

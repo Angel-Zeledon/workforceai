@@ -128,6 +128,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
       } else {
         const r = await acceptInvitation({ token, password, ...(name.trim() ? { name } : {}) });
         if (r.mfaRequired) { setMfa({ token: r.token }); setPassword(""); setBusy(false); return; }
+        if (r.enrollToken) { setEnroll({ token: r.enrollToken }); setPassword(""); setBusy(false); return; }
       }
       router.replace(next ?? "/");
     } catch (x) {

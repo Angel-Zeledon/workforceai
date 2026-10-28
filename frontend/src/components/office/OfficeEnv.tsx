@@ -10,7 +10,7 @@ import { roleMeta } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { deskOf, seatOf } from "./registry";
 import { effective, useOfficeLayout } from "@/lib/officeLayout";
-import { FIXTURES, FIXTURE_IDS, MOOD_BASE, ZONE_DEFAULTS, ZONE_SIZE, type FixtureId, type FloorKind, type LightMix, type ZoneName } from "@/lib/officeLayoutModel";
+import { FIXTURES, FIXTURE_IDS, MOOD_BASE, ZONE_DEFAULTS, ZONE_SIZE, localHour, timeOfDayMix, type FixtureId, type FloorKind, type LightMix, type ZoneName } from "@/lib/officeLayoutModel";
 import { useRewards } from "@/lib/rewards";
 import { ChairMesh, DeskSet } from "./Furniture";
 
@@ -515,14 +515,32 @@ function tint(out: THREE.Color, hex: string, temp: number) {
   return out;
 }
 
-/** The mix the room should have now: the organization's mood (layout) tuned by the temperature and brightness bars. */
+/** Local hour, refreshed every minute while the automatic light is on (0 otherwise: no timer at all). */
+function useLocalHour(on: boolean): number {
+  const [h, setH] = useState(() => localHour(new Date()));
+  useEffect(() => {
+    if (!on) return;
+    setH(localHour(new Date()));
+    const i = setInterval(() => setH(localHour(new Date())), 60_000);
+    return () => clearInterval(i);
+  }, [on]);
+  return on ? h : 0;
+}
+
+/**
+ * The mix the room should have now: the organization's mood (layout) tuned by the temperature and brightness bars,
+ * or, when the viewer chose "automatic (real time)", the light of their local hour (dawn / day / dusk / night)
+ * with the same brightness bar.
+ */
 function useLightTarget(): LightMix & { temp: number } {
   const light = useOfficeLayout((s) => effective(s).light);
+  const auto = usePreferences((s) => s.prefs.lightAuto);
+  const hour = useLocalHour(auto);
   return useMemo(() => {
-    const base = MOOD_BASE[light.mood] ?? MOOD_BASE.natural;
+    const base = auto ? timeOfDayMix(hour) : (MOOD_BASE[light.mood] ?? MOOD_BASE.natural);
     const k = light.brightness;
-    return { ...base, amb: base.amb * k, hemi: base.hemi * k, sun: base.sun * k, temp: light.mood === "night" ? 0 : light.temp };
-  }, [light.mood, light.brightness, light.temp]);
+    return { ...base, amb: base.amb * k, hemi: base.hemi * k, sun: base.sun * k, temp: auto || light.mood === "night" ? 0 : light.temp };
+  }, [auto, hour, light.mood, light.brightness, light.temp]);
 }
 
 /** Scene lights, background and fog driven by the layout's light and the `lighting` preference, eased toward the target. */

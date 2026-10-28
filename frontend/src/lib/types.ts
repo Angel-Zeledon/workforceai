@@ -14,6 +14,8 @@ export interface StructuredOutput {
   summary: string; findings: string[]; metrics: Record<string, string | number>;
   hypotheses: string[]; evidence: string[]; recommendations: string[];
   confidence: number; suggested_tasks: string[];
+  /** B6 evidence chain: figures and their sources, checked by the backend (optional, additive) */
+  citations?: import("./evidenceLogic").Citation[];
 }
 export type TaskStatus = "pending" | "running" | "blocked" | "awaiting_approval" | "done" | "failed";
 export interface Task {
@@ -44,6 +46,17 @@ export interface Approval {
 export interface Counterargument {
   approval_id: string; counterargument: string; risks: string[]; checks: string[];
   advisory: boolean; cached?: boolean; cost_usd: number; created_at: string; model?: string;
+}
+
+/** Team debate (B5, docs/architecture/team-debates.md): advisory, and every turn is untrusted model output. */
+export type DebateTurnKind = "position" | "objection" | "synthesis";
+export interface DebateTurn { seq: number; agent_id: string; kind: DebateTurnKind; text: string }
+export interface Debate {
+  id: string; topic: string; trigger: "planner_decision" | "user_request"; request_id?: string; task_id?: string;
+  options: string[]; participants: string[]; turns: DebateTurn[];
+  synthesis: { choice: string; rationale: string; dissent: string[] };
+  status: "done" | "failed" | "running"; fail_code?: string; max_turns: number; locale?: string; model?: string; provider?: string;
+  cost_usd: number; created_by?: string; created_at: string; advisory: boolean; untrusted: boolean;
 }
 
 /** "Always allow this kind of action in this project" (docs/architecture/06-permisos-autonomia.md). */

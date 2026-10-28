@@ -70,6 +70,33 @@ type GatewayCall struct {
 	// ApprovedArgsHash is set when executing after a human approval; it must
 	// equal the hash of the call's tool/action/args.
 	ApprovedArgsHash string
+	// Rehearsal (B9): the call belongs to a rehearsal. A side-effect call is then
+	// never executed, scheduled or held, even with an approval: the gateway only
+	// says what it would have done (GatewayOutcome.Rehearsal). Reads run normally.
+	Rehearsal bool
+}
+
+// RehearsalPreview is what the gateway would have done with a rehearsed write
+// (B9). It is computed with the same checks as a real call, without effects.
+type RehearsalPreview struct {
+	WouldDecision string // allowed | needs_approval | denied (domain.Would*)
+	DenyReason    string
+	Risk          string
+	Reversibility string
+	Account       string
+	Recipients    []string
+	Flags         []string
+}
+
+// DecisionRehearsed is the GatewayOutcome.Decision of a side-effect call that a
+// rehearsal stopped: nothing was executed.
+const DecisionRehearsed = "rehearsed"
+
+// RehearsalPolicy tells the Tool Gateway whether a call is part of a rehearsal
+// besides GatewayCall.Rehearsal (the agent's switch, a rehearsal request). An
+// error means "unknown" and the gateway treats the call as rehearsed (fail closed).
+type RehearsalPolicy interface {
+	Rehearsing(ctx context.Context, org, agentID, requestID string) (bool, error)
 }
 
 // GatewayPending describes what a human must approve (structured, no secrets).
@@ -106,9 +133,15 @@ type GatewayOutcome struct {
 	Images []ImagePart
 	// ConnectionID is internal: it is never forwarded to the runtime.
 	ConnectionID string
-	Pending      *GatewayPending
-	HoldID       string
-	HoldUntil    *time.Time
+	// Sources (B6) are the structured ids of what a successful read returned
+	// (connector items, the drive file version, memory refs): the evidence chain
+	// checks the citations of the task against them. Never sent to the runtime.
+	Sources   []ReadSource
+	Pending   *GatewayPending
+	HoldID    string
+	HoldUntil *time.Time
+	// Rehearsal is set when Decision is DecisionRehearsed (B9).
+	Rehearsal *RehearsalPreview
 }
 
 // ToolGateway executes connection-backed tools with the credential and
@@ -160,6 +193,29 @@ type NativeResult struct {
 	Trusted []TrustedBlock
 	// Images: see GatewayOutcome.Images.
 	Images []ImagePart
+	// Sources: see GatewayOutcome.Sources.
+	Sources []ReadSource
+}
+
+// ReadSource kinds (B6).
+const (
+	SourceConn   = "conn"   // an item returned by a connector read (email, event, file, issue...)
+	SourceFile   = "file"   // a drive file version read with fs.read
+	SourceRecall = "recall" // a memory ref returned by memory.search (task:, report:, memory:, file:)
+)
+
+// ReadSource is one thing a task read through the Tool Gateway (B6). Ids only:
+// the content stays where it already was (the untrusted block for the runtime).
+type ReadSource struct {
+	Kind     string
+	Tool     string // conn: the tool name the agent used (email, calendar...)
+	Provider string // conn: provider id (gmail, google_calendar...)
+	ItemID   string // conn: the item id as the runtime saw it in the block
+	FileID   string // file
+	Path     string // file
+	Version  int    // file
+	Ref      string // recall: task:<id> | report:<id> | memory:<id> | file:/path
+	Title    string // recall: title of the memory
 }
 
 // TrustedBlock is approved organization configuration returned by a native
@@ -231,4 +287,34 @@ type PlanReviewer interface {
 	Begin(ctx context.Context, org, requestID string, tasks []PlanTaskInfo) (pf PlanPreflight, required bool, wait <-chan PlanDecision, err error)
 	// Forget drops a review that nobody answered (timeout, cancellation).
 	Forget(org, requestID string)
+}
+
+// SourceLister (optional, implemented by the Tool Gateway) lists what an agent
+// may consult: the read tools of the connections granted to it. It feeds the
+// "sources" block of the run so the agent knows which platforms it can query
+// and how, instead of guessing tool names. Metadata written by admins only:
+// never a credential, a connection id or a URL.
+type SourceLister interface {
+	SourcesFor(ctx context.Context, org, agentID string) []SourceRef
+}
+
+// SourceRef is one platform an agent may query.
+type SourceRef struct {
+	// Alias is what the agent passes as connection_alias.
+	Alias string `json:"alias"`
+	Label string `json:"label"`
+	// Provider is the provider id (google_gmail, custom_api, ...).
+	Provider    string           `json:"provider"`
+	Description string           `json:"description,omitempty"`
+	Tools       []string         `json:"tools"` // "tool.action" reads
+	Endpoints   []SourceEndpoint `json:"endpoints,omitempty"`
+	// Simulated: the connection answers with sample data, not the real platform.
+	Simulated bool `json:"simulated,omitempty"`
+}
+
+// SourceEndpoint is a named query of a generic source.
+type SourceEndpoint struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
+	Params      []string `json:"params,omitempty"`
 }

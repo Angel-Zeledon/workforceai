@@ -31,7 +31,9 @@ type connState struct {
 type runExt struct {
 	mu       sync.Mutex
 	readOnly bool                  // the human marked the request "no external actions"
+	rehearsal bool                 // B9: the request runs as a rehearsal (rehearsal.go): no side effect is executed
 	taint    map[string]*taskTaint // task id -> what it read
+	seen     map[string]*taskSeen  // task id -> ids of what its reads returned (evidence.go)
 }
 
 type taskTaint struct {
@@ -199,6 +201,16 @@ func (o *Orchestrator) reviewPlanSince(ctx context.Context, rs *run, tasks []dom
 	}
 }
 
+// sourcesFor lists the platforms the agent may query (nil without a gateway
+// that can tell).
+func (o *Orchestrator) sourcesFor(ctx context.Context, agentID string) []SourceRef {
+	sl, ok := o.conn.gw.(SourceLister)
+	if !ok {
+		return nil
+	}
+	return sl.SourcesFor(ctx, o.org(ctx), agentID)
+}
+
 const maxReadsPerRound = 5
 
 // connectionReads executes the connection-backed READ tool requests of a task
@@ -261,6 +273,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 					taint.conns = append(taint.conns, out.ConnectionID)
 				}
 				rs.ext.mu.Unlock()
+				rs.recordSources(t.ID, out.Sources, time.Now().UTC()) // B6: what citations may point to
 			default:
 				reason := out.DenyReason
 				if reason == "" {
@@ -379,6 +392,9 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 	res := gw.Execute(ctx, call)
 
 	switch res.Decision {
+	case DecisionRehearsed: // B9: the gateway found a rehearsal the orchestrator did not (switch turned on just now)
+		o.rehearsedByGateway(ctx, rs, t, agent, tr, res)
+		return true, OutcomeDone
 	case "denied":
 		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.denied", Entity: "task", EntityID: t.ID,
 			Details: map[string]any{"tool": tr.Tool, "action": tr.Action, "reason": res.DenyReason}})
@@ -511,6 +527,10 @@ func (o *Orchestrator) gatewayAwait(ctx context.Context, rs *run, t *domain.Task
 	// an active kill switch stops an approved action.
 	res2 := gw.Execute(ctx, call)
 	switch {
+	case res2.Decision == DecisionRehearsed:
+		// B9: the agent went into rehearsal while the approval waited. The approval
+		// does not override it: nothing ran; it is recorded as "would have done".
+		o.rehearsedByGateway(ctx, rs, t, agent, tr, res2)
 	case res2.Decision == "denied":
 		o.rec.Audit(ctx, domain.AuditLog{Actor: agent.ID, Action: "tool.denied", Entity: "task", EntityID: t.ID,
 			Details: map[string]any{"tool": tr.Tool, "action": tr.Action, "reason": res2.DenyReason, "approval_id": decision.ID}})

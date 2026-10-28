@@ -24,10 +24,12 @@ import { ControlsBanner } from "../security/ControlsChrome";
 import { CostOverlays } from "../cost/CostOverlays";
 import { Icon, type IconName } from "../icons";
 import { Toaster } from "./Toaster";
+import { ShieldAlerts } from "../security/ShieldAlerts";
 import { TourLauncher } from "../tour/TourLauncher";
 import { TourOverlay } from "../tour/TourOverlay";
 import { WelcomeOverlay } from "../onboarding/WelcomeOverlay";
 import { RouteCurtain } from "./RouteCurtain";
+import { useAwayHeartbeat } from "../away/AwayHost";
 import { TrialBanner } from "./TrialBanner";
 import { ActivationChecklist } from "./ActivationChecklist";
 
@@ -95,6 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => { setNavigator((href) => router.push(href)); return () => setNavigator(null); }, [router]);
   useEffect(() => startRealtime(), []);
+  useAwayHeartbeat(); // last seen, for "while you were away" (B3)
   useEffect(() => { hydratePrefs(); }, [hydratePrefs]);
   useEffect(() => { try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1"); } catch { /* private mode */ } }, []);
   useEffect(() => { setDrawer(false); }, [pathname]);
@@ -178,6 +181,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
       <Toaster />
+      <ShieldAlerts />
       <TourOverlay />
       {section === "office" && <WelcomeOverlay />}
     </div>

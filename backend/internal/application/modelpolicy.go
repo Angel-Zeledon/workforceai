@@ -15,7 +15,7 @@ import (
 )
 
 // KnownProviders are the model providers the runtime can route to.
-var KnownProviders = []string{"deepseek", "anthropic", "openai", "kimi", "custom"}
+var KnownProviders = []string{"deepseek", "anthropic", "openai", "kimi", "gemini", "custom"}
 
 // noneProvider is sent as allowed_providers when nothing is allowed: it matches
 // no configured provider, so the runtime refuses the call (no_allowed_provider)

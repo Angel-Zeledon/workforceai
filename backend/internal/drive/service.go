@@ -117,7 +117,7 @@ func (s *Service) audit(ctx context.Context, org string, p Principal, action, en
 
 func checkPrincipal(p Principal) error {
 	switch p.Kind {
-	case PrincipalHuman, PrincipalAgent, PrincipalSystem:
+	case PrincipalHuman, PrincipalAgent, PrincipalSystem, PrincipalInbox, PrincipalLinkImport:
 		if strings.TrimSpace(p.ID) != "" {
 			return nil
 		}
@@ -323,6 +323,15 @@ func (s *Service) FolderByPath(ctx context.Context, path string) (Folder, error)
 		return Folder{}, err
 	}
 	f, err := s.cfg.Store.FolderByPath(ctx, s.org(ctx), c)
+	return f, mapStore(err, "folder")
+}
+
+// FolderByID returns an active folder by id (a folder in the trash is not found).
+func (s *Service) FolderByID(ctx context.Context, id string) (Folder, error) {
+	f, err := s.cfg.Store.FolderByID(ctx, s.org(ctx), id)
+	if err == nil && f.DeletedAt != nil {
+		return Folder{}, notFound("folder %s not found", id)
+	}
 	return f, mapStore(err, "folder")
 }
 

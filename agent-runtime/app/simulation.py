@@ -10,13 +10,14 @@ import re
 
 from . import review as rv
 from . import sim_content as sc
-from .commands import marker_draft, marker_meeting, sim_summary, sim_usage_tokens, strip_markers
+from .commands import is_decision_request, marker_draft, marker_meeting, sim_summary, sim_usage_tokens, strip_markers
 from .formats import EXT, requested_format
 from .engine import AgentEngine, estimate_cost
 from .routing import assigned_reason, compose_reply, owner_role
 from .vision import sim_image_lines
 from .models import (
     ChatReplyRequest,
+    Citation,
     ChatReplyResponse,
     Consult,
     ConsultRequest,
@@ -38,6 +39,28 @@ SIM_MODEL = "simulation-claude-sonnet"
 
 
 _SLUG = re.compile(r"[^\w]+", re.UNICODE)
+
+
+def sim_citations(req: RunTaskRequest, limit_per_dep: int = 2, limit: int = 8) -> list[Citation]:
+    """B6: cite the figures this task took from its dependencies (their metrics), with the ref the backend gave.
+    Only refs the task really saw: the backend verifies them anyway."""
+    out: list[Citation] = []
+    for dep in req.context.dependency_outputs:
+        o = dep.output if isinstance(dep.output, dict) else (dep.output.model_dump() if hasattr(dep.output, "model_dump") else {})
+        metrics = o.get("metrics") or {}
+        ref = dep.ref or f"task:{dep.task_id}"
+        n = 0
+        for key, raw in metrics.items():
+            if isinstance(raw, bool) or not any(ch.isdigit() for ch in str(raw)):
+                continue
+            text = f"${raw:,.0f}" if isinstance(raw, (int, float)) and "usd" in str(key).lower() else str(raw)
+            out.append(Citation(value=text, label=str(key).replace("_", " "), ref=ref))
+            n += 1
+            if n >= limit_per_dep or len(out) >= limit:
+                break
+        if len(out) >= limit:
+            break
+    return out
 
 
 def sim_desk_draft(req: RunTaskRequest, out: StructuredOutput) -> ToolRequest | None:
@@ -306,6 +329,11 @@ class SimulationEngine(AgentEngine):
             a = req.agents[0]
             key, title = c.TEXTS["fallback_task"]
             tasks = [PlanTask(key=key, title=title, description=req.request_text, agent_id=a.id)]
+        if is_decision_request(req.request_text):
+            # B5: a choice between alternatives -> the last task that is not the assistant's takes the decision
+            # (the backend has the team debate it first; deterministic: same text, same flag)
+            decider = next((t for t in reversed(tasks) if by_role.get("assistant") != t.agent_id and t.agent_id != "assistant"), tasks[-1])
+            decider.decision = True
         return PlanResponse(objectives=list(spec["objectives"]), tasks=tasks,
                             clarifying_questions=list(spec["questions"]))
 
@@ -370,6 +398,8 @@ class SimulationEngine(AgentEngine):
         n_ext = len(req.external_content or [])
         if n_dep:
             out.evidence.append(c.TEXTS["evidence_deps"].format(n=n_dep))
+            if role != rv.AUDITOR_ROLE and not out.citations:
+                out.citations = sim_citations(req)
         if n_ext:
             out.evidence.append(c.TEXTS["evidence_ext"].format(n=n_ext))
         out.evidence += sim_image_lines(req)  # vision: acknowledged in text, never analyzed

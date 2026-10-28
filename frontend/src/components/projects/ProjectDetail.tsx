@@ -14,6 +14,8 @@ import { KanbanBoard } from "./KanbanBoard";
 import { NodeDrawer } from "./NodeDrawer";
 import { PlanChangesPanel } from "./PlanChangesPanel";
 import { SaveTemplateModal } from "./SaveTemplateModal";
+import { ClientPortalModal } from "./ClientPortalModal";
+import { useCan } from "@/lib/session";
 import { ProjectMap } from "./ProjectMap";
 import { Timeline } from "./Timeline";
 import { LightDot, STATUS_COLOR, StatusPill } from "./shared";
@@ -26,6 +28,8 @@ export function ProjectDetailView() {
   const close = useProjects((s) => s.closeProject);
   const control = useProjects((s) => s.control);
   const [saveOpen, setSaveOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const canShare = useCan("org:manage"); // client portal links: owners and admins
   const selected = useProjects((s) => s.selectedNodeId);
   const light = useProjects((s) => s.health?.light);
   const pendingChanges = useProjects((s) => s.changes.filter((c) => c.status === "pending").length);
@@ -55,6 +59,7 @@ export function ProjectDetailView() {
             {active && !canResume && <Btn data-testid="project-pause" onClick={() => control("pause")}>{t("pv.pause")}</Btn>}
             {canResume && <Btn data-testid="project-resume" kind="ok" onClick={() => control("resume")}>{t("pv.resume")}</Btn>}
             {(active || p.status === "paused") && <Btn data-testid="project-cancel" kind="danger" onClick={() => { if (window.confirm(t("pv.cancelConfirm"))) control("cancel"); }}>{t("pv.cancel")}</Btn>}
+            {canShare && <Btn data-testid="project-share-client" onClick={() => setShareOpen(true)}>{t("portal.share.open")}</Btn>}
             <Btn data-testid="save-as-template" onClick={() => setSaveOpen(true)}>{t("pv.saveTemplate")}</Btn>
           </div>
         </div>
@@ -95,6 +100,7 @@ export function ProjectDetailView() {
         )}
       </div>
       {selected && !isDraft && <NodeDrawer />}
+      {shareOpen && <ClientPortalModal projectId={p.id} defaultTitle={p.name_key ? t(p.name_key) : p.name} onClose={() => setShareOpen(false)} />}
       {saveOpen && <SaveTemplateModal defaultName={p.name_key ? t(p.name_key) : p.name} defaultDescription={p.goal} onClose={() => setSaveOpen(false)} />}
     </div>
   );

@@ -151,6 +151,24 @@ var autonomyRank = map[string]int{"suggest": 1, "approve_each": 2, "rules": 3, "
 // tierCeiling is the highest autonomy a risk tier allows (catalog sec. 2.1).
 var tierCeiling = map[string]string{"green": "autonomous", "amber": "rules", "red": "approve_each"}
 
+// AutonomyRank orders the autonomy levels (suggest=1 .. autonomous=4); unknown levels rank 0.
+func AutonomyRank(level string) int { return autonomyRank[level] }
+
+// AutonomyCeiling is the highest autonomy an agent of this role may ever reach: the lower of the template's
+// own ceiling and the ceiling of its risk tier. A role that is not a known template gets the red-tier ceiling
+// (approve_each), the most restrictive one, so nothing unknown can be raised far.
+func AutonomyCeiling(role string) string {
+	t, ok := Get(role)
+	if !ok {
+		return tierCeiling["red"]
+	}
+	tc := tierCeiling[t.RiskTier]
+	if c := t.Autonomy.Ceiling; autonomyRank[c] > 0 && autonomyRank[c] < autonomyRank[tc] {
+		return c
+	}
+	return tc
+}
+
 var (
 	idRe    = regexp.MustCompile(`^[a-z][a-z0-9_]{1,39}$`)
 	colorRe = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)

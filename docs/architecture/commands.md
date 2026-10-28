@@ -160,6 +160,7 @@ Aliases are unique across the two languages (a unit test enforces it). The regis
 | excel, word, pdf, presentation | excel, word, pdf, presentacion | excel, word, pdf, presentation | office | requests:create | yes | request with `[[format:..]]` marker |
 | meeting | reunion | meeting | office | requests:create | yes | request with `[[meeting:..]]`: one task per agent + conclusion by the assistant |
 | assign | encargar | assign | office | requests:create | yes | direct task to one agent |
+| customer | cliente | customer, client | office | requests:create | yes | `/cliente <name>: <task>`: request scoped to one customer (B12, customer-district.md) |
 | project | proyecto | project | office | requests:create | no | navigate to the wizard (optional template) |
 | daily-summary | resumen-del-dia | daily-summary | office | reports:read | yes | summary of today (LLM, with local fallback) |
 | pending | pendientes | pending | office | approvals:read | no | approvals + open tasks |
@@ -205,6 +206,8 @@ requests), the system notice posted by `clear`/`compact`, and the exported docum
   same prompt builders as `run-task`, without calling the LLM.
 * Markers in request text (honored by the live prompts and by the simulation, deterministically):
   `[[format:xlsx|docx|pdf]]`, `[[meeting:<agent ids>]]`, `[[lang:es|en]]`, `[[draft:email|linkedin]]`.
+  `[[debate]]` / `[[debate:<agent ids>]]` (`/debatir`, B5) is read by the backend, which has the team debate the plan's
+  decision before it runs (docs/architecture/team-debates.md); the runtime only strips it.
 
 ## Storage
 

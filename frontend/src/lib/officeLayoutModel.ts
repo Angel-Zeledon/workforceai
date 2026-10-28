@@ -145,3 +145,46 @@ export const FIXTURES: Record<FixtureId, { x: number; z: number; rot: number; s:
   rack: { x: -12.9, z: -0.5, rot: Math.PI / 2, s: 1, w: 0.9, d: 0.8 },
 };
 export const FIXTURE_IDS = Object.keys(FIXTURES) as FixtureId[];
+
+/**
+ * "Automatic (real time)" light (B5): the room follows the viewer's local clock. Night until dawn (5-8 h), daylight
+ * (8-17 h), dusk (17-21 h), night again. Between keyframes the presets are blended, so the change is gradual.
+ */
+export type DayPhase = "dawn" | "day" | "dusk" | "night";
+const DAY_KEYS: [number, Mood][] = [[0, "night"], [5, "night"], [6.5, "sunset"], [8.5, "natural"], [17, "natural"], [19, "sunset"], [21, "night"], [24, "night"]];
+
+/** Phase of the day for a local hour (fractional, 0..24). */
+export function dayPhase(hour: number): DayPhase {
+  const h = ((hour % 24) + 24) % 24;
+  if (h >= 5 && h < 8) return "dawn";
+  if (h >= 8 && h < 17) return "day";
+  if (h >= 17 && h < 21) return "dusk";
+  return "night";
+}
+
+function lerpHex(a: string, b: string, t: number): string {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = (p: number, s: number) => (p >> s) & 255;
+  const mix = (s: number) => Math.round(ch(pa, s) + (ch(pb, s) - ch(pa, s)) * t);
+  return "#" + ((1 << 24) | (mix(16) << 16) | (mix(8) << 8) | mix(0)).toString(16).slice(1);
+}
+
+/** The light mix for a local hour: a blend of the two presets around it. */
+export function timeOfDayMix(hour: number): LightMix & { phase: DayPhase } {
+  const h = ((hour % 24) + 24) % 24;
+  let i = 0;
+  while (i < DAY_KEYS.length - 2 && h >= DAY_KEYS[i + 1][0]) i++;
+  const [h0, m0] = DAY_KEYS[i], [h1, m1] = DAY_KEYS[i + 1];
+  const t = h1 > h0 ? Math.min(1, Math.max(0, (h - h0) / (h1 - h0))) : 0;
+  const a = MOOD_BASE[m0], b = MOOD_BASE[m1];
+  const n = (x: number, y: number) => x + (y - x) * t;
+  return {
+    phase: dayPhase(h),
+    amb: n(a.amb, b.amb), ambColor: lerpHex(a.ambColor, b.ambColor, t), hemi: n(a.hemi, b.hemi), hemiSky: lerpHex(a.hemiSky, b.hemiSky, t),
+    hemiGround: lerpHex(a.hemiGround, b.hemiGround, t), sun: n(a.sun, b.sun), sunColor: lerpHex(a.sunColor, b.sunColor, t), bg: lerpHex(a.bg, b.bg, t),
+    sunPos: [n(a.sunPos[0], b.sunPos[0]), n(a.sunPos[1], b.sunPos[1]), n(a.sunPos[2], b.sunPos[2])],
+  };
+}
+
+/** Local hour (fractional) of a date in the viewer's time zone. */
+export const localHour = (d: Date): number => d.getHours() + d.getMinutes() / 60;

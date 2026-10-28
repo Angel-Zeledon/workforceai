@@ -176,6 +176,9 @@ type PlannedTask struct {
 	DependsOn   []string `json:"depends_on"`
 	// Reason is the optional human explanation of why this agent got the task.
 	Reason string `json:"reason,omitempty"`
+	// Decision (B5, additive) flags the task that takes a high-impact decision: before the plan runs, the team
+	// debates it (orchestrator_debate.go). Old runtimes omit it.
+	Decision bool `json:"decision,omitempty"`
 }
 
 type PlanResponse struct {
@@ -372,6 +375,10 @@ type RunTaskRequest struct {
 	// Images (vision, additive, omitted when empty): images the agent can SEE on
 	// this call, produced by fs.read (view "image") through the Tool Gateway.
 	Images []ImagePart `json:"images,omitempty"`
+	// Sources (additive, omitted when empty): the platforms this agent may query
+	// through its connection grants, with the read tools and named endpoints to
+	// use. Admin-written metadata: never a credential, connection id or URL.
+	Sources []SourceRef `json:"sources,omitempty"`
 
 	// MaxCostUSD (additive, omitted when 0): the most this one call may cost. The runtime estimates the call before
 	// sending it to the model and refuses it (HTTP 402 call_budget_exceeded) when it would cross this. Set from the

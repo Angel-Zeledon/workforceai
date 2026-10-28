@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"aiworkforce/backend/internal/application"
+	"aiworkforce/backend/internal/integrations"
 	"aiworkforce/backend/internal/mailer"
 	"aiworkforce/backend/internal/projects"
 )
@@ -65,6 +66,11 @@ type Config struct {
 	LinkedInClientID     string
 	LinkedInClientSecret string
 	OAuthRedirectURL     string
+	// VendorIntegrations (VENDOR_INTEGRATIONS) is the v1 switch of the vendor-specific connectors and the Slack
+	// channel: off by default (only generic imports), "on" for all, or a comma list of provider ids
+	// (internal/integrations). VendorIntegrationsUnknown lists ids of the list this build does not know.
+	VendorIntegrations        integrations.Policy
+	VendorIntegrationsUnknown []string
 	// UIBaseURL is where the OAuth callback sends the browser afterwards (and the base of e-mail verification links).
 	UIBaseURL string
 	// EmailVerification (EMAIL_VERIFICATION) makes new accounts verify their e-mail before they can sign in.
@@ -242,6 +248,7 @@ func Load() Config {
 		AppEnv:                 strings.ToLower(getenv("APP_ENV", "")),
 		StandingApprovalDays:   getInt("STANDING_APPROVAL_DAYS", 30),
 	}
+	c.VendorIntegrations, c.VendorIntegrationsUnknown = integrations.Parse(os.Getenv(integrations.EnvVar))
 	var err error
 	if c.AuthEnabled, err = getBool("AUTH_ENABLED", false); err != nil {
 		c.errs = append(c.errs, err)

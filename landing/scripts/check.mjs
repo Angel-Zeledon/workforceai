@@ -5,10 +5,49 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { dir, SITE } from "./guide-lib.mjs";
+import { dir, SITE, COLLECTIONS, loadPages } from "./guide-lib.mjs";
 
 const problems = [];
 const bad = (f, m) => problems.push(`${f}: ${m}`);
+
+// JSON sources (docs-src/_SCHEMA.md): known keys, callout kinds, code languages, es/en parity, no markup in metadata.
+const SECTION_KEYS = new Set(["h", "paras", "list", "steps", "code", "table", "note", "tip", "warning"]);
+const CODE_LANGS = new Set(["bash", "json", "yaml", "http", "go", "python", "sql", "text"]);
+for (const coll of Object.keys(COLLECTIONS)) {
+  const ids = new Set(loadPages(coll).map((p) => p.id));
+  for (const p of loadPages(coll)) {
+    const f = `${COLLECTIONS[coll].src}/${p.id}.json`;
+    for (const id of p.related || []) if (!ids.has(id)) bad(f, `related id "${id}" is not in ${coll}`);
+    for (const l of ["es", "en"]) {
+      const c = p[l];
+      for (const k of ["title", "metaTitle", "description"]) if (c[k] && /[`<>]/.test(c[k])) bad(f, `${l}.${k} must be plain text (no backticks or HTML)`);
+      if (c.metaTitle && c.metaTitle.length > 60) bad(f, `${l}.metaTitle is ${c.metaTitle.length} chars (max 60)`);
+      c.sections.forEach((s, i) => {
+        const where = `${l}.sections[${i}]`;
+        if (!s.h) bad(f, `${where} has no heading`);
+        for (const k of Object.keys(s)) if (!SECTION_KEYS.has(k)) bad(f, `${where} unknown key "${k}"`);
+        for (const k of ["paras", "list", "steps"]) if (s[k] !== undefined && !(Array.isArray(s[k]) && s[k].every((t) => typeof t === "string"))) bad(f, `${where}.${k} must be an array of strings`);
+        for (const k of ["note", "tip", "warning"]) if (s[k] !== undefined && typeof s[k] !== "string") bad(f, `${where}.${k} must be a string`);
+        for (const cb of s.code ? [].concat(s.code) : []) {
+          if (!CODE_LANGS.has(cb.lang || "text")) bad(f, `${where}.code lang "${cb.lang}" is not one of ${[...CODE_LANGS].join(", ")}`);
+          if (typeof cb.text !== "string" || !cb.text.trim()) bad(f, `${where}.code has no text`);
+        }
+        if (s.table) for (const r of s.table.rows) if (r.length !== s.table.head.length) bad(f, `${where}.table row has ${r.length} cells, head has ${s.table.head.length}`);
+        for (const t of [s.h, ...(s.paras || []), ...(s.list || []), ...(s.steps || []), s.note, s.tip, s.warning, ...(s.table ? [...s.table.head, ...s.table.rows.flat()] : [])].filter((x) => typeof x === "string")) {
+          if (((t.match(/`/g) || []).length) % 2) bad(f, `${where} has an unbalanced backtick: ${t.slice(0, 60)}`);
+          if (/<\/?(a|b|i|em|strong|code|br|p|span|div|ul|ol|li)\b[^>]*>/i.test(t.replace(/`[^`]*`/g, ""))) bad(f, `${where} contains HTML markup (text is plain): ${t.slice(0, 60)}`);
+        }
+      });
+    }
+    p.es.sections.forEach((s, i) => {
+      const e = p.en.sections[i];
+      const n = (x) => (x.code ? [].concat(x.code).length : 0);
+      if (n(s) !== n(e)) bad(f, `sections[${i}] es/en have different numbers of code blocks`);
+      if (!!s.table !== !!e.table || (s.table && s.table.rows.length !== e.table.rows.length)) bad(f, `sections[${i}] es/en tables differ in rows`);
+      for (const k of ["steps", "list"]) if ((s[k] || []).length !== (e[k] || []).length) bad(f, `sections[${i}] es/en ${k} differ in length`);
+    });
+  }
+}
 const pages = [];
 const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { if (["scripts", "guide-src", "node_modules", "fonts"].includes(e.name)) continue; const p = path.join(d, e.name); e.isDirectory() ? walk(p) : p.endsWith(".html") && !e.name.startsWith("google") && pages.push(p); } };
 walk(dir);

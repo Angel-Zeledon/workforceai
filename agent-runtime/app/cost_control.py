@@ -34,6 +34,7 @@ DEFAULT_MAX_TOKENS: dict[str, int] = {
     "chat": 350,
     "replan": 3000,
     "counterargument": 1200,
+    "debate": 1600,
     "default": 3000,
 }
 
@@ -123,6 +124,11 @@ def reasoning_kwargs(provider: str, model: str) -> dict[str, str]:
     if provider == "openai" and name.startswith("gpt-5"):
         return {"reasoning_effort": "minimal"}
     if provider == "openai" and (name.startswith("o1") or name.startswith("o3") or name.startswith("o4")):
+        return {"reasoning_effort": "low"}
+    if provider == "gemini":
+        # Gemini 3.x thinks by default and bills the thoughts as output: a 6-token answer cost 196 tokens in a live
+        # probe (2026-10-27). "low" is the lowest level every current Flash accepts ("minimal" is refused by
+        # gemini-3.8-flash, "none" by the Flash-Lite models) and brought the same probe to 0 thinking tokens.
         return {"reasoning_effort": "low"}
     return {}
 

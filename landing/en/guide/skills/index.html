@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skills: reusable know-how for agents | AI Workforce OS</title>
-  <meta name="description" content="Browse the Skills library, create or import your own, approve them and assign them to an agent so it works the way you want.">
+  <meta name="description" content="Browse the built-in skills, create or import your own, approve them and assign them to an agent so it works with your method.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,139 +24,167 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
   <meta property="og:title" content="Skills: reusable know-how for agents | AI Workforce OS">
-  <meta property="og:description" content="Browse the Skills library, create or import your own, approve them and assign them to an agent so it works the way you want.">
+  <meta property="og:description" content="Browse the built-in skills, create or import your own, approve them and assign them to an agent so it works with your method.">
   <meta property="og:url" content="https://workforceai.es/en/guide/skills/">
   <meta property="og:image" content="https://workforceai.es/img/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Skills: reusable know-how for agents | AI Workforce OS">
-  <meta name="twitter:description" content="Browse the Skills library, create or import your own, approve them and assign them to an agent so it works the way you want.">
+  <meta name="twitter:description" content="Browse the built-in skills, create or import your own, approve them and assign them to an agent so it works with your method.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"User guide","item":"https://workforceai.es/en/guide/"},{"@type":"ListItem","position":3,"name":"Skills: reusable know-how for your agents","item":"https://workforceai.es/en/guide/skills/"}]},{"@type":"TechArticle","headline":"Skills: reusable know-how for your agents","description":"Browse the Skills library, create or import your own, approve them and assign them to an agent so it works the way you want.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/guide/skills/","url":"https://workforceai.es/en/guide/skills/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=597dac5ccb">
+  <script src="/docs.js?v=2317516bde" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"User guide","item":"https://workforceai.es/en/guide/"},{"@type":"ListItem","position":3,"name":"Skills: reusable know-how for your agents","item":"https://workforceai.es/en/guide/skills/"}]},{"@type":"TechArticle","headline":"Skills: reusable know-how for your agents","description":"Browse the built-in skills, create or import your own, approve them and assign them to an agent so it works with your method.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/guide/skills/","url":"https://workforceai.es/en/guide/skills/","dateModified":"2026-10-23","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/en/" aria-label="AI Workforce OS">
-        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+<body class="dx dx-guide" id="top">
+  <a class="dx-skip" href="#main">Skip to content</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="/en/">Home</a>
-        <a href="/en/docs/">Documentation</a>
-        <a href="/en/guide/">User guide</a>
-        <a href="/en/trust/">Trust</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Language">
-          <a href="/guia/habilidades/" hreflang="es" lang="es" >ES</a>
+      <nav class="dx-tabs" aria-label="Site sections"><a href="/en/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Language">
+          <a href="/guia/habilidades/" hreflang="es" lang="es">ES</a>
           <a href="/en/guide/skills/" hreflang="en" lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap narrow">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/guide/">User guide</a></li><li aria-current="page">Skills: reusable know-how for your agents</li></ol></nav>
-      <article>
-        <h1>Skills: reusable know-how for your agents</h1>
-        <p class="lead">A skill is a written guide an agent consults while working, for example how to write a weekly report or how to reconcile a bank statement. You write the method once and any agent can use it. The library already comes with 55 starter skills.</p>
-        
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">What is a skill, and what does it NOT do?</a></li><li><a href="#s2">What does the library include from day one?</a></li><li><a href="#s3">How do I find a skill?</a></li><li><a href="#s4">How do I read a skill before using it?</a></li><li><a href="#s5">How do I create a skill of my own?</a></li><li><a href="#s6">How do I import a skill I already have?</a></li><li><a href="#s7">How do I activate it and give it to an agent?</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">What is a skill, and what does it NOT do?</h2>
-        <p>Each skill has a name, a description of when to use it and step-by-step instructions. It can include supporting files, such as templates or examples.</p>
-        <p>The agent only receives the name and description on each task. It gets the full text only if it asks for it. And a skill never gives an agent tools, connections or permissions: it only gives knowledge. What an agent can do is still decided by its role and your organization, and sensitive actions still ask for your approval.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">What does the library include from day one?</h2>
-        <p>There are 55 starter skills, in Spanish and English, already active. They cover sales, finance, legal, human resources, support, product, data and engineering. A few examples: bank reconciliation, lead qualification, NDA review, job description, support reply, product requirements, SQL query explainer and code review checklist.</p>
-        <p>On the cards they carry the Built-in label. Read them, use them as they are, or take one as a model for writing your own.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">How do I find a skill?</h2>
-        
-        <ol class="steps" aria-label="Steps"><li>Open Skills in the menu.</li><li>Type a word about the topic in Search skills, for example &quot;report&quot; or &quot;sales&quot;. The list filters instantly.</li><li>Use the status filters: All, Active, In review, Drafts or Disabled. Each filter shows how many there are.</li><li>Click a card to open it. There you see its status, its source (Built-in, Created, Imported or From a task), its version and how many agents have it.</li></ol>
-        
-        
-        <aside class="tip"><b>Tip.</b> Skills that are in review open straight on the Review tab.</aside>
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">How do I read a skill before using it?</h2>
-        <p>Inside a skill there are four tabs: Content, Review, Versions and Agents. Content shows the description, the instructions and the supporting files. Review shows everything an agent would receive, together with the warnings from the automatic scan, for example if the text seems to try to bypass rules or if it includes a script.</p>
-        <p>Scripts are stored as text and never run on their own. You can download any skill as a .zip or as a SKILL.md.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">How do I create a skill of my own?</h2>
-        
-        <ol class="steps" aria-label="Steps"><li>Click New skill.</li><li>Type the Name in lowercase letters, numbers and hyphens, for example bank-reconciliation. It cannot be changed later.</li><li>Fill in the Description: when to use it. It is the only thing the agent sees on each task, so say what it does and when it fits.</li><li>Write the Instructions in Markdown. If you want, add supporting files, examples and quality criteria.</li><li>Click Create draft. Then, from its page, click Send for review.</li></ol>
-        
-        
-        <aside class="tip"><b>Tip.</b> Every time you edit and save, a new version is created. The earlier ones are kept and you can restore them from Versions.</aside>
-      </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">How do I import a skill I already have?</h2>
-        
-        <ol class="steps" aria-label="Steps"><li>Click Import and choose a .zip or .md file with a skill in SKILL.md format.</li><li>If one with that name already exists, the app asks for another and you can choose Import with this name.</li><li>When it finishes, the skill is In review and opens on the Review tab. Read it in full before activating it.</li></ol>
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">How do I activate it and give it to an agent?</h2>
-        <p>Only what a person approved reaches an agent. A draft or a skill in review is delivered to nobody. Approving or disabling requires an administrator; creating, importing and sending for review require write permission on skills.</p>
-        <ol class="steps" aria-label="Steps"><li>An administrator opens the Review tab, reads the content and the warnings, and clicks Approve and activate. They can also Reject with a note, which sends it back to draft.</li><li>Open the active skill and go to the Agents tab.</li><li>Choose an agent from the list and click Assign.</li><li>To take it back, click Remove next to the agent.</li></ol>
-        
-        
-        <aside class="tip"><b>Tip.</b> If you edit an active skill, agents keep using the approved version until the new one is approved. Agents in a role that includes the skill by default also receive it.</aside>
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/guide/projects/"><b>Projects: big work, with follow-up</b><span>Learn to create a project, review its plan, launch it with a budget and follow your agents' progress from a single screen.</span></a></li><li><a href="/en/guide/settings/"><b>Settings: configure your office in one place</b><span>Tour the Settings hub: customize the office, hire employees, use team templates, connect tools and invite your team.</span></a></li><li><a href="/en/guide/getting-started/"><b>Getting started: your first 5 minutes</b><span>Create your account, ask your office for something, approve what is sensitive, read the report and earn coins. About 5 minutes, nothing to set up.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Start now</h2>
-      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="User guide">
+      <div class="dx-side-head">
+        <span>Menu</span>
+        <a class="dx-side-close" href="#top" aria-label="Close menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a href="/en/docs/">Documentation</a>
-      <a href="/en/guide/">User guide</a>
-      <a href="/en/trust/">Trust</a>
-      <a href="#top">Back to top</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Site sections"><a href="/en/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <nav class="dx-pages" aria-label="User guide">
+        <ul class="dx-list">
+          <li><a href="/en/guide/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Overview</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-start">Get started</p>
+        <ul class="dx-list" aria-labelledby="g-guide-start">
+          <li><a href="/en/guide/getting-started/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.2 3.5-5.2 3.5v-7Z"/></svg><span>Getting started</span></a></li>
+          <li><a href="/en/guide/the-office/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M15.5 9h2a2 2 0 0 1 2 2v10M3 21h18M8.5 7h3M8.5 11h3M8.5 15h3"/></svg><span>The 3D office and the Dashboard</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-work">Everyday work</p>
+        <ul class="dx-list" aria-labelledby="g-guide-work">
+          <li><a href="/en/guide/projects/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v7M12 7.5v10M16 7.5v4"/></svg><span>Projects</span></a></li>
+          <li><a href="/en/guide/files-and-chats/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 15a2 2 0 0 1-2 2H8.5L4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10Z"/><path d="M8 8h8M8 12h5"/></svg><span>Chats and Files</span></a></li>
+          <li><a href="/en/guide/approvals-and-security/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg><span>Approvals and security</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-tune">Customize</p>
+        <ul class="dx-list" aria-labelledby="g-guide-tune">
+          <li><a href="/en/guide/skills/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 3.5 12.9 8l4.6 1.9-4.6 1.9L11 16.4l-1.9-4.6L4.5 9.9 9.1 8 11 3.5Z"/><path d="m18.5 14.5.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z"/></svg><span>Skills</span></a></li>
+          <li><a href="/en/guide/shop-and-coins/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v4.5c0 1.7 2.7 3 6 3 .7 0 1.4-.1 2-.2M15 7v2"/><ellipse cx="15" cy="13.5" rx="6" ry="3"/><path d="M9 13.5V18c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg><span>Coins and the Shop</span></a></li>
+          <li><a href="/en/guide/settings/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><span>Settings</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Language">
+          <a href="/guia/habilidades/" hreflang="es" lang="es">ES</a>
+          <a href="/en/guide/skills/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/guide/">User guide</a></li><li><span>Customize</span></li></ol></nav>
+        <h1>Skills: reusable know-how for your agents</h1>
+        <p class="dx-lead">A skill is a written guide an agent looks up while it works, for example how to reconcile a bank statement or write a weekly report. Here you learn to find skills, write or import your own, approve them and give them to an agent.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>4 min read</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">On this page</summary>
+        <ol><li><a href="#understand-what-a-skill-does">Understand what a skill does</a></li><li><a href="#browse-the-built-in-skills">Browse the built-in skills</a></li><li><a href="#find-a-skill">Find a skill</a></li><li><a href="#read-a-skill-before-using-it">Read a skill before using it</a></li><li><a href="#create-your-own-skill">Create your own skill</a></li><li><a href="#import-a-skill-you-already-have">Import a skill you already have</a></li><li><a href="#activate-it-and-assign-it-to-an-agent">Activate it and assign it to an agent</a></li></ol>
+        <a class="dx-toc-top" href="#top">Back to top</a>
+      </details>
+      <div class="dx-body">
+        
+        <section class="dx-sec" aria-labelledby="understand-what-a-skill-does">
+        <h2 id="understand-what-a-skill-does">Understand what a skill does<a class="dx-anchor" href="#understand-what-a-skill-does" aria-label="Link to the “Understand what a skill does” section">#</a></h2>
+        <p>Each skill has a name, a description of when to use it and step-by-step instructions. It can include resource files, input and output examples and quality criteria.</p>
+        <p>On every task, the agent only sees the name and description of its skills. It receives the full text only if it asks for it.</p>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>A skill only brings knowledge: it never grants tools, connections or permissions. The agent's role and your organization still decide that, and sensitive actions still ask for your approval.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="browse-the-built-in-skills">
+        <h2 id="browse-the-built-in-skills">Browse the built-in skills<a class="dx-anchor" href="#browse-the-built-in-skills" aria-label="Link to the “Browse the built-in skills” section">#</a></h2>
+        <p>The library starts with 55 built-in skills, already active and written in Spanish or English. They carry the “Built-in” label and cover sales, finance, legal, human resources, support, product, data and engineering. For example:</p>
+        <ul class="dx-ul"><li>Bank reconciliation and month-end close.</li><li>Lead qualification and sales call prep.</li><li>NDA review and service contract review.</li><li>Job descriptions and interview questions.</li><li>Support replies and complaint handling.</li><li>Product requirements, SQL query explanations and a code review checklist.</li></ul>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>Your agents' roles already include some; on the skill they show as “From role”.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="find-a-skill">
+        <h2 id="find-a-skill">Find a skill<a class="dx-anchor" href="#find-a-skill" aria-label="Link to the “Find a skill” section">#</a></h2>
+        <ol class="dx-steps" aria-label="Steps"><li>Open “Skills” in the side menu.</li><li>Type a topic in “Search skills…”, for example “report” or “sales”. The list filters instantly.</li><li>Filter by status with “All”, “Active”, “In review”, “Drafts” or “Disabled”; each filter shows how many there are.</li><li>Click a card to open it and see its status, its source (“Built-in”, “Created”, “Imported” or “From a task”), its version and how many agents have it.</li></ol>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>Skills in review open directly on the “Review” tab.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="read-a-skill-before-using-it">
+        <h2 id="read-a-skill-before-using-it">Read a skill before using it<a class="dx-anchor" href="#read-a-skill-before-using-it" aria-label="Link to the “Read a skill before using it” section">#</a></h2>
+        <p>Each skill has four tabs:</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Read a skill before using it"><table><thead><tr><th scope="col">Tab</th><th scope="col">What it shows</th></tr></thead><tbody><tr><th scope="row">Content</th><td>The description, the instructions and the resource files</td></tr><tr><th scope="row">Review</th><td>Everything an agent would receive, with the “Scan warnings”</td></tr><tr><th scope="row">Versions</th><td>Every saved version, with a “Restore” option</td></tr><tr><th scope="row">Agents</th><td>Who has it and whether it arrives “Assigned” or “From role”</td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>The scan warns, for example, about a “Possible instruction injection” or that the skill “Contains a script”. Scripts are stored as text and never run on their own: running one needs <code>code.run</code> with human approval.</p></div></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>You can take any skill with you using “Download .zip” or “Download SKILL.md”.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="create-your-own-skill">
+        <h2 id="create-your-own-skill">Create your own skill<a class="dx-anchor" href="#create-your-own-skill" aria-label="Link to the “Create your own skill” section">#</a></h2>
+        <p>You can write it from scratch or start from work already done: in the “Tasks” tab of an agent's panel, a finished task offers “Save as skill”, which pre-fills the draft.</p>
+        <ol class="dx-steps" aria-label="Steps"><li>Press “New skill”.</li><li>Write the “Name” in lowercase letters, digits and hyphens, for example <code>bank-reconciliation</code>. It cannot be changed later.</li><li>Fill in “Description: when to use it”. It is the only thing the agent sees on every task, so say what it does and when it fits.</li><li>Write the “Instructions” in Markdown and, if you like, add “Resource files”, “Examples” and “Quality criteria”.</li><li>Press “Create draft” and then, from its page, “Send for review”.</li></ol>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>Resource files must be text (md, txt, csv, json, yaml, py, js or sh), up to 512 KB each and 2 MB in total.</p></div></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>Every save creates a new version; earlier ones are kept and you can restore them from “Versions”.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="import-a-skill-you-already-have">
+        <h2 id="import-a-skill-you-already-have">Import a skill you already have<a class="dx-anchor" href="#import-a-skill-you-already-have" aria-label="Link to the “Import a skill you already have” section">#</a></h2>
+        <ol class="dx-steps" aria-label="Steps"><li>Press “Import” and choose a .zip or .md file with a skill in SKILL.md format.</li><li>If one with that name already exists, type another and press “Import with this name”.</li><li>Read the whole skill on the “Review” tab, where it opens when done: it stays “In review” until someone approves it.</li></ol>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>A .zip must have SKILL.md at its root and weigh 4 MB at most.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="activate-it-and-assign-it-to-an-agent">
+        <h2 id="activate-it-and-assign-it-to-an-agent">Activate it and assign it to an agent<a class="dx-anchor" href="#activate-it-and-assign-it-to-an-agent" aria-label="Link to the “Activate it and assign it to an agent” section">#</a></h2>
+        <p>Only what a person approved reaches an agent: a draft or a skill in review is given to no one. This is what each role can do:</p>
+        <ol class="dx-steps" aria-label="Steps"><li>As an admin, open the “Review” tab, read the content and the warnings and press “Approve and activate”. “Reject” sends it back to draft with your note.</li><li>Open the active skill and go to the “Agents” tab.</li><li>Pick an agent in “Choose an agent…” and press “Assign”.</li><li>To take it away, press “Remove” next to the agent.</li></ol>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Activate it and assign it to an agent"><table><thead><tr><th scope="col">Action</th><th scope="col">Who can</th></tr></thead><tbody><tr><th scope="row">Read and download skills</th><td>Every role</td></tr><tr><th scope="row">Create, import and send for review</th><td>Member, Admin and Owner</td></tr><tr><th scope="row">Approve, disable or delete</th><td>Admin and Owner</td></tr><tr><th scope="row">Assign to an agent or remove it</th><td>Admin and Owner</td></tr></tbody></table></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>If you edit an active skill, agents keep using the approved version until the new one is approved.</p></div></div>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="dx-cards dx-cards-sm"><li><a href="/en/guide/projects/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v7M12 7.5v10M16 7.5v4"/></svg><b>Projects: big work, tracked</b><span>Create a project, review its plan and estimated cost, launch it with a budget and follow your agents' progress from a single screen.</span></a></li><li><a href="/en/guide/settings/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><b>Settings: configure your office in one place</b><span>Customize the office, hire employees, choose the AI model, connect tools, protect your account and invite your team from Settings.</span></a></li><li><a href="/en/guide/getting-started/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.2 3.5-5.2 3.5v-7Z"/></svg><b>Getting started: your first 5 minutes</b><span>Create your account, ask for your first task, decide an approval, read the report and earn your first coins in about 5 minutes.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Pagination">
+        <a class="dx-prev" href="/en/guide/approvals-and-security/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Previous</span><b>Approvals and security: you stay in control</b></a>
+        <a class="dx-next" href="/en/guide/shop-and-coins/" rel="next"><span>Next<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>Coins and the Shop: decorate your office with what your team earns</b></a>
+      </nav>
+      <section class="dx-cta" aria-labelledby="cta-h">
+        <div>
+          <h2 id="cta-h">Try it in your own office</h2>
+          <p>Create your account and land in an office with your AI team. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
+        </div>
+        <div class="dx-cta-row">
+          <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+          <a class="dx-btn dx-btn-ghost" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+        </div>
+      </section>
+      <footer class="dx-foot">
+        <p>AI Workforce OS is a project in development. This documentation describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+        <div class="dx-foot-links">
+          <a href="/en/">AI Workforce OS</a>
+          <a href="/en/docs/">Documentation</a>
+          <a href="/en/guide/">User guide</a>
+          <a href="/en/trust/">Trust</a>
+          <a href="#top">Back to top</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

@@ -249,7 +249,10 @@ def sim_audit_output(req: RunTaskRequest) -> StructuredOutput:
         findings, recs = [t["f_none"]], [t["rec_none"]]
     out = StructuredOutput(summary=summary, findings=findings,
                            metrics={"audit_status": status, "audit_compared": n, "audit_inconsistencies": len(bad)},
-                           evidence=res["evidence"][:40], recommendations=recs, confidence=conf)
+                           evidence=res["evidence"][:40], recommendations=recs, confidence=conf,
+                           # B6: every compared figure points to the task it came from
+                           citations=[{"value": src["value"], "label": e["key"], "ref": src["ref"]}
+                                      for e in (res["inconsistent"] + res["consistent"]) for src in e["sources"]])
     # "verified" without two cited sources can never leave this function.
     if status == "verified" and len(out.evidence) < MIN_EVIDENCE:
         out.metrics["audit_status"], out.confidence = "unverified", 0.4

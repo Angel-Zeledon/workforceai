@@ -22,6 +22,9 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		ClientMessageID string `json:"client_message_id"`
 		// Attachments are drive paths the user uploaded for this message (max 6); the agents read them with fs.read.
 		Attachments []string `json:"attachments"`
+		// CustomerID (B12, optional) scopes any request this message creates to one customer, like POST /requests:
+		// the scope is stored before the request exists and its tasks only see that customer's memories and files.
+		CustomerID string `json:"customer_id"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
@@ -35,7 +38,7 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 	if key == "" {
 		key = body.ClientMessageID
 	}
-	ctx := r.Context()
+	ctx := application.WithCustomer(r.Context(), body.CustomerID)
 	if len(body.Attachments) > 0 {
 		ctx = application.WithAttachments(ctx, body.Attachments)
 	}

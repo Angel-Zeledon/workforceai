@@ -28,6 +28,9 @@ type Config struct {
 	// project); ProjectPath its drive folder. Both optional.
 	ProjectOf   func(ctx context.Context, org, requestID string) (id, name string)
 	ProjectPath func(ctx context.Context, org, projectID string) string
+	// CustomerOf tells the customer a request is scoped to (B12; optional: nil = no customers). An
+	// error at recall time recalls nothing (fail closed).
+	CustomerOf func(ctx context.Context, org, requestID string) (string, error)
 	// Audit records a memory change by a person (optional).
 	Audit func(ctx context.Context, org, actor, action, id string, details map[string]any)
 	Now   func() time.Time
@@ -62,6 +65,26 @@ func (s *Service) project(ctx context.Context, org, requestID string) (string, s
 		return "", ""
 	}
 	return s.cfg.ProjectOf(ctx, org, requestID)
+}
+
+// customer is the customer a request is scoped to ("" = none or unknown, see callers).
+func (s *Service) customer(ctx context.Context, org, requestID string) (string, error) {
+	if s.cfg.CustomerOf == nil || requestID == "" {
+		return "", nil
+	}
+	return s.cfg.CustomerOf(ctx, org, requestID)
+}
+
+// tagCustomer sets the customer of the documents of a request. When it cannot be determined the
+// documents stay untagged: an untagged document is only ever seen by tasks without a customer.
+func (s *Service) tagCustomer(ctx context.Context, org, requestID string, docs ...*Doc) {
+	cid, err := s.customer(ctx, org, requestID)
+	if err != nil {
+		s.cfg.Log.Warn("memory: customer of request", "request", requestID, "err", err)
+	}
+	for _, d := range docs {
+		d.CustomerID = cid
+	}
 }
 
 func (s *Service) scrub(text string) string {
@@ -174,6 +197,7 @@ func (s *Service) RememberTask(ctx context.Context, org string, t domain.Task, r
 			AgentID: t.AgentID, Scope: ScopeAgent, ProjectID: d.ProjectID, ProjectName: d.ProjectName, RequestID: t.RequestID,
 			SourceRef: application.TaskRef(t.ID), CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt})
 	}
+	s.tagCustomer(ctx, org, t.RequestID, docs...)
 	s.embedDocs(ctx, org, docs...) // one provider call for the task and its notes
 	for i, doc := range docs {
 		if err := s.cfg.Docs.Upsert(ctx, org, *doc); err != nil {
@@ -191,6 +215,7 @@ func (s *Service) RememberReport(ctx context.Context, org string, r domain.Repor
 	d := ReportDoc(r)
 	d.Body, d.Title = s.scrub(d.Body), s.scrub(d.Title)
 	d.ProjectID, d.ProjectName = s.project(ctx, org, r.RequestID)
+	s.tagCustomer(ctx, org, r.RequestID, &d)
 	s.embedDocs(ctx, org, &d)
 	if err := s.cfg.Docs.Upsert(ctx, org, d); err != nil {
 		s.cfg.Log.Warn("memory: index report", "report", r.ID, "err", err)
@@ -250,6 +275,11 @@ func (s *Service) Backfill(ctx context.Context, org string, src BackfillSource, 
 // ---- retrieval ----
 
 func (s *Service) retrieve(ctx context.Context, org string, q Query) []Item {
+	// B12: the customer of the query and of ctx are the same thing (documents and drive files).
+	if q.CustomerID == "" {
+		q.CustomerID = application.CustomerFrom(ctx)
+	}
+	ctx = application.WithCustomer(ctx, q.CustomerID)
 	items, err := s.cfg.Retriever.Retrieve(ctx, org, q)
 	if err != nil {
 		s.cfg.Log.Warn("memory: retrieve", "err", err)
@@ -268,9 +298,14 @@ func (s *Service) Recall(ctx context.Context, org string, q application.MemoryRe
 	if s.cfg.Retriever == nil || strings.TrimSpace(q.Text) == "" {
 		return nil
 	}
+	cid, err := s.customer(ctx, org, q.RequestID)
+	if err != nil {
+		s.cfg.Log.Warn("memory: customer of request, recalling nothing", "request", q.RequestID, "err", err)
+		return nil // fail closed: an unknown scope must not see every customer's work
+	}
 	s.topUp(ctx, org)
 	pid, _ := s.project(ctx, org, q.RequestID)
-	query := Query{AgentID: q.AgentID, Text: q.Text, Limit: MaxItems * 2, ExcludeRequest: q.RequestID, PreferProject: pid}
+	query := Query{AgentID: q.AgentID, Text: q.Text, Limit: MaxItems * 2, ExcludeRequest: q.RequestID, PreferProject: pid, CustomerID: cid}
 	if pid != "" && s.cfg.ProjectPath != nil {
 		query.PreferPath = s.cfg.ProjectPath(ctx, org, pid)
 	}
@@ -308,7 +343,7 @@ func (s *Service) Search(ctx context.Context, org, agentID, query string, limit 
 // when the agent may see it. Files are opened with fs.read.
 func (s *Service) Open(ctx context.Context, org, agentID, ref string) (Item, error) {
 	d, err := s.cfg.Docs.GetByRef(ctx, org, ref)
-	if err != nil || d.Suppressed || d.Scope == ScopeAgent && d.AgentID != agentID {
+	if err != nil || d.Suppressed || d.Scope == ScopeAgent && d.AgentID != agentID || !VisibleToCustomer(d, application.CustomerFrom(ctx)) {
 		return Item{}, ErrNotFound
 	}
 	it := docItem(DocHit{Doc: d}, nil)
@@ -354,6 +389,25 @@ func (s *Service) Delete(ctx context.Context, org, agentID, id, actor string) er
 	return nil
 }
 
+// Doc returns one stored document (suppressed ones are not found).
+func (s *Service) Doc(ctx context.Context, org, id string) (Doc, error) {
+	d, err := s.cfg.Docs.Get(ctx, org, id)
+	if err != nil || d.Suppressed {
+		return Doc{}, ErrNotFound
+	}
+	return d, nil
+}
+
+// RetagCustomer moves documents between customer tags (B12, an explicit and audited decision of a person taken in
+// internal/customers; never automatic). It fails when the store cannot do it.
+func (s *Service) RetagCustomer(ctx context.Context, org string, sel RetagSelector, from, to string) (int, error) {
+	rt, ok := s.cfg.Docs.(CustomerRetagger)
+	if !ok {
+		return 0, fmt.Errorf("%w: this memory store cannot change customer tags", domain.ErrInvalid)
+	}
+	return rt.RetagCustomer(ctx, org, sel, from, to)
+}
+
 // Reset forgets everything of an organization (the demo reset: the tasks the
 // memories point to are gone too).
 func (s *Service) Reset(ctx context.Context, org string) error { return s.cfg.Docs.Clear(ctx, org) }
@@ -367,7 +421,7 @@ func (s *Service) RememberNote(ctx context.Context, org, agentID, text string) e
 		return fmt.Errorf("%w: the note is empty, too long or unsafe", domain.ErrInvalid)
 	}
 	n, now := notes[0], time.Now().UTC()
-	id := fmt.Sprintf("note_user_%s_%d", agentID, now.UnixNano())
+	id := fmt.Sprintf("%s%s_%d", UserNotePrefix, agentID, now.UnixNano())
 	d := Doc{ID: id, Kind: KindNote, Ref: "memory:" + id, Title: capRunes(n, 120), Body: n,
 		AgentID: agentID, Scope: ScopeAgent, CreatedAt: now, UpdatedAt: now}
 	s.embedDocs(ctx, org, &d)

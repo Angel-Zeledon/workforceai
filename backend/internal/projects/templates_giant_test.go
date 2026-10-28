@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 )
 
@@ -92,7 +93,9 @@ func TestGiantI18NFile(t *testing.T) {
 		return
 	}
 	cur, err := os.ReadFile("giant_i18n.json")
-	if err != nil || string(cur) != string(b) {
+	// .gitattributes pins the file to LF; normalizing too keeps checkouts that predate it (or
+	// core.autocrlf with an old index) from failing on line endings alone.
+	if err != nil || strings.ReplaceAll(string(cur), "\r\n", "\n") != string(b) {
 		t.Fatal("giant_i18n.json is out of date: run UPDATE_GIANT_I18N=1 go test ./internal/projects -run TestGiantI18NFile")
 	}
 }

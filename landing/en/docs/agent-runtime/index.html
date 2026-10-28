@@ -6,7 +6,8 @@
   <title>Agent runtime: providers, simulation, cost | AI Workforce OS</title>
   <meta name="description" content="The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -31,182 +32,211 @@
   <meta name="twitter:description" content="The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Agent runtime","item":"https://workforceai.es/en/docs/agent-runtime/"}]},{"@type":"TechArticle","headline":"Agent runtime","description":"The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/agent-runtime/","url":"https://workforceai.es/en/docs/agent-runtime/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=597dac5ccb">
+  <script src="/docs.js?v=2317516bde" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Agent runtime","item":"https://workforceai.es/en/docs/agent-runtime/"}]},{"@type":"TechArticle","headline":"Agent runtime","description":"The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/agent-runtime/","url":"https://workforceai.es/en/docs/agent-runtime/","dateModified":"2026-10-23","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/en/" aria-label="AI Workforce OS">
-        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+<body class="dx dx-docs" id="top">
+  <a class="dx-skip" href="#main">Skip to content</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="/en/">Home</a>
-        <a href="/en/docs/">Documentation</a>
-        <a href="/en/guide/">User guide</a>
-        <a href="/en/trust/">Trust</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Language">
-          <a href="/docs/runtime-de-agentes/" hreflang="es" lang="es" >ES</a>
+      <nav class="dx-tabs" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Language">
+          <a href="/docs/runtime-de-agentes/" hreflang="es" lang="es">ES</a>
           <a href="/en/docs/agent-runtime/" hreflang="en" lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap wide">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/docs/">Documentation</a></li><li aria-current="page">Agent runtime</li></ol></nav>
-      <article>
-        <h1>Agent runtime</h1>
-        <p class="lead">The agent runtime is a Python service (FastAPI and CrewAI) that turns a task and its context into a structured result. It talks only to model providers. Everything with side effects, such as tools, credentials, approvals and running code, stays in the Go backend.</p>
-        
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">Role and HTTP contract</a></li><li><a href="#s2">Simulation and live mode</a></li><li><a href="#s3">Model providers</a></li><li><a href="#s4">Provider order and fallback</a></li><li><a href="#s5">Data policy: ALLOWED_PROVIDERS</a></li><li><a href="#s6">What leaves the process and redaction</a></li><li><a href="#s7">Tools: the model asks, the backend executes</a></li><li><a href="#s8">Code sandbox</a></li><li><a href="#s9">Cost accounting and budgets</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">Role and HTTP contract</h2>
-        <p>The backend calls the runtime over HTTP with a task, the agent profile and the context it assembled. The runtime returns validated structured output and, if the agent wants to act, a list of tool_requests. It never executes a tool and never calls an external system. This keeps the trust boundary in one place: the model may be misled by untrusted text, but it can only propose.</p>
-        <p>When RUNTIME_TOKEN is set in both services, the runtime requires an Authorization bearer header on every route except /healthz, compared in constant time. It is optional so existing deployments do not break; set it in production. The main endpoints are:</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Endpoint</th><th scope="col">Purpose</th></tr></thead><tbody><tr><th scope="row"><code>POST /v1/plan, /v1/plan-phases, /v1/plan-phase, /v1/replan</code></th><td>Turn a request into a plan of tasks for the available agents</td></tr><tr><th scope="row"><code>POST /v1/run-task</code></th><td>Run one task for one agent; returns structured output and optional tool_requests</td></tr><tr><th scope="row"><code>POST /v1/consult, /v1/review, /v1/synthesize, /v1/summarize</code></th><td>Agent-to-agent questions, review, final report, summaries</td></tr><tr><th scope="row"><code>POST /v1/route, /v1/chat-reply</code></th><td>Chat routing and conversational replies</td></tr><tr><th scope="row"><code>POST /v1/estimate</code></th><td>Cost range before running; does not call the model</td></tr><tr><th scope="row"><code>POST /v1/provider-test</code></th><td>One small real call to test an organization's key</td></tr><tr><th scope="row"><code>GET /healthz</code></th><td>Status, mode (simulation or live), configured and default provider; never keys</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">Simulation and live mode</h2>
-        <p>SIMULATION=true selects a scripted engine. It returns plausible plans, results, token counts and costs with simulated latency (SIM_LATENCY_SCALE=0 removes the delay). It needs no keys, makes no network calls and costs nothing. It also ignores the provider policy because no data leaves the process. The same engine is used when no provider is configured at all, and /healthz then reports mode simulation.</p>
-        <p>In live mode a CrewAI engine runs one agent, task and crew per role, with output validated against a StructuredOutput schema. Fields that exist only in live mode (provider, model, usage.failed_providers) are omitted in simulation, so the contract does not change. SIMULATION=true always wins, including over an organization's own key.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">Model providers</h2>
-        <p>Three providers are supported and at least one must be configured: deepseek, anthropic and custom, an OpenAI-compatible endpoint that can be regional, a local vLLM or Ollama, or your own gateway. A custom model is passed as openai/&lt;name&gt;. A model that costs nothing, such as a local one, can be priced at 0 with the custom price variables.</p>
-        <p>Organizations can also bring their own key. It is sealed with the organization's data key (AES-256-GCM, wrapped by CONNECTIONS_KEK), is never returned by any endpoint beyond its last four characters, and travels in clear only on the internal, token-authenticated hop from the backend to the runtime.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Provider</th><th scope="col">Configuration</th><th scope="col">Notes</th></tr></thead><tbody><tr><th scope="row"><code>deepseek</code></th><td>DEEPSEEK_API_KEY, DEEPSEEK_MODEL</td><td>Third-party API; default model deepseek/deepseek-chat</td></tr><tr><th scope="row"><code>anthropic</code></th><td>ANTHROPIC_API_KEY, ANTHROPIC_MODEL</td><td>Third-party API; see the runtime README for the default model</td></tr><tr><th scope="row"><code>custom</code></th><td>CUSTOM_LLM_BASE_URL (required), CUSTOM_LLM_API_KEY, CUSTOM_LLM_MODEL</td><td>Any OpenAI-compatible endpoint: regional, vLLM or Ollama, own gateway. Prices via CUSTOM_PRICE_IN_PER_M and CUSTOM_PRICE_OUT_PER_M</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">Provider order and fallback</h2>
-        <p>For each call the runtime builds an attempt list from three sources, each adding only the providers not yet listed: MODEL_PROVIDER_ORDER_&lt;ROLE&gt; (the agent role in capitals, or PLAN, CONSULT, SYNTHESIZE), then the request's preferred_providers, then the global MODEL_PROVIDER_ORDER (default deepseek, anthropic, custom). Every configured and permitted provider is therefore a fallback.</p>
-        <p>A transient failure (timeout, rate limit, 5xx) is retried on the same provider PROVIDER_RETRIES times (default 1, with PROVIDER_RETRY_BACKOFF_S) before moving to the next. PROVIDER_TIMEOUT_S bounds each attempt. The response reports which provider and model answered and which ones failed first. Per-role models can be overridden by the organization policy, but only for a provider that is already configured and allowed.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash"># Runtime (agent-runtime)
-SIMULATION=false                 # true: scripted engine, no network, no cost
-DEEPSEEK_API_KEY=...             # at least one provider is enough
-ANTHROPIC_API_KEY=...
-CUSTOM_LLM_BASE_URL=https://llm.internal.example/v1   # OpenAI-compatible
-MODEL_PROVIDER_ORDER=anthropic,deepseek,custom
-MODEL_PROVIDER_ORDER_LEGAL=anthropic                  # per role / task
-ALLOWED_PROVIDERS=anthropic,custom                    # operator ceiling
-RUNTIME_TOKEN=&lt;shared secret&gt;    # same value in the backend
-
-# Backend
-RUNTIME_URL=http://runtime:8000
-BUDGET_USD=50                    # organization budget
-REQUEST_BUDGET_CAP_USD=...       # per-request cap
-AGENT_BUDGET_USD=...             # per-agent cap</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">Data policy: ALLOWED_PROVIDERS</h2>
-        <p>The data policy is applied before anything is sent. The effective list is the operator's ALLOWED_PROVIDERS intersected with the allowed_providers in the request. A provider outside the list is neither called nor used as a fallback, and a request can narrow the operator ceiling but never widen it.</p>
-        <p>The backend fills allowed_providers from each organization's model policy (owner and admin can edit it, and every change is audited). If the intersection is empty it sends a sentinel value that no provider matches, so the runtime refuses the call instead of widening the set. Failures are explicit, never silent:</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-json">{
-  &quot;detail&quot;: {
-    &quot;code&quot;: &quot;no_allowed_provider&quot;,
-    &quot;message&quot;: &quot;...&quot;,
-    &quot;providers_tried&quot;: [],
-    &quot;allowed_providers&quot;: [&quot;anthropic&quot;],
-    &quot;configured_providers&quot;: [&quot;deepseek&quot;]
-  }
-}</code></pre>
-        
-        <aside class="tip"><b>Tip.</b> no_allowed_provider returns HTTP 422 and nothing is sent. all_providers_failed returns HTTP 502 and lists providers_tried.</aside>
-      </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">What leaves the process and redaction</h2>
-        <p>Only the prompts of each call reach a provider: the user's request text, the agent's persona, responsibilities and tool list, outputs of dependency tasks, agent memory, external content, tool results that the backend already filtered, and consult or synthesis questions. Credentials, connection ids, API URLs and tokens are not part of the contract, so they cannot be sent.</p>
-        <p>Secrets are redacted twice. The backend redacts tool results first; the runtime's redact module is the second barrier and covers private keys, JWTs, GitHub, AWS and Google tokens, API keys, bearer tokens, password-style assignments, URLs carrying tokens and Luhn-valid card numbers. It applies to prompt input and to model output, and provider error messages pass through it too. External content, dependency outputs and memory are inserted only in the user prompt, inside blocks marked as untrusted data with an instruction not to obey them. The system prompt is built only from backend-supplied persona, responsibilities and tools.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">Tools: the model asks, the backend executes</h2>
-        <p>A tool request is a proposal. The backend checks the agent's tool list, the argument schema, constraints such as allowed domains, the policy engine and the autonomy level, and may create an approval for a person. Only then does the tool gateway run the tool, using credentials from the encrypted vault that never leave the backend. The result is returned to the model redacted and delimited as untrusted data.</p>
-        <p>Actions with irreversible external effects, such as sending an email, always require a human decision, regardless of the agent's autonomy. An approved action is claimed at most once, so a restart cannot run it twice. Tools without a connection use in-memory fake adapters, which is how simulation works end to end.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-json">{
-  &quot;tool_requests&quot;: [
-    { &quot;tool&quot;: &quot;email&quot;, &quot;action&quot;: &quot;send&quot;,
-      &quot;args&quot;: { &quot;to&quot;: &quot;customer@example.com&quot;, &quot;subject&quot;: &quot;Proposal&quot; } }
-  ]
-}</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s8" aria-labelledby="h8">
-        <h2 id="h8">Code sandbox</h2>
-        <p>The code tool, action run, lets an agent ask to execute Python. It is off by default and every run becomes a high-risk approval showing the full code, input files, purpose and limits; nothing can skip that step. The approval is bound to a hash of the code and the SHA-256 of every input, so changing either requires a new approval.</p>
-        <p>After approval the backend sends the run to a separate runner that starts a disposable container with no network, a read-only root, a non-root user, all capabilities dropped, CPU, memory and process limits, a timeout, output caps and an allow-list of output file types. The runner's environment is not forwarded, so no secrets reach the code. Kill switch, pause or read-only mode abort a running job. It needs SANDBOX_URL and SANDBOX_TOKEN in the backend; the runner mounts the Docker socket, which is root-equivalent on that host.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s9" aria-labelledby="h9">
-        <h2 id="h9">Cost accounting and budgets</h2>
-        <p>Prices live in one table, model_prices.json, in USD per million tokens, embedded in the backend and copied byte for byte into the runtime; a test in each service enforces that they match. A model missing from the table is billed at a conservative default and logged once. PRICE_IN_PER_M and PRICE_OUT_PER_M force a rate for every provider, and the table is not a statement of what your own provider contract charges.</p>
-        <p>Before each model call the backend reserves the maximum estimate against the request, the agent and the organization, then records the greater of the runtime's reported cost and its own recalculation, so it does not depend on the runtime's accuracy. Spending is read from a ledger in Postgres. /v1/estimate gives a range before running, never a single figure. Limits:</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Control</th><th scope="col">Where it applies</th><th scope="col">Effect when exceeded</th></tr></thead><tbody><tr><th scope="row"><code>Organization budget (BUDGET_USD)</code></th><td>Backend, before each model call</td><td>Task fails with an explicit message and an event; not resumable from the API</td></tr><tr><th scope="row"><code>Request cap (REQUEST_BUDGET_CAP_USD)</code></th><td>Backend</td><td>Request pauses with budget.exceeded; raise the cap to continue</td></tr><tr><th scope="row"><code>Agent cap (AGENT_BUDGET_USD)</code></th><td>Backend</td><td>Agent pauses; raise the cap to continue</td></tr><tr><th scope="row"><code>COST_CONFIRM_THRESHOLD_USD</code></th><td>Backend, after /v1/estimate</td><td>A person confirms the estimated cost before the run starts</td></tr><tr><th scope="row"><code>MAX_PARALLEL_PER_ORG</code></th><td>Backend queue</td><td>Calls wait in a priority queue</td></tr></tbody></table></div>
-        
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/architecture/"><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li><li><a href="/en/docs/configuration/"><b>Configuration reference</b><span>Environment variable reference for AI Workforce OS: server, database, auth, budget, rewards, model providers and frontend build arguments.</span></a></li><li><a href="/en/docs/skills-format/"><b>Skills format</b><span>How a skill is defined: a folder with SKILL.md, frontmatter, limits, lifecycle, review, import and export, and how it reaches the model.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Start now</h2>
-      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Documentation">
+      <div class="dx-side-head">
+        <span>Menu</span>
+        <a class="dx-side-close" href="#top" aria-label="Close menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a href="/en/docs/">Documentation</a>
-      <a href="/en/guide/">User guide</a>
-      <a href="/en/trust/">Trust</a>
-      <a href="#top">Back to top</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <nav class="dx-pages" aria-label="Documentation">
+        <ul class="dx-list">
+          <li><a href="/en/docs/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Overview</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-concepts">Concepts</p>
+        <ul class="dx-list" aria-labelledby="g-docs-concepts">
+          <li><a href="/en/docs/architecture/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><span>Architecture</span></a></li>
+          <li><a href="/en/docs/agent-runtime/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg><span>Agent runtime</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-integrate">Integrate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-integrate">
+          <li><a href="/en/docs/api-reference/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg><span>API Reference</span></a></li>
+          <li><a href="/en/docs/auth-and-tenancy/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg><span>Auth and tenancy</span></a></li>
+          <li><a href="/en/docs/skills-format/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><path d="M17.25 13.5v7.5M13.5 17.25H21"/></svg><span>Skills format</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-operate">Operate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-operate">
+          <li><a href="/en/docs/deployment/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></svg><span>Deployment</span></a></li>
+          <li><a href="/en/docs/configuration/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span>Configuration</span></a></li>
+          <li><a href="/en/docs/security-model/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Security model</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Language">
+          <a href="/docs/runtime-de-agentes/" hreflang="es" lang="es">ES</a>
+          <a href="/en/docs/agent-runtime/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/docs/">Documentation</a></li><li><span>Concepts</span></li></ol></nav>
+        <h1>Agent runtime</h1>
+        <p class="dx-lead">The agent runtime is a Python service (FastAPI and CrewAI) that turns a task and its context into a structured result; it talks only to model providers. This page is for whoever runs or integrates the runtime: its HTTP contract, how it picks a provider, what data leaves the process and how cost is controlled.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>8 min read</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">On this page</summary>
+        <ol><li><a href="#role-and-http-contract">Role and HTTP contract</a></li><li><a href="#simulation-and-live-mode">Simulation and live mode</a></li><li><a href="#model-providers">Model providers</a></li><li><a href="#provider-order-and-fallback">Provider order and fallback</a></li><li><a href="#data-policy-allowed-providers">Data policy: ALLOWED_PROVIDERS</a></li><li><a href="#what-leaves-the-process-and-redaction">What leaves the process and redaction</a></li><li><a href="#tools-the-model-asks-the-backend-executes">Tools: the model asks, the backend executes</a></li><li><a href="#code-sandbox">Code sandbox</a></li><li><a href="#cost-accounting-and-budgets">Cost accounting and budgets</a></li></ol>
+        <a class="dx-toc-top" href="#top">Back to top</a>
+      </details>
+      <div class="dx-body">
+        
+        <section class="dx-sec" aria-labelledby="role-and-http-contract">
+        <h2 id="role-and-http-contract">Role and HTTP contract<a class="dx-anchor" href="#role-and-http-contract" aria-label="Link to the “Role and HTTP contract” section">#</a></h2>
+        <p>The backend calls the runtime over HTTP with a task, the agent profile and the context it assembled. The runtime returns validated structured output and, if the agent wants to act, a list of <code>tool_requests</code>. It never executes a tool and never calls an external system: the model may be misled by untrusted text, but it can only propose.</p>
+        <p>When <code>RUNTIME_TOKEN</code> is set, the runtime requires <code>Authorization: Bearer &lt;token&gt;</code> on every route except <code>GET /healthz</code>, compared in constant time; without it, it answers <code>401</code>. The endpoints are:</p>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Runtime status (no token)</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-fn">curl</span> http://localhost:8000/healthz
+<span class="tk-com"># {&quot;status&quot;:&quot;ok&quot;,&quot;mode&quot;:&quot;live&quot;,&quot;provider&quot;:&quot;anthropic&quot;,</span>
+<span class="tk-com">#  &quot;configured_providers&quot;:[&quot;anthropic&quot;,&quot;custom&quot;],&quot;default_provider&quot;:&quot;anthropic&quot;}</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Role and HTTP contract"><table><thead><tr><th scope="col">Endpoint</th><th scope="col">Purpose</th></tr></thead><tbody><tr><th scope="row"><code>POST /v1/plan</code>, <code>/v1/plan-phases</code>, <code>/v1/plan-phase</code>, <code>/v1/replan</code></th><td>Turn a request or a project into a plan of tasks for the available agents; <code>replan</code> replaces a failed node</td></tr><tr><th scope="row"><code>POST /v1/run-task</code></th><td>Run one task for one agent; returns <code>output</code>, <code>consults</code>, <code>tool_requests</code> and <code>usage</code></td></tr><tr><th scope="row"><code>POST /v1/consult</code>, <code>/v1/review</code>, <code>/v1/synthesize</code>, <code>/v1/summarize</code></th><td>Agent-to-agent questions, quality review, final report and summaries</td></tr><tr><th scope="row"><code>POST /v1/counterargument</code></th><td>Advisory counterargument for a high-risk approval</td></tr><tr><th scope="row"><code>POST /v1/route</code>, <code>/v1/chat-reply</code></th><td>Chat routing and conversational replies</td></tr><tr><th scope="row"><code>POST /v1/estimate</code>, <code>/v1/context-sizes</code></th><td>Cost range for a plan and prompt size; neither calls the model</td></tr><tr><th scope="row"><code>POST /v1/provider-test</code></th><td>One small real call to test an organization's key; always answers <code>200</code> with a stable code</td></tr><tr><th scope="row"><code>GET /healthz</code></th><td>Status, mode (<code>simulation</code> or <code>live</code>), configured providers and default provider; never keys</td></tr></tbody></table></div>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>Set <code>RUNTIME_TOKEN</code> to the same value in the backend and the runtime. Without it, anyone who can reach the runtime port can spend your provider keys; the backend logs a warning at startup.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="simulation-and-live-mode">
+        <h2 id="simulation-and-live-mode">Simulation and live mode<a class="dx-anchor" href="#simulation-and-live-mode" aria-label="Link to the “Simulation and live mode” section">#</a></h2>
+        <p>The HTTP contract is the same in both modes; only the engine changes.</p>
+        <ul class="dx-ul"><li>Simulation: on with <code>SIMULATION=true</code> or when no provider is configured. It returns plausible plans, results, tokens and costs with simulated latency (<code>SIM_LATENCY_SCALE=0</code> removes the delay), with no network and no cost, and it ignores the provider policy because no data leaves the process.</li><li>Live: the CrewAI engine calls the provider and validates the output against the <code>StructuredOutput</code> schema. <code>LLM_DIRECT_CALL=true</code> replaces the CrewAI loop with a single chat call.</li><li>Degraded: if a provider is configured but the live engine cannot start, the runtime answers in simulation and <code>GET /healthz</code> returns <code>status: degraded</code> with a <code>warning</code>.</li></ul>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>The optional <code>provider</code> and <code>usage.failed_providers</code> fields appear only when a real provider answers, so clients do not need to tell the modes apart.</p></div></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p><code>SIMULATION=true</code> always wins, even over an organization's own key: no network call is made.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="model-providers">
+        <h2 id="model-providers">Model providers<a class="dx-anchor" href="#model-providers" aria-label="Link to the “Model providers” section">#</a></h2>
+        <p>There are five providers. One counts as configured when its key is in the environment (for <code>custom</code>, the base URL is enough) or when the request carries the organization's own key. A <code>custom</code> model is passed as <code>openai/&lt;name&gt;</code>, and a free local model can be priced at 0 with <code>CUSTOM_PRICE_IN_PER_M</code> and <code>CUSTOM_PRICE_OUT_PER_M</code>.</p>
+        <p>Organizations can bring their own key. It is sealed with AES-256-GCM under a key wrapped by <code>CONNECTIONS_KEK</code>, no API response returns it beyond its last four characters (<code>key_last4</code>), and it travels in clear only on the internal hop from the backend to the runtime.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Model providers"><table><thead><tr><th scope="col">Provider</th><th scope="col">Configuration</th><th scope="col">Default model</th></tr></thead><tbody><tr><th scope="row"><code>deepseek</code></th><td><code>DEEPSEEK_API_KEY</code>, <code>DEEPSEEK_MODEL</code></td><td><code>deepseek/deepseek-chat</code></td></tr><tr><th scope="row"><code>anthropic</code></th><td><code>ANTHROPIC_API_KEY</code>, <code>ANTHROPIC_MODEL</code></td><td><code>anthropic/claude-sonnet-5-5</code></td></tr><tr><th scope="row"><code>openai</code></th><td><code>OPENAI_API_KEY</code>, <code>OPENAI_MODEL</code>, optional <code>OPENAI_BASE_URL</code></td><td><code>openai/gpt-4.1</code></td></tr><tr><th scope="row"><code>kimi</code></th><td><code>KIMI_API_KEY</code>, <code>KIMI_MODEL</code>, optional <code>KIMI_BASE_URL</code></td><td><code>openai/kimi-k2-0905-preview</code> (Moonshot, OpenAI-compatible)</td></tr><tr><th scope="row"><code>custom</code></th><td><code>CUSTOM_LLM_BASE_URL</code> (required), <code>CUSTOM_LLM_API_KEY</code>, <code>CUSTOM_LLM_MODEL</code></td><td>Whatever <code>CUSTOM_LLM_MODEL</code> names: any OpenAI-compatible endpoint, such as vLLM, Ollama or your own gateway</td></tr></tbody></table></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="provider-order-and-fallback">
+        <h2 id="provider-order-and-fallback">Provider order and fallback<a class="dx-anchor" href="#provider-order-and-fallback" aria-label="Link to the “Provider order and fallback” section">#</a></h2>
+        <p>For each call the runtime builds an attempt list. Each source adds only the providers not listed yet, so every configured and permitted provider ends up as a fallback:</p>
+        <ul class="dx-ul"><li><code>MODEL_PROVIDER_ORDER_&lt;ROLE&gt;</code>: the agent <code>role</code> in capitals (for example <code>MODEL_PROVIDER_ORDER_LEGAL</code>) or the call kind: <code>PLAN</code>, <code>REVIEW</code>, <code>CONSULT</code>, <code>SYNTHESIZE</code>, <code>SUMMARIZE</code>, <code>ROUTE</code>, <code>COUNTERARGUMENT</code>.</li><li><code>role_providers</code> from the organization's model policy.</li><li>The request's <code>preferred_providers</code>.</li><li>The global <code>MODEL_PROVIDER_ORDER</code> (default <code>deepseek,anthropic,openai,kimi,custom</code>).</li></ul>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">.env</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-com"># Runtime (agent-runtime)</span>
+<span class="tk-var">SIMULATION</span>=false                 <span class="tk-com"># true: scripted engine, no network, no cost</span>
+<span class="tk-var">DEEPSEEK_API_KEY</span>=...             <span class="tk-com"># one configured provider is enough</span>
+<span class="tk-var">ANTHROPIC_API_KEY</span>=...
+<span class="tk-var">CUSTOM_LLM_BASE_URL</span>=https://llm.internal.example/v1   <span class="tk-com"># OpenAI-compatible</span>
+<span class="tk-var">MODEL_PROVIDER_ORDER</span>=anthropic,deepseek,custom
+<span class="tk-var">MODEL_PROVIDER_ORDER_LEGAL</span>=anthropic                  <span class="tk-com"># per role / call kind</span>
+<span class="tk-var">ALLOWED_PROVIDERS</span>=anthropic,custom                    <span class="tk-com"># operator ceiling</span>
+<span class="tk-var">RUNTIME_TOKEN</span>=&lt;shared secret&gt;    <span class="tk-com"># same value in the backend</span>
+
+<span class="tk-com"># Backend</span>
+<span class="tk-var">RUNTIME_URL</span>=http://agent-runtime:8000
+<span class="tk-var">RUNTIME_TOKEN</span>=&lt;shared secret&gt;
+<span class="tk-var">BUDGET_USD</span>=50                    <span class="tk-com"># organization budget (default 50)</span>
+<span class="tk-var">REQUEST_BUDGET_CAP_USD</span>=5         <span class="tk-com"># default cap per request</span>
+<span class="tk-var">AGENT_BUDGET_USD</span>=20              <span class="tk-com"># default monthly cap per agent</span></code></pre>
+        </figure>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>A transient failure (timeout, rate limit, 5xx) is retried on the same provider <code>PROVIDER_RETRIES</code> times (default 1, waiting <code>PROVIDER_RETRY_BACKOFF_S</code>) before moving to the next; <code>PROVIDER_TIMEOUT_S</code> (default 120) bounds each attempt. The organization policy can override the model per role (<code>role_models</code>), but only for a provider that is already configured and allowed.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="data-policy-allowed-providers">
+        <h2 id="data-policy-allowed-providers">Data policy: ALLOWED_PROVIDERS<a class="dx-anchor" href="#data-policy-allowed-providers" aria-label="Link to the “Data policy: ALLOWED_PROVIDERS” section">#</a></h2>
+        <p>The data policy is applied before anything is sent. The effective list is the operator's <code>ALLOWED_PROVIDERS</code> intersected with the request's <code>allowed_providers</code>: a provider outside the list is neither called nor used as a fallback, and a request can narrow the operator ceiling but never widen it.</p>
+        <p>The backend fills <code>allowed_providers</code> from each organization's model policy (<code>GET/PUT /api/v1/settings/model-policy</code>, owner and admin only, every change audited). When no provider is left it sends the sentinel value <code>none</code>, so the runtime refuses the call instead of widening the set. With <code>byo_only</code>, only the organization's own keys may answer. Failures are explicit:</p>
+        <figure class="dx-code" data-lang="json">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">422 no_allowed_provider</span><span class="dx-code-lang">JSON</span></figcaption>
+          <pre tabindex="0" aria-label="JSON code"><code><span class="tk-punct">{</span>
+  <span class="tk-key">&quot;detail&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">{</span>
+    <span class="tk-key">&quot;code&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;no_allowed_provider&quot;</span><span class="tk-punct">,</span>
+    <span class="tk-key">&quot;message&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;No allowed model provider is configured for this request; nothing was sent.&quot;</span><span class="tk-punct">,</span>
+    <span class="tk-key">&quot;providers_tried&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">[</span><span class="tk-punct">]</span><span class="tk-punct">,</span>
+    <span class="tk-key">&quot;allowed_providers&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">[</span><span class="tk-str">&quot;anthropic&quot;</span><span class="tk-punct">]</span><span class="tk-punct">,</span>
+    <span class="tk-key">&quot;configured_providers&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">[</span><span class="tk-str">&quot;deepseek&quot;</span><span class="tk-punct">]</span>
+  <span class="tk-punct">}</span>
+<span class="tk-punct">}</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Data policy: ALLOWED_PROVIDERS"><table><thead><tr><th scope="col">Code</th><th scope="col">HTTP</th><th scope="col">Meaning</th></tr></thead><tbody><tr><th scope="row"><code>no_allowed_provider</code></th><td>422</td><td>No configured provider is allowed; nothing was sent</td></tr><tr><th scope="row"><code>all_providers_failed</code></th><td>502</td><td>Every allowed provider failed; <code>providers_tried</code> lists them</td></tr><tr><th scope="row"><code>provider_no_balance</code></th><td>402</td><td>The provider accounts tried have no balance left; retrying will not help</td></tr><tr><th scope="row"><code>call_budget_exceeded</code></th><td>402</td><td>The call's estimate is above <code>max_cost_usd</code>, the allowance the backend gave it; nothing was sent</td></tr></tbody></table></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="what-leaves-the-process-and-redaction">
+        <h2 id="what-leaves-the-process-and-redaction">What leaves the process and redaction<a class="dx-anchor" href="#what-leaves-the-process-and-redaction" aria-label="Link to the “What leaves the process and redaction” section">#</a></h2>
+        <p>Only the prompts of each call reach a provider. The contract has no fields for credentials, <code>connection_id</code>, API URLs or tokens, so they cannot be sent. A prompt may contain:</p>
+        <ul class="dx-ul"><li>The user's request text and the agent's persona, responsibilities and tools.</li><li>Outputs of dependency tasks, agent memory and external content.</li><li>Tool results that the backend already filtered and redacted.</li><li>Consult or synthesis questions.</li></ul>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>Secrets are redacted twice. The backend redacts tool results first; the runtime's <code>redact.py</code> module is the second barrier and covers private keys, JWTs, GitHub, AWS and Google tokens, API keys, bearer tokens, password-style assignments, URLs carrying tokens and Luhn-valid card numbers. It applies to model output and to provider error messages. External content, dependency outputs and memory go only in the user prompt, inside blocks marked as untrusted data with an instruction not to obey them; the system prompt is built only from what the backend supplies.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="tools-the-model-asks-the-backend-executes">
+        <h2 id="tools-the-model-asks-the-backend-executes">Tools: the model asks, the backend executes<a class="dx-anchor" href="#tools-the-model-asks-the-backend-executes" aria-label="Link to the “Tools: the model asks, the backend executes” section">#</a></h2>
+        <p>A tool request is a proposal. The backend checks the agent's tool list, the arguments, the policy engine and the autonomy level, and may create an approval for a person. Only then does it run the tool, with credentials from the encrypted vault that never leave the backend. The result goes back to the model redacted and delimited as untrusted data.</p>
+        <p>Capabilities that the provider manifest marks as irreversible, such as Gmail's <code>email.send</code>, always require a human decision, whatever the agent's autonomy. An approved action is claimed at most once, so a restart cannot run it twice. Tools without a real connection use in-memory fake adapters, which is how simulation works end to end.</p>
+        <figure class="dx-code" data-lang="json">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">tool_requests in a /v1/run-task response</span><span class="dx-code-lang">JSON</span></figcaption>
+          <pre tabindex="0" aria-label="JSON code"><code><span class="tk-punct">{</span>
+  <span class="tk-key">&quot;tool_requests&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">[</span>
+    <span class="tk-punct">{</span> <span class="tk-key">&quot;tool&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;email&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;action&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;send&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;risk&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;high&quot;</span><span class="tk-punct">,</span>
+      <span class="tk-key">&quot;args&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">{</span> <span class="tk-key">&quot;to&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;customer@example.com&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;subject&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;Proposal&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;body&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;...&quot;</span> <span class="tk-punct">}</span> <span class="tk-punct">}</span>
+  <span class="tk-punct">]</span>
+<span class="tk-punct">}</span></code></pre>
+        </figure>
+      </section>
+        <section class="dx-sec" aria-labelledby="code-sandbox">
+        <h2 id="code-sandbox">Code sandbox<a class="dx-anchor" href="#code-sandbox" aria-label="Link to the “Code sandbox” section">#</a></h2>
+        <p>The <code>code.run</code> action lets an agent ask to execute Python. It is available only when the backend has <code>SANDBOX_URL</code> and <code>SANDBOX_TOKEN</code>; without them it is denied with <code>sandbox_unavailable</code>. By default every run is an approval that shows the code, the input files and the purpose, and it is bound to the code hash and the SHA-256 of every input: changing either requires a new approval.</p>
+        <p>After approval the backend sends the run to a separate runner that starts a disposable container:</p>
+        <ul class="dx-ul"><li>No network (<code>--network none</code>), a read-only root, a non-root user and all capabilities dropped.</li><li>Time, memory, process and output-size limits (<code>SANDBOX_MAX_RUNTIME_SECONDS</code>, <code>SANDBOX_MEMORY_MB</code>, <code>SANDBOX_PIDS</code>, <code>SANDBOX_MAX_OUTPUT_BYTES</code>) and an allow-list of output file types.</li><li>The runner's environment is not forwarded, so no secrets reach the code.</li><li>The kill switch, an agent pause or read-only mode abort a running job.</li></ul>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>Desk mode is opt-in and off by default: it lets an organization run, without approval, code that only uses the agent's own files, with lower caps on code size, inputs and runs per task.</p></div></div>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>The runner mounts the Docker socket, which is root-equivalent on that host. Run it on a dedicated machine with no published ports.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="cost-accounting-and-budgets">
+        <h2 id="cost-accounting-and-budgets">Cost accounting and budgets<a class="dx-anchor" href="#cost-accounting-and-budgets" aria-label="Link to the “Cost accounting and budgets” section">#</a></h2>
+        <p>Prices live in one table, <code>model_prices.json</code>, in USD per million tokens, byte-identical in the backend and the runtime (a test in each service enforces it). A model missing from the table is billed at the table's default rate and logged once. <code>PRICE_IN_PER_M</code> and <code>PRICE_OUT_PER_M</code> force a rate for every model.</p>
+        <p>Before each call the backend reserves the maximum estimate against the request, the agent and the organization. Afterwards it records the greater of the runtime's reported cost and its own recalculation, so it does not depend on the runtime's accuracy. Spending is read from a ledger in Postgres and survives restarts.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Cost accounting and budgets"><table><thead><tr><th scope="col">Control</th><th scope="col">Default</th><th scope="col">Effect when exceeded</th></tr></thead><tbody><tr><th scope="row"><code>BUDGET_USD</code> (organization)</th><td>50</td><td>The call is not made; raising a cap through the API does not resume it</td></tr><tr><th scope="row"><code>REQUEST_BUDGET_CAP_USD</code> (per request; <code>budget_cap_usd</code> overrides it)</th><td>No cap</td><td>The request pauses with <code>budget.exceeded</code>; raise the cap to continue</td></tr><tr><th scope="row"><code>AGENT_BUDGET_USD</code> (monthly, per agent)</th><td>No cap</td><td>The agent's calls pause; raise the cap to continue</td></tr><tr><th scope="row"><code>COST_CONFIRM_THRESHOLD_USD</code></th><td>1.0</td><td>A person confirms the estimated cost before the run starts</td></tr><tr><th scope="row"><code>MAX_PARALLEL_PER_ORG</code></th><td>8</td><td>The organization's calls wait in a queue</td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>The price table is a budgeting reference, not what your own provider contract charges.</p></div></div>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="dx-cards dx-cards-sm"><li><a href="/en/docs/architecture/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li><li><a href="/en/docs/configuration/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><b>Configuration reference</b><span>Every AI Workforce OS environment variable with its default: server, authentication, budget, model providers and frontend build arguments.</span></a></li><li><a href="/en/docs/security-model/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><b>Security model</b><span>How the damage an agent can do is bounded: credential vault, approvals, caps, kill switch, audit log, RLS and sandbox, with the current limits.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Pagination">
+        <a class="dx-prev" href="/en/docs/architecture/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Previous</span><b>AI Workforce OS Architecture</b></a>
+        <a class="dx-next" href="/en/docs/api-reference/" rel="next"><span>Next<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>API Reference</b></a>
+      </nav>
+      
+      <footer class="dx-foot">
+        <p>AI Workforce OS is a project in development. This documentation describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+        <div class="dx-foot-links">
+          <a href="/en/">AI Workforce OS</a>
+          <a href="/en/docs/">Documentation</a>
+          <a href="/en/guide/">User guide</a>
+          <a href="/en/trust/">Trust</a>
+          <a href="#top">Back to top</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

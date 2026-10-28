@@ -6,21 +6,27 @@
   },
   "related": [
     "deployment",
-    "auth-and-tenancy",
-    "agent-runtime"
+    "security-model",
+    "auth-and-tenancy"
   ],
   "es": {
     "title": "Referencia de configuración",
     "metaTitle": "Variables de entorno: backend, runtime y frontend",
-    "description": "Referencia de variables de entorno de AI Workforce OS: servidor, base de datos, autenticación, presupuesto, recompensas, proveedores de modelo y build.",
-    "intro": "Toda la configuración se lee del entorno. El backend (Go) carga y valida sus variables al arrancar y se niega a iniciar con valores incoherentes; el runtime (Python) lee las suyas al usarlas; el frontend solo tiene argumentos de build. Los valores por defecto de esta página provienen del código.",
+    "description": "Todas las variables de entorno de AI Workforce OS con su valor por defecto: servidor, autenticación, presupuesto, proveedores de modelo y build.",
+    "intro": "Toda la configuración de AI Workforce OS se lee de variables de entorno. Esta página lista las del backend (Go), el runtime de agentes (Python) y el frontend (Next.js), con el valor por defecto que fija el código. Es para quien instala u opera una instancia propia.",
     "sections": [
       {
         "h": "Cómo se carga la configuración",
         "paras": [
-          "El backend lee el entorno en config.Load y llama a Validate antes de arrancar. Los booleanos aceptan los valores de strconv.ParseBool (true, false, 1, 0...) y un valor inválido aborta el arranque. En las variables numéricas y de duración, un valor ausente, no numérico o menor o igual que cero se sustituye por el valor por defecto. Las duraciones usan la sintaxis de Go (30s, 5m, 1h). Las listas van separadas por comas.",
-          "En la columna Obligatoria, «Sí» significa que el proceso no arranca sin la variable; «Condicional» indica que depende de otra variable; «No» significa que hay un valor por defecto o que la función se desactiva."
-        ]
+          "El backend lee el entorno al arrancar y valida la combinación antes de abrir el puerto: si algo es incoherente, el proceso termina con un error que nombra la variable. El runtime lee sus variables cuando las usa. El frontend no lee nada en ejecución: sus valores quedan fijados al compilar."
+        ],
+        "list": [
+          "Booleanos: `true`, `false`, `1`, `0` y el resto de valores que acepta `strconv.ParseBool`. Un valor inválido aborta el arranque.",
+          "Enteros y duraciones: un valor ausente, no numérico o menor o igual que cero se sustituye por el valor por defecto. Las duraciones usan la sintaxis de Go (`30s`, `5m`, `1h`).",
+          "Importes en USD: `0` es válido y desactiva el tope correspondiente; un valor negativo o no numérico deja el valor por defecto. La excepción es `BUDGET_USD`, que necesita un valor mayor que cero.",
+          "Listas: valores separados por comas; se ignoran los espacios."
+        ],
+        "note": "En las tablas, «Condicional» significa que la variable solo es obligatoria en combinación con otra (por ejemplo `JWT_SECRET` con `AUTH_ENABLED=true`). «No» significa que hay un valor por defecto o que la función queda desactivada."
       },
       {
         "h": "Servidor y base de datos",
@@ -33,96 +39,98 @@
           ],
           "rows": [
             [
-              "PORT",
-              "8080",
+              "`PORT`",
+              "`8080`",
               "No",
               "Puerto HTTP del backend."
             ],
             [
-              "DATABASE_URL",
+              "`DATABASE_URL`",
               "vacío",
               "Condicional",
-              "URL de Postgres. Sin ella el backend corre en memoria (demos). Obligatoria con AUTH_ENABLED=true."
+              "URL de Postgres. Sin ella el backend guarda todo en memoria (solo demos). Obligatoria con `AUTH_ENABLED=true`."
             ],
             [
-              "MIGRATE_DATABASE_URL",
+              "`MIGRATE_DATABASE_URL`",
               "vacío",
               "No",
-              "Conexión de propietario (DDL) usada solo para aplicar migraciones. Vacía: se usa DATABASE_URL."
+              "Conexión de propietario (DDL) usada solo para aplicar migraciones. Vacía: se usa `DATABASE_URL`."
             ],
             [
-              "DB_APP_ROLE",
-              "app_user",
+              "`DB_APP_ROLE`",
+              "`app_user`",
               "No",
-              "Rol sin privilegios y sin BYPASSRLS al que cambia cada conexión (SET ROLE), base del aislamiento por RLS. Vacío desactiva el cambio."
+              "Rol sin privilegios de propietario y sin `BYPASSRLS` al que cambia cada conexión (`SET ROLE`); es la base del aislamiento por RLS. Vacío desactiva el cambio."
             ],
             [
-              "REDIS_URL",
+              "`REDIS_URL`",
               "vacío",
               "No",
-              "URL de Redis (contraseña incluida en la URL)."
+              "URL de Redis, con la contraseña dentro de la URL. Vacía: eventos, bloqueos y límites de tasa en memoria del proceso."
             ],
             [
-              "RUNTIME_URL",
-              "http://localhost:8000",
+              "`RUNTIME_URL`",
+              "`http://localhost:8000`",
               "No",
               "URL interna del runtime de agentes."
             ],
             [
-              "RUNTIME_TOKEN",
+              "`RUNTIME_TOKEN`",
               "vacío",
               "No",
-              "Secreto compartido backend-runtime. Se recomienda en producción: el backend avisa si está vacío."
+              "Secreto compartido entre backend y runtime. Recomendado en producción: el backend avisa en el log si está vacío."
             ],
             [
-              "READ_HEADER_TIMEOUT",
-              "10s",
+              "`READ_HEADER_TIMEOUT`",
+              "`10s`",
               "No",
-              "Tiempo máximo para leer las cabeceras de la petición."
+              "Tiempo máximo para leer las cabeceras de una petición."
             ],
             [
-              "READ_TIMEOUT",
-              "30s",
+              "`READ_TIMEOUT`",
+              "`30s`",
               "No",
-              "Tiempo máximo de lectura de la petición."
+              "Tiempo máximo para leer una petición completa."
             ],
             [
-              "WRITE_TIMEOUT",
-              "60s",
+              "`WRITE_TIMEOUT`",
+              "`60s`",
               "No",
-              "Tiempo máximo por petición REST (no se aplica al WebSocket)."
+              "Tiempo máximo por petición REST. No se aplica al WebSocket."
             ],
             [
-              "IDLE_TIMEOUT",
-              "120s",
+              "`IDLE_TIMEOUT`",
+              "`120s`",
               "No",
-              "Tiempo de inactividad de conexiones keep-alive."
+              "Tiempo de inactividad de las conexiones keep-alive."
             ],
             [
-              "MAX_BODY_BYTES",
-              "1048576",
+              "`MAX_BODY_BYTES`",
+              "`1048576`",
               "No",
-              "Tamaño máximo del cuerpo de una petición."
+              "Tamaño máximo del cuerpo de una petición (1 MiB)."
             ],
             [
-              "APP_ENV",
+              "`APP_ENV`",
               "vacío",
               "No",
-              "Con el valor production, el backend avisa si la clave KEK procede del entorno."
+              "Con el valor `production`, el backend avisa si la KEK de la bóveda procede del entorno."
             ],
             [
-              "TRACE_RETENTION_DAYS",
-              "30",
+              "`TRACE_RETENTION_DAYS`",
+              "`30`",
               "No",
-              "Días que se conservan las trazas de auditoría; se purgan cada hora."
+              "Días que se conservan las trazas de razonamiento de los agentes; se purgan cada hora."
             ]
           ]
-        }
+        },
+        "tip": "Define `RUNTIME_TOKEN` con el mismo valor en el backend y en el runtime. Con él definido, el runtime exige `Authorization: Bearer <token>` en todas las rutas salvo `/healthz`."
       },
       {
         "h": "Autenticación, CORS y proxy",
         "paras": [
-          "Con AUTH_ENABLED=false el backend funciona en modo demo (organización fija, sin login). Con AUTH_ENABLED=true activa JWT, RBAC y aislamiento por organización: el org_id sale del token. Validate rechaza JWT_SECRET de menos de 32 bytes, la ausencia de DATABASE_URL y un asterisco en ALLOWED_ORIGINS."
+          "Con `AUTH_ENABLED=false` el backend funciona en modo demo: una organización fija y sin inicio de sesión. Con `AUTH_ENABLED=true` activa cuentas, JWT, RBAC y aislamiento por organización, y el `org_id` sale del token.",
+          "Con la autenticación activa, el arranque falla si `JWT_SECRET` tiene menos de 32 bytes, si falta `DATABASE_URL` o si `ALLOWED_ORIGINS` contiene `*`."
         ],
         "table": {
           "head": [
@@ -133,66 +141,67 @@
           ],
           "rows": [
             [
-              "AUTH_ENABLED",
-              "false",
+              "`AUTH_ENABLED`",
+              "`false`",
               "No",
-              "Activa cuentas, JWT, RBAC y multi-tenencia. El compose de producción lo fija a true."
+              "Activa cuentas, JWT, RBAC y multi-tenencia. El compose de producción lo fija a `true`."
             ],
             [
-              "JWT_SECRET",
+              "`JWT_SECRET`",
               "vacío",
               "Condicional",
-              "Clave de firma de los tokens de acceso; mínimo 32 bytes; obligatoria con AUTH_ENABLED=true. Rotarla invalida las sesiones."
+              "Clave de firma de los tokens de acceso; mínimo 32 bytes; obligatoria con `AUTH_ENABLED=true`. Rotarla invalida todas las sesiones."
             ],
             [
-              "ALLOWED_ORIGINS",
+              "`ALLOWED_ORIGINS`",
               "vacío",
               "Condicional",
-              "Lista de orígenes permitidos para CORS y WebSocket, sin barra final. Vacía sin auth equivale a *; vacía con auth, solo mismo origen. No admite * con auth."
+              "Orígenes permitidos para CORS y WebSocket, separados por comas y sin barra final. Vacía sin autenticación equivale a `*`; vacía con autenticación, solo el mismo origen."
             ],
             [
-              "AUTH_COOKIE_SECURE",
-              "true",
+              "`AUTH_COOKIE_SECURE`",
+              "`true`",
               "No",
-              "Atributo Secure de la cookie del refresh token. Solo se desactiva en desarrollo local con HTTP plano."
+              "Atributo `Secure` de la cookie del refresh token. Solo se desactiva en desarrollo local con HTTP plano."
             ],
             [
-              "AUTH_COOKIE_NAME",
+              "`AUTH_COOKIE_NAME`",
+              "`wfai_refresh`",
+              "No",
+              "Nombre de la cookie del refresh token. Cámbialo si varias instalaciones comparten host."
+            ],
+            [
+              "`TRUSTED_PROXIES`",
               "vacío",
               "No",
-              "Nombre de la cookie, para evitar colisiones entre stacks que comparten host."
+              "CIDR o IP de los proxies cuyo `X-Forwarded-For` se respeta (lo usan los límites de tasa). Un valor inválido aborta el arranque."
             ],
             [
-              "TRUSTED_PROXIES",
+              "`ENABLE_DEMO_RESET`",
+              "`false`",
+              "No",
+              "Registra `POST /api/v1/demo/reset`, que borra los datos de ejecución. Déjala en `false` en producción."
+            ],
+            [
+              "`KILL_SWITCH`",
               "vacío",
               "No",
-              "CIDR o IP de proxies cuyo X-Forwarded-For se respeta (por ejemplo para el rate limiting). Un valor inválido aborta el arranque."
+              "`freeze` o `lockdown`: anulación global que ninguna llamada de API puede levantar. Se relee con `SIGHUP`."
             ],
             [
-              "ENABLE_DEMO_RESET",
-              "false",
-              "No",
-              "Registra POST /api/v1/demo/reset. Debe quedar en false en producción."
-            ],
-            [
-              "KILL_SWITCH",
+              "`UI_BASE_URL`",
               "vacío",
               "No",
-              "freeze o lockdown: anulación global que ninguna llamada de API puede levantar. Se relee con SIGHUP."
-            ],
-            [
-              "UI_BASE_URL",
-              "vacío",
-              "No",
-              "URL del frontend a la que se redirige el navegador tras el callback OAuth."
+              "URL pública del frontend: destino del navegador tras el callback OAuth y base de los enlaces de verificación de correo."
             ]
           ]
-        }
+        },
+        "warning": "Con `AUTH_ENABLED=false` no hay inicio de sesión: cualquiera que alcance la URL controla la organización demo. No expongas ese modo a internet con datos o claves reales."
       },
       {
         "h": "Presupuesto, costo y límites de ejecución",
         "paras": [
-          "Estas variables controlan el gasto y la concurrencia del orquestador. Para las variables numéricas de tope, 0 desactiva el límite correspondiente. Los valores por defecto de las ventanas de contexto y de calidad son internos del backend y se omiten aquí."
+          "Estas variables controlan el gasto y la concurrencia del orquestador. Las ventanas de contexto y los controles de calidad tienen más ajustes internos con valores por defecto razonables; esta tabla recoge los que conviene conocer."
         ],
         "table": {
           "head": [
@@ -203,106 +212,112 @@
           ],
           "rows": [
             [
-              "BUDGET_USD",
-              "50",
+              "`BUDGET_USD`",
+              "`50`",
               "No",
-              "Tope de gasto en USD. El compose de producción lo fija en 25 si no se define."
+              "Tope de gasto en USD. El compose de producción usa `25` si no la defines."
             ],
             [
-              "REQUEST_BUDGET_CAP_USD",
-              "0",
+              "`REQUEST_BUDGET_CAP_USD`",
+              "`0`",
               "No",
-              "Tope de gasto por solicitud."
+              "Tope duro de gasto por solicitud. `0` lo desactiva."
             ],
             [
-              "AGENT_BUDGET_USD",
-              "0",
+              "`AGENT_BUDGET_USD`",
+              "`0`",
               "No",
-              "Tope de gasto por agente."
+              "Tope mensual de gasto por agente. `0` lo desactiva."
             ],
             [
-              "COST_CONFIRM_THRESHOLD_USD",
-              "1.0",
+              "`COST_CONFIRM_THRESHOLD_USD`",
+              "`1.0`",
               "No",
-              "Costo estimado por encima del cual se pide confirmación."
+              "Costo estimado a partir del cual se pide confirmación antes de ejecutar."
             ],
             [
-              "BUDGET_PAUSE_TIMEOUT",
-              "30m",
+              "`BUDGET_PAUSE_TIMEOUT`",
+              "`30m`",
               "No",
-              "Tiempo que una solicitud queda pausada por presupuesto."
+              "Tiempo que una solicitud pausada por un tope espera a que alguien decida."
             ],
             [
-              "PRICE_IN_PER_M / PRICE_OUT_PER_M",
-              "tabla interna",
+              "`PRICE_IN_PER_M` / `PRICE_OUT_PER_M`",
+              "tabla de precios interna",
               "No",
-              "Fuerzan la tarifa en USD por millón de tokens (entrada y salida) para el cálculo de costo."
+              "Fuerzan la tarifa en USD por millón de tokens de entrada y salida. Hay que definir las dos; las leen el backend y el runtime."
             ],
             [
-              "APPROVAL_ACTIONS",
-              "send_proposal,send_contract",
+              "`APPROVAL_ACTIONS`",
+              "`send_proposal,send_contract`",
               "No",
-              "Acciones que exigen aprobación humana."
+              "Acciones que siempre exigen aprobación humana."
             ],
             [
-              "APPROVAL_TIMEOUT",
-              "30m",
+              "`APPROVAL_TIMEOUT`",
+              "`30m`",
               "No",
-              "Tiempo de espera de una aprobación."
+              "Tiempo de espera de una aprobación dentro de una solicitud."
             ],
             [
-              "STANDING_APPROVAL_DAYS",
-              "30",
+              "`STANDING_APPROVAL_DAYS`",
+              "`30`",
               "No",
-              "Duración de una aprobación permanente por proyecto (máximo 90)."
+              "Vigencia de un permiso permanente por proyecto (máximo 90). También termina con el proyecto."
             ],
             [
-              "MAX_PARALLEL / MAX_PARALLEL_PER_ORG",
-              "4 / 8",
+              "`MAX_PARALLEL` / `MAX_PARALLEL_PER_ORG`",
+              "`4` / `8`",
               "No",
-              "Tareas simultáneas en total y por organización."
+              "Tareas simultáneas en total y llamadas al runtime en vuelo por organización; el resto espera en cola."
             ],
             [
-              "MAX_PLAN_DEPTH",
-              "30",
+              "`MAX_PLAN_DEPTH`",
+              "`30`",
               "No",
               "Profundidad máxima de un plan."
             ],
             [
-              "TASK_TIMEOUT",
-              "120s",
+              "`TASK_TIMEOUT`",
+              "`120s`",
               "No",
               "Tiempo máximo de una tarea."
             ],
             [
-              "TASK_RETRIES / TASK_MAX_ATTEMPTS",
-              "3 / 2",
+              "`TASK_RETRIES` / `TASK_MAX_ATTEMPTS`",
+              "`3` / `2`",
               "No",
               "Reintentos y número máximo de intentos por tarea."
             ],
             [
-              "TASK_RETRY_BACKOFF",
-              "2s",
+              "`TASK_RETRY_BACKOFF`",
+              "`2s`",
               "No",
-              "Espera entre reintentos."
+              "Espera entre reintentos de una tarea."
             ],
             [
-              "PROJECT_MAX_NODES / PROJECT_MAX_CHILDREN_PER_GROUP / PROJECT_MAX_ACTIVE",
-              "20000 / 200 / 20",
+              "`PROJECT_MAX_NODES` / `PROJECT_MAX_CHILDREN_PER_GROUP` / `PROJECT_MAX_ACTIVE`",
+              "`20000` / `200` / `20`",
               "No",
-              "Límites de tamaño de proyectos y de proyectos activos."
+              "Tamaño máximo de un proyecto y número de proyectos activos por organización."
             ],
             [
-              "PLANNER_MAX_PHASES / PLANNER_MAX_TASKS_PER_PHASE / PLANNER_CONCURRENCY",
-              "12 / 40 / 3",
+              "`PLANNER_MAX_PHASES` / `PLANNER_MAX_TASKS_PER_PHASE` / `PLANNER_CONCURRENCY`",
+              "`12` / `40` / `3`",
               "No",
-              "Cotas del planificador."
+              "Cotas del planificador de proyectos."
             ],
             [
-              "EMAIL_HOLD_SECONDS",
-              "60",
+              "`DEP_CONTEXT_TOKEN_BUDGET`",
+              "`8000`",
               "No",
-              "Ventana de cancelación de un envío de correo. El mínimo obligatorio es 60 s: valores menores se elevan, nunca se respetan."
+              "Tokens de contexto que una tarea recibe de las tareas de las que depende."
+            ],
+            [
+              "`EMAIL_HOLD_SECONDS`",
+              "`60`",
+              "No",
+              "Ventana para cancelar un correo antes de que salga. Mínimo 60 y máximo 300: los valores fuera de rango se ajustan."
             ]
           ]
         }
@@ -310,7 +325,8 @@
       {
         "h": "Recompensas y monedas",
         "paras": [
-          "El sistema de monedas premia el trabajo completado. REWARDS_RULES permite sustituir las reglas con un JSON cuyos campos coinciden con los nombres de abajo; los valores inválidos se rechazan y el backend vuelve a las reglas por defecto en lugar de aplicar una economía a medias. REWARDS_WELCOME_COINS concede una sola vez monedas de bienvenida a cada organización en su primer uso."
+          "El sistema de monedas premia el trabajo completado. `REWARDS_RULES` acepta un JSON que se aplica encima de las reglas por defecto, así que basta con incluir los campos que quieras cambiar.",
+          "Si el JSON tiene un valor inválido, el backend lo registra en el log y usa las reglas por defecto completas: nunca aplica una economía a medias."
         ],
         "table": {
           "head": [
@@ -321,35 +337,36 @@
           ],
           "rows": [
             [
-              "REWARDS_ENABLED",
-              "true",
+              "`REWARDS_ENABLED`",
+              "`true`",
               "No",
-              "false, 0 u off desactivan por completo la obtención de monedas."
+              "`false`, `0` u `off` desactivan por completo la obtención de monedas."
             ],
             [
-              "REWARDS_RULES",
+              "`REWARDS_RULES`",
               "vacío",
               "No",
-              "JSON con reglas: enabled, base (S, M, L, XL), default_complexity, first_try_bonus_pct, rework_pct, project_base, project_per_task, project_max, min_project_tasks."
+              "JSON con reglas: `enabled`, `base` (`S`, `M`, `L`, `XL`), `default_complexity`, `first_try_bonus_pct`, `rework_pct`, `project_base`, `project_per_task`, `project_max`, `min_project_tasks`."
             ],
             [
-              "REWARDS_WELCOME_COINS",
-              "1000",
+              "`REWARDS_WELCOME_COINS`",
+              "`1000`",
               "No",
-              "Monedas de bienvenida que recibe cada organización una única vez en su primer uso. 0 lo desactiva."
+              "Monedas de bienvenida que recibe cada organización una sola vez, la primera vez que abre la tienda o la oficina. `0` lo desactiva."
             ]
           ]
         },
         "code": {
           "lang": "json",
+          "title": "Reglas por defecto de REWARDS_RULES",
           "text": "{\n  \"enabled\": true,\n  \"base\": { \"S\": 5, \"M\": 10, \"L\": 20, \"XL\": 40 },\n  \"default_complexity\": \"M\",\n  \"first_try_bonus_pct\": 50,\n  \"rework_pct\": 50,\n  \"project_base\": 20,\n  \"project_per_task\": 2,\n  \"project_max\": 100,\n  \"min_project_tasks\": 2\n}"
-        },
-        "tip": "El ejemplo muestra las reglas por defecto. Basta con incluir en REWARDS_RULES los campos que se quieran cambiar."
+        }
       },
       {
         "h": "Runtime: proveedores de modelo y claves",
         "paras": [
-          "El runtime exige al menos un proveedor configurado, salvo con SIMULATION=true. Soporta deepseek, anthropic y un endpoint compatible con OpenAI (custom). Ante error, timeout o límite de tasa reintenta y pasa al siguiente proveedor permitido. Con ALLOWED_PROVIDERS ningún dato llega a un proveedor excluido, ni siquiera como respaldo. Las claves de proveedor son secretos: no las incluya en imágenes ni en el repositorio."
+          "El runtime admite cinco proveedores: `deepseek`, `anthropic`, `openai`, `kimi` y `custom` (un endpoint compatible con OpenAI, por ejemplo vLLM u Ollama). Un proveedor cuenta como configurado cuando su clave (y, para `custom`, su URL base) está en el entorno. Sin ningún proveedor configurado, o con `SIMULATION=true`, el runtime usa el motor simulado: respuestas guionadas, sin claves y sin costo.",
+          "Ante un error transitorio (timeout, límite de tasa, 5xx) reintenta en el mismo proveedor y después pasa al siguiente permitido. `ALLOWED_PROVIDERS` es el techo del operador: ningún dato llega a un proveedor excluido, ni siquiera como respaldo. Cada organización puede restringirlo más desde sus ajustes, nunca ampliarlo, y puede guardar su propia clave de proveedor, que gana a la del entorno."
         ],
         "table": {
           "head": [
@@ -360,97 +377,110 @@
           ],
           "rows": [
             [
-              "SIMULATION",
-              "false",
+              "`SIMULATION`",
+              "`false`",
               "No",
-              "true usa el motor simulado, sin claves ni costo. Lo lee el runtime."
+              "`true` fuerza el motor simulado aunque haya claves."
             ],
             [
-              "DEEPSEEK_API_KEY / DEEPSEEK_MODEL",
-              "deepseek/deepseek-chat",
+              "`DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`",
+              "vacío / `deepseek/deepseek-chat`",
               "Condicional",
-              "Clave y modelo de DeepSeek."
+              "Clave y modelo de DeepSeek, el proveedor por defecto de la plataforma."
             ],
             [
-              "ANTHROPIC_API_KEY / ANTHROPIC_MODEL",
-              "anthropic/claude-sonnet-5-5",
+              "`ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL`",
+              "vacío / `anthropic/claude-sonnet-5-5`",
               "Condicional",
               "Clave y modelo de Anthropic."
             ],
             [
-              "CUSTOM_LLM_BASE_URL",
+              "`OPENAI_API_KEY` / `OPENAI_MODEL` / `OPENAI_BASE_URL`",
+              "vacío / `openai/gpt-4.1` / vacío",
+              "Condicional",
+              "Clave, modelo y URL base opcional de OpenAI."
+            ],
+            [
+              "`KIMI_API_KEY` / `KIMI_MODEL` / `KIMI_BASE_URL`",
+              "vacío / `openai/kimi-k2-0905-preview` / `https://api.moonshot.ai/v1`",
+              "Condicional",
+              "Clave, modelo y URL base de Kimi (Moonshot)."
+            ],
+            [
+              "`CUSTOM_LLM_BASE_URL`",
               "vacío",
               "Condicional",
-              "URL base de un endpoint compatible con OpenAI. Activa el proveedor custom."
+              "URL base de un endpoint compatible con OpenAI. Activa el proveedor `custom`."
             ],
             [
-              "CUSTOM_LLM_API_KEY / CUSTOM_LLM_MODEL",
+              "`CUSTOM_LLM_API_KEY` / `CUSTOM_LLM_MODEL`",
               "vacío",
               "No",
-              "Clave opcional y nombre del modelo del endpoint custom."
+              "Clave opcional (muchos servidores locales no la piden) y nombre del modelo del endpoint `custom`."
             ],
             [
-              "CUSTOM_PRICE_IN_PER_M / CUSTOM_PRICE_OUT_PER_M",
-              "tarifa Sonnet",
+              "`CUSTOM_PRICE_IN_PER_M` / `CUSTOM_PRICE_OUT_PER_M`",
+              "`3` / `15`",
               "No",
-              "USD por millón de tokens del endpoint custom; puede ser 0 para un modelo local."
+              "USD por millón de tokens del endpoint `custom`. Puede ser `0` para un modelo local."
             ],
             [
-              "MODEL",
+              "`MODEL`",
               "vacío",
               "No",
-              "Variable heredada: proveedor/modelo aplica a ese proveedor; un nombre sin prefijo aplica al primario."
+              "Variable heredada: `proveedor/modelo` aplica a ese proveedor; un nombre sin prefijo aplica al primario."
             ],
             [
-              "MODEL_PROVIDER_ORDER",
-              "deepseek,anthropic,custom",
+              "`MODEL_PROVIDER_ORDER`",
+              "`deepseek,anthropic,openai,kimi,custom`",
               "No",
-              "Orden global de respaldo. También existe MODEL_PROVIDER_ORDER_<ROL> por rol de agente o por PLAN, CONSULT y SYNTHESIZE."
+              "Orden global de respaldo. `MODEL_PROVIDER_ORDER_<ROL>` lo cambia para un rol de agente o un tipo de llamada (por ejemplo `MODEL_PROVIDER_ORDER_PLAN`)."
             ],
             [
-              "ALLOWED_PROVIDERS",
+              "`ALLOWED_PROVIDERS`",
               "vacío",
               "No",
-              "Techo del operador: solo estos proveedores pueden recibir datos. Vacío significa todos los configurados."
+              "Techo del operador: solo estos proveedores pueden recibir datos. Vacío significa todos los configurados. Defínela igual en el backend y en el runtime."
             ],
             [
-              "PROVIDER_RETRIES",
-              "1",
+              "`PROVIDER_RETRIES`",
+              "`1`",
               "No",
               "Reintentos en el mismo proveedor antes de pasar al siguiente."
             ],
             [
-              "PROVIDER_RETRY_BACKOFF_S",
-              "1.0",
+              "`PROVIDER_RETRY_BACKOFF_S`",
+              "`1.0`",
               "No",
               "Espera entre reintentos, en segundos."
             ],
             [
-              "PROVIDER_TIMEOUT_S",
-              "120",
+              "`PROVIDER_TIMEOUT_S`",
+              "`120`",
               "No",
               "Timeout por llamada al proveedor, en segundos."
             ],
             [
-              "DEP_CONTEXT_TOKEN_BUDGET",
-              "8000",
-              "No",
-              "Presupuesto de tokens del contexto de dependencias en el runtime (red de seguridad; el backend ya lo aplica)."
-            ],
-            [
-              "SYNTH_PROMPT_TOKEN_BUDGET",
-              "24000",
+              "`SYNTH_PROMPT_TOKEN_BUDGET`",
+              "`24000`",
               "No",
               "Presupuesto de tokens del prompt de síntesis en el runtime."
             ]
           ]
-        }
+        },
+        "warning": "Las claves de proveedor son secretos que cuestan dinero si se filtran. Pásalas por el entorno del servicio, nunca en una imagen ni en el repositorio."
       },
       {
-        "h": "Conexiones, correo, sandbox y almacenamiento",
+        "h": "Conexiones, sandbox, almacenamiento y push",
         "paras": [
-          "Sin CONNECTIONS_KEK no se puede guardar ninguna credencial real: el sistema falla cerrado, y las conexiones simuladas siguen funcionando. La KEK es base64 de 32 bytes aleatorios; CONNECTIONS_KEK_PREVIOUS permite descifrar claves de datos antiguas durante una rotación. El sandbox de código es opcional y requiere el servicio sandbox-runner, que recibe acceso al socket de Docker; lea antes la documentación de seguridad."
+          "Sin `CONNECTIONS_KEK` no se puede guardar ninguna credencial real: la bóveda falla cerrada y solo funcionan las conexiones simuladas. La KEK es base64 de 32 bytes aleatorios; guárdala aparte de la base de datos, porque sin ella los secretos cifrados son irrecuperables.",
+          "El sandbox de código es opcional y necesita el servicio `sandbox-runner`, que recibe acceso al socket de Docker. Lee antes la página del modelo de seguridad."
         ],
+        "code": {
+          "lang": "bash",
+          "title": "Generar una KEK",
+          "text": "openssl rand -base64 32"
+        },
         "table": {
           "head": [
             "Variable",
@@ -460,82 +490,88 @@
           ],
           "rows": [
             [
-              "CONNECTIONS_KEK",
+              "`CONNECTIONS_KEK`",
               "vacío",
               "No",
-              "Clave de cifrado de credenciales de conexiones (base64 de 32 bytes)."
+              "Clave de cifrado de claves de la bóveda (base64 de 32 bytes). La necesitan las conexiones reales y las claves de modelo propias de cada organización."
             ],
             [
-              "CONNECTIONS_KEK_PREVIOUS",
+              "`CONNECTIONS_KEK_PREVIOUS`",
               "vacío",
               "No",
-              "KEK anterior, solo durante una rotación."
+              "KEK anterior, solo mientras dura una rotación."
             ],
             [
-              "GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET",
+              "`CUSTOM_API_ALLOW_PRIVATE`",
+              "false",
+              "No",
+              "Si es true, las fuentes de API genéricas (`custom_api`) pueden llegar a direcciones privadas, como un ERP en tu red local. Solo para instalaciones propias en una red de confianza; nunca cambia la regla de solo GET."
+            ],
+            [
+              "`GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`",
               "vacío",
               "No",
-              "Aplicación OAuth propia de Google para las conexiones."
+              "Tu propia aplicación OAuth de Google para las conexiones."
             ],
             [
-              "LINKEDIN_OAUTH_CLIENT_ID / LINKEDIN_OAUTH_CLIENT_SECRET",
+              "`LINKEDIN_OAUTH_CLIENT_ID` / `LINKEDIN_OAUTH_CLIENT_SECRET`",
               "vacío",
               "No",
-              "Aplicación OAuth propia de LinkedIn."
+              "Tu propia aplicación OAuth de LinkedIn."
             ],
             [
-              "OAUTH_REDIRECT_URL",
-              "http://localhost:8080/api/v1/connections/oauth/callback",
+              "`OAUTH_REDIRECT_URL`",
+              "`http://localhost:8080/api/v1/connections/oauth/callback`",
               "No",
               "URL pública del callback OAuth; debe coincidir con la registrada en el proveedor."
             ],
             [
-              "GITHUB_API_URL",
-              "api.github.com",
+              "`GITHUB_API_URL`",
+              "vacío (`api.github.com`)",
               "No",
-              "Base de la API de GitHub (por ejemplo para GitHub Enterprise)."
+              "Base de la API de GitHub, por ejemplo para GitHub Enterprise."
             ],
             [
-              "SANDBOX_URL / SANDBOX_TOKEN",
+              "`SANDBOX_URL` / `SANDBOX_TOKEN`",
               "vacío",
               "No",
-              "Dirección y token del sandbox-runner. Sin ellas el sandbox queda desactivado."
+              "Dirección y token del `sandbox-runner`. Sin las dos, los agentes no pueden ejecutar código."
             ],
             [
-              "SANDBOX_IMAGE / SANDBOX_RUNTIME / SANDBOX_SECCOMP_PROFILE",
+              "`SANDBOX_IMAGE` / `SANDBOX_RUNTIME` / `SANDBOX_SECCOMP_PROFILE`",
               "vacío",
               "No",
-              "Imagen, runtime de contenedor y perfil seccomp del sandbox-runner."
+              "Las lee el `sandbox-runner`: imagen de ejecución, runtime de contenedor (por ejemplo `runsc` de gVisor) y perfil seccomp."
             ],
             [
-              "S3_ENDPOINT / S3_BUCKET / S3_REGION / S3_PREFIX / S3_USE_PATH_STYLE",
-              "vacío",
+              "`S3_ENDPOINT` / `S3_BUCKET` / `S3_REGION` / `S3_PREFIX` / `S3_USE_PATH_STYLE`",
+              "vacío (`S3_USE_PATH_STYLE`: `true`)",
               "No",
-              "Almacenamiento de objetos compatible con S3 para el Drive. Sin endpoint y bucket se usa Postgres o memoria."
+              "Almacenamiento compatible con S3 para los archivos del Drive. Sin endpoint y bucket se usa Postgres, o memoria si no hay base de datos."
             ],
             [
-              "S3_ACCESS_KEY / S3_SECRET_KEY",
+              "`S3_ACCESS_KEY` / `S3_SECRET_KEY`",
               "vacío",
               "No",
               "Credenciales S3."
             ],
             [
-              "DRIVE_MAX_FILE_MB / DRIVE_QUOTA_MB",
-              "límites internos",
+              "`DRIVE_MAX_FILE_MB` / `DRIVE_QUOTA_MB`",
+              "`25` / `5120`",
               "No",
               "Tamaño máximo por archivo y cuota por organización, en MB."
             ],
             [
-              "VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT",
+              "`VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`",
               "vacío",
               "No",
-              "Las tres activan Web Push; sin ellas queda desactivado."
+              "Las tres juntas activan las notificaciones Web Push; sin ellas quedan desactivadas."
             ],
             [
-              "PUSH_ALLOWED_HOSTS",
+              "`PUSH_ALLOWED_HOSTS`",
               "vacío",
               "No",
-              "Lista de hosts de push permitidos."
+              "Hosts de servicios push que se añaden a la lista permitida por defecto."
             ]
           ]
         }
@@ -543,13 +579,15 @@
       {
         "h": "Límites de tasa",
         "paras": [
-          "Los límites de tasa de autenticación y comandos están integrados en el backend y la configuración actual no expone variables para ajustarlos. Lo que sí se configura es TRUSTED_PROXIES: solo la cabecera X-Forwarded-For de esos proxies se usa para identificar al cliente, de modo que detrás de Caddy conviene indicar la red del proxy, y sin ella la IP del cliente será la del proxy."
+          "Los límites de tasa están integrados en el backend y no tienen variables de ajuste: por ejemplo, 10 intentos de inicio de sesión cada 15 minutos y 120 comandos por minuto. Los de autenticación se guardan en Redis si hay `REDIS_URL`, y en memoria del proceso si no.",
+          "Lo que sí se configura es `TRUSTED_PROXIES`. Solo la cabecera `X-Forwarded-For` de esos proxies sirve para identificar al cliente. Detrás de Caddy, indica la red del proxy: sin ella, todos los clientes comparten la IP del proxy y el mismo contador."
         ]
       },
       {
         "h": "Frontend: argumentos de build",
         "paras": [
-          "El frontend se compila con output standalone. Las variables NEXT_PUBLIC_* se incorporan en tiempo de build como argumentos del Dockerfile (ARG), no se leen en ejecución. Dejarlas vacías produce el comportamiento recomendado de un solo dominio: rutas relativas /api/v1 y WebSocket derivado de window.location."
+          "El frontend se compila con salida standalone. Las variables `NEXT_PUBLIC_*` se incorporan al compilar como argumentos del `Dockerfile` (`ARG`); cambiarlas exige reconstruir la imagen.",
+          "Dejarlas vacías da el comportamiento recomendado para un solo dominio: la API en la ruta relativa `/api/v1` y el WebSocket derivado de `window.location`."
         ],
         "table": {
           "head": [
@@ -560,34 +598,36 @@
           ],
           "rows": [
             [
-              "NEXT_PUBLIC_API_URL",
+              "`NEXT_PUBLIC_API_URL`",
               "vacío",
               "No",
-              "URL base absoluta de la API (por ejemplo https://app.example.com/api/v1). Vacía: ruta relativa."
+              "URL base absoluta de la API, por ejemplo `https://app.example.com/api/v1`. Vacía: ruta relativa."
             ],
             [
-              "NEXT_PUBLIC_WS_URL",
+              "`NEXT_PUBLIC_WS_URL`",
               "vacío",
               "No",
-              "URL absoluta del WebSocket (wss://app.example.com/ws). Vacía: se deriva de window.location."
+              "URL absoluta del WebSocket, por ejemplo `wss://app.example.com/ws`. Vacía: se deriva de `window.location`."
             ],
             [
-              "NEXT_PUBLIC_MOCK",
+              "`NEXT_PUBLIC_MOCK`",
               "vacío",
               "No",
-              "true ejecuta el frontend con datos simulados, sin backend."
+              "Con el valor `true`, el frontend funciona con datos simulados, sin backend."
             ]
           ]
         },
         "code": {
           "lang": "bash",
+          "title": "Build con dominios separados",
           "text": "docker build \\\n  --build-arg NEXT_PUBLIC_API_URL=https://app.example.com/api/v1 \\\n  --build-arg NEXT_PUBLIC_WS_URL=wss://app.example.com/ws \\\n  -t aiworkforce-frontend ./frontend"
         }
       },
       {
         "h": "Verificación de correo y cuentas de prueba",
         "paras": [
-          "Dos funciones opcionales de acceso. La verificación de correo exige SMTP funcional: con EMAIL_VERIFICATION=true y sin SMTP válido el backend se niega a arrancar, de modo que un servidor a medio configurar no deja a nadie fuera. Las cuentas de prueba permiten probar sin registrarse y caducan solas."
+          "Dos funciones opcionales de acceso, las dos requieren `AUTH_ENABLED=true`. La verificación de correo exige un SMTP que funcione: con `EMAIL_VERIFICATION=true` y sin SMTP válido el backend se niega a arrancar, de modo que un servidor a medio configurar no deja a nadie fuera.",
+          "Las cuentas de prueba permiten usar la app sin registrarse; cada una tiene su propia organización y deja de funcionar sola."
         ],
         "table": {
           "head": [
@@ -597,63 +637,63 @@
           ],
           "rows": [
             [
-              "EMAIL_VERIFICATION",
-              "false",
-              "Las cuentas nuevas deben abrir un enlace de un solo uso enviado a su correo antes de poder entrar. Requiere AUTH_ENABLED, UI_BASE_URL y SMTP_* (o EMAIL_DEV_LOG)."
+              "`EMAIL_VERIFICATION`",
+              "`false`",
+              "Las cuentas nuevas deben abrir un enlace de un solo uso enviado a su correo antes de entrar. Requiere `AUTH_ENABLED`, `UI_BASE_URL` y `SMTP_*` (o `EMAIL_DEV_LOG`)."
             ],
             [
-              "EMAIL_DEV_LOG",
-              "false",
+              "`EMAIL_DEV_LOG`",
+              "`false`",
               "Solo desarrollo: los enlaces de verificación se escriben en el log en lugar de enviarse."
             ],
             [
-              "SMTP_HOST",
-              "",
-              "Servidor SMTP. Obligatorio con EMAIL_VERIFICATION salvo que EMAIL_DEV_LOG esté activo."
+              "`SMTP_HOST`",
+              "vacío",
+              "Servidor SMTP. Obligatorio con `EMAIL_VERIFICATION`, salvo que `EMAIL_DEV_LOG` esté activo."
             ],
             [
-              "SMTP_PORT",
-              "465",
-              "465 usa TLS implícito; 587 usa STARTTLS."
+              "`SMTP_PORT`",
+              "`465`",
+              "`465` usa TLS implícito; `587` usa STARTTLS."
             ],
             [
-              "SMTP_TLS",
-              "tls (465) / starttls",
-              "tls, starttls o none (none solo para un relay local)."
+              "`SMTP_TLS`",
+              "`tls` con el puerto 465; `starttls` con otro",
+              "`tls`, `starttls` o `none` (`none` solo para un relay local)."
             ],
             [
-              "SMTP_USER / SMTP_PASS",
-              "",
-              "Credenciales del servidor SMTP; define ambas o ninguna."
+              "`SMTP_USER` / `SMTP_PASS`",
+              "vacío",
+              "Credenciales del servidor SMTP; define las dos o ninguna."
             ],
             [
-              "SMTP_FROM",
-              "",
-              "Remitente, p. ej. AI Workforce OS <no-reply@example.com>."
+              "`SMTP_FROM`",
+              "vacío",
+              "Remitente, por ejemplo `AI Workforce OS <no-reply@example.com>`. Obligatorio con verificación por SMTP."
             ],
             [
-              "TRIAL_ENABLED",
-              "false",
-              "Activa POST /auth/trial: cuentas desechables con su propia organización (requiere AUTH_ENABLED)."
+              "`TRIAL_ENABLED`",
+              "`false`",
+              "Activa `POST /api/v1/auth/trial`: cuentas desechables con su propia organización."
             ],
             [
-              "TRIAL_TTL_HOURS",
-              "24",
-              "Cuánto funciona una cuenta de prueba."
+              "`TRIAL_TTL_HOURS`",
+              "`24`",
+              "Horas que funciona una cuenta de prueba."
             ],
             [
-              "TRIAL_PER_IP_PER_DAY",
-              "3",
-              "Cuentas de prueba que una misma dirección puede crear al día."
+              "`TRIAL_PER_IP_PER_DAY`",
+              "`3`",
+              "Cuentas de prueba que una misma dirección IP puede crear al día."
             ],
             [
-              "TRIAL_GLOBAL_PER_DAY",
-              "300",
-              "Cuentas de prueba creadas al día, entre todas las direcciones."
+              "`TRIAL_GLOBAL_PER_DAY`",
+              "`300`",
+              "Cuentas de prueba creadas al día entre todas las direcciones."
             ],
             [
-              "TRIAL_EMAIL_DOMAIN",
-              "prueba.invalid",
+              "`TRIAL_EMAIL_DOMAIN`",
+              "`prueba.invalid`",
               "Dominio de las direcciones generadas para las pruebas (sin buzón detrás)."
             ]
           ]
@@ -664,15 +704,21 @@
   "en": {
     "title": "Configuration reference",
     "metaTitle": "Environment variables: backend, runtime and frontend",
-    "description": "Environment variable reference for AI Workforce OS: server, database, auth, budget, rewards, model providers and frontend build arguments.",
-    "intro": "All configuration comes from the environment. The backend (Go) loads and validates its variables at startup and refuses to boot with inconsistent values; the runtime (Python) reads its own when it needs them; the frontend only has build arguments. The defaults on this page come from the code.",
+    "description": "Every AI Workforce OS environment variable with its default: server, authentication, budget, model providers and frontend build arguments.",
+    "intro": "All AI Workforce OS configuration is read from environment variables. This page lists the variables of the backend (Go), the agent runtime (Python) and the frontend (Next.js), with the default value set in code. It is for anyone installing or operating their own instance.",
     "sections": [
       {
         "h": "How configuration is loaded",
         "paras": [
-          "The backend reads the environment in config.Load and calls Validate before starting. Booleans accept strconv.ParseBool values (true, false, 1, 0...) and an invalid value aborts startup. For numeric and duration variables, a missing, non-numeric or non-positive value is replaced by the default. Durations use Go syntax (30s, 5m, 1h). Lists are comma-separated.",
-          "In the Required column, Yes means the process does not start without the variable; Conditional means it depends on another variable; No means there is a default or the feature turns off."
-        ]
+          "The backend reads the environment at startup and validates the combination before it opens its port: if something is inconsistent, the process exits with an error that names the variable. The runtime reads its variables when it uses them. The frontend reads nothing at runtime: its values are fixed at build time."
+        ],
+        "list": [
+          "Booleans: `true`, `false`, `1`, `0` and the other values accepted by `strconv.ParseBool`. An invalid value aborts startup.",
+          "Integers and durations: a missing, non-numeric or non-positive value is replaced by the default. Durations use Go syntax (`30s`, `5m`, `1h`).",
+          "USD amounts: `0` is valid and turns the corresponding cap off; a negative or non-numeric value keeps the default. The exception is `BUDGET_USD`, which needs a value above zero.",
+          "Lists: comma-separated values; spaces are ignored."
+        ],
+        "note": "In the tables, Conditional means the variable is only required in combination with another one (for example `JWT_SECRET` with `AUTH_ENABLED=true`). No means there is a default or the feature stays off."
       },
       {
         "h": "Server and database",
@@ -685,96 +731,98 @@
           ],
           "rows": [
             [
-              "PORT",
-              "8080",
+              "`PORT`",
+              "`8080`",
               "No",
               "Backend HTTP port."
             ],
             [
-              "DATABASE_URL",
+              "`DATABASE_URL`",
               "empty",
               "Conditional",
-              "Postgres URL. Without it the backend runs in memory (demos). Required when AUTH_ENABLED=true."
+              "Postgres URL. Without it the backend keeps everything in memory (demos only). Required with `AUTH_ENABLED=true`."
             ],
             [
-              "MIGRATE_DATABASE_URL",
+              "`MIGRATE_DATABASE_URL`",
               "empty",
               "No",
-              "Owner (DDL) connection used only to apply migrations. Empty: DATABASE_URL is used."
+              "Owner (DDL) connection used only to apply migrations. Empty: `DATABASE_URL` is used."
             ],
             [
-              "DB_APP_ROLE",
-              "app_user",
+              "`DB_APP_ROLE`",
+              "`app_user`",
               "No",
-              "Non-owner, NOBYPASSRLS role every connection switches to (SET ROLE), the basis of RLS isolation. Empty disables the switch."
+              "Non-owner role without `BYPASSRLS` that every connection switches to (`SET ROLE`); the basis of RLS isolation. Empty disables the switch."
             ],
             [
-              "REDIS_URL",
+              "`REDIS_URL`",
               "empty",
               "No",
-              "Redis URL (password included in the URL)."
+              "Redis URL, with the password inside the URL. Empty: events, locks and rate limits live in process memory."
             ],
             [
-              "RUNTIME_URL",
-              "http://localhost:8000",
+              "`RUNTIME_URL`",
+              "`http://localhost:8000`",
               "No",
               "Internal URL of the agent runtime."
             ],
             [
-              "RUNTIME_TOKEN",
+              "`RUNTIME_TOKEN`",
               "empty",
               "No",
-              "Shared secret between backend and runtime. Recommended in production: the backend warns when empty."
+              "Shared secret between backend and runtime. Recommended in production: the backend logs a warning when it is empty."
             ],
             [
-              "READ_HEADER_TIMEOUT",
-              "10s",
+              "`READ_HEADER_TIMEOUT`",
+              "`10s`",
               "No",
-              "Maximum time to read request headers."
+              "Maximum time to read the headers of a request."
             ],
             [
-              "READ_TIMEOUT",
-              "30s",
+              "`READ_TIMEOUT`",
+              "`30s`",
               "No",
-              "Maximum time to read the request."
+              "Maximum time to read a whole request."
             ],
             [
-              "WRITE_TIMEOUT",
-              "60s",
+              "`WRITE_TIMEOUT`",
+              "`60s`",
               "No",
-              "Maximum time per REST request (not applied to the WebSocket)."
+              "Maximum time per REST request. Not applied to the WebSocket."
             ],
             [
-              "IDLE_TIMEOUT",
-              "120s",
+              "`IDLE_TIMEOUT`",
+              "`120s`",
               "No",
               "Idle time of keep-alive connections."
             ],
             [
-              "MAX_BODY_BYTES",
-              "1048576",
+              "`MAX_BODY_BYTES`",
+              "`1048576`",
               "No",
-              "Maximum size of a request body."
+              "Maximum size of a request body (1 MiB)."
             ],
             [
-              "APP_ENV",
+              "`APP_ENV`",
               "empty",
               "No",
-              "With the value production, the backend warns when the KEK comes from the environment."
+              "With the value `production`, the backend warns when the vault KEK comes from the environment."
             ],
             [
-              "TRACE_RETENTION_DAYS",
-              "30",
+              "`TRACE_RETENTION_DAYS`",
+              "`30`",
               "No",
-              "Days audit traces are kept; they are purged hourly."
+              "Days the agents' reasoning traces are kept; they are purged hourly."
             ]
           ]
-        }
+        },
+        "tip": "Set `RUNTIME_TOKEN` to the same value in the backend and the runtime. Once it is set, the runtime requires `Authorization: Bearer <token>` on every route except `/healthz`."
       },
       {
         "h": "Authentication, CORS and proxy",
         "paras": [
-          "With AUTH_ENABLED=false the backend runs in demo mode (fixed organization, no login). With AUTH_ENABLED=true it enables JWT, RBAC and per-organization isolation: org_id comes from the token. Validate rejects a JWT_SECRET shorter than 32 bytes, a missing DATABASE_URL and an asterisk in ALLOWED_ORIGINS."
+          "With `AUTH_ENABLED=false` the backend runs in demo mode: one fixed organization and no sign-in. With `AUTH_ENABLED=true` it enables accounts, JWT, RBAC and per-organization isolation, and the `org_id` comes from the token.",
+          "With authentication on, startup fails if `JWT_SECRET` is shorter than 32 bytes, if `DATABASE_URL` is missing or if `ALLOWED_ORIGINS` contains `*`."
         ],
         "table": {
           "head": [
@@ -785,66 +833,67 @@
           ],
           "rows": [
             [
-              "AUTH_ENABLED",
-              "false",
+              "`AUTH_ENABLED`",
+              "`false`",
               "No",
-              "Enables accounts, JWT, RBAC and multi-tenancy. The production compose sets it to true."
+              "Enables accounts, JWT, RBAC and multi-tenancy. The production compose file sets it to `true`."
             ],
             [
-              "JWT_SECRET",
+              "`JWT_SECRET`",
               "empty",
               "Conditional",
-              "Access token signing key; at least 32 bytes; required with AUTH_ENABLED=true. Rotating it invalidates sessions."
+              "Access token signing key; at least 32 bytes; required with `AUTH_ENABLED=true`. Rotating it invalidates every session."
             ],
             [
-              "ALLOWED_ORIGINS",
+              "`ALLOWED_ORIGINS`",
               "empty",
               "Conditional",
-              "Allowed origins for CORS and WebSocket, without trailing slash. Empty without auth means *; empty with auth, same-origin only. * is rejected with auth."
+              "Origins allowed for CORS and WebSocket, comma-separated and without a trailing slash. Empty without authentication means `*`; empty with authentication, same origin only."
             ],
             [
-              "AUTH_COOKIE_SECURE",
-              "true",
+              "`AUTH_COOKIE_SECURE`",
+              "`true`",
               "No",
-              "Secure attribute of the refresh token cookie. Only turned off for local plain-HTTP development."
+              "`Secure` attribute of the refresh token cookie. Only turned off for local plain-HTTP development."
             ],
             [
-              "AUTH_COOKIE_NAME",
+              "`AUTH_COOKIE_NAME`",
+              "`wfai_refresh`",
+              "No",
+              "Name of the refresh token cookie. Change it when several installations share a host."
+            ],
+            [
+              "`TRUSTED_PROXIES`",
               "empty",
               "No",
-              "Cookie name, to avoid collisions between stacks sharing a host."
+              "CIDRs or IPs of the proxies whose `X-Forwarded-For` is honored (used by rate limits). An invalid value aborts startup."
             ],
             [
-              "TRUSTED_PROXIES",
+              "`ENABLE_DEMO_RESET`",
+              "`false`",
+              "No",
+              "Registers `POST /api/v1/demo/reset`, which wipes execution data. Keep it `false` in production."
+            ],
+            [
+              "`KILL_SWITCH`",
               "empty",
               "No",
-              "CIDRs or IPs of proxies whose X-Forwarded-For is honoured (for example for rate limiting). An invalid value aborts startup."
+              "`freeze` or `lockdown`: a process-wide override no API call can lift. Re-read on `SIGHUP`."
             ],
             [
-              "ENABLE_DEMO_RESET",
-              "false",
-              "No",
-              "Registers POST /api/v1/demo/reset. Must stay false in production."
-            ],
-            [
-              "KILL_SWITCH",
+              "`UI_BASE_URL`",
               "empty",
               "No",
-              "freeze or lockdown: a process-wide override no API call can lift. Re-read on SIGHUP."
-            ],
-            [
-              "UI_BASE_URL",
-              "empty",
-              "No",
-              "Frontend URL the browser is redirected to after the OAuth callback."
+              "Public frontend URL: where the browser lands after the OAuth callback, and the base of email verification links."
             ]
           ]
-        }
+        },
+        "warning": "With `AUTH_ENABLED=false` there is no sign-in: anyone who can reach the URL controls the demo organization. Do not expose that mode to the internet with real data or keys."
       },
       {
         "h": "Budget, cost and execution limits",
         "paras": [
-          "These variables control spending and orchestrator concurrency. For numeric cap variables, 0 disables the corresponding limit. The defaults for context windows and quality checks are internal to the backend and are omitted here."
+          "These variables control spending and orchestrator concurrency. Context windows and quality checks have more internal settings with sensible defaults; this table covers the ones worth knowing."
         ],
         "table": {
           "head": [
@@ -855,106 +904,112 @@
           ],
           "rows": [
             [
-              "BUDGET_USD",
-              "50",
+              "`BUDGET_USD`",
+              "`50`",
               "No",
-              "Spending cap in USD. The production compose sets it to 25 when undefined."
+              "Spending cap in USD. The production compose file uses `25` when you do not set it."
             ],
             [
-              "REQUEST_BUDGET_CAP_USD",
-              "0",
+              "`REQUEST_BUDGET_CAP_USD`",
+              "`0`",
               "No",
-              "Spending cap per request."
+              "Hard spending cap per request. `0` turns it off."
             ],
             [
-              "AGENT_BUDGET_USD",
-              "0",
+              "`AGENT_BUDGET_USD`",
+              "`0`",
               "No",
-              "Spending cap per agent."
+              "Monthly spending cap per agent. `0` turns it off."
             ],
             [
-              "COST_CONFIRM_THRESHOLD_USD",
-              "1.0",
+              "`COST_CONFIRM_THRESHOLD_USD`",
+              "`1.0`",
               "No",
-              "Estimated cost above which confirmation is requested."
+              "Estimated cost above which confirmation is requested before running."
             ],
             [
-              "BUDGET_PAUSE_TIMEOUT",
-              "30m",
+              "`BUDGET_PAUSE_TIMEOUT`",
+              "`30m`",
               "No",
-              "How long a request stays paused on budget."
+              "How long a request paused by a cap waits for someone to decide."
             ],
             [
-              "PRICE_IN_PER_M / PRICE_OUT_PER_M",
-              "internal table",
+              "`PRICE_IN_PER_M` / `PRICE_OUT_PER_M`",
+              "internal price table",
               "No",
-              "Force the USD price per million tokens (input and output) used for cost calculation."
+              "Force the USD price per million input and output tokens. Set both; the backend and the runtime read them."
             ],
             [
-              "APPROVAL_ACTIONS",
-              "send_proposal,send_contract",
+              "`APPROVAL_ACTIONS`",
+              "`send_proposal,send_contract`",
               "No",
-              "Actions that require human approval."
+              "Actions that always require human approval."
             ],
             [
-              "APPROVAL_TIMEOUT",
-              "30m",
+              "`APPROVAL_TIMEOUT`",
+              "`30m`",
               "No",
-              "How long an approval waits."
+              "How long an approval inside a request waits."
             ],
             [
-              "STANDING_APPROVAL_DAYS",
-              "30",
+              "`STANDING_APPROVAL_DAYS`",
+              "`30`",
               "No",
-              "Duration of a standing per-project approval (at most 90)."
+              "Lifetime of a standing per-project permission (at most 90). It also ends with the project."
             ],
             [
-              "MAX_PARALLEL / MAX_PARALLEL_PER_ORG",
-              "4 / 8",
+              "`MAX_PARALLEL` / `MAX_PARALLEL_PER_ORG`",
+              "`4` / `8`",
               "No",
-              "Concurrent tasks overall and per organization."
+              "Concurrent tasks overall and runtime calls in flight per organization; the rest wait in a queue."
             ],
             [
-              "MAX_PLAN_DEPTH",
-              "30",
+              "`MAX_PLAN_DEPTH`",
+              "`30`",
               "No",
               "Maximum depth of a plan."
             ],
             [
-              "TASK_TIMEOUT",
-              "120s",
+              "`TASK_TIMEOUT`",
+              "`120s`",
               "No",
               "Maximum time of a task."
             ],
             [
-              "TASK_RETRIES / TASK_MAX_ATTEMPTS",
-              "3 / 2",
+              "`TASK_RETRIES` / `TASK_MAX_ATTEMPTS`",
+              "`3` / `2`",
               "No",
               "Retries and maximum attempts per task."
             ],
             [
-              "TASK_RETRY_BACKOFF",
-              "2s",
+              "`TASK_RETRY_BACKOFF`",
+              "`2s`",
               "No",
-              "Wait between retries."
+              "Wait between task retries."
             ],
             [
-              "PROJECT_MAX_NODES / PROJECT_MAX_CHILDREN_PER_GROUP / PROJECT_MAX_ACTIVE",
-              "20000 / 200 / 20",
+              "`PROJECT_MAX_NODES` / `PROJECT_MAX_CHILDREN_PER_GROUP` / `PROJECT_MAX_ACTIVE`",
+              "`20000` / `200` / `20`",
               "No",
-              "Project size limits and active project limit."
+              "Maximum project size and number of active projects per organization."
             ],
             [
-              "PLANNER_MAX_PHASES / PLANNER_MAX_TASKS_PER_PHASE / PLANNER_CONCURRENCY",
-              "12 / 40 / 3",
+              "`PLANNER_MAX_PHASES` / `PLANNER_MAX_TASKS_PER_PHASE` / `PLANNER_CONCURRENCY`",
+              "`12` / `40` / `3`",
               "No",
-              "Planner bounds."
+              "Bounds of the project planner."
             ],
             [
-              "EMAIL_HOLD_SECONDS",
-              "60",
+              "`DEP_CONTEXT_TOKEN_BUDGET`",
+              "`8000`",
               "No",
-              "Cancellation window of an email send. The mandatory minimum is 60 s: smaller values are raised, never honoured."
+              "Context tokens a task receives from the tasks it depends on."
+            ],
+            [
+              "`EMAIL_HOLD_SECONDS`",
+              "`60`",
+              "No",
+              "Window to cancel an email before it leaves. Minimum 60 and maximum 300: out-of-range values are clamped."
             ]
           ]
         }
@@ -962,7 +1017,8 @@
       {
         "h": "Rewards and coins",
         "paras": [
-          "The coin system rewards completed work. REWARDS_RULES lets you replace the rules with a JSON whose fields match the names below; invalid values are rejected and the backend falls back to the default rules instead of applying a half-changed economy. REWARDS_WELCOME_COINS grants welcome coins once to every organization on first use."
+          "The coin system rewards completed work. `REWARDS_RULES` takes a JSON object that is applied on top of the default rules, so you only include the fields you want to change.",
+          "If the JSON has an invalid value, the backend logs it and uses the full default rules: it never applies a half-changed economy."
         ],
         "table": {
           "head": [
@@ -973,35 +1029,36 @@
           ],
           "rows": [
             [
-              "REWARDS_ENABLED",
-              "true",
+              "`REWARDS_ENABLED`",
+              "`true`",
               "No",
-              "false, 0 or off turns coin earning off entirely."
+              "`false`, `0` or `off` turn coin earning off entirely."
             ],
             [
-              "REWARDS_RULES",
+              "`REWARDS_RULES`",
               "empty",
               "No",
-              "JSON with rules: enabled, base (S, M, L, XL), default_complexity, first_try_bonus_pct, rework_pct, project_base, project_per_task, project_max, min_project_tasks."
+              "JSON with rules: `enabled`, `base` (`S`, `M`, `L`, `XL`), `default_complexity`, `first_try_bonus_pct`, `rework_pct`, `project_base`, `project_per_task`, `project_max`, `min_project_tasks`."
             ],
             [
-              "REWARDS_WELCOME_COINS",
-              "1000",
+              "`REWARDS_WELCOME_COINS`",
+              "`1000`",
               "No",
-              "Welcome coins each organization receives once on first use. 0 disables it."
+              "Welcome coins each organization receives once, the first time it opens the shop or the office. `0` turns it off."
             ]
           ]
         },
         "code": {
           "lang": "json",
+          "title": "Default REWARDS_RULES",
           "text": "{\n  \"enabled\": true,\n  \"base\": { \"S\": 5, \"M\": 10, \"L\": 20, \"XL\": 40 },\n  \"default_complexity\": \"M\",\n  \"first_try_bonus_pct\": 50,\n  \"rework_pct\": 50,\n  \"project_base\": 20,\n  \"project_per_task\": 2,\n  \"project_max\": 100,\n  \"min_project_tasks\": 2\n}"
-        },
-        "tip": "The example shows the default rules. Include in REWARDS_RULES only the fields you want to change."
+        }
       },
       {
         "h": "Runtime: model providers and keys",
         "paras": [
-          "The runtime requires at least one configured provider, except with SIMULATION=true. It supports deepseek, anthropic and an OpenAI-compatible endpoint (custom). On error, timeout or rate limit it retries and moves to the next allowed provider. With ALLOWED_PROVIDERS no data reaches an excluded provider, not even as a fallback. Provider keys are secrets: never put them in images or in the repository."
+          "The runtime supports five providers: `deepseek`, `anthropic`, `openai`, `kimi` and `custom` (an OpenAI-compatible endpoint such as vLLM or Ollama). A provider counts as configured when its key (and, for `custom`, its base URL) is in the environment. With no provider configured, or with `SIMULATION=true`, the runtime uses the simulated engine: scripted answers, no keys and no cost.",
+          "On a transient error (timeout, rate limit, 5xx) it retries on the same provider and then moves to the next allowed one. `ALLOWED_PROVIDERS` is the operator ceiling: no data reaches an excluded provider, not even as a fallback. Each organization can narrow it further in its settings, never widen it, and can store its own provider key, which wins over the environment's."
         ],
         "table": {
           "head": [
@@ -1012,97 +1069,110 @@
           ],
           "rows": [
             [
-              "SIMULATION",
-              "false",
+              "`SIMULATION`",
+              "`false`",
               "No",
-              "true uses the simulated engine, with no keys and no cost. Read by the runtime."
+              "`true` forces the simulated engine even when keys are present."
             ],
             [
-              "DEEPSEEK_API_KEY / DEEPSEEK_MODEL",
-              "deepseek/deepseek-chat",
+              "`DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`",
+              "empty / `deepseek/deepseek-chat`",
               "Conditional",
-              "DeepSeek key and model."
+              "DeepSeek key and model; DeepSeek is the platform default provider."
             ],
             [
-              "ANTHROPIC_API_KEY / ANTHROPIC_MODEL",
-              "anthropic/claude-sonnet-5-5",
+              "`ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL`",
+              "empty / `anthropic/claude-sonnet-5-5`",
               "Conditional",
               "Anthropic key and model."
             ],
             [
-              "CUSTOM_LLM_BASE_URL",
+              "`OPENAI_API_KEY` / `OPENAI_MODEL` / `OPENAI_BASE_URL`",
+              "empty / `openai/gpt-4.1` / empty",
+              "Conditional",
+              "OpenAI key, model and optional base URL."
+            ],
+            [
+              "`KIMI_API_KEY` / `KIMI_MODEL` / `KIMI_BASE_URL`",
+              "empty / `openai/kimi-k2-0905-preview` / `https://api.moonshot.ai/v1`",
+              "Conditional",
+              "Kimi (Moonshot) key, model and base URL."
+            ],
+            [
+              "`CUSTOM_LLM_BASE_URL`",
               "empty",
               "Conditional",
-              "Base URL of an OpenAI-compatible endpoint. Enables the custom provider."
+              "Base URL of an OpenAI-compatible endpoint. Enables the `custom` provider."
             ],
             [
-              "CUSTOM_LLM_API_KEY / CUSTOM_LLM_MODEL",
+              "`CUSTOM_LLM_API_KEY` / `CUSTOM_LLM_MODEL`",
               "empty",
               "No",
-              "Optional key and model name of the custom endpoint."
+              "Optional key (many local servers need none) and model name of the `custom` endpoint."
             ],
             [
-              "CUSTOM_PRICE_IN_PER_M / CUSTOM_PRICE_OUT_PER_M",
-              "Sonnet rate",
+              "`CUSTOM_PRICE_IN_PER_M` / `CUSTOM_PRICE_OUT_PER_M`",
+              "`3` / `15`",
               "No",
-              "USD per million tokens of the custom endpoint; may be 0 for a local model."
+              "USD per million tokens of the `custom` endpoint. May be `0` for a local model."
             ],
             [
-              "MODEL",
+              "`MODEL`",
               "empty",
               "No",
-              "Legacy: provider/model applies to that provider; an unprefixed name applies to the primary."
+              "Legacy variable: `provider/model` applies to that provider; an unprefixed name applies to the primary."
             ],
             [
-              "MODEL_PROVIDER_ORDER",
-              "deepseek,anthropic,custom",
+              "`MODEL_PROVIDER_ORDER`",
+              "`deepseek,anthropic,openai,kimi,custom`",
               "No",
-              "Global fallback order. MODEL_PROVIDER_ORDER_<ROLE> also exists per agent role or for PLAN, CONSULT and SYNTHESIZE."
+              "Global fallback order. `MODEL_PROVIDER_ORDER_<ROLE>` changes it for an agent role or a call type (for example `MODEL_PROVIDER_ORDER_PLAN`)."
             ],
             [
-              "ALLOWED_PROVIDERS",
+              "`ALLOWED_PROVIDERS`",
               "empty",
               "No",
-              "Operator ceiling: only these providers may receive data. Empty means all configured."
+              "Operator ceiling: only these providers may receive data. Empty means all configured. Set it the same in the backend and the runtime."
             ],
             [
-              "PROVIDER_RETRIES",
-              "1",
+              "`PROVIDER_RETRIES`",
+              "`1`",
               "No",
               "Retries on the same provider before moving to the next."
             ],
             [
-              "PROVIDER_RETRY_BACKOFF_S",
-              "1.0",
+              "`PROVIDER_RETRY_BACKOFF_S`",
+              "`1.0`",
               "No",
               "Wait between retries, in seconds."
             ],
             [
-              "PROVIDER_TIMEOUT_S",
-              "120",
+              "`PROVIDER_TIMEOUT_S`",
+              "`120`",
               "No",
               "Timeout per provider call, in seconds."
             ],
             [
-              "DEP_CONTEXT_TOKEN_BUDGET",
-              "8000",
+              "`SYNTH_PROMPT_TOKEN_BUDGET`",
+              "`24000`",
               "No",
-              "Token budget for dependency context in the runtime (safety net; the backend already enforces it)."
-            ],
-            [
-              "SYNTH_PROMPT_TOKEN_BUDGET",
-              "24000",
-              "No",
-              "Token budget for the synthesis prompt in the runtime."
+              "Token budget of the synthesis prompt in the runtime."
             ]
           ]
-        }
+        },
+        "warning": "Provider keys are secrets that cost money when they leak. Pass them through the service environment, never in an image or the repository."
       },
       {
-        "h": "Connections, email, sandbox and storage",
+        "h": "Connections, sandbox, storage and push",
         "paras": [
-          "Without CONNECTIONS_KEK no live credential can be stored: the system fails closed, and simulated connections keep working. The KEK is base64 of 32 random bytes; CONNECTIONS_KEK_PREVIOUS lets old data keys be unwrapped during a rotation. The code sandbox is optional and needs the sandbox-runner service, which is given access to the Docker socket; read the security documentation first."
+          "Without `CONNECTIONS_KEK` no live credential can be stored: the vault fails closed and only simulated connections work. The KEK is base64 of 32 random bytes; keep it apart from the database, because without it the encrypted secrets cannot be recovered.",
+          "The code sandbox is optional and needs the `sandbox-runner` service, which is given access to the Docker socket. Read the security model page first."
         ],
+        "code": {
+          "lang": "bash",
+          "title": "Generate a KEK",
+          "text": "openssl rand -base64 32"
+        },
         "table": {
           "head": [
             "Variable",
@@ -1112,82 +1182,88 @@
           ],
           "rows": [
             [
-              "CONNECTIONS_KEK",
+              "`CONNECTIONS_KEK`",
               "empty",
               "No",
-              "Encryption key for connection credentials (base64 of 32 bytes)."
+              "Key-encryption key of the vault (base64 of 32 bytes). Needed by live connections and by each organization's own model keys."
             ],
             [
-              "CONNECTIONS_KEK_PREVIOUS",
+              "`CONNECTIONS_KEK_PREVIOUS`",
               "empty",
               "No",
-              "Previous KEK, only during a rotation."
+              "Previous KEK, only while a rotation is in progress."
             ],
             [
-              "GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET",
+              "`CUSTOM_API_ALLOW_PRIVATE`",
+              "false",
+              "No",
+              "When true, generic API sources (`custom_api`) may reach private addresses, such as an ERP on your LAN. Only for self-hosted installs on a trusted network; it never changes the GET-only rule."
+            ],
+            [
+              "`GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`",
               "empty",
               "No",
               "Your own Google OAuth app for connections."
             ],
             [
-              "LINKEDIN_OAUTH_CLIENT_ID / LINKEDIN_OAUTH_CLIENT_SECRET",
+              "`LINKEDIN_OAUTH_CLIENT_ID` / `LINKEDIN_OAUTH_CLIENT_SECRET`",
               "empty",
               "No",
               "Your own LinkedIn OAuth app."
             ],
             [
-              "OAUTH_REDIRECT_URL",
-              "http://localhost:8080/api/v1/connections/oauth/callback",
+              "`OAUTH_REDIRECT_URL`",
+              "`http://localhost:8080/api/v1/connections/oauth/callback`",
               "No",
               "Public URL of the OAuth callback; must match the one registered with the provider."
             ],
             [
-              "GITHUB_API_URL",
-              "api.github.com",
+              "`GITHUB_API_URL`",
+              "empty (`api.github.com`)",
               "No",
-              "GitHub API base (for example for GitHub Enterprise)."
+              "GitHub API base, for example for GitHub Enterprise."
             ],
             [
-              "SANDBOX_URL / SANDBOX_TOKEN",
+              "`SANDBOX_URL` / `SANDBOX_TOKEN`",
               "empty",
               "No",
-              "Address and token of the sandbox-runner. Without them the sandbox is disabled."
+              "Address and token of the `sandbox-runner`. Without both, agents cannot run code."
             ],
             [
-              "SANDBOX_IMAGE / SANDBOX_RUNTIME / SANDBOX_SECCOMP_PROFILE",
+              "`SANDBOX_IMAGE` / `SANDBOX_RUNTIME` / `SANDBOX_SECCOMP_PROFILE`",
               "empty",
               "No",
-              "Image, container runtime and seccomp profile of the sandbox-runner."
+              "Read by the `sandbox-runner`: execution image, container runtime (for example gVisor's `runsc`) and seccomp profile."
             ],
             [
-              "S3_ENDPOINT / S3_BUCKET / S3_REGION / S3_PREFIX / S3_USE_PATH_STYLE",
-              "empty",
+              "`S3_ENDPOINT` / `S3_BUCKET` / `S3_REGION` / `S3_PREFIX` / `S3_USE_PATH_STYLE`",
+              "empty (`S3_USE_PATH_STYLE`: `true`)",
               "No",
-              "S3-compatible object storage for the Drive. Without endpoint and bucket, Postgres or memory is used."
+              "S3-compatible storage for Drive files. Without endpoint and bucket, Postgres is used, or memory when there is no database."
             ],
             [
-              "S3_ACCESS_KEY / S3_SECRET_KEY",
+              "`S3_ACCESS_KEY` / `S3_SECRET_KEY`",
               "empty",
               "No",
               "S3 credentials."
             ],
             [
-              "DRIVE_MAX_FILE_MB / DRIVE_QUOTA_MB",
-              "internal limits",
+              "`DRIVE_MAX_FILE_MB` / `DRIVE_QUOTA_MB`",
+              "`25` / `5120`",
               "No",
               "Maximum size per file and quota per organization, in MB."
             ],
             [
-              "VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT",
+              "`VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`",
               "empty",
               "No",
-              "All three enable Web Push; without them it is disabled."
+              "All three together enable Web Push notifications; without them they stay off."
             ],
             [
-              "PUSH_ALLOWED_HOSTS",
+              "`PUSH_ALLOWED_HOSTS`",
               "empty",
               "No",
-              "List of allowed push hosts."
+              "Push service hosts added to the default allow-list."
             ]
           ]
         }
@@ -1195,13 +1271,15 @@
       {
         "h": "Rate limits",
         "paras": [
-          "Authentication and command rate limits are built into the backend and the current configuration exposes no variables to tune them. What is configurable is TRUSTED_PROXIES: only the X-Forwarded-For header from those proxies is used to identify the client, so behind Caddy you should list the proxy network; without it, the client IP seen is the proxy's."
+          "Rate limits are built into the backend and have no tuning variables: for example, 10 sign-in attempts per 15 minutes and 120 commands per minute. The authentication limits are stored in Redis when `REDIS_URL` is set, and in process memory otherwise.",
+          "What you do configure is `TRUSTED_PROXIES`. Only the `X-Forwarded-For` header from those proxies is used to identify the client. Behind Caddy, list the proxy network: without it, every client shares the proxy's IP and the same counter."
         ]
       },
       {
         "h": "Frontend: build arguments",
         "paras": [
-          "The frontend is compiled with standalone output. NEXT_PUBLIC_* variables are baked in at build time as Dockerfile arguments (ARG); they are not read at runtime. Leaving them empty gives the recommended single-domain behavior: relative /api/v1 paths and a WebSocket derived from window.location."
+          "The frontend is compiled with standalone output. `NEXT_PUBLIC_*` variables are baked in at build time as `Dockerfile` arguments (`ARG`); changing them means rebuilding the image.",
+          "Leaving them empty gives the recommended single-domain behavior: the API at the relative path `/api/v1` and a WebSocket URL derived from `window.location`."
         ],
         "table": {
           "head": [
@@ -1212,34 +1290,36 @@
           ],
           "rows": [
             [
-              "NEXT_PUBLIC_API_URL",
+              "`NEXT_PUBLIC_API_URL`",
               "empty",
               "No",
-              "Absolute API base URL (for example https://app.example.com/api/v1). Empty: relative path."
+              "Absolute API base URL, for example `https://app.example.com/api/v1`. Empty: relative path."
             ],
             [
-              "NEXT_PUBLIC_WS_URL",
+              "`NEXT_PUBLIC_WS_URL`",
               "empty",
               "No",
-              "Absolute WebSocket URL (wss://app.example.com/ws). Empty: derived from window.location."
+              "Absolute WebSocket URL, for example `wss://app.example.com/ws`. Empty: derived from `window.location`."
             ],
             [
-              "NEXT_PUBLIC_MOCK",
+              "`NEXT_PUBLIC_MOCK`",
               "empty",
               "No",
-              "true runs the frontend with mock data, without a backend."
+              "With the value `true`, the frontend runs on mock data, without a backend."
             ]
           ]
         },
         "code": {
           "lang": "bash",
+          "title": "Build for separate domains",
           "text": "docker build \\\n  --build-arg NEXT_PUBLIC_API_URL=https://app.example.com/api/v1 \\\n  --build-arg NEXT_PUBLIC_WS_URL=wss://app.example.com/ws \\\n  -t aiworkforce-frontend ./frontend"
         }
       },
       {
         "h": "Email verification and trial accounts",
         "paras": [
-          "Two optional sign-in features. Email verification needs a working SMTP: with EMAIL_VERIFICATION=true and no valid SMTP the backend refuses to start, so a half-configured server cannot lock anyone out. Trial accounts let people try the app without signing up and expire on their own."
+          "Two optional sign-in features, both requiring `AUTH_ENABLED=true`. Email verification needs a working SMTP server: with `EMAIL_VERIFICATION=true` and no valid SMTP the backend refuses to start, so a half-configured server cannot lock anyone out.",
+          "Trial accounts let people use the app without signing up; each one gets its own organization and stops working on its own."
         ],
         "table": {
           "head": [
@@ -1249,63 +1329,63 @@
           ],
           "rows": [
             [
-              "EMAIL_VERIFICATION",
-              "false",
-              "New accounts must open a one-time link sent to their address before they can sign in. Needs AUTH_ENABLED, UI_BASE_URL and SMTP_* (or EMAIL_DEV_LOG)."
+              "`EMAIL_VERIFICATION`",
+              "`false`",
+              "New accounts must open a one-time link sent to their address before they can sign in. Needs `AUTH_ENABLED`, `UI_BASE_URL` and `SMTP_*` (or `EMAIL_DEV_LOG`)."
             ],
             [
-              "EMAIL_DEV_LOG",
-              "false",
+              "`EMAIL_DEV_LOG`",
+              "`false`",
               "Development only: verification links are written to the log instead of being sent."
             ],
             [
-              "SMTP_HOST",
-              "",
-              "SMTP server. Required with EMAIL_VERIFICATION unless EMAIL_DEV_LOG is on."
+              "`SMTP_HOST`",
+              "empty",
+              "SMTP server. Required with `EMAIL_VERIFICATION` unless `EMAIL_DEV_LOG` is on."
             ],
             [
-              "SMTP_PORT",
-              "465",
-              "465 uses implicit TLS; 587 uses STARTTLS."
+              "`SMTP_PORT`",
+              "`465`",
+              "`465` uses implicit TLS; `587` uses STARTTLS."
             ],
             [
-              "SMTP_TLS",
-              "tls (465) / starttls",
-              "tls, starttls or none (none only for a local relay)."
+              "`SMTP_TLS`",
+              "`tls` on port 465; `starttls` otherwise",
+              "`tls`, `starttls` or `none` (`none` only for a local relay)."
             ],
             [
-              "SMTP_USER / SMTP_PASS",
-              "",
-              "Credentials for the SMTP server; set both or neither."
+              "`SMTP_USER` / `SMTP_PASS`",
+              "empty",
+              "SMTP server credentials; set both or neither."
             ],
             [
-              "SMTP_FROM",
-              "",
-              "Sender, e.g. AI Workforce OS <no-reply@example.com>."
+              "`SMTP_FROM`",
+              "empty",
+              "Sender, for example `AI Workforce OS <no-reply@example.com>`. Required for SMTP verification."
             ],
             [
-              "TRIAL_ENABLED",
-              "false",
-              "Turns on POST /auth/trial: throwaway accounts with their own organization (needs AUTH_ENABLED)."
+              "`TRIAL_ENABLED`",
+              "`false`",
+              "Turns on `POST /api/v1/auth/trial`: throwaway accounts with their own organization."
             ],
             [
-              "TRIAL_TTL_HOURS",
-              "24",
-              "How long a trial account works."
+              "`TRIAL_TTL_HOURS`",
+              "`24`",
+              "Hours a trial account works."
             ],
             [
-              "TRIAL_PER_IP_PER_DAY",
-              "3",
-              "Trial accounts one client address may create per day."
+              "`TRIAL_PER_IP_PER_DAY`",
+              "`3`",
+              "Trial accounts one IP address may create per day."
             ],
             [
-              "TRIAL_GLOBAL_PER_DAY",
-              "300",
-              "Trial accounts created per day, all addresses together."
+              "`TRIAL_GLOBAL_PER_DAY`",
+              "`300`",
+              "Trial accounts created per day across all addresses."
             ],
             [
-              "TRIAL_EMAIL_DOMAIN",
-              "prueba.invalid",
+              "`TRIAL_EMAIL_DOMAIN`",
+              "`prueba.invalid`",
               "Domain of the generated trial addresses (no mailbox behind it)."
             ]
           ]

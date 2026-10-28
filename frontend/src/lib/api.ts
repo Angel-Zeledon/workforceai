@@ -1,7 +1,7 @@
 import { API_URL, MOCK } from "./config";
 import { authFetch } from "./session";
 import type {
-  Agent, AgentDetail, Approval, ChatMessage, Counterargument, Conversation, Message, Metrics, Report, Request, StandingApproval, Task, ActivityItem,
+  Agent, AgentDetail, Approval, ChatMessage, Counterargument, Conversation, Debate, Message, Metrics, Report, Request, StandingApproval, Task, ActivityItem,
 } from "./types";
 
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -62,11 +62,14 @@ export const api = {
     return list<any>(await call("GET", `/conversations/${conv}/messages?${q}`)).map((x) => toChatMessage(x, conv));
   },
   /** POST /messages: the backend decides who answers and replies over the WebSocket (chat.message / chat.typing / route.decided). */
-  postMessage: (conversation: string, text: string, attachments?: string[]) =>
-    call<{ message_id: string; turn_id: string }>("POST", "/messages", { conversation, text, ...(attachments?.length ? { attachments } : {}) }),
+  /** `customerId` (B12) scopes any request the turn creates to that customer (stored before the request exists). */
+  postMessage: (conversation: string, text: string, attachments?: string[], customerId?: string) =>
+    call<{ message_id: string; turn_id: string }>("POST", "/messages", { conversation, text, ...(attachments?.length ? { attachments } : {}), ...(customerId ? { customer_id: customerId } : {}) }),
   approvals: async () => list<Approval>(await call("GET", "/approvals")),
   reports: async () => list<Report>(await call("GET", "/reports")),
   report: (id: string) => call<Report>("GET", `/reports/${id}`),
+  /** B7: the internal auditor's stamp of a request (raw; parse with parseRequestAudit). */
+  requestAudit: (requestId: string) => call<unknown>("GET", `/requests/${encodeURIComponent(requestId)}/audit`),
   activity: async () => list<ActivityItem>(await call("GET", "/activity?limit=100")),
   metrics: () => call<Metrics>("GET", "/metrics"),
   postRequest: (text: string) => call<{ request_id: string }>("POST", "/requests", { text }),
@@ -79,5 +82,9 @@ export const api = {
       always ? { decision, note, always_allow: true, always_allow_any_agent: always.anyAgent, scope: always.scope ?? "project" } : { decision, note }),
   /** Devil's advocate (B8): generates the advisory review of a high-risk approval on the first call and returns the cached one afterwards. */
   counterargument: (id: string, locale?: string) => call<Counterargument>("POST", `/approvals/${id}/counterargument`, locale ? { locale } : {}),
+  /** Team debates (B5): newest first; advisory, the transcript is untrusted model output. */
+  debates: async (requestId?: string) => list<Debate>(await call("GET", `/debates${requestId ? `?request_id=${encodeURIComponent(requestId)}` : ""}`)),
+  debate: (id: string) => call<Debate>("GET", `/debates/${encodeURIComponent(id)}`),
+  startDebate: (body: { topic: string; details?: string; options?: string[]; agent_ids?: string[]; locale?: string }) => call<Debate>("POST", "/debates", body),
   reset: () => call<unknown>("POST", "/demo/reset"),
 };

@@ -17,8 +17,6 @@ import (
 	"aiworkforce/backend/internal/api"
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
-	"aiworkforce/backend/internal/scim"
-	"aiworkforce/backend/internal/sso"
 	"aiworkforce/backend/internal/config"
 	"aiworkforce/backend/internal/counters"
 	"aiworkforce/backend/internal/domain"
@@ -28,11 +26,15 @@ import (
 	redisinfra "aiworkforce/backend/internal/infrastructure/redis"
 	"aiworkforce/backend/internal/infrastructure/runtime"
 	"aiworkforce/backend/internal/mailer"
+	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
-	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/rewards"
 	"aiworkforce/backend/internal/roles"
+	"aiworkforce/backend/internal/scim"
+	"aiworkforce/backend/internal/slackapp"
+	"aiworkforce/backend/internal/sso"
+	"aiworkforce/backend/internal/trust"
 	"aiworkforce/backend/internal/webhooks"
 )
 
@@ -107,10 +109,19 @@ func run(log *slog.Logger) error {
 	notifyObs := &notify.Observer{Inner: pub}
 	pub = notifyObs
 
+	// Two-way Slack channel for humans: posts approval requests with buttons and keeps them up to date (bound later).
+	slackObs := &slackapp.Observer{Inner: pub}
+	pub = slackObs
+
 	// Coins: the observer sees task.completed / project.status_changed after
 	// they were published and pays them in the background (internal/rewards).
 	rewardsObs := &rewards.Observer{Inner: pub}
 	pub = rewardsObs
+
+	// Trust ladder (B1): after an approval is resolved, a task ends or an agent is hired, the observer re-evaluates
+	// that agent in the background (suggested promotions, automatic demotions). Bound once the service exists.
+	trustObs := &trust.Observer{Inner: pub}
+	pub = trustObs
 
 	// --- governance (BEGIN): public webhook events (request.done, approval.requested, report.created) ---
 	whSvc := &webhooks.Service{Log: log}
@@ -179,6 +190,9 @@ func run(log *slog.Logger) error {
 	approvals.Observer = cw.ctl
 	orch.SetAnomalyObserver(cw.ctl)
 
+	// Slack channel (bring-your-own app, secrets sealed with the vault; people mapped through the accounts).
+	slackSvc := wireSlack(log, cfg, pg, store, approvals, authStore, cw.ctl, cw.vault, rec, slackObs)
+
 	// Approval rules and the policy engine (organization rules as data, applied
 	// to every tool request) and the tamper-evident audit trail.
 	if cs, ok := store.(application.ConfigStore); ok {
@@ -209,7 +223,9 @@ func run(log *slog.Logger) error {
 	}
 
 	// Projects (whole workflows with parallel work) and agent workspaces (artifacts).
-	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy)
+	custSvc := newCustomers(cfg, log, pg, store, rec, orch, cw) // B12 customer district (consulted by the drive and the projects)
+	ws := wireWorkspaces(ctx, cfg, log, pg, store, rt, rec, approvals, orch, orgCfg, cw, modelPolicy, custSvc)
+	bindCustomers(custSvc, ws, store)
 	skillsSvc := wireSkills(cfg, log, pg, store, rec, orch, orgCfg, cw, ws.drive)
 	webSvc := wireWeb(log, pg, rec, cw, orch)
 	// >>> corporate organization model (orgchart.go): installed after the projects gate, which it wraps
@@ -233,8 +249,28 @@ func run(log *slog.Logger) error {
 			devilsSvc.Locale = func(c context.Context) string { return orgCfg.Locale(c, "") }
 		}
 	}
+	// Rehearsal (B9): agents show what they would have sent or paid without doing it. The Tool Gateway enforces it
+	// on its own (fail closed), so an approval, the outbox or a held send never turns a rehearsal into a real effect.
+	var rehearsalSvc *application.RehearsalService
+	if rs, ok := store.(application.RehearsalStore); ok {
+		rehearsalSvc = &application.RehearsalService{Store: rs, Rec: rec, Cfg: cfg.App, Suspects: cw.sus}
+		if runs, ok := store.(application.RunStore); ok {
+			rehearsalSvc.Runs = runs
+		}
+		orch.SetRehearsal(rehearsalSvc)
+		if cw.gw != nil {
+			cw.gw.Rehearsal = rehearsalSvc
+		}
+	}
+	// Team debates (B5): advisory, bounded debate before a flagged decision (and on demand).
+	debatesSvc := wireDebates(store, rt, orch, rec, cfg.App, orgCfg)
 	rewardsSvc := wireRewards(log, pg, store, rec, ws.projects)
 	qualitySvc := wireQuality(cfg, log, pg, store, rec)
+	trustSvc := wireTrust(cfg, log, pg, store, rec, cw.ctl, qualitySvc)
+	if trustSvc != nil {
+		trustObs.Bind(trustSvc)
+	}
+	awaySvc := wireAway(cfg, log, pg, store)
 	chats := wireChatHistory(cfg.App, store, rec, ws.projects)
 	rewardsObs.Bind(rewardsSvc)
 	// Slash commands: /clear and /compact keep their state in the conversation context store.
@@ -253,6 +289,7 @@ func run(log *slog.Logger) error {
 		}
 	}
 	memorySvc := wireMemory(ctx, log, pg, store, rec, orch, cw, ws, orgIDs, cfg.App.OrgID)
+	bindCustomerHistory(custSvc, ws, store, memorySvc) // B12: earlier work is assigned to a customer explicitly, never silently
 	if n, err := orch.Recover(ctx, orgIDs); err != nil {
 		log.Warn("recover in-progress requests", "err", err)
 	} else if n > 0 {
@@ -275,13 +312,32 @@ func run(log *slog.Logger) error {
 		initiativeSvc = &application.InitiativeService{Store: is, Submit: orch, Rec: rec, Cfg: cfg.App}
 		orch.SetInitiative(initiativeSvc)
 	}
+	// Rituals (B4): daily stand-up and weekly retro, deterministic from tasks and approvals; schedule off until a person turns it on.
+	ritualsSvc := wireRituals(ctx, cfg, log, pg, store, rec, orch, orgCfg, qualitySvc, profiles)
 
-	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
-		Standing: standingSvc, Initiative: initiativeSvc, DevilsAdvocate: devilsSvc,
-		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
+	// AI payroll and return (B15): AI cost per agent next to the estimated human time, with the org's own model.
+	var roiSvc *application.ROIService
+	if rs, ok := store.(application.ROIStore); ok {
+		roiSvc = &application.ROIService{Store: rs, Core: store, Rec: rec, Cfg: cfg.App}
+	}
+
+	// Metric signals (margin / sales / cash in sheets, spend pace, aging approvals, quality drop): same budget, same path.
+	initiativeScan := wireInitiativeScanner(initiativeSvc, store, orch, ws.artifacts, qualitySvc, cw.ctl, orgCfg)
+	startInitiativeScan(ctx, log, initiativeScan, store, cfg.App.OrgID, initiativeScanInterval(log))
+
+	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, ROI: roiSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
+		Standing: standingSvc, Initiative: initiativeSvc, InitiativeScanner: initiativeScan, DevilsAdvocate: devilsSvc, Rehearsal: rehearsalSvc, Debates: debatesSvc,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Trust: trustSvc, Rituals: ritualsSvc, Away: awaySvc, Customers: custSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
+	deps.Slack = slackSvc
+	deps.LinkImports = wireLinkImports(ctx, cfg, log, pg, rec, cw, ws.drive, custSvc, orgLister(store)) // import from a link (single line)
+	deps.VendorIntegrations = &cfg.VendorIntegrations // v1: vendor-specific integrations (VENDOR_INTEGRATIONS, default off)
+	// Client portal (B13): read-only share links of a project with the firm's branding.
+	deps.Portal, deps.PortalLimiter, deps.TrustedProxies = wirePortal(cfg, pg, rec, ws.projects, ws.artifacts, authStore), limiter, cfg.TrustedProxies
+	// Data inboxes: a URL + secret token any software can push JSON, CSV or files to; each push is a tainted drive file.
+	deps.Inboxes, deps.InboxLimiter, deps.InboxBaseURL = wireInboxes(cfg, pg, rec, cw.ctl, custSvc, ws.drive), limiter, inboxBaseURL(cfg.UIBaseURL)
 	deps.Presence, deps.PeopleChat = wirePeople(ctx, pg, pub, queries, orch) // human presence + people chat
 	if meetingsSvc != nil && deps.PeopleChat != nil {
 		meetingsSvc.People = meetingPeople{dir: deps.PeopleChat.Store} // attendee picker: the same directory as the people chat
@@ -321,8 +377,8 @@ func run(log *slog.Logger) error {
 		}
 		idw.startJanitor(ctx, log)
 		svc, err := auth.NewService(auth.Config{
-			Policy: idw.sso, // per-organization sign-in policy (require MFA, enforce SSO)
-			AutoJoin: idw.sso, // join the organization that verified your e-mail domain, once the address is proven
+			Policy:              idw.sso, // per-organization sign-in policy (require MFA, enforce SSO)
+			AutoJoin:            idw.sso, // join the organization that verified your e-mail domain, once the address is proven
 			RequireVerification: cfg.EmailVerification, Mailer: authMailer, AppURL: cfg.UIBaseURL,
 			TrialEnabled: cfg.TrialEnabled, TrialTTL: time.Duration(cfg.TrialTTLHours) * time.Hour, TrialGlobalPerDay: cfg.TrialGlobalPerDay, TrialEmailDomain: cfg.TrialEmailDomain,
 			Logf:                func(f string, a ...any) { log.Warn(fmt.Sprintf(f, a...)) },

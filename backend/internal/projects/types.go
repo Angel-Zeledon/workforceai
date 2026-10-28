@@ -12,6 +12,7 @@ package projects
 import (
 	"time"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/demodata"
 	"aiworkforce/backend/internal/domain"
 )
@@ -102,6 +103,9 @@ type Node struct {
 	// of its quality review (Q1, additive).
 	Acceptance []string       `json:"acceptance,omitempty"`
 	Review     *domain.Review `json:"review,omitempty"`
+	// Audit is the internal auditor's stamp when this node is a finished audit
+	// task (B7, additive): verified | inconsistency | unverified with findings.
+	Audit *application.TaskAudit `json:"audit,omitempty"`
 	// PlanChangeID is the plan change that added this node (Q2, additive).
 	PlanChangeID string `json:"plan_change_id,omitempty"`
 	// Superseded is "replaced" or "removed" when a plan change took the node out
@@ -217,6 +221,8 @@ type Summary struct {
 	ObjectivesCnt int        `json:"objectives_count"`
 	// RequestID is the orchestrator request behind a launched project (additive).
 	RequestID string `json:"request_id,omitempty"`
+	// CustomerID is the customer the project works for (B12, additive).
+	CustomerID string `json:"customer_id,omitempty"`
 	// BudgetWarnPct is the highest budget early-warning threshold already crossed
 	// (percent of the approved budget, e.g. 80); 0 when none (additive, W5).
 	BudgetWarnPct float64 `json:"budget_warn_pct,omitempty"`
@@ -453,6 +459,8 @@ type NewProject struct {
 	Params     map[string]string `json:"params,omitempty"`
 	BudgetUSD  float64           `json:"budget_usd,omitempty"`
 	Locale     string            `json:"locale,omitempty"`
+	// CustomerID (B12, optional) scopes the project to one customer of the organization.
+	CustomerID string `json:"customer_id,omitempty"`
 }
 
 type LaunchBody struct {
@@ -552,6 +560,9 @@ type Record struct {
 	Estimate         *Estimate         `json:"estimate"`
 	StructureVersion int               `json:"structure_version"`
 	RequestID        string            `json:"request_id,omitempty"`
+	// CustomerID (B12) is the customer the project works for ("" = none). It is set at creation and the
+	// project's request is scoped to it at launch.
+	CustomerID string `json:"customer_id,omitempty"`
 	// Decisions maps a gate task id to "approved" or "rejected".
 	Decisions  map[string]string `json:"decisions,omitempty"`
 	Error      string            `json:"error,omitempty"`

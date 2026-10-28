@@ -2,8 +2,8 @@
 
 Pure logic (no network, no CrewAI import) so it can be tested without real keys.
 
-Providers: ``deepseek`` (the platform default), ``anthropic`` (Claude), ``openai``, ``kimi`` (Moonshot,
-OpenAI-compatible) and ``custom`` (one OpenAI-compatible endpoint: regional, self-hosted vLLM/Ollama,
+Providers: ``gemini`` (Google, through its OpenAI-compatible endpoint; first in the default order),
+``deepseek``, ``anthropic`` (Claude), ``openai``, ``kimi`` (Moonshot, OpenAI-compatible) and ``custom`` (one OpenAI-compatible endpoint: regional, self-hosted vLLM/Ollama,
 Azure-style gateway...). A provider is "configured" when its API key (and, for custom, its base URL) is
 present in the environment, OR when the request carries the organization's own key for it
 (bring-your-own-model, ``provider_credentials``): the organization's key always wins over the environment.
@@ -11,7 +11,7 @@ present in the environment, OR when the request carries the organization's own k
 Candidate order for a call (first match wins as the primary, the rest are fallbacks):
   1. MODEL_PROVIDER_ORDER_<ROLE>   (per role/task kind, e.g. MODEL_PROVIDER_ORDER_LEGAL)
   2. request.preferred_providers   (optional field sent by the backend)
-  3. MODEL_PROVIDER_ORDER          (global; default: deepseek,anthropic,custom)
+  3. MODEL_PROVIDER_ORDER          (global; default: gemini,deepseek,anthropic,openai,kimi,custom)
 Later sources only add providers missing from the earlier ones, so every configured and
 allowed provider is a fallback. The DATA POLICY is applied after ordering and BEFORE any
 send: ALLOWED_PROVIDERS (env, operator ceiling) intersected with request.allowed_providers.
@@ -23,22 +23,28 @@ import re
 from dataclasses import dataclass, field
 from typing import Iterable
 
-KNOWN_PROVIDERS: tuple[str, ...] = ("deepseek", "anthropic", "openai", "kimi", "custom")
-DEFAULT_ORDER: tuple[str, ...] = KNOWN_PROVIDERS  # deepseek first (platform default), legacy order kept
+KNOWN_PROVIDERS: tuple[str, ...] = ("deepseek", "anthropic", "openai", "kimi", "gemini", "custom")
+# Gemini first: it is the platform model when GEMINI_API_KEY is set. Only configured providers take part, so an
+# install without that key keeps the previous order (deepseek, anthropic, openai, kimi, custom).
+DEFAULT_ORDER: tuple[str, ...] = ("gemini", "deepseek", "anthropic", "openai", "kimi", "custom")
 
 KIMI_BASE_URL = "https://api.moonshot.ai/v1"
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+# Providers reached through an OpenAI-compatible endpoint (litellm prefix openai/ + base_url).
+_OPENAI_COMPATIBLE = ("kimi", "gemini", "custom")
 DEFAULT_MODELS = {
     "anthropic": "anthropic/claude-sonnet-5-5",
     "deepseek": "deepseek/deepseek-chat",
     "openai": "openai/gpt-4.1",
     "kimi": "openai/kimi-k2-0905-preview",  # Moonshot speaks the OpenAI protocol: litellm prefix is openai/
+    "gemini": "openai/gemini-3.6-flash",  # Google's OpenAI-compatible endpoint (gemini-3.5-flash routes here)
     "custom": "openai/custom-model",  # overridden by CUSTOM_LLM_MODEL
 }
 _KEY_ENV = {"anthropic": "ANTHROPIC_API_KEY", "deepseek": "DEEPSEEK_API_KEY", "openai": "OPENAI_API_KEY",
-            "kimi": "KIMI_API_KEY", "custom": "CUSTOM_LLM_API_KEY"}
+            "kimi": "KIMI_API_KEY", "gemini": "GEMINI_API_KEY", "custom": "CUSTOM_LLM_API_KEY"}
 # litellm prefix per provider. Kimi and custom are OpenAI-compatible endpoints reached through base_url.
 _LITELLM_PREFIX = {"deepseek": "deepseek", "anthropic": "anthropic", "openai": "openai", "kimi": "openai",
-                   "custom": "openai"}
+                   "gemini": "openai", "custom": "openai"}
 
 
 def litellm_model(provider: str, name: str) -> str:
@@ -47,7 +53,7 @@ def litellm_model(provider: str, name: str) -> str:
     prefix = _LITELLM_PREFIX.get(provider, provider)
     if not name:
         return DEFAULT_MODELS.get(provider, f"{prefix}/model")
-    if provider in ("kimi", "custom"):
+    if provider in _OPENAI_COMPATIBLE:
         return name if name.startswith("openai/") else f"openai/{name.removeprefix(provider + '/')}"
     return name if name.startswith(prefix + "/") else f"{prefix}/{name}"
 
@@ -163,8 +169,8 @@ def _model_for(provider: str, first_in_order: bool) -> str:
             return DEFAULT_MODELS["custom"]
         return name if "/" in name else f"openai/{name}"
     name = (os.getenv(f"{provider.upper()}_MODEL") or "").strip()
-    if provider == "kimi":
-        return litellm_model("kimi", name)
+    if provider in ("kimi", "gemini"):
+        return litellm_model(provider, name)
     if not name and legacy:
         # Legacy MODEL: "deepseek/x" targets deepseek; a bare name targets the primary provider.
         if "/" in legacy and legacy.split("/", 1)[0].lower() == provider:
@@ -186,6 +192,8 @@ def config_from_credential(cred: object) -> ProviderConfig | None:
     base = (getattr(cred, "base_url", None) or "").strip() or None
     if pid == "kimi":
         base = base or KIMI_BASE_URL
+    if pid == "gemini":
+        base = base or GEMINI_BASE_URL
     if pid == "custom" and not base:
         return None
     if pid == "deepseek" or pid == "anthropic":
@@ -258,6 +266,10 @@ def configured_providers() -> list[ProviderConfig]:
             if not key:
                 continue
             base = (os.getenv("KIMI_BASE_URL") or "").strip() or KIMI_BASE_URL
+        elif p == "gemini":
+            if not key:
+                continue
+            base = (os.getenv("GEMINI_BASE_URL") or "").strip() or GEMINI_BASE_URL
         elif p == "openai":
             if not key:
                 continue
@@ -269,9 +281,9 @@ def configured_providers() -> list[ProviderConfig]:
 
 
 def default_provider(configs: list[ProviderConfig] | None = None) -> str:
-    """The provider used first: DeepSeek when its key is present, otherwise Anthropic, otherwise the
-    first other configured provider ("" when none). The default global order is deepseek, anthropic,
-    custom, so this is the head of that list; an operator who sets MODEL_PROVIDER_ORDER overrides it."""
+    """The provider used first: Gemini when its key is present, otherwise DeepSeek, otherwise Anthropic, otherwise
+    the first other configured provider ("" when none). That is the head of the default global order; an operator
+    who sets MODEL_PROVIDER_ORDER overrides it."""
     configs = configured_providers() if configs is None else configs
     return configs[0].id if configs else ""
 
@@ -333,9 +345,38 @@ _NO_BALANCE = re.compile(r"insufficient.?balance|insufficient_quota|exceeded you
                          r"payment required|\b402\b|billing hard limit|no remaining (quota|credit)", re.I)
 
 
+# Gemini answers a per-minute rate limit with the same "You exceeded your current quota" text as an empty account,
+# but adds "Please retry in 12.3s" / a retryDelay. That one is transient. It is final when the model is not in the
+# key's plan ("limit: 0") or the wait is long: the free tier's daily cap (live, 2026-10-27: 20 requests per day per
+# model) says "Please retry in 11h27m33s" / "retryDelay: '41253s'", and retrying in seconds cannot help.
+_RETRY_HINT = re.compile(r"retry in \d|retrydelay", re.I)
+_ZERO_LIMIT = re.compile(r"limit:\s*0\b", re.I)
+_RETRY_IN = re.compile(r"retry in\s+(?:(\d+)h)?\s*(?:(\d+)m(?!s))?\s*(?:([\d.]+)s)?", re.I)
+_RETRY_DELAY = re.compile(r"retrydelay\W+(\d+(?:\.\d+)?)s", re.I)
+_PER_DAY = re.compile(r"per\s?day", re.I)
+MAX_TRANSIENT_WAIT_S = 120.0
+
+
+def retry_after_s(text: str) -> float | None:
+    """The wait the provider asks for, in seconds ("retry in 1h2m3.5s" or retryDelay "3723s"); None if absent."""
+    m = _RETRY_DELAY.search(text)
+    if m:
+        return float(m.group(1))
+    m = _RETRY_IN.search(text)
+    if m and any(m.groups()):
+        h, mins, s = m.groups()
+        return int(h or 0) * 3600 + int(mins or 0) * 60 + float(s or 0)
+    return None
+
+
 def is_no_balance(exc: BaseException) -> bool:
-    """The provider account has no money left: never worth a retry on the same provider."""
-    return bool(_NO_BALANCE.search(f"{type(exc).__name__} {exc}"))
+    """The provider account has no money (or quota) left for now: never worth a retry on the same provider."""
+    text = f"{type(exc).__name__} {exc}"
+    if _RETRY_HINT.search(text) and not _ZERO_LIMIT.search(text) and not _PER_DAY.search(text):
+        wait = retry_after_s(text)
+        if wait is None or wait <= MAX_TRANSIENT_WAIT_S:
+            return False  # a short rate limit that tells us when to come back: transient
+    return bool(_NO_BALANCE.search(text))
 
 
 def is_transient(exc: BaseException) -> bool:
@@ -353,9 +394,10 @@ _TEMPERATURES = {
     "deepseek": (0.1, DEFAULT_TEMPERATURE, 1.0),
     "openai": (0.1, DEFAULT_TEMPERATURE, 0.9),
     "kimi": (0.1, DEFAULT_TEMPERATURE, 0.8),  # Moonshot accepts 0..1
+    "gemini": (0.1, DEFAULT_TEMPERATURE, 1.0),  # Gemini accepts 0..2
     "custom": (0.1, DEFAULT_TEMPERATURE, 0.8),
 }
-_TEMPERATURE_MAX = {"anthropic": 1.0, "deepseek": 1.5, "openai": 1.0, "kimi": 1.0, "custom": 1.0}
+_TEMPERATURE_MAX = {"anthropic": 1.0, "deepseek": 1.5, "openai": 1.0, "kimi": 1.0, "gemini": 2.0, "custom": 1.0}
 
 
 def fixed_temperature_model(model: str) -> bool:
@@ -381,8 +423,9 @@ def temperature_for(provider: str, creativity: str = "") -> float:
 # off unless the operator says otherwise (KIMI_VISION / CUSTOM_LLM_VISION = true).
 ERR_NO_VISION_PROVIDER = "no_vision_provider"  # stable: no allowed provider can see images (the call goes on as text)
 
-_VISION_DEFAULT = {"anthropic": True, "openai": True, "deepseek": False, "kimi": False, "custom": False}
-_VISION_ENV = {"kimi": "KIMI_VISION", "custom": "CUSTOM_LLM_VISION", "deepseek": "DEEPSEEK_VISION"}
+_VISION_DEFAULT = {"anthropic": True, "openai": True, "gemini": True, "deepseek": False, "kimi": False, "custom": False}
+_VISION_ENV = {"kimi": "KIMI_VISION", "custom": "CUSTOM_LLM_VISION", "deepseek": "DEEPSEEK_VISION",
+               "gemini": "GEMINI_VISION"}
 # OpenAI models without image input (the gpt-4o / gpt-4.1 / gpt-5 / o-series families see images).
 _OPENAI_TEXT_ONLY = re.compile(r"^(gpt-3\.5|gpt-4-0613|gpt-4-32k|o1-mini|o3-mini|text-|davinci|babbage)", re.I)
 _ANTHROPIC_TEXT_ONLY = re.compile(r"^claude-(instant|2)", re.I)
@@ -396,7 +439,7 @@ def _truthy_env(name: str) -> bool | None:
 
 
 def vision_capable(cfg: ProviderConfig) -> bool:
-    """Whether this provider + model accepts images (anthropic: yes; openai gpt-4.1/4o/5: yes; deepseek-chat: no;
+    """Whether this provider + model accepts images (anthropic: yes; openai gpt-4.1/4o/5: yes; gemini: yes; deepseek-chat: no;
     kimi/custom: KIMI_VISION / CUSTOM_LLM_VISION, default no)."""
     env = _VISION_ENV.get(cfg.id)
     forced = _truthy_env(env) if env else None

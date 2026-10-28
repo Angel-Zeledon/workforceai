@@ -132,6 +132,10 @@ func (s *Service) Launch(ctx context.Context, id string, b LaunchBody) (Summary,
 		}
 		return Summary{}, fmt.Errorf("%w: invalid_plan (%s)", domain.ErrInvalid, strings.Join(slices.Compact(codes), ", "))
 	}
+	// B12: the last plan-time check of the artifacts a customer's project references (the tasks filter again).
+	if err := s.checkArtifactRefs(ctx, rec); err != nil {
+		return Summary{}, err
+	}
 	est := estimatePlanWith(rec.Nodes, rec.Objectives, s.estimator(ctx, rec.Planner))
 	if b.ApprovedBudgetUSD < est.Total.P50USD && !b.AcknowledgeUnderbudget {
 		return Summary{}, fmt.Errorf("%w: underbudget: the approved budget $%.4f is below the P50 estimate $%.4f", domain.ErrConflict, b.ApprovedBudgetUSD, est.Total.P50USD)
@@ -158,7 +162,9 @@ func (s *Service) Launch(ctx context.Context, id string, b LaunchBody) (Summary,
 
 	s.launching.Add(1)
 	defer s.launching.Add(-1)
-	reqID, err := s.cfg.Orch.SubmitPlan(application.WithRunParallel(application.WithWorkPriority(application.WithBudgetCap(ctx, rec.BudgetUSD), application.PriorityProject), rec.MaxParallel), rec.Goal, planOf(rec))
+	// B12: the request of a customer's project is scoped to that customer before anything runs.
+	sctx := application.WithCustomer(ctx, rec.CustomerID)
+	reqID, err := s.cfg.Orch.SubmitPlan(application.WithRunParallel(application.WithWorkPriority(application.WithBudgetCap(sctx, rec.BudgetUSD), application.PriorityProject), rec.MaxParallel), rec.Goal, planOf(rec))
 	if err != nil {
 		return Summary{}, err
 	}

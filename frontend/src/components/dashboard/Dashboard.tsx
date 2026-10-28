@@ -4,6 +4,7 @@ import { useStore } from "@/lib/store";
 import { trOr, useT } from "@/lib/i18n";
 import { fmtTime, fmtUsd, roleMeta, taskStatusLabel, TASK_STATUS_COLOR } from "@/lib/meta";
 import { resolveAgent, usePreferences } from "@/lib/preferences";
+import { openInOffice } from "@/lib/navBridge";
 import type { Task } from "@/lib/types";
 import { ActivityFeed } from "../ActivityFeed";
 import { ApprovalCard } from "../ApprovalsTray";
@@ -13,10 +14,14 @@ import { ReportView } from "../ReportView";
 import { DashboardFiles } from "../workspace/DashboardFiles";
 import { BudgetLimitsPanel, CostBreakdownPanel } from "../cost/CostBreakdownPanel";
 import { EstimateCard } from "../cost/EstimateCard";
+import { RoiPanel } from "../cost/RoiPanel";
 import { QualityOverview } from "../quality/QualityOverview";
+import { AuditDetail } from "../quality/AuditStamp";
+import { taskAuditOf } from "@/lib/auditLogic";
+import { CustomerDistrict } from "../customers/CustomerDistrict";
 import { Card, Dot, Empty, Progress, ReasonChip, StateBadge, TaskBadge, readable, timeAgo, useAgentColor, useAgentName } from "../ui";
 
-const SECTIONS = ["overview", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "quality", "costs"] as const;
+const SECTIONS = ["overview", "customers", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "quality", "costs"] as const;
 type Section = (typeof SECTIONS)[number];
 
 function Kpi({ label, value, sub, color = "#151b26" }: { label: string; value: string | number; sub?: string; color?: string }) {
@@ -48,6 +53,7 @@ export function Dashboard() {
       </nav>
       <div className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">
         {section === "overview" && <Overview go={setSection} />}
+        {section === "customers" && <CustomerDistrict />}
         {section === "requests" && <Requests />}
         {section === "tasks" && <Tasks />}
         {section === "agents" && <Agents />}
@@ -72,7 +78,6 @@ function Overview({ go }: { go: (s: Section) => void }) {
   const tasksMap = useStore((s) => s.tasks);
   const approvals = Object.values(approvalsMap).filter((a) => a.status === "pending");
   const select = useStore((s) => s.select);
-  const setMode = useStore((s) => s.setMode);
   const active = Object.values(agents).filter((a) => !["idle", "completed"].includes(a.state)).length;
   const budgetPct = m ? Math.min(100, (m.cost_usd / Math.max(0.01, m.budget_usd)) * 100) : 0;
   return (
@@ -94,7 +99,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
               const meta = roleMeta(a.role);
               const v = resolveAgent(a, agentPrefs[id]);
               return (
-                <button key={id} onClick={() => { select(id); setMode("office"); }} className="rounded-md border border-line bg-panel2 p-3 text-left transition hover:border-line-strong">
+                <button key={id} onClick={() => openInOffice(id, select)} className="rounded-md border border-line bg-panel2 p-3 text-left transition hover:border-line-strong">
                   <div className="flex items-center justify-between"><span className="flex items-center gap-2 text-[13px] font-semibold text-ink"><Dot color={v.color} />{v.name}</span><StateBadge state={a.state} /></div>
                   <div className="mt-1 truncate text-[11px] text-mute">{v.title}</div>
                   <div className="mt-1.5 truncate text-[11.5px] text-ink2">{a.activity || "—"}</div>
@@ -246,7 +251,7 @@ function Tasks() {
                   <tr key={`${t.id}-o`} className="border-b border-line/60 bg-bg/50"><td colSpan={6} className="p-3 text-[12px] text-ink2">
                     <p className="mb-2 text-mute">{t.description}</p>
                     <ReasonChip agentId={t.agent_id} reason={t.assigned_reason} className="mb-2" />
-                    {t.output ? (<div className="space-y-1"><div className="font-semibold text-ink">{t.output.summary}</div>{t.output.findings.map((f, i) => <div key={i}>• {f}</div>)}
+                    {t.output ? (<div className="space-y-1">{(() => { const a = taskAuditOf(t); return a ? <AuditDetail audit={a} testId={`task-audit-${t.id}`} /> : null; })()}<div className="font-semibold text-ink">{t.output.summary}</div>{t.output.findings.map((f, i) => <div key={i}>• {f}</div>)}
                       {Object.keys(t.output.metrics).length > 0 && <div className="flex flex-wrap gap-2 pt-1">{Object.entries(t.output.metrics).map(([k, v]) => <span key={k} className="rounded bg-mute/[0.08] px-2 py-0.5 font-mono text-[11px]">{k}: {String(v)}</span>)}</div>}
                       {t.output.recommendations.length > 0 && <div className="pt-1 text-mute">{tt("dash.tasks.recommendations")}: {t.output.recommendations.join(" · ")}</div>}
                       <div className="text-mute">{tt("common.confidence")} {Math.round(t.output.confidence * 100)}%</div></div>) : <span className="text-mute">{tt("dash.tasks.noOutput")}</span>}
@@ -267,7 +272,6 @@ function Agents() {
   const agentPrefs = usePreferences((s) => s.prefs.agents);
   const order = useStore((s) => s.agentOrder);
   const select = useStore((s) => s.select);
-  const setMode = useStore((s) => s.setMode);
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {order.map((id) => {
@@ -286,7 +290,7 @@ function Agents() {
               ))}
             </div>
             <div className="mt-3 flex items-center justify-between text-[11px] text-mute"><span>{t("dash.agents.autonomy")}: {a.autonomy}</span>
-              <button className="text-accent" onClick={() => { select(id); setMode("office"); }}>{t("dash.agents.viewInOffice")}</button></div>
+              <button className="text-accent" onClick={() => openInOffice(id, select)}>{t("dash.agents.viewInOffice")}</button></div>
           </Card>
         );
       })}
@@ -380,6 +384,7 @@ function Costs() {
         ))}</tbody></table> : <Empty>{tt("dash.costs.noRequests")}</Empty>}
       </Card>
       <div className="xl:col-span-2"><CostBreakdownPanel /></div>
+      <div className="xl:col-span-2"><RoiPanel /></div>
       <BudgetLimitsPanel />
       <Card title={tt("dash.costs.errorsTitle", { count: errors.length + failed.length })}>
         {errors.length + failed.length === 0 ? <Empty>{tt("dash.costs.noErrors")}</Empty> : (

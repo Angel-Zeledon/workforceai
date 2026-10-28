@@ -5,14 +5,16 @@ import { useConnections, type ConnTab } from "@/lib/connections/store";
 import type { Connection } from "@/lib/connections/types";
 import { Btn, Card, Empty } from "../ui";
 import { CapabilitiesTab } from "./CapabilitiesTab";
+import { DataInboxesTab } from "./DataInboxesTab";
 import { ConnectionDrawer } from "./ConnectionDrawer";
 import { ConnectWizard } from "./ConnectWizard";
 import { GrantMatrix } from "./GrantMatrix";
 import { LimitsTab } from "./LimitsTab";
+import { LinkImportsSection } from "./LinkImportsSection";
 import { CapChip, StatusBadge, useViewer } from "./shared";
 import { UsageTable } from "./UsageTable";
 
-const TABS: ConnTab[] = ["connections", "matrix", "capabilities", "usage", "limits"];
+const TABS: ConnTab[] = ["connections", "inboxes", "matrix", "capabilities", "usage", "limits"];
 const AGE_WARNING_DAYS = 180;
 
 function ConnectionCard({ c, onOpen }: { c: Connection; onOpen: () => void }) {
@@ -28,7 +30,9 @@ function ConnectionCard({ c, onOpen }: { c: Connection; onOpen: () => void }) {
           <div className="truncate text-sm font-semibold">{c.label}</div>
           <div className="truncate text-[11px] text-mute">{t(`conn.provider.${c.provider}`)} · <span data-testid="conn-account-label">{c.account_label ?? "—"}</span></div>
         </div>
-        <StatusBadge status={c.status} />
+        {c.provider_disabled
+          ? <span data-testid="conn-provider-disabled" title={t("conn.providerDisabledHint")} className="shrink-0 rounded-full bg-slate-500/15 px-2 py-[2px] text-[10px] font-semibold uppercase text-ink2">{t("conn.providerDisabled")}</span>
+          : <StatusBadge status={c.status} />}
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
         {c.granted_capabilities.map((cap) => <CapChip key={cap} cap={cap} risk={defs.find((d) => d.id === cap)?.risk ?? "low"} />)}
@@ -71,7 +75,7 @@ export function ConnectionsView() {
         {TABS.map((k) => (
           <button key={k} role="tab" aria-selected={tab === k} data-testid={`conn-tab-${k}`} onClick={() => setTab(k)}
             className={`rounded-md px-4 py-1.5 text-xs font-medium transition ${tab === k ? "bg-accent-soft text-accent" : "text-mute hover:text-ink"}`}>
-            {t(`conn.tab.${k}`)}
+            {k === "inboxes" ? t("dataInbox.tab") : t(`conn.tab.${k}`)}
           </button>
         ))}
       </div>
@@ -83,10 +87,12 @@ export function ConnectionsView() {
             </div>
           )
         )}
+        {tab === "connections" && <LinkImportsSection />}
         {tab === "matrix" && <GrantMatrix />}
         {tab === "capabilities" && <CapabilitiesTab />}
         {tab === "usage" && <Card title={t("conn.tab.usage")}><UsageTable /></Card>}
         {tab === "limits" && <LimitsTab />}
+        {tab === "inboxes" && <DataInboxesTab isAdmin={isAdmin} />}
       </div>
       {wizard && <ConnectWizard onClose={() => setWizard(false)} />}
       {openId && connections[openId] && <ConnectionDrawer id={openId} onClose={() => setOpenId(null)} />}

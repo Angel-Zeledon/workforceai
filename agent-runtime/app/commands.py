@@ -35,7 +35,24 @@ from .security import (
 _MARK_LANG = re.compile(r"\[\[lang:(es|en)\]\]", re.I)
 _MARK_MEETING = re.compile(r"\[\[meeting:([^\]]*)\]\]", re.I)
 _MARK_DRAFT = re.compile(r"\[\[draft:(email|linkedin)\]\]", re.I)
-_MARK_ANY = re.compile(r"\[\[(?:lang|meeting|draft|format):[^\]]*\]\]", re.I)
+_MARK_ANY = re.compile(r"\[\[(?:(?:lang|meeting|draft|format):[^\]]*|debate(?::[^\]]*)?)\]\]", re.I)
+# [[debate]] / [[debate:a,b]]: the person asked the team to debate the plan's decision first (B5, handled by the
+# backend before the plan runs); the runtime only strips it from the texts it shows.
+_MARK_DEBATE = re.compile(r"\[\[debate(?::[^\]]*)?\]\]", re.I)
+
+# Words that make a request a DECISION between alternatives (simulation planner only; the live planner decides).
+_DECISION = re.compile(
+    r"\b(decid\w*|decisi[oó]n\w*|elegir|escoger|escojamos|elijamos|choose|choosing|decide|deciding|decision|"
+    r"which option|qu[eé] opci[oó]n|cu[aá]l opci[oó]n|versus|vs\.?)\b", re.I)
+
+
+def marker_debate(text: str | None) -> bool:
+    return bool(_MARK_DEBATE.search(text or ""))
+
+
+def is_decision_request(text: str | None) -> bool:
+    """True when the request asks to decide between alternatives (the simulation planner flags one task)."""
+    return bool(_DECISION.search(strip_markers(text)))
 
 
 def marker_lang(text: str | None) -> str:

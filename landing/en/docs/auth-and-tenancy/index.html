@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Auth, roles and tenant isolation | AI Workforce OS</title>
-  <meta name="description" content="How accounts, sessions, roles, invitations and Postgres row-level security isolate organizations in AI Workforce OS.">
+  <meta name="description" content="Accounts, sessions, two-factor auth, roles, invitations and Postgres row-level security: how AI Workforce OS isolates each organization.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,194 +24,263 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
   <meta property="og:title" content="Auth, roles and tenant isolation | AI Workforce OS">
-  <meta property="og:description" content="How accounts, sessions, roles, invitations and Postgres row-level security isolate organizations in AI Workforce OS.">
+  <meta property="og:description" content="Accounts, sessions, two-factor auth, roles, invitations and Postgres row-level security: how AI Workforce OS isolates each organization.">
   <meta property="og:url" content="https://workforceai.es/en/docs/auth-and-tenancy/">
   <meta property="og:image" content="https://workforceai.es/img/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Auth, roles and tenant isolation | AI Workforce OS">
-  <meta name="twitter:description" content="How accounts, sessions, roles, invitations and Postgres row-level security isolate organizations in AI Workforce OS.">
+  <meta name="twitter:description" content="Accounts, sessions, two-factor auth, roles, invitations and Postgres row-level security: how AI Workforce OS isolates each organization.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Authentication and multi-tenancy","item":"https://workforceai.es/en/docs/auth-and-tenancy/"}]},{"@type":"TechArticle","headline":"Authentication and multi-tenancy","description":"How accounts, sessions, roles, invitations and Postgres row-level security isolate organizations in AI Workforce OS.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/auth-and-tenancy/","url":"https://workforceai.es/en/docs/auth-and-tenancy/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=597dac5ccb">
+  <script src="/docs.js?v=2317516bde" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Authentication and multi-tenancy","item":"https://workforceai.es/en/docs/auth-and-tenancy/"}]},{"@type":"TechArticle","headline":"Authentication and multi-tenancy","description":"Accounts, sessions, two-factor auth, roles, invitations and Postgres row-level security: how AI Workforce OS isolates each organization.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/auth-and-tenancy/","url":"https://workforceai.es/en/docs/auth-and-tenancy/","dateModified":"2026-10-23","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/en/" aria-label="AI Workforce OS">
-        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+<body class="dx dx-docs" id="top">
+  <a class="dx-skip" href="#main">Skip to content</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="/en/">Home</a>
-        <a href="/en/docs/">Documentation</a>
-        <a href="/en/guide/">User guide</a>
-        <a href="/en/trust/">Trust</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Language">
-          <a href="/docs/autenticacion-y-multitenencia/" hreflang="es" lang="es" >ES</a>
+      <nav class="dx-tabs" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Language">
+          <a href="/docs/autenticacion-y-multitenencia/" hreflang="es" lang="es">ES</a>
           <a href="/en/docs/auth-and-tenancy/" hreflang="en" lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap wide">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/docs/">Documentation</a></li><li aria-current="page">Authentication and multi-tenancy</li></ol></nav>
-      <article>
-        <h1>Authentication and multi-tenancy</h1>
-        <p class="lead">AI Workforce OS can run open, with one fixed organization, or with accounts, roles and per-organization isolation. This page describes the auth service in the Go backend: how accounts and sessions work, what each role can do and how Postgres enforces the tenant boundary.</p>
-        
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">Two modes: AUTH_ENABLED false and true</a></li><li><a href="#s2">Accounts and registration</a></li><li><a href="#s3">Login, lockout and rate limits</a></li><li><a href="#s4">Sessions: access token and rotating refresh token</a></li><li><a href="#s5">Roles and permissions (RBAC)</a></li><li><a href="#s6">Organizations, members and switching</a></li><li><a href="#s7">Invitations</a></li><li><a href="#s8">Tenant isolation with Postgres row-level security</a></li><li><a href="#s9">Endpoint reference</a></li><li><a href="#s10">Email verification and trial accounts</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">Two modes: AUTH_ENABLED false and true</h2>
-        <p>With AUTH_ENABLED=false (the default) there is no login. The API is open and every request uses a single fixed demo organization. This is meant for local development and demos, and the server logs a warning at startup. Do not expose it to a network.</p>
-        <p>With AUTH_ENABLED=true the API requires a bearer access token on protected routes, resolves a role for every request and scopes every database access to the caller's organization. Startup validation refuses the configuration unless JWT_SECRET has at least 32 bytes, DATABASE_URL is set and ALLOWED_ORIGINS does not contain a wildcard.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-bash"># Auth enabled
-AUTH_ENABLED=true
-JWT_SECRET=&lt;at least 32 random bytes&gt;
-DATABASE_URL=postgres://...         # required with auth
-MIGRATE_DATABASE_URL=postgres://... # owner/DDL role, runs migrations
-DB_APP_ROLE=app_user                # default
-ALLOWED_ORIGINS=https://app.example.com   # no wildcard when auth is on
-TRUSTED_PROXIES=10.0.0.0/8          # honour X-Forwarded-For for IP limits
-AUTH_COOKIE_SECURE=true             # default; false only for plain-http dev
-AUTH_COOKIE_NAME=wfai_refresh       # optional override</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">Accounts and registration</h2>
-        <p>Registering creates a user, a new organization and an owner membership in one step, then opens a session. The organization starts with the default budget configured for new organizations. Email addresses are normalized (trimmed, lowercased) before any lookup or storage, so Ana@Example.com and ana@example.com are the same account.</p>
-        <p>Passwords are hashed with Argon2id (64 MiB, 3 iterations, 2 lanes by default). Hashes created with weaker parameters are re-hashed on the next successful login. Input is validated with these rules:</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Field</th><th scope="col">Rule</th></tr></thead><tbody><tr><th scope="row"><code>email</code></th><td>Trimmed and lowercased; max 254 characters; must parse as a plain address with a dot in the domain</td></tr><tr><th scope="row"><code>password</code></th><td>10 to 128 characters; not in a short common-password list; not equal to the email or its local part; not a single repeated character; at least two of lowercase, uppercase, digits, symbols</td></tr><tr><th scope="row"><code>name</code></th><td>1 to 100 characters, no control characters</td></tr><tr><th scope="row"><code>org_name</code></th><td>2 to 100 characters, no control characters; the slug is derived from it plus a random suffix</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">Login, lockout and rate limits</h2>
-        <p>Login failures are counted per account. After five wrong passwords the account is locked for 15 minutes and further attempts return a locked error with the unlock time. Unknown emails are verified against a dummy hash so that a missing account costs the same time as a wrong password, which limits account enumeration.</p>
-        <p>Throttling is layered: a per-email limiter that does not depend on whether the account exists, and per-IP limiters on the unauthenticated endpoints. Counters live in Redis when available, so they survive restarts, and in memory otherwise. IP limits honour X-Forwarded-For only from addresses listed in TRUSTED_PROXIES. The defaults are:</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Limit</th><th scope="col">Default</th><th scope="col">Key</th></tr></thead><tbody><tr><th scope="row"><code>Login attempts</code></th><td>10 per 15 min</td><td>Email address (hashed), whether or not the account exists</td></tr><tr><th scope="row"><code>POST /login</code></th><td>20 per 15 min</td><td>Client IP</td></tr><tr><th scope="row"><code>POST /register and /invitations/accept</code></th><td>5 per hour</td><td>Client IP</td></tr><tr><th scope="row"><code>POST /refresh and /logout</code></th><td>60 per 15 min</td><td>Client IP</td></tr><tr><th scope="row"><code>Authenticated auth and invitation endpoints</code></th><td>120 per min</td><td>User</td></tr><tr><th scope="row"><code>Failed passwords before lockout</code></th><td>5, lock for 15 min</td><td>Account</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">Sessions: access token and rotating refresh token</h2>
-        <p>A session has two parts. The access token is a short-lived (15 minutes by default) HMAC-signed JWT carrying the user, the organization and the role, sent as a bearer token. The refresh token is an opaque random value, valid 30 days by default, stored server-side only as a SHA-256 hash and delivered in an HttpOnly, SameSite=Strict cookie (wfai_refresh) scoped to /api/v1/auth, with the Secure attribute on by default. It never appears in a JSON body.</p>
-        <p>Refresh and logout act on the ambient cookie, so they require the custom X-WFAI-CSRF header and reject cross-site requests by Sec-Fetch-Site and Origin. Each refresh rotates the token inside a family. Presenting an already-used token revokes the whole family, which detects theft. Logout revokes the family; logout-all revokes every refresh token of the user in every organization.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-http">POST /api/v1/auth/login
-Content-Type: application/json
-
-{&quot;email&quot;:&quot;ana@example.com&quot;,&quot;password&quot;:&quot;...&quot;,&quot;org_id&quot;:&quot;(optional)&quot;}
-
-200 OK
-Set-Cookie: wfai_refresh=...; Path=/api/v1/auth; HttpOnly; SameSite=Strict; Secure
-{&quot;token_type&quot;:&quot;Bearer&quot;,&quot;access_token&quot;:&quot;...&quot;,&quot;expires_in&quot;:900,
- &quot;user&quot;:{...},&quot;org_id&quot;:&quot;...&quot;,&quot;role&quot;:&quot;owner&quot;}</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">Roles and permissions (RBAC)</h2>
-        <p>Each membership has one role: owner, admin, member or viewer. A role is a set of permissions named resource:action, and each role is a strict superset of the one below. By default the role is re-read from the database on every request, so demoting or removing a member takes effect immediately instead of when the access token expires (the TrustTokenClaims option trades this for statelessness).</p>
-        <p>Role changes obey two rules. An owner can assign any role; an admin can assign and manage only roles below admin; nobody can grant a role above their own. The last owner cannot be removed. Agents never hold approval-granting permissions such as artifacts:approve.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Role</th><th scope="col">Adds on top of the role below</th></tr></thead><tbody><tr><th scope="row"><code>viewer</code></th><td>Read-only: members, agents, tasks, requests, conversations, approvals, reports, memories, activity, metrics, artifacts, files, skills, shop</td></tr><tr><th scope="row"><code>member</code></th><td>Create requests and tasks, post in conversations, write memories, create/edit/comment/export artifacts, write files, write skills, buy in the shop, read connections</td></tr><tr><th scope="row"><code>admin</code></th><td>Manage the organization, invite and manage members, write agents, manage tasks, decide approvals, read the audit log, manage connections and grants, pause and kill switch, approve/delete artifacts, delete files, review skills, delete conversations</td></tr><tr><th scope="row"><code>owner</code></th><td>Delete the organization, billing, release the kill switch, edit approval policy (policy:manage)</td></tr></tbody></table></div>
-        
-      </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">Organizations, members and switching</h2>
-        <p>A user can belong to several organizations, with a different role in each. GET /me returns the user and the list of organizations with names and roles. POST /switch-org opens a new session for another organization the user belongs to, and the previous refresh token should be dropped. Asking for an organization without membership returns forbidden.</p>
-        <p>Members are listed, added by email (an existing user), re-roled and removed within the actor's organization only; targets from other organizations are reported as not found. Removing a member also revokes that user's refresh tokens for the organization.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">Invitations</h2>
-        <p>Admins and owners create invitations for an email and a role they are allowed to assign. The server stores only the SHA-256 of the one-time token and returns the plaintext once, at creation. The server does not send email: the inviter shares the link, which the frontend serves at /invite. A new invitation to the same address revokes the previous pending one, and links expire after 7 days by default.</p>
-        <p>Accepting is public and takes the token. A new person provides a name and a password. An existing account must prove ownership with its current password, with the same lockout as login. Unknown, expired, revoked and used tokens fail without revealing which. If the inviter has since been demoted or removed, the invitation stops working. Creation, revocation and acceptance are written to the audit trail, storing only the email domain.</p>
-        
-        
-        
-        
-      </section>
-
-      <section class="g-sec" id="s8" aria-labelledby="h8">
-        <h2 id="h8">Tenant isolation with Postgres row-level security</h2>
-        <p>Role checks decide what a user may do; row-level security decides which rows exist for them. Every tenant table has a tenant_isolation policy comparing org_id with app_current_org(), and FORCE ROW LEVEL SECURITY applies it even to the table owner. Each request runs in a transaction that starts with set_config('app.org_id', ..., true). The setting is transaction-local, so a pooled connection cannot carry one tenant into another request.</p>
-        <p>It fails closed: when app.org_id is unset, no row is visible or writable. The server connects with owner credentials and switches to app_user on every connection (DB_APP_ROLE), a role that is not a superuser, has no BYPASSRLS and owns no table. The audit log is append-only for that role (UPDATE and DELETE are revoked). Migrations run with the separate MIGRATE_DATABASE_URL.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-text">-- One transaction per request, scoped to the caller's organization
-SELECT set_config('app.org_id', '&lt;org id&gt;', true);   -- == SET LOCAL
-
-CREATE POLICY tenant_isolation ON agents
-  USING      (org_id = app_current_org())
-  WITH CHECK (org_id = app_current_org());</code></pre>
-        
-        
-      </section>
-
-      <section class="g-sec" id="s9" aria-labelledby="h9">
-        <h2 id="h9">Endpoint reference</h2>
-        <p>The auth router is mounted at /api/v1/auth and the invitation router under the same prefix. Permissions are checked by middleware before the handler runs; the service re-checks the actor's current membership on every member operation.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Endpoint</th><th scope="col">Access</th></tr></thead><tbody><tr><th scope="row"><code>POST /api/v1/auth/register, /login, /refresh, /logout</code></th><td>Public (refresh and logout use the cookie plus X-WFAI-CSRF)</td></tr><tr><th scope="row"><code>POST /api/v1/auth/invitations/accept</code></th><td>Public, token in the body</td></tr><tr><th scope="row"><code>GET /api/v1/auth/config</code></th><td>Public, reports whether auth and registration are enabled</td></tr><tr><th scope="row"><code>GET /me, POST /logout-all, POST /switch-org</code></th><td>Any authenticated user</td></tr><tr><th scope="row"><code>GET/POST/PATCH/DELETE /members</code></th><td>members:read, members:invite, members:manage; a member may remove themself</td></tr><tr><th scope="row"><code>GET/POST/DELETE /invitations</code></th><td>members:read to list, members:invite to create and revoke</td></tr></tbody></table></div>
-        <aside class="tip"><b>Tip.</b> See the API reference for the full route list and the security model for the threat analysis.</aside>
-      </section>
-
-      <section class="g-sec" id="s10" aria-labelledby="h10">
-        <h2 id="h10">Email verification and trial accounts</h2>
-        <p>With EMAIL_VERIFICATION=true, POST /auth/register creates the account but opens no session: it answers 202 with verification_required and sends a one-time link (random token, stored as a hash, valid for 24 hours). POST /auth/login answers 403 email_not_verified only when the password is correct; with a wrong password it still answers invalid_credentials, so the endpoint does not reveal which addresses exist. POST /auth/verify {token} consumes the link, marks the address verified and opens the session. POST /auth/verify/resend {email} sends the link again, rate-limited per address, and answers 204 whether or not the account exists.</p>
-        <p>With TRIAL_ENABLED=true, POST /auth/trial creates a throwaway account with its own organization and returns the username and a generated password exactly once (format XXXX-XXXX-XXXX); only its hash is stored. The account stops working after TRIAL_TTL_HOURS: the access token never outlives the trial, login answers 403 trial_expired and session renewal is refused. Creation is limited per client address and in total per day. GET /auth/config tells the UI about both features.</p>
-        
-        
-        
-        
-      </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/api-reference/"><b>API Reference</b><span>Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.</span></a></li><li><a href="/en/docs/security-model/"><b>Security model</b><span>How an agent's blast radius is limited: credential vault, human approvals, caps, kill switch, audit, RLS and sandbox. With the current limits stated.</span></a></li><li><a href="/en/docs/configuration/"><b>Configuration reference</b><span>Environment variable reference for AI Workforce OS: server, database, auth, budget, rewards, model providers and frontend build arguments.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Start now</h2>
-      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Documentation">
+      <div class="dx-side-head">
+        <span>Menu</span>
+        <a class="dx-side-close" href="#top" aria-label="Close menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a href="/en/docs/">Documentation</a>
-      <a href="/en/guide/">User guide</a>
-      <a href="/en/trust/">Trust</a>
-      <a href="#top">Back to top</a>
-    </div>
-  </footer>
+      <nav class="dx-colls" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <nav class="dx-pages" aria-label="Documentation">
+        <ul class="dx-list">
+          <li><a href="/en/docs/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Overview</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-concepts">Concepts</p>
+        <ul class="dx-list" aria-labelledby="g-docs-concepts">
+          <li><a href="/en/docs/architecture/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><span>Architecture</span></a></li>
+          <li><a href="/en/docs/agent-runtime/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg><span>Agent runtime</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-integrate">Integrate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-integrate">
+          <li><a href="/en/docs/api-reference/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg><span>API Reference</span></a></li>
+          <li><a href="/en/docs/auth-and-tenancy/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg><span>Auth and tenancy</span></a></li>
+          <li><a href="/en/docs/skills-format/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><path d="M17.25 13.5v7.5M13.5 17.25H21"/></svg><span>Skills format</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-operate">Operate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-operate">
+          <li><a href="/en/docs/deployment/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></svg><span>Deployment</span></a></li>
+          <li><a href="/en/docs/configuration/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span>Configuration</span></a></li>
+          <li><a href="/en/docs/security-model/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Security model</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Language">
+          <a href="/docs/autenticacion-y-multitenencia/" hreflang="es" lang="es">ES</a>
+          <a href="/en/docs/auth-and-tenancy/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/docs/">Documentation</a></li><li><span>Integrate</span></li></ol></nav>
+        <h1>Authentication and multi-tenancy</h1>
+        <p class="dx-lead">This page describes the auth service in the Go backend: accounts, sessions, two-factor authentication, roles, invitations and how Postgres enforces the boundary between organizations. It is for whoever deploys or operates AI Workforce OS or builds their own client against the API.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>9 min read</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">On this page</summary>
+        <ol><li><a href="#two-modes-auth-enabled-false-and-true">Two modes: AUTH_ENABLED false and true</a></li><li><a href="#accounts-and-registration">Accounts and registration</a></li><li><a href="#email-verification-and-trial-accounts">Email verification and trial accounts</a></li><li><a href="#login-lockout-and-rate-limits">Login, lockout and rate limits</a></li><li><a href="#sessions-access-token-and-rotating-refresh-token">Sessions: access token and rotating refresh token</a></li><li><a href="#two-factor-authentication-and-password-reset">Two-factor authentication and password reset</a></li><li><a href="#roles-and-permissions-rbac">Roles and permissions (RBAC)</a></li><li><a href="#organizations-members-and-switching">Organizations, members and switching</a></li><li><a href="#invitations">Invitations</a></li><li><a href="#tenant-isolation-with-postgres-row-level-security">Tenant isolation with Postgres row-level security</a></li><li><a href="#endpoint-reference">Endpoint reference</a></li></ol>
+        <a class="dx-toc-top" href="#top">Back to top</a>
+      </details>
+      <div class="dx-body">
+        
+        <section class="dx-sec" aria-labelledby="two-modes-auth-enabled-false-and-true">
+        <h2 id="two-modes-auth-enabled-false-and-true">Two modes: AUTH_ENABLED false and true<a class="dx-anchor" href="#two-modes-auth-enabled-false-and-true" aria-label="Link to the “Two modes: AUTH_ENABLED false and true” section">#</a></h2>
+        <p>With <code>AUTH_ENABLED=false</code> (the binary's default) there is no login: the API is open, every request uses a single fixed demo organization and the server logs a warning at startup. It is meant for local development and demos.</p>
+        <p>With <code>AUTH_ENABLED=true</code> the API requires a bearer access token on protected routes, resolves the role on every request and scopes all data access to the caller's organization. Startup fails if:</p>
+        <ul class="dx-ul"><li><code>JWT_SECRET</code> is shorter than 32 bytes.</li><li><code>DATABASE_URL</code> is missing (accounts and organizations live in Postgres).</li><li><code>ALLOWED_ORIGINS</code> contains <code>*</code>. If you leave it empty, only the same origin is accepted.</li></ul>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">.env (backend)</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-var">AUTH_ENABLED</span>=true
+<span class="tk-var">JWT_SECRET</span>=&lt;at least 32 random bytes&gt;
+<span class="tk-var">DATABASE_URL</span>=postgres://...          <span class="tk-com"># required with auth</span>
+<span class="tk-var">MIGRATE_DATABASE_URL</span>=postgres://...  <span class="tk-com"># owner/DDL role for migrations (default: DATABASE_URL)</span>
+<span class="tk-var">DB_APP_ROLE</span>=app_user                 <span class="tk-com"># default</span>
+<span class="tk-var">ALLOWED_ORIGINS</span>=https://app.example.com   <span class="tk-com"># no * when auth is on</span>
+<span class="tk-var">TRUSTED_PROXIES</span>=10.0.0.0/8           <span class="tk-com"># honour X-Forwarded-For from these addresses</span>
+<span class="tk-var">AUTH_COOKIE_SECURE</span>=true              <span class="tk-com"># default; false only for plain-http development</span>
+<span class="tk-var">AUTH_COOKIE_NAME</span>=wfai_refresh        <span class="tk-com"># default name</span></code></pre>
+        </figure>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>The development <code>docker-compose.yml</code> starts with <code>AUTH_ENABLED=true</code> and <code>AUTH_COOKIE_SECURE=false</code>; <code>docker-compose.demo.yml</code> sets it to <code>false</code>.</p></div></div>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>With <code>AUTH_ENABLED=false</code> anyone who can reach the port can read and change everything. Never expose that mode to a network.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="accounts-and-registration">
+        <h2 id="accounts-and-registration">Accounts and registration<a class="dx-anchor" href="#accounts-and-registration" aria-label="Link to the “Accounts and registration” section">#</a></h2>
+        <p><code>POST /api/v1/auth/register</code> creates a user, a new organization and an <code>owner</code> membership in one step, and answers <code>201</code> with a session. The organization starts with the default budget (<code>BUDGET_USD</code>). Email addresses are normalized (trimmed, lowercased) before any lookup or storage, so <code>Ana@Example.com</code> and <code>ana@example.com</code> are the same account.</p>
+        <p>Passwords are hashed with Argon2id (64 MiB, 3 iterations, 2 threads). A hash created with weaker parameters is re-hashed on the next successful login. When a rule fails, the response is <code>422 validation_failed</code> with the details in <code>error.fields</code>.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Accounts and registration"><table><thead><tr><th scope="col">Field</th><th scope="col">Rule</th></tr></thead><tbody><tr><th scope="row"><code>email</code></th><td>Trimmed and lowercased; max 254 characters; a plain address with a dot in the domain.</td></tr><tr><th scope="row"><code>password</code></th><td>10 to 128 characters; not in a short common-password list; not equal to the email or its local part; not a single repeated character; at least two of lowercase, uppercase, digits and symbols.</td></tr><tr><th scope="row"><code>name</code></th><td>1 to 100 characters, no control characters.</td></tr><tr><th scope="row"><code>org_name</code></th><td>2 to 100 characters, no control characters. The slug is derived from the name plus a random suffix.</td></tr></tbody></table></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="email-verification-and-trial-accounts">
+        <h2 id="email-verification-and-trial-accounts">Email verification and trial accounts<a class="dx-anchor" href="#email-verification-and-trial-accounts" aria-label="Link to the “Email verification and trial accounts” section">#</a></h2>
+        <p>With <code>EMAIL_VERIFICATION=true</code>, registration creates the account but opens no session: it answers <code>202</code> with <code>verification_required</code> and sends a one-time link (random token stored as a hash, valid for 24 hours). It needs <code>AUTH_ENABLED=true</code>, <code>UI_BASE_URL</code> and SMTP (<code>SMTP_*</code>) or <code>EMAIL_DEV_LOG=true</code>, which writes the links to the log instead of sending them.</p>
+        <p>With <code>TRIAL_ENABLED=true</code> (which also needs <code>AUTH_ENABLED=true</code>), <code>POST /api/v1/auth/trial</code> creates a throwaway account with its own organization and returns, exactly once, the generated email, a password (format <code>XXXX-XXXX-XXXX</code>) and <code>expires_at</code>. Only the password hash is stored. <code>GET /api/v1/auth/config</code> tells the UI which features are on.</p>
+        <ul class="dx-ul"><li><code>POST /auth/login</code> with the right password and an unverified address answers <code>403 email_not_verified</code>; with a wrong password it still answers <code>invalid_credentials</code>, so it does not reveal which addresses exist.</li><li><code>POST /auth/verify</code> with <code>{token}</code> consumes the link, marks the address verified and opens the session.</li><li><code>POST /auth/verify/resend</code> with <code>{email}</code> sends the link again (3 per hour per address) and answers <code>204</code> whether or not the account exists.</li><li>A trial account stops working after <code>TRIAL_TTL_HOURS</code> (default 24): the access token never outlives the trial, login answers <code>403 trial_expired</code> and renewal is refused.</li><li>Trial creation is limited per IP (<code>TRIAL_PER_IP_PER_DAY</code>, 3) and in total (<code>TRIAL_GLOBAL_PER_DAY</code>, 300) per day.</li></ul>
+        <figure class="dx-code" data-lang="json">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">201 from POST /api/v1/auth/trial</span><span class="dx-code-lang">JSON</span></figcaption>
+          <pre tabindex="0" aria-label="JSON code"><code><span class="tk-punct">{</span>
+  <span class="tk-key">&quot;email&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;prueba-1a2b3c4d@prueba.invalid&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;password&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;K7QD-3MWX-H9TR&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;expires_at&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;2026-10-23T12:00:00Z&quot;</span>
+<span class="tk-punct">}</span></code></pre>
+        </figure>
+      </section>
+        <section class="dx-sec" aria-labelledby="login-lockout-and-rate-limits">
+        <h2 id="login-lockout-and-rate-limits">Login, lockout and rate limits<a class="dx-anchor" href="#login-lockout-and-rate-limits" aria-label="Link to the “Login, lockout and rate limits” section">#</a></h2>
+        <p>Login failures are counted per account. After five wrong passwords the account is locked for 15 minutes and further attempts answer <code>429 account_locked</code> with a <code>Retry-After</code> header. An unknown email is checked against a dummy hash, so a missing account takes as long as a wrong password.</p>
+        <p>On top of that there are per-email and per-IP limiters. Counters live in Redis when <code>REDIS_URL</code> is set (they survive restarts) and in memory otherwise. IP limits honour <code>X-Forwarded-For</code> only from addresses in <code>TRUSTED_PROXIES</code>. When exceeded, the response is <code>429 rate_limited</code> with <code>Retry-After</code>.</p>
+        <figure class="dx-code" data-lang="http">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Locked account</span><span class="dx-code-lang">HTTP</span></figcaption>
+          <pre tabindex="0" aria-label="HTTP code"><code><span class="tk-com">HTTP/1.1 </span><span class="tk-num">429</span><span class="tk-str"> Too Many Requests</span>
+<span class="tk-key">Retry-After</span><span class="tk-punct">:</span> 840
+<span class="tk-key">Content-Type</span><span class="tk-punct">:</span> application/json
+
+<span class="tk-punct">{</span><span class="tk-key">&quot;error&quot;</span><span class="tk-punct">:</span><span class="tk-punct">{</span><span class="tk-key">&quot;code&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;account_locked&quot;</span><span class="tk-punct">,</span><span class="tk-key">&quot;message&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;too many failed attempts; try again later&quot;</span><span class="tk-punct">}</span><span class="tk-punct">}</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Login, lockout and rate limits"><table><thead><tr><th scope="col">Limit</th><th scope="col">Default</th><th scope="col">Key</th></tr></thead><tbody><tr><th scope="row">Login attempts</th><td>10 per 15 min</td><td>Email address (hashed), whether or not the account exists</td></tr><tr><th scope="row"><code>POST /auth/login</code> and public two-factor endpoints</th><td>20 per 15 min</td><td>Client IP</td></tr><tr><th scope="row"><code>POST /auth/register</code>, <code>/invitations/accept</code>, <code>/verify</code>, <code>/verify/resend</code>, <code>/password/forgot</code>, <code>/password/reset</code></th><td>5 per hour each</td><td>Client IP</td></tr><tr><th scope="row"><code>POST /auth/refresh</code> and <code>/auth/logout</code></th><td>60 per 15 min</td><td>Client IP</td></tr><tr><th scope="row">Authenticated <code>/auth</code> and <code>/invitations</code> endpoints</th><td>120 per min</td><td>User</td></tr><tr><th scope="row">Failed passwords before lockout</th><td>5, lock for 15 min</td><td>Account</td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>If the limiter backend (Redis) fails, the limiters let requests through instead of blocking login. The per-account lockout does not depend on Redis: it lives in Postgres.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="sessions-access-token-and-rotating-refresh-token">
+        <h2 id="sessions-access-token-and-rotating-refresh-token">Sessions: access token and rotating refresh token<a class="dx-anchor" href="#sessions-access-token-and-rotating-refresh-token" aria-label="Link to the “Sessions: access token and rotating refresh token” section">#</a></h2>
+        <p>The access token is a short-lived (15 minutes) HS256 JWT carrying the user, the organization and the role, sent in <code>Authorization: Bearer</code>. The refresh token is an opaque random value, valid for 30 days, stored server-side only as a SHA-256 hash and delivered in the <code>wfai_refresh</code> cookie (<code>HttpOnly</code>, <code>SameSite=Strict</code>, <code>Secure</code> by default, <code>Path=/api/v1/auth</code>). It never appears in a JSON body.</p>
+        <p><code>/auth/refresh</code> and <code>/auth/logout</code> act on that cookie, so they require the <code>X-WFAI-CSRF</code> header and reject requests with <code>Sec-Fetch-Site: cross-site</code> or with an <code>Origin</code> outside <code>ALLOWED_ORIGINS</code> (or the host itself). Each refresh rotates the token inside its family:</p>
+        <ul class="dx-ul"><li>Presenting an already-used refresh token revokes the whole family, which exposes theft.</li><li>A rejected token (expired, revoked or reused) answers <code>401 invalid_token</code> and clears the cookie.</li><li><code>POST /auth/logout</code> revokes the family and answers <code>204</code>; <code>POST /auth/logout-all</code> revokes every refresh token of the user in every organization.</li></ul>
+        <figure class="dx-code" data-lang="http">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Login</span><span class="dx-code-lang">HTTP</span></figcaption>
+          <pre tabindex="0" aria-label="HTTP code"><code><span class="tk-kw">POST</span> <span class="tk-path">/api/v1/auth/login</span>
+<span class="tk-key">Content-Type</span><span class="tk-punct">:</span> application/json
+
+<span class="tk-punct">{</span><span class="tk-key">&quot;email&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;ana@example.com&quot;</span><span class="tk-punct">,</span><span class="tk-key">&quot;password&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;&lt;password&gt;&quot;</span><span class="tk-punct">}</span>
+
+<span class="tk-com">HTTP/1.1 </span><span class="tk-num">200</span><span class="tk-str"> OK</span>
+<span class="tk-key">Cache-Control</span><span class="tk-punct">:</span> no-store
+<span class="tk-key">Set-Cookie</span><span class="tk-punct">:</span> wfai_refresh=&lt;opaque&gt;; Path=/api/v1/auth; Max-Age=2592000; HttpOnly; Secure; SameSite=Strict
+<span class="tk-key">Content-Type</span><span class="tk-punct">:</span> application/json
+
+<span class="tk-punct">{</span><span class="tk-key">&quot;token_type&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;Bearer&quot;</span><span class="tk-punct">,</span><span class="tk-key">&quot;access_token&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;&lt;jwt&gt;&quot;</span><span class="tk-punct">,</span><span class="tk-key">&quot;expires_in&quot;</span><span class="tk-punct">:</span><span class="tk-num">900</span><span class="tk-punct">,</span>
+ <span class="tk-key">&quot;expires_at&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;2026-10-22T12:15:00Z&quot;</span><span class="tk-punct">,</span>
+ <span class="tk-key">&quot;user&quot;</span><span class="tk-punct">:</span><span class="tk-punct">{</span><span class="tk-key">&quot;id&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;&lt;user id&gt;&quot;</span><span class="tk-punct">,</span><span class="tk-key">&quot;email&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;ana@example.com&quot;</span><span class="tk-punct">,</span><span class="tk-key">&quot;name&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;Ana&quot;</span><span class="tk-punct">}</span><span class="tk-punct">,</span>
+ <span class="tk-key">&quot;org_id&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;&lt;org id&gt;&quot;</span><span class="tk-punct">,</span><span class="tk-key">&quot;role&quot;</span><span class="tk-punct">:</span><span class="tk-str">&quot;owner&quot;</span><span class="tk-punct">}</span></code></pre>
+        </figure>
+        <figure class="dx-code" data-lang="bash">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Renew the session</span><span class="dx-code-lang">Bash</span></figcaption>
+          <pre tabindex="0" aria-label="Bash code"><code><span class="tk-fn">curl</span> <span class="tk-flag">-X</span> POST http://localhost:8080/api/v1/auth/refresh <span class="tk-punct">\</span>
+  <span class="tk-flag">-b</span> <span class="tk-str">'wfai_refresh=&lt;cookie value&gt;'</span> <span class="tk-flag">-H</span> <span class="tk-str">'X-WFAI-CSRF: 1'</span></code></pre>
+        </figure>
+      </section>
+        <section class="dx-sec" aria-labelledby="two-factor-authentication-and-password-reset">
+        <h2 id="two-factor-authentication-and-password-reset">Two-factor authentication and password reset<a class="dx-anchor" href="#two-factor-authentication-and-password-reset" aria-label="Link to the “Two-factor authentication and password reset” section">#</a></h2>
+        <p>Each user can turn on a TOTP second factor: <code>POST /auth/mfa/setup</code> returns <code>secret</code> and <code>otpauth_uri</code> (for the QR code), and <code>POST /auth/mfa/enable</code> with a valid code turns it on and returns 8 recovery codes, shown exactly once. From then on, a login with the right password opens no session: it answers <code>200</code> with <code>mfa_required</code> and a 5-minute <code>mfa_token</code>, and the session opens with <code>POST /auth/mfa/verify</code> (<code>{mfa_token, code}</code>). A TOTP code cannot be replayed, and wrong codes count toward the same lockout as passwords.</p>
+        <p>An organization can require two-factor authentication from its members (login returns <code>mfa_enrollment_required</code> with an enrolment token) or require SSO (a password login by anyone who is not an owner answers <code>403 sso_required</code>).</p>
+        <p>With email configured (SMTP or <code>EMAIL_DEV_LOG</code>) and <code>UI_BASE_URL</code>, <code>POST /auth/password/forgot</code> with <code>{email}</code> sends a link valid for 1 hour and answers <code>204</code> whether or not the account exists. <code>POST /auth/password/reset</code> with <code>{token, password}</code> applies the password policy, ends every session of the user, clears the lockout and opens no session: the user signs in again.</p>
+      </section>
+        <section class="dx-sec" aria-labelledby="roles-and-permissions-rbac">
+        <h2 id="roles-and-permissions-rbac">Roles and permissions (RBAC)<a class="dx-anchor" href="#roles-and-permissions-rbac" aria-label="Link to the “Roles and permissions (RBAC)” section">#</a></h2>
+        <p>Each membership has one role: <code>owner</code>, <code>admin</code>, <code>member</code> or <code>viewer</code>. A role is a set of permissions named <code>resource:action</code>, and each is a strict superset of the one below. The role is re-read from the database on every request, so demoting or removing a member takes effect immediately rather than when the token expires. <code>GET /auth/me</code> returns the role and its <code>permissions</code> list.</p>
+        <p>An owner can assign any role; an admin can assign and manage only roles below admin and cannot change their own; nobody grants a role above their own. The last owner cannot be removed (<code>409 last_owner</code>).</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Roles and permissions (RBAC)"><table><thead><tr><th scope="col">Role</th><th scope="col">Adds on top of the role below</th></tr></thead><tbody><tr><th scope="row"><code>viewer</code></th><td>Read-only: members, agents, tasks, requests, conversations, approvals, reports, memories, activity, metrics, artifacts, files, skills and shop.</td></tr><tr><th scope="row"><code>member</code></th><td>Create requests and tasks, write in conversations and memories, create, edit, comment on and export artifacts, write files and skills, buy in the shop, read connections.</td></tr><tr><th scope="row"><code>admin</code></th><td>Manage the organization, invite and manage members, write agents, manage tasks, decide approvals (<code>approvals:decide</code>), read the audit log, manage connections and their grants, pause and kill switch, approve and delete artifacts, delete files, review skills, delete conversations.</td></tr><tr><th scope="row"><code>owner</code></th><td>Delete the organization, billing, release the kill switch (<code>controls:release</code>) and edit the approval policy (<code>policy:manage</code>).</td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>Agents never receive approval permissions such as <code>artifacts:approve</code>: their authority cannot approve what they themselves propose.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="organizations-members-and-switching">
+        <h2 id="organizations-members-and-switching">Organizations, members and switching<a class="dx-anchor" href="#organizations-members-and-switching" aria-label="Link to the “Organizations, members and switching” section">#</a></h2>
+        <p>A user can belong to several organizations, with a different role in each. <code>GET /auth/me</code> returns the user and the <code>orgs</code> list with names and roles. <code>POST /auth/switch-org</code> with <code>{org_id}</code> opens a new session in another of the user's organizations and revokes the previous refresh-token family; asking for an organization without membership answers <code>403 forbidden</code>.</p>
+        <p>All member management happens inside the actor's organization, and users from other organizations are reported as not found:</p>
+        <ul class="dx-ul"><li><code>GET /auth/members</code> lists the members (<code>members:read</code>).</li><li><code>POST /auth/members</code> with <code>{email, role}</code> adds a user who already has an account (<code>members:invite</code>).</li><li><code>PATCH /auth/members/{id}</code> with <code>{role}</code> changes the role (<code>members:manage</code>).</li><li><code>DELETE /auth/members/{id}</code> removes a member (<code>members:manage</code>) or lets anyone leave on their own. It also revokes that user's refresh tokens for the organization.</li></ul>
+      </section>
+        <section class="dx-sec" aria-labelledby="invitations">
+        <h2 id="invitations">Invitations<a class="dx-anchor" href="#invitations" aria-label="Link to the “Invitations” section">#</a></h2>
+        <p>Admins and owners invite an email address with a role they are allowed to assign (<code>POST /api/v1/invitations</code>). The server stores only the SHA-256 of the one-time token and returns the plaintext exactly once. It does not send email: the inviter shares the <code>/invite?token=...</code> link served by the frontend. A new invitation to the same address revokes the previous pending one, and links expire after 7 days.</p>
+        <p><code>POST /api/v1/auth/invitations/accept</code> is public and takes <code>{token, name, password}</code>. A new person picks a name and a password; an existing account proves ownership with its current password, under the same lockout as login. Unknown, expired, revoked and used tokens all fail the same way (<code>401 invalid_token</code>). If the inviter has since been demoted or removed, the invitation stops working. Creation, revocation and acceptance go to the audit trail, which stores only the email domain.</p>
+        <figure class="dx-code" data-lang="json">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">201 from POST /api/v1/invitations</span><span class="dx-code-lang">JSON</span></figcaption>
+          <pre tabindex="0" aria-label="JSON code"><code><span class="tk-punct">{</span>
+  <span class="tk-key">&quot;id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;&lt;invitation id&gt;&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;org_id&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;&lt;org id&gt;&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;email&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;luis@example.com&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;role&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;member&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;invited_by&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;&lt;user id&gt;&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;created_at&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;2026-10-22T12:00:00Z&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;expires_at&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;2026-10-29T12:00:00Z&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;status&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;pending&quot;</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;accepted_at&quot;</span><span class="tk-punct">:</span> <span class="tk-lit">null</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;revoked_at&quot;</span><span class="tk-punct">:</span> <span class="tk-lit">null</span><span class="tk-punct">,</span>
+  <span class="tk-key">&quot;token&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;&lt;one-time token&gt;&quot;</span>
+<span class="tk-punct">}</span></code></pre>
+        </figure>
+        <div class="dx-callout is-warning" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.3 4.2 2.7 17.4a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.2M12 17h.01"/></svg><div><p class="dx-callout-t">Warning</p><p>The <code>token</code> field is the only copy of the secret: whoever holds it can join the organization with that role. Share it over a private channel.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="tenant-isolation-with-postgres-row-level-security">
+        <h2 id="tenant-isolation-with-postgres-row-level-security">Tenant isolation with Postgres row-level security<a class="dx-anchor" href="#tenant-isolation-with-postgres-row-level-security" aria-label="Link to the “Tenant isolation with Postgres row-level security” section">#</a></h2>
+        <p>Role checks decide what a user may do; row-level security decides which rows exist for them. Every tenant table has the <code>tenant_isolation</code> policy, which compares <code>org_id</code> with <code>app_current_org()</code>, and <code>FORCE ROW LEVEL SECURITY</code> applies it even to the table owner. Each request runs in a transaction that starts with <code>set_config('app.org_id', ..., true)</code>: the setting is transaction-local, so a pooled connection cannot carry one tenant into another request.</p>
+        <p>It fails closed: without <code>app.org_id</code>, no row is visible or writable. Every application connection runs <code>SET ROLE app_user</code> (<code>DB_APP_ROLE</code>), a role that is not a superuser, has no <code>BYPASSRLS</code> and owns no table. For that role the audit log is append-only (<code>UPDATE</code> and <code>DELETE</code> are revoked). Migrations run with <code>MIGRATE_DATABASE_URL</code> when it is set.</p>
+        <figure class="dx-code" data-lang="sql">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">SQL</span></figcaption>
+          <pre tabindex="0" aria-label="SQL code"><code><span class="tk-com">-- One transaction per request, scoped to the caller's organization</span>
+<span class="tk-kw">SELECT</span> set_config(<span class="tk-str">'app.org_id'</span>, <span class="tk-str">'&lt;org id&gt;'</span>, true);   <span class="tk-com">-- == SET LOCAL</span>
+
+<span class="tk-kw">CREATE</span> <span class="tk-kw">OR</span> REPLACE FUNCTION app_current_org() RETURNS TEXT
+LANGUAGE sql STABLE PARALLEL SAFE <span class="tk-kw">AS</span>
+$$ <span class="tk-kw">SELECT</span> NULLIF(current_setting(<span class="tk-str">'app.org_id'</span>, true), <span class="tk-str">''</span>) $$;
+
+<span class="tk-kw">CREATE</span> <span class="tk-kw">POLICY</span> tenant_isolation <span class="tk-kw">ON</span> agents
+  <span class="tk-kw">USING</span>      (org_id = app_current_org())
+  <span class="tk-kw">WITH</span> <span class="tk-kw">CHECK</span> (org_id = app_current_org());</code></pre>
+        </figure>
+      </section>
+        <section class="dx-sec" aria-labelledby="endpoint-reference">
+        <h2 id="endpoint-reference">Endpoint reference<a class="dx-anchor" href="#endpoint-reference" aria-label="Link to the “Endpoint reference” section">#</a></h2>
+        <p>The auth router is mounted at <code>/api/v1/auth</code> and the invitation router at <code>/api/v1/invitations</code>. Permissions are checked by middleware before the handler runs, and the service re-reads the actor's current membership on every member operation. Errors use the shape <code>{&quot;error&quot;: {&quot;code&quot;, &quot;message&quot;}}</code>.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Endpoint reference"><table><thead><tr><th scope="col">Endpoint</th><th scope="col">Access</th></tr></thead><tbody><tr><th scope="row"><code>POST /api/v1/auth/register</code>, <code>/login</code>, <code>/refresh</code>, <code>/logout</code></th><td>Public; <code>refresh</code> and <code>logout</code> use the cookie plus <code>X-WFAI-CSRF</code>.</td></tr><tr><th scope="row"><code>POST /api/v1/auth/verify</code>, <code>/verify/resend</code>, <code>/trial</code>, <code>/password/forgot</code>, <code>/password/reset</code></th><td>Public; each needs its feature turned on.</td></tr><tr><th scope="row"><code>POST /api/v1/auth/mfa/verify</code>, <code>/mfa/enroll/setup</code>, <code>/mfa/enroll/enable</code></th><td>Public, with the <code>mfa_token</code> from login.</td></tr><tr><th scope="row"><code>POST /api/v1/auth/invitations/accept</code></th><td>Public, token in the body.</td></tr><tr><th scope="row"><code>GET /api/v1/auth/config</code></th><td>Public: <code>enabled</code>, <code>registration</code>, <code>verification</code>, <code>trial</code>, <code>password_reset</code>, <code>mfa</code>.</td></tr><tr><th scope="row"><code>GET /auth/me</code>, <code>POST /auth/logout-all</code>, <code>/auth/switch-org</code>, <code>/auth/mfa/setup</code>, <code>/auth/mfa/enable</code>, <code>/auth/mfa/disable</code></th><td>Any authenticated user.</td></tr><tr><th scope="row"><code>GET</code>, <code>POST</code>, <code>PATCH</code>, <code>DELETE</code> <code>/auth/members</code></th><td><code>members:read</code>, <code>members:invite</code>, <code>members:manage</code>; a member may leave on their own.</td></tr><tr><th scope="row"><code>GET</code>, <code>POST</code>, <code>DELETE</code> <code>/api/v1/invitations</code></th><td><code>members:read</code> to list; <code>members:invite</code> to create and revoke.</td></tr></tbody></table></div>
+        <div class="dx-callout is-tip" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1v.1h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z"/></svg><div><p class="dx-callout-t">Tip</p><p>The API reference lists the remaining routes and the security model covers the threat analysis.</p></div></div>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="dx-cards dx-cards-sm"><li><a href="/en/docs/api-reference/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg><b>API Reference</b><span>Authentication, API tokens, errors and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.</span></a></li><li><a href="/en/docs/security-model/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><b>Security model</b><span>How the damage an agent can do is bounded: credential vault, approvals, caps, kill switch, audit log, RLS and sandbox, with the current limits.</span></a></li><li><a href="/en/docs/configuration/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><b>Configuration reference</b><span>Every AI Workforce OS environment variable with its default: server, authentication, budget, model providers and frontend build arguments.</span></a></li></ul></section>
+      </div>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Pagination">
+        <a class="dx-prev" href="/en/docs/api-reference/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Previous</span><b>API Reference</b></a>
+        <a class="dx-next" href="/en/docs/skills-format/" rel="next"><span>Next<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>Skills format</b></a>
+      </nav>
+      
+      <footer class="dx-foot">
+        <p>AI Workforce OS is a project in development. This documentation describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+        <div class="dx-foot-links">
+          <a href="/en/">AI Workforce OS</a>
+          <a href="/en/docs/">Documentation</a>
+          <a href="/en/guide/">User guide</a>
+          <a href="/en/trust/">Trust</a>
+          <a href="#top">Back to top</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

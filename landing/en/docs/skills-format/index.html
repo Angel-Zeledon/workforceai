@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agent skills format (SKILL.md)</title>
-  <meta name="description" content="How a skill is defined: a folder with SKILL.md, frontmatter, limits, lifecycle, review, import and export, and how it reaches the model.">
+  <meta name="description" content="How to write a skill: a folder with SKILL.md, frontmatter, limits, review lifecycle, import and export, and how it reaches the model.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -23,202 +24,235 @@
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
   <meta property="og:title" content="Agent skills format (SKILL.md)">
-  <meta property="og:description" content="How a skill is defined: a folder with SKILL.md, frontmatter, limits, lifecycle, review, import and export, and how it reaches the model.">
+  <meta property="og:description" content="How to write a skill: a folder with SKILL.md, frontmatter, limits, review lifecycle, import and export, and how it reaches the model.">
   <meta property="og:url" content="https://workforceai.es/en/docs/skills-format/">
   <meta property="og:image" content="https://workforceai.es/img/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Agent skills format (SKILL.md)">
-  <meta name="twitter:description" content="How a skill is defined: a folder with SKILL.md, frontmatter, limits, lifecycle, review, import and export, and how it reaches the model.">
+  <meta name="twitter:description" content="How to write a skill: a folder with SKILL.md, frontmatter, limits, review lifecycle, import and export, and how it reaches the model.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Skills format","item":"https://workforceai.es/en/docs/skills-format/"}]},{"@type":"TechArticle","headline":"Skills format","description":"How a skill is defined: a folder with SKILL.md, frontmatter, limits, lifecycle, review, import and export, and how it reaches the model.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/skills-format/","url":"https://workforceai.es/en/docs/skills-format/","dateModified":"2026-10-13","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=597dac5ccb">
+  <script src="/docs.js?v=2317516bde" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://workforceai.es/en/docs/"},{"@type":"ListItem","position":3,"name":"Skills format","item":"https://workforceai.es/en/docs/skills-format/"}]},{"@type":"TechArticle","headline":"Skills format","description":"How to write a skill: a folder with SKILL.md, frontmatter, limits, review lifecycle, import and export, and how it reaches the model.","inLanguage":"en","mainEntityOfPage":"https://workforceai.es/en/docs/skills-format/","url":"https://workforceai.es/en/docs/skills-format/","dateModified":"2026-10-23","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/en/" aria-label="AI Workforce OS">
-        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+<body class="dx dx-docs" id="top">
+  <a class="dx-skip" href="#main">Skip to content</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="/en/">Home</a>
-        <a href="/en/docs/">Documentation</a>
-        <a href="/en/guide/">User guide</a>
-        <a href="/en/trust/">Trust</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Language">
-          <a href="/docs/formato-de-habilidades/" hreflang="es" lang="es" >ES</a>
+      <nav class="dx-tabs" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Language">
+          <a href="/docs/formato-de-habilidades/" hreflang="es" lang="es">ES</a>
           <a href="/en/docs/skills-format/" hreflang="en" lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap wide">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><a href="/en/docs/">Documentation</a></li><li aria-current="page">Skills format</li></ol></nav>
-      <article>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="Documentation">
+      <div class="dx-side-head">
+        <span>Menu</span>
+        <a class="dx-side-close" href="#top" aria-label="Close menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
+      </div>
+      <nav class="dx-colls" aria-label="Site sections"><a href="/en/docs/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <nav class="dx-pages" aria-label="Documentation">
+        <ul class="dx-list">
+          <li><a href="/en/docs/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Overview</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-concepts">Concepts</p>
+        <ul class="dx-list" aria-labelledby="g-docs-concepts">
+          <li><a href="/en/docs/architecture/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><span>Architecture</span></a></li>
+          <li><a href="/en/docs/agent-runtime/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg><span>Agent runtime</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-integrate">Integrate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-integrate">
+          <li><a href="/en/docs/api-reference/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg><span>API Reference</span></a></li>
+          <li><a href="/en/docs/auth-and-tenancy/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg><span>Auth and tenancy</span></a></li>
+          <li><a href="/en/docs/skills-format/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><path d="M17.25 13.5v7.5M13.5 17.25H21"/></svg><span>Skills format</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-docs-operate">Operate</p>
+        <ul class="dx-list" aria-labelledby="g-docs-operate">
+          <li><a href="/en/docs/deployment/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></svg><span>Deployment</span></a></li>
+          <li><a href="/en/docs/configuration/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span>Configuration</span></a></li>
+          <li><a href="/en/docs/security-model/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Security model</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Language">
+          <a href="/docs/formato-de-habilidades/" hreflang="es" lang="es">ES</a>
+          <a href="/en/docs/skills-format/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <article class="dx-article">
+      <header class="dx-head">
+        <nav class="dx-crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/docs/">Documentation</a></li><li><span>Integrate</span></li></ol></nav>
         <h1>Skills format</h1>
-        <p class="lead">A skill is reusable know-how that an agent can load when it needs it. It uses the open Agent Skills format: a folder with a SKILL.md file and optional text resources. It is plain prompt text plus one gateway tool, so it works the same with every model provider.</p>
+        <p class="dx-lead">A skill is reusable know-how that an agent loads when it needs it: a folder with a <code>SKILL.md</code> file and optional text resources, in the open Agent Skills format. This page is for anyone who writes, imports or reviews skills. Since it is plain prompt text plus one gateway tool, it works the same with every model provider.</p>
+        <p class="dx-meta"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>7 min read</span></p>
+      </header>
+      <details class="dx-toc" open>
+        <summary id="toc-h">On this page</summary>
+        <ol><li><a href="#what-a-skill-package-is">What a skill package is</a></li><li><a href="#skill-md-frontmatter">SKILL.md frontmatter</a></li><li><a href="#complete-example">Complete example</a></li><li><a href="#package-limits">Package limits</a></li><li><a href="#built-in-starter-skills">Built-in starter skills</a></li><li><a href="#lifecycle-and-review">Lifecycle and review</a></li><li><a href="#scanning-import-and-export">Scanning, import and export</a></li><li><a href="#skills-api-routes">Skills API routes</a></li><li><a href="#assignment-to-agents">Assignment to agents</a></li><li><a href="#how-skills-reach-the-model">How skills reach the model</a></li><li><a href="#limits-and-cleaning-of-loaded-text">Limits and cleaning of loaded text</a></li></ol>
+        <a class="dx-toc-top" href="#top">Back to top</a>
+      </details>
+      <div class="dx-body">
         
-        <nav class="toc" aria-labelledby="toc-h"><h2 id="toc-h">On this page</h2><ol><li><a href="#s1">What a skill package is</a></li><li><a href="#s2">SKILL.md frontmatter</a></li><li><a href="#s3">Complete annotated example</a></li><li><a href="#s4">Package limits</a></li><li><a href="#s5">Built-in starter skills</a></li><li><a href="#s6">Lifecycle and statuses</a></li><li><a href="#s7">Scanning, import and export</a></li><li><a href="#s8">Assignment to agents</a></li><li><a href="#s9">How skills reach the model</a></li></ol></nav>
-
-      <section class="g-sec" id="s1" aria-labelledby="h1">
-        <h2 id="h1">What a skill package is</h2>
-        <p>A package is a folder whose only required file is SKILL.md: a YAML frontmatter block followed by markdown instructions. It may include supporting files such as templates, examples, reference documents or scripts, always as text.</p>
-        <p>The files of each version are stored in the organization's drive, at /Shared/Skills/&lt;name&gt;/v&lt;n&gt;/, and the database keeps the manifest (path, size and sha256 of each file). Versions are immutable: restoring an old version creates a new one.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-text">client-email/
+        <section class="dx-sec" aria-labelledby="what-a-skill-package-is">
+        <h2 id="what-a-skill-package-is">What a skill package is<a class="dx-anchor" href="#what-a-skill-package-is" aria-label="Link to the “What a skill package is” section">#</a></h2>
+        <p>A package is a folder whose only required file is <code>SKILL.md</code>: a YAML frontmatter block followed by markdown instructions. It may include supporting files such as templates, examples, reference documents or scripts, always as text.</p>
+        <p>Each version stores its files in the organization's Drive, at <code>/Shared/Skills/&lt;name&gt;/v&lt;n&gt;/</code>, and the database keeps the manifest: path, size and <code>sha256</code> of each file. Versions are immutable; restoring an old version creates a new version with the same content.</p>
+        <figure class="dx-code" data-lang="text">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Built-in client-email package</span><span class="dx-code-lang">Text</span></figcaption>
+          <pre tabindex="0" aria-label="Text code"><code>client-email/
 ├── SKILL.md
-├── templates/
-│   └── follow-up.md
 └── examples/
-    └── collection.txt</code></pre>
-        
-        
+    └── follow-up-example.md</code></pre>
+        </figure>
       </section>
-
-      <section class="g-sec" id="s2" aria-labelledby="h2">
-        <h2 id="h2">SKILL.md frontmatter</h2>
-        <p>The parser understands only a small subset of YAML: scalars, quoted strings, blocks with &gt; or |, inline or block lists and one level of nested map for metadata. It does not support anchors, tags, merges or code, and it rejects tabs in indentation.</p>
-        <p>SKILL.md must be valid UTF-8, start with a --- line and close the block with another. The instructions after the frontmatter cannot be empty.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Field</th><th scope="col">Required</th><th scope="col">Rule or limit</th></tr></thead><tbody><tr><th scope="row"><code>name</code></th><td>Yes</td><td>Pattern ^[a-z0-9-]{1,64}$. Unique per organization and immutable.</td></tr><tr><th scope="row"><code>description</code></th><td>Yes</td><td>Up to 1024 characters. It is what the agent sees to decide whether to use the skill.</td></tr><tr><th scope="row"><code>license</code></th><td>No</td><td>Free text.</td></tr><tr><th scope="row"><code>compatibility</code></th><td>No</td><td>Free text; preserved on export.</td></tr><tr><th scope="row"><code>allowed-tools</code></th><td>No</td><td>Up to 20 entries. Informational: it never grants anything.</td></tr><tr><th scope="row"><code>metadata</code></th><td>No</td><td>Key-to-text map, up to 30 entries (for example category).</td></tr></tbody></table></div>
-        <aside class="tip"><b>Tip.</b> Other top-level scalar keys are preserved on import and export, so a round trip does not lose data.</aside>
+        <section class="dx-sec" aria-labelledby="skill-md-frontmatter">
+        <h2 id="skill-md-frontmatter">SKILL.md frontmatter<a class="dx-anchor" href="#skill-md-frontmatter" aria-label="Link to the “SKILL.md frontmatter” section">#</a></h2>
+        <p><code>SKILL.md</code> must be valid UTF-8, start with a <code>---</code> line and close the block with another one. The instructions after the frontmatter cannot be empty.</p>
+        <p>The parser understands a small subset of YAML, on purpose:</p>
+        <ul class="dx-ul"><li>Scalars, quoted strings and <code>&gt;</code> or <code>|</code> blocks.</li><li>Inline or block lists.</li><li>A single level of nested map, only for <code>metadata</code>.</li><li>It rejects anchors, aliases, tags, inline maps and tabs in indentation.</li></ul>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: SKILL.md frontmatter"><table><thead><tr><th scope="col">Field</th><th scope="col">Required</th><th scope="col">Rule or limit</th></tr></thead><tbody><tr><th scope="row"><code>name</code></th><td>Yes</td><td>Pattern <code>^[a-z0-9-]{1,64}$</code>. Unique per organization and immutable once created.</td></tr><tr><th scope="row"><code>description</code></th><td>Yes</td><td>Up to 1024 characters. It is what the agent reads to decide whether to use the skill: say what it does and when to use it.</td></tr><tr><th scope="row"><code>license</code></th><td>No</td><td>Free text.</td></tr><tr><th scope="row"><code>compatibility</code></th><td>No</td><td>Free text; preserved on export.</td></tr><tr><th scope="row"><code>allowed-tools</code></th><td>No</td><td>Up to 20 entries. Informational: it never grants tools.</td></tr><tr><th scope="row"><code>metadata</code></th><td>No</td><td>Key-to-text map, up to 30 entries (for example <code>category</code>).</td></tr></tbody></table></div>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>Other top-level scalar keys are preserved on import and export (up to 20 keys and 300 bytes per value), so a round trip loses nothing. The in-app editor does not show <code>compatibility</code> or those extra keys: saving from the editor drops them.</p></div></div>
       </section>
+        <section class="dx-sec" aria-labelledby="complete-example">
+        <h2 id="complete-example">Complete example<a class="dx-anchor" href="#complete-example" aria-label="Link to the “Complete example” section">#</a></h2>
+        <p>This is the <code>SKILL.md</code> of the English <code>client-email</code> skill, exactly as the backend ships it. The name uses lowercase and hyphens, the description says what it does and when to use it, and <code>metadata</code> carries the category and the built-in marker.</p>
+        <figure class="dx-code" data-lang="yaml">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">SKILL.md</span><span class="dx-code-lang">YAML</span></figcaption>
+          <pre tabindex="0" aria-label="YAML code"><code><span class="tk-punct">---</span>
+<span class="tk-key">name</span>: client-email
+<span class="tk-key">description</span>: <span class="tk-str">&quot;Write a clear email to a client: subject, brief context, a concrete request or answer and the next step. Use it for replies, follow-ups, friendly collections and announcements.&quot;</span>
+<span class="tk-key">metadata</span>:
+  <span class="tk-key">category</span>: communication
+  <span class="tk-key">builtin</span>: <span class="tk-str">&quot;true&quot;</span>
+<span class="tk-punct">---</span>
 
-      <section class="g-sec" id="s3" aria-labelledby="h3">
-        <h2 id="h3">Complete annotated example</h2>
-        <p>This is the client-email starter package in English, as shipped with the backend. The limits from the previous section hold: the name uses lowercase and hyphens, the description is short, and metadata carries the category and the built-in marker.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-yaml">---
-name: client-email
-description: &quot;Write a clear email to a client: subject, brief context, a concrete request or answer and the next step. Use it for replies, follow-ups, friendly collections and announcements.&quot;
-metadata:
-  category: communication
-  builtin: &quot;true&quot;
----
+<span class="tk-com"># Client email</span>
 
-# Client email
-
-## When to use it
+<span class="tk-com">## When to use it</span>
 To write replies, follow-ups or notices to clients.
 
-## Steps
-1. Identify the goal in one sentence: inform, ask, confirm, collect or apologize.
-2. Specific subject (at most 8 words) with the topic and, if relevant, the date or reference.
-3. First paragraph: the answer or request. Then the minimum context.
-4. Close with a single next step, who does it and by when.
-5. Adjust the tone: warm and professional; in complaints acknowledge the problem first; in collections be firm and kind.
+<span class="tk-com">## Steps</span>
+<span class="tk-num">1</span>. Identify the goal in one sentence: inform, ask, confirm, collect or apologize.
+<span class="tk-num">2</span>. Specific subject (at most <span class="tk-num">8</span> words) with the topic and, if relevant, the date or reference.
+<span class="tk-num">3</span>. First paragraph: the answer or request. Then the minimum context.
+<span class="tk-num">4</span>. Close with a single next step, who does it and by when.
+<span class="tk-num">5</span>. Adjust the tone: warm and professional; in complaints acknowledge the problem first; in collections be firm and kind.
 
-## Quality criteria
-- Under 150 words unless more is needed.
-- No figure, date or commitment that is not in the task data.
-- Check names, amounts and attachments mentioned.
+<span class="tk-com">## Quality criteria</span>
+<span class="tk-punct">-</span> Under <span class="tk-num">150</span> words unless more is needed.
+<span class="tk-punct">-</span> No figure, date or commitment that is not in the task data.
+<span class="tk-punct">-</span> Check names, amounts and attachments mentioned.
 
-## Limits
+<span class="tk-com">## Limits</span>
 Leave the email as a draft; sending it is decided by a person or by the organization policy.</code></pre>
-        
-        
+        </figure>
       </section>
-
-      <section class="g-sec" id="s4" aria-labelledby="h4">
-        <h2 id="h4">Package limits</h2>
-        <p>These caps are validated on create, edit and import. A violation returns a stable error code, for example file_too_large, too_many_files or zip_bomb.</p>
-        
-        
-        <div class="tbl" role="region" tabindex="0"><table><thead><tr><th scope="col">Limit</th><th scope="col">Value</th></tr></thead><tbody><tr><th scope="row"><code>Total size of a version</code></th><td>2 MB</td></tr><tr><th scope="row"><code>Size of one file</code></th><td>512 KB</td></tr><tr><th scope="row"><code>Files per skill (including SKILL.md)</code></th><td>40</td></tr><tr><th scope="row"><code>Zip entries inspected</code></th><td>300</td></tr><tr><th scope="row"><code>Path depth</code></th><td>4 levels, segments with [A-Za-z0-9._-]</td></tr><tr><th scope="row"><code>Allowed extensions</code></th><td>md, txt, csv, json, yaml, yml, py, js, sh (UTF-8 text only, no NUL bytes)</td></tr><tr><th scope="row"><code>Compression ratio per zip entry</code></th><td>100 to 1</td></tr></tbody></table></div>
-        
+        <section class="dx-sec" aria-labelledby="package-limits">
+        <h2 id="package-limits">Package limits<a class="dx-anchor" href="#package-limits" aria-label="Link to the “Package limits” section">#</a></h2>
+        <p>These caps are validated on create, edit and import. A violation returns a stable error code, for example <code>file_too_large</code>, <code>too_many_files</code>, <code>extension_not_allowed</code> or <code>zip_bomb</code>.</p>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Package limits"><table><thead><tr><th scope="col">Limit</th><th scope="col">Value</th></tr></thead><tbody><tr><th scope="row">Uploaded file on import</th><td>4 MB</td></tr><tr><th scope="row">Total size of a version</th><td>2 MB</td></tr><tr><th scope="row">Size of one file</th><td>512 KB</td></tr><tr><th scope="row">Files per skill (including <code>SKILL.md</code>)</th><td>40</td></tr><tr><th scope="row">Zip entries inspected</th><td>300</td></tr><tr><th scope="row">Paths</th><td>Up to 4 levels (the file name counts) and 160 characters. Each segment starts with a letter or digit and uses <code>A-Z</code>, <code>a-z</code>, <code>0-9</code>, <code>.</code>, <code>_</code> or <code>-</code>, up to 64 characters.</td></tr><tr><th scope="row">Allowed extensions</th><td><code>md</code>, <code>txt</code>, <code>csv</code>, <code>json</code>, <code>yaml</code>, <code>yml</code>, <code>py</code>, <code>js</code>, <code>sh</code> (UTF-8 text only, no NUL bytes)</td></tr><tr><th scope="row">Compression ratio of a zip entry</th><td>Up to 100 to 1 (checked on entries of 64 KB or more)</td></tr></tbody></table></div>
       </section>
-
-      <section class="g-sec" id="s5" aria-labelledby="h5">
-        <h2 id="h5">Built-in starter skills</h2>
-        <p>The backend ships a catalog of starter skills as data embedded in the binary, in Spanish and English and in the same format as an import, under builtin/&lt;language&gt;/&lt;name&gt;/ (currently 55 per language, including bank-reconciliation, b2b-proposal, service-contract-review, month-end-close, client-email and project-plan).</p>
-        <p>The first time an organization uses the library they are created as active, in the organization's language. If the organization already has any skill, even a deleted one, it is left as is, and deleted starters are not re-created. Role templates declare default_skills (names only) and agents of that role receive them without needing an assignment.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-text">backend/internal/skills/builtin/
-├── es/&lt;nombre&gt;/SKILL.md
-└── en/&lt;nombre&gt;/SKILL.md</code></pre>
-        
-        
+        <section class="dx-sec" aria-labelledby="built-in-starter-skills">
+        <h2 id="built-in-starter-skills">Built-in starter skills<a class="dx-anchor" href="#built-in-starter-skills" aria-label="Link to the “Built-in starter skills” section">#</a></h2>
+        <p>The backend ships a catalog of starter skills embedded in the binary, in Spanish and English, in the same format as an import. There are 55 per language today, including <code>bank-reconciliation</code>, <code>b2b-proposal</code>, <code>service-contract-review</code>, <code>month-end-close</code>, <code>client-email</code> and <code>project-plan</code>.</p>
+        <p>The first time an organization opens the library, they are created as active in its language. If the organization already has any skill, even a deleted one, none are created, and deleted starters do not come back. Role templates declare <code>default_skills</code> (names only) and agents of that role receive them without needing an assignment.</p>
+        <figure class="dx-code" data-lang="text">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Text</span></figcaption>
+          <pre tabindex="0" aria-label="Text code"><code>backend/internal/skills/builtin/
+├── es/&lt;name&gt;/SKILL.md
+└── en/&lt;name&gt;/SKILL.md</code></pre>
+        </figure>
       </section>
-
-      <section class="g-sec" id="s6" aria-labelledby="h6">
-        <h2 id="h6">Lifecycle and statuses</h2>
-        <p>A skill is in one of four statuses: draft, in_review, active or disabled. Holders of the skills:write permission (members) create drafts, edit and import. Only holders of skills:review (administrators) review, activate, disable and delete. A review names the version the reviewer read (otherwise stale_review) and re-verifies the file hashes before activating.</p>
-        <p>An import always enters in_review. If a member edits an active skill, the new version lands in in_review and agents keep using the approved version; if an administrator edits it, the edit is the review and it becomes active. A rejection returns to draft (or leaves the previous approved version active) with a note. Deletion is soft: creating another skill with the same name brings it back with a new version.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-text">create (member)  → draft ──submit──▶ in_review ──approve (admin)──▶ active
+        <section class="dx-sec" aria-labelledby="lifecycle-and-review">
+        <h2 id="lifecycle-and-review">Lifecycle and review<a class="dx-anchor" href="#lifecycle-and-review" aria-label="Link to the “Lifecycle and review” section">#</a></h2>
+        <p>A skill is in one of four statuses: <code>draft</code>, <code>in_review</code>, <code>active</code> or <code>disabled</code>. Members (<code>skills:write</code> permission) create drafts, edit, import and restore versions. Administrators (<code>skills:review</code> permission) approve, reject, disable and delete.</p>
+        <ul class="dx-ul"><li>An import always enters <code>in_review</code>.</li><li>If a member edits an active skill, the new version lands in <code>in_review</code> and agents keep using the approved one. If an administrator edits it, the edit counts as the review and it becomes active.</li><li>A review names the version the reviewer read: if it is no longer current, it fails with <code>stale_review</code>. File hashes are checked again before activation.</li><li>A rejection stores a note and returns the skill to <code>draft</code>, or keeps it active with the previous approved version when there is one.</li><li>Deletion is soft and removes assignments. Creating another skill with the same name brings it back with a new version.</li></ul>
+        <figure class="dx-code" data-lang="text">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Text</span></figcaption>
+          <pre tabindex="0" aria-label="Text code"><code>create (member)  → draft ──submit──▶ in_review ──approve (admin)──▶ active
 import (member)  → in_review (always)
 reject → draft, or stays active with the previous approved version
-disable / approve again · delete (soft)</code></pre>
-        
-        
+active ──disable (admin)──▶ disabled · delete (admin, soft)</code></pre>
+        </figure>
       </section>
+        <section class="dx-sec" aria-labelledby="scanning-import-and-export">
+        <h2 id="scanning-import-and-export">Scanning, import and export<a class="dx-anchor" href="#scanning-import-and-export" aria-label="Link to the “Scanning, import and export” section">#</a></h2>
+        <p>Every saved version is scanned and the warnings are stored for the reviewer. The scan informs; it does not decide: the reviewer sees everything before approving.</p>
+        <ul class="dx-ul"><li><code>injection</code>: a file's injection score exceeds the threshold.</li><li><code>script</code>: the package ships executable files as text (<code>py</code>, <code>js</code>, <code>sh</code>).</li><li><code>allowed_tools</code>: the frontmatter declares <code>allowed-tools</code>.</li><li><code>import_note</code>: the import adjusted something, for example it skipped an empty file.</li></ul>
+        <ol class="dx-steps" aria-label="Steps"><li>Import a <code>.zip</code> or a single <code>SKILL.md</code> with <code>POST /api/v1/skills/import</code> (multipart field <code>file</code>).</li><li>Validation is strict: it rejects absolute paths or paths with <code>..</code>, backslashes, drive letters, symlinks and special files, encrypted entries, duplicates that differ only in case, and zip bombs. It strips a single wrapper folder and ignores <code>__MACOSX</code>, <code>.DS_Store</code> and <code>Thumbs.db</code>.</li><li>An administrator reviews the version and approves or rejects it.</li><li>To take it out, <code>GET /api/v1/skills/{id}/export</code> returns a deterministic zip in the standard layout (<code>&lt;name&gt;/SKILL.md</code> plus resources, no executable bits), or only <code>SKILL.md</code> with <code>?format=md</code>.</li></ol>
+        <div class="dx-callout is-note" role="note"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg><div><p class="dx-callout-t">Note</p><p>Import from a URL deliberately does not exist: it would need an SSRF-safe downloader.</p></div></div>
+      </section>
+        <section class="dx-sec" aria-labelledby="skills-api-routes">
+        <h2 id="skills-api-routes">Skills API routes<a class="dx-anchor" href="#skills-api-routes" aria-label="Link to the “Skills API routes” section">#</a></h2>
+        <p>Every route lives under <code>/api/v1</code>, behind authentication and per-organization isolation. A review body carries the decision (<code>approve</code> or <code>reject</code>), the reviewed version and a note.</p>
+        <figure class="dx-code" data-lang="http">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Approve version 3</span><span class="dx-code-lang">HTTP</span></figcaption>
+          <pre tabindex="0" aria-label="HTTP code"><code><span class="tk-kw">POST</span> <span class="tk-path">/api/v1/skills/{id}/review</span>
+<span class="tk-key">Content-Type</span><span class="tk-punct">:</span> application/json
 
-      <section class="g-sec" id="s7" aria-labelledby="h7">
-        <h2 id="h7">Scanning, import and export</h2>
-        <p>When each version is saved, the package is scanned and warnings are stored for the reviewer: injection (a file's injection score exceeds the threshold), script (files that are executable as text), allowed_tools (allowed-tools was declared) and import_note. The scan informs; it does not decide on its own. The reviewer sees everything before approving.</p>
-        <p>A .zip or a single SKILL.md can be imported. Validation is strict: paths with .. or absolute ones, backslashes, drive letters, symlinks and special files, encrypted entries, case-insensitive duplicates and zip bombs are rejected. A single wrapper folder is stripped and __MACOSX and .DS_Store are ignored. Import from a URL is deliberately not implemented, because it would need an SSRF-safe fetcher.</p>
-        <p>Export returns a deterministic zip in the standard layout (&lt;name&gt;/SKILL.md plus resources, no executable bits) or only SKILL.md. Importing an export again gives the same instructions, description, metadata and files.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-http">POST /skills/import           # .zip or SKILL.md
-GET  /skills/{id}/export      # deterministic zip
-POST /skills/{id}/submit      # draft → in_review
-POST /skills/{id}/review      # approve or reject (skills:review)</code></pre>
-        
-        
+<span class="tk-punct">{</span> <span class="tk-key">&quot;decision&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;approve&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;version&quot;</span><span class="tk-punct">:</span> <span class="tk-num">3</span><span class="tk-punct">,</span> <span class="tk-key">&quot;note&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;Checked tone and limits&quot;</span> <span class="tk-punct">}</span></code></pre>
+        </figure>
+        <div class="dx-table" role="region" tabindex="0" aria-label="Table: Skills API routes"><table><thead><tr><th scope="col">Route (under /api/v1)</th><th scope="col">Permission</th><th scope="col">What it does</th></tr></thead><tbody><tr><th scope="row"><code>GET /skills</code></th><td><code>skills:read</code></td><td>Lists the organization's skills.</td></tr><tr><th scope="row"><code>POST /skills</code></th><td><code>skills:write</code></td><td>Creates a draft from the editor.</td></tr><tr><th scope="row"><code>POST /skills/import</code></th><td><code>skills:write</code></td><td>Imports a <code>.zip</code> or a <code>SKILL.md</code>; it enters <code>in_review</code>.</td></tr><tr><th scope="row"><code>PUT /skills/{id}</code></th><td><code>skills:write</code></td><td>Saves a new version.</td></tr><tr><th scope="row"><code>POST /skills/{id}/versions/{n}/restore</code></th><td><code>skills:write</code></td><td>Creates a new version with the content of version <code>n</code>.</td></tr><tr><th scope="row"><code>POST /skills/{id}/submit</code></th><td><code>skills:write</code></td><td>Moves from <code>draft</code> to <code>in_review</code>.</td></tr><tr><th scope="row"><code>POST /skills/{id}/review</code></th><td><code>skills:review</code></td><td>Approves or rejects a specific version.</td></tr><tr><th scope="row"><code>POST /skills/{id}/disable</code></th><td><code>skills:review</code></td><td>Stops serving the skill to agents.</td></tr><tr><th scope="row"><code>GET /skills/{id}/export</code></th><td><code>skills:read</code></td><td>Exports the zip or, with <code>?format=md</code>, only <code>SKILL.md</code>.</td></tr></tbody></table></div>
       </section>
-
-      <section class="g-sec" id="s8" aria-labelledby="h8">
-        <h2 id="h8">Assignment to agents</h2>
-        <p>Assignment links a skill to an agent (skill_assignments table) through PUT and DELETE on /agents/{id}/skills/{skillId}, with the agents write permission. There are also role defaults: names in a role template's default_skills reach every agent of that role without an assignment row.</p>
-        <p>A skill is served to an agent only if it is assigned (or is a default of its role) and its approved version is active and enabled. In any other situation the load is denied with skill_not_available.</p>
-        
-        
-        
-        
+        <section class="dx-sec" aria-labelledby="assignment-to-agents">
+        <h2 id="assignment-to-agents">Assignment to agents<a class="dx-anchor" href="#assignment-to-agents" aria-label="Link to the “Assignment to agents” section">#</a></h2>
+        <p>An assignment links a skill to an agent through <code>PUT</code> and <code>DELETE</code> on <code>/api/v1/agents/{id}/skills/{skillId}</code>, with the <code>agents:write</code> permission. There are also role defaults: the names in a role template's <code>default_skills</code> reach every agent of that role without an explicit assignment.</p>
+        <p>An agent only receives a skill if it is assigned (or is a default of its role), is neither deleted nor disabled, and has an approved version. While an edit waits for review, the approved version is served. In any other case the load is denied with <code>skill_not_available</code>.</p>
       </section>
-
-      <section class="g-sec" id="s9" aria-labelledby="h9">
-        <h2 id="h9">How skills reach the model</h2>
-        <p>Progressive disclosure in two steps. On every run, the backend adds to the request only the name and description of the agent's servable skills, with caps: at most 12 skills, 240 characters per description and 3000 characters in total. The runtime renders them as prompt lines with the rule that a skill guides how to work and never grants tools, connections, permissions, autonomy or approvals.</p>
-        <p>If a skill applies, the agent asks for it with a tool request. The Tool Gateway serves it as a native read tool (subject to the kill switch, pause and audit) and answers with the approved version's body without frontmatter plus the file list; with file it returns one specific resource.</p>
-        <p>The text travels in its own channel (loaded_skills) as trusted organization configuration, inside dedicated delimiters and not as untrusted data, because a person approved that exact version. It is still cleaned (invisible characters, credentials, forged delimiters), bounded (24,000 characters per answer, 4 loaded skills per task) and scored for injection. Scripts are inert text: running them requires the code tool with human approval.</p>
-        
-        <pre class="code" tabindex="0"><code class="lang-json">{ &quot;tool&quot;: &quot;skill&quot;, &quot;action&quot;: &quot;load&quot;, &quot;args&quot;: { &quot;name&quot;: &quot;client-email&quot;, &quot;file&quot;: &quot;templates/follow-up.md&quot; } }</code></pre>
-        
-        
+        <section class="dx-sec" aria-labelledby="how-skills-reach-the-model">
+        <h2 id="how-skills-reach-the-model">How skills reach the model<a class="dx-anchor" href="#how-skills-reach-the-model" aria-label="Link to the “How skills reach the model” section">#</a></h2>
+        <p>Disclosure is progressive, in two steps. On every run, the backend adds to the request only the name and description of the skills the agent can use, with caps: at most 12 skills, 240 characters per description and 3000 bytes in total. The runtime renders them in the prompt with an explicit rule: a skill guides how to work and never grants tools, connections, permissions, autonomy or approvals.</p>
+        <p>If a skill applies, the agent asks for it with a tool request. The Tool Gateway serves it as a native read tool, subject to the kill switch, pause and audit, and answers with the approved version's body without frontmatter plus the file list. With <code>file</code> it returns a single resource.</p>
+        <figure class="dx-code" data-lang="json">
+          <figcaption class="dx-code-bar"><span class="dx-code-title">Agent tool request</span><span class="dx-code-lang">JSON</span></figcaption>
+          <pre tabindex="0" aria-label="JSON code"><code><span class="tk-punct">{</span> <span class="tk-key">&quot;tool&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;skill&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;action&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;load&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;args&quot;</span><span class="tk-punct">:</span> <span class="tk-punct">{</span> <span class="tk-key">&quot;name&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;client-email&quot;</span><span class="tk-punct">,</span> <span class="tk-key">&quot;file&quot;</span><span class="tk-punct">:</span> <span class="tk-str">&quot;examples/follow-up-example.md&quot;</span> <span class="tk-punct">}</span> <span class="tk-punct">}</span></code></pre>
+        </figure>
       </section>
-      </article>
-      <section class="related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="cards"><li><a href="/en/docs/agent-runtime/"><b>Agent runtime</b><span>The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.</span></a></li><li><a href="/en/docs/api-reference/"><b>API Reference</b><span>Authentication, error format and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.</span></a></li><li><a href="/en/docs/architecture/"><b>AI Workforce OS Architecture</b><span>Components, request flow, the WebSocket channel, data model, row-level-security multi-tenancy and how simulation differs from real AI.</span></a></li></ul></section>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Start now</h2>
-      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+        <section class="dx-sec" aria-labelledby="limits-and-cleaning-of-loaded-text">
+        <h2 id="limits-and-cleaning-of-loaded-text">Limits and cleaning of loaded text<a class="dx-anchor" href="#limits-and-cleaning-of-loaded-text" aria-label="Link to the “Limits and cleaning of loaded text” section">#</a></h2>
+        <p>Once loaded, the skill enters the task context with several safeguards:</p>
+        <ul class="dx-ul"><li>The text travels in its own channel (<code>loaded_skills</code>) as trusted organization configuration, inside dedicated delimiters, because a person approved that exact version.</li><li>It is still cleaned (invisible characters, credentials, forged delimiters) and scored for injection.</li><li>It is bounded in the backend (24,000 characters per answer, 4 loads per task) and again in the runtime (3 skills, 12,000 characters each, 20,000 in total).</li><li>Scripts are inert text: running them requires the code tool, with human approval.</li></ul>
+      </section>
+        <section class="dx-related" aria-labelledby="rel-h"><h2 id="rel-h">Keep reading</h2><ul class="dx-cards dx-cards-sm"><li><a href="/en/docs/agent-runtime/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></svg><b>Agent runtime</b><span>The Python agent runtime: HTTP contract, simulation vs live mode, model providers and fallback, data policy, tools, sandbox and cost budgets.</span></a></li><li><a href="/en/docs/api-reference/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></svg><b>API Reference</b><span>Authentication, API tokens, errors and /api/v1 routes: requests, tasks, approvals, agents, projects, skills, shop, drive and the WebSocket.</span></a></li><li><a href="/en/docs/security-model/"><svg class="dx-i dx-card-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><b>Security model</b><span>How the damage an agent can do is bounded: credential vault, approvals, caps, kill switch, audit log, RLS and sandbox, with the current limits.</span></a></li></ul></section>
       </div>
-    </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a href="/en/docs/">Documentation</a>
-      <a href="/en/guide/">User guide</a>
-      <a href="/en/trust/">Trust</a>
-      <a href="#top">Back to top</a>
-    </div>
-  </footer>
+      <div class="dx-end">
+      <nav class="dx-pager" aria-label="Pagination">
+        <a class="dx-prev" href="/en/docs/auth-and-tenancy/" rel="prev"><span><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Previous</span><b>Authentication and multi-tenancy</b></a>
+        <a class="dx-next" href="/en/docs/deployment/" rel="next"><span>Next<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><b>Production deployment</b></a>
+      </nav>
+      
+      <footer class="dx-foot">
+        <p>AI Workforce OS is a project in development. This documentation describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+        <div class="dx-foot-links">
+          <a href="/en/">AI Workforce OS</a>
+          <a href="/en/docs/">Documentation</a>
+          <a href="/en/guide/">User guide</a>
+          <a href="/en/trust/">Trust</a>
+          <a href="#top">Back to top</a>
+        </div>
+      </footer>
+      </div>
+    </article>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

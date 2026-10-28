@@ -6,7 +6,8 @@
   <title>AI Workforce OS user guide | How to use the app</title>
   <meta name="description" content="Learn AI Workforce OS step by step: ask for work, approve, projects, skills, shop, files and security.">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#f7f9fb">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
@@ -31,61 +32,177 @@
   <meta name="twitter:description" content="Learn AI Workforce OS step by step: ask for work, approve, projects, skills, shop, files and security.">
   <meta name="twitter:image" content="https://workforceai.es/img/og.png">
   <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/guide.css">
-  <link rel="stylesheet" href="/theme.css">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"User guide","item":"https://workforceai.es/en/guide/"}]},{"@type":"CollectionPage","name":"AI Workforce OS user guide","description":"Learn AI Workforce OS step by step: ask for work, approve, projects, skills, shop, files and security.","inLanguage":"en","url":"https://workforceai.es/en/guide/","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"},"mainEntity":{"@type":"ItemList","itemListElement":[{"@type":"ListItem","position":1,"name":"Getting started: your first 5 minutes","url":"https://workforceai.es/en/guide/getting-started/"},{"@type":"ListItem","position":2,"name":"The 3D office and the Dashboard","url":"https://workforceai.es/en/guide/the-office/"},{"@type":"ListItem","position":3,"name":"Projects: big work, with follow-up","url":"https://workforceai.es/en/guide/projects/"},{"@type":"ListItem","position":4,"name":"Skills: reusable know-how for your agents","url":"https://workforceai.es/en/guide/skills/"},{"@type":"ListItem","position":5,"name":"Coins and the Shop: decorate your office with what your team earns","url":"https://workforceai.es/en/guide/shop-and-coins/"},{"@type":"ListItem","position":6,"name":"Chats and Files: pick up conversations and find what was produced","url":"https://workforceai.es/en/guide/files-and-chats/"},{"@type":"ListItem","position":7,"name":"Approvals and security: you stay in control","url":"https://workforceai.es/en/guide/approvals-and-security/"},{"@type":"ListItem","position":8,"name":"Settings: configure your office in one place","url":"https://workforceai.es/en/guide/settings/"}]}}]}</script>
+  <link rel="stylesheet" href="/guide.css?v=597dac5ccb">
+  <script src="/docs.js?v=2317516bde" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://workforceai.es/en/"},{"@type":"ListItem","position":2,"name":"User guide","item":"https://workforceai.es/en/guide/"}]},{"@type":"CollectionPage","name":"AI Workforce OS user guide","description":"Learn AI Workforce OS step by step: ask for work, approve, projects, skills, shop, files and security.","inLanguage":"en","url":"https://workforceai.es/en/guide/","publisher":{"@type":"Organization","@id":"https://workforceai.es/#org","name":"AI Workforce OS","url":"https://workforceai.es/","logo":"https://workforceai.es/icon-512.png"},"mainEntity":{"@type":"ItemList","itemListElement":[{"@type":"ListItem","position":1,"name":"Getting started: your first 5 minutes","url":"https://workforceai.es/en/guide/getting-started/"},{"@type":"ListItem","position":2,"name":"The 3D office and the Dashboard","url":"https://workforceai.es/en/guide/the-office/"},{"@type":"ListItem","position":3,"name":"Projects: big work, tracked","url":"https://workforceai.es/en/guide/projects/"},{"@type":"ListItem","position":4,"name":"Chats and Files: pick up conversations and find what was produced","url":"https://workforceai.es/en/guide/files-and-chats/"},{"@type":"ListItem","position":5,"name":"Approvals and security: you stay in control","url":"https://workforceai.es/en/guide/approvals-and-security/"},{"@type":"ListItem","position":6,"name":"Skills: reusable know-how for your agents","url":"https://workforceai.es/en/guide/skills/"},{"@type":"ListItem","position":7,"name":"Coins and the Shop: decorate your office with what your team earns","url":"https://workforceai.es/en/guide/shop-and-coins/"},{"@type":"ListItem","position":8,"name":"Settings: configure your office in one place","url":"https://workforceai.es/en/guide/settings/"}]}}]}</script>
 </head>
-<body class="guide" id="top">
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="wrap bar-row">
-      <a class="brand" href="/en/" aria-label="AI Workforce OS">
-        <svg class="brand-mark" viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><g transform="translate(0 0) scale(1.0)"><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></g></svg>
+<body class="dx dx-guide" id="top">
+  <a class="dx-skip" href="#main">Skip to content</a>
+  <header class="dx-top">
+    <div class="dx-top-in">
+      <a class="dx-menu" href="#docs-nav" aria-controls="docs-nav" aria-label="Menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></a>
+      <a class="dx-brand" href="/en/" aria-label="AI Workforce OS">
+        <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0B1F3A"/><line x1="16" y1="6.4" x2="16" y2="9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="5.4" r="2" fill="#2DD4BF"/><rect x="4.6" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="24.8" y="14" width="2.6" height="5.6" rx="1.3" fill="#fff"/><rect x="7.5" y="9.5" width="17" height="15" rx="6" fill="#fff"/><rect x="10.2" y="13.2" width="11.6" height="6.4" rx="3.2" fill="#0B1F3A"/><circle cx="13.6" cy="16.4" r="1.45" fill="#2DD4BF"/><circle cx="18.4" cy="16.4" r="1.45" fill="#2DD4BF"/><path d="M13.4 21.9q2.6 1.5 5.2 0" fill="none" stroke="#0B1F3A" stroke-width="1.3" stroke-linecap="round"/></svg>
         <span>AI Workforce OS</span>
       </a>
-      <nav class="nav" aria-label="Main">
-        <a href="/en/">Home</a>
-        <a href="/en/docs/">Documentation</a>
-        <a href="/en/guide/">User guide</a>
-        <a href="/en/trust/">Trust</a>
-      </nav>
-      <div class="bar-end">
-        <div class="lang" role="group" aria-label="Language">
-          <a href="/guia/" hreflang="es" lang="es" >ES</a>
+      <nav class="dx-tabs" aria-label="Site sections"><a href="/en/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <div class="dx-top-end">
+        <button class="dx-search-btn" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /">
+          <svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="dx-search-ph">Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd>
+        </button>
+        <div class="dx-lang dx-lang-top" role="group" aria-label="Language">
+          <a href="/guia/" hreflang="es" lang="es">ES</a>
           <a href="/en/guide/" hreflang="en" lang="en" aria-current="true">EN</a>
         </div>
-        <a class="btn btn-primary btn-sm" href="https://app.workforceai.es/register" rel="noopener"><span>Create account</span></a>
+        <a class="dx-btn dx-btn-primary dx-top-cta" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
       </div>
     </div>
   </header>
-  <main id="main" class="guide-main">
-    <div class="wrap narrow">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li aria-current="page">User guide</li></ol></nav>
-      <h1>AI Workforce OS user guide</h1>
-      <p class="lead">Everything you need to get the most out of your office of AI employees, screen by screen. Start with “Getting started” and follow the order, or jump to what interests you.</p>
-      <ol class="cards index"><li><a href="/en/guide/getting-started/"><span class="n">1</span><b>Getting started: your first 5 minutes</b><span>Create your account, ask your office for something, approve what is sensitive, read the report and earn coins. About 5 minutes, nothing to set up.</span></a></li><li><a href="/en/guide/the-office/"><span class="n">2</span><b>The 3D office and the Dashboard</b><span>Move the camera, open an employee's panel, follow the activity, change the lighting and switch between the office and the Dashboard with its indicators.</span></a></li><li><a href="/en/guide/projects/"><span class="n">3</span><b>Projects: big work, with follow-up</b><span>Learn to create a project, review its plan, launch it with a budget and follow your agents' progress from a single screen.</span></a></li><li><a href="/en/guide/skills/"><span class="n">4</span><b>Skills: reusable know-how for your agents</b><span>Browse the Skills library, create or import your own, approve them and assign them to an agent so it works the way you want.</span></a></li><li><a href="/en/guide/shop-and-coins/"><span class="n">5</span><b>Coins and the Shop: decorate your office with what your team earns</b><span>Learn how coins are earned by finished work and how to spend them in the Shop to dress your agents and decorate your office.</span></a></li><li><a href="/en/guide/files-and-chats/"><span class="n">6</span><b>Chats and Files: pick up conversations and find what was produced</b><span>Find conversations with your agents, write from Chats, and browse, upload, search and recover files with versions and a trash.</span></a></li><li><a href="/en/guide/approvals-and-security/"><span class="n">7</span><b>Approvals and security: you stay in control</b><span>Learn to approve sensitive actions, set spend limits, control permissions per employee and stop everything at once if you need to.</span></a></li><li><a href="/en/guide/settings/"><span class="n">8</span><b>Settings: configure your office in one place</b><span>Tour the Settings hub: customize the office, hire employees, use team templates, connect tools and invite your team.</span></a></li></ol>
-    </div>
-  </main>
-  <section class="guide-cta" aria-labelledby="cta-h">
-    <div class="wrap narrow">
-      <h2 id="cta-h">Start now</h2>
-      <p>Create your account and land in your own office. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
-      <div class="cta-row">
-        <a class="btn btn-invert" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/login" rel="noopener">Sign in</a>
-        <a class="btn btn-outline-invert" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+  <div class="dx-shell">
+    <aside class="dx-side" id="docs-nav" aria-label="User guide">
+      <div class="dx-side-head">
+        <span>Menu</span>
+        <a class="dx-side-close" href="#top" aria-label="Close menu"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
       </div>
+      <nav class="dx-colls" aria-label="Site sections"><a href="/en/docs/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg><span>Documentation</span></a><a href="/en/guide/" aria-current="true"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span></a><a href="/en/trust/"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg><span>Trust</span></a></nav>
+      <nav class="dx-pages" aria-label="User guide">
+        <ul class="dx-list">
+          <li><a href="/en/guide/" aria-current="page"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>Overview</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-start">Get started</p>
+        <ul class="dx-list" aria-labelledby="g-guide-start">
+          <li><a href="/en/guide/getting-started/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.2 3.5-5.2 3.5v-7Z"/></svg><span>Getting started</span></a></li>
+          <li><a href="/en/guide/the-office/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M15.5 9h2a2 2 0 0 1 2 2v10M3 21h18M8.5 7h3M8.5 11h3M8.5 15h3"/></svg><span>The 3D office and the Dashboard</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-work">Everyday work</p>
+        <ul class="dx-list" aria-labelledby="g-guide-work">
+          <li><a href="/en/guide/projects/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v7M12 7.5v10M16 7.5v4"/></svg><span>Projects</span></a></li>
+          <li><a href="/en/guide/files-and-chats/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 15a2 2 0 0 1-2 2H8.5L4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10Z"/><path d="M8 8h8M8 12h5"/></svg><span>Chats and Files</span></a></li>
+          <li><a href="/en/guide/approvals-and-security/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg><span>Approvals and security</span></a></li>
+        </ul>
+        <p class="dx-group" id="g-guide-tune">Customize</p>
+        <ul class="dx-list" aria-labelledby="g-guide-tune">
+          <li><a href="/en/guide/skills/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 3.5 12.9 8l4.6 1.9-4.6 1.9L11 16.4l-1.9-4.6L4.5 9.9 9.1 8 11 3.5Z"/><path d="m18.5 14.5.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z"/></svg><span>Skills</span></a></li>
+          <li><a href="/en/guide/shop-and-coins/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v4.5c0 1.7 2.7 3 6 3 .7 0 1.4-.1 2-.2M15 7v2"/><ellipse cx="15" cy="13.5" rx="6" ry="3"/><path d="M9 13.5V18c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg><span>Coins and the Shop</span></a></li>
+          <li><a href="/en/guide/settings/"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><span>Settings</span></a></li>
+        </ul>
+      </nav>
+      <div class="dx-side-foot">
+        <div class="dx-lang" role="group" aria-label="Language">
+          <a href="/guia/" hreflang="es" lang="es">ES</a>
+          <a href="/en/guide/" hreflang="en" lang="en" aria-current="true">EN</a>
+        </div>
+        <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+      </div>
+    </aside>
+    <a class="dx-scrim" href="#top" tabindex="-1" aria-hidden="true"></a>
+    <main id="main" class="dx-main" tabindex="-1">
+    <div class="dx-home">
+      <header class="dx-hero">
+        <nav class="dx-crumbs" aria-label="Breadcrumb"><ol><li><a href="/en/">Home</a></li><li><span aria-current="page">User guide</span></li></ol></nav>
+        <p class="dx-eyebrow"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg><span>User guide</span><span class="dx-dot" aria-hidden="true">·</span><span>8 pages</span></p>
+        <h1>AI Workforce OS user guide</h1>
+        <p class="dx-lead">Everything you need to get the most out of your office of AI employees, screen by screen. Start with “Getting started” and follow the order, or jump to what interests you.</p>
+        <button class="dx-hero-search" type="button" data-search hidden aria-label="Search the docs…" aria-keyshortcuts="Control+K Meta+K /"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span>Search the docs…</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd></button>
+        <div class="dx-hero-actions">
+          <a class="dx-btn dx-btn-primary" href="/en/guide/getting-started/">Start here<svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          <a class="dx-btn dx-btn-ghost" href="/en/guide/the-office/">The 3D office and the Dashboard</a>
+          <a class="dx-btn dx-btn-ghost" href="/en/guide/approvals-and-security/">Approvals and security</a>
+        </div>
+      </header>
+      <section class="dx-group-sec" id="grp-start" aria-labelledby="grp-start-h">
+        <div class="dx-group-head"><h2 id="grp-start-h">Get started</h2><p>Your first session and how to read the office.</p></div>
+        <ul class="dx-cards">
+            <li><a href="/en/guide/getting-started/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.2 3.5-5.2 3.5v-7Z"/></svg></span>
+              <b>Getting started: your first 5 minutes</b>
+              <span>Create your account, ask for your first task, decide an approval, read the report and earn your first coins in about 5 minutes.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+            <li><a href="/en/guide/the-office/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M15.5 9h2a2 2 0 0 1 2 2v10M3 21h18M8.5 7h3M8.5 11h3M8.5 15h3"/></svg></span>
+              <b>The 3D office and the Dashboard</b>
+              <span>Move the camera, talk to an employee, follow the activity, adjust the light, redecorate the office and read the Dashboard indicators.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+        </ul>
+      </section>
+      <section class="dx-group-sec" id="grp-work" aria-labelledby="grp-work-h">
+        <div class="dx-group-head"><h2 id="grp-work-h">Everyday work</h2><p>Ask for work, follow it and decide what runs.</p></div>
+        <ul class="dx-cards">
+            <li><a href="/en/guide/projects/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 7.5v7M12 7.5v10M16 7.5v4"/></svg></span>
+              <b>Projects: big work, tracked</b>
+              <span>Create a project, review its plan and estimated cost, launch it with a budget and follow your agents' progress from a single screen.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+            <li><a href="/en/guide/files-and-chats/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 15a2 2 0 0 1-2 2H8.5L4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10Z"/><path d="M8 8h8M8 12h5"/></svg></span>
+              <b>Chats and Files: pick up conversations and find what was produced</b>
+              <span>Find conversations with your agents and your team, and upload, search, recover and version your office's files.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+            <li><a href="/en/guide/approvals-and-security/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg></span>
+              <b>Approvals and security: you stay in control</b>
+              <span>Decide approvals, understand each employee's autonomy, set spend limits, restrict permissions and stop all activity at once if you need to.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+        </ul>
+      </section>
+      <section class="dx-group-sec" id="grp-tune" aria-labelledby="grp-tune-h">
+        <div class="dx-group-head"><h2 id="grp-tune-h">Customize</h2><p>Skills, the shop and your account settings.</p></div>
+        <ul class="dx-cards">
+            <li><a href="/en/guide/skills/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 3.5 12.9 8l4.6 1.9-4.6 1.9L11 16.4l-1.9-4.6L4.5 9.9 9.1 8 11 3.5Z"/><path d="m18.5 14.5.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z"/></svg></span>
+              <b>Skills: reusable know-how for your agents</b>
+              <span>Browse the built-in skills, create or import your own, approve them and assign them to an agent so it works with your method.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+            <li><a href="/en/guide/shop-and-coins/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v4.5c0 1.7 2.7 3 6 3 .7 0 1.4-.1 2-.2M15 7v2"/><ellipse cx="15" cy="13.5" rx="6" ry="3"/><path d="M9 13.5V18c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg></span>
+              <b>Coins and the Shop: decorate your office with what your team earns</b>
+              <span>Learn how coins are earned by finished work and how to spend them in the Shop to dress your agents and decorate your office.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+            <li><a href="/en/guide/settings/">
+              <span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg></span>
+              <b>Settings: configure your office in one place</b>
+              <span>Customize the office, hire employees, choose the AI model, connect tools, protect your account and invite your team from Settings.</span>
+              <span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </a></li>
+        </ul>
+      </section>
+      <section class="dx-group-sec" aria-labelledby="explore-h">
+        <div class="dx-group-head"><h2 id="explore-h">Explore more</h2></div>
+        <ul class="dx-cards dx-cards-coll">
+          <li><a href="/en/docs/"><span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5v-14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8.5 7.5h7"/></svg></span><b>Documentation</b><span>Architecture, API, deployment and configuration.</span><span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></li>
+          <li><a href="/en/trust/"><span class="dx-card-ic"><svg class="dx-i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.1 7.5 9.5 4.3-1.4 7.5-4.9 7.5-9.5V6L12 3Z"/></svg></span><b>Trust</b><span>Security, data and providers, no embellishment.</span><span class="dx-card-go"><svg class="dx-i dx-i-sm" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></li>
+        </ul>
+      </section>
+      <section class="dx-cta" aria-labelledby="cta-h">
+        <div>
+          <h2 id="cta-h">Try it in your own office</h2>
+          <p>Create your account and land in an office with your AI team. For now the AI runs in simulation mode: scripted responses, no cost and nothing to connect.</p>
+        </div>
+        <div class="dx-cta-row">
+          <a class="dx-btn dx-btn-primary" href="https://app.workforceai.es/register" rel="noopener">Create account</a>
+          <a class="dx-btn dx-btn-ghost" href="https://app.workforceai.es/prueba" rel="noopener">Try it without signing up</a>
+        </div>
+      </section>
+      <footer class="dx-foot">
+        <p>AI Workforce OS is a project in development. This documentation describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
+        <div class="dx-foot-links">
+          <a href="/en/">AI Workforce OS</a>
+          <a href="/en/docs/">Documentation</a>
+          <a href="/en/guide/">User guide</a>
+          <a href="/en/trust/">Trust</a>
+          <a href="#top">Back to top</a>
+        </div>
+      </footer>
     </div>
-  </section>
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>AI Workforce OS is a project in development. This page describes its state to date; capabilities listed as simulation use scripted responses, with no real AI.</p>
-      <a href="/en/docs/">Documentation</a>
-      <a href="/en/guide/">User guide</a>
-      <a href="/en/trust/">Trust</a>
-      <a href="#top">Back to top</a>
-    </div>
-  </footer>
+    </main>
+  </div>
+  <div class="dx-live" aria-live="polite" data-live></div>
 </body>
 </html>

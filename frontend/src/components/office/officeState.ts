@@ -20,6 +20,8 @@ export interface ZoneInput {
   planning: boolean;
   /** the agent has a pending tool/action approval of its own */
   approvalPending: boolean;
+  /** the agent sits at a team debate being played in the meeting room (B5) */
+  debating?: boolean;
 }
 
 /**
@@ -28,6 +30,9 @@ export interface ZoneInput {
  * just finished, failed or are in a conversation keep their normal behavior.
  */
 export function zoneFor(i: ZoneInput): Zone {
+  // a team debate is short and visible: its seats win over a finished/busy state (not over a budget pause, a block
+  // or an approval the agent waits on)
+  if (i.debating && !i.budgetPaused && i.state !== "blocked" && i.state !== "awaiting_approval") return "meeting";
   if (i.state === "completed" || i.state === "error" || i.state === "talking") return "desk";
   if (i.budgetPaused) return "cafeteria";
   if (i.planning && i.state !== "blocked" && i.state !== "awaiting_approval") return "meeting";
@@ -78,9 +83,13 @@ export function truncateText(s: string, max = 64): string {
   return (sp > max * 0.55 ? cut.slice(0, sp) : cut).replace(/[\s,.;:]+$/, "") + "…";
 }
 
-export type BubbleKind = "phase" | "consult" | "chat" | "task" | "step" | "file";
-/** `urgent`: a change of situation (e.g. the agent just got paused) replaces a visible bubble immediately. */
-export interface Bubble { key: string; kind: BubbleKind; text: string; urgent?: boolean }
+export type BubbleKind = "phase" | "consult" | "chat" | "task" | "step" | "file" | "debate";
+/**
+ * `urgent`: a change of situation (e.g. the agent just got paused) replaces a visible bubble immediately.
+ * `live`: a turn of a team debate being played in the meeting room; it follows the debate's own clock, so it
+ * bypasses the quiet gap and the cap on visible bubbles (only one debater talks at a time).
+ */
+export interface Bubble { key: string; kind: BubbleKind; text: string; urgent?: boolean; live?: boolean }
 
 export interface BubbleInput {
   state: string;
@@ -147,6 +156,13 @@ export function stepBubbles(state: BubbleState, cands: readonly { id: string; bu
   for (const c of cands) {
     seen.add(c.id);
     const cur = state.get(c.id);
+    if (c.bubble?.live) { // a debate turn: shown on the debate's clock, never twice
+      const b = c.bubble;
+      if (cur && cur.key === b.key) { if (now < cur.until) out.push(c.id); continue; }
+      if (!cur || now >= cur.until) visible++;
+      state.set(c.id, { key: b.key, text: b.text, kind: b.kind, shownAt: now, until: now + BUBBLE_SHOW_MS, nextAt: now + BUBBLE_SHOW_MS });
+      out.push(c.id); continue;
+    }
     if (cur && now < cur.until) {
       if (!c.bubble) { state.delete(c.id); visible--; continue; } // nothing real to say anymore: the stale bubble goes away
       if (c.bubble.urgent && c.bubble.key !== cur.key) { cur.key = c.bubble.key; cur.text = c.bubble.text; cur.kind = c.bubble.kind; cur.shownAt = now; cur.until = now + BUBBLE_SHOW_MS; cur.nextAt = cur.until + BUBBLE_GAP_MS; }
@@ -168,6 +184,79 @@ export function stepBubbles(state: BubbleState, cands: readonly { id: string; bu
 export function phaseFor(phases: readonly string[], k: number, cycle: number): string | null {
   if (!phases.length) return null;
   return phases[(((k + cycle) % phases.length) + phases.length) % phases.length];
+}
+
+// ---------------------------------------------------------------------------------------------
+// Team debate playback (B5): the team walks to the meeting room, the turns play one by one as speech bubbles,
+// then everyone walks back. Driven only by the debate events (debate.started / completed / failed) and the
+// client clock, so a debate that never completes (runtime down) still ends.
+// ---------------------------------------------------------------------------------------------
+
+/** Time for the team to walk to the room before the first turn is shown. */
+export const DEBATE_GATHER_MS = 4000;
+/** How long each turn is on screen. */
+export const DEBATE_TURN_MS = 4500;
+/** After the synthesis, the team stays seated this long before walking back. */
+export const DEBATE_LINGER_MS = 3000;
+/** A debate that started but never completed is given up after this long. */
+export const DEBATE_WAIT_MAX_MS = 90000;
+
+export interface DebateClock {
+  id: string;
+  status: "running" | "done" | "failed";
+  /** client ms when debate.started (or the debate itself) arrived */
+  startedAt: number;
+  /** client ms when debate.completed arrived (null while running) */
+  doneAt: number | null;
+  participants: readonly string[];
+  turns: readonly { agent_id: string; kind: string; text: string }[];
+}
+
+export interface DebateStage {
+  /** the team is (or should be) in the meeting room */
+  active: boolean;
+  phase: "gathering" | "talking" | "closing" | "over";
+  /** index of the turn on screen (-1 when none) */
+  turn: number;
+  speaker: string | null;
+  text: string;
+  kind: string;
+}
+
+const OVER: DebateStage = { active: false, phase: "over", turn: -1, speaker: null, text: "", kind: "" };
+
+/** Where a debate's playback is at `now`. Pure: same clock, same answer. */
+export function debateStage(c: DebateClock, now: number): DebateStage {
+  if (c.status === "failed") return OVER;
+  if (c.status === "running" || c.doneAt === null) {
+    return now - c.startedAt > DEBATE_WAIT_MAX_MS ? OVER : { ...OVER, active: true, phase: "gathering" };
+  }
+  const start = Math.max(c.doneAt, c.startedAt + DEBATE_GATHER_MS);
+  if (now < start) return { ...OVER, active: true, phase: "gathering" };
+  const k = Math.floor((now - start) / DEBATE_TURN_MS);
+  if (k < c.turns.length) {
+    const t = c.turns[k];
+    return { active: true, phase: "talking", turn: k, speaker: t.agent_id, text: t.text, kind: t.kind };
+  }
+  if (now < start + c.turns.length * DEBATE_TURN_MS + DEBATE_LINGER_MS) return { ...OVER, active: true, phase: "closing" };
+  return OVER;
+}
+
+/** The debate the meeting room shows now: the most recently started one that is still active. */
+export function liveDebate(clocks: readonly DebateClock[], now: number): { clock: DebateClock; stage: DebateStage } | null {
+  let best: { clock: DebateClock; stage: DebateStage } | null = null;
+  for (const c of clocks) {
+    const stage = debateStage(c, now);
+    if (stage.active && (!best || c.startedAt > best.clock.startedAt)) best = { clock: c, stage };
+  }
+  return best;
+}
+
+/** Who sits in the room for a debate: the moderator first, then the participants (no duplicates). */
+export function debateSeats(c: DebateClock, moderator: string | null): string[] {
+  const out: string[] = [];
+  for (const id of [moderator, ...c.participants]) if (id && !out.includes(id)) out.push(id);
+  return out;
 }
 
 // ---------------------------------------------------------------------------------------------

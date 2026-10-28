@@ -8,6 +8,7 @@ import (
 	"time"
 	"unicode"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/sanitize"
 	"aiworkforce/backend/internal/textfold"
@@ -39,7 +40,7 @@ func (f *FTS) Retrieve(ctx context.Context, org string, q Query) ([]Item, error)
 		limit = 20
 	}
 	var items []Item
-	hits, err := f.Docs.Search(ctx, org, SearchParams{Terms: terms, AgentID: q.AgentID, ExcludeRequest: q.ExcludeRequest, OnlyAgent: q.OnlyAgent, Limit: limit * 2})
+	hits, err := f.Docs.Search(ctx, org, SearchParams{Terms: terms, AgentID: q.AgentID, ExcludeRequest: q.ExcludeRequest, OnlyAgent: q.OnlyAgent, CustomerID: q.CustomerID, Limit: limit * 2})
 	if err != nil {
 		return nil, err
 	}
@@ -100,8 +101,17 @@ func (d *DriveFiles) Files(ctx context.Context, org, agentID string, terms []str
 	if err != nil {
 		return nil, err
 	}
+	var readable func(string) bool
+	if application.CustomerFrom(ctx) != "" { // B12: a foreign customer's folder nested under a readable root stays out
+		if readable, err = d.FS.ReadableFilter(ctx, agentID); err != nil {
+			return nil, err
+		}
+	}
 	out := make([]Item, 0, len(hits))
 	for _, h := range hits {
+		if readable != nil && !readable(h.Path) {
+			continue
+		}
 		out = append(out, Item{cover: coverage(h.Name+" "+h.Snippet, terms), Ref: "file:" + h.Path, Kind: KindFile, Title: h.Name, Path: h.Path, Snippet: Passage(h.Snippet, terms, MaxSnippetChars),
 			AgentID: agentIDOf(h.UpdatedBy), Score: h.Score, Foreign: h.UpdatedBy != drive.AgentP(agentID)})
 	}

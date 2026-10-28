@@ -195,6 +195,24 @@ class _CounterargumentLLM(BaseModel):
     checks: list[str] = Field(default_factory=list)
 
 
+class _DebateTurnLLM(BaseModel):
+    agent_id: str
+    kind: str
+    text: str
+
+
+class _DebateSynthLLM(BaseModel):
+    choice: str = ""
+    rationale: str = ""
+    dissent: list[str] = Field(default_factory=list)
+
+
+class _DebateLLM(BaseModel):
+    options: list[str] = Field(default_factory=list)
+    turns: list[_DebateTurnLLM] = Field(default_factory=list)
+    synthesis: _DebateSynthLLM = Field(default_factory=_DebateSynthLLM)
+
+
 class _Synth(BaseModel):
     title: str
     summary: str
@@ -245,10 +263,11 @@ class CrewAIEngine(AgentEngine):
         kw.update(reasoning_kwargs(cfg.id, cfg.model))
         if temperature is None or (cfg.id == "openai" and fixed_temperature_model(cfg.model)):
             kw.pop("temperature")  # reasoning models only accept their default
-        if cfg.id in ("deepseek", "kimi"):
+        if cfg.id in ("deepseek", "kimi", "gemini"):
             # Live finding (DeepSeek): long consolidations came back as invalid JSON (unescaped quotes
             # around char 13k). JSON mode guarantees syntactically valid JSON (the schema still goes in
-            # the instructions). Moonshot's Kimi has the same json_object mode and no json_schema.
+            # the instructions). Moonshot's Kimi has the same json_object mode and no json_schema; Gemini's
+            # OpenAI-compatible endpoint takes json_object as well (verified live 2026-10-27).
             kw["response_format"] = {"type": "json_object"}
             # (the old floor of 8192 output tokens is gone: every kind of call has its own env-configurable cap)
         if cfg.base_url:
@@ -460,7 +479,9 @@ class CrewAIEngine(AgentEngine):
             "Descompone la solicitud en objetivos y tareas. Cada tarea tiene key unica, title, "
             "description, agent_id y depends_on (lista de keys). Maximiza el paralelismo, sin ciclos. "
             "Si falta informacion critica, agrega clarifying_questions. "
-            "En cada tarea agrega reason: una frase corta y humana que explique por que ESE agente tiene esa tarea."
+            "En cada tarea agrega reason: una frase corta y humana que explique por que ESE agente tiene esa tarea. "
+            "Si la solicitud exige una decision de alto impacto entre alternativas (elegir proveedor, precio, contratar, "
+            "invertir), marca decision=true SOLO en la tarea que toma esa decision (como maximo una); en las demas omitelo."
         )
         plan, usage = await self._run(
             role="Orquestadora / Asistente Ejecutiva",
@@ -621,6 +642,20 @@ class CrewAIEngine(AgentEngine):
         if not data["counterargument"]:
             raise ValueError("empty counterargument")
         return CounterargumentResponse(**data, usage=usage, provider=usage.provider, model=usage.model)
+
+    async def debate(self, req):
+        """Team debate (B5): ONE bounded call that voices every participant and the moderator's synthesis. Advisory."""
+        from .debate import DebateResponse, build_debate_prompt, normalize_debate
+
+        res, usage = await self._run(
+            role="Moderadora de un debate de equipo", goal="Que el equipo exponga posturas y objeciones breves antes de decidir, sin decidir",
+            backstory=system_rules(req.locale, req.tone), description=build_debate_prompt(req),
+            expected="JSON con options, turns y synthesis", schema=_DebateLLM,
+            policy=policy_from_request(req, "debate"), kind="debate", max_cost_usd=req.max_cost_usd)
+        data = normalize_debate(res.model_dump(), req)
+        if not data["turns"]:
+            raise ValueError("empty debate")
+        return DebateResponse(**data, usage=usage, provider=usage.provider, model=usage.model)
 
     async def consult(self, req: ConsultRequest) -> ConsultResponse:
         res, usage = await self._run(

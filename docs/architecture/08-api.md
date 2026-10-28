@@ -41,6 +41,7 @@ Extension compatible de `GET /metrics`: ademas de `{tasks_active, tasks_done, ap
 | `POST /requests/{id}/clarify` `{answers:[{question,answer}]}` | Responde `clarifying_questions` del plan | `requests:create` |
 | `GET /requests/{id}/timeline` | Eventos causales ordenados (`events` por `correlation_id`) | `tasks:read` |
 | `GET /requests/{id}/cost` | Desglose por tarea/agente/modelo | `reports:read` |
+| `GET /reports/{id}/evidence` | Cadena de evidencia (B6): citas comprobadas de las tareas del informe, verificadas primero (`evidence-chain.md`) | `reports:read` |
 | `POST /tasks/{id}/retry` | Reintento manual de `failed`/`blocked` | `tasks:cancel` |
 | `POST /tasks/{id}/cancel` | Cancela una tarea | `tasks:cancel` |
 | `GET /tasks/{id}/interactions` | Trazas (`agent_interactions`), con cuerpos solo para `audit:read` | `audit:read` |
@@ -372,9 +373,9 @@ Aditivo y retrocompatible: sin `Deps.Conns/Controls/Gateway` (o sin conexiones) 
 |---|---|---|
 | `GET /connection-providers` | `[{id, label_key, phase, available, auth:["oauth2_byo_app" o "api_key"], capabilities:[{id, profile:"read" o "write", risk, side_effects, reversibility?, default, always_approval, hold_seconds_default?, label_key, tools[]}], resource_filters:[{key,type}], never_offered[], default_limits, live_available, split_read_write}]`. `live_available=false` si falta `CONNECTIONS_KEK`: la UI ofrece solo simulado | `connections:read` |
 | `GET /connections?provider=&status=` | Lista (metadatos) | `connections:read` |
-| `POST /connections` `{provider, kind:"oauth2" o "api_key", label, capabilities[], resource_scope?, mode?:"live" o "simulated", expires_at?, secret? (api_key, solo escritura), oauth_client_id?, oauth_client_secret? (trae tu app, solo escritura; ambos o ninguno)}` | `201` + conexión. Gmail: **lectura y escritura en conexiones distintas** (`mail.read` solo; `mail.draft` y `mail.send` juntas); mezclar da `400 read_write_must_be_separate`. `simulated` no guarda secretos y queda `active`. `live` sin KEK da `503 kek_missing` | `connections:manage` |
+| `POST /connections` `{provider, kind:"oauth2" o "api_key", label, capabilities[], resource_scope?, mode?:"live" o "simulated", expires_at?, secret? (api_key, solo escritura), oauth_client_id?, oauth_client_secret? (trae tu app, solo escritura; ambos o ninguno)}` | `201` + conexión. Gmail: **lectura y escritura en conexiones distintas** (`mail.read` solo; `mail.draft` y `mail.send` juntas); mezclar da `400 read_write_must_be_separate`. `simulated` no guarda secretos y queda `active`. `live` sin KEK da `503 kek_missing`. `custom_api` acepta `source: {base_url, auth:{style: bearer\|header\|query, name?}, description?, endpoints?:[{name, path, description?, params?}]}`: una fuente de solo lectura que los agentes consultan con `api.get` (`integrations-credentials.md` 18.8) | `connections:manage` |
 | `GET /connections/{id}` | Detalle + `credential` + `grants_count` | `connections:read` |
-| `PATCH /connections/{id}` `{label?, limits?, resource_scope?, read_only?}` | `If-Match` opcional | `connections:manage` |
+| `PATCH /connections/{id}` `{label?, limits?, resource_scope?, read_only?, source?}` | `If-Match` opcional. `source` reemplaza la configuración entera de una fuente `custom_api` | `connections:manage` |
 | `POST /connections/{id}/oauth/start` | `{auth_url, expires_at}` | `connections:manage` |
 | `GET /connections/oauth/callback?code&state` | Público; `302` a la UI | verificado por `state` |
 | `POST /connections/{id}/scopes` `{add:[cap]}` | Consentimiento incremental (devuelve `auth_url` si es live). Añadir capacidades de escritura exige `connections:grant:write`; una conexión de lectura no puede ganar escritura | `connections:manage` |
@@ -454,7 +455,7 @@ Ningún payload contiene secretos ni contenido de mensajes (salvo `tool_call` en
 | `agent.control_changed` | `{agent_id, control, read_only?, by, reason?}` |
 | `tool_call.hold_changed` | `{hold_id, status, reason?, hold_until?, tool_call: EmailDraft}` |
 | `plan.review_requested`, `plan.approved`, `plan.rejected` | `{request_id, preflight}` |
-| `security.alert` | `{kind:"prompt_injection_suspected" o "secret_detected", agent_id, tool, ...}` |
+| `security.alert` | `{kind:"prompt_injection_suspected" o "secret_detected", agent_id, tool, ...}`; para `prompt_injection_suspected` (B10, aditivo): `{agent_id, task_id, request_id, tool, action, source:"connection"\|"native"\|"web", connection_id?, treated_as_data:true}`, nunca el texto del tercero (sec. 27) |
 
 ### 13.7 Contrato Go -> runtime (extensión aditiva)
 
@@ -907,9 +908,237 @@ Los empleados avisan solos ("la tarea X falló, ¿la reviso?") con un presupuest
 | POST | `/initiatives/{id}/dismiss` | `requests:create` | `200`; `409` si ya estaba resuelta; `404` si no es de la organización |
 | GET | `/settings/initiative` | `requests:read` | `{enabled, daily_limit, monthly_limit, agent_daily?{agent_id: n}}` (por defecto activo, 3 por día, 30 por mes) |
 | PUT | `/settings/initiative` | `org:manage` | mismo cuerpo; límites 0..1000 (`400` si no), `agent_daily` sobrescribe el tope diario de un agente (0 lo silencia). Auditado (`initiative.settings_changed`) |
+| POST | `/initiatives/scan` | `org:manage` | Evalúa ahora las señales de métricas de la organización. `200` `{raised, results: [{signal, signal_key, agent_id?, raised, reason?: disabled\|duplicate\|daily_limit\|monthly_limit\|agent_limit\|controls\|no_agent\|error, initiative_id?}]}`. Auditado (`initiative.scanned`). Ruta presente solo si el servidor tiene el escáner |
 
 Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditoría: `initiative.raised`, `initiative.accepted`, `initiative.dismissed`, `initiative.settings_changed`.
+
+**Señales de métricas (aditivo, migración `800_initiative_signals`).** Detección determinista (sin modelo) de `metric_change` (margen/ventas/caja en hojas y tablas), `spend_pace` (ritmo del gasto del mes frente a lo disponible bajo el tope), `approval_aging` (aprobaciones que esperan) y `quality_drop` (puntaje B11 frente a la ventana anterior); detalle en `initiative.md`. Campos nuevos:
+
+- Sugerencia: `params?: {clave: texto}` con los valores detrás del texto (p. ej. `metric_change`: `artifact, column, period, previous, current, change, direction: up|down, unit: pct|points, metric`; `spend_pace`: `spent, projected, available, pace, month`; `approval_aging`: `count, hours, oldest, age`; `quality_drop`: `agent, previous, current, drop`). Ausente en sugerencias sin parámetros (tareas fallidas).
+- Ajustes: `signals: {metric_change: {enabled, change_pct 1..1000 (10), margin_points 0.5..100 (3)}, spend_pace: {enabled, pace_pct 50..500 (100), min_days 1..27 (3)}, approval_aging: {enabled, min_age_hours 1..720 (24), min_count 1..100 (1)}, quality_drop: {enabled, drop_points 1..100 (10)}}`, siempre presente en `GET`. En `PUT`, `signals` se combina con lo guardado (se puede mandar solo lo que cambia) y si falta se conserva; un umbral fuera de rango es `400`. El detalle de auditoría de `initiative.settings_changed` incluye `signals`.
+- Barrido periódico cada `INITIATIVE_SCAN_INTERVAL` (por defecto `15m`; `0`/`off` lo apaga).
 
 ## 26. Puntaje de calidad y casos dorados (B11)
 
 Puntaje orientativo por agente con la metodología en la respuesta (componentes, pesos, tamaños de muestra, `insufficient_data` bajo el mínimo), ventana móvil y tendencia. Solo lectura sobre señales existentes; nunca cambia autonomía ni permisos. Rutas: `GET /quality/agents`, `GET /agents/{id}/quality`, `GET|POST /agents/{id}/golden-cases`, `PUT|DELETE /golden-cases/{id}`, `GET|POST /golden-cases/{id}/runs` (lectura `agents:read`, escritura `agents:write`, escrituras auditadas). Contrato y metodología completos: `docs/architecture/quality-score.md`. Migración `789_quality_golden`.
+
+## 27. Ascensos por confianza: autonomía ganada (B1)
+
+Escalera de confianza por agente: periodo de prueba, evidencia desde que llegó a su nivel (aprobaciones, denegaciones de
+política, tareas, calidad B11) y una de tres salidas: **proponer** un ascenso de un nivel (nunca sobre el techo del rol;
+lo acepta una persona), **proponer** un descenso, o **aplicar** un descenso automático por incidente (reversible 7 días).
+Toda respuesta lleva `methodology` con los umbrales. Diseño completo: `docs/architecture/trust-ladder.md`. Migración
+`791_agent_trust` (`agent_trust`, `trust_proposals`, RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/agents/{id}/trust` | `agents:read` | `{methodology, generated_at, agent}`; `agent` = `{agent_id, name, role, level, ceiling, tracking_since, level_since, evidence_since, counts{approved, rejected, high_risk_rejected, recent_rejected, policy_denials, tasks_done, tasks_failed, tasks_blocked}, quality{score, trend}\|null, recommendation: none\|promote\|demote\|demote_auto\|probation\|at_ceiling\|cooldown\|gathering, target?, next_level?, at_ceiling, probation{active, until, decisions, min_decisions, days}, criteria[{key, value, threshold, op, status: met\|unmet\|not_available}], triggers[{key, value, threshold, op, auto, fired}], progress (0..1), pending (propuesta)\|null, last_change\|null, can_revert}`. Empieza a seguir al agente la primera vez. `404` si no existe |
+| GET | `/trust/agents` | `agents:read` | `{methodology, generated_at, agents:[...]}` (los que tienen propuesta pendiente primero) |
+| GET | `/agents/{id}/trust/proposals?limit=` | `agents:read` | Historial, más nuevo primero: `[{id, agent_id, kind: promotion\|demotion, from_level, to_level, status: pending\|accepted\|declined\|applied\|reverted\|superseded, auto, reasons[], evidence{since, counts, quality?, criteria, triggers, ceiling, methodology_version}, created_at, resolved_at?, resolved_by?, note?}]` |
+| POST | `/agents/{id}/trust/evaluate` | `agents:write` | Evalúa ahora (lo mismo hace el servidor solo tras `approval.resolved`, `task.completed`, `task.failed`, `agent.created`). `{methodology, agent}`. Nunca sube autonomía |
+| POST | `/trust/proposals/{id}/accept` | `agents:write` + `approvals:decide` | Cuerpo opcional `{note}`. Aplica la propuesta pendiente tras revalidar evidencia, nivel y techo. `403` agentes/`system`/rol bajo (auditado `trust.decision_refused`); `409` con `code` `kill_switch_active` \| `read_only_mode` \| `agent_paused` al subir, `evidence_changed` si ya no se sostiene, o si no está pendiente |
+| POST | `/trust/proposals/{id}/decline` | `agents:write` + `approvals:decide` | `{note}` opcional. Un ascenso rechazado no se vuelve a proponer desde ese nivel en 7 días |
+| POST | `/trust/proposals/{id}/revert` | `agents:write` + `approvals:decide` | Deshace un descenso automático (`status: applied`, `auto: true`) de los últimos 7 días si el agente sigue en ese nivel; es una subida, así que aplican los mismos controles `409` |
+
+Eventos WS: `agent.autonomy_changed` `{agent_id, from, to, direction, source, proposal_id, reasons}` y `trust.proposal`
+`{proposal_id, agent_id, kind, status, from?, to?}`. Auditoría: `trust.promotion_suggested`, `trust.demotion_suggested`,
+`agent.autonomy_changed`, `trust.proposal_declined`, `trust.decision_refused`, `trust.reset`. `POST /demo/reset` devuelve a
+su nivel inicial a los agentes que la escalera movió.
+
+## 28. Rituales: stand-up diario y retrospectiva semanal (B4)
+
+Cada agente cuenta qué hizo, qué hará y qué lo bloquea (de sus tareas y aprobaciones reales, sin modelo) y, una vez por semana, propone hasta 2 mejoras a su propio trabajo. Las propuestas solo las resuelve una persona; aceptar una nota la añade a las instrucciones del agente por el perfil de trabajo (nueva versión, auditada). Nunca da herramientas, permisos ni autonomía. Diseño: `docs/architecture/rituals.md`. Migración `793_rituals` (`rituals`, `ritual_proposals`, `ritual_settings`, RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/rituals?kind=standup\|retro&limit=` | `requests:read` | más nuevo primero (máx. 100, por defecto 30); `400` si `kind` es desconocido |
+| GET | `/rituals/{id}` | `requests:read` | `{id, kind, origin: scheduled\|manual, period_key?, status: held\|skipped, skip_reason?, locale, window_from, window_to, entries[{agent_id, name, role, done[], next[], blockers[], lines[], quiet, retro?}], absent[{agent_id, name, reason}], summary, summary_source: deterministic\|runtime\|local, created_by, held_at, proposals?}`; `404` si no es de la organización |
+| POST | `/rituals/{kind}/run` | `requests:create` | "Hacer stand-up ahora": `201` con el ritual. `409 {code: blocked}` con el kill-switch activo; `429 {code: limit}` tras 10 manuales del mismo tipo en el día (UTC); `403` si quien llama es un agente |
+| GET | `/rituals/proposals?status=&agent_id=&ritual_id=&limit=` | `requests:read` | `[{id, ritual_id, agent_id, kind: instruction_note\|skill_suggestion, signal: rejected_approvals\|reworks\|failed_tasks\|quality_score, title, text, evidence[], status, applied, created_at, resolved_at?, resolved_by?}]` |
+| POST | `/rituals/proposals/{id}/accept` | `agents:write` | `{proposal, applied, profile_version?}`; `409` si ya estaba resuelta; si la edición del perfil falla, el error vuelve y la propuesta sigue pendiente |
+| POST | `/rituals/proposals/{id}/dismiss` | `agents:write` | `200`; `409` si ya estaba resuelta |
+| GET | `/settings/rituals` | `requests:read` | `{timezone, standup{enabled, time "HH:MM", weekdays[0..6]}, retro{enabled, time, weekdays[uno]}, use_model}`; por defecto ambos apagados, 09:30 L-V y viernes 16:00, sin modelo |
+| PUT | `/settings/rituals` | `org:manage` | mismo cuerpo; `400` con zona, hora o días inválidos o retro con más de un día. Auditado (`ritual.settings_changed`) |
+
+Eventos: `ritual.held` `{ritual_id, kind, origin, agent_ids, proposals}` (la oficina lleva a esos agentes a la sala de reuniones ~45 s). Auditoría: `ritual.held`, `ritual.skipped`, `ritual.blocked`, `ritual.summary_skipped`, `ritual.proposal_accepted`, `ritual.proposal_dismissed`, `ritual.settings_changed`.
+
+## 29. Mientras no estabas (B3)
+
+Resumen de lo ocurrido desde la última visita de la persona que llama: conteos exactos, secciones ordenadas (alertas, problemas, terminado, sugerencias, aprobaciones resueltas), primero las aprobaciones que esa persona puede decidir, gasto del periodo y un timelapse de cambios de estado de los agentes. Se calcula al leer con datos que ya existen (log de eventos, aprobaciones pendientes, auditoría `request.status.failed`, libro de uso): **determinista y sin llamar a ningún modelo**, así que no gasta presupuesto ni lo detienen kill-switch o modo solo lectura. Diseño: `docs/architecture/away-summary.md`. Migración `792_away_marks` (`away_marks`, RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/away-summary?min_hours=` | `activity:read` | `{version, method: "deterministic", generated_at, first_visit, since, until, away_minutes, min_hours, clipped, dismissed, quiet, show, counts{...}, spend{usd, calls, top[]}, act_now[], sections[{key, total, items[]}], agents[], timelapse{available, total, sampled, frames[{at, agent_id, state, activity?}]}}`. `min_hours` 0..168 (por omisión 8 o `AWAY_SUMMARY_MIN_HOURS`) solo decide `show`; `400` si no es un número. Sin `approvals:read` no se listan aprobaciones; `act_now` solo trae las que la persona puede decidir (rol, sin autoaprobación, sin repetir en doble aprobación) |
+| POST | `/away-summary/heartbeat` | `activity:read` | la persona está mirando ahora; tras 30 min de silencio empieza una visita nueva. `200` `{last_seen_at, visit_started_at, away_since?, dismissed_at?}` |
+| POST | `/away-summary/dismiss` | `activity:read` | cierra el resumen de la visita actual (vuelve a abrirse tras la próxima ausencia). `200` con la marca |
+
+Item: `{kind: approval|alert|task_failed|task_blocked|request_failed|request_completed|initiative|decision, ref, ref_id, title, detail?, code?, agent_id?, severity: high|medium|low|info, at, new?, repeats?, risk?, required_approvals?}`. `title` y `detail` son datos (títulos), nunca texto de interfaz; `code` es la clave para i18n. Heartbeat y dismiss no se auditan (son metadatos personales de presencia, no acciones).
+
+## 30. Escudo visible (B10)
+
+Sin endpoints nuevos. Cuando el detector marca como intento de dar órdenes un contenido que leyó un agente (conexión, herramienta nativa o web), el backend emite `security.alert` (`kind:"prompt_injection_suspected"`, payload de la sec. 13.6) y audita `security.injection_suspected` (actor = agente, `details {tool, action, task_id, request_id, source, treated_as_data}`). El registro de seguridad de la UI es `GET /audit?type=security.injection_suspected&limit=50` (sec. 14.2, `audit:read`). Sólo identificadores: ni el evento ni la auditoría llevan el texto del tercero. Detalle: `docs/architecture/shield.md`.
+
+## 31. Ensayo general (B9)
+
+Los agentes muestran qué habrían enviado o pagado sin hacerlo. Aditivo; migración `794_rehearsal`.
+
+| Método y ruta | Permiso | Notas |
+|---|---|---|
+| `POST /requests` `{text, budget_cap_usd?, rehearsal?:bool}` | `requests:create` | `rehearsal:true` = toda la solicitud en ensayo (persistido en la meta de la ejecución) |
+| `PUT /agents/{id}/rehearsal` `{enabled:bool}` | `controls:pause` | apagar (`enabled:false`) exige además `controls:release` (403 si no) |
+| `GET /rehearsal/agents` | `connections:read` | `{agents:[{agent_id, enabled, set_by?, updated_at?, actions, would_approve, would_reject, undecided}]}` (evidencia para ascensos) |
+| `GET /rehearsal/actions?request_id&agent_id&limit` | `approvals:read` | `{items:[RehearsalAction]}`, más reciente primero; `limit` 1..500 |
+| `GET /requests/{id}/rehearsal` | `requests:read` | `{request_id, rehearsal, actions:[RehearsalAction], summary:{total, would_approve, would_reject, undecided}}` |
+| `POST /rehearsal/actions/{id}/verdict` `{verdict:"would_approve"\|"would_reject"\|""}` | `approvals:decide` | sólo personas; `""` borra la marca |
+
+`RehearsalAction = {id, request_id, task_id, agent_id, tool, action, source:"gateway"|"simulated"|"code", scope:"request"|"agent", would_decision:"allowed"|"needs_approval"|"denied", deny_reason?, risk, reversibility?, account?, recipients[], amount?, flags[], preview{clave: texto saneado}, args_hash, verdict, verdict_by?, verdict_at?, created_at}`.
+
+Eventos WS: `rehearsal.recorded {id, request_id, task_id, agent_id, tool, action, would_decision, scope}` (sin vista previa), `rehearsal.agent_changed {agent_id, enabled, by}`, `rehearsal.verdict {id, request_id, agent_id, tool, action, verdict, would_decision, by}`. `request.received` lleva `rehearsal:true` cuando aplica. Auditoría: `tool.rehearsed` (orquestador y Tool Gateway). En el gateway, una llamada con efecto de un ensayo devuelve `Decision:"rehearsed"` y nunca se ejecuta, ni con aprobación; aprobar desde la bandeja un envío re-encolado de un agente en ensayo responde el código `rehearsal_mode`. Detalle y garantías: `docs/architecture/rehearsal.md`.
+
+## 32. Sello del auditor interno (B7)
+
+El veredicto del auditor interno (`output.metrics.audit_status` de sus tareas, ya endurecido por `enforceAuditEvidence`) como sello legible. Solo lectura; no calcula veredictos propios. Diseño: `docs/architecture/internal-auditor.md`. Sin migración.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/requests/{id}/audit` | `requests:read` | `{request_id, status: verified\|inconsistency\|unverified\|none, audits: [{task_id, title, agent_id, status, summary, findings[], evidence[], compared, inconsistencies, confidence, finished_at?}]}`. Solo tareas terminadas; estado agregado: `inconsistency` si alguna, `verified` si todas, `none` sin auditorías. `404` si la solicitud no es de la organización |
+
+Aditivo en `GET /projects/{id}`: cada nodo que sea una auditoría terminada trae `audit` con la misma forma que un elemento de `audits` (ausente en los demás). `GET /tasks` y `GET /tasks/{id}` ya devolvían `output.metrics.audit_status` sin cambios.
+
+## 33. Nómina de IA y retorno (B15)
+
+Costo de IA medido por empleado junto a las horas humanas **estimadas** de su trabajo terminado, con la metodología en cada respuesta. Sin tarifa de la organización no hay montos de tiempo humano (`null`). Diseño: `docs/architecture/ai-payroll-roi.md`. Migración `796_roi_settings` (`roi_settings`, RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/roi?window_days=` | `metrics:read` | `{generated_at, methodology: {kind: "estimate", window_days, from, to, counted, excluded[], default_minutes, default_minutes_source: assumption\|org, role_minutes, hourly_rate_usd\|null, rate_source: org\|unset, ai_cost_basis}, org: Figures, agents: [Figures + {agent_id, role, minutes_per_task, minutes_source: role\|default\|assumption}]}`. `Figures = {tasks_counted, excluded_rework, excluded_failed, excluded_skipped, est_minutes, est_hours, ai_cost_usd, est_human_cost_usd\|null, ai_cost_per_est_hour_usd\|null}`. Ventana 1..365 (por defecto 30) |
+| GET | `/settings/roi` | `metrics:read` | `{hourly_rate_usd\|null, default_minutes, role_minutes{rol: min}, updated_by?, updated_at?, saved, default_assumed_minutes, max_minutes, max_hourly_rate_usd}` (`saved: false` = nunca configurado, se usa el supuesto de 30 min) |
+| PUT | `/settings/roi` | `org:manage` | `{hourly_rate_usd\|null, default_minutes, role_minutes}`; minutos 0..480, tarifa 0..10000 (`<= 0` o `null` la borra), `400` si no. Auditado (`roi.settings_changed`) |
+
+## 34. Bandeja rápida de aprobaciones (B17)
+
+Una bandeja de todos los proyectos para decidir rápido. Solo lectura: decidir sigue en `POST /approvals/{id}/decision` y `POST /approvals/batch`. La revisión del abogado del diablo solo se lee de su caché. No hay deshacer en el servidor: la ventana de deshacer es del cliente. Diseño: `docs/architecture/approvals-inbox.md`. Sin migración.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/approvals/inbox` | `approvals:read` | `{generated_at, items: [Approval + {task_title?, request_id?, task_cost_usd, project_id?, project_name?, group_key?, counterargument?: {summary, risks[≤3]}, high_risk}], groups: [{key, project_id, project_name?, action, count, approval_ids[], batchable, reason?: "risk"}], suggestions: [{kind: "raise_notify_threshold", action, decided, approved, rate, window_days, max_risk}], rules: {suggest_window_days: 30, suggest_min_decisions: 20, suggest_rate: 0.95, undo: "client_side"}}`. Items: riesgo más alto primero, luego más antiguo. Grupo `batchable` = 2 o más pendientes de una acción en un proyecto, todas de riesgo bajo. Sugerencia: más del 95 % aprobadas con al menos 20 decisiones humanas en 30 días y nunca riesgo alto; es solo informativa |
+
+## 35. Slack de doble vía para personas (A6)
+
+La organización conecta **su propia app de Slack** (signing secret + token del bot, guardados solo sellados con la bóveda; sin clave de bóveda, `409 vault_required`). Las aprobaciones llegan al canal con botones Aprobar / Rechazar y cualquiera consulta con un comando (`/oficina estado`, `/oficina pendientes`, `/oficina vincular <código>`, `/oficina desvincular`; también `status`, `pending`, `link`, `unlink`, `pendentes`). Slack nunca amplía permisos: la decisión pasa por `application.Approvals.Decide` con el id y el rol **actual** de la persona vinculada (las mismas reglas que `POST /approvals/{id}/decision`). Diseño y modelo de seguridad: `docs/architecture/channels.md`. Código: `backend/internal/slackapp`. Migración `801_slack_app` (5 tablas, RLS por organización). No es el conector de Slack de los agentes (`internal/connections/slack`) y no comparte credenciales con él.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| POST | `/channels/slack/{org}/interactions` | público, firma de Slack | Request URL de Interactivity. `413` cuerpo > 64 KB, `404` organización sin app, `401` firma inválida o fuera de la ventana de 5 min, `403` otro espacio de trabajo. `200` inmediato; la decisión sigue en segundo plano y responde por `response_url` (solo `https://hooks.slack.com`) |
+| POST | `/channels/slack/{org}/commands` | público, firma de Slack | Request URL del comando. Mismas comprobaciones; responde JSON efímero (`response_type: ephemeral`) |
+| GET | `/channels/slack/settings` | `org:manage` | `{enabled, configured, signing_secret_set, bot_token_set, bot_token_last4?, team_id?, team_name?, channel_id, min_risk, locale, email_matching, high_risk_in_app, verified_at?, interactions_url, commands_url, command, scopes[], vault_available, accounts_available}`. Los secretos nunca se devuelven |
+| PUT | `/channels/slack/settings` | `org:manage` | `{enabled?, signing_secret?, bot_token?, channel_id?, min_risk?, locale?, email_matching?, high_risk_in_app?}`. Un token nuevo se comprueba con `auth.test` (`400 slack_auth_failed` + `slack_error`) y fija el `team_id` aceptado. `enabled:true` exige ambos secretos. Auditado (`channel.slack.settings_updated`, sin secretos) |
+| DELETE | `/channels/slack/settings` | `org:manage` | Desconecta: borra secretos, vínculos, códigos y referencias. Auditado (`channel.slack.disconnected`) |
+| POST | `/channels/slack/test` | `org:manage` | `{ok, team_id?, team_name?, posted, error?}`: `auth.test` y, si hay canal, un mensaje de prueba. `409 not_configured` sin token |
+| GET | `/channels/slack/link` | `approvals:read` | `{linked, links:[{team_id, slack_user_id, user_id, method, created_at}]}` del usuario que llama |
+| POST | `/channels/slack/link-code` | `approvals:read` | `{code: "ABCD-EFGH", expires_at, command}`: un solo uso, 10 min, se guarda solo su hash; uno nuevo reemplaza al anterior. `Cache-Control: no-store` |
+| DELETE | `/channels/slack/link` | `approvals:read` | `{removed}`: quita los vínculos del usuario que llama. Auditado |
+
+Resultado de cada botón (auditado como `channel.slack.decision` con `channel: "slack"`, `decision`, `outcome`, `slack_team`, `slack_user`, `identity`): `approved`, `rejected`, `partial` (doble aprobación, 1 de 2), `unlinked`, `not_member`, `forbidden` (rol sin `approvals:decide`), `role_too_low`, `self_approval`, `already_approved_by_you`, `not_pending`, `kill_switch`, `read_only`, `needs_app` (riesgo alto u `code.run`), `disabled`, `not_found`, `failed`. Las entradas `approval.approved|rejected|partial|decision_refused` de una decisión desde Slack llevan además `channel: "slack"`. Otras auditorías: `channel.slack.linked`, `channel.slack.link_refused`, `channel.slack.link_code_issued`, `channel.slack.unlinked`, `channel.slack.tested`.
+
+Variables: `SLACK_CHANNEL=off` no monta el canal; las URL públicas usan `NOTIFY_PUBLIC_URL` (o `UI_BASE_URL`).
+
+## 36. Distrito de clientes (B12)
+
+Clientes del despacho, clones de agente por cliente y alcance por cliente de solicitudes, proyectos y carpetas. Una tarea de un cliente solo recuerda y lee lo de ese cliente (más `/Shared` y las notas que una persona escribió al agente); lo aplica el backend al resolver el cliente desde el id de la solicitud. Diseño y tabla de aislamiento: `docs/architecture/customer-district.md`. Migración `797_customers` (`customers`, `customer_assignments`, `customer_links`, `memory_docs.customer_id`; RLS por organización).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/customers?include_archived=1` | `requests:read` | `[{id, name, tax_id, color, notes, folder_path, archived, archived_at?, created_at, updated_at}]` por nombre |
+| POST | `/customers` `{name, tax_id?, color?, notes?}` | `requests:create` | `201`; crea `/Clients/<nombre>`. `400` nombre vacío o > 120, color no `#rrggbb`; `409` nombre repetido entre activos |
+| GET | `/customers/district` | `requests:read` | `{generated_at, customers: [{customer, status: on_track\|waiting_approval\|blocked\|idle, projects_active, approvals_waiting, failed, assignments}]}` |
+| GET | `/customers/{id}` | `requests:read` | `{customer, status, projects_active, approvals_waiting, failed, assignments: [...], projects: [{id, name, status, light, tasks_done, tasks_total, awaiting, failed}], requests: [{id, text, status, created_at}], folder_path}` |
+| PUT | `/customers/{id}` | `requests:create` | solo los campos dados; `409` si está archivado |
+| DELETE | `/customers/{id}` | `agents:write` | `204`; archiva (no admite trabajo nuevo; sus datos siguen aislados) |
+| POST | `/customers/{id}/assignments` `{agent_id, display_name?}` | `files:grant` | `201` `{id, customer_id, agent_id, display_name, created_at}`; nombre por omisión "<título del agente> · <cliente>"; `404` agente desconocido; `409` repetido o cliente archivado |
+| DELETE | `/customers/{id}/assignments/{assignment_id}` | `files:grant` | `204` |
+| POST | `/customers/{id}/folders` `{folder_id}` | `files:grant` | `201`; la carpeta (no de primer nivel) y todo lo que cuelga de ella pasa a ser del cliente; `409` si ya es de otro |
+| DELETE | `/customers/{id}/folders/{folder_id}` | `files:grant` | `204` |
+| GET | `/customers/history/candidates` | `files:grant` | `{projects: [{id, name, status, ...}], requests: [{id, text, status, created_at}]}`: trabajo anterior sin cliente (proyectos en borrador o terminados; solicitudes terminadas que no son de un proyecto), hasta 30 de cada uno |
+| POST | `/customers/history` `{kind: project\|request\|memory, ref_id, customer_id}` | `files:grant` | asigna explícitamente trabajo anterior a un cliente; `customer_id: ""` lo quita (deshacer). `200 {kind, ref_id, from, to, request_id?, memories, changed}`. Una solicitud mueve su vínculo y sus recuerdos; un proyecto mueve también su solicitud; un recuerdo suelto solo si su solicitud no tiene cliente. `409` si sigue en curso, si ya es de otro cliente (quitarlo primero) o si el recuerdo es de una solicitud con cliente; `404` cliente o referencia desconocidos |
+
+Aditivo en rutas existentes: `POST /requests` acepta `customer_id` (`404` cliente desconocido, `409` archivado; en ambos casos no se crea la solicitud); `POST /messages` acepta `customer_id` con los mismos códigos (se valida antes de guardar el mensaje; la solicitud que cree el turno queda vinculada al cliente antes de existir); `POST /projects` acepta `customer_id` y los resúmenes de proyecto lo devuelven. Un plan de proyecto con cliente (borrador, `PATCH` del plan, cambios de plan, lanzamiento) que referencia `artifact:<id>` de otro cliente o sin cliente responde `400` con `customer_isolation`. Comando `/cliente` (`/customer`, `/client`) `<nombre>: <tarea>`: crea una solicitud del cliente (`400 unknown_customer|ambiguous_customer`). Herramientas de agente: `fs.*` y `memory.search` responden `customer_scope_unknown` si el alcance no se puede resolver y `customer_isolation` al intentar escribir fuera del cliente. Auditoría: `customer.created|updated|archived`, `customer.clone.created|deleted`, `customer.folder.linked|unlinked`, `customer.request.scoped`, `customer.history.assigned|unassigned` (con `from`/`to`), `project.customer_changed`.
+
+## 37. Portal del cliente (B13)
+
+Enlace de sólo lectura con el avance de UN proyecto y la marca del despacho. El token (256 bits) se muestra una sola vez; se guarda su SHA-256. La vista pública es una allowlist (`portal.View`): título, estado grueso, avance, etapas y tareas (sólo título y estado), entregables aprobados que el despacho eligió y fecha de última actualización; nunca costos, agentes, instrucciones, aprobaciones, notas internas, conexiones ni ids. Diseño completo: `docs/architecture/client-portal.md`. Migración `798_client_portal` (`portal_branding`, `portal_links`, RLS por organización + política de sólo lectura por hash del token).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/portal/branding` | `agents:read` | `{display_name, accent_color, has_logo, updated_by, updated_at}` (vacío si no hay) |
+| PUT | `/portal/branding` `{display_name, accent_color}` | `org:manage` | `display_name` ≤ 80; `accent_color` `#rrggbb` o vacío (`400` si no). Auditado (`portal_branding.updated`) |
+| GET | `/portal/branding/logo` | `agents:read` | la imagen (`image/png` o `image/jpeg`); `404 no_logo` |
+| PUT | `/portal/branding/logo` (cuerpo = imagen) | `org:manage` | PNG/JPEG/GIF ≤ 2 MB; se re-codifica a ≤ 512 px sin metadatos; `400` si no es una imagen válida, `413` si es mayor. Auditado |
+| DELETE | `/portal/branding/logo` | `org:manage` | auditado |
+| GET | `/projects/{id}/portal-links` | `org:manage` | `[{id, project_id, label, title, deliverable_ids[], created_by, created_at, updated_at, expires_at, revoked_at, revoked_by?, first_viewed_at, last_viewed_at, status: active\|expired\|revoked}]`, más nuevo primero; nunca el token; `404` si el proyecto no es de la organización |
+| GET | `/projects/{id}/portal-links/candidates` | `org:manage` | entregables del proyecto `[{id, title, kind, status, completed, updated_at}]` (`completed` = `approved`/`sent`; los archivados no salen) |
+| POST | `/projects/{id}/portal-links` `{label, title, expires_in_days, deliverable_ids[]}` | `org:manage` | `201` con el enlace y `token` (única vez, `Cache-Control: no-store`). `expires_in_days` 0 = no vence, máx. 365; `deliverable_ids` deben ser artefactos del proyecto (`400`); máx. 20 activos por proyecto (`409`). Auditado (`portal_link.created`) |
+| PUT | `/projects/{id}/portal-links/{lid}` `{label, title, deliverable_ids[]}` | `org:manage` | edita lo compartido; el token y el vencimiento no cambian; `409` si está revocado. Auditado |
+| DELETE | `/projects/{id}/portal-links/{lid}` | `org:manage` | revoca (idempotente) y devuelve el enlace. Auditado (`portal_link.revoked`) |
+
+Públicas (sin sesión; el token es la credencial y va en el **cuerpo**, nunca en la URL; 60 peticiones/min por dirección; `no-store`, `no-referrer`, `X-Robots-Tag: noindex`, `X-Frame-Options: DENY`, CSP `default-src 'none'`):
+
+| Método | Ruta | Notas |
+|---|---|---|
+| POST | `/public/portal/view` `{token}` | `200` `{firm{name, accent_color, has_logo}, project{title, title_key?, title_params?, status, progress_pct, tasks_done, tasks_total}, milestones[{title, title_key?, title_params?, status, progress_pct, tasks[{title, title_key?, title_params?, status}]}], deliverables[{title, kind, completed_at}], updated_at, generated_at, expires_at}`. `404 link_unavailable` para token desconocido, vencido o revocado (indistinguibles); `429 rate_limited`. La primera visita se audita (`portal_link.first_viewed`) |
+| POST | `/public/portal/logo` `{token}` | el logotipo del despacho del enlace; `404` como arriba o `no_logo` |
+
+Página: `/portal#<token>` (el fragmento no se envía al servidor). Estados públicos: proyecto `planning`, `in_progress`, `on_hold`, `completed`, `closed`; tarea `pending`, `in_progress`, `done`.
+
+## 38. Debates del equipo (B5)
+
+Antes de una decisión de alto impacto, de 2 a 4 agentes debaten en la sala de reuniones (posturas, objeciones) y la asistente cierra con una síntesis: la opción a la que se inclina el equipo y el desacuerdo. Es **consultivo** y su transcripción es **texto de modelo no confiable**: no aprueba, rechaza ni ejecuta nada; la decisión sigue pasando por las aprobaciones normales. Disparadores: una tarea del plan con `decision: true` (el planificador marca como máximo una), la marca `[[debate]]` / `[[debate:a,b]]` en la solicitud (`/debatir`, `POST /requests {"debate": true}`) o `POST /debates`. Topes: `DEBATE_MAX_TURNS` (8 por defecto, 3..12, síntesis incluida) y `DEBATE_MAX_COST_USD` (0.10 por debate), dentro de los topes de gasto del agente asistente y de la organización. Diseño: `docs/architecture/team-debates.md`. Migración `799_team_debates` (`team_debates`, RLS por organización, script de bajada).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/debates?request_id=&limit=` | `requests:read` | `[{id, topic, trigger: planner_decision\|user_request, request_id?, task_id?, options[], participants[], turns[{seq, agent_id, kind: position\|objection\|synthesis, text}], synthesis{choice, rationale, dissent[]}, status: done\|failed, fail_code?, max_turns, model, provider, cost_usd, created_by, created_at, advisory: true, untrusted: true}]`, más nuevo primero (límite 1..100, 30 por defecto) |
+| GET | `/debates/{id}` | `requests:read` | un debate; `404` si no es de la organización |
+| POST | `/debates` `{topic, details?, options?[≤4], agent_ids?[2..4], locale?}` | `requests:create` | `201` con el debate. `400` tema vacío, más de 4 opciones o participantes inválidos; `403` si quien llama es un agente; `503 unavailable` / `423 blocked` / `402 budget_exceeded` con `{code, debate_id}` (el intento fallido queda guardado) |
+| POST | `/requests` `{text, debate: true}` | `requests:create` | aditivo: añade la marca `[[debate]]`; el plan se debate antes de ejecutarse |
+
+Eventos: `debate.started` `{debate_id, topic, participants, trigger, request_id, task_id, max_turns}`, `debate.completed` `{debate}`, `debate.failed` `{debate_id, participants, code, request_id}`. Auditoría (metadatos, nunca el texto): `debate.completed` `{trigger, task_id, participants, turns, max_turns, model, cost_usd}`, `debate.failed` `{trigger, task_id, reason}`. Runtime (aditivo): `POST /v1/debate` `{topic, details, options, participants[{id, name, role, title, area}], moderator, max_turns, locale, tone, max_cost_usd}` → `{options, turns, synthesis, usage}`; `PlanTask.decision` (opcional) en `/v1/plan`.
+
+## 39. Buzones de datos (entrada genérica)
+
+Una URL y un token secreto a los que cualquier programa (scripts, exportaciones de un ERP, n8n/Zapier/Make, curl) envía JSON, CSV o archivos sin que la plataforma integre ese programa. Cada envío se guarda como un archivo **versionado** del drive con autor `{kind: "inbox", id}`; al leerlo, un agente lo ve como contenido de otros (marcado) y cualquier acción externa derivada pide aprobación humana. El token (`aiwi_` + 256 bits) se muestra una sola vez; se guarda su SHA-256 y sus últimos 4 caracteres (`token_hint`). Diseño, modelo de seguridad y límites: `docs/architecture/data-inboxes.md`. Migración `803_data_inboxes` (`data_inboxes`, `data_inbox_pushes`, RLS por organización + política de sólo lectura por hash del token; script de bajada).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/data-inboxes` | `org:manage` | `[{id, name, slug, folder, customer_id, allowed[json\|csv\|files], max_bytes, rate_per_min, token_hint, created_by, created_at, updated_at, rotated_at, revoked_at, revoked_by?, last_push_at, push_count, status: active\|revoked, folder_path, push_path, push_url}]`, más nuevo primero; nunca el token ni su hash |
+| POST | `/data-inboxes` `{name, folder?, customer_id?, allowed?, max_bytes?, rate_per_min?}` | `org:manage` | `201` con el buzón y `token` (única vez, `Cache-Control: no-store`). `folder` bajo `/Shared` o un `/Projects/<proyecto>` existente (vacío = `/Shared/Imports/<slug>`); con `customer_id`, relativa a la carpeta del cliente (vacío = `Imports/<slug>`). `allowed` vacío = `json, csv`; `max_bytes` 1 KB..`DRIVE_MAX_FILE_MB` (5 MB por defecto); `rate_per_min` 1..600 (30). `400 invalid`; `409` con 50 activos. Auditado (`inbox.created`) |
+| GET | `/data-inboxes/{id}` | `org:manage` | un buzón; `404 not_found` si no es de la organización |
+| PUT | `/data-inboxes/{id}` `{name, allowed, max_bytes, rate_per_min}` | `org:manage` | el destino, el cliente y el token no cambian; `409` si está revocado. Auditado (`inbox.updated`) |
+| POST | `/data-inboxes/{id}/rotate` | `org:manage` | `200` con el buzón y el `token` nuevo (única vez); el anterior deja de funcionar al instante; `409` si está revocado. Auditado (`inbox.token_rotated`) |
+| DELETE | `/data-inboxes/{id}` | `org:manage` | revoca para siempre (idempotente); los archivos quedan en el drive. Auditado (`inbox.revoked`) |
+| GET | `/data-inboxes/{id}/pushes?limit=` | `org:manage` | `[{id, inbox_id, status, size, received_at, files[{file_id, path, name, version, size, mime, kind, created, unchanged}]}]`, más nuevo primero (20 por defecto, 100 máx.); sólo metadatos |
+
+`push_url` sale de `PUBLIC_API_URL` (o `UI_BASE_URL` + `/api/v1`); vacío si no hay ninguna y la interfaz la arma con su propio origen.
+
+Pública (sin sesión, fuera del middleware de usuario; `no-store`, `nosniff`, `no-referrer`):
+
+| Método | Ruta | Notas |
+|---|---|---|
+| POST | `/inbox/{id}` | `Authorization: Bearer <token>` **sólo en la cabecera**. Cuerpo `application/json` (o `+json`, `application/x-ndjson`), `text/csv`, `text/tab-separated-values`, un tipo de archivo del drive, o `multipart/form-data` (hasta 20 partes de archivo; los campos sin archivo se ignoran). Cabeceras opcionales `X-Filename` (cuerpos crudos) y `X-Idempotency-Key` (≤ 200 ASCII). `201` `{push_id, inbox_id, received_at, size, files[...], replayed: false, ignored_fields?}`; `200` con `replayed: true` si la clave ya se vio. Errores `{code, error}`: `400 token_in_query` (token en la URL: rótalo), `401 unauthorized` (sin token, desconocido, revocado, rotado o de otro buzón: indistinguibles; `WWW-Authenticate: Bearer`), `429 rate_limited` (`Retry-After`; 600/min por dirección antes de autenticar y `rate_per_min` por buzón), `413 payload_too_large` (un `Content-Length` mayor se rechaza antes de leer; los cuerpos chunked se cortan), `415 kind_not_allowed` / `415 unsupported_media_type`, `400 bad_payload` (JSON inválido, multipart mal formado, vacío, `X-Filename` que no coincide), `409 push_in_progress` / `409 customer_unavailable`, `423 read_only_mode`, `503 kill_switch_active`, `507 quota_exceeded`, `503 unavailable` (limitador ilegible; falla cerrado) |
+
+Eventos: `inbox.data_received` `{inbox_id, inbox_name, push_id, customer_id, size, files[{file_id, path, name, size, mime, version}], received_at}`. Auditoría (metadatos, nunca el contenido ni el token): `inbox.push_received` `{push_id, size, files[{file_id, kind, mime, size, version, created}], customer_id, idempotency_key, ignored_fields}` con actor `inbox:<id>`, `inbox.push_refused` `{code}`.
+
+## 40. Importar desde un enlace
+
+Importación genérica de tipo PULL: un administrador pega una URL que devuelve datos (CSV publicado, exportación JSON/CSV, XLSX, PDF) y se descarga a Archivos como archivo versionado, una vez o `hourly`/`daily`/`weekly`. Descarga por la guarda SSRF de la herramienta web (https, redirecciones revalidadas, direcciones públicas, 60 s, `DRIVE_MAX_FILE_MB`, tipos `csv, tsv, json, xlsx, txt, pdf`). Versión nueva sólo si cambia el SHA-256; autor `link_import` (contaminado para `fs.read`). Diseño: `docs/architecture/link-imports.md`. Migración `804_link_imports` (`link_imports`, `link_import_runs`, RLS por organización, script de bajada).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/link-imports` | `connections:read` | `{imports: [LinkImport], schedules, types}`, más nuevo primero. `LinkImport` = `{id, name, slug, url, host, folder, folder_path, customer_id, file_stem, schedule: once\|hourly\|daily\|weekly, enabled, header_name, header_set, header_hint, created_by, created_at, updated_at, next_run_at, last_run_at, last_status, last_code, last_hash, last_file_id, last_path, last_version, last_data_at, run_count}`. Nunca el valor del encabezado; sin `org:manage` la query string de `url` se muestra como `?…` |
+| GET | `/link-imports/{id}` | `connections:read` | una importación; `404` si no es de la organización |
+| POST | `/link-imports` `{name, url, schedule?, folder?, customer_id?, file_stem?, enabled?, header?{name, value}}` | `org:manage` | `201`. `400` si la URL no es https, apunta a una dirección privada/interna, puerto no permitido, carpeta fuera de `/Shared` o de un proyecto existente (o fuera de la carpeta del cliente), cliente archivado/desconocido, encabezado no permitido o sin `CONNECTIONS_KEK`; `409` con 50 importaciones. Auditado (`link_import.created`, sólo el host) |
+| PUT | `/link-imports/{id}` `{name?, url?, schedule?, file_stem?, enabled?, header?{name, value?, clear?}}` | `org:manage` | campos vacíos se conservan; `header {name}` sin `value` renombra y conserva el valor sellado; `{clear: true}` lo quita. Destino y cliente fijos. Auditado (`link_import.updated`) |
+| DELETE | `/link-imports/{id}` | `org:manage` | `204`; borra la configuración y el historial, los archivos se quedan. Auditado (`link_import.deleted`) |
+| POST | `/link-imports/{id}/run` | `org:manage` | corre ahora: `200 {run, import}` con `run = {id, import_id, trigger: manual\|schedule, actor, status: ok\|unchanged\|error\|skipped, code, http_status?, started_at, duration_ms, size, mime, hash, file_id, path, version}`; una corrida omitida o fallida también es `200` (mira `status`/`code`). `409` si ya hay una corrida en curso. Auditado (`link_import.run` / `link_import.run_skipped`, sólo metadatos) |
+| GET | `/link-imports/{id}/runs?limit=` | `connections:read` | historial, más nuevo primero (1..100, 20 por defecto; se guardan 200) |
+
+Evento: `link_import.data_landed` `{import_id, import_name, run_id, customer_id, trigger, fetched_at, file{file_id, path, name, size, version}}` (sólo cuando llegan datos nuevos). Variables: `CUSTOM_API_ALLOW_PRIVATE` (compartida), `LINK_IMPORTS_ALLOW_HTTP`.

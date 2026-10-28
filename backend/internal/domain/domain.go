@@ -95,6 +95,59 @@ type StructuredOutput struct {
 	// Review is the verdict of the quality review (Q1); omitted when the task
 	// was not reviewed, so old payloads stay valid.
 	Review *Review `json:"review,omitempty"`
+	// Citations (B6, evidence chain) tie the figures of the output to where they
+	// came from. The agent proposes value, label and ref; the backend checks every
+	// ref against what the task really saw and fills kind, status and source
+	// (docs/architecture/evidence-chain.md). Omitted when there are none.
+	Citations []Citation `json:"citations,omitempty"`
+}
+
+// Citation statuses (B6). Only the backend sets them: whatever the runtime
+// sends in status/source is discarded and recomputed.
+const (
+	CitationVerified   = "verified"
+	CitationUnverified = "unverified"
+)
+
+// Citation is one figure of an output and its source.
+type Citation struct {
+	Value string `json:"value"`           // the figure as written ("$50,000", "24%")
+	Label string `json:"label,omitempty"` // what the figure is ("real margin")
+	// Ref is one of task:<id> | report:<id> | memory:<id> | file:<path or file id> |
+	// cell:<artifact id>!<sheet>!<A1> | conn:<tool>:<item id>.
+	Ref    string `json:"ref"`
+	Kind   string `json:"kind,omitempty"`   // task|report|memory|file|cell|conn (from the ref)
+	Status string `json:"status,omitempty"` // verified|unverified (set by the backend)
+	// Reason says why a citation is unverified: malformed | unknown_kind |
+	// not_seen | not_found | value_mismatch.
+	Reason string `json:"reason,omitempty"`
+	// ValueChecked: the backend found this exact figure in the source (always
+	// true for a verified cell). False on a verified citation means the source
+	// was really read but the figure itself could not be matched (derived figure,
+	// or a source whose content the backend does not keep).
+	ValueChecked bool            `json:"value_checked,omitempty"`
+	Source       *CitationSource `json:"source,omitempty"` // only when verified
+}
+
+// CitationSource is what the backend resolved for a verified citation: enough
+// to open it (task, artifact cell, drive file version) or to describe it
+// (connector item metadata). It never carries third-party content beyond what
+// the task already stored.
+type CitationSource struct {
+	TaskID     string     `json:"task_id,omitempty"`
+	Title      string     `json:"title,omitempty"`
+	AgentID    string     `json:"agent_id,omitempty"`
+	ArtifactID string     `json:"artifact_id,omitempty"`
+	Sheet      string     `json:"sheet,omitempty"`
+	Cell       string     `json:"cell,omitempty"`
+	CellValue  string     `json:"cell_value,omitempty"`
+	FileID     string     `json:"file_id,omitempty"`
+	Path       string     `json:"path,omitempty"`
+	Version    int        `json:"version,omitempty"`
+	Provider   string     `json:"provider,omitempty"`
+	Tool       string     `json:"tool,omitempty"`
+	ItemID     string     `json:"item_id,omitempty"`
+	ReadAt     *time.Time `json:"read_at,omitempty"`
 }
 
 // Review verdicts (Q1).
@@ -358,6 +411,11 @@ const (
 	EvTaskFailed       = "task.failed"
 	EvTaskBlocked      = "task.blocked"
 	EvInitiativeRaised = "initiative.raised"
+	// EvAutonomyChanged: an agent's autonomy level changed (a human accepted a promotion or a demotion, or the
+	// trust ladder demoted it automatically); EvTrustProposal: a promotion or demotion was suggested or resolved
+	// (docs/architecture/trust-ladder.md, additive).
+	EvAutonomyChanged  = "agent.autonomy_changed"
+	EvTrustProposal    = "trust.proposal"
 	EvMessageSent      = "message.sent"
 	EvApprovalRequest  = "approval.requested"
 	EvApprovalResolved = "approval.resolved"

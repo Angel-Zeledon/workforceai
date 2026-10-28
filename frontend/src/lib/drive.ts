@@ -12,7 +12,8 @@ import { authFetch } from "./session";
 import { useStore } from "./store";
 import { draftSlug } from "./mock/draft";
 
-export interface Principal { kind: "human" | "agent" | "system"; id: string }
+/** "inbox" = a data inbox: software outside the platform pushed the content (lib/dataInboxLogic.ts). */
+export interface Principal { kind: "human" | "agent" | "system" | "inbox"; id: string }
 export interface DriveFolder { id: string; name: string; path: string; root_kind?: string }
 export interface DriveFile {
   id: string; name: string; path: string; mime: string; size: number; current_version: number;
@@ -123,6 +124,13 @@ function mockDrive() {
   put("/Shared/Politicas/politica-de-descuentos.md", "# Política de descuentos\n\nHasta 10% sin aprobación; más requiere Dirección.\n", human);
   put("/Shared/Finanzas/saldos-bancarios.csv", "cuenta,banco,saldo\nOperativa,BAC,128400\nNómina,BN,56300\nUSD,BCR,40200\n", human);
   put("/Clients/Grupo Alfa/brief.md", "# Brief Grupo Alfa\n\nRediseño completo, presupuesto USD 50,000, entrega en 8 semanas.\n", human);
+  // B6 demo: the capacity cost the accountant cites is in version 2 of this file (version 1 had an older figure)
+  put("/Shared/Finanzas/costo-capacidad.csv", "concepto,mensual\nPerfil senior ops,3600\nPerfil senior ops,3600\n", human);
+  put("/Shared/Finanzas/costo-capacidad.csv", "concepto,mensual\nPerfil senior ops (cargado),3900\nPerfil senior ops (cargado),3900\nTotal capacidad adicional,7800\n", human, "costo cargado");
+  // Data inboxes demo: a file an outside system pushed (two versions), authored by the inbox (lib/mock/data-inboxes-mock.ts).
+  const erp: Principal = { kind: "inbox", id: "ibx_demo_erp" };
+  put("/Shared/Imports/pedidos-erp/orders-2026-10-26.json", '[{"order_id":1040,"total":120.5},{"order_id":1041,"total":88}]\n', erp, "pushed to the data inbox Pedidos ERP (diario)");
+  put("/Shared/Imports/pedidos-erp/orders-2026-10-26.json", '[{"order_id":1040,"total":120.5},{"order_id":1041,"total":88},{"order_id":1042,"total":250.75}]\n', erp, "pushed to the data inbox Pedidos ERP (diario)");
 
   /** Each finished task leaves its draft on the agent's desk, as the simulated runtime does. */
   const drafted = new Set<string>(); // one draft per task: later edits by people are not overwritten

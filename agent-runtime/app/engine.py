@@ -115,7 +115,7 @@ class AgentEngine(abc.ABC):
     solo devuelve tool_requests para que el backend decida."""
 
     mode: str  # "simulation" | "live"
-    provider: str = "simulation"  # simulation | deepseek | anthropic | openai | kimi | custom
+    provider: str = "simulation"  # simulation | deepseek | anthropic | openai | kimi | gemini | custom
 
     @abc.abstractmethod
     async def plan(self, req: PlanRequest) -> PlanResponse: ...
@@ -160,6 +160,12 @@ class AgentEngine(abc.ABC):
         from .devils_advocate import sim_counterargument
 
         return sim_counterargument(req)
+
+    async def debate(self, req):
+        """Team debate before a decision (B5, advisory only). Default: the deterministic simulated debate."""
+        from .debate import sim_debate
+
+        return sim_debate(req)
 
     async def route(self, req: RouteRequest) -> RouteResponse:
         """Who should answer a chat message (docs/architecture/chat-routing.md). Default: the rules."""

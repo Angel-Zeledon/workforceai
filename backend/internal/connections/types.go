@@ -41,6 +41,8 @@ const (
 const (
 	CodeScopeNotGranted       = "scope_not_granted"
 	CodeConnectionUnavailable = "connection_unavailable"
+	// CodeProviderDisabled: the provider is a vendor-specific integration switched off for v1 (VENDOR_INTEGRATIONS).
+	CodeProviderDisabled = "vendor_integrations_disabled"
 	CodeReauthRequired        = "reauth_required"
 	CodeReadOnlyMode          = "read_only_mode"
 	CodeKillSwitch            = "kill_switch_active"
@@ -61,6 +63,8 @@ var (
 	ErrConflict         = errors.New("connections: conflict")
 	ErrNoKEK            = vault.ErrNoKEK
 	ErrOAuthUnavailable = errors.New("connections: OAuth app not configured for this provider")
+	// ErrProviderDisabled: the provider is a vendor-specific integration switched off (VENDOR_INTEGRATIONS, v1).
+	ErrProviderDisabled = errors.New("connections: vendor-specific integration disabled (VENDOR_INTEGRATIONS)")
 	// ErrNeedsSecondApprover: a write grant needs a different human to approve it.
 	ErrNeedsSecondApprover = errors.New("connections: a second human must approve this write grant")
 )
@@ -134,9 +138,15 @@ type Connection struct {
 	OAuthClientID        string `json:"oauth_client_id,omitempty"`
 	OAuthClientSecretEnc []byte `json:"-"`
 
+	// Source configures a generic HTTP source (provider custom_api only).
+	Source *Source `json:"source,omitempty"`
+
 	// Filled by the service for responses.
 	Credential  *vault.Meta `json:"credential"`
 	GrantsCount int         `json:"grants_count"`
+	// ProviderDisabled: the provider is a vendor-specific integration switched off (VENDOR_INTEGRATIONS). The
+	// connection is kept (nothing is deleted) but cannot be used, tested, re-authorized or extended.
+	ProviderDisabled bool `json:"provider_disabled,omitempty"`
 }
 
 // Grant lets one agent use some capabilities of one connection.

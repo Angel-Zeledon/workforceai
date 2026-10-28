@@ -20,14 +20,15 @@ import { SecurityCenter } from "../security/SecurityCenter";
 import { AccountSecurity } from "./AccountSecurity";
 import { DataPrivacy } from "./DataPrivacy";
 import { IdentitySettings } from "./IdentitySettings";
+import { PortalBranding } from "./PortalBranding";
 
 /** Sub-pages of Settings. The URL (/settings?s=...) says which one is open, so the browser's Back button and the
  *  sidebar both just work: nothing needs a "Close" button. */
-const SUBS = ["office", "hire", "templates", "members", "kill", "connections", "security", "account", "data", "identity"] as const;
+const SUBS = ["office", "hire", "templates", "members", "kill", "connections", "security", "account", "data", "identity", "portal"] as const;
 type Sub = (typeof SUBS)[number];
 const SUB_TITLE: Record<Sub, string> = {
   office: "settings.title", hire: "hire.open", templates: "tpl.open", members: "members.title",
-  kill: "ctl.killswitch.title", connections: "nav.connections", security: "nav.security", account: "mfa.rowTitle", data: "data.title", identity: "idn.title",
+  kill: "ctl.killswitch.title", connections: "nav.connections", security: "nav.security", account: "mfa.rowTitle", data: "data.title", identity: "idn.title", portal: "portal.brand.title",
 };
 
 function Row({ icon, title, body, onClick, testid, disabled, danger, tour }: { tour?: string; icon: IconName; title: string; body: string; onClick: () => void; testid: string; disabled?: boolean; danger?: boolean }) {
@@ -81,6 +82,7 @@ export function SettingsView() {
             {sub === "account" && <AccountSecurity />}
             {sub === "data" && <DataPrivacy />}
             {sub === "identity" && <IdentitySettings />}
+            {sub === "portal" && <PortalBranding />}
             {sub === "office" && <OfficeSettingsPanel onClose={() => open(null)} />}
             {sub === "hire" && <HireFromTemplateDialog onClose={() => open(null)} />}
             {sub === "templates" && <TemplateGallery onClose={() => open(null)} />}
@@ -100,6 +102,7 @@ export function SettingsView() {
           <Row tour="settings.office" testid="settings-office" icon="edit" title={t("settings.title")} body={t("settings.page.office")} onClick={() => open("office")} />
           <Row tour="settings.hire" testid="settings-hire" icon="plus" title={t("hire.open")} body={t("settings.page.hire")} disabled={!isAdmin} onClick={() => open("hire")} />
           <Row tour="settings.templates" testid="settings-templates" icon="layout" title={t("tpl.open")} body={t("settings.page.templates")} onClick={() => open("templates")} />
+          <Row testid="settings-portal" icon="layout" title={t("portal.brand.title")} body={t("portal.brand.rowBody")} onClick={() => open("portal")} />
           <Row tour="settings.connections" testid="settings-connections" icon="plug" title={t("nav.connections")} body={t("settings.page.connections")} onClick={() => open("connections")} />
           {onboarding.supported && <Row tour="settings.onboarding" testid="settings-onboarding" icon="flag" title={onboarding.pending ? t("onb.prompt.title") : t("cfg.open")} body={t("settings.page.onboarding")} onClick={onboarding.open} />}
         </Section>

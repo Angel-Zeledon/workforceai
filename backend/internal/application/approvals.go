@@ -293,8 +293,8 @@ func (a *Approvals) Decide(ctx context.Context, id, decision, note string) (doma
 			return ap, err
 		}
 		a.rec.Audit(ctx, domain.AuditLog{Actor: actor, Action: "approval.partial", Entity: "approval", EntityID: id, RequestID: a.requestOf(ctx, ap),
-			Details: map[string]any{"task_id": ap.TaskID, "action": ap.Action, "received": len(ap.Decisions), "required": ap.RequiredApprovals,
-				"required_role": ap.RequiredRole, "policy_rule": ap.PolicyRule}})
+			Details: withChannel(ctx, map[string]any{"task_id": ap.TaskID, "action": ap.Action, "received": len(ap.Decisions), "required": ap.RequiredApprovals,
+				"required_role": ap.RequiredRole, "policy_rule": ap.PolicyRule})})
 		a.rec.Emit(ctx, Action{Type: domain.EvApprovalProgress, AgentID: ap.AgentID, Entity: "approval", EntityID: id, SkipAudit: true,
 			Payload: map[string]any{"approval": ap},
 			Text:    fmt.Sprintf("Aprobación %d/%d: %s", len(ap.Decisions), ap.RequiredApprovals, ap.Title)})
@@ -306,7 +306,15 @@ func (a *Approvals) Decide(ctx context.Context, id, decision, note string) (doma
 // deny audits a refused decision attempt (who tried, and why it was refused).
 func (a *Approvals) deny(ctx context.Context, ap domain.Approval, actor, why string) {
 	a.rec.Audit(ctx, domain.AuditLog{Actor: actor, Action: "approval.decision_refused", Entity: "approval", EntityID: ap.ID, RequestID: a.requestOf(ctx, ap),
-		Details: map[string]any{"reason": why, "task_id": ap.TaskID, "action": ap.Action, "required_role": ap.RequiredRole}})
+		Details: withChannel(ctx, map[string]any{"reason": why, "task_id": ap.TaskID, "action": ap.Action, "required_role": ap.RequiredRole})})
+}
+
+// withChannel adds the channel of a decision made outside the app (WithChannel) to audit details.
+func withChannel(ctx context.Context, d map[string]any) map[string]any {
+	if ch := ChannelFrom(ctx); ch != "" {
+		d["channel"] = ch
+	}
+	return d
 }
 
 // isAgentPrincipal: agents never receive the "approve" capability. Their
@@ -352,8 +360,8 @@ func (a *Approvals) resolveLocked(ctx context.Context, ap domain.Approval, st do
 		approvers = append(approvers, d.By)
 	}
 	a.rec.Audit(ctx, domain.AuditLog{Actor: actor, Action: "approval." + string(st), Entity: "approval", EntityID: id, RequestID: a.requestOf(ctx, ap),
-		Details: map[string]any{"note": note, "task_id": ap.TaskID, "action": ap.Action, "risk": ap.Risk, "approvers": approvers,
-			"required_approvals": ap.RequiredApprovals, "required_role": ap.RequiredRole, "requested_by": ap.RequestedBy, "policy_rule": ap.PolicyRule}})
+		Details: withChannel(ctx, map[string]any{"note": note, "task_id": ap.TaskID, "action": ap.Action, "risk": ap.Risk, "approvers": approvers,
+			"required_approvals": ap.RequiredApprovals, "required_role": ap.RequiredRole, "requested_by": ap.RequestedBy, "policy_rule": ap.PolicyRule})})
 	if st == domain.ApprovalRejected && a.Observer != nil {
 		a.Observer.ObserveApprovalRejected(ctx, a.org(ctx), ap.AgentID)
 	}

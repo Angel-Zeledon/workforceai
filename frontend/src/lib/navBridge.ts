@@ -9,6 +9,12 @@ export function go(href: string) {
   else if (typeof window !== "undefined") window.location.assign(href);
 }
 
+/** Focus an agent and navigate to the office ("/"); the selection lives in the global store and survives the route change. */
+export function openInOffice(agentId: string, select: (id: string) => void) {
+  select(agentId);
+  go("/");
+}
+
 /** Sections of the app: route, i18n label key and icon. */
 export const SECTIONS = [
   { id: "office", href: "/", label: "nav.office", icon: "office" },

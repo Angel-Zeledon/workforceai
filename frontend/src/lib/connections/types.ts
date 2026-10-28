@@ -18,6 +18,8 @@ export interface CapabilityDef {
   hold_seconds_default?: number;
   /** Gmail: capabilities belong to the read or to the write connection profile (owner decision: separate). */
   profile?: "read" | "write";
+  /** agent tools this capability unlocks (e.g. custom_api api.read -> ["api.get"]). */
+  tools?: string[];
 }
 export interface ResourceFilterDef { key: string; type: "list" | "number"; default?: string | number }
 export interface ProviderDef {
@@ -29,6 +31,35 @@ export interface ProviderDef {
   phase: string;
   /** Gmail splits read and write into two connections. */
   split_read_write?: boolean;
+  /** false when the server cannot create live connections (no vault / no OAuth app): only simulated mode works. */
+  live_available?: boolean;
+}
+
+/** How the API key of a custom_api source travels: Authorization: Bearer, a named header, or a named query parameter. */
+export type ApiAuthStyle = "bearer" | "header" | "query";
+export interface ApiSourceAuth {
+  style: ApiAuthStyle;
+  /** header or query parameter name; required for header/query, ignored for bearer. */
+  name?: string;
+}
+export interface ApiEndpoint {
+  /** ^[a-z][a-z0-9_]{0,39}$, unique within the source. */
+  name: string;
+  /** starts with "/", may contain {param} placeholders. */
+  path: string;
+  /** <= 300 chars, shown to agents. */
+  description?: string;
+  /** accepted parameter names (path placeholders + query params). */
+  params?: string[];
+}
+/** custom_api: a generic read-only HTTP source. Never carries the secret. */
+export interface ApiSource {
+  base_url: string;
+  auth: ApiSourceAuth;
+  /** <= 500 chars: what lives there (shown to agents). */
+  description?: string;
+  /** <= 30; empty = agents may GET any path under base_url. */
+  endpoints?: ApiEndpoint[];
 }
 
 export interface CredentialMeta {
@@ -55,6 +86,8 @@ export interface Connection {
   mode: "live" | "simulated";
   status: ConnStatus;
   status_reason: string | null;
+  /** Vendor-specific integration switched off for v1 (VENDOR_INTEGRATIONS): kept, but cannot be used. */
+  provider_disabled?: boolean;
   profile?: "read" | "write";
   requested_capabilities: string[];
   granted_capabilities: string[];
@@ -70,6 +103,8 @@ export interface Connection {
   created_at: string;
   revoked_at?: string | null;
   pending_provider_revocation?: boolean;
+  /** custom_api only: the read-only HTTP source (base URL, how the key is sent, endpoints). */
+  source?: ApiSource;
 }
 
 export type GrantStatus = "active" | "pending_second_approval" | "revoked";

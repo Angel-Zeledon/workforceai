@@ -66,6 +66,9 @@ func (s *Service) PutGrant(ctx context.Context, org, connID, agentID string, in 
 	if c.Status == StatusRevoked {
 		return Grant{}, fmt.Errorf("%w: connection is revoked", ErrConflict)
 	}
+	if err := s.usable(c); err != nil {
+		return Grant{}, err
+	}
 	m := s.manifests[c.Provider]
 	caps := dedupe(in.Capabilities)
 	if len(caps) == 0 {

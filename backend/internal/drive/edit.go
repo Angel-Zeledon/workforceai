@@ -45,6 +45,9 @@ func (a *AgentFS) planEdit(ctx context.Context, org string, sc scope, args map[s
 	if !(canRead(zs) || autoWrite(zs)) { // an edit needs to read the file first
 		return deny("not_granted", "this file is outside the areas you can read")
 	}
+	if sc.writeRefused(zs) {
+		return deny(denyCustomerIsolation, "this task works for one customer: edit only in that customer's folders or your desk for it")
+	}
 	if _, ok := TypeOf(f.Name); !ok || officedoc.EditKind(f.Name) == "" || (officedoc.EditKind(f.Name) == "text" && !IsTextName(f.Name)) {
 		return deny("unsupported_type", "edit works on text files (md, txt, csv, json, code), docx and xlsx")
 	}

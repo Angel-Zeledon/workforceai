@@ -10,6 +10,36 @@ Convenciones de esta spec (las mismas del repo):
 - Migraciones reales en `backend/internal/infrastructure/postgres/migrations/` (ids `TEXT`, `org_id TEXT`, RLS con `app_current_org()` y `FORCE ROW LEVEL SECURITY`). Esta feature quedó en `240_connections.sql` y `241_controls.sql` (los números provisionales 205/206 se renumeraron tras `210_cost_ledger.sql` y `230_org_config.sql`; ver sec. 18).
 - **`data-testid`**: el e2e cuenta `[data-testid^="agent-"]` y `[data-testid^="approval-"]`. Ningún id nuevo puede empezar con `agent-` ni `approval-`. Esta spec usa los prefijos `conn-` y `ctl-`.
 
+## v1: solo importaciones genéricas
+
+Decisión del dueño (2026-10-27): la v1 **no** incluye integraciones atadas a un producto concreto (Gmail, Google
+Calendar/Drive, GitHub, LinkedIn, calendario de Microsoft 365, Slack, ni el canal de Slack de dos vías). Si un cliente
+necesita una, se le construye como feature aparte. Lo que sí hay en v1 son formas **genéricas** de traer datos:
+
+| Vía | Dirección | Dónde |
+|---|---|---|
+| Fuente de API genérica (`custom_api`) | los agentes consultan, solo lectura | este documento, `08-api.md` |
+| Buzones de datos | cualquier software empuja JSON/CSV/archivos a una URL con token | `data-inboxes.md` |
+| Importar desde un enlace | el backend descarga un CSV/JSON/XLSX de una URL, una vez o programado | `link-imports.md` |
+| Subir archivos (unidad, chat, "Antes de empezar") | manual | `drive.md` |
+
+El código de los conectores de proveedor **se conserva** y se apaga con un interruptor del backend:
+
+| `VENDOR_INTEGRATIONS` | Efecto |
+|---|---|
+| vacío / `off` / `false` / `0` (por defecto) | todos apagados |
+| `on` / `true` / `1` / `all` | todos encendidos (comportamiento anterior a v1) |
+| lista, p. ej. `github,slack` | solo esos (`slack` cubre también el canal de dos vías) |
+
+Con un proveedor apagado: desaparece del catálogo (`GET /connection-providers`); crear, probar, conceder,
+re-autorizar o ejecutar responde `403 vendor_integrations_disabled`; las conexiones que ya existían se conservan y se
+listan con `provider_disabled: true` (se pueden revocar, no usar); el canal de Slack no monta sus URLs (404) y
+`GET /channels/slack/settings` responde `{available: false}`. `GET /org/settings` expone el estado en
+`vendor_integrations {enabled, all, providers}`. `custom_api` nunca se apaga. Código: `backend/internal/integrations`.
+
+Fuera del interruptor, a propósito: los avisos salientes de aprobaciones por webhook de Slack/Teams
+(`approvals-notify.md`) son un POST a una URL que pega el admin, no una integración con la cuenta del proveedor.
+
 ---
 
 ## 0. Decisiones (resumen)
@@ -1119,3 +1149,21 @@ Cambios compartidos: `ResourceScope` suma `calendars`, `folders`, `repos`, `chan
 Pruebas (`internal/gateway/connectors_test.go`, `connections/{drive,slack}/*_test.go`): lecturas delimitadas con la inyección marcada y nunca obedecida, listas de recursos que fallan cerrado, escritura que solo produce aprobación y luego ventana, cancelación durante la ventana, conexión de lectura que no puede escribir, el token de GitHub viajando solo en la cabecera `Authorization` (nunca en auditoría, eventos ni datos), errores `{"ok":false}` de Slack clasificados y una publicación enviada exactamente una vez.
 
 **No verificado**: ninguno de los cuatro contra el servicio real (no hay cuentas ni credenciales en este entorno; los clientes reales se probaron contra servidores de prueba que imitan los endpoints documentados). Gmail real tiene su lista de verificación manual en `docs/runbooks/gmail-live-checklist.md`; la misma secuencia (conexión de lectura primero, luego escritura con aprobación) aplica a estos conectores.
+
+### 18.8 Fuentes genéricas por API (`custom_api`): consultar cualquier plataforma sin escribir un adaptador
+
+Fecha: 2026-10-22. Objetivo: bajar la fricción para que los agentes **consulten otras plataformas y respondan con esos datos** (tipo RAG, pero en vivo y sin indexar). Antes, solo las seis plataformas con adaptador propio eran consultables, `custom_api` guardaba una clave sin herramientas y el agente no sabía qué conexiones tenía: solo veía nombres genéricos de herramientas.
+
+**Qué es una fuente.** Una conexión `custom_api` lleva ahora `source` (JSONB, migración `790_connection_source`, configuración escrita por un admin, **sin secretos**): `base_url`, `auth.style` (`bearer` | `header` con `auth.name` | `query` con `auth.name`), `description` ("¿qué hay ahí?", máx. 500, la ve el agente) y `endpoints` opcionales (`name`, `path` con `{placeholders}`, `description`, `params`; máx. 30). La clave sigue en la bóveda; el transporte del handle la inyecta donde dice `auth` (`connections/service.go`, `authTransport`). Se configura en `POST /connections` y se reemplaza entera con `PATCH /connections/{id}` (solo `custom_api`; otro proveedor da 400).
+
+**Cómo la usa el agente.** Capacidad `api.read` (lectura, riesgo bajo) con una sola herramienta: `api.get {connection_alias, endpoint, params}` o, si la fuente no lista endpoints, `{connection_alias, path, params}`. El adaptador (`connections/customapi`) solo envía **GET**; con endpoints, solo esos son llamables y solo viajan los `params` listados (los demás se descartan); los valores de un placeholder van con `PathEscape` (no pueden añadir segmentos); sin endpoints, cualquier ruta relativa a `base_url` sin `..`, `//`, query ni esquema. El parámetro de la clave (`auth.style=query`) nunca lo fija el agente. La respuesta se parte en ítems (una lista JSON en la raíz o bajo `data`/`items`/`results`/`records`/`rows`/`value`/..., si no un ítem con todo el cuerpo; máx. 4000 caracteres por ítem) y pasa por el sanitizador como cualquier lectura: `<untrusted_data>`, taint y detección de inyección. Varias fuentes concedidas y ningún `connection_alias`: `source_alias_required` (nunca se contesta desde una fuente arbitraria).
+
+**El agente sabe qué puede consultar.** `RunTaskRequest.sources` (aditivo) lleva, por agente, las conexiones activas con grant activo y sus herramientas de **lectura** (`gateway.SourcesFor`: alias, etiqueta, proveedor, descripción, endpoints, si es simulada; nunca URL, id de conexión ni credencial; máx. 20). El runtime las muestra en el bloque "FUENTES QUE PUEDES CONSULTAR" (`agent-runtime/app/security.py`, `source_lines`) con un ejemplo de `tool_requests` listo para copiar y la regla: no inventar, pedir la lectura, citar alias y endpoint, decir si falla. El texto del admin va acotado, en una línea y sin poder falsificar delimitadores ni el encabezado de reglas. La ejecución usa el ciclo de lecturas que ya existía (`connectionReads`, hasta `WORK_READ_ROUNDS` rondas).
+
+**Red.** La URL la elige un admin, así que el transporte de fuentes (`customapi.Transport`) resuelve el nombre, exige que **todas** las respuestas DNS sean públicas, vuelve a comprobar la IP al marcar (sin ventana de rebinding), no usa el proxy del entorno, no sigue redirecciones y solo permite los puertos 80, 443, 8080 y 8443. `CUSTOM_API_ALLOW_PRIVATE=true` (solo autoalojado en una red de confianza) permite llegar a un ERP de la LAN; nunca cambia la regla de solo GET. Un destino bloqueado se informa como `address_not_allowed`, sin la dirección.
+
+**Prueba de conexión.** Llama al primer endpoint sin placeholders (o a `base_url`): una clave rechazada (401/403) falla; 404/405 en la raíz cuenta como alcanzable. Modo `simulated`: sin clave, devuelve registros de ejemplo para probar fuentes y grants antes de pegar la clave.
+
+**Pruebas.** `internal/gateway/customapi_test.go` (lectura delimitada con la inyección marcada, solo GET, parámetros no listados descartados, placeholder escapado, endpoints que no se pueden ampliar, ruta que no sale de la base, alias obligatorio con varias fuentes, `SourcesFor` sin URL ni ids, fuente simulada sin clave, `source` rechazado fuera de `custom_api`, la clave nunca en datos, auditoría ni logs); `connections/customapi/customapi_test.go` (validación, transporte que rechaza loopback y lo permite con `allow_private`, formas de lista, prueba de conexión); `agent-runtime/tests/test_sources_prompt.py`.
+
+**No verificado**: contra una API real de terceros (solo servidores de prueba locales); la migración 790 contra Postgres en este entorno.

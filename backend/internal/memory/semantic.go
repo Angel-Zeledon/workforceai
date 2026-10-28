@@ -49,6 +49,7 @@ type VecQuery struct {
 	Model          string
 	ExcludeRequest string
 	OnlyAgent      bool
+	CustomerID     string // B12: see VisibleToCustomer
 	Limit          int
 }
 
@@ -129,7 +130,7 @@ func (s *Semantic) Retrieve(ctx context.Context, org string, q Query) ([]Item, e
 	if capN <= 0 {
 		capN = DefaultCandidate
 	}
-	cands, err := s.Vecs.Candidates(ctx, org, VecQuery{AgentID: q.AgentID, Model: model, ExcludeRequest: q.ExcludeRequest, OnlyAgent: q.OnlyAgent, Limit: capN})
+	cands, err := s.Vecs.Candidates(ctx, org, VecQuery{AgentID: q.AgentID, Model: model, ExcludeRequest: q.ExcludeRequest, OnlyAgent: q.OnlyAgent, CustomerID: q.CustomerID, Limit: capN})
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +160,7 @@ func (s *Semantic) Retrieve(ctx context.Context, org string, q Query) ([]Item, e
 	items := make([]Item, 0, len(top))
 	for _, t := range top {
 		d, err := s.Docs.Get(ctx, org, t.id)
-		if err != nil || !visible(d, q.AgentID) || q.OnlyAgent && d.AgentID != q.AgentID ||
+		if err != nil || !visible(d, q.AgentID) || !VisibleToCustomer(d, q.CustomerID) || q.OnlyAgent && d.AgentID != q.AgentID ||
 			q.ExcludeRequest != "" && d.RequestID == q.ExcludeRequest {
 			continue // gone, suppressed or not for this agent since the candidate scan
 		}

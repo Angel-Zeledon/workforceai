@@ -13,9 +13,17 @@ import (
 type fakeGuard struct {
 	kill, readOnly, toolOff, down atomic.Bool
 	blips                         atomic.Int32 // the next N Admit calls cannot read the controls
+	admits                        atomic.Int64 // Admit calls so far (each poll of a running run is one)
 }
 
+// hangGuard bounds a wait that must end on an event: it only turns a hang into
+// a failure. It is generous on purpose — a loaded machine (the whole suite on
+// Windows) can stall the process for seconds, and a tight bound then fails a
+// run that was merely descheduled (it failed at 3 s that way).
+const hangGuard = 30 * time.Second
+
 func (g *fakeGuard) Admit(context.Context, string, string) application.GuardVerdict {
+	g.admits.Add(1)
 	if g.down.Load() || g.blips.Add(-1) >= 0 {
 		return application.GuardVerdict{} // not allowed, no code: the controls are unreadable
 	}
@@ -230,7 +238,7 @@ func TestKillSwitchAbortsRunningContainer(t *testing.T) {
 		if o.Status != StatusAborted {
 			t.Fatalf("want aborted, got %+v", o)
 		}
-	case <-time.After(3 * time.Second):
+	case <-time.After(hangGuard):
 		t.Fatal("kill switch did not abort the run")
 	}
 	if len(e.runner.Aborted()) == 0 {
@@ -348,23 +356,40 @@ func TestRunSurvivesABlipOfTheControlsButNotAnOutage(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			e := newEnv(t, true)
 			p := e.prepare(t, "ap1", "x")
-			started := make(chan struct{})
+			started, armed := make(chan struct{}), make(chan struct{})
 			e.runner.Fn = func(ctx context.Context, req RunRequest) (RunResponse, error) {
 				close(started)
-				select {
-				case <-time.After(300 * time.Millisecond): // ~60 polls at 5 ms
-					return RunResponse{Status: RunOK, Stdout: "ok"}, nil
-				case <-ctx.Done():
-					return RunResponse{}, ctx.Err()
+				<-armed
+				// Finish only after the watcher polled the controls through the blip and
+				// past the point where an outage of that length aborts (counted in polls,
+				// not wall time: a wall-clock window raced the 5 ms ticker under load).
+				// An outage never lets it get there: the run must be aborted first.
+				target := e.guard.admits.Load() + int64(tc.blips) + MaxUnavailablePolls + 2
+				deadline := time.After(hangGuard)
+				for e.guard.admits.Load() < target {
+					select {
+					case <-ctx.Done():
+						return RunResponse{}, ctx.Err()
+					case <-deadline:
+						return RunResponse{Status: RunError, Stderr: "watcher stopped polling"}, nil
+					case <-time.After(time.Millisecond):
+					}
 				}
+				return RunResponse{Status: RunOK, Stdout: "ok"}, nil
 			}
 			done := make(chan application.CodeOutcome, 1)
 			go func() { done <- e.exec("ap1", p.ArgsHash) }()
 			<-started
 			e.guard.blips.Store(tc.blips)
 			e.guard.down.Store(tc.down)
-			if o := <-done; o.Status != tc.want {
-				t.Fatalf("want %s, got %+v", tc.want, o)
+			close(armed)
+			select {
+			case o := <-done:
+				if o.Status != tc.want {
+					t.Fatalf("want %s, got %+v", tc.want, o)
+				}
+			case <-time.After(hangGuard):
+				t.Fatal("the run never finished")
 			}
 		})
 	}

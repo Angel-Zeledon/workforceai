@@ -16,9 +16,23 @@ import { MockChat } from "./chat-mock";
 import { MockChatHistory } from "./chats-mock";
 import { MockCommands } from "./commands-mock";
 import { MockRewards } from "./rewards-mock";
+import { MockRoi } from "./roi-mock";
+import { MockInbox } from "./inbox-mock";
 import { mockQuality } from "./quality-mock";
+import { mockTrust } from "./trust-mock";
+import { MockRituals } from "./rituals-mock";
+import { mockAway, mockAwayDismiss, overnightApproval } from "./away-mock";
+import { MockShield } from "./shield-mock";
+import { MockRehearsal } from "./rehearsal-mock";
+import { MockInitiatives } from "./initiative-mock";
+import { METRIC_SIGNALS, SIGNAL_FIELDS } from "../initiativeLogic";
+import { MockCustomers } from "./customers-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
+import type { RequestAudit, TaskAudit } from "../auditLogic";
+import { demoEvidence } from "./evidence-mock";
+import type { ReportEvidence } from "../evidenceLogic";
+import { MockDebates } from "./debates-mock";
 
 /** Card of the draft an agent leaves on its desk after a task (the mock drive creates the same path). */
 const draftRef = (agentId: string, title: string): FileRef => {
@@ -77,7 +91,7 @@ export function buildPlan(text: string): TaskSpec[] {
         out: out({ summary: "Contrato aceptable con dos ajustes: tope de penalización y cláusula de cambio de alcance.", findings: ["Penalización 2%/semana con tope 10% (aceptable)", "Falta cláusula de cambio de alcance", "Propiedad intelectual sin conflictos"], recommendations: ["Agregar cláusula de cambio de alcance", "Limitar responsabilidad al monto del contrato"], confidence: 0.82 }) },
       { key: "t3", agent: "accounting", title: "Calcular margen real de la propuesta", desc: "Recalcular el margen con costos de capacidad y descuentos.", secs: 6, deps: ["t1"], activities: ["Cargando costos directos", "Aplicando descuento por volumen", "Recalculando margen"],
         consult: { to: "operations", q: "¿Cuál es el costo real de capacidad adicional para esta entrega?", a: "Dos contrataciones senior, cerca de $7,800 al mes cargado." },
-        out: out({ summary: "El margen real es 24%, no 31%: el costo de capacidad adicional lo reduce 7 puntos.", findings: ["Margen presentado: 31%", "Margen real tras capacidad: 24%", "Sigue sobre el mínimo de 22%"], metrics: { margen_presentado: "31%", margen_real: "24%", costo_capacidad_mensual: "$7,800" }, evidence: ["Libro mayor Q3", "Costo cargado por hora $48"], recommendations: ["Aprobar solo si el margen se mantiene ≥ 22%"], confidence: 0.9 }) },
+        out: out({ summary: "El margen real es 24%, no 31%: el costo de capacidad adicional lo reduce 7 puntos.", findings: ["Margen presentado: 31%", "Margen real tras capacidad: 24%", "Sigue sobre el mínimo de 22%", "Costo de capacidad adicional: $7,800 al mes"], metrics: { margen_presentado: "31%", margen_real: "24%", costo_capacidad_mensual: "$7,800" }, evidence: ["Libro mayor Q3", "Costo cargado por hora $48"], recommendations: ["Aprobar solo si el margen se mantiene ≥ 22%"], confidence: 0.9 }) },
       { key: "t4", agent: "analyst", title: "Analizar rentabilidad y escenarios", desc: "Modelar escenarios optimista, base y adverso.", secs: 7, deps: ["t1"], activities: ["Construyendo modelo de rentabilidad", "Corriendo escenarios", "Calculando sensibilidad"],
         consult: { to: "accounting", q: "¿Confirmas el margen del 24% para el escenario base?", a: "Confirmado: 24% tras costos de capacidad y descuento por volumen." },
         out: out({ summary: "Escenario base rentable (24%); el adverso cae a 17% si el retraso supera 3 semanas.", findings: ["Base: 24% margen, retorno en 5 meses", "Adverso: 17% si hay retraso > 3 semanas", "Optimista: 28%"], hypotheses: ["El retraso depende de la velocidad de contratación"], metrics: { base: "24%", adverso: "17%", optimista: "28%" }, recommendations: ["Incluir hitos con pago parcial"], confidence: 0.78 }) },
@@ -116,6 +130,27 @@ export function buildPlan(text: string): TaskSpec[] {
   ];
 }
 
+/** B7 demo: the internal auditor's stamp of a finished request, one kind per scenario (fixed demo figures taken from
+ * the scenario outputs above). The $50,000 proposal shows an inconsistency, the sales drop a verification and the
+ * hiring plan "not verified"; anything else has no audit. */
+export function demoRequestAudit(req: Request, tasks: Task[]): RequestAudit | null {
+  const t = req.text.toLowerCase();
+  const kind = /50[, ]?000|propuesta|cliente|cotiz|proposal|\bquote/.test(t) ? "p50k"
+    : /ventas|bajaron|bajó|cayeron|caída|sales (dropped|fell)|sales are down/.test(t) ? "sales"
+    : /contrat|vacante|personal|reclut|\bhire\b|hiring|vacanc/.test(t) ? "hire" : null;
+  if (!kind) return null;
+  const ref = (key: string) => tasks.find((x) => buildPlan(req.text).find((s) => s.key === key)?.title === x.title)?.id ?? key;
+  const base = { task_id: `${req.id}#audit`, title: tr("mock.audit.title"), agent_id: "assistant", finished_at: nowIso() };
+  const audit: TaskAudit = kind === "p50k"
+    ? { ...base, status: "inconsistency", summary: tr("mock.audit.p50k.summary"), findings: [tr("mock.audit.p50k.f1"), tr("mock.audit.p50k.f2")],
+      evidence: [`task:${ref("t1")}.metrics.margen_estimado=31%`, `task:${ref("t3")}.metrics.margen_real=24%`, `task:${ref("t4")}.metrics.base=24%`], compared: 2, inconsistencies: 1, confidence: 0.85 }
+    : kind === "sales"
+      ? { ...base, status: "verified", summary: tr("mock.audit.sales.summary"), findings: [tr("mock.audit.sales.f1"), tr("mock.audit.sales.f2")],
+        evidence: [`task:${ref("b1")}.metrics.variacion=-14%`, `task:${ref("b3")}.summary=-14%`, `task:${ref("b1")}.metrics.leads=-18%`, `task:${ref("b2")}.summary=-18%`], compared: 2, inconsistencies: 0, confidence: 0.9 }
+      : { ...base, status: "unverified", summary: tr("mock.audit.hire.summary"), findings: [tr("mock.audit.hire.f1")], evidence: [], compared: 0, inconsistencies: 0, confidence: 0.4 };
+  return { request_id: req.id, status: audit.status, audits: [audit] };
+}
+
 const fullOutput = (o: Partial<StructuredOutput>): StructuredOutput => ({
   summary: "", findings: [], metrics: {}, hypotheses: [], evidence: [], recommendations: [], confidence: 0.8, suggested_tasks: [], ...o,
 });
@@ -130,17 +165,22 @@ export class MockBackend {
   private messages: Record<string, Message[]> = {};
   private approvals: Approval[] = [];
   private reports: Report[] = [];
+  /** B7: the internal auditor's stamp per request (GET /requests/{id}/audit) */
+  private audits = new Map<string, RequestAudit>();
+  private evidence = new Map<string, ReportEvidence>(); // B6: report id -> checked citations (demo scenario)
   private activity: ActivityItem[] = [];
   private errorsCount = 0;
   private budget = 50;
   private decisions = new Map<string, (d: "approve" | "reject") => void>();
   private counter = new Map<string, Record<string, unknown>>();
+  private awaySeeded = false; // "while you were away" (B3): the overnight approval is added once per page load
   /** agent id -> active budget pause (GET /budget `pauses`) */
   private pauses = new Map<string, { scope: "agent"; scope_id: string; request_id: string; since: string; cap_usd: number; spent_usd: number; needed_usd: number; waiters: number }>();
   private specs = new Map<string, TaskSpec>();
   private running = new Map<string, number>(); // agent -> number of tasks running
   private orgCfg = new MockOrgConfig(); // workflow templates, onboarding, org settings and schedules
   private orgChart = new MockOrgChart(() => this.agents); // >>> org <<< departments, org chart, job descriptions, delegation, industries
+  private customers = new MockCustomers(() => this.agents, () => this.requests); // B12: customer district (buildings, clones, scoped requests)
   private art = new MockArtifacts((t, p, a) => this.emit(t, p, a), (ms) => this.wait(ms)); // workspaces: artifact.* endpoints/events
   private chat = new MockChat({
     emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agent: (id) => this.agents.find((a) => a.id === id), agents: () => this.agents,
@@ -157,14 +197,34 @@ export class MockBackend {
   private cmds = new MockCommands({ agents: () => this.agents, chatCount: (c) => this.chat.all()[c]?.length ?? 0, startRequest: (t) => this.startRequest(t) }); // slash commands
   private rewards = new MockRewards((t, p, a) => this.emit(t, p, a)); // coins + shop: earned only when a task finishes
   private roles = new MockRoles(); // role templates + hiring from a template
+  private roi = new MockRoi({ agents: () => this.agents, tasks: () => this.tasks }); // B15: AI payroll / estimated hours
+  private inbox = new MockInbox({ approvals: () => this.approvals, tasks: () => this.tasks }); // B17: fast approvals inbox
+
+  /** POST /approvals/batch for a project of the projects demo (same body as the real API). */
+  private async projectsBatch(body: any) {
+    const { projectsMock } = await import("../projects/mock");
+    return projectsMock.decideBatch(String(body?.filter?.project_id ?? ""), { action: String(body?.filter?.action ?? ""), decision: body?.decision === "approve" ? "approve" : "reject", expected_count: Number(body?.expected_count), include_high: !!body?.include_high });
+  }
+  // proactive suggestions (B2): one per metric signal; accepting starts a normal mock request
+  private initiatives = new MockInitiatives((text) => this.startRequest(text), { signals: METRIC_SIGNALS, fields: SIGNAL_FIELDS });
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
+  private rituals = new MockRituals({
+    agents: () => this.agents, tasks: () => this.tasks, approvals: () => this.approvals,
+    emit: (t, p, a) => this.emit(t, p, a), note: (text) => this.chat.note("system", "user", "chat", text),
+  }); // B4: daily stand-up and weekly retro (/rituals/*, ritual.held)
+  private shield = new MockShield((t, p, a) => this.emit(t, p, a), () => this.agents, ORG); // B10: security.alert demo, /audit security log, traces
+  private rehearsal = new MockRehearsal((t, p, a) => this.emit(t, p, a)); // B9: rehearsal switches, would-have-done log, verdicts
+  private debates = new MockDebates({ emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agents: () => this.agents }); // B5 team debates
+  /** request id -> the person asked for a debate ([[debate]]) or the request is a decision between alternatives */
+  private debateWanted = new Map<string, ReturnType<typeof MockDebates.wants>>();
 
   constructor() { this.seed(); }
 
   private seed() {
     this.agents = SEED_AGENTS.map((a) => ({ ...a, metrics: { ...a.metrics }, state: "idle" as AgentState, activity: "Disponible", current_task_id: null, progress: 0 }));
     this.tasks = []; this.requests = []; this.conversations = []; this.messages = {}; this.approvals = [];
-    this.reports = []; this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
+    this.reports = []; this.audits.clear(); this.evidence?.clear(); this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
+    this.debates?.reset(); this.debateWanted?.clear();
   }
 
   // ---- realtime -----------------------------------------------------------------------------
@@ -176,6 +236,30 @@ export class MockBackend {
   private frame(type: string, payload: unknown, agent_id?: string): WsFrame {
     return { id: uid("evt"), type, ts: nowIso(), org_id: ORG, ...(agent_id ? { agent_id } : {}), payload };
   }
+  /** GET /away-summary, POST /away-summary/heartbeat|dismiss (B3): a simulated night, see away-mock.ts. */
+  private awaySummary(method: string, sub: string | undefined, q: URLSearchParams) {
+    if (method === "POST") {
+      if (sub === "dismiss") mockAwayDismiss();
+      return { last_seen_at: nowIso(), visit_started_at: nowIso() };
+    }
+    if (!this.awaySeeded && this.agents.length) {
+      this.awaySeeded = true;
+      const agent = this.agents.find((x) => x.id !== "assistant") ?? this.agents[0];
+      const ap = overnightApproval(agent.id, uid("appr"), new Date(Date.now() - 3 * 3600_000).toISOString());
+      this.approvals.unshift(ap);
+      this.emit("approval.requested", { approval: { ...ap } }, agent.id);
+      this.decisions.set(ap.id, (d) => {
+        ap.status = d === "approve" ? "approved" : "rejected"; ap.resolved_at = nowIso();
+        this.emit("approval.resolved", { approval: { ...ap } }, agent.id);
+        this.log(agent.id, "approval.resolved", `${ap.title}: ${d === "approve" ? "aprobada" : "rechazada"}`);
+        this.pushMetrics();
+      });
+      this.pushMetrics();
+    }
+    const h = q.get("min_hours");
+    return mockAway(this.agents, this.approvals, h === null ? undefined : Number(h));
+  }
+
   private emit(type: string, payload: unknown, agent_id?: string) {
     const f = this.frame(type, payload, agent_id);
     this.listeners.forEach((l) => l(f));
@@ -249,10 +333,14 @@ export class MockBackend {
   private emitTask(type: string, t: Task) { this.emit(type, { task: { ...t }, ...(type === "task.created" && t.assigned_reason ? { assigned_reason: t.assigned_reason } : {}) }, t.agent_id); this.art.onTask(type, t); }
 
   // ---- orchestrator -------------------------------------------------------------------------
-  private async startRequest(text: string): Promise<string> {
+  private async startRequest(raw: string, rehearsal = false): Promise<string> {
+    const want = MockDebates.wants(raw);
+    const text = MockDebates.strip(raw); // the [[debate]] marker is an instruction to the backend, not part of the request
     const req: Request = { id: uid("req"), text, status: "planning", created_at: nowIso(), report_id: null, cost_usd: 0 };
+    if (want.marked || want.decision) this.debateWanted.set(req.id, want);
     this.requests.unshift(req);
-    this.emit("request.received", { request_id: req.id, text });
+    if (rehearsal) this.rehearsal.markRequest(req.id); // B9: nothing this request would send is sent
+    this.emit("request.received", { request_id: req.id, text, ...(rehearsal ? { rehearsal: true } : {}) });
     this.art.onRequest(text);
     this.log("assistant", "request.received", `Nueva solicitud: ${text}`);
     const conv: Conversation = { id: uid("conv"), title: `Solicitud: ${text.slice(0, 48)}`, participants: ["assistant"], request_id: req.id, last_message_at: nowIso() };
@@ -339,6 +427,18 @@ export class MockBackend {
     this.setState("assistant", "waiting", "Coordinando al equipo", null, 0);
     this.pushMetrics();
 
+    // B5: one advisory debate before the decision (the last task that is not the assistant's), like the backend
+    const want = this.debateWanted.get(req.id);
+    if (want) {
+      this.debateWanted.delete(req.id);
+      const decider = [...tasks].reverse().find((t) => t.agent_id !== "assistant") ?? tasks[tasks.length - 1];
+      const ids = want.ids.length ? want.ids : Array.from(new Set([decider.agent_id, ...tasks.map((t) => t.agent_id)])).filter((a) => a !== "assistant");
+      this.setState("assistant", "working", "Moderando el debate del equipo", null, 32);
+      const d = await this.debates.run({ topic: decider.title, agentIds: ids, trigger: want.marked ? "user_request" : "planner_decision", requestId: req.id, taskId: decider.id });
+      this.sendMessage(conv, "assistant", "user", "chat", MockDebates.chatLine(d));
+      this.setState("assistant", "waiting", "Coordinando al equipo", null, 0);
+    }
+
     // scheduler: run tasks whose dependencies are done, in parallel
     const started = new Set<string>();
     const pending = new Set(tasks.map((t) => t.id));
@@ -382,7 +482,10 @@ export class MockBackend {
       sections: tasks.filter((t) => t.agent_id !== "assistant").map((t) => ({ heading: `${this.agent(t.agent_id).title}: ${t.title}`, body: body(t) })),
       contributors, cost_usd: cost, created_at: nowIso(),
     };
+    const audit = demoRequestAudit(req, tasks);
+    if (audit) this.audits.set(req.id, audit);
     this.reports.unshift(report);
+    if (is50k) this.evidence.set(report.id, demoEvidence(report, tasks, (id) => this.specs.get(id)?.key));
     this.emit("report.created", { report }, "assistant");
     req.report_id = report.id; req.status = "done"; req.cost_usd = cost;
     this.emit("request.completed", { request_id: req.id, report_id: report.id }, "assistant");
@@ -442,7 +545,13 @@ export class MockBackend {
       return;
     }
 
-    if (spec.approval) {
+    const rehearsing = spec.approval ? this.rehearsal.rehearsing(id, task.request_id) : "";
+    if (spec.approval && rehearsing) {
+      // B9: in a rehearsal the action is recorded as "would have done" and not executed; no approval is asked.
+      this.rehearsal.record(rehearsing, task.request_id, task.id, id, spec.approval);
+      this.log(id, "tool.rehearsed", tr("mock.act.rehearsed", { title: spec.approval.title }));
+    }
+    if (spec.approval && !rehearsing) {
       const ap: Approval = {
         id: uid("appr"), task_id: task.id, agent_id: id, action: spec.approval.action, title: spec.approval.title,
         details: spec.approval.details, risk: spec.approval.risk, status: "pending", created_at: nowIso(), resolved_at: null,
@@ -477,6 +586,7 @@ export class MockBackend {
     // finish
     const cost = +(0.03 + Math.random() * 0.09).toFixed(4);
     task.output = fullOutput(spec.out);
+    if (rehearsing && spec.approval) task.output = { ...task.output, summary: tr("mock.task.rehearsed", { title: spec.approval.title }), evidence: [...task.output.evidence, tr("mock.act.rehearsed", { title: spec.approval.title })] };
     task.status = "done"; task.finished_at = nowIso();
     this.bump(id, -1);
     const a = this.agent(id);
@@ -535,14 +645,26 @@ export class MockBackend {
       return res;
     }
     if (this.cmds.matches(seg)) return this.cmds.handle(method, seg, q, body);
+    if (this.rituals.matches(seg)) return this.rituals.handle(method, seg, body, q);
+    if (this.roi.matches(seg)) return this.roi.handle(method, seg, q, body);
+    if (this.inbox.matches(method, seg)) return this.inbox.handle(method, seg, body, () => this.projectsBatch(body));
+    if (this.debates.matches(seg)) return this.debates.handle(method, seg, q, body);
     if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
+    if (this.initiatives.matches(seg)) return this.initiatives.handle(method, seg, q, body);
     if (this.art.matches(r0)) return this.art.handle(method, seg, q, body);
+    // org/controls belongs to the connections mock (kill switch, viewer role). The org chart and org config mocks match
+    // every other org/* path, so it is routed first or the Connections screen never learns who the viewer is.
+    if (r0 === "org" && seg[1] === "controls") return this.conns.handle(method, seg, q, body);
     // >>> org
     if (this.orgChart.matches(seg)) return this.orgChart.handle(method, seg, body, q);
+    if (this.customers.matches(seg)) return this.customers.handle(method, seg, q, body);
     // <<< org
     if (this.orgCfg.matches(seg)) return this.orgCfg.handle(method, seg, body, (text) => this.handle("POST", "/requests", { text }));
+    if (this.shield.matches(method, seg)) return this.shield.handle(method, seg, q);
+    if (this.rehearsal.matches(method, seg)) return this.rehearsal.handle(method, seg, q, body);
     if (this.conns.matches(r0, r2)) return this.conns.handle(method, seg, q, body);
+    if (r0 === "away-summary") return this.awaySummary(method, r1, q);
     if (method === "GET") {
       if (r0 === "agents" && !r1) return this.agents;
       if (r0 === "agents" && r1 && r2 === "detail") {
@@ -559,6 +681,10 @@ export class MockBackend {
       if (r0 === "quality" && r1 === "agents") return mockQuality(this.agents);
       if (r0 === "agents" && r1 && r2 === "quality") { const a = mockQuality(this.agents.filter((x) => x.id === r1)); return { methodology: a.methodology, generated_at: a.generated_at, agent: a.agents[0] }; }
       if (r0 === "agents" && r1 && r2 === "golden-cases") return [];
+      // Trust ladder (B1): no decision history in the demo, so every agent is honestly on probation.
+      if (r0 === "agents" && r1 && r2 === "trust" && seg[3] === "proposals") return [];
+      if (r0 === "agents" && r1 && r2 === "trust") return mockTrust(this.agent(r1));
+      if (r0 === "trust" && r1 === "agents") { const all = this.agents.map((a) => mockTrust(a)); return { methodology: all[0]?.methodology, generated_at: new Date().toISOString(), agents: all.map((x) => x.agent) }; }
       if (r0 === "agents" && r1 && r2 === "profile" && seg[3] === "versions") return [];
       if (r0 === "agents" && r1 && r2 === "profile") {
         return { agent_id: r1, instructions: "", creativity: "medium", skills: [], tone: "", version: 0, role_skills: [], limits: { instructions_max: 4000, skills_max: 20, skill_max_len: 40 } };
@@ -570,6 +696,10 @@ export class MockBackend {
       }
       if (r0 === "tasks" && r1) return this.tasks.find((t) => t.id === r1);
       if (r0 === "requests" && !r1) return this.requests;
+      if (r0 === "requests" && r1 && r2 === "audit") {
+        if (!this.requests.some((r) => r.id === r1)) throw new Error(`GET /requests/${r1}/audit -> 404`);
+        return this.audits.get(r1) ?? { request_id: r1, status: "none", audits: [] };
+      }
       if (r0 === "requests" && r1) {
         return { request: this.requests.find((r) => r.id === r1), tasks: this.tasks.filter((t) => t.request_id === r1) };
       }
@@ -580,6 +710,11 @@ export class MockBackend {
       }
       if (r0 === "approvals") { const st = q.get("status"); return this.approvals.filter((a) => !st || a.status === st); }
       if (r0 === "reports" && !r1) return this.reports;
+      if (r0 === "reports" && r1 && r2 === "evidence") { // B6 evidence chain
+        const rep = this.reports.find((r) => r.id === r1);
+        if (!rep) throw new Error("mock: report not found");
+        return this.evidence.get(r1) ?? { report_id: r1, request_id: rep.request_id, citations: [], verified: 0, total: 0 };
+      }
       if (r0 === "reports" && r1) return this.reports.find((r) => r.id === r1);
       if (r0 === "activity") return this.activity.slice(0, Number(q.get("limit") || 100));
       if (r0 === "metrics") return this.metrics();
@@ -587,8 +722,16 @@ export class MockBackend {
       if (r0 === "healthz") return { status: "ok", mode: "simulation" };
     }
     if (method === "POST") {
+      if (r0 === "agents" && r1 && r2 === "trust" && seg[3] === "evaluate") { const x = mockTrust(this.agent(r1)); return { methodology: x.methodology, agent: x.agent }; }
+      if (r0 === "messages" && !r1 && body?.customer_id && !this.customers.hasCustomer(String(body.customer_id))) throw new Error("customer not found"); // B12
       if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : []);
-      if (r0 === "requests") { const id = await this.startRequest(String(body?.text || "").trim()); return { request_id: id }; }
+      if (r0 === "requests") {
+        const cid = body?.customer_id ? String(body.customer_id) : "";
+        if (cid && !this.customers.hasCustomer(cid)) throw new Error("customer not found");
+        const id = await this.startRequest(String(body?.text || "").trim(), body?.rehearsal === true);
+        if (cid) this.customers.linkRequest(id, cid); // B12: the request is scoped to the customer
+        return { request_id: id };
+      }
       if (r0 === "conversations" && r1 && r2 === "messages") {
         const conv = this.conversations.find((c) => c.id === r1);
         if (!conv) throw new Error("conversation not found");
@@ -619,7 +762,13 @@ export class MockBackend {
         this.gen++;
         this.art.reset();
         this.roles.reset();
+        this.roi.reset();
+        this.inbox.reset();
         this.conns.reset();
+        this.rituals.reset();
+        this.shield.reset();
+        this.rehearsal.reset();
+        this.initiatives.reset();
         this.decisions.clear();
         this.seed();
         this.emit("hello", { agents: this.agents });

@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 import { fmtUsd, stateMeta } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { useAgentView } from "@/lib/preferences";
+import { useAgentFocus } from "@/lib/agentFocus";
 import { AgentCustomizer } from "./AgentCustomizer";
 import type { AgentDetail } from "@/lib/types";
 import { ActivityFeed } from "./ActivityFeed";
@@ -20,10 +21,12 @@ import { ProfileSheet } from "./agent/ProfileSheet";
 import { ThoughtAudit } from "./agent/ThoughtAudit";
 import { TaskIntervention } from "./agent/TaskIntervention";
 import { AgentPauseToggle } from "./agent/AgentPauseToggle";
+import { RehearsalToggle } from "./rehearsal/RehearsalToggle";
 import { DeskFiles } from "./drive/DeskFiles";
 import { MemoryTab } from "./agent/MemoryTab";
 import { AgentSkillsCard } from "./skills/AgentSkillsCard";
 import { QualityCard } from "./quality/QualityCard";
+import { TrustCard } from "./trust/TrustCard";
 import { SaveAsSkillButton } from "./skills/SaveAsSkillButton";
 
 const TABS = ["chat", "state", "tasks", "chats", "memory", "reports", "files", "activity", "profile", "thoughts"] as const;
@@ -43,9 +46,16 @@ export function AgentPanel({ id }: { id: string }) {
   const [openConv, setOpenConv] = useState<string | null>(null);
   const [openReport, setOpenReport] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [focusTask, setFocusTask] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setDetail(null); setTab("chat"); setOpenConv(null); setOpenReport(null); }, [id]);
+  useEffect(() => { setDetail(null); setTab("chat"); setOpenConv(null); setOpenReport(null); setFocusTask(""); }, [id]);
+  // B10: the shield notice opens this panel on the thought audit of the task whose read content tried to give orders
+  const focus = useAgentFocus((s) => s.req);
+  useEffect(() => {
+    if (!focus || focus.agentId !== id) return;
+    setTab(focus.tab); setFocusTask(focus.taskId); useAgentFocus.getState().clear();
+  }, [id, focus]);
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
@@ -83,13 +93,13 @@ export function AgentPanel({ id }: { id: string }) {
         </div>
         <div className="mt-3 flex items-center gap-2"><StateBadge state={agent.state} /><span className="truncate text-xs text-ink2">{agent.activity}</span></div>
         {agent.progress > 0 && <div className="mt-2"><Progress value={agent.progress} color={sm.color} /></div>}
-        <div className="mt-2"><AgentPauseToggle id={id} /></div>
+        <div className="mt-2 flex flex-wrap items-center gap-2"><AgentPauseToggle id={id} /><RehearsalToggle id={id} /></div>
       </div>
       <div role="tabpanel" aria-label={t(`panel.tab.${tab}`)} className={tab === "chat" ? "min-h-0 flex-1" : "min-h-0 flex-1 space-y-3 overflow-y-auto p-4"}>
         {tab === "chat" && <AgentChat id={id} />}
         {error && !detail && <Empty>{t("panel.loadError")}</Empty>}
-        {tab === "profile" && <><Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card><ProfileSheet id={id} /><QualityCard id={id} /><AgentSkillsCard id={id} /></>}
-        {tab === "thoughts" && <ThoughtAudit id={id} />}
+        {tab === "profile" && <><Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card><ProfileSheet id={id} /><TrustCard id={id} /><QualityCard id={id} /><AgentSkillsCard id={id} /></>}
+        {tab === "thoughts" && <ThoughtAudit id={id} focusTaskId={focusTask} />}
         {tab === "state" && (
           <>
             <Card title={t("panel.currentTask")}>

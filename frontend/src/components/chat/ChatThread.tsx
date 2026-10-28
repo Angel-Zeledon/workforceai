@@ -16,6 +16,7 @@ import { useSlashComposer } from "./commands/useSlashComposer";
 import { surfaceOf } from "@/lib/commands/logic";
 import { withOpenFile } from "@/lib/fileEdit";
 import { useFileViewer } from "@/lib/fileView";
+import { useChatCustomer } from "@/lib/chatCustomer";
 import { AttachMenu, AttachmentTray, DrivePicker, DropOverlay, MAX_FILES, useAttachments } from "./attachments";
 
 const EMPTY: ChatMessage[] = [];
@@ -186,10 +187,11 @@ export async function sendChat(conv: string, text: string, from = "user", attach
   const store = useStore.getState();
   const files = refs ?? attachments.map((p) => ({ path: p, name: p.split("/").pop() || p, action: "attach" }));
   store.addLocalChat({ id: `local:${Date.now().toString(36)}`, conversation: conv, turn_id: null, from, to: conv === "office" ? "all" : conv.slice(6), kind: "chat", text, reply_to: null, ts: new Date().toISOString(), ...(files.length ? { files } : {}) });
+  const customer = useChatCustomer.getState().customer; // B12: the chat works for this customer (its view is open)
   try {
-    await api.postMessage(conv, text, attachments);
+    await api.postMessage(conv, text, attachments, customer?.id);
   } catch (e) {
-    if (conv === "office" && /-> (404|405|501)\b/.test(String((e as Error)?.message))) { await api.postRequest(text); return; }
+    if (!customer && conv === "office" && /-> (404|405|501)\b/.test(String((e as Error)?.message))) { await api.postRequest(text); return; }
     throw e;
   }
 }
@@ -218,6 +220,8 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
   }, [draft, conv, setDraft]);
   const editCtx = useFileViewer((s) => (s.editInChat ? s.ref : null));
   const setEditInChat = useFileViewer((s) => s.setEditInChat);
+  const forCustomer = useChatCustomer((s) => s.customer);
+  const setForCustomer = useChatCustomer((s) => s.set);
   // the box grows with what is typed (up to ~8 lines) and shrinks back when it is sent
   useEffect(() => {
     const el = inputRef.current;
@@ -263,6 +267,14 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
         <div data-testid="chat-edit-context" className="flex items-center gap-2 rounded-md bg-accent-soft px-2 py-1 text-[11px] text-accent-hover">
           <span className="min-w-0 flex-1 truncate">{t("chat.editingFile", { name: editCtx.name })}</span>
           <button type="button" onClick={() => setEditInChat(false)} className="shrink-0 font-semibold underline-offset-2 hover:underline">{t("chat.editingFileOff")}</button>
+        </div>
+      )}
+      {forCustomer && (
+        <div data-testid="chat-customer-chip" className="flex items-center gap-2 rounded-md border border-line bg-panel2 px-2 py-1 text-[11px] text-ink2">
+          <span aria-hidden className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: forCustomer.color }} />
+          <span className="min-w-0 flex-1 truncate" title={t("chat.customer.hint")}>{t("chat.customer.for", { name: forCustomer.name })}</span>
+          <button type="button" data-testid="chat-customer-clear" onClick={() => setForCustomer(null)} aria-label={t("chat.customer.clearAria", { name: forCustomer.name })}
+            className="shrink-0 font-semibold underline-offset-2 hover:underline">{t("chat.customer.clear")}</button>
         </div>
       )}
       <AttachmentTray items={att.items} onRemove={att.remove} />

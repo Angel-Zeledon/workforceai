@@ -40,16 +40,17 @@ func nf(err error) error {
 const connCols = `id, org_id, provider, kind, label, account_label, account_ref, mode, status, status_reason, class,
 	requested_capabilities, granted_capabilities, provider_scopes, resource_scope, limits, read_only,
 	last_tested_at, last_test_status, last_used_at, last_error_code, expires_at, created_by, created_at, updated_at,
-	revoked_at, revoked_by, pending_provider_revocation, oauth_client_id, oauth_client_secret_enc`
+	revoked_at, revoked_by, pending_provider_revocation, oauth_client_id, oauth_client_secret_enc, source`
 
 func scanConn(r scanner) (connections.Connection, error) {
 	var c connections.Connection
-	var rs, lim []byte
+	var rs, lim, src []byte
 	err := r.Scan(&c.ID, &c.OrgID, &c.Provider, &c.Kind, &c.Label, &c.AccountLabel, &c.AccountRef, &c.Mode, &c.Status, &c.StatusReason, &c.Class,
 		&c.RequestedCapabilities, &c.GrantedCapabilities, &c.ProviderScopes, &rs, &lim, &c.ReadOnly,
 		&c.LastTestedAt, &c.LastTestStatus, &c.LastUsedAt, &c.LastErrorCode, &c.ExpiresAt, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
-		&c.RevokedAt, &c.RevokedBy, &c.PendingProviderRevocation, &c.OAuthClientID, &c.OAuthClientSecretEnc)
+		&c.RevokedAt, &c.RevokedBy, &c.PendingProviderRevocation, &c.OAuthClientID, &c.OAuthClientSecretEnc, &src)
 	unmarshal(rs, &c.ResourceScope)
+	unmarshal(src, &c.Source)
 	unmarshal(lim, &c.Limits)
 	return c, err
 }
@@ -58,12 +59,12 @@ func (c *ConnStore) CreateConnection(ctx context.Context, x connections.Connecti
 	return c.S.exec(ctx, x.OrgID, `INSERT INTO connections (id, org_id, provider, kind, label, account_label, account_ref, mode, status, status_reason, class,
 		requested_capabilities, granted_capabilities, provider_scopes, resource_scope, limits, read_only, last_tested_at, last_test_status,
 		last_used_at, last_error_code, expires_at, created_by, created_at, updated_at, revoked_at, revoked_by, pending_provider_revocation,
-		oauth_client_id, oauth_client_secret_enc)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)`,
+		oauth_client_id, oauth_client_secret_enc, source)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31)`,
 		x.ID, x.OrgID, x.Provider, x.Kind, x.Label, x.AccountLabel, x.AccountRef, x.Mode, x.Status, x.StatusReason, x.Class,
 		strs(x.RequestedCapabilities), strs(x.GrantedCapabilities), strs(x.ProviderScopes), jb(x.ResourceScope), jb(x.Limits), x.ReadOnly,
 		x.LastTestedAt, x.LastTestStatus, x.LastUsedAt, x.LastErrorCode, x.ExpiresAt, x.CreatedBy, x.CreatedAt, x.UpdatedAt,
-		x.RevokedAt, x.RevokedBy, x.PendingProviderRevocation, x.OAuthClientID, x.OAuthClientSecretEnc)
+		x.RevokedAt, x.RevokedBy, x.PendingProviderRevocation, x.OAuthClientID, x.OAuthClientSecretEnc, jbOpt(x.Source))
 }
 
 func (c *ConnStore) GetConnection(ctx context.Context, org, id string) (connections.Connection, error) {
@@ -75,12 +76,12 @@ func (c *ConnStore) UpdateConnection(ctx context.Context, x connections.Connecti
 	tag, err := c.S.execTag(ctx, x.OrgID, `UPDATE connections SET label=$3, account_label=$4, account_ref=$5, mode=$6, status=$7, status_reason=$8, class=$9,
 		requested_capabilities=$10, granted_capabilities=$11, provider_scopes=$12, resource_scope=$13, limits=$14, read_only=$15,
 		last_tested_at=$16, last_test_status=$17, last_used_at=$18, last_error_code=$19, expires_at=$20, updated_at=$21,
-		revoked_at=$22, revoked_by=$23, pending_provider_revocation=$24, oauth_client_id=$25, oauth_client_secret_enc=$26
+		revoked_at=$22, revoked_by=$23, pending_provider_revocation=$24, oauth_client_id=$25, oauth_client_secret_enc=$26, source=$27
 		WHERE org_id=$1 AND id=$2`,
 		x.OrgID, x.ID, x.Label, x.AccountLabel, x.AccountRef, x.Mode, x.Status, x.StatusReason, x.Class,
 		strs(x.RequestedCapabilities), strs(x.GrantedCapabilities), strs(x.ProviderScopes), jb(x.ResourceScope), jb(x.Limits), x.ReadOnly,
 		x.LastTestedAt, x.LastTestStatus, x.LastUsedAt, x.LastErrorCode, x.ExpiresAt, x.UpdatedAt,
-		x.RevokedAt, x.RevokedBy, x.PendingProviderRevocation, x.OAuthClientID, x.OAuthClientSecretEnc)
+		x.RevokedAt, x.RevokedBy, x.PendingProviderRevocation, x.OAuthClientID, x.OAuthClientSecretEnc, jbOpt(x.Source))
 	if err == nil && tag.RowsAffected() == 0 {
 		return connections.ErrNotFound
 	}

@@ -241,10 +241,14 @@ func (s *Service) AcceptInvitation(ctx context.Context, in AcceptInput, meta Cli
 		return nil, err
 	}
 	s.audit(ctx, inv.OrgID, u.ID, "invitation.accepted", inv.ID, map[string]any{"role": inv.Role, "new_user": newUser != nil, "invited_by": inv.InvitedBy})
-	if newUser == nil {
-		if err := s.mfaGate(ctx, u, inv.OrgID); err != nil { // joined, but the session still needs the second factor
-			return nil, err
-		}
+	// Joined either way, but the session follows the same rules as a password login: an organization that enforces
+	// single sign-on or requires a second factor gets them here too (a new account has no factor yet, so it is sent to
+	// enrolment), and an existing second factor is still asked for.
+	if err := s.enforcePolicy(ctx, u, m, true); err != nil {
+		return nil, err
+	}
+	if err := s.mfaGate(ctx, u, inv.OrgID); err != nil {
+		return nil, err
 	}
 	return s.issueSession(ctx, u, m, uuid.NewString(), meta)
 }
