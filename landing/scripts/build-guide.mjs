@@ -293,9 +293,8 @@ function head({ lang, title, description, path: pth, altPath, type = "article", 
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}">
   <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#070d17" media="(prefers-color-scheme: dark)">
-  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico?v=3" sizes="any">
   <link rel="icon" href="/favicon-32.png?v=3" sizes="32x32" type="image/png">
