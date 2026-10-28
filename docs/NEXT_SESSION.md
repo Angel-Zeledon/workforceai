@@ -1,6 +1,25 @@
 # Próxima sesión
 
-## Actualización 2026-10-27 (rama `feat/api-sources`, sin fusionar a `main`)
+## Actualización 2026-10-28: `feat/api-sources` fusionada a `main` (local, sin push)
+
+Antes de fusionar, todo en verde: `go vet` y `go test ./...` del backend; 863 pruebas del runtime; 226 pruebas
+unitarias del frontend, i18n y `npm run build`. Postgres (`TEST_DATABASE_URL`, migraciones 802-804) y la revisión en
+navegador de Conexiones quedaron hechos el 27. `TestEveryBuiltinTemplateRunsAtMaximumSize` tarda 21 s en frío: lo
+de los 10 min era la carga de la máquina. El build encontró un `<a>` interno en la bandeja de aprobaciones, ya
+corregido con `next/link`.
+
+Para el runtime usa `agent-runtime/.venv/Scripts/python -m pytest`: el Python global importa el paquete `tests`
+de otro proyecto (`forecasting/ForecastingCore`) y falla al recolectar.
+
+Pendiente:
+1. **Cuenta de Gemini de pago.** La clave está en la capa gratuita: 20 solicitudes por día y por modelo, y Google
+   puede usar el contenido para mejorar sus productos. Activar facturación y rotar la clave (se pegó en el chat).
+   Luego repetir `scripts/eval-live --live` completo.
+2. `git push origin main` y redesplegar. En producción: definir `GEMINI_API_KEY` y dejar `VENDOR_INTEGRATIONS`
+   vacío (las migraciones 802-804 se aplican solas al arrancar el backend).
+3. Backlog que queda (sin integraciones de proveedor): B14 calendario fiscal, B18 "enséñale una vez", B19 voz.
+
+### Lo que entró (2026-10-27)
 
 Decisiones del dueño: **Gemini es el LLM**; **v1 sin integraciones de un proveedor concreto** (Slack, Gmail…),
 solo formas genéricas de importar datos.
@@ -14,17 +33,6 @@ Hecho y probado de verdad:
   la URL rechazado, 423 en solo lectura).
 - **Importar desde un enlace** (migración 804): probado con un CSV público real (versión 1, luego `unchanged`) y
   rechazo de 127.0.0.1 y 169.254.169.254.
-
-Pendiente:
-1. **Cuenta de Gemini de pago.** La clave está en la capa gratuita: 20 solicitudes por día y por modelo, y Google
-   puede usar el contenido para mejorar sus productos. Activar facturación y rotar la clave (se pegó en el chat).
-   Luego repetir `scripts/eval-live --live` completo.
-2. Probar con Postgres (`TEST_DATABASE_URL`): migraciones 802-804 y los stores de buzones y enlaces.
-3. Ver en navegador las pestañas nuevas de Conexiones (buzones, enlaces) y la insignia "Desactivada en v1".
-4. `internal/projects` `TestEveryBuiltinTemplateRunsAtMaximumSize` se pasó de 10 min con la máquina cargada: repetir
-   en frío para saber si es carga o un problema real.
-5. Fusionar `feat/api-sources` a `main` cuando lo anterior esté verde.
-6. Backlog que queda (sin integraciones de proveedor): B14 calendario fiscal, B18 "enséñale una vez", B19 voz.
 
 ---
 
