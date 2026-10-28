@@ -36,7 +36,7 @@ function ProductMock() {
   const dot = ["bg-ok", "bg-accent", "bg-warn", "bg-line-strong"];
   const kpis = [["4", "land.mock.kpi1"], ["12", "land.mock.kpi2"], ["1", "land.mock.kpi3"], ["$18.40", "land.mock.kpi4"]];
   return (
-    <div aria-hidden className="select-none overflow-hidden rounded-xl border border-white/10 bg-panel shadow-[0_30px_80px_-20px_rgba(0,0,0,0.55)]">
+    <div aria-hidden className="select-none overflow-hidden rounded-xl border border-line bg-panel shadow-[0_24px_60px_-28px_rgba(10,22,40,0.35)]">
       <div className="flex items-center gap-2 border-b border-line bg-panel2 px-4 py-2.5">
         <span className="flex gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-line-strong" /><i className="h-2.5 w-2.5 rounded-full bg-line-strong" /><i className="h-2.5 w-2.5 rounded-full bg-line-strong" /></span>
         <span className="ml-2 truncate text-[11px] font-medium text-ink2">{t("land.mock.title")}</span>
@@ -126,18 +126,17 @@ export function Landing() {
 
       <main id="top">
         {/* Hero */}
-        <section className="relative overflow-hidden bg-navy text-white">
-          <div aria-hidden className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)", backgroundSize: "56px 56px" }} />
+        <section className="relative overflow-hidden border-b border-line bg-panel">
           <div className={`${wrap} relative grid items-center gap-12 py-16 sm:py-24 lg:grid-cols-[1fr_1.1fr] lg:gap-14`}>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#7fd1c8]">{t("land.hero.eyebrow")}</p>
-              <h1 className="mt-5 text-[2.5rem] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-6xl">{t("land.hero.title")}</h1>
-              <p className="mt-6 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">{t("land.hero.sub")}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-info">{t("land.hero.eyebrow")}</p>
+              <h1 className="mt-5 text-[2.5rem] font-semibold leading-[1.05] tracking-[-0.025em] text-ink sm:text-6xl">{t("land.hero.title")}</h1>
+              <p className="mt-6 max-w-xl text-base leading-relaxed text-ink2 sm:text-lg">{t("land.hero.sub")}</p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                <a href="/register" data-testid="land-hero-signup" className="inline-flex items-center justify-center rounded-md bg-white px-6 py-3 text-sm font-semibold text-navy transition hover:bg-[#e6f2f1]">{t("land.hero.cta1")}</a>
-                <a href="/login" className="inline-flex items-center justify-center rounded-md border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">{t("land.hero.cta2")}</a>
+                <a href="/register" data-testid="land-hero-signup" className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-hover">{t("land.hero.cta1")}</a>
+                <a href="/login" className="inline-flex items-center justify-center rounded-md border border-line-strong px-6 py-3 text-sm font-semibold text-ink transition hover:bg-panel2">{t("land.hero.cta2")}</a>
               </div>
-              <p className="mt-5 text-sm text-white/60">{t("land.hero.note")}</p>
+              <p className="mt-5 text-sm text-mute">{t("land.hero.note")}</p>
             </div>
             <ProductMock />
           </div>
@@ -207,17 +206,17 @@ export function Landing() {
         </section>
 
         {/* Security */}
-        <section id="seguridad" className="scroll-mt-16 bg-navy py-20 text-white sm:py-28">
+        <section id="seguridad" className="scroll-mt-16 border-y border-line bg-panel py-20 sm:py-28">
           <div className={`${wrap} grid gap-12 lg:grid-cols-[1fr_1.1fr] lg:gap-20`}>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#7fd1c8]">{t("land.sec.eyebrow")}</p>
-              <h2 className="mt-3 text-3xl font-semibold leading-tight tracking-[-0.02em] sm:text-[2.5rem] sm:leading-[1.1]">{t("land.sec.title")}</h2>
-              <p className="mt-4 max-w-md text-base leading-relaxed text-white/70">{t("land.sec.sub")}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-info">{t("land.sec.eyebrow")}</p>
+              <h2 className={h2}>{t("land.sec.title")}</h2>
+              <p className="mt-4 max-w-md text-base leading-relaxed text-mute">{t("land.sec.sub")}</p>
             </div>
-            <ul className="divide-y divide-white/10 border-y border-white/10">
+            <ul className="divide-y divide-line border-y border-line">
               {[0, 1, 2, 3, 4].map((i) => (
-                <li key={i} className="flex gap-3 py-4 text-[15px] leading-relaxed text-white/85">
-                  <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden className="mt-0.5 shrink-0 text-[#7fd1c8]"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <li key={i} className="flex gap-3 py-4 text-[15px] leading-relaxed text-ink2">
+                  <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden className="mt-0.5 shrink-0 text-info"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   {t(`land.sec.${i}`)}
                 </li>
               ))}
