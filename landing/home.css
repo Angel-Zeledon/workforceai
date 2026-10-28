@@ -25,7 +25,7 @@
 @media (min-width:600px){.bar-cta{display:inline-flex}}
 @media (min-width:1080px){.home .nav{display:flex}}
 
-.mnav summary{list-style:none;display:grid;place-items:center;width:40px;height:40px;border-radius:10px;border:1px solid var(--line-strong);cursor:pointer;color:var(--ink);transition:border-color .2s,background-color .2s}
+.mnav summary{list-style:none;display:grid;place-items:center;width:40px;height:40px;padding:0;border-radius:10px;border:1px solid var(--line-strong);cursor:pointer;color:var(--ink);transition:border-color .2s,background-color .2s}
 .mnav summary::-webkit-details-marker{display:none}
 .mnav summary::after{display:none}
 .mnav summary:hover{border-color:var(--ink)}
@@ -467,7 +467,7 @@
 
 /* ---------------- Parallel lanes ---------------- */
 .lanes{margin:0;overflow-x:auto;background:var(--panel);border:1px solid var(--line-strong);border-radius:18px;padding:24px 22px 16px;box-shadow:var(--shadow)}
-.lane-grid{position:relative;display:grid;grid-template-columns:96px 1fr;gap:10px 14px;min-width:840px}
+.lane-grid{position:relative;display:grid;grid-template-columns:96px 1fr;gap:10px 14px;min-width:1060px}
 .lane-label{align-self:center;font-size:.85rem;font-weight:600;color:var(--ink2)}
 .lane-track{position:relative;height:44px;border-radius:9px;background:var(--panel2);border:1px solid var(--line)}
 .lane-track.two{height:94px}
@@ -484,7 +484,10 @@
 .playhead i{position:absolute;inset:0;transform:translateX(-100%)}
 .playhead i::after{content:"";position:absolute;right:0;top:0;bottom:0;width:2px;border-radius:2px;background:var(--accent);box-shadow:0 0 12px var(--accent)}
 .lanes figcaption{margin-top:14px;font-size:.84rem;color:var(--mute)}
-@media (max-width:640px){.lane-grid{grid-template-columns:72px 1fr;min-width:760px}.playhead{left:86px}.lanes{padding:18px 14px 12px}}
+/* narrow screens scroll the diagram sideways: fade the right edge while there is more to see, keep the caption put */
+.lanes.lanes-more{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 64px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 64px),transparent)}
+.lanes figcaption{position:sticky;left:0}
+@media (max-width:640px){.lane-grid{grid-template-columns:72px 1fr}.playhead{left:86px}.lanes{padding:18px 14px 12px}}
 
 /* ---------------- Team ---------------- */
 .roles{list-style:none;margin:0;padding:0;display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}

@@ -157,6 +157,15 @@
     }
   }
 
+  // ---- Parallel lanes: on narrow screens the diagram scrolls sideways; fade the edge until the end ----
+  var lanes = document.querySelector(".lanes");
+  if (lanes) {
+    var lanesMore = function () { lanes.classList.toggle("lanes-more", lanes.scrollLeft + lanes.clientWidth < lanes.scrollWidth - 4); };
+    lanes.addEventListener("scroll", lanesMore, { passive: true });
+    window.addEventListener("resize", lanesMore);
+    lanesMore();
+  }
+
   // ---- Count-up for the product facts (the final number is already in the HTML) ----
   if (!still && hasIO) {
     var nums = document.querySelectorAll("[data-countup]");
