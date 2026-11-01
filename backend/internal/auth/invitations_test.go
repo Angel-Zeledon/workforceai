@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/policy"
 	"context"
 	"encoding/json"
 	"errors"
@@ -274,5 +276,28 @@ func TestSwitchOrg(t *testing.T) {
 	}
 	if len(orgs) != 2 || names[a.OrgID].Name != "alpha Inc" || names[b.OrgID].Name != "beta Inc" || names[b.OrgID].Role != RoleViewer {
 		t.Fatalf("orgs: %+v", orgs)
+	}
+}
+
+func TestInvitationsStopAtThePlanSeats(t *testing.T) {
+	e := newEnv(t, func(c *Config) {
+		c.SeatLimit = func(context.Context, string) (int, string) { return 2, "free" }
+	})
+	owner := e.register(t, "owner@example.com", "acme")
+	op := e.principal(t, owner)
+	// the owner is seat 1, the pending invitation seat 2
+	if _, err := e.svc.CreateInvitation(bg, op, "a@example.com", RoleMember); err != nil {
+		t.Fatal(err)
+	}
+	// re-inviting the same address replaces its invitation: still 2 seats
+	if _, err := e.svc.CreateInvitation(bg, op, "a@example.com", RoleMember); err != nil {
+		t.Fatalf("re-invite: %v", err)
+	}
+	_, err := e.svc.CreateInvitation(bg, op, "b@example.com", RoleMember)
+	if pe, ok := domain.AsPlanLimit(err); !ok || pe.Kind != policy.LimitSeats || pe.Limit != 2 {
+		t.Fatalf("third seat: %v", err)
+	}
+	if n, _ := e.svc.Seats(bg, owner.OrgID); n != 2 {
+		t.Fatalf("seats %d", n)
 	}
 }

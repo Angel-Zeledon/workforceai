@@ -188,6 +188,9 @@ type Deps struct {
 	// Notify serves /notify/* (signed approval links, channel settings) and /plan/usage; Daily-goal
 	// reads Rewards. Optional: nil leaves those routes unmounted.
 	Notify *notify.Service
+	// PlanSelfServe lets an owner change the plan with PUT /plan (PLAN_SELF_SERVE): there is no payment provider yet,
+	// so it is for early access and demos; off, the UI offers to write to sales instead.
+	PlanSelfServe bool
 	// ---- END approvals-notify ----
 	// Slack serves the two-way Slack channel for humans (slack_mount.go): the signed public request URLs, the
 	// settings card and the account link. Optional: nil leaves the routes unmounted.
@@ -359,6 +362,10 @@ func (s *server) fail(w http.ResponseWriter, err error) {
 	}
 	if status == http.StatusInternalServerError {
 		s.Log.Error("request failed", "err", err)
+	}
+	if pe, ok := domain.AsPlanLimit(err); ok {
+		writeJSON(w, status, map[string]any{"error": err.Error(), "code": "plan_limit", "limit_kind": pe.Kind, "limit": pe.Limit, "plan": pe.Plan})
+		return
 	}
 	writeJSON(w, status, map[string]string{"error": err.Error()})
 }

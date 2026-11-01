@@ -151,6 +151,8 @@ type Error struct {
 	Msg  string
 	// Current is the current version of a version_conflict.
 	Current int
+	// PlanLimit is set when the quota reached is the plan's storage (code "plan_limit"), not the deployment's.
+	PlanLimit *domain.PlanLimitError
 }
 
 func (e *Error) Error() string { return e.Code + ": " + e.Msg }

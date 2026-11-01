@@ -124,6 +124,42 @@ Nunca hay sobreconsumo silencioso: el tope se comprueba antes de gastar, la paus
 notifica. Lo que sí puede pasar es que el costo real de una llamada ya iniciada supere su estimación; el excedente
 queda visible (`percent_used` 100, `spent_usd` real) y bloquea todo lo siguiente.
 
+### 3.1 Planes: Free, Pro y Max
+
+El catálogo vive en `policy/plans.go` (`policy.Catalog`) y se sirve tal cual en `GET /plans` (público, para las páginas
+de precios). Un plan es un precio más límites DUROS:
+
+| Plan | Mensual | Anual | IA al mes (tope duro) | Proyectos activos | Tareas programadas | Personas | Almacenamiento | Agentes |
+|------|--------:|------:|----------------------:|------------------:|-------------------:|---------:|---------------:|--------:|
+| Free | 0       | 0     | 1 USD                 | 1                 | 2                  | 2        | 500 MB         | 20      |
+| Pro  | 29 USD  | 290   | 12 USD                | 5                 | 10                 | 10       | 10 GB          | 20      |
+| Max  | 99 USD  | 990   | 45 USD                | 20                | 20                 | 50       | 50 GB          | 20      |
+
+- El cupo de IA es el `cap_usd` de `org_plans` y se aplica igual que el tope del plan gratis de arriba: los tres planes
+  del catálogo son duros (`policy.HardCapped`), con el mismo reinicio mensual. `paid` queda como el "sin plan" de un
+  despliegue sin planes: sin tope y sin límites de plan (solo los máximos del sistema). Migración 805: `org_plans.plan`
+  acepta `free`, `pro`, `max` y `paid`.
+- Los demás límites son cuentas que se comprueban donde se crea la cosa: agentes (`POST /agents/from-template` y aplicar
+  una industria en el organigrama), proyectos activos (al lanzar), tareas programadas (`OrgConfig.CreateSchedule`),
+  personas = miembros + invitaciones pendientes (`auth.CreateInvitation`; reinvitar a la misma dirección no suma) y
+  almacenamiento (la cuota de Drive, cuando la del plan es menor que la del despliegue). Pasar un límite nunca borra
+  nada: solo rechaza lo siguiente con `409` y `{"code":"plan_limit","limit_kind","limit","plan"}`
+  (`domain.PlanLimitError`; el servicio de auth responde `{"error":{"code":"plan_limit","message"}}`). El
+  almacenamiento sigue siendo `ErrQuota` de Drive (`413`), pero cuando la cuota alcanzada es la del plan el cuerpo
+  lleva `code: "plan_limit"` con `limit_kind: "storage"`, `limit` (bytes) y `plan`; la cuota del despliegue sigue
+  respondiendo `quota_exceeded`.
+- Los agentes no se venden: todos los planes traen la oficina completa (20, el máximo del sistema).
+- `GET /plan` (`metrics:read`): plan, límites, lo usado de cada uno (`-1` = desconocido en este despliegue), el cupo
+  de IA del mes y el catálogo. `PUT /plan {"plan":"pro"}` (`billing:manage`, auditado `plan.changed`) solo con
+  `PLAN_SELF_SERVE=on`; no hay proveedor de pagos, así que no cobra nada. Al cambiar, el mes en curso conserva su base:
+  subir de plan sube el tope al momento; bajar puede dejar a la organización por encima del nuevo tope hasta el día 1.
+- Front: Ajustes → Plan y uso (`PlanBilling.tsx`) muestra el plan, una barra por límite y el catálogo (mensual / anual);
+  `PlanCapBanner` nombra el plan y enlaza ahí (también sin login, `AUTH_ENABLED=false`). La fila de Ajustes solo aparece
+  si el despliegue usa planes. `authFetch` detecta cualquier `409`/`413` con `plan_limit` (de cualquier pantalla) y
+  `TrialBanner` muestra qué límite fue y el enlace para mejorar el plan.
+- Encendido: `PLANS=on` hace Free a toda organización sin plan, con el cupo de IA de Free del catálogo
+  (`FREE_PLAN_CAP_USD` > 0 también lo enciende y fija ese cupo).
+
 ## 4. Meta del día
 
 `rewards/daily.go`. Una meta por día UTC, elegida por la fecha (rotación fija: 1, 2 o 3 tareas, o una aprobada a
@@ -143,10 +179,12 @@ se muestra al lado como una pastilla.
 ## Variables
 
 `NOTIFY_PUBLIC_URL`, `NOTIFY_LINK_SECRET`, `NOTIFY_LINK_TTL_HOURS`, `FREE_PLAN_CAP_USD`, `REWARDS_DAILY_GOAL`,
-`NOTIFY_OUTBOX` (`off` = sin cola), `PLAN_RESET_JOB` (`off` = sin reinicio mensual).
+`NOTIFY_OUTBOX` (`off` = sin cola), `PLAN_RESET_JOB` (`off` = sin reinicio mensual), `PLANS` (`on` = catálogo de planes,
+toda organización sin plan en Free), `PLAN_SELF_SERVE` (`on` = la persona dueña cambia el plan desde la app).
 
 ## Pendiente
 
-- Un checkout real para pasar de gratis a pago (hoy solo se informa).
+- Un checkout real (proveedor de pagos) para cobrar Pro y Max; hoy `PUT /plan` cambia el plan sin cobrar y solo con
+  `PLAN_SELF_SERVE=on`. `provider` / `provider_ref` de `org_plans` siguen reservados para eso.
 - Sellar con la bóveda también la columna en claro de filas antiguas que nadie vuelva a leer (se sellan al leerlas).
-- Pantalla para cambiar el plan de una organización (hoy: tabla `org_plans` o `FREE_PLAN_CAP_USD`).
+- Publicar precios en la landing (hoy dice "todavía no hay precios").

@@ -54,7 +54,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
       await load();
       toast(t("toast.uploaded"));
     } catch (e) {
-      setError(e instanceof DriveError ? t("drive.error", { code: e.code }) : String(e));
+      setError(e instanceof DriveError ? (e.code === "plan_limit" ? t("drive.planLimit") : t("drive.error", { code: e.code })) : String(e));
     } finally {
       setBusy(false);
     }

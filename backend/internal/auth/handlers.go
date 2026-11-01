@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"aiworkforce/backend/internal/domain"
 	"encoding/json"
 	"errors"
 	"io"
@@ -658,6 +659,7 @@ func writeServiceError(w http.ResponseWriter, err error) {
 	var re *RateLimitedError
 	var mr *MFARequiredError
 	var me *MFAEnrollmentRequiredError
+	var ple *domain.PlanLimitError
 	switch {
 	case errors.As(err, &mr):
 		// Not a failure: the password was right and the client must now present the second factor.
@@ -707,6 +709,8 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusForbidden, "forbidden", "insufficient permissions")
 	case errors.Is(err, ErrEmailTaken):
 		writeError(w, http.StatusConflict, "email_taken", "email already registered")
+	case errors.As(err, &ple):
+		writeError(w, http.StatusConflict, "plan_limit", ple.Error())
 	case errors.Is(err, ErrAlreadyMember):
 		writeError(w, http.StatusConflict, "already_member", "user is already a member")
 	case errors.Is(err, ErrLastOwner):

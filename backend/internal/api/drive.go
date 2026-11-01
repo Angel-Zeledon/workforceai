@@ -88,6 +88,9 @@ func (s *server) driveFail(w http.ResponseWriter, err error) {
 		if de.Current > 0 {
 			body["current_version"] = de.Current
 		}
+		if pl := de.PlanLimit; pl != nil {
+			body["limit_kind"], body["limit"], body["plan"] = pl.Kind, pl.Limit, pl.Plan
+		}
 	}
 	writeJSON(w, status, body)
 }

@@ -11,6 +11,7 @@ import (
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/policy"
 )
 
 // ---- launch ----
@@ -63,6 +64,21 @@ func planOf(r Record) application.PlanResponse {
 	return plan
 }
 
+// ActiveCount counts the launched, unfinished projects of the organization (what MaxActiveProjects limits).
+func (s *Service) ActiveCount(ctx context.Context) (int, error) {
+	recs, err := s.cfg.Store.List(ctx, s.org(ctx))
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, r := range recs {
+		if r.Status != StatusDraft && !terminalStatus(r.Status) {
+			n++
+		}
+	}
+	return n, nil
+}
+
 // checkActiveLimit refuses a launch when the organization already has
 // MaxActiveProjects launched, unfinished projects.
 func (s *Service) checkActiveLimit(ctx context.Context, org, self string) error {
@@ -78,6 +94,11 @@ func (s *Service) checkActiveLimit(ctx context.Context, org, self string) error 
 	}
 	if active >= s.cfg.Limits.MaxActiveProjects {
 		return limitError(domain.ErrConflict, LimitMaxActive, s.cfg.Limits.MaxActiveProjects, fmt.Sprintf("the organization has %d active projects", active))
+	}
+	if s.cfg.PlanLimits != nil {
+		if t := s.cfg.PlanLimits(ctx, org); policy.AtLimit(active, t.MaxActiveProjects) {
+			return &domain.PlanLimitError{Kind: policy.LimitProjects, Limit: t.MaxActiveProjects, Plan: t.ID}
+		}
 	}
 	return nil
 }

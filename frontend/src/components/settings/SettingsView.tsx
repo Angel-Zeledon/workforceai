@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/lib/i18n";
 import { useConnections } from "@/lib/connections/store";
@@ -19,16 +20,18 @@ import { ConnectionsView } from "../connections/ConnectionsView";
 import { SecurityCenter } from "../security/SecurityCenter";
 import { AccountSecurity } from "./AccountSecurity";
 import { DataPrivacy } from "./DataPrivacy";
+import { PlanBilling } from "./PlanBilling";
+import { notifyApi } from "@/lib/notifyApi";
 import { IdentitySettings } from "./IdentitySettings";
 import { PortalBranding } from "./PortalBranding";
 
 /** Sub-pages of Settings. The URL (/settings?s=...) says which one is open, so the browser's Back button and the
  *  sidebar both just work: nothing needs a "Close" button. */
-const SUBS = ["office", "hire", "templates", "members", "kill", "connections", "security", "account", "data", "identity", "portal"] as const;
+const SUBS = ["office", "hire", "templates", "members", "kill", "connections", "security", "account", "data", "identity", "portal", "plan"] as const;
 type Sub = (typeof SUBS)[number];
 const SUB_TITLE: Record<Sub, string> = {
   office: "settings.title", hire: "hire.open", templates: "tpl.open", members: "members.title",
-  kill: "ctl.killswitch.title", connections: "nav.connections", security: "nav.security", account: "mfa.rowTitle", data: "data.title", identity: "idn.title", portal: "portal.brand.title",
+  kill: "ctl.killswitch.title", connections: "nav.connections", security: "nav.security", account: "mfa.rowTitle", data: "data.title", identity: "idn.title", portal: "portal.brand.title", plan: "planpage.title",
 };
 
 function Row({ icon, title, body, onClick, testid, disabled, danger, tour }: { tour?: string; icon: IconName; title: string; body: string; onClick: () => void; testid: string; disabled?: boolean; danger?: boolean }) {
@@ -65,6 +68,15 @@ export function SettingsView() {
   const session = useSession();
   const signedIn = session.status === "authenticated";
   const canMembers = useCan("members:read");
+  const canPlan = useCan("metrics:read");
+  // The Plan row only where the deployment has plans (every plan of the catalog has a hard AI cap).
+  const [hasPlan, setHasPlan] = useState(false);
+  useEffect(() => {
+    if (!canPlan) return;
+    let live = true;
+    notifyApi.planUsage().then((u) => { if (live) setHasPlan(u.hard); }).catch(() => { /* no plans here */ });
+    return () => { live = false; };
+  }, [canPlan]);
   const { isAdmin } = useViewer();
   const controls = useConnections((s) => s.controls);
   const loaded = useConnections((s) => s.loaded);
@@ -81,6 +93,7 @@ export function SettingsView() {
             {sub === "security" && (loaded ? <SecurityCenter /> : <PageSkeleton />)}
             {sub === "account" && <AccountSecurity />}
             {sub === "data" && <DataPrivacy />}
+            {sub === "plan" && <PlanBilling />}
             {sub === "identity" && <IdentitySettings />}
             {sub === "portal" && <PortalBranding />}
             {sub === "office" && <OfficeSettingsPanel onClose={() => open(null)} />}
@@ -103,6 +116,7 @@ export function SettingsView() {
           <Row tour="settings.hire" testid="settings-hire" icon="plus" title={t("hire.open")} body={t("settings.page.hire")} disabled={!isAdmin} onClick={() => open("hire")} />
           <Row tour="settings.templates" testid="settings-templates" icon="layout" title={t("tpl.open")} body={t("settings.page.templates")} onClick={() => open("templates")} />
           <Row testid="settings-portal" icon="layout" title={t("portal.brand.title")} body={t("portal.brand.rowBody")} onClick={() => open("portal")} />
+          {hasPlan && <Row testid="settings-plan" icon="bag" title={t("planpage.title")} body={t("settings.page.plan")} onClick={() => open("plan")} />}
           <Row tour="settings.connections" testid="settings-connections" icon="plug" title={t("nav.connections")} body={t("settings.page.connections")} onClick={() => open("connections")} />
           {onboarding.supported && <Row tour="settings.onboarding" testid="settings-onboarding" icon="flag" title={onboarding.pending ? t("onb.prompt.title") : t("cfg.open")} body={t("settings.page.onboarding")} onClick={onboarding.open} />}
         </Section>

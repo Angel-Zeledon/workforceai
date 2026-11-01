@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"time"
 	"crypto/hmac"
 	"crypto/sha256"
 	"log/slog"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/config"
@@ -16,6 +16,7 @@ import (
 	"aiworkforce/backend/internal/infrastructure/postgres"
 	"aiworkforce/backend/internal/mailer"
 	"aiworkforce/backend/internal/notify"
+	"aiworkforce/backend/internal/policy"
 )
 
 // wireNotify builds the approval notifications (e-mail, Slack, Teams), the
@@ -25,7 +26,10 @@ import (
 //	NOTIFY_PUBLIC_URL    public base of the API for the links (default UI_BASE_URL); without it no links are offered
 //	NOTIFY_LINK_SECRET   signing key, >= 32 bytes (default: derived from JWT_SECRET, never the same key)
 //	NOTIFY_LINK_TTL_HOURS validity of a link (default 24, max 168)
-//	FREE_PLAN_CAP_USD    > 0 makes every organization without an explicit plan a free one with this HARD cap
+//	PLANS                on: plans of the catalog (internal/policy/plans.go); every organization without one is on Free
+//	FREE_PLAN_CAP_USD    > 0 makes every organization without an explicit plan a free one with this HARD cap (and turns
+//	                     PLANS on); with PLANS=on and no value, the cap is Free's AI allowance of the catalog
+//	PLAN_SELF_SERVE      on: owners change the plan from the app (PUT /plan). There is no payment provider yet.
 func wireNotify(log *slog.Logger, cfg config.Config, pg *postgres.Store, store application.Store, approvals *application.Approvals,
 	orch *application.Orchestrator, obs *notify.Observer) *notify.Service {
 	var settings notify.SettingsStore = notify.NewMemSettings()
@@ -44,7 +48,12 @@ func wireNotify(log *slog.Logger, cfg config.Config, pg *postgres.Store, store a
 			log.Warn("FREE_PLAN_CAP_USD ignored: it must be a number greater than 0")
 		}
 	}
+	if freeCap == 0 && envOn("PLANS") {
+		free, _ := policy.TierOf(policy.PlanFree)
+		freeCap = free.AIAllowanceUSD
+	}
 	plans := &notify.Plans{Store: planStore, DefaultFreeCapUSD: freeCap}
+	orgPlans = plans
 	// The free plan cap is enforced where every call is reserved (Budget.Reserve): never silent, never over.
 	orch.Budget().OrgCapFor = plans.OrgCap
 	if freeCap > 0 {
@@ -133,6 +142,17 @@ func startNotifyJobs(ctx context.Context, log *slog.Logger, svc *notify.Service,
 			rec.Audit(application.WithOrg(c, org), domain.AuditLog{Actor: "system", Action: action, Entity: "plan", EntityID: org, Details: d})
 		}}
 	r.Start(ctx, time.Hour)
+}
+
+// orgPlans is the plan of every organization (set by wireNotify, which runs before the services that check the plan's
+// limits). planLimits is nil-safe: without plans nothing is limited by a plan.
+var orgPlans *notify.Plans
+
+func planLimits(ctx context.Context, org string) policy.Tier { return orgPlans.Limits(ctx, org) }
+
+func envOn(name string) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(name)))
+	return v == "on" || v == "true" || v == "1"
 }
 
 func firstNonEmpty(v ...string) string {

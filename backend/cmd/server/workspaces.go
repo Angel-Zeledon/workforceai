@@ -85,7 +85,7 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	asvc := artifacts.New(artifacts.Config{Store: astore, Collab: collab, Blobs: blobs, WriteGate: readOnlyGate(cw.ctl), Rec: rec, Core: store, Asker: orch, OrgID: cfg.App.OrgID, Log: log,
 		Projects:   projectLookup(func(ctx context.Context, id string) (string, string, error) { return psvc.Info(ctx, id) }),
 		CustomerOf: customerOf(cust)}) // B12: referenced artifacts and cell citations stay inside the task's customer
-	pcfg := projects.Config{Store: pstore, Orch: orch, Core: store, Approvals: approvals, Rec: rec, Runtime: rt, Guard: guard, Sink: deliverableSink{next: asvc, drive: dsvc, log: log}, OrgID: cfg.App.OrgID, MaxAttempts: max(1, cfg.App.TaskMaxAttempts), Log: log, Limits: cfg.Projects}
+	pcfg := projects.Config{Store: pstore, Orch: orch, Core: store, Approvals: approvals, Rec: rec, Runtime: rt, Guard: guard, Sink: deliverableSink{next: asvc, drive: dsvc, log: log}, OrgID: cfg.App.OrgID, MaxAttempts: max(1, cfg.App.TaskMaxAttempts), Log: log, Limits: cfg.Projects, PlanLimits: planLimits}
 	// W5 monitor tuning (all optional): PROJECT_POLL_MS (active period),
 	// PROJECT_POLL_IDLE_MAX_MS (idle backoff ceiling), PROJECT_BUDGET_WARN_PCT (1-100).
 	if v, err := strconv.Atoi(os.Getenv("PROJECT_POLL_MS")); err == nil && v > 0 {

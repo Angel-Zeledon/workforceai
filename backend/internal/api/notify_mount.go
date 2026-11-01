@@ -22,12 +22,16 @@ import (
 //	GET  /notify/outbox/dead       approvals:decide  messages that ran out of attempts
 //	POST /notify/outbox/dead/{id}/retry  approvals:decide  back to pending, attempts reset (audited)
 //	GET  /plan/usage               metrics:read    spent / estimated / cap of the plan
+//	GET  /plan                     metrics:read    plan, limits, what is used and the catalog (plan.go)
+//	PUT  /plan                     billing:manage  change the plan (PLAN_SELF_SERVE only)
+//	GET  /plans                    public          the catalog: prices and limits
 //	GET  /rewards/daily-goal       shop:read
 func (s *server) mountNotifyPublic(r chi.Router) {
 	if s.Notify == nil {
 		return
 	}
 	r.Handle("/notify/a", s.Notify.Landing())
+	r.Get("/plans", s.listPlans)
 }
 
 func (s *server) notifyAPI() notify.API {
@@ -65,6 +69,8 @@ func (s *server) mountNotify(r chi.Router) {
 		r.With(decide).Post("/notify/outbox/dead/{id}/retry", a.RetryDeadLetter)
 		if s.Notify.Plans != nil {
 			r.With(s.can(auth.PermMetricsRead)).Get("/plan/usage", a.PlanUsage)
+			r.With(s.can(auth.PermMetricsRead)).Get("/plan", s.getOrgPlan)
+			r.With(s.can(auth.PermBillingManage)).Put("/plan", s.putOrgPlan)
 		}
 	}
 	if s.Rewards != nil {

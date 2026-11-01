@@ -11,6 +11,7 @@
  */
 import { create } from "zustand";
 import { API_URL, MOCK } from "./config";
+import { announcePlanLimit } from "./planLimit";
 
 export type SessionStatus = "loading" | "disabled" | "anonymous" | "authenticated";
 export interface SessionUser { id: string; email: string; name: string; /** Set only for trial accounts: when they stop working (ISO). */ trial_expires_at?: string; /** True when the account has a second factor. */ mfa_enabled?: boolean }
@@ -233,11 +234,17 @@ export async function accessToken(): Promise<string> {
 export async function authFetch(url: string, init: RequestInit = {}): Promise<Response> {
   // A screen may fire requests before its gate decided the mode: wait for it instead of sending no token.
   if (!MOCK && useSession.getState().status === "loading") await bootstrapAuth();
-  if (!authEnabled() || MOCK) return fetch(url, init);
+  if (MOCK) return fetch(url, init);
+  if (!authEnabled()) {
+    const open = await fetch(url, init);
+    announcePlanLimit(open);
+    return open;
+  }
   const withToken = (tok: string): RequestInit => ({ ...init, headers: { ...(init.headers as Record<string, string> | undefined), ...(tok ? { Authorization: `Bearer ${tok}` } : {}) } });
   let res = await fetch(url, withToken(await accessToken()));
   if (res.status === 401 && (await refresh())) res = await fetch(url, withToken(access));
   if (res.status === 401) clear();
+  announcePlanLimit(res);
   return res;
 }
 

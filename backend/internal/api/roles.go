@@ -10,6 +10,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/policy"
 	"aiworkforce/backend/internal/roles"
 )
 
@@ -115,6 +116,10 @@ func (s *server) hireFromTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 	if total >= maxAgentsPerOrg {
 		s.fail(w, fmt.Errorf("%w: the office is full (%d agents)", domain.ErrConflict, maxAgentsPerOrg))
+		return
+	}
+	if t := s.planLimits(r.Context(), s.org(r)); policy.AtLimit(total, t.MaxAgents) {
+		s.fail(w, &domain.PlanLimitError{Kind: policy.LimitAgents, Limit: t.MaxAgents, Plan: t.ID})
 		return
 	}
 	a, err := s.Orch.HireFromTemplate(r.Context(), body)

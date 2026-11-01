@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/policy"
 	"context"
 	"errors"
 	"strings"
@@ -114,6 +116,18 @@ func (s *Service) CreateInvitation(ctx context.Context, actor Principal, email s
 	} else if !errors.Is(err, ErrNotFound) {
 		return nil, err
 	}
+	if s.cfg.SeatLimit != nil {
+		if lim, plan := s.cfg.SeatLimit(ctx, actor.OrgID); lim > 0 {
+			n, err := s.Seats(ctx, actor.OrgID)
+			if err != nil {
+				return nil, err
+			}
+			// The pending invitation of this same address is revoked by CreateInvitation, so it frees its seat.
+			if n-s.pendingFor(ctx, actor.OrgID, email) >= lim {
+				return nil, &domain.PlanLimitError{Kind: policy.LimitSeats, Limit: lim, Plan: plan}
+			}
+		}
+	}
 	plain, hash, err := newOpaqueToken()
 	if err != nil {
 		return nil, err
@@ -127,6 +141,40 @@ func (s *Service) CreateInvitation(ctx context.Context, actor Principal, email s
 	// The e-mail is personal data: the audit keeps its domain only.
 	s.audit(ctx, actor.OrgID, actor.UserID, "invitation.created", inv.ID, map[string]any{"role": role, "email_domain": emailDomain(email), "expires_at": inv.ExpiresAt})
 	return &CreatedInvitation{InvitationView: s.view(inv), Token: plain}, nil
+}
+
+// Seats counts what the plan's seats cover: the members of org plus its pending invitations.
+func (s *Service) Seats(ctx context.Context, org string) (int, error) {
+	ms, err := s.store.ListMembers(ctx, org)
+	if err != nil {
+		return 0, err
+	}
+	invs, err := s.store.ListInvitations(ctx, org)
+	if err != nil {
+		return 0, err
+	}
+	n, now := len(ms), s.now()
+	for _, i := range invs {
+		if i.Status(now) == InvitationPending {
+			n++
+		}
+	}
+	return n, nil
+}
+
+// pendingFor is 1 when org has a pending invitation for email (it will be replaced, not added), else 0.
+func (s *Service) pendingFor(ctx context.Context, org, email string) int {
+	invs, err := s.store.ListInvitations(ctx, org)
+	if err != nil {
+		return 0
+	}
+	now := s.now()
+	for _, i := range invs {
+		if i.Email == email && i.Status(now) == InvitationPending {
+			return 1
+		}
+	}
+	return 0
 }
 
 // ListInvitations lists the invitations of the actor's organization, newest first.

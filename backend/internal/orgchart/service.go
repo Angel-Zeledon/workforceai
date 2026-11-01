@@ -14,6 +14,7 @@ import (
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/policy"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/roles"
 )
@@ -59,6 +60,9 @@ type Service struct {
 	Audit      func(ctx context.Context, a domain.AuditLog)
 	DefaultOrg string
 	Now        func() time.Time
+	// PlanLimits (optional) returns the limits of the organization's plan (policy.Catalog): applying an industry
+	// may not leave the office over the plan's agents.
+	PlanLimits func(ctx context.Context, org string) policy.Tier
 	// OnChange (optional) is called after the model changed in a way that can release held work (a
 	// schedule or a rule was edited): the orchestrator asks its gates again at once (application.WakeHeld).
 	OnChange func()

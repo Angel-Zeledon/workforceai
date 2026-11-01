@@ -153,7 +153,7 @@ func run(log *slog.Logger) error {
 	// tone and schedules (daily briefing). Both stores implement ConfigStore.
 	var orgCfg *application.OrgConfig
 	if cs, ok := store.(application.ConfigStore); ok {
-		orgCfg = &application.OrgConfig{Cfg: cfg.App, Store: cs, Core: store, Orch: orch, Rec: rec, Log: log}
+		orgCfg = &application.OrgConfig{Cfg: cfg.App, Store: cs, Core: store, Orch: orch, Rec: rec, Log: log, PlanLimits: planLimits}
 		orch.SetStyle(orgCfg)
 		var lister application.OrgLister
 		if l, ok := store.(application.OrgLister); ok {
@@ -327,7 +327,7 @@ func run(log *slog.Logger) error {
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, ROI: roiSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Standing: standingSvc, Initiative: initiativeSvc, InitiativeScanner: initiativeScan, DevilsAdvocate: devilsSvc, Rehearsal: rehearsalSvc, Debates: debatesSvc,
-		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Trust: trustSvc, Rituals: ritualsSvc, Away: awaySvc, Customers: custSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Trust: trustSvc, Rituals: ritualsSvc, Away: awaySvc, Customers: custSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, PlanSelfServe: envOn("PLAN_SELF_SERVE"), Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
@@ -386,6 +386,10 @@ func run(log *slog.Logger) error {
 			Secret:              []byte(cfg.JWTSecret),
 			DefaultOrgBudgetUSD: cfg.App.BudgetUSD,
 			LoginLimiter:        limiter,
+			SeatLimit: func(sctx context.Context, org string) (int, string) {
+				t := planLimits(sctx, org)
+				return t.MaxSeats, t.ID
+			},
 			Audit: func(actx context.Context, e auth.AuditEvent) {
 				rec.Audit(application.WithOrg(actx, e.OrgID), domain.AuditLog{Actor: e.Actor, Action: e.Action, Entity: e.Entity, EntityID: e.EntityID, Details: e.Details})
 			},

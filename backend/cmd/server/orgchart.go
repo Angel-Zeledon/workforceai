@@ -22,7 +22,7 @@ func wireOrgChart(pg *postgres.Store, store application.Store, authStore auth.St
 	if pg != nil {
 		st = &postgres.OrgChartStore{S: pg}
 	}
-	svc := &orgchart.Service{Store: st, Agents: store, DefaultOrg: defaultOrg,
+	svc := &orgchart.Service{Store: st, Agents: store, DefaultOrg: defaultOrg, PlanLimits: planLimits,
 		Audit: func(ctx context.Context, a domain.AuditLog) { rec.Audit(ctx, a) }}
 	if w, ok := store.(orgchart.AgentWriter); ok {
 		svc.Writer = w

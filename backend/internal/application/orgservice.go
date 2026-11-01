@@ -13,6 +13,7 @@ import (
 
 	"aiworkforce/backend/internal/catalog"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/policy"
 )
 
 // MaxSchedulesPerOrg bounds simple recurring tasks per organization.
@@ -34,6 +35,8 @@ type OrgConfig struct {
 	Cat   *catalog.Catalog
 	Log   *slog.Logger
 	Now   func() time.Time
+	// PlanLimits (optional) returns the limits of the organization's plan (policy.Catalog): its schedules.
+	PlanLimits func(ctx context.Context, org string) policy.Tier
 }
 
 var _ StyleProvider = (*OrgConfig)(nil)
@@ -414,6 +417,11 @@ func (s *OrgConfig) CreateSchedule(ctx context.Context, in ScheduleInput) (Sched
 	}
 	if len(existing) >= MaxSchedulesPerOrg {
 		return Schedule{}, fmt.Errorf("%w: schedule limit reached (%d)", domain.ErrConflict, MaxSchedulesPerOrg)
+	}
+	if s.PlanLimits != nil {
+		if t := s.PlanLimits(ctx, org); policy.AtLimit(len(existing), t.MaxSchedules) {
+			return Schedule{}, &domain.PlanLimitError{Kind: policy.LimitSched, Limit: t.MaxSchedules, Plan: t.ID}
+		}
 	}
 	tpl := in.TemplateKey
 	if tpl == "" {

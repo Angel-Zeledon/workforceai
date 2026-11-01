@@ -17,6 +17,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/objstore"
+	"aiworkforce/backend/internal/policy"
 )
 
 // Default limits (env DRIVE_MAX_FILE_BYTES and DRIVE_QUOTA_BYTES override them).
@@ -56,6 +57,9 @@ type Config struct {
 	Objects objstore.Store
 	OrgID   string
 	Limits  Limits
+	// PlanLimits (optional) returns the limits of the organization's plan (policy.Catalog): its storage, when it is
+	// smaller than Limits.QuotaBytes.
+	PlanLimits func(ctx context.Context, org string) policy.Tier
 	// WriteGate refuses every change while the organization is in read-only
 	// mode (returns ErrReadOnly; must fail closed). nil = always open (tests).
 	WriteGate func(ctx context.Context, org string) error
@@ -502,6 +506,18 @@ func cleanMessage(m string) string {
 	return m
 }
 
+// quota is the storage of org: the deployment quota, or the plan's when it is smaller. plan is the plan whose quota
+// it is ("" = the deployment's).
+func (s *Service) quota(ctx context.Context, org string) (q int64, plan string) {
+	q = s.cfg.Limits.QuotaBytes
+	if s.cfg.PlanLimits != nil {
+		if t := s.cfg.PlanLimits(ctx, org); t.StorageBytes > 0 && t.StorageBytes < q {
+			q, plan = t.StorageBytes, t.ID
+		}
+	}
+	return q, plan
+}
+
 func (s *Service) checkSize(ctx context.Context, org string, n int64, extra int64) error {
 	lim := s.cfg.Limits
 	if n == 0 {
@@ -514,8 +530,15 @@ func (s *Service) checkSize(ctx context.Context, org string, n int64, extra int6
 	if err != nil {
 		return err
 	}
-	if used+n+extra > lim.QuotaBytes {
-		return errf(ErrQuota, "quota_exceeded", "the storage quota of the organization (%d MB) would be exceeded", lim.QuotaBytes>>20)
+	q, plan := s.quota(ctx, org)
+	if used+n+extra > q {
+		if plan != "" {
+			// The plan's storage, not the deployment's: the client offers an upgrade (still a 413 quota error).
+			e := errf(ErrQuota, "plan_limit", "the storage of the %s plan (%d MB) would be exceeded", plan, q>>20)
+			e.PlanLimit = &domain.PlanLimitError{Kind: policy.LimitStorage, Limit: int(q), Plan: plan}
+			return e
+		}
+		return errf(ErrQuota, "quota_exceeded", "the storage quota of the organization (%d MB) would be exceeded", q>>20)
 	}
 	return nil
 }
@@ -991,8 +1014,10 @@ type Usage struct {
 
 // Usage returns the storage usage.
 func (s *Service) Usage(ctx context.Context) (Usage, error) {
-	n, err := s.cfg.Store.UsedBytes(ctx, s.org(ctx))
-	return Usage{UsedBytes: n, QuotaBytes: s.cfg.Limits.QuotaBytes, MaxFileBytes: s.cfg.Limits.MaxFileBytes}, err
+	org := s.org(ctx)
+	n, err := s.cfg.Store.UsedBytes(ctx, org)
+	q, _ := s.quota(ctx, org)
+	return Usage{UsedBytes: n, QuotaBytes: q, MaxFileBytes: s.cfg.Limits.MaxFileBytes}, err
 }
 
 // ---- search / retriever ----

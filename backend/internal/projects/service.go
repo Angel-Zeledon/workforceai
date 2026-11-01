@@ -18,6 +18,7 @@ import (
 	"aiworkforce/backend/internal/catalog"
 	"aiworkforce/backend/internal/demodata"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/policy"
 )
 
 // NodeEvent tells an optional Sink (the workspace of artifacts) that a leaf
@@ -66,6 +67,8 @@ type Config struct {
 	Now           func() time.Time
 	// Limits are the size limits and planner bounds (zero values: defaults).
 	Limits Limits
+	// PlanLimits (optional) returns the limits of the organization's plan (policy.Catalog): its active projects.
+	PlanLimits func(ctx context.Context, org string) policy.Tier
 	// ModelFor returns the model ("provider/model") an agent role is routed to
 	// (organization model policy); "" when none is configured. Optional: nil
 	// keeps the deepseek-chat priors (Q3).

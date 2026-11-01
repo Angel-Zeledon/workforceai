@@ -12,6 +12,7 @@ import (
 	"aiworkforce/backend/internal/catalog"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/infrastructure/memory"
+	"aiworkforce/backend/internal/policy"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/roles"
 )
@@ -492,6 +493,23 @@ func TestApplyIndustryRespectsTheOfficeCapAndUnknownKeys(t *testing.T) {
 	}
 	if deps, _ := svc.Departments(ctx); len(deps) != 0 {
 		t.Fatalf("a refused template must not leave departments behind: %d", len(deps))
+	}
+}
+
+func TestApplyIndustryRespectsThePlanAgents(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _ := newSvc(t)
+	svc.PlanLimits = func(context.Context, string) policy.Tier { return policy.Tier{ID: "free", MaxAgents: 4} }
+	_, err := svc.ApplyIndustry(ctx, "law_firm", ApplyInput{})
+	if pe, ok := domain.AsPlanLimit(err); !ok || pe.Kind != policy.LimitAgents || pe.Limit != 4 || !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("%v", err)
+	}
+	if deps, _ := svc.Departments(ctx); len(deps) != 0 {
+		t.Fatalf("a refused template must not leave departments behind: %d", len(deps))
+	}
+	svc.PlanLimits = func(context.Context, string) policy.Tier { return policy.Tier{ID: "free", MaxAgents: 20} }
+	if _, err := svc.ApplyIndustry(ctx, "law_firm", ApplyInput{}); err != nil {
+		t.Fatalf("an industry fits the free plan: %v", err)
 	}
 }
 

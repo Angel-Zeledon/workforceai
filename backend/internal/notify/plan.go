@@ -2,6 +2,7 @@ package notify
 
 import (
 	"context"
+	"errors"
 	"math"
 	"sync"
 	"time"
@@ -22,8 +23,8 @@ type Plan struct {
 	SpendBaseUSD float64 `json:"-"`
 }
 
-// Hard reports whether the plan has a hard spend cap.
-func (p Plan) Hard() bool { return p.Plan == policy.PlanFree }
+// Hard reports whether the plan has a hard spend cap: every plan of the catalog (free, pro, max) does.
+func (p Plan) Hard() bool { return policy.HardCapped(p.Plan) }
 
 // PlanStore persists explicit plans. No row = the deployment default.
 type PlanStore interface {
@@ -96,6 +97,37 @@ func (s *Plans) Resolve(ctx context.Context, org string) Plan {
 	s.cache[org] = cachedPlan{p: p, at: s.now()}
 	s.mu.Unlock()
 	return p
+}
+
+// Limits returns the catalog limits of the plan in force. A plan outside the catalog (the legacy paid plan of a
+// deployment without plans) has none: zero counts, only the system-wide maximums apply.
+func (s *Plans) Limits(ctx context.Context, org string) policy.Tier {
+	if s == nil {
+		return policy.Tier{ID: policy.PlanPaid}
+	}
+	t, _ := policy.TierOf(s.Resolve(ctx, org).Plan)
+	return t
+}
+
+// ErrUnknownPlan is returned by Change for a plan outside the catalog.
+var ErrUnknownPlan = errors.New("unknown plan")
+
+// Change moves org to a plan of the catalog, with the plan's AI allowance as its cap. The month in course keeps its
+// base: an upgrade raises the cap at once, a downgrade may leave the organization over the new cap until the 1st.
+func (s *Plans) Change(ctx context.Context, org, plan, by string) (Plan, error) {
+	t, ok := policy.TierOf(plan)
+	if !ok {
+		return Plan{}, ErrUnknownPlan
+	}
+	capUSD := t.AIAllowanceUSD
+	if plan == policy.PlanFree && s.DefaultFreeCapUSD > 0 {
+		capUSD = s.DefaultFreeCapUSD
+	}
+	if err := s.Store.PutPlan(ctx, Plan{OrgID: org, Plan: plan, CapUSD: capUSD}, by); err != nil {
+		return Plan{}, err
+	}
+	s.Invalidate(org)
+	return s.Resolve(ctx, org), nil
 }
 
 // Invalidate drops the cached plan (after a change).

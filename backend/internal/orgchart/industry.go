@@ -9,6 +9,7 @@ import (
 
 	"aiworkforce/backend/internal/catalog"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/policy"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/roles"
 )
@@ -142,6 +143,11 @@ func (s *Service) ApplyIndustry(ctx context.Context, key string, in ApplyInput) 
 	}
 	if len(list)+len(fresh) > MaxAgents {
 		return ApplyResult{}, fmt.Errorf("%w: the office would have %d agents (max %d); remove some first", domain.ErrConflict, len(list)+len(fresh), MaxAgents)
+	}
+	if s.PlanLimits != nil && len(fresh) > 0 {
+		if t := s.PlanLimits(ctx, org); t.MaxAgents > 0 && len(list)+len(fresh) > t.MaxAgents {
+			return ApplyResult{}, &domain.PlanLimitError{Kind: policy.LimitAgents, Limit: t.MaxAgents, Plan: t.ID}
+		}
 	}
 	prior, hadApplied, err := s.Store.GetApplied(ctx, org, key)
 	if err != nil {

@@ -53,6 +53,9 @@ type Config struct {
 	AppURL              string
 	VerifyTTL           time.Duration // default 24h
 	ResendLimit         Limit         // per e-mail address, default 3 / hour
+	// SeatLimit (optional) returns the seats of the organization's plan (members plus pending invitations; 0 = no
+	// plan limit) and the plan's name: an invitation past it is refused with a domain.PlanLimitError.
+	SeatLimit func(ctx context.Context, org string) (limit int, plan string)
 	// Trial accounts ("try it without signing up"): TrialEnabled turns on POST /auth/trial.
 	TrialEnabled      bool
 	TrialTTL          time.Duration // default 24h

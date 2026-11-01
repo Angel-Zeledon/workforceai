@@ -97,7 +97,7 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 	if pg != nil {
 		dstore = &postgres.DriveStore{S: pg}
 	}
-	svc := drive.New(drive.Config{Store: dstore, Objects: objects, OrgID: cfg.App.OrgID, Limits: driveLimits(), Log: log,
+	svc := drive.New(drive.Config{Store: dstore, Objects: objects, OrgID: cfg.App.OrgID, Limits: driveLimits(), Log: log, PlanLimits: planLimits,
 		WriteGate: driveReadOnlyGate(cw.ctl),
 		Audit: func(actx context.Context, org string, e drive.AuditEntry) {
 			d := map[string]any{"actor_kind": e.Actor.Kind}
