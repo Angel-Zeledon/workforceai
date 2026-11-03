@@ -5,33 +5,42 @@ import * as THREE from "three";
 import type { ShopItem } from "@/lib/rewards";
 import { BodyWear, Buddy, HeadWear, OutfitWear, useOutfit } from "../office/Worn";
 import { ItemMesh } from "../office/OfficeItems";
+import { getOfficeStyle, useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
+import type { OfficeStyle } from "@/lib/officeLayoutModel";
+import { addStaticStuds, themeTree } from "../office/themeRuntime";
 
 /**
  * Shop thumbnails rendered from the SAME 3D models the office uses (lit, with volume and a soft shadow), instead of flat
  * drawings. One hidden canvas renders one item at a time from a queue; each picture is cached for the session and the
- * card keeps its flat SVG until its picture is ready. Only items that are on screen are requested.
+ * card keeps its flat SVG until its picture is ready. Only items that are on screen are requested. Pictures follow the
+ * office style (themeRuntime restyles the subject before the shot), so each one is cached per style.
  */
 const SIZE = 256;
 const MAX_CACHE = 500;
 
 const cache = new Map<string, string>();
-const queue: ShopItem[] = [];
+interface Job { item: ShopItem; style: OfficeStyle; key: string }
+const queue: Job[] = [];
 const queued = new Set<string>();
 const subs = new Set<() => void>();
 const notify = () => subs.forEach((f) => f());
 const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
 
-export function requestThumb(item: ShopItem) {
-  if (cache.has(item.id) || queued.has(item.id)) return;
-  queued.add(item.id);
-  queue.push(item);
+const keyOf = (style: OfficeStyle, id: string) => (style === "classic" ? id : `${style}:${id}`);
+
+export function requestThumb(item: ShopItem, style: OfficeStyle = getOfficeStyle()) {
+  const key = keyOf(style, item.id);
+  if (cache.has(key) || queued.has(key)) return;
+  queued.add(key);
+  queue.push({ item, style, key });
   notify();
 }
 /** The rendered picture of an item (a data URL) or null while it is still in the queue. */
 export function useThumb(item: ShopItem): string | null {
-  const id = item.id;
-  const url = useSyncExternalStore(subscribe, () => cache.get(id) ?? null, () => null);
-  useEffect(() => { if (!url) requestThumb(item); }, [url, item]);
+  const style = useOfficeStyle();
+  const key = keyOf(style, item.id);
+  const url = useSyncExternalStore(subscribe, () => cache.get(key) ?? null, () => null);
+  useEffect(() => { if (!url) requestThumb(item, style); }, [url, item, style]);
   return url;
 }
 
@@ -42,7 +51,7 @@ const SKIN = "#e8b894", HAIR = "#4a3020";
 function HeadMesh({ worn }: { worn: Record<string, string> }) {
   return (
     <group scale={1.75}>
-      <mesh castShadow position={[0, 0.15, 0]}><sphereGeometry args={[0.165, 28, 20]} /><meshStandardMaterial color={SKIN} roughness={0.7} /></mesh>
+      <mesh castShadow position={[0, 0.15, 0]} userData={{ brick: "cyl" }}><sphereGeometry args={[0.165, 28, 20]} /><meshStandardMaterial color={SKIN} roughness={0.7} /></mesh>
       <mesh position={[0, 0.17, 0]} rotation={[-0.35, 0, 0]}><sphereGeometry args={[0.178, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.52]} /><meshStandardMaterial color={HAIR} roughness={0.9} /></mesh>
       {[0.058, -0.058].map((x) => <mesh key={x} position={[x, 0.17, 0.145]} scale={[1, 1.35, 0.5]}><sphereGeometry args={[0.022, 10, 8]} /><meshBasicMaterial color="#4a3626" /></mesh>)}
       {[0.065, -0.051].map((x) => <mesh key={x} position={[x, 0.182, 0.159]}><sphereGeometry args={[0.0075, 8, 6]} /><meshBasicMaterial color="#ffffff" /></mesh>)}
@@ -121,15 +130,24 @@ function focusOf(item: ShopItem): Focus {
 }
 
 /** Frames the subject (a focus-specific part of it), takes the picture a few frames later and reports it. */
-function Shot({ item, onDone, ground }: { item: ShopItem; onDone: (url: string) => void; ground: React.RefObject<THREE.Mesh | null> }) {
+function Shot({ item, style, onDone, ground }: { item: ShopItem; style: OfficeStyle; onDone: (url: string) => void; ground: React.RefObject<THREE.Mesh | null> }) {
   const { gl, camera, scene } = useThree();
   const focusRef = useRef<THREE.Group>(null);
+  const stage = useRef<THREE.Group>(null);
+  const studs = useRef<THREE.InstancedMesh | null>(null);
+  useEffect(() => () => { const m = studs.current; if (m) { m.dispose(); (m.material as THREE.Material).dispose(); } }, []);
   const frames = useRef(0);
   const kind = focusOf(item);
   useFrame(() => {
     frames.current++;
     const g = focusRef.current;
     if (!g) return;
+    if (frames.current === 1 && stage.current && style !== "classic") {
+      // the office style: same restyle as the 3D office (characters' clothes get no studs there either)
+      stage.current.updateMatrixWorld(true);
+      const r = themeTree(stage.current, style, true);
+      studs.current = addStaticStuds(stage.current, r.studs);
+    }
     if (frames.current === 2) {
       const box = new THREE.Box3().setFromObject(g);
       const size = box.getSize(new THREE.Vector3());
@@ -153,7 +171,7 @@ function Shot({ item, onDone, ground }: { item: ShopItem; onDone: (url: string) 
       onDone(gl.domElement.toDataURL("image/png"));
     }
   });
-  return <Subject item={item} focus={focusRef} />;
+  return <group ref={stage} userData={{ noStuds: item.kind !== "office", figure: item.kind !== "office" }}><Subject item={item} focus={focusRef} /></group>;
 }
 
 /** The ground shadow of floor objects. */
@@ -177,7 +195,9 @@ const Ground = ({ gref }: { gref: React.RefObject<THREE.Mesh | null> }) => {
 
 /** Mount once where thumbnails are shown (the shop, the editor): renders the queue, one item at a time, offscreen. */
 export function ThumbStudio() {
-  const [cur, setCur] = useState<ShopItem | null>(null);
+  const [cur, setCur] = useState<Job | null>(null);
+  // the office style decides how the pictures look: the shop needs the layout too
+  useEffect(() => { if (!useOfficeLayout.getState().loaded) void useOfficeLayout.getState().load(); }, []);
   const busy = useRef(false);
   const groundRef = useRef<THREE.Mesh>(null);
   const next = useCallback(() => {
@@ -194,8 +214,8 @@ export function ThumbStudio() {
   const done = useCallback((url: string) => {
     setCur((c) => {
       if (c) {
-        cache.set(c.id, url);
-        queued.delete(c.id);
+        cache.set(c.key, url);
+        queued.delete(c.key);
         if (cache.size > MAX_CACHE) { const first = cache.keys().next().value; if (first) cache.delete(first); }
       }
       return c;
@@ -211,7 +231,7 @@ export function ThumbStudio() {
         <directionalLight position={[-4, 2.5, 2]} intensity={0.7} color="#cfe0ff" />
         <directionalLight position={[0, 3, -4]} intensity={0.9} color="#fff1dc" />
         <Ground gref={groundRef} />
-        {cur && <Shot key={cur.id} item={cur} onDone={done} ground={groundRef} />}
+        {cur && <Shot key={cur.key} item={cur.item} style={cur.style} onDone={done} ground={groundRef} />}
       </Canvas>
     </div>
   );

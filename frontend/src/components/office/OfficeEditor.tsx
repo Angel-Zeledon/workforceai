@@ -6,7 +6,8 @@ import { useStore } from "@/lib/store";
 import { useCan } from "@/lib/session";
 import { itemName, useRewards, type ShopItem } from "@/lib/rewards";
 import { effective, pieceOf, useOfficeLayout, withPiece, withoutPiece } from "@/lib/officeLayout";
-import { DEFAULT_LAYOUT, FIXTURES, FIXTURE_IDS, FLOOR_KINDS, FLOOR_TINTS, MOODS, TRIM_COLORS, WALL_COLORS, ZONE_NAMES, dayPhase, isHex, localHour, type FixtureId, type FloorKind, type Layout, type Mood, type ZoneName } from "@/lib/officeLayoutModel";
+import { DEFAULT_LAYOUT, FIXTURES, FIXTURE_IDS, FLOOR_KINDS, FLOOR_TINTS, MOODS, OFFICE_STYLES, TRIM_COLORS, WALL_COLORS, ZONE_NAMES, dayPhase, isHex, localHour, type FixtureId, type FloorKind, type Layout, type Mood, type OfficeStyle, type ZoneName } from "@/lib/officeLayoutModel";
+import { STYLE_LOOKS } from "./officeTheme";
 import { usePreferences } from "@/lib/preferences";
 import { Btn, useAgentName } from "../ui";
 import { Icon } from "../icons";
@@ -157,6 +158,56 @@ export function LightButton() {
   );
 }
 
+/**
+ * Preview tile of each office style: today's three colors (wall, oak, accent) drawn the way the style renders them.
+ * CSS only, so the picker costs nothing.
+ */
+function styleTile(id: OfficeStyle): React.CSSProperties {
+  const [a, b, c] = STYLE_LOOKS[id].swatch;
+  switch (id) {
+    case "bricks": // studs catching the light on molded plastic
+      return { background: `radial-gradient(circle at 45% 40%, rgba(255,255,255,.55) 0 1.6px, rgba(255,255,255,.12) 2.2px 3px, rgba(0,0,0,.2) 3.4px, transparent 4px) 0 0/11px 11px, linear-gradient(90deg, ${a} 0 34%, ${b} 34% 67%, ${c} 67%)` };
+    case "clay": // soft lumps with a matte, finger-marked surface
+      return { background: `radial-gradient(ellipse at 22% 70%, ${b} 0 30%, transparent 31%), radial-gradient(ellipse at 74% 62%, ${c} 0 26%, transparent 27%), radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 60%), repeating-radial-gradient(circle at 70% 30%, rgba(0,0,0,.05) 0 1px, transparent 1px 4px), ${a}`, filter: "saturate(.9)" };
+    case "paper": // folded card with crisp creases and a fibrous grain
+      return { background: `linear-gradient(225deg, transparent 0 14px, rgba(0,0,0,.18) 14px 15px, transparent 15px), linear-gradient(135deg, ${a} 0 50%, ${b} 50% 76%, ${c} 76%), repeating-linear-gradient(80deg, rgba(0,0,0,.035) 0 1px, transparent 1px 3px)`, backgroundBlendMode: "normal, normal, multiply" };
+    case "toon": // flat bands of light and an ink outline
+      return { background: `linear-gradient(135deg, ${a} 0 52%, #1f1d24 52% 54%, ${b} 54% 70%, color-mix(in srgb, ${b} 78%, #000) 70% 76%, #1f1d24 76% 78%, ${c} 78%)` };
+    case "real": // wood grain, brushed metal sheen and a soft reflection
+      return { background: `linear-gradient(115deg, rgba(255,255,255,.5) 0 8%, transparent 22%), repeating-linear-gradient(100deg, rgba(90,60,30,.12) 0 2px, transparent 2px 6px), linear-gradient(135deg, ${a} 0 50%, ${b} 50% 80%, ${c} 80%)` };
+    default:
+      return { background: `linear-gradient(135deg, ${a} 0 55%, ${b} 55% 80%, ${c} 80%)` };
+  }
+}
+
+/**
+ * The office style (saved with the layout): how the whole office is RENDERED (geometry, surfaces, shading and motion),
+ * never its colors or its light. Applies live to the draft.
+ */
+function OfficeStylePicker({ layout, set }: { layout: Layout; set: (fn: (l: Layout) => Layout, key?: string) => void }) {
+  const { t } = useT();
+  const cur = layout.style ?? "classic";
+  const pick = (id: OfficeStyle) => set((l) => {
+    const { style: _drop, ...rest } = l; // eslint-disable-line @typescript-eslint/no-unused-vars
+    return id === "classic" ? rest : { ...rest, style: id };
+  });
+  return (
+    <Section title={t("oe.style.title")}>
+      <p className="text-[11.5px] text-mute">{t("oe.style.hint")}</p>
+      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t("oe.style.title")}>
+        {OFFICE_STYLES.map((id) => (
+          <button key={id} type="button" role="radio" data-testid={`oe-style-${id}`} aria-checked={cur === id} onClick={() => { if (cur !== id) pick(id); }}
+            className={`overflow-hidden rounded-lg border text-left transition ${cur === id ? "border-accent ring-2 ring-accent/30" : "border-line hover:border-line-strong"}`}>
+            <span className="block h-10 w-full" style={styleTile(id)} />
+            <span className="block px-2 pt-1 text-[11.5px] font-semibold text-ink">{t(`oe.style.${id}`)}</span>
+            <span className="block px-2 pb-1.5 text-[10.5px] leading-snug text-mute">{t(`oe.style.${id}.d`)}</span>
+          </button>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 function AmbienceTab() {
   const { t, locale } = useT();
   const layout = useOfficeLayout((s) => s.draft) as Layout;
@@ -168,6 +219,7 @@ function AmbienceTab() {
   const set = (fn: (l: Layout) => Layout, key?: string) => mutate(fn, key);
   return (
     <div className="space-y-5">
+      <OfficeStylePicker layout={layout} set={set} />
       <Section title={t("oe.a.walls")}>
         <Swatches colors={WALL_COLORS} value={layout.walls.color} label={(c) => t("oe.a.swatch", { c })} onPick={(c) => set((l) => ({ ...l, walls: { ...l.walls, color: c } }), "wall")} />
         <ColorField value={layout.walls.color} label={t("oe.a.custom")} onPick={(c) => set((l) => ({ ...l, walls: { ...l.walls, color: c } }), "wall")} />

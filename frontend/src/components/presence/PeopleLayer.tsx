@@ -41,7 +41,7 @@ function Figure({ color, status, name, self, moving }: { color: string; status: 
   });
   const away = status === "away";
   return (
-    <group>
+    <group userData={{ noStuds: true, figure: true }}>
       <mesh rotation-x={-Math.PI / 2} position-y={0.02}>
         <ringGeometry args={[0.36, 0.46, 32]} />
         <meshBasicMaterial color={STATUS_COLOR[status]} transparent opacity={away ? 0.5 : 0.95} />

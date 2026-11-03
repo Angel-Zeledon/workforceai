@@ -7,6 +7,7 @@ import { LEGACY_SLOTS } from "@/lib/officeLayoutModel";
 import { effective, useOfficeLayout } from "@/lib/officeLayout";
 import { PieceMesh } from "./Furniture";
 import { isLegacyCategory, pieceInfo } from "./pieceInfo";
+import { Appear, seedOf, useLeaving } from "./ThemeLayer";
 
 /**
  * Shop items placed in the office (docs/architecture/rewards.md). Every office slot has a fixed spot, so no editor is
@@ -371,6 +372,7 @@ export function OfficeItems() {
   const catalog = useRewards((s) => s.catalog);
   const layout = useOfficeLayout(effective);
   const editing = useOfficeLayout((s) => s.editing);
+  const leaving = useLeaving(layout.pieces); // removed pieces playing their exit in the office style
 
   const byId = new Map(catalog.map((i) => [i.id, i] as const));
   if (!layout.seeded) {
@@ -409,8 +411,17 @@ export function OfficeItems() {
             onPointerDown={editing ? (ev) => { ev.stopPropagation(); const st = useOfficeLayout.getState(); if (st.placing) return; st.select({ kind: "piece", uid: p.uid }); st.setDragging(true); } : undefined}
             onPointerOver={editing ? () => { document.body.style.cursor = "grab"; } : undefined}
             onPointerOut={editing ? () => { document.body.style.cursor = ""; } : undefined}>
-            <ItemMesh item={item} />
+            <Appear seed={seedOf(p.uid)}><ItemMesh item={item} /></Appear>
             {lit && info.light && <pointLight position={[0, info.mount === "ceiling" ? -0.3 : 1.2, 0]} intensity={info.light.intensity} distance={info.light.distance} color={info.light.color} />}
+          </group>
+        );
+      })}
+      {leaving.map((p) => {
+        const item = byId.get(p.item);
+        if (!item) return null;
+        return (
+          <group key={`out-${p.uid}`} position={[p.x, p.y ?? pieceInfo(item).y, p.z]} rotation={[0, p.rot, 0]} scale={p.s}>
+            <Appear leaving><ItemMesh item={item} /></Appear>
           </group>
         );
       })}

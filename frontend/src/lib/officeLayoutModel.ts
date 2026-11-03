@@ -4,6 +4,12 @@
  */
 export type FloorKind = "concrete" | "wood" | "parquet" | "carpet" | "tile" | "marble";
 export type Mood = "natural" | "warm" | "cool" | "sunset" | "night";
+/**
+ * Visual style of the whole office (scene, furniture, what the characters wear and how everything moves). "classic" is
+ * the original look and the default; the rest are drawn by a transform layer (components/office/officeTheme.ts).
+ */
+export type OfficeStyle = "classic" | "bricks" | "clay" | "paper" | "toon" | "real";
+export const OFFICE_STYLES: OfficeStyle[] = ["classic", "bricks", "clay", "paper", "toon", "real"];
 export interface DeskCfg { x?: number; z?: number; desk?: string; chair?: string }
 export interface Piece { uid: string; item: string; x: number; z: number; rot: number; s: number; y?: number }
 export type ZoneName = "meeting" | "approvals" | "cafe";
@@ -22,6 +28,8 @@ export interface Layout {
   zones: Partial<Record<ZoneName, Spot>>;
   /** The built-in decoration (plants, rack) moved, turned or taken away. */
   fixtures: Partial<Record<FixtureId, FixtureCfg>>;
+  /** Visual style; absent = "classic" (the original look). */
+  style?: OfficeStyle;
 }
 
 export const FLOOR_KINDS: FloorKind[] = ["concrete", "wood", "parquet", "carpet", "tile", "marble"];
@@ -62,6 +70,7 @@ export function normalizeLayout(raw: unknown): Layout {
     fixtures: {},
   };
   if (r.seeded) out.seeded = true;
+  if (OFFICE_STYLES.includes(r.style) && r.style !== "classic") out.style = r.style;
   if (r.zones && typeof r.zones === "object") {
     for (const name of ZONE_NAMES) { const z = r.zones[name]; if (z && Number.isFinite(z.x) && Number.isFinite(z.z)) out.zones[name] = { x: z.x, z: z.z }; }
   }

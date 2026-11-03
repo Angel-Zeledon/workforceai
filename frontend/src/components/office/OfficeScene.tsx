@@ -21,6 +21,7 @@ import { EditorLayer } from "./EditorLayer";
 import { useOfficeLayout } from "@/lib/officeLayout";
 import { useRewards } from "@/lib/rewards";
 import { PeopleLayer } from "../presence/PeopleLayer";
+import { StyleAmbient, StyleVeil, ThemeApplier } from "./ThemeLayer";
 
 const VIEW = { pos: new THREE.Vector3(7, 16, 19), target: new THREE.Vector3(0.5, 0.4, -0.3) };
 /** The editor looks down on the floor plan so the grid and the footprints read clearly. */
@@ -131,10 +132,13 @@ export default function OfficeScene() {
           <CoinFloats />
           <ShieldFloats /> {/* B10: a shield over the agent whose read content tried to give it orders */}
           <PeopleLayer /> {/* human presence: the people of the office walk next to the agents */}
+          <StyleAmbient /> {/* the office style's ambient effect (baseplate, drifting paper, neon grid, dust motes) */}
+          <ThemeApplier /> {/* restyles every lit mesh for the office style (classic: untouched) */}
         </Suspense>
         <LabelSolver />
         <Rig />
       </Canvas>
+      <StyleVeil /> {/* short dissolve while the office switches style */}
       <LabelLayer />
       <CoinAnnouncer />
     </div>

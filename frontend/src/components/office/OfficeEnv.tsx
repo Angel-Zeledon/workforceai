@@ -9,7 +9,8 @@ import { usePreferences } from "@/lib/preferences";
 import { roleMeta } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { deskOf, seatOf } from "./registry";
-import { effective, useOfficeLayout } from "@/lib/officeLayout";
+import { effective, useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
+import { Appear, seedOf } from "./ThemeLayer";
 import { FIXTURES, FIXTURE_IDS, MOOD_BASE, ZONE_DEFAULTS, ZONE_SIZE, localHour, timeOfDayMix, type FixtureId, type FloorKind, type LightMix, type ZoneName } from "@/lib/officeLayoutModel";
 import { useRewards } from "@/lib/rewards";
 import { ChairMesh, DeskSet } from "./Furniture";
@@ -213,13 +214,63 @@ function FloorSign({ pos, text, color, sub }: { pos: [number, number, number]; t
 
 /** Planta discreta: maceta de hormigón y hojas lanceoladas en verde apagado. */
 function Plant({ position, s = 1, tint = "#7f9a86" }: { position: [number, number, number]; s?: number; tint?: string }) {
+  const style = useOfficeStyle();
   const leaves = [
     [0, 0, 0.62, 0], [0.09, 0.08, 0.5, 0.35], [-0.1, -0.05, 0.54, -0.4], [0.02, -0.11, 0.44, 0.15], [-0.07, 0.1, 0.4, -0.2], [0.12, -0.06, 0.34, 0.5],
   ];
-  return (
-    <group position={position} scale={s}>
+  const pot = (
+    <>
       <mesh castShadow position={[0, 0.2, 0]}><cylinderGeometry args={[0.24, 0.19, 0.4, 24]} /><meshStandardMaterial color="#d5d9df" roughness={0.9} /></mesh>
       <mesh position={[0, 0.4, 0]}><cylinderGeometry args={[0.22, 0.22, 0.02, 24]} /><meshStandardMaterial color="#6c6a63" roughness={1} /></mesh>
+    </>
+  );
+  const leaf = (i: number) => <meshStandardMaterial color={mix(tint, "#ffffff", i * 0.045)} roughness={0.85} side={THREE.DoubleSide} />;
+  if (style === "clay") { // drops of clay pressed into the pot
+    return (
+      <group position={position} scale={s}>
+        {pot}
+        {leaves.map(([x, z, h, tilt], i) => (
+          <mesh key={i} castShadow position={[x * 1.2, 0.42 + h * 0.42, z * 1.2]} rotation={[tilt * 0.3, 0, tilt * 0.6]} scale={[1, 1.7, 1]}>
+            <sphereGeometry args={[0.07 + h * 0.07, 16, 12]} />{leaf(i)}
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  if (style === "paper") { // long leaves of card, each folded down its middle
+    return (
+      <group position={position} scale={s}>
+        {pot}
+        {leaves.map(([x, z, h, tilt], i) => (
+          <group key={i} position={[x, 0.4, z]} rotation={[tilt * 0.5, i * 1.05, tilt * 0.8]}>
+            {[-1, 1].map((side) => (
+              <mesh key={side} castShadow position={[side * 0.035, h / 2, 0]} rotation={[0, side * 0.5, 0]}><planeGeometry args={[0.07, h]} />{leaf(i)}</mesh>
+            ))}
+          </group>
+        ))}
+      </group>
+    );
+  }
+  if (style === "real") { // a real plant: many slender arching leaves from the soil
+    return (
+      <group position={position} scale={s}>
+        {pot}
+        {Array.from({ length: 14 }, (_, i) => {
+          const a = (i / 14) * Math.PI * 2 + (i % 3) * 0.3, h = 0.38 + ((i * 37) % 30) / 100;
+          return (
+            <group key={i} position={[0, 0.41, 0]} rotation={[0, a, 0]}>
+              <mesh castShadow position={[0, h / 2, 0.05]} rotation={[0.35 + (i % 4) * 0.08, 0, 0]} scale={[1, 1, 0.18]}>
+                <coneGeometry args={[0.035, h, 8]} />{leaf(i % 6)}
+              </mesh>
+            </group>
+          );
+        })}
+      </group>
+    );
+  }
+  return (
+    <group position={position} scale={s}>
+      {pot}
       {leaves.map(([x, z, h, tilt], i) => (
         <mesh key={i} castShadow position={[x, 0.4 + h / 2, z]} rotation={[tilt * 0.4, i, tilt]} scale={[1, 1, 0.45]}>
           <coneGeometry args={[0.07 + (i % 3) * 0.012, h, 6]} />
@@ -262,6 +313,7 @@ function Desk({ id, index }: { id: string; index: number }) {
   const progTrack = useRef<THREE.Mesh>(null!);
   const progFill = useRef<THREE.Mesh>(null!);
   const meta = roleMeta(agent?.role);
+  const officeStyle = useOfficeStyle();
   const cfg = useOfficeLayout((s) => effective(s).desks[id]);
   const editing = useOfficeLayout((s) => s.editing);
   const catalog = useRewards((s) => s.catalog);
@@ -303,13 +355,23 @@ function Desk({ id, index }: { id: string; index: number }) {
   return (
     <group position={[dx, 0, dz]}>
       {/* alfombra técnica del puesto: panel plano en un tono casi neutro del rol */}
-      <RoundedBox args={[3.5, 0.02, 2.6]} radius={0.01} smoothness={2} position={[0.1, 0.011, 0.95]} receiveShadow><meshStandardMaterial color="#c4cbd6" roughness={1} /></RoundedBox>
+      <RoundedBox args={[3.5, 0.02, 2.6]} radius={0.01} smoothness={2} position={[0.1, 0.011, 0.95]} receiveShadow userData={{ ground: true, noStuds: true }}><meshStandardMaterial color="#c4cbd6" roughness={1} /></RoundedBox>
       {/* escritorio: tablero, canto en el color del rol, panel frontal y patas (estilo elegido en el editor) */}
+      <Appear seed={seedOf(id)}>
       <DeskSet item={deskItem} accent={meta.color}>
       {/* monitor (pantalla hacia +z) */}
       <group position={[0, T, -0.12]}>
-        <mesh castShadow position={[0, 0.01, 0]}><boxGeometry args={[0.26, 0.02, 0.18]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
-        <mesh castShadow position={[0, 0.17, 0]}><boxGeometry args={[0.04, 0.3, 0.03]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
+        {officeStyle === "real" ? ( // a real stand: round foot, slim neck leaning back a little
+          <>
+            <mesh castShadow position={[0, 0.008, 0.02]}><cylinderGeometry args={[0.13, 0.14, 0.016, 32]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
+            <mesh castShadow position={[0, 0.18, -0.02]} rotation={[-0.08, 0, 0]}><boxGeometry args={[0.035, 0.34, 0.02]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
+          </>
+        ) : (
+          <>
+            <mesh castShadow position={[0, 0.01, 0]}><boxGeometry args={[0.26, 0.02, 0.18]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
+            <mesh castShadow position={[0, 0.17, 0]}><boxGeometry args={[0.04, 0.3, 0.03]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
+          </>
+        )}
         <RoundedBox args={[0.98, 0.58, 0.04]} radius={0.02} smoothness={3} castShadow position={[0, 0.5, 0]}><meshStandardMaterial color="#2c323b" roughness={0.5} /></RoundedBox>
         <mesh position={[0, 0.5, 0.024]}><planeGeometry args={[0.9, 0.5]} /><meshBasicMaterial ref={screen} color="#bfe6ff" toneMapped={false} /></mesh>
         <group ref={bars} position={[0, 0.5, 0.03]}>
@@ -327,6 +389,7 @@ function Desk({ id, index }: { id: string; index: number }) {
       </DeskSet>
       {/* silla de oficina (estilo elegido en el editor) */}
       <group position={[sx - dx, 0, sz - dz]}><ChairMesh item={chairItem} /></group>
+      </Appear>
       {editing && (
         <mesh position={[0, 0.7, 0.55]} onPointerDown={(ev) => { ev.stopPropagation(); const st = useOfficeLayout.getState(); if (st.placing) return; st.select({ kind: "desk", id }); st.setDragging(true); }}
           onPointerOver={() => { document.body.style.cursor = "grab"; }} onPointerOut={() => { document.body.style.cursor = ""; }}>
@@ -484,7 +547,7 @@ function Wall({ args, position, children }: { args: [number, number, number]; po
   const color = useOfficeLayout((s) => effective(s).walls.color);
   return (
     <group position={position}>
-      <RoundedBox args={args} radius={0.03} smoothness={2} castShadow receiveShadow><meshStandardMaterial color={color} roughness={0.95} /></RoundedBox>
+      <RoundedBox args={args} radius={0.03} smoothness={2} castShadow receiveShadow userData={{ wall: true }}><meshStandardMaterial color={color} roughness={0.95} /></RoundedBox>
       {children}
     </group>
   );
@@ -630,9 +693,9 @@ export function OfficeEnv() {
       <LightRig />
 
       {/* fondo: disco con degradado neutro (sin cielo) y losa de hormigón pulido */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.42, 0]} receiveShadow><circleGeometry args={[95, 64]} /><meshStandardMaterial map={backdrop} roughness={1} /></mesh>
-      <RoundedBox args={[29, 0.4, 21]} radius={0.04} smoothness={3} position={[0, -0.22, 0]} receiveShadow castShadow><meshStandardMaterial color="#8d97a6" roughness={0.9} /></RoundedBox>
-      <RoundedBox args={[28.4, 0.1, 20.4]} radius={0.02} smoothness={2} position={[0, -0.03, 0]} receiveShadow><meshStandardMaterial map={floorMap} color={layoutFloor.tint} roughness={finish.rough} metalness={finish.metal} /></RoundedBox>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.42, 0]} receiveShadow userData={{ ground: true }}><circleGeometry args={[95, 64]} /><meshStandardMaterial map={backdrop} roughness={1} /></mesh>
+      <RoundedBox args={[29, 0.4, 21]} radius={0.04} smoothness={3} position={[0, -0.22, 0]} receiveShadow castShadow userData={{ ground: true }}><meshStandardMaterial color="#8d97a6" roughness={0.9} /></RoundedBox>
+      <RoundedBox args={[28.4, 0.1, 20.4]} radius={0.02} smoothness={2} position={[0, -0.03, 0]} receiveShadow userData={{ ground: true, noStuds: true }}><meshStandardMaterial map={floorMap} color={layoutFloor.tint} roughness={finish.rough} metalness={finish.metal} /></RoundedBox>
 
       {/* paredes bajas con ventanal y zócalo */}
       <Wall args={[28.4, 3, 0.3]} position={[0, 1.5, -10]}>

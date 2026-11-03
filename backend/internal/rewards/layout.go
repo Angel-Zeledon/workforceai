@@ -40,6 +40,8 @@ type Layout struct {
 	// Zones moves the three rooms (meeting, approvals, cafe); Fixtures moves or hides the original decoration.
 	Zones    map[string]Spot    `json:"zones,omitempty"`
 	Fixtures map[string]Fixture `json:"fixtures,omitempty"`
+	// Style is the visual style of the whole office ("" = classic, the original look).
+	Style string `json:"style,omitempty"`
 }
 
 // Spot is a position on the floor plan.
@@ -104,6 +106,7 @@ var (
 	fixtureIDs = map[string]bool{"plant_a": true, "plant_b": true, "plant_c": true, "plant_d": true, "rack": true}
 	floorKinds = map[string]bool{"concrete": true, "wood": true, "parquet": true, "carpet": true, "tile": true, "marble": true}
 	moods      = map[string]bool{"natural": true, "warm": true, "cool": true, "sunset": true, "night": true}
+	styles     = map[string]bool{"classic": true, "bricks": true, "clay": true, "paper": true, "toon": true, "real": true}
 )
 
 // ErrLayoutConflict is returned (as *LayoutConflictError) when base_version is not the stored version.
@@ -143,6 +146,9 @@ func inRange(v, lo, hi float64) bool { return v >= lo && v <= hi }
 func Validate(c *Catalog, l *Layout) error {
 	if l.V != LayoutVersion {
 		return invalidf("v must be %d", LayoutVersion)
+	}
+	if l.Style != "" && !styles[l.Style] {
+		return invalidf("unknown office style %q", clip(l.Style, 20))
 	}
 	if w := l.Walls; w != nil {
 		if w.Color != "" && !hexColor.MatchString(w.Color) || w.Trim != "" && !hexColor.MatchString(w.Trim) {

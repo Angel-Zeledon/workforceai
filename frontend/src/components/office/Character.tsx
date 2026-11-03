@@ -16,7 +16,8 @@ import { approvalsSpot, cafeSpot, meetingSeat, zoneFor } from "./officeState";
 import { getSignals } from "./officeSignals";
 import { BodyWear, Buddy, HeadWear, OutfitWear, suppressesAccessory, useOutfit, useWorn } from "./Worn";
 import { AISLE_Z, deskOf, feetPos, headPos, seatOf, standOf, visitorOf } from "./registry";
-import { effective, useOfficeLayout } from "@/lib/officeLayout";
+import { effective, getOfficeStyle, useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
+import { bodySquash, lookOf, stopMotionTick, stylePose } from "./officeTheme";
 
 const SEATED = new Set<AgentState>(["thinking", "working", "waiting", "reviewing", "blocked", "awaiting_approval"]);
 const ACTIVE_TASK = new Set(["pending", "running", "awaiting_approval"]);
@@ -90,6 +91,7 @@ function makeSim(id: string, seat: [number, number]) {
     leaveAt: 0, curDest: [0, 0] as [number, number], curFace: null as number | null,
     linkSrc: null as unknown, linkTs: 0, apprSrc: null as unknown, seenAppr: new Set<string>(),
     debTurn: "", // last debate turn this character reacted to (B5)
+    stopAcc: [0] as [number], // stop-motion clock of the bricks style
   };
 }
 
@@ -144,6 +146,11 @@ export function Character({ id, index }: { id: string; index: number }) {
   const pants = outfit.pants, shoe = "#6b4a36";
   const showShirt = outfit.style === "blazer" || outfit.style === "cardigan" || outfit.style === "vest" || outfit.style === "trench";
   const noseCol = useMemo(() => "#" + new THREE.Color(skin).multiplyScalar(0.9).getHexString(), [skin]);
+  // the office style: toy figures get a stud on top of the head (the rest of the restyle is ThemeLayer's)
+  const officeStyle = useOfficeStyle();
+  const brickHead = officeStyle === "bricks" && !worn?.hat;
+  // body proportions of the style: chubby clay figures, slimmer realistic people (all 1 in classic)
+  const bp = lookOf(officeStyle).body;
 
   useFrame((state, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
@@ -165,6 +172,9 @@ export function Character({ id, index }: { id: string; index: number }) {
     const now = Date.now();
     const st = ag.state;
     const reduce = usePreferences.getState().prefs.reduceMotion;
+    // how this office style moves (identity in "classic")
+    const mo = lookOf(getOfficeStyle()).motion;
+    const walkSpeed = WALK_SPEED * mo.speed;
 
     // Real assigned work: any non-terminal task of this agent in the store (task.created/started/... events).
     if (sm.taskSrc !== S.tasks) {
@@ -247,7 +257,7 @@ export function Character({ id, index }: { id: string; index: number }) {
       const d = Math.hypot(dx, dz);
       if (d < 0.05) { sm.pos.set(wp[0], wp[1]); sm.pts.shift(); }
       else {
-        speedTarget = sm.pts.length === 1 ? clamp(d * 2.6, 0.7, WALK_SPEED) : WALK_SPEED;
+        speedTarget = sm.pts.length === 1 ? clamp(d * 2.6, 0.7, walkSpeed) : walkSpeed;
         sm.speed += (speedTarget - sm.speed) * Math.min(1, dt * 7);
         if (sm.speed < 0.5) sm.speed = 0.5;
         const step = Math.min(d, sm.speed * dt);
@@ -322,7 +332,7 @@ export function Character({ id, index }: { id: string; index: number }) {
     if (!sm.gKind && !reduce && !walking && !far && sm.t >= sm.nextFid) {
       const k = pickFidget(mode, sm.rng());
       if (k) startGesture(sm, k, null, canTurn, reduce || walking);
-      sm.nextFid = sm.t + fidgetDelay(mode, sm.rng());
+      sm.nextFid = sm.t + fidgetDelay(mode, sm.rng()) / mo.fidget;
     }
     const gu = sm.gKind ? (sm.t - sm.gStart) / sm.gDur : 0;
 
@@ -334,7 +344,7 @@ export function Character({ id, index }: { id: string; index: number }) {
     else if (sm.t < sm.turnUntil) targetYaw = sm.turnYaw;
     else targetYaw = 0.35;
     const dyaw = wrap(targetYaw - sm.yaw);
-    sm.yaw += dyaw * Math.min(1, dt * (walking ? 9 : 5));
+    sm.yaw += dyaw * Math.min(1, dt * (walking ? 9 : 5) * mo.turn);
     sm.turn += (clamp(dyaw, -1, 1) - sm.turn) * Math.min(1, dt * 6); // lean into the turn
 
     // --- pose: base target + gesture layer, blended with easing ---
@@ -342,6 +352,7 @@ export function Character({ id, index }: { id: string; index: number }) {
     sm.blend = Math.min(1, sm.blend + dt / 0.45);
     const target = computePose(sm.target, mode, reduce ? 0 : sm.t, sm.phase, sm.rate, sm.stride, sm.speed / WALK_SPEED);
     if (walking) target.torsoZ += -sm.turn * 0.12;
+    stylePose(target, mo, walking, mode.startsWith("seat"), reduce ? 0 : sm.t, sm.phase, sm.stride, mode);
     if (sm.gKind) {
       const aim = sm.hasAim ? wrap(sm.aimWorld - sm.yaw) : (sm.gKind === "wave" ? (place === "seat" ? 0.6 : 0) : 0);
       applyGesture(target, sm.gKind, gu, sm.t, aim);
@@ -350,16 +361,18 @@ export function Character({ id, index }: { id: string; index: number }) {
     const c = sm.pose;
     for (const key of KEYS) c[key] += (target[key] - c[key]) * k;
 
-    // --- apply ---
-    root.current.position.set(sm.pos.x, 0, sm.pos.y);
-    root.current.rotation.y = sm.yaw;
-    pelvis.current.position.y = c.pelvisY;
-    torso.current.rotation.set(c.torsoX, c.torsoY, c.torsoZ);
-    head.current.rotation.set(c.headX, c.headY, c.headZ);
-    lSh.current.rotation.set(c.lShX, 0, c.lShZ); lEl.current.rotation.x = c.lElX;
-    rSh.current.rotation.set(c.rShX, 0, -c.rShZ); rEl.current.rotation.x = c.rElX;
-    lHip.current.rotation.x = c.lHipX; rHip.current.rotation.x = c.rHipX;
-    lKnee.current.rotation.x = c.lKneeX; rKnee.current.rotation.x = c.rKneeX;
+    // --- apply --- (the bricks style poses in stop-motion: the body only takes a new pose a few times per second)
+    if (reduce || stopMotionTick(sm.stopAcc, dt, mo.stopFps)) {
+      root.current.position.set(sm.pos.x, 0, sm.pos.y);
+      root.current.rotation.y = sm.yaw;
+      pelvis.current.position.y = c.pelvisY;
+      torso.current.rotation.set(c.torsoX, c.torsoY, c.torsoZ);
+      head.current.rotation.set(c.headX, c.headY, c.headZ);
+      lSh.current.rotation.set(c.lShX, 0, c.lShZ); lEl.current.rotation.x = c.lElX;
+      rSh.current.rotation.set(c.rShX, 0, -c.rShZ); rEl.current.rotation.x = c.rElX;
+      lHip.current.rotation.x = c.lHipX; rHip.current.rotation.x = c.rHipX;
+      lKnee.current.rotation.x = c.lKneeX; rKnee.current.rotation.x = c.rKneeX;
+    }
 
     // face details: blink (double-blinks sometimes), tired eyes when blocked, wider smile when done
     const talking = st === "talking" || (!reduce && sig.debate?.speaker === id && atZone === "meeting");
@@ -393,7 +406,10 @@ export function Character({ id, index }: { id: string; index: number }) {
     if (sm.prev !== st) { if (sm.prev) sm.pop = 1; sm.prev = st; }
     sm.pop = reduce ? 0 : Math.max(0, sm.pop - dt * 1.4);
     const sq = Math.sin((1 - sm.pop) * Math.PI * 3) * sm.pop * 0.09;
-    body.current.scale.set(BODY_SCALE * (1 - sq * 0.6), BODY_SCALE * (1 + sq), BODY_SCALE * (1 - sq * 0.6));
+    // style: clay / cartoon squash and stretch, the cartoon smear along the run, flat paper cut-outs (all 1 in classic)
+    const [qx, qy] = reduce ? [1, 1] : bodySquash(mo, walking, sm.t, sm.phase, sm.stride, mode);
+    const smear = walking && mo.smear && !reduce ? 1 + 0.14 * mo.smear * Math.min(1, sm.speed / walkSpeed) : 1;
+    body.current.scale.set(BODY_SCALE * (1 - sq * 0.6) * qx, BODY_SCALE * (1 + sq) * qy / Math.sqrt(smear), BODY_SCALE * (1 - sq * 0.6) * mo.depth * qx * smear);
     ringRef.current.visible = selected;
 
     // registry (head + feet world positions)
@@ -406,7 +422,7 @@ export function Character({ id, index }: { id: string; index: number }) {
   const f = meta.female;
   const dark = "#4a3626";
   return (
-    <group ref={root}>
+    <group ref={root} userData={{ noStuds: true, figure: true }}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
         <circleGeometry args={[0.5, 24]} />
         <meshBasicMaterial map={blobTexture()} transparent opacity={0.55} depthWrite={false} toneMapped={false} />
@@ -428,11 +444,11 @@ export function Character({ id, index }: { id: string; index: number }) {
 
       <group ref={body} scale={BODY_SCALE}>
       <group ref={pelvis}>
-        <mesh castShadow position={[0, -0.02, 0]} scale={[f ? 1.0 : 1.08, 1, 1]}><sphereGeometry args={[0.19, 16, 12]} /><meshStandardMaterial color={pants} roughness={0.85} /></mesh>
+        <mesh castShadow position={[0, -0.02, 0]} scale={[(f ? 1.0 : 1.08) * bp.torsoW, 1, bp.torsoW]}><sphereGeometry args={[0.19, 16, 12]} /><meshStandardMaterial color={pants} roughness={0.85} /></mesh>
 
         {/* piernas cortas y redondas */}
         {([[0.1, lHip, lKnee], [-0.1, rHip, rKnee]] as const).map(([x, hipRef, kneeRef], i) => (
-          <group key={i} ref={hipRef} position={[x, -0.02, 0]}>
+          <group key={i} ref={hipRef} position={[x * bp.torsoW, -0.02, 0]} scale={[bp.limb, 1, bp.limb]}>
             {/* round joints hide the seam between the stacked limb pieces: the leg reads as one soft limb */}
             <mesh position={[0, 0, 0]}><sphereGeometry args={[0.085, 12, 10]} /><meshStandardMaterial color={pants} roughness={0.85} /></mesh>
             <mesh castShadow position={[0, -0.1, 0]}><capsuleGeometry args={[0.085, 0.06, 4, 10]} /><meshStandardMaterial color={pants} roughness={0.85} /></mesh>
@@ -449,14 +465,14 @@ export function Character({ id, index }: { id: string; index: number }) {
 
         {/* torso */}
         <group ref={torso}>
-          <mesh castShadow position={[0, 0.16, 0]} scale={[f ? 1.0 : 1.08, 1, 0.9]}>
+          <mesh castShadow position={[0, 0.16 * bp.torsoH, 0]} scale={[(f ? 1.0 : 1.08) * bp.torsoW, bp.torsoH, 0.9 * bp.torsoW]}>
             <capsuleGeometry args={[0.2, 0.04, 6, 14]} />
             <meshStandardMaterial color={blazer} roughness={0.8} />
           </mesh>
           {showShirt && <mesh position={[0, 0.14, 0.165]} scale={[1, 1.25, 0.3]}><sphereGeometry args={[0.1, 12, 10]} /><meshStandardMaterial color={outfit.shirt} roughness={0.9} /></mesh>}
           <OutfitWear o={outfit} fallback={meta.color} />
           {/* neck: hides the gap between the head and the collar */}
-          <mesh position={[0, 0.33, 0]}><cylinderGeometry args={[0.05, 0.06, 0.07, 12]} /><meshStandardMaterial color={skin} roughness={0.8} /></mesh>
+          <mesh position={[0, 0.33 * bp.torsoH, 0]}><cylinderGeometry args={[0.05, 0.06, 0.07, 12]} /><meshStandardMaterial color={skin} roughness={0.8} /></mesh>
           {meta.tie && outfit.style === "blazer" && (
             <group position={[0, 0.3, 0.19]}>
               <mesh><sphereGeometry args={[0.03, 8, 8]} /><meshStandardMaterial color={blazer} /></mesh>
@@ -473,7 +489,7 @@ export function Character({ id, index }: { id: string; index: number }) {
 
           {/* brazos redondos */}
           {([[0.24, lSh, lEl], [-0.24, rSh, rEl]] as const).map(([x, shRef, elRef], i) => (
-            <group key={i} ref={shRef} position={[x, 0.28, 0]}>
+            <group key={i} ref={shRef} position={[x * bp.torsoW, 0.28 * bp.torsoH, 0]} scale={[bp.limb, 1, bp.limb]}>
               <mesh position={[0, 0, 0]}><sphereGeometry args={[0.072, 12, 10]} /><meshStandardMaterial color={sleeve} roughness={0.8} /></mesh>
               <mesh castShadow position={[0, -0.1, 0]}><capsuleGeometry args={[0.07, 0.1, 4, 10]} /><meshStandardMaterial color={sleeve} roughness={0.8} /></mesh>
               <group ref={elRef} position={[0, -0.2, 0]}>
@@ -506,8 +522,9 @@ export function Character({ id, index }: { id: string; index: number }) {
           ))}
 
           {/* cabeza grande */}
-          <group ref={head} position={[0, 0.32, 0]} scale={1.75}>
-            <mesh castShadow position={[0, 0.15, 0]}><sphereGeometry args={[0.165, 24, 18]} /><meshStandardMaterial color={skin} roughness={0.75} /></mesh>
+          <group ref={head} position={[0, 0.32 * bp.torsoH, 0]} scale={1.75 * bp.head}>
+            <mesh castShadow position={[0, 0.15, 0]} userData={{ brick: "cyl" }}><sphereGeometry args={[0.165, 24, 18]} /><meshStandardMaterial color={skin} roughness={0.75} /></mesh>
+            {brickHead && <mesh position={[0, meta.hairStyle === "bald" ? 0.297 : 0.345, 0]}><cylinderGeometry args={[0.065, 0.065, 0.045, 14]} /><meshStandardMaterial color={meta.hairStyle === "bald" ? skin : hair} roughness={0.3} /></mesh>}
             <group ref={eyes} position={[0, 0.17, 0]}>
               <mesh position={[0.058, 0, 0.145]} scale={[1, 1.35, 0.5]}><sphereGeometry args={[0.022, 10, 8]} /><meshBasicMaterial color={dark} /></mesh>
               <mesh position={[-0.058, 0, 0.145]} scale={[1, 1.35, 0.5]}><sphereGeometry args={[0.022, 10, 8]} /><meshBasicMaterial color={dark} /></mesh>

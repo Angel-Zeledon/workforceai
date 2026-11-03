@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import { call } from "./api";
 import { useRewards } from "./rewards";
-import { DEFAULT_LAYOUT, LEGACY_SLOTS, newUid, normalizeLayout, sameLayout, type FixtureId, type Layout, type Piece, type ZoneName } from "./officeLayoutModel";
+import { DEFAULT_LAYOUT, LEGACY_SLOTS, newUid, normalizeLayout, sameLayout, type FixtureId, type Layout, type OfficeStyle, type Piece, type ZoneName } from "./officeLayoutModel";
 
 export type EditorTab = "ambience" | "furniture" | "desks";
 export type Selection = { kind: "piece"; uid: string } | { kind: "desk"; id: string } | { kind: "zone"; id: ZoneName } | { kind: "fixture"; id: FixtureId } | null;
@@ -55,6 +55,12 @@ let lastCoalesce = { key: "", at: 0 };
 
 /** The layout the 3D office draws: the draft while editing, the saved one otherwise. */
 export const effective = (s: Pick<State, "draft" | "layout">): Layout => s.draft ?? s.layout;
+
+/** The office's visual style (the draft's while editing, so the picker previews live). */
+export const styleOf = (l: Layout): OfficeStyle => l.style ?? "classic";
+export const useOfficeStyle = (): OfficeStyle => useOfficeLayout((s) => styleOf(effective(s)));
+/** Same, read outside React (per-frame code). */
+export const getOfficeStyle = (): OfficeStyle => styleOf(effective(useOfficeLayout.getState()));
 
 /** Copies the items placed in the 12 legacy slots into free pieces at their fixed spots (the look does not change). */
 function seeded(l: Layout): Layout {
