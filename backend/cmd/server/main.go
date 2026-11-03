@@ -126,6 +126,11 @@ func run(log *slog.Logger) error {
 	trustObs := &trust.Observer{Inner: pub}
 	pub = trustObs
 
+	// Approval permissions: a newly hired agent gets the factory rules (and the organization's default level) before
+	// its first action. Bound once the service exists (permissions.go).
+	permObs := &application.PermissionsObserver{Inner: pub}
+	pub = permObs
+
 	// --- governance (BEGIN): public webhook events (request.done, approval.requested, report.created) ---
 	whSvc := &webhooks.Service{Log: log}
 	pub = webhooks.Publisher{Inner: pub, Svc: whSvc}
@@ -215,8 +220,10 @@ func run(log *slog.Logger) error {
 
 	// Approval rules and the policy engine (organization rules as data, applied
 	// to every tool request) and the tamper-evident audit trail.
+	var policySvc *application.PolicyService // also told the project / batch of a request (wirePermissions)
 	if cs, ok := store.(application.ConfigStore); ok {
-		orch.SetPolicy(&application.PolicyService{Store: cs, Cfg: cfg.App, Counters: counterStore(pg), Log: log})
+		policySvc = &application.PolicyService{Store: cs, Cfg: cfg.App, Counters: counterStore(pg), Log: log}
+		orch.SetPolicy(policySvc)
 	}
 	var auditSvc *application.AuditService
 	if as, ok := store.(application.AuditStore); ok {
@@ -240,6 +247,11 @@ func run(log *slog.Logger) error {
 		tracer = &application.Tracer{Store: vs, Log: log, Retention: traceRetention()}
 		orch.SetV2(vs, profiles, tracer)
 		go purgeTracesLoop(ctx, log, tracer, store)
+	}
+
+	// Needs your help: agents may ask a person mid-task; the task waits (needs_input) for the answer.
+	if qst, ok := store.(application.QuestionStore); ok {
+		orch.SetQuestions(&application.Questions{Store: qst, Rec: rec})
 	}
 
 	// Projects (whole workflows with parallel work) and agent workspaces (artifacts).
@@ -352,6 +364,7 @@ func run(log *slog.Logger) error {
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
 	deps.Slack = slackSvc
+	deps.AgentFolders = agentFolders(ws) // folder access per agent (folder_access.go)
 	deps.LinkImports = wireLinkImports(ctx, cfg, log, pg, rec, cw, ws.drive, custSvc, orgLister(store)) // import from a link (single line)
 	deps.VendorIntegrations = &cfg.VendorIntegrations // v1: vendor-specific integrations (VENDOR_INTEGRATIONS, default off)
 	// Client portal (B13): read-only share links of a project with the firm's branding.
@@ -364,6 +377,10 @@ func run(log *slog.Logger) error {
 	}
 	// GDPR export / deletion of the organization and the purge janitor (internal/tenantdata).
 	deps.OrgChart = orgChartSvc // corporate organization model
+	deps.Permissions = wirePermissions(cfg, log, store, rec, trustSvc, cw.ctl, orgChartSvc, permObs, policySvc, ws.projects) // approval permissions per agent
+	// E2 offices (offices.go): offices, agent owners and visibility; their notes reach the tasks.
+	deps.Offices = wireOffices(pg, store, authStore, orgChartSvc, rec, noteCleaner(memorySvc))
+	officeRecall(memorySvc, deps.Offices)
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	// Governance: API tokens, reports, retention job, webhooks (internal/governance, internal/webhooks).
 	wireGovernance(ctx, log, pg, store, rec, auditSvc, orch, cw.vault, whSvc, &deps)

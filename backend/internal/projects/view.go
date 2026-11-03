@@ -144,10 +144,14 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 					n.Attempt = a
 				}
 				n.Review = t.Output.Review
+				n.Files = t.Output.Files
 				n.Audit = application.TaskAuditOf(t) // B7: nil unless this is a finished audit task
 				if sk, _ := t.Output.Metrics["skipped"].(bool); sk {
 					n.Skipped = true
 					n.SkipReason, _ = t.Output.Metrics["skip_reason"].(string)
+				}
+				if om, _ := t.Output.Metrics["omitted"].(bool); om && n.State == StateBlocked {
+					n.Omitted, n.State = true, StateCancelled // left undone on purpose, not broken
 				}
 			}
 		}
@@ -158,6 +162,8 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 			n.Progress = 50
 		case StateAwaitingApproval:
 			n.Progress = 80
+		case StateNeedsInput:
+			n.Progress = 50
 		}
 		switch {
 		case n.State == StateBlocked && rec.Decisions[n.TaskID] == "rejected":
@@ -222,8 +228,8 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 	// summary
 	c := countStates(nodes)
 	sum := Summary{ID: rec.ID, Name: rec.Name, NameKey: rec.NameKey, Goal: rec.Goal, Status: rec.Status, Control: rec.Control, TemplateID: rec.TemplateID,
-		BudgetUSD: rec.BudgetUSD, TasksDone: c.done, TasksTotal: c.total, Running: c.running, Awaiting: c.awaiting, Failed: c.failed, Light: "green",
-		CreatedAt: rec.CreatedAt, StartedAt: rec.StartedAt, FinishedAt: rec.FinishedAt, DeadlineAt: rec.DeadlineAt, ObjectivesCnt: len(rec.Objectives), RequestID: rec.RequestID, BudgetWarnPct: warnedPct(rec.BudgetWarned), CustomerID: rec.CustomerID}
+		BudgetUSD: rec.BudgetUSD, TasksDone: c.done, TasksTotal: c.total, Running: c.running, Awaiting: c.awaiting, Failed: c.failed, NeedsInput: c.needsInput, Light: "green",
+		CreatedAt: rec.CreatedAt, StartedAt: rec.StartedAt, FinishedAt: rec.FinishedAt, DeadlineAt: rec.DeadlineAt, ObjectivesCnt: len(rec.Objectives), RequestID: rec.RequestID, BudgetWarnPct: warnedPct(rec.BudgetWarned), CustomerID: rec.CustomerID, BatchID: rec.BatchID}
 	if sum.Control == "" {
 		sum.Control = ControlActive
 	}
@@ -243,6 +249,9 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 		if sum.Status == StatusDone {
 			d.Project.Light = "green"
 		}
+		if sum.Status == StatusPartial {
+			d.Project.Light = "amber"
+		}
 	}
 	return d
 }
@@ -255,7 +264,7 @@ func nonNil[T any](v []T) []T {
 }
 
 func terminalStatus(st string) bool {
-	return st == StatusDone || st == StatusFailed || st == StatusCancelled
+	return st == StatusDone || st == StatusFailed || st == StatusCancelled || st == StatusPartial
 }
 
 func terminalState(st string) bool {
@@ -281,6 +290,8 @@ func rawState(launched bool, t domain.Task, tasks map[string]domain.Task, nodeID
 		return StateRunning
 	case domain.TaskAwaitingApproval:
 		return StateAwaitingApproval
+	case domain.TaskNeedsInput:
+		return StateNeedsInput
 	}
 	return StatePending
 }
@@ -339,9 +350,9 @@ func deriveStatus(rec Record, req *domain.Request, nodes []Node, approvals []App
 		return StatusDone
 	}
 	allTerminal := c.total > 0
-	active, ready := 0, 0
+	active, ready, broken := 0, 0, 0
 	for _, n := range nodes {
-		if n.Kind == KindGroup {
+		if n.Kind == KindGroup || n.Superseded != "" {
 			continue
 		}
 		if !terminalState(n.State) {
@@ -352,10 +363,18 @@ func deriveStatus(rec Record, req *domain.Request, nodes []Node, approvals []App
 			active++
 		case StateReady, "waiting":
 			ready++
+		case StateFailed, StateBlocked:
+			broken++
 		}
 	}
 	reqFailed := req != nil && req.Status == domain.RequestFailed
-	if allTerminal || (reqFailed && active == 0) {
+	if allTerminal && broken == 0 && !reqFailed { // only skipped/omitted steps are missing
+		if len(objectivesLost(nodes)) > 0 {
+			return StatusPartial
+		}
+		return StatusDone
+	}
+	if allTerminal || (reqFailed && active == 0 && c.needsInput == 0) {
 		return StatusFailed
 	}
 	if rec.Control == ControlPaused {
@@ -367,10 +386,53 @@ func deriveStatus(rec Record, req *domain.Request, nodes []Node, approvals []App
 			pending++
 		}
 	}
-	if (req != nil && req.Status == domain.RequestPaused) || (pending > 0 && active == 0 && ready == 0) {
+	if (req != nil && req.Status == domain.RequestPaused) || ((pending > 0 || c.needsInput > 0) && active == 0 && ready == 0) {
 		return StatusWaitingHuman
 	}
 	return StatusRunning
+}
+
+// objectivesLost returns the objectives whose final nodes (the ones no other node of the same objective depends on)
+// were all skipped or omitted: they ended without any result.
+func objectivesLost(nodes []Node) []string {
+	byObj := map[string][]Node{}
+	var order []string
+	for _, n := range nodes {
+		if n.Kind == KindGroup || n.Superseded != "" {
+			continue
+		}
+		if _, ok := byObj[n.ObjectiveID]; !ok {
+			order = append(order, n.ObjectiveID)
+		}
+		byObj[n.ObjectiveID] = append(byObj[n.ObjectiveID], n)
+	}
+	var lost []string
+	for _, ob := range order {
+		ns := byObj[ob]
+		in := map[string]bool{}
+		for _, n := range ns {
+			in[n.ID] = true
+		}
+		used := map[string]bool{}
+		for _, n := range ns {
+			for _, d := range n.DependsOn {
+				if in[d] {
+					used[d] = true
+				}
+			}
+		}
+		delivered := false
+		for _, n := range ns {
+			if !used[n.ID] && n.State == StateDone && !n.Skipped {
+				delivered = true
+				break
+			}
+		}
+		if !delivered {
+			lost = append(lost, ob)
+		}
+	}
+	return lost
 }
 
 func (s *Service) now() time.Time {

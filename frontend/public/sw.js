@@ -82,6 +82,20 @@ self.addEventListener("push", (event) => {
       });
       return;
     }
+    // Needs your help: only how many questions arrive (no text on the lock screen); the inbox shows them.
+    if (m.type === "help.notice") {
+      const n = Number.isInteger(m.count) && m.count > 1 ? m.count : 1;
+      const title = n > 1 ? String(l.help_many || l.help_one || "").replace("{count}", String(n)) : String(l.help_one || l.fallbackTitle || "");
+      await self.registration.showNotification(title, {
+        body: l.help_body || "",
+        tag: "help",
+        renotify: true,
+        icon: "/icon.svg",
+        badge: "/icon.svg",
+        data: { url: "/approvals/inbox" },
+      });
+      return;
+    }
     const risk = ["low", "medium", "high"].includes(m.risk) ? m.risk : "medium";
     const id = typeof m.approval_id === "string" ? m.approval_id : "";
     // Only title + risk + id arrive; details are read after signing in.

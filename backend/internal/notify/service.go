@@ -268,6 +268,34 @@ func (s *Service) NotifyCap(ctx context.Context, org string, u Usage) {
 	s.flush(ctx, org)
 }
 
+// NotifyHelp tells the configured channels that agents need a person (needs your help). count > 1 is a gathered
+// notice of several questions of one group; need is the first question.
+func (s *Service) NotifyHelp(ctx context.Context, org string, count int, need string) {
+	if s.Settings == nil {
+		return
+	}
+	st, err := s.Settings.GetSettings(ctx, org)
+	if err != nil {
+		return
+	}
+	m := Message{Locale: st.Locale, Open: s.appURL()}
+	if m.Open != "" {
+		m.Open += "/approvals/inbox"
+	}
+	if count > 1 {
+		m.NoticeSubject, m.Notice = fmt.Sprintf(tr(st.Locale, "helpSubjN"), count), fmt.Sprintf(tr(st.Locale, "helpBodyN"), count)
+	} else {
+		m.NoticeSubject, m.Notice = tr(st.Locale, "helpSubj"), fmt.Sprintf(tr(st.Locale, "helpBody"), Clip(oneLine(need), 300))
+	}
+	if st.EmailEnabled && s.Mail != nil {
+		for _, to := range st.EmailTo {
+			s.sendEmail(ctx, org, to, mailer.Message{Subject: m.Subject(), Text: m.PlainText(), HTML: m.HTMLBody()})
+		}
+	}
+	s.chat(ctx, org, st, m)
+	s.flush(ctx, org)
+}
+
 // SendTest posts a harmless test message to the configured channels and
 // returns what was attempted.
 func (s *Service) SendTest(ctx context.Context, org string) (map[string]string, error) {
@@ -414,6 +442,12 @@ func (o *Observer) Publish(ctx context.Context, e domain.Event) error {
 	case domain.EvApprovalRequest:
 		if ap, ok := approvalOf(e.Payload); ok {
 			go o.bg(ctx, svc, func(c context.Context) { svc.Notify(c, e.OrgID, ap) })
+		}
+	case domain.EvHelpNotice:
+		if p, ok := e.Payload.(map[string]any); ok {
+			count, _ := p["count"].(int)
+			need, _ := p["need"].(string)
+			go o.bg(ctx, svc, func(c context.Context) { svc.NotifyHelp(c, e.OrgID, max(count, 1), need) })
 		}
 	case domain.EvBudgetExceeded:
 		if p, ok := e.Payload.(map[string]any); ok && fmt.Sprint(p["scope"]) == string(domain.ScopeOrg) {

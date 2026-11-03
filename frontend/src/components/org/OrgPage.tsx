@@ -5,15 +5,17 @@ import { fmtDateTime, fmtUsd, useT } from "@/lib/i18n";
 import { orgChartApi, type Chart } from "@/lib/orgChartApi";
 import { flattenDepartments } from "@/lib/orgChartLogic";
 import { PageHeader } from "../nav/ui2";
+import { AgentDirectory } from "./AgentDirectory";
 import { AgentRoleEditor } from "./AgentRoleEditor";
 import { DelegationPanel } from "./DelegationPanel";
 import { DepartmentEditor } from "./DepartmentEditor";
+import { OfficesPanel } from "./OfficesPanel";
 import { OrgChartTree } from "./OrgChartTree";
 import { PersonEditor } from "./PersonEditor";
 import { allDepts, allMembers, btnPrimary } from "./shared";
 
-type Tab = "chart" | "departments" | "roles" | "delegation";
-const TABS: Tab[] = ["chart", "departments", "roles", "delegation"];
+type Tab = "chart" | "offices" | "directory" | "departments" | "roles" | "delegation";
+const TABS: Tab[] = ["chart", "offices", "directory", "departments", "roles", "delegation"];
 
 /** Organization page: org chart, department editor, agent job descriptions and delegation rules. */
 export function OrgPage() {
@@ -36,6 +38,7 @@ export function OrgPage() {
   const flat = flattenDepartments(depts.map((d) => ({ id: d.id, name: d.name, parent_id: d.parent_id })));
   const byId = new Map(depts.map((d) => [d.id, d]));
   const agents = allMembers(chart).filter((m) => m.kind === "agent");
+  const people = allMembers(chart).filter((m) => m.kind === "person").map((m) => ({ user_id: m.id, name: m.name }));
 
   return (
     <div className="flex h-full flex-col overflow-y-auto" data-testid="org-page">
@@ -97,6 +100,8 @@ export function OrgPage() {
           </ul>
         )}
         {chart && tab === "delegation" && <DelegationPanel chart={chart} />}
+        {chart && tab === "offices" && <OfficesPanel people={people} onChanged={load} />}
+        {chart && tab === "directory" && <AgentDirectory people={people} />}
       </div>
       {chart && dept !== undefined && <DepartmentEditor deptId={dept} chart={chart} onClose={() => setDept(undefined)} onSaved={saved} />}
       {chart && agent && <AgentRoleEditor agentId={agent} chart={chart} onClose={() => setAgent(null)} onSaved={saved} />}

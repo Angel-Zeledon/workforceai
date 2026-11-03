@@ -301,3 +301,76 @@ Además solo si: riesgo `low` o `medium` (ausente o `high` => no), un solo aprob
 **Dónde se comprueba.** (1) Al crear la aprobación (`Orchestrator.markStanding`): solo entonces se marca `standing_eligible` y la UI ofrece la casilla. (2) Al guardar el permiso (`StandingService.Grant`): el servidor relee la aprobación guardada y vuelve a clasificar; no confía en el cliente. (3) En cada uso (`Match`): vuelve a clasificar y comprueba que el proyecto sigue activo. El uso crea una aprobación ya resuelta por `standing:<id>` (`Approvals.RequestAuto`), de modo que el resto del flujo (re-validación de la política, ejecución una sola vez, ledger) es el mismo que con una persona, y queda en la auditoría (`approval.auto_approved`, `standing_approval.used`).
 
 **Fuera de alcance, a propósito.** No hay permisos "de la organización" ni por herramienta externa; las retenciones de correo (`hold`) y la doble aprobación siguen intactas. Revocar no deshace lo ya ejecutado.
+
+## 11. Permisos de aprobación por agente, por categoría y por proyecto o lote
+
+Diseño: `docs/superpowers/specs/2026-11-03-permisos-de-aprobacion-design.md`. API: `08-api.md` sec. 43. Código:
+`internal/policy/permissions.go` (clasificación y reglas), `internal/application/permissions.go` (quién cambia qué,
+"aprobar y no volver a preguntar"), `application/policyflow.go` (aplicación), `internal/trust/manual.go` (nivel elegido
+por una persona), `internal/api/permissions.go`, `cmd/server/permissions.go`. UI: sección "Permisos" en la pestaña
+Perfil del agente (`components/agent/PermissionsSection.tsx`), Ajustes → Aprobaciones (`settings/ApprovalSettings.tsx`),
+el motivo en cada tarjeta de aprobación (`approvals/ApprovalReason.tsx`) y "Aprobar y no volver a preguntar" en
+Pendientes (`approvals/RememberApproval.tsx`).
+
+**Sin segundo motor.** Los permisos se guardan en `org_settings.rules.permissions` (JSONB, sin migración) y
+`PolicyService` los traduce, para la llamada que decide, a *grants* `require_approval` y *limits* del mismo
+`policy.Engine` (§8: gana la más estricta). El nivel sigue siendo `agents.autonomy`; solo lo escribe `trust.Service`
+(`ChooseLevel` respeta el techo del rol y, al subir, el freno, el modo solo lectura y la pausa; reinicia la evidencia de
+la escalera).
+
+**Niveles en palabras.** `ask_all` = `approve_each` ("Me pregunta todo"); `important` = `rules` + reglas de fábrica
+("Solo lo importante": hace solo lo interno, pregunta lo demás); `alone` = `autonomous` ("Trabaja solo": solo el piso);
+`suggest` queda como opción avanzada.
+
+**Clasificación** (`policy.ActionKind`, decisión de quien construye): primero lo de solo lectura (`read`, `search`,
+`draft`, `analyze`... → interno, así un borrador de contrato es interno); luego `contracts` (contract, proposal, offer,
+sign), `payments` (pay, payment, transfer, refund, charge, invoice, financials), `delete` (delete, remove, purge,
+trash...), `publish` (publish, post, tweet; no en herramientas de mensajería), `messages` (send, reply, forward, email,
+message, notify, invite, share, o una herramienta de correo/chat), `spend` (cualquier acción con monto, o buy, purchase,
+order, book...); escribir en herramientas internas (`documents`, `spreadsheet`, `fs`, `drive`, `notes`, `memory`...) es
+interno; todo lo demás es `other` (en "Solo lo importante" pregunta).
+
+**Reglas** (`policy.PermissionRules`): piso (`payments`, `contracts`, `delete`) → `perm.floor:<cat>` salvo que el owner
+lo haya quitado para ese agente; excepción `ask` → `perm.ask:<cat>`, `never` → nada, `ask_if` → `perm.if_amount:<cat>`
+(condición de monto), `perm.if_new_recipient:<cat>` (destinatario nuevo, mismos contactos conocidos de §8.6) y el
+límite `perm.per_day:<cat>` (24 h, `on_exceed: require_approval`, contadores persistidos como los demás); sin excepción,
+en `rules` → `perm.important:<cat>`. En `approve_each`/`suggest` las excepciones no se aplican (el motor ya pregunta
+todo); quedan guardadas.
+
+**Empresas existentes no cambian.** Un agente sin entrada en `permissions.agents` decide exactamente como antes (test
+`TestAgentsWithoutPermissionsDecideExactlyAsBefore`). La entrada se crea al elegir un nivel en el panel o al contratar un
+agente nuevo (`PermissionsObserver` sobre `agent.created`: reglas de fábrica y, si la empresa eligió un nivel por
+defecto en Ajustes, ese nivel, nunca sobre el techo del rol; sin elegir, el nivel que trae la plantilla). Poner una
+excepción en un agente sin nivel elegido responde `409 choose_level_first`, para no activar las reglas de fábrica por
+sorpresa.
+
+**Piso levantado** (invariante 1 de §3: "regla explícita firmada"): solo para ese agente y esa categoría deja de pedir
+el piso y las listas "siempre aprobar" (`APPROVAL_ACTIONS` y `always_approve` de la empresa) para esa acción. Siguen: el
+riesgo `high` del runtime, el umbral de monto, `deny`, límites, doble aprobación, rol del aprobador, presupuesto, y lo
+que exija el Gateway (`always_approval` del correo).
+
+**Conexiones.** Si el veredicto de aprobación viene de estas reglas (`perm.*`), el Gateway también retiene la acción
+(se le pasa `approve_each`); antes un veredicto del motor no escalaba en el Gateway (§8.7) y eso no cambia para las
+demás reglas.
+
+**Quién cambia qué.** Niveles y excepciones: `admin`, `owner` o el responsable del equipo del agente (jefe de su
+departamento o de uno superior, o la persona a la que reporta en el organigrama). Quitar el piso: solo el `owner`, con
+`understood=true`. Volver a poner el piso: quien puede editar. Nivel por defecto: `org:manage`. Agentes y `system`
+nunca. Todo cambio y todo rechazo quedan en la auditoría.
+
+**Cada aprobación dice qué regla la pidió** (`policy_rule`, y para conexiones `context.flags`) y la tarjeta lo explica
+con el modo de evitarlo la próxima vez (`lib/permissionsLogic.ts: approvalReason`).
+
+**Aprobar y no volver a preguntar.** Solo si la aprobación la pidió una regla de los permisos del agente
+(`perm.important|ask|if_*`, `limit:perm.per_day`; nunca el piso, reglas de la empresa, riesgo alto ni el Gateway).
+Alcance: el agente (excepción `never` con `source=approval:<id>`), este proyecto (ese agente) o todo el lote (todos los
+agentes de sus proyectos). Los alcances de proyecto/lote (`permissions.scopes`) extienden §10 a categorías y lotes: valen
+mientras el proyecto siga activo y como mucho `ScopeDays` (30) días; el piso sigue preguntando; se ven y se revocan en la
+pestaña Aprobaciones del proyecto, en la vista del lote y en Ajustes → Aprobaciones. El proyecto y el lote se resuelven
+desde el contexto de la ejecución (`RequestIDFrom` → `projects.ScopeOfRequest`).
+
+**No verificado / pendiente.** Sin Postgres en esta entrega (no hay migración: todo vive en `org_settings.rules`);
+escrituras simultáneas de `/policy/rules` y de permisos sobre la misma fila pueden pisarse (la última gana). Con correo
+real (Gmail), "no volver a preguntar" para mensajes no evita la aprobación del Gateway (`always_approval`, retención de
+60 s): es un invariante de la conexión. No hay prueba automática del escalado en el Gateway para una escritura sin
+`always_approval`. No se revisó en el navegador.

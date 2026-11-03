@@ -21,6 +21,7 @@ import { MockInbox } from "./inbox-mock";
 import { mockQuality } from "./quality-mock";
 import { mockTrust } from "./trust-mock";
 import { MockRituals } from "./rituals-mock";
+import { MockPermissions } from "./permissions-mock";
 import { mockAway, mockAwayDismiss, overnightApproval } from "./away-mock";
 import { MockShield } from "./shield-mock";
 import { MockRehearsal } from "./rehearsal-mock";
@@ -66,7 +67,7 @@ const SEED_AGENTS: Omit<Agent, "state" | "activity" | "current_task_id" | "progr
   { id: "accounting", name: "Tomás Vidal", role: "accounting", title: "Contador", description: "Márgenes, costos, flujo de caja y presupuesto.", tools: ["ledger.read", "margin.calc"], permissions: ["read:finance"], autonomy: "rules", metrics: { tasks_completed: 0, tasks_pending: 0, avg_seconds: 0, cost_usd: 0 } },
   { id: "analyst", name: "Nadia Ortega", role: "analyst", title: "Analista", description: "Analítica de negocio, rentabilidad y escenarios.", tools: ["bi.query", "forecast.run"], permissions: ["read:analytics"], autonomy: "autonomous", metrics: { tasks_completed: 0, tasks_pending: 0, avg_seconds: 0, cost_usd: 0 } },
   { id: "operations", name: "Iván Duarte", role: "operations", title: "Operaciones", description: "Capacidad, entrega, proveedores y logística.", tools: ["capacity.read", "schedule.read"], permissions: ["read:ops"], autonomy: "rules", metrics: { tasks_completed: 0, tasks_pending: 0, avg_seconds: 0, cost_usd: 0 } },
-  { id: "assistant", name: "Sofía Lara", role: "assistant", title: "Secretaria / Asistente Ejecutivo", description: "Recibe solicitudes, coordina al equipo y consolida informes.", tools: ["planner", "report.build"], permissions: ["delegate", "read:all"], autonomy: "autonomous", metrics: { tasks_completed: 0, tasks_pending: 0, avg_seconds: 0, cost_usd: 0 } },
+  { id: "assistant", name: "Sofía Lara", role: "assistant", title: "Secretaria / Asistente Ejecutivo", description: "Recibe pedidos, coordina al equipo y consolida informes.", tools: ["planner", "report.build"], permissions: ["delegate", "read:all"], autonomy: "autonomous", metrics: { tasks_completed: 0, tasks_pending: 0, avg_seconds: 0, cost_usd: 0 } },
 ];
 
 const SEED_MEMORY: Record<string, MemoryItem[]> = {
@@ -124,7 +125,7 @@ export function buildPlan(text: string): TaskSpec[] {
   }
   const failing = /error|falla|fall[óo]/.test(t);
   return [
-    { key: "d1", agent: "analyst", title: "Investigar y estructurar la solicitud", desc: "Entender el pedido y definir qué datos hacen falta.", secs: 5, deps: [], activities: ["Estructurando el problema", "Reuniendo datos relevantes"], out: out({ summary: "Solicitud estructurada en 3 líneas de análisis.", findings: ["Se requiere validación operativa"], confidence: 0.75 }) },
+    { key: "d1", agent: "analyst", title: "Investigar y estructurar el pedido", desc: "Entender el pedido y definir qué datos hacen falta.", secs: 5, deps: [], activities: ["Estructurando el problema", "Reuniendo datos relevantes"], out: out({ summary: "Pedido estructurado en 3 líneas de análisis.", findings: ["Se requiere validación operativa"], confidence: 0.75 }) },
     { key: "d2", agent: "operations", title: "Evaluar viabilidad operativa", desc: "Impacto operativo y recursos.", secs: 5, deps: ["d1"], fail: failing ? "El sistema de capacidad no respondió (timeout 30s)" : undefined, activities: ["Revisando carga actual", "Evaluando recursos"], out: out({ summary: "Operativamente viable con ajustes menores.", confidence: 0.8 }) },
     { key: "d3", agent: "assistant", title: "Consolidar informe", desc: "Unir resultados.", secs: 4, deps: ["d2"], activities: ["Reuniendo resultados", "Redactando resumen"], out: out({ summary: "Informe consolidado.", confidence: 0.85 }) },
   ];
@@ -181,6 +182,7 @@ export class MockBackend {
   private orgCfg = new MockOrgConfig(); // workflow templates, onboarding, org settings and schedules
   private orgChart = new MockOrgChart(() => this.agents); // >>> org <<< departments, org chart, job descriptions, delegation, industries
   private customers = new MockCustomers(() => this.agents, () => this.requests); // B12: customer district (buildings, clones, scoped requests)
+  private perms = new MockPermissions(); // approval permissions per agent
   private art = new MockArtifacts((t, p, a) => this.emit(t, p, a), (ms) => this.wait(ms)); // workspaces: artifact.* endpoints/events
   private chat = new MockChat({
     emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agent: (id) => this.agents.find((a) => a.id === id), agents: () => this.agents,
@@ -342,8 +344,8 @@ export class MockBackend {
     if (rehearsal) this.rehearsal.markRequest(req.id); // B9: nothing this request would send is sent
     this.emit("request.received", { request_id: req.id, text, ...(rehearsal ? { rehearsal: true } : {}) });
     this.art.onRequest(text);
-    this.log("assistant", "request.received", `Nueva solicitud: ${text}`);
-    const conv: Conversation = { id: uid("conv"), title: `Solicitud: ${text.slice(0, 48)}`, participants: ["assistant"], request_id: req.id, last_message_at: nowIso() };
+    this.log("assistant", "request.received", `Nuevo pedido: ${text}`);
+    const conv: Conversation = { id: uid("conv"), title: text.slice(0, 80), participants: ["assistant"], request_id: req.id, last_message_at: nowIso() };
     this.conversations.unshift(conv);
     this.messages[conv.id] = [];
     this.sendMessage(conv, "user", "assistant", "chat", text);
@@ -386,7 +388,7 @@ export class MockBackend {
   }
 
   private async orchestrate(req: Request, conv: Conversation) {
-    this.setState("assistant", "thinking", "Analizando la solicitud", null, 15);
+    this.setState("assistant", "thinking", "Analizando el pedido", null, 15);
     await this.wait(900);
     this.setState("assistant", "thinking", "Planificando tareas y dependencias", null, 60);
     // demo: a planning meeting (project draft planned phase by phase while the team meets in the meeting room)
@@ -461,7 +463,7 @@ export class MockBackend {
     const all = tasks.map((t) => this.tasks.find((x) => x.id === t.id)!);
     if (all.every((t) => t.status === "done")) await this.finishRequest(req, all);
     else {
-      this.log("assistant", "request.failed", "La solicitud no pudo completarse: hay tareas bloqueadas o fallidas");
+      this.log("assistant", "request.failed", "El pedido no pudo completarse: hay tareas bloqueadas o fallidas");
       this.setState("assistant", "idle", "Disponible", null, 0);
     }
     this.pushMetrics();
@@ -489,7 +491,7 @@ export class MockBackend {
     this.emit("report.created", { report }, "assistant");
     req.report_id = report.id; req.status = "done"; req.cost_usd = cost;
     this.emit("request.completed", { request_id: req.id, report_id: report.id }, "assistant");
-    this.log("assistant", "request.completed", `Solicitud completada. Informe: ${report.title}`);
+    this.log("assistant", "request.completed", `Pedido completado. Informe: ${report.title}`);
     this.chat.note("assistant", "user", "chat", tr("mock.task.done", { title: report.title }));
     this.setState("assistant", "completed", "Informe entregado", null, 100);
     await this.wait(2500);
@@ -646,6 +648,10 @@ export class MockBackend {
     }
     if (this.cmds.matches(seg)) return this.cmds.handle(method, seg, q, body);
     if (this.rituals.matches(seg)) return this.rituals.handle(method, seg, body, q);
+    if (this.perms.matches(seg)) return this.perms.handle(method, seg, body, this.agents, (id, lvl) => {
+      const ag = this.agents.find((x) => x.id === id);
+      if (ag && ag.autonomy !== lvl) { const from = ag.autonomy; ag.autonomy = lvl; this.emit("agent.autonomy_changed", { agent_id: id, from, to: lvl, source: "permissions.manual" }, id); }
+    });
     if (this.roi.matches(seg)) return this.roi.handle(method, seg, q, body);
     if (this.inbox.matches(method, seg)) return this.inbox.handle(method, seg, body, () => this.projectsBatch(body));
     if (this.debates.matches(seg)) return this.debates.handle(method, seg, q, body);

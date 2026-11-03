@@ -267,7 +267,7 @@ Regla: **cada pantalla nueva aparece cuando hace falta, no antes.**
 |---|---|---|
 | E0 | Saber quién es quién | **En construcción** (2026-11-02) |
 | E1 | Alta "¿para quién es?", profesión, agentes por rol, invitaciones con oficina | **Implementada** (2026-11-03, `equipos-oficinas.md` §11) |
-| E2 | Oficinas, agentes con dueño, directorio, memoria de oficina y personal | + promover conocimiento (§2.9) |
+| E2 | Oficinas, agentes con dueño, directorio, memoria de oficina y personal | + promover conocimiento (§2.9). **Implementada** (2026-11-03, `equipos-oficinas.md` §11) |
 | E3 | Motor de permisos (§3), compartir, pedir acceso, derivados, auditoría | Diseñar junto con las fuentes de `archivos-agentes.md` fase 4 |
 | E4 | Encargos, mi bandeja, tocar la puerta, consultas entre oficinas, pedir revisión, menciones | Los encargos son la base de E5 |
 | E5 | Circuitos entre oficinas, ausencias y suplentes, salidas, invitados externos, tablero de la oficina, avisos por niveles | |

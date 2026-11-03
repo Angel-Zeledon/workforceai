@@ -78,6 +78,9 @@ const (
 	TaskAwaitingApproval TaskStatus = "awaiting_approval"
 	TaskDone             TaskStatus = "done"
 	TaskFailed           TaskStatus = "failed"
+	// TaskNeedsInput ("Necesita tu ayuda"): the agent asked a person something it cannot get or decide alone and the
+	// task waits for the answer without calling the model (docs/architecture/approvals-inbox.md, questions).
+	TaskNeedsInput TaskStatus = "needs_input"
 )
 
 type StructuredOutput struct {
@@ -100,6 +103,9 @@ type StructuredOutput struct {
 	// ref against what the task really saw and fills kind, status and source
 	// (docs/architecture/evidence-chain.md). Omitted when there are none.
 	Citations []Citation `json:"citations,omitempty"`
+	// Files are the drive paths the task wrote or moved (set by the backend when the task ends, never by the
+	// runtime), so its project node can show what it produced. Omitted when it wrote nothing.
+	Files []string `json:"files,omitempty"`
 }
 
 // Citation statuses (B6). Only the backend sets them: whatever the runtime
@@ -432,6 +438,15 @@ const (
 	EvApprovalProgress = "approval.progress"
 	// EvApprovalReminder: a project approval is still pending (it never expires).
 	EvApprovalReminder = "approval.reminder"
+	// Needs your help (additive): a task asked a person (question.asked, payload {question, task}), the question was
+	// answered or closed (question.resolved), a still open question reminds (question.reminder) and the coalesced
+	// notice for people (help.notice, payload {asked_for, group, count, question_ids, reminder}): push and the
+	// notification channels listen to help.notice only, so a burst of questions is one notice.
+	EvTaskNeedsInput   = "task.needs_input"
+	EvQuestionAsked    = "question.asked"
+	EvQuestionResolved = "question.resolved"
+	EvQuestionReminder = "question.reminder"
+	EvHelpNotice       = "help.notice"
 	// EvTaskRetrying: a task failed transiently and starts another attempt, or a
 	// human re-queued it (payload.manual).
 	EvTaskRetrying = "task.retrying"

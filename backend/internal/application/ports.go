@@ -365,6 +365,10 @@ type RunTaskRequest struct {
 	// HumanGuidance (V2, additive): notes a human sent to steer this task, oldest
 	// first. Extra guidance for the model, never authority.
 	HumanGuidance []string `json:"human_guidance,omitempty"`
+	// Needs your help (additive): the agent may ask a person (HelpRequest of the response) and gets back the
+	// answers already given to this task. Old runtimes ignore both.
+	HelpAllowed bool         `json:"help_allowed,omitempty"`
+	HelpAnswers []HelpAnswer `json:"help_answers,omitempty"`
 	// WantTrace (V2, additive): ask the runtime to return the redacted prompt it
 	// built, for the thought audit. Only set when the organization stores prompts.
 	WantTrace bool `json:"want_trace,omitempty"`
@@ -420,6 +424,23 @@ type RunTaskResponse struct {
 	Trace *RunTrace `json:"trace,omitempty"`
 	// Notices (vision, additive): stable codes about images (vision_unavailable, images_dropped).
 	Notices []string `json:"notices,omitempty"`
+	// HelpRequest (additive): the agent cannot go on without a person; the task waits for the answer.
+	HelpRequest *HelpRequest `json:"help_request,omitempty"`
+}
+
+// HelpRequest is what the agent asks a person ("Necesita tu ayuda").
+type HelpRequest struct {
+	Kind         string   `json:"kind"`
+	WhatHappened string   `json:"what_happened"`
+	Need         string   `json:"need"`
+	Options      []string `json:"options"`
+}
+
+// HelpAnswer is a person's answer to an earlier question of the same task, sent back to the runtime.
+type HelpAnswer struct {
+	Question string `json:"question"`
+	Answer   string `json:"answer"`
+	By       string `json:"by,omitempty"`
 }
 
 // RunTrace is the prompt of a run-task call as the runtime builds it.

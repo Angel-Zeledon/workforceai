@@ -342,7 +342,7 @@ func TestAssignmentRoleDefaultsAndBounds(t *testing.T) {
 		}
 		names = append(names, a.Name)
 	}
-	if strings.Join(names, ",") != "accounts-payable-run,accounts-receivable-aging,bank-reconciliation,fixed-asset-register,month-end-close,variance-analysis" {
+	if strings.Join(names, ",") != "accounts-payable-run,accounts-receivable-aging,bank-reconciliation,fixed-asset-register,income-statement-from-invoices,month-end-close,variance-analysis" {
 		t.Fatalf("accounting defaults: %v", names)
 	}
 	// a direct assignment adds, unassign removes it; unknown agents are refused

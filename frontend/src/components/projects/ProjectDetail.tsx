@@ -6,6 +6,7 @@ import { Btn, Progress } from "../ui";
 import { AgentLanes } from "./AgentLanes";
 import { ApprovalsBatch } from "./ApprovalsBatch";
 import { StandingApprovals } from "./StandingApprovals";
+import { ScopeGrants } from "../approvals/ScopeGrants";
 import { CostsView } from "./CostsView";
 import { DelegationTree } from "./DelegationTree";
 import { DraftEditor } from "./DraftEditor";
@@ -19,6 +20,7 @@ import { useCan } from "@/lib/session";
 import { ProjectMap } from "./ProjectMap";
 import { Timeline } from "./Timeline";
 import { LightDot, STATUS_COLOR, StatusPill } from "./shared";
+import { FollowView } from "./FollowView";
 
 export function ProjectDetailView() {
   const { t } = useT();
@@ -87,13 +89,14 @@ export function ProjectDetailView() {
               ))}
             </div>
             <div data-testid="pv-hint" className="text-[11px] text-mute">{t("pv.hint")}</div>
+            {tab === "follow" && <FollowView />}
             {tab === "health" && <HealthView />}
             {tab === "map" && <ProjectMap />}
             {tab === "timeline" && <Timeline />}
             {tab === "kanban" && <KanbanBoard />}
             {tab === "lanes" && <AgentLanes />}
             {tab === "delegation" && <DelegationTree />}
-            {tab === "approvals" && <><ApprovalsBatch /><StandingApprovals projectId={detail.project.id} /></>}
+            {tab === "approvals" && <><ApprovalsBatch /><StandingApprovals projectId={detail.project.id} /><ScopeGrants projectId={detail.project.id} /></>}
             {tab === "changes" && <PlanChangesPanel />}
             {tab === "costs" && <CostsView />}
           </>

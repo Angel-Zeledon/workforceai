@@ -75,6 +75,15 @@ func TestPushGoesToThePersonItIsFor(t *testing.T) {
 	if got := sentTo(1); !slices.Equal(got, []string{"asker"}) {
 		t.Fatalf("failure pushed to %v", got)
 	}
+	// needs your help: to the person asked; nobody asked -> the owners and admins
+	_ = n.Publish(ctx, domain.Event{Type: domain.EvHelpNotice, OrgID: "o", Payload: map[string]any{"asked_for": "member", "count": 3}})
+	if got := sentTo(1); !slices.Equal(got, []string{"member"}) {
+		t.Fatalf("help pushed to %v", got)
+	}
+	_ = n.Publish(ctx, domain.Event{Type: domain.EvHelpNotice, OrgID: "o", Payload: map[string]any{"asked_for": "", "count": 1}})
+	if got := sentTo(3); !slices.Equal(got, []string{"admin", "asker", "owner"}) {
+		t.Fatalf("unowned help pushed to %v", got)
+	}
 	// nobody asked (scheduled work): no push at all
 	_ = n.Publish(ctx, domain.Event{Type: domain.EvRequestCompleted, OrgID: "o", Payload: map[string]any{"request_id": "r3"}})
 	time.Sleep(200 * time.Millisecond)

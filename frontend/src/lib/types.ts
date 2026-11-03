@@ -17,7 +17,7 @@ export interface StructuredOutput {
   /** B6 evidence chain: figures and their sources, checked by the backend (optional, additive) */
   citations?: import("./evidenceLogic").Citation[];
 }
-export type TaskStatus = "pending" | "running" | "blocked" | "awaiting_approval" | "done" | "failed";
+export type TaskStatus = "pending" | "running" | "blocked" | "awaiting_approval" | "needs_input" | "done" | "failed";
 export interface Task {
   id: string; request_id: string; workflow_id: string | null; title: string; description: string;
   agent_id: string; status: TaskStatus; depends_on: string[]; parent_task_id: string | null;
@@ -40,6 +40,8 @@ export interface Approval {
   decisions?: { by: string; role?: string; note?: string; ts: string }[];
   /** Standing approvals: set by the server only for internal, reversible actions of a project. */
   tool?: string; project_id?: string; standing_eligible?: boolean;
+  /** The rule that asked for it (policy engine rule id) and, for connection-backed actions, the gateway context (flags). */
+  policy_rule?: string; context?: { flags?: unknown; [k: string]: unknown };
 }
 
 /** Devil's advocate (B8): the advisory review of a high-risk approval. Never a decision. */

@@ -188,8 +188,10 @@ export function AttachmentTray({ items, onRemove, onRetry }: { items: Att[]; onR
 // ------------------------------------------------------------------ the drive picker
 
 /** Browse the drive's folders: pick files to attach, or pick the folder new attachments are saved in. */
-export function DrivePicker({ mode, start = "/Shared", onClose, onFiles, onFolder }: {
+export function DrivePicker({ mode, start = "/Shared", onClose, onFiles, onFolder, title, confirmLabel }: {
   mode: "files" | "folder"; start?: string; onClose: () => void; onFiles?: (f: DriveFile[]) => void; onFolder?: (path: string) => void;
+  /** Optional texts for other uses of the folder picker (e.g. giving an agent access to a folder). */
+  title?: string; confirmLabel?: string;
 }) {
   const { t } = useT();
   const [path, setPath] = useState(start);
@@ -222,11 +224,11 @@ export function DrivePicker({ mode, start = "/Shared", onClose, onFiles, onFolde
   if (typeof document === "undefined") return null;
   // rendered on <body>: inside the composer a blurred / transformed ancestor would pin it to the composer's box
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label={mode === "files" ? t("att.pick.titleFiles") : t("att.pick.titleFolder")} data-testid="drive-picker"
+    <div role="dialog" aria-modal="true" aria-label={title ?? (mode === "files" ? t("att.pick.titleFiles") : t("att.pick.titleFolder"))} data-testid="drive-picker"
       className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="flex max-h-[80dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-pop">
         <header className="flex items-center justify-between border-b border-line px-4 py-3">
-          <h2 className="text-[14px] font-semibold text-ink">{mode === "files" ? t("att.pick.titleFiles") : t("att.pick.titleFolder")}</h2>
+          <h2 className="text-[14px] font-semibold text-ink">{title ?? (mode === "files" ? t("att.pick.titleFiles") : t("att.pick.titleFolder"))}</h2>
           <button type="button" onClick={onClose} aria-label={t("att.close")} className="rounded-md p-1 text-mute hover:bg-panel2 hover:text-ink"><Icon name="x" size={16} /></button>
         </header>
         <nav aria-label={t("att.pick.path")} className="flex flex-wrap items-center gap-1 border-b border-line bg-panel2/50 px-4 py-2 text-[12px]">
@@ -243,7 +245,7 @@ export function DrivePicker({ mode, start = "/Shared", onClose, onFiles, onFolde
           {listing && (
             <ul className="space-y-0.5">
               {listing.folders.map((f) => (
-                <li key={f.id}>
+                <li key={f.id || f.path}>
                   <button type="button" data-testid={`pick-folder-${f.name}`} onClick={() => setPath(f.path)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-ink hover:bg-panel2">
                     <Icon name="folder" size={15} className="text-accent" /><span className="truncate">{f.name}</span><Icon name="chevron" size={13} className="ml-auto text-mute" />
                   </button>
@@ -274,7 +276,7 @@ export function DrivePicker({ mode, start = "/Shared", onClose, onFiles, onFolde
             <Btn onClick={onClose}>{t("att.close")}</Btn>
             {mode === "files"
               ? <Btn kind="primary" disabled={!sel.size} onClick={() => { onFiles?.([...sel.values()]); onClose(); }} data-testid="pick-attach">{t("att.pick.attach")}</Btn>
-              : <Btn kind="primary" disabled={path === "/"} onClick={() => { onFolder?.(path); onClose(); }} data-testid="pick-here">{t("att.pick.here")}</Btn>}
+              : <Btn kind="primary" disabled={path === "/"} onClick={() => { onFolder?.(path); onClose(); }} data-testid="pick-here">{confirmLabel ?? t("att.pick.here")}</Btn>}
           </div>
         </footer>
       </div>

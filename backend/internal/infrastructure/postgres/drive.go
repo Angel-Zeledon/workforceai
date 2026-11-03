@@ -299,13 +299,12 @@ func (d *DriveStore) searchTerms(ctx context.Context, org string, q drive.Search
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
-	const sql = `WITH qq AS (SELECT to_tsquery('spanish'::regconfig, $2) AS q)
+	sql := `WITH qq AS (SELECT to_tsquery('spanish'::regconfig, $2) AS q)
 		SELECT f.id, fo.path || '/' || f.name, f.name, f.mime, f.current_version, f.size_bytes, f.updated_by,
 		       ts_rank_cd(f.search_mem, qq.q, 32)::float8 AS score, left(f.search_text, 6000)
 		FROM drive_files f JOIN drive_folders fo ON fo.org_id=f.org_id AND fo.id=f.folder_id, qq
 		WHERE f.org_id=$1 AND f.deleted_at IS NULL AND fo.deleted_at IS NULL AND f.search_mem @@ qq.q
-		  AND (cardinality($3::text[]) = 0 OR EXISTS (SELECT 1 FROM unnest($3::text[]) u(p)
-		        WHERE lower(fo.path) = lower(u.p) OR left(lower(fo.path), length(u.p)+1) = lower(u.p) || '/'))
+		  AND (cardinality($3::text[]) = 0 OR `+scopeMatch("$3", false)+`)
 		ORDER BY score DESC, fo.path, f.name LIMIT $4`
 	return many(ctx, d.S, org, func(r scanner) (drive.Hit, error) {
 		var h drive.Hit
@@ -339,8 +338,7 @@ func (d *DriveStore) Search(ctx context.Context, org string, q drive.SearchQuery
 		FROM drive_files f JOIN drive_folders fo ON fo.org_id=f.org_id AND fo.id=f.folder_id, qq
 		WHERE f.org_id=$1 AND f.deleted_at IS NULL AND fo.deleted_at IS NULL
 		  AND (` + vec + ` @@ qq.q OR lower(f.name) LIKE '%' || lower($5) || '%')
-		  AND (cardinality($3::text[]) = 0 OR EXISTS (SELECT 1 FROM unnest($3::text[]) u(p)
-		        WHERE lower(fo.path) = lower(u.p) OR left(lower(fo.path), length(u.p)+1) = lower(u.p) || '/'))
+		  AND (cardinality($3::text[]) = 0 OR `+scopeMatch("$3", false)+`)
 		ORDER BY score DESC, fo.path, f.name LIMIT $4`
 	likeEsc := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(q.Query)
 	// An explicit but empty scope means "nothing readable": return no rows.
@@ -383,4 +381,34 @@ func (d *DriveStore) RevokeGrant(ctx context.Context, org, id string, at time.Ti
 		return domain.ErrNotFound
 	}
 	return nil
+}
+
+// RecentFiles: live files touched in the window (fs.recent), newest first, within the scope ("!" exclusions honoured).
+func (d *DriveStore) RecentFiles(ctx context.Context, org string, q drive.RecentQuery) ([]drive.File, error) {
+	if q.Under != nil && len(q.Under) == 0 {
+		return []drive.File{}, nil
+	}
+	under, scoped := scopeArgs(q.Under)
+	limit := q.Limit
+	if limit <= 0 || limit > 500 {
+		limit = 500
+	}
+	byKind, byID := "", ""
+	if q.By != nil {
+		byKind, byID = q.By.Kind, q.By.ID
+	}
+	pats := make([]string, 0, len(q.Exts))
+	for _, e := range q.Exts {
+		pats = append(pats, "%."+strings.NewReplacer(`\`, `\`, `%`, `\%`, `_`, `\_`).Replace(strings.ToLower(e)))
+	}
+	cols := strings.Replace(fileCols, "f.search_text", "''::text", 1)
+	return many(ctx, d.S, org, scanFile, `SELECT `+cols+fileFrom+`
+		WHERE f.org_id=$1 AND f.deleted_at IS NULL AND fo.deleted_at IS NULL
+		  AND (CASE WHEN $3 = '' THEN f.updated_at >= $2
+		            ELSE (f.updated_by->>'kind' = $3 AND f.updated_by->>'id' = $4 AND f.updated_at >= $2)
+		              OR (f.created_by->>'kind' = $3 AND f.created_by->>'id' = $4 AND f.created_at >= $2) END)
+		  AND (cardinality($5::text[]) = 0 OR lower(f.name) LIKE ANY ($5::text[]))
+		  AND `+scopeSQL("$6", "$7")+`
+		ORDER BY f.updated_at DESC, fo.path, f.name LIMIT $8`,
+		org, q.Since, byKind, byID, pats, under, scoped, limit)
 }

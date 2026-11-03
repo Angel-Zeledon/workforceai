@@ -132,7 +132,8 @@ type SteerResult struct {
 }
 
 func steerable(st domain.TaskStatus) bool {
-	return st == domain.TaskPending || st == domain.TaskRunning || st == domain.TaskBlocked || st == domain.TaskAwaitingApproval
+	return st == domain.TaskPending || st == domain.TaskRunning || st == domain.TaskBlocked || st == domain.TaskAwaitingApproval ||
+		st == domain.TaskNeedsInput
 }
 
 // Steer stores a human note for a task and, when asked, restarts its in-flight

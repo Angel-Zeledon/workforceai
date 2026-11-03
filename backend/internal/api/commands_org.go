@@ -226,7 +226,7 @@ func (s *server) suggestCommands(w http.ResponseWriter, r *http.Request) {
 	if s.has(r, auth.PermApprovalsRead) {
 		if ap, err := s.Store.ListApprovals(ctx, s.org(r), string(domain.ApprovalPending)); err == nil && len(ap) > 0 {
 			out = append(out, suggestion{"pending", commands.L{
-				ES: fmt.Sprintf("Hay %d aprobaciones esperando.", len(ap)), EN: fmt.Sprintf("%d approvals are waiting.", len(ap))}, "info"})
+				ES: plural(len(ap), "Hay 1 aprobación esperando.", "Hay %d aprobaciones esperando."), EN: plural(len(ap), "1 approval is waiting.", "%d approvals are waiting.")}, "info"})
 		}
 	}
 	_ = surface
@@ -246,4 +246,13 @@ func sevRank(s string) int {
 		return 2
 	}
 	return 1
+}
+
+// plural picks the singular text for exactly one and formats the plural one (with %d) otherwise:
+// "Hay 1 aprobación esperando." instead of "Hay 1 aprobaciones esperando.".
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return fmt.Sprintf(many, n)
 }

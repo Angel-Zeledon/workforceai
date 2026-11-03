@@ -535,6 +535,8 @@ func (o *Orchestrator) resume(ctx context.Context, rs *run, tasks []domain.Task)
 			return OutcomeBlocked
 		case domain.TaskAwaitingApproval:
 			return o.resumeTask(c, rs, t)
+		case domain.TaskNeedsInput:
+			return o.runTask(c, rs, t) // waits again for its open question (helpGate), never asks twice
 		}
 		t.Status, t.Output = domain.TaskPending, nil // interrupted mid-call: run it again
 		return o.runTask(c, rs, t)

@@ -101,6 +101,9 @@ type PackRules struct {
 	ApprovalAmountUSD float64            `json:"approval_amount_usd"`
 	AlwaysApprove     []string           `json:"always_approve"`
 	Governance        *policy.Governance `json:"governance,omitempty"`
+	// Permissions are the approval permissions per agent (levels in plain words, exceptions, safety floor). Set
+	// from the agent panel and Settings; packs never seed them.
+	Permissions *policy.Permissions `json:"permissions,omitempty"`
 }
 
 // PackBriefing is the suggested daily briefing time of a pack.

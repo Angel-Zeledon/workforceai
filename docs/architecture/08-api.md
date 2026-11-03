@@ -691,7 +691,34 @@ Código: `backend/internal/projects/templates_data.go` (expansión y validación
 
 ### 16.2 Estados
 
-`project.status`: `draft`, `running`, `paused`, `waiting_human` (esperando una aprobación o ampliación de presupuesto), `done`, `failed`, `cancelled`; `control`: `active|paused|cancelled`. Nodo: `draft`, `pending`, `ready`, `running`, `awaiting_approval`, `waiting` (temporizador), `paused` (proyecto o agente en pausa / kill-switch), `blocked`, `done`, `failed`, `cancelled`. Todo se deriva de las tareas del orquestador al leer.
+`project.status`: `draft`, `running`, `paused`, `waiting_human` (esperando una aprobación, una ampliación de presupuesto o la respuesta a una pregunta de un agente), `done`, `partial` ("terminado en parte": una persona omitió un paso y algún objetivo quedó sin resultado; los demás sí se entregaron), `failed`, `cancelled`; `control`: `active|paused|cancelled`. Nodo: `draft`, `pending`, `ready`, `running`, `awaiting_approval`, `needs_input` ("Necesita tu ayuda": el agente preguntó a una persona y espera), `waiting` (temporizador), `paused` (proyecto o agente en pausa / kill-switch), `blocked`, `done`, `failed`, `cancelled` (también los pasos que no se hicieron porque dependían de un paso omitido: `omitted: true`). `ProjectSummary.needs_input` cuenta los nodos que esperan respuesta. `Node.files` (aditivo) son las rutas del drive que escribió la tarea del nodo (las guarda el backend al terminar la tarea en `output.files`, máx. 20). Todo se deriva de las tareas del orquestador al leer.
+
+### 16.10 Lotes: una plantilla para varios clientes
+
+Un **lote** lanza una plantilla para muchos clientes: cada cliente recibe su propio proyecto normal (`customer_id`, su carpeta y su aislamiento; `ProjectSummary.batch_id`), así uno trabado o fallido no frena a los demás. El lote lanza como mucho `parallel` proyectos a la vez (los demás en cola) y cuenta como **un solo** proyecto activo del plan. Límites por plan (`policy.Tier`): `max_batch_customers` (Free 10, Pro 100, Max 500) y `batch_parallel` (2, 3, 5). Los textos de la plantilla (objetivo y parámetros) pueden usar `{{cliente.nombre}}` (contacto o nombre), `{{cliente.empresa}}`, `{{cliente.correo}}`, `{{cliente.telefono}}`, `{{cliente.notas}}`. El trabajo lo hacen los agentes del equipo; si el cliente tiene agentes asignados, la solicitud del cliente ya se limita a ellos (B12). Un lote nunca crea agentes. Las preguntas de los proyectos de un lote se agrupan como `group_key: "batch:<id>"`. Migración `814_project_batches` (JSONB, RLS). Código: `backend/internal/projects/batch.go`.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| POST | `/project-batches/preview` | `requests:create` | `{template_id, goal?, params?, customer_ids[], budget_per_project_usd?, parallel?}` → `{customers: [{customer_id, name, missing: ["correo",...], error?}], vars_used, per_project_p50_usd, per_project_p90_usd, total_p50_usd, total_p90_usd, budget_per_project_usd, total_budget_usd, max_customers, parallel, confirm_threshold_usd, needs_confirm, missing}`. Más clientes que el plan: error de límite de plan (`batch_customers`) |
+| POST | `/project-batches` | `requests:create` | El mismo cuerpo + `confirm?`, `allow_missing?`, `name?` → `201 Batch {id, name, template_id, items: [{customer_id, customer_name, project_id, state: queued\|launched\|cancelled\|error, error?}], parallel, budget_per_project_usd, control, status: running\|done\|cancelled, created_by, created_at, finished_at}`. `409 needs_confirm` si el tope total supera el umbral de confirmación (`CONFIRM_THRESHOLD_USD`, 1 USD) sin `confirm`; `409 missing_customer_data` si a algún cliente le falta un dato que la plantilla usa y no hay `allow_missing`; límite de proyectos activos como en un lanzamiento |
+| GET | `/project-batches` | `tasks:read` | `{items: [{id, name, status, control, customers, summary: {<estado>: n}, created_at}]}` |
+| GET | `/project-batches/{id}` | `tasks:read` | `{batch, rows: [{customer_id, customer_name, project_id?, status: queued\|running\|paused\|needs_help\|done\|partial\|failed\|cancelled, progress, current_step?, current_agent_id?, cost_usd, needs_input, waiting_seconds?, error?}], summary, cost_usd}` |
+| POST | `/project-batches/{id}/control` `{action: pause\|resume\|cancel}` | `tasks:manage` | Pausar: no empieza ningún cliente nuevo y los proyectos en curso se pausan. Cancelar: los en cola no empiezan y los en curso se cancelan (sus preguntas se cierran) |
+| POST | `/project-batches/{id}/customers/{customerId}/cancel` | `tasks:manage` | Cancela un cliente (su proyecto o su lugar en la cola); los demás siguen |
+| POST | `/project-batches/{id}/retry-failed` | `tasks:manage` | Reintenta los pasos fallidos de cada cliente fallido → `{retried}` |
+
+### 16.9 "Necesita tu ayuda": preguntas de los agentes
+
+Un agente que no puede conseguir ni decidir algo solo (un dato, un archivo, una decisión entre opciones, una contradicción) se detiene y pregunta en vez de inventar o fallar. El runtime recibe `help_allowed: true` y las respuestas ya dadas (`help_answers: [{question, answer, by}]`) y devuelve opcionalmente `help_request: {kind, what_happened, need, options[≤5]}` (esquema `TaskResultHelp`, solo cuando se permite preguntar). La tarea pasa a `needs_input` (no llama al modelo, cede su hueco del planificador; el resto del proyecto y de los otros clientes sigue) y espera. Una tarea puede preguntar hasta 3 veces; la 4.ª la marca `failed` (recuperable). Nunca se decide por falta de respuesta: recordatorios a las 24 h, luego cada día durante 3 días y después semanales. Al reiniciar, la tarea vuelve a esperar la misma pregunta. Cancelar el proyecto cierra sus preguntas (`cancelled`) y detiene sus tareas. Migración `810_task_questions` (RLS por organización, sin borrado). Código: `backend/internal/application/questions.go`, `help_flow.go`, `help_skip.go`, `internal/api/questions.go`.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/questions?status=open\|answered\|reassigned\|skipped\|cancelled\|all` | `tasks:read` | Por defecto `open`, más nuevas primero. `{items: [Question + {task_title?, project_name?, waiting_seconds, for_me, can_answer}]}`. `Question = {id, task_id, request_id, agent_id, project_id?, group_key ("project:<id>"\|"request:<id>"), kind (data\|file\|decision\|contradiction\|other), what_happened, need, options[], status, asked_for?, created_at, resolved_at, resolved_by?, answer_kind?, answer?, file_path?, reassign_to?, reminders}` |
+| GET | `/questions/{id}` | `tasks:read` | `{question, impact?, reassign_candidates?}`. `impact` (solo abierta) = `{task, skipped: [{id,title}] (lo que depende de ella y no se hará), objectives_lost: [{id,title}], objectives, all_lost, allowed}`. Un objetivo se pierde cuando todas sus tareas finales quedarían sin hacer |
+| POST | `/questions/{id}/answer` | `tasks:create` + ser la persona a quien se preguntó, o `tasks:manage` | `{kind: text\|option\|file\|reassign\|skip, text?, option?, file_path? (ruta del drive), agent_id?, confirm?}`. La tarea sigue desde donde paró con la respuesta incluida; queda en la auditoría (`question.answered\|reassigned\|skipped`). `skip`: `409 {code: "skip_blocks_result", impact}` si sin ella no se entrega nada (no se puede forzar), `409 {code: "skip_needs_confirm", impact}` sin `confirm: true`. Omitir deja la tarea `done` con `metrics.skipped` y lo que depende de ella `blocked` con `metrics.omitted` (nodo `cancelled`, `omitted: true`). Responder dos veces: `409`. Los agentes nunca responden (`403`) |
+| POST | `/questions/answer-batch` | igual | `{ids[≤200], kind: text\|option, text?, option?}` → `{answered: [], failed: {id: error}}`: la misma respuesta para varias (cada una queda registrada por separado) |
+
+Eventos WS (aditivos): `task.needs_input {task, question_id}`, `question.asked {question}`, `question.resolved {question}`, `question.reminder {question, reminder, waiting_seconds}`, `help.notice {asked_for, group, project_id, count, question_ids, reminder, need}`. `help.notice` es el aviso para personas: lo envían push (a `asked_for`, o a dueños y administradores si nadie lanzó el trabajo; sin texto en la pantalla bloqueada) y los canales de aviso (correo/Slack/Teams de la organización). Las preguntas de un mismo grupo y persona dentro de 3 minutos salen en un solo aviso ("5 tareas necesitan tu ayuda"); los recordatorios semanales se juntan por día.
 
 ### 16.3 Eventos WS (aditivos)
 
@@ -794,11 +821,16 @@ Archivos y carpetas de la organización (diseño: `docs/architecture/drive.md`).
 | PUT | `/drive/files/{id}/tags` `{tags}` | write | |
 | DELETE | `/drive/files/{id}` | delete | borrado lógico (204) |
 | POST | `/drive/files/{id}/restore` | write | |
-| GET | `/drive/grants?agent_id=` | read | carpetas extra que un agente puede leer |
-| POST | `/drive/grants` `{agent_id, path}` | grant | lectura; escribir ahí sigue pidiendo aprobación |
+| GET | `/drive/grants?agent_id=` | read | reglas de acceso del agente (`mode`: `none`, `read` o `edit`) |
+| POST | `/drive/grants` `{agent_id, path}` | grant | regla `read` (compatibilidad); para los tres niveles usar `PUT /agents/{id}/folder-access` |
 | DELETE | `/drive/grants/{id}` | grant | |
+| GET | `/agents/{id}/folder-access` | read | "Carpetas que puede ver": `{entries:[{path, level: none\|read\|edit, source: default\|manual, grant_id?, fixed?}], can_manage}`. Por defecto: su carpeta (Editar, fija), `/Shared` (Leer) y las carpetas de sus proyectos (Editar) |
+| PUT | `/agents/{id}/folder-access` `{path, level}` | read + (`files:grant` o jefe del departamento del agente) | `level`: `none`, `read`, `edit` o `default` (quita la regla). Vale para la carpeta y todo lo de dentro; gana la regla más específica. La carpeta propia del agente no se cambia (400 `own_desk`). 403 si no es admin ni responsable de su equipo. Auditado `drive.access.changed {agent_id, path, from, to}` |
+| GET | `/drive/folder-access?path=` | read | "Qué agentes la ven": `{path, agents:[{agent_id, name, level, source, can_manage}]}` (primero los que editan) |
 
 Todo cambio queda auditado (`entity: file|folder|grant`, sin contenido). El modo solo lectura bloquea todo cambio (423) pero no la lectura.
+
+Herramienta `fs` de los agentes (no es HTTP; `drive/gwtool.go`): además de list/read/search/write/write_document/edit/move/delete, `recent {days? (14, máx. 90), by? me|anyone, kind? pdf|sheet|doc|image|text|<ext>, path?, limit?}` (archivos que la persona que pidió subió, cambió o movió, por carpeta; las carpetas sin acceso solo como "no access: N archivos en /X") e `income_statement {path .xlsx, company {name, tax_id}, invoices[], currency?, rates?, locale?}` (el backend calcula el estado de resultados y escribe Detalle / Estado de resultados / Revisar; mismas zonas y aprobaciones que `write_document`). Diseño: `archivos-agentes.md` §11.
 ## 19. Perfil de trabajo, auditoría de pensamiento e intervención (V2)
 
 Todo aditivo. Roles: lectura de perfil `agents:read`; edición `agents:write` (admin/owner); trazas y exportación `audit:read` (admin/owner); `store_prompts` `org:manage`; steer/reasignar `tasks:manage`. Los agentes nunca editan perfiles.
@@ -1057,7 +1089,9 @@ Clientes del despacho, clones de agente por cliente y alcance por cliente de sol
 
 | Método | Ruta | Permiso | Notas |
 |---|---|---|---|
-| GET | `/customers?include_archived=1` | `requests:read` | `[{id, name, tax_id, color, notes, folder_path, archived, archived_at?, created_at, updated_at}]` por nombre |
+| GET | `/customers?include_archived=1` | `requests:read` | `[{id, name, tax_id, color, notes, contact_name, email, phone, folder_path, archived, archived_at?, created_at, updated_at}]` por nombre. Contacto opcional (migración `813_customer_contact`): un cliente puede ser una persona o una empresa (su nombre); `email` se guarda en minúsculas y `400` si no es un correo |
+| POST | `/customers/import/preview` `{rows: [{name?, email?, phone?, company?, notes?, tax_id?, contact_name?}]}` | `requests:create` | No crea nada. `{rows: [{row, action: existing\|new\|error, customer_id?, customer_name?, matched_by?: email\|tax_id\|name, reason?: name_required\|invalid_email\|duplicate_in_file\|too_long, name, contact_name?, email?, phone?}]}`. Con `company`, la empresa es el cliente y `name` su contacto. Una fila es el mismo cliente si coincide el correo; sin correo, el número fiscal; sin él, el nombre normalizado (mayúsculas, acentos y espacios no cuentan). Máx. 1000 filas |
+| POST | `/customers/import` `{rows, choices?: {<fila>: "new"\|"skip"\|<customer_id>}}` | `requests:create` | Aplica la vista previa con las correcciones de la persona; crea los clientes nuevos (con su carpeta). Por fila `action: existing\|created\|skipped\|error` (`reason: name_taken` si el nombre ya existe). Auditoría `customer.imported` |
 | POST | `/customers` `{name, tax_id?, color?, notes?}` | `requests:create` | `201`; crea `/Clients/<nombre>`. `400` nombre vacío o > 120, color no `#rrggbb`; `409` nombre repetido entre activos |
 | GET | `/customers/district` | `requests:read` | `{generated_at, customers: [{customer, status: on_track\|waiting_approval\|blocked\|idle, projects_active, approvals_waiting, failed, assignments}]}` |
 | GET | `/customers/{id}` | `requests:read` | `{customer, status, projects_active, approvals_waiting, failed, assignments: [...], projects: [{id, name, status, light, tasks_done, tasks_total, awaiting, failed}], requests: [{id, text, status, created_at}], folder_path}` |
@@ -1179,3 +1213,71 @@ de sus pasos sin agente en esta oficina; vacío en las oficinas clásicas). Al i
 rol aunque su id sea otro (p. ej. `law_lawyer` de una plantilla de industria hace los pasos de `legal`) y, si no hay
 ninguno, a la asistente; queda en la auditoría (`template.roles_reassigned`). La galería lo avisa: "Tu oficina no tiene
 Contabilidad: esos pasos los hará la asistente". Código: `application/template_roles.go`.
+
+## 42. Oficinas, dueño y visibilidad de agentes, memoria de oficina (E2)
+
+Diseño: `equipos-oficinas.md` §3, §4, §8 y `equipos-colaboracion.md` §2.9; plan:
+`docs/superpowers/plans/2026-11-03-e2-oficinas.md`. Código: `backend/internal/offices/`, `backend/internal/api/offices*.go`,
+`backend/internal/rewards/office_layout.go`, `cmd/server/offices.go`. Migración `815_offices.sql` (tablas `offices`,
+`office_members`, `agent_access`, `team_notes`, `office_layouts`, todas con RLS).
+
+"General" (`id = general`) es una oficina virtual: abierta, con todas las personas y con los admin como responsables. Un
+agente sin regla guardada es de la oficina de su departamento (si ese departamento es oficina) o de General, con
+visibilidad `office`. **Sin oficinas ni reglas nada cambia**: `GET /agents` devuelve lo mismo que antes, sin `access`.
+Sin autenticación (demo abierta) tampoco se filtra nada. Todas las rutas piden `agents:read`; quién puede cambiar qué lo
+decide el servicio (`403` si no).
+
+| Ruta | Descripción | Quién |
+|---|---|---|
+| `GET /offices` | `{offices:[{id, name, visibility, general, leads[{user_id,name}], members[…] (vacío si no puede mirar dentro), member_count, agents[ids que ve], can_enter, can_manage, is_member, is_lead}], departments:[{id,name,office}], restricted, me:{user_id, admin, offices[]}}`. General primero | cualquiera |
+| `POST /offices` `{department_id, visibility?}` | Convierte un departamento en oficina (`open` por defecto). Entran las personas puestas en ese departamento y su jefe como responsable; sus agentes pasan a ser de la oficina. `409` si ya lo es, `404` si no existe | admin |
+| `PUT /offices/{id}` `{visibility}` | `open` \| `private`. General no se puede hacer privada (`400`) | responsable o admin |
+| `DELETE /offices/{id}` | Vuelve a ser solo un departamento. `409` si todavía es dueña de agentes (primero se pasan) | admin |
+| `PUT /offices/{id}/members/{user_id}` `{role}` | Añade a una persona o cambia su rol (`lead` \| `member`). Sin responsables, la gestionan los admin | responsable o admin |
+| `DELETE /offices/{id}/members/{user_id}` | Saca a una persona (cada uno puede salir de una oficina) | responsable, admin o la propia persona |
+| `GET /agents` | Con oficinas o reglas: solo los agentes que la persona **ve**, cada uno con `access` (como abajo). `GET /agents/{id}` y `/detail` → `404` si no lo ve | cualquiera |
+| `POST /messages` `{conversation:"agent:<id>"}` | `403` si la persona no puede **usar** ese agente (el chat de toda la oficina no se filtra todavía) | `conversations:post` |
+| `GET /agents/directory` | `{agents:[{id, name, role, title, owner_kind, owner_id, owner_name, office_id, office_name, visibility, shares[] (solo a quien puede editar), explicit, departed?, previous_owner_name?, rights:{see,use,edit}}], restricted}` | cualquiera |
+| `GET /agents/{id}/access` | El acceso de un agente (mismo objeto); `404` si no lo ve | cualquiera |
+| `PUT /agents/{id}/access` `{owner_kind?, owner_id?, visibility?, shares?}` | Cambia dueño (`person` \| `office`), visibilidad (`private` \| `office` \| `people` \| `directory`) y personas una a una (`[{user_id, level: chat\|edit}]`, máx. 50). Quien no es admin solo puede dárselo a sí mismo, a un miembro de una oficina que lleva o a una de sus oficinas. Auditado (`agent.access_changed`) | dueño, responsable de su oficina, `share edit` o admin |
+| `GET /memory/notes?scope=office\|person\|company&ref=` | `{notes:[{id, scope, owner_ref, text, promoted_from?, created_by, author_name, created_at, can_delete}], can_write, can_promote}`. `office`: la miran sus miembros (o cualquiera si es abierta; `403` si es privada); `person`: siempre la de quien llama (nadie más la ve, tampoco el admin); `company`: todos | según el ámbito |
+| `POST /memory/notes` `{scope, ref, text}` | Guarda una nota (≤ 1000 caracteres, el mismo limpiador que `/recordar`: `400` si parece un secreto o una instrucción). `office`: sus miembros; `person`: la propia; `company`: admin | según el ámbito |
+| `DELETE /memory/notes/{id}` | Borrado suave, auditado (salvo las personales) | autor, responsable o admin; la personal solo su dueño |
+| `POST /memory/notes/{id}/promote` | Copia una nota de oficina a "conocimiento de la empresa" (`promoted_from`); una vez (`409` la segunda). Auditado (`memory.promoted`) | responsable o admin |
+| `GET /office/layout?office=<id>` / `PUT …?office=<id>` | El diseño 3D de una oficina (sin `office` o con `general`: el de siempre, `office_layout`). Leer: quien puede mirar dentro (`404` en una privada ajena); guardar: su responsable o un admin. Mismo control de versión (`409 layout_conflict`) | según la oficina |
+
+**Escalera de visibilidad** (persona P): **usa** el agente si es su dueño, si está en `shares`, si es miembro de su oficina
+y la visibilidad es `office` o `directory` (o `people` en un agente de oficina), o si es `directory`. Lo **ve** además si
+la oficina es abierta (lo ve, no lo usa) o si es admin. Los admin usan todos salvo los agentes personales que su dueño
+no abrió a su oficina. **Si el dueño deja la empresa**, el agente pasa a su oficina de origen (lo lleva el responsable),
+con la misma visibilidad, y la ficha lo dice (`departed`).
+
+**Recuerdo:** al empezar una tarea, el agente recibe (dentro del mismo presupuesto de memoria, como datos no confiables)
+hasta 3 notas: las de su oficina y las de la empresa que comparten palabras con la tarea, y las de la persona para la
+que trabaja (sus preferencias valen para cualquier tarea). Una tarea programada no recibe notas personales.
+
+## 43. Permisos de aprobación por agente, por categoría y por proyecto o lote
+
+Diseño: `06-permisos-autonomia.md` sec. 11. Código: `backend/internal/api/permissions.go`. Lectura con `agents:read`;
+los cambios de nivel y excepciones los decide el servicio (admin, owner o el responsable del equipo del agente: `403`
+y `permissions.refused` en la auditoría para cualquier otro); quitar el piso, solo el `owner`.
+
+| Método y ruta | Cuerpo | Respuesta / errores |
+|---|---|---|
+| `GET /agents/{id}/permissions` | — | `{agent_id, name, autonomy, level (ask_all\|important\|alone\|suggest), factory, ceiling, options:[{level, autonomy, allowed, reason?}], categories:[{category, floor, lifted?, exception?, effective (ask\|never\|ask_if)}], can_edit, can_lift_floor, updated_by?, updated_at?}`. `factory=false`: el agente sigue con el comportamiento anterior. `reason`: `role_ceiling` o el código del control (`kill_switch_active`, `read_only_mode`, `agent_paused`). |
+| `PUT /agents/{id}/permissions/level` | `{level}` | La vista. Activa las reglas de fábrica. `403` sobre el techo del rol o sin permiso; `409 <control>` al subir con freno, solo lectura o pausa. Escribe por `trust.Service.ChooseLevel` (`agent.autonomy_changed`, `source=permissions.manual`). |
+| `PUT /agents/{id}/permissions/exceptions/{category}` | `{mode: ask\|never\|ask_if, if?: {per_day_over?, amount_over?, new_recipient?}, source?}` | La vista. `400` categoría o condición inválida; `409 choose_level_first` si el agente aún no tiene nivel elegido. |
+| `DELETE /agents/{id}/permissions/exceptions/{category}` | — | La vista. |
+| `POST /agents/{id}/permissions/floor/{category}` | `{understood: true}` | La vista (`lifted`). Solo `owner`; `400` sin `understood` o si la categoría no es del piso (`payments`, `contracts`, `delete`). |
+| `DELETE /agents/{id}/permissions/floor/{category}` | — | La vista (el piso vuelve). |
+| `GET /permissions` | — | `{default_level, categories, floor, can_edit_default, agents:[{agent_id, name, level, factory, exceptions, floor_lifts}], scopes}`. |
+| `PUT /permissions/default` (`org:manage`) | `{level: ""\|ask_all\|important\|alone}` | El resumen. `""` = el nivel que trae cada puesto. |
+| `POST /approvals/{id}/remember` (`approvals:decide`) | `{scope: agent\|project\|batch}` | `{scope, category, agent_id, scope_grant?}`. Se llama después de aprobar. `409 not_rememberable` si la pidió el piso, una regla de la empresa, el riesgo alto o el Gateway; `409 no_project` / `no_batch`; `409 choose_level_first`. |
+| `GET /permissions/scopes?project_id=&batch_id=` | — | `[{id, kind: project\|batch, scope_id, agent_id?, category, approval_id, created_by, created_at, expires_at}]` vigentes. |
+| `DELETE /permissions/scopes/{id}` | — | `204`. |
+
+Cada aprobación ya devolvía `policy_rule` (la regla que la pidió); las reglas nuevas son `perm.important:<cat>`,
+`perm.floor:<cat>`, `perm.ask:<cat>`, `perm.if_amount:<cat>`, `perm.if_new_recipient:<cat>` y
+`limit:perm.per_day:<cat>`. Auditoría: `permissions.level_changed`, `permissions.exception_set`,
+`permissions.exception_removed`, `permissions.floor_lifted`, `permissions.floor_restored`, `permissions.default_changed`,
+`permissions.adopted`, `permissions.scope_granted`, `permissions.scope_revoked`, `permissions.refused`.

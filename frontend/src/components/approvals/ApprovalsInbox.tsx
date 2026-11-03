@@ -12,6 +12,8 @@ import { useCan, useSession } from "@/lib/session";
 import { OrgIndicator } from "../auth/OrgIndicator";
 import { RiskBadge } from "../ui";
 import { DevilsAdvocate } from "./DevilsAdvocate";
+import { QuestionsSection } from "./QuestionsSection";
+import { ApprovalReason } from "./ApprovalReason";
 
 type Decision = "approve" | "reject";
 interface Held { item: InboxItem; decision: Decision; timer: ReturnType<typeof setTimeout>; until: number }
@@ -155,6 +157,7 @@ export function ApprovalsInbox() {
           );
         })}
       </div>
+      <QuestionsSection />
       {failed && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-err/40 bg-err/10 p-3 text-[13px] text-err">
           <span>{t("approvalInbox.loadError")}</span>
@@ -180,6 +183,7 @@ export function ApprovalsInbox() {
             <Fact k={t("approvalInbox.cost")} v={fmtUsd(cur.task_cost_usd)} mono />
             <Fact k={t("approvalInbox.project")} v={cur.project_name || (cur.project_id ? cur.project_id : t("approvalInbox.noProject"))} />
           </dl>
+          <ApprovalReason a={cur} className="mt-2 bg-panel2" />
           {(cur.required_approvals ?? 1) > 1 && <p className="mt-2 text-[12px] text-ink2">{t("approvals.mobile.progress", { done: cur.decisions?.length ?? 0, total: cur.required_approvals ?? 1 })} · {t("approvals.mobile.doubleApproval")}</p>}
           {cur.counterargument?.summary && (
             <div data-testid="inbox-devil-summary" className="mt-2 rounded-md border border-amber-600/30 bg-amber-500/10 px-2.5 py-1.5 text-[12px] text-amber-900">

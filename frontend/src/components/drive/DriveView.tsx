@@ -5,6 +5,7 @@ import { drive, DriveError, isTextual, parentOf, useUploadLimit, type DriveFile,
 import { useStore } from "@/lib/store";
 import { toast } from "@/lib/toast";
 import { Btn, Empty, Loading } from "../ui";
+import { FolderAgentsPanel } from "./FolderAgentsPanel";
 import { EmptyState } from "../nav/ui2";
 import { Icon } from "../icons";
 import { useAgentName } from "../ui";
@@ -30,6 +31,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
   const [passages, setPassages] = useState<PassageResult | null>(null);
   const [focus, setFocus] = useState<{ start: number; page?: number } | null>(null);
   const [trash, setTrash] = useState<DriveFile[] | null>(null);
+  const [whoSees, setWhoSees] = useState(false); // "Qué agentes la ven" for the current folder
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   // share of the current upload already sent (0..1); null when nothing is uploading
@@ -123,6 +125,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
               className={`min-h-10 rounded-lg border px-2 py-1.5 text-[11px] sm:min-h-0 ${meaning ? "border-accent bg-accent/10 text-accent" : "border-line text-mute hover:text-ink"}`}>{t("drive.meaning.toggle")}</button>
             <input data-tour="files.search" data-testid="drive-search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") search(); }}
               placeholder={meaning ? t("drive.meaning.placeholder") : t("drive.searchPlaceholder")} className="min-h-10 w-full rounded-lg border border-line bg-panel2 px-3 py-1.5 text-base outline-none focus:border-accent sm:min-h-0 sm:w-56 sm:text-xs" />
+            {path !== "/" && <Btn data-testid="drive-who-sees" className="inline-flex items-center gap-1" onClick={() => { setWhoSees(!whoSees); setSelected(null); }}><Icon name="users" size={13} />{t("access.folder.button")}</Btn>}
             <span data-tour="files.trash" className="inline-flex"><Btn data-testid="drive-trash" onClick={async () => setTrash(trash ? null : (await drive.trash().catch(() => ({ files: [] }))).files)}>{t("drive.trash")}</Btn></span>
             <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) upload(e.target.files); e.target.value = ""; }} />
             <span data-tour="files.upload" className="inline-flex"><Btn kind="primary" data-testid="drive-upload" className="inline-flex items-center gap-1" disabled={!canUpload || busy} onClick={() => fileInput.current?.click()}>
@@ -153,6 +156,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
           )}
         </div>
       </div>
+      {whoSees && !selected && path !== "/" && <FolderAgentsPanel path={path} label={"/" + crumbs.map((c) => rootLabel(t, c)).join("/")} onClose={() => setWhoSees(false)} />}
       {selected && <FilePane file={selected} focus={focus} onClearFocus={() => setFocus(null)} onClose={() => { setSelected(null); setFocus(null); }} onChanged={() => { load(); }} onDeleted={() => { setSelected(null); load(); }} />}
     </div>
   );

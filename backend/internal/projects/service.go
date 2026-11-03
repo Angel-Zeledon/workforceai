@@ -87,6 +87,12 @@ type Config struct {
 	// when it does not exist). A customer-scoped project may only reference ("artifact:<id>") artifacts of its own
 	// customer; without it such references are refused (customer_refs.go).
 	ArtifactCustomer func(ctx context.Context, org, artifactID string) (string, error)
+	// CustomerInfo (batches, optional) is the data of a customer a batch template can use ({{cliente.*}}).
+	CustomerInfo func(ctx context.Context, org, customerID string) (CustomerVars, error)
+	// Batches persists the batches. Default: the Store when it implements BatchStore. BatchConfirmUSD is the total
+	// above which launching a batch must be confirmed (default 1 USD, the orchestrator's confirmation threshold).
+	Batches         BatchStore
+	BatchConfirmUSD float64
 }
 
 // Service is the projects use case layer.
@@ -111,6 +117,8 @@ type Service struct {
 	// recovered: Recover ran, so a launched project without a live entry is
 	// adopted (its request was settled by the orchestrator) instead of failed.
 	recovered atomic.Bool
+	// pumps are the running batch paces (batch.go).
+	pumps batchPumps
 }
 
 // New builds the service and installs it as the orchestrator's task gate.

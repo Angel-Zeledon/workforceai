@@ -118,7 +118,7 @@ export class MockCommands {
       case "customer": { // B12: the real backend scopes the request to the customer before it exists
         const text = String(a.task || "").trim();
         const id = await this.host.startRequest(text);
-        return { status: "started", result: { kind: "request", title: pick(lang, `Solicitud para ${a.customer}`, `Request for ${a.customer}`), text, request_id: id } };
+        return { status: "started", result: { kind: "request", title: pick(lang, `Pedido para ${a.customer}`, `Request for ${a.customer}`), text, request_id: id } };
       }
       case "pending": return msg(pick(lang, "No tienes aprobaciones pendientes.", "You have no pending approvals."));
       case "search":

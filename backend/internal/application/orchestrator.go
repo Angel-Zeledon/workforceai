@@ -63,6 +63,8 @@ type Orchestrator struct {
 
 	v2 v2State // work profiles, thought audit and intervention (intervene.go); zero value = off
 
+	help helpState // "needs your help" questions (help_flow.go); zero value = off
+
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
 
 	stateMu sync.Map // org|agent -> *sync.Mutex: serializes setState of one agent (see setState)
@@ -122,6 +124,9 @@ type run struct {
 	customer    string      // the customer the request is scoped to (customer.go); "" = none
 	// debateNote is the team debate recalled by the deciding task (orchestrator_debate.go; guarded by mu).
 	debateNote map[string]RecalledMemory
+	// omitted are the tasks left undone because a person skipped a task they depend on (help_skip.go; guarded by
+	// mu): task id -> title of the skipped task.
+	omitted map[string]string
 }
 
 func (r *run) touch(agentID string) {
@@ -495,14 +500,31 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 		defer unlock()
 	}
 
+	for { // needs your help (help_flow.go): a task that asked a person waits for the answer, then runs again
+		if out, handled := o.helpGate(ctx, rs, &t); handled {
+			return out
+		}
+		out, asked := o.runTaskOnce(ctx, rs, t)
+		if !asked {
+			return out
+		}
+		if cur, err := o.store.GetTask(ctx, o.org(ctx), t.ID); err == nil {
+			t = cur
+		}
+	}
+}
+
+// runTaskOnce is one run of a task: guards, budget, the runtime call, tools and completion. asked=true means the
+// agent asked a person for help instead: the task is needs_input and runTask waits for the answer.
+func (o *Orchestrator) runTaskOnce(ctx context.Context, rs *run, t domain.Task) (Outcome, bool) {
 	if !o.admitTask(ctx, rs, t) {
-		return OutcomeFailed // kill switch / pause never released before shutdown
+		return OutcomeFailed, false // kill switch / pause never released before shutdown
 	}
 	if out, handled := o.delegationApproval(ctx, rs, t); handled {
-		return out // the rule of the delegation asks a named approver first (delegation_hook.go)
+		return out, false // the rule of the delegation asks a named approver first (delegation_hook.go)
 	}
 	if out, handled := o.projectGate(ctx, rs, t); handled {
-		return out // project paused/cancelled, human gate or milestone (projects_hooks.go)
+		return out, false // project paused/cancelled, human gate or milestone (projects_hooks.go)
 	}
 	if cur, err := o.store.GetTask(ctx, o.org(ctx), t.ID); err == nil && cur.Status == domain.TaskPending && cur.AgentID != t.AgentID {
 		t.AgentID, t.AssignedReason = cur.AgentID, cur.AssignedReason // reassigned by a human while it waited
@@ -515,17 +537,17 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 	res, err := o.reserveOrPause(ctx, rs, t.AgentID, t.ID, domain.UsageRunTask)
 	if err != nil {
 		if ctx.Err() != nil {
-			return OutcomeFailed
+			return OutcomeFailed, false
 		}
 		o.failTask(ctx, rs, t, err)
-		return OutcomeFailed
+		return OutcomeFailed, false
 	}
 	now := time.Now().UTC()
 	t.Status, t.StartedAt = domain.TaskRunning, &now
 	if err := o.store.UpdateTask(ctx, o.org(ctx), t); err != nil {
 		res.Release()
 		o.failTask(ctx, rs, t, err)
-		return OutcomeFailed
+		return OutcomeFailed, false
 	}
 	tid := t.ID
 	o.setState(ctx, t.AgentID, domain.StateWorking, t.Title, &tid, 10)
@@ -535,6 +557,7 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 
 	in := o.buildRunRequest(ctx, rs, t, agent)
 	o.decorateRun(ctx, &in)
+	o.helpContext(ctx, &in)
 	// Vision: images the user attached to the chat message, read as the agent.
 	o.firstPassImages(ctx, rs, &t, agent, &in)
 	spec := o.reviewSpecOf(ctx, t) // Q1: off (zero spec) unless the project enabled the review
@@ -549,7 +572,7 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 		if ctx.Err() == nil {
 			o.failTask(ctx, rs, t, err)
 		}
-		return OutcomeFailed
+		return OutcomeFailed, false
 	}
 	var resp RunTaskResponse
 	attempt := 1
@@ -569,21 +592,21 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 			o.traceEvent(ctx, t.ID, "apply_now", map[string]any{"completed_before_cancel": err == nil})
 			o.applyGuidance(ctx, &in)
 			if !o.admitTask(ctx, rs, t) {
-				return OutcomeFailed
+				return OutcomeFailed, false
 			}
 			next, rerr := o.reserveOrPause(ctx, rs, t.AgentID, t.ID, domain.UsageRunTask)
 			if rerr != nil {
 				if ctx.Err() == nil {
 					o.failTask(ctx, rs, t, rerr)
 				}
-				return OutcomeFailed
+				return OutcomeFailed, false
 			}
 			res = next
 			if res, in.MaxCostUSD, err = o.sizeReservation(ctx, rs, t.AgentID, t.ID, domain.UsageRunTask, res, in); err != nil {
 				if ctx.Err() == nil {
 					o.failTask(ctx, rs, t, err)
 				}
-				return OutcomeFailed
+				return OutcomeFailed, false
 			}
 			continue
 		}
@@ -592,15 +615,15 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 		}
 		res.Release() // a failed attempt holds no budget; its (zero) usage was never recorded
 		if ctx.Err() != nil {
-			return OutcomeFailed
+			return OutcomeFailed, false
 		}
 		if attempt >= max(1, o.cfg.TaskMaxAttempts) || !retryableTaskErr(err) {
 			o.failTask(ctx, rs, t, err)
-			return OutcomeFailed
+			return OutcomeFailed, false
 		}
 		next, out, ok := o.beginRetry(ctx, rs, t, attempt, err)
 		if !ok {
-			return out
+			return out, false
 		}
 		o.applyGuidance(ctx, &in) // notes sent while it failed ride on the retry
 		// The retry is a NEW call: size it from its real payload again and refresh the allowance sent to the
@@ -609,12 +632,15 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 			if ctx.Err() == nil {
 				o.failTask(ctx, rs, t, err)
 			}
-			return OutcomeFailed
+			return OutcomeFailed, false
 		}
 		res = next
 		attempt++
 	}
 	o.recordUsage(ctx, rs, t.ID, t.AgentID, domain.UsageRunTask, resp.Usage, resp.ToolRequests, res)
+	if resp.HelpRequest != nil && in.HelpAllowed { // the agent asks a person instead of inventing or failing
+		return o.askForHelp(ctx, rs, t, agent, *resp.HelpRequest)
+	}
 	resp.Output.Normalize()
 	if attempt > 1 {
 		if resp.Output.Metrics == nil {
@@ -633,7 +659,7 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 		var out Outcome
 		var stop bool
 		if resp, out, stop = o.qualityReview(ctx, rs, &t, agent, in, resp, spec); stop {
-			return out
+			return out, false
 		}
 	}
 	t.Output = &resp.Output
@@ -641,9 +667,9 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 
 	o.handleConsults(ctx, rs, &t, agent, resp.Consults)
 	if out := o.handleTools(ctx, rs, &t, agent, resp.ToolRequests); out != OutcomeDone {
-		return out
+		return out, false
 	}
-	return o.completeTask(ctx, rs, t, agent)
+	return o.completeTask(ctx, rs, t, agent), false
 }
 
 // completeTask stores a finished task, remembers it and frees its agent.
@@ -651,6 +677,9 @@ func (o *Orchestrator) completeTask(ctx context.Context, rs *run, t domain.Task,
 	tid := t.ID
 	fin := time.Now().UTC()
 	t.Status, t.FinishedAt = domain.TaskDone, &fin
+	if files := o.peekTaskFiles(t.ID); len(files) > 0 && t.Output != nil { // the node shows what the task produced
+		t.Output.Files = files[:min(len(files), 20)]
+	}
 	if err := o.store.UpdateTask(ctx, o.org(ctx), t); err != nil {
 		o.failTask(ctx, rs, t, err)
 		return OutcomeFailed
@@ -1105,8 +1134,21 @@ func (o *Orchestrator) skipTask(ctx context.Context, rs *run, t domain.Task) {
 	}
 	fin := time.Now().UTC()
 	t.Status, t.FinishedAt = domain.TaskBlocked, &fin
+	by := ""
+	if rs != nil {
+		by = rs.omittedBy(t.ID)
+	}
+	if by != "" { // a person skipped a task this one depends on: left undone on purpose, not broken
+		t.Output = omittedOutput(by)
+	}
 	if err := o.store.UpdateTask(ctx, o.org(ctx), t); err != nil {
 		o.log.Warn("update task", "err", err)
+	}
+	if by != "" {
+		o.rec.Emit(ctx, Action{Type: domain.EvTaskBlocked, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
+			Payload: map[string]any{"task": t, "reason": "omitted"}, Text: fmt.Sprintf("Tarea omitida (dependía de %s): %s", by, t.Title)})
+		o.emitMetrics(ctx)
+		return
 	}
 	o.rec.Emit(ctx, Action{Type: domain.EvTaskBlocked, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
 		Payload: map[string]any{"task": t}, Text: fmt.Sprintf("Tarea bloqueada por dependencias: %s", t.Title)})

@@ -9,6 +9,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
@@ -266,6 +267,51 @@ func Run(t *testing.T, svc *drive.Service, orgA, orgB string, o Options) {
 		}
 		if gs = must[[]drive.Grant](t)(svc.Grants(ctxA, "sales")); len(gs) != 0 {
 			t.Fatalf("revoked grant still active: %+v", gs)
+		}
+	})
+
+	t.Run("access levels and scope exclusions", func(t *testing.T) {
+		for _, lv := range []string{drive.AccessNone, drive.AccessEdit, drive.AccessRead} {
+			if _, err := svc.SetAgentAccess(ctxA, h, "ops", "/Shared/Privado", lv); err != nil {
+				t.Fatalf("%s: %v", lv, err)
+			}
+		}
+		gs := must[[]drive.Grant](t)(svc.Grants(ctxA, "ops"))
+		if len(gs) != 1 || gs[0].Mode != drive.AccessRead {
+			t.Fatalf("one active rule with the last level: %+v", gs)
+		}
+		must[drive.WriteResult](t)(svc.Write(ctxA, h, drive.WriteInput{Path: "/Shared/Privado/sueldos.md", Data: []byte("kiwi-exclusion-token sueldos")}))
+		must[drive.WriteResult](t)(svc.Write(ctxA, h, drive.WriteInput{Path: "/Shared/abierto.md", Data: []byte("kiwi-exclusion-token abierto")}))
+		hits := must[[]drive.Hit](t)(svc.Retrieve(ctxA, drive.RetrieveQuery{Query: "kiwi-exclusion-token", Under: []string{"/Shared", "!/Shared/Privado"}}))
+		if len(hits) != 1 || hits[0].Path != "/Shared/abierto.md" {
+			t.Fatalf("an excluded subtree must not be searched: %+v", hits)
+		}
+		hits = must[[]drive.Hit](t)(svc.Retrieve(ctxA, drive.RetrieveQuery{Terms: []string{"kiwi"}, Under: []string{"/Shared", "!/Shared/Privado"}}))
+		if len(hits) != 1 || hits[0].Path != "/Shared/abierto.md" {
+			t.Fatalf("memory leg must honour exclusions: %+v", hits)
+		}
+	})
+
+	t.Run("recent files by person, kind and scope", func(t *testing.T) {
+		ana, luis := drive.Human("ana-recent"), drive.Human("luis-recent")
+		must[drive.WriteResult](t)(svc.Write(ctxA, ana, drive.WriteInput{Path: "/Shared/Recientes/a.md", Data: []byte("a")}))
+		must[drive.WriteResult](t)(svc.Write(ctxA, ana, drive.WriteInput{Path: "/Shared/Recientes/b.csv", Data: []byte("x,y")}))
+		must[drive.WriteResult](t)(svc.Write(ctxA, ana, drive.WriteInput{Path: "/Shared/Oculto/c.md", Data: []byte("c")}))
+		must[drive.WriteResult](t)(svc.Write(ctxA, luis, drive.WriteInput{Path: "/Shared/Recientes/d.md", Data: []byte("d")}))
+		since := time.Now().Add(-time.Hour)
+		fs := must[[]drive.File](t)(svc.Recent(ctxA, drive.RecentQuery{By: &ana, Since: since, Exts: []string{"md"}, Under: []string{"/Shared", "!/Shared/Oculto"}}))
+		if len(fs) != 1 || fs[0].Path != "/Shared/Recientes/a.md" || fs[0].SearchText != "" {
+			t.Fatalf("recent of ana, md, without the excluded folder: %+v", fs)
+		}
+		fs = must[[]drive.File](t)(svc.Recent(ctxA, drive.RecentQuery{Since: since, Under: []string{"/Shared/Recientes"}}))
+		if len(fs) != 3 {
+			t.Fatalf("anybody in a folder: %+v", fs)
+		}
+		if fs = must[[]drive.File](t)(svc.Recent(ctxA, drive.RecentQuery{By: &ana, Since: time.Now().Add(time.Hour)})); len(fs) != 0 {
+			t.Fatalf("outside the window: %+v", fs)
+		}
+		if fs = must[[]drive.File](t)(svc.Recent(ctxB, drive.RecentQuery{By: &ana, Since: since})); len(fs) != 0 {
+			t.Fatalf("recent leaked across organizations: %+v", fs)
 		}
 	})
 }

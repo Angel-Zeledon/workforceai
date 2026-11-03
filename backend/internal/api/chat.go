@@ -36,6 +36,10 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 	if body.Conversation == "" {
 		body.Conversation = domain.ChatOffice
 	}
+	if err := s.checkAgentUse(r, body.Conversation); err != nil { // E2: an agent the person may not use
+		s.fail(w, err)
+		return
+	}
 	// A retry or double click with the same Idempotency-Key (or client_message_id) gets the first turn back.
 	key := r.Header.Get("Idempotency-Key")
 	if key == "" {

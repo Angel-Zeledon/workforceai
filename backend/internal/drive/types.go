@@ -123,14 +123,14 @@ type Version struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// Grant gives an agent read access to a folder subtree outside its own areas.
-// Grants never allow writing without approval: writes outside the desk and the
-// agent's projects always go through the policy engine.
+// Grant is a folder access rule of an agent (access.go): Ninguno, Leer or Editar
+// on a folder subtree. Read rules never allow writing without approval; an Edit
+// rule makes that subtree as free to write as the agent's desk.
 type Grant struct {
 	ID        string     `json:"id"`
 	AgentID   string     `json:"agent_id"`
 	Path      string     `json:"path"`
-	Mode      string     `json:"mode"` // read
+	Mode      string     `json:"mode"` // none | read | edit
 	CreatedBy Principal  `json:"created_by"`
 	CreatedAt time.Time  `json:"created_at"`
 	RevokedAt *time.Time `json:"revoked_at,omitempty"`

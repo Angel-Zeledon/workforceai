@@ -22,6 +22,9 @@ func (s *server) mountCustomers(r chi.Router) {
 	grant, archive := s.can(auth.PermFilesGrant), s.can(auth.PermAgentsWrite)
 	r.With(read).Get("/customers", s.customersList)
 	r.With(write).Post("/customers", s.customersCreate)
+	// Import a list (projects for many customers): preview first, nothing is created until the import itself.
+	r.With(write).Post("/customers/import/preview", s.customersImportPreview)
+	r.With(write).Post("/customers/import", s.customersImport)
 	r.With(read).Get("/customers/district", s.customersDistrict)
 	r.With(read).Get("/customers/{id}", s.customersDetail)
 	r.With(write).Put("/customers/{id}", s.customersUpdate)
@@ -33,6 +36,40 @@ func (s *server) mountCustomers(r chi.Router) {
 	// Earlier work without a customer (before B12): assigned explicitly by an admin, audited and reversible.
 	r.With(grant).Get("/customers/history/candidates", s.customersHistoryCandidates)
 	r.With(grant).Post("/customers/history", s.customersAssignHistory)
+}
+
+type importBody struct {
+	Rows []customers.ImportRow `json:"rows"`
+	// Choices per row index ("new", "skip" or a customer id), import only.
+	Choices map[int]string `json:"choices"`
+}
+
+func (s *server) customersImportPreview(w http.ResponseWriter, r *http.Request) {
+	var body importBody
+	if err := s.decodeArtifact(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	res, err := s.Customers.PreviewImport(r.Context(), body.Rows)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"rows": res})
+}
+
+func (s *server) customersImport(w http.ResponseWriter, r *http.Request) {
+	var body importBody
+	if err := s.decodeArtifact(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	res, err := s.Customers.ApplyImport(r.Context(), s.actor(r), body.Rows, body.Choices)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"rows": res})
 }
 
 func (s *server) customersHistoryCandidates(w http.ResponseWriter, r *http.Request) {

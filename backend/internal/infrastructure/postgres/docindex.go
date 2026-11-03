@@ -25,10 +25,25 @@ const liveJoin = ` FROM doc_chunks c
 	JOIN drive_folders fo ON fo.org_id=f.org_id AND fo.id=f.folder_id AND fo.deleted_at IS NULL `
 
 // scopeSQL is the folder scope on parameter $n (text[]) with the flag $n+1
-// (scoped): unscoped = every folder (a person with files:read).
+// (scoped): unscoped = every folder (a person with files:read). An entry
+// "!<path>" excludes that subtree (an agent's Ninguno, drive.InScope): a row is
+// in scope when an included entry covers it and no deeper exclusion does.
 func scopeSQL(n string, flag string) string {
-	return `(NOT ` + flag + `::bool OR EXISTS (SELECT 1 FROM unnest(` + n + `::text[]) u(p)
-		WHERE lower(fo.path) = lower(u.p) OR left(lower(fo.path), length(u.p)+1) = lower(u.p) || '/' OR lower(fo.path || '/' || f.name) = lower(u.p)))`
+	return `(NOT ` + flag + `::bool OR ` + scopeMatch(n, true) + `)`
+}
+
+// scopeMatch is the include/exclude test of drive.InScope over $n; withFile also matches an entry naming the file.
+func scopeMatch(n string, withFile bool) string {
+	m := func(col string) string {
+		x := `(lower(fo.path) = lower(` + col + `) OR left(lower(fo.path), length(` + col + `)+1) = lower(` + col + `) || '/'`
+		if withFile {
+			x += ` OR lower(fo.path || '/' || f.name) = lower(` + col + `)`
+		}
+		return x + `)`
+	}
+	return `EXISTS (SELECT 1 FROM unnest(` + n + `::text[]) u(p) WHERE left(u.p, 1) <> '!' AND ` + m("u.p") + `
+		AND NOT EXISTS (SELECT 1 FROM unnest(` + n + `::text[]) x(p) WHERE left(x.p, 1) = '!' AND length(x.p) - 1 > length(u.p)
+			AND ` + m("substr(x.p, 2)") + `))`
 }
 
 func scopeArgs(under []string) ([]string, bool) {

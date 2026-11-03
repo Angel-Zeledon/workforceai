@@ -43,7 +43,7 @@ function Row({ c, active, onPick }: { c: PChannel; active: boolean; onPick: () =
       </span>
       <span className="min-w-0 flex-1">
         <span className={`block truncate text-[13px] ${unread ? "font-semibold text-ink" : "font-medium text-ink"}`}>{title}</span>
-        <span className="block truncate text-[11.5px] text-mute">{c.preview || (c.kind === "dm" ? t("pchat.dm.sub") : t("pchat.members", { n: Math.max(c.members.length, 1) }))}</span>
+        <span className="block truncate text-[11.5px] text-mute">{c.preview || (c.kind === "dm" ? t("pchat.dm.sub") : t("pchat.members", { count: Math.max(c.members.length, 1) }))}</span>
       </span>
       {unread > 0 && (
         <span data-testid="pchat-unread" aria-label={t("pchat.unread", { n: unread })} className={`min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-[10.5px] font-semibold text-white ${mentions ? "bg-err" : "bg-accent"}`}>
@@ -129,7 +129,8 @@ function NewDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (id
   );
 }
 
-export function PeopleChatsList({ onPicked }: { onPicked?: () => void }) {
+/** The "People" group of the sidebar. `only` (search results): just those channels, in that order, without "New". */
+export function PeopleChatsList({ onPicked, heading, only }: { onPicked?: () => void; heading?: string; only?: string[] }) {
   const { t } = useT();
   const channels = usePeopleChat((s) => s.channels);
   const loaded = usePeopleChat((s) => s.loaded);
@@ -139,13 +140,14 @@ export function PeopleChatsList({ onPicked }: { onPicked?: () => void }) {
   const canPost = useCan("conversations:write");
   const [creating, setCreating] = useState(false);
   useEffect(() => { void load(); void usePeopleChat.getState().loadDirectory(); }, [load]);
-  const sorted = useMemo(() => [...channels], [channels]);
+  const sorted = useMemo(() => (only ? only.map((id) => channels.find((c) => c.id === id)).filter((c): c is PChannel => !!c) : [...channels]), [channels, only]);
   const pick = (id: string) => { void open(id); onPicked?.(); };
+  if (only && !sorted.length) return null;
   return (
-    <section aria-label={t("pchat.title")} data-testid="pchat-list" className="mt-4">
+    <section aria-label={heading ?? t("pchat.title")} data-testid={only ? "chats-results-people" : "pchat-list"} className="mt-4">
       <div className="flex items-center justify-between px-2 pb-1">
-        <h2 className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{t("pchat.title")}</h2>
-        {canPost && <button type="button" data-testid="pchat-new-btn" onClick={() => setCreating(true)} className="text-[11px] font-medium text-accent-hover hover:underline">{t("pchat.new")}</button>}
+        <h2 className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{heading ?? t("pchat.title")}</h2>
+        {canPost && !only && <button type="button" data-testid="pchat-new-btn" onClick={() => setCreating(true)} className="text-[11px] font-medium text-accent-hover hover:underline">{t("pchat.new")}</button>}
       </div>
       {!loaded ? <p className="px-3 py-3 text-xs text-mute">…</p> : sorted.length === 0 ? (
         <p className="rounded-xl border border-dashed border-line-strong px-3 py-4 text-center text-xs leading-relaxed text-mute">{t("pchat.empty.list")}</p>

@@ -178,14 +178,14 @@ func (o *Orchestrator) confirmEstimateFrom(ctx context.Context, rs *run, tasks [
 	case c := <-ch:
 		if !c.Proceed {
 			o.cancelPlanned(ctx, rs, tasks, "cancelada por el usuario")
-			o.failRequest(ctx, rs, assistantID, "Solicitud cancelada", errors.New("no confirmaste la estimación de costo"))
+			o.failRequest(ctx, rs, assistantID, "Pedido cancelado", errors.New("no confirmaste la estimación de costo"))
 			return false
 		}
 		o.setGate(ctx, rs, nil)
 		return true
 	case <-timer.C:
 		o.cancelPlanned(ctx, rs, tasks, "sin confirmación de costo")
-		o.failRequest(ctx, rs, assistantID, "Solicitud sin confirmar", errors.New("la estimación de costo no se confirmó a tiempo"))
+		o.failRequest(ctx, rs, assistantID, "Pedido sin confirmar", errors.New("la estimación de costo no se confirmó a tiempo"))
 		return false
 	case <-ctx.Done():
 		return false
@@ -355,7 +355,7 @@ func (o *Orchestrator) announceExceeded(ctx context.Context, rs *run, ex *Exceed
 	switch ex.Scope {
 	case domain.ScopeRequest:
 		o.setRequestStatus(ctx, rs, domain.RequestPaused)
-		o.setState(ctx, assistantID, domain.StateBlocked, "Pausado: tope de presupuesto de la solicitud", nil, 30)
+		o.setState(ctx, assistantID, domain.StateBlocked, "Pausado: tope de presupuesto del pedido", nil, 30)
 	case domain.ScopeAgent:
 		var tid *string
 		if ex.TaskID != "" {
@@ -376,7 +376,7 @@ func (o *Orchestrator) announceExceeded(ctx context.Context, rs *run, ex *Exceed
 func (o *Orchestrator) exceededMessage(ex *Exceeded) string {
 	switch ex.Scope {
 	case domain.ScopeRequest:
-		return fmt.Sprintf("Solicitud en pausa: gastó $%.2f de su tope de $%.2f y la siguiente llamada necesita llegar a $%.2f. Sube el tope para continuar.",
+		return fmt.Sprintf("Pedido en pausa: gastó $%.2f de su tope de $%.2f y la siguiente llamada necesita llegar a $%.2f. Sube el tope para continuar.",
 			ex.SpentUSD, ex.CapUSD, ex.NeededUSD)
 	case domain.ScopeAgent:
 		return fmt.Sprintf("Agente %s en pausa: gastó $%.2f de su tope mensual de $%.2f y la siguiente llamada necesita llegar a $%.2f. Sube el tope para continuar.",

@@ -26,7 +26,8 @@ export function EditOfficeButton() {
   const { t } = useT();
   const editing = useOfficeLayout((s) => s.editing);
   const can = useCan("shop:buy");
-  if (editing || !can) return null;
+  const editable = useOfficeLayout((s) => s.officeEditable); // E2: another office is arranged by its responsible
+  if (editing || !can || !editable) return null;
   return (
     <button type="button" data-testid="office-edit" onClick={() => useOfficeLayout.getState().startEdit()}
       className="pointer-events-auto flex min-h-10 items-center gap-2 rounded-lg border border-line bg-panel/95 px-3 py-2 text-xs font-semibold text-ink shadow-soft backdrop-blur transition hover:bg-panel2">

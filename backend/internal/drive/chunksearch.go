@@ -1,6 +1,7 @@
 package drive
 
 import (
+	"slices"
 	"context"
 	"errors"
 	"fmt"
@@ -161,15 +162,23 @@ func (a *AgentFS) readWindow(ctx context.Context, f File, args map[string]any) (
 }
 
 // scopeUnder intersects a requested path with the readable roots: the result
-// is never wider than what the agent can read.
+// is never wider than what the agent can read, and keeps the "!" exclusions
+// (Ninguno) that touch the path.
 func scopeUnder(roots []string, p string) []string {
+	pos, neg := splitScope(roots)
 	out := []string{}
-	for _, r := range roots {
-		switch {
-		case IsUnder(p, r):
-			return []string{p}
-		case IsUnder(r, p):
-			out = append(out, r)
+	if slices.ContainsFunc(pos, func(r string) bool { return IsUnder(p, r) }) {
+		out = append(out, p)
+	} else {
+		for _, r := range pos {
+			if IsUnder(r, p) {
+				out = append(out, r)
+			}
+		}
+	}
+	for _, n := range neg {
+		if IsUnder(n, p) || IsUnder(p, n) {
+			out = append(out, "!"+n)
 		}
 	}
 	return out

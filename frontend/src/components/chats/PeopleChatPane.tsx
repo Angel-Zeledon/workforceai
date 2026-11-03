@@ -99,7 +99,7 @@ function Members({ channel, all, canManage }: { channel: PChannel; all: Mentiona
   return (
     <div className="relative">
       <button type="button" data-testid="pchat-members-btn" aria-expanded={open} onClick={() => setOpen((v) => !v)}
-        className="rounded-md border border-line px-2 py-1 text-[11.5px] font-medium text-ink2 hover:border-accent hover:text-ink">{t("pchat.members", { n: channel.members.length })}</button>
+        className="rounded-md border border-line px-2 py-1 text-[11.5px] font-medium text-ink2 hover:border-accent hover:text-ink">{t("pchat.members", { count: channel.members.length })}</button>
       {open && (
         <div className="absolute right-0 z-30 mt-1 w-72 rounded-xl border border-line-strong bg-panel p-2 shadow-float">
           <ul className="max-h-56 overflow-y-auto">

@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"path"
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"aiworkforce/backend/internal/catalog"
 	"aiworkforce/backend/internal/counters"
@@ -44,6 +46,16 @@ type PolicyService struct {
 
 	mu   sync.Mutex
 	orgs map[string]*orgPolicy
+	// scopeOf (optional) tells the project and batch of a request, for the "in this project / batch do not ask"
+	// permissions. Installed with SetScopeResolver.
+	scopeOf func(ctx context.Context, org, requestID string) (projectID, batchID string, active bool)
+}
+
+// SetScopeResolver installs how to find the project and batch of a request (nil disables project/batch scopes).
+func (p *PolicyService) SetScopeResolver(f func(ctx context.Context, org, requestID string) (projectID, batchID string, active bool)) {
+	p.mu.Lock()
+	p.scopeOf = f
+	p.mu.Unlock()
 }
 
 type orgPolicy struct {
@@ -74,6 +86,9 @@ type PolicyInput struct {
 	Args        map[string]any
 	Risk        string
 	RequestedBy string // the human on whose behalf the agent acts ("" in demo mode)
+
+	// project and batch of the request (filled by prepare from the run's context; scope permissions only).
+	projectID, batchID string
 }
 
 // PolicyVerdict is the decision of the policy layer for one tool request.
@@ -105,12 +120,21 @@ func configured(r catalog.PackRules) bool {
 	return r.ApprovalAmountUSD > 0 || len(r.AlwaysApprove) > 0 || (r.Governance != nil && !r.Governance.IsZero())
 }
 
-// baseline is the invariant floor (the original needsApproval).
-func (p *PolicyService) baseline(a domain.Agent, tool, action, risk string) (bool, string, string) {
+// applies reports whether the engine must decide for this agent: the organization has rules, or the agent has
+// approval permissions (permissions.go). Without either, only the baseline decides, as always.
+func applies(r catalog.PackRules, agentID string) bool {
+	_, has := r.Permissions.For(agentID)
+	return configured(r) || has
+}
+
+// baseline is the invariant floor (the original needsApproval). lifted is true only when the account owner lifted
+// the safety floor of this action's category for this agent: then the always-approve list no longer asks for it
+// (invariant 1 of section 3); high risk and the agent's autonomy still do.
+func (p *PolicyService) baseline(a domain.Agent, tool, action, risk string, lifted bool) (bool, string, string) {
 	switch {
 	case strings.EqualFold(risk, "high"):
 		return true, "baseline.risk_high", "the runtime flagged this action as high risk"
-	case p.Cfg.ApprovalActions[action]:
+	case p.Cfg.ApprovalActions[action] && !lifted:
 		return true, "baseline.approval_action:" + action, fmt.Sprintf("action %s is on the always-approve list", action)
 	case a.Autonomy == "suggest" || a.Autonomy == "approve_each":
 		return true, "baseline.autonomy:" + a.Autonomy, fmt.Sprintf("agent autonomy %s requires approval", a.Autonomy)
@@ -130,7 +154,18 @@ func mapAutonomy(a string) policy.Autonomy {
 	return policy.AutonomyRules
 }
 
-func (p *PolicyService) engineConfig(r catalog.PackRules, agent domain.Agent) policy.Config {
+// floorLifted reports whether the call's category is a safety-floor category the owner lifted for this agent.
+func floorLifted(r catalog.PackRules, in PolicyInput) bool {
+	ap, ok := r.Permissions.For(in.Agent.ID)
+	if !ok {
+		return false
+	}
+	k := policy.ActionKind(in.Tool, in.Action, in.Args)
+	return policy.IsFloor(k) && ap.Lifted(k)
+}
+
+func (p *PolicyService) engineConfig(r catalog.PackRules, in PolicyInput) policy.Config {
+	agent := in.Agent
 	var g policy.Governance
 	if r.Governance != nil {
 		g = *r.Governance
@@ -141,6 +176,24 @@ func (p *PolicyService) engineConfig(r catalog.PackRules, agent domain.Agent) po
 	}
 	slices.Sort(always)
 	always = append(always, r.AlwaysApprove...)
+	lifted := floorLifted(r, in)
+	if lifted {
+		// The owner lifted the floor of this category for this agent: the always-approve lists stop asking for
+		// this action (and only for it). Amount threshold, deny, limits and double approval still apply.
+		tool, action := policy.NormalizeName(in.Tool), policy.NormalizeName(in.Action)
+		keep := always[:0:0]
+		for _, a := range always {
+			n := policy.NormalizeName(a)
+			if m, _ := path.Match(n, action); m {
+				continue
+			}
+			if m, _ := path.Match(n, tool+"."+action); m {
+				continue
+			}
+			keep = append(keep, a)
+		}
+		always = keep
+	}
 	cfg := policy.Config{
 		Org:      policy.OrgRules{AlwaysApprove: always, DenyActions: g.DenyActions, ApprovalAmount: r.ApprovalAmountUSD},
 		Autonomy: map[string]policy.Autonomy{agent.ID: mapAutonomy(agent.Autonomy)},
@@ -158,7 +211,28 @@ func (p *PolicyService) engineConfig(r catalog.PackRules, agent domain.Agent) po
 		cfg.Grants = append(cfg.Grants, policy.Grant{ID: "org.categories", Agent: "*", Tool: "*", Action: "*", Effect: policy.EffectRequireApproval,
 			When: policy.Conditions{Categories: g.ApprovalCategories}, Description: "the action touches a category that needs approval"})
 	}
+	if ap, ok := r.Permissions.For(agent.ID); ok {
+		// The agent's approval permissions, as grants and limits of this same engine (no second engine).
+		kind := policy.ActionKind(in.Tool, in.Action, in.Args)
+		if _, ok := r.Permissions.ScopeAllows(agent.ID, in.projectID, in.batchID, kind, time.Now()); ok {
+			ap = ap.WithNever(kind) // "in this project / batch do not ask for <kind>"; the floor still asks
+		}
+		gs, ls := policy.PermissionRules(agent.ID, permissionLevel(agent.Autonomy), ap, kind)
+		cfg.Grants = append(cfg.Grants, gs...)
+		cfg.Limits = append(cfg.Limits, ls...)
+	}
 	return cfg
+}
+
+// permissionLevel is the level the permission rules read: suggest and approve_each ask for everything anyway.
+func permissionLevel(a string) policy.Autonomy {
+	switch a {
+	case "autonomous":
+		return policy.AutonomyAutonomous
+	case "rules":
+		return policy.AutonomyRules
+	}
+	return policy.AutonomyApproveEach
 }
 
 func (p *PolicyService) forOrg(org string) *orgPolicy {
@@ -187,7 +261,14 @@ func (p *PolicyService) prepare(ctx context.Context, org string, in PolicyInput)
 		g = *rules.Governance
 	}
 	op.contacts.set(policy.NewStaticContacts(g))
-	cfg := p.engineConfig(rules, in.Agent)
+	if p.scopeOf != nil && rules.Permissions != nil && len(rules.Permissions.Scopes) > 0 {
+		if rid := RequestIDFrom(ctx); rid != "" {
+			if pid, bid, active := p.scopeOf(ctx, org, rid); active {
+				in.projectID, in.batchID = pid, bid
+			}
+		}
+	}
+	cfg := p.engineConfig(rules, in)
 	if op.eng == nil {
 		eng, err := policy.NewEngine(cfg, op.contacts)
 		if err != nil {
@@ -220,9 +301,6 @@ func callOf(in PolicyInput) policy.ToolCall {
 func (p *PolicyService) Decide(ctx context.Context, in PolicyInput) PolicyVerdict {
 	org := OrgFrom(ctx, p.Cfg.OrgID)
 	v := PolicyVerdict{Effect: string(policy.EffectAllow), RequiredApprovals: 1, Source: "baseline", Autonomy: in.Agent.Autonomy}
-	if need, rule, why := p.baseline(in.Agent, in.Tool, in.Action, in.Risk); need {
-		v.Effect, v.RuleID, v.Reason = string(policy.EffectRequireApproval), rule, why
-	}
 	id, call := identityOf(org, in), callOf(in)
 	v.ArgsHash = policy.Fingerprint(id, call)
 	if a, ok := policy.MaxAmount(in.Args); ok {
@@ -232,6 +310,9 @@ func (p *PolicyService) Decide(ctx context.Context, in PolicyInput) PolicyVerdic
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	eng, rules, err := p.prepare(ctx, org, in)
+	if need, rule, why := p.baseline(in.Agent, in.Tool, in.Action, in.Risk, err == nil && floorLifted(rules, in)); need {
+		v.Effect, v.RuleID, v.Reason = string(policy.EffectRequireApproval), rule, why
+	}
 	if err != nil {
 		// Fail towards a human: rules that cannot be read must not become "allow".
 		v.Source = "engine"
@@ -240,7 +321,7 @@ func (p *PolicyService) Decide(ctx context.Context, in PolicyInput) PolicyVerdic
 		}
 		return v
 	}
-	if !configured(rules) {
+	if !applies(rules, in.Agent.ID) {
 		return v
 	}
 	v.Source = "engine"
@@ -283,7 +364,7 @@ func (p *PolicyService) Reserve(ctx context.Context, in PolicyInput) PolicyVerdi
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	eng, rules, err := p.prepare(ctx, org, in)
-	if err != nil || !configured(rules) {
+	if err != nil || !applies(rules, in.Agent.ID) {
 		return v
 	}
 	v.Source = "engine"
@@ -312,7 +393,7 @@ func (p *PolicyService) Recheck(ctx context.Context, in PolicyInput, approvalID 
 		v.Effect, v.RuleID, v.Reason, v.Source = string(policy.EffectDeny), "policy.unavailable", "organization rules could not be loaded; the approved action was not run", "engine"
 		return v
 	}
-	if !configured(rules) {
+	if !applies(rules, in.Agent.ID) {
 		return v
 	}
 	v.Source = "engine"

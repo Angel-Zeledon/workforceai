@@ -3,9 +3,10 @@ import type { TaskAudit } from "../auditLogic";
 
 export type NodeKind = "task" | "subtask" | "consult" | "group" | "milestone" | "gate" | "wait" | "review";
 export type NodeState =
-  | "draft" | "pending" | "ready" | "running" | "awaiting_approval" | "waiting"
+  | "draft" | "pending" | "ready" | "running" | "awaiting_approval" | "waiting" | "needs_input"
   | "paused" | "blocked" | "done" | "skipped" | "failed" | "cancelled";
-export type ProjectStatus = "draft" | "planning" | "ready" | "running" | "paused" | "waiting_human" | "done" | "failed" | "cancelled";
+/** partial: it ended, but a person skipped a step and some objective was left without a result. */
+export type ProjectStatus = "draft" | "planning" | "ready" | "running" | "paused" | "waiting_human" | "done" | "partial" | "failed" | "cancelled";
 export type ProjectControl = "active" | "paused" | "cancelled";
 export type Complexity = "S" | "M" | "L" | "XL";
 export type Light = "green" | "amber" | "red";
@@ -49,6 +50,10 @@ export interface ProjectNode {
   /** a human skipped this failed node (W2) */
   skipped?: boolean;
   skip_reason?: string;
+  /** left undone because a person skipped a step it depends on (needs your help) */
+  omitted?: boolean;
+  /** drive paths the node's task wrote */
+  files?: string[];
   /** Q1: checkable criteria the output is reviewed against, and the verdict of that review */
   acceptance?: string[];
   review?: NodeReview | null;
@@ -105,6 +110,10 @@ export interface ProjectSummary {
   template_id: string | null;
   budget_usd: number; spent_usd: number;
   tasks_done: number; tasks_total: number; running: number; awaiting: number; failed: number;
+  /** the batch (one template for many customers) the project belongs to */
+  batch_id?: string;
+  /** tasks whose agent asked a person and waits for the answer (older backends omit it) */
+  needs_input?: number;
   light: Light;
   created_at: string; started_at: string | null; finished_at: string | null; deadline_at: string | null;
   objectives_count: number;

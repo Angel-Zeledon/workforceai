@@ -309,6 +309,14 @@ func (s *Service) GetLayout(ctx context.Context, org string) (LayoutDoc, error) 
 // SaveLayout validates and stores the layout if base equals the stored version (0 when none); the answer carries
 // the new version. A stale base returns *LayoutConflictError with the current document.
 func (s *Service) SaveLayout(ctx context.Context, org, actor string, raw []byte, base int) (LayoutDoc, error) {
+	return s.saveLayout(ctx, org, actor, raw, base, func(doc json.RawMessage) (int, error) {
+		return s.Store.SaveLayout(ctx, org, doc, base, actor)
+	}, "")
+}
+
+// saveLayout validates a layout and stores it with save; office is "" for the organization's layout (E2: the
+// office whose layout it is, in the audit and the live event).
+func (s *Service) saveLayout(ctx context.Context, org, actor string, raw []byte, base int, save func(json.RawMessage) (int, error), office string) (LayoutDoc, error) {
 	if base < 0 {
 		return LayoutDoc{}, invalidf("base_version must not be negative")
 	}
@@ -341,13 +349,16 @@ func (s *Service) SaveLayout(ctx context.Context, org, actor string, raw []byte,
 	if err != nil {
 		return LayoutDoc{}, err
 	}
-	v, err := s.Store.SaveLayout(ctx, org, doc, base, actor)
+	v, err := save(doc)
 	if err != nil {
 		return LayoutDoc{}, err
 	}
-	s.audit(ctx, actor, EvOfficeLayout, "office", "layout", map[string]any{"version": v, "pieces": len(l.Pieces), "desks": len(l.Desks)})
-	s.emit(ctx, application.Action{Type: EvOfficeLayout, SkipAudit: true, Entity: "office", EntityID: "layout",
-		Payload: map[string]any{"version": v, "actor": actor}})
+	details, payload := map[string]any{"version": v, "pieces": len(l.Pieces), "desks": len(l.Desks)}, map[string]any{"version": v, "actor": actor}
+	if office != "" {
+		details["office"], payload["office"] = office, office
+	}
+	s.audit(ctx, actor, EvOfficeLayout, "office", "layout", details)
+	s.emit(ctx, application.Action{Type: EvOfficeLayout, SkipAudit: true, Entity: "office", EntityID: "layout", Payload: payload})
 	return LayoutDoc{Layout: doc, Version: v}, nil
 }
 

@@ -38,7 +38,12 @@ func (s *server) mountRewards(r chi.Router) {
 }
 
 func (s *server) officeLayout(w http.ResponseWriter, r *http.Request) {
-	d, err := s.Rewards.GetLayout(r.Context(), s.org(r))
+	office := r.URL.Query().Get("office") // E2: one layout per office ("" or general = the organization's)
+	if err := s.officeLayoutAllowed(r, office, false); err != nil {
+		s.fail(w, err)
+		return
+	}
+	d, err := s.Rewards.GetLayoutFor(r.Context(), s.org(r), office)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -57,7 +62,12 @@ func (s *server) officeLayoutSave(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	d, err := s.Rewards.SaveLayout(r.Context(), s.org(r), s.actor(r), body.Layout, body.BaseVersion)
+	office := r.URL.Query().Get("office")
+	if err := s.officeLayoutAllowed(r, office, true); err != nil {
+		s.fail(w, err)
+		return
+	}
+	d, err := s.Rewards.SaveLayoutFor(r.Context(), s.org(r), office, s.actor(r), body.Layout, body.BaseVersion)
 	if err != nil {
 		if ce, ok := rewards.AsConflict(err); ok {
 			writeJSON(w, http.StatusConflict, map[string]any{"error": ce.Error(), "code": rewards.CodeLayoutConflict, "version": ce.Version, "layout": ce.Layout})

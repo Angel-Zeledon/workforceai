@@ -6,7 +6,7 @@ El usuario puede volver a sus conversaciones con la oficina («General») y con 
 
 No hay mensajes duplicados. `messages` sigue siendo la única fuente; General y el hilo de un agente son *vistas* (consultas):
 
-- **General** = todos los mensajes del canal `office` y de cada chat 1:1 (`agent:<id>`), en orden cronológico. Las conversaciones de solicitudes (`request`) no entran: se llega a ellas desde el enlace de la solicitud.
+- **General** (en pantalla: «Toda la oficina») = todos los mensajes del canal `office` y de cada chat 1:1 (`agent:<id>`), en orden cronológico. Las conversaciones internas de los pedidos (`request`) no entran: se leen en el panel del pedido (ver «Pedidos» abajo).
 - **Hilo de un agente X** = su chat 1:1 (`agent:X`) + todo mensaje que X envió o recibió + los mensajes del usuario y avisos del sistema de los *turnos* (`turn_id`) en los que X participó. Así un mensaje del usuario en General que se enrutó a X aparece en el hilo de X (mismo id), y lo que se escribe en el chat 1:1 de X aparece en General.
 - Cada mensaje devuelto trae `agent_ids`: los agentes que participaron en su turno (las insignias «Enviado a»).
 
@@ -72,7 +72,47 @@ Lo que una persona escribió nunca cuenta como no leído para ella; lo que escri
 responde `400` ("too many attachments … max 10") y el compositor lo muestra con un error claro (antes el backend
 recortaba a 6 sin avisar).
 
-**Lo que no cambia en E0.** Una tarea pedida en un hilo privado crea una solicitud de la empresa como antes (visible en
-Solicitudes y en sus conversaciones de solicitud, con aprobaciones para quien decide), pero ahora queda registrado quién
+**Lo que no cambia en E0.** Una tarea pedida en un hilo privado crea un pedido de la empresa como antes (visible en
+Pedidos y en sus conversaciones internas, con aprobaciones para quien decide), pero ahora queda registrado quién
 la pidió (`request_runs.requested_by`, costos y avisos por persona). Restringir quién ve las solicitudes es de E2/E3.
 La exportación completa de la organización (owner/admin) sigue incluyendo todas las tablas.
+
+## Pedidos: cada trabajo se abre al costado del chat (2026-11-03)
+
+Diseño: `docs/superpowers/specs/2026-11-03-chats-y-pedidos-design.md`. Regla: **un chat por «con quién hablas»; cada
+trabajo es un «pedido» que se abre al costado, sin salir del chat.** Un solo nombre en la app: «pedido» (en: «request»,
+pt: «pedido»); ya no se dice «solicitud», «trabajo» ni «conversación del trabajo».
+
+**Barra lateral en tres grupos** (`ChatsView.tsx`): **Agentes** («Toda la oficina» y un chat por agente), **Personas**
+(`PeopleChatsList`: compañeros y canales) y **Pedidos** (reemplaza «Conversaciones anteriores»): cada conversación de
+tipo `request` con su estado, quién lo hace y cuándo; los que necesitan a la persona van primero. Archivar, renombrar y
+eliminar siguen siendo los de la conversación (`PATCH/DELETE /conversations/{id}`), ahora dentro del panel. El
+buscador busca en los tres grupos a la vez: nombres y puestos de los agentes, nombres de canales y títulos de pedidos en
+el navegador (sin tildes ni mayúsculas) más lo que el backend encuentra en los mensajes (`GET /conversations?q=`); un
+acierto del canal `office` lleva a «Toda la oficina», uno de `agent:<id>` a ese agente y uno de `request` a su pedido.
+
+**Estado de un pedido** (`lib/pedidosLogic.ts`, `pedidoStatus`): falló > listo > **necesita tu ayuda** (pregunta abierta
+del agente en `useStore.questions` o tarea `needs_input`, del trabajo de Proyectos) > **espera tu aprobación** (pedido
+`awaiting_approval`/`awaiting_confirmation`, tarea `awaiting_approval` o aprobación pendiente de una de sus tareas) > en
+pausa > en curso. Sin el pedido cargado: «sin estado» (nunca se inventa).
+
+**Una tarjeta por pedido en el chat**, en el último mensaje que lo nombra (`pedidoCardAnchors`): título, estado, quién y
+«Abrir pedido»; si necesita ayuda o aprobación lo dice y lleva a Pendientes (`/approvals/inbox`). Se quitaron la
+etiqueta «Solicitud» y los botones «Ver informe» / «Ver proyecto» / «Ver cómo lo trabajaron»: el chat ya no cambia a la
+conversación interna.
+
+**Panel del pedido** (`PedidoPanel.tsx`): drawer a la derecha (en pantallas anchas comparte la fila con el chat; en
+móvil, pantalla completa con «Volver»), cierra con la X, Esc o Atrás. Pestañas: **Resumen** (qué se pidió, estado,
+quién, costo, fechas, «Abrir proyecto» si es parte de uno, organizar), **Pasos** (`GET /requests/{id}`: tareas con su
+agente y estado), **Archivos** (los `files` de los mensajes del pedido, última versión de cada ruta, en el visor de
+archivos), **Informe** (`ReportView`, antes en un modal) y **Cómo lo trabajaron** (`GET /conversations/{id}/messages`,
+solo lectura).
+
+**URL.** El pedido abierto vive en `?pedido=<id del pedido>` sobre la ruta del chat (`/chats`, `/chats/<agente>`):
+abrir uno agrega una entrada al historial (Atrás lo cierra y la persona queda en el chat donde estaba); cambiar de un
+pedido a otro la reemplaza. Enlaces viejos: `/chats/<agente>` sigue igual y `?conv=<id de conversación>` abre el pedido
+de esa conversación. La notificación de un pedido terminado (`push.FromRequest`) y la tarjeta de un comando que creó un
+pedido abren `/chats?pedido=<id>` (si ya se está en Chats, el panel se abre sin navegar: `lib/pedidoNav.ts`).
+
+Textos del backend: el mensaje del plan termina con «Puedes seguir el avance en el pedido, aquí mismo en el chat.» y el
+del informe con «Lo encuentras en el pedido, aquí mismo en el chat.» (`chat_local.go`). Sin cambios de almacenamiento.

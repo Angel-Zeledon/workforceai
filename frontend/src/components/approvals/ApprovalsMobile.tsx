@@ -9,6 +9,7 @@ import { currentSubscription, disablePush, enablePush, getPushConfig, pushSuppor
 import { useSession } from "@/lib/session";
 import { OrgIndicator } from "../auth/OrgIndicator";
 import { Progress, RiskBadge } from "../ui";
+import { ApprovalReason } from "./ApprovalReason";
 
 type PushState = "loading" | "unsupported" | "unavailable" | "denied" | "off" | "on";
 
@@ -40,6 +41,7 @@ function PushControl() {
     sendLabels({
       risk_low: t("risk.low"), risk_medium: t("risk.medium"), risk_high: t("risk.high"), fallbackTitle: t("approvals.push.fallbackTitle"),
       request_done: t("push.request.done"), request_failed: t("push.request.failed"), request_body: t("push.request.body"),
+      help_one: t("push.help.one"), help_many: t("push.help.many"), help_body: t("push.help.body"),
     }).catch(() => {});
   }, [t]);
 
@@ -96,6 +98,7 @@ function ApprovalItem({ a, focused, onDone }: { a: Approval; focused: boolean; o
       </div>
       {focused && <p className="mt-1 text-[11px] font-medium text-accent">{t("approvals.mobile.focused")}</p>}
       {a.details && <p className="mt-2 text-[13px] leading-snug text-ink2 [overflow-wrap:anywhere]">{a.details}</p>}
+      {a.status === "pending" && <ApprovalReason a={a} className="mt-2 bg-panel2" />}
       <dl className="mt-2 space-y-1 text-[12px] text-mute">
         <div className="font-mono">{a.action}</div>
         {a.required_role && <div data-testid={`approval-role-${a.id}`}>{t("approvals.mobile.requiredRole", { role: a.required_role })}</div>}

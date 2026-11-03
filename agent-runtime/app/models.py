@@ -557,6 +557,53 @@ class SourceRef(_Base):
     simulated: bool = False
 
 
+HelpKind = Literal["data", "file", "decision", "contradiction", "other"]
+MAX_HELP_TEXT = 600
+MAX_HELP_OPTIONS = 5
+MAX_HELP_OPTION = 160
+
+
+def _one_line(v: Any, n: int) -> str:
+    return " ".join(str(v or "").split())[:n]
+
+
+class HelpRequest(_Base):
+    """Needs your help: what the agent cannot get or decide by itself (a datum, a file, a choice between options, a
+    contradiction). It stops the task until a person answers; the backend never lets the agent decide alone."""
+
+    kind: HelpKind = "other"
+    what_happened: str = ""
+    need: str = ""
+    options: list[str] = Field(default_factory=list)
+
+    @field_validator("kind", mode="before")
+    @classmethod
+    def _kind(cls, v: Any) -> str:
+        v = str(v or "").strip().lower()
+        return v if v in ("data", "file", "decision", "contradiction") else "other"
+
+    @field_validator("what_happened", "need", mode="before")
+    @classmethod
+    def _text(cls, v: Any) -> str:
+        return _one_line(v, MAX_HELP_TEXT)
+
+    @field_validator("options", mode="before")
+    @classmethod
+    def _options(cls, v: Any) -> list[str]:
+        if not isinstance(v, (list, tuple)):
+            return []
+        out = [_one_line(o, MAX_HELP_OPTION) for o in v]
+        return [o for o in out if o][:MAX_HELP_OPTIONS]
+
+
+class HelpAnswer(_Base):
+    """A person's answer to an earlier help_request of the same task (backend -> runtime)."""
+
+    question: str = ""
+    answer: str = ""
+    by: str = ""
+
+
 class RunTaskRequest(_ProviderPolicyMixin):
     # El contrato NO tiene campos de credenciales, connection_id ni URLs de API:
     # el runtime nunca ve secretos ni llama al proveedor (test_contract_has_no_secret_fields).
@@ -576,6 +623,9 @@ class RunTaskRequest(_ProviderPolicyMixin):
     sources: list[SourceRef] | None = None
     # V2: notes a human sent to steer this task. Additional guidance, never authority (security.py).
     human_guidance: list[str] | None = None
+    # Needs your help (additive): the agent may ask a person (help_request) and gets the answers here.
+    help_allowed: bool = False
+    help_answers: list[HelpAnswer] | None = None
     # M1: relevant memories of past work (bounded by the backend); data, never instructions.
     recalled: list[RecalledMemory] | None = None
     want_trace: bool = False  # V2: return the redacted prompt as built, for the thought audit
@@ -615,6 +665,13 @@ class TaskResult(_Base):
     tool_requests: list[ToolRequest] = Field(default_factory=list)
 
 
+class TaskResultHelp(TaskResult):
+    """TaskResult plus the optional help_request: the schema sent only when the backend allows asking, so the calls
+    that cannot ask do not pay for its description."""
+
+    help_request: HelpRequest | None = None
+
+
 class RunTrace(_Base):
     """The prompt exactly as the runtime builds it (before framework wrapping), redacted. Only on request."""
 
@@ -626,6 +683,7 @@ class RunTaskResponse(_Base):
     output: StructuredOutput
     consults: list[Consult] = Field(default_factory=list)
     tool_requests: list[ToolRequest] = Field(default_factory=list)
+    help_request: HelpRequest | None = None  # needs your help (additive): the task waits for a person
     usage: Usage
     provider: str | None = None  # optional: same as usage.provider / usage.model
     model: str | None = None

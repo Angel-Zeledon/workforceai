@@ -60,8 +60,9 @@ def scrub_run_task(resp: RunTaskResponse) -> RunTaskResponse:
     """Nada con forma de credencial sale del runtime: ni en el resultado ni en los args
     de un tool_request (el modelo podria repetir un secreto visto en un correo)."""
     data = resp.model_dump()
-    for key in ("output", "consults", "tool_requests"):
-        data[key] = redact_any(data[key])
+    for key in ("output", "consults", "tool_requests", "help_request"):
+        if data.get(key) is not None:
+            data[key] = redact_any(data[key])
     return RunTaskResponse(**data)
 
 

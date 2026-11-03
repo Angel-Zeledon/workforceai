@@ -141,6 +141,7 @@ type opts struct {
 	debater        *debaterStub        // mount the team debates with this runtime (debates_api_test.go)
 	inboxes        *inboxOpts          // mount the data inboxes (inboxes_api_test.go); implies the drive
 	deps           func(d *api.Deps)   // last word on the dependencies before the router is built (linkimports_api_test.go)
+	questions      bool                // agents may ask people mid-task (questions_api_test.go)
 }
 
 type env struct {
@@ -183,6 +184,9 @@ func newEnv(t *testing.T, o opts) *env {
 	d := api.Deps{Cfg: cfg, Queries: q, Orch: orch, Approvals: appr, Store: spy, Runtime: fakeRuntime{}, Hub: hub, Log: log,
 		AuthEnabled: o.auth, AllowedOrigins: o.origins, EnableDemoReset: o.demoReset, MaxBodyBytes: o.maxBody, WSMaxAge: o.wsMaxAge}
 	d.Chats = &application.ChatHistory{Store: mem, Core: spy, Rec: rec, Cfg: cfg}
+	if o.questions {
+		orch.SetQuestions(&application.Questions{Store: mem, Rec: rec, NoticeWindow: time.Millisecond})
+	}
 	d.Audit = &application.AuditService{Store: mem, Rec: rec, Cfg: cfg}
 	if o.v2 {
 		pr := &application.ProfileService{Store: mem, Core: spy, Tones: mem, Rec: rec, Config: cfg}

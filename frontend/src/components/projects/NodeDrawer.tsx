@@ -6,6 +6,8 @@ import { explainNode, fmtDuration, isDoneState } from "@/lib/projects/calc";
 import { useProjects } from "@/lib/projects/store";
 import { Btn } from "../ui";
 import { AuditDetail } from "../quality/AuditStamp";
+import { QuestionCard } from "../approvals/QuestionCard";
+import { useStore } from "@/lib/store";
 import { AgentChip, StatePill, fmtMoney, useNodeTitle } from "./shared";
 
 /** Right-hand panel for the selected node: facts, dependencies in/out and a deterministic "why is it blocked?". */
@@ -27,6 +29,7 @@ export function NodeDrawer() {
   const select = useProjects((s) => s.selectNode);
   const decide = useProjects((s) => s.decide);
   const title = useNodeTitle();
+  const questions = useStore((s) => s.questions);
   const n = detail.nodes.find((x) => x.id === id);
   if (!n) return null;
   const incoming = n.depends_on.map((d) => detail.nodes.find((x) => x.id === d)).filter(Boolean);
@@ -54,6 +57,14 @@ export function NodeDrawer() {
         <Fact k={t("pv.node.complexity")} v={n.complexity} />
       </dl>
       {n.error && <div className="rounded-xl bg-red-500/10 px-2 py-1 text-[11px] text-red-700">{t("pv.node.error", { code: n.error })}</div>}
+      {n.task_id && Object.values(questions).filter((q) => q.task_id === n.task_id && q.status === "open").map((q) => <QuestionCard key={q.id} q={q} />)}
+      {n.omitted && <div data-testid="node-omitted" className="rounded-xl bg-panel2 px-2 py-1 text-[11px] text-mute">{t("pv.node.omitted")}</div>}
+      {n.files && n.files.length > 0 && (
+        <div data-testid="node-files" className="rounded-xl border border-line bg-panel2 p-2 text-[11px]">
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-mute">{t("pv.follow.files")}</div>
+          <ul className="space-y-0.5">{n.files.map((f) => <li key={f}><a href={`/files?path=${encodeURIComponent(f)}`} className="break-all text-accent hover:underline">{f}</a></li>)}</ul>
+        </div>
+      )}
       {n.acceptance && n.acceptance.length > 0 && (
         <div data-testid="node-acceptance" className="rounded-xl border border-line bg-panel2 p-2 text-[11px] text-ink">
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-mute">{t("pv.quality.acceptance")}</div>

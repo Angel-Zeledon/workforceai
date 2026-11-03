@@ -8,7 +8,7 @@ import type {
   ControlAction, LaunchBody, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectFrame, ProjectHealth, ProjectSummary, ProjectTemplate, SaveTemplateOpts,
 } from "./types";
 
-export const PROJECT_TABS = ["health", "map", "timeline", "kanban", "lanes", "delegation", "approvals", "changes", "costs"] as const;
+export const PROJECT_TABS = ["follow", "health", "map", "timeline", "kanban", "lanes", "delegation", "approvals", "changes", "costs"] as const;
 export type ProjectTab = (typeof PROJECT_TABS)[number];
 /** what the Projects screen shows when no project is open */
 export type ProjectsScreen = "list" | "library" | "builder";
@@ -100,7 +100,7 @@ export const useProjects = create<PState>((set, get) => ({
     if (d.project.status !== "planning" && !d.planning) { if (!s.planningPhases[id]) return {}; const { [id]: _g, ...rest } = s.planningPhases; return { planningPhases: rest }; }
     return { planningPhases: { ...s.planningPhases, [id]: mergePlanning(undefined, d.nodes, d.objectives) } };
   }),
-  open: false, loaded: false, projects: {}, activeId: null, detail: null, health: null, tab: "health", selectedNodeId: null,
+  open: false, loaded: false, projects: {}, activeId: null, detail: null, health: null, tab: "follow", selectedNodeId: null,
   templates: [], changes: [], error: null,
   view: "list", editingId: null, wizard: null,
   setView: (view) => set({ view }),
@@ -124,7 +124,7 @@ export const useProjects = create<PState>((set, get) => ({
   loadTemplates: async () => { try { set({ templates: await projectsApi.templates() }); } catch { /* ignore */ } },
 
   openProject: async (id) => {
-    set({ activeId: id, detail: null, health: null, changes: [], tab: "health", selectedNodeId: null, error: null, view: "list" });
+    set({ activeId: id, detail: null, health: null, changes: [], tab: "follow", selectedNodeId: null, error: null, view: "list" });
     try {
       const detail = await projectsApi.get(id);
       if (get().activeId !== id) return;

@@ -111,7 +111,7 @@ El responsable (la asistente en la oficina, el agente en 1:1, o el nombrado) con
 Listo, armé un plan de 5 tareas. Esto es lo que hará cada quien:
 • Valeria Ríos (Gerente de Ventas): Analizar cliente y preparar propuesta. Por qué: conoce al cliente y es quien arma la propuesta comercial.
 …
-Antes de cualquier acción sensible te pediré aprobación. Puedes seguir el avance en Solicitudes.
+Antes de cualquier acción sensible te pediré aprobación. Puedes seguir el avance en el pedido, aquí mismo en el chat.
 ```
 Cada tarea lleva `assigned_reason` (`reason` opcional del planner `/v1/plan`; si falta, el backend lo deriva del rol). Al terminar el informe (o fallar la solicitud) el chat recibe el aviso correspondiente.
 

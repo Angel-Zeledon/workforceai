@@ -264,6 +264,35 @@ func TestAgentSearchNeverLeaksForbiddenFolders(t *testing.T) {
 	}
 }
 
+// A Ninguno inside a readable folder (folder access, part 3) is excluded before ranking, in every mode.
+func TestAgentSearchHonoursNoneInsideReadableFolder(t *testing.T) {
+	e := newEnv(t, docindex.Limits{}, true)
+	e.write(t, "/Shared/RRHH/payroll.md", "Payroll merger bonus for the directors.")
+	e.write(t, "/Shared/news.md", "The merger party is on Friday.")
+	e.idx.Sync(e.ctx, org)
+	fs := &drive.AgentFS{Svc: e.drive, Chunks: e.idx}
+	if _, err := e.drive.SetAgentAccess(e.ctx, drive.Human("admin"), "sales", "/Shared/RRHH", drive.AccessNone); err != nil {
+		t.Fatal(err)
+	}
+	roots, _ := fs.ReadableRoots(e.ctx, "sales")
+	for _, mode := range []string{"keyword", "semantic", "hybrid"} {
+		r := e.search(t, "merger", mode, roots)
+		for _, h := range r.Hits {
+			if strings.Contains(h.Path, "RRHH") {
+				t.Fatalf("%s: excluded folder ranked: %+v", mode, r.Hits)
+			}
+		}
+		rr := fs.Run(e.ctx, "sales", drive.ActSearch, map[string]any{"query": "merger", "mode": mode, "path": "/Shared"}, false)
+		if strings.Contains(rr.Text, "Payroll") || strings.Contains(rr.Text, "RRHH") {
+			t.Fatalf("%s: agent saw an excluded folder: %+v", mode, rr)
+		}
+	}
+	rr := fs.Run(e.ctx, "sales", drive.ActSearch, map[string]any{"query": "merger party", "mode": "keyword"}, false)
+	if !strings.Contains(rr.Text, "/Shared/news.md") {
+		t.Fatalf("the rest of /Shared is still found: %+v", rr)
+	}
+}
+
 func TestTenantIsolation(t *testing.T) {
 	e := newEnv(t, docindex.Limits{}, true)
 	e.write(t, "/Shared/a.md", "Tenant A blueprint of the warehouse.")

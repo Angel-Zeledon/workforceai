@@ -4,6 +4,7 @@ import { Fragment, useMemo, useRef, useEffect, useState, type ReactNode } from "
 import { useT } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import { go } from "@/lib/navBridge";
+import { openPedido, pedidoLink } from "@/lib/pedidoNav";
 import { sortRows } from "@/lib/commands/logic";
 import type { ChatMessage } from "@/lib/types";
 import { Icon } from "../../icons";
@@ -72,10 +73,12 @@ export function CommandCard({ m }: { m: ChatMessage }) {
       </a>
     );
   } else if (card.kind === "request" || card.kind === "navigate") {
-    const href = card.href || (card.request_id ? "/chats" : "");
+    // a request opens its pedido (beside the chat when already in Chats); an older "/chats" link gets the pedido too
+    const pedidoId = card.request_id && (!card.href || card.href === "/chats") ? card.request_id : "";
+    const href = pedidoId ? pedidoLink(pedidoId) : card.href || "";
     if (href) {
       action = (
-        <button type="button" data-testid="cmd-link" onClick={() => go(href)} className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-line-strong bg-panel px-2.5 py-1 text-[11.5px] font-medium text-accent-hover hover:border-accent">
+        <button type="button" data-testid="cmd-link" onClick={() => (pedidoId ? openPedido(pedidoId) : go(href))} className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-line-strong bg-panel px-2.5 py-1 text-[11.5px] font-medium text-accent-hover hover:border-accent">
           <Icon name="arrow" size={12} />{card.kind === "request" ? t("cmds.card.openRequest") : t("cmds.card.open")}
         </button>
       );

@@ -36,6 +36,8 @@ const (
 	StateDone             = "done"
 	StateFailed           = "failed"
 	StateCancelled        = "cancelled"
+	// StateNeedsInput ("Necesita tu ayuda"): the agent of the node asked a person and waits for the answer.
+	StateNeedsInput = "needs_input"
 
 	StatusDraft        = "draft"
 	StatusRunning      = "running"
@@ -44,6 +46,9 @@ const (
 	StatusDone         = "done"
 	StatusFailed       = "failed"
 	StatusCancelled    = "cancelled"
+	// StatusPartial ("terminado en parte"): it ended, but a person skipped a step and at least one objective was
+	// left without a result (the others delivered).
+	StatusPartial = "partial"
 
 	ControlActive    = "active"
 	ControlPaused    = "paused"
@@ -98,6 +103,10 @@ type Node struct {
 	TaskID string `json:"task_id,omitempty"`
 	// Skipped: a human skipped this failed node (W2); SkipReason is theirs.
 	Skipped    bool   `json:"skipped,omitempty"`
+	// Omitted: the node was left undone because a person skipped a step it depends on (needs your help).
+	Omitted bool `json:"omitted,omitempty"`
+	// Files are the drive paths the node's task wrote (additive).
+	Files []string `json:"files,omitempty"`
 	SkipReason string `json:"skip_reason,omitempty"`
 	// Acceptance are the checkable criteria of the node and Review the verdict
 	// of its quality review (Q1, additive).
@@ -213,6 +222,7 @@ type Summary struct {
 	Running       int        `json:"running"`
 	Awaiting      int        `json:"awaiting"`
 	Failed        int        `json:"failed"`
+	NeedsInput    int        `json:"needs_input"`
 	Light         string     `json:"light"`
 	CreatedAt     time.Time  `json:"created_at"`
 	StartedAt     *time.Time `json:"started_at"`
@@ -223,6 +233,8 @@ type Summary struct {
 	RequestID string `json:"request_id,omitempty"`
 	// CustomerID is the customer the project works for (B12, additive).
 	CustomerID string `json:"customer_id,omitempty"`
+	// BatchID is the batch the project belongs to (additive).
+	BatchID string `json:"batch_id,omitempty"`
 	// BudgetWarnPct is the highest budget early-warning threshold already crossed
 	// (percent of the approved budget, e.g. 80); 0 when none (additive, W5).
 	BudgetWarnPct float64 `json:"budget_warn_pct,omitempty"`
@@ -563,6 +575,9 @@ type Record struct {
 	// CustomerID (B12) is the customer the project works for ("" = none). It is set at creation and the
 	// project's request is scoped to it at launch.
 	CustomerID string `json:"customer_id,omitempty"`
+	// BatchID is the batch the project belongs to ("" = a project on its own): one template launched for many
+	// customers. A batch counts as one active project.
+	BatchID string `json:"batch_id,omitempty"`
 	// Decisions maps a gate task id to "approved" or "rejected".
 	Decisions  map[string]string `json:"decisions,omitempty"`
 	Error      string            `json:"error,omitempty"`

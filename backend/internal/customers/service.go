@@ -138,7 +138,21 @@ const (
 	maxTaxID   = 40
 	maxNotes   = 2000
 	maxDisplay = 160
+	maxContact = 120
+	maxEmail   = 254
+	maxPhone   = 40
 )
+
+var emailRe = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+
+// NormalizeEmail is the form an e-mail is compared in ("" when it is not one).
+func NormalizeEmail(s string) string {
+	e := strings.ToLower(clean(s))
+	if !emailRe.MatchString(e) {
+		return ""
+	}
+	return e
+}
 
 var colorRe = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
@@ -209,6 +223,28 @@ func (s *Service) apply(c *Customer, in Input) error {
 			return invalid("notes must have at most %d characters", maxNotes)
 		}
 		c.Notes = n
+	}
+	if in.ContactName != nil {
+		n := clean(*in.ContactName)
+		if utf8.RuneCountInString(n) > maxContact {
+			return invalid("contact_name must have at most %d characters", maxContact)
+		}
+		c.ContactName = n
+	}
+	if in.Email != nil {
+		raw := clean(*in.Email)
+		e := NormalizeEmail(raw)
+		if raw != "" && (e == "" || len(e) > maxEmail) {
+			return invalid("email is not a valid address")
+		}
+		c.Email = e
+	}
+	if in.Phone != nil {
+		ph := clean(*in.Phone)
+		if utf8.RuneCountInString(ph) > maxPhone {
+			return invalid("phone must have at most %d characters", maxPhone)
+		}
+		c.Phone = ph
 	}
 	if c.Color == "" {
 		c.Color = defaultColor(c.Name)

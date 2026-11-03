@@ -60,6 +60,14 @@ func (o *Orchestrator) NoteTaskFile(taskID, action, p string) {
 	f.by[taskID] = append(f.by[taskID], p)
 }
 
+// peekTaskFiles returns the paths a task wrote so far without forgetting them (the chat message takes them later).
+func (o *Orchestrator) peekTaskFiles(taskID string) []string {
+	f := &o.files
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.by[taskID]...)
+}
+
 func (o *Orchestrator) takeTaskFiles(taskID string) []string {
 	f := &o.files
 	f.mu.Lock()

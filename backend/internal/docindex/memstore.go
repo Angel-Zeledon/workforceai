@@ -242,18 +242,7 @@ func (m *MemStore) ChunkCount(_ context.Context, org string) (int, error) {
 	return n, nil
 }
 
-func inScope(p string, under []string) bool {
-	if under == nil {
-		return true
-	}
-	lp := strings.ToLower(p)
-	for _, u := range under {
-		if drive.IsUnder(lp, strings.ToLower(u)) {
-			return true
-		}
-	}
-	return false
-}
+func inScope(p string, under []string) bool { return drive.InScope(under, p) }
 
 // visible walks the chunks of current versions of live files in scope.
 func (m *MemStore) visible(ctx context.Context, org string, under []string, fn func(f drive.File, c StoredChunk)) {

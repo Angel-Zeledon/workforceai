@@ -23,10 +23,12 @@ import { TaskIntervention } from "./agent/TaskIntervention";
 import { AgentPauseToggle } from "./agent/AgentPauseToggle";
 import { RehearsalToggle } from "./rehearsal/RehearsalToggle";
 import { DeskFiles } from "./drive/DeskFiles";
+import { FolderAccessSection } from "./agent/FolderAccessSection";
 import { MemoryTab } from "./agent/MemoryTab";
 import { AgentSkillsCard } from "./skills/AgentSkillsCard";
 import { QualityCard } from "./quality/QualityCard";
 import { TrustCard } from "./trust/TrustCard";
+import { PermissionsSection } from "./agent/PermissionsSection";
 import { SaveAsSkillButton } from "./skills/SaveAsSkillButton";
 
 const TABS = ["chat", "state", "tasks", "chats", "memory", "reports", "files", "activity", "profile", "thoughts"] as const;
@@ -98,7 +100,7 @@ export function AgentPanel({ id }: { id: string }) {
       <div role="tabpanel" aria-label={t(`panel.tab.${tab}`)} className={tab === "chat" ? "min-h-0 flex-1" : "min-h-0 flex-1 space-y-3 overflow-y-auto p-4"}>
         {tab === "chat" && <AgentChat id={id} />}
         {error && !detail && <Empty>{t("panel.loadError")}</Empty>}
-        {tab === "profile" && <><Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card><ProfileSheet id={id} /><TrustCard id={id} /><QualityCard id={id} /><AgentSkillsCard id={id} /></>}
+        {tab === "profile" && <><Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card><ProfileSheet id={id} /><PermissionsSection id={id} /><TrustCard id={id} /><QualityCard id={id} /><AgentSkillsCard id={id} /></>}
         {tab === "thoughts" && <ThoughtAudit id={id} focusTaskId={focusTask} />}
         {tab === "state" && (
           <>
@@ -165,7 +167,7 @@ export function AgentPanel({ id }: { id: string }) {
             <div className="text-[13px] font-semibold text-ink">{r.title}</div><div className="mt-1 line-clamp-2 text-xs text-mute">{r.summary}</div>
           </button>
         )) : <Empty>{t("panel.noReports")}</Empty>)}
-        {tab === "files" && <><DeskFiles id={id} /><AgentFilesTab id={id} /></>}
+        {tab === "files" && <><DeskFiles id={id} /><FolderAccessSection id={id} /><AgentFilesTab id={id} /></>}
         {tab === "activity" && <ActivityFeed agentId={id} limit={40} />}
       </div>
     </aside>

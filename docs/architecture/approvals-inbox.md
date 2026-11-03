@@ -1,4 +1,4 @@
-# Aprobaciones en 1 minuto (B17)
+# Pendientes: aprobaciones en 1 minuto (B17) y preguntas de los agentes
 
 Bandeja rápida de aprobaciones **de todos los proyectos**: una tarjeta a la vez con lo esencial, teclado, gestos y
 agrupación donde la API ya lo permite. Página `/approvals/inbox` (`frontend/src/components/approvals/ApprovalsInbox.tsx`),
@@ -78,7 +78,29 @@ de solo lectura (`approvals:read`); decidir sigue pidiendo `approvals:decide`.
 ya generada, un pago de riesgo alto sin proyecto, y un historial que dispara una sugerencia (`draft_reply`, 39 de 40).
 Las aprobaciones reales del simulador se suman a la bandeja.
 
+## Preguntas de los agentes ("Necesita tu ayuda")
+
+La bandeja se llama ahora **Pendientes** y tiene dos tipos de elemento: aprobaciones y preguntas. Una pregunta es lo que
+un agente pide a una persona cuando le falta algo que no puede conseguir ni decidir solo (un dato del cliente, un
+archivo, una decisión entre opciones, una contradicción). API y reglas: `08-api.md` §16.9.
+
+- **Dónde se ven:** arriba en la bandeja flotante (`ApprovalsTray`, "N pendientes · M necesitan tu ayuda"), en
+  `/approvals/inbox` (sección "N tareas necesitan tu ayuda", agrupadas por lote, proyecto o solicitud) y en el panel del
+  nodo del proyecto (`NodeDrawer`). Los archivos de la oficina 3D no cambiaron: la bandeja flotante que usa ya las muestra.
+- **Responder:** eligiendo una opción, con texto, con un archivo del drive (ruta), pasando la tarea a otro agente u
+  omitiéndola. Varias seleccionadas se responden a la vez con el mismo texto o una opción que todas compartan.
+- **Omitir con sentido:** antes de omitir se ve qué pasos no se harán. Si sin ella no se entrega nada, la app no deja
+  omitir y ofrece responder, reasignar o cancelar el proyecto de ese cliente. Si solo se pierde parte, nombra los
+  objetivos y el proyecto termina "terminado en parte".
+- **Quién responde:** la persona que lanzó el trabajo (`asked_for`) o quien tiene `tasks:manage`. Los agentes nunca.
+- **Avisos:** uno por pregunta, pero juntos si llegan varias del mismo grupo en 3 minutos; recordatorios a las 24 h,
+  cada día durante 3 días y luego semanales. Push a la persona; correo/Slack/Teams según la configuración de la
+  organización. Lógica pura del cliente: `frontend/src/lib/questionsLogic.ts` (+ `questionsLogic.test.mjs`).
+
 ## Pendiente / no verificado
+
+- Preguntas: el aviso semanal es "un aviso por grupo y día" (ventana de 24 h), no un resumen con la lista de clientes;
+  el correo y Slack/Teams van a los destinos de la organización, no a la persona.
 
 - No hay prueba e2e de Playwright del gesto de deslizar; la lógica está cubierta por `inboxLogic.test.mjs`.
 - La bandeja carga todo el historial de aprobaciones de la organización para la sugerencia; con mucho volumen convendría

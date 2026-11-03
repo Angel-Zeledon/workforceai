@@ -142,3 +142,32 @@ func (p *ProjectStore) GetChange(ctx context.Context, org, project, id string) (
 func (p *ProjectStore) ListChanges(ctx context.Context, org, project string) ([]projects.PlanChange, error) {
 	return many(ctx, p.S, org, scanChange, `SELECT data FROM plan_changes WHERE org_id=$1 AND project_id=$2 ORDER BY created_at, id`, org, project)
 }
+
+// ---- batches (migration 814) ----
+
+var _ projects.BatchStore = (*ProjectStore)(nil)
+
+func scanBatch(r scanner) (projects.Batch, error) {
+	var raw []byte
+	err := r.Scan(&raw)
+	var b projects.Batch
+	if err == nil {
+		err = json.Unmarshal(raw, &b)
+	}
+	return b, err
+}
+
+func (p *ProjectStore) PutBatch(ctx context.Context, b projects.Batch) error {
+	return p.S.exec(ctx, b.OrgID, `INSERT INTO project_batches (id, org_id, status, data, created_at) VALUES ($1,$2,$3,$4,$5)
+		ON CONFLICT (org_id, id) DO UPDATE SET status=EXCLUDED.status, data=EXCLUDED.data, updated_at=now()`,
+		b.ID, b.OrgID, b.Status, jb(b), b.CreatedAt)
+}
+
+func (p *ProjectStore) GetBatch(ctx context.Context, org, id string) (projects.Batch, error) {
+	b, err := one(ctx, p.S, org, scanBatch, `SELECT data FROM project_batches WHERE org_id=$1 AND id=$2`, org, id)
+	return b, mapErr(err)
+}
+
+func (p *ProjectStore) ListBatches(ctx context.Context, org string) ([]projects.Batch, error) {
+	return many(ctx, p.S, org, scanBatch, `SELECT data FROM project_batches WHERE org_id=$1 ORDER BY created_at DESC, id LIMIT 500`, org)
+}

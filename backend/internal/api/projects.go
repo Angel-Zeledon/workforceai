@@ -49,6 +49,14 @@ func (s *server) mountProjects(r chi.Router) {
 	r.With(s.can(auth.PermApprovalsDecide)).Post("/projects/{id}/plan-changes/{changeId}/reject", func(w http.ResponseWriter, r *http.Request) { s.decidePlanChange(w, r, "reject") })
 	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/nodes/{nodeId}/replan", s.replanProjectNode)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/projects/{id}/save-as-template", s.saveProjectTemplate)
+	// Batches: one template for many customers (a project per customer, launched at the plan's pace).
+	r.With(s.can(auth.PermRequestsCreate)).Post("/project-batches/preview", s.previewBatch)
+	r.With(s.can(auth.PermRequestsCreate)).Post("/project-batches", s.createBatch)
+	r.With(s.can(auth.PermTasksRead)).Get("/project-batches", s.listBatches)
+	r.With(s.can(auth.PermTasksRead)).Get("/project-batches/{id}", s.getBatch)
+	r.With(s.can(auth.PermTasksManage)).Post("/project-batches/{id}/control", s.controlBatch)
+	r.With(s.can(auth.PermTasksManage)).Post("/project-batches/{id}/customers/{customerId}/cancel", s.cancelBatchCustomer)
+	r.With(s.can(auth.PermTasksManage)).Post("/project-batches/{id}/retry-failed", s.retryBatchFailed)
 	r.With(s.can(auth.PermTasksRead)).Get("/project-templates", s.listProjectTemplates)
 	// Customizable work templates (G2): members create and edit, admins delete.
 	r.With(s.can(auth.PermRequestsCreate)).Post("/project-templates", s.createProjectTemplate)
@@ -429,4 +437,86 @@ func (s *server) previewProjectTemplate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, 200, p)
+}
+
+// ---- batches ----
+
+func (s *server) previewBatch(w http.ResponseWriter, r *http.Request) {
+	var in projects.BatchInput
+	if err := s.decode(w, r, &in); err != nil {
+		s.fail(w, err)
+		return
+	}
+	p, err := s.Projects.PreviewBatch(r.Context(), in)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, p)
+}
+
+func (s *server) createBatch(w http.ResponseWriter, r *http.Request) {
+	var in projects.BatchInput
+	if err := s.decode(w, r, &in); err != nil {
+		s.fail(w, err)
+		return
+	}
+	b, err := s.Projects.CreateBatch(r.Context(), in)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, b)
+}
+
+func (s *server) listBatches(w http.ResponseWriter, r *http.Request) {
+	list, err := s.Projects.ListBatches(r.Context())
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": list})
+}
+
+func (s *server) getBatch(w http.ResponseWriter, r *http.Request) {
+	v, err := s.Projects.BatchView(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
+}
+
+func (s *server) controlBatch(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Action string `json:"action"`
+	}
+	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	b, err := s.Projects.BatchControl(r.Context(), chi.URLParam(r, "id"), body.Action)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, b)
+}
+
+func (s *server) cancelBatchCustomer(w http.ResponseWriter, r *http.Request) {
+	b, err := s.Projects.CancelBatchCustomer(r.Context(), chi.URLParam(r, "id"), chi.URLParam(r, "customerId"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, b)
+}
+
+func (s *server) retryBatchFailed(w http.ResponseWriter, r *http.Request) {
+	n, err := s.Projects.RetryBatchFailed(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"retried": n})
 }

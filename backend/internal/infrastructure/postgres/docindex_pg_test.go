@@ -106,6 +106,25 @@ func TestDocIndexPostgres(t *testing.T) {
 			}
 		}
 	}
+	// a Ninguno inside a readable folder ("!" exclusion) is applied in SQL before ranking, in every mode
+	if _, err := dsvc.SetAgentAccess(ctxA, drive.Human("admin"), "sales", "/Shared", drive.AccessNone); err != nil {
+		t.Fatal(err)
+	}
+	roots, _ = fs.ReadableRoots(ctxA, "sales")
+	for _, m := range []string{"keyword", "semantic", "hybrid"} {
+		r, err := idx.SearchChunks(ctxA, drive.ChunkQuery{Query: "facturas car automobile", Mode: m, Under: append(roots, "/Shared", "!/Shared/informe.txt")})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, h := range r.Hits {
+			if h.Path == "/Shared/informe.txt" || strings.HasPrefix(h.Path, "/Agents/legal") {
+				t.Fatalf("%s: excluded passage ranked: %s", m, h.Path)
+			}
+		}
+	}
+	if _, err := dsvc.SetAgentAccess(ctxA, drive.Human("admin"), "sales", "/Shared", drive.AccessDefault); err != nil {
+		t.Fatal(err)
+	}
 	// tenant isolation: org-b sees only its own passages, and raw SQL as org-b sees no org-a rows
 	r, _ = idx.SearchChunks(ctxB, drive.ChunkQuery{Query: "facturas", Mode: "hybrid"})
 	if len(r.Hits) != 1 || r.Hits[0].Path != "/Shared/b.md" {

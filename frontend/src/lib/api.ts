@@ -3,6 +3,7 @@ import { authFetch } from "./session";
 import type {
   Agent, AgentDetail, Approval, ChatMessage, Counterargument, Conversation, Debate, Message, Metrics, Report, Request, StandingApproval, Task, ActivityItem,
 } from "./types";
+import type { AnswerKind, QuestionItem, SkipImpact } from "./questionsLogic";
 
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   if (MOCK) {
@@ -90,4 +91,32 @@ export const api = {
   debate: (id: string) => call<Debate>("GET", `/debates/${encodeURIComponent(id)}`),
   startDebate: (body: { topic: string; details?: string; options?: string[]; agent_ids?: string[]; locale?: string }) => call<Debate>("POST", "/debates", body),
   reset: () => call<unknown>("POST", "/demo/reset"),
+  /** Needs your help: the questions agents asked people (open by default, newest first). */
+  questions: async (status: "open" | "all" = "open") => list<QuestionItem>(await call("GET", `/questions?status=${status}`)),
+  question: (id: string) => call<{ question: QuestionItem; impact?: SkipImpact; reassign_candidates?: { id: string; name: string; role: string; title: string }[] }>(
+    "GET", `/questions/${encodeURIComponent(id)}`),
+  /** Throws AnswerError: a refused or unconfirmed skip carries the server's impact analysis. */
+  answerQuestion: (id: string, body: { kind: AnswerKind; text?: string; option?: string; file_path?: string; agent_id?: string; confirm?: boolean }) =>
+    callWithBody<QuestionItem>("POST", `/questions/${encodeURIComponent(id)}/answer`, body),
+  answerQuestions: (ids: string[], body: { kind: "text" | "option"; text?: string; option?: string }) =>
+    call<{ answered: string[]; failed: Record<string, string> }>("POST", "/questions/answer-batch", { ids, ...body }),
 };
+
+/** An API error that kept its JSON body (code, impact...). */
+export class AnswerError extends Error {
+  status: number; code: string; impact?: SkipImpact;
+  constructor(status: number, body: any) {
+    super(String(body?.error || status));
+    this.status = status; this.code = String(body?.code || ""); this.impact = body?.impact;
+  }
+}
+
+async function callWithBody<T>(method: string, path: string, body: unknown): Promise<T> {
+  if (MOCK) return call<T>(method, path, body);
+  const res = await authFetch(`${API_URL}${path}`, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store" });
+  const text = await res.text();
+  let data: any = {};
+  try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
+  if (!res.ok) throw new AnswerError(res.status, data);
+  return data as T;
+}

@@ -49,6 +49,8 @@ aprueba se **publica de vuelta** en el origen, sin pisar cambios ajenos.
 | Importar | Enlace (pull programado), buzones (push con token), `custom_api` (lectura en vivo) | `link-imports.md`, `data-inboxes.md` |
 | Conectores de marca | Google Drive solo lectura en vivo, solo texto, 256 KiB, sin sync. GitHub solo issues. Todo apagado (`VENDOR_INTEGRATIONS`) | `connections/drive` |
 | Devolver archivos a un origen | **No existe** | — |
+| Accesos por agente | Ninguno / Leer / Editar por carpeta, con herencia y pantalla (hecho el 2026-11-03, §11) | `drive/access.go`, `api/folder_access.go` |
+| Archivos recientes y facturas → estado de resultados | `fs.recent` y `fs.income_statement` (hecho el 2026-11-03, §11) | `drive/recent.go`, `drive/pnl.go`, `invoicepnl` |
 | Chat | Adjuntar archivos y carpetas, elegir del Drive, tarjetas de archivo y de edición con Conservar/Deshacer, "Pedir un cambio". El front deja 10 adjuntos y el back se queda con 6 | `chat/attachments.tsx`, `application/chat.go:367` |
 
 **Producción hoy** (`docker-compose.prod.yml`): sin S3 (los bytes van a Postgres como bytea), sin sandbox (sin
@@ -247,8 +249,8 @@ demás.
   versión nueva con diff visual y Conservar / Deshacer / Descargar / Publicar en origen. Corregir el límite de adjuntos
   (10 en el front, 6 en el back).
 - **Archivos:** raíz `/Fuentes` con el estado de cada fuente (última sincronización, errores, "cambiado aquí",
-  "conflicto"), insignia de origen en cada archivo, vista previa de pptx, permisos de agentes sobre carpetas (hoy solo
-  por API).
+  "conflicto"), insignia de origen en cada archivo, vista previa de pptx, permisos de agentes sobre carpetas ("Qué
+  agentes la ven", hecho el 2026-11-03: §11).
 - **Ajustes → Fuentes:** conectar, elegir carpetas, activar la vuelta (pide el permiso de escritura en ese momento),
   desconectar (revoca el token y borra lo importado en un plazo dicho).
 - **Ajustes → Memoria:** ver, corregir y borrar recuerdos por ámbito; memoria núcleo de cada agente.
@@ -319,6 +321,61 @@ documentos reales de clientes en producción por Gemini.
 4. **El banco de documentos sin aprobación por ejecución** cuando solo crea versiones en la mesa del agente o del
    proyecto (recomendado; publicar fuera siempre con aprobación).
 5. **Cambiar la imagen de Postgres a pgvector** (recomendado; un cambio de imagen en el VPS con copia de seguridad antes).
+
+## 11. Agentes que se ubican en los archivos, facturas exactas y accesos por agente (hecho el 2026-11-03)
+
+Diseño: `docs/superpowers/specs/2026-11-03-agentes-ubican-archivos-y-accesos-design.md`; plan:
+`docs/superpowers/plans/2026-11-03-archivos-y-accesos.md`. Migración `811_agent_folder_access.sql` (aditiva; `down` en
+`backend/migrations/down/`). Sin tablas nuevas: las reglas viven en `drive_grants` (ya clasificada en `tenantdata`).
+
+### 11.1 Accesos por agente (Ninguno / Leer / Editar)
+
+- **Modelo** (`drive/access.go`): cada fila activa de `drive_grants` es una regla `none | read | edit` sobre una carpeta y
+  todo lo que hay dentro. **Gana la regla más específica.** Valores por defecto sin regla: su carpeta `/Agents/<id>`
+  Editar (fija, no se puede cambiar), las carpetas de los proyectos donde trabaja Editar, `/Shared` Leer, lo demás
+  Ninguno. Una regla vence a un valor por defecto si está al menos tan abajo como la raíz de ese valor (una regla en
+  `/Projects` no quita el proyecto propio; una en `/Projects/<p>/Final` sí). Las filas antiguas son `read`: los
+  agentes existentes ven lo mismo que antes.
+- **Qué hace cada nivel:** Ninguno = no lista, no lee, no busca ni recuerda nada de ahí (ni siquiera nombra la carpeta);
+  Leer = lista, lee y busca, escribir pide aprobación; Editar = además escribe, edita y mueve sin aprobación (como su
+  mesa). En una tarea de un cliente (B12) las reglas nunca abren datos de otro cliente; un Ninguno sí cierra.
+- **En cada llamada:** `scopeOf` relee las reglas en cada herramienta (`list`, `read`, `search` por palabras y por
+  significado, `recent`, `write`, `write_document`, `edit`, `move`, `delete`, `income_statement`) y la memoria larga.
+  Las búsquedas reciben el alcance como `Under` con exclusiones `!/ruta` (`drive.InScope`); Postgres las aplica en SQL
+  antes de ordenar (`scopeSQL`/`scopeMatch`), así una carpeta con Ninguno no se clasifica ni se cuenta.
+- **Quién cambia:** administradores y dueño (`files:grant`) o el jefe (`head`) del departamento del agente (o de un
+  departamento superior) en el organigrama. Cada cambio se audita (`drive.access.changed {agent_id, path, from, to}`).
+- **Pantallas:** panel del agente > Archivos > "Carpetas que puede ver" (lista con Ninguno/Leer/Editar, "Agregar
+  carpeta" con el selector del Drive, "Volver al valor por defecto"); Archivos > "Qué agentes la ven" en cualquier
+  carpeta (nivel de cada agente, heredado o dado ahí, y cambiarlo si se puede).
+- **Pendiente (E3):** acceso efectivo = lo del agente ∩ lo que puede ver la persona que le pide.
+
+### 11.2 El agente se ubica solo (`fs.recent`)
+
+- `recent {days? (14, máx. 90), by? me|anyone, kind? pdf|sheet|doc|image|text|slides|<ext>, path?, limit? (50, máx. 200)}`:
+  archivos que la persona que pidió (`GatewayCall.OnBehalfOf`) subió, cambió o movió en la ventana, agrupados por
+  carpeta con tipos y fechas, solo en las carpetas que el agente ve. Lo que esa persona tocó en carpetas sin acceso sale
+  solo como "no access: N archivos en /X" (sin nombres ni contenido; nunca en una tarea de cliente). Sin persona conocida
+  lista lo de cualquiera y lo dice.
+- Prompt (`agent-runtime/app/file_locate.py`, enganchado en `security.workspace_lines`): orden adjuntos → recientes →
+  búsqueda; confirmar en una línea solo si hay duda (dentro de una tarea con `help_request` de "Necesita tu ayuda" si
+  está disponible; si no, pregunta en el resumen); sin acceso → decirlo y ofrecer "Darle acceso a esta carpeta" o
+  "Pedir acceso". Los mensajes `not_granted` también lo piden.
+
+### 11.3 Facturas → estado de resultados (`fs.income_statement`)
+
+- El agente extrae una fila por factura (fecha, número, emisor y receptor con su RFC/NIF, concepto, categoría, moneda,
+  subtotal, impuestos, total, tipo, archivo y página; `status: scanned|unreadable` si no se pudo leer).
+- `internal/invoicepnl` calcula en centavos enteros, determinista: emitidas por la empresa = ingreso, recibidas = gasto
+  (por RFC/NIF; si no, por nombre sin sufijos legales); costo de ventas si la categoría lo dice; utilidad bruta, gastos de
+  operación y utilidad antes de impuestos; los impuestos aparte, solo informativos. A **Revisar**: escaneadas e
+  ilegibles (no se suman), duplicadas por número y emisor (cuenta la primera), subtotal + impuestos ≠ total (se suma el
+  subtotal), moneda sin tipo de cambio (no se suma), importes ambiguos ("1.234"), clasificación dudosa.
+- Excel (`officedoc` + `excelize`): hojas **Detalle** (una fila por factura, la columna Archivo enlaza a su carpeta en
+  Archivos cuando `UI_BASE_URL` existe), **Estado de resultados** y **Revisar**, en es/en/pt. Mismas zonas y
+  aprobaciones que `write_document`. El resumen devuelve cuántas se leyeron, el resultado y cuántas revisar.
+- Escaneadas: con el sandbox de render apagado (producción hoy) van a Revisar con "escaneada: no se pudo leer el texto".
+- Skill de fábrica `income-statement-from-invoices` (es/en) asignada a `accounting` y `finance_treasury`.
 
 ## Fuentes de la investigación
 

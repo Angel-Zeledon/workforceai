@@ -26,6 +26,11 @@ type Customer struct {
 	// Color tints its building in the district ("#rrggbb").
 	Color string `json:"color"`
 	Notes string `json:"notes"`
+	// Contact (optional): a customer is a person or a company (its name). ContactName is the person to talk to;
+	// Email is also how an imported row is recognized as the same customer (projects for many customers, batches).
+	ContactName string `json:"contact_name"`
+	Email       string `json:"email"`
+	Phone       string `json:"phone"`
 	// FolderID is the customer's folder in the drive (/Clients/<name>, RefID = customer id); "" without a drive.
 	FolderID   string     `json:"-"`
 	FolderPath string     `json:"folder_path"`
@@ -67,6 +72,10 @@ type Input struct {
 	TaxID *string `json:"tax_id"`
 	Color *string `json:"color"`
 	Notes *string `json:"notes"`
+	// Contact (optional).
+	ContactName *string `json:"contact_name"`
+	Email       *string `json:"email"`
+	Phone       *string `json:"phone"`
 }
 
 // AssignmentInput is the body of a new clone.

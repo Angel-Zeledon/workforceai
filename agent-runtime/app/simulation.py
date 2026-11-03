@@ -17,6 +17,7 @@ from .routing import assigned_reason, compose_reply, owner_role
 from .vision import sim_image_lines
 from .models import (
     ChatReplyRequest,
+    HelpRequest,
     Citation,
     ChatReplyResponse,
     Consult,
@@ -231,7 +232,7 @@ def sim_code_request(req: RunTaskRequest) -> ToolRequest | None:
 def sim_skill_load(req: RunTaskRequest) -> ToolRequest | None:
     """S1: a task whose title (or description) carries "[sim:skill]" makes the simulated employee ask for
     its first skill with skill.load (once). Nothing else changes: the $50,000 scenario never has the marker."""
-    text = f"{req.task.title} {req.task.description}".lower()
+    text = f"{req.task.title} {req.task.description} {req.context.request_text or ''}".lower()
     if "[sim:skill]" not in text or not req.skills or req.loaded_skills:
         return None
     return ToolRequest(tool="skill", action="load", risk="low", args={"name": req.skills[0].name})
@@ -258,6 +259,22 @@ def sim_memory_notes(req: RunTaskRequest, out: StructuredOutput) -> list[str]:
         return []
     prefix = "Lesson" if req.locale == "en" else "Lección"
     return [f"{prefix} ({req.task.title[:60]}): {first}"]
+
+
+SIM_HELP_MARKER = "[sim:help]"
+
+
+def sim_help_request(req: RunTaskRequest) -> HelpRequest | None:
+    """[sim:help] in the task: the simulated agent asks a person once (only when asking is allowed and no answer
+    arrived yet), so the whole "needs your help" flow can be shown and tested without a model."""
+    text = f"{req.task.title} {req.task.description} {req.context.request_text or ''}".lower()
+    if not req.help_allowed or SIM_HELP_MARKER not in text or req.help_answers:
+        return None
+    if req.locale == "en":
+        return HelpRequest(kind="data", what_happened="The customer record has no phone number.",
+                           need="How should I contact this customer?", options=["Use the e-mail", "Skip the call", "I will add the phone"])
+    return HelpRequest(kind="data", what_happened="La ficha del cliente no tiene teléfono.",
+                       need="¿Cómo contacto a este cliente?", options=["Usa el correo", "Omite la llamada", "Agrego el teléfono"])
 
 
 class SimulationEngine(AgentEngine):
@@ -443,11 +460,19 @@ class SimulationEngine(AgentEngine):
         elif req.loaded_skills and "[sim:skill]" in f"{req.task.title} {req.task.description}".lower():
             names = ", ".join(l.name for l in req.loaded_skills)
             out.evidence.append(("Skill applied: " if req.locale == "en" else "Habilidad aplicada: ") + names)
+        help_req = sim_help_request(req)
+        if help_req is not None:  # needs your help: the task stops here until a person answers
+            out.summary = ("I stopped to ask for help: " if req.locale == "en" else "Me detuve a pedir ayuda: ") + help_req.need
+            tool_requests = []
+        elif req.help_answers:
+            out.evidence += [("Answer from a person: " if req.locale == "en" else "Respuesta de una persona: ") + a.answer
+                             for a in req.help_answers if a.answer]
         return RunTaskResponse(
             output=out,
-            consults=[Consult(**c) for c in entry["consults"]],
+            consults=[Consult(**c) for c in entry["consults"]] if help_req is None else [],
             tool_requests=tool_requests,
             usage=usage,
+            help_request=help_req,
         )
 
     # -------------------------------------------------------------- consult

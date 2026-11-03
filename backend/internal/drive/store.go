@@ -71,6 +71,8 @@ type Store interface {
 	// UsedBytes is the total size of every stored version (quota).
 	UsedBytes(ctx context.Context, org string) (int64, error)
 	Search(ctx context.Context, org string, q SearchQuery) ([]Hit, error)
+	// RecentFiles lists live files touched recently, newest first (recent.go). SearchText is not filled.
+	RecentFiles(ctx context.Context, org string, q RecentQuery) ([]File, error)
 
 	AddGrant(ctx context.Context, org string, g Grant) error
 	Grants(ctx context.Context, org, agentID string) ([]Grant, error) // active; agentID "" = all

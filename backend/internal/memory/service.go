@@ -31,6 +31,9 @@ type Config struct {
 	// CustomerOf tells the customer a request is scoped to (B12; optional: nil = no customers). An
 	// error at recall time recalls nothing (fail closed).
 	CustomerOf func(ctx context.Context, org, requestID string) (string, error)
+	// ExtraRecall (optional, E2 offices) adds memories that do not live in the index: the notes of the agent's
+	// office, of the person it works for and the company's knowledge. They come first, within the same budget.
+	ExtraRecall func(ctx context.Context, org, agentID, requestID, text string) []application.RecalledMemory
 	// Audit records a memory change by a person (optional).
 	Audit func(ctx context.Context, org, actor, action, id string, details map[string]any)
 	Now   func() time.Time
@@ -295,13 +298,38 @@ func (s *Service) retrieve(ctx context.Context, org string, q Query) []Item {
 // Recall implements application.MemorySource: the memories relevant to a task,
 // within the budget of a prompt (MaxItems items, MaxChars characters).
 func (s *Service) Recall(ctx context.Context, org string, q application.MemoryRecall) []application.RecalledMemory {
-	if s.cfg.Retriever == nil || strings.TrimSpace(q.Text) == "" {
+	if strings.TrimSpace(q.Text) == "" {
 		return nil
+	}
+	var out []application.RecalledMemory
+	budget := MaxChars
+	add := func(m application.RecalledMemory) bool {
+		cost := len([]rune(m.Title)) + len([]rune(m.Snippet))
+		if len(out) >= MaxItems || cost > budget && len(out) > 0 {
+			return false
+		}
+		budget -= cost
+		out = append(out, m)
+		return true
+	}
+	// E2: notes people wrote (the office's, the person's, the company's) are instructions like /recordar, never
+	// customer data, so they also reach customer-scoped tasks
+	if s.cfg.ExtraRecall != nil {
+		for _, m := range s.cfg.ExtraRecall(ctx, org, q.AgentID, q.RequestID, q.Text) {
+			m.Title, m.Snippet = Clean(m.Title, s.cfg.Suspects), Clean(m.Snippet, s.cfg.Suspects)
+			if len([]rune(m.Title))+len([]rune(m.Snippet)) > budget {
+				continue // too big for what is left: the next ones may fit
+			}
+			add(m)
+		}
+	}
+	if s.cfg.Retriever == nil {
+		return out
 	}
 	cid, err := s.customer(ctx, org, q.RequestID)
 	if err != nil {
 		s.cfg.Log.Warn("memory: customer of request, recalling nothing", "request", q.RequestID, "err", err)
-		return nil // fail closed: an unknown scope must not see every customer's work
+		return out // fail closed: an unknown scope must not see every customer's work
 	}
 	s.topUp(ctx, org)
 	pid, _ := s.project(ctx, org, q.RequestID)
@@ -309,15 +337,10 @@ func (s *Service) Recall(ctx context.Context, org string, q application.MemoryRe
 	if pid != "" && s.cfg.ProjectPath != nil {
 		query.PreferPath = s.cfg.ProjectPath(ctx, org, pid)
 	}
-	var out []application.RecalledMemory
-	budget := MaxChars
 	for _, it := range s.retrieve(ctx, org, query) {
-		cost := len([]rune(it.Title)) + len([]rune(it.Snippet))
-		if len(out) >= MaxItems || cost > budget && len(out) > 0 {
+		if !add(application.RecalledMemory{Ref: it.Ref, Kind: it.Kind, Title: it.Title, Snippet: it.Snippet, Project: it.Project, AgentID: it.AgentID, At: it.At}) {
 			break
 		}
-		budget -= cost
-		out = append(out, application.RecalledMemory{Ref: it.Ref, Kind: it.Kind, Title: it.Title, Snippet: it.Snippet, Project: it.Project, AgentID: it.AgentID, At: it.At})
 	}
 	return out
 }
@@ -426,4 +449,10 @@ func (s *Service) RememberNote(ctx context.Context, org, agentID, text string) e
 		AgentID: agentID, Scope: ScopeAgent, CreatedAt: now, UpdatedAt: now}
 	s.embedDocs(ctx, org, &d)
 	return s.cfg.Docs.Upsert(ctx, org, d)
+}
+
+// SetExtraRecall installs Config.ExtraRecall after construction (the offices are wired after the memory). Call it
+// at start-up, before the first task.
+func (s *Service) SetExtraRecall(fn func(ctx context.Context, org, agentID, requestID, text string) []application.RecalledMemory) {
+	s.cfg.ExtraRecall = fn
 }

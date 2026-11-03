@@ -6,7 +6,7 @@ import type { Light, NodeState, ProjectNode, ProjectStatus } from "@/lib/project
 import { useAgentColor, useAgentName } from "../ui";
 
 export const NODE_STATE_COLOR: Record<NodeState, string> = {
-  draft: "#aab3c0", pending: "#66707f", ready: "#5b8fb5", running: "#2b6cb0", awaiting_approval: "#a86208", waiting: "#7c6bb0",
+  draft: "#aab3c0", pending: "#66707f", ready: "#5b8fb5", running: "#2b6cb0", awaiting_approval: "#a86208", waiting: "#7c6bb0", needs_input: "#1d4ed8",
   paused: "#8b94a3", blocked: "#b4443c", done: "#2f7d55", skipped: "#aab3c0", failed: "#a63232", cancelled: "#8b94a3",
 };
 export const RETRY_COLOR = "#b8651f";
@@ -14,7 +14,7 @@ export const CRITICAL_COLOR = "#0F766E";
 export const LIGHT_COLOR: Record<Light, string> = { green: "#2f7d55", amber: "#a86208", red: "#a63232" };
 export const STATUS_COLOR: Record<ProjectStatus, string> = {
   draft: "#aab3c0", planning: "#7c6bb0", ready: "#5b8fb5", running: "#2b6cb0", paused: "#8b94a3", waiting_human: "#a86208",
-  done: "#2f7d55", failed: "#a63232", cancelled: "#8b94a3",
+  done: "#2f7d55", partial: "#a86208", failed: "#a63232", cancelled: "#8b94a3",
 };
 
 /** USD with enough decimals for the sub-dollar amounts LLM tasks cost. */
@@ -89,7 +89,7 @@ export function Kpi({ label, value, sub, color = "#151b26", testId, attrs }: { l
 /** Segmented bar by node state (used on cards and workflow rows). */
 export function StateBar({ nodes }: { nodes: ProjectNode[] }) {
   const total = nodes.length || 1;
-  const order: NodeState[] = ["done", "running", "awaiting_approval", "ready", "waiting", "pending", "blocked", "failed"];
+  const order: NodeState[] = ["done", "running", "needs_input", "awaiting_approval", "ready", "waiting", "pending", "blocked", "failed"];
   return (
     <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-mute/[0.14]">
       {order.map((s) => {

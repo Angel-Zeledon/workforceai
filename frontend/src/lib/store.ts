@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api, toChatMessage } from "./api";
+import type { QuestionItem } from "./questionsLogic";
 import { registerRoleTemplates } from "./meta";
 import { getLocale } from "./i18n-core";
 import { useArtifacts } from "./artifacts";
@@ -58,6 +59,9 @@ interface State {
   /** who is typing per conversation: agent_id -> start ms (auto-expires) */
   typing: Record<string, Record<string, number>>;
   approvals: Record<string, Approval>;
+  /** Needs your help: the questions agents asked people, by id (open ones drive the Pendientes tray). */
+  questions: Record<string, QuestionItem>;
+  loadQuestions: () => Promise<void>;
   reports: Record<string, Report>;
   activity: ActivityItem[];
   errors: ErrorItem[];
@@ -119,7 +123,7 @@ export const useStore = create<State>((set, get) => ({
   connected: false, loaded: false, mode: "office", selectedAgentId: null,
   agents: {}, agentOrder: [], tasks: {}, requests: {}, plans: {}, conversations: {}, messages: {}, chat: {}, routes: {}, lastTurnId: null, typing: {}, drafts: {},
   setDraft: (conv, text) => set((s) => ({ drafts: { ...s.drafts, [conv]: text } })),
-  approvals: {}, reports: {}, activity: [], errors: [], metrics: null, links: [], agentTick: {}, trustTick: {}, files: {}, debates: {}, debateClocks: {},
+  approvals: {}, questions: {}, reports: {}, activity: [], errors: [], metrics: null, links: [], agentTick: {}, trustTick: {}, files: {}, debates: {}, debateClocks: {},
   loadDebates: async () => {
     // stored debates are authoritative; one still running is only known from its debate.started frame
     try { const ds = await api.debates(); set((s) => ({ debates: { ...s.debates, ...byId(ds) } })); } catch { /* ignore */ }
@@ -152,6 +156,10 @@ export const useStore = create<State>((set, get) => ({
       activity: activity.length ? [...activity].sort((a, b) => +new Date(b.ts) - +new Date(a.ts)) : s.activity,
       metrics: metrics ?? s.metrics,
     }));
+    void get().loadQuestions();
+  },
+  loadQuestions: async () => {
+    try { const qs = await api.questions("open"); set((s) => ({ questions: { ...Object.fromEntries(Object.entries(s.questions).filter(([, q]) => q.status !== "open")), ...byId(qs) } })); } catch { /* the backend may not offer questions */ }
   },
   loadConversations: async () => {
     try { const c = await api.conversations(); set((s) => ({ conversations: { ...s.conversations, ...byId(c) } })); } catch { /* ignore */ }
@@ -240,7 +248,7 @@ export const useStore = create<State>((set, get) => ({
         });
         break;
       }
-      case "task.created": case "task.started": case "task.completed": case "task.failed": case "task.blocked": {
+      case "task.created": case "task.started": case "task.completed": case "task.failed": case "task.blocked": case "task.needs_input": case "task.reassigned": {
         const t0: Task = p.task;
         if (!t0) break;
         set((s) => {
@@ -321,6 +329,18 @@ export const useStore = create<State>((set, get) => ({
           const requests = task ? deriveRequest(task.request_id, s.tasks, s.requests) : s.requests;
           return { approvals, requests, agentTick: tick(s, [a.agent_id]) };
         });
+        break;
+      }
+      case "question.asked": case "question.resolved": case "question.reminder": {
+        const q0 = p.question;
+        if (!q0?.id) break;
+        set((s) => {
+          const prev = s.questions[q0.id];
+          // the event carries the stored question; keep what the list added (task title, project name, can_answer)
+          const q: QuestionItem = { ...(prev || { waiting_seconds: 0, for_me: false, can_answer: true }), ...q0, options: q0.options || [] };
+          return { questions: { ...s.questions, [q.id]: q }, agentTick: tick(s, [q.agent_id]) };
+        });
+        if (f.type === "question.asked") setTimeout(() => { void get().loadQuestions(); }, 300); // enrich (titles, permissions)
         break;
       }
       case "report.created": {

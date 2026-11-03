@@ -51,7 +51,7 @@ func (c *cmdCall) submit(text string) (*cmdResult, *cmdFail) {
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
-	return &cmdResult{Kind: "request", RequestID: id, Title: c.t("Solicitud creada", "Request created"),
+	return &cmdResult{Kind: "request", RequestID: id, Title: c.t("Pedido creado", "Request created"),
 		Text: c.t("Lo puse en marcha; verás el avance en la oficina.", "It is under way; you will see the progress in the office.")}, nil
 }
 
@@ -433,7 +433,7 @@ func cmdSaveTemplate(c *cmdCall) (*cmdResult, *cmdFail) {
 		return nil, c.serviceFail(err)
 	}
 	if len(reqs) == 0 {
-		return nil, fail(http.StatusUnprocessableEntity, "nothing_to_do", "Todavía no hay una solicitud para convertir en plantilla.", "There is no request yet to turn into a template.")
+		return nil, fail(http.StatusUnprocessableEntity, "nothing_to_do", "Todavía no hay un pedido para convertir en plantilla.", "There is no request yet to turn into a template.")
 	}
 	last := reqs[0]
 	for _, r := range reqs {

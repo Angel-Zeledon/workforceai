@@ -19,8 +19,9 @@ type Message struct {
 	Reject   string
 	Open     string // the app
 	NeedsApp bool   // links are not allowed for this approval (high risk, double approval...)
-	// Notice is set instead of an approval: the plan cap was reached.
-	Notice string
+	// Notice is set instead of an approval: the plan cap was reached, or agents need help (NoticeSubject set).
+	Notice        string
+	NoticeSubject string
 }
 
 // text holds the words of the messages in the three languages of the product.
@@ -50,6 +51,10 @@ var text = map[string]map[string]string{
 		"cFail":    "No se pudo registrar la decisión. Abre la app.",
 		"cOff":     "Las aprobaciones por enlace están desactivadas.",
 		"confirm":  "Confirmar",
+		"helpSubj":  "Un agente necesita tu ayuda",
+		"helpSubjN": "%d tareas necesitan tu ayuda",
+		"helpBody":  "Un agente se detuvo porque le falta algo que no puede conseguir ni decidir solo: %s. Respóndele en Pendientes y la tarea sigue desde donde paró.",
+		"helpBodyN": "%d tareas se detuvieron porque les falta algo que no pueden conseguir ni decidir solas. Respóndelas en Pendientes (puedes responder varias a la vez).",
 	},
 	"en": {
 		"subject":  "Approval pending: %s",
@@ -76,6 +81,10 @@ var text = map[string]map[string]string{
 		"cFail":    "The decision could not be recorded. Open the app.",
 		"cOff":     "Approvals by link are turned off.",
 		"confirm":  "Confirm",
+		"helpSubj":  "An agent needs your help",
+		"helpSubjN": "%d tasks need your help",
+		"helpBody":  "An agent stopped because it is missing something it cannot get or decide alone: %s. Answer it in Pending and the task continues where it stopped.",
+		"helpBodyN": "%d tasks stopped because they are missing something they cannot get or decide alone. Answer them in Pending (you can answer several at once).",
 	},
 	"pt": {
 		"subject":  "Aprovação pendente: %s",
@@ -102,6 +111,10 @@ var text = map[string]map[string]string{
 		"cFail":    "Não foi possível registrar a decisão. Abra o app.",
 		"cOff":     "As aprovações por link estão desativadas.",
 		"confirm":  "Confirmar",
+		"helpSubj":  "Um agente precisa da sua ajuda",
+		"helpSubjN": "%d tarefas precisam da sua ajuda",
+		"helpBody":  "Um agente parou porque falta algo que ele não consegue obter nem decidir sozinho: %s. Responda em Pendências e a tarefa continua de onde parou.",
+		"helpBodyN": "%d tarefas pararam porque falta algo que não conseguem obter nem decidir sozinhas. Responda em Pendências (você pode responder várias de uma vez).",
 	},
 }
 
@@ -148,6 +161,9 @@ func oneLine(s string) string {
 
 // Subject is the e-mail subject.
 func (m Message) Subject() string {
+	if m.Notice != "" && m.NoticeSubject != "" {
+		return m.NoticeSubject
+	}
 	if m.Notice != "" {
 		return tr(m.Locale, "subjCap")
 	}

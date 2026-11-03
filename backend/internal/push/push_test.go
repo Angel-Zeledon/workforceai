@@ -270,3 +270,11 @@ func TestFromApprovalTruncatesTitle(t *testing.T) {
 		t.Fatalf("%+v", m)
 	}
 }
+
+// A finished request opens its pedido beside the chat that asked for it (docs/superpowers/specs/2026-11-03-chats-y-pedidos-design.md).
+func TestFromRequestOpensItsPedido(t *testing.T) {
+	m := FromRequest("request.completed", "r 1&x")
+	if m.URL != "/chats?pedido=r+1%26x" || m.RequestID != "r 1&x" || m.Title != "" {
+		t.Fatalf("%+v", m)
+	}
+}

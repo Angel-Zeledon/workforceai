@@ -27,6 +27,10 @@ type Tier struct {
 	MaxSchedules      int     `json:"max_schedules"`
 	MaxSeats          int     `json:"max_seats"` // members plus pending invitations
 	StorageBytes      int64   `json:"storage_bytes"`
+	// Batches (one template launched for many customers): how many customers one batch may have and how many of its
+	// projects run at the same time. A batch counts as ONE active project, whatever its size.
+	MaxBatchCustomers int `json:"max_batch_customers"`
+	BatchParallel     int `json:"batch_parallel"`
 }
 
 // Catalog is every plan a customer can be on, cheapest first.
@@ -39,11 +43,11 @@ type Tier struct {
 // the full office (20, the system-wide maximum). Plans differ in what costs money: AI, parallel work, storage, people.
 var Catalog = []Tier{
 	{ID: PlanFree, AIAllowanceUSD: 1,
-		MaxAgents: 20, MaxActiveProjects: 1, MaxSchedules: 2, MaxSeats: 2, StorageBytes: 500 << 20},
+		MaxAgents: 20, MaxActiveProjects: 1, MaxSchedules: 2, MaxSeats: 2, StorageBytes: 500 << 20, MaxBatchCustomers: 10, BatchParallel: 2},
 	{ID: PlanPro, PriceMonthlyUSD: 29, PriceYearlyUSD: 290, AIAllowanceUSD: 12,
-		MaxAgents: 20, MaxActiveProjects: 5, MaxSchedules: 10, MaxSeats: 10, StorageBytes: 10 << 30},
+		MaxAgents: 20, MaxActiveProjects: 5, MaxSchedules: 10, MaxSeats: 10, StorageBytes: 10 << 30, MaxBatchCustomers: 100, BatchParallel: 3},
 	{ID: PlanMax, PriceMonthlyUSD: 99, PriceYearlyUSD: 990, AIAllowanceUSD: 45,
-		MaxAgents: 20, MaxActiveProjects: 20, MaxSchedules: 20, MaxSeats: 50, StorageBytes: 50 << 30},
+		MaxAgents: 20, MaxActiveProjects: 20, MaxSchedules: 20, MaxSeats: 50, StorageBytes: 50 << 30, MaxBatchCustomers: 500, BatchParallel: 5},
 }
 
 // TierOf returns the catalog entry of a plan. PlanPaid (and anything unknown) has no plan limits.

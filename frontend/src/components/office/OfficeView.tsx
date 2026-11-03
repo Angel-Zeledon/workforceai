@@ -12,6 +12,7 @@ import { CommandBar } from "../CommandBar";
 import { ProjectPill } from "../projects/ProjectPill";
 import { FirstRunHint } from "../nav/ui2";
 import { EditOfficeButton, OfficeEditor } from "./OfficeEditor";
+import { OfficePicker } from "./OfficePicker";
 import { useOfficeLayout } from "@/lib/officeLayout";
 import { PresenceHost } from "../presence/PresenceHost";
 import { AwayButton, AwayHost } from "../away/AwayHost";
@@ -86,6 +87,7 @@ export function OfficeView() {
       {/* Same box as the office scene but above the chat: in-scene popups that must stay clickable (approvals desk card). */}
       <div id="office-popups" className="pointer-events-none absolute inset-0 z-20" />
       <div data-tour="office.lighting" className={`pointer-events-none absolute right-[var(--hud-r)] top-[max(1rem,env(safe-area-inset-top))] z-40 flex max-w-[calc(100%-2rem)] items-start gap-2 ${selected ? "max-md:hidden" : ""}`} style={{ "--hud-r": `calc(${selected ? "var(--panel-w, 420px) + 16px" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})` } as React.CSSProperties}>
+        <OfficePicker />
         <AwayButton />
         <EditOfficeButton />
       </div>

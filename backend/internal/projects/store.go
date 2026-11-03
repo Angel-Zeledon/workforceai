@@ -48,6 +48,7 @@ type MemStore struct {
 	tpls map[string][]Template
 	vers map[string][]TemplateVersion // org|template id
 	chg  *MemChangeStore
+	bats map[string]Batch // org|id
 }
 
 func NewMemStore() *MemStore {
@@ -203,4 +204,51 @@ func cloneVersion(v TemplateVersion) TemplateVersion {
 	var out TemplateVersion
 	_ = json.Unmarshal(b, &out)
 	return out
+}
+
+// MemStore also keeps the batches.
+var _ BatchStore = (*MemStore)(nil)
+
+func (m *MemStore) PutBatch(_ context.Context, b Batch) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.bats == nil {
+		m.bats = map[string]Batch{}
+	}
+	raw, _ := json.Marshal(b)
+	var cp Batch
+	_ = json.Unmarshal(raw, &cp)
+	m.bats[b.OrgID+"|"+b.ID] = cp
+	return nil
+}
+
+func (m *MemStore) GetBatch(_ context.Context, org, id string) (Batch, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	b, ok := m.bats[org+"|"+id]
+	if !ok {
+		return Batch{}, domain.ErrNotFound
+	}
+	raw, _ := json.Marshal(b)
+	var cp Batch
+	_ = json.Unmarshal(raw, &cp)
+	return cp, nil
+}
+
+func (m *MemStore) ListBatches(ctx context.Context, org string) ([]Batch, error) {
+	m.mu.Lock()
+	ids := []string{}
+	for k, b := range m.bats {
+		if b.OrgID == org {
+			ids = append(ids, k)
+		}
+	}
+	m.mu.Unlock()
+	out := make([]Batch, 0, len(ids))
+	for _, k := range ids {
+		if b, err := m.GetBatch(ctx, org, k[len(org)+1:]); err == nil {
+			out = append(out, b)
+		}
+	}
+	return out, nil
 }

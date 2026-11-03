@@ -371,14 +371,14 @@ func (o *Orchestrator) AmendRun(ctx context.Context, requestID string, a RunAmen
 	}
 	for _, t := range fresh {
 		for _, d := range t.DependsOn {
-			if ex, ok := byID[d]; ok && (ex.Status == domain.TaskPending || ex.Status == domain.TaskRunning || ex.Status == domain.TaskAwaitingApproval) {
+			if ex, ok := byID[d]; ok && (ex.Status == domain.TaskPending || ex.Status == domain.TaskRunning || ex.Status == domain.TaskAwaitingApproval || ex.Status == domain.TaskNeedsInput) {
 				required[d] = true
 			}
 		}
 	}
 	for _, t := range edited {
 		for _, d := range t.DependsOn {
-			if ex, ok := byID[d]; ok && (ex.Status == domain.TaskPending || ex.Status == domain.TaskRunning || ex.Status == domain.TaskAwaitingApproval) {
+			if ex, ok := byID[d]; ok && (ex.Status == domain.TaskPending || ex.Status == domain.TaskRunning || ex.Status == domain.TaskAwaitingApproval || ex.Status == domain.TaskNeedsInput) {
 				required[d] = true
 			}
 		}

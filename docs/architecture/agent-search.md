@@ -64,7 +64,10 @@ stemmers when the query is too short to tell), so exact words always match and "
 ## Search (`search.go`)
 
 * **Scope first.** The caller passes `Under` = the folders the principal may read (agents: `AgentFS.ReadableRoots`: own
-  desk, `/Shared`, assigned project folders, human grants; `path` can only narrow it). It is a `WHERE` clause of every query
+  desk, `/Shared`, assigned project folders, folders with Read/Edit; `path` can only narrow it). An entry `!/path` excludes
+  a subtree the agent has **Ninguno** on (folder access, `archivos-agentes.md` §11): the deepest entry covering a path
+  decides (`drive.InScope`; in SQL `scopeSQL`/`scopeMatch`), so an excluded folder inside a readable one is never ranked
+  nor counted either. It is a `WHERE` clause of every query
   (keyword, semantic candidates, passage fetch), so a forbidden passage is never ranked, counted, nor returned. `fs.search`
   re-checks every hit against the zone policy (`zoneAll`) before showing it (defense in depth).
 * **Only live, current versions.** Every query joins `drive_files` (`current_version = chunk.version`, `deleted_at IS NULL`)

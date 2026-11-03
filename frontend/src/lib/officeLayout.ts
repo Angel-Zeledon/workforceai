@@ -31,8 +31,14 @@ interface State {
   error: "conflict" | "forbidden" | "invalid" | "network" | null;
   tab: EditorTab;
   grid: boolean;
+  /** E2: the office whose layout is shown ("" = General, the organization's). */
+  officeId: string;
+  /** Whether this person may redecorate the office shown (General: shop:buy as before; an office: its responsible). */
+  officeEditable: boolean;
 
   load: () => Promise<void>;
+  /** Shows another office's layout (an open edit is cancelled). */
+  setOffice: (id: string) => Promise<void>;
   startEdit: () => void;
   cancel: () => void;
   save: () => Promise<boolean>;
@@ -75,6 +81,9 @@ function seeded(l: Layout): Layout {
   return { ...l, pieces, seeded: true };
 }
 
+/** The layout endpoint of an office ("" = General: the organization's layout, as before E2). */
+export const layoutPath = (office: string) => (office ? `/office/layout?office=${encodeURIComponent(office)}` : "/office/layout");
+
 const errorOf = (e: unknown): State["error"] => {
   const m = /->\s*(\d+)/.exec(String((e as Error)?.message));
   const code = m ? Number(m[1]) : 0;
@@ -84,16 +93,26 @@ const errorOf = (e: unknown): State["error"] => {
 export const useOfficeLayout = create<State>((set, get) => ({
   layout: DEFAULT_LAYOUT, version: 0, loaded: false,
   editing: false, draft: null, past: [], future: [], selection: null, placing: null, dragging: false, deskGhost: null, zoneGhost: null, saving: false, error: null,
-  tab: "furniture", grid: true,
+  tab: "furniture", grid: true, officeId: "", officeEditable: true,
 
   load: async () => {
+    const office = get().officeId;
     try {
-      const doc = await call<LayoutDoc>("GET", "/office/layout");
+      const doc = await call<LayoutDoc>("GET", layoutPath(office));
+      if (get().officeId !== office) return; // the person switched office meanwhile
       // the editing user keeps their draft: the conflict check at Save time covers a stale base
       set({ loaded: true, layout: normalizeLayout(doc?.layout), version: Number(doc?.version) || 0 });
     } catch {
       set({ loaded: true }); // an older backend without the editor: the built-in look stays
     }
+  },
+
+  setOffice: async (id) => {
+    const next = id === "general" ? "" : id;
+    if (next === get().officeId) return;
+    if (get().editing) get().cancel();
+    set({ officeId: next, loaded: false, layout: DEFAULT_LAYOUT, version: 0 });
+    await get().load();
   },
 
   startEdit: () => {
@@ -109,7 +128,7 @@ export const useOfficeLayout = create<State>((set, get) => ({
     if (sameLayout(s.draft, s.layout)) { get().cancel(); return true; }
     set({ saving: true, error: null });
     try {
-      const doc = await call<LayoutDoc>("PUT", "/office/layout", { layout: s.draft, base_version: s.version });
+      const doc = await call<LayoutDoc>("PUT", layoutPath(s.officeId), { layout: s.draft, base_version: s.version });
       set({
         saving: false, editing: false, draft: null, past: [], future: [], selection: null, placing: null, dragging: false, deskGhost: null, zoneGhost: null,
         layout: normalizeLayout(doc?.layout ?? s.draft), version: Number(doc?.version) || s.version + 1,
@@ -171,7 +190,7 @@ async function flushLight(retry = true) {
   const s = useOfficeLayout.getState();
   const doc = { ...s.layout, light: { ...s.layout.light, ...patch } };
   try {
-    const res = await call<LayoutDoc>("PUT", "/office/layout", { layout: doc, base_version: s.version });
+    const res = await call<LayoutDoc>("PUT", layoutPath(s.officeId), { layout: doc, base_version: s.version });
     useOfficeLayout.setState({ layout: normalizeLayout(res?.layout ?? doc), version: Number(res?.version) || s.version + 1 });
   } catch (e) {
     if (retry && errorOf(e) === "conflict") { // someone saved meanwhile: take their version and apply the light on top

@@ -104,11 +104,14 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	pcfg.SynthTokenBudget, pcfg.SynthMaxGroups = cfg.App.SynthTokenBudget, cfg.App.SynthMaxGroups
 	pcfg.CustomerActive = customerActive(cust) // B12: projects scoped to a customer
 	pcfg.ArtifactCustomer = asvc.CustomerOfArtifact // B12: a customer's plan may only reference that customer's artifacts
+	pcfg.CustomerInfo = customerInfo(cust)            // batches: the customer's data in the template ({{cliente.*}})
+	pcfg.BatchConfirmUSD = cfg.App.ConfirmThresholdUSD
 	if orgCfg != nil {
 		pcfg.Catalog = orgCfg.Catalog()
 		pcfg.LocaleFor = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }
 	}
 	psvc = projects.New(ctx, pcfg)
+	orch.SetRequestOwner(psvc) // needs your help: the objectives (skip analysis) and the notice group of project tasks
 	orch.SetContextSource(asvc) // W3: referenced artifacts reach project tasks as delimited data
 	// B6: cell citations of the evidence chain are checked against the artifact
 	orch.SetCitationResolver(asvc)

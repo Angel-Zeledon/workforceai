@@ -8,6 +8,7 @@ import { useCan } from "@/lib/session";
 import { Btn, Empty } from "../ui";
 import { TemplateHistoryModal, inputCls, useTplText } from "./templateUi";
 import { ConceptLegend } from "../concepts/ConceptLegend";
+import { useBatchUi } from "@/lib/projects/batchApi";
 
 type Source = "all" | "builtin" | "org";
 
@@ -121,7 +122,8 @@ export function TemplateLibrary() {
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                  <Btn data-testid={`tpl-use-${tpl.id}`} kind="primary" onClick={() => openWizard(tpl.id)}>{t("tpl.lib.use")}</Btn>
+                  <Btn data-testid={`tpl-use-${tpl.id}`} kind="primary" onClick={() => openWizard(tpl.id)}>{t("batch.useOne")}</Btn>
+                  <Btn data-testid={`tpl-batch-${tpl.id}`} onClick={() => useBatchUi.getState().openWizard(tpl.id)}>{t("batch.useMany")}</Btn>
                   <Btn data-testid={`tpl-duplicate-${tpl.id}`} disabled={busy === tpl.id} onClick={() => duplicate(tpl)}>{t("tpl.lib.duplicate")}</Btn>
                   {!tpl.builtin && <Btn data-testid={`tpl-edit-${tpl.id}`} onClick={() => openBuilder(tpl.id)}>{t("tpl.lib.edit")}</Btn>}
                   {!tpl.builtin && <Btn data-testid={`tpl-history-${tpl.id}`} onClick={() => setHistory(tpl.id)}>{t("tpl.lib.history")}</Btn>}

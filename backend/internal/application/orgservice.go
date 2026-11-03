@@ -271,7 +271,8 @@ func (s *OrgConfig) Onboard(ctx context.Context, in OnboardInput) (OnboardResult
 	cur.Configured, cur.Locale, cur.Tone = true, locale, tone
 	cur.BusinessType, cur.PackVersion = pack.Key, pack.Version
 	rules := pack.Rules
-	rules.Governance = cur.Rules.Governance // a pack seeds the basics; it never erases governance an owner configured
+	rules.Governance = cur.Rules.Governance   // a pack seeds the basics; it never erases governance an owner configured
+	rules.Permissions = cur.Rules.Permissions // nor the approval permissions of the agents
 	cur.Onboarded, cur.OnboardedAt, cur.Rules = true, &now, rules
 	if err := s.Store.PutOrgSettings(ctx, org, cur); err != nil {
 		return OnboardResult{}, err

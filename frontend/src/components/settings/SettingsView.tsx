@@ -26,14 +26,15 @@ import { notifyApi } from "@/lib/notifyApi";
 import { IdentitySettings } from "./IdentitySettings";
 import { PortalBranding } from "./PortalBranding";
 import { MyCosts } from "./MyCosts";
+import { ApprovalSettings } from "./ApprovalSettings";
 
 /** Sub-pages of Settings. The URL (/settings?s=...) says which one is open, so the browser's Back button and the
  *  sidebar both just work: nothing needs a "Close" button. */
-const SUBS = ["office", "hire", "templates", "members", "kill", "connections", "security", "account", "data", "identity", "portal", "plan", "costs"] as const;
+const SUBS = ["office", "hire", "templates", "members", "kill", "connections", "security", "account", "data", "identity", "portal", "plan", "costs", "approvals"] as const;
 type Sub = (typeof SUBS)[number];
 const SUB_TITLE: Record<Sub, string> = {
   office: "settings.title", hire: "hire.open", templates: "tpl.open", members: "members.title",
-  kill: "ctl.killswitch.title", connections: "nav.connections", security: "nav.security", account: "mfa.rowTitle", data: "data.title", identity: "idn.title", portal: "portal.brand.title", plan: "planpage.title", costs: "mycosts.title",
+  kill: "ctl.killswitch.title", connections: "nav.connections", security: "nav.security", account: "mfa.rowTitle", data: "data.title", identity: "idn.title", portal: "portal.brand.title", plan: "planpage.title", costs: "mycosts.title", approvals: "perm.settings.title",
 };
 
 function Row({ icon, title, body, onClick, testid, disabled, danger, tour }: { tour?: string; icon: IconName; title: string; body: string; onClick: () => void; testid: string; disabled?: boolean; danger?: boolean }) {
@@ -97,6 +98,7 @@ export function SettingsView() {
             {sub === "account" && <AccountSecurity />}
             {sub === "data" && <DataPrivacy />}
             {sub === "costs" && <MyCosts />}
+            {sub === "approvals" && <ApprovalSettings />}
             {sub === "plan" && <PlanBilling />}
             {sub === "identity" && <IdentitySettings />}
             {sub === "portal" && <PortalBranding />}
@@ -122,6 +124,7 @@ export function SettingsView() {
     { id: "plan", group: "workspace", testid: "settings-plan", icon: "bag", title: t("planpage.title"), body: t("settings.page.plan"), hidden: !hasPlan, run: () => open("plan") },
     { id: "connections", group: "workspace", tour: "settings.connections", testid: "settings-connections", icon: "plug", title: t("nav.connections"), body: t("settings.page.connections"), run: () => open("connections") },
     { id: "onboarding", group: "workspace", tour: "settings.onboarding", testid: "settings-onboarding", icon: "flag", title: onboarding.pending ? t("onb.prompt.title") : t("cfg.open"), body: t("settings.page.onboarding"), hidden: !onboarding.supported, run: onboarding.open },
+    { id: "approvals", group: "safety", testid: "settings-approvals", icon: "shield", title: t("perm.settings.title"), body: t("perm.settings.rowBody"), run: () => open("approvals") },
     { id: "security", group: "safety", tour: "settings.security", testid: "settings-security", icon: "shield", title: t("nav.security"), body: t("settings.page.security"), run: () => open("security") },
     { id: "identity", group: "safety", testid: "settings-identity", icon: "users", title: t("idn.title"), body: t("idn.rowBody"), disabled: !isAdmin, run: () => open("identity") },
     { id: "kill", group: "safety", tour: "settings.killswitch", testid: "settings-killswitch", icon: "power", danger: true, title: level === "none" ? t("ctl.killswitch.title") : t(`ctl.level.${level}`), body: t("settings.page.kill"), disabled: level === "none" && !isAdmin, run: () => open(level === "none" ? "kill" : "security") },

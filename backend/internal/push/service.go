@@ -187,6 +187,8 @@ type Message struct {
 	Title      string `json:"title"`
 	Risk       string `json:"risk"`
 	URL        string `json:"url"`
+	// Count (help.notice): how many questions this notice is about. No question text travels (lock screen).
+	Count int `json:"count,omitempty"`
 }
 
 // FromApproval builds the notification of a new approval (title + risk only).
@@ -365,6 +367,31 @@ func (n Notifier) Publish(ctx context.Context, e domain.Event) error {
 				n.Svc.Notify(c, e.OrgID, m)
 			}()
 		}
+	case domain.EvHelpNotice: // needs your help: to the person asked, or to the owners and admins when nobody was
+		p, _ := e.Payload.(map[string]any)
+		asked, _ := p["asked_for"].(string)
+		count, _ := p["count"].(int)
+		go func() {
+			c, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+			defer cancel()
+			m := Message{Type: domain.EvHelpNotice, Count: max(count, 1), URL: "/approvals/inbox"}
+			users := []string{}
+			if asked != "" {
+				users = append(users, asked)
+			} else if n.Who != nil && n.Who.Members != nil {
+				ms, _ := n.Who.Members(c, e.OrgID)
+				for _, mb := range ms {
+					if mb.Role == "owner" || mb.Role == "admin" {
+						users = append(users, mb.UserID)
+					}
+				}
+			}
+			if len(users) == 0 && (n.Who == nil || n.Who.Members == nil) {
+				n.Svc.Notify(c, e.OrgID, m) // no identity store (demo): everyone subscribed
+				return
+			}
+			n.Svc.NotifyUsers(c, e.OrgID, m, users)
+		}()
 	case domain.EvRequestCompleted, domain.EvRequestFailed:
 		id, by := requestOf(e.Payload)
 		if id == "" || by == "" {
@@ -382,7 +409,7 @@ func (n Notifier) Publish(ctx context.Context, e domain.Event) error {
 // FromRequest is the notification of a finished request: no title nor content (the lock screen may be
 // seen by anyone), the service worker shows a localized "your request is ready / failed" line.
 func FromRequest(typ, requestID string) Message {
-	return Message{Type: typ, RequestID: requestID, URL: "/chats"} // the result is in the chat that asked for it
+	return Message{Type: typ, RequestID: requestID, URL: "/chats?pedido=" + url.QueryEscape(requestID)} // opens its pedido beside the chat that asked for it
 }
 
 func requestOf(payload any) (id, by string) {

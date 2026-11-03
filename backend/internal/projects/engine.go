@@ -64,34 +64,49 @@ func planOf(r Record) application.PlanResponse {
 	return plan
 }
 
-// ActiveCount counts the launched, unfinished projects of the organization (what MaxActiveProjects limits).
+// activeGroup is what counts as one active project: the batch of a project, or the project itself.
+func activeGroup(r Record) string {
+	if r.BatchID != "" {
+		return "batch:" + r.BatchID
+	}
+	return r.ID
+}
+
+// activeGroups counts the launched, unfinished projects, a batch counting once, leaving out the group skip.
+func activeGroups(recs []Record, skip string) int {
+	seen := map[string]bool{}
+	for _, r := range recs {
+		if g := activeGroup(r); g != skip && r.Status != StatusDraft && !terminalStatus(r.Status) {
+			seen[g] = true
+		}
+	}
+	return len(seen)
+}
+
+// ActiveCount counts the launched, unfinished projects of the organization (what MaxActiveProjects limits); a batch
+// counts as one.
 func (s *Service) ActiveCount(ctx context.Context) (int, error) {
 	recs, err := s.cfg.Store.List(ctx, s.org(ctx))
 	if err != nil {
 		return 0, err
 	}
-	n := 0
-	for _, r := range recs {
-		if r.Status != StatusDraft && !terminalStatus(r.Status) {
-			n++
-		}
-	}
-	return n, nil
+	return activeGroups(recs, ""), nil
 }
 
 // checkActiveLimit refuses a launch when the organization already has
-// MaxActiveProjects launched, unfinished projects.
+// MaxActiveProjects launched, unfinished projects (a batch counts once: the next customer of a running batch fits).
 func (s *Service) checkActiveLimit(ctx context.Context, org, self string) error {
 	recs, err := s.cfg.Store.List(ctx, org)
 	if err != nil {
 		return err
 	}
-	active := 0
+	skip := self
 	for _, r := range recs {
-		if r.ID != self && r.Status != StatusDraft && !terminalStatus(r.Status) {
-			active++
+		if r.ID == self && self != "" {
+			skip = activeGroup(r)
 		}
 	}
+	active := activeGroups(recs, skip)
 	if active >= s.cfg.Limits.MaxActiveProjects {
 		return limitError(domain.ErrConflict, LimitMaxActive, s.cfg.Limits.MaxActiveProjects, fmt.Sprintf("the organization has %d active projects", active))
 	}
@@ -267,6 +282,7 @@ func (s *Service) Recover(ctx context.Context, orgs []string) int {
 		}
 	}
 	s.recovered.Store(true)
+	s.RecoverBatches(ctx, orgs)
 	return n
 }
 
@@ -356,6 +372,7 @@ func (s *Service) Control(ctx context.Context, id, action string) (Summary, erro
 	s.audit(ctx, "project."+map[string]string{"pause": "paused", "resume": "resumed", "cancel": "cancelled"}[action], id, map[string]any{"request_id": rec.RequestID})
 	if rejectPending {
 		s.rejectPending(ctx, rec)
+		s.cfg.Orch.CancelQuestions(ctx, rec.RequestID, "project cancelled") // its waiting tasks stop, nothing is decided for them
 	}
 	d, err := s.detailOf(ctx, rec)
 	if err != nil {
@@ -507,6 +524,43 @@ func (s *Service) ProjectIDForRequest(ctx context.Context, org, requestID string
 		return ""
 	}
 	return rec.ID
+}
+
+// ObjectivesOfRequest maps every task of a project's request to its objective (needs your help: skipping a step
+// names the objectives that would be left without a result).
+func (s *Service) ObjectivesOfRequest(ctx context.Context, org, requestID string) (map[string]application.ObjectiveRef, bool) {
+	rec, err := s.cfg.Store.ByRequest(application.WithOrg(ctx, org), org, requestID)
+	if err != nil {
+		return nil, false
+	}
+	snap, err := s.loadSnapshot(application.WithOrg(ctx, org), rec)
+	if err != nil {
+		return nil, false
+	}
+	titles := map[string]string{}
+	for _, ob := range rec.Objectives {
+		titles[ob.ID] = ob.Title
+	}
+	out := map[string]application.ObjectiveRef{}
+	for _, def := range rec.Nodes {
+		if t, ok := snap.tasks[def.ID]; ok {
+			out[t.ID] = application.ObjectiveRef{ID: def.ObjectiveID, Title: titles[def.ObjectiveID]}
+		}
+	}
+	return out, true
+}
+
+// GroupOfRequest is the group the questions of a project's request are noticed by: the project (its batch, when
+// it belongs to one).
+func (s *Service) GroupOfRequest(ctx context.Context, org, requestID string) (string, string) {
+	rec, err := s.cfg.Store.ByRequest(application.WithOrg(ctx, org), org, requestID)
+	if err != nil {
+		return "", ""
+	}
+	if rec.BatchID != "" {
+		return rec.ID, "batch:" + rec.BatchID // several customers of one batch: one gathered notice
+	}
+	return rec.ID, "project:" + rec.ID
 }
 
 // GateTask decides what happens to a task of a launched project: it holds new

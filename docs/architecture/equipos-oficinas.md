@@ -252,7 +252,7 @@ Tamaños: S (días), M (1-2 semanas), L (varias semanas).
 |---|---|---|---|
 | **E0. Saber quién es quién** (**implementada** 2026-11-02, ver `chat-history.md` sección E0) | Autor en cada mensaje; hilo propio por persona y agente; leído/no leído por persona; push y avisos a la persona; "mis aprobaciones"; persona en el registro de costos | M | Cada uno ve sus conversaciones; se sabe quién pidió qué. Es la deuda más grande y lo que todo lo demás necesita |
 | **E1. Alta y agentes por rol** (**implementada** 2026-11-03, ver abajo y `08-api.md` §41) | "¿Para quién es?", profesión, agentes sugeridos por rol, invitaciones con oficina y profesión, entrar por dominio a la empresa existente | S-M | La abogada no ve un agente de ventas; los invitados llegan a su equipo |
-| **E2. Oficinas** | Departamento → oficina (miembros, responsable, abierta/privada), dueño y visibilidad de agentes, directorio, oficina "General" para las empresas existentes, diseño 3D por oficina, memoria de oficina y personal | L | Cada equipo tiene su espacio, sus agentes y su memoria |
+| **E2. Oficinas** (**implementada** 2026-11-03, ver abajo y `08-api.md` §42) | Departamento → oficina (miembros, responsable, abierta/privada), dueño y visibilidad de agentes, directorio, oficina "General" para las empresas existentes, diseño 3D por oficina, memoria de oficina y personal | L | Cada equipo tiene su espacio, sus agentes y su memoria |
 | **E3. Permisos de archivos** | Tres niveles con herencia, carpetas personal y de oficina, carpeta restringida, compartir con caducidad, pedir acceso, acceso efectivo = agente ∩ persona en cada herramienta, marca de derivado, adjuntos fuera de `/Shared`, pantalla de permisos, auditoría de lecturas | L | Leer, editar o nada por carpeta y archivo, y los agentes lo respetan |
 | **E4. Colaborar entre oficinas** | Tocar la puerta, consulta a otra oficina con aprobación, encargos a personas o agentes, bandeja personal, compartir conversaciones, salas de proyecto con miembros | M | Ventas le pide a Legal sin ver lo que no debe |
 | **E5. Gobierno** | Aprobaciones al responsable de la oficina (por fin se usa `approver_id`), reglas por agente y acción, topes y costos por persona, panel de agentes, controles de Max | M | Cada responsable gobierna su oficina; el admin ve el conjunto |
@@ -282,6 +282,29 @@ Tamaños: S (días), M (1-2 semanas), L (varias semanas).
 - **Pendiente para E2:** la visibilidad de agentes por persona u oficina (en E1 todos ven todos los agentes de la
   empresa, pero la empresa solo tiene los de los trabajos de su gente), la aprobación del responsable para entrar a un
   equipo (en E1 se entra directo y queda auditado) y los poderes del responsable.
+
+**E2 implementada (2026-11-03).** Plan: `docs/superpowers/plans/2026-11-03-e2-oficinas.md`.
+
+- **Oficinas:** un admin convierte un equipo (departamento) en oficina, abierta por defecto o privada. Entran las personas
+  de ese equipo y su jefe queda como responsable; el responsable añade y quita miembros, nombra otros responsables y la
+  abre o cierra. Una oficina sin responsable la gestionan los admin. Una oficina que todavía es dueña de agentes no se
+  puede cerrar. Pantalla: Organización → Oficinas.
+- **"General" para todas las empresas:** oficina virtual, abierta, con todas las personas; los admin la llevan. Las
+  empresas que ya existían no notan nada hasta que crean una segunda oficina o cambian la visibilidad de un agente.
+- **Agentes con dueño y visibilidad:** cada agente es de una persona o de una oficina, con la escalera privado / su
+  oficina / compartido con personas (puede chatear o puede editar) / directorio de la empresa. La lista de agentes, sus
+  fichas y el chat directo respetan quién puede verlo y usarlo; en una oficina abierta los de fuera ven sus agentes pero
+  no los usan. Si el dueño se va, el agente pasa al responsable de su oficina.
+- **Directorio de agentes:** Organización → Directorio de agentes: mis agentes, los de mis oficinas, compartidos
+  conmigo, los de toda la empresa y los de otras oficinas abiertas (solo mirar), con buscador y "Quién lo usa".
+- **Memoria de oficina y personal:** notas de la oficina (sus miembros) y "Mi memoria" (solo la persona); los agentes
+  las tienen en cuenta en sus tareas. El responsable puede **pasar una nota a toda la empresa** (queda registrado).
+- **Diseño 3D por oficina:** en la oficina 3D aparece un selector de oficina cuando hay más de una; cada oficina tiene su
+  propio diseño, que arregla su responsable. Las privadas ajenas salen con candado.
+- **Pendiente:** el chat de toda la oficina, los proyectos, los eventos en vivo y las menciones en canales todavía no
+  filtran por visibilidad; en la oficina 3D de una oficina se ven todos los personajes (cambia el diseño, no quién
+  está); la aprobación del responsable para entrar a un equipo; contratar un agente propio desde el directorio; los
+  permisos de archivos por carpeta para personas (E3).
 
 Orden recomendado: **E0 → E1 → E2 → E3 → E4 → E5**. E0 y E1 se notan enseguida y no rompen nada. E3 va de la mano de la
 fase 4 de `archivos-agentes.md` (fuentes): las dos tocan permisos de carpetas y se deben diseñar juntas.

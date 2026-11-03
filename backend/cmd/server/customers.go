@@ -214,6 +214,20 @@ func customerActive(svc *customers.Service) func(ctx context.Context, org, id st
 	}
 }
 
+// customerInfo gives a batch template the customer's data ({{cliente.*}}); nil without customers.
+func customerInfo(svc *customers.Service) func(ctx context.Context, org, id string) (projects.CustomerVars, error) {
+	if svc == nil {
+		return nil
+	}
+	return func(ctx context.Context, org, id string) (projects.CustomerVars, error) {
+		c, err := svc.Active(ctx, org, id)
+		if err != nil {
+			return projects.CustomerVars{}, err
+		}
+		return projects.CustomerVars{Name: c.Name, Contact: c.ContactName, Email: c.Email, Phone: c.Phone, Notes: c.Notes}, nil
+	}
+}
+
 // customerOf is the resolver the drive and memory tools use (nil without customers).
 func customerOf(svc *customers.Service) func(ctx context.Context, org, requestID string) (string, error) {
 	if svc == nil {

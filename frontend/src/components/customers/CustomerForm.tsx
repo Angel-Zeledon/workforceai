@@ -14,13 +14,16 @@ export function CustomerForm({ initial, onSave, onCancel }: { initial?: Customer
   const [taxId, setTaxId] = useState(initial?.tax_id ?? "");
   const [color, setColor] = useState(customerColor(initial?.color, initial?.id ?? "new"));
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [contact, setContact] = useState(initial?.contact_name ?? "");
+  const [email, setEmail] = useState(initial?.email ?? "");
+  const [phone, setPhone] = useState(initial?.phone ?? "");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     const v = validateCustomer({ name, color });
     if (v) { setErr(t(`customers.form.error.${v}`)); return; }
     setBusy(true); setErr(null);
-    try { await onSave({ name: name.trim(), tax_id: taxId.trim(), color, notes: notes.trim() }); }
+    try { await onSave({ name: name.trim(), tax_id: taxId.trim(), color, notes: notes.trim(), contact_name: contact.trim(), email: email.trim(), phone: phone.trim() }); }
     catch (e) { setErr(e instanceof Error && e.message ? e.message : t("customers.error.save")); }
     finally { setBusy(false); }
   };
@@ -35,6 +38,17 @@ export function CustomerForm({ initial, onSave, onCancel }: { initial?: Customer
         </label>
         <label className="block text-[11px] font-medium text-mute">{t("customers.form.color")}
           <input data-testid="customers-form-color" type="color" className="mt-1 block h-[34px] w-16 cursor-pointer rounded-md border border-line bg-panel2" value={color} onChange={(e) => setColor(e.target.value)} />
+        </label>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="block text-[11px] font-medium text-mute">{t("customers.form.contact")}
+          <input data-testid="customers-form-contact" className={`${field} mt-1`} value={contact} maxLength={120} onChange={(e) => setContact(e.target.value)} placeholder={t("customers.form.optional")} />
+        </label>
+        <label className="block text-[11px] font-medium text-mute">{t("customers.form.email")}
+          <input data-testid="customers-form-email" type="email" className={`${field} mt-1`} value={email} maxLength={254} onChange={(e) => setEmail(e.target.value)} placeholder={t("customers.form.optional")} />
+        </label>
+        <label className="block text-[11px] font-medium text-mute">{t("customers.form.phone")}
+          <input data-testid="customers-form-phone" className={`${field} mt-1`} value={phone} maxLength={40} onChange={(e) => setPhone(e.target.value)} placeholder={t("customers.form.optional")} />
         </label>
       </div>
       <label className="block text-[11px] font-medium text-mute">{t("customers.form.notes")}

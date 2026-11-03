@@ -15,11 +15,12 @@ type CustomerStore struct{ S *Store }
 
 var _ customers.Store = (*CustomerStore)(nil)
 
-const customerCols = `id, org_id, name, tax_id, color, notes, folder_id, created_by, created_at, updated_at, archived_at`
+const customerCols = `id, org_id, name, tax_id, color, notes, folder_id, created_by, created_at, updated_at, archived_at, contact_name, email, phone`
 
 func scanCustomer(r scanner) (customers.Customer, error) {
 	var c customers.Customer
-	err := r.Scan(&c.ID, &c.OrgID, &c.Name, &c.TaxID, &c.Color, &c.Notes, &c.FolderID, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt, &c.ArchivedAt)
+	err := r.Scan(&c.ID, &c.OrgID, &c.Name, &c.TaxID, &c.Color, &c.Notes, &c.FolderID, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt, &c.ArchivedAt,
+		&c.ContactName, &c.Email, &c.Phone)
 	c.Archived = c.ArchivedAt != nil
 	return c, err
 }
@@ -32,9 +33,9 @@ func conflictOr(err error, msg string) error {
 }
 
 func (s *CustomerStore) CreateCustomer(ctx context.Context, c customers.Customer) error {
-	err := s.S.exec(ctx, c.OrgID, `INSERT INTO customers (org_id, id, name, tax_id, color, notes, folder_id, created_by, created_at, updated_at, archived_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-		c.OrgID, c.ID, c.Name, c.TaxID, c.Color, c.Notes, c.FolderID, c.CreatedBy, c.CreatedAt, c.UpdatedAt, c.ArchivedAt)
+	err := s.S.exec(ctx, c.OrgID, `INSERT INTO customers (org_id, id, name, tax_id, color, notes, folder_id, created_by, created_at, updated_at, archived_at,
+		contact_name, email, phone) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+		c.OrgID, c.ID, c.Name, c.TaxID, c.Color, c.Notes, c.FolderID, c.CreatedBy, c.CreatedAt, c.UpdatedAt, c.ArchivedAt, c.ContactName, c.Email, c.Phone)
 	return conflictOr(err, "a customer with that name already exists")
 }
 
@@ -47,8 +48,9 @@ func (s *CustomerStore) UpdateCustomer(ctx context.Context, c customers.Customer
 			archived = &now
 		}
 	}
-	tag, err := s.S.execTag(ctx, c.OrgID, `UPDATE customers SET name=$3, tax_id=$4, color=$5, notes=$6, folder_id=$7, updated_at=$8, archived_at=$9
-		WHERE org_id=$1 AND id=$2`, c.OrgID, c.ID, c.Name, c.TaxID, c.Color, c.Notes, c.FolderID, c.UpdatedAt, archived)
+	tag, err := s.S.execTag(ctx, c.OrgID, `UPDATE customers SET name=$3, tax_id=$4, color=$5, notes=$6, folder_id=$7, updated_at=$8, archived_at=$9,
+		contact_name=$10, email=$11, phone=$12 WHERE org_id=$1 AND id=$2`, c.OrgID, c.ID, c.Name, c.TaxID, c.Color, c.Notes, c.FolderID, c.UpdatedAt, archived,
+		c.ContactName, c.Email, c.Phone)
 	if err != nil {
 		return conflictOr(err, "a customer with that name already exists")
 	}

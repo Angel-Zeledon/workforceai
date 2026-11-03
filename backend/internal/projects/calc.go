@@ -394,6 +394,8 @@ func rollupState(children []Node) string {
 		return StateDone
 	case any(func(n Node) bool { return n.State == StateRunning }):
 		return StateRunning
+	case any(func(n Node) bool { return n.State == StateNeedsInput }):
+		return StateNeedsInput
 	case any(func(n Node) bool { return n.State == StateAwaitingApproval }):
 		return StateAwaitingApproval
 	case any(func(n Node) bool { return n.State == StateBlocked }):
@@ -406,7 +408,7 @@ func rollupState(children []Node) string {
 	return StatePending
 }
 
-type counts struct{ done, running, ready, pending, awaiting, failed, total int }
+type counts struct{ done, running, ready, pending, awaiting, failed, needsInput, total int }
 
 func countStates(nodes []Node) counts {
 	var c counts
@@ -424,6 +426,8 @@ func countStates(nodes []Node) counts {
 			c.ready++
 		case n.State == StateAwaitingApproval:
 			c.awaiting++
+		case n.State == StateNeedsInput:
+			c.needsInput++
 		case n.State == StateFailed || n.State == StateBlocked:
 			c.failed++
 		default:

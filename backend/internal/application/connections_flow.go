@@ -389,6 +389,11 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 		return true, OutcomeFailed
 	}
 	call := o.gatewayCall(ctx, rs, *t, agent, tr)
+	if pv.NeedsApproval() && isPermissionRule(pv.RuleID) {
+		// The agent's approval permissions ask for this action (permissions.go): the gateway must hold it too,
+		// as it does for an agent that asks for everything. Other engine rules keep their documented behaviour.
+		call.Autonomy = "approve_each"
+	}
 	res := gw.Execute(ctx, call)
 
 	switch res.Decision {

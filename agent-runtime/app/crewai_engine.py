@@ -61,6 +61,7 @@ from .models import (
     SynthesizeRequest,
     SynthesizeResponse,
     TaskResult,
+    TaskResultHelp,
     Usage,
 )
 from .providers import (
@@ -279,6 +280,14 @@ class _Synth(BaseModel):
     title: str
     summary: str
     sections: list[Section] = Field(default_factory=list)
+
+
+def allowed_help(req: RunTaskRequest, res: Any):
+    """The agent's help_request, only when the backend allows asking (and with something to ask)."""
+    hr = getattr(res, "help_request", None)
+    if not req.help_allowed or hr is None or not (hr.need or hr.what_happened):
+        return None
+    return hr
 
 
 class CrewAIEngine(AgentEngine):
@@ -769,11 +778,12 @@ class CrewAIEngine(AgentEngine):
                 res, usage = await asyncio.to_thread(
                     self._kickoff, order=order, once=self._vision_once,
                     system=build_system_prompt(req.agent, req.locale, req.tone), user=description, images=images,
-                    schema=TaskResult, creativity=req.agent.creativity, locale=req.locale, kind="run_task",
+                    schema=TaskResultHelp if req.help_allowed else TaskResult, creativity=req.agent.creativity, locale=req.locale, kind="run_task",
                     max_cost_usd=req.max_cost_usd)
                 out = StructuredOutput.model_validate(res.output.model_dump())
                 return RunTaskResponse(output=out, consults=res.consults, tool_requests=res.tool_requests, usage=usage,
-                                       provider=usage.provider, model=usage.model, notices=notices or None)
+                                       provider=usage.provider, model=usage.model, notices=notices or None,
+                                       help_request=allowed_help(req, res))
             # Nobody allowed can see images: never send them elsewhere; say so and go on with the text.
             log.warning("vision: no allowed provider can see images; continuing with text only")
             notices.append(NOTICE_VISION_UNAVAILABLE)
@@ -783,13 +793,15 @@ class CrewAIEngine(AgentEngine):
             goal=f"Completar la tarea asignada como {req.agent.title or req.agent.role}",
             backstory=build_system_prompt(req.agent, req.locale, req.tone),
             description=description,
-            expected="JSON con output (StructuredOutput), consults y tool_requests",
-            schema=TaskResult, policy=policy, creativity=req.agent.creativity, kind="run_task",
+            expected="JSON con output (StructuredOutput), consults y tool_requests"
+                     + (" (y help_request solo si necesitas a una persona)" if req.help_allowed else ""),
+            schema=TaskResultHelp if req.help_allowed else TaskResult, policy=policy, creativity=req.agent.creativity, kind="run_task",
             max_cost_usd=req.max_cost_usd)
         out = StructuredOutput.model_validate(res.output.model_dump())  # validacion estricta
         return RunTaskResponse(output=out, consults=res.consults,
                                tool_requests=res.tool_requests, usage=usage,
-                               provider=usage.provider, model=usage.model, notices=notices or None)
+                               provider=usage.provider, model=usage.model, notices=notices or None,
+                               help_request=allowed_help(req, res))
 
     def _vision_once(self, cfg: ProviderConfig, *, system: str, user: str, images: list, schema: type[BaseModel],
                      max_tokens: int | None = None, creativity: str = "", locale: str = "es") -> tuple[Any, Usage]:

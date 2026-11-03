@@ -38,7 +38,7 @@ func cmdCustomer(c *cmdCall) (*cmdResult, *cmdFail) {
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
-	return &cmdResult{Kind: "request", RequestID: id, Title: fmt.Sprintf(c.t("Solicitud para %s", "Request for %s"), cust.Name),
+	return &cmdResult{Kind: "request", RequestID: id, Title: fmt.Sprintf(c.t("Pedido para %s", "Request for %s"), cust.Name),
 		Text: fmt.Sprintf(c.t("Lo puse en marcha para %s: sus tareas solo ven la memoria y los archivos de este cliente.",
 			"It is under way for %s: its tasks only see this customer's memory and files."), cust.Name),
 		Data: map[string]any{"customer_id": cust.ID}}, nil

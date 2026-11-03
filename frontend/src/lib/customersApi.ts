@@ -5,11 +5,20 @@ import type { CustomerStatus } from "./customersLogic";
 
 export interface Customer {
   id: string; name: string; tax_id: string; color: string; notes: string;
+  /** Optional contact: a customer is a person or a company (its name). The e-mail recognizes it in an import. */
+  contact_name?: string; email?: string; phone?: string;
   /** The customer's drive folder (/Clients/<name>), "" when the drive is off. */
   folder_path: string;
   archived: boolean; created_at: string; updated_at: string;
 }
-export interface CustomerInput { name: string; tax_id?: string; color?: string; notes?: string }
+export interface CustomerInput { name: string; tax_id?: string; color?: string; notes?: string; contact_name?: string; email?: string; phone?: string }
+
+/** One row of an imported list and what happens to it (preview: existing|new|error; import: existing|created|skipped|error). */
+export interface ImportRow { name?: string; email?: string; phone?: string; company?: string; notes?: string; tax_id?: string; contact_name?: string }
+export interface ImportResult {
+  row: number; action: "existing" | "new" | "error" | "created" | "skipped"; customer_id?: string; customer_name?: string;
+  matched_by?: "email" | "tax_id" | "name" | "choice"; reason?: string; name: string; contact_name?: string; email?: string; phone?: string;
+}
 
 /** A per-customer clone of an agent: same role and tools, memory and files isolated to this customer. */
 export interface Assignment { id: string; customer_id: string; agent_id: string; display_name: string; created_at: string }
@@ -49,6 +58,9 @@ export const customersApi = {
   unlinkFolder: (cid: string, folderId: string) => call<unknown>("DELETE", `/customers/${id(cid)}/folders/${id(folderId)}`),
   /** A request scoped to the customer: its tasks only recall this customer's memory and files. */
   request: (cid: string, text: string) => call<{ request_id: string }>("POST", "/requests", { text, customer_id: cid }),
+  /** Import a list: the preview creates nothing; choices per row: "new", "skip" or a customer id. */
+  importPreview: (rows: ImportRow[]) => call<{ rows: ImportResult[] }>("POST", "/customers/import/preview", { rows }),
+  importApply: (rows: ImportRow[], choices: Record<number, string>) => call<{ rows: ImportResult[] }>("POST", "/customers/import", { rows, choices }),
   historyCandidates: () => call<HistoryCandidates>("GET", "/customers/history/candidates"),
   /** Assigns earlier work to a customer; `cid` "" removes the customer again (undo). */
   assignHistory: (kind: HistoryKind, refId: string, cid: string) => call<HistoryResult>("POST", "/customers/history", { kind, ref_id: refId, customer_id: cid }),

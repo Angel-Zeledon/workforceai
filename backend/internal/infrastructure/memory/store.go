@@ -54,6 +54,7 @@ type Store struct {
 	debates       debateState                              // team debates (debates.go)
 	v2            v2State                                  // work profiles, traces, steer notes (v2.go)
 	hist          chatHistState                            // chat history: archive, custom titles, read markers (chat_history.go)
+	questions     map[string][]application.Question        // org -> "needs your help" questions, creation order (questions.go)
 }
 
 func New() *Store {

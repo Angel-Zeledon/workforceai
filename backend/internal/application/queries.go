@@ -133,7 +133,7 @@ func fillMetrics(agents []domain.Agent, tasks []domain.Task) {
 				if t.StartedAt != nil && t.FinishedAt != nil {
 					secs += t.FinishedAt.Sub(*t.StartedAt).Seconds()
 				}
-			case domain.TaskPending, domain.TaskRunning, domain.TaskAwaitingApproval, domain.TaskBlocked:
+			case domain.TaskPending, domain.TaskRunning, domain.TaskAwaitingApproval, domain.TaskBlocked, domain.TaskNeedsInput:
 				m.TasksPending++
 			}
 		}
@@ -235,7 +235,7 @@ func (q *Queries) Metrics(ctx context.Context) (domain.Metrics, error) {
 	}
 	for _, t := range tasks {
 		switch t.Status {
-		case domain.TaskRunning, domain.TaskAwaitingApproval:
+		case domain.TaskRunning, domain.TaskAwaitingApproval, domain.TaskNeedsInput:
 			m.TasksActive++
 		case domain.TaskDone:
 			m.TasksDone++

@@ -159,7 +159,7 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 	doc = newDocIndex(log, pg, svc, cfg.App.OrgID)
 	if cw.gw != nil {
 		tool := &drive.GatewayTool{FS: &drive.AgentFS{Svc: svc, Projects: projectDirectory{store: pstore}, Render: renderFromEnv(log),
-			Vision: drive.VisionLimitsFromEnv(), Chunks: doc, Customers: customerDirectory(cust)}, Suspects: cw.sus,
+			Vision: drive.VisionLimitsFromEnv(), Chunks: doc, Customers: customerDirectory(cust), LinkBase: cfg.UIBaseURL}, Suspects: cw.sus,
 			CustomerOf: customerOf(cust), // B12: fs.* of a customer-scoped request stay inside that customer
 			AgentTools: func(actx context.Context, org, agentID string) ([]string, error) {
 				a, err := store.GetAgent(application.WithOrg(actx, org), org, agentID)

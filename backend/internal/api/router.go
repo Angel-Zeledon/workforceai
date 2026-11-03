@@ -36,6 +36,7 @@ import (
 	"aiworkforce/backend/internal/meetings" // meetings-block
 	"aiworkforce/backend/internal/memory"
 	"aiworkforce/backend/internal/notify"
+	"aiworkforce/backend/internal/offices"
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/peoplechat"
 	"aiworkforce/backend/internal/portal"
@@ -114,6 +115,9 @@ type Deps struct {
 	Artifacts *artifacts.Service
 	// Drive serves /drive/* (drive.go): the organization's files. Optional.
 	Drive *drive.Service
+	// AgentFolders (optional) evaluates the folder access of agents for /agents/{id}/folder-access and
+	// /drive/folder-access (folder_access.go) with the project directory; nil = Drive without project folders.
+	AgentFolders *drive.AgentFS
 	// DocIndex serves /drive/passages, /drive/index/status and /settings/doc-index (docsearch.go):
 	// passage search with citations over the drive (capability 6). Optional.
 	DocIndex *docindex.Service
@@ -129,6 +133,9 @@ type Deps struct {
 	Web *webtool.Service
 	// >>> corporate organization model (orgchart.go): departments, org chart, job descriptions, delegation, industries. Optional.
 	OrgChart *orgchart.Service
+	// Offices serves /offices/*, /agents/directory, /agents/{id}/access and /memory/notes (offices.go): E2 offices,
+	// agent owners and visibility, office and personal memory. Optional.
+	Offices *offices.Service
 	// <<< corporate organization model
 	// Skills serves /skills/* and /agents/{id}/skills (skills.go). Optional.
 	Skills *skills.Service
@@ -141,6 +148,8 @@ type Deps struct {
 	Quality *quality.Service
 	// Trust serves /agents/{id}/trust, /trust/agents and /trust/proposals/* (trust.go): the trust ladder (B1). Optional.
 	Trust *trust.Service
+	// Permissions serves /permissions and /agents/{id}/permissions/* (permissions.go): approval permissions per agent. Optional.
+	Permissions *application.PermissionsService
 	// Rituals serves /rituals/* and /settings/rituals (rituals.go): the daily stand-up and the weekly retro. Optional.
 	Rituals *rituals.Service
 	// Away serves /away-summary (away.go): "while you were away", what happened since the caller's last visit. Optional.
@@ -312,16 +321,19 @@ func NewRouter(d Deps) http.Handler {
 			s.mountRoles(r)
 			s.mountArtifacts(r)
 			s.mountDrive(r)
+			s.mountFolderAccess(r) // folder access per agent
 			s.mountDocSearch(r)
 			s.mountMeetings(r) // meetings
 			s.mountCode(r)
 			s.mountWeb(r)
 			s.mountOrgChart(r) // corporate organization model
+			s.mountOffices(r)  // E2 offices, agent owners and visibility, team memory
 			s.mountSkills(r)
 			s.mountMemory(r)
 			s.mountRewards(r)
 			s.mountQuality(r)
 			s.mountTrust(r)
+			s.mountPermissions(r) // approval permissions per agent (permissions.go)
 			s.mountRituals(r)
 			s.mountAway(r)
 			s.mountCustomers(r)
@@ -332,6 +344,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountNotify(r) // approvals-notify: channel settings, plan usage, daily goal
 			s.mountSlack(r)  // Slack channel: settings card and account link
 			s.mountV2(r)
+			s.mountQuestions(r) // needs your help: the questions agents ask people (questions.go)
 			s.mountCommands(r)
 			s.mountTenantData(r)
 			s.mountGovernance(r) // governance (single line)
@@ -430,10 +443,18 @@ func (s *server) listAgents(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, 200, list(a))
+	out, err := s.visibleAgents(r, a) // E2: only the agents the person sees, with their access (offices_agents.go)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, out)
 }
 
 func (s *server) getAgent(w http.ResponseWriter, r *http.Request) {
+	if s.hideAgent(w, r) {
+		return
+	}
 	a, err := s.Queries.Agent(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
 		s.fail(w, err)
@@ -443,6 +464,9 @@ func (s *server) getAgent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) agentDetail(w http.ResponseWriter, r *http.Request) {
+	if s.hideAgent(w, r) {
+		return
+	}
 	d, err := s.Queries.AgentDetail(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
 		s.fail(w, err)

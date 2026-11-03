@@ -380,7 +380,7 @@ func (m *MemStore) Search(_ context.Context, org string, q SearchQuery) ([]Hit, 
 			continue
 		}
 		f = m.fill(org, f)
-		if len(q.Under) > 0 && !slices.ContainsFunc(q.Under, func(p string) bool { return IsUnder(f.Path, p) }) {
+		if len(q.Under) > 0 && !InScope(q.Under, f.Path) {
 			continue
 		}
 		name, text := lc(f.Name), lc(f.SearchText)
@@ -420,7 +420,7 @@ func (m *MemStore) searchTerms(org string, q SearchQuery) []Hit {
 			continue
 		}
 		f = m.fill(org, f)
-		if q.Under != nil && !slices.ContainsFunc(q.Under, func(p string) bool { return IsUnder(f.Path, p) }) {
+		if q.Under != nil && !InScope(q.Under, f.Path) {
 			continue
 		}
 		name, text := textfold.Fold(f.Name), textfold.Fold(f.SearchText)
@@ -496,4 +496,34 @@ func (m *MemStore) RevokeGrant(_ context.Context, org, id string, at time.Time) 
 	g.RevokedAt = &at
 	m.grants[k(org, id)] = g
 	return nil
+}
+
+func (m *MemStore) RecentFiles(_ context.Context, org string, q RecentQuery) ([]File, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := []File{}
+	for key, f := range m.files {
+		if !strings.HasPrefix(key, org+"|") || f.DeletedAt != nil {
+			continue
+		}
+		if fo, ok := m.folders[k(org, f.FolderID)]; !ok || fo.DeletedAt != nil {
+			continue
+		}
+		f = m.fill(org, f)
+		if !TouchedBy(f, q.By, q.Since) || !HasExt(f.Name, q.Exts) || !InScope(q.Under, f.Path) {
+			continue
+		}
+		f.SearchText = ""
+		out = append(out, f)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if !out[i].UpdatedAt.Equal(out[j].UpdatedAt) {
+			return out[i].UpdatedAt.After(out[j].UpdatedAt)
+		}
+		return out[i].Path < out[j].Path
+	})
+	if q.Limit > 0 && len(out) > q.Limit {
+		out = out[:q.Limit]
+	}
+	return out, nil
 }

@@ -85,6 +85,7 @@ erDiagram
 | `ready` | Dependencias listas, en cola (incluye reintento con `next_attempt_at` futuro => se muestra "reintentando") | pending | `#6bb6d6` |
 | `running` | Con lease de un worker | running | `#2f9fd0` (actual) |
 | `awaiting_approval` | Pausada por aprobación humana (sin goroutine) | awaiting_approval | `#cf8a0f` (actual) |
+| `needs_input` | "Necesita tu ayuda": el agente preguntó a una persona y espera la respuesta (cede su hueco; 08-api.md §16.9) | needs_input | `#1d4ed8` |
 | `waiting` | Temporizador o señal externa | pending | `#b09ad8` |
 | `paused` | Pausa de usuario/política (presupuesto) | blocked | `#a89f91` |
 | `blocked` | Dependencia fallida/rechazada | blocked | `#e0584f` (actual) |
@@ -1163,3 +1164,11 @@ Entrega 1 del frontend (Next 15, mock con `NEXT_PUBLIC_MOCK=true`). La capa `fro
 **Cambios compartidos mínimos.** `application/projects_hooks.go` (nuevo: `TaskGate`, `SetTaskGate`), `orchestrator.go` (3 líneas en `runTask` para consultar el gate y 1 en `createTasks` para ampliar la profundidad máxima por plan con `PlanResponse.MaxDepth`: las cadenas de dependencias de un proyecto superan 5; las consultas entre agentes de los nodos más profundos se omiten), `ports.go` (el campo `MaxDepth`), `connections_flow.go` (el campo `gate`), `auth/rbac.go` (permisos de artefactos), `api/router.go` y `cmd/server/main.go` (registro). Pruebas: `internal/projects/service_test.go` (paralelismo y dependencias del cierre financiero, pausa/reanudación/cancelación, pausa por presupuesto + `extend_budget`, lote y riesgo alto, compuerta rechazada, pausa de agente, reglas de lanzamiento, plantillas, aislamiento por organización) y `internal/api/workspaces_api_test.go` (ciclo completo por HTTP y permisos por rol).
 
 **Mapa grande (A7c)**: `ProjectMap.tsx` sigue siendo SVG propio (sin React Flow ni ELK), pero ya escala a proyectos grandes. La geometría vive en `lib/projects/mapLod.ts` (pruebas con `npm run test:unit`, incluye un proyecto sintético de 5,000 tareas): layout por capas O(n log n), LOD por zoom (`full` >= 0.8 > `mini` >= 0.5 > `dot`), recorte por vista en mosaicos de 256 px (solo se montan los nodos y aristas visibles; `map-canvas` expone `data-rendered`), en `dot` solo se dibujan aristas del camino crítico y del nodo seleccionado y no hay texto (el nombre queda en `<title>`). Con más de 150 tareas el mapa abre en `mini` (más de 600: en `dot`), muestra un minimapa en un solo `<canvas>` (`map-minimap`, clic o arrastre para moverse) y la tira de calor se dibuja en canvas. Zoom con `map-zoom-in`/`map-zoom-out` o Ctrl/⌘ + rueda alrededor del puntero (`map-zoom` muestra el %). La búsqueda fija el nodo encontrado aunque esté fuera de vista y desplaza hasta él. Medido en el navegador con 240 tareas: 40-120 nodos montados según el zoom. Sigue pendiente lo de la sec. 4.2: grupos plegables cargados por nivel (`/graph?parent=`), layout ELK en un worker y modo edición en el mapa.
+
+## Seguimiento simple (vista por defecto, 2026-11-03)
+
+Al abrir un proyecto se ve primero **Seguimiento** (`FollowView`): la lista de tareas con su agente, su estado, desde
+cuándo y los archivos que produjo (`Node.files`), con las que **necesitan tu ayuda** arriba y su pregunta para
+responder ahí mismo. Las vistas avanzadas (salud, mapa, línea de tiempo, kanban, carriles, delegación, aprobaciones,
+cambios, costos) siguen en sus pestañas. Los proyectos de un lote se muestran dentro de la tarjeta del lote
+(`BatchView`, una fila por cliente; 08-api.md §16.10). La vista general en la oficina se diseña aparte.
