@@ -39,6 +39,7 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/theme.css">
   <link rel="stylesheet" href="/home.css">
+  <link rel="stylesheet" href="/search.css">
   <script>document.documentElement.classList.add("js")</script>
 </head>
 <body class="home">
@@ -61,6 +62,7 @@
         <span class="nav-ind" aria-hidden="true"></span>
       </nav>
       <div class="bar-end">
+        <button class="home-search" type="button" data-search hidden data-i18n-aria="search.aria" aria-label="Search the site and the docs…" aria-keyshortcuts="Control+K Meta+K /"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="home-search-ph" data-i18n="search.label">Search</span><kbd class="dx-kbd" data-kbd>Ctrl K</kbd></button>
         <div class="lang" role="group" data-i18n-aria="a11y.lang" aria-label="Language">
           <a href="/" hreflang="es" lang="es" data-lang="es">ES</a>
           <a href="/en/" hreflang="en" lang="en" data-lang="en" aria-current="true">EN</a>
@@ -155,7 +157,7 @@
               <li><button type="button" data-ch="4"><span class="ch-bar"><i></i></span><span data-i18n="stage.ch5">Report</span></button></li>
             </ol>
             <figcaption class="st-cap">
-              <span data-i18n="stage.caption">Illustrative animation of the $50,000 scenario, with the app's colors, states and messages; not a recording. Marketing, Support and Procurement are example roles: the app ships seven base employees and templates to add more.</span>
+              <span data-i18n="stage.caption">Illustrative animation of the $50,000 scenario, with the app's colors, states and messages; not a recording. Marketing, Support and Procurement are example roles: your office starts with the employees of your line of work and you add other professions whenever you want.</span>
               <span class="st-ctl"><button type="button" class="st-toggle" data-sound="fx" aria-pressed="false"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path class="i-on" d="M11 5.5a3.5 3.5 0 0 1 0 5M12.6 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="i-off" d="M11 6l4 4M15 6l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="stage.sound">Sound</span></button><button type="button" class="st-toggle" data-sound="music" aria-pressed="false"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M6 12V3.5l7-1.5v8.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="4.5" cy="12" r="2" fill="currentColor"/><circle cx="11.5" cy="10.5" r="2" fill="currentColor"/><path class="i-off" d="M2 2l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="stage.music">Music</span></button><button type="button" class="st-toggle" data-stage-toggle aria-pressed="false"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path class="i-pause" d="M5 3v10M11 3v10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path class="i-play" d="M5 3l8 5-8 5z" fill="currentColor"/></svg><span data-i18n="stage.pause">Pause animation</span></button></span>
             </figcaption>
           </figure>
@@ -379,8 +381,8 @@
       <div class="wrap">
         <div class="head reveal">
           <p class="kicker" data-i18n="team.kicker">The team</p>
-          <h2 id="team-h" data-i18n="team.title">Seven employees to start. More when you need them.</h2>
-          <p class="lead" data-i18n="team.lead">Each one has a role, tools, memory and a history of what it did. And you can hire other professions from templates.</p>
+          <h2 id="team-h" data-i18n="team.title">The employees of your line of work. More when you need them.</h2>
+          <p class="lead" data-i18n="team.lead">When you sign up you pick what you do and start with the employees of that job plus an assistant. Each one has a role, tools, memory and a history of what it did, and you can hire other professions when you need them.</p>
         </div>
         <ul class="roles reveal" data-stagger>
           <li class="lead-role" style="--c:#5a95e8"><span class="av" aria-hidden="true">S</span><p class="who">Sofía Lara</p><h3 data-i18n="r.assistant.t">Assistant</h3><p data-i18n="r.assistant.d">Plans, coordinates the team and consolidates the final report.</p></li>
@@ -566,5 +568,6 @@
   <script src="/app.js"></script>
   <script src="/sound.js"></script>
   <script src="/stage.js"></script>
+  <script src="/docs.js" defer></script>
 </body>
 </html>

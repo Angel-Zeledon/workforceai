@@ -1,0 +1,40 @@
+/* Search on the home page: the same dialog as the docs (docs.js opens it with the button, Ctrl/Cmd+K or "/") with the
+   docs' look, mapped onto the home tokens. The rules below .dx-search are copied from guide.css: keep them in step. */
+.dx-search,.home-search{--bg-soft:color-mix(in srgb,var(--line) 35%,var(--bg));--bg-hover:color-mix(in srgb,var(--line) 45%,var(--bg));--accent-line:color-mix(in srgb,var(--accent) 35%,transparent);--faint:var(--mute);--shadow-lg:0 24px 60px -18px rgb(10 20 40/.35),0 2px 8px rgb(10 20 40/.08);--r-lg:12px}
+.home-search{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 8px 0 10px;border:1px solid var(--line-strong);border-radius:9px;background:var(--bg-soft);color:var(--mute);font:500 .86rem/1 var(--font);cursor:pointer;transition:border-color .15s,background .15s,color .15s}
+.home-search:hover{border-color:var(--mute);background:var(--bg);color:var(--ink)}
+.home-search svg{width:16px;height:16px;flex:none}
+.home-search .home-search-ph{min-width:72px;text-align:left}
+@media (max-width:1100px){.home-search .home-search-ph,.home-search .dx-kbd{display:none}.home-search{width:36px;padding:0;justify-content:center}}
+.dx kbd,.dx-kbd{font:500 .72rem/1 var(--font);letter-spacing:.02em;color:var(--mute);background:var(--bg);border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:5px;padding:3px 5px;white-space:nowrap}
+.dx-search{width:min(640px,calc(100vw - 24px));max-width:none;max-height:min(620px,calc(100dvh - 48px));margin:min(12vh,96px) auto auto;padding:0;border:1px solid var(--line-strong);border-radius:var(--r-lg);background:var(--bg);color:var(--ink);box-shadow:var(--shadow-lg);overflow:hidden}
+.dx-search::backdrop{background:rgb(4 10 20/.45);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.dx-search[open]{display:flex}
+.dx-search-box{display:flex;flex-direction:column;width:100%;min-height:0}
+.dx-search-field{display:flex;align-items:center;gap:10px;padding:0 12px 0 16px;border-bottom:1px solid var(--line);color:var(--mute)}
+.dx-search-field svg{width:18px;height:18px;flex:none}
+.dx-search-field input:focus-visible{outline:none}
+.dx-search-field:focus-within{color:var(--accent)}
+.dx-search-field input{flex:1;min-width:0;height:56px;border:0;outline:0;background:transparent;color:var(--ink);font:400 16px/1.2 var(--font)}
+.dx-search-field input::placeholder{color:var(--mute)}
+.dx-search-field input::-webkit-search-cancel-button{display:none}
+.dx-search-esc{font:600 .7rem/1 var(--font);color:var(--mute);background:var(--bg-soft);border:1px solid var(--line-strong);border-radius:6px;padding:5px 7px;cursor:pointer}
+.dx-search-body{overflow-y:auto;overscroll-behavior:contain;padding:8px;min-height:120px}
+.dx-search-status{margin:4px 8px 8px!important;font-size:.74rem;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.dx-search-status:empty{display:none}
+.dx-search ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.dx-search li a{display:grid;gap:3px;padding:10px 12px;border-radius:8px;text-decoration:none;color:var(--ink2);border:1px solid transparent}
+.dx-search li[aria-selected="true"] a{background:var(--accent-soft);border-color:var(--accent-line)}
+.dx-r-meta{display:flex;align-items:center;gap:6px;font-size:.74rem;color:var(--mute);min-width:0}
+.dx-r-coll{flex:none;font-weight:650;color:var(--accent);letter-spacing:.02em}
+.dx-r-page{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dx-r-page::before{content:"›";margin-right:6px;color:var(--faint)}
+.dx-r-title{font-weight:600;color:var(--ink);line-height:1.35}
+.dx-r-text{font-size:.85rem;line-height:1.5;color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dx-search mark{background:color-mix(in srgb,var(--accent) 22%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.dx-search-empty{display:grid;gap:4px;padding:28px 12px;text-align:center;color:var(--mute);font-size:.92rem}
+.dx-search-empty b{color:var(--ink);font-weight:600}
+.dx-search-foot{display:none;gap:16px;padding:10px 16px;border-top:1px solid var(--line);background:var(--bg-soft);font-size:.76rem;color:var(--mute)}
+.dx-search-foot kbd{margin-right:3px}
+@media (min-width:640px){.dx-search-foot{display:flex}}
+@media (max-width:639px){.dx-search{margin-top:12px;max-height:calc(100dvh - 24px)}}

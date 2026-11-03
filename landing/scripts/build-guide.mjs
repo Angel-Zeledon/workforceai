@@ -614,9 +614,31 @@ for (const coll of ORDERED_KINDS) {
   total += pages.length;
 }
 
+// ---------- the home page's sections: the search on the landing also finds "how it works", security, FAQ... ----------
+// Read from the prerendered pages (index.html, en/index.html: run prerender.mjs first). A top-level section is one with
+// an id; it runs until the next one (nested sections have no id and stay inside their parent).
+const HOME = { es: { file: "index.html", base: "/", label: "Inicio" }, en: { file: "en/index.html", base: "/en/", label: "Home" } };
+const htmlText = (h) => h.replace(/<(script|style|svg)\b[\s\S]*?<\/\1>/g, " ").replace(/<[^>]+>/g, " ")
+  .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+  .replace(/\s+/g, " ").trim();
+for (const l of ["es", "en"]) {
+  const file = path.join(dir, HOME[l].file);
+  if (!fs.existsSync(file)) continue;
+  const html = fs.readFileSync(file, "utf8");
+  const main = html.slice(html.indexOf("<main"), html.indexOf("</main>") > 0 ? html.indexOf("</main>") : html.length);
+  const starts = [...main.matchAll(/<section\b[^>]*\bid="([a-z0-9-]+)"[^>]*>/g)];
+  starts.forEach((m, i) => {
+    const body = main.slice(m.index, i + 1 < starts.length ? starts[i + 1].index : main.length);
+    const h = htmlText((body.match(/<h[12]\b[^>]*>([\s\S]*?)<\/h[12]>/) || [, ""])[1]);
+    // the excerpt without the section label (kicker) and the heading, which the result already shows
+    const x = htmlText(body.replace(/<p class="kicker"[\s\S]*?<\/p>/, " ").replace(/<h[12]\b[\s\S]*?<\/h[12]>/, " ")).slice(0, 700);
+    if (h && x) search[l].push({ c: "home", t: HOME[l].label, h, u: `${HOME[l].base}#${m[1]}`, x: x.normalize("NFC") });
+  });
+}
+
 // ---------- search index (one per language; docs.js fetches the page's language) ----------
 for (const l of ["es", "en"]) {
-  const labels = Object.fromEntries(ORDERED_KINDS.map((k) => [k, UI[l][k].short]));
+  const labels = { home: HOME[l].label, ...Object.fromEntries(ORDERED_KINDS.map((k) => [k, UI[l][k].short])) };
   write(`docs-search.${l}.json`, JSON.stringify({ v: 1, labels, items: search[l] }));
 }
 

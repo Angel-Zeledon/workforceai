@@ -182,6 +182,10 @@
   const status = dlg.querySelector(".dx-search-status");
   let results = [], active = -1;
 
+  // A light stem, so "aprobar" finds "aprobación", "pagos" finds "pago" and "approving" finds "approval": common
+  // Spanish and English endings come off while at least 4 letters stay. Used only when the exact word is not there.
+  const ENDINGS = ["aciones", "iciones", "ciones", "acion", "icion", "cion", "amente", "mente", "ando", "iendo", "ados", "idos", "adas", "idas", "ado", "ido", "ada", "ida", "ar", "er", "ir", "es", "s", "ings", "ing", "ions", "ion", "ed", "al", "e"];
+  const stem = (t) => { if (t.length < 5) return t; for (const e of ENDINGS) if (t.endsWith(e) && t.length - e.length >= 4) return t.slice(0, -e.length); return t; };
   function score(it, terms) {
     let s = 0;
     for (const t of terms) {
@@ -189,6 +193,13 @@
       if (it._h && (it._h.startsWith(t) || it._h.includes(" " + t))) v = 14; else if (it._h.includes(t)) v = 9;
       if (it._t.startsWith(t) || it._t.includes(" " + t)) v = Math.max(v, it.h ? 6 : 16); else if (it._t.includes(t)) v = Math.max(v, it.h ? 4 : 10);
       if (it._x.includes(t)) v += it._x.includes(" " + t) || it._x.startsWith(t) ? 3 : 1.5;
+      if (!v) {
+        const r = stem(t);
+        if (r !== t) {
+          if (it._h.includes(" " + r) || it._h.startsWith(r)) v = 6; else if (it._t.includes(" " + r) || it._t.startsWith(r)) v = 4;
+          if (it._x.includes(" " + r) || it._x.startsWith(r)) v += 1;
+        }
+      }
       if (!v) return 0;
       s += v;
     }
@@ -205,7 +216,7 @@
     }
     const n = norm(text);
     const ranges = [];
-    for (const t of terms) { let i = n.indexOf(t); while (i > -1 && t) { ranges.push([i, i + t.length]); i = n.indexOf(t, i + t.length); } }
+    for (const t0 of terms) { const t = n.includes(t0) ? t0 : stem(t0); let i = n.indexOf(t); while (i > -1 && t) { ranges.push([i, i + t.length]); i = n.indexOf(t, i + t.length); } }
     ranges.sort((a, b) => a[0] - b[0]);
     let out = "", at = 0;
     for (const [a, b] of ranges) { if (a < at) continue; out += escHtml(text.slice(at, a)) + "<mark>" + escHtml(text.slice(a, b)) + "</mark>"; at = b; }
