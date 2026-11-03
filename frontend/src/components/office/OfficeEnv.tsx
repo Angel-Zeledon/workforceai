@@ -693,9 +693,9 @@ export function OfficeEnv() {
       <LightRig />
 
       {/* fondo: disco con degradado neutro (sin cielo) y losa de hormigón pulido */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.42, 0]} receiveShadow userData={{ ground: true }}><circleGeometry args={[95, 64]} /><meshStandardMaterial map={backdrop} roughness={1} /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.42, 0]} receiveShadow userData={{ ground: true, surfaceHint: "backdrop" }}><circleGeometry args={[95, 64]} /><meshStandardMaterial map={backdrop} roughness={1} /></mesh>
       <RoundedBox args={[29, 0.4, 21]} radius={0.04} smoothness={3} position={[0, -0.22, 0]} receiveShadow castShadow userData={{ ground: true }}><meshStandardMaterial color="#8d97a6" roughness={0.9} /></RoundedBox>
-      <RoundedBox args={[28.4, 0.1, 20.4]} radius={0.02} smoothness={2} position={[0, -0.03, 0]} receiveShadow userData={{ ground: true, noStuds: true }}><meshStandardMaterial map={floorMap} color={layoutFloor.tint} roughness={finish.rough} metalness={finish.metal} /></RoundedBox>
+      <RoundedBox args={[28.4, 0.1, 20.4]} radius={0.02} smoothness={2} position={[0, -0.03, 0]} receiveShadow userData={{ ground: true, noStuds: true, surfaceHint: layoutFloor.kind }}><meshStandardMaterial map={floorMap} color={layoutFloor.tint} roughness={finish.rough} metalness={finish.metal} /></RoundedBox>
 
       {/* paredes bajas con ventanal y zócalo */}
       <Wall args={[28.4, 3, 0.3]} position={[0, 1.5, -10]}>

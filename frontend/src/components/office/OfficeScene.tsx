@@ -22,6 +22,7 @@ import { useOfficeLayout } from "@/lib/officeLayout";
 import { useRewards } from "@/lib/rewards";
 import { PeopleLayer } from "../presence/PeopleLayer";
 import { StyleAmbient, StyleVeil, ThemeApplier } from "./ThemeLayer";
+import { FrameDriver } from "./FrameDriver";
 
 const VIEW = { pos: new THREE.Vector3(7, 16, 19), target: new THREE.Vector3(0.5, 0.4, -0.3) };
 /** The editor looks down on the floor plan so the grid and the footprints read clearly. */
@@ -79,6 +80,7 @@ function Rig() {
   return (
     <OrbitControls
       ref={ref as never}
+      makeDefault
       target={[0.5, 0.4, -0.3]}
       enabled={!dragging}
       enableDamping dampingFactor={0.08}
@@ -115,6 +117,7 @@ export default function OfficeScene() {
       <Canvas
         shadows="soft"
         dpr={[1, 1.75]}
+        frameloop="never" /* FrameDriver draws the frames: paused off screen, 30 fps when idle, adaptive quality */
         camera={{ position: [7, 16, 19], fov: 32, near: 0.5, far: 160 }}
         gl={{ antialias: true, powerPreference: "high-performance" }}
         onPointerMissed={() => {
@@ -132,11 +135,12 @@ export default function OfficeScene() {
           <CoinFloats />
           <ShieldFloats /> {/* B10: a shield over the agent whose read content tried to give it orders */}
           <PeopleLayer /> {/* human presence: the people of the office walk next to the agents */}
-          <StyleAmbient /> {/* the office style's ambient effect (baseplate, drifting paper, neon grid, dust motes) */}
+          <StyleAmbient /> {/* the office style's extras: drifting paper, reflections, texture sets, post-processing */}
           <ThemeApplier /> {/* restyles every lit mesh for the office style (classic: untouched) */}
         </Suspense>
         <LabelSolver />
         <Rig />
+        <FrameDriver />
       </Canvas>
       <StyleVeil /> {/* short dissolve while the office switches style */}
       <LabelLayer />

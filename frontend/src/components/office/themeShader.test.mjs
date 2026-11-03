@@ -34,5 +34,24 @@ test("the checker catches a call before the definition", () => {
 
 test("every th* shader function is defined before it is used", () => {
   assert.deepEqual(useBeforeDefine(expand(chunk("VERT_HEAD")) + chunk("VERT_BODY")), [], "vertex shader");
-  assert.deepEqual(useBeforeDefine(expand(chunk("FRAG_HEAD")) + chunk("FRAG_NORMAL") + chunk("FRAG_INK")), [], "fragment shader");
+  const frag = expand(chunk("FRAG_HEAD")) + chunk("FRAG_COLOR") + chunk("FRAG_ROUGH") + chunk("FRAG_NORMAL") + chunk("FRAG_IBL") + chunk("FRAG_INK") + chunk("FRAG_CEL");
+  assert.deepEqual(useBeforeDefine(frag), [], "fragment shader");
+});
+
+test("the surface detail has no grid of cells (the old value noise drew blocky, Minecraft-like patches)", () => {
+  const noise = chunk("NOISE");
+  assert.match(noise, /float thSimplex\(vec3 v\)/);
+  assert.doesNotMatch(noise, /thHash|thNoise/); // no per-cell random value blended across a cube lattice
+  const all = src.slice(src.indexOf("const NOISE"), src.indexOf("const FRAG_CEL"));
+  assert.doesNotMatch(all, /thNoise\(/);
+  // relief from a true gradient in object space, not from screen-space derivatives of a height (2x2-pixel steps)
+  assert.doesNotMatch(all, /dFdx\(h\)|dFdy\(h\)/);
+});
+
+test("the shader only adds detail around the catalog color and keeps the office's light", () => {
+  // the albedo detail multiplies the color around 1 (mean kept); the room reflection adds no diffuse light
+  assert.match(chunk("FRAG_COLOR"), /diffuseColor\.rgb \*= mix\(1\.0, thS\.x, uThTex\)/);
+  assert.match(chunk("FRAG_IBL"), /iblIrradiance \*= 0\.0/);
+  // the fragment stage uses normalMatrix: it must be declared there (three.js only declares it for the vertex stage)
+  assert.match(chunk("FRAG_HEAD"), /uniform mat3 normalMatrix;/);
 });

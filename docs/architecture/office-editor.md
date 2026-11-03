@@ -95,34 +95,78 @@ the six names below. The picker is the first section of the editor's Ambience ta
 
 | style | rendering | motion |
 |---|---|---|
-| `classic` | unchanged | unchanged |
-| `bricks` | generic toy bricks (no brand): rounded shapes become blocks, glossy molded plastic, toy-figure cylinder heads with a stud, studs on every upward box face (one instanced mesh), walls built in brick courses, a studded baseplate overlay on the floor (shading only) | stop-motion (8 poses/s), stiff knees and elbows, snappy turns; pieces drop in whole steps and click into place |
-| `clay` | modeled by hand: walls with a wavy top, thick bulging tops and screens (pillows), chunky posts and legs, chairs as balls of clay, plants as drops, chubby figures with a big head and sausage limbs; smudges and finger marks on every surface, waxy finish | strong squash and stretch on every step, while breathing and celebrating; pieces plop down and wobble back to shape |
-| `paper` | papercraft: walls pleated like a folding screen, thick card tops with a visible edge, legs as folded strips of card, folded card chairs and leaves, low-poly flat-shaded faces, card grain on every surface, the shadowed cut edge of every sheet and a soft shadow lifted off the page (outline pass), almost flat cut-out characters; white sheets drift through the room | puppet waddle, flutter, quick flips when turning; pieces unfold from the floor like a pop-up book |
-| `toon` | cartoon: cel shading (flat bands a fixed ratio apart, so lit / half-lit / shaded sides always separate; same colors) and a thick ink outline on everything from a full-screen pass (depth jumps, creases and sharp shade changes) | exaggerated idle and walk, smear stretch and forward lean when running, squash; pieces pop in with stretch and overshoot |
-| `real` | realistic: desks with a visible edge band, slim metal frame legs and a monitor cable, office chairs with mesh backs and casters, monitors on a round foot, leafy plants, soft contact shadows under desks and chairs, people with less doll-like proportions (smaller head, taller torso); polished mottled concrete floor, plaster walls, wood grain, fabric weave, brushed metal, low neutral room reflections | calmer idle, natural weight shift over the stance leg, slower turns; pieces are lowered gently into place |
+| `classic` | unchanged (no post-processing, no reflections, no download: not one extra pass) | unchanged |
+| `bricks` | generic toy bricks (no brand, no logo): boxes become blocks with a small molded bevel, anything round becomes a round brick (a cylinder with chamfered rims, never a cube), glossy ABS (low roughness plus a real-room reflection), bevelled studs on every upward block and round-brick face (one instanced mesh), walls built in thin-seamed brick courses, the floor a studded baseplate (true relief in the shader), strong ambient occlusion in the joints and a slight tilt-shift (photo of a miniature) | stop-motion (8 poses/s), stiff knees and elbows, snappy turns; pieces drop in whole steps and click into place |
+| `clay` | modeled by hand: walls with a wavy top, thick bulging tops and screens (pillows), chunky posts and legs, chairs as balls of clay, plants as drops, chubby figures with a big head and sausage limbs; a smooth waxy finish with soft dents and finger marks in the relief only (no color stains), soft ambient occlusion | stop-motion on twelves (12 poses/s), strong squash and stretch on every step, while breathing and celebrating; pieces plop down and wobble back to shape |
+| `paper` | papercraft: walls pleated like a folding screen, thick card tops with a visible edge, legs as folded strips of card, folded card chairs and leaves, low-poly flat-shaded faces (whole spheres become folded paper balls, icospheres), a soft fibrous card grain, the dark cut edge of every sheet and a soft shadow lifted off the page (ink effect), almost flat cut-out characters; white sheets drift through the room | puppet waddle, flutter, quick flips when turning; pieces unfold from the floor like a pop-up book |
+| `toon` | cartoon: cel shading (flat bands a fixed ratio apart, edges antialiased; same colors) and a thick ink outline on everything (depth jumps, creases and sharp shade changes) that "boils": redrawn 8 times per second with a slight smooth wobble, like animation drawn by hand | exaggerated idle and walk, smear stretch and forward lean when running, squash; pieces pop in with stretch and overshoot |
+| `real` | realistic: desks with a visible edge band, slim metal frame legs and a monitor cable, office chairs with mesh backs and casters, monitors on a round foot, leafy plants, soft contact shadows under desks and chairs, people with less doll-like proportions; photographed CC0 materials (oak veneer, polished concrete, painted plaster, woven fabric, brushed metal) with real normal and roughness maps, reflections of a real room (HDRI), ambient occlusion, SMAA and a light bloom on what glows | calmer idle, natural weight shift over the stance leg, slower turns; pieces are lowered gently into place |
 
 How it is drawn (no item is modelled twice):
 
-* `components/office/officeTheme.ts` (pure, unit tested): the table of styles, the finish transform (`styleMaterial`,
-  which has no color in or out), the pose layer (`stylePose`, `bodySquash`, `stopMotionTick`) and the entrance curves
-  (`appearPose`).
+* `components/office/officeTheme.ts` (pure, unit tested): the table of styles (geometry, finish, outline, reflections
+  `env`, post-processing `post`, motion, body), the finish transform (`styleMaterial`, which has no color in or out:
+  roughness, metalness, the surface detail and, for `real`, the texture set `pbr` with its tile size), the pose layer
+  (`stylePose`, `bodySquash`, `stopMotionTick`) and the entrance curves (`appearPose`).
 * `furnitureStyle.ts`: `styleDesk` / `styleChair` / `styleTable` / `styleSofa` / `styleCab` reshape the existing specs
   (legs, kinds, finishes). Sizes and colors never change, so footprints, collisions and seat heights are the same.
 * `themeShapes.ts`: the shapes that replace classic boxes (clay pillows and wavy walls, paper card, folded strips and
   pleated walls), built once per size and shared. Characters take the style's `body` proportions (head, torso, limbs).
 * `themeRuntime.ts` + `ThemeLayer.tsx`: a sweep of the rendered scene every few frames restyles lit materials (unlit
-  labels, glows and screens are left alone) with one shared shader patch (procedural surface, vertex wobble, ink,
-  cel bands; switched by uniforms so all styled materials share one program per base type), swaps geometry for blocky /
-  soft / low-poly versions from a shared cache and collects brick studs into one instanced mesh (one draw call; only
-  studs of meshes that moved are rewritten). Originals are kept in `userData`, so going back to `classic` restores them.
-  `userData.noTheme` skips a subtree, `noStuds` keeps studs off it (characters); the role flags pick the variant of
-  the style: `figure` (characters: finer detail), `ground` (floor, outer ground, desk mats: no geometry swap, no wobble),
-  `wall`. Surfaces may shade the color a little lighter / darker (grain, smudges, mottling), never change it.
+  labels, glows and screens are left alone) with one shared shader patch (switched by uniforms packed in two vec4, so
+  all styled materials share one program per base type), swaps geometry (toy blocks and round bricks, clay, paper;
+  cached and shared) and collects brick studs into one instanced mesh (one draw call; only studs of meshes that moved
+  are rewritten). Originals are kept outside the React-owned `userData` (a WeakMap per mesh for geometry), so going
+  back to `classic` restores them even after a component re-rendered. `userData.noTheme` skips a subtree, `noStuds`
+  keeps studs off it (characters); the role flags pick the variant of the style: `figure` (characters), `ground`
+  (floor, outer ground, desk mats: no geometry swap, no wobble), `wall`; `surfaceHint` says what a ground is (the
+  floor's kind: a parquet floor gets the wood relief, carpet the fabric one, tile / marble a polished sheen; `backdrop`
+  for the ground outside, left plain).
+* Surface detail (the shader): nothing is a grid of cells any more. The old value noise (one random value per cubic
+  cell, blended) drew blocky, axis-aligned patches at the scale seen from the camera, the "Minecraft" look; the
+  procedural relief (clay dents, card fibres, brick seams, baseplate studs) is now smooth 3D simplex noise or an
+  antialiased pattern, its gradient taken from three samples in object space (no screen-space derivatives, which drew
+  2x2-pixel steps) and faded out before it gets finer than a pixel. `real` projects photographed textures triplanar in
+  object space scaled to meters (the meshes have no useful UVs): the normal map is blended per axis, the albedo detail
+  multiplies the catalog color around 1 (high-passed and mean-normalized when packed, so an oak desk stays that oak on
+  average) and the roughness detail multiplies the finish. The room reflection adds reflections only: its diffuse light
+  is dropped in the shader, so the office is lit exactly by the organization's light, as in classic.
+* Assets (`frontend/public/office`, CC0, origin and authors in `CREDITS.md` there, ~1.1 MB): five texture sets in
+  `pbr/` (one JPG with normal + albedo detail, one with roughness detail) loaded only while `real` is active and
+  released when it is left, and a 512 x 256 desaturated HDRI in `env/` loaded only for `real` and `bricks` (the
+  generated studio room is the fallback). Nothing is fetched from another site at runtime.
+* Post-processing (`StylePost`, `@react-three/postprocessing` + `postprocessing`, one `EffectComposer`, mounted only in
+  the styles that have `post`): the scene is drawn once into a half-float buffer, then N8AO ambient occlusion (half
+  resolution; its "transparency aware" mode, which redraws the scene twice more, is switched off), the ink effect of
+  cartoon and paper (an `Effect` of the same composer, not a second render of the scene), bloom of what glows, ACES
+  tone mapping (the composer turns the renderer's own off; this keeps every color as in classic), SMAA and the bricks
+  tilt-shift.
 * Entrances (`Appear`) play when a piece is placed in the editor and, staggered, when the style changes; a removed
   piece plays the same entrance backwards (`useLeaving`). Switching styles shows a short veil (`StyleVeil`) while the
-  scene restyles. `StyleAmbient` adds the baseplate, the drifting paper, the room reflections or the ink pass.
+  scene restyles. `StyleAmbient` adds the drifting paper, the reflections, the texture sets and the post-processing.
 * Reduced motion (preference or `prefers-reduced-motion`): the look stays, the motion goes (no entrances, exits, veil,
-  stop-motion, squash, waddle or drifting paper).
+  stop-motion, squash, waddle, drifting paper or boiling lines).
 * The 3D shop thumbnails (`ThumbStudio`) are rendered in the active style and cached per style; the flat SVG fallback
   drawn before the 3D picture is ready stays classic.
+
+### Speed on slow computers
+
+Measured with a Chrome performance trace on an Intel Iris Xe laptop: the office is bound by the CPU submitting draw
+calls (~930 meshes, ~500 shadow casters, one material each; `WebGLRenderer.render` is ~45 % of the main thread),
+not by our own code (the style sweep, the character poses and the label solver together are under 3 %) and not by
+JavaScript math, so WebAssembly would not help. What helps is drawing less:
+
+* `FrameDriver.tsx` drives the canvas (`frameloop="never"`): no frame while the tab is hidden or the canvas is off
+  screen, full rate while someone uses the office (pointer, wheel, keys, the editor), `IDLE_FPS` (30) after
+  `IDLE_AFTER` seconds untouched (the characters keep moving).
+* `officeQuality.ts` (pure, unit tested) is the monitor and the tier table. Frames well below the target (25 of 60 fps,
+  20 of an idle 30) for 1.5 s step one tier down; 8 s at full speed step one up; a tier that failed is not retried for
+  60 s and the first 2.5 s after any change are not judged (no flicker, shader compiles ignored). Tiers: 0 full
+  (pixel ratio up to 1.75, soft 2048 shadows, AO, bloom, tilt-shift); 1 (ratio 1.25, basic shadows, cheap AO, pieces
+  under 6 cm cast no shadow); 2 (ratio 1, shadow map redrawn every 2nd frame, pieces under 15 cm cast no shadow, no
+  AO / bloom); 3 (ratio 0.75, no shadow map: only the blob and contact shadows). The style keeps its look at every tier
+  (geometry, materials, ink); only the costly extras go.
+* Console handles for screenshots and FPS checks (`window.__officeStyle.set(style)`, `.view(fov, x, y, z)` for
+  close-ups, `window.__officeQuality.get()` / `.pin(tier)` / `.counters()`) exist in development builds or in a build
+  made with `NEXT_PUBLIC_OFFICE_DEBUG=true`.
+* Screenshots of the six styles (default camera and close-ups, 2026-11-03): `docs/screenshots/office-styles-2026-11-03/`.

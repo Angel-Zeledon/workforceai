@@ -4,9 +4,18 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useOfficeStyle, useOfficeLayout } from "@/lib/officeLayout";
 import { usePreferences } from "@/lib/preferences";
-import { APPEAR_SECONDS, appearPose, lookOf, type Outline } from "./officeTheme";
+import { Bloom, EffectComposer, N8AO, SMAA, TiltShift2, ToneMapping } from "@react-three/postprocessing";
+import { Effect, EffectAttribute, ToneMappingMode } from "postprocessing";
+import type { OfficeStyle } from "@/lib/officeLayoutModel";
+import { APPEAR_SECONDS, appearPose, lookOf, pbrKindsOf, type Outline, type PbrKind } from "./officeTheme";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { StudBatch, setRoomEnvironment, themeTree } from "./themeRuntime";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+import { StudBatch, setPbrSet, setRoomEnvironment, themeTree, type PbrSet } from "./themeRuntime";
+import { QUALITY_TIERS } from "./officeQuality";
+import { useQualityTier } from "./FrameDriver";
+
+/** Console handles for screenshots and FPS checks: development builds, or a build made with NEXT_PUBLIC_OFFICE_DEBUG=true. */
+export const OFFICE_DEBUG = process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_OFFICE_DEBUG === "true";
 
 /** Frames between two sweeps of the scene (new meshes pick up the style within this many frames). */
 const SWEEP_EVERY = 8;
@@ -18,19 +27,28 @@ const SWEEP_EVERY = 8;
 export function ThemeApplier() {
   const style = useOfficeStyle();
   const scene = useThree((s) => s.scene);
+  const getState = useThree((s) => s.get);
   const batch = useMemo(() => new StudBatch(), []);
   const st = useRef({ frame: 0, applied: "classic", idleSweeps: 0 });
   useEffect(() => () => batch.dispose(), [batch]);
   // development only: switch styles and inspect the scene from the console (screenshots, FPS checks)
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
+    if (!OFFICE_DEBUG) return;
     const w = window as unknown as { __officeStyle?: unknown };
     w.__officeStyle = {
       scene,
+      /** close-ups for screenshots: narrows the lens on a point of the floor plan (fov null: back to the default view) */
+      view: (fov: number | null, x = 0.5, y = 0.4, z = -0.3) => {
+        const st = getState();
+        const cam = st.camera as THREE.PerspectiveCamera;
+        const c = st.controls as unknown as { target: THREE.Vector3; update: () => void } | null;
+        cam.fov = fov ?? 32; cam.updateProjectionMatrix();
+        if (c) { c.target.set(x, y, z); c.update(); }
+      },
       set: (s: string) => useOfficeLayout.setState((st) => ({ layout: { ...st.layout, style: s === "classic" ? undefined : (s as never) } })),
     };
     return () => { delete w.__officeStyle; };
-  }, [scene]);
+  }, [scene, getState]);
   useFrame(() => {
     const s = st.current;
     s.frame++;
@@ -111,114 +129,192 @@ export function seedOf(s: string): number {
 
 // ------------------------------------------------------------------------------------------------ ambient effects
 
-/** Just above the floor slab and the desk mats (top at 0.021), so the overlays never fight with them. */
-const FLOOR_W = 28.4, FLOOR_D = 20.4, FLOOR_Y = 0.026;
-
 /**
- * What a style adds to the scene besides restyling it: the studded baseplate (bricks), drifting paper (papercraft), the
- * neutral room reflections (realistic) and the ink outline pass (cartoon). Nothing in "classic".
+ * What a style adds to the scene besides restyling it: drifting paper (papercraft), the
+ * room reflections (realistic, toy plastic), the real texture sets (realistic) and the post-processing (ambient
+ * occlusion, ink, bloom, antialiasing, tilt-shift). Nothing in "classic": no composer, no extra pass, no download.
  */
 export function StyleAmbient() {
-  const look = lookOf(useOfficeStyle());
+  const style = useOfficeStyle();
+  const look = lookOf(style);
+  const kinds = pbrKindsOf(style);
   return (
     <>
-      {look.ambient === "baseplate" && <Baseplate />}
       {look.ambient === "paper" && <PaperDrift />}
-      {look.env && <RoomReflections />}
-      {look.outline && <InkOutline outline={look.outline} />}
+      {look.env !== "none" && <StyleEnvironment />}
+      {kinds.length > 0 && <StyleTextures kinds={kinds} />}
+      {look.post && <StylePost style={style} />}
     </>
   );
 }
 
-/** Realistic: a neutral studio room (generated, no file) as the reflection of every material; the light stays the same. */
-function RoomReflections() {
+/** The CC0 HDRI of a real room (Poly Haven, see public/office/CREDITS.md), desaturated so it never tints the office. */
+const HDRI_URL = "/office/env/room_512.hdr";
+
+/**
+ * Reflections of a real room on every styled material (each with its own strength, see setRoomEnvironment); the light
+ * stays the same. Loaded only while a style that reflects is active; the generated studio room is the fallback.
+ */
+function StyleEnvironment() {
   const { gl, scene } = useThree();
   useEffect(() => {
+    let alive = true, env: THREE.Texture | null = null;
     const pm = new THREE.PMREMGenerator(gl);
-    const room = new RoomEnvironment();
-    const env = pm.fromScene(room, 0.04).texture;
-    // per material, not scene.environment (see setRoomEnvironment): each finish keeps its own reflection strength
-    setRoomEnvironment(env, scene);
-    return () => { setRoomEnvironment(null, scene); env.dispose(); pm.dispose(); room.dispose(); };
+    const fallback = () => {
+      if (!alive) return;
+      const room = new RoomEnvironment();
+      env = pm.fromScene(room, 0.04).texture;
+      room.dispose();
+      setRoomEnvironment(env, scene);
+    };
+    new RGBELoader().load(HDRI_URL, (hdr) => {
+      if (!alive) { hdr.dispose(); return; }
+      hdr.mapping = THREE.EquirectangularReflectionMapping;
+      env = pm.fromEquirectangular(hdr).texture;
+      hdr.dispose();
+      setRoomEnvironment(env, scene);
+    }, undefined, fallback);
+    return () => { alive = false; setRoomEnvironment(null, scene); env?.dispose(); pm.dispose(); };
   }, [gl, scene]);
   return null;
 }
 
 /**
- * Outlines (cartoon ink, papercraft cut edges): the scene is drawn into a buffer and a full-screen pass draws a line where
- * the depth jumps (silhouettes), where it bends (creases) and where the shade changes sharply (edges between surfaces at
- * the same depth). One extra pass, no per-object outline meshes; the line keeps the same thickness on screen.
+ * The photographed texture sets of the realistic style (public/office/pbr, ~0.6 MB in all): fetched when the style is
+ * turned on, released when it is left. Until they arrive the surfaces are simply smooth (never a placeholder pattern).
  */
-function InkOutline({ outline }: { outline: Outline }) {
-  const { gl, scene, camera, size } = useThree();
-  const res = useMemo(() => {
-    const rt = new THREE.WebGLRenderTarget(1, 1, { samples: 4, type: THREE.HalfFloatType });
-    rt.depthTexture = new THREE.DepthTexture(1, 1);
-    rt.depthTexture.type = THREE.UnsignedIntType;
-    const mat = new THREE.ShaderMaterial({
-      uniforms: {
-        tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, uPx: { value: new THREE.Vector2() }, uNear: { value: 0.5 }, uFar: { value: 160 },
-        uInk: { value: new THREE.Color() }, uAlpha: { value: 1 }, uShadow: { value: 0 },
-      },
-      vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }",
-      fragmentShader: `
-        #include <common>
-        varying vec2 vUv;
-        uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 uPx; uniform float uNear; uniform float uFar; uniform vec3 uInk; uniform float uAlpha; uniform float uShadow;
-        float lum(vec2 uv) { vec3 c = texture2D(tColor, uv).rgb; return dot(c / (1.0 + c), vec3(0.299, 0.587, 0.114)); }
-        float lin(vec2 uv) { float z = texture2D(tDepth, uv).r * 2.0 - 1.0; return (2.0 * uNear * uFar) / (uFar + uNear - z * (uFar - uNear)); }
-        void main() {
-          vec4 col = texture2D(tColor, vUv);
-          float c = lin(vUv);
-          float l = lin(vUv - vec2(uPx.x, 0.0)), r = lin(vUv + vec2(uPx.x, 0.0)), u = lin(vUv + vec2(0.0, uPx.y)), d = lin(vUv - vec2(0.0, uPx.y));
-          float jump = max(max(abs(l - c), abs(r - c)), max(abs(u - c), abs(d - c))) / c;
-          float bend = abs(l + r + u + d - 4.0 * c) / c;
-          float lc = lum(vUv);
-          float shade = max(max(abs(lum(vUv - vec2(uPx.x, 0.0)) - lc), abs(lum(vUv + vec2(uPx.x, 0.0)) - lc)), max(abs(lum(vUv + vec2(0.0, uPx.y)) - lc), abs(lum(vUv - vec2(0.0, uPx.y)) - lc)));
-          float ink = max(max(smoothstep(0.008, 0.022, jump), smoothstep(0.003, 0.009, bend) * 0.8), smoothstep(0.07, 0.14, shade) * 0.7);
-          ink *= 1.0 - smoothstep(60.0, 90.0, c); // the far ground fades out of the drawing
-          col.rgb = mix(col.rgb, uInk, ink * uAlpha);
-          if (uShadow > 0.0) {
-            // paper: every cut-out casts a soft shadow a few pixels down and to the right, as if lifted off the page
-            float sh = 0.0;
-            for (int i = 1; i <= 3; i++) {
-              float o = float(i) * 2.2;
-              sh += step(0.18, c - lin(vUv + vec2(-uPx.x, uPx.y) * o)) / 3.0;
-            }
-            col.rgb *= 1.0 - sh * 0.32 * uShadow;
-          }
-          gl_FragColor = col;
-          #include <tonemapping_fragment>
-          #include <colorspace_fragment>
-        }`,
-      depthTest: false, depthWrite: false,
-    });
-    mat.toneMapped = true;
-    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
-    quad.frustumCulled = false;
-    const qScene = new THREE.Scene();
-    qScene.add(quad);
-    return { rt, mat, quad, qScene, qCam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1) };
-  }, []);
+function StyleTextures({ kinds }: { kinds: PbrKind[] }) {
+  const { gl, scene } = useThree();
+  const key = kinds.join(",");
   useEffect(() => {
-    const dpr = gl.getPixelRatio();
-    res.rt.setSize(Math.max(1, Math.floor(size.width * dpr)), Math.max(1, Math.floor(size.height * dpr)));
-    res.mat.uniforms.uPx.value.set(outline.px / Math.max(1, size.width * dpr), outline.px / Math.max(1, size.height * dpr));
-    // the buffer holds linear light: the ink color goes in linear too, so it lands exactly as picked on screen
-    res.mat.uniforms.uInk.value.set(outline.color);
-    res.mat.uniforms.uAlpha.value = outline.alpha;
-    res.mat.uniforms.uShadow.value = outline.shadow ?? 0;
-  }, [gl, size, res, outline]);
-  useEffect(() => () => { res.rt.dispose(); res.mat.dispose(); res.quad.geometry.dispose(); }, [res]);
-  useFrame(() => {
-    const cam = camera as THREE.PerspectiveCamera;
-    res.mat.uniforms.uNear.value = cam.near; res.mat.uniforms.uFar.value = cam.far;
-    gl.setRenderTarget(res.rt);
-    gl.render(scene, camera);
-    gl.setRenderTarget(null);
-    gl.render(res.qScene, res.qCam);
-  }, 1); // priority 1: this pass draws the frame instead of the default render
+    let alive = true;
+    const held: { kind: PbrKind; set: PbrSet }[] = [];
+    const loader = new THREE.TextureLoader();
+    const aniso = Math.min(8, gl.capabilities.getMaxAnisotropy());
+    for (const kind of key.split(",") as PbrKind[]) {
+      Promise.all([loader.loadAsync(`/office/pbr/${kind}.jpg`), loader.loadAsync(`/office/pbr/${kind}_r.jpg`)]).then(([map, rgh]) => {
+        if (!alive) { map.dispose(); rgh.dispose(); return; }
+        for (const t of [map, rgh]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.NoColorSpace; t.anisotropy = aniso; t.needsUpdate = true; }
+        const set = { map, rgh };
+        held.push({ kind, set });
+        setPbrSet(kind, set, scene);
+      }).catch(() => { /* offline or blocked: the surfaces stay smooth */ });
+    }
+    return () => {
+      alive = false;
+      for (const { kind, set } of held) { setPbrSet(kind, null, scene); set.map.dispose(); set.rgh.dispose(); }
+    };
+  }, [key, gl, scene]);
   return null;
+}
+
+// ------------------------------------------------------------------------------------------------ post-processing
+
+/**
+ * The ink of cartoon and papercraft, as one effect of the composer (no second render of the scene): a line where the
+ * depth jumps (silhouettes), where it bends (creases) and where the shade changes sharply (edges between surfaces at
+ * the same depth); the line keeps the same thickness on screen. Cartoon lines "boil": a few times per second the line
+ * is redrawn with a slight, smooth wobble, like animation drawn by hand. Paper adds the soft shadow of a cut-out
+ * lifted off the page.
+ */
+const INK_FRAG = /* glsl */ `
+uniform vec3 uInk; uniform float uAlpha; uniform float uShadow; uniform float uPx; uniform float uBoil; uniform float uSeed;
+float inkLum(vec2 uv) { vec3 c = texture2D(inputBuffer, uv).rgb; return dot(c / (1.0 + c), vec3(0.299, 0.587, 0.114)); }
+float inkLin(vec2 uv) { return -getViewZ(readDepth(uv)); }
+void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {
+  vec2 q = uv;
+  if (uBoil > 0.0) {
+    vec2 f = uv * resolution;
+    q += vec2(sin(f.y / 23.0 + uSeed * 7.13) + sin(f.y / 9.0 + uSeed * 3.7) * 0.5, cos(f.x / 19.0 + uSeed * 5.31) + cos(f.x / 8.0 + uSeed * 2.9) * 0.5) * texelSize * uBoil;
+  }
+  vec2 px = texelSize * uPx;
+  float c = inkLin(q);
+  float l = inkLin(q - vec2(px.x, 0.0)), r = inkLin(q + vec2(px.x, 0.0)), u = inkLin(q + vec2(0.0, px.y)), d = inkLin(q - vec2(0.0, px.y));
+  float jump = max(max(abs(l - c), abs(r - c)), max(abs(u - c), abs(d - c))) / c;
+  float bend = abs(l + r + u + d - 4.0 * c) / c;
+  float lc = inkLum(q);
+  float shade = max(max(abs(inkLum(q - vec2(px.x, 0.0)) - lc), abs(inkLum(q + vec2(px.x, 0.0)) - lc)), max(abs(inkLum(q + vec2(0.0, px.y)) - lc), abs(inkLum(q - vec2(0.0, px.y)) - lc)));
+  float ink = max(max(smoothstep(0.008, 0.022, jump), smoothstep(0.003, 0.009, bend) * 0.8), smoothstep(0.07, 0.14, shade) * 0.7);
+  ink *= 1.0 - smoothstep(60.0, 90.0, c); // the far ground fades out of the drawing
+  vec3 col = mix(inputColor.rgb, uInk, ink * uAlpha);
+  if (uShadow > 0.0) {
+    // paper: every cut-out casts a soft shadow a few pixels down and to the right, as if lifted off the page
+    float sh = 0.0;
+    for (int i = 1; i <= 3; i++) {
+      float o = float(i) * 2.2;
+      sh += step(0.18, c - inkLin(uv + vec2(-px.x, px.y) * o)) / 3.0;
+    }
+    col *= 1.0 - sh * 0.32 * uShadow;
+  }
+  outputColor = vec4(col, inputColor.a);
+}`;
+
+class InkEffect extends Effect {
+  constructor() {
+    super("OfficeInkEffect", INK_FRAG, {
+      attributes: EffectAttribute.DEPTH | EffectAttribute.CONVOLUTION,
+      uniforms: new Map<string, THREE.Uniform>([
+        ["uInk", new THREE.Uniform(new THREE.Color())], ["uAlpha", new THREE.Uniform(1)], ["uShadow", new THREE.Uniform(0)],
+        ["uPx", new THREE.Uniform(1)], ["uBoil", new THREE.Uniform(0)], ["uSeed", new THREE.Uniform(0)],
+      ]),
+    });
+  }
+}
+
+function Ink({ outline }: { outline: Outline }) {
+  const effect = useMemo(() => new InkEffect(), []);
+  useEffect(() => () => effect.dispose(), [effect]);
+  useEffect(() => {
+    const u = effect.uniforms;
+    // the buffer holds linear light: the ink color goes in linear too, so it lands as picked once tone mapped
+    (u.get("uInk")!.value as THREE.Color).set(outline.color);
+    u.get("uAlpha")!.value = outline.alpha;
+    u.get("uShadow")!.value = outline.shadow ?? 0;
+    u.get("uPx")!.value = outline.px; // device pixels, like before
+    u.get("uBoil")!.value = outline.boil ?? 0;
+  }, [effect, outline]);
+  useFrame(({ clock }) => {
+    if (!outline.boil) return;
+    const reduce = usePreferences.getState().prefs.reduceMotion || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    effect.uniforms.get("uSeed")!.value = reduce ? 0 : Math.floor(clock.elapsedTime * (outline.boilFps ?? 8));
+  });
+  return <primitive object={effect} dispose={null} />;
+}
+
+/**
+ * The style's post-processing: one composer, mounted only in the styles that have one. The scene is drawn once into a
+ * half-float buffer, then: ambient occlusion (N8AO), ink, bloom of what glows, ACES tone mapping (the composer turns
+ * the renderer's own off, so this keeps every color exactly as in classic), SMAA and tilt-shift. The quality tier
+ * (FrameDriver) drops the costly ones on slow computers.
+ */
+/**
+ * N8AO turns "transparency aware" on by itself when the scene has any transparent material (the office always does:
+ * glass, labels, rings), and then draws the whole scene twice more every frame, ~15 % of the frame on a laptop. The AO
+ * only needs the opaque depth: switched off.
+ */
+function opaqueAo(pass: { autoDetectTransparency?: boolean; configuration: { transparencyAware: boolean } } | null) {
+  if (!pass) return;
+  pass.autoDetectTransparency = false;
+  pass.configuration.transparencyAware = false;
+}
+
+function StylePost({ style }: { style: OfficeStyle }) {
+  const look = lookOf(style);
+  const post = look.post!;
+  const q = QUALITY_TIERS[useQualityTier()];
+  const ao = post.ao > 0 && q.ao !== "off";
+  const bloom = post.bloom > 0 && q.bloom;
+  const tilt = post.tilt > 0 && q.tilt;
+  return (
+    <EffectComposer multisampling={0} depthBuffer>
+      {ao ? <N8AO ref={opaqueAo} halfRes quality={q.ao === "full" ? "medium" : "performance"} aoRadius={post.aoRadius} intensity={post.ao} distanceFalloff={0.7} depthAwareUpsampling /> : <></>}
+      {look.outline ? <Ink outline={look.outline} /> : <></>}
+      {bloom ? <Bloom mipmapBlur intensity={post.bloom} luminanceThreshold={1.05} luminanceSmoothing={0.25} /> : <></>}
+      <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      {post.smaa ? <SMAA /> : <></>}
+      {tilt ? <TiltShift2 blur={0.16 * post.tilt} taper={0.55} start={[0, 0.5]} end={[1, 0.5]} samples={6} /> : <></>}
+    </EffectComposer>
+  );
 }
 
 /**
@@ -243,35 +339,6 @@ export function StyleVeil() {
     <div key={veil.key} aria-hidden className="pointer-events-none absolute inset-0 z-[5]" style={{ background: veil.bg, animation: "office-veil .7s ease-in-out forwards" }}>
       <style>{"@keyframes office-veil{0%{opacity:0}30%{opacity:.8}100%{opacity:0}}"}</style>
     </div>
-  );
-}
-
-/**
- * The floor as a toy baseplate: a repeated stud texture that only adds light and shadow, so the floor keeps its own color
- * (one quad; real studs on the whole floor would be ~20k meshes).
- */
-function Baseplate() {
-  const tex = useMemo(() => {
-    const S = 64, c = document.createElement("canvas");
-    c.width = c.height = S;
-    const g = c.getContext("2d")!;
-    // the shadow ring, the stud body, then the light catching its top edge
-    g.fillStyle = "rgba(0,0,0,0.20)"; g.beginPath(); g.ellipse(S / 2 + 3, S / 2 + 4, S * 0.31, S * 0.29, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = "rgba(255,255,255,0.10)"; g.beginPath(); g.arc(S / 2, S / 2, S * 0.3, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = "rgba(255,255,255,0.55)"; g.lineWidth = 3; g.beginPath(); g.arc(S / 2, S / 2, S * 0.27, Math.PI * 0.95, Math.PI * 1.75); g.stroke();
-    g.strokeStyle = "rgba(0,0,0,0.18)"; g.lineWidth = 2; g.beginPath(); g.arc(S / 2, S / 2, S * 0.3, Math.PI * 0.05, Math.PI * 0.85); g.stroke();
-    const t = new THREE.CanvasTexture(c);
-    t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.repeat.set(FLOOR_W / 0.4, FLOOR_D / 0.4);
-    t.anisotropy = 4;
-    return t;
-  }, []);
-  useEffect(() => () => tex.dispose(), [tex]);
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, FLOOR_Y, 0]} receiveShadow userData={{ noTheme: true }}>
-      <planeGeometry args={[FLOOR_W, FLOOR_D]} />
-      <meshStandardMaterial map={tex} transparent depthWrite={false} roughness={0.4} polygonOffset polygonOffsetFactor={-2} />
-    </mesh>
   );
 }
 
