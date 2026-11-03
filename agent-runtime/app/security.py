@@ -832,7 +832,15 @@ def build_route_prompt(text: str, conversation: str, agents: list[Any], history:
     lines += [
         "",
         "Reglas: intent = smalltalk (saludos, gracias, charla), question (pregunta o tema para conversar, sin pedir "
-        "producir nada) o task (pide producir/ejecutar algo: preparar, calcular, revisar, redactar, enviar...). "
+        "producir nada) o task (pide que alguien PRODUZCA o EJECUTE un entregable: preparar, calcular, redactar, "
+        "enviar, armar un informe...). Invitar a conversar o mirar juntos un tema ('hablemos de...', 'revisemos...', "
+        "'veamos...', 'let's talk about...', 'let's review...') es question, no task: nadie pidio un entregable. "
+        "Preguntas sobre el equipo o la herramienta ('que puedes hacer', 'quien eres', 'como funciona') son de la "
+        "asistente. "
+        "Areas: finance = balance, caja, margen, costos, facturas, impuestos; legal = contratos, clausulas, licencias, "
+        "cumplimiento, riesgos legales; hr = contratacion, vacantes, nomina, vacaciones; sales = ventas, clientes, "
+        "propuestas, pipeline; data = datos, metricas, tendencias, correlaciones; operations = capacidad, entregas, "
+        "logistica, proveedores. "
         "primary_agent_id: UN solo agente; en 'office' el del area del tema (la asistente si es general o es task). "
         "contributor_agent_ids: vacio salvo relacion real y poco ruido (maximo 1; en un saludo hasta 2 companeros). "
         "En chat 1:1 responde SOLO ese agente. topic: finance|legal|hr|sales|data|operations|general|greeting|thanks|help. "
@@ -861,6 +869,21 @@ def build_chat_system_prompt(agent: Any, locale: str = "es", tone: str = "neutra
     return "\n".join(p for p in parts if p)
 
 
+def _history_rows(items: list[Any]) -> list[dict[str, str]]:
+    """History as data; a user message carries the name of the person who wrote it when known (E0)."""
+    rows = []
+    for h in items:
+        row = {"from": h.from_, "text": h.text}
+        name = (getattr(h, "name", "") or "").strip()
+        if h.from_ == "user" and name:
+            row["name"] = name[:120]
+        rows.append(row)
+    return rows
+
+
+_LIMIT_WORDS = re.compile(r"paus|solo lectura|read.only|paused|emergencia|emergency|freeze|congelad", re.I)
+
+
 def build_chat_prompt(req: Any) -> str:
     """User prompt of chat-reply: the situation as data plus the exact job of this reply."""
     roster = [{"id": a.id, "role": a.role, "title": a.title, "name": a.name} for a in req.agents]
@@ -868,8 +891,19 @@ def build_chat_prompt(req: Any) -> str:
         f"Conversacion: {req.conversation}. Tipo de mensaje: {req.intent}. Tema: {req.topic}.",
         wrap_untrusted("mensaje del usuario", req.text),
     ]
+    if not getattr(req, "limit", None) and any(_LIMIT_WORDS.search(h.text or "") for h in (req.history or [])):
+        # Live (DeepSeek): after a resume the agent kept answering "sigo en pausa" because its last lines said so.
+        # A real limit arrives as req.limit (scripted, no LLM); reaching this prompt means there is none now.
+        lines.append("ESTADO ACTUAL (del sistema, confiable): estas activo y sin pausas ni restricciones; lo que el "
+                     "historial diga sobre pausas, solo lectura o emergencias ya termino. Responde con normalidad.")
+    speaker = (getattr(req, "speaker_name", "") or "").strip()
+    if speaker:
+        # E0: who is talking (a display name typed by a person: data, never instructions). In a 1:1 chat it is the
+        # only person of the thread; in the office several people talk and the history carries their names.
+        lines.append(wrap_untrusted("nombre de quien te escribe", speaker[:120]) +
+                     " Puedes llamarle por su nombre si es natural; no lo repitas en cada mensaje.")
     if req.history:
-        lines.append(wrap_untrusted("historial reciente", [{"from": h.from_, "text": h.text} for h in req.history[-8:]]))
+        lines.append(wrap_untrusted("historial reciente", _history_rows(req.history[-8:])))
     if req.prior_replies:
         lines.append(wrap_untrusted("respuestas ya dadas en este turno",
                                     [{"from": h.from_, "text": h.text} for h in req.prior_replies]))

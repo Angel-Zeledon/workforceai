@@ -724,6 +724,9 @@ class SynthesizeResponse(_Base):
     sections: list[Section] = Field(default_factory=list)
     provider: str | None = None
     model: str | None = None
+    # The backend bills the consolidation from this (SynthesizeResponse.Usage in Go). It was missing: every live
+    # synthesis reached the ledger as $0.
+    usage: Usage | None = None
 
 
 def _none_to_list(v):
@@ -754,12 +757,14 @@ class RouteAgent(_Base):
 
 
 class HistoryItem(_Base):
-    """One earlier chat message. ``from`` is "user" or an agent id."""
+    """One earlier chat message. ``from`` is "user" or an agent id; ``name`` (E0, optional) is the display name of
+    the person who wrote a user message (the office is shared: several people talk there)."""
 
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
     from_: str = Field(default="", alias="from")
     text: str = ""
+    name: str = Field(default="", max_length=120)
 
 
 class RouteRequest(_ProviderPolicyMixin):
@@ -843,6 +848,8 @@ class ChatReplyRequest(_ProviderPolicyMixin):
     handoff: bool = False  # the user accepted a redirect: this agent now takes the turn from the colleague
     locale: Locale = "es"
     tone: Tone = "neutral"
+    # E0: display name of the person who wrote the message (data, never instructions); "" when unknown.
+    speaker_name: str = Field(default="", max_length=120)
 
     _norm = field_validator("locale", mode="before")(normalize_locale)
     _norm_tone = field_validator("tone", mode="before")(normalize_tone)

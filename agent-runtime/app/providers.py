@@ -69,6 +69,10 @@ ERR_ALL_PROVIDERS_FAILED = "all_providers_failed"
 # "insufficient_quota", Anthropic "credit balance is too low"): retrying cannot help, a person
 # must top up or switch models.
 ERR_NO_BALANCE = "provider_no_balance"
+# Every provider tried is rate limiting us right now (HTTP 429 / RESOURCE_EXHAUSTED per minute, after the retries
+# that honour the provider's own retry delay). Transient: the same request works later. HTTP 429 so the backend
+# treats it as retryable (its RuntimeError marks every other 4xx as final); detail.retry_after_s says when.
+ERR_RATE_LIMITED = "provider_rate_limited"
 
 
 class ProviderError(Exception):
@@ -77,21 +81,31 @@ class ProviderError(Exception):
     status_code = 502
 
     def __init__(self, code: str, message: str, *, tried: list[str] | None = None,
-                 allowed: list[str] | None = None, configured: list[str] | None = None):
+                 allowed: list[str] | None = None, configured: list[str] | None = None,
+                 retry_after_s: float | None = None):
         super().__init__(message)
         self.code = code
         self.message = message
         self.tried = tried or []
         self.allowed = allowed
         self.configured = configured or []
+        self.retry_after_s = retry_after_s
+        self.usage = None  # tokens the failed attempts already burned (models.Usage), when any
         if code == ERR_NO_ALLOWED_PROVIDER:
             self.status_code = 422
         elif code == ERR_NO_BALANCE:
             self.status_code = 402
+        elif code == ERR_RATE_LIMITED:
+            self.status_code = 429
 
     def detail(self) -> dict:
-        return {"code": self.code, "message": self.message, "providers_tried": self.tried,
-                "allowed_providers": self.allowed, "configured_providers": self.configured}
+        out = {"code": self.code, "message": self.message, "providers_tried": self.tried,
+               "allowed_providers": self.allowed, "configured_providers": self.configured}
+        if self.retry_after_s is not None:
+            out["retry_after_s"] = round(float(self.retry_after_s), 1)
+        if self.usage is not None:  # what the failed attempts cost, so the caller can charge it (never hidden)
+            out["spent_usd"] = float(getattr(self.usage, "cost_usd", 0) or 0)
+        return out
 
 
 @dataclass(frozen=True)
@@ -337,8 +351,8 @@ def candidates(configs: list[ProviderConfig], policy: ProviderPolicy) -> list[Pr
     return [by_id[p] for p in order]
 
 
-_TRANSIENT = re.compile(r"timeout|timed out|rate.?limit|429|overload|502|503|504|529|connection|temporar|unavailable",
-                        re.I)
+_TRANSIENT = re.compile(r"timeout|timed out|rate.?limit|429|overload|high demand|502|503|504|529|connection|temporar|"
+                        r"unavailable", re.I)
 
 
 _NO_BALANCE = re.compile(r"insufficient.?balance|insufficient_quota|exceeded your current quota|credit balance is too low|"
@@ -382,6 +396,58 @@ def is_no_balance(exc: BaseException) -> bool:
 def is_transient(exc: BaseException) -> bool:
     """Worth retrying on the same provider (timeout / rate limit / 5xx / network)."""
     return bool(_TRANSIENT.search(f"{type(exc).__name__} {exc}"))
+
+
+_RATE_LIMITED = re.compile(r"RateLimitError|rate.?limit|\b429\b|too many requests|resource.?exhausted|"
+                           r"exceeded your current quota", re.I)
+
+
+def _status_of(exc: BaseException) -> int | None:
+    for obj in (exc, getattr(exc, "response", None), getattr(exc, "__cause__", None)):
+        code = getattr(obj, "status_code", None) if obj is not None else None
+        if isinstance(code, int):
+            return code
+    return None
+
+
+_OVERLOADED = re.compile(r"\b(503|529)\b|overloaded|high demand|service unavailable|temporarily unavailable", re.I)
+_UNAVAILABLE_STATUS = re.compile(r"\bUNAVAILABLE\b")  # Google's status name, upper case only ("... type is
+# unavailable" is DeepSeek's permanent 400, not a busy server)
+
+
+def is_overloaded(exc: BaseException) -> bool:
+    """The provider is busy right now (Gemini answers 503 UNAVAILABLE "The model is experiencing high demand",
+    Anthropic 529 overloaded). Transient: retried with exponential backoff, never counted as a failure of the key."""
+    if _status_of(exc) in (503, 529):
+        return True
+    text = f"{type(exc).__name__} {exc}"
+    return bool(_OVERLOADED.search(text) or _UNAVAILABLE_STATUS.search(text))
+
+
+def is_rate_limited(exc: BaseException) -> bool:
+    """A per-minute/short rate limit (HTTP 429, Gemini RESOURCE_EXHAUSTED): worth waiting for, not a failover
+    reason by itself. Check is_no_balance first: the free tier's DAILY cap also answers 429 but is final."""
+    if _status_of(exc) == 429:
+        return True
+    return bool(_RATE_LIMITED.search(f"{type(exc).__name__} {exc}"))
+
+
+def retry_after_from_exc(exc: BaseException) -> float | None:
+    """Seconds the provider asked us to wait: the Retry-After / retry-after-ms header when the SDK kept the
+    response, else the body (Gemini puts "Please retry in 41.5s" / retryDelay '41s' in the message)."""
+    resp = getattr(exc, "response", None) or getattr(getattr(exc, "__cause__", None), "response", None)
+    headers = getattr(resp, "headers", None)
+    if headers is not None:
+        try:
+            ms = headers.get("retry-after-ms")
+            if ms:
+                return max(0.0, float(ms) / 1000)
+            s = headers.get("retry-after")
+            if s:
+                return max(0.0, float(s))
+        except (TypeError, ValueError):
+            pass
+    return retry_after_s(f"{exc}")
 
 
 # ---- V2: creativity -> bounded temperature ----------------------------------------------------

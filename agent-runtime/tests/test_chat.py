@@ -268,7 +268,8 @@ def test_live_route_uses_the_llm_when_valid(monkeypatch):
 
 
 @pytest.mark.parametrize("bad", [
-    crewai_engine._RouteLLM(intent="chitchat", primary_agent_id="accounting"),      # unknown intent
+    crewai_engine._RouteLLM(intent="complaint", primary_agent_id="accounting"),     # unknown intent ("chitchat" is a
+    # smalltalk synonym now: routing.validate_route)
     crewai_engine._RouteLLM(intent="question", primary_agent_id="ghost"),           # unknown agent
     RuntimeError("provider down"), ValueError("not json"),
 ])

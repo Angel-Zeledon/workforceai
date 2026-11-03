@@ -86,7 +86,8 @@ def test_agent_is_built_with_the_caps(monkeypatch):
 
     cfg = ProviderConfig(id="deepseek", model="deepseek/deepseek-chat", api_key="k")
     eng._kickoff_once(cfg, role="r", goal="g", backstory="b", description="d", expected="e", schema=_ConsultAnswer)
-    assert seen["max_iter"] == 3 and seen["reasoning"] is False and seen["max_retry_limit"] == 1
+    # max_retry_limit 0: the runtime owns retries (CrewAI re-ran the task on any error, a 429 included, with no wait)
+    assert seen["max_iter"] == 3 and seen["reasoning"] is False and seen["max_retry_limit"] == 0
 
 
 # ------------------------------------------------------------------ prompt size

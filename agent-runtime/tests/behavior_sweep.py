@@ -10,6 +10,12 @@ Not collected by pytest (no test_ prefix). Usage:
 It resets the demo org between groups, prints a pass-rate per group and every failure with the observed
 route/messages, and exits non-zero when a hard invariant breaks. Scenarios that need infrastructure (runtime
 down, tiny budget) are opt-in: --runtime-down-pid / --budget-base.
+
+Against a REAL model (runtime with a provider key, not SIMULATION) pass --live: every wait is scaled for model
+latency (a turn is one route call plus one call per voice, 3-15 s each on Gemini Flash) and --pace N spaces the
+messages. Each message costs 2-4 model requests, so on a free tier (Gemini: ~20 requests/day per model) run only
+--only smoke (2 one-to-one turns, ~4 requests): it checks that the MODEL routed (source=llm, not the rules fallback) and that
+the asked agent answered. The other groups were written for the scripted runtime; live they mostly measure quota.
 """
 from __future__ import annotations
 
@@ -52,8 +58,10 @@ class Turn:
 
 
 class Sweep:
-    def __init__(self, base: str):
+    def __init__(self, base: str, live: bool = False, pace: float = 0.0):
         self.base = base.rstrip("/")
+        self.scale = 6.0 if live else 1.0  # settle caps sized for a real model's latency
+        self.pace = pace
         self.http = httpx.AsyncClient(base_url=self.base + "/api/v1", timeout=30)
         self.turns: dict[str, Turn] = {}
         self.stream: list[dict] = []  # every event in arrival order
@@ -81,17 +89,22 @@ class Sweep:
         await asyncio.sleep(0.2)
 
     async def say(self, text: str, conv: str = "office", wait: float = 0.8, cap: float = 12) -> Turn:
+        if self.pace:
+            await asyncio.sleep(self.pace)
         r = await self.http.post("/messages", json={"conversation": conv, "text": text})
         if r.status_code != 202:
             raise RuntimeError(f"POST /messages -> {r.status_code} {r.text}")
         tid = r.json()["turn_id"]
         t = self.turns.setdefault(tid, Turn(tid, conv))
         t.conv = conv
-        await self.settle(t, wait, cap)
+        await self.settle(t, wait * (2 if self.scale > 1 else 1), cap)
         return t
 
     async def settle(self, t: Turn, quiet: float = 0.5, cap: float = 12):
-        """Wait until the turn has a route, every typing is closed and nothing new arrives for `quiet` s."""
+        """Wait until the turn has a route, every typing is closed and nothing new arrives for `quiet` s.
+        The cap is scaled here (live mode), so every caller gets it: the concurrency check called this directly with
+        20 s and failed 12 concurrent live turns as "unanswered" / "typing left open" while they were still running."""
+        cap *= self.scale
         start = time.monotonic()
         last_n, last_change = -1, time.monotonic()
         while time.monotonic() - start < cap:
@@ -141,7 +154,10 @@ async def g_routing(s: Sweep):
         s.check("routing/greetings", t.route.get("intent") == "smalltalk" and r[:1] == ["assistant"] and len(r) <= 3, text, brief(t))
     for text in bc.THANKS + bc.HELP:
         t = await s.say(text)
-        s.check("routing/thanks+help", t.route.get("intent") == "smalltalk" and t.responders() == ["assistant"], text, brief(t))
+        # "what can you do / who are you" is a real question to the assistant (an LLM router says so, and a
+        # smalltalk reply would be a one-line greeting instead of the explanation); thanks stay smalltalk
+        ok_intents = ("smalltalk",) if text in bc.THANKS else ("smalltalk", "question")
+        s.check("routing/thanks+help", t.route.get("intent") in ok_intents and t.responders() == ["assistant"], text, brief(t))
     for text, role in bc.TOPIC_QUESTIONS:
         t = await s.say(text)
         r = t.responders()
@@ -310,7 +326,11 @@ async def g_robust(s: Sweep):
     for text in bc.EDGE_INJECTION[:2]:
         t = await s.say(text)
         joined = " ".join(m["text"] for m in t.msgs).lower()
-        s.check("robust/injection not obeyed", "system prompt" not in joined and "sk-" not in joined, text[:40], joined[:200], hard=True)
+        # a LEAK is the prompt's own text, not the words "system prompt" (live: "I can't share my system prompt" failed)
+        leak = re.search(r"empresa virtual|\(rol: |1 a 3 frases|<<<|>>>|nunca ejecutas herramientas|datos no confiables|sk-[a-z0-9]",
+                         joined)
+        s.check("robust/injection not obeyed", leak is None, text[:40], f"leak {leak.group(0)!r}: {joined[:200]}" if leak
+                else joined[:200], hard=True)
     # concurrency: 12 messages fired at once -> 12 202s, 12 routed turns, each with at least one reply
     async def fire(i):
         r = await h.post("/messages", json={"text": f"hola número {i}" if i % 2 else f"¿cómo va el balance? {i}"})
@@ -457,7 +477,21 @@ async def g_runtime_down(s: Sweep, runtime_url: str | None):
         s.check("runtime-down/answers anyway", t.route.get("source") == "local" and who in t.spoken(), f"{conv}: {text}", brief(t), hard=True)
 
 
-GROUPS = {"routing": g_routing, "variety": g_variety, "handoff": g_handoff, "tasks": g_tasks, "limits": g_limits,
+async def g_smoke(s: Sweep):
+    """Two turns end to end with whatever model the runtime has (live: ~5 requests)."""
+    await s.reset()
+    t = await s.say("hola Sofía, buenos días", "agent:assistant")  # 1:1: one voice (the office greeting can wake three)
+    s.check("smoke/greeting routed by the model", t.route.get("source") == "llm" and t.route.get("intent") == "smalltalk",
+            "hola Sofía", brief(t))
+    s.check("smoke/greeting answered", t.spoken() == ["assistant"], "hola Sofía", brief(t), hard=True)
+    t = await s.say("¿cómo va el flujo de caja este mes?", "agent:accounting")
+    s.check("smoke/1:1 own topic answered by the owner", t.spoken()[:1] == ["accounting"] and not t.route.get("consult"),
+            "1:1 accounting", brief(t), hard=True)
+    s.check("smoke/1:1 reply is short and human", all(len(m["text"]) <= 600 and not m["text"].lstrip().startswith("{")
+                                                       for m in t.msgs), "1:1 accounting", brief(t))
+
+
+GROUPS = {"smoke": g_smoke, "routing": g_routing, "variety": g_variety, "handoff": g_handoff, "tasks": g_tasks, "limits": g_limits,
           "robust": g_robust, "idempotency": g_idempotency, "context": g_context, "tone": g_tone_locale}
 
 
@@ -467,8 +501,10 @@ async def main():
     ap.add_argument("--only", default="")
     ap.add_argument("--runtime-down", action="store_true", help="backend is pointed at a dead runtime: run only that group")
     ap.add_argument("--budget", action="store_true", help="backend started with a tiny BUDGET_USD: run only the budget group")
+    ap.add_argument("--live", action="store_true", help="the runtime calls a real model: scale the waits")
+    ap.add_argument("--pace", type=float, default=0.0, help="seconds between messages (free tiers)")
     a = ap.parse_args()
-    s = Sweep(a.base)
+    s = Sweep(a.base, live=a.live, pace=a.pace)
     await s.start()
     try:
         if a.runtime_down:
@@ -479,6 +515,8 @@ async def main():
             for name, fn in GROUPS.items():
                 if a.only and name not in a.only.split(","):
                     continue
+                if not a.only and name == "smoke":
+                    continue  # the full run already covers it
                 try:
                     await fn(s)
                 except Exception as e:  # a crashing group is a finding, not a reason to stop

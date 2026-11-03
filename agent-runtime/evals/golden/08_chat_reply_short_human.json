@@ -1,0 +1,46 @@
+{
+  "id": "chat_reply_short_human",
+  "description": "Chat reply (the most frequent live call): the accountant answers a cash question briefly, as a person, with no invented figures and no JSON or markup leaking into the text.",
+  "endpoint": "/v1/chat-reply",
+  "request": {
+    "agent": {
+      "id": "accounting",
+      "role": "accounting",
+      "title": "Contador",
+      "name": "Tomás",
+      "persona": "Preciso y algo seco."
+    },
+    "text": "Tomás, ¿cómo vamos de flujo de caja este mes?",
+    "conversation": "office",
+    "intent": "question",
+    "topic": "finance",
+    "responder_role": "primary",
+    "agents": [
+      {
+        "id": "accounting",
+        "role": "accounting",
+        "title": "Contador",
+        "name": "Tomás"
+      },
+      {
+        "id": "sales",
+        "role": "sales",
+        "title": "Gerente de Ventas",
+        "name": "Valeria"
+      },
+      {
+        "id": "assistant",
+        "role": "assistant",
+        "title": "Asistente",
+        "name": "Sofía"
+      }
+    ],
+    "locale": "es"
+  },
+  "rubric": {
+    "text_non_empty": true,
+    "max_chars": 600,
+    "forbid_regex": "^\\s*[\\[{]|```|\"text\"\\s*:|\\$\\s?\\d{1,3}(,\\d{3})+"
+  },
+  "max_cost_usd": 0.03
+}

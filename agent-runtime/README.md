@@ -22,7 +22,13 @@ Proveedores: `deepseek`, `anthropic` y `custom` (un endpoint compatible con Open
 | `MODEL_PROVIDER_ORDER` | Orden global de respaldo, separado por comas. Def. `deepseek,anthropic,custom` (el orden historico; para que Anthropic sea primario: `anthropic,deepseek`) |
 | `MODEL_PROVIDER_ORDER_<ROL>` | Orden para un rol/tarea: el `role` del agente en MAYUSCULAS (`MODEL_PROVIDER_ORDER_LEGAL`), o `PLAN`, `CONSULT`, `SYNTHESIZE` |
 | `ALLOWED_PROVIDERS` | Techo del operador: solo estos proveedores pueden recibir datos (p. ej. `anthropic,custom` excluye DeepSeek para todo el despliegue) |
-| `PROVIDER_RETRIES` (1), `PROVIDER_RETRY_BACKOFF_S` (1.0), `PROVIDER_TIMEOUT_S` (120) | Reintentos en el mismo proveedor ante timeout/limite de tasa/5xx antes de pasar al siguiente |
+| `PROVIDER_RETRIES` (1), `PROVIDER_RETRY_BACKOFF_S` (1.0), `PROVIDER_TIMEOUT_S` (120) | Reintentos en el mismo proveedor ante timeout/5xx de red antes de pasar al siguiente |
+| `PROVIDER_RATE_LIMIT_RETRIES` (2), `PROVIDER_MAX_RETRY_WAIT_S` (60), `PROVIDER_MAX_RETRY_WAIT_S_CHAT` (8) | Limite de tasa (429): espera lo que pide el proveedor (`retryDelay` de Gemini / `Retry-After`) si cabe en el tope de esa clase de llamada (route/chat: 8 s, el backend les da 30 s); si no, HTTP 429 `provider_rate_limited` con `retry_after_s`. Es la UNICA capa de reintento: el SDK va con `max_retries=0` y `CREW_MAX_RETRY_LIMIT` es 0 por defecto |
+| `PROVIDER_DEADLINE_S_CHAT` (25) | Tiempo TOTAL de una llamada interactiva (route/chat), reintentos incluidos: cada solicitud lleva como timeout lo que queda y no se empieza un reintento que no alcance a terminar. El backend abandona a los 30 s (`CHAT_TIMEOUT`); despues de eso la respuesta se tira pero se cobra |
+| `PROVIDER_OVERLOAD_RETRIES` (2), `PROVIDER_OVERLOAD_BACKOFF_S` (2.0) | Proveedor saturado (Gemini 503 "high demand", Anthropic 529): backoff exponencial 2 s, 4 s, acotado igual |
+| `LLM_RPM_<PROVEEDOR>` (p. ej. `LLM_RPM_GEMINI=8`) | Ritmo local: como mucho N llamadas por minuto a ese proveedor (capas gratuitas). Si una llamada tendria que esperar mas que su tope, falla con `provider_rate_limited` sin enviar nada |
+| `THINKING_HEADROOM_<PROVEEDOR>` (Gemini: 1024) | Tokens extra en `max_tokens` para el razonamiento oculto que el tope cuenta (Gemini). El guardia de presupuesto los cuenta; si solo ellos superan el tope de la llamada, se omiten |
+| `PYTHON_DOTENV_DISABLED` (true) | El runtime NO lee archivos `.env` (CrewAI llama `load_dotenv()` al importarse y encontraba el `.env` del repo) |
 | `PRICE_IN_PER_M`, `PRICE_OUT_PER_M` | Fuerza una tarifa para TODOS los proveedores (sobrescribe la tabla) |
 
 **Orden de intentos** de una llamada: `MODEL_PROVIDER_ORDER_<ROL>` -> `preferred_providers` de la solicitud -> `MODEL_PROVIDER_ORDER`; cada fuente solo agrega los que faltan, asi que todo proveedor configurado y permitido es respaldo. Un error transitorio se reintenta en el mismo proveedor; cualquier fallo despues de eso pasa al siguiente. La respuesta indica quien contesto.
@@ -37,6 +43,8 @@ Proveedores: `deepseek`, `anthropic` y `custom` (un endpoint compatible con Open
 El detalle es un objeto `{code, message, providers_tried, allowed_providers, configured_providers}` (sin secretos; los mensajes del proveedor pasan por `redact_secrets`):
 - HTTP 422 `no_allowed_provider`: ningun proveedor configurado esta permitido; no se envio nada.
 - HTTP 502 `all_providers_failed`: todos los permitidos fallaron (`providers_tried` los lista).
+- HTTP 429 `provider_rate_limited` (+ cabecera `Retry-After` y `retry_after_s`): todos los intentados siguen limitando la tasa tras los reintentos. Transitorio: el backend lo reintenta.
+- Cuando intentos fallidos ya consumieron tokens, el detalle trae `spent_usd`; `/v1/route` que cae a las reglas devuelve igualmente su `usage` (source `rules`) para que el backend lo cobre.
 - Otros fallos del motor siguen siendo HTTP 502 con `detail` de texto (`engine error: ...`).
 
 ## Seguridad

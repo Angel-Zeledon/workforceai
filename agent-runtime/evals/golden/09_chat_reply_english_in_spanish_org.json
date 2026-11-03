@@ -1,0 +1,20 @@
+{
+  "id": "chat_reply_english_in_spanish_org",
+  "description": "Chat reply: the organization is Spanish but the person writes in English; the agent answers in English.",
+  "endpoint": "/v1/chat-reply",
+  "request": {
+    "agent": {"id": "sales", "role": "sales", "title": "Gerente de Ventas", "name": "Valeria", "persona": "Entusiasta y cercana."},
+    "text": "hey Valeria, how are sales looking this week?",
+    "conversation": "agent:sales",
+    "intent": "question",
+    "topic": "sales",
+    "responder_role": "primary",
+    "agents": [
+      {"id": "sales", "role": "sales", "title": "Gerente de Ventas", "name": "Valeria"},
+      {"id": "accounting", "role": "accounting", "title": "Contador", "name": "Tomás"}
+    ],
+    "locale": "es"
+  },
+  "rubric": {"text_non_empty": true, "max_chars": 600, "lang": "en"},
+  "max_cost_usd": 0.03
+}

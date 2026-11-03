@@ -49,7 +49,20 @@ def tokens_from_raw_usage(usage: Any) -> tuple[int, int, int]:
     hit = _get(usage, "prompt_cache_hit_tokens")  # DeepSeek
     if hit is None:
         hit = _get(_get(usage, "prompt_tokens_details"), "cached_tokens")  # OpenAI / Kimi
+    if hit is None:
+        # CrewAI's per-request dict (what BaseLLM._track_token_usage_internal receives): every provider's cache hits
+        # under one key; its Anthropic input_tokens already include the cache read and write.
+        hit = _get(usage, "cached_prompt_tokens")
     return inp, min(_int(hit), inp), out
+
+
+def tokens_from_raw_list(usages: list[Any]) -> tuple[int, int, int]:
+    """Sum of tokens_from_raw_usage over every provider request of one call (a JSON retry is a second request)."""
+    i = c = o = 0
+    for u in usages:
+        a, b, d = tokens_from_raw_usage(u)
+        i, c, o = i + a, c + b, o + d
+    return i, c, o
 
 
 def tokens_from_metrics(m: Any, provider: str = "") -> tuple[int, int, int]:

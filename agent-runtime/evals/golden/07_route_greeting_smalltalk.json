@@ -1,0 +1,18 @@
+{
+  "id": "route_greeting_smalltalk",
+  "description": "Chat routing: a plain greeting to the office is small talk led by the assistant (the model decides, not the rules).",
+  "endpoint": "/v1/route",
+  "request": {
+    "text": "hola equipo, buenos días",
+    "conversation": "office",
+    "agents": [
+      {"id": "sales", "role": "sales", "title": "Gerente de Ventas", "name": "Valeria"},
+      {"id": "legal", "role": "legal", "title": "Abogada", "name": "Elena"},
+      {"id": "accounting", "role": "accounting", "title": "Contador", "name": "Tomás"},
+      {"id": "assistant", "role": "assistant", "title": "Asistente", "name": "Sofía"}
+    ],
+    "locale": "es"
+  },
+  "rubric": {"require_llm": true, "primary_in": ["assistant"], "intent_in": ["smalltalk"]},
+  "max_cost_usd": 0.05
+}

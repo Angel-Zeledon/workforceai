@@ -104,7 +104,7 @@ def test_transient_error_retried_on_same_provider_then_succeeds(monkeypatch):
 
 
 def test_rate_limit_fails_over_after_retries(monkeypatch):
-    monkeypatch.setattr(crewai_engine, "PROVIDER_RETRIES", 1)
+    monkeypatch.setattr(crewai_engine, "PROVIDER_RATE_LIMIT_RETRIES", 1)  # rate limits have their own retry count
     eng = make_engine(monkeypatch, {"deepseek": RuntimeError("429 rate limit"), "anthropic": (5, 5)})
     out = run(eng)
     assert eng.calls == ["deepseek", "deepseek", "anthropic"] and out.provider == "anthropic"

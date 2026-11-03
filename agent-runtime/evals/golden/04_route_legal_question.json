@@ -13,6 +13,6 @@
     ],
     "locale": "es"
   },
-  "rubric": {"primary_in": ["legal"], "intent_in": ["question", "task"]},
+  "rubric": {"require_llm": true, "primary_in": ["legal"], "intent_in": ["question", "task"]},
   "max_cost_usd": 0.05
 }

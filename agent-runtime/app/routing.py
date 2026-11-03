@@ -560,14 +560,43 @@ def _pick_contributor(primary: str, scores: dict[str, int], n: str, roster: Rost
 
 
 # ------------------------------------------------------------------ validation of an LLM routing
+# Intent words a model writes instead of the three allowed values (unambiguous ones only).
+_INTENT_ALIASES = {"smalltalk": "smalltalk", "small_talk": "smalltalk", "small talk": "smalltalk",
+                   "greeting": "smalltalk", "chitchat": "smalltalk", "chat": "smalltalk", "thanks": "smalltalk",
+                   "question": "question", "query": "question", "pregunta": "question", "consulta": "question",
+                   "task": "task", "request": "task", "tarea": "task", "action": "task",
+                   # topic names a model copies into intent (live, DeepSeek: intent='help' for "que puedes hacer")
+                   "help": "question", "ack": "smalltalk"}
+
+
+def resolve_agent(value: object, roster: "Roster") -> RouteAgent | None:
+    """The roster agent a model meant: its id, else (when exactly one matches) its role, name, first name or title.
+    Live (DeepSeek): routes answered with a name or role instead of the id were thrown away for the rules."""
+    raw = str(value or "").strip().lstrip("@")
+    if raw in roster.by_id:
+        return roster.by_id[raw]
+    key = norm(raw)
+    if not key:
+        return None
+    hits = [a for a in roster.agents
+            if key in {norm(a.id), norm(a.role), norm(a.name), norm((a.name or "").split(" ")[0]), norm(a.title)} - {""}]
+    return hits[0] if len(hits) == 1 else None
+
+
 def validate_route(data: dict, req: RouteRequest) -> RouteResponse | None:
     """Checks an LLM routing against the roster and the hard rules; None means "use the rules"."""
     roster = Roster(req.agents)
-    if data.get("intent") not in ("smalltalk", "question", "task"):
+    intent = _INTENT_ALIASES.get(norm(str(data.get("intent") or "")))
+    primary = resolve_agent(data.get("primary_agent_id"), roster)
+    if intent is None or primary is None:
+        import logging  # what was rejected (never the user's text), so a live run says WHY it fell to the rules
+
+        logging.getLogger("agent_runtime").warning(
+            "route: rejected LLM routing (intent=%r primary_agent_id=%r)", str(data.get("intent"))[:40],
+            str(data.get("primary_agent_id"))[:40])
         return None
-    primary = roster.by_id.get(str(data.get("primary_agent_id") or ""))
-    if primary is None:
-        return None
+    data = {**data, "intent": intent, "contributor_agent_ids": [
+        a.id for a in (resolve_agent(x, roster) for x in (data.get("contributor_agent_ids") or [])) if a is not None]}
     rs = _reasons(req.locale)
     reasons = data.get("reasons") if isinstance(data.get("reasons"), dict) else {}
     topic = str(data.get("topic") or "general").strip().lower()

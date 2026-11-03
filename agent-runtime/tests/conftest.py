@@ -43,6 +43,16 @@ def _restore_environ():
     os.environ.update(before)
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    """Pacing windows and 429 cooldowns are process-wide (app.rate_limit): no test inherits another's."""
+    from app import rate_limit
+
+    rate_limit.reset()
+    yield
+    rate_limit.reset()
+
+
 @pytest.fixture
 def engine():
     return SimulationEngine(latency_scale=0)

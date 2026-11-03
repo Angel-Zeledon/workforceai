@@ -10,6 +10,7 @@ como datos (tool_requests) y las decide el backend.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import json
 import logging
 import os
@@ -24,13 +25,17 @@ from .cost_control import (
     crew_max_iter,
     crew_max_retry_limit,
     direct_call_enabled,
+    call_deadline_s,
+    max_retry_wait_s,
     max_tokens_for,
     non_reasoning_model,
+    output_cap,
     preflight,
     reasoning_kwargs,
 )
 from .engine import AgentEngine, estimate_cost
-from .usage_tokens import tokens_from_metrics
+from . import rate_limit
+from .usage_tokens import tokens_from_metrics, tokens_from_raw_list
 from .fast_path import try_fast_plan
 from .hier_plan import normalize_phase_tasks, normalize_phases
 from .models import (
@@ -63,6 +68,7 @@ from .providers import (
     DEFAULT_MODELS,
     ERR_ALL_PROVIDERS_FAILED,
     ERR_NO_BALANCE,
+    ERR_RATE_LIMITED,
     ProviderConfig,
     ProviderError,
     ProviderPolicy,
@@ -70,7 +76,10 @@ from .providers import (
     classify_error,
     fixed_temperature_model,
     is_no_balance,
+    is_overloaded,
+    is_rate_limited,
     is_transient,
+    retry_after_from_exc,
     policy_from_request,
     scrub,
     temperature_for,
@@ -101,10 +110,61 @@ from .security import (
 DEFAULT_MODEL = DEFAULT_MODELS["anthropic"]
 log = logging.getLogger("agent_runtime")
 
-# Same-provider retries for transient errors (timeout / rate limit / 5xx) before failing over.
+# Same-provider retries for transient errors (timeout / 5xx / network) before failing over.
 PROVIDER_RETRIES = max(0, int(os.getenv("PROVIDER_RETRIES", "1") or 1))
 PROVIDER_RETRY_BACKOFF_S = float(os.getenv("PROVIDER_RETRY_BACKOFF_S", "1.0") or 1.0)
 PROVIDER_TIMEOUT_S = float(os.getenv("PROVIDER_TIMEOUT_S", "120") or 120)
+# Same-provider retries for a RATE LIMIT (429): each waits what the provider asked for (cost_control.max_retry_wait_s
+# bounds it per kind of call). This is the only retry layer: the SDK's own retries are off (max_retries=0 below).
+PROVIDER_RATE_LIMIT_RETRIES = max(0, int(os.getenv("PROVIDER_RATE_LIMIT_RETRIES", "2") or 0))
+# A busy provider (Gemini 503 "high demand", Anthropic 529): retried with exponential backoff (2 s, 4 s, ...), each wait
+# bounded like a rate limit's (short for chat). Google answers these often on the free tier; they pass in seconds.
+PROVIDER_OVERLOAD_RETRIES = max(0, int(os.getenv("PROVIDER_OVERLOAD_RETRIES", "2") or 0))
+PROVIDER_OVERLOAD_BACKOFF_S = float(os.getenv("PROVIDER_OVERLOAD_BACKOFF_S", "2.0") or 2.0)
+# Per-request timeout for the call being made now (an interactive call's remaining deadline); None = PROVIDER_TIMEOUT_S.
+# A contextvar so _llm_kwargs sees it without changing the signature of every `once` (set in the worker thread).
+_CALL_TIMEOUT: contextvars.ContextVar[float | None] = contextvars.ContextVar("call_timeout", default=None)
+MIN_CALL_S = 3.0  # no request is started with less time than this left before the deadline
+# A JSON answer whose output used at least this share of its cap was cut by the cap: retrying with the same cap
+# repeats the cut, so the one JSON retry doubles it instead.
+TRUNCATION_SHARE = 0.97
+
+
+class _UsageTap:
+    """Per-request provider usage of ONE call, recorded as it happens.
+
+    Two live findings (2026-11-02, CrewAI 1.x native OpenAI client, Gemini):
+      * LLM.get_token_usage_summary() is cumulative for the life of the LLM object; with a cached LLM every call
+        reported the tokens of all the earlier calls of the same kind (third run_task: 4999 in / 1424 out for a
+        1802 / 506 call). The engine now builds one LLM per call.
+      * CrewAI rebuilds total_tokens as prompt + completion, so Gemini's thinking tokens (billed as output, only
+        visible in the provider's total_tokens) were dropped: a route that thought 286 tokens reported 10.
+    The tap wraps the instance's _track_token_usage_internal and keeps every raw usage dict (provider total
+    included). Falls back to the framework metrics when the LLM object cannot be tapped (test doubles)."""
+
+    def __init__(self, llm: Any):
+        self.raw: list[dict] = []
+        self.ok = False
+        orig = getattr(llm, "_track_token_usage_internal", None)
+        if callable(orig):
+            def track(usage_data: Any, _orig: Any = orig) -> Any:
+                if isinstance(usage_data, dict):
+                    self.raw.append(dict(usage_data))
+                return _orig(usage_data)
+            try:
+                object.__setattr__(llm, "_track_token_usage_internal", track)
+                self.ok = True
+            except Exception:  # pragma: no cover - a frozen/slotted object: metrics fallback
+                self.ok = False
+
+    def tokens(self, cfg: ProviderConfig, metrics: Any = None) -> tuple[int, int, int]:
+        if self.ok and self.raw:
+            return tokens_from_raw_list(self.raw)
+        return tokens_from_metrics(metrics, cfg.id)
+
+
+def _truncated(output_tokens: int, cap: int | None) -> bool:
+    return bool(cap) and output_tokens >= TRUNCATION_SHARE * int(cap)
 
 
 def parse_json_output(raw: str, schema: type[BaseModel]) -> Any:
@@ -245,21 +305,21 @@ class CrewAIEngine(AgentEngine):
         self._llms: dict[str, Any] = {}
 
     def _llm_for(self, cfg: ProviderConfig, max_tokens: int | None = None, creativity: str = "") -> Any:
-        temperature = temperature_for(cfg.id, creativity)
-        key = f"{cfg.id}:{max_tokens or 0}:{temperature}"
-        # An organization's own key is never cached: the cache is shared by every tenant.
-        if cfg.byo or key not in self._llms:
-            llm = self._LLM(**self._llm_kwargs(cfg, max_tokens, temperature))
-            if cfg.byo:
-                return llm
-            self._llms[key] = llm
-        return self._llms[key]
+        """A NEW LLM object for every call. It used to be cached per (provider, cap, temperature), but CrewAI keeps
+        lifetime token counters on the object: a cached LLM billed each call for every earlier call of its kind and
+        mixed concurrent calls (see _UsageTap). Building one is cheap (no network); an organization's own key was
+        never cached anyway. self._llms stays empty (kept for code that inspects it)."""
+        return self._LLM(**self._llm_kwargs(cfg, max_tokens, temperature_for(cfg.id, creativity)))
 
     @staticmethod
     def _llm_kwargs(cfg: ProviderConfig, max_tokens: int | None, temperature: float | None) -> dict[str, Any]:
         # No reasoning/thinking unless LLM_REASONING is set (cost_control): a reasoning alias maps to the plain model.
         kw: dict[str, Any] = {"model": non_reasoning_model(cfg.model), "api_key": cfg.api_key, "temperature": temperature,
-                              "max_tokens": max_tokens or max_tokens_for("default"), "timeout": PROVIDER_TIMEOUT_S}
+                              "max_tokens": max_tokens or max_tokens_for("default"),
+                              "timeout": min(PROVIDER_TIMEOUT_S, _CALL_TIMEOUT.get() or PROVIDER_TIMEOUT_S),
+                              # The OpenAI/Anthropic SDKs retry 429/5xx twice on their own, blind to Gemini's retryDelay
+                              # and invisible to the budget: the runtime's _kickoff is the only retry layer.
+                              "max_retries": 0}
         kw.update(reasoning_kwargs(cfg.id, cfg.model))
         if temperature is None or (cfg.id == "openai" and fixed_temperature_model(cfg.model)):
             kw.pop("temperature")  # reasoning models only accept their default
@@ -299,21 +359,24 @@ class CrewAIEngine(AgentEngine):
 
     # ------------------------------------------------------------ nucleo
     @staticmethod
-    def _spent(exc: BaseException, cfg: ProviderConfig, metrics: Any, t0: float) -> BaseException:
+    def _usage(cfg: ProviderConfig, tokens: tuple[int, int, int], t0: float, **extra: Any) -> Usage:
+        i, c, o = tokens
+        return Usage(model=cfg.model, input_tokens=i, output_tokens=o, cost_usd=estimate_cost(i, o, cfg.model, cfg.id, c),
+                     duration_ms=int((time.monotonic() - t0) * 1000), provider=cfg.id, cached_tokens=c or None, **extra)
+
+    @classmethod
+    def _spent(cls, exc: BaseException, cfg: ProviderConfig, tokens: tuple[int, int, int], t0: float) -> BaseException:
         """Attach to a failed attempt the tokens it already burned (the first answer of a JSON retry, say), so
         _kickoff can charge them against the call's allowance before it retries or falls back."""
-        i, c, o = tokens_from_metrics(metrics, cfg.id)
-        if i > 0 or o > 0:
-            exc.usage = Usage(model=cfg.model, input_tokens=i, output_tokens=o,  # type: ignore[attr-defined]
-                              cost_usd=estimate_cost(i, o, cfg.model, cfg.id, c),
-                              duration_ms=int((time.monotonic() - t0) * 1000), provider=cfg.id,
-                              cached_tokens=c or None)
+        if tokens[0] > 0 or tokens[2] > 0:
+            exc.usage = cls._usage(cfg, tokens, t0)  # type: ignore[attr-defined]
         return exc
 
-    def _kickoff_once(self, cfg: ProviderConfig, *, role: str, goal: str, backstory: str, description: str,
-                      expected: str, schema: type[BaseModel], max_tokens: int | None = None,
-                      creativity: str = "") -> tuple[Any, Usage]:
-        agent = self._Agent(role=role, goal=goal, backstory=backstory, llm=self._llm_for(cfg, max_tokens, creativity),
+    def _crew_for(self, cfg: ProviderConfig, cap: int | None, *, role: str, goal: str, backstory: str,
+                  description: str, expected: str, schema: type[BaseModel], creativity: str) -> tuple[Any, _UsageTap]:
+        llm = self._llm_for(cfg, cap, creativity)
+        tap = _UsageTap(llm)
+        agent = self._Agent(role=role, goal=goal, backstory=backstory, llm=llm,
                             tools=[], allow_delegation=False, verbose=False,
                             # A tool-less agent answers in one pass. The framework default (25 iterations) re-sends the
                             # whole growing conversation on every format retry: the main source of the ~76k input tokens.
@@ -327,62 +390,101 @@ class CrewAIEngine(AgentEngine):
             # the raw answer is parsed and validated below (one retry on invalid JSON).
             task = self._Task(description=description, expected_output=expected + json_instructions(schema),
                               agent=agent)
-        crew = self._Crew(agents=[agent], tasks=[task], process=self._Process.sequential, verbose=False)
+        return self._Crew(agents=[agent], tasks=[task], process=self._Process.sequential, verbose=False), tap
+
+    def _kickoff_once(self, cfg: ProviderConfig, *, role: str, goal: str, backstory: str, description: str,
+                      expected: str, schema: type[BaseModel], max_tokens: int | None = None,
+                      creativity: str = "") -> tuple[Any, Usage]:
+        """One CrewAI call; on invalid JSON one retry: the same crew (its LLM counts both requests), or, when the
+        answer used its whole output cap (cut, not malformed), a new crew with the cap doubled."""
+        args = dict(role=role, goal=goal, backstory=backstory, description=description, expected=expected,
+                    schema=schema, creativity=creativity)
+        crew, tap = self._crew_for(cfg, max_tokens, **args)
         t0 = time.monotonic()
-        result = crew.kickoff()
-        parsed = getattr(result, "pydantic", None)
-        if parsed is None:  # tolerant parse of the raw text + one retry if the JSON is invalid
-            try:
-                parsed = parse_json_output(getattr(result, "raw", "") or "", schema)
-            except ValueError:
-                first = getattr(result, "token_usage", None)
+        done = (0, 0, 0)  # tokens of crews already finished with (a truncated first attempt)
+        result = None
+
+        def burned() -> tuple[int, int, int]:
+            now = tap.tokens(cfg, getattr(result, "token_usage", None))
+            return done[0] + now[0], done[1] + now[1], done[2] + now[2]
+
+        try:
+            result = crew.kickoff()
+            parsed = getattr(result, "pydantic", None)
+            if parsed is None:  # tolerant parse of the raw text + one retry if the JSON is invalid
                 try:
+                    parsed = parse_json_output(getattr(result, "raw", "") or "", schema)
+                except ValueError:
+                    first = burned()
+                    if _truncated(first[2], max_tokens):
+                        log.warning("provider %s: answer cut at its %s-token cap; retrying with %s", cfg.id,
+                                    max_tokens, 2 * int(max_tokens or 0))
+                        done, result = first, None
+                        crew, tap = self._crew_for(cfg, 2 * int(max_tokens or 0), **args)
+                    else:  # the retry doubles the call's cost: never silent (live: one in 30 DeepSeek run_tasks)
+                        log.warning("provider %s: invalid JSON for %s (%d output tokens); retrying once", cfg.id,
+                                    schema.__name__, first[2])
                     result = crew.kickoff()
                     parsed = getattr(result, "pydantic", None)
                     if parsed is None:
                         parsed = parse_json_output(getattr(result, "raw", "") or "", schema)
-                except Exception as exc:
-                    self._spent(exc, cfg, getattr(result, "token_usage", None) or first, t0)
-                    raise
-        ms = int((time.monotonic() - t0) * 1000)
-        m = getattr(result, "token_usage", None)
-        i, c, o = tokens_from_metrics(m, cfg.id)
-        return parsed, Usage(model=cfg.model, input_tokens=i, output_tokens=o,
-                             cost_usd=estimate_cost(i, o, cfg.model, cfg.id, c), duration_ms=ms,
-                             provider=cfg.id, cached_tokens=c or None)
+        except Exception as exc:
+            self._spent(exc, cfg, burned(), t0)
+            raise
+        return parsed, self._usage(cfg, burned(), t0)
 
     def _direct_once(self, cfg: ProviderConfig, *, role: str, goal: str, backstory: str, description: str,
                      expected: str, schema: type[BaseModel], max_tokens: int | None = None,
                      creativity: str = "") -> tuple[Any, Usage]:
         """LLM_DIRECT_CALL=true: ONE plain chat completion (system + user), JSON parsed and validated here.
-        No Agent/Task/Crew, no ReAct wrapper, no iterations. Same contract as _kickoff_once."""
-        llm = self._LLM(**self._llm_kwargs(cfg, max_tokens, temperature_for(cfg.id, creativity)))
+        No Agent/Task/Crew, no ReAct wrapper, no iterations. Same contract as _kickoff_once (and the same
+        truncation-aware JSON retry)."""
         messages = [{"role": "system", "content": backstory},
                     {"role": "user", "content": f"{description}\n\n{expected}{json_instructions(schema)}"}]
         t0 = time.monotonic()
-        summary = getattr(llm, "get_token_usage_summary", None)
+        state: dict[str, Any] = {"done": (0, 0, 0)}
+
+        def new_llm(cap: int | None) -> None:
+            llm = self._LLM(**self._llm_kwargs(cfg, cap, temperature_for(cfg.id, creativity)))
+            state.update(llm=llm, tap=_UsageTap(llm), summary=getattr(llm, "get_token_usage_summary", None))
+
+        def burned() -> tuple[int, int, int]:
+            s = state["summary"]
+            now = state["tap"].tokens(cfg, s() if callable(s) else None)
+            d = state["done"]
+            return d[0] + now[0], d[1] + now[1], d[2] + now[2]
+
+        def ask() -> str:
+            raw = state["llm"].call(messages)
+            return raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
+
+        new_llm(max_tokens)
+        text = ""
         try:
-            raw = llm.call(messages)
-            text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
+            text = ask()
             try:
                 parsed = parse_json_output(text, schema)
             except ValueError:  # one retry on invalid JSON, like the crew path
-                raw = llm.call(messages)
-                text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
+                first = burned()
+                if _truncated(first[2], max_tokens):
+                    log.warning("provider %s: answer cut at its %s-token cap; retrying with %s", cfg.id,
+                                max_tokens, 2 * int(max_tokens or 0))
+                    state["done"] = first
+                    new_llm(2 * int(max_tokens or 0))
+                else:
+                    log.warning("provider %s: invalid JSON for %s (%d output tokens); retrying once", cfg.id,
+                                schema.__name__, first[2])
+                text = ask()
                 parsed = parse_json_output(text, schema)
         except Exception as exc:
-            self._spent(exc, cfg, summary() if callable(summary) else None, t0)
+            self._spent(exc, cfg, burned(), t0)
             raise
-        ms = int((time.monotonic() - t0) * 1000)
-        m = summary() if callable(summary) else None
-        i, c, o = tokens_from_metrics(m, cfg.id)
+        i, c, o = burned()
         if i <= 0:
             i, c = (len(backstory) + len(description) + len(expected)) // 4, 0
         if o <= 0:
             o = max(1, len(text) // 4)
-        return parsed, Usage(model=cfg.model, input_tokens=i, output_tokens=o,
-                             cost_usd=estimate_cost(i, o, cfg.model, cfg.id, c), duration_ms=ms, provider=cfg.id,
-                             cached_tokens=c or None)
+        return parsed, self._usage(cfg, (i, c, o), t0)
 
     @staticmethod
     def _prompt_texts(cfg: ProviderConfig, kw: dict[str, Any]) -> list[str]:
@@ -403,30 +505,79 @@ class CrewAIEngine(AgentEngine):
         once = once or (self._direct_once if direct_call_enabled() else self._kickoff_once)
         kind = kw.pop("kind", "") or "default"
         allowance = kw.pop("max_cost_usd", 0.0) or 0.0
-        kw["max_tokens"] = kw.get("max_tokens") or max_tokens_for(kind)
+        visible_cap = kw.get("max_tokens") or max_tokens_for(kind)
+        wait_cap = max_retry_wait_s(kind)
+        budget_s = call_deadline_s(kind)  # interactive calls: total time, retries included (backend gives up at 30 s)
+        deadline = time.monotonic() + budget_s if budget_s else None
+
+        def time_left() -> float:
+            return deadline - time.monotonic() if deadline is not None else float("inf")
+
+        def can_wait(pause: float) -> bool:
+            """A retry after `pause` still has time to finish before the deadline."""
+            return time_left() - pause >= MIN_CALL_S
+
         over: CallBudgetError | None = None  # the pre-call guard refused every provider tried so far
         failed: list[str] = []
         broke: list[str] = []  # providers whose account has no balance left
+        limited: list[str] = []  # providers still rate limiting after the retries (or further away than wait_cap)
+        retry_hint: float | None = None  # the shortest wait a rate-limiting provider asked for
         last: BaseException | None = None
         spent = 0.0  # USD already burned by failed attempts of THIS call (exc.usage.cost_usd when the error carries it)
+        burned: list[Usage] = []  # the same attempts as Usage, reported on the final error (never silently dropped)
+
+        def note_limit(cfg: ProviderConfig, wait: float | None) -> None:
+            nonlocal retry_hint
+            limited.append(cfg.id)
+            if wait is not None and (retry_hint is None or wait < retry_hint):
+                retry_hint = wait
+
         for cfg in order:
-            attempt = 0
+            attempt = 0  # transient (timeout / 5xx) retries on this provider
+            limit_attempt = 0  # rate-limit retries on this provider
+            busy_attempt = 0  # overload (503 high demand / 529) retries on this provider
+            cap = output_cap(cfg.id, visible_cap)  # + room for hidden thinking where the cap counts it (Gemini)
             while True:
                 try:  # budget guard BEFORE every send, against what is left after the failed attempts so far
                     left = allowance - spent if allowance > 0 else 0.0
                     if allowance > 0 and left <= 0:
                         left = 1e-12  # nothing left: any estimate is above it
-                    preflight(kind=kind, model=cfg.model, provider=cfg.id,
-                              prompt_texts=self._prompt_texts(cfg, kw), max_tokens=kw["max_tokens"],
-                              allowance_usd=left)
+                    texts = self._prompt_texts(cfg, kw)
+                    try:
+                        preflight(kind=kind, model=cfg.model, provider=cfg.id, prompt_texts=texts, max_tokens=cap,
+                                  allowance_usd=left)
+                    except CallBudgetError:
+                        if cap == visible_cap:
+                            raise
+                        # the thinking headroom alone crosses the allowance: send the plain cap (still guarded)
+                        preflight(kind=kind, model=cfg.model, provider=cfg.id, prompt_texts=texts,
+                                  max_tokens=visible_cap, allowance_usd=left)
+                        cap = visible_cap
                 except CallBudgetError as exc:
                     log.warning("provider %s skipped by the budget guard (spent $%.4f): %s", cfg.id, spent, exc)
                     over = over or exc
-                    if attempt:
+                    if attempt or limit_attempt:
                         failed.append(cfg.id)
                     break
+                if time_left() < MIN_CALL_S:  # an interactive call out of time: nothing more is sent
+                    log.warning("provider %s: %s call out of time (%.0fs deadline); not sending", cfg.id, kind,
+                                budget_s or 0)
+                    failed.append(cfg.id)
+                    last = last or TimeoutError(f"{kind} deadline of {budget_s:.0f}s reached")
+                    break
+                still = rate_limit.acquire(cfg.id, max(0.0, min(wait_cap, time_left() - MIN_CALL_S)))
+                if still > 0:  # it would have to wait longer than this kind of call can: nothing is sent
+                    log.warning("provider %s rate limited for %.0fs more (local pacing); not sending", cfg.id, still)
+                    failed.append(cfg.id)
+                    note_limit(cfg, still)
+                    last = RuntimeError(f"rate limited by local pacing for {still:.0f}s")
+                    break
                 try:
-                    parsed, usage = once(cfg, **kw)
+                    token = _CALL_TIMEOUT.set(time_left() if deadline is not None else None)
+                    try:
+                        parsed, usage = once(cfg, **{**kw, "max_tokens": cap})
+                    finally:
+                        _CALL_TIMEOUT.reset(token)
                     if failed:
                         log.warning("provider failover: %s failed, answered by %s (%s)",
                                     ",".join(failed), cfg.id, cfg.model)
@@ -434,13 +585,44 @@ class CrewAIEngine(AgentEngine):
                     return parsed, usage
                 except Exception as exc:
                     last = exc
-                    spent += float(getattr(getattr(exc, "usage", None), "cost_usd", 0) or 0)
+                    u = getattr(exc, "usage", None)
+                    spent += float(getattr(u, "cost_usd", 0) or 0)
+                    if isinstance(u, Usage):
+                        burned.append(u)
                     if is_no_balance(exc):
                         log.warning("provider %s has no balance left", cfg.id)
                         failed.append(cfg.id)
                         broke.append(cfg.id)
                         break
-                    if is_transient(exc) and attempt < PROVIDER_RETRIES:
+                    if is_rate_limited(exc):
+                        wait = retry_after_from_exc(exc)
+                        rate_limit.note_rate_limited(cfg.id, wait)
+                        if (limit_attempt < PROVIDER_RATE_LIMIT_RETRIES and (wait is None or wait <= wait_cap)
+                                and can_wait(min(wait_cap, (wait or 0) + 0.5))):
+                            limit_attempt += 1
+                            # the provider's own delay when it gave one (+ a little), else exponential backoff
+                            pause = min(wait_cap, (wait + 0.5) if wait is not None
+                                        else PROVIDER_RETRY_BACKOFF_S * 2 ** limit_attempt)
+                            log.warning("provider %s rate limited (retry in %s); waiting %.1fs, retry %d", cfg.id,
+                                        f"{wait:.1f}s" if wait is not None else "?", pause, limit_attempt)
+                            time.sleep(pause)
+                            continue
+                        log.warning("provider %s still rate limited (asked to wait %s)", cfg.id,
+                                    f"{wait:.0f}s" if wait is not None else "?")
+                        failed.append(cfg.id)
+                        note_limit(cfg, wait)
+                        break
+                    hint = retry_after_from_exc(exc) if is_overloaded(exc) else None
+                    pause = min(wait_cap, hint if hint is not None
+                                else PROVIDER_OVERLOAD_BACKOFF_S * 2 ** busy_attempt)
+                    if is_overloaded(exc) and busy_attempt < PROVIDER_OVERLOAD_RETRIES and can_wait(pause):
+                        busy_attempt += 1
+                        log.warning("provider %s overloaded (%s); waiting %.1fs, retry %d", cfg.id,
+                                    type(exc).__name__, pause, busy_attempt)
+                        time.sleep(pause)
+                        continue
+                    if (is_transient(exc) and not is_overloaded(exc) and attempt < PROVIDER_RETRIES
+                            and can_wait(PROVIDER_RETRY_BACKOFF_S * (attempt + 1))):
                         attempt += 1
                         log.warning("provider %s transient error (%s); retry %d", cfg.id,
                                     type(exc).__name__, attempt)
@@ -452,16 +634,32 @@ class CrewAIEngine(AgentEngine):
                     break
         if over is not None and (not failed or spent > 0):
             raise over
+        common = dict(tried=failed, allowed=[c.id for c in order], configured=[c.id for c in self.providers])
         if failed and len(broke) == len(failed):
-            raise ProviderError(
+            err = ProviderError(
                 ERR_NO_BALANCE,
                 f"The model provider account has no balance left ({', '.join(broke)}): top it up or choose another model.",
-                tried=failed, allowed=[c.id for c in order], configured=[c.id for c in self.providers])
-        raise ProviderError(
-            ERR_ALL_PROVIDERS_FAILED,
-            f"All allowed model providers failed ({', '.join(failed)}). Last error: "
-            f"{type(last).__name__}: {scrub(str(last), order)[:200]}",
-            tried=failed, allowed=[c.id for c in order], configured=[c.id for c in self.providers])
+                **common)
+        elif failed and len(limited) == len(failed):
+            when = f" Try again in about {retry_hint:.0f}s." if retry_hint is not None else " Try again shortly."
+            err = ProviderError(
+                ERR_RATE_LIMITED,
+                f"The model provider is rate limiting requests ({', '.join(limited)}).{when}",
+                retry_after_s=retry_hint, **common)
+        else:
+            err = ProviderError(
+                ERR_ALL_PROVIDERS_FAILED,
+                f"All allowed model providers failed ({', '.join(failed)}). Last error: "
+                f"{type(last).__name__}: {scrub(str(last), order)[:200]}",
+                **common)
+        if burned:  # what the failed attempts cost: the caller can still charge it
+            err.usage = Usage(model=burned[-1].model, provider=burned[-1].provider,
+                              input_tokens=sum(b.input_tokens for b in burned),
+                              output_tokens=sum(b.output_tokens for b in burned),
+                              cost_usd=round(sum(b.cost_usd for b in burned), 6),
+                              duration_ms=sum(b.duration_ms for b in burned),
+                              cached_tokens=sum(b.cached_tokens or 0 for b in burned) or None)
+        raise err
 
     async def _run(self, **kw) -> tuple[Any, Usage]:
         return await asyncio.to_thread(self._kickoff, **kw)
@@ -593,28 +791,29 @@ class CrewAIEngine(AgentEngine):
         Anthropic provider converts them), each preceded by its untrusted-data label. A fresh LLM per call
         (never cached: the images belong to one organization, and the usage counter is per call)."""
         llm = self._LLM(**self._llm_kwargs(cfg, max_tokens, temperature_for(cfg.id, creativity)))
+        tap = _UsageTap(llm)  # raw provider usage (Gemini thinking included), per call
         messages = build_vision_messages(system, user + json_instructions(schema), images, locale)
         t0 = time.monotonic()
-        raw = llm.call(messages)
-        text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
+        summary = getattr(llm, "get_token_usage_summary", None)
         try:
-            parsed = parse_json_output(text, schema)
-        except ValueError:  # one retry on invalid JSON, like the text path
             raw = llm.call(messages)
             text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
-            parsed = parse_json_output(text, schema)
-        ms = int((time.monotonic() - t0) * 1000)
+            try:
+                parsed = parse_json_output(text, schema)
+            except ValueError:  # one retry on invalid JSON, like the text path
+                raw = llm.call(messages)
+                text = raw if isinstance(raw, str) else str(getattr(raw, "raw", raw) or "")
+                parsed = parse_json_output(text, schema)
+        except Exception as exc:  # the images were sent and billed even when the answer is unusable
+            self._spent(exc, cfg, tap.tokens(cfg, summary() if callable(summary) else None), t0)
+            raise
         img_tokens = sum(estimate_image_tokens(i) for i in images)
-        summary = getattr(llm, "get_token_usage_summary", None)
-        m = summary() if callable(summary) else None
-        i, c, o = tokens_from_metrics(m, cfg.id)
+        i, c, o = tap.tokens(cfg, summary() if callable(summary) else None)
         if i <= 0:  # the provider gave no usage: estimate (text at ~4 chars/token plus the images)
             i, c = (len(system) + len(user)) // 4 + img_tokens, 0
         if o <= 0:
             o = max(1, len(text) // 4)
-        return parsed, Usage(model=cfg.model, input_tokens=i, output_tokens=o,
-                             cost_usd=estimate_cost(i, o, cfg.model, cfg.id, c), duration_ms=ms, provider=cfg.id,
-                             cached_tokens=c or None, image_count=len(images), image_tokens=img_tokens)
+        return parsed, self._usage(cfg, (i, c, o), t0, image_count=len(images), image_tokens=img_tokens)
 
     async def review(self, req: ReviewRequest) -> ReviewResponse:
         """Quality review (Q1): the reviewer persona (internal auditor or neutral) judges ONE output."""
@@ -676,7 +875,7 @@ class CrewAIEngine(AgentEngine):
             expected="JSON con title, summary y sections", schema=_Synth,
             policy=policy_from_request(req, "synthesize"), kind="synthesize", max_cost_usd=req.max_cost_usd)
         return SynthesizeResponse(title=res.title, summary=res.summary, sections=res.sections,
-                                  provider=usage.provider, model=usage.model)
+                                  provider=usage.provider, model=usage.model, usage=usage)
 
     async def summarize(self, req):
         """Slash commands (compact / meeting / daily). Works without structured output: the JSON contract is in the
@@ -713,9 +912,16 @@ class CrewAIEngine(AgentEngine):
                 out.usage, out.provider, out.model = usage, usage.provider, usage.model
                 return out
             log.warning("route: invalid LLM routing, using rules")
+            spent = usage
         except Exception as exc:  # provider failure, data policy, bad JSON...: the rules are the safe path
             log.warning("route: LLM unavailable (%s), using rules", type(exc).__name__)
-        return rules_route(req)
+            spent = getattr(exc, "usage", None)
+        fallback = rules_route(req)
+        if isinstance(spent, Usage) and (spent.input_tokens or spent.output_tokens):
+            # the rules decided, but the model calls that failed were real and billed: report them (source stays
+            # "rules") so the backend's ledger records them instead of losing them
+            fallback.usage, fallback.provider, fallback.model = spent, spent.provider, spent.model
+        return fallback
 
     async def chat_reply(self, req: ChatReplyRequest) -> ChatReplyResponse:
         if req.limit or req.handoff:  # "I can't" lines and handoffs are scripted: no LLM call, no cost

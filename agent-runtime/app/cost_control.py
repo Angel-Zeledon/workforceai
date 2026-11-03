@@ -73,14 +73,69 @@ def max_tokens_for(kind: str) -> int:
     return _env_int(f"MAX_TOKENS_{kind.upper()}", base)
 
 
+# Providers whose output cap (max_tokens) also counts the model's hidden thinking. Live finding (Gemini 3.6 Flash,
+# reasoning_effort=low, 2026-11-02): a /v1/route call thought ~290 tokens inside its 300-token cap and the JSON came
+# back cut after 10 visible tokens ("Unterminated string"), twice, then fell to the rules; the same route later thought
+# 590 tokens for a 71-token answer. Only real tokens are billed: the headroom raises the cap, not the cost. It is added to
+# the cap of every call to such a provider and to the budget guard's worst case (thinking is billed as output); when
+# the headroom alone would cross the call's allowance it is dropped for that call (crewai_engine._kickoff).
+DEFAULT_THINKING_HEADROOM = {"gemini": 1024}
+
+
+def thinking_headroom(provider: str) -> int:
+    """Extra output tokens for hidden thinking (THINKING_HEADROOM_<PROVIDER>, e.g. THINKING_HEADROOM_GEMINI=1024)."""
+    p = (provider or "").lower()
+    return _env_int(f"THINKING_HEADROOM_{p.upper()}", DEFAULT_THINKING_HEADROOM.get(p, 0), minimum=0)
+
+
+def output_cap(provider: str, max_tokens: int) -> int:
+    """The max_tokens actually sent: the kind's cap for the visible answer plus the provider's thinking headroom."""
+    return int(max_tokens) + thinking_headroom(provider)
+
+
+# Interactive kinds: the backend gives a chat turn's runtime call 30 s (CHAT_TIMEOUT). Waiting longer for a rate
+# limit only produces an answer nobody reads, while still spending a request of the quota.
+INTERACTIVE_KINDS = frozenset({"route", "chat"})
+
+
+def max_retry_wait_s(kind: str) -> float:
+    """Longest single wait for a provider's rate limit before giving up on it. PROVIDER_MAX_RETRY_WAIT_S (default
+    60) for background work, PROVIDER_MAX_RETRY_WAIT_S_CHAT (default 8) for route/chat."""
+    name, default = (("PROVIDER_MAX_RETRY_WAIT_S_CHAT", 8.0) if (kind or "") in INTERACTIVE_KINDS
+                     else ("PROVIDER_MAX_RETRY_WAIT_S", 60.0))
+    raw = os.getenv(name, "").strip()
+    try:
+        return max(0.0, float(raw)) if raw else default
+    except ValueError:
+        return default
+
+
+def call_deadline_s(kind: str) -> float | None:
+    """Total seconds ONE interactive call (route/chat) may take, retries and waits included; None = no deadline.
+    PROVIDER_DEADLINE_S_CHAT (default 25): the backend abandons a chat turn's runtime call at 30 s (CHAT_TIMEOUT), so
+    past that the answer is thrown away while the request is still billed. Live (DeepSeek, 2026-11-02): a /v1/route
+    took longer than 30 s and the backend fell back to its local rules."""
+    if (kind or "") not in INTERACTIVE_KINDS:
+        return None
+    raw = os.getenv("PROVIDER_DEADLINE_S_CHAT", "").strip()
+    try:
+        v = float(raw) if raw else 25.0
+    except ValueError:
+        v = 25.0
+    return v if v > 0 else None
+
+
 def crew_max_iter() -> int:
     """Iterations the CrewAI agent may spend on ONE task (framework default: 25). CREW_MAX_ITER."""
     return _env_int("CREW_MAX_ITER", 3)
 
 
 def crew_max_retry_limit() -> int:
-    """Framework-level retries after an error (framework default: 2). CREW_MAX_RETRY_LIMIT; 0 is valid."""
-    return _env_int("CREW_MAX_RETRY_LIMIT", 1, minimum=0)
+    """Framework-level retries after an error (framework default: 2). CREW_MAX_RETRY_LIMIT; 0 is valid and the
+    default: the runtime owns retries (_kickoff: honours the provider's retry delay, charges failed attempts).
+    CrewAI's own loop re-ran the whole task on ANY provider error, a 429 included, with no wait: together with the
+    SDK's hidden retries one rate-limited call became up to 12 HTTP requests against the same per-minute quota."""
+    return _env_int("CREW_MAX_RETRY_LIMIT", 0, minimum=0)
 
 
 def direct_call_enabled() -> bool:

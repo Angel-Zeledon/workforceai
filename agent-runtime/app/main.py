@@ -139,7 +139,10 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail()) from exc
         except ProviderError as exc:  # stable, explicit: never a silent fallback
             log.warning("provider error code=%s tried=%s", exc.code, exc.tried)
-            raise HTTPException(status_code=exc.status_code, detail=exc.detail()) from exc
+            headers = None
+            if exc.retry_after_s is not None:  # provider_rate_limited: standard header too (rounded up, >= 1)
+                headers = {"Retry-After": str(max(1, int(-(-exc.retry_after_s // 1))))}
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail(), headers=headers) from exc
         except Exception as exc:  # fallo del motor/LLM
             log.exception("engine error")
             raise HTTPException(status_code=502, detail=f"engine error: {exc}") from exc
