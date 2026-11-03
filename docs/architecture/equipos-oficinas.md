@@ -1,0 +1,271 @@
+# Trabajo en equipo: oficinas por equipo, agentes por rol y permisos entre compañeros
+
+Investigación y diseño del 2026-11-02. Pregunta del dueño: cómo mejorar el trabajo entre personas de la misma empresa;
+si al crear la cuenta hay que preguntar si es solo para una persona o para una empresa; cómo colaboran compañeros con
+oficinas distintas; cómo cada uno tiene solo los agentes de su trabajo (un abogado no necesita un agente de ventas); y
+cómo se da acceso de lectura, de edición o ninguno a carpetas y archivos de un compañero.
+
+Estado: **propuesta**. Las decisiones del dueño están en la sección 10. Los flujos de colaboración (encargos,
+circuitos, ausencias, invitados), el motor de permisos paso a paso y los casos difíciles están en
+`equipos-colaboracion.md`.
+
+---
+
+## 0. La idea en una frase
+
+**Una empresa, varias oficinas, cada persona con su mesa.** La empresa es el edificio; cada equipo (Legal, Ventas,
+Contabilidad…) es una **oficina** con sus personas, sus agentes, sus carpetas y su memoria; cada persona tiene además
+**sus propios agentes y su carpeta privada**. Un agente nunca ve más de lo que puede ver la persona que le pide algo. Se
+colabora entre oficinas **tocando la puerta**: pedir a otra oficina (a una persona o a su agente) con aprobación de quien
+la lleva.
+
+```
+ Empresa (edificio, recepción común)
+ ├─ Oficina Legal   (privada)   personas: Ana (responsable), Luis · agentes: Elena (legal), Sofía (asistente)
+ │   └─ /Oficinas/Legal/…       memoria de Legal
+ ├─ Oficina Ventas  (abierta)   personas: Marta, Pablo · agentes: Valeria (ventas), Nadia (análisis)
+ │   └─ /Oficinas/Ventas/…
+ └─ Cada persona: su mesa, /Personas/<persona>/ (privada) y "mis agentes" (privados hasta que los comparta)
+```
+
+---
+
+## 1. Lo que hay hoy (inventario del 2026-11-02)
+
+Todo está pensado para **una sola oficina por empresa**:
+
+| Área | Hoy | Problema para equipos |
+|---|---|---|
+| Registro | Pide correo, contraseña, nombre y empresa. Crea la empresa con 7 agentes fijos para todos | No pregunta si es para una persona o un equipo, ni a qué se dedica |
+| Bienvenida | Asistente de 3 pasos (tipo de negocio, idioma, resumen diario) + plantillas de industria (despacho de abogados, etc.) que crean departamentos y agentes | Solo a nivel empresa; quien entra invitado ve lo mismo que el dueño |
+| Organización | Roles owner/admin/member/viewer; departamentos (árbol con jefe y centro de costo); personas en el organigrama | Los departamentos son solo para mostrar y para presupuesto: no dan ni quitan acceso. Las reglas de delegación existen pero no se aplican |
+| Oficina 3D | Una por empresa (`office_layout` por organización); presencia de personas, cercanía abre un chat | No hay oficinas por equipo ni pisos |
+| Agentes | Pertenecen a la empresa; todos los ven todos; tope de 20 por empresa en todos los planes | No hay dueño, ni agentes personales, ni compartir con alguien |
+| **Chat con agentes** | Un hilo por agente **para toda la empresa**; el mensaje se guarda como `user` sin autor; leído/no leído por empresa | La abogada y el vendedor ven las conversaciones del otro con el mismo agente, y no se sabe quién escribió qué |
+| Chat entre personas | Canales de empresa, departamento, proyecto, grupo y mensajes directos, con agentes que responden si se los menciona | Sin adjuntos |
+| Archivos (personas) | Acceso por rol en toda la empresa | No hay carpetas privadas ni permisos por carpeta o archivo; cualquier miembro lee y sobrescribe todo |
+| Archivos (agentes) | Zonas (su mesa, proyectos asignados, `/Shared`, `/Clients`) + permisos de lectura por carpeta (sin pantalla) | El alcance depende del agente, no de quién le pide. Los adjuntos del chat van a `/Shared` y los ve todo el mundo |
+| Aprobaciones y avisos | Las deciden admin/owner; push a toda la empresa | No llegan a la persona que corresponde |
+| Costos | Por agente, proyecto, departamento y empresa | No hay costo por persona; todos ven todo |
+| Memoria | Empresa, agente y cliente | No hay memoria de equipo ni personal |
+| Proyectos | Tienen creador; los agentes "están" por sus tareas | Las personas no son miembros de proyectos |
+
+Ya existe y se aprovecha: departamentos, presencia, chat entre personas con canales de departamento, aislamiento por
+cliente (el mismo patrón sirve para oficinas), registro de quién pidió cada ejecución y aprobación, SSO/SCIM con
+autoingreso por dominio, invitaciones con límite de asientos.
+
+---
+
+## 2. Qué hace la competencia (resumen)
+
+| Producto | Modelo | Lo que vale copiar | Lo que no |
+|---|---|---|---|
+| **Dust** | Un espacio de trabajo con *spaces* abiertos o restringidos y *pods* (salas de equipo con personas y agentes) | Los datos viven en un espacio y el espacio decide qué agentes y personas los usan; tareas asignables a persona o agente | — |
+| **Microsoft 365 Copilot** | Agentes privados al crearlos; "puede chatear" o "puede editar"; publicar a la tienda de la empresa con aprobación del admin | Escalera de visibilidad; el agente respeta el acceso de cada usuario | Sobre-compartir: Copilot encuentra lo que la gente no sabía que tenía abierto (Microsoft vende herramientas para arreglarlo) |
+| **Gemini Enterprise / Glean** | Galería/biblioteca de agentes; por defecto se crean pero no se comparten | Resultados recortados a los permisos de quien pregunta; en sitios públicos, solo contenido público; las acciones de escritura esperan aprobación | Gemini: lo subido al conocimiento del agente lo lee cualquiera que lo use |
+| **ChatGPT / Claude (Team, Enterprise)** | Proyectos públicos o privados; "ver" o "editar" | Conocimiento del proyecto compartido, **chats privados salvo que se compartan** | — |
+| **Notion (agentes)** | El agente usa sus propios permisos | Pregunta en el alta "personal / equipo" y luego tamaño y función | **Fuga documentada**: un usuario puede sacar información a la que no tiene acceso a través del agente |
+| **Sintra / Lindy / Marblism** | Espacio con dueño y pocos roles | Créditos de la empresa con tope por persona (Lindy) | Un solo dueño sin roles (Sintra); asientos que se cobran solos al mencionar al agente (Lindy); alta por separado que crea espacios sueltos |
+| **Gather / Kumospace / Sococo** | Pisos, áreas por equipo, salas con puerta | **Tocar la puerta** (Sococo: cualquiera dentro abre, caduca a los 5 min y queda constancia); estados automáticos por calendario | — |
+| **Google Drive / Box / SharePoint** | Lector, comentarista, editor; herencia hacia abajo | Pedir acceso con nota → el dueño elige nivel y caducidad → aviso al que pidió | Romper la herencia por archivo vuelve el permiso inmanejable (SharePoint) |
+
+Errores de los demás que hay que evitar: **agentes sin control** (el 94% de responsables de TI dice que la proliferación
+de agentes aumenta el riesgo), **agentes con permisos propios** (Notion), **agentes huérfanos** cuando su dueño se va,
+**cambios de política que no se aplican hacia atrás**, y **cobros por créditos que nadie entiende**.
+
+Precio de referencia: la competencia cobra 12-30 USD por persona y mes; nuestro Pro cuesta 29 USD por 10 personas.
+Hay margen para que el trabajo en equipo sea una razón para pasar a Pro y Max.
+
+---
+
+## 3. Modelo: empresa → oficina → persona
+
+- **Empresa:** facturación, plan, administradores, directorio de agentes, políticas, recepción común.
+- **Oficina = equipo.** **Se construye sobre los departamentos que ya existen**: un departamento con oficina activada
+  gana miembros con acceso, agentes, carpeta, memoria, presupuesto (los límites por departamento ya existen) y su sala
+  3D. Para la persona es un solo concepto, "oficina". El organigrama sigue igual.
+  - **Abierta** (por defecto): cualquiera de la empresa puede entrar a mirar (lectura); los miembros trabajan.
+  - **Privada:** solo sus miembros la ven por dentro; desde fuera se ve la puerta y se puede tocar.
+  - Roles dentro de la oficina: **responsable** (aprueba lo de su oficina, gestiona miembros, agentes y permisos) y
+    **miembro**. Los admin de la empresa pueden todo, y queda auditado.
+- **Persona:** pertenece a una o varias oficinas; tiene **su mesa**, su carpeta privada `/Personas/<persona>/`, **sus
+  agentes** y su bandeja (tareas, aprobaciones, puertas tocadas, pedidos de acceso).
+- **Empresas que ya existen:** se crea una oficina "General", abierta, con todas las personas, los agentes y
+  `/Shared`. Nada cambia hasta que creen una segunda oficina.
+
+---
+
+## 4. Agentes por rol, con dueño
+
+- Cada agente tiene **dueño**: una persona (agente personal) o una oficina (agente del equipo). Nunca un grupo como
+  único dueño. Si su dueño se va, pasa al responsable de la oficina (no queda huérfano).
+- **Escalera de visibilidad** (como Microsoft, Glean y Dust):
+  1. **Privado:** solo su dueño.
+  2. **Oficina:** lo usan los miembros de la oficina.
+  3. **Compartido con personas:** "puede chatear" (por defecto) o "puede editar".
+  4. **Directorio de la empresa:** lo puede "contratar" o consultar cualquiera. En Max, publicar ahí puede requerir
+     aprobación del admin.
+- **Por rol:** al elegir profesión (§6) se sugieren los agentes que tienen sentido. Una abogada parte con Legal y
+  Asistente; un vendedor con Ventas y Análisis. Los demás están en el directorio, no en su oficina.
+- **Panel de agentes del admin:** dueño, oficina, último uso, agentes sin uso, duplicados, traspasos.
+- El tope de 20 agentes por empresa hoy es igual en todos los planes; con agentes por persona y por oficina hay que
+  revisarlo por plan (decisión §10.3).
+
+---
+
+## 5. Permisos: quién ve y edita qué
+
+### 5.1 Tres niveles, nada más
+
+**Ninguno · Leer (ver y comentar) · Editar.** Ser responsable o dueño queda implícito.
+
+- Se dan sobre **oficina → carpeta → archivo** y **se heredan hacia abajo**: quien lee la oficina lee sus carpetas.
+- La única excepción es la **carpeta restringida**, que corta la herencia (solo quien se nombra), es explícita y se ve
+  con una insignia. No se permite romper la herencia archivo por archivo (el problema de SharePoint): para un archivo
+  suelto se comparte el archivo.
+- **Carpetas por defecto:**
+
+  | Carpeta | Quién | Nivel |
+  |---|---|---|
+  | `/Personas/<persona>/` | su dueño | Editar; nadie más (ni sus agentes compartidos, salvo que ella lo decida) |
+  | `/Oficinas/<oficina>/` | miembros | Editar |
+  | `/Oficinas/<oficina>/` | resto de la empresa | Leer si la oficina es abierta; Ninguno si es privada |
+  | `/Proyectos/<p>/` | miembros del proyecto (personas, ahora sí) | Editar |
+  | `/Compartido/` | toda la empresa | Leer; Editar para member+ (como hoy) |
+  | `/Clientes/<c>/` | quien atiende al cliente | igual que hoy, más el aislamiento por cliente |
+
+- **Compartir** un archivo o carpeta con una persona: Leer o Editar, con **caducidad opcional** (30 días por defecto si se
+  activa).
+- **Pedir acceso** (como Drive): si alguien abre algo que no puede ver, aparece "Pedir acceso" con una nota. Al dueño o
+  responsable le llega a su bandeja; responde Leer, Editar o No, con caducidad opcional, y se avisa a quien lo pidió. Un
+  pedido sin respuesta caduca y queda constancia.
+- **Adjuntos del chat:** dejan de ir a `/Shared`. Van a la carpeta de la oficina de la conversación o a la carpeta
+  personal en un chat privado.
+
+### 5.2 Los agentes respetan a la persona
+
+**Acceso efectivo del agente = lo que el agente tiene permitido ∩ lo que puede la persona que le pide.**
+
+- El agente de una abogada no lee la carpeta privada de otra abogada aunque esté en su oficina.
+- Si un compañero usa mi agente compartido, el agente trabaja con **los permisos del compañero**, no con los míos.
+- Las tareas programadas o autónomas actúan en nombre de un **patrocinador** (el dueño del agente) con su techo.
+- En sitios compartidos (un canal de toda la empresa) el agente usa solo lo que pueden leer todos los presentes.
+- Se comprueba **en cada llamada a herramienta**, no solo al empezar la tarea, para que una instrucción escondida en un
+  documento no pueda saltárselo.
+- Un agente puede tener **menos** que la persona (por ejemplo, solo lectura aunque ella pueda editar), nunca más.
+- Si no puede ver algo, lo dice y ofrece "Pedir acceso" o "Preguntar a la oficina de Legal" (§7).
+
+### 5.3 Lo que sale de un archivo restringido
+
+Si un agente produce algo a partir de contenido restringido (un resumen de un contrato de Legal):
+
+- el resultado **hereda la restricción más fuerte** de sus fuentes y lleva la marca "derivado de: Legal / Contratos";
+- guardarlo o enviarlo a un sitio más visible necesita aprobación del dueño de la fuente;
+- las citas a contenido que el lector no puede ver aparecen como "fuente restringida", sin el texto.
+
+### 5.4 Auditoría
+
+Cada lectura de contenido restringido y cada escritura queda registrada con **qué agente, para qué persona y qué
+archivo**, incluidas las lecturas de texto y vistas previas (hoy solo se audita la descarga). El admin tiene una vista de
+"quién o qué agente tocó qué", un informe de lo compartido con mucha gente y un informe de accesos que caducan.
+
+---
+
+## 6. Alta y bienvenida
+
+1. **"¿Para quién es?"** con tres respuestas:
+   - **Solo para mí** → una oficina personal, sin pasos de equipo. Puede crecer después a equipo.
+   - **Para mi equipo** → una oficina con nombre ("Despacho", "Ventas"), invitar compañeros ahora o después.
+   - **Para mi empresa (varios equipos)** → elegir oficinas de una lista (las plantillas de industria ya crean
+     departamentos) o crearlas, y quién es responsable de cada una.
+2. **"¿A qué te dedicas?"** → profesión (abogacía, ventas, contabilidad, marketing, operaciones, RR. HH., dirección,
+   otra). Define los agentes sugeridos para su mesa y su oficina. **Los 7 agentes fijos para todos dejan de existir**:
+   cada oficina arranca con los de su trabajo.
+3. **Invitaciones con oficina y profesión:** "Invitar a Luis a Legal como miembro, abogado". Luis entra a su oficina con
+   sus agentes sugeridos y una bienvenida de su equipo, no la del dueño. Con un dominio verificado, quien se registra con
+   el correo de la empresa **entra a la empresa existente** (pidiendo entrar a una oficina) en vez de crear otra empresa
+   suelta (el error de Lindy).
+4. El recorrido guiado cambia según el caso: solo, miembro o responsable.
+
+---
+
+## 7. Colaborar entre oficinas
+
+- **Tocar la puerta** (como Sococo): en la oficina 3D o desde el directorio, para pedir algo a otra oficina. Abre
+  cualquier miembro presente; si no hay nadie, queda en la bandeja del responsable; caduca y deja constancia.
+- **Consulta a otra oficina** (por ejemplo, Ventas pregunta a Legal "¿este contrato tiene penalización?"):
+  - el pedido llega a la **cola de Legal** y el agente de Legal prepara la respuesta **con los permisos de Legal**;
+  - si la respuesta usa contenido que quien pregunta no puede ver, **una persona de Legal la aprueba** (o la edita)
+    antes de enviarla; si solo usa contenido visible para él, sale directa;
+  - todo queda en el hilo, con las fuentes marcadas.
+- **Encargos entre personas y agentes:** una tarea con su contexto (archivos, conversación), asignable a una persona o a
+  un agente de otra oficina, con plazo y estado, visible en la bandeja de quien la recibe. Las delegaciones entre agentes
+  que ya existen (consultar, traspasar, reasignar) se respetan, pero cruzar a otra oficina pasa a ser un encargo.
+- **Salas compartidas:** un proyecto o canal con personas y agentes de varias oficinas (el canal de proyecto que ya
+  existe gana carpeta y miembros). Cada uno ve lo que su permiso le deja.
+- **Conversaciones:** cada persona tiene **su propio hilo** con cada agente (privado por defecto) y puede **compartirlo**
+  con alguien o con la oficina. La sala de la oficina tiene su hilo común.
+
+---
+
+## 8. Oficina 3D
+
+- **Un edificio:** una recepción común y una sala por oficina (pisos o alas según el tamaño). Cada oficina tiene su
+  propio diseño en el editor (hoy hay uno por empresa) y sus propios estilos (`office-editor.md`).
+- Las oficinas privadas se ven con la puerta cerrada; las abiertas se pueden visitar mirando (sin tocar).
+- Cada persona tiene su mesa con sus agentes personales al lado.
+- Estados de presencia (disponible, concentrado, en reunión, fuera), que ya existen, más los automáticos por calendario.
+
+---
+
+## 9. Plan y costos
+
+- **Costo por persona:** el registro de costos gana la persona que pidió; informes por persona, oficina y agente; topes
+  por oficina (ya existen por departamento) y, en Max, por persona.
+- **Quién ve los costos:** cada persona los suyos; el responsable los de su oficina; el admin todos.
+- **Por plan** (propuesta):
+  - **Gratis:** una oficina (uso personal o equipo pequeño), los tres niveles de permiso.
+  - **Pro:** varias oficinas, agentes personales, compartir y pedir acceso, tocar la puerta, encargos entre oficinas.
+  - **Max:** oficinas privadas ocultas, caducidad de accesos, aprobación para publicar agentes al directorio, reglas de
+    aprobación por agente y acción, topes por persona, exportar la auditoría.
+
+---
+
+## 10. Decisiones del dueño
+
+1. **Oficina = departamento** (un solo concepto, reutilizando lo que existe). Recomendado.
+2. **Oficina abierta por defecto** (las empresas pequeñas colaboran más así; privada a un clic). Recomendado.
+3. **Topes de agentes por plan** (hoy 20 por empresa en todos los planes). Propuesta: contar por empresa y subir el tope
+   en Pro y Max. Las cifras las decide el dueño.
+4. **Consultas entre oficinas aprobadas por una persona** cuando la respuesta usa contenido que quien pregunta no puede
+   ver. Recomendado.
+5. **Chats con agentes privados por persona por defecto** (se pueden compartir). Recomendado: es lo que hacen ChatGPT,
+   Claude y Copilot, y hoy todo el mundo ve las conversaciones de todos.
+
+---
+
+## 11. Fases
+
+Tamaños: S (días), M (1-2 semanas), L (varias semanas).
+
+| Fase | Qué | Tamaño | Qué se nota |
+|---|---|---|---|
+| **E0. Saber quién es quién** (**implementada** 2026-11-02, ver `chat-history.md` sección E0) | Autor en cada mensaje; hilo propio por persona y agente; leído/no leído por persona; push y avisos a la persona; "mis aprobaciones"; persona en el registro de costos | M | Cada uno ve sus conversaciones; se sabe quién pidió qué. Es la deuda más grande y lo que todo lo demás necesita |
+| **E1. Alta y agentes por rol** | "¿Para quién es?", profesión, agentes sugeridos por rol, invitaciones con oficina y profesión, entrar por dominio a la empresa existente | S-M | La abogada no ve un agente de ventas; los invitados llegan a su equipo |
+| **E2. Oficinas** | Departamento → oficina (miembros, responsable, abierta/privada), dueño y visibilidad de agentes, directorio, oficina "General" para las empresas existentes, diseño 3D por oficina, memoria de oficina y personal | L | Cada equipo tiene su espacio, sus agentes y su memoria |
+| **E3. Permisos de archivos** | Tres niveles con herencia, carpetas personal y de oficina, carpeta restringida, compartir con caducidad, pedir acceso, acceso efectivo = agente ∩ persona en cada herramienta, marca de derivado, adjuntos fuera de `/Shared`, pantalla de permisos, auditoría de lecturas | L | Leer, editar o nada por carpeta y archivo, y los agentes lo respetan |
+| **E4. Colaborar entre oficinas** | Tocar la puerta, consulta a otra oficina con aprobación, encargos a personas o agentes, bandeja personal, compartir conversaciones, salas de proyecto con miembros | M | Ventas le pide a Legal sin ver lo que no debe |
+| **E5. Gobierno** | Aprobaciones al responsable de la oficina (por fin se usa `approver_id`), reglas por agente y acción, topes y costos por persona, panel de agentes, controles de Max | M | Cada responsable gobierna su oficina; el admin ve el conjunto |
+
+Orden recomendado: **E0 → E1 → E2 → E3 → E4 → E5**. E0 y E1 se notan enseguida y no rompen nada. E3 va de la mano de la
+fase 4 de `archivos-agentes.md` (fuentes): las dos tocan permisos de carpetas y se deben diseñar juntas.
+
+## Fuentes
+
+Dust (access controls, agents management, pods, pricing), Microsoft (compartir agentes en Copilot, buenas prácticas de
+SharePoint para Copilot, Restricted Content Discovery, plan contra sobre-compartir), Google (compartir agentes en Gemini
+Enterprise, roles de Drive, pedidos de acceso, accesos que caducan), Glean (permisos de agentes, biblioteca), Notion
+(permisos de agentes personalizados, teamspaces), OpenAI (Business FAQ, proyectos, workspace agents), Claude
+(visibilidad de proyectos), Lindy, Relevance, Sintra, Marblism, ClickUp, CrewAI, Devin, Gather, Kumospace, Sococo
+(tocar la puerta), Box y Dropbox (roles de carpetas), encuesta de OutSystems 2026 sobre proliferación de agentes.
+Detalle y enlaces en el informe de investigación del 2026-11-02; algunos precios de terceros sin verificar.
