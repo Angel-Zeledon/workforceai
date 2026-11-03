@@ -148,10 +148,10 @@ function DailyGoalChip() {
     <span data-testid="daily-goal" data-done={g.done ? "1" : "0"} title={`${t("daily.title")}: ${t(`daily.goal.${g.id}`)}. ${t("daily.tip")}`}
       className={`hidden h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[11.5px] font-semibold md:flex ${g.done ? "border-ok/40 bg-ok/10 text-ok" : "border-amber-300 bg-amber-100/70 text-amber-800"}`}>
       <Icon name={g.done ? "check" : "bag"} size={12} />
-      <span className="max-w-[170px] truncate">{t(`daily.goal.${g.id}`)}</span>
+      <span className="hidden max-w-[170px] truncate 2xl:inline">{t(`daily.goal.${g.id}`)}</span>
       <span className="font-mono">{g.done ? t("daily.done") : `${shown}/${g.target}`}</span>
-      {!g.done && <span className="relative h-1 w-8 overflow-hidden rounded-full bg-black/10" aria-hidden><span className="absolute inset-y-0 left-0 bg-amber-500" style={{ width: `${pct}%` }} /></span>}
-      {!g.done && <span className="font-mono">{t("daily.reward", { coins: g.reward })}</span>}
+      {!g.done && <span className="relative hidden h-1 w-8 overflow-hidden rounded-full bg-black/10 2xl:block" aria-hidden><span className="absolute inset-y-0 left-0 bg-amber-500" style={{ width: `${pct}%` }} /></span>}
+      {!g.done && <span className="hidden font-mono 2xl:inline">{t("daily.reward", { coins: g.reward })}</span>}
     </span>
   );
 }

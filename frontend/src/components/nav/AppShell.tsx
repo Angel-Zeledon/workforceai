@@ -135,7 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             {modeToggle && (
               <button type="button" data-tour="shell.mode" data-testid="mode-toggle" data-mode={section === "dashboard" ? "dashboard" : "office"} onClick={() => router.push(section === "dashboard" ? "/" : "/dashboard")} title={t("mode.switchTitle")}
-                className="ml-1 hidden rounded-lg border border-line bg-panel2 p-0.5 text-xs font-medium sm:flex">
+                className="ml-1 hidden shrink-0 rounded-lg border border-line bg-panel2 p-0.5 text-xs font-medium sm:flex">
                 {(["office", "dashboard"] as const).map((m) => (
                   <span key={m} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition ${(section === "dashboard") === (m === "dashboard") ? "bg-panel text-ink shadow-pop ring-1 ring-line" : "text-mute hover:text-ink"}`}>
                     <Icon name={m === "office" ? "office" : "grid"} size={14} />
@@ -147,7 +147,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex shrink-0 items-center gap-x-2 text-[11px] text-mute sm:gap-x-3">
             {metrics && (
-              <div data-tour="shell.metrics" className="hidden items-center gap-3 border-r border-line pr-3 sm:flex sm:gap-4 sm:pr-4">
+              <div data-tour="shell.metrics" className="hidden items-center gap-3 border-r border-line pr-3 2xl:flex 2xl:gap-4 2xl:pr-4">
                 <span className="hidden 2xl:inline">{t("hud.active")} <b className="font-mono font-medium text-ink">{metrics.tasks_active}</b></span>
                 <span data-testid="hud-approvals">{t("hud.approvalsShort")} <b className={`font-mono font-medium ${metrics.approvals_pending ? "text-warn" : "text-ink"}`}>{metrics.approvals_pending}</b></span>
                 <span data-testid="hud-cost">{t("common.cost")} <b className="font-mono font-medium text-ink">{fmtUsd(metrics.cost_usd)}</b></span>

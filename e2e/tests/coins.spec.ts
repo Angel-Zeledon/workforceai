@@ -23,6 +23,8 @@ test("the $50,000 request earns coins; a purchase is equipped on an agent", asyn
   const ledger = await api.get<{ kind: string; ref_kind: string; agent_id: string; amount: number }[]>("/rewards/ledger?limit=50");
   expect(ledger.filter((e) => e.kind === "earn" && e.ref_kind === "task").length).toBeGreaterThanOrEqual(3);
 
+  // the cost and approvals in the top bar show from 1536 px (narrower screens keep the bar compact)
+  await page.setViewportSize({ width: 1536, height: 864 });
   await page.goto("/");
   await expect(page.getByTestId("hud-coins")).toHaveAttribute("data-balance", String(wallet.balance));
   await expect(page.getByTestId("hud-cost")).toBeVisible(); // the dollar cost stays, separate from coins
