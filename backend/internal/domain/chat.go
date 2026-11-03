@@ -1,5 +1,7 @@
 package domain
 
+import "strings"
+
 // Chat layer (docs/architecture/chat-routing.md): conversation ids, message
 // kinds, intents and the additive WebSocket events.
 
@@ -13,6 +15,47 @@ const (
 
 // ChatAgentConv is the conversation id of the 1:1 chat with an agent.
 func ChatAgentConv(agentID string) string { return ChatAgentPrefix + agentID }
+
+// ChatOwnerSep separates the agent and the person in the STORED id of a private 1:1 thread
+// (E0, docs/architecture/chat-history.md): each person has their own thread with each agent, stored as
+// "agent:<agent>@<user>". The API and the WebSocket keep speaking "agent:<agent>" (the caller's own thread);
+// the stored id never leaves the backend. "agent:<agent>" without owner is the history written before
+// private threads existed: shared and read-only.
+const ChatOwnerSep = "@"
+
+// ChatPrivateConv is the stored id of the private thread of owner with agentID ("agent:<agent>" when
+// owner is empty: no identity, e.g. a deployment without authentication).
+func ChatPrivateConv(agentID, owner string) string {
+	if owner == "" {
+		return ChatAgentConv(agentID)
+	}
+	return ChatAgentPrefix + agentID + ChatOwnerSep + owner
+}
+
+// ChatConvOwner is the person a stored chat conversation belongs to ("" = shared).
+func ChatConvOwner(id string) string {
+	rest, ok := strings.CutPrefix(id, ChatAgentPrefix)
+	if !ok {
+		return ""
+	}
+	if i := strings.Index(rest, ChatOwnerSep); i >= 0 {
+		return rest[i+len(ChatOwnerSep):]
+	}
+	return ""
+}
+
+// PublicChatConv is the id the API shows for a stored conversation id: the owner is dropped
+// ("agent:<agent>@<user>" -> "agent:<agent>"); any other id is unchanged.
+func PublicChatConv(id string) string {
+	rest, ok := strings.CutPrefix(id, ChatAgentPrefix)
+	if !ok {
+		return id
+	}
+	if i := strings.Index(rest, ChatOwnerSep); i >= 0 {
+		return ChatAgentPrefix + rest[:i]
+	}
+	return id
+}
 
 // Message kinds used by the chat layer (the others are chat|delegation|consult|answer).
 const (

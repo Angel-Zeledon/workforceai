@@ -49,6 +49,14 @@ func (s *server) governanceHandler() *governance.Handler {
 			WithOrg: func(ctx context.Context, org, actor string) context.Context {
 				return application.WithActor(application.WithOrg(ctx, org), actor)
 			},
+			SeesAllPeople: func(r *http.Request) bool {
+				if !s.AuthEnabled {
+					return true
+				}
+				p, ok := auth.PrincipalFrom(r.Context())
+				return ok && p.Role.Rank() >= auth.RoleAdmin.Rank()
+			},
+			Person: func(r *http.Request) string { return application.PersonFrom(r.Context()) },
 		},
 		Policies: func(ctx context.Context, org string) (map[string]any, error) {
 			out := map[string]any{}

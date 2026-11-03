@@ -242,6 +242,13 @@ type Message struct {
 	// Files are the drive files this message refers to: what an agent produced
 	// during the task, or what the user attached. References only, never content.
 	Files []FileRef `json:"files,omitempty"`
+	// E0 (docs/architecture/chat-history.md): the person who wrote a user message (id and display name at the
+	// time of writing). Empty for agents, the system and the history written before authors were recorded.
+	AuthorID   string `json:"author_id,omitempty"`
+	AuthorName string `json:"author_name,omitempty"`
+	// SharedLegacy marks, when a person reads an agent chat, the messages of the 1:1 history written before
+	// private threads existed: shared by the whole organization, read-only. Computed on read, never stored.
+	SharedLegacy bool `json:"shared_legacy,omitempty"`
 }
 
 type Conversation struct {
@@ -396,6 +403,8 @@ const (
 	EvRequestReceived  = "request.received"
 	EvAgentCreated     = "agent.created"
 	EvRequestCompleted = "request.completed"
+	// EvRequestFailed (E0, additive): a request ended in failure; requested_by says who asked for it (push).
+	EvRequestFailed = "request.failed"
 	// EvRequestResumed: a request interrupted by a restart continues (additive, A1).
 	EvRequestResumed = "request.resumed"
 	// EvRequestQueued / EvRequestDequeued: a runtime call of the request waits

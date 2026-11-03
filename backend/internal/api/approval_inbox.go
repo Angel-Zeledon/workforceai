@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"aiworkforce/backend/internal/application"
+	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 )
 
@@ -35,6 +36,20 @@ func (s *server) getApprovalInbox(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	in := application.InboxInput{Pending: pending, History: history, Tasks: tasks, Now: time.Now().UTC()}
+	// E0 "my approvals": ?mine=requested (the ones I asked for) or ?mine=decidable (the ones I can decide)
+	switch mine := r.URL.Query().Get("mine"); mine {
+	case "", application.InboxMineRequested, application.InboxMineDecidable:
+		in.Mine = mine
+	default:
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "mine must be requested or decidable"})
+		return
+	}
+	if p, ok := auth.PrincipalFrom(ctx); ok {
+		in.Viewer, in.ViewerRole, in.ViewerCanDecide = p.UserID, string(p.Role), p.Can(auth.PermApprovalsDecide)
+	} else if !s.AuthEnabled {
+		// the demo without accounts acts as its owner: everything is decidable, nothing was "asked by me"
+		in.Viewer, in.ViewerRole, in.ViewerCanDecide = "demo", string(auth.RoleOwner), true
+	}
 	if s.Projects != nil {
 		in.ProjectOf = func(requestID string) string { return s.Projects.ProjectIDForRequest(ctx, org, requestID) }
 		var names map[string]string

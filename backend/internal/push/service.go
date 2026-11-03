@@ -182,7 +182,8 @@ func (s *Service) Unsubscribe(ctx context.Context, orgID, userID, endpoint strin
 // never details, arguments, recipients or message content.
 type Message struct {
 	Type       string `json:"type"`
-	ApprovalID string `json:"approval_id"`
+	ApprovalID string `json:"approval_id,omitempty"`
+	RequestID  string `json:"request_id,omitempty"`
 	Title      string `json:"title"`
 	Risk       string `json:"risk"`
 	URL        string `json:"url"`
@@ -203,11 +204,37 @@ func FromApproval(a domain.Approval) Message {
 
 // Notify sends m to every subscription of the organization. Endpoints the push
 // service reports as gone (404/410) are deleted.
-func (s *Service) Notify(ctx context.Context, orgID string, m Message) {
-	subs, err := s.store.ListPushSubscriptions(ctx, orgID)
+func (s *Service) Notify(ctx context.Context, orgID string, m Message) { s.notify(ctx, orgID, m, nil) }
+
+// NotifyUsers sends m only to the subscriptions of these people (E0: a notice goes to the person it is for).
+// An empty list sends nothing.
+func (s *Service) NotifyUsers(ctx context.Context, orgID string, m Message, users []string) {
+	if len(users) == 0 {
+		return
+	}
+	allow := make(map[string]bool, len(users))
+	for _, u := range users {
+		if u != "" {
+			allow[u] = true
+		}
+	}
+	s.notify(ctx, orgID, m, allow)
+}
+
+func (s *Service) notify(ctx context.Context, orgID string, m Message, allow map[string]bool) {
+	all, err := s.store.ListPushSubscriptions(ctx, orgID)
 	if err != nil {
 		s.cfg.Log.Warn("push: list subscriptions", "org", orgID, "err", err)
 		return
+	}
+	subs := all
+	if allow != nil {
+		subs = nil
+		for _, sub := range all {
+			if allow[sub.UserID] {
+				subs = append(subs, sub)
+			}
+		}
 	}
 	body, _ := json.Marshal(m)
 	var wg sync.WaitGroup
@@ -273,28 +300,98 @@ type Publisher interface {
 	Publish(ctx context.Context, e domain.Event) error
 }
 
+// Member is one person of an organization and their role (owner|admin|member|viewer).
+type Member struct {
+	UserID string
+	Role   string
+}
+
+// Recipients says who a push is for (E0, docs/architecture/equipos-oficinas.md). It is filled once the
+// identity store exists (cmd/server); with no Members (a deployment without authentication) every
+// subscription of the organization is notified, as before.
+type Recipients struct {
+	// Members lists the people of an organization with their roles.
+	Members func(ctx context.Context, org string) ([]Member, error)
+	// CanDecide reports whether a person may decide an approval now (role, no self-approval, double approval).
+	CanDecide func(ap domain.Approval, userID, role string) bool
+}
+
+// approvers are the people who may decide ap (scoped=false: no identity store, notify everyone).
+func (r *Recipients) approvers(ctx context.Context, org string, ap domain.Approval) (users []string, scoped bool) {
+	if r == nil || r.Members == nil || r.CanDecide == nil {
+		return nil, false
+	}
+	ms, err := r.Members(ctx, org)
+	if err != nil {
+		return nil, true // fail closed: nobody rather than everybody
+	}
+	for _, m := range ms {
+		if r.CanDecide(ap, m.UserID, m.Role) {
+			users = append(users, m.UserID)
+		}
+	}
+	return users, true
+}
+
 // Notifier decorates the event publisher: every event goes through unchanged,
 // and approval.requested also triggers a push in the background. Pushes only
 // notify; deciding still needs an authenticated human through the API.
+//
+// E0: an approval is pushed to the people who can decide it; the result of a request (request.completed,
+// request.failed) to the person who asked for it, and to nobody when no person asked (scheduled work).
 type Notifier struct {
 	Inner Publisher
 	Svc   *Service
+	Who   *Recipients // optional
 }
 
 func (n Notifier) Publish(ctx context.Context, e domain.Event) error {
 	err := n.Inner.Publish(ctx, e)
-	if n.Svc != nil && (e.Type == domain.EvApprovalRequest || e.Type == domain.EvApprovalReminder) {
+	if n.Svc == nil {
+		return err
+	}
+	switch e.Type {
+	case domain.EvApprovalRequest, domain.EvApprovalReminder:
 		if ap, ok := approvalOf(e.Payload); ok {
 			go func() {
 				c, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 				defer cancel()
 				m := FromApproval(ap)
 				m.Type = e.Type
+				if users, scoped := n.Who.approvers(c, e.OrgID, ap); scoped {
+					n.Svc.NotifyUsers(c, e.OrgID, m, users)
+					return
+				}
 				n.Svc.Notify(c, e.OrgID, m)
 			}()
 		}
+	case domain.EvRequestCompleted, domain.EvRequestFailed:
+		id, by := requestOf(e.Payload)
+		if id == "" || by == "" {
+			return err
+		}
+		go func() {
+			c, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+			defer cancel()
+			n.Svc.NotifyUsers(c, e.OrgID, FromRequest(e.Type, id), []string{by})
+		}()
 	}
 	return err
+}
+
+// FromRequest is the notification of a finished request: no title nor content (the lock screen may be
+// seen by anyone), the service worker shows a localized "your request is ready / failed" line.
+func FromRequest(typ, requestID string) Message {
+	return Message{Type: typ, RequestID: requestID, URL: "/chats"} // the result is in the chat that asked for it
+}
+
+func requestOf(payload any) (id, by string) {
+	switch p := payload.(type) {
+	case map[string]any:
+		id, _ = p["request_id"].(string)
+		by, _ = p["requested_by"].(string)
+	}
+	return id, by
 }
 
 func approvalOf(payload any) (domain.Approval, bool) {

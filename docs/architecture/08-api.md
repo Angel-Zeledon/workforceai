@@ -604,11 +604,11 @@ Contrato completo y reglas en [chat-routing.md](chat-routing.md). Resumen:
 
 `{"conversation": "office" | "agent:<id>", "text": "..."}` -> `202 {"message_id", "turn_id"}`. Permiso `conversations:write`. Guarda el mensaje, enruta (`POST /v1/route` del runtime, con respaldo a reglas locales) y responde por WebSocket (`chat.message`, `chat.typing`, `route.decided`). `smalltalk` y `question` no crean solicitud, plan ni tareas; `task` sigue el flujo existente (plan, aprobación humana). `400` texto vacío / conversación inválida, `404` agente desconocido.
 
-Opcional `"attachments": ["/Shared/Chat/x1/saldos.csv", ...]` (máx. 6 rutas de archivos ya subidos al drive, ver §19): el mensaje guardado conserva el texto del usuario y gana `files` con una referencia por archivo que existe (`action: "attach"`); a los agentes les llega, tras el texto y entre `[attachments]...[/attachments]`, la lista de rutas para que las lean con `fs.read` (datos, nunca instrucciones). Las rutas que no resuelven se ignoran.
+Opcional `"attachments": ["/Shared/Chat/x1/saldos.csv", ...]` (máx. 10 rutas; con más responde `400` "too many attachments", nunca recorta en silencio de archivos ya subidos al drive, ver §19): el mensaje guardado conserva el texto del usuario y gana `files` con una referencia por archivo que existe (`action: "attach"`); a los agentes les llega, tras el texto y entre `[attachments]...[/attachments]`, la lista de rutas para que las lean con `fs.read` (datos, nunca instrucciones). Las rutas que no resuelven se ignoran.
 
 ### 15.2 `GET /conversations/{id}/messages`
 
-Sin parámetros devuelve todo (como antes). `?limit=N` (máx. 200) devuelve los N más recientes; `?before=<message_id>` los N anteriores. Cuerpo = array; headers `X-Has-More` y `X-Next-Before`. Los ids `office` y `agent:<id>` son conversaciones por organización creadas al primer mensaje (lista vacía si aún no hay).
+Sin parámetros devuelve todo (como antes). `?limit=N` (máx. 200) devuelve los N más recientes; `?before=<message_id>` los N anteriores. Cuerpo = array; headers `X-Has-More` y `X-Next-Before`. `office` es común a la organización; desde E0, `agent:<id>` es **el hilo privado de quien llama** con ese agente más el historial anterior compartido (`shared_legacy: true`, solo lectura); nadie más lo lee, tampoco un admin ([chat-history.md](chat-history.md), sección E0). Lista vacía si aún no hay mensajes. Los mensajes de personas traen `author_id` y `author_name`.
 
 Cada mensaje puede traer `files: [{file_id, path, name, mime, size, version, action}]` (solo referencias, nunca contenido): `action: "write"` = lo que un agente escribió durante una tarea de esa conversación (el agente publica «Terminé X. Dejé estos archivos:» al completar la tarea, solo si escribió algo), `"attach"` = adjunto del usuario.
 
@@ -753,6 +753,14 @@ Solo notifican: la notificación lleva **título, riesgo e id de la aprobación*
 | `GET /push/config` | `approvals:read` | `{enabled, public_key?}` (clave pública VAPID para `applicationServerKey`) |
 | `POST /push/subscriptions` `{endpoint, keys:{p256dh, auth}}` | `approvals:read` | `201 {id, created_at}`; el `endpoint` no se devuelve. Endpoint no `https`, IP, puerto distinto de 443 o fuera de la lista de servicios push -> `400`. Repetir el mismo endpoint lo actualiza |
 | `DELETE /push/subscriptions` `{endpoint}` | `approvals:read` | `204`; solo borra suscripciones propias (misma organización y usuario) |
+
+**A quién (E0).** Una aprobación (`approval.requested`, recordatorios) llega solo a las suscripciones de las personas que
+**pueden decidirla** (permiso `approvals:decide`, rol mínimo, sin autoaprobación, otra persona en la doble aprobación);
+el resultado de una solicitud (`request.completed`, nuevo `request.failed`) solo a **quien la pidió**
+(`requested_by` en el evento), con un aviso sin título ni contenido ("Tu solicitud está lista / no se pudo completar")
+que abre `/chats`; una solicitud que no pidió nadie (programada) no avisa a nadie. Sin autenticación no hay personas y
+la aprobación llega a todas las suscripciones, como antes. Los avisos por correo/Slack/Teams (`notify`, `slackapp`)
+siguen yendo a los destinatarios y canales que configuró un admin.
 
 Auditoría (`entity:"push_subscription"`): `push.subscribed` y `push.unsubscribed`, sin endpoint ni claves. Tabla `push_subscriptions` (migración 330) con RLS por organización; las suscripciones que el servicio push declara caducadas (`404/410`) se eliminan solas.
 
@@ -1021,7 +1029,7 @@ Una bandeja de todos los proyectos para decidir rápido. Solo lectura: decidir s
 
 | Método | Ruta | Permiso | Notas |
 |---|---|---|---|
-| GET | `/approvals/inbox` | `approvals:read` | `{generated_at, items: [Approval + {task_title?, request_id?, task_cost_usd, project_id?, project_name?, group_key?, counterargument?: {summary, risks[≤3]}, high_risk}], groups: [{key, project_id, project_name?, action, count, approval_ids[], batchable, reason?: "risk"}], suggestions: [{kind: "raise_notify_threshold", action, decided, approved, rate, window_days, max_risk}], rules: {suggest_window_days: 30, suggest_min_decisions: 20, suggest_rate: 0.95, undo: "client_side"}}`. Items: riesgo más alto primero, luego más antiguo. Grupo `batchable` = 2 o más pendientes de una acción en un proyecto, todas de riesgo bajo. Sugerencia: más del 95 % aprobadas con al menos 20 decisiones humanas en 30 días y nunca riesgo alto; es solo informativa |
+| GET | `/approvals/inbox?mine=requested\|decidable` | `approvals:read` | E0: `mine` filtra "las que pedí yo" / "las que puedo decidir"; la respuesta gana `mine`, `counts: {all, requested, decidable}` y por item `requested_by_me`, `can_decide`. `{generated_at, items: [Approval + {task_title?, request_id?, task_cost_usd, project_id?, project_name?, group_key?, counterargument?: {summary, risks[≤3]}, high_risk}], groups: [{key, project_id, project_name?, action, count, approval_ids[], batchable, reason?: "risk"}], suggestions: [{kind: "raise_notify_threshold", action, decided, approved, rate, window_days, max_risk}], rules: {suggest_window_days: 30, suggest_min_decisions: 20, suggest_rate: 0.95, undo: "client_side"}}`. Items: riesgo más alto primero, luego más antiguo. Grupo `batchable` = 2 o más pendientes de una acción en un proyecto, todas de riesgo bajo. Sugerencia: más del 95 % aprobadas con al menos 20 decisiones humanas en 30 días y nunca riesgo alto; es solo informativa |
 
 ## 35. Slack de doble vía para personas (A6)
 

@@ -6,11 +6,16 @@ export interface InboxCounter { summary: string; risks: string[] }
 export interface InboxItem extends Approval {
   task_title?: string; request_id?: string; task_cost_usd: number; project_name?: string; group_key?: string;
   counterargument?: InboxCounter | null; high_risk: boolean;
+  /** E0 "my approvals": the reader asked for it / may decide it now (absent on older servers) */
+  requested_by_me?: boolean; can_decide?: boolean;
 }
+/** E0 filters of the inbox: everything, the ones I asked for, the ones I can decide. */
+export type InboxMine = "" | "requested" | "decidable";
+export interface InboxCounts { all: number; requested: number; decidable: number }
 export interface InboxGroup { key: string; project_id: string; project_name?: string; action: string; count: number; approval_ids: string[]; batchable: boolean; reason?: string }
 export interface InboxSuggestion { kind: "raise_notify_threshold"; action: string; decided: number; approved: number; rate: number; window_days: number; max_risk: string }
 export interface InboxRules { suggest_window_days: number; suggest_min_decisions: number; suggest_rate: number; undo: "client_side" }
-export interface ApprovalInbox { generated_at: string; items: InboxItem[]; groups: InboxGroup[]; suggestions: InboxSuggestion[]; rules: InboxRules }
+export interface ApprovalInbox { generated_at: string; items: InboxItem[]; groups: InboxGroup[]; suggestions: InboxSuggestion[]; rules: InboxRules; mine?: InboxMine; counts?: InboxCounts }
 
 export type Command = "approve" | "reject" | "next" | "prev" | "expand";
 

@@ -14,7 +14,8 @@ import { useFileViewer } from "@/lib/fileView";
 import { useProjects } from "@/lib/projects/store";
 import { fmtTime } from "@/lib/meta";
 import type { ChatMessage } from "@/lib/types";
-import { Avatar, Bubble, ChatInput, sendChat } from "../chat/ChatThread";
+import { Avatar, Bubble, ChatInput, LegacyDivider, legacyEdge, sendChat } from "../chat/ChatThread";
+import { useSession } from "@/lib/session";
 import { FileViewerPanel } from "../files/FileViewerPanel";
 import { ReportView } from "../ReportView";
 import { Icon } from "../icons";
@@ -293,6 +294,7 @@ function Messages({ sel, onOpenReport, onOpenConv, empty }: { sel: Sel; onOpenRe
   const prevHeight = useRef(0);
   const key = sel.kind === "thread" ? sel.key : `conv:${sel.id}`;
   const turns = useMemo(() => turnAgents(msgs as ThreadMsg[]), [msgs]);
+  const me = useSession((s) => s.user?.id);
 
   // keep the reader where they were when older messages are prepended; stay at the bottom for new ones
   useLayoutEffect(() => {
@@ -342,8 +344,9 @@ function Messages({ sel, onOpenReport, onOpenConv, empty }: { sel: Sel; onOpenRe
         </div>
       )}
       {msgs.length === 0 && empty}
-      {rows.map(({ m, sep, grouped }) => {
-        const mine = m.from === "user";
+      {rows.map(({ m, sep, grouped }, i) => {
+        const mine = m.from === "user" && !m.shared_legacy && !(m.author_id && me && m.author_id !== me);
+        const edge = legacyEdge(msgs, i);
         const badges = agentBadges(m as ThreadMsg, turns);
         return (
           <div key={m.id}>
@@ -352,6 +355,8 @@ function Messages({ sel, onOpenReport, onOpenConv, empty }: { sel: Sel; onOpenRe
                 <span className="h-px flex-1 bg-line" /><span>{dayLabel(sep, t)}</span><span className="h-px flex-1 bg-line" />
               </div>
             )}
+            {/* General mixes the office with every 1:1 chat: only the start of the earlier shared history is marked there */}
+            {(edge === "start" || (edge === "end" && sel.kind === "thread" && sel.key !== GENERAL)) && <LegacyDivider start={edge === "start"} />}
             <div className="chats-in" data-testid="chats-msg" data-id={m.id} data-from={m.from} data-conv={m.conversation} data-badges={badges.join(",")}>
               <Bubble m={m} grouped={grouped} showRoute />
               {mine && !(m.turn_id && routes[m.turn_id]) && <div className="pr-1"><RoutedTo ids={badges} /></div>}

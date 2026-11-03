@@ -62,6 +62,9 @@ type UsageEntry struct {
 	// per-tool breakdown splits the call cost among them.
 	Tools []string  `json:"tools"`
 	TS    time.Time `json:"ts"`
+	// UserID (E0) is the person whose message or request started the call ("" = nobody: scheduled work, the
+	// system, entries written before persons were recorded).
+	UserID string `json:"user_id,omitempty"`
 }
 
 // BudgetCap is a hard cap: scope "agent" (per-period) or "request".

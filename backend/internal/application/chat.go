@@ -46,10 +46,12 @@ type RouteAgent struct {
 	Skills []string `json:"skills,omitempty"`
 }
 
-// ChatHistoryItem is one earlier message; From is "user" or an agent id.
+// ChatHistoryItem is one earlier message; From is "user" or an agent id. Name (E0, optional) is the display
+// name of the person who wrote a user message, so an agent in the shared office knows who said what.
 type ChatHistoryItem struct {
 	From string `json:"from"`
 	Text string `json:"text"`
+	Name string `json:"name,omitempty"`
 }
 
 type RouteRequest struct {
@@ -114,6 +116,9 @@ type ChatReplyRequest struct {
 	Handoff       bool              `json:"handoff,omitempty"` // the user accepted a redirect
 	Locale        string            `json:"locale,omitempty"`
 	Tone          string            `json:"tone,omitempty"`
+	// SpeakerName (E0, optional) is the display name of the person who wrote the message, so the agent can
+	// answer them by name. Data, never instructions (the runtime treats it like the history).
+	SpeakerName string `json:"speaker_name,omitempty"`
 }
 
 // ChatReplyConsult asks the backend to show a visible consult message and to
@@ -155,16 +160,21 @@ type ChatTurn struct {
 
 // chatTurn is the in-memory state of one turn.
 type chatTurn struct {
-	conv, id, text, userMsgID string
-	userTS                    time.Time // when the user's message was stamped; replies sort after it
-	loc                       string
-	style                     RunStyle
-	agents                    []domain.Agent
-	byID                      map[string]domain.Agent
-	direct                    string // agent id of a 1:1 chat, "" for the office
-	history                   []ChatHistoryItem
-	noticed                   bool // a blocking notice (pause, budget) was already posted
-	handoff                   *handoff
+	// conv is the STORED conversation id (the caller's private "agent:<a>@<user>" for a 1:1 chat), pub the id
+	// the API, the WebSocket and the runtime see ("office" or "agent:<a>"), owner the person of a private
+	// thread ("" = shared: the office, or no identity).
+	conv, pub, owner    string
+	author, authorName  string // the person who wrote the message ("" without identity)
+	id, text, userMsgID string
+	userTS              time.Time // when the user's message was stamped; replies sort after it
+	loc                 string
+	style               RunStyle
+	agents              []domain.Agent
+	byID                map[string]domain.Agent
+	direct              string // agent id of a 1:1 chat, "" for the office
+	history             []ChatHistoryItem
+	noticed             bool // a blocking notice (pause, budget) was already posted
+	handoff             *handoff
 }
 
 // handoff is a redirect the user may accept ("yes, pass it on"): the colleague
@@ -308,7 +318,7 @@ func (o *Orchestrator) PostChatKeyed(ctx context.Context, conversation, text, ke
 	if len(key) > 128 {
 		return ChatTurn{}, false, fmt.Errorf("%w: idempotency key is too long (max 128 characters)", domain.ErrInvalid)
 	}
-	full := o.org(ctx) + "|" + strings.TrimSpace(conversation) + "|" + key
+	full := o.org(ctx) + "|" + PersonFrom(ctx) + "|" + strings.TrimSpace(conversation) + "|" + key
 	o.chatIdem.mu.Lock()
 	defer o.chatIdem.mu.Unlock()
 	if t, ok := o.chatIdem.get(full); ok {
@@ -333,6 +343,13 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	if !IsChatConversation(conversation) || conversation == domain.ChatAgentPrefix {
 		return ChatTurn{}, fmt.Errorf("%w: conversation must be %q or %q", domain.ErrInvalid, domain.ChatOffice, domain.ChatAgentPrefix+"<agent id>")
 	}
+	stored, err := ResolveChatConv(ctx, conversation)
+	if err != nil {
+		return ChatTurn{}, err
+	}
+	if n := len(attachmentsFrom(ctx)); n > maxAttachments {
+		return ChatTurn{}, fmt.Errorf("%w: too many attachments (%d, max %d per message)", domain.ErrInvalid, n, maxAttachments)
+	}
 	org := o.org(ctx)
 	// B12: a message sent "for a customer" (the chat's customer picker, /cliente) scopes any request the turn
 	// creates. The customer is checked now, so a bad one is refused before anything is stored.
@@ -344,14 +361,15 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	if err != nil {
 		return ChatTurn{}, err
 	}
-	t := &chatTurn{conv: conversation, id: newID(), text: text, userMsgID: newID(), agents: agents,
+	t := &chatTurn{conv: stored, pub: domain.PublicChatConv(stored), owner: domain.ChatConvOwner(stored),
+		author: PersonFrom(ctx), authorName: ActorNameFrom(ctx), id: newID(), text: text, userMsgID: newID(), agents: agents,
 		byID: map[string]domain.Agent{}, style: o.loadStyle(ctx)}
 	t.loc = chatLocale(t.style)
 	for _, a := range agents {
 		t.byID[a.ID] = a
 	}
 	to := "all"
-	if id, ok := strings.CutPrefix(conversation, domain.ChatAgentPrefix); ok {
+	if id, ok := strings.CutPrefix(t.pub, domain.ChatAgentPrefix); ok {
 		if _, known := t.byID[id]; !known {
 			return ChatTurn{}, fmt.Errorf("%w: agent %q", domain.ErrNotFound, id)
 		}
@@ -361,12 +379,9 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 		return ChatTurn{}, err
 	}
 	t.userTS = time.Now().UTC()
-	m := domain.Message{ID: t.userMsgID, ConversationID: conversation, From: "user", To: to, Kind: domain.MsgChat, Text: text,
-		TS: t.userTS, TurnID: t.id}
+	m := domain.Message{ID: t.userMsgID, ConversationID: stored, From: "user", To: to, Kind: domain.MsgChat, Text: text,
+		TS: t.userTS, TurnID: t.id, AuthorID: t.author, AuthorName: t.authorName}
 	if att := attachmentsFrom(ctx); len(att) > 0 {
-		if len(att) > maxAttachments {
-			att = att[:maxAttachments]
-		}
 		// the agents get the paths (they read with fs.read); the stored message keeps the user's own text
 		m.Files = o.resolveFiles(ctx, att, "attach")
 		t.text += attachmentNote(t.loc, m.Files)
@@ -384,7 +399,7 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	rctx = WithCustomer(rctx, customer) // B12: a request born in this turn is linked to the customer before it exists
 	// Turns of one conversation run one after the other, in the order the messages arrived: answers never
 	// interleave between turns and a follow-up always sees what the previous turn said.
-	key := org + "|" + conversation
+	key := org + "|" + stored // the private thread of each person has its own queue
 	prev, done := o.chatQ.enqueue(key)
 	o.wg.Add(1)
 	go func() {
@@ -496,7 +511,11 @@ func (o *Orchestrator) chatHistory(ctx context.Context, t *chatTurn) []ChatHisto
 		if m.ID == t.userMsgID || (m.From == "user" && !mine.IsZero() && m.TS.After(mine)) {
 			continue
 		}
-		out = append(out, ChatHistoryItem{From: m.From, Text: truncate(m.Text, 400)})
+		item := ChatHistoryItem{From: m.From, Text: truncate(m.Text, 400)}
+		if m.From == "user" {
+			item.Name = m.AuthorName
+		}
+		out = append(out, item)
 	}
 	if len(out) > chatHistoryLimit {
 		out = out[len(out)-chatHistoryLimit:]
@@ -522,14 +541,15 @@ func (o *Orchestrator) runTurn(ctx context.Context, t *chatTurn) {
 	for _, r := range route.Responders {
 		ids = append(ids, r.AgentID)
 	}
-	payload := map[string]any{"turn_id": t.id, "conversation": t.conv, "intent": route.Intent, "topic": route.Topic,
+	payload := map[string]any{"turn_id": t.id, "conversation": t.pub, "intent": route.Intent, "topic": route.Topic,
 		"responders": route.Responders, "source": route.Source}
 	if route.Consult != nil {
 		payload["consult"] = route.Consult
 	}
-	o.rec.Emit(ctx, Action{Type: domain.EvRouteDecided, Entity: "conversation", EntityID: t.conv, Payload: payload, SkipAudit: true})
+	o.rec.Emit(ctx, Action{Type: domain.EvRouteDecided, Entity: "conversation", EntityID: t.pub, Payload: payload, SkipAudit: true,
+		Audience: chatAudience(t.conv)})
 	// Metadata only: never the text of the message.
-	o.rec.Audit(ctx, domain.AuditLog{Actor: ActorFrom(ctx, "user"), Action: "chat.turn", Entity: "conversation", EntityID: t.conv,
+	o.rec.Audit(ctx, domain.AuditLog{Actor: ActorFrom(ctx, "user"), Action: "chat.turn", Entity: "conversation", EntityID: t.pub,
 		Details: map[string]any{"turn_id": t.id, "intent": route.Intent, "topic": route.Topic, "responders": ids, "source": route.Source}})
 
 	if t.handoff != nil {
@@ -566,9 +586,9 @@ func (o *Orchestrator) runTurn(ctx context.Context, t *chatTurn) {
 func (o *Orchestrator) chatReplyRequest(t *chatTurn, agent domain.Agent, route RouteResponse, r RouteResponder, slot int, prior []ChatHistoryItem) ChatReplyRequest {
 	req := ChatReplyRequest{
 		Agent: chatAgent(agent, t.style.Locale),
-		Text:  t.text, Conversation: t.conv, Intent: route.Intent, Topic: route.Topic, ResponderRole: r.Role, Reason: r.Reason,
+		Text:  t.text, Conversation: t.pub, Intent: route.Intent, Topic: route.Topic, ResponderRole: r.Role, Reason: r.Reason,
 		Agents: o.routeAgents(t.agents, t.style.Locale), History: append([]ChatHistoryItem{}, t.history...), PriorReplies: append([]ChatHistoryItem{}, prior...), Slot: slot,
-		Locale: t.style.Locale, Tone: t.style.ToneFor(agent.ID),
+		Locale: t.style.Locale, Tone: t.style.ToneFor(agent.ID), SpeakerName: t.authorName,
 	}
 	if route.Consult != nil && r.Role == domain.RolePrimary {
 		req.ConsultTo = route.Consult.AgentID
@@ -581,7 +601,7 @@ func (o *Orchestrator) chatReplyRequest(t *chatTurn, agent domain.Agent, route R
 // decideRoute asks the runtime and falls back to the local rules on any
 // problem (runtime down, timeout, invalid answer). It never fails.
 func (o *Orchestrator) decideRoute(ctx context.Context, t *chatTurn) RouteResponse {
-	in := RouteRequest{Text: t.text, Conversation: t.conv, Agents: o.withRouteSkills(ctx, o.routeAgents(t.agents, t.style.Locale)), History: append([]ChatHistoryItem{}, t.history...),
+	in := RouteRequest{Text: t.text, Conversation: t.pub, Agents: o.withRouteSkills(ctx, o.routeAgents(t.agents, t.style.Locale)), History: append([]ChatHistoryItem{}, t.history...),
 		Locale: t.style.Locale, Tone: t.style.Tone}
 	if cr, ok := o.rt.(ChatRuntime); ok {
 		cctx, cancel := context.WithTimeout(ctx, o.chatTimeout())
@@ -809,7 +829,7 @@ func (o *Orchestrator) chatTask(ctx context.Context, t *chatTurn, route RouteRes
 	if res == speakSkipped && !o.chatAdmit(ctx, agent.ID).Allowed {
 		return // paused or kill switch: no work is created
 	}
-	link := &chatLink{conv: t.conv, turnID: t.id, replyTo: t.userMsgID, speaker: agent.ID, loc: t.loc}
+	link := &chatLink{conv: t.conv, turnID: t.id, replyTo: t.userMsgID, speaker: agent.ID, loc: t.loc, requester: t.author}
 	if route.Consult != nil && agent.Role != "assistant" {
 		link.reassignFrom, link.reassignTo = agent.ID, route.Consult.AgentID
 	}
@@ -974,8 +994,11 @@ func (o *Orchestrator) chatStore(ctx context.Context, m domain.Message, requestI
 	o.emitChat(ctx, m, requestID)
 }
 
+// emitChat publishes chat.message. The payload carries the PUBLIC conversation id; a message of a private
+// thread is addressed to its owner only (WebSocket audience, not kept in the shared event log) and never
+// becomes an activity item of the organization.
 func (o *Orchestrator) emitChat(ctx context.Context, m domain.Message, requestID string) {
-	payload := map[string]any{"id": m.ID, "conversation": m.ConversationID, "turn_id": m.TurnID, "from": m.From, "to": m.To,
+	payload := map[string]any{"id": m.ID, "conversation": domain.PublicChatConv(m.ConversationID), "turn_id": m.TurnID, "from": m.From, "to": m.To,
 		"kind": m.Kind, "text": m.Text, "reply_to": m.ReplyTo, "ts": m.TS}
 	if requestID != "" {
 		payload["request_id"] = requestID
@@ -983,25 +1006,42 @@ func (o *Orchestrator) emitChat(ctx context.Context, m domain.Message, requestID
 	if len(m.Files) > 0 {
 		payload["files"] = m.Files
 	}
-	act := Action{Type: domain.EvChatMessage, Entity: "message", EntityID: m.ID, Payload: payload, SkipAudit: true}
+	if m.AuthorID != "" {
+		payload["author_id"] = m.AuthorID
+	}
+	if m.AuthorName != "" {
+		payload["author_name"] = m.AuthorName
+	}
+	act := Action{Type: domain.EvChatMessage, Entity: "message", EntityID: m.ID, Payload: payload, SkipAudit: true,
+		Audience: chatAudience(m.ConversationID)}
 	if m.From != "user" && m.From != "system" {
 		act.AgentID = m.From
 	}
-	if m.Kind == domain.MsgConsult {
+	if m.Kind == domain.MsgConsult && len(act.Audience) == 0 {
 		act.Text = fmt.Sprintf("%s → %s: %s", m.From, m.To, truncate(m.Text, 100))
 	}
 	o.rec.Emit(ctx, act)
 }
 
+// chatAudience is who may receive the live events of a stored conversation: its owner for a private
+// thread, nil (the whole organization) for a shared one.
+func chatAudience(stored string) []string {
+	if owner := domain.ChatConvOwner(stored); owner != "" {
+		return []string{owner}
+	}
+	return nil
+}
+
 func (o *Orchestrator) emitTyping(ctx context.Context, t *chatTurn, agentID string, on bool) {
-	o.rec.Emit(ctx, Action{Type: domain.EvChatTyping, AgentID: agentID, SkipAudit: true,
-		Payload: map[string]any{"conversation": t.conv, "turn_id": t.id, "agent_id": agentID, "on": on}})
+	o.rec.Emit(ctx, Action{Type: domain.EvChatTyping, AgentID: agentID, SkipAudit: true, Audience: chatAudience(t.conv),
+		Payload: map[string]any{"conversation": t.pub, "turn_id": t.id, "agent_id": agentID, "on": on}})
 }
 
 // ---- link between a chat turn and the request it created ----
 
 type chatLink struct {
 	conv, turnID, replyTo, speaker, loc string
+	requester                           string // the person who asked in the chat ("" without identity)
 	// reassignFrom declined the work (outside their role): their tasks go to reassignTo.
 	reassignFrom, reassignTo string
 }
@@ -1104,26 +1144,14 @@ func cleanReason(s string) string {
 // A chat conversation that has no messages yet is simply empty.
 func (q *Queries) ChatMessages(ctx context.Context, id, beforeID string, limit int) ([]domain.Message, bool, error) {
 	org := q.org(ctx)
-	if IsChatConversation(id) {
-		if agent, ok := strings.CutPrefix(id, domain.ChatAgentPrefix); ok {
-			if agent == "" {
-				return nil, false, fmt.Errorf("%w: conversation %q", domain.ErrNotFound, id)
-			}
-			if _, err := q.Store.GetAgent(ctx, org, agent); err != nil {
-				return nil, false, err
-			}
-		}
-		if _, err := q.Store.GetConversation(ctx, org, id); err != nil {
-			if errors.Is(err, domain.ErrNotFound) {
-				return []domain.Message{}, false, nil
-			}
-			return nil, false, err
-		}
-	} else if _, err := q.Store.GetConversation(ctx, org, id); err != nil {
-		return nil, false, err
-	}
 	if limit > maxChatLimit {
 		limit = maxChatLimit
+	}
+	if IsChatConversation(id) {
+		return q.chatMessages(ctx, org, id, beforeID, limit)
+	}
+	if _, err := q.Store.GetConversation(ctx, org, id); err != nil {
+		return nil, false, err
 	}
 	if limit > 0 {
 		if p, ok := q.Store.(MessagePager); ok {
@@ -1135,6 +1163,83 @@ func (q *Queries) ChatMessages(ctx context.Context, id, beforeID string, limit i
 		return nil, false, err
 	}
 	return PageMessages(all, beforeID, limit)
+}
+
+// chatMessages is ChatMessages for "office" and "agent:<id>" (E0): the caller's private thread with the
+// agent plus, read-only and marked SharedLegacy, the 1:1 history written before private threads existed.
+// Every message carries the public conversation id; another person's thread is never reachable.
+func (q *Queries) chatMessages(ctx context.Context, org, id, beforeID string, limit int) ([]domain.Message, bool, error) {
+	stored, err := ResolveChatConv(ctx, id)
+	if err != nil {
+		return nil, false, err
+	}
+	pub := domain.PublicChatConv(stored)
+	if agent, ok := strings.CutPrefix(pub, domain.ChatAgentPrefix); ok {
+		if agent == "" {
+			return nil, false, fmt.Errorf("%w: conversation %q", domain.ErrNotFound, id)
+		}
+		if _, err := q.Store.GetAgent(ctx, org, agent); err != nil {
+			return nil, false, err
+		}
+	}
+	ids := []string{stored}
+	if pub != stored {
+		ids = append(ids, pub) // the earlier shared history of this agent chat
+	}
+	var have []string
+	for _, cid := range ids {
+		if _, err := q.Store.GetConversation(ctx, org, cid); err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				continue
+			}
+			return nil, false, err
+		}
+		have = append(have, cid)
+	}
+	if len(have) == 0 {
+		return []domain.Message{}, false, nil
+	}
+	var all []domain.Message
+	var more bool
+	if p, ok := q.Store.(MessagePager); ok && len(have) == 1 && limit > 0 {
+		all, more, err = p.ListMessagesPage(ctx, org, have[0], beforeID, limit)
+		if err != nil {
+			return nil, false, err
+		}
+	} else {
+		for _, cid := range have {
+			msgs, err := q.Store.ListMessages(ctx, org, cid)
+			if err != nil {
+				return nil, false, err
+			}
+			all = append(all, msgs...)
+		}
+		slices.SortStableFunc(all, func(a, b domain.Message) int {
+			if c := a.TS.Compare(b.TS); c != 0 {
+				return c
+			}
+			return strings.Compare(a.ID, b.ID)
+		})
+		if all, more, err = PageMessages(all, beforeID, limit); err != nil {
+			return nil, false, err
+		}
+	}
+	return PublicMessages(ctx, all), more, nil
+}
+
+// PublicMessages prepares stored chat messages for the person reading them: the public conversation id,
+// and SharedLegacy on the earlier shared 1:1 history (only when the reader has an identity: without one
+// that history is simply the chat).
+func PublicMessages(ctx context.Context, msgs []domain.Message) []domain.Message {
+	me := PersonFrom(ctx)
+	for i, m := range msgs {
+		pub := domain.PublicChatConv(m.ConversationID)
+		if me != "" && pub == m.ConversationID && strings.HasPrefix(m.ConversationID, domain.ChatAgentPrefix) {
+			msgs[i].SharedLegacy = true
+		}
+		msgs[i].ConversationID = pub
+	}
+	return msgs
 }
 
 // PageMessages slices an oldest-first list: the `limit` messages before
@@ -1156,4 +1261,21 @@ func PageMessages(all []domain.Message, beforeID string, limit int) ([]domain.Me
 		out = []domain.Message{}
 	}
 	return out, start > 0, nil
+}
+
+// ResolveChatConv maps the conversation id a client sends to the STORED id of the caller's view (E0):
+// "office" stays shared; "agent:<a>" is the caller's private thread with agent a ("agent:<a>@<user>"; the
+// shared "agent:<a>" when there is no identity); any other id (a request conversation) is unchanged. A
+// stored private id is only accepted from its owner: another person's thread is "not found".
+func ResolveChatConv(ctx context.Context, id string) (string, error) {
+	id = strings.TrimSpace(id)
+	if !strings.HasPrefix(id, domain.ChatAgentPrefix) {
+		return id, nil
+	}
+	me := PersonFrom(ctx)
+	if owner := domain.ChatConvOwner(id); owner != "" && owner != me {
+		return "", fmt.Errorf("%w: conversation %q", domain.ErrNotFound, domain.PublicChatConv(id))
+	}
+	agent := strings.TrimPrefix(domain.PublicChatConv(id), domain.ChatAgentPrefix)
+	return domain.ChatPrivateConv(agent, me), nil
 }

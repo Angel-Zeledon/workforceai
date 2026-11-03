@@ -36,19 +36,38 @@ func (s *Store) sortedMessages() []domain.Message {
 	return out
 }
 
-func (s *Store) readAt(key string) time.Time { return s.hist.reads[key] }
+// readAt is viewer's marker of key: the newest of their own and the organization-wide baseline ("" viewer,
+// the markers written before per-person markers existed).
+func (s *Store) readAt(viewer, key string) time.Time {
+	a, b := s.hist.reads["|"+key], s.hist.reads[viewer+"|"+key]
+	if b.After(a) {
+		return b
+	}
+	return a
+}
+
+// visibleMessages are the messages viewer may see (E0: shared ones and their own private threads).
+func visibleMessages(msgs []domain.Message, viewer string) []domain.Message {
+	out := msgs[:0:0]
+	for _, m := range msgs {
+		if application.VisibleTo(m.ConversationID, viewer) {
+			out = append(out, m)
+		}
+	}
+	return out
+}
 
 // convRow builds the list row of c from the messages (already sorted).
-func (s *Store) convRow(c domain.Conversation, msgs []domain.Message) application.ChatConversation {
+func (s *Store) convRow(c domain.Conversation, msgs []domain.Message, viewer string) application.ChatConversation {
 	kind, agent := application.ChatKind(c.ID)
 	row := application.ChatConversation{ID: c.ID, Title: c.Title, Kind: kind, AgentID: agent, Participants: slices.Clone(c.Participants),
-		RequestID: c.RequestID, UpdatedAt: c.LastMessageAt, LastMessageAt: c.LastMessageAt}
+		RequestID: c.RequestID, UpdatedAt: c.LastMessageAt, LastMessageAt: c.LastMessageAt, OwnerID: domain.ChatConvOwner(c.ID)}
 	if row.Participants == nil {
 		row.Participants = []string{}
 	}
 	m := s.hist.meta[c.ID]
 	row.Archived, row.ArchivedAt, row.TitleCustom = m.archivedAt != nil, m.archivedAt, m.titleCustom
-	read := s.readAt("conv:" + c.ID)
+	read := s.readAt(viewer, "conv:"+c.ID)
 	firstUser := ""
 	for _, x := range msgs {
 		if x.ConversationID != c.ID {
@@ -59,7 +78,7 @@ func (s *Store) convRow(c domain.Conversation, msgs []domain.Message) applicatio
 		if firstUser == "" && x.From == "user" {
 			firstUser = x.Text
 		}
-		if x.From != "user" && x.TS.After(read) {
+		if application.UnreadFor(x, viewer) && x.TS.After(read) {
 			row.Unread++
 		}
 	}
@@ -78,8 +97,11 @@ func (s *Store) ChatConversations(_ context.Context, _ string, q application.Cha
 	msgs := s.sortedMessages()
 	var rows []application.ChatConversation
 	for _, id := range s.convOrder {
+		if !application.VisibleTo(id, q.Viewer) {
+			continue
+		}
 		c := s.convs[id]
-		row := s.convRow(c, msgs)
+		row := s.convRow(c, msgs, q.Viewer)
 		switch q.Archived {
 		case "":
 			if row.Archived {
@@ -93,7 +115,7 @@ func (s *Store) ChatConversations(_ context.Context, _ string, q application.Cha
 		if q.Kind != "" && row.Kind != q.Kind {
 			continue
 		}
-		if q.AgentID != "" && c.ID != domain.ChatAgentConv(q.AgentID) {
+		if q.AgentID != "" && domain.PublicChatConv(c.ID) != domain.ChatAgentConv(q.AgentID) {
 			ok := false
 			for _, m := range msgs {
 				if m.ConversationID == c.ID && (m.From == q.AgentID || m.To == q.AgentID) {
@@ -140,16 +162,17 @@ func (s *Store) ChatConversations(_ context.Context, _ string, q application.Cha
 	return rows, more, nil
 }
 
-func (s *Store) ChatGetConversation(_ context.Context, _, id string) (application.ChatConversation, error) {
+func (s *Store) ChatGetConversation(_ context.Context, _, viewer, id string) (application.ChatConversation, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	c, ok := s.convs[id]
-	if !ok {
+	if !ok || !application.VisibleTo(id, viewer) {
 		return application.ChatConversation{}, domain.ErrNotFound
 	}
-	return s.convRow(c, s.sortedMessages()), nil
+	return s.convRow(c, s.sortedMessages(), viewer), nil
 }
 
+// threadMessages filters msgs (already restricted to what the viewer may see) to a thread.
 func (s *Store) threadMessages(msgs []domain.Message, thread string) []domain.Message {
 	agent := ""
 	var turns map[string]bool
@@ -169,7 +192,7 @@ func (s *Store) threadMessages(msgs []domain.Message, thread string) []domain.Me
 func (s *Store) ChatThreadMessages(_ context.Context, _ string, q application.ChatThreadQuery) ([]application.ChatMessage, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	all := s.sortedMessages()
+	all := visibleMessages(s.sortedMessages(), q.Viewer)
 	in := s.threadMessages(all, q.Thread)
 	page, more, err := application.PageMessages(in, q.BeforeID, q.Limit)
 	if err != nil {
@@ -183,17 +206,17 @@ func (s *Store) ChatThreadMessages(_ context.Context, _ string, q application.Ch
 	return out, more, nil
 }
 
-func (s *Store) ChatThreads(_ context.Context, _ string, agentIDs []string) ([]application.ChatThread, error) {
+func (s *Store) ChatThreads(_ context.Context, _, viewer string, agentIDs []string) ([]application.ChatThread, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	all := s.sortedMessages()
+	all := visibleMessages(s.sortedMessages(), viewer)
 	mk := func(key, agent string) application.ChatThread {
 		t := application.ChatThread{Key: key, AgentID: agent}
-		read := s.readAt("thread:" + key)
+		read := s.readAt(viewer, "thread:"+key)
 		for _, m := range s.threadMessages(all, key) {
 			t.MessageCount++
 			t.Preview, t.PreviewFrom, t.LastMessageAt = application.Preview(m.Text), m.From, m.TS
-			if m.From != "user" && m.TS.After(read) {
+			if application.UnreadFor(m, viewer) && m.TS.After(read) {
 				t.Unread++
 			}
 		}
@@ -206,29 +229,33 @@ func (s *Store) ChatThreads(_ context.Context, _ string, agentIDs []string) ([]a
 	return out, nil
 }
 
-func (s *Store) ChatMarkRead(_ context.Context, _, key string, at time.Time) error {
+func (s *Store) ChatMarkRead(_ context.Context, _, viewer, key string, at time.Time) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.hist.reads == nil {
 		s.hist.reads = map[string]time.Time{}
 	}
 	set := func(k string) {
+		k = viewer + "|" + k
 		if at.After(s.hist.reads[k]) {
 			s.hist.reads[k] = at
 		}
 	}
 	set(key)
-	// reading a thread reads the 1:1 chats it contains
+	// reading a thread reads the 1:1 chats it contains (the viewer's own and the earlier shared history)
 	if t, ok := strings.CutPrefix(key, "thread:"); ok {
 		if t == application.ThreadGeneral {
 			set("conv:" + domain.ChatOffice)
 			for id := range s.convs {
-				if strings.HasPrefix(id, domain.ChatAgentPrefix) {
+				if strings.HasPrefix(id, domain.ChatAgentPrefix) && application.VisibleTo(id, viewer) {
 					set("conv:" + id)
 				}
 			}
 		} else {
 			set("conv:" + domain.ChatAgentConv(t))
+			if viewer != "" {
+				set("conv:" + domain.ChatPrivateConv(t, viewer))
+			}
 		}
 	}
 	return nil
@@ -280,7 +307,11 @@ func (s *Store) ChatDeleteConversation(_ context.Context, _, id string) (int, er
 	s.messages = kept
 	delete(s.convs, id)
 	delete(s.hist.meta, id)
-	delete(s.hist.reads, "conv:"+id)
+	for k := range s.hist.reads {
+		if strings.HasSuffix(k, "|conv:"+id) {
+			delete(s.hist.reads, k)
+		}
+	}
 	s.convOrder = slices.DeleteFunc(s.convOrder, func(x string) bool { return x == id })
 	return n, nil
 }

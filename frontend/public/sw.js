@@ -69,6 +69,19 @@ self.addEventListener("push", (event) => {
   try { m = event.data ? event.data.json() : {}; } catch { m = {}; }
   event.waitUntil((async () => {
     const l = await readLabels();
+    // E0: the result of a request goes only to the person who asked; no title nor content travels (lock screen)
+    if (m.type === "request.completed" || m.type === "request.failed") {
+      const ok = m.type === "request.completed";
+      const url = typeof m.url === "string" && m.url.startsWith("/") && !m.url.startsWith("//") ? m.url : "/chats";
+      await self.registration.showNotification(String((ok ? l.request_done : l.request_failed) || l.fallbackTitle || ""), {
+        body: l.request_body || "",
+        tag: "request:" + (typeof m.request_id === "string" ? m.request_id : ""),
+        icon: "/icon.svg",
+        badge: "/icon.svg",
+        data: { url },
+      });
+      return;
+    }
     const risk = ["low", "medium", "high"].includes(m.risk) ? m.risk : "medium";
     const id = typeof m.approval_id === "string" ? m.approval_id : "";
     // Only title + risk + id arrive; details are read after signing in.

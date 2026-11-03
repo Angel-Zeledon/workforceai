@@ -36,6 +36,7 @@ func Run(t *testing.T, mk func(t *testing.T) Fixture) {
 	t.Run("unread and read markers", func(t *testing.T) { unread(t, mk(t)) })
 	t.Run("delete", func(t *testing.T) { del(t, mk(t)) })
 	t.Run("automatic title", func(t *testing.T) { autoTitle(t, mk(t)) })
+	t.Run("private threads per person (E0)", func(t *testing.T) { privacy(t, mk(t)) })
 	t.Run("other organization sees nothing", func(t *testing.T) {
 		f := mk(t)
 		if f.Other == "" {

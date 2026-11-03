@@ -101,8 +101,9 @@ func run(log *slog.Logger) error {
 
 	// Web Push (optional): approval.requested also notifies subscribed browsers.
 	pushSvc := wirePush(log, pg)
+	pushWho := &push.Recipients{} // E0: who each push is for; filled once the identity store exists
 	if pushSvc != nil {
-		pub = push.Notifier{Inner: pub, Svc: pushSvc}
+		pub = push.Notifier{Inner: pub, Svc: pushSvc, Who: pushWho}
 	}
 
 	// Approval notifications (e-mail / Slack / Teams) and the plan-cap notice: bound once the approvals exist.
@@ -148,6 +149,10 @@ func run(log *slog.Logger) error {
 	orch := application.NewOrchestrator(ctx, cfg.App, store, rt, locker, rec, approvals, queries, log)
 
 	notifySvc := wireNotify(log, cfg, pg, store, approvals, orch, notifyObs)
+	billingSvc, err := wireBilling(log, notifySvc, rec)
+	if err != nil {
+		return err
+	}
 
 	// Organization configuration: onboarding packs, workflow templates, regional
 	// tone and schedules (daily briefing). Both stores implement ConfigStore.
@@ -167,6 +172,18 @@ func run(log *slog.Logger) error {
 	var authStore auth.Store
 	if cfg.AuthEnabled {
 		authStore = auth.NewPGStore(pg.Pool())
+		// E0: an approval is pushed to the people who may decide it, a request's result to whoever asked
+		pushWho.Members = func(c context.Context, org string) ([]push.Member, error) {
+			ms, err := authStore.ListMembers(c, org)
+			out := make([]push.Member, 0, len(ms))
+			for _, m := range ms {
+				out = append(out, push.Member{UserID: m.UserID, Role: string(m.Role)})
+			}
+			return out, err
+		}
+		pushWho.CanDecide = func(ap domain.Approval, userID, role string) bool {
+			return application.CanDecideApproval(ap, userID, role, auth.Role(role).Has(auth.PermApprovalsDecide))
+		}
 	}
 	cw, err := wireConnections(ctx, cfg, log, pg, authStore, rec, orch)
 	if err != nil {
@@ -177,6 +194,7 @@ func run(log *slog.Logger) error {
 	{
 		lister, _ := store.(application.OrgLister)
 		startNotifyJobs(ctx, log, notifySvc, cw.vault, lister, orch, rec)
+		startBillingJob(ctx, log, billingSvc, lister)
 	}
 
 	// Bring-your-own-model: the organization's own provider key (sealed with its data key) is merged
@@ -327,7 +345,7 @@ func run(log *slog.Logger) error {
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, ROI: roiSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
 		Standing: standingSvc, Initiative: initiativeSvc, InitiativeScanner: initiativeScan, DevilsAdvocate: devilsSvc, Rehearsal: rehearsalSvc, Debates: debatesSvc,
-		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Trust: trustSvc, Rituals: ritualsSvc, Away: awaySvc, Customers: custSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, PlanSelfServe: envOn("PLAN_SELF_SERVE"), Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
+		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Trust: trustSvc, Rituals: ritualsSvc, Away: awaySvc, Customers: custSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, PlanSelfServe: envOn("PLAN_SELF_SERVE"), Billing: billingSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}

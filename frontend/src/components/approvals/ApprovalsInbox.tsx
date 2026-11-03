@@ -5,7 +5,7 @@ import { api, call } from "@/lib/api";
 import { fmtUsd, trOr, useT } from "@/lib/i18n";
 import {
   batchGroupOf, clampIndex, deckOf, keyToCommand, needsConfirm, swipeIntent, UNDO_MS,
-  type ApprovalInbox, type InboxGroup, type InboxItem,
+  type ApprovalInbox, type InboxGroup, type InboxItem, type InboxMine,
 } from "@/lib/inboxLogic";
 import { usePreferences } from "@/lib/preferences";
 import { useCan, useSession } from "@/lib/session";
@@ -39,9 +39,11 @@ export function ApprovalsInbox() {
   heldRef.current = held;
   useEffect(() => { hydrate(); }, [hydrate]);
 
+  const [mine, setMine] = useState<InboxMine>("");
   const load = useCallback(async () => {
-    try { setInbox(await call<ApprovalInbox>("GET", "/approvals/inbox")); setFailed(false); } catch { setFailed(true); }
-  }, []);
+    try { setInbox(await call<ApprovalInbox>("GET", `/approvals/inbox${mine ? `?mine=${mine}` : ""}`)); setFailed(false); } catch { setFailed(true); }
+  }, [mine]);
+  useEffect(() => { setIdx(0); }, [mine]);
   useEffect(() => {
     void load();
     api.agents().then((as) => setNames(Object.fromEntries(as.map((a) => [a.id, a.name])))).catch(() => {});
@@ -141,6 +143,18 @@ export function ApprovalsInbox() {
         </div>
         {deck.length > 0 && <span data-testid="inbox-position" className="shrink-0 rounded-md bg-panel2 px-2 py-1 font-mono text-[12px] text-ink2">{t("approvalInbox.position", { n: i + 1, total: deck.length })}</span>}
       </header>
+      {/* E0 "my approvals": everything / the ones I asked for / the ones I can decide */}
+      <div role="tablist" aria-label={t("approvalInbox.mine.label")} data-testid="inbox-mine" className="flex flex-wrap gap-1.5">
+        {(["", "requested", "decidable"] as InboxMine[]).map((k) => {
+          const n = k === "" ? inbox?.counts?.all : k === "requested" ? inbox?.counts?.requested : inbox?.counts?.decidable;
+          return (
+            <button key={k || "all"} type="button" role="tab" aria-selected={mine === k} data-testid={`inbox-mine-${k || "all"}`} onClick={() => setMine(k)}
+              className={`min-h-[36px] rounded-md border px-3 text-[12.5px] font-medium transition-colors ${mine === k ? "border-accent bg-accent/10 text-accent" : "border-line bg-panel text-ink2 hover:border-accent"}`}>
+              {t(`approvalInbox.mine.${k || "all"}`)}{typeof n === "number" ? ` · ${n}` : ""}
+            </button>
+          );
+        })}
+      </div>
       {failed && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-err/40 bg-err/10 p-3 text-[13px] text-err">
           <span>{t("approvalInbox.loadError")}</span>
@@ -150,7 +164,7 @@ export function ApprovalsInbox() {
       {!canDecide && inbox && <p className="rounded-lg border border-line bg-panel p-3 text-[13px] text-ink2">{t("approvals.noPermission")}</p>}
       {errors.map((m, k) => <p key={k} role="alert" className="rounded-lg border border-err/40 bg-err/10 p-2 text-[12px] text-err">{m}</p>)}
 
-      {inbox && deck.length === 0 && !held.length && <p data-testid="inbox-empty" className="py-10 text-center text-[14px] text-mute">{t("approvalInbox.empty")}</p>}
+      {inbox && deck.length === 0 && !held.length && <p data-testid="inbox-empty" className="py-10 text-center text-[14px] text-mute">{mine ? t(`approvalInbox.mine.empty.${mine}`) : t("approvalInbox.empty")}</p>}
 
       {cur && (
         <article data-testid={`inbox-card-${cur.id}`} data-risk={cur.risk} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => { drag.current = null; setDx(0); }}

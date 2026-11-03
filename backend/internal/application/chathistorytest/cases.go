@@ -141,7 +141,7 @@ func renameArchive(t *testing.T, f Fixture) {
 	if err := h.ChatPatchConversation(ctx, f.Org, "rq1", application.ChatConvPatch{Title: &title}); err != nil {
 		t.Fatal(err)
 	}
-	c, err := h.ChatGetConversation(ctx, f.Org, "rq1")
+	c, err := h.ChatGetConversation(ctx, f.Org, "", "rq1")
 	if err != nil || c.Title != title || !c.TitleCustom || c.Archived {
 		t.Fatalf("renamed = %+v, %v", c, err)
 	}
@@ -152,7 +152,7 @@ func renameArchive(t *testing.T, f Fixture) {
 	if err := h.ChatPatchConversation(ctx, f.Org, "rq1", application.ChatConvPatch{Archived: &yes}); err != nil {
 		t.Fatal(err)
 	}
-	c, _ = h.ChatGetConversation(ctx, f.Org, "rq1")
+	c, _ = h.ChatGetConversation(ctx, f.Org, "", "rq1")
 	if !c.Archived || c.ArchivedAt == nil || c.Title != title {
 		t.Fatalf("archived = %+v", c)
 	}
@@ -168,7 +168,7 @@ func renameArchive(t *testing.T, f Fixture) {
 	if err := h.ChatPatchConversation(ctx, f.Org, "rq1", application.ChatConvPatch{Archived: &yes}); err != nil {
 		t.Fatal(err)
 	}
-	c2, _ := h.ChatGetConversation(ctx, f.Org, "rq1")
+	c2, _ := h.ChatGetConversation(ctx, f.Org, "", "rq1")
 	if c2.ArchivedAt == nil || !c2.ArchivedAt.Equal(*c.ArchivedAt) {
 		t.Fatalf("archived_at changed: %v vs %v", c2.ArchivedAt, c.ArchivedAt)
 	}
@@ -186,7 +186,7 @@ func renameArchive(t *testing.T, f Fixture) {
 
 func threadOf(t *testing.T, s *seeded, key string) application.ChatThread {
 	t.Helper()
-	ts, err := s.f.Hist.ChatThreads(context.Background(), s.f.Org, []string{"sales", "accounting", "hr"})
+	ts, err := s.f.Hist.ChatThreads(context.Background(), s.f.Org, "", []string{"sales", "accounting", "hr"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +227,7 @@ func unread(t *testing.T, f Fixture) {
 	}
 
 	// reading General reads every chat stream, but not the agents' own markers or request conversations
-	if err := h.ChatMarkRead(ctx, f.Org, "thread:general", time.Now().UTC()); err != nil {
+	if err := h.ChatMarkRead(ctx, f.Org, "", "thread:general", time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 	if g := threadOf(t, s, "general"); g.Unread != 0 {
@@ -246,14 +246,14 @@ func unread(t *testing.T, f Fixture) {
 	if a := threadOf(t, s, "accounting"); a.Unread != 2 {
 		t.Fatalf("accounting keeps its own marker: %+v", a)
 	}
-	if err := h.ChatMarkRead(ctx, f.Org, "thread:accounting", time.Now().UTC()); err != nil {
+	if err := h.ChatMarkRead(ctx, f.Org, "", "thread:accounting", time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 	if a := threadOf(t, s, "accounting"); a.Unread != 0 {
 		t.Fatalf("accounting after read = %+v", a)
 	}
 	// a read marker never goes back in time
-	if err := h.ChatMarkRead(ctx, f.Org, "thread:accounting", base); err != nil {
+	if err := h.ChatMarkRead(ctx, f.Org, "", "thread:accounting", base); err != nil {
 		t.Fatal(err)
 	}
 	if a := threadOf(t, s, "accounting"); a.Unread != 0 {
@@ -269,10 +269,10 @@ func unread(t *testing.T, f Fixture) {
 	if a := threadOf(t, s, "accounting"); a.Unread != 1 {
 		t.Fatalf("accounting after new message = %+v", a)
 	}
-	if err := h.ChatMarkRead(ctx, f.Org, "conv:rq1", time.Now().UTC()); err != nil {
+	if err := h.ChatMarkRead(ctx, f.Org, "", "conv:rq1", time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
-	if c, _ := h.ChatGetConversation(ctx, f.Org, "rq1"); c.Unread != 0 {
+	if c, _ := h.ChatGetConversation(ctx, f.Org, "", "rq1"); c.Unread != 0 {
 		t.Fatalf("rq1 unread = %d", c.Unread)
 	}
 }
@@ -285,7 +285,7 @@ func del(t *testing.T, f Fixture) {
 	if err != nil || n != 2 {
 		t.Fatalf("delete = %d, %v", n, err)
 	}
-	if _, err := h.ChatGetConversation(ctx, f.Org, "agent:sales"); !errors.Is(err, domain.ErrNotFound) {
+	if _, err := h.ChatGetConversation(ctx, f.Org, "", "agent:sales"); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("still there: %v", err)
 	}
 	gen, _ := thread(t, s, application.ThreadGeneral, "", 100)
@@ -313,7 +313,7 @@ func autoTitle(t *testing.T, f Fixture) {
 	s := &seeded{f: f, ids: map[string]string{}}
 	s.msg(t, "x1", "tmp", "assistant", "user", "", "Respuesta primero", "")
 	s.msg(t, "x2", "tmp", "user", "assistant", "", "  Necesito   un informe\nde ventas ", "")
-	c, err := f.Hist.ChatGetConversation(ctx, f.Org, "tmp")
+	c, err := f.Hist.ChatGetConversation(ctx, f.Org, "", "tmp")
 	if err != nil || c.Title != "Necesito un informe de ventas" || c.TitleCustom {
 		t.Fatalf("auto title = %+v, %v", c, err)
 	}
@@ -330,11 +330,11 @@ func isolation(t *testing.T, f Fixture) {
 	if err != nil || len(ms) != 0 {
 		t.Fatalf("other org thread = %d, %v", len(ms), err)
 	}
-	ts, err := f.Hist.ChatThreads(ctx, f.Other, []string{"sales"})
+	ts, err := f.Hist.ChatThreads(ctx, f.Other, "", []string{"sales"})
 	if err != nil || ts[0].MessageCount != 0 || ts[1].MessageCount != 0 {
 		t.Fatalf("other org threads = %+v, %v", ts, err)
 	}
-	if _, err := f.Hist.ChatGetConversation(ctx, f.Other, "office"); !errors.Is(err, domain.ErrNotFound) {
+	if _, err := f.Hist.ChatGetConversation(ctx, f.Other, "", "office"); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("other org get = %v", err)
 	}
 	if err := f.Hist.ChatPatchConversation(ctx, f.Other, "office", application.ChatConvPatch{Title: ptr("hack")}); !errors.Is(err, domain.ErrNotFound) {

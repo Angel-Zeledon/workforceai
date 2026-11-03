@@ -15,7 +15,7 @@ Definición de referencia: `application.InThread` (Go), `chatsLogic.ts` (fronten
 ## Datos (migración 570)
 
 - `conversations.archived_at`, `conversations.title_custom` (renombrar / archivar).
-- `chat_reads(org_id, key, read_at)`: marcadores de lectura **por organización** (no por usuario): `thread:<general|agentId>` y `conv:<id>`. El historial existente se siembra como leído. RLS por `org_id`.
+- `chat_reads(org_id, key, read_at)`: marcadores de lectura `thread:<general|agentId>` y `conv:<id>`. Eran por organización; desde la migración 807 son por persona (`user_id`, ver E0). El historial existente se siembra como leído. RLS por `org_id`.
 - Índices `messages(org_id, from_id, ts)` y `(org_id, to_id, ts)`.
 - Título automático: las conversaciones de solicitud ya nacen con el texto de la petición; si el título está vacío se deriva del primer mensaje del usuario.
 
@@ -23,5 +23,56 @@ Definición de referencia: `application.InThread` (Go), `chatsLogic.ts` (fronten
 
 - Búsqueda con `ILIKE` (título y texto), sin FTS; suficiente para el volumen actual.
 - Borrar `office` o `agent:<id>` limpia ese historial en **ambas** vistas (es el mismo dato); exige permiso de administrador y queda auditado.
-- La no-lectura es por organización: con varios usuarios en una misma organización comparten el marcador.
+- ~~La no-lectura es por organización~~: desde E0 es **por persona** (ver abajo).
 - Auditoría: solo metadatos (`conversation.updated`, `conversation.deleted` con número de mensajes), nunca texto.
+
+## E0: cada persona tiene su hilo con cada agente (migración 807)
+
+Fase E0 de `equipos-oficinas.md` ("saber quién es quién").
+
+**Autor.** Cada mensaje de una persona guarda `author_id` (su id de usuario) y `author_name` (su nombre visible en ese
+momento: el nombre de la cuenta, o la parte del correo antes de la `@`). Viajan en la API (`GET …/messages`,
+`/chats/threads/…`) y en el evento `chat.message`. El agente recibe el nombre de quien le escribe (`speaker_name`
+en `/v1/chat-reply`) y el historial lleva el nombre de cada persona (`history[].name`); ambos son **datos**, nunca
+instrucciones (van dentro del bloque no confiable del prompt).
+
+**Hilo privado por persona.** La API y el WebSocket siguen hablando de `agent:<id>`, pero cada persona escribe y lee
+**su propio** hilo con ese agente. Por dentro se guarda como `agent:<agente>@<usuario>` (`domain.ChatPrivateConv`);
+ese id nunca sale del backend (`domain.PublicChatConv` lo traduce) y, si alguien lo manda a mano, solo lo acepta su
+dueño (para cualquier otra persona es `404`). `messages.owner_id` y `conversations.owner_id` guardan el dueño (`''` =
+compartido); toda lectura filtra `owner_id IN ('', <quien lee>)` (`application.VisibleTo`, mismo criterio en la memoria
+y en Postgres, probado por la misma suite `chathistorytest`).
+
+- **`office` sigue siendo común**: todos la ven y cada mensaje muestra quién lo escribió.
+- **Nadie más lee el hilo privado**: ni otra persona ni un admin/owner (igual que los mensajes directos de
+  `peoplechat`). Tampoco aparece en General, en el hilo del agente, en la lista de conversaciones, en la búsqueda, en
+  los contadores de no leídos ni por WebSocket: los eventos `chat.message`, `chat.typing` y `route.decided` de un hilo
+  privado salen con `audience = [dueño]` (el hub solo los entrega a sus sockets), **no se guardan** en la tabla de
+  eventos de la organización y no crean actividad (`activity`).
+- **Lo que hereda cada hilo**: la cola de turnos, el traspaso pendiente (memoria `chat/handoff:<id guardado>`), el
+  contexto de `/limpiar` y `/compactar`, el título, el archivado y los marcadores de lectura son por id guardado, así
+  que son de cada persona. `/memoria` ya no lista las entradas internas de alcance `chat`.
+- **Borrar** `agent:<id>` (permiso de admin, como antes) borra el hilo propio de quien borra y el historial anterior
+  compartido; **nunca** el hilo privado de otra persona.
+
+**Historial anterior (decisión).** Lo escrito antes de E0 en `agent:<id>` no tiene autor ni dueño: no se borra ni se
+asigna a nadie. Queda como **historial anterior compartido, de solo lectura**: lo ven todas las personas (como lo veían
+antes), dentro del chat con ese agente, marcado con `shared_legacy: true` y separado por un divisor ("Historial anterior
+compartido… / Desde aquí, tu conversación privada"). No se puede renombrar ni archivar (`404`) y **no se le pasa al
+modelo** como historial del hilo nuevo: el agente empieza el hilo privado sin lo que otras personas le dijeron antes.
+Motivo: asignarlo a alguien sería adivinar (y podría poner lo que escribió una persona en el hilo de otra); ocultarlo
+haría desaparecer datos que la gente ya veía. Los mensajes de persona sin autor no cuentan como no leídos. Sin
+autenticación (demo) no hay identidad: todo sigue en el hilo compartido `agent:<id>`, como antes.
+
+**No leído por persona.** `chat_reads.user_id` (clave primaria `(org_id, user_id, key)`). El marcador de una persona es
+el más reciente entre el suyo y el de la organización (`user_id = ''`, los escritos antes de E0, que quedan como base).
+Lo que una persona escribió nunca cuenta como no leído para ella; lo que escribió otra en la oficina, sí.
+
+**Adjuntos.** Máximo **10** archivos por mensaje, igual en el compositor y en el backend; con más, `POST /messages`
+responde `400` ("too many attachments … max 10") y el compositor lo muestra con un error claro (antes el backend
+recortaba a 6 sin avisar).
+
+**Lo que no cambia en E0.** Una tarea pedida en un hilo privado crea una solicitud de la empresa como antes (visible en
+Solicitudes y en sus conversaciones de solicitud, con aprobaciones para quien decide), pero ahora queda registrado quién
+la pidió (`request_runs.requested_by`, costos y avisos por persona). Restringir quién ve las solicitudes es de E2/E3.
+La exportación completa de la organización (owner/admin) sigue incluyendo todas las tablas.

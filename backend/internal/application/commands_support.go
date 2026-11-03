@@ -53,6 +53,11 @@ func (o *Orchestrator) SetConvContext(s ConvContextStore) { o.convCtx = s }
 
 // ConvContextOf returns the stored context of a conversation (zero value when none).
 func (o *Orchestrator) ConvContextOf(ctx context.Context, conversation string) ConvContext {
+	if stored, err := ResolveChatConv(ctx, conversation); err == nil {
+		conversation = stored // E0: /clear and /compact act on the caller's own thread
+	} else {
+		return ConvContext{ConversationID: conversation}
+	}
 	if o.convCtx == nil {
 		return ConvContext{ConversationID: conversation}
 	}
@@ -68,6 +73,11 @@ func (o *Orchestrator) SaveConvContext(ctx context.Context, c ConvContext) error
 	if o.convCtx == nil {
 		return fmt.Errorf("%w: conversation context is not available", domain.ErrInvalid)
 	}
+	stored, err := ResolveChatConv(ctx, c.ConversationID)
+	if err != nil {
+		return err
+	}
+	c.ConversationID = stored
 	c.UpdatedAt = time.Now().UTC()
 	return o.convCtx.PutConvContext(ctx, o.org(ctx), c)
 }
@@ -274,16 +284,22 @@ func (o *Orchestrator) PostSystemNotice(ctx context.Context, conversation, text 
 	if !IsChatConversation(conversation) || conversation == domain.ChatAgentPrefix {
 		return fmt.Errorf("%w: conversation must be %q or %q", domain.ErrInvalid, domain.ChatOffice, domain.ChatAgentPrefix+"<agent id>")
 	}
+	stored, err := ResolveChatConv(ctx, conversation)
+	if err != nil {
+		return err
+	}
+	conversation = stored
 	agents, err := o.store.ListAgents(ctx, o.org(ctx))
 	if err != nil {
 		return err
 	}
-	t := &chatTurn{conv: conversation, agents: agents, byID: map[string]domain.Agent{}, style: o.loadStyle(ctx)}
+	t := &chatTurn{conv: conversation, pub: domain.PublicChatConv(conversation), owner: domain.ChatConvOwner(conversation),
+		agents: agents, byID: map[string]domain.Agent{}, style: o.loadStyle(ctx)}
 	t.loc = chatLocale(t.style)
 	for _, a := range agents {
 		t.byID[a.ID] = a
 	}
-	if id, ok := strings.CutPrefix(conversation, domain.ChatAgentPrefix); ok {
+	if id, ok := strings.CutPrefix(t.pub, domain.ChatAgentPrefix); ok {
 		if _, known := t.byID[id]; !known {
 			return fmt.Errorf("%w: agent %q", domain.ErrNotFound, id)
 		}
@@ -299,8 +315,12 @@ func (o *Orchestrator) PostSystemNotice(ctx context.Context, conversation, text 
 
 // ChatMessagesSince returns the conversation's messages newer than since (oldest first), at most limit (the newest ones).
 func (o *Orchestrator) ChatMessagesSince(ctx context.Context, conversation string, since time.Time, limit int) ([]domain.Message, error) {
+	stored, err := ResolveChatConv(ctx, conversation)
+	if err != nil {
+		return nil, err
+	}
+	conversation = stored // E0: only the caller's own thread (never the earlier shared history)
 	var msgs []domain.Message
-	var err error
 	if p, ok := o.store.(MessagePager); ok {
 		msgs, _, err = p.ListMessagesPage(ctx, o.org(ctx), conversation, "", limit+50)
 	} else {

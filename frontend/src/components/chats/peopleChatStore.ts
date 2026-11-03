@@ -46,7 +46,8 @@ export const usePeopleChat = create<State>((set, get) => ({
   loadChannels: async () => {
     if (MOCK) { set({ loaded: true }); return; }
     try {
-      const rows = await call<PChannel[]>("GET", "/people-chat/channels");
+      // the organization channel comes with members: null (everyone is a member): keep the list an array
+      const rows = (await call<PChannel[]>("GET", "/people-chat/channels")).map((c) => ({ ...c, members: c.members ?? [] }));
       set({ channels: rows, counters: fromChannels(rows), loaded: true, error: null });
       if (!get().dir.self) void get().loadDirectory();
     } catch { set({ loaded: true, error: "load" }); }

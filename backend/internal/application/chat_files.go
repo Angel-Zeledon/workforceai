@@ -27,7 +27,7 @@ func (o *Orchestrator) SetFileResolver(r FileResolver) { o.files.res = r }
 
 const (
 	maxTaskFiles   = 8 // files shown per task message
-	maxAttachments = 6 // files per user message
+	maxAttachments = 10 // files per user message (the composer allows the same; more is a 400, never a silent cut)
 	maxFileTracked = 2000
 )
 

@@ -1,6 +1,9 @@
 package application
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 type (
 	orgKey     struct{}
@@ -83,4 +86,37 @@ func WithRequestID(ctx context.Context, id string) context.Context {
 func RequestIDFrom(ctx context.Context) string {
 	id, _ := ctx.Value(requestKey{}).(string)
 	return id
+}
+
+type actorNameKey struct{}
+
+// WithActorName records the display name of the acting person (E0: the author shown on their chat
+// messages and given to the agent that answers). The API sets it from the directory.
+func WithActorName(ctx context.Context, name string) context.Context {
+	return context.WithValue(ctx, actorNameKey{}, name)
+}
+
+// ActorNameFrom returns the display name of the acting person ("" when unknown).
+func ActorNameFrom(ctx context.Context) string {
+	n, _ := ctx.Value(actorNameKey{}).(string)
+	return n
+}
+
+// PersonFrom returns the acting PERSON of ctx: the user id of an authenticated human, "" for the system,
+// the scheduler, agents, signed links and deployments without authentication. It is what private chat
+// threads, read markers and the cost ledger are keyed by.
+func PersonFrom(ctx context.Context) string {
+	return PersonID(ActorFrom(ctx, ""))
+}
+
+// PersonID filters an actor string down to a person id ("" when the actor is not a person).
+func PersonID(actor string) string {
+	switch actor {
+	case "", "user", "system", "orchestrator", "scheduler", "demo", "runtime":
+		return ""
+	}
+	if strings.ContainsAny(actor, ": ") {
+		return "" // agent:<id>, link:<to>, slack:<id>, token:<id>...
+	}
+	return actor
 }

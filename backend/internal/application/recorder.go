@@ -29,6 +29,9 @@ type Action struct {
 	Payload   any
 	Text      string // when set, an activity item is logged as well
 	SkipAudit bool
+	// Audience (E0) limits the live delivery to these user ids (a private chat thread). Such an event is
+	// NOT kept in the organization's event log (it would be readable by everyone) and logs no activity.
+	Audience []string
 }
 
 func newID() string { return uuid.NewString() }
@@ -38,9 +41,11 @@ func (r *Recorder) Emit(ctx context.Context, a Action) {
 	// Persist even if the caller's context was cancelled (e.g. demo reset).
 	ctx = context.WithoutCancel(ctx)
 	now := time.Now().UTC()
-	ev := domain.Event{ID: newID(), Type: a.Type, TS: now, OrgID: r.org(ctx), AgentID: a.AgentID, Payload: a.Payload}
-	if err := r.Store.SaveEvent(ctx, r.org(ctx), ev); err != nil {
-		r.Log.Warn("save event", "type", a.Type, "err", err)
+	ev := domain.Event{ID: newID(), Type: a.Type, TS: now, OrgID: r.org(ctx), AgentID: a.AgentID, Payload: a.Payload, Audience: a.Audience}
+	if len(a.Audience) == 0 {
+		if err := r.Store.SaveEvent(ctx, r.org(ctx), ev); err != nil {
+			r.Log.Warn("save event", "type", a.Type, "err", err)
+		}
 	}
 	if err := r.Pub.Publish(ctx, ev); err != nil {
 		r.Log.Warn("publish event", "type", a.Type, "err", err)
@@ -52,7 +57,7 @@ func (r *Recorder) Emit(ctx context.Context, a Action) {
 		}
 		r.Audit(ctx, domain.AuditLog{Actor: actor, Action: a.Type, Entity: a.Entity, EntityID: a.EntityID, Details: a.Payload})
 	}
-	if a.Text != "" {
+	if a.Text != "" && len(a.Audience) == 0 {
 		r.Activity(ctx, a.AgentID, a.Type, a.Text)
 	}
 }

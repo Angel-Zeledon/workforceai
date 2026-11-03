@@ -19,6 +19,9 @@ type threadMsg struct {
 	Text           string   `json:"text"`
 	TurnID         string   `json:"turn_id"`
 	AgentIDs       []string `json:"agent_ids"`
+	AuthorID       string   `json:"author_id"`
+	AuthorName     string   `json:"author_name"`
+	SharedLegacy   bool     `json:"shared_legacy"`
 }
 
 func (e *env) thread(token, key, query string) ([]threadMsg, string) {
@@ -275,7 +278,7 @@ func TestChatHistoryAuditAndRoles(t *testing.T) {
 	}
 	deadline := time.Now().Add(8 * time.Second)
 	for {
-		ms, _ := e.thread(viewer, "sales", "")
+		ms, _ := e.thread(member, "sales", "")
 		if len(ms) >= 2 {
 			break
 		}
@@ -283,6 +286,10 @@ func TestChatHistoryAuditAndRoles(t *testing.T) {
 			t.Fatal("no reply")
 		}
 		time.Sleep(20 * time.Millisecond)
+	}
+	// E0: the 1:1 chat is the member's own: the viewer (and the owner) do not see it
+	if ms, _ := e.thread(viewer, "sales", ""); len(ms) != 0 {
+		t.Fatalf("another person's private thread leaked: %+v", ms)
 	}
 	// viewers read but cannot change anything
 	if c := e.status("GET", "/api/v1/conversations?q=secreto", viewer, nil); c != 200 {
@@ -301,8 +308,23 @@ func TestChatHistoryAuditAndRoles(t *testing.T) {
 	if c := e.status("DELETE", "/api/v1/conversations/agent:sales", member, nil); c != 403 {
 		t.Fatalf("member delete = %d", c)
 	}
+	// an administrator never deletes another person's private thread...
+	if c := e.status("DELETE", "/api/v1/conversations/agent:sales", tok, nil); c != 404 {
+		t.Fatalf("owner delete of the member's thread = %d", c)
+	}
+	if ms, _ := e.thread(member, "sales", ""); len(ms) < 2 {
+		t.Fatalf("the member's thread must survive: %+v", ms)
+	}
+	// ...only their own
+	if c := e.status("POST", "/api/v1/messages", tok, map[string]string{"conversation": "agent:sales", "text": "hola del dueño"}); c != 202 {
+		t.Fatalf("owner posts = %d", c)
+	}
+	waitFor(t, func() bool { ms, _ := e.thread(tok, "sales", ""); return len(ms) >= 2 })
 	if c := e.status("DELETE", "/api/v1/conversations/agent:sales", tok, nil); c != 204 {
 		t.Fatalf("owner delete = %d", c)
+	}
+	if ms, _ := e.thread(member, "sales", ""); len(ms) < 2 {
+		t.Fatalf("deleting the owner's thread must not touch the member's: %+v", ms)
 	}
 	_, raw := e.do("GET", "/api/v1/audit?limit=200", tok, nil, nil)
 	s := string(raw)

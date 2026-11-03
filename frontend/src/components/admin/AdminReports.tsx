@@ -5,7 +5,7 @@ import { Btn } from "../ui";
 import { download, gov, type UsageReport } from "./governanceApi";
 import { Field, inputCls, Notice, Panel, tdCls, thCls, useErrText, usd } from "./AdminParts";
 
-const DIMS = ["agent", "project", "department"] as const;
+const DIMS = ["agent", "project", "department", "person"] as const;
 type Dim = (typeof DIMS)[number];
 
 /** Usage and cost by agent, project or department, with CSV export. */
@@ -26,7 +26,7 @@ export function AdminReports() {
     setErr(null);
     try { await download(gov.usageCsvPath(by, from || undefined, to || undefined), `usage-by-${by}.csv`); } catch (e) { setErr(errText(e)); }
   };
-  const label = (key: string, name: string) => (key === "" ? t("adm.rep.none") : name || key);
+  const label = (key: string, name: string) => (key === "" ? t(by === "person" ? "adm.rep.nobody" : "adm.rep.none") : name || key);
   return (
     <Panel testid="adm-reports" title={t("adm.rep.title")} body={t("adm.rep.body")}>
       <div className="flex flex-wrap items-end gap-3">
@@ -35,6 +35,7 @@ export function AdminReports() {
             <option value="agent">{t("adm.rep.by.agent")}</option>
             <option value="project">{t("adm.rep.by.project")}</option>
             <option value="department">{t("adm.rep.by.department")}</option>
+            <option value="person">{t("adm.rep.by.person")}</option>
           </select>
         </Field>
         <Field label={t("adm.rep.from")}><input className={inputCls} type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/policy"
 )
 
 // Approvals in one minute (B17, docs/architecture/approvals-inbox.md): a cross-project inbox built from what
@@ -37,6 +38,45 @@ type InboxItem struct {
 	// Counterargument is the devil's advocate summary when one was already generated (never generated here).
 	Counterargument *InboxCounter `json:"counterargument,omitempty"`
 	HighRisk        bool          `json:"high_risk"`
+	// E0 ("my approvals"): the person reading asked for this action (their message or request started it) /
+	// may decide it now (role, no self-approval, a different person for each approval of a double approval).
+	RequestedByMe bool `json:"requested_by_me"`
+	CanDecide     bool `json:"can_decide"`
+}
+
+// Inbox filters (E0): every pending approval, the ones I asked for, the ones I can decide.
+const (
+	InboxMineRequested = "requested"
+	InboxMineDecidable = "decidable"
+)
+
+// InboxCounts are the sizes of the three filters, for the tabs.
+type InboxCounts struct {
+	All       int `json:"all"`
+	Requested int `json:"requested"`
+	Decidable int `json:"decidable"`
+}
+
+// CanDecideApproval reports whether a person may decide ap right now: the same rules as Approvals.Decide
+// (approvals:decide, minimum role, no self-approval, a different person for each approval of a double
+// approval; agents never decide). hasDecide says whether their role holds approvals:decide.
+func CanDecideApproval(ap domain.Approval, userID, role string, hasDecide bool) bool {
+	if ap.Status != domain.ApprovalPending || !hasDecide || userID == "" || userID == ap.AgentID {
+		return false
+	}
+	r := policy.RoleRank(role)
+	if r == 0 || r < policy.RoleRank(ap.RequiredRole) {
+		return false
+	}
+	if ap.NoSelfApproval && ap.RequestedBy != "" && ap.RequestedBy == userID {
+		return false
+	}
+	for _, d := range ap.Decisions {
+		if d.By == userID {
+			return false
+		}
+	}
+	return true
 }
 
 // InboxCounter is the cached devil's advocate review, shortened for the card.
@@ -86,6 +126,9 @@ type ApprovalInbox struct {
 	Groups      []InboxGroup      `json:"groups"`
 	Suggestions []InboxSuggestion `json:"suggestions"`
 	Rules       InboxRules        `json:"rules"`
+	// Mine is the filter applied ("" = all) and Counts the size of each filter (E0).
+	Mine   string      `json:"mine"`
+	Counts InboxCounts `json:"counts"`
 }
 
 // InboxInput is what BuildApprovalInbox needs; the lookups may be nil.
@@ -97,6 +140,12 @@ type InboxInput struct {
 	ProjectName func(projectID string) string
 	Counter     func(approvalID string) (domain.Counterargument, bool)
 	Now         time.Time
+	// E0: the person reading (user id, role, whether the role holds approvals:decide) and the filter
+	// ("", InboxMineRequested or InboxMineDecidable). Without a viewer nothing is "mine".
+	Viewer          string
+	ViewerRole      string
+	ViewerCanDecide bool
+	Mine            string
 }
 
 var riskRank = map[string]int{"low": 0, "medium": 1, "high": 2}
@@ -105,12 +154,25 @@ var riskRank = map[string]int{"low": 0, "medium": 1, "high": 2}
 func BuildApprovalInbox(in InboxInput) ApprovalInbox {
 	out := ApprovalInbox{GeneratedAt: in.Now, Items: []InboxItem{}, Groups: []InboxGroup{}, Suggestions: []InboxSuggestion{},
 		Rules: InboxRules{SuggestWindowDays: InboxSuggestWindowDays, SuggestMinDecisions: InboxSuggestMinDecisions, SuggestRate: InboxSuggestRate, Undo: "client_side"}}
+	out.Mine = in.Mine
 	groups := map[string]*InboxGroup{}
 	for _, ap := range in.Pending {
 		if ap.Status != domain.ApprovalPending {
 			continue
 		}
 		it := InboxItem{Approval: ap, HighRisk: IsHighRiskApproval(ap)}
+		it.RequestedByMe = in.Viewer != "" && ap.RequestedBy == in.Viewer
+		it.CanDecide = CanDecideApproval(ap, in.Viewer, in.ViewerRole, in.ViewerCanDecide)
+		out.Counts.All++
+		if it.RequestedByMe {
+			out.Counts.Requested++
+		}
+		if it.CanDecide {
+			out.Counts.Decidable++
+		}
+		if (in.Mine == InboxMineRequested && !it.RequestedByMe) || (in.Mine == InboxMineDecidable && !it.CanDecide) {
+			continue
+		}
 		if t, ok := in.Tasks[ap.TaskID]; ok {
 			it.TaskTitle, it.RequestID, it.TaskCostUSD = t.Title, t.RequestID, round6(t.CostUSD)
 			if it.ProjectID == "" && in.ProjectOf != nil && t.RequestID != "" {

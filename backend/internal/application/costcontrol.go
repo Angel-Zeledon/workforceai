@@ -420,7 +420,7 @@ func (o *Orchestrator) recordUsage(ctx context.Context, rs *run, taskID, agentID
 		names = append(names, t.Tool+"."+t.Action)
 	}
 	entry := domain.UsageEntry{TaskID: taskID, AgentID: agentID, Kind: kind, Model: u.Model,
-		InputTokens: u.InputTokens, CachedTokens: u.CachedTokens, OutputTokens: u.OutputTokens, Tools: names}
+		InputTokens: u.InputTokens, CachedTokens: u.CachedTokens, OutputTokens: u.OutputTokens, Tools: names, UserID: PersonID(rs.requestedBy)}
 	cost, err := o.budget.Record(ctx, rs.req.ID, entry, u.CostUSD)
 	if err != nil {
 		o.log.Warn("record usage", "err", err)

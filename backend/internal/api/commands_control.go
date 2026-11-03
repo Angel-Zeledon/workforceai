@@ -413,6 +413,9 @@ func (c *cmdCall) memories(agentID string) ([]memEntry, error) {
 	ms, err := c.s.Store.ListMemory(c.ctx, c.org, agentID)
 	out := make([]memEntry, 0, len(ms))
 	for _, m := range ms {
+		if m.Scope == "chat" {
+			continue // internal chat state (a pending redirect of someone's thread, with their question): not a memory
+		}
 		out = append(out, memEntry{m.Scope, m.Key, m.Value})
 	}
 	return out, err

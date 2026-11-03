@@ -39,6 +39,7 @@ function PushControl() {
   useEffect(() => {
     sendLabels({
       risk_low: t("risk.low"), risk_medium: t("risk.medium"), risk_high: t("risk.high"), fallbackTitle: t("approvals.push.fallbackTitle"),
+      request_done: t("push.request.done"), request_failed: t("push.request.failed"), request_body: t("push.request.body"),
     }).catch(() => {});
   }, [t]);
 

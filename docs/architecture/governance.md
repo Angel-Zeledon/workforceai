@@ -26,9 +26,13 @@ the governance routes are not mounted.
   column `agents.department`; another stream may build real departments on top of the same tag.
 * `PUT /governance/departments/limit` `{department, monthly_usd}` (0 removes).
 * Per-agent monthly cap: the existing `PUT /agents/{id}/budget` (budget_caps), which the budget service enforces.
-* `GET /governance/reports/usage?by=agent|project|department&from&to[&format=csv]`: calls, requests, tokens, cost,
+* `GET /governance/reports/usage?by=agent|project|department|person&from&to[&format=csv]`: calls, requests, tokens, cost,
   share. Default range: current month; max 400 days. Projects join through `projects.request_id`. CSV cells that start
   with `= + - @` are neutralized (CSV injection).
+  `by=person` (E0, migration 808 adds `usage_entries.user_id`) groups by the person whose chat message or request
+  started each call (the label is their name; the `""` row is work nobody asked for: schedules, the system, entries
+  written before E0). Owners and admins see every person; any other role gets **only their own row** (and totals over
+  it). Settings -> "My costs" shows it to every member; who sees which costs beyond that is a later phase.
 * `GET /governance/audit/export?format=csv|json|zip&actor&type&from&to`.
   * `csv`: streamed; the chain check travels in `X-Audit-Chain-OK`, `X-Audit-Chain-Checked`, `X-Audit-Head-Seq`,
     `X-Audit-Head-Hash`, `X-Audit-Chain-Reason`.

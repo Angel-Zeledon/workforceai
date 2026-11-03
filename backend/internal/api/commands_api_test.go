@@ -436,7 +436,7 @@ func TestCommandsClearCompactContextUsage(t *testing.T) {
 	if d["tokens_before"].(float64) <= 0 || d["tokens_after"].(float64) <= 0 || d["messages"].(float64) < 2 {
 		t.Fatalf("compact data: %v", d)
 	}
-	cc, _, _ := e.store.GetConvContext(context.Background(), e.org, "agent:sales")
+	cc, _, _ := e.store.GetConvContext(context.Background(), e.org, domain.ChatPrivateConv("sales", userIDOf(t, e.member))) // E0: the member's own thread
 	if !strings.HasPrefix(cc.Summary, "SUM[compact|") || cc.SummaryUpto.IsZero() || cc.SummaryTokens == 0 {
 		t.Fatalf("the summary must be stored as the conversation context: %+v", cc)
 	}
@@ -450,7 +450,7 @@ func TestCommandsClearCompactContextUsage(t *testing.T) {
 	if resultOf(out)["data"].(map[string]any)["epoch"].(float64) != 1 {
 		t.Fatalf("clear: %v", out)
 	}
-	cc, _, _ = e.store.GetConvContext(context.Background(), e.org, "agent:sales")
+	cc, _, _ = e.store.GetConvContext(context.Background(), e.org, domain.ChatPrivateConv("sales", userIDOf(t, e.member)))
 	if cc.Summary != "" || cc.Epoch != 1 || cc.ClearedAt.IsZero() {
 		t.Fatalf("after clear: %+v", cc)
 	}
@@ -788,9 +788,10 @@ func TestCommandsBudgetSuggestionAndLLMCommandsRespectIt(t *testing.T) {
 	// no money left: /compact is refused before any model call, like a chat reply
 	e.say(e.member, "agent:sales", "hola, un mensaje para la conversación", 1)
 	_ = e.store.AddCost(ctx, e.org, "r1", "", 0.5)
-	_ = e.store.CreateConversation(ctx, e.org, domain.Conversation{ID: "agent:legal", LastMessageAt: time.Now()})
+	legal := domain.ChatPrivateConv("legal", userIDOf(t, e.member)) // E0: /compact reads the member's own thread
+	_ = e.store.CreateConversation(ctx, e.org, domain.Conversation{ID: legal, LastMessageAt: time.Now()})
 	for i := 0; i < 3; i++ {
-		_ = e.store.AddMessage(ctx, e.org, domain.Message{ID: fmt.Sprintf("l%d", i), ConversationID: "agent:legal", From: "user", To: "legal", Kind: "chat", Text: "texto", TS: time.Now().UTC().Add(time.Duration(i) * time.Millisecond)})
+		_ = e.store.AddMessage(ctx, e.org, domain.Message{ID: fmt.Sprintf("l%d", i), ConversationID: legal, From: "user", To: "legal", Kind: "chat", Text: "texto", TS: time.Now().UTC().Add(time.Duration(i) * time.Millisecond)})
 	}
 	e.fails(e.member, map[string]any{"command": "compact", "context": agentCtx("legal")}, 409, "budget_exceeded")
 	if len(e.rt.sums) != 0 {

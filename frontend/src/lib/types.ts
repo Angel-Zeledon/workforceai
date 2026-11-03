@@ -110,6 +110,11 @@ export interface ChatMessage {
   request_id?: string | null;
   /** chat history: the agents this message belongs to (where it was routed), for the badges */
   agent_ids?: string[];
+  /** E0: the person who wrote a user message (id and display name); absent for agents, the system and old history */
+  author_id?: string;
+  author_name?: string;
+  /** E0: 1:1 history written before private threads existed (shared with the whole organization, read-only) */
+  shared_legacy?: boolean;
 }
 export type TurnIntent = "smalltalk" | "question" | "task";
 export interface RouteResponder { agent_id: string; role: "primary" | "contributor"; reason: string }

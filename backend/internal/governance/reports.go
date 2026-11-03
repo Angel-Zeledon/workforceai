@@ -16,14 +16,32 @@ const (
 	ByAgent      = "agent"
 	ByProject    = "project"
 	ByDepartment = "department"
+	// ByPerson (E0) groups by the person whose message or request started each call ("" = nobody: scheduled
+	// work, the system, entries written before persons were recorded).
+	ByPerson = "person"
 )
 
 // ValidDimension reports whether d is a report dimension.
-func ValidDimension(d string) bool { return d == ByAgent || d == ByProject || d == ByDepartment }
+func ValidDimension(d string) bool {
+	return d == ByAgent || d == ByProject || d == ByDepartment || d == ByPerson
+}
+
+// OnlyPerson keeps the row of one person (E0: a person who may not see everybody's costs sees their own) and
+// recomputes the totals over what is left.
+func (r *UsageReport) OnlyPerson(person string) {
+	kept := []UsageRow{}
+	for _, x := range r.Rows {
+		if person != "" && x.Key == person {
+			kept = append(kept, x)
+		}
+	}
+	r.Rows = kept
+	r.Finish()
+}
 
 // UsageRow is one line of a usage and cost report.
 type UsageRow struct {
-	Key          string  `json:"key"`   // agent id / project id / department ("" = unassigned)
+	Key          string  `json:"key"`   // agent id / project id / department / person id ("" = unassigned)
 	Label        string  `json:"label"` // display name
 	Department   string  `json:"department,omitempty"`
 	Requests     int     `json:"requests"`
@@ -83,7 +101,7 @@ type ReportStore interface {
 // current month and is bounded to 400 days.
 func BuildUsageReport(ctx context.Context, st ReportStore, org, by string, from, to *time.Time, now time.Time) (UsageReport, error) {
 	if !ValidDimension(by) {
-		return UsageReport{}, fmt.Errorf("%w: by must be agent, project or department", ErrInvalid)
+		return UsageReport{}, fmt.Errorf("%w: by must be agent, project, department or person", ErrInvalid)
 	}
 	f := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	t := now.Add(time.Second)

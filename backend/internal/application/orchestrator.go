@@ -363,7 +363,7 @@ func (o *Orchestrator) finish(ctx context.Context, rs *run, tasks []domain.Task,
 	o.sendMessage(ctx, rs, assistantID, "user", "chat", "El informe está listo: "+report.Title, nil)
 	o.chatEchoReport(ctx, rs, report.Title)
 	o.rec.Emit(ctx, Action{Type: domain.EvRequestCompleted, Entity: "request", EntityID: rs.req.ID,
-		Payload: map[string]any{"request_id": rs.req.ID, "report_id": report.ID}, Text: "Solicitud completada"})
+		Payload: map[string]any{"request_id": rs.req.ID, "report_id": report.ID, "requested_by": PersonID(rs.requestedBy)}, Text: "Solicitud completada"})
 	o.emitMetrics(ctx)
 }
 
@@ -1123,6 +1123,9 @@ func (o *Orchestrator) failRequest(ctx context.Context, rs *run, agentID, what s
 	o.reportError(ctx, agentID, fmt.Sprintf("%s: %v", what, cause))
 	o.sendMessage(ctx, rs, "system", "user", "chat", fmt.Sprintf("%s: %v", what, cause), nil)
 	o.chatEchoFailure(ctx, rs, what, cause)
+	// E0: the person who asked is told (push), nobody else
+	o.rec.Emit(ctx, Action{Type: domain.EvRequestFailed, Entity: "request", EntityID: rs.req.ID, SkipAudit: true,
+		Payload: map[string]any{"request_id": rs.req.ID, "requested_by": PersonID(rs.requestedBy)}})
 	o.emitMetrics(ctx)
 }
 

@@ -32,6 +32,9 @@ export function toChatMessage(x: any, conv: string): ChatMessage {
     kind: x.kind ?? "chat", text: String(x.text ?? ""), reply_to: x.reply_to ?? null, ts: String(x.ts ?? new Date().toISOString()), handoff_to: x.handoff_to ?? null,
     ...(x.request_id ? { request_id: String(x.request_id) } : {}),
     ...(Array.isArray(x.agent_ids) ? { agent_ids: x.agent_ids.map(String) } : {}),
+    ...(x.author_id ? { author_id: String(x.author_id) } : {}),
+    ...(x.author_name ? { author_name: String(x.author_name) } : {}),
+    ...(x.shared_legacy ? { shared_legacy: true } : {}),
     ...(Array.isArray(x.files) && x.files.length ? { files: x.files.filter((f: any) => f && typeof f.path === "string").map((f: any) => ({ file_id: f.file_id, path: f.path, name: String(f.name ?? f.path.split("/").pop()), mime: f.mime, size: f.size, version: f.version, action: f.action })) } : {}),
   };
 }

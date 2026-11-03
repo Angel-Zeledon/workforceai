@@ -248,6 +248,42 @@ export async function authFetch(url: string, init: RequestInit = {}): Promise<Re
   return res;
 }
 
+/** Progress of an upload: bytes sent so far and the total. */
+export type UploadProgress = (loaded: number, total: number) => void;
+
+/**
+ * authFetch for uploads, with progress: fetch() cannot report how much of a request body was sent, so the
+ * body goes through XMLHttpRequest (same token, same refresh-and-retry on 401, same plan-limit notice).
+ * Resolves with a Response built from the answer; rejects only on network errors or abort.
+ */
+export async function authUpload(url: string, init: { method: string; body: XMLHttpRequestBodyInit; headers?: Record<string, string>; signal?: AbortSignal },
+  onProgress?: UploadProgress): Promise<Response> {
+  if (!MOCK && useSession.getState().status === "loading") await bootstrapAuth();
+  const send = (tok: string) => new Promise<Response>((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open(init.method, url);
+    for (const [k, v] of Object.entries(init.headers ?? {})) x.setRequestHeader(k, v);
+    if (tok) x.setRequestHeader("Authorization", `Bearer ${tok}`);
+    if (onProgress) x.upload.onprogress = (e) => onProgress(e.loaded, e.lengthComputable ? e.total : 0);
+    x.onload = () => resolve(new Response(x.status === 204 ? null : x.responseText, { status: x.status, statusText: x.statusText,
+      headers: { "Content-Type": x.getResponseHeader("Content-Type") ?? "application/json" } }));
+    x.onerror = () => reject(new TypeError("network error"));
+    x.onabort = () => reject(new DOMException("aborted", "AbortError"));
+    init.signal?.addEventListener("abort", () => x.abort(), { once: true });
+    x.send(init.body);
+  });
+  if (MOCK || !authEnabled()) {
+    const open = await send("");
+    announcePlanLimit(open);
+    return open;
+  }
+  let res = await send(await accessToken());
+  if (res.status === 401 && (await refresh())) res = await send(access);
+  if (res.status === 401) clear();
+  announcePlanLimit(res);
+  return res;
+}
+
 /** The WebSocket URL with the access token as ?access_token= (how the backend authenticates /ws). */
 export async function wsUrl(base: string): Promise<string> {
   if (!authEnabled() || MOCK) return base;

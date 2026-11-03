@@ -14,6 +14,15 @@ proyecto y, si ya existe, el **resumen del abogado del diablo** (B8) leído de s
 
 Orden: riesgo más alto primero; dentro del mismo riesgo, la más antigua primero.
 
+## "Mis aprobaciones" (E0)
+
+Arriba de la tarjeta hay tres pestañas con su número: **Todas**, **Las que pedí yo** (`requested_by` de la aprobación
+es quien mira: la pidió su mensaje o su solicitud) y **Las que puedo decidir** (mismas reglas que
+`POST /approvals/{id}/decision`: `approvals:decide`, rol mínimo, sin autoaprobación, otra persona en la doble
+aprobación). `GET /approvals/inbox?mine=requested|decidable`; la respuesta trae `counts` y, por item,
+`requested_by_me` y `can_decide`. Los grupos y "aprobar las N" se calculan sobre lo filtrado. Sin autenticación (demo)
+todo es decidible y nada es "pedido por mí".
+
 ## Teclado y gestos
 
 | Acción | Teclado | Táctil |

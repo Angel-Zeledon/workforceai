@@ -104,7 +104,7 @@ func (o *Orchestrator) webReads(ctx context.Context, rs *run, t *domain.Task, ag
 			}
 			out := o.web.Run(ctx, WebCall{Org: org, AgentID: agent.ID, TaskID: t.ID, Action: strings.ToLower(strings.TrimSpace(tr.Action)), Args: tr.Args})
 			if out.CostUSD > 0 {
-				entry := domain.UsageEntry{TaskID: t.ID, AgentID: agent.ID, Kind: UsageWeb, Tools: []string{"web." + tr.Action}}
+				entry := domain.UsageEntry{TaskID: t.ID, AgentID: agent.ID, Kind: UsageWeb, Tools: []string{"web." + tr.Action}, UserID: PersonID(rs.requestedBy)}
 				if _, err := o.budget.Record(ctx, rs.req.ID, entry, out.CostUSD); err != nil {
 					o.log.Warn("record web cost", "err", err)
 				}

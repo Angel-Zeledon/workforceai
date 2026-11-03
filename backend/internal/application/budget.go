@@ -254,6 +254,9 @@ func (b *Budget) Record(ctx context.Context, requestID string, u domain.UsageEnt
 	org := b.org(ctx)
 	cost := math.Max(runtimeCost, recalcCostCached(u.Model, u.InputTokens, u.CachedTokens, u.OutputTokens))
 	u.ID, u.RequestID, u.CostUSD = newID(), requestID, cost
+	if u.UserID == "" {
+		u.UserID = PersonFrom(ctx) // E0: the person whose message or action started the call ("" = nobody)
+	}
 	if u.TS.IsZero() {
 		u.TS = time.Now().UTC()
 	}

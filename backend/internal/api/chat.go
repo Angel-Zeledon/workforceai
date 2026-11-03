@@ -1,12 +1,15 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"aiworkforce/backend/internal/application"
+	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 )
 
@@ -20,7 +23,7 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		Text         string `json:"text"`
 		// ClientMessageID is an alternative to the Idempotency-Key header.
 		ClientMessageID string `json:"client_message_id"`
-		// Attachments are drive paths the user uploaded for this message (max 6); the agents read them with fs.read.
+		// Attachments are drive paths the user uploaded for this message (max 10; more is a 400); the agents read them with fs.read.
 		Attachments []string `json:"attachments"`
 		// CustomerID (B12, optional) scopes any request this message creates to one customer, like POST /requests:
 		// the scope is stored before the request exists and its tasks only see that customer's memories and files.
@@ -39,6 +42,7 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		key = body.ClientMessageID
 	}
 	ctx := application.WithCustomer(r.Context(), body.CustomerID)
+	ctx = application.WithActorName(ctx, s.authorName(ctx)) // E0: the author shown on the message and told to the agent
 	if len(body.Attachments) > 0 {
 		ctx = application.WithAttachments(ctx, body.Attachments)
 	}
@@ -51,6 +55,26 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Idempotent-Replayed", "true")
 	}
 	writeJSON(w, http.StatusAccepted, turn)
+}
+
+// authorName is the display name of the signed-in person ("" without authentication): their account name,
+// else the part of their e-mail before the @, else the directory's label.
+func (s *server) authorName(ctx context.Context) string {
+	p, ok := auth.PrincipalFrom(ctx)
+	if !ok {
+		return ""
+	}
+	if s.Auth != nil {
+		if v, err := s.Auth.Me(ctx, p); err == nil {
+			if n := strings.TrimSpace(v.Name); n != "" {
+				return n
+			}
+			if local, _, ok := strings.Cut(v.Email, "@"); ok && local != "" {
+				return local
+			}
+		}
+	}
+	return s.personName(ctx, p.OrgID, p.UserID)
 }
 
 // listMessages is GET /conversations/{id}/messages. Without query parameters it

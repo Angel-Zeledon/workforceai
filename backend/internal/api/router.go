@@ -33,6 +33,7 @@ import (
 	"aiworkforce/backend/internal/linkimports"
 	"aiworkforce/backend/internal/meetings" // meetings-block
 	"aiworkforce/backend/internal/memory"
+	"aiworkforce/backend/internal/billing"
 	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/peoplechat"
@@ -191,6 +192,9 @@ type Deps struct {
 	// PlanSelfServe lets an owner change the plan with PUT /plan (PLAN_SELF_SERVE): there is no payment provider yet,
 	// so it is for early access and demos; off, the UI offers to write to sales instead.
 	PlanSelfServe bool
+	// Billing charges the plans with ONVO Pay (ONVO_SECRET_KEY): subscribe, confirm, cancel and the webhook
+	// (billing.go). When it is set, plan changes only happen by paying (PUT /plan is off). Optional.
+	Billing *billing.Service
 	// ---- END approvals-notify ----
 	// Slack serves the two-way Slack channel for humans (slack_mount.go): the signed public request URLs, the
 	// settings card and the account link. Optional: nil leaves the routes unmounted.
@@ -258,6 +262,7 @@ func NewRouter(d Deps) http.Handler {
 		// without a bearer token); it is verified by its single-use state.
 		s.mountOAuthCallback(r)
 		s.mountNotifyPublic(r)   // approvals-notify: the public landing page of the signed links
+		s.mountBillingPublic(r)  // ONVO webhook, authenticated by the X-Webhook-Secret header
 		s.mountSlackPublic(r)    // Slack channel: request URLs authenticated by the Slack signature
 		s.mountMeetingsPublic(r) // meetings: public ICS feed (secret token in the URL)
 		s.mountPortalPublic(r)   // client portal: the read-only page of a share link (token in the body)

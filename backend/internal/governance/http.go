@@ -29,6 +29,11 @@ type Env struct {
 	Admin, Owner, Metrics, AuditRead func(http.Handler) http.Handler
 	// WithOrg binds an organization and an actor to a context (public API requests).
 	WithOrg func(ctx context.Context, org, actor string) context.Context
+	// SeesAllPeople (E0, optional) reports whether the caller may see the costs of every person
+	// (by=person); otherwise the report keeps the caller's own row only. nil = everybody may.
+	SeesAllPeople func(r *http.Request) bool
+	// Person (E0, optional) is the caller's person id (the key of their own by=person row).
+	Person func(r *http.Request) string
 }
 
 // Handler serves the administration endpoints (Mount) and the public API (PublicRouter).
@@ -281,6 +286,13 @@ func (h *Handler) usageReport(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.fail(w, err)
 		return
+	}
+	if rep.By == ByPerson && h.Env.SeesAllPeople != nil && !h.Env.SeesAllPeople(r) {
+		me := ""
+		if h.Env.Person != nil {
+			me = h.Env.Person(r)
+		}
+		rep.OnlyPerson(me) // each person sees their own costs; owners and admins see everybody's
 	}
 	if strings.EqualFold(r.URL.Query().Get("format"), "csv") {
 		w.Header().Set("Content-Type", "text/csv; charset=utf-8")

@@ -18,6 +18,7 @@ import { withOpenFile } from "@/lib/fileEdit";
 import { useFileViewer } from "@/lib/fileView";
 import { useChatCustomer } from "@/lib/chatCustomer";
 import { AttachMenu, AttachmentTray, DrivePicker, DropOverlay, MAX_FILES, useAttachments } from "./attachments";
+import { useSession } from "@/lib/session";
 
 const EMPTY: ChatMessage[] = [];
 
@@ -98,12 +99,50 @@ function useHandoff(m: ChatMessage): string | null {
   return hits.length === 1 ? hits[0].id : null;
 }
 
+/** E0: a user message written by SOMEONE ELSE (a colleague in the shared office, or the earlier shared history). */
+export function useOtherPerson(m: ChatMessage): boolean {
+  const me = useSession((s) => s.user?.id);
+  if (m.from !== "user") return false;
+  if (m.shared_legacy) return true;
+  return !!(m.author_id && me && m.author_id !== me);
+}
+
+/** Avatar of a person (initial on a neutral chip; agents keep their colored square). */
+function PersonAvatar({ name, size = 24 }: { name: string; size?: number }) {
+  return (
+    <span aria-hidden className="flex shrink-0 items-center justify-center rounded-full border border-line-strong bg-panel2 font-semibold text-ink2" style={{ width: size, height: size, fontSize: size * 0.46 }}>
+      {(name.trim()[0] || "?").toUpperCase()}
+    </span>
+  );
+}
+
+/** E0: divider where the earlier shared 1:1 history starts or ends inside an agent chat. */
+export function LegacyDivider({ start }: { start: boolean }) {
+  const { t } = useT();
+  return (
+    <div data-testid={start ? "chat-legacy-start" : "chat-legacy-end"} role="note" className="my-2 flex items-center gap-2 text-[10.5px] text-mute">
+      <span className="h-px flex-1 bg-line" />
+      <span className="max-w-[80%] text-center">{start ? t("chat.legacy.start") : t("chat.legacy.end")}</span>
+      <span className="h-px flex-1 bg-line" />
+    </div>
+  );
+}
+
+/** Whether a divider goes before message i of a list (start or end of the earlier shared history). */
+export function legacyEdge(msgs: ChatMessage[], i: number): "start" | "end" | "" {
+  const cur = !!msgs[i]?.shared_legacy, prev = i > 0 ? !!msgs[i - 1]?.shared_legacy : false;
+  if (cur && !prev) return "start";
+  if (!cur && prev) return "end";
+  return "";
+}
+
 export function Bubble({ m, grouped, showRoute }: { m: ChatMessage; grouped: boolean; showRoute: boolean }) {
   const { t } = useT();
   const name = useAgentName();
   const color = useAgentColor();
   const route = useStore((s) => (m.turn_id ? s.routes[m.turn_id] : undefined));
-  const mine = m.from === "user";
+  const other = useOtherPerson(m);
+  const mine = m.from === "user" && !other;
   const handoff = useHandoff(m);
   const select = useStore((s) => s.select);
   const setDraft = useStore((s) => s.setDraft);
@@ -118,6 +157,23 @@ export function Bubble({ m, grouped, showRoute }: { m: ChatMessage; grouped: boo
   if (m.card) return <CommandCard m={m} />;
   if (m.kind === "system" || m.from === "system") {
     return <div className="py-0.5 text-center text-[10.5px] text-mute">{m.text}</div>;
+  }
+  if (other) {
+    // a colleague's message in the shared office (or one of the earlier shared history): left, with their name
+    const who = m.author_name || t("chat.someone");
+    return (
+      <div data-testid="chat-msg" data-from="user" data-author={m.author_id || ""} data-legacy={m.shared_legacy ? "1" : "0"} data-kind={m.kind} className="flex gap-2 pt-1">
+        <PersonAvatar name={who} />
+        <div className="flex min-w-0 max-w-[86%] flex-col items-start">
+          <div className="mb-0.5 flex items-center gap-1.5 text-[10.5px] text-mute">
+            <span data-testid="chat-author" className="font-semibold text-ink2">{who}</span>
+            <span className="font-mono text-[10px]">{fmtTime(m.ts)}</span>
+          </div>
+          <div className="whitespace-pre-line break-words rounded-xl rounded-tl-sm border border-line bg-panel px-3 py-1.5 text-[12.5px] leading-[1.45] text-ink">{m.text}</div>
+          <FileCards files={m.files} mine={false} />
+        </div>
+      </div>
+    );
   }
   const toAgent = m.to && !["user", "all", "system", ""].includes(m.to) && !mine ? name(m.to).split(" ")[0] : "";
   // kind tag only for team traffic (assignments, questions between agents); plain replies to you need no label
@@ -174,7 +230,15 @@ export function ChatThread({ conv, showRoute = false, className = "", emptyText 
         className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-2"
       >
         {msgs.length === 0 && <div className="py-6 text-center text-xs leading-relaxed text-mute">{emptyText}</div>}
-        {rows.map(({ m, grouped }) => <Bubble key={m.id} m={m} grouped={grouped} showRoute={showRoute} />)}
+        {rows.map(({ m, grouped }, i) => {
+          const edge = legacyEdge(msgs, i);
+          return (
+            <div key={m.id}>
+              {edge && <LegacyDivider start={edge === "start"} />}
+              <Bubble m={m} grouped={grouped} showRoute={showRoute} />
+            </div>
+          );
+        })}
       </div>
       <div className="px-3 pb-1.5"><TypingLine conv={conv} /></div>
     </div>
@@ -249,7 +313,10 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
       }
       await sendChat(conv, body, "user", refs.map((r) => r.path), refs);
       setText(""); att.clear(); onSent?.();
-    } catch { setErr(t("chat.sendError")); }
+    } catch (e) {
+      // the server refuses more attachments than a message may carry with a clear 400 (never a silent cut)
+      setErr(/too many attachments/i.test(String((e as Error)?.message)) ? t("att.err.tooMany", { n: MAX_FILES }) : t("chat.sendError"));
+    }
     setBusy(false);
   };
   return (

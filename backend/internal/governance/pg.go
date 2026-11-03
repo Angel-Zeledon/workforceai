@@ -274,6 +274,10 @@ func (p *PgStore) Usage(ctx context.Context, org, by string, from, to time.Time)
 	case ByDepartment:
 		keyExpr, labelExpr, deptExpr = `COALESCE(a.department, '')`, `COALESCE(a.department, '')`, `COALESCE(a.department, '')`
 		joins, group = `LEFT JOIN agents a ON a.org_id=u.org_id AND a.id=u.agent_id`, `COALESCE(a.department, '')`
+	case ByPerson:
+		// users is not under RLS: the join is by the ledger's own user ids, inside the organization's rows
+		keyExpr, labelExpr, deptExpr = `u.user_id`, `COALESCE(NULLIF(MAX(us.name), ''), NULLIF(MAX(us.email), ''), u.user_id)`, `''`
+		joins, group = `LEFT JOIN users us ON us.id = u.user_id AND u.user_id <> ''`, `u.user_id`
 	case ByProject:
 		keyExpr, labelExpr, deptExpr = `COALESCE(pr.id, '')`, `COALESCE(MAX(COALESCE(pr.data->>'name', pr.data->>'title')), COALESCE(pr.id, ''))`, `''`
 		joins, group = `LEFT JOIN projects pr ON pr.org_id=u.org_id AND pr.request_id=u.request_id AND pr.request_id <> ''`, `COALESCE(pr.id, '')`

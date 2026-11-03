@@ -425,9 +425,9 @@ func (s *Store) AddUsage(ctx context.Context, orgID string, u domain.UsageEntry)
 	if u.TS.IsZero() {
 		u.TS = time.Now().UTC()
 	}
-	return s.exec(ctx, orgID, `INSERT INTO usage_entries (id, org_id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-		u.ID, orgID, u.RequestID, u.TaskID, u.AgentID, string(u.Kind), u.Model, u.InputTokens, u.OutputTokens, u.CostUSD, jb(strs(u.Tools)), u.TS)
+	return s.exec(ctx, orgID, `INSERT INTO usage_entries (id, org_id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts, user_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+		u.ID, orgID, u.RequestID, u.TaskID, u.AgentID, string(u.Kind), u.Model, u.InputTokens, u.OutputTokens, u.CostUSD, jb(strs(u.Tools)), u.TS, u.UserID)
 }
 
 func (s *Store) ListUsage(ctx context.Context, orgID string) ([]domain.UsageEntry, error) {
@@ -435,12 +435,12 @@ func (s *Store) ListUsage(ctx context.Context, orgID string) ([]domain.UsageEntr
 		var u domain.UsageEntry
 		var kind string
 		var tools []byte
-		err := r.Scan(&u.ID, &u.RequestID, &u.TaskID, &u.AgentID, &kind, &u.Model, &u.InputTokens, &u.OutputTokens, &u.CostUSD, &tools, &u.TS)
+		err := r.Scan(&u.ID, &u.RequestID, &u.TaskID, &u.AgentID, &kind, &u.Model, &u.InputTokens, &u.OutputTokens, &u.CostUSD, &tools, &u.TS, &u.UserID)
 		u.Kind = domain.UsageKind(kind)
 		unmarshal(tools, &u.Tools)
 		u.Tools = strs(u.Tools)
 		return u, err
-	}, `SELECT id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts FROM usage_entries WHERE org_id=$1 ORDER BY ts, id`, orgID)
+	}, `SELECT id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts, user_id FROM usage_entries WHERE org_id=$1 ORDER BY ts, id`, orgID)
 }
 
 func (s *Store) SetBudgetCap(ctx context.Context, orgID string, scope domain.BudgetScope, scopeID string, capUSD float64) error {
@@ -474,8 +474,8 @@ func scanConv(r scanner) (domain.Conversation, error) {
 }
 
 func (s *Store) CreateConversation(ctx context.Context, orgID string, c domain.Conversation) error {
-	return s.exec(ctx, orgID, `INSERT INTO conversations (id, org_id, title, participants, request_id, last_message_at) VALUES ($1,$2,$3,$4,$5,$6)`,
-		c.ID, orgID, c.Title, jb(strs(c.Participants)), c.RequestID, c.LastMessageAt)
+	return s.exec(ctx, orgID, `INSERT INTO conversations (id, org_id, title, participants, request_id, last_message_at, owner_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+		c.ID, orgID, c.Title, jb(strs(c.Participants)), c.RequestID, c.LastMessageAt, domain.ChatConvOwner(c.ID))
 }
 
 func (s *Store) GetConversation(ctx context.Context, orgID, id string) (domain.Conversation, error) {
@@ -489,8 +489,10 @@ func (s *Store) ListConversations(ctx context.Context, orgID string) ([]domain.C
 
 func (s *Store) AddMessage(ctx context.Context, orgID string, m domain.Message) error {
 	return s.WithOrgTx(ctx, orgID, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `INSERT INTO messages (id, org_id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id, files) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-			m.ID, orgID, m.ConversationID, m.From, m.To, m.Kind, m.Text, m.TaskID, m.TS, m.TurnID, m.ReplyTo, m.RequestID, jb(fileRefs(m.Files))); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO messages (id, org_id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id, files, author_id, author_name, owner_id)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+			m.ID, orgID, m.ConversationID, m.From, m.To, m.Kind, m.Text, m.TaskID, m.TS, m.TurnID, m.ReplyTo, m.RequestID, jb(fileRefs(m.Files)),
+			m.AuthorID, m.AuthorName, domain.ChatConvOwner(m.ConversationID)); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `UPDATE conversations SET last_message_at=$3 WHERE org_id=$1 AND id=$2`, orgID, m.ConversationID, m.TS); err != nil {
@@ -509,7 +511,7 @@ func (s *Store) AddMessage(ctx context.Context, orgID string, m domain.Message) 
 	})
 }
 
-const msgCols = `id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id, files`
+const msgCols = `id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id, files, author_id, author_name`
 
 func fileRefs(f []domain.FileRef) []domain.FileRef {
 	if f == nil {
@@ -521,7 +523,7 @@ func fileRefs(f []domain.FileRef) []domain.FileRef {
 func scanMessage(r scanner) (domain.Message, error) {
 	var m domain.Message
 	var files []byte
-	err := r.Scan(&m.ID, &m.ConversationID, &m.From, &m.To, &m.Kind, &m.Text, &m.TaskID, &m.TS, &m.TurnID, &m.ReplyTo, &m.RequestID, &files)
+	err := r.Scan(&m.ID, &m.ConversationID, &m.From, &m.To, &m.Kind, &m.Text, &m.TaskID, &m.TS, &m.TurnID, &m.ReplyTo, &m.RequestID, &files, &m.AuthorID, &m.AuthorName)
 	unmarshal(files, &m.Files)
 	return m, err
 }

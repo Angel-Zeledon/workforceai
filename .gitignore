@@ -28,3 +28,6 @@ Caddyfile;C*/
 
 # scripts/eval-live output (may contain model answers)
 agent-runtime/evals/reports/
+
+# local Go builds
+backend/*.exe

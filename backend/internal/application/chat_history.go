@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -60,6 +61,11 @@ type ChatConversation struct {
 	// LastMessageAt equals UpdatedAt (the field GET /conversations always had).
 	LastMessageAt time.Time  `json:"last_message_at"`
 	ArchivedAt    *time.Time `json:"archived_at,omitempty"`
+	// SharedLegacy (E0): the row includes the 1:1 history written before private threads existed (shared
+	// with the whole organization, read-only).
+	SharedLegacy bool `json:"shared_legacy,omitempty"`
+	// OwnerID is the person of a private thread ("" = shared). Internal: the API shows public ids only.
+	OwnerID string `json:"-"`
 }
 
 // ChatThread is one entry of the left list: General or one agent.
@@ -75,6 +81,9 @@ type ChatThread struct {
 
 // ChatConvQuery filters the history list. Archived: "" (hide archived), "only", "all".
 type ChatConvQuery struct {
+	// Viewer (E0) is the person reading: they see the shared conversations and their own private threads,
+	// never another person's. Set by the service from the context, never by the client.
+	Viewer   string
 	AgentID  string
 	Q        string
 	Kind     string
@@ -85,6 +94,7 @@ type ChatConvQuery struct {
 
 // ChatThreadQuery pages a thread: the Limit messages older than BeforeID ("" = newest).
 type ChatThreadQuery struct {
+	Viewer   string // the person reading (E0, see ChatConvQuery.Viewer)
 	Thread   string // ThreadGeneral or an agent id
 	BeforeID string
 	Limit    int
@@ -98,14 +108,20 @@ type ChatConvPatch struct {
 
 // ChatHistoryStore is the storage behind the history. Postgres and the memory
 // store implement it with the same semantics (tested against one suite).
+//
+// E0: every read takes the viewer (the person reading). Messages and conversations whose owner is another
+// person are invisible to them; read markers and unread counts are per viewer (a marker written before
+// per-person markers existed, user ”, still counts as a baseline). Ids given to the store are STORED ids;
+// rows come back with stored ids too (the service turns them into public ids).
 type ChatHistoryStore interface {
 	ChatConversations(ctx context.Context, org string, q ChatConvQuery) ([]ChatConversation, bool, error)
-	ChatGetConversation(ctx context.Context, org, id string) (ChatConversation, error)
+	// ChatGetConversation returns a conversation as viewer sees it (not found when it belongs to another person).
+	ChatGetConversation(ctx context.Context, org, viewer, id string) (ChatConversation, error)
 	ChatThreadMessages(ctx context.Context, org string, q ChatThreadQuery) ([]ChatMessage, bool, error)
-	// ChatThreads returns General first, then one entry per given agent id (in that order).
-	ChatThreads(ctx context.Context, org string, agentIDs []string) ([]ChatThread, error)
-	// ChatMarkRead stores the read marker of a thread ("thread:<key>") or a conversation ("conv:<id>").
-	ChatMarkRead(ctx context.Context, org, key string, at time.Time) error
+	// ChatThreads returns General first, then one entry per given agent id (in that order), as viewer sees them.
+	ChatThreads(ctx context.Context, org, viewer string, agentIDs []string) ([]ChatThread, error)
+	// ChatMarkRead stores viewer's read marker of a thread ("thread:<key>") or a conversation ("conv:<stored id>").
+	ChatMarkRead(ctx context.Context, org, viewer, key string, at time.Time) error
 	ChatPatchConversation(ctx context.Context, org, id string, p ChatConvPatch) error
 	// ChatDeleteConversation removes a conversation and its messages; it returns how many messages.
 	ChatDeleteConversation(ctx context.Context, org, id string) (int, error)
@@ -146,12 +162,51 @@ func (h *ChatHistory) Conversations(ctx context.Context, q ChatConvQuery) ([]Cha
 		q.Q = string(r[:100])
 	}
 	org := h.org(ctx)
+	q.Viewer = PersonFrom(ctx)
 	rows, more, err := h.Store.ChatConversations(ctx, org, q)
 	if err != nil {
 		return nil, false, err
 	}
+	rows = publicRows(q.Viewer, rows)
 	h.link(ctx, org, rows)
 	return rows, more, nil
+}
+
+// publicRows turns stored rows into what the viewer sees: public ids, and one row per agent chat (their
+// private thread and the earlier shared history are the same chat for them: counts add up, the newest wins).
+func publicRows(viewer string, rows []ChatConversation) []ChatConversation {
+	out := make([]ChatConversation, 0, len(rows))
+	at := map[string]int{}
+	for _, r := range rows {
+		r = publicRow(viewer, r)
+		i, dup := at[r.ID]
+		if !dup {
+			at[r.ID] = len(out)
+			out = append(out, r)
+			continue
+		}
+		c := &out[i]
+		c.MessageCount += r.MessageCount
+		c.Unread += r.Unread
+		c.SharedLegacy = c.SharedLegacy || r.SharedLegacy
+		if r.UpdatedAt.After(c.UpdatedAt) {
+			c.Preview, c.PreviewFrom, c.UpdatedAt, c.LastMessageAt = r.Preview, r.PreviewFrom, r.UpdatedAt, r.LastMessageAt
+		}
+		if c.OwnerID == "" && r.OwnerID != "" { // the private row owns title and archive state
+			c.Title, c.TitleCustom, c.Archived, c.ArchivedAt, c.OwnerID = r.Title, r.TitleCustom, r.Archived, r.ArchivedAt, r.OwnerID
+		}
+	}
+	return out
+}
+
+func publicRow(viewer string, r ChatConversation) ChatConversation {
+	pub := domain.PublicChatConv(r.ID)
+	if viewer != "" && r.OwnerID == "" && pub == r.ID && strings.HasPrefix(r.ID, domain.ChatAgentPrefix) {
+		r.SharedLegacy = true
+	}
+	r.ID = pub
+	r.Kind, r.AgentID = ChatKind(pub)
+	return r
 }
 
 func (h *ChatHistory) link(ctx context.Context, org string, rows []ChatConversation) {
@@ -179,7 +234,7 @@ func (h *ChatHistory) Threads(ctx context.Context) ([]ChatThread, error) {
 	for _, a := range agents {
 		ids = append(ids, a.ID)
 	}
-	return h.Store.ChatThreads(ctx, org, ids)
+	return h.Store.ChatThreads(ctx, org, PersonFrom(ctx), ids)
 }
 
 func (h *ChatHistory) checkThread(ctx context.Context, key string) error {
@@ -199,23 +254,68 @@ func (h *ChatHistory) Thread(ctx context.Context, q ChatThreadQuery) ([]ChatMess
 		q.Limit = 50
 	}
 	q.Limit = min(q.Limit, maxHistoryLimit)
-	return h.Store.ChatThreadMessages(ctx, h.org(ctx), q)
+	q.Viewer = PersonFrom(ctx)
+	msgs, more, err := h.Store.ChatThreadMessages(ctx, h.org(ctx), q)
+	if err != nil {
+		return nil, false, err
+	}
+	plain := make([]domain.Message, len(msgs))
+	for i := range msgs {
+		plain[i] = msgs[i].Message
+	}
+	plain = PublicMessages(ctx, plain)
+	for i := range msgs {
+		msgs[i].Message = plain[i]
+	}
+	return msgs, more, nil
 }
 
-// MarkThreadRead says the user has seen everything in a thread.
+// MarkThreadRead says the person has seen everything in a thread (their own marker).
 func (h *ChatHistory) MarkThreadRead(ctx context.Context, key string) error {
 	if err := h.checkThread(ctx, key); err != nil {
 		return err
 	}
-	return h.Store.ChatMarkRead(ctx, h.org(ctx), "thread:"+key, time.Now().UTC())
+	return h.Store.ChatMarkRead(ctx, h.org(ctx), PersonFrom(ctx), "thread:"+key, time.Now().UTC())
 }
 
-// MarkRead marks one conversation as read.
+// storedIDs are the stored conversations behind a public id, as the viewer sees them: their private thread
+// and the earlier shared history for an agent chat, the id itself otherwise. Only the existing ones.
+func (h *ChatHistory) storedIDs(ctx context.Context, id string) ([]string, error) {
+	stored, err := ResolveChatConv(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	ids := []string{stored}
+	if pub := domain.PublicChatConv(stored); pub != stored {
+		ids = append(ids, pub)
+	}
+	var out []string
+	for _, cid := range ids {
+		if _, err := h.Store.ChatGetConversation(ctx, h.org(ctx), PersonFrom(ctx), cid); err == nil {
+			out = append(out, cid)
+		} else if !errors.Is(err, domain.ErrNotFound) {
+			return nil, err
+		}
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("%w: conversation %q", domain.ErrNotFound, id)
+	}
+	return out, nil
+}
+
+// MarkRead marks one conversation as read (for the person reading).
 func (h *ChatHistory) MarkRead(ctx context.Context, id string) error {
-	if _, err := h.Store.ChatGetConversation(ctx, h.org(ctx), id); err != nil {
+	ids, err := h.storedIDs(ctx, id)
+	if err != nil {
 		return err
 	}
-	return h.Store.ChatMarkRead(ctx, h.org(ctx), "conv:"+id, time.Now().UTC())
+	now := time.Now().UTC()
+	for _, cid := range ids {
+		if err := h.Store.ChatMarkRead(ctx, h.org(ctx), PersonFrom(ctx), "conv:"+cid, now); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 const maxTitleRunes = 120
@@ -236,7 +336,15 @@ func (h *ChatHistory) Update(ctx context.Context, id string, p ChatConvPatch) (C
 		p.Title = &t
 	}
 	org := h.org(ctx)
-	if err := h.Store.ChatPatchConversation(ctx, org, id, p); err != nil {
+	// E0: the caller renames or archives their own thread; the earlier shared history is read-only.
+	stored, err := ResolveChatConv(ctx, id)
+	if err != nil {
+		return ChatConversation{}, err
+	}
+	if _, err := h.Store.ChatGetConversation(ctx, org, PersonFrom(ctx), stored); err != nil {
+		return ChatConversation{}, err
+	}
+	if err := h.Store.ChatPatchConversation(ctx, org, stored, p); err != nil {
 		return ChatConversation{}, err
 	}
 	if h.Rec != nil {
@@ -249,9 +357,9 @@ func (h *ChatHistory) Update(ctx context.Context, id string, p ChatConvPatch) (C
 		}
 		h.Rec.Audit(ctx, domain.AuditLog{Actor: ActorFrom(ctx, "user"), Action: "conversation.updated", Entity: "conversation", EntityID: id, Details: det})
 	}
-	c, err := h.Store.ChatGetConversation(ctx, org, id)
+	c, err := h.Store.ChatGetConversation(ctx, org, PersonFrom(ctx), stored)
 	if err == nil {
-		rows := []ChatConversation{c}
+		rows := []ChatConversation{publicRow(PersonFrom(ctx), c)}
 		h.link(ctx, org, rows)
 		c = rows[0]
 	}
@@ -260,10 +368,22 @@ func (h *ChatHistory) Update(ctx context.Context, id string, p ChatConvPatch) (C
 
 // Delete removes a conversation and its messages for good. Audited. Deleting a
 // chat stream (office or an agent's 1:1 chat) clears that history in both views.
+//
+// E0: for an agent chat it removes the caller's own private thread and the earlier shared history (the route
+// needs conversations:delete, an administrator's permission, as before); another person's private thread is
+// never touched (an administrator does not read nor delete it).
 func (h *ChatHistory) Delete(ctx context.Context, id string) error {
-	n, err := h.Store.ChatDeleteConversation(ctx, h.org(ctx), id)
+	ids, err := h.storedIDs(ctx, id)
 	if err != nil {
 		return err
+	}
+	n := 0
+	for _, cid := range ids {
+		k, err := h.Store.ChatDeleteConversation(ctx, h.org(ctx), cid)
+		if err != nil {
+			return err
+		}
+		n += k
 	}
 	if h.Rec != nil {
 		h.Rec.Audit(ctx, domain.AuditLog{Actor: ActorFrom(ctx, "user"), Action: "conversation.deleted", Entity: "conversation", EntityID: id,
@@ -276,6 +396,7 @@ func (h *ChatHistory) Delete(ctx context.Context, id string) error {
 
 // ChatKind classifies a conversation id.
 func ChatKind(id string) (kind, agent string) {
+	id = domain.PublicChatConv(id)
 	if id == domain.ChatOffice {
 		return ConvKindOffice, ""
 	}
@@ -300,7 +421,7 @@ func InThread(m domain.Message, agent string, agentTurns map[string]bool) bool {
 	if agent == "" {
 		return true
 	}
-	if m.ConversationID == domain.ChatAgentConv(agent) || m.From == agent || m.To == agent {
+	if domain.PublicChatConv(m.ConversationID) == domain.ChatAgentConv(agent) || m.From == agent || m.To == agent {
 		return true
 	}
 	return (m.From == "user" || m.From == "system") && m.TurnID != "" && agentTurns[m.TurnID]
@@ -346,7 +467,7 @@ func WithAgentIDs(m domain.Message, turns map[string][]string) ChatMessage {
 		add(p)
 	}
 	add(m.To)
-	if a, ok := strings.CutPrefix(m.ConversationID, domain.ChatAgentPrefix); ok {
+	if a, ok := strings.CutPrefix(domain.PublicChatConv(m.ConversationID), domain.ChatAgentPrefix); ok {
 		add(a)
 	}
 	return ChatMessage{Message: m, AgentIDs: ids}
@@ -355,6 +476,19 @@ func WithAgentIDs(m domain.Message, turns map[string][]string) ChatMessage {
 // Preview is the one-line text shown in the lists.
 func Preview(s string) string {
 	return truncate(strings.Join(strings.Fields(s), " "), 140)
+}
+
+// VisibleTo reports whether viewer may see a stored message or conversation id (E0): shared ones, and the
+// private threads of viewer. The reference rule the SQL of the Postgres store mirrors (owner_id IN (”, viewer)).
+func VisibleTo(storedConv, viewer string) bool {
+	o := domain.ChatConvOwner(storedConv)
+	return o == "" || o == viewer
+}
+
+// UnreadFor reports whether message m counts as unread for viewer (newer than the marker is checked by the
+// caller): what the viewer wrote never does, nor do user messages without an author (written before E0).
+func UnreadFor(m domain.Message, viewer string) bool {
+	return !(m.From == "user" && (m.AuthorID == "" || m.AuthorID == viewer))
 }
 
 // SearchMatch is the case-insensitive substring match used by the history search.

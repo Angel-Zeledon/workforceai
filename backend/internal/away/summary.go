@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
-	"aiworkforce/backend/internal/policy"
 )
 
 // Version of the summary method (sections, ranking and caps). Bump it when the output changes meaning.
@@ -220,22 +220,7 @@ func emptySummary(now time.Time, minHours float64) Summary {
 // CanDecide reports whether viewer may approve ap right now: the same rules as Approvals.Decide (role, no
 // self-approval, a different person for each approval of a double approval). Agents never decide.
 func CanDecide(ap domain.Approval, v Viewer) bool {
-	if ap.Status != domain.ApprovalPending || !v.CanDecide || v.UserID == "" || v.UserID == ap.AgentID {
-		return false
-	}
-	r := policy.RoleRank(v.Role)
-	if r == 0 || r < policy.RoleRank(ap.RequiredRole) {
-		return false
-	}
-	if ap.NoSelfApproval && ap.RequestedBy != "" && ap.RequestedBy == v.UserID {
-		return false
-	}
-	for _, d := range ap.Decisions {
-		if d.By == v.UserID {
-			return false
-		}
-	}
-	return true
+	return application.CanDecideApproval(ap, v.UserID, v.Role, v.CanDecide)
 }
 
 func riskRank(r string) int {

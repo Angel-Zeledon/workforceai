@@ -25,7 +25,7 @@ usuario --POST /api/v1/messages--> backend --(POST /v1/route)--> runtime
 | id | Qué es | Quién responde |
 |---|---|---|
 | `office` | Canal general | Router: saludo = la asistente primero + 1-2 compañeros (no todos); tema = el dueño del tema y, como mucho, 1 contribuyente |
-| `agent:<id>` | Chat 1:1 | **Solo ese agente** (regla dura del backend, aunque el router diga otra cosa) |
+| `agent:<id>` | Chat 1:1 (desde E0, **privado de cada persona**: se guarda como `agent:<id>@<usuario>`, ver chat-history.md) | **Solo ese agente** (regla dura del backend, aunque el router diga otra cosa) |
 
 El id guardado es el mismo string. En Postgres la clave de `conversations` pasa a `(org_id, id)` (migración `260_chat.sql`). Se crean al primer mensaje; un chat que nunca empezó se lee como lista vacía (no 404). `GET /conversations` los lista junto a las conversaciones de solicitudes.
 
@@ -79,7 +79,9 @@ Salida: `{intent: smalltalk|question|task, topic, responders:[{agent_id, role: p
 
 ### `POST /v1/chat-reply`
 
-Entrada: `{agent:{id,role,title,name,persona}, text, conversation, intent, topic, responder_role, reason, agents, history, prior_replies, consult?:{from_agent_id,question}, slot, consult_to?, limit?, handoff?, locale, tone}`.
+Entrada: `{agent:{id,role,title,name,persona}, text, conversation, intent, topic, responder_role, reason, agents, history, prior_replies, consult?:{from_agent_id,question}, slot, consult_to?, limit?, handoff?, locale, tone, speaker_name?}`.
+
+E0 (aditivo): `speaker_name` es el nombre visible de la persona que escribió y `history[].name` el de cada mensaje de persona (la oficina es común: hablan varias). En live van dentro del bloque de datos no confiables del prompt; el agente puede llamar a la persona por su nombre. `conversation` es siempre el id público (`office` o `agent:<id>`), nunca el id guardado del hilo privado; el historial de un hilo privado es solo el de esa persona (el historial anterior compartido no se le pasa al modelo).
 Salida: `{text, kind: chat|answer, consult?: {to_agent_id, question}, usage, provider?, model?}`.
 
 - Simulación: guion variado en `sim_content.py` / `sim_content_en.py` (clave `CHAT`), con rotación: no repite una variante que el agente dijo recientemente (`history`/`prior_replies`). Tono regional: `ar` (voseo) en simulación; en live el tono va como instrucción.
