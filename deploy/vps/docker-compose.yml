@@ -25,7 +25,8 @@
 # COMPOSE_PROFILES=sandbox and SANDBOX_TOKEN (`openssl rand -hex 24`) in ./.env.
 # Search by meaning (docs/architecture/agent-search.md): OFF by default (EMBEDDINGS_PROVIDER empty). Customer documents
 # may only go to Gemini once the key is on PAID billing (on the free tier Google uses the data); then set
-# EMBEDDINGS_PROVIDER=gemini and GEMINI_API_KEY in ./.env.
+# EMBEDDINGS_PROVIDER=gemini and GEMINI_API_KEY in ./.env. With the OpenAI platform key: EMBEDDINGS_PROVIDER=openai and
+# EMBEDDINGS_API_KEY=<the same OPENAI_API_KEY> (text-embedding-3-small, USD 0.02 per million tokens).
 name: workforceai
 
 services:
@@ -70,9 +71,11 @@ services:
     build: ../../agent-runtime
     restart: unless-stopped
     environment:
-      # Live models: set DEEPSEEK_API_KEY and SIMULATION=false in ./.env (the platform model is DeepSeek, see
+      # Live models: set OPENAI_API_KEY and SIMULATION=false in ./.env (the platform model is OpenAI gpt-5-mini, see
       # PLATFORM_LLM_PROVIDER on the backend). Without both it stays in simulation (no network, no cost).
       SIMULATION: ${SIMULATION:-true}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       # Operator ceiling of model providers (comma-separated; empty = all configured).
       ALLOWED_PROVIDERS: ${ALLOWED_PROVIDERS:-}
@@ -95,8 +98,10 @@ services:
       PORT: "8080"
       RUNTIME_URL: http://wf-runtime:8000
       RUNTIME_TOKEN: ${RUNTIME_TOKEN:-}
-      # Platform model answered with the operator's key; must match the key the runtime has (deepseek by default).
-      PLATFORM_LLM_PROVIDER: ${PLATFORM_LLM_PROVIDER:-deepseek}
+      # Platform model answered with the operator's key; must match the key the runtime has (openai by default).
+      PLATFORM_LLM_PROVIDER: ${PLATFORM_LLM_PROVIDER:-openai}
+      # Shown in settings as the platform model; keep it equal to the runtime's OPENAI_MODEL.
+      PLATFORM_LLM_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
       ALLOWED_PROVIDERS: ${ALLOWED_PROVIDERS:-}
       BUDGET_USD: "5"
       UI_BASE_URL: https://app.workforceai.es

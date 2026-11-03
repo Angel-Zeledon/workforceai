@@ -37,6 +37,17 @@ func platformProvider() string {
 	return "deepseek"
 }
 
+// platformModel is the model the platform provider answers with when the operator pins one (PLATFORM_LLM_MODEL,
+// the same value as the runtime's <PROVIDER>_MODEL), so settings show the real model instead of the catalog
+// default. A value outside the provider's catalog is ignored ("" = show the catalog default).
+func platformModel(info LLMProviderInfo) string {
+	m := strings.TrimSpace(os.Getenv("PLATFORM_LLM_MODEL"))
+	if slices.Contains(info.Models, m) {
+		return m
+	}
+	return ""
+}
+
 // LLMProviderInfo is the catalog entry of a provider (what the settings screen renders).
 type LLMProviderInfo struct {
 	ID              string   `json:"id"`
@@ -251,6 +262,9 @@ func (s *LLMService) Get(ctx context.Context) (LLMView, error) {
 	for _, info := range LLMCatalog {
 		info.Platform = info.ID == platformProvider()
 		pv := LLMProviderView{LLMProviderInfo: info, Model: info.DefaultModel, BaseURL: info.DefaultBaseURL}
+		if m := platformModel(info); info.Platform && m != "" {
+			pv.Model = m
+		}
 		if info.Models == nil {
 			pv.Models = []string{}
 		}

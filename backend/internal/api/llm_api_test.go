@@ -110,6 +110,38 @@ func TestLLMPlatformProviderFollowsTheOperatorSetting(t *testing.T) {
 	}
 }
 
+// The platform row shows the model the runtime really answers with (PLATFORM_LLM_MODEL = the runtime's
+// <PROVIDER>_MODEL), not the catalog default; the other providers keep their catalog default.
+func TestLLMPlatformModelFollowsTheOperatorSetting(t *testing.T) {
+	t.Setenv("PLATFORM_LLM_PROVIDER", "openai")
+	t.Setenv("PLATFORM_LLM_MODEL", "gpt-5-mini")
+	e := newEnv(t, opts{llm: true})
+	_, body := e.do("GET", "/api/v1/settings/llm", "", nil, nil)
+	var v application.LLMView
+	_ = json.Unmarshal(body, &v)
+	for _, p := range v.Providers {
+		switch p.ID {
+		case "openai":
+			if p.Model != "gpt-5-mini" || !p.Platform {
+				t.Errorf("platform openai row = %+v", p)
+			}
+		case "deepseek":
+			if p.Model != "deepseek-chat" {
+				t.Errorf("deepseek row model = %s", p.Model)
+			}
+		}
+	}
+	// A model outside the provider's catalog is ignored (the catalog default is shown).
+	t.Setenv("PLATFORM_LLM_MODEL", "gpt 5; drop")
+	_, body = e.do("GET", "/api/v1/settings/llm", "", nil, nil)
+	_ = json.Unmarshal(body, &v)
+	for _, p := range v.Providers {
+		if p.ID == "openai" && p.Model != "gpt-4.1" {
+			t.Errorf("unknown platform model shown: %s", p.Model)
+		}
+	}
+}
+
 func TestLLMGeminiKeyIsStoredWithTheGoogleEndpoint(t *testing.T) {
 	e := newEnv(t, opts{llm: true})
 	resp, body := e.do("PUT", "/api/v1/settings/llm/providers/gemini", "", map[string]any{"api_key": fakeKey, "model": "gemini-3.8-flash"}, nil)
