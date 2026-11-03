@@ -11,7 +11,7 @@ import { ApprovalsTray } from "../ApprovalsTray";
 import { CommandBar } from "../CommandBar";
 import { ProjectPill } from "../projects/ProjectPill";
 import { FirstRunHint } from "../nav/ui2";
-import { EditOfficeButton, LightButton, OfficeEditor } from "./OfficeEditor";
+import { EditOfficeButton, OfficeEditor } from "./OfficeEditor";
 import { useOfficeLayout } from "@/lib/officeLayout";
 import { PresenceHost } from "../presence/PresenceHost";
 import { AwayButton, AwayHost } from "../away/AwayHost";
@@ -53,16 +53,24 @@ export function OfficeView() {
         {folded ? (
           <button type="button" data-testid="activity-expand" onClick={() => setFolded(false)}
             className="pointer-events-auto hidden items-center gap-2 rounded-full border border-line bg-panel/95 px-3.5 py-1.5 text-[11.5px] font-semibold text-ink2 shadow-soft backdrop-blur transition hover:bg-panel2 sm:inline-flex">
-            <Icon name="pulse" size={14} />{t("hud.liveActivity")}<Icon name="chevron" size={13} className="rotate-90 text-mute" />
+            <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden />{t("hud.liveActivity")}<Icon name="chevron" size={13} className="rotate-90 text-mute" />
           </button>
         ) : (
-          <div data-tour="office.activity" className="hidden rounded-xl border border-line bg-panel/95 p-3 shadow-soft backdrop-blur sm:block">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{t("hud.liveActivity")}</div>
+          <div data-tour="office.activity" className="pointer-events-auto hidden overflow-hidden rounded-xl border border-line bg-panel/95 shadow-soft backdrop-blur sm:block">
+            <div className="flex items-center justify-between border-b border-line px-3 py-2">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2" aria-hidden>
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:hidden" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                <span className="text-[12px] font-semibold text-ink">{t("hud.liveActivity")}</span>
+              </div>
               <button type="button" data-testid="activity-collapse" onClick={() => setFolded(true)} aria-label={t("hud.activityHide")} title={t("hud.activityHide")}
-                className="pointer-events-auto -mr-1 rounded-md p-1 text-mute transition hover:bg-panel2 hover:text-ink"><Icon name="chevron" size={14} className="-rotate-90" /></button>
+                className="-mr-1 rounded-md p-1 text-mute transition hover:bg-panel2 hover:text-ink"><Icon name="chevron" size={14} className="-rotate-90" /></button>
             </div>
-            <ActivityFeed limit={7} compact />
+            <div className="max-h-[min(340px,45vh)] overflow-y-auto px-2 py-1">
+              <ActivityFeed limit={7} compact />
+            </div>
           </div>
         )}
         <ProjectPill />
@@ -80,7 +88,6 @@ export function OfficeView() {
       <div data-tour="office.lighting" className={`pointer-events-none absolute right-[var(--hud-r)] top-[max(1rem,env(safe-area-inset-top))] z-40 flex max-w-[calc(100%-2rem)] items-start gap-2 ${selected ? "max-md:hidden" : ""}`} style={{ "--hud-r": `calc(${selected ? "var(--panel-w, 420px) + 16px" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})` } as React.CSSProperties}>
         <AwayButton />
         <EditOfficeButton />
-        <LightButton />
       </div>
       <PresenceHost /> {/* human presence: who is online, status, "start conversation" */}
       <AwayHost /> {/* "while you were away" sheet and the office timelapse (B3) */}
