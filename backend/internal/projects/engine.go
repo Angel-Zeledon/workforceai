@@ -823,8 +823,11 @@ func (s *Service) publish(ctx context.Context, lp *liveProject, rec *Record, sna
 			rec.FinishedAt = fin
 		}
 		upd, err := s.update(ctx, rec.ID, func(r *Record) error {
-			if terminalStatus(r.Status) || s.revivedSince(lp) {
-				return nil // already settled, or revived after this tick took its snapshot
+			// Already settled, revived after this tick took its snapshot, or its plan changed meanwhile: an approved plan
+			// change (replacing a failed node, say) reopens the project and bumps StructureVersion, and a monitor that is
+			// already leaving (no longer in s.live, so revive could not mark it) must not write its stale "failed" over it.
+			if terminalStatus(r.Status) || s.revivedSince(lp) || r.StructureVersion != rec.StructureVersion {
+				return nil
 			}
 			r.Status = d.Project.Status
 			if r.FinishedAt == nil {
