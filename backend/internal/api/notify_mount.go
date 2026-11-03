@@ -25,6 +25,7 @@ import (
 //	GET  /plan                     metrics:read    plan, limits, what is used and the catalog (plan.go)
 //	PUT  /plan                     billing:manage  change the plan (PLAN_SELF_SERVE only)
 //	GET  /plans                    public          the catalog: prices and limits
+//	POST /plan/subscribe, /plan/confirm, /plan/cancel, /billing/onvo/webhook: ONVO Pay (billing.go)
 //	GET  /rewards/daily-goal       shop:read
 func (s *server) mountNotifyPublic(r chi.Router) {
 	if s.Notify == nil {
@@ -71,6 +72,11 @@ func (s *server) mountNotify(r chi.Router) {
 			r.With(s.can(auth.PermMetricsRead)).Get("/plan/usage", a.PlanUsage)
 			r.With(s.can(auth.PermMetricsRead)).Get("/plan", s.getOrgPlan)
 			r.With(s.can(auth.PermBillingManage)).Put("/plan", s.putOrgPlan)
+			if s.Billing != nil {
+				r.With(s.can(auth.PermBillingManage)).Post("/plan/subscribe", s.planSubscribe)
+				r.With(s.can(auth.PermBillingManage)).Post("/plan/confirm", s.planConfirm)
+				r.With(s.can(auth.PermBillingManage)).Post("/plan/cancel", s.planCancel)
+			}
 		}
 	}
 	if s.Rewards != nil {

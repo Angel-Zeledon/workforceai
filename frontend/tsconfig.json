@@ -35,10 +35,11 @@
     ".next-dev/types/**/*.ts",
     ".next-mock/types/**/*.ts",
     ".next-native/types/**/*.ts",
+    ".next-ui/types/**/*.ts",
     ".next-verify/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    ".next-ui/types/**/*.ts"
+    ".next-claude/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

@@ -32,10 +32,21 @@ export interface PlanTier {
 /** What the organization has of each counted limit; -1 = not known on this deployment. */
 export interface PlanUsed { agents: number; active_projects: number; schedules: number; seats: number; storage_bytes: number }
 /** GET /plan (backend/internal/api/plan.go). */
-export interface PlanView { plan: PlanId; limits: PlanTier; used: PlanUsed; usage: PlanUsage; catalog: PlanTier[]; self_serve: boolean }
+/** How the plan changes: paid with ONVO Pay, PUT /plan without charging, or only by the platform's team. */
+export type PlanBillingMode = "onvo" | "self_serve" | "none";
+/** The ONVO subscription the plan comes from (billing "onvo"). */
+export interface PlanSubscription { subscribed: boolean; cancel_at_period_end: boolean; period_end?: string; past_due: boolean }
+export interface PlanView {
+  plan: PlanId; limits: PlanTier; used: PlanUsed; usage: PlanUsage; catalog: PlanTier[]; self_serve: boolean;
+  billing: PlanBillingMode; subscription?: PlanSubscription;
+  /** what can be bought: "pro_monthly", "max_yearly"... */ available?: string[];
+}
+/** A subscription waiting for its first payment: ONVO's SDK pays it in the browser. */
+export interface PlanStarted { subscription_id: string; customer_id: string; publishable_key: string }
+export type PlanPeriod = "monthly" | "yearly";
 
 export class PlanError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  constructor(public status: number, message: string, public code = "") { super(message); }
 }
 
 async function planCall<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -49,7 +60,7 @@ async function planCall<T>(method: string, path: string, body?: unknown): Promis
   const text = await res.text();
   let json: Record<string, unknown> = {};
   try { json = text ? JSON.parse(text) : {}; } catch { /* not JSON */ }
-  if (!res.ok) throw new PlanError(res.status, String(json.error ?? `${method} ${path} -> ${res.status}`));
+  if (!res.ok) throw new PlanError(res.status, String(json.error ?? `${method} ${path} -> ${res.status}`), String(json.code ?? ""));
   return json as T;
 }
 
@@ -69,6 +80,13 @@ export const notifyApi = {
   orgPlan: () => planCall<PlanView>("GET", "/plan"),
   /** Owners only, and only when the deployment has PLAN_SELF_SERVE on (403 otherwise). */
   changePlan: (plan: PlanId) => planCall<PlanView>("PUT", "/plan", { plan }),
+  /** ONVO: creates the subscription of a purchase or a plan change; the browser pays it with ONVO's SDK. */
+  subscribe: (plan: PlanId, period: PlanPeriod, name: string, email: string) =>
+    planCall<PlanStarted>("POST", "/plan/subscribe", { plan, period, name, email }),
+  /** ONVO: after paying. 409 code "not_paid" while ONVO is still confirming the payment. */
+  confirm: (subscription_id: string) => planCall<PlanView>("POST", "/plan/confirm", { subscription_id }),
+  /** ONVO: end the subscription when the paid period ends, or undo that. */
+  cancel: (resume: boolean) => planCall<PlanView>("POST", "/plan/cancel", { resume }),
   deadLetters: () => call<{ items: DeadLetter[]; enabled: boolean }>("GET", "/notify/outbox/dead"),
   retryDead: (id: string) => call<{ id: string; status: string }>("POST", `/notify/outbox/dead/${encodeURIComponent(id)}/retry`),
   dailyGoal: () => call<DailyGoal>("GET", "/rewards/daily-goal"),

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { logout, useSession } from "@/lib/session";
 import { notifyApi, type PlanUsage } from "@/lib/notifyApi";
-import { PLAN_LIMIT_EVENT, type PlanLimitHit } from "@/lib/planLimit";
+import { PLAN_CHANGED_EVENT, PLAN_LIMIT_EVENT, type PlanLimitHit } from "@/lib/planLimit";
 import Link from "next/link";
 
 
@@ -57,7 +57,11 @@ export function PlanCapBanner() {
     const id = setInterval(load, 20_000);
     const onFocus = () => load();
     window.addEventListener("focus", onFocus);
-    return () => { live = false; clearInterval(id); window.removeEventListener("focus", onFocus); };
+    window.addEventListener(PLAN_CHANGED_EVENT, onFocus);
+    return () => {
+      live = false; clearInterval(id);
+      window.removeEventListener("focus", onFocus); window.removeEventListener(PLAN_CHANGED_EVENT, onFocus);
+    };
   }, [signedIn]);
   if (!u || !u.hard) return null;
   const tone = u.paused ? "bg-err/10 text-err" : u.state === "warn" ? "bg-warn/15 text-warn" : "bg-accent-soft text-accent";

@@ -146,8 +146,8 @@ func (p *PG) GetPlan(ctx context.Context, org string) (Plan, bool, error) {
 	pl := Plan{OrgID: org}
 	found := true
 	err := p.DB.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx, `SELECT plan, cap_usd, cap_notified_at, period_start, spend_base_usd FROM org_plans WHERE org_id = $1`, org).
-				Scan(&pl.Plan, &pl.CapUSD, &pl.CapNotifiedAt, &pl.PeriodStart, &pl.SpendBaseUSD)
+		err := tx.QueryRow(ctx, `SELECT plan, cap_usd, cap_notified_at, period_start, spend_base_usd, provider, provider_ref, provider_sub, provider_pending FROM org_plans WHERE org_id = $1`, org).
+				Scan(&pl.Plan, &pl.CapUSD, &pl.CapNotifiedAt, &pl.PeriodStart, &pl.SpendBaseUSD, &pl.Provider, &pl.ProviderRef, &pl.ProviderSub, &pl.ProviderPending)
 		if errors.Is(err, pgx.ErrNoRows) {
 			found = false
 			return nil
@@ -162,6 +162,18 @@ func (p *PG) PutPlan(ctx context.Context, pl Plan, by string) error {
 		_, err := tx.Exec(ctx, `INSERT INTO org_plans (org_id, plan, cap_usd, updated_by) VALUES ($1,$2,$3,$4)
 			ON CONFLICT (org_id) DO UPDATE SET plan=EXCLUDED.plan, cap_usd=EXCLUDED.cap_usd, updated_by=EXCLUDED.updated_by, updated_at=now()`,
 			pl.OrgID, pl.Plan, pl.CapUSD, by)
+		return err
+	})
+}
+
+// SetBilling implements BillingStore.
+func (p *PG) SetBilling(ctx context.Context, org string, b Billing) error {
+	return p.DB.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `UPDATE org_plans SET provider = $2, provider_ref = $3, provider_sub = $4, provider_pending = $5,
+			updated_at = now() WHERE org_id = $1`, org, b.Provider, b.Customer, b.Subscription, b.Pending)
+		if err == nil && tag.RowsAffected() == 0 {
+			return errors.New("notify: no plan row for " + org)
+		}
 		return err
 	})
 }

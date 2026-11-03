@@ -7,6 +7,8 @@
 export type PlanLimitKind = "agents" | "active_projects" | "schedules" | "seats" | "storage";
 export interface PlanLimitHit { kind: PlanLimitKind | ""; limit: number; plan: string }
 export const PLAN_LIMIT_EVENT = "plan-limit";
+/** The plan screen changed the plan (paid, cancelled, switched): the plan bar reloads now instead of on its next poll. */
+export const PLAN_CHANGED_EVENT = "plan-changed";
 
 /**
  * Reads a plan-limit refusal from an error body, in both shapes the server uses: the API's

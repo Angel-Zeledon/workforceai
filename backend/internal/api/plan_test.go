@@ -17,7 +17,7 @@ import (
 )
 
 // planEnv is an API with plans on: every organization starts on Free.
-func planEnv(t *testing.T, selfServe bool) *env {
+func planEnv(t *testing.T, selfServe bool, mods ...func(*api.Deps)) *env {
 	t.Helper()
 	cfg := application.DefaultConfig()
 	cfg.IdleDelay = 0
@@ -37,6 +37,9 @@ func planEnv(t *testing.T, selfServe bool) *env {
 	oc := &application.OrgConfig{Cfg: cfg, Store: mem, Core: mem, Orch: orch, Rec: rec, Log: log, PlanLimits: plans.Limits}
 	d := api.Deps{Cfg: cfg, Queries: q, Orch: orch, Approvals: appr, Store: mem, Runtime: fakeRuntime{}, Hub: hub, Log: log,
 		OrgConfig: oc, Rec: rec, Notify: &notify.Service{Plans: plans}, PlanSelfServe: selfServe}
+	for _, m := range mods {
+		m(&d)
+	}
 	ts := httptest.NewServer(api.NewRouter(d))
 	t.Cleanup(ts.Close)
 	return &env{t: t, srv: ts, store: mem, hub: hub}

@@ -21,6 +21,17 @@ type Plan struct {
 	// SpendBaseUSD is the lifetime spend of the organization when the period started: the plan only counts
 	// lifetime - SpendBaseUSD (migration 785).
 	SpendBaseUSD float64 `json:"-"`
+	// Billing (internal/billing, migrations 785 and 806): the payment provider ("onvo") and its customer; the
+	// subscription the plan comes from; a subscription created for a purchase whose first payment is not confirmed yet.
+	Provider        string `json:"-"`
+	ProviderRef     string `json:"-"`
+	ProviderSub     string `json:"-"`
+	ProviderPending string `json:"-"`
+}
+
+// Billing is who charges a plan: the provider, its customer, the subscription in force and a pending one.
+type Billing struct {
+	Provider, Customer, Subscription, Pending string
 }
 
 // Hard reports whether the plan has a hard spend cap: every plan of the catalog (free, pro, max) does.
@@ -130,6 +141,26 @@ func (s *Plans) Change(ctx context.Context, org, plan, by string) (Plan, error) 
 	return s.Resolve(ctx, org), nil
 }
 
+// BillingStore is implemented by the plan stores that keep who charges a plan (org_plans.provider, provider_ref,
+// provider_sub, provider_pending: migrations 785 and 806).
+type BillingStore interface {
+	// SetBilling records the billing of org's plan row (which must exist).
+	SetBilling(ctx context.Context, org string, b Billing) error
+}
+
+// SetBilling records who charges org (after Change, which creates the row). A store without billing columns fails.
+func (s *Plans) SetBilling(ctx context.Context, org string, b Billing) error {
+	bs, ok := s.Store.(BillingStore)
+	if !ok {
+		return errors.New("notify: the plan store does not keep a payment provider")
+	}
+	if err := bs.SetBilling(ctx, org, b); err != nil {
+		return err
+	}
+	s.Invalidate(org)
+	return nil
+}
+
 // Invalidate drops the cached plan (after a change).
 func (s *Plans) Invalidate(org string) {
 	s.mu.Lock()
@@ -204,8 +235,25 @@ func (m *MemPlans) GetPlan(_ context.Context, org string) (Plan, bool, error) {
 
 func (m *MemPlans) PutPlan(_ context.Context, p Plan, _ string) error {
 	m.mu.Lock()
+	if old, ok := m.m[p.OrgID]; ok { // like the SQL upsert: only plan and cap change
+		old.Plan, old.CapUSD = p.Plan, p.CapUSD
+		p = old
+	}
 	m.m[p.OrgID] = p
 	m.mu.Unlock()
+	return nil
+}
+
+// SetBilling implements BillingStore.
+func (m *MemPlans) SetBilling(_ context.Context, org string, b Billing) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p, ok := m.m[org]
+	if !ok {
+		return errors.New("notify: no plan row for " + org)
+	}
+	p.Provider, p.ProviderRef, p.ProviderSub, p.ProviderPending = b.Provider, b.Customer, b.Subscription, b.Pending
+	m.m[org] = p
 	return nil
 }
 

@@ -157,6 +157,10 @@ de precios). Un plan es un precio más límites DUROS:
   `PlanCapBanner` nombra el plan y enlaza ahí (también sin login, `AUTH_ENABLED=false`). La fila de Ajustes solo aparece
   si el despliegue usa planes. `authFetch` detecta cualquier `409`/`413` con `plan_limit` (de cualquier pantalla) y
   `TrialBanner` muestra qué límite fue y el enlace para mejorar el plan.
+- Cobro: con `ONVO_SECRET_KEY` los planes se pagan con ONVO Pay (formulario de ONVO dentro de la pantalla de plan); el
+  plan cambia cuando el backend ve el pago en ONVO, y `org_plans.provider` / `provider_ref` / `provider_sub` /
+  `provider_pending` guardan cliente y suscripciones (`billing-onvo.md`). Sin ONVO, `PUT /plan` (solo con
+  `PLAN_SELF_SERVE=on`) cambia el plan sin cobrar.
 - Encendido: `PLANS=on` hace Free a toda organización sin plan, con el cupo de IA de Free del catálogo
   (`FREE_PLAN_CAP_USD` > 0 también lo enciende y fija ese cupo).
 
@@ -184,7 +188,5 @@ toda organización sin plan en Free), `PLAN_SELF_SERVE` (`on` = la persona dueñ
 
 ## Pendiente
 
-- Un checkout real (proveedor de pagos) para cobrar Pro y Max; hoy `PUT /plan` cambia el plan sin cobrar y solo con
-  `PLAN_SELF_SERVE=on`. `provider` / `provider_ref` de `org_plans` siguen reservados para eso.
 - Sellar con la bóveda también la columna en claro de filas antiguas que nadie vuelva a leer (se sellan al leerlas).
 - Publicar precios en la landing (hoy dice "todavía no hay precios").

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"aiworkforce/backend/internal/billing"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/policy"
@@ -36,6 +37,13 @@ type planView struct {
 	Usage     notify.Usage  `json:"usage"` // the AI allowance of the month (GET /plan/usage)
 	Catalog   []policy.Tier `json:"catalog"`
 	SelfServe bool          `json:"self_serve"`
+	// Billing is how the plan changes: "onvo" (paid with ONVO Pay), "self_serve" (PUT /plan, nothing charged) or
+	// "none" (the platform's team changes it).
+	Billing string `json:"billing"`
+	// Subscription (billing "onvo"): whether it pays, a cancellation at the end of the period, a failed payment.
+	Subscription *billing.Status `json:"subscription,omitempty"`
+	// Available (billing "onvo") are the plans and periods that can be bought: "pro_monthly", "max_yearly"...
+	Available []string `json:"available,omitempty"`
 }
 
 func (s *server) planUsed(r *http.Request, org string) planUsed {
@@ -74,8 +82,16 @@ func (s *server) planView(r *http.Request) (planView, error) {
 		return planView{}, err
 	}
 	lim := s.planLimits(r.Context(), org)
-	return planView{Plan: usage.Plan, Limits: lim, Used: s.planUsed(r, org), Usage: usage, Catalog: policy.Catalog,
-		SelfServe: s.PlanSelfServe}, nil
+	v := planView{Plan: usage.Plan, Limits: lim, Used: s.planUsed(r, org), Usage: usage, Catalog: policy.Catalog,
+		SelfServe: s.PlanSelfServe && s.Billing == nil, Billing: "none"}
+	switch {
+	case s.Billing != nil:
+		st := s.Billing.StatusOf(r.Context(), org)
+		v.Billing, v.Subscription, v.Available = "onvo", &st, s.Billing.Available()
+	case s.PlanSelfServe:
+		v.Billing = "self_serve"
+	}
+	return v, nil
 }
 
 // getOrgPlan: GET /plan.
@@ -90,6 +106,10 @@ func (s *server) getOrgPlan(w http.ResponseWriter, r *http.Request) {
 
 // putOrgPlan: PUT /plan {"plan":"pro"}. Audited. Off unless PLAN_SELF_SERVE: nothing charges anyone yet.
 func (s *server) putOrgPlan(w http.ResponseWriter, r *http.Request) {
+	if s.Billing != nil {
+		s.fail(w, errors.Join(domain.ErrForbidden, errors.New("plans are paid on this deployment: use POST /plan/subscribe")))
+		return
+	}
 	if !s.PlanSelfServe {
 		s.fail(w, errors.Join(domain.ErrForbidden, errors.New("plan changes are not self-serve on this deployment: contact sales")))
 		return
@@ -126,4 +146,3 @@ func (s *server) putOrgPlan(w http.ResponseWriter, r *http.Request) {
 func (s *server) listPlans(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"plans": policy.Catalog})
 }
-
