@@ -131,5 +131,5 @@
       "en": "# Month-end close\n\n- [ ] Bank reconciliations\n- [ ] Receivables and payables\n- [ ] Accruals and depreciation\n- [ ] Trial balance\n- [ ] Financial statements and variances\n"
     }
   ],
-  "default_skills": ["bank-reconciliation", "month-end-close", "variance-analysis"]
+  "default_skills": ["bank-reconciliation", "month-end-close", "variance-analysis", "accounts-receivable-aging", "accounts-payable-run", "fixed-asset-register"]
 }

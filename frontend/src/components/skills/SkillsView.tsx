@@ -8,6 +8,7 @@ import { Btn, Empty, Loading, timeAgo } from "../ui";
 import { Icon } from "../icons";
 import { SkillDetailView } from "./SkillDetailView";
 import { SourceChip, StatusBadge } from "./shared";
+import { ConceptLegend } from "../concepts/ConceptLegend";
 
 const FILTERS: SkillFilter[] = ["all", "active", "in_review", "draft", "disabled"];
 
@@ -70,6 +71,7 @@ export function SkillsView() {
         </div>
       </div>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
+        <ConceptLegend current="skills" />
         {error && <div data-testid="skills-error" className="rounded-lg bg-err/10 px-3 py-2 text-xs text-err">{error}</div>}
         {rename && (
           <div data-testid="skills-import-rename" className="flex flex-wrap items-center gap-2 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">

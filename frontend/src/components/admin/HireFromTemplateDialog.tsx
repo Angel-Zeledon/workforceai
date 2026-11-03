@@ -5,6 +5,7 @@ import { useT } from "@/lib/i18n";
 import { registerRoleTemplates } from "@/lib/meta";
 import { useStore } from "@/lib/store";
 import { Modal } from "../templates/Modal";
+import { ConceptLegend } from "../concepts/ConceptLegend";
 
 /** Lists the profession templates (GET /role-templates) and hires one as a new agent (POST /agents/from-template). */
 export function HireFromTemplateDialog({ onClose }: { onClose: () => void }) {
@@ -38,6 +39,7 @@ export function HireFromTemplateDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal title={t("hire.title")} onClose={onClose} testid="hire-dialog" wide>
+      <ConceptLegend current="agents" className="mb-4" />
       <p className="mb-4 text-sm text-mute">{t("hire.subtitle")}</p>
       {result && (
         <div role={result.ok ? "status" : "alert"} data-testid={result.ok ? "hire-result" : "hire-error"}

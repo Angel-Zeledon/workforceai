@@ -135,5 +135,6 @@
       "es": "nombre,puesto,etapa,proxima_entrevista,notas\n",
       "en": "name,role,stage,next_interview,notes\n"
     }
-  ]
+  ],
+  "default_skills": ["job-description", "onboarding-checklist", "hr-policy-draft", "training-plan", "exit-interview-summary", "payroll-checklist"]
 }

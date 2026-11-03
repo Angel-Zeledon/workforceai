@@ -150,5 +150,5 @@
       "en": "risk,probability,impact,owner,mitigation,status\n"
     }
   ],
-  "default_skills": ["project-plan"]
+  "default_skills": ["project-plan", "risk-register", "weekly-status-report"]
 }

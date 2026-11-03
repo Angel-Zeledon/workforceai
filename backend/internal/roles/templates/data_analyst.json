@@ -135,5 +135,5 @@
       "en": "metric,period,value,target,source\n"
     }
   ],
-  "default_skills": ["variance-analysis"]
+  "default_skills": ["variance-analysis", "data-cleaning-plan", "sql-query-explainer"]
 }

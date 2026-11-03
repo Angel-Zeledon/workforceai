@@ -3,9 +3,12 @@ package skills
 import (
 	"context"
 	"embed"
+	"errors"
 	"io/fs"
 	"sort"
 	"strings"
+
+	"aiworkforce/backend/internal/domain"
 )
 
 // The starter skills ship as data (builtin/<lang>/<name>/SKILL.md plus their
@@ -73,9 +76,10 @@ func StarterNames() []string {
 	return out
 }
 
-// Ensure creates the starter skills of an organization the first time it uses
-// the library (an organization that already has any skill, deleted ones
-// included, is left alone). Failures are logged and retried on the next call.
+// Ensure creates the starter skills of an organization once per process: all of them the first time it uses the
+// library and, for an organization seeded by an earlier release, only the starters it never had (no row by that
+// name, deleted ones included), so new starters reach every organization while a starter it deleted, or a skill of
+// its own under the same name, is left alone. Failures are logged and retried on the next call.
 func (s *Service) Ensure(ctx context.Context, org string) {
 	if _, loaded := s.seeded.LoadOrStore(org, struct{}{}); loaded {
 		return
@@ -87,9 +91,7 @@ func (s *Service) Ensure(ctx context.Context, org string) {
 		s.cfg.Log.Warn("skills: count", "org", org, "err", err)
 		return
 	}
-	if n > 0 {
-		return
-	}
+	seeded := n > 0
 	lang := "es"
 	if s.cfg.Locale != nil {
 		lang = s.cfg.Locale(ctx)
@@ -101,6 +103,15 @@ func (s *Service) Ensure(ctx context.Context, org string) {
 	}
 	sys := Actor{ID: "system", System: true, Admin: true}
 	for _, p := range pkgs {
+		if seeded {
+			if _, err := s.cfg.Store.SkillByName(ctx, org, p.Front.Name); !errors.Is(err, domain.ErrNotFound) {
+				if err != nil { // the store failed: try again on the next call
+					s.seeded.Delete(org)
+					s.cfg.Log.Warn("skills: starter lookup", "name", p.Front.Name, "err", err)
+				}
+				continue // it has (or had) a skill by this name
+			}
+		}
 		if _, err := s.createFrom(ctx, sys, p, SourceCreated, StatusActive, "Starter skill", true); err != nil && CodeOf(err) != "name_taken" {
 			s.cfg.Log.Warn("skills: starter not created", "name", p.Front.Name, "err", err)
 			s.seeded.Delete(org) // e.g. read-only mode: try again later

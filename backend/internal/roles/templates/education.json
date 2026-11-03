@@ -138,5 +138,6 @@
       "es": "# Plan de curso\n\n## Objetivos\n\n## Módulos\n\n## Evaluación\n",
       "en": "# Course plan\n\n## Goals\n\n## Modules\n\n## Assessment\n"
     }
-  ]
+  ],
+  "default_skills": ["lesson-plan", "grading-rubric"]
 }

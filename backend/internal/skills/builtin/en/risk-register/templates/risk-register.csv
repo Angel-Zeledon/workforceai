@@ -1,0 +1,2 @@
+id,risk,cause,effect,probability_1_5,impact_1_5,score,level,owner,mitigation,review_date,status
+R1,[short risk description],[cause],[effect],[1-5],[1-5],[probability x impact],[low/medium/high],[owner],[concrete action],[YYYY-MM-DD],open

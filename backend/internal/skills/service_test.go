@@ -342,7 +342,7 @@ func TestAssignmentRoleDefaultsAndBounds(t *testing.T) {
 		}
 		names = append(names, a.Name)
 	}
-	if strings.Join(names, ",") != "bank-reconciliation,month-end-close,variance-analysis" {
+	if strings.Join(names, ",") != "accounts-payable-run,accounts-receivable-aging,bank-reconciliation,fixed-asset-register,month-end-close,variance-analysis" {
 		t.Fatalf("accounting defaults: %v", names)
 	}
 	// a direct assignment adds, unassign removes it; unknown agents are refused
@@ -358,12 +358,12 @@ func TestAssignmentRoleDefaultsAndBounds(t *testing.T) {
 	_ = e.svc.Assign(e.ctx, admin, "sales", sales.ID)
 	_ = e.svc.Assign(e.ctx, admin, "sales", sales.ID) // idempotent
 	as, _ = e.svc.AgentSkills(e.ctx, "sales")
-	if len(as) != 3 {
+	if len(as) != 6 { // 5 role defaults + the direct assignment
 		t.Fatalf("sales: %+v", as)
 	}
 	_ = e.svc.Unassign(e.ctx, admin, "sales", sales.ID)
 	as, _ = e.svc.AgentSkills(e.ctx, "sales")
-	if len(as) != 2 {
+	if len(as) != 5 {
 		t.Fatalf("sales after unassign: %d", len(as))
 	}
 	// progressive disclosure: only name + description, bounded
@@ -539,5 +539,50 @@ func TestMemberCannotSkipReviewByDeletingAssumptions(t *testing.T) {
 	d2, _ := e.svc.Create(e.ctx, member, x2)
 	if d2.Source != SourceCreated {
 		t.Fatalf("source: %s", d2.Source)
+	}
+}
+
+// Starter skills added in a release reach organizations seeded by an earlier one (they used to get only the set that
+// existed the first time they opened the library), and a starter the organization deleted is never brought back.
+func TestNewStartersReachSeededOrganizationsButDeletedOnesStayDeleted(t *testing.T) {
+	e := newEnv(t, false) // an organization that already uses the library: one skill of its own, no starter yet
+	d, err := e.svc.Create(e.ctx, admin, in("our-own-way"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.svc.seeded.Delete(org) // a new process (release) sees the organization for the first time
+	l, err := e.svc.List(e.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := len(StarterNames()) + 1
+	if len(l) != want {
+		t.Fatalf("after the release: %d skills, want %d (every starter + its own)", len(l), want)
+	}
+	var mine *Skill
+	var gone string
+	for i := range l {
+		if l[i].ID == d.ID {
+			mine = &l[i]
+		}
+		if l[i].Name == "client-email" {
+			gone = l[i].ID
+		}
+	}
+	if mine == nil || mine.Builtin {
+		t.Fatalf("its own skill is untouched: %+v", mine)
+	}
+	if err := e.svc.Delete(e.ctx, admin, gone); err != nil {
+		t.Fatal(err)
+	}
+	e.svc.seeded.Delete(org) // the next release
+	l, _ = e.svc.List(e.ctx)
+	if len(l) != want-1 {
+		t.Fatalf("a deleted starter came back: %d skills, want %d", len(l), want-1)
+	}
+	for _, sk := range l {
+		if sk.Name == "client-email" {
+			t.Fatal("client-email was re-created")
+		}
 	}
 }

@@ -141,5 +141,5 @@
       "en": "week,opening_balance,receipts,payments,closing_balance\n"
     }
   ],
-  "default_skills": ["bank-reconciliation", "variance-analysis"]
+  "default_skills": ["bank-reconciliation", "variance-analysis", "cash-flow-forecast", "accounts-payable-run", "pricing-margin-analysis"]
 }

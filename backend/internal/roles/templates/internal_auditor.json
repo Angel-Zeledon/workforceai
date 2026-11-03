@@ -114,5 +114,6 @@
       "es": "hallazgo,evidencia,severidad,responsable,estado\n",
       "en": "finding,evidence,severity,owner,status\n"
     }
-  ]
+  ],
+  "default_skills": ["audit-evidence-list", "internal-control-test", "audit-findings-report"]
 }

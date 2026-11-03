@@ -102,13 +102,15 @@ audited: `skill.created|imported|version_created|restored|submitted|approved|rej
 
 ## Starter skills
 
-Seven built-in skills ship as data (`backend/internal/skills/builtin/<lang>/<name>/`, Spanish
-and English, same format as an import) and are created `active` the first time an
-organization uses the library, in the organization's language: `bank-reconciliation`,
-`b2b-proposal`, `service-contract-review`, `month-end-close`, `variance-analysis`,
-`client-email`, `project-plan`. Role templates map them with `default_skills`
-(accounting, finance_treasury, sales, legal, assistant, operations, project_manager,
-analyst, data_analyst). The deleted ones are not re-created.
+85 built-in skills ship as data (`backend/internal/skills/builtin/<lang>/<name>/`, Spanish
+and English, same names in both, same format as an import), across finance, audit, legal,
+sales, marketing, HR, management, education, operations, product, data, engineering and
+support. They are created `active` in the organization's language the first time it uses
+the library. On every new process, an organization seeded by an earlier release also gets the
+starters it never had: one is created only when no skill by that name exists, deleted ones
+included, so a starter the organization deleted (or a skill of its own under the same name) is
+never brought back or touched. Role templates map them with `default_skills` (up to 8 per
+role, every role has some; `MaxRunSkills` = 12 bounds what an agent sees per run).
 
 ## Testing
 

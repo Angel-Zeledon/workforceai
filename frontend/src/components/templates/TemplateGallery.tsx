@@ -6,6 +6,7 @@ import { orgApi, type WorkflowTemplate } from "@/lib/orgConfigApi";
 import { Modal } from "./Modal";
 import { TemplateRunDialog } from "./TemplateRunDialog";
 import { IndustryTemplates } from "./IndustryTemplates";
+import { ConceptLegend } from "../concepts/ConceptLegend";
 
 /** Gallery of workflow templates (data served by GET /workflow-templates). */
 export function TemplateGallery({ onClose, onStarted }: { onClose: () => void; onStarted?: () => void }) {
@@ -42,6 +43,7 @@ export function TemplateGallery({ onClose, onStarted }: { onClose: () => void; o
         {view === "industries" && <IndustryTemplates />}
         {/* <<< org */}
         <div hidden={view !== "workflows"}>
+        <ConceptLegend current="templates" className="mb-4" />
         <p className="mb-4 text-sm text-mute">{t("tpl.subtitle")}</p>
         {started && <div role="status" data-testid="wf-template-started" className="mb-3 rounded-xl border border-emerald-400/50 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700">{t("tpl.run.started")}</div>}
         <div className="mb-4 flex flex-wrap gap-1.5" role="tablist" aria-label={t("tpl.title")}>

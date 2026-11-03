@@ -125,5 +125,5 @@
       "en": "team,week,capacity_hours,committed_hours,risk\n"
     }
   ],
-  "default_skills": ["project-plan"]
+  "default_skills": ["project-plan", "sop-writer", "risk-register"]
 }

@@ -133,5 +133,5 @@
       "en": "# Contract review\n\n- [ ] Parties and purpose\n- [ ] Price and payment terms\n- [ ] Penalties and caps\n- [ ] Intellectual property\n- [ ] Confidentiality\n- [ ] Termination and governing law\n"
     }
   ],
-  "default_skills": ["service-contract-review"]
+  "default_skills": ["service-contract-review", "nda-review", "employment-contract-review", "lease-agreement-review", "legal-memo", "contract-redline-summary", "legal-deadline-tracker", "data-processing-agreement-review"]
 }

@@ -7,6 +7,7 @@ import type { ProjectTemplate } from "@/lib/projects/types";
 import { useCan } from "@/lib/session";
 import { Btn, Empty } from "../ui";
 import { TemplateHistoryModal, inputCls, useTplText } from "./templateUi";
+import { ConceptLegend } from "../concepts/ConceptLegend";
 
 type Source = "all" | "builtin" | "org";
 
@@ -75,6 +76,7 @@ export function TemplateLibrary() {
           <button type="button" data-testid="tpl-back" onClick={() => setView("list")} className="text-[11px] font-semibold text-accent hover:underline">‹ {t("tpl.lib.back")}</button>
           <h1 className="font-display text-2xl font-semibold text-ink">{t("tpl.lib.title")}</h1>
           <p className="max-w-[640px] text-xs text-mute">{t("tpl.lib.subtitle")}</p>
+          <ConceptLegend current="templates" className="mt-3 max-w-4xl" />
         </div>
         <Btn data-testid="tpl-new" kind="primary" onClick={() => openBuilder(null)}>{t("tpl.lib.new")}</Btn>
       </div>

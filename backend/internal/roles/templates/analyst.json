@@ -120,5 +120,5 @@
       "en": "metric,period,value,target,source\n"
     }
   ],
-  "default_skills": ["variance-analysis"]
+  "default_skills": ["variance-analysis", "kpi-dashboard-brief", "executive-summary"]
 }

@@ -1,0 +1,2 @@
+id,riesgo,causa,efecto,probabilidad_1_5,impacto_1_5,puntuacion,nivel,responsable,mitigacion,fecha_revision,estado
+R1,[descripción breve del riesgo],[causa],[efecto],[1-5],[1-5],[probabilidad x impacto],[bajo/medio/alto],[responsable],[acción concreta],[AAAA-MM-DD],abierto
