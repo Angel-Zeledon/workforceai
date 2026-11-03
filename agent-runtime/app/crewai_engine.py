@@ -185,9 +185,11 @@ def parse_json_output(raw: str, schema: type[BaseModel]) -> Any:
 
 def native_structured_output(cfg: ProviderConfig) -> bool:
     """Whether the provider accepts a JSON-schema response_format (structured output).
-    Anthropic and OpenAI do. DeepSeek and Kimi (Moonshot) only support {"type": "json_object"};
-    custom OpenAI-compatible endpoints vary, so they also get the schema in the prompt."""
-    return cfg.id in ("anthropic", "openai")
+    Only Anthropic here. DeepSeek and Kimi (Moonshot) only support {"type": "json_object"}; custom OpenAI-compatible
+    endpoints vary; OpenAI's strict json_schema mode rejects schemas with defaults or free-form dicts (live 400
+    "'required' is required to be supplied ... every key in properties" on _RouteLLM, gpt-5-mini, 2026-11-03). They all
+    get JSON mode and the schema in the prompt, parsed and validated here."""
+    return cfg.id == "anthropic"
 
 
 MAX_SCHEMA_DESCRIPTION_CHARS = 320  # longer prose is dropped from the schema sent in the prompt
@@ -323,7 +325,7 @@ class CrewAIEngine(AgentEngine):
         kw.update(reasoning_kwargs(cfg.id, cfg.model))
         if temperature is None or (cfg.id == "openai" and fixed_temperature_model(cfg.model)):
             kw.pop("temperature")  # reasoning models only accept their default
-        if cfg.id in ("deepseek", "kimi", "gemini"):
+        if cfg.id in ("deepseek", "kimi", "gemini", "openai"):
             # Live finding (DeepSeek): long consolidations came back as invalid JSON (unescaped quotes
             # around char 13k). JSON mode guarantees syntactically valid JSON (the schema still goes in
             # the instructions). Moonshot's Kimi has the same json_object mode and no json_schema; Gemini's

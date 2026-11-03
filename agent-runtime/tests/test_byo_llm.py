@@ -111,16 +111,20 @@ def test_provider_probe_of_a_reasoning_model_sends_no_max_tokens(monkeypatch):
     assert "max_tokens" not in sent and sent["max_completion_tokens"] == 64
 
 
-def test_json_mode_for_kimi_and_deepseek_only():
+def test_json_mode_for_every_provider_without_native_schema():
     kimi = config_from_credential(ProviderCredential(provider="kimi", api_key=KEY))
     oa = config_from_credential(ProviderCredential(provider="openai", api_key=KEY))
+    an = config_from_credential(ProviderCredential(provider="anthropic", api_key=KEY))
     assert crewai_engine.CrewAIEngine._llm_kwargs(kimi, 100, 0.3)["response_format"] == {"type": "json_object"}
-    assert "response_format" not in crewai_engine.CrewAIEngine._llm_kwargs(oa, 100, 0.3)
+    assert crewai_engine.CrewAIEngine._llm_kwargs(oa, 100, 0.3)["response_format"] == {"type": "json_object"}
+    assert "response_format" not in crewai_engine.CrewAIEngine._llm_kwargs(an, 100, 0.3)
 
 
 def test_structured_output_only_for_providers_that_have_it():
     ns = crewai_engine.native_structured_output
-    assert ns(ProviderConfig("openai", "openai/gpt-4.1")) and ns(ProviderConfig("anthropic", "a/b"))
+    # OpenAI's strict json_schema mode rejects schemas with defaults or free-form dicts (live 400 on _RouteLLM,
+    # gpt-5-mini, 2026-11-03): it takes JSON mode + the schema in the prompt, like DeepSeek / Kimi / Gemini.
+    assert ns(ProviderConfig("anthropic", "a/b")) and not ns(ProviderConfig("openai", "openai/gpt-4.1"))
     assert not ns(ProviderConfig("deepseek", "d/x")) and not ns(ProviderConfig("kimi", "openai/k"))
     assert not ns(ProviderConfig("custom", "openai/x"))
 
