@@ -19,7 +19,8 @@ is unchanged.
   "desks":  { "<agent_id>": { "x": -9.5, "z": -4, "desk": "desk_walnut", "chair": "chair_mesh_teal" } },  // every field optional
   "pieces": [ { "uid": "p_k3j2", "item": "sofa_chesterfield", "x": 2.5, "z": 3, "rot": 1.5708, "s": 1, "y": 0 } ],
   "zones":    { "meeting": { "x": 9.5, "z": -6.2 }, "approvals": { "x": 9.5, "z": 5.4 }, "cafe": { "x": 9.2, "z": 1.2 } },   // the three rooms moved (center of each)
-  "fixtures": { "plant_a": { "x": -12.8, "z": -8.6, "rot": 0, "hidden": false }, "rack": { "x": -12.9, "z": -0.5, "rot": 1.5708 } }, // plant_a..plant_d, rack: the built-in decoration moved, turned or taken away
+  "fixtures": { "plant_a": { "x": -12.8, "z": -8.6, "rot": 0, "hidden": false }, "rack": { "x": -12.9, "z": -0.5, "rot": 1.5708 },   // the built-in decoration (absolute)
+                "meeting_table": { "x": 0.5, "z": -0.5 }, "cafe_machine": { "x": -0.6, "z": 0.1 }, "meeting_seat_3": { "x": 1, "z": 2, "hidden": true } }, // furniture of the rooms (relative to the room)
   "seeded": true,                                                     // legacy slot items were copied into `pieces`
   "style": "bricks"                                                   // visual style: classic (default, omitted) | bricks | clay | paper | toon | real
 }
@@ -29,7 +30,48 @@ is unchanged.
 * `rot`: rotation about Y in radians (the editor snaps to multiples of 90 degrees but any value is stored). `s`: uniform scale 0.6..1.6. `y`: height above the floor, only for `mount: "wall"` pieces.
 * `desks[agent].desk` / `.chair` are **styles**, not objects: the same owned `desk_*` / `chair_*` item can dress every workstation.
 * `pieces[].item` must be an owned `kind: "office"` item whose slot is `piece` (free placement) or one of the legacy slots (`plant_1`, `lamp_1`, ...). An item appears at most once in `pieces`. `window_1` (the view behind the glass) stays a legacy slot, not a piece.
-* Limits: at most 150 pieces, 60 desk entries, uids <= 24 chars `[A-Za-z0-9_-]`, coordinates within +-40, colors `#rgb`/`#rrggbb`, everything else rejected with 400.
+* `fixtures`: every built-in object that is not bought: the decoration standing on its own (`plant_a`..`plant_d`, `rack`,
+  absolute floor coordinates) and the furniture of the three rooms (below, coordinates **relative to the room's center**).
+  An absent entry is the object at its built-in spot; `hidden: true` takes it away (it keeps its spot for when it is put back).
+* Limits: at most 150 pieces, 60 desk entries, uids <= 24 chars `[A-Za-z0-9_-]`, coordinates within +-40 (room furniture: within +-8 of its room's center), colors `#rgb`/`#rrggbb`, unknown fixture ids, everything else rejected with 400.
+
+### Furniture of the rooms
+
+The three rooms stay **zones**: the mat on the floor, the sign and the ring are the room, the place the agents walk to,
+and they move with `zones`. What stands in them is a closed list of objects, each moved, turned (R) and taken away (Del)
+on its own like the decoration, with the same collisions, red ghost, undo/redo and Save:
+
+| room | ids |
+|---|---|
+| meeting | `meeting_table`, `meeting_seat_1`..`meeting_seat_6`, `meeting_screen` |
+| approvals | `approvals_desk` (the desk with the pile of pending approvals), `approvals_chair` |
+| cafe | `cafe_counter`, `cafe_machine` (with its LED), `cafe_mug_1`..`cafe_mug_3`, `cafe_pot`, `cafe_table` (high table), `cafe_table_mug`, `cafe_plant` |
+
+* **Relative coordinates** (chosen because it is the simplest robust option): moving a room moves everything in it without
+  rewriting any entry, and a layout saved before (no entries) draws every object exactly where it always was. An object stays
+  inside its room's footprint (0.3 m of slack: the screen hangs on the wall behind the meeting room).
+* **Levels** (`FIXTURES[id].level` in `lib/officeLayoutModel.ts`): `floor` things collide with the other floor things of
+  their room and with small things standing on the floor; `top` things (machine, mugs, pot) rest on the highest surface under
+  their center (`surface`: the counter at 0.95 m, the high table at 0.97 m) or on the floor when there is none, and collide only
+  with things on the same surface; `wall` (the screen) collides with nothing. Moving or turning a surface carries what rests on
+  it (`moveFixture`); taking it away leaves those things standing on the floor (nothing floats). Other furniture and bought
+  pieces never enter a room: the room box is an obstacle for them, as before.
+* **Edit mode handles:** each object has its own invisible grab box (at least 30 cm, so a mug can be caught); the room's
+  handle is a thin slab over its floor mat. Grabbing a piece of furniture moves only it; grabbing the floor of the room moves
+  the whole room. The editor's "Rooms" list folds each room's objects under it (select, put back, back to its spot).
+* **What the agents do** (pure functions in `components/office/officeState.ts`, fed by `components/office/zones.ts`):
+  * meeting (`meetingPlace`): the k-th agent sits on the k-th seat still in the room, wherever it was moved, facing the table
+    (or the room's center when the table was taken away). Without a seat left it stands in the ring (2.25 m) around the table or
+    the room's center, at the place of a missing seat, facing it. The debate speaker points at the table (`meetingFocus`).
+  * approvals (`approvalsFrame`, `approvalsSpot`): the user's anchor (the "you" label, the delivery spot, the link lines) and
+    the waiting line follow the desk, turned with it; with the desk taken away they use the room's center as before. The pile
+    of pending approvals is part of the desk.
+  * cafeteria (`cafeSpot`): four spots in front of the counter and two beside the high table, moved and turned with them; a
+    piece taken away keeps its spots at its built-in place in the room. The machine's LED keeps blinking while work is paused
+    by a budget cap (it is part of `cafe_machine`).
+  * A moved seat or counter re-routes the agents standing or sitting there (their place key includes the spot).
+* Styles: every object is drawn by `FixtureMesh` inside `Appear` (entrance on a style change, when put back in the editor,
+  and backwards when taken away) and restyled by the `themeRuntime` sweep like the rest of the scene.
 
 ### Legacy slots
 
@@ -75,7 +117,7 @@ export function ChairMesh(props: { item?: ShopItem }): JSX.Element;    // undefi
 
 * `lib/officeLayout.ts` (zustand): `layout`, `version`, `draft`, `load()`, `startEdit()`, `save()`, `cancel()`, undo/redo, and pure helpers (`collides`, `snap`, `DEFAULT_LAYOUT`). Mock mode keeps the layout in memory/localStorage (`lib/mock/rewards-mock.ts`).
 * `OfficeEnv` reads walls/floor/light from `draft ?? layout`; `Desk` reads its style and position; `OfficeItems` renders `pieces`.
-* `OfficeEditor` (HUD + 3D interaction): placement ghost with snap, drag, rotate (R), delete (Del), grid, collision (red ghost), a no-build band along the walkway.
+* `OfficeEditor` (HUD + 3D interaction): placement ghost with snap, drag, rotate (R), delete (Del), grid, collision (red ghost), a no-build band along the walkway. Rooms, decoration and room furniture: `EditorLayer` (drag) and `editorWorld.ts` (`fixtureBox`, `partFits`, `fixtureFits`, `turnFixture`).
 * Characters read their desk through `deskOf`, which now honors `layout.desks[agent].x/z`.
 * Permissions: the editor needs `shop:buy`; everyone else sees the saved layout.
 
@@ -167,6 +209,7 @@ JavaScript math, so WebAssembly would not help. What helps is drawing less:
   AO / bloom); 3 (ratio 0.75, no shadow map: only the blob and contact shadows). The style keeps its look at every tier
   (geometry, materials, ink); only the costly extras go.
 * Console handles for screenshots and FPS checks (`window.__officeStyle.set(style)`, `.view(fov, x, y, z)` for
-  close-ups, `window.__officeQuality.get()` / `.pin(tier)` / `.counters()`) exist in development builds or in a build
+  close-ups, `.camera()` to project scene points to the screen in browser checks, `window.__officeQuality.get()` / `.pin(tier)` / `.counters()`) exist in development builds or in a build
   made with `NEXT_PUBLIC_OFFICE_DEBUG=true`.
 * Screenshots of the six styles (default camera and close-ups, 2026-11-03): `docs/screenshots/office-styles-2026-11-03/`.
+* Screenshots of the room furniture moved, turned and taken away, saved and reloaded, and the agents seated (2026-11-03): `docs/screenshots/office-move-all-2026-11-03/`.

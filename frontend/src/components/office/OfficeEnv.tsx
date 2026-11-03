@@ -10,8 +10,8 @@ import { roleMeta } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { deskOf, seatOf } from "./registry";
 import { effective, useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
-import { Appear, seedOf } from "./ThemeLayer";
-import { FIXTURES, FIXTURE_IDS, MOOD_BASE, ZONE_DEFAULTS, ZONE_SIZE, localHour, timeOfDayMix, type FixtureId, type FloorKind, type LightMix, type ZoneName } from "@/lib/officeLayoutModel";
+import { Appear, seedOf, useLeaving } from "./ThemeLayer";
+import { DECOR_IDS, FIXTURES, MOOD_BASE, ROOM_PARTS, ZONE_DEFAULTS, ZONE_SIZE, fixturePose, localHour, restOn, timeOfDayMix, type FixtureId, type FloorKind, type LightMix, type ZoneName } from "@/lib/officeLayoutModel";
 import { useRewards } from "@/lib/rewards";
 import { ChairMesh, DeskSet } from "./Furniture";
 
@@ -408,17 +408,164 @@ function useZone(name: ZoneName): [number, number] {
   return g ? [g.x, g.z] : z ? [z.x, z.z] : ZONE_DEFAULTS[name];
 }
 
-/** In edit mode the whole room is one grab handle (its floor footprint, a little taller than the furniture). */
+const grab = (sel: () => void) => ({
+  onPointerDown: (ev: { stopPropagation: () => void }) => { ev.stopPropagation(); const st = useOfficeLayout.getState(); if (st.placing) return; sel(); st.setDragging(true); },
+  onPointerOver: () => { document.body.style.cursor = "grab"; },
+  onPointerOut: () => { document.body.style.cursor = ""; },
+});
+
+/**
+ * In edit mode the floor of a room is its grab handle (a thin slab over its mat): the furniture standing on it has
+ * handles of its own, so grabbing the table moves the table and grabbing the floor moves the whole room.
+ */
 function ZoneHit({ name }: { name: ZoneName }) {
   const editing = useOfficeLayout((s) => s.editing);
   if (!editing) return null;
   const z = ZONE_SIZE[name];
   return (
-    <mesh position={[z.dx, 0.5, z.dz]}
-      onPointerDown={(ev) => { ev.stopPropagation(); const st = useOfficeLayout.getState(); if (st.placing) return; st.select({ kind: "zone", id: name }); st.setDragging(true); }}
-      onPointerOver={() => { document.body.style.cursor = "grab"; }} onPointerOut={() => { document.body.style.cursor = ""; }}>
-      <boxGeometry args={[z.w, 1, z.d]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    <mesh position={[z.dx, 0.03, z.dz]} {...grab(() => useOfficeLayout.getState().select({ kind: "zone", id: name }))}>
+      <boxGeometry args={[z.w, 0.06, z.d]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} />
     </mesh>
+  );
+}
+
+/** Grab handle of a built-in object in edit mode (a little larger than it, so small things like a mug can be caught). */
+function FixtureHit({ id }: { id: FixtureId }) {
+  const f = FIXTURES[id];
+  const y = f.level === "wall" ? 1.7 : f.h / 2;
+  return (
+    <mesh position={[0, y, 0]} {...grab(() => useOfficeLayout.getState().select({ kind: "fixture", id }))}>
+      <boxGeometry args={[Math.max(0.3, f.w) + 0.2, f.h, Math.max(0.3, f.d) + 0.2]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
+  );
+}
+
+/** The pile of pending approvals on the approvals desk (it rises and bobs while something waits for a decision). */
+function ApprovalsDesk() {
+  const pending = useStore((s) => Object.values(s.approvals).filter((a) => a.status === "pending").length);
+  const stack = useRef<THREE.Group>(null!);
+  useFrame(({ clock }) => {
+    const has = Object.values(useStore.getState().approvals).some((a) => a.status === "pending");
+    const k = usePreferences.getState().prefs.reduceMotion ? 0 : 1;
+    stack.current.position.y = DESK_H + 0.14 + (has ? Math.abs(Math.sin(clock.elapsedTime * 2.4)) * 0.05 * k : 0);
+  });
+  return (
+    <>
+      <RoundedBox args={[2.4, 0.06, 1.0]} radius={0.015} smoothness={3} castShadow receiveShadow position={[0, DESK_H - 0.03, 0]}><meshStandardMaterial color={OAK} roughness={0.8} /></RoundedBox>
+      <RoundedBox args={[2.2, DESK_H - 0.06, 0.04]} radius={0.01} smoothness={2} castShadow position={[0, (DESK_H - 0.06) / 2, -0.38]}><meshStandardMaterial color={GRAPHITE_L} roughness={0.85} /></RoundedBox>
+      {[-1.12, 1.12].map((s) => (
+        <mesh key={s} castShadow position={[s, (DESK_H - 0.06) / 2, 0]}><boxGeometry args={[0.05, DESK_H - 0.06, 0.8]} /><meshStandardMaterial color={GRAPHITE} roughness={0.5} metalness={0.3} /></mesh>
+      ))}
+      <group ref={stack} position={[0, DESK_H + 0.14, 0]}>
+        {Array.from({ length: Math.min(pending, 6) }).map((_, i) => (
+          <RoundedBox key={i} args={[0.24, 0.02, 0.32]} radius={0.006} smoothness={2} castShadow position={[(i % 3 - 1) * 0.3, -0.12 + Math.floor(i / 3) * 0.025, 0]} rotation={[0, i * 0.4, 0]}>
+            <meshStandardMaterial color="#f7f4ea" emissive="#c9993f" emissiveIntensity={0.18} />
+          </RoundedBox>
+        ))}
+      </group>
+      <RoundedBox args={[0.9, 0.02, 0.5]} radius={0.01} smoothness={2} position={[0, DESK_H + 0.01, 0]}><meshStandardMaterial color="#e3e7ec" /></RoundedBox>
+    </>
+  );
+}
+
+/** The coffee machine; its LED blinks while some work is paused by a budget cap (the agents wait here). */
+function CoffeeMachine() {
+  const led = useRef<THREE.MeshBasicMaterial>(null!);
+  useFrame(({ clock }) => {
+    const paused = Object.keys(useCost.getState().alerts).length > 0;
+    const reduce = usePreferences.getState().prefs.reduceMotion;
+    led.current.opacity = paused ? (reduce ? 1 : 0.55 + Math.abs(Math.sin(clock.elapsedTime * 2)) * 0.45) : 0.5;
+  });
+  return (
+    <>
+      <RoundedBox args={[0.42, 0.55, 0.5]} radius={0.04} smoothness={3} castShadow position={[0, 0.275, 0]}><meshStandardMaterial color="#2c323b" roughness={0.5} metalness={0.3} /></RoundedBox>
+      <mesh position={[-0.215, 0.38, 0]}><boxGeometry args={[0.012, 0.07, 0.07]} /><meshBasicMaterial ref={led} color="#e8943a" transparent toneMapped={false} /></mesh>
+      <mesh position={[-0.215, 0.18, 0]}><boxGeometry args={[0.02, 0.1, 0.12]} /><meshStandardMaterial color={STEEL} metalness={0.5} roughness={0.4} /></mesh>
+    </>
+  );
+}
+
+const Mug = ({ color }: { color: string }) => (
+  <mesh castShadow position={[0, 0.05, 0]}><cylinderGeometry args={[0.05, 0.043, 0.1, 12]} /><meshStandardMaterial color={color} roughness={0.6} /></mesh>
+);
+const MUG_COLORS: Record<string, string> = { cafe_mug_1: "#f4efe6", cafe_mug_2: "#e0735a", cafe_mug_3: "#5a95e8", cafe_table_mug: "#f4efe6" };
+
+/** One built-in object, drawn around its own origin (floor level, or the surface it rests on for small things). */
+function FixtureMesh({ id }: { id: FixtureId }) {
+  const f = FIXTURES[id];
+  switch (id) {
+    case "rack": return <Rack position={[0, 0, 0]} />;
+    case "plant_a": case "plant_b": case "plant_c": case "plant_d": case "cafe_plant": return <Plant position={[0, 0, 0]} s={f.s} tint={f.tint} />;
+    case "meeting_table": return (
+      <>
+        <mesh castShadow receiveShadow position={[0, 0.66, 0]}><cylinderGeometry args={[1.45, 1.45, 0.06, 48]} /><meshStandardMaterial color={OAK} roughness={0.8} /></mesh>
+        <mesh castShadow position={[0, 0.33, 0]}><cylinderGeometry args={[0.14, 0.3, 0.64, 20]} /><meshStandardMaterial color={GRAPHITE} roughness={0.6} metalness={0.2} /></mesh>
+      </>
+    );
+    case "meeting_seat_1": case "meeting_seat_2": case "meeting_seat_3": case "meeting_seat_4": case "meeting_seat_5": case "meeting_seat_6": {
+      const i = Number(id.slice(-1)) - 1;
+      return <mesh castShadow position={[0, 0.2, 0]}><cylinderGeometry args={[0.3, 0.28, 0.38, 28]} /><meshStandardMaterial color={i % 2 ? GRAPHITE_L : GRAPHITE} roughness={0.9} /></mesh>;
+    }
+    case "meeting_screen": return (
+      <>
+        <RoundedBox args={[3.4, 1.6, 0.08]} radius={0.03} smoothness={3} position={[0, 1.7, 0]} castShadow><meshStandardMaterial color="#2c323b" roughness={0.5} /></RoundedBox>
+        <mesh position={[0, 1.7, 0.045]}><planeGeometry args={[3.2, 1.4]} /><meshBasicMaterial color="#e9eef5" toneMapped={false} /></mesh>
+        {[0, 1, 2, 3, 4].map((i) => (<mesh key={i} position={[-1.1 + i * 0.55, 1.35 + (0.2 + (i % 3) * 0.14) / 2 - 0.1, 0.05]}><planeGeometry args={[0.32, 0.2 + (i % 3) * 0.14]} /><meshBasicMaterial color={["#6f86c9", "#9fb0d8", "#6f86c9", "#b9c5e2", "#8196cf"][i]} toneMapped={false} /></mesh>))}
+      </>
+    );
+    case "approvals_desk": return <ApprovalsDesk />;
+    case "approvals_chair": return (
+      <>
+        <mesh castShadow position={[0, 0.3, 0]}><cylinderGeometry args={[0.34, 0.3, 0.08, 28]} /><meshStandardMaterial color={GRAPHITE_L} roughness={0.9} /></mesh>
+        <mesh position={[0, 0.14, 0]}><cylinderGeometry args={[0.035, 0.035, 0.22, 10]} /><meshStandardMaterial color={STEEL} metalness={0.4} roughness={0.5} /></mesh>
+      </>
+    );
+    case "cafe_counter": return (
+      <>
+        <RoundedBox args={[0.7, 0.9, 3.8]} radius={0.03} smoothness={3} castShadow receiveShadow position={[0, 0.45, 0]}><meshStandardMaterial color={GRAPHITE_L} roughness={0.8} /></RoundedBox>
+        <RoundedBox args={[0.78, 0.05, 3.88]} radius={0.015} smoothness={2} castShadow position={[0, 0.925, 0]}><meshStandardMaterial color={OAK} roughness={0.7} /></RoundedBox>
+      </>
+    );
+    case "cafe_machine": return <CoffeeMachine />;
+    case "cafe_mug_1": case "cafe_mug_2": case "cafe_mug_3": case "cafe_table_mug": return <Mug color={MUG_COLORS[id]} />;
+    case "cafe_pot": return <mesh castShadow position={[0, 0.12, 0]}><cylinderGeometry args={[0.1, 0.12, 0.24, 14]} /><meshStandardMaterial color="#c9d3dc" roughness={0.35} metalness={0.5} /></mesh>;
+    case "cafe_table": return (
+      <>
+        <mesh castShadow position={[0, 0.95, 0]}><cylinderGeometry args={[0.42, 0.42, 0.05, 28]} /><meshStandardMaterial color={OAK} roughness={0.7} /></mesh>
+        <mesh castShadow position={[0, 0.47, 0]}><cylinderGeometry args={[0.05, 0.14, 0.94, 14]} /><meshStandardMaterial color={GRAPHITE} roughness={0.6} metalness={0.2} /></mesh>
+      </>
+    );
+  }
+}
+
+/**
+ * Built-in objects where the layout puts them (in the parent's frame: the floor for the decor, the room for room
+ * parts; small things on the surface under them), each with its grab handle in edit mode and the style's entrance.
+ * Taken-away objects play the entrance backwards.
+ */
+function FixtureSet({ ids }: { ids: readonly FixtureId[] }) {
+  const layout = useOfficeLayout(effective);
+  const editing = useOfficeLayout((s) => s.editing);
+  const shown = useMemo(() => ids.flatMap((id) => {
+    const p = fixturePose(layout, id);
+    return p.hidden ? [] : [{ uid: id, x: p.x, z: p.z, rot: p.rot, y: restOn(layout, id).y }];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [ids, layout.fixtures]);
+  const leaving = useLeaving(shown);
+  return (
+    <>
+      {shown.map((p) => (
+        <group key={p.uid} position={[p.x, p.y, p.z]} rotation={[0, p.rot, 0]} userData={{ fixture: p.uid }}>
+          <Appear seed={seedOf(p.uid)}><FixtureMesh id={p.uid} /></Appear>
+          {editing && <FixtureHit id={p.uid} />}
+        </group>
+      ))}
+      {leaving.map((p) => (
+        <group key={`out-${p.uid}`} position={[p.x, p.y, p.z]} rotation={[0, p.rot, 0]}>
+          <Appear leaving><FixtureMesh id={p.uid} /></Appear>
+        </group>
+      ))}
+    </>
   );
 }
 
@@ -429,20 +576,7 @@ function MeetingRoom() {
       <ZoneHit name="meeting" />
       <RoundedBox args={[7.6, 0.02, 7.2]} radius={0.01} smoothness={2} position={[0, 0.011, 0]} receiveShadow><meshStandardMaterial color="#cfd6df" roughness={1} /></RoundedBox>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.024, 0]}><ringGeometry args={[3.0, 3.05, 64]} /><meshStandardMaterial color="#8d99ab" roughness={1} /></mesh>
-      <mesh castShadow receiveShadow position={[0, 0.66, 0]}><cylinderGeometry args={[1.45, 1.45, 0.06, 48]} /><meshStandardMaterial color={OAK} roughness={0.8} /></mesh>
-      <mesh castShadow position={[0, 0.33, 0]}><cylinderGeometry args={[0.14, 0.3, 0.64, 20]} /><meshStandardMaterial color={GRAPHITE} roughness={0.6} metalness={0.2} /></mesh>
-      {Array.from({ length: 6 }).map((_, i) => {
-        const a = (i / 6) * Math.PI * 2 + 0.3;
-        return (
-          <group key={i} position={[Math.sin(a) * 2.25, 0, Math.cos(a) * 2.25]}>
-            <mesh castShadow position={[0, 0.2, 0]}><cylinderGeometry args={[0.3, 0.28, 0.38, 28]} /><meshStandardMaterial color={i % 2 ? GRAPHITE_L : GRAPHITE} roughness={0.9} /></mesh>
-          </group>
-        );
-      })}
-      {/* pantalla de la sala (en la pared del fondo) */}
-      <RoundedBox args={[3.4, 1.6, 0.08]} radius={0.03} smoothness={3} position={[0, 1.7, -3.9]} castShadow><meshStandardMaterial color="#2c323b" roughness={0.5} /></RoundedBox>
-      <mesh position={[0, 1.7, -3.855]}><planeGeometry args={[3.2, 1.4]} /><meshBasicMaterial color="#e9eef5" toneMapped={false} /></mesh>
-      {[0, 1, 2, 3, 4].map((i) => (<mesh key={i} position={[-1.1 + i * 0.55, 1.35 + (0.2 + (i % 3) * 0.14) / 2 - 0.1, -3.85]}><planeGeometry args={[0.32, 0.2 + (i % 3) * 0.14]} /><meshBasicMaterial color={["#6f86c9", "#9fb0d8", "#6f86c9", "#b9c5e2", "#8196cf"][i]} toneMapped={false} /></mesh>))}
+      <FixtureSet ids={ROOM_PARTS.meeting} />
       <FloorSign pos={[0, 0.04, 3.1]} text="Sala de reuniones" color="#5a7fd0" />
     </group>
   );
@@ -451,16 +585,13 @@ function MeetingRoom() {
 function ApprovalsZone() {
   const pending = useStore((s) => Object.values(s.approvals).filter((a) => a.status === "pending").length);
   const pulse = useRef<THREE.Mesh>(null!);
-  const stack = useRef<THREE.Group>(null!);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     const m = pulse.current.material as THREE.MeshBasicMaterial;
     const has = Object.values(useStore.getState().approvals).some((a) => a.status === "pending");
-    const reduce = usePreferences.getState().prefs.reduceMotion;
-    const k = reduce ? 0 : 1;
+    const k = usePreferences.getState().prefs.reduceMotion ? 0 : 1;
     m.opacity = has ? 0.5 + Math.abs(Math.sin(t * 2.2)) * 0.35 * k : 0.28;
     pulse.current.scale.setScalar(has ? 1 + Math.sin(t * 2.2) * 0.04 * k : 1);
-    stack.current.position.y = DESK_H + 0.14 + (has ? Math.abs(Math.sin(t * 2.4)) * 0.05 * k : 0);
   });
   const [ux, uz] = useZone("approvals");
   return (
@@ -468,21 +599,7 @@ function ApprovalsZone() {
       <ZoneHit name="approvals" />
       <RoundedBox args={[5.4, 0.02, 4.6]} radius={0.01} smoothness={2} position={[0, 0.011, 0.5]} receiveShadow><meshStandardMaterial color="#d5dae1" roughness={1} /></RoundedBox>
       <mesh ref={pulse} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0.4]}><ringGeometry args={[2.4, 2.45, 64]} /><meshBasicMaterial color="#b98a34" transparent opacity={0.3} toneMapped={false} /></mesh>
-      <RoundedBox args={[2.4, 0.06, 1.0]} radius={0.015} smoothness={3} castShadow receiveShadow position={[0, DESK_H - 0.03, 0.1]}><meshStandardMaterial color={OAK} roughness={0.8} /></RoundedBox>
-      <RoundedBox args={[2.2, DESK_H - 0.06, 0.04]} radius={0.01} smoothness={2} castShadow position={[0, (DESK_H - 0.06) / 2, -0.28]}><meshStandardMaterial color={GRAPHITE_L} roughness={0.85} /></RoundedBox>
-      {[-1.12, 1.12].map((s) => (
-        <mesh key={s} castShadow position={[s, (DESK_H - 0.06) / 2, 0.1]}><boxGeometry args={[0.05, DESK_H - 0.06, 0.8]} /><meshStandardMaterial color={GRAPHITE} roughness={0.5} metalness={0.3} /></mesh>
-      ))}
-      <group ref={stack} position={[0, DESK_H + 0.14, 0.1]}>
-        {Array.from({ length: Math.min(pending, 6) }).map((_, i) => (
-          <RoundedBox key={i} args={[0.24, 0.02, 0.32]} radius={0.006} smoothness={2} castShadow position={[(i % 3 - 1) * 0.3, -0.12 + Math.floor(i / 3) * 0.025, 0]} rotation={[0, i * 0.4, 0]}>
-            <meshStandardMaterial color="#f7f4ea" emissive="#c9993f" emissiveIntensity={0.18} />
-          </RoundedBox>
-        ))}
-      </group>
-      <RoundedBox args={[0.9, 0.02, 0.5]} radius={0.01} smoothness={2} position={[0, DESK_H + 0.01, 0.1]}><meshStandardMaterial color="#e3e7ec" /></RoundedBox>
-      <mesh castShadow position={[0, 0.3, 1.5]}><cylinderGeometry args={[0.34, 0.3, 0.08, 28]} /><meshStandardMaterial color={GRAPHITE_L} roughness={0.9} /></mesh>
-      <mesh position={[0, 0.14, 1.5]}><cylinderGeometry args={[0.035, 0.035, 0.22, 10]} /><meshStandardMaterial color={STEEL} metalness={0.4} roughness={0.5} /></mesh>
+      <FixtureSet ids={ROOM_PARTS.approvals} />
       <FloorSign pos={[0, 0.04, -1.1]} text="Zona de aprobaciones" color="#b98a34" sub={pending ? `${pending} pendiente${pending > 1 ? "s" : ""}` : "sin pendientes"} />
     </group>
   );
@@ -492,35 +609,11 @@ function ApprovalsZone() {
 function Cafeteria() {
   const { t } = useT();
   const [cx, cz] = useZone("cafe");
-  const led = useRef<THREE.MeshBasicMaterial>(null!);
-  useFrame(({ clock }) => {
-    const paused = Object.keys(useCost.getState().alerts).length > 0;
-    const reduce = usePreferences.getState().prefs.reduceMotion;
-    led.current.opacity = paused ? (reduce ? 1 : 0.55 + Math.abs(Math.sin(clock.elapsedTime * 2)) * 0.45) : 0.5;
-  });
   return (
     <group position={[cx, 0, cz]}>
       <ZoneHit name="cafe" />
       <RoundedBox args={[3.9, 0.02, 4.4]} radius={0.01} smoothness={2} position={[0.1, 0.011, 0]} receiveShadow><meshStandardMaterial color="#e1d8c8" roughness={1} /></RoundedBox>
-      {/* counter along the east edge */}
-      <RoundedBox args={[0.7, 0.9, 3.8]} radius={0.03} smoothness={3} castShadow receiveShadow position={[1.75, 0.45, 0]}><meshStandardMaterial color={GRAPHITE_L} roughness={0.8} /></RoundedBox>
-      <RoundedBox args={[0.78, 0.05, 3.88]} radius={0.015} smoothness={2} castShadow position={[1.75, 0.925, 0]}><meshStandardMaterial color={OAK} roughness={0.7} /></RoundedBox>
-      {/* coffee machine */}
-      <group position={[1.8, 0.95, -0.9]}>
-        <RoundedBox args={[0.42, 0.55, 0.5]} radius={0.04} smoothness={3} castShadow position={[0, 0.275, 0]}><meshStandardMaterial color="#2c323b" roughness={0.5} metalness={0.3} /></RoundedBox>
-        <mesh position={[-0.215, 0.38, 0]}><boxGeometry args={[0.012, 0.07, 0.07]} /><meshBasicMaterial ref={led} color="#e8943a" transparent toneMapped={false} /></mesh>
-        <mesh position={[-0.215, 0.18, 0]}><boxGeometry args={[0.02, 0.1, 0.12]} /><meshStandardMaterial color={STEEL} metalness={0.5} roughness={0.4} /></mesh>
-      </group>
-      {/* mugs and a pot on the counter */}
-      {[0.1, 0.4, 0.7].map((z, i) => (
-        <mesh key={i} castShadow position={[1.7, 1.0, z]}><cylinderGeometry args={[0.05, 0.043, 0.1, 12]} /><meshStandardMaterial color={["#f4efe6", "#e0735a", "#5a95e8"][i]} roughness={0.6} /></mesh>
-      ))}
-      <mesh castShadow position={[1.8, 1.07, 1.3]}><cylinderGeometry args={[0.1, 0.12, 0.24, 14]} /><meshStandardMaterial color="#c9d3dc" roughness={0.35} metalness={0.5} /></mesh>
-      {/* small high table */}
-      <mesh castShadow position={[-0.6, 0.95, 0]}><cylinderGeometry args={[0.42, 0.42, 0.05, 28]} /><meshStandardMaterial color={OAK} roughness={0.7} /></mesh>
-      <mesh castShadow position={[-0.6, 0.47, 0]}><cylinderGeometry args={[0.05, 0.14, 0.94, 14]} /><meshStandardMaterial color={GRAPHITE} roughness={0.6} metalness={0.2} /></mesh>
-      <mesh castShadow position={[-0.5, 1.02, 0.1]}><cylinderGeometry args={[0.05, 0.043, 0.1, 12]} /><meshStandardMaterial color="#f4efe6" roughness={0.6} /></mesh>
-      <Plant position={[-1.6, 0, 1.8]} s={0.8} tint="#8aa28c" />
+      <FixtureSet ids={ROOM_PARTS.cafe} />
       <FloorSign pos={[0.2, 0.04, 1.95]} text={t("office.cafeteria")} color="#c98a4a" />
     </group>
   );
@@ -651,34 +744,6 @@ function LightRig() {
   );
 }
 
-/** The built-in plants and rack: they can be moved, turned or taken away in the office editor. */
-function Fixtures() {
-  const cfg = useOfficeLayout((s) => effective(s).fixtures);
-  const editing = useOfficeLayout((s) => s.editing);
-  return (
-    <>
-      {FIXTURE_IDS.map((id) => {
-        const base = FIXTURES[id];
-        const c = cfg[id];
-        if (c?.hidden) return null;
-        const x = c?.x ?? base.x, z = c?.z ?? base.z, rot = c?.rot ?? base.rot;
-        return (
-          <group key={id} position={[x, 0, z]} rotation={[0, rot, 0]}>
-            {id === "rack" ? <Rack position={[0, 0, 0]} /> : <Plant position={[0, 0, 0]} s={base.s} tint={base.tint} />}
-            {editing && (
-              <mesh position={[0, 0.9, 0]}
-                onPointerDown={(ev) => { ev.stopPropagation(); const st = useOfficeLayout.getState(); if (st.placing) return; st.select({ kind: "fixture", id: id as FixtureId }); st.setDragging(true); }}
-                onPointerOver={() => { document.body.style.cursor = "grab"; }} onPointerOut={() => { document.body.style.cursor = ""; }}>
-                <boxGeometry args={[base.w + 0.2, 1.8, base.d + 0.2]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} />
-              </mesh>
-            )}
-          </group>
-        );
-      })}
-    </>
-  );
-}
-
 export function OfficeEnv() {
   const order = useStore((s) => s.agentOrder);
   const concrete = useConcrete();
@@ -709,7 +774,8 @@ export function OfficeEnv() {
         {walls.windows && <group position={[0.17, 0.4, 0]}><GlassBand length={17} horizontal={false} /></group>}
       </Wall>
 
-      <Fixtures />
+      {/* the original plants and rack (the furniture of the rooms is drawn by each room) */}
+      <FixtureSet ids={DECOR_IDS} />
 
       {order.map((id, i) => <Desk key={id} id={id} index={i} />)}
       <MeetingRoom />

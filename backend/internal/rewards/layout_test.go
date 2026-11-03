@@ -339,3 +339,40 @@ func TestValidateRoomsFixturesAndWindows(t *testing.T) {
 		}
 	}
 }
+
+// The furniture of the three rooms is a closed list too; its coordinates are relative to its room, so they must stay
+// close to the room (a room is at most 7.8 x 7.4 m).
+func TestValidateRoomParts(t *testing.T) {
+	cat, _ := rewards.ParseCatalog([]byte(layoutCatalog))
+	ok := rewards.Layout{V: 1, Fixtures: map[string]rewards.Fixture{
+		"meeting_table": {X: 0.5, Z: -1, Rot: 1.5708}, "meeting_seat_1": {X: 2, Z: 2}, "meeting_seat_6": {Hidden: true}, "meeting_screen": {Z: -3.9},
+		"approvals_desk": {X: 1, Z: 0.1, Rot: 3.1416}, "approvals_chair": {Z: 1.5, Hidden: true},
+		"cafe_counter": {X: -1.5, Z: 0}, "cafe_machine": {X: -1.5, Z: 1}, "cafe_mug_1": {X: 1.7}, "cafe_mug_2": {}, "cafe_mug_3": {},
+		"cafe_pot": {}, "cafe_table": {}, "cafe_table_mug": {}, "cafe_plant": {X: -1.6, Z: 1.8},
+		"plant_a": {X: -12.8, Z: -8.6},
+	}}
+	if err := rewards.Validate(cat, &ok); err != nil {
+		t.Fatalf("valid room parts: %v", err)
+	}
+	for name, f := range map[string]map[string]rewards.Fixture{
+		"unknown part":         {"meeting_seat_7": {}},
+		"unknown room part":    {"cafe_sofa": {}},
+		"part far from room":   {"cafe_machine": {X: 9}},
+		"part far from room z": {"meeting_seat_2": {Z: -8.5}},
+		"part turned too far":  {"meeting_table": {Rot: 5000}},
+	} {
+		l := rewards.Layout{V: 1, Fixtures: f}
+		if err := rewards.Validate(cat, &l); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+	// a document with every part round-trips through the strict parser
+	raw := []byte(`{"v":1,"pieces":[],"fixtures":{"cafe_mug_2":{"x":-0.6,"z":0.1,"rot":1.5708},"meeting_seat_3":{"x":1,"z":1,"hidden":true}}}`)
+	l, err := rewards.ParseLayout(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := rewards.Validate(cat, &l); err != nil || !l.Fixtures["meeting_seat_3"].Hidden || l.Fixtures["cafe_mug_2"].X != -0.6 {
+		t.Fatalf("parsed %+v err %v", l.Fixtures, err)
+	}
+}

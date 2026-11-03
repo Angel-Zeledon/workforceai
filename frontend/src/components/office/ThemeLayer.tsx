@@ -37,6 +37,8 @@ export function ThemeApplier() {
     const w = window as unknown as { __officeStyle?: unknown };
     w.__officeStyle = {
       scene,
+      /** the live camera (to project a point of the scene to the screen in browser checks) */
+      camera: () => getState().camera,
       /** close-ups for screenshots: narrows the lens on a point of the floor plan (fov null: back to the default view) */
       view: (fov: number | null, x = 0.5, y = 0.4, z = -0.3) => {
         const st = getState();

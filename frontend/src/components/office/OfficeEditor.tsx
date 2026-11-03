@@ -6,7 +6,8 @@ import { useStore } from "@/lib/store";
 import { useCan } from "@/lib/session";
 import { itemName, useRewards, type ShopItem } from "@/lib/rewards";
 import { effective, pieceOf, useOfficeLayout, withPiece, withoutPiece } from "@/lib/officeLayout";
-import { DEFAULT_LAYOUT, FIXTURES, FIXTURE_IDS, FLOOR_KINDS, FLOOR_TINTS, MOODS, OFFICE_STYLES, TRIM_COLORS, WALL_COLORS, ZONE_NAMES, dayPhase, isHex, localHour, type FixtureId, type FloorKind, type Layout, type Mood, type OfficeStyle, type ZoneName } from "@/lib/officeLayoutModel";
+import { DECOR_IDS, DEFAULT_LAYOUT, FIXTURES, FLOOR_KINDS, FLOOR_TINTS, MOODS, OFFICE_STYLES, ROOM_PARTS, TRIM_COLORS, WALL_COLORS, ZONE_NAMES, dayPhase, hideFixture, isHex, isRoomPart, localHour, resetFixture, showFixture, type FixtureId, type FloorKind, type Layout, type Mood, type OfficeStyle, type ZoneName } from "@/lib/officeLayoutModel";
+import { turnFixture } from "./editorWorld";
 import { STYLE_LOOKS } from "./officeTheme";
 import { usePreferences } from "@/lib/preferences";
 import { Btn, useAgentName } from "../ui";
@@ -296,59 +297,88 @@ function SelectedPiece() {
 }
 
 const zoneName = (t: (k: string) => string, z: ZoneName) => t(`oe.zone.${z}`);
-const fixtureName = (t: (k: string) => string, id: FixtureId) => t(id === "rack" ? "oe.fx.rack" : "oe.fx.plant");
+/** "Plant 2", "Seat 3", "Coffee machine": the name of a built-in object for the list and the selection card. */
+function fixtureName(t: (k: string, v?: Record<string, string | number>) => string, id: FixtureId): string {
+  if (!isRoomPart(id)) return id === "rack" ? t("oe.fx.rack") : `${t("oe.fx.plant")} ${DECOR_IDS.indexOf(id) + 1}`;
+  const m = /^(.*)_(\d)$/.exec(id);
+  return m ? t(`oe.part.${m[1]}`, { n: m[2] }) : t(`oe.part.${id}`);
+}
 
-/** Rooms and the original plants / rack: selected here or in the 3D view, dragged to move. */
+/** One built-in object in the list: select it, put it back when taken away, or send it back to its spot when moved. */
+function FixtureRow({ id, indent }: { id: FixtureId; indent?: boolean }) {
+  const { t } = useT();
+  const layout = useOfficeLayout((s) => s.draft) as Layout;
+  const sel = useOfficeLayout((s) => s.selection);
+  const mutate = useOfficeLayout((s) => s.mutate);
+  const cfg = layout.fixtures[id];
+  const hidden = !!cfg?.hidden;
+  return (
+    <li className={`flex items-center gap-1 ${indent ? "pl-3" : ""}`}>
+      <button type="button" data-testid={`oe-fixture-${id}`} disabled={hidden} onClick={() => useOfficeLayout.getState().select({ kind: "fixture", id })} className={`${rowCls(sel?.kind === "fixture" && sel.id === id)} disabled:opacity-50`}>
+        <span>{fixtureName(t, id)}</span>{hidden ? <span className="text-[10.5px] text-mute">{t("oe.fx.hidden")}</span> : cfg && <span className="text-[10.5px] text-mute">{t("oe.d.moved")}</span>}
+      </button>
+      {hidden && <button type="button" data-testid={`oe-fixture-show-${id}`} onClick={() => mutate((l) => showFixture(l, id))} className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent-soft">{t("oe.fx.show")}</button>}
+      {!hidden && cfg && <button type="button" onClick={() => mutate((l) => resetFixture(l, id))} className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent-soft">{t("oe.z.reset")}</button>}
+    </li>
+  );
+}
+const rowCls = (active: boolean) => `flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left text-[12px] transition ${active ? "border-accent bg-accent-soft text-accent" : "border-transparent text-ink2 hover:bg-panel2"}`;
+
+/** Rooms (each with its furniture, folded) and the original plants / rack: selected here or in the 3D view, dragged to move. */
 function RoomsSection() {
   const { t } = useT();
   const layout = useOfficeLayout((s) => s.draft) as Layout;
   const sel = useOfficeLayout((s) => s.selection);
   const mutate = useOfficeLayout((s) => s.mutate);
   const select = useOfficeLayout((s) => s.select);
-  const row = (active: boolean) => `flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left text-[12px] transition ${active ? "border-accent bg-accent-soft text-accent" : "border-transparent text-ink2 hover:bg-panel2"}`;
+  const selRoom = sel?.kind === "zone" ? sel.id : sel?.kind === "fixture" ? FIXTURES[sel.id].room : undefined;
+  const [open, setOpen] = useState<ZoneName | null>(null);
   return (
     <Section title={t("oe.f.rooms")}>
       <p className="text-[11.5px] leading-snug text-mute">{t("oe.z.hint")}</p>
       <ul className="space-y-0.5">
         {ZONE_NAMES.map((z) => {
           const moved = !!layout.zones[z];
+          const expanded = open === z || selRoom === z;
+          const changed = ROOM_PARTS[z].filter((id) => layout.fixtures[id]).length;
           return (
-            <li key={z} className="flex items-center gap-1">
-              <button type="button" data-testid={`oe-zone-${z}`} onClick={() => select({ kind: "zone", id: z })} className={row(sel?.kind === "zone" && sel.id === z)}><span>{zoneName(t, z)}</span>{moved && <span className="text-[10.5px] text-mute">{t("oe.d.moved")}</span>}</button>
-              {moved && <button type="button" onClick={() => mutate((l) => { const zs = { ...l.zones }; delete zs[z]; return { ...l, zones: zs }; })} className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent-soft">{t("oe.z.reset")}</button>}
+            <li key={z}>
+              <div className="flex items-center gap-1">
+                <button type="button" aria-expanded={expanded} aria-label={t("oe.z.parts")} data-testid={`oe-zone-open-${z}`} onClick={() => setOpen(open === z ? null : z)}
+                  className="shrink-0 rounded-md px-1.5 py-1 text-[11px] text-mute hover:bg-panel2">{expanded ? "▾" : "▸"}</button>
+                <button type="button" data-testid={`oe-zone-${z}`} onClick={() => select({ kind: "zone", id: z })} className={rowCls(sel?.kind === "zone" && sel.id === z)}>
+                  <span>{zoneName(t, z)}</span>
+                  <span className="text-[10.5px] text-mute">{[moved ? t("oe.d.moved") : "", changed ? t("oe.z.changed", { count: changed }) : ""].filter(Boolean).join(" · ")}</span>
+                </button>
+                {moved && <button type="button" onClick={() => mutate((l) => { const zs = { ...l.zones }; delete zs[z]; return { ...l, zones: zs }; })} className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent-soft">{t("oe.z.reset")}</button>}
+              </div>
+              {expanded && <ul className="mt-0.5 space-y-0.5" data-testid={`oe-zone-parts-${z}`}>{ROOM_PARTS[z].map((id) => <FixtureRow key={id} id={id} indent />)}</ul>}
             </li>
           );
         })}
-        {FIXTURE_IDS.map((id, i) => {
-          const hidden = !!layout.fixtures[id]?.hidden;
-          return (
-            <li key={id} className="flex items-center gap-1">
-              <button type="button" data-testid={`oe-fixture-${id}`} disabled={hidden} onClick={() => select({ kind: "fixture", id })} className={`${row(sel?.kind === "fixture" && sel.id === id)} disabled:opacity-50`}>
-                <span>{fixtureName(t, id)}{id !== "rack" ? ` ${i + 1}` : ""}</span>{hidden && <span className="text-[10.5px] text-mute">{t("oe.fx.hidden")}</span>}
-              </button>
-              {hidden && <button type="button" onClick={() => mutate((l) => { const fx = { ...l.fixtures }; delete fx[id]; return { ...l, fixtures: fx }; })} className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent-soft">{t("oe.fx.show")}</button>}
-            </li>
-          );
-        })}
+        {DECOR_IDS.map((id) => <FixtureRow key={id} id={id} />)}
       </ul>
     </Section>
   );
 }
 
-/** Controls of the selected room or original decoration. */
+/** Controls of the selected room or built-in object. */
 function SelectedOther() {
   const { t } = useT();
   const sel = useOfficeLayout((s) => s.selection);
   const mutate = useOfficeLayout((s) => s.mutate);
   if (sel?.kind === "fixture") {
     const id = sel.id;
-    const rot = () => mutate((l) => ({ ...l, fixtures: { ...l.fixtures, [id]: { ...(l.fixtures[id] ?? { x: FIXTURES[id].x, z: FIXTURES[id].z }), rot: (l.fixtures[id]?.rot ?? FIXTURES[id].rot) + Math.PI / 2 } } }), `rot:${id}`);
+    const room = FIXTURES[id].room;
     return (
       <div data-testid="oe-selected" className="space-y-3 rounded-xl border border-accent/40 bg-accent-soft/40 p-3">
-        <div className="text-[13px] font-semibold text-ink">{fixtureName(t, id)}</div>
+        <div>
+          <div className="text-[13px] font-semibold text-ink">{fixtureName(t, id)}</div>
+          {room && <div className="text-[11px] text-mute">{zoneName(t, room)} · {t(FIXTURES[id].surface ? "oe.part.carries" : "oe.part.hint")}</div>}
+        </div>
         <div className="flex gap-2">
-          <Btn onClick={rot}>{t("oe.f.rotate")} (R)</Btn>
-          <Btn kind="danger" onClick={() => { mutate((l) => ({ ...l, fixtures: { ...l.fixtures, [id]: { ...(l.fixtures[id] ?? { x: FIXTURES[id].x, z: FIXTURES[id].z }), hidden: true } } })); useOfficeLayout.getState().select(null); }}>{t("oe.f.remove")}</Btn>
+          <Btn onClick={() => turnFixture(id)} data-testid="oe-rotate">{t("oe.f.rotate")} (R)</Btn>
+          <Btn kind="danger" data-testid="oe-remove" onClick={() => { mutate((l) => hideFixture(l, id)); useOfficeLayout.getState().select(null); }}>{t("oe.f.remove")}</Btn>
         </div>
       </div>
     );

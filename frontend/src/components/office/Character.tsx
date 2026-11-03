@@ -6,13 +6,13 @@ import * as THREE from "three";
 import { useStore } from "@/lib/store";
 import { usePreferences, useAgentView } from "@/lib/preferences";
 import { roleMeta } from "@/lib/meta";
-import { cafeCenter, meetingCenter, userPos } from "./zones";
+import { cafeCenter, cafeParts, meetingFocus, meetingRoom, nearUser, userFrame, userPos } from "./zones";
 import type { AgentState } from "@/lib/types";
 import {
   EVENT_GESTURES, GESTURE_DURATION, KEYS, WALK_SPEED, applyGesture, blinkDelay, clamp, computePose, createRng, fidgetDelay,
   hashSeed, holdsMug, pickFidget, propFor, smooth, wrapAngle as wrap, zeroPose, type GestureKind,
 } from "./gestures";
-import { approvalsSpot, cafeSpot, meetingSeat, zoneFor } from "./officeState";
+import { approvalsSpot, cafeSpot, meetingPlace, zoneFor } from "./officeState";
 import { getSignals } from "./officeSignals";
 import { BodyWear, Buddy, HeadWear, OutfitWear, suppressesAccessory, useOutfit, useWorn } from "./Worn";
 import { AISLE_Z, deskOf, feetPos, headPos, seatOf, standOf, visitorOf } from "./registry";
@@ -21,8 +21,10 @@ import { bodySquash, lookOf, stopMotionTick, stylePose } from "./officeTheme";
 
 const SEATED = new Set<AgentState>(["thinking", "working", "waiting", "reviewing", "blocked", "awaiting_approval"]);
 const ACTIVE_TASK = new Set(["pending", "running", "awaiting_approval"]);
-/** Where the assistant hands the finished report to the user (in front of the approvals desk, clear of furniture). */
-const deliverPos = (): [number, number] => { const u = userPos(); return [u[0] - 1.6, u[2] - 1.1]; };
+/** Where the assistant hands the finished report to the user (in front of the approvals desk, clear of furniture; it follows the desk). */
+const deliverPos = (): [number, number] => { const p = nearUser(-1.6, -1.1); return [p[0], p[2]]; };
+/** Place key of a spot: a seat or counter that is moved re-routes the agent. */
+const spotKey = (p: readonly [number, number]) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`;
 const BODY_SCALE = 1.2;
 /** Beyond this squared camera distance fidgets and event gestures are skipped (cheap LOD). */
 const FAR_D2 = 24 * 24;
@@ -199,6 +201,7 @@ export function Character({ id, index }: { id: string; index: number }) {
     let place = "stand";
     let dest: [number, number] = own.stand;
     let face: number | null = null;
+    let meetSit = true; // false: no seat left in the meeting room for this agent (it stands around the table)
     if (visit) {
       place = `visit:${visit}`;
       const td = deskOf(S.agents[visit], Math.max(0, S.agentOrder.indexOf(visit)));
@@ -207,13 +210,16 @@ export function Character({ id, index }: { id: string; index: number }) {
       face = Math.atan2(tgt[0] - dest[0], tgt[1] - dest[1]);
     } else if (zone === "cafeteria") {
       // budget cap reached: waits for the cap to be raised with a coffee (the agent is paused, not failing)
-      const cs = cafeSpot(sig.cafeSlot.get(id) ?? 0, cafeCenter());
-      place = `cafe:${sig.cafeSlot.get(id)}`; dest = cs.pos; face = cs.yaw;
+      const cs = cafeSpot(sig.cafeSlot.get(id) ?? 0, cafeCenter(), cafeParts());
+      place = `cafe:${sig.cafeSlot.get(id)}:${spotKey(cs.pos)}`; dest = cs.pos; face = cs.yaw;
     } else if (zone === "meeting") {
-      const ms = meetingSeat(meetingCenter(), sig.meetingSlot.get(id) ?? 0);
-      place = `meeting:${sig.meetingSlot.get(id)}`; dest = ms.pos; face = ms.yaw;
+      // the k-th seat still in the room, wherever it was moved; standing around the table when there is none left
+      const ms = meetingPlace(meetingRoom(), sig.meetingSlot.get(id) ?? 0);
+      place = `meeting:${sig.meetingSlot.get(id)}:${spotKey(ms.pos)}`; dest = ms.pos; face = ms.yaw; meetSit = ms.sit;
     } else if (zone === "approvals") {
-      place = `appr:${sig.apprSlot.get(id)}`; dest = approvalsSpot(USER_POS, sig.apprSlot.get(id) ?? 0); face = 0;
+      const rot = userFrame().rot;
+      dest = approvalsSpot(USER_POS, sig.apprSlot.get(id) ?? 0, rot);
+      place = `appr:${sig.apprSlot.get(id)}:${spotKey(dest)}`; face = rot;
     } else if (SEATED.has(st) || (st === "idle" && sm.hasTask)) { place = "seat"; dest = own.seat; }
     else if (st === "completed" && ag.role === "assistant") {
       // the final report is handed to the user (request.completed -> assistant "completed")
@@ -272,12 +278,12 @@ export function Character({ id, index }: { id: string; index: number }) {
     const atZone = place.startsWith("cafe:") ? "cafe" : place.startsWith("meeting:") ? "meeting" : place.startsWith("appr:") ? "appr" : "";
     const mode = walking ? "walk"
       : atZone === "cafe" ? "stand:cafe"
-      : atZone === "meeting" ? "seat:meeting"
+      : atZone === "meeting" ? (meetSit ? "seat:meeting" : "stand:idle")
       : atZone === "appr" ? (st === "awaiting_approval" ? "stand:awaiting_approval" : "stand:idle")
       : place === "seat" ? `seat:${st}` : `stand:${visit ? "talking" : st}`;
 
     // --- gestures: event reactions (selection, approvals, delegation, user messages) and idle fidgets ---
-    const standing = place !== "seat" && atZone !== "meeting";
+    const standing = place !== "seat" && !(atZone === "meeting" && meetSit);
     const canTurn = standing && face === null;
     if (!reduce && !far) {
       if (selected && !sm.wasSel) {
@@ -311,7 +317,7 @@ export function Character({ id, index }: { id: string; index: number }) {
             if (sm.rng() < 0.35) startGesture(sm, "nod", null, false, false);
             else if (h) startGesture(sm, "lookAt", Math.atan2(h.x - sm.pos.x, h.z - sm.pos.y), false, false);
           } else if (sm.rng() < 0.6) {
-            const mc = meetingCenter();
+            const mc = meetingFocus();
             startGesture(sm, "point", Math.atan2(mc[0] - sm.pos.x, mc[1] - sm.pos.y), false, false);
           }
         }

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   BUBBLE_GAP_MS, BUBBLE_MAX_VISIBLE, BUBBLE_SHOW_MS, FolderPool, approvalsSpot, cafeSpot, detectHandoffs, energyOf, etaShort, meetingSeat,
-  phaseFor, pickBubble, slotIndex, stepBubbles, taskEta, truncateText, zoneFor, fileBubbleText, FILE_MAX_AGE,
+  phaseFor, pickBubble, slotIndex, stepBubbles, taskEta, truncateText, zoneFor, fileBubbleText, FILE_MAX_AGE, meetingPlace, approvalsFrame,
 } from "./officeState.ts";
 
 test("file bubble: what the agent does with which file, after the plan phase and chat lines", () => {
@@ -191,4 +191,86 @@ test("FolderPool caps concurrency, dedupes and bounds the queue", () => {
   assert.equal(pool.pump(1700, () => 1000), 1); // both done, the last queued one starts
   assert.equal(pool.pump(3000, () => 1000), 0);
   assert.ok(!pool.enqueue({ from: "x", to: "x" }, 4000));
+});
+
+// ---- the objects of the rooms can be moved, turned or taken away (office editor) ----
+
+const seatRing = (c) => [0, 1, 2, 3, 4, 5].map((k) => { const a = (k / 6) * Math.PI * 2 + 0.3; return { x: c[0] + Math.sin(a) * 2.25, z: c[1] + Math.cos(a) * 2.25 }; });
+const close = (a, b) => Math.abs(a - b) < 1e-9;
+
+test("meeting: the built-in room seats everyone exactly where they always sat", () => {
+  const c = [9.5, -6.2];
+  const room = { center: c, table: { x: c[0], z: c[1] }, seats: seatRing(c) };
+  for (let k = 0; k < 6; k++) {
+    const p = meetingPlace(room, k), old = meetingSeat(c, k);
+    assert.ok(p.sit && close(p.pos[0], old.pos[0]) && close(p.pos[1], old.pos[1]) && close(p.yaw, old.yaw), `seat ${k}`);
+  }
+});
+
+test("meeting: agents sit on the seats wherever they were moved, facing the table", () => {
+  const c = [9.5, -6.2];
+  const seats = seatRing(c);
+  seats[2] = { x: 12, z: -3 };
+  const table = { x: 10, z: -5 };
+  const p = meetingPlace({ center: c, table, seats }, 2);
+  assert.deepEqual(p.pos, [12, -3]);
+  assert.ok(p.sit && close(p.yaw, Math.atan2(10 - 12, -5 - -3)));
+  // walking forward along the yaw reaches the table
+  const d = Math.hypot(12 - 10, -3 - -5);
+  assert.ok(Math.hypot(12 + Math.sin(p.yaw) * d - 10, -3 + Math.cos(p.yaw) * d - -5) < 1e-9);
+});
+
+test("meeting: without a table they face the room center; without a seat they stand around it", () => {
+  const c = [0, 0];
+  const seats = seatRing(c);
+  const noTable = meetingPlace({ center: c, table: null, seats }, 0);
+  assert.ok(noTable.sit && close(noTable.yaw, Math.atan2(-seats[0].x, -seats[0].z)));
+  // two seats taken away: the first four agents sit on the four left, the other two stand where the missing ones were
+  const few = [...seats]; few[1] = null; few[4] = null;
+  const room = { center: c, table: { x: 1, z: 0 }, seats: few };
+  const sat = [0, 1, 2, 3].map((k) => meetingPlace(room, k));
+  assert.ok(sat.every((p) => p.sit));
+  assert.deepEqual(sat.map((p) => p.pos), [0, 2, 3, 5].map((i) => [seats[i].x, seats[i].z]));
+  const st = [4, 5].map((k) => meetingPlace(room, k));
+  assert.ok(st.every((p) => !p.sit));
+  for (const [p, i] of [[st[0], 1], [st[1], 4]]) {
+    const a = (i / 6) * Math.PI * 2 + 0.3;
+    assert.ok(close(p.pos[0], 1 + Math.sin(a) * 2.25) && close(p.pos[1], Math.cos(a) * 2.25)); // around the (moved) table
+    assert.ok(close(p.yaw, Math.atan2(1 - p.pos[0], 0 - p.pos[1])));
+  }
+  // nothing left at all: everyone stands around the room center, all spots distinct
+  const bare = [0, 1, 2, 3, 4, 5].map((k) => meetingPlace({ center: [3, 3], table: null, seats: [null, null, null, null, null, null] }, k));
+  assert.ok(bare.every((p) => !p.sit && close(Math.hypot(p.pos[0] - 3, p.pos[1] - 3), 2.25)));
+  assert.equal(new Set(bare.map((p) => p.pos.join(","))).size, 6);
+});
+
+test("cafeteria: the spots follow the counter and the high table when they are moved or turned", () => {
+  const c = [9.2, 1.2];
+  const dflt = [0, 1, 2, 3, 4, 5].map((k) => cafeSpot(k, c));
+  const same = [0, 1, 2, 3, 4, 5].map((k) => cafeSpot(k, c, { counter: { x: c[0] + 1.75, z: c[1], rot: 0 }, table: { x: c[0] - 0.6, z: c[1], rot: 0 } }));
+  for (let k = 0; k < 6; k++) assert.ok(close(dflt[k].pos[0], same[k].pos[0]) && close(dflt[k].pos[1], same[k].pos[1]) && close(dflt[k].yaw, same[k].yaw));
+  // counter turned a quarter: the agents line up along it and face it (yaw turns with it)
+  const turned = cafeSpot(0, c, { counter: { x: 5, z: 5, rot: Math.PI / 2 }, table: null });
+  assert.ok(close(turned.pos[0], 5 + -1.2) && close(turned.pos[1], 5 + 0.8), JSON.stringify(turned));
+  assert.ok(close(turned.yaw, Math.PI));
+  // the counter taken away (null): its spots stay where the counter was
+  assert.deepEqual(cafeSpot(1, c, { counter: null, table: null }), dflt[1]);
+  // the high table moved: its two spots flank it
+  const t = cafeSpot(4, c, { counter: null, table: { x: 0, z: 0, rot: 0 } });
+  assert.ok(close(t.pos[0], 0) && close(t.pos[1], -0.95) && close(t.yaw, 0));
+});
+
+test("approvals: the waiting line and the user follow the desk", () => {
+  const c = [9.5, 5.4];
+  // built-in desk (0.1 south of the room center): the user anchor is the room center as before
+  const f = approvalsFrame(c, { x: c[0], z: c[1] + 0.1, rot: 0 });
+  assert.ok(close(f.user[0], 9.5) && close(f.user[1], 5.4) && f.rot === 0);
+  assert.deepEqual(approvalsFrame(c, null), { user: [9.5, 5.4], rot: 0 }); // desk taken away: the room center
+  const u = [f.user[0], 1.6, f.user[1]];
+  assert.deepEqual(approvalsSpot(u, 1, 0), approvalsSpot(u, 1));
+  // desk turned a quarter: the line is rotated about the user
+  const r = approvalsFrame([0, 0], { x: 0, z: 0, rot: Math.PI / 2 });
+  assert.ok(close(r.user[0], -0.1) && close(r.user[1], 0));
+  const s = approvalsSpot([r.user[0], 1.6, r.user[1]], 0, r.rot);
+  assert.ok(close(s[0], -0.1 - 0.95) && close(s[1], 0), JSON.stringify(s));
 });

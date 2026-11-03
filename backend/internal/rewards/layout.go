@@ -24,6 +24,8 @@ const (
 	MaxPieces     = 150
 	MaxDesks      = 60
 	maxCoord      = 40.0
+	// maxRoomOffset bounds the room-relative coordinates of a room part (a room is at most 7.8 x 7.4 m).
+	maxRoomOffset = 8.0
 	maxUID        = 24
 	maxAgentID    = 64
 )
@@ -37,7 +39,8 @@ type Layout struct {
 	Desks  map[string]Desk `json:"desks,omitempty"`
 	Pieces []Piece         `json:"pieces"`
 	Seeded bool            `json:"seeded,omitempty"`
-	// Zones moves the three rooms (meeting, approvals, cafe); Fixtures moves or hides the original decoration.
+	// Zones moves the three rooms (meeting, approvals, cafe); Fixtures moves, turns or hides the original decoration
+	// (absolute coordinates) and the furniture of the rooms (coordinates relative to the room's center).
 	Zones    map[string]Spot    `json:"zones,omitempty"`
 	Fixtures map[string]Fixture `json:"fixtures,omitempty"`
 	// Style is the visual style of the whole office ("" = classic, the original look).
@@ -50,7 +53,7 @@ type Spot struct {
 	Z float64 `json:"z"`
 }
 
-// Fixture is one of the built-in decorations (plants, rack): moved, turned or taken away.
+// Fixture is one of the built-in objects (plants, rack, or a piece of furniture of a room): moved, turned or taken away.
 type Fixture struct {
 	X      float64 `json:"x"`
 	Z      float64 `json:"z"`
@@ -103,7 +106,15 @@ var (
 	uidRe    = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 	zoneNames  = map[string]bool{"meeting": true, "approvals": true, "cafe": true}
-	fixtureIDs = map[string]bool{"plant_a": true, "plant_b": true, "plant_c": true, "plant_d": true, "rack": true}
+	// fixtureIDs is the closed list of built-in objects; true marks a room part (room-relative coordinates).
+	fixtureIDs = map[string]bool{
+		"plant_a": false, "plant_b": false, "plant_c": false, "plant_d": false, "rack": false,
+		"meeting_table": true, "meeting_seat_1": true, "meeting_seat_2": true, "meeting_seat_3": true, "meeting_seat_4": true,
+		"meeting_seat_5": true, "meeting_seat_6": true, "meeting_screen": true,
+		"approvals_desk": true, "approvals_chair": true,
+		"cafe_counter": true, "cafe_machine": true, "cafe_mug_1": true, "cafe_mug_2": true, "cafe_mug_3": true, "cafe_pot": true,
+		"cafe_table": true, "cafe_table_mug": true, "cafe_plant": true,
+	}
 	floorKinds = map[string]bool{"concrete": true, "wood": true, "parquet": true, "carpet": true, "tile": true, "marble": true}
 	moods      = map[string]bool{"natural": true, "warm": true, "cool": true, "sunset": true, "night": true}
 	styles     = map[string]bool{"classic": true, "bricks": true, "clay": true, "paper": true, "toon": true, "real": true}
@@ -183,10 +194,15 @@ func Validate(c *Catalog, l *Layout) error {
 		}
 	}
 	for id, f := range l.Fixtures {
-		if !fixtureIDs[id] {
+		roomPart, known := fixtureIDs[id]
+		if !known {
 			return invalidf("unknown fixture %q", clip(id, 20))
 		}
-		if !inRange(f.X, -maxCoord, maxCoord) || !inRange(f.Z, -maxCoord, maxCoord) || !inRange(f.Rot, -1000, 1000) {
+		lim := maxCoord
+		if roomPart {
+			lim = maxRoomOffset
+		}
+		if !inRange(f.X, -lim, lim) || !inRange(f.Z, -lim, lim) || !inRange(f.Rot, -1000, 1000) {
 			return invalidf("fixture %q is out of range", id)
 		}
 	}

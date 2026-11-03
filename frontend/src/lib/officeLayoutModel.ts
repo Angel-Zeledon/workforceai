@@ -13,7 +13,14 @@ export const OFFICE_STYLES: OfficeStyle[] = ["classic", "bricks", "clay", "paper
 export interface DeskCfg { x?: number; z?: number; desk?: string; chair?: string }
 export interface Piece { uid: string; item: string; x: number; z: number; rot: number; s: number; y?: number }
 export type ZoneName = "meeting" | "approvals" | "cafe";
-export type FixtureId = "plant_a" | "plant_b" | "plant_c" | "plant_d" | "rack";
+/** The original decoration standing on its own (absolute coordinates). */
+export type DecorId = "plant_a" | "plant_b" | "plant_c" | "plant_d" | "rack";
+/** The furniture inside the three rooms (coordinates relative to the room's center, so moving the room carries it). */
+export type RoomPartId =
+  | "meeting_table" | "meeting_seat_1" | "meeting_seat_2" | "meeting_seat_3" | "meeting_seat_4" | "meeting_seat_5" | "meeting_seat_6" | "meeting_screen"
+  | "approvals_desk" | "approvals_chair"
+  | "cafe_counter" | "cafe_machine" | "cafe_mug_1" | "cafe_mug_2" | "cafe_mug_3" | "cafe_pot" | "cafe_table" | "cafe_table_mug" | "cafe_plant";
+export type FixtureId = DecorId | RoomPartId;
 export interface Spot { x: number; z: number }
 export interface FixtureCfg { x: number; z: number; rot?: number; hidden?: boolean }
 export interface Layout {
@@ -26,7 +33,7 @@ export interface Layout {
   seeded?: boolean;
   /** The three rooms moved from their built-in place (center of each room). */
   zones: Partial<Record<ZoneName, Spot>>;
-  /** The built-in decoration (plants, rack) moved, turned or taken away. */
+  /** The built-in decoration (plants, rack) and the furniture of the rooms moved, turned or taken away (room parts: relative to their room). */
   fixtures: Partial<Record<FixtureId, FixtureCfg>>;
   /** Visual style; absent = "classic" (the original look). */
   style?: OfficeStyle;
@@ -145,15 +152,182 @@ export const ZONE_SIZE: Record<ZoneName, { w: number; d: number; dx: number; dz:
   approvals: { w: 5.6, d: 4.8, dx: 0, dz: 0.5 },
   cafe: { w: 4.1, d: 4.6, dx: 0.1, dz: 0 },
 };
-/** The built-in decoration: where it stands, its scale and tint, and how much floor it takes. */
-export const FIXTURES: Record<FixtureId, { x: number; z: number; rot: number; s: number; tint?: string; w: number; d: number }> = {
-  plant_a: { x: -12.8, z: -8.6, rot: 0, s: 1.5, w: 0.8, d: 0.8 },
-  plant_b: { x: -12.8, z: 8.4, rot: 0, s: 1.1, tint: "#8aa28c", w: 0.6, d: 0.6 },
-  plant_c: { x: 4.4, z: -8.8, rot: 0, s: 1.2, tint: "#8ba08d", w: 0.7, d: 0.7 },
-  plant_d: { x: 12.8, z: 8.6, rot: 0, s: 1.3, tint: "#7a9680", w: 0.7, d: 0.7 },
-  rack: { x: -12.9, z: -0.5, rot: Math.PI / 2, s: 1, w: 0.9, d: 0.8 },
+/**
+ * How a built-in object stands: `floor` on the floor; `top` small things that rest on a surface (the counter, the high
+ * table) or on the floor when nothing is under them; `wall` hangs (the meeting screen) and collides with nothing.
+ */
+export type FixtureLevel = "floor" | "top" | "wall";
+/**
+ * A built-in object: where it stands (absolute for the decor, relative to its room's center for room parts), its scale
+ * and tint, how much floor it takes (`w` x `d`), the height of its grab handle (`h`), and for surfaces the height of
+ * their top (`surface`: what other things rest on).
+ */
+export interface FixtureDef { x: number; z: number; rot: number; s: number; tint?: string; w: number; d: number; h: number; level: FixtureLevel; room?: ZoneName; surface?: number }
+const decor = (x: number, z: number, s: number, w: number, tint?: string): FixtureDef => ({ x, z, rot: 0, s, w, d: w, h: 1.8, level: "floor", ...(tint ? { tint } : {}) });
+const part = (room: ZoneName, x: number, z: number, w: number, d: number, h: number, level: FixtureLevel = "floor", extra: Partial<FixtureDef> = {}): FixtureDef => ({ x, z, rot: 0, s: 1, w, d, h, level, room, ...extra });
+/** The six meeting seats stand in a ring of radius 2.25 around the table (officeState.meetingSeat uses the same angles). */
+const seat = (k: number): FixtureDef => { const a = (k / 6) * Math.PI * 2 + 0.3; return part("meeting", Math.sin(a) * 2.25, Math.cos(a) * 2.25, 0.6, 0.6, 0.45); };
+/** The built-in objects: where they stand, their scale and tint, and how much floor they take. */
+export const FIXTURES: Record<FixtureId, FixtureDef> = {
+  plant_a: decor(-12.8, -8.6, 1.5, 0.8),
+  plant_b: decor(-12.8, 8.4, 1.1, 0.6, "#8aa28c"),
+  plant_c: decor(4.4, -8.8, 1.2, 0.7, "#8ba08d"),
+  plant_d: decor(12.8, 8.6, 1.3, 0.7, "#7a9680"),
+  rack: { x: -12.9, z: -0.5, rot: Math.PI / 2, s: 1, w: 0.9, d: 0.8, h: 1.8, level: "floor" },
+  // meeting room: round table, six seats around it, the screen on the back wall
+  meeting_table: part("meeting", 0, 0, 2.4, 2.4, 0.75), // round (1.45 m radius): a square a little smaller than it, so the seats fit around it
+  meeting_seat_1: seat(0), meeting_seat_2: seat(1), meeting_seat_3: seat(2), meeting_seat_4: seat(3), meeting_seat_5: seat(4), meeting_seat_6: seat(5),
+  meeting_screen: part("meeting", 0, -3.9, 3.4, 0.1, 1.7, "wall"),
+  // approvals: the counter with the pile of pending approvals, and the user's chair behind it
+  approvals_desk: part("approvals", 0, 0.1, 2.4, 1.0, 0.85),
+  approvals_chair: part("approvals", 0, 1.5, 0.7, 0.7, 0.5),
+  // cafeteria: the bar along the east edge with the machine, mugs and pot on it; a high table with a mug; a plant
+  cafe_counter: part("cafe", 1.75, 0, 0.78, 3.88, 0.95, "floor", { surface: 0.95 }),
+  cafe_machine: part("cafe", 1.8, -0.9, 0.42, 0.5, 0.55, "top"),
+  cafe_mug_1: part("cafe", 1.7, 0.1, 0.12, 0.12, 0.12, "top"),
+  cafe_mug_2: part("cafe", 1.7, 0.4, 0.12, 0.12, 0.12, "top"),
+  cafe_mug_3: part("cafe", 1.7, 0.7, 0.12, 0.12, 0.12, "top"),
+  cafe_pot: part("cafe", 1.8, 1.3, 0.24, 0.24, 0.26, "top"),
+  cafe_table: part("cafe", -0.6, 0, 0.84, 0.84, 1.0, "floor", { surface: 0.97 }),
+  cafe_table_mug: part("cafe", -0.5, 0.1, 0.12, 0.12, 0.12, "top"),
+  cafe_plant: part("cafe", -1.6, 1.8, 0.6, 0.6, 1.0, "floor", { s: 0.8, tint: "#8aa28c" }),
 };
 export const FIXTURE_IDS = Object.keys(FIXTURES) as FixtureId[];
+export const DECOR_IDS = FIXTURE_IDS.filter((id) => !FIXTURES[id].room) as DecorId[];
+/** The parts of each room, in a stable order (the meeting seats 1..6 are taken in this order). */
+export const ROOM_PARTS: Record<ZoneName, RoomPartId[]> = {
+  meeting: FIXTURE_IDS.filter((id) => FIXTURES[id].room === "meeting") as RoomPartId[],
+  approvals: FIXTURE_IDS.filter((id) => FIXTURES[id].room === "approvals") as RoomPartId[],
+  cafe: FIXTURE_IDS.filter((id) => FIXTURES[id].room === "cafe") as RoomPartId[],
+};
+export const isRoomPart = (id: FixtureId): id is RoomPartId => !!FIXTURES[id].room;
+/** Seats of the meeting room in order (seat k of the meeting is the k-th one still in the room). */
+export const MEETING_SEATS = ROOM_PARTS.meeting.filter((id) => id.startsWith("meeting_seat_"));
+
+export interface Pose { x: number; z: number; rot: number }
+/** A floor rectangle (same shape as officeGeometry.Box). */
+export interface FootBox { x: number; z: number; w: number; d: number; rot: number }
+
+/** Center of a room in a layout: where the organization moved it, or its built-in place. */
+export function zoneCenterOf(l: Layout, name: ZoneName): [number, number] {
+  const z = l.zones[name];
+  return z ? [z.x, z.z] : ZONE_DEFAULTS[name];
+}
+/** Footprint of a room relative to its own center. */
+export function roomRect(name: ZoneName): FootBox {
+  const s = ZONE_SIZE[name];
+  return { x: s.dx, z: s.dz, w: s.w, d: s.d, rot: 0 };
+}
+/** Where a built-in object stands in its own frame (room-relative for room parts, absolute for the decor). */
+export function fixturePose(l: Layout, id: FixtureId): Pose & { hidden: boolean } {
+  const f = FIXTURES[id], c = l.fixtures[id];
+  return { x: c?.x ?? f.x, z: c?.z ?? f.z, rot: c?.rot ?? f.rot, hidden: !!c?.hidden };
+}
+/** Where a built-in object stands on the floor plan (null when taken away). `center` overrides its room's center (a room being dragged). */
+export function fixtureWorld(l: Layout, id: FixtureId, center?: readonly [number, number]): Pose | null {
+  const p = fixturePose(l, id);
+  if (p.hidden) return null;
+  const room = FIXTURES[id].room;
+  if (!room) return { x: p.x, z: p.z, rot: p.rot };
+  const [cx, cz] = center ?? zoneCenterOf(l, room);
+  return { x: cx + p.x, z: cz + p.z, rot: p.rot };
+}
+/** Floor rectangle of a built-in object at a pose (in the same frame as the pose). */
+export const partFootprint = (id: FixtureId, at: Pose): FootBox => ({ x: at.x, z: at.z, w: FIXTURES[id].w, d: FIXTURES[id].d, rot: at.rot });
+
+/** Local offset (lx, lz) of a frame turned by `rot`, in the parent frame (the same convention as three.js rotation.y). */
+export const turn = (lx: number, lz: number, rot: number): [number, number] => [lx * Math.cos(rot) + lz * Math.sin(rot), -lx * Math.sin(rot) + lz * Math.cos(rot)];
+/** Whether a point lies on a rotated rectangle. */
+function onBox(px: number, pz: number, b: FootBox): boolean {
+  const [lx, lz] = turn(px - b.x, pz - b.z, -b.rot);
+  return Math.abs(lx) <= b.w / 2 + 1e-9 && Math.abs(lz) <= b.d / 2 + 1e-9;
+}
+
+/**
+ * What a small (`top`) object rests on: the highest surface of its room under its center (`at` overrides its
+ * position), or the floor when there is none (also when that surface was taken away: nothing floats).
+ */
+export function restOn(l: Layout, id: FixtureId, at?: { x: number; z: number }): { on: RoomPartId | null; y: number } {
+  const def = FIXTURES[id];
+  if (def.level !== "top" || !def.room) return { on: null, y: 0 };
+  const p = at ?? fixturePose(l, id);
+  let best: { on: RoomPartId | null; y: number } = { on: null, y: 0 };
+  for (const s of ROOM_PARTS[def.room]) {
+    const sd = FIXTURES[s];
+    if (!sd.surface || s === id) continue;
+    const sp = fixturePose(l, s);
+    if (sp.hidden || !onBox(p.x, p.z, partFootprint(s, sp))) continue;
+    if (sd.surface > best.y) best = { on: s, y: sd.surface };
+  }
+  return best;
+}
+/** The small objects resting on a surface (they move and turn with it). */
+export function carriedBy(l: Layout, id: FixtureId): RoomPartId[] {
+  const room = FIXTURES[id].room;
+  if (!room || !FIXTURES[id].surface || fixturePose(l, id).hidden) return [];
+  return ROOM_PARTS[room].filter((o) => o !== id && !fixturePose(l, o).hidden && restOn(l, o).on === id);
+}
+
+/** The stored entry of an object at a pose (rotation only when not zero, nothing else). */
+const entry = (p: Pose, hidden = false): FixtureCfg => ({ x: p.x, z: p.z, ...(p.rot ? { rot: p.rot } : {}), ...(hidden ? { hidden: true } : {}) });
+/**
+ * Moves / turns a built-in object (in its own frame). A surface carries what rests on it: those objects keep their
+ * place on it, turned with it. Anything else stays where it is.
+ */
+export function moveFixture(l: Layout, id: FixtureId, to: Pose): Layout {
+  const from = fixturePose(l, id);
+  const fixtures = { ...l.fixtures, [id]: entry(to) };
+  const dr = to.rot - from.rot;
+  for (const o of carriedBy(l, id)) {
+    const op = fixturePose(l, o);
+    // offset from the surface in the surface's own frame, then back out with its new pose
+    const [lx, lz] = turn(op.x - from.x, op.z - from.z, -from.rot);
+    const [wx, wz] = turn(lx, lz, to.rot);
+    fixtures[o] = entry({ x: to.x + wx, z: to.z + wz, rot: op.rot + dr });
+  }
+  return { ...l, fixtures };
+}
+/** Takes a built-in object away (it keeps its spot for when it is put back; what rested on it now stands on the floor). */
+export function hideFixture(l: Layout, id: FixtureId): Layout {
+  return { ...l, fixtures: { ...l.fixtures, [id]: entry(fixturePose(l, id), true) } };
+}
+/** Puts a built-in object back where it was taken from (nothing stored when that is its built-in spot). */
+export function showFixture(l: Layout, id: FixtureId): Layout {
+  const p = fixturePose(l, id), f = FIXTURES[id];
+  const fixtures = { ...l.fixtures };
+  if (p.x === f.x && p.z === f.z && p.rot === f.rot) delete fixtures[id];
+  else fixtures[id] = entry(p);
+  return { ...l, fixtures };
+}
+/** Back to its built-in spot (what it carries goes with it). */
+export function resetFixture(l: Layout, id: FixtureId): Layout {
+  const f = FIXTURES[id];
+  const moved = moveFixture(l, id, { x: f.x, z: f.z, rot: f.rot });
+  const fixtures = { ...moved.fixtures };
+  delete fixtures[id];
+  return { ...moved, fixtures };
+}
+
+/**
+ * The room-relative rectangles a room part at `at` must not overlap: the other parts of its room on the same level
+ * (floor things with floor things and with small things standing on the floor; small things on a surface with the
+ * others on that surface). A surface ignores what it carries; the wall screen collides with nothing.
+ */
+export function partNeighbors(l: Layout, id: FixtureId, at: Pose): FootBox[] {
+  const def = FIXTURES[id];
+  if (!def.room || def.level === "wall") return [];
+  const level = def.level === "top" ? restOn(l, id, at).on : null;
+  const carried = new Set<FixtureId>(carriedBy(l, id));
+  const out: FootBox[] = [];
+  for (const o of ROOM_PARTS[def.room]) {
+    if (o === id || carried.has(o)) continue;
+    const od = FIXTURES[o], op = fixturePose(l, o);
+    if (op.hidden || od.level === "wall") continue;
+    if ((od.level === "top" ? restOn(l, o).on : null) !== level) continue;
+    out.push(partFootprint(o, op));
+  }
+  return out;
+}
 
 /**
  * "Automatic (real time)" light (B5): the room follows the viewer's local clock. Night until dawn (5-8 h), daylight

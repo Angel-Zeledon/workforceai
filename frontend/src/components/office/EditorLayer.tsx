@@ -6,11 +6,11 @@ import * as THREE from "three";
 import { useRewards, type ShopItem } from "@/lib/rewards";
 import { useStore } from "@/lib/store";
 import { effective, pieceOf, useOfficeLayout, withPiece, withoutPiece } from "@/lib/officeLayout";
-import { FIXTURES, ZONE_DEFAULTS, newUid, type FixtureId, type Layout, type ZoneName } from "@/lib/officeLayoutModel";
+import { FIXTURES, ZONE_DEFAULTS, fixturePose, hideFixture, moveFixture, newUid, restOn, zoneCenterOf, type FixtureId, type Layout, type ZoneName } from "@/lib/officeLayoutModel";
 import { GRID, corners, deskBox, snap, wallSnap, type Box } from "@/lib/officeGeometry";
 import { deskOf } from "./registry";
 import { ItemMesh } from "./OfficeItems";
-import { fixtureBox, floorObstacles, fits, fitsOnWall, pieceBox, zoneBox } from "./editorWorld";
+import { fixtureBox, fixtureFits, floorObstacles, fits, fitsOnWall, pieceBox, turnFixture, zoneBox } from "./editorWorld";
 import { pieceInfo, type PieceInfo } from "./pieceInfo";
 
 const OK = "#3fae7d", BAD = "#e0524a", SEL = "#4f7fe0";
@@ -18,13 +18,13 @@ const OK = "#3fae7d", BAD = "#e0524a", SEL = "#4f7fe0";
 interface Ghost { item: ShopItem; x: number; z: number; rot: number; y: number; valid: boolean }
 interface Drag { kind: "piece" | "desk" | "zone" | "fixture"; id: string; snapshot: Layout; off: { x: number; z: number } | null; moved: boolean; valid: boolean; last: { x: number; z: number } }
 
-/** Outline of a footprint on the floor. */
-function Frame({ box, color }: { box: Box; color: string }) {
-  const pts = useMemo(() => [...corners(box), corners(box)[0]].map(([x, z]) => new THREE.Vector3(x, 0.06, z)), [box]);
+/** Outline of a footprint on the floor (or on the surface a small thing rests on: `y`). */
+function Frame({ box, color, y = 0 }: { box: Box; color: string; y?: number }) {
+  const pts = useMemo(() => [...corners(box), corners(box)[0]].map(([x, z]) => new THREE.Vector3(x, 0.06 + y, z)), [box, y]);
   return (
     <>
       <Line points={pts} color={color} lineWidth={2.5} />
-      <mesh position={[box.x, 0.045, box.z]} rotation={[-Math.PI / 2, 0, -box.rot]}>
+      <mesh position={[box.x, 0.045 + y, box.z]} rotation={[-Math.PI / 2, 0, -box.rot]}>
         <planeGeometry args={[box.w, box.d]} />
         <meshBasicMaterial color={color} transparent opacity={0.14} depthWrite={false} toneMapped={false} />
       </mesh>
@@ -136,17 +136,18 @@ function Inner() {
         useOfficeLayout.setState({ zoneGhost: { id: name, x, z, valid } });
         setSelValid(valid);
       } else if (d.kind === "fixture") {
+        // decor in floor coordinates; a room part in its room's (it stays in its room and moves with it)
         const id = d.id as FixtureId;
-        const cur = d.snapshot.fixtures[id];
-        const hx = cur?.x ?? FIXTURES[id].x, hz = cur?.z ?? FIXTURES[id].z, rot = cur?.rot ?? FIXTURES[id].rot;
-        if (!d.off) d.off = { x: hx - fp.x, z: hz - fp.z };
-        const x = st.grid ? snap(fp.x + d.off.x) : fp.x + d.off.x, z = st.grid ? snap(fp.z + d.off.z) : fp.z + d.off.z;
-        const deskPos = Object.fromEntries(order.map((i, k) => [i, deskOf({ id: i, role: agents[i]?.role || "" }, k)]));
-        const box = fixtureBox(id, d.snapshot, { x, z, rot })!;
-        const valid = fits(box, floorObstacles(d.snapshot, catalog, deskPos, { fixture: id }));
-        d.moved = d.moved || Math.hypot(x - hx, z - hz) > 0.01;
+        const cur = fixturePose(d.snapshot, id);
+        const room = FIXTURES[id].room;
+        const [cx, cz] = room ? zoneCenterOf(d.snapshot, room) : [0, 0];
+        const lx = fp.x - cx, lz = fp.z - cz;
+        if (!d.off) d.off = { x: cur.x - lx, z: cur.z - lz };
+        const x = st.grid ? snap(lx + d.off.x) : lx + d.off.x, z = st.grid ? snap(lz + d.off.z) : lz + d.off.z;
+        const valid = fixtureFits(id, d.snapshot, { x, z, rot: cur.rot });
+        d.moved = d.moved || Math.hypot(x - cur.x, z - cur.z) > 0.01;
         d.valid = valid; d.last = { x, z };
-        useOfficeLayout.setState({ draft: { ...d.snapshot, fixtures: { ...d.snapshot.fixtures, [id]: { ...(cur || {}), x, z, rot } } } });
+        useOfficeLayout.setState({ draft: moveFixture(d.snapshot, id, { x, z, rot: cur.rot }) });
         setSelValid(valid);
       } else {
         const cur = effective({ draft: d.snapshot, layout: d.snapshot });
@@ -231,7 +232,7 @@ function Inner() {
         return;
       }
       if ((k === "delete" || k === "backspace") && st.selection?.kind === "piece") { const uid = st.selection.uid; st.mutate((l) => withoutPiece(l, uid)); st.select(null); return; }
-      if ((k === "delete" || k === "backspace") && st.selection?.kind === "fixture") { const id = st.selection.id; st.mutate((l) => ({ ...l, fixtures: { ...l.fixtures, [id]: { ...(l.fixtures[id] ?? { x: FIXTURES[id].x, z: FIXTURES[id].z }), hidden: true } } })); st.select(null); return; }
+      if ((k === "delete" || k === "backspace") && st.selection?.kind === "fixture") { const id = st.selection.id; st.mutate((l) => hideFixture(l, id)); st.select(null); return; }
       const arrows: Record<string, [number, number]> = { arrowleft: [-1, 0], arrowright: [1, 0], arrowup: [0, -1], arrowdown: [0, 1] };
       if (arrows[k] && st.selection?.kind === "piece") { ev.preventDefault(); nudge(arrows[k][0] * GRID, arrows[k][1] * GRID); }
     };
@@ -251,15 +252,7 @@ function Inner() {
     if (!c.valid) return;
     st.mutate((d) => withPiece(d, uid, { x: info.mount === "wall" ? c.x : x, z: info.mount === "wall" ? c.z : z, rot: info.mount === "wall" ? c.rot : r }), `move:${uid}`);
   }
-  function rotateFixture(id: FixtureId, by: number) {
-    const st = useOfficeLayout.getState();
-    const l = st.draft as Layout;
-    const cur = l.fixtures[id];
-    const rot = (cur?.rot ?? FIXTURES[id].rot) + by;
-    const deskPos = Object.fromEntries(order.map((i, k) => [i, deskOf({ id: i, role: agents[i]?.role || "" }, k)]));
-    const box = fixtureBox(id, l, { x: cur?.x ?? FIXTURES[id].x, z: cur?.z ?? FIXTURES[id].z, rot });
-    if (box && fits(box, floorObstacles(l, catalog, deskPos, { fixture: id }))) st.mutate((d) => ({ ...d, fixtures: { ...d.fixtures, [id]: { ...(cur || { x: FIXTURES[id].x, z: FIXTURES[id].z }), rot } } }), `rot:${id}`);
-  }
+  const rotateFixture = turnFixture;
   function rotateSelected(by: number) { const s = useOfficeLayout.getState().selection; if (s?.kind === "piece") { const p = pieceOf(useOfficeLayout.getState().draft as Layout, s.uid); if (p) tryMove(s.uid, { rot: p.rot + by }); } }
   function nudge(dx: number, dz: number) { const s = useOfficeLayout.getState().selection; if (s?.kind === "piece") { const p = pieceOf(useOfficeLayout.getState().draft as Layout, s.uid); if (p) tryMove(s.uid, { x: p.x + dx, z: p.z + dz }); } }
 
@@ -271,7 +264,7 @@ function Inner() {
       return p && it ? pieceBox(p, it) : null;
     }
     if (selection.kind === "zone") return zoneBox(selection.id, draft, zoneGhost?.id === selection.id ? zoneGhost : undefined);
-    if (selection.kind === "fixture") return fixtureBox(selection.id, draft, { x: draft.fixtures[selection.id]?.x ?? FIXTURES[selection.id].x, z: draft.fixtures[selection.id]?.z ?? FIXTURES[selection.id].z, rot: draft.fixtures[selection.id]?.rot ?? FIXTURES[selection.id].rot });
+    if (selection.kind === "fixture") return fixtureBox(selection.id, draft, fixturePose(draft, selection.id));
     const a = agents[selection.id];
     const [x, z] = deskGhost?.id === selection.id ? [deskGhost.x, deskGhost.z] : deskOf({ id: selection.id, role: a?.role || "" }, Math.max(0, order.indexOf(selection.id)));
     return deskBox(x, z);
@@ -284,7 +277,7 @@ function Inner() {
   return (
     <>
       {grid && <gridHelper args={[28, 56, "#5b7fd0", "#9fb0d8"]} position={[0, 0.04, 0]} material-transparent material-opacity={0.22} material-depthWrite={false} />}
-      {selBox && <Frame box={selBox} color={selValid ? SEL : BAD} />}
+      {selBox && <Frame box={selBox} color={selValid ? SEL : BAD} y={selection?.kind === "fixture" ? restOn(draft, selection.id).y : 0} />}
       {ghost && ghostBox && placing && (
         <>
           <group position={[ghost.x, ghost.y, ghost.z]} rotation={[0, ghost.rot, 0]}><ItemMesh item={ghost.item} /></group>

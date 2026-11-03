@@ -47,26 +47,74 @@ export function slotIndex(ids: readonly string[], id: string, cap: number): numb
 }
 
 export const CAFE_CENTER: [number, number] = [9.2, 1.2];
-/** Counter along the east edge (local x = +1.75); 4 spots face it, 2 more flank the small high table. */
-const CAFE_SPOTS: { dx: number; dz: number; yaw: number }[] = [
-  { dx: 0.95, dz: -1.2, yaw: Math.PI / 2 }, { dx: 0.95, dz: -0.4, yaw: Math.PI / 2 }, { dx: 0.95, dz: 0.4, yaw: Math.PI / 2 }, { dx: 0.95, dz: 1.2, yaw: Math.PI / 2 },
-  { dx: -0.6, dz: -0.95, yaw: 0 }, { dx: -0.6, dz: 0.95, yaw: Math.PI },
+/** A thing of a room on the floor plan (world x, z and its turn about Y), as the office layout puts it. */
+export interface PartPose { x: number; z: number; rot?: number }
+/** Offset (lx, lz) of a frame turned by `rot`, in world axes (three.js rotation.y convention). */
+const turn = (lx: number, lz: number, rot = 0): [number, number] => (rot ? [lx * Math.cos(rot) + lz * Math.sin(rot), -lx * Math.sin(rot) + lz * Math.cos(rot)] : [lx, lz]);
+
+/** Built-in place of the counter and the high table relative to the cafeteria's center (officeLayoutModel.FIXTURES). */
+const CAFE_COUNTER: [number, number] = [1.75, 0], CAFE_TABLE: [number, number] = [-0.6, 0];
+/** 4 spots face the counter (along its length, 0.8 in front of it); 2 more flank the small high table. Relative to each. */
+const CAFE_SPOTS: { of: "counter" | "table"; dx: number; dz: number; yaw: number }[] = [
+  { of: "counter", dx: -0.8, dz: -1.2, yaw: Math.PI / 2 }, { of: "counter", dx: -0.8, dz: -0.4, yaw: Math.PI / 2 }, { of: "counter", dx: -0.8, dz: 0.4, yaw: Math.PI / 2 }, { of: "counter", dx: -0.8, dz: 1.2, yaw: Math.PI / 2 },
+  { of: "table", dx: 0, dz: -0.95, yaw: 0 }, { of: "table", dx: 0, dz: 0.95, yaw: Math.PI },
 ];
-export function cafeSpot(k: number, center: readonly [number, number] = CAFE_CENTER): { pos: [number, number]; yaw: number } {
+/**
+ * Where the k-th budget-paused agent waits with a coffee: in front of the counter or beside the high table, wherever
+ * the organization moved / turned them (`parts`, world poses). A thing taken away (null) or not given keeps its
+ * built-in place relative to the room's center, so the agents still stand in the room.
+ */
+export function cafeSpot(k: number, center: readonly [number, number] = CAFE_CENTER, parts?: { counter?: PartPose | null; table?: PartPose | null }): { pos: [number, number]; yaw: number } {
   const o = CAFE_SPOTS[Math.abs(k) % CAFE_SPOTS.length];
-  return { pos: [center[0] + o.dx, center[1] + o.dz], yaw: o.yaw };
+  const home = o.of === "counter" ? CAFE_COUNTER : CAFE_TABLE;
+  const base: PartPose = parts?.[o.of] ?? { x: center[0] + home[0], z: center[1] + home[1] };
+  const [wx, wz] = turn(o.dx, o.dz, base.rot);
+  return { pos: [base.x + wx, base.z + wz], yaw: o.yaw + (base.rot ?? 0) };
+}
+
+/**
+ * The user's spot at the approvals desk and the desk's turn: the anchor of the "you" label, the delivery and the
+ * waiting line. Built in, the desk stands 0.1 south of the room's center and the anchor is the room's center; it
+ * follows the desk when it is moved or turned, and stays at the room's center when the desk was taken away.
+ */
+export function approvalsFrame(center: readonly [number, number], desk: PartPose | null): { user: [number, number]; rot: number } {
+  if (!desk) return { user: [center[0], center[1]], rot: 0 };
+  const [wx, wz] = turn(0, -0.1, desk.rot);
+  return { user: [desk.x + wx, desk.z + wz], rot: desk.rot ?? 0 };
 }
 
 const APPR_OFFSETS = [0, 0.9, -0.9, 1.8, -1.8];
-/** Standing spot in front of the approvals desk (the CEO desk) for the k-th waiting agent. user = USER_POS. */
-export function approvalsSpot(user: readonly [number, number, number], k: number): [number, number] {
-  return [user[0] + APPR_OFFSETS[Math.abs(k) % APPR_OFFSETS.length], user[2] - 0.95];
+/** Standing spot in front of the approvals desk (the CEO desk) for the k-th waiting agent. user = USER_POS; rot = the desk's turn (they face it: yaw = rot). */
+export function approvalsSpot(user: readonly [number, number, number], k: number, rot = 0): [number, number] {
+  const [wx, wz] = turn(APPR_OFFSETS[Math.abs(k) % APPR_OFFSETS.length], -0.95, rot);
+  return [user[0] + wx, user[2] + wz];
 }
 /** Seat around the meeting table (same angles as the chairs in OfficeEnv.MeetingRoom) and the yaw toward the table. */
 export function meetingSeat(center: readonly [number, number], k: number, radius = 2.25): { pos: [number, number]; yaw: number } {
   const a = (k / 6) * Math.PI * 2 + 0.3;
   const x = center[0] + Math.sin(a) * radius, z = center[1] + Math.cos(a) * radius;
   return { pos: [x, z], yaw: Math.atan2(center[0] - x, center[1] - z) };
+}
+
+/** The meeting room as the layout has it: its center, the table (null = taken away) and the six seats in order (null = taken away). World poses. */
+export interface MeetingRoomInput { center: readonly [number, number]; table: PartPose | null; seats: readonly (PartPose | null)[] }
+/**
+ * Where the k-th agent of a meeting goes: the k-th seat still in the room (wherever it was moved), facing the table,
+ * or the room's center when there is no table. Agents without a seat stand in the ring around the table (or the
+ * room's center) at the place of a seat that was taken away, facing it: nothing breaks when furniture is missing.
+ */
+export function meetingPlace(room: MeetingRoomInput, k: number): { pos: [number, number]; yaw: number; sit: boolean } {
+  const focus: [number, number] = room.table ? [room.table.x, room.table.z] : [room.center[0], room.center[1]];
+  const kk = Math.abs(k) % ZONE_CAP.meeting;
+  const seats = room.seats.filter((s): s is PartPose => !!s);
+  if (kk < seats.length) {
+    const s = seats[kk];
+    return { pos: [s.x, s.z], yaw: Math.atan2(focus[0] - s.x, focus[1] - s.z), sit: true };
+  }
+  const missing: number[] = [];
+  for (let i = 0; i < ZONE_CAP.meeting; i++) if (!room.seats[i]) missing.push(i);
+  const ring = meetingSeat(focus, missing[kk - seats.length] ?? kk);
+  return { ...ring, sit: false };
 }
 
 // ---------------------------------------------------------------------------------------------
