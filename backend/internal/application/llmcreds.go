@@ -259,8 +259,17 @@ func (s *LLMService) Get(ctx context.Context) (LLMView, error) {
 	}
 	v := LLMView{ActiveProvider: active, PlatformDefault: platformProvider(), EncryptionOn: s.Sealer != nil && s.Sealer.Enabled(),
 		Providers: []LLMProviderView{}, Warnings: []string{}}
+	var ceiling []string // the server's ALLOWED_PROVIDERS (nil = every provider)
+	if s.Policy != nil && len(s.Policy.Ceiling) > 0 {
+		ceiling = s.Policy.serverAllowed()
+	}
 	for _, info := range LLMCatalog {
 		info.Platform = info.ID == platformProvider()
+		// only what the server allows is offered; the platform provider and a provider that still has a stored key
+		// stay visible (the key can be removed)
+		if _, stored := byID[info.ID]; ceiling != nil && !info.Platform && !stored && !slices.Contains(ceiling, info.ID) {
+			continue
+		}
 		pv := LLMProviderView{LLMProviderInfo: info, Model: info.DefaultModel, BaseURL: info.DefaultBaseURL}
 		if m := platformModel(info); info.Platform && m != "" {
 			pv.Model = m
@@ -332,6 +341,9 @@ func (s *LLMService) normalize(provider string, in LLMInput) (LLMProviderInfo, L
 	info, ok := llmInfo(provider)
 	if !ok {
 		return info, in, fmt.Errorf("%w: unknown provider %q", domain.ErrInvalid, provider)
+	}
+	if s.Policy != nil && len(s.Policy.Ceiling) > 0 && !slices.Contains(s.Policy.serverAllowed(), provider) {
+		return info, in, fmt.Errorf("%w: provider %q is not allowed by this server (ALLOWED_PROVIDERS)", domain.ErrInvalid, provider)
 	}
 	in.APIKey = strings.TrimSpace(in.APIKey)
 	in.Model = strings.TrimSpace(in.Model)

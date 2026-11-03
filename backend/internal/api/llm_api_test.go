@@ -465,3 +465,31 @@ func TestLLMActiveMustBeAllowedByThePolicy(t *testing.T) {
 		t.Errorf("a kimi model under openai = %d, want 400", c)
 	}
 }
+
+// The server's ceiling (ALLOWED_PROVIDERS) decides which providers an organization can pick: settings only offer
+// those, plus the platform provider and any provider that still has a stored key (so it can be removed).
+func TestLLMSettingsOfferOnlyTheProvidersTheServerAllows(t *testing.T) {
+	t.Setenv("PLATFORM_LLM_PROVIDER", "openai")
+	e := newEnv(t, opts{llm: true})
+	if c := e.status("PUT", "/api/v1/settings/llm/providers/anthropic", "", map[string]any{"api_key": fakeKey, "model": "claude-sonnet-5-5"}); c != 200 {
+		t.Fatalf("store an anthropic key before the ceiling: %d", c)
+	}
+	e.llm.policy.Ceiling = []string{"openai", "gemini", "custom"} // providers whose API serves embeddings
+	_, body := e.do("GET", "/api/v1/settings/llm", "", nil, nil)
+	var v application.LLMView
+	_ = json.Unmarshal(body, &v)
+	var ids []string
+	for _, p := range v.Providers {
+		ids = append(ids, p.ID)
+	}
+	if strings.Join(ids, ",") != "anthropic,openai,gemini,custom" {
+		t.Fatalf("offered providers = %v", ids)
+	}
+	// a provider outside the ceiling cannot be stored or picked
+	if c := e.status("PUT", "/api/v1/settings/llm/providers/deepseek", "", map[string]any{"api_key": fakeKey, "model": "deepseek-chat"}); c != 400 {
+		t.Fatalf("deepseek key stored under the ceiling: %d", c)
+	}
+	if c := e.status("PUT", "/api/v1/settings/llm/active", "", map[string]any{"provider": "anthropic"}); c != 400 {
+		t.Fatalf("anthropic picked under the ceiling: %d", c)
+	}
+}

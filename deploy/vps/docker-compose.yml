@@ -77,7 +77,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
-      # Operator ceiling of model providers (comma-separated; empty = all configured).
+      # Operator ceiling of model providers (comma-separated; empty = all configured). Production keeps the providers
+      # whose API also serves embeddings (search by meaning): ALLOWED_PROVIDERS=openai,gemini,custom.
       ALLOWED_PROVIDERS: ${ALLOWED_PROVIDERS:-}
       # Shared secret with the backend; empty = unauthenticated calls (the backend logs a warning).
       RUNTIME_TOKEN: ${RUNTIME_TOKEN:-}
