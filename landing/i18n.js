@@ -12,7 +12,7 @@
 window.I18N = {
   es: {
     "meta.title": "AI Workforce OS: tu equipo de IA, a la vista y bajo control",
-    "meta.description": "Una oficina virtual 3D con empleados de IA. Pides en lenguaje natural, los ves trabajar en paralelo y apruebas lo sensible. Acceso anticipado.",
+    "meta.description": "Una oficina virtual 3D con empleados de IA. Pides en lenguaje natural, los ves trabajar en paralelo y apruebas lo sensible. Empieza gratis.",
     "meta.ogTitle": "AI Workforce OS: empleados de IA que trabajan a la vista",
     "meta.ogDescription": "Pides, ves a tus empleados de IA trabajar en paralelo y apruebas lo sensible. Con costo estimado, topes de gasto y credenciales fuera del modelo.",
 
@@ -37,12 +37,10 @@ window.I18N = {
     "cta.demo": "Entrar",
     "cta.trial": "Probar sin registrarte",
 
-    "hero.eyebrow": "Acceso anticipado",
-    "hero.eyebrow2": "Funciona sin clave de IA",
     "hero.title": "Empleados de IA que trabajan a la vista. <span class=\"hl\">Tú decides lo importante.</span>",
     "hero.sub": "Pídele trabajo en lenguaje natural a Ventas, Legal, Contabilidad, Análisis, Operaciones, RR. HH. y tu Asistente. Míralos repartirse la tarea en una oficina 3D, aprueba lo sensible y recibe un reporte con lo que se hizo y lo que costó.",
     "hero.have": "¿Ya tienes cuenta?",
-    "hero.note": "Hoy funciona en modo simulación sin clave de IA, o en vivo con tu propia clave. Todavía no hay precios: estamos en acceso anticipado.",
+    "hero.note": "Empieza gratis, sin tarjeta. Pro cuesta 29 USD al mes y Max 99 USD; pagando al año, dos meses gratis.",
 
     "facts.k": "Lo que trae hoy",
     "facts.1": "empleados base, cada uno con rol, herramientas y memoria",
@@ -291,8 +289,8 @@ window.I18N = {
     "st.7.d": "Diseñados en papel. Hoy no existen.",
     "st.8.t": "SAML y recuperación con varias instancias",
     "st.8.d": "Pendientes. Hoy el SSO es solo OIDC y la recuperación supone un solo servidor.",
-    "st.9.t": "Precios",
-    "st.9.d": "Aún no hay. Primero queremos aprender del uso real.",
+    "st.9.t": "Planes y pago con tarjeta",
+    "st.9.d": "Gratis, Pro (29 USD al mes) y Max (99 USD al mes), con pago por ONVO Pay. Probado en modo de prueba; todavía sin cobros reales.",
 
     "use.kicker": "Primeros pasos",
     "use.title": "Tu primera tarea, en cinco minutos.",
@@ -322,12 +320,12 @@ window.I18N = {
     "faq.q8": "¿Qué es «Probar sin registrarte»?",
     "faq.a8": "Una cuenta de prueba desechable, con su propia oficina, que deja de funcionar a las 24 horas. No pide correo: el usuario y la contraseña se muestran una sola vez.",
     "faq.q6": "¿Cuánto cuesta?",
-    "faq.a6": "Todavía no hay precios. Estamos en acceso anticipado para aprender del uso real antes de fijarlos.",
+    "faq.a6": "Hay un plan Gratis para probarlo de verdad, sin tarjeta: 1 USD de IA al mes, 1 proyecto activo y 2 personas. Pro cuesta 29 USD al mes (12 USD de IA, 5 proyectos, 10 personas, 10 GB) y Max 99 USD al mes (45 USD de IA, 20 proyectos, 50 personas, 50 GB). Pagando al año, dos meses gratis. La IA nunca gasta por encima del tope de tu plan.",
     "faq.q7": "¿Sirve para una empresa grande?",
     "faq.a7": "Todavía no. Ya hay SSO por OIDC, SCIM y recuperación tras reinicios, pero no tenemos certificaciones ni SAML y no lo hemos validado con empresas grandes. Hoy está pensado para equipos pequeños y profesionales hispanohablantes.",
 
     "final.title": "Pide tu primera tarea hoy.",
-    "final.d": "Crea tu cuenta con tu correo y el nombre de tu empresa: llegas a tu propia oficina, separada de las demás. Todavía no hay precios; estamos en acceso anticipado. Esta página no recoge datos: el registro ocurre en la app.",
+    "final.d": "Crea tu cuenta con tu correo y el nombre de tu empresa: llegas a tu propia oficina, separada de las demás. Empiezas en el plan Gratis, sin tarjeta. Esta página no recoge datos: el registro ocurre en la app.",
 
     "footer.tag": "Una oficina virtual donde tus empleados de IA trabajan a la vista y tú decides lo importante.",
     "footer.product": "Producto",
@@ -341,7 +339,7 @@ window.I18N = {
 
   en: {
     "meta.title": "AI Workforce OS: your AI team, in plain sight and in control",
-    "meta.description": "A 3D virtual office staffed by AI employees. Ask in plain language, watch them work in parallel and approve what is sensitive. Early access.",
+    "meta.description": "A 3D virtual office staffed by AI employees. Ask in plain language, watch them work in parallel and approve what is sensitive. Start free.",
     "meta.ogTitle": "AI Workforce OS: AI employees that work in plain sight",
     "meta.ogDescription": "Ask, watch your AI employees work in parallel and approve what is sensitive. With cost estimates, spending caps and credentials kept away from the model.",
 
@@ -366,12 +364,10 @@ window.I18N = {
     "cta.demo": "Sign in",
     "cta.trial": "Try it without signing up",
 
-    "hero.eyebrow": "Early access",
-    "hero.eyebrow2": "Works without an AI key",
     "hero.title": "AI employees that work in plain sight. <span class=\"hl\">You decide what matters.</span>",
     "hero.sub": "Ask Sales, Legal, Accounting, Analysis, Operations, HR and your Assistant for work in plain language. Watch them split it up in a 3D office, approve what is sensitive and get a report of what was done and what it cost.",
     "hero.have": "Already have an account?",
-    "hero.note": "It runs in simulation mode with no AI key today, or live with your own key. There is no pricing yet: we are in early access.",
+    "hero.note": "Start free, no card needed. Pro is 29 USD a month and Max 99 USD; pay yearly and get two months free.",
 
     "facts.k": "What ships today",
     "facts.1": "base employees, each with a role, tools and memory",
@@ -620,8 +616,8 @@ window.I18N = {
     "st.7.d": "Designed on paper. They do not exist today.",
     "st.8.t": "SAML and multi-instance recovery",
     "st.8.d": "Pending. SSO is OIDC only today and recovery assumes a single server.",
-    "st.9.t": "Pricing",
-    "st.9.d": "None yet. We want to learn from real use first.",
+    "st.9.t": "Plans and card payments",
+    "st.9.d": "Free, Pro (29 USD a month) and Max (99 USD a month), paid through ONVO Pay. Tested in test mode; no real charges yet.",
 
     "use.kicker": "Getting started",
     "use.title": "Your first task, in five minutes.",
@@ -651,12 +647,12 @@ window.I18N = {
     "faq.q8": "What is “Try it without signing up”?",
     "faq.a8": "A throwaway trial account, with its own office, that stops working after 24 hours. It asks for no email: the username and password are shown once.",
     "faq.q6": "How much does it cost?",
-    "faq.a6": "There is no pricing yet. We are in early access to learn from real use before setting it.",
+    "faq.a6": "There is a Free plan to try it for real, no card needed: 1 USD of AI a month, 1 active project and 2 people. Pro is 29 USD a month (12 USD of AI, 5 projects, 10 people, 10 GB) and Max 99 USD a month (45 USD of AI, 20 projects, 50 people, 50 GB). Pay yearly and get two months free. The AI never spends past your plan's cap.",
     "faq.q7": "Is it suitable for a large company?",
     "faq.a7": "Not yet. OIDC single sign-on, SCIM and restart recovery exist, but we hold no certifications, there is no SAML and it has not been validated with large companies. Today it is aimed at small teams and Spanish-speaking professionals.",
 
     "final.title": "Ask for your first task today.",
-    "final.d": "Create your account with your email and your company name: you land in your own office, separate from everyone else's. There is no pricing yet; we are in early access. This page collects no data: signing up happens in the app.",
+    "final.d": "Create your account with your email and your company name: you land in your own office, separate from everyone else's. You start on the Free plan, no card needed. This page collects no data: signing up happens in the app.",
 
     "footer.tag": "A virtual office where your AI employees work in plain sight and you decide what matters.",
     "footer.product": "Product",
