@@ -337,6 +337,10 @@ class CrewAIEngine(AgentEngine):
                 kw["organization"] = cfg.org_id
             if cfg.project_id:
                 kw["project"] = cfg.project_id
+            if fixed_temperature_model(cfg.model):
+                # Live finding (production, gpt-5-mini, 2026-11-03): OpenAI's reasoning models (gpt-5, o-series)
+                # reject max_tokens with a 400 and cap the answer with max_completion_tokens instead.
+                kw["max_completion_tokens"] = kw.pop("max_tokens")
         return kw
 
     def test_provider(self, cfg: ProviderConfig) -> dict[str, Any]:
@@ -347,7 +351,7 @@ class CrewAIEngine(AgentEngine):
             kw = self._llm_kwargs(cfg, 64, None)
             kw["timeout"] = min(PROVIDER_TIMEOUT_S, 30)
             kw.pop("response_format", None)  # a plain text probe
-            kw["max_tokens"] = 64
+            kw["max_completion_tokens" if "max_completion_tokens" in kw else "max_tokens"] = 64
             self._LLM(**kw).call([{"role": "user", "content": "Reply with the single word: OK"}])
             code, msg = "ok", "Connection works."
         except Exception as exc:  # classified, redacted, never propagated

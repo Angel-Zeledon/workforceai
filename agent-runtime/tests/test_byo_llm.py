@@ -86,6 +86,31 @@ def test_reasoning_models_get_no_temperature():
     assert crewai_engine.CrewAIEngine._llm_kwargs(c, 100, 0.3)["temperature"] == 0.3
 
 
+def test_reasoning_models_cap_with_max_completion_tokens():
+    # Live finding (production, gpt-5-mini, 2026-11-03): OpenAI answers 400 "Unsupported parameter: 'max_tokens' ...
+    # Use 'max_completion_tokens' instead" to every call of a gpt-5 / o-series model.
+    c = config_from_credential(ProviderCredential(provider="openai", api_key=KEY, model="gpt-5-mini"))
+    kw = crewai_engine.CrewAIEngine._llm_kwargs(c, 100, 0.3)
+    assert kw["max_completion_tokens"] == 100 and "max_tokens" not in kw
+    c = config_from_credential(ProviderCredential(provider="openai", api_key=KEY, model="gpt-4.1"))
+    kw = crewai_engine.CrewAIEngine._llm_kwargs(c, 100, 0.3)
+    assert kw["max_tokens"] == 100 and "max_completion_tokens" not in kw
+
+
+def test_provider_probe_of_a_reasoning_model_sends_no_max_tokens(monkeypatch):
+    sent = {}
+
+    class FakeLLM:
+        def __init__(self, **kw): sent.update(kw)
+        def call(self, _msgs): return "OK"
+
+    eng = crewai_engine.CrewAIEngine.__new__(crewai_engine.CrewAIEngine)
+    eng._LLM = FakeLLM
+    c = config_from_credential(ProviderCredential(provider="openai", api_key=KEY, model="gpt-5-mini"))
+    assert eng.test_provider(c)["ok"]
+    assert "max_tokens" not in sent and sent["max_completion_tokens"] == 64
+
+
 def test_json_mode_for_kimi_and_deepseek_only():
     kimi = config_from_credential(ProviderCredential(provider="kimi", api_key=KEY))
     oa = config_from_credential(ProviderCredential(provider="openai", api_key=KEY))
