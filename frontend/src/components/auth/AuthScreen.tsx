@@ -11,6 +11,7 @@ import { SsoSignIn, ssoErrorKey, useSsoAvailable } from "./SsoSignIn";
 import { SignupTeamFields } from "./SignupTeamFields";
 import { registerBody, signupMissing, type Audience, type Profession } from "@/lib/teamsLogic";
 import { teamsApi } from "@/lib/teamsApi";
+import { LANDING_URL } from "@/lib/config";
 
 type Mode = "login" | "register" | "invite";
 
@@ -171,7 +172,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
     <main className="grid min-h-dvh bg-bg lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="relative hidden flex-col justify-between gap-10 overflow-hidden bg-navy p-12 text-white lg:flex">
         <div aria-hidden className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)", backgroundSize: "56px 56px" }} />
-        <a href="/welcome" className="relative w-fit" aria-label="AI Workforce OS"><Brand tone="light" /></a>
+        <a href={LANDING_URL} className="relative w-fit" aria-label="AI Workforce OS"><Brand tone="light" /></a>
         <div className="relative max-w-md">
           <h2 className="text-4xl font-semibold leading-[1.1] tracking-[-0.02em]">{t("auth.brand.title")}</h2>
           <p className="mt-5 text-base leading-relaxed text-white/70">{t("auth.brand.sub")}</p>
@@ -190,7 +191,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
         <MfaEnroll token={enroll.token} onDone={() => router.replace(next ?? "/")} onCancel={() => { setEnroll(null); setErr(null); }} />
       ) : mfa ? (
         <form onSubmit={submitCode} data-testid="auth-mfa" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
-          <a href="/welcome" className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
+          <a href={LANDING_URL} className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.mfa.title")}</h1>
           <p className="text-sm leading-relaxed text-ink2">{t("auth.mfa.body")}</p>
           <Field label={t("auth.mfa.code")}>
@@ -204,7 +205,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
         </form>
       ) : sent ? (
         <div data-testid="auth-sent" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
-          <a href="/welcome" className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
+          <a href={LANDING_URL} className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.sent.title")}</h1>
           <p className="text-sm leading-relaxed text-ink2">{t(sent.emailSent ? "auth.sent.body" : "auth.sent.failed", { email: sent.email })}</p>
           <p className="text-xs text-mute">{t("auth.sent.hint")}</p>
@@ -218,7 +219,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
         </div>
       ) : (
       <form onSubmit={submit} data-testid={`auth-${mode}`} className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
-        <a href="/welcome" className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
+        <a href={LANDING_URL} className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
         <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{title}</h1>
         {mode === "invite" && <p className="text-xs text-mute">{t("auth.invite.body")}</p>}
         {mode !== "invite" && (

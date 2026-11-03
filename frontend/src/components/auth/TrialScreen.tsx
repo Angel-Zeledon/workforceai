@@ -7,6 +7,7 @@ import { Btn } from "../ui";
 import { ErrorLine } from "../connections/shared";
 import { Brand } from "../landing/Brand";
 import { Icon } from "../icons";
+import { LANDING_URL } from "@/lib/config";
 
 /**
  * "Try it without signing up". Arriving here mints a throwaway account on the server and shows its user and
@@ -92,7 +93,7 @@ export function TrialScreen() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
       <div data-testid="trial" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
-        <a href="/welcome" className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
+        <a href={LANDING_URL} className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
         <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("trial.title")}</h1>
         {!acct && !err && <p role="status" className="text-sm text-mute">{t("trial.creating")}</p>}
         {acct && (

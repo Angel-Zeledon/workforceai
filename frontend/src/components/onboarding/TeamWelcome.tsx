@@ -17,7 +17,7 @@ export function TeamWelcomeBody({ w, plan, onPicked }: { w: Welcome; plan: Welco
   const vars = { org: w.org_name, team: w.team?.name ?? "", head: w.team?.head_name ?? "", by: w.invited_by };
   return (
     <div data-testid="team-welcome" data-variant={plan.variant} className="relative mt-4 grid gap-2 text-left">
-      <p className="text-center text-[13.5px] leading-relaxed text-ink2">{t(`e1.welcome.${plan.variant}.sub`, vars)}</p>
+      <p className="text-center text-[12.5px] leading-snug text-ink2 sm:text-[13.5px] sm:leading-relaxed">{t(`e1.welcome.${plan.variant}.sub`, vars)}</p>
       {(w.team || w.invited_by) && (
         <div className="rounded-[10px] border border-line bg-panel2 px-3 py-2 text-[12.5px] text-ink2">
           {w.team && <p data-testid="team-welcome-team"><b className="text-ink">{t("e1.welcome.team", { team: w.team.name })}</b>
@@ -28,11 +28,11 @@ export function TeamWelcomeBody({ w, plan, onPicked }: { w: Welcome; plan: Welco
       )}
       {w.agents.length > 0 && <p data-testid="team-welcome-agents" className="text-[12.5px] text-ink2"><b className="text-ink">{t("e1.welcome.agents")}</b> {agentList(w.agents)}</p>}
       {plan.primary === "pickTeam" ? <PickTeam w={w} onPicked={onPicked} /> : (
-        <ol className="grid gap-2">
+        <ol className="grid gap-1.5 sm:gap-2">
           {[1, 2, 3].map((n, i) => (
-            <li key={n} className="flex items-start gap-3 rounded-[10px] border border-line bg-panel2 px-3 py-2.5">
-              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><Icon name={ICONS[i]} size={15} /></span>
-              <span className="min-w-0 text-[12.5px] leading-snug text-ink2"><b className="block text-[13px] text-ink">{t(`e1.welcome.${plan.variant}.step${n}.t`, vars)}</b>{t(`e1.welcome.${plan.variant}.step${n}.d`, vars)}</span>
+            <li key={n} className="flex items-start gap-2.5 rounded-[10px] border border-line bg-panel2 px-2.5 py-2 sm:gap-3 sm:px-3 sm:py-2.5">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent sm:h-7 sm:w-7"><Icon name={ICONS[i]} size={13} /></span>
+              <span className="min-w-0 text-[11.5px] leading-snug text-ink2 sm:text-[12.5px]"><b className="block text-[12.5px] text-ink sm:text-[13px]">{t(`e1.welcome.${plan.variant}.step${n}.t`, vars)}</b>{t(`e1.welcome.${plan.variant}.step${n}.d`, vars)}</span>
             </li>
           ))}
         </ol>

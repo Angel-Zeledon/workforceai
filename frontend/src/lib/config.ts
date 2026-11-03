@@ -13,3 +13,5 @@ function deriveWsUrl(): string {
 export const API_URL = (envApi || "/api/v1").replace(/\/$/, "");
 export const WS_URL = envWs || deriveWsUrl();
 export const MOCK = process.env.NEXT_PUBLIC_MOCK === "true";
+/** The public landing (the only one): the robot on the sign-in screens and the old /welcome link go there. */
+export const LANDING_URL = (process.env.NEXT_PUBLIC_LANDING_URL || "https://workforceai.es").replace(/\/$/, "") + "/";

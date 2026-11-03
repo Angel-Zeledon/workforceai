@@ -5,6 +5,7 @@ import { AuthError, bootstrapAuth, forgotPassword } from "@/lib/session";
 import { Btn } from "../ui";
 import { ErrorLine, inputCls } from "../connections/shared";
 import { Brand } from "../landing/Brand";
+import { LANDING_URL } from "@/lib/config";
 
 /** Asks for the address and e-mails a reset link. The answer is the same whether or not the address has an account. */
 export function ForgotScreen() {
@@ -26,7 +27,7 @@ export function ForgotScreen() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
       <div data-testid="forgot" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
-        <a href="/welcome" className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
+        <a href={LANDING_URL} className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
         {sent ? (
           <>
             <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.forgot.sentTitle")}</h1>

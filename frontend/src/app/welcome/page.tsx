@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
-import { Landing } from "@/components/landing/Landing";
+import { redirect } from "next/navigation";
+import { LANDING_URL } from "@/lib/config";
 
-export const metadata: Metadata = {
-  title: "AI Workforce OS: un equipo de IA que trabaja como una empresa",
-  description: "Agentes con roles, archivos, aprobaciones humanas y proyectos de gran escala.",
-};
-
+/** There is one landing, the public site: the old in-app landing at /welcome now sends there (old links keep working). */
 export default function WelcomePage() {
-  return <Landing />;
+  redirect(LANDING_URL);
 }

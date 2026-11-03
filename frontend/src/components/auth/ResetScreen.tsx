@@ -5,6 +5,7 @@ import { AuthError, bootstrapAuth, resetPassword } from "@/lib/session";
 import { Btn } from "../ui";
 import { ErrorLine, inputCls } from "../connections/shared";
 import { Brand } from "../landing/Brand";
+import { LANDING_URL } from "@/lib/config";
 
 /** Landing page of the reset link (/reset?token=...): sets the new password, then sends the person to sign in. */
 export function ResetScreen() {
@@ -30,7 +31,7 @@ export function ResetScreen() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
       <div data-testid="reset" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
-        <a href="/welcome" className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
+        <a href={LANDING_URL} className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
         {done ? (
           <>
             <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.reset.doneTitle")}</h1>

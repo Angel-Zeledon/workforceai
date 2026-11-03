@@ -89,9 +89,9 @@ export function WelcomeOverlay() {
     { icon: "chat", k: "1" }, { icon: "office", k: "2" }, { icon: "shield", k: "3" },
   ];
   return (
-    <div className="fixed inset-0 z-[8800] flex items-center justify-center bg-ink/45 p-4 ac-fade" data-testid="welcome" onMouseDown={(e) => { if (e.target === e.currentTarget) close(false); }}>
+    <div className="fixed inset-0 z-[8800] flex items-end justify-center bg-ink/45 p-0 ac-fade sm:items-center sm:p-4" data-testid="welcome" onMouseDown={(e) => { if (e.target === e.currentTarget) close(false); }}>
       <div ref={card} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t("welcome.aria")}
-        className="wf-welcome relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overflow-x-hidden rounded-2xl border border-line bg-panel p-6 text-center shadow-float outline-none focus-visible:shadow-float">
+        className="wf-welcome relative max-h-[88dvh] w-full max-w-md overflow-y-auto overflow-x-hidden rounded-t-2xl border border-line bg-panel px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 text-center shadow-float outline-none focus-visible:shadow-float sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl sm:p-6">
         {!noMotion && balance > 0 && (
           <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-full overflow-hidden">
             {Array.from({ length: COINS }).map((_, i) => (
@@ -101,11 +101,11 @@ export function WelcomeOverlay() {
             ))}
           </div>
         )}
-        <div className={`relative mx-auto mb-3 w-fit ${noMotion ? "" : "wf-wave"}`}><AgentMark size={64} /></div>
-        <h2 className="relative text-xl font-semibold tracking-tight text-ink">{plan && team
+        <div className={`relative mx-auto mb-2 w-fit sm:mb-3 ${noMotion ? "" : "wf-wave"}`}><AgentMark size={44} className="sm:hidden" /><AgentMark size={64} className="hidden sm:block" /></div>
+        <h2 className="relative text-[17px] font-semibold leading-snug tracking-tight text-ink sm:text-xl">{plan && team
           ? t(`e1.welcome.${plan.variant}.title`, { name: first || "", org: team.org_name, team: team.team?.name ?? "" })
           : first ? t("welcome.titleName", { name: first }) : t("welcome.title")}</h2>
-        {!plan && <p className="relative mx-auto mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-ink2">{t("welcome.sub")}</p>}
+        {!plan && <p className="relative mx-auto mt-1 max-w-sm text-[12.5px] leading-snug text-ink2 sm:mt-1.5 sm:text-[13.5px] sm:leading-relaxed">{t("welcome.sub")}</p>}
 
         {balance > 0 && (
           <div data-testid="welcome-coins" className="relative mx-auto mt-4 flex w-fit items-center gap-2 rounded-full border border-amber-300 bg-amber-100/70 px-4 py-1.5">
@@ -114,19 +114,20 @@ export function WelcomeOverlay() {
             <span className="text-[12.5px] font-medium text-amber-800">{t("welcome.coins")}</span>
           </div>
         )}
-        {balance > 0 && <p className="relative mt-1.5 text-[11.5px] text-mute">{t("welcome.coinsHint")}</p>}
+        {balance > 0 && <p className="relative mt-1.5 hidden text-[11.5px] text-mute sm:block">{t("welcome.coinsHint")}</p>}
 
         {plan && team && <TeamWelcomeBody w={team} plan={plan} onPicked={setTeam} />}
-        {!plan && <ol className="relative mt-5 grid gap-2 text-left">
+        {/* phone: the three steps as one row of short chips (title only); from sm up, each with its explanation */}
+        {!plan && <ol className="relative mt-3 grid grid-cols-3 gap-1.5 text-left sm:mt-5 sm:grid-cols-1 sm:gap-2">
           {steps.map((s) => (
-            <li key={s.k} className="flex items-start gap-3 rounded-xl border border-line bg-panel2 px-3 py-2.5">
-              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><Icon name={s.icon} size={15} /></span>
-              <span className="min-w-0 text-[12.5px] leading-snug text-ink2"><b className="block text-[13px] text-ink">{t(`welcome.step${s.k}.t`)}</b>{t(`welcome.step${s.k}.d`)}</span>
+            <li key={s.k} className="flex flex-col items-center gap-1 rounded-xl border border-line bg-panel2 px-2 py-2 text-center sm:flex-row sm:items-start sm:gap-3 sm:px-3 sm:py-2.5 sm:text-left">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent sm:mt-0.5 sm:h-7 sm:w-7"><Icon name={s.icon} size={13} /></span>
+              <span className="min-w-0 text-[12.5px] leading-snug text-ink2"><b className="block text-[12px] text-ink sm:text-[13px]">{t(`welcome.step${s.k}.t`)}</b><span className="hidden sm:inline">{t(`welcome.step${s.k}.d`)}</span></span>
             </li>
           ))}
         </ol>}
 
-        <div className="relative mt-5 flex flex-col gap-2 sm:flex-row-reverse">
+        <div className="relative mt-4 flex flex-col gap-2 sm:mt-5 sm:flex-row-reverse">
           {plan?.primary !== "pickTeam" && (
             <button type="button" data-testid="welcome-start" onClick={primary} className="min-h-10 flex-1 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-hover">
               {plan?.primary === "setup" ? t(team?.audience === "team" ? "e1.welcome.inviteTeam" : "e1.welcome.setupTeams") : t("welcome.start")}</button>

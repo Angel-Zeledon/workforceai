@@ -6,6 +6,7 @@ import { AuthError, bootstrapAuth, resendVerification, verifyEmail, useSession }
 import { Btn } from "../ui";
 import { ErrorLine, inputCls } from "../connections/shared";
 import { Brand } from "../landing/Brand";
+import { LANDING_URL } from "@/lib/config";
 
 /** Landing page of the verification link (/verify?token=...): opens the session when the link is good, or offers a new one. */
 export function VerifyScreen() {
@@ -41,7 +42,7 @@ export function VerifyScreen() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
       <div data-testid="verify" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
-        <a href="/welcome" className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
+        <a href={LANDING_URL} className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
         {phase === "checking" && (<><h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("verify.checking")}</h1><p role="status" className="text-sm text-mute">{t("verify.checkingBody")}</p></>)}
         {phase === "resent" && (<><h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("verify.resentTitle")}</h1><p className="text-sm text-ink2">{t("verify.resentBody")}</p></>)}
         {phase === "bad" && (
