@@ -19,6 +19,9 @@ type MemoryStore struct {
 	invitations map[string]*Invitation   // by id
 	verifs      map[string]*memVerif     // by token hash
 	mfa         map[string]MFARecord     // by user id
+	setups      map[string]OrgSetup      // by org
+	profiles    map[[2]string]MemberProfile
+	intents     map[string]SignupIntent // by user
 }
 
 type memVerif struct {
@@ -39,6 +42,9 @@ func NewMemoryStore() *MemoryStore {
 		memberships: map[[2]string]Membership{},
 		tokens:      map[string]*RefreshToken{},
 		invitations: map[string]*Invitation{},
+		setups:      map[string]OrgSetup{},
+		profiles:    map[[2]string]MemberProfile{},
+		intents:     map[string]SignupIntent{},
 	}
 }
 

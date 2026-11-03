@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -136,6 +137,11 @@ func (s *server) tenant(next http.Handler) http.Handler {
 			s.fail(w, err)
 			return
 		}
+		if s.AuthEnabled {
+			if p, ok := auth.PrincipalFrom(ctx); ok {
+				s.ensureMember(ctx, org, p.UserID) // E1: the agents and team of this person (teams.go), once
+			}
+		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -155,7 +161,17 @@ func (s *server) ensureSeeded(ctx context.Context, org string) error {
 	}
 	if len(agents) == 0 {
 		o := domain.Organization{ID: org, Name: org, Slug: org, BudgetUSD: s.Cfg.BudgetUSD}
-		if err := s.Store.Seed(ctx, o, roles.SeedAgents()); err != nil {
+		seed := roles.SeedAgents()
+		if s.Auth != nil {
+			// E1: an organization created by the team sign-up starts with the assistant only; each person's profession
+			// adds its agents right after (ensureMember). Organizations from before keep the 7 fixed agents.
+			if st, err := s.Auth.OrgSetup(ctx, org); err == nil {
+				seed = roles.SeedAgentsFor([]string{roles.AssistantRole}, st.Locale)
+			} else if !errors.Is(err, auth.ErrNotFound) {
+				return err
+			}
+		}
+		if err := s.Store.Seed(ctx, o, seed); err != nil {
 			return err
 		}
 	}

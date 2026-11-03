@@ -45,8 +45,37 @@ func (s *server) locale(r *http.Request) string {
 	return s.OrgConfig.Locale(r.Context(), r.URL.Query().Get("locale"))
 }
 
+// workflowView is a workflow template plus the roles of its steps this office has no agent for (E1: a new organization
+// only has the agents of its people's work). Those steps go to the assistant; the gallery suggests hiring the role.
+type workflowView struct {
+	catalog.WorkflowView
+	MissingRoles []string `json:"missing_roles"`
+}
+
+func (s *server) withMissingRoles(r *http.Request, vs []catalog.WorkflowView) ([]workflowView, error) {
+	agents, err := s.Store.ListAgents(r.Context(), s.org(r))
+	if err != nil {
+		return nil, err
+	}
+	ix := application.RoleAgents(agents)
+	out := make([]workflowView, 0, len(vs))
+	for _, v := range vs {
+		roles := make([]string, 0, len(v.Steps))
+		for _, st := range v.Steps {
+			roles = append(roles, st.AgentID)
+		}
+		out = append(out, workflowView{WorkflowView: v, MissingRoles: ix.Missing(roles)})
+	}
+	return out, nil
+}
+
 func (s *server) listWorkflowTemplates(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, s.OrgConfig.Catalog().Workflows(s.locale(r)))
+	out, err := s.withMissingRoles(r, s.OrgConfig.Catalog().Workflows(s.locale(r)))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, out)
 }
 
 func (s *server) getWorkflowTemplate(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +84,12 @@ func (s *server) getWorkflowTemplate(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, domain.ErrNotFound)
 		return
 	}
-	writeJSON(w, 200, v)
+	out, err := s.withMissingRoles(r, []catalog.WorkflowView{v})
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, out[0])
 }
 
 func (s *server) instantiateTemplate(w http.ResponseWriter, r *http.Request) {

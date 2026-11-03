@@ -229,31 +229,39 @@ func (s *Service) SignInFederated(ctx context.Context, id FederatedIdentity, met
 // autoJoin adds u to the organization that auto-joins its e-mail domain. It runs only after the address is PROVEN (the
 // verification link was just consumed): joining on a typed, unconfirmed address would let anybody enter an organization by
 // registering with one of its addresses. Failures never block the sign-in; they are logged.
-func (s *Service) autoJoin(ctx context.Context, u User) {
+//
+// It returns the organization joined now ("" when none); a person who was already a member is not "joined".
+func (s *Service) autoJoin(ctx context.Context, u User) string {
 	if s.cfg.AutoJoin == nil {
-		return
+		return ""
 	}
 	org, role, ok, err := s.cfg.AutoJoin.AutoJoinFor(ctx, u.Email)
 	if err != nil {
 		s.cfg.Logf("auth: auto-join lookup failed: %v", err)
-		return
+		return ""
 	}
 	if !ok || org == "" {
-		return
+		return ""
 	}
 	if !role.Valid() || role == RoleOwner {
 		role = RoleViewer
 	}
 	if _, err := s.store.GetMembership(ctx, org, u.ID); err == nil {
-		return // already a member
+		return "" // already a member
 	}
 	err = s.store.AddMembership(ctx, Membership{OrgID: org, UserID: u.ID, Role: role, CreatedAt: s.now()})
 	if err != nil && !errors.Is(err, ErrAlreadyMember) {
 		s.cfg.Logf("auth: auto-join failed: %v", err)
-		return
+		return ""
 	}
-	if err == nil && s.cfg.Audit != nil {
+	if err != nil {
+		return ""
+	}
+	if s.cfg.Audit != nil {
 		s.cfg.Audit(ctx, AuditEvent{OrgID: org, Actor: u.ID, Action: "user.auto_joined", Entity: "user", EntityID: u.ID,
 			Details: map[string]any{"role": string(role), "via": "verified_domain"}})
 	}
+	// E1: a profile (no team yet) so the welcome asks which team they want to join.
+	s.saveJoinProfile(ctx, org, u.ID, "", ViaDomain)
+	return org
 }

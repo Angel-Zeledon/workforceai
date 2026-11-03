@@ -308,6 +308,21 @@ func (s *OrgConfig) InstantiateTemplate(ctx context.Context, key string, params 
 	if err != nil {
 		return "", err
 	}
+	// E1: each step goes to an agent of its role, or to the assistant when the office has none (template_roles.go).
+	agents, err := s.Core.ListAgents(ctx, s.org(ctx))
+	if err != nil {
+		return "", err
+	}
+	ix := RoleAgents(agents)
+	var roles []string
+	for i, t := range plan.Tasks {
+		roles = append(roles, t.AgentID)
+		plan.Tasks[i].AgentID = ix.AgentFor(t.AgentID)
+	}
+	if missing := ix.Missing(roles); len(missing) > 0 && s.Rec != nil {
+		s.Rec.Audit(ctx, domain.AuditLog{Actor: ActorFrom(ctx, "user"), Action: "template.roles_reassigned", Entity: "workflow_template", EntityID: key,
+			Details: map[string]any{"missing_roles": missing, "to": ix.AgentFor("assistant")}})
+	}
 	return s.Orch.SubmitPlan(ctx, plan.Text, planResponse(plan))
 }
 

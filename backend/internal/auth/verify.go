@@ -80,7 +80,8 @@ func (s *Service) Verify(ctx context.Context, token string, meta ClientMeta) (*S
 	if err != nil {
 		return nil, err
 	}
-	s.autoJoin(ctx, u) // the address is proven now: join the organization that owns its domain, if it allows it
+	joined := s.autoJoin(ctx, u) // the address is proven now: join the organization that owns its domain, if it allows it
+	s.finishSignupIntent(ctx, u, joined)
 	m, err := s.pickMembership(ctx, u.ID, "")
 	if err != nil {
 		return nil, err

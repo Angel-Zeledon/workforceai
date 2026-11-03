@@ -131,7 +131,8 @@ func (h *Handler) csrfOK(r *http.Request) bool {
 
 // Routes returns a router to mount, e.g. r.Mount("/api/v1/auth", h.Routes()):
 //
-//	POST   /register        public
+//	POST   /register        public (E1: audience, profession, team_name, join are optional)
+//	POST   /signup/check    public {email}: the company this address can join by its verified domain
 //	POST   /login           public
 //	POST   /refresh         public (refresh token in the HttpOnly cookie + X-WFAI-CSRF header; rotates it)
 //	POST   /logout          public (cookie + X-WFAI-CSRF header; idempotent; clears the cookie)
@@ -153,6 +154,8 @@ func (h *Handler) Routes() http.Handler {
 		return RateLimit(h.cfg.Limiter, l, IPKey(prefix, h.cfg.TrustedProxies), h.cfg.FailOpen)
 	}
 	r.With(lim("register", h.cfg.RegisterLimit)).Post("/register", h.register)
+	// E1: can this address enter its company (verified domain with auto-join)? Throttled like registration.
+	r.With(lim("signup-check", h.cfg.RegisterLimit)).Post("/signup/check", h.signupCheck)
 	r.With(lim("login", h.cfg.LoginLimit)).Post("/login", h.login)
 	r.With(lim("refresh", h.cfg.RefreshLimit)).Post("/refresh", h.refresh)
 	r.With(lim("refresh", h.cfg.RefreshLimit)).Post("/logout", h.logout)
@@ -235,6 +238,22 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.writeSession(w, http.StatusCreated, s)
+}
+
+func (h *Handler) signupCheck(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Email string `json:"email"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	o, err := h.svc.SignupCheck(r.Context(), in.Email)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, o)
 }
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
@@ -590,7 +609,7 @@ func AuthConfigHandlerV(enabled, verification, trial, passwordReset bool) http.H
 // InvitationRoutes returns the router mounted at /api/v1/invitations:
 //
 //	GET    /       members:read
-//	POST   /       members:invite  {email, role} -> invitation + one-time token
+//	POST   /       members:invite  {email, role, department_id?, profession?, lead?} -> invitation + one-time token
 //	DELETE /{id}   members:invite  (revoke)
 func (h *Handler) InvitationRoutes() http.Handler {
 	r := chi.NewRouter()
@@ -605,12 +624,12 @@ func (h *Handler) InvitationRoutes() http.Handler {
 }
 
 func (h *Handler) createInvitation(w http.ResponseWriter, r *http.Request) {
-	var in memberBody
+	var in InviteInput
 	if !decode(w, r, &in) {
 		return
 	}
 	p, _ := PrincipalFrom(r.Context())
-	inv, err := h.svc.CreateInvitation(r.Context(), p, in.Email, in.Role)
+	inv, err := h.svc.Invite(r.Context(), p, in)
 	if err != nil {
 		writeServiceError(w, err)
 		return

@@ -8,6 +8,9 @@ import { ErrorLine, inputCls } from "../connections/shared";
 import { Brand } from "../landing/Brand";
 import { MfaEnroll } from "./MfaEnroll";
 import { SsoSignIn, ssoErrorKey, useSsoAvailable } from "./SsoSignIn";
+import { SignupTeamFields } from "./SignupTeamFields";
+import { registerBody, signupMissing, type Audience, type Profession } from "@/lib/teamsLogic";
+import { teamsApi } from "@/lib/teamsApi";
 
 type Mode = "login" | "register" | "invite";
 
@@ -52,6 +55,12 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [org, setOrg] = useState("");
+  // E1: who the account is for, what the person does, the team name, and joining the company of a verified domain.
+  const [audience, setAudience] = useState<Audience | "">("");
+  const [profession, setProfession] = useState<Profession | "">("");
+  const [team, setTeam] = useState("");
+  const [joinOrg, setJoinOrg] = useState("");
+  const [join, setJoin] = useState(false);
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -123,7 +132,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
         if (r.mfaRequired) { setMfa({ token: r.token }); setPassword(""); setBusy(false); return; }
         if (r.enrollToken) { setEnroll({ token: r.enrollToken }); setPassword(""); setBusy(false); return; }
       } else if (mode === "register") {
-        const r = await register({ email, password, name, org_name: org, locale });
+        const r = await register(registerBody({ email, password, name, org, team, audience, profession, join: join && !!joinOrg, locale }));
         if (r.verificationRequired) { setSent({ email: r.email, emailSent: r.emailSent }); setCooldown(60); setBusy(false); return; }
       } else {
         const r = await acceptInvitation({ token, password, ...(name.trim() ? { name } : {}) });
@@ -199,6 +208,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.sent.title")}</h1>
           <p className="text-sm leading-relaxed text-ink2">{t(sent.emailSent ? "auth.sent.body" : "auth.sent.failed", { email: sent.email })}</p>
           <p className="text-xs text-mute">{t("auth.sent.hint")}</p>
+          {join && joinOrg && <p data-testid="auth-sent-join" className="text-xs text-ink2">{t("e1.signup.join.sent", { org: joinOrg })}</p>}
           <ErrorLine msg={err} />
           {resent && <p role="status" className="text-xs font-medium text-ok">{t("auth.resent")}</p>}
           <Btn kind="primary" disabled={cooldown > 0} onClick={() => resend(sent.email)} className="w-full min-h-10 py-2" data-testid="auth-resend">
@@ -213,7 +223,11 @@ export function AuthScreen({ mode }: { mode: Mode }) {
         {mode === "invite" && <p className="text-xs text-mute">{t("auth.invite.body")}</p>}
         {mode !== "invite" && (
           <Field label={t("auth.email")}>
-            <input data-testid="auth-email" type="email" autoComplete="email" required className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input data-testid="auth-email" type="email" autoComplete="email" required className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => {
+                if (mode !== "register") return;
+                void teamsApi.signupCheck(email).then((o) => { setJoinOrg(o.join_org_name ?? ""); setJoin(!!o.join_org_name); });
+              }} />
           </Field>
         )}
         {mode !== "login" && (
@@ -222,9 +236,8 @@ export function AuthScreen({ mode }: { mode: Mode }) {
           </Field>
         )}
         {mode === "register" && (
-          <Field label={t("auth.org")}>
-            <input data-testid="auth-org" autoComplete="organization" required className={inputCls} value={org} onChange={(e) => setOrg(e.target.value)} />
-          </Field>
+          <SignupTeamFields audience={audience} setAudience={setAudience} profession={profession} setProfession={setProfession}
+            org={org} setOrg={setOrg} team={team} setTeam={setTeam} joinOrg={joinOrg} join={join} setJoin={setJoin} />
         )}
         <Field label={t("auth.password")}>
           <input data-testid="auth-password" type="password" required autoComplete={mode === "login" ? "current-password" : "new-password"}
@@ -243,7 +256,8 @@ export function AuthScreen({ mode }: { mode: Mode }) {
             {resent && <span role="status" className="text-ok">{t("auth.resent")}</span>}
           </div>
         )}
-        <Btn type="submit" kind="primary" disabled={busy || (mode === "invite" && !token)} className="w-full min-h-10 py-2" data-testid="auth-submit">
+        <Btn type="submit" kind="primary" className="w-full min-h-10 py-2" data-testid="auth-submit"
+          disabled={busy || (mode === "invite" && !token) || (mode === "register" && signupMissing({ email, password, name, org, team, audience, profession, join: join && !!joinOrg }).length > 0)}>
           {t(`auth.${mode}.submit`)}
         </Btn>
         <div className="flex flex-wrap justify-between gap-x-4 text-xs">

@@ -14,6 +14,8 @@ export interface WorkflowTemplate {
   key: string; version: number; category: string;
   name_key: string; name: string; description_key: string; description: string;
   params: TemplateParam[]; steps: TemplateStep[]; parallel_steps: number;
+  /** E1: roles of its steps this office has no agent for (those steps go to the assistant). Older backends omit it. */
+  missing_roles?: string[];
 }
 
 export interface PackAgent { id: string; autonomy: string }

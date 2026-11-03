@@ -26,7 +26,10 @@ test("register, invite a member, accept the invitation and sign in again", async
   await page.getByTestId("auth-to-register").click();
   await page.getByTestId("auth-email").fill(owner);
   await page.getByTestId("auth-name").fill("Owner E2E");
+  // E1: who it is for and what the person does (the company name is asked for teams and companies).
+  await page.getByTestId("signup-audience-company").click();
   await page.getByTestId("auth-org").fill(`Org ${uniq()}`);
+  await page.getByTestId("signup-profession").selectOption("direction");
   await page.getByTestId("auth-password").fill(pw);
   await page.getByTestId("auth-submit").click();
   await expect(page).toHaveURL(/\/$/);
@@ -92,7 +95,8 @@ test("the refresh token is an HttpOnly cookie, the session survives a reload and
   await page.goto("/register");
   await page.getByTestId("auth-email").fill(email);
   await page.getByTestId("auth-name").fill("Cookie E2E");
-  await page.getByTestId("auth-org").fill(`Org ${uniq()}`);
+  await page.getByTestId("signup-audience-solo").click();
+  await page.getByTestId("signup-profession").selectOption("legal");
   await page.getByTestId("auth-password").fill(pw);
   await page.getByTestId("auth-submit").click();
   await expect(page).toHaveURL(/\/$/);

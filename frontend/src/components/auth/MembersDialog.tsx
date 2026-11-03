@@ -6,9 +6,11 @@ import { useCloseLabel } from "../nav/pageMode";
 import { useCan, useSession } from "@/lib/session";
 import { Btn } from "../ui";
 import { ErrorLine, inputCls, Modal } from "../connections/shared";
+import { orgChartApi, type Department } from "@/lib/orgChartApi";
+import { PROFESSIONS } from "@/lib/teamsLogic";
 
 interface Member { user_id: string; email: string; name: string; role: string; created_at: string }
-interface Invitation { id: string; email: string; role: string; status: string; expires_at: string }
+interface Invitation { id: string; email: string; role: string; status: string; expires_at: string; department_id?: string; profession?: string; lead?: boolean }
 
 const ROLES = ["viewer", "member", "admin", "owner"] as const;
 const RANK: Record<string, number> = { viewer: 1, member: 2, admin: 3, owner: 4 };
@@ -28,6 +30,11 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
   const [invites, setInvites] = useState<Invitation[]>([]);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>("member");
+  // E1: invite to a team (department) with a profession (their suggested agents) and, optionally, as its responsible.
+  const [depts, setDepts] = useState<Department[]>([]);
+  const [dept, setDept] = useState("");
+  const [profession, setProfession] = useState("");
+  const [lead, setLead] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -43,6 +50,8 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
     } catch { setErr(t("members.err.load")); }
   }, [t]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { orgChartApi.departments().then(setDepts).catch(() => setDepts([])); }, []);
+  const deptName = (id?: string) => depts.find((d) => d.id === id)?.name ?? "";
 
   // Same rule as auth.CanManage: owners manage everyone else, admins only members below admin.
   const editable = (m: Member) => canManage && m.user_id !== me?.id && (myRole === "owner" || (myRole === "admin" && RANK[m.role] < RANK.admin));
@@ -55,7 +64,9 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
     try { await fn(); await load(); } catch { setErr(t("members.err.action")); }
   };
   const invite = () => act(async () => {
-    const r = await call<{ token: string }>("POST", "/invitations", { email, role });
+    const r = await call<{ token: string }>("POST", "/invitations", {
+      email, role, ...(dept ? { department_id: dept, lead } : {}), ...(profession ? { profession } : {}),
+    });
     setLink(`${window.location.origin}/invite?token=${encodeURIComponent(r.token)}`);
     setCopied(false);
     setEmail("");
@@ -105,6 +116,24 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
             </select>
             <Btn kind="primary" data-testid="invite-send" disabled={!email.includes("@")} onClick={invite}>{t("members.invite.send")}</Btn>
           </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {depts.length > 0 && (
+              <select data-testid="invite-team" aria-label={t("e1.invite.team")} className={`${inputCls} !w-auto`} value={dept} onChange={(e) => { setDept(e.target.value); if (!e.target.value) setLead(false); }}>
+                <option value="">{t("e1.invite.noTeam")}</option>
+                {depts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            )}
+            <select data-testid="invite-profession" aria-label={t("e1.signup.profession")} className={`${inputCls} !w-auto`} value={profession} onChange={(e) => setProfession(e.target.value)}>
+              <option value="">{t("e1.invite.noProfession")}</option>
+              {PROFESSIONS.map((p) => <option key={p} value={p}>{t(`e1.profession.${p}`)}</option>)}
+            </select>
+            {dept && (
+              <label className="flex items-center gap-1.5 text-xs font-medium text-ink2">
+                <input type="checkbox" data-testid="invite-lead" checked={lead} onChange={(e) => setLead(e.target.checked)} />{t("e1.invite.lead")}
+              </label>
+            )}
+          </div>
+          <p className="mt-1.5 text-[11px] text-mute">{t("e1.invite.hint")}</p>
           {link && (
             <div className="mt-2 space-y-1" data-testid="invite-link-box">
               <p className="text-[11px] text-mute">{t("members.invite.linkOnce")}</p>
@@ -123,7 +152,9 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
           <ul className="mt-2 divide-y divide-line rounded-xl border border-line" data-testid="invites-list">
             {invites.map((i) => (
               <li key={i.id} data-testid="invite-row" data-status={i.status} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 text-xs">
-                <span className="min-w-0 flex-1 truncate">{i.email} · {t(`members.roles.${i.role}`)}</span>
+                <span className="min-w-0 flex-1 truncate">{i.email} · {t(`members.roles.${i.role}`)}
+                  {i.department_id && deptName(i.department_id) ? ` · ${deptName(i.department_id)}${i.lead ? ` (${t("e1.invite.leadShort")})` : ""}` : ""}
+                  {i.profession ? ` · ${t(`e1.profession.${i.profession}`)}` : ""}</span>
                 <span className="text-mute">{t(`members.status.${i.status}`)}</span>
                 {canInvite && i.status === "pending" && assignable(myRole).includes(i.role as never) && (
                   <Btn data-testid="invite-revoke" onClick={() => act(() => call("DELETE", `/invitations/${i.id}`))}>{t("members.invite.revoke")}</Btn>

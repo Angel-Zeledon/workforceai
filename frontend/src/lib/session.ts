@@ -153,7 +153,7 @@ async function begin(path: string, body: unknown): Promise<SignInResult> {
 export const login = (email: string, password: string) => begin("/auth/login", { email, password });
 export type RegisterResult = { verificationRequired: false } | { verificationRequired: true; email: string; emailSent: boolean };
 /** Creates the account. With e-mail verification on there is no session yet: the user must open the link we send. */
-export async function register(b: { email: string; password: string; name: string; org_name: string; locale?: string }): Promise<RegisterResult> {
+export async function register(b: { email: string; password: string; name: string; org_name: string; locale?: string; audience?: string; profession?: string; team_name?: string; join?: boolean }): Promise<RegisterResult> {
   const data = await post<SessionPayload & { verification_required?: boolean; email?: string; email_sent?: boolean }>("/auth/register", b);
   if (data.verification_required) return { verificationRequired: true, email: data.email ?? b.email, emailSent: data.email_sent === true };
   adopt(data);

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -27,6 +28,7 @@ import (
 	"aiworkforce/backend/internal/infrastructure/runtime"
 	"aiworkforce/backend/internal/mailer"
 	"aiworkforce/backend/internal/notify"
+	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
 	"aiworkforce/backend/internal/rewards"
@@ -404,6 +406,14 @@ func run(log *slog.Logger) error {
 			Secret:              []byte(cfg.JWTSecret),
 			DefaultOrgBudgetUSD: cfg.App.BudgetUSD,
 			LoginLimiter:        limiter,
+			// E1: an invitation to a team (department) must name one of the organization's departments.
+			DepartmentExists: func(dctx context.Context, org, id string) bool {
+				if orgChartSvc == nil {
+					return false
+				}
+				ds, derr := orgChartSvc.Store.ListDepartments(dctx, org)
+				return derr == nil && slices.ContainsFunc(ds, func(d orgchart.Department) bool { return d.ID == id })
+			},
 			SeatLimit: func(sctx context.Context, org string) (int, string) {
 				t := planLimits(sctx, org)
 				return t.MaxSeats, t.ID

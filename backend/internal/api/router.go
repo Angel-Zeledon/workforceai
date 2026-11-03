@@ -21,6 +21,7 @@ import (
 	"aiworkforce/backend/internal/artifacts"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/away"
+	"aiworkforce/backend/internal/billing"
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/controls"
 	"aiworkforce/backend/internal/customers"
@@ -30,10 +31,10 @@ import (
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
 	"aiworkforce/backend/internal/inboxes"
+	"aiworkforce/backend/internal/integrations"
 	"aiworkforce/backend/internal/linkimports"
 	"aiworkforce/backend/internal/meetings" // meetings-block
 	"aiworkforce/backend/internal/memory"
-	"aiworkforce/backend/internal/billing"
 	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/peoplechat"
@@ -46,7 +47,6 @@ import (
 	"aiworkforce/backend/internal/rituals"
 	"aiworkforce/backend/internal/sandbox"
 	"aiworkforce/backend/internal/skills"
-	"aiworkforce/backend/internal/integrations"
 	"aiworkforce/backend/internal/slackapp"
 	"aiworkforce/backend/internal/tenantdata"
 	"aiworkforce/backend/internal/trust"
@@ -220,7 +220,9 @@ type server struct {
 	origins  originPolicy
 	upgrader websocket.Upgrader
 	seeded   sync.Map // org id -> struct{}: orgs whose agents were verified
-	cmds     *commandsState
+	// provisioned: org|user -> struct{}: people whose E1 profile (agents, team) was checked (teams.go)
+	provisioned sync.Map
+	cmds        *commandsState
 }
 
 // NewRouter builds the chi router.
@@ -334,6 +336,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountTenantData(r)
 			s.mountGovernance(r) // governance (single line)
 			s.mountPresence(r)   // human presence + people chat (presence_people.go)
+			s.mountTeams(r)      // E1: welcome per person and team set-up (teams.go)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}

@@ -68,6 +68,9 @@ type Config struct {
 	// AutoJoin (optional) lets a person whose address was just proven (verification link) join the organization that
 	// verified their e-mail domain, if that organization turned auto-join on. Nil = never.
 	AutoJoin AutoJoiner
+	// DepartmentExists (optional) tells whether a team (department) exists in an organization: an invitation to a
+	// team is refused without it (E1, docs/architecture/equipos-oficinas.md §6).
+	DepartmentExists func(ctx context.Context, org, departmentID string) bool
 	// Logf (optional) receives operational notes that must not reach the caller (e.g. delivery failures).
 	Logf func(format string, args ...any)
 
@@ -193,6 +196,11 @@ type RegisterInput struct {
 	Name     string `json:"name"`
 	OrgName  string `json:"org_name"`
 	Locale   string `json:"locale,omitempty"` // language of the verification e-mail: es (default) or en
+	// E1 team sign-up (all optional; without Audience the sign-up is the classic one with the 7 fixed agents).
+	Audience   Audience `json:"audience,omitempty"`   // solo | team | company
+	Profession string   `json:"profession,omitempty"` // roles.Professions(); "" = other
+	TeamName   string   `json:"team_name,omitempty"`  // the team of a "team" sign-up (default: the profession's)
+	Join       bool     `json:"join,omitempty"`       // enter the company that owns the address's verified domain
 }
 
 type LoginInput struct {
@@ -206,6 +214,14 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, meta ClientMet
 	email := NormalizeEmail(in.Email)
 	in.Name, in.OrgName = strings.TrimSpace(in.Name), strings.TrimSpace(in.OrgName)
 	ve := &ValidationError{}
+	validateTeamFields(ve, &in)
+	joining := false
+	if in.Join {
+		_, joining = s.joinableOrg(ctx, email)
+	}
+	if in.OrgName == "" && (in.Audience == AudienceSolo || joining) {
+		in.OrgName = in.Name // a personal office (or the fallback of a join) is named after its person
+	}
 	if m := ValidateEmail(email); m != "" {
 		ve.add("email", m)
 	}
@@ -230,6 +246,9 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, meta ClientMet
 	if !s.verifyEnabled() {
 		u.VerifiedAt = now // nothing to verify against: the account is usable at once
 	}
+	if joining {
+		return nil, s.registerToJoin(ctx, u, in)
+	}
 	for attempt := 0; ; attempt++ {
 		o := Org{ID: uuid.NewString(), Name: in.OrgName, Slug: slugify(in.OrgName) + "-" + randomHex(3), BudgetUSD: s.cfg.DefaultOrgBudgetUSD}
 		m := Membership{OrgID: o.ID, UserID: u.ID, Role: RoleOwner, CreatedAt: now}
@@ -239,6 +258,9 @@ func (s *Service) Register(ctx context.Context, in RegisterInput, meta ClientMet
 		}
 		if err != nil {
 			return nil, err
+		}
+		if in.Audience != "" {
+			s.writeSignupProfile(ctx, o.ID, u.ID, in.Audience, in.Profession, in.TeamName, in.Locale)
 		}
 		if s.verifyEnabled() {
 			sent := true

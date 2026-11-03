@@ -51,6 +51,7 @@ func pgConn(t *testing.T) *pgx.Conn {
 		"../infrastructure/postgres/migrations/610_email_verification.sql",
 		"../infrastructure/postgres/migrations/620_trial_accounts.sql",
 		"../infrastructure/postgres/migrations/630_mfa_and_reset.sql",
+		"../infrastructure/postgres/migrations/809_team_signup.sql",
 	} {
 		b, err := os.ReadFile(f)
 		if err != nil {
@@ -78,6 +79,8 @@ func TestPGStoreContract(t *testing.T) {
 	storeContract(t, st)
 	emailAndTrialContract(t, st)
 }
+
+func TestPGProfilesContract(t *testing.T) { profilesContract(t, NewPGStore(pgConn(t))) }
 
 func TestPGInvitationContract(t *testing.T) {
 	invitationContract(t, NewPGStore(pgConn(t)))

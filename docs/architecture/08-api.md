@@ -85,7 +85,7 @@ Rutas reales bajo `/api/v1` (con `AUTH_ENABLED=true`; código en `backend/intern
 | `POST /auth/switch-org` `{org_id}` | Nueva sesión del mismo usuario en otra organización suya (403 si no es miembro) | autenticado |
 | `POST /auth/logout-all` | Revoca todas las sesiones del usuario | autenticado |
 | `GET /auth/members`, `POST /auth/members`, `PATCH/DELETE /auth/members/{id}` | Miembros; nadie asigna un rol por encima del suyo (`CanAssign`), el último owner no se puede quitar | `members:read` / `members:invite` / `members:manage` |
-| `GET /invitations`, `POST /invitations` `{email, role}`, `DELETE /invitations/{id}` | Invitaciones. `POST` devuelve el `token` **una sola vez** (solo se guarda su SHA-256); caduca en 7 días; una nueva invitación al mismo correo revoca la anterior | `members:read` / `members:invite` |
+| `GET /invitations`, `POST /invitations` `{email, role, department_id?, profession?, lead?}`, `DELETE /invitations/{id}` | Invitaciones. `POST` devuelve el `token` **una sola vez** (solo se guarda su SHA-256); caduca en 7 días; una nueva invitación al mismo correo revoca la anterior. E1 (§41): equipo, profesión y marca de responsable opcionales | `members:read` / `members:invite` |
 | `POST /auth/invitations/accept` `{token, name?, password}` | Usuario nuevo: crea la cuenta. Usuario existente con ese correo: exige su contraseña (mismo bloqueo que el login). Falla si caducó, se usó, se revocó o quien invitó ya no puede otorgar ese rol | público, con límite por IP |
 | `GET /ws?access_token=` | WebSocket autenticado; se cierra al caducar el token y el cliente reconecta con uno nuevo | autenticado |
 
@@ -1150,3 +1150,32 @@ Importación genérica de tipo PULL: un administrador pega una URL que devuelve 
 | GET | `/link-imports/{id}/runs?limit=` | `connections:read` | historial, más nuevo primero (1..100, 20 por defecto; se guardan 200) |
 
 Evento: `link_import.data_landed` `{import_id, import_name, run_id, customer_id, trigger, fetched_at, file{file_id, path, name, size, version}}` (sólo cuando llegan datos nuevos). Variables: `CUSTOM_API_ALLOW_PRIVATE` (compartida), `LINK_IMPORTS_ALLOW_HTTP`.
+
+## 41. Alta por equipos y agentes por rol (E1)
+
+Diseño: `equipos-oficinas.md` §6; plan: `docs/superpowers/plans/2026-11-03-e1-alta-agentes-por-rol.md`. Código:
+`backend/internal/auth/teams.go`, `backend/internal/api/teams.go`, `backend/internal/roles/professions.go`. Migración
+`809_team_signup.sql` (tablas `org_setup`, `member_profiles`, `signup_intents`; columnas nuevas en `invitations`).
+
+| Ruta | Descripción | Permiso |
+|---|---|---|
+| `POST /auth/register` | Campos nuevos opcionales: `audience` (`solo`\|`team`\|`company`), `profession` (`legal`, `sales`, `accounting`, `marketing`, `operations`, `hr`, `direction`, `other`), `team_name`, `join`. **Con `audience`** la organización arranca con el asistente y los agentes de la profesión (no con los 7 fijos); `solo` no necesita `org_name`. **Sin `audience`** el alta es la de siempre (7 agentes). `join:true` con un correo cuyo dominio verificado tiene autoingreso activo (y verificación de correo encendida): se crea solo la cuenta, y al abrir el enlace de verificación entra a esa empresa; si ya no la deja entrar, se crea su propia organización con lo elegido | público, con límite por IP y por correo |
+| `POST /auth/signup/check` `{email}` | `{join_org_name?}`: nombre de la empresa a la que puede entrar ese correo. Solo responde si la empresa activó el autoingreso y la verificación de correo está encendida; no revela nada más | público, con límite por IP |
+| `POST /invitations` | Además de `{email, role}`: `department_id` (equipo existente; 422 si no existe), `profession`, `lead` (responsable del equipo; exige `department_id`). El límite de asientos del plan se aplica igual. Al aceptar, la persona recibe un perfil con esos datos | `members:invite` |
+| `GET /me/welcome` | Bienvenida de la persona: `{kind, audience, org_name, setup_pending, profession, team:{id,name,head_name,head_is_me}\|null, invited_by, agents:[{id,name,title,role}], teammates:[{user_id,name}], can_pick_team, teams:[{id,name}]}`. `kind`: `solo` (oficina personal), `owner` (responsable de la empresa; `setup_pending` hasta terminar el alta de equipos), `lead` (responsable de un equipo), `member`, `classic` (organización anterior a E1: la bienvenida de siempre) | autenticado |
+| `POST /me/team` `{department_id?, profession?}` | Quien entró sin equipo (dominio, SSO, invitación sin equipo) elige su equipo (solo si aún no tiene: `409` si ya tiene; `400` si no existe) y/o su profesión. Se aprovisionan sus agentes y su puesto; queda en la auditoría (`team.joined`). Devuelve la bienvenida actualizada | autenticado |
+| `POST /teams` `{name?, profession, head_me?}` | Equipo = departamento + los agentes de su profesión que falten (asignados a ese departamento). `name` por defecto: el de la profesión en el idioma de la organización. `head_me` lo hace jefe a quien llama. `201 {team:{id,name}, profession, agents:[ids creados]}` | `org:manage` |
+| `POST /teams/setup/done` | El responsable terminó (o pospuso) el alta de equipos: `setup_pending` pasa a `false`. `404` en organizaciones sin alta por equipos | `org:manage` |
+
+**Aprovisionamiento** (una vez por persona, en su primera petición; nunca hace fallar la petición): crea los agentes
+sugeridos de su profesión que la organización no tenga (siempre con el asistente; con la identidad semilla, p. ej.
+`legal` / Elena Castro, si está libre), dentro del tope de 20 y de los agentes del plan; crea su equipo si solo era un
+nombre (alta "para mi equipo"), la pone en él (puesto del organigrama), la hace jefa si es responsable y el equipo no
+tiene, y pone los agentes nuevos en ese equipo. Un equipo no da acceso a nada todavía (eso es E2).
+
+**Plantillas de trabajo con roles que la oficina no tiene.** Las plantillas (`catalog/data/workflows`) asignan cada paso a
+uno de los 7 roles clásicos. `GET /workflow-templates` y `GET /workflow-templates/{key}` añaden `missing_roles` (los roles
+de sus pasos sin agente en esta oficina; vacío en las oficinas clásicas). Al instanciar, cada paso va a un agente de su
+rol aunque su id sea otro (p. ej. `law_lawyer` de una plantilla de industria hace los pasos de `legal`) y, si no hay
+ninguno, a la asistente; queda en la auditoría (`template.roles_reassigned`). La galería lo avisa: "Tu oficina no tiene
+Contabilidad: esos pasos los hará la asistente". Código: `application/template_roles.go`.

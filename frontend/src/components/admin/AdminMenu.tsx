@@ -9,6 +9,7 @@ import { useConnections } from "@/lib/connections/store";
 import { Icon, type IconName } from "../icons";
 import { useViewer } from "../connections/shared";
 import { useOnboardingEntry } from "../onboarding/OnboardingEntry";
+import { useTeamSetupEntry } from "../onboarding/TeamSetupEntry";
 import { useBootConnections } from "../security/ControlsChrome";
 import { logout, orgLabel, switchOrg, useCan, useSession } from "@/lib/session";
 
@@ -57,6 +58,7 @@ export function AdminMenu() {
   const controls = useConnections((s) => s.controls);
   const { isAdmin } = useViewer();
   const onboarding = useOnboardingEntry();
+  const teamSetup = useTeamSetupEntry(); // E1: the responsible's team set-up, until it is done
   const level = controls?.kill_switch_level ?? "none";
   const readOnly = controls?.mode === "read_only";
   // attention dot: safety state wins over the pending-setup hint
@@ -115,6 +117,9 @@ export function AdminMenu() {
               <Item icon="flag" testid={onboarding.pending ? "onboarding-open" : "org-config-open"} label={onboarding.pending ? t("onb.prompt.title") : t("cfg.open")}
                 trailing={onboarding.pending ? badge(t("admin.pending"), "bg-accent-soft text-accent") : undefined} onClick={run(onboarding.open)} />
             )}
+            {teamSetup.pending && (
+              <Item icon="users" testid="team-setup-open" label={t("e1.setup.menu")} trailing={badge(t("admin.pending"), "bg-accent-soft text-accent")} onClick={run(teamSetup.open)} />
+            )}
             <Item icon="edit" testid="office-settings" label={t("settings.title")} onClick={run(() => go("/settings?s=office"))} />
             {isAdmin && <Item icon="grid" testid="admin-console-open" label={t("adm.title")} onClick={run(() => go("/admin"))} />}
           </Group>
@@ -149,6 +154,7 @@ export function AdminMenu() {
         </div>
       )}
       {onboarding.dialogs}
+      {teamSetup.dialogs}
     </div>
   );
 }

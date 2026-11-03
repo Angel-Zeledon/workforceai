@@ -734,3 +734,15 @@ func (g TaskGate) ResumeRequest(ctx context.Context, org, requestID string) bool
 	}
 	return false
 }
+
+// AssignAgent puts an agent in a department and keeps the rest of its job description as it is (E1: the agents of a
+// new team join that team).
+func (s *Service) AssignAgent(ctx context.Context, agentID, departmentID string) error {
+	j, err := s.Job(ctx, agentID)
+	if err != nil {
+		return err
+	}
+	_, err = s.PutJob(ctx, agentID, JobInput{DepartmentID: departmentID, ReportsTo: j.ReportsTo, Escalation: j.Escalation,
+		Responsibilities: j.Responsibilities, AllowedTools: j.AllowedTools, Schedule: j.Schedule, BudgetUSD: j.BudgetUSD})
+	return err
+}

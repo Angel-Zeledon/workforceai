@@ -69,6 +69,11 @@ export function TemplateGallery({ onClose, onStarted }: { onClose: () => void; o
                 <span>{t("tpl.steps", { count: tpl.steps.length })}</span>
                 {tpl.parallel_steps > 0 && <span className="text-accent">{t("tpl.parallel", { count: tpl.parallel_steps })}</span>}
               </div>
+              {(tpl.missing_roles?.length ?? 0) > 0 && (
+                <p data-testid={`wf-template-missing-${tpl.key}`} className="mb-3 rounded-[10px] border border-line bg-panel2 px-2.5 py-1.5 text-[11.5px] leading-snug text-ink2">
+                  {t("e1.tpl.missing", { roles: (tpl.missing_roles ?? []).map((r) => trOr(`role.${r}`, r)).join(", ") })}
+                </p>
+              )}
               <button type="button" data-testid={`wf-template-run-${tpl.key}`} onClick={() => setSelected(tpl)}
                 className="min-h-10 self-start rounded-md bg-accent px-4 py-1.5 text-xs font-semibold text-white">{t("tpl.run")}</button>
             </li>

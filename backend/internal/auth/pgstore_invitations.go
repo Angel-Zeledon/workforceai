@@ -14,14 +14,14 @@ import (
 // tenant is known, scopes its transaction to the single row whose token hash it
 // knows (app.invitation_hash).
 
-const invCols = `id, org_id, email, role, token_hash, invited_by, created_at, expires_at, accepted_at, accepted_by, revoked_at`
+const invCols = `id, org_id, email, role, token_hash, invited_by, created_at, expires_at, accepted_at, accepted_by, revoked_at, department_id, profession, lead`
 
 func scanInvitation(row pgx.Row) (Invitation, error) {
 	var i Invitation
 	var role string
 	var acc, rev *time.Time
 	var accBy *string
-	if err := row.Scan(&i.ID, &i.OrgID, &i.Email, &role, &i.TokenHash, &i.InvitedBy, &i.CreatedAt, &i.ExpiresAt, &acc, &accBy, &rev); err != nil {
+	if err := row.Scan(&i.ID, &i.OrgID, &i.Email, &role, &i.TokenHash, &i.InvitedBy, &i.CreatedAt, &i.ExpiresAt, &acc, &accBy, &rev, &i.DepartmentID, &i.Profession, &i.Lead); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Invitation{}, ErrNotFound
 		}
@@ -46,9 +46,9 @@ func (s *PGStore) CreateInvitation(ctx context.Context, inv Invitation, now time
 			inv.OrgID, inv.Email, now); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `INSERT INTO invitations (id, org_id, email, role, token_hash, invited_by, created_at, expires_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-			inv.ID, inv.OrgID, inv.Email, string(inv.Role), inv.TokenHash, inv.InvitedBy, inv.CreatedAt, inv.ExpiresAt)
+		_, err := tx.Exec(ctx, `INSERT INTO invitations (id, org_id, email, role, token_hash, invited_by, created_at, expires_at, department_id, profession, lead)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+			inv.ID, inv.OrgID, inv.Email, string(inv.Role), inv.TokenHash, inv.InvitedBy, inv.CreatedAt, inv.ExpiresAt, inv.DepartmentID, inv.Profession, inv.Lead)
 		var pe *pgconn.PgError
 		if errors.As(err, &pe) && pe.Code == "23503" {
 			return ErrNotFound

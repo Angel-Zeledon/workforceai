@@ -26,6 +26,11 @@ type Invitation struct {
 	AcceptedAt time.Time `json:"-"`
 	AcceptedBy string    `json:"accepted_by,omitempty"`
 	RevokedAt  time.Time `json:"-"`
+	// E1: the team (department) the person joins, their profession (suggested agents) and whether they are the
+	// responsible of that team. All optional.
+	DepartmentID string `json:"department_id"`
+	Profession   string `json:"profession"`
+	Lead         bool   `json:"lead"`
 }
 
 // Invitation states (derived, never stored).
@@ -90,11 +95,17 @@ func (s *Service) invitationTTL() time.Duration {
 // members and viewers only, owners anyone. A previous pending invitation for
 // the same e-mail in the same organization is revoked.
 func (s *Service) CreateInvitation(ctx context.Context, actor Principal, email string, role Role) (*CreatedInvitation, error) {
+	return s.Invite(ctx, actor, InviteInput{Email: email, Role: role})
+}
+
+// Invite is CreateInvitation with the E1 fields: the team (department) the person joins, their profession (their
+// suggested agents) and whether they are the responsible of that team.
+func (s *Service) Invite(ctx context.Context, actor Principal, in InviteInput) (*CreatedInvitation, error) {
 	am, err := s.authorize(ctx, actor, PermMembersInvite)
 	if err != nil {
 		return nil, err
 	}
-	email = NormalizeEmail(email)
+	email, role := NormalizeEmail(in.Email), in.Role
 	ve := &ValidationError{}
 	if m := ValidateEmail(email); m != "" {
 		ve.add("email", m)
@@ -102,6 +113,7 @@ func (s *Service) CreateInvitation(ctx context.Context, actor Principal, email s
 	if !role.Valid() {
 		ve.add("role", "unknown role")
 	}
+	s.validateInviteTeam(ctx, actor.OrgID, &in, ve)
 	if err := ve.orNil(); err != nil {
 		return nil, err
 	}
@@ -134,12 +146,14 @@ func (s *Service) CreateInvitation(ctx context.Context, actor Principal, email s
 	}
 	now := s.now()
 	inv := Invitation{ID: uuid.NewString(), OrgID: actor.OrgID, Email: email, Role: role, TokenHash: hash,
-		InvitedBy: actor.UserID, CreatedAt: now, ExpiresAt: now.Add(s.invitationTTL())}
+		InvitedBy: actor.UserID, CreatedAt: now, ExpiresAt: now.Add(s.invitationTTL()),
+		DepartmentID: in.DepartmentID, Profession: in.Profession, Lead: in.Lead}
 	if err := s.store.CreateInvitation(ctx, inv, now); err != nil {
 		return nil, err
 	}
 	// The e-mail is personal data: the audit keeps its domain only.
-	s.audit(ctx, actor.OrgID, actor.UserID, "invitation.created", inv.ID, map[string]any{"role": role, "email_domain": emailDomain(email), "expires_at": inv.ExpiresAt})
+	s.audit(ctx, actor.OrgID, actor.UserID, "invitation.created", inv.ID, map[string]any{"role": role, "email_domain": emailDomain(email), "expires_at": inv.ExpiresAt,
+		"department_id": inv.DepartmentID, "profession": inv.Profession, "lead": inv.Lead})
 	return &CreatedInvitation{InvitationView: s.view(inv), Token: plain}, nil
 }
 
@@ -288,6 +302,7 @@ func (s *Service) AcceptInvitation(ctx context.Context, in AcceptInput, meta Cli
 	if err := s.store.AcceptInvitation(ctx, hash, newUser, m, now); err != nil {
 		return nil, err
 	}
+	s.profileFromInvitation(ctx, inv, u.ID)
 	s.audit(ctx, inv.OrgID, u.ID, "invitation.accepted", inv.ID, map[string]any{"role": inv.Role, "new_user": newUser != nil, "invited_by": inv.InvitedBy})
 	// Joined either way, but the session follows the same rules as a password login: an organization that enforces
 	// single sign-on or requires a second factor gets them here too (a new account has no factor yet, so it is sent to

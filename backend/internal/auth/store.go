@@ -128,6 +128,20 @@ type Store interface {
 	// PeekEmailToken checks a token like ConsumeEmailVerification but changes nothing; it returns the user.
 	PeekEmailToken(ctx context.Context, tokenHash, purpose string, now time.Time) (User, error)
 
+	// CreateOrg creates an organization and the first membership of an EXISTING user (a person who registered to join
+	// their company by domain but was not let in). ErrSlugTaken on a slug conflict.
+	CreateOrg(ctx context.Context, o Org, m Membership) error
+	// Team sign-up (profiles.go). GetOrgSetup / GetMemberProfile / TakeSignupIntent return ErrNotFound.
+	PutOrgSetup(ctx context.Context, s OrgSetup) error // upsert
+	GetOrgSetup(ctx context.Context, orgID string) (OrgSetup, error)
+	MarkOrgSetupDone(ctx context.Context, orgID string, at time.Time) error // ErrNotFound without a setup row
+	PutMemberProfile(ctx context.Context, p MemberProfile) error            // upsert by (org, user)
+	GetMemberProfile(ctx context.Context, orgID, userID string) (MemberProfile, error)
+	ListMemberProfiles(ctx context.Context, orgID string) ([]MemberProfile, error)
+	PutSignupIntent(ctx context.Context, in SignupIntent) error // upsert by user
+	// TakeSignupIntent returns the intent and deletes it (single use).
+	TakeSignupIntent(ctx context.Context, userID string) (SignupIntent, error)
+
 	// Two-factor authentication. GetMFA returns ErrNotFound when the user never started enrolment.
 	GetMFA(ctx context.Context, userID string) (MFARecord, error)
 	SaveMFA(ctx context.Context, r MFARecord) error // upsert

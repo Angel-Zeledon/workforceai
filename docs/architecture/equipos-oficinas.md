@@ -251,11 +251,37 @@ Tamaños: S (días), M (1-2 semanas), L (varias semanas).
 | Fase | Qué | Tamaño | Qué se nota |
 |---|---|---|---|
 | **E0. Saber quién es quién** (**implementada** 2026-11-02, ver `chat-history.md` sección E0) | Autor en cada mensaje; hilo propio por persona y agente; leído/no leído por persona; push y avisos a la persona; "mis aprobaciones"; persona en el registro de costos | M | Cada uno ve sus conversaciones; se sabe quién pidió qué. Es la deuda más grande y lo que todo lo demás necesita |
-| **E1. Alta y agentes por rol** | "¿Para quién es?", profesión, agentes sugeridos por rol, invitaciones con oficina y profesión, entrar por dominio a la empresa existente | S-M | La abogada no ve un agente de ventas; los invitados llegan a su equipo |
+| **E1. Alta y agentes por rol** (**implementada** 2026-11-03, ver abajo y `08-api.md` §41) | "¿Para quién es?", profesión, agentes sugeridos por rol, invitaciones con oficina y profesión, entrar por dominio a la empresa existente | S-M | La abogada no ve un agente de ventas; los invitados llegan a su equipo |
 | **E2. Oficinas** | Departamento → oficina (miembros, responsable, abierta/privada), dueño y visibilidad de agentes, directorio, oficina "General" para las empresas existentes, diseño 3D por oficina, memoria de oficina y personal | L | Cada equipo tiene su espacio, sus agentes y su memoria |
 | **E3. Permisos de archivos** | Tres niveles con herencia, carpetas personal y de oficina, carpeta restringida, compartir con caducidad, pedir acceso, acceso efectivo = agente ∩ persona en cada herramienta, marca de derivado, adjuntos fuera de `/Shared`, pantalla de permisos, auditoría de lecturas | L | Leer, editar o nada por carpeta y archivo, y los agentes lo respetan |
 | **E4. Colaborar entre oficinas** | Tocar la puerta, consulta a otra oficina con aprobación, encargos a personas o agentes, bandeja personal, compartir conversaciones, salas de proyecto con miembros | M | Ventas le pide a Legal sin ver lo que no debe |
 | **E5. Gobierno** | Aprobaciones al responsable de la oficina (por fin se usa `approver_id`), reglas por agente y acción, topes y costos por persona, panel de agentes, controles de Max | M | Cada responsable gobierna su oficina; el admin ve el conjunto |
+
+**E1 implementada (2026-11-03).** Plan: `docs/superpowers/plans/2026-11-03-e1-alta-agentes-por-rol.md`.
+
+- **Registro:** "¿Para quién es?" (solo para mí / mi equipo / mi empresa) y "¿A qué te dedicas?" (8 profesiones). Una
+  oficina personal no pide nombre de empresa; "mi equipo" pide empresa y nombre del equipo (por defecto, el de la
+  profesión).
+- **Agentes por rol:** las organizaciones creadas con el registro nuevo arrancan con el asistente y los agentes de la
+  profesión de cada persona (abogacía → Legal; ventas → Ventas y Análisis; contabilidad → Contabilidad y Análisis;
+  marketing → Ventas y Análisis; operaciones → Operaciones y Project manager; RR. HH. → Recursos Humanos; dirección →
+  Análisis y Project manager; otra → solo el asistente). Las organizaciones que ya existían, el demo, las cuentas de
+  prueba y las altas por API sin `audience` siguen con los 7 de siempre.
+- **Equipo = departamento.** "Mi equipo" crea el departamento con su responsable al entrar. "Mi empresa" abre el alta de
+  equipos: equipos de una lista (uno por profesión), propios o de una plantilla de industria, y responsable de cada uno
+  (yo, invitar a alguien o después). Cada equipo trae los agentes de su trabajo.
+- **Invitaciones con equipo, profesión y "responsable"**, con el límite de asientos de siempre. La persona invitada entra
+  a su equipo (puesto en el organigrama, jefa del equipo si es responsable), con sus agentes y la bienvenida de su
+  equipo (quién la invitó, responsable, compañeros, sus agentes).
+- **Entrar por dominio:** si la empresa verificó su dominio y activó el autoingreso, el registro lo ofrece; la cuenta se
+  crea sin organización y, al confirmar el correo, entra a esa empresa y elige su equipo y su trabajo en la bienvenida.
+  Si la empresa ya no lo permite, se crea su propia oficina.
+- **Bienvenida distinta por caso:** solo, responsable de la empresa (lleva al alta de equipos), responsable de equipo,
+  miembro y miembro sin equipo (elige equipo). El alta de equipos también queda en el menú de administración hasta
+  terminarla.
+- **Pendiente para E2:** la visibilidad de agentes por persona u oficina (en E1 todos ven todos los agentes de la
+  empresa, pero la empresa solo tiene los de los trabajos de su gente), la aprobación del responsable para entrar a un
+  equipo (en E1 se entra directo y queda auditado) y los poderes del responsable.
 
 Orden recomendado: **E0 → E1 → E2 → E3 → E4 → E5**. E0 y E1 se notan enseguida y no rompen nada. E3 va de la mano de la
 fase 4 de `archivos-agentes.md` (fuentes): las dos tocan permisos de carpetas y se deben diseñar juntas.

@@ -108,3 +108,42 @@ func areaOf(role, loc string) string {
 	_, _, _, area := profileOf(role, loc)
 	return area
 }
+
+// HireForRole adds the agent of a role the way a new organization gets it (E1, docs/architecture/equipos-oficinas.md §4):
+// with the seed identity (fixed id and name, e.g. "legal" / Elena Castro) when the role has one and that id is free,
+// otherwise exactly like HireFromTemplate. Same guarantees: no connection is granted and autonomy starts at the
+// template's default.
+func (o *Orchestrator) HireForRole(ctx context.Context, role, loc string) (domain.Agent, error) {
+	if loc == "" {
+		loc = o.loadStyle(ctx).Locale
+	}
+	loc = roles.Locale(loc)
+	seeds := roles.SeedAgentsFor([]string{role}, loc)
+	if len(seeds) == 0 {
+		return o.HireFromTemplate(ctx, HireInput{TemplateID: role, Locale: loc})
+	}
+	a := seeds[0]
+	w, ok := o.store.(AgentWriter)
+	if !ok {
+		return domain.Agent{}, fmt.Errorf("%w: this store cannot add agents", domain.ErrInvalid)
+	}
+	existing, err := o.store.ListAgents(ctx, o.org(ctx))
+	if err != nil {
+		return domain.Agent{}, err
+	}
+	for _, x := range existing {
+		if x.ID == a.ID || strings.EqualFold(x.Name, a.Name) {
+			return o.HireFromTemplate(ctx, HireInput{TemplateID: role, Locale: loc})
+		}
+	}
+	if err := w.CreateAgent(ctx, o.org(ctx), a); err != nil {
+		return domain.Agent{}, err
+	}
+	t, _ := roles.Get(role)
+	o.rec.Audit(ctx, domain.AuditLog{Actor: ActorFrom(ctx, "user"), Action: "agent.created_from_template", Entity: "agent", EntityID: a.ID,
+		Details: map[string]any{"template_id": t.ID, "template_version": t.Version, "risk_tier": t.RiskTier, "autonomy": a.Autonomy, "tools": a.Tools, "via": "profession"}})
+	text := map[string]string{"es": "Se incorporó al equipo: ", "en": "Joined the team: "}[loc] + a.Name + " (" + a.Title + ")"
+	o.rec.Emit(ctx, Action{Type: domain.EvAgentCreated, AgentID: a.ID, Entity: "agent", EntityID: a.ID, SkipAudit: true,
+		Payload: map[string]any{"agent": a, "template_id": t.ID}, Text: text})
+	return a, nil
+}
