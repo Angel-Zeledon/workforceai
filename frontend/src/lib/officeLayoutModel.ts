@@ -162,11 +162,11 @@ export type FixtureLevel = "floor" | "top" | "wall";
  * and tint, how much floor it takes (`w` x `d`), the height of its grab handle (`h`), and for surfaces the height of
  * their top (`surface`: what other things rest on).
  */
-export interface FixtureDef { x: number; z: number; rot: number; s: number; tint?: string; w: number; d: number; h: number; level: FixtureLevel; room?: ZoneName; surface?: number }
-const decor = (x: number, z: number, s: number, w: number, tint?: string): FixtureDef => ({ x, z, rot: 0, s, w, d: w, h: 1.8, level: "floor", ...(tint ? { tint } : {}) });
+export interface FixtureDef { x: number; z: number; rot: number; s: number; tint?: string; w: number; d: number; h: number; level: FixtureLevel; room?: ZoneName; surface?: number; /** a circle of diameter `w` (tables, seats, mugs, plants) */ round?: boolean }
+const decor = (x: number, z: number, s: number, w: number, tint?: string): FixtureDef => ({ x, z, rot: 0, s, w, d: w, h: 1.8, level: "floor", round: true, ...(tint ? { tint } : {}) });
 const part = (room: ZoneName, x: number, z: number, w: number, d: number, h: number, level: FixtureLevel = "floor", extra: Partial<FixtureDef> = {}): FixtureDef => ({ x, z, rot: 0, s: 1, w, d, h, level, room, ...extra });
 /** The six meeting seats stand in a ring of radius 2.25 around the table (officeState.meetingSeat uses the same angles). */
-const seat = (k: number): FixtureDef => { const a = (k / 6) * Math.PI * 2 + 0.3; return part("meeting", Math.sin(a) * 2.25, Math.cos(a) * 2.25, 0.6, 0.6, 0.45); };
+const seat = (k: number): FixtureDef => { const a = (k / 6) * Math.PI * 2 + 0.3; return part("meeting", Math.sin(a) * 2.25, Math.cos(a) * 2.25, 0.6, 0.6, 0.45, "floor", { round: true }); };
 /** The built-in objects: where they stand, their scale and tint, and how much floor they take. */
 export const FIXTURES: Record<FixtureId, FixtureDef> = {
   plant_a: decor(-12.8, -8.6, 1.5, 0.8),
@@ -175,7 +175,7 @@ export const FIXTURES: Record<FixtureId, FixtureDef> = {
   plant_d: decor(12.8, 8.6, 1.3, 0.7, "#7a9680"),
   rack: { x: -12.9, z: -0.5, rot: Math.PI / 2, s: 1, w: 0.9, d: 0.8, h: 1.8, level: "floor" },
   // meeting room: round table, six seats around it, the screen on the back wall
-  meeting_table: part("meeting", 0, 0, 2.4, 2.4, 0.75), // round (1.45 m radius): a square a little smaller than it, so the seats fit around it
+  meeting_table: part("meeting", 0, 0, 2.9, 2.9, 0.75, "floor", { round: true }), // round, its real 1.45 m radius: nothing hides under its edge
   meeting_seat_1: seat(0), meeting_seat_2: seat(1), meeting_seat_3: seat(2), meeting_seat_4: seat(3), meeting_seat_5: seat(4), meeting_seat_6: seat(5),
   meeting_screen: part("meeting", 0, -3.9, 3.4, 0.1, 1.7, "wall"),
   // approvals: the counter with the pile of pending approvals, and the user's chair behind it
@@ -184,13 +184,13 @@ export const FIXTURES: Record<FixtureId, FixtureDef> = {
   // cafeteria: the bar along the east edge with the machine, mugs and pot on it; a high table with a mug; a plant
   cafe_counter: part("cafe", 1.75, 0, 0.78, 3.88, 0.95, "floor", { surface: 0.95 }),
   cafe_machine: part("cafe", 1.8, -0.9, 0.42, 0.5, 0.55, "top"),
-  cafe_mug_1: part("cafe", 1.7, 0.1, 0.12, 0.12, 0.12, "top"),
-  cafe_mug_2: part("cafe", 1.7, 0.4, 0.12, 0.12, 0.12, "top"),
-  cafe_mug_3: part("cafe", 1.7, 0.7, 0.12, 0.12, 0.12, "top"),
-  cafe_pot: part("cafe", 1.8, 1.3, 0.24, 0.24, 0.26, "top"),
-  cafe_table: part("cafe", -0.6, 0, 0.84, 0.84, 1.0, "floor", { surface: 0.97 }),
-  cafe_table_mug: part("cafe", -0.5, 0.1, 0.12, 0.12, 0.12, "top"),
-  cafe_plant: part("cafe", -1.6, 1.8, 0.6, 0.6, 1.0, "floor", { s: 0.8, tint: "#8aa28c" }),
+  cafe_mug_1: part("cafe", 1.7, 0.1, 0.12, 0.12, 0.12, "top", { round: true }),
+  cafe_mug_2: part("cafe", 1.7, 0.4, 0.12, 0.12, 0.12, "top", { round: true }),
+  cafe_mug_3: part("cafe", 1.7, 0.7, 0.12, 0.12, 0.12, "top", { round: true }),
+  cafe_pot: part("cafe", 1.8, 1.3, 0.24, 0.24, 0.26, "top", { round: true }),
+  cafe_table: part("cafe", -0.6, 0, 0.84, 0.84, 1.0, "floor", { surface: 0.97, round: true }),
+  cafe_table_mug: part("cafe", -0.5, 0.1, 0.12, 0.12, 0.12, "top", { round: true }),
+  cafe_plant: part("cafe", -1.6, 1.8, 0.6, 0.6, 1.0, "floor", { s: 0.8, tint: "#8aa28c", round: true }),
 };
 export const FIXTURE_IDS = Object.keys(FIXTURES) as FixtureId[];
 export const DECOR_IDS = FIXTURE_IDS.filter((id) => !FIXTURES[id].room) as DecorId[];
@@ -206,7 +206,7 @@ export const MEETING_SEATS = ROOM_PARTS.meeting.filter((id) => id.startsWith("me
 
 export interface Pose { x: number; z: number; rot: number }
 /** A floor rectangle (same shape as officeGeometry.Box). */
-export interface FootBox { x: number; z: number; w: number; d: number; rot: number }
+export interface FootBox { x: number; z: number; w: number; d: number; rot: number; round?: boolean }
 
 /** Center of a room in a layout: where the organization moved it, or its built-in place. */
 export function zoneCenterOf(l: Layout, name: ZoneName): [number, number] {
@@ -233,12 +233,13 @@ export function fixtureWorld(l: Layout, id: FixtureId, center?: readonly [number
   return { x: cx + p.x, z: cz + p.z, rot: p.rot };
 }
 /** Floor rectangle of a built-in object at a pose (in the same frame as the pose). */
-export const partFootprint = (id: FixtureId, at: Pose): FootBox => ({ x: at.x, z: at.z, w: FIXTURES[id].w, d: FIXTURES[id].d, rot: at.rot });
+export const partFootprint = (id: FixtureId, at: Pose): FootBox => ({ x: at.x, z: at.z, w: FIXTURES[id].w, d: FIXTURES[id].d, rot: at.rot, ...(FIXTURES[id].round ? { round: true } : {}) });
 
 /** Local offset (lx, lz) of a frame turned by `rot`, in the parent frame (the same convention as three.js rotation.y). */
 export const turn = (lx: number, lz: number, rot: number): [number, number] => [lx * Math.cos(rot) + lz * Math.sin(rot), -lx * Math.sin(rot) + lz * Math.cos(rot)];
 /** Whether a point lies on a rotated rectangle. */
 function onBox(px: number, pz: number, b: FootBox): boolean {
+  if (b.round) return Math.hypot(px - b.x, pz - b.z) <= b.w / 2 + 1e-9;
   const [lx, lz] = turn(px - b.x, pz - b.z, -b.rot);
   return Math.abs(lx) <= b.w / 2 + 1e-9 && Math.abs(lz) <= b.d / 2 + 1e-9;
 }

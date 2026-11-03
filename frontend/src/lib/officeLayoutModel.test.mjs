@@ -123,3 +123,21 @@ test("normalizeLayout keeps known parts and drops unknown ids", () => {
   assert.deepEqual(DEFAULT_LAYOUT.fixtures, {});
   assert.equal(FIXTURES.cafe_counter.surface, 0.95);
 });
+
+test("round room parts take their real round footprint: a seat cannot hide under the table's edge", async () => {
+  const { overlap } = await import("./officeGeometry.ts");
+  const m = await import("./officeLayoutModel.ts");
+  const table = m.partFootprint("meeting_table", { x: 0, z: 0, rot: 0 });
+  assert.equal(table.round, true);
+  assert.ok(table.w >= 2.9 - 1e-9, "the table's circle is its real 1.45 m radius");
+  const seatAt = (x, z) => m.partFootprint("meeting_seat_1", { x, z, rot: 0 });
+  assert.equal(overlap(table, seatAt(1.6, 0)), true, "under the edge");
+  // the built-in ring still fits: no seat touches the table or the next seat
+  const l = m.normalizeLayout ? m.normalizeLayout({}) : m.DEFAULT_LAYOUT;
+  for (const id of m.ROOM_PARTS.meeting) {
+    if (id === "meeting_table" || id === "meeting_screen") continue;
+    const seat = m.partFootprint(id, m.fixturePose(l, id));
+    assert.equal(overlap(table, seat), false, `${id} clears the table`);
+    assert.equal(m.partNeighbors(l, id, m.fixturePose(l, id)).some((o) => overlap(seat, o)), false, `${id} fits where it stands`);
+  }
+});

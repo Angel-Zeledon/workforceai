@@ -2,7 +2,8 @@
  * Pure geometry of the office editor (no React, no three): footprints, snapping, overlap tests and the free-floor rules.
  * Kept free of imports so it can be unit tested with `node --test`. Units are world meters; rotation is about Y.
  */
-export interface Box { x: number; z: number; w: number; d: number; rot: number }
+/** A floor footprint: a rotated rectangle, or a circle of diameter `w` when `round` (tables, seats, mugs, plants). */
+export interface Box { x: number; z: number; w: number; d: number; rot: number; round?: boolean }
 
 /** The walkable slab (walls sit just outside it). */
 export const FLOOR = { x0: -13.9, x1: 13.9, z0: -9.7, z1: 9.7 };
@@ -24,6 +25,7 @@ export function corners(b: Box): [number, number][] {
 
 /** Separating-axis overlap of two rotated rectangles; `margin` shrinks both (touching edges do not collide). */
 export function overlap(a: Box, b: Box, margin = 0.02): boolean {
+  if (a.round || b.round) return roundOverlap(a, b, margin);
   const shrink = (r: Box): Box => ({ ...r, w: Math.max(0.01, r.w - margin * 2), d: Math.max(0.01, r.d - margin * 2) });
   const A = corners(shrink(a)), B = corners(shrink(b));
   for (const poly of [A, B]) {
@@ -40,7 +42,21 @@ export function overlap(a: Box, b: Box, margin = 0.02): boolean {
 }
 
 /** Axis-aligned bounds of a rotated rectangle. */
+/** Overlap when one or both footprints are circles (diameter `w`): circle-circle by distance, circle-rectangle by the
+ *  rectangle's closest point to the circle's center. `margin` shrinks both, like the rectangle test. */
+function roundOverlap(a: Box, b: Box, margin: number): boolean {
+  if (a.round && b.round) return Math.hypot(a.x - b.x, a.z - b.z) < a.w / 2 + b.w / 2 - margin * 2;
+  const c = a.round ? a : b, r = a.round ? b : a;
+  const cos = Math.cos(r.rot), sin = Math.sin(r.rot), dx = c.x - r.x, dz = c.z - r.z;
+  // the circle's center in the rectangle's own frame (inverse of corners())
+  const lx = dx * cos - dz * sin, lz = dx * sin + dz * cos;
+  const hw = Math.max(0.005, r.w / 2 - margin), hd = Math.max(0.005, r.d / 2 - margin);
+  const qx = Math.max(-hw, Math.min(hw, lx)), qz = Math.max(-hd, Math.min(hd, lz));
+  return Math.hypot(lx - qx, lz - qz) < Math.max(0.005, c.w / 2 - margin);
+}
+
 export function bounds(b: Box) {
+  if (b.round) { const r = b.w / 2; return { x0: b.x - r, x1: b.x + r, z0: b.z - r, z1: b.z + r }; }
   const cs = corners(b);
   return { x0: Math.min(...cs.map((c) => c[0])), x1: Math.max(...cs.map((c) => c[0])), z0: Math.min(...cs.map((c) => c[1])), z1: Math.max(...cs.map((c) => c[1])) };
 }

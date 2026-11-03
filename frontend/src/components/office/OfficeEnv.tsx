@@ -429,13 +429,20 @@ function ZoneHit({ name }: { name: ZoneName }) {
   );
 }
 
-/** Grab handle of a built-in object in edit mode (a little larger than it, so small things like a mug can be caught). */
+/**
+ * Grab handle of a built-in object in edit mode. Floor things get a little margin; the small things resting on a
+ * surface (mugs, pot, machine) only a hair more than themselves, so their handles do not cover the counter they stand
+ * on: touching the counter between them grabs the counter, touching a mug grabs the mug.
+ */
 function FixtureHit({ id }: { id: FixtureId }) {
   const f = FIXTURES[id];
   const y = f.level === "wall" ? 1.7 : f.h / 2;
+  const small = f.level === "top";
+  const w = small ? Math.max(0.16, f.w) + 0.05 : Math.max(0.3, f.w) + 0.2;
+  const d = small ? Math.max(0.16, f.d) + 0.05 : Math.max(0.3, f.d) + 0.2;
   return (
     <mesh position={[0, y, 0]} {...grab(() => useOfficeLayout.getState().select({ kind: "fixture", id }))}>
-      <boxGeometry args={[Math.max(0.3, f.w) + 0.2, f.h, Math.max(0.3, f.d) + 0.2]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      <boxGeometry args={[w, f.h, d]} /><meshBasicMaterial transparent opacity={0} depthWrite={false} />
     </mesh>
   );
 }

@@ -19,14 +19,23 @@ interface Ghost { item: ShopItem; x: number; z: number; rot: number; y: number; 
 interface Drag { kind: "piece" | "desk" | "zone" | "fixture"; id: string; snapshot: Layout; off: { x: number; z: number } | null; moved: boolean; valid: boolean; last: { x: number; z: number } }
 
 /** Outline of a footprint on the floor (or on the surface a small thing rests on: `y`). */
+/** The footprint under a selected, dragged or placed thing: its outline (a circle for round things) and a fill. When it
+ *  does not fit, the fill turns into a clear red shadow: letting go there puts it back where it was. */
 function Frame({ box, color, y = 0 }: { box: Box; color: string; y?: number }) {
-  const pts = useMemo(() => [...corners(box), corners(box)[0]].map(([x, z]) => new THREE.Vector3(x, 0.06 + y, z)), [box, y]);
+  const pts = useMemo(() => {
+    if (box.round) {
+      const r = box.w / 2;
+      return Array.from({ length: 49 }, (_, i) => { const a = (i / 48) * Math.PI * 2; return new THREE.Vector3(box.x + Math.cos(a) * r, 0.06 + y, box.z + Math.sin(a) * r); });
+    }
+    return [...corners(box), corners(box)[0]].map(([x, z]) => new THREE.Vector3(x, 0.06 + y, z));
+  }, [box, y]);
+  const bad = color === BAD;
   return (
     <>
-      <Line points={pts} color={color} lineWidth={2.5} />
-      <mesh position={[box.x, 0.045 + y, box.z]} rotation={[-Math.PI / 2, 0, -box.rot]}>
-        <planeGeometry args={[box.w, box.d]} />
-        <meshBasicMaterial color={color} transparent opacity={0.14} depthWrite={false} toneMapped={false} />
+      <Line points={pts} color={color} lineWidth={bad ? 3.5 : 2.5} />
+      <mesh position={[box.x, 0.045 + y, box.z]} rotation={[-Math.PI / 2, 0, -box.rot]} renderOrder={bad ? 10 : 0}>
+        {box.round ? <circleGeometry args={[box.w / 2, 48]} /> : <planeGeometry args={[box.w, box.d]} />}
+        <meshBasicMaterial color={color} transparent opacity={bad ? 0.42 : 0.14} depthWrite={false} depthTest={!bad} toneMapped={false} />
       </mesh>
     </>
   );

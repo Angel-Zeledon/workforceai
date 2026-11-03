@@ -39,3 +39,20 @@ test("desk footprint and wall snapping", () => {
   assert.equal(w.wall, "w");
   assert.equal(corners({ x: 0, z: 0, w: 2, d: 2, rot: 0 }).length, 4);
 });
+
+test("overlap: round footprints collide as circles", () => {
+  const table = { x: 0, z: 0, w: 2.9, d: 2.9, rot: 0, round: true }; // radius 1.45
+  const seat = (x, z) => ({ x, z, w: 0.6, d: 0.6, rot: 0, round: true });
+  assert.equal(overlap(table, seat(2.25, 0)), false, "a seat in its ring clears the table");
+  assert.equal(overlap(table, seat(1.6, 0)), true, "a seat under the table's edge collides");
+  // diagonal: a square would reach 2.05 m along the diagonal, the circle only 1.45 m
+  assert.equal(overlap(table, seat(1.4, 1.4)), false, "the circle leaves the square's corners free");
+  const box = { x: 1.8, z: 0, w: 1, d: 1, rot: 0 }; // its edge at 1.3 m, inside the 1.45 m circle
+  assert.equal(overlap(table, box), true, "a box reaching into the circle collides");
+  assert.equal(overlap(table, { ...box, x: 2.1, z: 2.1 }), false, "a box off the circle's diagonal does not");
+  assert.equal(overlap(box, table), overlap(table, box), "symmetric");
+});
+
+test("a round footprint keeps its bounds whatever its rotation", () => {
+  assert.equal(insideFloor({ x: FLOOR.x1 - 0.31, z: 0, w: 0.6, d: 0.6, rot: Math.PI / 4, round: true }), true);
+});
