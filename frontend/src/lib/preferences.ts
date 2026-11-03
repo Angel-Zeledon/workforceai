@@ -19,6 +19,9 @@ export interface AgentPrefs {
 export interface Prefs {
   version: 1;
   locale: Locale;
+  /** the person picked the language in Settings; until then the app follows the organization's language (then the
+   *  browser's), so a Spanish company on an English browser still sees Spanish */
+  localeChosen?: boolean;
   lighting: Lighting;
   showNames: boolean;
   labelSize: LabelSize;
@@ -79,6 +82,8 @@ interface PrefState {
   set: (patch: Partial<Omit<Prefs, "agents" | "version">>) => void;
   setAgent: (id: string, patch: AgentPrefs) => void;
   resetAgent: (id: string) => void;
+  /** the organization's language, applied while the person has not picked one */
+  followOrgLocale: (locale: string | undefined) => void;
 }
 
 export const usePreferences = create<PrefState>((set, get) => {
@@ -95,7 +100,13 @@ export const usePreferences = create<PrefState>((set, get) => {
     },
     set: (patch) => {
       if (patch.locale) setCurrentLocale(patch.locale);
-      commit({ ...get().prefs, ...patch });
+      commit({ ...get().prefs, ...patch, ...(patch.locale ? { localeChosen: true } : {}) });
+    },
+    followOrgLocale: (locale) => {
+      const prefs = get().prefs;
+      if (prefs.localeChosen || !locale || locale === prefs.locale || !(["es", "en", "pt"] as string[]).includes(locale)) return;
+      setCurrentLocale(locale as Locale);
+      commit({ ...prefs, locale: locale as Locale });
     },
     setAgent: (id, patch) => {
       const cur = { ...(get().prefs.agents[id] || {}), ...patch } as Record<string, unknown>;

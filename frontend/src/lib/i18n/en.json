@@ -1547,7 +1547,7 @@
   "chats.agent.sub": "Direct chat",
   "chats.seeInOffice": "See in the office",
   "chats.work": "Work",
-  "chats.work.sub": "The agents' conversation about the work",
+  "chats.work.sub": "What the agents said to each other while doing your request",
   "chats.work.empty": "This conversation has no messages yet.",
   "chats.readonly": "This is the internal conversation of a piece of work (read only). To keep talking, write in General or to an agent.",
   "chats.continueGeneral": "Go to General",
@@ -1561,7 +1561,7 @@
   "chats.req.failed": "failed",
   "chats.viewReport": "View report",
   "chats.viewProject": "View project",
-  "chats.viewWork": "View the work conversation",
+  "chats.viewWork": "See how they worked on it",
   "chats.report.missing": "The report was not found.",
   "chats.loadOlder": "Show earlier messages",
   "chats.loadingOlder": "Loading…",
@@ -5436,5 +5436,7 @@
   "tpl.category.operations": "Operations",
   "tpl.category.marketing": "Marketing",
   "tpl.category.management": "Management",
-  "e1.tpl.missing": "Your office has no {roles}: the assistant will do those steps. Hire them in “Hire” if you want them to."
+  "e1.tpl.missing": "Your office has no {roles}: the assistant will do those steps. Hire them in “Hire” if you want them to.",
+  "chats.work.back": "Back to the chat",
+  "chats.work.backHint": "You are seeing how the agents worked on this request. Your chat is where you left it."
 }

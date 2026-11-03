@@ -17,6 +17,7 @@ import { useProjects } from "@/lib/projects/store";
 import { fmtUsd } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
+import { orgApi } from "@/lib/orgConfigApi";
 import { setNavigator, SECTIONS, sectionOf } from "@/lib/navBridge";
 import { AdminMenu } from "../admin/AdminMenu";
 import { OrgIndicator } from "../auth/OrgIndicator";
@@ -99,6 +100,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => startRealtime(), []);
   useAwayHeartbeat(); // last seen, for "while you were away" (B3)
   useEffect(() => { hydratePrefs(); }, [hydratePrefs]);
+  // the organization's language wins over the browser's until the person picks one in Settings
+  useEffect(() => { if (!MOCK) orgApi.settings().then((o) => usePreferences.getState().followOrgLocale(o.locale)).catch(() => { /* older backend or no permission */ }); }, []);
   useEffect(() => { try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1"); } catch { /* private mode */ } }, []);
   useEffect(() => { setDrawer(false); }, [pathname]);
   // Old stores keep reporting "is this screen open?" for code that still reads them: derive it from the URL.

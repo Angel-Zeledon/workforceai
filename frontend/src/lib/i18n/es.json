@@ -1547,7 +1547,7 @@
   "chats.agent.sub": "Chat directo",
   "chats.seeInOffice": "Ver en la oficina",
   "chats.work": "Trabajo",
-  "chats.work.sub": "Conversación del trabajo entre los agentes",
+  "chats.work.sub": "Lo que se dijeron los agentes mientras hacían tu pedido",
   "chats.work.empty": "Esta conversación aún no tiene mensajes.",
   "chats.readonly": "Esta es la conversación interna de un trabajo (solo lectura). Para seguir hablando, escribe en General o a un agente.",
   "chats.continueGeneral": "Ir a General",
@@ -1561,7 +1561,7 @@
   "chats.req.failed": "fallida",
   "chats.viewReport": "Ver informe",
   "chats.viewProject": "Ver proyecto",
-  "chats.viewWork": "Ver conversación del trabajo",
+  "chats.viewWork": "Ver cómo lo trabajaron",
   "chats.report.missing": "No se encontró el informe.",
   "chats.loadOlder": "Ver mensajes anteriores",
   "chats.loadingOlder": "Cargando…",
@@ -5436,5 +5436,7 @@
   "tpl.category.operations": "Operaciones",
   "tpl.category.marketing": "Marketing",
   "tpl.category.management": "Dirección",
-  "e1.tpl.missing": "Tu oficina no tiene {roles}: esos pasos los hará la asistente. Contrátalos en «Contratar» si quieres que los hagan ellos."
+  "e1.tpl.missing": "Tu oficina no tiene {roles}: esos pasos los hará la asistente. Contrátalos en «Contratar» si quieres que los hagan ellos.",
+  "chats.work.back": "Volver al chat",
+  "chats.work.backHint": "Estás viendo cómo trabajaron los agentes en este pedido. Tu chat sigue donde lo dejaste."
 }

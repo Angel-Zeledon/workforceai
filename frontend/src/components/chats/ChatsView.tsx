@@ -425,6 +425,8 @@ export function ChatsView({ agentId }: { agentId?: string }) {
   const hydrate = usePreferences((s) => s.hydrate);
   const reduce = usePreferences((s) => s.prefs.reduceMotion);
   const [sel, setSel] = useState<Sel>({ kind: "thread", key: agentId || GENERAL });
+  // the chat the person was in when they opened "how they worked on it" from a request card: the way back
+  const [cameFrom, setCameFrom] = useState<Sel | null>(null);
   const [showThread, setShowThread] = useState(!!agentId); // phones: list first, thread after picking
   const [q, setQ] = useState("");
   const [showArchived, setShowArchived] = useState(false);
@@ -454,8 +456,9 @@ export function ChatsView({ agentId }: { agentId?: string }) {
 
   // the URL follows the selection without remounting (and back/forward work)
   const peopleOpen = usePeopleChat((s) => s.activeId); // a people channel is open (replaces the thread on the right)
-  const navigate = useCallback((next: Sel) => {
+  const navigate = useCallback((next: Sel, from: Sel | null = null) => {
     void usePeopleChat.getState().open(null);
+    setCameFrom(from);
     setSel(next);
     setShowThread(true);
     if (typeof window !== "undefined" && next.kind === "thread") {
@@ -664,7 +667,16 @@ export function ChatsView({ agentId }: { agentId?: string }) {
           </div>
         ) : (
           <div key={histKey} data-tour="chats.messages" className="chats-fade flex min-h-0 flex-1 flex-col">
-            <Messages sel={sel} onOpenReport={setReport} onOpenConv={(id) => navigate({ kind: "conv", id })} empty={sel.kind === "thread" ? emptyThread : <p className="py-10 text-center text-xs text-mute">{t("chats.work.empty")}</p>} />
+            {sel.kind === "conv" && cameFrom && (
+              <div data-testid="chats-work-back" className="flex items-center gap-3 border-b border-line bg-accent-soft/50 px-4 py-2">
+                <button type="button" data-testid="chats-work-back-btn" onClick={() => navigate(cameFrom)}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line-strong bg-panel px-2.5 py-1 text-[11.5px] font-semibold text-accent-hover transition-colors hover:border-accent">
+                  <span aria-hidden>‹</span>{t("chats.work.back")}
+                </button>
+                <p className="min-w-0 text-[11.5px] leading-snug text-ink2">{t("chats.work.backHint")}</p>
+              </div>
+            )}
+            <Messages sel={sel} onOpenReport={setReport} onOpenConv={(id) => navigate({ kind: "conv", id }, sel)} empty={sel.kind === "thread" ? emptyThread : <p className="py-10 text-center text-xs text-mute">{t("chats.work.empty")}</p>} />
             {sel.kind === "thread" && <TypingNow thread={sel.key} />}
           </div>
         )}
