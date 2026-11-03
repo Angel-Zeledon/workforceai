@@ -14,6 +14,18 @@
 # database, and the stored credentials cannot be decrypted without the key. To rotate it, move the current value to
 # CONNECTIONS_KEK_PREVIOUS and put a new one in CONNECTIONS_KEK.
 # The runtime stays in SIMULATION mode (no model API keys, no cost) until a provider key is configured.
+#
+# Files (docs/architecture/drive.md): the bytes live in the internal S3 store `wf-objects` (RustFS, no published
+# port, volume wf-objdata). REQUIRED in ./.env: S3_ACCESS_KEY (`openssl rand -hex 16`) and S3_SECRET_KEY
+# (`openssl rand -hex 32`). Files uploaded before S3 stay readable from Postgres; move them with
+#   docker compose exec wf-backend server ctl objects-to-s3            (copy + verify)
+#   docker compose exec wf-backend server ctl objects-to-s3 -delete    (then free the Postgres copies)
+# backup.sh also copies the objects volume.
+# Code sandbox + PDF page rendering (docs/architecture/code-sandbox.md): OFF by default. Turn on with
+# COMPOSE_PROFILES=sandbox and SANDBOX_TOKEN (`openssl rand -hex 24`) in ./.env.
+# Search by meaning (docs/architecture/agent-search.md): OFF by default (EMBEDDINGS_PROVIDER empty). Customer documents
+# may only go to Gemini once the key is on PAID billing (on the free tier Google uses the data); then set
+# EMBEDDINGS_PROVIDER=gemini and GEMINI_API_KEY in ./.env.
 name: workforceai
 
 services:
@@ -35,6 +47,25 @@ services:
     mem_limit: 384m
     networks: [internal]
 
+  # S3-compatible storage of the drive (same RustFS as in development). Private network only, no published port.
+  wf-objects:
+    image: rustfs/rustfs:1.0.1
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:?define S3_ACCESS_KEY in deploy/vps/.env (openssl rand -hex 16)}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?define S3_SECRET_KEY in deploy/vps/.env (openssl rand -hex 32)}
+    volumes:
+      - wf-objdata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    mem_limit: 384m
+    cpus: 0.5
+    networks: [internal]
+
   wf-runtime:
     build: ../../agent-runtime
     restart: unless-stopped
@@ -52,6 +83,8 @@ services:
       wf-runtime:
         condition: service_healthy
       wf-postgres:
+        condition: service_healthy
+      wf-objects:
         condition: service_healthy
     environment:
       PORT: "8080"
@@ -86,6 +119,38 @@ services:
       # Generic API sources may reach private/LAN addresses only when true (docs/architecture/integrations-credentials.md
       # sec. 18.8). This is a shared VPS: keep it false.
       CUSTOM_API_ALLOW_PRIVATE: ${CUSTOM_API_ALLOW_PRIVATE:-false}
+      # Plans (docs/architecture/approvals-notify.md 3.1) paid with ONVO Pay (docs/architecture/billing-onvo.md). All off
+      # by default; set them in ./.env. PLANS=on puts every organization without a subscription on Free. The ONVO keys
+      # are secrets: only in ./.env. With ONVO_SECRET_KEY the rest is required (the backend refuses to start without it).
+      PLANS: ${PLANS:-off}
+      PLAN_SELF_SERVE: ${PLAN_SELF_SERVE:-off}
+      ONVO_SECRET_KEY: ${ONVO_SECRET_KEY:-}
+      ONVO_PUBLISHABLE_KEY: ${ONVO_PUBLISHABLE_KEY:-}
+      ONVO_WEBHOOK_SECRET: ${ONVO_WEBHOOK_SECRET:-}
+      ONVO_PRICE_PRO_MONTHLY: ${ONVO_PRICE_PRO_MONTHLY:-}
+      ONVO_PRICE_PRO_YEARLY: ${ONVO_PRICE_PRO_YEARLY:-}
+      ONVO_PRICE_MAX_MONTHLY: ${ONVO_PRICE_MAX_MONTHLY:-}
+      ONVO_PRICE_MAX_YEARLY: ${ONVO_PRICE_MAX_YEARLY:-}
+      # Files: the internal S3 store (wf-objects). Its credentials reach only the backend.
+      S3_ENDPOINT: http://wf-objects:9000
+      S3_BUCKET: wfai-drive
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?define S3_ACCESS_KEY in deploy/vps/.env}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?define S3_SECRET_KEY in deploy/vps/.env}
+      S3_USE_PATH_STYLE: "true"
+      # Uploads are streamed (temporary file -> S3), so the backend's 256 MB stays enough. Per file, default 500 MB.
+      DRIVE_MAX_UPLOAD_MB: ${DRIVE_MAX_UPLOAD_MB:-}
+      DRIVE_QUOTA_MB: ${DRIVE_QUOTA_MB:-}
+      # Search by meaning: OFF until Gemini is on paid billing (see the header).
+      EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER:-}
+      EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      EMBEDDINGS_DIMENSIONS: ${EMBEDDINGS_DIMENSIONS:-}
+      EMBEDDINGS_DAILY_TOKENS: ${EMBEDDINGS_DAILY_TOKENS:-}
+      # Code sandbox and PDF page rendering (profile "sandbox"): without SANDBOX_TOKEN they do not exist.
+      SANDBOX_URL: http://wf-sandbox-runner:8090
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-}
+      SANDBOX_MAX_RUNTIME_SECONDS: ${SANDBOX_MAX_RUNTIME_SECONDS:-60}
+      SANDBOX_MAX_RUNS_PER_DAY: ${SANDBOX_MAX_RUNS_PER_DAY:-20}
     mem_limit: 256m
     networks: [internal, edge]
 
@@ -105,8 +170,64 @@ services:
     mem_limit: 64m
     networks: [edge]
 
+  # ---- Code sandbox + PDF page rendering -- OFF by default (profile "sandbox") ----
+  # On: COMPOSE_PROFILES=sandbox and SANDBOX_TOKEN in ./.env, then ./deploy.sh (it builds the images).
+  # WARNING: wf-sandbox-runner mounts the Docker socket, which is root on this SHARED host (stockai runs here too). It
+  # publishes no port, lives only on the private network and requires the token. Every run is a throwaway container
+  # with --network none, read-only root, no capabilities and the CPU / memory / pids / time caps below. Prefer
+  # SANDBOX_RUNTIME=runsc (gVisor installed on the host) before turning on desk mode for anyone.
+  wf-sandbox-image:
+    profiles: ["sandbox"]
+    build: ../../sandbox
+    image: wfai-sandbox-python:1
+    entrypoint: ["true"]
+    restart: "no"
+    network_mode: none
+
+  wf-sandbox-render-image:
+    profiles: ["sandbox"]
+    build: ../../sandbox/render
+    image: wfai-sandbox-render:1
+    entrypoint: ["true"]
+    restart: "no"
+    network_mode: none
+
+  wf-sandbox-runner:
+    profiles: ["sandbox"]
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile.sandbox-runner
+    restart: unless-stopped
+    environment:
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-}  # required (>= 16 chars): the runner refuses to start without it
+      SANDBOX_IMAGE: wfai-sandbox-python:1
+      SANDBOX_RENDER_IMAGE: wfai-sandbox-render:1
+      SANDBOX_RUNTIME: ${SANDBOX_RUNTIME:-}
+      SANDBOX_MAX_RUNTIME_SECONDS: ${SANDBOX_MAX_RUNTIME_SECONDS:-60}
+      # Caps of EACH run (shared VPS: half a CPU, 512 MB, one run at a time)
+      SANDBOX_MEMORY_MB: ${SANDBOX_MEMORY_MB:-512}
+      SANDBOX_CPUS: ${SANDBOX_CPUS:-0.5}
+      SANDBOX_PIDS: ${SANDBOX_PIDS:-128}
+      SANDBOX_MAX_CONCURRENT: ${SANDBOX_MAX_CONCURRENT:-1}
+      PORT: "8090"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - wf-sandbox-image
+      - wf-sandbox-render-image
+    healthcheck:
+      test: ["CMD", "sandbox-runner", "-healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    mem_limit: 128m
+    cpus: 0.5
+    networks: [internal]
+
 volumes:
   wf-pgdata: {}
+  wf-objdata: {}
 
 networks:
   internal: {}

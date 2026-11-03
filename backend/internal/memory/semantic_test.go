@@ -248,3 +248,33 @@ func TestEmbeddingsNeverCarrySecrets(t *testing.T) {
 		t.Fatalf("document and query were embedded: %d", len(emb.texts))
 	}
 }
+
+// queryFake also has the query form (like docindex.Service with Gemini): the
+// semantic leg must embed the query with it, documents stay on EmbedTexts.
+type queryFake struct {
+	*fakeEmbedder
+	queries []string
+}
+
+func (q *queryFake) EmbedQueryTexts(ctx context.Context, org string, texts []string) ([][]float32, string, string) {
+	q.mu.Lock()
+	q.queries = append(q.queries, texts...)
+	q.mu.Unlock()
+	return q.fakeEmbedder.EmbedTexts(ctx, org, texts)
+}
+
+func TestSemanticEmbedsTheQueryAsAQuery(t *testing.T) {
+	ctx, store := context.Background(), memory.NewMemStore()
+	emb := &queryFake{fakeEmbedder: &fakeEmbedder{model: "gemini-embedding-2@1536"}}
+	sem := &memory.Semantic{Docs: store, Vecs: store, Embedder: emb}
+	svc := memory.New(memory.Config{Docs: store, Embedder: emb, Retriever: &memory.Multi{Retrievers: []memory.Retriever{&memory.FTS{Docs: store}, sem}}})
+	svc.RememberTask(ctx, "org-a", task("1", "fin", "Factura de proveedor", "Revisión de la factura mensual"), "")
+	docs := len(emb.texts)
+	items, err := sem.Retrieve(ctx, "org-a", memory.Query{AgentID: "fin", Text: "cobro pendiente"})
+	if err != nil || len(items) == 0 {
+		t.Fatalf("semantic: %v %d", err, len(items))
+	}
+	if len(emb.queries) != 1 || emb.queries[0] != "cobro pendiente" || docs == 0 {
+		t.Fatalf("query must use EmbedQueryTexts, documents EmbedTexts: queries %q, doc texts %d", emb.queries, docs)
+	}
+}

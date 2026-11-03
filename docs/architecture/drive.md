@@ -24,8 +24,14 @@ Tool Gateway. Every change is versioned and reversible.
   component that holds the credentials free of large dependency trees. Its contract test
   runs against a real server: `S3_TEST_ENDPOINT=... go test -run TestS3AgainstMinIO ./internal/objstore/`.
 - docker-compose runs **RustFS 1.0.1** (Apache-2.0, MinIO-compatible) as the internal
-  `objects` service: MinIO no longer publishes free community images. Production: S3, R2 or
-  any S3-compatible service.
+  `objects` service: MinIO no longer publishes free community images. The production composes
+  run the same image (`objects` in `docker-compose.prod.yml`, `wf-objects` in
+  `deploy/vps/docker-compose.yml`): private network only, no published port, persistent volume,
+  credentials `S3_ACCESS_KEY` / `S3_SECRET_KEY` required in the `.env`. S3, R2 or any other
+  S3-compatible service also work (set `S3_ENDPOINT` & co.).
+- With S3 and a database the store is `objstore.Tiered`: new objects go to S3, a key S3 does not
+  have is read from Postgres (`drive_objects`). Switching an existing install to S3 therefore
+  needs no downtime; `server ctl objects-to-s3` then moves the old bytes (below).
 - PDF blobs of artifacts also go to the object store when one is configured; old bytea
   blobs stay readable.
 
@@ -36,8 +42,87 @@ Tool Gateway. Every change is versioned and reversible.
 | `S3_REGION` | `us-east-1` | `auto` for R2 |
 | `S3_USE_PATH_STYLE` | `true` | MinIO/RustFS/R2 |
 | `S3_PREFIX` | | optional key prefix inside the bucket |
-| `DRIVE_MAX_FILE_MB` | 25 | per version |
+| `DRIVE_MAX_FILE_MB` | 25 | per version written from memory (agents, inboxes, link imports, edits) |
+| `DRIVE_MAX_UPLOAD_MB` | 500 with S3; `DRIVE_MAX_FILE_MB` without (at most 64) | per file a person uploads (streamed, below) |
+| `DRIVE_SPOOL_DIR` | OS temp dir | where uploads are spooled while they are checked |
 | `DRIVE_QUOTA_MB` | 5120 (5 GB) | all versions of the organization |
+
+## Uploads (streamed)
+
+People's uploads never sit whole in the backend's memory (the VPS backend has 256 MB):
+
+1. The handler wraps the body (`api/drive_upload.go`): an announced `Content-Length` over the
+   cap is a 413 before anything is read; the read deadline moves forward while bytes keep
+   arriving (2 min without progress cuts it), so the 30 s `READ_TIMEOUT` does not end big uploads.
+2. `drive.WriteStream` / `NewVersionStream` (`drive/stream.go`) check path, type, read-only mode
+   and quota first, then copy the body to a temporary file while hashing it (SHA-256), capped
+   at `DRIVE_MAX_UPLOAD_MB`.
+3. The temporary file is checked without loading it: magic numbers, OOXML zip directory, UTF-8
+   and NUL bytes in 64 KB chunks. Text is extracted only from what `fs.read` would read anyway
+   (first 8 MB of text, PDFs up to 20 MB, office files up to 8 MB); a bigger binary is stored
+   with `extraction: none`.
+4. The file is streamed to the object store with its length and digest (S3 verifies the
+   signed digest); the temporary file is deleted in every case. Restoring an old version uses
+   the same path. Downloads push the write deadline forward the same way.
+
+Routes: `PUT /drive/upload?path=` and `PUT /drive/files/{id}/content` (raw body, as before) and
+`POST /drive/upload?folder=` with `multipart/form-data` for several files: each `file` part is
+streamed in turn; its filename may carry a relative path (`sub/a.txt`, folder uploads); the
+answer is `{results: [{name, path, status, result | code, error}]}` (one bad file does not undo
+the others; at most 100 files). `GET /drive/usage` returns `max_upload_bytes` for the client.
+The frontend uses XMLHttpRequest for uploads (`session.authUpload`) to show progress: per file
+in the chat composer, one bar for the batch in the Files screen.
+
+Not done yet: resumable uploads (tus-style offsets or S3 multipart) and direct browser-to-S3
+uploads with presigned URLs. The internal RustFS is deliberately not reachable from the
+internet, so presigned URLs would need a proxied route (Caddy) or an external S3; the
+hand-written client signs only headers (no presigned query strings) today.
+
+## Moving existing files to S3
+
+Installs that ran without S3 keep their bytes in Postgres (`drive_objects`, and the `data`
+column of `artifact_blobs` for PDFs). After S3 is configured they stay readable (Tiered store);
+to move them:
+
+```sh
+# VPS (deploy/vps): inside the running backend, which has DATABASE_URL and S3_*
+docker compose exec wf-backend server ctl objects-to-s3 -dry-run   # read + verify, copy nothing
+docker compose exec wf-backend server ctl objects-to-s3            # copy + verify (Postgres untouched)
+docker compose exec wf-backend server ctl objects-to-s3 -delete    # copy if needed, verify, free Postgres
+docker compose exec wf-postgres psql -U workforce -d workforce -c 'VACUUM (VERBOSE, ANALYZE) drive_objects'
+# docker-compose.prod.yml: docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend server ctl objects-to-s3 ...
+```
+
+- **Idempotent and resumable:** objects are walked in key order per organization; one already
+  in S3 with the same SHA-256 is not copied again, so an interrupted run is just started again.
+  `-org ID` limits it to one organization, `-batch N` sets the page size.
+- **Verified before deleting:** the bytea is hashed and compared with its recorded SHA-256 and
+  size; the copy is uploaded with a signed digest and then read back from S3 and hashed. Only
+  then, and only with `-delete`, the `drive_objects` row is deleted (`... AND sha256 = <verified>`)
+  or the PDF row switches to `object_key` with `data = NULL`. An object that does not verify is
+  reported and left untouched; the command exits non-zero.
+- It connects as the owner (`MIGRATE_URL`, else `DATABASE_URL`, no `SET ROLE`) because PDF rows
+  are insert-only for `app_user`; every statement still runs in an organization-scoped
+  transaction. Organizations come from memberships plus the default org (and every org with
+  objects when the connection is a superuser, as in the composes).
+- Plain `VACUUM` makes the freed space reusable; `VACUUM FULL drive_objects` returns it to the
+  disk but locks the table while it runs.
+- Run the database backup first (below).
+
+## Backup
+
+The database dump (`deploy/vps/backup.sh`, nightly) holds folders, files and versions but **not**
+the bytes that live in S3: back up both.
+
+- **VPS:** `backup.sh` now also mirrors the RustFS volume (`workforceai_wf-objdata`, override
+  with `WF_OBJECTS_VOLUME`) into `/var/backups/workforceai/objects` with an incremental copy:
+  objects are immutable (a new version is a new object), so each night only new files are
+  copied. Copy `/var/backups/workforceai` off the server as well (the VPS disk is one failure).
+- **Other installs:** any S3 mirror works (`rclone sync`, `mc mirror`) against the bucket, or
+  `docker run --rm -v <project>_objdata:/data:ro -v $PWD:/b alpine tar czf /b/objects.tgz -C /data .`.
+- **Restore:** stop the stack, restore the database dump and copy the mirror back into the
+  volume (`docker run --rm -v <volume>:/data -v <mirror>:/b alpine cp -a /b/. /data/`), start.
+  A version whose object is missing answers `content_missing` instead of failing the drive.
 
 ## Agents: the `fs` tool
 

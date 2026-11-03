@@ -144,7 +144,7 @@ func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64, o Put
 		h["x-amz-meta-sha256"] = payload
 	}
 	s.sign(req, host, h, payload)
-	resp, err := s.cfg.HTTP.Do(req)
+	resp, err := s.putClient(size).Do(req)
 	if err != nil {
 		return Info{}, fmt.Errorf("objstore: put: %w", errNoSecret(err))
 	}
@@ -158,20 +158,68 @@ func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64, o Put
 	return Info{Key: key, Size: size, SHA256: hr.Sum(), ContentType: o.ContentType, ModifiedAt: s.now()}, nil
 }
 
+// putClient is the HTTP client of one upload: the per-request timeout grows
+// with the size (at least 1 MB/s on top of the base timeout), so a 500 MB file
+// is not cut by the 60 s default meant for small requests.
+func (s *S3) putClient(size int64) *http.Client {
+	c := *s.cfg.HTTP
+	if c.Timeout > 0 && size > 1<<20 {
+		c.Timeout += time.Duration(size>>20) * time.Second
+	}
+	return &c
+}
+
 // Get implements Store.
 func (s *S3) Get(ctx context.Context, key string) (io.ReadCloser, Info, error) {
 	if err := ValidKey(key); err != nil {
 		return nil, Info{}, err
 	}
-	resp, err := s.do(ctx, http.MethodGet, key)
+	// The client timeout covers the whole body, which a person downloading a big
+	// file reads at their own pace: here it only bounds the wait for the headers,
+	// and the body lives as long as ctx (or until it is closed).
+	gctx, cancel := context.WithCancel(ctx)
+	base := s.cfg.HTTP.Timeout
+	var timer *time.Timer
+	if base > 0 {
+		timer = time.AfterFunc(base, cancel)
+	}
+	u, host := s.target(key)
+	req, err := http.NewRequestWithContext(gctx, http.MethodGet, u.String(), nil)
 	if err != nil {
+		cancel()
 		return nil, Info{}, err
 	}
+	s.sign(req, host, nil, emptySHA)
+	c := *s.cfg.HTTP
+	c.Timeout = 0
+	resp, err := c.Do(req)
+	if timer != nil && !timer.Stop() && err == nil {
+		resp.Body.Close()
+		cancel()
+		return nil, Info{}, fmt.Errorf("objstore: get: %w", context.DeadlineExceeded)
+	}
+	if err != nil {
+		cancel()
+		return nil, Info{}, fmt.Errorf("objstore: get: %w", errNoSecret(err))
+	}
 	if resp.StatusCode/100 != 2 {
+		defer cancel()
 		defer resp.Body.Close()
 		return nil, Info{}, s.statusErr("get", resp)
 	}
-	return resp.Body, infoOf(key, resp), nil
+	return &cancelBody{ReadCloser: resp.Body, cancel: cancel}, infoOf(key, resp), nil
+}
+
+// cancelBody releases the request context when the body is closed.
+type cancelBody struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+}
+
+func (b *cancelBody) Close() error {
+	err := b.ReadCloser.Close()
+	b.cancel()
+	return err
 }
 
 // Head implements Store.

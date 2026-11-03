@@ -24,6 +24,30 @@ type Embedder interface {
 	Model() string
 }
 
+// QueryEmbedder is implemented by embedders whose model embeds a search query
+// differently from a document (Gemini: prompt prefixes). Callers embedding a
+// query use EmbedQuery when available, Embed otherwise.
+type QueryEmbedder interface {
+	EmbedQuery(ctx context.Context, texts []string) (vecs [][]float32, tokens int, err error)
+}
+
+// embedQuery embeds search queries with the query form when the embedder has one.
+func embedQuery(ctx context.Context, e Embedder, texts []string) ([][]float32, int, error) {
+	if q, ok := e.(QueryEmbedder); ok {
+		return q.EmbedQuery(ctx, texts)
+	}
+	return e.Embed(ctx, texts)
+}
+
+// PricePerM is the default USD price per million tokens of a provider's
+// embeddings (EMBEDDINGS_PRICE_PER_M overrides it for every provider).
+func PricePerM(provider string) float64 {
+	if provider == "gemini" {
+		return DefaultGeminiEmbedPrice
+	}
+	return DefaultOpenAIEmbedPrice
+}
+
 // EmbedChoice is the embedder an organization may use right now, or why it
 // stays keyword only (Reason is one of the Reason* codes; Note is plain English).
 type EmbedChoice struct {
@@ -37,30 +61,55 @@ type EmbedResolver func(ctx context.Context, org string) EmbedChoice
 
 // EmbedConfig is the platform embeddings provider (environment).
 type EmbedConfig struct {
-	Provider string // "" (off) | openai | custom
+	Provider string // "" (off) | openai | custom | gemini
 	APIKey   string
 	Model    string
 	BaseURL  string
+	// Dimensions is the output size asked from Gemini (128-3072, default 1536);
+	// OpenAI-compatible models keep their native size.
+	Dimensions int
 }
 
 // DefaultEmbedModel is the default model of the OpenAI-compatible provider.
 const DefaultEmbedModel = "text-embedding-3-small"
 
 // EmbedConfigFromEnv reads EMBEDDINGS_PROVIDER, EMBEDDINGS_API_KEY,
-// EMBEDDINGS_MODEL and EMBEDDINGS_BASE_URL. A provider without a key is off.
+// EMBEDDINGS_MODEL, EMBEDDINGS_BASE_URL and EMBEDDINGS_DIMENSIONS. A provider
+// without a key is off. With EMBEDDINGS_PROVIDER=gemini the key defaults to
+// GEMINI_API_KEY (the same key as the chat models), the model to
+// gemini-embedding-2 and the dimensions to 1536.
 func EmbedConfigFromEnv() EmbedConfig {
 	c := EmbedConfig{Provider: strings.ToLower(strings.TrimSpace(os.Getenv("EMBEDDINGS_PROVIDER"))), APIKey: strings.TrimSpace(os.Getenv("EMBEDDINGS_API_KEY")),
 		Model: strings.TrimSpace(os.Getenv("EMBEDDINGS_MODEL")), BaseURL: strings.TrimSpace(os.Getenv("EMBEDDINGS_BASE_URL"))}
-	if c.Model == "" {
-		c.Model = DefaultEmbedModel
-	}
 	if c.Provider == "" && c.APIKey != "" {
 		c.Provider = "openai"
 	}
-	if c.Provider != "openai" && c.Provider != "custom" || c.APIKey == "" {
+	if c.Provider == "gemini" {
+		if c.APIKey == "" {
+			c.APIKey = strings.TrimSpace(os.Getenv("GEMINI_API_KEY"))
+		}
+		if c.Model == "" {
+			c.Model = DefaultGeminiEmbedModel
+		}
+		c.Dimensions = DefaultGeminiDims
+		if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv("EMBEDDINGS_DIMENSIONS"))); err == nil {
+			c.Dimensions = normDims(v)
+		}
+	} else if c.Model == "" {
+		c.Model = DefaultEmbedModel
+	}
+	if c.Provider != "openai" && c.Provider != "custom" && c.Provider != "gemini" || c.APIKey == "" {
 		c.Provider = ""
 	}
 	return c
+}
+
+// newEmbedder builds the embedder of a provider ("gemini" or OpenAI-compatible).
+func newEmbedder(provider, key, model, baseURL, orgRef string, dims int, cl *http.Client) Embedder {
+	if provider == "gemini" {
+		return &GeminiEmbedder{Key: key, ModelName: model, Dims: dims, BaseURL: baseURL, HTTP: cl}
+	}
+	return &OpenAIEmbedder{ProviderID: provider, Key: key, ModelName: model, BaseURL: baseURL, OrgRef: orgRef, HTTP: cl}
 }
 
 // OpenAIEmbedder calls an OpenAI-compatible POST {base}/embeddings.
@@ -175,13 +224,13 @@ type ResolverConfig struct {
 	HTTP          *http.Client
 }
 
-// embedCapable are the BYO providers whose API serves /embeddings.
-var embedCapable = []string{"openai", "custom"}
+// embedCapable are the BYO providers whose API serves embeddings.
+var embedCapable = []string{"openai", "custom", "gemini"}
 
 // NewResolver applies the rules of docs/architecture/agent-search.md:
 //  1. an organization on its own key (byo_only) never uses the platform's
-//     key: its openai/custom credential embeds, any other provider means
-//     keyword only;
+//     key: its openai/custom/gemini credential embeds, any other provider
+//     means keyword only;
 //  2. otherwise the platform provider (EMBEDDINGS_*) when the data policy allows it;
 //  3. otherwise keyword only.
 func NewResolver(c ResolverConfig) EmbedResolver {
@@ -195,12 +244,21 @@ func NewResolver(c ResolverConfig) EmbedResolver {
 				if !allowed(prov) {
 					return EmbedChoice{Reason: ReasonEmbedPolicy, Note: "the data policy does not allow sending text to " + prov + ": search is keyword only"}
 				}
+				_ = model // the chat model of the credential is not an embeddings model
+				if prov == "gemini" {
+					// Its own Gemini key, never the platform's; the platform's model and size
+					// only when the platform also embeds with Gemini.
+					m, dims, gbase := DefaultGeminiEmbedModel, DefaultGeminiDims, ""
+					if c.Platform.Provider == "gemini" {
+						m, dims, gbase = c.Platform.Model, c.Platform.Dimensions, c.Platform.BaseURL
+					}
+					return EmbedChoice{Embedder: newEmbedder(prov, key, m, gbase, "", dims, c.HTTP)}
+				}
 				m := c.Platform.Model
-				if m == "" {
+				if m == "" || c.Platform.Provider == "gemini" {
 					m = DefaultEmbedModel
 				}
-				_ = model // the chat model of the credential is not an embeddings model
-				return EmbedChoice{Embedder: &OpenAIEmbedder{ProviderID: prov, Key: key, ModelName: m, BaseURL: base, OrgRef: ref, HTTP: c.HTTP}}
+				return EmbedChoice{Embedder: newEmbedder(prov, key, m, base, ref, 0, c.HTTP)}
 			}
 		}
 		if c.Platform.Provider == "" {
@@ -209,8 +267,7 @@ func NewResolver(c ResolverConfig) EmbedResolver {
 		if !allowed(c.Platform.Provider) {
 			return EmbedChoice{Reason: ReasonEmbedPolicy, Note: "the data policy does not allow sending text to " + c.Platform.Provider + ": search is keyword only"}
 		}
-		return EmbedChoice{Embedder: &OpenAIEmbedder{ProviderID: c.Platform.Provider, Key: c.Platform.APIKey, ModelName: c.Platform.Model,
-			BaseURL: c.Platform.BaseURL, HTTP: c.HTTP}}
+		return EmbedChoice{Embedder: newEmbedder(c.Platform.Provider, c.Platform.APIKey, c.Platform.Model, c.Platform.BaseURL, "", c.Platform.Dimensions, c.HTTP)}
 	}
 }
 

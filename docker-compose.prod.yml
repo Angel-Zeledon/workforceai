@@ -6,6 +6,11 @@
 #
 # Solo Caddy publica puertos (80/443). Todo lo demas vive en la red `internal`
 # (sin salida a internet). El runtime ademas se une a `egress` para llamar a DeepSeek.
+#
+# Archivos (docs/architecture/drive.md): los bytes van al almacenamiento S3 interno `objects`
+# (RustFS, sin puerto publicado, volumen objdata). S3_ACCESS_KEY y S3_SECRET_KEY son obligatorias.
+# Sandbox de codigo y render de paginas PDF (docs/architecture/code-sandbox.md): APAGADO por
+# defecto. Se enciende con COMPOSE_PROFILES=sandbox y SANDBOX_TOKEN en .env.prod.
 
 x-logging: &logging
   driver: json-file
@@ -93,6 +98,27 @@ services:
     cpus: 0.5
     logging: *logging
 
+  # Almacenamiento S3 de los archivos (el mismo RustFS que en desarrollo). Solo en `internal`:
+  # sin puerto publicado ni salida a internet. Respaldo del volumen: docs/architecture/drive.md.
+  objects:
+    image: rustfs/rustfs:1.0.1
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:?define S3_ACCESS_KEY (openssl rand -hex 16)}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?define S3_SECRET_KEY (openssl rand -hex 32)}
+    volumes:
+      - objdata:/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    mem_limit: 512m
+    cpus: 0.5
+    logging: *logging
+
   agent-runtime:
     image: ghcr.io/${OWNER:?define OWNER (usuario/org de GHCR, minusculas)}/aiworkforce-agent-runtime:${TAG:?define TAG}
     build: ./agent-runtime
@@ -150,8 +176,36 @@ services:
       # Generic API sources may reach private/LAN addresses only when explicitly true
       # (self-hosted on a trusted network; integrations-credentials.md sec. 18.8). Keep false.
       CUSTOM_API_ALLOW_PRIVATE: ${CUSTOM_API_ALLOW_PRIVATE:-false}
+      # Archivos: S3 interno (servicio objects). Las credenciales solo llegan al backend.
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://objects:9000}
+      S3_BUCKET: ${S3_BUCKET:-wfai-drive}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?define S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?define S3_SECRET_KEY}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE:-true}
+      # Subidas en streaming (disco temporal -> S3): tope por archivo (500 MB por defecto con S3).
+      DRIVE_MAX_UPLOAD_MB: ${DRIVE_MAX_UPLOAD_MB:-}
+      DRIVE_MAX_FILE_MB: ${DRIVE_MAX_FILE_MB:-}
+      DRIVE_QUOTA_MB: ${DRIVE_QUOTA_MB:-}
+      # Busqueda por significado (docs/architecture/agent-search.md). APAGADA por defecto: los
+      # documentos de clientes solo pueden ir a Gemini con facturacion de pago (en el nivel gratuito
+      # Google usa los datos). Para encenderla: EMBEDDINGS_PROVIDER=gemini (usa GEMINI_API_KEY).
+      EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER:-}
+      EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-}
+      EMBEDDINGS_DIMENSIONS: ${EMBEDDINGS_DIMENSIONS:-}
+      EMBEDDINGS_DAILY_TOKENS: ${EMBEDDINGS_DAILY_TOKENS:-}
+      EMBEDDINGS_PRICE_PER_M: ${EMBEDDINGS_PRICE_PER_M:-}
+      # Sandbox (perfil "sandbox"): sin SANDBOX_TOKEN code.run y el render de paginas no existen.
+      SANDBOX_URL: ${SANDBOX_URL:-http://sandbox-runner:8090}
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-}
+      SANDBOX_MAX_RUNTIME_SECONDS: ${SANDBOX_MAX_RUNTIME_SECONDS:-60}
+      SANDBOX_MAX_RUNS_PER_DAY: ${SANDBOX_MAX_RUNS_PER_DAY:-20}
     networks: [internal]
     depends_on:
+      objects:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
@@ -191,6 +245,65 @@ services:
     cpus: 1.0
     logging: *logging
 
+  # ---- Sandbox de codigo + render de paginas PDF -- APAGADO por defecto ----
+  # Encender: COMPOSE_PROFILES=sandbox y SANDBOX_TOKEN (openssl rand -hex 24) en .env.prod, y
+  #   docker compose -f docker-compose.prod.yml --env-file .env.prod build sandbox-image sandbox-render-image sandbox-runner
+  # AVISO: sandbox-runner monta el socket de Docker (equivale a root en el host). No publica puerto,
+  # vive solo en `internal` y exige el token. Cada ejecucion corre en un contenedor desechable con
+  # --network none, raiz de solo lectura, sin capacidades y con topes de CPU/memoria/pids/tiempo.
+  # Recomendado en produccion: SANDBOX_RUNTIME=runsc (gVisor) instalado en el host.
+  sandbox-image:
+    profiles: ["sandbox"]
+    build: ./sandbox
+    image: wfai-sandbox-python:1
+    entrypoint: ["true"]
+    restart: "no"
+    network_mode: none
+
+  sandbox-render-image:
+    profiles: ["sandbox"]
+    build: ./sandbox/render
+    image: wfai-sandbox-render:1
+    entrypoint: ["true"]
+    restart: "no"
+    network_mode: none
+
+  sandbox-runner:
+    profiles: ["sandbox"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.sandbox-runner
+    image: aiworkforce-sandbox-runner:local
+    restart: unless-stopped
+    environment:
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-}  # obligatorio (>= 16 caracteres): sin el, el runner no arranca
+      SANDBOX_IMAGE: wfai-sandbox-python:1
+      SANDBOX_RENDER_IMAGE: ${SANDBOX_RENDER_IMAGE:-wfai-sandbox-render:1}
+      SANDBOX_RUNTIME: ${SANDBOX_RUNTIME:-}
+      SANDBOX_MAX_RUNTIME_SECONDS: ${SANDBOX_MAX_RUNTIME_SECONDS:-60}
+      # Topes de CADA ejecucion (contenedor desechable, sin red)
+      SANDBOX_MEMORY_MB: ${SANDBOX_MEMORY_MB:-512}
+      SANDBOX_CPUS: ${SANDBOX_CPUS:-1}
+      SANDBOX_PIDS: ${SANDBOX_PIDS:-128}
+      SANDBOX_MAX_CONCURRENT: ${SANDBOX_MAX_CONCURRENT:-2}
+      PORT: "8090"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks: [internal]
+    depends_on:
+      - sandbox-image
+      - sandbox-render-image
+    healthcheck:
+      test: ["CMD", "sandbox-runner", "-healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # Topes del propio runner (las ejecuciones tienen los suyos, arriba)
+    mem_limit: 256m
+    cpus: 0.5
+    logging: *logging
+
 networks:
   edge:
   egress:
@@ -206,6 +319,7 @@ networks:
 
 volumes:
   pgdata:
+  objdata:
   redisdata:
   caddy_data:
   caddy_config:

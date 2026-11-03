@@ -89,7 +89,17 @@ services:
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE:-true}
       DRIVE_MAX_FILE_MB: ${DRIVE_MAX_FILE_MB:-}
+      # People's uploads are streamed (temporary file -> S3): per-file cap, 500 MB by default with S3.
+      DRIVE_MAX_UPLOAD_MB: ${DRIVE_MAX_UPLOAD_MB:-}
       DRIVE_QUOTA_MB: ${DRIVE_QUOTA_MB:-}
+      # Search by meaning (docs/architecture/agent-search.md): off unless EMBEDDINGS_PROVIDER is set
+      # (gemini reuses GEMINI_API_KEY; the free tier has a very low quota and Google uses the data).
+      EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER:-}
+      EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-}
+      EMBEDDINGS_DIMENSIONS: ${EMBEDDINGS_DIMENSIONS:-}
+      EMBEDDINGS_DAILY_TOKENS: ${EMBEDDINGS_DAILY_TOKENS:-}
       # Accounts: sign up and log in with email and password (our own auth, no
       # third-party login). The open demo without login is a separate mode:
       # `make demo` (docker-compose.demo.yml sets AUTH_ENABLED=false).
@@ -120,6 +130,16 @@ services:
       WEB_SEARCH_COST_USD: ${WEB_SEARCH_COST_USD:-0.005}
       WEB_MAX_CALLS_PER_DAY: ${WEB_MAX_CALLS_PER_DAY:-200}
       WEB_ALLOWED_HOSTS: ${WEB_ALLOWED_HOSTS:-}
+      # Plans paid with ONVO Pay (docs/architecture/billing-onvo.md). Off by default; the keys go only in ./.env.
+      PLANS: ${PLANS:-off}
+      PLAN_SELF_SERVE: ${PLAN_SELF_SERVE:-off}
+      ONVO_SECRET_KEY: ${ONVO_SECRET_KEY:-}
+      ONVO_PUBLISHABLE_KEY: ${ONVO_PUBLISHABLE_KEY:-}
+      ONVO_WEBHOOK_SECRET: ${ONVO_WEBHOOK_SECRET:-}
+      ONVO_PRICE_PRO_MONTHLY: ${ONVO_PRICE_PRO_MONTHLY:-}
+      ONVO_PRICE_PRO_YEARLY: ${ONVO_PRICE_PRO_YEARLY:-}
+      ONVO_PRICE_MAX_MONTHLY: ${ONVO_PRICE_MAX_MONTHLY:-}
+      ONVO_PRICE_MAX_YEARLY: ${ONVO_PRICE_MAX_YEARLY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -178,6 +198,7 @@ services:
       SANDBOX_RUNTIME: ${SANDBOX_RUNTIME:-}
       SANDBOX_MAX_RUNTIME_SECONDS: ${SANDBOX_MAX_RUNTIME_SECONDS:-60}
       SANDBOX_MEMORY_MB: ${SANDBOX_MEMORY_MB:-512}
+      SANDBOX_CPUS: ${SANDBOX_CPUS:-1}
       SANDBOX_MAX_CONCURRENT: ${SANDBOX_MAX_CONCURRENT:-2}
       PORT: "8090"
     volumes:

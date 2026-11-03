@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/audit"
 	"aiworkforce/backend/internal/domain"
@@ -26,6 +28,11 @@ import (
 //	server ctl release          [-org ID] -reason TEXT
 //	server ctl audit-verify     [-org ID | -all] [-anchor-seq N -anchor-hash H]
 //	server ctl audit-verify     -file export.jsonl [-strict]
+//	server ctl objects-to-s3    [-org ID] [-dry-run] [-delete] [-batch N]
+//
+// objects-to-s3 copies the file bytes kept in Postgres (drive_objects, PDF blobs) to the
+// S3-compatible store of S3_*, verifying every copy; -delete then removes the Postgres copies
+// (docs/architecture/drive.md, "Moving existing files to S3").
 //
 // audit-verify checks the hash chain of the audit trail (database or an
 // exported JSONL file) and exits with an error when it does not verify.
@@ -35,7 +42,7 @@ import (
 // once.
 func runCtl(log *slog.Logger, args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: server ctl freeze|lockdown|release|audit-verify [-org ID] [-reason TEXT]")
+		return errors.New("usage: server ctl freeze|lockdown|release|audit-verify|objects-to-s3 [-org ID] [-reason TEXT]")
 	}
 	cmd := strings.ToLower(args[0])
 	fs := flag.NewFlagSet("ctl", flag.ContinueOnError)
@@ -47,8 +54,24 @@ func runCtl(log *slog.Logger, args []string) error {
 	strict := fs.Bool("strict", false, "audit-verify -file: fail on gaps (use for unfiltered exports)")
 	anchorSeq := fs.Int64("anchor-seq", 0, "audit-verify: externally stored chain position")
 	anchorHash := fs.String("anchor-hash", "", "audit-verify: externally stored hash of that position")
+	dryRun := fs.Bool("dry-run", false, "objects-to-s3: verify and report, copy nothing")
+	del := fs.Bool("delete", false, "objects-to-s3: remove the Postgres copy of every verified object")
+	batch := fs.Int("batch", 100, "objects-to-s3: rows listed per query")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
+	}
+	orgSet := false
+	fs.Visit(func(f *flag.Flag) { orgSet = orgSet || f.Name == "org" })
+	if cmd == "objects-to-s3" {
+		if cfg.DatabaseURL == "" {
+			return errors.New("DATABASE_URL is required")
+		}
+		var only []string
+		if orgSet {
+			only = []string{*org}
+		}
+		return objectsToS3(context.Background(), log, firstNonEmptyStr(cfg.MigrateURL, cfg.DatabaseURL), cfg.App.OrgID, only,
+			postgres.ObjectsMigrateOptions{DryRun: *dryRun, Delete: *del, Batch: *batch})
 	}
 	if cmd == "audit-verify" && *file != "" {
 		return verifyAuditFile(*file, *strict)
@@ -142,4 +165,63 @@ func describe(r audit.Report) string {
 		return fmt.Sprintf("OK, %d entries verified (seq %d..%d, head %s)", r.Checked, r.FirstSeq, r.LastSeq, r.HeadHash)
 	}
 	return fmt.Sprintf("BROKEN at seq %d: %s (%s); %d entries verified before the break", r.BrokenAtSeq, r.Reason, r.Detail, r.Checked)
+}
+
+func firstNonEmptyStr(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}
+
+// objectsToS3 is `server ctl objects-to-s3`. It connects as the owner (no SET ROLE: PDF blob rows
+// are insert-only for app_user) and still scopes every statement to one organization.
+func objectsToS3(ctx context.Context, log *slog.Logger, ownerURL, defaultOrg string, only []string, o postgres.ObjectsMigrateOptions) error {
+	if os.Getenv("S3_ENDPOINT") == "" || os.Getenv("S3_BUCKET") == "" {
+		return errors.New("S3_ENDPOINT and S3_BUCKET (and S3_ACCESS_KEY / S3_SECRET_KEY) are required: where should the files go?")
+	}
+	s3, err := s3FromEnv()
+	if err != nil {
+		return err
+	}
+	if !o.DryRun {
+		if err := s3.CreateBucket(ctx); err != nil {
+			log.Warn("S3 bucket check", "err", err)
+		}
+	}
+	if err := postgres.Migrate(ctx, ownerURL); err != nil {
+		return err
+	}
+	pool, err := pgxpool.New(ctx, ownerURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	orgs := only
+	if len(orgs) == 0 {
+		if orgs, err = postgres.OrgsWithObjects(ctx, pool, defaultOrg); err != nil {
+			return err
+		}
+	}
+	o.Log = func(msg string, args ...any) { log.Info(msg, args...) }
+	rep, err := postgres.MigrateObjects(ctx, pool, s3, orgs, o)
+	mode := "copy"
+	switch {
+	case o.DryRun:
+		mode = "dry-run"
+	case o.Delete:
+		mode = "copy+delete"
+	}
+	fmt.Printf("objects-to-s3 (%s): %d organizations, %d objects seen, %d copied (%d bytes), %d already in S3, %d Postgres copies removed, %d failed\n",
+		mode, rep.Orgs, rep.Seen, rep.Copied, rep.Bytes, rep.Already, rep.Deleted, rep.Failed)
+	for _, f := range rep.Failures {
+		fmt.Println("  failed:", f)
+	}
+	if err != nil {
+		return fmt.Errorf("stopped (run it again to resume): %w", err)
+	}
+	if rep.Failed > 0 {
+		return fmt.Errorf("%d objects could not be moved; their Postgres copy was kept", rep.Failed)
+	}
+	return nil
 }

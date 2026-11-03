@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT, fmtNumber } from "@/lib/i18n";
-import { drive, DriveError, isTextual, parentOf, type DriveFile, type DriveVersion, type Hit, type Listing } from "@/lib/drive";
+import { drive, DriveError, isTextual, parentOf, useUploadLimit, type DriveFile, type DriveVersion, type Hit, type Listing, type UploadResult } from "@/lib/drive";
 import { useStore } from "@/lib/store";
 import { toast } from "@/lib/toast";
 import { Btn, Empty, Loading } from "../ui";
@@ -32,6 +32,9 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
   const [trash, setTrash] = useState<DriveFile[] | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // share of the current upload already sent (0..1); null when nothing is uploading
+  const [progress, setProgress] = useState<number | null>(null);
+  const maxBytes = useUploadLimit();
   const [drag, setDrag] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   // refresh when an agent touches a file under the folder we are looking at
@@ -47,17 +50,36 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
   }, [path, t]);
   useEffect(() => { load(); }, [load, touched]);
 
+  /** Streams the files to the server in multipart batches, with one progress bar for the whole upload. */
   const upload = async (files: FileList | File[]) => {
-    setBusy(true);
+    const all = Array.from(files);
+    const tooBig = all.filter((f) => f.size > maxBytes);
+    const list = all.filter((f) => f.size <= maxBytes);
+    setBusy(true); setError("");
+    const total = list.reduce((n, f) => n + f.size, 0) || 1;
+    let done = 0;
+    const failed: UploadResult[] = [];
     try {
-      for (const f of Array.from(files)) await drive.upload(`${path === "/" ? "" : path}/${f.name}`, f);
+      setProgress(0);
+      // batches of at most 20 files / ~200 MB: a failed request only repeats its own batch
+      for (let i = 0; i < list.length;) {
+        const batch: File[] = [];
+        let bytes = 0;
+        while (i < list.length && batch.length < 20 && (batch.length === 0 || bytes + list[i].size <= 200 << 20)) { bytes += list[i].size; batch.push(list[i++]); }
+        const res = await drive.uploadMany(path, batch.map((f) => ({ name: f.name, file: f })), (loaded) => setProgress(Math.min(1, (done + loaded) / total)));
+        done += bytes;
+        failed.push(...res.filter((r) => r.status >= 300));
+      }
       await load();
-      toast(t("toast.uploaded"));
+      if (list.length > failed.length) toast(t("toast.uploaded"));
     } catch (e) {
       setError(e instanceof DriveError ? (e.code === "plan_limit" ? t("drive.planLimit") : t("drive.error", { code: e.code })) : String(e));
     } finally {
-      setBusy(false);
+      setBusy(false); setProgress(null);
     }
+    const first = failed[0];
+    if (tooBig.length) setError(`${tooBig.map((f) => f.name).join(", ")}: ${t("att.err.file_too_large", { mb: Math.round(maxBytes / (1 << 20)) })}`);
+    else if (first) setError(`${failed.map((f) => f.name).join(", ")}: ${first.code === "plan_limit" ? t("drive.planLimit") : t("drive.error", { code: first.code ?? String(first.status) })}`);
   };
   const search = async () => {
     if (!query.trim()) { setHits(null); setPassages(null); return; }
@@ -104,10 +126,16 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
             <span data-tour="files.trash" className="inline-flex"><Btn data-testid="drive-trash" onClick={async () => setTrash(trash ? null : (await drive.trash().catch(() => ({ files: [] }))).files)}>{t("drive.trash")}</Btn></span>
             <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) upload(e.target.files); e.target.value = ""; }} />
             <span data-tour="files.upload" className="inline-flex"><Btn kind="primary" data-testid="drive-upload" className="inline-flex items-center gap-1" disabled={!canUpload || busy} onClick={() => fileInput.current?.click()}>
-              <Icon name="plus" size={13} />{busy ? t("drive.uploading") : t("drive.upload")}
+              <Icon name="plus" size={13} />{busy ? `${t("drive.uploading")}${progress ? ` ${Math.floor(progress * 100)} %` : ""}` : t("drive.upload")}
             </Btn></span>
           </div>
         </div>
+        {progress !== null && (
+          <div role="progressbar" aria-label={t("drive.uploading")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(progress * 100)} data-testid="drive-upload-progress"
+            className="h-[3px] w-full overflow-hidden bg-accent/15">
+            <div className="h-full bg-accent transition-[width] duration-200" style={{ width: `${Math.floor(progress * 100)}%` }} />
+          </div>
+        )}
         {error && <div data-testid="drive-error" className="mx-5 mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-700">{error}</div>}
         {drag && <div className="mx-5 mt-3 rounded-xl border-2 border-dashed border-accent px-4 py-6 text-center text-sm text-accent">{t("drive.dropHere", { path })}</div>}
         <div data-tour="files.list" className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-5">

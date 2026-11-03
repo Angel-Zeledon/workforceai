@@ -20,7 +20,7 @@ type Limits struct {
 	MaxChunksPerOrg  int     // DOCINDEX_MAX_CHUNKS_PER_ORG (200000)
 	MaxTextChars     int     // characters extracted per file (1,000,000, the drive's read cap)
 	DailyEmbedTokens int     // EMBEDDINGS_DAILY_TOKENS per organization (2,000,000)
-	EmbedPricePerM   float64 // EMBEDDINGS_PRICE_PER_M USD per million tokens (0.02)
+	EmbedPricePerM   float64 // EMBEDDINGS_PRICE_PER_M USD per million tokens; < 0 (unset) = PricePerM(provider): 0.02, Gemini 0.20
 	CandidateCap     int     // DOCINDEX_SEMANTIC_CANDIDATES chunks scored by cosine per query (3000)
 	Workers          int     // DOCINDEX_WORKERS concurrent files per replica (2)
 	QueueSize        int     // pending notifications kept in memory (256)
@@ -52,9 +52,6 @@ func (l Limits) norm() Limits {
 	l.CandidateCap = min(l.CandidateCap, 20_000) // hard cap: memory and latency of the cosine pass
 	def(&l.Workers, 2)
 	def(&l.QueueSize, 256)
-	if l.EmbedPricePerM < 0 {
-		l.EmbedPricePerM = 0.02
-	}
 	dur := func(v *time.Duration, d time.Duration) {
 		if *v <= 0 {
 			*v = d
@@ -440,7 +437,7 @@ func (s *Service) embedChunks(ctx context.Context, org, fileID string, cs []Stor
 		texts[k] = embedText(cs[i].Chunk)
 		est += utf8.RuneCountInString(texts[k])/4 + 1
 	}
-	if reason := s.allowEmbed(ctx, org, est); reason != "" {
+	if reason := s.allowEmbed(ctx, org, ch.Embedder.Provider(), est); reason != "" {
 		return n, model, reason
 	}
 	ectx, cancel := context.WithTimeout(ctx, s.cfg.Limits.EmbedTimeout)
@@ -450,7 +447,7 @@ func (s *Service) embedChunks(ctx context.Context, org, fileID string, cs []Stor
 		s.cfg.Log.Warn("docindex: embeddings failed: keyword only", "org", org, "provider", ch.Embedder.Provider())
 		return n, model, ReasonEmbedFailure
 	}
-	s.bookEmbed(ctx, org, max(tokens, est), model)
+	s.bookEmbed(ctx, org, ch.Embedder.Provider(), max(tokens, est), model)
 	for k, i := range need {
 		cs[i].Vec, cs[i].Model = vecs[k], model
 	}
@@ -465,23 +462,28 @@ func embedText(c Chunk) string {
 }
 
 // allowEmbed applies the per-day token cap and the budget ("" = allowed).
-func (s *Service) allowEmbed(ctx context.Context, org string, tokens int) string {
+func (s *Service) allowEmbed(ctx context.Context, org, provider string, tokens int) string {
 	used, err := s.cfg.Store.EmbedUsage(ctx, org, s.now())
 	if err != nil || used+tokens > s.cfg.Limits.DailyEmbedTokens {
 		return ReasonEmbedCap
 	}
-	if s.cfg.Spend != nil && !s.cfg.Spend.Allow(ctx, org, s.cost(tokens)) {
+	if s.cfg.Spend != nil && !s.cfg.Spend.Allow(ctx, org, s.cost(provider, tokens)) {
 		return ReasonEmbedBudget
 	}
 	return ""
 }
 
-func (s *Service) cost(tokens int) float64 {
-	return float64(tokens) * s.cfg.Limits.EmbedPricePerM / 1e6
+// cost prices tokens at EMBEDDINGS_PRICE_PER_M, or at the provider's default when unset.
+func (s *Service) cost(provider string, tokens int) float64 {
+	p := s.cfg.Limits.EmbedPricePerM
+	if p < 0 {
+		p = PricePerM(provider)
+	}
+	return float64(tokens) * p / 1e6
 }
 
-func (s *Service) bookEmbed(ctx context.Context, org string, tokens int, model string) {
-	usd := s.cost(tokens)
+func (s *Service) bookEmbed(ctx context.Context, org, provider string, tokens int, model string) {
+	usd := s.cost(provider, tokens)
 	if err := s.cfg.Store.AddEmbedUsage(ctx, org, s.now(), tokens, usd); err != nil {
 		s.cfg.Log.Warn("docindex: embed usage", "org", org, "err", err)
 	}

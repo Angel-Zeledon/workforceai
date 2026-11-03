@@ -115,12 +115,13 @@ highlighted snippet; a click opens the file pane at the extracted text around th
 
 | Variable | Default | What |
 |---|---|---|
-| `EMBEDDINGS_PROVIDER` | (off) | `openai` or `custom` (OpenAI-compatible `/embeddings`). A key without a provider means `openai`. |
-| `EMBEDDINGS_API_KEY` | | platform key (environment only, never stored or logged). |
-| `EMBEDDINGS_MODEL` | `text-embedding-3-small` | |
-| `EMBEDDINGS_BASE_URL` | `https://api.openai.com/v1` | |
+| `EMBEDDINGS_PROVIDER` | (off) | `gemini`, `openai` or `custom` (OpenAI-compatible `/embeddings`). A key without a provider means `openai`. |
+| `EMBEDDINGS_API_KEY` | | platform key (environment only, never stored or logged). With `gemini` it may stay empty: `GEMINI_API_KEY` (the chat models' key) is reused. |
+| `EMBEDDINGS_MODEL` | `gemini-embedding-2` (gemini) / `text-embedding-3-small` | |
+| `EMBEDDINGS_DIMENSIONS` | 1536 | Gemini only: `outputDimensionality`, 128-3072 (other values fall back to 1536). |
+| `EMBEDDINGS_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta` (gemini) / `https://api.openai.com/v1` | |
 | `EMBEDDINGS_DAILY_TOKENS` | 2,000,000 | per organization and UTC day (indexing + queries). |
-| `EMBEDDINGS_PRICE_PER_M` | 0.02 | USD per million tokens, for the budget and the usage ledger. |
+| `EMBEDDINGS_PRICE_PER_M` | 0.20 (gemini) / 0.02 | USD per million tokens, for the budget and the usage ledger. Unset = the default of the provider that embeds. |
 | `DOCINDEX_MAX_CHUNKS_PER_FILE` | 2000 | above it the file is `skipped: too_large` (the drive extracts at most 1,000,000 characters per file anyway). |
 | `DOCINDEX_MAX_CHUNKS_PER_ORG` | 200,000 | above it new files are `skipped: org_limit`. |
 | `DOCINDEX_SEMANTIC_CANDIDATES` | 3000 | chunks scored by cosine per query (hard max 20000). |
@@ -129,10 +130,30 @@ highlighted snippet; a click opens the file pane at the extracted text around th
 Indexing is **on by default** (keyword search needs no key). Which embedder an organization uses (`embed.go`, `NewResolver`):
 
 1. An organization on its own model key (bring-your-own, `byo_only`) never uses the platform's key: its OpenAI or
-   OpenAI-compatible credential embeds (model `EMBEDDINGS_MODEL`); any other provider (Anthropic, Kimi, DeepSeek) means
-   keyword only, said in plain words.
+   OpenAI-compatible credential embeds (model `EMBEDDINGS_MODEL`, or `text-embedding-3-small` when the platform embeds
+   with Gemini); its **Gemini** credential embeds with `gemini-embedding-2` at 1536 dimensions (the platform's Gemini
+   model and size when the platform also uses Gemini); any other provider (Anthropic, Kimi, DeepSeek) means keyword
+   only, said in plain words.
 2. Otherwise the platform provider, if `allowed_providers` (within the server ceiling) allows it.
 3. Otherwise keyword only. Nothing is ever sent to a provider the data policy forbids.
+
+**Gemini** (`internal/docindex/gemini.go`, checked against https://ai.google.dev/gemini-api/docs/embeddings on
+2026-11-02). `POST {base}/models/{model}:batchEmbedContents` with the key in `x-goog-api-key`, one request per text
+(`{"model":"models/gemini-embedding-2","content":{"parts":[{"text":...}]},"outputDimensionality":1536}`; several parts
+in one content would be merged into one vector), at most 64 per call. `gemini-embedding-2` has no `task_type`: chunks and
+memory documents are sent as `title: none | text: ...` and search queries (passages and memory) as
+`task: search result | query: ...` (`QueryEmbedder` / `Service.EmbedQueryTexts`). The answer must carry exactly one
+vector of the requested size per text (otherwise the call fails and the file stays keyword only); vectors are
+L2-normalized in Go. Tokens come from `usageMetadata.promptTokenCount` (or the character estimate when absent).
+The stored model is `model@dimensions` (e.g. `gemini-embedding-2@1536`) in `doc_chunks.embed_model`,
+`doc_index_state.embed_model` and `memory_docs.embed_model`: vectors of another model, size or provider are never
+compared, and changing any of them re-indexes (the reconcile re-queues files whose `embed_model` differs, within the
+daily cap; memory documents are re-embedded the same way).
+
+**Gemini and customer data.** On the free tier Google may use what is sent to improve its products. Production
+compose files leave `EMBEDDINGS_PROVIDER` empty: turn it on (`EMBEDDINGS_PROVIDER=gemini`) only once the Gemini key is
+on a paid (billing-enabled) project, so customer documents never go through the free tier
+(`archivos-agentes.md` §8 and §10.2). The free tier is fine for development, with a very low quota.
 
 **Cost.** Each embeddings call reserves its estimated cost against the organization budget caps (`Budget.Reserve`, released
 at once) and is booked in the usage ledger (`usage_entries`, kind `embed`, agent `system`, `Model = embeddings/<model>`,
@@ -146,7 +167,7 @@ appears in the ledger and blocks at the org cap, but is not attributed to a requ
   not even in the count (`TestAgentSearchNeverLeaksForbiddenFolders`, and the Postgres test).
 * Tenant isolation: RLS on the four tables, org-scoped transactions, the worker claims per organization.
 * Snippets, headings and file text are data: sanitized and delimited by the `fs` gateway like any file content.
-* The embeddings key is never logged (`OpenAIEmbedder.String` redacts it, errors carry only a status code).
+* The embeddings key is never logged (`OpenAIEmbedder.String` and `GeminiEmbedder.String` redact it, errors carry only a status code).
 * The trash is never indexed nor searchable; restoring a file re-indexes it.
 
 ## Limits and scaling (honest)

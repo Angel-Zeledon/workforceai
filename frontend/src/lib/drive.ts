@@ -6,9 +6,10 @@
  * does against the real backend).
  */
 import { go } from "@/lib/navBridge";
+import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { API_URL, MOCK } from "./config";
-import { authFetch } from "./session";
+import { authFetch, authUpload, type UploadProgress } from "./session";
 import { useStore } from "./store";
 import { draftSlug } from "./mock/draft";
 
@@ -30,6 +31,11 @@ export interface PreviewSheet { name: string; rows: string[][]; truncated?: bool
 export interface PreviewBlock { type: "heading" | "paragraph" | "bullets" | "table"; level?: number; text?: string; items?: string[]; rows?: string[][] }
 export interface Preview { kind: "sheets" | "doc" | "none"; sheets?: PreviewSheet[]; blocks?: PreviewBlock[]; truncated: boolean; note?: string }
 export interface Trash { folders: DriveFolder[]; files: DriveFile[] }
+/** Storage of the organization; max_upload_bytes is the cap of one uploaded file (bigger with S3). */
+export interface DriveUsage { used_bytes: number; quota_bytes: number; max_file_bytes: number; max_upload_bytes?: number }
+/** One file of a multipart upload (POST /drive/upload): each file succeeds or fails on its own. */
+export interface UploadResult { name: string; path?: string; status: number; code?: string; error?: string; created?: boolean; result?: { file: DriveFile } }
+export type { UploadProgress };
 
 /** A drive error with the backend's stable code (version_conflict, read_only_mode, too_large...). */
 export class DriveError extends Error {
@@ -37,7 +43,9 @@ export class DriveError extends Error {
 }
 
 async function req<T>(method: string, path: string, body?: BodyInit | null, headers?: Record<string, string>): Promise<T> {
-  const res = await authFetch(`${API_URL}${path}`, { method, body: body ?? undefined, headers, cache: "no-store" });
+  return parse<T>(await authFetch(`${API_URL}${path}`, { method, body: body ?? undefined, headers, cache: "no-store" }));
+}
+async function parse<T>(res: Response): Promise<T> {
   const text = await res.text();
   const data = text ? (() => { try { return JSON.parse(text); } catch { return text; } })() : {};
   if (!res.ok) throw new DriveError(res.status, data?.code ?? String(res.status), data?.error ?? res.statusText, data?.current_version);
@@ -78,9 +86,21 @@ export const drive = MOCK ? mockDrive() : {
     if (!res.ok) throw new DriveError(res.status, String(res.status), res.statusText);
     return res.blob();
   },
-  upload: (path: string, file: Blob, expected?: number) =>
-    req<{ file: DriveFile; created: boolean }>("PUT", `/drive/upload?path=${q(path)}${expected ? `&expected_version=${expected}` : ""}`, file,
-      { "Content-Type": file.type || "application/octet-stream" }),
+  /** One file, streamed by the server straight to storage; onProgress reports the bytes sent. */
+  upload: async (path: string, file: Blob, expected?: number, onProgress?: UploadProgress, signal?: AbortSignal) =>
+    parse<{ file: DriveFile; created: boolean }>(await authUpload(`${API_URL}/drive/upload?path=${q(path)}${expected ? `&expected_version=${expected}` : ""}`,
+      { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" }, signal }, onProgress)),
+  /**
+   * Several files in one request (multipart): `name` may carry a relative path ("sub/a.txt", folder uploads).
+   * Resolves with one result per file; a file that fails does not undo the others.
+   */
+  uploadMany: async (folder: string, files: { name: string; file: Blob }[], onProgress?: UploadProgress, signal?: AbortSignal) => {
+    const fd = new FormData();
+    for (const f of files) fd.append("file", f.file, f.name);
+    const r = await parse<{ results: UploadResult[] }>(await authUpload(`${API_URL}/drive/upload?folder=${q(folder)}`, { method: "POST", body: fd, signal }, onProgress));
+    return r.results ?? [];
+  },
+  usage: () => req<DriveUsage>("GET", "/drive/usage"),
   mkdir: (path: string) => { const j = json({ path }); return req<DriveFolder>("POST", "/drive/folders", j.body, j.headers); },
   remove: (id: string) => req("DELETE", `/drive/files/${id}`),
   restore: (id: string) => req("POST", `/drive/files/${id}/restore`),
@@ -214,10 +234,23 @@ function mockDrive() {
       if (old) put(m.file.path, old.text, human, `restored v${v}`);
       return {};
     },
-    upload: async (path: string, file: Blob) => {
+    upload: async (path: string, file: Blob, _expected?: number, onProgress?: UploadProgress) => {
       const created = !live().some((m) => m.file.path === path);
+      onProgress?.(file.size, file.size);
       return { file: put(path, await file.text(), human, "upload"), created };
     },
+    uploadMany: async (folder: string, list: { name: string; file: Blob }[], onProgress?: UploadProgress): Promise<UploadResult[]> => {
+      const total = list.reduce((n, f) => n + f.file.size, 0);
+      const out: UploadResult[] = [];
+      for (const f of list) {
+        const path = `${folder === "/" ? "" : folder}/${f.name}`;
+        const created = !live().some((m) => m.file.path === path);
+        out.push({ name: f.name.split("/").pop() || f.name, path, status: created ? 201 : 200, created, result: { file: put(path, await f.file.text(), human, "upload") } });
+      }
+      onProgress?.(total, total);
+      return out;
+    },
+    usage: async (): Promise<DriveUsage> => ({ used_bytes: 0, quota_bytes: 5 << 30, max_file_bytes: 25 << 20, max_upload_bytes: 25 << 20 }),
     mkdir: async (path: string) => ({ id: `fld:${path}`, name: path.split("/").pop() || "", path }),
     remove: async (id: string) => { byId(id).file.deleted_at = now(); return {}; },
     restore: async (id: string) => { byId(id).file.deleted_at = null; return {}; },
@@ -242,3 +275,19 @@ export const useDriveNav = create<{ open: boolean; path: string; show: (path: st
   close: () => set({ open: false }),
   toggle: () => go(useDriveNav.getState().open ? "/" : "/files"),
 }));
+
+/** Upload cap until the server says otherwise (GET /drive/usage max_upload_bytes: 500 MB with S3, 25 MB without). */
+export const DEFAULT_UPLOAD_BYTES = 25 << 20;
+let uploadLimit: Promise<number> | null = null;
+/** The server's per-file upload cap, asked once per page load. */
+export function useUploadLimit(): number {
+  const [n, setN] = useState(DEFAULT_UPLOAD_BYTES);
+  useEffect(() => {
+    uploadLimit ??= drive.usage().then((u) => u.max_upload_bytes || u.max_file_bytes || DEFAULT_UPLOAD_BYTES)
+      .catch(() => { uploadLimit = null; return DEFAULT_UPLOAD_BYTES; });
+    let live = true;
+    void uploadLimit.then((v) => { if (live) setN(v); });
+    return () => { live = false; };
+  }, []);
+  return n;
+}

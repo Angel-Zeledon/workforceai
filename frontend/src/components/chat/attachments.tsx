@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "@/lib/i18n";
-import { drive, DriveError, type DriveFile, type Listing } from "@/lib/drive";
+import { drive, DriveError, DEFAULT_UPLOAD_BYTES, useUploadLimit, type DriveFile, type Listing } from "@/lib/drive";
 import type { FileRef } from "@/lib/types";
 import { Btn } from "../ui";
 import { Icon } from "../icons";
@@ -14,7 +14,8 @@ import { Icon } from "../icons";
  * can be uploaded, and files that are already in the drive can be attached without uploading them again.
  */
 export const MAX_FILES = 10;
-export const MAX_BYTES = 25 << 20; // the drive's per-file limit (DRIVE_MAX_FILE_BYTES)
+/** Default upload cap shown until the server answers (see useUploadLimit). */
+export const MAX_BYTES = DEFAULT_UPLOAD_BYTES;
 
 export interface Att {
   id: string;
@@ -24,6 +25,8 @@ export interface Att {
   /** Object URL of an image, to show its thumbnail. */
   preview?: string;
   status: "uploading" | "done" | "error";
+  /** Share of the upload already sent (0..1) while uploading. */
+  progress?: number;
   ref?: FileRef;
   error?: string;
   from: "upload" | "drive";
@@ -47,6 +50,7 @@ export function useAttachments(conv: string) {
   const [items, setItems] = useState<Att[]>([]);
   const [dest, setDestState] = useState(defaultDest);
   const urls = useRef(new Set<string>());
+  const maxBytes = useUploadLimit();
 
   useEffect(() => {
     try { const d = localStorage.getItem(destKey(conv)); if (d) setDestState(d); } catch { /* private mode */ }
@@ -58,7 +62,12 @@ export function useAttachments(conv: string) {
 
   const send = useCallback(async (id: string, file: File, rel: string, dir: string) => {
     const path = `${dir.replace(/\/$/, "")}/${rel}`;
-    const put = async (p: string) => drive.upload(p, file);
+    let shown = 0;
+    const progress = (loaded: number, total: number) => {
+      const f = total ? loaded / total : 0;
+      if (f - shown >= 0.02 || f >= 1) { shown = f; patch(id, { progress: f }); } // at most ~50 re-renders per file
+    };
+    const put = async (p: string) => { shown = 0; return drive.upload(p, file, undefined, progress); };
     try {
       let r;
       try { r = await put(path); }
@@ -87,7 +96,7 @@ export function useAttachments(conv: string) {
         const rel = relative && (f as File & { webkitRelativePath?: string }).webkitRelativePath ? (f as File & { webkitRelativePath: string }).webkitRelativePath.split("/").map(safe).join("/") : safe(f.name);
         const preview = isImage(f.type, f.name) ? URL.createObjectURL(f) : undefined;
         if (preview) urls.current.add(preview);
-        const tooBig = f.size > MAX_BYTES;
+        const tooBig = f.size > maxBytes;
         const a: Att = { id: uid(), name: relative ? rel : f.name, size: f.size, mime: f.type, preview, status: tooBig ? "error" : "uploading", error: tooBig ? "file_too_large" : undefined, from: "upload" };
         if (!tooBig) queueMicrotask(() => void send(a.id, f, rel, dest));
         return a;
@@ -95,7 +104,7 @@ export function useAttachments(conv: string) {
       return [...cur, ...added];
     });
     return skipped;
-  }, [dest, send]);
+  }, [dest, send, maxBytes]);
 
   const addDrive = useCallback((files: DriveFile[]) => {
     setItems((cur) => {
@@ -128,6 +137,7 @@ export function useAttachments(conv: string) {
     failed: items.some((a) => a.status === "error"),
     refs: items.filter((a) => a.status === "done" && a.ref).map((a) => a.ref as FileRef),
     full: items.length >= MAX_FILES,
+    maxBytes,
   };
 }
 
@@ -143,21 +153,29 @@ function Thumb({ a }: { a: Att }) {
 }
 
 export function AttachmentTray({ items, onRemove, onRetry }: { items: Att[]; onRemove: (id: string) => void; onRetry?: (id: string) => void }) {
-  const { t } = useT();
+  const { t: tr } = useT();
+  const mb = Math.round(useUploadLimit() / (1 << 20));
+  const t = (k: string, v?: Record<string, string | number>) => tr(k, { mb, ...v });
   if (!items.length) return null;
   return (
     <ul data-testid="chat-attachments" className="flex flex-wrap gap-2">
       {items.map((a) => (
         <li key={a.id} data-status={a.status} title={a.error ? t(`att.err.${a.error}`) : a.name}
-          className={`group flex max-w-[230px] items-center gap-2 rounded-xl border bg-panel py-1 pl-1 pr-1.5 text-[11px] shadow-soft ${a.status === "error" ? "border-err/50" : "border-line"}`}>
+          className={`group relative flex max-w-[230px] items-center gap-2 rounded-xl border bg-panel py-1 pl-1 pr-1.5 text-[11px] shadow-soft ${a.status === "error" ? "border-err/50" : "border-line"}`}>
           <Thumb a={a} />
           <span className="min-w-0 flex-1">
             <span className="block truncate font-medium text-ink">{a.name}</span>
             <span className={`block truncate text-[10.5px] ${a.status === "error" ? "text-err" : "text-mute"}`}>
-              {a.status === "uploading" ? t("att.uploading") : a.status === "error" ? t(`att.err.${a.error ?? "upload"}`) : a.from === "drive" ? `${t("att.fromDrive")} · ${fmtSize(a.size)}` : fmtSize(a.size)}
+              {a.status === "uploading" ? `${t("att.uploading")}${a.progress ? ` ${Math.floor(a.progress * 100)} %` : ""}` : a.status === "error" ? t(`att.err.${a.error ?? "upload"}`) : a.from === "drive" ? `${t("att.fromDrive")} · ${fmtSize(a.size)}` : fmtSize(a.size)}
             </span>
           </span>
           {a.status === "uploading" && <span aria-hidden className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />}
+          {a.status === "uploading" && (
+            <span role="progressbar" aria-label={a.name} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor((a.progress ?? 0) * 100)}
+              className="pointer-events-none absolute inset-x-2 bottom-0.5 h-[2px] overflow-hidden rounded-full bg-accent/15">
+              <span className="block h-full bg-accent transition-[width] duration-200" style={{ width: `${Math.floor((a.progress ?? 0) * 100)}%` }} />
+            </span>
+          )}
           <button type="button" aria-label={t("chat.attach.remove", { name: a.name })} onClick={() => onRemove(a.id)}
             className="shrink-0 rounded-md p-1 text-mute transition hover:bg-mute/10 hover:text-ink"><Icon name="x" size={11} /></button>
           {a.status === "error" && onRetry && <span className="sr-only">{a.error}</span>}
@@ -273,6 +291,7 @@ export function AttachMenu({ dest, full, onUpload, onFolderUpload, onDrive, onPi
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const maxBytes = useUploadLimit();
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
@@ -293,7 +312,7 @@ export function AttachMenu({ dest, full, onUpload, onFolderUpload, onDrive, onPi
         className="rounded-lg border border-line bg-panel2 p-2 text-mute hover:border-accent hover:text-ink disabled:opacity-40"><Icon name="plus" size={14} /></button>
       {open && (
         <div role="menu" className="absolute bottom-full left-0 z-50 mb-2 w-[270px] max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-panel p-1.5 shadow-pop">
-          {item(t("att.menu.upload"), t("att.menu.uploadHint", { n: MAX_FILES, mb: MAX_BYTES >> 20 }), onUpload, "attach-upload", "plus")}
+          {item(t("att.menu.upload"), t("att.menu.uploadHint", { n: MAX_FILES, mb: Math.round(maxBytes / (1 << 20)) }), onUpload, "attach-upload", "plus")}
           {item(t("att.menu.folder"), t("att.menu.folderHint"), onFolderUpload, "attach-folder", "folder")}
           {item(t("att.menu.drive"), t("att.menu.driveHint"), onDrive, "attach-drive", "layers")}
           <div className="my-1 border-t border-line" />

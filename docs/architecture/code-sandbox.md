@@ -145,6 +145,7 @@ approval for modified code, kill switch aborting a running run).
 | `SANDBOX_TOKEN` | runner | shared bearer token (>= 16 chars; the runner refuses to start otherwise) |
 | `SANDBOX_IMAGE`, `SANDBOX_RUNTIME` | runner | image (`wfai-sandbox-python:1`) and OCI runtime (`runsc` = gVisor) |
 | `SANDBOX_MAX_RUNTIME_SECONDS`, `SANDBOX_MEMORY_MB`, `SANDBOX_PIDS`, `SANDBOX_MAX_OUTPUT_BYTES`, `SANDBOX_MAX_OUTPUT_FILE_BYTES` | backend and runner | platform ceilings; organizations can only lower them |
+| `SANDBOX_CPUS` | runner | CPU ceiling of one run (default 1, at most 4) |
 | `SANDBOX_MAX_RUNS_PER_DAY` | backend | platform ceiling of runs per org per UTC day (default 20) |
 | `SANDBOX_MAX_CONCURRENT`, `SANDBOX_WORK_MB` | runner | concurrency and size of `/work` |
 
@@ -157,6 +158,33 @@ turn `auto_run` to `"desk"`).
 Run it: `make up-sandbox` (builds `wfai-sandbox-python:1`, generates
 `SANDBOX_TOKEN` into `.env.sandbox`, starts the stack with compose profile
 `sandbox`). `make sandbox-image` builds only the image.
+
+### Production
+
+Both production composes carry the runner and the two images under the compose profile
+`sandbox`, **off by default**:
+
+| | `docker-compose.prod.yml` | `deploy/vps/docker-compose.yml` |
+|---|---|---|
+| Services | `sandbox-image`, `sandbox-render-image`, `sandbox-runner` | `wf-sandbox-image`, `wf-sandbox-render-image`, `wf-sandbox-runner` |
+| Runner network | `internal` only (no internet, no port) | private `internal` network only |
+| Runner container | 256 MB, 0.5 CPU | 128 MB, 0.5 CPU |
+| Each run (defaults) | 512 MB, 1 CPU (`SANDBOX_CPUS`), 128 pids, 1 concurrent | 512 MB, 0.5 CPU, 128 pids, 1 concurrent |
+
+Every run is a throwaway container with `--network none`, whatever the compose network.
+
+Turn it on (in the `.env` of that compose):
+
+1. `COMPOSE_PROFILES=sandbox` and `SANDBOX_TOKEN=$(openssl rand -hex 24)` (the backend already
+   points `SANDBOX_URL` at the runner; without the token code runs and page rendering stay
+   unavailable).
+2. Build the images: VPS `./deploy.sh` (it builds every active service); otherwise
+   `docker compose -f docker-compose.prod.yml --env-file .env.prod build sandbox-image sandbox-render-image sandbox-runner`.
+3. `up -d`. The backend log says `render sandbox: agents can see PDF pages and images`. Code
+   execution still has to be enabled per organization (Settings, owner/admin).
+4. Strongly recommended before enabling it for customers: gVisor on the host and
+   `SANDBOX_RUNTIME=runsc`. On the shared VPS the socket gives the runner control over the
+   other project's containers too.
 
 ## WARNING: the Docker socket
 

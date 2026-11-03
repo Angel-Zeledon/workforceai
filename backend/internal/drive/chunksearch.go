@@ -84,7 +84,12 @@ func (s *Service) FullText(ctx context.Context, f File, version, maxChars int) (
 		return Extracted{}, Version{}, err
 	}
 	defer rc.Close()
-	data, err := io.ReadAll(io.LimitReader(rc, MaxExtractBytes+1))
+	lim := readLimit(f.Name) // the same window fs.read uses (PDFs up to 20 MB)
+	if !IsTextName(f.Name) && v.Size > lim {
+		// a big binary (an upload streamed to S3): never pulled into memory for text
+		return Extracted{Kind: "none", Note: fmt.Sprintf("file larger than %d MB: text not extracted", lim>>20)}, v, nil
+	}
+	data, err := io.ReadAll(io.LimitReader(rc, lim+1))
 	if err != nil {
 		return Extracted{}, Version{}, err
 	}

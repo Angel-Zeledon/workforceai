@@ -88,8 +88,12 @@ func bindDocIndex(ctx context.Context, log *slog.Logger, doc *docindex.Service, 
 	doc.Bind(b)
 	doc.Start(ctx)
 	if rc.Platform.Provider == "" {
-		log.Info("drive passage index ready (keyword search; set EMBEDDINGS_PROVIDER/EMBEDDINGS_API_KEY for search by meaning)")
+		log.Info("drive passage index ready (keyword search; set EMBEDDINGS_PROVIDER=gemini or EMBEDDINGS_PROVIDER/EMBEDDINGS_API_KEY for search by meaning)")
 	} else {
-		log.Info("drive passage index ready", "embeddings_provider", rc.Platform.Provider, "embeddings_model", rc.Platform.Model)
+		attrs := []any{"embeddings_provider", rc.Platform.Provider, "embeddings_model", rc.Platform.Model}
+		if rc.Platform.Provider == "gemini" {
+			attrs = append(attrs, "embeddings_dimensions", rc.Platform.Dimensions)
+		}
+		log.Info("drive passage index ready: search by meaning on", attrs...)
 	}
 }

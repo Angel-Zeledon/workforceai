@@ -43,6 +43,13 @@ type Embedder interface {
 	EmbedTexts(ctx context.Context, org string, texts []string) (vecs [][]float32, model, reason string)
 }
 
+// QueryEmbedder is optionally implemented by an Embedder whose model embeds a
+// search query differently from a document (docindex.Service: Gemini prompt
+// prefixes). The semantic leg uses it for the query when present.
+type QueryEmbedder interface {
+	EmbedQueryTexts(ctx context.Context, org string, texts []string) (vecs [][]float32, model, reason string)
+}
+
 // VecQuery selects the documents compared by cosine.
 type VecQuery struct {
 	AgentID        string
@@ -122,7 +129,11 @@ func (s *Semantic) Retrieve(ctx context.Context, org string, q Query) ([]Item, e
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
-	vecs, model, reason := s.Embedder.EmbedTexts(ctx, org, []string{text})
+	embedQ := s.Embedder.EmbedTexts
+	if qe, ok := s.Embedder.(QueryEmbedder); ok {
+		embedQ = qe.EmbedQueryTexts // models with a query form (Gemini) embed the query as one
+	}
+	vecs, model, reason := embedQ(ctx, org, []string{text})
 	if reason != "" || len(vecs) != 1 {
 		return []Item{}, nil // keyword only
 	}

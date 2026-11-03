@@ -72,6 +72,10 @@ func main() {
 	lim.TimeoutSeconds = envInt("SANDBOX_MAX_RUNTIME_SECONDS", lim.TimeoutSeconds)
 	lim.MemoryMB = envInt("SANDBOX_MEMORY_MB", lim.MemoryMB)
 	lim.PIDs = envInt("SANDBOX_PIDS", lim.PIDs)
+	// SANDBOX_CPUS: CPU ceiling of one run (default 1; e.g. 0.5 on a shared host).
+	if v, err := strconv.ParseFloat(strings.TrimSpace(os.Getenv("SANDBOX_CPUS")), 64); err == nil && v > 0 && v <= 4 {
+		lim.CPUs = v
+	}
 	lim.MaxOutputBytes = int64(envInt("SANDBOX_MAX_OUTPUT_BYTES", int(lim.MaxOutputBytes)))
 	lim.MaxOutputFileBytes = int64(envInt("SANDBOX_MAX_OUTPUT_FILE_BYTES", int(lim.MaxOutputFileBytes)))
 	local := strings.EqualFold(strings.TrimSpace(os.Getenv("RENDER_EXEC")), runnerd.RenderExecLocal)

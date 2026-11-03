@@ -28,12 +28,7 @@ import (
 func objectStoreFromEnv(ctx context.Context, log *slog.Logger, pg *postgres.Store) objstore.Store {
 	endpoint, bucket := os.Getenv("S3_ENDPOINT"), os.Getenv("S3_BUCKET")
 	if endpoint != "" && bucket != "" {
-		pathStyle := true
-		if v, err := strconv.ParseBool(os.Getenv("S3_USE_PATH_STYLE")); err == nil {
-			pathStyle = v
-		}
-		s3, err := objstore.NewS3(objstore.S3Config{Endpoint: endpoint, Bucket: bucket, AccessKey: os.Getenv("S3_ACCESS_KEY"),
-			SecretKey: os.Getenv("S3_SECRET_KEY"), Region: os.Getenv("S3_REGION"), UsePathStyle: pathStyle, Prefix: os.Getenv("S3_PREFIX")})
+		s3, err := s3FromEnv()
 		if err != nil {
 			log.Error("S3 object store misconfigured: files fall back to the database", "err", err)
 		} else {
@@ -41,6 +36,11 @@ func objectStoreFromEnv(ctx context.Context, log *slog.Logger, pg *postgres.Stor
 				log.Warn("S3 bucket check", "bucket", bucket, "err", err) // usually: already exists, or no permission to create
 			}
 			log.Info("files are stored in the S3-compatible object store", "endpoint", endpoint, "bucket", bucket)
+			if pg != nil {
+				// Objects written before S3 was configured stay readable from Postgres (drive_objects)
+				// until `server ctl objects-to-s3` has copied them (docs/architecture/drive.md).
+				return &objstore.Tiered{Primary: s3, Fallback: &postgres.ObjectStore{S: pg}}
+			}
 			return s3
 		}
 	}
@@ -50,8 +50,41 @@ func objectStoreFromEnv(ctx context.Context, log *slog.Logger, pg *postgres.Stor
 	return objstore.NewMemory()
 }
 
-// driveLimits reads DRIVE_MAX_FILE_MB and DRIVE_QUOTA_MB (0 or unset: defaults).
-func driveLimits() drive.Limits {
+// s3FromEnv builds the S3 client from S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY, S3_REGION,
+// S3_USE_PATH_STYLE (default true) and S3_PREFIX.
+func s3FromEnv() (*objstore.S3, error) {
+	pathStyle := true
+	if v, err := strconv.ParseBool(os.Getenv("S3_USE_PATH_STYLE")); err == nil {
+		pathStyle = v
+	}
+	return objstore.NewS3(objstore.S3Config{Endpoint: os.Getenv("S3_ENDPOINT"), Bucket: os.Getenv("S3_BUCKET"), AccessKey: os.Getenv("S3_ACCESS_KEY"),
+		SecretKey: os.Getenv("S3_SECRET_KEY"), Region: os.Getenv("S3_REGION"), UsePathStyle: pathStyle, Prefix: os.Getenv("S3_PREFIX")})
+}
+
+// Upload caps (DRIVE_MAX_UPLOAD_MB): streamed uploads go to disk and then to the object store,
+// so with S3 they can be much bigger than what the in-memory paths accept. Without S3 the bytes
+// end up in a Postgres bytea row, which postgres.ObjectStore caps at 64 MB.
+const (
+	defaultS3UploadMB = 500
+	maxPGUploadMB     = 64
+)
+
+// isS3 reports whether the bytes of new files go to an S3-compatible store.
+func isS3(objects objstore.Store) bool {
+	switch o := objects.(type) {
+	case *objstore.S3:
+		return true
+	case *objstore.Tiered:
+		_, ok := o.Primary.(*objstore.S3)
+		return ok
+	}
+	return false
+}
+
+// driveLimits reads DRIVE_MAX_FILE_MB (in-memory writes: agents, imports), DRIVE_MAX_UPLOAD_MB (a
+// person's streamed upload; default 500 with S3, DRIVE_MAX_FILE_MB otherwise, at most 64 without
+// S3) and DRIVE_QUOTA_MB. 0 or unset: defaults.
+func driveLimits(objects objstore.Store) drive.Limits {
 	var l drive.Limits
 	if v, err := strconv.ParseInt(os.Getenv("DRIVE_MAX_FILE_MB"), 10, 64); err == nil && v > 0 {
 		l.MaxFileBytes = v << 20
@@ -59,6 +92,19 @@ func driveLimits() drive.Limits {
 	if v, err := strconv.ParseInt(os.Getenv("DRIVE_QUOTA_MB"), 10, 64); err == nil && v > 0 {
 		l.QuotaBytes = v << 20
 	}
+	up, err := strconv.ParseInt(os.Getenv("DRIVE_MAX_UPLOAD_MB"), 10, 64)
+	if err != nil || up <= 0 {
+		up = 0
+		if isS3(objects) {
+			up = defaultS3UploadMB
+		}
+	}
+	if !isS3(objects) && objects != nil {
+		if _, mem := objects.(*objstore.Memory); !mem {
+			up = min(up, maxPGUploadMB)
+		}
+	}
+	l.MaxUploadBytes = up << 20 // below MaxFileBytes, the drive raises it to MaxFileBytes
 	return l
 }
 
@@ -97,7 +143,8 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 	if pg != nil {
 		dstore = &postgres.DriveStore{S: pg}
 	}
-	svc := drive.New(drive.Config{Store: dstore, Objects: objects, OrgID: cfg.App.OrgID, Limits: driveLimits(), Log: log, PlanLimits: planLimits,
+	svc := drive.New(drive.Config{Store: dstore, Objects: objects, OrgID: cfg.App.OrgID, Limits: driveLimits(objects), Log: log, PlanLimits: planLimits,
+		SpoolDir: os.Getenv("DRIVE_SPOOL_DIR"),
 		WriteGate: driveReadOnlyGate(cw.ctl),
 		Audit: func(actx context.Context, org string, e drive.AuditEntry) {
 			d := map[string]any{"actor_kind": e.Actor.Kind}
@@ -132,7 +179,7 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 			}}
 		cw.gw.AddNative(tool)
 	}
-	log.Info("drive ready", "agents_tool", drive.ToolName, "max_file_bytes", svc.Limits().MaxFileBytes, "quota_bytes", svc.Limits().QuotaBytes,
+	log.Info("drive ready", "agents_tool", drive.ToolName, "max_file_bytes", svc.Limits().MaxFileBytes, "max_upload_bytes", svc.Limits().MaxUploadBytes, "quota_bytes", svc.Limits().QuotaBytes,
 		"object_store", fmt.Sprintf("%T", objects))
 	return svc, doc
 }

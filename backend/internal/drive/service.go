@@ -1,7 +1,6 @@
 package drive
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -28,13 +27,22 @@ const (
 
 // Limits caps what an organization can store.
 type Limits struct {
-	MaxFileBytes int64 // per file version
-	QuotaBytes   int64 // total of every stored version of the organization
+	// MaxFileBytes caps a version written from memory (agents, inboxes, link
+	// imports, edits): those paths hold the whole file in RAM.
+	MaxFileBytes int64
+	// MaxUploadBytes caps a version streamed by a person (WriteStream,
+	// NewVersionStream): the body goes to a temporary file on disk and then to
+	// the object store, never whole in memory. Default and minimum: MaxFileBytes.
+	MaxUploadBytes int64
+	QuotaBytes     int64 // total of every stored version of the organization
 }
 
 func (l Limits) norm() Limits {
 	if l.MaxFileBytes <= 0 {
 		l.MaxFileBytes = DefaultMaxFileBytes
+	}
+	if l.MaxUploadBytes < l.MaxFileBytes {
+		l.MaxUploadBytes = l.MaxFileBytes
 	}
 	if l.QuotaBytes <= 0 {
 		l.QuotaBytes = DefaultQuotaBytes
@@ -57,6 +65,9 @@ type Config struct {
 	Objects objstore.Store
 	OrgID   string
 	Limits  Limits
+	// SpoolDir is where streamed uploads are written while they are checked
+	// (default: the OS temporary directory). Files there live for one request.
+	SpoolDir string
 	// PlanLimits (optional) returns the limits of the organization's plan (policy.Catalog): its storage, when it is
 	// smaller than Limits.QuotaBytes.
 	PlanLimits func(ctx context.Context, org string) policy.Tier
@@ -518,13 +529,14 @@ func (s *Service) quota(ctx context.Context, org string) (q int64, plan string) 
 	return q, plan
 }
 
-func (s *Service) checkSize(ctx context.Context, org string, n int64, extra int64) error {
-	lim := s.cfg.Limits
+// checkSize checks one version of n bytes against maxBytes (the cap of the
+// write path) and the organization's quota.
+func (s *Service) checkSize(ctx context.Context, org string, n int64, extra int64, maxBytes int64) error {
 	if n == 0 {
 		return invalid("empty_file", "the file is empty")
 	}
-	if n > lim.MaxFileBytes {
-		return errf(ErrTooLarge, "file_too_large", "the file exceeds the limit of %d MB", lim.MaxFileBytes>>20)
+	if n > maxBytes {
+		return tooLarge(maxBytes)
 	}
 	used, err := s.cfg.Store.UsedBytes(ctx, org)
 	if err != nil {
@@ -543,23 +555,42 @@ func (s *Service) checkSize(ctx context.Context, org string, n int64, extra int6
 	return nil
 }
 
+func tooLarge(maxBytes int64) *Error {
+	return errf(ErrTooLarge, "file_too_large", "the file exceeds the limit of %d MB", maxBytes>>20)
+}
+
+// writeMeta is what a write carries besides the bytes.
+type writeMeta struct {
+	Message  string
+	Expected *int
+	Tags     []string
+	Source   string
+}
+
 // Write creates the file at path or adds a version to it. Parents are created.
+// The bytes are in memory: the cap is Limits.MaxFileBytes (people uploading big
+// files go through WriteStream).
 func (s *Service) Write(ctx context.Context, p Principal, in WriteInput) (WriteResult, error) {
+	return s.write(ctx, p, in.Path, memContent(in.Data), writeMeta{Message: in.Message, Expected: in.Expected, Tags: in.Tags, Source: in.Source},
+		s.cfg.Limits.MaxFileBytes)
+}
+
+func (s *Service) write(ctx context.Context, p Principal, filePath string, c *content, m writeMeta, maxBytes int64) (WriteResult, error) {
 	org := s.org(ctx)
 	if err := checkPrincipal(p); err != nil {
 		return WriteResult{}, err
 	}
-	folderPath, name, err := SplitFile(in.Path)
+	folderPath, name, err := SplitFile(filePath)
 	if err != nil {
 		return WriteResult{}, err
 	}
 	if _, err := CleanName(name); err != nil {
 		return WriteResult{}, err
 	}
-	if err := CheckContent(name, in.Data); err != nil {
+	if err := c.check(name); err != nil {
 		return WriteResult{}, err
 	}
-	tags := in.Tags
+	tags := m.Tags
 	if tags != nil {
 		if tags, err = CleanTags(tags); err != nil {
 			return WriteResult{}, err
@@ -568,7 +599,7 @@ func (s *Service) Write(ctx context.Context, p Principal, in WriteInput) (WriteR
 	if err := s.gate(ctx, org); err != nil {
 		return WriteResult{}, err
 	}
-	if err := s.checkSize(ctx, org, int64(len(in.Data)), 0); err != nil {
+	if err := s.checkSize(ctx, org, c.size, 0, maxBytes); err != nil {
 		return WriteResult{}, err
 	}
 	segs, _ := Segments(folderPath)
@@ -579,21 +610,21 @@ func (s *Service) Write(ctx context.Context, p Principal, in WriteInput) (WriteR
 	cur, err := s.cfg.Store.FileByName(ctx, org, folder.ID, name)
 	switch {
 	case err == nil:
-		return s.addVersion(ctx, org, p, cur, in.Data, cleanMessage(in.Message), in.Expected, tags, in.Source)
+		return s.addVersion(ctx, org, p, cur, c, cleanMessage(m.Message), m.Expected, tags, m.Source, maxBytes)
 	case !errors.Is(err, domain.ErrNotFound):
 		return WriteResult{}, err
 	}
-	if in.Expected != nil && *in.Expected != 0 {
-		e := conflict("version_conflict", "the file does not exist yet (expected version %d)", *in.Expected)
+	if m.Expected != nil && *m.Expected != 0 {
+		e := conflict("version_conflict", "the file does not exist yet (expected version %d)", *m.Expected)
 		return WriteResult{}, e
 	}
 	now := s.now()
 	ft, _ := TypeOf(name)
-	x := Extract(name, in.Data, MaxIndexChars)
-	f := File{ID: newID("fil_"), FolderID: folder.ID, Name: name, Path: folder.Path + "/" + name, Mime: ft.mime, Size: int64(len(in.Data)),
+	x := c.extract(name)
+	f := File{ID: newID("fil_"), FolderID: folder.ID, Name: name, Path: folder.Path + "/" + name, Mime: ft.mime, Size: c.size,
 		CurrentVersion: 1, Tags: orEmpty(tags), CreatedBy: p, UpdatedBy: p, CreatedAt: now, UpdatedAt: now}
-	f.SHA256, f.Extraction, f.SearchText = objstore.SumBytes(in.Data), extractionOf(x), searchTextOf(x)
-	v, err := s.putVersion(ctx, org, f, 1, in.Data, p, cleanMessage(in.Message), now)
+	f.SHA256, f.Extraction, f.SearchText = c.sum, extractionOf(x), searchTextOf(x)
+	v, err := s.putVersion(ctx, org, f, 1, c, p, cleanMessage(m.Message), now, maxBytes)
 	if err != nil {
 		return WriteResult{}, err
 	}
@@ -601,7 +632,7 @@ func (s *Service) Write(ctx context.Context, p Principal, in WriteInput) (WriteR
 		_ = s.cfg.Objects.Delete(ctx, v.ObjectKey)
 		return WriteResult{}, mapStore(err, "file")
 	}
-	s.audit(ctx, org, p, "drive.file.created", "file", f.ID, map[string]any{"path": f.Path, "size": f.Size, "sha256": f.SHA256, "version": 1, "source": in.Source})
+	s.audit(ctx, org, p, "drive.file.created", "file", f.ID, map[string]any{"path": f.Path, "size": f.Size, "sha256": f.SHA256, "version": 1, "source": m.Source})
 	return WriteResult{File: f, Version: v, Created: true}, nil
 }
 
@@ -626,8 +657,13 @@ func searchTextOf(x Extracted) string {
 	return x.Text
 }
 
-// NewVersion adds a version to an existing file (by id).
+// NewVersion adds a version to an existing file (by id). The bytes are in
+// memory (cap Limits.MaxFileBytes); NewVersionStream is the streamed form.
 func (s *Service) NewVersion(ctx context.Context, p Principal, fileID string, data []byte, message string, expected *int, source string) (WriteResult, error) {
+	return s.newVersion(ctx, p, fileID, memContent(data), message, expected, source, s.cfg.Limits.MaxFileBytes)
+}
+
+func (s *Service) newVersion(ctx context.Context, p Principal, fileID string, c *content, message string, expected *int, source string, maxBytes int64) (WriteResult, error) {
 	org := s.org(ctx)
 	if err := checkPrincipal(p); err != nil {
 		return WriteResult{}, err
@@ -639,38 +675,38 @@ func (s *Service) NewVersion(ctx context.Context, p Principal, fileID string, da
 	if cur.DeletedAt != nil {
 		return WriteResult{}, conflict("is_deleted", "the file is in the trash: restore it first")
 	}
-	if err := CheckContent(cur.Name, data); err != nil {
+	if err := c.check(cur.Name); err != nil {
 		return WriteResult{}, err
 	}
 	if err := s.gate(ctx, org); err != nil {
 		return WriteResult{}, err
 	}
-	if err := s.checkSize(ctx, org, int64(len(data)), 0); err != nil {
+	if err := s.checkSize(ctx, org, c.size, 0, maxBytes); err != nil {
 		return WriteResult{}, err
 	}
-	return s.addVersion(ctx, org, p, cur, data, cleanMessage(message), expected, nil, source)
+	return s.addVersion(ctx, org, p, cur, c, cleanMessage(message), expected, nil, source, maxBytes)
 }
 
-func (s *Service) addVersion(ctx context.Context, org string, p Principal, cur File, data []byte, msg string, expected *int, tags []string, source string) (WriteResult, error) {
+func (s *Service) addVersion(ctx context.Context, org string, p Principal, cur File, c *content, msg string, expected *int, tags []string, source string, maxBytes int64) (WriteResult, error) {
 	if expected != nil && *expected != cur.CurrentVersion {
 		e := conflict("version_conflict", "the file is at version %d, not %d: read it again before writing", cur.CurrentVersion, *expected)
 		e.Current = cur.CurrentVersion
 		return WriteResult{}, e
 	}
-	sum := objstore.SumBytes(data)
+	sum := c.sum
 	if sum == cur.SHA256 && tags == nil {
 		v, err := s.cfg.Store.VersionOf(ctx, org, cur.ID, cur.CurrentVersion)
 		return WriteResult{File: cur, Version: v, Unchanged: true}, mapStore(err, "version")
 	}
 	now := s.now()
-	x := Extract(cur.Name, data, MaxIndexChars)
+	x := c.extract(cur.Name)
 	nf := cur
-	nf.Size, nf.SHA256, nf.CurrentVersion, nf.UpdatedBy, nf.UpdatedAt = int64(len(data)), sum, cur.CurrentVersion+1, p, now
+	nf.Size, nf.SHA256, nf.CurrentVersion, nf.UpdatedBy, nf.UpdatedAt = c.size, sum, cur.CurrentVersion+1, p, now
 	nf.Extraction, nf.SearchText = extractionOf(x), searchTextOf(x)
 	if tags != nil {
 		nf.Tags = tags
 	}
-	v, err := s.putVersion(ctx, org, nf, nf.CurrentVersion, data, p, msg, now)
+	v, err := s.putVersion(ctx, org, nf, nf.CurrentVersion, c, p, msg, now, maxBytes)
 	if err != nil {
 		return WriteResult{}, err
 	}
@@ -690,14 +726,17 @@ func (s *Service) addVersion(ctx context.Context, org string, p Principal, cur F
 	return WriteResult{File: nf, Version: v}, nil
 }
 
-// putVersion stores the bytes as an immutable object and returns the version row.
-func (s *Service) putVersion(ctx context.Context, org string, f File, n int, data []byte, p Principal, msg string, at time.Time) (Version, error) {
+// putVersion stores the bytes as an immutable object and returns the version
+// row. The body is streamed (a spooled upload never enters memory with S3).
+func (s *Service) putVersion(ctx context.Context, org string, f File, n int, c *content, p Principal, msg string, at time.Time, maxBytes int64) (Version, error) {
 	key := objstore.OrgKey(org, "drive", f.ID, fmt.Sprintf("v%d", n))
-	sum := objstore.SumBytes(data)
-	if _, err := s.cfg.Objects.Put(ctx, key, bytes.NewReader(data), int64(len(data)), objstore.PutOptions{ContentType: f.Mime, SHA256: sum, MaxBytes: s.cfg.Limits.MaxFileBytes}); err != nil {
+	if _, err := s.cfg.Objects.Put(ctx, key, c.reader(), c.size, objstore.PutOptions{ContentType: f.Mime, SHA256: c.sum, MaxBytes: maxBytes}); err != nil {
+		if errors.Is(err, objstore.ErrTooLarge) {
+			return Version{}, tooLarge(maxBytes) // e.g. the Postgres object store keeps at most 64 MB per object
+		}
 		return Version{}, fmt.Errorf("drive: store content: %w", err)
 	}
-	return Version{FileID: f.ID, Version: n, ObjectKey: key, SHA256: sum, Size: int64(len(data)), Mime: f.Mime, Author: p, Message: msg, CreatedAt: at}, nil
+	return Version{FileID: f.ID, Version: n, ObjectKey: key, SHA256: c.sum, Size: c.size, Mime: f.Mime, Author: p, Message: msg, CreatedAt: at}, nil
 }
 
 // RestoreVersion makes an old version current again by writing a NEW version
@@ -713,11 +752,14 @@ func (s *Service) RestoreVersion(ctx context.Context, p Principal, fileID string
 		return WriteResult{}, err
 	}
 	defer rc.Close()
-	data, err := objstore.ReadAllBounded(rc, s.cfg.Limits.MaxFileBytes)
+	// Streamed through a temporary file: an old version may be as big as any upload.
+	maxBytes := max(s.cfg.Limits.MaxUploadBytes, old.Size)
+	c, err := s.spool(rc, maxBytes)
 	if err != nil {
 		return WriteResult{}, err
 	}
-	res, err := s.NewVersion(ctx, p, fileID, data, fmt.Sprintf("Restored version %d", old.Version), expected, "restore_version")
+	defer c.close()
+	res, err := s.newVersion(ctx, p, fileID, c, fmt.Sprintf("Restored version %d", old.Version), expected, "restore_version", maxBytes)
 	if err == nil {
 		s.audit(ctx, org, p, "drive.version.restored", "file", fileID, map[string]any{"path": f.Path, "restored_version": old.Version, "new_version": res.File.CurrentVersion})
 	}
@@ -1010,6 +1052,8 @@ type Usage struct {
 	UsedBytes    int64 `json:"used_bytes"`
 	QuotaBytes   int64 `json:"quota_bytes"`
 	MaxFileBytes int64 `json:"max_file_bytes"`
+	// MaxUploadBytes is the cap of a file a person uploads (streamed).
+	MaxUploadBytes int64 `json:"max_upload_bytes"`
 }
 
 // Usage returns the storage usage.
@@ -1017,7 +1061,7 @@ func (s *Service) Usage(ctx context.Context) (Usage, error) {
 	org := s.org(ctx)
 	n, err := s.cfg.Store.UsedBytes(ctx, org)
 	q, _ := s.quota(ctx, org)
-	return Usage{UsedBytes: n, QuotaBytes: q, MaxFileBytes: s.cfg.Limits.MaxFileBytes}, err
+	return Usage{UsedBytes: n, QuotaBytes: q, MaxFileBytes: s.cfg.Limits.MaxFileBytes, MaxUploadBytes: s.cfg.Limits.MaxUploadBytes}, err
 }
 
 // ---- search / retriever ----

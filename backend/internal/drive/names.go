@@ -1,7 +1,6 @@
 package drive
 
 import (
-	"archive/zip"
 	"bytes"
 	"path"
 	"strings"
@@ -250,23 +249,7 @@ func CheckContent(name string, data []byte) error {
 }
 
 func checkOOXML(ext string, data []byte) error {
-	bad := func() error { return invalid("content_mismatch", "the content is not a valid %s file", ext[1:]) }
-	if !bytes.HasPrefix(data, []byte("PK\x03\x04")) {
-		return bad()
-	}
-	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
-	if err != nil || len(zr.File) > 5000 {
-		return bad()
-	}
-	need := map[string]string{".docx": "word/document.xml", ".xlsx": "xl/workbook.xml", ".pptx": "ppt/presentation.xml"}[ext]
-	have := map[string]bool{}
-	for _, f := range zr.File {
-		have[f.Name] = true
-	}
-	if !have["[Content_Types].xml"] || !have[need] {
-		return bad()
-	}
-	return nil
+	return checkOOXMLAt(ext, bytes.NewReader(data), int64(len(data)))
 }
 
 // CleanTags validates and normalizes tags.

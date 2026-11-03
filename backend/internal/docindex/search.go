@@ -137,17 +137,17 @@ func (s *Service) queryEmbedder(ctx context.Context, org string) (Embedder, stri
 // semantic embeds the query and ranks the prefiltered candidates by cosine.
 func (s *Service) semantic(ctx context.Context, org string, emb Embedder, query string, under []string) ([]Scored, string) {
 	est := utf8.RuneCountInString(query)/4 + 1
-	if reason := s.allowEmbed(ctx, org, est); reason != "" {
+	if reason := s.allowEmbed(ctx, org, emb.Provider(), est); reason != "" {
 		if reason == ReasonEmbedBudget {
 			return nil, "semantic ranking skipped: the budget is exhausted"
 		}
 		return nil, "semantic ranking skipped: the daily embeddings cap was reached"
 	}
-	vecs, tokens, err := emb.Embed(ctx, []string{query})
+	vecs, tokens, err := embedQuery(ctx, emb, []string{query})
 	if err != nil || len(vecs) != 1 {
 		return nil, "semantic ranking failed (provider error): keyword results only"
 	}
-	s.bookEmbed(ctx, org, max(tokens, est), emb.Model())
+	s.bookEmbed(ctx, org, emb.Provider(), max(tokens, est), emb.Model())
 	cands, err := s.cfg.Store.Candidates(ctx, org, CandidateQuery{Under: under, Model: emb.Model(), OrTerms: queryTerms(query), Limit: s.cfg.Limits.CandidateCap})
 	if err != nil {
 		return nil, "semantic ranking failed: keyword results only"

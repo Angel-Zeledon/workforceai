@@ -36,6 +36,7 @@ func (s *server) mountDrive(r chi.Router) {
 	r.With(del).Delete("/drive/folders/{id}", s.driveDeleteFolder)
 	r.With(write).Post("/drive/folders/{id}/restore", s.driveRestoreFolder)
 	r.With(write).Put("/drive/upload", s.driveUpload)
+	r.With(write).Post("/drive/upload", s.driveUploadMany)
 	r.With(read).Get("/drive/files/{id}", s.driveFile)
 	r.With(read).Get("/drive/files/{id}/content", s.driveContent)
 	r.With(read).Get("/drive/files/{id}/text", s.driveText)
@@ -55,36 +56,43 @@ func (s *server) mountDrive(r chi.Router) {
 
 func (s *server) drivePrincipal(r *http.Request) drive.Principal { return drive.Human(s.actor(r)) }
 
-// driveFail maps drive errors: the stable code always travels in the body.
-func (s *server) driveFail(w http.ResponseWriter, err error) {
+// driveStatus maps a drive error to its HTTP status, stable code and message
+// (500 = unexpected: the caller logs it).
+func driveStatus(err error) (int, string, string) {
 	var de *drive.Error
-	code := ""
+	code, msg := "", err.Error()
 	if errors.As(err, &de) {
-		code = de.Code
+		code, msg = de.Code, de.Msg
 	}
-	var status int
 	switch {
 	case errors.Is(err, drive.ErrReadOnly):
-		status = http.StatusLocked
+		return http.StatusLocked, code, msg
 	case errors.Is(err, drive.ErrTooLarge), errors.Is(err, drive.ErrQuota):
-		status = http.StatusRequestEntityTooLarge
+		return http.StatusRequestEntityTooLarge, code, msg
 	case errors.Is(err, drive.ErrUnsupportedType):
-		status = http.StatusUnsupportedMediaType
+		return http.StatusUnsupportedMediaType, code, msg
 	case errors.Is(err, domain.ErrNotFound):
-		status = http.StatusNotFound
+		return http.StatusNotFound, code, msg
 	case errors.Is(err, domain.ErrConflict):
-		status = http.StatusConflict
+		return http.StatusConflict, code, msg
 	case errors.Is(err, domain.ErrForbidden):
-		status = http.StatusForbidden
+		return http.StatusForbidden, code, msg
 	case errors.Is(err, domain.ErrInvalid):
-		status = http.StatusBadRequest
-	default:
+		return http.StatusBadRequest, code, msg
+	}
+	return http.StatusInternalServerError, code, msg
+}
+
+// driveFail maps drive errors: the stable code always travels in the body.
+func (s *server) driveFail(w http.ResponseWriter, err error) {
+	status, code, msg := driveStatus(err)
+	if status == http.StatusInternalServerError {
 		s.fail(w, err) // unexpected: 500, logged
 		return
 	}
-	body := map[string]any{"code": code, "error": err.Error()}
-	if de != nil {
-		body["error"] = de.Msg
+	body := map[string]any{"code": code, "error": msg}
+	var de *drive.Error
+	if errors.As(err, &de) {
 		if de.Current > 0 {
 			body["current_version"] = de.Current
 		}
@@ -113,7 +121,8 @@ func expectedVersion(r *http.Request) *int {
 	return &n
 }
 
-// readBody reads a raw upload capped at the drive's per-file limit.
+// readBody reads a raw body into memory capped at the drive's in-memory limit
+// (project inputs). Drive uploads are streamed instead (drive_upload.go).
 func (s *server) readBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
 	limit := s.Drive.Limits().MaxFileBytes
 	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit+1))
@@ -228,27 +237,6 @@ func (s *server) driveRestoreFolder(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, f)
 }
 
-// driveUpload: PUT /drive/upload?path=/Shared/plan.xlsx&message=&expected_version=
-// with the raw file as body. Creates the file or adds a version to it. 201
-// created, 200 new version (or unchanged); 409 version_conflict; 413; 415; 423.
-func (s *server) driveUpload(w http.ResponseWriter, r *http.Request) {
-	data, ok := s.readBody(w, r)
-	if !ok {
-		return
-	}
-	res, err := s.Drive.Write(r.Context(), s.drivePrincipal(r), drive.WriteInput{Path: r.URL.Query().Get("path"), Data: data,
-		Message: r.URL.Query().Get("message"), Expected: expectedVersion(r), Source: "upload"})
-	if err != nil {
-		s.driveFail(w, err)
-		return
-	}
-	status := http.StatusOK
-	if res.Created {
-		status = http.StatusCreated
-	}
-	writeJSON(w, status, res)
-}
-
 func (s *server) driveFile(w http.ResponseWriter, r *http.Request) {
 	f, err := s.Drive.GetFile(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
@@ -285,7 +273,7 @@ func (s *server) driveContent(w http.ResponseWriter, r *http.Request) {
 	h.Set("Content-Length", strconv.FormatInt(v.Size, 10))
 	h.Set("ETag", `"`+v.SHA256+`"`)
 	w.WriteHeader(http.StatusOK)
-	_, _ = io.Copy(w, rc)
+	_, _ = io.Copy(&downloadWriter{w: w, rc: http.NewResponseController(w)}, rc) // a big file is not cut by WriteTimeout
 }
 
 // driveText: GET /drive/files/{id}/text?version=&offset=&max_chars=. The
@@ -320,20 +308,6 @@ func (s *server) drivePreview(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
 	writeJSON(w, http.StatusOK, map[string]any{"file_id": f.ID, "version": v.Version, "preview": p})
-}
-
-// driveNewVersion: PUT /drive/files/{id}/content?message=&expected_version= raw body.
-func (s *server) driveNewVersion(w http.ResponseWriter, r *http.Request) {
-	data, ok := s.readBody(w, r)
-	if !ok {
-		return
-	}
-	res, err := s.Drive.NewVersion(r.Context(), s.drivePrincipal(r), chi.URLParam(r, "id"), data, r.URL.Query().Get("message"), expectedVersion(r), "upload")
-	if err != nil {
-		s.driveFail(w, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, res)
 }
 
 func (s *server) driveVersions(w http.ResponseWriter, r *http.Request) {
