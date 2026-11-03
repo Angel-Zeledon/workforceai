@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { orgApi } from "@/lib/orgConfigApi";
-import { connApi } from "@/lib/connections/api";
 import { notifyApi, type DailyGoal } from "@/lib/notifyApi";
 import { useRewards } from "@/lib/rewards";
 import { useSession } from "@/lib/session";
@@ -12,15 +11,15 @@ import { toast } from "@/lib/toast";
 import { Icon, type IconName } from "../icons";
 
 /**
- * "Primeros pasos": four real steps that take an account from empty to working: (1) tell the office about the business,
- * (2) connect a tool, (3) choose how much freedom the team has, (4) ask the first task. Progress comes from what the
- * account really has (the organization settings, an active connection, an agent above "suggest", a request), not from
+ * "Primeros pasos": three real steps that take an account from empty to working: (1) tell the office about the business,
+ * (2) choose how much freedom the team has, (3) ask the first task. Connecting a tool is not a step: the office works
+ * without one. Progress comes from what the account really has (the organization settings, an agent above "suggest",
+ * a request), not from
  * clicking a box. Each step, once done, stays done (remembered per account), and the pill disappears when all are done.
  */
-type StepId = "context" | "connect" | "autonomy" | "task";
+type StepId = "context" | "autonomy" | "task";
 const STEPS: { id: StepId; icon: IconName }[] = [
   { id: "context", icon: "flag" },
-  { id: "connect", icon: "plug" },
   { id: "autonomy", icon: "shield" },
   { id: "task", icon: "chat" },
 ];
@@ -34,8 +33,7 @@ function ActivationPill() {
   const asked = useStore((s) => Object.keys(s.requests).length > 0);
   const freer = useStore((s) => Object.values(s.agents).some((a) => a.autonomy === "rules" || a.autonomy === "autonomous"));
   const [configured, setConfigured] = useState(false); // the office was set up: business type, tone and the autonomy of the pack
-  const [connected, setConnected] = useState(false);
-  const [done, setDone] = useState<Record<StepId, boolean>>({ context: false, connect: false, autonomy: false, task: false });
+  const [done, setDone] = useState<Record<StepId, boolean>>({ context: false, autonomy: false, task: false });
   const [dismissed, setDismissed] = useState(true); // hidden until we know (avoids a flash)
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
@@ -44,17 +42,16 @@ function ActivationPill() {
   // What the account really has. Best effort: an older backend or a missing permission just leaves the step open.
   const refresh = useCallback(() => {
     orgApi.settings().then((o) => setConfigured(!!(o.onboarding_completed || (o.configured && o.business_type)))).catch(() => {});
-    connApi.list().then((l) => setConnected(l.some((c) => c.status === "active"))).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh, uid]);
   // Load what this account already completed.
   useEffect(() => {
-    setDone({ context: get(key(uid, "context")), connect: get(key(uid, "connect")), autonomy: get(key(uid, "autonomy")), task: get(key(uid, "task")) });
+    setDone({ context: get(key(uid, "context")), autonomy: get(key(uid, "autonomy")), task: get(key(uid, "task")) });
     setDismissed(get(key(uid, "dismissed")));
     announced.current = false;
   }, [uid]);
   // Remember each step the moment its real condition becomes true.
-  const live: Record<StepId, boolean> = useMemo(() => ({ context: configured, connect: connected, autonomy: configured || freer, task: asked }), [configured, connected, freer, asked]);
+  const live: Record<StepId, boolean> = useMemo(() => ({ context: configured, autonomy: configured || freer, task: asked }), [configured, freer, asked]);
   useEffect(() => {
     setDone((d) => {
       const next = { ...d };
@@ -86,7 +83,6 @@ function ActivationPill() {
   const run = (id: StepId) => {
     setOpen(false);
     if (id === "context") { go("/settings"); return; }
-    if (id === "connect") { go("/settings?s=connections"); return; }
     go("/");
     if (id === "task") setTimeout(() => document.querySelector<HTMLInputElement>('[data-testid="command-input"]')?.focus(), 450);
   };
