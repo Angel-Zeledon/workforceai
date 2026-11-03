@@ -70,7 +70,12 @@ services:
     build: ../../agent-runtime
     restart: unless-stopped
     environment:
-      SIMULATION: "true"
+      # Live models: set DEEPSEEK_API_KEY and SIMULATION=false in ./.env (the platform model is DeepSeek, see
+      # PLATFORM_LLM_PROVIDER on the backend). Without both it stays in simulation (no network, no cost).
+      SIMULATION: ${SIMULATION:-true}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      # Operator ceiling of model providers (comma-separated; empty = all configured).
+      ALLOWED_PROVIDERS: ${ALLOWED_PROVIDERS:-}
       # Shared secret with the backend; empty = unauthenticated calls (the backend logs a warning).
       RUNTIME_TOKEN: ${RUNTIME_TOKEN:-}
     mem_limit: 768m
@@ -90,6 +95,9 @@ services:
       PORT: "8080"
       RUNTIME_URL: http://wf-runtime:8000
       RUNTIME_TOKEN: ${RUNTIME_TOKEN:-}
+      # Platform model answered with the operator's key; must match the key the runtime has (deepseek by default).
+      PLATFORM_LLM_PROVIDER: ${PLATFORM_LLM_PROVIDER:-deepseek}
+      ALLOWED_PROVIDERS: ${ALLOWED_PROVIDERS:-}
       BUDGET_USD: "5"
       UI_BASE_URL: https://app.workforceai.es
       ALLOWED_ORIGINS: https://app.workforceai.es
