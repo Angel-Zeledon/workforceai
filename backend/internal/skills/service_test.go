@@ -358,12 +358,12 @@ func TestAssignmentRoleDefaultsAndBounds(t *testing.T) {
 	_ = e.svc.Assign(e.ctx, admin, "sales", sales.ID)
 	_ = e.svc.Assign(e.ctx, admin, "sales", sales.ID) // idempotent
 	as, _ = e.svc.AgentSkills(e.ctx, "sales")
-	if len(as) != 6 { // 5 role defaults + the direct assignment
+	if len(as) != 8 { // 7 role defaults + the direct assignment
 		t.Fatalf("sales: %+v", as)
 	}
 	_ = e.svc.Unassign(e.ctx, admin, "sales", sales.ID)
 	as, _ = e.svc.AgentSkills(e.ctx, "sales")
-	if len(as) != 5 {
+	if len(as) != 7 {
 		t.Fatalf("sales after unassign: %d", len(as))
 	}
 	// progressive disclosure: only name + description, bounded

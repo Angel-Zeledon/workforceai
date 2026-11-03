@@ -1,0 +1,63 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "marketing_campaign",
+  "version": 1,
+  "category": "marketing",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "product", "label_key": "param.product", "required": true },
+    { "key": "budget", "label_key": "param.budget", "required": false, "default_key": "param.budget.default" }
+  ],
+  "steps": [
+    { "key": "objective", "title_key": "step.objective.title", "description_key": "step.objective.desc", "agent_role": "sales", "depends_on": [] },
+    { "key": "messages", "title_key": "step.messages.title", "description_key": "step.messages.desc", "agent_role": "sales", "depends_on": ["objective"] },
+    { "key": "channel_budget", "title_key": "step.channel_budget.title", "description_key": "step.channel_budget.desc", "agent_role": "accounting", "depends_on": ["objective"] },
+    { "key": "metrics", "title_key": "step.metrics.title", "description_key": "step.metrics.desc", "agent_role": "analyst", "depends_on": ["objective"] },
+    { "key": "legal_review", "title_key": "step.legal_review.title", "description_key": "step.legal_review.desc", "agent_role": "legal", "depends_on": ["messages"] },
+    { "key": "plan", "title_key": "step.plan.title", "description_key": "step.plan.desc", "agent_role": "assistant", "depends_on": ["messages", "channel_budget", "legal_review", "metrics"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Campaña de marketing",
+      "tpl.description": "Define objetivo y público, mensajes, presupuesto por canal, métricas y revisión legal, y arma un plan final sin publicar nada.",
+      "tpl.request": "Preparar una campaña de marketing para {{product}} (presupuesto: {{budget}})",
+      "param.product": "Producto o servicio",
+      "param.budget": "Presupuesto",
+      "param.budget.default": "por definir",
+      "step.objective.title": "Definir objetivo y público",
+      "step.objective.desc": "Fijar el objetivo de la campaña de {{product}} y el público al que se dirige, con sus características principales.",
+      "step.messages.title": "Redactar mensajes y calendario",
+      "step.messages.desc": "Preparar los mensajes clave de {{product}} y un calendario de publicación en borrador. No publicar sin aprobación.",
+      "step.channel_budget.title": "Asignar presupuesto por canal",
+      "step.channel_budget.desc": "Distribuir el presupuesto ({{budget}}) de {{product}} entre los canales propuestos, con supuestos de costo.",
+      "step.metrics.title": "Definir métricas a seguir",
+      "step.metrics.desc": "Proponer indicadores de alcance, conversión y costo para la campaña de {{product}} y la forma de medirlos.",
+      "step.legal_review.title": "Revisar afirmaciones y promociones",
+      "step.legal_review.desc": "Revisar las afirmaciones, comparaciones y promociones de los mensajes de {{product}} y señalar riesgos y cambios.",
+      "step.plan.title": "Armar el plan final sin publicar",
+      "step.plan.desc": "Consolidar objetivo, mensajes, presupuesto, métricas y revisión legal en un plan de {{product}}. No publicar ni enviar nada sin aprobación."
+    },
+    "en": {
+      "tpl.name": "Marketing campaign",
+      "tpl.description": "Defines objective and audience, messages, channel budget, metrics and legal review, and assembles a final plan without publishing anything.",
+      "tpl.request": "Prepare a marketing campaign for {{product}} (budget: {{budget}})",
+      "param.product": "Product or service",
+      "param.budget": "Budget",
+      "param.budget.default": "to be defined",
+      "step.objective.title": "Define objective and audience",
+      "step.objective.desc": "Set the objective of the {{product}} campaign and the audience it targets, with their main characteristics.",
+      "step.messages.title": "Draft messages and calendar",
+      "step.messages.desc": "Prepare the key messages for {{product}} and a publishing calendar as drafts. Do not publish without approval.",
+      "step.channel_budget.title": "Allocate budget by channel",
+      "step.channel_budget.desc": "Split the {{product}} budget ({{budget}}) across the proposed channels, with cost assumptions.",
+      "step.metrics.title": "Define metrics to track",
+      "step.metrics.desc": "Propose reach, conversion and cost indicators for the {{product}} campaign and how to measure them.",
+      "step.legal_review.title": "Review claims and promotions",
+      "step.legal_review.desc": "Review the claims, comparisons and promotions in the {{product}} messages and flag risks and changes.",
+      "step.plan.title": "Assemble the final plan without publishing",
+      "step.plan.desc": "Consolidate the objective, messages, budget, metrics and legal review into a {{product}} plan. Do not publish or send anything without approval."
+    }
+  }
+}

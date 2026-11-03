@@ -138,5 +138,5 @@
       "en": "# Technical notes\n\n## Decisions\n\n## Risks\n\n## To do\n"
     }
   ],
-  "default_skills": ["code-review-checklist", "bug-report-triage", "release-notes"]
+  "default_skills": ["code-review-checklist", "bug-report-triage", "release-notes", "change-request", "security-incident-checklist", "it-access-request-review"]
 }

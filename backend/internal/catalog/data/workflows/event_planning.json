@@ -1,0 +1,63 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "event_planning",
+  "version": 1,
+  "category": "operations",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "event", "label_key": "param.event", "required": true },
+    { "key": "date", "label_key": "param.date", "required": false, "default_key": "param.date.default" }
+  ],
+  "steps": [
+    { "key": "goal", "title_key": "step.goal.title", "description_key": "step.goal.desc", "agent_role": "assistant", "depends_on": [] },
+    { "key": "venue", "title_key": "step.venue.title", "description_key": "step.venue.desc", "agent_role": "operations", "depends_on": ["goal"] },
+    { "key": "budget", "title_key": "step.budget.title", "description_key": "step.budget.desc", "agent_role": "accounting", "depends_on": ["goal"] },
+    { "key": "invitations", "title_key": "step.invitations.title", "description_key": "step.invitations.desc", "agent_role": "sales", "depends_on": ["goal"] },
+    { "key": "contracts", "title_key": "step.contracts.title", "description_key": "step.contracts.desc", "agent_role": "legal", "depends_on": ["venue", "budget"] },
+    { "key": "schedule", "title_key": "step.schedule.title", "description_key": "step.schedule.desc", "agent_role": "operations", "depends_on": ["budget", "contracts", "invitations"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Planificación de evento",
+      "tpl.description": "Define objetivo y formato, prepara lugar, presupuesto e invitaciones en paralelo, revisa contratos y entrega un cronograma final.",
+      "tpl.request": "Planificar el evento {{event}} (fecha: {{date}})",
+      "param.event": "Evento",
+      "param.date": "Fecha",
+      "param.date.default": "por definir",
+      "step.goal.title": "Definir objetivo y formato",
+      "step.goal.desc": "Fijar el objetivo de {{event}}, su público, su formato y la fecha ({{date}}).",
+      "step.venue.title": "Buscar lugar y proveedores",
+      "step.venue.desc": "Identificar lugares y proveedores para {{event}} ({{date}}) y comparar capacidad, costo y disponibilidad.",
+      "step.budget.title": "Presupuestar el evento",
+      "step.budget.desc": "Estimar el costo de {{event}} por rubro, con un margen para imprevistos y el monto total.",
+      "step.invitations.title": "Redactar invitaciones en borrador",
+      "step.invitations.desc": "Preparar borradores de invitación y una lista de invitados para {{event}}. No enviar invitaciones sin aprobación.",
+      "step.contracts.title": "Revisar contratos con proveedores",
+      "step.contracts.desc": "Revisar condiciones, cancelaciones y responsabilidades de los contratos de {{event}} antes de firmar. No firmar sin aprobación.",
+      "step.schedule.title": "Armar el cronograma final",
+      "step.schedule.desc": "Consolidar presupuesto, contratos e invitaciones en un cronograma final de {{event}} con responsables y fechas."
+    },
+    "en": {
+      "tpl.name": "Event planning",
+      "tpl.description": "Defines goal and format, prepares venue, budget and invitations in parallel, reviews contracts and delivers a final schedule.",
+      "tpl.request": "Plan the event {{event}} (date: {{date}})",
+      "param.event": "Event",
+      "param.date": "Date",
+      "param.date.default": "to be defined",
+      "step.goal.title": "Define goal and format",
+      "step.goal.desc": "Set the goal of {{event}}, its audience, its format and its date ({{date}}).",
+      "step.venue.title": "Find venue and suppliers",
+      "step.venue.desc": "Identify venues and suppliers for {{event}} ({{date}}) and compare capacity, cost and availability.",
+      "step.budget.title": "Budget the event",
+      "step.budget.desc": "Estimate the cost of {{event}} by line item, with a contingency margin and the total amount.",
+      "step.invitations.title": "Draft invitations",
+      "step.invitations.desc": "Prepare invitation drafts and a guest list for {{event}}. Do not send invitations without approval.",
+      "step.contracts.title": "Review supplier contracts",
+      "step.contracts.desc": "Review the conditions, cancellations and liabilities in the {{event}} contracts before signing. Do not sign without approval.",
+      "step.schedule.title": "Assemble the final schedule",
+      "step.schedule.desc": "Consolidate the budget, contracts and invitations into a final {{event}} schedule with owners and dates."
+    }
+  }
+}

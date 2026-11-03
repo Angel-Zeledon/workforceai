@@ -5277,5 +5277,10 @@
   "concepts.templates.what": "what, in which order",
   "concepts.templates.body": "Work recipes: the steps, which agent does each one and where you approve.",
   "concepts.templates.example": "E.g. “Month close”: the accountant reconciles, finance reviews, you approve.",
-  "concepts.templates.go": "See templates"
+  "concepts.templates.go": "See templates",
+  "tpl.category.legal": "Legal",
+  "tpl.category.hr": "People",
+  "tpl.category.operations": "Operations",
+  "tpl.category.marketing": "Marketing",
+  "tpl.category.management": "Management"
 }

@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "expense_audit",
+  "version": 1,
+  "category": "finance",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "period", "label_key": "param.period", "required": true }
+  ],
+  "steps": [
+    { "key": "gather", "title_key": "step.gather.title", "description_key": "step.gather.desc", "agent_role": "accounting", "depends_on": [] },
+    { "key": "policy_check", "title_key": "step.policy_check.title", "description_key": "step.policy_check.desc", "agent_role": "accounting", "depends_on": ["gather"] },
+    { "key": "anomalies", "title_key": "step.anomalies.title", "description_key": "step.anomalies.desc", "agent_role": "analyst", "depends_on": ["gather"] },
+    { "key": "receipts", "title_key": "step.receipts.title", "description_key": "step.receipts.desc", "agent_role": "assistant", "depends_on": ["gather"] },
+    { "key": "findings", "title_key": "step.findings.title", "description_key": "step.findings.desc", "agent_role": "accounting", "depends_on": ["policy_check", "anomalies", "receipts"] },
+    { "key": "adjustments", "title_key": "step.adjustments.title", "description_key": "step.adjustments.desc", "agent_role": "hr", "depends_on": ["findings"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Auditoría de gastos",
+      "tpl.description": "Reúne los gastos del período, los revisa contra la política, busca anomalías y comprobantes faltantes en paralelo y prepara los ajustes sin enviarlos.",
+      "tpl.request": "Auditar los gastos de {{period}}",
+      "param.period": "Período a auditar",
+      "step.gather.title": "Reunir gastos del período",
+      "step.gather.desc": "Reunir los gastos registrados en {{period}} y agruparlos por categoría, área y responsable.",
+      "step.policy_check.title": "Revisar gastos contra la política",
+      "step.policy_check.desc": "Comparar cada gasto de {{period}} con la política de gastos vigente y marcar los incumplimientos.",
+      "step.anomalies.title": "Detectar anomalías",
+      "step.anomalies.desc": "Buscar en los gastos de {{period}} montos, frecuencias o proveedores atípicos, con la evidencia de cada caso.",
+      "step.receipts.title": "Validar comprobantes",
+      "step.receipts.desc": "Verificar que cada gasto de {{period}} tenga un comprobante completo y coherente con el monto registrado.",
+      "step.findings.title": "Informe de hallazgos",
+      "step.findings.desc": "Consolidar incumplimientos, anomalías y comprobantes faltantes de {{period}} en un informe con montos e impacto.",
+      "step.adjustments.title": "Preparar comunicación de ajustes",
+      "step.adjustments.desc": "Preparar los mensajes de ajuste para los responsables de los gastos de {{period}}. No enviarlos sin aprobación."
+    },
+    "en": {
+      "tpl.name": "Expense audit",
+      "tpl.description": "Gathers the period's expenses, checks them against policy, looks for anomalies and missing receipts in parallel, and prepares adjustments without sending them.",
+      "tpl.request": "Audit the expenses for {{period}}",
+      "param.period": "Period to audit",
+      "step.gather.title": "Gather the period's expenses",
+      "step.gather.desc": "Collect the expenses recorded in {{period}} and group them by category, area and owner.",
+      "step.policy_check.title": "Check expenses against policy",
+      "step.policy_check.desc": "Compare each {{period}} expense with the current expense policy and flag any non-compliance.",
+      "step.anomalies.title": "Detect anomalies",
+      "step.anomalies.desc": "Look for unusual amounts, frequencies or vendors in the {{period}} expenses, with evidence for each case.",
+      "step.receipts.title": "Validate receipts",
+      "step.receipts.desc": "Verify that each {{period}} expense has a complete receipt that matches the recorded amount.",
+      "step.findings.title": "Findings report",
+      "step.findings.desc": "Consolidate the {{period}} non-compliance, anomalies and missing receipts into a report with amounts and impact.",
+      "step.adjustments.title": "Prepare adjustment communication",
+      "step.adjustments.desc": "Prepare adjustment messages for the owners of the {{period}} expenses. Do not send them without approval."
+    }
+  }
+}

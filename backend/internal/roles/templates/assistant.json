@@ -130,5 +130,5 @@
       "en": "# Weekly agenda\n\n## Monday\n\n## Tuesday\n\n## Wednesday\n\n## Thursday\n\n## Friday\n"
     }
   ],
-  "default_skills": ["client-email", "project-plan", "executive-summary", "meeting-minutes"]
+  "default_skills": ["client-email", "project-plan", "executive-summary", "meeting-minutes", "meeting-agenda", "decision-log", "appointment-reminder", "event-plan"]
 }

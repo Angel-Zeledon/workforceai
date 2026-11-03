@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "supplier_selection",
+  "version": 1,
+  "category": "operations",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "need", "label_key": "param.need", "required": true }
+  ],
+  "steps": [
+    { "key": "requirements", "title_key": "step.requirements.title", "description_key": "step.requirements.desc", "agent_role": "operations", "depends_on": [] },
+    { "key": "quotes_comparison", "title_key": "step.quotes_comparison.title", "description_key": "step.quotes_comparison.desc", "agent_role": "operations", "depends_on": ["requirements"] },
+    { "key": "financial_analysis", "title_key": "step.financial_analysis.title", "description_key": "step.financial_analysis.desc", "agent_role": "accounting", "depends_on": ["quotes_comparison"] },
+    { "key": "contract_terms", "title_key": "step.contract_terms.title", "description_key": "step.contract_terms.desc", "agent_role": "legal", "depends_on": ["quotes_comparison"] },
+    { "key": "recommendation", "title_key": "step.recommendation.title", "description_key": "step.recommendation.desc", "agent_role": "analyst", "depends_on": ["financial_analysis", "contract_terms"] },
+    { "key": "purchase_order", "title_key": "step.purchase_order.title", "description_key": "step.purchase_order.desc", "agent_role": "operations", "depends_on": ["recommendation"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Selección de proveedor",
+      "tpl.description": "Define requisitos, compara cotizaciones, evalúa finanzas y términos en paralelo y prepara un pedido de compra en borrador.",
+      "tpl.request": "Seleccionar proveedor para {{need}}",
+      "param.need": "Necesidad de compra",
+      "step.requirements.title": "Requisitos para {{need}}",
+      "step.requirements.desc": "Definir especificaciones, volumen, plazos y criterios mínimos para cubrir {{need}}.",
+      "step.quotes_comparison.title": "Comparar cotizaciones",
+      "step.quotes_comparison.desc": "Comparar precio, calidad, plazos y condiciones de las cotizaciones recibidas para {{need}}.",
+      "step.financial_analysis.title": "Análisis financiero de proveedores",
+      "step.financial_analysis.desc": "Evaluar solvencia, condiciones de pago y costo total de los proveedores candidatos para {{need}}.",
+      "step.contract_terms.title": "Términos contractuales",
+      "step.contract_terms.desc": "Revisar garantías, penalizaciones, confidencialidad y responsabilidad que ofrecen los proveedores para {{need}}.",
+      "step.recommendation.title": "Recomendación de proveedor",
+      "step.recommendation.desc": "Recomendar un proveedor para {{need}} integrando comparación, finanzas y términos, con riesgos y alternativas.",
+      "step.purchase_order.title": "Pedido de compra en borrador",
+      "step.purchase_order.desc": "Preparar el pedido de compra en borrador para {{need}}. No se envía al proveedor sin aprobación."
+    },
+    "en": {
+      "tpl.name": "Supplier selection",
+      "tpl.description": "Defines requirements, compares quotes, assesses finances and terms in parallel, and prepares a draft purchase order.",
+      "tpl.request": "Select a supplier for {{need}}",
+      "param.need": "Purchase need",
+      "step.requirements.title": "Requirements for {{need}}",
+      "step.requirements.desc": "Define specifications, volume, lead times and minimum criteria to cover {{need}}.",
+      "step.quotes_comparison.title": "Compare quotes",
+      "step.quotes_comparison.desc": "Compare price, quality, lead times and conditions of the quotes received for {{need}}.",
+      "step.financial_analysis.title": "Financial analysis of suppliers",
+      "step.financial_analysis.desc": "Assess solvency, payment terms and total cost of the candidate suppliers for {{need}}.",
+      "step.contract_terms.title": "Contract terms",
+      "step.contract_terms.desc": "Review guarantees, penalties, confidentiality and liability offered by the suppliers for {{need}}.",
+      "step.recommendation.title": "Supplier recommendation",
+      "step.recommendation.desc": "Recommend a supplier for {{need}} combining comparison, finances and terms, with risks and alternatives.",
+      "step.purchase_order.title": "Draft purchase order",
+      "step.purchase_order.desc": "Prepare the draft purchase order for {{need}}. Not sent to the supplier without approval."
+    }
+  }
+}

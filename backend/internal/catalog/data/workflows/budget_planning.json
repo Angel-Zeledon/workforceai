@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "budget_planning",
+  "version": 1,
+  "category": "finance",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "period", "label_key": "param.period", "required": true }
+  ],
+  "steps": [
+    { "key": "assumptions", "title_key": "step.assumptions.title", "description_key": "step.assumptions.desc", "agent_role": "analyst", "depends_on": [] },
+    { "key": "revenue", "title_key": "step.revenue.title", "description_key": "step.revenue.desc", "agent_role": "sales", "depends_on": ["assumptions"] },
+    { "key": "opex", "title_key": "step.opex.title", "description_key": "step.opex.desc", "agent_role": "operations", "depends_on": ["assumptions"] },
+    { "key": "payroll", "title_key": "step.payroll.title", "description_key": "step.payroll.desc", "agent_role": "hr", "depends_on": ["assumptions"] },
+    { "key": "consolidate", "title_key": "step.consolidate.title", "description_key": "step.consolidate.desc", "agent_role": "accounting", "depends_on": ["revenue", "opex", "payroll"] },
+    { "key": "summary", "title_key": "step.summary.title", "description_key": "step.summary.desc", "agent_role": "assistant", "depends_on": ["consolidate"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Planificación presupuestaria",
+      "tpl.description": "Define supuestos y metas, proyecta ingresos y costos en paralelo, consolida el presupuesto y prepara un resumen para dirección.",
+      "tpl.request": "Preparar el presupuesto de {{period}}",
+      "param.period": "Período del presupuesto",
+      "step.assumptions.title": "Definir supuestos y metas",
+      "step.assumptions.desc": "Fijar los supuestos de mercado y las metas financieras para {{period}}, indicando la fuente de cada uno.",
+      "step.revenue.title": "Proyectar ingresos",
+      "step.revenue.desc": "Estimar los ingresos de {{period}} por línea de negocio, con base en el embudo comercial y los supuestos.",
+      "step.opex.title": "Estimar costos de operación",
+      "step.opex.desc": "Calcular los costos operativos de {{period}} (compras, proveedores, servicios e inventario) según los supuestos.",
+      "step.payroll.title": "Estimar costos de personal",
+      "step.payroll.desc": "Calcular la nómina y los costos de personal de {{period}}: salarios, beneficios y contrataciones previstas.",
+      "step.consolidate.title": "Consolidar el presupuesto",
+      "step.consolidate.desc": "Integrar ingresos, costos y personal de {{period}} en un presupuesto único y verificar que cuadre.",
+      "step.summary.title": "Resumen para dirección",
+      "step.summary.desc": "Resumir el presupuesto de {{period}}, sus supuestos clave y los riesgos principales para la aprobación de la dirección."
+    },
+    "en": {
+      "tpl.name": "Budget planning",
+      "tpl.description": "Sets assumptions and targets, projects revenue and costs in parallel, consolidates the budget and prepares a summary for management.",
+      "tpl.request": "Prepare the budget for {{period}}",
+      "param.period": "Budget period",
+      "step.assumptions.title": "Set assumptions and targets",
+      "step.assumptions.desc": "Set the market assumptions and financial targets for {{period}}, stating the source of each one.",
+      "step.revenue.title": "Project revenue",
+      "step.revenue.desc": "Estimate the {{period}} revenue by business line, based on the sales pipeline and the assumptions.",
+      "step.opex.title": "Estimate operating costs",
+      "step.opex.desc": "Calculate the {{period}} operating costs (purchasing, suppliers, services and inventory) based on the assumptions.",
+      "step.payroll.title": "Estimate personnel costs",
+      "step.payroll.desc": "Calculate the payroll and personnel costs for {{period}}: salaries, benefits and planned hires.",
+      "step.consolidate.title": "Consolidate the budget",
+      "step.consolidate.desc": "Combine the {{period}} revenue, costs and personnel into a single budget and check that it balances.",
+      "step.summary.title": "Summary for management",
+      "step.summary.desc": "Summarize the {{period}} budget, its key assumptions and the main risks for management approval."
+    }
+  }
+}

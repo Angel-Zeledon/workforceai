@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "hiring_process",
+  "version": 1,
+  "category": "hr",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "position", "label_key": "param.position", "required": true }
+  ],
+  "steps": [
+    { "key": "job_description", "title_key": "step.job_description.title", "description_key": "step.job_description.desc", "agent_role": "hr", "depends_on": [] },
+    { "key": "salary_budget", "title_key": "step.salary_budget.title", "description_key": "step.salary_budget.desc", "agent_role": "accounting", "depends_on": ["job_description"] },
+    { "key": "selection_criteria", "title_key": "step.selection_criteria.title", "description_key": "step.selection_criteria.desc", "agent_role": "hr", "depends_on": ["job_description"] },
+    { "key": "interview_guide", "title_key": "step.interview_guide.title", "description_key": "step.interview_guide.desc", "agent_role": "hr", "depends_on": ["selection_criteria"] },
+    { "key": "offer_legal_review", "title_key": "step.offer_legal_review.title", "description_key": "step.offer_legal_review.desc", "agent_role": "legal", "depends_on": ["salary_budget"] },
+    { "key": "publication_plan", "title_key": "step.publication_plan.title", "description_key": "step.publication_plan.desc", "agent_role": "assistant", "depends_on": ["job_description", "salary_budget"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Proceso de contratación",
+      "tpl.description": "Define el puesto, el salario, los criterios y la guía de entrevista, revisa la oferta y prepara el plan de publicación sin publicarlo.",
+      "tpl.request": "Preparar el proceso de contratación para {{position}}",
+      "param.position": "Puesto",
+      "step.job_description.title": "Descripción del puesto de {{position}}",
+      "step.job_description.desc": "Redactar la descripción de {{position}}: responsabilidades, requisitos y condiciones del puesto.",
+      "step.salary_budget.title": "Rango salarial y presupuesto de {{position}}",
+      "step.salary_budget.desc": "Definir el rango salarial y el presupuesto disponible para {{position}} según el mercado y la estructura interna.",
+      "step.selection_criteria.title": "Criterios de selección para {{position}}",
+      "step.selection_criteria.desc": "Definir criterios objetivos de evaluación y las competencias necesarias para {{position}}.",
+      "step.interview_guide.title": "Guía de entrevista para {{position}}",
+      "step.interview_guide.desc": "Preparar preguntas y puntajes de entrevista para {{position}} alineados con los criterios de selección.",
+      "step.offer_legal_review.title": "Revisión legal de la oferta para {{position}}",
+      "step.offer_legal_review.desc": "Revisar condiciones, cláusulas y obligaciones de la oferta para {{position}}. No se envía sin aprobación.",
+      "step.publication_plan.title": "Plan de publicación para {{position}}",
+      "step.publication_plan.desc": "Preparar el plan de publicación de la vacante de {{position}} por canal y calendario. No se publica sin aprobación."
+    },
+    "en": {
+      "tpl.name": "Hiring process",
+      "tpl.description": "Defines the role, salary, criteria and interview guide, reviews the offer, and prepares the publication plan without publishing it.",
+      "tpl.request": "Prepare the hiring process for {{position}}",
+      "param.position": "Position",
+      "step.job_description.title": "Job description for {{position}}",
+      "step.job_description.desc": "Write the description of {{position}}: responsibilities, requirements and conditions of the role.",
+      "step.salary_budget.title": "Salary range and budget for {{position}}",
+      "step.salary_budget.desc": "Define the salary range and the budget available for {{position}} based on the market and internal structure.",
+      "step.selection_criteria.title": "Selection criteria for {{position}}",
+      "step.selection_criteria.desc": "Define objective evaluation criteria and the skills required for {{position}}.",
+      "step.interview_guide.title": "Interview guide for {{position}}",
+      "step.interview_guide.desc": "Prepare interview questions and scores for {{position}} aligned with the selection criteria.",
+      "step.offer_legal_review.title": "Legal review of the offer for {{position}}",
+      "step.offer_legal_review.desc": "Review the conditions, clauses and obligations of the offer for {{position}}. Not sent without approval.",
+      "step.publication_plan.title": "Publication plan for {{position}}",
+      "step.publication_plan.desc": "Prepare the publication plan for the {{position}} vacancy by channel and schedule. Not published without approval."
+    }
+  }
+}

@@ -1,0 +1,2 @@
+id,request,user_problem,requesters,frequency,value_1_to_5,value_justification,effort_1_to_5,decision,reason
+PF-001,[request name],[problem the user is trying to solve],[number of distinct cases],[number of mentions],[1 to 5],[one-sentence justification],[1 to 5 or to be estimated],[evaluate; keep; discard],[reason if discarded]

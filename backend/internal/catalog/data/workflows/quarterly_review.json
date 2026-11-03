@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "quarterly_review",
+  "version": 1,
+  "category": "management",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "quarter", "label_key": "param.quarter", "required": true }
+  ],
+  "steps": [
+    { "key": "financials", "title_key": "step.financials.title", "description_key": "step.financials.desc", "agent_role": "accounting", "depends_on": [] },
+    { "key": "funnel", "title_key": "step.funnel.title", "description_key": "step.funnel.desc", "agent_role": "sales", "depends_on": [] },
+    { "key": "operations", "title_key": "step.operations.title", "description_key": "step.operations.desc", "agent_role": "operations", "depends_on": [] },
+    { "key": "variance", "title_key": "step.variance.title", "description_key": "step.variance.desc", "agent_role": "analyst", "depends_on": ["financials", "funnel", "operations"] },
+    { "key": "priorities", "title_key": "step.priorities.title", "description_key": "step.priorities.desc", "agent_role": "assistant", "depends_on": ["variance"] },
+    { "key": "summary", "title_key": "step.summary.title", "description_key": "step.summary.desc", "agent_role": "assistant", "depends_on": ["variance", "priorities"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Revisión trimestral",
+      "tpl.description": "Revisa resultados, embudo comercial y operación del trimestre, analiza desvíos contra metas y prepara prioridades y un resumen ejecutivo.",
+      "tpl.request": "Revisar el trimestre {{quarter}}",
+      "param.quarter": "Trimestre a revisar",
+      "step.financials.title": "Resultados financieros de {{quarter}}",
+      "step.financials.desc": "Resumir ingresos, costos, márgenes y flujo de caja de {{quarter}} con sus cifras clave.",
+      "step.funnel.title": "Revisar el embudo comercial",
+      "step.funnel.desc": "Analizar oportunidades, conversión y ciclo de venta de {{quarter}} frente a lo planeado.",
+      "step.operations.title": "Revisar la operación",
+      "step.operations.desc": "Evaluar entregas, tiempos, capacidad y calidad de {{quarter}} frente a los compromisos.",
+      "step.variance.title": "Analizar desvíos contra metas",
+      "step.variance.desc": "Comparar los resultados de {{quarter}} con las metas, explicar los desvíos relevantes y su evidencia.",
+      "step.priorities.title": "Definir prioridades del siguiente trimestre",
+      "step.priorities.desc": "Proponer prioridades para el trimestre siguiente a {{quarter}}, con responsables y metas sugeridas.",
+      "step.summary.title": "Resumen ejecutivo",
+      "step.summary.desc": "Redactar el resumen ejecutivo de {{quarter}} con resultados, desvíos y prioridades para la dirección."
+    },
+    "en": {
+      "tpl.name": "Quarterly review",
+      "tpl.description": "Reviews the quarter's results, sales funnel and operations, analyzes deviations from targets, and prepares priorities and an executive summary.",
+      "tpl.request": "Review quarter {{quarter}}",
+      "param.quarter": "Quarter to review",
+      "step.financials.title": "Financial results for {{quarter}}",
+      "step.financials.desc": "Summarize the revenue, costs, margins and cash flow for {{quarter}} with their key figures.",
+      "step.funnel.title": "Review the sales funnel",
+      "step.funnel.desc": "Analyze opportunities, conversion and sales cycle for {{quarter}} against the plan.",
+      "step.operations.title": "Review operations",
+      "step.operations.desc": "Evaluate deliveries, lead times, capacity and quality for {{quarter}} against commitments.",
+      "step.variance.title": "Analyze deviations from targets",
+      "step.variance.desc": "Compare the {{quarter}} results with the targets, and explain the relevant deviations and their evidence.",
+      "step.priorities.title": "Set next quarter's priorities",
+      "step.priorities.desc": "Propose priorities for the quarter after {{quarter}}, with suggested owners and targets.",
+      "step.summary.title": "Executive summary",
+      "step.summary.desc": "Write the executive summary of {{quarter}} with results, deviations and priorities for management."
+    }
+  }
+}

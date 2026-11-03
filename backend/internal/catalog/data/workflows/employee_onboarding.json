@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "employee_onboarding",
+  "version": 1,
+  "category": "hr",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "employee", "label_key": "param.employee", "required": true },
+    { "key": "start_date", "label_key": "param.start_date", "required": false, "default_key": "param.start_date.default" }
+  ],
+  "steps": [
+    { "key": "prepare_hire", "title_key": "step.prepare_hire.title", "description_key": "step.prepare_hire.desc", "agent_role": "hr", "depends_on": [] },
+    { "key": "equipment_access", "title_key": "step.equipment_access.title", "description_key": "step.equipment_access.desc", "agent_role": "operations", "depends_on": ["prepare_hire"] },
+    { "key": "payroll_setup", "title_key": "step.payroll_setup.title", "description_key": "step.payroll_setup.desc", "agent_role": "accounting", "depends_on": ["prepare_hire"] },
+    { "key": "documents_contract", "title_key": "step.documents_contract.title", "description_key": "step.documents_contract.desc", "agent_role": "legal", "depends_on": ["prepare_hire"] },
+    { "key": "first_week", "title_key": "step.first_week.title", "description_key": "step.first_week.desc", "agent_role": "assistant", "depends_on": ["equipment_access", "payroll_setup", "documents_contract"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Ingreso de empleado",
+      "tpl.description": "Prepara equipo, accesos, nómina y documentos en paralelo y arma el plan de primera semana con la bienvenida lista para tu aprobación.",
+      "tpl.request": "Preparar el ingreso de {{employee}} con fecha de inicio {{start_date}}",
+      "param.employee": "Nombre del empleado",
+      "param.start_date": "Fecha de inicio",
+      "param.start_date.default": "fecha por definir",
+      "step.prepare_hire.title": "Preparar el ingreso de {{employee}}",
+      "step.prepare_hire.desc": "Reunir datos de {{employee}}, puesto y fecha de inicio ({{start_date}}), y coordinar con el responsable del área.",
+      "step.equipment_access.title": "Equipo y accesos para {{employee}}",
+      "step.equipment_access.desc": "Preparar equipo, herramientas y accesos que {{employee}} necesita desde el primer día ({{start_date}}).",
+      "step.payroll_setup.title": "Alta en nómina de {{employee}}",
+      "step.payroll_setup.desc": "Registrar a {{employee}} en nómina con salario, deducciones y datos bancarios verificados. No se realiza ningún pago sin aprobación.",
+      "step.documents_contract.title": "Documentos y contrato de {{employee}}",
+      "step.documents_contract.desc": "Preparar el contrato laboral y los documentos de {{employee}} y revisar sus cláusulas. No se firma sin aprobación.",
+      "step.first_week.title": "Plan de primera semana y bienvenida",
+      "step.first_week.desc": "Armar el plan de primera semana de {{employee}} y redactar el mensaje de bienvenida. No se envía sin aprobación."
+    },
+    "en": {
+      "tpl.name": "Employee onboarding",
+      "tpl.description": "Prepares equipment, access, payroll and documents in parallel, then builds the first-week plan with the welcome message ready for your approval.",
+      "tpl.request": "Prepare the onboarding of {{employee}} starting {{start_date}}",
+      "param.employee": "Employee name",
+      "param.start_date": "Start date",
+      "param.start_date.default": "date to be defined",
+      "step.prepare_hire.title": "Prepare the onboarding of {{employee}}",
+      "step.prepare_hire.desc": "Gather data on {{employee}}, the role and the start date ({{start_date}}), and coordinate with the area manager.",
+      "step.equipment_access.title": "Equipment and access for {{employee}}",
+      "step.equipment_access.desc": "Prepare the equipment, tools and access {{employee}} needs from the first day ({{start_date}}).",
+      "step.payroll_setup.title": "Payroll setup for {{employee}}",
+      "step.payroll_setup.desc": "Register {{employee}} in payroll with verified salary, deductions and bank details. No payment is made without approval.",
+      "step.documents_contract.title": "Documents and contract for {{employee}}",
+      "step.documents_contract.desc": "Prepare the employment contract and documents of {{employee}} and review their clauses. Not signed without approval.",
+      "step.first_week.title": "First-week plan and welcome",
+      "step.first_week.desc": "Build the first-week plan for {{employee}} and draft the welcome message. Not sent without approval."
+    }
+  }
+}

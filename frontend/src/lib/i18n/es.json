@@ -5277,5 +5277,10 @@
   "concepts.templates.what": "qué y en qué orden",
   "concepts.templates.body": "Recetas de trabajo: los pasos, qué agente hace cada uno y dónde apruebas tú.",
   "concepts.templates.example": "Ej.: «Cierre de mes»: el contador concilia, finanzas revisa y tú apruebas.",
-  "concepts.templates.go": "Ver plantillas"
+  "concepts.templates.go": "Ver plantillas",
+  "tpl.category.legal": "Legal",
+  "tpl.category.hr": "Personas",
+  "tpl.category.operations": "Operaciones",
+  "tpl.category.marketing": "Marketing",
+  "tpl.category.management": "Dirección"
 }

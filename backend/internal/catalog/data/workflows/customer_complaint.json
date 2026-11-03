@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "customer_complaint",
+  "version": 1,
+  "category": "operations",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "customer", "label_key": "param.customer", "required": true }
+  ],
+  "steps": [
+    { "key": "log_case", "title_key": "step.log_case.title", "description_key": "step.log_case.desc", "agent_role": "assistant", "depends_on": [] },
+    { "key": "root_cause", "title_key": "step.root_cause.title", "description_key": "step.root_cause.desc", "agent_role": "operations", "depends_on": ["log_case"] },
+    { "key": "compensation", "title_key": "step.compensation.title", "description_key": "step.compensation.desc", "agent_role": "accounting", "depends_on": ["root_cause"] },
+    { "key": "legal_risk", "title_key": "step.legal_risk.title", "description_key": "step.legal_risk.desc", "agent_role": "legal", "depends_on": ["root_cause"] },
+    { "key": "customer_response", "title_key": "step.customer_response.title", "description_key": "step.customer_response.desc", "agent_role": "sales", "depends_on": ["compensation", "legal_risk"] },
+    { "key": "preventive_action", "title_key": "step.preventive_action.title", "description_key": "step.preventive_action.desc", "agent_role": "operations", "depends_on": ["customer_response"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Queja de cliente",
+      "tpl.description": "Registra el caso, encuentra la causa raíz y evalúa compensación y riesgo legal en paralelo; luego prepara la respuesta en borrador y una acción preventiva.",
+      "tpl.request": "Atender la queja del cliente {{customer}}",
+      "param.customer": "Cliente",
+      "step.log_case.title": "Registrar el caso de {{customer}}",
+      "step.log_case.desc": "Registrar la queja de {{customer}} con hechos, fechas, evidencias y prioridad.",
+      "step.root_cause.title": "Causa raíz de la queja",
+      "step.root_cause.desc": "Identificar la causa raíz del problema reportado por {{customer}} a partir de los hechos registrados.",
+      "step.compensation.title": "Compensación posible para {{customer}}",
+      "step.compensation.desc": "Estimar la compensación posible para {{customer}} y su costo. No se ofrece ni se paga sin aprobación.",
+      "step.legal_risk.title": "Riesgo legal del caso de {{customer}}",
+      "step.legal_risk.desc": "Evaluar obligaciones contractuales, garantías y riesgo legal del caso de {{customer}}.",
+      "step.customer_response.title": "Respuesta al cliente en borrador",
+      "step.customer_response.desc": "Redactar la respuesta a {{customer}} con el reconocimiento del problema y las opciones. No se envía sin aprobación.",
+      "step.preventive_action.title": "Acción preventiva",
+      "step.preventive_action.desc": "Definir la acción que evite que la causa raíz vuelva a ocurrir, con responsable y fecha."
+    },
+    "en": {
+      "tpl.name": "Customer complaint",
+      "tpl.description": "Logs the case, finds the root cause, and assesses compensation and legal risk in parallel; then prepares the draft response and a preventive action.",
+      "tpl.request": "Handle the complaint from customer {{customer}}",
+      "param.customer": "Customer",
+      "step.log_case.title": "Log the case of {{customer}}",
+      "step.log_case.desc": "Log the complaint from {{customer}} with facts, dates, evidence and priority.",
+      "step.root_cause.title": "Root cause of the complaint",
+      "step.root_cause.desc": "Identify the root cause of the problem reported by {{customer}} from the logged facts.",
+      "step.compensation.title": "Possible compensation for {{customer}}",
+      "step.compensation.desc": "Estimate the possible compensation for {{customer}} and its cost. Not offered or paid without approval.",
+      "step.legal_risk.title": "Legal risk of the {{customer}} case",
+      "step.legal_risk.desc": "Assess contractual obligations, warranties and the legal risk of the case of {{customer}}.",
+      "step.customer_response.title": "Draft customer response",
+      "step.customer_response.desc": "Draft the response to {{customer}} acknowledging the problem and the options. Not sent without approval.",
+      "step.preventive_action.title": "Preventive action",
+      "step.preventive_action.desc": "Define the action that keeps the root cause from happening again, with an owner and a date."
+    }
+  }
+}

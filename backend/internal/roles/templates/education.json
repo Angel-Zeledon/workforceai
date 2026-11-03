@@ -139,5 +139,5 @@
       "en": "# Course plan\n\n## Goals\n\n## Modules\n\n## Assessment\n"
     }
   ],
-  "default_skills": ["lesson-plan", "grading-rubric"]
+  "default_skills": ["lesson-plan", "grading-rubric", "student-progress-report", "course-syllabus"]
 }

@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.workflow_template/1",
+  "key": "contract_review",
+  "version": 1,
+  "category": "legal",
+  "name_key": "tpl.name",
+  "description_key": "tpl.description",
+  "request_key": "tpl.request",
+  "params": [
+    { "key": "counterparty", "label_key": "param.counterparty", "required": true }
+  ],
+  "steps": [
+    { "key": "intake", "title_key": "step.intake.title", "description_key": "step.intake.desc", "agent_role": "assistant", "depends_on": [] },
+    { "key": "legal_review", "title_key": "step.legal_review.title", "description_key": "step.legal_review.desc", "agent_role": "legal", "depends_on": ["intake"] },
+    { "key": "economic_impact", "title_key": "step.economic_impact.title", "description_key": "step.economic_impact.desc", "agent_role": "accounting", "depends_on": ["legal_review"] },
+    { "key": "operational_feasibility", "title_key": "step.operational_feasibility.title", "description_key": "step.operational_feasibility.desc", "agent_role": "operations", "depends_on": ["legal_review"] },
+    { "key": "risk_summary", "title_key": "step.risk_summary.title", "description_key": "step.risk_summary.desc", "agent_role": "analyst", "depends_on": ["economic_impact", "operational_feasibility"] },
+    { "key": "counterparty_notes", "title_key": "step.counterparty_notes.title", "description_key": "step.counterparty_notes.desc", "agent_role": "legal", "depends_on": ["risk_summary"] }
+  ],
+  "i18n": {
+    "es": {
+      "tpl.name": "Revisión de contrato",
+      "tpl.description": "Clasifica el contrato, revisa cláusulas y valora impacto económico y viabilidad en paralelo; luego resume riesgos y prepara observaciones sin enviarlas.",
+      "tpl.request": "Revisar el contrato con {{counterparty}}",
+      "param.counterparty": "Contraparte",
+      "step.intake.title": "Recibir y clasificar el contrato",
+      "step.intake.desc": "Recibir el contrato con {{counterparty}}, identificar partes, vigencia, montos y tipo, y clasificarlo por urgencia.",
+      "step.legal_review.title": "Revisión legal de cláusulas",
+      "step.legal_review.desc": "Revisar responsabilidad, rescisión, confidencialidad y jurisdicción del contrato con {{counterparty}}.",
+      "step.economic_impact.title": "Impacto económico",
+      "step.economic_impact.desc": "Calcular pagos, penalizaciones y plazos de cobro del contrato con {{counterparty}} y su efecto en el margen.",
+      "step.operational_feasibility.title": "Viabilidad operativa",
+      "step.operational_feasibility.desc": "Verificar si la operación puede cumplir las obligaciones del contrato con {{counterparty}} en plazos y capacidad.",
+      "step.risk_summary.title": "Resumen de riesgos y recomendación",
+      "step.risk_summary.desc": "Resumir los riesgos legales, económicos y operativos con {{counterparty}} y recomendar aceptar, negociar o rechazar.",
+      "step.counterparty_notes.title": "Observaciones para {{counterparty}}",
+      "step.counterparty_notes.desc": "Preparar las observaciones para {{counterparty}} a partir de la revisión. No se envían sin aprobación."
+    },
+    "en": {
+      "tpl.name": "Contract review",
+      "tpl.description": "Classifies the contract, reviews clauses, and assesses economic impact and feasibility in parallel; then summarizes risks and prepares notes without sending them.",
+      "tpl.request": "Review the contract with {{counterparty}}",
+      "param.counterparty": "Counterparty",
+      "step.intake.title": "Receive and classify the contract",
+      "step.intake.desc": "Receive the contract with {{counterparty}}, identify parties, term, amounts and type, and classify it by urgency.",
+      "step.legal_review.title": "Legal review of clauses",
+      "step.legal_review.desc": "Review liability, termination, confidentiality and jurisdiction of the contract with {{counterparty}}.",
+      "step.economic_impact.title": "Economic impact",
+      "step.economic_impact.desc": "Calculate payments, penalties and collection terms of the contract with {{counterparty}} and their effect on margin.",
+      "step.operational_feasibility.title": "Operational feasibility",
+      "step.operational_feasibility.desc": "Check whether operations can meet the contract obligations with {{counterparty}} in terms of timing and capacity.",
+      "step.risk_summary.title": "Risk summary and recommendation",
+      "step.risk_summary.desc": "Summarize legal, economic and operational risks with {{counterparty}} and recommend accepting, negotiating or rejecting.",
+      "step.counterparty_notes.title": "Notes for {{counterparty}}",
+      "step.counterparty_notes.desc": "Prepare the notes for {{counterparty}} based on the review. Not sent without approval."
+    }
+  }
+}

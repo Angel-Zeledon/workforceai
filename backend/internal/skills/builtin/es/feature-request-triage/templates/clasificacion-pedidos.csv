@@ -1,0 +1,2 @@
+id,pedido,problema_del_usuario,solicitantes,frecuencia,valor_1_a_5,justificacion_valor,esfuerzo_1_a_5,decision,motivo
+PF-001,[nombre del pedido],[problema que intenta resolver el usuario],[número de casos distintos],[número de menciones],[1 a 5],[justificación en una frase],[1 a 5 o por estimar],[evaluar; mantener; descartar],[motivo si se descarta]
