@@ -11,7 +11,7 @@ import { useViewer } from "../connections/shared";
 import { useOnboardingEntry } from "../onboarding/OnboardingEntry";
 import { useTeamSetupEntry } from "../onboarding/TeamSetupEntry";
 import { useBootConnections } from "../security/ControlsChrome";
-import { logout, orgLabel, switchOrg, useCan, useSession } from "@/lib/session";
+import { logout, orgLabel, switchOrg, useSession } from "@/lib/session";
 
 function Item({ icon, label, onClick, testid, disabled, danger, trailing, active, level }: {
   icon: IconName; label: string; onClick: () => void; testid: string; disabled?: boolean; danger?: boolean; trailing?: ReactNode; active?: boolean; level?: string;
@@ -26,32 +26,22 @@ function Item({ icon, label, onClick, testid, disabled, danger, trailing, active
   );
 }
 
-function Group({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div role="group" aria-label={title} className="py-1">
-      <div className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-mute">{title}</div>
-      {children}
-    </div>
-  );
-}
-
 const badge = (text: string, cls: string) => (
   <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide ${cls}`}>{text}</span>
 );
 
 /**
- * The single, discreet administration entry of the header (gear). It keeps the
- * main screen clean: Connections, Security (+ kill switch / read-only), Templates,
- * office setup, office settings and demo reset live here. Dialogs are owned by this
- * component so they survive the menu closing.
+ * The avatar of the top bar (it replaced the gear): Mi cuenta, Detener todo and Salir, plus what only exists here (switch
+ * organization, the set-up still pending, reset the demo). Everything else lives in Ajustes and in the menu; the test ids
+ * stay (admin-menu, admin-menu-list, account-who, ctl-killswitch, logout…). Dialogs are owned here so they survive the
+ * menu closing.
  */
-export function AdminMenu() {
+export function AccountMenu() {
   const { t } = useT();
   useBootConnections();
   const [open, setOpen] = useState(false);
   const session = useSession();
   const signedIn = session.status === "authenticated";
-  const canMembers = useCan("members:read");
   const wrap = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -62,7 +52,8 @@ export function AdminMenu() {
   const level = controls?.kill_switch_level ?? "none";
   const readOnly = controls?.mode === "read_only";
   // attention dot: safety state wins over the pending-setup hint
-  const dot = level !== "none" ? "bg-err" : readOnly ? "bg-warn" : onboarding.supported && onboarding.pending ? "bg-accent" : "";
+  const dot = level !== "none" ? "bg-err" : readOnly ? "bg-warn" : (onboarding.supported && onboarding.pending) || teamSetup.pending ? "bg-accent" : "";
+  const initials = (session.user?.name || session.user?.email || "").split(/[s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
 
   const items = useCallback(() => Array.from(menu.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])') ?? []), []);
   const close = useCallback((refocus = true) => { setOpen(false); if (refocus) trigger.current?.focus(); }, []);
@@ -100,57 +91,50 @@ export function AdminMenu() {
 
   return (
     <div ref={wrap} className="relative">
-      <button ref={trigger} type="button" data-testid="admin-menu" aria-haspopup="menu" aria-expanded={open} aria-controls="admin-menu-list" title={t("admin.title")} aria-label={t("admin.title")}
+      <button ref={trigger} type="button" data-testid="admin-menu" aria-haspopup="menu" aria-expanded={open} aria-controls="admin-menu-list" title={t("ux.account.title")} aria-label={t("ux.account.title")}
         onClick={() => setOpen((o) => !o)} onKeyDown={(e) => { if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); setOpen(true); } }}
-        className={`relative flex h-8 w-8 items-center justify-center rounded-md border transition ${open ? "border-accent/30 bg-accent-soft text-accent" : "border-transparent text-ink2 hover:bg-panel2 hover:text-ink"}`}>
-        <Icon name="settings" size={17} />
-        {dot && <span data-testid="admin-menu-dot" className={`absolute right-1 top-1 h-2 w-2 rounded-full ring-2 ring-panel ${dot}`} />}
+        className={`relative flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-semibold transition ${open ? "border-accent bg-accent-soft text-accent" : "border-line bg-panel2 text-ink2 hover:border-line-strong hover:text-ink"}`}>
+        {initials || <Icon name="user" size={16} />}
+        {dot && <span data-testid="admin-menu-dot" className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-panel ${dot}`} />}
       </button>
       {open && (
-        <div ref={menu} id="admin-menu-list" role="menu" aria-label={t("admin.title")} data-testid="admin-menu-list" onKeyDown={onKey}
-          className="ac-pop absolute right-0 top-full z-[70] mt-2 w-[290px] max-w-[calc(100vw-24px)] divide-y divide-line rounded-xl border border-line bg-panel p-1.5 text-ink shadow-float">
-          <Group title={t("admin.group.workspace")}>
-            <Item icon="plug" testid="nav-connections" label={t("nav.connections")} onClick={run(() => go("/settings?s=connections"))} />
-            <Item icon="plus" testid="hire-open" disabled={!isAdmin} label={t("hire.open")} onClick={run(() => go("/settings?s=hire"))} />
-            <Item icon="layout" testid="templates-open" label={t("tpl.open")} onClick={run(() => go("/settings?s=templates"))} />
-            {onboarding.supported && (
-              <Item icon="flag" testid={onboarding.pending ? "onboarding-open" : "org-config-open"} label={onboarding.pending ? t("onb.prompt.title") : t("cfg.open")}
-                trailing={onboarding.pending ? badge(t("admin.pending"), "bg-accent-soft text-accent") : undefined} onClick={run(onboarding.open)} />
-            )}
-            {teamSetup.pending && (
-              <Item icon="users" testid="team-setup-open" label={t("e1.setup.menu")} trailing={badge(t("admin.pending"), "bg-accent-soft text-accent")} onClick={run(teamSetup.open)} />
-            )}
-            <Item icon="edit" testid="office-settings" label={t("settings.title")} onClick={run(() => go("/settings?s=office"))} />
-            {isAdmin && <Item icon="grid" testid="admin-console-open" label={t("adm.title")} onClick={run(() => go("/admin"))} />}
-          </Group>
-          <Group title={t("admin.group.safety")}>
-            <Item icon="shield" testid="nav-security" label={t("nav.security")}
-              trailing={readOnly ? badge(t("ctl.state.readonly"), "bg-warn/15 text-warn") : undefined} onClick={run(() => go("/settings?s=security"))} />
-            <Item icon="power" testid="ctl-killswitch" danger level={level} disabled={level === "none" && !isAdmin}
-              label={level === "none" ? t("ctl.killswitch.title") : t(`ctl.level.${level}`)}
-              trailing={level !== "none" ? badge(t("admin.active"), "bg-err text-white") : undefined}
-              onClick={run(() => go(level === "none" ? "/settings?s=kill" : "/settings?s=security"))} />
-          </Group>
-          {(!signedIn || session.role === "admin" || session.role === "owner") && (
-            <Group title={t("admin.group.demo")}>
-              <Item icon="back" testid="demo-reset" label={t("hud.resetDemo")} onClick={run(reset)}
-                trailing={MOCK ? badge("Mock", "bg-violet-500/15 text-violet-700") : undefined} />
-            </Group>
-          )}
+        <div ref={menu} id="admin-menu-list" role="menu" aria-label={t("ux.account.title")} data-testid="admin-menu-list" onKeyDown={onKey}
+          className="ac-pop absolute right-0 top-full z-[70] mt-2 w-[280px] max-w-[calc(100vw-24px)] divide-y divide-line rounded-xl border border-line bg-panel p-1.5 text-ink shadow-float">
           {signedIn && (
-            <Group title={t("admin.group.account")}>
-              <div data-testid="account-who" className="px-2.5 pb-1.5 text-[11.5px] leading-tight text-mute">
+            <div className="py-1">
+              <div data-testid="account-who" className="px-2.5 pb-1.5 pt-1 text-[11.5px] leading-tight text-mute">
                 <b className="block truncate text-[12.5px] text-ink">{session.user?.name}</b>
                 <span className="block truncate">{session.user?.email} · {t(`members.roles.${session.role}`)}</span>
               </div>
-              {canMembers && <Item icon="users" testid="members-open" label={t("members.title")} onClick={run(() => go("/settings?s=members"))} />}
+              <Item icon="user" testid="account-open" label={t("ux.account.mine")} onClick={run(() => go("/settings?s=account"))} />
               {session.orgs.length > 1 && session.orgs.filter((o) => o.org_id !== session.orgId).map((o) => (
                 <Item key={o.org_id} icon="layout" testid={`org-switch-${o.org_id}`} label={t("admin.switchOrg", { org: orgLabel(o), role: t(`members.roles.${o.role}`) })}
                   onClick={run(() => { switchOrg(o.org_id).catch(() => undefined); })} />
               ))}
-              <Item icon="power" testid="logout" label={t("auth.logout")} onClick={run(() => { logout().then(() => { window.location.href = "/login"; }); })} />
-            </Group>
+            </div>
           )}
+          {((onboarding.supported && onboarding.pending) || teamSetup.pending || isAdmin) && (
+            <div className="py-1">
+              {onboarding.supported && onboarding.pending && (
+                <Item icon="flag" testid="onboarding-open" label={t("onb.prompt.title")} trailing={badge(t("admin.pending"), "bg-accent-soft text-accent")} onClick={run(onboarding.open)} />
+              )}
+              {teamSetup.pending && (
+                <Item icon="users" testid="team-setup-open" label={t("e1.setup.menu")} trailing={badge(t("admin.pending"), "bg-accent-soft text-accent")} onClick={run(teamSetup.open)} />
+              )}
+              {isAdmin && <Item icon="grid" testid="admin-console-open" label={t("adm.title")} onClick={run(() => go("/admin"))} />}
+            </div>
+          )}
+          <div className="py-1">
+            <Item icon="power" testid="ctl-killswitch" danger level={level} disabled={level === "none" && !isAdmin}
+              label={level === "none" ? t("ctl.killswitch.title") : t(`ctl.level.${level}`)}
+              trailing={level !== "none" ? badge(t("admin.active"), "bg-err text-white") : readOnly ? badge(t("ctl.state.readonly"), "bg-warn/15 text-warn") : undefined}
+              onClick={run(() => go(level === "none" ? "/settings?s=kill" : "/settings?s=security"))} />
+            {(!signedIn || session.role === "admin" || session.role === "owner") && (
+              <Item icon="back" testid="demo-reset" label={t("hud.resetDemo")} onClick={run(reset)}
+                trailing={MOCK ? badge("Mock", "bg-violet-500/15 text-violet-700") : undefined} />
+            )}
+            {signedIn && <Item icon="power" testid="logout" label={t("auth.logout")} onClick={run(() => { logout().then(() => { window.location.href = "/login"; }); })} />}
+          </div>
         </div>
       )}
       {onboarding.dialogs}

@@ -53,7 +53,7 @@ func (o *OrgChartStore) PutDepartment(ctx context.Context, org string, d orgchar
 func (o *OrgChartStore) DeleteDepartment(ctx context.Context, org, id string) error {
 	tag, err := o.S.execTag(ctx, org, `DELETE FROM departments WHERE org_id=$1 AND id=$2`, org, id)
 	if err == nil && tag.RowsAffected() == 0 {
-		return fmt.Errorf("%w: department %s", domain.ErrNotFound, id)
+		return fmt.Errorf("%w: office %s", domain.ErrNotFound, id)
 	}
 	return err
 }

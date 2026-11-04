@@ -26,9 +26,7 @@ export function RouteCurtain({ section }: { section: SectionId }) {
   }, [section, reduce]);
 
   if (!run) return null;
-  const meta: { label: string; icon: IconName } = run.section === "settings"
-    ? { label: "nav.settings", icon: "settings" }
-    : run.section === "dashboard"
+  const meta: { label: string; icon: IconName } = run.section === "dashboard"
       ? { label: "mode.dashboard", icon: "grid" }
       : (SECTIONS.find((s) => s.id === run.section) ?? SECTIONS[0]);
   return (

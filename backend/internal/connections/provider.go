@@ -91,6 +91,11 @@ type Handle struct {
 	HTTP          *http.Client
 	// Source is the configuration of a generic HTTP source (custom_api).
 	Source *Source
+	// Database is the configuration of a database source (provider database).
+	Database *Database
+	// Secret lends the connection's stored secret (a database password) to fn, only for the duration of the
+	// call, through the vault. nil for simulated connections. The bytes must not be kept after fn returns.
+	Secret func(ctx context.Context, fn func(secret []byte) error) error
 }
 
 // Item is one normalized result item. Meta is trusted structure (ids, dates,

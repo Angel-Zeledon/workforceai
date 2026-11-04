@@ -84,7 +84,7 @@ func limitError(kind error, code string, limit int, detail string) error {
 // checkSize enforces MaxNodesPerProject and MaxChildrenPerGroup on a plan.
 func (l Limits) checkSize(nodes []NodeDef) error {
 	if len(nodes) > l.MaxNodesPerProject {
-		return limitError(domain.ErrInvalid, LimitMaxNodes, l.MaxNodesPerProject, fmt.Sprintf("the plan has %d nodes", len(nodes)))
+		return limitError(domain.ErrInvalid, LimitMaxNodes, l.MaxNodesPerProject, fmt.Sprintf("the plan has %d tasks", len(nodes)))
 	}
 	children := map[string]int{}
 	for _, n := range nodes {
@@ -94,7 +94,7 @@ func (l Limits) checkSize(nodes []NodeDef) error {
 	}
 	for id, c := range children {
 		if c > l.MaxChildrenPerGroup {
-			return limitError(domain.ErrInvalid, LimitMaxChildren, l.MaxChildrenPerGroup, fmt.Sprintf("node %s has %d children", id, c))
+			return limitError(domain.ErrInvalid, LimitMaxChildren, l.MaxChildrenPerGroup, fmt.Sprintf("task %s has %d subtasks", id, c))
 		}
 	}
 	return nil

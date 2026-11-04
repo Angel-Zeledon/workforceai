@@ -16,6 +16,7 @@ import (
 	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/connections/calendar"
 	"aiworkforce/backend/internal/connections/customapi"
+	"aiworkforce/backend/internal/connections/database"
 	"aiworkforce/backend/internal/connections/drive"
 	"aiworkforce/backend/internal/connections/github"
 	"aiworkforce/backend/internal/connections/gmail"
@@ -113,8 +114,16 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 	if err != nil {
 		return connWiring{}, err
 	}
+	dbAllowPrivate, _ := strconv.ParseBool(strings.TrimSpace(os.Getenv("DATABASE_ALLOW_PRIVATE")))
+	if dbAllowPrivate {
+		log.Warn("DATABASE_ALLOW_PRIVATE=true: read-only database sources may reach private addresses (only for self-hosted installs on a trusted network)")
+	}
+	dbsrc, err := database.New(dbAllowPrivate) // read-only database sources (docs/architecture/database-sources.md)
+	if err != nil {
+		return connWiring{}, err
+	}
 	providers := map[string]connections.Provider{"google_gmail": gm, "google_calendar": cal, "google_drive": drv, "github": gh, "slack": sl, "linkedin": li,
-		connections.SourceProvider: capi}
+		connections.SourceProvider: capi, connections.DatabaseProvider: dbsrc}
 	if st := cfg.VendorIntegrations.State(); st.Enabled {
 		log.Info("VENDOR_INTEGRATIONS: vendor-specific connectors enabled", "providers", st.Providers)
 	} else {

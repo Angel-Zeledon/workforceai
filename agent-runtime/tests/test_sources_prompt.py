@@ -65,3 +65,20 @@ def test_invalid_aliases_and_tools_are_dropped():
     lines = source_lines(RunTaskRequest.model_validate({**_req().model_dump(), "sources": [
         {"alias": "Bad Alias!", "tools": ["api.get"]}, {"alias": "ok", "tools": ["rm -rf"]}]}).sources)
     assert lines == []
+
+
+DB = {"alias": "ventas", "label": "Ventas", "provider": "database", "description": "Pedidos y clientes",
+      "tools": ["db.query", "db.schema"], "engine": "postgres", "schemas": ["public", "bad schema!"]}
+
+
+def test_database_sources_explain_schema_then_one_read_query():
+    lines = source_lines(RunTaskRequest.model_validate({**_req().model_dump(), "sources": [DB]}).sources)
+    text = "\n".join(lines)
+    assert "- ventas (Ventas): Pedidos y clientes" in text
+    assert "PostgreSQL, solo lectura; esquemas permitidos: public" in text and "bad schema!" not in text
+    query = json.loads(text.split("consulta: ", 1)[1].split("\n", 1)[0])
+    assert query == {"tool": "db", "action": "query", "args": {"connection_alias": "ventas", "sql": "SELECT ... LIMIT 50"}}
+    schema = json.loads(text.split("tablas y columnas: ", 1)[1].split("\n", 1)[0])
+    assert schema["tool"] == "db" and schema["action"] == "schema" and schema["args"]["connection_alias"] == "ventas"
+    assert "UNA sola sentencia" in text and "nada que escriba" in text and "api" not in query["tool"]
+    assert all("\n" not in l for l in lines)

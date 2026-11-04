@@ -253,6 +253,8 @@ type CreateInput struct {
 	OAuthClientSecret *vault.Secret
 	// Source configures a generic HTTP source (custom_api only).
 	Source *Source
+	// Database configures a read-only database source (provider database only). The password is Secret.
+	Database *Database
 }
 
 // SourceProvider is the provider whose connections carry a Source.
@@ -268,6 +270,24 @@ func normSource(provider string, src *Source) (*Source, error) {
 		return nil, invalid("only %s connections take a source", SourceProvider)
 	}
 	n, err := src.Normalize()
+	if err != nil {
+		return nil, err
+	}
+	return &n, nil
+}
+
+// normDatabase validates the database configuration: required for the database provider, refused for others.
+func normDatabase(provider string, d *Database) (*Database, error) {
+	if provider != DatabaseProvider {
+		if d != nil {
+			return nil, invalid("only %s connections take a database", DatabaseProvider)
+		}
+		return nil, nil
+	}
+	if d == nil {
+		return nil, invalid("database is required for %s connections", DatabaseProvider)
+	}
+	n, err := d.Normalize()
 	if err != nil {
 		return nil, err
 	}
@@ -306,6 +326,10 @@ func (s *Service) Create(ctx context.Context, org string, in CreateInput) (Conne
 	if err != nil {
 		return Connection{}, err
 	}
+	dbc, err := normDatabase(in.Provider, in.Database)
+	if err != nil {
+		return Connection{}, err
+	}
 	if in.Mode == "" {
 		in.Mode = ModeLive
 	}
@@ -325,7 +349,7 @@ func (s *Service) Create(ctx context.Context, org string, in CreateInput) (Conne
 	c := Connection{ID: newID(), OrgID: org, Provider: in.Provider, Kind: in.Kind, Label: label, Mode: in.Mode,
 		Status: StatusPending, Class: m.ClassOf(in.Capabilities), RequestedCapabilities: in.Capabilities,
 		GrantedCapabilities: []string{}, ProviderScopes: []string{}, ResourceScope: in.ResourceScope, Limits: m.DefaultLimits,
-		CreatedBy: in.Actor, CreatedAt: now, UpdatedAt: now, ExpiresAt: in.ExpiresAt, Source: src}
+		CreatedBy: in.Actor, CreatedAt: now, UpdatedAt: now, ExpiresAt: in.ExpiresAt, Source: src, Database: dbc}
 	if c.Limits.OnExceed == "" {
 		c.Limits.OnExceed = "deny"
 	}
@@ -361,6 +385,9 @@ func (s *Service) Create(ctx context.Context, org string, in CreateInput) (Conne
 			return Connection{}, err
 		}
 		c.Status, c.GrantedCapabilities, c.AccountLabel = StatusActive, in.Capabilities, "api key"
+		if dbc != nil {
+			c.AccountLabel = dbc.Account() // user@host:port/db, never the password
+		}
 	default: // live oauth2
 		if in.Secret != nil {
 			return Connection{}, invalid("OAuth connections take no secret")
@@ -436,8 +463,8 @@ func (s *Service) view(ctx context.Context, c Connection) Connection {
 		c.ProviderScopes = []string{}
 	}
 	if meta, err := s.Vault.Meta(ctx, c.OrgID, c.ID); err == nil {
-		if meta.Kind == vault.KindOAuthRefresh {
-			meta.Hint = "" // never reveal even a fragment of an OAuth token
+		if meta.Kind == vault.KindOAuthRefresh || c.Provider == DatabaseProvider {
+			meta.Hint = "" // never reveal even a fragment of an OAuth token or a database password
 		}
 		c.Credential = &meta
 	}
@@ -484,7 +511,9 @@ type PatchInput struct {
 	ReadOnly      *bool
 	// Source replaces the whole source configuration (custom_api only).
 	Source *Source
-	Actor  string
+	// Database replaces the database configuration (database only; the password is rotated apart).
+	Database *Database
+	Actor    string
 }
 
 // Patch updates label, limits, resource scope and the read-only switch.
@@ -522,11 +551,21 @@ func (s *Service) Patch(ctx context.Context, org, id string, in PatchInput) (Con
 		}
 		c.Source = src
 	}
+	if in.Database != nil {
+		dbc, err := normDatabase(c.Provider, in.Database)
+		if err != nil {
+			return Connection{}, err
+		}
+		c.Database = dbc
+		if c.Mode == ModeLive {
+			c.AccountLabel = dbc.Account()
+		}
+	}
 	c.UpdatedAt = s.Now().UTC()
 	if err := s.Store.UpdateConnection(ctx, c); err != nil {
 		return Connection{}, err
 	}
-	s.Audit(ctx, org, in.Actor, "connection.updated", "connection", id, map[string]any{"read_only": c.ReadOnly, "source_changed": in.Source != nil})
+	s.Audit(ctx, org, in.Actor, "connection.updated", "connection", id, map[string]any{"read_only": c.ReadOnly, "source_changed": in.Source != nil, "database_changed": in.Database != nil})
 	s.Emit(ctx, org, "connection.updated", map[string]any{"connection": s.brief(c)})
 	return s.view(ctx, c), nil
 }
@@ -848,7 +887,23 @@ func (t authTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // Handle builds the provider handle of a connection.
 func (s *Service) Handle(c Connection) Handle {
-	h := Handle{Org: c.OrgID, ConnectionID: c.ID, Mode: c.Mode, ResourceScope: c.ResourceScope, Source: c.Source}
+	h := Handle{Org: c.OrgID, ConnectionID: c.ID, Mode: c.Mode, ResourceScope: c.ResourceScope, Source: c.Source, Database: c.Database}
+	if c.Mode == ModeLive && c.Database != nil {
+		// A database source logs in with its password: lent by the vault for the duration of one call, and
+		// registered as a suspect so that no output (error, row, log) can ever carry it.
+		org, id := c.OrgID, c.ID
+		h.Secret = func(ctx context.Context, fn func([]byte) error) error {
+			err := s.Vault.Use(ctx, org, id, func(sec vault.Secret) error {
+				s.Suspects.Add(string(sec.Reveal()))
+				return fn(sec.Reveal())
+			})
+			if errors.Is(err, vault.ErrNoKEK) || errors.Is(err, vault.ErrDestroyed) || errors.Is(err, vault.ErrNotFound) {
+				return &ProviderError{Code: CodeConnectionUnavailable}
+			}
+			return err
+		}
+		return h
+	}
 	if c.Mode == ModeLive {
 		base, auth := s.Transport, SourceAuth{}
 		if c.Source != nil {

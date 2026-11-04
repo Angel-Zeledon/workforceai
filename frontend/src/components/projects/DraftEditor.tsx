@@ -89,13 +89,15 @@ export function DraftEditor() {
 
       <div className="space-y-4">
         <Card title={t("pv.est.title")}>
-          <div className="grid grid-cols-2 gap-2">
-            <Kpi label={t("pv.est.p50")} value={<span data-testid="estimate-p50" data-usd={est.total.p50_usd}>{fmtMoney(est.total.p50_usd)}</span>} />
-            <Kpi label={t("pv.est.p90")} value={<span data-testid="estimate-p90" data-usd={est.total.p90_usd}>{fmtMoney(est.total.p90_usd)}</span>} />
-          </div>
+          {/* "Costo probable: $0,03 (hasta $0,06)": no P50/P90, model or confidence on screen; those live in "Ver cómo se calculó" */}
+          <Kpi label={t("pv.est.p50")} value={<span data-testid="estimate-p50" data-usd={est.total.p50_usd}>{fmtMoney(est.total.p50_usd)}</span>}
+            sub={<span data-testid="estimate-p90" data-usd={est.total.p90_usd}>{t("pv.est.upTo", { usd: fmtMoney(est.total.p90_usd) })}</span>} />
           <div className="mt-3 text-[11px] text-mute">
             {t("pv.est.duration", { p50: fmtDuration(est.duration.p50_seconds), p90: fmtDuration(est.duration.p90_seconds) })}
-            <div>{t("pv.est.basis", { basis: t(`pv.est.basis.${est.basis}`), model: est.model, confidence: t(`pv.est.conf.${est.confidence}`) })}</div>
+            <details data-testid="estimate-how" className="mt-1">
+              <summary className="cursor-pointer font-semibold text-accent">{t("pv.est.how")}</summary>
+              <div className="mt-1">{t("pv.est.basis", { basis: t(`pv.est.basis.${est.basis}`), model: est.model, confidence: t(`pv.est.conf.${est.confidence}`) })}</div>
+            </details>
           </div>
           {est.warnings.map((w, i) => <div key={i} className="mt-2 rounded-xl bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800">{t(w.key, { objective: title(detail.objectives.find((o) => o.id === w.params?.id) ?? { title: "" }) })}</div>)}
         </Card>

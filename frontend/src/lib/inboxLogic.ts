@@ -56,3 +56,12 @@ export const clampIndex = (i: number, n: number) => (n <= 0 ? 0 : Math.min(Math.
 
 /** Undo window of a decision before it is sent (client side: the API has no undo). */
 export const UNDO_MS = 5000;
+
+/**
+ * The ONE number of Pendientes for the whole app (menu, office tray, dashboard, top bar): approvals waiting for a
+ * decision plus questions agents asked that are still open. Everyone reads it from the same store.
+ */
+export function pendingTotal(approvals: Record<string, { status: string }> | { status: string }[], questions: Record<string, { status: string }> | { status: string }[]): number {
+  const list = <T,>(x: Record<string, T> | T[]) => (Array.isArray(x) ? x : Object.values(x));
+  return list(approvals).filter((a) => a.status === "pending").length + list(questions).filter((q) => q.status === "open").length;
+}

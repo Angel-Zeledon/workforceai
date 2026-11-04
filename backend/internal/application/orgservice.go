@@ -81,6 +81,12 @@ func (s *OrgConfig) Settings(ctx context.Context) (OrgSettings, error) {
 	if st.Rules.AlwaysApprove == nil {
 		st.Rules.AlwaysApprove = []string{}
 	}
+	st.ViewModeDefault = "full"
+	if cs, ok := s.Store.(OrgCreatedAtStore); ok {
+		if at, err := cs.OrgCreatedAt(ctx, org); err == nil {
+			st.ViewModeDefault = ViewModeFor(org, at)
+		}
+	}
 	return st, nil
 }
 

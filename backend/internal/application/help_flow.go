@@ -263,7 +263,7 @@ func (o *Orchestrator) AnswerQuestion(ctx context.Context, id string, r Resoluti
 			return q, fmt.Errorf("%w: skip_blocks_result: without this task the work cannot be finished; answer, reassign or cancel it", domain.ErrConflict)
 		}
 		if !confirm {
-			return q, fmt.Errorf("%w: skip_needs_confirm: confirm the steps and objectives that will be left undone", domain.ErrConflict)
+			return q, fmt.Errorf("%w: skip_needs_confirm: confirm the tasks and objectives that will be left undone", domain.ErrConflict)
 		}
 	default:
 		return q, fmt.Errorf("%w: kind must be text, option, file, reassign or skip", domain.ErrInvalid)

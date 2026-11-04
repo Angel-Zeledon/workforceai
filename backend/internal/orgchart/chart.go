@@ -264,7 +264,7 @@ func (s *Service) CreateRule(ctx context.Context, in RuleInput) (Rule, error) {
 				found = found || d.ID == sel.ID
 			}
 			if !found {
-				return Rule{}, invalid("unknown department %q", sel.ID)
+				return Rule{}, invalid("unknown office %q", sel.ID)
 			}
 		}
 	}

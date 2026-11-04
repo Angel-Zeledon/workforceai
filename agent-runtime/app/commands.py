@@ -132,8 +132,8 @@ def sim_summary(req: SummarizeRequest) -> str:
         lines.append(("Participants: " if en else "Participantes: ") + who)
         for m in req.messages[:8]:
             lines.append(f"- {m.from_}: {_short(m.text, 160)}")
-        lines.append(("Conclusion: the team aligned on the topic; owners follow up on their own points."
-                      if en else "Conclusion: el equipo se alineo en el tema; cada responsable da seguimiento a su parte."))
+        lines.append(("Conclusion: the participants aligned on the topic; owners follow up on their own points."
+                      if en else "Conclusion: los participantes se alinearon en el tema; cada responsable da seguimiento a su parte."))
         return "\n".join(lines)
     if req.previous_summary:
         lines.append(("Earlier: " if en else "Antes: ") + _short(req.previous_summary, 400))

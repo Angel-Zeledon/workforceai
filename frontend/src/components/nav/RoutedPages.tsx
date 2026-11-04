@@ -13,6 +13,12 @@ import { ShopView } from "../shop/ShopView";
 import { ChatsView } from "../chats/ChatsView";
 import { SettingsView } from "../settings/SettingsView";
 import { FirstRunHint, PageSkeleton } from "./ui2";
+import { ApprovalsInbox } from "../approvals/ApprovalsInbox";
+import { ApprovalsMobile } from "../approvals/ApprovalsMobile";
+import { CustomerDistrict } from "../customers/CustomerDistrict";
+import { ConnectionsView } from "../connections/ConnectionsView";
+import { useConnections } from "@/lib/connections/store";
+import { useBootConnections } from "../security/ControlsChrome";
 
 /** Page body with a first-run hint strip on top (dismissed once, remembered in localStorage). */
 function Hinted({ id, children }: { id: string; children: ReactNode }) {
@@ -53,6 +59,25 @@ function ProjectsInner() {
   return <Hinted id="projects"><ProjectsView /></Hinted>;
 }
 export const ProjectsPage = () => <Suspense fallback={<PageSkeleton />}><ProjectsInner /></Suspense>;
+
+/** Pendientes inside the app frame (sidebar, top bar, Back works): one card at a time or the list. */
+export const PendingPage = ({ view, focusId }: { view: "inbox" | "list"; focusId?: string }) => (
+  <div data-testid="pending-page" data-view={view} className="h-full overflow-y-auto bg-bg">
+    {view === "list" ? <ApprovalsMobile focusId={focusId} /> : <ApprovalsInbox />}
+  </div>
+);
+
+/** Clientes: the customer district, now with its own place in the menu. */
+export const ClientsPage = () => (
+  <div className="h-full overflow-y-auto bg-bg"><div className="mx-auto w-full max-w-6xl p-4 md:p-6"><CustomerDistrict /></div></div>
+);
+
+/** Conexiones: the same screen that lived in Ajustes, unchanged (it manages its own scrolling). */
+export function ConnectionsPage() {
+  useBootConnections();
+  const loaded = useConnections((s) => s.loaded);
+  return <div data-testid="conn-screen" className="h-full overflow-hidden bg-bg">{loaded ? <ConnectionsView /> : <PageSkeleton />}</div>;
+}
 
 /** /office is an alias of the home (the office lives at "/"). */
 export function OfficeRedirect() {

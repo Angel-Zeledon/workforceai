@@ -90,8 +90,8 @@ def best_fit_agent(text: str, agents: list[PlanAgent]) -> PlanAgent | None:
 
 
 _TEXT = {
-    "es": ("Pedido directo", "Resolver la solicitud con un solo responsable.",
-           "Solicitud simple: un solo agente la resuelve, sin descomponer en varias tareas."),
+    "es": ("Pedido directo", "Resolver el pedido con un solo responsable.",
+           "Pedido simple: un solo agente lo resuelve, sin descomponer en varias tareas."),
     "en": ("Direct request", "Resolve the request with a single owner.",
            "Simple request: one agent handles it, no decomposition into several tasks."),
 }

@@ -277,7 +277,7 @@ func expandData(t Template, goal string, raw map[string]string, locale string, l
 			per := 1 + len(w.Nodes)
 			for _, n := range w.Nodes {
 				if _, dup := wfOf[n.Key]; dup {
-					return t, nil, fmt.Errorf("%w: duplicate node key %q", domain.ErrInvalid, n.Key)
+					return t, nil, fmt.Errorf("%w: duplicate task key %q", domain.ErrInvalid, n.Key)
 				}
 				wfOf[n.Key] = wfRef{dims}
 				if n.Delegate != nil {
@@ -286,7 +286,7 @@ func expandData(t Template, goal string, raw map[string]string, locale string, l
 			}
 			total += mult * per
 			if total > lim.MaxNodesPerProject {
-				return t, nil, limitError(domain.ErrInvalid, LimitMaxNodes, lim.MaxNodesPerProject, fmt.Sprintf("the template expands to more than %d nodes", total-1))
+				return t, nil, limitError(domain.ErrInvalid, LimitMaxNodes, lim.MaxNodesPerProject, fmt.Sprintf("the template expands to more than %d tasks", total-1))
 			}
 		}
 	}
@@ -347,7 +347,7 @@ func expandData(t Template, goal string, raw map[string]string, locale string, l
 						dk, prev, _ := strings.Cut(dep, "^")
 						ref, ok := wfOf[dk]
 						if !ok {
-							return t, nil, fmt.Errorf("%w: node %q depends on unknown node %q", domain.ErrInvalid, n.Key, dk)
+							return t, nil, fmt.Errorf("%w: task %q depends on unknown task %q", domain.ErrInvalid, n.Key, dk)
 						}
 						fixed := pos
 						if prev != "" {
@@ -355,7 +355,7 @@ func expandData(t Template, goal string, raw map[string]string, locale string, l
 							pi := slices.Index(listOrder, prev)
 							at, here := pos[pi]
 							if pi < 0 || !here || !slices.Contains(ref.dims, pi) {
-								return t, nil, fmt.Errorf("%w: node %q: %q is not a repeat dimension of both blocks", domain.ErrInvalid, n.Key, prev)
+								return t, nil, fmt.Errorf("%w: task %q: %q is not a repeat dimension of both blocks", domain.ErrInvalid, n.Key, prev)
 							}
 							if at == 0 {
 								continue

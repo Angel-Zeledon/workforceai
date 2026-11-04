@@ -236,7 +236,7 @@ func (in Input) toPackage() (Package, error) {
 	}
 	for _, f := range in.Files {
 		if strings.EqualFold(f.Path, SkillFile) {
-			return Package{}, invalid("path_invalid", "SKILL.md is edited through the instructions field")
+			return Package{}, invalid("path_invalid", "the skill file is edited through the instructions field")
 		}
 	}
 	return Build(RenderSkillMD(fm, in.Instructions), in.Files)

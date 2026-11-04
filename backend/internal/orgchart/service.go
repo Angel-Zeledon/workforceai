@@ -232,10 +232,10 @@ func (s *Service) putDepartment(ctx context.Context, id string, in DepartmentInp
 		rest = append(rest, all[i])
 	}
 	if create && cur != nil {
-		return Department{}, fmt.Errorf("%w: department %s already exists", domain.ErrConflict, id)
+		return Department{}, fmt.Errorf("%w: office %s already exists", domain.ErrConflict, id)
 	}
 	if !create && cur == nil {
-		return Department{}, fmt.Errorf("%w: department %s", domain.ErrNotFound, id)
+		return Department{}, fmt.Errorf("%w: office %s", domain.ErrNotFound, id)
 	}
 	now := s.now()
 	d := Department{ID: id, Name: in.Name, ParentID: in.ParentID, Head: in.Head, CostCenter: in.CostCenter, CreatedAt: now, UpdatedAt: now}
@@ -304,11 +304,11 @@ func (s *Service) DeleteDepartment(ctx context.Context, id string) error {
 			found = true
 		}
 		if d.ParentID == id {
-			return fmt.Errorf("%w: the department has sub-departments; move or delete them first", domain.ErrConflict)
+			return fmt.Errorf("%w: the office has sub-offices; move or delete them first", domain.ErrConflict)
 		}
 	}
 	if !found {
-		return fmt.Errorf("%w: department %s", domain.ErrNotFound, id)
+		return fmt.Errorf("%w: office %s", domain.ErrNotFound, id)
 	}
 	if err := s.retag(ctx, id, nil); err != nil {
 		return err
@@ -457,7 +457,7 @@ func (s *Service) PutJob(ctx context.Context, agentID string, in JobInput) (Job,
 			}
 		}
 		if dept == nil {
-			return Job{}, invalid("unknown department %q", in.DepartmentID)
+			return Job{}, invalid("unknown office %q", in.DepartmentID)
 		}
 	}
 	resp, err := cleanLines(in.Responsibilities, MaxResponsibilities, MaxResponsibility)
@@ -592,7 +592,7 @@ func (s *Service) PutPlacement(ctx context.Context, userID string, in PlacementI
 			return Placement{}, err
 		}
 		if !slices.ContainsFunc(deps, func(d Department) bool { return d.ID == in.DepartmentID }) {
-			return Placement{}, invalid("unknown department %q", in.DepartmentID)
+			return Placement{}, invalid("unknown office %q", in.DepartmentID)
 		}
 	}
 	agents, _, err := s.agentMap(ctx)

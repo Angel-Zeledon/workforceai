@@ -1,6 +1,8 @@
 import { call } from "../api";
+import { API_URL, MOCK } from "../config";
+import { authFetch } from "../session";
 import type {
-  AgentControl, ApiSource, Connection, EmailDraft, Grant, OrgControls, PlanReview, ProviderDef, SpendLimitStatus, UsageRow,
+  AgentControl, ApiSource, Connection, DatabaseConfig, DbResult, DbSchema, EmailDraft, Grant, OrgControls, PlanReview, ProviderDef, SpendLimitStatus, UsageRow,
 } from "./types";
 
 const items = <T>(x: any): T[] => (Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : []);
@@ -32,6 +34,10 @@ export interface CreateConnectionInput {
   mode?: "live" | "simulated";
   /** custom_api only: the read-only HTTP source. */
   source?: ApiSource;
+  /** database only: where the read-only database is (never the password; with connection_string, only description/schemas). */
+  database?: Partial<DatabaseConfig>;
+  /** database only. WRITE-ONLY: a pasted postgresql:// URL; the server splits it and keeps only the password (in the vault). */
+  connection_string?: string;
 }
 
 export const connApi = {
@@ -39,7 +45,7 @@ export const connApi = {
   list: async () => items<Connection>(await call("GET", "/connections")),
   create: (b: CreateConnectionInput) => call<Connection>("POST", "/connections", b),
   /** `source` (custom_api) is a full replace. */
-  patch: (id: string, b: Partial<Pick<Connection, "label" | "read_only" | "limits" | "source">>) => call<Connection>("PATCH", `/connections/${id}`, b),
+  patch: (id: string, b: Partial<Pick<Connection, "label" | "read_only" | "limits" | "source" | "database">>) => call<Connection>("PATCH", `/connections/${id}`, b),
   oauthStart: (id: string) => call<{ auth_url: string; expires_at: string }>("POST", `/connections/${id}/oauth/start`),
   /** Mock only: simulates the provider redirect landing on the callback. */
   oauthSimulateCallback: (id: string, denyScopes = false) => call<Connection>("GET", `/connections/oauth/callback?connection_id=${id}${denyScopes ? "&deny_scopes=1" : ""}`),
@@ -57,6 +63,30 @@ export const connApi = {
   /** Mock only: an agent "tries" a capability; the policy decides and the result is logged. */
   simulateUse: (id: string, agentId: string, capability: string) => call<UsageRow>("POST", `/connections/${id}/usage/simulate`, { agent_id: agentId, capability }),
   agentGrants: async (agentId: string) => items<Grant>(await call("GET", `/agents/${agentId}/connections`)),
+};
+
+/** Like call(), but a failed answer throws its stable code ({"code": "sql_not_read_only"}) instead of the generic
+ *  "METHOD path -> status" message, so the database screens can say exactly why a query was refused. */
+async function callCode<T>(method: string, path: string, body?: unknown): Promise<T> {
+  if (MOCK) return call<T>(method, path, body);
+  const res = await authFetch(`${API_URL}${path}`, {
+    method, cache: "no-store",
+    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  let data: any = {};
+  try { data = text ? JSON.parse(text) : {}; } catch { /* not JSON */ }
+  if (!res.ok) throw new Error(typeof data?.code === "string" && /^[a-z_]+$/.test(data.code) ? data.code : "request_failed");
+  return data as T;
+}
+
+/** Read-only database sources: what the database user may read, and one test query by hand (the agents' rules). */
+export const dbApi = {
+  /** POST /connections for provider "database", keeping the server's code (e.g. a malformed connection string). */
+  create: (b: CreateConnectionInput) => callCode<Connection>("POST", "/connections", b),
+  schema: (id: string) => callCode<DbSchema>("GET", `/connections/${id}/database/schema`),
+  query: (id: string, sql: string) => callCode<DbResult>("POST", `/connections/${id}/database/query`, { sql }),
 };
 
 export interface OperatingHoursInterval { day: number; open: string; close: string }

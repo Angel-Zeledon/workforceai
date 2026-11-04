@@ -33,6 +33,8 @@ export const TONE_CODES: ToneCode[] = ["neutral", "mx", "co", "ar", "cl", "es"];
 export interface OrgSettings {
   configured: boolean; locale: Locale; tone: ToneCode; business_type: string; pack_version: number;
   onboarding_completed: boolean; onboarding_completed_at: string | null;
+  /** who starts in simple mode: "simple" for organizations created after the UX change, "full" before (absent on older servers) */
+  view_mode_default?: "simple" | "full";
   rules: { approval_amount_usd: number; always_approve: string[] };
   agent_tones: Record<string, ToneCode>;
   recommended_templates: string[];

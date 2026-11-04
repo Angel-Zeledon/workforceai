@@ -28,7 +28,7 @@ test("batch table filter and tones", () => {
   const rows = [{ status: "done" }, { status: "needs_help" }, { status: "running" }, { status: "failed" }];
   assert.equal(filterRows(rows, "").length, 4);
   assert.deepEqual(filterRows(rows, "needs_help"), [{ status: "needs_help" }]);
-  assert.equal(rowTone("needs_help"), "accent");
+  assert.equal(rowTone("needs_help"), "warn"); // "Te necesita" is amber everywhere (UX tanda 1)
   assert.equal(rowTone("failed"), "err");
   assert.equal(rowTone("done"), "ok");
   assert.ok(ROW_STATUSES.includes("partial") && ROW_STATUSES.includes("queued"));

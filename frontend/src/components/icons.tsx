@@ -41,6 +41,8 @@ const P: Record<string, string> = {
   sidebar: "M4 5h16v14H4zM9 5v14M15 10l-2 2 2 2",
   shrink: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
   calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h2M14 14h2", // meetings
+  bell: "M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10.3 20.5a2 2 0 0 0 3.4 0",
+  briefcase: "M4 7h16v12H4zM9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M4 12h16",
 };
 
 export type IconName = keyof typeof P;

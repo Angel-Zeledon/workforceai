@@ -140,6 +140,8 @@ type Connection struct {
 
 	// Source configures a generic HTTP source (provider custom_api only).
 	Source *Source `json:"source,omitempty"`
+	// Database configures a read-only database source (provider database only). Never holds the password.
+	Database *Database `json:"database,omitempty"`
 
 	// Filled by the service for responses.
 	Credential  *vault.Meta `json:"credential"`

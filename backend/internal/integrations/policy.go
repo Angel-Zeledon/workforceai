@@ -8,7 +8,7 @@
 //	VENDOR_INTEGRATIONS=on|true|1|all    every vendor integration is on (pre-v1 behavior)
 //	VENDOR_INTEGRATIONS=github,slack     only the listed provider ids are on ("slack" also covers the Slack channel)
 //
-// Generic providers (custom_api) are never affected.
+// Generic providers (custom_api, database) are never affected.
 package integrations
 
 import (
@@ -27,7 +27,7 @@ const CodeDisabled = "vendor_integrations_disabled"
 const SlackChannel = "slack"
 
 // generic providers are not tied to any product: they are always available.
-var generic = map[string]bool{"custom_api": true}
+var generic = map[string]bool{"custom_api": true, "database": true}
 
 // Vendors lists the vendor-specific provider ids known to this build (manifests under
 // internal/connections/providers plus the Slack channel). Unknown ids in a list are ignored (and reported by Parse).

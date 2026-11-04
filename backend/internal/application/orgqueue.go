@@ -226,7 +226,7 @@ func (o *Orchestrator) acquireSlot(ctx context.Context, call string) (func(), er
 			Payload: map[string]any{"request_id": reqID, "priority": prio.String(), "call": call, "ahead": ahead,
 				"max_parallel_per_org": o.cfg.MaxParallelPerOrg}}
 		if reqID != "" && o.firstQueued(reqID) {
-			act.Text = "Solicitud en cola: la organización está usando todos sus turnos de trabajo en paralelo"
+			act.Text = "Pedido en cola: la organización está usando todos sus turnos de trabajo en paralelo"
 		}
 		o.rec.Emit(ctx, act)
 	})

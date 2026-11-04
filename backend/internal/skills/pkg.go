@@ -92,7 +92,7 @@ func Build(skillMD string, files []File) (Package, error) {
 		return Package{}, err
 	}
 	if len(skillMD) > MaxFileBytes {
-		return Package{}, tooLarge("file_too_large", "SKILL.md is larger than %d KB", MaxFileBytes>>10)
+		return Package{}, tooLarge("file_too_large", "the skill file is larger than %d KB", MaxFileBytes>>10)
 	}
 	if len(files)+1 > MaxFiles {
 		return Package{}, tooLarge("too_many_files", "a skill may have at most %d files", MaxFiles)
@@ -128,7 +128,7 @@ func Build(skillMD string, files []File) (Package, error) {
 // ReadSkillMD builds a package from a single SKILL.md upload.
 func ReadSkillMD(data []byte) (Package, error) {
 	if len(data) > MaxFileBytes {
-		return Package{}, tooLarge("file_too_large", "SKILL.md is larger than %d KB", MaxFileBytes>>10)
+		return Package{}, tooLarge("file_too_large", "the skill file is larger than %d KB", MaxFileBytes>>10)
 	}
 	if err := checkText(SkillFile, data); err != nil {
 		return Package{}, err
@@ -262,7 +262,7 @@ func ReadZip(data []byte) (Package, error) {
 		files = append(files, File{Path: p, Content: string(b)})
 	}
 	if !haveSkill {
-		return Package{}, invalid("skill_md_missing", "the archive has no SKILL.md at its root")
+		return Package{}, invalid("skill_md_missing", "the archive has no skill file (SKILL.md) at its root")
 	}
 	p, err := Build(skillMD, files)
 	if err != nil {

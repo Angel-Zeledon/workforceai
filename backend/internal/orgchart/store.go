@@ -97,7 +97,7 @@ func (s *MemoryStore) DeleteDepartment(_ context.Context, org, id string) error 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := sub(s.deps, org)[id]; !ok {
-		return fmt.Errorf("%w: department %s", domain.ErrNotFound, id)
+		return fmt.Errorf("%w: office %s", domain.ErrNotFound, id)
 	}
 	delete(sub(s.deps, org), id)
 	return nil

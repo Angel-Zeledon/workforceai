@@ -168,11 +168,11 @@ const MaxDepartmentLen = 60
 func NormalizeDepartment(s string) (string, error) {
 	s = strings.TrimSpace(s)
 	if len(s) > MaxDepartmentLen {
-		return "", fmt.Errorf("%w: department is limited to %d characters", ErrInvalid, MaxDepartmentLen)
+		return "", fmt.Errorf("%w: office is limited to %d characters", ErrInvalid, MaxDepartmentLen)
 	}
 	for _, r := range s {
 		if r < 0x20 || r == 0x7f {
-			return "", fmt.Errorf("%w: department has control characters", ErrInvalid)
+			return "", fmt.Errorf("%w: office has control characters", ErrInvalid)
 		}
 	}
 	return s, nil

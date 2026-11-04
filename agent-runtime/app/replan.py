@@ -51,12 +51,12 @@ _STEPS = {
     "es": [
         ("Diagnosticar por que fallo: {t}", "Revisar los insumos y la causa probable del fallo de \"{t}\" y proponer otra via."),
         ("Rehacer con otro enfoque: {t}", "Completar el objetivo de \"{t}\" con el enfoque alternativo del diagnostico."),
-        ("Verificar el resultado: {t}", "Comprobar que el resultado cubre lo que esperaban los pasos que dependen de \"{t}\"."),
+        ("Verificar el resultado: {t}", "Comprobar que el resultado cubre lo que esperaban las tareas que dependen de \"{t}\"."),
     ],
     "en": [
         ("Diagnose why it failed: {t}", "Review the inputs and the likely cause of the failure of \"{t}\" and propose another way."),
         ("Redo with another approach: {t}", "Reach the goal of \"{t}\" with the alternative approach from the diagnosis."),
-        ("Check the result: {t}", "Check that the result covers what the steps depending on \"{t}\" expect."),
+        ("Check the result: {t}", "Check that the result covers what the tasks depending on \"{t}\" expect."),
     ],
 }
 _REASON = {

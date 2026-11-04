@@ -284,8 +284,8 @@ func retroEntry(a domain.Agent, d *agentData, from, to time.Time, qs QualitySnap
 			fmt.Sprintf("Quality score %d (%s), trend %s", *qs.Score, qs.Level, qs.Trend))}
 		if bestDone != "" {
 			cands = append(cands, cand{0, Proposal{Kind: ProposalSkillSuggestion, Signal: SignalQuality,
-				Title: tr(loc, "Guardar como skill mi mejor procedimiento", "Save my best procedure as a skill"),
-				Text: tr(loc, "Guarda como skill (borrador que revisa un administrador) cómo se resolvió la tarea que salió bien, para repetir el mismo procedimiento en las próximas.",
+				Title: tr(loc, "Guardar como habilidad mi mejor procedimiento", "Save my best procedure as a skill"),
+				Text: tr(loc, "Guarda como habilidad (borrador que revisa un administrador) cómo se resolvió la tarea que salió bien, para repetir el mismo procedimiento en las próximas.",
 					"Save as a skill (a draft an administrator reviews) how the task that went well was solved, to repeat the same procedure next time."),
 				Evidence: append(ev, q(loc, bestDone))}})
 		} else {

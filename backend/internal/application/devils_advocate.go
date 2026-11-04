@@ -182,7 +182,7 @@ func (d *DevilsAdvocate) Generate(ctx context.Context, approvalID, locale string
 		return c, nil
 	}
 	if !IsHighRiskApproval(ap) {
-		return domain.Counterargument{}, fmt.Errorf("%w: only high-risk approvals have a devil's advocate review", domain.ErrInvalid)
+		return domain.Counterargument{}, fmt.Errorf("%w: only high-risk approvals have a second opinion", domain.ErrInvalid)
 	}
 	if ap.Status != domain.ApprovalPending {
 		return domain.Counterargument{}, fmt.Errorf("%w: approval already %s", domain.ErrConflict, ap.Status)

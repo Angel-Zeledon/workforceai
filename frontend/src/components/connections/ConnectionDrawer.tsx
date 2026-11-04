@@ -8,6 +8,8 @@ import { useConnections } from "@/lib/connections/store";
 import { useStore } from "@/lib/store";
 import { Btn } from "../ui";
 import { ApiSourceSection } from "./ApiSourceForm";
+import { DatabaseSection } from "./DatabaseForm";
+import { DATABASE } from "@/lib/connections/dbSource";
 import { CapChip, ErrorLine, errText, inputCls, Modal, StatusBadge, useViewer } from "./shared";
 
 const REVOKE_STEPS = ["suspend", "cancel", "provider", "destroy", "grants", "audit"] as const;
@@ -111,11 +113,12 @@ export function ConnectionDrawer({ id, onClose }: { id: string; onClose: () => v
             )}
           </section>
           {c.provider === CUSTOM_API && <ApiSourceSection key={c.id} c={c} canEdit={isAdmin && live} />}
+          {c.provider === DATABASE && <DatabaseSection key={c.id} c={c} canEdit={isAdmin && live} />}
           <section>
             <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-mute">{t("conn.drawer.credential")}</h3>
             {c.credential ? (
               <p className="text-mute">
-                {t(`conn.cred.${c.credential.kind}`)} · v{c.credential.version}
+                {c.provider === DATABASE ? t("conn.db.password") : t(`conn.cred.${c.credential.kind}`)} · v{c.credential.version}
                 {c.credential.hint ? <> · <span data-testid="conn-credential-hint">…{c.credential.hint}</span></> : null}
                 {c.credential.rotated_at ? <> · {fmtDateTime(c.credential.rotated_at)}</> : null}
               </p>
@@ -123,7 +126,7 @@ export function ConnectionDrawer({ id, onClose }: { id: string; onClose: () => v
             <p className="mt-1 text-[11px] text-mute">{t("conn.secretNeverShown")}</p>
             {c.kind === "api_key" && live && (
               <div className="mt-2 flex gap-2">
-                <input ref={rotateRef} data-testid="conn-secret-input" data-sensitive type="password" autoComplete="off" data-1p-ignore data-lpignore="true" className={inputCls} placeholder={t("conn.apiKey.newPlaceholder")} />
+                <input ref={rotateRef} data-testid="conn-secret-input" data-sensitive type="password" autoComplete="off" data-1p-ignore data-lpignore="true" className={inputCls} placeholder={c.provider === DATABASE ? t("conn.db.newPassword") : t("conn.apiKey.newPlaceholder")} />
                 <Btn data-testid="conn-rotate" disabled={!isAdmin} onClick={rotate}>{t("conn.rotate")}</Btn>
               </div>
             )}

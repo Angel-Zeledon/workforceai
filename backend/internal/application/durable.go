@@ -401,16 +401,16 @@ func (o *Orchestrator) recoverRequest(ctx context.Context, req domain.Request) b
 	gated := metaErr == nil && meta.Gate != nil && beforeStartStatus(req.Status)
 	switch {
 	case beforeStartStatus(req.Status) && !gated:
-		o.abandon(ctx, rs, "Solicitud interrumpida antes de empezar", errors.New("el servidor se reinició; vuelve a enviarla"))
+		o.abandon(ctx, rs, "Pedido interrumpido antes de empezar", errors.New("el servidor se reinició; vuelve a enviarlo"))
 		return false
 	case o.durable.runs == nil:
-		o.abandon(ctx, rs, "Solicitud interrumpida", errors.New("el servidor se reinició y esta instalación no guarda el progreso"))
+		o.abandon(ctx, rs, "Pedido interrumpido", errors.New("el servidor se reinició y esta instalación no guarda el progreso"))
 		return false
 	case metaErr != nil:
-		o.abandon(ctx, rs, "Solicitud interrumpida", errors.New("el servidor se reinició y no hay datos para reanudarla; vuelve a enviarla"))
+		o.abandon(ctx, rs, "Pedido interrumpido", errors.New("el servidor se reinició y no hay datos para reanudarlo; vuelve a enviarlo"))
 		return false
 	case o.durable.owner != nil && o.durable.owner.OwnsRequest(ctx, org, req.ID) && !o.durable.owner.ResumeRequest(ctx, org, req.ID):
-		o.abandon(ctx, rs, "Solicitud interrumpida", errors.New("el servidor se reinició y el proyecto no se pudo reanudar"))
+		o.abandon(ctx, rs, "Pedido interrumpido", errors.New("el servidor se reinició y el proyecto no se pudo reanudar"))
 		return false
 	}
 	tasks, err := o.store.ListTasksByRequest(ctx, org, req.ID)
@@ -419,7 +419,7 @@ func (o *Orchestrator) recoverRequest(ctx context.Context, req domain.Request) b
 		return false
 	}
 	if gated && len(tasks) == 0 {
-		o.abandon(ctx, rs, "Solicitud interrumpida antes de empezar", errors.New("el servidor se reinició; vuelve a enviarla"))
+		o.abandon(ctx, rs, "Pedido interrumpido antes de empezar", errors.New("el servidor se reinició; vuelve a enviarlo"))
 		return false
 	}
 	o.mu.Lock()
@@ -476,7 +476,7 @@ func (o *Orchestrator) emitResumed(ctx context.Context, rs *run, done, total int
 		p["gate"] = gate
 	}
 	o.rec.Emit(ctx, Action{Type: domain.EvRequestResumed, Entity: "request", EntityID: rs.req.ID, Payload: p,
-		Text: "Solicitud reanudada tras un reinicio del servidor"})
+		Text: "Pedido reanudado tras un reinicio del servidor"})
 }
 
 // resumeGated continues a request that was waiting on a human gate before it
@@ -501,7 +501,7 @@ func (o *Orchestrator) resumeGated(ctx context.Context, rs *run, tasks []domain.
 		}
 	}
 	o.setRequestStatus(ctx, rs, domain.RequestRunning)
-	o.setState(ctx, assistantID, domain.StateWaiting, "Coordinando al equipo", nil, 30)
+	o.setState(ctx, assistantID, domain.StateWaiting, "Coordinando a los agentes", nil, 30)
 	o.execute(ctx, rs, tasks, func(c context.Context, t domain.Task) Outcome { return o.runTask(c, rs, t) })
 }
 

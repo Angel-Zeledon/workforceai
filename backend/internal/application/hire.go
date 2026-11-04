@@ -59,7 +59,7 @@ func (o *Orchestrator) HireFromTemplate(ctx context.Context, in HireInput) (doma
 	}
 	o.rec.Audit(ctx, domain.AuditLog{Actor: ActorFrom(ctx, "user"), Action: "agent.created_from_template", Entity: "agent", EntityID: a.ID,
 		Details: map[string]any{"template_id": t.ID, "template_version": t.Version, "risk_tier": t.RiskTier, "autonomy": a.Autonomy, "tools": a.Tools}})
-	text := map[string]string{"es": "Se incorporó al equipo: ", "en": "Joined the team: "}[loc] + a.Name + " (" + a.Title + ")"
+	text := map[string]string{"es": "Nuevo agente: ", "en": "New agent: "}[loc] + a.Name + " (" + a.Title + ")"
 	o.rec.Emit(ctx, Action{Type: domain.EvAgentCreated, AgentID: a.ID, Entity: "agent", EntityID: a.ID, SkipAudit: true,
 		Payload: map[string]any{"agent": a, "template_id": t.ID}, Text: text})
 	return a, nil
@@ -142,7 +142,7 @@ func (o *Orchestrator) HireForRole(ctx context.Context, role, loc string) (domai
 	t, _ := roles.Get(role)
 	o.rec.Audit(ctx, domain.AuditLog{Actor: ActorFrom(ctx, "user"), Action: "agent.created_from_template", Entity: "agent", EntityID: a.ID,
 		Details: map[string]any{"template_id": t.ID, "template_version": t.Version, "risk_tier": t.RiskTier, "autonomy": a.Autonomy, "tools": a.Tools, "via": "profession"}})
-	text := map[string]string{"es": "Se incorporó al equipo: ", "en": "Joined the team: "}[loc] + a.Name + " (" + a.Title + ")"
+	text := map[string]string{"es": "Nuevo agente: ", "en": "New agent: "}[loc] + a.Name + " (" + a.Title + ")"
 	o.rec.Emit(ctx, Action{Type: domain.EvAgentCreated, AgentID: a.ID, Entity: "agent", EntityID: a.ID, SkipAudit: true,
 		Payload: map[string]any{"agent": a, "template_id": t.ID}, Text: text})
 	return a, nil

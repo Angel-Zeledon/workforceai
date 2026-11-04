@@ -15,6 +15,7 @@ import (
 var (
 	_ application.ConfigStore = (*Store)(nil)
 	_ application.OrgLister   = (*Store)(nil)
+	_ application.OrgCreatedAtStore = (*Store)(nil)
 )
 
 func (s *Store) GetOrgSettings(ctx context.Context, orgID string) (application.OrgSettings, error) {
@@ -39,6 +40,15 @@ func (s *Store) GetOrgSettings(ctx context.Context, orgID string) (application.O
 	}
 	st.AgentTones, st.Recommendation = map[string]string{}, []string{}
 	return st, nil
+}
+
+// OrgCreatedAt is when the organization was created (it decides whether new people start in simple mode).
+func (s *Store) OrgCreatedAt(ctx context.Context, orgID string) (time.Time, error) {
+	return one(ctx, s, orgID, func(r scanner) (time.Time, error) {
+		var at time.Time
+		err := r.Scan(&at)
+		return at, err
+	}, `SELECT created_at FROM organizations WHERE id=$1`, orgID)
 }
 
 func (s *Store) PutOrgSettings(ctx context.Context, orgID string, o application.OrgSettings) error {

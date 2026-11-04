@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"aiworkforce/backend/internal/catalog"
+	"aiworkforce/backend/internal/domain"
 )
 
 // OrgSettings is the per-organization configuration: language, regional tone,
@@ -22,6 +23,28 @@ type OrgSettings struct {
 	Rules          catalog.PackRules `json:"rules"`
 	AgentTones     map[string]string `json:"agent_tones"`
 	Recommendation []string          `json:"recommended_templates"`
+	// ViewModeDefault tells the app who starts in simple mode (advanced views folded, one switch "Ver todo" away):
+	// "simple" for organizations created on or after SimpleModeSince, "full" for the ones that already existed and
+	// for the demo. Computed on read, never stored; the person's own choice in the app always wins.
+	ViewModeDefault string `json:"view_mode_default,omitempty"`
+}
+
+// SimpleModeSince is the release of the simplified UI (docs/superpowers/plans/2026-11-03-ux-tanda-1.md): accounts
+// created from then on start in simple mode; older accounts keep seeing everything as before.
+var SimpleModeSince = time.Date(2026, 11, 4, 0, 0, 0, 0, time.UTC)
+
+// ViewModeFor is the default view of an organization created at created ("simple" or "full").
+func ViewModeFor(orgID string, created time.Time) string {
+	if orgID == domain.DemoOrgID || created.IsZero() || created.Before(SimpleModeSince) {
+		return "full"
+	}
+	return "simple"
+}
+
+// OrgCreatedAtStore is implemented by stores that know when an organization was created (postgres). Optional: without
+// it every organization sees everything, as before.
+type OrgCreatedAtStore interface {
+	OrgCreatedAt(ctx context.Context, orgID string) (time.Time, error)
 }
 
 // DefaultOrgSettings are the settings of an organization that configured nothing.

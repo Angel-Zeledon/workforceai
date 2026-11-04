@@ -1,16 +1,33 @@
 import type { Page } from "@playwright/test";
 
 /**
- * Admin entries (nav-connections, nav-security, ctl-killswitch, templates-open,
- * onboarding-open, org-config-open, office-settings, demo-reset) live inside the
- * gear menu (`admin-menu`); the menu closes after each choice. Opens it if needed.
+ * The avatar of the top bar (`admin-menu`, it replaced the gear) keeps: account-who, account-open, ctl-killswitch,
+ * demo-reset, logout, onboarding-open (while the set-up is pending) and team-setup-open. The menu closes after each
+ * choice. Opens it if needed.
  */
 export async function openAdminMenu(page: Page) {
   if ((await page.getByTestId("admin-menu").getAttribute("aria-expanded")) !== "true") await page.getByTestId("admin-menu").click();
 }
 
-/** Click an admin entry by test id (opens the gear menu first). */
+/** Entries that left the gear menu (UX tanda 1) and where they live now. */
+const MOVED: Record<string, { href: string; testid?: string }> = {
+  "nav-connections": { href: "/connections" },                       // main menu, "Conexiones"
+  "nav-security": { href: "/settings", testid: "settings-security" },  // Ajustes → Seguridad
+  "templates-open": { href: "/settings?s=templates" },               // search box of Ajustes
+  "hire-open": { href: "/settings?s=hire" },                         // Agentes y oficinas → Contratar agente
+  "office-settings": { href: "/settings", testid: "settings-office" }, // Ajustes → Apariencia e idioma
+  "org-config-open": { href: "/settings", testid: "settings-onboarding" }, // Ajustes → Tu negocio
+  "members-open": { href: "/settings", testid: "settings-members" },   // Ajustes → Miembros
+};
+
+/** Click an admin entry by test id: in the avatar menu, or at its new home in Ajustes / the main menu. */
 export async function adminClick(page: Page, testid: string) {
+  const moved = MOVED[testid];
+  if (moved) {
+    await page.goto(moved.href);
+    if (moved.testid) await page.getByTestId(moved.testid).click();
+    return;
+  }
   await openAdminMenu(page);
   await page.getByTestId(testid).click();
 }

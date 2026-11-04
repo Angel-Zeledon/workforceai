@@ -39,7 +39,7 @@ def test_debate_is_advisory_and_treats_orders_as_data(client):
     assert not ({"verdict", "decision", "approve", "approved", "reject"} & set(out))
     assert "dato" in out["synthesis"]["rationale"]  # the hidden order is flagged, not obeyed
     en = _call(client, locale="en")
-    assert en["turns"][-1]["text"].startswith("The team leans to")
+    assert en["turns"][-1]["text"].startswith("The agents lean to")
 
 
 def test_debate_needs_two_participants(client):

@@ -1085,8 +1085,8 @@ func (s *Service) Ask(ctx context.Context, actor Actor, id string, in AskInput) 
 	m := cur.Meta
 	var text string
 	if in.Mode == "review_my_changes" {
-		text = L(m.Locale, fmt.Sprintf("Para %s (%s): revisa los cambios que hice en el artefacto «%s» (%s, versión %d) y dime si ves errores.", agent.Title, agent.ID, m.Title, m.ID, m.HeadVersion),
-			fmt.Sprintf("For %s (%s): review the changes I made in the artifact “%s” (%s, version %d) and tell me if you see any mistakes.", agent.Title, agent.ID, m.Title, m.ID, m.HeadVersion))
+		text = L(m.Locale, fmt.Sprintf("Para %s (%s): revisa los cambios que hice en el archivo «%s» (%s, versión %d) y dime si ves errores.", agent.Title, agent.ID, m.Title, m.ID, m.HeadVersion),
+			fmt.Sprintf("For %s (%s): review the changes I made in the file “%s” (%s, version %d) and tell me if you see any mistakes.", agent.Title, agent.ID, m.Title, m.ID, m.HeadVersion))
 	} else {
 		text = fmt.Sprintf("%s (%s) · %s [%s, v%d]: %s", agent.Title, agent.ID, m.Title, m.ID, m.HeadVersion, strings.TrimSpace(in.Text))
 	}

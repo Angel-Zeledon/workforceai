@@ -73,7 +73,7 @@ func (s *server) createDebate(w http.ResponseWriter, r *http.Request) {
 		}
 		// The cause stays in the audit trail and the logs; the client gets the stable code and the failed row.
 		s.Log.Info("debate unavailable", "code", de.Code, "err", de.Err)
-		writeJSON(w, status, map[string]any{"code": de.Code, "error": "the team debate is not available right now", "debate_id": de.Debate.ID})
+		writeJSON(w, status, map[string]any{"code": de.Code, "error": "the agents' debate is not available right now", "debate_id": de.Debate.ID})
 		return
 	}
 	if err != nil {

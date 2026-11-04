@@ -9,6 +9,7 @@ import { currentSubscription, disablePush, enablePush, getPushConfig, pushSuppor
 import { useSession } from "@/lib/session";
 import { OrgIndicator } from "../auth/OrgIndicator";
 import { Progress, RiskBadge } from "../ui";
+import { ActionName } from "./ActionName";
 import { ApprovalReason } from "./ApprovalReason";
 
 type PushState = "loading" | "unsupported" | "unavailable" | "denied" | "off" | "on";
@@ -100,7 +101,7 @@ function ApprovalItem({ a, focused, onDone }: { a: Approval; focused: boolean; o
       {a.details && <p className="mt-2 text-[13px] leading-snug text-ink2 [overflow-wrap:anywhere]">{a.details}</p>}
       {a.status === "pending" && <ApprovalReason a={a} className="mt-2 bg-panel2" />}
       <dl className="mt-2 space-y-1 text-[12px] text-mute">
-        <div className="font-mono">{a.action}</div>
+        <div><ActionName code={a.action} /></div>
         {a.required_role && <div data-testid={`approval-role-${a.id}`}>{t("approvals.mobile.requiredRole", { role: a.required_role })}</div>}
       </dl>
       {total > 1 && (
@@ -159,7 +160,7 @@ export function ApprovalsMobile({ focusId }: { focusId?: string }) {
   const sorted = (items ?? []).slice().sort((a, b) => (a.id === focusId ? -1 : b.id === focusId ? 1 : +new Date(b.created_at) - +new Date(a.created_at)));
   const focusGone = !!focusId && items !== null && !items.some((a) => a.id === focusId);
   return (
-    <main className="mx-auto min-h-dvh max-w-xl space-y-3 bg-bg px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5" data-testid="approvals-page">
+    <main className="mx-auto min-h-full max-w-xl space-y-3 bg-bg px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5" data-testid="approvals-page">
       <header>
         <h1 className="text-xl font-bold text-ink">{t("approvals.mobile.title")}</h1>
         <p className="text-[13px] text-mute">{t("approvals.mobile.subtitle")}</p>

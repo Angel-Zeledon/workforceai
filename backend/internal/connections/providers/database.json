@@ -1,0 +1,23 @@
+{
+  "id": "database",
+  "version": 1,
+  "label_key": "provider.database.name",
+  "phase": "available",
+  "auth": [{ "method": "api_key", "secret_regex": "^[^\\x00\\r\\n]{1,1000}$" }],
+  "capabilities": {
+    "db.read": {
+      "class": "read",
+      "scopes": [],
+      "tools": ["db.schema", "db.query"],
+      "risk": "low",
+      "side_effects": false,
+      "default": true,
+      "label_key": "conn.cap.db.read",
+      "scope_overreach": "one SELECT/WITH/EXPLAIN per call inside a READ ONLY transaction with a statement timeout and row/byte caps, always rolled back; writes fail even if the database user may write; give the source a read-only database user anyway"
+    }
+  },
+  "never_offered": ["db.write"],
+  "resource_filters": [],
+  "default_limits": { "per_minute": 20, "per_hour": 300, "per_day": 1500, "write_per_day": 0, "max_items_per_call": 10, "max_bytes_per_day": 20000000 },
+  "untrusted_sources": ["rows", "comments", "error.message"]
+}

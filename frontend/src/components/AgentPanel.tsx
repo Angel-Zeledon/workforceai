@@ -30,10 +30,14 @@ import { QualityCard } from "./quality/QualityCard";
 import { TrustCard } from "./trust/TrustCard";
 import { PermissionsSection } from "./agent/PermissionsSection";
 import { SaveAsSkillButton } from "./skills/SaveAsSkillButton";
+import { useViewAll, useViewMode } from "@/lib/viewMode";
+import { SIMPLE_AGENT_TABS, splitTabs } from "@/lib/viewModeLogic";
 
-const TABS = ["chat", "state", "tasks", "chats", "memory", "reports", "files", "activity", "profile", "thoughts"] as const;
+// "can" (Qué puede hacer) brings the approval permissions and the folders it sees to the front (they hid in Perfil
+// and Archivos). In simple mode the everyday tabs are listed and the rest wait behind "Ver todo" (the open one stays).
+const TABS = ["chat", "state", "tasks", "can", "chats", "memory", "reports", "files", "activity", "profile", "thoughts"] as const;
 type Tab = (typeof TABS)[number];
-const TAB_ICON: Record<Tab, IconName> = { chat: "chat", state: "pulse", tasks: "list", chats: "users", memory: "layers", reports: "doc", files: "folder", activity: "clock", profile: "user", thoughts: "shield" };
+const TAB_ICON: Record<Tab, IconName> = { chat: "chat", state: "pulse", tasks: "list", can: "shield", chats: "users", memory: "layers", reports: "doc", files: "folder", activity: "clock", profile: "user", thoughts: "help" };
 
 export function AgentPanel({ id }: { id: string }) {
   const { t } = useT();
@@ -50,6 +54,8 @@ export function AgentPanel({ id }: { id: string }) {
   const [error, setError] = useState(false);
   const [focusTask, setFocusTask] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const viewAll = useViewAll();
+  const setViewAll = useViewMode((s) => s.setViewAll);
 
   useEffect(() => { setDetail(null); setTab("chat"); setOpenConv(null); setOpenReport(null); setFocusTask(""); }, [id]);
   // B10: the shield notice opens this panel on the thought audit of the task whose read content tried to give orders
@@ -88,19 +94,24 @@ export function AgentPanel({ id }: { id: string }) {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
-            <SectionWheel items={TABS.map((tb) => ({ id: tb, icon: TAB_ICON[tb], label: t(`panel.tab.${tb}`), testid: `panel-tab-${tb}` }))} value={tab} onChange={setTab}
+            <SectionWheel items={splitTabs(TABS, SIMPLE_AGENT_TABS, viewAll, [tab]).shown.map((tb) => ({ id: tb, icon: TAB_ICON[tb], label: t(`panel.tab.${tb}`), testid: `panel-tab-${tb}` }))} value={tab} onChange={setTab}
               hubAvatar={<Avatar id={id} size={52} />} ariaLabel={t("panel.nav.label")} />
             <button onClick={() => select(null)} className="flex min-h-10 min-w-10 items-center justify-center rounded-md p-1.5 text-mute hover:bg-mute/10 hover:text-ink md:min-h-0 md:min-w-0" aria-label={t("common.close")}><Icon name="x" size={16} /></button>
           </div>
         </div>
         <div className="mt-3 flex items-center gap-2"><StateBadge state={agent.state} /><span className="truncate text-xs text-ink2">{agent.activity}</span></div>
         {agent.progress > 0 && <div className="mt-2"><Progress value={agent.progress} color={sm.color} /></div>}
-        <div className="mt-2 flex flex-wrap items-center gap-2"><AgentPauseToggle id={id} /><RehearsalToggle id={id} /></div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <AgentPauseToggle id={id} /><RehearsalToggle id={id} />
+          {tab !== "can" && <button type="button" data-testid="panel-open-can" onClick={() => setTab("can")} className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-[11px] font-semibold text-ink2 hover:border-accent hover:text-accent"><Icon name="shield" size={12} />{t("panel.tab.can")}</button>}
+          {!viewAll && <button type="button" data-testid="panel-view-all" onClick={() => setViewAll(true)} className="ml-auto text-[11px] font-semibold text-accent hover:underline">{t("ux.viewAll.panel")}</button>}
+        </div>
       </div>
       <div role="tabpanel" aria-label={t(`panel.tab.${tab}`)} className={tab === "chat" ? "min-h-0 flex-1" : "min-h-0 flex-1 space-y-3 overflow-y-auto p-4"}>
         {tab === "chat" && <AgentChat id={id} />}
         {error && !detail && <Empty>{t("panel.loadError")}</Empty>}
-        {tab === "profile" && <><Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card><ProfileSheet id={id} /><PermissionsSection id={id} /><TrustCard id={id} /><QualityCard id={id} /><AgentSkillsCard id={id} /></>}
+        {tab === "can" && <><PermissionsSection id={id} /><FolderAccessSection id={id} /></>}
+        {tab === "profile" && <><Card title={t("panel.tab.profile")}><AgentCustomizer id={id} /></Card><ProfileSheet id={id} /><TrustCard id={id} /><QualityCard id={id} /><AgentSkillsCard id={id} /></>}
         {tab === "thoughts" && <ThoughtAudit id={id} focusTaskId={focusTask} />}
         {tab === "state" && (
           <>
@@ -167,7 +178,7 @@ export function AgentPanel({ id }: { id: string }) {
             <div className="text-[13px] font-semibold text-ink">{r.title}</div><div className="mt-1 line-clamp-2 text-xs text-mute">{r.summary}</div>
           </button>
         )) : <Empty>{t("panel.noReports")}</Empty>)}
-        {tab === "files" && <><DeskFiles id={id} /><FolderAccessSection id={id} /><AgentFilesTab id={id} /></>}
+        {tab === "files" && <><DeskFiles id={id} /><AgentFilesTab id={id} /></>}
         {tab === "activity" && <ActivityFeed agentId={id} limit={40} />}
       </div>
     </aside>

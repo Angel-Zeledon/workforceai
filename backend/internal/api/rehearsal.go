@@ -59,7 +59,7 @@ func (s *server) putAgentRehearsal(w http.ResponseWriter, r *http.Request) {
 	}
 	// Turning rehearsal on only takes power away (like a pause); turning it off gives the agent its real effects back.
 	if !*body.Enabled && !s.has(r, auth.PermControlsRelease) {
-		codeErr(w, http.StatusForbidden, "forbidden", "only the owner can take an agent out of rehearsal")
+		codeErr(w, http.StatusForbidden, "forbidden", "only the owner can turn off “try without sending” for an agent")
 		return
 	}
 	v, err := s.Rehearsal.SetAgent(r.Context(), id, *body.Enabled, s.actor(r))

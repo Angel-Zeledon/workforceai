@@ -2,6 +2,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
+import { useViewAll } from "@/lib/viewMode";
 import { Icon } from "../icons";
 import { useT } from "@/lib/i18n";
 import { useFileViewer } from "@/lib/fileView";
@@ -25,8 +26,10 @@ const OfficeScene = dynamic(() => import("./OfficeScene"), {
 const ACTIVITY_KEY = "aiw.office.activity.collapsed";
 /** The live-activity window can be folded into a small pill; the choice is remembered in this browser. */
 function useActivityCollapsed(): [boolean, (v: boolean) => void] {
+  const viewAll = useViewAll();
   const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => { try { setCollapsed(localStorage.getItem(ACTIVITY_KEY) === "1"); } catch { /* private mode */ } }, []);
+  // simple mode: "Actividad en vivo" starts folded until the person opens it (their choice is remembered)
+  useEffect(() => { try { const v = localStorage.getItem(ACTIVITY_KEY); setCollapsed(v === null ? !viewAll : v === "1"); } catch { /* private mode */ } }, [viewAll]);
   return [collapsed, (v) => { setCollapsed(v); try { localStorage.setItem(ACTIVITY_KEY, v ? "1" : "0"); } catch { /* private mode */ } }];
 }
 
@@ -81,7 +84,9 @@ export function OfficeView() {
         <FirstRunHint id="office" title={t("hint.office.title")} body={t("hint.office.body")} />
       </div>
       <div data-tour="office.approvals" className="pointer-events-none absolute bottom-[calc(96px+env(safe-area-inset-bottom))] left-4 max-w-[calc(100%-2rem)]"><ApprovalsTray /></div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex justify-center px-4 md:pl-[var(--cb-l)] md:pr-[var(--cb-r)]" style={{ "--cb-r": `calc(${selected ? "var(--panel-w, 420px)" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})`, "--cb-l": pendingApprovals ? "352px" : "16px" } as React.CSSProperties}>
+      {/* One bar to type at a time: with an agent's panel open you write in its chat, so the office bar steps aside
+          (hidden, not unmounted: a half-written message is still there when the panel closes). */}
+      <div data-testid="office-command-host" data-hidden={selected ? "1" : "0"} aria-hidden={selected ? true : undefined} className={`pointer-events-none absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 justify-center px-4 md:pl-[var(--cb-l)] md:pr-[var(--cb-r)] ${selected ? "hidden" : "flex"}`} style={{ "--cb-r": `calc(${selected ? "var(--panel-w, 420px)" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})`, "--cb-l": pendingApprovals ? "352px" : "16px" } as React.CSSProperties}>
         <CommandBar />
       </div>
       {/* Same box as the office scene but above the chat: in-scene popups that must stay clickable (approvals desk card). */}

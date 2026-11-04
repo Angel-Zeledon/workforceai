@@ -1,5 +1,6 @@
 import type { AgentState } from "./types";
 import { tr, hasKey } from "./i18n-core";
+import { colorTable, statusColor } from "./statusLogic";
 
 export interface RoleMeta {
   color: string; label: string; skin: string; hair: string;
@@ -82,18 +83,10 @@ export function assignDesks(agents: { id: string; role: string }[]): Record<stri
 export const USER_POS: [number, number, number] = [9.5, 1.6, 5.4];
 export const MEETING_CENTER: [number, number] = [9.5, -6.2];
 
-export const STATE_META: Record<AgentState, { color: string }> = {
-  idle: { color: "#66707f" },
-  thinking: { color: "#6d5bb5" },
-  working: { color: "#2b6cb0" },
-  waiting: { color: "#7b8494" },
-  talking: { color: "#2f8f6b" },
-  reviewing: { color: "#4f5fb8" },
-  blocked: { color: "#b4443c" },
-  awaiting_approval: { color: "#a86208" },
-  completed: { color: "#2f7d55" },
-  error: { color: "#a63232" },
-};
+// The agent and task colors come from the single palette (lib/statusLogic.ts), like every other status of the app.
+export const STATE_META: Record<AgentState, { color: string }> = Object.fromEntries(
+  (["idle", "thinking", "working", "waiting", "talking", "reviewing", "blocked", "awaiting_approval", "completed", "error"] as const).map((s) => [s, { color: statusColor("agent", s) }]),
+) as Record<AgentState, { color: string }>;
 export const stateMeta = (s: string) => {
   const key = (s in STATE_META ? s : "idle") as AgentState;
   return { color: STATE_META[key].color, label: tr(`state.${key}`) };
@@ -101,6 +94,4 @@ export const stateMeta = (s: string) => {
 
 export { fmtUsd, fmtTime } from "./i18n-core";
 export const taskStatusLabel = (st: string) => (hasKey(`task.status.${st}`) ? tr(`task.status.${st}`) : st);
-export const TASK_STATUS_COLOR: Record<string, string> = {
-  pending: "#66707f", running: "#2b6cb0", blocked: "#b4443c", awaiting_approval: "#a86208", done: "#2f7d55", failed: "#a63232",
-};
+export const TASK_STATUS_COLOR: Record<string, string> = colorTable("task", ["pending", "running", "blocked", "awaiting_approval", "done", "failed", "needs_input", "paused", "cancelled"] as const);

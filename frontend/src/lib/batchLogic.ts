@@ -61,12 +61,13 @@ export function filterRows<T extends { status: string }>(rows: T[], status: stri
 }
 
 /** Color family of a row status in the table. */
-export function rowTone(status: string): "accent" | "err" | "ok" | "warn" | "mute" {
+// Same families as the single palette (lib/statusLogic.ts; statusLogic.test.mjs checks they never drift apart).
+export function rowTone(status: string): "running" | "err" | "ok" | "warn" | "mute" {
   switch (status) {
-    case "needs_help": return "accent";
+    case "needs_help": return "warn"; // "Te necesita" is amber everywhere
+    case "running": return "running";
     case "failed": return "err";
-    case "done": return "ok";
-    case "partial": case "paused": return "warn";
+    case "done": case "partial": return "ok";
     default: return "mute";
   }
 }

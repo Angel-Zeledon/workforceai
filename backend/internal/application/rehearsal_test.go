@@ -85,7 +85,7 @@ func TestAgentRehearsalRecordsSendWithoutExecutingIt(t *testing.T) {
 	if !w.hasAudit("tool.rehearsed") || w.hasAudit("tool.executed") {
 		t.Fatal("audit must say rehearsed, never executed")
 	}
-	if !strings.Contains(strings.Join(w.tasks(reqID)["Responder correos"].Output.Evidence, "\n"), "Ensayo") {
+	if !strings.Contains(strings.Join(w.tasks(reqID)["Responder correos"].Output.Evidence, "\n"), "Probar sin enviar") {
 		t.Fatal("the task output must say what was rehearsed")
 	}
 }

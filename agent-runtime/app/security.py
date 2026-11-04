@@ -633,6 +633,28 @@ def _source_example(s, ep) -> str:
     return json.dumps({"tool": "api", "action": "get", "args": args}, ensure_ascii=False)
 
 
+_SCHEMA = re.compile(r"^[A-Za-z_][A-Za-z0-9_$]{0,62}$")
+_ENGINES = {"postgres": "PostgreSQL", "mysql": "MySQL"}
+
+
+def _db_source_block(s, tools: list[str]) -> list[str]:
+    """How to read a database source: look at the tables first, then ONE read query per request."""
+    engine = _ENGINES.get((getattr(s, "engine", "") or "postgres").lower(), "PostgreSQL")
+    schemas = [x for x in (getattr(s, "schemas", None) or []) if _SCHEMA.match(x)][:20]
+    block = [f"    base de datos {engine}, solo lectura" + (f"; esquemas permitidos: {', '.join(schemas)}" if schemas else "")]
+    if "db.schema" in tools:
+        block.append("    tablas y columnas: " + json.dumps({"tool": "db", "action": "schema", "args": {
+            "connection_alias": s.alias, "schema": "(opcional)", "table": "(opcional)"}}, ensure_ascii=False))
+    if "db.query" in tools:
+        block.append("    consulta: " + json.dumps({"tool": "db", "action": "query", "args": {
+            "connection_alias": s.alias, "sql": "SELECT ... LIMIT 50"}}, ensure_ascii=False))
+        block.append("    reglas: UNA sola sentencia SELECT/WITH/EXPLAIN (sin ';' encadenados), con LIMIT; nada que escriba "
+                     "(INSERT, UPDATE, DELETE, CREATE, SET...) porque el backend lo rechaza; si no sabes las columnas, pide "
+                     "db.schema antes; maximo 500 filas por consulta, 15 s. Si la consulta falla, el error vuelve como dato: "
+                     "corrigela y vuelve a pedirla.")
+    return block
+
+
 def source_lines(sources) -> list[str]:
     """The platforms this agent may query (connections an admin granted it) and how to ask for a read.
     Labels and descriptions are admin-written organization configuration: bounded and neutralized. What a
@@ -651,7 +673,9 @@ def source_lines(sources) -> list[str]:
         head += ", datos simulados)" if s.simulated else ")"
         desc = _admin_line(s.description, MAX_SOURCE_DESC_CHARS)
         block = [head + (f": {desc}" if desc else "")]
-        if "api.get" in tools:
+        if any(t.startswith("db.") for t in tools):
+            block += _db_source_block(s, tools)
+        elif "api.get" in tools:
             eps = [e for e in (s.endpoints or []) if _ENDPOINT.match(getattr(e, "name", "") or "")][:MAX_SOURCE_ENDPOINTS]
             for e in eps:
                 ps = ", ".join(p for p in (e.params or []) if _PARAM.match(p))

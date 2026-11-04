@@ -36,8 +36,8 @@ func cmdTeam(c *cmdCall) (*cmdResult, *cmdFail) {
 	for _, a := range c.loadAgents() {
 		rows = append(rows, []string{a.Name, a.Title, string(a.State), a.Autonomy})
 	}
-	return tableResult(c.t("Equipo", "Team"), []string{c.t("Nombre", "Name"), c.t("Rol", "Role"), c.t("Estado", "State"), c.t("Autonomía", "Autonomy")}, rows,
-		fmt.Sprintf(c.t("%d personas en el equipo.", "%d people on the team."), len(rows)), map[string]any{"count": len(rows)}), nil
+	return tableResult(c.t("Agentes", "Agents"), []string{c.t("Nombre", "Name"), c.t("Rol", "Role"), c.t("Estado", "State"), c.t("Autonomía", "Autonomy")}, rows,
+		fmt.Sprintf(c.t("%d agentes.", "%d agents."), len(rows)), map[string]any{"count": len(rows)}), nil
 }
 
 func cmdHire(c *cmdCall) (*cmdResult, *cmdFail) {
@@ -60,14 +60,14 @@ func cmdHire(c *cmdCall) (*cmdResult, *cmdFail) {
 		}
 	}
 	if tpl == nil {
-		return nil, fail(http.StatusNotFound, "not_found", fmt.Sprintf("No hay una plantilla de rol «%s».", ref), fmt.Sprintf("There is no role template “%s”.", ref))
+		return nil, fail(http.StatusNotFound, "not_found", fmt.Sprintf("No encuentro el puesto «%s».", ref), fmt.Sprintf("I cannot find the role “%s”.", ref))
 	}
 	a, err := c.s.Orch.HireFromTemplate(c.ctx, application.HireInput{TemplateID: tpl.ID, Name: c.str("name"), Locale: c.lang})
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
-	return msgResult(c.t("Nuevo integrante", "New team member"),
-		fmt.Sprintf(c.t("%s se sumó al equipo como %s. Empieza con aprobación en cada acción.", "%s joined the team as %s. They start with approval on every action."), a.Name, a.Title),
+	return msgResult(c.t("Nuevo agente", "New agent"),
+		fmt.Sprintf(c.t("%s se sumó a tus agentes como %s. Empieza con aprobación en cada acción.", "%s joined your agents as %s. They start with approval on every action."), a.Name, a.Title),
 		map[string]any{"agent_id": a.ID}), nil
 }
 

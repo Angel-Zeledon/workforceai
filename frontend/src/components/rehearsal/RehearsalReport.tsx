@@ -5,6 +5,7 @@ import { useCan } from "@/lib/session";
 import { rehearsalApi, useRehearsal, type RehearsalAction, type RequestRehearsal } from "@/lib/rehearsal";
 import { nextVerdict, previewRows, tally } from "@/lib/rehearsalLogic";
 import { RiskBadge, useAgentName } from "../ui";
+import { ActionName } from "../approvals/ActionName";
 
 const DECISION_STYLE: Record<string, string> = {
   allowed: "border-ok/40 bg-ok/10 text-ok",
@@ -29,7 +30,7 @@ export function RehearsalActionRow({ a, onChange }: { a: RehearsalAction; onChan
     <li data-testid="rehearsal-action" data-id={a.id} data-verdict={a.verdict || "none"} className="rounded-lg border border-line bg-panel2 p-2.5 text-xs">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <b>{name(a.agent_id)}</b> <span className="font-mono text-[11px] text-ink2">{a.tool}.{a.action}</span>
+          <b>{name(a.agent_id)}</b> <ActionName code={`${a.tool}.${a.action}`} className="text-[11px] text-ink2" />
           <span className={`ml-2 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${DECISION_STYLE[a.would_decision] ?? ""}`}>{t(`rehearsal.would.${a.would_decision}`)}</span>
           {a.deny_reason && <span className="ml-1 text-[10.5px] text-mute">({a.deny_reason})</span>}
         </div>

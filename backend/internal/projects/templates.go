@@ -144,7 +144,7 @@ var i18n = map[string]map[string]string{
 		"proj.gen.v1": "Aprobar el plan", "proj.gen.v2": "Consolidar el informe final",
 		"pv.action.publish_statement": "Publicar: {node}", "pv.action.approve_close": "Aprobar: {node}", "pv.action.approve_plan": "Aprobar: {node}",
 		"pv.action.send_contract": "Enviar: {node}", "pv.action.extend_budget": "Ampliar el presupuesto del proyecto (+25 %)", "pv.action.plan_change": "Cambio de plan: {node}", "pv.action.generic": "Aprobar: {node}",
-		"pv.approval.details":       "Un humano debe autorizar este paso antes de que continúe el proyecto: {node}",
+		"pv.approval.details":       "Una persona debe autorizar esta tarea antes de que continúe el proyecto: {node}",
 		"pv.approval.budgetDetails": "El proyecto alcanzó su tope de presupuesto y está en pausa. Aprueba una ampliación del 25 % para continuar o recházala para cancelar el proyecto.",
 		"project.delegated":         "Delegado desde: {node}",
 		"pv.suggest.reason":         "Tareas sugeridas por el agente al terminar «{node}»",
@@ -172,7 +172,7 @@ var i18n = map[string]map[string]string{
 		"proj.gen.v1": "Approve the plan", "proj.gen.v2": "Consolidate the final report",
 		"pv.action.publish_statement": "Publish: {node}", "pv.action.approve_close": "Approve: {node}", "pv.action.approve_plan": "Approve: {node}",
 		"pv.action.send_contract": "Send: {node}", "pv.action.extend_budget": "Extend the project budget (+25%)", "pv.action.plan_change": "Plan change: {node}", "pv.action.generic": "Approve: {node}",
-		"pv.approval.details":       "A person must authorize this step before the project continues: {node}",
+		"pv.approval.details":       "A person must authorize this task before the project continues: {node}",
 		"pv.approval.budgetDetails": "The project reached its budget cap and is paused. Approve a 25% extension to continue, or reject it to cancel the project.",
 		"project.delegated":         "Delegated from: {node}",
 		"pv.suggest.reason":         "Tasks suggested by the agent after finishing \"{node}\"",
@@ -334,7 +334,7 @@ func (t Template) instantiateWith(lim Limits, pid, goal string, params map[strin
 		for _, w := range o.Workflows {
 			for _, n := range w.Nodes {
 				if _, dup := keyToID[n.Key]; dup {
-					return inst, fmt.Errorf("%w: duplicate node key %q", domain.ErrInvalid, n.Key)
+					return inst, fmt.Errorf("%w: duplicate task key %q", domain.ErrInvalid, n.Key)
 				}
 				keyToID[n.Key] = pid + ":" + n.Key
 			}
@@ -364,7 +364,7 @@ func (t Template) instantiateWith(lim Limits, pid, goal string, params map[strin
 				for _, d := range n.Deps {
 					did, ok := keyToID[d]
 					if !ok {
-						return inst, fmt.Errorf("%w: node %q depends on unknown node %q", domain.ErrInvalid, n.Key, d)
+						return inst, fmt.Errorf("%w: task %q depends on unknown task %q", domain.ErrInvalid, n.Key, d)
 					}
 					def.DependsOn = append(def.DependsOn, did)
 				}

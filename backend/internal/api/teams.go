@@ -366,11 +366,11 @@ func (s *server) pickTeam(w http.ResponseWriter, r *http.Request) {
 	}
 	if body.DepartmentID != "" {
 		if prof.DepartmentID != "" {
-			s.fail(w, fmt.Errorf("%w: you already have a team", domain.ErrConflict))
+			s.fail(w, fmt.Errorf("%w: you already have an office", domain.ErrConflict))
 			return
 		}
 		if s.OrgChart == nil {
-			s.fail(w, fmt.Errorf("%w: teams are not available", domain.ErrInvalid))
+			s.fail(w, fmt.Errorf("%w: offices are not available", domain.ErrInvalid))
 			return
 		}
 		deps, err := s.OrgChart.Departments(ctx)
@@ -379,7 +379,7 @@ func (s *server) pickTeam(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !slices.ContainsFunc(deps, func(d orgchart.Department) bool { return d.ID == body.DepartmentID }) {
-			s.fail(w, fmt.Errorf("%w: unknown team %q", domain.ErrInvalid, body.DepartmentID))
+			s.fail(w, fmt.Errorf("%w: unknown office %q", domain.ErrInvalid, body.DepartmentID))
 			return
 		}
 		prof.DepartmentID = body.DepartmentID
@@ -417,7 +417,7 @@ func (s *server) createTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.OrgChart == nil {
-		s.fail(w, fmt.Errorf("%w: teams are not available", domain.ErrInvalid))
+		s.fail(w, fmt.Errorf("%w: offices are not available", domain.ErrInvalid))
 		return
 	}
 	ctx, org := r.Context(), s.org(r)
@@ -435,7 +435,7 @@ func (s *server) createTeam(w http.ResponseWriter, r *http.Request) {
 		name = prof.TeamName(s.teamLocale(ctx, org))
 	}
 	if utf8.RuneCountInString(name) > 80 {
-		s.fail(w, fmt.Errorf("%w: the team name is too long (max 80)", domain.ErrInvalid))
+		s.fail(w, fmt.Errorf("%w: the office name is too long (max 80)", domain.ErrInvalid))
 		return
 	}
 	in := orgchart.DepartmentInput{Name: name}
@@ -471,7 +471,7 @@ func (s *server) createTeam(w http.ResponseWriter, r *http.Request) {
 func (s *server) teamSetupDone(w http.ResponseWriter, r *http.Request) {
 	if err := s.Auth.MarkOrgSetupDone(r.Context(), s.org(r)); err != nil {
 		if errors.Is(err, auth.ErrNotFound) {
-			s.fail(w, fmt.Errorf("%w: this organization has no team set-up", domain.ErrNotFound))
+			s.fail(w, fmt.Errorf("%w: this organization has no office set-up", domain.ErrNotFound))
 			return
 		}
 		s.fail(w, err)

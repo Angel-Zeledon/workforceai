@@ -612,7 +612,7 @@ var signalTexts = map[string]map[string]string{
 		"spend.title": "El gasto de IA va camino de superar lo disponible este mes",
 		"spend.body":  "Llevamos US$ {spent} este mes; a este ritmo serían US$ {projected} y el mes tenía US$ {available} disponibles. ¿Reviso en qué se va?",
 		"spend.prompt": "Analiza el gasto de IA de este mes (US$ {spent}; proyección US$ {projected} frente a US$ {available} disponibles): " +
-			"qué empleados y tareas concentran el costo y qué se puede ajustar. No cambies topes ni configuraciones: entrega una propuesta.",
+			"qué agentes y tareas concentran el costo y qué se puede ajustar. No cambies topes ni configuraciones: entrega una propuesta.",
 		"approvals.title": "Hay aprobaciones esperando: {count} con más de {hours} h",
 		"approvals.body":  "La más antigua es «{oldest}» ({age} h). ¿Preparo un resumen para que decidas?",
 		"approvals.prompt": "Prepara un resumen breve de estas aprobaciones pendientes para que una persona decida: qué pide cada una, el riesgo y " +
@@ -633,7 +633,7 @@ var signalTexts = map[string]map[string]string{
 		"spend.title": "AI spend is on track to exceed what this month has available",
 		"spend.body":  "We have spent US$ {spent} this month; at this pace it would be US$ {projected}, and the month had US$ {available} available. Shall I check where it goes?",
 		"spend.prompt": "Analyze this month's AI spend (US$ {spent}; projected US$ {projected} against US$ {available} available): which " +
-			"employees and tasks concentrate the cost and what could be adjusted. Do not change caps or settings: deliver a proposal.",
+			"agents and tasks concentrate the cost and what could be adjusted. Do not change caps or settings: deliver a proposal.",
 		"approvals.title": "Approvals waiting: {count} older than {hours} h",
 		"approvals.body":  "The oldest is \"{oldest}\" ({age} h). Shall I prepare a summary so you can decide?",
 		"approvals.prompt": "Prepare a short summary of these pending approvals so a person can decide: what each one asks for, the risk and " +
@@ -654,7 +654,7 @@ var signalTexts = map[string]map[string]string{
 		"spend.title": "O gasto de IA está a caminho de superar o disponível neste mês",
 		"spend.body":  "Gastamos US$ {spent} neste mês; neste ritmo seriam US$ {projected}, e o mês tinha US$ {available} disponíveis. Quer que eu veja para onde vai?",
 		"spend.prompt": "Analise o gasto de IA deste mês (US$ {spent}; projeção de US$ {projected} contra US$ {available} disponíveis): quais " +
-			"funcionários e tarefas concentram o custo e o que pode ser ajustado. Não altere limites nem configurações: entregue uma proposta.",
+			"agentes e tarefas concentram o custo e o que pode ser ajustado. Não altere limites nem configurações: entregue uma proposta.",
 		"approvals.title": "Aprovações esperando: {count} com mais de {hours} h",
 		"approvals.body":  "A mais antiga é «{oldest}» ({age} h). Quer que eu prepare um resumo para você decidir?",
 		"approvals.prompt": "Prepare um resumo breve destas aprovações pendentes para que uma pessoa decida: o que cada uma pede, o risco e o " +

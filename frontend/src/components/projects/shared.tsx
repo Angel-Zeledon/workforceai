@@ -4,18 +4,14 @@ import { useT, fmtNumber } from "@/lib/i18n";
 import { displayTitle } from "@/lib/projects/calc";
 import type { Light, NodeState, ProjectNode, ProjectStatus } from "@/lib/projects/types";
 import { useAgentColor, useAgentName } from "../ui";
+import { KIND_COLOR, colorTable, kindOf } from "@/lib/statusLogic";
 
-export const NODE_STATE_COLOR: Record<NodeState, string> = {
-  draft: "#aab3c0", pending: "#66707f", ready: "#5b8fb5", running: "#2b6cb0", awaiting_approval: "#a86208", waiting: "#7c6bb0", needs_input: "#1d4ed8",
-  paused: "#8b94a3", blocked: "#b4443c", done: "#2f7d55", skipped: "#aab3c0", failed: "#a63232", cancelled: "#8b94a3",
-};
+// One palette for the whole app (lib/statusLogic.ts): "Te necesita" amber, "Listo" one green, "Por empezar" gray.
+export const NODE_STATE_COLOR: Record<NodeState, string> = colorTable("node", ["draft", "pending", "ready", "running", "awaiting_approval", "waiting", "needs_input", "paused", "blocked", "done", "skipped", "failed", "cancelled"] as const);
 export const RETRY_COLOR = "#b8651f";
 export const CRITICAL_COLOR = "#0F766E";
-export const LIGHT_COLOR: Record<Light, string> = { green: "#2f7d55", amber: "#a86208", red: "#a63232" };
-export const STATUS_COLOR: Record<ProjectStatus, string> = {
-  draft: "#aab3c0", planning: "#7c6bb0", ready: "#5b8fb5", running: "#2b6cb0", paused: "#8b94a3", waiting_human: "#a86208",
-  done: "#2f7d55", partial: "#a86208", failed: "#a63232", cancelled: "#8b94a3",
-};
+export const LIGHT_COLOR: Record<Light, string> = { green: KIND_COLOR.done, amber: KIND_COLOR.needs, red: KIND_COLOR.problem };
+export const STATUS_COLOR: Record<ProjectStatus, string> = colorTable("project", ["draft", "planning", "ready", "running", "paused", "waiting_human", "done", "partial", "failed", "cancelled"] as const);
 
 /** USD with enough decimals for the sub-dollar amounts LLM tasks cost. */
 export const fmtMoney = (n: number) => `$${fmtNumber(n || 0, Math.abs(n) < 1 ? 3 : 2)}`;
@@ -31,9 +27,9 @@ export function useNodeTitle() {
 
 export function StatePill({ state, retrying }: { state: NodeState; retrying?: boolean }) {
   const { t } = useT();
-  const c = retrying ? RETRY_COLOR : NODE_STATE_COLOR[state];
+  const c = retrying ? NODE_STATE_COLOR.running : NODE_STATE_COLOR[state];
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}22`, color: c }}>
+    <span data-kind={kindOf("node", retrying ? "running" : state)} className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}22`, color: c }}>
       <span className="h-1.5 w-1.5 rounded-full" style={{ background: c }} />
       {retrying ? t("pv.state.retrying") : t(`pv.state.${state}`)}
     </span>
@@ -44,7 +40,7 @@ export function StatusPill({ status }: { status: ProjectStatus }) {
   const { t } = useT();
   const c = STATUS_COLOR[status];
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-[3px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}26`, color: c }}>
+    <span data-kind={kindOf("project", status)} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-[3px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}26`, color: c }}>
       <span className="h-1.5 w-1.5 rounded-full" style={{ background: c }} />
       {t(`pv.status.${status}`)}
     </span>

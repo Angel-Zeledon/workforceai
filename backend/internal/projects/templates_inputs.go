@@ -60,7 +60,7 @@ var inputDefs = map[string][]inDef{
 			desc:  [2]string{"Cuenta local de cada filial a cuenta del grupo.", "Local account of each subsidiary to group account."}},
 		{key: "materiality", kind: InputFile, required: false, accept: docs, example: "materiality_policy.md",
 			label: [2]string{"Política de materialidad", "Materiality policy"},
-			desc:  [2]string{"Umbrales de materialidad y tolerancias de conciliación. Si falta, el equipo propone unos como SUPUESTO.", "Materiality thresholds and reconciliation tolerances. If missing, the team proposes some as an ASSUMPTION."}},
+			desc:  [2]string{"Umbrales de materialidad y tolerancias de conciliación. Si falta, los agentes proponen unos como SUPUESTO.", "Materiality thresholds and reconciliation tolerances. If missing, the agents propose some as an ASSUMPTION."}},
 	},
 	keyDueDilig: {
 		{key: "financials", kind: InputFolder, required: true, accept: tabular, perParam: "entities", example: "financials_T01_empresa.csv",

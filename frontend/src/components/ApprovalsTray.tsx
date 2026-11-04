@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store";
+import { pendingTotal } from "@/lib/inboxLogic";
 import type { Approval } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 import { useCan } from "@/lib/session";
@@ -11,6 +12,7 @@ import { CodeRunView } from "./code/CodeRunView";
 import { DevilsAdvocate } from "./approvals/DevilsAdvocate";
 import { QuestionCard } from "./approvals/QuestionCard";
 import { ApprovalReason } from "./approvals/ApprovalReason";
+import { ActionName } from "./approvals/ActionName";
 import { RememberApproval, RememberNotice } from "./approvals/RememberApproval";
 
 /** `scope="office"` is the card shown over the approvals desk in the 3D office: same decision call and permission
@@ -40,7 +42,7 @@ export function ApprovalCard({ a, compact = false, scope = "tray" }: { a: Approv
   return (
     <div data-testid={pending ? (scope === "office" ? `office-approval-card-${a.id}` : scope === "away" ? `away-approval-card-${a.id}` : `approval-${a.id}`) : undefined} className="rounded-md border border-line bg-panel2 p-3">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 text-[11px] text-mute"><Dot color={color(a.agent_id)} />{name(a.agent_id)} · <span className="font-mono">{a.action}</span></span>
+        <span className="flex items-center gap-1.5 text-[11px] text-mute"><Dot color={color(a.agent_id)} />{name(a.agent_id)} · <ActionName code={a.action} /></span>
         <RiskBadge risk={a.risk} />
       </div>
       <div className="text-[13px] font-semibold text-ink">{a.title}</div>
@@ -101,7 +103,7 @@ export function ApprovalsTray() {
   const questionsById = useStore((s) => s.questions);
   const pendingApprovals = Object.values(approvals).filter((a) => a.status === "pending").sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
   const questions = Object.values(questionsById).filter((q) => q.status === "open").sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
-  const total = pendingApprovals.length + questions.length;
+  const total = pendingTotal(approvals, questionsById); // the same number as the menu's Pendientes
   const [open, setOpen] = useState(true);
   const seen = useRef(0);
   useEffect(() => {

@@ -2,13 +2,15 @@
 import { useRef, useState } from "react";
 import { MOCK } from "@/lib/config";
 import { useT } from "@/lib/i18n";
-import { connApi, type CreateConnectionInput, type TestResult } from "@/lib/connections/api";
+import { connApi, dbApi, type CreateConnectionInput, type TestResult } from "@/lib/connections/api";
+import { DATABASE, draftToDatabase, emptyDbDraft, hasDbErrors, looksLikeConnString, validateDb, type DbDraft } from "@/lib/connections/dbSource";
 import { CUSTOM_API, draftToSource, emptySourceDraft, hasErrors, validateSource, type SourceDraft } from "@/lib/connections/apiSource";
 import { useConnections } from "@/lib/connections/store";
 import type { CapabilityDef, Connection, ProviderDef } from "@/lib/connections/types";
 import { useStore } from "@/lib/store";
 import { Btn } from "../ui";
 import { AuthStyleFields, SourceFields } from "./ApiSourceForm";
+import { DbFields, DbReadOnlyNote, dbErrText, dbTestText } from "./DatabaseForm";
 import { ErrorLine, errText, Field, inputCls, Modal } from "./shared";
 
 const STEPS = 5;
@@ -38,35 +40,48 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
   const [src, setSrc] = useState<SourceDraft>(emptySourceDraft);
   const [srcShowErrors, setSrcShowErrors] = useState(false);
   const [simulated, setSimulated] = useState(false);
+  // database ("Database (read only)"): where it is and what agents may see. Never the password nor the connection string.
+  const [db, setDb] = useState<DbDraft>(emptyDbDraft);
+  const [dbShowErrors, setDbShowErrors] = useState(false);
   const idRef = useRef<HTMLInputElement>(null);
   const secretRef = useRef<HTMLInputElement>(null);
   const isCustom = prov?.id === CUSTOM_API;
+  const isDb = prov?.id === DATABASE;
+  /** generic read-only sources skip the resource-filter step: 1 -> 2 -> 4 -> 5 */
+  const isGeneric = isCustom || isDb;
   const liveAvailable = prov?.live_available !== false;
   // errors appear after the first attempt and then follow the typing (they vanish once fixed)
   const srcErrors = srcShowErrors ? validateSource(src) : null;
+  const dbErrors = dbShowErrors ? validateDb(db) : null;
 
   const visibleCaps = (p: ProviderDef): CapabilityDef[] => p.capabilities.filter((c) => !p.split_read_write || c.profile === profile);
   const chooseProvider = (p: ProviderDef) => {
     setProv(p); setErr(null);
     const prof = "read" as const; setProfile(prof);
-    const custom = p.id === CUSTOM_API;
+    const custom = p.id === CUSTOM_API || p.id === DATABASE;
     // custom_api is read-only by design: every read capability, nothing to pick
     setCaps(custom ? p.capabilities.filter((c) => !c.side_effects).map((c) => c.id)
       : p.capabilities.filter((c) => c.default && (!p.split_read_write || c.profile === prof)).map((c) => c.id));
     setFilters(Object.fromEntries(p.resource_filters.filter((f) => f.default !== undefined).map((f) => [f.key, String(f.default)])));
     setLabel(custom ? "" : t(`conn.provider.${p.id}`));
     setSrc(emptySourceDraft()); setSrcShowErrors(false); setSimulated(p.live_available === false);
+    setDb(emptyDbDraft()); setDbShowErrors(false);
     setStep(2);
   };
   // custom_api skips the resource-filter step (it has none): 1 -> 2 -> 4 -> 5
   const next = () => {
+    if (isDb && step === 2) {
+      if (hasDbErrors(validateDb(db))) { setDbShowErrors(true); setErr(t("conn.db.fixErrors")); return; }
+      if (db.mode === "url") setSimulated(false); // a pasted connection string is always a live database
+      setErr(null); setStep(4); return;
+    }
     if (isCustom && step === 2) {
       if (hasErrors(validateSource(src), { ignoreAuth: true })) { setSrcShowErrors(true); setErr(t("conn.src.fixErrors")); return; }
       setErr(null); setStep(4); return;
     }
     setStep(step + 1);
   };
-  const back = () => setStep(isCustom && step === 4 ? 2 : step - 1);
+  const back = () => setStep(isGeneric && step === 4 ? 2 : step - 1);
   const chooseProfile = (p: "read" | "write") => {
     if (!prov) return;
     setProfile(p);
@@ -101,6 +116,12 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
       if (hasErrors(validateSource(src))) { setSrcShowErrors(true); setErr(t("conn.src.fixErrors")); return; }
       if (!simulated && !(secretRef.current?.value ?? "")) { setErr(t("conn.src.keyMissing")); return; }
     }
+    if (isDb) {
+      if (hasDbErrors(validateDb(db))) { setDbShowErrors(true); setErr(t("conn.db.fixErrors")); return; }
+      const v = secretRef.current?.value ?? "";
+      if (!simulated && !v) { setErr(t(db.mode === "url" ? "conn.db.urlMissing" : "conn.db.passwordMissing")); return; }
+      if (!simulated && db.mode === "url" && !looksLikeConnString(v)) { setErr(t("conn.db.urlInvalid")); return; }
+    }
     setBusy(true); setErr(null);
     // Read the secret values from the DOM, wipe the inputs, and only then talk to the network.
     const idVal = idRef.current?.value ?? "";
@@ -108,9 +129,14 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
     if (secretRef.current) secretRef.current.value = "";
     const base: CreateConnectionInput = { provider: prov.id, kind: wantsOAuth ? "oauth2" : "api_key", label: label.trim() || t(`conn.provider.${prov.id}`), capabilities: caps, resource_scope: resourceScope() };
     if (isCustom) { base.source = draftToSource(src); base.mode = simulated ? "simulated" : "live"; }
+    if (isDb) { base.database = draftToDatabase(db); base.mode = simulated ? "simulated" : "live"; }
     try {
       let created: Connection;
-      if (wantsOAuth) {
+      if (isDb) {
+        // the password (or the whole connection string) is sent once and never kept: the server splits a string
+        // and stores only the password, in the vault
+        created = await dbApi.create(simulated ? base : db.mode === "url" ? { ...base, connection_string: secretVal } : { ...base, secret: secretVal });
+      } else if (wantsOAuth) {
         created = await connApi.create({ ...base, oauth_client_id: idVal.trim(), oauth_client_secret: secretVal });
         const start = await connApi.oauthStart(created.id);
         if (MOCK) created = await connApi.oauthSimulateCallback(created.id, denyScope);
@@ -121,7 +147,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
       }
       await useConnections.getState().loadConnections();
       await finish(created);
-    } catch (e) { setErr(errText(e)); }
+    } catch (e) { setErr(isDb ? dbErrText(e) : errText(e)); }
     finally { setBusy(false); }
   };
 
@@ -144,7 +170,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
       <div data-testid={`conn-wizard-step-${step}`} data-step={step}>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold">{t("conn.wizard.title")}</h2>
-          <span className="text-[11px] font-semibold text-mute">{t("conn.wizard.step", isCustom ? { n: step >= 4 ? step - 1 : step, total: STEPS - 1 } : { n: step, total: STEPS })}</span>
+          <span className="text-[11px] font-semibold text-mute">{t("conn.wizard.step", isGeneric ? { n: step >= 4 ? step - 1 : step, total: STEPS - 1 } : { n: step, total: STEPS })}</span>
         </div>
 
         {step === 1 && (
@@ -174,7 +200,18 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {step === 2 && prov && !isCustom && (
+        {step === 2 && prov && isDb && (
+          <div data-testid="conn-db-form" className="space-y-3">
+            <p className="text-xs text-mute">{t("conn.db.intro")}</p>
+            <Field label={t("conn.wizard.label")}>
+              <input data-testid="conn-label-input" className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} placeholder={t("conn.db.labelPlaceholder")} />
+            </Field>
+            <DbFields draft={db} setDraft={(fn) => setDb(fn)} errors={dbErrors} />
+            <DbReadOnlyNote />
+          </div>
+        )}
+
+        {step === 2 && prov && !isGeneric && (
           <div className="space-y-3">
             <Field label={t("conn.wizard.label")}>
               <input data-testid="conn-label-input" className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} />
@@ -248,6 +285,23 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
                 )}
                 <Btn data-testid="conn-oauth-start" kind="primary" disabled={busy} onClick={authorize}>{busy ? t("conn.working") : t("conn.oauth.authorize")}</Btn>
               </>
+            ) : isDb ? (
+              <>
+                {db.mode === "fields" && (
+                  <label className="flex items-start gap-2 text-xs">
+                    <input type="checkbox" className="mt-0.5" data-testid="conn-db-simulated" checked={simulated} disabled={!liveAvailable} onChange={(e) => setSimulated(e.target.checked)} />
+                    <span>{t("conn.db.simulated")}</span>
+                  </label>
+                )}
+                {!liveAvailable && <p className="text-[11px] text-mute">{t("conn.src.simulatedOnly")}</p>}
+                {!simulated && (
+                  <Field label={t(db.mode === "url" ? "conn.db.connString" : "conn.db.password")} hint={t(db.mode === "url" ? "conn.db.connStringHint" : "conn.db.passwordHint")}>
+                    <input ref={secretRef} data-testid="conn-secret-input" data-sensitive type="password" autoComplete="off" data-1p-ignore data-lpignore="true" spellCheck={false}
+                      className={`${inputCls} ${db.mode === "url" ? "font-mono" : ""}`} placeholder={db.mode === "url" ? "postgresql://user:****@host:5432/postgres" : ""} />
+                  </Field>
+                )}
+                <Btn data-testid="conn-secret-submit" kind="primary" disabled={busy} onClick={authorize}>{busy ? t("conn.working") : t("conn.db.saveAndTest")}</Btn>
+              </>
             ) : isCustom ? (
               <>
                 <AuthStyleFields draft={src} setDraft={(fn) => setSrc(fn)} errors={srcErrors} />
@@ -278,7 +332,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
         {step === 5 && conn && prov && (
           <div className="space-y-3">
             <div data-testid="conn-test-result" data-status={test?.status ?? "pending"} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${test?.status === "ok" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-red-300 bg-red-50 text-red-700"}`}>
-              {test?.status === "ok" ? t("conn.test.ok", { ms: test.latency_ms, account: test.account_label ?? "—" }) : t("conn.test.failed")}
+              {test?.status === "ok" ? t("conn.test.ok", { ms: test.latency_ms, account: test.account_label ?? "—" }) : isDb ? dbTestText(test?.error_code) : t("conn.test.failed")}
             </div>
             <div data-testid="conn-granted-caps" className="text-xs">
               <b>{t("conn.test.granted")}: </b>{conn.granted_capabilities.map((c) => t(`conn.capShort.${c}`)).join(", ") || "—"}
@@ -287,7 +341,15 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
               )}
             </div>
             <div>
-              <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-mute">{t("conn.wizard.assign")}</div>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-mute">{t("conn.wizard.assign")}</span>
+                {agentOrder.length > 0 && (
+                  <button type="button" data-testid="conn-assign-all" className="text-[11px] font-medium text-accent hover:underline"
+                    onClick={() => setAssign(assign.length === agentOrder.length ? [] : [...agentOrder])}>
+                    {assign.length === agentOrder.length ? t("conn.wizard.assignNone") : t("conn.wizard.assignAll")}
+                  </button>
+                )}
+              </div>
               <p className="mb-2 text-[11px] text-mute">{t("conn.not_granted_note")} {hasWrite ? t("conn.wizard.assignWriteNote") : ""}</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {agentOrder.map((a) => (

@@ -1,7 +1,7 @@
-import { ApprovalsMobile } from "@/components/approvals/ApprovalsMobile";
-import { AuthGate } from "@/components/auth/AuthScreen";
+import { PendingPage } from "@/components/nav/RoutedPages";
 
+/** One approval from a notification link (/approvals/<id>), inside the app frame. */
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <AuthGate><ApprovalsMobile focusId={decodeURIComponent(id)} /></AuthGate>;
+  return <PendingPage view="list" focusId={decodeURIComponent(id)} />;
 }

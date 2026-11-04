@@ -47,8 +47,8 @@ func TestVendorConnectorsOffHideAndRefuse(t *testing.T) {
 		}
 		cat.Items = arr
 	}
-	if len(cat.Items) != 1 || cat.Items[0].ID != "custom_api" {
-		t.Fatalf("catalog must only offer the generic API source: %s", raw)
+	if len(cat.Items) != 2 || cat.Items[0].ID != "custom_api" || cat.Items[1].ID != "database" {
+		t.Fatalf("catalog must only offer the generic sources (API and database): %s", raw)
 	}
 
 	if code, c := e.createSim("", "after", "mail.read"); code != 403 || c["code"] != integrations.CodeDisabled {

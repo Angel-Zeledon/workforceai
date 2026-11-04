@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, call } from "@/lib/api";
-import { fmtUsd, trOr, useT } from "@/lib/i18n";
+import { fmtUsd, useT } from "@/lib/i18n";
 import {
   batchGroupOf, clampIndex, deckOf, keyToCommand, needsConfirm, swipeIntent, UNDO_MS,
   type ApprovalInbox, type InboxGroup, type InboxItem, type InboxMine,
@@ -14,6 +14,7 @@ import { RiskBadge } from "../ui";
 import { DevilsAdvocate } from "./DevilsAdvocate";
 import { QuestionsSection } from "./QuestionsSection";
 import { ApprovalReason } from "./ApprovalReason";
+import { useActionName } from "./ActionName";
 
 type Decision = "approve" | "reject";
 interface Held { item: InboxItem; decision: Decision; timer: ReturnType<typeof setTimeout>; until: number }
@@ -23,6 +24,7 @@ interface Held { item: InboxItem; decision: Decision; timer: ReturnType<typeof s
  * held. High risk never approves on a swipe or a key without an explicit confirm. Nothing here changes a setting. */
 export function ApprovalsInbox() {
   const { t } = useT();
+  const actionName = useActionName();
   const hydrate = usePreferences((s) => s.hydrate);
   const signedIn = useSession((s) => s.status === "authenticated");
   const canDecide = useCan("approvals:decide");
@@ -136,7 +138,7 @@ export function ApprovalsInbox() {
   const tips = (inbox?.suggestions ?? []).filter((s) => !hiddenTips.has(s.action));
 
   return (
-    <main data-testid="inbox-page" className="mx-auto min-h-dvh max-w-xl space-y-3 bg-bg px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5">
+    <main data-testid="inbox-page" className="mx-auto min-h-full max-w-xl space-y-3 bg-bg px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5">
       <header className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-ink">{t("approvalInbox.title")}</h1>
@@ -179,7 +181,7 @@ export function ApprovalsInbox() {
           </div>
           <dl className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
             <Fact k={t("approvalInbox.who")} v={who(cur)} />
-            <Fact k={t("approvalInbox.what")} v={trOr(`pv.group.${cur.action}`, cur.action)} mono />
+            <Fact k={t("approvalInbox.what")} v={actionName(cur.action)} />
             <Fact k={t("approvalInbox.cost")} v={fmtUsd(cur.task_cost_usd)} mono />
             <Fact k={t("approvalInbox.project")} v={cur.project_name || (cur.project_id ? cur.project_id : t("approvalInbox.noProject"))} />
           </dl>
@@ -234,7 +236,7 @@ export function ApprovalsInbox() {
           {tips.map((s) => (
             <div key={s.action} data-testid={`inbox-suggestion-${s.action}`} className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-[12px] text-ink2">
               <div className="text-[10px] font-semibold uppercase tracking-wide text-accent">{t("approvalInbox.tipsTitle")}</div>
-              <p>{t("approvalInbox.tip", { pct: Math.round(s.rate * 1000) / 10, approved: s.approved, decided: s.decided, action: trOr(`pv.group.${s.action}`, s.action), days: s.window_days })}</p>
+              <p>{t("approvalInbox.tip", { pct: Math.round(s.rate * 1000) / 10, approved: s.approved, decided: s.decided, action: actionName(s.action), days: s.window_days })}</p>
               <p className="mt-1 text-mute">{t("approvalInbox.tipWhy", { min: inbox?.rules.suggest_min_decisions ?? 20 })}</p>
               <button type="button" onClick={() => setHiddenTips((x) => new Set([...x, s.action]))} className="mt-1 text-[11px] font-semibold text-accent underline">{t("approvalInbox.tipDismiss")}</button>
             </div>

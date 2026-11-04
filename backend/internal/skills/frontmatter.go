@@ -35,20 +35,20 @@ func SplitSkillMD(raw string) (front, body string, err error) {
 	raw = strings.ReplaceAll(raw, "\r\n", "\n")
 	lines := strings.Split(raw, "\n")
 	if len(lines) == 0 || strings.TrimRight(lines[0], " \t") != "---" {
-		return "", "", invalid("frontmatter_missing", "SKILL.md must start with a --- YAML frontmatter block")
+		return "", "", invalid("frontmatter_missing", "the skill file must start with a --- YAML frontmatter block")
 	}
 	for i := 1; i < len(lines); i++ {
 		if strings.TrimRight(lines[i], " \t") == "---" {
 			return strings.Join(lines[1:i], "\n"), strings.TrimLeft(strings.Join(lines[i+1:], "\n"), "\n"), nil
 		}
 	}
-	return "", "", invalid("frontmatter_unclosed", "the frontmatter block of SKILL.md is not closed with ---")
+	return "", "", invalid("frontmatter_unclosed", "the frontmatter block of the skill file is not closed with ---")
 }
 
 // ParseSkillMD parses and validates SKILL.md: frontmatter and body.
 func ParseSkillMD(raw string) (Frontmatter, string, error) {
 	if !utf8.ValidString(raw) || strings.ContainsRune(raw, 0) {
-		return Frontmatter{}, "", invalid("not_text", "SKILL.md must be valid UTF-8 text")
+		return Frontmatter{}, "", invalid("not_text", "the skill file must be valid UTF-8 text")
 	}
 	front, body, err := SplitSkillMD(raw)
 	if err != nil {
@@ -71,7 +71,7 @@ func ParseSkillMD(raw string) (Frontmatter, string, error) {
 		return Frontmatter{}, "", invalid("too_many_allowed_tools", "allowed-tools lists more than %d entries", MaxAllowedTools)
 	}
 	if strings.TrimSpace(body) == "" {
-		return Frontmatter{}, "", invalid("instructions_required", "SKILL.md has no instructions after the frontmatter")
+		return Frontmatter{}, "", invalid("instructions_required", "the skill file has no instructions after the frontmatter")
 	}
 	return fm, body, nil
 }

@@ -96,7 +96,7 @@ func (o *Orchestrator) debateBeforeDecision(ctx context.Context, rs *run, plan P
 		trigger = domain.DebateTriggerUser
 	}
 	en := rs.style.Locale == "en"
-	o.setState(ctx, assistantID, domain.StateWorking, pick(en, "Moderating the team debate", "Moderando el debate del equipo"), nil, 32)
+	o.setState(ctx, assistantID, domain.StateWorking, pick(en, "Moderating the agents' debate", "Moderando el debate de los agentes"), nil, 32)
 	dctx := ctx
 	if rs.requestedBy != "" {
 		dctx = WithActor(ctx, rs.requestedBy)
@@ -107,14 +107,14 @@ func (o *Orchestrator) debateBeforeDecision(ctx context.Context, rs *run, plan P
 	if err != nil {
 		o.log.Info("team debate skipped", "request", rs.req.ID, "err", err)
 		o.sendMessage(ctx, rs, assistantID, "user", "chat", pick(en,
-			"The team could not debate this decision right now ("+debateCode(err)+"). The plan continues as usual and every action still needs its approvals.",
-			"El equipo no pudo debatir esta decisión ahora ("+debateCode(err)+"). El plan sigue como siempre y cada acción mantiene sus aprobaciones."), nil)
+			"The agents could not debate this decision right now ("+debateCode(err)+"). The plan continues as usual and every action still needs its approvals.",
+			"Los agentes no pudieron debatir esta decisión ahora ("+debateCode(err)+"). El plan sigue como siempre y cada acción mantiene sus aprobaciones."), nil)
 		return
 	}
 	rs.mu.Lock()
 	rs.debateNote = map[string]RecalledMemory{t.ID: debateRecall(d, en)}
 	rs.mu.Unlock()
-	msg := pick(en, "Team debate (advisory, nobody approved anything): the team leans to «%s».", "Debate del equipo (consultivo, nadie aprobó nada): el equipo se inclina por «%s».")
+	msg := pick(en, "Agents' debate (advisory, nobody approved anything): the agents lean to «%s».", "Debate de los agentes (consultivo, nadie aprobó nada): los agentes se inclinan por «%s».")
 	text := fmt.Sprintf(msg, d.Synthesis.Choice)
 	if len(d.Synthesis.Dissent) > 0 {
 		text += " " + pick(en, "Dissent: ", "Desacuerdo: ") + strings.Join(d.Synthesis.Dissent, " · ")

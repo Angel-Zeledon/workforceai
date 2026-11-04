@@ -110,7 +110,7 @@ func (s *server) putAgentFolderAccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.canManageAgentAccess(r, id) {
-		codeErr(w, http.StatusForbidden, "forbidden", "only admins and the head of the agent's team change its folders")
+		codeErr(w, http.StatusForbidden, "forbidden", "only admins and the head of the agent's office change its folders")
 		return
 	}
 	prev, err := s.Drive.SetAgentAccess(r.Context(), s.drivePrincipal(r), id, in.Path, strings.ToLower(strings.TrimSpace(in.Level)))

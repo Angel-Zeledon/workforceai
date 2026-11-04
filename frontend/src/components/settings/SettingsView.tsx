@@ -27,6 +27,7 @@ import { IdentitySettings } from "./IdentitySettings";
 import { PortalBranding } from "./PortalBranding";
 import { MyCosts } from "./MyCosts";
 import { ApprovalSettings } from "./ApprovalSettings";
+import { useViewMode } from "@/lib/viewMode";
 
 /** Sub-pages of Settings. The URL (/settings?s=...) says which one is open, so the browser's Back button and the
  *  sidebar both just work: nothing needs a "Close" button. */
@@ -86,6 +87,8 @@ export function SettingsView() {
   const onboarding = useOnboardingEntry();
   const [q, setQ] = useState("");
   const level = controls?.kill_switch_level ?? "none";
+  // Conexiones moved to the main menu (/connections); the old link keeps working.
+  useEffect(() => { if (sub === "connections") router.replace("/connections"); }, [sub, router]);
   if (sub) {
     const full = sub === "connections" || sub === "security"; // these two manage their own scrolling
     return (
@@ -116,24 +119,27 @@ export function SettingsView() {
   type Group = "workspace" | "safety" | "account";
   interface Entry { id: string; group: Group; icon: IconName; title: string; body: string; run: () => void; testid?: string; tour?: string; disabled?: boolean; danger?: boolean; hidden?: boolean; searchOnly?: boolean }
   const goOffice = (edit: boolean) => { router.push("/"); if (edit) setTimeout(() => { void useOfficeLayout.getState().startEdit(); }, 350); };
+  // Three groups, ~11 rows (proposal 5.2 #7). What left the list (hire, templates, connections, sign out) still opens
+  // from the search box and from its new home (Organización, Proyectos, the menu, the avatar).
   const all: Entry[] = [
-    { id: "office", group: "workspace", tour: "settings.office", testid: "settings-office", icon: "edit", title: t("settings.title"), body: t("settings.page.office"), run: () => open("office") },
-    { id: "hire", group: "workspace", tour: "settings.hire", testid: "settings-hire", icon: "plus", title: t("hire.open"), body: t("settings.page.hire"), disabled: !isAdmin, run: () => open("hire") },
-    { id: "templates", group: "workspace", tour: "settings.templates", testid: "settings-templates", icon: "layout", title: t("tpl.open"), body: t("settings.page.templates"), run: () => open("templates") },
-    { id: "portal", group: "workspace", testid: "settings-portal", icon: "layout", title: t("portal.brand.title"), body: t("portal.brand.rowBody"), run: () => open("portal") },
-    { id: "plan", group: "workspace", testid: "settings-plan", icon: "bag", title: t("planpage.title"), body: t("settings.page.plan"), hidden: !hasPlan, run: () => open("plan") },
-    { id: "connections", group: "workspace", tour: "settings.connections", testid: "settings-connections", icon: "plug", title: t("nav.connections"), body: t("settings.page.connections"), run: () => open("connections") },
     { id: "onboarding", group: "workspace", tour: "settings.onboarding", testid: "settings-onboarding", icon: "flag", title: onboarding.pending ? t("onb.prompt.title") : t("cfg.open"), body: t("settings.page.onboarding"), hidden: !onboarding.supported, run: onboarding.open },
-    { id: "approvals", group: "safety", testid: "settings-approvals", icon: "shield", title: t("perm.settings.title"), body: t("perm.settings.rowBody"), run: () => open("approvals") },
+    { id: "office", group: "workspace", tour: "settings.office", testid: "settings-office", icon: "edit", title: t("settings.title"), body: t("settings.page.office"), run: () => open("office") },
+    { id: "members", group: "workspace", testid: "settings-members", icon: "users", title: t("members.title"), body: t("settings.page.members"), hidden: !signedIn || !canMembers, run: () => open("members") },
+    { id: "plan", group: "workspace", testid: "settings-plan", icon: "bag", title: t("planpage.title"), body: t("settings.page.plan"), hidden: !hasPlan, run: () => open("plan") },
+    { id: "portal", group: "workspace", testid: "settings-portal", icon: "layout", title: t("portal.brand.title"), body: t("portal.brand.rowBody"), run: () => open("portal") },
+    { id: "approvals", group: "safety", tour: "settings.approvals", testid: "settings-approvals", icon: "shield", title: t("perm.settings.title"), body: t("perm.settings.rowBody"), run: () => open("approvals") },
     { id: "security", group: "safety", tour: "settings.security", testid: "settings-security", icon: "shield", title: t("nav.security"), body: t("settings.page.security"), run: () => open("security") },
     { id: "identity", group: "safety", testid: "settings-identity", icon: "users", title: t("idn.title"), body: t("idn.rowBody"), disabled: !isAdmin, run: () => open("identity") },
     { id: "kill", group: "safety", tour: "settings.killswitch", testid: "settings-killswitch", icon: "power", danger: true, title: level === "none" ? t("ctl.killswitch.title") : t(`ctl.level.${level}`), body: t("settings.page.kill"), disabled: level === "none" && !isAdmin, run: () => open(level === "none" ? "kill" : "security") },
     { id: "account", group: "account", testid: "settings-account", icon: "shield", title: t("mfa.rowTitle"), body: t("mfa.rowBody"), hidden: !signedIn, run: () => open("account") },
-    { id: "data", group: "account", testid: "settings-data", icon: "layout", title: t("data.title"), body: t("settings.page.data"), hidden: !signedIn, run: () => open("data") },
     { id: "costs", group: "account", testid: "settings-costs", icon: "bag", title: t("mycosts.title"), body: t("mycosts.rowBody"), hidden: !signedIn || !canPlan, run: () => open("costs") },
-    { id: "members", group: "account", testid: "settings-members", icon: "users", title: t("members.title"), body: t("settings.page.members"), hidden: !signedIn || !canMembers, run: () => open("members") },
-    { id: "logout", group: "account", testid: "settings-logout", icon: "power", title: t("auth.logout"), body: t("settings.page.logout"), hidden: !signedIn, run: () => { logout().then(() => { window.location.href = "/login"; }); } },
-    // only found by searching: things that live inside another screen
+    { id: "data", group: "account", testid: "settings-data", icon: "layout", title: t("data.title"), body: t("settings.page.data"), hidden: !signedIn, run: () => open("data") },
+    // only found by searching: things that moved to another home or live inside another screen
+    { id: "hire", group: "workspace", searchOnly: true, testid: "settings-hire", icon: "plus", title: t("hire.open"), body: t("settings.page.hire"), disabled: !isAdmin, run: () => open("hire") },
+    { id: "templates", group: "workspace", searchOnly: true, testid: "settings-templates", icon: "layout", title: t("tpl.open"), body: t("settings.page.templates"), run: () => open("templates") },
+    { id: "connections", group: "workspace", searchOnly: true, testid: "settings-connections", icon: "plug", title: t("nav.connections"), body: t("settings.page.connections"), run: () => router.push("/connections") },
+    { id: "logout", group: "account", searchOnly: true, testid: "settings-logout", icon: "power", title: t("auth.logout"), body: t("settings.page.logout"), hidden: !signedIn, run: () => { logout().then(() => { window.location.href = "/login"; }); } },
+    { id: "viewAll", group: "workspace", searchOnly: true, icon: "grid", title: t("ux.viewAll.label"), body: t("ux.viewAll.find"), run: () => useViewMode.getState().setViewAll(!useViewMode.getState().viewAll) },
     { id: "llm", group: "workspace", searchOnly: true, icon: "settings", title: t("llm.title"), body: t("settings.find.llm"), hidden: !onboarding.supported, run: onboarding.open },
     { id: "editOffice", group: "workspace", searchOnly: true, icon: "edit", title: t("settings.find.editOffice.t"), body: t("settings.find.editOffice"), run: () => goOffice(true) },
     { id: "language", group: "workspace", searchOnly: true, icon: "settings", title: t("settings.language"), body: t("settings.find.language"), run: () => open("office") },

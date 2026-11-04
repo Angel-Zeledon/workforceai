@@ -151,7 +151,7 @@ def sim_office_text(req: RunTaskRequest, out: StructuredOutput) -> dict:
     if out.recommendations:
         blocks += [{"type": "heading", "level": 2, "text": "Recommendations" if en else "Recomendaciones"},
                    {"type": "bullets", "items": list(out.recommendations)}]
-    blocks += [{"type": "heading", "level": 2, "text": "Request" if en else "Solicitud"}, {"type": "paragraph", "text": text}]
+    blocks += [{"type": "heading", "level": 2, "text": "Request" if en else "Pedido"}, {"type": "paragraph", "text": text}]
     return {"title": (req.task.title or text)[:120], "blocks": blocks}
 
 
@@ -167,7 +167,7 @@ def sim_office_document(req: RunTaskRequest, out: StructuredOutput) -> ToolReque
     slug = _SLUG.sub("-", re.sub(r"\b(hazme|haz|genera|crea|prepara|un|una|el|la|en|de|con|excel|word|pdf|documento)\b", " ", text.lower())).strip("-")[:50] or "documento"
     doc = sim_office_sheet(text, req.locale) if fmt == "xlsx" else sim_office_text(req, out)
     return ToolRequest(tool="fs", action="write_document", risk="low",
-                       args={"path": f"{ws.desk.rstrip('/')}/{slug}{EXT[fmt]}", "document": doc, "message": f"entregable de {req.task.id}"})
+                       args={"path": f"{ws.desk.rstrip('/')}/{slug}{EXT[fmt]}", "document": doc, "message": f"archivo de {req.task.id}"})
 
 
 def sim_draft_request(req: RunTaskRequest, kind: str) -> ToolRequest:

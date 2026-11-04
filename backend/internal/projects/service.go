@@ -569,7 +569,7 @@ func (s *Service) PatchPlan(ctx context.Context, id string, ops []PlanOp) (int, 
 			}
 			i := slices.IndexFunc(r.Nodes, func(n NodeDef) bool { return n.ID == op.ID })
 			if i < 0 {
-				return fmt.Errorf("%w: unknown node %q", domain.ErrNotFound, op.ID)
+				return fmt.Errorf("%w: unknown task %q", domain.ErrNotFound, op.ID)
 			}
 			n := &r.Nodes[i]
 			if t := op.Fields.Title; t != nil {
@@ -581,13 +581,13 @@ func (s *Service) PatchPlan(ctx context.Context, id string, ops []PlanOp) (int, 
 			}
 			if ac := op.Fields.Acceptance; ac != nil {
 				if n.isGroup() || n.human() {
-					return fmt.Errorf("%w: node %q has no acceptance criteria", domain.ErrInvalid, op.ID)
+					return fmt.Errorf("%w: task %q has no acceptance criteria", domain.ErrInvalid, op.ID)
 				}
 				n.Acceptance = cleanAcceptance(*ac, MaxAcceptance)
 			}
 			if a := op.Fields.AgentID; a != nil {
 				if n.isGroup() || n.human() {
-					return fmt.Errorf("%w: node %q has no agent", domain.ErrInvalid, op.ID)
+					return fmt.Errorf("%w: task %q has no agent", domain.ErrInvalid, op.ID)
 				}
 				if len(agentIDs) > 0 && !slices.Contains(agentIDs, *a) {
 					return fmt.Errorf("%w: unknown agent %q", domain.ErrInvalid, *a)

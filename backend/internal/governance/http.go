@@ -226,7 +226,7 @@ func (h *Handler) putDepartmentLimit(w http.ResponseWriter, r *http.Request) {
 	}
 	d, err := NormalizeDepartment(body.Department)
 	if err != nil || d == "" {
-		h.fail(w, fmt.Errorf("%w: department is required", ErrInvalid))
+		h.fail(w, fmt.Errorf("%w: office is required", ErrInvalid))
 		return
 	}
 	if body.MonthlyUSD < 0 || body.MonthlyUSD > 1e9 || body.MonthlyUSD != body.MonthlyUSD {

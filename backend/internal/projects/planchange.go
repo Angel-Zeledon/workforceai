@@ -304,7 +304,7 @@ func (s *Service) planChange(rec Record, states map[string]string, agentIDs []st
 	touched := map[string]bool{}
 	touch := func(id string) error {
 		if touched[id] {
-			return invalidChange("node %s is changed by more than one operation", id)
+			return invalidChange("task %s is changed by more than one operation", id)
 		}
 		touched[id] = true
 		return nil
@@ -458,10 +458,10 @@ func (s *Service) planChange(rec Record, states map[string]string, agentIDs []st
 		case OpReplaceTask:
 			target, ok := live(op.NodeID)
 			if !ok || !leafOK(target) || (target.Kind != KindTask && target.Kind != KindSubtask) {
-				return nil, invalidChange("node %q cannot be replaced", op.NodeID)
+				return nil, invalidChange("task %q cannot be replaced", op.NodeID)
 			}
 			if st := states[op.NodeID]; !(st == StateFailed || editableState(st)) {
-				return nil, conflictChange("node %q is %s: only a failed or not-yet-started node can be replaced", target.Title, st)
+				return nil, conflictChange("task %q is %s: only a failed or not-yet-started task can be replaced", target.Title, st)
 			}
 			if len(op.Tasks) == 0 {
 				return nil, invalidChange("replace_task needs the replacement tasks")
@@ -538,10 +538,10 @@ func (s *Service) planChange(rec Record, states map[string]string, agentIDs []st
 		case OpRemovePending:
 			target, ok := live(op.NodeID)
 			if !ok || !leafOK(target) || (target.Kind != KindTask && target.Kind != KindSubtask) {
-				return nil, invalidChange("node %q cannot be removed", op.NodeID)
+				return nil, invalidChange("task %q cannot be removed", op.NodeID)
 			}
 			if st := states[op.NodeID]; !editableState(st) {
-				return nil, conflictChange("node %q is %s: only a not-yet-started node can be removed", target.Title, st)
+				return nil, conflictChange("task %q is %s: only a not-yet-started task can be removed", target.Title, st)
 			}
 			if err := touch(op.NodeID); err != nil {
 				return nil, err
@@ -560,10 +560,10 @@ func (s *Service) planChange(rec Record, states map[string]string, agentIDs []st
 		case OpUpdatePending:
 			target, ok := live(op.NodeID)
 			if !ok || !leafOK(target) || (target.Kind != KindTask && target.Kind != KindSubtask) {
-				return nil, invalidChange("node %q cannot be updated", op.NodeID)
+				return nil, invalidChange("task %q cannot be updated", op.NodeID)
 			}
 			if st := states[op.NodeID]; !editableState(st) {
-				return nil, conflictChange("node %q is %s: only a not-yet-started node can be updated", target.Title, st)
+				return nil, conflictChange("task %q is %s: only a not-yet-started task can be updated", target.Title, st)
 			}
 			if err := touch(op.NodeID); err != nil {
 				return nil, err
@@ -601,7 +601,7 @@ func (s *Service) planChange(rec Record, states map[string]string, agentIDs []st
 		return nil, invalidChange("cycle: the change creates a dependency cycle")
 	}
 	if len(nodes) > lim.MaxNodesPerProject {
-		return nil, limitError(domain.ErrInvalid, LimitMaxNodes, lim.MaxNodesPerProject, fmt.Sprintf("the plan would have %d nodes", len(nodes)))
+		return nil, limitError(domain.ErrInvalid, LimitMaxNodes, lim.MaxNodesPerProject, fmt.Sprintf("the plan would have %d tasks", len(nodes)))
 	}
 	if err := lim.checkSize(nodes); err != nil {
 		return nil, err
@@ -616,7 +616,7 @@ func (s *Service) planChange(rec Record, states map[string]string, agentIDs []st
 		}
 		for _, d := range n.DependsOn {
 			if !ids[d] {
-				return nil, invalidChange("node %q has an unknown dependency %q", n.Title, d)
+				return nil, invalidChange("task %q has an unknown dependency %q", n.Title, d)
 			}
 		}
 	}

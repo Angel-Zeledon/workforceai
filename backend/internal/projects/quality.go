@@ -110,10 +110,10 @@ func withAuditTask(tasks []application.PhaseTask, ph application.PlanPhase, audi
 	for _, t := range tasks {
 		deps = append(deps, t.Key)
 	}
-	title, desc := "Auditoría de la fase: "+ph.Title, "Revisa los entregables de la fase \""+ph.Title+"\" y cruza las cifras entre tareas (totales, cantidades y fechas que deben coincidir). "+
+	title, desc := "Auditoría de la fase: "+ph.Title, "Revisa los resultados de la fase \""+ph.Title+"\" y cruza las cifras entre tareas (totales, cantidades y fechas que deben coincidir). "+
 		"Responde \"verificado\" SOLO citando la evidencia (qué tarea y qué campo comparaste) o marca cada inconsistencia con detalle."
 	if locale == "en" {
-		title, desc = "Audit of phase: "+ph.Title, "Review the deliverables of the \""+ph.Title+"\" phase and cross-check the figures between tasks (totals, quantities and dates that must match). "+
+		title, desc = "Audit of phase: "+ph.Title, "Review the results of the \""+ph.Title+"\" phase and cross-check the figures between tasks (totals, quantities and dates that must match). "+
 			"Answer \"verified\" ONLY citing the evidence (which task and which field you compared) or flag each inconsistency in detail."
 	}
 	return append(tasks, application.PhaseTask{Key: auditKey, Title: title, Description: desc, AgentID: auditor, DependsOn: deps, Complexity: "M"})

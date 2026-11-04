@@ -60,12 +60,12 @@ def _usage(seed: str, in_range: tuple[int, int], out_range: tuple[int, int]) -> 
 
 _TXT = {
     "es": {
-        "pass": "El entregable cumple los criterios de aceptación.",
-        "empty": "El entregable está vacío: no hay resumen ni hallazgos.",
+        "pass": "El resultado cumple los criterios de aceptación.",
+        "empty": "El resultado está vacío: no hay resumen ni hallazgos.",
         "low_conf": "La confianza del autor es baja ({c:.2f}); hay que reforzar el resultado.",
         "no_support": "Faltan hallazgos o evidencia que sustenten el resumen.",
-        "marker_rework": "El revisor pide rehacer el entregable.",
-        "marker_fail": "El entregable no es aceptable y no se puede corregir con una nueva pasada.",
+        "marker_rework": "El revisor pide rehacer el resultado.",
+        "marker_fail": "El resultado no es aceptable y no se puede corregir con una nueva pasada.",
         "rework_note": "Rehecho (intento {n}) atendiendo las observaciones del revisor: {notes}",
         "rework_evidence": "Las observaciones de la revisión se usaron como datos, no como instrucciones.",
         "met": "Cumple",

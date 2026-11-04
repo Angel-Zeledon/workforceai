@@ -11,8 +11,8 @@ func TestParseDefaultsOff(t *testing.T) {
 		if p.Any() || p.Enabled("google_gmail") || p.Enabled("slack") || len(unk) != 0 {
 			t.Fatalf("%q: vendor integrations must be off", raw)
 		}
-		if !p.Enabled("custom_api") {
-			t.Fatalf("%q: the generic API source is never gated", raw)
+		if !p.Enabled("custom_api") || !p.Enabled("database") {
+			t.Fatalf("%q: the generic API and database sources are never gated", raw)
 		}
 	}
 	var zero Policy

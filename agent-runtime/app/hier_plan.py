@@ -36,8 +36,8 @@ TASKS_BY_SIZE = {"S": 6, "M": 12, "L": 16, "XL": 22}
 _PHASES = {
     "es": [
         ("p1", "Descubrimiento y alcance", "Entender el objetivo, los actores y el alcance", "M", []),
-        ("p2", "Diseno y planificacion", "Definir la solucion, los entregables y el plan de trabajo", "L", ["p1"]),
-        ("p3", "Construccion", "Producir los entregables principales del proyecto", "XL", ["p2"]),
+        ("p2", "Diseno y planificacion", "Definir la solucion, los resultados esperados y el plan de trabajo", "L", ["p1"]),
+        ("p3", "Construccion", "Producir los resultados principales del proyecto", "XL", ["p2"]),
         ("p4", "Soporte y cumplimiento", "Preparar documentos, controles y comunicaciones en paralelo", "L", ["p2"]),
         ("p5", "Validacion y cierre", "Revisar, ajustar y cerrar el proyecto con un informe final", "M", ["p3", "p4"]),
     ],
@@ -54,8 +54,8 @@ _VERBS = {
     "en": ["Research", "Draft", "Analyze", "Prepare", "Review", "Coordinate", "Document", "Validate"],
 }
 _TASK_DESC = {
-    "es": "Paso {n} de la fase \"{phase}\" del proyecto: {goal}. Objetivo de la fase: {pgoal}",
-    "en": "Step {n} of the \"{phase}\" phase of the project: {goal}. Phase goal: {pgoal}",
+    "es": "Tarea {n} de la fase \"{phase}\" del proyecto: {goal}. Objetivo de la fase: {pgoal}",
+    "en": "Task {n} of the \"{phase}\" phase of the project: {goal}. Phase goal: {pgoal}",
 }
 _TASK_TITLE = {"es": "{verb} - {phase} ({n})", "en": "{verb} - {phase} ({n})"}
 _REASON = {

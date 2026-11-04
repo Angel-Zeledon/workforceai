@@ -52,11 +52,11 @@ func (s *Service) recoverNode(ctx context.Context, projectID, nodeID string, ski
 	}
 	def, ok := findNode(rec.Nodes, nodeID)
 	if !ok || def.isGroup() {
-		return RecoveryResult{}, fmt.Errorf("%w: node %s", domain.ErrNotFound, nodeID)
+		return RecoveryResult{}, fmt.Errorf("%w: task %s", domain.ErrNotFound, nodeID)
 	}
 	t, ok := snap.tasks[nodeID]
 	if !ok {
-		return RecoveryResult{}, fmt.Errorf("%w: the node has no task yet", domain.ErrConflict)
+		return RecoveryResult{}, fmt.Errorf("%w: the task has not started yet", domain.ErrConflict)
 	}
 	var res application.RecoveryResult
 	if skip {

@@ -92,9 +92,9 @@ export class MockCommands {
       case "resume": return msg(pick(lang, `${first(target!)} sigue trabajando.`, `${first(target!)} is back at work.`));
       case "stop": return msg(pick(lang, `Detuve el trabajo de ${first(target!)}.`, `I stopped ${first(target!)}'s work.`));
       case "status":
-        return { status: "ok", result: { kind: "table", title: pick(lang, "Estado del equipo", "Team status"), columns: [pick(lang, "Agente", "Agent"), pick(lang, "Estado", "State"), pick(lang, "Actividad", "Activity")], rows: agents.slice(0, 8).map((x) => [first(x), x.state, x.activity]) } };
+        return { status: "ok", result: { kind: "table", title: pick(lang, "Estado de los agentes", "Agent status"), columns: [pick(lang, "Agente", "Agent"), pick(lang, "Estado", "State"), pick(lang, "Actividad", "Activity")], rows: agents.slice(0, 8).map((x) => [first(x), x.state, x.activity]) } };
       case "team":
-        return { status: "ok", result: { kind: "table", title: pick(lang, "Tu equipo", "Your team"), columns: [pick(lang, "Agente", "Agent"), pick(lang, "Rol", "Role")], rows: agents.map((x) => [x.name, x.role]) } };
+        return { status: "ok", result: { kind: "table", title: pick(lang, "Tus agentes", "Your agents"), columns: [pick(lang, "Agente", "Agent"), pick(lang, "Rol", "Role")], rows: agents.map((x) => [x.name, x.role]) } };
       case "export":
         return { status: "ok", result: { kind: "download", title: pick(lang, "Conversación exportada", "Conversation exported"), filename: "conversacion.txt", url: "data:text/plain;charset=utf-8," + encodeURIComponent(pick(lang, "Conversación exportada (demo)\n", "Exported conversation (demo)\n")) } };
       case "excel": case "word": case "pdf": case "presentation": {
@@ -113,7 +113,7 @@ export class MockCommands {
         const ids = names.map((n) => agentOf(n)?.id ?? agents.find((x) => x.id === n || x.role === n || x.role === AREA[n.toLowerCase()])?.id ?? n).join(",");
         const text = `[[debate${ids ? ":" + ids : ""}]] ${a.topic || ""}`.trim();
         const id = await this.host.startRequest(text);
-        return { status: "started", result: { kind: "request", title: pick(lang, "El equipo va a debatir", "The team will debate"), text: a.topic || "", request_id: id, href: "/meetings?view=debates" } };
+        return { status: "started", result: { kind: "request", title: pick(lang, "Los agentes van a debatir", "The agents will debate"), text: a.topic || "", request_id: id, href: "/meetings?view=debates" } };
       }
       case "customer": { // B12: the real backend scopes the request to the customer before it exists
         const text = String(a.task || "").trim();

@@ -200,7 +200,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	}
 	rs.customer = CustomerFrom(ctx)
 	o.rec.Emit(ctx, Action{Type: domain.EvRequestReceived, Entity: "request", EntityID: req.ID,
-		Payload: received, Text: "Nueva solicitud: " + truncate(text, 100)})
+		Payload: received, Text: "Nuevo pedido: " + truncate(text, 100)})
 	o.sendMessage(ctx, rs, "user", assistantID, "chat", text, nil)
 	o.emitMetrics(ctx)
 
@@ -224,7 +224,7 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 	defer o.releaseAgents(ctx, rs)
 	defer o.untrack(rs.req.ID)
 	o.saveRunMeta(ctx, rs)
-	o.setState(ctx, assistantID, domain.StateThinking, "Analizando la solicitud", nil, 10)
+	o.setState(ctx, assistantID, domain.StateThinking, "Analizando el pedido", nil, 10)
 
 	var plan PlanResponse
 	var err error
@@ -245,7 +245,7 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 		})
 	}
 	if err != nil {
-		o.failRequest(ctx, rs, assistantID, "No pude planificar la solicitud", err)
+		o.failRequest(ctx, rs, assistantID, "No pude planificar el pedido", err)
 		return
 	}
 	if plan.Usage != nil && rs.preset == nil { // the planner call spends too (additive field; old runtimes omit it)
@@ -256,7 +256,7 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 		if len(plan.ClarifyingQuestions) > 0 {
 			o.sendMessage(ctx, rs, assistantID, "user", "chat", "Necesito aclarar antes de continuar:\n- "+strings.Join(plan.ClarifyingQuestions, "\n- "), nil)
 		}
-		o.failRequest(ctx, rs, assistantID, "Solicitud sin tareas ejecutables", errors.New("el plan no contiene tareas"))
+		o.failRequest(ctx, rs, assistantID, "Pedido sin tareas ejecutables", errors.New("el plan no contiene tareas"))
 		return
 	}
 	tasks, err := o.createTasks(ctx, rs, plan)
@@ -272,7 +272,7 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 	}
 	o.debateBeforeDecision(ctx, rs, plan, tasks) // B5: at most one advisory debate; never blocks the plan
 	o.setRequestStatus(ctx, rs, domain.RequestRunning)
-	o.setState(ctx, assistantID, domain.StateWaiting, "Coordinando al equipo", nil, 30)
+	o.setState(ctx, assistantID, domain.StateWaiting, "Coordinando a los agentes", nil, 30)
 	o.execute(ctx, rs, tasks, func(c context.Context, t domain.Task) Outcome { return o.runTask(c, rs, t) })
 }
 
@@ -348,7 +348,7 @@ func (o *Orchestrator) finish(ctx context.Context, rs *run, tasks []domain.Task,
 	}
 	cur, err := o.store.GetRequest(ctx, o.org(ctx), rs.req.ID)
 	if err != nil {
-		o.failRequest(ctx, rs, assistantID, "No pude leer la solicitud", err)
+		o.failRequest(ctx, rs, assistantID, "No pude leer el pedido", err)
 		return
 	}
 	report := domain.Report{ID: newID(), RequestID: rs.req.ID, Title: syn.Title, Summary: syn.Summary, Sections: syn.Sections,
@@ -368,7 +368,7 @@ func (o *Orchestrator) finish(ctx context.Context, rs *run, tasks []domain.Task,
 	o.sendMessage(ctx, rs, assistantID, "user", "chat", "El informe está listo: "+report.Title, nil)
 	o.chatEchoReport(ctx, rs, report.Title)
 	o.rec.Emit(ctx, Action{Type: domain.EvRequestCompleted, Entity: "request", EntityID: rs.req.ID,
-		Payload: map[string]any{"request_id": rs.req.ID, "report_id": report.ID, "requested_by": PersonID(rs.requestedBy)}, Text: "Solicitud completada"})
+		Payload: map[string]any{"request_id": rs.req.ID, "report_id": report.ID, "requested_by": PersonID(rs.requestedBy)}, Text: "Pedido completado"})
 	o.emitMetrics(ctx)
 }
 
@@ -1045,7 +1045,7 @@ func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.
 			// B9: the agent (or request) went into rehearsal while the approval waited:
 			// the approval never overrides a rehearsal. Recorded, not executed.
 			o.rehearseTool(ctx, rs, t, agent, tr, RouteNone, scope)
-			o.setState(ctx, agent.ID, domain.StateWorking, "Ensayo, finalizando: "+t.Title, &tid, 90)
+			o.setState(ctx, agent.ID, domain.StateWorking, "Probando sin enviar, finalizando: "+t.Title, &tid, 90)
 			return OutcomeDone
 		}
 		// At most once: mark the checkpoint before recording the execution, so a

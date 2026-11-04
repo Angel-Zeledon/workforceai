@@ -26,9 +26,9 @@ func describeNode(r Record, n NodeDef) string {
 	base := n.Description
 	if base == "" {
 		if r.Locale == "en" {
-			base = fmt.Sprintf("Project: %s. Objective: %s. Step: %s.", r.Name, objective, n.Title)
+			base = fmt.Sprintf("Project: %s. Objective: %s. Task: %s.", r.Name, objective, n.Title)
 		} else {
-			base = fmt.Sprintf("Proyecto: %s. Objetivo: %s. Paso: %s.", r.Name, objective, n.Title)
+			base = fmt.Sprintf("Proyecto: %s. Objetivo: %s. Tarea: %s.", r.Name, objective, n.Title)
 		}
 	}
 	return base + inputsHint(r)

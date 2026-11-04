@@ -5,8 +5,9 @@ export type CustomerStatus = "on_track" | "waiting_approval" | "blocked" | "idle
 export const CUSTOMER_STATUSES: CustomerStatus[] = ["blocked", "waiting_approval", "on_track", "idle"];
 
 /** Status light colors (the same palette as the task and quality badges). */
+// The single palette's colors (lib/statusLogic.ts; statusLogic.test.mjs checks they never drift apart).
 export const STATUS_COLOR: Record<CustomerStatus, string> = {
-  on_track: "#2f7d55", waiting_approval: "#a86208", blocked: "#b4443c", idle: "#7b8494",
+  on_track: "#2b6cb0", waiting_approval: "#a86208", blocked: "#b4443c", idle: "#7b8494",
 };
 
 /** Lower is more urgent: blocked first, then waiting for an approval, then on track, then idle. */

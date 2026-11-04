@@ -22,10 +22,9 @@ test("an agent asks to run code, a person reads it, approves, and the result lan
     method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ enabled: false, max_runs_per_day: 0, max_runtime_seconds: 0 }),
   });
 
-  // Off by default: a person turns it on in Security
-  await page.goto("/");
-  await page.getByTestId("admin-menu").click();
-  await page.getByTestId("nav-security").click();
+  // Off by default: a person turns it on in Ajustes → Seguridad
+  await page.goto("/settings");
+  await page.getByTestId("settings-security").click();
   const toggle = page.getByTestId("ctl-code-enabled");
   await expect(toggle).not.toBeChecked();
   await toggle.click(); // controlled: it flips once the server accepted the change
@@ -70,9 +69,8 @@ test("an agent asks to run code, a person reads it, approves, and the result lan
   expect(["running", "done"]).toContain(done.status);
 
   // Result view + link to the Files screen
-  await page.goto("/");
-  await page.getByTestId("admin-menu").click();
-  await page.getByTestId("nav-security").click();
+  await page.goto("/settings");
+  await page.getByTestId("settings-security").click();
   const row = page.getByTestId("ctl-code-run").first();
   await row.locator("button").first().click();
   await expect(row.getByTestId("code-run-status")).toBeVisible();

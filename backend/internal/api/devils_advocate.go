@@ -61,7 +61,7 @@ func (s *server) makeCounterargument(w http.ResponseWriter, r *http.Request) {
 		}
 		// The cause stays in the audit trail and the logs; the client only gets the stable code.
 		s.Log.Info("counterargument unavailable", "approval", chi.URLParam(r, "id"), "code", ce.Code, "err", ce.Err)
-		codeErr(w, status, ce.Code, "the devil's advocate review is not available right now; you can still decide this approval")
+		codeErr(w, status, ce.Code, "the second opinion is not available right now; you can still decide this approval")
 		return
 	}
 	if err != nil {

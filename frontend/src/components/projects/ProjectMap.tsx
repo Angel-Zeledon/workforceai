@@ -157,7 +157,7 @@ export function ProjectMap() {
           </div>
         )}
         <div className="flex flex-wrap gap-3 border-t border-line px-4 py-2 text-[10px] text-mute">
-          {(["pending", "ready", "running", "awaiting_approval", "done", "failed"] as const).map((s) => (
+          {(["pending", "running", "awaiting_approval", "done", "failed"] as const).map((s) => (
             <span key={s} className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: NODE_STATE_COLOR[s] }} />{t(`pv.state.${s}`)}</span>
           ))}
           <span className="flex items-center gap-1"><span className="h-0.5 w-4" style={{ background: CRITICAL_COLOR }} />{t("pv.map.critical")}</span>

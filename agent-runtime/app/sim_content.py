@@ -74,10 +74,10 @@ PLANS: dict[str, dict] = {
         "questions": [],
     },
     "default": {
-        "objectives": ["Entender y atender la solicitud"],
+        "objectives": ["Entender y atender el pedido"],
         "tasks": [
-            ("asistente", "assistant", "Estructurar la solicitud",
-             "Aclarar el alcance de la solicitud, reunir contexto y definir entregables.", []),
+            ("asistente", "assistant", "Estructurar el pedido",
+             "Aclarar el alcance del pedido, reunir contexto y definir los resultados esperados.", []),
             ("analista", "analyst", "Analizar la informacion disponible",
              "Analizar los datos disponibles y proponer conclusiones accionables.", ["asistente"]),
         ],
@@ -293,11 +293,11 @@ CONTENT[("contract", "sales")] = dict(
 # ---- default
 CONTENT[("default", "assistant")] = dict(
     output=_o(
-        "Solicitud estructurada: se definieron alcance, entregables y los datos que faltan para continuar.",
-        ["La solicitud no especifica fecha limite.", "Se requiere informacion de contexto del Analista.", "Se sugiere un entregable en formato de resumen ejecutivo."],
+        "Pedido estructurado: se definieron alcance, resultados esperados y los datos que faltan para continuar.",
+        ["El pedido no especifica fecha limite.", "Se requiere informacion de contexto del Analista.", "Se sugiere un informe en formato de resumen ejecutivo."],
         {"entregables": 1, "datos_faltantes": 2},
         ["El usuario espera un resumen ejecutivo de una pagina."],
-        ["Texto original de la solicitud."],
+        ["Texto original del pedido."],
         ["Confirmar fecha limite y formato.", "Compartir los datos disponibles con el Analista."],
         0.7, ["Pedir al usuario la fecha limite"],
     ),
@@ -309,7 +309,7 @@ CONTENT[("default", "analyst")] = dict(
         ["Los datos disponibles son parciales.", "Se identifican dos areas de oportunidad.", "Hay riesgos bajos y manejables."],
         {"conclusiones": 3, "riesgos_identificados": 2},
         ["Con mas datos las conclusiones podrian refinarse."],
-        ["Estructura de la solicitud de la Asistente."],
+        ["Estructura del pedido de la Asistente."],
         ["Recopilar datos adicionales.", "Revisar resultados en una semana."],
         0.65, ["Solicitar datos historicos"],
     ),
@@ -375,13 +375,13 @@ TEXTS = {
     "h_recs": "Recomendaciones y proximos pasos",
     "h_conf": "Confianza global",
     "conf_body": "Confianza promedio de los agentes: {avg:.0%} sobre {n} tareas.",
-    "fallback_task": ("tarea_1", "Atender la solicitud"),
+    "fallback_task": ("tarea_1", "Atender el pedido"),
     # default scenario with a recognizable topic: the owner of the topic does the work, the assistant frames it
     "owner_task": ("responsable", "Resolver la parte de {area}",
-                   "Resolver la parte de {area} de la solicitud con la información disponible y dejar conclusiones claras."),
+                   "Resolver la parte de {area} del pedido con la información disponible y dejar conclusiones claras."),
     # default scenario with a recognizable topic: the owner of the topic does the work, the assistant frames it
-    "owner_task": ("responsable", "Atender la solicitud desde {area}",
-                   "Resolver la parte de {area} de la solicitud con la información disponible y dejar conclusiones claras."),
+    "owner_task": ("responsable", "Atender el pedido desde {area}",
+                   "Resolver la parte de {area} del pedido con la información disponible y dejar conclusiones claras."),
 }
 
 
@@ -409,7 +409,7 @@ ROLE_REASONS: dict[str, str] = {
     "accounting": "controla márgenes, costos y facturación",
     "analyst": "analiza datos y rentabilidad con evidencia",
     "operations": "conoce la capacidad operativa y los plazos de entrega",
-    "assistant": "coordina y estructura la solicitud",
+    "assistant": "coordina y estructura el pedido",
 }
 
 CHAT: dict = {
@@ -419,24 +419,24 @@ CHAT: dict = {
     },
     "reasons": {
         "owner": "Es quien lleva {topic}",
-        "coordinates": "Coordina al equipo y atiende lo general",
+        "coordinates": "Coordina a los agentes y atiende lo general",
         "greeting": "Responde primero al saludo",
         "peer_greeting": "Saluda brevemente",
         "related": "Puede aportar algo desde {topic}",
         "direct": "Le escribiste directamente",
         "consult": "El tema es de {topic}; {name} lo puede aclarar",
-        "task": "Coordina la solicitud y reparte el trabajo",
+        "task": "Coordina el pedido y reparte el trabajo",
     },
     "area": {
         "sales": "clientes, propuestas y pipeline", "hr": "contratación y temas laborales",
         "legal": "contratos y riesgos legales", "accounting": "márgenes, costos y facturación",
         "analyst": "datos, métricas y rentabilidad", "operations": "capacidad, logística y entrega",
-        "assistant": "coordinar al equipo y organizar tus pedidos",
+        "assistant": "coordinar a los agentes y organizar tus pedidos",
     },
     "greet_primary": [
         "¡Hola! Soy {name}. ¿En qué te puedo ayudar hoy?",
         "¡Buenas! Por aquí {name}, lista para lo que necesites. Cuéntame.",
-        "Hola, ¿cómo va todo? Dime qué tienes en mente y vemos quién del equipo lo toma.",
+        "Hola, ¿cómo va todo? Dime qué tienes en mente y vemos qué agente lo toma.",
         "¡Hola! Qué gusto verte por aquí. ¿Empezamos con algo o vienes a saludar?",
         "Buen día. Aquí {name}; si necesitas algo, me avisas y lo coordino.",
     ],
@@ -463,7 +463,7 @@ CHAT: dict = {
     ],
     "howare": [
         "Todo bien por aquí, gracias por preguntar. ¿Y tú, en qué andas?",
-        "Bien, con buen ritmo. ¿Necesitas algo del equipo?",
+        "Bien, con buen ritmo. ¿Necesitas algo de los agentes?",
         "Tranquilos y al día. Cuéntame, ¿qué tienes en mente?",
     ],
     "thanks": [
@@ -482,16 +482,16 @@ CHAT: dict = {
     ],
     "help": [
         "Puedo ayudarte a repartir el trabajo: Ventas, Legal, Contabilidad, RR. HH., Análisis y Operaciones están disponibles. Pregunta algo de su área o pídeme una tarea y la coordino.",
-        "Soy la asistente del equipo. Si me dices qué necesitas, te digo quién es el indicado o lo coordino yo. Para dudas rápidas, habla directo con cada persona.",
+        "Soy la asistente de tus agentes. Si me dices qué necesitas, te digo quién es el indicado o lo coordino yo. Para dudas rápidas, habla directo con cada persona.",
     ],
     "help_self": [
         "Me ocupo de {area}. Pregúntame lo que quieras de eso o pídeme que prepare algo y lo coordino.",
         "Puedo ayudarte con {area}. ¿Qué necesitas?",
     ],
     "answer_general": [
-        "Te sigo. Para darte algo útil, cuéntame un poco más: ¿es algo para consultar o quieres que el equipo lo prepare?",
-        "Entiendo. Si me das más contexto te digo quién del equipo puede ayudarte mejor.",
-        "Anotado. ¿Prefieres que lo hablemos aquí o que lo convierta en una tarea para el equipo?",
+        "Te sigo. Para darte algo útil, cuéntame un poco más: ¿es algo para consultar o quieres que los agentes lo preparen?",
+        "Entiendo. Si me das más contexto te digo qué agente puede ayudarte mejor.",
+        "Anotado. ¿Prefieres que lo hablemos aquí o que lo convierta en una tarea para los agentes?",
     ],
     "answer_agenda": [
         "Para tu agenda necesito saber el día, la hora y con quién. ¿Quieres revisar lo que hay o agendo algo nuevo?",
@@ -570,14 +570,14 @@ CHAT: dict = {
         "default": ["Si hace falta, me sumo."],
     },
     "task_ack": [
-        "Entendido, déjame ver quién del equipo es el indicado y lo armamos.",
-        "Perfecto. Lo coordino con el equipo y te cuento quién hace qué y por qué.",
+        "Entendido, déjame ver qué agente es el indicado y lo armamos.",
+        "Perfecto. Lo coordino con los agentes y te cuento quién hace qué y por qué.",
         "Va. Reviso qué necesita esto y reparto el trabajo; en un momento te explico.",
     ],
     "task_ack_self": [
-        "Claro, me encargo. Lo armo con el equipo y te cuento quién hace qué.",
+        "Claro, me encargo. Lo armo con los agentes y te cuento quién hace qué.",
         "Va, lo tomo. Veo qué necesito de los demás y te aviso cómo queda.",
-        "Listo, déjame organizarlo con el equipo y te cuento el plan.",
+        "Listo, déjame organizarlo con los agentes y te cuento el plan.",
     ],
     "redirect": [
         "Eso lo lleva mejor {other} ({other_title}). Se lo consulto y te cuento.",
@@ -682,7 +682,7 @@ CHAT["deflect_pair"] = {
 # Task clearly outside the role: personality lead + core, then the backend reassigns the work.
 CHAT["refuse_core"] = [
     "Ese trabajo no me toca: lo reasigno a {other} ({other_title}), que lleva {topic_area}, y te cuento el plan.",
-    "No es mío: se lo paso a {other}, que se ocupa de {topic_area}, y lo coordino con el equipo.",
+    "No es mío: se lo paso a {other}, que se ocupa de {topic_area}, y lo coordino con los agentes.",
     "Eso es de {topic_area}, o sea de {other}. Lo reasigno y te explico por qué.",
 ]
 # Real limits ("I can't do that"): lead per role + core per limit kind.
@@ -696,7 +696,7 @@ CHAT["limit_lead"] = {
     "assistant": ["Disculpa.", "Perdona la molestia.", "Lo siento."],
 }
 CHAT["limit_core"] = {
-    "kill_switch": ["Ahora mismo el equipo está en pausa por el interruptor de emergencia, así que no puedo hacerlo.",
+    "kill_switch": ["Ahora mismo los agentes están en pausa por el interruptor de emergencia, así que no puedo hacerlo.",
                     "Hay un freno de emergencia activo; hasta que lo levanten no puedo trabajar en esto."],
     "paused": ["Me pusieron en pausa, así que por ahora no puedo ayudarte con eso.",
                "Estoy en pausa hasta nuevo aviso; no puedo tomarlo."],
@@ -791,7 +791,7 @@ ROLE_CONTENT: dict[str, dict] = {
         ["La ruta crítica pasa por 4 de las 9 tareas.", "Dos tareas dependen de un mismo proveedor.", "Falta un responsable en un entregable."],
         {"tareas": 9, "hitos": 3, "riesgos_altos": 2},
         ["Si el proveedor se retrasa una semana, el hito final se mueve una semana."],
-        ["Lista de entregables y dependencias declaradas en la solicitud."],
+        ["Lista de resultados esperados y dependencias declaradas en el pedido."],
         ["Asignar responsable al entregable sin dueño.", "Pedir fecha comprometida al proveedor.", "Revisar el plan cada lunes."],
         0.74, ["Reporte semanal de avance"]), consults=[], tool_requests=[]),
     "education": dict(output=_o(
@@ -799,7 +799,7 @@ ROLE_CONTENT: dict[str, dict] = {
         ["Los objetivos están alineados con la evaluación final.", "Se incluyen actividades para tres niveles de avance.", "No se usaron datos de estudiantes."],
         {"semanas": 4, "actividades": 12, "preguntas": 20},
         ["Una evaluación por proyecto mide mejor el objetivo 3 que un examen."],
-        ["Tema y nivel indicados en la solicitud."],
+        ["Tema y nivel indicados en el pedido."],
         ["Revisar la rúbrica con el docente titular.", "Probar una actividad con un grupo piloto."],
         0.77, ["Versión en PDF para compartir (requiere aprobación)"]), consults=[], tool_requests=[]),
     "data_analyst": dict(output=_o(

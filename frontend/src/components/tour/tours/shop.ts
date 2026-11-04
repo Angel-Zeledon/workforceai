@@ -18,7 +18,7 @@ export const shopTour: TourDefinition = {
     es: {
       "tour.name": "Recorrido de la tienda",
       "intro.title": "La tienda de tu oficina",
-      "intro.body": "Aquí gastas las monedas que tu equipo gana al terminar trabajo. Con ellas compras objetos estéticos para los personajes y para la oficina.\n\nEn la demo empiezas con 1000 monedas, así que puedes probar todo.",
+      "intro.body": "Aquí gastas las monedas que tus agentes ganan al terminar trabajo. Con ellas compras objetos estéticos para los personajes y para la oficina.\n\nEn la demo empiezas con 1000 monedas, así que puedes probar todo.",
       "wallet.title": "Tu saldo de monedas",
       "wallet.body": "Mira aquí cuántas monedas tienes. Baja cuando compras y sube cuando un agente termina trabajo. Si un objeto cuesta más que tu saldo, su botón Comprar se desactiva y verás cuántas monedas te faltan.",
       "rule.title": "Cómo funcionan las monedas",
@@ -35,7 +35,7 @@ export const shopTour: TourDefinition = {
     en: {
       "tour.name": "Shop tour",
       "intro.title": "Your office shop",
-      "intro.body": "Here you spend the coins your team earns by finishing work. You buy cosmetic items for the characters and for the office.\n\nThe demo starts you with 1000 coins, so you can try everything.",
+      "intro.body": "Here you spend the coins your agents earn by finishing work. You buy cosmetic items for the characters and for the office.\n\nThe demo starts you with 1000 coins, so you can try everything.",
       "wallet.title": "Your coin balance",
       "wallet.body": "Check here how many coins you have. It goes down when you buy and up when an agent finishes work. If an item costs more than your balance, its Buy button is disabled and you see how many coins you are missing.",
       "rule.title": "How coins work",

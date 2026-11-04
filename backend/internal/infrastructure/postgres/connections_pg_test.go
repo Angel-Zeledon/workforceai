@@ -314,3 +314,32 @@ func TestHoldsAndControlsOnPostgres(t *testing.T) {
 		t.Fatal("pause leaked to another tenant")
 	}
 }
+
+// Migration 816: a read-only database source keeps its configuration (never the password) in connections.database.
+func TestConnectionsStoreDatabaseConfig(t *testing.T) {
+	env := testStore(t)
+	ctx := context.Background()
+	seedOrg(t, env.Store, "org-a")
+	cs := &ConnStore{S: env.Store}
+	c := newConn("org-a", "cn_db")
+	c.Provider, c.Kind = connections.DatabaseProvider, "api_key"
+	c.Database = &connections.Database{Engine: "postgres", Host: "db.example.test", Port: 6543, Name: "app", User: "reader", SSLMode: "require",
+		Description: "Pedidos", Schemas: []string{"public"}}
+	if err := cs.CreateConnection(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	got, err := cs.GetConnection(ctx, "org-a", "cn_db")
+	if err != nil || got.Database == nil || got.Database.Port != 6543 || got.Database.Schemas[0] != "public" || got.Source != nil {
+		t.Fatalf("round trip: %v %+v", err, got.Database)
+	}
+	got.Database.Schemas = []string{"sales"}
+	if err := cs.UpdateConnection(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	if again, _ := cs.GetConnection(ctx, "org-a", "cn_db"); again.Database.Schemas[0] != "sales" {
+		t.Fatalf("update: %+v", again.Database)
+	}
+	if plain, _ := cs.GetConnection(ctx, "org-a", "cn_db"); plain.Provider != connections.DatabaseProvider {
+		t.Fatal("provider")
+	}
+}

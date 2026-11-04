@@ -599,7 +599,7 @@ func TestEnglishOrganizationGetsEnglishTexts(t *testing.T) {
 		all = append(all, m.Text)
 	}
 	text := strings.Join(all, "\n")
-	for _, want := range []string{"I'll coordinate it with the team", "Here is what each person will do", "Why: owns the client relationship"} {
+	for _, want := range []string{"I'll coordinate it with the agents", "Here is what each person will do", "Why: owns the client relationship"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("english text %q missing:\n%s", want, text)
 		}

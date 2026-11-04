@@ -124,8 +124,8 @@ function BatchCard({ b, onOpen }: { b: BatchSummary; onOpen: () => void }) {
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-mute">
         <span>{t("batch.card.done", { count: done })}</span>
         {(b.summary.running ?? 0) > 0 && <span>{t("batch.card.running", { count: b.summary.running })}</span>}
-        {(b.summary.needs_help ?? 0) > 0 && <span className="font-semibold text-accent">{t("batch.card.needsHelp", { count: b.summary.needs_help })}</span>}
-        {(b.summary.failed ?? 0) > 0 && <span className="font-semibold text-red-700">{t("batch.card.failed", { count: b.summary.failed })}</span>}
+        {(b.summary.needs_help ?? 0) > 0 && <span className="font-semibold text-warn">{t("batch.card.needsHelp", { count: b.summary.needs_help })}</span>}
+        {(b.summary.failed ?? 0) > 0 && <span className="font-semibold text-err">{t("batch.card.failed", { count: b.summary.failed })}</span>}
       </div>
     </button>
   );

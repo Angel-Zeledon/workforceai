@@ -249,7 +249,7 @@ func (g *Gateway) resolve(ctx context.Context, c application.GatewayCall, t targ
 	if len(cands) == 0 {
 		return candidate{}, connections.CodeScopeNotGranted
 	}
-	if alias == "" && len(cands) > 1 && t.provider.ID == connections.SourceProvider {
+	if alias == "" && len(cands) > 1 && (t.provider.ID == connections.SourceProvider || t.provider.ID == connections.DatabaseProvider) {
 		// Generic sources are different systems: never answer from an arbitrary one.
 		return candidate{}, CodeSourceAliasRequired
 	}
@@ -679,6 +679,9 @@ func (g *Gateway) fail(ctx context.Context, c application.GatewayCall, t target,
 		code = connections.CodeRateLimit
 	case "not_found", connections.CodeInvalidArgs, connections.CodeOutOfScope, connections.CodeConnectionUnavailable:
 	default:
+		if t.provider.ID == connections.DatabaseProvider && (strings.HasPrefix(code, "sql_") || strings.HasPrefix(code, "db_")) {
+			break // stable read-only database codes (sql_not_read_only, sql_timeout, db_unreachable...): the agent can act on them
+		}
 		code = connections.CodeProviderError
 	}
 	g.usage(ctx, c, t, cd, connections.Usage{Decision: "allowed", Status: "failed", ErrorCode: code, LatencyMS: lat, ProviderState: pe.Status, Tainted: c.Tainted})

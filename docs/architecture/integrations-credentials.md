@@ -19,6 +19,7 @@ necesita una, se le construye como feature aparte. Lo que sí hay en v1 son form
 | Vía | Dirección | Dónde |
 |---|---|---|
 | Fuente de API genérica (`custom_api`) | los agentes consultan, solo lectura | este documento, `08-api.md` |
+| Base de datos de solo lectura (`database`, PostgreSQL) | los agentes consultan con SQL de lectura | `database-sources.md`, `08-api.md` sec. 44 |
 | Buzones de datos | cualquier software empuja JSON/CSV/archivos a una URL con token | `data-inboxes.md` |
 | Importar desde un enlace | el backend descarga un CSV/JSON/XLSX de una URL, una vez o programado | `link-imports.md` |
 | Subir archivos (unidad, chat, "Antes de empezar") | manual | `drive.md` |
@@ -35,7 +36,7 @@ Con un proveedor apagado: desaparece del catálogo (`GET /connection-providers`)
 re-autorizar o ejecutar responde `403 vendor_integrations_disabled`; las conexiones que ya existían se conservan y se
 listan con `provider_disabled: true` (se pueden revocar, no usar); el canal de Slack no monta sus URLs (404) y
 `GET /channels/slack/settings` responde `{available: false}`. `GET /org/settings` expone el estado en
-`vendor_integrations {enabled, all, providers}`. `custom_api` nunca se apaga. Código: `backend/internal/integrations`.
+`vendor_integrations {enabled, all, providers}`. `custom_api` y `database` nunca se apagan. Código: `backend/internal/integrations`.
 
 Fuera del interruptor, a propósito: los avisos salientes de aprobaciones por webhook de Slack/Teams
 (`approvals-notify.md`) son un POST a una URL que pega el admin, no una integración con la cuenta del proveedor.

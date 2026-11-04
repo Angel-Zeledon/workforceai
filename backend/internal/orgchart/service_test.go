@@ -168,7 +168,7 @@ func TestPutJobNarrowsAndValidates(t *testing.T) {
 		{"unknown tool", "accounting", JobInput{AllowedTools: []string{"teleport"}}, "not registered"},
 		{"bad schedule", "accounting", JobInput{Schedule: Schedule{Enabled: true, Timezone: "Nowhere/X", Days: []int{1}, Start: "09:00", End: "17:00"}}, "schedule"},
 		{"negative budget", "accounting", JobInput{BudgetUSD: ptr(-1)}, "budget"},
-		{"unknown department", "accounting", JobInput{DepartmentID: "nope"}, "department"},
+		{"unknown department", "accounting", JobInput{DepartmentID: "nope"}, "office"},
 		{"escalate to self", "accounting", JobInput{Escalation: Ref{Kind: KindAgent, ID: "accounting"}}, "itself"},
 		{"unknown person", "accounting", JobInput{ReportsTo: Ref{Kind: KindPerson, ID: "stranger"}}, "unknown person"},
 		{"too many responsibilities", "accounting", JobInput{Responsibilities: make([]string, 21)}, ""},

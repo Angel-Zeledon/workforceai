@@ -5,6 +5,7 @@ import { projectsApi } from "@/lib/projects/api";
 import type { StandingApproval } from "@/lib/types";
 import { useCan } from "@/lib/session";
 import { Btn, Card, Empty, useAgentName } from "../ui";
+import { ActionName } from "../approvals/ActionName";
 
 /** The "always allow this kind of action in this project" permissions of a project, with their history; any of them can be revoked. */
 export function StandingApprovals({ projectId }: { projectId: string }) {
@@ -31,7 +32,7 @@ export function StandingApprovals({ projectId }: { projectId: string }) {
           {items?.map((s) => (
             <li key={s.id} data-testid={`standing-${s.id}`} data-status={s.status} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-panel2 px-3 py-2 text-[12px]">
               <div className="min-w-0">
-                <div className="font-semibold text-ink"><span className="font-mono">{s.tool}.{s.action}</span> · {s.agent_id ? agentName(s.agent_id) : t("pv.standing.anyAgent")}</div>
+                <div className="font-semibold text-ink"><ActionName code={`${s.tool}.${s.action}`} /> · {s.agent_id ? agentName(s.agent_id) : t("pv.standing.anyAgent")}</div>
                 <div className="text-mute">
                   {t(`pv.standing.status.${s.status}`)} · {t("pv.standing.expires", { when: fmtDateTime(s.expires_at) })} · {t("pv.standing.uses", { count: s.use_count })} · {t("pv.standing.by", { who: s.created_by })}
                 </div>

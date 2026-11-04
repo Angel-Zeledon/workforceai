@@ -11,7 +11,7 @@ import { Btn, useAgentName } from "../ui";
 import { fmtMoney } from "./shared";
 
 const TONE: Record<string, string> = {
-  accent: "bg-accent/10 text-accent", err: "bg-err/10 text-err", ok: "bg-ok/10 text-ok", warn: "bg-amber-500/10 text-amber-800", mute: "bg-panel2 text-ink2",
+  running: "bg-[#2b6cb0]/10 text-[#2b6cb0]", err: "bg-err/10 text-err", ok: "bg-ok/10 text-ok", warn: "bg-amber-500/10 text-amber-800", mute: "bg-panel2 text-ink2",
 };
 
 /** The batch table: one row per customer (progress, current step and agent, status, cost, how long it waits for a

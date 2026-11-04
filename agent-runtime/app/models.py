@@ -555,6 +555,9 @@ class SourceRef(_Base):
     tools: list[str] = Field(default_factory=list)
     endpoints: list[SourceEndpoint] = Field(default_factory=list)
     simulated: bool = False
+    # Read-only database sources (provider "database"): the SQL dialect and the schemas the admin allowed.
+    engine: str = ""
+    schemas: list[str] = Field(default_factory=list)
 
 
 HelpKind = Literal["data", "file", "decision", "contradiction", "other"]

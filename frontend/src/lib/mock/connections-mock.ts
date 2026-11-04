@@ -10,6 +10,7 @@ import type {
   ProviderDef, SpendLimitStatus, UsageRow,
 } from "../connections/types";
 import { CUSTOM_API, sourceErrorCode } from "../connections/apiSource";
+import { DATABASE } from "../connections/dbSource";
 
 export class MockError extends Error {
   constructor(public status: number, public code: string) { super(code); }
@@ -82,9 +83,51 @@ const PROVIDERS: ProviderDef[] = [
     capabilities: [{ id: "api.read", risk: "low", side_effects: false, default: true, profile: "read", tools: ["api.get"] }],
     resource_filters: [],
   },
+  {
+    // Mirrors backend/internal/connections/providers/database.json: a read-only database source ("Database (read only)").
+    // Agents call tool `db`, actions `schema` and `query` (one SELECT/WITH/EXPLAIN, read-only transaction, capped).
+    id: "database", auth: ["api_key"], available: true, phase: "C1",
+    capabilities: [{ id: "db.read", risk: "low", side_effects: false, default: true, profile: "read", tools: ["db.schema", "db.query"] }],
+    resource_filters: [],
+  },
   { id: "gitlab", auth: ["api_key"], available: false, phase: "C4", capabilities: [{ id: "repo.read", risk: "low", side_effects: false, default: true }], resource_filters: [] },
   { id: "microsoft_365", auth: ["oauth2_byo_app"], available: false, phase: "C5", capabilities: [{ id: "mail.read", risk: "low", side_effects: false, default: true }], resource_filters: [] },
 ];
+// ---- read-only database (mock): sample tables and rows, and the same refusals as the server for obvious writes ----
+function mockDatabase(body: any) {
+  const d = body?.database ?? {};
+  let host = d.host ?? "", port = d.port ?? 5432, database = d.database ?? "postgres", user = d.user ?? "", sslmode = d.sslmode ?? "require";
+  if (body?.connection_string) {
+    try {
+      const u = new URL(String(body.connection_string));
+      host = u.hostname; port = Number(u.port || 5432); database = u.pathname.replace(/^\//, "") || "postgres";
+      user = decodeURIComponent(u.username); sslmode = u.searchParams.get("sslmode") ?? "require";
+    } catch { fail(400, "invalid"); }
+  }
+  if (!host || !user) fail(400, "invalid");
+  return { engine: "postgres" as const, host, port, database, user, sslmode, description: d.description, schemas: d.schemas ?? [] };
+}
+function mockPassword(conn: string): string {
+  try { return decodeURIComponent(new URL(conn).password) || "mock-password"; } catch { return "mock-password"; }
+}
+function mockSchema() {
+  return { truncated: false, tables: [
+    { schema: "public", name: "customers", kind: "table", comment: "Clientes", rows_estimate: 3, columns: [
+      { name: "id", type: "integer", not_null: true }, { name: "name", type: "text", not_null: true }, { name: "city", type: "text", not_null: false }] },
+    { schema: "public", name: "orders", kind: "table", rows_estimate: 3, columns: [
+      { name: "id", type: "integer", not_null: true }, { name: "customer_id", type: "integer", not_null: false }, { name: "total", type: "numeric(10,2)", not_null: false }] },
+  ] };
+}
+function mockQuery(sql: string) {
+  const q = sql.trim().replace(/;+\s*$/, "");
+  if (!q) fail(422, "sql_empty");
+  if (q.includes(";")) fail(422, "sql_multiple_statements");
+  if (!/^\(*\s*(select|with|explain|values|table)\b/i.test(q) || /\b(insert|update|delete|merge|create|alter|drop|truncate|grant|copy|call|set|lock)\b/i.test(q)) fail(422, "sql_not_read_only");
+  if (/\bpg_sleep|dblink|lo_\w+|pg_read_|set_config|nextval/i.test(q)) fail(422, "sql_forbidden_function");
+  return { columns: [{ name: "id", type: "int4" }, { name: "name", type: "text" }, { name: "city", type: "text" }],
+    rows: [["1", "Ana", "San José"], ["2", "Luis", null], ["3", "Marta", "Cartago"]], row_count: 3, truncated: false, elapsed_ms: 12 };
+}
+
 const capDef = (provider: string, cap: string) => PROVIDERS.find((p) => p.id === provider)?.capabilities.find((c) => c.id === cap);
 const isWriteCap = (provider: string, cap: string) => !!capDef(provider, cap)?.side_effects;
 
@@ -538,6 +581,13 @@ export class MockConnections {
         this.changed(c); return this.pub(c);
       }
       if (r2 === "grants") return this.grantsRoute(method, c, r3, body);
+      if (r2 === "database") {
+        this.requireRole(["owner", "admin"]);
+        if (c.provider !== DATABASE) fail(400, "invalid");
+        if (c.status !== "active") fail(409, "conflict");
+        if (r3 === "schema" && method === "GET") return mockSchema();
+        if (r3 === "query" && method === "POST") return mockQuery(String(body?.sql ?? ""));
+      }
       if (r2 === "usage") {
         if (r3 === "simulate" && method === "POST") {
           const agent = String(body?.agent_id), cap = String(body?.capability);
@@ -583,7 +633,12 @@ export class MockConnections {
       limits: { per_day: 2000, write_per_day: writes ? 20 : 0, max_items_per_call: 50 }, read_only: false, grants_count: 0,
       last_tested_at: null, last_used_at: null, created_at: nowIso(), revoked_at: null,
       ...(prov.id === CUSTOM_API ? { source: JSON.parse(JSON.stringify(body.source)) } : {}),
+      ...(prov.id === DATABASE ? { database: mockDatabase(body) } : {}),
     };
+    if (prov.id === DATABASE) {
+      // the connection string is split and dropped like on the server: only the password would be kept (here: discarded)
+      if (body?.connection_string) body = { ...body, secret: mockPassword(String(body.connection_string)), connection_string: undefined };
+    }
     if (simulated && kind === "api_key") {
       // simulated connections store no secret and answer with sample data
       c.status = "active"; c.granted_capabilities = [...caps]; c.account_label = "simulated@example.test";
@@ -599,7 +654,8 @@ export class MockConnections {
       else {
         c.status = "active"; c.granted_capabilities = [...caps];
         c.credential = { kind: "api_key", hint: secret.length >= 20 ? secret.slice(-4) : null, version: 1, expires_at: body?.expires_at ?? null, rotated_at: nowIso(), created_at: nowIso() };
-        c.account_label = `svc-${prov.id}`;
+        c.account_label = c.database ? `${c.database.user}@${c.database.host}:${c.database.port}/${c.database.database}` : `svc-${prov.id}`;
+        if (c.database) c.credential.hint = null; // a database password never shows even a fragment
       }
     }
     this.connections.unshift(c);

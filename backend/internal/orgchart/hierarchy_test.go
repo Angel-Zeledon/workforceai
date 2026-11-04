@@ -43,7 +43,7 @@ func TestValidateDepartments(t *testing.T) {
 		deps []Department
 		want string
 	}{
-		{"duplicate id", []Department{dep("a", "A", ""), dep("a", "B", "")}, "duplicate department id"},
+		{"duplicate id", []Department{dep("a", "A", ""), dep("a", "B", "")}, "duplicate office id"},
 		{"duplicate name case-insensitive", []Department{dep("a", "Sales", ""), dep("b", " sales ", "")}, "already used"},
 		{"missing parent", []Department{dep("a", "A", "zzz")}, "does not exist"},
 		{"own parent", []Department{dep("a", "A", "a")}, "own parent"},

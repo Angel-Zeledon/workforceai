@@ -188,7 +188,7 @@ func (s *Service) Enable(ctx context.Context, org string, v Viewer, deptID, visi
 		}
 	}
 	if dept == nil {
-		return Office{}, fmt.Errorf("%w: department %s", domain.ErrNotFound, deptID)
+		return Office{}, fmt.Errorf("%w: office %s", domain.ErrNotFound, deptID)
 	}
 	m, err := s.fresh(ctx, org)
 	if err != nil {

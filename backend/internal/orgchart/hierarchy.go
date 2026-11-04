@@ -66,7 +66,7 @@ func DetectCycle(parent map[string]string) []string {
 // parents exist, no cycle, bounded depth, sane cost centers and heads.
 func ValidateDepartments(deps []Department) error {
 	if len(deps) > MaxDepartments {
-		return fmt.Errorf("too many departments (max %d)", MaxDepartments)
+		return fmt.Errorf("too many offices (max %d)", MaxDepartments)
 	}
 	ids, names := map[string]Department{}, map[string]string{}
 	for _, d := range deps {
@@ -74,11 +74,11 @@ func ValidateDepartments(deps []Department) error {
 			return err
 		}
 		if _, dup := ids[d.ID]; dup {
-			return fmt.Errorf("duplicate department id %q", d.ID)
+			return fmt.Errorf("duplicate office id %q", d.ID)
 		}
 		n := strings.ToLower(strings.TrimSpace(d.Name))
 		if other, dup := names[n]; dup {
-			return fmt.Errorf("department name %q is already used by %q", d.Name, other)
+			return fmt.Errorf("office name %q is already used by %q", d.Name, other)
 		}
 		ids[d.ID], names[n] = d, d.ID
 	}
@@ -86,13 +86,13 @@ func ValidateDepartments(deps []Department) error {
 	for _, d := range deps {
 		if d.ParentID != "" {
 			if _, ok := ids[d.ParentID]; !ok {
-				return fmt.Errorf("department %q: parent %q does not exist", d.ID, d.ParentID)
+				return fmt.Errorf("office %q: parent %q does not exist", d.ID, d.ParentID)
 			}
 		}
 		parent[d.ID] = d.ParentID
 	}
 	if c := DetectCycle(parent); c != nil {
-		return fmt.Errorf("departments form a cycle: %s", strings.Join(c, " -> "))
+		return fmt.Errorf("offices form a cycle: %s", strings.Join(c, " -> "))
 	}
 	for id := range parent {
 		depth := 1
@@ -100,7 +100,7 @@ func ValidateDepartments(deps []Department) error {
 			depth++
 		}
 		if depth > MaxDepth {
-			return fmt.Errorf("department %q is nested too deep (max %d levels)", id, MaxDepth)
+			return fmt.Errorf("office %q is nested too deep (max %d levels)", id, MaxDepth)
 		}
 	}
 	return nil
@@ -108,17 +108,17 @@ func ValidateDepartments(deps []Department) error {
 
 func validateDepartmentFields(d Department) error {
 	if strings.TrimSpace(d.ID) == "" || len(d.ID) > 64 {
-		return fmt.Errorf("department id is required (max 64 characters)")
+		return fmt.Errorf("office id is required (max 64 characters)")
 	}
 	name := strings.TrimSpace(d.Name)
 	if name == "" || utf8.RuneCountInString(name) > MaxNameRunes {
-		return fmt.Errorf("department %q: name is required (max %d characters)", d.ID, MaxNameRunes)
+		return fmt.Errorf("office %q: name is required (max %d characters)", d.ID, MaxNameRunes)
 	}
 	if d.ParentID == d.ID {
-		return fmt.Errorf("department %q cannot be its own parent", d.ID)
+		return fmt.Errorf("office %q cannot be its own parent", d.ID)
 	}
 	if d.CostCenter != "" && !costCenterRe.MatchString(d.CostCenter) {
-		return fmt.Errorf("department %q: cost center must be 1-%d letters, digits, dot, dash or underscore", d.ID, MaxCostCenterLen)
+		return fmt.Errorf("office %q: cost center must be 1-%d letters, digits, dot, dash or underscore", d.ID, MaxCostCenterLen)
 	}
 	return validateRef(d.Head, "head")
 }

@@ -18,8 +18,12 @@ import { fmtUsd } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { usePreferences } from "@/lib/preferences";
 import { orgApi } from "@/lib/orgConfigApi";
-import { setNavigator, SECTIONS, sectionOf } from "@/lib/navBridge";
-import { AdminMenu } from "../admin/AdminMenu";
+import { navGroups, setNavigator, SECTIONS, sectionOf } from "@/lib/navBridge";
+import { usePendingCount } from "@/lib/pending";
+import { useViewMode } from "@/lib/viewMode";
+import { useSession } from "@/lib/session";
+import { ViewAllSwitch } from "./ViewAll";
+import { AccountMenu } from "../admin/AdminMenu";
 import { OrgIndicator } from "../auth/OrgIndicator";
 import { ControlsBanner } from "../security/ControlsChrome";
 import { CostOverlays } from "../cost/CostOverlays";
@@ -41,7 +45,7 @@ function NavLink({ href, icon, label, testid, active, collapsed, onNavigate, bad
 }) {
   return (
     <Link href={href} prefetch={false} data-testid={testid} data-active={active} aria-current={active ? "page" : undefined} title={collapsed ? label : undefined} onClick={onNavigate}
-      className={`group relative flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-150 ${active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"} ${collapsed ? "justify-center px-0" : ""}`}>
+      className={`group relative flex min-h-9 items-center gap-3 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-150 ${active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"} ${collapsed ? "justify-center px-0" : ""}`}>
       {active && <span aria-hidden className="absolute inset-y-1.5 left-0 w-[3px] rounded-r bg-[#5eead4]" />}
       <Icon name={icon} size={18} className="shrink-0 transition-transform duration-150 group-hover:scale-110" />
       {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
@@ -53,25 +57,34 @@ function NavLink({ href, icon, label, testid, active, collapsed, onNavigate, bad
 function Sidebar({ section, collapsed, onToggle, onNavigate }: { section: string; collapsed: boolean; onToggle?: () => void; onNavigate?: () => void }) {
   const { t } = useT();
   const shopAvailable = useRewards((s) => s.available);
-  const pending = useStore((s) => Object.values(s.approvals).filter((a) => a.status === "pending").length);
-  const items = SECTIONS.filter((s) => s.id !== "shop" || shopAvailable);
+  const pending = usePendingCount(); // the ONE number of Pendientes for the whole app
+  const groups = navGroups({ shopAvailable });
   const isActive = (id: string) => section === id || (id === "office" && section === "dashboard");
+  const link = (s: (typeof groups)[number]["items"][number]) => (
+    <NavLink key={s.id} href={s.href} icon={s.icon} label={t(s.label)} testid={`nav-${s.id}`} active={isActive(s.id)} collapsed={collapsed} onNavigate={onNavigate} badge={s.id === "pending" ? pending : undefined} />
+  );
   return (
     <nav aria-label={t("nav.main")} data-testid="sidebar" data-collapsed={collapsed} className="flex h-full flex-col bg-navy text-white">
       <div className={`flex h-14 shrink-0 items-center gap-2.5 border-b border-white/10 ${collapsed ? "justify-center" : "px-4"}`}>
         <AgentMark size={32} tone="light" className="shrink-0" />
         {!collapsed && <span className="truncate text-[14px] font-semibold tracking-tight">AI Workforce OS</span>}
       </div>
-      <div className="flex-1 space-y-1 overflow-y-auto p-2.5">
-        {items.map((s) => (
-          <NavLink key={s.id} href={s.href} icon={s.icon} label={t(s.label)} testid={`nav-${s.id}`} active={isActive(s.id)} collapsed={collapsed} onNavigate={onNavigate} badge={s.id === "office" ? pending : undefined} />
+      <div className="flex-1 overflow-y-auto p-2.5">
+        {groups.filter((g) => g.id !== "bottom").map((g) => (
+          <div key={g.id} role="group" aria-label={g.label ? t(g.label) : undefined} data-testid={`nav-group-${g.id}`} className="mb-2 space-y-0.5 last:mb-0">
+            {g.label && (collapsed
+              ? <div aria-hidden className="mx-3 my-2 border-t border-white/10 first:hidden" />
+              : <div className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">{t(g.label)}</div>)}
+            {g.items.map(link)}
+          </div>
         ))}
       </div>
-      <div className="space-y-1 border-t border-white/10 p-2.5">
-        <NavLink href="/settings" icon="settings" label={t("nav.settings")} testid="nav-settings" active={section === "settings"} collapsed={collapsed} onNavigate={onNavigate} />
+      <div className="space-y-0.5 border-t border-white/10 p-2.5">
+        {groups.find((g) => g.id === "bottom")!.items.map(link)}
+        <ViewAllSwitch tone="dark" compact={collapsed} />
         {onToggle && (
           <button type="button" onClick={onToggle} data-testid="sidebar-toggle" title={collapsed ? t("nav.expand") : t("nav.collapse")} aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
-            className={`flex min-h-10 w-full items-center gap-3 rounded-md px-3 py-2 text-[12px] text-white/50 transition hover:bg-white/5 hover:text-white ${collapsed ? "justify-center px-0" : ""}`}>
+            className={`flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1.5 text-[12px] text-white/50 transition hover:bg-white/5 hover:text-white ${collapsed ? "justify-center px-0" : ""}`}>
             <Icon name="sidebar" size={17} className={`transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`} />
             {!collapsed && <span>{t("nav.collapse")}</span>}
           </button>
@@ -101,7 +114,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   useAwayHeartbeat(); // last seen, for "while you were away" (B3)
   useEffect(() => { hydratePrefs(); }, [hydratePrefs]);
   // the organization's language wins over the browser's until the person picks one in Settings
-  useEffect(() => { if (!MOCK) orgApi.settings().then((o) => usePreferences.getState().followOrgLocale(o.locale)).catch(() => { /* older backend or no permission */ }); }, []);
+  // and the organization says whether new people start in simple mode (decision 3 of the owner)
+  const uid = useSession((s) => s.user?.id ?? null);
+  useEffect(() => {
+    useViewMode.getState().init(uid);
+    if (MOCK) return;
+    orgApi.settings().then((o) => {
+      usePreferences.getState().followOrgLocale(o.locale);
+      useViewMode.getState().init(uid, o.view_mode_default ?? null);
+    }).catch(() => { /* older backend or no permission */ });
+  }, [uid]);
   useEffect(() => { try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1"); } catch { /* private mode */ } }, []);
   useEffect(() => { setDrawer(false); }, [pathname]);
   // Old stores keep reporting "is this screen open?" for code that still reads them: derive it from the URL.
@@ -115,7 +137,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const toggleCollapsed = () => setCollapsed((c) => { try { localStorage.setItem(COLLAPSE_KEY, c ? "0" : "1"); } catch { /* ignore */ } return !c; });
   const modeToggle = section === "office" || section === "dashboard";
-  const title = section === "dashboard" ? t("mode.dashboard") : section === "settings" ? t("nav.settings") : t(SECTIONS.find((s) => s.id === section)?.label ?? "nav.office");
+  const title = section === "dashboard" ? t("mode.dashboard") : t(SECTIONS.find((s) => s.id === section)?.label ?? "nav.office");
+  const pendingCount = usePendingCount();
 
   return (
     <div data-reduce={reduce ? "1" : "0"} className="flex h-dvh w-full overflow-hidden bg-bg text-ink">
@@ -152,7 +175,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {metrics && (
               <div data-tour="shell.metrics" className="hidden items-center gap-3 border-r border-line pr-3 2xl:flex 2xl:gap-4 2xl:pr-4">
                 <span className="hidden 2xl:inline">{t("hud.active")} <b className="font-mono font-medium text-ink">{metrics.tasks_active}</b></span>
-                <span data-testid="hud-approvals">{t("hud.approvalsShort")} <b className={`font-mono font-medium ${metrics.approvals_pending ? "text-warn" : "text-ink"}`}>{metrics.approvals_pending}</b></span>
+                <span data-testid="hud-approvals">{t("hud.approvalsShort")} <b className={`font-mono font-medium ${pendingCount ? "text-warn" : "text-ink"}`}>{pendingCount}</b></span>
                 <span data-testid="hud-cost">{t("common.cost")} <b className="font-mono font-medium text-ink">{fmtUsd(metrics.cost_usd)}</b></span>
               </div>
             )}
@@ -164,7 +187,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-ok" : "animate-pulse bg-err"}`} />
               {connected ? t("hud.live") : t("hud.reconnecting")}
             </span>
-            <AdminMenu />
+            <AccountMenu />
           </div>
         </header>
 

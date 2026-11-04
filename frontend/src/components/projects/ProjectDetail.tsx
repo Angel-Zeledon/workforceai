@@ -21,6 +21,9 @@ import { ProjectMap } from "./ProjectMap";
 import { Timeline } from "./Timeline";
 import { LightDot, STATUS_COLOR, StatusPill } from "./shared";
 import { FollowView } from "./FollowView";
+import { useViewAll } from "@/lib/viewMode";
+import { SIMPLE_PROJECT_TABS, splitTabs } from "@/lib/viewModeLogic";
+import { MoreButton } from "../nav/ViewAll";
 
 export function ProjectDetailView() {
   const { t } = useT();
@@ -36,6 +39,10 @@ export function ProjectDetailView() {
   const light = useProjects((s) => s.health?.light);
   const pendingChanges = useProjects((s) => s.changes.filter((c) => c.status === "pending").length);
   const pendingApprovals = useProjects((s) => s.detail?.approvals.filter((a) => a.status === "pending").length ?? 0);
+  const viewAll = useViewAll();
+  const [more, setMore] = useState(false); // "Más vistas": opens the folded tabs here only
+  // simple mode: Seguimiento and Aprobaciones open; Cambios de plan when one waits; the open tab never disappears
+  const tabs = splitTabs(PROJECT_TABS, SIMPLE_PROJECT_TABS, viewAll || more, [tab, pendingChanges > 0 ? "changes" : null]);
 
   if (!detail) return <div className="p-6 text-sm text-mute">…</div>;
   const p = detail.project;
@@ -79,7 +86,7 @@ export function ProjectDetailView() {
         {isDraft ? <DraftEditor /> : (
           <>
             <div data-tour="projects.tabs" className="flex flex-wrap items-center gap-1.5" role="tablist">
-              {PROJECT_TABS.map((k: ProjectTab) => (
+              {tabs.shown.map((k: ProjectTab) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`pv-tab-${k}`} onClick={() => setTab(k)}
                   className={`rounded-md border px-3.5 py-2.5 text-xs font-semibold transition md:py-1.5 ${tab === k ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel text-mute hover:text-ink"}`}>
                   {t(`pv.tab.${k}`)}
@@ -87,8 +94,9 @@ export function ProjectDetailView() {
                   {k === "approvals" && pendingApprovals > 0 && <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-black">{pendingApprovals}</span>}
                 </button>
               ))}
+              {!viewAll && <MoreButton testid="pv-more" count={more ? 1 : tabs.folded.length} open={more} onToggle={() => setMore((m) => !m)} />}
             </div>
-            <div data-testid="pv-hint" className="text-[11px] text-mute">{t("pv.hint")}</div>
+            {viewAll && <div data-testid="pv-hint" className="text-[11px] text-mute">{t("pv.hint")}</div>}
             {tab === "follow" && <FollowView />}
             {tab === "health" && <HealthView />}
             {tab === "map" && <ProjectMap />}

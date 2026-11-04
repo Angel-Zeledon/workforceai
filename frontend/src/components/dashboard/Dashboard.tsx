@@ -1,5 +1,6 @@
 "use client";
 import { Fragment, useMemo, useState } from "react";
+import { usePendingCount } from "@/lib/pending";
 import { useStore } from "@/lib/store";
 import { trOr, useT } from "@/lib/i18n";
 import { fmtTime, fmtUsd, roleMeta, taskStatusLabel, TASK_STATUS_COLOR } from "@/lib/meta";
@@ -20,6 +21,9 @@ import { AuditDetail } from "../quality/AuditStamp";
 import { taskAuditOf } from "@/lib/auditLogic";
 import { CustomerDistrict } from "../customers/CustomerDistrict";
 import { Card, Dot, Empty, Progress, ReasonChip, StateBadge, TaskBadge, readable, timeAgo, useAgentColor, useAgentName } from "../ui";
+import { useViewAll } from "@/lib/viewMode";
+import { SIMPLE_DASHBOARD, splitTabs } from "@/lib/viewModeLogic";
+import { MoreButton } from "../nav/ViewAll";
 
 const SECTIONS = ["overview", "customers", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "quality", "costs"] as const;
 type Section = (typeof SECTIONS)[number];
@@ -37,19 +41,22 @@ function Kpi({ label, value, sub, color = "#151b26" }: { label: string; value: s
 export function Dashboard() {
   const { t } = useT();
   const [section, setSection] = useState<Section>("overview");
-  const approvalsMap = useStore((s) => s.approvals);
-  const tasksMap = useStore((s) => s.tasks);
-  const pending = Object.values(approvalsMap).filter((a) => a.status === "pending").length;
+  const pending = usePendingCount(); // the one Pendientes number
+  const viewAll = useViewAll();
+  const [more, setMore] = useState(false);
+  // simple mode: Resumen, Tareas and Agentes; the rest (Clientes, Pendientes, Archivos… have their own screens) behind "Más"
+  const shown = splitTabs(SECTIONS, SIMPLE_DASHBOARD, viewAll || more, [section]);
   return (
     <div className="flex h-full min-h-0 flex-col md:flex-row">
       <nav data-tour="dashboard.nav" className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-line bg-panel p-2 md:block md:w-[210px] md:space-y-0.5 md:overflow-visible md:border-b-0 md:border-r md:p-3">
-        {SECTIONS.map((k) => (
+        {shown.shown.map((k) => (
           <button key={k} data-testid={`dash-nav-${k}`} onClick={() => setSection(k)}
             className={`flex shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-[13px] transition md:w-full ${section === k ? "bg-accent-soft font-medium text-accent" : "text-ink2 hover:bg-mute/[0.08] hover:text-ink"}`}>
             {t(`dash.section.${k}`)}
             {k === "approvals" && pending > 0 && <span className="rounded-full bg-warn px-1.5 text-[10px] font-semibold text-white">{pending}</span>}
           </button>
         ))}
+        {!viewAll && <div className="shrink-0 px-1 pt-1 md:px-0"><MoreButton testid="dash-more" count={more ? 1 : shown.folded.length} open={more} onToggle={() => setMore((m) => !m)} /></div>}
       </nav>
       <div className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">
         {section === "overview" && <Overview go={setSection} />}
@@ -77,6 +84,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
   const approvalsMap = useStore((s) => s.approvals);
   const tasksMap = useStore((s) => s.tasks);
   const approvals = Object.values(approvalsMap).filter((a) => a.status === "pending");
+  const pendingCount = usePendingCount();
   const select = useStore((s) => s.select);
   const active = Object.values(agents).filter((a) => !["idle", "completed"].includes(a.state)).length;
   const budgetPct = m ? Math.min(100, (m.cost_usd / Math.max(0.01, m.budget_usd)) * 100) : 0;
@@ -86,7 +94,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
         <Kpi label={t("dash.kpi.requests")} value={m?.requests_total ?? 0} />
         <Kpi label={t("dash.kpi.tasksActive")} value={m?.tasks_active ?? 0} color="#2b6cb0" />
         <Kpi label={t("dash.kpi.tasksDone")} value={m?.tasks_done ?? 0} color="#2f7d55" />
-        <Kpi label={t("dash.kpi.approvals")} value={m?.approvals_pending ?? 0} color={(m?.approvals_pending ?? 0) > 0 ? "#a86208" : undefined} sub={t("dash.kpi.pending")} />
+        <Kpi label={t("dash.kpi.approvals")} value={pendingCount} color={pendingCount > 0 ? "#a86208" : undefined} sub={t("dash.kpi.pending")} />
         <Kpi label={t("common.cost")} value={fmtUsd(m?.cost_usd)} sub={t("dash.kpi.ofBudget", { budget: fmtUsd(m?.budget_usd), pct: budgetPct.toFixed(1) })} />
         <Kpi label={t("dash.kpi.errors")} value={m?.errors ?? 0} color={(m?.errors ?? 0) > 0 ? "#b4443c" : undefined} />
         <Kpi label={t("dash.kpi.activeAgents")} value={`${active}/${order.length}`} />

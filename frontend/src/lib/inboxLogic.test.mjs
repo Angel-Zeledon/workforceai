@@ -41,3 +41,12 @@ test("deck and index", () => {
   assert.equal(clampIndex(-1, 2), 0);
   assert.equal(clampIndex(3, 0), 0);
 });
+
+import { pendingTotal } from "./inboxLogic.ts";
+test("one pending number: pending approvals plus open questions, decided ones never count", () => {
+  const approvals = { a: { status: "pending" }, b: { status: "approved" }, c: { status: "pending" } };
+  const questions = { q1: { status: "open" }, q2: { status: "answered" } };
+  assert.equal(pendingTotal(approvals, questions), 3);
+  assert.equal(pendingTotal([], []), 0);
+  assert.equal(pendingTotal([{ status: "rejected" }], [{ status: "open" }]), 1);
+});

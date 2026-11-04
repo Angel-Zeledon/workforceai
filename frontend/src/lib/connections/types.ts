@@ -105,6 +105,37 @@ export interface Connection {
   pending_provider_revocation?: boolean;
   /** custom_api only: the read-only HTTP source (base URL, how the key is sent, endpoints). */
   source?: ApiSource;
+  /** database only: where the read-only database is and as whom we log in. Never the password. */
+  database?: DatabaseConfig;
+}
+
+/** "database" provider: a read-only database source. The password is write-only and never comes back. */
+export type DbEngine = "postgres" | "mysql";
+export type DbSslMode = "disable" | "require" | "verify-ca" | "verify-full";
+export interface DatabaseConfig {
+  engine: DbEngine;
+  host: string;
+  port: number;
+  database: string;
+  user: string;
+  sslmode: DbSslMode;
+  /** <= 500 chars: what lives there (shown to agents). */
+  description?: string;
+  /** schemas the agents may see; empty = every schema the database user may read. */
+  schemas?: string[];
+}
+export interface DbColumn { name: string; type: string; not_null: boolean; comment?: string }
+export interface DbTable { schema: string; name: string; kind: string; comment?: string; rows_estimate: number; columns: DbColumn[] }
+export interface DbSchema { tables: DbTable[]; truncated: boolean }
+export interface DbResult {
+  columns: { name: string; type: string }[];
+  /** server text form of each value; null is SQL NULL. */
+  rows: (string | null)[][];
+  row_count: number;
+  truncated: boolean;
+  truncated_by?: "rows" | "bytes";
+  elapsed_ms: number;
+  error?: { sqlstate: string; message: string };
 }
 
 export type GrantStatus = "active" | "pending_second_approval" | "revoked";

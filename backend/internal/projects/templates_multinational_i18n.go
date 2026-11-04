@@ -11,7 +11,7 @@ var multinationalI18n = map[string]map[string]string{
 		"proj.gc.o2":                     "Consolidación del grupo",
 		"proj.gc.w_sub":                  "{country}",
 		"proj.gc.w_group":                "Grupo",
-		"proj.gc.w_report":               "Reporte y aprobación",
+		"proj.gc.w_report":               "Informe y aprobación",
 		"proj.gc.close":                  "Cerrar la contabilidad local de {country}",
 		"proj.gc.ic":                     "Conciliar intercompañías de {country}",
 		"proj.gc.fx":                     "Convertir los estados de {country} a moneda del grupo",

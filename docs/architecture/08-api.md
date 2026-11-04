@@ -373,9 +373,9 @@ Aditivo y retrocompatible: sin `Deps.Conns/Controls/Gateway` (o sin conexiones) 
 |---|---|---|
 | `GET /connection-providers` | `[{id, label_key, phase, available, auth:["oauth2_byo_app" o "api_key"], capabilities:[{id, profile:"read" o "write", risk, side_effects, reversibility?, default, always_approval, hold_seconds_default?, label_key, tools[]}], resource_filters:[{key,type}], never_offered[], default_limits, live_available, split_read_write}]`. `live_available=false` si falta `CONNECTIONS_KEK`: la UI ofrece solo simulado | `connections:read` |
 | `GET /connections?provider=&status=` | Lista (metadatos) | `connections:read` |
-| `POST /connections` `{provider, kind:"oauth2" o "api_key", label, capabilities[], resource_scope?, mode?:"live" o "simulated", expires_at?, secret? (api_key, solo escritura), oauth_client_id?, oauth_client_secret? (trae tu app, solo escritura; ambos o ninguno)}` | `201` + conexión. Gmail: **lectura y escritura en conexiones distintas** (`mail.read` solo; `mail.draft` y `mail.send` juntas); mezclar da `400 read_write_must_be_separate`. `simulated` no guarda secretos y queda `active`. `live` sin KEK da `503 kek_missing`. `custom_api` acepta `source: {base_url, auth:{style: bearer\|header\|query, name?}, description?, endpoints?:[{name, path, description?, params?}]}`: una fuente de solo lectura que los agentes consultan con `api.get` (`integrations-credentials.md` 18.8) | `connections:manage` |
+| `POST /connections` `{provider, kind:"oauth2" o "api_key", label, capabilities[], resource_scope?, mode?:"live" o "simulated", expires_at?, secret? (api_key, solo escritura), oauth_client_id?, oauth_client_secret? (trae tu app, solo escritura; ambos o ninguno)}` | `201` + conexión. Gmail: **lectura y escritura en conexiones distintas** (`mail.read` solo; `mail.draft` y `mail.send` juntas); mezclar da `400 read_write_must_be_separate`. `simulated` no guarda secretos y queda `active`. `live` sin KEK da `503 kek_missing`. `custom_api` acepta `source: {base_url, auth:{style: bearer\|header\|query, name?}, description?, endpoints?:[{name, path, description?, params?}]}`: una fuente de solo lectura que los agentes consultan con `api.get` (`integrations-credentials.md` 18.8). `database` acepta `database: {engine:"postgres", host, port?:5432, database?:"postgres", user, sslmode?:"require" o "disable" o "verify-ca" o "verify-full", description?, schemas?[]}` y la contraseña en `secret`, **o** `connection_string` (`postgresql://…`, solo escritura: el servidor la separa, guarda la contraseña en el vault y descarta la cadena; `database` añade `description` y `schemas`); `engine:"mysql"` da `400 engine_not_supported` (sección 44) | `connections:manage` |
 | `GET /connections/{id}` | Detalle + `credential` + `grants_count` | `connections:read` |
-| `PATCH /connections/{id}` `{label?, limits?, resource_scope?, read_only?, source?}` | `If-Match` opcional. `source` reemplaza la configuración entera de una fuente `custom_api` | `connections:manage` |
+| `PATCH /connections/{id}` `{label?, limits?, resource_scope?, read_only?, source?, database?}` | `If-Match` opcional. `source` reemplaza la configuración entera de una fuente `custom_api`; `database` la de una base (la contraseña se rota con `PUT .../credential`) | `connections:manage` |
 | `POST /connections/{id}/oauth/start` | `{auth_url, expires_at}` | `connections:manage` |
 | `GET /connections/oauth/callback?code&state` | Público; `302` a la UI | verificado por `state` |
 | `POST /connections/{id}/scopes` `{add:[cap]}` | Consentimiento incremental (devuelve `auth_url` si es live). Añadir capacidades de escritura exige `connections:grant:write`; una conexión de lectura no puede ganar escritura | `connections:manage` |
@@ -1281,3 +1281,24 @@ Cada aprobación ya devolvía `policy_rule` (la regla que la pidió); las reglas
 `limit:perm.per_day:<cat>`. Auditoría: `permissions.level_changed`, `permissions.exception_set`,
 `permissions.exception_removed`, `permissions.floor_lifted`, `permissions.floor_restored`, `permissions.default_changed`,
 `permissions.adopted`, `permissions.scope_granted`, `permissions.scope_revoked`, `permissions.refused`.
+
+## 44. Bases de datos de solo lectura (`database`)
+
+Conexión genérica (no se apaga con `VENDOR_INTEGRATIONS`) para que los agentes concedidos consulten una base
+PostgreSQL: `db.schema` y `db.query`, una sola sentencia `SELECT`/`WITH`/`EXPLAIN`/`VALUES`/`TABLE` en una transacción
+`READ ONLY` que siempre se deshace, `statement_timeout` 15 s, 500 filas, 1 MiB. Diseño y pruebas:
+`docs/architecture/database-sources.md`. Migración `816_connection_database` (columna `connections.database`, sin
+secretos; bajada en `backend/migrations/down/`).
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| POST | `/connections` `{provider:"database", kind:"api_key", label, database, secret}` o `{…, connection_string}` | `connections:manage` | Ver 13.2. `account_label` = `usuario@host:puerto/base`; `credential.hint` siempre vacío. `mode:"simulated"` responde tablas y filas de ejemplo sin contraseña |
+| PATCH | `/connections/{id}` `{database}` | `connections:manage` | Reemplaza la configuración (no la contraseña) |
+| POST | `/connections/{id}/test` | `connections:manage` | Conecta, abre la transacción de solo lectura (verifica `transaction_read_only = on`) y la deshace. Falla con `code` estable: `db_unreachable`, `db_host_not_found`, `db_tls_failed`, `db_not_found`, `db_address_not_allowed`, `db_read_only_not_enforced`, `reauth_required`, `rate_limit` |
+| GET | `/connections/{id}/database/schema?schema=&table=` | `connections:manage` | `{tables:[{schema, name, kind: table\|view\|materialized_view\|foreign_table, comment?, rows_estimate, columns:[{name, type, not_null, comment?}]}], truncated}`: lo que el usuario de la base puede leer, dentro de los esquemas permitidos (máx. 300). Auditado (`connection.db_schema_viewed`) |
+| POST | `/connections/{id}/database/query` `{sql}` | `connections:manage` | Consulta de prueba con las mismas reglas que los agentes. `200 {columns:[{name, type}], rows:[[texto o null]], row_count, truncated, truncated_by?: rows\|bytes, elapsed_ms, error?:{sqlstate, message}}` (`error` = sentencia corregible: sintaxis, tabla inexistente…). `422 {code}` si se rechaza: `sql_empty`, `sql_too_long`, `sql_invalid`, `sql_multiple_statements`, `sql_not_read_only`, `sql_forbidden_function`, `sql_schema_not_allowed`, `sql_timeout` o un código de conexión. `409` si la conexión no está activa. Auditado (`connection.db_test_query`, con hash y largo del SQL, nunca el texto) |
+
+Herramientas del agente (Tool Gateway, capacidad `db.read`): `{"tool":"db","action":"schema","args":{"connection_alias","schema?","table?"}}`
+y `{"tool":"db","action":"query","args":{"connection_alias","sql"}}`. El resultado vuelve como `<untrusted_data>`; los
+rechazos usan los mismos códigos (`deny_reason`). `SourceRef` (Go -> runtime) suma `engine` y `schemas`. Variable:
+`DATABASE_ALLOW_PRIVATE` (self-hosted: permite hosts en redes privadas).

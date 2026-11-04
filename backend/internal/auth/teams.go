@@ -199,12 +199,12 @@ func (s *Service) validateInviteTeam(ctx context.Context, org string, in *Invite
 	switch {
 	case in.DepartmentID == "":
 		if in.Lead {
-			ve.add("lead", "a responsible needs a team")
+			ve.add("lead", "a responsible needs an office")
 		}
 	case s.cfg.DepartmentExists == nil:
-		ve.add("department_id", "teams are not available")
+		ve.add("department_id", "offices are not available")
 	case len(in.DepartmentID) > 80 || !s.cfg.DepartmentExists(ctx, org, in.DepartmentID):
-		ve.add("department_id", "unknown team")
+		ve.add("department_id", "unknown office")
 	}
 }
 

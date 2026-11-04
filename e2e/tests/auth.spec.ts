@@ -34,10 +34,12 @@ test("register, invite a member, accept the invitation and sign in again", async
   await page.getByTestId("auth-submit").click();
   await expect(page).toHaveURL(/\/$/);
 
-  // Invite from the admin menu and read the one-time link.
+  // The avatar says who is signed in; invite from Ajustes → Miembros and read the one-time link.
   await openAdmin(page);
   await expect(page.getByTestId("account-who")).toContainText(owner);
-  await page.getByTestId("members-open").click();
+  await page.keyboard.press("Escape");
+  await page.goto("/settings");
+  await page.getByTestId("settings-members").click();
   await page.getByTestId("invite-email").fill(invitee);
   await page.getByTestId("invite-role").selectOption("member");
   await page.getByTestId("invite-send").click();

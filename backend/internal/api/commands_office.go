@@ -90,8 +90,8 @@ func cmdMeeting(c *cmdCall) (*cmdResult, *cmdFail) {
 	topic := c.str("topic")
 	if len(ids) == 0 {
 		// Nobody named: the team meets and the planner calls in the areas the topic needs.
-		return c.submit(fmt.Sprintf(c.t("Reunión del equipo sobre: %s. Convoca a las áreas que el tema necesita; cada una da su postura con riesgos y propuestas, y la asistente redacta la conclusión (acuerdos, desacuerdos y próximos pasos).",
-			"Team meeting about: %s. Call in the areas the topic needs; each gives its position with risks and proposals, and the assistant writes the conclusion (agreements, disagreements and next steps)."), topic))
+		return c.submit(fmt.Sprintf(c.t("Reunión de agentes sobre: %s. Convoca a las áreas que el tema necesita; cada una da su postura con riesgos y propuestas, y la asistente redacta la conclusión (acuerdos, desacuerdos y próximos pasos).",
+			"Agents meeting about: %s. Call in the areas the topic needs; each gives its position with risks and proposals, and the assistant writes the conclusion (agreements, disagreements and next steps)."), topic))
 	}
 	body := fmt.Sprintf(c.t("Reunión entre %s sobre: %s. Cada uno da la postura de su área con riesgos y propuestas; la asistente redacta la conclusión (acuerdos, desacuerdos y próximos pasos).",
 		"Meeting between %s about: %s. Each one gives their area's position with risks and proposals; the assistant writes the conclusion (agreements, disagreements and next steps)."),
@@ -136,15 +136,15 @@ func cmdAssign(c *cmdCall) (*cmdResult, *cmdFail) {
 	desc := task + "\n\n" + c.t("Responde en español.", "Answer in English.")
 	plan := application.PlanResponse{
 		Objectives: []string{title},
-		Tasks:      []application.PlannedTask{{Key: "t1", Title: title, Description: desc, AgentID: a.ID, Reason: c.t("Encargo directo de una persona", "Direct assignment from a person")}},
+		Tasks:      []application.PlannedTask{{Key: "t1", Title: title, Description: desc, AgentID: a.ID, Reason: c.t("Pedido directo de una persona", "Direct assignment from a person")}},
 	}
-	text := fmt.Sprintf(c.t("Encargo para %s: %s", "Assignment for %s: %s"), a.Name, task)
+	text := fmt.Sprintf(c.t("Pedido para %s: %s", "Assignment for %s: %s"), a.Name, task)
 	id, err := c.s.Orch.SubmitPlan(c.ctx, text, plan)
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
 	return &cmdResult{Kind: "request", RequestID: id, Title: c.t("Tarea encargada", "Task assigned"),
-		Text: fmt.Sprintf(c.t("%s ya tiene el encargo.", "%s has the assignment."), a.Name), Data: map[string]any{"agent_id": a.ID}}, nil
+		Text: fmt.Sprintf(c.t("%s ya tiene el pedido.", "%s has the assignment."), a.Name), Data: map[string]any{"agent_id": a.ID}}, nil
 }
 
 // ---- project ----
@@ -481,11 +481,11 @@ func cmdSkill(c *cmdCall) (*cmdResult, *cmdFail) {
 			if err := c.s.Skills.Assign(c.ctx, c.s.skillActorOf(c), a.ID, sk.ID); err != nil {
 				return nil, c.skillErr(err)
 			}
-			return msgResult(c.t("Skill asignada", "Skill assigned"),
-				fmt.Sprintf(c.t("%s ya tiene la skill «%s» para sus próximas tareas.", "%s now has the skill “%s” for its next tasks."), a.Name, sk.Name), map[string]any{"skill_id": sk.ID, "agent_id": a.ID}), nil
+			return msgResult(c.t("Habilidad asignada", "Skill assigned"),
+				fmt.Sprintf(c.t("%s ya tiene la habilidad «%s» para sus próximas tareas.", "%s now has the skill “%s” for its next tasks."), a.Name, sk.Name), map[string]any{"skill_id": sk.ID, "agent_id": a.ID}), nil
 		}
 	}
-	return nil, fail(http.StatusNotFound, "not_found", fmt.Sprintf("No encuentro la skill «%s».", ref), fmt.Sprintf("I cannot find the skill “%s”.", ref))
+	return nil, fail(http.StatusNotFound, "not_found", fmt.Sprintf("No encuentro la habilidad «%s».", ref), fmt.Sprintf("I cannot find the skill “%s”.", ref))
 }
 
 func (s *server) skillActorOf(c *cmdCall) skills.Actor { return s.skillActor(c.r) }
@@ -561,7 +561,7 @@ func cmdLearn(c *cmdCall) (*cmdResult, *cmdFail) {
 	if err != nil {
 		return nil, c.skillErr(err)
 	}
-	return msgResult(c.t("Skill guardada como borrador", "Skill saved as a draft"),
+	return msgResult(c.t("Habilidad guardada como borrador", "Skill saved as a draft"),
 		fmt.Sprintf(c.t("«%s» quedó como borrador; un administrador debe revisarla antes de que los agentes la usen.", "“%s” is a draft; an administrator must review it before agents use it."), d.Name),
 		map[string]any{"skill_id": d.ID, "task_id": last.ID}), nil
 }

@@ -310,6 +310,10 @@ type SourceRef struct {
 	Endpoints   []SourceEndpoint `json:"endpoints,omitempty"`
 	// Simulated: the connection answers with sample data, not the real platform.
 	Simulated bool `json:"simulated,omitempty"`
+	// Engine and Schemas describe a read-only database source (provider database): the SQL dialect and the
+	// schemas the admin allowed (empty = every schema the database user may read).
+	Engine  string   `json:"engine,omitempty"`
+	Schemas []string `json:"schemas,omitempty"`
 }
 
 // SourceEndpoint is a named query of a generic source.

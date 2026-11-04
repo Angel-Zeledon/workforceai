@@ -11,8 +11,8 @@ import { toast } from "@/lib/toast";
 import { Icon, type IconName } from "../icons";
 
 /**
- * "Primeros pasos": three real steps that take an account from empty to working: (1) tell the office about the business,
- * (2) choose how much freedom the team has, (3) ask the first task. Connecting a tool is not a step: the office works
+ * "Primeros pasos": three real steps that take an account from empty to working: (1) tell us about the business,
+ * (2) choose what each agent can do without asking (the three levels of Ajustes → Aprobaciones), (3) make the first request. Connecting a tool is not a step: the office works
  * without one. Progress comes from what the account really has (the organization settings, an agent above "suggest",
  * a request), not from
  * clicking a box. Each step, once done, stays done (remembered per account), and the pill disappears when all are done.
@@ -83,6 +83,8 @@ function ActivationPill() {
   const run = (id: StepId) => {
     setOpen(false);
     if (id === "context") { go("/settings"); return; }
+    // the three levels (Me pregunta todo / Solo lo importante / Trabaja solo) are chosen in Ajustes → Aprobaciones
+    if (id === "autonomy") { go("/settings?s=approvals"); return; }
     go("/");
     if (id === "task") setTimeout(() => document.querySelector<HTMLInputElement>('[data-testid="command-input"]')?.focus(), 450);
   };

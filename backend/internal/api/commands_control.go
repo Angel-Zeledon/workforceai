@@ -604,7 +604,7 @@ func cmdStatus(c *cmdCall) (*cmdResult, *cmdFail) {
 		rows = append(rows, []string{a.Name, string(a.State), trunc(a.Activity, 80), fmt.Sprint(running[a.ID])})
 	}
 	text := fmt.Sprintf(c.t("%d tareas en curso, %d aprobaciones pendientes.", "%d tasks running, %d approvals pending."), nRun, len(appr))
-	return tableResult(c.t("Estado del equipo", "Team status"), []string{c.t("Agente", "Agent"), c.t("Estado", "State"), c.t("Haciendo", "Doing"), c.t("Tareas", "Tasks")}, rows, text,
+	return tableResult(c.t("Estado de los agentes", "Agent status"), []string{c.t("Agente", "Agent"), c.t("Estado", "State"), c.t("Haciendo", "Doing"), c.t("Tareas", "Tasks")}, rows, text,
 		map[string]any{"running_tasks": nRun, "pending_approvals": len(appr), "tasks_awaiting_approval": waiting}), nil
 }
 

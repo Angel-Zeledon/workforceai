@@ -36,7 +36,7 @@ var professions = []Profession{
 	{Key: "operations", Roles: []string{"operations", "project_manager"}, teams: map[string]string{"es": "Operaciones", "en": "Operations", "pt": "Operações"}},
 	{Key: "hr", Roles: []string{"hr"}, teams: map[string]string{"es": "Recursos Humanos", "en": "People", "pt": "Recursos Humanos"}},
 	{Key: "direction", Roles: []string{"analyst", "project_manager"}, teams: map[string]string{"es": "Dirección", "en": "Management", "pt": "Direção"}},
-	{Key: ProfessionOther, Roles: nil, teams: map[string]string{"es": "Equipo", "en": "Team", "pt": "Equipe"}},
+	{Key: ProfessionOther, Roles: nil, teams: map[string]string{"es": "General", "en": "General", "pt": "Geral"}},
 }
 
 // Professions returns the catalog in the order the forms show it.

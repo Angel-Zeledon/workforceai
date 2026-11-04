@@ -724,15 +724,15 @@ func (s *Service) ProposeReplan(ctx context.Context, id, nodeID string) (PlanCha
 		}
 	}
 	if def.ID == "" || def.isGroup() || def.Superseded != "" {
-		return PlanChange{}, fmt.Errorf("%w: node %s", domain.ErrNotFound, nodeID)
+		return PlanChange{}, fmt.Errorf("%w: task %s", domain.ErrNotFound, nodeID)
 	}
 	if states[nodeID] != StateFailed {
-		return PlanChange{}, fmt.Errorf("%w: only a failed node can be replanned (it is %s)", domain.ErrConflict, states[nodeID])
+		return PlanChange{}, fmt.Errorf("%w: only a failed task can be replanned (it is %s)", domain.ErrConflict, states[nodeID])
 	}
 	if list, err := s.cfg.Changes.ListChanges(ctx, rec.OrgID, id); err == nil {
 		for _, c := range list {
 			if c.open() && c.Source == SourceReplan && c.SourceNodeID == nodeID {
-				return c, fmt.Errorf("%w: a replan of this node is already waiting for a decision", domain.ErrConflict)
+				return c, fmt.Errorf("%w: a replan of this task is already waiting for a decision", domain.ErrConflict)
 			}
 		}
 	}

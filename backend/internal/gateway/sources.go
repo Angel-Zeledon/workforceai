@@ -33,7 +33,7 @@ func (g *Gateway) SourcesFor(ctx context.Context, org, agentID string) []applica
 			continue
 		}
 		m, ok := g.Conns.Manifest(cn.Provider)
-		if !ok || (cn.Provider == connections.SourceProvider && cn.Source == nil) {
+		if !ok || (cn.Provider == connections.SourceProvider && cn.Source == nil) || (cn.Provider == connections.DatabaseProvider && cn.Database == nil) {
 			continue // a generic source without its configuration has nothing to query yet
 		}
 		var tools []string
@@ -55,6 +55,9 @@ func (g *Gateway) SourcesFor(ctx context.Context, org, agentID string) []applica
 			for _, e := range src.Endpoints {
 				ref.Endpoints = append(ref.Endpoints, application.SourceEndpoint{Name: e.Name, Description: e.Description, Params: e.Params})
 			}
+		}
+		if d := cn.Database; d != nil {
+			ref.Description, ref.Engine, ref.Schemas = d.Description, d.Engine, d.Schemas
 		}
 		out = append(out, ref)
 	}

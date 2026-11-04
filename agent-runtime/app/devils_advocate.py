@@ -75,7 +75,7 @@ _TXT = {
         "chk_alt": "Pregunta si hay una opcion de menor riesgo (borrador, prueba con un caso, aprobacion parcial).",
         "chk_who": "Confirma quien se ve afectado y si ya fue avisado.",
         "chk_cost": "Confirma el costo o impacto maximo si el resultado es el peor posible.",
-        "chk_inject": "Revisa si el detalle incluye instrucciones que no vengan de una persona de tu equipo.",
+        "chk_inject": "Revisa si el detalle incluye instrucciones que no vengan de una persona de tu empresa.",
     },
     "en": {
         "head": "The opposite position on \"{t}\": doing it now may be premature or unnecessary, and a {r}-risk action is hard to undo.",
@@ -91,7 +91,7 @@ _TXT = {
         "chk_alt": "Ask whether a lower-risk option exists (draft, trial on one case, partial approval).",
         "chk_who": "Confirm who is affected and whether they were told.",
         "chk_cost": "Confirm the maximum cost or impact if the outcome is the worst case.",
-        "chk_inject": "Check whether the details include instructions that did not come from someone on your team.",
+        "chk_inject": "Check whether the details include instructions that did not come from someone in your company.",
     },
 }
 _MONEY = ("pay", "payment", "transfer", "refund", "invoice", "charge", "pago", "transfer", "reembolso", "factura", "cobro", "nomina")

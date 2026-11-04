@@ -1,6 +1,6 @@
-import { ApprovalsInbox } from "@/components/approvals/ApprovalsInbox";
-import { AuthGate } from "@/components/auth/AuthScreen";
+import { PendingPage } from "@/components/nav/RoutedPages";
 
+/** Pendientes, one card at a time (the menu's "Pendientes"). Inside the app frame, with the menu and Back. */
 export default function Page() {
-  return <AuthGate><ApprovalsInbox /></AuthGate>;
+  return <PendingPage view="inbox" />;
 }

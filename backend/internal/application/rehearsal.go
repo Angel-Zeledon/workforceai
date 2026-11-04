@@ -543,7 +543,7 @@ func (o *Orchestrator) recordRehearsal(ctx context.Context, t *domain.Task, agen
 				"action": a.Action, "would_decision": a.WouldDecision, "scope": a.Scope}})
 	}
 	o.traceEvent(ctx, t.ID, "tool_decision", map[string]any{"tool": a.Tool, "action": a.Action, "effect": "rehearsed", "rule_id": a.WouldDecision})
-	noteTask(t, "Ensayo: %s.%s no se ejecutó (en real: %s)", a.Tool, a.Action, a.WouldDecision)
+	noteTask(t, "Probar sin enviar: %s.%s no se ejecutó (en real: %s)", a.Tool, a.Action, a.WouldDecision)
 }
 
 func previewKeys(p map[string]string) []string {

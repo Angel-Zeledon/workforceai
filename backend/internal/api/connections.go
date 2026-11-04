@@ -101,6 +101,9 @@ func (s *server) mountConnections(r chi.Router) {
 	r.With(manage).Post("/connections/{id}/scopes", s.addScopes)
 	r.With(manage).Put("/connections/{id}/credential", s.putCredential)
 	r.With(manage).Post("/connections/{id}/test", s.testConnection)
+	// read-only database sources: what the user may read, and one test query by hand (same rules as the agents)
+	r.With(manage).Get("/connections/{id}/database/schema", s.databaseSchema)
+	r.With(manage).Post("/connections/{id}/database/query", s.databaseQuery)
 	r.With(s.can(auth.PermConnectionsRevoke)).Post("/connections/{id}/suspend", s.suspendConnection)
 	r.With(s.can(auth.PermConnectionsRevoke)).Post("/connections/{id}/resume", s.resumeConnection)
 	r.With(s.can(auth.PermConnectionsRevoke)).Post("/connections/{id}/revoke", s.revokeConnection)
@@ -168,13 +171,36 @@ func (s *server) createConnection(w http.ResponseWriter, r *http.Request) {
 		OAuthClientSecret string `json:"oauth_client_secret"`
 		// Source: the generic HTTP source of a custom_api connection.
 		Source *connections.Source `json:"source"`
+		// Database: the read-only database source (provider database). The password travels in secret, or inside
+		// connection_string (write-only: split here, the password goes to the vault and the string is dropped).
+		Database         *connections.Database `json:"database"`
+		ConnectionString string                `json:"connection_string"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.connErr(w, err)
 		return
 	}
+	if body.ConnectionString != "" {
+		if body.Provider != connections.DatabaseProvider {
+			codeErr(w, http.StatusBadRequest, "invalid", "connection_string is only for database connections")
+			return
+		}
+		d, pass, err := connections.ParseConnString(body.ConnectionString)
+		body.ConnectionString = ""
+		if err != nil {
+			s.connErr(w, err)
+			return
+		}
+		if body.Database != nil { // what a connection string cannot say: description and allowed schemas
+			d.Description, d.Schemas = body.Database.Description, body.Database.Schemas
+		}
+		body.Database = &d
+		if body.Secret == "" {
+			body.Secret = pass
+		}
+	}
 	in := connections.CreateInput{Provider: body.Provider, Kind: body.Kind, Label: body.Label, Capabilities: body.Capabilities,
-		ResourceScope: body.ResourceScope, Mode: body.Mode, ExpiresAt: body.ExpiresAt, Source: body.Source, Actor: s.actor(r)}
+		ResourceScope: body.ResourceScope, Mode: body.Mode, ExpiresAt: body.ExpiresAt, Source: body.Source, Database: body.Database, Actor: s.actor(r)}
 	if body.Secret != "" {
 		sec := vault.SecretFromString(body.Secret)
 		defer sec.Zero()
@@ -224,13 +250,14 @@ func (s *server) patchConnection(w http.ResponseWriter, r *http.Request) {
 		ResourceScope *connections.ResourceScope `json:"resource_scope"`
 		ReadOnly      *bool                      `json:"read_only"`
 		Source        *connections.Source        `json:"source"`
+		Database      *connections.Database      `json:"database"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.connErr(w, err)
 		return
 	}
 	c, err := s.Conns.Patch(r.Context(), s.org(r), id, connections.PatchInput{Label: body.Label, Limits: body.Limits,
-		ResourceScope: body.ResourceScope, ReadOnly: body.ReadOnly, Source: body.Source, Actor: s.actor(r)})
+		ResourceScope: body.ResourceScope, ReadOnly: body.ReadOnly, Source: body.Source, Database: body.Database, Actor: s.actor(r)})
 	if err != nil {
 		s.connErr(w, err)
 		return
@@ -612,4 +639,41 @@ func (s *server) decidePlan(w http.ResponseWriter, r *http.Request, approve bool
 		return
 	}
 	writeJSON(w, 200, s.planShape(r, v))
+}
+
+// dbErr answers a failed database call with its stable code (never driver text).
+func (s *server) dbErr(w http.ResponseWriter, err error) {
+	var pe *connections.ProviderError
+	if errors.As(err, &pe) {
+		codeErr(w, http.StatusUnprocessableEntity, pe.Code, pe.Code)
+		return
+	}
+	s.connErr(w, err)
+}
+
+func (s *server) databaseSchema(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	sc, err := s.Conns.DatabaseSchema(r.Context(), s.org(r), chi.URLParam(r, "id"), s.actor(r),
+		connections.SchemaFilter{Schema: q.Get("schema"), Table: q.Get("table")})
+	if err != nil {
+		s.dbErr(w, err)
+		return
+	}
+	writeJSON(w, 200, sc)
+}
+
+func (s *server) databaseQuery(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		SQL string `json:"sql"`
+	}
+	if err := s.decode(w, r, &body); err != nil {
+		s.connErr(w, err)
+		return
+	}
+	res, err := s.Conns.DatabaseQuery(r.Context(), s.org(r), chi.URLParam(r, "id"), s.actor(r), body.SQL)
+	if err != nil {
+		s.dbErr(w, err)
+		return
+	}
+	writeJSON(w, 200, res)
 }

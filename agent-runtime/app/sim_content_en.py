@@ -398,7 +398,7 @@ CHAT: dict = {
     },
     "reasons": {
         "owner": "Owns {topic}",
-        "coordinates": "Coordinates the team and handles general topics",
+        "coordinates": "Coordinates the agents and handles general topics",
         "greeting": "Answers the greeting first",
         "peer_greeting": "Says a quick hello",
         "related": "Can add something from {topic}",
@@ -410,12 +410,12 @@ CHAT: dict = {
         "sales": "clients, proposals and pipeline", "hr": "hiring and labor matters",
         "legal": "contracts and legal risks", "accounting": "margins, costs and invoicing",
         "analyst": "data, metrics and profitability", "operations": "capacity, logistics and delivery",
-        "assistant": "coordinating the team and organizing your requests",
+        "assistant": "coordinating the agents and organizing your requests",
     },
     "greet_primary": [
         "Hi! I'm {name}. How can I help you today?",
         "Hello! {name} here, ready for whatever you need. Tell me.",
-        "Hey, how's it going? Tell me what you have in mind and we'll see who on the team takes it.",
+        "Hey, how's it going? Tell me what you have in mind and we'll see which agent takes it.",
         "Hi there! Good to see you. Shall we start on something, or just saying hello?",
         "Good morning. {name} here; if you need anything, let me know and I'll coordinate it.",
     ],
@@ -442,7 +442,7 @@ CHAT: dict = {
     ],
     "howare": [
         "All good here, thanks for asking. And you, what are you up to?",
-        "Doing well, nicely busy. Do you need anything from the team?",
+        "Doing well, nicely busy. Do you need anything from the agents?",
         "Calm and on schedule. Tell me, what do you have in mind?",
     ],
     "thanks": [
@@ -461,16 +461,16 @@ CHAT: dict = {
     ],
     "help": [
         "I can help split the work: Sales, Legal, Accounting, HR, Analysis and Operations are available. Ask something from their area or give me a task and I'll coordinate it.",
-        "I'm the team's assistant. Tell me what you need and I'll say who is the right person, or coordinate it myself. For quick questions, talk to each person directly.",
+        "I'm your agents' assistant. Tell me what you need and I'll say who is the right person, or coordinate it myself. For quick questions, talk to each person directly.",
     ],
     "help_self": [
         "I take care of {area}. Ask me anything about it, or ask me to prepare something and I'll coordinate it.",
         "I can help you with {area}. What do you need?",
     ],
     "answer_general": [
-        "I'm with you. To give you something useful, tell me a bit more: is it something to look up or do you want the team to prepare it?",
-        "Got it. If you give me more context I'll tell you who on the team can help best.",
-        "Noted. Shall we talk it through here, or should I turn it into a task for the team?",
+        "I'm with you. To give you something useful, tell me a bit more: is it something to look up or do you want the agents to prepare it?",
+        "Got it. If you give me more context I'll tell you which agent can help best.",
+        "Noted. Shall we talk it through here, or should I turn it into a task for the agents?",
     ],
     "answer_agenda": [
         "For your calendar I need the day, the time and who it's with. Do you want to review what's there or should I book something new?",
@@ -549,14 +549,14 @@ CHAT: dict = {
         "default": ["If needed, I'll chip in."],
     },
     "task_ack": [
-        "Understood, let me see who on the team is the right fit and we'll set it up.",
-        "Perfect. I'll coordinate it with the team and tell you who does what and why.",
+        "Understood, let me see which agent is the right fit and we'll set it up.",
+        "Perfect. I'll coordinate it with the agents and tell you who does what and why.",
         "On it. I'll check what this needs and split the work; I'll explain in a moment.",
     ],
     "task_ack_self": [
-        "Sure, I'll take care of it. I'll set it up with the team and tell you who does what.",
+        "Sure, I'll take care of it. I'll set it up with the agents and tell you who does what.",
         "On it. I'll see what I need from the others and let you know how it looks.",
-        "Done, let me organize it with the team and I'll tell you the plan.",
+        "Done, let me organize it with the agents and I'll tell you the plan.",
     ],
     "redirect": [
         "{other} ({other_title}) handles that better. I'll ask and get back to you.",
@@ -649,7 +649,7 @@ CHAT["deflect_pair"] = {
 }
 CHAT["refuse_core"] = [
     "That work isn't mine: I'm reassigning it to {other} ({other_title}), who handles {topic_area}, and I'll tell you the plan.",
-    "Not mine: I'll hand it to {other}, who takes care of {topic_area}, and coordinate it with the team.",
+    "Not mine: I'll hand it to {other}, who takes care of {topic_area}, and coordinate it with the agents.",
     "That's {topic_area}, so it's {other}'s. I'll reassign it and explain why.",
 ]
 CHAT["limit_lead"] = {
@@ -662,7 +662,7 @@ CHAT["limit_lead"] = {
     "assistant": ["Apologies.", "Sorry about that.", "I'm sorry."],
 }
 CHAT["limit_core"] = {
-    "kill_switch": ["The team is paused by the emergency switch right now, so I can't do it.",
+    "kill_switch": ["The agents are paused by the emergency switch right now, so I can't do it.",
                     "An emergency brake is active; until it's lifted I can't work on this."],
     "paused": ["I've been paused, so I can't help with that for now.",
                "I'm paused until further notice; I can't take it on."],

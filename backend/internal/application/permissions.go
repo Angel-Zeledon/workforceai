@@ -226,7 +226,7 @@ func (s *PermissionsService) refuse(ctx context.Context, agentID, what, why stri
 
 func (s *PermissionsService) mayEdit(ctx context.Context, org, agentID, what string) error {
 	if !s.editable(ctx, org, agentID) {
-		return s.refuse(ctx, agentID, what, "only admins, the owner or the person responsible for the agent's team can change its permissions")
+		return s.refuse(ctx, agentID, what, "only admins, the owner or the person responsible for the agent's office can change its permissions")
 	}
 	return nil
 }

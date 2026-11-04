@@ -389,7 +389,7 @@ func (q qualityTally) text(locale string) (title, summary string) {
 		return "Quality review", fmt.Sprintf("Reviewed outputs: %d. Passed: %d, passed after rework: %d, still needing rework: %d, failed: %d. "+
 			"Audits: %d (inconsistencies found: %d, not verified: %d).", q.Reviews, q.Pass, q.Reworked, q.Exhausted, q.Fail, q.Audits, q.Inconsistencies, q.Unverified)
 	}
-	return "Revisión de calidad", fmt.Sprintf("Entregables revisados: %d. Aprobados: %d, aprobados tras rehacer: %d, aún por rehacer: %d, fallidos: %d. "+
+	return "Revisión de calidad", fmt.Sprintf("Resultados revisados: %d. Aprobados: %d, aprobados tras rehacer: %d, aún por rehacer: %d, fallidos: %d. "+
 		"Auditorías: %d (inconsistencias encontradas: %d, sin verificar: %d).", q.Reviews, q.Pass, q.Reworked, q.Exhausted, q.Fail, q.Audits, q.Inconsistencies, q.Unverified)
 }
 
