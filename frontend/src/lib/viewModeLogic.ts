@@ -35,6 +35,8 @@ export function splitTabs<T extends string>(all: readonly T[], simple: readonly 
 }
 
 /** What simple mode keeps open on each screen (the proposal's 5.5). */
+// Project (4 tabs, tanda 2): Seguimiento and Permisos ("approvals") open; Plan and Costos behind "Más vistas".
 export const SIMPLE_PROJECT_TABS = ["follow", "approvals"] as const;
-export const SIMPLE_AGENT_TABS = ["chat", "state", "tasks", "can", "reports"] as const;
+// Agent panel (5 tabs, tanda 2): Chat and Trabajo open; Qué puede hacer, Qué sabe and Perfil behind "Más".
+export const SIMPLE_AGENT_TABS = ["chat", "work"] as const;
 export const SIMPLE_DASHBOARD = ["overview", "tasks", "agents"] as const;

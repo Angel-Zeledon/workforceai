@@ -1,5 +1,6 @@
 "use client";
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { MOCK } from "@/lib/config";
 import { fmtDateTime, fmtUsd, useT } from "@/lib/i18n";
 import { ctlApi } from "@/lib/connections/api";
@@ -7,7 +8,6 @@ import { useConnections } from "@/lib/connections/store";
 import { useStore } from "@/lib/store";
 import { Btn, Card, Empty } from "../ui";
 import { ErrorLine, errText, inputCls, useViewer } from "../connections/shared";
-import { EmailDraftCard } from "./EmailDraftCard";
 import { PlanReviewCard } from "./PlanReviewCard";
 import { KillSwitchDialog } from "./KillSwitchDialog";
 import { OperatingHoursCard } from "./OperatingHoursCard";
@@ -20,6 +20,7 @@ import { DocSearchCard } from "./DocSearchCard";
 import { ShieldLogCard } from "./ShieldLogCard";
 import { RehearsalCenterCard } from "../rehearsal/RehearsalCenterCard";
 import { simulateInjection } from "@/lib/shield";
+import { emailDrafts, inboxHref } from "@/lib/inboxLogic";
 
 function Section({ id, title, children, right }: { id: string; title: string; children: ReactNode; right?: ReactNode }) {
   return <div data-testid={id}><Card title={title} right={right}>{children}</Card></div>;
@@ -177,8 +178,7 @@ export function SecurityCenter() {
   const agents = useStore((s) => s.agents);
   const openPlans = plans.filter((p) => p.status === "plan_ready");
   const closedPlans = plans.filter((p) => p.status !== "plan_ready").slice(0, 3);
-  const activeDrafts = drafts.filter((d) => ["draft", "pending_approval", "held", "blocked"].includes(d.status));
-  const doneDrafts = drafts.filter((d) => ["sent", "cancelled", "rejected"].includes(d.status)).slice(0, 4);
+  const waitingDrafts = emailDrafts(drafts).waiting;
 
   return (
     <div className="mx-auto h-full max-w-6xl overflow-y-auto px-4 py-3 pb-10 sm:px-5 sm:py-4">
@@ -197,12 +197,16 @@ export function SecurityCenter() {
             {closedPlans.map((p) => <PlanReviewCard key={p.id} plan={p} />)}
           </div>
         </Section>
+        {/* "Correos para aprobar" is now a filter of Pendientes: one place for every decision. */}
         <Section id="ctl-outbox" title={t("ctl.outbox.title")}>
-          <p className="mb-2 text-xs text-mute">{t("ctl.outbox.help")}</p>
-          <div className="space-y-3">
-            {activeDrafts.map((d) => <EmailDraftCard key={d.id} draft={d} />)}
-            {activeDrafts.length === 0 && <Empty>{t("ctl.outbox.empty")}</Empty>}
-            {doneDrafts.map((d) => <EmailDraftCard key={d.id} draft={d} />)}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="min-w-0 flex-1 text-xs text-ink2">
+              {waitingDrafts.length ? t("ctl.outbox.waiting", { count: waitingDrafts.length }) : t("ctl.outbox.empty")} <span className="text-mute">{t("ctl.outbox.moved")}</span>
+            </p>
+            <Link href={inboxHref("email")} data-testid="ctl-outbox-link"
+              className="inline-flex min-h-10 shrink-0 items-center rounded-md border border-accent bg-accent px-3.5 text-xs font-semibold text-white hover:bg-accent-hover sm:min-h-9">
+              {t("ctl.outbox.open")}
+            </Link>
           </div>
         </Section>
         <Section id="ctl-limits" title={t("ctl.limits.title")}>

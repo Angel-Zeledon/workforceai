@@ -23,6 +23,8 @@ import { PeopleChatsList, useChannelTitle } from "./PeopleChatsList"; // people 
 import { PeopleChatPane } from "./PeopleChatPane";
 import { usePeopleChat } from "./peopleChatStore";
 import { Glyph, StatusPill, shortTime } from "./chatsUi";
+import { ConceptHelp } from "../concepts/ConceptHelp";
+import { EmptyState } from "../nav/ui2";
 import { PedidoPanel, usePedidoConv, usePedidoCtx } from "./PedidoPanel";
 
 // ---------------------------------------------------------------------------------------------
@@ -603,7 +605,7 @@ export function ChatsView({ agentId }: { agentId?: string }) {
       <aside aria-label={t("chats.title")} className={`${showThread ? "hidden md:flex" : "flex"} w-full min-h-0 shrink-0 flex-col border-r border-line bg-panel md:w-[330px]`}>
         <div className="space-y-2 border-b border-line px-3 py-3">
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-[15px] font-semibold tracking-tight text-ink">{t("chats.title")}</h1>
+            <div className="flex min-w-0 items-center gap-1"><h1 className="text-[15px] font-semibold tracking-tight text-ink">{t("chats.title")}</h1><ConceptHelp concept="pedido" /></div>
             <button type="button" data-testid="chats-to-office" data-tour="chats.toOffice" onClick={() => goOffice()} className="chats-t inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-[11px] font-medium text-ink2 transition-colors hover:border-accent hover:text-ink">
               <Glyph name="office" size={12} />{t("chats.toOffice")}
             </button>
@@ -658,9 +660,8 @@ export function ChatsView({ agentId }: { agentId?: string }) {
               <section aria-label={t("chats.group.pedidos")} data-testid="chats-pedidos" data-tour="chats.past" className="mt-4">
                 <GroupTitle action={archivedToggle}>{showArchived ? t("chats.pedidos.archived") : t("chats.group.pedidos")}</GroupTitle>
                 {!convsLoaded ? <Skeleton kind="list" rows={2} /> : pedidos.length === 0 ? (
-                  <p data-testid="chats-pedidos-empty" className="chats-fade rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-xs leading-relaxed text-mute">
-                    {showArchived ? t("chats.pedidos.archivedEmpty") : t("chats.pedidos.empty")}
-                  </p>
+                  <EmptyState compact testid="chats-pedidos-empty" concept="pedido" className="chats-fade !px-3 !py-5"
+                    body={<span className="text-xs">{showArchived ? t("chats.pedidos.archivedEmpty") : t("chats.pedidos.empty")}</span>} />
                 ) : pedidos.map((r) => <PedidoItem key={r.id} row={r} q="" active={pedido === r.id} onPick={() => openPedido(r.id)} />)}
                 {convsMore && (
                   <button type="button" onClick={() => void loadConvs({ archived: showArchived, append: true })} className="mt-1 w-full rounded-md py-1.5 text-center text-[11.5px] font-medium text-accent-hover hover:bg-panel2">{t("chats.loadMore")}</button>

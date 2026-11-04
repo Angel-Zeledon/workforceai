@@ -9,6 +9,7 @@ import { Icon } from "../icons";
 import { SkillDetailView } from "./SkillDetailView";
 import { SourceChip, StatusBadge } from "./shared";
 import { ConceptLegend } from "../concepts/ConceptLegend";
+import { ConceptHelp } from "../concepts/ConceptHelp";
 
 const FILTERS: SkillFilter[] = ["all", "active", "in_review", "draft", "disabled"];
 
@@ -60,7 +61,7 @@ export function SkillsView() {
     <div data-testid="skills-view" className="flex h-full min-h-0 flex-col bg-bg">
       <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-4 py-3 sm:px-5">
         <div data-tour="skills.header" className="w-full sm:mr-3 sm:w-auto">
-          <h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("skills.title")}</h1>
+          <div className="flex items-center gap-1.5"><h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("skills.title")}</h1><ConceptHelp concept="skills" /></div>
           <p className="text-[11px] text-mute">{t("skills.subtitle")}</p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
@@ -89,7 +90,14 @@ export function SkillsView() {
             </button>
           ))}
         </div>
-        {list === null ? <Loading rows={4} /> : shown.length === 0 ? <Empty>{t("skills.empty")}</Empty> : (
+        {list === null ? <Loading rows={4} /> : shown.length === 0 ? (
+          (list.length === 0 && !q)
+            ? <Empty testid="skills-empty" concept="skills" title={t("skills.emptyState.title")} how={t("skills.emptyState.how")}
+                action={canWrite ? <><Btn kind="primary" onClick={() => nav.openNew(null)}>{t("skills.new")}</Btn><Btn disabled={busy} onClick={() => input.current?.click()}>{t("skills.import.button")}</Btn></> : undefined}>
+                {t("skills.emptyState.body")}
+              </Empty>
+            : <Empty concept="skills">{t("skills.empty")}</Empty>
+        ) : (
           <div data-tour="skills.list" data-testid="skills-grid" className="ac-stagger grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {shown.map((s) => (
               <button key={s.id} type="button" data-testid={`skill-card-${s.name}`} data-status={s.status} onClick={() => nav.select(s.id, needsReview(s) ? "review" : "content")}

@@ -8,7 +8,6 @@ import { logout, useCan, useSession } from "@/lib/session";
 import { useViewer } from "../connections/shared";
 import { Icon, type IconName } from "../icons";
 import { OfficeSettingsPanel } from "../OfficeSettings";
-import { TemplateGallery } from "../templates/TemplateGallery";
 import { useOnboardingEntry } from "../onboarding/OnboardingEntry";
 import { HireFromTemplateDialog } from "../admin/HireFromTemplateDialog";
 import { KillSwitchDialog } from "../security/KillSwitchDialog";
@@ -37,6 +36,9 @@ const SUB_TITLE: Record<Sub, string> = {
   office: "settings.title", hire: "hire.open", templates: "tpl.open", members: "members.title",
   kill: "ctl.killswitch.title", connections: "nav.connections", security: "nav.security", account: "mfa.rowTitle", data: "data.title", identity: "idn.title", portal: "portal.brand.title", plan: "planpage.title", costs: "mycosts.title", approvals: "perm.settings.title",
 };
+
+/** where the templates live now: the single library of Proyectos (quick requests + projects) */
+const TEMPLATES_HOME = "/projects?view=library";
 
 function Row({ icon, title, body, onClick, testid, disabled, danger, tour }: { tour?: string; icon: IconName; title: string; body: string; onClick: () => void; testid: string; disabled?: boolean; danger?: boolean }) {
   return (
@@ -89,6 +91,8 @@ export function SettingsView() {
   const level = controls?.kill_switch_level ?? "none";
   // Conexiones moved to the main menu (/connections); the old link keeps working.
   useEffect(() => { if (sub === "connections") router.replace("/connections"); }, [sub, router]);
+  // Plantillas de trabajo joined the single template library of Proyectos; the old link keeps working.
+  useEffect(() => { if (sub === "templates") router.replace(TEMPLATES_HOME); }, [sub, router]);
   if (sub) {
     const full = sub === "connections" || sub === "security"; // these two manage their own scrolling
     return (
@@ -107,7 +111,6 @@ export function SettingsView() {
             {sub === "portal" && <PortalBranding />}
             {sub === "office" && <OfficeSettingsPanel onClose={() => open(null)} />}
             {sub === "hire" && <HireFromTemplateDialog onClose={() => open(null)} />}
-            {sub === "templates" && <TemplateGallery onClose={() => open(null)} />}
             {sub === "members" && <MembersDialog onClose={() => open(null)} />}
             {sub === "kill" && <KillSwitchDialog onClose={() => open(null)} />}
           </PageModeCtx.Provider>
@@ -136,7 +139,7 @@ export function SettingsView() {
     { id: "data", group: "account", testid: "settings-data", icon: "layout", title: t("data.title"), body: t("settings.page.data"), hidden: !signedIn, run: () => open("data") },
     // only found by searching: things that moved to another home or live inside another screen
     { id: "hire", group: "workspace", searchOnly: true, testid: "settings-hire", icon: "plus", title: t("hire.open"), body: t("settings.page.hire"), disabled: !isAdmin, run: () => open("hire") },
-    { id: "templates", group: "workspace", searchOnly: true, testid: "settings-templates", icon: "layout", title: t("tpl.open"), body: t("settings.page.templates"), run: () => open("templates") },
+    { id: "templates", group: "workspace", searchOnly: true, testid: "settings-templates", icon: "layout", title: t("tpl.open"), body: t("settings.page.templates"), run: () => router.push(TEMPLATES_HOME) },
     { id: "connections", group: "workspace", searchOnly: true, testid: "settings-connections", icon: "plug", title: t("nav.connections"), body: t("settings.page.connections"), run: () => router.push("/connections") },
     { id: "logout", group: "account", searchOnly: true, testid: "settings-logout", icon: "power", title: t("auth.logout"), body: t("settings.page.logout"), hidden: !signedIn, run: () => { logout().then(() => { window.location.href = "/login"; }); } },
     { id: "viewAll", group: "workspace", searchOnly: true, icon: "grid", title: t("ux.viewAll.label"), body: t("ux.viewAll.find"), run: () => useViewMode.getState().setViewAll(!useViewMode.getState().viewAll) },

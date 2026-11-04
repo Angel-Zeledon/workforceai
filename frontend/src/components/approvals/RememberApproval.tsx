@@ -15,7 +15,7 @@ import { Btn } from "../ui";
  *  when the agent's own permissions asked (never the safety floor, the organization rules or high risk). It approves,
  *  then creates the exception for this agent and category, or for this project or batch when the approval comes from
  *  one; Pendientes shows what was created with Undo. */
-export function RememberApproval({ a, busy, setBusy }: { a: Approval; busy: boolean; setBusy: (b: boolean) => void }) {
+export function RememberApproval({ a, busy, setBusy, onDone }: { a: Approval; busy: boolean; setBusy: (b: boolean) => void; onDone?: () => void }) {
   const { t } = useT();
   const r = approvalReason(a.policy_rule, Array.isArray(a.context?.flags) ? (a.context!.flags as unknown[]).map(String) : []);
   const batchId = useProjects((s) => (a.project_id ? s.projects[a.project_id]?.batch_id : undefined));
@@ -39,6 +39,7 @@ export function RememberApproval({ a, busy, setBusy }: { a: Approval; busy: bool
       // The approval stands; only the "do not ask again" part failed.
       toast(t(statusOf(e) === 403 ? "perm.error.forbidden" : "perm.remember.failed"), "warn");
     }
+    onDone?.();
   };
   if (!open) {
     return <Btn data-testid={`approve-remember-${a.id}`} disabled={busy} onClick={() => setOpen(true)}>{t("perm.remember.button")}</Btn>;

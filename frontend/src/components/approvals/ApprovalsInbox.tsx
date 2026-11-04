@@ -4,17 +4,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, call } from "@/lib/api";
 import { fmtUsd, useT } from "@/lib/i18n";
 import {
-  batchGroupOf, clampIndex, deckOf, keyToCommand, needsConfirm, swipeIntent, UNDO_MS,
-  type ApprovalInbox, type InboxGroup, type InboxItem, type InboxMine,
+  batchGroupOf, clampIndex, deckOf, emailDrafts, filterInbox, inboxHref, INBOX_FILTERS, keyToCommand, needsConfirm, parseInboxFilter, swipeIntent, UNDO_MS,
+  type ApprovalInbox, type InboxFilter, type InboxGroup, type InboxItem, type InboxMine,
 } from "@/lib/inboxLogic";
+import { useConnections } from "@/lib/connections/store";
+import type { EmailDraft } from "@/lib/connections/types";
 import { usePreferences } from "@/lib/preferences";
 import { useCan, useSession } from "@/lib/session";
 import { OrgIndicator } from "../auth/OrgIndicator";
-import { RiskBadge } from "../ui";
 import { DevilsAdvocate } from "./DevilsAdvocate";
 import { QuestionsSection } from "./QuestionsSection";
 import { ApprovalReason } from "./ApprovalReason";
 import { useActionName } from "./ActionName";
+import { PendingCard } from "./PendingCard";
+import { RememberApproval } from "./RememberApproval";
+import { EmailDraftCard } from "../security/EmailDraftCard";
+import { useBootConnections } from "../security/ControlsChrome";
+import { ConceptHelp } from "../concepts/ConceptHelp";
 
 type Decision = "approve" | "reject";
 interface Held { item: InboxItem; decision: Decision; timer: ReturnType<typeof setTimeout>; until: number }
@@ -48,6 +54,18 @@ export function ApprovalsInbox() {
     try { setInbox(await call<ApprovalInbox>("GET", `/approvals/inbox${mine ? `?mine=${mine}` : ""}`)); setFailed(false); } catch { setFailed(true); }
   }, [mine]);
   useEffect(() => { setIdx(0); }, [mine]);
+  // ?filter=email: "Correos para aprobar" (what Seguridad used to list). Read from the address and kept in it, so the
+  // link from Seguridad and the Back button land on the same view.
+  const [filter, setFilterState] = useState<InboxFilter>("");
+  useEffect(() => {
+    const read = () => setFilterState(parseInboxFilter(new URLSearchParams(window.location.search).get("filter")));
+    read();
+    window.addEventListener("popstate", read);
+    return () => window.removeEventListener("popstate", read);
+  }, []);
+  const setFilter = (f: InboxFilter) => { setFilterState(f); setIdx(0); setExpanded(false); window.history.replaceState(null, "", inboxHref(f)); };
+  const drafts = useConnections((s) => s.drafts);
+  const outbox = useMemo(() => emailDrafts(drafts), [drafts]);
   useEffect(() => {
     void load();
     api.agents().then((as) => setNames(Object.fromEntries(as.map((a) => [a.id, a.name])))).catch(() => {});
@@ -73,7 +91,7 @@ export function ApprovalsInbox() {
   }, []);
 
   const hidden = useMemo(() => new Set(held.map((h) => h.item.id)), [held]);
-  const deck = useMemo(() => deckOf(inbox?.items ?? [], hidden), [inbox, hidden]);
+  const deck = useMemo(() => filterInbox(deckOf(inbox?.items ?? [], hidden), filter), [inbox, hidden, filter]);
   const i = clampIndex(idx, deck.length);
   const cur = deck[i] ?? null;
   const group = cur && inbox ? batchGroupOf(cur, inbox.groups) : null;
@@ -134,14 +152,13 @@ export function ApprovalsInbox() {
   };
 
   const last = held[held.length - 1];
-  const who = (it: InboxItem) => names[it.agent_id] ?? it.agent_id;
   const tips = (inbox?.suggestions ?? []).filter((s) => !hiddenTips.has(s.action));
 
   return (
     <main data-testid="inbox-page" className="mx-auto min-h-full max-w-xl space-y-3 bg-bg px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[18px] sm:text-xl font-bold text-ink">{t("approvalInbox.title")}</h1>
+          <div className="flex items-center gap-1.5"><h1 className="text-[18px] sm:text-xl font-bold text-ink">{t("approvalInbox.title")}</h1><ConceptHelp concept="pending" /></div>
           <p className="text-[13px] text-mute">{t("approvalInbox.subtitle")}</p>
           {signedIn && <OrgIndicator className="mt-1 text-[12px] font-medium text-ink2" />}
         </div>
@@ -159,7 +176,16 @@ export function ApprovalsInbox() {
           );
         })}
       </div>
-      <QuestionsSection />
+      <div data-testid="inbox-filter" className="flex flex-wrap items-center gap-1.5">
+        <span className="text-[11.5px] text-mute">{t("approvalInbox.filter.label")}</span>
+        {INBOX_FILTERS.map((f) => (
+          <button key={f || "all"} type="button" aria-pressed={filter === f} data-testid={`inbox-filter-${f || "all"}`} onClick={() => setFilter(f)}
+            className={`min-h-[36px] rounded-full border px-3 text-[12px] font-medium transition-colors ${filter === f ? "border-accent bg-accent text-white" : "border-line bg-panel text-ink2 hover:border-accent"}`}>
+            {t(`approvalInbox.filter.${f || "all"}`)}{f === "email" && outbox.waiting.length > 0 ? ` · ${outbox.waiting.length}` : ""}
+          </button>
+        ))}
+      </div>
+      {filter === "email" ? <EmailDrafts waiting={outbox.waiting} done={outbox.done} /> : <QuestionsSection />}
       {failed && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-err/40 bg-err/10 p-3 text-[13px] text-err">
           <span>{t("approvalInbox.loadError")}</span>
@@ -169,23 +195,43 @@ export function ApprovalsInbox() {
       {!canDecide && inbox && <p className="rounded-lg border border-line bg-panel p-3 text-[13px] text-ink2">{t("approvals.noPermission")}</p>}
       {errors.map((m, k) => <p key={k} role="alert" className="rounded-lg border border-err/40 bg-err/10 p-2 text-[12px] text-err">{m}</p>)}
 
-      {inbox && deck.length === 0 && !held.length && <p data-testid="inbox-empty" className="py-10 text-center text-[14px] text-mute">{mine ? t(`approvalInbox.mine.empty.${mine}`) : t("approvalInbox.empty")}</p>}
+      {inbox && deck.length === 0 && !held.length && !(filter === "email" && outbox.waiting.length > 0) && (
+        <p data-testid="inbox-empty" className="py-10 text-center text-[14px] text-mute">{filter === "email" ? t("ctl.outbox.empty") : mine ? t(`approvalInbox.mine.empty.${mine}`) : t("approvalInbox.empty")}</p>
+      )}
 
       {cur && (
-        <article data-testid={`inbox-card-${cur.id}`} data-risk={cur.risk} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => { drag.current = null; setDx(0); }}
-          style={{ transform: dx ? `translateX(${dx}px) rotate(${dx / 40}deg)` : undefined, touchAction: "pan-y" }}
-          className={`select-none rounded-xl border bg-panel p-3.5 shadow-soft sm:p-4 transition-[border-color] ${dx > 60 ? "border-ok" : dx < -60 ? "border-err" : cur.high_risk ? "border-err/50" : "border-line"}`}>
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="min-w-0 break-words text-[15px] font-semibold leading-snug text-ink sm:text-[16px]">{cur.title}</h2>
-            <RiskBadge risk={cur.risk} />
-          </div>
-          <dl className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
-            <Fact k={t("approvalInbox.who")} v={who(cur)} />
-            <Fact k={t("approvalInbox.what")} v={actionName(cur.action)} />
-            <Fact k={t("approvalInbox.cost")} v={fmtUsd(cur.task_cost_usd)} mono />
-            <Fact k={t("approvalInbox.project")} v={cur.project_name || (cur.project_id ? cur.project_id : t("approvalInbox.noProject"))} />
-          </dl>
-          <ApprovalReason a={cur} className="mt-2 bg-panel2" />
+        <PendingCard kind="approval" variant="full" as="article" testId={`inbox-card-${cur.id}`} agentId={cur.agent_id} agentName={names[cur.agent_id]}
+          title={cur.title} action={cur.action} risk={cur.risk}
+          context={[cur.task_title, cur.project_name || cur.project_id].filter(Boolean).join(" · ") || undefined}
+          className="select-none transition-[border-color]"
+          border={dx > 60 ? "border-ok" : dx < -60 ? "border-err" : cur.high_risk ? "border-err/50" : "border-line"}
+          rootProps={{
+            "data-risk": cur.risk, onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: () => { drag.current = null; setDx(0); },
+            style: { transform: dx ? `translateX(${dx}px) rotate(${dx / 40}deg)` : undefined, touchAction: "pan-y" },
+          }}
+          body={
+            <dl className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
+              <Fact k={t("approvalInbox.cost")} v={fmtUsd(cur.task_cost_usd)} mono />
+              <Fact k={t("approvalInbox.project")} v={cur.project_name || (cur.project_id ? cur.project_id : t("approvalInbox.noProject"))} />
+            </dl>
+          }
+          why={<ApprovalReason a={cur} className="mt-2 bg-panel2" />}
+          actions={
+            <>
+              {canDecide && (
+                <div className="grid grid-cols-2 gap-3">
+                  <button type="button" data-testid="inbox-reject" onClick={() => decide(cur, "reject")} className="min-h-[48px] rounded-md border border-err/40 bg-err/10 text-sm font-semibold text-err">{t("approvalInbox.reject")} <kbd className="ml-1 hidden rounded border border-err/30 px-1 text-[10px] sm:inline">R</kbd></button>
+                  <button type="button" data-testid="inbox-approve" onClick={() => decide(cur, "approve")} className="min-h-[48px] rounded-md border border-ok/40 bg-ok/10 text-sm font-semibold text-ok">{t("approvalInbox.approve")} <kbd className="ml-1 hidden rounded border border-ok/30 px-1 text-[10px] sm:inline">A</kbd></button>
+                </div>
+              )}
+              {canDecide && <InboxRemember key={cur.id} a={cur} onDone={() => void load()} />}
+              <div className="mt-2 flex items-center justify-between gap-2 text-[12px]">
+                <button type="button" data-testid="inbox-prev" disabled={i === 0} onClick={() => { setIdx(i - 1); setExpanded(false); }} className="min-h-[40px] rounded-md px-2 text-mute disabled:opacity-30">‹ {t("approvalInbox.prev")}</button>
+                <button type="button" data-testid="inbox-expand" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)} className="min-h-[40px] rounded-md px-2 font-semibold text-accent">{t(expanded ? "approvalInbox.collapse" : "approvalInbox.expand")}</button>
+                <button type="button" data-testid="inbox-next" disabled={i >= deck.length - 1} onClick={() => { setIdx(i + 1); setExpanded(false); }} className="min-h-[40px] rounded-md px-2 text-mute disabled:opacity-30">{t("approvalInbox.next")} ›</button>
+              </div>
+            </>
+          }>
           {(cur.required_approvals ?? 1) > 1 && <p className="mt-2 text-[12px] text-ink2">{t("approvals.mobile.progress", { done: cur.decisions?.length ?? 0, total: cur.required_approvals ?? 1 })} · {t("approvals.mobile.doubleApproval")}</p>}
           {cur.counterargument?.summary && (
             <div data-testid="inbox-devil-summary" className="mt-2 rounded-md border border-amber-600/30 bg-amber-500/10 px-2.5 py-1.5 text-[12px] text-amber-900">
@@ -207,18 +253,7 @@ export function ApprovalsInbox() {
               {t("approvalInbox.batch", { count: group.count, project: group.project_name || group.project_id })}
             </button>
           )}
-          {canDecide && (
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <button type="button" data-testid="inbox-reject" onClick={() => decide(cur, "reject")} className="min-h-[48px] rounded-md border border-err/40 bg-err/10 text-sm font-semibold text-err">{t("approvalInbox.reject")} <kbd className="ml-1 hidden rounded border border-err/30 px-1 text-[10px] sm:inline">R</kbd></button>
-              <button type="button" data-testid="inbox-approve" onClick={() => decide(cur, "approve")} className="min-h-[48px] rounded-md border border-ok/40 bg-ok/10 text-sm font-semibold text-ok">{t("approvalInbox.approve")} <kbd className="ml-1 hidden rounded border border-ok/30 px-1 text-[10px] sm:inline">A</kbd></button>
-            </div>
-          )}
-          <div className="mt-2 flex items-center justify-between gap-2 text-[12px]">
-            <button type="button" data-testid="inbox-prev" disabled={i === 0} onClick={() => { setIdx(i - 1); setExpanded(false); }} className="min-h-[40px] rounded-md px-2 text-mute disabled:opacity-30">‹ {t("approvalInbox.prev")}</button>
-            <button type="button" data-testid="inbox-expand" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)} className="min-h-[40px] rounded-md px-2 font-semibold text-accent">{t(expanded ? "approvalInbox.collapse" : "approvalInbox.expand")}</button>
-            <button type="button" data-testid="inbox-next" disabled={i >= deck.length - 1} onClick={() => { setIdx(i + 1); setExpanded(false); }} className="min-h-[40px] rounded-md px-2 text-mute disabled:opacity-30">{t("approvalInbox.next")} ›</button>
-          </div>
-        </article>
+        </PendingCard>
       )}
       {cur && <p className="hidden text-center text-[11px] text-mute sm:block">{t("approvalInbox.keys")}</p>}
       {cur && <p className="text-center text-[11px] text-mute sm:hidden">{t("approvalInbox.swipe")}</p>}
@@ -273,6 +308,27 @@ export function ApprovalsInbox() {
       )}
       <Link href="/approvals" className="block min-h-[44px] pt-3 text-center text-[13px] font-medium text-accent underline">{t("approvalInbox.listView")}</Link>
     </main>
+  );
+}
+
+/** "Approve and do not ask again" on the card of Pendientes: it decides at once (no undo window) and reloads. */
+function InboxRemember({ a, onDone }: { a: InboxItem; onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  return <div className="mt-2 flex flex-wrap justify-center"><RememberApproval a={a} busy={busy} setBusy={setBusy} onDone={() => { setBusy(false); onDone(); }} /></div>;
+}
+
+/** "Correos para aprobar" inside Pendientes (?filter=email): the outbox drafts, editable, with the cancel window. */
+function EmailDrafts({ waiting, done }: { waiting: EmailDraft[]; done: EmailDraft[] }) {
+  const { t } = useT();
+  useBootConnections();
+  if (!waiting.length && !done.length) return null;
+  return (
+    <section data-testid="inbox-email-drafts" aria-labelledby="inbox-email-title" className="space-y-2">
+      <h2 id="inbox-email-title" className="text-[15px] font-semibold text-ink">{t("ctl.outbox.title")}{waiting.length ? ` · ${waiting.length}` : ""}</h2>
+      <p className="text-[12px] text-mute">{t("ctl.outbox.help")}</p>
+      {waiting.map((d) => <EmailDraftCard key={d.id} draft={d} />)}
+      {done.map((d) => <EmailDraftCard key={d.id} draft={d} />)}
+    </section>
   );
 }
 

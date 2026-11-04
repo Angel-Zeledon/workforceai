@@ -1,10 +1,14 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import { useStore } from "@/lib/store";
-import { fmtTime, stateMeta, taskStatusLabel, TASK_STATUS_COLOR } from "@/lib/meta";
+import { fmtTime, stateMeta, taskStatusLabel, STATE_META, TASK_STATUS_COLOR } from "@/lib/meta";
+import { kindOf } from "@/lib/statusLogic";
+import { StatusIcon } from "./ui/Status";
 import { tr, useT } from "@/lib/i18n";
 import { resolveAgent, usePreferences } from "@/lib/preferences";
-import { Skeleton } from "./nav/ui2";
+import { EmptyState, Skeleton } from "./nav/ui2";
+import type { Concept } from "./concepts/ConceptLegend";
+import type { IconName } from "./icons";
 
 /** Resolves an agent id to its display name (honors user-customized names). */
 export function useAgentName() {
@@ -43,9 +47,10 @@ export function readable(hex: string): string {
 export function StateBadge({ state }: { state: string }) {
   useT();
   const m = stateMeta(state);
+  const kind = kindOf("agent", state in STATE_META ? state : "idle");
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${m.color}1a`, color: m.color }}>
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: m.color }} />
+    <span data-kind={kind} className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${m.color}1a`, color: m.color }}>
+      <StatusIcon kind={kind} size={10} />
       {m.label}
     </span>
   );
@@ -53,9 +58,10 @@ export function StateBadge({ state }: { state: string }) {
 export function TaskBadge({ status }: { status: string }) {
   useT();
   const c = TASK_STATUS_COLOR[status] || "#7b8494";
+  const kind = kindOf("task", status);
   return (
-    <span className="inline-flex items-center whitespace-nowrap rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}22`, color: c }}>
-      {taskStatusLabel(status)}
+    <span data-kind={kind} className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}22`, color: c }}>
+      <StatusIcon kind={kind} size={10} />{taskStatusLabel(status)}
     </span>
   );
 }
@@ -101,13 +107,11 @@ export function Card({ title, right, children, className = "" }: { title?: React
     </section>
   );
 }
-export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
-  return (
-    <div className="ac-pop rounded-lg border border-dashed border-line-strong px-4 py-7 text-center text-[13px] leading-relaxed text-mute">
-      {children}
-      {action && <div className="mt-3">{action}</div>}
-    </div>
-  );
+/** Empty list: the same shape as EmptyState (icon of the concept, what it is, how something appears here, a button). */
+export function Empty({ children, action, concept, icon, title, how, testid }: {
+  children?: ReactNode; action?: ReactNode; concept?: Concept; icon?: IconName; title?: ReactNode; how?: ReactNode; testid?: string;
+}) {
+  return <EmptyState compact concept={concept} icon={icon} title={title} body={children} how={how} action={action} testid={testid} />;
 }
 /** Skeleton rows while a list loads (instead of a bare "Loading…"). */
 export function Loading({ rows = 3 }: { rows?: number }) {

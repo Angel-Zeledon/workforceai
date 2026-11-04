@@ -5,6 +5,7 @@ import { displayTitle } from "@/lib/projects/calc";
 import type { Light, NodeState, ProjectNode, ProjectStatus } from "@/lib/projects/types";
 import { useAgentColor, useAgentName } from "../ui";
 import { KIND_COLOR, colorTable, kindOf } from "@/lib/statusLogic";
+import { StatusIcon } from "../ui/Status";
 
 // One palette for the whole app (lib/statusLogic.ts): "Te necesita" amber, "Listo" one green, "Por empezar" gray.
 export const NODE_STATE_COLOR: Record<NodeState, string> = colorTable("node", ["draft", "pending", "ready", "running", "awaiting_approval", "waiting", "needs_input", "paused", "blocked", "done", "skipped", "failed", "cancelled"] as const);
@@ -28,9 +29,10 @@ export function useNodeTitle() {
 export function StatePill({ state, retrying }: { state: NodeState; retrying?: boolean }) {
   const { t } = useT();
   const c = retrying ? NODE_STATE_COLOR.running : NODE_STATE_COLOR[state];
+  const kind = kindOf("node", retrying ? "running" : state);
   return (
-    <span data-kind={kindOf("node", retrying ? "running" : state)} className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}22`, color: c }}>
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: c }} />
+    <span data-kind={kind} className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}22`, color: c }}>
+      <StatusIcon kind={kind} size={10} />
       {retrying ? t("pv.state.retrying") : t(`pv.state.${state}`)}
     </span>
   );
@@ -39,9 +41,10 @@ export function StatePill({ state, retrying }: { state: NodeState; retrying?: bo
 export function StatusPill({ status }: { status: ProjectStatus }) {
   const { t } = useT();
   const c = STATUS_COLOR[status];
+  const kind = kindOf("project", status);
   return (
-    <span data-kind={kindOf("project", status)} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-[3px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}26`, color: c }}>
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: c }} />
+    <span data-kind={kind} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-[3px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}26`, color: c }}>
+      <StatusIcon kind={kind} size={10} />
       {t(`pv.status.${status}`)}
     </span>
   );

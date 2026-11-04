@@ -3,8 +3,32 @@ import { useState } from "react";
 import { trOr, useT } from "@/lib/i18n";
 import { useProjects } from "@/lib/projects/store";
 import type { ProjectApproval } from "@/lib/projects/types";
+import { useStore } from "@/lib/store";
 import { Btn, Card, Empty, RiskBadge } from "../ui";
 import { Modal } from "./shared";
+import { PendingCard } from "../approvals/PendingCard";
+import { ApprovalReason } from "../approvals/ApprovalReason";
+import { RememberApproval } from "../approvals/RememberApproval";
+
+/** One approval of the project, as the one pending card (compact): who asks, what, why (the rule, when the app knows
+ * the approval) and Aprobar / Rechazar / "Aprobar y no volver a preguntar". The decision goes through the project store. */
+function ProjectPending({ a, onDecide }: { a: ProjectApproval; onDecide: (id: string, d: "approve" | "reject") => void }) {
+  const { t } = useT();
+  const full = useStore((s) => s.approvals[a.id]); // the same approval in the app store carries the rule and the remember option
+  const [busy, setBusy] = useState(false);
+  return (
+    <PendingCard as="li" kind="approval" variant="compact" testId={`project-approval-${a.id}`} agentId={a.agent_id} title={a.title} action={a.action} risk={a.risk}
+      body={a.details ? <p className="mt-1 line-clamp-2 break-words text-[12px] leading-snug text-ink2 [overflow-wrap:anywhere]" title={a.details}>{a.details}</p> : null}
+      why={full ? <ApprovalReason a={full} /> : null}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <Btn kind="ok" disabled={busy} onClick={() => onDecide(a.id, "approve")}>{t("pv.approve")}</Btn>
+          <Btn kind="danger" disabled={busy} onClick={() => onDecide(a.id, "reject")}>{t("pv.reject")}</Btn>
+          {full && full.status === "pending" && <RememberApproval a={full} busy={busy} setBusy={setBusy} onDone={() => setBusy(false)} />}
+        </div>
+      } />
+  );
+}
 
 const RISK_RANK = { low: 0, medium: 1, high: 2 } as const;
 
@@ -38,16 +62,8 @@ export function ApprovalsBatch() {
         const risk = items.reduce<ProjectApproval["risk"]>((m, a) => (RISK_RANK[a.risk] > RISK_RANK[m] ? a.risk : m), "low");
         return (
           <Card key={action} title={<span data-testid={`approval-group-${action}`} data-count={items.length}>{trOr(`pv.group.${action}`, action)} · {t("pv.batch.count", { count: items.length })}</span>} right={<RiskBadge risk={risk} />}>
-            <ul className="space-y-1 text-[12px] text-ink">
-              {items.slice(0, 4).map((a) => (
-                <li key={a.id} data-testid={`project-approval-${a.id}`} className="flex items-center justify-between gap-2 rounded-xl bg-panel2 px-3 py-1.5">
-                  <span className="truncate">{a.title}</span>
-                  <span className="flex shrink-0 gap-1.5">
-                    <Btn kind="ok" onClick={() => decide(a.id, "approve")}>{t("pv.approve")}</Btn>
-                    <Btn kind="danger" onClick={() => decide(a.id, "reject")}>{t("pv.reject")}</Btn>
-                  </span>
-                </li>
-              ))}
+            <ul className="space-y-2 text-[12px] text-ink">
+              {items.slice(0, 4).map((a) => <ProjectPending key={a.id} a={a} onDecide={decide} />)}
               {items.length > 4 && <li className="px-1 text-[11px] text-mute">{t("pv.batch.more", { count: items.length - 4 })}</li>}
             </ul>
             {items.length > 1 && (

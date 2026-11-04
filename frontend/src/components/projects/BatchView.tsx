@@ -9,6 +9,7 @@ import { WaitingLabel } from "../approvals/QuestionCard";
 import { ScopeGrants } from "../approvals/ScopeGrants";
 import { Btn, useAgentName } from "../ui";
 import { fmtMoney } from "./shared";
+import { ConceptHelp } from "../concepts/ConceptHelp";
 
 const TONE: Record<string, string> = {
   running: "bg-[#2b6cb0]/10 text-[#2b6cb0]", err: "bg-err/10 text-err", ok: "bg-ok/10 text-ok", warn: "bg-amber-500/10 text-amber-800", mute: "bg-panel2 text-ink2",
@@ -47,7 +48,7 @@ export function BatchView({ id }: { id: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <button type="button" onClick={() => close(null)} className="text-[11px] font-medium text-accent">‹ {t("batch.backToProjects")}</button>
-          <h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("batch.cardTitle", { name: b.name, count: b.items.length })}</h1>
+          <div className="flex items-center gap-1.5"><h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("batch.cardTitle", { name: b.name, count: b.items.length })}</h1><ConceptHelp concept="batch" /></div>
           <p className="text-[12px] text-mute">{t(`batch.status.${b.status}`)}{b.control === "paused" && running ? ` · ${t("batch.paused")}` : ""} · {t("batch.review.paceValue", { count: b.parallel })} · {fmtMoney(v.cost_usd)}</p>
         </div>
         {canManage && (

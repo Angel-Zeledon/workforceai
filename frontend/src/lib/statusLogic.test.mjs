@@ -81,3 +81,24 @@ test("batch rows and customers use the single palette", () => {
   for (const s of ROW_STATUSES) assert.equal(rowTone(s), statusTone("batchRow", s), s);
   for (const [s, c] of Object.entries(CUSTOMER_COLOR)) assert.equal(c, statusColor("customer", s), s);
 });
+
+test("every kind has its own icon: bell for needs-you, check for done, half check for partial, dash for cancelled", async () => {
+  const { KIND_ICON, kindIcon } = await import("./statusLogic.ts");
+  for (const k of Object.keys(KIND_COLOR)) assert.ok(KIND_ICON[k], `icon for ${k}`);
+  assert.equal(kindIcon("todo"), "circle");
+  assert.equal(kindIcon("running"), "spinner");
+  assert.equal(kindIcon("needs"), "bell");
+  assert.equal(kindIcon("paused"), "pause");
+  assert.equal(kindIcon("done"), "check");
+  assert.equal(kindIcon("partial"), "halfcheck");
+  assert.equal(kindIcon("problem"), "triangle");
+  assert.equal(kindIcon("cancelled"), "dash");
+  assert.equal(kindIcon(kindOf("node", "awaiting_approval")), "bell");
+  assert.equal(kindIcon(kindOf("agent", "idle")), "circle");
+  // the states people must tell apart never share an icon
+  const distinct = ["todo", "running", "needs", "paused", "done", "partial", "problem", "cancelled"].map(kindIcon);
+  assert.equal(new Set(distinct).size, distinct.length);
+  // an unknown kind from a newer server still gets a neutral icon
+  assert.equal(kindIcon("brand_new"), "circle");
+  assert.equal(kindIcon(undefined), "circle");
+});

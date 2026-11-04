@@ -5,7 +5,7 @@ import { useStore } from "@/lib/store";
 import { trOr, useT } from "@/lib/i18n";
 import { fmtTime, fmtUsd, roleMeta, taskStatusLabel, TASK_STATUS_COLOR } from "@/lib/meta";
 import { resolveAgent, usePreferences } from "@/lib/preferences";
-import { openInOffice } from "@/lib/navBridge";
+import { go as goRoute, openInOffice } from "@/lib/navBridge";
 import type { Task } from "@/lib/types";
 import { ActivityFeed } from "../ActivityFeed";
 import { ApprovalCard } from "../ApprovalsTray";
@@ -120,7 +120,7 @@ function Overview({ go }: { go: (s: Section) => void }) {
         </Card>
         <div data-tour="dashboard.side" className="space-y-5">
           <Card title={t("dash.pendingApprovals")}>
-            {approvals.length ? <div className="space-y-2">{approvals.map((a) => <ApprovalCard key={a.id} a={a} compact />)}</div> : <Empty>{t("dash.nothingToApprove")}</Empty>}
+            {approvals.length ? <div className="space-y-2">{approvals.map((a) => <ApprovalCard key={a.id} a={a} compact />)}</div> : <Empty concept="pending">{t("dash.nothingToApprove")}</Empty>}
           </Card>
           <InitiativePanel />
           <Card title={t("hud.liveActivity")}><ActivityFeed limit={12} compact /></Card>
@@ -166,7 +166,7 @@ function Requests() {
   const cols = Math.max(0, ...items.map((i) => depth(i.id))) + 1;
   const statusColor: Record<string, string> = { planning: "#7c6bb0", running: "#2b6cb0", awaiting_approval: "#a86208", awaiting_confirmation: "#a86208", paused: "#b4443c", done: "#2f7d55", failed: "#b4443c" };
   const statusLabel = (st: string) => trOr(`dash.reqStatus.${st}`, st);
-  if (!list.length) return <Empty>{t("dash.requests.empty")}</Empty>;
+  if (!list.length) return <Empty concept="pedido" how={t("dash.requests.how")} action={<button type="button" onClick={() => goRoute("/chats")} className="min-h-10 rounded-md border border-line-strong bg-panel px-3.5 py-1.5 text-xs font-medium text-ink hover:bg-panel2 sm:min-h-0">{t("dash.goChats")}</button>}>{t("dash.requests.empty")}</Empty>;
   return (
     <div className="grid gap-5 xl:grid-cols-[340px_1fr] [&>*]:min-w-0">
       <Card title={t("dash.requests.title")}>
@@ -224,7 +224,7 @@ function Tasks() {
   const list = all.filter((t) => (filter === "all" || t.request_id === filter) && (status === "all" || t.status === status));
   const title = (id: string) => tasks[id]?.title ?? id;
   const dur = (t: Task) => (t.started_at && t.finished_at ? `${Math.round((+new Date(t.finished_at) - +new Date(t.started_at)) / 1000)}s` : "—");
-  if (!all.length) return <Empty>{tt("dash.tasks.empty")}</Empty>;
+  if (!all.length) return <Empty concept="task" how={tt("dash.tasks.how")}>{tt("dash.tasks.empty")}</Empty>;
   return (
     <Card title={tt("dash.tasks.title", { count: list.length })} right={
       <div className="flex gap-2">
@@ -337,7 +337,7 @@ function Approvals() {
   const pend = approvals.filter((a) => a.status === "pending"), done = approvals.filter((a) => a.status !== "pending");
   return (
     <div className="grid gap-5 xl:grid-cols-2 [&>*]:min-w-0">
-      <Card title={t("dash.approvals.pending", { count: pend.length })}>{pend.length ? <div className="space-y-2">{pend.map((a) => <ApprovalCard key={a.id} a={a} />)}</div> : <Empty>{t("dash.approvals.nonePending")}</Empty>}</Card>
+      <Card title={t("dash.approvals.pending", { count: pend.length })}>{pend.length ? <div className="space-y-2">{pend.map((a) => <ApprovalCard key={a.id} a={a} />)}</div> : <Empty concept="pending">{t("dash.approvals.nonePending")}</Empty>}</Card>
       <Card title={t("dash.approvals.history")}>{done.length ? <div className="space-y-2">{done.map((a) => <ApprovalCard key={a.id} a={a} compact />)}</div> : <Empty>{t("dash.approvals.noDecisions")}</Empty>}</Card>
     </div>
   );
@@ -348,7 +348,7 @@ function Reports() {
   const reports = Object.values(useStore((s) => s.reports)).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
   const [sel, setSel] = useState<string | null>(null);
   const cur = reports.find((r) => r.id === sel) ?? reports[0];
-  if (!reports.length) return <Empty>{t("dash.reports.empty")}</Empty>;
+  if (!reports.length) return <Empty concept="report" how={t("dash.reports.how")} action={<button type="button" onClick={() => goRoute("/chats")} className="min-h-10 rounded-md border border-line-strong bg-panel px-3.5 py-1.5 text-xs font-medium text-ink hover:bg-panel2 sm:min-h-0">{t("dash.goChats")}</button>}>{t("dash.reports.empty")}</Empty>;
   return (
     <div className="grid gap-5 xl:grid-cols-[320px_1fr] [&>*]:min-w-0">
       <Card title={t("dash.reports.title")}><ul className="space-y-1.5">{reports.map((r) => (

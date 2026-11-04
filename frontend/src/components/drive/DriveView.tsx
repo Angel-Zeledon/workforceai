@@ -7,6 +7,7 @@ import { toast } from "@/lib/toast";
 import { Btn, Empty, Loading } from "../ui";
 import { FolderAgentsPanel } from "./FolderAgentsPanel";
 import { EmptyState } from "../nav/ui2";
+import { ConceptHelp } from "../concepts/ConceptHelp";
 import { Icon } from "../icons";
 import { useAgentName } from "../ui";
 import { docSearch, type Passage, type PassageResult } from "@/lib/docsearch";
@@ -107,7 +108,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
       onDrop={(e) => { e.preventDefault(); setDrag(false); if (canUpload && e.dataTransfer.files.length) upload(e.dataTransfer.files); }}>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-3 py-3 sm:px-5">
-          <div data-tour="files.header" className="w-full sm:mr-3 sm:w-auto"><h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("drive.title")}</h1><p className="text-[12px] text-mute">{t("drive.page.desc")}</p></div>
+          <div data-tour="files.header" className="w-full sm:mr-3 sm:w-auto"><div className="flex items-center gap-1.5"><h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("drive.title")}</h1><ConceptHelp concept="file" /></div><p className="text-[12px] text-mute">{t("drive.page.desc")}</p></div>
           <nav data-tour="files.crumbs" data-testid="drive-crumbs" className="flex flex-wrap items-center gap-1 text-sm">
             <button type="button" className="min-h-9 rounded px-1.5 py-0.5 text-mute hover:bg-panel2 hover:text-ink sm:min-h-0" onClick={() => { setPath("/"); setSelected(null); setTrash(null); }}>{t("drive.root")}</button>
             {crumbs.map((c, i) => (
@@ -177,7 +178,7 @@ function FileTable({ listing, path, selected, onFolder, onFile, canUpload, onUpl
 }) {
   const { t } = useT();
   if (!listing.folders.length && !listing.files.length) return canUpload
-    ? <EmptyState testid="drive-empty" icon="doc" title={t("drive.emptyTitle")} body={t("drive.emptyFolder")} action={<Btn kind="primary" onClick={onUpload}>{t("drive.upload")}</Btn>} />
+    ? <EmptyState testid="drive-empty" concept="file" title={t("drive.emptyTitle")} body={t("drive.emptyFolder")} action={<Btn kind="primary" onClick={onUpload}>{t("drive.upload")}</Btn>} />
     : <Empty>{t("drive.empty")}</Empty>;
   return (
     <table data-testid="drive-table" className="w-full text-left text-sm">

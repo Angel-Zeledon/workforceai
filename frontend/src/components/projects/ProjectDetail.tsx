@@ -1,26 +1,22 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useT, fmtNumber } from "@/lib/i18n";
-import { PROJECT_TABS, useProjects, type ProjectTab } from "@/lib/projects/store";
+import { PROJECT_TABS, resolveProjectTab, useProjects, type ProjectTab } from "@/lib/projects/store";
 import { Btn, Progress } from "../ui";
-import { AgentLanes } from "./AgentLanes";
 import { ApprovalsBatch } from "./ApprovalsBatch";
 import { StandingApprovals } from "./StandingApprovals";
 import { ScopeGrants } from "../approvals/ScopeGrants";
 import { CostsView } from "./CostsView";
-import { DelegationTree } from "./DelegationTree";
 import { DraftEditor } from "./DraftEditor";
-import { HealthView } from "./HealthView";
-import { KanbanBoard } from "./KanbanBoard";
 import { NodeDrawer } from "./NodeDrawer";
-import { PlanChangesPanel } from "./PlanChangesPanel";
 import { SaveTemplateModal } from "./SaveTemplateModal";
 import { ClientPortalModal } from "./ClientPortalModal";
 import { useCan } from "@/lib/session";
-import { ProjectMap } from "./ProjectMap";
-import { Timeline } from "./Timeline";
 import { LightDot, STATUS_COLOR, StatusPill } from "./shared";
 import { FollowView } from "./FollowView";
+import { PlanTab } from "./PlanTab";
+import { ProjectNotices } from "./ProjectNotices";
 import { useViewAll } from "@/lib/viewMode";
 import { SIMPLE_PROJECT_TABS, splitTabs } from "@/lib/viewModeLogic";
 import { MoreButton } from "../nav/ViewAll";
@@ -41,8 +37,17 @@ export function ProjectDetailView() {
   const pendingApprovals = useProjects((s) => s.detail?.approvals.filter((a) => a.status === "pending").length ?? 0);
   const viewAll = useViewAll();
   const [more, setMore] = useState(false); // "Más vistas": opens the folded tabs here only
-  // simple mode: Seguimiento and Aprobaciones open; Cambios de plan when one waits; the open tab never disappears
-  const tabs = splitTabs(PROJECT_TABS, SIMPLE_PROJECT_TABS, viewAll || more, [tab, pendingChanges > 0 ? "changes" : null]);
+  // simple mode: Seguimiento and Permisos open, Plan and Costos behind "Más vistas"; the open tab never disappears
+  const tabs = splitTabs(PROJECT_TABS, SIMPLE_PROJECT_TABS, viewAll || more, [tab]);
+  // old links keep working: /projects?p=<id>&tab=kanban opens Plan on the board (lib/projects/tabsLogic.ts)
+  const pid = detail?.project.id;
+  const search = useSearchParams(); // a new ?tab= on the same open project applies too
+  useEffect(() => {
+    if (!pid || typeof window === "undefined") return;
+    const linked = search.get("p");
+    if (linked && linked !== pid) return;
+    if (resolveProjectTab(search.get("tab"))) setTab(search.get("tab") as Parameters<typeof setTab>[0]);
+  }, [pid, setTab, search]);
 
   if (!detail) return <div className="p-6 text-sm text-mute">…</div>;
   const p = detail.project;
@@ -85,28 +90,21 @@ export function ProjectDetailView() {
 
         {isDraft ? <DraftEditor /> : (
           <>
-            <div data-tour="projects.tabs" className="flex flex-wrap items-center gap-1.5 wf-tabs" role="tablist">
+            <div data-tour="projects.tabs" data-tab={tab} className="flex flex-wrap items-center gap-1.5 wf-tabs" role="tablist">
               {tabs.shown.map((k: ProjectTab) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`pv-tab-${k}`} onClick={() => setTab(k)}
                   className={`rounded-md border px-3.5 py-2.5 text-xs font-semibold transition md:py-1.5 ${tab === k ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel text-mute hover:text-ink"}`}>
                   {t(`pv.tab.${k}`)}
-                  {k === "changes" && pendingChanges > 0 && <span data-testid="plan-changes-badge" className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-black">{pendingChanges}</span>}
+                  {k === "plan" && pendingChanges > 0 && <span data-testid="plan-changes-badge" className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-black">{pendingChanges}</span>}
                   {k === "approvals" && pendingApprovals > 0 && <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-black">{pendingApprovals}</span>}
                 </button>
               ))}
               {!viewAll && <MoreButton testid="pv-more" count={more ? 1 : tabs.folded.length} open={more} onToggle={() => setMore((m) => !m)} />}
             </div>
-            {viewAll && <div data-testid="pv-hint" className="text-[11px] text-mute">{t("pv.hint")}</div>}
-            {tab === "follow" && <FollowView />}
-            {tab === "health" && <HealthView />}
-            {tab === "map" && <ProjectMap />}
-            {tab === "timeline" && <Timeline />}
-            {tab === "kanban" && <KanbanBoard />}
-            {tab === "lanes" && <AgentLanes />}
-            {tab === "delegation" && <DelegationTree />}
-            {tab === "approvals" && <><ApprovalsBatch /><StandingApprovals projectId={detail.project.id} /><ScopeGrants projectId={detail.project.id} /></>}
-            {tab === "changes" && <PlanChangesPanel />}
+            {tab === "follow" && <><ProjectNotices /><FollowView /></>}
+            {tab === "plan" && <PlanTab />}
             {tab === "costs" && <CostsView />}
+            {tab === "approvals" && <><ApprovalsBatch /><StandingApprovals projectId={detail.project.id} /><ScopeGrants projectId={detail.project.id} /></>}
           </>
         )}
       </div>

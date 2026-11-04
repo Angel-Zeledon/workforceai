@@ -4,7 +4,9 @@ import { useT } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import { customersApi, type CustomerInput, type District } from "@/lib/customersApi";
 import { CUSTOMER_STATUSES, customerColor, normalizeStatus, sortDistrict, STATUS_COLOR } from "@/lib/customersLogic";
+import { go } from "@/lib/navBridge";
 import { Btn, Card, Empty, Loading } from "../ui";
+import { ConceptHelp } from "../concepts/ConceptHelp";
 import { CustomerForm } from "./CustomerForm";
 import { CustomerView, StatusPill } from "./CustomerView";
 import { DistrictMap } from "./DistrictMap";
@@ -39,15 +41,20 @@ export function CustomerDistrict() {
     <div data-testid="customers-district" className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-semibold text-ink">{t("customers.title")}</h2>
+          <div className="flex items-center gap-1.5"><h2 className="font-display text-lg font-semibold text-ink">{t("customers.title")}</h2><ConceptHelp concept="customer" /></div>
           <p className="mt-0.5 max-w-2xl text-xs text-mute">{t("customers.help")}</p>
         </div>
         <Btn data-testid="customers-new" kind="primary" onClick={() => setCreating((v) => !v)}>{t("customers.new")}</Btn>
       </div>
       {creating && <Card title={t("customers.new")}><CustomerForm onSave={create} onCancel={() => setCreating(false)} /></Card>}
-      {err ? <Empty action={<Btn onClick={load}>{t("customers.retry")}</Btn>}>{t("customers.error.load")}</Empty>
+      {err ? <Empty icon="alert" action={<Btn onClick={load}>{t("customers.retry")}</Btn>}>{t("customers.error.load")}</Empty>
         : !data ? <Loading rows={3} />
-        : !items.length ? <Empty action={<Btn kind="primary" onClick={() => setCreating(true)}>{t("customers.new")}</Btn>}>{t("customers.empty")}</Empty>
+        : !items.length ? (
+          <Empty testid="customers-empty" concept="customer" title={t("customers.emptyState.title")} how={t("customers.emptyState.how")}
+            action={<><Btn data-testid="customers-empty-new" kind="primary" onClick={() => setCreating(true)}>{t("customers.new")}</Btn><Btn data-testid="customers-empty-import" onClick={() => go("/projects")}>{t("customers.emptyState.import")}</Btn></>}>
+            {t("customers.emptyState.body")}
+          </Empty>
+        )
         : (
           <>
             <div className="flex flex-wrap gap-3 text-[11px] text-ink2" aria-label={t("customers.legend")}>

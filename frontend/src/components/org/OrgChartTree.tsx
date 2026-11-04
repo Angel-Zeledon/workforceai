@@ -3,6 +3,7 @@ import { useState } from "react";
 import { fmtDateTime, fmtUsd, useT } from "@/lib/i18n";
 import type { Chart, ChartDept, ChartMember } from "@/lib/orgChartApi";
 import { KindIcon, allDepts } from "./shared";
+import { EmptyState } from "../nav/ui2";
 
 interface Handlers { onDept: (id: string) => void; onAgent: (id: string) => void; onPerson: (id: string) => void }
 
@@ -110,10 +111,8 @@ export function OrgChartTree({ chart, onDept, onAgent, onPerson, onNewDept }: Ha
         </div>
       </div>
       {!hasDepts && (
-        <div className="mb-4 rounded-xl border border-dashed border-line-strong bg-panel p-4 text-center text-[13px] text-mute sm:p-5" data-testid="org-empty">
-          <p className="mb-3">{t("org.empty.body")}</p>
-          <button type="button" data-testid="org-empty-new" onClick={onNewDept} className="rounded-md bg-accent px-4 py-2 text-xs font-semibold text-white">{t("org.dept.new")}</button>
-        </div>
+        <EmptyState compact testid="org-empty" concept="office" className="mb-4 bg-panel" title={t("org.emptyState.title")} body={t("org.empty.body")}
+          action={<button type="button" data-testid="org-empty-new" onClick={onNewDept} className="min-h-10 rounded-md bg-accent px-4 py-2 text-xs font-semibold text-white sm:min-h-0">{t("org.dept.new")}</button>} />
       )}
       {hasDepts && (mode === "tree" ? (
         <div className="grid gap-3">{chart.roots.map((d) => <DeptBox key={d.id} d={d} h={h} depth={0} />)}</div>

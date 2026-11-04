@@ -29,7 +29,7 @@ export const projectsTour: TourDefinition = {
       "progress.t": "Cuánto falta",
       "progress.b": "Esta barra cuenta las tareas terminadas sobre el total. Mírala primero para saber si el proyecto avanza como esperabas.",
       "tabs.t": "Cambia de vista",
-      "tabs.b": "Empieza por Salud para saber si hay un problema, usa Mapa para ver dónde, Kanban o carriles para actuar y Línea de tiempo para replanificar. Aprobaciones y Costos reúnen lo que debes autorizar y lo que se gastó.",
+      "tabs.b": "Seguimiento muestra cada tarea con su agente y, arriba, lo que te espera. Plan abre el mapa y, en Otras vistas, el tablero, el trabajo por agente, el calendario, la salud y el historial de cambios. Costos reúne lo que se gastó y Permisos lo que debes autorizar.",
     },
     en: {
       name: "Projects tour",
@@ -46,7 +46,7 @@ export const projectsTour: TourDefinition = {
       "progress.t": "How much is left",
       "progress.b": "This bar counts finished tasks over the total. Check it first to see whether the project is moving as you expected.",
       "tabs.t": "Switch views",
-      "tabs.b": "Start with Health to know if there is a problem, use Map to see where, Kanban or lanes to act, and Timeline to replan. Approvals and Costs gather what you must authorize and what was spent.",
+      "tabs.b": "Tracking shows every task with its agent and, on top, what is waiting for you. Plan opens the map and, under Other views, the board, the work by agent, the calendar, health and the change history. Costs gathers what was spent and Permissions what you must authorize.",
     },
   },
 };

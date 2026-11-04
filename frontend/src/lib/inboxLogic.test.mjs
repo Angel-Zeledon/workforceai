@@ -50,3 +50,33 @@ test("one pending number: pending approvals plus open questions, decided ones ne
   assert.equal(pendingTotal([], []), 0);
   assert.equal(pendingTotal([{ status: "rejected" }], [{ status: "open" }]), 1);
 });
+
+test("filter of Pendientes: only ?filter=email is known, the link goes back to the same address", async () => {
+  const { parseInboxFilter, inboxHref } = await import("./inboxLogic.ts");
+  assert.equal(parseInboxFilter("email"), "email");
+  assert.equal(parseInboxFilter(" EMAIL "), "email");
+  assert.equal(parseInboxFilter(null), "");
+  assert.equal(parseInboxFilter("payments"), "");
+  assert.equal(inboxHref("email"), "/approvals/inbox?filter=email");
+  assert.equal(inboxHref(""), "/approvals/inbox");
+  assert.equal(parseInboxFilter(new URL(`http://x${inboxHref("email")}`).searchParams.get("filter")), "email");
+});
+
+test("email filter: keeps the actions that send or prepare an e-mail, nothing else", async () => {
+  const { filterInbox, isEmailAction } = await import("./inboxLogic.ts");
+  for (const c of ["email.send", "gmail.send_reply", "outlook.send", "draft_reply", "send_reply", "mail.send"]) assert.equal(isEmailAction(c), true, c);
+  for (const c of ["send_contract", "publish_post", "pay_invoice", "categorize_expense", "code.run", "outlook.create_event", "gmail.label", "", null]) assert.equal(isEmailAction(c), false, String(c));
+  const items = [{ id: "1", action: "email.send" }, { id: "2", action: "send_contract" }, { id: "3", action: "draft_reply" }];
+  assert.deepEqual(filterInbox(items, "email").map((i) => i.id), ["1", "3"]);
+  assert.equal(filterInbox(items, "").length, 3);
+});
+
+test("outbox drafts: waiting ones (also held in the cancel window) and the last ended ones", async () => {
+  const { emailDrafts } = await import("./inboxLogic.ts");
+  const ds = ["draft", "pending_approval", "held", "blocked", "sent", "cancelled", "rejected", "sent", "sent", "queued"].map((status, i) => ({ id: String(i), status }));
+  const r = emailDrafts(ds);
+  assert.deepEqual(r.waiting.map((d) => d.status), ["draft", "pending_approval", "held", "blocked"]);
+  assert.equal(r.done.length, 4);
+  assert.ok(r.done.every((d) => ["sent", "cancelled", "rejected"].includes(d.status)));
+  assert.equal(emailDrafts(ds, 1).done.length, 1);
+});

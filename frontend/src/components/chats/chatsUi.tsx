@@ -4,6 +4,7 @@ import { intlLocale, useT } from "@/lib/i18n";
 import { fmtTime } from "@/lib/meta";
 import type { PedidoStatus } from "@/lib/pedidosLogic";
 import { kindOf, statusColor } from "@/lib/statusLogic";
+import { StatusIcon } from "../ui/Status";
 
 /** Small line icons (kept local: this screen owns its glyphs). */
 export const GLYPH = {
@@ -52,9 +53,10 @@ export function shortTime(iso: string): string {
 export function StatusPill({ status, testId = "pedido-status" }: { status: PedidoStatus; testId?: string }) {
   const { t } = useT();
   const c = statusColor("pedido", status);
+  const kind = kindOf("pedido", status);
   return (
-    <span data-testid={testId} data-status={status} data-kind={kindOf("pedido", status)} className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-[1px] text-[10.5px] font-semibold" style={{ background: `${c}1f`, color: c }}>
-      <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: c }} />{t(`pedido.status.${status}`)}
+    <span data-testid={testId} data-status={status} data-kind={kind} className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-[1px] text-[10.5px] font-semibold" style={{ background: `${c}1f`, color: c }}>
+      <StatusIcon kind={kind} size={10} />{t(`pedido.status.${status}`)}
     </span>
   );
 }

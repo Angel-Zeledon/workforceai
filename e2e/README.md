@@ -83,7 +83,9 @@ Siguen el catalogo de la sec. 10 del spec. Nuevos o con matices respecto al spec
 | `project-status` | Estado del proyecto | `data-status`. |
 | `project-progress` | Progreso (solo en detalle no borrador) | `data-done`, `data-total`. |
 | `project-pause`, `project-resume`, `project-cancel`, `save-as-template` | Control / plantilla | |
-| `pv-tab-<health|map|timeline|kanban|lanes|delegation|approvals|costs>`, `pv-hint` | Pestanas | |
+| `pv-tab-<follow|plan|costs|approvals>` | Pestanas (Seguimiento, Plan, Costos, Permisos) | `approvals` es Permisos. |
+| `pv-plan` (`data-view`), `pv-tab-<map|kanban|lanes|timeline|delegation|health|changes>` | Vistas dentro de Plan (Mapa por defecto + "Otras vistas") | Antes eran pestanas; `?tab=kanban` abre Plan en el Tablero. |
+| `pv-pending-notice`, `pv-pending-open`, `pv-pending-all`, `pv-changes-notice`, `pv-changes-open`, `plan-changes-badge` | Avisos arriba de Seguimiento | Solo si hay aprobaciones o cambios de plan pendientes. |
 | `draft-editor`, `draft-objective-<id>`, `draft-node-count`, `draft-node-title-input`, `draft-node-agent-select`, `estimate-p50`, `estimate-p90`, `validate-ok`, `budget-input`, `underbudget-warning`, `launch-ack-underbudget`, `launch-confirm` | Borrador y lanzamiento | `estimate-*` llevan `data-usd`; `draft-node-count` lleva `data-count`. Hay un input por nodo (usar `.first()`/`nth`). |
 | `health-light` (`data-light`), `health-eta-p50`, `health-budget-forecast`, `health-waiting-human` (`data-count`), `critical-path-strip`, `cp-node-<id>` | Salud | |
 | `map-canvas` (`data-lod`), `map-node-<id>` (`data-state`, `data-selected`), `map-node-count`, `project-heat-strip`, `map-search-input`, `map-breadcrumb` | Mapa (version simple) | |
@@ -132,7 +134,7 @@ Nuevos (no cambian ni reutilizan los de arriba; sin prefijos `agent-` ni `approv
 
 Frontend: `frontend/src/components/connections/*` y `components/security/*`. Contrato en `docs/architecture/integrations-credentials.md` sec. 11.6. Los ids siguen el spec; ademas:
 
-- Navegacion: `nav-connections`, `nav-security`, `conn-close`, `conn-screen`, `ctl-screen`, `conn-tab-{connections|matrix|capabilities|usage|limits}`.
+- Navegacion: `nav-connections`, `nav-security`, `conn-close`, `conn-screen`, `ctl-screen`, `conn-tab-{connections|access|usage}` (las 3 pestañas; `?tab=` viejo abre la que lo contiene), `conn-tab-{matrix|capabilities}` (las dos vistas de "Quién puede usar qué"), `conn-jump-{accounts|inboxes|links|databases}` y `conn-section-{accounts|inboxes|links|databases|usage|limits}`, `conn-db-add`.
 - Asistente: `conn-label-input`, `conn-profile-{read|write}` (Gmail: lectura y escritura son conexiones separadas), `conn-oauth-client-id`, `conn-secret-input` (password, `data-sensitive`; en OAuth es el secreto de cliente de "trae tu app"), `conn-assign-{agentId}`, `conn-wizard-done`, `conn-sim-deny-scope` (solo mock).
 - Detalle: `conn-drawer`, `conn-drawer-status`, `conn-readonly-toggle`, `conn-revoke-submit`, `conn-sim-agent`, `conn-sim-use-{capability}` (solo mock).
 - Permisos: `conn-grant-remove`, `conn-grant-approve` (segunda persona), `conn-grant-second-note`, `conn-grant-no-approve-note`.

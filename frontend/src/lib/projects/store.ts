@@ -8,8 +8,9 @@ import type {
   ControlAction, LaunchBody, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectFrame, ProjectHealth, ProjectSummary, ProjectTemplate, SaveTemplateOpts,
 } from "./types";
 
-export const PROJECT_TABS = ["follow", "health", "map", "timeline", "kanban", "lanes", "delegation", "approvals", "changes", "costs"] as const;
-export type ProjectTab = (typeof PROJECT_TABS)[number];
+import { DEFAULT_PLAN_VIEW, resolveProjectTab, type PlanView, type ProjectTab, type ProjectTabLink } from "./tabsLogic";
+// The detail in 4 tabs (Seguimiento, Plan, Costos, Permisos); old names (setTab("map"), ?tab=kanban) are translated.
+export { PLAN_VIEWS, PROJECT_TABS, resolveProjectTab, type PlanView, type ProjectTab, type ProjectTabLink } from "./tabsLogic";
 /** what the Projects screen shows when no project is open */
 export type ProjectsScreen = "list" | "library" | "builder";
 
@@ -40,6 +41,8 @@ interface PState {
   detail: ProjectDetail | null;
   health: ProjectHealth | null;
   tab: ProjectTab;
+  /** the view shown inside Plan (the map unless the person or a link chose another) */
+  planView: PlanView;
   selectedNodeId: string | null;
   templates: ProjectTemplate[];
   /** template library / builder (inside the Projects screen) */
@@ -59,7 +62,9 @@ interface PState {
   changes: PlanChange[];
   error: string | null;
   setOpen: (o: boolean) => void;
-  setTab: (t: ProjectTab) => void;
+  /** opens a tab by its new or old name: setTab("kanban") opens Plan on the board, setTab("plan") keeps the view chosen */
+  setTab: (t: ProjectTabLink) => void;
+  setPlanView: (v: PlanView) => void;
   selectNode: (id: string | null) => void;
   loadList: () => Promise<void>;
   loadTemplates: () => Promise<void>;
@@ -100,7 +105,7 @@ export const useProjects = create<PState>((set, get) => ({
     if (d.project.status !== "planning" && !d.planning) { if (!s.planningPhases[id]) return {}; const { [id]: _g, ...rest } = s.planningPhases; return { planningPhases: rest }; }
     return { planningPhases: { ...s.planningPhases, [id]: mergePlanning(undefined, d.nodes, d.objectives) } };
   }),
-  open: false, loaded: false, projects: {}, activeId: null, detail: null, health: null, tab: "follow", selectedNodeId: null,
+  open: false, loaded: false, projects: {}, activeId: null, detail: null, health: null, tab: "follow", planView: DEFAULT_PLAN_VIEW, selectedNodeId: null,
   templates: [], changes: [], error: null,
   view: "list", editingId: null, wizard: null,
   setView: (view) => set({ view }),
@@ -112,7 +117,8 @@ export const useProjects = create<PState>((set, get) => ({
   deleteTemplate: async (id) => { await projectsApi.deleteTemplate(id); await get().loadTemplates(); },
 
   setOpen: (open) => { set({ open }); if (open) go("/projects"); },
-  setTab: (tab) => set({ tab }),
+  setTab: (name) => { const p = resolveProjectTab(name); if (p) set(p.planView ? { tab: p.tab, planView: p.planView } : { tab: p.tab }); },
+  setPlanView: (planView) => set({ tab: "plan", planView }),
   selectNode: (selectedNodeId) => set({ selectedNodeId }),
 
   loadList: async () => {
@@ -124,7 +130,7 @@ export const useProjects = create<PState>((set, get) => ({
   loadTemplates: async () => { try { set({ templates: await projectsApi.templates() }); } catch { /* ignore */ } },
 
   openProject: async (id) => {
-    set({ activeId: id, detail: null, health: null, changes: [], tab: "follow", selectedNodeId: null, error: null, view: "list" });
+    set({ activeId: id, detail: null, health: null, changes: [], tab: "follow", planView: DEFAULT_PLAN_VIEW, selectedNodeId: null, error: null, view: "list" });
     try {
       const detail = await projectsApi.get(id);
       if (get().activeId !== id) return;

@@ -51,7 +51,7 @@ export function OrgPage() {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto" data-testid="org-page">
-      <PageHeader title={t("org.title")} description={t("org.subtitle")} testid="org-header"
+      <PageHeader title={t("org.title")} description={t("org.subtitle")} testid="org-header" concept="office"
         actions={<div className="flex flex-wrap items-center gap-2">
           {/* one primary action: hire an agent (it used to live only in Ajustes); a new office stays one click away */}
           <button type="button" data-testid="org-new-dept" onClick={() => setDept(null)} className="min-h-10 rounded-md border border-line bg-panel px-3 py-1.5 text-[12.5px] sm:min-h-0 font-semibold text-ink2 hover:border-accent hover:text-accent">{t("org.dept.new")}</button>

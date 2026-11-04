@@ -8,9 +8,11 @@ import type { Approval } from "@/lib/types";
 import { currentSubscription, disablePush, enablePush, getPushConfig, pushSupported, sendLabels, type PushConfig } from "@/lib/push";
 import { useSession } from "@/lib/session";
 import { OrgIndicator } from "../auth/OrgIndicator";
-import { Progress, RiskBadge } from "../ui";
-import { ActionName } from "./ActionName";
+import { Progress } from "../ui";
 import { ApprovalReason } from "./ApprovalReason";
+import { PendingCard } from "./PendingCard";
+import { RememberApproval } from "./RememberApproval";
+import { ConceptHelp } from "../concepts/ConceptHelp";
 
 type PushState = "loading" | "unsupported" | "unavailable" | "denied" | "off" | "on";
 
@@ -91,44 +93,42 @@ function ApprovalItem({ a, focused, onDone }: { a: Approval; focused: boolean; o
   const total = a.required_approvals ?? 1;
   const done = a.decisions?.length ?? 0;
   return (
-    <li data-testid={`approval-card-${a.id}`} aria-current={focused ? "true" : undefined}
-      className={`rounded-lg border bg-panel p-4 ${focused ? "border-accent ring-2 ring-accent/30" : "border-line"}`}>
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-[15px] font-semibold leading-snug text-ink">{a.title}</h2>
-        <RiskBadge risk={a.risk} />
-      </div>
-      {focused && <p className="mt-1 text-[11px] font-medium text-accent">{t("approvals.mobile.focused")}</p>}
-      {a.details && <p className="mt-2 text-[13px] leading-snug text-ink2 [overflow-wrap:anywhere]">{a.details}</p>}
-      {a.status === "pending" && <ApprovalReason a={a} className="mt-2 bg-panel2" />}
-      <dl className="mt-2 space-y-1 text-[12px] text-mute">
-        <div><ActionName code={a.action} /></div>
-        {a.required_role && <div data-testid={`approval-role-${a.id}`}>{t("approvals.mobile.requiredRole", { role: a.required_role })}</div>}
-      </dl>
-      {total > 1 && (
-        <div className="mt-3" data-testid={`approval-progress-${a.id}`}>
-          <div className="mb-1 flex justify-between text-[12px] text-ink2">
-            <span>{t("approvals.mobile.progress", { done, total })}</span>
-            <span className="text-mute">{t("approvals.mobile.doubleApproval")}</span>
+    <PendingCard kind="approval" variant="full" as="li" testId={`approval-card-${a.id}`} agentId={a.agent_id} title={a.title} action={a.action} risk={a.risk}
+      border={focused ? "border-accent ring-2 ring-accent/30" : "border-line"}
+      rootProps={{ "aria-current": focused ? "true" : undefined }}
+      context={focused ? <span className="font-medium text-accent">{t("approvals.mobile.focused")}</span> : undefined}
+      body={<>
+        {a.details && <p className="mt-2 text-[13px] leading-snug text-ink2 [overflow-wrap:anywhere]">{a.details}</p>}
+        {a.required_role && <p data-testid={`approval-role-${a.id}`} className="mt-1 text-[12px] text-mute">{t("approvals.mobile.requiredRole", { role: a.required_role })}</p>}
+      </>}
+      why={a.status === "pending" ? <ApprovalReason a={a} className="mt-2 bg-panel2" /> : null}
+      actions={<>
+        {total > 1 && (
+          <div className="mb-3" data-testid={`approval-progress-${a.id}`}>
+            <div className="mb-1 flex justify-between text-[12px] text-ink2">
+              <span>{t("approvals.mobile.progress", { done, total })}</span>
+              <span className="text-mute">{t("approvals.mobile.doubleApproval")}</span>
+            </div>
+            <Progress value={(done / total) * 100} />
           </div>
-          <Progress value={(done / total) * 100} />
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          <button type="button" data-testid={`approval-approve-${a.id}`} disabled={busy} onClick={() => decide("approve")}
+            className="min-h-[48px] rounded-md border border-ok/40 bg-ok/10 text-sm font-semibold text-ok disabled:opacity-40">{canRemember ? t("approvals.approveOnce") : t("approvals.approve")}</button>
+          <button type="button" data-testid={`approval-reject-${a.id}`} disabled={busy} onClick={() => decide("reject")}
+            className="min-h-[48px] rounded-md border border-err/40 bg-err/10 text-sm font-semibold text-err disabled:opacity-40">{t("approvals.reject")}</button>
         </div>
-      )}
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <button type="button" data-testid={`approval-approve-${a.id}`} disabled={busy} onClick={() => decide("approve")}
-          className="min-h-[48px] rounded-md border border-ok/40 bg-ok/10 text-sm font-semibold text-ok disabled:opacity-40">{canRemember ? t("approvals.approveOnce") : t("approvals.approve")}</button>
-        <button type="button" data-testid={`approval-reject-${a.id}`} disabled={busy} onClick={() => decide("reject")}
-          className="min-h-[48px] rounded-md border border-err/40 bg-err/10 text-sm font-semibold text-err disabled:opacity-40">{t("approvals.reject")}</button>
-      </div>
-      {canRemember && (
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <button type="button" data-testid={`approval-session-${a.id}`} disabled={busy} onClick={() => decide("approve", "session")}
-            className="min-h-[44px] rounded-md border border-ok/30 text-[13px] font-semibold text-ok disabled:opacity-40">{t("approvals.approveSession")}</button>
-          <button type="button" data-testid={`approval-project-${a.id}`} disabled={busy} onClick={() => decide("approve", "project")}
-            className="min-h-[44px] rounded-md border border-ok/30 text-[13px] font-semibold text-ok disabled:opacity-40">{t("approvals.approveProject")}</button>
-        </div>
-      )}
-      {err && <p role="alert" className="mt-2 text-[12px] text-err">{t("approvals.decideError")}</p>}
-    </li>
+        {canRemember && (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <button type="button" data-testid={`approval-session-${a.id}`} disabled={busy} onClick={() => decide("approve", "session")}
+              className="min-h-[44px] rounded-md border border-ok/30 text-[13px] font-semibold text-ok disabled:opacity-40">{t("approvals.approveSession")}</button>
+            <button type="button" data-testid={`approval-project-${a.id}`} disabled={busy} onClick={() => decide("approve", "project")}
+              className="min-h-[44px] rounded-md border border-ok/30 text-[13px] font-semibold text-ok disabled:opacity-40">{t("approvals.approveProject")}</button>
+          </div>
+        )}
+        <div className="mt-2 flex flex-wrap justify-center"><RememberApproval a={a} busy={busy} setBusy={setBusy} onDone={() => { setBusy(false); onDone(); }} /></div>
+        {err && <p role="alert" className="mt-2 text-[12px] text-err">{t("approvals.decideError")}</p>}
+      </>} />
   );
 }
 
@@ -162,7 +162,7 @@ export function ApprovalsMobile({ focusId }: { focusId?: string }) {
   return (
     <main className="mx-auto min-h-full max-w-xl space-y-3 bg-bg px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5" data-testid="approvals-page">
       <header>
-        <h1 className="text-[18px] sm:text-xl font-bold text-ink">{t("approvals.mobile.title")}</h1>
+        <div className="flex items-center gap-1.5"><h1 className="text-[18px] sm:text-xl font-bold text-ink">{t("approvals.mobile.title")}</h1><ConceptHelp concept="pending" /></div>
         <p className="text-[13px] text-mute">{t("approvals.mobile.subtitle")}</p>
         {signedIn && <OrgIndicator className="mt-1 text-[12px] font-medium text-ink2" />}
         <Link href="/approvals/inbox" data-testid="approvals-fast-mode" className="mt-2 inline-flex min-h-[40px] items-center rounded-md border border-accent/40 px-3 text-[13px] font-semibold text-accent">{t("approvalInbox.fastMode")}</Link>

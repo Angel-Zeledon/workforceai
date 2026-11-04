@@ -43,6 +43,12 @@ const P: Record<string, string> = {
   calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h2M14 14h2", // meetings
   bell: "M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10.3 20.5a2 2 0 0 0 3.4 0",
   briefcase: "M4 7h16v12H4zM9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M4 12h16",
+  // concepts of the glossary (proposal 5.1): each concept has one fixed icon
+  clipboard: "M8 4h8v3H8zM6 6H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1M8 12h8M8 16h5", // pedido
+  checkbox: "M4 4h16v16H4zM8 12.5l3 3 5-6", // tarea
+  template: "M4 4h16v5H4zM4 11h16v4H4zM4 17h10v3H4z", // plantilla (molde)
+  copies: "M8 4h12v12H8zM4 8v12h12", // lote
+  bot: "M6 8h12v11H6zM12 4.5V8M12 4.5h.01M9.5 12.5v1M14.5 12.5v1M9.5 16.5h5M3.5 12v3.5M20.5 12v3.5", // agente
 };
 
 export type IconName = keyof typeof P;

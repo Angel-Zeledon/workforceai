@@ -65,3 +65,43 @@ export function pendingTotal(approvals: Record<string, { status: string }> | { s
   const list = <T,>(x: Record<string, T> | T[]) => (Array.isArray(x) ? x : Object.values(x));
   return list(approvals).filter((a) => a.status === "pending").length + list(questions).filter((q) => q.status === "open").length;
 }
+
+/**
+ * Filters of Pendientes. "email" is what Seguridad used to call "Correos para aprobar": the e-mail drafts waiting in the
+ * outbox plus the approvals whose action sends or prepares an e-mail. One place for all decisions; Seguridad links here.
+ */
+export type InboxFilter = "" | "email";
+export const INBOX_FILTERS: InboxFilter[] = ["", "email"];
+
+/** `?filter=` of the address: anything unknown is "everything". */
+export const parseInboxFilter = (v: string | null | undefined): InboxFilter => (String(v ?? "").trim().toLowerCase() === "email" ? "email" : "");
+
+/** The address of Pendientes with a filter (`/approvals/inbox?filter=email`). */
+export const inboxHref = (f: InboxFilter) => (f ? `/approvals/inbox?filter=${f}` : "/approvals/inbox");
+
+const EMAIL_PREFIXES = ["email.", "mail.", "smtp."];
+/** Providers that do more than e-mail (Outlook also has a calendar): only their sending or drafting actions count. */
+const MAILBOX_PREFIXES = ["gmail.", "outlook.", "imap."];
+const EMAIL_VERBS = new Set(["email_send", "send_email", "send_reply", "draft_reply", "reply_email", "send_mail"]);
+
+/** True when the action sends or prepares an e-mail ("email.send", "gmail.send_reply", "draft_reply"). */
+export function isEmailAction(code: string | null | undefined): boolean {
+  const c = String(code ?? "").trim().toLowerCase();
+  if (!c) return false;
+  if (EMAIL_PREFIXES.some((p) => c.startsWith(p))) return true;
+  if (MAILBOX_PREFIXES.some((p) => c.startsWith(p))) return /send|reply|draft|mail/.test(c.slice(c.indexOf(".") + 1));
+  return EMAIL_VERBS.has(c.replace(/[^a-z0-9]+/g, "_")) || EMAIL_VERBS.has(c.split(".").pop()!.replace(/[^a-z0-9]+/g, "_"));
+}
+
+/** The approvals a filter shows (all of them without a filter). */
+export const filterInbox = <T extends { action: string }>(items: T[], f: InboxFilter): T[] => (f === "email" ? items.filter((i) => isEmailAction(i.action)) : items);
+
+/** Outbox drafts still waiting for a person (to edit, approve or cancel in the window) and the last few that ended. */
+export const OUTBOX_WAITING = ["draft", "pending_approval", "held", "blocked"] as const;
+export const OUTBOX_DONE = ["sent", "cancelled", "rejected"] as const;
+export function emailDrafts<T extends { status: string }>(drafts: T[], recentDone = 4): { waiting: T[]; done: T[] } {
+  return {
+    waiting: drafts.filter((d) => (OUTBOX_WAITING as readonly string[]).includes(d.status)),
+    done: drafts.filter((d) => (OUTBOX_DONE as readonly string[]).includes(d.status)).slice(0, recentDone),
+  };
+}

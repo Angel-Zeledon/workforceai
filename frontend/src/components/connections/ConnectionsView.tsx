@@ -1,7 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useT, fmtDateTime } from "@/lib/i18n";
-import { useConnections, type ConnTab } from "@/lib/connections/store";
+import { useConnections } from "@/lib/connections/store";
+import { DATABASE } from "@/lib/connections/dbSource";
+import { CONN_PAGE_TABS, accessViewOf, resolveConnTab, type ConnPageTab, type ConnSection, type ConnTarget } from "@/lib/connections/tabs";
 import type { Connection } from "@/lib/connections/types";
 import { Btn, Card, Empty } from "../ui";
 import { CapabilitiesTab } from "./CapabilitiesTab";
@@ -13,8 +15,8 @@ import { LimitsTab } from "./LimitsTab";
 import { LinkImportsSection } from "./LinkImportsSection";
 import { CapChip, StatusBadge, useViewer } from "./shared";
 import { UsageTable } from "./UsageTable";
+import { ConceptHelp } from "../concepts/ConceptHelp";
 
-const TABS: ConnTab[] = ["connections", "inboxes", "matrix", "capabilities", "usage", "limits"];
 const AGE_WARNING_DAYS = 180;
 
 function ConnectionCard({ c, onOpen }: { c: Connection; onOpen: () => void }) {
@@ -52,47 +54,145 @@ function ConnectionCard({ c, onOpen }: { c: Connection; onOpen: () => void }) {
   );
 }
 
+const TAB_LABEL: Record<ConnPageTab, string> = { connections: "conn.tab.connections", access: "conn.tab.access", usage: "conn.tab.usageLimits" };
+/** sections of the Conexiones tab, in the order of the proposal (5.2 #5): accounts, inboxes, link imports, databases */
+const SECTIONS = ["accounts", "inboxes", "links", "databases"] as const;
+const SECTION_LABEL: Record<(typeof SECTIONS)[number], string> = { accounts: "conn.section.accounts", inboxes: "dataInbox.tab", links: "conn.section.links", databases: "conn.section.databases" };
+
+function SectionHead({ title, help, right }: { title: string; help?: string; right?: ReactNode }) {
+  return (
+    <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+      <div className="min-w-0 max-w-2xl">
+        <h2 className="font-display text-base font-semibold">{title}</h2>
+        {help && <p className="text-xs text-mute">{help}</p>}
+      </div>
+      {right}
+    </div>
+  );
+}
+
+/**
+ * Conexiones in three tabs (UX tanda 2): Conexiones (accounts, data inboxes, link imports and databases as sections of
+ * one page; a database is one more kind of connection, same card and same wizard) · Quién puede usar qué (the
+ * permissions table and what each agent can do) · Uso y límites. The components inside are the same as before.
+ * Old links (`?tab=matrix`, `?tab=limits`…) open the tab that contains them (lib/connections/tabs.ts).
+ */
 export function ConnectionsView() {
   const { t } = useT();
-  const tab = useConnections((s) => s.tab);
-  const setTab = useConnections((s) => s.setTab);
+  const storeTab = useConnections((s) => s.tab);
   const connections = useConnections((s) => s.connections);
   const { isAdmin } = useViewer();
+  const [target, setTarget] = useState<ConnTarget>(() => resolveConnTab(storeTab));
+  const [access, setAccess] = useState<"matrix" | "capabilities">(() => accessViewOf(resolveConnTab(storeTab).section));
   const [wizard, setWizard] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
-  const list = Object.values(connections).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+  const scroller = useRef<HTMLDivElement>(null);
+  const tab = target.tab;
+  const all = Object.values(connections).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+  const accounts = all.filter((c) => c.provider !== DATABASE);
+  const databases = all.filter((c) => c.provider === DATABASE);
+
+  // the link wins over the remembered tab: /connections?tab=<old or new name>
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get("tab");
+    if (!raw) return;
+    const next = resolveConnTab(raw);
+    setTarget(next);
+    setAccess(accessViewOf(next.section));
+  }, []);
+  // a section asked for (inboxes, databases, limits…) scrolls into view once its tab is on screen
+  useEffect(() => {
+    const sec = target.section;
+    if (!sec || sec === "matrix" || sec === "capabilities") return;
+    const id = window.setTimeout(() => scroller.current?.querySelector(`[data-section="${sec}"]`)?.scrollIntoView({ block: "start", behavior: "smooth" }), 60);
+    return () => window.clearTimeout(id);
+  }, [target]);
+
+  const choose = (k: ConnPageTab) => {
+    setTarget({ tab: k });
+    scroller.current?.scrollTo({ top: 0 });
+    // keep the address in step, so a copied link or a reload opens the same tab
+    const url = new URL(window.location.href);
+    if (url.pathname.startsWith("/connections")) { url.searchParams.set("tab", k); window.history.replaceState(window.history.state, "", url.toString()); }
+  };
+  const jump = (sec: ConnSection) => setTarget({ tab: "connections", section: sec });
+  const chip = (on: boolean) => `rounded-full border px-3 py-1 text-[11px] font-semibold transition ${on ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel text-mute hover:text-ink"}`;
 
   return (
     <div className="mx-auto flex h-full max-w-6xl flex-col px-4 py-3 sm:px-5 sm:py-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="font-display text-[18px] sm:text-xl font-semibold">{t("conn.title")}</h1>
+          <div className="flex items-center gap-1.5"><h1 className="font-display text-[18px] sm:text-xl font-semibold">{t("conn.title")}</h1><ConceptHelp concept="connection" /></div>
           <p className="text-xs text-mute">{t("conn.subtitle")}</p>
         </div>
         <Btn data-testid="conn-add" kind="primary" disabled={!isAdmin} onClick={() => setWizard(true)}>{t("conn.add")}</Btn>
       </div>
       <div role="tablist" className="mb-4 flex flex-wrap gap-1 border-b border-line pb-2 wf-tabs">
-        {TABS.map((k) => (
-          <button key={k} role="tab" aria-selected={tab === k} data-testid={`conn-tab-${k}`} onClick={() => setTab(k)}
+        {CONN_PAGE_TABS.map((k) => (
+          <button key={k} role="tab" aria-selected={tab === k} data-testid={`conn-tab-${k}`} onClick={() => choose(k)}
             className={`rounded-md px-4 py-1.5 text-xs font-medium transition ${tab === k ? "bg-accent-soft text-accent" : "text-mute hover:text-ink"}`}>
-            {k === "inboxes" ? t("dataInbox.tab") : t(`conn.tab.${k}`)}
+            {t(TAB_LABEL[k])}
           </button>
         ))}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
+      <div ref={scroller} data-testid={`conn-panel-${tab}`} className="min-h-0 flex-1 overflow-y-auto pb-6">
         {tab === "connections" && (
-          list.length === 0 ? <Empty>{t("conn.empty")}</Empty> : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {list.map((c) => <ConnectionCard key={c.id} c={c} onOpen={() => setOpenId(c.id)} />)}
-            </div>
-          )
+          <div className="space-y-6">
+            <nav aria-label={t("conn.sections.aria")} className="wf-hscroll flex flex-wrap gap-1.5">
+              {SECTIONS.map((s) => (
+                <button key={s} type="button" data-testid={`conn-jump-${s}`} aria-current={target.section === s ? "true" : undefined} onClick={() => jump(s)} className={chip(target.section === s)}>{t(SECTION_LABEL[s])}</button>
+              ))}
+            </nav>
+            <section data-section="accounts" data-testid="conn-section-accounts" className="scroll-mt-2">
+              <SectionHead title={t("conn.section.accounts")} help={t("conn.section.accountsHelp")} />
+              {accounts.length === 0 ? <Empty>{t("conn.empty")}</Empty> : (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {accounts.map((c) => <ConnectionCard key={c.id} c={c} onOpen={() => setOpenId(c.id)} />)}
+                </div>
+              )}
+            </section>
+            <section data-section="inboxes" data-testid="conn-section-inboxes" className="scroll-mt-2">
+              <DataInboxesTab isAdmin={isAdmin} />
+            </section>
+            <section data-section="links" data-testid="conn-section-links" className="scroll-mt-2 [&>section]:!mt-0">
+              <LinkImportsSection />
+            </section>
+            <section data-section="databases" data-testid="conn-section-databases" className="scroll-mt-2">
+              <SectionHead title={t("conn.section.databases")} help={t("conn.section.databasesHelp")}
+                right={<Btn data-testid="conn-db-add" disabled={!isAdmin} onClick={() => setWizard(true)}>{t("conn.section.databasesAdd")}</Btn>} />
+              {databases.length === 0 ? <Empty>{t("conn.section.databasesEmpty")}</Empty> : (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {databases.map((c) => <ConnectionCard key={c.id} c={c} onOpen={() => setOpenId(c.id)} />)}
+                </div>
+              )}
+            </section>
+          </div>
         )}
-        {tab === "connections" && <LinkImportsSection />}
-        {tab === "matrix" && <GrantMatrix />}
-        {tab === "capabilities" && <CapabilitiesTab />}
-        {tab === "usage" && <Card title={t("conn.tab.usage")}><UsageTable /></Card>}
-        {tab === "limits" && <LimitsTab />}
-        {tab === "inboxes" && <DataInboxesTab isAdmin={isAdmin} />}
+        {tab === "access" && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div role="tablist" aria-label={t("conn.access.aria")} className="wf-hscroll inline-flex max-w-full gap-1 rounded-lg border border-line bg-panel2 p-1">
+                {(["matrix", "capabilities"] as const).map((v) => (
+                  <button key={v} type="button" role="tab" aria-selected={access === v} data-testid={`conn-tab-${v}`} onClick={() => setAccess(v)}
+                    className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${access === v ? "bg-panel text-ink shadow-soft" : "text-mute hover:text-ink"}`}>{t(`conn.tab.${v}`)}</button>
+                ))}
+              </div>
+              <p className="min-w-0 flex-1 basis-60 text-[11px] text-mute">{t("conn.access.help")}</p>
+            </div>
+            {access === "matrix" ? <GrantMatrix /> : <CapabilitiesTab />}
+          </div>
+        )}
+        {tab === "usage" && (
+          <div className="space-y-6">
+            <section data-section="log" data-testid="conn-section-usage" className="scroll-mt-2">
+              <Card title={t("conn.tab.usage")}><UsageTable /></Card>
+            </section>
+            <section data-section="limits" data-testid="conn-section-limits" className="scroll-mt-2">
+              <SectionHead title={t("conn.tab.limits")} help={t("conn.limits.help")} />
+              <LimitsTab />
+            </section>
+          </div>
+        )}
       </div>
       {wizard && <ConnectWizard onClose={() => setWizard(false)} />}
       {openId && connections[openId] && <ConnectionDrawer id={openId} onClose={() => setOpenId(null)} />}

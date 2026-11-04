@@ -50,7 +50,7 @@ test("an agent asks to run code, a person reads it, approves, and the result lan
   await expect(card.getByTestId("code-listing")).toContainText("out/resumen.csv");
   await expect(card.getByTestId("code-listing")).toContainText("groupby");
   await expect(card.getByTestId("code-run-limits")).toBeVisible();
-  await card.getByRole("button", { name: /Aprobar|Approve/ }).click();
+  await card.getByTestId(`approve-btn-${ap!.id}`).click(); // the one pending card: Approve, not "Approve and do not ask again"
 
   // The container runs pandas; the output is a new file on the agent's desk
   let run: Run | undefined;

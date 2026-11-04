@@ -10,9 +10,9 @@ import { useSession } from "@/lib/session";
 import { useStore } from "@/lib/store";
 import { Icon } from "../icons";
 import { welcomeSeen } from "../onboarding/WelcomeOverlay";
-import { ApprovalCard } from "../ApprovalsTray";
+import { ApprovalPending, PendingCard } from "../approvals/PendingCard";
 import { ReportView } from "../ReportView";
-import { Btn, RiskBadge, useAgentName } from "../ui";
+import { Btn, useAgentName } from "../ui";
 
 /**
  * "While you were away" (B3, docs/architecture/away-summary.md): a dismissible sheet over the office with what
@@ -213,7 +213,6 @@ function AwaySheet() {
 
 function ActNow({ s, onNavigate }: { s: AwaySummary; onNavigate: () => void }) {
   const { t } = useT();
-  const name = useAgentName();
   const approvals = useStore((x) => x.approvals);
   const [openId, setOpenId] = useState<string | null>(null);
   const { counts } = s;
@@ -221,31 +220,33 @@ function ActNow({ s, onNavigate }: { s: AwaySummary; onNavigate: () => void }) {
   return (
     <div data-testid="away-act-now">
       <h3 className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{t("away.actNow.title")}</h3>
-      <ul className="space-y-1.5">
+      <ul className="space-y-2">
         {s.act_now.map((it) => {
           const live = approvals[it.ref_id];
           const decided = live && live.status !== "pending";
+          const when = (
+            <span className="flex flex-wrap items-center gap-1.5">
+              <span>{t("away.waitingSince", { time: shortWhen(it.at) })}</span>
+              {it.new && <span className="rounded bg-accent-soft px-1 font-semibold text-accent">{t("away.new")}</span>}
+              {(it.required_approvals ?? 1) >= 2 && <span className="font-semibold">{t("away.double")}</span>}
+            </span>
+          );
           return (
-            <li key={it.ref_id} className="rounded-lg border border-amber-500/40 bg-amber-50/60 px-3 py-2 dark:bg-amber-500/10">
-              <div className="flex items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-semibold text-ink">{it.title}</div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-mute">
-                    {it.agent_id && <span>{name(it.agent_id)}</span>}
-                    <span>· {t("away.waitingSince", { time: shortWhen(it.at) })}</span>
-                    {it.new && <span className="rounded bg-accent-soft px-1 font-semibold text-accent">{t("away.new")}</span>}
-                    {(it.required_approvals ?? 1) >= 2 && <span className="font-semibold">{t("away.double")}</span>}
-                  </div>
-                </div>
-                {it.risk && <RiskBadge risk={it.risk} />}
-                {decided ? <span className="text-[11px] font-semibold text-emerald-700">{t("away.handled")}</span> : (
-                  <Btn kind="ghost" data-testid={`away-approval-${it.ref_id}`} onClick={() => {
-                    if (live) setOpenId(openId === it.ref_id ? null : it.ref_id);
-                    else { onNavigate(); go(`/approvals/${encodeURIComponent(it.ref_id)}`); }
-                  }}>{openId === it.ref_id ? t("common.hide") : t("away.review")}</Btn>
-                )}
-              </div>
-              {openId === it.ref_id && live && <div className="mt-2"><ApprovalCard a={live} scope="away" /></div>}
+            <li key={it.ref_id}>
+              {openId === it.ref_id && live ? (
+                // Opened: the same pending card as the office tray, with the decision buttons.
+                <ApprovalPending a={live} variant="compact" scope="away" context={when}
+                  extraActions={<Btn kind="ghost" data-testid={`away-approval-${it.ref_id}`} onClick={() => setOpenId(null)}>{t("common.hide")}</Btn>} />
+              ) : (
+                <PendingCard kind="approval" variant="compact" agentId={it.agent_id} title={it.title} action={live?.action} risk={it.risk} context={when}
+                  border={decided ? "border-line" : "border-amber-500/40"}
+                  actions={decided ? <span className="text-[11px] font-semibold text-emerald-700">{t("away.handled")}</span> : (
+                    <Btn kind="ghost" data-testid={`away-approval-${it.ref_id}`} onClick={() => {
+                      if (live) setOpenId(it.ref_id);
+                      else { onNavigate(); go(`/approvals/${encodeURIComponent(it.ref_id)}`); }
+                    }}>{t("away.review")}</Btn>
+                  )} />
+              )}
             </li>
           );
         })}

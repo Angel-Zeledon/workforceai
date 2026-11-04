@@ -2,13 +2,18 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useT } from "@/lib/i18n";
 import { Icon, type IconName } from "../icons";
+import { conceptOf, type Concept } from "../concepts/ConceptLegend";
+import { ConceptHelp } from "../concepts/ConceptHelp";
 
-/** Consistent page header: title, one line that says what the page is for, and the primary action. */
-export function PageHeader({ title, description, actions, testid }: { title: string; description?: string; actions?: ReactNode; testid?: string }) {
+/** Consistent page header: title (with "¿Qué es esto?" when the page is a concept), what the page is for, the primary action. */
+export function PageHeader({ title, description, actions, testid, concept }: { title: string; description?: string; actions?: ReactNode; testid?: string; concept?: Concept }) {
   return (
     <div data-testid={testid} className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-line bg-panel px-4 py-3 sm:px-6 sm:py-4">
       <div className="min-w-0">
-        <h1 className="font-display text-[18px] font-semibold leading-tight tracking-tight text-ink sm:text-xl">{title}</h1>
+        <div className="flex items-center gap-1.5">
+          <h1 className="font-display text-[18px] font-semibold leading-tight tracking-tight text-ink sm:text-xl">{title}</h1>
+          {concept && <ConceptHelp concept={concept} />}
+        </div>
         {description && <p className="mt-0.5 max-w-2xl text-[12.5px] leading-snug text-mute sm:text-[13px]">{description}</p>}
       </div>
       {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -16,14 +21,28 @@ export function PageHeader({ title, description, actions, testid }: { title: str
   );
 }
 
-/** Empty state that says exactly what to do next. */
-export function EmptyState({ icon = "layers", title, body, action, testid }: { icon?: IconName; title: string; body: string; action?: ReactNode; testid?: string }) {
+/**
+ * The one empty state (proposal 5.4, point 5), always with the same shape: the icon of the concept, what it is
+ * (title + body), how something appears here (how) and a button to do it (action). `compact` is the version that
+ * sits inside a card or a list (ui.tsx's Empty uses it, so every list gets the same form).
+ */
+export function EmptyState({ icon, concept, title, body, how, action, testid, compact = false, className = "" }: {
+  icon?: IconName; concept?: Concept; title?: ReactNode; body?: ReactNode; how?: ReactNode; action?: ReactNode; testid?: string; compact?: boolean; className?: string;
+}) {
+  const c = concept ? conceptOf(concept) : null;
+  const glyph = icon ?? c?.icon ?? "layers";
+  const tint = c ? c.tint : compact && !icon ? "bg-mute/[0.1] text-mute" : "bg-accent-soft text-accent";
   return (
-    <div data-testid={testid} className="ac-pop mx-auto flex max-w-md flex-col items-center rounded-xl border border-dashed border-line-strong bg-panel px-4 py-7 text-center sm:px-6 sm:py-10">
-      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-soft text-accent"><Icon name={icon} size={20} /></span>
-      <h3 className="mt-4 text-[15px] font-semibold text-ink">{title}</h3>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-mute">{body}</p>
-      {action && <div className="mt-5">{action}</div>}
+    <div data-testid={testid} data-concept={concept} className={`ac-pop flex flex-col items-center border border-dashed border-line-strong text-center ${compact
+      ? "rounded-lg px-4 py-6"
+      : "mx-auto max-w-md rounded-xl bg-panel px-4 py-7 sm:px-6 sm:py-10"} ${className}`}>
+      <span aria-hidden className={`flex items-center justify-center rounded-full ${compact ? "h-8 w-8" : "h-11 w-11"} ${tint}`}><Icon name={glyph} size={compact ? 16 : 20} /></span>
+      {title && (compact
+        ? <p className="mt-2.5 text-[13.5px] font-semibold text-ink">{title}</p>
+        : <h3 className="mt-4 text-[15px] font-semibold text-ink">{title}</h3>)}
+      {body && <div className={`${title ? "mt-1" : compact ? "mt-2.5" : "mt-4"} max-w-md text-[13px] leading-relaxed text-mute`}>{body}</div>}
+      {how && <p className={`mt-1 max-w-md leading-relaxed text-mute ${compact ? "text-[12.5px]" : "text-[13px]"}`}>{how}</p>}
+      {action && <div className={`flex flex-wrap items-center justify-center gap-2 ${compact ? "mt-3" : "mt-5"}`}>{action}</div>}
     </div>
   );
 }

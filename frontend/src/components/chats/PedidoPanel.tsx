@@ -17,6 +17,7 @@ import { Avatar, Bubble } from "../chat/ChatThread";
 import { FileCards } from "../files/FileCard";
 import { ReportView } from "../ReportView";
 import { useAgentName } from "../ui";
+import { ApprovalPending, QuestionPending } from "../approvals/PendingCard";
 import { Glyph, StatusPill } from "./chatsUi";
 
 export type PedidoTab = "summary" | "steps" | "files" | "report" | "work";
@@ -170,6 +171,16 @@ export function PedidoPanel({ requestId, onClose }: { requestId: string; onClose
   const files = usePedidoFiles(requestId, conv.convId);
   const info = useMemo(() => pedidoInfo(requestId, ctx, conv.participants), [requestId, ctx, conv.participants]);
   const tasks = useMemo(() => Object.values(tasksAll).filter((x) => x.request_id === requestId).sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at)), [tasksAll, requestId]);
+  // What this pedido waits for, as the one pending card (the same as in the office tray and in Pendientes).
+  const approvalsAll = useStore((s) => s.approvals);
+  const questionsAll = useStore((s) => s.questions);
+  const pendingHere = useMemo(() => {
+    const ids = new Set(tasks.map((x) => x.id));
+    return {
+      questions: Object.values(questionsAll ?? {}).filter((q) => q.status === "open" && (q.request_id === requestId || ids.has(q.task_id))),
+      approvals: Object.values(approvalsAll).filter((a) => a.status === "pending" && ids.has(a.task_id)),
+    };
+  }, [tasks, approvalsAll, questionsAll, requestId]);
   const [missing, setMissing] = useState(false);
   const box = useRef<HTMLDivElement>(null);
 
@@ -239,6 +250,12 @@ export function PedidoPanel({ requestId, onClose }: { requestId: string; onClose
           <Glyph name="alert" size={14} className="shrink-0 text-warn" />
           <p className="min-w-0 flex-1 text-[12px] leading-snug text-ink">{t(info.status === "needs_help" ? "pedido.attention.help" : "pedido.attention.approval")}</p>
           <Link href="/approvals/inbox" data-testid="pedido-to-pending" className="shrink-0 rounded-md bg-accent px-2.5 py-1 text-[11.5px] font-semibold text-white hover:bg-accent-hover">{t("pedido.toPending")}</Link>
+          {pendingHere.questions.length + pendingHere.approvals.length > 0 && (
+            <div data-testid="pedido-pending" className="max-h-[42dvh] basis-full space-y-2 overflow-y-auto overscroll-contain pb-0.5">
+              {pendingHere.questions.slice(0, 2).map((q) => <QuestionPending key={q.id} q={q} variant="compact" />)}
+              {pendingHere.approvals.slice(0, Math.max(0, 2 - pendingHere.questions.length)).map((a) => <ApprovalPending key={a.id} a={a} variant="compact" />)}
+            </div>
+          )}
         </div>
       )}
 

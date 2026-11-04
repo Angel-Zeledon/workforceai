@@ -1,6 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useT, fmtNumber } from "@/lib/i18n";
+import { kindFromParam } from "@/lib/templateLibraryLogic";
 import { startProjectsRealtime, useProjects } from "@/lib/projects/store";
 import type { ProjectSummary, ProjectTemplate } from "@/lib/projects/types";
 import { Btn, Card, Progress } from "../ui";
@@ -14,8 +16,11 @@ import { BatchWizard } from "./BatchWizard";
 import { batchApi, useBatchUi, type BatchSummary } from "@/lib/projects/batchApi";
 import { LightDot, StatusPill, STATUS_COLOR, fmtMoney } from "./shared";
 import { useTplText } from "./templateUi";
+import { ConceptHelp } from "../concepts/ConceptHelp";
 
-/** "Projects" screen: cards with progress, or the detail of the selected project. */
+/** "Projects" screen: cards with progress, or the detail of the selected project. `/projects?view=library` opens the
+ *  single template library (quick requests + projects; `&kind=quick|project` picks the filter), the home of what used
+ *  to be "Plantillas de trabajo" in Ajustes (`/settings?s=templates` redirects here). */
 export function ProjectsView() {
   const { t } = useT();
   const activeId = useProjects((s) => s.activeId);
@@ -26,10 +31,22 @@ export function ProjectsView() {
   const batchId = useBatchUi((s) => s.openId);
   const batchWizard = useBatchUi((s) => s.wizardTemplate);
   const openBatchWizard = useBatchUi((s) => s.openWizard);
+  const openLibrary = useProjects((s) => s.openLibrary);
+  const router = useRouter();
+  const params = useSearchParams();
+  const wantLibrary = params.get("view") === "library";
+  const kind = kindFromParam(params.get("kind"));
   useEffect(() => startProjectsRealtime(), []);
+  useEffect(() => { if (wantLibrary) openLibrary(); }, [wantLibrary, openLibrary]);
+  // leaving the library (back to the list, a project, the builder) drops ?view=library, so a reload shows what you see
+  const sawLibrary = useRef(false);
+  useEffect(() => {
+    if (view === "library") { sawLibrary.current = true; return; }
+    if (sawLibrary.current && wantLibrary) { sawLibrary.current = false; router.replace("/projects", { scroll: false }); }
+  }, [view, wantLibrary, router]);
   return (
     <div data-testid="projects-view" className="h-full min-h-0 overflow-y-auto bg-bg">
-      {activeId ? <ProjectDetailView /> : batchId ? <BatchView id={batchId} /> : view === "library" ? <TemplateLibrary /> : view === "builder" ? <TemplateBuilder /> : <ProjectList />}
+      {activeId ? <ProjectDetailView /> : batchId ? <BatchView id={batchId} /> : view === "library" ? <TemplateLibrary initialKind={kind} /> : view === "builder" ? <TemplateBuilder /> : <ProjectList />}
       {wizard && <NewProjectWizard initialTemplate={wizard.templateId} onClose={closeWizard} />}
       {batchWizard && <BatchWizard templateId={batchWizard} onClose={() => openBatchWizard(null)} />}
       {error && !activeId && <div className="mx-6 mb-6 rounded-xl border border-dashed border-line px-4 py-3 text-xs text-mute">{t("pv.backendMissing")}</div>}
@@ -55,7 +72,7 @@ function ProjectList() {
     <div className="mx-auto max-w-[1180px] space-y-4 p-4 sm:space-y-6 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("pv.title")}</h1>
+          <div className="flex items-center gap-1.5"><h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("pv.title")}</h1><ConceptHelp concept="project" /></div>
           <p className="text-xs text-mute">{t("pv.subtitle")}</p>
         </div>
         <div data-tour="projects.actions" className="flex flex-wrap items-center gap-2">

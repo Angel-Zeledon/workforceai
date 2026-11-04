@@ -13,7 +13,7 @@ export async function openAdminMenu(page: Page) {
 const MOVED: Record<string, { href: string; testid?: string }> = {
   "nav-connections": { href: "/connections" },                       // main menu, "Conexiones"
   "nav-security": { href: "/settings", testid: "settings-security" },  // Ajustes → Seguridad
-  "templates-open": { href: "/settings?s=templates" },               // search box of Ajustes
+  "templates-open": { href: "/projects?view=library" },              // Proyectos → Biblioteca de plantillas (/settings?s=templates redirects)
   "hire-open": { href: "/settings?s=hire" },                         // Agentes y oficinas → Contratar agente
   "office-settings": { href: "/settings", testid: "settings-office" }, // Ajustes → Apariencia e idioma
   "org-config-open": { href: "/settings", testid: "settings-onboarding" }, // Ajustes → Tu negocio
@@ -33,10 +33,16 @@ export async function adminClick(page: Page, testid: string) {
 }
 
 /**
- * The agent panel tabs (`panel-tab-*`) are the items of a radial wheel that is closed by
- * default (they stay in the DOM, so attribute checks work). To click one, open the wheel first.
+ * The agent panel has 5 tabs in one row (`panel-tab-chat|work|can|knows|profile`, UX tanda 2). The old sections live
+ * inside them (frontend/src/components/agent/panelTabs.ts) and their jump buttons keep the old `panel-tab-<section>` ids:
+ * this opens the new tab first (and "Más" in simple mode), then jumps to the section (unfolding it if needed).
  */
+const PANEL_PARENT: Record<string, string> = {
+  state: "work", tasks: "work", reports: "work", files: "work", activity: "work", thoughts: "work", chats: "work", memory: "knows",
+};
 export async function openPanelTab(page: Page, tab: string) {
-  if ((await page.getByTestId("panel-nav").getAttribute("aria-expanded")) !== "true") await page.getByTestId("panel-nav").click();
-  await page.getByTestId(`panel-tab-${tab}`).click();
+  const parent = PANEL_PARENT[tab] ?? tab;
+  if (!(await page.getByTestId(`panel-tab-${parent}`).isVisible()) && (await page.getByTestId("panel-view-all").isVisible())) await page.getByTestId("panel-view-all").click();
+  await page.getByTestId(`panel-tab-${parent}`).click();
+  if (parent !== tab) await page.getByTestId(`panel-tab-${tab}`).click();
 }

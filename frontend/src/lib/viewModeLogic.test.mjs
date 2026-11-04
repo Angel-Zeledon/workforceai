@@ -23,27 +23,30 @@ test("the choice is remembered per person", () => {
   assert.equal(viewAllKey(null), "wf.viewAll.anon");
 });
 
-const PROJECT = ["follow", "health", "map", "timeline", "kanban", "lanes", "delegation", "approvals", "changes", "costs"];
+// The project detail in 4 tabs (tanda 2): Seguimiento, Plan, Costos, Permisos ("approvals").
+const PROJECT = ["follow", "plan", "costs", "approvals"];
 
 test("see everything shows every tab and folds nothing", () => {
   assert.deepEqual(splitTabs(PROJECT, SIMPLE_PROJECT_TABS, true), { shown: PROJECT, folded: [] });
 });
 
-test("simple mode keeps Seguimiento and Aprobaciones open; Kanban, lanes, delegation and costs fold", () => {
+test("simple mode keeps Seguimiento and Permisos open; Plan and Costos fold behind 'Más vistas'", () => {
   const s = splitTabs(PROJECT, SIMPLE_PROJECT_TABS, false);
-  assert.deepEqual(s.shown, ["follow", "approvals"]);
-  for (const k of ["kanban", "lanes", "delegation", "costs", "timeline"]) assert.ok(s.folded.includes(k), k);
+  assert.deepEqual(s, { shown: ["follow", "approvals"], folded: ["plan", "costs"] });
   assert.equal(s.shown.length + s.folded.length, PROJECT.length); // nothing lost
 });
 
-test("a tab opened by a link or with something waiting stays visible, in the screen's order", () => {
-  const s = splitTabs(PROJECT, SIMPLE_PROJECT_TABS, false, ["kanban", "changes", null]);
-  assert.deepEqual(s.shown, ["follow", "kanban", "approvals", "changes"]);
+test("a tab opened by a link (?tab=kanban opens Plan) stays visible, in the screen's order", () => {
+  const s = splitTabs(PROJECT, SIMPLE_PROJECT_TABS, false, ["plan", null]);
+  assert.deepEqual(s.shown, ["follow", "plan", "approvals"]);
+  assert.deepEqual(s.folded, ["costs"]);
 });
 
 test("agent panel and dashboard keep the everyday parts open in simple mode", () => {
-  const agent = ["chat", "state", "tasks", "can", "chats", "memory", "reports", "files", "activity", "profile", "thoughts"];
-  assert.deepEqual(splitTabs(agent, SIMPLE_AGENT_TABS, false).shown, ["chat", "state", "tasks", "can", "reports"]);
+  const agent = ["chat", "work", "can", "knows", "profile"];
+  assert.deepEqual(splitTabs(agent, SIMPLE_AGENT_TABS, false), { shown: ["chat", "work"], folded: ["can", "knows", "profile"] });
+  // a tab opened by a link (the shield on "Cómo lo pensó" lives in Trabajo; permissions in Qué puede hacer) stays visible
+  assert.deepEqual(splitTabs(agent, SIMPLE_AGENT_TABS, false, ["can"]).shown, ["chat", "work", "can"]);
   const dash = ["overview", "customers", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "quality", "costs"];
   assert.deepEqual(splitTabs(dash, SIMPLE_DASHBOARD, false).shown, ["overview", "tasks", "agents"]);
 });

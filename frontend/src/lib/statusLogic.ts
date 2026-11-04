@@ -63,3 +63,15 @@ export const LABEL_PREFIX: Record<StatusDomain, string> = {
   node: "pv.state.", project: "pv.status.", agent: "state.", task: "task.status.", pedido: "pedido.status.",
   batchRow: "batch.row.", batch: "batch.status.", customer: "customers.status.",
 };
+
+/**
+ * Icon of each kind (the color says the state; the icon makes it readable without color too):
+ * empty circle = to start, spinning circle = running, bell = needs you, two bars = paused, check = done,
+ * half check = partly done, triangle = problem, dash = cancelled; draft is a dashed circle and free an empty one (gray).
+ */
+export type KindIcon = "circle" | "dashed" | "spinner" | "bell" | "pause" | "check" | "halfcheck" | "triangle" | "dash";
+export const KIND_ICON: Record<StatusKind, KindIcon> = {
+  draft: "dashed", todo: "circle", free: "circle", running: "spinner", needs: "bell", paused: "pause",
+  done: "check", partial: "halfcheck", problem: "triangle", cancelled: "dash",
+};
+export const kindIcon = (kind: StatusKind | string | null | undefined): KindIcon => KIND_ICON[(kind ?? "todo") as StatusKind] ?? "circle";
