@@ -24,7 +24,7 @@ export function TableView({ rows, testId = "viewer-table" }: { rows: string[][];
   }, [body, sort]);
   if (!head) return <div className="p-4 text-xs text-mute">{t("fileviewer.empty")}</div>;
   return (
-    <div className="overflow-auto">
+    <div className="overflow-auto wf-scroll-x">
       <table data-testid={testId} className="w-full border-collapse text-[12px]">
         <thead className="sticky top-0 bg-panel">
           <tr>
@@ -168,7 +168,7 @@ export function SheetView({ sheets }: { sheets: PreviewSheet[] }) {
   return (
     <div data-testid="viewer-workbook">
       {sheets.length > 1 && (
-        <div role="tablist" aria-label={t("fileviewer.sheets")} className="mb-2 flex flex-wrap gap-1 border-b border-line pb-1.5">
+        <div role="tablist" aria-label={t("fileviewer.sheets")} className="mb-2 flex flex-wrap gap-1 border-b border-line pb-1.5 wf-tabs">
           {sheets.map((s, k) => (
             <button key={k} type="button" role="tab" aria-selected={k === i} data-testid={`viewer-sheet-tab-${k}`} onClick={() => setActive(k)}
               className={`rounded-md px-2.5 py-1 text-[11.5px] font-medium ${k === i ? "bg-accent/10 text-accent-hover" : "text-ink2 hover:bg-panel2"}`}>{s.name}</button>
@@ -199,7 +199,7 @@ export function DocView({ blocks }: { blocks: PreviewBlock[] }) {
             const [head, ...rows] = b.rows ?? [];
             if (!head) return null;
             return (
-              <div key={i} className="overflow-auto">
+              <div key={i} className="overflow-auto wf-scroll-x">
                 <table data-testid="viewer-doc-table" className="w-full border-collapse text-[12px]">
                   <thead><tr>{head.map((c, j) => <th key={j} className="border border-line-strong bg-panel2 px-2 py-1 text-left font-semibold">{c}</th>)}</tr></thead>
                   <tbody>{rows.map((r, k) => <tr key={k}>{head.map((_, j) => <td key={j} className={`border border-line px-2 py-1 ${isNumericCell(r[j] ?? "") ? "text-right font-mono" : ""}`}>{r[j] ?? ""}</td>)}</tr>)}</tbody>

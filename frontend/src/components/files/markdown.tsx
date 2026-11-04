@@ -65,7 +65,7 @@ export function Markdown({ text }: { text: string }) {
       const rows: string[][] = [];
       while (i < lines.length && lines[i].includes("|") && lines[i].trim()) rows.push(cells(lines[i++]));
       blocks.push(
-        <div key={key} className="overflow-x-auto"><table className="w-full border-collapse text-[12.5px]">
+        <div key={key} className="overflow-x-auto wf-scroll-x"><table className="w-full border-collapse text-[12.5px]">
           <thead><tr>{head.map((c, j) => <th key={j} className="border-b border-line-strong px-2 py-1 text-left font-semibold">{inline(c, `${key}h${j}`)}</th>)}</tr></thead>
           <tbody>{rows.map((r, a) => <tr key={a} className="border-b border-line">{r.map((c, j) => <td key={j} className="px-2 py-1">{inline(c, `${key}${a}c${j}`)}</td>)}</tr>)}</tbody>
         </table></div>,

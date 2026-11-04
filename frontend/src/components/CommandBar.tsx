@@ -59,14 +59,14 @@ export function CommandBar() {
               <Icon name="down" size={15} className={`transition-transform ${open ? "" : "rotate-180"}`} />
             </button>
           </header>
-          {open && <ChatThread conv={OFFICE} showRoute emptyText={t("chat.empty.office")} className="h-[min(300px,36dvh)] border-t border-line" />}
+          {open && <ChatThread conv={OFFICE} showRoute emptyText={t("chat.empty.office")} className="h-[min(300px,30dvh)] border-t border-line lg:h-[min(300px,36dvh)]" />}
         </section>
       )}
       {(!hasThread || !open) && !busy && (
-        <div data-tour="office.suggestions" className="mb-2 flex flex-wrap justify-center gap-1.5">
+        <div data-tour="office.suggestions" className="wf-hscroll mb-2 flex flex-wrap justify-start gap-1.5 sm:justify-center">
           {SUGGESTIONS.map((s) => (
             <button key={s} onClick={() => quick(t(`${s}.prompt`))} disabled={busy}
-              className="rounded-md border border-line bg-panel/90 px-3 py-1 text-[11px] text-ink2 backdrop-blur transition hover:border-accent hover:text-ink disabled:opacity-50">
+              className="min-h-8 rounded-md border border-line bg-panel/90 px-3 py-1 text-[11px] text-ink2 backdrop-blur sm:min-h-0 transition hover:border-accent hover:text-ink disabled:opacity-50">
               {t(`${s}.label`)}
             </button>
           ))}

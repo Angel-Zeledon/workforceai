@@ -84,7 +84,7 @@ export function AgentPanel({ id }: { id: string }) {
 
   return (
     <aside className="pointer-events-auto relative flex h-full w-[min(420px,100vw)] flex-col border-l border-line bg-panel shadow-float">
-      <div className="border-b border-line p-4">
+      <div className="border-b border-line p-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <Avatar id={id} size={40} />
@@ -103,11 +103,11 @@ export function AgentPanel({ id }: { id: string }) {
         {agent.progress > 0 && <div className="mt-2"><Progress value={agent.progress} color={sm.color} /></div>}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <AgentPauseToggle id={id} /><RehearsalToggle id={id} />
-          {tab !== "can" && <button type="button" data-testid="panel-open-can" onClick={() => setTab("can")} className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-[11px] font-semibold text-ink2 hover:border-accent hover:text-accent"><Icon name="shield" size={12} />{t("panel.tab.can")}</button>}
+          {tab !== "can" && <button type="button" data-testid="panel-open-can" onClick={() => setTab("can")} className="inline-flex min-h-10 items-center gap-1 rounded-md border border-line px-2 py-1 text-[11px] font-semibold text-ink2 hover:border-accent hover:text-accent sm:min-h-0"><Icon name="shield" size={12} />{t("panel.tab.can")}</button>}
           {!viewAll && <button type="button" data-testid="panel-view-all" onClick={() => setViewAll(true)} className="ml-auto text-[11px] font-semibold text-accent hover:underline">{t("ux.viewAll.panel")}</button>}
         </div>
       </div>
-      <div role="tabpanel" aria-label={t(`panel.tab.${tab}`)} className={tab === "chat" ? "min-h-0 flex-1" : "min-h-0 flex-1 space-y-3 overflow-y-auto p-4"}>
+      <div role="tabpanel" aria-label={t(`panel.tab.${tab}`)} className={tab === "chat" ? "min-h-0 flex-1" : "min-h-0 flex-1 space-y-3 overflow-y-auto p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4"}>
         {tab === "chat" && <AgentChat id={id} />}
         {error && !detail && <Empty>{t("panel.loadError")}</Empty>}
         {tab === "can" && <><PermissionsSection id={id} /><FolderAccessSection id={id} /></>}

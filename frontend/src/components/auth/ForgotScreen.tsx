@@ -25,17 +25,17 @@ export function ForgotScreen() {
   };
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
-      <div data-testid="forgot" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
+    <main className="flex min-h-dvh items-center justify-center bg-bg px-3 py-6 sm:px-4 sm:py-10">
+      <div data-testid="forgot" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-8">
         <a href={LANDING_URL} className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
         {sent ? (
           <>
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.forgot.sentTitle")}</h1>
+            <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("auth.forgot.sentTitle")}</h1>
             <p role="status" className="text-sm leading-relaxed text-ink2">{t("auth.forgot.sentBody", { email })}</p>
           </>
         ) : (
           <form onSubmit={submit} className="space-y-3">
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.forgot.title")}</h1>
+            <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("auth.forgot.title")}</h1>
             <p className="text-sm text-ink2">{t("auth.forgot.body")}</p>
             <label className="block text-xs font-medium text-ink2"><span className="mb-1 block">{t("auth.email")}</span>
               <input data-testid="forgot-email" type="email" required autoComplete="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />

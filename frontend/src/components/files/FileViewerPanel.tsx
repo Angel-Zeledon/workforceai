@@ -108,6 +108,12 @@ function Toolbar({ file, kind, version, shown, showDiff, editing, onVersion, onD
   const setEditInChat = useFileViewer((s) => s.setEditInChat);
   const textual = TEXTUAL.includes(kind);
   const nums = useMemo(() => Array.from({ length: file.current_version }, (_, i) => file.current_version - i), [file.current_version]);
+  // phones: version and Edit stay in view, the rest folds under "More" (same buttons, so ids stay unique); from sm up, one row
+  const [more, setMore] = useState(false);
+  const canDiff = textual && shown > 1 && !editing;
+  const canChat = kind !== "pdf" && kind !== "image" && kind !== "other";
+  const folded = (canDiff ? 1 : 0) + (canChat ? 1 : 0) + 2;
+  const btn = "min-h-10 rounded-md border px-2 py-1 font-medium sm:min-h-0";
   return (
     <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-3 py-2 text-[11.5px]">
       <label className="flex items-center gap-1 text-mute">
@@ -117,27 +123,34 @@ function Toolbar({ file, kind, version, shown, showDiff, editing, onVersion, onD
           {nums.map((n) => <option key={n} value={n}>v{n}{n === file.current_version ? ` · ${t("fileviewer.latest")}` : ""}</option>)}
         </select>
       </label>
-      {textual && shown > 1 && !editing && (
-        <button type="button" data-testid="viewer-diff-toggle" aria-pressed={showDiff} onClick={onDiff}
-          className={`rounded-md border px-2 py-1 font-medium ${showDiff ? "border-accent bg-accent/10 text-accent-hover" : "border-line text-ink2 hover:border-accent"}`}>
-          {t("fileviewer.changes")}
-        </button>
-      )}
       {EDITABLE.includes(kind) && !editing && version === 0 && (
-        <button type="button" data-testid="viewer-edit" onClick={onEdit} className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 font-medium text-ink2 hover:border-accent">
+        <button type="button" data-testid="viewer-edit" onClick={onEdit} className={`inline-flex items-center gap-1 border-line text-ink2 hover:border-accent ${btn}`}>
           <Icon name="edit" size={12} />{t("fileviewer.edit")}
         </button>
       )}
       <span className="flex-1" />
-      {kind !== "pdf" && kind !== "image" && kind !== "other" && (
+      <button type="button" data-testid="viewer-more" aria-expanded={more} onClick={() => setMore((m) => !m)}
+        className="inline-flex min-h-10 items-center gap-1 rounded-md border border-dashed border-line-strong px-2.5 font-semibold text-ink2 sm:hidden">
+        {more ? t("fileviewer.lessActions") : t("fileviewer.moreActions")} <span className="font-mono text-mute">{folded}</span>
+        <Icon name="down" size={12} className={`transition-transform ${more ? "rotate-180" : ""}`} />
+      </button>
+      <span className={`${more ? "flex w-full flex-wrap items-center gap-1.5" : "hidden"} sm:contents`}>
+      {canDiff && (
+        <button type="button" data-testid="viewer-diff-toggle" aria-pressed={showDiff} onClick={onDiff}
+          className={`${btn} ${showDiff ? "border-accent bg-accent/10 text-accent-hover" : "border-line text-ink2 hover:border-accent"}`}>
+          {t("fileviewer.changes")}
+        </button>
+      )}
+      {canChat && (
         <button type="button" data-testid="viewer-edit-in-chat" aria-pressed={editInChat} title={t("fileviewer.editInChatTitle")} onClick={() => setEditInChat(!editInChat)}
-          className={`rounded-md border px-2 py-1 font-medium ${editInChat ? "border-accent bg-accent/10 text-accent-hover" : "border-line text-ink2 hover:border-accent"}`}>
+          className={`${btn} ${editInChat ? "border-accent bg-accent/10 text-accent-hover" : "border-line text-ink2 hover:border-accent"}`}>
           {editInChat ? t("fileviewer.editInChatOn") : t("fileviewer.editInChat")}
         </button>
       )}
-      <button type="button" data-testid="viewer-download" onClick={() => drive.download(file).catch(() => {})} className="rounded-md border border-line px-2 py-1 font-medium text-ink2 hover:border-accent">{t("fileviewer.download")}</button>
+      <button type="button" data-testid="viewer-download" onClick={() => drive.download(file).catch(() => {})} className={`border-line text-ink2 hover:border-accent ${btn}`}>{t("fileviewer.download")}</button>
       <button type="button" data-testid="viewer-open-files" onClick={() => { close(); show(file.path.split("/").slice(0, -1).join("/") || "/"); }}
-        className="rounded-md border border-line px-2 py-1 font-medium text-ink2 hover:border-accent">{t("fileviewer.openInFiles")}</button>
+        className={`border-line text-ink2 hover:border-accent ${btn}`}>{t("fileviewer.openInFiles")}</button>
+      </span>
       {version > 0 && version !== file.current_version && (
         <span className="w-full text-[11px] text-warn">{t("fileviewer.oldVersion", { v: version })}</span>
       )}

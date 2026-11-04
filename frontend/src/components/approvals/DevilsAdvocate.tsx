@@ -33,7 +33,7 @@ export function DevilsAdvocate({ approvalId }: { approvalId: string }) {
   return (
     <div data-testid={`devils-advocate-${approvalId}`} className="mt-2 rounded-md border border-line bg-panel text-[11px]">
       <button type="button" aria-expanded={open} data-testid={`devils-advocate-toggle-${approvalId}`} onClick={toggle}
-        className="flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left font-semibold text-ink2 hover:bg-panel2">
+        className="flex min-h-10 w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left font-semibold text-ink2 hover:bg-panel2 sm:min-h-0">
         <span>{t("approvals.devil.title")}</span>
         <span className="text-mute">{open ? t("common.hide") : t("common.show")}</span>
       </button>

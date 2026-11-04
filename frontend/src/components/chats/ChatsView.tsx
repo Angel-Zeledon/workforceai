@@ -46,6 +46,8 @@ const CSS = `
 [data-reduce="1"] .chats-in, [data-reduce="1"] .chats-fade, [data-reduce="1"] .chats-skel { animation: none; }
 [data-reduce="1"] .chats-t { transition: none !important; }
 @media (prefers-reduced-motion: reduce) { .chats-in, .chats-fade, .chats-skel { animation: none; } .chats-t { transition: none !important; } }
+/* phones: the small inline buttons of Chats and of the request panel get a 40px tap target */
+@media (max-width: 639px) { .chats-t.inline-flex, .chats-tap { min-height: 40px; } .chats-tap { display: inline-flex; align-items: center; margin-block: -10px; } }
 `;
 
 function dayLabel(iso: string, t: (k: string) => string): string {
@@ -588,7 +590,7 @@ export function ChatsView({ agentId }: { agentId?: string }) {
   );
 
   const archivedToggle = (
-    <button type="button" data-testid="chats-toggle-archived" onClick={() => setShowArchived((v) => !v)} className="text-[11px] font-medium text-accent-hover hover:underline">
+    <button type="button" data-testid="chats-toggle-archived" onClick={() => setShowArchived((v) => !v)} className="chats-tap text-[11px] font-medium text-accent-hover hover:underline">
       {showArchived ? t("chats.pedidos.showActive") : t("chats.pedidos.showArchived")}
     </button>
   );

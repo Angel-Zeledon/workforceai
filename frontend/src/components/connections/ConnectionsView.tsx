@@ -24,14 +24,14 @@ function ConnectionCard({ c, onOpen }: { c: Connection; onOpen: () => void }) {
   const ageDays = c.credential ? (Date.now() - new Date(c.credential.created_at).getTime()) / 86400000 : 0;
   return (
     <button type="button" data-testid={`conn-card-${c.id}`} data-status={c.status} data-provider={c.provider} onClick={onOpen}
-      className="ac-pop w-full rounded-xl border border-line bg-panel p-4 text-left shadow-pop transition hover:border-accent">
+      className="ac-pop w-full min-w-0 rounded-xl border border-line bg-panel p-3 text-left shadow-pop sm:p-4 transition hover:border-accent">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="truncate text-sm font-semibold">{c.label}</div>
           <div className="truncate text-[11px] text-mute">{t(`conn.provider.${c.provider}`)} · <span data-testid="conn-account-label">{c.account_label ?? "—"}</span></div>
         </div>
         {c.provider_disabled
-          ? <span data-testid="conn-provider-disabled" title={t("conn.providerDisabledHint")} className="shrink-0 rounded-full bg-slate-500/15 px-2 py-[2px] text-[10px] font-semibold uppercase text-ink2">{t("conn.providerDisabled")}</span>
+          ? <span data-testid="conn-provider-disabled" title={t("conn.providerDisabledHint")} className="max-w-[48%] shrink-0 rounded-xl bg-slate-500/15 px-2 py-[2px] text-right text-[10px] font-semibold uppercase leading-tight text-ink2">{t("conn.providerDisabled")}</span>
           : <StatusBadge status={c.status} />}
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
@@ -63,15 +63,15 @@ export function ConnectionsView() {
   const list = Object.values(connections).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
 
   return (
-    <div className="mx-auto flex h-full max-w-6xl flex-col px-5 py-4">
+    <div className="mx-auto flex h-full max-w-6xl flex-col px-4 py-3 sm:px-5 sm:py-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="font-display text-xl font-semibold">{t("conn.title")}</h1>
+          <h1 className="font-display text-[18px] sm:text-xl font-semibold">{t("conn.title")}</h1>
           <p className="text-xs text-mute">{t("conn.subtitle")}</p>
         </div>
         <Btn data-testid="conn-add" kind="primary" disabled={!isAdmin} onClick={() => setWizard(true)}>{t("conn.add")}</Btn>
       </div>
-      <div role="tablist" className="mb-4 flex flex-wrap gap-1 border-b border-line pb-2">
+      <div role="tablist" className="mb-4 flex flex-wrap gap-1 border-b border-line pb-2 wf-tabs">
         {TABS.map((k) => (
           <button key={k} role="tab" aria-selected={tab === k} data-testid={`conn-tab-${k}`} onClick={() => setTab(k)}
             className={`rounded-md px-4 py-1.5 text-xs font-medium transition ${tab === k ? "bg-accent-soft text-accent" : "text-mute hover:text-ink"}`}>

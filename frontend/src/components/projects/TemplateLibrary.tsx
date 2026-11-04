@@ -68,14 +68,14 @@ export function TemplateLibrary() {
     try { await deleteTemplate(tpl.id); } catch { setErr(t("tpl.lib.actionError")); }
   };
 
-  const chip = (active: boolean) => `rounded-full border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel text-mute hover:text-ink"}`;
+  const chip = (active: boolean) => `min-h-9 rounded-full border px-3 py-1 text-[11px] sm:min-h-0 font-semibold transition ${active ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel text-mute hover:text-ink"}`;
 
   return (
-    <div data-testid="template-library" className="mx-auto max-w-[1180px] space-y-5 p-4 md:p-6">
+    <div data-testid="template-library" className="mx-auto max-w-[1180px] space-y-4 p-4 sm:space-y-5 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <button type="button" data-testid="tpl-back" onClick={() => setView("list")} className="text-[11px] font-semibold text-accent hover:underline">‹ {t("tpl.lib.back")}</button>
-          <h1 className="font-display text-2xl font-semibold text-ink">{t("tpl.lib.title")}</h1>
+          <h1 className="font-display text-xl sm:text-2xl font-semibold text-ink">{t("tpl.lib.title")}</h1>
           <p className="max-w-[640px] text-xs text-mute">{t("tpl.lib.subtitle")}</p>
           <ConceptLegend current="templates" className="mt-3 max-w-4xl" />
         </div>
@@ -91,7 +91,7 @@ export function TemplateLibrary() {
             ))}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t("tpl.lib.category")}>
+        <div className="wf-hscroll flex flex-wrap items-center gap-1.5" role="group" aria-label={t("tpl.lib.category")}>
           <button type="button" data-testid="tpl-cat-all" aria-pressed={cat === "all"} onClick={() => setCat("all")} className={chip(cat === "all")}>{t("tpl.cat.all")}</button>
           {cats.map((c) => (
             <button key={c} type="button" data-testid={`tpl-cat-${c}`} aria-pressed={cat === c} onClick={() => setCat(c)} className={chip(cat === c)}>{t(`tpl.cat.${c}`)}</button>
@@ -102,12 +102,12 @@ export function TemplateLibrary() {
       {err && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{err}</div>}
 
       {shown.length ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
           {shown.map((tpl) => {
             const st = tplSize(tpl);
             const origin = tpl.builtin ? "builtin" : tpl.shared === false ? "private" : "org";
             return (
-              <div key={tpl.id} data-testid={`template-card-${tpl.id}`} className="flex flex-col justify-between rounded-xl border border-line bg-panel p-4 shadow-pop">
+              <div key={tpl.id} data-testid={`template-card-${tpl.id}`} className="flex min-w-0 flex-col justify-between rounded-xl border border-line bg-panel p-3 shadow-pop sm:p-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span data-testid={`tpl-cat-badge-${tpl.id}`} className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">{t(`tpl.cat.${tpl.category || "general"}`)}</span>

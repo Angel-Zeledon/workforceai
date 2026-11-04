@@ -221,7 +221,7 @@ function InboxDetail({ ib, isAdmin, onClose, onChanged, onToken }: {
         <section>
           <h3 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-mute">{t("dataInbox.pushes.title")}</h3>
           {pushes === null ? <Loading rows={2} /> : pushes.length === 0 ? <Empty>{t("dataInbox.pushes.empty")}</Empty> : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto wf-scroll-x">
               <table data-testid="inbox-pushes" className="w-full text-left text-xs">
                 <thead className="text-[10px] uppercase tracking-wide text-mute">
                   <tr><th className="py-1 pr-3">{t("dataInbox.pushes.when")}</th><th className="py-1 pr-3">{t("dataInbox.pushes.size")}</th><th className="py-1 pr-3">{t("dataInbox.pushes.type")}</th><th className="py-1">{t("dataInbox.pushes.file")}</th></tr>

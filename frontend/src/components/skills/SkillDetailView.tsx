@@ -41,7 +41,7 @@ export function SkillDetailView({ id, prefill, tab, onBack, onChanged }: { id: s
 
   if (id === "new") {
     return (
-      <div className="mx-auto w-full max-w-4xl space-y-4 p-5" data-testid="skill-detail">
+      <div className="mx-auto w-full max-w-4xl space-y-4 p-4 sm:p-5" data-testid="skill-detail">
         <BackBar onBack={onBack} title={t("skills.new")} />
         <SkillEditor key={prefill?.name ?? "blank"} prefill={prefill} canWrite={canWrite} onSaved={(d) => { onChanged(); select(d.id, "content"); }} />
       </div>
@@ -57,7 +57,7 @@ export function SkillDetailView({ id, prefill, tab, onBack, onChanged }: { id: s
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 p-5" data-testid="skill-detail" data-skill={detail.name}>
+    <div className="mx-auto w-full max-w-4xl space-y-4 p-4 sm:p-5" data-testid="skill-detail" data-skill={detail.name}>
       <BackBar onBack={onBack} title={<span className="flex flex-wrap items-center gap-2"><span className="font-mono">{detail.name}</span><StatusBadge status={detail.status} testId="skill-detail-status" /><SourceChip source={detail.source} builtin={detail.builtin} />
         <span className="font-sans text-[11px] font-normal text-mute">v{detail.current_version}{detail.active_version > 0 && detail.active_version !== detail.current_version ? ` · ${t("skills.activeVersion", { v: detail.active_version })}` : ""}</span></span>}
         right={<div className="flex gap-2">
@@ -75,7 +75,7 @@ export function SkillDetailView({ id, prefill, tab, onBack, onChanged }: { id: s
         </div>
       )}
 
-      <div role="tablist" className="flex gap-1 border-b border-line">
+      <div role="tablist" className="flex gap-1 border-b border-line wf-tabs">
         {tabs.map((tb) => (
           <button key={tb} role="tab" aria-selected={tab === tb} data-testid={`skill-tab-${tb}`} onClick={() => select(detail.id, tb)}
             className={`-mb-px border-b-2 px-3 py-2 text-xs font-medium ${tab === tb ? "border-accent text-accent" : "border-transparent text-mute hover:text-ink"}`}>
@@ -97,7 +97,7 @@ function BackBar({ onBack, title, right }: { onBack: () => void; title: React.Re
   return (
     <div className="flex flex-wrap items-center gap-3">
       <button type="button" data-testid="skills-back" onClick={onBack} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-accent hover:bg-accent-soft"><Icon name="back" size={12} />{t("skills.backToLibrary")}</button>
-      <h1 className="font-display text-xl font-semibold text-ink">{title}</h1>
+      <h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{title}</h1>
       <div className="ml-auto">{right}</div>
     </div>
   );

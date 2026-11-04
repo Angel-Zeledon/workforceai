@@ -68,7 +68,7 @@ export function RoiPanel() {
             {!hasRate && <p data-testid="roi-hours-only" className="text-[11px] text-mute">{t(canEdit ? "roi.hoursOnlyAdmin" : "roi.hoursOnly")}</p>}
 
             {rep.agents.length === 0 ? <Empty>{t("roi.empty")}</Empty> : (
-              <div className="overflow-x-auto"><table className="w-full">
+              <div className="overflow-x-auto wf-scroll-x"><table className="w-full">
                 <thead>
                   <tr className="text-left text-[10px] uppercase tracking-wide text-mute">
                     <th className="pb-1 font-semibold">{t("roi.col.agent")}</th>

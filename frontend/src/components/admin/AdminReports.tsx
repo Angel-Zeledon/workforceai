@@ -45,7 +45,7 @@ export function AdminReports() {
       </div>
       {err && <Notice kind="err">{err}</Notice>}
       {rep && (rep.rows.length === 0 ? <p className="text-mute">{t("adm.rep.empty")}</p> : (
-        <div className="overflow-x-auto rounded-lg border border-line">
+        <div className="overflow-x-auto rounded-lg border border-line wf-scroll-x">
           <table data-testid="adm-rep-table" className="w-full min-w-[640px] border-collapse">
             <thead className="bg-panel2"><tr>
               <th className={thCls}>{t("adm.rep.col.name")}</th><th className={thCls}>{t("adm.rep.col.requests")}</th><th className={thCls}>{t("adm.rep.col.calls")}</th>

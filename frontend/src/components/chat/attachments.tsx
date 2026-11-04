@@ -225,8 +225,8 @@ export function DrivePicker({ mode, start = "/Shared", onClose, onFiles, onFolde
   // rendered on <body>: inside the composer a blurred / transformed ancestor would pin it to the composer's box
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label={title ?? (mode === "files" ? t("att.pick.titleFiles") : t("att.pick.titleFolder"))} data-testid="drive-picker"
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="flex max-h-[80dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-pop">
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-line bg-panel pb-[env(safe-area-inset-bottom)] shadow-pop sm:max-h-[80dvh] sm:rounded-2xl sm:pb-0">
         <header className="flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="text-[14px] font-semibold text-ink">{title ?? (mode === "files" ? t("att.pick.titleFiles") : t("att.pick.titleFolder"))}</h2>
           <button type="button" onClick={onClose} aria-label={t("att.close")} className="rounded-md p-1 text-mute hover:bg-panel2 hover:text-ink"><Icon name="x" size={16} /></button>

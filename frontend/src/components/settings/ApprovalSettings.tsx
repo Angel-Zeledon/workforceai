@@ -26,7 +26,7 @@ export function ApprovalSettings() {
     try { await f(); await load(); } catch (e) { setErr(statusOf(e) === 403 ? "perm.error.forbidden" : "perm.error.action"); } finally { setBusy(false); }
   };
 
-  if (!v) return <div className="mx-auto max-w-3xl px-5 py-6">{err ? <p className="text-xs text-err">{t(err)}</p> : <Loading rows={3} />}</div>;
+  if (!v) return <div className="mx-auto max-w-3xl px-4 py-4 sm:px-5 sm:py-6">{err ? <p className="text-xs text-err">{t(err)}</p> : <Loading rows={3} />}</div>;
   const rows = v.agents.flatMap((a) => [
     ...a.exceptions.map((e) => ({ key: `${a.agent_id}:x:${e.category}`, a, cat: e.category, label: exceptionLabel(e.mode, e.if).map((x) => t(x.key, x.vars)).join(", "),
       who: e.created_by ?? "", when: e.created_at, floor: false })),
@@ -37,7 +37,7 @@ export function ApprovalSettings() {
   const legacy = v.agents.filter((a) => !a.factory).length;
 
   return (
-    <div data-testid="approval-settings" className="mx-auto max-w-3xl space-y-4 px-5 py-6 sm:px-6">
+    <div data-testid="approval-settings" className="mx-auto max-w-3xl space-y-4 px-4 py-4 sm:px-6 sm:py-6">
       <Card title={t("perm.settings.default")}>
         <select data-testid="perm-default" disabled={!v.can_edit_default || busy} value={v.default_level}
           onChange={(e) => act(() => permissionsApi.setDefault(e.target.value as PlainLevel | ""))}

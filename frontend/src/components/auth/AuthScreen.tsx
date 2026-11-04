@@ -186,13 +186,13 @@ export function AuthScreen({ mode }: { mode: Mode }) {
           </ul>
         </div>
       </aside>
-      <div className="flex items-center justify-center px-4 py-10 sm:px-8">
+      <div className="flex items-center justify-center px-3 py-6 sm:px-8 sm:py-10">
       {enroll ? (
         <MfaEnroll token={enroll.token} onDone={() => router.replace(next ?? "/")} onCancel={() => { setEnroll(null); setErr(null); }} />
       ) : mfa ? (
-        <form onSubmit={submitCode} data-testid="auth-mfa" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
+        <form onSubmit={submitCode} data-testid="auth-mfa" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-8">
           <a href={LANDING_URL} className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.mfa.title")}</h1>
+          <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("auth.mfa.title")}</h1>
           <p className="text-sm leading-relaxed text-ink2">{t("auth.mfa.body")}</p>
           <Field label={t("auth.mfa.code")}>
             <input data-testid="auth-mfa-code" autoFocus required inputMode="text" autoComplete="one-time-code" spellCheck={false}
@@ -204,9 +204,9 @@ export function AuthScreen({ mode }: { mode: Mode }) {
           <div className="text-xs"><button type="button" className="inline-block py-2 text-accent hover:underline" onClick={() => { setMfa(null); setCode(""); setErr(null); }}>{t("auth.mfa.back")}</button></div>
         </form>
       ) : sent ? (
-        <div data-testid="auth-sent" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
+        <div data-testid="auth-sent" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-8">
           <a href={LANDING_URL} className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.sent.title")}</h1>
+          <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("auth.sent.title")}</h1>
           <p className="text-sm leading-relaxed text-ink2">{t(sent.emailSent ? "auth.sent.body" : "auth.sent.failed", { email: sent.email })}</p>
           <p className="text-xs text-mute">{t("auth.sent.hint")}</p>
           {join && joinOrg && <p data-testid="auth-sent-join" className="text-xs text-ink2">{t("e1.signup.join.sent", { org: joinOrg })}</p>}
@@ -218,9 +218,9 @@ export function AuthScreen({ mode }: { mode: Mode }) {
           <div className="text-xs"><a className="inline-block py-2 text-accent hover:underline" href="/login">{t("auth.toLogin")}</a></div>
         </div>
       ) : (
-      <form onSubmit={submit} data-testid={`auth-${mode}`} className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
+      <form onSubmit={submit} data-testid={`auth-${mode}`} className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-8">
         <a href={LANDING_URL} className="mb-3 block w-fit lg:hidden" aria-label={t("auth.back")}><Brand /></a>
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+        <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{title}</h1>
         {mode === "invite" && <p className="text-xs text-mute">{t("auth.invite.body")}</p>}
         {mode !== "invite" && (
           <Field label={t("auth.email")}>

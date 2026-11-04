@@ -161,9 +161,9 @@ function LiftFloorDialog({ agent, cat, onCancel, onConfirm }: { agent: string; c
     return () => document.removeEventListener("keydown", k);
   }, [onCancel]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation" onMouseDown={onCancel}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" role="presentation" onMouseDown={onCancel}>
       <div role="dialog" aria-modal="true" aria-label={t("perm.floor.confirmTitle")} data-testid="perm-lift-dialog" onMouseDown={(e) => e.stopPropagation()}
-        className="w-[min(420px,92vw)] rounded-xl border border-line bg-panel p-4 shadow-float">
+        className="ac-pop max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-line bg-panel px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-float sm:w-[min(420px,92vw)] sm:rounded-xl sm:p-4">
         <h3 className="text-[14px] font-semibold text-ink">{t("perm.floor.confirmTitle")}</h3>
         <p className="mt-2 text-[12.5px] leading-snug text-ink2">{t("perm.floor.confirmBody", { agent, cat: t(`perm.cat.${cat}`) })}</p>
         <label className="mt-3 flex items-center gap-2 text-[12.5px] text-ink"><input type="checkbox" data-testid="perm-understand" checked={ok} onChange={(e) => setOk(e.target.checked)} />{t("perm.floor.understand")}</label>

@@ -38,7 +38,7 @@ export function DistrictMap({ items, onOpen }: { items: DistrictItem[]; onOpen: 
   };
   return (
     <svg data-testid="customers-district-map" role="group" aria-label={t("customers.map.aria")}
-      viewBox={`${-SIDE} ${-TOP} ${layout.width + 2 * SIDE} ${layout.height + TOP + BOTTOM}`} className="h-auto w-full max-h-[70vh]" preserveAspectRatio="xMidYMid meet">
+      viewBox={`${-SIDE} ${-TOP} ${layout.width + 2 * SIDE} ${layout.height + TOP + BOTTOM}`} className="h-auto w-full max-h-[32dvh] sm:max-h-[70vh]" preserveAspectRatio="xMidYMid meet">
       {/* streets: the lots sit on a soft ground */}
       {layout.lots.map((l) => (
         <polygon key={`g${l.index}`} points={`${l.x},${l.y - hh} ${l.x + hw},${l.y} ${l.x},${l.y + hh} ${l.x - hw},${l.y}`} fill="#e9edf2" stroke="#d5dbe3" strokeWidth={1.5} />

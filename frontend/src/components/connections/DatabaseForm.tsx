@@ -176,7 +176,7 @@ function ResultTable({ res }: { res: DbResult }) {
         {t("conn.db.resultMeta", { n: res.row_count, ms: res.elapsed_ms })}
         {res.truncated && <> · <b data-testid="conn-db-result-truncated" className="text-amber-700">{t(`conn.db.truncated.${res.truncated_by ?? "rows"}`, { n: DB_LIMITS.maxRows })}</b></>}
       </p>
-      <div className="max-h-72 overflow-auto rounded-md border border-line">
+      <div className="wf-scroll-x max-h-72 overflow-auto rounded-md border border-line">
         <table className="min-w-full border-collapse text-[11px]">
           <thead className="sticky top-0 bg-panel2">
             <tr>{res.columns.map((c, i) => <th key={i} className="border-b border-line px-2 py-1 text-left font-semibold" title={c.type}>{c.name}</th>)}</tr>

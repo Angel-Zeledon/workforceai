@@ -54,7 +54,7 @@ export function PortalBranding() {
   const fg = textOn(accent);
   if (!b && !msg) return <div className="p-6 text-sm text-mute">…</div>;
   return (
-    <div data-testid="portal-branding" className="mx-auto max-w-2xl space-y-5 px-5 py-6 sm:px-6">
+    <div data-testid="portal-branding" className="mx-auto max-w-2xl space-y-5 px-4 py-4 sm:px-6 sm:py-6">
       <div>
         <h2 className="font-display text-lg font-semibold text-ink">{t("portal.brand.title")}</h2>
         <p className="mt-1 text-[12.5px] leading-relaxed text-mute">{t("portal.brand.desc")}</p>

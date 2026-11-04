@@ -181,8 +181,8 @@ export function SecurityCenter() {
   const doneDrafts = drafts.filter((d) => ["sent", "cancelled", "rejected"].includes(d.status)).slice(0, 4);
 
   return (
-    <div className="mx-auto h-full max-w-6xl overflow-y-auto px-5 py-4 pb-10">
-      <h1 className="font-display text-xl font-semibold">{t("ctl.title")}</h1>
+    <div className="mx-auto h-full max-w-6xl overflow-y-auto px-4 py-3 pb-10 sm:px-5 sm:py-4">
+      <h1 className="font-display text-[18px] sm:text-xl font-semibold">{t("ctl.title")}</h1>
       <p className="mb-4 text-xs text-mute">{t("ctl.subtitle")}</p>
       <div className="space-y-4">
         <GlobalState />
@@ -206,7 +206,7 @@ export function SecurityCenter() {
           </div>
         </Section>
         <Section id="ctl-limits" title={t("ctl.limits.title")}>
-          <div className="overflow-x-auto"><table data-testid="ctl-limits-table" className="w-full border-collapse text-xs">
+          <div className="overflow-x-auto wf-scroll-x"><table data-testid="ctl-limits-table" className="w-full border-collapse text-xs">
             <thead><tr className="border-b border-line text-left text-[11px] font-semibold uppercase tracking-wide text-mute">{["scope", "period", "used", "limit", "onHit"].map((h) => <th key={h} className="px-2 py-1.5">{t(`ctl.limits.col.${h}`)}</th>)}</tr></thead>
             <tbody>
               {spend.map((s) => (

@@ -94,7 +94,7 @@ function ActivationPill() {
         title={t("act.title")} className="flex h-10 items-center gap-1.5 rounded-lg sm:h-8 border border-accent/30 bg-accent-soft px-2.5 text-[11.5px] font-semibold text-accent transition hover:border-accent">
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" strokeOpacity=".25" strokeWidth="2" />
           <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray={`${(count / STEPS.length) * 39} 39`} transform="rotate(-90 8 8)" /></svg>
-        <span className="hidden sm:inline">{t("act.title")}</span>
+        <span className="hidden sm:inline md:hidden xl:inline">{t("act.title")}</span>
         <span className="font-mono">{count}/{STEPS.length}</span>
       </button>
       {open && (

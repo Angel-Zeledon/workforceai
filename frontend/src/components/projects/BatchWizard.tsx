@@ -86,19 +86,19 @@ export function BatchWizard({ templateId, onClose }: { templateId: string; onClo
   const field = "w-full rounded-md border border-line bg-white px-2 py-1.5 text-[12px] text-ink outline-none focus:border-accent";
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="batch-title" data-testid="batch-wizard" className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-4">
-      <div className="max-h-[92dvh] w-full max-w-[760px] overflow-y-auto rounded-[10px] border border-line bg-white p-5 shadow-soft">
+    <div role="dialog" aria-modal="true" aria-labelledby="batch-title" data-testid="batch-wizard" className="fixed inset-0 z-50 flex items-end justify-center bg-ink/30 p-0 sm:items-center sm:p-4">
+      <div className="max-h-[94dvh] w-full max-w-[760px] overflow-y-auto overflow-x-hidden rounded-t-2xl border border-line bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-soft sm:max-h-[92dvh] sm:rounded-[10px] sm:p-5">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <h2 id="batch-title" className="text-[16px] font-semibold text-ink">{t("batch.title")}</h2>
             <p className="text-[12px] text-mute">{tpl ? tx.name(tpl) : templateId} · {t(`batch.step.${step}`)}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label={t("common.close")} className="rounded-md border border-line px-2 text-mute hover:text-ink">×</button>
+          <button type="button" onClick={onClose} aria-label={t("common.close")} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line text-mute hover:text-ink sm:h-auto sm:w-auto sm:px-2">×</button>
         </div>
 
         {step === "customers" && (
           <div className="space-y-3">
-            <div role="tablist" className="flex gap-1.5">
+            <div role="tablist" className="flex gap-1.5 wf-tabs">
               {(["pick", "import"] as const).map((m) => (
                 <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)}
                   className={`rounded-md border px-3 py-1 text-[12px] font-medium ${mode === m ? "border-accent bg-accent/10 text-accent" : "border-line text-ink2"}`}>{t(`batch.mode.${m}`)}</button>
@@ -106,17 +106,17 @@ export function BatchWizard({ templateId, onClose }: { templateId: string; onClo
             </div>
             {mode === "pick" ? (
               <>
-                <div className="flex gap-2">
-                  <input className={field} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("batch.search")} aria-label={t("batch.search")} />
+                <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+                  <input className={`${field} basis-full sm:basis-auto`} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("batch.search")} aria-label={t("batch.search")} />
                   <Btn onClick={() => setSel((s) => ({ ...s, ...Object.fromEntries(shown.map((c) => [c.id, true])) }))}>{t("batch.selectAll")}</Btn>
                   <Btn onClick={() => setSel({})}>{t("batch.clear")}</Btn>
                 </div>
                 <ul data-testid="batch-customers" className="max-h-[300px] divide-y divide-line overflow-y-auto rounded-md border border-line">
                   {shown.map((c) => (
-                    <li key={c.id}><label className="flex items-center gap-2 px-2 py-1.5 text-[12px]">
+                    <li key={c.id}><label className="flex min-h-10 items-center gap-2 px-2 py-1.5 text-[12px] sm:min-h-0">
                       <input type="checkbox" checked={!!sel[c.id]} onChange={(e) => setSel((s) => ({ ...s, [c.id]: e.target.checked }))} />
-                      <span className="font-medium text-ink">{c.name}</span>
-                      <span className="truncate text-mute">{[c.contact_name, c.email, c.phone].filter(Boolean).join(" · ")}</span>
+                      <span className="shrink-0 font-medium text-ink">{c.name}</span>
+                      <span className="min-w-0 truncate text-mute">{[c.contact_name, c.email, c.phone].filter(Boolean).join(" · ")}</span>
                     </label></li>
                   ))}
                   {!shown.length && <li className="px-2 py-3 text-center text-[12px] text-mute">{t("batch.noCustomers")}</li>}
@@ -137,7 +137,7 @@ export function BatchWizard({ templateId, onClose }: { templateId: string; onClo
                 </div>
                 {preview && (
                   <>
-                    <table className="w-full text-left text-[11px]">
+                    <div className="wf-scroll-x -mx-1 px-1"><table className="w-full min-w-[460px] text-left text-[11px]">
                       <thead className="text-mute"><tr><th className="py-1">{t("batch.import.col.row")}</th><th>{t("batch.import.col.customer")}</th><th>{t("batch.import.col.result")}</th><th>{t("batch.import.col.choice")}</th></tr></thead>
                       <tbody className="divide-y divide-line">
                         {preview.map((r) => (
@@ -160,7 +160,7 @@ export function BatchWizard({ templateId, onClose }: { templateId: string; onClo
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                    </table></div>
                     <div className="flex justify-end"><Btn kind="primary" disabled={busy} onClick={() => void applyImport()}>{t("batch.import.apply")}</Btn></div>
                   </>
                 )}

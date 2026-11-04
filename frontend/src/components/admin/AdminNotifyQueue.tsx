@@ -26,7 +26,7 @@ export function AdminNotifyQueue() {
       {data && !data.enabled && <p className="text-mute">{t("adm.dead.off")}</p>}
       {data && data.enabled && items.length === 0 && <p className="text-mute">{t("adm.dead.none")}</p>}
       {items.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-line">
+        <div className="overflow-x-auto rounded-lg border border-line wf-scroll-x">
           <table className="w-full min-w-[620px] border-collapse">
             <thead className="bg-panel2"><tr>
               <th className={thCls}>{t("adm.dead.col.time")}</th><th className={thCls}>{t("adm.dead.col.channel")}</th>

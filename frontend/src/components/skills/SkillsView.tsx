@@ -48,7 +48,7 @@ export function SkillsView() {
   if (nav.selected) {
     return (
       <div data-testid="skills-view" className="h-full min-h-0 overflow-y-auto bg-bg">
-        {notice && <div className="mx-auto mt-3 max-w-4xl px-5"><div data-testid="skills-import-notice" className="rounded-lg bg-ok/10 px-3 py-2 text-xs text-ok">{notice.text}{notice.notes.length > 0 && <ul className="mt-1 list-disc pl-5 text-ink2">{notice.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}</div></div>}
+        {notice && <div className="mx-auto mt-3 max-w-4xl px-4 sm:px-5"><div data-testid="skills-import-notice" className="rounded-lg bg-ok/10 px-3 py-2 text-xs text-ok">{notice.text}{notice.notes.length > 0 && <ul className="mt-1 list-disc pl-5 text-ink2">{notice.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}</div></div>}
         <SkillDetailView id={nav.selected} prefill={nav.prefill} tab={nav.tab} onBack={() => { nav.select(null); setNotice(null); load(); }} onChanged={load} />
       </div>
     );
@@ -58,19 +58,19 @@ export function SkillsView() {
   const shown = filterSkills(list ?? [], filter, q);
   return (
     <div data-testid="skills-view" className="flex h-full min-h-0 flex-col bg-bg">
-      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-5 py-3">
-        <div data-tour="skills.header" className="mr-3">
-          <h1 className="font-display text-xl font-semibold text-ink">{t("skills.title")}</h1>
+      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-4 py-3 sm:px-5">
+        <div data-tour="skills.header" className="w-full sm:mr-3 sm:w-auto">
+          <h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("skills.title")}</h1>
           <p className="text-[11px] text-mute">{t("skills.subtitle")}</p>
         </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <input data-tour="skills.search" data-testid="skills-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("skills.searchPlaceholder")} aria-label={t("skills.searchPlaceholder")} className="w-56 rounded-lg border border-line bg-panel2 px-3 py-1.5 text-xs outline-none focus:border-accent" />
+        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
+          <input data-tour="skills.search" data-testid="skills-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("skills.searchPlaceholder")} aria-label={t("skills.searchPlaceholder")} className="min-w-0 flex-1 basis-full rounded-lg border border-line bg-panel2 px-3 py-1.5 text-xs outline-none focus:border-accent sm:w-56 sm:flex-none sm:basis-auto" />
           <input ref={input} type="file" accept=".zip,.md,application/zip,text/markdown" data-testid="skills-import-input" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = ""; }} />
           {canWrite && <span data-tour="skills.import" className="inline-flex"><Btn data-testid="skills-import" disabled={busy} onClick={() => input.current?.click()}>{busy ? t("skills.import.busy") : t("skills.import.button")}</Btn></span>}
           {canWrite && <span data-tour="skills.new" className="inline-flex"><Btn kind="primary" data-testid="skills-new" className="inline-flex items-center gap-1" onClick={() => nav.openNew(null)}><Icon name="plus" size={13} />{t("skills.new")}</Btn></span>}
         </div>
       </div>
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
         <ConceptLegend current="skills" />
         {error && <div data-testid="skills-error" className="rounded-lg bg-err/10 px-3 py-2 text-xs text-err">{error}</div>}
         {rename && (
@@ -81,7 +81,7 @@ export function SkillsView() {
             <button type="button" className="text-mute underline" onClick={() => setRename(null)}>{t("common.close")}</button>
           </div>
         )}
-        <div data-tour="skills.filters" role="tablist" aria-label={t("skills.filter.label")} className="flex flex-wrap gap-1.5">
+        <div data-tour="skills.filters" role="tablist" aria-label={t("skills.filter.label")} className="flex flex-wrap gap-1.5 wf-tabs">
           {FILTERS.map((f) => (
             <button key={f} role="tab" aria-selected={filter === f} data-testid={`skills-filter-${f}`} onClick={() => setFilter(f)}
               className={`rounded-full border px-3 py-1 text-xs font-medium ${filter === f ? "border-accent/30 bg-accent-soft text-accent" : "border-line text-ink2 hover:bg-panel2"} ${f === "in_review" && counts.in_review ? "ring-1 ring-warn/50" : ""}`}>

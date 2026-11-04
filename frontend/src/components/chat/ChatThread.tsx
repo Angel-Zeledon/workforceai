@@ -291,6 +291,8 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
     const el = inputRef.current;
     if (!el) return;
     el.style.height = "auto";
+    // empty: one line, whatever the length of the hint (measuring a long placeholder made it three lines tall on phones)
+    if (!text) return;
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, [text]);
   const sc = useSlashComposer({ conv, surface: surfaceOf(conv, general), text, caret, setText, inputRef, onSent });

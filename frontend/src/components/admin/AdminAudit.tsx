@@ -43,7 +43,7 @@ export function AdminAudit() {
         ? <Notice kind="ok">{t("adm.aud.ok", { n: chain.checked, seq: chain.head_seq })}</Notice>
         : <Notice kind="err">{t("adm.aud.broken", { seq: chain.broken_at_seq ?? 0, reason: chain.reason ?? "" })}</Notice>)}
       {items && (items.length === 0 ? <p className="text-mute">{t("adm.aud.none")}</p> : (
-        <div className="overflow-x-auto rounded-lg border border-line">
+        <div className="overflow-x-auto rounded-lg border border-line wf-scroll-x">
           <table className="w-full min-w-[560px] border-collapse">
             <thead className="bg-panel2"><tr><th className={thCls}>{t("adm.aud.col.time")}</th><th className={thCls}>{t("adm.aud.actor")}</th><th className={thCls}>{t("adm.aud.col.action")}</th><th className={thCls}>{t("adm.aud.col.entity")}</th></tr></thead>
             <tbody>{items.map((r) => (

@@ -25,17 +25,17 @@ export function Modal({ title, onClose, children, testid, wide = false }: {
     return () => { window.removeEventListener("keydown", onKey); prev?.focus?.(); };
   }, []);
   // As a page (see nav/pageMode): inline body under the breadcrumb, nothing covers the sidebar.
-  if (page) return <div data-testid={testid} role="region" aria-label={title} className={`mx-auto w-full px-5 py-5 ${wide ? "max-w-4xl" : "max-w-xl"}`}>{children}</div>;
+  if (page) return <div data-testid={testid} role="region" aria-label={title} className={`mx-auto w-full px-4 py-4 sm:px-5 sm:py-5 ${wide ? "max-w-4xl" : "max-w-xl"}`}>{children}</div>;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/35 p-3 sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/35 p-0 sm:items-center sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} data-testid={testid}
-        className={`pointer-events-auto flex max-h-[88dvh] w-full flex-col overflow-hidden rounded-xl border border-line bg-panel text-ink shadow-float outline-none ${wide ? "max-w-4xl" : "max-w-xl"}`}>
-        <div className="flex items-center justify-between border-b border-line px-5 py-3">
-          <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+        className={`ac-rise pointer-events-auto flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-line bg-panel text-ink shadow-float outline-none sm:max-h-[88dvh] sm:rounded-xl ${wide ? "max-w-4xl" : "max-w-xl"}`}>
+        <div className="flex items-center justify-between gap-3 border-b border-line py-2 pl-4 pr-2 sm:px-5 sm:py-3">
+          <h2 className="min-w-0 truncate text-[15px] font-semibold tracking-tight">{title}</h2>
           <button type="button" data-testid={`${testid}-close`} onClick={onClose} aria-label={t("common.close")}
-            className="min-h-10 rounded-md border border-line px-3 py-1 text-xs font-medium text-ink2 sm:min-h-0 sm:px-2.5 hover:bg-panel2 hover:text-ink">{t("common.close")}</button>
+            className="min-h-10 shrink-0 rounded-md border border-line px-3 py-1 text-xs font-medium text-ink2 sm:min-h-0 sm:px-2.5 hover:bg-panel2 hover:text-ink">{t("common.close")}</button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-5 sm:pb-4">{children}</div>
       </div>
     </div>
   );

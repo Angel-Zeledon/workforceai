@@ -37,9 +37,9 @@ export function EstimateGate() {
 
   const reason = est?.confirm_reason;
   return (
-    <div className="pointer-events-auto fixed inset-0 z-[70] flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm">
+    <div className="pointer-events-auto fixed inset-0 z-[70] flex items-end justify-center bg-ink/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
       <div data-testid="cost-estimate-dialog" role="dialog" aria-modal="true" aria-label={t("cost.gate.title")}
-        className="max-h-full w-full max-w-[560px] overflow-auto rounded-xl border border-line bg-panel shadow-soft">
+        className="max-h-[92dvh] w-full max-w-[560px] overflow-auto rounded-t-2xl border border-line bg-panel pb-[env(safe-area-inset-bottom)] shadow-soft sm:max-h-full sm:rounded-xl sm:pb-0">
         <header className="border-b border-line px-5 py-3">
           <h2 className="font-display text-base font-semibold text-ink">{t("cost.gate.title")}</h2>
           <p className="mt-0.5 line-clamp-2 text-[12px] text-mute">{waiting.text}</p>

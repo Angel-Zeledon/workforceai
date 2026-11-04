@@ -161,21 +161,22 @@ function DraftRow({ n, agents, onChange }: { n: ProjectNode; agents: string[]; o
   const commitAcc = () => { if (acc !== accShown) onChange({ acceptance: acc.split("\n").map((c) => c.trim()).filter(Boolean) }); };
   return (
     <div>
-    <div className="flex items-center gap-2">
-      <span className="w-14 shrink-0 text-[9px] font-semibold uppercase tracking-wide text-mute">{t(`pv.kind.${n.kind}`)}</span>
+    {/* phones: kind, agent and cost on one line, the title under them at full width; from sm up, one row */}
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap">
+      <span className="order-1 min-w-0 flex-1 truncate text-[9px] font-semibold uppercase tracking-wide text-mute sm:order-none sm:w-14 sm:flex-none sm:shrink-0">{t(`pv.kind.${n.kind}`)}</span>
       <input data-testid="draft-node-title-input" value={text} onChange={(e) => setText(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-        className="min-w-0 flex-1 rounded-lg border border-line-strong bg-panel px-2 py-1 text-[12px] text-ink outline-none focus:border-accent" />
-      {human ? <span className="w-[88px] shrink-0 sm:w-[110px] text-[11px] text-mute">{t("pv.human")}</span> : (
-        <select data-testid="draft-node-agent-select" value={n.agent_id ?? ""} onChange={(e) => onChange({ agent_id: e.target.value })} className="w-[88px] shrink-0 sm:w-[110px] rounded-lg border border-line-strong bg-panel px-1 py-1 text-[11px] text-ink">
+        className="order-3 min-w-0 flex-1 basis-full rounded-lg border border-line-strong bg-panel px-2 py-1 text-[12px] text-ink outline-none focus:border-accent sm:order-none sm:basis-auto" />
+      {human ? <span className="order-2 w-[88px] shrink-0 text-[11px] text-mute sm:order-none sm:w-[110px]">{t("pv.human")}</span> : (
+        <select data-testid="draft-node-agent-select" value={n.agent_id ?? ""} onChange={(e) => onChange({ agent_id: e.target.value })} className="order-2 w-[110px] shrink-0 rounded-lg border border-line-strong bg-panel px-1 py-1 text-[11px] text-ink sm:order-none">
           {!n.agent_id && <option value="">—</option>}
           {agents.map((a) => <option key={a} value={a}>{agentName(a).split(" ")[0]}</option>)}
         </select>
       )}
-      <span className="w-16 shrink-0 text-right font-mono text-[10px] text-mute">{n.est_cost_usd ? fmtMoney(n.est_cost_usd) : "—"}</span>
+      <span className="order-2 w-14 shrink-0 text-right font-mono text-[10px] text-mute sm:order-none sm:w-16">{n.est_cost_usd ? fmtMoney(n.est_cost_usd) : "—"}</span>
     </div>
     {!human && (n.kind === "task" || n.kind === "subtask") && (
       <textarea data-testid="draft-node-acceptance-input" value={acc} rows={acc ? Math.min(4, acc.split("\n").length) : 1} onChange={(e) => setAcc(e.target.value)} onBlur={commitAcc}
-        placeholder={t("pv.quality.acceptancePlaceholder")} className="ml-16 mt-1 w-[calc(100%-4rem)] rounded-lg border border-line bg-panel px-2 py-1 text-[11px] text-ink outline-none focus:border-accent" />
+        placeholder={t("pv.quality.acceptancePlaceholder")} className="mt-1 w-full rounded-lg sm:ml-16 sm:w-[calc(100%-4rem)] border border-line bg-panel px-2 py-1 text-[11px] text-ink outline-none focus:border-accent" />
     )}
     </div>
   );

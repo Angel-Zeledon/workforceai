@@ -53,12 +53,12 @@ export function ProjectDetailView() {
 
   return (
     <div className="flex h-full min-h-0">
-      <div className="min-w-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
+      <div className="min-w-0 flex-1 space-y-3 overflow-y-auto p-3 sm:space-y-4 sm:p-4 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <button type="button" data-testid="project-back" onClick={close} className="text-[11px] font-semibold text-accent hover:underline">‹ {t("pv.back")}</button>
+            <button type="button" data-testid="project-back" onClick={close} className="-my-2 min-h-10 text-[11px] font-semibold sm:my-0 sm:min-h-0 text-accent hover:underline">‹ {t("pv.back")}</button>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate font-display text-xl font-semibold text-ink">{p.name_key ? t(p.name_key) : p.name}</h1>
+              <h1 className="min-w-0 break-words font-display text-[18px] leading-tight sm:truncate sm:text-xl font-semibold text-ink">{p.name_key ? t(p.name_key) : p.name}</h1>
               <span data-testid="project-status" data-status={p.status}><StatusPill status={p.status} /></span>
               {!isDraft && <LightDot light={light ?? p.light} />}
             </div>
@@ -85,7 +85,7 @@ export function ProjectDetailView() {
 
         {isDraft ? <DraftEditor /> : (
           <>
-            <div data-tour="projects.tabs" className="flex flex-wrap items-center gap-1.5" role="tablist">
+            <div data-tour="projects.tabs" className="flex flex-wrap items-center gap-1.5 wf-tabs" role="tablist">
               {tabs.shown.map((k: ProjectTab) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`pv-tab-${k}`} onClick={() => setTab(k)}
                   className={`rounded-md border px-3.5 py-2.5 text-xs font-semibold transition md:py-1.5 ${tab === k ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel text-mute hover:text-ink"}`}>

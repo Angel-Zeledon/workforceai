@@ -107,24 +107,24 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
       onDrop={(e) => { e.preventDefault(); setDrag(false); if (canUpload && e.dataTransfer.files.length) upload(e.dataTransfer.files); }}>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-3 py-3 sm:px-5">
-          <div data-tour="files.header" className="mr-3"><h1 className="font-display text-xl font-semibold text-ink">{t("drive.title")}</h1><p className="text-[12px] text-mute">{t("drive.page.desc")}</p></div>
+          <div data-tour="files.header" className="w-full sm:mr-3 sm:w-auto"><h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("drive.title")}</h1><p className="text-[12px] text-mute">{t("drive.page.desc")}</p></div>
           <nav data-tour="files.crumbs" data-testid="drive-crumbs" className="flex flex-wrap items-center gap-1 text-sm">
-            <button type="button" className="rounded px-1.5 py-0.5 text-mute hover:bg-panel2 hover:text-ink" onClick={() => { setPath("/"); setSelected(null); setTrash(null); }}>{t("drive.root")}</button>
+            <button type="button" className="min-h-9 rounded px-1.5 py-0.5 text-mute hover:bg-panel2 hover:text-ink sm:min-h-0" onClick={() => { setPath("/"); setSelected(null); setTrash(null); }}>{t("drive.root")}</button>
             {crumbs.map((c, i) => (
               <span key={i} className="flex items-center gap-1">
                 <span className="text-mute">/</span>
-                <button type="button" className="rounded px-1.5 py-0.5 text-ink hover:bg-panel2" onClick={() => { setPath("/" + crumbs.slice(0, i + 1).join("/")); setSelected(null); setTrash(null); }}>
+                <button type="button" className="min-h-9 rounded px-1.5 py-0.5 text-ink hover:bg-panel2 sm:min-h-0" onClick={() => { setPath("/" + crumbs.slice(0, i + 1).join("/")); setSelected(null); setTrash(null); }}>
                   {rootLabel(t, c)}
                 </button>
               </span>
             ))}
           </nav>
           <IndexStatusChip path={path} refresh={touched} />
-          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
             <button type="button" data-testid="drive-meaning" aria-pressed={meaning} title={t("drive.meaning.help")} onClick={() => setMeaning(!meaning)}
               className={`min-h-10 rounded-lg border px-2 py-1.5 text-[11px] sm:min-h-0 ${meaning ? "border-accent bg-accent/10 text-accent" : "border-line text-mute hover:text-ink"}`}>{t("drive.meaning.toggle")}</button>
             <input data-tour="files.search" data-testid="drive-search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") search(); }}
-              placeholder={meaning ? t("drive.meaning.placeholder") : t("drive.searchPlaceholder")} className="min-h-10 w-full rounded-lg border border-line bg-panel2 px-3 py-1.5 text-base outline-none focus:border-accent sm:min-h-0 sm:w-56 sm:text-xs" />
+              placeholder={meaning ? t("drive.meaning.placeholder") : t("drive.searchPlaceholder")} className="order-first min-h-10 w-full min-w-0 basis-full rounded-lg border border-line bg-panel2 px-3 py-1.5 text-base outline-none focus:border-accent sm:order-none sm:min-h-0 sm:w-56 sm:basis-auto sm:text-xs" />
             {path !== "/" && <Btn data-testid="drive-who-sees" className="inline-flex items-center gap-1" onClick={() => { setWhoSees(!whoSees); setSelected(null); }}><Icon name="users" size={13} />{t("access.folder.button")}</Btn>}
             <span data-tour="files.trash" className="inline-flex"><Btn data-testid="drive-trash" onClick={async () => setTrash(trash ? null : (await drive.trash().catch(() => ({ files: [] }))).files)}>{t("drive.trash")}</Btn></span>
             <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) upload(e.target.files); e.target.value = ""; }} />
@@ -139,8 +139,8 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
             <div className="h-full bg-accent transition-[width] duration-200" style={{ width: `${Math.floor(progress * 100)}%` }} />
           </div>
         )}
-        {error && <div data-testid="drive-error" className="mx-5 mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-700">{error}</div>}
-        {drag && <div className="mx-5 mt-3 rounded-xl border-2 border-dashed border-accent px-4 py-6 text-center text-sm text-accent">{t("drive.dropHere", { path })}</div>}
+        {error && <div data-testid="drive-error" className="mx-3 mt-3 sm:mx-5 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-700">{error}</div>}
+        {drag && <div className="mx-3 mt-3 sm:mx-5 rounded-xl border-2 border-dashed border-accent px-4 py-6 text-center text-sm text-accent">{t("drive.dropHere", { path })}</div>}
         <div data-tour="files.list" className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-5">
           {passages ? (
             <PassageResults result={passages} onOpen={openPassage} onClose={() => setPassages(null)} />
@@ -162,12 +162,13 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
   );
 }
 
-function Author({ p }: { p: DriveFile["updated_by"] }) {
+/** `copy`: the second rendering (phone line under the name) carries no test id, so ids stay unique. */
+function Author({ p, copy = false }: { p: DriveFile["updated_by"]; copy?: boolean }) {
   const { t } = useT();
   const name = useAgentName();
   if (p.kind === "agent") return <span className="inline-flex items-center gap-1"><span className="rounded bg-accent/10 px-1 text-[10px] font-semibold uppercase text-accent">{t("drive.agent")}</span>{name(p.id)}</span>;
   if (p.kind === "system") return <span className="text-mute">{t("drive.system")}</span>;
-  if (p.kind === "inbox") return <span data-testid="drive-author-inbox" title={t("dataInbox.authorHint")} className="inline-flex items-center gap-1"><span className="rounded bg-amber-500/15 px-1 text-[10px] font-semibold uppercase text-amber-700">{t("dataInbox.author")}</span>{p.id}</span>;
+  if (p.kind === "inbox") return <span data-testid={copy ? undefined : "drive-author-inbox"} title={t("dataInbox.authorHint")} className="inline-flex items-center gap-1"><span className="rounded bg-amber-500/15 px-1 text-[10px] font-semibold uppercase text-amber-700">{t("dataInbox.author")}</span>{p.id}</span>;
   return <span>{t("drive.person")}</span>;
 }
 
@@ -181,23 +182,27 @@ function FileTable({ listing, path, selected, onFolder, onFile, canUpload, onUpl
   return (
     <table data-testid="drive-table" className="w-full text-left text-sm">
       <thead className="text-[11px] uppercase tracking-wide text-mute">
-        <tr><th className="py-2 font-semibold">{t("drive.col.name")}</th><th className="font-semibold">{t("drive.col.by")}</th><th className="font-semibold">{t("drive.col.version")}</th><th className="font-semibold">{t("drive.col.size")}</th><th className="font-semibold">{t("drive.col.updated")}</th></tr>
+        <tr><th className="py-2 font-semibold">{t("drive.col.name")}</th><th className="hidden font-semibold sm:table-cell">{t("drive.col.by")}</th><th className="hidden font-semibold sm:table-cell">{t("drive.col.version")}</th><th className="hidden font-semibold sm:table-cell">{t("drive.col.size")}</th><th className="hidden font-semibold sm:table-cell">{t("drive.col.updated")}</th></tr>
       </thead>
       <tbody>
         {listing.folders.map((f) => (
           <tr key={f.id} data-testid={`drive-folder-${f.name}`} className="cursor-pointer border-t border-line hover:bg-panel2" onClick={() => onFolder(f.path)}>
             <td className="py-2"><span className="flex items-center gap-2 font-medium text-ink"><Icon name="folder" size={15} />{path === "/" ? rootLabel(t, f.name) : f.name}</span></td>
-            <td /><td /><td /><td />
+            <td className="hidden sm:table-cell" /><td className="hidden sm:table-cell" /><td className="hidden sm:table-cell" /><td className="hidden sm:table-cell" />
           </tr>
         ))}
         {listing.files.map((f) => (
           <tr key={f.id} data-testid={`drive-file-${f.name}`} data-selected={selected === f.id}
             className={`cursor-pointer border-t border-line hover:bg-panel2 ${selected === f.id ? "bg-accent/5" : ""}`} onClick={() => onFile(f)}>
-            <td className="py-2"><span className="flex items-center gap-2 text-ink"><Icon name="doc" size={15} />{f.name}</span></td>
-            <td className="text-xs"><Author p={f.updated_by} /></td>
-            <td className="text-xs text-mute">v{f.current_version}</td>
-            <td className="text-xs text-mute">{fmtSize(f.size)}</td>
-            <td className="text-xs text-mute">{new Date(f.updated_at).toLocaleString()}</td>
+            <td className="py-2">
+              <span className="flex min-w-0 items-center gap-2 text-ink"><Icon name="doc" size={15} className="shrink-0" /><span className="min-w-0 break-words [overflow-wrap:anywhere]">{f.name}</span></span>
+              {/* phones: the other columns as one line under the name */}
+              <span className="mt-0.5 flex flex-wrap gap-x-2 pl-[23px] text-[11.5px] text-mute sm:hidden"><Author p={f.updated_by} copy /><span>v{f.current_version}</span><span>{fmtSize(f.size)}</span><span>{new Date(f.updated_at).toLocaleDateString()}</span></span>
+            </td>
+            <td className="hidden text-xs sm:table-cell"><Author p={f.updated_by} /></td>
+            <td className="hidden text-xs text-mute sm:table-cell">v{f.current_version}</td>
+            <td className="hidden text-xs text-mute sm:table-cell">{fmtSize(f.size)}</td>
+            <td className="hidden text-xs text-mute sm:table-cell">{new Date(f.updated_at).toLocaleString()}</td>
           </tr>
         ))}
       </tbody>
@@ -242,9 +247,9 @@ function Preview({ file, text }: { file: DriveFile; text: string }) {
   const rows = useMemo(() => (file.name.endsWith(".csv") ? text.trim().split(/\r?\n/).slice(0, 60).map((l) => l.split(",")) : null), [file.name, text]);
   if (rows && rows.length) {
     return (
-      <table data-testid="drive-preview-table" className="w-full text-xs">
+      <div className="wf-scroll-x"><table data-testid="drive-preview-table" className="w-full text-xs">
         <tbody>{rows.map((r, i) => <tr key={i} className={i ? "border-t border-line" : "font-semibold"}>{r.map((c, j) => <td key={j} className="px-1.5 py-1">{c}</td>)}</tr>)}</tbody>
-      </table>
+      </table></div>
     );
   }
   return <pre data-testid="drive-preview-text" className="whitespace-pre-wrap break-words font-mono text-[11.5px] leading-relaxed text-ink">{text}</pre>;

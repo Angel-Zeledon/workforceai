@@ -119,7 +119,7 @@ export function AwayButton() {
   return (
     <button type="button" data-testid="away-open" onClick={openNow} title={t("away.open")}
       className="pointer-events-auto relative flex min-h-10 items-center gap-2 rounded-lg border border-line bg-panel/95 px-3 py-2 text-xs font-semibold text-ink shadow-soft backdrop-blur transition hover:bg-panel2">
-      <Icon name="moon" size={15} /><span className="max-sm:hidden">{t("away.open")}</span>
+      <Icon name="moon" size={15} /><span className="hidden lg:inline">{t("away.open")}</span>
       {waiting > 0 && <span className="rounded-full bg-warn px-1.5 text-[10px] font-semibold text-white">{waiting}</span>}
     </button>
   );

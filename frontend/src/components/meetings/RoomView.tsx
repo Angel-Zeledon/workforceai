@@ -75,7 +75,7 @@ export function RoomView({ id, initialTab, settings, rooms, onBack, onChanged }:
           <ErrorBar msg={err} />
           {m.external.sync_error && <div data-testid="sync-error" className="rounded-lg bg-warn/10 px-3 py-2 text-xs text-warn">{t("meetings.sync.failed", { reason: t(`meetings.sync.code.${m.external.sync_error}`) })}</div>}
 
-          <div className="flex flex-wrap items-center gap-2" role="tablist">
+          <div className="flex flex-wrap items-center gap-2 wf-tabs" role="tablist">
             {(["overview", "minutes"] as Tab[]).map((k) => (
               <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`room-tab-${k}`} onClick={() => setTab(k)}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium ${tab === k ? "bg-accent-soft text-accent" : "text-mute hover:bg-panel2 hover:text-ink"}`}>

@@ -45,7 +45,7 @@ export function UsageTable({ connectionId }: { connectionId?: string }) {
         <Btn data-testid="conn-usage-export" onClick={exportCsv} disabled={rows.length === 0}>{t("conn.usage.export")}</Btn>
       </div>
       {rows.length === 0 ? <Empty>{t("conn.usage.empty")}</Empty> : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto wf-scroll-x">
           <table data-testid="conn-usage-table" className="w-full border-collapse text-xs">
             <thead>
               <tr className="border-b border-line text-left text-[11px] font-semibold uppercase tracking-wide text-mute">

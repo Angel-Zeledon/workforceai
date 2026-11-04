@@ -27,17 +27,17 @@ export function ConceptLegend({ current, className = "" }: { current: Concept; c
         const here = c.id === current;
         return (
           <div key={c.id} data-testid={`concept-${c.id}`} data-current={here ? "1" : "0"} aria-current={here ? "page" : undefined}
-            className={`flex items-start gap-2.5 rounded-xl border p-3 ${here ? "border-line-strong bg-panel shadow-soft" : "border-line bg-panel2"}`}>
-            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${c.tint}`}><Icon name={c.icon} size={16} /></span>
+            className={`flex items-start gap-2.5 rounded-xl border p-2.5 sm:p-3 ${here ? "border-line-strong bg-panel shadow-soft" : "border-line bg-panel2"}`}>
+            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-8 sm:w-8 ${c.tint}`}><Icon name={c.icon} size={16} /></span>
             <span className="min-w-0 flex-1">
               <span className="flex items-baseline gap-1.5">
                 <b className="text-[12.5px] text-ink">{t(`concepts.${c.id}.name`)}</b>
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-mute">{t(`concepts.${c.id}.what`)}</span>
               </span>
               <span className="mt-0.5 block text-[11.5px] leading-snug text-ink2">{t(`concepts.${c.id}.body`)}</span>
-              <span className="mt-1 block text-[11px] leading-snug text-mute">{t(`concepts.${c.id}.example`)}</span>
+              <span className="mt-1 hidden text-[11px] leading-snug text-mute sm:block">{t(`concepts.${c.id}.example`)}</span>
               {!here && (
-                <button type="button" data-testid={`concept-go-${c.id}`} onClick={() => go(c.href)} className="mt-1.5 text-[11px] font-semibold text-accent hover:underline">
+                <button type="button" data-testid={`concept-go-${c.id}`} onClick={() => go(c.href)} className="-mb-2 mt-0 min-h-10 text-[11px] font-semibold text-accent hover:underline sm:mb-0 sm:mt-1.5 sm:min-h-0">
                   {t(`concepts.${c.id}.go`)} ›
                 </button>
               )}

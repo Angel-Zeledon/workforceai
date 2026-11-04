@@ -57,8 +57,8 @@ export function Modal({ children, onClose, testId, wide }: { children: ReactNode
   }, [onClose]);
   if (page) return <div data-testid={testId} role="region" className={`mx-auto w-full px-5 py-5 ${wide ? "max-w-2xl" : "max-w-md"}`}>{children}</div>;
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/35 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div data-testid={testId} role="dialog" aria-modal="true" className={`ac-pop max-h-[90vh] max-h-[90dvh] w-full overflow-y-auto rounded-xl border border-line bg-panel p-5 shadow-float ${wide ? "max-w-2xl" : "max-w-md"}`}>
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-ink/35 p-0 sm:items-center sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div data-testid={testId} role="dialog" aria-modal="true" className={`ac-pop max-h-[92dvh] w-full overflow-y-auto overflow-x-hidden rounded-t-2xl border border-line bg-panel px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-float sm:max-h-[90dvh] sm:rounded-xl sm:p-5 ${wide ? "max-w-2xl" : "max-w-md"}`}>
         {children}
       </div>
     </div>

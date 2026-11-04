@@ -153,7 +153,7 @@ export function SettingsView() {
   return (
     <div data-testid="settings-view" className="h-full overflow-y-auto bg-bg">
       <PageHeader title={t("settings.page.title")} description={t("settings.page.desc")} />
-      <div className="mx-auto max-w-4xl px-5 py-6 sm:px-6">
+      <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 sm:py-6">
         <div className="relative mb-6">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-mute" aria-hidden>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>

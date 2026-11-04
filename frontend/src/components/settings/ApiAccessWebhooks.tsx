@@ -18,7 +18,7 @@ function Deliveries({ id }: { id: string }) {
   const items: WebhookDelivery[] = data?.items ?? [];
   if (data && items.length === 0) return <p className="text-[12px] text-mute">{t("adm.wh.noDeliveries")}</p>;
   return (
-    <div className="overflow-x-auto rounded-lg border border-line">
+    <div className="overflow-x-auto rounded-lg border border-line wf-scroll-x">
       <table className="w-full min-w-[480px] border-collapse">
         <thead className="bg-panel2"><tr><th className={thCls}>{t("adm.wh.col.event")}</th><th className={thCls}>{t("adm.wh.col.state")}</th><th className={thCls}>{t("adm.wh.col.attempts")}</th><th className={thCls}>{t("adm.wh.col.when")}</th></tr></thead>
         <tbody>{items.map((d) => (

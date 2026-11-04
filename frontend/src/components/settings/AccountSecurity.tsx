@@ -47,7 +47,7 @@ export function AccountSecurity() {
   const copy = () => { try { void navigator.clipboard.writeText((recovery ?? []).join("\n")); } catch { /* the codes are on screen */ } };
 
   return (
-    <div data-testid="account-security" className="mx-auto max-w-2xl space-y-4 px-5 py-6 sm:px-6">
+    <div data-testid="account-security" className="mx-auto max-w-2xl space-y-4 px-4 py-4 sm:px-6 sm:py-6">
       <Card title={t("mfa.title")} testid="mfa-card">
         <p className="text-[12.5px] leading-relaxed text-mute">{t("mfa.body")}</p>
 

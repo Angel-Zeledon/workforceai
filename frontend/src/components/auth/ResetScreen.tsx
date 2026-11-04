@@ -29,18 +29,18 @@ export function ResetScreen() {
   };
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
-      <div data-testid="reset" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
+    <main className="flex min-h-dvh items-center justify-center bg-bg px-3 py-6 sm:px-4 sm:py-10">
+      <div data-testid="reset" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-8">
         <a href={LANDING_URL} className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
         {done ? (
           <>
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.reset.doneTitle")}</h1>
+            <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("auth.reset.doneTitle")}</h1>
             <p role="status" className="text-sm text-ink2">{t("auth.reset.doneBody")}</p>
             <a href="/login" className="block"><Btn kind="primary" className="w-full min-h-10 py-2">{t("auth.login.submit")}</Btn></a>
           </>
         ) : (
           <form onSubmit={submit} className="space-y-3">
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("auth.reset.title")}</h1>
+            <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("auth.reset.title")}</h1>
             <label className="block text-xs font-medium text-ink2"><span className="mb-1 block">{t("auth.reset.password")}</span>
               <input data-testid="reset-password" type="password" required autoComplete="new-password" className={inputCls} value={password} onChange={(e) => setPassword(e.target.value)} />
             </label>

@@ -71,7 +71,7 @@ export function ApiAccessTokens() {
       <div><Btn kind="primary" disabled={!name.trim() || scopes.length === 0} onClick={create}>{t("adm.api.create")}</Btn></div>
       {data && data.items.length === 0 && <p className="text-mute">{t("adm.api.noTokens")}</p>}
       {data && data.items.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-line">
+        <div className="overflow-x-auto rounded-lg border border-line wf-scroll-x">
           <table className="w-full min-w-[620px] border-collapse">
             <thead className="bg-panel2"><tr><th className={thCls}>{t("adm.api.name")}</th><th className={thCls}>{t("adm.api.scopes")}</th><th className={thCls}>{t("adm.api.col.lastUsed")}</th><th className={thCls} /></tr></thead>
             <tbody>

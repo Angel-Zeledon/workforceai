@@ -46,7 +46,7 @@ export function TemplateGallery({ onClose, onStarted }: { onClose: () => void; o
         <ConceptLegend current="templates" className="mb-4" />
         <p className="mb-4 text-sm text-mute">{t("tpl.subtitle")}</p>
         {started && <div role="status" data-testid="wf-template-started" className="mb-3 rounded-xl border border-emerald-400/50 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700">{t("tpl.run.started")}</div>}
-        <div className="mb-4 flex flex-wrap gap-1.5" role="tablist" aria-label={t("tpl.title")}>
+        <div className="mb-4 flex flex-wrap gap-1.5 wf-tabs" role="tablist" aria-label={t("tpl.title")}>
           {categories.map((c) => (
             <button key={c} type="button" role="tab" aria-selected={category === c} data-testid={`wf-template-category-${c}`} onClick={() => setCategory(c)}
               className={`min-h-10 rounded-md border px-3 py-2 text-[11px] sm:min-h-0 sm:py-1 font-semibold ${category === c ? "border-accent/30 bg-accent-soft text-accent" : "border-line text-mute hover:text-ink"}`}>

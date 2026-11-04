@@ -49,8 +49,8 @@ export function MfaEnroll({ token, onDone, onCancel }: { token: string; onDone: 
 
   if (recovery) {
     return (
-      <div data-testid="auth-enroll-done" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-7 shadow-soft sm:p-8">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("mfa.on")}</h1>
+      <div data-testid="auth-enroll-done" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-8">
+        <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("mfa.on")}</h1>
         <p className="text-sm leading-relaxed text-ink2">{t("mfa.recoveryBody")}</p>
         <ul className="grid grid-cols-2 gap-1.5 rounded-lg border border-line bg-bg p-3 font-mono text-[13px] text-ink">
           {recovery.map((c) => <li key={c}>{c}</li>)}
@@ -63,8 +63,8 @@ export function MfaEnroll({ token, onDone, onCancel }: { token: string; onDone: 
     );
   }
   return (
-    <form onSubmit={confirm} data-testid="auth-enroll" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-7 shadow-soft sm:p-8">
-      <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("idn.enroll.title")}</h1>
+    <form onSubmit={confirm} data-testid="auth-enroll" className="ac-pop w-full max-w-md space-y-3 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-8">
+      <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("idn.enroll.title")}</h1>
       <p className="text-sm leading-relaxed text-ink2">{t("idn.enroll.body")}</p>
       {setup && (
         <>

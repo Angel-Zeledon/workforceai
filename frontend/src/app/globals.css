@@ -49,6 +49,36 @@ body { overflow-x: clip; }
   /* The typed text stays 16px (smaller makes iOS zoom on focus); the hint can be smaller so a long one fits on one line. */
   input::placeholder, textarea::placeholder { font-size: 13px; }
 }
+/* ------------------------------------------------------------------
+   Responsive helpers (phones < 640px). From sm up they do nothing, so desktop stays as it was.
+   .wf-hscroll  one row that scrolls sideways (chips, filters), fading at the right edge as a hint
+   .wf-tabs     the same for tab bars, with 40px tap targets
+   .wf-scroll-x wide tables: scroll sideways inside the card with edge shadows, never the page
+------------------------------------------------------------------- */
+@media (max-width: 639px) {
+  .wf-hscroll, .wf-tabs {
+    flex-wrap: nowrap !important; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    padding-right: 28px;
+    /* a scroll container loses its automatic min-height: without this a column flex parent squeezes the row */
+    min-height: fit-content;
+  }
+  .wf-hscroll::-webkit-scrollbar, .wf-tabs::-webkit-scrollbar { display: none; }
+  .wf-hscroll > *, .wf-tabs > * { flex-shrink: 0; white-space: nowrap; }
+  .wf-tabs > button, .wf-tabs > a, .wf-tabs > [role="tab"] { min-height: 40px; display: inline-flex; align-items: center; }
+}
+/* one-line text boxes (the chat composer) stay one line while empty, whatever the length of the hint */
+textarea[rows="1"]:placeholder-shown { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wf-scroll-x {
+  overflow-x: auto; overscroll-behavior-x: contain;
+  background:
+    linear-gradient(to right, rgb(var(--panel)) 30%, rgb(var(--panel) / 0)) left center / 32px 100% no-repeat local,
+    linear-gradient(to left, rgb(var(--panel)) 30%, rgb(var(--panel) / 0)) right center / 32px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(15 23 42 / 0.14), transparent) left center / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(15 23 42 / 0.14), transparent) right center / 12px 100% no-repeat scroll;
+  background-color: rgb(var(--panel));
+}
 select { color-scheme: light; }
 input::placeholder, textarea::placeholder { color: rgb(var(--mute) / 0.75); }
 ::selection { background: rgb(var(--accent) / 0.18); }

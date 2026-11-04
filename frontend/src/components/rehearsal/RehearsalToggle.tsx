@@ -26,7 +26,7 @@ export function RehearsalToggle({ id }: { id: string }) {
     <div className="flex flex-wrap items-center gap-2">
       <button type="button" data-testid="agent-rehearsal-toggle" data-on={on ? "true" : "false"} aria-pressed={on} onClick={toggle}
         disabled={busy || !loaded || (on ? !canOff : !canOn)} title={t("rehearsal.toggle.help")}
-        className={`rounded-md border px-3 py-1 text-xs font-medium transition disabled:opacity-40 ${on ? "border-accent bg-accent-soft text-accent" : "border-line-strong bg-panel text-ink hover:bg-panel2"}`}>
+        className={`min-h-10 rounded-md border px-3 py-1 text-xs font-medium transition disabled:opacity-40 sm:min-h-0 ${on ? "border-accent bg-accent-soft text-accent" : "border-line-strong bg-panel text-ink hover:bg-panel2"}`}>
         {on ? t("rehearsal.toggle.off") : t("rehearsal.toggle.on")}
       </button>
       {on && <span data-testid="agent-rehearsal-badge" className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">{t("rehearsal.badge")}</span>}

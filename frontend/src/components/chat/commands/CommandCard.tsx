@@ -31,7 +31,7 @@ function Table({ columns, rows }: { columns: { key?: string; label: string }[]; 
   const [sort, setSort] = useState<{ col: number; dir: 1 | -1 } | null>(null);
   const shown = useMemo(() => (sort ? sortRows(rows, sort.col, sort.dir) : rows), [rows, sort]);
   return (
-    <div className="overflow-x-auto rounded-lg border border-line">
+    <div className="overflow-x-auto rounded-lg border border-line wf-scroll-x">
       <table data-testid="cmd-table" className="w-full border-collapse text-left text-[11.5px]">
         <thead>
           <tr className="bg-panel2">
@@ -122,8 +122,8 @@ export function ConfirmDialog({ message, onConfirm, onCancel }: { message: strin
     }
   };
   return createPortal(
-    <div data-reduce={reduce ? "1" : "0"} className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onKeyDown={onKey} onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
-      <div role="alertdialog" aria-modal="true" aria-labelledby="cmd-confirm-msg" data-testid="cmd-confirm" className="ac-pop w-full max-w-sm rounded-xl border border-line-strong bg-panel p-4 shadow-float">
+    <div data-reduce={reduce ? "1" : "0"} className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 p-0 sm:items-center sm:p-4" onKeyDown={onKey} onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
+      <div role="alertdialog" aria-modal="true" aria-labelledby="cmd-confirm-msg" data-testid="cmd-confirm" className="ac-pop max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-line-strong bg-panel px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-float sm:max-w-sm sm:rounded-xl sm:p-4">
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-mute">{t("cmds.confirm.title")}</h3>
         <p id="cmd-confirm-msg" className="mt-1 text-[13.5px] font-medium text-ink">{message}</p>
         <div className="mt-4 flex justify-end gap-2">

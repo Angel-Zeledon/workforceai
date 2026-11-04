@@ -240,7 +240,7 @@ function LinkImportRow({ li, isAdmin, tick, onEdit, onChanged, onDeleted }: {
         <span>{li.last_run_at ? t("linkImports.lastRun", { time: fmtDateTime(li.last_run_at) }) : t("linkImports.neverRun")}</span>
         {li.enabled && li.next_run_at && li.schedule !== "once" && <span>{t("linkImports.nextRun", { time: fmtDateTime(li.next_run_at) })}</span>}
         {li.header_set && <span data-testid="link-import-header-hint">{t("linkImports.headerSet", { name: li.header_name, hint: li.header_hint || "····" })}</span>}
-        <span className="min-w-0 truncate">{t("linkImports.destination")}: <span className="font-mono">{li.last_path || li.folder_path || li.folder}</span></span>
+        <span className="min-w-0 max-w-full truncate">{t("linkImports.destination")}: <span className="font-mono">{li.last_path || li.folder_path || li.folder}</span></span>
       </div>
       {li.last_status === "error" && li.last_code && <p className="mt-1 text-[11px] font-medium text-err">{codeText(li.last_code)}</p>}
       {li.last_status === "skipped" && li.last_code && <p className="mt-1 text-[11px] font-medium text-amber-700">{codeText(li.last_code)}</p>}

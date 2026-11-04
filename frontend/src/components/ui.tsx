@@ -76,7 +76,7 @@ export function RiskBadge({ risk }: { risk: string }) {
   const { t } = useT();
   const c = risk === "high" ? "#a63232" : risk === "medium" ? "#a86208" : "#2f7d55";
   const l = t(risk === "high" ? "risk.high" : risk === "medium" ? "risk.medium" : "risk.low");
-  return <span className="rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}22`, color: c }}>{l}</span>;
+  return <span className="shrink-0 whitespace-nowrap rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${c}22`, color: c }}>{l}</span>;
 }
 export function Progress({ value, color = "#2b6cb0" }: { value: number; color?: string }) {
   return (
@@ -92,12 +92,12 @@ export function Card({ title, right, children, className = "" }: { title?: React
   return (
     <section className={`rounded-xl border border-line bg-panel shadow-pop ${className}`}>
       {title !== undefined && (
-        <header className="flex items-center justify-between border-b border-line px-4 py-3">
+        <header className="flex items-center justify-between gap-2 border-b border-line px-3 py-2.5 sm:px-4 sm:py-3">
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-mute">{title}</h3>
           {right}
         </header>
       )}
-      <div className="p-4">{children}</div>
+      <div className="p-3 sm:p-4">{children}</div>
     </section>
   );
 }
@@ -127,7 +127,7 @@ export function Btn({ children, onClick, kind = "ghost", disabled, className = "
     danger: "border-err/40 bg-err/10 text-err hover:bg-err/15",
   }[kind];
   return (
-    <button data-testid={testId} type={type} disabled={disabled} onClick={onClick} className={`rounded-md border px-3.5 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${k} ${className}`}>
+    <button data-testid={testId} type={type} disabled={disabled} onClick={onClick} className={`min-h-10 rounded-md border px-3.5 py-1.5 text-xs font-medium transition sm:min-h-0 disabled:cursor-not-allowed disabled:opacity-40 ${k} ${className}`}>
       {children}
     </button>
   );

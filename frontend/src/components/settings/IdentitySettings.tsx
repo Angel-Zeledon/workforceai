@@ -39,7 +39,7 @@ export function IdentitySettings() {
   const [version, setVersion] = useState(0);
   const bump = useCallback(() => setVersion((v) => v + 1), []);
   return (
-    <div data-testid="identity-settings" className="mx-auto max-w-2xl space-y-4 px-5 py-6 sm:px-6">
+    <div data-testid="identity-settings" className="mx-auto max-w-2xl space-y-4 px-4 py-4 sm:px-6 sm:py-6">
       <p className="text-[12.5px] leading-relaxed text-mute">{t("idn.intro")}</p>
       <PolicyCard version={version} />
       <IdentityDomains onChanged={bump} />

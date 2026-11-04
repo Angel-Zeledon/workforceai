@@ -64,11 +64,11 @@ export function CustomerDistrict() {
                 {items.map((it) => (
                   <li key={it.customer.id}>
                     <button data-testid={`customers-row-${it.customer.id}`} onClick={() => setOpen(it.customer.id)}
-                      className="w-full rounded-md border border-line bg-panel2 p-3 text-left transition hover:border-line-strong">
-                      <div className="flex items-center justify-between gap-2">
+                      className="w-full rounded-md border border-line bg-panel2 p-2.5 text-left transition hover:border-line-strong sm:p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                         <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-ink">
                           <span aria-hidden className="inline-block h-3 w-3 shrink-0 rounded-sm" style={{ background: customerColor(it.customer.color, it.customer.id) }} />
-                          <span className="truncate">{it.customer.name}</span>
+                          <span className="min-w-0 break-words sm:truncate">{it.customer.name}</span>
                         </span>
                         <StatusPill status={it.status} />
                       </div>

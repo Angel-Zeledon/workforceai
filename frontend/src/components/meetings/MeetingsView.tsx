@@ -89,7 +89,7 @@ export function MeetingsView() {
           </>
         ) : undefined} />
 
-      <div className="flex flex-wrap items-center gap-1 border-b border-line bg-panel px-5 py-2" role="tablist">
+      <div className="flex flex-wrap items-center gap-1 border-b border-line bg-panel px-4 py-2 sm:px-5 wf-tabs" role="tablist">
         {(["meetings", "rooms", "rituals", "calendar", "debates"] as Tab[]).map((k) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`meetings-tab-${k}`} onClick={() => setTab(k)}
             className={`rounded-md px-3 py-1.5 text-xs font-medium ${tab === k ? "bg-accent-soft text-accent" : "text-mute hover:bg-panel2 hover:text-ink"}`}>
@@ -100,14 +100,14 @@ export function MeetingsView() {
           <div className="ml-auto flex flex-wrap items-center gap-1.5">
             {FILTERS.map((f) => (
               <button key={f} type="button" aria-pressed={filter === f} data-testid={`meetings-filter-${f}`} onClick={() => setFilter(f)}
-                className={`rounded-full border px-2.5 py-1 text-[11px] ${filter === f ? "border-accent bg-accent-soft text-accent" : "border-line-strong bg-panel text-ink2 hover:bg-panel2"}`}>{t(`meetings.filter.${f}`)}</button>
+                className={`min-h-9 rounded-full border px-2.5 py-1 text-[11px] sm:min-h-0 ${filter === f ? "border-accent bg-accent-soft text-accent" : "border-line-strong bg-panel text-ink2 hover:bg-panel2"}`}>{t(`meetings.filter.${f}`)}</button>
             ))}
             <label className="ml-1 flex items-center gap-1.5 text-[11px] text-ink2"><input type="checkbox" data-testid="meetings-mine" checked={mine} onChange={(e) => setMine(e.target.checked)} />{t("meetings.filter.mine")}</label>
           </div>
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-5">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
         <div className="mx-auto max-w-5xl space-y-3">
           <ErrorBar msg={err} />
           {tab === "meetings" && (

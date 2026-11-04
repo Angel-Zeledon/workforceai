@@ -54,10 +54,10 @@ export function OrgPage() {
       <PageHeader title={t("org.title")} description={t("org.subtitle")} testid="org-header"
         actions={<div className="flex flex-wrap items-center gap-2">
           {/* one primary action: hire an agent (it used to live only in Ajustes); a new office stays one click away */}
-          <button type="button" data-testid="org-new-dept" onClick={() => setDept(null)} className="rounded-md border border-line bg-panel px-3 py-1.5 text-[12.5px] font-semibold text-ink2 hover:border-accent hover:text-accent">{t("org.dept.new")}</button>
+          <button type="button" data-testid="org-new-dept" onClick={() => setDept(null)} className="min-h-10 rounded-md border border-line bg-panel px-3 py-1.5 text-[12.5px] sm:min-h-0 font-semibold text-ink2 hover:border-accent hover:text-accent">{t("org.dept.new")}</button>
           {isAdmin && <Link href="/settings?s=hire" prefetch={false} data-testid="org-hire" className={btnPrimary}>{t("hire.open")}</Link>}
         </div>} />
-      <div role="tablist" aria-label={t("org.title")} className="flex flex-wrap gap-1.5 border-b border-line bg-panel px-5 py-2 sm:px-6">
+      <div role="tablist" aria-label={t("org.title")} className="flex flex-wrap gap-1.5 border-b border-line bg-panel px-4 py-2 sm:px-6 wf-tabs">
         {tabs.shown.map((k) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} data-testid={`org-tab-${k}`} onClick={() => setTab(k)}
             className={`rounded-md border px-3 py-1 text-[12px] font-semibold ${tab === k ? "border-accent/30 bg-accent-soft text-accent" : "border-line text-mute hover:text-ink"}`}>{t(`org.tab.${k}`)}</button>
@@ -65,7 +65,7 @@ export function OrgPage() {
         {!viewAll && <MoreButton testid="org-more" count={more ? 1 : tabs.folded.length} open={more} onToggle={() => setMore((m) => !m)} />}
         <Link href="/settings?s=templates" prefetch={false} data-testid="org-industries-link" className="ml-auto self-center text-[12px] font-semibold text-accent hover:underline">{t("org.industriesLink")}</Link>
       </div>
-      <div className="mx-auto w-full max-w-6xl flex-1 px-5 py-5 sm:px-6">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-5">
         {error && <div role="alert" data-testid="org-error" className="text-sm font-semibold text-red-600">{t("org.error.load")} <button type="button" onClick={load} className="underline">{t("org.retry")}</button></div>}
         {!error && !chart && <div className="text-sm text-mute">{t("org.loading")}</div>}
         {chart && tab === "chart" && <OrgChartTree chart={chart} onDept={setDept} onAgent={setAgent} onPerson={setPerson} onNewDept={() => setDept(null)} />}

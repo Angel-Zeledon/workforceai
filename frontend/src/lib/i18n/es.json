@@ -2323,6 +2323,8 @@
   "fileviewer.edit": "Editar",
   "fileviewer.download": "Descargar",
   "fileviewer.openInFiles": "Abrir en Archivos",
+  "fileviewer.moreActions": "Más acciones",
+  "fileviewer.lessActions": "Menos acciones",
   "fileviewer.oldVersion": "Estás viendo la versión {v}, no la actual. Para editar, vuelve a la versión actual.",
   "fileviewer.noPreview": "Este tipo de archivo no tiene vista previa en el navegador. Descárgalo para abrirlo.",
   "fileviewer.truncated": "El archivo es largo: se muestra solo la primera parte.",

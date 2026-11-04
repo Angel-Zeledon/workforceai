@@ -42,7 +42,7 @@ export function QualityOverview() {
         </div>
       }>
         {err ? <Empty>{t("quality.error.load")}</Empty> : !data ? <div className="text-xs text-mute">{t("quality.loading")}</div> : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto wf-scroll-x">
             <table className="w-full min-w-[520px] text-left text-xs">
               <thead>
                 <tr className="text-[10px] font-semibold uppercase tracking-[0.08em] text-mute">

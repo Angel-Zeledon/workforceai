@@ -57,7 +57,7 @@ export function CostBreakdownPanel() {
             <div className="font-mono text-2xl font-semibold text-ink" data-testid="cost-breakdown-total">{usd(total)}</div>
             <div className="text-[11px] text-mute">{t("cost.breakdown.calls", { count: breakdown?.calls ?? 0 })}</div>
           </div>
-          <div role="tablist" className="flex flex-wrap gap-1">
+          <div role="tablist" className="flex flex-wrap gap-1 wf-tabs">
             {TABS.map((k) => (
               <button key={k} role="tab" aria-selected={tab === k} data-testid={`cost-tab-${k}`} onClick={() => setTab(k)}
                 className={`rounded-md border px-3 py-1 text-[11px] font-semibold transition ${tab === k ? "border-accent/30 bg-accent-soft text-accent" : "border-line bg-panel2 text-mute hover:text-ink"}`}>
@@ -68,7 +68,7 @@ export function CostBreakdownPanel() {
         </div>
 
         {rows.length === 0 ? <Empty>{t("cost.breakdown.empty")}</Empty> : (
-          <div className="overflow-x-auto"><table className="w-full text-[12px]">
+          <div className="overflow-x-auto wf-scroll-x"><table className="w-full text-[12px]">
             <thead>
               <tr className="text-left text-[10px] uppercase tracking-wide text-mute">
                 <th className="pb-1 font-semibold">{t("cost.breakdown.col.name")}</th>
@@ -153,7 +153,7 @@ export function BudgetLimitsPanel() {
           })}
         </div>
         <div className="text-[11px] text-mute">{t("cost.limits.period", { date: fmtDateTime(status.defaults.period_start) })}</div>
-        <div className="overflow-x-auto"><table className="w-full">
+        <div className="overflow-x-auto wf-scroll-x"><table className="w-full">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wide text-mute">
               <th className="pb-1 font-semibold">{t("cost.estimate.agent")}</th>

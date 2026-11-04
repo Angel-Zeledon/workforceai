@@ -76,10 +76,10 @@ function NewDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (id
   };
   const toggle = (key: string) => setPicked((p) => (mode === "dm" ? { [key]: !p[key] } : { ...p, [key]: !p[key] }));
   return (
-    <div role="dialog" aria-modal="true" aria-label={t("pchat.new")} data-testid="pchat-new" className="absolute inset-0 z-40 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
-      <div className="max-h-full w-full max-w-sm overflow-y-auto rounded-xl border border-line-strong bg-panel p-4 shadow-float" onClick={(e) => e.stopPropagation()}>
+    <div role="dialog" aria-modal="true" aria-label={t("pchat.new")} data-testid="pchat-new" className="absolute inset-0 z-40 flex items-end justify-center bg-black/30 p-0 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[92%] w-full overflow-y-auto rounded-t-2xl border border-line-strong bg-panel px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-float sm:max-h-full sm:max-w-sm sm:rounded-xl sm:p-4" onClick={(e) => e.stopPropagation()}>
         <h2 className="mb-3 text-[14px] font-semibold text-ink">{t("pchat.new")}</h2>
-        <div role="tablist" className="mb-3 flex flex-wrap gap-1.5">
+        <div role="tablist" className="mb-3 flex flex-wrap gap-1.5 wf-tabs">
           {modes.map((m) => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => { setMode(m); setPicked({}); }}
               className={`rounded-full border px-3 py-1 text-[11.5px] font-medium ${mode === m ? "border-accent bg-accent-soft text-ink" : "border-line text-ink2 hover:bg-panel2"}`}>{t(`pchat.new.${m}`)}</button>
@@ -147,7 +147,7 @@ export function PeopleChatsList({ onPicked, heading, only }: { onPicked?: () => 
     <section aria-label={heading ?? t("pchat.title")} data-testid={only ? "chats-results-people" : "pchat-list"} className="mt-4">
       <div className="flex items-center justify-between px-2 pb-1">
         <h2 className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{heading ?? t("pchat.title")}</h2>
-        {canPost && !only && <button type="button" data-testid="pchat-new-btn" onClick={() => setCreating(true)} className="text-[11px] font-medium text-accent-hover hover:underline">{t("pchat.new")}</button>}
+        {canPost && !only && <button type="button" data-testid="pchat-new-btn" onClick={() => setCreating(true)} className="chats-tap text-[11px] font-medium text-accent-hover hover:underline">{t("pchat.new")}</button>}
       </div>
       {!loaded ? <p className="px-3 py-3 text-xs text-mute">…</p> : sorted.length === 0 ? (
         <p className="rounded-xl border border-dashed border-line-strong px-3 py-4 text-center text-xs leading-relaxed text-mute">{t("pchat.empty.list")}</p>

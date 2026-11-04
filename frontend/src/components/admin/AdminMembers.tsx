@@ -27,7 +27,7 @@ export function AdminMembers() {
   return (
     <Panel testid="adm-members" title={t("adm.members.title")} body={t("adm.members.body")}>
       {(err || bad) && <Notice kind="err">{err || bad}</Notice>}
-      <div className="overflow-x-auto rounded-lg border border-line">
+      <div className="overflow-x-auto rounded-lg border border-line wf-scroll-x">
         <table className="w-full min-w-[520px] border-collapse">
           <thead className="bg-panel2"><tr><th className={thCls}>{t("adm.api.name")}</th><th className={thCls}>{t("members.role")}</th><th className={thCls}>{t("adm.wh.col.when")}</th></tr></thead>
           <tbody>

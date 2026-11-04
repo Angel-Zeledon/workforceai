@@ -80,14 +80,20 @@ export function OfficeView() {
         <ProjectPill />
       </div>
       {/* Right above the command bar it talks about, clear of the lighting controls at the top. */}
-      <div className="pointer-events-none absolute bottom-[140px] left-1/2 z-30 hidden w-[min(460px,40vw)] -translate-x-1/2 lg:block">
+      {/* centered on the command bar, which moves right (by 352px - 16px) while the Pendientes tray is on the left */}
+      <div className="pointer-events-none absolute bottom-[140px] z-30 hidden w-[min(460px,40vw)] -translate-x-1/2 lg:block" style={{ left: pendingApprovals ? "calc(50% + 168px)" : "50%" }}>
         <FirstRunHint id="office" title={t("hint.office.title")} body={t("hint.office.body")} />
       </div>
-      <div data-tour="office.approvals" className="pointer-events-none absolute bottom-[calc(96px+env(safe-area-inset-bottom))] left-4 max-w-[calc(100%-2rem)]"><ApprovalsTray /></div>
+      {/* Phones and tablets: Pendientes and the bar to type share one column at the bottom, so they can never cover each
+          other (below the agent panel, z-30). From lg up there is room for both side by side: the wrapper disappears
+          (display: contents) and both sit where they always did. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[25] flex flex-col items-center gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 md:pr-[var(--cb-r)] lg:contents" style={{ "--cb-r": `calc(${selected ? "var(--panel-w, 420px)" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})` } as React.CSSProperties}>
+      <div data-tour="office.approvals" className="pointer-events-none w-full max-w-[720px] lg:absolute lg:bottom-[calc(96px+env(safe-area-inset-bottom))] lg:left-4 lg:w-auto lg:max-w-[calc(100%-2rem)]"><ApprovalsTray /></div>
       {/* One bar to type at a time: with an agent's panel open you write in its chat, so the office bar steps aside
           (hidden, not unmounted: a half-written message is still there when the panel closes). */}
-      <div data-testid="office-command-host" data-hidden={selected ? "1" : "0"} aria-hidden={selected ? true : undefined} className={`pointer-events-none absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 justify-center px-4 md:pl-[var(--cb-l)] md:pr-[var(--cb-r)] ${selected ? "hidden" : "flex"}`} style={{ "--cb-r": `calc(${selected ? "var(--panel-w, 420px)" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})`, "--cb-l": pendingApprovals ? "352px" : "16px" } as React.CSSProperties}>
+      <div data-testid="office-command-host" data-hidden={selected ? "1" : "0"} aria-hidden={selected ? true : undefined} className={`pointer-events-none w-full justify-center lg:absolute lg:inset-x-0 lg:bottom-[max(1rem,env(safe-area-inset-bottom))] lg:z-40 lg:px-4 lg:pl-[var(--cb-l)] lg:pr-[var(--cb-r)] ${selected ? "hidden" : "flex"}`} style={{ "--cb-r": `calc(${selected ? "var(--panel-w, 420px)" : "16px"} + ${viewerOpen ? "min(560px, 100vw)" : "0px"})`, "--cb-l": pendingApprovals ? "352px" : "16px" } as React.CSSProperties}>
         <CommandBar />
+      </div>
       </div>
       {/* Same box as the office scene but above the chat: in-scene popups that must stay clickable (approvals desk card). */}
       <div id="office-popups" className="pointer-events-none absolute inset-0 z-20" />
@@ -99,7 +105,7 @@ export function OfficeView() {
       <PresenceHost /> {/* human presence: who is online, status, "start conversation" */}
       <AwayHost /> {/* "while you were away" sheet and the office timelapse (B3) */}
       {selected && <div data-tour="office.agentPanel" className="pointer-events-none absolute bottom-0 right-0 top-0 z-30"><WorkspaceHost id={selected} /></div>}
-      {!selected && <div className="pointer-events-none absolute bottom-4 right-4 hidden rounded-md border border-line bg-panel/80 px-3 py-1.5 text-[10px] font-semibold text-mute md:block">{t("hud.cameraHint")}</div>}
+      {!selected && <div className="pointer-events-none absolute bottom-4 right-4 hidden rounded-md border border-line bg-panel/80 px-3 py-1.5 text-[10px] font-semibold text-mute xl:block">{t("hud.cameraHint")}</div>}
     </>
   );
 }

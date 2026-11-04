@@ -141,14 +141,14 @@ export function ApprovalsInbox() {
     <main data-testid="inbox-page" className="mx-auto min-h-full max-w-xl space-y-3 bg-bg px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-ink">{t("approvalInbox.title")}</h1>
+          <h1 className="text-[18px] sm:text-xl font-bold text-ink">{t("approvalInbox.title")}</h1>
           <p className="text-[13px] text-mute">{t("approvalInbox.subtitle")}</p>
           {signedIn && <OrgIndicator className="mt-1 text-[12px] font-medium text-ink2" />}
         </div>
         {deck.length > 0 && <span data-testid="inbox-position" className="shrink-0 rounded-md bg-panel2 px-2 py-1 font-mono text-[12px] text-ink2">{t("approvalInbox.position", { n: i + 1, total: deck.length })}</span>}
       </header>
       {/* E0 "my approvals": everything / the ones I asked for / the ones I can decide */}
-      <div role="tablist" aria-label={t("approvalInbox.mine.label")} data-testid="inbox-mine" className="flex flex-wrap gap-1.5">
+      <div role="tablist" aria-label={t("approvalInbox.mine.label")} data-testid="inbox-mine" className="flex flex-wrap gap-1.5 wf-tabs">
         {(["", "requested", "decidable"] as InboxMine[]).map((k) => {
           const n = k === "" ? inbox?.counts?.all : k === "requested" ? inbox?.counts?.requested : inbox?.counts?.decidable;
           return (
@@ -174,9 +174,9 @@ export function ApprovalsInbox() {
       {cur && (
         <article data-testid={`inbox-card-${cur.id}`} data-risk={cur.risk} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => { drag.current = null; setDx(0); }}
           style={{ transform: dx ? `translateX(${dx}px) rotate(${dx / 40}deg)` : undefined, touchAction: "pan-y" }}
-          className={`select-none rounded-xl border bg-panel p-4 shadow-soft transition-[border-color] ${dx > 60 ? "border-ok" : dx < -60 ? "border-err" : cur.high_risk ? "border-err/50" : "border-line"}`}>
+          className={`select-none rounded-xl border bg-panel p-3.5 shadow-soft sm:p-4 transition-[border-color] ${dx > 60 ? "border-ok" : dx < -60 ? "border-err" : cur.high_risk ? "border-err/50" : "border-line"}`}>
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-[16px] font-semibold leading-snug text-ink">{cur.title}</h2>
+            <h2 className="min-w-0 break-words text-[15px] font-semibold leading-snug text-ink sm:text-[16px]">{cur.title}</h2>
             <RiskBadge risk={cur.risk} />
           </div>
           <dl className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
@@ -245,8 +245,8 @@ export function ApprovalsInbox() {
       )}
 
       {confirm && (
-        <div role="dialog" aria-modal="true" data-testid="inbox-confirm" className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" onClick={() => setConfirm(null)}>
-          <div className="w-full max-w-md rounded-xl bg-panel p-4 shadow-soft" onClick={(e) => e.stopPropagation()}>
+        <div role="dialog" aria-modal="true" data-testid="inbox-confirm" className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={() => setConfirm(null)}>
+          <div className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-panel px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-soft sm:rounded-xl sm:p-4" onClick={(e) => e.stopPropagation()}>
             {confirm.kind === "high" ? (
               <>
                 <h3 className="text-[16px] font-semibold text-ink">{t("approvalInbox.confirmHighTitle")}</h3>

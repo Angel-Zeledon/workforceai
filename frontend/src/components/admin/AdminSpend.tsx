@@ -59,7 +59,7 @@ export function AdminSpend() {
         </div>
       </Panel>
       <Panel title={t("adm.spend.title")} body={t("adm.spend.body")}>
-        <div className="overflow-x-auto rounded-lg border border-line">
+        <div className="overflow-x-auto rounded-lg border border-line wf-scroll-x">
           <table className="w-full min-w-[640px] border-collapse">
             <thead className="bg-panel2"><tr>
               <th className={thCls}>{t("adm.spend.agent")}</th><th className={thCls}>{t("adm.spend.department")}</th>

@@ -162,7 +162,7 @@ export function ApprovalsMobile({ focusId }: { focusId?: string }) {
   return (
     <main className="mx-auto min-h-full max-w-xl space-y-3 bg-bg px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5" data-testid="approvals-page">
       <header>
-        <h1 className="text-xl font-bold text-ink">{t("approvals.mobile.title")}</h1>
+        <h1 className="text-[18px] sm:text-xl font-bold text-ink">{t("approvals.mobile.title")}</h1>
         <p className="text-[13px] text-mute">{t("approvals.mobile.subtitle")}</p>
         {signedIn && <OrgIndicator className="mt-1 text-[12px] font-medium text-ink2" />}
         <Link href="/approvals/inbox" data-testid="approvals-fast-mode" className="mt-2 inline-flex min-h-[40px] items-center rounded-md border border-accent/40 px-3 text-[13px] font-semibold text-accent">{t("approvalInbox.fastMode")}</Link>

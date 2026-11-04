@@ -8,8 +8,8 @@ export function Crumbs({ root, title, onBack, backTestId = "crumb-back" }: { roo
   return (
     <nav aria-label={t("common.breadcrumb")} data-testid="crumbs" className="flex shrink-0 items-center gap-1.5 border-b border-line bg-panel px-4 py-2.5 text-[13px] sm:px-6">
       <button type="button" data-testid={backTestId} onClick={onBack} aria-label={t("common.back")} title={t("common.back")}
-        className="rounded-md p-1 text-ink2 transition hover:bg-panel2 hover:text-ink"><Icon name="back" size={16} /></button>
-      <button type="button" onClick={onBack} className="rounded px-1 font-medium text-mute transition hover:text-ink hover:underline">{root}</button>
+        className="-my-1.5 -ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-ink2 transition hover:bg-panel2 hover:text-ink sm:my-0 sm:ml-0 sm:h-auto sm:w-auto sm:p-1"><Icon name="back" size={16} /></button>
+      <button type="button" onClick={onBack} className="-my-1.5 min-h-10 shrink-0 rounded px-1 font-medium text-mute transition hover:text-ink hover:underline sm:my-0 sm:min-h-0">{root}</button>
       <Icon name="chevron" size={14} className="shrink-0 text-mute" />
       <span aria-current="page" className="min-w-0 truncate font-semibold text-ink">{title}</span>
     </nav>

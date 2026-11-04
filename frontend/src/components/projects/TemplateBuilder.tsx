@@ -141,7 +141,7 @@ export function TemplateBuilder() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <button type="button" data-testid="tb-back" onClick={leave} className="text-[11px] font-semibold text-accent hover:underline">‹ {t("tpl.bld.back")}</button>
-            <h1 className="font-display text-2xl font-semibold text-ink">{tplId ? t("tpl.bld.titleEdit", { version }) : t("tpl.bld.titleNew")}</h1>
+            <h1 className="font-display text-xl sm:text-2xl font-semibold text-ink">{tplId ? t("tpl.bld.titleEdit", { version }) : t("tpl.bld.titleNew")}</h1>
             <p className="max-w-[680px] text-xs text-mute">{t("tpl.bld.subtitle")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

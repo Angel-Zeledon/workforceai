@@ -91,10 +91,10 @@ export function TrialScreen() {
 
   const left = acct ? Date.parse(acct.expires_at) - Date.now() : 0;
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
-      <div data-testid="trial" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
+    <main className="flex min-h-dvh items-center justify-center bg-bg px-3 py-6 sm:px-4 sm:py-10">
+      <div data-testid="trial" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-8">
         <a href={LANDING_URL} className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("trial.title")}</h1>
+        <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("trial.title")}</h1>
         {!acct && !err && <p role="status" className="text-sm text-mute">{t("trial.creating")}</p>}
         {acct && (
           <>

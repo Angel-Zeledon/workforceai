@@ -36,7 +36,7 @@ export function EvidenceDrawer({ value, cites, onClose }: { value: string; cites
     <div className="fixed inset-0 z-[9000] flex justify-end bg-black/30" onClick={onClose}>
       <aside role="dialog" aria-modal="true" aria-labelledby="evidence-title" data-testid="evidence-drawer"
         onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-full max-w-md flex-col border-l border-line bg-panel shadow-xl">
+        className="flex h-full w-full max-w-md flex-col border-l border-line bg-panel pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-xl">
         <header className="flex items-start gap-2 border-b border-line px-4 py-3">
           <div className="min-w-0 flex-1">
             <h3 id="evidence-title" className="text-[14px] font-semibold text-ink">{t("evidence.title", { value })}</h3>

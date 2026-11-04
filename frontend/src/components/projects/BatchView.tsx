@@ -47,7 +47,7 @@ export function BatchView({ id }: { id: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <button type="button" onClick={() => close(null)} className="text-[11px] font-medium text-accent">‹ {t("batch.backToProjects")}</button>
-          <h1 className="font-display text-xl font-semibold text-ink">{t("batch.cardTitle", { name: b.name, count: b.items.length })}</h1>
+          <h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("batch.cardTitle", { name: b.name, count: b.items.length })}</h1>
           <p className="text-[12px] text-mute">{t(`batch.status.${b.status}`)}{b.control === "paused" && running ? ` · ${t("batch.paused")}` : ""} · {t("batch.review.paceValue", { count: b.parallel })} · {fmtMoney(v.cost_usd)}</p>
         </div>
         {canManage && (
@@ -60,14 +60,14 @@ export function BatchView({ id }: { id: string }) {
         )}
       </div>
 
-      <div role="tablist" aria-label={t("batch.filter")} className="flex flex-wrap gap-1.5">
+      <div role="tablist" aria-label={t("batch.filter")} className="flex flex-wrap gap-1.5 wf-tabs">
         <FilterBtn on={filter === ""} onClick={() => setFilter("")} label={`${t("batch.filterAll")} · ${v.rows.length}`} />
         {ROW_STATUSES.filter((s) => v.summary[s]).map((s) => (
           <FilterBtn key={s} on={filter === s} onClick={() => setFilter(s)} label={`${t(`batch.row.${s}`)} · ${v.summary[s]}`} testid={`batch-filter-${s}`} />
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-[10px] border border-line bg-white">
+      <div className="overflow-x-auto rounded-[10px] border border-line bg-white wf-scroll-x">
         <table className="w-full min-w-[720px] text-left text-[12px]">
           <thead className="bg-panel2 text-[11px] text-mute">
             <tr>

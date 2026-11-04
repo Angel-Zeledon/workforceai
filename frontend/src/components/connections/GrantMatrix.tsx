@@ -152,7 +152,7 @@ export function GrantMatrix() {
   return (
     <div>
       <p className="mb-3 text-xs text-mute">{t("conn.matrix.help")}</p>
-      <div className="overflow-x-auto rounded-xl border border-line bg-panel shadow-pop">
+      <div className="overflow-x-auto rounded-xl border border-line bg-panel shadow-pop wf-scroll-x">
         <table data-testid="conn-matrix" className="w-full border-collapse text-xs">
           <thead>
             <tr className="border-b border-line bg-panel2">

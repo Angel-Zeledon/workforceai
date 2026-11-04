@@ -242,7 +242,7 @@ export function PedidoPanel({ requestId, onClose }: { requestId: string; onClose
         </div>
       )}
 
-      <div role="tablist" aria-label={t("pedido.label")} className="flex shrink-0 gap-1 overflow-x-auto border-b border-line px-3 py-1.5">
+      <div role="tablist" aria-label={t("pedido.label")} className="flex shrink-0 gap-1 overflow-x-auto border-b border-line px-3 py-1.5 wf-tabs">
         {TABS.map((k) => (
           <button key={k} type="button" role="tab" id={`pedido-tab-${k}`} aria-selected={tab === k} aria-controls="pedido-tabpanel" data-testid={`pedido-tab-${k}`} onClick={() => setTab(k)}
             className={`chats-t shrink-0 rounded-md px-2.5 py-1.5 text-[12px] font-medium transition-colors ${tab === k ? "bg-accent-soft text-accent-hover" : "text-ink2 hover:bg-panel2 hover:text-ink"}`}>

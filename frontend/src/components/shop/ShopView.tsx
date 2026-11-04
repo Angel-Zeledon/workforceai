@@ -64,19 +64,19 @@ function ItemCard({ item, mode, onOpenInventory }: { item: ShopItem; mode: "shop
   const rw = useRewards.getState;
 
   return (
-    <article data-testid={`shop-item-${item.id}`} data-owned={owned} data-category={item.category} className={`group relative flex flex-col gap-2.5 rounded-2xl border bg-panel p-3 shadow-soft transition duration-150 hover:-translate-y-0.5 hover:shadow-pop ${RARITY_CARD[item.rarity] ?? RARITY_CARD.common}`}>
-      <div className={`relative mx-auto flex w-full items-center justify-center overflow-hidden rounded-xl py-3 ring-1 ring-inset ring-black/5 ${item.rarity === "epic" ? "shop-sheen" : ""}`} style={stageStyle(item)}>
-        <div className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.06]"><ItemThumb item={item} size={148} /></div>
+    <article data-testid={`shop-item-${item.id}`} data-owned={owned} data-category={item.category} className={`group relative flex min-w-0 flex-col gap-2 rounded-2xl border bg-panel p-2.5 shadow-soft sm:gap-2.5 sm:p-3 transition duration-150 hover:-translate-y-0.5 hover:shadow-pop ${RARITY_CARD[item.rarity] ?? RARITY_CARD.common}`}>
+      <div className={`relative mx-auto flex w-full items-center justify-center overflow-hidden rounded-xl py-1.5 ring-1 sm:py-3 ring-inset ring-black/5 ${item.rarity === "epic" ? "shop-sheen" : ""}`} style={stageStyle(item)}>
+        <div className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.06] max-sm:[zoom:0.72]"><ItemThumb item={item} size={148} /></div>
         {owned && <span className="absolute right-1.5 top-1.5 rounded-full bg-ok/90 px-2 py-0.5 text-[10px] font-semibold text-white shadow-soft">{t("shop.inInventory")}</span>}
       </div>
       <div className="min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-[13.5px] font-semibold leading-tight text-ink">{itemName(item, locale)}</h3>
+        <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+          <h3 className="min-w-0 break-words text-[13px] font-semibold leading-tight text-ink sm:text-[13.5px]">{itemName(item, locale)}</h3>
           <Price n={item.price} />
         </div>
         <span className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-medium text-mute"><i className={`h-1.5 w-1.5 rounded-full ${RARITY_DOT[item.rarity] ?? RARITY_DOT.common}`} />{t(`shop.rarity.${item.rarity}`)}</span>
       </div>
-      <p className="text-[11.5px] leading-snug text-mute">{itemDesc(item, locale)}</p>
+      <p className="line-clamp-3 text-[11.5px] leading-snug text-mute sm:line-clamp-none">{itemDesc(item, locale)}</p>
       <div className="mt-auto flex flex-col gap-1.5">
         {item.kind === "character" && wearers.length > 0 && (
           <div data-testid={`shop-worn-${item.id}`} className="text-[11px] font-medium text-ok">{t("shop.wornBy", { names: wearers.map((id) => name(id).split(" ")[0]).join(", ") })}</div>
@@ -153,7 +153,7 @@ function History() {
         </div>
       )}
       {ledger.length === 0 ? <Empty>{t("shop.history.empty")}</Empty> : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-panel">
+        <div className="overflow-x-auto rounded-xl border border-line bg-panel wf-scroll-x">
           <table className="w-full text-left text-xs">
             <thead className="bg-panel2 text-[10.5px] uppercase tracking-wide text-mute">
               <tr><th className="px-3 py-2 font-semibold">{t("shop.history.when")}</th><th className="px-3 py-2 font-semibold">{t("shop.history.what")}</th><th className="px-3 py-2 font-semibold">{t("shop.history.agent")}</th><th className="px-3 py-2 text-right font-semibold">{t("shop.history.amount")}</th><th className="px-3 py-2 text-right font-semibold">{t("shop.history.balance")}</th></tr>
@@ -200,7 +200,7 @@ export function ShopView() {
     <div data-testid="shop-view" className="flex h-full min-h-0 flex-col bg-bg">
       <ThumbStudio />
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-panel px-4 py-3 sm:px-5">
-        <h1 className="font-display text-xl font-semibold text-ink">{t("shop.title")}</h1>
+        <h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("shop.title")}</h1>
         <div data-tour="shop.wallet" data-testid="shop-wallet" data-balance={wallet.balance} className="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-100/70 px-3 py-1">
           <CoinIcon size={18} />
           <b className="font-mono text-base font-semibold tabular-nums text-amber-800">{fmtNumber(wallet.balance, 0)}</b>
@@ -228,7 +228,7 @@ export function ShopView() {
                     className={`min-h-10 rounded-md px-3 py-1.5 transition ${group === g ? "bg-accent-soft text-accent" : "text-mute hover:text-ink"}`}>{t(`shop.group.${g}`)}</button>
                 ))}
               </div>
-              <div data-tour="shop.categories" className="flex flex-wrap gap-1.5">
+              <div data-tour="shop.categories" className="wf-hscroll flex w-full flex-wrap gap-1.5 sm:w-auto">
                 {["all", ...cats].map((c) => (
                   <button key={c} type="button" data-testid={`shop-cat-${c}`} aria-pressed={cat === c} onClick={() => setCat(c)}
                     className={`min-h-10 rounded-full border px-3 py-1 text-[11.5px] font-medium transition ${cat === c ? "border-accent/40 bg-accent-soft text-accent" : "border-line bg-panel text-ink2 hover:bg-panel2"}`}>
@@ -238,7 +238,7 @@ export function ShopView() {
               </div>
             </div>
             {items.length === 0 ? <Empty>{tab === "mine" ? t("shop.mineEmpty") : t("shop.empty")}</Empty> : (
-              <div data-tour="shop.grid" data-testid="shop-grid" className="ac-stagger grid grid-cols-[repeat(auto-fill,minmax(min(210px,100%),1fr))] gap-3.5">
+              <div data-tour="shop.grid" data-testid="shop-grid" className="ac-stagger grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(min(210px,100%),1fr))] sm:gap-3.5">
                 {items.slice(0, limit).map((it) => <ItemCard key={it.id} item={it} mode={tab === "mine" ? "inventory" : "shop"} onOpenInventory={() => setTab("mine")} />)}
               </div>
             )}

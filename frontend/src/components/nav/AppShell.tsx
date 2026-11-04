@@ -148,14 +148,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       {drawer && (
         <div className="fixed inset-0 z-[80] md:hidden" data-testid="nav-drawer">
           <button type="button" aria-label={t("nav.close")} className="absolute inset-0 bg-navy/50 ac-fade" onClick={() => setDrawer(false)} />
-          <aside className="ac-slide-left absolute inset-y-0 left-0 w-[260px] max-w-[85vw] shadow-float"><Sidebar section={section} collapsed={false} onNavigate={() => setDrawer(false)} /></aside>
+          <aside className="ac-slide-left absolute inset-y-0 left-0 w-[260px] max-w-[85vw] bg-navy pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-float"><Sidebar section={section} collapsed={false} onNavigate={() => setDrawer(false)} /></aside>
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="relative z-[55] flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line bg-panel px-3 sm:px-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button type="button" data-testid="nav-open" aria-label={t("nav.open")} title={t("nav.open")} onClick={() => setDrawer(true)} className="-ml-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-ink2 transition hover:bg-panel2 md:hidden"><Icon name="menu" size={20} /></button>
-            <div data-tour="shell.title" className="min-w-0 leading-tight">
+            <div data-tour="shell.title" className="min-w-[72px] leading-tight">
               <div className="truncate text-[14px] font-semibold tracking-tight">{title}</div>
               <OrgIndicator className="truncate text-[10.5px] text-mute" />
             </div>
@@ -165,7 +165,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {(["office", "dashboard"] as const).map((m) => (
                   <span key={m} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition ${(section === "dashboard") === (m === "dashboard") ? "bg-panel text-ink shadow-pop ring-1 ring-line" : "text-mute hover:text-ink"}`}>
                     <Icon name={m === "office" ? "office" : "grid"} size={14} />
-                    {m === "office" ? t("mode.office") : t("mode.dashboard")}
+                    {/* icons only while the sidebar leaves the header narrow (md to lg) */}
+                    <span className="md:hidden lg:inline">{m === "office" ? t("mode.office") : t("mode.dashboard")}</span>
                   </span>
                 ))}
               </button>

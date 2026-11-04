@@ -22,7 +22,7 @@ export function MyCosts() {
   // owners and admins get everybody's rows: pick mine by id (a member only ever gets their own)
   const mine = rep?.rows.find((r) => r.key !== "" && r.key === me);
   return (
-    <div data-testid="my-costs" className="mx-auto max-w-2xl space-y-3 px-5 py-6 text-[13px] text-ink2">
+    <div data-testid="my-costs" className="mx-auto max-w-2xl space-y-3 px-4 py-4 text-[13px] text-ink2 sm:px-5 sm:py-6">
       <p className="text-mute">{t("mycosts.body")}</p>
       {err && <p role="alert" className="rounded-lg border border-err/40 bg-err/10 p-3 text-err">{t("mycosts.error")}</p>}
       {!rep && !err && <p className="text-mute">{t("mycosts.loading")}</p>}

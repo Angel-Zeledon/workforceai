@@ -152,7 +152,7 @@ export function DataPrivacy() {
   const orgName = status?.org_name ?? "";
   const ready = name.trim() === orgName && orgName !== "" && password.length > 0 && !busy;
   return (
-    <div data-testid="data-privacy" className="mx-auto max-w-3xl space-y-5 px-5 py-6 sm:px-6">
+    <div data-testid="data-privacy" className="mx-auto max-w-3xl space-y-5 px-4 py-4 sm:px-6 sm:py-6">
       <p className="text-[13px] leading-relaxed text-mute">{t("data.intro")}</p>
       <ErrorLine msg={loadErr} />
       {status && <DeletionBanner status={status} busy={busy} onCancel={canDelete ? cancel : undefined} />}

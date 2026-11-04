@@ -52,26 +52,26 @@ function ProjectList() {
   // the projects of a batch are shown inside its card, not one by one
   const list = Object.values(projects).filter((p) => !p.batch_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
   return (
-    <div className="mx-auto max-w-[1180px] space-y-6 p-4 md:p-6">
+    <div className="mx-auto max-w-[1180px] space-y-4 p-4 sm:space-y-6 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-xl font-semibold text-ink">{t("pv.title")}</h1>
+          <h1 className="font-display text-[18px] sm:text-xl font-semibold text-ink">{t("pv.title")}</h1>
           <p className="text-xs text-mute">{t("pv.subtitle")}</p>
         </div>
-        <div data-tour="projects.actions" className="flex items-center gap-2">
+        <div data-tour="projects.actions" className="flex flex-wrap items-center gap-2">
           <Btn data-testid="template-library-open" onClick={openLibrary}>{t("tpl.lib.open")}</Btn>
           <Btn data-testid="project-new" kind="primary" onClick={() => openWizard("")}>{t("pv.new")}</Btn>
         </div>
       </div>
 
       {list.length || batches.length ? (
-        <div data-tour="projects.cards" className="ac-stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div data-tour="projects.cards" className="ac-stagger grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
           {batches.map((b) => <BatchCard key={b.id} b={b} onOpen={() => openBatch(b.id)} />)}
           {list.map((p) => <ProjectCard key={p.id} p={p} onOpen={() => openProject(p.id)} />)}
         </div>
       ) : <EmptyState testid="projects-empty" icon="folder" title={t("pv.emptyTitle")} body={t("pv.empty")} action={<Btn kind="primary" onClick={() => openWizard("")}>{t("pv.new")}</Btn>} />}
 
-      <div data-tour="projects.templates"><Card title={t("pv.templates")} right={<button type="button" data-testid="template-library-all" onClick={openLibrary} className="text-[11px] font-semibold text-accent hover:underline">{t("tpl.lib.seeAll", { count: templates.length })}</button>}>
+      <div data-tour="projects.templates"><Card title={t("pv.templates")} right={<button type="button" data-testid="template-library-all" onClick={openLibrary} className="-my-2 min-h-10 text-[11px] font-semibold text-accent hover:underline sm:my-0 sm:min-h-0">{t("tpl.lib.seeAll", { count: templates.length })}</button>}>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {templates.slice(0, 6).map((tpl) => <TemplateCard key={tpl.id} tpl={tpl} onUse={() => openWizard(tpl.id)} />)}
         </div>
@@ -86,7 +86,7 @@ function ProjectCard({ p, onOpen }: { p: ProjectSummary; onOpen: () => void }) {
   const draft = p.status === "draft" || p.status === "planning";
   return (
     <button type="button" data-testid={`project-card-${p.id}`} data-status={p.status} onClick={onOpen}
-      className="rounded-xl border border-line bg-panel p-4 text-left shadow-pop transition hover:-translate-y-0.5 hover:border-line-strong">
+      className="min-w-0 rounded-xl border border-line bg-panel p-3 text-left shadow-pop transition hover:-translate-y-0.5 hover:border-line-strong sm:p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="truncate font-display text-[15px] font-semibold text-ink">{p.name_key ? t(p.name_key) : p.name}</div>
@@ -117,7 +117,7 @@ function BatchCard({ b, onOpen }: { b: BatchSummary; onOpen: () => void }) {
   const pct = b.customers ? (done / b.customers) * 100 : 0;
   return (
     <button type="button" data-testid={`batch-card-${b.id}`} onClick={onOpen}
-      className="rounded-xl border border-accent/30 bg-panel p-4 text-left shadow-pop transition hover:-translate-y-0.5 hover:border-accent">
+      className="min-w-0 rounded-xl border border-accent/30 bg-panel p-3 text-left shadow-pop transition hover:-translate-y-0.5 hover:border-accent sm:p-4">
       <div className="text-[10px] font-semibold uppercase tracking-wide text-accent">{t("batch.card.kicker")}</div>
       <div className="mt-0.5 truncate font-display text-[15px] font-semibold text-ink">{t("batch.cardTitle", { name: b.name, count: b.customers })}</div>
       <div className="mt-3"><Progress value={pct} color="#2563eb" /></div>
@@ -141,9 +141,9 @@ function TemplateCard({ tpl, onUse }: { tpl: ProjectTemplate; onUse: () => void 
         <div className="text-[13px] font-semibold text-ink">{tx.name(tpl)}</div>
         <div className="mt-0.5 line-clamp-2 text-[11px] text-mute">{tx.description(tpl)}</div>
       </div>
-      <div className="mt-2 flex items-center justify-between text-[10px] text-mute">
-        <span>{t("pv.tpl.meta", { objectives: tpl.objectives.length, version: tpl.version })}</span>
-        <span className="flex gap-1.5">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 text-[10px] text-mute">
+        <span className="whitespace-nowrap">{t("pv.tpl.meta", { objectives: tpl.objectives.length, version: tpl.version })}</span>
+        <span className="grid w-full grid-cols-1 gap-1.5 sm:flex sm:w-auto sm:flex-wrap">
           <Btn data-testid="project-from-template" onClick={onUse}>{t("batch.useOne")}</Btn>
           <Btn data-testid={`batch-from-template-${tpl.id}`} onClick={() => openBatchWizard(tpl.id)}>{t("batch.useMany")}</Btn>
         </span>

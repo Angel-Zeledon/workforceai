@@ -40,14 +40,14 @@ export function VerifyScreen() {
   };
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
-      <div data-testid="verify" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-5 shadow-soft sm:p-8">
+    <main className="flex min-h-dvh items-center justify-center bg-bg px-3 py-6 sm:px-4 sm:py-10">
+      <div data-testid="verify" className="ac-pop w-full max-w-md space-y-4 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-8">
         <a href={LANDING_URL} className="block w-fit" aria-label={t("auth.back")}><Brand /></a>
-        {phase === "checking" && (<><h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("verify.checking")}</h1><p role="status" className="text-sm text-mute">{t("verify.checkingBody")}</p></>)}
-        {phase === "resent" && (<><h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("verify.resentTitle")}</h1><p className="text-sm text-ink2">{t("verify.resentBody")}</p></>)}
+        {phase === "checking" && (<><h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("verify.checking")}</h1><p role="status" className="text-sm text-mute">{t("verify.checkingBody")}</p></>)}
+        {phase === "resent" && (<><h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("verify.resentTitle")}</h1><p className="text-sm text-ink2">{t("verify.resentBody")}</p></>)}
         {phase === "bad" && (
           <form onSubmit={resend} className="space-y-3">
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{t("verify.badTitle")}</h1>
+            <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{t("verify.badTitle")}</h1>
             <p className="text-sm text-ink2">{t("verify.badBody")}</p>
             <label className="block text-xs font-medium text-ink2"><span className="mb-1 block">{t("auth.email")}</span>
               <input data-testid="verify-email" type="email" required autoComplete="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} />

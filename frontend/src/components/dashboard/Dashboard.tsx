@@ -237,7 +237,7 @@ function Tasks() {
           {["pending", "running", "awaiting_approval", "blocked", "done", "failed"].map((s) => <option key={s} value={s}>{taskStatusLabel(s)}</option>)}
         </select>
       </div>}>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto wf-scroll-x">
         <table className="w-full text-left text-[12px]">
           <thead><tr className="border-b border-line text-[10px] uppercase tracking-wider text-mute">
             <th className="py-2 pr-3">{tt("dash.tasks.col.task")}</th><th className="pr-3">{tt("dash.tasks.col.agent")}</th><th className="pr-3">{tt("dash.tasks.col.status")}</th><th className="pr-3">{tt("dash.tasks.col.dependsOn")}</th><th className="pr-3">{tt("dash.tasks.col.start")}</th><th>{tt("dash.tasks.col.duration")}</th>
