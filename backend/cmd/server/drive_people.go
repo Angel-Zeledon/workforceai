@@ -16,7 +16,7 @@ func (o officePeople) OfficeAccess(ctx context.Context, org, userID, officeID st
 	if err != nil {
 		return drive.AccessNone, err
 	}
-	if officeID == offices.GeneralID || m.IsMember(userID, officeID) {
+	if m.IsMember(userID, officeID) {
 		return drive.AccessEdit, nil
 	}
 	off, ok := m.Office(officeID)

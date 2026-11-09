@@ -43,10 +43,11 @@ func TestOfficePeopleAccess(t *testing.T) {
 		{"u-boss", "d-priv", drive.AccessNone},
 		{"u-eve", "d-unknown", drive.AccessNone},
 		{"u-eve", offices.GeneralID, drive.AccessEdit},
+		{"", offices.GeneralID, drive.AccessRead},
 	}
 	for _, c := range cases {
 		got, err := op.OfficeAccess(context.Background(), "org1", c.user, c.office)
-		if err != nil || got != c.want {
+		if err != nil || got != c.want || (c.user == "" && got == drive.AccessEdit) {
 			t.Errorf("%s in %s = %q %v, want %q", c.user, c.office, got, err, c.want)
 		}
 	}

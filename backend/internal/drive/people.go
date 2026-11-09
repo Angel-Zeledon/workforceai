@@ -1,6 +1,9 @@
 package drive
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 // PeopleAccess tells what a person may do inside an office's folder: AccessEdit, AccessRead or AccessNone.
 // Implementations must fail closed (an error or an unknown office is never access).
@@ -22,17 +25,18 @@ func (s *Service) personAccess(ctx context.Context, userID, path string, memo ma
 		return AccessEdit
 	}
 	segs, err := Segments(path)
-	if err != nil || len(segs) == 0 || segs[0] != RootOffices {
+	if err != nil || len(segs) == 0 || !strings.EqualFold(segs[0], RootOffices) {
 		return AccessEdit
 	}
 	if len(segs) == 1 {
 		return AccessRead
 	}
-	if lvl, ok := memo[segs[1]]; ok {
+	key := strings.ToLower(segs[1]) // the store resolves paths without regard to case
+	if lvl, ok := memo[key]; ok {
 		return lvl
 	}
 	lvl := s.officeLevel(ctx, userID, segs[1])
-	memo[segs[1]] = lvl
+	memo[key] = lvl
 	return lvl
 }
 

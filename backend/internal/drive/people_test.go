@@ -96,3 +96,21 @@ func TestVisibleToResolvesEachOfficeOnce(t *testing.T) {
 		t.Fatalf("asked %v", fp.asked)
 	}
 }
+
+func TestPersonAccessIgnoresCaseOfOfficesRoot(t *testing.T) {
+	svc := peopleSvc(t, &fakePeople{level: drive.AccessNone})
+	for _, p := range []string{"/offices/Legal/x.md", "/OFFICES/legal/x.md"} {
+		if got := svc.PersonAccess(context.Background(), "u1", p); got != drive.AccessNone {
+			t.Fatalf("%s: got %s", p, got)
+		}
+	}
+}
+
+func TestVisibleToMemoIgnoresCase(t *testing.T) {
+	fp := &fakePeople{level: drive.AccessNone}
+	svc := peopleSvc(t, fp)
+	got := svc.VisibleTo(context.Background(), "u1", []string{"/Offices/Legal/a", "/offices/legal/b"})
+	if got[0] || got[1] || len(fp.asked) != 1 {
+		t.Fatalf("got %v asked %v", got, fp.asked)
+	}
+}
