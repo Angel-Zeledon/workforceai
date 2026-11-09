@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"io"
 	"mime"
@@ -107,10 +108,17 @@ func (s *server) driveFail(w http.ResponseWriter, err error) {
 // driveNeed checks what the acting person may do at path (office folders, company edition): nil when the person
 // has level; domain.ErrNotFound when the person may not see it at all (a private office is never revealed);
 // domain.ErrForbidden when the person may only read and asked to change. Outside /Offices everything is edit.
+// The 404 reads like the drive's own "folder not found", so hidden and missing cannot be told apart.
 func (s *server) driveNeed(r *http.Request, path, level string) error {
-	have := s.Drive.PersonAccess(r.Context(), application.PersonFrom(r.Context()), path)
+	return s.driveNeedAt(r.Context(), path, level, "folder")
+}
+
+// driveNeedAt is driveNeed for a context (commands) and for what the path names ("file" or "folder"), so the 404
+// is word for word the drive's own for a missing file or folder.
+func (s *server) driveNeedAt(ctx context.Context, path, level, what string) error {
+	have := s.Drive.PersonAccess(ctx, application.PersonFrom(ctx), path)
 	if have == drive.AccessNone {
-		return &drive.Error{Code: "not_found", Kind: domain.ErrNotFound, Msg: "not found"}
+		return driveNotFound(what)
 	}
 	if level == drive.AccessEdit && have != drive.AccessEdit {
 		return &drive.Error{Code: "read_only_folder", Kind: domain.ErrForbidden, Msg: "you can read this office's folder but not change it"}
@@ -118,16 +126,25 @@ func (s *server) driveNeed(r *http.Request, path, level string) error {
 	return nil
 }
 
+// driveNotFound is the drive's own not-found error (drive.mapStore): same code and text.
+func driveNotFound(what string) error {
+	return &drive.Error{Code: "not_found", Kind: domain.ErrNotFound, Msg: what + " not found"}
+}
+
 // driveVisible keeps the items the acting person may see, resolved in one VisibleTo call for the whole list.
 func driveVisible[T any](s *server, r *http.Request, items []T, path func(T) string) []T {
-	if len(items) == 0 {
+	return driveVisibleAt(s, r.Context(), items, path)
+}
+
+func driveVisibleAt[T any](s *server, ctx context.Context, items []T, path func(T) string) []T {
+	if len(items) == 0 || s.Drive == nil {
 		return items
 	}
 	paths := make([]string, len(items))
 	for i, it := range items {
 		paths[i] = path(it)
 	}
-	ok := s.Drive.VisibleTo(r.Context(), application.PersonFrom(r.Context()), paths)
+	ok := s.Drive.VisibleTo(ctx, application.PersonFrom(ctx), paths)
 	out := make([]T, 0, len(items))
 	for i, it := range items {
 		if ok[i] {
@@ -139,12 +156,13 @@ func driveVisible[T any](s *server, r *http.Request, items []T, path func(T) str
 
 func folderPath(f drive.Folder) string { return f.Path }
 func filePath(f drive.File) string     { return f.Path }
+func hitPath(h drive.Hit) string       { return h.Path }
 
 // driveFileFor loads the file {id} and checks the person's level on its path; false = the answer was written.
 func (s *server) driveFileFor(w http.ResponseWriter, r *http.Request, level string) (drive.File, bool) {
 	f, err := s.Drive.GetFile(r.Context(), chi.URLParam(r, "id"))
 	if err == nil {
-		err = s.driveNeed(r, f.Path, level)
+		err = s.driveNeedAt(r.Context(), f.Path, level, "file")
 	}
 	if err != nil {
 		s.driveFail(w, err)
@@ -232,7 +250,7 @@ func (s *server) driveSearch(w http.ResponseWriter, r *http.Request) {
 		s.driveFail(w, err)
 		return
 	}
-	hits = driveVisible(s, r, hits, func(h drive.Hit) string { return h.Path })
+	hits = driveVisible(s, r, hits, hitPath)
 	writeJSON(w, http.StatusOK, map[string]any{"hits": list(hits)})
 }
 
@@ -321,7 +339,7 @@ func (s *server) driveRestoreFolder(w http.ResponseWriter, r *http.Request) {
 		s.driveFail(w, err)
 		return
 	}
-	need := error(&drive.Error{Code: "not_found", Kind: domain.ErrNotFound, Msg: "folder not found in the trash"})
+	need := driveNotFound("folder") // what the drive answers for a folder that is not in the trash
 	for _, f := range t.Folders {
 		if f.ID == id {
 			need = s.driveNeed(r, f.Path, drive.AccessEdit)

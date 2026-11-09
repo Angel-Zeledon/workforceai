@@ -169,12 +169,12 @@ func (s *server) completeCommands(w http.ResponseWriter, r *http.Request) {
 		if s.Drive != nil && s.has(r, auth.PermFilesRead) {
 			if text == "" {
 				if l, err := s.Drive.List(ctx, "/"); err == nil {
-					for _, f := range l.Files {
+					for _, f := range driveVisible(s, r, l.Files, filePath) {
 						out = append(out, completion{f.Path, f.Name, f.Path})
 					}
 				}
 			} else if hs, err := s.Drive.Retrieve(ctx, drive.RetrieveQuery{Query: q.Get("q"), Limit: limit}); err == nil {
-				for _, h := range hs {
+				for _, h := range driveVisible(s, r, hs, hitPath) {
 					out = append(out, completion{h.Path, h.Name, h.Path})
 				}
 			}

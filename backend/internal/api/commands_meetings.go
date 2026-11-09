@@ -136,6 +136,9 @@ func cmdMinutes(c *cmdCall) (*cmdResult, *cmdFail) {
 		if err != nil {
 			return nil, c.driveErr(err)
 		}
+		if err := c.s.driveNeedAt(c.ctx, p, drive.AccessRead, "file"); err != nil {
+			return nil, c.driveErr(err) // hidden reads as missing
+		}
 		file, err := c.s.Drive.FileByPath(c.ctx, p)
 		if err != nil {
 			return nil, c.driveErr(err)

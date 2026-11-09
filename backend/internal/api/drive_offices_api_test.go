@@ -12,7 +12,10 @@ import (
 	"aiworkforce/backend/internal/api"
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/calendar"
+	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
+	"aiworkforce/backend/internal/meetings"
 	"aiworkforce/backend/internal/offices"
 )
 
@@ -47,10 +50,16 @@ type officeDrive struct {
 func newOfficeDrive(t *testing.T) *officeDrive {
 	t.Helper()
 	var dr *drive.Service
-	e := newEnv(t, opts{auth: true, orgchart: true, drive: true, deps: func(d *api.Deps) {
+	e := newEnv(t, opts{auth: true, orgchart: true, drive: true, ws: true, deps: func(d *api.Deps) {
 		withOffices(d)
 		d.Drive.SetPeople(officeDriveAccess{svc: d.Offices})
 		dr = d.Drive
+		// the other HTTP paths that read drive files: commands, meeting minutes, chat attachments
+		d.Commands = &api.CommandsDeps{}
+		d.Meetings = meetings.New(meetings.Config{Store: meetings.NewMemStore(), Calendars: meetCals{fake: calendar.NewFake(calendar.ProviderGoogle)},
+			Summarizer: meetSummary{orch: d.Orch}, Tasks: meetTasks{orch: d.Orch}, Files: meetFiles{d: d.Drive}, Agents: meetAgents{st: d.Store},
+			JitsiBase: "https://jitsi.example.org"})
+		d.Orch.SetFileResolver(chatDriveFiles{d: d.Drive})
 	}})
 	owner := e.register("owner-do@example.com", "OwnerDO")
 	o := &officeDrive{e: e, owner: owner,
@@ -68,6 +77,17 @@ func newOfficeDrive(t *testing.T) *officeDrive {
 	}
 	o.legal, o.ventas = office("Legal", "private"), office("Ventas", "open")
 	return o
+}
+
+// chatDriveFiles resolves chat attachments like the server's resolver (cmd/server/drive.go).
+type chatDriveFiles struct{ d *drive.Service }
+
+func (c chatDriveFiles) ResolveFile(ctx context.Context, org, p string) (domain.FileRef, bool) {
+	f, err := c.d.FileByPath(application.WithOrg(ctx, org), p)
+	if err != nil || f.DeletedAt != nil {
+		return domain.FileRef{}, false
+	}
+	return domain.FileRef{FileID: f.ID, Path: f.Path, Name: f.Name, Mime: f.Mime, Size: f.Size, Version: f.CurrentVersion}, true
 }
 
 func drivePut(p string) string { return api1 + "/drive/upload?path=" + url.QueryEscape(p) }
@@ -129,7 +149,7 @@ func TestOfficePrivateHiddenFromNonMember(t *testing.T) {
 		t.Fatalf("list legal (lower case) = %d", c)
 	}
 	files := api1 + "/drive/files/" + id
-	for _, sub := range []string{"", "/content", "/text", "/versions", "/diff?from=1&to=1"} {
+	for _, sub := range []string{"", "/content", "/text", "/preview", "/versions", "/diff?from=1&to=1"} {
 		if c := o.status("GET", files+sub, o.beto, nil); c != 404 {
 			t.Fatalf("GET file%s = %d", sub, c)
 		}
@@ -296,5 +316,119 @@ func TestBecomingPrivateTakesEffectNextRequest(t *testing.T) {
 	o.e.json("PUT", api1+"/offices/"+o.ventas, o.ana, map[string]any{"visibility": "private"}, 200)
 	if c := o.status("GET", api1+"/drive/files/"+id, o.beto, nil); c != 404 {
 		t.Fatalf("after private = %d", c)
+	}
+}
+
+// hiddenVsMissing asserts that what beto gets for a file in Legal is word for word what he gets for a missing one.
+func hiddenVsMissing(t *testing.T, o *officeDrive, method, u string, body func(p string) any) {
+	t.Helper()
+	r1, b1 := o.e.do(method, u, o.beto, body("/Offices/Legal/contrato.md"), nil)
+	r2, b2 := o.e.do(method, u, o.beto, body("/Offices/Legal/nada.md"), nil)
+	if r1.StatusCode != 404 || r1.StatusCode != r2.StatusCode || strings.ReplaceAll(string(b1), "contrato", "nada") != string(b2) {
+		t.Fatalf("hidden = %d %s; missing = %d %s", r1.StatusCode, b1, r2.StatusCode, b2)
+	}
+}
+
+func (o *officeDrive) run(token, raw string) (int, string) {
+	o.e.t.Helper()
+	r, b := o.e.do("POST", api1+"/commands/run", token, map[string]any{"raw": raw, "lang": "en", "context": map[string]any{"surface": "office"}}, nil)
+	return r.StatusCode, string(b)
+}
+
+func TestOfficeHiddenFromMeetingMinutes(t *testing.T) {
+	o := newOfficeDrive(t)
+	o.upload(o.ana, "/Offices/Legal/contrato.md", "acuerdo secreto")
+	u := api1 + "/meetings/mtg_ghost/minutes"
+	hiddenVsMissing(t, o, "POST", u, func(p string) any { return map[string]any{"file_path": p} })
+	// for ana the file gate passes and the (missing) meeting answers instead
+	if r, b := o.e.do("POST", u, o.ana, map[string]any{"file_path": "/Offices/Legal/contrato.md"}, nil); r.StatusCode != 404 || strings.Contains(string(b), "file not found") {
+		t.Fatalf("ana = %d %s", r.StatusCode, b)
+	}
+	// the /minutes command with a path
+	c1, b1 := o.run(o.beto, "/minutes /Offices/Legal/contrato.md")
+	c2, b2 := o.run(o.beto, "/minutes /Offices/Legal/nada.md")
+	if c1 != 404 || c1 != c2 || b1 != b2 {
+		t.Fatalf("/minutes hidden = %d %s; missing = %d %s", c1, b1, c2, b2)
+	}
+}
+
+func TestOfficeHiddenFromProjectInputs(t *testing.T) {
+	o := newOfficeDrive(t)
+	csv := map[string]string{"Content-Type": "text/csv"}
+	if r, b := o.e.do("PUT", drivePut("/Offices/Legal/matriz.csv"), o.ana, []byte("creditor,debtor\nS01,S02\n"), csv); r.StatusCode != 201 {
+		t.Fatalf("upload csv = %d %s", r.StatusCode, b)
+	}
+	created := o.e.json("POST", api1+"/projects/draft", o.owner.AccessToken, map[string]any{"goal": "Cierre", "template_id": "group_consolidated_close",
+		"params": map[string]string{"subsidiaries": "3"}, "locale": "es"}, 201)
+	link := api1 + "/projects/" + str(created, "project_id") + "/inputs/intercompany/link"
+	r1, b1 := o.e.do("POST", link, o.beto, map[string]any{"paths": []string{"/Offices/Legal/matriz.csv"}}, nil)
+	r2, b2 := o.e.do("POST", link, o.beto, map[string]any{"paths": []string{"/Offices/Legal/nada.csv"}}, nil)
+	if r1.StatusCode != 404 || !strings.Contains(string(b1), "file_not_found") || strings.ReplaceAll(string(b1), "matriz", "nada") != string(b2) || r2.StatusCode != 404 {
+		t.Fatalf("hidden = %d %s; missing = %d %s", r1.StatusCode, b1, r2.StatusCode, b2)
+	}
+	if v := o.e.json("POST", link, o.ana, map[string]any{"paths": []string{"/Offices/Legal/matriz.csv"}}, 200); !strings.Contains(mustJSON(t, v), "matriz.csv") {
+		t.Fatalf("ana link = %v", v)
+	}
+}
+
+func TestOfficeHiddenFromCommandSearch(t *testing.T) {
+	o := newOfficeDrive(t)
+	o.upload(o.ana, "/Offices/Legal/contrato.md", "clausula confidencialisima")
+	if c, b := o.run(o.beto, "/search confidencialisima"); strings.Contains(b, "contrato") || strings.Contains(b, "Legal") {
+		t.Fatalf("beto /search = %d %s", c, b)
+	}
+	if c, b := o.run(o.ana, "/search confidencialisima"); c != 200 || !strings.Contains(b, "contrato.md") {
+		t.Fatalf("ana /search = %d %s", c, b)
+	}
+	if c, b := o.run(o.beto, "/file /Offices/Legal/contrato.md"); c != 404 || strings.Contains(b, "files?open") {
+		t.Fatalf("beto /file path = %d %s", c, b)
+	}
+	if c, b := o.run(o.beto, "/file confidencialisima"); c != 404 || strings.Contains(b, "files?open") {
+		t.Fatalf("beto /file search = %d %s", c, b)
+	}
+	if c, b := o.run(o.ana, "/file /Offices/Legal/contrato.md"); c != 200 || !strings.Contains(b, "files?open") {
+		t.Fatalf("ana /file = %d %s", c, b)
+	}
+	complete := api1 + "/commands/complete?kind=file&q=confidencialisima"
+	if l := o.e.list(complete, o.beto); len(l) != 0 {
+		t.Fatalf("beto completes %v", l)
+	}
+	if l := o.e.list(complete, o.ana); len(l) != 1 {
+		t.Fatalf("ana completes %v", l)
+	}
+}
+
+func TestOfficeHiddenFromChatAttachments(t *testing.T) {
+	o := newOfficeDrive(t)
+	o.upload(o.ana, "/Offices/Legal/contrato.md", "x")
+	post := func(token, text string) {
+		t.Helper()
+		if r, b := o.e.do("POST", api1+"/messages", token, map[string]any{"conversation": "office", "text": text,
+			"attachments": []string{"/Offices/Legal/contrato.md"}}, nil); r.StatusCode >= 300 {
+			t.Fatalf("post = %d %s", r.StatusCode, b)
+		}
+	}
+	files := func(text string) []domain.FileRef {
+		t.Helper()
+		_, raw := o.e.do("GET", api1+"/conversations/office/messages", o.owner.AccessToken, nil, nil)
+		var ms []domain.Message
+		if err := json.Unmarshal(raw, &ms); err != nil {
+			t.Fatalf("messages: %v %s", err, raw)
+		}
+		for _, m := range ms {
+			if m.Text == text {
+				return m.Files
+			}
+		}
+		t.Fatalf("message %q not found in %s", text, raw)
+		return nil
+	}
+	post(o.beto, "mira esto beto")
+	if fs := files("mira esto beto"); len(fs) != 0 {
+		t.Fatalf("beto attached a hidden file: %v", fs)
+	}
+	post(o.ana, "mira esto ana")
+	if fs := files("mira esto ana"); len(fs) != 1 || fs[0].Path != "/Offices/Legal/contrato.md" {
+		t.Fatalf("ana's attachment: %v", fs)
 	}
 }

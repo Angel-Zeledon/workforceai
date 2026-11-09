@@ -504,6 +504,10 @@ func (s *server) postMinutes(w http.ResponseWriter, r *http.Request) {
 			s.driveFail(w, err)
 			return
 		}
+		if err := s.driveNeedAt(r.Context(), p, drive.AccessRead, "file"); err != nil {
+			s.driveFail(w, err) // a file in an office the person may not see reads as a missing one
+			return
+		}
 		f, err := s.Drive.FileByPath(r.Context(), p)
 		if err != nil {
 			s.driveFail(w, err)

@@ -224,6 +224,9 @@ func (s *server) linkProjectInput(w http.ResponseWriter, r *http.Request) {
 	limit := s.Drive.Limits().MaxFileBytes
 	for _, p := range body.Paths {
 		src, err := s.Drive.FileByPath(r.Context(), p)
+		if err == nil { // a file the person may not read is answered exactly like a missing one
+			err = s.driveNeedAt(r.Context(), src.Path, drive.AccessRead, "file")
+		}
 		if err != nil || src.DeletedAt != nil {
 			codeErr(w, http.StatusNotFound, "file_not_found", "not found in the drive: "+p)
 			return

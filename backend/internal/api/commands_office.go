@@ -255,7 +255,7 @@ func cmdSearch(c *cmdCall) (*cmdResult, *cmdFail) {
 	}
 	if c.s.Drive != nil && c.s.has(c.r, "files:read") {
 		if hs, err := c.s.Drive.Retrieve(c.ctx, drive.RetrieveQuery{Query: q, Limit: 5}); err == nil {
-			for _, h := range hs {
+			for _, h := range driveVisibleAt(c.s, c.ctx, hs, hitPath) {
 				add(c.t("Archivo", "File"), h.Name, h.Path, "/files?open="+h.FileID)
 			}
 		}
@@ -298,20 +298,25 @@ func cmdSearch(c *cmdCall) (*cmdResult, *cmdFail) {
 
 // ---- file / open ----
 
+// cmdFile: what the person may not read (an office folder) is never named; it falls through to "not found".
 func cmdFile(c *cmdCall) (*cmdResult, *cmdFail) {
 	ref := c.str("file")
+	sees := func(p string) bool { return c.s.driveNeedAt(c.ctx, p, drive.AccessRead, "file") == nil }
 	if strings.HasPrefix(ref, "/") {
-		if f, err := c.s.Drive.FileByPath(c.ctx, ref); err == nil {
+		if f, err := c.s.Drive.FileByPath(c.ctx, ref); err == nil && sees(f.Path) {
 			return navResult("/files?open="+f.ID, f.Name, f.Path), nil
 		}
-		if l, err := c.s.Drive.List(c.ctx, ref); err == nil {
+		if l, err := c.s.Drive.List(c.ctx, ref); err == nil && sees(l.Folder.Path) {
 			return navResult("/files?path="+url.QueryEscape(l.Folder.Path), l.Folder.Path, ""), nil
 		}
-	} else if f, err := c.s.Drive.GetFile(c.ctx, ref); err == nil {
+	} else if f, err := c.s.Drive.GetFile(c.ctx, ref); err == nil && sees(f.Path) {
 		return navResult("/files?open="+f.ID, f.Name, f.Path), nil
 	}
-	if hs, err := c.s.Drive.Retrieve(c.ctx, drive.RetrieveQuery{Query: ref, Limit: 1}); err == nil && len(hs) > 0 {
-		return navResult("/files?open="+hs[0].FileID, hs[0].Name, hs[0].Path), nil
+	// the best visible hit (a few are asked for, as the hidden ones are dropped after the search)
+	if hs, err := c.s.Drive.Retrieve(c.ctx, drive.RetrieveQuery{Query: ref, Limit: 5}); err == nil {
+		if hs = driveVisibleAt(c.s, c.ctx, hs, hitPath); len(hs) > 0 {
+			return navResult("/files?open="+hs[0].FileID, hs[0].Name, hs[0].Path), nil
+		}
 	}
 	return nil, fail(http.StatusNotFound, "not_found", fmt.Sprintf("No encuentro el archivo «%s».", ref), fmt.Sprintf("I cannot find the file “%s”.", ref))
 }
@@ -587,6 +592,10 @@ func (c *cmdCall) lastDriveChange() (fileID, path string, version int, f *cmdFai
 	cur, err := c.s.Drive.GetFile(c.ctx, e.EntityID)
 	if err != nil {
 		return "", "", 0, c.driveErr(err)
+	}
+	if c.s.driveNeedAt(c.ctx, cur.Path, drive.AccessEdit, "file") != nil {
+		// a change in an office folder the person may not edit: nothing to undo for them, and the path is not shown
+		return "", "", 0, fail(http.StatusUnprocessableEntity, "nothing_to_do", "No hay cambios recientes que deshacer.", "There are no recent changes to undo.")
 	}
 	if cur.CurrentVersion < 2 {
 		return "", "", 0, fail(http.StatusUnprocessableEntity, "nothing_to_do", "Ese archivo no tiene una versión anterior.", "That file has no earlier version.")

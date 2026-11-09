@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 
@@ -12,6 +13,9 @@ import (
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 )
+
+// maxChatAttachments is application's limit of files per chat message (more is a 400 there).
+const maxChatAttachments = 10
 
 // postChat is POST /api/v1/messages {conversation, text}: the user talks to the
 // office ("office") or to one agent ("agent:<id>"). The message is stored and
@@ -48,6 +52,11 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 	ctx := application.WithCustomer(r.Context(), body.CustomerID)
 	ctx = application.WithActorName(ctx, s.authorName(ctx)) // E0: the author shown on the message and told to the agent
 	if len(body.Attachments) > 0 {
+		// a path the person may not read (an office folder) is dropped exactly like one that does not resolve; more
+		// than the limit is left whole so the count is refused as before, whatever is hidden
+		if len(body.Attachments) <= maxChatAttachments {
+			body.Attachments = driveVisible(s, r, body.Attachments, func(p string) string { return path.Clean("/" + strings.TrimSpace(p)) })
+		}
 		ctx = application.WithAttachments(ctx, body.Attachments)
 	}
 	turn, replayed, err := s.Orch.PostChatKeyed(ctx, body.Conversation, body.Text, key)
