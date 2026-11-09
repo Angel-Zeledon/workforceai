@@ -16,6 +16,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/offices"
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/policy"
 	"aiworkforce/backend/internal/roles"
@@ -447,6 +448,16 @@ func (s *server) createTeam(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	// A company's department is born a private office with its profession's folders; a failed folder is only logged.
+	folderPath := ""
+	if st, err := s.Auth.OrgSetup(ctx, org); err == nil && st.Audience == auth.AudienceCompany && s.Offices != nil {
+		if o, err := s.Offices.Enable(ctx, org, s.viewer(r), d.ID, offices.Private); err != nil {
+			s.Log.Warn("teams: the department was not made an office", "department", d.ID, "err", err)
+		} else {
+			s.ensureOfficeFolder(ctx, o, prof.Key)
+			folderPath = s.officeFolderPath(ctx, o.ID)
+		}
+	}
 	created, err := s.hireForProfession(ctx, org, prof.Key, s.teamLocale(ctx, org))
 	if err != nil {
 		s.fail(w, err)
@@ -465,7 +476,7 @@ func (s *server) createTeam(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"team": teamRef{ID: d.ID, Name: d.Name}, "profession": prof.Key, "agents": list(created)})
+	writeJSON(w, http.StatusCreated, map[string]any{"team": teamRef{ID: d.ID, Name: d.Name}, "profession": prof.Key, "agents": list(created), "folder_path": folderPath})
 }
 
 func (s *server) teamSetupDone(w http.ResponseWriter, r *http.Request) {

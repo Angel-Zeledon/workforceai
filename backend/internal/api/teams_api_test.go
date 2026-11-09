@@ -31,7 +31,7 @@ type teamsEnv struct {
 	chart *orgchart.Service
 }
 
-func newTeamsEnv(t *testing.T) *teamsEnv {
+func newTeamsEnv(t *testing.T, mods ...func(*api.Deps)) *teamsEnv {
 	t.Helper()
 	cfg := application.DefaultConfig()
 	cfg.IdleDelay = 0
@@ -71,6 +71,9 @@ func newTeamsEnv(t *testing.T) *teamsEnv {
 		AuthEnabled: true, Auth: svc, AuthRoutes: h.Routes(), InvitationRoutes: h.InvitationRoutes(), OrgChart: chart}
 	d.Audit = &application.AuditService{Store: mem, Rec: rec, Cfg: cfg}
 	d.OrgConfig = &application.OrgConfig{Cfg: cfg, Store: mem, Core: mem, Orch: orch, Rec: rec, Log: log}
+	for _, m := range mods {
+		m(&d)
+	}
 	ts := httptest.NewServer(api.NewRouter(d))
 	t.Cleanup(ts.Close)
 	return &teamsEnv{t: t, srv: ts, svc: svc, store: mem, chart: chart}

@@ -1,14 +1,17 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/offices"
+	"aiworkforce/backend/internal/roles"
 )
 
 // E2 "Oficinas" (docs/architecture/equipos-oficinas.md §3 and §4; docs/superpowers/plans/2026-11-03-e2-oficinas.md):
@@ -57,6 +60,7 @@ type officeView struct {
 	Members     []personRef `json:"members"` // empty when the viewer cannot look inside
 	MemberCount int         `json:"member_count"`
 	Agents      []string    `json:"agents"` // the agents of the office the viewer sees
+	FolderPath  string      `json:"folder_path"` // "" when the office has no drive folder
 	CanEnter    bool        `json:"can_enter"`
 	CanManage   bool        `json:"can_manage"`
 	IsMember    bool        `json:"is_member"`
@@ -72,8 +76,20 @@ func (s *server) people(m *offices.Model, ids []string) []personRef {
 	return out
 }
 
-func (s *server) officeView(m *offices.Model, v offices.Viewer, o offices.Office) officeView {
-	ov := officeView{ID: o.ID, Name: o.Name, Visibility: o.Visibility, General: o.General, Leads: s.people(m, o.Leads),
+// officeFolderPath is the path of the office's drive folder, "" when there is none (or no drive).
+func (s *server) officeFolderPath(ctx context.Context, officeID string) string {
+	if s.Drive == nil {
+		return ""
+	}
+	f, err := s.Drive.OfficeFolder(ctx, officeID)
+	if err != nil {
+		return ""
+	}
+	return f.Path
+}
+
+func (s *server) officeView(ctx context.Context, m *offices.Model, v offices.Viewer, o offices.Office) officeView {
+	ov := officeView{ID: o.ID, FolderPath: s.officeFolderPath(ctx, o.ID), Name: o.Name, Visibility: o.Visibility, General: o.General, Leads: s.people(m, o.Leads),
 		Members: []personRef{}, MemberCount: len(o.Members), Agents: []string{}, CanEnter: m.CanEnter(v, o.ID),
 		CanManage: m.CanManage(v, o.ID), IsMember: m.IsMember(v.UserID, o.ID), IsLead: m.IsLead(v.UserID, o.ID)}
 	if ov.CanEnter {
@@ -98,7 +114,7 @@ func (s *server) listOffices(w http.ResponseWriter, r *http.Request) {
 	isOffice := map[string]bool{}
 	for _, o := range m.Offices() {
 		isOffice[o.ID] = true
-		out = append(out, s.officeView(m, v, o))
+		out = append(out, s.officeView(r.Context(), m, v, o))
 	}
 	type dept struct {
 		ID     string `json:"id"`
@@ -119,7 +135,7 @@ func (s *server) writeOffice(w http.ResponseWriter, r *http.Request, o offices.O
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, status, s.officeView(m, s.viewer(r), o))
+	writeJSON(w, status, s.officeView(r.Context(), m, s.viewer(r), o))
 }
 
 func (s *server) enableOffice(w http.ResponseWriter, r *http.Request) {
@@ -136,7 +152,21 @@ func (s *server) enableOffice(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	s.ensureOfficeFolder(r.Context(), o, roles.ProfessionOther)
 	s.writeOffice(w, r, o, http.StatusCreated)
+}
+
+// ensureOfficeFolder gives the office its drive folder with the profession's template. Failing does not undo the
+// office: it is logged and the office simply has no folder yet.
+func (s *server) ensureOfficeFolder(ctx context.Context, o offices.Office, profession string) {
+	if s.Drive == nil {
+		return
+	}
+	prof, _ := roles.ProfessionOf(profession)
+	loc := s.teamLocale(ctx, application.OrgFrom(ctx, s.Cfg.OrgID))
+	if _, err := s.Drive.EnsureOfficeFolder(ctx, o.ID, o.Name, prof.Folders(loc)); err != nil {
+		s.Log.Warn("offices: the office folder was not created", "office", o.ID, "err", err)
+	}
 }
 
 func (s *server) updateOffice(w http.ResponseWriter, r *http.Request) {
