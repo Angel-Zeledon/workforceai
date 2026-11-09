@@ -381,6 +381,9 @@ func run(log *slog.Logger) error {
 	// E2 offices (offices.go): offices, agent owners and visibility; their notes reach the tasks.
 	deps.Offices = wireOffices(pg, store, authStore, orgChartSvc, rec, noteCleaner(memorySvc))
 	officeRecall(memorySvc, deps.Offices)
+	if cfg.AuthEnabled && deps.Offices != nil && ws.drive != nil {
+		ws.drive.SetPeople(officePeople{svc: deps.Offices}) // office folders: member edits, open reads, private none
+	}
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	// Governance: API tokens, reports, retention job, webhooks (internal/governance, internal/webhooks).
 	wireGovernance(ctx, log, pg, store, rec, auditSvc, orch, cw.vault, whSvc, &deps)

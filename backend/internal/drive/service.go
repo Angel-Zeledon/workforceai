@@ -78,6 +78,8 @@ type Config struct {
 	Audit func(ctx context.Context, org string, e AuditEntry)
 	Now   func() time.Time
 	Log   *slog.Logger
+	// People (optional) decides what a person may do inside an office folder (/Offices/<office>). nil = no restriction.
+	People PeopleAccess
 }
 
 // Service is the drive use case layer. It does NOT decide who may do what:
