@@ -587,7 +587,7 @@ func (s *Service) PreviewTemplate(ctx context.Context, req PreviewRequest) (Prev
 		now := s.now()
 		tpl.CreatedAt = &now // organization template: the data expansion applies
 		if issues := ValidateTemplate(tpl, s.agentList(ctx), s.cfg.Limits); hasErrors(issues) {
-			return Preview{Issues: issues}, nil
+			return Preview{Agents: []string{}, Issues: issues}, nil // never null lists: the builder reads .length
 		}
 	case req.TemplateID != "":
 		in := NewProject{TemplateID: req.TemplateID, Params: req.Params, Goal: req.Goal}

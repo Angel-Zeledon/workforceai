@@ -2,7 +2,7 @@
  * Visual theme: cleaner, more technical, not neon. Loaded AFTER styles.css (and guide.css on content pages), so it
  * redefines the tokens and refines shared components without touching the structure. Home-only styles live in home.css.
  *   Ink  #0a1628  (the navy of the robot and the app)      Paper #f7f9fb   Mist #f1f4f8
- *   Line #e1e7ee  (hairlines carry the structure)          Accent #0f766e  (the app's teal; the bright #2dd4bf only as a tiny "live" dot)
+ *   Line #e1e7ee  (hairlines carry the structure)          Accent #0a66c2  (the app's LinkedIn-style blue; the bright #2dd4bf only as a tiny "live" dot)
  * Type: IBM Plex Sans (self-hosted, SIL OFL; fonts/IBMPlexSans-OFL.txt), sober display sizes, calm body.
  * Token names are shared with the guide/docs/trust pages: add new ones, do not rename existing ones.
  */
@@ -20,7 +20,7 @@
   --bg:#f7f9fb; --panel:#ffffff; --panel2:#f1f4f8;
   --line:#e1e7ee; --line-strong:#cbd4df;
   --ink:#0a1628; --ink2:#38485c; --mute:#5c6b7e;
-  --accent:#0f766e; --accent-hover:#115e59; --accent-soft:#e3f2f0; --on-accent:#ffffff;
+  --accent:#0a66c2; --accent-hover:#004182; --accent-soft:#e8f1fb; --on-accent:#ffffff;
   --ok:#1f6f55; --ok-soft:#e1f1ea; --warn:#8a5206; --warn-soft:#f7edd8; --info:#2b6cb0; --info-soft:#e6eff8;
   --final-bg:#ffffff; --final-ink:#0a1628; --final-mute:#38485c;
   --shadow:0 1px 0 rgb(10 22 40/.04),0 28px 56px -28px rgb(10 22 40/.32);

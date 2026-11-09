@@ -12,55 +12,55 @@
   "es": {
     "title": "Chats y Archivos: retoma conversaciones y encuentra lo que se produjo",
     "metaTitle": "Chats y Archivos en AI Workforce OS",
-    "description": "Encuentra conversaciones con tus agentes y tu equipo, y sube, busca, recupera y versiona los archivos de tu oficina.",
-    "intro": "Chats guarda lo que has hablado con tus agentes y con las personas de tu organización. Archivos reúne los documentos que crean los agentes y los que subes tú, con versiones y papelera para que nada se pierda. Aquí aprendes a encontrar, escribir, subir y recuperar.",
+    "description": "Encuentra tus chats con agentes y personas, abre cada pedido con su informe, y sube, busca, recupera y versiona los archivos de tu oficina.",
+    "intro": "Chats guarda lo que hablas con tus agentes y con las personas de tu organización, y una fila por cada pedido que haces. Archivos reúne los documentos que crean los agentes y los que subes tú, con versiones y papelera para que nada se pierda. Aquí aprendes a encontrar, escribir, subir y recuperar.",
     "sections": [
       {
         "h": "Encuentra una conversación",
         "paras": [
-          "En Chats, la lista «Conversaciones» empieza por «General», que muestra todo en orden: lo que escribiste a la oficina y lo que escribiste a cada agente. Debajo aparece un hilo por agente."
+          "La lista de Chats tiene tres grupos: «Agentes», que empieza por «Toda la empresa» (todo lo que hablas con tus agentes, en orden) y sigue con un chat por agente; «Personas», con los chats entre personas; y «Pedidos», con una fila por cada cosa que le pediste a la oficina."
         ],
         "steps": [
           "Abre «Chats» en el menú lateral.",
-          "Pulsa «General» para verlo todo, o un agente para ver solo su hilo. Los agentes con actividad reciente aparecen primero y un número indica los mensajes sin leer.",
-          "Para buscar, escribe en «Buscar en títulos y mensajes…». La lista se reemplaza por los «Resultados», con la coincidencia resaltada.",
-          "Pulsa «Borrar búsqueda» para volver a la lista."
+          "Pulsa «Toda la empresa» para verlo todo, o un agente para ver solo su chat. Los agentes con actividad reciente aparecen primero y un número indica los mensajes sin leer.",
+          "Para buscar, escribe en «Buscar agentes, personas y pedidos…». La lista se reemplaza por los resultados, agrupados en Agentes, Personas y Pedidos.",
+          "Pulsa la X de «Borrar búsqueda» para volver a la lista."
         ]
       },
       {
         "h": "Escribe a la oficina o a un agente",
         "steps": [
-          "Elige «General» o un agente en la lista.",
+          "Elige «Toda la empresa» o un agente en la lista.",
           "Escribe tu mensaje en la caja de abajo y envíalo.",
-          "Revisa bajo tu mensaje a qué agentes se envió: en General, la oficina lo enruta al agente adecuado; en el hilo de un agente, le llega directo."
+          "Revisa bajo tu mensaje a qué agentes se envió («Enviado a»): en Toda la empresa, la oficina lo enruta al agente adecuado; en el chat de un agente, le llega directo."
         ],
-        "tip": "En el hilo de un agente, «Ver en la oficina» te lleva a su escritorio en la escena 3D."
+        "tip": "En el chat de un agente, «Ver en la oficina» te lleva a su escritorio en la vista 3D."
       },
       {
         "h": "Habla con las personas de tu equipo",
         "paras": [
-          "La sección «Equipo» de la lista reúne los chats entre personas: el canal de toda la organización, mensajes directos y grupos, a los que también puedes sumar agentes."
+          "El grupo «Personas» reúne los chats entre personas: el canal de toda la organización, mensajes directos y grupos, a los que también puedes sumar agentes."
         ],
         "steps": [
-          "Pulsa «Nuevo» en la sección «Equipo».",
+          "Pulsa «Nuevo» en el grupo «Personas».",
           "Elige «Mensaje directo» y una persona, o «Grupo», un nombre y sus miembros (personas y agentes).",
           "Pulsa «Crear» y escribe. Usa @ para mencionar a personas o agentes."
         ],
-        "note": "Los administradores también pueden crear canales de «Departamento» y de «Proyecto». Con el rol Solo lectura puedes leer los chats, pero no escribir."
+        "note": "Los administradores también pueden crear canales de «Oficina» y de «Proyecto». Con el rol Solo lectura puedes leer los chats, pero no escribir."
       },
       {
-        "h": "Vuelve a un trabajo pasado",
+        "h": "Abre un pedido y su informe",
         "paras": [
-          "Cada vez que le pides un trabajo a la oficina, su conversación interna entre agentes se guarda en «Conversaciones anteriores». Es de solo lectura: para seguir hablando, escribe en General o a un agente.",
-          "Los mensajes que dieron origen a un trabajo traen «Ver informe» y «Ver proyecto» para ir directo al resultado."
+          "Cada pedido tiene su fila en «Pedidos», con su estado y quién lo hace. Al pulsarla se abre su panel al lado del chat, con cinco pestañas: «Resumen», «Tareas», «Archivos», «Informe» y «Cómo lo trabajaron», donde lees, sin poder escribir, lo que se dijeron los agentes mientras lo hacían."
         ],
         "steps": [
-          "Haz clic en una conversación de «Conversaciones anteriores» para leerla.",
-          "Usa «Renombrar» para darle un título que reconozcas.",
-          "Pulsa «Archivar» para sacarla de la lista; «Ver archivadas» las muestra y «Restaurar» las devuelve.",
-          "Pulsa «Eliminar» y confirma con «Sí, eliminar» para borrarla con sus mensajes."
+          "Pulsa un pedido de la lista, o «Abrir pedido» en su mensaje del chat.",
+          "En «Resumen» ves «Qué se pidió», el «Estado» y «Quién lo hace». Si viene de un proyecto, pulsa «Abrir proyecto»; si espera algo de ti, pulsa «Ir a Pendientes».",
+          "En «Organizar», usa «Renombrar» para darle un título que reconozcas.",
+          "Pulsa «Archivar» para sacarlo de la lista; «Ver archivados» los muestra y «Restaurar» los devuelve.",
+          "Pulsa «Eliminar» y confirma con «Sí, eliminar» para borrar la conversación del pedido."
         ],
-        "warning": "Eliminar una conversación la borra para siempre junto con sus mensajes. Solo un Administrador o el Dueño puede hacerlo."
+        "warning": "Eliminar borra para siempre la conversación del pedido junto con sus mensajes. Solo un Administrador o el Dueño puede hacerlo."
       },
       {
         "h": "Navega por tus archivos",
@@ -68,12 +68,32 @@
           "En Archivos viven los documentos que crean tus agentes y los que subes tú. Empiezas en «Inicio», con cuatro carpetas raíz:"
         ],
         "table": {
-          "head": ["Carpeta", "Qué guarda", "Qué agentes la leen"],
+          "head": [
+            "Carpeta",
+            "Qué guarda",
+            "Qué agentes la leen"
+          ],
           "rows": [
-            ["Escritorios de agentes", "Una carpeta por agente con su trabajo", "Cada agente, la suya"],
-            ["Proyectos", "Una carpeta por proyecto, con sus entregables y entradas", "Los agentes asignados a ese proyecto"],
-            ["Clientes", "Material de cada cliente", "Solo los agentes a los que se les concede acceso"],
-            ["Compartido", "Material común de la oficina", "Todos los agentes"]
+            [
+              "Escritorios de agentes",
+              "Una carpeta por agente con su trabajo",
+              "Cada agente, la suya"
+            ],
+            [
+              "Proyectos",
+              "Una carpeta por proyecto, con sus entregables y entradas",
+              "Los agentes asignados a ese proyecto"
+            ],
+            [
+              "Clientes",
+              "Material de cada cliente",
+              "Solo los agentes a los que se les concede acceso"
+            ],
+            [
+              "Compartido",
+              "Material común de la oficina",
+              "Todos los agentes"
+            ]
           ]
         },
         "steps": [
@@ -119,55 +139,55 @@
   "en": {
     "title": "Chats and Files: pick up conversations and find what was produced",
     "metaTitle": "Chats and Files in AI Workforce OS",
-    "description": "Find conversations with your agents and your team, and upload, search, recover and version your office's files.",
-    "intro": "Chats keeps what you have discussed with your agents and with the people in your organization. Files gathers the documents your agents create and the ones you upload, with versions and a trash so nothing gets lost. Here you learn to find, write, upload and recover.",
+    "description": "Find your chats with agents and people, open each request with its report, and upload, search, recover and version your office's files.",
+    "intro": "Chats keeps what you discuss with your agents and with the people in your organization, plus one row for every request you make. Files gathers the documents your agents create and the ones you upload, with versions and a trash so nothing gets lost. Here you learn to find, write, upload and recover.",
     "sections": [
       {
         "h": "Find a conversation",
         "paras": [
-          "In Chats, the “Conversations” list starts with “General”, which shows everything in order: what you wrote to the office and what you wrote to each agent. Below it there is one thread per agent."
+          "The Chats list has three groups: “Agents”, which starts with “The whole company” (everything you say to your agents, in order) and then one chat per agent; “People”, with the chats between people; and “Requests”, with one row for everything you asked the office for."
         ],
         "steps": [
           "Open “Chats” in the side menu.",
-          "Press “General” to see everything, or an agent to see only their thread. Agents with recent activity come first and a number shows unread messages.",
-          "To search, type in “Search titles and messages…”. The list is replaced by the “Results”, with the match highlighted.",
-          "Press “Clear search” to go back to the list."
+          "Press “The whole company” to see everything, or an agent to see only its chat. Agents with recent activity come first and a number shows unread messages.",
+          "To search, type in “Search agents, people and requests…”. The list is replaced by the results, grouped into Agents, People and Requests.",
+          "Press the “Clear search” X to go back to the list."
         ]
       },
       {
         "h": "Write to the office or to an agent",
         "steps": [
-          "Pick “General” or an agent in the list.",
+          "Pick “The whole company” or an agent in the list.",
           "Type your message in the box at the bottom and send it.",
-          "Check under your message which agents it was sent to: in General, the office routes it to the right agent; in an agent's thread, it goes straight to them."
+          "Check under your message which agents it was sent to (“Sent to”): in The whole company, the office routes it to the right agent; in an agent's chat, it goes straight to it."
         ],
-        "tip": "In an agent's thread, “See in the office” takes you to their desk in the 3D scene."
+        "tip": "In an agent's chat, “See in the office” takes you to its desk in the 3D view."
       },
       {
         "h": "Talk to the people on your team",
         "paras": [
-          "The “Team” section of the list gathers chats between people: the organization-wide channel, direct messages and groups, which you can also add agents to."
+          "The “People” group gathers chats between people: the organization-wide channel, direct messages and groups, which you can also add agents to."
         ],
         "steps": [
-          "Press “New” in the “Team” section.",
+          "Press “New” in the “People” group.",
           "Choose “Direct message” and a person, or “Group”, a name and its members (people and agents).",
           "Press “Create” and write. Use @ to mention people or agents."
         ],
-        "note": "Admins can also create “Department” and “Project” channels. With the Read only role you can read chats but not write."
+        "note": "Admins can also create “Office” and “Project” channels. With the Read only role you can read chats but not write."
       },
       {
-        "h": "Go back to past work",
+        "h": "Open a request and its report",
         "paras": [
-          "Every time you ask the office for work, the agents' internal conversation about it is kept in “Past conversations”. It is read only: to keep talking, write in General or to an agent.",
-          "The messages that started a piece of work carry “View report” and “View project” to jump straight to the result."
+          "Each request has its row in “Requests”, with its status and who is doing it. Pressing it opens its panel next to the chat, with five tabs: “Summary”, “Tasks”, “Files”, “Report” and “How they worked on it”, where you read, without writing, what the agents said to each other while working on it."
         ],
         "steps": [
-          "Click a conversation in “Past conversations” to read it.",
-          "Use “Rename” to give it a title you recognize.",
-          "Press “Archive” to take it out of the list; “Show archived” shows them and “Restore” brings them back.",
-          "Press “Delete” and confirm with “Yes, delete” to erase it with its messages."
+          "Press a request in the list, or “Open request” on its message in the chat.",
+          "In “Summary” you see “What was asked”, the “Status” and “Who is doing it”. If it comes from a project, press “Open project”; if it is waiting for you, press “Go to Pending”.",
+          "Under “Organize”, use “Rename” to give it a title you recognize.",
+          "Press “Archive” to take it out of the list; “See archived” shows them and “Restore” brings them back.",
+          "Press “Delete” and confirm with “Yes, delete” to erase the request's conversation."
         ],
-        "warning": "Deleting a conversation erases it for good along with its messages. Only an Admin or the Owner can do it."
+        "warning": "Deleting erases the request's conversation for good along with its messages. Only an Admin or the Owner can do it."
       },
       {
         "h": "Browse your files",
@@ -175,12 +195,32 @@
           "Files holds the documents your agents create and the ones you upload. You start at “Home”, with four root folders:"
         ],
         "table": {
-          "head": ["Folder", "What it holds", "Which agents read it"],
+          "head": [
+            "Folder",
+            "What it holds",
+            "Which agents read it"
+          ],
           "rows": [
-            ["Agent desks", "One folder per agent with its work", "Each agent, its own"],
-            ["Projects", "One folder per project, with its deliverables and inputs", "The agents assigned to that project"],
-            ["Clients", "Material for each client", "Only agents that are granted access"],
-            ["Shared", "Common office material", "Every agent"]
+            [
+              "Agent desks",
+              "One folder per agent with its work",
+              "Each agent, its own"
+            ],
+            [
+              "Projects",
+              "One folder per project, with its deliverables and inputs",
+              "The agents assigned to that project"
+            ],
+            [
+              "Clients",
+              "Material for each client",
+              "Only agents that are granted access"
+            ],
+            [
+              "Shared",
+              "Common office material",
+              "Every agent"
+            ]
           ]
         },
         "steps": [

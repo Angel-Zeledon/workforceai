@@ -97,7 +97,7 @@ function ToolSwitches() {
           const disabled = off.includes(c.id);
           return (
             <div key={c.id} className="flex items-center justify-between gap-2 rounded-xl border border-line bg-panel2 px-3 py-1.5 text-xs">
-              <span><b>{t(`conn.capShort.${c.id}`)}</b> <span className="font-mono text-[10px] text-mute">{c.id}</span></span>
+              <span title={c.id}><b>{t(`conn.capShort.${c.id}`)}</b></span>
               <button type="button" data-testid={`ctl-tool-kill-${c.id}`} data-disabled={disabled} disabled={disabled ? !isOwner : !isAdmin} onClick={() => toggle(c.id, !disabled)}
                 className={`rounded-md border px-3 py-0.5 text-[11px] font-semibold transition disabled:opacity-40 ${disabled ? "border-red-400 bg-red-500/15 text-red-700" : "border-line bg-panel text-ink hover:border-red-300"}`}>
                 {disabled ? t("ctl.tools.off") : t("ctl.tools.stop")}

@@ -63,6 +63,17 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+/** Members, sign-in rules and the second factor need accounts: the open demo has none, so a direct link explains it instead of failing. */
+function NeedsSession() {
+  const { t } = useT();
+  return (
+    <div data-testid="settings-needs-session" className="mx-auto max-w-lg p-6 text-center">
+      <p className="text-[13px] font-semibold text-ink">{t("settings.needsSession.title")}</p>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-mute">{t("settings.needsSession.body")}</p>
+    </div>
+  );
+}
+
 /** Settings hub: everything that used to hide in the gear menu, explained and one click away. */
 export function SettingsView() {
   const { t } = useT();
@@ -73,6 +84,7 @@ export function SettingsView() {
   const open = (s: Sub | null) => router.push(s ? `/settings?s=${s}` : "/settings");
   const session = useSession();
   const signedIn = session.status === "authenticated";
+  const noSession = session.status === "disabled"; // the open demo: no accounts, so no members nor sign-in rules
   const canMembers = useCan("members:read");
   const canPlan = useCan("metrics:read");
   // The Plan row only where the deployment has plans (every plan of the catalog has a hard AI cap).
@@ -102,16 +114,16 @@ export function SettingsView() {
           <PageModeCtx.Provider value={{ back: () => open(null) }}>
             {sub === "connections" && (loaded ? <ConnectionsView /> : <PageSkeleton />)}
             {sub === "security" && (loaded ? <SecurityCenter /> : <PageSkeleton />)}
-            {sub === "account" && <AccountSecurity />}
+            {sub === "account" && (noSession ? <NeedsSession /> : <AccountSecurity />)}
             {sub === "data" && <DataPrivacy />}
             {sub === "costs" && <MyCosts />}
             {sub === "approvals" && <ApprovalSettings />}
             {sub === "plan" && <PlanBilling />}
-            {sub === "identity" && <IdentitySettings />}
+            {sub === "identity" && (noSession ? <NeedsSession /> : <IdentitySettings />)}
             {sub === "portal" && <PortalBranding />}
             {sub === "office" && <OfficeSettingsPanel onClose={() => open(null)} />}
             {sub === "hire" && <HireFromTemplateDialog onClose={() => open(null)} />}
-            {sub === "members" && <MembersDialog onClose={() => open(null)} />}
+            {sub === "members" && (noSession ? <NeedsSession /> : <MembersDialog onClose={() => open(null)} />)}
             {sub === "kill" && <KillSwitchDialog onClose={() => open(null)} />}
           </PageModeCtx.Provider>
         </div>
@@ -132,7 +144,7 @@ export function SettingsView() {
     { id: "portal", group: "workspace", testid: "settings-portal", icon: "layout", title: t("portal.brand.title"), body: t("portal.brand.rowBody"), run: () => open("portal") },
     { id: "approvals", group: "safety", tour: "settings.approvals", testid: "settings-approvals", icon: "shield", title: t("perm.settings.title"), body: t("perm.settings.rowBody"), run: () => open("approvals") },
     { id: "security", group: "safety", tour: "settings.security", testid: "settings-security", icon: "shield", title: t("nav.security"), body: t("settings.page.security"), run: () => open("security") },
-    { id: "identity", group: "safety", testid: "settings-identity", icon: "users", title: t("idn.title"), body: t("idn.rowBody"), disabled: !isAdmin, run: () => open("identity") },
+    { id: "identity", group: "safety", testid: "settings-identity", icon: "users", title: t("idn.title"), body: t("idn.rowBody"), disabled: !isAdmin, hidden: noSession, run: () => open("identity") },
     { id: "kill", group: "safety", tour: "settings.killswitch", testid: "settings-killswitch", icon: "power", danger: true, title: level === "none" ? t("ctl.killswitch.title") : t(`ctl.level.${level}`), body: t("settings.page.kill"), disabled: level === "none" && !isAdmin, run: () => open(level === "none" ? "kill" : "security") },
     { id: "account", group: "account", testid: "settings-account", icon: "shield", title: t("mfa.rowTitle"), body: t("mfa.rowBody"), hidden: !signedIn, run: () => open("account") },
     { id: "costs", group: "account", testid: "settings-costs", icon: "bag", title: t("mycosts.title"), body: t("mycosts.rowBody"), hidden: !signedIn || !canPlan, run: () => open("costs") },

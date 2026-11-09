@@ -44,7 +44,7 @@ export function AppSplash() {
       <div className="wf-splash-mark"><AgentMark size={84} tone="light" /></div>
       <div className="mt-5 text-[19px] font-semibold tracking-tight">AI Workforce OS</div>
       <div className="wf-splash-line mt-1.5 min-h-[20px] text-[13.5px] text-white/70">{line}</div>
-      <div aria-hidden className="mt-6 h-[3px] w-44 overflow-hidden rounded-full bg-white/15"><div className="wf-splash-bar h-full w-1/3 rounded-full bg-[#5eead4]" /></div>
+      <div aria-hidden className="mt-6 h-[3px] w-44 overflow-hidden rounded-full bg-white/15"><div className="wf-splash-bar h-full w-1/3 rounded-full bg-[#70b5f9]" /></div>
     </div>
   );
 }

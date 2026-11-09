@@ -3176,6 +3176,8 @@
   "chats.stub.body": "You will see the conversation history with each agent here. Coming very soon.",
   "hint.dismiss": "Got it, dismiss",
   "settings.page.title": "Settings",
+  "settings.needsSession.title": "Available with sign-in",
+  "settings.needsSession.body": "Members, two-step verification and single sign-on are used when your organization signs in with accounts. This open demo has no accounts.",
   "settings.page.desc": "What you set up once: your company, safety and your account. Connections and Customers are in the menu.",
   "settings.page.office": "Language, labels, motion and customization of each agent.",
   "settings.page.hire": "Add a new AI agent: pick its role.",

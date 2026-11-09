@@ -46,7 +46,7 @@ function NavLink({ href, icon, label, testid, active, collapsed, onNavigate, bad
   return (
     <Link href={href} prefetch={false} data-testid={testid} data-active={active} aria-current={active ? "page" : undefined} title={collapsed ? label : undefined} onClick={onNavigate}
       className={`group relative flex min-h-9 items-center gap-3 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-150 ${active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"} ${collapsed ? "justify-center px-0" : ""}`}>
-      {active && <span aria-hidden className="absolute inset-y-1.5 left-0 w-[3px] rounded-r bg-[#5eead4]" />}
+      {active && <span aria-hidden className="absolute inset-y-1.5 left-0 w-[3px] rounded-r bg-[#70b5f9]" />}
       <Icon name={icon} size={18} className="shrink-0 transition-transform duration-150 group-hover:scale-110" />
       {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
       {!collapsed && badge ? <span className="rounded-full bg-white/15 px-1.5 text-[10px] font-semibold">{badge}</span> : null}

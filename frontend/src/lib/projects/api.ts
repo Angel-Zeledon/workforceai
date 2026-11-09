@@ -107,5 +107,8 @@ export const projectsApi = {
   templateVersions: async (id: string): Promise<TemplateVersionInfo[]> => (MOCK ? (await mock()).templateVersions(id) : items<TemplateVersionInfo>(await http("GET", `/project-templates/${id}/versions`))),
   restoreTemplate: async (id: string, version: number): Promise<ProjectTemplate> => (MOCK ? (await mock()).restoreTemplate(id, version) : http("POST", `/project-templates/${id}/versions/${version}/restore`, {})),
   validateTemplate: async (b: TemplateInput): Promise<TemplateValidation> => (MOCK ? (await mock()).validateTemplate(b) : http("POST", "/project-templates/validate", b)),
-  previewTemplate: async (r: TemplatePreviewRequest): Promise<TemplatePreview> => (MOCK ? (await mock()).previewTemplate(r) : http("POST", "/project-templates/preview", r)),
+  previewTemplate: async (r: TemplatePreviewRequest): Promise<TemplatePreview> => {
+    const p: TemplatePreview = MOCK ? await (await mock()).previewTemplate(r) : await http<TemplatePreview>("POST", "/project-templates/preview", r);
+    return { ...p, agents: p.agents ?? [], issues: p.issues ?? [] }; // an invalid template comes without lists
+  },
 };

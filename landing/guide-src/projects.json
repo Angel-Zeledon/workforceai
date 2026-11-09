@@ -19,8 +19,8 @@
   "es": {
     "title": "Proyectos: trabajo grande, con seguimiento",
     "metaTitle": "Proyectos: trabajo grande con seguimiento | AI Workforce OS",
-    "description": "Crea un proyecto, revisa su plan y su costo estimado, lánzalo con un presupuesto y sigue el avance de tus agentes desde una sola pantalla.",
-    "intro": "Un pedido en la barra de la oficina basta para una tarea suelta. Cuando el trabajo tiene muchas partes, usa un proyecto: reúne objetivos, tareas repartidas entre tus empleados, aprobaciones y presupuesto. Aquí aprendes a crearlo, lanzarlo y seguirlo hasta el final.",
+    "description": "Crea un proyecto, revisa su plan y su costo estimado, lánzalo con un presupuesto, síguelo en cuatro pestañas y repítelo para varios clientes.",
+    "intro": "Un pedido en la barra de la oficina basta para una tarea suelta. Cuando el trabajo tiene muchas partes, usa un proyecto: reúne objetivos, tareas repartidas entre tus agentes, aprobaciones y presupuesto. Aquí aprendes a crearlo, lanzarlo, seguirlo hasta el final y repetirlo con plantillas.",
     "sections": [
       {
         "h": "Decide si necesitas un proyecto",
@@ -53,10 +53,10 @@
         ],
         "steps": [
           "Cambia el título de una tarea o el agente que la hace, y añade criterios de aceptación, uno por línea.",
-          "Revisa la «Estimación»: «Costo probable (P50)», «Costo pesimista (P90)» y la duración estimada.",
+          "Revisa la «Estimación»: el «Costo probable», hasta cuánto puede llegar y la duración probable.",
           "En «Revisión de calidad», elige «No revisar», «Solo si el agente duda» o «Siempre».",
           "Comprueba que la «Validación» diga que el plan es válido.",
-          "Escribe el «Presupuesto aprobado (USD)». La app sugiere el P90 más un 10 %.",
+          "Escribe el «Presupuesto aprobado (USD)». La app sugiere lo que puede llegar a costar más un 10 %.",
           "Pulsa «Lanzar proyecto»."
         ],
         "note": "Solo se revisan las tareas que tienen criterios de aceptación, y cada revisión cuenta en el presupuesto.",
@@ -77,38 +77,107 @@
       {
         "h": "Sigue el avance y controla el proyecto",
         "paras": [
-          "Cada tarjeta de la lista de Proyectos muestra el estado, una barra con los pasos terminados sobre el total, las tareas «por aprobar», las que tienen problemas y lo gastado frente al presupuesto. Dentro del proyecto verás la misma barra arriba.",
-          "Según el estado, el proyecto ofrece «Pausar», «Reanudar» o «Cancelar». Cancelar pide confirmación y detiene las tareas que no hayan terminado."
+          "Cada tarjeta de la lista de Proyectos muestra el estado, una barra con las tareas terminadas sobre el total, cuántas «Te necesita», cuántas tienen problemas y lo gastado frente al presupuesto. Dentro del proyecto verás la misma barra arriba.",
+          "Según el estado, el proyecto ofrece «Pausar», «Reanudar» o «Cancelar». Cancelar pide confirmación y detiene las tareas que no hayan terminado. «Compartir con el cliente» crea un enlace de avance para tu cliente, y «Guardar como plantilla» lo deja listo para repetir."
         ]
       },
       {
-        "h": "Usa las pestañas del proyecto",
+        "h": "Usa las cuatro pestañas del proyecto",
         "paras": [
-          "Las pestañas siguen un orden de trabajo: Salud te dice si hay un problema, Mapa te muestra dónde, Kanban y carriles sirven para actuar y Línea de tiempo para replanificar."
+          "Un proyecto lanzado tiene cuatro pestañas. En la vista simple se ven «Seguimiento» y «Permisos», y «Más vistas» muestra las otras dos.",
+          "Si hay aprobaciones del proyecto esperando o un agente propuso cambiar el plan, «Seguimiento» lo avisa arriba, con «Decidir», «Ver en Pendientes» o «Revisar cambios»."
         ],
         "table": {
-          "head": ["Pestaña", "Para qué sirve"],
+          "head": [
+            "Pestaña",
+            "Para qué sirve"
+          ],
           "rows": [
-            ["Salud", "Saber si algo va mal"],
-            ["Mapa", "Ver en qué parte del plan está el problema"],
-            ["Línea de tiempo", "Replanificar fechas y dependencias"],
-            ["Kanban", "Actuar sobre las tareas según su estado"],
-            ["Carriles por agente", "Actuar sobre las tareas de cada agente"],
-            ["Delegación", "Ver quién le pidió trabajo a quién"],
-            ["Aprobaciones", "Decidir lo que debes autorizar y revocar las decisiones recordadas"],
-            ["Cambios de plan", "Revisar los ajustes propuestos al plan"],
-            ["Costos", "Ver lo que se ha gastado"]
+            [
+              "Seguimiento",
+              "Ver qué se hizo, qué está en curso y los archivos que produjo cada tarea"
+            ],
+            [
+              "Plan",
+              "Ver el plan en el «Mapa» y, en «Otras vistas», cambiar la forma de mirarlo"
+            ],
+            [
+              "Costos",
+              "Ver lo que se ha gastado"
+            ],
+            [
+              "Permisos",
+              "Decidir lo que debes autorizar y revocar lo que dejaste «Siempre permitido en este proyecto»"
+            ]
           ]
         }
       },
       {
+        "h": "Mira el plan de otra forma",
+        "paras": [
+          "La pestaña «Plan» abre el «Mapa» del plan. En «Otras vistas» eliges otra forma de verlo, según lo que necesites:"
+        ],
+        "table": {
+          "head": [
+            "Vista",
+            "Para qué sirve"
+          ],
+          "rows": [
+            [
+              "Tablero",
+              "Actuar sobre las tareas según su estado"
+            ],
+            [
+              "Por agente",
+              "Actuar sobre las tareas de cada agente"
+            ],
+            [
+              "Calendario del plan",
+              "Replanificar fechas y dependencias"
+            ],
+            [
+              "Quién pasó qué",
+              "Ver qué agente le pasó trabajo a cuál"
+            ],
+            [
+              "Salud",
+              "Saber si algo va mal"
+            ],
+            [
+              "Historial de cambios",
+              "Revisar los cambios propuestos al plan"
+            ]
+          ]
+        },
+        "tip": "Cuando hay cambios de plan por revisar, la pestaña «Plan» muestra cuántos."
+      },
+      {
         "h": "Parte de una plantilla o guarda la tuya",
+        "paras": [
+          "Todas las plantillas viven en una sola biblioteca, dentro de Proyectos. Hay dos tipos: un «Pedido rápido» se lanza enseguida a tus agentes, y una plantilla de «Proyecto» es un plan más grande que revisas antes de empezar."
+        ],
         "steps": [
-          "En «Proyectos», pulsa «Usar plantilla» en una de las plantillas de la lista, o «Ver todas» para abrir la biblioteca.",
-          "En la biblioteca, busca por nombre o descripción y pulsa «Usar», «Duplicar» para adaptarla o «Nueva plantilla» para crear una desde cero.",
+          "En «Proyectos», mira la tarjeta «Plantillas» y pulsa «Crear un proyecto» en la que te interese, o «Ver todas» para abrir la «Biblioteca de plantillas».",
+          "En la biblioteca, busca en «Buscar por nombre o descripción» y filtra por «Tipo de plantilla», «Origen» o categoría.",
+          "En un pedido rápido, pulsa «Usar plantilla», completa los datos obligatorios y pulsa «Iniciar flujo».",
+          "En una plantilla de proyecto, pulsa «Crear un proyecto», «Duplicar» para adaptarla o «Nueva plantilla de proyecto» para crear una desde cero.",
           "Para repetir un proyecto que ya hiciste, ábrelo y pulsa «Guardar como plantilla»."
         ],
-        "note": "Guardar como plantilla conserva la estructura del proyecto; no se copian resultados ni costos."
+        "note": "Guardar como plantilla conserva la estructura del proyecto; no se copian resultados ni costos.",
+        "tip": "Los pedidos rápidos vienen incluidos con la app: si filtras por «Mías y de la organización», la biblioteca te lo avisa y ofrece «Ver todas»."
+      },
+      {
+        "h": "Lanza el mismo proyecto para varios clientes",
+        "paras": [
+          "Con «Lanzar para varios clientes», una plantilla de proyecto se convierte en un lote: cada cliente tiene su propio proyecto, con su carpeta, y uno trabado no frena a los demás."
+        ],
+        "steps": [
+          "Pulsa «Lanzar para varios clientes» en una plantilla de proyecto.",
+          "En «1 · Clientes», elige los clientes o pulsa «Importar una lista» para pegar filas de Excel o subir un CSV.",
+          "En «2 · Datos del proyecto», escribe «Qué hay que hacer con cada cliente» y usa los botones de «Datos del cliente» para que cada proyecto lleve los suyos.",
+          "En «3 · Revisar y lanzar», mira el «Costo estimado total», fija el «Presupuesto por cliente (USD)» y pulsa «Lanzar para N clientes»."
+        ],
+        "note": "El lote aparece en la lista de Proyectos como una tarjeta «Lote» y cuenta como un solo proyecto activo de tu plan."
       },
       {
         "h": "Cobra el bono al terminar",
@@ -122,8 +191,8 @@
   "en": {
     "title": "Projects: big work, tracked",
     "metaTitle": "Projects: big work, tracked | AI Workforce OS",
-    "description": "Create a project, review its plan and estimated cost, launch it with a budget and follow your agents' progress from a single screen.",
-    "intro": "A request in the office bar is enough for a single task. When the work has many parts, use a project: it brings together objectives, tasks split among your employees, approvals and budget. Here you learn to create it, launch it and follow it to the end.",
+    "description": "Create a project, review its plan and estimated cost, launch it with a budget, follow it in four tabs and repeat it for several customers.",
+    "intro": "A request in the office bar is enough for a single task. When the work has many parts, use a project: it brings together objectives, tasks split among your agents, approvals and budget. Here you learn to create it, launch it, follow it to the end and repeat it with templates.",
     "sections": [
       {
         "h": "Decide whether you need a project",
@@ -156,10 +225,10 @@
         ],
         "steps": [
           "Change a task's title or the agent doing it, and add acceptance criteria, one per line.",
-          "Check the “Estimate”: “Likely cost (P50)”, “Pessimistic cost (P90)” and the estimated duration.",
+          "Check the “Estimate”: the “Likely cost”, how high it could go and the likely duration.",
           "In “Quality review”, choose “Do not review”, “Only when the agent is unsure” or “Always”.",
           "Make sure “Validation” says the plan is valid.",
-          "Enter the “Approved budget (USD)”. The app suggests P90 plus 10%.",
+          "Enter the “Approved budget (USD)”. The app suggests the highest likely cost plus 10%.",
           "Press “Launch project”."
         ],
         "note": "Only tasks with acceptance criteria are reviewed, and each review counts toward the budget.",
@@ -168,7 +237,7 @@
       {
         "h": "Provide the data the project needs",
         "paras": [
-          "Some projects need data to compute real figures. In that case the draft shows the “Before you start” card, and what you provide is stored in the project's Inputs folder, where all its agents read it."
+          "Some projects need data to compute real figures. In that case the draft shows the “Before you start” card, and what you provide is stored in the project's Entradas folder, where all its agents read it."
         ],
         "steps": [
           "Press “Upload file” to upload the data from your computer.",
@@ -180,44 +249,113 @@
       {
         "h": "Follow progress and control the project",
         "paras": [
-          "Each card in the Projects list shows the status, a bar with finished steps over the total, tasks “to approve”, those with problems and spending against the budget. Inside the project you see the same bar at the top.",
-          "Depending on its status, the project offers “Pause”, “Resume” or “Cancel”. Cancel asks for confirmation and stops any unfinished tasks."
+          "Each card in the Projects list shows the status, a bar with finished tasks over the total, how many “need you”, how many have problems and spending against the budget. Inside the project you see the same bar at the top.",
+          "Depending on its status, the project offers “Pause”, “Resume” or “Cancel”. Cancel asks for confirmation and stops any unfinished tasks. “Share with client” creates a progress link for your customer, and “Save as template” gets it ready to repeat."
         ]
       },
       {
-        "h": "Use the project tabs",
+        "h": "Use the project's four tabs",
         "paras": [
-          "The tabs follow a working order: Health tells you if there is a problem, Map shows where, Kanban and lanes are for acting, and Timeline is for replanning."
+          "A launched project has four tabs. In the simple view you see “Tracking” and “Permissions”, and “More views” shows the other two.",
+          "If project approvals are waiting or an agent proposed changing the plan, “Tracking” says so at the top, with “Decide”, “See in Pending” or “Review changes”."
         ],
         "table": {
-          "head": ["Tab", "What it is for"],
+          "head": [
+            "Tab",
+            "What it is for"
+          ],
           "rows": [
-            ["Health", "Knowing whether something is wrong"],
-            ["Map", "Seeing where in the plan the problem is"],
-            ["Timeline", "Replanning dates and dependencies"],
-            ["Kanban", "Acting on tasks by status"],
-            ["Agent lanes", "Acting on each agent's tasks"],
-            ["Delegation", "Seeing who asked whom for work"],
-            ["Approvals", "Deciding what you must authorize and revoking remembered decisions"],
-            ["Plan changes", "Reviewing proposed changes to the plan"],
-            ["Costs", "Seeing what has been spent"]
+            [
+              "Tracking",
+              "Seeing what was done, what is in progress and the files each task produced"
+            ],
+            [
+              "Plan",
+              "Seeing the plan on the “Map” and, under “Other views”, changing how you look at it"
+            ],
+            [
+              "Costs",
+              "Seeing what has been spent"
+            ],
+            [
+              "Permissions",
+              "Deciding what you must authorize and revoking what you left “Always allowed in this project”"
+            ]
           ]
         }
       },
       {
+        "h": "Look at the plan another way",
+        "paras": [
+          "The “Plan” tab opens the plan's “Map”. Under “Other views” you pick another way to see it, depending on what you need:"
+        ],
+        "table": {
+          "head": [
+            "View",
+            "What it is for"
+          ],
+          "rows": [
+            [
+              "Board",
+              "Acting on tasks by their status"
+            ],
+            [
+              "By agent",
+              "Acting on each agent's tasks"
+            ],
+            [
+              "Plan calendar",
+              "Replanning dates and dependencies"
+            ],
+            [
+              "Who passed what",
+              "Seeing which agent passed work to which"
+            ],
+            [
+              "Health",
+              "Knowing whether something is wrong"
+            ],
+            [
+              "Change history",
+              "Reviewing the changes proposed to the plan"
+            ]
+          ]
+        },
+        "tip": "When there are plan changes to review, the “Plan” tab shows how many."
+      },
+      {
         "h": "Start from a template or save your own",
+        "paras": [
+          "All templates live in one library, inside Projects. There are two kinds: a “Quick request” goes to your agents right away, and a “Project” template is a bigger plan that you review before it starts."
+        ],
         "steps": [
-          "In “Projects”, press “Use template” on one of the listed templates, or “See all” to open the library.",
-          "In the library, search by name or description and press “Use”, “Duplicate” to adapt it, or “New template” to build one from scratch.",
+          "In “Projects”, look at the “Templates” card and press “Create one project” on the one you want, or “See all” to open the “Template library”.",
+          "In the library, search with “Search by name or description” and filter by “Type of template”, “Source” or category.",
+          "On a quick request, press “Use template”, fill in the required details and press “Start flow”.",
+          "On a project template, press “Create one project”, “Duplicate” to adapt it or “New project template” to build one from scratch.",
           "To repeat a project you already ran, open it and press “Save as template”."
         ],
-        "note": "Saving as a template keeps the project's structure; results and costs are not copied."
+        "note": "Saving as a template keeps the project's structure; results and costs are not copied.",
+        "tip": "Quick requests come with the app: if you filter by “Mine and organization”, the library tells you so and offers “See all”."
+      },
+      {
+        "h": "Launch the same project for several customers",
+        "paras": [
+          "With “Launch for several customers”, a project template becomes a batch: each customer gets its own project, with its folder, and one stuck customer does not hold the others back."
+        ],
+        "steps": [
+          "Press “Launch for several customers” on a project template.",
+          "In “1 · Customers”, choose the customers or press “Import a list” to paste rows from Excel or upload a CSV.",
+          "In “2 · Work details”, write “What to do with each customer” and use the “Customer data” buttons so each project gets its own.",
+          "In “3 · Review and launch”, check the “Estimated total cost”, set the “Budget per customer (USD)” and press “Launch for N customers”."
+        ],
+        "note": "The batch shows in the Projects list as a “Batch” card and counts as one active project of your plan."
       },
       {
         "h": "Collect the bonus when it finishes",
         "paras": [
-          "When a project finishes successfully with at least two tasks done, your organization receives a one-time coin bonus. With the default settings it is 20 coins plus 2 per finished task, capped at 100. A cancelled or failed project does not receive it.",
-          "Coins are only earned by finished work, cannot be bought with money and are spent on cosmetic items in the Shop."
+          "When a project finishes successfully with at least two tasks done, your organization receives a one-time coin bonus. With the default settings it is 20 coins plus 2 per finished task, capped at 100. A cancelled or failed project does not get it.",
+          "Coins are only earned with finished work, cannot be bought with money, and are spent on cosmetic items in the Shop."
         ]
       }
     ]

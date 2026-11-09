@@ -10,7 +10,7 @@ import { StatusIcon } from "../ui/Status";
 // One palette for the whole app (lib/statusLogic.ts): "Te necesita" amber, "Listo" one green, "Por empezar" gray.
 export const NODE_STATE_COLOR: Record<NodeState, string> = colorTable("node", ["draft", "pending", "ready", "running", "awaiting_approval", "waiting", "needs_input", "paused", "blocked", "done", "skipped", "failed", "cancelled"] as const);
 export const RETRY_COLOR = "#b8651f";
-export const CRITICAL_COLOR = "#0F766E";
+export const CRITICAL_COLOR = "#0A66C2";
 export const LIGHT_COLOR: Record<Light, string> = { green: KIND_COLOR.done, amber: KIND_COLOR.needs, red: KIND_COLOR.problem };
 export const STATUS_COLOR: Record<ProjectStatus, string> = colorTable("project", ["draft", "planning", "ready", "running", "paused", "waiting_human", "done", "partial", "failed", "cancelled"] as const);
 

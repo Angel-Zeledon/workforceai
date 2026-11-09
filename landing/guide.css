@@ -23,9 +23,9 @@
   --bg:#ffffff; --bg-soft:#f7f9fb; --bg-muted:#eff3f7; --bg-hover:#f1f5f9;
   --line:#e4e9ef; --line-strong:#d0d8e2;
   --ink:#0a1628; --ink2:#334359; --mute:#5b6a7e; --faint:#8592a3;
-  --accent:#0f766e; --accent-ink:#0b5f58; --accent-soft:#e8f5f3; --accent-line:#a7d8d1; --on-accent:#ffffff;
+  --accent:#0a66c2; --accent-ink:#004182; --accent-soft:#e8f1fb; --accent-line:#a9c9ec; --on-accent:#ffffff;
   --note:#2563a8; --note-soft:#eef5fc; --note-line:#c4dbf2;
-  --tip:#0f766e; --tip-soft:#ecf7f5; --tip-line:#b5ddd7;
+  --tip:#0a66c2; --tip-soft:#eef5fc; --tip-line:#b8d3f0;
   --warn:#94570a; --warn-soft:#fdf6e9; --warn-line:#efd6a8;
   --code-bg:#0b1322; --code-bar:#101b2e; --code-line:#1d2a40; --code-ink:#dbe4f0; --code-mute:#8d9ab0;
   --tk-com:#8693a8; --tk-str:#9fdcae; --tk-num:#f5c27a; --tk-kw:#c9a7ff; --tk-key:#82c8ff; --tk-fn:#62d6c6; --tk-var:#ffaf9b; --tk-flag:#f0b97d; --tk-type:#7fd0f5; --tk-path:#e9eef6;

@@ -43,8 +43,10 @@ export function SlackChannelCard() {
   const loadLinks = useCallback(() => slackApi.myLink().then((r) => setLinks(r.links)).catch(() => setLinks(null)), []);
   useEffect(() => {
     // admins only (org:manage). {available:false}: vendor integrations are off in this deployment (v1) -> no card.
-    slackApi.settings().then((s) => ((s as { available?: boolean }).available === false ? setCfg(null) : apply(s))).catch(() => setCfg(null));
-    loadLinks();
+    // The personal link is asked for only where Slack exists: switched off (v1) it would only answer 403.
+    slackApi.settings()
+      .then((s) => { if ((s as { available?: boolean }).available === false) { setCfg(null); return; } apply(s); loadLinks(); })
+      .catch(() => { setCfg(null); loadLinks(); }); // not an admin: the settings are not theirs, the link still is
   }, [apply, loadLinks]);
   if (!cfg && !links) return null;
 

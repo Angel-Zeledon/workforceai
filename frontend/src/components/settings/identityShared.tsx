@@ -19,7 +19,7 @@ export function IdCard({ title, desc, testid, children }: { title: string; desc?
 export function IdCheck({ label, hint, checked, onChange, disabled, testid }: { label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; testid?: string }) {
   return (
     <label className={`flex items-start gap-2.5 text-[13px] text-ink ${disabled ? "opacity-60" : ""}`}>
-      <input data-testid={testid} type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--accent,#2563eb)]" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <input data-testid={testid} type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--accent,#0A66C2)]" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       <span>{label}{hint && <span className="mt-0.5 block text-[12px] leading-snug text-mute">{hint}</span>}</span>
     </label>
   );

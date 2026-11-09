@@ -10,7 +10,7 @@ export interface ChartSpec {
   source: { artifact_id?: string; sheet?: string; range?: string; inline?: { columns: string[]; rows: CellValue[][] } };
   encoding: { x: string; y: string[]; series?: string | null }; format?: { y?: string }; stack?: boolean;
 }
-const PALETTE = ["#0F766E", "#1d4f91", "#a8741f", "#7461b5", "#b4543c", "#5f8a3f", "#5b8fb5", "#7b8494"];
+const PALETTE = ["#0A66C2", "#0F766E", "#a8741f", "#7461b5", "#b4543c", "#5f8a3f", "#5b8fb5", "#7b8494"];
 
 /** Resolves the chart data matrix (header row + rows) from an inline table or from another artifact (live). */
 function useChartMatrix(spec: ChartSpec | undefined): CellValue[][] {

@@ -7,8 +7,8 @@
   "image": {
     "file": "office.webp",
     "alt": {
-      "es": "La oficina 3D de AI Workforce OS con los empleados agentes en sus escritorios y la barra de pedidos abajo.",
-      "en": "The AI Workforce OS 3D office with agent employees at their desks and the request bar at the bottom."
+      "es": "La oficina 3D de AI Workforce OS con los agentes en sus escritorios y la barra de pedidos abajo.",
+      "en": "The AI Workforce OS 3D office with the agents at their desks and the request bar at the bottom."
     }
   },
   "related": [
@@ -19,8 +19,8 @@
   "es": {
     "title": "Primeros pasos: tus primeros 5 minutos",
     "metaTitle": "Primeros pasos con AI Workforce OS",
-    "description": "Crea tu cuenta, pide tu primera tarea, decide una aprobación, lee el reporte y gana tus primeras monedas en unos 5 minutos.",
-    "intro": "AI Workforce OS es una oficina virtual en 3D donde los empleados son agentes de IA. En unos cinco minutos vas a crear tu cuenta, pedir tu primera tarea, decidir una aprobación y leer el reporte que deja el equipo.",
+    "description": "Crea tu cuenta, haz tu primer pedido, decide tu primer pendiente, lee el informe y gana tus primeras monedas en unos 5 minutos.",
+    "intro": "AI Workforce OS es una oficina virtual en 3D donde trabajan agentes de IA. En unos cinco minutos vas a crear tu cuenta, hacer tu primer pedido, decidir tu primer pendiente y leer el informe que dejan tus agentes.",
     "sections": [
       {
         "h": "Crea tu cuenta",
@@ -37,64 +37,65 @@
         "warning": "El trabajo de una cuenta de prueba se pierde cuando caduca; crea una cuenta si quieres conservarlo."
       },
       {
-        "h": "Pide tu primera tarea",
+        "h": "Haz tu primer pedido",
         "paras": [
-          "Al entrar llegas a la Oficina: una escena 3D con tu equipo y, abajo, una barra para hablar con toda la oficina como lo harías con un jefe de equipo."
+          "Al entrar llegas a la Oficina, en su «Vista 3D»: una escena con tus agentes y, abajo, una barra para escribir a toda la empresa como lo harías con un jefe de equipo. Cada cosa que pides ahí es un pedido."
         ],
         "steps": [
           "Pulsa uno de los atajos que aparecen sobre la barra: «Saludar», «Finanzas», «Propuesta de $50,000», «Ventas a la baja» o «Contratar 2 personas».",
-          "O escribe tu pedido en la barra «Escribe a la oficina: saluda, pregunta o pide algo…» y pulsa «Enviar».",
-          "Lee la respuesta en el chat de la oficina, justo encima de la barra. Si es una tarea, verás a quién se asignó y por qué."
+          "O escribe tu pedido en la barra «Escribe a toda la empresa: saluda, pregunta o pide algo…» y pulsa «Enviar».",
+          "Lee la respuesta en el «Chat de la oficina», justo encima de la barra. Si es una tarea, verás a qué agente se asignó y por qué."
         ],
         "note": "Si el servidor no tiene configurado un proveedor de modelo, la IA corre en modo simulación: las respuestas son guionadas, no hay costo de modelo y el flujo es el mismo que con un modelo real.",
         "tip": "Empieza por «Propuesta de $50,000»: siempre pide una aprobación, así recorres el flujo completo."
       },
       {
-        "h": "Mira cómo colabora el equipo",
+        "h": "Mira cómo colaboran tus agentes",
         "paras": [
           "Cada persona de la escena es un agente y se mueve según lo que hace: trabaja en su escritorio, se reúne con otros para planear o espera en la zona de aprobaciones."
         ],
         "steps": [
-          "Revisa el cuadro «Actividad en vivo», arriba a la izquierda, para seguir cada paso de los agentes.",
+          "Abre el cuadro «Actividad en vivo», arriba a la izquierda, para seguir cada paso de los agentes.",
           "Mira el estado en la cabecera del chat de la oficina: «En curso: planificando», «ejecutando» o «esperando tu aprobación».",
-          "Haz clic en un empleado para abrir su panel, ver su trabajo y escribirle directamente."
+          "Haz clic en un agente para abrir su panel, ver su trabajo y escribirle directamente."
         ],
         "tip": "Arrastra para rotar la vista, usa la rueda para acercar y mantén el clic derecho para desplazarte."
       },
       {
-        "h": "Decide tu primera aprobación",
+        "h": "Decide tu primer pendiente",
         "paras": [
-          "Cuando un agente quiere hacer algo delicado, se detiene y espera tu decisión. Nada sigue hasta que decides."
+          "Cuando un agente quiere hacer algo delicado, o necesita un dato que solo tú tienes, se detiene y te deja un pendiente: una aprobación o una pregunta. Nada sigue hasta que decides."
         ],
         "steps": [
-          "Abre la bandeja de aprobaciones pendientes, abajo a la izquierda de la oficina.",
+          "Abre «Pendientes» en el menú lateral. El número junto al nombre dice cuántos te esperan; también los ves en la bandeja de la oficina, abajo a la izquierda.",
           "Lee qué quiere hacer el agente y su nivel de riesgo.",
-          "Pulsa «Aprobar» para que continúe o «Rechazar» para detenerlo."
+          "Pulsa «Aprobar» para que continúe o «Rechazar» para detenerlo. Si es una pregunta, escribe tu respuesta y pulsa «Responder»."
         ],
         "note": "Decidir aprobaciones requiere el rol de Administrador o Dueño. Si tu rol no lo permite, la tarjeta te lo indica y no muestra los botones.",
         "tip": "Rechazar también es una respuesta válida: para eso existe el paso humano."
       },
       {
-        "h": "Lee el reporte y revisa tus monedas",
+        "h": "Lee el informe y revisa tus monedas",
         "paras": [
-          "Cuando una solicitud se completa se genera un reporte, y cada tarea terminada suma monedas a tu organización. Las monedas no son dinero ni se compran: solo se ganan con trabajo terminado y se gastan en la Tienda."
+          "Cuando un pedido se completa se genera un informe, y cada tarea terminada suma monedas a tu organización. Las monedas no son dinero ni se compran: solo se ganan con trabajo terminado y se gastan en la Tienda."
         ],
         "steps": [
-          "Pulsa «Dashboard» en el selector Oficina / Dashboard de la barra superior.",
-          "Abre «Reportes» y elige el reporte de tu pedido.",
-          "Mira el contador «Monedas» de la barra superior y púlsalo para abrir la Tienda."
-        ]
+          "Abre «Chats» y, en la lista «Pedidos», pulsa el de tu pedido.",
+          "En el panel del pedido, abre la pestaña «Informe».",
+          "Mira el contador de monedas de la barra superior y púlsalo para abrir la Tienda."
+        ],
+        "tip": "Todos los informes juntos están en la «Vista lista» de la Oficina, en «Informes»."
       },
       {
         "h": "Completa la lista Primeros pasos",
         "paras": [
-          "Mientras te queden pasos pendientes, la barra superior muestra el botón «Primeros pasos». Reúne cuatro tareas que preparan tu oficina para trabajo real, y cada una se marca sola cuando la cumples:"
+          "Mientras te queden pasos pendientes, la barra superior muestra el botón «Primeros pasos». Reúne cuatro pasos que preparan tu oficina para trabajo real, y cada uno se marca solo cuando lo cumples:"
         ],
         "list": [
-          "«Cuéntale a tu oficina de tu negocio»: tipo de negocio, tono e idioma, desde Ajustes.",
-          "«Conecta una herramienta»: correo, calendario, archivos u otras.",
-          "«Elige cuánta libertad tiene tu equipo»: desde «sugerir» hasta «autónomo».",
-          "«Pide tu primera tarea»."
+          "«Cuéntale de tu negocio»: tipo de negocio, tono e idioma, en Ajustes, «Tu negocio».",
+          "«Haz tu primer pedido»: en la barra de abajo o con un atajo.",
+          "«Decide tu primer pendiente»: el atajo «Propuesta de $50,000» siempre te deja uno.",
+          "«Elige qué puede hacer cada agente sin preguntarte»: «Me pregunta todo», «Solo lo importante» o «Trabaja solo», en Ajustes, «Aprobaciones»."
         ],
         "tip": "El botón «?» de la barra superior abre un tour guiado de la pantalla en la que estás."
       }
@@ -103,8 +104,8 @@
   "en": {
     "title": "Getting started: your first 5 minutes",
     "metaTitle": "Getting started with AI Workforce OS",
-    "description": "Create your account, ask for your first task, decide an approval, read the report and earn your first coins in about 5 minutes.",
-    "intro": "AI Workforce OS is a 3D virtual office where the employees are AI agents. In about five minutes you will create your account, ask for your first task, decide an approval and read the report the team leaves behind.",
+    "description": "Create your account, make your first request, decide your first pending item, read the report and earn your first coins in about 5 minutes.",
+    "intro": "AI Workforce OS is a 3D virtual office where AI agents do the work. In about five minutes you will create your account, make your first request, decide your first pending item and read the report your agents leave behind.",
     "sections": [
       {
         "h": "Create your account",
@@ -121,39 +122,39 @@
         "warning": "A trial account's work is lost when it expires; create an account if you want to keep it."
       },
       {
-        "h": "Ask for your first task",
+        "h": "Make your first request",
         "paras": [
-          "When you sign in you land on the Office: a 3D scene with your team and, at the bottom, a bar to talk to the whole office the way you would talk to a team lead."
+          "When you sign in you land on the Office, in its “3D view”: a scene with your agents and, at the bottom, a bar to write to the whole office the way you would talk to a team lead. Everything you ask for there is a request."
         ],
         "steps": [
           "Press one of the shortcuts above the bar: “Say hi”, “Finance”, “$50,000 proposal”, “Sales are down” or “Hire 2 people”.",
           "Or type your request in the bar “Write to the office: say hi, ask or request something…” and press “Send”.",
-          "Read the answer in the office chat, right above the bar. If it is a task, you will see who it was assigned to and why."
+          "Read the answer in the “Office chat”, right above the bar. If it is a task, you will see which agent it was assigned to and why."
         ],
         "note": "If the server has no model provider configured, the AI runs in simulation mode: answers are scripted, there is no model cost, and the flow is the same as with a real model.",
         "tip": "Start with “$50,000 proposal”: it always asks for an approval, so you go through the whole flow."
       },
       {
-        "h": "Watch the team collaborate",
+        "h": "Watch your agents collaborate",
         "paras": [
-          "Each person in the scene is an agent and moves according to what they are doing: working at their desk, meeting others to plan, or waiting in the approvals area."
+          "Each person in the scene is an agent and moves according to what it is doing: working at its desk, meeting others to plan, or waiting in the approvals area."
         ],
         "steps": [
-          "Check the “Live activity” box at the top left to follow every step the agents take.",
+          "Open the “Live activity” box at the top left to follow every step the agents take.",
           "Look at the status in the office chat header: “In progress: planning”, “running” or “waiting for your approval”.",
-          "Click an employee to open their panel, see their work and write to them directly."
+          "Click an agent to open its panel, see its work and write to it directly."
         ],
         "tip": "Drag to rotate the view, use the scroll wheel to zoom and hold the right button to pan."
       },
       {
-        "h": "Decide your first approval",
+        "h": "Decide your first pending item",
         "paras": [
-          "When an agent wants to do something sensitive, it stops and waits for your decision. Nothing continues until you decide."
+          "When an agent wants to do something sensitive, or needs information only you have, it stops and leaves you a pending item: an approval or a question. Nothing continues until you decide."
         ],
         "steps": [
-          "Open the pending approvals tray at the bottom left of the office.",
+          "Open “Pending” in the side menu. The number next to it says how many are waiting for you; you also see them in the office tray at the bottom left.",
           "Read what the agent wants to do and its risk level.",
-          "Press “Approve” to let it continue or “Reject” to stop it."
+          "Press “Approve” to let it continue or “Reject” to stop it. If it is a question, write your answer and press “Answer”."
         ],
         "note": "Deciding approvals requires the Admin or Owner role. If your role cannot, the card tells you so and shows no buttons.",
         "tip": "Rejecting is a valid answer too: that is what the human step is for."
@@ -164,21 +165,22 @@
           "When a request completes, a report is generated, and every finished task adds coins to your organization. Coins are not money and cannot be bought: they are only earned by finished work and spent in the Shop."
         ],
         "steps": [
-          "Press “Dashboard” in the Office / Dashboard switch of the top bar.",
-          "Open “Reports” and pick the report for your request.",
-          "Look at the “Coins” counter in the top bar and press it to open the Shop."
-        ]
+          "Open “Chats” and, in the “Requests” list, press the one for your request.",
+          "In the request panel, open the “Report” tab.",
+          "Look at the coin counter in the top bar and press it to open the Shop."
+        ],
+        "tip": "All the reports together are in the Office's “List view”, under “Reports”."
       },
       {
         "h": "Complete the Getting started list",
         "paras": [
-          "While you have steps left, the top bar shows the “Getting started” button. It holds four tasks that prepare your office for real work, and each one ticks itself when you complete it:"
+          "While you have steps left, the top bar shows the “Getting started” button. It holds four steps that prepare your office for real work, and each one ticks itself when you complete it:"
         ],
         "list": [
-          "“Tell your office about your business”: business type, tone and language, from Settings.",
-          "“Connect a tool”: e-mail, calendar, files or others.",
-          "“Choose how much freedom your team has”: from “suggest” to “autonomous”.",
-          "“Ask for your first task”."
+          "“Tell us about your business”: business type, tone and language, in Settings, “Your business”.",
+          "“Make your first request”: in the bar at the bottom or with a shortcut.",
+          "“Decide your first pending item”: the “$50,000 proposal” shortcut always leaves you one.",
+          "“Choose what each agent can do without asking you”: “Asks me about everything”, “Only what matters” or “Works alone”, in Settings, “Approvals”."
         ],
         "tip": "The “?” button in the top bar opens a guided tour of the screen you are on."
       }

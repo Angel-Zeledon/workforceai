@@ -20,7 +20,7 @@ export type Concept =
 
 /** href = where the legend button goes; where = "Ver dónde se usa" when it differs (the screen of the concept). */
 export const CONCEPTS: { id: Concept; icon: IconName; tint: string; href: string; where?: string }[] = [
-  { id: "agents", icon: "bot", tint: "bg-teal-600/10 text-teal-700", href: "/settings?s=hire", where: "/org" },
+  { id: "agents", icon: "bot", tint: "bg-accent-soft text-accent", href: "/settings?s=hire", where: "/org" },
   { id: "skills", icon: "layers", tint: "bg-amber-100 text-amber-700", href: "/skills" },
   { id: "templates", icon: "template", tint: "bg-violet-100 text-violet-500", href: "/projects?view=library" },
   { id: "person", icon: "user", tint: "bg-slate-500/10 text-slate-700", href: "/settings?s=members" },

@@ -21,8 +21,10 @@ function Inner() {
   const { t } = useT();
   const router = useRouter();
   const raw = useSearchParams().get("tab");
-  const tab: Tab = (TABS as readonly string[]).includes(raw ?? "") ? (raw as Tab) : "spend";
   const status = useSession((s) => s.status);
+  // Members needs accounts: the open demo (no sign-in) has none, so the tab is not offered there.
+  const tabs = TABS.filter((id) => id !== "members" || status !== "disabled");
+  const tab: Tab = (tabs as readonly string[]).includes(raw ?? "") ? (raw as Tab) : "spend";
   const role = useSession((s) => s.role);
   // Demo mode (no accounts) behaves as before: everything is reachable. With accounts, owner/admin only.
   const allowed = status !== "authenticated" || role === "owner" || role === "admin";
@@ -34,7 +36,7 @@ function Inner() {
       ) : (
         <>
           <div role="tablist" aria-label={t("adm.title")} className="flex shrink-0 gap-1 overflow-x-auto border-b border-line bg-panel px-4 sm:px-6">
-            {TABS.map((id) => (
+            {tabs.map((id) => (
               <button key={id} type="button" role="tab" aria-selected={tab === id} data-testid={`admin-tab-${id}`}
                 onClick={() => router.push(`/admin?tab=${id}`)}
                 className={`whitespace-nowrap border-b-2 px-3 py-2.5 text-[12.5px] font-medium transition ${tab === id ? "border-accent text-accent" : "border-transparent text-mute hover:text-ink"}`}>

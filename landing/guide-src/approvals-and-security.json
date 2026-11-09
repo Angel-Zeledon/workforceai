@@ -17,68 +17,88 @@
     "projects"
   ],
   "es": {
-    "title": "Aprobaciones y seguridad: tú mantienes el control",
-    "metaTitle": "Aprobaciones y seguridad | AI Workforce OS",
-    "description": "Decide aprobaciones, entiende la autonomía de cada empleado, pon topes de gasto, limita permisos y detén toda la actividad al instante si hace falta.",
-    "intro": "Tus empleados de IA preparan y proponen, pero las decisiones delicadas son tuyas. Aquí aprendes a decidir aprobaciones, revisar costos antes de ejecutar, fijar topes y permisos, y detener toda la actividad con un clic.",
+    "title": "Pendientes y seguridad: tú mantienes el control",
+    "metaTitle": "Pendientes, aprobaciones y seguridad | AI Workforce OS",
+    "description": "Decide tus pendientes, elige qué puede hacer cada agente sin preguntarte, pon topes de gasto, limita conexiones y detén toda la actividad si hace falta.",
+    "intro": "Tus agentes de IA preparan y proponen, pero las decisiones delicadas son tuyas. Aquí aprendes a decidir tus pendientes, a elegir cuánto te pregunta cada agente, a revisar costos antes de ejecutar, a fijar topes y permisos y a detener toda la actividad con un clic.",
     "sections": [
       {
-        "h": "Entiende cuándo te pide permiso un empleado",
+        "h": "Entiende qué es un pendiente",
         "paras": [
-          "Cuando un agente quiere hacer algo que necesita tu visto bueno, se detiene y espera en la zona de aprobaciones de la oficina. Cada aviso dice quién lo pide, qué acción es, el detalle y el nivel de riesgo (bajo, medio o alto). Un agente puede pedir aprobación, pero nunca darla.",
-          "Cuánto pide cada empleado depende de su nivel de autonomía, que ves en su panel y en «Qué puede hacer cada empleado»:"
+          "Un pendiente es algo que espera tu decisión: una aprobación, cuando un agente quiere hacer algo que necesita tu visto bueno, o una pregunta, cuando necesita un dato tuyo. Cada tarjeta dice quién lo pide, qué es, el detalle y el riesgo («Riesgo bajo», «Riesgo medio» o «Riesgo alto»). Un agente puede pedir aprobación, pero nunca darla.",
+          "Cuánto te pregunta cada agente depende de su nivel. Lo eliges en su panel, pestaña «Qué puede hacer», en «Permisos»; el de los agentes nuevos, en Ajustes, «Aprobaciones»."
         ],
         "table": {
-          "head": ["Nivel", "Qué pasa con las acciones que cambian algo"],
+          "head": [
+            "Nivel",
+            "Qué hace el agente"
+          ],
           "rows": [
-            ["Solo sugiere", "No las ejecuta: quedan registradas como sugerencia y las hace una persona"],
-            ["Aprobar cada acción", "Cada una espera tu aprobación"],
-            ["Según reglas", "Deciden sus permisos, y una acción marcada como de riesgo alto pide aprobación"],
-            ["Autónomo", "Deciden sus permisos sin escalar por riesgo; siguen valiendo las reglas de tu organización y los topes"]
+            [
+              "Me pregunta todo",
+              "Pide tu aprobación antes de cada acción que no sea leer o buscar"
+            ],
+            [
+              "Solo lo importante",
+              "Hace solo lo interno (leer, buscar, borradores, archivos internos, análisis) y pregunta antes de lo que sale de la empresa o no tiene vuelta"
+            ],
+            [
+              "Trabaja solo",
+              "No pregunta nada salvo el piso de seguridad"
+            ],
+            [
+              "Solo sugiere (avanzado)",
+              "No hace nada por su cuenta: propone y una persona decide"
+            ]
           ]
         },
-        "note": "Enviar un correo, crear un evento de calendario, publicar en Slack o LinkedIn y crear incidencias o comentarios en GitHub siempre piden aprobación, sea cual sea el nivel."
+        "note": "El piso de seguridad siempre pregunta, también en «Trabaja solo»: pagos, contratos y propuestas, y borrar. Las reglas de tu organización y los topes de gasto valen en cualquier nivel."
       },
       {
-        "h": "Aprueba o rechaza una acción",
+        "h": "Decide en Pendientes",
+        "paras": [
+          "«Pendientes», en el menú lateral, reúne las preguntas de tus agentes y las aprobaciones de todos tus proyectos, una tarjeta a la vez. Es la misma tarjeta que ves en la bandeja de la oficina y en la vista lista."
+        ],
         "steps": [
-          "Abre la bandeja de aprobaciones pendientes, abajo a la izquierda de la oficina. Se despliega sola cuando llega una nueva, y puedes ocultarla o mostrarla.",
-          "Lee el título, el detalle y el riesgo de la tarjeta.",
-          "Pulsa «Aprobar» para que el agente continúe o «Rechazar» para frenar esa acción."
+          "Abre «Pendientes». El número junto al nombre dice cuántos te esperan.",
+          "Si quieres, filtra con «Todas», «Las que pedí yo» o «Las que puedo decidir», y en «Mostrar:» elige «Todo» o «Correos para aprobar».",
+          "Lee la tarjeta: quién lo pide, qué quiere hacer, el detalle y el riesgo.",
+          "Pulsa «Aprobar» o «Rechazar». Si es una pregunta, escribe tu respuesta y pulsa «Responder».",
+          "Si te equivocaste, pulsa «Deshacer» mientras la decisión no se ha enviado: tarda unos segundos y después es definitiva."
         ],
         "note": "Decidir requiere el rol de Administrador o Dueño. Si tu rol solo puede ver la aprobación, la tarjeta te lo dice y no muestra los botones.",
-        "tip": "También puedes decidir desde la sección «Aprobaciones» del Dashboard."
+        "tip": "Con el teclado: A aprueba, R rechaza y J/K pasan a la siguiente o a la anterior; «Ver como lista» las muestra todas juntas."
       },
       {
         "h": "Decide desde el móvil",
         "steps": [
-          "Abre app.workforceai.es/approvals en el navegador del móvil e inicia sesión.",
+          "Abre app.workforceai.es/approvals en el navegador del móvil e inicia sesión: verás «Pendientes: aprobaciones».",
           "Pulsa «Activar notificaciones» para enterarte cuando algo espere tu decisión.",
-          "Abre la aprobación y decide con «Aprobar» o «Rechazar»."
+          "Abre la aprobación y decide con «Aprobar» o «Rechazar», o desliza a la derecha para aprobar y a la izquierda para rechazar."
         ],
         "note": "La notificación solo muestra el título y el riesgo; la decisión siempre se toma dentro de la app, con tu sesión. En iPhone, primero añade la app a la pantalla de inicio.",
-        "tip": "Si una aprobación necesita a dos personas distintas, la tarjeta muestra cuántas aprobaciones van."
+        "tip": "Si una aprobación necesita a dos personas distintas, la tarjeta lo indica y muestra cuántas aprobaciones van."
       },
       {
         "h": "Deja de aprobar lo repetitivo",
         "paras": [
-          "En acciones internas de un proyecto que se pueden deshacer, la tarjeta ofrece recordar tu decisión. Lo externo nunca entra aquí: enviar, publicar, pagar, borrar y ejecutar código siempre piden aprobación."
+          "Si apruebas lo mismo una y otra vez, la tarjeta te ofrece no volver a preguntar. Se crea una excepción que puedes deshacer; el piso de seguridad y las reglas de la empresa siguen preguntando."
         ],
         "steps": [
-          "Marca «Recordar esta decisión para esta clase de acción».",
-          "Elige por cuánto tiempo: «Esta sesión (unas 8 horas)» o «Este proyecto».",
-          "Si elegiste el proyecto, marca «También para los demás agentes de este proyecto» si quieres extenderlo.",
-          "Pulsa «Aprobar para esta sesión» o «Aprobar para este proyecto»."
+          "Pulsa «Aprobar y no volver a preguntar».",
+          "Elige a quién vale: al agente en todo su trabajo, al agente solo en este proyecto o, si el pedido viene de un lote, a todos en todos los proyectos de ese lote.",
+          "Pulsa «Aprobar y recordar». Arriba de Pendientes verás lo que se creó, con «Deshacer».",
+          "Para revisar o quitar excepciones más tarde, abre Ajustes, «Aprobaciones», y mira «Excepciones activas»."
         ],
-        "tip": "Revoca una decisión recordada cuando quieras en la pestaña «Aprobaciones» del proyecto."
+        "note": "En acciones internas de un proyecto que se pueden deshacer, la tarjeta ofrece además «No volver a preguntar por esta clase de acción», por «Esta sesión (unas 8 horas)» o «Este proyecto», con «Aprobar para esta sesión» o «Aprobar para este proyecto». Se revocan en la pestaña «Permisos» del proyecto, en «Siempre permitido en este proyecto». Enviar, publicar, pagar, borrar y ejecutar código siempre piden aprobación."
       },
       {
         "h": "Revisa el costo antes de ejecutar",
         "paras": [
-          "Antes de ejecutar un pedido que pueda tocar conexiones con escritura, la oficina te pide revisar su plan en la pantalla Seguridad, en «Revisión de plan»."
+          "Antes de ejecutar un pedido que pueda tocar conexiones con escritura, la oficina te pide revisar su plan en la pantalla «Seguridad y control», en «Revisión de plan»."
         ],
         "steps": [
-          "Abre «Ajustes» y entra en «Seguridad».",
+          "Abre «Ajustes» y entra en «Seguridad y límites».",
           "En «Revisión de plan», lee el costo estimado (con su máximo probable), el tiempo aproximado, las «Conexiones que podría tocar» y las aprobaciones que se esperan.",
           "Quita las tareas que no quieras con «Quitar».",
           "Pulsa «Aprobar y ejecutar» o «Rechazar»."
@@ -88,24 +108,24 @@
       {
         "h": "Pon topes de gasto",
         "steps": [
-          "Para un tope por empleado, abre el Dashboard, entra en «Costos y errores» y escribe su «Tope mensual (USD)» en «Límites de presupuesto». Pulsa «Guardar»; dejarlo vacío quita el tope.",
-          "Para ver todos los topes, abre «Ajustes», entra en «Seguridad» y baja hasta «Topes de gasto»: cada fila muestra el ámbito, el periodo, lo usado, el tope y qué pasa «Al llegar» («Avisar», «Pausar y preguntar» o «Bloquear»).",
-          "Para limitar una conexión, abre «Conexiones», entra en la pestaña «Límites», ajusta «Usos por día», «Escrituras por día» y «Presupuesto mensual (USD)», y pulsa «Guardar límites»."
+          "Para un tope por agente, abre la «Vista lista» de la Oficina, entra en «Costos y errores» y escribe su «Tope mensual (USD)» en «Límites de presupuesto». Pulsa «Guardar»; dejarlo vacío quita el tope.",
+          "Para ver todos los topes, abre «Ajustes», entra en «Seguridad y límites» y baja hasta «Topes de gasto»: cada fila muestra el ámbito, el periodo, lo usado, el tope y qué pasa «Al llegar» («Avisar», «Pausar y preguntar» o «Bloquear»).",
+          "Para limitar una conexión, abre «Conexiones», entra en la pestaña «Uso y límites», ajusta en «Límites» los «Usos por día», las «Escrituras por día» y el «Presupuesto mensual (USD)», y pulsa «Guardar límites»."
         ],
-        "tip": "Un empleado que llega a su tope aparece «En pausa» en «Límites de presupuesto»."
+        "tip": "Un agente que llega a su tope aparece «En pausa» en «Límites de presupuesto»."
       },
       {
-        "h": "Decide qué puede hacer cada empleado",
+        "h": "Decide qué conexiones puede usar cada agente",
         "paras": [
-          "Conectar una cuenta no es conceder acceso: cada permiso se asigna por separado, siguiendo el mínimo privilegio. Las integraciones con cuentas reales todavía se están probando."
+          "Conectar una cuenta no es conceder acceso: cada permiso se asigna por separado, siguiendo el mínimo privilegio. «Conexiones», en el grupo Enseñar y conectar del menú, tiene tres pestañas: «Conexiones», «Quién puede usar qué» y «Uso y límites»."
         ],
         "steps": [
-          "Abre «Ajustes», entra en «Conexiones» y pulsa «Conectar».",
-          "Sigue el asistente «Conectar una cuenta»: «Nombre de la conexión», «Tipo de conexión», «¿Qué podrá hacer?» y, si quieres, «Asignar a empleados (opcional)».",
-          "Abre la pestaña «Permisos por empleado» y haz clic en una celda (empleado y conexión) para ver o cambiar sus permisos.",
-          "Concede los permisos de escritura desde esa misma pestaña. Si hay más de un administrador, otra persona debe aprobar la concesión.",
-          "Consulta «Qué puede hacer cada empleado» y el «Registro de uso» para ver qué ocurrió."
-        ]
+          "Abre «Conexiones» y pulsa «Conectar».",
+          "Sigue el asistente «Conectar una cuenta»: elige «Otra plataforma (API)» o «Base de datos (solo lectura)», escribe el «Nombre de la conexión», sus datos y su clave y, si quieres, usa «Asignar a agentes (opcional)».",
+          "Abre la pestaña «Quién puede usar qué». En «Permisos por agente», haz clic en una celda (agente y conexión) para ver o cambiar sus permisos; «Qué puede hacer cada agente» lo resume por agente.",
+          "Consulta el «Registro de uso», en la pestaña «Uso y límites», para ver qué ocurrió."
+        ],
+        "note": "En esta versión las conexiones son genéricas y de solo lectura: un sistema con API y clave, una base de datos PostgreSQL, un buzón de datos o un enlace que devuelva datos. Las integraciones con productos concretos, como correo, calendario o chat, no están disponibles."
       },
       {
         "h": "Protege tus claves",
@@ -116,18 +136,36 @@
         "note": "AI Workforce OS no cuenta hoy con certificaciones de seguridad."
       },
       {
-        "h": "Usa el Centro de seguridad",
+        "h": "Usa el centro de seguridad",
         "paras": [
-          "La pantalla «Seguridad y control» (Ajustes, Seguridad) reúne los frenos de la oficina. Nada de lo que hagas aquí borra datos."
+          "La pantalla «Seguridad y control» (Ajustes, «Seguridad y límites») reúne los frenos de la oficina. Nada de lo que hagas aquí borra datos."
         ],
         "table": {
-          "head": ["Control", "Qué hace"],
+          "head": [
+            "Control",
+            "Qué hace"
+          ],
           "rows": [
-            ["Modo solo lectura global", "Los empleados siguen leyendo y proponiendo, pero no envían ni modifican nada"],
-            ["Pausar empleados", "Un empleado en pausa no empieza tareas nuevas ni usa conexiones, y se reanuda donde se quedó"],
-            ["Detener por herramienta", "Apaga una herramienta para todos; cualquier administrador la detiene y solo el Dueño la reactiva"],
-            ["Horario de operación", "Fuera del horario, el trabajo nuevo espera a la vista; lo que ya está en curso no se interrumpe"],
-            ["Alertas de actividad inusual", "Avisan ante un gasto disparado, ráfagas de herramientas, muchas aprobaciones rechazadas o destinatarios nuevos; no bloquean por sí solas"]
+            [
+              "Modo solo lectura global",
+              "Los agentes siguen leyendo y proponiendo, pero no envían ni modifican nada"
+            ],
+            [
+              "Pausar agentes",
+              "Un agente en pausa no empieza tareas nuevas ni usa conexiones, y se reanuda donde se quedó"
+            ],
+            [
+              "Detener por herramienta",
+              "Apaga una herramienta para todos; cualquier administrador la detiene y solo el Dueño la reactiva"
+            ],
+            [
+              "Horario de operación",
+              "Fuera del horario, el trabajo nuevo espera a la vista; las aprobaciones y el freno de emergencia siguen funcionando"
+            ],
+            [
+              "Alertas de actividad inusual",
+              "Avisan ante un gasto disparado, ráfagas de herramientas, muchas aprobaciones rechazadas o destinatarios nuevos; no bloquean por sí solas"
+            ]
           ]
         },
         "tip": "Las alertas pueden congelar la oficina automáticamente, pero esa opción viene apagada."
@@ -135,87 +173,116 @@
       {
         "h": "Detén todo en una emergencia",
         "paras": [
-          "«Detener todo» está en Ajustes y en el Centro de seguridad. Cualquier administrador puede detener, pero solo el Dueño puede levantar el bloqueo. Nada se borra. Hay dos niveles:"
+          "«Detener todo» está en Ajustes, en el menú de tu avatar y en el centro de seguridad. Cualquier administrador puede detener, pero solo el Dueño puede levantar el bloqueo. Nada se borra. Hay dos niveles:"
         ],
-        "table": {
-          "head": ["Nivel", "Qué hace"],
-          "rows": [
-            ["Todo detenido", "No se inicia nada nuevo y se bloquea el uso de las conexiones; las cuentas siguen conectadas"],
-            ["Bloqueo total", "Además suspende todas las conexiones y cancela los envíos en espera"]
-          ]
-        },
         "steps": [
           "Pulsa «Detener todo» y elige el nivel.",
           "Escribe un motivo si quieres y confirma con «Sí, detener todo».",
-          "Para reanudar, el Dueño abre «Seguridad», escribe el «Motivo para reanudar» y pulsa «Levantar bloqueo»."
+          "Para reanudar, el Dueño abre «Seguridad y límites», escribe el «Motivo para reanudar» y pulsa «Levantar bloqueo»."
         ],
+        "table": {
+          "head": [
+            "Nivel",
+            "Qué hace"
+          ],
+          "rows": [
+            [
+              "Todo detenido",
+              "No se inicia nada nuevo y se bloquea el uso de las conexiones; las cuentas siguen conectadas"
+            ],
+            [
+              "Bloqueo total",
+              "Además suspende todas las conexiones y cancela los envíos en espera"
+            ]
+          ]
+        },
         "note": "Al reanudar, las acciones que estaban en espera vuelven a pedir aprobación."
       }
     ]
   },
   "en": {
-    "title": "Approvals and security: you stay in control",
-    "metaTitle": "Approvals and security | AI Workforce OS",
-    "description": "Decide approvals, understand each employee's autonomy, set spend limits, restrict permissions and stop all activity at once if you need to.",
-    "intro": "Your AI employees prepare and propose, but sensitive decisions are yours. Here you learn to decide approvals, review costs before running, set limits and permissions, and stop all activity with one click.",
+    "title": "Pending and security: you stay in control",
+    "metaTitle": "Pending items, approvals and security | AI Workforce OS",
+    "description": "Decide your pending items, choose what each agent can do without asking you, set spend limits, limit connections and stop all activity if needed.",
+    "intro": "Your AI agents prepare and propose, but the sensitive decisions are yours. Here you learn to decide your pending items, choose how much each agent asks you, review costs before running, set limits and permissions, and stop all activity with one click.",
     "sections": [
       {
-        "h": "Understand when an employee asks for permission",
+        "h": "Understand what a pending item is",
         "paras": [
-          "When an agent wants to do something that needs your sign-off, it stops and waits in the office's approvals area. Each notice says who is asking, which action it is, the details and the risk level (low, medium or high). An agent can ask for approval, but never grant it.",
-          "How much each employee asks depends on its autonomy level, which you see in its panel and in “What each employee can do”:"
+          "A pending item is something that waits for your decision: an approval, when an agent wants to do something that needs your go-ahead, or a question, when it needs information from you. Each card says who asks, what it is, the details and the risk (“Low risk”, “Medium risk” or “High risk”). An agent can ask for approval, but never give it.",
+          "How much each agent asks you depends on its level. You choose it in its panel, “What it can do” tab, under “Permissions”; the level of new agents, in Settings, “Approvals”."
         ],
         "table": {
-          "head": ["Level", "What happens to actions that change something"],
+          "head": [
+            "Level",
+            "What the agent does"
+          ],
           "rows": [
-            ["Suggest only", "It does not run them: they are recorded as a suggestion and a person carries them out"],
-            ["Approve each action", "Each one waits for your approval"],
-            ["Rule-based", "Its permissions decide, and an action flagged as high risk asks for approval"],
-            ["Autonomous", "Its permissions decide without escalating on risk; your organization's rules and limits still apply"]
+            [
+              "Asks me about everything",
+              "Asks for your approval before every action other than reading or searching"
+            ],
+            [
+              "Only what matters",
+              "Does internal work on its own (reading, searching, drafts, internal files, analysis) and asks before anything that leaves the company or cannot be undone"
+            ],
+            [
+              "Works alone",
+              "Asks nothing except the safety floor"
+            ],
+            [
+              "Only suggests (advanced)",
+              "Does nothing on its own: it proposes and a person decides"
+            ]
           ]
         },
-        "note": "Sending an email, creating a calendar event, posting to Slack or LinkedIn, and creating GitHub issues or comments always ask for approval, whatever the level."
+        "note": "The safety floor always asks, also in “Works alone”: payments, contracts and proposals, and deleting. Your organization's rules and spend limits apply at every level."
       },
       {
-        "h": "Approve or reject an action",
+        "h": "Decide in Pending",
+        "paras": [
+          "“Pending”, in the side menu, brings together your agents' questions and the approvals of all your projects, one card at a time. It is the same card you see in the office tray and in the list view."
+        ],
         "steps": [
-          "Open the pending approvals tray at the bottom left of the office. It opens by itself when a new one arrives, and you can hide or show it.",
-          "Read the card's title, details and risk.",
-          "Press “Approve” to let the agent continue or “Reject” to stop that action."
+          "Open “Pending”. The number next to it says how many are waiting for you.",
+          "If you like, filter with “All”, “Requested by me” or “I can decide”, and under “Show:” pick “Everything” or “Emails to approve”.",
+          "Read the card: who asks, what it wants to do, the details and the risk.",
+          "Press “Approve” or “Reject”. If it is a question, write your answer and press “Answer”.",
+          "If you made a mistake, press “Undo” while the decision has not been sent yet: it takes a few seconds and then it is final."
         ],
         "note": "Deciding requires the Admin or Owner role. If your role can only see the approval, the card tells you so and shows no buttons.",
-        "tip": "You can also decide from the “Approvals” section of the Dashboard."
+        "tip": "With the keyboard: A approves, R rejects and J/K move to the next or previous one; “View as a list” shows them all together."
       },
       {
         "h": "Decide from your phone",
         "steps": [
-          "Open app.workforceai.es/approvals in your phone's browser and sign in.",
-          "Press “Enable notifications” to hear when something is waiting for your decision.",
-          "Open the approval and decide with “Approve” or “Reject”."
+          "Open app.workforceai.es/approvals in your phone's browser and sign in: you will see “Pending: approvals”.",
+          "Press “Enable notifications” to find out when something is waiting for your decision.",
+          "Open the approval and decide with “Approve” or “Reject”, or swipe right to approve and left to reject."
         ],
-        "note": "The notification only shows the title and risk; the decision is always made inside the app, signed in. On iPhone, add the app to your Home Screen first.",
-        "tip": "If an approval needs two different people, the card shows how many approvals it has."
+        "note": "The notification only shows the title and the risk; the decision is always made inside the app, with your session. On iPhone, add the app to the home screen first.",
+        "tip": "If an approval needs two different people, the card says so and shows how many approvals it has so far."
       },
       {
-        "h": "Stop approving repetitive actions",
+        "h": "Stop approving the repetitive stuff",
         "paras": [
-          "For internal project actions that can be undone, the card offers to remember your decision. External actions never qualify: sending, publishing, paying, deleting and running code always ask."
+          "If you approve the same thing again and again, the card offers to stop asking. It creates an exception you can undo; the safety floor and the company rules still ask."
         ],
         "steps": [
-          "Tick “Remember this decision for this kind of action”.",
-          "Choose for how long: “This session (about 8 hours)” or “This project”.",
-          "If you chose the project, tick “Also for the other agents of this project” to extend it.",
-          "Press “Approve for this session” or “Approve for this project”."
+          "Press “Approve and do not ask again”.",
+          "Choose who it applies to: the agent in all of its work, the agent only in this project or, if the request comes from a batch, everyone in every project of that batch.",
+          "Press “Approve and remember”. At the top of Pending you will see what was created, with “Undo”.",
+          "To review or remove exceptions later, open Settings, “Approvals”, and look at “Active exceptions”."
         ],
-        "tip": "Revoke a remembered decision at any time from the project's “Approvals” tab."
+        "note": "For internal project actions that can be undone, the card also offers “Don't ask again for this kind of action”, for “This session (about 8 hours)” or “This project”, with “Approve for this session” or “Approve for this project”. You revoke them in the project's “Permissions” tab, under “Always allowed in this project”. Sending, publishing, paying, deleting and running code always ask for approval."
       },
       {
         "h": "Review the cost before running",
         "paras": [
-          "Before running a request that may touch connections with write access, the office asks you to review its plan on the Security screen, under “Plan review”."
+          "Before running a request that may touch connections with write access, the office asks you to review its plan on the “Security and control” screen, under “Plan review”."
         ],
         "steps": [
-          "Open “Settings” and go to “Security”.",
+          "Open “Settings” and go to “Safety and limits”.",
           "In “Plan review”, read the estimated cost (with its likely maximum), the approximate time, the “Connections it could touch” and the approvals expected.",
           "Take out any tasks you do not want with “Remove”.",
           "Press “Approve and run” or “Reject”."
@@ -225,24 +292,24 @@
       {
         "h": "Set spend limits",
         "steps": [
-          "For a per-employee cap, open the Dashboard, go to “Costs & errors” and enter its “Monthly cap (USD)” under “Budget limits”. Press “Save”; leaving it empty removes the cap.",
-          "To see every limit, open “Settings”, go to “Security” and scroll to “Spend limits”: each row shows the scope, period, usage, limit and what happens “When reached” (“Warn”, “Pause and ask” or “Block”).",
-          "To limit a connection, open “Connections”, go to the “Limits” tab, set “Uses per day”, “Writes per day” and “Monthly budget (USD)”, and press “Save limits”."
+          "For a per-agent cap, open the Office's “List view”, go to “Costs & errors” and enter its “Monthly cap (USD)” under “Budget limits”. Press “Save”; leaving it empty removes the cap.",
+          "To see every limit, open “Settings”, go to “Safety and limits” and scroll to “Spend limits”: each row shows the scope, period, usage, limit and what happens “When reached” (“Warn”, “Pause and ask” or “Block”).",
+          "To limit a connection, open “Connections”, go to the “Usage and limits” tab, set “Uses per day”, “Writes per day” and “Monthly budget (USD)” under “Limits”, and press “Save limits”."
         ],
-        "tip": "An employee that hits its cap shows as “Paused” under “Budget limits”."
+        "tip": "An agent that hits its cap shows as “Paused” under “Budget limits”."
       },
       {
-        "h": "Decide what each employee can do",
+        "h": "Decide which connections each agent can use",
         "paras": [
-          "Connecting an account is not granting access: each permission is assigned separately, following least privilege. Integrations with real accounts are still being tested."
+          "Connecting an account is not granting access: each permission is assigned separately, following least privilege. “Connections”, in the Teach and connect group of the menu, has three tabs: “Connections”, “Who can use what” and “Usage and limits”."
         ],
         "steps": [
-          "Open “Settings”, go to “Connections” and press “Connect”.",
-          "Follow the “Connect an account” wizard: “Connection name”, “Connection type”, “What will it be able to do?” and, if you like, “Assign to employees (optional)”.",
-          "Open the “Permissions by employee” tab and click a cell (employee and connection) to view or change its permissions.",
-          "Grant write permissions from that same tab. If there is more than one admin, another person must approve the grant.",
-          "Check “What each employee can do” and the “Usage log” to see what happened."
-        ]
+          "Open “Connections” and press “Connect”.",
+          "Follow the “Connect an account” wizard: pick “Other platform (API)” or “Database (read only)”, enter the “Connection name”, its details and its key and, if you like, use “Assign to agents (optional)”.",
+          "Open the “Who can use what” tab. In “Permissions per agent”, click a cell (agent and connection) to view or change its permissions; “What each agent can do” sums it up per agent.",
+          "Check the “Usage log”, in the “Usage and limits” tab, to see what happened."
+        ],
+        "note": "In this version connections are generic and read only: a system with an API and a key, a PostgreSQL database, a data inbox or a link that returns data. Integrations with specific products, such as e-mail, calendar or chat, are not available."
       },
       {
         "h": "Protect your keys",
@@ -253,18 +320,36 @@
         "note": "AI Workforce OS does not hold any security certifications today."
       },
       {
-        "h": "Use the Security center",
+        "h": "Use the security center",
         "paras": [
-          "The “Security and control” screen (Settings, Security) gathers the office's brakes. Nothing you do here deletes data."
+          "The “Security and control” screen (Settings, “Safety and limits”) gathers the office's brakes. Nothing you do here deletes data."
         ],
         "table": {
-          "head": ["Control", "What it does"],
+          "head": [
+            "Control",
+            "What it does"
+          ],
           "rows": [
-            ["Global read-only mode", "Employees keep reading and proposing, but send and change nothing"],
-            ["Pause employees", "A paused employee starts no new tasks and uses no connections, and resumes where it left off"],
-            ["Stop by tool", "Switches a tool off for everyone; any admin stops it and only the Owner turns it back on"],
-            ["Operating hours", "Outside hours, new work waits in plain sight; work already running is not interrupted"],
-            ["Unusual activity alerts", "Warn about a spend spike, bursts of tool requests, many rejected approvals or new recipient domains; they never block on their own"]
+            [
+              "Global read-only mode",
+              "Agents keep reading and proposing, but send and change nothing"
+            ],
+            [
+              "Pause agents",
+              "A paused agent starts no new tasks and uses no connections, and resumes where it left off"
+            ],
+            [
+              "Stop by tool",
+              "Switches a tool off for everyone; any admin stops it and only the Owner turns it back on"
+            ],
+            [
+              "Operating hours",
+              "Outside hours, new work waits in plain sight; approvals and the emergency stop keep working"
+            ],
+            [
+              "Unusual activity alerts",
+              "Warn about a spend spike, bursts of tool requests, many rejected approvals or new recipient domains; they never block on their own"
+            ]
           ]
         },
         "tip": "Alerts can freeze the office automatically, but that option is off by default."
@@ -272,20 +357,29 @@
       {
         "h": "Stop everything in an emergency",
         "paras": [
-          "“Stop everything” is in Settings and in the Security center. Any admin can stop, but only the Owner can lift the lock. Nothing is deleted. There are two levels:"
+          "“Stop everything” is in Settings, in your avatar menu and in the security center. Any admin can stop, but only the Owner can lift the lock. Nothing is deleted. There are two levels:"
         ],
-        "table": {
-          "head": ["Level", "What it does"],
-          "rows": [
-            ["Everything stopped", "Nothing new starts and connection use is blocked; accounts stay connected"],
-            ["Full lockdown", "Also suspends all connections and cancels pending sends"]
-          ]
-        },
         "steps": [
           "Press “Stop everything” and choose the level.",
           "Write a reason if you like and confirm with “Yes, stop everything”.",
-          "To resume, the Owner opens “Security”, writes the “Reason to resume” and presses “Lift lock”."
+          "To resume, the Owner opens “Safety and limits”, writes the “Reason to resume” and presses “Lift lock”."
         ],
+        "table": {
+          "head": [
+            "Level",
+            "What it does"
+          ],
+          "rows": [
+            [
+              "Everything stopped",
+              "Nothing new starts and connection use is blocked; accounts stay connected"
+            ],
+            [
+              "Full lockdown",
+              "Also suspends all connections and cancels pending sends"
+            ]
+          ]
+        },
         "note": "When you resume, actions that were on hold ask for approval again."
       }
     ]

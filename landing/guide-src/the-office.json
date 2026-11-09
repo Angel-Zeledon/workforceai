@@ -7,8 +7,8 @@
   "image": {
     "file": "dashboard.webp",
     "alt": {
-      "es": "El Dashboard de AI Workforce OS con indicadores, tarjetas del equipo, aprobaciones pendientes y actividad en vivo.",
-      "en": "The AI Workforce OS Dashboard with indicators, team cards, pending approvals and live activity."
+      "es": "La vista lista de la oficina de AI Workforce OS con indicadores, tarjetas de los agentes, aprobaciones pendientes y actividad en vivo.",
+      "en": "The AI Workforce OS office list view with indicators, agent cards, pending approvals and live activity."
     }
   },
   "related": [
@@ -17,53 +17,126 @@
     "shop-and-coins"
   ],
   "es": {
-    "title": "La oficina 3D y el Dashboard",
-    "metaTitle": "La oficina 3D y el Dashboard | AI Workforce OS",
-    "description": "Mueve la cámara, habla con un empleado, sigue la actividad, ajusta la luz, redecora la oficina y lee los indicadores del Dashboard.",
-    "intro": "Tu equipo trabaja en dos vistas del mismo sistema: la oficina 3D, para pedir trabajo y ver a los agentes, y el Dashboard, para revisar cifras y tablas. Aquí aprendes a moverte por las dos y a dejar la oficina a tu gusto.",
+    "title": "La oficina: vista 3D, vista lista y tus agentes",
+    "metaTitle": "La oficina y tus agentes | AI Workforce OS",
+    "description": "Recorre el menú, mueve la cámara, habla con un agente, sigue sus pendientes, cambia a la vista lista, contrata agentes y redecora la oficina.",
+    "intro": "La Oficina tiene dos vistas del mismo trabajo: la «Vista 3D», para pedir trabajo y ver a tus agentes, y la «Vista lista», para revisar cifras y tablas. Aquí aprendes a moverte por la app, a hablar con cada agente, a contratar otros y a dejar la oficina a tu gusto.",
     "sections": [
+      {
+        "h": "Recorre el menú",
+        "paras": [
+          "El menú lateral agrupa las pantallas según para qué las usas. En el teléfono se abre con el botón de menú de la barra superior.",
+          "Abajo están «Tienda», «Ajustes» y el interruptor «Ver todo». Apagado es la vista simple: lo avanzado queda plegado detrás de un botón «Más vistas», a un clic. Encendido, todas las vistas aparecen abiertas en toda la app. Se recuerda por persona."
+        ],
+        "table": {
+          "head": [
+            "Grupo",
+            "Pantallas"
+          ],
+          "rows": [
+            [
+              "Tu día",
+              "Oficina, Pendientes, Chats y Proyectos"
+            ],
+            [
+              "Tu empresa",
+              "Agentes y oficinas, Clientes, Archivos y Reuniones"
+            ],
+            [
+              "Enseñar y conectar",
+              "Habilidades y Conexiones"
+            ]
+          ]
+        },
+        "tip": "Junto a muchos títulos verás «¿Qué es esto?»: explica en dos líneas qué es un pedido, un pendiente, una plantilla y otros conceptos."
+      },
       {
         "h": "Mueve la cámara",
         "paras": [
-          "La oficina es una escena 3D y tú eliges el punto de vista. Mientras no tengas a un empleado seleccionado, la esquina inferior derecha te recuerda los gestos del mouse."
+          "La vista 3D es una escena y tú eliges el punto de vista. Mientras no tengas a un agente seleccionado, la esquina inferior derecha te recuerda los gestos del mouse."
         ],
         "table": {
-          "head": ["Acción", "Con mouse", "Con el teléfono en vertical"],
+          "head": [
+            "Acción",
+            "Con mouse",
+            "Con el teléfono en vertical"
+          ],
           "rows": [
-            ["Rotar la vista", "Arrastra con el botón izquierdo", "Gira dos dedos sobre la pantalla"],
-            ["Acercar o alejar", "Usa la rueda", "Pellizca con dos dedos"],
-            ["Desplazar la vista", "Mantén el clic derecho y arrastra", "Arrastra con un dedo"]
+            [
+              "Rotar la vista",
+              "Arrastra con el botón izquierdo",
+              "Gira dos dedos sobre la pantalla"
+            ],
+            [
+              "Acercar o alejar",
+              "Usa la rueda",
+              "Pellizca con dos dedos"
+            ],
+            [
+              "Desplazar la vista",
+              "Mantén el clic derecho y arrastra",
+              "Arrastra con un dedo"
+            ]
           ]
         },
         "tip": "Acércate a un escritorio para ver mejor qué está haciendo cada agente."
       },
       {
-        "h": "Entiende lo que hacen los empleados",
+        "h": "Entiende lo que hacen tus agentes",
         "paras": [
-          "Cada persona es un agente, y lo que hace en la escena refleja su trabajo real: escribe en su escritorio, se reúne con otros para planear o espera en la zona de aprobaciones cuando necesita tu permiso.",
-          "Su estado, por ejemplo Trabajando, Revisando, Bloqueado o Esperando aprobación, también aparece en las tarjetas del Equipo del Dashboard."
+          "Cada persona de la escena es un agente, y lo que hace refleja su trabajo real: escribe en su escritorio, se reúne con otros para planear o espera en la zona de aprobaciones cuando necesita tu permiso.",
+          "Su estado aparece en su panel y en las tarjetas «Agentes» de la vista lista: «Libre», «En curso», «En espera», «Te necesita · una aprobación», «Te necesita · una pregunta», «Con problema» o «Listo»."
         ]
       },
       {
-        "h": "Habla con un empleado",
+        "h": "Habla con un agente",
         "paras": [
-          "Para hablar con un agente concreto en lugar de con toda la oficina, usa su panel."
+          "Para hablar con un agente concreto en lugar de con toda la empresa, usa su panel. Tiene cinco pestañas; en la vista simple se ven «Chat» y «Trabajo», y «Más» muestra las demás."
         ],
         "steps": [
-          "Haz clic en el empleado dentro de la escena.",
+          "Haz clic en el agente dentro de la escena.",
           "Escríbele en la pestaña «Chat» del panel que se abre a la derecha.",
-          "Recorre las otras pestañas para ver su «Estado», sus «Tareas», sus «Reportes», sus «Archivos» o su «Perfil».",
+          "Recorre las demás pestañas para ver su trabajo, lo que puede hacer, lo que sabe y su perfil.",
           "Cierra el panel para volver a ver la oficina completa."
         ],
-        "tip": "En «Tareas», una tarea terminada ofrece «Guardar como habilidad» para reutilizar ese método."
+        "table": {
+          "head": [
+            "Pestaña",
+            "Qué encuentras"
+          ],
+          "rows": [
+            [
+              "Chat",
+              "Tu conversación directa con el agente"
+            ],
+            [
+              "Trabajo",
+              "Su estado, sus tareas, sus informes, sus archivos y su actividad; plegados, «Cómo lo pensó» y «Con otros agentes»"
+            ],
+            [
+              "Qué puede hacer",
+              "«Pausar o probar sin enviar», sus permisos, sus carpetas y sus «Herramientas y conexiones»"
+            ],
+            [
+              "Qué sabe",
+              "Sus habilidades y su memoria"
+            ],
+            [
+              "Perfil",
+              "Quién es, su puesto, su «Apariencia» y su calidad"
+            ]
+          ]
+        },
+        "tip": "En «Trabajo», una tarea terminada ofrece «Guardar como habilidad» para reutilizar ese método."
       },
       {
-        "h": "Sigue la actividad y las aprobaciones",
+        "h": "Sigue la actividad y los pendientes",
         "paras": [
-          "Arriba a la izquierda está el cuadro «Actividad en vivo», con lo que hace cada agente paso a paso. Puedes minimizarlo con su flecha y volver a abrirlo cuando quieras.",
-          "Abajo a la izquierda aparece la bandeja de aprobaciones cuando hay algo pendiente. Se abre sola al llegar una nueva, puedes ocultarla o mostrarla, y en la escena el agente espera en la zona de aprobaciones con su tarjeta para «Aprobar» o «Rechazar»."
+          "Arriba a la izquierda está el cuadro «Actividad en vivo», con lo que hace cada agente paso a paso. En la vista simple empieza minimizado: ábrelo con su flecha y vuelve a minimizarlo cuando quieras.",
+          "Abajo a la izquierda aparece la bandeja de «Aprobaciones pendientes» cuando algo te espera. Puedes decidir ahí mismo con «Aprobar» o «Rechazar», o pulsar «Decidir las N una a una» para ir a «Pendientes». En la escena, el agente espera en la zona de aprobaciones.",
+          "Si estuviste fuera un rato, el botón «Mientras no estabas», arriba a la derecha, resume lo que pasó."
         ],
-        "tip": "En pantallas pequeñas el cuadro de actividad no aparece; usa el Dashboard para seguirla."
+        "tip": "En pantallas pequeñas el cuadro de actividad no aparece; usa la vista lista para seguirla."
       },
       {
         "h": "Ajusta la luz",
@@ -94,32 +167,88 @@
         "tip": "Si otra persona cambió la oficina mientras editabas, pulsa «Recargar» para ver sus cambios."
       },
       {
-        "h": "Pasa al Dashboard",
+        "h": "Cambia a la vista lista",
         "paras": [
-          "El selector Oficina / Dashboard de la barra superior cambia de vista. El Dashboard muestra la misma operación en cifras y tablas, con estas secciones a la izquierda:"
+          "El selector «Vista 3D / Vista lista» de la barra superior cambia de vista sin salir de la Oficina. La vista lista muestra el mismo trabajo en cifras y tablas, con estas secciones a la izquierda:"
         ],
         "table": {
-          "head": ["Sección", "Qué encuentras"],
+          "head": [
+            "Sección",
+            "Qué encuentras"
+          ],
           "rows": [
-            ["Resumen", "Indicadores, el Equipo con el estado de cada agente, aprobaciones pendientes y actividad en vivo"],
-            ["Solicitudes y plan", "Cada pedido con su plan de tareas y su estado"],
-            ["Tareas", "Todas las tareas y su estado"],
-            ["Agentes", "Una ficha por agente con sus tareas hechas y pendientes y su autonomía"],
-            ["Conversaciones", "Las conversaciones del equipo"],
-            ["Aprobaciones", "Las decisiones pendientes, para aprobar o rechazar"],
-            ["Reportes", "Los reportes de las solicitudes completadas"],
-            ["Archivos", "Los archivos de la oficina"],
-            ["Calidad", "Un puntaje orientativo por empleado, que nunca cambia su autonomía ni sus permisos"],
-            ["Costos y errores", "Costo por agente y por solicitud, «Límites de presupuesto» y errores y bloqueos"]
+            [
+              "Resumen",
+              "Indicadores, las tarjetas «Ir a», tus agentes con su estado, las aprobaciones pendientes, la actividad en vivo y las decisiones tomadas"
+            ],
+            [
+              "Agentes",
+              "Una ficha por agente con sus tareas hechas y pendientes y lo que hace sin preguntarte, y las conversaciones entre agentes"
+            ],
+            [
+              "Tareas",
+              "Todas las tareas y su estado"
+            ],
+            [
+              "Calidad",
+              "Un puntaje orientativo por agente, que nunca cambia lo que puede hacer sin preguntarte ni sus permisos"
+            ],
+            [
+              "Costos y errores",
+              "El presupuesto, el costo por agente y por pedido, los «Límites de presupuesto» y los errores y bloqueos"
+            ],
+            [
+              "Informes",
+              "Los informes de los pedidos completados"
+            ]
           ]
         },
         "steps": [
-          "Pulsa «Dashboard» en la barra superior.",
-          "Empieza por «Resumen»: Solicitudes, Tareas activas, Tareas hechas, Aprobaciones, Costo (con su porcentaje del presupuesto), Errores y Agentes activos.",
-          "Abre la sección que necesites.",
-          "Pulsa «Oficina» para volver a pedir trabajo y ver a los agentes."
+          "Pulsa «Vista lista» en la barra superior.",
+          "Empieza por «Resumen»: «Tareas activas», «Tareas hechas», «Costo» (con su porcentaje del presupuesto), «Errores» y «Agentes activos».",
+          "Usa las tarjetas «Ir a» para saltar a «Clientes», «Pedidos» (en Chats), «Pendientes» o «Archivos», que tienen su propia pantalla.",
+          "Pulsa «Vista 3D» para volver a pedir trabajo y ver a los agentes."
         ],
-        "tip": "Si Aprobaciones, Costo o Errores cambian de color, conviene revisarlos."
+        "note": "En la vista simple, «Calidad», «Costos y errores» e «Informes» quedan detrás de «Más vistas».",
+        "tip": "Si la tarjeta «Pendientes» o el indicador «Errores» cambian de color, conviene revisarlos."
+      },
+      {
+        "h": "Contrata agentes y organiza tus oficinas",
+        "paras": [
+          "«Agentes y oficinas», en el grupo Tu empresa del menú, reúne a tus agentes y cómo se organizan, en cuatro pestañas:"
+        ],
+        "table": {
+          "head": [
+            "Pestaña",
+            "Para qué sirve"
+          ],
+          "rows": [
+            [
+              "Agentes",
+              "Todos los agentes que puedes ver, de quién son y quién los usa; «Contratar agente» y el puesto de cada uno"
+            ],
+            [
+              "Oficinas",
+              "Cada oficina es un grupo con sus personas, sus agentes y su memoria; las que tienen espacio propio tienen su lugar en la vista 3D"
+            ],
+            [
+              "Organigrama",
+              "Quién reporta a quién"
+            ],
+            [
+              "Reglas de delegación",
+              "Quién puede asignar trabajo a quién y quién lo aprueba"
+            ]
+          ]
+        },
+        "steps": [
+          "Abre «Agentes y oficinas» y quédate en la pestaña «Agentes».",
+          "Pulsa «Contratar agente» y elige un puesto de la lista.",
+          "Escribe un nombre para el nuevo agente, o deja el campo «Nombre (opcional)» vacío.",
+          "Pulsa «Contratar»."
+        ],
+        "note": "Solo un administrador puede contratar. El agente nuevo empieza en «Me pregunta todo» y nunca puede aprobar por su cuenta.",
+        "tip": "Si ya tienes el máximo de agentes o ya hay uno con ese nombre, la app te avisa y no contrata."
       },
       {
         "h": "Lee la barra superior",
@@ -127,66 +256,139 @@
           "La barra superior te acompaña en todas las pantallas. Según el ancho de tu pantalla, muestra:"
         ],
         "list": [
-          "Aprobaciones: cuántas hay pendientes; el número cambia de color cuando hay alguna.",
-          "Costo: lo gastado hasta ahora.",
-          "La meta del día, por ejemplo «Termina 1 tarea hoy», con su progreso y su premio en monedas.",
+          "«Activas», «Pendientes» y «Costo», en pantallas muy anchas; el número de Pendientes cambia de color cuando hay alguno.",
+          "La «Meta del día», por ejemplo «Termina 1 tarea hoy», con su progreso y su premio en monedas.",
           "«Primeros pasos», mientras te queden pasos de la lista de inicio.",
           "El botón «?», que abre un tour guiado de la pantalla actual.",
-          "Monedas: tu saldo; púlsalo para abrir la Tienda.",
-          "En vivo o Reconectando…: el estado de la conexión."
+          "Tus monedas: el saldo; púlsalo para abrir la Tienda.",
+          "«En vivo» o «Reconectando…»: el estado de la conexión.",
+          "Tu avatar, con «Mi cuenta», «Detener todo» y «Cerrar sesión»."
         ],
         "note": "Si la IA corre en modo simulación, no hay un modelo real detrás y el costo que ves no corresponde a un gasto real con un proveedor."
       }
     ]
   },
   "en": {
-    "title": "The 3D office and the Dashboard",
-    "metaTitle": "The 3D office and the Dashboard | AI Workforce OS",
-    "description": "Move the camera, talk to an employee, follow the activity, adjust the light, redecorate the office and read the Dashboard indicators.",
-    "intro": "Your team works in two views of the same system: the 3D office, to ask for work and watch the agents, and the Dashboard, to review numbers and tables. Here you learn to move around both and make the office your own.",
+    "title": "The office: 3D view, list view and your agents",
+    "metaTitle": "The office and your agents | AI Workforce OS",
+    "description": "Find your way around the menu, move the camera, talk to an agent, follow pending items, switch to the list view, hire agents and redecorate the office.",
+    "intro": "The Office has two views of the same work: the “3D view”, to ask for work and watch your agents, and the “List view”, to review numbers and tables. Here you learn to move around the app, talk to each agent, hire new ones and make the office your own.",
     "sections": [
+      {
+        "h": "Find your way around the menu",
+        "paras": [
+          "The side menu groups the screens by what you use them for. On a phone it opens with the menu button in the top bar.",
+          "At the bottom are “Shop”, “Settings” and the “See everything” switch. Off is the simple view: advanced things are folded behind a “More views” button, one click away. On, every view is open across the app. It is remembered per person."
+        ],
+        "table": {
+          "head": [
+            "Group",
+            "Screens"
+          ],
+          "rows": [
+            [
+              "Your day",
+              "Office, Pending, Chats and Projects"
+            ],
+            [
+              "Your company",
+              "Agents and offices, Customers, Files and Meetings"
+            ],
+            [
+              "Teach and connect",
+              "Skills and Connections"
+            ]
+          ]
+        },
+        "tip": "Next to many titles you will see “What is this?”: it explains in two lines what a request, a pending item, a template and other concepts are."
+      },
       {
         "h": "Move the camera",
         "paras": [
-          "The office is a 3D scene and you choose the point of view. While no employee is selected, the bottom right corner reminds you of the mouse gestures."
+          "The 3D view is a scene and you choose the point of view. While no agent is selected, the bottom right corner reminds you of the mouse gestures."
         ],
         "table": {
-          "head": ["Action", "With a mouse", "With a phone held upright"],
+          "head": [
+            "Action",
+            "With a mouse",
+            "With a phone held upright"
+          ],
           "rows": [
-            ["Rotate the view", "Drag with the left button", "Twist two fingers on the screen"],
-            ["Zoom in or out", "Use the scroll wheel", "Pinch with two fingers"],
-            ["Pan the view", "Hold the right button and drag", "Drag with one finger"]
+            [
+              "Rotate the view",
+              "Drag with the left button",
+              "Twist two fingers on the screen"
+            ],
+            [
+              "Zoom in or out",
+              "Use the scroll wheel",
+              "Pinch with two fingers"
+            ],
+            [
+              "Pan the view",
+              "Hold the right button and drag",
+              "Drag with one finger"
+            ]
           ]
         },
         "tip": "Get close to a desk to see better what each agent is doing."
       },
       {
-        "h": "Understand what the employees are doing",
+        "h": "Understand what your agents are doing",
         "paras": [
-          "Each person is an agent, and what they do in the scene reflects their real work: typing at their desk, meeting others to plan, or waiting in the approvals area when they need your permission.",
-          "Their status, for example Working, Reviewing, Blocked or Awaiting approval, also shows on the Team cards of the Dashboard."
+          "Each person in the scene is an agent, and what it does reflects its real work: typing at its desk, meeting others to plan, or waiting in the approvals area when it needs your permission.",
+          "Its status shows in its panel and on the “Agents” cards of the list view: “Free”, “In progress”, “Waiting”, “Needs you · an approval”, “Needs you · a question”, “Has a problem” or “Done”."
         ]
       },
       {
-        "h": "Talk to an employee",
+        "h": "Talk to an agent",
         "paras": [
-          "To talk to one specific agent instead of the whole office, use their panel."
+          "To talk to one specific agent instead of the whole office, use its panel. It has five tabs; in the simple view you see “Chat” and “Work”, and “More” shows the rest."
         ],
         "steps": [
-          "Click the employee in the scene.",
-          "Write to them in the “Chat” tab of the panel that opens on the right.",
-          "Go through the other tabs to see their “Status”, “Tasks”, “Reports”, “Files” or “Profile”.",
+          "Click the agent in the scene.",
+          "Write to it in the “Chat” tab of the panel that opens on the right.",
+          "Go through the other tabs to see its work, what it can do, what it knows and its profile.",
           "Close the panel to see the whole office again."
         ],
-        "tip": "In “Tasks”, a finished task offers “Save as skill” so you can reuse that method."
+        "table": {
+          "head": [
+            "Tab",
+            "What you find"
+          ],
+          "rows": [
+            [
+              "Chat",
+              "Your direct conversation with the agent"
+            ],
+            [
+              "Work",
+              "Its status, tasks, reports, files and activity; folded, “How it thought” and “With other agents”"
+            ],
+            [
+              "What it can do",
+              "“Pause or try without sending”, its permissions, its folders and its “Tools and connections”"
+            ],
+            [
+              "What it knows",
+              "Its skills and its memory"
+            ],
+            [
+              "Profile",
+              "Who it is, its job, its “Appearance” and its quality"
+            ]
+          ]
+        },
+        "tip": "In “Work”, a finished task offers “Save as skill” so you can reuse that method."
       },
       {
-        "h": "Follow activity and approvals",
+        "h": "Follow activity and pending items",
         "paras": [
-          "At the top left is the “Live activity” box, with what each agent does step by step. You can minimize it with its arrow and open it again whenever you want.",
-          "At the bottom left, the approvals tray appears when something is pending. It opens by itself when a new one arrives, you can hide or show it, and in the scene the agent waits in the approvals area with its card to “Approve” or “Reject”."
+          "At the top left is the “Live activity” box, with what each agent does step by step. In the simple view it starts minimized: open it with its arrow and minimize it again whenever you want.",
+          "At the bottom left, the “Pending approvals” tray appears when something is waiting for you. You can decide right there with “Approve” or “Reject”, or press “Decide all N one by one” to go to “Pending”. In the scene, the agent waits in the approvals area.",
+          "If you were away for a while, the “While you were away” button at the top right sums up what happened."
         ],
-        "tip": "On small screens the activity box does not appear; use the Dashboard to follow it."
+        "tip": "On small screens the activity box does not appear; use the list view to follow it."
       },
       {
         "h": "Adjust the light",
@@ -217,48 +419,104 @@
         "tip": "If someone else changed the office while you were editing, press “Reload” to see their changes."
       },
       {
-        "h": "Switch to the Dashboard",
+        "h": "Switch to the list view",
         "paras": [
-          "The Office / Dashboard switch in the top bar changes the view. The Dashboard shows the same operation as numbers and tables, with these sections on the left:"
+          "The “3D view / List view” switch in the top bar changes the view without leaving the Office. The list view shows the same work as numbers and tables, with these sections on the left:"
         ],
         "table": {
-          "head": ["Section", "What you find"],
+          "head": [
+            "Section",
+            "What you find"
+          ],
           "rows": [
-            ["Overview", "Indicators, the Team with each agent's status, pending approvals and live activity"],
-            ["Requests & plan", "Each request with its task plan and status"],
-            ["Tasks", "Every task and its status"],
-            ["Agents", "One card per agent with its done and pending tasks and its autonomy"],
-            ["Conversations", "The team's conversations"],
-            ["Approvals", "Pending decisions, to approve or reject"],
-            ["Reports", "The reports of completed requests"],
-            ["Files", "The office files"],
-            ["Quality", "An advisory score per employee, which never changes its autonomy or permissions"],
-            ["Costs & errors", "Cost per agent and per request, “Budget limits”, and errors and blocks"]
+            [
+              "Overview",
+              "Indicators, the “Go to” cards, your agents with their status, pending approvals, live activity and the decisions made"
+            ],
+            [
+              "Agents",
+              "One card per agent with its done and pending tasks and what it can do without asking you, plus the conversations between agents"
+            ],
+            [
+              "Tasks",
+              "Every task and its status"
+            ],
+            [
+              "Quality",
+              "An advisory score per agent, which never changes what it can do without asking you nor its permissions"
+            ],
+            [
+              "Costs & errors",
+              "The budget, cost per agent and per request, “Budget limits”, and errors and blocks"
+            ],
+            [
+              "Reports",
+              "The reports of completed requests"
+            ]
           ]
         },
         "steps": [
-          "Press “Dashboard” in the top bar.",
-          "Start with “Overview”: Requests, Active tasks, Tasks done, Approvals, Cost (with its share of the budget), Errors and Active agents.",
-          "Open the section you need.",
-          "Press “Office” to ask for work again and watch the agents."
+          "Press “List view” in the top bar.",
+          "Start with “Overview”: “Active tasks”, “Tasks done”, “Cost” (with its share of the budget), “Errors” and “Active agents”.",
+          "Use the “Go to” cards to jump to “Customers”, “Requests” (in Chats), “Pending” or “Files”, which have a screen of their own.",
+          "Press “3D view” to ask for work again and watch the agents."
         ],
-        "tip": "If Approvals, Cost or Errors change color, they are worth a look."
+        "note": "In the simple view, “Quality”, “Costs & errors” and “Reports” sit behind “More views”.",
+        "tip": "If the “Pending” card or the “Errors” indicator change color, they are worth a look."
+      },
+      {
+        "h": "Hire agents and organize your offices",
+        "paras": [
+          "“Agents and offices”, in the Your company group of the menu, brings together your agents and how they are organized, in four tabs:"
+        ],
+        "table": {
+          "head": [
+            "Tab",
+            "What it is for"
+          ],
+          "rows": [
+            [
+              "Agents",
+              "Every agent you can see, whose it is and who uses it; “Hire an agent” and each agent's job description"
+            ],
+            [
+              "Offices",
+              "Each office is a group of people and agents with its memory; the ones with their own space have their place in the 3D view"
+            ],
+            [
+              "Org chart",
+              "Who reports to whom"
+            ],
+            [
+              "Delegation rules",
+              "Who may assign work to whom and who approves it"
+            ]
+          ]
+        },
+        "steps": [
+          "Open “Agents and offices” and stay on the “Agents” tab.",
+          "Press “Hire an agent” and pick a role from the list.",
+          "Type a name for the new agent, or leave the “Name (optional)” field empty.",
+          "Press “Hire”."
+        ],
+        "note": "Only an administrator can hire. The new agent can do very little without asking you at first, and it can never approve on its own.",
+        "tip": "If the office is full or an agent with that name already exists, the app tells you and does not hire."
       },
       {
         "h": "Read the top bar",
         "paras": [
-          "The top bar stays with you on every screen. Depending on your screen width, it shows:"
+          "The top bar stays with you on every screen. Depending on the width of your screen, it shows:"
         ],
         "list": [
-          "Approvals: how many are pending; the number changes color when there are any.",
-          "Cost: what has been spent so far.",
-          "The daily goal, for example “Finish 1 task today”, with its progress and its coin reward.",
-          "“Getting started”, while you have steps left in the starter list.",
+          "“Active”, “Pending” and “Cost”, on very wide screens; the Pending number changes color when there is something.",
+          "The “Daily goal”, for example “Finish 1 task today”, with its progress and its coin reward.",
+          "“Getting started”, while you have steps left on the starter list.",
           "The “?” button, which opens a guided tour of the current screen.",
-          "Coins: your balance; press it to open the Shop.",
-          "Live or Reconnecting…: the connection status."
+          "Your coins: the balance; press it to open the Shop.",
+          "“Live” or “Reconnecting…”: the connection status.",
+          "Your avatar, with “My account”, “Stop everything” and “Sign out”."
         ],
-        "note": "If the AI runs in simulation mode, there is no real model behind it and the cost you see is not real spending with a provider."
+        "note": "If the AI runs in simulation mode, there is no real model behind it and the cost you see is not a real charge from a provider."
       }
     ]
   }

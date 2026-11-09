@@ -3176,6 +3176,8 @@
   "chats.stub.body": "Aquí verás el historial de conversaciones con cada agente. Estará disponible muy pronto.",
   "hint.dismiss": "Entendido, cerrar",
   "settings.page.title": "Ajustes",
+  "settings.needsSession.title": "Disponible con inicio de sesión",
+  "settings.needsSession.body": "Miembros, verificación en dos pasos e inicio de sesión único se usan cuando tu organización entra con cuentas. Esta demo abierta no tiene cuentas.",
   "settings.page.desc": "Lo que configuras una vez: tu empresa, la seguridad y tu cuenta. Conexiones y Clientes están en el menú.",
   "settings.page.office": "Idioma, etiquetas, movimiento y personalización de cada agente.",
   "settings.page.hire": "Añade un nuevo agente de IA a partir de un puesto.",

@@ -137,7 +137,7 @@ function BatchCard({ b, onOpen }: { b: BatchSummary; onOpen: () => void }) {
       className="min-w-0 rounded-xl border border-accent/30 bg-panel p-3 text-left shadow-pop transition hover:-translate-y-0.5 hover:border-accent sm:p-4">
       <div className="text-[10px] font-semibold uppercase tracking-wide text-accent">{t("batch.card.kicker")}</div>
       <div className="mt-0.5 truncate font-display text-[15px] font-semibold text-ink">{t("batch.cardTitle", { name: b.name, count: b.customers })}</div>
-      <div className="mt-3"><Progress value={pct} color="#2563eb" /></div>
+      <div className="mt-3"><Progress value={pct} color="#0A66C2" /></div>
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-mute">
         <span>{t("batch.card.done", { count: done })}</span>
         {(b.summary.running ?? 0) > 0 && <span>{t("batch.card.running", { count: b.summary.running })}</span>}

@@ -26,7 +26,7 @@
       {
         "h": "Explora las habilidades incluidas",
         "paras": [
-          "La biblioteca empieza con 55 habilidades incluidas, ya activas y escritas en español o en inglés. Llevan la etiqueta «Incluida» y cubren ventas, finanzas, legal, recursos humanos, soporte, producto, datos e ingeniería. Por ejemplo:"
+          "La biblioteca empieza con más de cien habilidades incluidas, ya activas y escritas en el idioma de tu organización (español o inglés). Llevan la etiqueta «Incluida» y cubren ventas, finanzas, legal, recursos humanos, soporte, producto, datos, ingeniería y más. Por ejemplo:"
         ],
         "list": [
           "Conciliación bancaria y cierre de mes.",
@@ -63,7 +63,7 @@
           ]
         },
         "note": "El análisis avisa, por ejemplo, de una «Posible inyección de instrucciones» o de que la habilidad «Contiene un script». Los scripts se guardan como texto y nunca se ejecutan por sí solos: hacerlo requiere `code.run` con aprobación humana.",
-        "tip": "Puedes llevarte cualquier habilidad con «Descargar .zip» o «Descargar SKILL.md»."
+        "tip": "Puedes llevarte cualquier habilidad con «Descargar .zip» o «Descargar el archivo de la habilidad»."
       },
       {
         "h": "Crea una habilidad propia",
@@ -75,7 +75,7 @@
           "Pulsa «Crear borrador» y, desde su ficha, «Enviar a revisión»."
         ],
         "paras": [
-          "Puedes escribirla desde cero o partir de un trabajo ya hecho: en la pestaña «Tareas» del panel de un agente, una tarea terminada ofrece «Guardar como habilidad», que prellena el borrador."
+          "Puedes escribirla desde cero o partir de un trabajo ya hecho: en la pestaña «Trabajo» del panel de un agente, una tarea terminada ofrece «Guardar como habilidad», que prellena el borrador."
         ],
         "note": "Los archivos de apoyo deben ser texto (md, txt, csv, json, yaml, py, js o sh), de hasta 512 KB cada uno y 2 MB en total.",
         "tip": "Cada guardado crea una versión nueva; las anteriores se conservan y puedes restaurarlas desde «Versiones»."
@@ -130,7 +130,7 @@
       {
         "h": "Browse the built-in skills",
         "paras": [
-          "The library starts with 55 built-in skills, already active and written in Spanish or English. They carry the “Built-in” label and cover sales, finance, legal, human resources, support, product, data and engineering. For example:"
+          "The library starts with more than a hundred built-in skills, already active and written in your organization's language (Spanish or English). They carry the “Built-in” label and cover sales, finance, legal, human resources, support, product, data, engineering and more. For example:"
         ],
         "list": [
           "Bank reconciliation and month-end close.",
@@ -167,7 +167,7 @@
           ]
         },
         "note": "The scan warns, for example, about a “Possible instruction injection” or that the skill “Contains a script”. Scripts are stored as text and never run on their own: running one needs `code.run` with human approval.",
-        "tip": "You can take any skill with you using “Download .zip” or “Download SKILL.md”."
+        "tip": "You can take any skill with you using “Download .zip” or “Download the skill file”."
       },
       {
         "h": "Create your own skill",
@@ -179,7 +179,7 @@
           "Press “Create draft” and then, from its page, “Send for review”."
         ],
         "paras": [
-          "You can write it from scratch or start from work already done: in the “Tasks” tab of an agent's panel, a finished task offers “Save as skill”, which pre-fills the draft."
+          "You can write it from scratch or start from work already done: in the “Work” tab of an agent's panel, a finished task offers “Save as skill”, which pre-fills the draft."
         ],
         "note": "Resource files must be text (md, txt, csv, json, yaml, py, js or sh), up to 512 KB each and 2 MB in total.",
         "tip": "Every save creates a new version; earlier ones are kept and you can restore them from “Versions”."

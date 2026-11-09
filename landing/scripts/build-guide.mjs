@@ -104,7 +104,7 @@ const UI = {
     guide: {
       name: "Guía de uso", short: "Guía", title: "Guía de uso de AI Workforce OS", meta: "Guía de uso de AI Workforce OS | Cómo usar la app",
       desc: "Aprende a usar AI Workforce OS paso a paso: pedir trabajo, aprobar, proyectos, habilidades, tienda, archivos y seguridad.",
-      intro: "Todo lo que necesitas para sacarle partido a tu oficina de empleados de IA, pantalla por pantalla. Empieza por «Primeros pasos» y sigue el orden, o salta a lo que te interese.",
+      intro: "Todo lo que necesitas para sacarle partido a tu oficina de agentes de IA, pantalla por pantalla. Empieza por «Primeros pasos» y sigue el orden, o salta a lo que te interese.",
       blurb: "Cómo usar la app, pantalla por pantalla.",
       groups: { start: ["Empieza", "Tu primera sesión y cómo se lee la oficina."], work: ["Trabajo diario", "Pedir trabajo, seguirlo y decidir qué se ejecuta."], tune: ["Personaliza", "Habilidades, tienda y ajustes de tu cuenta."] },
       quick: ["getting-started", "the-office", "approvals-and-security"],
@@ -139,7 +139,7 @@ const UI = {
     guide: {
       name: "User guide", short: "Guide", title: "AI Workforce OS user guide", meta: "AI Workforce OS user guide | How to use the app",
       desc: "Learn AI Workforce OS step by step: ask for work, approve, projects, skills, shop, files and security.",
-      intro: "Everything you need to get the most out of your office of AI employees, screen by screen. Start with “Getting started” and follow the order, or jump to what interests you.",
+      intro: "Everything you need to get the most out of your office of AI agents, screen by screen. Start with “Getting started” and follow the order, or jump to what interests you.",
       blurb: "How to use the app, screen by screen.",
       groups: { start: ["Get started", "Your first session and how to read the office."], work: ["Everyday work", "Ask for work, follow it and decide what runs."], tune: ["Customize", "Skills, the shop and your account settings."] },
       quick: ["getting-started", "the-office", "approvals-and-security"],
