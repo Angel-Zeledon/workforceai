@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
@@ -103,6 +104,68 @@ func (s *server) driveFail(w http.ResponseWriter, err error) {
 	writeJSON(w, status, body)
 }
 
+// driveNeed checks what the acting person may do at path (office folders, company edition): nil when the person
+// has level; domain.ErrNotFound when the person may not see it at all (a private office is never revealed);
+// domain.ErrForbidden when the person may only read and asked to change. Outside /Offices everything is edit.
+func (s *server) driveNeed(r *http.Request, path, level string) error {
+	have := s.Drive.PersonAccess(r.Context(), application.PersonFrom(r.Context()), path)
+	if have == drive.AccessNone {
+		return &drive.Error{Code: "not_found", Kind: domain.ErrNotFound, Msg: "not found"}
+	}
+	if level == drive.AccessEdit && have != drive.AccessEdit {
+		return &drive.Error{Code: "read_only_folder", Kind: domain.ErrForbidden, Msg: "you can read this office's folder but not change it"}
+	}
+	return nil
+}
+
+// driveVisible keeps the items the acting person may see, resolved in one VisibleTo call for the whole list.
+func driveVisible[T any](s *server, r *http.Request, items []T, path func(T) string) []T {
+	if len(items) == 0 {
+		return items
+	}
+	paths := make([]string, len(items))
+	for i, it := range items {
+		paths[i] = path(it)
+	}
+	ok := s.Drive.VisibleTo(r.Context(), application.PersonFrom(r.Context()), paths)
+	out := make([]T, 0, len(items))
+	for i, it := range items {
+		if ok[i] {
+			out = append(out, it)
+		}
+	}
+	return out
+}
+
+func folderPath(f drive.Folder) string { return f.Path }
+func filePath(f drive.File) string     { return f.Path }
+
+// driveFileFor loads the file {id} and checks the person's level on its path; false = the answer was written.
+func (s *server) driveFileFor(w http.ResponseWriter, r *http.Request, level string) (drive.File, bool) {
+	f, err := s.Drive.GetFile(r.Context(), chi.URLParam(r, "id"))
+	if err == nil {
+		err = s.driveNeed(r, f.Path, level)
+	}
+	if err != nil {
+		s.driveFail(w, err)
+		return drive.File{}, false
+	}
+	return f, true
+}
+
+// driveFolderFor checks the person's level on the active folder {id}; false = the answer was written.
+func (s *server) driveFolderFor(w http.ResponseWriter, r *http.Request, level string) (drive.Folder, bool) {
+	f, err := s.Drive.FolderByID(r.Context(), chi.URLParam(r, "id"))
+	if err == nil {
+		err = s.driveNeed(r, f.Path, level)
+	}
+	if err != nil {
+		s.driveFail(w, err)
+		return drive.Folder{}, false
+	}
+	return f, true
+}
+
 func queryInt(r *http.Request, key string) int {
 	n, _ := strconv.Atoi(r.URL.Query().Get(key))
 	return n
@@ -144,11 +207,16 @@ func (s *server) driveList(w http.ResponseWriter, r *http.Request) {
 	if p == "" {
 		p = "/"
 	}
+	if err := s.driveNeed(r, p, drive.AccessRead); err != nil {
+		s.driveFail(w, err)
+		return
+	}
 	l, err := s.Drive.List(r.Context(), p)
 	if err != nil {
 		s.driveFail(w, err)
 		return
 	}
+	l.Folders, l.Files = driveVisible(s, r, l.Folders, folderPath), driveVisible(s, r, l.Files, filePath)
 	writeJSON(w, http.StatusOK, l)
 }
 
@@ -164,6 +232,7 @@ func (s *server) driveSearch(w http.ResponseWriter, r *http.Request) {
 		s.driveFail(w, err)
 		return
 	}
+	hits = driveVisible(s, r, hits, func(h drive.Hit) string { return h.Path })
 	writeJSON(w, http.StatusOK, map[string]any{"hits": list(hits)})
 }
 
@@ -182,6 +251,7 @@ func (s *server) driveTrash(w http.ResponseWriter, r *http.Request) {
 		s.driveFail(w, err)
 		return
 	}
+	t.Folders, t.Files = driveVisible(s, r, t.Folders, folderPath), driveVisible(s, r, t.Files, filePath)
 	writeJSON(w, http.StatusOK, t)
 }
 
@@ -192,6 +262,10 @@ func (s *server) driveMkdir(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.decode(w, r, &in); err != nil {
 		s.fail(w, err)
+		return
+	}
+	if err := s.driveNeed(r, in.Path, drive.AccessEdit); err != nil {
+		s.driveFail(w, err)
 		return
 	}
 	f, err := s.Drive.Mkdir(r.Context(), s.drivePrincipal(r), in.Path)
@@ -212,6 +286,13 @@ func (s *server) driveMoveFolder(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	if _, ok := s.driveFolderFor(w, r, drive.AccessEdit); !ok {
+		return
+	}
+	if err := s.driveNeed(r, in.Path, drive.AccessEdit); err != nil {
+		s.driveFail(w, err)
+		return
+	}
 	f, err := s.Drive.MoveFolder(r.Context(), s.drivePrincipal(r), chi.URLParam(r, "id"), in.Path)
 	if err != nil {
 		s.driveFail(w, err)
@@ -221,6 +302,9 @@ func (s *server) driveMoveFolder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) driveDeleteFolder(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.driveFolderFor(w, r, drive.AccessEdit); !ok {
+		return
+	}
 	if err := s.Drive.DeleteFolder(r.Context(), s.drivePrincipal(r), chi.URLParam(r, "id")); err != nil {
 		s.driveFail(w, err)
 		return
@@ -228,8 +312,27 @@ func (s *server) driveDeleteFolder(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// driveRestoreFolder: only the roots of a deletion can be restored, and the trash lists exactly those, so the
+// path to authorize comes from there; a folder that is not in it is not found (as the drive itself would say).
 func (s *server) driveRestoreFolder(w http.ResponseWriter, r *http.Request) {
-	f, err := s.Drive.RestoreFolder(r.Context(), s.drivePrincipal(r), chi.URLParam(r, "id"))
+	id := chi.URLParam(r, "id")
+	t, err := s.Drive.Trash(r.Context())
+	if err != nil {
+		s.driveFail(w, err)
+		return
+	}
+	need := error(&drive.Error{Code: "not_found", Kind: domain.ErrNotFound, Msg: "folder not found in the trash"})
+	for _, f := range t.Folders {
+		if f.ID == id {
+			need = s.driveNeed(r, f.Path, drive.AccessEdit)
+			break
+		}
+	}
+	if need != nil {
+		s.driveFail(w, need)
+		return
+	}
+	f, err := s.Drive.RestoreFolder(r.Context(), s.drivePrincipal(r), id)
 	if err != nil {
 		s.driveFail(w, err)
 		return
@@ -238,9 +341,8 @@ func (s *server) driveRestoreFolder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) driveFile(w http.ResponseWriter, r *http.Request) {
-	f, err := s.Drive.GetFile(r.Context(), chi.URLParam(r, "id"))
-	if err != nil {
-		s.driveFail(w, err)
+	f, ok := s.driveFileFor(w, r, drive.AccessRead)
+	if !ok {
 		return
 	}
 	writeJSON(w, http.StatusOK, f)
@@ -249,9 +351,8 @@ func (s *server) driveFile(w http.ResponseWriter, r *http.Request) {
 // driveContent: GET /drive/files/{id}/content[?version=n][&download=1]. Streamed;
 // never sniffed, never cached by shared caches, sandboxed if opened directly.
 func (s *server) driveContent(w http.ResponseWriter, r *http.Request) {
-	f, err := s.Drive.GetFile(r.Context(), chi.URLParam(r, "id"))
-	if err != nil {
-		s.driveFail(w, err)
+	f, ok := s.driveFileFor(w, r, drive.AccessRead)
+	if !ok {
 		return
 	}
 	rc, v, err := s.Drive.Download(r.Context(), s.drivePrincipal(r), f, queryInt(r, "version"))
@@ -279,9 +380,8 @@ func (s *server) driveContent(w http.ResponseWriter, r *http.Request) {
 // driveText: GET /drive/files/{id}/text?version=&offset=&max_chars=. The
 // extracted text (what an agent would read), paged.
 func (s *server) driveText(w http.ResponseWriter, r *http.Request) {
-	f, err := s.Drive.GetFile(r.Context(), chi.URLParam(r, "id"))
-	if err != nil {
-		s.driveFail(w, err)
+	f, ok := s.driveFileFor(w, r, drive.AccessRead)
+	if !ok {
 		return
 	}
 	t, err := s.Drive.ReadText(r.Context(), f, queryInt(r, "version"), queryInt(r, "offset"), queryInt(r, "max_chars"))
@@ -296,9 +396,8 @@ func (s *server) driveText(w http.ResponseWriter, r *http.Request) {
 // office file (xlsx sheets, docx blocks) read by the server; the browser never
 // parses the untrusted package.
 func (s *server) drivePreview(w http.ResponseWriter, r *http.Request) {
-	f, err := s.Drive.GetFile(r.Context(), chi.URLParam(r, "id"))
-	if err != nil {
-		s.driveFail(w, err)
+	f, ok := s.driveFileFor(w, r, drive.AccessRead)
+	if !ok {
 		return
 	}
 	p, v, err := s.Drive.PreviewOf(r.Context(), f, queryInt(r, "version"))
@@ -311,6 +410,9 @@ func (s *server) drivePreview(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) driveVersions(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.driveFileFor(w, r, drive.AccessRead); !ok {
+		return
+	}
 	vs, err := s.Drive.Versions(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
 		s.driveFail(w, err)
@@ -327,6 +429,9 @@ func (s *server) driveRestoreVersion(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, errors.Join(domain.ErrInvalid, err))
 		return
 	}
+	if _, ok := s.driveFileFor(w, r, drive.AccessEdit); !ok {
+		return
+	}
 	res, err := s.Drive.RestoreVersion(r.Context(), s.drivePrincipal(r), chi.URLParam(r, "id"), n, expectedVersion(r))
 	if err != nil {
 		s.driveFail(w, err)
@@ -337,9 +442,8 @@ func (s *server) driveRestoreVersion(w http.ResponseWriter, r *http.Request) {
 
 // driveDiff: GET /drive/files/{id}/diff?from=&to= (text files).
 func (s *server) driveDiff(w http.ResponseWriter, r *http.Request) {
-	f, err := s.Drive.GetFile(r.Context(), chi.URLParam(r, "id"))
-	if err != nil {
-		s.driveFail(w, err)
+	f, ok := s.driveFileFor(w, r, drive.AccessRead)
+	if !ok {
 		return
 	}
 	d, err := s.Drive.Diff(r.Context(), f, queryInt(r, "from"), queryInt(r, "to"))
@@ -354,6 +458,13 @@ func (s *server) driveMoveFile(w http.ResponseWriter, r *http.Request) {
 	var in drivePathBody
 	if err := s.decode(w, r, &in); err != nil {
 		s.fail(w, err)
+		return
+	}
+	if _, ok := s.driveFileFor(w, r, drive.AccessEdit); !ok {
+		return
+	}
+	if err := s.driveNeed(r, in.Path, drive.AccessEdit); err != nil {
+		s.driveFail(w, err)
 		return
 	}
 	f, err := s.Drive.MoveFile(r.Context(), s.drivePrincipal(r), chi.URLParam(r, "id"), in.Path)
@@ -372,6 +483,9 @@ func (s *server) driveTags(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	if _, ok := s.driveFileFor(w, r, drive.AccessEdit); !ok {
+		return
+	}
 	f, err := s.Drive.SetTags(r.Context(), s.drivePrincipal(r), chi.URLParam(r, "id"), in.Tags)
 	if err != nil {
 		s.driveFail(w, err)
@@ -381,6 +495,9 @@ func (s *server) driveTags(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) driveDeleteFile(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.driveFileFor(w, r, drive.AccessEdit); !ok {
+		return
+	}
 	if err := s.Drive.DeleteFile(r.Context(), s.drivePrincipal(r), chi.URLParam(r, "id")); err != nil {
 		s.driveFail(w, err)
 		return
@@ -389,6 +506,9 @@ func (s *server) driveDeleteFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) driveRestoreFile(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.driveFileFor(w, r, drive.AccessEdit); !ok { // GetFile also finds a file in the trash
+		return
+	}
 	f, err := s.Drive.RestoreFile(r.Context(), s.drivePrincipal(r), chi.URLParam(r, "id"))
 	if err != nil {
 		s.driveFail(w, err)
@@ -409,6 +529,7 @@ func (s *server) driveGrants(w http.ResponseWriter, r *http.Request) {
 		s.driveFail(w, err)
 		return
 	}
+	gs = driveVisible(s, r, gs, func(g drive.Grant) string { return g.Path })
 	writeJSON(w, http.StatusOK, map[string]any{"grants": list(gs)})
 }
 
@@ -423,6 +544,11 @@ func (s *server) driveAddGrant(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	// whoever opens a folder to an agent must be able to change it
+	if err := s.driveNeed(r, in.Path, drive.AccessEdit); err != nil {
+		s.driveFail(w, err)
+		return
+	}
 	g, err := s.Drive.AddGrant(r.Context(), s.drivePrincipal(r), in.AgentID, in.Path)
 	if err != nil {
 		s.driveFail(w, err)
@@ -431,8 +557,25 @@ func (s *server) driveAddGrant(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, g)
 }
 
+// driveRevokeGrant: changing what an agent reads at a path needs edit there too (the grant is looked up among the
+// active ones; an unknown id is left to the drive, which answers not found).
 func (s *server) driveRevokeGrant(w http.ResponseWriter, r *http.Request) {
-	if err := s.Drive.RevokeGrant(r.Context(), s.drivePrincipal(r), chi.URLParam(r, "id")); err != nil {
+	id := chi.URLParam(r, "id")
+	gs, err := s.Drive.Grants(r.Context(), "")
+	if err != nil {
+		s.driveFail(w, err)
+		return
+	}
+	for _, g := range gs {
+		if g.ID == id {
+			if err := s.driveNeed(r, g.Path, drive.AccessEdit); err != nil {
+				s.driveFail(w, err)
+				return
+			}
+			break
+		}
+	}
+	if err := s.Drive.RevokeGrant(r.Context(), s.drivePrincipal(r), id); err != nil {
 		s.driveFail(w, err)
 		return
 	}

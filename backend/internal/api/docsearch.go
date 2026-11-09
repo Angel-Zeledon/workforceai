@@ -53,7 +53,8 @@ func (s *server) drivePassages(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"enabled": true, "hits": list(res.Hits), "mode": res.Mode, "note": res.Note})
+	hits := driveVisible(s, r, res.Hits, func(h drive.ChunkHit) string { return h.Path })
+	writeJSON(w, http.StatusOK, map[string]any{"enabled": true, "hits": list(hits), "mode": res.Mode, "note": res.Note})
 }
 
 // driveIndexStatus: GET /drive/index/status?path=. Counts of the index states
@@ -66,6 +67,10 @@ func (s *server) driveIndexStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	out := map[string]any{"enabled": st.Enabled, "embeddings": s.DocIndex.Embeddings(r.Context())}
 	if st.Enabled {
+		if err := s.driveNeed(r, r.URL.Query().Get("path"), drive.AccessRead); err != nil {
+			s.driveFail(w, err) // the counts of a folder the person may not see are not revealed
+			return
+		}
 		c, err := s.DocIndex.Status(r.Context(), r.URL.Query().Get("path"))
 		if err != nil {
 			s.driveFail(w, err)

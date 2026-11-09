@@ -91,6 +91,7 @@ func (s *server) agentFolderAccess(w http.ResponseWriter, r *http.Request) {
 		s.driveFail(w, err)
 		return
 	}
+	es = driveVisible(s, r, es, accessEntryPath)
 	writeJSON(w, http.StatusOK, map[string]any{"entries": list(es), "can_manage": s.canManageAgentAccess(r, id)})
 }
 
@@ -113,6 +114,11 @@ func (s *server) putAgentFolderAccess(w http.ResponseWriter, r *http.Request) {
 		codeErr(w, http.StatusForbidden, "forbidden", "only admins and the head of the agent's office change its folders")
 		return
 	}
+	// whoever changes what an agent may do in a folder must be able to change that folder
+	if err := s.driveNeed(r, in.Path, drive.AccessEdit); err != nil {
+		s.driveFail(w, err)
+		return
+	}
 	prev, err := s.Drive.SetAgentAccess(r.Context(), s.drivePrincipal(r), id, in.Path, strings.ToLower(strings.TrimSpace(in.Level)))
 	if err != nil {
 		s.driveFail(w, err)
@@ -123,8 +129,11 @@ func (s *server) putAgentFolderAccess(w http.ResponseWriter, r *http.Request) {
 		s.driveFail(w, err)
 		return
 	}
+	es = driveVisible(s, r, es, accessEntryPath)
 	writeJSON(w, http.StatusOK, map[string]any{"previous": prev, "entries": list(es), "can_manage": true})
 }
+
+func accessEntryPath(e drive.AccessEntry) string { return e.Path }
 
 type folderAgent struct {
 	AgentID   string `json:"agent_id"`
@@ -139,6 +148,10 @@ func (s *server) driveFolderAccess(w http.ResponseWriter, r *http.Request) {
 	p, err := drive.CleanPath(r.URL.Query().Get("path"))
 	if err != nil || p == "/" {
 		codeErr(w, http.StatusBadRequest, "path_invalid", "a folder path below / is required")
+		return
+	}
+	if err := s.driveNeed(r, p, drive.AccessRead); err != nil {
+		s.driveFail(w, err)
 		return
 	}
 	agents, err := s.Queries.Agents(r.Context())

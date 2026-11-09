@@ -72,6 +72,10 @@ func uploadDone(w http.ResponseWriter) {
 // with the raw file as body. Creates the file or adds a version to it. 201
 // created, 200 new version (or unchanged); 409 version_conflict; 413; 415; 423.
 func (s *server) driveUpload(w http.ResponseWriter, r *http.Request) {
+	if err := s.driveNeed(r, r.URL.Query().Get("path"), drive.AccessEdit); err != nil {
+		s.driveFail(w, err)
+		return
+	}
 	body, ok := s.uploadBody(w, r, s.Drive.Limits().MaxUploadBytes)
 	if !ok {
 		return
@@ -92,6 +96,9 @@ func (s *server) driveUpload(w http.ResponseWriter, r *http.Request) {
 
 // driveNewVersion: PUT /drive/files/{id}/content?message=&expected_version= raw body.
 func (s *server) driveNewVersion(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.driveFileFor(w, r, drive.AccessEdit); !ok {
+		return
+	}
 	body, ok := s.uploadBody(w, r, s.Drive.Limits().MaxUploadBytes)
 	if !ok {
 		return
@@ -179,8 +186,13 @@ func (s *server) driveUploadMany(w http.ResponseWriter, r *http.Request) {
 				Error: "too many files in one upload"})
 			continue
 		}
-		body := &progressReader{r: part, rc: rc, idle: uploadIdle}
-		res, err := s.Drive.WriteStream(r.Context(), p, drive.StreamInput{Path: full, Body: body, Size: -1, Message: msg, Source: "upload"})
+		// each file is authorized at its own final path; a refused one is reported and the rest go on
+		var res drive.WriteResult
+		err = s.driveNeed(r, full, drive.AccessEdit)
+		if err == nil {
+			body := &progressReader{r: part, rc: rc, idle: uploadIdle}
+			res, err = s.Drive.WriteStream(r.Context(), p, drive.StreamInput{Path: full, Body: body, Size: -1, Message: msg, Source: "upload"})
+		}
 		_ = part.Close()
 		item := uploadItem{Name: name, Path: full}
 		if err != nil {
