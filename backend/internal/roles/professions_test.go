@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-func TestProfessionsAreTheEightOfTheDesign(t *testing.T) {
-	want := []string{"legal", "sales", "accounting", "marketing", "operations", "hr", "direction", "other"}
+func TestProfessionsAreTheNineOfTheDesign(t *testing.T) {
+	want := []string{"legal", "sales", "accounting", "marketing", "operations", "hr", "direction", "education", "other"}
 	got := []string{}
 	for _, p := range Professions() {
 		got = append(got, p.Key)
@@ -74,5 +74,49 @@ func TestSeedAgentsForKeepsTheSeedIdentityAndTheLocale(t *testing.T) {
 	en := SeedAgentsFor([]string{"legal"}, "en")
 	if en[0].Name != "Elena Castro" || en[0].Title == "Abogada" {
 		t.Fatalf("en seed must keep the name and translate the texts: %+v", en[0])
+	}
+}
+
+func TestProfessionFolders(t *testing.T) {
+	cases := []struct {
+		key, loc string
+		want     []string
+	}{
+		{"accounting", "es", []string{"Clientes", "Proveedores", "Bancos y conciliaciones", "Impuestos", "Cierres mensuales", "Políticas"}},
+		{"legal", "es", []string{"Casos", "Contratos", "Plantillas de escritos", "Plazos", "Políticas"}},
+		{"hr", "es", []string{"Colaboradores", "Reclutamiento", "Planillas", "Políticas", "Capacitación"}},
+		{"education", "es", []string{"Cursos", "Exámenes", "Rúbricas", "Calificaciones"}},
+		{"sales", "es", []string{"Documentos", "Políticas"}},
+		{"accounting", "en", []string{"Clients", "Suppliers", "Banks and reconciliations", "Taxes", "Monthly closings", "Policies"}},
+		{"legal", "en", []string{"Cases", "Contracts", "Filing templates", "Deadlines", "Policies"}},
+		{"hr", "en", []string{"People", "Recruiting", "Payroll", "Policies", "Training"}},
+		{"education", "en", []string{"Courses", "Exams", "Rubrics", "Grades"}},
+		{"other", "en", []string{"Documents", "Policies"}},
+		{"accounting", "pt", []string{"Clientes", "Fornecedores", "Bancos e conciliações", "Impostos", "Fechamentos mensais", "Políticas"}},
+		{"legal", "pt", []string{"Casos", "Contratos", "Modelos de petições", "Prazos", "Políticas"}},
+		{"hr", "pt", []string{"Colaboradores", "Recrutamento", "Folha de pagamento", "Políticas", "Treinamento"}},
+		{"education", "pt", []string{"Cursos", "Provas", "Rubricas", "Notas"}},
+		{"marketing", "pt", []string{"Documentos", "Políticas"}},
+		{"legal", "xx", []string{"Casos", "Contratos", "Plantillas de escritos", "Plazos", "Políticas"}},
+		{"legal", "en-US", []string{"Cases", "Contracts", "Filing templates", "Deadlines", "Policies"}},
+	}
+	for _, c := range cases {
+		p, ok := ProfessionOf(c.key)
+		if !ok {
+			t.Fatalf("no profession %s", c.key)
+		}
+		if got := p.Folders(c.loc); !slices.Equal(got, c.want) {
+			t.Fatalf("%s/%s = %v, want %v", c.key, c.loc, got, c.want)
+		}
+	}
+}
+
+func TestEducationProfession(t *testing.T) {
+	p, ok := ProfessionOf("education")
+	if !ok || p.Roles != nil {
+		t.Fatalf("education = %+v, %v", p, ok)
+	}
+	if p.TeamName("es") != "Educación" || p.TeamName("en") != "Education" || p.TeamName("pt") != "Educação" {
+		t.Fatal("education team names wrong")
 	}
 }

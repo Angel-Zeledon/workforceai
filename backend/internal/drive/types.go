@@ -58,10 +58,11 @@ const (
 	RootClients  = "Clients"  // /Clients/<client>
 	RootAgents   = "Agents"   // /Agents/<agent>  (the agent's desk)
 	RootShared   = "Shared"   // /Shared
+	RootOffices  = "Offices"  // /Offices/<office>  (the sealed folder of an office, company edition)
 )
 
 // Roots lists the allowed top-level folder names.
-var Roots = []string{RootProjects, RootClients, RootAgents, RootShared}
+var Roots = []string{RootProjects, RootClients, RootAgents, RootShared, RootOffices}
 
 // Folder is a node of the tree. The root "/" is virtual (no row).
 type Folder struct {
@@ -69,7 +70,7 @@ type Folder struct {
 	ParentID string `json:"parent_id"` // "" for a top-level folder
 	Name     string `json:"name"`
 	Path     string `json:"path"`
-	// RootKind is the top-level folder this one lives under (projects|clients|agents|shared).
+	// RootKind is the top-level folder this one lives under (projects|clients|agents|shared|offices).
 	RootKind string `json:"root_kind"`
 	// RefID links /Projects/<x>, /Clients/<x> and /Agents/<x> to the project,
 	// client or agent they belong to. It is what the access policy uses.

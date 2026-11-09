@@ -256,6 +256,48 @@ func (s *Service) EnsureOwnedFolder(ctx context.Context, root, ref, displayName 
 	return f, err
 }
 
+// EnsureOfficeFolder creates /Offices/<name> linked to the office (RefID) and each template subfolder that is
+// missing. Idempotent: calling it again returns the same folder and adds only what was deleted or never created.
+func (s *Service) EnsureOfficeFolder(ctx context.Context, officeID, displayName string, subfolders []string) (Folder, error) {
+	f, err := s.EnsureOwnedFolder(ctx, RootOffices, officeID, displayName)
+	if err != nil {
+		return Folder{}, err
+	}
+	for _, sub := range subfolders {
+		if _, err := s.Mkdir(ctx, System(), JoinPath(append(mustSegments(f.Path), sub)...)); err != nil && !errors.Is(err, domain.ErrConflict) {
+			return Folder{}, err
+		}
+	}
+	return f, nil
+}
+
+// OfficeFolder returns the folder of an office, or domain.ErrNotFound when it has none yet.
+func (s *Service) OfficeFolder(ctx context.Context, officeID string) (Folder, error) {
+	org := s.org(ctx)
+	if officeID == "" {
+		return Folder{}, domain.ErrNotFound
+	}
+	top, err := s.cfg.Store.FolderByPath(ctx, org, JoinPath(RootOffices))
+	if err != nil {
+		return Folder{}, err
+	}
+	kids, err := s.cfg.Store.ChildFolders(ctx, org, top.ID)
+	if err != nil {
+		return Folder{}, err
+	}
+	for _, k := range kids {
+		if k.RefID == officeID {
+			return k, nil
+		}
+	}
+	return Folder{}, domain.ErrNotFound
+}
+
+func mustSegments(p string) []string {
+	segs, _ := Segments(p)
+	return segs
+}
+
 func shortRef(ref string) string {
 	if len(ref) > 6 {
 		return ref[len(ref)-6:]

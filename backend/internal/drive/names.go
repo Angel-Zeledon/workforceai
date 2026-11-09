@@ -126,6 +126,8 @@ func rootKind(name string) string {
 		return "agents"
 	case RootShared:
 		return "shared"
+	case RootOffices:
+		return "offices"
 	}
 	return ""
 }

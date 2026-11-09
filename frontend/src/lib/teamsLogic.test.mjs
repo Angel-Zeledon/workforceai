@@ -5,8 +5,8 @@ import { cleanInvites, parseEmails, PROFESSIONS, registerBody, signupMissing, su
 
 const base = { email: "ana@x.com", password: "Correct-Horse-9", name: "Ana", org: "", team: "", audience: "", profession: "", join: false };
 
-test("the professions are the eight of the design, in the backend order", () => {
-  assert.deepEqual([...PROFESSIONS], ["legal", "sales", "accounting", "marketing", "operations", "hr", "direction", "other"]);
+test("the professions are the nine of the design, in the backend order", () => {
+  assert.deepEqual([...PROFESSIONS], ["legal", "sales", "accounting", "marketing", "operations", "hr", "direction", "education", "other"]);
 });
 
 test("signupMissing asks for who it is for and the profession, and the company name only for teams", () => {
@@ -61,7 +61,7 @@ test("teamRowsIssues flags empty, duplicated and badly invited teams, ignoring t
 
 test("suggestedTeams offers every profession but 'other', off by default", () => {
   const rows = suggestedTeams((p) => `T-${p}`);
-  assert.equal(rows.length, 7);
+  assert.equal(rows.length, 8);
   assert.ok(rows.every((r) => !r.on && r.head === "later" && r.name === `T-${r.profession}`));
 });
 

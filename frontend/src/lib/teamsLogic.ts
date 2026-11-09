@@ -7,7 +7,7 @@ export const AUDIENCES = ["solo", "team", "company"] as const;
 export type Audience = (typeof AUDIENCES)[number];
 
 /** Same keys and order as backend/internal/roles/professions.go. */
-export const PROFESSIONS = ["legal", "sales", "accounting", "marketing", "operations", "hr", "direction", "other"] as const;
+export const PROFESSIONS = ["legal", "sales", "accounting", "marketing", "operations", "hr", "direction", "education", "other"] as const;
 export type Profession = (typeof PROFESSIONS)[number];
 
 export const isProfession = (v: string): v is Profession => (PROFESSIONS as readonly string[]).includes(v);

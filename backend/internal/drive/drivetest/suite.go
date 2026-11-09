@@ -49,7 +49,7 @@ func Run(t *testing.T, svc *drive.Service, orgA, orgB string, o Options) {
 
 	t.Run("roots are virtual until used", func(t *testing.T) {
 		l := must[drive.Listing](t)(svc.List(ctxA, "/"))
-		if len(l.Folders) != 4 || !l.Folders[0].Virtual {
+		if len(l.Folders) != len(drive.Roots) || !l.Folders[0].Virtual {
 			t.Fatalf("roots: %+v", l.Folders)
 		}
 	})

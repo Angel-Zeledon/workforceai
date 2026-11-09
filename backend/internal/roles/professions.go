@@ -36,6 +36,7 @@ var professions = []Profession{
 	{Key: "operations", Roles: []string{"operations", "project_manager"}, teams: map[string]string{"es": "Operaciones", "en": "Operations", "pt": "Operações"}},
 	{Key: "hr", Roles: []string{"hr"}, teams: map[string]string{"es": "Recursos Humanos", "en": "People", "pt": "Recursos Humanos"}},
 	{Key: "direction", Roles: []string{"analyst", "project_manager"}, teams: map[string]string{"es": "Dirección", "en": "Management", "pt": "Direção"}},
+	{Key: "education", Roles: nil, teams: map[string]string{"es": "Educación", "en": "Education", "pt": "Educação"}},
 	{Key: ProfessionOther, Roles: nil, teams: map[string]string{"es": "General", "en": "General", "pt": "Geral"}},
 }
 
@@ -65,6 +66,55 @@ func (p Profession) TeamName(loc string) string {
 		return p.teams["pt"]
 	}
 	return p.teams["es"]
+}
+
+// officeFolders is the folder template of an office per profession and locale (es, en, pt). The professions that are not
+// listed use defaultFolders.
+var officeFolders = map[string]map[string][]string{
+	"accounting": {
+		"es": {"Clientes", "Proveedores", "Bancos y conciliaciones", "Impuestos", "Cierres mensuales", "Políticas"},
+		"en": {"Clients", "Suppliers", "Banks and reconciliations", "Taxes", "Monthly closings", "Policies"},
+		"pt": {"Clientes", "Fornecedores", "Bancos e conciliações", "Impostos", "Fechamentos mensais", "Políticas"},
+	},
+	"legal": {
+		"es": {"Casos", "Contratos", "Plantillas de escritos", "Plazos", "Políticas"},
+		"en": {"Cases", "Contracts", "Filing templates", "Deadlines", "Policies"},
+		"pt": {"Casos", "Contratos", "Modelos de petições", "Prazos", "Políticas"},
+	},
+	"hr": {
+		"es": {"Colaboradores", "Reclutamiento", "Planillas", "Políticas", "Capacitación"},
+		"en": {"People", "Recruiting", "Payroll", "Policies", "Training"},
+		"pt": {"Colaboradores", "Recrutamento", "Folha de pagamento", "Políticas", "Treinamento"},
+	},
+	"education": {
+		"es": {"Cursos", "Exámenes", "Rúbricas", "Calificaciones"},
+		"en": {"Courses", "Exams", "Rubrics", "Grades"},
+		"pt": {"Cursos", "Provas", "Rubricas", "Notas"},
+	},
+}
+
+var defaultFolders = map[string][]string{
+	"es": {"Documentos", "Políticas"},
+	"en": {"Documents", "Policies"},
+	"pt": {"Documentos", "Políticas"},
+}
+
+// Folders is the template of subfolders the office folder of this profession starts with (es, en, pt; Spanish
+// otherwise). The returned slice is a copy.
+func (p Profession) Folders(loc string) []string {
+	l := strings.ToLower(loc)
+	key := "es"
+	switch {
+	case strings.HasPrefix(l, "en"):
+		key = "en"
+	case strings.HasPrefix(l, "pt"):
+		key = "pt"
+	}
+	byLoc, ok := officeFolders[p.Key]
+	if !ok {
+		byLoc = defaultFolders
+	}
+	return slices.Clone(byLoc[key])
 }
 
 // SuggestedRoles returns the roles a person of this profession starts with, the assistant last. An unknown or empty
