@@ -1,8 +1,11 @@
 "use client";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePendingCount } from "@/lib/pending";
 import { useStore } from "@/lib/store";
-import { trOr, useT } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
+import { useArtifacts } from "@/lib/artifacts";
+import { customersApi } from "@/lib/customersApi";
 import { fmtTime, fmtUsd, roleMeta, taskStatusLabel, TASK_STATUS_COLOR } from "@/lib/meta";
 import { resolveAgent, usePreferences } from "@/lib/preferences";
 import { go as goRoute, openInOffice } from "@/lib/navBridge";
@@ -12,62 +15,130 @@ import { ApprovalCard } from "../ApprovalsTray";
 import { InitiativePanel } from "../initiative/InitiativePanel";
 import { ConversationThread } from "../Conversation";
 import { ReportView } from "../ReportView";
-import { DashboardFiles } from "../workspace/DashboardFiles";
 import { BudgetLimitsPanel, CostBreakdownPanel } from "../cost/CostBreakdownPanel";
-import { EstimateCard } from "../cost/EstimateCard";
 import { RoiPanel } from "../cost/RoiPanel";
 import { QualityOverview } from "../quality/QualityOverview";
 import { AuditDetail } from "../quality/AuditStamp";
 import { taskAuditOf } from "@/lib/auditLogic";
-import { CustomerDistrict } from "../customers/CustomerDistrict";
+import { Icon } from "../icons";
 import { Card, Dot, Empty, Progress, ReasonChip, StateBadge, TaskBadge, readable, timeAgo, useAgentColor, useAgentName } from "../ui";
 import { useViewAll } from "@/lib/viewMode";
 import { SIMPLE_DASHBOARD, splitTabs } from "@/lib/viewModeLogic";
 import { MoreButton } from "../nav/ViewAll";
+import { GO_TO, LIST_SECTIONS, sectionHref, targetOfSearch, type GoToId, type ListSection } from "./listViewLogic";
 
-const SECTIONS = ["overview", "customers", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "quality", "costs"] as const;
-type Section = (typeof SECTIONS)[number];
+/**
+ * The Office's "Vista lista" (it used to be "Dashboard", another app inside the Office with 11 sections). It keeps
+ * what is its own: Resumen, Agentes, Tareas, Calidad, Costos (and Informes, which have no screen of their own).
+ * Clientes, Pedidos, Pendientes and Archivos have their own screen in the menu: here they are links with their number
+ * ("Ir a"). Old links (`/dashboard?section=customers`, `?tab=files`…) land on the screen or section that holds them now.
+ */
 
 function Kpi({ label, value, sub, color = "#151b26" }: { label: string; value: string | number; sub?: string; color?: string }) {
   return (
-    <div className="rounded-xl border border-line bg-panel shadow-pop p-4">
+    <div className="rounded-xl border border-line bg-panel shadow-pop p-3 sm:p-4">
       <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-mute">{label}</div>
-      <div className="mt-1.5 text-2xl font-semibold tracking-tight" style={{ color }}>{value}</div>
+      <div className="mt-1 text-xl font-semibold tracking-tight sm:mt-1.5 sm:text-2xl" style={{ color }}>{value}</div>
       {sub && <div className="mt-0.5 text-[11px] text-mute">{sub}</div>}
     </div>
   );
 }
 
+/** The number each "Ir a" link carries. null = not known yet (the link still works, it just shows no number). */
+function useGoToCounts(): Record<GoToId, number | null> {
+  const pending = usePendingCount(); // the one Pendientes number
+  const m = useStore((s) => s.metrics);
+  const requests = useStore((s) => s.requests);
+  const files = useArtifacts((s) => s.artifacts);
+  const [customers, setCustomers] = useState<number | null>(null);
+  useEffect(() => {
+    let live = true;
+    customersApi.district().then((d) => { if (live) setCustomers(d.customers.length); }).catch(() => { /* older server: no number */ });
+    return () => { live = false; };
+  }, []);
+  return {
+    customers,
+    requests: m?.requests_total ?? Object.keys(requests).length,
+    approvals: pending,
+    files: Object.keys(files).length,
+  };
+}
+
 export function Dashboard() {
   const { t } = useT();
-  const [section, setSection] = useState<Section>("overview");
-  const pending = usePendingCount(); // the one Pendientes number
+  const router = useRouter();
+  const [section, setSectionState] = useState<ListSection>("overview");
+  const [anchor, setAnchor] = useState<string | null>(null);
   const viewAll = useViewAll();
   const [more, setMore] = useState(false);
-  // simple mode: Resumen, Tareas and Agentes; the rest (Clientes, Pendientes, Archivos… have their own screens) behind "Más"
-  const shown = splitTabs(SECTIONS, SIMPLE_DASHBOARD, viewAll || more, [section]);
+  const counts = useGoToCounts();
+
+  // Old links: a section that has its own screen now goes there; the rest opens the section that holds it.
+  useEffect(() => {
+    const read = () => {
+      const target = targetOfSearch(window.location.search);
+      if (target.kind === "route") { router.replace(target.href); return; }
+      setSectionState(target.section);
+      setAnchor(target.anchor);
+    };
+    read();
+    window.addEventListener("popstate", read);
+    return () => window.removeEventListener("popstate", read);
+  }, [router]);
+  // A block inside the section (conversations under Agentes, decisions in Resumen): scroll to it once it is drawn.
+  useEffect(() => {
+    if (!anchor) return;
+    // once now and again when the agents have loaded (the cards above push the block down); a touch or wheel stops it
+    let stop = false;
+    const halt = () => { stop = true; };
+    const jump = () => { if (!stop) document.getElementById(`dash-${anchor}`)?.scrollIntoView({ block: "start" }); };
+    const ids = [120, 800, 1600].map((ms) => window.setTimeout(jump, ms));
+    window.addEventListener("wheel", halt, { passive: true });
+    window.addEventListener("touchstart", halt, { passive: true });
+    return () => { ids.forEach((i) => window.clearTimeout(i)); window.removeEventListener("wheel", halt); window.removeEventListener("touchstart", halt); };
+  }, [anchor, section]);
+
+  const setSection = (s: ListSection) => {
+    setSectionState(s);
+    setAnchor(null);
+    try { window.history.replaceState(window.history.state, "", sectionHref(s)); } catch { /* ignore */ }
+  };
+  // simple mode: Resumen, Agentes and Tareas open; Calidad, Costos and Informes behind "Más vistas"
+  const shown = splitTabs(LIST_SECTIONS, SIMPLE_DASHBOARD, viewAll || more, [section]);
   return (
-    <div className="flex h-full min-h-0 flex-col md:flex-row">
-      <nav data-tour="dashboard.nav" className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-line bg-panel p-2 md:block md:w-[210px] md:space-y-0.5 md:overflow-visible md:border-b-0 md:border-r md:p-3">
+    <div data-testid="list-view" className="flex h-full min-h-0 flex-col md:flex-row">
+      <nav data-tour="dashboard.nav" className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-line bg-panel p-2 md:block md:w-[210px] md:space-y-0.5 md:overflow-y-auto md:border-b-0 md:border-r md:p-3">
         {shown.shown.map((k) => (
-          <button key={k} data-testid={`dash-nav-${k}`} onClick={() => setSection(k)}
-            className={`flex shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-[13px] transition md:w-full ${section === k ? "bg-accent-soft font-medium text-accent" : "text-ink2 hover:bg-mute/[0.08] hover:text-ink"}`}>
+          <button key={k} type="button" data-testid={`dash-nav-${k}`} aria-current={section === k ? "page" : undefined} onClick={() => setSection(k)}
+            className={`flex min-h-10 shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-left text-[13px] transition md:min-h-0 md:w-full ${section === k ? "bg-accent-soft font-medium text-accent" : "text-ink2 hover:bg-mute/[0.08] hover:text-ink"}`}>
             {t(`dash.section.${k}`)}
-            {k === "approvals" && pending > 0 && <span className="rounded-full bg-warn px-1.5 text-[10px] font-semibold text-white">{pending}</span>}
           </button>
         ))}
-        {!viewAll && <div className="shrink-0 px-1 pt-1 md:px-0"><MoreButton testid="dash-more" count={more ? 1 : shown.folded.length} open={more} onToggle={() => setMore((m) => !m)} /></div>}
+        {!viewAll && <div className="flex shrink-0 items-center px-1 md:px-0 md:pt-1"><MoreButton testid="dash-more" count={more ? 1 : shown.folded.length} open={more} onToggle={() => setMore((m) => !m)} /></div>}
+        {/* "Ir a": what has its own screen (on the phone the same links are the cards on top of Resumen) */}
+        <div data-testid="dash-goto-nav" className="hidden md:mt-4 md:block md:border-t md:border-line md:pt-3">
+          <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-mute">{t("dash.goTo")}</div>
+          {GO_TO.map((g) => {
+            const n = counts[g.id];
+            return (
+              <a key={g.id} href={g.href} data-testid={`dash-nav-${g.id}`} data-goto={g.href}
+                onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); goRoute(g.href); }}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-[13px] text-ink2 transition hover:bg-mute/[0.08] hover:text-ink">
+                <Icon name={g.icon} size={14} className="shrink-0 text-mute" />
+                <span className="min-w-0 flex-1 truncate">{t(`dash.go.${g.id}`)}</span>
+                {g.id === "approvals" && n ? <span className="rounded-full bg-warn px-1.5 text-[10px] font-semibold text-white">{n}</span>
+                  : n != null ? <span className="font-mono text-[11px] text-mute">{n}</span> : null}
+                <Icon name="arrow" size={12} className="shrink-0 text-mute" />
+              </a>
+            );
+          })}
+        </div>
       </nav>
-      <div className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">
-        {section === "overview" && <Overview go={setSection} />}
-        {section === "customers" && <CustomerDistrict />}
-        {section === "requests" && <Requests />}
+      <div className="min-w-0 flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+        {section === "overview" && <Overview go={setSection} counts={counts} openDecisions={anchor === "decisions"} />}
         {section === "tasks" && <Tasks />}
         {section === "agents" && <Agents />}
-        {section === "conversations" && <Conversations />}
-        {section === "approvals" && <Approvals />}
         {section === "reports" && <Reports />}
-        {section === "files" && <DashboardFiles />}
         {section === "quality" && <QualityOverview />}
         {section === "costs" && <Costs />}
       </div>
@@ -75,7 +146,43 @@ export function Dashboard() {
   );
 }
 
-function Overview({ go }: { go: (s: Section) => void }) {
+/** "Ir a": one card per screen of its own, with its number. */
+function GoToCards({ counts }: { counts: Record<GoToId, number | null> }) {
+  const { t } = useT();
+  return (
+    <section data-testid="dash-goto" aria-label={t("dash.goTo")}>
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-mute">{t("dash.goTo")}</h2>
+        <span className="truncate text-[11px] text-mute">{t("dash.goTo.help")}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+        {GO_TO.map((g) => {
+          const n = counts[g.id];
+          const warn = g.id === "approvals" && !!n;
+          return (
+            <a key={g.id} href={g.href} data-testid={`dash-go-${g.id}`} data-goto={g.href}
+              onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); goRoute(g.href); }}
+              className={`group flex min-h-[76px] flex-col justify-between rounded-xl border bg-panel p-3 shadow-pop transition hover:border-accent sm:p-4 ${warn ? "border-amber-500/50" : "border-line"}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-ink">
+                  <Icon name={g.icon} size={15} className={`shrink-0 ${warn ? "text-warn" : "text-accent"}`} />
+                  <span className="truncate">{t(`dash.go.${g.id}`)}</span>
+                </span>
+                <Icon name="arrow" size={13} className="shrink-0 text-mute transition group-hover:translate-x-0.5 group-hover:text-accent" />
+              </div>
+              <div className="mt-1.5 flex items-end justify-between gap-2">
+                <span className="line-clamp-2 min-w-0 text-[11px] leading-snug text-mute">{t(`dash.go.${g.id}.hint`)}</span>
+                {n != null && <span data-testid={`dash-go-${g.id}-count`} className={`shrink-0 text-xl font-semibold tracking-tight ${warn ? "text-warn" : "text-ink"}`}>{n}</span>}
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function Overview({ go, counts, openDecisions }: { go: (s: ListSection) => void; counts: Record<GoToId, number | null>; openDecisions: boolean }) {
   const { t } = useT();
   const m = useStore((s) => s.metrics);
   const agents = useStore((s) => s.agents);
@@ -83,32 +190,32 @@ function Overview({ go }: { go: (s: Section) => void }) {
   const order = useStore((s) => s.agentOrder);
   const approvalsMap = useStore((s) => s.approvals);
   const tasksMap = useStore((s) => s.tasks);
-  const approvals = Object.values(approvalsMap).filter((a) => a.status === "pending");
+  const all = Object.values(approvalsMap).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+  const approvals = all.filter((a) => a.status === "pending");
+  const decided = all.filter((a) => a.status !== "pending");
   const pendingCount = usePendingCount();
   const select = useStore((s) => s.select);
   const active = Object.values(agents).filter((a) => !["idle", "completed"].includes(a.state)).length;
   const budgetPct = m ? Math.min(100, (m.cost_usd / Math.max(0.01, m.budget_usd)) * 100) : 0;
   return (
     <div className="space-y-5">
-      <div data-tour="dashboard.kpis" className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
-        <Kpi label={t("dash.kpi.requests")} value={m?.requests_total ?? 0} />
+      <div data-tour="dashboard.kpis" className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:grid-cols-5 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
         <Kpi label={t("dash.kpi.tasksActive")} value={m?.tasks_active ?? 0} color="#2b6cb0" />
         <Kpi label={t("dash.kpi.tasksDone")} value={m?.tasks_done ?? 0} color="#2f7d55" />
-        <Kpi label={t("dash.kpi.approvals")} value={pendingCount} color={pendingCount > 0 ? "#a86208" : undefined} sub={t("dash.kpi.pending")} />
         <Kpi label={t("common.cost")} value={fmtUsd(m?.cost_usd)} sub={t("dash.kpi.ofBudget", { budget: fmtUsd(m?.budget_usd), pct: budgetPct.toFixed(1) })} />
         <Kpi label={t("dash.kpi.errors")} value={m?.errors ?? 0} color={(m?.errors ?? 0) > 0 ? "#b4443c" : undefined} />
         <Kpi label={t("dash.kpi.activeAgents")} value={`${active}/${order.length}`} />
       </div>
+      <GoToCards counts={counts} />
       <div className="grid gap-5 xl:grid-cols-3 [&>*]:min-w-0">
-        <Card title={t("dash.team")} className="xl:col-span-2" right={<button className="text-[11px] text-accent" onClick={() => go("agents")}>{t("dash.viewAll")}</button>}>
+        <Card title={t("dash.team")} className="xl:col-span-2" right={<button type="button" className="text-[11px] text-accent" onClick={() => go("agents")}>{t("dash.viewAll")}</button>}>
           <div data-tour="dashboard.team" className="grid gap-2 md:grid-cols-2">
             {order.map((id) => {
               const a = agents[id]; if (!a) return null;
-              const meta = roleMeta(a.role);
               const v = resolveAgent(a, agentPrefs[id]);
               return (
-                <button key={id} onClick={() => openInOffice(id, select)} className="rounded-md border border-line bg-panel2 p-3 text-left transition hover:border-line-strong">
-                  <div className="flex items-center justify-between"><span className="flex items-center gap-2 text-[13px] font-semibold text-ink"><Dot color={v.color} />{v.name}</span><StateBadge state={a.state} /></div>
+                <button key={id} type="button" onClick={() => openInOffice(id, select)} className="rounded-md border border-line bg-panel2 p-3 text-left transition hover:border-line-strong">
+                  <div className="flex items-center justify-between gap-2"><span className="flex min-w-0 items-center gap-2 truncate text-[13px] font-semibold text-ink"><Dot color={v.color} />{v.name}</span><StateBadge state={a.state} /></div>
                   <div className="mt-1 truncate text-[11px] text-mute">{v.title}</div>
                   <div className="mt-1.5 truncate text-[11.5px] text-ink2">{a.activity || "—"}</div>
                   {a.progress > 0 && <div className="mt-2"><Progress value={a.progress} /></div>}
@@ -119,94 +226,23 @@ function Overview({ go }: { go: (s: Section) => void }) {
           </div>
         </Card>
         <div data-tour="dashboard.side" className="space-y-5">
-          <Card title={t("dash.pendingApprovals")}>
-            {approvals.length ? <div className="space-y-2">{approvals.map((a) => <ApprovalCard key={a.id} a={a} compact />)}</div> : <Empty concept="pending">{t("dash.nothingToApprove")}</Empty>}
+          {/* the decision stays one click away here; the whole list (and the questions) lives in Pendientes */}
+          <Card title={t("dash.pendingApprovals")} right={pendingCount > 0 ? <button type="button" data-testid="dash-pending-all" className="text-[11px] text-accent" onClick={() => goRoute("/approvals/inbox")}>{t("dash.pending.seeAll", { count: pendingCount })}</button> : undefined}>
+            {approvals.length ? <div className="space-y-2">{approvals.slice(0, 3).map((a) => <ApprovalCard key={a.id} a={a} compact />)}</div> : <Empty concept="pending">{t("dash.nothingToApprove")}</Empty>}
           </Card>
           <InitiativePanel />
           <Card title={t("hud.liveActivity")}><ActivityFeed limit={12} compact /></Card>
+          {decided.length > 0 && (
+            <details id="dash-decisions" data-testid="dash-decisions" open={openDecisions || undefined} className="group rounded-xl border border-line bg-panel shadow-pop">
+              <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-[13px] font-semibold text-ink">
+                {t("dash.decisions.title", { count: decided.length })}
+                <Icon name="down" size={13} className="shrink-0 text-mute transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="max-h-[420px] space-y-2 overflow-y-auto border-t border-line p-3">{decided.map((a) => <ApprovalCard key={a.id} a={a} compact />)}</div>
+            </details>
+          )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function depthOf(tasks: { id: string; depends_on: string[] }[]) {
-  const map = new Map(tasks.map((t) => [t.id, t]));
-  const memo = new Map<string, number>();
-  const d = (id: string, seen = new Set<string>()): number => {
-    if (memo.has(id)) return memo.get(id)!;
-    if (seen.has(id)) return 0;
-    seen.add(id);
-    const t = map.get(id);
-    const v = !t || !t.depends_on.length ? 0 : 1 + Math.max(...t.depends_on.map((x) => d(x, seen)));
-    memo.set(id, v);
-    return v;
-  };
-  return (id: string) => d(id);
-}
-
-function Requests() {
-  const { t } = useT();
-  const requests = useStore((s) => s.requests);
-  const tasks = useStore((s) => s.tasks);
-  const plans = useStore((s) => s.plans);
-  const reports = useStore((s) => s.reports);
-  const name = useAgentName();
-  const color = useAgentColor();
-  const list = Object.values(requests).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-  const [sel, setSel] = useState<string | null>(null);
-  const cur = requests[sel ?? list[0]?.id ?? ""];
-  const items = useMemo(() => {
-    if (!cur) return [];
-    const real = Object.values(tasks).filter((t) => t.request_id === cur.id);
-    if (real.length) return real.map((t) => ({ id: t.id, title: t.title, agent_id: t.agent_id, depends_on: t.depends_on, status: t.status as string, assigned_reason: t.assigned_reason }));
-    return (plans[cur.id] || []).map((p) => ({ ...p, status: "pending", assigned_reason: undefined as string | null | undefined }));
-  }, [cur, tasks, plans]);
-  const depth = depthOf(items);
-  const cols = Math.max(0, ...items.map((i) => depth(i.id))) + 1;
-  const statusColor: Record<string, string> = { planning: "#7c6bb0", running: "#2b6cb0", awaiting_approval: "#a86208", awaiting_confirmation: "#a86208", paused: "#b4443c", done: "#2f7d55", failed: "#b4443c" };
-  const statusLabel = (st: string) => trOr(`dash.reqStatus.${st}`, st);
-  if (!list.length) return <Empty concept="pedido" how={t("dash.requests.how")} action={<button type="button" onClick={() => goRoute("/chats")} className="min-h-10 rounded-md border border-line-strong bg-panel px-3.5 py-1.5 text-xs font-medium text-ink hover:bg-panel2 sm:min-h-0">{t("dash.goChats")}</button>}>{t("dash.requests.empty")}</Empty>;
-  return (
-    <div className="grid gap-5 xl:grid-cols-[340px_1fr] [&>*]:min-w-0">
-      <Card title={t("dash.requests.title")}>
-        <ul className="space-y-1.5">
-          {list.map((r) => (
-            <li key={r.id}>
-              <button onClick={() => setSel(r.id)} className={`w-full rounded-md border p-2.5 text-left ${cur?.id === r.id ? "border-accent bg-accent/10" : "border-line bg-panel2 hover:border-line-strong"}`}>
-                <div className="line-clamp-2 text-[12.5px] text-ink">{r.text}</div>
-                <div className="mt-1.5 flex items-center justify-between text-[10px]">
-                  <span className="font-semibold uppercase tracking-wide" style={{ color: statusColor[r.status] }}>{statusLabel(r.status)}</span>
-                  <span className="text-mute">{timeAgo(r.created_at)} · {fmtUsd(r.cost_usd)}</span>
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </Card>
-      {cur && (
-        <Card title={t("dash.requests.plan", { count: items.length })} right={cur.report_id && reports[cur.report_id] ? <span className="text-[11px] text-emerald-700">{t("dash.requests.reportReady")}</span> : undefined}>
-          <p className="mb-4 text-sm text-ink">{cur.text}</p>
-          <div className="mb-4"><EstimateCard requestId={cur.id} compact /></div>
-          {items.length ? (
-            <div className="grid gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${cols}, minmax(200px, 1fr))` }}>
-              {Array.from({ length: cols }).map((_, c) => (
-                <div key={c} className="space-y-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-widest text-mute">{c === 0 ? t("dash.requests.start") : t("dash.requests.phase", { n: c + 1 })}</div>
-                  {items.filter((i) => depth(i.id) === c).map((i) => (
-                    <div key={i.id} className="rounded-md border bg-panel2 p-2.5" style={{ borderColor: `${TASK_STATUS_COLOR[i.status] || "#e2e6ec"}88`, borderLeftWidth: 3, borderLeftColor: color(i.agent_id) }}>
-                      <div className="text-[12px] font-semibold text-ink">{i.title}</div>
-                      <div className="mt-1 flex items-center justify-between"><span className="text-[11px]" style={{ color: readable(color(i.agent_id)) }}>{name(i.agent_id)}</span><TaskBadge status={i.status} /></div>
-                      <ReasonChip agentId={i.agent_id} reason={i.assigned_reason} compact className="mt-1.5" />
-                      {i.depends_on.length > 0 && <div className="mt-1 text-[10px] text-mute">{t("dash.dependsOn")}: {i.depends_on.map((d) => items.find((x) => x.id === d)?.title ?? d).join(", ")}</div>}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          ) : <Empty>{t("dash.requests.waitingPlan")}</Empty>}
-        </Card>
-      )}
     </div>
   );
 }
@@ -281,11 +317,12 @@ function Agents() {
   const order = useStore((s) => s.agentOrder);
   const select = useStore((s) => s.select);
   return (
+    <div className="space-y-6">
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {order.map((id) => {
         const a = agents[id]; if (!a) return null;
         const meta = roleMeta(a.role);
-              const v = resolveAgent(a, agentPrefs[id]);
+        const v = resolveAgent(a, agentPrefs[id]);
         return (
           <Card key={id}>
             <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: readable(v.color) }}>{meta.label}</div>
@@ -298,10 +335,16 @@ function Agents() {
               ))}
             </div>
             <div className="mt-3 flex items-center justify-between text-[11px] text-mute"><span>{t("dash.agents.autonomy")}: {a.autonomy}</span>
-              <button className="text-accent" onClick={() => openInOffice(id, select)}>{t("dash.agents.viewInOffice")}</button></div>
+              <button type="button" className="text-accent" onClick={() => openInOffice(id, select)}>{t("dash.agents.viewInOffice")}</button></div>
           </Card>
         );
       })}
+    </div>
+    {/* the conversations between agents used to be a section of their own (`?section=conversations` lands here) */}
+    <section id="dash-conversations" data-testid="dash-conversations" className="scroll-mt-4">
+      <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-mute">{t("dash.conversations.between")}</h2>
+      <Conversations />
+    </section>
     </div>
   );
 }
@@ -319,7 +362,7 @@ function Conversations() {
       <Card title={t("dash.conversations.title")}>
         <ul className="space-y-1.5">
           {list.map((c) => (
-            <li key={c.id}><button onClick={() => setSel(c.id)} className={`w-full rounded-md border p-2.5 text-left ${cur?.id === c.id ? "border-accent bg-accent/10" : "border-line bg-panel2 hover:border-line-strong"}`}>
+            <li key={c.id}><button type="button" onClick={() => setSel(c.id)} className={`w-full rounded-md border p-2.5 text-left ${cur?.id === c.id ? "border-accent bg-accent/10" : "border-line bg-panel2 hover:border-line-strong"}`}>
               <div className="line-clamp-1 text-[12.5px] font-semibold text-ink">{c.title}</div>
               <div className="mt-1 flex justify-between text-[10px] text-mute"><span>{c.participants.map((p) => name(p).split(" ")[0]).join(", ")}</span><span>{timeAgo(c.last_message_at)}</span></div>
             </button></li>
@@ -327,18 +370,6 @@ function Conversations() {
         </ul>
       </Card>
       {cur && <Card title={cur.title}><ConversationThread key={cur.id} id={cur.id} height="max-h-[55vh]" /></Card>}
-    </div>
-  );
-}
-
-function Approvals() {
-  const { t } = useT();
-  const approvals = Object.values(useStore((s) => s.approvals)).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-  const pend = approvals.filter((a) => a.status === "pending"), done = approvals.filter((a) => a.status !== "pending");
-  return (
-    <div className="grid gap-5 xl:grid-cols-2 [&>*]:min-w-0">
-      <Card title={t("dash.approvals.pending", { count: pend.length })}>{pend.length ? <div className="space-y-2">{pend.map((a) => <ApprovalCard key={a.id} a={a} />)}</div> : <Empty concept="pending">{t("dash.approvals.nonePending")}</Empty>}</Card>
-      <Card title={t("dash.approvals.history")}>{done.length ? <div className="space-y-2">{done.map((a) => <ApprovalCard key={a.id} a={a} compact />)}</div> : <Empty>{t("dash.approvals.noDecisions")}</Empty>}</Card>
     </div>
   );
 }

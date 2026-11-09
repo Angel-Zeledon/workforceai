@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useT } from "@/lib/i18n";
 import { useProjects } from "@/lib/projects/store";
 import { Icon } from "../icons";
@@ -26,10 +26,17 @@ const btn = "inline-flex min-h-10 items-center rounded-md border px-3 py-1.5 tex
 /**
  * What used to be its own tab ("Cambios de plan") and the project's pending approvals, as notices on top of
  * Seguimiento: they only show when something waits, and their button opens it (Plan → Historial de cambios, Permisos).
+ * The plan changes are loaded here too (not only in Historial de cambios), when the project opens, starts, changes
+ * state or its plan changes, so the notice can tell about them before anyone opens that view.
  */
 export function ProjectNotices() {
   const { t } = useT();
   const setTab = useProjects((s) => s.setTab);
+  const loadChanges = useProjects((s) => s.loadChanges);
+  const activeId = useProjects((s) => s.activeId);
+  const status = useProjects((s) => s.detail?.project.status);
+  const version = useProjects((s) => s.detail?.structure_version);
+  useEffect(() => { if (activeId && status && status !== "draft" && status !== "planning") void loadChanges(); }, [loadChanges, activeId, status, version]);
   const changes = useProjects((s) => s.changes.filter((c) => c.status === "pending").length);
   const approvals = useProjects((s) => s.detail?.approvals.filter((a) => a.status === "pending").length ?? 0);
   if (!changes && !approvals) return null;

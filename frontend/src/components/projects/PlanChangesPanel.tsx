@@ -5,7 +5,7 @@ import { useCan } from "@/lib/session";
 import { useStore } from "@/lib/store";
 import { useProjects } from "@/lib/projects/store";
 import type { PlanChange } from "@/lib/projects/types";
-import { Btn, Card, Empty, RiskBadge } from "../ui";
+import { Btn, Card, Empty, RiskBadge, useAgentName } from "../ui";
 import { fmtMoney } from "./shared";
 
 const STATUS_STYLE: Record<PlanChange["status"], string> = {
@@ -24,6 +24,7 @@ export function PlanChangesPanel() {
   const canManage = useCan("tasks:manage");
   const agentOrder = useStore((s) => s.agentOrder);
   const agents = useStore((s) => s.agents);
+  const agentName = useAgentName();
   const [title, setTitle] = useState("");
   const [agent, setAgent] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,11 +42,12 @@ export function PlanChangesPanel() {
       {sorted.map((c) => {
         const im = c.impact;
         return (
-          <Card key={c.id} title={<span data-testid={`plan-change-${c.id}`} data-status={c.status}>{c.reason || t(`pv.changes.source.${c.source}`)}</span>}
+          <Card key={c.id} title={<span data-testid={`plan-change-${c.id}`} data-status={c.status}>{t(`pv.changes.source.${c.source}`)}</span>}
             right={<span className="flex items-center gap-2"><RiskBadge risk={c.risk} /><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[c.status]}`}>{t(`pv.changes.status.${c.status}`)}</span></span>}>
             <div className="space-y-2 text-[12px] text-ink">
+              {c.reason && <p data-testid={`plan-change-reason-${c.id}`} className="text-[13px] leading-snug text-ink">{c.reason}</p>}
               <div className="text-[11px] text-mute">
-                {t(`pv.changes.by.${c.proposed_by}`, { actor: c.actor })} · {t(`pv.changes.source.${c.source}`)}{c.source_node_id ? ` · ${nodeTitle(c.source_node_id)}` : ""}
+                {t(`pv.changes.by.${c.proposed_by}`, { actor: c.proposed_by === "agent" ? agentName(c.actor) : c.actor })} · {t(`pv.changes.source.${c.source}`)}{c.source_node_id ? ` · ${nodeTitle(c.source_node_id)}` : ""}
               </div>
               <div data-testid={`plan-change-diff-${c.id}`} className="flex flex-wrap gap-2 text-[11px] font-semibold">
                 <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-emerald-800">{t("pv.changes.added", { n: im.added })}</span>

@@ -1,7 +1,7 @@
 // Unit tests of the "while you were away" helpers (run: npm run test:unit).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { alertKey, awayDuration, headlineParts, itemAction, parseMinHours, replaySchedule } from "./awayLogic.ts";
+import { alertKey, awayDuration, awayParam, headlineParts, itemAction, parseMinHours, replaySchedule, sameLocalDay } from "./awayLogic.ts";
 
 const zero = { requests_completed: 0, requests_failed: 0, tasks_completed: 0, tasks_failed: 0, tasks_blocked: 0, approvals_waiting: 0, approvals_decided: 0, initiatives: 0, alerts: 0 };
 
@@ -50,4 +50,22 @@ test("replaySchedule spreads frames evenly within the cap", () => {
   assert.equal(s.length, 400);
   assert.equal(s[1], 50);
   assert.ok(s[399] < 20000);
+});
+
+test("?away=1 asks to open the summary on arrival", () => {
+  assert.equal(awayParam("?away=1"), true);
+  assert.equal(awayParam("?tab=x&away=open"), true);
+  assert.equal(awayParam("away=Sí"), true);
+  assert.equal(awayParam("?away=0"), false);
+  assert.equal(awayParam("?other=1"), false);
+  assert.equal(awayParam(""), false);
+  assert.equal(awayParam(null), false);
+});
+
+test("sameLocalDay: the demo opens the summary on the first visit of each day", () => {
+  const morning = new Date(2026, 10, 4, 8, 0).getTime();
+  assert.equal(sameLocalDay(morning, new Date(2026, 10, 4, 23, 59).getTime()), true);
+  assert.equal(sameLocalDay(morning, new Date(2026, 10, 5, 0, 1).getTime()), false);
+  assert.equal(sameLocalDay(0, morning), false); // never dismissed
+  assert.equal(sameLocalDay(Number.NaN, morning), false);
 });

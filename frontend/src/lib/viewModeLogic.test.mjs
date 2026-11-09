@@ -47,6 +47,8 @@ test("agent panel and dashboard keep the everyday parts open in simple mode", ()
   assert.deepEqual(splitTabs(agent, SIMPLE_AGENT_TABS, false), { shown: ["chat", "work"], folded: ["can", "knows", "profile"] });
   // a tab opened by a link (the shield on "Cómo lo pensó" lives in Trabajo; permissions in Qué puede hacer) stays visible
   assert.deepEqual(splitTabs(agent, SIMPLE_AGENT_TABS, false, ["can"]).shown, ["chat", "work", "can"]);
-  const dash = ["overview", "customers", "requests", "tasks", "agents", "conversations", "approvals", "reports", "files", "quality", "costs"];
-  assert.deepEqual(splitTabs(dash, SIMPLE_DASHBOARD, false).shown, ["overview", "tasks", "agents"]);
+  // the Office list view (tanda 3): 6 sections; Clientes, Pedidos, Pendientes and Archivos are links, not sections
+  const dash = ["overview", "agents", "tasks", "quality", "costs", "reports"];
+  assert.deepEqual(splitTabs(dash, SIMPLE_DASHBOARD, false), { shown: ["overview", "agents", "tasks"], folded: ["quality", "costs", "reports"] });
+  assert.deepEqual(splitTabs(dash, SIMPLE_DASHBOARD, false, ["costs"]).shown, ["overview", "agents", "tasks", "costs"]);
 });

@@ -137,7 +137,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const toggleCollapsed = () => setCollapsed((c) => { try { localStorage.setItem(COLLAPSE_KEY, c ? "0" : "1"); } catch { /* ignore */ } return !c; });
   const modeToggle = section === "office" || section === "dashboard";
-  const title = section === "dashboard" ? t("mode.dashboard") : t(SECTIONS.find((s) => s.id === section)?.label ?? "nav.office");
+  // the list view is a view of the Office ("Vista 3D / Vista lista"), so the title stays "Oficina"
+  const title = t(SECTIONS.find((s) => s.id === section)?.label ?? "nav.office");
   const pendingCount = usePendingCount();
 
   return (
@@ -155,18 +156,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="relative z-[55] flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line bg-panel px-3 sm:px-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button type="button" data-testid="nav-open" aria-label={t("nav.open")} title={t("nav.open")} onClick={() => setDrawer(true)} className="-ml-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-ink2 transition hover:bg-panel2 md:hidden"><Icon name="menu" size={20} /></button>
-            <div data-tour="shell.title" className="min-w-[72px] leading-tight">
+            {/* on the phone the Office title makes room for the "Vista 3D / Vista lista" selector (the menu already marks Oficina) */}
+            <div data-tour="shell.title" className={`min-w-[72px] leading-tight ${modeToggle ? "hidden sm:block" : ""}`}>
               <div className="truncate text-[14px] font-semibold tracking-tight">{title}</div>
               <OrgIndicator className="truncate text-[10.5px] text-mute" />
             </div>
             {modeToggle && (
-              <button type="button" data-tour="shell.mode" data-testid="mode-toggle" data-mode={section === "dashboard" ? "dashboard" : "office"} onClick={() => router.push(section === "dashboard" ? "/" : "/dashboard")} title={t("mode.switchTitle")}
-                className="ml-1 hidden shrink-0 rounded-lg border border-line bg-panel2 p-0.5 text-xs font-medium sm:flex">
+              <button type="button" data-tour="shell.mode" data-testid="mode-toggle" data-mode={section === "dashboard" ? "dashboard" : "office"} onClick={() => router.push(section === "dashboard" ? "/" : "/dashboard")} title={t("mode.switchTitle")} aria-label={t("mode.switchTitle")}
+                className="ml-0.5 flex shrink-0 rounded-lg border border-line bg-panel2 p-0.5 text-xs font-medium sm:ml-1">
                 {(["office", "dashboard"] as const).map((m) => (
-                  <span key={m} className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition ${(section === "dashboard") === (m === "dashboard") ? "bg-panel text-ink shadow-pop ring-1 ring-line" : "text-mute hover:text-ink"}`}>
-                    <Icon name={m === "office" ? "office" : "grid"} size={14} />
-                    {/* icons only while the sidebar leaves the header narrow (md to lg) */}
-                    <span className="md:hidden lg:inline">{m === "office" ? t("mode.office") : t("mode.dashboard")}</span>
+                  <span key={m} className={`flex min-h-9 items-center gap-1.5 rounded-md px-2.5 py-1.5 transition sm:min-h-0 sm:px-3 ${(section === "dashboard") === (m === "dashboard") ? "bg-panel text-ink shadow-pop ring-1 ring-line" : "text-mute hover:text-ink"}`}>
+                    <Icon name={m === "office" ? "office" : "list"} size={14} />
+                    {/* "Vista 3D / Vista lista"; icons only on the phone and while the sidebar leaves the header narrow (md to lg) */}
+                    <span className="hidden sm:inline md:hidden lg:inline">{m === "office" ? t("mode.view3d") : t("mode.viewList")}</span>
                   </span>
                 ))}
               </button>
@@ -200,7 +202,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <RouteCurtain section={section} />
           <div key={section === "dashboard" ? "office" : section} className="ac-page absolute inset-0">{children}</div>
           {/* Files in the conversation: viewer next to the chat (left of the agent panel when it is open) */}
-          {section !== "drive" && viewerOpen && (
+          {section !== "drive" && section !== "chats" && viewerOpen && ( /* Chats mounts its own viewer beside the conversation */
             <div data-testid="file-viewer-host" className="pointer-events-none absolute bottom-0 top-0 z-[35] max-w-full" style={{ right: section === "office" && selected ? "var(--panel-w, 420px)" : 0 }}>
               <FileViewerPanel />
             </div>

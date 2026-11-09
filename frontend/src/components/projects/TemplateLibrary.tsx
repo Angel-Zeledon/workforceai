@@ -6,7 +6,7 @@ import { useProjects } from "@/lib/projects/store";
 import { TEMPLATE_CATEGORIES } from "@/lib/projects/templateLogic";
 import type { ProjectTemplate } from "@/lib/projects/types";
 import type { WorkflowTemplate } from "@/lib/orgConfigApi";
-import { LIBRARY_KINDS, libraryCategories, matchesSearch, showsKind, type LibraryKind } from "@/lib/templateLibraryLogic";
+import { LIBRARY_KINDS, hasActiveFilters, libraryCategories, libraryEmptyState, matchesSearch, showQuickBuiltinNote, showsKind, type LibraryKind, type LibrarySource } from "@/lib/templateLibraryLogic";
 import { useCan } from "@/lib/session";
 import { Btn, Empty } from "../ui";
 import { TemplateHistoryModal, inputCls, useTplText } from "./templateUi";
@@ -18,7 +18,7 @@ import { IndustryTemplates } from "../templates/IndustryTemplates";
 import { Modal } from "../templates/Modal";
 import { ConceptHelp } from "../concepts/ConceptHelp";
 
-type Source = "all" | "builtin" | "org";
+type Source = LibrarySource;
 
 /** size of a template: stats from the backend, or counted from its definition */
 export function tplSize(tpl: ProjectTemplate) {
@@ -82,13 +82,14 @@ export function TemplateLibrary({ initialKind = "all" }: { initialKind?: Library
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templates, q, cat, src, t]);
 
-  // quick-request templates come with the app: "Mías y de la organización" leaves them out
-  const shownQuick = useMemo(() => (quick.items ?? []).filter((tpl) => {
-    if (src === "org") return false;
+  // quick-request templates come with the app: "Mías y de la organización" leaves them out (and says so, below)
+  const matchingQuick = useMemo(() => (quick.items ?? []).filter((tpl) => {
     if (cat !== "all" && (tpl.category || "general") !== cat) return false;
     return matchesSearch(`${quickName(tpl)} ${quickDescription(tpl)}`, q);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [quick.items, q, cat, src, t]);
+  }), [quick.items, q, cat, t]);
+  const shownQuick = src === "org" ? [] : matchingQuick;
+  const quickNote = showQuickBuiltinNote(src, kind, matchingQuick.length);
 
   const cats = useMemo(() => libraryCategories(TEMPLATE_CATEGORIES,
     showsKind(kind, "project") ? templates.map((x) => x.category || "general") : [],
@@ -100,6 +101,9 @@ export function TemplateLibrary({ initialKind = "all" }: { initialKind?: Library
   const withProjects = showsKind(kind, "project");
   const quickLoading = withQuick && quick.items === null && !quick.error;
   const nothing = (!withQuick || (!quickLoading && shownQuick.length === 0)) && (!withProjects || shown.length === 0);
+  const filtered = hasActiveFilters({ query: q, category: cat, source: src, kind });
+  const empty = libraryEmptyState({ nothing, quickNote, source: src, kind });
+  const clearFilters = () => { setQ(""); setCat("all"); setSrc("all"); setKind("all"); };
 
   const duplicate = async (tpl: ProjectTemplate) => {
     if (busy) return;
@@ -156,7 +160,17 @@ export function TemplateLibrary({ initialKind = "all" }: { initialKind?: Library
       {err && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{err}</div>}
       {started && <div role="status" data-testid="wf-template-started" className="rounded-xl border border-emerald-400/50 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700">{t("tpl.run.started")}</div>}
 
-      {withQuick && (quickLoading || quick.error || shownQuick.length > 0) && (
+      {quickNote && (
+        // "Mías y de la organización" hides every quick request (they all come with the app): say so instead of vanishing
+        <section data-testid="tpl-quick-builtin-note" className="flex flex-col gap-2 rounded-[10px] border border-line bg-panel2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <p className="min-w-0 text-[12px] text-ink2">
+            <span className="font-semibold text-ink">{t("tpl.lib.quickTitle")}:</span> {t("tpl.lib.quickBuiltinNote", { count: matchingQuick.length })}
+          </p>
+          <Btn data-testid="tpl-quick-builtin-show" className="shrink-0 self-start sm:self-auto" onClick={() => setSrc("all")}>{t("tpl.lib.quickBuiltinShow")}</Btn>
+        </section>
+      )}
+
+      {withQuick && src !== "org" && (quickLoading || quick.error || shownQuick.length > 0) && (
         <section data-testid="wf-template-gallery">
           <GroupHead testid="tpl-group-quick" title={t("tpl.lib.quickTitle")} count={shownQuick.length} help={t("tpl.lib.quickHelp")} />
           {quick.error && <div role="alert" className="text-sm font-semibold text-red-600">{t("tpl.error")}</div>}
@@ -206,7 +220,14 @@ export function TemplateLibrary({ initialKind = "all" }: { initialKind?: Library
         </section>
       )}
 
-      {nothing && <div data-testid="tpl-empty"><Empty>{t("tpl.lib.empty")}</Empty></div>}
+      {empty && (
+        <div data-testid="tpl-empty">
+          <Empty icon="template" title={t(empty === "projects" ? "tpl.lib.emptyProjects" : "tpl.lib.empty")}
+            action={filtered ? <Btn data-testid="tpl-empty-clear" onClick={clearFilters}>{t("tpl.lib.clearFilters")}</Btn> : undefined}>
+            {filtered ? t("tpl.lib.emptyHint") : undefined}
+          </Empty>
+        </div>
+      )}
 
       {history && <TemplateHistoryModal templateId={history} onClose={() => setHistory(null)} onRestored={() => loadTemplates()} />}
       {running && (

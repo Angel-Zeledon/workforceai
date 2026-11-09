@@ -31,8 +31,8 @@ export const officeTour: TourDefinition = {
       "tour.office.agent.body": "Al hacer clic en un agente se abre su panel a la derecha: su trabajo, sus archivos y una conversación directa con él. Úsalo cuando quieras hablar con un agente concreto en vez de con toda la empresa.",
       "tour.office.lighting.title": "Diseño de la oficina",
       "tour.office.lighting.body": "«Editar oficina» te deja mover muebles, puestos y salas, cambiar paredes, suelo, estilo y la luz (cálida, fría, atardecer). Es solo estético: no afecta el trabajo de los agentes.",
-      "tour.office.mode.title": "Cambia a Panel",
-      "tour.office.mode.body": "Este interruptor alterna entre la oficina y el panel de control. Pasa al panel cuando quieras ver cifras, tareas y costos en tablas en vez de en la escena.",
+      "tour.office.mode.title": "Vista 3D / Vista lista",
+      "tour.office.mode.body": "Este selector cambia entre la vista 3D y la vista lista de la oficina. Pasa a la lista cuando quieras ver agentes, tareas, calidad y costos en tablas en vez de en la escena.",
     },
     en: {
       "tour.office.name": "Office tour",
@@ -50,8 +50,8 @@ export const officeTour: TourDefinition = {
       "tour.office.agent.body": "Clicking an agent opens their panel on the right: their work, their files and a direct conversation with them. Use it when you want to talk to one specific agent instead of the whole company.",
       "tour.office.lighting.title": "Office layout",
       "tour.office.lighting.body": "“Edit office” lets you move furniture, workstations and rooms, and change walls, floor, style and light (warm, cool, sunset). It is cosmetic only and does not affect the agents' work.",
-      "tour.office.mode.title": "Switch to Dashboard",
-      "tour.office.mode.body": "This switch toggles between the office and the control dashboard. Go to the dashboard when you want numbers, tasks and costs in tables instead of in the scene.",
+      "tour.office.mode.title": "3D view / List view",
+      "tour.office.mode.body": "This switch moves between the office's 3D view and list view. Go to the list when you want agents, tasks, quality and costs in tables instead of in the scene.",
     },
   },
 };

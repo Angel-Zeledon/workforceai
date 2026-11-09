@@ -8,7 +8,7 @@ import { Modal } from "./Modal";
 
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
-function IndustryDetail({ ind, onClose }: { ind: Industry; onClose: () => void }) {
+function IndustryDetail({ ind, onClose, onDone }: { ind: Industry; onClose: () => void; onDone?: () => void }) {
   const { t, locale } = useT();
   const [projects, setProjects] = useState(true);
   const [demo, setDemo] = useState(false);
@@ -75,7 +75,9 @@ function IndustryDetail({ ind, onClose }: { ind: Industry; onClose: () => void }
           <p className="text-[12px]">{t("org.ind.resultCounts", { departments: res.result.departments.length, agents: res.result.agents.length, existing: res.result.agents_existing.length, projects: res.result.project_templates.length, rules: res.result.rules })}</p>
           {res.demo_files.length > 0 && <p className="text-[12px]">{t("org.ind.demoFiles", { count: res.demo_files.length })}</p>}
           {res.demo_error && <p className="text-[12px] text-red-600">{t("org.ind.demoError")}</p>}
-          <Link href="/org" prefetch={false} data-testid="industry-open-org" className="mt-2 inline-block text-[12px] font-semibold text-accent hover:underline">{t("org.ind.openOrg")}</Link>
+          {onDone
+            ? <button type="button" onClick={onDone} data-testid="industry-open-org" className="mt-2 inline-block text-[12px] font-semibold text-accent hover:underline">{t("org.ind.openOrg")}</button>
+            : <Link href="/org?tab=offices" prefetch={false} data-testid="industry-open-org" className="mt-2 inline-block text-[12px] font-semibold text-accent hover:underline">{t("org.ind.openOrg")}</Link>}
         </div>
       ) : (
         <div className="grid gap-2 border-t border-line pt-3">
@@ -90,8 +92,10 @@ function IndustryDetail({ ind, onClose }: { ind: Industry; onClose: () => void }
   );
 }
 
-/** Industry templates: a whole company skeleton (departments, team with job descriptions, projects) applied in one click. */
-export function IndustryTemplates() {
+/** Industry templates: a whole company skeleton (offices, starting agents with job descriptions, projects) applied in one
+ *  click. Opened from Proyectos (template library) and from the Oficinas tab of "Agentes y oficinas"; there, `onDone`
+ *  closes it and shows the new offices instead of a link to the page that is already open. */
+export function IndustryTemplates({ onDone }: { onDone?: () => void } = {}) {
   const { t, locale } = useT();
   const [items, setItems] = useState<Industry[] | null>(null);
   const [error, setError] = useState(false);
@@ -127,7 +131,7 @@ export function IndustryTemplates() {
           </li>
         ))}
       </ul>
-      {selected && <IndustryDetail ind={selected} onClose={() => setSelected(null)} />}
+      {selected && <IndustryDetail ind={selected} onClose={() => setSelected(null)} onDone={onDone} />}
     </div>
   );
 }

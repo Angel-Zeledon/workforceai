@@ -12,7 +12,7 @@ const NO: Ref = { kind: "", id: "" };
 const INDUSTRIES: Industry[] = [
   {
     key: "accounting_firm", version: 1, category: "professional", name: "Despacho contable", subsidiaries: 0, demo_set: "accounting_firm", locale: "es",
-    description: "Impuestos, contabilidad y nómina para tus clientes, con un equipo de agentes y horarios de oficina.",
+    description: "Impuestos, contabilidad y nómina para tus clientes, con agentes y horarios de oficina.",
     disclaimer: "Los agentes asisten: un profesional con licencia debe revisar los entregables fiscales.",
     departments: [
       { key: "practice", name: "Dirección del despacho", parent: "", cost_center: "CC-100", head: "" },

@@ -157,6 +157,8 @@ const fullOutput = (o: Partial<StructuredOutput>): StructuredOutput => ({
 });
 
 export class MockBackend {
+  /** the demo's agents, read-only (the offices directory lists them) */
+  agentList(): readonly Agent[] { return this.agents; }
   private listeners = new Set<(f: WsFrame) => void>();
   private gen = 0;
   private agents: Agent[] = [];

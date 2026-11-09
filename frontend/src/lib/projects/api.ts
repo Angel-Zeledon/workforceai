@@ -43,6 +43,15 @@ async function http<T>(method: string, path: string, body?: unknown): Promise<T>
 }
 const items = <T,>(x: any): T[] => (Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : []);
 const mock = async () => (await import("./mock")).projectsMock;
+/** Demo plan changes (lib/mock/plan-changes-mock.ts): one agent proposal per launched project, decided by a person. */
+let planChanges: import("../mock/plan-changes-mock").MockPlanChanges | null = null;
+const mockChanges = async () => {
+  if (!planChanges) {
+    const [{ MockPlanChanges }, { tr }] = await Promise.all([import("../mock/plan-changes-mock"), import("../i18n-core")]);
+    planChanges = new MockPlanChanges((k, v) => tr(k, v));
+  }
+  return planChanges;
+};
 
 export const projectsApi = {
   list: async (): Promise<ProjectSummary[]> => (MOCK ? (await mock()).list() : items<ProjectSummary>(await http("GET", "/projects"))),
@@ -76,9 +85,9 @@ export const projectsApi = {
   retryNode: async (id: string, nodeId: string) => (MOCK ? (await mock()).retryNode(id, nodeId) : http("POST", `/projects/${id}/nodes/${nodeId}/retry`)),
   skipNode: async (id: string, nodeId: string, reason: string) => (MOCK ? (await mock()).skipNode(id, nodeId, reason) : http("POST", `/projects/${id}/nodes/${nodeId}/skip`, { reason })),
   /** Q2 plan changes: agents only propose; a human decides. */
-  listChanges: async (id: string): Promise<PlanChange[]> => (MOCK ? [] : items<PlanChange>(await http("GET", `/projects/${id}/plan-changes`))),
-  proposeChange: async (id: string, reason: string, ops: PlanChangeOp[]): Promise<PlanChange | null> => (MOCK ? null : http("POST", `/projects/${id}/plan-changes`, { reason, ops })),
-  decideChange: async (id: string, changeId: string, decision: "approve" | "reject"): Promise<PlanChange | null> => (MOCK ? null : http("POST", `/projects/${id}/plan-changes/${changeId}/${decision}`, {})),
+  listChanges: async (id: string): Promise<PlanChange[]> => (MOCK ? (await mockChanges()).list(await (await mock()).get(id)) : items<PlanChange>(await http("GET", `/projects/${id}/plan-changes`))),
+  proposeChange: async (id: string, reason: string, ops: PlanChangeOp[]): Promise<PlanChange | null> => (MOCK ? (await mockChanges()).propose(await (await mock()).get(id), reason, ops) : http("POST", `/projects/${id}/plan-changes`, { reason, ops })),
+  decideChange: async (id: string, changeId: string, decision: "approve" | "reject"): Promise<PlanChange | null> => (MOCK ? (await mockChanges()).decide(id, changeId, decision) : http("POST", `/projects/${id}/plan-changes/${changeId}/${decision}`, {})),
   replanNode: async (id: string, nodeId: string): Promise<PlanChange | null> => (MOCK ? null : http("POST", `/projects/${id}/nodes/${nodeId}/replan`)),
   setBudget: async (id: string, usd: number) => (MOCK ? (await mock()).setBudget(id, usd) : http("PUT", `/projects/${id}/budget`, { budget_usd: usd })),
   decide: async (pid: string, approvalId: string, decision: "approve" | "reject") =>

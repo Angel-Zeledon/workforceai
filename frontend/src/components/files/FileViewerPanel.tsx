@@ -12,10 +12,15 @@ import { AskForChange } from "./AskForChange";
 import { Markdown } from "./markdown";
 import { parseCsv } from "@/lib/csv";
 import { CodeView, DiffView, DocView, ImageView, JsonView, PdfBytesView, SheetView, TableView } from "./viewers";
+import { DetailPanel, dropDetailUrl, useDetailUrl } from "../ui/DetailPanel";
+
+const FILE_PARAM = "archivo";
 
 type Load = { state: "loading" } | { state: "error"; code: string } | { state: "ok"; file: DriveFile; versions: DriveVersion[] };
 
-/** Right side panel, like Claude artifacts / ChatGPT canvas: the file chosen in the chat, by type, with versions, edit and "ask for changes". */
+/** Right side panel, like Claude artifacts / ChatGPT canvas: the file chosen in the chat, by type, with versions, edit and "ask for changes".
+ *  The frame is the single side panel (components/ui/DetailPanel.tsx), one layer above the others; ?archivo=<path> says
+ *  which file is open, so Back closes it. Wider than the pedido (560 px): tables and documents need the room. */
 export function FileViewerPanel() {
   const ref = useFileViewer((s) => s.ref);
   const close = useFileViewer((s) => s.close);
@@ -44,12 +49,11 @@ export function FileViewerPanel() {
   useEffect(() => { setLoad({ state: "loading" }); setVersion(ref?.action === "evidence" && ref.version ? ref.version : 0); setShowDiff(false); setEditing(false); reload(); }, [ref?.path, ref?.file_id, reload]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (touched) reload(); }, [touched, reload]);
   useEffect(() => { if (rev) reload(); }, [rev, reload]);
-  useEffect(() => {
-    if (!ref) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !editing) close(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [ref, close, editing]);
+  const open = useFileViewer((s) => s.open);
+  useDetailUrl(FILE_PARAM, ref?.path, (path) => {
+    if (!path) close();
+    else if (useFileViewer.getState().ref?.path !== path) open({ path, name: path.split("/").pop() || path });
+  });
 
   if (!ref) return null;
   const file = load.state === "ok" ? load.file : null;
@@ -59,22 +63,19 @@ export function FileViewerPanel() {
   const author = file?.updated_by;
 
   return (
-    <aside data-testid="file-viewer" data-kind={kind} data-version={shown} role="complementary" aria-label={t("fileviewer.panelLabel", { name: ref.name })}
-      className="pointer-events-auto flex h-full w-[min(560px,100vw)] flex-col border-l border-line bg-panel shadow-float">
-      <header className="flex items-start gap-2.5 border-b border-line p-3">
-        <FileBadge kind={kind} />
-        <div className="min-w-0 flex-1">
-          <h2 data-testid="viewer-title" className="truncate text-[13.5px] font-semibold text-ink">{file?.name ?? ref.name}</h2>
-          <div className="truncate text-[11px] text-mute">
-            {t(`fileviewer.kind.${kind}`)}{file ? ` · ${fmtBytes(file.size)}` : ""}
-            {author ? ` · ${author.kind === "agent" ? name(author.id) : author.kind === "human" ? t("drive.person") : t("drive.system")}` : ""}
-          </div>
-          <div className="truncate font-mono text-[10px] text-mute">{ref.path}</div>
-        </div>
-        <button type="button" data-testid="viewer-close" aria-label={t("fileviewer.close")} title={t("fileviewer.close")} onClick={close} className="flex min-h-10 min-w-10 items-center justify-center rounded-md p-1.5 text-mute hover:bg-panel2 hover:text-ink">
-          <Icon name="x" size={15} />
-        </button>
-      </header>
+    <DetailPanel
+      testId="file-viewer" label={t("detail.kind.file")} concept="file" layout="fill" width="lg" layer={2}
+      ariaLabel={t("fileviewer.panelLabel", { name: ref.name })} title={file?.name ?? ref.name} titleTestId="viewer-title"
+      closeLabel={t("fileviewer.close")} closeTestId="viewer-close" backTestId="viewer-back" onClose={close} canEscape={() => !editing}
+      data={{ "data-kind": kind, "data-version": shown }} leading={<FileBadge kind={kind} />}
+      subtitle={<>
+        <span className="block truncate">
+          {t(`fileviewer.kind.${kind}`)}{file ? ` · ${fmtBytes(file.size)}` : ""}
+          {author ? ` · ${author.kind === "agent" ? name(author.id) : author.kind === "human" ? t("drive.person") : t("drive.system")}` : ""}
+        </span>
+        <span className="block truncate font-mono text-[10px]">{ref.path}</span>
+      </>}
+    >
 
       {file && (
         <Toolbar
@@ -93,7 +94,7 @@ export function FileViewerPanel() {
       </div>
 
       {file && <AskForChange file={file} versions={load.state === "ok" ? load.versions : []} />}
-    </aside>
+    </DetailPanel>
   );
 }
 
@@ -148,7 +149,7 @@ function Toolbar({ file, kind, version, shown, showDiff, editing, onVersion, onD
         </button>
       )}
       <button type="button" data-testid="viewer-download" onClick={() => drive.download(file).catch(() => {})} className={`border-line text-ink2 hover:border-accent ${btn}`}>{t("fileviewer.download")}</button>
-      <button type="button" data-testid="viewer-open-files" onClick={() => { close(); show(file.path.split("/").slice(0, -1).join("/") || "/"); }}
+      <button type="button" data-testid="viewer-open-files" onClick={() => { dropDetailUrl(FILE_PARAM); close(); show(file.path.split("/").slice(0, -1).join("/") || "/"); }}
         className={`border-line text-ink2 hover:border-accent ${btn}`}>{t("fileviewer.openInFiles")}</button>
       </span>
       {version > 0 && version !== file.current_version && (

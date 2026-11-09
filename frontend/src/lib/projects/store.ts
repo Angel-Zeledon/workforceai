@@ -194,8 +194,8 @@ export const useProjects = create<PState>((set, get) => ({
     const id = get().activeId; if (!id) return;
     try { const changes = await projectsApi.listChanges(id); if (get().activeId === id) set({ changes }); } catch { /* backend without plan changes */ }
   },
-  proposeChange: async (reason, ops) => { const id = get().activeId; if (!id) return; await projectsApi.proposeChange(id, reason, ops); if (!MOCK) { set({ detail: await projectsApi.get(id) }); await get().loadChanges(); } },
-  decideChange: async (changeId, d) => { const id = get().activeId; if (!id) return; await projectsApi.decideChange(id, changeId, d); if (!MOCK) { set({ detail: await projectsApi.get(id) }); await get().loadChanges(); } },
+  proposeChange: async (reason, ops) => { const id = get().activeId; if (!id) return; await projectsApi.proposeChange(id, reason, ops); if (!MOCK) set({ detail: await projectsApi.get(id) }); await get().loadChanges(); },
+  decideChange: async (changeId, d) => { const id = get().activeId; if (!id) return; await projectsApi.decideChange(id, changeId, d); if (!MOCK) set({ detail: await projectsApi.get(id) }); await get().loadChanges(); },
   replanNode: async (nodeId) => { const id = get().activeId; if (!id) return; await projectsApi.replanNode(id, nodeId); if (!MOCK) await get().loadChanges(); },
   saveAsTemplate: async (opts) => { const id = get().activeId; if (!id) return null; const t = await projectsApi.saveAsTemplate(id, opts); await get().loadTemplates(); return t; },
 }));

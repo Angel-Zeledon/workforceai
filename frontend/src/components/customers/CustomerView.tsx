@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { trOr, useT } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { toast } from "@/lib/toast";
@@ -8,6 +8,7 @@ import { useChatCustomer } from "@/lib/chatCustomer";
 import { customerColor, defaultCloneName, normalizeStatus, STATUS_COLOR } from "@/lib/customersLogic";
 import { Btn, Card, Dot, Empty, Loading, timeAgo, useAgentColor, useAgentName } from "../ui";
 import { CustomerForm } from "./CustomerForm";
+import { DetailPanel, useDetailUrl, type DetailPanelProps } from "../ui/DetailPanel";
 
 const field = "w-full rounded-md border border-line bg-panel2 px-2.5 py-1.5 text-[16px] text-ink md:text-[13px]";
 
@@ -23,8 +24,12 @@ export function StatusPill({ status }: { status: string }) {
   );
 }
 
-/** One customer's scoped view: its clones, projects, recent requests and a request box scoped to it. */
-export function CustomerView({ id, onBack, onChanged }: { id: string; onBack: () => void; onChanged: () => void }) {
+/**
+ * One customer's scoped view: its clones, projects, recent requests and a request box scoped to it. It opens in the
+ * single side panel (components/ui/DetailPanel.tsx) over the district, so the list stays where it was; ?cliente=<id>
+ * says which customer is open and the browser's Back closes it.
+ */
+export function CustomerView({ id, onBack, onChanged, onOpen }: { id: string; onBack: () => void; onChanged: () => void; onOpen?: (id: string) => void }) {
   const { t } = useT();
   const agents = useStore((s) => s.agents);
   const order = useStore((s) => s.agentOrder);
@@ -48,6 +53,9 @@ export function CustomerView({ id, onBack, onChanged }: { id: string; onBack: ()
     customersApi.get(id).then(setD).catch(() => setErr(true));
   }, [id]);
   useEffect(load, [load]);
+  // another customer in the same panel: start from its own state
+  useEffect(() => { setD(null); setEditing(false); setText(""); setEarlierOpen(false); }, [id]);
+  useDetailUrl("cliente", id, (v) => { if (!v) onBack(); else if (onOpen) onOpen(v); });
   // B12: while this view is open the chat works for this customer (its requests are scoped to it).
   const cust = d?.customer;
   useEffect(() => {
@@ -60,8 +68,17 @@ export function CustomerView({ id, onBack, onChanged }: { id: string; onBack: ()
     customersApi.historyCandidates().then(setEarlier).catch(() => setEarlierErr(true));
   }, []);
 
-  if (err) return <Empty action={<Btn onClick={onBack}>{t("customers.back")}</Btn>}>{t("customers.error.load")}</Empty>;
-  if (!d) return <Loading rows={4} />;
+  const frame = (body: ReactNode, more: Partial<DetailPanelProps> = {}) => (
+    <DetailPanel
+      testId="customers-view" layout="overlay" label={t("detail.kind.customer")} concept="customer" title={t("detail.kind.customer")}
+      ariaLabel={t("detail.customer.aria", { name: d?.customer.name ?? "" })} closeLabel={t("detail.customer.close")}
+      closeTestId="customers-close" backTestId="customers-back" onClose={onBack} {...more}
+    >
+      <div data-testid="customers-view-body" className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-bg px-4 py-3">{body}</div>
+    </DetailPanel>
+  );
+  if (err) return frame(<Empty action={<Btn onClick={onBack}>{t("detail.back")}</Btn>}>{t("customers.error.load")}</Empty>);
+  if (!d) return frame(<Loading rows={4} />);
   const c = d.customer;
   const assigned = new Set(d.assignments.map((a) => a.agent_id));
   const free = order.filter((aid) => agents[aid] && !assigned.has(aid));
@@ -108,33 +125,13 @@ export function CustomerView({ id, onBack, onChanged }: { id: string; onBack: ()
   const finishedRequest = (st: string) => st === "done" || st === "failed";
   const smallBtn = "shrink-0 rounded px-2 py-1 text-[11px] text-accent hover:bg-accent-soft";
 
-  return (
-    <div data-testid="customers-view" className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <Btn data-testid="customers-back" onClick={onBack}>← {t("customers.back")}</Btn>
-          <div className="min-w-0">
-            <h2 className="flex flex-wrap items-center gap-2 font-display text-lg font-semibold text-ink">
-              <span aria-hidden className="inline-block h-3.5 w-3.5 rounded-sm" style={{ background: customerColor(c.color, c.id) }} />
-              <span className="break-words">{c.name}</span>
-              <StatusPill status={d.status} />
-            </h2>
-            <div className="mt-0.5 text-[11.5px] text-mute">
-              {c.tax_id && <span className="mr-3">{t("customers.taxId")}: {c.tax_id}</span>}
-              {d.folder_path && <span className="break-all">{t("customers.folder")}: <span className="font-mono">{d.folder_path}</span></span>}
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Btn data-testid="customers-edit" onClick={() => setEditing((v) => !v)}>{t("customers.edit")}</Btn>
-          <Btn data-testid="customers-archive" kind="danger" onClick={() => void archive()}>{t("customers.archive")}</Btn>
-        </div>
-      </div>
-      {c.notes && !editing && <p className="max-w-3xl whitespace-pre-line text-[12.5px] text-ink2">{c.notes}</p>}
+  return frame(
+    <div className="space-y-4">
+      {c.notes && !editing && <p className="whitespace-pre-line text-[12.5px] text-ink2">{c.notes}</p>}
       {editing && <Card title={t("customers.edit")}><CustomerForm initial={c} onSave={save} onCancel={() => setEditing(false)} /></Card>}
-      <p className="max-w-3xl rounded-md border border-line bg-panel2 px-3 py-2 text-[11.5px] text-ink2">{t("customers.isolation.note")}</p>
+      <p className="rounded-md border border-line bg-panel2 px-3 py-2 text-[11.5px] text-ink2">{t("customers.isolation.note")}</p>
 
-      <div className="grid gap-4 xl:grid-cols-2 [&>*]:min-w-0">
+      <div className="grid gap-4 [&>*]:min-w-0">
         <Card title={t("customers.clones.title", { count: d.assignments.length })}>
           {d.assignments.length ? (
             <ul className="space-y-1.5">
@@ -252,6 +249,19 @@ export function CustomerView({ id, onBack, onChanged }: { id: string; onBack: ()
             )}
         </Card>
       </div>
-    </div>
+    </div>,
+    {
+      title: <span className="break-words">{c.name}</span>, titleTestId: "customers-name",
+      leading: <span aria-hidden className="mt-0.5 inline-block h-3.5 w-3.5 rounded-sm" style={{ background: customerColor(c.color, c.id) }} />,
+      meta: <StatusPill status={d.status} />,
+      subtitle: (c.tax_id || d.folder_path) ? <>
+        {c.tax_id && <span className="mr-3">{t("customers.taxId")}: {c.tax_id}</span>}
+        {d.folder_path && <span className="break-all">{t("customers.folder")}: <span className="font-mono">{d.folder_path}</span></span>}
+      </> : undefined,
+      actions: <>
+        <Btn data-testid="customers-edit" onClick={() => setEditing((v) => !v)}>{t("customers.edit")}</Btn>
+        <Btn data-testid="customers-archive" kind="danger" onClick={() => void archive()}>{t("customers.archive")}</Btn>
+      </>,
+    },
   );
 }

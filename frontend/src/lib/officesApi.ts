@@ -10,6 +10,16 @@ const mockOffices: OfficesResponse = {
   departments: [], restricted: false, me: { user_id: "demo", admin: true, offices: ["general"] },
 };
 
+/** Demo: the directory lists the demo's own agents (owned by the General office), so the Agents tab is not empty. */
+async function mockDirectory(): Promise<DirectoryEntry[]> {
+  const { mockBackend } = await import("./mock/engine");
+  return mockBackend.agentList().map((a) => ({
+    id: a.id, name: a.name, role: a.role, title: a.title,
+    owner_kind: "office" as const, owner_id: "general", owner_name: "General", office_id: "general", office_name: "General",
+    visibility: "office" as const, shares: [], explicit: false, rights: { see: true, use: true, edit: true },
+  }));
+}
+
 export const officesApi = {
   list: (): Promise<OfficesResponse> => (MOCK ? Promise.resolve(mockOffices) : call<OfficesResponse>("GET", "/offices")),
   enable: (department_id: string, visibility: OfficeVisibility) => call<OfficeView>("POST", "/offices", { department_id, visibility }),
@@ -19,7 +29,7 @@ export const officesApi = {
   removeMember: (id: string, user: string) => call<OfficeView>("DELETE", `/offices/${encodeURIComponent(id)}/members/${encodeURIComponent(user)}`),
 
   directory: (): Promise<{ agents: DirectoryEntry[]; restricted: boolean }> =>
-    (MOCK ? Promise.resolve({ agents: [], restricted: false }) : call("GET", "/agents/directory")),
+    (MOCK ? mockDirectory().then((agents) => ({ agents, restricted: false })) : call("GET", "/agents/directory")),
   access: (agent: string) => call<AccessView>("GET", `/agents/${encodeURIComponent(agent)}/access`),
   setAccess: (agent: string, b: AccessInput) => call<AccessView>("PUT", `/agents/${encodeURIComponent(agent)}/access`, b),
 

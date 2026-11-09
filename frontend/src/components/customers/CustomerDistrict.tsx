@@ -10,10 +10,12 @@ import { ConceptHelp } from "../concepts/ConceptHelp";
 import { CustomerForm } from "./CustomerForm";
 import { CustomerView, StatusPill } from "./CustomerView";
 import { DistrictMap } from "./DistrictMap";
+import { detailParam } from "../ui/detailPanelLogic";
 
 /**
  * The customer district (B12): the firm sees its customers as a neighbourhood of buildings, the most urgent first.
- * Clicking a building opens that customer's scoped view (its clones, projects and requests).
+ * Clicking a building opens that customer's scoped view (its clones, projects and requests) in the side panel, over the
+ * district; /clients?cliente=<id> opens it straight away.
  */
 export function CustomerDistrict() {
   const { t } = useT();
@@ -27,8 +29,8 @@ export function CustomerDistrict() {
     customersApi.district().then(setData).catch(() => setErr(true));
   }, []);
   useEffect(load, [load]);
-
-  if (open) return <CustomerView id={open} onBack={() => { setOpen(null); load(); }} onChanged={load} />;
+  // a link straight to one customer (?cliente=<id>)
+  useEffect(() => { const id = detailParam(window.location.search, "cliente"); if (id) setOpen(id); }, []);
 
   const items = data ? sortDistrict(data.customers) : [];
   const create = async (v: CustomerInput) => {
@@ -38,7 +40,8 @@ export function CustomerDistrict() {
   const counts = Object.fromEntries(CUSTOMER_STATUSES.map((s) => [s, items.filter((i) => normalizeStatus(i.status) === s).length]));
 
   return (
-    <div data-testid="customers-district" className="space-y-4">
+    <div data-testid="customers-district" data-open={open ?? ""} className="space-y-4">
+      {open && <CustomerView id={open} onBack={() => { setOpen(null); load(); }} onChanged={load} onOpen={setOpen} />}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-1.5"><h2 className="font-display text-lg font-semibold text-ink">{t("customers.title")}</h2><ConceptHelp concept="customer" /></div>

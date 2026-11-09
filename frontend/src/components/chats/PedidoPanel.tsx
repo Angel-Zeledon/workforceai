@@ -2,6 +2,7 @@
 // The panel of one pedido, beside the chat (docs/superpowers/specs/2026-11-03-chats-y-pedidos-design.md): everything about a
 // piece of work in one place (summary, steps, files, report, how they worked on it) without leaving the chat. Desktop: a
 // drawer on the right; phone: full screen with "Back". Closing (X, Esc, Back of the browser) returns to where the person was.
+// The frame (header, X, Esc, Volver, focus) is the single side panel of the app: components/ui/DetailPanel.tsx.
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,6 +20,7 @@ import { ReportView } from "../ReportView";
 import { useAgentName } from "../ui";
 import { ApprovalPending, QuestionPending } from "../approvals/PendingCard";
 import { Glyph, StatusPill } from "./chatsUi";
+import { DetailPanel } from "../ui/DetailPanel";
 
 export type PedidoTab = "summary" | "steps" | "files" | "report" | "work";
 const TABS: PedidoTab[] = ["summary", "steps", "files", "report", "work"];
@@ -210,40 +212,23 @@ export function PedidoPanel({ requestId, onClose }: { requestId: string; onClose
   // how they worked on it: the internal conversation (loaded once per opening, it is read-only)
   useEffect(() => { if (conv.convId) void loadRequestConv(conv.convId); }, [conv.convId, loadRequestConv]);
 
-  // Esc closes (the file viewer, when open on top, takes its own Esc first)
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !useFileViewer.getState().ref && !e.defaultPrevented) onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const title = (conv.row?.title_custom ? conv.title : "") || req?.text || conv.title || t("pedido.label"); // a renamed pedido keeps its name
   const finished = report?.created_at || (info.status === "done" || info.status === "failed" ? tasks.map((x) => x.finished_at || "").sort().pop() : "") || "";
   const attention = needsAttention(info.status);
   const msgs = work?.items ?? NO_MSGS;
 
   return (
-    <aside
-      role="dialog" aria-modal="false" aria-label={t("pedido.aria", { title })} data-testid="pedido-panel" data-request={requestId} data-status={info.status}
-      className="chats-fade absolute inset-0 z-20 flex min-h-0 flex-col bg-panel md:left-auto md:w-[460px] md:border-l md:border-line md:shadow-float xl:static xl:z-auto xl:shrink-0 xl:shadow-none"
+    <DetailPanel
+      testId="pedido-panel" label={t("pedido.label")} concept="pedido" ariaLabel={t("pedido.aria", { title })}
+      title={title} titleTestId="pedido-title" closeLabel={t("pedido.close")} closeTestId="pedido-close" backTestId="pedido-back"
+      onClose={onClose} canEscape={() => !useFileViewer.getState().ref} className="chats-fade"
+      data={{ "data-request": requestId, "data-status": info.status }}
+      meta={<>
+        <StatusPill status={info.status} />
+        {req?.created_at && <span>{t("pedido.created", { date: fmtDateTime(req.created_at) })}</span>}
+        {conv.row?.archived && <span className="rounded bg-mute/10 px-1.5 py-[1px] text-[10.5px] font-medium text-ink2">{t("chats.archived.badge")}</span>}
+      </>}
     >
-      <header className="border-b border-line px-4 pb-3 pt-2.5">
-        <div className="flex items-center gap-2">
-          <button type="button" data-testid="pedido-back" onClick={onClose} className="inline-flex min-h-10 items-center gap-1 rounded-md pr-2 text-[12px] font-semibold text-accent-hover hover:bg-panel2 md:hidden">
-            <Glyph name="back" size={15} />{t("pedido.back")}
-          </button>
-          <span className="hidden text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute md:inline">{t("pedido.label")}</span>
-          <span className="flex-1" />
-          <button type="button" data-testid="pedido-close" onClick={onClose} aria-label={t("pedido.close")} title={t("pedido.close")}
-            className="hidden min-h-9 min-w-9 items-center justify-center rounded-md text-mute hover:bg-panel2 hover:text-ink md:flex"><Glyph name="x" size={15} /></button>
-        </div>
-        <h2 data-testid="pedido-title" className="mt-1 line-clamp-2 text-[15px] font-semibold leading-snug tracking-tight text-ink">{title}</h2>
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-mute">
-          <StatusPill status={info.status} />
-          {req?.created_at && <span>{t("pedido.created", { date: fmtDateTime(req.created_at) })}</span>}
-          {conv.row?.archived && <span className="rounded bg-mute/10 px-1.5 py-[1px] text-[10.5px] font-medium text-ink2">{t("chats.archived.badge")}</span>}
-        </div>
-      </header>
 
       {attention && (
         <div data-testid="pedido-attention" role="status" className="flex flex-wrap items-center gap-2 border-b border-warn/30 bg-warn/10 px-4 py-2">
@@ -313,6 +298,6 @@ export function PedidoPanel({ requestId, onClose }: { requestId: string; onClose
           </div>
         )}
       </div>
-    </aside>
+    </DetailPanel>
   );
 }

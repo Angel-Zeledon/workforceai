@@ -21,7 +21,7 @@ Variables opcionales: `FRONTEND_URL`, `API_URL` (default `http://localhost:8080/
 | `command-input` | Input del chat de la Oficina (canal general) | Visible en el modo oficina. |
 | `command-submit` | Botón de enviar al chat de la Oficina | Dispara `POST /messages` con `conversation: "office"`; el backend decide quién responde y, si es una tarea, crea la solicitud (si el backend aún no tiene `/messages` el frontend cae a `POST /requests`). |
 | `approval-<id>` | Una aprobación pendiente en la bandeja | `<id>` = id de la `Approval`. Debe contener un botón con texto "Aprobar" (y "Rechazar"). Solo aprobaciones `pending`; desaparece al resolverse. |
-| `mode-toggle` | Botón de cambio oficina/dashboard | Debe exponer `data-mode="office"` o `data-mode="dashboard"` (modo activo). |
+| `mode-toggle` | Selector "Vista 3D / Vista lista" de la Oficina (visible también en el teléfono, solo íconos) | Debe exponer `data-mode="office"` (vista 3D) o `data-mode="dashboard"` (vista lista, `/dashboard`). |
 | `activity-feed` | Contenedor del feed de actividad | Muestra los `activity.logged` en texto. |
 
 Los tests usan `[data-testid^="agent-"]` y `[data-testid^="approval-"]`: no reutilices esos prefijos.
@@ -65,7 +65,8 @@ Prefijos `ws-`, `art-`, `dash-`, `files-` (nunca `agent-` ni `approval-`). Imple
 | `art-history-toggle`, `art-version-<n>`, `art-restore-<n>` | Historial |
 | `art-export-json`, `art-export-csv` | Exportar |
 | `art-conflict`, `art-conflict-mine`, `art-conflict-theirs` | Conflicto de guardado |
-| `dash-nav-<section>` (incluye `dash-nav-files`), `dash-file-<id>`, `dash-project-<projectId>` (`data-progress`) | Dashboard: navegación genérica y sección Archivos |
+| `dash-nav-<section>` (`overview`, `agents`, `tasks`, `quality`, `costs`, `reports`), `dash-more` | Vista lista de la Oficina (`/dashboard`): sus secciones; en modo simple Calidad, Costos e Informes van tras `dash-more` |
+| `dash-nav-<id>` y `dash-go-<id>` (`customers`, `requests`, `approvals`, `files`; `data-goto` = ruta), `dash-go-<id>-count` | Vista lista: "Ir a" (en el menú de la vista en escritorio, tarjetas en Resumen) a Clientes `/clients`, Pedidos `/chats`, Pendientes `/approvals/inbox` (número de `lib/pending.ts`) y Archivos `/files`. `/dashboard?section=<viejo>` (también `?tab=`) lleva a esa pantalla; `conversations` abre Agentes (`dash-conversations`) |
 
 Pendientes del spec (no implementados aún): `ws-chip-<agentId>`, `art-proposal-*`, `art-suggestion-*`, `art-comment-*`, `art-import-input`, `art-export-docx|xlsx|pdf`.
 
@@ -95,7 +96,7 @@ Siguen el catalogo de la sec. 10 del spec. Nuevos o con matices respecto al spec
 | `depth-badge` (`data-depth`), `depth-limit-badge` | Delegacion | |
 | `approval-group-<action>` (`data-count`), `approvals-batch-approve`, `approvals-batch-reject`, `approvals-batch-confirm`, `approvals-batch-typed-confirm`, `approvals-batch-confirm-go`, `project-approval-<id>` | Aprobaciones del proyecto | `project-approval-<id>` no usa el prefijo `approval-`. |
 | `costs-budget-input`, `costs-budget-save` | Costos | |
-| `node-drawer`, `node-drawer-close`, `explain-headline`, `explain-root-cause-<id>` | Panel de nodo | |
+| `node-drawer` (`data-node`, `data-state`), `node-drawer-title`, `node-drawer-close` (X, escritorio), `node-drawer-back` (Volver, teléfono), `node-drawer-body`, `explain-headline`, `explain-root-cause-<id>` | Panel de la tarea | Es el panel lateral único (`components/ui/DetailPanel.tsx`): Esc lo cierra y `?tarea=<id>` en la dirección, así que Atrás también. Mismo marco: pedido (`pedido-*`), cliente (`customers-view`, `customers-close`, `customers-back`, `customers-name`, `?cliente=<id>`) y archivo (`file-viewer`, `viewer-close`, `viewer-back`, `?archivo=<ruta>`). |
 | `project-pill` | Pastilla en la oficina | `data-progress`. |
 | `template-card-<id>`, `project-from-template` | Plantillas | |
 

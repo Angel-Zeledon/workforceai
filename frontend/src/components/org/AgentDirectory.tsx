@@ -33,7 +33,7 @@ export function AgentDirectory({ people }: { people: PersonRef[] }) {
         <p className="flex-1 text-[13px] text-mute">{t("offices.dir.intro")}</p>
         <input type="search" data-testid="agent-directory-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("offices.dir.search")} className={`${inputCls} max-w-xs`} />
       </div>
-      {groups.length === 0 && <p className="text-[13px] text-mute">{t("offices.dir.empty")}</p>}
+      {groups.length === 0 && <p className="text-[13px] text-mute" data-testid="agent-directory-empty">{t(q.trim() ? "offices.dir.empty" : "offices.dir.none")}</p>}
       {groups.map((g) => (
         <section key={g.group} data-testid={`agent-directory-${g.group}`}>
           <h3 className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-mute">{t(`offices.dir.group.${g.group}`)}</h3>

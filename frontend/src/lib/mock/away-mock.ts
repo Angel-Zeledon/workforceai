@@ -1,10 +1,12 @@
 import type { Agent, Approval } from "../types";
 import type { AwayFrame, AwayItem, AwaySummary } from "../awayApi";
+import { sameLocalDay } from "../awayLogic";
 
 /**
  * Simulated "while you were away" (B3) for NEXT_PUBLIC_MOCK=true: a believable night in the demo office, built from
- * the mock roster and the mock pending approvals. Same shape as GET /away-summary. Closing it is remembered in this
- * browser for 12 hours so the demo does not reopen it on every reload.
+ * the mock roster and the mock pending approvals. Same shape as GET /away-summary. It opens on its own on the first
+ * visit of each day (closing it is remembered in this browser until midnight, so reloads do not reopen it), and at
+ * any time with `?away=1` in the address (see AwayHost) or with the moon button of the office.
  */
 const DISMISS_KEY = "aiw.mock.away.dismissedAt";
 const HOUR = 3600_000;
@@ -13,8 +15,9 @@ export function mockAwayDismiss() {
   try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch { /* private mode */ }
 }
 
+/** Closed today already: the demo shows the summary again on the first visit of the next day. */
 function dismissedRecently(): boolean {
-  try { return Date.now() - Number(localStorage.getItem(DISMISS_KEY) || 0) < 12 * HOUR; } catch { return false; }
+  try { return sameLocalDay(Number(localStorage.getItem(DISMISS_KEY) || 0), Date.now()); } catch { return false; }
 }
 
 /** The approval the demo "received overnight", so the act-now list has something real to decide. */

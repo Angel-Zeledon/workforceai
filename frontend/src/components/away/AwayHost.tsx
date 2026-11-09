@@ -1,8 +1,9 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { create } from "zustand";
 import { awayApi, type AwayItem, type AwaySection, type AwaySummary } from "@/lib/awayApi";
-import { alertKey, awayDuration, headlineParts, itemAction, MIN_HOURS_CHOICES, parseMinHours } from "@/lib/awayLogic";
+import { alertKey, awayDuration, awayParam, headlineParts, itemAction, MIN_HOURS_CHOICES, parseMinHours } from "@/lib/awayLogic";
 import { useAwayReplay } from "@/lib/awayReplay";
 import { fmtDateTime, fmtUsd, intlLocale, useT } from "@/lib/i18n";
 import { go } from "@/lib/navBridge";
@@ -100,10 +101,18 @@ export function AwayHost() {
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [load, uid]);
+  useEffect(() => {
+    // `?away=1` opens it on arrival, whatever the time away (still never on top of the first-run welcome: it waits).
+    if (!awayParam(window.location.search)) return;
+    if (welcomeSeen(uid)) { useAway.getState().openNow(); return; }
+    const id = setInterval(() => { if (welcomeSeen(uid)) { clearInterval(id); useAway.getState().openNow(); } }, 1000);
+    return () => clearInterval(id);
+  }, [uid]);
   useEffect(() => () => useAwayReplay.getState().stop(), []);
   return (
     <>
-      {open && <AwaySheet />}
+      {/* A portal on <body>: above the app header and the menu, not inside the office stacking context. */}
+      {open && typeof document !== "undefined" && createPortal(<AwaySheet />, document.body)}
       <ReplayBar />
     </>
   );
@@ -148,7 +157,7 @@ function AwaySheet() {
   const hide = () => useAway.setState({ open: false }); // close without dismissing (navigating somewhere)
   const parts = s ? headlineParts(s.counts) : [];
   return (
-    <div className="pointer-events-auto fixed inset-0 z-[60] flex items-end justify-center bg-black/25 sm:items-center sm:p-6" onClick={hide}>
+    <div className="pointer-events-auto fixed inset-0 z-[8000] flex items-end justify-center bg-black/25 sm:items-center sm:p-6" onClick={hide}>
       <section role="dialog" aria-modal="true" aria-labelledby="away-title" data-testid="away-sheet" onClick={(e) => e.stopPropagation()}
         className="flex max-h-[88dvh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-2xl border border-line bg-panel shadow-pop sm:rounded-2xl">
         <header className="flex items-start gap-3 border-b border-line px-4 py-3.5 sm:px-5">
@@ -296,7 +305,7 @@ function SectionBlock({ sec, onNavigate }: { sec: AwaySection; onNavigate: () =>
         else { onNavigate(); go("/dashboard"); }
         return;
       case "agent": onNavigate(); select(it.agent_id || it.ref_id); return;
-      case "approval": // a decided approval: its history lives in the dashboard
+      case "approval": onNavigate(); go("/dashboard?section=history"); return; // a decided approval: its history lives in the list view
       case "dashboard": onNavigate(); go("/dashboard"); return;
     }
   }, [reports, report, onNavigate, select]);

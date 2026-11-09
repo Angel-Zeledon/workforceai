@@ -38,7 +38,7 @@ export function FollowView() {
           <div key={n.id} data-testid={`follow-row-${n.id}`} data-state={n.state}
             className={`rounded-[10px] border bg-white p-3 ${n.state === "needs_input" ? "border-accent/40" : "border-line"}`}>
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => select(n.id)} className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-ink hover:text-accent">{title(n)}</button>
+              <button type="button" onClick={() => select(n.id)} className="min-w-0 basis-full break-words text-left text-[13px] font-semibold text-ink hover:text-accent sm:basis-auto sm:flex-1 sm:truncate">{title(n)}</button>
               <AgentChip id={n.agent_id} />
               <StatePill state={n.state} />
               {s !== null && <span className="text-[11px] text-mute">{n.finished_at ? t("pv.follow.finished") : t("pv.follow.since")} <WaitingLabel seconds={s} /></span>}

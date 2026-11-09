@@ -39,4 +39,7 @@ export function splitTabs<T extends string>(all: readonly T[], simple: readonly 
 export const SIMPLE_PROJECT_TABS = ["follow", "approvals"] as const;
 // Agent panel (5 tabs, tanda 2): Chat and Trabajo open; Qué puede hacer, Qué sabe and Perfil behind "Más".
 export const SIMPLE_AGENT_TABS = ["chat", "work"] as const;
-export const SIMPLE_DASHBOARD = ["overview", "tasks", "agents"] as const;
+// Agentes y oficinas (4 tabs, tanda 3): Agentes and Oficinas open; Organigrama and Reglas de delegación behind "Más vistas".
+export const SIMPLE_ORG_TABS = ["agents", "offices"] as const;
+// Office list view (tanda 3, 6 sections): Resumen, Agentes and Tareas open; Calidad, Costos and Informes behind "Más vistas".
+export const SIMPLE_DASHBOARD = ["overview", "agents", "tasks"] as const;

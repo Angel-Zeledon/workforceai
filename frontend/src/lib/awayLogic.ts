@@ -71,3 +71,20 @@ export function replaySchedule(n: number, maxMs = 20000, minStepMs = 40, maxStep
   const step = Math.min(maxStepMs, Math.max(minStepMs, Math.floor(maxMs / n)));
   return Array.from({ length: n }, (_, i) => i * step);
 }
+
+/**
+ * `?away=1` in the address opens "while you were away" on arrival, whatever the time away (a link to show it,
+ * the demo, a test). Also `?away=open|true|yes`; anything else, or no parameter, leaves the usual rules.
+ */
+export function awayParam(search: string | null | undefined): boolean {
+  let v: string | null = null;
+  try { v = new URLSearchParams(search || "").get("away"); } catch { return false; }
+  return v !== null && ["1", "true", "yes", "open", "si", "sí"].includes(v.trim().toLowerCase());
+}
+
+/** Whether two moments fall on the same local calendar day (the demo shows the summary on the first visit of the day). */
+export function sameLocalDay(a: number, b: number): boolean {
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a <= 0 || b <= 0) return false;
+  const x = new Date(a), y = new Date(b);
+  return x.getFullYear() === y.getFullYear() && x.getMonth() === y.getMonth() && x.getDate() === y.getDate();
+}
