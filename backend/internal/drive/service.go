@@ -80,6 +80,9 @@ type Config struct {
 	Log   *slog.Logger
 	// People (optional) decides what a person may do inside an office folder (/Offices/<office>). nil = no restriction.
 	People PeopleAccess
+	// AgentOffices (optional) tells the office of each agent: its folder /Offices/<office> is its work area
+	// (agent_offices.go). nil = agents have no office folder.
+	AgentOffices AgentOffices
 }
 
 // Service is the drive use case layer. It does NOT decide who may do what:

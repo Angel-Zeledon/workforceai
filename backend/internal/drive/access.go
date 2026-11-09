@@ -87,9 +87,10 @@ func depthOf(p string) int {
 // deepestGrant is the most specific rule covering p (nil when none does).
 func (sc scope) deepestGrant(p string) *Grant {
 	var best *Grant
+	lp := strings.ToLower(p) // the store resolves paths without regard to case: so do the rules
 	for i := range sc.rules {
 		g := &sc.rules[i]
-		if IsUnder(p, g.Path) && (best == nil || depthOf(g.Path) > depthOf(best.Path)) {
+		if IsUnder(lp, strings.ToLower(g.Path)) && (best == nil || depthOf(g.Path) > depthOf(best.Path)) {
 			best = g
 		}
 	}
@@ -149,8 +150,8 @@ type AccessEntry struct {
 	Fixed bool `json:"fixed,omitempty"`
 }
 
-// AgentAccess lists the folders of an agent with their level: the defaults first (desk, /Shared, its projects), then
-// the rules people set. A rule on exactly a default folder replaces that default line.
+// AgentAccess lists the folders of an agent with their level: the defaults first (desk, /Shared, its office, its
+// projects), then the rules people set. A rule on exactly a default folder replaces that default line.
 func (a *AgentFS) AgentAccess(ctx context.Context, agentID string) ([]AccessEntry, error) {
 	sc, err := a.scopeOf(ctx, agentID)
 	if err != nil {
@@ -160,6 +161,9 @@ func (a *AgentFS) AgentAccess(ctx context.Context, agentID string) ([]AccessEntr
 	desk := JoinPath(RootAgents, agentID)
 	out := []AccessEntry{{Path: desk, Level: AccessEdit, Source: SourceDefault, Fixed: true}}
 	defaults := []AccessEntry{{Path: "/" + RootShared, Level: AccessRead, Source: SourceDefault}}
+	if sc.office != "" {
+		defaults = append(defaults, AccessEntry{Path: sc.office, Level: AccessEdit, Source: SourceDefault})
+	}
 	for _, p := range a.projectRoots(ctx, org, sc) {
 		defaults = append(defaults, AccessEntry{Path: p, Level: AccessEdit, Source: SourceDefault})
 	}
@@ -186,7 +190,7 @@ func (a *AgentFS) AccessAt(ctx context.Context, agentID, p string) (level, sourc
 		return "", "", err
 	}
 	switch a.zone(ctx, a.Svc.org(ctx), sc, c) {
-	case ZoneDesk, ZoneProject:
+	case ZoneDesk, ZoneProject, ZoneOffice:
 		return AccessEdit, SourceDefault, nil
 	case ZoneShared:
 		return AccessRead, SourceDefault, nil

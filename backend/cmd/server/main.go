@@ -383,6 +383,8 @@ func run(log *slog.Logger) error {
 	officeRecall(memorySvc, deps.Offices)
 	if cfg.AuthEnabled && deps.Offices != nil && ws.drive != nil {
 		ws.drive.SetPeople(officePeople{svc: deps.Offices}) // office folders: member edits, open reads, private none
+		// agents work in their office folder and never beyond the person they work for
+		ws.drive.SetAgentOffices(agentOffices{svc: deps.Offices})
 	}
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	// Governance: API tokens, reports, retention job, webhooks (internal/governance, internal/webhooks).

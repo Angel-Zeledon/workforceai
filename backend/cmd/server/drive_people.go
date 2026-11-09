@@ -28,3 +28,21 @@ func (o officePeople) OfficeAccess(ctx context.Context, org, userID, officeID st
 	}
 	return drive.AccessNone, nil
 }
+
+// agentOffices answers drive.AgentOffices over the offices model: the office of the agent, "" for General (General has
+// no folder under /Offices). An unreadable model is an error, so the agent's scope is unknown (fail closed).
+type agentOffices struct{ svc *offices.Service }
+
+func (a agentOffices) AgentOffice(ctx context.Context, org, agentID string) (string, error) {
+	if a.svc == nil {
+		return "", nil
+	}
+	m, err := a.svc.Model(ctx, org)
+	if err != nil {
+		return "", err
+	}
+	if id := m.Agent(agentID).OfficeID; id != offices.GeneralID {
+		return id, nil
+	}
+	return "", nil
+}

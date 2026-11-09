@@ -90,6 +90,9 @@ var _ FileSource = (*DriveFiles)(nil)
 
 // Files implements FileSource.
 func (d *DriveFiles) Files(ctx context.Context, org, agentID string, terms []string, limit int) ([]Item, error) {
+	if drive.RequesterFrom(ctx) == "" { // the person the work is for: inside /Offices the agent never goes beyond them
+		ctx = drive.WithRequester(ctx, application.ActorFrom(ctx, ""))
+	}
 	roots, err := d.FS.ReadableRoots(ctx, agentID)
 	if err != nil {
 		return nil, err // unknown scope: nothing readable
@@ -101,15 +104,14 @@ func (d *DriveFiles) Files(ctx context.Context, org, agentID string, terms []str
 	if err != nil {
 		return nil, err
 	}
-	var readable func(string) bool
-	if application.CustomerFrom(ctx) != "" { // B12: a foreign customer's folder nested under a readable root stays out
-		if readable, err = d.FS.ReadableFilter(ctx, agentID); err != nil {
-			return nil, err
-		}
+	// Defense in depth (B12: a foreign customer's folder nested under a readable root; an office the person cannot see).
+	readable, err := d.FS.ReadableFilter(ctx, agentID)
+	if err != nil {
+		return nil, err
 	}
 	out := make([]Item, 0, len(hits))
 	for _, h := range hits {
-		if readable != nil && !readable(h.Path) {
+		if !readable(h.Path) {
 			continue
 		}
 		out = append(out, Item{cover: coverage(h.Name+" "+h.Snippet, terms), Ref: "file:" + h.Path, Kind: KindFile, Title: h.Name, Path: h.Path, Snippet: Passage(h.Snippet, terms, MaxSnippetChars),

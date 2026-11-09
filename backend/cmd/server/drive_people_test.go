@@ -52,3 +52,32 @@ func TestOfficePeopleAccess(t *testing.T) {
 		}
 	}
 }
+
+func TestAgentOfficesOfModel(t *testing.T) {
+	ctx := context.Background()
+	svc := offices.New(offices.Config{Store: offices.NewMemStore(),
+		Departments: func(context.Context, string) ([]offices.Dept, error) {
+			return []offices.Dept{{ID: "d-acct", Name: "Contabilidad"}, {ID: "d-off", Name: "Sin oficina"}}, nil
+		},
+		AgentDepts: func(context.Context, string) (map[string]string, error) {
+			return map[string]string{"a-acct": "d-acct", "a-off": "d-off"}, nil
+		},
+		Agents: func(context.Context, string) ([]offices.AgentRef, error) {
+			return []offices.AgentRef{{ID: "a-acct"}, {ID: "a-gen"}, {ID: "a-off"}}, nil
+		},
+		People: func(context.Context, string) ([]offices.Person, error) {
+			return []offices.Person{{UserID: "u-boss", Name: "Boss", Admin: true}}, nil
+		}})
+	if _, err := svc.Enable(ctx, "org1", offices.Viewer{UserID: "u-boss", Admin: true}, "d-acct", offices.Private); err != nil {
+		t.Fatal(err)
+	}
+	ao := agentOffices{svc: svc}
+	for agent, want := range map[string]string{"a-acct": "d-acct", "a-gen": "", "a-off": "", "a-unknown": ""} {
+		if got, err := ao.AgentOffice(ctx, "org1", agent); err != nil || got != want {
+			t.Errorf("%s: office %q %v, want %q", agent, got, err, want)
+		}
+	}
+	if got, err := (agentOffices{}).AgentOffice(ctx, "org1", "a-acct"); err != nil || got != "" {
+		t.Errorf("without offices: %q %v", got, err)
+	}
+}

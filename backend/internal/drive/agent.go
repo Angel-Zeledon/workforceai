@@ -31,14 +31,16 @@ type ProjectDirectory interface {
 
 // Zone classes of a path, from the point of view of one agent.
 const (
-	ZoneDesk      = "desk"          // /Agents/<me>/...
-	ZoneProject   = "project"       // /Projects/<assigned project>/...
-	ZoneShared    = "shared"        // /Shared/...
-	ZoneGranted   = "granted"       // a folder a person gave the agent Read on (access.go)
-	ZoneOtherDesk = "other_desk"    // /Agents/<someone else>/...
-	ZoneOtherProj = "other_project" // /Projects/<not assigned>/...
-	ZoneClients   = "clients"       // /Clients/...
-	ZoneOutside   = "outside"       // anything else
+	ZoneDesk        = "desk"          // /Agents/<me>/...
+	ZoneProject     = "project"       // /Projects/<assigned project>/...
+	ZoneShared      = "shared"        // /Shared/...
+	ZoneGranted     = "granted"       // a folder a person gave the agent Read on (access.go)
+	ZoneOtherDesk   = "other_desk"    // /Agents/<someone else>/...
+	ZoneOtherProj   = "other_project" // /Projects/<not assigned>/...
+	ZoneClients     = "clients"       // /Clients/...
+	ZoneOffice      = "office"        // /Offices/<its office>/... (agent_offices.go): read and write without approval
+	ZoneOtherOffice = "other_office"  // /Offices/<another office>/... and /Offices itself
+	ZoneOutside     = "outside"       // anything else
 )
 
 // AgentFS is the policy layer between agents and the drive. It decides, per
@@ -46,12 +48,13 @@ const (
 // refused, and it runs the action as the agent (every write is attributed to
 // the agent and is versioned, hence reversible).
 //
-//	read      own desk, assigned projects, /Shared, folders with Read/Edit; anything else (and Ninguno) is refused
-//	write     own desk, assigned projects and folders with Edit: no approval. Everything else: approval.
+//	read      own desk, own office, assigned projects, /Shared, folders with Read/Edit; anything else (and Ninguno) is refused
+//	write     own desk, own office, assigned projects and folders with Edit: no approval. Everything else: approval.
 //	move      both ends inside the writable areas: no approval. Otherwise approval.
-//
-// Folder access levels (Ninguno / Leer / Editar, inherited downwards) are described in access.go.
 //	delete    always approval (high risk); it is a soft delete, restorable
+//
+// Folder access levels (Ninguno / Leer / Editar, inherited downwards) are described in access.go. Inside /Offices the
+// agent never goes beyond the person it works for (agent_offices.go).
 type AgentFS struct {
 	Svc      *Service
 	Projects ProjectDirectory
@@ -66,6 +69,9 @@ type AgentFS struct {
 	// Customers (optional) tells which customer owns which folder (customer_scope.go, B12). A call
 	// scoped to a customer without it is refused (fail closed).
 	Customers CustomerDirectory
+	// Offices (optional) tells the agent's office; nil uses the one plugged into the service (SetAgentOffices).
+	// An agent of General, or without either, has no office folder (agent_offices.go).
+	Offices AgentOffices
 	// LinkBase (optional) is the app's address (UI_BASE_URL): fs.income_statement links each invoice to its folder.
 	LinkBase string
 }
@@ -108,6 +114,10 @@ type scope struct {
 	// by customers, deepest first (customer_scope.go). Both are empty for an unscoped task.
 	customer string
 	owned    []ownedPath
+	// office is the folder of the agent's office ("" = General or none); person is the person the call works for
+	// ("" = nobody: a scheduled or system run). Both in agent_offices.go.
+	office string
+	person string
 }
 
 func (a *AgentFS) scopeOf(ctx context.Context, agentID string) (scope, error) {
@@ -127,6 +137,10 @@ func (a *AgentFS) scopeOf(ctx context.Context, agentID string) (scope, error) {
 		return sc, err
 	}
 	sc.rules = gs
+	if sc.office, err = a.officeFolderOf(ctx, org, agentID); err != nil {
+		return sc, err
+	}
+	sc.person = personRequester(ctx)
 	if sc.customer = customerFromCtx(ctx); sc.customer != "" {
 		if err := a.loadCustomerScope(ctx, org, &sc); err != nil {
 			return sc, err
@@ -141,6 +155,12 @@ func (a *AgentFS) baseZone(ctx context.Context, org string, sc scope, p string) 
 	segs, _ := Segments(p)
 	if len(segs) == 0 {
 		return ZoneOutside, 0
+	}
+	if strings.EqualFold(segs[0], RootOffices) { // the store resolves paths without regard to case
+		if len(segs) >= 2 && sc.office != "" && strings.EqualFold(JoinPath(segs[:2]...), sc.office) {
+			return ZoneOffice, 2
+		}
+		return ZoneOtherOffice, 0
 	}
 	switch segs[0] {
 	case RootAgents:
@@ -188,23 +208,23 @@ func (sc scope) applyRule(z string, depth int, p string) string {
 }
 
 func canRead(z string) bool {
-	return z == ZoneDesk || z == ZoneProject || z == ZoneShared || z == ZoneGranted || z == ZoneGrantedEdit || z == ZoneCustomer
+	return z == ZoneDesk || z == ZoneProject || z == ZoneShared || z == ZoneGranted || z == ZoneGrantedEdit || z == ZoneCustomer || z == ZoneOffice
 }
 
-func autoWrite(z string) bool { return z == ZoneDesk || z == ZoneProject || z == ZoneGrantedEdit }
+func autoWrite(z string) bool {
+	return z == ZoneDesk || z == ZoneProject || z == ZoneGrantedEdit || z == ZoneOffice
+}
 
 // zoneAll is the zone every action checks: zone() plus, in a customer-scoped task, the customer isolation of
-// customer_scope.go (access rules never open another customer's data there; a Ninguno still closes a folder).
+// customer_scope.go (access rules never open another customer's data there; a Ninguno still closes a folder), and
+// inside /Offices the limit of the person the call works for (agent_offices.go).
 func (a *AgentFS) zoneAll(ctx context.Context, org string, sc scope, p string) string {
 	base, depth := a.baseZone(ctx, org, sc, p)
 	z := sc.applyRule(base, depth, p)
-	if sc.customer != "" { // B12: a customer-scoped task never reaches another customer's data
-		if z == ZoneDenied {
-			return ZoneDenied
-		}
-		return sc.customerZone(base, p)
+	if sc.customer != "" && z != ZoneDenied { // B12: a customer-scoped task never reaches another customer's data
+		z = sc.customerZone(base, p)
 	}
-	return z
+	return a.personLimit(ctx, sc, p, z)
 }
 
 // ---- argument helpers ----
@@ -682,14 +702,17 @@ func fileLine(f File) string {
 // the agent has Ninguno on (InScope; every store applies them before ranking).
 func (a *AgentFS) readableRoots(ctx context.Context, org string, sc scope) []string {
 	if sc.customer != "" {
-		return sc.withRules(a.customerRoots(sc))
+		return a.personRoots(ctx, org, sc, sc.withRules(a.customerRoots(sc)))
 	}
 	roots := []string{JoinPath(RootAgents, sc.agent), "/" + RootShared}
+	if sc.office != "" {
+		roots = append(roots, sc.office)
+	}
 	roots = append(roots, a.projectRoots(ctx, org, sc)...)
-	return sc.withRules(roots)
+	return a.personRoots(ctx, org, sc, sc.withRules(roots))
 }
 
-// ReadableRoots lists the folders an agent may read (its desk, /Shared, the
+// ReadableRoots lists the folders an agent may read (its desk, /Shared, its office, the
 // folders of its projects and the ones a person gave it Read or Edit on, minus
 // "!<path>" exclusions for Ninguno): the exact scope of
 // fs.search, exported so the long-term memory retrieves files under the same
@@ -726,8 +749,10 @@ func (a *AgentFS) runList(ctx context.Context, agentID, p string) RunResult {
 					tag = " (your desk for this customer: write freely)"
 				} else if IsUnder(r, JoinPath(RootAgents, agentID)) {
 					tag = " (your desk: write freely)"
-				} else if z := a.zone(ctx, org, sc, r); z == ZoneProject {
+				} else if z := a.zoneAll(ctx, org, sc, r); z == ZoneProject {
 					tag = " (your project: write freely)"
+				} else if z == ZoneOffice {
+					tag = " (your office: write freely)"
 				} else if z == ZoneGrantedEdit {
 					tag = " (edit: write freely)"
 				} else if r == "/"+RootShared {
@@ -845,7 +870,7 @@ func (a *AgentFS) runSearch(ctx context.Context, agentID string, args map[string
 	if err != nil {
 		return failure(err)
 	}
-	if sc.customer != "" { // B12: a foreign customer's folder nested under a readable root stays out
+	{ // B12: a foreign customer's folder nested under a readable root stays out; so does an office the person cannot see
 		kept := hits[:0]
 		for _, h := range hits {
 			if canRead(a.zoneAll(ctx, org, sc, h.Path)) {

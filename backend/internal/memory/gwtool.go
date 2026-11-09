@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"aiworkforce/backend/internal/application"
+	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/sanitize"
 )
 
@@ -65,7 +66,7 @@ func (t *GatewayTool) Assess(_ context.Context, c application.GatewayCall) appli
 
 // Run implements application.NativeTool.
 func (t *GatewayTool) Run(ctx context.Context, c application.GatewayCall, _ bool) application.NativeResult {
-	ctx = application.WithOrg(ctx, c.Org)
+	ctx = drive.WithRequester(application.WithOrg(ctx, c.Org), c.OnBehalfOf) // drive files: never beyond this person
 	ctx, ok := application.ScopeCustomer(ctx, t.CustomerOf, c.Org, c.RequestID)
 	if !ok {
 		return application.NativeResult{Status: "failed", Code: "customer_scope_unknown", Summary: "customer_scope_unknown"}
