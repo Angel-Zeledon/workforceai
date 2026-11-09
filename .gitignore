@@ -31,3 +31,4 @@ agent-runtime/evals/reports/
 
 # local Go builds
 backend/*.exe
+.superpowers/
