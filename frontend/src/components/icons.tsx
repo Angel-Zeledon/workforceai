@@ -43,6 +43,12 @@ const P: Record<string, string> = {
   calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h2M14 14h2", // meetings
   bell: "M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10.3 20.5a2 2 0 0 0 3.4 0",
   briefcase: "M4 7h16v12H4zM9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M4 12h16",
+  search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4",
+  archive: "M4 5h16v4H4zM6 9v10h12V9M10 13h4",
+  trash: "M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13M10 11v6M14 11v6",
+  up: "M6 15l6-6 6 6",
+  restore: "M4 12a8 8 0 1 0 3-6.2M4 4v5h5",
+  external: "M14 4h6v6M20 4l-9 9M18 14v5H5V6h5",
   // concepts of the glossary (proposal 5.1): each concept has one fixed icon
   clipboard: "M8 4h8v3H8zM6 6H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1M8 12h8M8 16h5", // pedido
   checkbox: "M4 4h16v16H4zM8 12.5l3 3 5-6", // tarea

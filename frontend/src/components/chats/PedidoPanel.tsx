@@ -274,7 +274,7 @@ export function PedidoPanel({ requestId, onClose }: { requestId: string; onClose
               <Field label={t("pedido.project")}>
                 <button type="button" data-testid="pedido-open-project" onClick={() => openProject(router, conv.projectId!)}
                   className="chats-t inline-flex items-center gap-1 rounded-md border border-line-strong bg-panel px-2 py-1 text-[11.5px] font-medium text-accent-hover transition-colors hover:border-accent">
-                  <Glyph name="folder" size={12} />{t("pedido.openProject")}
+                  <Glyph name="project" size={12} />{t("pedido.openProject")}
                 </button>
               </Field>
             )}

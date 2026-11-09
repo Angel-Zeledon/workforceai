@@ -8,20 +8,23 @@ import { useRewards } from "@/lib/rewards";
 import { useSession } from "@/lib/session";
 import { go } from "@/lib/navBridge";
 import { toast } from "@/lib/toast";
+import { DECIDED_EVENT } from "@/lib/firstSteps";
 import { Icon, type IconName } from "../icons";
 
 /**
- * "Primeros pasos": three real steps that take an account from empty to working: (1) tell us about the business,
- * (2) choose what each agent can do without asking (the three levels of Ajustes → Aprobaciones), (3) make the first request. Connecting a tool is not a step: the office works
- * without one. Progress comes from what the account really has (the organization settings, an agent above "suggest",
- * a request), not from
- * clicking a box. Each step, once done, stays done (remembered per account), and the pill disappears when all are done.
+ * "Primeros pasos", the one guide of the first day (proposal 5.6): four real steps that teach the concepts in order:
+ * (1) tell us about the business, (2) make the first pedido, (3) decide the first pending item (the "Propuesta de
+ * $50,000" shortcut always asks for one), (4) choose what each agent can do without asking (the three levels of
+ * Ajustes → Aprobaciones). Connecting a tool is not a step: the office works without one. Progress comes from what the
+ * account really has (the organization settings, a request, a decided approval or answered question, an agent above
+ * "suggest"), not from clicking a box. Each step, once done, stays done (remembered per account), and the pill disappears when all are done.
  */
-type StepId = "context" | "autonomy" | "task";
+type StepId = "context" | "task" | "pending" | "autonomy";
 const STEPS: { id: StepId; icon: IconName }[] = [
   { id: "context", icon: "flag" },
-  { id: "autonomy", icon: "shield" },
   { id: "task", icon: "chat" },
+  { id: "pending", icon: "bell" },
+  { id: "autonomy", icon: "shield" },
 ];
 const key = (uid: string, s: string) => `wf.act.${uid}.${s}`;
 const get = (k: string) => { try { return localStorage.getItem(k) === "1"; } catch { return false; } };
@@ -31,9 +34,17 @@ function ActivationPill() {
   const { t } = useT();
   const uid = useSession((s) => s.user?.id ?? "anon");
   const asked = useStore((s) => Object.keys(s.requests).length > 0);
+  const decided = useStore((s) => Object.values(s.approvals).some((a) => a.status !== "pending") || Object.values(s.questions).some((q) => q.status !== "open"));
+  const waiting = useStore((s) => Object.values(s.approvals).some((a) => a.status === "pending") || Object.values(s.questions).some((q) => q.status === "open"));
+  const [decidedNow, setDecidedNow] = useState(false); // a pending item was decided in this session (any screen)
+  useEffect(() => {
+    const on = () => setDecidedNow(true);
+    window.addEventListener(DECIDED_EVENT, on);
+    return () => window.removeEventListener(DECIDED_EVENT, on);
+  }, []);
   const freer = useStore((s) => Object.values(s.agents).some((a) => a.autonomy === "rules" || a.autonomy === "autonomous"));
   const [configured, setConfigured] = useState(false); // the office was set up: business type, tone and the autonomy of the pack
-  const [done, setDone] = useState<Record<StepId, boolean>>({ context: false, autonomy: false, task: false });
+  const [done, setDone] = useState<Record<StepId, boolean>>({ context: false, task: false, pending: false, autonomy: false });
   const [dismissed, setDismissed] = useState(true); // hidden until we know (avoids a flash)
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
@@ -46,12 +57,12 @@ function ActivationPill() {
   useEffect(() => { refresh(); }, [refresh, uid]);
   // Load what this account already completed.
   useEffect(() => {
-    setDone({ context: get(key(uid, "context")), autonomy: get(key(uid, "autonomy")), task: get(key(uid, "task")) });
+    setDone({ context: get(key(uid, "context")), task: get(key(uid, "task")), pending: get(key(uid, "pending")), autonomy: get(key(uid, "autonomy")) });
     setDismissed(get(key(uid, "dismissed")));
     announced.current = false;
   }, [uid]);
   // Remember each step the moment its real condition becomes true.
-  const live: Record<StepId, boolean> = useMemo(() => ({ context: configured, autonomy: configured || freer, task: asked }), [configured, freer, asked]);
+  const live: Record<StepId, boolean> = useMemo(() => ({ context: configured, task: asked, pending: decided || decidedNow, autonomy: configured || freer }), [configured, asked, decided, decidedNow, freer]);
   useEffect(() => {
     setDone((d) => {
       const next = { ...d };
@@ -85,8 +96,10 @@ function ActivationPill() {
     if (id === "context") { go("/settings"); return; }
     // the three levels (Me pregunta todo / Solo lo importante / Trabaja solo) are chosen in Ajustes → Aprobaciones
     if (id === "autonomy") { go("/settings?s=approvals"); return; }
+    // something is waiting: decide it in Pendientes; nothing yet: the bar, where the $50,000 shortcut asks for one
+    if (id === "pending" && waiting) { go("/approvals/inbox"); return; }
     go("/");
-    if (id === "task") setTimeout(() => document.querySelector<HTMLInputElement>('[data-testid="command-input"]')?.focus(), 450);
+    setTimeout(() => document.querySelector<HTMLInputElement>('[data-testid="command-input"]')?.focus(), 450);
   };
   return (
     <div ref={wrap} className="relative">

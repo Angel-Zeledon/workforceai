@@ -4,11 +4,14 @@ import type {
   Agent, AgentDetail, Approval, ChatMessage, Counterargument, Conversation, Debate, Message, Metrics, Report, Request, StandingApproval, Task, ActivityItem,
 } from "./types";
 import type { AnswerKind, QuestionItem, SkipImpact } from "./questionsLogic";
+import { afterRequest } from "./firstSteps";
 
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   if (MOCK) {
     const { mockBackend } = await import("./mock/engine");
-    return (await mockBackend.handle(method, path, body)) as T;
+    const out = (await mockBackend.handle(method, path, body)) as T;
+    afterRequest(method, path);
+    return out;
   }
   const res = await authFetch(`${API_URL}${path}`, {
     method,
@@ -18,6 +21,7 @@ export async function call<T>(method: string, path: string, body?: unknown): Pro
   });
   if (!res.ok) throw new Error(`${method} ${path} -> ${res.status}`);
   const text = await res.text();
+  afterRequest(method, path);
   return (text ? JSON.parse(text) : {}) as T;
 }
 function list<T>(x: any): T[] {
@@ -118,5 +122,6 @@ async function callWithBody<T>(method: string, path: string, body: unknown): Pro
   let data: any = {};
   try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
   if (!res.ok) throw new AnswerError(res.status, data);
+  afterRequest(method, path);
   return data as T;
 }

@@ -56,13 +56,20 @@ export function pedidoInfo(requestId: string, ctx: PedidoCtx, participants: stri
 
 /** The "Pedidos" group of the sidebar: the request conversations (archived or not), the ones needing you first, then newest. */
 export function pedidoRows(convs: PedidoConvLike[], ctx: PedidoCtx, o: { archived: boolean }): PedidoRow[] {
-  const rows: PedidoRow[] = [];
+  // One row per pedido: a pedido can have more than one conversation (or the same one twice after "load more");
+  // the newest conversation opens, and unread messages add up across different conversations.
+  const byId = new Map<string, PedidoRow>();
+  const seen = new Set<string>();
   for (const c of convs) {
     if (c.kind !== "request" || !c.request_id || c.archived !== o.archived) continue;
+    const prev = byId.get(c.request_id);
+    const unread = (seen.has(c.id) ? 0 : c.unread ?? 0) + (prev?.unread ?? 0);
+    seen.add(c.id);
+    if (prev && +new Date(prev.updatedAt) >= +new Date(c.updated_at)) { prev.unread = unread; continue; }
     const { status, agents } = pedidoInfo(c.request_id, ctx, c.participants);
-    rows.push({ id: c.request_id, convId: c.id, title: c.title, status, agents, updatedAt: c.updated_at, unread: c.unread, archived: c.archived, projectId: c.project_id });
+    byId.set(c.request_id, { id: c.request_id, convId: c.id, title: c.title, status, agents, updatedAt: c.updated_at, unread, archived: c.archived, projectId: c.project_id });
   }
-  return rows.sort((a, b) => (Number(needsAttention(b.status)) - Number(needsAttention(a.status))) || (+new Date(b.updatedAt) - +new Date(a.updatedAt)));
+  return [...byId.values()].sort((a, b) => (Number(needsAttention(b.status)) - Number(needsAttention(a.status))) || (+new Date(b.updatedAt) - +new Date(a.updatedAt)));
 }
 
 /** One card per pedido in a chat: on the latest message that belongs to it. */

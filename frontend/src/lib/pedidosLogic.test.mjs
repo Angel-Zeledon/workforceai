@@ -73,6 +73,20 @@ test("pedidoRows: only request conversations, the ones needing you first, then n
   assert.deepEqual(arch.map((r) => [r.id, r.status]), [["r4", "unknown"]]);
 });
 
+test("pedidoRows: one row per pedido even with two conversations or the same one listed twice", () => {
+  const convs = [
+    conv("c1", "r1", "2026-11-03T10:00:00Z", { unread: 2 }),
+    conv("c2", "r1", "2026-11-03T12:00:00Z", { unread: 1 }),
+    conv("c2", "r1", "2026-11-03T12:00:00Z", { unread: 1 }), // "load more" brought it again
+    conv("c3", "r2", "2026-11-03T11:00:00Z"),
+  ];
+  const rows = pedidoRows(convs, ctx, { archived: false });
+  assert.deepEqual(rows.map((r) => r.id).sort(), ["r1", "r2"]);
+  const r1 = rows.find((r) => r.id === "r1");
+  assert.equal(r1.convId, "c2"); // the newest conversation opens
+  assert.equal(r1.unread, 3); // 2 + 1, the repeated c2 counted once
+});
+
 test("pedidoCardAnchors: one card per request, on its latest message", () => {
   const msgs = [
     { id: "m1", request_id: "r1" }, { id: "m2" }, { id: "m3", request_id: "r2" }, { id: "m4", request_id: "r1" }, { id: "m5", request_id: null },

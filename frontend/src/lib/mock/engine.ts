@@ -615,12 +615,15 @@ export class MockBackend {
     const to = c.to;
     const prevTo = { ...this.agent(to) };
     const toBusy = prevTo.state === "talking";
-    const conv: Conversation = {
-      id: uid("conv"), title: `Consulta: ${this.agent(from).name.split(" ")[0]} → ${this.agent(to).name.split(" ")[0]}`,
-      participants: [from, to], request_id: task.request_id, last_message_at: nowIso(),
-    };
-    this.conversations.unshift(conv);
-    this.messages[conv.id] = [];
+    // like the backend: a consultation is part of the pedido's one conversation, not a conversation of its own
+    let conv = this.conversations.find((c) => c.request_id === task.request_id);
+    if (!conv) {
+      conv = { id: uid("conv"), title: `Consulta: ${this.agent(from).name.split(" ")[0]} → ${this.agent(to).name.split(" ")[0]}`,
+        participants: [from, to], request_id: task.request_id, last_message_at: nowIso() };
+      this.conversations.unshift(conv);
+      this.messages[conv.id] = [];
+    }
+    for (const p of [from, to]) if (!conv.participants.includes(p)) conv.participants.push(p);
     this.setState(from, "talking", `Consultando a ${this.agent(to).name}`, task.id, this.agent(from).progress);
     this.sendMessage(conv, from, to, "consult", c.q, task.id);
     this.log(from, "message.sent", tr("mock.act.consult", { from: this.agent(from).name.split(" ")[0], to: this.agent(to).name.split(" ")[0], q: c.q }));

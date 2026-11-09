@@ -9,7 +9,7 @@ import type { ChatMessage, RouteDecision, TurnIntent } from "@/lib/types";
 import { Btn, readable, useAgentColor, useAgentName } from "../ui";
 import { Icon } from "../icons";
 import { FileCards } from "../files/FileCard";
-import { drive, DriveError } from "@/lib/drive";
+import { drive } from "@/lib/drive";
 import type { FileRef } from "@/lib/types";
 import { CommandCard } from "./commands/CommandCard";
 import { useSlashComposer } from "./commands/useSlashComposer";

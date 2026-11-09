@@ -5,6 +5,7 @@
  */
 import { API_URL, MOCK } from "../config";
 import { authFetch } from "../session";
+import { afterRequest, noteDecision } from "../firstSteps";
 import type { StandingApproval } from "../types";
 import type {
   ControlAction, LaunchBody, ProjectInputs, NewProjectBody, PlanChange, PlanChangeOp, PlanOp, ProjectDetail, ProjectEstimate, ProjectHealth, ProjectSummary, ProjectTemplate,
@@ -39,6 +40,7 @@ async function http<T>(method: string, path: string, body?: unknown): Promise<T>
     throw new ApiError(`${method} ${path} -> ${res.status}`, res.status, detail);
   }
   const text = await res.text();
+  afterRequest(method, path);
   return (text ? JSON.parse(text) : {}) as T;
 }
 const items = <T,>(x: any): T[] => (Array.isArray(x) ? x : Array.isArray(x?.items) ? x.items : []);
@@ -91,9 +93,9 @@ export const projectsApi = {
   replanNode: async (id: string, nodeId: string): Promise<PlanChange | null> => (MOCK ? null : http("POST", `/projects/${id}/nodes/${nodeId}/replan`)),
   setBudget: async (id: string, usd: number) => (MOCK ? (await mock()).setBudget(id, usd) : http("PUT", `/projects/${id}/budget`, { budget_usd: usd })),
   decide: async (pid: string, approvalId: string, decision: "approve" | "reject") =>
-    MOCK ? (await mock()).decide(pid, approvalId, decision) : http("POST", `/approvals/${approvalId}/decision`, { decision }),
+    MOCK ? (await mock()).decide(pid, approvalId, decision).then((r) => { noteDecision(); return r; }) : http("POST", `/approvals/${approvalId}/decision`, { decision }),
   decideBatch: async (pid: string, b: { action: string; decision: "approve" | "reject"; expected_count: number; include_high?: boolean }) =>
-    MOCK ? (await mock()).decideBatch(pid, b) : http("POST", "/approvals/batch", { filter: { project_id: pid, action: b.action }, decision: b.decision, expected_count: b.expected_count, include_high: b.include_high }),
+    MOCK ? (await mock()).decideBatch(pid, b).then((r) => { noteDecision(); return r; }) : http("POST", "/approvals/batch", { filter: { project_id: pid, action: b.action }, decision: b.decision, expected_count: b.expected_count, include_high: b.include_high }),
   templates: async (): Promise<ProjectTemplate[]> => (MOCK ? (await mock()).templates() : items<ProjectTemplate>(await http("GET", "/project-templates"))),
   saveAsTemplate: async (id: string, opts?: SaveTemplateOpts): Promise<ProjectTemplate> => (MOCK ? (await mock()).saveAsTemplate(id, opts) : http("POST", `/projects/${id}/save-as-template`, opts ?? {})),
   // ---- customizable templates (library, builder, versions) ----
