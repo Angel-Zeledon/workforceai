@@ -26,7 +26,7 @@ func TestWireSandbox(t *testing.T) {
 
 	t.Setenv("SANDBOX_URL", "")
 	t.Setenv("SANDBOX_TOKEN", "")
-	w := wireSandbox(log, nil, rec, connWiring{}, orch, dr)
+	w := wireSandbox(log, nil, rec, connWiring{}, orch, dr, nil)
 	if w.svc == nil || w.available || w.svc.Runner != nil {
 		t.Fatalf("without a runner: %+v", w)
 	}
@@ -36,7 +36,7 @@ func TestWireSandbox(t *testing.T) {
 
 	t.Setenv("SANDBOX_URL", "http://sandbox-runner:8090")
 	t.Setenv("SANDBOX_TOKEN", "secret-token-xyz")
-	w = wireSandbox(log, nil, rec, connWiring{}, orch, dr)
+	w = wireSandbox(log, nil, rec, connWiring{}, orch, dr, nil)
 	if !w.available || w.svc.Runner == nil || w.svc.Files == nil || w.svc.Sink == nil {
 		t.Fatalf("with a runner: %+v", w)
 	}

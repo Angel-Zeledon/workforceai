@@ -15,13 +15,17 @@ import (
 // and stores the produced ones on the desk of the agent that asked for the run.
 type DriveFiles struct {
 	Drive *drive.Service
+	// FS (optional) is the agents' folder policy: with it an input the agent may not read (for the person it works
+	// for) is "not found" (ReadAs). nil: any file of the organization (tests).
+	FS *drive.AgentFS
 	// Notify (optional) is called with the path of each file written (file.activity).
 	Notify func(ctx context.Context, org, agentID, path string)
 }
 
 var (
-	_ FileSource = (*DriveFiles)(nil)
-	_ FileSink   = (*DriveFiles)(nil)
+	_ FileSource      = (*DriveFiles)(nil)
+	_ AgentFileSource = (*DriveFiles)(nil)
+	_ FileSink        = (*DriveFiles)(nil)
 )
 
 // Read implements FileSource. ref is a file id or an absolute drive
@@ -29,6 +33,32 @@ var (
 // file of another organization is simply "not found".
 func (d *DriveFiles) Read(ctx context.Context, org, ref string) (string, io.ReadCloser, error) {
 	ctx = application.WithOrg(ctx, org)
+	f, err := d.resolve(ctx, ref)
+	if err != nil {
+		return "", nil, err
+	}
+	return d.open(ctx, f)
+}
+
+// ReadAs implements AgentFileSource: Read, limited to what the agent may read for that person (the zones of fs.read).
+// A file it may not read is domain.ErrNotFound, exactly like a missing one.
+func (d *DriveFiles) ReadAs(ctx context.Context, org, agentID, onBehalfOf, ref string) (string, io.ReadCloser, error) {
+	if d.FS == nil {
+		return d.Read(ctx, org, ref)
+	}
+	ctx = drive.WithRequester(application.WithOrg(ctx, org), onBehalfOf)
+	f, err := d.resolve(ctx, ref)
+	if err != nil {
+		return "", nil, err
+	}
+	readable, err := d.FS.ReadableFilter(ctx, agentID)
+	if err != nil || !readable(f.Path) {
+		return "", nil, domain.ErrNotFound // unknown scope or not readable: never "exists but forbidden"
+	}
+	return d.open(ctx, f)
+}
+
+func (d *DriveFiles) resolve(ctx context.Context, ref string) (drive.File, error) {
 	var f drive.File
 	var err error
 	if strings.HasPrefix(ref, "/") {
@@ -36,12 +66,13 @@ func (d *DriveFiles) Read(ctx context.Context, org, ref string) (string, io.Read
 	} else {
 		f, err = d.Drive.GetFile(ctx, ref)
 	}
-	if err != nil {
-		return "", nil, domain.ErrNotFound
+	if err != nil || f.DeletedAt != nil {
+		return drive.File{}, domain.ErrNotFound
 	}
-	if f.DeletedAt != nil {
-		return "", nil, domain.ErrNotFound
-	}
+	return f, nil
+}
+
+func (d *DriveFiles) open(ctx context.Context, f drive.File) (string, io.ReadCloser, error) {
 	rc, _, err := d.Drive.Open(ctx, f, 0)
 	if err != nil {
 		return "", nil, err

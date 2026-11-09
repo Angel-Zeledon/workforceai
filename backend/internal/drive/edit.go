@@ -42,6 +42,9 @@ func (a *AgentFS) planEdit(ctx context.Context, org string, sc scope, args map[s
 		return deny("not_found", "no such file")
 	}
 	zs := a.zoneAll(ctx, org, sc, f.Path)
+	if zs == ZonePersonDenied {
+		return personDeny()
+	}
 	if !(canRead(zs) || autoWrite(zs)) { // an edit needs to read the file first
 		return deny("not_granted", "this file is outside the areas you can read")
 	}

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/drive"
 )
 
@@ -133,14 +134,11 @@ func TestAgentLimitedByRequester(t *testing.T) {
 	beto := drive.WithRequester(e.ctx, "beto")
 	bal := "/Offices/Contabilidad/Clientes/balance.md"
 
-	if pl := e.fs.Plan(beto, "acct", "read", map[string]any{"path": bal}); pl.Deny != "not_granted" {
+	if pl := e.fs.Plan(beto, "acct", "read", map[string]any{"path": bal}); pl.Deny != "person_no_access" {
 		t.Fatalf("beto has no access to Contabilidad: the agent must not read for him: %+v", pl)
 	}
-	if pl := e.fs.Plan(beto, "acct", "read", map[string]any{"path": "/offices/contabilidad/Clientes/balance.md"}); pl.Deny != "not_granted" {
+	if pl := e.fs.Plan(beto, "acct", "read", map[string]any{"path": "/offices/contabilidad/Clientes/balance.md"}); pl.Deny != "person_no_access" {
 		t.Fatalf("lower case must not evade the person's limit: %+v", pl)
-	}
-	if pl := e.fs.Plan(beto, "acct", "write", map[string]any{"path": "/Offices/Contabilidad/x.md", "content": "x"}); pl.Deny == "" && !pl.Approval {
-		t.Fatalf("beto has no access: a write must not be free: %+v", pl)
 	}
 	r := e.fs.Run(beto, "acct", "search", map[string]any{"query": "confidencial"}, false)
 	if !r.OK || strings.Contains(r.Text, "balance") {
@@ -184,7 +182,7 @@ func TestAgentGrantToOtherOfficeLimitedByRequester(t *testing.T) {
 	}
 	e.svc.SetPeople(officePeopleByID{"dep_acct": drive.AccessEdit, "dep_legal": drive.AccessNone})
 	beto := drive.WithRequester(e.ctx, "beto")
-	if pl := e.fs.Plan(beto, "acct", "read", map[string]any{"path": doc}); pl.Deny != "not_granted" {
+	if pl := e.fs.Plan(beto, "acct", "read", map[string]any{"path": doc}); pl.Deny != "person_no_access" {
 		t.Fatalf("the rule never goes beyond the person: %+v", pl)
 	}
 	r := e.fs.Run(beto, "acct", "search", map[string]any{"query": "confidencial"}, false)
@@ -224,5 +222,140 @@ func TestAgentOfficeNoneRuleIgnoresCase(t *testing.T) {
 	}
 	if pl := e.plan("acct", "write", map[string]any{"path": "/offices/contabilidad/clientes/n.md", "content": "x"}); pl.Deny == "" && !pl.Approval {
 		t.Fatalf("a Ninguno folder is not free to write: %+v", pl)
+	}
+}
+
+// When the limit comes from the person (none), every action there is refused with its own code, and the message never
+// offers to give the agent access (that would not help: the person cannot see the folder).
+func TestPersonNoAccessIsRefusedNotApproved(t *testing.T) {
+	e := newOfficeEnv(t)
+	if _, err := e.svc.Write(e.ctx, drive.AgentP("acct"), drive.WriteInput{Path: "/Agents/acct/x.md", Data: []byte("x")}); err != nil {
+		t.Fatal(err)
+	}
+	e.svc.SetPeople(officePeopleByID{"dep_acct": drive.AccessNone})
+	beto := drive.WithRequester(e.ctx, "beto")
+	bal := "/Offices/Contabilidad/Clientes/balance.md"
+	for _, c := range []struct {
+		action string
+		args   map[string]any
+	}{
+		{"write", map[string]any{"path": "/Offices/Contabilidad/x.md", "content": "x"}},
+		{"write_document", map[string]any{"path": "/Offices/Contabilidad/x.md", "document": map[string]any{"title": "x"}}},
+		{"edit", map[string]any{"path": bal, "expected_version": 1, "ops": []any{}}},
+		{"move", map[string]any{"path": "/Agents/acct/x.md", "to": "/Offices/Contabilidad/x.md"}},
+		{"move", map[string]any{"path": bal, "to": "/Agents/acct/b.md"}},
+		{"delete", map[string]any{"path": bal}},
+		{"read", map[string]any{"path": bal}},
+		{"list", map[string]any{"path": "/Offices/Contabilidad/Clientes"}},
+		{"search", map[string]any{"query": "balance", "path": "/Offices/Contabilidad"}},
+		{"recent", map[string]any{"path": "/Offices/Contabilidad"}},
+	} {
+		pl := e.fs.Plan(beto, "acct", c.action, c.args)
+		if pl.Deny != "person_no_access" || pl.Approval || strings.Contains(pl.DenyMsg, "give you access") {
+			t.Fatalf("%s %v: %+v", c.action, c.args["path"], pl)
+		}
+	}
+	if r := e.fs.Run(beto, "acct", "recent", map[string]any{"path": "/Offices/Contabilidad"}, false); r.Code != "person_no_access" {
+		t.Fatalf("recent run: %+v", r)
+	}
+}
+
+// Actors that are not people (a token, a link, the orchestrator...) do not limit the agent: it keeps its office.
+func TestNonPersonRequesterKeepsOwnOffice(t *testing.T) {
+	e := newOfficeEnv(t)
+	e.svc.SetPeople(officePeopleByID{})
+	for _, who := range []string{"token:abc", "orchestrator", "slack:U1", "agent:legal", "link:x", "demo", "runtime", "scheduler", "system", "user"} {
+		ctx := drive.WithRequester(e.ctx, who)
+		if pl := e.fs.Plan(ctx, "acct", "write", map[string]any{"path": "/Offices/Contabilidad/x.md", "content": "x"}); pl.Deny != "" || pl.Approval {
+			t.Fatalf("%s: the agent keeps its office: %+v", who, pl)
+		}
+		if roots, _ := e.fs.ReadableRoots(ctx, "acct"); !slices.Contains(roots, "/Offices/Contabilidad") {
+			t.Fatalf("%s: roots %v", who, roots)
+		}
+	}
+}
+
+// fs.recent "no access" never names a folder under /Offices the person cannot see.
+func TestRecentNoAccessHidesOfficesThePersonCannotSee(t *testing.T) {
+	e := newOfficeEnv(t)
+	beto := drive.Human("beto")
+	for _, p := range []string{"/Offices/Legal/Casos/subido.md", "/Projects/Otro/subido.md"} {
+		if _, err := e.svc.Write(e.ctx, beto, drive.WriteInput{Path: p, Data: []byte("x")}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e.svc.SetPeople(officePeopleByID{"dep_acct": drive.AccessEdit, "dep_legal": drive.AccessNone})
+	r := e.fs.Run(drive.WithRequester(e.ctx, "beto"), "acct", "recent", map[string]any{}, false)
+	if !r.OK || !strings.Contains(r.Text, "no access: 1 recent file(s) of this person in /Projects/Otro") || strings.Contains(r.Text, "Legal") {
+		t.Fatalf("recent: %+v", r)
+	}
+	// a person who can read Legal (an open office) still hears about it
+	e.svc.SetPeople(officePeopleByID{"dep_acct": drive.AccessEdit, "dep_legal": drive.AccessRead})
+	r = e.fs.Run(drive.WithRequester(e.ctx, "beto"), "acct", "recent", map[string]any{}, false)
+	if !r.OK || !strings.Contains(r.Text, "/Offices/Legal/Casos") {
+		t.Fatalf("recent (beto reads Legal): %+v", r)
+	}
+}
+
+// linkedCustomers links folders (by id) to customers.
+type linkedCustomers map[string]string
+
+func (linkedCustomers) ProjectCustomer(context.Context, string, string) (string, error) {
+	return "", nil
+}
+func (l linkedCustomers) LinkedFolders(context.Context, string) (map[string]string, error) {
+	return l, nil
+}
+
+// A customer only narrows: a customer folder linked inside another office never opens to an agent of another office
+// (or of General) in a task for that customer; the agent of that office reads it.
+func TestCustomerTaskDoesNotOpenAnotherOffice(t *testing.T) {
+	e := newOfficeEnv(t)
+	acme := "/Offices/Contabilidad/Clientes/ACME"
+	if _, err := e.svc.Write(e.ctx, drive.Human("u"), drive.WriteInput{Path: acme + "/estado.md", Data: []byte("estado de cuenta de acme")}); err != nil {
+		t.Fatal(err)
+	}
+	l, err := e.svc.List(e.ctx, acme)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.fs.Customers = linkedCustomers{l.Folder.ID: "cus_acme"}
+	ctx := application.WithCustomer(e.ctx, "cus_acme")
+	file := acme + "/estado.md"
+	for _, agent := range []string{"legal", "sales"} {
+		for _, p := range []string{file, strings.ToLower(file)} {
+			if pl := e.fs.Plan(ctx, agent, "read", map[string]any{"path": p}); pl.Deny == "" {
+				t.Fatalf("%s reads %s: %+v", agent, p, pl)
+			}
+		}
+		if pl := e.fs.Plan(ctx, agent, "list", map[string]any{"path": acme}); pl.Deny == "" {
+			t.Fatalf("%s lists ACME: %+v", agent, pl)
+		}
+		if pl := e.fs.Plan(ctx, agent, "write", map[string]any{"path": acme + "/n.md", "content": "x"}); pl.Deny == "" {
+			t.Fatalf("%s writes ACME: %+v", agent, pl)
+		}
+		for _, action := range []string{"search", "recent"} {
+			r := e.fs.Run(ctx, agent, action, map[string]any{"query": "acme", "by": "anyone"}, false)
+			if !r.OK || strings.Contains(r.Text, "estado") || strings.Contains(r.Text, "ACME") {
+				t.Fatalf("%s %s: %+v", agent, action, r)
+			}
+		}
+		r := e.fs.Run(ctx, agent, "list", map[string]any{"path": "/Offices"}, false)
+		if strings.Contains(r.Text, "ACME") {
+			t.Fatalf("%s list /Offices: %+v", agent, r)
+		}
+		if roots, _ := e.fs.ReadableRoots(ctx, agent); drive.InScope(roots, file) {
+			t.Fatalf("%s roots: %v", agent, roots)
+		}
+		f, _ := e.fs.ReadableFilter(ctx, agent)
+		if f(file) {
+			t.Fatalf("%s filter reads ACME", agent)
+		}
+	}
+	if pl := e.fs.Plan(ctx, "acct", "read", map[string]any{"path": file}); pl.Deny != "" {
+		t.Fatalf("the agent of Contabilidad reads its customer folder: %+v", pl)
+	}
+	if roots, _ := e.fs.ReadableRoots(ctx, "acct"); !drive.InScope(roots, file) {
+		t.Fatalf("acct roots: %v", roots)
 	}
 }

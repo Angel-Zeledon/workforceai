@@ -20,6 +20,12 @@ type FileSource interface {
 	Read(ctx context.Context, org, fileID string) (name string, r io.ReadCloser, err error)
 }
 
+// AgentFileSource is a FileSource that also enforces what the agent may read, for the person it works for: a file
+// outside the agent's folders is domain.ErrNotFound, exactly like a missing one (its existence is never revealed).
+type AgentFileSource interface {
+	ReadAs(ctx context.Context, org, agentID, onBehalfOf, fileID string) (name string, r io.ReadCloser, err error)
+}
+
 // FileSink receives the files produced by a run and stores them attributed to
 // the agent (the drive writes a new version in a folder; folderHint is a
 // suggestion such as "outputs/<run id>", never a trusted path). It returns a

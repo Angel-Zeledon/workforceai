@@ -221,7 +221,11 @@ func autoWrite(z string) bool {
 func (a *AgentFS) zoneAll(ctx context.Context, org string, sc scope, p string) string {
 	base, depth := a.baseZone(ctx, org, sc, p)
 	z := sc.applyRule(base, depth, p)
-	if sc.customer != "" && z != ZoneDenied { // B12: a customer-scoped task never reaches another customer's data
+	switch {
+	case sc.customer == "" || z == ZoneDenied:
+	case base == ZoneOtherOffice && !canRead(z):
+		// the customer only narrows: another office the agent cannot read stays closed (writes refused: writeRefused)
+	default: // B12: a customer-scoped task never reaches another customer's data
 		z = sc.customerZone(base, p)
 	}
 	return a.personLimit(ctx, sc, p, z)
@@ -319,7 +323,9 @@ func (a *AgentFS) Plan(ctx context.Context, agentID, action string, args map[str
 		if len(strings.Split(strings.Trim(c, "/"), "/")) <= 1 { // "/" and the roots are filtered, not refused
 			return Plan{Path: c}
 		}
-		if !canRead(a.zoneAll(ctx, org, sc, c)) {
+		if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
+			return personDeny()
+		} else if !canRead(z) {
 			return deny("not_granted", "this folder is outside the areas you can read; tell the person and offer to give you access to it (or to ask for it)")
 		}
 		return Plan{Path: c}
@@ -339,7 +345,9 @@ func (a *AgentFS) Plan(ctx context.Context, agentID, action string, args map[str
 			if err != nil {
 				return deny("path_invalid", err.(*Error).Msg)
 			}
-			if !canRead(a.zoneAll(ctx, org, sc, c)) {
+			if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
+				return personDeny()
+			} else if !canRead(z) {
 				return deny("not_granted", "this folder is outside the areas you can read; tell the person and offer to give you access to it (or to ask for it)")
 			}
 		}
@@ -353,7 +361,9 @@ func (a *AgentFS) Plan(ctx context.Context, agentID, action string, args map[str
 			if err != nil {
 				return deny("path_invalid", err.(*Error).Msg)
 			}
-			if !canRead(a.zoneAll(ctx, org, sc, c)) {
+			if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
+				return personDeny()
+			} else if !canRead(z) {
 				return deny("not_granted", "this folder is outside the areas you can read; tell the person and offer to give you access to it (or to ask for it)")
 			}
 		}
@@ -391,7 +401,11 @@ func (a *AgentFS) planRead(ctx context.Context, org string, sc scope, args map[s
 	if err != nil {
 		return planErr(err)
 	}
-	if f.DeletedAt != nil || !canRead(a.zoneAll(ctx, org, sc, f.Path)) {
+	z := a.zoneAll(ctx, org, sc, f.Path)
+	if f.DeletedAt == nil && z == ZonePersonDenied {
+		return personDeny()
+	}
+	if f.DeletedAt != nil || !canRead(z) {
 		return deny("not_granted", "this file is outside the areas you can read; tell the person and offer to give you access to its folder (or to ask for it)")
 	}
 	return Plan{Path: f.Path}
@@ -441,7 +455,9 @@ func (a *AgentFS) planWrite(ctx context.Context, org string, sc scope, args map[
 		}
 	}
 	pl := Plan{Path: c, Bytes: len(content), Reversibility: "versioned", Risk: "medium"}
-	if z := a.zoneAll(ctx, org, sc, c); sc.writeRefused(z) {
+	if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
+		return personDeny()
+	} else if sc.writeRefused(z) {
 		return deny(denyCustomerIsolation, "this task works for one customer: write only in that customer's folders or your desk for it")
 	} else if !autoWrite(z) {
 		pl.Approval, pl.Flags = true, []string{"outside_scope"}
@@ -485,6 +501,9 @@ func (a *AgentFS) planWriteDocument(ctx context.Context, org string, sc scope, a
 			return deny("tags_invalid", err.(*Error).Msg)
 		}
 	}
+	if a.zoneAll(ctx, org, sc, c) == ZonePersonDenied {
+		return personDeny()
+	}
 	pl := Plan{Path: c, Reversibility: "versioned", Risk: "medium"}
 	doc, perr := officedoc.Parse(args["document"])
 	var data []byte
@@ -520,6 +539,9 @@ func (a *AgentFS) planMove(ctx context.Context, org string, sc scope, args map[s
 		return planErr(err)
 	}
 	zs := a.zoneAll(ctx, org, sc, f.Path)
+	if f.DeletedAt == nil && zs == ZonePersonDenied {
+		return personDeny()
+	}
 	if f.DeletedAt != nil || !(canRead(zs) || autoWrite(zs)) {
 		return deny("not_granted", "this file is outside the areas you can read; tell the person and offer to give you access to its folder (or to ask for it)")
 	}
@@ -534,6 +556,9 @@ func (a *AgentFS) planMove(ctx context.Context, org string, sc scope, args map[s
 	dest := folder + "/" + name
 	pl := Plan{Path: f.Path, Reversibility: "versioned", Risk: "medium"}
 	zd := a.zoneAll(ctx, org, sc, dest)
+	if zd == ZonePersonDenied {
+		return personDeny()
+	}
 	if sc.writeRefused(zs) || sc.writeRefused(zd) {
 		return deny(denyCustomerIsolation, "this task works for one customer: move only inside that customer's folders")
 	}
@@ -553,6 +578,9 @@ func (a *AgentFS) planDelete(ctx context.Context, org string, sc scope, args map
 		return planErr(err)
 	}
 	zs := a.zoneAll(ctx, org, sc, f.Path)
+	if f.DeletedAt == nil && zs == ZonePersonDenied {
+		return personDeny()
+	}
 	if f.DeletedAt != nil || !(canRead(zs) || autoWrite(zs)) {
 		return deny("not_granted", "this file is outside the areas you can read; tell the person and offer to give you access to its folder (or to ask for it)")
 	}
@@ -702,7 +730,7 @@ func fileLine(f File) string {
 // the agent has Ninguno on (InScope; every store applies them before ranking).
 func (a *AgentFS) readableRoots(ctx context.Context, org string, sc scope) []string {
 	if sc.customer != "" {
-		return a.personRoots(ctx, org, sc, sc.withRules(a.customerRoots(sc)))
+		return a.personRoots(ctx, org, sc, sc.withRules(a.customerRoots(ctx, org, sc)))
 	}
 	roots := []string{JoinPath(RootAgents, sc.agent), "/" + RootShared}
 	if sc.office != "" {
@@ -772,7 +800,7 @@ func (a *AgentFS) runList(ctx context.Context, agentID, p string) RunResult {
 	}
 	others := false
 	for _, f := range l.Folders {
-		if z := a.zoneAll(ctx, org, sc, f.Path); !canRead(z) && (sc.customer != "" || z == ZoneDenied) {
+		if z := a.zoneAll(ctx, org, sc, f.Path); !canRead(z) && (sc.customer != "" || z == ZoneDenied || z == ZonePersonDenied) {
 			continue // B12: never name another customer's folders; never name a folder the agent has Ninguno on
 		}
 		fmt.Fprintf(&b, "[dir] %s/\n", f.Name)

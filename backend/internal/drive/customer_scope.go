@@ -163,11 +163,12 @@ func (sc scope) writeRefused(z string) bool {
 	return sc.customer != "" && z != ZoneDesk && z != ZoneProject && z != ZoneCustomer
 }
 
-// customerRoots are the readable roots of a customer-scoped task.
-func (a *AgentFS) customerRoots(sc scope) []string {
+// customerRoots are the readable roots of a customer-scoped task. A customer folder inside an office the agent cannot
+// read (another office without a rule) stays out: the customer only narrows, it never opens an office.
+func (a *AgentFS) customerRoots(ctx context.Context, org string, sc scope) []string {
 	roots := []string{CustomerDesk(sc.agent, sc.customer), "/" + RootShared}
 	for _, o := range sc.owned {
-		if o.customer == sc.customer {
+		if o.customer == sc.customer && (!underOffices(o.path) || canRead(a.zone(ctx, org, sc, o.path))) {
 			roots = append(roots, o.path)
 		}
 	}

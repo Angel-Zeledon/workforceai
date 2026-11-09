@@ -200,8 +200,9 @@ type inputData struct {
 	Data []byte
 }
 
-// readInputs reads the input files through the FileSource (bounded).
-func (s *Service) readInputs(ctx context.Context, org string, ids []string) ([]inputData, error) {
+// readInputs reads the input files through the FileSource (bounded), as the agent for the person when the source
+// enforces the agent's folders (AgentFileSource).
+func (s *Service) readInputs(ctx context.Context, org, agentID, onBehalfOf string, ids []string) ([]inputData, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -212,7 +213,14 @@ func (s *Service) readInputs(ctx context.Context, org string, ids []string) ([]i
 	used := map[string]bool{}
 	total := int64(0)
 	for i, id := range ids {
-		name, rc, err := s.Files.Read(ctx, org, id)
+		var name string
+		var rc io.ReadCloser
+		var err error
+		if as, ok := s.Files.(AgentFileSource); ok {
+			name, rc, err = as.ReadAs(ctx, org, agentID, onBehalfOf, id)
+		} else {
+			name, rc, err = s.Files.Read(ctx, org, id)
+		}
 		if err != nil {
 			if errors.Is(err, domain.ErrNotFound) || errors.Is(err, domain.ErrForbidden) {
 				return nil, invalid("input file %q was not found", id)
@@ -258,7 +266,7 @@ func (s *Service) Prepare(ctx context.Context, in application.CodeRunInput) (app
 	if n >= s.runsPerDay(st) {
 		return application.CodePlan{}, &Error{Code: CodeDailyLimit, Detail: fmt.Sprintf("%d runs today", n)}
 	}
-	ins, err := s.readInputs(ctx, in.Org, req.InputFiles)
+	ins, err := s.readInputs(ctx, in.Org, in.AgentID, in.OnBehalfOf, req.InputFiles)
 	if err != nil {
 		return application.CodePlan{}, err
 	}
@@ -396,7 +404,7 @@ func (s *Service) Execute(ctx context.Context, org string, ex application.CodeEx
 	for _, i := range run.Inputs {
 		ids = append(ids, i.ID)
 	}
-	ins, err := s.readInputs(ctx, org, ids)
+	ins, err := s.readInputs(ctx, org, run.AgentID, run.OnBehalfOf, ids)
 	if err != nil {
 		if CodeOf(err) == CodeUnavailable {
 			return s.deny(ctx, org, run, CodeUnavailable)

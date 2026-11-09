@@ -230,7 +230,9 @@ func (a *AgentFS) runRecent(ctx context.Context, agentID string, args map[string
 		if err != nil {
 			return RunResult{Code: "path_invalid", Summary: "path_invalid: " + err.(*Error).Msg}
 		}
-		if !canRead(a.zoneAll(ctx, org, sc, c)) {
+		if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
+			return RunResult{Code: denyPersonNoAccess, Summary: denyPersonNoAccess + ": " + personNoAccessMsg}
+		} else if !canRead(z) {
 			return RunResult{Code: "not_granted", Summary: "not_granted: this folder is outside the areas you can read; tell the person and offer to give you access to it (or to ask for it)"}
 		}
 		under = scopeUnder(under, c)
@@ -255,9 +257,13 @@ func (a *AgentFS) runRecent(ctx context.Context, agentID string, args map[string
 		q.Under = nil
 		if all, err := a.Svc.Recent(ctx, q); err == nil {
 			idx := map[string]int{}
+			memo := map[string]string{}
 			for _, f := range all {
-				if canRead(a.zoneAll(ctx, org, sc, f.Path)) {
+				if z := a.zoneAll(ctx, org, sc, f.Path); canRead(z) || z == ZonePersonDenied {
 					continue
+				}
+				if underOffices(f.Path) && a.Svc.personAccess(ctx, by.ID, f.Path, memo) == AccessNone {
+					continue // an office the person cannot see (any more) is never named
 				}
 				dir := parentPath(f.Path)
 				if i, ok := idx[strings.ToLower(dir)]; ok {

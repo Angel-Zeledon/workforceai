@@ -8,10 +8,12 @@ import (
 	"strings"
 
 	"aiworkforce/backend/internal/application"
+	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/gateway"
 	"aiworkforce/backend/internal/infrastructure/postgres"
+	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/sandbox"
 )
 
@@ -26,7 +28,8 @@ type sandboxWiring struct {
 // wireSandbox builds the code sandbox. The service always exists (settings and
 // the run history work without a runner); it is installed in the orchestrator,
 // and code.run can be approved, only when SANDBOX_URL and SANDBOX_TOKEN are set.
-func wireSandbox(log *slog.Logger, pg *postgres.Store, rec *application.Recorder, cw connWiring, orch *application.Orchestrator, dsvc *drive.Service) sandboxWiring {
+// fs is the agents' folder policy: code.run inputs obey the same zones as fs.read (nil: the drive without projects).
+func wireSandbox(log *slog.Logger, pg *postgres.Store, rec *application.Recorder, cw connWiring, orch *application.Orchestrator, dsvc *drive.Service, fs *drive.AgentFS) sandboxWiring {
 	var store sandbox.Store = sandbox.NewMemoryStore()
 	if pg != nil {
 		store = &postgres.CodeRunStore{S: pg}
@@ -50,7 +53,10 @@ func wireSandbox(log *slog.Logger, pg *postgres.Store, rec *application.Recorder
 	}
 	svc.Runner = sandbox.NewHTTPRunner(url, token)
 	if dsvc != nil {
-		df := &sandbox.DriveFiles{Drive: dsvc, Notify: func(ctx context.Context, org, agentID, p string) {
+		if fs == nil {
+			fs = &drive.AgentFS{Svc: dsvc}
+		}
+		df := &sandbox.DriveFiles{Drive: dsvc, FS: fs, Notify: func(ctx context.Context, org, agentID, p string) {
 			rec.Emit(application.WithOrg(ctx, org), application.Action{Type: "file.activity", AgentID: agentID, Entity: "file", SkipAudit: true,
 				Payload: map[string]any{"agent_id": agentID, "action": "write", "path": p}})
 		}}
@@ -80,4 +86,12 @@ func sandboxCeiling() sandbox.Limits {
 	l.MaxOutputBytes = int64(envPositive("SANDBOX_MAX_OUTPUT_BYTES", int(l.MaxOutputBytes)))
 	l.MaxOutputFileBytes = int64(envPositive("SANDBOX_MAX_OUTPUT_FILE_BYTES", int(l.MaxOutputFileBytes)))
 	return l
+}
+
+// sandboxFolders is the folder policy of code.run inputs: the same as the fs.* tools (projects and customers).
+func sandboxFolders(dsvc *drive.Service, pstore projects.Store, cust *customers.Service) *drive.AgentFS {
+	if dsvc == nil {
+		return nil
+	}
+	return &drive.AgentFS{Svc: dsvc, Projects: projectDirectory{store: pstore}, Customers: customerDirectory(cust)}
 }

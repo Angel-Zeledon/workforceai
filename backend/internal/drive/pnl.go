@@ -92,7 +92,9 @@ func (a *AgentFS) planIncomeStatement(ctx context.Context, org string, sc scope,
 	pl.noteData = map[string]any{"read": res.Read, "included": res.Included, "to_review": len(res.Review), "currency": res.Currency,
 		"revenue": cents(st.Revenue), "cost": cents(st.Cost), "gross_profit": cents(st.Gross), "expenses": cents(st.Expenses), "profit_before_taxes": cents(st.Operating),
 		"period": res.Period}
-	if z := a.zoneAll(ctx, org, sc, c); sc.writeRefused(z) {
+	if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
+		return personDeny()
+	} else if sc.writeRefused(z) {
 		return deny(denyCustomerIsolation, "this task works for one customer: write only in that customer's folders or your desk for it")
 	} else if !autoWrite(z) {
 		pl.Approval, pl.Flags = true, []string{"outside_scope"}

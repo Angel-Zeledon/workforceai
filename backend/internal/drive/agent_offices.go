@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/domain"
 )
 
@@ -56,16 +57,22 @@ func (a *AgentFS) officeFolderOf(ctx context.Context, org, agentID string) (stri
 	return f.Path, nil
 }
 
-// personRequester is the person a call works for; actors that are not people (a schedule, the system, the
-// single-user mode) are nobody.
+// personRequester is the person a call works for; actors that are not people (application.PersonID: the system, a
+// schedule, a token, a link, another agent...) are nobody.
 func personRequester(ctx context.Context) string {
-	switch p := strings.TrimSpace(requesterFrom(ctx)); p {
-	case "user", "system", "scheduler":
-		return ""
-	default:
-		return p
-	}
+	return application.PersonID(strings.TrimSpace(requesterFrom(ctx)))
 }
+
+// ZonePersonDenied: inside /Offices, the person the call works for has no access. Nothing there is read, listed or
+// written for them, and no approval can change that (it is not the agent's access that is missing).
+const ZonePersonDenied = "person_denied"
+
+const (
+	denyPersonNoAccess = "person_no_access"
+	personNoAccessMsg  = "the person you work for has no access to this office folder, so you cannot use it for them; tell them so (giving you access would not help)"
+)
+
+func personDeny() Plan { return deny(denyPersonNoAccess, personNoAccessMsg) }
 
 func underOffices(p string) bool {
 	segs, err := Segments(p)
@@ -79,7 +86,7 @@ func (a *AgentFS) personLimit(ctx context.Context, sc scope, p, z string) string
 	}
 	switch a.Svc.PersonAccess(ctx, sc.person, p) {
 	case AccessNone:
-		return ZoneDenied
+		return ZonePersonDenied
 	case AccessRead:
 		if autoWrite(z) {
 			return ZoneGranted // the person only reads there: so does the agent, writes ask a human

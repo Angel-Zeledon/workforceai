@@ -91,7 +91,7 @@ var _ FileSource = (*DriveFiles)(nil)
 // Files implements FileSource.
 func (d *DriveFiles) Files(ctx context.Context, org, agentID string, terms []string, limit int) ([]Item, error) {
 	if drive.RequesterFrom(ctx) == "" { // the person the work is for: inside /Offices the agent never goes beyond them
-		ctx = drive.WithRequester(ctx, application.ActorFrom(ctx, ""))
+		ctx = drive.WithRequester(ctx, application.PersonFrom(ctx)) // only a person: a token, link or system actor is nobody
 	}
 	roots, err := d.FS.ReadableRoots(ctx, agentID)
 	if err != nil {

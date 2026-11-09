@@ -121,5 +121,5 @@ func wireWorkspaces(ctx context.Context, cfg config.Config, log *slog.Logger, pg
 	}
 	orch.SetFileResolver(driveFileResolver{drive: dsvc}) // chat: file cards and attachments
 	orch.SetWorkspaceSource(dws)                         // F1: agents know their drive folders (and find their work kit)
-	return workspaceWiring{pstore: pstore, projects: psvc, artifacts: asvc, drive: dsvc, sandbox: wireSandbox(log, pg, rec, cw, orch, dsvc), objects: objects, docIndex: docIdx, customers: cust}
+	return workspaceWiring{pstore: pstore, projects: psvc, artifacts: asvc, drive: dsvc, sandbox: wireSandbox(log, pg, rec, cw, orch, dsvc, sandboxFolders(dsvc, pstore, cust)), objects: objects, docIndex: docIdx, customers: cust}
 }

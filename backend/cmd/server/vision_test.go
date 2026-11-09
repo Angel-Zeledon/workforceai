@@ -29,7 +29,7 @@ func TestRenderEnvDoesNotEnableCodeRuns(t *testing.T) {
 	if renderFromEnv(log) == nil {
 		t.Fatal("RENDER_* must configure the renderer")
 	}
-	if w := wireSandbox(log, nil, rec, connWiring{}, orch, dr); w.available || w.svc.Runner != nil {
+	if w := wireSandbox(log, nil, rec, connWiring{}, orch, dr, nil); w.available || w.svc.Runner != nil {
 		t.Fatalf("RENDER_* must not enable code execution: %+v", w)
 	}
 }
