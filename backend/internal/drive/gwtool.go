@@ -96,7 +96,8 @@ func (t *GatewayTool) labelsOK(ctx context.Context, org, agentID, action string)
 
 // readSoft are the plan refusals of a READ that are reported to the agent as
 // data (so it can correct itself) instead of as a policy denial.
-var readSoft = map[string]bool{"not_found": true, "not_granted": true, "path_invalid": true, "name_invalid": true, "invalid_args": true}
+var readSoft = map[string]bool{"not_found": true, "not_granted": true, "path_invalid": true, "name_invalid": true, "invalid_args": true,
+	"person_no_access": true} // the agent tells the person it works for that they cannot see that folder
 
 // Assess implements application.NativeTool.
 func (t *GatewayTool) Assess(ctx context.Context, c application.GatewayCall) application.NativeAssessment {

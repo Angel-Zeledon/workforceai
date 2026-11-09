@@ -359,3 +359,35 @@ func TestCustomerTaskDoesNotOpenAnotherOffice(t *testing.T) {
 		t.Fatalf("acct roots: %v", roots)
 	}
 }
+
+// Through the Tool Gateway, a read the person cannot make is a soft result: the agent gets the code and the message as
+// data (so it can tell the person), never a policy block. A write stays refused.
+func TestGatewayPersonNoAccessReadIsSoft(t *testing.T) {
+	e := newOfficeEnv(t)
+	e.svc.SetPeople(officePeopleByID{"dep_acct": drive.AccessNone})
+	tool := &drive.GatewayTool{FS: e.fs, AgentTools: func(context.Context, string, string) ([]string, error) { return []string{"fs"}, nil }}
+	for _, c := range []struct {
+		action string
+		args   map[string]any
+	}{
+		{"read", map[string]any{"path": "/Offices/Contabilidad/Clientes/balance.md"}},
+		{"list", map[string]any{"path": "/Offices/Contabilidad/Clientes"}},
+		{"search", map[string]any{"query": "balance", "path": "/Offices/Contabilidad"}},
+		{"recent", map[string]any{"path": "/Offices/Contabilidad"}},
+	} {
+		call := application.GatewayCall{Org: "o1", AgentID: "acct", TaskID: "t1", OnBehalfOf: "beto", Tool: "fs", Action: c.action, Args: c.args}
+		if as := tool.Assess(e.ctx, call); as.DenyCode != "" || as.NeedsApproval {
+			t.Fatalf("%s: a person limit on a read is not a policy block: %+v", c.action, as)
+		}
+		res := tool.Run(e.ctx, call, false)
+		if res.Status != "succeeded" || !strings.Contains(res.Summary, "person_no_access") || len(res.Blocks) != 1 ||
+			!strings.Contains(res.Blocks[0], "the person you work for has no access") || strings.Contains(res.Blocks[0], "balance trimestral") {
+			t.Fatalf("%s: run: %+v", c.action, res)
+		}
+	}
+	w := application.GatewayCall{Org: "o1", AgentID: "acct", TaskID: "t1", OnBehalfOf: "beto", Tool: "fs", Action: "write",
+		Args: map[string]any{"path": "/Offices/Contabilidad/x.md", "content": "x"}}
+	if as := tool.Assess(e.ctx, w); as.DenyCode != "person_no_access" {
+		t.Fatalf("a write stays refused: %+v", as)
+	}
+}
