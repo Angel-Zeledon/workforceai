@@ -22,12 +22,13 @@ export function privateOfficeFolders(offices: OfficeLike[]): Set<string> {
   return new Set(offices.filter((o) => o.visibility === "private" && !o.general && o.folder_path).map((o) => o.folder_path as string));
 }
 
-/** Folder of the office of the agent a conversation ("agent:<id>") is with; undefined if none. */
-export function officeFolderOfAgent(conv: string, directory: { id: string; office_id?: string }[], offices: { id: string; folder_path?: string }[]): string | undefined {
+/** Folder of the office of the agent a conversation ("agent:<id>") is with, only when the person is a member of that
+ * office (a non-member cannot write there: an open office only reads); undefined otherwise (Shared/Chat). */
+export function officeFolderOfAgent(conv: string, directory: { id: string; office_id?: string }[], offices: { id: string; folder_path?: string; is_member?: boolean }[]): string | undefined {
   if (!conv.startsWith("agent:")) return undefined;
   const a = directory.find((d) => d.id === conv.slice(6));
-  const f = a?.office_id ? offices.find((o) => o.id === a.office_id)?.folder_path : undefined;
-  return f || undefined;
+  const o = a?.office_id ? offices.find((x) => x.id === a.office_id) : undefined;
+  return o?.is_member && o.folder_path ? o.folder_path : undefined;
 }
 
 export interface DestState {

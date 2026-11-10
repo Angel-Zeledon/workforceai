@@ -30,11 +30,18 @@ test("privateOfficeFolders: only private non-general offices with a folder", () 
 });
 test("officeFolderOfAgent: agent conversation -> folder of its office", () => {
   const dir = [{ id: "a1", office_id: "o1" }, { id: "a2", office_id: "o2" }];
-  const offices = [{ id: "o1", folder_path: "/Offices/Legal" }, { id: "o2" }];
+  const offices = [{ id: "o1", folder_path: "/Offices/Legal", is_member: true }, { id: "o2", is_member: true }];
   assert.equal(officeFolderOfAgent("agent:a1", dir, offices), "/Offices/Legal");
   assert.equal(officeFolderOfAgent("agent:a2", dir, offices), undefined);
   assert.equal(officeFolderOfAgent("office", dir, offices), undefined);
   assert.equal(officeFolderOfAgent("agent:zz", dir, offices), undefined);
+});
+test("officeFolderOfAgent: a person who is not a member of the agent's office -> Shared/Chat", () => {
+  const dir = [{ id: "a1", office_id: "o1" }, { id: "a3", office_id: "o3" }];
+  const offices = [{ id: "o1", folder_path: "/Offices/Legal", is_member: false }, { id: "o3", folder_path: "/Offices/Ventas" }];
+  assert.equal(officeFolderOfAgent("agent:a1", dir, offices), undefined);
+  assert.equal(officeFolderOfAgent("agent:a3", dir, offices), undefined);
+  assert.equal(frozenDest({ resolved: true, officeFolder: officeFolderOfAgent("agent:a1", dir, offices) }, "2026-11-09", "Adjuntos"), "/Shared/Chat/2026-11-09");
 });
 
 test("frozenDest: unresolved -> no destination yet", () => {

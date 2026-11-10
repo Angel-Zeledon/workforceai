@@ -115,7 +115,7 @@
           "Pulsa «Oficinas» y elige la carpeta de tu departamento.",
           "Sube archivos o abre las subcarpetas para ordenarlos."
         ],
-        "tip": "Los archivos que adjuntas en un chat se guardan por defecto en la carpeta Adjuntos del departamento del agente con el que chateas, en una subcarpeta por día (si ese agente no tiene departamento, van a Compartido > Chat); puedes elegir otra carpeta."
+        "tip": "Los archivos que adjuntas en un chat se guardan por defecto en la carpeta Adjuntos del departamento del agente con el que chateas, en una subcarpeta por día, si eres miembro de ese departamento (si no lo eres, o si ese agente no tiene departamento, van a Compartido > Chat); puedes elegir otra carpeta."
       },
       {
         "h": "Sube tus propios archivos",
@@ -255,7 +255,7 @@
           "Click “Offices” and choose your department's folder.",
           "Upload files or open the subfolders to keep them in order."
         ],
-        "tip": "Files you attach in a chat are saved by default in the Attachments folder of the department of the agent you chat with, in one subfolder per day (if that agent has no department, they go to Shared > Chat); you can pick another folder."
+        "tip": "Files you attach in a chat are saved by default in the Attachments folder of the department of the agent you chat with, in one subfolder per day, when you are a member of that department (if you are not, or that agent has no department, they go to Shared > Chat); you can pick another folder."
       },
       {
         "h": "Upload your own files",
