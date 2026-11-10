@@ -82,6 +82,35 @@
           "Las cuentas personales y de equipo conservan el menú de siempre."
         ],
         "note": "Un departamento privado no se ve desde fuera, ni siquiera siendo administrador de la organización."
+      },
+      {
+        "h": "Lo que queda dentro del departamento",
+        "paras": [
+          "Si un departamento es privado, todo lo que se hace en él se queda en él. Quien no es del departamento no lo ve, ni siquiera siendo administrador: para esa persona es como si no existiera. Un administrador que necesite verlo puede unirse al departamento, y queda registrado."
+        ],
+        "list": [
+          "Pedidos y tareas: solo los ve la gente del departamento. Quien hizo un pedido siempre ve el suyo, aunque no sea del departamento.",
+          "Chats: lo que responden los agentes del departamento no aparece en los chats compartidos de los demás.",
+          "Memoria: lo que aprenden los agentes del departamento solo lo recuerdan los agentes de ese departamento.",
+          "Habilidades: las habilidades del departamento y sus archivos se guardan en la carpeta del departamento. Una habilidad de un departamento no se puede dar a un agente de otro.",
+          "Conexiones: las cuentas conectadas a un departamento (correo, bases de datos y otras) solo las usan los agentes de ese departamento.",
+          "Avisos en vivo: los avisos de lo que ocurre en un departamento privado solo llegan a su gente."
+        ]
+      },
+      {
+        "h": "Aprobaciones: decide quien responde por el departamento",
+        "paras": [
+          "El responsable del departamento decide las aprobaciones de su departamento, aunque no sea administrador. Quien hizo el pedido ve que su aprobación está pendiente, pero no decide.",
+          "Las aprobaciones de un departamento privado se avisan solo a sus responsables; no se mandan a los correos ni a los canales de toda la empresa."
+        ],
+        "list": [
+          "Para cambiar a dónde se envían las claves de una conexión, el responsable debe volver a escribir la clave.",
+          "Para dar a una conexión permiso de escribir, hacen falta dos aprobaciones; la segunda puede darla el responsable del departamento.",
+          "«Permitir siempre» a cualquier agente solo lo decide quien tiene permiso para aprobar en toda la empresa.",
+          "Si cambias un correo después de que alguien ya lo aprobó, el cambio se rechaza: rechaza el correo y pide uno nuevo.",
+          "Si cancelas un proyecto, sus aprobaciones pendientes se retiran."
+        ],
+        "note": "Si un departamento privado no tiene responsable ni administradores dentro, nadie puede decidir sus aprobaciones. Pon un responsable."
       }
     ]
   },
@@ -158,6 +187,35 @@
           "Personal and team accounts keep the usual menu."
         ],
         "note": "A private department is not visible from outside, not even to an organization admin."
+      },
+      {
+        "h": "What stays inside the department",
+        "paras": [
+          "When a department is private, everything done in it stays in it. People outside the department do not see it, not even admins: for them it is as if it did not exist. An admin who needs to see it can join the department, and that is recorded."
+        ],
+        "list": [
+          "Requests and tasks: only the department's people see them. Whoever made a request always sees their own, even if they are not in the department.",
+          "Chats: what the department's agents reply does not show up in the shared chats of everyone else.",
+          "Memory: what the department's agents learn is only remembered by that department's agents.",
+          "Skills: a department's skills and their files are kept in the department's folder. A department's skill cannot be given to an agent of another department.",
+          "Connections: accounts connected to a department (email, databases and others) are used only by that department's agents.",
+          "Live notices: notices about what happens in a private department only reach its people."
+        ]
+      },
+      {
+        "h": "Approvals: whoever answers for the department decides",
+        "paras": [
+          "The department's responsible decides its approvals, even if they are not an admin. Whoever made the request sees that their approval is pending, but does not decide.",
+          "Approvals of a private department are announced only to its responsible people; they are not sent to company-wide emails or channels."
+        ],
+        "list": [
+          "To change where a connection's keys are sent, the responsible must type the key again.",
+          "Giving a connection permission to write takes two approvals; the second can come from the department's responsible.",
+          "“Always allow” for any agent is decided only by someone who can approve across the whole company.",
+          "If you change an email after someone already approved it, the change is rejected: reject the email and ask for a new one.",
+          "If you cancel a project, its pending approvals are withdrawn."
+        ],
+        "note": "If a private department has no responsible and no admins inside, nobody can decide its approvals. Set a responsible."
       }
     ]
   }
