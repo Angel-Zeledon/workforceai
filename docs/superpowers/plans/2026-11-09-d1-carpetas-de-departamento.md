@@ -193,3 +193,20 @@ Regla en `zoneAll`, después de lo actual: si la ruta está bajo `/Offices` y `r
 - [ ] **Step 2:** recorrido manual sin Docker: compilar `go build -o $TEMP/wf-server.exe ./cmd/server`, correrlo con `AUTH_ENABLED=false SIMULATION=true PORT=8080 ALLOWED_ORIGINS=http://localhost:3000`, y el frontend con `NEXT_PUBLIC_MOCK=true npx next dev -p 3100` para la pantalla de Archivos; captura en `docs/screenshots/d1-2026-11-09/`. Detener ambos procesos al terminar (y el `node` hijo si queda en el puerto).
 - [ ] **Step 3:** actualizar los docs y la guía; regenerar la landing.
 - [ ] **Step 4:** commit `docs: office folders (D1) in the drive and team docs and the user guide`.
+
+## Decisiones tomadas durante la ejecución (2026-11-09)
+
+- Ruling: T5 enables the office with s.viewer(r) (the caller already needs org:manage, so is admin) — simplest, no fake system viewer — if wrong, a non-admin manager path could fail Enable; tests cover it.
+- Ruling: T6 attachDest takes the folder word as a third arg: attachDest(officeFolder: string|undefined, today: string, word: string) — keeps the logic pure and i18n outside — costs nothing if wrong.
+- Ruling: work on branch empresa-d1 in place (no worktree): node_modules and Go cache stay shared; the owner asked to build everything without more questions.
+- Task 2: checked ⚠️ names.go rootKind case-sensitive — only labels top-level folder kind (pre-existing pattern for all roots); not an access gate. Ruling: carry "compare /Offices case-insensitively" into Task 4 (agent baseZone) — cost if wrong: agent bypass via /offices
+- Task 3: implemented 95beb5a. Ruling: keep implementer's 4 extra gates (revoke grant needs edit, grants list hides invisible folders, PUT folder-access needs edit, index/status needs read) — same sealing rule the spec demands, fewer leaks — cost if wrong: an admin can't revoke a grant on an office they're not in (acceptable).
+- Ruling: GET /org/export (admin/owner) keeps office folders in the ZIP — it is the organization's legal data export/portability; excluding would make the export incomplete — cost if wrong: an admin outside a private department can read it via the export (audited). Surface to owner.
+- Ruling: skip the native Go-server SIMULATION walk of Task 7 step 2 — API tests (httptest servers with auth, offices, drive) already exercise the behavior end to end and the owner wants minimal local processes — cost if wrong: a wiring bug only visible in main.go startup (main.go wiring is compiled and vetted).
+- Ruling: OnBehalfOf = rs.requestedBy at the 4 gateway call sites + recall uses requestedBy — reviewer's minimal fix, no change to rctx actor semantics.
+- Ruling: inside /Offices, a non-empty requester that is not a person and not a system actor (token:, link:, slack:, agent:…) gets NO office access (fail closed); only system actors ("", system, scheduler, orchestrator, runtime, demo) keep the agent's office — spec §4.1 says admins (who mint tokens) don't read private departments — cost if wrong: API-token integrations can't touch department files until tokens are bound to a person.
+- Ruling: file.activity for paths under /Offices/<o> goes only to that office's members (or drops the path if audience can't be scoped) — cost if wrong: non-members lose a cosmetic "last file" hint.
+- Ruling: PersonAccess recognizes the Offices root also by the store's own resolution (FolderByPath of the first segment has RootKind offices), and meetings/commands_meetings check the resolved f.Path — closes Unicode-lowercasing gaps without guessing Postgres collation.
+- Ruling: fix now from minors: agent write/move into another office without a person is refused (not approval); real-adapter test for open office agent read.
+
+Resultado: 7 tareas + revisión final (1 crítico y 4 importantes arreglados: persona perdida en pedidos reales, tokens, eventos con rutas, rutas Unicode, adjuntos de no miembros). Integrado en main en 22c2f73.
