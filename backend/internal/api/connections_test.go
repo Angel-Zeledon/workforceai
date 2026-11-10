@@ -579,3 +579,55 @@ func TestOperatingHoursAndAnomalySettingsAPI(t *testing.T) {
 		t.Fatalf("owner disable = %d", c)
 	}
 }
+
+// D2: a drive change waiting for approval carries its path and action on GET /approvals and on the inbox, so the
+// department screen keeps "Para revisar"/"Propuesto" after a reload; after a restart the card comes back from the
+// task checkpoint (GatewayRestorer), with the path, and the screens still find it.
+func TestPendingApprovalExposesDrivePathAndAction(t *testing.T) {
+	e := newConnEnv(t, false, true)
+	ctx := context.Background()
+	card := application.GatewayPending{Account: "drive", Title: "Escribir cierre.md", Path: "/Offices/Contabilidad/cierre.md", Action: "write"}
+	live, _, err := e.appr.Request(ctx, domain.Approval{TaskID: "t1", AgentID: "accounting", Action: "write", Risk: "medium", Title: "t"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.gw.RegisterApproval(live.ID, card)
+	// the restarted process: the approval is in the store (without its context) and the card is in the checkpoint
+	restored, _, err := e.appr.Request(ctx, domain.Approval{TaskID: "t2", AgentID: "accounting", Action: "write_document", Risk: "medium", Title: "t"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(application.TaskCheckpoint{TaskID: "t2", ApprovalID: restored.ID,
+		Gateway: &application.GatewayPending{Account: "drive", Path: "/Offices/Contabilidad/Impuestos/iva.docx", Action: "write_document"}})
+	var cp application.TaskCheckpoint
+	if err := json.Unmarshal(raw, &cp); err != nil {
+		t.Fatal(err)
+	}
+	e.gw.RestoreApproval(ctx, restored.ID, application.GatewayCall{Org: e.org, Tool: "fs", Action: "write_document"}, *cp.Gateway)
+
+	want := map[string][2]string{live.ID: {"/Offices/Contabilidad/cierre.md", "write"},
+		restored.ID: {"/Offices/Contabilidad/Impuestos/iva.docx", "write_document"}}
+	check := func(where string, items []map[string]any) {
+		t.Helper()
+		if len(items) != 2 {
+			t.Fatalf("%s: %v", where, items)
+		}
+		for _, it := range items {
+			c, _ := it["context"].(map[string]any)
+			w := want[it["id"].(string)]
+			if c == nil || c["path"] != w[0] || c["action"] != w[1] {
+				t.Fatalf("%s: context of %v = %v, want path %q action %q", where, it["id"], c, w[0], w[1])
+			}
+		}
+	}
+	_, body := e.do("GET", "/api/v1/approvals?status=pending", "", nil, nil)
+	var list []map[string]any
+	_ = json.Unmarshal(body, &list)
+	check("/approvals", list)
+	_, body = e.do("GET", "/api/v1/approvals/inbox", "", nil, nil)
+	var inbox struct {
+		Items []map[string]any `json:"items"`
+	}
+	_ = json.Unmarshal(body, &inbox)
+	check("/approvals/inbox", inbox.Items)
+}

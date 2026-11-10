@@ -139,8 +139,12 @@ func (s *server) approvalContext(id string) map[string]any {
 	if !ok {
 		return nil
 	}
-	return map[string]any{"account": p.Account, "recipients": p.Recipients, "reversibility": p.Reversibility,
+	c := map[string]any{"account": p.Account, "recipients": p.Recipients, "reversibility": p.Reversibility,
 		"tainted": p.Tainted, "external_origin": p.ExternalOrigin, "hold_seconds": p.HoldSeconds, "flags": p.Flags, "args_hash": p.ArgsHash, "outbox_id": p.OutboxID}
+	if p.Path != "" { // a drive change (D2): which file and what is done to it, as when the approval was requested
+		c["path"], c["action"] = p.Path, p.Action
+	}
+	return c
 }
 
 func (s *server) listProviders(w http.ResponseWriter, r *http.Request) {

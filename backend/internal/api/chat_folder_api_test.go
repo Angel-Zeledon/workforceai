@@ -26,7 +26,10 @@ func (r *routeSpy) Route(_ context.Context, in application.RouteRequest) (applic
 	return application.RouteResponse{}, errors.New("route spy")
 }
 
-func (r *routeSpy) ChatReply(context.Context, application.ChatReplyRequest) (application.ChatReplyResponse, error) {
+func (r *routeSpy) ChatReply(_ context.Context, in application.ChatReplyRequest) (application.ChatReplyResponse, error) {
+	r.mu.Lock()
+	r.texts = append(r.texts, in.Text)
+	r.mu.Unlock()
 	return application.ChatReplyResponse{}, errors.New("route spy")
 }
 
@@ -53,10 +56,14 @@ func TestChatFolderMustBeReadableOfficeFolder(t *testing.T) {
 	rt := &routeSpy{}
 	o := newOfficeDriveRT(t, rt)
 	o.upload(o.ana, "/Offices/Legal/Casos/demanda.md", "demanda")
+	postTo := func(conv, token, text, folder string) (int, string) {
+		t.Helper()
+		r, b := o.e.do("POST", api1+"/messages", token, map[string]any{"conversation": conv, "text": text, "folder": folder}, nil)
+		return r.StatusCode, string(b)
+	}
 	post := func(token, text, folder string) (int, string) {
 		t.Helper()
-		r, b := o.e.do("POST", api1+"/messages", token, map[string]any{"conversation": "office", "text": text, "folder": folder}, nil)
-		return r.StatusCode, string(b)
+		return postTo("agent:sales", token, text, folder)
 	}
 	const block = "[work folder]\n/Offices/Legal/Casos\n[/work folder]"
 
@@ -76,8 +83,12 @@ func TestChatFolderMustBeReadableOfficeFolder(t *testing.T) {
 
 	// what a missing folder answers: everything that may not be used answers exactly the same
 	missC, missB := post(o.ana, "tres ana", "/Offices/Legal/NoExiste")
-	if missC != 404 {
+	if missC != 404 || !strings.Contains(missB, `"code":"not_found"`) {
 		t.Fatalf("missing folder = %d %s", missC, missB)
+	}
+	// an unknown agent is also a 404, but without the drive's code: the screen tells both apart by the code
+	if c, b := postTo("agent:ghost", o.ana, "fantasma", "/Offices/Legal/Casos"); c != 404 || strings.Contains(b, `"code"`) {
+		t.Fatalf("unknown agent = %d %s", c, b)
 	}
 	same := func(who, token, folder string) {
 		t.Helper()
@@ -95,6 +106,14 @@ func TestChatFolderMustBeReadableOfficeFolder(t *testing.T) {
 		c, b := post(o.ana, "fuera", f)
 		if c != 400 || !strings.Contains(b, "folder must be a department folder") {
 			t.Fatalf("%s = %d %s", f, c, b)
+		}
+	}
+
+	// a work folder is only for a conversation with one agent: the office chat gets a clear 400, whatever the folder
+	for _, conv := range []string{"office", ""} {
+		c, b := postTo(conv, o.ana, "oficina", "/Offices/Legal/Casos")
+		if c != 400 || !strings.Contains(b, `"code":"folder_invalid"`) || !strings.Contains(b, "only accepted in a conversation with one agent") {
+			t.Fatalf("folder in %q = %d %s", conv, c, b)
 		}
 	}
 

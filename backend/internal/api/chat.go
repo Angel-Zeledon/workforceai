@@ -33,9 +33,10 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		// CustomerID (B12, optional) scopes any request this message creates to one customer, like POST /requests:
 		// the scope is stored before the request exists and its tasks only see that customer's memories and files.
 		CustomerID string `json:"customer_id"`
-		// Folder (D2, optional) is a department folder (/Offices/<office>/...) the agents work in: they read from it
-		// and save there what they produce. It must be a folder the person may read; anything else is a 404 like a
-		// missing folder, and a folder outside the departments is a 400.
+		// Folder (D2, optional) is a department folder (/Offices/<office>/...) the agent works in: it reads from it
+		// and saves there what it produces. Only for a conversation with one agent (agent:<id>) and a folder inside
+		// /Offices/<office> (else 400 folder_invalid); a folder that is missing or that the person may not read is the
+		// same 404 not_found.
 		Folder string `json:"folder"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
@@ -65,6 +66,11 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		ctx = application.WithAttachments(ctx, body.Attachments)
 	}
 	if strings.TrimSpace(body.Folder) != "" {
+		// a work folder belongs to a request to one agent; the office chat (or anything else) has no single worker
+		if id, ok := strings.CutPrefix(domain.PublicChatConv(body.Conversation), domain.ChatAgentPrefix); !ok || id == "" {
+			s.driveFail(w, &drive.Error{Code: "folder_invalid", Kind: domain.ErrInvalid, Msg: "folder is only accepted in a conversation with one agent (agent:<id>)"})
+			return
+		}
 		folder, err := s.workFolder(r, body.Folder)
 		if err != nil {
 			s.driveFail(w, err)
