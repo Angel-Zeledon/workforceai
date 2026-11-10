@@ -11,6 +11,8 @@ export interface OfficeView {
   id: string; name: string; visibility: OfficeVisibility; general: boolean;
   leads: PersonRef[]; members: PersonRef[]; member_count: number; agents: string[];
   can_enter: boolean; can_manage: boolean; is_member: boolean; is_lead: boolean;
+  /** Drive folder of the office ("/Offices/<name>"); empty or missing when it has none. */
+  folder_path?: string;
 }
 export interface OfficesResponse {
   offices: OfficeView[]; departments: { id: string; name: string; office: boolean }[]; restricted: boolean;

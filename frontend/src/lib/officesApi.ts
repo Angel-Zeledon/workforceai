@@ -6,7 +6,9 @@ import type { AccessInput, AccessView, DirectoryEntry, NoteScope, OfficeView, Of
 
 const mockOffices: OfficesResponse = {
   offices: [{ id: "general", name: "General", visibility: "open", general: true, leads: [{ user_id: "demo", name: "Demo" }], members: [{ user_id: "demo", name: "Demo" }],
-    member_count: 1, agents: [], can_enter: true, can_manage: true, is_member: true, is_lead: true }],
+    member_count: 1, agents: [], can_enter: true, can_manage: true, is_member: true, is_lead: true },
+    { id: "contabilidad", name: "Contabilidad", visibility: "private", general: false, leads: [{ user_id: "demo", name: "Demo" }], members: [{ user_id: "demo", name: "Demo" }],
+      member_count: 1, agents: [], can_enter: true, can_manage: true, is_member: true, is_lead: true, folder_path: "/Offices/Contabilidad" }],
   departments: [], restricted: false, me: { user_id: "demo", admin: true, offices: ["general"] },
 };
 

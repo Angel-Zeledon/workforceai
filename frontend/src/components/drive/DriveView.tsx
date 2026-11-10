@@ -11,11 +11,10 @@ import { ConceptHelp } from "../concepts/ConceptHelp";
 import { Icon } from "../icons";
 import { useAgentName } from "../ui";
 import { docSearch, type Passage, type PassageResult } from "@/lib/docsearch";
+import { officesApi } from "@/lib/officesApi";
+import { privateOfficeFolders, rootLabel } from "@/lib/officeFoldersLogic";
 import { IndexStatusChip, PassageResults } from "./PassageSearch";
 
-const ROOTS = new Set(["Agents", "Projects", "Clients", "Shared"]);
-/** The four well-known roots are translated; every other folder keeps its own name. */
-const rootLabel = (t: (k: string) => string, name: string) => (ROOTS.has(name) ? t(`drive.rootName.${name}`) : name);
 
 const fmtSize = (n: number) => (n < 1024 ? `${n} B` : n < 1 << 20 ? `${(n / 1024).toFixed(1)} KB` : `${(n / (1 << 20)).toFixed(1)} MB`);
 
@@ -34,6 +33,9 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
   const [trash, setTrash] = useState<DriveFile[] | null>(null);
   const [whoSees, setWhoSees] = useState(false); // "Qué agentes la ven" for the current folder
   const [error, setError] = useState("");
+  // folders of private offices (they show a lock); an older backend without offices just shows none
+  const [lockedFolders, setLockedFolders] = useState<Set<string>>(new Set());
+  useEffect(() => { officesApi.list().then((r) => setLockedFolders(privateOfficeFolders(r.offices))).catch(() => { /* no offices */ }); }, []);
   const [busy, setBusy] = useState(false);
   // share of the current upload already sent (0..1); null when nothing is uploading
   const [progress, setProgress] = useState<number | null>(null);
@@ -115,7 +117,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
               <span key={i} className="flex items-center gap-1">
                 <span className="text-mute">/</span>
                 <button type="button" className="min-h-9 rounded px-1.5 py-0.5 text-ink hover:bg-panel2 sm:min-h-0" onClick={() => { setPath("/" + crumbs.slice(0, i + 1).join("/")); setSelected(null); setTrash(null); }}>
-                  {rootLabel(t, c)}
+                  {rootLabel(c, t)}
                 </button>
               </span>
             ))}
@@ -153,11 +155,11 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
             <Loading rows={5} />
           ) : (
             <FileTable listing={listing} path={path} selected={selected?.id ?? null}
-              onFolder={(p) => { setPath(p); setSelected(null); }} onFile={(f) => { setSelected(f); setFocus(null); }} canUpload={canUpload} onUpload={() => fileInput.current?.click()} />
+              onFolder={(p) => { setPath(p); setSelected(null); }} onFile={(f) => { setSelected(f); setFocus(null); }} canUpload={canUpload} onUpload={() => fileInput.current?.click()} lockedFolders={lockedFolders} />
           )}
         </div>
       </div>
-      {whoSees && !selected && path !== "/" && <FolderAgentsPanel path={path} label={"/" + crumbs.map((c) => rootLabel(t, c)).join("/")} onClose={() => setWhoSees(false)} />}
+      {whoSees && !selected && path !== "/" && <FolderAgentsPanel path={path} label={"/" + crumbs.map((c) => rootLabel(c, t)).join("/")} onClose={() => setWhoSees(false)} />}
       {selected && <FilePane file={selected} focus={focus} onClearFocus={() => setFocus(null)} onClose={() => { setSelected(null); setFocus(null); }} onChanged={() => { load(); }} onDeleted={() => { setSelected(null); load(); }} />}
     </div>
   );
@@ -173,8 +175,8 @@ function Author({ p, copy = false }: { p: DriveFile["updated_by"]; copy?: boolea
   return <span>{t("drive.person")}</span>;
 }
 
-function FileTable({ listing, path, selected, onFolder, onFile, canUpload, onUpload }: {
-  listing: Listing; path: string; selected: string | null; onFolder: (p: string) => void; onFile: (f: DriveFile) => void; canUpload: boolean; onUpload: () => void;
+function FileTable({ listing, path, selected, onFolder, onFile, canUpload, onUpload, lockedFolders }: {
+  listing: Listing; path: string; selected: string | null; onFolder: (p: string) => void; onFile: (f: DriveFile) => void; canUpload: boolean; onUpload: () => void; lockedFolders: Set<string>;
 }) {
   const { t } = useT();
   if (!listing.folders.length && !listing.files.length) return canUpload
@@ -188,7 +190,7 @@ function FileTable({ listing, path, selected, onFolder, onFile, canUpload, onUpl
       <tbody>
         {listing.folders.map((f) => (
           <tr key={f.id} data-testid={`drive-folder-${f.name}`} className="cursor-pointer border-t border-line hover:bg-panel2" onClick={() => onFolder(f.path)}>
-            <td className="py-2"><span className="flex items-center gap-2 font-medium text-ink"><Icon name="folder" size={15} />{path === "/" ? rootLabel(t, f.name) : f.name}</span></td>
+            <td className="py-2"><span className="flex items-center gap-2 font-medium text-ink"><Icon name="folder" size={15} />{path === "/" ? rootLabel(f.name, t) : f.name}{lockedFolders.has(f.path) && <span data-testid={`drive-lock-${f.name}`} title={t("drive.officePrivate")} className="text-mute"><Icon name="lock" size={13} /></span>}</span></td>
             <td className="hidden sm:table-cell" /><td className="hidden sm:table-cell" /><td className="hidden sm:table-cell" /><td className="hidden sm:table-cell" />
           </tr>
         ))}

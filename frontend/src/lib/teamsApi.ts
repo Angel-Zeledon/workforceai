@@ -5,7 +5,7 @@ import type { Profession, Welcome } from "./teamsLogic";
 
 /** Contract: backend/internal/auth/teams.go (sign-up check) and backend/internal/api/teams.go (welcome, teams). */
 
-export interface CreatedTeam { team: { id: string; name: string }; profession: string; agents: string[] }
+export interface CreatedTeam { team: { id: string; name: string }; profession: string; agents: string[]; folder_path?: string }
 export interface TeamInvite { email: string; role: string; department_id?: string; profession?: string; lead?: boolean }
 
 export const teamsApi = {

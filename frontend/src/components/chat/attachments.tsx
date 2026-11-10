@@ -6,6 +6,8 @@ import { drive, DriveError, DEFAULT_UPLOAD_BYTES, useUploadLimit, type DriveFile
 import type { FileRef } from "@/lib/types";
 import { Btn } from "../ui";
 import { Icon } from "../icons";
+import { officesApi } from "@/lib/officesApi";
+import { attachDest, officeFolderOfAgent } from "@/lib/officeFoldersLogic";
 
 /**
  * Attachments of the chat composer, the way people expect them (Claude, ChatGPT): files upload as soon as they are
@@ -33,7 +35,6 @@ export interface Att {
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
-const defaultDest = () => `/Shared/Chat/${today()}`;
 const destKey = (conv: string) => `aiw.attach.dest.${conv}`;
 const safe = (name: string) => name.replace(/[\\:*?"<>|]/g, "_");
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -47,16 +48,31 @@ export function fmtSize(n: number): string {
 
 /** Everything the composer needs: the items, adding from the computer or from the drive, the destination folder. */
 export function useAttachments(conv: string) {
+  const { t } = useT();
   const [items, setItems] = useState<Att[]>([]);
-  const [dest, setDestState] = useState(defaultDest);
+  const [officeFolder, setOfficeFolder] = useState<string | undefined>();
+  const [chosen, setChosen] = useState<string | null>(null); // what the person picked (or saved) wins over the default
+  // default destination: the office folder of the agent of this conversation (Shared/Chat without one)
+  const dest = chosen ?? attachDest(officeFolder, today(), t("drive.attachFolder"));
+  useEffect(() => {
+    let alive = true;
+    setOfficeFolder(undefined);
+    if (conv.startsWith("agent:")) {
+      Promise.all([officesApi.directory(), officesApi.list()])
+        .then(([d, o]) => { if (alive) setOfficeFolder(officeFolderOfAgent(conv, d.agents, o.offices)); })
+        .catch(() => { /* older backend: Shared/Chat */ });
+    }
+    return () => { alive = false; };
+  }, [conv]);
   const urls = useRef(new Set<string>());
   const maxBytes = useUploadLimit();
 
   useEffect(() => {
-    try { const d = localStorage.getItem(destKey(conv)); if (d) setDestState(d); } catch { /* private mode */ }
+    setChosen(null);
+    try { const d = localStorage.getItem(destKey(conv)); if (d) setChosen(d); } catch { /* private mode */ }
   }, [conv]);
   useEffect(() => () => { urls.current.forEach((u) => URL.revokeObjectURL(u)); urls.current.clear(); }, []);
-  const setDest = (d: string) => { setDestState(d); try { localStorage.setItem(destKey(conv), d); } catch { /* private mode */ } };
+  const setDest = (d: string) => { setChosen(d); try { localStorage.setItem(destKey(conv), d); } catch { /* private mode */ } };
 
   const patch = useCallback((id: string, p: Partial<Att>) => setItems((cur) => cur.map((a) => (a.id === id ? { ...a, ...p } : a))), []);
 

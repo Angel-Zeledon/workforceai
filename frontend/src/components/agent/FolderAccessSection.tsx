@@ -4,11 +4,12 @@ import { useT } from "@/lib/i18n";
 import { folderAccess, type AccessEntry, type AccessLevel } from "@/lib/folderAccess";
 import { LEVELS, displayPath, levelKey, sortEntries, validFolder } from "@/lib/folderAccessLogic";
 import { useDriveNav } from "@/lib/drive";
+import { rootLabel } from "@/lib/officeFoldersLogic";
 import { Btn, Card, Empty } from "../ui";
 import { Icon } from "../icons";
 import { DrivePicker } from "../chat/attachments";
 
-const ROOTS = ["Agents", "Projects", "Clients", "Shared"] as const;
+const ROOTS = ["Agents", "Projects", "Clients", "Shared", "Offices"] as const;
 
 /** "Carpetas que puede ver": the folders an agent sees, each with Ninguno / Leer / Editar (inherited downwards).
  * Admins and the head of the agent's team change them; everybody else sees them read-only. */
@@ -20,7 +21,7 @@ export function FolderAccessSection({ id }: { id: string }) {
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-  const roots = Object.fromEntries(ROOTS.map((r) => [r, t(`drive.rootName.${r}`)]));
+  const roots = Object.fromEntries(ROOTS.map((r) => [r, rootLabel(r, t)]));
 
   const load = useCallback(async () => {
     try {
