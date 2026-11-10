@@ -49,9 +49,14 @@ func (s *Service) Assign(ctx context.Context, a Actor, agentID, skillID string) 
 	if _, err := s.checkAgent(ctx, org, agentID); err != nil {
 		return err
 	}
-	sk, err := s.skill(ctx, org, skillID)
+	sk, err := s.visible(ctx, org, a, skillID)
 	if err != nil {
 		return err
+	}
+	if sk.OfficeID != "" {
+		if v := s.model(ctx, org); v.m != nil && v.m.Agent(agentID).OfficeID != sk.OfficeID {
+			return invalid("other_department", "skill belongs to another department")
+		}
 	}
 	if err := s.cfg.Store.Assign(ctx, org, Assignment{AgentID: agentID, SkillID: skillID, AssignedBy: a.ID, AssignedAt: s.now()}); err != nil {
 		return err
@@ -63,7 +68,7 @@ func (s *Service) Assign(ctx context.Context, a Actor, agentID, skillID string) 
 // Unassign removes a direct assignment.
 func (s *Service) Unassign(ctx context.Context, a Actor, agentID, skillID string) error {
 	org := s.org(ctx)
-	sk, err := s.skill(ctx, org, skillID)
+	sk, err := s.visible(ctx, org, a, skillID)
 	if err != nil {
 		return err
 	}
@@ -97,17 +102,22 @@ func (s *Service) AgentSkills(ctx context.Context, agentID string) ([]AgentSkill
 	}
 	out := []AgentSkill{}
 	seen := map[string]bool{}
+	// a skill of a department only works for the agents of that department (an agent that moved loses it)
+	m := s.model(ctx, org)
+	here := func(sk Skill) bool {
+		return sk.OfficeID == "" || !m.failed && (m.m == nil || m.m.Agent(agentID).OfficeID == sk.OfficeID)
+	}
 	for _, a := range as {
-		if sk, ok := byID[a.SkillID]; ok && !seen[sk.ID] {
+		if sk, ok := byID[a.SkillID]; ok && !seen[sk.ID] && here(sk) {
 			seen[sk.ID] = true
-			out = append(out, AgentSkill{Skill: sk, Via: ViaAgent, AssignedBy: a.AssignedBy, Servable: servable(sk)})
+			out = append(out, AgentSkill{Skill: withOfficeName(m, sk), Via: ViaAgent, AssignedBy: a.AssignedBy, Servable: servable(sk)})
 		}
 	}
 	if s.cfg.RoleDefaults != nil {
 		for _, name := range s.cfg.RoleDefaults(role) {
-			if sk, ok := byName[name]; ok && !seen[sk.ID] {
+			if sk, ok := byName[name]; ok && !seen[sk.ID] && here(sk) {
 				seen[sk.ID] = true
-				out = append(out, AgentSkill{Skill: sk, Via: ViaRole, Servable: servable(sk)})
+				out = append(out, AgentSkill{Skill: withOfficeName(m, sk), Via: ViaRole, Servable: servable(sk)})
 			}
 		}
 	}
@@ -236,7 +246,8 @@ func (s *Service) Load(ctx context.Context, org string, c LoadCall) (Loaded, err
 		}
 		out.File, text = c.File, pkg.Files[i].Content
 	} else {
-		text = buildLoadText(sk.Name, v.Version, pkg)
+		dir, _ := s.skillDir(ctx, org, sk.OfficeID, sk.Name, v.Version)
+		text = buildLoadText(dir, pkg)
 	}
 	score, _ := sanitize.ScoreInjection(text)
 	out.Suspect = score >= sanitize.InjectionThreshold
@@ -249,7 +260,7 @@ func (s *Service) Load(ctx context.Context, org string, c LoadCall) (Loaded, err
 	return out, nil
 }
 
-func buildLoadText(name string, version int, pkg Package) string {
+func buildLoadText(dir string, pkg Package) string {
 	var b strings.Builder
 	b.WriteString(strings.TrimSpace(pkg.Body))
 	b.WriteString("\n")
@@ -262,7 +273,7 @@ func buildLoadText(name string, version int, pkg Package) string {
 			}
 			b.WriteString(line + "\n")
 		}
-		b.WriteString("Read a file with skill.load {name, file} or fs.read " + VersionDir(name, version) + "/<file>.\n")
+		b.WriteString("Read a file with skill.load {name, file} or fs.read " + dir + "/<file>.\n")
 	}
 	if len(pkg.Front.AllowedTools) > 0 {
 		b.WriteString("\nSuggested tools (informational: they grant nothing): " + strings.Join(pkg.Front.AllowedTools, ", ") + "\n")

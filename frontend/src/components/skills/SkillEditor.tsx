@@ -1,9 +1,10 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { skillPayload, skillsApi, SkillError, type SkillDetail } from "@/lib/skills";
+import { officesApi } from "@/lib/officesApi";
 import {
-  NAME_RE, emptyDraft, isDraftDirty, isScript, joinFiles, splitFiles, validateDraft, slugify, LIMITS, type Example, type SkillDraft,
+  NAME_RE, emptyDraft, isDraftDirty, isScript, joinFiles, skillOfficeChoices, splitFiles, validateDraft, slugify, LIMITS, type Example, type SkillDraft,
 } from "@/lib/skillsLogic";
 import { Btn, Card } from "../ui";
 import { Icon } from "../icons";
@@ -27,6 +28,14 @@ export function SkillEditor({ detail, prefill, canWrite, onSaved }: {
   const [busy, setBusy] = useState(false);
   const upload = useRef<HTMLInputElement>(null);
   const editing = !!detail;
+  // "For: the whole company / <department>": only the departments I manage and can see; none = no selector
+  const [offices, setOffices] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    if (editing) return;
+    let alive = true;
+    officesApi.list().then((r) => { if (alive) setOffices(skillOfficeChoices(r.offices)); }).catch(() => { /* no departments */ });
+    return () => { alive = false; };
+  }, [editing]);
   const issues = validateDraft(draft, editing);
   const dirty = isDraftDirty(base, draft) || (!editing);
   const set = (p: Partial<SkillDraft>) => setDraft((d) => ({ ...d, ...p }));
@@ -82,6 +91,20 @@ export function SkillEditor({ detail, prefill, canWrite, onSaved }: {
             <p className="mt-1 text-[11px] text-mute">{t("skills.editor.descriptionHint")} <span className="font-mono">{[...draft.description].length}/{LIMITS.description}</span></p>
           </div>
         </div>
+        {(offices.length > 0 || (editing && detail?.office_id)) && (
+          <div className="mt-3 max-w-xs">
+            <label className={label} htmlFor="skill-office">{t("skills.office.for")}</label>
+            {editing ? (
+              <div id="skill-office" data-testid="skill-office-fixed" className="text-xs text-ink2">{detail?.office_name || t("skills.office.company")}</div>
+            ) : (
+              <select id="skill-office" data-testid="skill-office" value={draft.office_id ?? ""} onChange={(e) => set({ office_id: e.target.value })} className={field}>
+                <option value="">{t("skills.office.company")}</option>
+                {offices.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            )}
+            <p className="mt-1 text-[11px] text-mute">{editing ? t("skills.office.fixed") : t("skills.office.hint")}</p>
+          </div>
+        )}
       </Card>
 
       <Card title={t("skills.editor.instructions")} right={

@@ -59,6 +59,10 @@ type Skill struct {
 	Status      string `json:"status"`
 	Source      string `json:"source"`
 	Builtin     bool   `json:"builtin"`
+	// OfficeID is the department the skill belongs to ("" = the whole company);
+	// OfficeName is its display name (computed, not stored).
+	OfficeID   string `json:"office_id"`
+	OfficeName string `json:"office_name,omitempty"`
 	// CurrentVersion is the latest version; ActiveVersion the one agents get (0 =
 	// never approved). They differ while a newer version waits for review.
 	CurrentVersion int `json:"current_version"`

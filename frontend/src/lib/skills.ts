@@ -17,6 +17,8 @@ export interface Skill {
   id: string; name: string; description: string; status: SkillStatus; source: SkillSource; builtin: boolean;
   current_version: number; active_version: number; active_description?: string;
   created_by: string; created_at: string; updated_at: string; reviewed_by?: string; reviewed_at?: string | null; review_note?: string; agents?: number;
+  /** The department the skill belongs to ("" or missing = the whole company) and its name. */
+  office_id?: string; office_name?: string;
 }
 export interface SkillWarning { code: "injection" | "script" | "allowed_tools" | "import_note"; path?: string; detail?: string; hits?: string[] }
 export interface SkillFileMeta { path: string; size: number; sha256: string; script?: boolean }
@@ -29,7 +31,7 @@ export interface SkillDetail extends Skill {
   allowed_tools: string[]; files: SkillFileEntry[]; assignments: { agent_id: string; assigned_by: string }[];
 }
 export interface AgentSkill extends Skill { via: "agent" | "role"; assigned_by?: string; servable: boolean }
-export interface SkillPayload { name: string; description: string; instructions: string; allowed_tools: string[]; files: SkillFileEntry[]; changelog?: string; source?: string }
+export interface SkillPayload { name: string; description: string; instructions: string; allowed_tools: string[]; files: SkillFileEntry[]; changelog?: string; source?: string; office_id?: string }
 
 /** A skills error with the backend's stable code (name_taken, path_traversal, zip_bomb, stale_review...). */
 export class SkillError extends Error {
@@ -45,7 +47,7 @@ async function req<T>(method: string, path: string, body?: BodyInit | null, head
 }
 const json = (v: unknown) => ({ body: JSON.stringify(v), headers: { "Content-Type": "application/json" } });
 const toPayload = (d: SkillDraft, files: SkillFileEntry[]): SkillPayload => ({
-  name: d.name, description: d.description, instructions: d.instructions, allowed_tools: d.allowed_tools, files, changelog: d.changelog || undefined, source: d.source,
+  name: d.name, description: d.description, instructions: d.instructions, allowed_tools: d.allowed_tools, files, changelog: d.changelog || undefined, source: d.source, office_id: d.office_id || undefined,
 });
 export { toPayload as skillPayload };
 

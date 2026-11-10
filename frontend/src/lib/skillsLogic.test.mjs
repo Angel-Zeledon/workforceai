@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  countByStatus, emptyDraft, exampleFile, filterSkills, fromTask, joinFiles, parseExample, parseQuality, pathIssue, qualityFile, slugify, splitFiles, validateDraft,
+  countByStatus, emptyDraft, exampleFile, filterSkills, fromTask, joinFiles, parseExample, parseQuality, pathIssue, qualityFile, skillOfficeChoices, slugify, splitFiles, validateDraft,
 } from "./skillsLogic.ts";
 
 test("slugify makes valid skill names", () => {
@@ -79,4 +79,16 @@ test("filters and counters", () => {
   assert.equal(filterSkills(list, "active", "").length, 1);
   assert.equal(filterSkills(list, "all", "PROP").length, 1);
   assert.equal(filterSkills(list, "disabled", "").length, 0);
+});
+
+test("a skill can be for a department only where I manage it and can see inside", () => {
+  const o = (id, name, over = {}) => ({ id, name, general: false, visibility: "open", can_manage: true, is_member: true, ...over });
+  const got = skillOfficeChoices([
+    o("general", "General", { general: true }),
+    o("d-sales", "Ventas"),
+    o("d-legal", "Legal", { visibility: "private" }),
+    o("d-hr", "RH", { visibility: "private", is_member: false }), // an administrator outside a private department
+    o("d-ops", "Operaciones", { can_manage: false }),
+  ]);
+  assert.deepEqual(got, [{ id: "d-legal", name: "Legal" }, { id: "d-sales", name: "Ventas" }]);
 });

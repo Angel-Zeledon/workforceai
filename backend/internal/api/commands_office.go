@@ -494,7 +494,7 @@ func cmdSkill(c *cmdCall) (*cmdResult, *cmdFail) {
 		return nil, f
 	}
 	ref := c.str("skill")
-	list, err := c.s.Skills.List(c.ctx)
+	list, err := c.s.Skills.List(c.ctx, c.s.skillActorOf(c))
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
@@ -583,7 +583,12 @@ func cmdLearn(c *cmdCall) (*cmdResult, *cmdFail) {
 			}
 		}
 	}
-	d, err := c.s.Skills.Create(c.ctx, c.s.skillActor(c.r), skills.Input{Name: name, Description: trunc(c.t("Cómo hacer: ", "How to: ")+last.Title, 300), Instructions: b.String(), Source: skills.SourceFromWork})
+	// what a department's agent learned stays in the department: its skill belongs to that office
+	office, oerr := c.s.agentOffice(c.ctx, c.org, last.AgentID)
+	if oerr != nil {
+		return nil, c.serviceFail(oerr)
+	}
+	d, err := c.s.Skills.Create(c.ctx, c.s.skillActor(c.r), skills.Input{Name: name, Description: trunc(c.t("Cómo hacer: ", "How to: ")+last.Title, 300), Instructions: b.String(), Source: skills.SourceFromWork, OfficeID: office})
 	if err != nil {
 		return nil, c.skillErr(err)
 	}
