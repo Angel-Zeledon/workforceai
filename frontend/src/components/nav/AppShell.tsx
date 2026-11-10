@@ -21,6 +21,7 @@ import { orgApi } from "@/lib/orgConfigApi";
 import { navGroups, setNavigator, SECTIONS, sectionOf } from "@/lib/navBridge";
 import { usePendingCount } from "@/lib/pending";
 import { useViewMode } from "@/lib/viewMode";
+import { useAudience } from "@/lib/audience";
 import { useSession } from "@/lib/session";
 import { ViewAllSwitch } from "./ViewAll";
 import { AccountMenu } from "../admin/AdminMenu";
@@ -39,6 +40,7 @@ import { TrialBanner } from "./TrialBanner";
 import { ActivationChecklist } from "./ActivationChecklist";
 
 const COLLAPSE_KEY = "wf.sidebar.collapsed";
+const MORE_KEY = "wf.sidebar.more";
 
 function NavLink({ href, icon, label, testid, active, collapsed, onNavigate, badge }: {
   href: string; icon: IconName; label: string; testid: string; active: boolean; collapsed: boolean; onNavigate?: () => void; badge?: number;
@@ -58,7 +60,11 @@ function Sidebar({ section, collapsed, onToggle, onNavigate }: { section: string
   const { t } = useT();
   const shopAvailable = useRewards((s) => s.available);
   const pending = usePendingCount(); // the ONE number of Pendientes for the whole app
-  const groups = navGroups({ shopAvailable });
+  const company = useAudience() === "company";
+  const groups = navGroups({ shopAvailable, company });
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => { try { setMoreOpen(localStorage.getItem(MORE_KEY) === "1"); } catch { /* private mode */ } }, []);
+  const toggleMore = () => setMoreOpen((o) => { try { localStorage.setItem(MORE_KEY, o ? "0" : "1"); } catch { /* ignore */ } return !o; });
   const isActive = (id: string) => section === id || (id === "office" && section === "dashboard");
   const link = (s: (typeof groups)[number]["items"][number]) => (
     <NavLink key={s.id} href={s.href} icon={s.icon} label={t(s.label)} testid={`nav-${s.id}`} active={isActive(s.id)} collapsed={collapsed} onNavigate={onNavigate} badge={s.id === "pending" ? pending : undefined} />
@@ -72,15 +78,26 @@ function Sidebar({ section, collapsed, onToggle, onNavigate }: { section: string
       <div className="flex-1 overflow-y-auto p-2.5">
         {groups.filter((g) => g.id !== "bottom").map((g) => (
           <div key={g.id} role="group" aria-label={g.label ? t(g.label) : undefined} data-testid={`nav-group-${g.id}`} className="mb-2 space-y-0.5 last:mb-0">
-            {g.label && (collapsed
+            {g.label && g.id !== "more" && (collapsed
               ? <div aria-hidden className="mx-3 my-2 border-t border-white/10 first:hidden" />
               : <div className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">{t(g.label)}</div>)}
-            {g.items.map(link)}
+            {g.id === "more" ? (
+              <>
+                {!collapsed && (
+                  <button type="button" data-testid="nav-more-toggle" aria-expanded={moreOpen} onClick={toggleMore}
+                    className="flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1.5 text-[13px] font-medium text-white/70 transition hover:bg-white/5 hover:text-white">
+                    <Icon name="chevron" size={16} className={`shrink-0 transition-transform duration-150 ${moreOpen ? "rotate-90" : ""}`} />
+                    <span className="min-w-0 flex-1 truncate text-left">{t("nav.group.more")}</span>
+                  </button>
+                )}
+                {(moreOpen || collapsed || g.items.some((s) => isActive(s.id))) && g.items.map(link)}
+              </>
+            ) : g.items.map(link)}
           </div>
         ))}
       </div>
       <div className="space-y-0.5 border-t border-white/10 p-2.5">
-        {groups.find((g) => g.id === "bottom")!.items.map(link)}
+        {(groups.find((g) => g.id === "bottom")?.items ?? []).map(link)}
         <ViewAllSwitch tone="dark" compact={collapsed} />
         {onToggle && (
           <button type="button" onClick={onToggle} data-testid="sidebar-toggle" title={collapsed ? t("nav.expand") : t("nav.collapse")} aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}

@@ -6042,6 +6042,8 @@
   "nav.customers": "Customers",
   "nav.group.day": "Your day",
   "nav.group.company": "Your company",
+  "nav.department": "Department",
+  "nav.group.more": "More",
   "nav.group.teach": "Teach and connect",
   "ux.viewAll.label": "See everything",
   "ux.viewAll.onHint": "See everything is on: every view is open. Turn it off for the simple view.",

@@ -41,7 +41,7 @@ test("Clientes and Conexiones are in the main menu, Pendientes inside the app", 
 
 test("no section is lost: every section is in exactly one group", () => {
   const ids = NAV_GROUPS.flatMap((g) => g.items);
-  assert.deepEqual([...ids].sort(), SECTIONS.map((s) => s.id).sort());
+  assert.deepEqual([...ids].sort(), SECTIONS.map((s) => s.id).filter((id) => id !== "department").sort()); // department is company-only
   assert.equal(new Set(ids).size, ids.length);
 });
 
@@ -58,4 +58,34 @@ test("sectionOf knows the new homes and the old links", () => {
   assert.equal(sectionOf("/connections"), "connections");
   assert.equal(sectionOf("/dashboard"), "dashboard");
   assert.equal(sectionOf("/"), "office");
+});
+
+// ---- D2: the short menu of company accounts ----
+test("company accounts get a short menu led by their department, the rest under More", () => {
+  const g = navGroups({ shopAvailable: false, company: true });
+  assert.deepEqual(g.map((x) => x.id), ["main", "more"]);
+  assert.deepEqual(g[0].items.map((s) => s.id), ["department", "pending", "office", "settings"]);
+  const more = g[1].items.map((s) => s.id);
+  assert.ok(!more.includes("shop"));
+  const all = [...g[0].items, ...g[1].items].map((s) => s.id);
+  assert.equal(new Set(all).size, all.length);
+  assert.deepEqual([...all].sort(), SECTIONS.map((s) => s.id).filter((id) => id !== "shop").sort());
+});
+
+test("company menu keeps the shop (under More) where rewards are on", () => {
+  const g = navGroups({ shopAvailable: true, company: true });
+  assert.ok(g[1].items.some((s) => s.id === "shop"));
+});
+
+test("non-company menu is the one of today and has no department", () => {
+  const g = navGroups({ shopAvailable: true, company: false });
+  assert.deepEqual(g.map((x) => x.id), ["day", "company", "teach", "bottom"]);
+  assert.ok(!g.flatMap((x) => x.items).some((s) => s.id === "department"));
+  assert.equal(SECTIONS.find((s) => s.id === "department").href, "/d");
+});
+
+test("sectionOf maps /d to the department", () => {
+  assert.equal(sectionOf("/d"), "department");
+  assert.equal(sectionOf("/d/dep_1"), "department");
+  assert.equal(sectionOf("/dashboard"), "dashboard");
 });

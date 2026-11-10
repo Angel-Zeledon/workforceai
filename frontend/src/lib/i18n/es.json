@@ -6042,6 +6042,8 @@
   "nav.customers": "Clientes",
   "nav.group.day": "Tu día",
   "nav.group.company": "Tu empresa",
+  "nav.department": "Departamento",
+  "nav.group.more": "Más",
   "nav.group.teach": "Enseñar y conectar",
   "ux.viewAll.label": "Ver todo",
   "ux.viewAll.onHint": "Ver todo está encendido: todas las vistas abiertas. Apágalo para volver a la vista simple.",

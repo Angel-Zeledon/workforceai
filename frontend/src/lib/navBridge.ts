@@ -31,6 +31,8 @@ export const SECTIONS = [
   { id: "connections", href: "/connections", label: "nav.connections", icon: "plug" },
   { id: "shop", href: "/shop", label: "nav.shop", icon: "bag" },
   { id: "settings", href: "/settings", label: "nav.settings", icon: "settings" },
+  // company accounts only (D2): the department's own Drive
+  { id: "department", href: "/d", label: "nav.department", icon: "folder" },
 ] as const;
 export type Section = (typeof SECTIONS)[number];
 export type SectionId = Section["id"] | "dashboard";
@@ -43,16 +45,25 @@ export const NAV_GROUPS: { id: "day" | "company" | "teach" | "bottom"; label: st
   { id: "bottom", label: null, items: ["shop", "settings"] },
 ];
 
+/** Company accounts: a short menu led by their department; everything else folds under "More". */
+const COMPANY_MAIN: Section["id"][] = ["department", "pending", "office", "settings"];
+
 /** The menu groups with their sections; the shop only where the rewards system is on. */
-export function navGroups({ shopAvailable }: { shopAvailable: boolean }) {
-  return NAV_GROUPS.map((g) => ({
-    ...g,
-    items: g.items.filter((id) => id !== "shop" || shopAvailable).map((id) => SECTIONS.find((s) => s.id === id)!),
-  }));
+export function navGroups({ shopAvailable, company = false }: { shopAvailable: boolean; company?: boolean }) {
+  const pick = (ids: Section["id"][]) => ids.filter((id) => id !== "shop" || shopAvailable).map((id) => SECTIONS.find((s) => s.id === id)!);
+  if (company) {
+    const rest = NAV_GROUPS.flatMap((g) => g.items).filter((id) => !COMPANY_MAIN.includes(id));
+    return [
+      { id: "main" as const, label: null as string | null, items: pick(COMPANY_MAIN) },
+      { id: "more" as const, label: "nav.group.more" as string | null, items: pick(rest) },
+    ];
+  }
+  return NAV_GROUPS.map((g) => ({ ...g, items: pick(g.items) }));
 }
 
 export function sectionOf(pathname: string): SectionId {
   if (pathname.startsWith("/dashboard")) return "dashboard";
+  if (pathname === "/d" || pathname.startsWith("/d/")) return "department";
   if (pathname.startsWith("/approvals")) return "pending";
   if (pathname.startsWith("/chats")) return "chats";
   if (pathname.startsWith("/projects")) return "projects";
