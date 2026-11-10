@@ -15,8 +15,8 @@ export const COLLECTIONS = {
   guide: {
     src: "guide-src",
     root: { es: "/guia/", en: "/en/guide/" },
-    order: ["getting-started", "the-office", "projects", "files-and-chats", "approvals-and-security", "skills", "shop-and-coins", "settings"],
-    groups: { start: ["getting-started", "the-office"], work: ["projects", "files-and-chats", "approvals-and-security"], tune: ["skills", "shop-and-coins", "settings"] },
+    order: ["getting-started", "the-office", "projects", "files-and-chats", "departments", "approvals-and-security", "skills", "shop-and-coins", "settings"],
+    groups: { start: ["getting-started", "the-office"], work: ["projects", "files-and-chats", "departments", "approvals-and-security"], tune: ["skills", "shop-and-coins", "settings"] },
   },
   docs: {
     src: "docs-src",

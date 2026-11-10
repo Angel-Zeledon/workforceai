@@ -22,8 +22,8 @@
         ],
         "steps": [
           "Abre «Departamento» en el menú lateral. Se abre el primer departamento al que perteneces.",
-          "Usa el árbol de carpetas de la izquierda para moverte. La carpeta y el archivo que abres quedan en la dirección de la página, así que el botón Atrás del navegador funciona.",
-          "Si perteneces a varios departamentos, usa «Cambiar de departamento»."
+          "Usa el árbol de carpetas (a la izquierda en la computadora; en el teléfono, el botón «Carpetas») para moverte. La carpeta y el archivo que abres quedan en la dirección de la página, así que el botón Atrás del navegador funciona.",
+          "Si perteneces a varios departamentos, usa el selector junto al nombre del departamento, arriba."
         ],
         "note": "Si todavía no estás en un departamento, verás un aviso. Los administradores también ven «Crear departamentos». Si abres un departamento que no es tuyo, la página dice que no está disponible."
       },
@@ -56,9 +56,12 @@
           "Abajo, escribe en «Pedir algo sobre esta carpeta…».",
           "Elige el agente en el selector. Solo aparecen los agentes que puedes usar.",
           "Pulsa «Pedir». El agente trabaja dentro de esa carpeta."
-        ],
+        ]
+      },
+      {
+        "h": "Pide algo desde el menú «⋯»",
         "paras": [
-          "También puedes usar el menú «⋯» de un archivo: «Abrir», «Pedir a un agente…» o «Descargar». «Pedir a un agente…» deja el nombre del archivo escrito en tu pedido."
+          "En la lista, pulsa «⋯» en la fila de un archivo: «Abrir», «Pedir a un agente…» o «Descargar». «Pedir a un agente…» pone el nombre del archivo en tu pedido y lo adjunta."
         ]
       },
       {
@@ -68,7 +71,7 @@
           "Un agente nunca puede ver o cambiar más de lo que puedes tú.",
           "Las cuentas personales y de equipo conservan el menú de siempre."
         ],
-        "warning": "Un departamento privado no se ve desde fuera, ni siquiera siendo administrador de la organización."
+        "note": "Un departamento privado no se ve desde fuera, ni siquiera siendo administrador de la organización."
       }
     ]
   },
@@ -85,8 +88,8 @@
         ],
         "steps": [
           "Open “Department” in the side menu. The first department you belong to opens.",
-          "Use the folder tree on the left to move around. The folder and file you open are kept in the page address, so the browser Back button works.",
-          "If you belong to several departments, use “Switch department”."
+          "Use the folder tree (on the left on a computer; on a phone, the “Folders” button) to move around. The folder and file you open are kept in the page address, so the browser Back button works.",
+          "If you belong to several departments, use the selector next to the department name, at the top."
         ],
         "note": "If you are not in a department yet, you will see a notice. Admins also see “Create departments”. If you open a department that is not yours, the page says it is not available."
       },
@@ -119,9 +122,12 @@
           "At the bottom, type in “Ask something about this folder…”.",
           "Choose the agent in the selector. Only agents you can use are listed.",
           "Click “Ask”. The agent works inside that folder."
-        ],
+        ]
+      },
+      {
+        "h": "Ask an agent from the “⋯” menu",
         "paras": [
-          "You can also use the “⋯” menu on a file: “Open”, “Ask an agent…” or “Download”. “Ask an agent…” puts the file name in your request."
+          "In the list, click “⋯” on a file's row: “Open”, “Ask an agent…” or “Download”. “Ask an agent…” puts the file name in your request and attaches the file."
         ]
       },
       {
@@ -131,7 +137,7 @@
           "An agent can never see or change more than you can.",
           "Personal and team accounts keep the usual menu."
         ],
-        "warning": "A private department is not visible from outside, not even to an organization admin."
+        "note": "A private department is not visible from outside, not even to an organization admin."
       }
     ]
   }

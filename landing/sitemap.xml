@@ -211,6 +211,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/guia/archivos-y-chats/"/>
   </url>
   <url>
+    <loc>https://workforceai.es/guia/departamentos/</loc>
+    <lastmod>2026-11-10</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/guia/departamentos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/guide/departments/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/guia/departamentos/"/>
+  </url>
+  <url>
+    <loc>https://workforceai.es/en/guide/departments/</loc>
+    <lastmod>2026-11-10</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/guia/departamentos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/guide/departments/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/guia/departamentos/"/>
+  </url>
+  <url>
     <loc>https://workforceai.es/guia/aprobaciones-y-seguridad/</loc>
     <lastmod>2026-11-10</lastmod>
     <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/guia/aprobaciones-y-seguridad/"/>
@@ -265,20 +279,6 @@
     <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/guia/ajustes/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/guide/settings/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/guia/ajustes/"/>
-  </url>
-  <url>
-    <loc>https://workforceai.es/guia/departamentos/</loc>
-    <lastmod>2026-11-10</lastmod>
-    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/guia/departamentos/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/guide/departments/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/guia/departamentos/"/>
-  </url>
-  <url>
-    <loc>https://workforceai.es/en/guide/departments/</loc>
-    <lastmod>2026-11-10</lastmod>
-    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/guia/departamentos/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/guide/departments/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/guia/departamentos/"/>
   </url>
   <url>
     <loc>https://workforceai.es/confianza/</loc>
