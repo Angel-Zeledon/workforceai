@@ -16,11 +16,11 @@ import (
 func (s *server) mountCost(r chi.Router) {
 	r.With(s.can(auth.PermMetricsRead)).Get("/budget", s.getBudget)
 	r.With(s.can(auth.PermMetricsRead)).Get("/costs/breakdown", s.costBreakdown)
-	r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}/cost", s.requestCost)
-	r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}/estimate", s.requestEstimate)
-	r.With(s.can(auth.PermRequestsCreate)).Post("/requests/{id}/confirm", s.confirmEstimate)
+	r.With(s.can(auth.PermRequestsRead), s.workRequest).Get("/requests/{id}/cost", s.requestCost)
+	r.With(s.can(auth.PermRequestsRead), s.workRequest).Get("/requests/{id}/estimate", s.requestEstimate)
+	r.With(s.can(auth.PermRequestsCreate), s.workRequest).Post("/requests/{id}/confirm", s.confirmEstimate)
 	// Raising a cap spends money: same privilege as deciding approvals.
-	r.With(s.can(auth.PermApprovalsDecide)).Put("/requests/{id}/budget", s.putRequestBudget)
+	r.With(s.can(auth.PermApprovalsDecide), s.workRequest).Put("/requests/{id}/budget", s.putRequestBudget)
 	r.With(s.can(auth.PermApprovalsDecide)).Put("/agents/{id}/budget", s.putAgentBudget)
 }
 

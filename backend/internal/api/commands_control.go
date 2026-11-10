@@ -436,7 +436,7 @@ func matchMem(list []memEntry, action, text string) []memEntry {
 }
 
 func confirmMemory(c *cmdCall) (commands.L, *cmdFail) {
-	a, f := c.targetAgent("assistant")
+	a, f := c.workAgent("assistant")
 	if f != nil {
 		return commands.L{}, f
 	}
@@ -454,7 +454,7 @@ func confirmMemory(c *cmdCall) (commands.L, *cmdFail) {
 }
 
 func cmdMemory(c *cmdCall) (*cmdResult, *cmdFail) {
-	a, f := c.targetAgent("assistant")
+	a, f := c.workAgent("assistant")
 	if f != nil {
 		return nil, f
 	}
@@ -589,6 +589,9 @@ func cmdStatus(c *cmdCall) (*cmdResult, *cmdFail) {
 	}
 	running, waiting := map[string]int{}, 0
 	for _, t := range tasks {
+		if !c.work.agent(t.AgentID) { // D3
+			continue
+		}
 		switch t.Status {
 		case domain.TaskRunning:
 			running[t.AgentID]++
@@ -597,9 +600,13 @@ func cmdStatus(c *cmdCall) (*cmdResult, *cmdFail) {
 		}
 	}
 	appr, _ := c.s.Store.ListApprovals(c.ctx, c.org, string(domain.ApprovalPending))
+	appr = slices.DeleteFunc(appr, func(a domain.Approval) bool { return !c.work.agent(a.AgentID) })
 	rows := [][]string{}
 	nRun := 0
 	for _, a := range agents {
+		if !c.work.agent(a.ID) { // D3: what a private office's agent is doing is its members'
+			continue
+		}
 		nRun += running[a.ID]
 		rows = append(rows, []string{a.Name, string(a.State), trunc(a.Activity, 80), fmt.Sprint(running[a.ID])})
 	}
@@ -617,6 +624,9 @@ func cmdTrace(c *cmdCall) (*cmdResult, *cmdFail) {
 	} else {
 		agentID = c.agentID
 	}
+	if agentID != "" && !c.work.agent(agentID) { // D3: the trace of a private office's agent is its members'
+		return nil, fail(http.StatusBadRequest, "unknown_agent", fmt.Sprintf("No encuentro al agente «%s».", agentID), fmt.Sprintf("I cannot find the agent “%s”.", agentID))
+	}
 	if agentID == "" { // no agent named: the agent of the latest task
 		tasks, err := c.s.Store.ListTasks(c.ctx, c.org, "", "")
 		if err != nil {
@@ -624,7 +634,7 @@ func cmdTrace(c *cmdCall) (*cmdResult, *cmdFail) {
 		}
 		var latest time.Time
 		for _, t := range tasks {
-			if t.CreatedAt.After(latest) {
+			if t.CreatedAt.After(latest) && c.work.agent(t.AgentID) {
 				latest, agentID = t.CreatedAt, t.AgentID
 			}
 		}
@@ -653,10 +663,18 @@ func cmdExport(c *cmdCall) (*cmdResult, *cmdFail) {
 	if !c.s.has(c.r, "files:write") {
 		return nil, fail(http.StatusForbidden, "forbidden", "Exportar guarda un archivo en el drive: tu rol no puede escribir archivos.", "Exporting saves a file in the drive: your role cannot write files.")
 	}
+	agent, direct := strings.CutPrefix(domain.PublicChatConv(c.conv), domain.ChatAgentPrefix)
+	if direct && !c.work.chat(agent) {
+		return nil, fail(http.StatusBadRequest, "unknown_agent", fmt.Sprintf("No encuentro al agente «%s».", agent), fmt.Sprintf("I cannot find the agent “%s”.", agent))
+	}
 	msgs, err := c.s.Orch.ChatMessagesSince(c.ctx, c.conv, time.Time{}, 500)
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
+	msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool {
+		// D3: replies of agents the person neither uses nor sees, and the shared history of a private office's agent
+		return !c.work.chat(m.From) || direct && m.SharedLegacy && !c.work.agent(agent)
+	})
 	if len(msgs) == 0 {
 		return nil, fail(http.StatusUnprocessableEntity, "nothing_to_do", "No hay nada que exportar todavía.", "There is nothing to export yet.")
 	}

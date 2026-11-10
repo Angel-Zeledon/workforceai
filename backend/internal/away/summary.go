@@ -99,6 +99,17 @@ type Viewer struct {
 	Role          string // organization role; the demo without auth acts as owner
 	CanDecide     bool   // has approvals:decide
 	ReadApprovals bool   // has approvals:read (otherwise approvals are left out entirely)
+	// SeesAgent and SeesRequest (D3, optional: nil sees everything) leave out the work of a private department the
+	// person is not in: its items, approvals, agent lines, spend lines and timelapse frames. The headline counts
+	// stay exact numbers of the organization.
+	SeesAgent   func(agentID string) bool
+	SeesRequest func(requestID string) bool
+}
+
+func (v Viewer) seesAgent(id string) bool { return id == "" || v.SeesAgent == nil || v.SeesAgent(id) }
+
+func (v Viewer) seesRequest(id string) bool {
+	return id == "" || v.SeesRequest == nil || v.SeesRequest(id)
 }
 
 // Item is one line of the summary: what happened and what it points to.
@@ -445,7 +456,7 @@ func Build(f Facts, v Viewer, from, to, now time.Time, minHours float64) Summary
 	if v.ReadApprovals {
 		mine := []domain.Approval{}
 		for _, ap := range f.Pending {
-			if ap.Status != domain.ApprovalPending {
+			if ap.Status != domain.ApprovalPending || !v.seesAgent(ap.AgentID) {
 				continue
 			}
 			if CanDecide(ap, v) {
@@ -491,6 +502,9 @@ func Build(f Facts, v Viewer, from, to, now time.Time, minHours float64) Summary
 		if !ok || (sec == SectionDecided && !v.ReadApprovals) {
 			continue
 		}
+		if !v.seesAgent(it.AgentID) || e.Type == domain.EvRequestCompleted && !v.seesRequest(str(payload(e), "request_id")) {
+			continue // D3
+		}
 		k := sec + "|" + foldKey(sec, it)
 		if i, dup := seen[k]; dup {
 			groups[sec][i].Repeats++
@@ -500,6 +514,9 @@ func Build(f Facts, v Viewer, from, to, now time.Time, minHours float64) Summary
 		groups[sec] = append(groups[sec], it)
 	}
 	for _, a := range f.FailedRequests {
+		if !v.seesRequest(a.EntityID) {
+			continue // D3
+		}
 		it := Item{Kind: KindRequestFailed, Ref: "request", RefID: a.EntityID, Title: clip(f.Requests[a.EntityID].Text, 140), Severity: SevHigh, At: a.TS}
 		k := SectionProblems + "|" + foldKey(SectionProblems, it)
 		if _, dup := seen[k]; dup {
@@ -529,7 +546,7 @@ func Build(f Facts, v Viewer, from, to, now time.Time, minHours float64) Summary
 	}
 	lines := map[string]*AgentLine{}
 	line := func(id string) *AgentLine {
-		if id == "" {
+		if id == "" || !v.seesAgent(id) {
 			return nil
 		}
 		l := lines[id]
@@ -543,7 +560,7 @@ func Build(f Facts, v Viewer, from, to, now time.Time, minHours float64) Summary
 	for _, r := range f.Spend {
 		s.Spend.USD += r.CostUSD
 		s.Spend.Calls += r.Calls
-		if r.AgentID != "" && len(s.Spend.Top) < MaxAgents {
+		if r.AgentID != "" && v.seesAgent(r.AgentID) && len(s.Spend.Top) < MaxAgents {
 			s.Spend.Top = append(s.Spend.Top, AgentSpend{AgentID: r.AgentID, USD: round4(r.CostUSD), Calls: r.Calls})
 		}
 		if l := line(r.AgentID); l != nil {
@@ -586,7 +603,17 @@ func Build(f Facts, v Viewer, from, to, now time.Time, minHours float64) Summary
 		s.Agents = s.Agents[:MaxAgents]
 	}
 
-	s.Timelapse = buildTimelapse(f.States, c[domain.EvAgentState])
+	states, total := f.States, c[domain.EvAgentState]
+	if v.SeesAgent != nil {
+		states = make([]domain.Event, 0, len(f.States))
+		for _, e := range f.States {
+			if v.seesAgent(e.AgentID) {
+				states = append(states, e)
+			}
+		}
+		total -= len(f.States) - len(states)
+	}
+	s.Timelapse = buildTimelapse(states, total)
 	s.Quiet = s.Counts.ApprovalsWaiting == 0 && len(s.Sections) == 0 && s.Counts.TasksCompleted == 0 && s.Spend.USD == 0
 	return s
 }

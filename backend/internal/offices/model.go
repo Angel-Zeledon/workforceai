@@ -223,8 +223,10 @@ func (m *Model) Rights(v Viewer, agentID string) Rights {
 	officeWide := ea.Visibility == VisOffice || ea.Visibility == VisDirectory || ea.Visibility == VisPeople && !personal
 	inOffice := m.IsMember(v.UserID, ea.OfficeID)
 	use := owner || shared || officeWide && inOffice || ea.Visibility == VisDirectory
-	if v.Admin && (!personal || officeWide) {
-		use = true // admins may use everything but the agents a person keeps for themself (and whom they share it with)
+	if v.Admin && (!personal || officeWide) && m.CanSeeWork(v, agentID) {
+		// admins may use everything but the agents a person keeps for themself (and whom they share it with) and,
+		// D3, the agents of a private office they are not in (unless shared with them or in the directory: above)
+		use = true
 	}
 	open := m.byID[ea.OfficeID] != nil && m.byID[ea.OfficeID].Visibility == Open
 	see := use || v.Admin || officeWide && open

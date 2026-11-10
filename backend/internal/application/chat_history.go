@@ -233,7 +233,7 @@ func (h *ChatHistory) Threads(ctx context.Context) ([]ChatThread, error) {
 	}
 	ids := make([]string, 0, len(agents))
 	for _, a := range agents {
-		if WorkVisible(ctx, a.ID) { // D3: no thread with an agent whose work the person may not see
+		if ChatVisible(ctx, a.ID) { // D3: no thread with an agent the person neither uses nor sees the work of
 			ids = append(ids, a.ID)
 		}
 	}
@@ -244,7 +244,7 @@ func (h *ChatHistory) checkThread(ctx context.Context, key string) error {
 	if key == ThreadGeneral {
 		return nil
 	}
-	if !WorkVisible(ctx, key) { // D3: answered like an agent that does not exist
+	if !ChatVisible(ctx, key) { // D3: answered like an agent that does not exist
 		return fmt.Errorf("%w: agent %s", domain.ErrNotFound, key)
 	}
 	_, err := h.Core.GetAgent(ctx, h.org(ctx), key)
@@ -272,6 +272,11 @@ func (h *ChatHistory) Thread(ctx context.Context, q ChatThreadQuery) ([]ChatMess
 	plain = PublicMessages(ctx, plain)
 	for i := range msgs {
 		msgs[i].Message = plain[i]
+	}
+	if q.Thread != ThreadGeneral && !WorkVisible(ctx, q.Thread) {
+		// D3: someone who uses a private office's agent without being in it sees their own thread only, not the
+		// history the organization shared with the agent before private threads existed
+		msgs = slices.DeleteFunc(msgs, func(m ChatMessage) bool { return m.SharedLegacy })
 	}
 	return msgs, more, nil
 }

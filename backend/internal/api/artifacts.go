@@ -360,6 +360,15 @@ func (s *server) projectWorkspace(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	scope := s.work(r)
+	if err := scope.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !scope.open() && redactWorkspace(&ws, scope.agent) { // D3 (work_projects.go)
+		s.fail(w, notFound("project", ws.ProjectID))
+		return
+	}
 	writeJSON(w, 200, ws)
 }
 

@@ -123,11 +123,11 @@ func (s *server) mountConnections(r chi.Router) {
 		r.With(read).Get("/connection-holds", s.listHolds)
 		// cancel-hold: the author or whoever may decide approvals (members cancel their own sends).
 		r.With(s.can(auth.PermRequestsCreate)).Post("/tool-calls/{id}/cancel-hold", s.cancelHold)
-		r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}/plan", s.getPlan)
+		r.With(s.can(auth.PermRequestsRead), s.workRequest).Get("/requests/{id}/plan", s.getPlan)
 		s.mountOutbox(r)
-		r.With(s.can(auth.PermRequestsCreate)).Patch("/requests/{id}/plan", s.patchPlan)
-		r.With(s.can(auth.PermRequestsCreate)).Post("/requests/{id}/plan/approve", s.approvePlan)
-		r.With(s.can(auth.PermRequestsCreate)).Post("/requests/{id}/plan/reject", s.rejectPlan)
+		r.With(s.can(auth.PermRequestsCreate), s.workRequest).Patch("/requests/{id}/plan", s.patchPlan)
+		r.With(s.can(auth.PermRequestsCreate), s.workRequest).Post("/requests/{id}/plan/approve", s.approvePlan)
+		r.With(s.can(auth.PermRequestsCreate), s.workRequest).Post("/requests/{id}/plan/reject", s.rejectPlan)
 	}
 }
 

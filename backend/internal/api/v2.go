@@ -31,9 +31,9 @@ func (s *server) mountV2(r chi.Router) {
 		r.With(s.can(auth.PermAuditRead)).Get("/settings/traces", s.getTraceSettings)
 		r.With(s.can(auth.PermOrgManage)).Put("/settings/traces", s.putTraceSettings)
 	}
-	r.With(s.can(auth.PermTasksManage)).Get("/tasks/{id}/intervention", s.getIntervention)
-	r.With(s.can(auth.PermTasksManage)).Post("/tasks/{id}/steer", s.steerTask)
-	r.With(s.can(auth.PermTasksManage)).Post("/tasks/{id}/reassign", s.reassignTask)
+	r.With(s.can(auth.PermTasksManage), s.workTask).Get("/tasks/{id}/intervention", s.getIntervention)
+	r.With(s.can(auth.PermTasksManage), s.workTask).Post("/tasks/{id}/steer", s.steerTask)
+	r.With(s.can(auth.PermTasksManage), s.workTask).Post("/tasks/{id}/reassign", s.reassignTask)
 }
 
 func (s *server) getProfile(w http.ResponseWriter, r *http.Request) {

@@ -192,3 +192,19 @@ func TestCanSeeWork(t *testing.T) {
 		t.Fatal("General agent hidden from the admin")
 	}
 }
+
+// D3: an admin outside a private office manages its agents (sees and edits them) but does not use them, unless the
+// agent is in the directory or shared with them.
+func TestAdminDoesNotUsePrivateOfficeAgents(t *testing.T) {
+	f := newFix(t)
+	f.enable(t, "d-legal", Private)
+	wantRights(t, f.model(t), admin, "a-elena", Rights{See: true, Edit: true})
+	wantRights(t, f.model(t), admin, "a-valeria", Rights{See: true, Use: true, Edit: true}) // General
+	f.setAccess(t, ana, "a-elena", AccessInput{Visibility: VisPeople, Shares: []Share{{UserID: "u-owner", Level: ShareChat}}})
+	wantRights(t, f.model(t), admin, "a-elena", Rights{See: true, Use: true, Edit: true})
+	f.setAccess(t, ana, "a-elena", AccessInput{Visibility: VisDirectory, Shares: []Share{}})
+	wantRights(t, f.model(t), admin, "a-elena", Rights{See: true, Use: true, Edit: true})
+	if m := f.model(t); m.CanSeeWork(admin, "a-elena") {
+		t.Fatal("using a directory agent does not open the office's work")
+	}
+}

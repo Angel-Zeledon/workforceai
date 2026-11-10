@@ -361,6 +361,10 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	if err != nil {
 		return ChatTurn{}, err
 	}
+	if !strings.HasPrefix(domain.PublicChatConv(stored), domain.ChatAgentPrefix) {
+		// D3: the office chat only routes to the agents the person may use (a direct chat was checked by the API)
+		agents = slices.DeleteFunc(agents, func(a domain.Agent) bool { return !AgentUsable(ctx, a.ID) })
+	}
 	t := &chatTurn{conv: stored, pub: domain.PublicChatConv(stored), owner: domain.ChatConvOwner(stored),
 		author: PersonFrom(ctx), authorName: ActorNameFrom(ctx), id: newID(), text: text, userMsgID: newID(), agents: agents,
 		byID: map[string]domain.Agent{}, style: o.loadStyle(ctx)}

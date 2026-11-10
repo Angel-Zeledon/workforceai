@@ -21,9 +21,10 @@ func (s *server) mountChatHistory(r chi.Router) {
 		return
 	}
 	read, write := s.can(auth.PermConversationsRead), s.can(auth.PermConversationsPost)
-	r.With(write).Patch("/conversations/{id}", s.patchConversation)
-	r.With(s.can(auth.PermConversationsDelete)).Delete("/conversations/{id}", s.deleteConversation)
-	r.With(write).Post("/conversations/{id}/read", s.readConversation)
+	// D3: a conversation of a private office's work answers like a missing one (workConversation)
+	r.With(write, s.workConversation).Patch("/conversations/{id}", s.patchConversation)
+	r.With(s.can(auth.PermConversationsDelete), s.workConversation).Delete("/conversations/{id}", s.deleteConversation)
+	r.With(write, s.workConversation).Post("/conversations/{id}/read", s.readConversation)
 	r.With(read).Get("/chats/threads", s.listChatThreads)
 	r.With(read).Get("/chats/threads/{key}/messages", s.listThreadMessages)
 	r.With(write).Post("/chats/threads/{key}/read", s.readChatThread)

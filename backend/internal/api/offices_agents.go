@@ -119,8 +119,8 @@ func (s *server) agentHidden(r *http.Request, agentID string) (bool, error) {
 // errAgentNotUsable is the answer to a direct chat with an agent the person may not use.
 var errAgentNotUsable = fmt.Errorf("%w: you cannot use this agent; ask its owner or its office to share it", domain.ErrForbidden)
 
-// checkAgentUse refuses a direct chat (conversation agent:<id>) with an agent the person may not use. An agent whose
-// work the person may not see (D3: a private office they are not in, admins included) answers like a missing one.
+// checkAgentUse refuses a direct chat (conversation agent:<id>) with an agent the person may not use (D3: an admin
+// outside a private office does not use its agents unless they are shared with them or in the directory).
 func (s *server) checkAgentUse(r *http.Request, conversation string) error {
 	id, ok := strings.CutPrefix(domain.PublicChatConv(conversation), domain.ChatAgentPrefix)
 	if !ok || id == "" {
@@ -132,9 +132,6 @@ func (s *server) checkAgentUse(r *http.Request, conversation string) error {
 	}
 	if !m.Rights(v, id).Use {
 		return errAgentNotUsable
-	}
-	if !m.CanSeeWork(v, id) {
-		return notFound("agent", id)
 	}
 	return nil
 }

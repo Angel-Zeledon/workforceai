@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -105,6 +106,15 @@ func (s *server) getProject(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.open() && redactProject(&d, ws.agent) { // D3 (work_projects.go)
+		s.fail(w, notFound("project", d.Project.ID))
+		return
+	}
 	writeJSON(w, 200, d)
 }
 
@@ -123,6 +133,12 @@ func (s *server) projectApprovals(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	v = slices.DeleteFunc(v, func(a projects.Approval) bool { return a.AgentID != nil && !ws.agent(*a.AgentID) }) // D3
 	writeJSON(w, 200, list(v))
 }
 

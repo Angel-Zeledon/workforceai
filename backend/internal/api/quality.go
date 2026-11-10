@@ -21,9 +21,9 @@ func (s *server) mountQuality(r chi.Router) {
 	}
 	read, write := s.can(auth.PermAgentsRead), s.can(auth.PermAgentsWrite)
 	r.With(read).Get("/quality/agents", s.qualityOverview)
-	r.With(read).Get("/agents/{id}/quality", s.qualityAgent)
-	r.With(read).Get("/agents/{id}/golden-cases", s.goldenList)
-	r.With(write).Post("/agents/{id}/golden-cases", s.goldenCreate)
+	r.With(read, s.workAgent).Get("/agents/{id}/quality", s.qualityAgent)
+	r.With(read, s.workAgent).Get("/agents/{id}/golden-cases", s.goldenList)
+	r.With(write, s.workAgent).Post("/agents/{id}/golden-cases", s.goldenCreate)
 	r.With(write).Put("/golden-cases/{id}", s.goldenUpdate)
 	r.With(write).Delete("/golden-cases/{id}", s.goldenDelete)
 	r.With(read).Get("/golden-cases/{id}/runs", s.goldenRuns)

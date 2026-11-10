@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"net/http"
 	"strconv"
 
@@ -96,6 +97,10 @@ func (s *server) listCodeRuns(w http.ResponseWriter, r *http.Request) {
 			s.fail(w, err)
 			return
 		}
+		if ws := s.work(r); !ws.agent(run.AgentID) { // D3
+			s.fail(w, cmp.Or(ws.err, notFound("code run", ap)))
+			return
+		}
 		writeJSON(w, http.StatusOK, []sandbox.Run{normalizeRun(run)})
 		return
 	}
@@ -105,9 +110,16 @@ func (s *server) listCodeRuns(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
 	out := make([]sandbox.Run, 0, len(runs))
 	for _, run := range runs {
-		out = append(out, normalizeRun(run))
+		if ws.agent(run.AgentID) { // D3: a private office's code runs are its members'
+			out = append(out, normalizeRun(run))
+		}
 	}
 	runs = out
 	writeJSON(w, http.StatusOK, runs)
@@ -117,6 +129,10 @@ func (s *server) getCodeRun(w http.ResponseWriter, r *http.Request) {
 	run, err := s.Sandbox.Store.GetRun(r.Context(), s.org(r), chi.URLParam(r, "id"))
 	if err != nil {
 		s.fail(w, err)
+		return
+	}
+	if ws := s.work(r); !ws.agent(run.AgentID) { // D3
+		s.fail(w, cmp.Or(ws.err, notFound("code run", run.ID)))
 		return
 	}
 	writeJSON(w, http.StatusOK, normalizeRun(run))

@@ -158,6 +158,8 @@ type cmdCall struct {
 
 	agents []domain.Agent
 	loaded bool
+	// work (D3) is the person's view of the private departments' work: the commands leave out what it hides.
+	work *workScope
 }
 
 func (c *cmdCall) t(es, en string) string {
@@ -315,6 +317,11 @@ func (s *server) execCommand(r *http.Request, req runRequest) (int, runResponse)
 		return errResp(http.StatusNotImplemented, "not_available", commands.L{ES: "Este servidor no tiene configurado lo que necesita /" + cmd.ID, EN: "This server does not have what /" + cmd.ID + " needs"})
 	}
 	c := &cmdCall{s: s, r: r, ctx: ctx, cmd: cmd, lang: lang, surface: surface, raw: req.Raw, org: s.org(r), actor: s.actor(r)}
+	c.work = s.work(r)
+	if err := c.work.load(); err != nil {
+		return errResp(http.StatusInternalServerError, "internal", commands.L{ES: "No pude leer los departamentos.", EN: "I could not read the departments."})
+	}
+	c.ctx = application.WithWorkFilter(c.ctx, c.work.filter())
 	c.agentID = strings.TrimSpace(req.Context.AgentID)
 	if req.Context.ProjectID != nil {
 		c.project = strings.TrimSpace(*req.Context.ProjectID)
@@ -324,6 +331,9 @@ func (s *server) execCommand(r *http.Request, req runRequest) (int, runResponse)
 	}
 	if rf := c.agentRef(c.agentID); rf != nil {
 		c.agentID = rf.ID
+	}
+	if c.agentID != "" && !c.work.chat(c.agentID) { // D3: a context agent the person neither uses nor sees
+		return errResp(http.StatusBadRequest, "unknown_agent", commands.L{ES: "El agente del contexto no existe.", EN: "The context agent does not exist."})
 	}
 	c.conv = c.convID(req.Context.ConversationID)
 	// Arguments: explicit ones win; otherwise parse the text after the command.
@@ -590,6 +600,16 @@ func (c *cmdCall) targetAgent(fallback string) (*domain.Agent, *cmdFail) {
 		return nil, fail(http.StatusBadRequest, "unknown_agent", fmt.Sprintf("No encuentro al agente «%s».", ref), fmt.Sprintf("I cannot find the agent “%s”.", ref))
 	}
 	return a, nil
+}
+
+// workAgent is targetAgent for the commands that read an agent's work (its memory): an agent of a private office
+// the person is not in answers like an unknown one (D3).
+func (c *cmdCall) workAgent(fallback string) (*domain.Agent, *cmdFail) {
+	a, f := c.targetAgent(fallback)
+	if f == nil && !c.work.agent(a.ID) {
+		return nil, fail(http.StatusBadRequest, "unknown_agent", fmt.Sprintf("No encuentro al agente «%s».", a.ID), fmt.Sprintf("I cannot find the agent “%s”.", a.ID))
+	}
+	return a, f
 }
 
 func msgResult(title, text string, data map[string]any) *cmdResult {

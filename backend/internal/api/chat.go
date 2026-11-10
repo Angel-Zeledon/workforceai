@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -50,6 +51,13 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 	if err := s.checkAgentUse(r, body.Conversation); err != nil { // E2: an agent the person may not use
 		s.fail(w, err)
 		return
+	}
+	if domain.PublicChatConv(body.Conversation) == domain.ChatOffice {
+		if err := s.checkMentions(r, body.Text); err != nil { // D3: nor called by @name in the office chat
+			s.fail(w, err)
+			return
+		}
+		r = s.work(r).context() // and the office chat routes only to the agents the person may use
 	}
 	// A retry or double click with the same Idempotency-Key (or client_message_id) gets the first turn back.
 	key := r.Header.Get("Idempotency-Key")
@@ -159,6 +167,10 @@ func (s *server) listMessages(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.fail(w, err)
 		return
+	}
+	if agent, ok := strings.CutPrefix(domain.PublicChatConv(id), domain.ChatAgentPrefix); ok && !s.work(r).agent(agent) {
+		// D3: using a private office's agent opens one's own thread, not the history shared before private threads
+		msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool { return m.SharedLegacy })
 	}
 	if limit > 0 {
 		w.Header().Set("Access-Control-Expose-Headers", "X-Has-More, X-Next-Before")

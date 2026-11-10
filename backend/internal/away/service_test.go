@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -313,5 +314,31 @@ func TestCanDecideMirrorsTheApprovalRules(t *testing.T) {
 		if got := away.CanDecide(c.ap, c.v); got != c.want {
 			t.Errorf("%s: got %v", c.name, got)
 		}
+	}
+}
+
+// D3: the work of a private department the person is not in is left out of their summary.
+func TestSummaryLeavesOutHiddenWork(t *testing.T) {
+	e := newEnv(t)
+	if _, err := e.svc.Heartbeat(e.ctx(), owner); err != nil {
+		t.Fatal(err)
+	}
+	e.seed(t)
+	*e.now = back
+	v := owner
+	v.SeesAgent = func(id string) bool { return id != "bob" }
+	v.SeesRequest = func(id string) bool { return id != "r1" }
+	s, err := e.svc.Summary(e.ctx(), v, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := json.Marshal(s)
+	for _, leak := range []string{"bob", "Bob", "Descargar facturas", "Enviar correo", "Prepara el reporte", "Descargando"} {
+		if strings.Contains(string(b), leak) {
+			t.Fatalf("summary shows %q: %s", leak, b)
+		}
+	}
+	if !strings.Contains(string(b), "Concilia las facturas") || len(s.Agents) != 1 || s.Agents[0].AgentID != "ana" || len(s.ActNow) != 3 {
+		t.Fatalf("summary lost the visible work: %s", b)
 	}
 }

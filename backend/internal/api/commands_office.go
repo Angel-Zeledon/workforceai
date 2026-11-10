@@ -181,6 +181,9 @@ func cmdDaily(c *cmdCall) (*cmdResult, *cmdFail) {
 	tasks, _ := c.s.Store.ListTasks(c.ctx, c.org, "", "")
 	done := 0
 	for _, t := range tasks {
+		if !c.work.agent(t.AgentID) { // D3
+			continue
+		}
 		if t.Status == domain.TaskDone && t.FinishedAt != nil && !t.FinishedAt.Before(day) {
 			done++
 			sum := ""
@@ -191,12 +194,15 @@ func cmdDaily(c *cmdCall) (*cmdResult, *cmdFail) {
 		}
 	}
 	reports, _ := c.s.Store.ListReports(c.ctx, c.org)
+	_ = c.work.indexAll()
+	reports = slices.DeleteFunc(reports, func(r domain.Report) bool { return !c.work.request(r.RequestID) }) // D3
 	for _, r := range reports {
 		if !r.CreatedAt.Before(day) {
 			facts = append(facts, application.ChatHistoryItem{From: "assistant", Text: "Informe: " + r.Title + ". " + trunc(r.Summary, 300)})
 		}
 	}
 	appr, _ := c.s.Store.ListApprovals(c.ctx, c.org, string(domain.ApprovalPending))
+	appr = slices.DeleteFunc(appr, func(a domain.Approval) bool { return !c.work.agent(a.AgentID) }) // D3
 	for _, a := range appr {
 		facts = append(facts, application.ChatHistoryItem{From: a.AgentID, Text: "Aprobación pendiente: " + a.Title})
 	}
@@ -227,13 +233,14 @@ func cmdPending(c *cmdCall) (*cmdResult, *cmdFail) {
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
+	appr = slices.DeleteFunc(appr, func(a domain.Approval) bool { return !c.work.agent(a.AgentID) }) // D3
 	for _, a := range appr {
 		rows = append(rows, []string{c.t("Aprobación", "Approval"), trunc(a.Title, 90), a.AgentID, "/approvals/" + a.ID})
 	}
 	tasks, _ := c.s.Store.ListTasks(c.ctx, c.org, "", "")
 	open := 0
 	for _, t := range tasks {
-		if t.Status == domain.TaskRunning || t.Status == domain.TaskPending || t.Status == domain.TaskBlocked {
+		if (t.Status == domain.TaskRunning || t.Status == domain.TaskPending || t.Status == domain.TaskBlocked) && c.work.agent(t.AgentID) {
 			open++
 			rows = append(rows, []string{c.t("Tarea", "Task"), trunc(t.Title, 90), t.AgentID, string(t.Status)})
 		}
@@ -272,10 +279,10 @@ func cmdSearch(c *cmdCall) (*cmdResult, *cmdFail) {
 		}
 	}
 	f := commands.Fold(q)
-	if reports, err := c.s.Store.ListReports(c.ctx, c.org); err == nil && c.s.has(c.r, "reports:read") {
+	if reports, err := c.s.Store.ListReports(c.ctx, c.org); err == nil && c.s.has(c.r, "reports:read") && c.work.indexAll() == nil {
 		n := 0
 		for _, r := range reports {
-			if n < 5 && (strings.Contains(commands.Fold(r.Title), f) || strings.Contains(commands.Fold(r.Summary), f)) {
+			if n < 5 && c.work.request(r.RequestID) && (strings.Contains(commands.Fold(r.Title), f) || strings.Contains(commands.Fold(r.Summary), f)) {
 				add(c.t("Informe", "Report"), r.Title, r.Summary, "/office")
 				n++
 			}
@@ -283,6 +290,9 @@ func cmdSearch(c *cmdCall) (*cmdResult, *cmdFail) {
 	}
 	if c.s.has(c.r, "memories:read") {
 		for _, a := range c.loadAgents() {
+			if !c.work.agent(a.ID) { // D3: what a private office's agent remembers is its members'
+				continue
+			}
 			ms, _ := c.memories(a.ID)
 			for _, m := range matchMem(ms, "forget", q) {
 				add(c.t("Memoria", "Memory"), a.Name+" · "+m.key, m.value, "/office?agent="+a.ID)

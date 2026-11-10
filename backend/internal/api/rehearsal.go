@@ -27,7 +27,7 @@ func (s *server) mountRehearsal(r chi.Router) {
 	r.With(s.can(auth.PermConnectionsRead)).Get("/rehearsal/agents", s.rehearsalAgents)
 	r.With(s.can(auth.PermControlsPause)).Put("/agents/{id}/rehearsal", s.putAgentRehearsal)
 	r.With(s.can(auth.PermApprovalsRead)).Get("/rehearsal/actions", s.rehearsalActions)
-	r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}/rehearsal", s.requestRehearsal)
+	r.With(s.can(auth.PermRequestsRead), s.workRequest).Get("/requests/{id}/rehearsal", s.requestRehearsal)
 	r.With(s.can(auth.PermApprovalsDecide)).Post("/rehearsal/actions/{id}/verdict", s.rehearsalVerdict)
 }
 
