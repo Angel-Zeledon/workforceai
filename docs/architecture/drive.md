@@ -13,6 +13,9 @@ Tool Gateway. Every change is versioned and reversible.
 | `/Projects/<project>` | a launched project | created on demand; deliverables land here |
 | `/Clients/<client>` | client material | agents read only with a grant |
 | `/Shared` | the whole team | agents read; writes need approval |
+| `/Offices/<office>` | a department (RefID = office id) | born with the profession's folder template (accounting, legal, hr, education, otherwise Documentos/Políticas); migration 817 allows `root_kind 'offices'` |
+
+**Permissions under `/Offices` (D1).** People: a member edits; a non-member of an open office reads; a non-member of a private office gets 404 (admins too). Outside `/Offices` the roles apply as before. This holds across the drive API, meeting minutes, project entries, chat commands (`/search`, `/file`, `/minutes`, `/undo`), autocomplete and chat attachments. Agents: edit without approval in their own office's folder, nothing in other offices (also in client tasks and `code.run`), and never more than the person they work for (`person_no_access`); with no person (scheduled runs, tokens) they keep their office. The full organization export (`GET /org/export`, owner/admin) includes every department's folders.
 
 ## Storage
 
