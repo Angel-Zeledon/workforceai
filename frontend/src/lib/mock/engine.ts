@@ -229,6 +229,27 @@ export class MockBackend {
     this.tasks = []; this.requests = []; this.conversations = []; this.messages = {}; this.approvals = [];
     this.reports = []; this.audits.clear(); this.evidence?.clear(); this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
     this.debates?.reset(); this.debateWanted?.clear();
+    this.seedDeptApproval();
+  }
+
+  /** D2 demo: Contabilidad's agent proposes a new document in its department's Drive (an fs write held for approval,
+   * with the path in `context` as the backend sends it), so the department screen shows "Para revisar" and "Propuesto". */
+  private seedDeptApproval() {
+    const path = "/Offices/Contabilidad/Bancos y conciliaciones/conciliacion-octubre.md";
+    const ap: Approval = {
+      id: "appr_dept_demo", task_id: "task_dept_demo", agent_id: "accounting", action: "fs.write_document",
+      title: "Guardar la conciliación bancaria de octubre",
+      details: "Documento nuevo en Bancos y conciliaciones: conciliacion-octubre.md. Saldo BAC conciliado con el extracto; quedan 2 movimientos por identificar.",
+      risk: "low", status: "pending", created_at: new Date(Date.now() - 25 * 60_000).toISOString(), resolved_at: null, required_approvals: 1,
+      context: { path, action: "write_document" },
+    };
+    this.approvals.unshift(ap);
+    this.decisions.set(ap.id, (d) => {
+      ap.status = d === "approve" ? "approved" : "rejected"; ap.resolved_at = nowIso();
+      this.emit("approval.resolved", { approval: { ...ap } }, ap.agent_id);
+      this.log(ap.agent_id, "approval.resolved", `${ap.title}: ${d === "approve" ? "aprobada" : "rechazada"}`);
+      this.pushMetrics();
+    });
   }
 
   // ---- realtime -----------------------------------------------------------------------------

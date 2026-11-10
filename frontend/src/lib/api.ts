@@ -71,8 +71,11 @@ export const api = {
   },
   /** POST /messages: the backend decides who answers and replies over the WebSocket (chat.message / chat.typing / route.decided). */
   /** `customerId` (B12) scopes any request the turn creates to that customer (stored before the request exists). */
-  postMessage: (conversation: string, text: string, attachments?: string[], customerId?: string) =>
-    call<{ message_id: string; turn_id: string }>("POST", "/messages", { conversation, text, ...(attachments?.length ? { attachments } : {}), ...(customerId ? { customer_id: customerId } : {}) }),
+  /** `folder` (D2) is the department folder the turn works in (a /Offices/... folder the person can read; 400/404 otherwise). */
+  postMessage: (conversation: string, text: string, attachments?: string[], customerId?: string, folder?: string) =>
+    call<{ message_id: string; turn_id: string }>("POST", "/messages", {
+      conversation, text, ...(attachments?.length ? { attachments } : {}), ...(customerId ? { customer_id: customerId } : {}), ...(folder ? { folder } : {}),
+    }),
   approvals: async () => list<Approval>(await call("GET", "/approvals")),
   reports: async () => list<Report>(await call("GET", "/reports")),
   report: (id: string) => call<Report>("GET", `/reports/${id}`),

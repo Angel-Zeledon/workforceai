@@ -125,28 +125,45 @@ function mockDrive() {
   const now = () => new Date().toISOString();
   const human: Principal = { kind: "human", id: "user" };
   let seq = 0;
-  const put = (path: string, text: string, by: Principal, message = "") => {
+  /** `at`: when it happened (demo data in the past); now by default. */
+  const put = (path: string, text: string, by: Principal, message = "", at = now()) => {
     const cur = [...files.values()].find((m) => m.file.path === path && !m.file.deleted_at);
     if (cur) {
       if (cur.versions[cur.versions.length - 1].text === text) return cur.file;
       const n = cur.file.current_version + 1;
-      cur.versions.push({ v: { file_id: cur.file.id, version: n, size: text.length, author: by, message, created_at: now() }, text });
-      Object.assign(cur.file, { current_version: n, size: text.length, updated_by: by, updated_at: now() });
+      cur.versions.push({ v: { file_id: cur.file.id, version: n, size: text.length, author: by, message, created_at: at }, text });
+      Object.assign(cur.file, { current_version: n, size: text.length, updated_by: by, updated_at: at });
       return cur.file;
     }
     const id = `fil_mock_${++seq}`;
     const name = path.split("/").pop() || "file";
     const mime = name.endsWith(".csv") ? "text/csv" : name.endsWith(".md") ? "text/markdown" : name.endsWith(".json") ? "application/json" : "text/plain";
-    const file: DriveFile = { id, name, path, mime, size: text.length, current_version: 1, updated_by: by, updated_at: now(), tags: [] };
-    files.set(id, { file, versions: [{ v: { file_id: id, version: 1, size: text.length, author: by, message, created_at: now() }, text }] });
+    const file: DriveFile = { id, name, path, mime, size: text.length, current_version: 1, updated_by: by, updated_at: at, tags: [] };
+    files.set(id, { file, versions: [{ v: { file_id: id, version: 1, size: text.length, author: by, message, created_at: at }, text }] });
     return file;
   };
+  const ago = (hours: number) => new Date(Date.now() - hours * 3600_000).toISOString();
   put("/Shared/Politicas/politica-de-descuentos.md", "# Política de descuentos\n\nHasta 10% sin aprobación; más requiere Dirección.\n", human);
   put("/Shared/Finanzas/saldos-bancarios.csv", "cuenta,banco,saldo\nOperativa,BAC,128400\nNómina,BN,56300\nUSD,BCR,40200\n", human);
   put("/Clients/Grupo Alfa/brief.md", "# Brief Grupo Alfa\n\nRediseño completo, presupuesto USD 50,000, entrega en 8 semanas.\n", human);
   // Office folders demo: the private Contabilidad office has its folder with a client's files
   put("/Offices/Contabilidad/Clientes/Grupo Alfa/estado-de-cuenta.csv", "concepto,monto\nServicios octubre,12500\nAnticipo,-5000\n", human);
   put("/Offices/Contabilidad/Clientes/Grupo Alfa/notas-de-cierre.md", "# Cierre de octubre\n\nPendiente conciliar el anticipo.\n", human);
+  // D2 demo: the department's Drive. Contabilidad has the accounting template (Clientes, Proveedores, Bancos y
+  // conciliaciones, Impuestos, Cierres mensuales, Políticas) with files by people and by its agent (Tomás Vidal).
+  const acc: Principal = { kind: "agent", id: "accounting" };
+  const C = "/Offices/Contabilidad";
+  put(`${C}/resumen-semanal.md`, "# Resumen semanal de Contabilidad\n\n- Cobros de la semana registrados.\n- Conciliación de octubre en revisión.\n- Declaración de IVA lista para presentar.\n", acc, "resumen de la semana", ago(0.7));
+  put(`${C}/plan-de-cuentas.csv`, "cuenta,nombre,tipo\n1101,Caja,activo\n1102,Bancos,activo\n2101,Proveedores,pasivo\n4101,Ventas,ingreso\n5101,Costo de ventas,gasto\n", human, "", ago(24 * 15));
+  put(`${C}/Clientes/Distribuidora Norte/contrato-servicios.md`, "# Contrato de servicios — Distribuidora Norte\n\nVigencia: 12 meses. Facturación mensual a 30 días.\n", human, "", ago(24 * 3));
+  put(`${C}/Proveedores/lista-de-proveedores.csv`, "proveedor,plazo,contacto\nPapelería Central,30 días,ventas@papeleria.example\nTransportes Ruta 1,15 días,cobros@ruta1.example\n", human, "", ago(24 * 6));
+  put(`${C}/Proveedores/facturas-por-pagar-noviembre.csv`, "proveedor,factura,vence,monto\nPapelería Central,F-2201,2026-11-20,850\nTransportes Ruta 1,TR-993,2026-11-14,1240\n", acc, "facturas de noviembre", ago(2));
+  put(`${C}/Bancos y conciliaciones/extracto-bac-octubre.csv`, "fecha,concepto,monto\n2026-10-03,Depósito Grupo Alfa,5000\n2026-10-15,Pago planilla,-18200\n2026-10-28,Comisión bancaria,-12\n", human, "", ago(26));
+  put(`${C}/Bancos y conciliaciones/conciliacion-septiembre.md`, "# Conciliación bancaria — septiembre\n\nSaldo según banco y según libros coinciden. Sin partidas abiertas.\n", acc, "conciliación de septiembre", ago(24 * 12));
+  put(`${C}/Impuestos/declaracion-iva-octubre.md`, "# Declaración de IVA — octubre\n\nDébito fiscal: 4.180\nCrédito fiscal: 2.960\nA pagar: 1.220\n", acc, "borrador de la declaración", ago(24 * 4));
+  put(`${C}/Cierres mensuales/cierre-septiembre.md`, "# Cierre de septiembre\n\nCerrado el 5 de octubre. Ajustes: depreciación y provisión de vacaciones.\n", acc, "cierre de septiembre", ago(24 * 9));
+  put(`${C}/Cierres mensuales/checklist-de-cierre.md`, "# Checklist de cierre mensual\n\n1. Conciliar bancos\n2. Registrar provisiones\n3. Revisar cuentas por cobrar\n4. Emitir estados financieros\n", human, "", ago(24 * 20));
+  put(`${C}/Políticas/politica-de-reembolsos.md`, "# Política de reembolsos de gastos\n\nSe reembolsan gastos con factura a nombre de la empresa, presentados en 30 días.\n", human, "", ago(24 * 30));
   // B6 demo: the capacity cost the accountant cites is in version 2 of this file (version 1 had an older figure)
   put("/Shared/Finanzas/costo-capacidad.csv", "concepto,mensual\nPerfil senior ops,3600\nPerfil senior ops,3600\n", human);
   put("/Shared/Finanzas/costo-capacidad.csv", "concepto,mensual\nPerfil senior ops (cargado),3900\nPerfil senior ops (cargado),3900\nTotal capacidad adicional,7800\n", human, "costo cargado");

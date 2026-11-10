@@ -1,7 +1,7 @@
 // Unit tests of the department drive logic (run: npm run test:unit).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { myDepartments, pendingByPath, filterRows, proposedRows, defaultAgent, crumbs } from "./deptLogic.ts";
+import { myDepartments, pendingByPath, filterRows, proposedRows, defaultAgent, crumbs, pathKey, pendingUnder, findDepartment, deptView, lastChange } from "./deptLogic.ts";
 
 const off = (o) => ({ id: "x", name: "x", general: false, is_member: true, folder_path: "/Offices/X", agents: [], ...o });
 const ap = (id, path, over = {}) => ({ id, status: "pending", context: path === undefined ? {} : { path, action: "write" }, ...over });
@@ -66,4 +66,53 @@ test("1000 rows filter fast", () => {
   const t = performance.now();
   filterRows(rows, "review", pend, new Date()); filterRows(rows, "today", pend, new Date());
   assert.ok(performance.now() - t < 50);
+});
+
+test("pathKey matches the keys of pendingByPath", () => {
+  assert.equal(pathKey("/Offices/Legal/A.md/"), "/offices/legal/a.md");
+});
+
+test("pendingUnder counts distinct paths strictly under a folder, any depth", () => {
+  const pend = pendingByPath([
+    ap("1", "/Offices/Legal/Casos/a.md"), ap("2", "/Offices/Legal/Casos/a.md"), ap("3", "/Offices/Legal/Casos/2026/b.md"),
+    ap("4", "/Offices/Legal/c.md"), ap("5", "/Offices/Legal/CasosViejos/d.md"),
+  ], "/Offices/Legal");
+  assert.equal(pendingUnder(pend, "/Offices/Legal"), 4);
+  assert.equal(pendingUnder(pend, "/offices/legal/casos/"), 2);
+  assert.equal(pendingUnder(pend, "/Offices/Legal/Casos/2026/b.md"), 0);
+});
+
+test("findDepartment by id, case-insensitive and decoded; undefined when not mine", () => {
+  const ds = [off({ id: "contabilidad" }), off({ id: "Ventas Norte" })];
+  assert.equal(findDepartment(ds, "Contabilidad")?.id, "contabilidad");
+  assert.equal(findDepartment(ds, "Ventas%20Norte")?.id, "Ventas Norte");
+  assert.equal(findDepartment(ds, "legal"), undefined);
+  assert.equal(findDepartment(ds, "%E0%A4%A"), undefined); // bad escape: no throw
+});
+
+test("deptView: what each filter shows and the review count", () => {
+  const now = new Date(2026, 10, 9, 15, 0, 0);
+  const today = new Date(2026, 10, 9, 9, 0, 0).toISOString();
+  const old = new Date(2026, 10, 1, 9, 0, 0).toISOString();
+  const pend = pendingByPath([ap("1", "/Offices/L/a.md"), ap("2", "/Offices/L/Sub/x.md"), ap("3", "/Offices/L/new.md")], "/Offices/L");
+  const folders = [{ path: "/Offices/L/Sub" }, { path: "/Offices/L/Empty" }];
+  const files = [{ path: "/Offices/L/a.md", updated_at: old }, { path: "/Offices/L/b.md", updated_at: today }];
+  const proposed = proposedRows(pend, "/Offices/L", new Set(files.map((f) => f.path)));
+  const all = deptView({ folder: "/Offices/L", folders, files, proposed, pending: pend, now }, "all");
+  assert.equal(all.folders.length, 2); assert.equal(all.files.length, 2); assert.equal(all.proposed.length, 1);
+  assert.equal(all.reviewCount, 3);
+  const rev = deptView({ folder: "/Offices/L", folders, files, proposed, pending: pend, now }, "review");
+  assert.deepEqual(rev.folders.map((f) => f.path), ["/Offices/L/Sub"]);
+  assert.deepEqual(rev.files.map((f) => f.path), ["/Offices/L/a.md"]);
+  assert.equal(rev.proposed.length, 1);
+  const tod = deptView({ folder: "/Offices/L", folders, files, proposed, pending: pend, now }, "today");
+  assert.equal(tod.folders.length, 0); assert.equal(tod.proposed.length, 0);
+  assert.deepEqual(tod.files.map((f) => f.path), ["/Offices/L/b.md"]);
+});
+
+test("lastChange: relative under a day, a date after", () => {
+  const now = new Date(2026, 10, 9, 15, 0, 0);
+  assert.deepEqual(lastChange(new Date(2026, 10, 9, 14, 0, 0).toISOString(), now), { relative: true });
+  assert.deepEqual(lastChange(new Date(2026, 10, 7, 14, 0, 0).toISOString(), now), { relative: false });
+  assert.deepEqual(lastChange("nope", now), { relative: false });
 });

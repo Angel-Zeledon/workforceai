@@ -75,3 +75,45 @@ export function crumbs(path: string, root: string): { name: string; path: string
   }
   return out;
 }
+
+/** The key `pendingByPath` uses for a path (lowercase, no trailing "/"). */
+export const pathKey = norm;
+
+/** How many distinct paths with something pending lie strictly under `folder` (any depth). */
+export function pendingUnder(pending: Map<string, unknown>, folder: string): number {
+  const root = norm(folder) + "/";
+  let n = 0;
+  for (const k of pending.keys()) if (k.startsWith(root)) n++;
+  return n;
+}
+
+/** The department a URL segment names (by id, case-insensitive, URL-decoded); undefined when it is not one of mine. */
+export function findDepartment(depts: OfficeView[], param: string): OfficeView | undefined {
+  let id = param;
+  try { id = decodeURIComponent(param); } catch { /* keep it raw */ }
+  const k = id.toLowerCase();
+  return depts.find((d) => d.id.toLowerCase() === k);
+}
+
+export type DeptFilter = "all" | "review" | "today";
+
+/**
+ * What the center list shows. All: everything. Para revisar: the files here with something pending, the proposed files
+ * and the subfolders that hold something pending (to drill down). Cambiado hoy: only files changed today.
+ * `reviewCount` = everything pending under the current folder, at any depth.
+ */
+export function deptView<F extends { path: string }, R extends { path: string; updated_at?: string }, P>(
+  v: { folder: string; folders: F[]; files: R[]; proposed: P[]; pending: Map<string, unknown>; now: Date }, filter: DeptFilter,
+): { folders: F[]; files: R[]; proposed: P[]; reviewCount: number } {
+  const reviewCount = pendingUnder(v.pending, v.folder);
+  const files = filterRows(v.files, filter, v.pending, v.now);
+  if (filter === "all") return { folders: v.folders, files, proposed: v.proposed, reviewCount };
+  if (filter === "review") return { folders: v.folders.filter((f) => pendingUnder(v.pending, f.path) > 0), files, proposed: v.proposed, reviewCount };
+  return { folders: [], files, proposed: [], reviewCount };
+}
+
+/** "Último cambio": relative ("3h") under a day, a date after that (or when the date is unreadable). */
+export function lastChange(iso: string, now: Date): { relative: boolean } {
+  const t = Date.parse(iso);
+  return { relative: !Number.isNaN(t) && now.getTime() - t < 24 * 3600_000 };
+}

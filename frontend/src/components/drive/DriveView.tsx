@@ -166,7 +166,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
 }
 
 /** `copy`: the second rendering (phone line under the name) carries no test id, so ids stay unique. */
-function Author({ p, copy = false }: { p: DriveFile["updated_by"]; copy?: boolean }) {
+export function Author({ p, copy = false }: { p: DriveFile["updated_by"]; copy?: boolean }) {
   const { t } = useT();
   const name = useAgentName();
   if (p.kind === "agent") return <span className="inline-flex items-center gap-1"><span className="rounded bg-accent/10 px-1 text-[10px] font-semibold uppercase text-accent">{t("drive.agent")}</span>{name(p.id)}</span>;
@@ -258,8 +258,10 @@ function Preview({ file, text }: { file: DriveFile; text: string }) {
   return <pre data-testid="drive-preview-text" className="whitespace-pre-wrap break-words font-mono text-[11.5px] leading-relaxed text-ink">{text}</pre>;
 }
 
-function FilePane({ file, focus, onClearFocus, onClose, onChanged, onDeleted }: {
-  file: DriveFile; focus?: { start: number; page?: number } | null; onClearFocus?: () => void; onClose: () => void; onChanged: () => void; onDeleted: () => void;
+/** `embedded`: inside a host panel that already shows the name and the close button (the department's Drive):
+ * no header and no placement of its own, it fills the host. Default: the Files screen's side pane, as always. */
+export function FilePane({ file, focus, onClearFocus, onClose, onChanged, onDeleted, embedded = false }: {
+  file: DriveFile; focus?: { start: number; page?: number } | null; onClearFocus?: () => void; onClose: () => void; onChanged: () => void; onDeleted: () => void; embedded?: boolean;
 }) {
   const { t } = useT();
   const [text, setText] = useState<string | null>(null);
@@ -281,15 +283,15 @@ function FilePane({ file, focus, onClearFocus, onClose, onChanged, onDeleted }: 
     drive.text(file.id, shown).then((r) => setText(r.text)).catch(() => setText(null));
   }, [file.id, file.current_version, shown, textual]);
   return (
-    <aside data-tour="files.pane" data-testid="drive-file-pane" className="flex flex-col border-l border-line bg-panel max-md:fixed max-md:inset-0 max-md:z-40 max-md:h-dvh max-md:w-full max-md:border-l-0 md:w-[420px] md:min-w-[320px]">
-      <div className="flex items-start gap-2 border-b border-line p-4">
+    <aside data-tour={embedded ? undefined : "files.pane"} data-testid="drive-file-pane" className={embedded ? "flex min-h-0 flex-1 flex-col bg-panel" : "flex flex-col border-l border-line bg-panel max-md:fixed max-md:inset-0 max-md:z-40 max-md:h-dvh max-md:w-full max-md:border-l-0 md:w-[420px] md:min-w-[320px]"}>
+      {!embedded && <div className="flex items-start gap-2 border-b border-line p-4">
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium text-ink">{file.name}</div>
           <div className="truncate text-[11px] text-mute">{file.path}</div>
           <div className="mt-1 text-[11px] text-mute"><Author p={file.updated_by} /> · v{file.current_version} · {fmtSize(file.size)}</div>
         </div>
         <button type="button" aria-label={t("drive.close")} onClick={onClose} className="rounded p-1 text-mute hover:bg-panel2"><Icon name="x" size={14} /></button>
-      </div>
+      </div>}
       <div className="flex gap-2 border-b border-line px-4 py-2">
         <Btn data-testid="drive-download" onClick={() => drive.download(file)}>{t("drive.download")}</Btn>
         <Btn kind="danger" data-testid="drive-delete" onClick={async () => { try { await drive.remove(file.id); onDeleted(); } catch (e) { alertCode(e); } }}>{t("drive.delete")}</Btn>
