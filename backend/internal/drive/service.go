@@ -670,6 +670,7 @@ func (s *Service) write(ctx context.Context, p Principal, filePath string, c *co
 	x := c.extract(name)
 	f := File{ID: newID("fil_"), FolderID: folder.ID, Name: name, Path: folder.Path + "/" + name, Mime: ft.mime, Size: c.size,
 		CurrentVersion: 1, Tags: orEmpty(tags), CreatedBy: p, UpdatedBy: p, CreatedAt: now, UpdatedAt: now}
+	f.Tags = s.reviewAfterWrite(ctx, org, p, f.Path, f.Tags)
 	f.SHA256, f.Extraction, f.SearchText = c.sum, extractionOf(x), searchTextOf(x)
 	v, err := s.putVersion(ctx, org, f, 1, c, p, cleanMessage(m.Message), now, maxBytes)
 	if err != nil {
@@ -753,6 +754,7 @@ func (s *Service) addVersion(ctx context.Context, org string, p Principal, cur F
 	if tags != nil {
 		nf.Tags = tags
 	}
+	nf.Tags = s.reviewAfterWrite(ctx, org, p, nf.Path, nf.Tags)
 	v, err := s.putVersion(ctx, org, nf, nf.CurrentVersion, c, p, msg, now, maxBytes)
 	if err != nil {
 		return WriteResult{}, err
@@ -906,6 +908,25 @@ func (s *Service) MoveFile(ctx context.Context, p Principal, fileID, newPath str
 	f.Path = folder.Path + "/" + name
 	s.audit(ctx, org, p, "drive.file.moved", "file", f.ID, map[string]any{"from": old, "to": f.Path})
 	return f, nil
+}
+
+// TagReviewed is the tag a person puts on a department file (/Offices/...) once they reviewed what an agent wrote
+// (D2, "Marcar como revisado"). A new version written by an agent takes it off, so the file is "Para revisar" again.
+const TagReviewed = "revisado"
+
+// reviewAfterWrite returns the tags of a file after p wrote a version of it at path: an agent writing under /Offices
+// loses the TagReviewed tag (an agent never marks its own work as reviewed); anything else keeps the tags as they are.
+func (s *Service) reviewAfterWrite(ctx context.Context, org string, p Principal, path string, tags []string) []string {
+	if !p.IsAgent() || !slices.Contains(tags, TagReviewed) || !s.underOffices(ctx, org, path) {
+		return tags
+	}
+	out := make([]string, 0, len(tags)-1)
+	for _, t := range tags {
+		if t != TagReviewed {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 // SetTags replaces the tags of a file.
