@@ -188,8 +188,9 @@ func run(log *slog.Logger) error {
 			}
 			return out, err
 		}
-		pushWho.CanDecide = func(ap domain.Approval, userID, role string) bool {
-			return application.CanDecideApproval(ap, userID, role, auth.Role(role).Has(auth.PermApprovalsDecide))
+		pushWho.CanDecide = func(c context.Context, org string, ap domain.Approval, userID, role string) bool {
+			// D3: the policy is installed with the offices (wireApprovers); until then, today's rules
+			return application.DecidesApproval(application.WithOrg(c, org), approvals.Policy(), org, ap, userID, role, auth.Role(role).Has(auth.PermApprovalsDecide))
 		}
 	}
 	cw, err := wireConnections(ctx, cfg, log, pg, authStore, rec, orch)
@@ -380,6 +381,7 @@ func run(log *slog.Logger) error {
 	deps.Permissions = wirePermissions(cfg, log, store, rec, trustSvc, cw.ctl, orgChartSvc, permObs, policySvc, ws.projects) // approval permissions per agent
 	// E2 offices (offices.go): offices, agent owners and visibility; their notes reach the tasks.
 	deps.Offices = wireOffices(pg, store, authStore, orgChartSvc, rec, noteCleaner(memorySvc))
+	wireApprovers(orch, notifySvc, deps.Offices, authStore, cfg.AuthEnabled) // D3: an office's approvals go to its responsibles
 	officeRecall(memorySvc, deps.Offices)
 	if cfg.AuthEnabled && deps.Offices != nil && ws.drive != nil {
 		ws.drive.SetPeople(officePeople{svc: deps.Offices}) // office folders: member edits, open reads, private none

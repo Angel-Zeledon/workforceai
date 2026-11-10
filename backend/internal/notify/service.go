@@ -49,6 +49,10 @@ type Service struct {
 	TTL       time.Duration
 	// AgentName (optional) turns an agent id into a name for the message.
 	AgentName func(ctx context.Context, org, id string) string
+	// Approvers (optional, D3) returns the e-mail addresses of the responsibles who decide an approval of an office
+	// (none: an approval of General, sent as before). They get the e-mail too, with its links; the other recipients
+	// of an office's approval are told without links (they open the app, where the office rule applies).
+	Approvers func(ctx context.Context, org string, ap domain.Approval) []string
 	Log       *slog.Logger
 	Now       func() time.Time
 	// Outbox (optional) is the durable retry queue (migration 784): Notify and NotifyCap queue messages and the worker
@@ -177,14 +181,40 @@ func (s *Service) Notify(ctx context.Context, org string, ap domain.Approval) {
 	if RiskRank(ap.Risk) < RiskRank(st.MinRisk) {
 		return
 	}
+	var leads map[string]bool // D3: the responsibles of an office's approval (lowercase address)
+	if s.Approvers != nil {
+		for _, to := range s.Approvers(ctx, org, ap) {
+			if to = strings.ToLower(strings.TrimSpace(to)); to != "" {
+				if leads == nil {
+					leads = map[string]bool{}
+				}
+				leads[to] = true
+			}
+		}
+	}
+	msg := func(to string) Message {
+		m := s.message(ctx, org, st, ap, to)
+		if leads != nil && !leads[strings.ToLower(strings.TrimSpace(to))] {
+			m.Approve, m.Reject, m.NeedsApp = "", "", true
+		}
+		return m
+	}
 	if st.EmailEnabled && s.Mail != nil {
+		sent := map[string]bool{}
 		for _, to := range st.EmailTo {
-			m := s.message(ctx, org, st, ap, to)
+			m := msg(to)
 			s.sendEmail(ctx, org, to, mailer.Message{Subject: m.Subject(), Text: m.PlainText(), HTML: m.HTMLBody()})
+			sent[strings.ToLower(strings.TrimSpace(to))] = true
+		}
+		for to := range leads {
+			if !sent[to] {
+				m := msg(to)
+				s.sendEmail(ctx, org, to, mailer.Message{Subject: m.Subject(), Text: m.PlainText(), HTML: m.HTMLBody()})
+			}
 		}
 	}
 	if st.SlackWebhook != "" || st.TeamsWebhook != "" {
-		s.chat(ctx, org, st, s.message(ctx, org, st, ap, "chat"))
+		s.chat(ctx, org, st, msg("chat"))
 	}
 	s.flush(ctx, org)
 }

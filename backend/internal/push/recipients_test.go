@@ -27,7 +27,7 @@ func TestPushGoesToThePersonItIsFor(t *testing.T) {
 			return []Member{{"owner", "owner"}, {"admin", "admin"}, {"member", "member"}, {"asker", "admin"}}, nil
 		},
 		// the deciders are owners and admins, and nobody decides what they asked for
-		CanDecide: func(ap domain.Approval, userID, role string) bool {
+		CanDecide: func(_ context.Context, _ string, ap domain.Approval, userID, role string) bool {
 			return (role == "owner" || role == "admin") && userID != ap.RequestedBy
 		},
 	}

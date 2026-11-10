@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, call } from "@/lib/api";
 import { fmtUsd, useT } from "@/lib/i18n";
 import {
-  batchGroupOf, clampIndex, deckOf, emailDrafts, filterInbox, inboxHref, INBOX_FILTERS, keyToCommand, needsConfirm, parseInboxFilter, swipeIntent, UNDO_MS,
+  batchGroupOf, clampIndex, decidersLine, deckOf, emailDrafts, itemDecidable, filterInbox, inboxHref, INBOX_FILTERS, keyToCommand, needsConfirm, parseInboxFilter, swipeIntent, UNDO_MS,
   type ApprovalInbox, type InboxFilter, type InboxGroup, type InboxItem, type InboxMine,
 } from "@/lib/inboxLogic";
 import { useConnections } from "@/lib/connections/store";
@@ -95,9 +95,12 @@ export function ApprovalsInbox() {
   const i = clampIndex(idx, deck.length);
   const cur = deck[i] ?? null;
   const group = cur && inbox ? batchGroupOf(cur, inbox.groups) : null;
+  // D3: an office's approvals are decided by its responsibles (the server says so per item), whatever the role
+  const curCan = cur ? itemDecidable(cur, canDecide) : false;
+  const deciders = cur && !curCan ? decidersLine(cur) : "";
 
   const decide = useCallback((item: InboxItem, decision: Decision, confirmed = false) => {
-    if (!canDecide) return;
+    if (!itemDecidable(item, canDecide)) return;
     if (needsConfirm(item, decision) && !confirmed) { setConfirm({ kind: "high", item }); return; }
     const until = Date.now() + UNDO_MS;
     const h: Held = { item, decision, until, timer: setTimeout(() => void sendRef.current({ item, decision }), UNDO_MS) };
@@ -140,7 +143,7 @@ export function ApprovalsInbox() {
   }, [confirm, cur, decide, deck.length, i]);
 
   // Swipe (touch / pen): right approves, left rejects. High risk opens the confirm instead of approving.
-  const onDown = (e: React.PointerEvent) => { if (e.pointerType !== "mouse" && canDecide) drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId }; };
+  const onDown = (e: React.PointerEvent) => { if (e.pointerType !== "mouse" && curCan) drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId }; };
   const onMove = (e: React.PointerEvent) => { if (drag.current && drag.current.id === e.pointerId) setDx(e.clientX - drag.current.x); };
   const onUp = (e: React.PointerEvent) => {
     const d = drag.current;
@@ -192,7 +195,7 @@ export function ApprovalsInbox() {
           <button type="button" onClick={() => void load()} className="min-h-[44px] rounded-md border border-err/40 px-3 font-semibold">{t("approvalInbox.retry")}</button>
         </div>
       )}
-      {!canDecide && inbox && <p className="rounded-lg border border-line bg-panel p-3 text-[13px] text-ink2">{t("approvals.noPermission")}</p>}
+      {!canDecide && inbox && !inbox.counts?.decidable && <p className="rounded-lg border border-line bg-panel p-3 text-[13px] text-ink2">{t("approvals.noPermission")}</p>}
       {errors.map((m, k) => <p key={k} role="alert" className="rounded-lg border border-err/40 bg-err/10 p-2 text-[12px] text-err">{m}</p>)}
 
       {inbox && deck.length === 0 && !held.length && !(filter === "email" && outbox.waiting.length > 0) && (
@@ -218,13 +221,14 @@ export function ApprovalsInbox() {
           why={<ApprovalReason a={cur} className="mt-2 bg-panel2" />}
           actions={
             <>
-              {canDecide && (
+              {deciders && <p data-testid="inbox-deciders" className="rounded-md border border-line bg-panel2 px-3 py-2 text-[12.5px] text-ink2">{t("approvalInbox.decidedBy", { names: deciders })}</p>}
+              {curCan && (
                 <div className="grid grid-cols-2 gap-3">
                   <button type="button" data-testid="inbox-reject" onClick={() => decide(cur, "reject")} className="min-h-[48px] rounded-md border border-err/40 bg-err/10 text-sm font-semibold text-err">{t("approvalInbox.reject")} <kbd className="ml-1 hidden rounded border border-err/30 px-1 text-[10px] sm:inline">R</kbd></button>
                   <button type="button" data-testid="inbox-approve" onClick={() => decide(cur, "approve")} className="min-h-[48px] rounded-md border border-ok/40 bg-ok/10 text-sm font-semibold text-ok">{t("approvalInbox.approve")} <kbd className="ml-1 hidden rounded border border-ok/30 px-1 text-[10px] sm:inline">A</kbd></button>
                 </div>
               )}
-              {canDecide && <InboxRemember key={cur.id} a={cur} onDone={() => void load()} />}
+              {canDecide && curCan && <InboxRemember key={cur.id} a={cur} onDone={() => void load()} />}
               <div className="mt-2 flex items-center justify-between gap-2 text-[12px]">
                 <button type="button" data-testid="inbox-prev" disabled={i === 0} onClick={() => { setIdx(i - 1); setExpanded(false); }} className="min-h-[40px] rounded-md px-2 text-mute disabled:opacity-30">‹ {t("approvalInbox.prev")}</button>
                 <button type="button" data-testid="inbox-expand" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)} className="min-h-[40px] rounded-md px-2 font-semibold text-accent">{t(expanded ? "approvalInbox.collapse" : "approvalInbox.expand")}</button>
@@ -247,7 +251,7 @@ export function ApprovalsInbox() {
               {cur.high_risk && !cur.counterargument && <DevilsAdvocate approvalId={cur.id} />}
             </div>
           )}
-          {group && canDecide && (
+          {group && canDecide && curCan && (
             <button type="button" data-testid={`inbox-batch-${group.key}`} onClick={() => setConfirm({ kind: "batch", group })}
               className="mt-3 min-h-[44px] w-full rounded-md border border-ok/40 bg-ok/5 px-3 text-[13px] font-semibold text-ok">
               {t("approvalInbox.batch", { count: group.count, project: group.project_name || group.project_id })}
