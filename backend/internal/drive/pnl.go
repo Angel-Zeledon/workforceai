@@ -94,6 +94,8 @@ func (a *AgentFS) planIncomeStatement(ctx context.Context, org string, sc scope,
 		"period": res.Period}
 	if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
 		return personDeny()
+	} else if sc.otherOfficeRefused(z) {
+		return otherOfficeDeny()
 	} else if sc.writeRefused(z) {
 		return deny(denyCustomerIsolation, "this task works for one customer: write only in that customer's folders or your desk for it")
 	} else if !autoWrite(z) {

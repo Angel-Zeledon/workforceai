@@ -173,8 +173,8 @@ func wireDrive(ctx context.Context, cfg config.Config, log *slog.Logger, pg *pos
 				orch.NoteTaskEdit(taskID, path, application.EditNote{From: from, To: to, Added: added, Removed: removed})
 			},
 			Notify: func(actx context.Context, org, agentID, taskID, action, path string) {
-				rec.Emit(application.WithOrg(actx, org), application.Action{Type: "file.activity", AgentID: agentID, Entity: "file", SkipAudit: true,
-					Payload: map[string]any{"agent_id": agentID, "task_id": taskID, "action": action, "path": path}})
+				octx := application.WithOrg(actx, org) // inside an office's folder: only its members hear of it
+				rec.Emit(octx, fileActivity(octx, svc, agentID, map[string]any{"agent_id": agentID, "task_id": taskID, "action": action, "path": path}))
 				orch.NoteTaskFile(taskID, action, path) // the chat message of the task points to what it wrote
 			}}
 		cw.gw.AddNative(tool)

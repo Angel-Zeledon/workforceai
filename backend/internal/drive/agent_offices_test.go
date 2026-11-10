@@ -260,16 +260,34 @@ func TestPersonNoAccessIsRefusedNotApproved(t *testing.T) {
 	}
 }
 
-// Actors that are not people (a token, a link, the orchestrator...) do not limit the agent: it keeps its office.
-func TestNonPersonRequesterKeepsOwnOffice(t *testing.T) {
+// Only the platform itself (no requester, the scheduler, the system...) leaves the agent its office: it works on its
+// own there (spec §4.1). An actor that is neither a person nor the platform (a token, a link, Slack, another agent)
+// acts for someone the drive cannot tell, so inside /Offices the agent gets nothing for it (fails closed).
+func TestSystemRequesterKeepsOwnOfficeForeignGetsNone(t *testing.T) {
 	e := newOfficeEnv(t)
 	e.svc.SetPeople(officePeopleByID{})
-	for _, who := range []string{"token:abc", "orchestrator", "slack:U1", "agent:legal", "link:x", "demo", "runtime", "scheduler", "system", "user"} {
+	for _, who := range []string{"", "orchestrator", "demo", "runtime", "scheduler", "system", "user"} {
 		ctx := drive.WithRequester(e.ctx, who)
 		if pl := e.fs.Plan(ctx, "acct", "write", map[string]any{"path": "/Offices/Contabilidad/x.md", "content": "x"}); pl.Deny != "" || pl.Approval {
-			t.Fatalf("%s: the agent keeps its office: %+v", who, pl)
+			t.Fatalf("%q: the agent keeps its office: %+v", who, pl)
+		}
+		if pl := e.fs.Plan(ctx, "acct", "read", map[string]any{"path": "/Offices/Contabilidad/Clientes/balance.md"}); pl.Deny != "" {
+			t.Fatalf("%q: reads its office: %+v", who, pl)
 		}
 		if roots, _ := e.fs.ReadableRoots(ctx, "acct"); !slices.Contains(roots, "/Offices/Contabilidad") {
+			t.Fatalf("%q: roots %v", who, roots)
+		}
+	}
+	for _, who := range []string{"token:abc", "slack:U1", "agent:legal", "link:x", "Some One"} {
+		ctx := drive.WithRequester(e.ctx, who)
+		if pl := e.fs.Plan(ctx, "acct", "write", map[string]any{"path": "/Offices/Contabilidad/x.md", "content": "x"}); pl.Deny != "person_no_access" {
+			t.Fatalf("%s: no office for a foreign requester (write): %+v", who, pl)
+		}
+		if pl := e.fs.Plan(ctx, "acct", "read", map[string]any{"path": "/Offices/Contabilidad/Clientes/balance.md"}); pl.Deny != "person_no_access" {
+			t.Fatalf("%s: no office for a foreign requester (read): %+v", who, pl)
+		}
+		roots, _ := e.fs.ReadableRoots(ctx, "acct")
+		if slices.Contains(roots, "/Offices/Contabilidad") || drive.InScope(roots, "/Offices/Contabilidad/x.md") || !drive.InScope(roots, "/Shared/x.md") {
 			t.Fatalf("%s: roots %v", who, roots)
 		}
 	}
@@ -389,5 +407,70 @@ func TestGatewayPersonNoAccessReadIsSoft(t *testing.T) {
 		Args: map[string]any{"path": "/Offices/Contabilidad/x.md", "content": "x"}}
 	if as := tool.Assess(e.ctx, w); as.DenyCode != "person_no_access" {
 		t.Fatalf("a write stays refused: %+v", as)
+	}
+}
+
+// With nobody to work for, an agent writes nothing into another office (nor creates one): refused, not approved.
+func TestNoPersonOtherOfficeWriteIsRefused(t *testing.T) {
+	e := newOfficeEnv(t)
+	for _, a := range []struct{ action, path string }{
+		{"write", "/Offices/Legal/Casos/x.md"}, {"write", "/Offices/Nueva/x.md"}, {"write", "/Offices/x.md"},
+		{"write_document", "/Offices/Legal/x.md"}, {"write_document", "/Offices/Nueva/x.md"},
+	} {
+		args := map[string]any{"path": a.path, "content": "x"}
+		if a.action == "write_document" {
+			args = map[string]any{"path": a.path, "document": map[string]any{"title": "x", "blocks": []any{map[string]any{"type": "paragraph", "text": "x"}}}}
+		}
+		if pl := e.plan("acct", a.action, args); pl.Deny != "other_office" || pl.Approval {
+			t.Fatalf("%s %s: %+v", a.action, a.path, pl)
+		}
+	}
+	// a move from its office into another office (or a new one) too
+	for _, to := range []string{"/Offices/Legal/Casos/balance.md", "/Offices/Nueva/balance.md"} {
+		if pl := e.plan("acct", "move", map[string]any{"path": "/Offices/Contabilidad/Clientes/balance.md", "to": to}); pl.Deny != "other_office" {
+			t.Fatalf("move to %s: %+v", to, pl)
+		}
+	}
+	// its own office, its desk and /Shared are unchanged
+	if pl := e.plan("acct", "write", map[string]any{"path": "/Offices/Contabilidad/x.md", "content": "x"}); pl.Deny != "" || pl.Approval {
+		t.Fatalf("own office: %+v", pl)
+	}
+	if pl := e.plan("acct", "write", map[string]any{"path": "/Shared/x.md", "content": "x"}); pl.Deny != "" || !pl.Approval {
+		t.Fatalf("shared: %+v", pl)
+	}
+	// a rule a person set that opens the other office still decides (read: writes ask a human)
+	if _, err := e.svc.AddGrant(e.ctx, drive.Human("u"), "acct", "/Offices/Legal"); err != nil {
+		t.Fatal(err)
+	}
+	if pl := e.plan("acct", "write", map[string]any{"path": "/Offices/Legal/x.md", "content": "x"}); pl.Deny != "" || !pl.Approval {
+		t.Fatalf("other office with a read rule: %+v", pl)
+	}
+	// with a person who edits there, the write is theirs to approve
+	e.svc.SetPeople(officePeopleByID{"dep_acct": drive.AccessEdit, "dep_legal": drive.AccessEdit})
+	if pl := e.fs.Plan(drive.WithRequester(e.ctx, "beto"), "acct", "write", map[string]any{"path": "/Offices/Legal/y.md", "content": "x"}); pl.Deny != "" || !pl.Approval {
+		t.Fatalf("person who edits Legal: %+v", pl)
+	}
+}
+
+// The agent's zones follow the store: /OFFİCES/... (dotted capital İ) is /Offices for Postgres and the memstore alike.
+func TestAgentZonesUnicodeSpellingOfOffices(t *testing.T) {
+	e := newOfficeEnv(t)
+	const legal, own = "/OFFİCES/Legal/Casos/demanda.md", "/OFFİCES/Contabilidad/z.md"
+	if pl := e.plan("acct", "read", map[string]any{"path": legal}); pl.Deny != "not_granted" {
+		t.Fatalf("read another office: %+v", pl)
+	}
+	if pl := e.plan("acct", "write", map[string]any{"path": "/OFFİCES/Legal/x.md", "content": "x"}); pl.Deny != "other_office" {
+		t.Fatalf("write another office: %+v", pl)
+	}
+	if pl := e.plan("acct", "write", map[string]any{"path": own, "content": "x"}); pl.Deny != "" || pl.Approval {
+		t.Fatalf("own office: %+v", pl)
+	}
+	e.svc.SetPeople(officePeopleByID{"dep_acct": drive.AccessNone})
+	beto := drive.WithRequester(e.ctx, "beto")
+	if pl := e.fs.Plan(beto, "acct", "write", map[string]any{"path": own, "content": "x"}); pl.Deny != "person_no_access" {
+		t.Fatalf("person without access, unicode spelling: %+v", pl)
+	}
+	if pl := e.fs.Plan(beto, "acct", "read", map[string]any{"path": "/OFFİCES/Contabilidad/Clientes/balance.md"}); pl.Deny != "person_no_access" {
+		t.Fatalf("person without access, unicode read: %+v", pl)
 	}
 }

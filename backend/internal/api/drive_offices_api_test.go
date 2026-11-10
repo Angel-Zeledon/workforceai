@@ -352,6 +352,32 @@ func TestOfficeHiddenFromMeetingMinutes(t *testing.T) {
 	}
 }
 
+// The minutes check the path the store resolved, not the spelling asked: another case or a Unicode folding that the
+// store (lower() in Postgres, strings.ToLower in the memstore: both fold the dotted capital İ to "i") resolves to Legal
+// stays hidden, word for word like a missing file. Limit without Postgres: only foldings Go's ToLower shares are tested.
+func TestOfficeMinutesCheckTheResolvedPath(t *testing.T) {
+	o := newOfficeDrive(t)
+	o.upload(o.ana, "/Offices/Legal/contrato.md", "acuerdo secreto")
+	u := api1 + "/meetings/mtg_ghost/minutes"
+	for _, spelled := range []string{"/offices/legal/contrato.md", "/OFFİCES/Legal/contrato.md"} {
+		missing := strings.Replace(spelled, "contrato", "nada", 1)
+		r1, b1 := o.e.do("POST", u, o.beto, map[string]any{"file_path": spelled}, nil)
+		r2, b2 := o.e.do("POST", u, o.beto, map[string]any{"file_path": missing}, nil)
+		if r1.StatusCode != 404 || r1.StatusCode != r2.StatusCode || string(b1) != string(b2) {
+			t.Fatalf("%s: hidden = %d %s; missing = %d %s", spelled, r1.StatusCode, b1, r2.StatusCode, b2)
+		}
+		c1, m1 := o.run(o.beto, "/minutes "+spelled)
+		c2, m2 := o.run(o.beto, "/minutes "+missing)
+		if c1 != 404 || c1 != c2 || m1 != m2 {
+			t.Fatalf("/minutes %s: hidden = %d %s; missing = %d %s", spelled, c1, m1, c2, m2)
+		}
+		// ana (a member) passes the file gate: the missing meeting answers
+		if r, b := o.e.do("POST", u, o.ana, map[string]any{"file_path": spelled}, nil); r.StatusCode != 404 || strings.Contains(string(b), "file not found") {
+			t.Fatalf("ana %s = %d %s", spelled, r.StatusCode, b)
+		}
+	}
+}
+
 func TestOfficeHiddenFromProjectInputs(t *testing.T) {
 	o := newOfficeDrive(t)
 	csv := map[string]string{"Content-Type": "text/csv"}

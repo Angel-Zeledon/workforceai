@@ -67,8 +67,9 @@ func TestDriveFilesRespectOfficesAndPerson(t *testing.T) {
 	}
 }
 
-// An actor that is not a person (an API token) does not limit the agent: it keeps its office in the memory.
-func TestDriveFilesNonPersonActorKeepsOffice(t *testing.T) {
+// An actor that is neither a person nor the platform (an API token) gets nothing from /Offices in the memory; the
+// platform itself (the scheduler, no actor) leaves the agent its office.
+func TestDriveFilesForeignActorGetsNoOffice(t *testing.T) {
 	drv := newDrive()
 	ctx := application.WithOrg(context.Background(), "org-a")
 	if _, err := drv.EnsureOfficeFolder(ctx, "dep_acct", "Contabilidad", nil); err != nil {
@@ -80,8 +81,14 @@ func TestDriveFilesNonPersonActorKeepsOffice(t *testing.T) {
 	drv.SetPeople(officeLevels{})
 	files := &memory.DriveFiles{FS: &drive.AgentFS{Svc: drv, Offices: agentOffice{"acct": "dep_acct"}}}
 	items, err := files.Files(application.WithActor(ctx, "token:abc"), "org-a", "acct", []string{"conciliacion"}, 10)
-	if err != nil || len(items) != 1 {
+	if err != nil || len(items) != 0 {
 		t.Fatalf("token actor: %v %+v", err, items)
+	}
+	for _, who := range []string{"", "scheduler"} {
+		items, err := files.Files(application.WithActor(ctx, who), "org-a", "acct", []string{"conciliacion"}, 10)
+		if err != nil || len(items) != 1 {
+			t.Fatalf("%q: the agent keeps its office: %v %+v", who, err, items)
+		}
 	}
 }
 

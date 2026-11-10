@@ -215,8 +215,8 @@ func (a *AgentFS) runRecent(ctx context.Context, agentID string, args map[string
 	lim = min(lim, MaxRecentList)
 	var by *Principal
 	note := "touched by anybody"
-	if person := requesterFrom(ctx); !strings.EqualFold(strings.TrimSpace(argStr(args, "by")), "anyone") {
-		if person != "" && person != "user" {
+	if person, _ := requesterOf(ctx); !strings.EqualFold(strings.TrimSpace(argStr(args, "by")), "anyone") {
+		if person != "" {
 			p := Human(person)
 			by, note = &p, "uploaded, changed or moved by the person who asked"
 		} else {
@@ -262,7 +262,7 @@ func (a *AgentFS) runRecent(ctx context.Context, agentID string, args map[string
 				if z := a.zoneAll(ctx, org, sc, f.Path); canRead(z) || z == ZonePersonDenied {
 					continue
 				}
-				if underOffices(f.Path) && a.Svc.personAccess(ctx, by.ID, f.Path, memo) == AccessNone {
+				if a.Svc.underOffices(ctx, org, f.Path) && a.Svc.personAccess(ctx, by.ID, f.Path, memo) == AccessNone {
 					continue // an office the person cannot see (any more) is never named
 				}
 				dir := parentPath(f.Path)

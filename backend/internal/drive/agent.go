@@ -115,9 +115,11 @@ type scope struct {
 	customer string
 	owned    []ownedPath
 	// office is the folder of the agent's office ("" = General or none); person is the person the call works for
-	// ("" = nobody: a scheduled or system run). Both in agent_offices.go.
-	office string
-	person string
+	// ("" = nobody: a scheduled or system run); foreign is a requester that is neither (a token, a link...: no office
+	// at all). All in agent_offices.go.
+	office  string
+	person  string
+	foreign bool
 }
 
 func (a *AgentFS) scopeOf(ctx context.Context, agentID string) (scope, error) {
@@ -140,7 +142,7 @@ func (a *AgentFS) scopeOf(ctx context.Context, agentID string) (scope, error) {
 	if sc.office, err = a.officeFolderOf(ctx, org, agentID); err != nil {
 		return sc, err
 	}
-	sc.person = personRequester(ctx)
+	sc.person, sc.foreign = requesterOf(ctx)
 	if sc.customer = customerFromCtx(ctx); sc.customer != "" {
 		if err := a.loadCustomerScope(ctx, org, &sc); err != nil {
 			return sc, err
@@ -156,8 +158,8 @@ func (a *AgentFS) baseZone(ctx context.Context, org string, sc scope, p string) 
 	if len(segs) == 0 {
 		return ZoneOutside, 0
 	}
-	if strings.EqualFold(segs[0], RootOffices) { // the store resolves paths without regard to case
-		if len(segs) >= 2 && sc.office != "" && strings.EqualFold(JoinPath(segs[:2]...), sc.office) {
+	if a.Svc.isOfficesRoot(ctx, org, segs[0]) { // the store resolves paths without regard to case (people.go)
+		if len(segs) >= 2 && sc.office != "" && strings.EqualFold(JoinPath(RootOffices, segs[1]), sc.office) {
 			return ZoneOffice, 2
 		}
 		return ZoneOtherOffice, 0
@@ -228,7 +230,7 @@ func (a *AgentFS) zoneAll(ctx context.Context, org string, sc scope, p string) s
 	default: // B12: a customer-scoped task never reaches another customer's data
 		z = sc.customerZone(base, p)
 	}
-	return a.personLimit(ctx, sc, p, z)
+	return a.personLimit(ctx, org, sc, p, z)
 }
 
 // ---- argument helpers ----
@@ -457,6 +459,8 @@ func (a *AgentFS) planWrite(ctx context.Context, org string, sc scope, args map[
 	pl := Plan{Path: c, Bytes: len(content), Reversibility: "versioned", Risk: "medium"}
 	if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
 		return personDeny()
+	} else if sc.otherOfficeRefused(z) {
+		return otherOfficeDeny()
 	} else if sc.writeRefused(z) {
 		return deny(denyCustomerIsolation, "this task works for one customer: write only in that customer's folders or your desk for it")
 	} else if !autoWrite(z) {
@@ -501,8 +505,10 @@ func (a *AgentFS) planWriteDocument(ctx context.Context, org string, sc scope, a
 			return deny("tags_invalid", err.(*Error).Msg)
 		}
 	}
-	if a.zoneAll(ctx, org, sc, c) == ZonePersonDenied {
+	if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
 		return personDeny()
+	} else if sc.otherOfficeRefused(z) {
+		return otherOfficeDeny()
 	}
 	pl := Plan{Path: c, Reversibility: "versioned", Risk: "medium"}
 	doc, perr := officedoc.Parse(args["document"])
@@ -558,6 +564,9 @@ func (a *AgentFS) planMove(ctx context.Context, org string, sc scope, args map[s
 	zd := a.zoneAll(ctx, org, sc, dest)
 	if zd == ZonePersonDenied {
 		return personDeny()
+	}
+	if sc.otherOfficeRefused(zd) {
+		return otherOfficeDeny()
 	}
 	if sc.writeRefused(zs) || sc.writeRefused(zd) {
 		return deny(denyCustomerIsolation, "this task works for one customer: move only inside that customer's folders")

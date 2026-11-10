@@ -67,7 +67,12 @@ func TestInputsOutsideTheAgentZonesAreNotFound(t *testing.T) {
 	if err := prep("beto", "/Offices/Contabilidad/y.md"); err == nil || err.Error() != invalid("input file %q was not found", "/Offices/Contabilidad/y.md").Error() {
 		t.Fatalf("beto cannot see Contabilidad: %v", err)
 	}
-	if err := prep("token:abc", "/Offices/Contabilidad/y.md"); err != nil {
-		t.Fatalf("a token is not a person: %v", err)
+	// a token is neither a person nor the platform: no office at all, not even the agent's own (fails closed)
+	if err := prep("token:abc", "/Offices/Contabilidad/y.md"); err == nil || err.Error() != invalid("input file %q was not found", "/Offices/Contabilidad/y.md").Error() {
+		t.Fatalf("a token gets no office: %v", err)
+	}
+	// the platform itself (a scheduled run) keeps the agent's office
+	if err := prep("scheduler", "/Offices/Contabilidad/y.md"); err != nil {
+		t.Fatalf("a scheduled run keeps its office: %v", err)
 	}
 }

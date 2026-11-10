@@ -57,8 +57,8 @@ func wireSandbox(log *slog.Logger, pg *postgres.Store, rec *application.Recorder
 			fs = &drive.AgentFS{Svc: dsvc}
 		}
 		df := &sandbox.DriveFiles{Drive: dsvc, FS: fs, Notify: func(ctx context.Context, org, agentID, p string) {
-			rec.Emit(application.WithOrg(ctx, org), application.Action{Type: "file.activity", AgentID: agentID, Entity: "file", SkipAudit: true,
-				Payload: map[string]any{"agent_id": agentID, "action": "write", "path": p}})
+			octx := application.WithOrg(ctx, org) // inside an office's folder: only its members hear of it
+			rec.Emit(octx, fileActivity(octx, dsvc, agentID, map[string]any{"agent_id": agentID, "action": "write", "path": p}))
 		}}
 		svc.Files, svc.Sink = df, df
 	}

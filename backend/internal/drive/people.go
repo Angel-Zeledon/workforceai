@@ -2,7 +2,10 @@ package drive
 
 import (
 	"context"
+	"errors"
 	"strings"
+
+	"aiworkforce/backend/internal/domain"
 )
 
 // PeopleAccess tells what a person may do inside an office's folder: AccessEdit, AccessRead or AccessNone.
@@ -25,7 +28,7 @@ func (s *Service) personAccess(ctx context.Context, userID, path string, memo ma
 		return AccessEdit
 	}
 	segs, err := Segments(path)
-	if err != nil || len(segs) == 0 || !strings.EqualFold(segs[0], RootOffices) {
+	if err != nil || len(segs) == 0 || !s.isOfficesRoot(ctx, s.org(ctx), segs[0]) {
 		return AccessEdit
 	}
 	if len(segs) == 1 {
@@ -61,4 +64,64 @@ func (s *Service) VisibleTo(ctx context.Context, userID string, paths []string) 
 		out[i] = s.personAccess(ctx, userID, p, memo) != AccessNone
 	}
 	return out
+}
+
+// isOfficesRoot reports whether a top-level segment names /Offices. Go compares names with EqualFold, but Postgres
+// resolves paths with lower() under the database collation, which may fold more ("OFFİCES", with a dotted capital
+// İ, lowers to "offices"): a segment that is not one of the well-known roots in ASCII is asked to the store, which
+// answers with the folder it would resolve to. One query, only for such a segment; a store error counts as /Offices
+// (fails closed: inside /Offices nothing is granted by default).
+func (s *Service) isOfficesRoot(ctx context.Context, org, seg string) bool {
+	if strings.EqualFold(seg, RootOffices) {
+		return true
+	}
+	for _, r := range Roots {
+		if strings.EqualFold(seg, r) {
+			return false
+		}
+	}
+	f, err := s.cfg.Store.FolderByPath(ctx, org, "/"+seg)
+	if errors.Is(err, domain.ErrNotFound) {
+		return false
+	}
+	return err != nil || f.RootKind == rootKind(RootOffices)
+}
+
+// underOffices reports whether a path lies under /Offices (any spelling the store resolves there).
+func (s *Service) underOffices(ctx context.Context, org, p string) bool {
+	segs, err := Segments(p)
+	return err == nil && len(segs) > 0 && s.isOfficesRoot(ctx, org, segs[0])
+}
+
+// OfficeMembers is optionally implemented by the PeopleAccess adapter: the user ids of the members of an office.
+type OfficeMembers interface {
+	OfficeMembers(ctx context.Context, org, officeID string) ([]string, error)
+}
+
+// SealedAudience tells who may learn that something happened at path (a live event naming it). sealed is false for a
+// path outside an office's folder (anyone in the organization). Inside /Offices/<office>, members are the members of
+// that office; nil when they cannot be told (no adapter, an unknown office, an error, nobody): the caller must then
+// not name the path at all.
+func (s *Service) SealedAudience(ctx context.Context, path string) (members []string, sealed bool) {
+	if s.cfg.People == nil {
+		return nil, false // no office folders are sealed (PersonAccess: edit everywhere)
+	}
+	org := s.org(ctx)
+	segs, err := Segments(path)
+	if err != nil || len(segs) < 2 || !s.isOfficesRoot(ctx, org, segs[0]) {
+		return nil, false
+	}
+	om, ok := s.cfg.People.(OfficeMembers)
+	if !ok {
+		return nil, true
+	}
+	f, err := s.cfg.Store.FolderByPath(ctx, org, JoinPath(RootOffices, segs[1]))
+	if err != nil || f.RefID == "" {
+		return nil, true
+	}
+	ids, err := om.OfficeMembers(ctx, org, f.RefID)
+	if err != nil || len(ids) == 0 {
+		return nil, true
+	}
+	return ids, true
 }

@@ -109,10 +109,20 @@ func PersonFrom(ctx context.Context) string {
 	return PersonID(ActorFrom(ctx, ""))
 }
 
+// IsSystemActor reports whether actor is the platform itself ("" included: nobody, the system, the scheduler, the
+// orchestrator, the runtime, the demo, an unauthenticated "user"): work it starts is the agents' own. Every other
+// actor is either a person (PersonID) or a non-person actor that acts for somebody (token:, link:, slack:, agent:...).
+func IsSystemActor(actor string) bool {
+	switch strings.TrimSpace(actor) {
+	case "", "user", "system", "orchestrator", "scheduler", "demo", "runtime":
+		return true
+	}
+	return false
+}
+
 // PersonID filters an actor string down to a person id ("" when the actor is not a person).
 func PersonID(actor string) string {
-	switch actor {
-	case "", "user", "system", "orchestrator", "scheduler", "demo", "runtime":
+	if IsSystemActor(actor) {
 		return ""
 	}
 	if strings.ContainsAny(actor, ": ") {

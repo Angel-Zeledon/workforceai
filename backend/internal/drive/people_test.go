@@ -114,3 +114,73 @@ func TestVisibleToMemoIgnoresCase(t *testing.T) {
 		t.Fatalf("got %v asked %v", got, fp.asked)
 	}
 }
+
+// Postgres resolves paths with lower() under the database collation, which folds the dotted capital İ to "i": a path
+// spelled /OFFİCES/... reaches the office folder although EqualFold("OFFİCES", "Offices") is false. The memstore
+// lowers with strings.ToLower, which folds İ the same way, so this test reproduces it without Postgres (its limit:
+// other collation-only foldings are not covered here; the store lookup in isOfficesRoot covers them all the same).
+func TestPersonAccessUnicodeSpellingOfOfficesRoot(t *testing.T) {
+	ctx := context.Background()
+	fp := &fakePeople{level: drive.AccessNone}
+	svc := peopleSvc(t, fp)
+	const p = "/OFFİCES/Legal/Casos/x.md"
+	if f, err := svc.FolderByPath(ctx, "/OFFİCES/Legal"); err != nil || f.Path != "/Offices/Legal" {
+		t.Fatalf("the store resolves the spelling to the office folder (precondition): %+v %v", f, err)
+	}
+	if got := svc.PersonAccess(ctx, "u1", p); got != drive.AccessNone {
+		t.Fatalf("%s: got %s", p, got)
+	}
+	if got := svc.VisibleTo(ctx, "u1", []string{p, "/OFFİCES"}); got[0] || !got[1] {
+		t.Fatalf("visible %v", got)
+	}
+	// a name that resolves to nothing is not an office: edit as before, and no office is asked
+	fp.asked = nil
+	if got := svc.PersonAccess(ctx, "u1", "/NİNGUNA/x.md"); got != drive.AccessEdit || len(fp.asked) != 0 {
+		t.Fatalf("unknown root: %s asked %v", got, fp.asked)
+	}
+}
+
+type peopleWithMembers struct {
+	fakePeople
+	members map[string][]string
+	err     error
+}
+
+func (p *peopleWithMembers) OfficeMembers(_ context.Context, _, officeID string) ([]string, error) {
+	return p.members[officeID], p.err
+}
+
+func TestSealedAudience(t *testing.T) {
+	ctx := context.Background()
+	pm := &peopleWithMembers{members: map[string][]string{"dep_legal": {"u-ana", "u-beto"}}}
+	svc := peopleSvc(t, nil)
+	svc.SetPeople(pm)
+	for _, p := range []string{"/Shared/a.md", "/Offices", "/Agents/x/a.md"} {
+		if m, sealed := svc.SealedAudience(ctx, p); sealed || m != nil {
+			t.Fatalf("%s: %v %v", p, m, sealed)
+		}
+	}
+	for _, p := range []string{"/Offices/Legal/Casos/x.md", "/offices/legal/x.md", "/OFFİCES/Legal/x.md"} {
+		if m, sealed := svc.SealedAudience(ctx, p); !sealed || len(m) != 2 || m[0] != "u-ana" {
+			t.Fatalf("%s: %v %v", p, m, sealed)
+		}
+	}
+	// members that cannot be told: sealed, nobody named (the caller says nothing of the path)
+	for _, p := range []string{"/Offices/Nope/x.md"} {
+		if m, sealed := svc.SealedAudience(ctx, p); !sealed || m != nil {
+			t.Fatalf("%s: %v %v", p, m, sealed)
+		}
+	}
+	pm.err = errors.New("boom")
+	if m, sealed := svc.SealedAudience(ctx, "/Offices/Legal/x.md"); !sealed || m != nil {
+		t.Fatalf("error: %v %v", m, sealed)
+	}
+	svc.SetPeople(&fakePeople{level: drive.AccessEdit}) // an adapter without members
+	if m, sealed := svc.SealedAudience(ctx, "/Offices/Legal/x.md"); !sealed || m != nil {
+		t.Fatalf("no members adapter: %v %v", m, sealed)
+	}
+	svc.SetPeople(nil)
+	if m, sealed := svc.SealedAudience(ctx, "/Offices/Legal/x.md"); sealed || m != nil {
+		t.Fatalf("no people adapter: nothing sealed: %v %v", m, sealed)
+	}
+}
