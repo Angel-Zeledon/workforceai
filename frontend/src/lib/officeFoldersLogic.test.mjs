@@ -1,7 +1,7 @@
 // Unit tests of the office folders helpers (run: npm run test:unit).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { attachDest, rootLabel, privateOfficeFolders, officeFolderOfAgent } from "./officeFoldersLogic.ts";
+import { attachDest, rootLabel, privateOfficeFolders, officeFolderOfAgent, frozenDest } from "./officeFoldersLogic.ts";
 
 const t = (k) => ({ "drive.root.offices": "Oficinas", "drive.rootName.Shared": "Compartido" })[k] ?? k;
 
@@ -35,4 +35,19 @@ test("officeFolderOfAgent: agent conversation -> folder of its office", () => {
   assert.equal(officeFolderOfAgent("agent:a2", dir, offices), undefined);
   assert.equal(officeFolderOfAgent("office", dir, offices), undefined);
   assert.equal(officeFolderOfAgent("agent:zz", dir, offices), undefined);
+});
+
+test("frozenDest: unresolved -> no destination yet", () => {
+  assert.equal(frozenDest({ resolved: false }, "2026-11-09", "Adjuntos"), null);
+});
+test("frozenDest: resolved with folder -> office folder; failure/no folder -> Shared/Chat", () => {
+  assert.equal(frozenDest({ resolved: true, officeFolder: "/Offices/X" }, "2026-11-09", "Adjuntos"), "/Offices/X/Adjuntos/2026-11-09");
+  assert.equal(frozenDest({ resolved: true }, "2026-11-09", "Adjuntos"), "/Shared/Chat/2026-11-09");
+});
+test("frozenDest: a frozen destination ignores later word or day changes", () => {
+  const frozen = frozenDest({ resolved: true, officeFolder: "/Offices/X" }, "2026-11-09", "Adjuntos");
+  assert.equal(frozenDest({ resolved: true, officeFolder: "/Offices/X", frozen }, "2026-11-10", "Attachments"), "/Offices/X/Adjuntos/2026-11-09");
+});
+test("frozenDest: what the person chose wins", () => {
+  assert.equal(frozenDest({ resolved: false, chosen: "/Shared/Mio", frozen: "/Offices/X/A/d" }, "2026-11-09", "Adjuntos"), "/Shared/Mio");
 });

@@ -7,7 +7,7 @@ import type { FileRef } from "@/lib/types";
 import { Btn } from "../ui";
 import { Icon } from "../icons";
 import { officesApi } from "@/lib/officesApi";
-import { attachDest, officeFolderOfAgent } from "@/lib/officeFoldersLogic";
+import { attachDest, frozenDest, officeFolderOfAgent } from "@/lib/officeFoldersLogic";
 
 /**
  * Attachments of the chat composer, the way people expect them (Claude, ChatGPT): files upload as soon as they are
@@ -50,20 +50,36 @@ export function fmtSize(n: number): string {
 export function useAttachments(conv: string) {
   const { t } = useT();
   const [items, setItems] = useState<Att[]>([]);
-  const [officeFolder, setOfficeFolder] = useState<string | undefined>();
-  const [chosen, setChosen] = useState<string | null>(null); // what the person picked (or saved) wins over the default
-  // default destination: the office folder of the agent of this conversation (Shared/Chat without one)
-  const dest = chosen ?? attachDest(officeFolder, today(), t("drive.attachFolder"));
+  // Default destination, fixed ONCE per conversation when the office of its agent is resolved (word and day of that
+  // moment); the person's choice (state/localStorage) wins. Uploads wait until there is a destination.
+  const [res, setRes] = useState<{ conv: string; folder?: string } | null>(null);
+  const [frozenS, setFrozenS] = useState<{ conv: string; value: string } | null>(null);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const tRef = useRef(t); tRef.current = t;
   useEffect(() => {
     let alive = true;
-    setOfficeFolder(undefined);
-    if (conv.startsWith("agent:")) {
-      Promise.all([officesApi.directory(), officesApi.list()])
-        .then(([d, o]) => { if (alive) setOfficeFolder(officeFolderOfAgent(conv, d.agents, o.offices)); })
-        .catch(() => { /* older backend: Shared/Chat */ });
-    }
+    setRes(null);
+    if (!conv.startsWith("agent:")) { setRes({ conv }); return; }
+    Promise.all([officesApi.directory(), officesApi.list()])
+      .then(([d, o]) => { if (alive) setRes({ conv, folder: officeFolderOfAgent(conv, d.agents, o.offices) }); })
+      .catch(() => { if (alive) setRes({ conv }); }); // older backend or failure: Shared/Chat
     return () => { alive = false; };
   }, [conv]);
+  const resolved = res?.conv === conv;
+  const frozen = frozenS?.conv === conv ? frozenS.value : null;
+  const dest = frozenDest({ chosen, frozen, resolved, officeFolder: resolved ? res?.folder : undefined }, today(), t("drive.attachFolder"));
+  useEffect(() => {
+    if (resolved && !frozen) setFrozenS({ conv, value: attachDest(res?.folder, today(), tRef.current("drive.attachFolder")) });
+  }, [resolved, frozen, conv, res]);
+  const destRef = useRef<string | null>(null);
+  const waiters = useRef<((d: string) => void)[]>([]);
+  useEffect(() => {
+    destRef.current = dest;
+    if (dest) { const w = waiters.current; waiters.current = []; w.forEach((f) => f(dest)); }
+  }, [dest]);
+  const whenDest = useCallback((fn: (d: string) => void) => {
+    if (destRef.current) fn(destRef.current); else waiters.current.push(fn);
+  }, []);
   const urls = useRef(new Set<string>());
   const maxBytes = useUploadLimit();
 
@@ -114,13 +130,13 @@ export function useAttachments(conv: string) {
         if (preview) urls.current.add(preview);
         const tooBig = f.size > maxBytes;
         const a: Att = { id: uid(), name: relative ? rel : f.name, size: f.size, mime: f.type, preview, status: tooBig ? "error" : "uploading", error: tooBig ? "file_too_large" : undefined, from: "upload" };
-        if (!tooBig) queueMicrotask(() => void send(a.id, f, rel, dest));
+        if (!tooBig) queueMicrotask(() => whenDest((d) => void send(a.id, f, rel, d)));
         return a;
       });
       return [...cur, ...added];
     });
     return skipped;
-  }, [dest, send, maxBytes]);
+  }, [whenDest, send, maxBytes]);
 
   const addDrive = useCallback((files: DriveFile[]) => {
     setItems((cur) => {
@@ -148,7 +164,7 @@ export function useAttachments(conv: string) {
   }, []);
 
   return {
-    items, dest, setDest, addFiles, addDrive, remove, clear,
+    items, dest: dest ?? "", setDest, addFiles, addDrive, remove, clear,
     uploading: items.some((a) => a.status === "uploading"),
     failed: items.some((a) => a.status === "error"),
     refs: items.filter((a) => a.status === "done" && a.ref).map((a) => a.ref as FileRef),

@@ -29,3 +29,22 @@ export function officeFolderOfAgent(conv: string, directory: { id: string; offic
   const f = a?.office_id ? offices.find((o) => o.id === a.office_id)?.folder_path : undefined;
   return f || undefined;
 }
+
+export interface DestState {
+  /** The person picked (or saved) a folder: it always wins. */
+  chosen?: string | null;
+  /** The default fixed once for this conversation. */
+  frozen?: string | null;
+  /** The office of the agent has been resolved (or the resolution failed). */
+  resolved: boolean;
+  officeFolder?: string;
+}
+
+/** Destination of the attachments of a conversation: chosen > frozen default > fixed now that the office is resolved >
+ * null while it is still resolving. A later change of word (language) or day never changes a frozen destination. */
+export function frozenDest(s: DestState, today: string, word: string): string | null {
+  if (s.chosen) return s.chosen;
+  if (s.frozen) return s.frozen;
+  if (!s.resolved) return null;
+  return attachDest(s.officeFolder, today, word);
+}
