@@ -28,6 +28,7 @@ import (
 	"aiworkforce/backend/internal/infrastructure/runtime"
 	"aiworkforce/backend/internal/mailer"
 	"aiworkforce/backend/internal/notify"
+	"aiworkforce/backend/internal/officeaudience"
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
@@ -392,6 +393,11 @@ func run(log *slog.Logger) error {
 	}
 	if skillsSvc != nil && deps.Offices != nil {
 		skillsSvc.SetOffices(deps.Offices.Model) // D3: skills of a department follow its visibility
+	}
+	if cfg.AuthEnabled && deps.Offices != nil { // D3 (internal/officeaudience): a private office's live events reach its members only
+		rec.SetAudienceFor(officeaudience.New(deps.Offices, store, func(c context.Context, org, id string) string {
+			return orch.RequestedBy(application.WithOrg(c, org), id)
+		}, log))
 	}
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	// Governance: API tokens, reports, retention job, webhooks (internal/governance, internal/webhooks).

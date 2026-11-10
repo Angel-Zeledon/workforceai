@@ -64,6 +64,27 @@ func RequestVisible(ctx context.Context, requestID string) bool {
 	return f.Request == nil || f.Request(requestID)
 }
 
+// SharedMessageVisible reports whether the person reading may see a message of a STORED chat conversation: always in
+// a private thread (theirs: the store only returns their own); in a shared one (the office chat, the history shared
+// with an agent) not what an agent whose work they do not see said or was told, which is that office's work and is
+// sealed live as well (internal/officeaudience).
+func SharedMessageVisible(ctx context.Context, m domain.Message) bool {
+	if domain.ChatConvOwner(m.ConversationID) != "" {
+		return true
+	}
+	return !NamesHiddenAgent(ctx, m)
+}
+
+// NamesHiddenAgent reports whether a message was written by or to an agent whose work the person reading does not see.
+func NamesHiddenAgent(ctx context.Context, m domain.Message) bool {
+	for _, a := range []string{m.From, m.To} {
+		if IsAgentActor(a) && !WorkVisible(ctx, a) {
+			return true
+		}
+	}
+	return false
+}
+
 // storedRowVisible reports whether the person reading may see a STORED history row (before the rows of an agent
 // chat are merged): their own thread with an agent always (D3: read only once they cannot use it), the history shared
 // before private threads existed only with the agent's work, a request's conversation with the request, else every

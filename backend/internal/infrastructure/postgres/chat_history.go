@@ -55,6 +55,7 @@ func convSelect(v string) string {
 		AND m.ts > ` + readAtSQL("c.org_id", "'conv:' || c.id", v) + `),
 	COALESCE((SELECT m.text FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id ORDER BY m.ts DESC, m.id DESC LIMIT 1), ''),
 	COALESCE((SELECT m.from_id FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id ORDER BY m.ts DESC, m.id DESC LIMIT 1), ''),
+	COALESCE((SELECT m.to_id FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id ORDER BY m.ts DESC, m.id DESC LIMIT 1), ''),
 	COALESCE((SELECT m.text FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id AND m.from_id = 'user' ORDER BY m.ts, m.id LIMIT 1), '')
 	FROM conversations c`
 }
@@ -62,8 +63,8 @@ func convSelect(v string) string {
 func scanChatConv(r scanner) (application.ChatConversation, error) {
 	var c application.ChatConversation
 	var parts []byte
-	var last, from, first string
-	if err := r.Scan(&c.ID, &c.Title, &parts, &c.RequestID, &c.UpdatedAt, &c.ArchivedAt, &c.TitleCustom, &c.OwnerID, &c.MessageCount, &c.Unread, &last, &from, &first); err != nil {
+	var last, from, to, first string
+	if err := r.Scan(&c.ID, &c.Title, &parts, &c.RequestID, &c.UpdatedAt, &c.ArchivedAt, &c.TitleCustom, &c.OwnerID, &c.MessageCount, &c.Unread, &last, &from, &to, &first); err != nil {
 		return c, err
 	}
 	unmarshal(parts, &c.Participants)
@@ -71,7 +72,7 @@ func scanChatConv(r scanner) (application.ChatConversation, error) {
 	c.LastMessageAt = c.UpdatedAt
 	c.Kind, c.AgentID = application.ChatKind(c.ID)
 	c.Archived = c.ArchivedAt != nil
-	c.Preview, c.PreviewFrom = application.Preview(last), from
+	c.Preview, c.PreviewFrom, c.PreviewTo = application.Preview(last), from, to
 	if strings.TrimSpace(c.Title) == "" {
 		c.Title = application.Preview(first)
 		if r := []rune(c.Title); len(r) > 80 {
@@ -236,9 +237,9 @@ func (s *Store) ChatThreads(ctx context.Context, org, viewer string, agentIDs, n
 			}
 			if t.MessageCount > 0 {
 				var text string
-				if err := tx.QueryRow(ctx, `SELECT m.text, m.from_id, m.ts FROM messages m WHERE `+threadPred("$3")+
+				if err := tx.QueryRow(ctx, `SELECT m.text, m.from_id, m.to_id, m.conversation_id, m.ts FROM messages m WHERE `+threadPred("$3")+
 					` AND NOT (m.conversation_id = ANY($4::text[])) ORDER BY m.ts DESC, m.id DESC LIMIT 1`,
-					org, agent, viewer, hidden).Scan(&text, &t.PreviewFrom, &t.LastMessageAt); err != nil {
+					org, agent, viewer, hidden).Scan(&text, &t.PreviewFrom, &t.PreviewTo, &t.PreviewConv, &t.LastMessageAt); err != nil {
 					return err
 				}
 				t.Preview = application.Preview(text)

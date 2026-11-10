@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +19,9 @@ type Recorder struct {
 	Store Store
 	Pub   Publisher
 	Log   *slog.Logger
+
+	// audienceFor (D3) scopes the live events that name no audience of their own (SetAudienceFor).
+	audienceFor atomic.Pointer[AudienceFunc]
 }
 
 // Action describes something that happened.
@@ -31,6 +35,8 @@ type Action struct {
 	SkipAudit bool
 	// Audience (E0) limits the live delivery to these user ids (a private chat thread). Such an event is
 	// NOT kept in the organization's event log (it would be readable by everyone) and logs no activity.
+	// Without one, the recorder's AudienceFor (D3) may scope the event to the members of a private office: kept
+	// out of the event log too, but its activity line is kept under the office's agent (GET /activity filters it).
 	Audience []string
 }
 
@@ -42,7 +48,14 @@ func (r *Recorder) Emit(ctx context.Context, a Action) {
 	ctx = context.WithoutCancel(ctx)
 	now := time.Now().UTC()
 	ev := domain.Event{ID: newID(), Type: a.Type, TS: now, OrgID: r.org(ctx), AgentID: a.AgentID, Payload: a.Payload, Audience: a.Audience}
-	if len(a.Audience) == 0 {
+	private := len(a.Audience) > 0 // E0: the caller named who receives it
+	var office Audience            // D3: who may see the work of the private office this event is about
+	scoped := false
+	if !private {
+		office, scoped = r.scope(ctx, ev)
+		ev.Audience = office.Users
+	}
+	if !private && !scoped {
 		if err := r.Store.SaveEvent(ctx, r.org(ctx), ev); err != nil {
 			r.Log.Warn("save event", "type", a.Type, "err", err)
 		}
@@ -57,8 +70,14 @@ func (r *Recorder) Emit(ctx context.Context, a Action) {
 		}
 		r.Audit(ctx, domain.AuditLog{Actor: actor, Action: a.Type, Entity: a.Entity, EntityID: a.EntityID, Details: a.Payload})
 	}
-	if a.Text != "" && len(a.Audience) == 0 {
-		r.Activity(ctx, a.AgentID, a.Type, a.Text)
+	switch {
+	case a.Text == "" || private:
+	case !scoped:
+		r.activity(ctx, a.AgentID, a.Type, a.Text, nil)
+	case office.Agent != "":
+		// D3: filed under the private agent that sealed the event, so GET /activity keeps it within the office even
+		// when the event names no agent or one of General (the assistant's report of a private request)
+		r.activity(ctx, office.Agent, a.Type, a.Text, office.Users)
 	}
 }
 
@@ -79,9 +98,21 @@ func (r *Recorder) Audit(ctx context.Context, a domain.AuditLog) {
 	}
 }
 
-// Activity stores an activity item and emits activity.logged.
+// Activity stores an activity item and emits activity.logged (D3: only to the members of the agent's private
+// office).
 func (r *Recorder) Activity(ctx context.Context, agentID, kind, text string) {
 	ctx = context.WithoutCancel(ctx)
+	aud, scoped := r.scope(ctx, domain.Event{Type: domain.EvActivityLogged, OrgID: r.org(ctx), AgentID: agentID})
+	switch {
+	case !scoped:
+		r.activity(ctx, agentID, kind, text, nil)
+	case aud.Agent != "":
+		r.activity(ctx, aud.Agent, kind, text, aud.Users)
+	}
+}
+
+// activity stores an activity item and emits activity.logged to aud (nil: the whole organization).
+func (r *Recorder) activity(ctx context.Context, agentID, kind, text string, aud []string) {
 	item := domain.ActivityItem{ID: newID(), TS: time.Now().UTC(), Kind: kind, Text: text}
 	if agentID != "" {
 		item.AgentID = &agentID
@@ -90,7 +121,8 @@ func (r *Recorder) Activity(ctx context.Context, agentID, kind, text string) {
 		r.Log.Warn("activity", "err", err)
 		return
 	}
-	ev := domain.Event{ID: newID(), Type: domain.EvActivityLogged, TS: item.TS, OrgID: r.org(ctx), AgentID: agentID, Payload: map[string]any{"item": item}}
+	ev := domain.Event{ID: newID(), Type: domain.EvActivityLogged, TS: item.TS, OrgID: r.org(ctx), AgentID: agentID,
+		Payload: map[string]any{"item": item}, Audience: aud}
 	if err := r.Pub.Publish(ctx, ev); err != nil {
 		r.Log.Warn("publish activity", "err", err)
 	}

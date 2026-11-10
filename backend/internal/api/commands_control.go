@@ -66,6 +66,21 @@ func spokenMessages(msgs []domain.Message) []domain.Message {
 	return out
 }
 
+// hidesAnyAgent reports whether some agent's work is hidden from the person (D3: an agent of a private office they
+// are not in). An unreadable agent list fails closed: it counts as hiding some agent.
+func (c *cmdCall) hidesAnyAgent() bool {
+	agents, err := c.s.Store.ListAgents(c.ctx, c.org)
+	if err != nil {
+		return true
+	}
+	for _, a := range agents {
+		if !c.work.agent(a.ID) {
+			return true
+		}
+	}
+	return false
+}
+
 func cmdCompact(c *cmdCall) (*cmdResult, *cmdFail) {
 	// D3: like /export, the chat with an agent is the person's own thread (when they may chat with it or already
 	// have one), never the history shared before private threads when they do not see the agent's work
@@ -80,10 +95,17 @@ func cmdCompact(c *cmdCall) (*cmdResult, *cmdFail) {
 	}
 	// ChatMessagesSince reads the caller's own thread (E0); should it ever read the stored shared chat (no person in
 	// the context), that history stays out unless the agent's work is visible
+	// D3: in a shared chat (the office) what a private office's agent said or was told stays out for whoever does not
+	// see its work, like in the threads
 	msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool {
-		return direct && m.ConversationID == domain.ChatAgentConv(agent) && !c.work.agent(agent)
+		return direct && m.ConversationID == domain.ChatAgentConv(agent) && !c.work.agent(agent) || !application.SharedMessageVisible(c.ctx, m)
 	})
 	msgs = spokenMessages(msgs)
+	if !direct && c.hidesAnyAgent() {
+		// the summary of a shared chat is everybody's: a summary written by a member may quote a private office's agent,
+		// so whoever does not see that work starts it afresh instead of carrying it over
+		cc.Summary = ""
+	}
 	if len(msgs) < 2 {
 		return nil, fail(http.StatusUnprocessableEntity, "nothing_to_do", "Todavía no hay suficiente conversación para resumir.", "There is not enough conversation to summarize yet.")
 	}
@@ -682,8 +704,9 @@ func cmdExport(c *cmdCall) (*cmdResult, *cmdFail) {
 		return nil, c.serviceFail(err)
 	}
 	msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool {
-		// D3: the person's own messages are theirs; the history shared before private threads is the agent's work
-		return direct && m.SharedLegacy && !c.work.agent(agent)
+		// D3: the person's own messages are theirs; the history shared before private threads is the agent's work; in
+		// a shared chat (the office) what a private office's agent said or was told is that office's
+		return direct && m.SharedLegacy && !c.work.agent(agent) || !application.SharedMessageVisible(c.ctx, m)
 	})
 	if len(msgs) == 0 {
 		return nil, fail(http.StatusUnprocessableEntity, "nothing_to_do", "No hay nada que exportar todavía.", "There is nothing to export yet.")

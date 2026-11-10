@@ -53,6 +53,7 @@ type ChatConversation struct {
 	ProjectID    *string   `json:"project_id"`
 	Preview      string    `json:"preview"`
 	PreviewFrom  string    `json:"preview_from,omitempty"`
+	PreviewTo    string    `json:"-"` // the addressee of the previewed message (D3, sealPreview); never sent
 	MessageCount int       `json:"message_count"`
 	Unread       int       `json:"unread"`
 	Archived     bool      `json:"archived"`
@@ -77,6 +78,10 @@ type ChatThread struct {
 	LastMessageAt time.Time `json:"last_message_at"`
 	MessageCount  int       `json:"message_count"`
 	Unread        int       `json:"unread"`
+	// PreviewTo and PreviewConv (never sent) are the addressee and the STORED conversation of the previewed
+	// message, so the service can tell whether the person may read it (D3, SharedMessageVisible).
+	PreviewTo   string `json:"-"`
+	PreviewConv string `json:"-"`
 }
 
 // ChatConvQuery filters the history list. Archived: "" (hide archived), "only", "all".
@@ -170,9 +175,24 @@ func (h *ChatHistory) Conversations(ctx context.Context, q ChatConvQuery) ([]Cha
 		return nil, false, err
 	}
 	rows = slices.DeleteFunc(rows, func(c ChatConversation) bool { return !storedRowVisible(ctx, c) }) // D3: private work
+	for i := range rows {
+		sealPreview(ctx, &rows[i])
+	}
 	rows = publicRows(q.Viewer, rows)
 	h.link(ctx, org, rows)
 	return rows, more, nil
+}
+
+// sealPreview (D3) clears the preview of a STORED chat row when it quotes what an agent whose work the person does not
+// see said or was told in a shared chat (its reply in the office chat, a consultation of it in the history shared with
+// another agent), like the thread previews; the person's own thread keeps it.
+func sealPreview(ctx context.Context, c *ChatConversation) {
+	if !IsChatConversation(c.ID) {
+		return
+	}
+	if !SharedMessageVisible(ctx, domain.Message{From: c.PreviewFrom, To: c.PreviewTo, ConversationID: c.ID}) {
+		c.Preview, c.PreviewFrom, c.PreviewTo = "", "", ""
+	}
 }
 
 // publicRows turns stored rows into what the viewer sees: public ids, and one row per agent chat (their
@@ -247,7 +267,16 @@ func (h *ChatHistory) Threads(ctx context.Context) ([]ChatThread, error) {
 			noShared = append(noShared, a.ID)
 		}
 	}
-	return h.Store.ChatThreads(ctx, org, PersonFrom(ctx), ids, noShared)
+	ts, err := h.Store.ChatThreads(ctx, org, PersonFrom(ctx), ids, noShared)
+	for i := range ts {
+		// D3: a preview never quotes what an agent whose work the person does not see said or was told in a shared
+		// chat (its reply in the office chat, a consultation of it); their own thread with it is theirs
+		m := domain.Message{From: ts[i].PreviewFrom, To: ts[i].PreviewTo, ConversationID: ts[i].PreviewConv}
+		if !SharedMessageVisible(ctx, m) {
+			ts[i].Preview, ts[i].PreviewFrom = "", ""
+		}
+	}
+	return ts, err
 }
 
 func (h *ChatHistory) checkThread(ctx context.Context, key string) error {
@@ -275,6 +304,8 @@ func (h *ChatHistory) Thread(ctx context.Context, q ChatThreadQuery) ([]ChatMess
 	if err != nil {
 		return nil, false, err
 	}
+	// D3: in a shared chat, what a private office's agent said or was told is that office's (sealed live too)
+	msgs = slices.DeleteFunc(msgs, func(m ChatMessage) bool { return !SharedMessageVisible(ctx, m.Message) })
 	plain := make([]domain.Message, len(msgs))
 	for i := range msgs {
 		plain[i] = msgs[i].Message
@@ -384,6 +415,7 @@ func (h *ChatHistory) Update(ctx context.Context, id string, p ChatConvPatch) (C
 	}
 	c, err := h.Store.ChatGetConversation(ctx, org, PersonFrom(ctx), stored)
 	if err == nil {
+		sealPreview(ctx, &c) // D3: the row answered is read like the list's
 		rows := []ChatConversation{publicRow(PersonFrom(ctx), c)}
 		h.link(ctx, org, rows)
 		c = rows[0]
