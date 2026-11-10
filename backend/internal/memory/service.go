@@ -34,6 +34,10 @@ type Config struct {
 	// ExtraRecall (optional, E2 offices) adds memories that do not live in the index: the notes of the agent's
 	// office, of the person it works for and the company's knowledge. They come first, within the same budget.
 	ExtraRecall func(ctx context.Context, org, agentID, requestID, text string) []application.RecalledMemory
+	// AgentOffice (D3) tells the office an agent works in ("" for General's agents, unknown agents and when
+	// there are no offices: then everything stays organization memory, as before). What a department's agents
+	// learn is written with ScopeOffice and only the agents of that office recall it.
+	AgentOffice func(ctx context.Context, org, agentID string) string
 	// Audit records a memory change by a person (optional).
 	Audit func(ctx context.Context, org, actor, action, id string, details map[string]any)
 	Now   func() time.Time
@@ -88,6 +92,14 @@ func (s *Service) tagCustomer(ctx context.Context, org, requestID string, docs .
 	for _, d := range docs {
 		d.CustomerID = cid
 	}
+}
+
+// office is the office of an agent ("" = General, unknown or no offices).
+func (s *Service) office(ctx context.Context, org, agentID string) string {
+	if s.cfg.AgentOffice == nil || agentID == "" {
+		return ""
+	}
+	return s.cfg.AgentOffice(ctx, org, agentID)
 }
 
 func (s *Service) scrub(text string) string {
@@ -194,6 +206,9 @@ func (s *Service) RememberTask(ctx context.Context, org string, t domain.Task, r
 	d.Body = s.scrub(d.Body)
 	d.Title = s.scrub(d.Title)
 	d.ProjectID, d.ProjectName = s.project(ctx, org, t.RequestID)
+	if off := s.office(ctx, org, t.AgentID); off != "" { // D3: what a department learns stays in the department
+		d.Scope, d.OfficeID = ScopeOffice, off
+	}
 	docs := []*Doc{&d}
 	for i, n := range s.CleanNotes(t.Output.MemoryNotes) {
 		docs = append(docs, &Doc{ID: fmt.Sprintf("note_%s_%d", t.ID, i+1), Kind: KindNote, Ref: fmt.Sprintf("memory:%s.%d", t.ID, i+1), Title: capRunes(n, 120), Body: n,
@@ -333,7 +348,7 @@ func (s *Service) Recall(ctx context.Context, org string, q application.MemoryRe
 	}
 	s.topUp(ctx, org)
 	pid, _ := s.project(ctx, org, q.RequestID)
-	query := Query{AgentID: q.AgentID, Text: q.Text, Limit: MaxItems * 2, ExcludeRequest: q.RequestID, PreferProject: pid, CustomerID: cid}
+	query := Query{AgentID: q.AgentID, OfficeID: s.office(ctx, org, q.AgentID), Text: q.Text, Limit: MaxItems * 2, ExcludeRequest: q.RequestID, PreferProject: pid, CustomerID: cid}
 	if pid != "" && s.cfg.ProjectPath != nil {
 		query.PreferPath = s.cfg.ProjectPath(ctx, org, pid)
 	}
@@ -355,7 +370,7 @@ func (s *Service) Search(ctx context.Context, org, agentID, query string, limit 
 		limit = MaxItems
 	}
 	query = capRunes(strings.TrimSpace(query), 500)
-	items := s.retrieve(ctx, org, Query{AgentID: agentID, Text: query, Limit: limit})
+	items := s.retrieve(ctx, org, Query{AgentID: agentID, OfficeID: s.office(ctx, org, agentID), Text: query, Limit: limit})
 	if items == nil {
 		items = []Item{}
 	}
@@ -366,7 +381,7 @@ func (s *Service) Search(ctx context.Context, org, agentID, query string, limit 
 // when the agent may see it. Files are opened with fs.read.
 func (s *Service) Open(ctx context.Context, org, agentID, ref string) (Item, error) {
 	d, err := s.cfg.Docs.GetByRef(ctx, org, ref)
-	if err != nil || d.Suppressed || d.Scope == ScopeAgent && d.AgentID != agentID || !VisibleToCustomer(d, application.CustomerFrom(ctx)) {
+	if err != nil || d.Suppressed || d.Scope == ScopeAgent && d.AgentID != agentID || d.Scope == ScopeOffice && (d.OfficeID == "" || d.OfficeID != s.office(ctx, org, agentID)) || !VisibleToCustomer(d, application.CustomerFrom(ctx)) {
 		return Item{}, ErrNotFound
 	}
 	it := docItem(DocHit{Doc: d}, nil)
@@ -450,6 +465,10 @@ func (s *Service) RememberNote(ctx context.Context, org, agentID, text string) e
 	s.embedDocs(ctx, org, &d)
 	return s.cfg.Docs.Upsert(ctx, org, d)
 }
+
+// SetAgentOffice installs Config.AgentOffice after construction (the offices are wired after the memory). Call it
+// at start-up, before the first task.
+func (s *Service) SetAgentOffice(fn func(ctx context.Context, org, agentID string) string) { s.cfg.AgentOffice = fn }
 
 // SetExtraRecall installs Config.ExtraRecall after construction (the offices are wired after the memory). Call it
 // at start-up, before the first task.

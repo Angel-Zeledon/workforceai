@@ -97,6 +97,18 @@ func officeRecall(m *memory.Service, svc *offices.Service) {
 	if m == nil || svc == nil {
 		return
 	}
+	// D3: what the agents of a department learn stays in the department; General's agents (and unknown ones) keep
+	// writing organization memory.
+	m.SetAgentOffice(func(ctx context.Context, org, agentID string) string {
+		model, err := svc.Model(ctx, org)
+		if err != nil || model == nil {
+			return ""
+		}
+		if id := model.Agent(agentID).OfficeID; id != offices.GeneralID {
+			return id
+		}
+		return ""
+	})
 	m.SetExtraRecall(func(ctx context.Context, org, agentID, _, text string) []application.RecalledMemory {
 		var out []application.RecalledMemory
 		for _, n := range svc.RecallNotes(ctx, org, agentID, application.PersonFrom(ctx), text, 3) {

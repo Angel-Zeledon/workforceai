@@ -72,8 +72,9 @@ func (m *MemStore) RetagCustomer(_ context.Context, org string, sel RetagSelecto
 	return n, nil
 }
 
-func visible(d Doc, agentID string) bool {
-	return !d.Suppressed && (d.Scope == ScopeOrg || d.AgentID == agentID)
+// visible: organization knowledge, the notes of the agent itself and, D3, the documents of its own office.
+func visible(d Doc, agentID, officeID string) bool {
+	return !d.Suppressed && (d.Scope == ScopeOrg || d.AgentID == agentID || d.Scope == ScopeOffice && officeID != "" && d.OfficeID == officeID)
 }
 
 // Search implements DocStore.
@@ -82,7 +83,7 @@ func (m *MemStore) Search(_ context.Context, org string, p SearchParams) ([]DocH
 	defer m.mu.Unlock()
 	var out []DocHit
 	for k, d := range m.docs {
-		if !strings.HasPrefix(k, org+"|") || !visible(d, p.AgentID) || !VisibleToCustomer(d, p.CustomerID) || p.OnlyAgent && d.AgentID != p.AgentID ||
+		if !strings.HasPrefix(k, org+"|") || !visible(d, p.AgentID, p.OfficeID) || !VisibleToCustomer(d, p.CustomerID) || p.OnlyAgent && d.AgentID != p.AgentID ||
 			p.ExcludeRequest != "" && d.RequestID == p.ExcludeRequest {
 			continue
 		}
@@ -192,7 +193,7 @@ func (m *MemStore) Candidates(_ context.Context, org string, q VecQuery) ([]VecC
 	defer m.mu.Unlock()
 	var docs []Doc
 	for k, d := range m.docs {
-		if strings.HasPrefix(k, org+"|") && len(d.Vec) > 0 && d.EmbedModel == q.Model && visible(d, q.AgentID) && VisibleToCustomer(d, q.CustomerID) &&
+		if strings.HasPrefix(k, org+"|") && len(d.Vec) > 0 && d.EmbedModel == q.Model && visible(d, q.AgentID, q.OfficeID) && VisibleToCustomer(d, q.CustomerID) &&
 			(!q.OnlyAgent || d.AgentID == q.AgentID) && (q.ExcludeRequest == "" || d.RequestID != q.ExcludeRequest) {
 			docs = append(docs, d)
 		}

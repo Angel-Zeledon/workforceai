@@ -37,6 +37,9 @@ const (
 const (
 	ScopeOrg   = "org"   // organization knowledge: task outputs, reports
 	ScopeAgent = "agent" // private to the agent that wrote it: its notes
+	// ScopeOffice (D3): what the agents of a department learn stays in that department (Doc.OfficeID); only the
+	// agents of the same office recall it. General's agents write ScopeOrg.
+	ScopeOffice = "office"
 )
 
 // Limits (the budget of what reaches a prompt).
@@ -59,6 +62,8 @@ type Doc struct {
 	Body        string `json:"body"`
 	AgentID     string `json:"agent_id"`
 	Scope       string `json:"scope"`
+	// OfficeID is the office a ScopeOffice document belongs to ("" for every other scope).
+	OfficeID    string `json:"office_id,omitempty"`
 	ProjectID   string `json:"project_id,omitempty"`
 	ProjectName string `json:"project_name,omitempty"`
 	RequestID   string `json:"request_id,omitempty"`
@@ -115,6 +120,9 @@ type Query struct {
 	PreferPath    string
 	// OnlyAgent restricts to what the agent itself produced (the Memory tab list).
 	OnlyAgent bool
+	// OfficeID is the office of AgentID ("" = General or unknown): it also sees the ScopeOffice documents of
+	// that office. The service fills it in when it is empty (Config.AgentOffice).
+	OfficeID string
 	// CustomerID (B12) restricts to the documents of that customer (plus the notes a person wrote
 	// for the agent); "" = not scoped. Drive files follow application.CustomerFrom(ctx).
 	CustomerID string
@@ -130,6 +138,7 @@ type Retriever interface {
 type SearchParams struct {
 	Terms          []string
 	AgentID        string
+	OfficeID       string // D3: the office of AgentID, whose ScopeOffice documents it may also see
 	ExcludeRequest string
 	OnlyAgent      bool   // only documents produced by AgentID
 	CustomerID     string // B12: only documents of this customer (see VisibleToCustomer); "" = all
@@ -148,7 +157,7 @@ type DocStore interface {
 	// Upsert inserts or updates by ref. A suppressed document stays suppressed.
 	Upsert(ctx context.Context, org string, d Doc) error
 	// Search returns the documents any of the terms matches, best first, that
-	// the agent may see (organization scope or its own notes), never suppressed.
+	// the agent may see (organization scope, its office's scope or its own notes), never suppressed.
 	Search(ctx context.Context, org string, p SearchParams) ([]DocHit, error)
 	// List returns the documents an agent produced, newest first, notes first.
 	List(ctx context.Context, org, agentID string, limit int) ([]Doc, error)

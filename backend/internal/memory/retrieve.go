@@ -40,7 +40,7 @@ func (f *FTS) Retrieve(ctx context.Context, org string, q Query) ([]Item, error)
 		limit = 20
 	}
 	var items []Item
-	hits, err := f.Docs.Search(ctx, org, SearchParams{Terms: terms, AgentID: q.AgentID, ExcludeRequest: q.ExcludeRequest, OnlyAgent: q.OnlyAgent, CustomerID: q.CustomerID, Limit: limit * 2})
+	hits, err := f.Docs.Search(ctx, org, SearchParams{Terms: terms, AgentID: q.AgentID, OfficeID: q.OfficeID, ExcludeRequest: q.ExcludeRequest, OnlyAgent: q.OnlyAgent, CustomerID: q.CustomerID, Limit: limit * 2})
 	if err != nil {
 		return nil, err
 	}

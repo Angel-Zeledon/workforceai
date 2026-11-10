@@ -16,7 +16,7 @@ type MemoryStore struct{ S *Store }
 
 var _ memory.DocStore = (*MemoryStore)(nil)
 
-const memCols = `id, kind, ref, title, body, agent_id, scope, project_id, project_name, request_id, source_ref, suppressed, created_at, updated_at, embed_model, embed_hash, customer_id`
+const memCols = `id, kind, ref, title, body, agent_id, scope, project_id, project_name, request_id, source_ref, suppressed, created_at, updated_at, embed_model, embed_hash, customer_id, office_id`
 
 // memCustomerFilter is the customer isolation of memory.VisibleToCustomer in SQL (B12, migration 797):
 // with a customer ($N non-empty) only that customer's documents and the notes a person wrote without one.
@@ -26,7 +26,7 @@ func memCustomerFilter(n string) string {
 
 func scanMemDoc(r scanner) (memory.Doc, error) {
 	var d memory.Doc
-	err := r.Scan(&d.ID, &d.Kind, &d.Ref, &d.Title, &d.Body, &d.AgentID, &d.Scope, &d.ProjectID, &d.ProjectName, &d.RequestID, &d.SourceRef, &d.Suppressed, &d.CreatedAt, &d.UpdatedAt, &d.EmbedModel, &d.EmbedHash, &d.CustomerID)
+	err := r.Scan(&d.ID, &d.Kind, &d.Ref, &d.Title, &d.Body, &d.AgentID, &d.Scope, &d.ProjectID, &d.ProjectName, &d.RequestID, &d.SourceRef, &d.Suppressed, &d.CreatedAt, &d.UpdatedAt, &d.EmbedModel, &d.EmbedHash, &d.CustomerID, &d.OfficeID)
 	return d, err
 }
 
@@ -45,18 +45,18 @@ func (m *MemoryStore) Upsert(ctx context.Context, org string, d memory.Doc) erro
 	if len(d.Vec) > 0 {
 		vec = d.Vec
 	}
-	return m.S.exec(ctx, org, `INSERT INTO memory_docs (org_id, id, kind, ref, title, body, agent_id, scope, project_id, project_name, request_id, source_ref, created_at, updated_at, embedding, embed_model, embed_hash, customer_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+	return m.S.exec(ctx, org, `INSERT INTO memory_docs (org_id, id, kind, ref, title, body, agent_id, scope, project_id, project_name, request_id, source_ref, created_at, updated_at, embedding, embed_model, embed_hash, customer_id, office_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
 		ON CONFLICT (org_id, ref) DO UPDATE SET title=EXCLUDED.title, body=EXCLUDED.body, agent_id=EXCLUDED.agent_id, scope=EXCLUDED.scope,
 			project_id=EXCLUDED.project_id, project_name=EXCLUDED.project_name, request_id=EXCLUDED.request_id, source_ref=EXCLUDED.source_ref,
-			customer_id=EXCLUDED.customer_id, updated_at=EXCLUDED.updated_at,
+			customer_id=EXCLUDED.customer_id, office_id=EXCLUDED.office_id, updated_at=EXCLUDED.updated_at,
 			embedding=CASE WHEN EXCLUDED.embedding IS NOT NULL THEN EXCLUDED.embedding
 			               WHEN memory_docs.embed_hash=EXCLUDED.embed_hash THEN memory_docs.embedding END,
 			embed_model=CASE WHEN EXCLUDED.embedding IS NOT NULL THEN EXCLUDED.embed_model
 			                 WHEN memory_docs.embed_hash=EXCLUDED.embed_hash THEN memory_docs.embed_model ELSE '' END,
 			embed_hash=EXCLUDED.embed_hash`,
 		org, d.ID, d.Kind, d.Ref, d.Title, d.Body, d.AgentID, d.Scope, d.ProjectID, d.ProjectName, d.RequestID, d.SourceRef, d.CreatedAt, d.UpdatedAt,
-		vec, d.EmbedModel, memory.ContentHash(d), d.CustomerID)
+		vec, d.EmbedModel, memory.ContentHash(d), d.CustomerID, d.OfficeID)
 }
 
 // Search implements memory.DocStore. The terms are letters and digits only
@@ -72,18 +72,18 @@ func (m *MemoryStore) Search(ctx context.Context, org string, p memory.SearchPar
 	return many(ctx, m.S, org, func(r scanner) (memory.DocHit, error) {
 		var h memory.DocHit
 		err := r.Scan(&h.Doc.ID, &h.Doc.Kind, &h.Doc.Ref, &h.Doc.Title, &h.Doc.Body, &h.Doc.AgentID, &h.Doc.Scope, &h.Doc.ProjectID, &h.Doc.ProjectName,
-			&h.Doc.RequestID, &h.Doc.SourceRef, &h.Doc.Suppressed, &h.Doc.CreatedAt, &h.Doc.UpdatedAt, &h.Doc.EmbedModel, &h.Doc.EmbedHash, &h.Doc.CustomerID, &h.Score)
+			&h.Doc.RequestID, &h.Doc.SourceRef, &h.Doc.Suppressed, &h.Doc.CreatedAt, &h.Doc.UpdatedAt, &h.Doc.EmbedModel, &h.Doc.EmbedHash, &h.Doc.CustomerID, &h.Doc.OfficeID, &h.Score)
 		return h, err
 	}, `WITH qq AS (SELECT to_tsquery('spanish'::regconfig, $2) AS q)
 		SELECT `+memCols+`, ts_rank_cd(tsv, qq.q, 32)::float8 AS score
 		FROM memory_docs, qq
 		WHERE org_id=$1 AND NOT suppressed AND tsv @@ qq.q
-		  AND (scope='org' OR agent_id=$3)
+		  AND (scope='org' OR agent_id=$3 OR (scope='office' AND $8<>'' AND office_id=$8))
 		  AND (NOT $5 OR agent_id=$3)
 		  AND ($4='' OR request_id<>$4)
 		  AND `+memCustomerFilter("$7")+`
 		ORDER BY score DESC, ref LIMIT $6`,
-		org, strings.Join(p.Terms, " | "), p.AgentID, p.ExcludeRequest, p.OnlyAgent, limit, p.CustomerID)
+		org, strings.Join(p.Terms, " | "), p.AgentID, p.ExcludeRequest, p.OnlyAgent, limit, p.CustomerID, p.OfficeID)
 }
 
 // List implements memory.DocStore: notes first, then the rest, newest first.
@@ -159,12 +159,12 @@ func (m *MemoryStore) Candidates(ctx context.Context, org string, q memory.VecQu
 		return c, err
 	}, `SELECT id, embedding FROM memory_docs
 		WHERE org_id=$1 AND NOT suppressed AND embedding IS NOT NULL AND embed_model=$2
-		  AND (scope='org' OR agent_id=$3)
+		  AND (scope='org' OR agent_id=$3 OR (scope='office' AND $8<>'' AND office_id=$8))
 		  AND (NOT $5 OR agent_id=$3)
 		  AND ($4='' OR request_id<>$4)
 		  AND `+memCustomerFilter("$7")+`
 		ORDER BY updated_at DESC, id LIMIT $6`,
-		org, q.Model, q.AgentID, q.ExcludeRequest, q.OnlyAgent, limit, q.CustomerID)
+		org, q.Model, q.AgentID, q.ExcludeRequest, q.OnlyAgent, limit, q.CustomerID, q.OfficeID)
 }
 
 // Unembedded implements memory.VecStore.
