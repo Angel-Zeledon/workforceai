@@ -137,6 +137,30 @@ func attachmentsFrom(ctx context.Context) []string {
 	return p
 }
 
+type workFolderKey struct{}
+
+// WithWorkFolder carries the drive folder a chat message asks the agents to work in (a department folder the
+// person may read, checked by the caller). The turn's text then ends with a delimited [work folder] block.
+func WithWorkFolder(ctx context.Context, path string) context.Context {
+	return context.WithValue(ctx, workFolderKey{}, path)
+}
+
+func workFolderFrom(ctx context.Context) string {
+	p, _ := ctx.Value(workFolderKey{}).(string)
+	return strings.TrimSpace(p)
+}
+
+// blockSafe keeps a path on one line and without brackets, so it cannot close or open a delimited block.
+var blockSafe = strings.NewReplacer("\n", " ", "\r", " ", "[", "(", "]", ")")
+
+// workFolderNote is the delimited block that tells the agents where to read and write ("" without a folder).
+func workFolderNote(loc, folder string) string {
+	if folder == "" {
+		return ""
+	}
+	return "\n\n" + chatText(loc, "work_folder_note") + "\n[work folder]\n" + blockSafe.Replace(folder) + "\n[/work folder]"
+}
+
 // attachmentNote is the delimited block appended to the text the agents see.
 func attachmentNote(loc string, refs []domain.FileRef) string {
 	if len(refs) == 0 {
@@ -145,7 +169,7 @@ func attachmentNote(loc string, refs []domain.FileRef) string {
 	var b strings.Builder
 	b.WriteString("\n\n[attachments]\n" + chatText(loc, "attach_note"))
 	for _, r := range refs {
-		fmt.Fprintf(&b, "\n- %s", strings.NewReplacer("\n", " ", "\r", " ", "[", "(", "]", ")").Replace(r.Path))
+		fmt.Fprintf(&b, "\n- %s", blockSafe.Replace(r.Path))
 	}
 	b.WriteString("\n[/attachments]")
 	return b.String()

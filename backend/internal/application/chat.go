@@ -386,6 +386,7 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 		m.Files = o.resolveFiles(ctx, att, "attach")
 		t.text += attachmentNote(t.loc, m.Files)
 	}
+	t.text += workFolderNote(t.loc, workFolderFrom(ctx)) // the agents get the folder; the stored message keeps the user's text
 	if err := o.store.AddMessage(ctx, org, m); err != nil {
 		return ChatTurn{}, err
 	}

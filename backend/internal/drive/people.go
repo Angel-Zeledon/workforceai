@@ -66,6 +66,13 @@ func (s *Service) VisibleTo(ctx context.Context, userID string, paths []string) 
 	return out
 }
 
+// InOfficeFolder reports whether path names an office's folder or something inside it (/Offices/<office>/...), under
+// any spelling the store resolves there. /Offices itself is not an office's folder.
+func (s *Service) InOfficeFolder(ctx context.Context, path string) bool {
+	segs, err := Segments(path)
+	return err == nil && len(segs) >= 2 && s.isOfficesRoot(ctx, s.org(ctx), segs[0])
+}
+
 // isOfficesRoot reports whether a top-level segment names /Offices. Go compares names with EqualFold, but Postgres
 // resolves paths with lower() under the database collation, which may fold more ("OFFİCES", with a dotted capital
 // İ, lowers to "offices"): a segment that is not one of the well-known roots in ASCII is asked to the store, which

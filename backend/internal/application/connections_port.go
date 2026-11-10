@@ -114,6 +114,10 @@ type GatewayPending struct {
 	Flags          []string `json:"flags"`
 	// OutboxID is the id of the outbox item that represents this action.
 	OutboxID string `json:"outbox_id,omitempty"`
+	// Path and Action (native drive changes only) are the normalized drive path and the fs action (write, move,
+	// delete...): the approval's context carries them so a screen can tell which file waits for a decision.
+	Path   string `json:"path,omitempty"`
+	Action string `json:"action,omitempty"`
 }
 
 // GatewayOutcome is the redacted result handed back to the orchestrator.

@@ -131,6 +131,8 @@ func (t *GatewayTool) Assess(ctx context.Context, c application.GatewayCall) app
 			Reversibility: pl.Reversibility,
 			Flags:         pl.Flags,
 			Account:       "drive",
+			Path:          pl.Path,
+			Action:        action,
 		}
 	}
 	return as

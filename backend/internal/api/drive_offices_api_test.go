@@ -49,8 +49,14 @@ type officeDrive struct {
 
 func newOfficeDrive(t *testing.T) *officeDrive {
 	t.Helper()
+	return newOfficeDriveRT(t, nil)
+}
+
+// newOfficeDriveRT is newOfficeDrive with its own runtime (nil: the default fake).
+func newOfficeDriveRT(t *testing.T, rt application.Runtime) *officeDrive {
+	t.Helper()
 	var dr *drive.Service
-	e := newEnv(t, opts{auth: true, orgchart: true, drive: true, ws: true, deps: func(d *api.Deps) {
+	e := newEnv(t, opts{auth: true, orgchart: true, drive: true, ws: true, runtime: rt, deps: func(d *api.Deps) {
 		withOffices(d)
 		d.Drive.SetPeople(officeDriveAccess{svc: d.Offices})
 		dr = d.Drive

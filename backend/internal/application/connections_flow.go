@@ -426,6 +426,9 @@ func (o *Orchestrator) gatewayTool(ctx context.Context, rs *run, t *domain.Task,
 	ap := domain.Approval{TaskID: t.ID, AgentID: agent.ID, Action: tr.Action, Risk: risk, Title: p.Title, Details: p.Details,
 		Context: map[string]any{"account": p.Account, "recipients": p.Recipients, "reversibility": p.Reversibility, "tainted": p.Tainted,
 			"external_origin": p.ExternalOrigin, "hold_seconds": p.HoldSeconds, "flags": p.Flags, "args_hash": p.ArgsHash, "outbox_id": p.OutboxID}}
+	if p.Path != "" { // a drive change: which file and what is done to it (other tools carry no path)
+		ap.Context["path"], ap.Context["action"] = p.Path, p.Action
+	}
 	governApproval(&ap, rs, pv)
 	standing, hasStanding := o.markStanding(ctx, rs, &ap, agent, tr.Tool, nativeStandingRule(*p))
 	t.Status = domain.TaskAwaitingApproval

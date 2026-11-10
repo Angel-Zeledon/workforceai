@@ -12,6 +12,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/drive"
 )
 
 // maxChatAttachments is application's limit of files per chat message (more is a 400 there).
@@ -32,6 +33,10 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		// CustomerID (B12, optional) scopes any request this message creates to one customer, like POST /requests:
 		// the scope is stored before the request exists and its tasks only see that customer's memories and files.
 		CustomerID string `json:"customer_id"`
+		// Folder (D2, optional) is a department folder (/Offices/<office>/...) the agents work in: they read from it
+		// and save there what they produce. It must be a folder the person may read; anything else is a 404 like a
+		// missing folder, and a folder outside the departments is a 400.
+		Folder string `json:"folder"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
@@ -59,6 +64,14 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		}
 		ctx = application.WithAttachments(ctx, body.Attachments)
 	}
+	if strings.TrimSpace(body.Folder) != "" {
+		folder, err := s.workFolder(r, body.Folder)
+		if err != nil {
+			s.driveFail(w, err)
+			return
+		}
+		ctx = application.WithWorkFolder(ctx, folder)
+	}
 	turn, replayed, err := s.Orch.PostChatKeyed(ctx, body.Conversation, body.Text, key)
 	if err != nil {
 		s.fail(w, err)
@@ -68,6 +81,27 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Idempotent-Replayed", "true")
 	}
 	writeJSON(w, http.StatusAccepted, turn)
+}
+
+// workFolder checks the work folder of a chat message and returns it as the drive spells it. ".." is resolved first,
+// so the check is made on the final path. A folder the person may not see and a path that names a file answer
+// exactly like a missing folder (a private office's folder is never revealed).
+func (s *server) workFolder(r *http.Request, raw string) (string, error) {
+	p, err := drive.CleanPath(path.Clean("/" + strings.TrimSpace(raw)))
+	if err != nil {
+		return "", err
+	}
+	if s.Drive == nil || !s.Drive.InOfficeFolder(r.Context(), p) {
+		return "", &drive.Error{Code: "folder_invalid", Kind: domain.ErrInvalid, Msg: "folder must be a department folder"}
+	}
+	if err := s.driveNeed(r, p, drive.AccessRead); err != nil {
+		return "", err
+	}
+	f, err := s.Drive.FolderByPath(r.Context(), p)
+	if err != nil {
+		return "", err
+	}
+	return f.Path, nil
 }
 
 // authorName is the display name of the signed-in person ("" without authentication): their account name,
