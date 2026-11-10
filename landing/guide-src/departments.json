@@ -18,7 +18,8 @@
       {
         "h": "Dónde está",
         "paras": [
-          "En las cuentas de empresa, el menú lateral muestra primero «Departamento», seguido de «Pendientes», «Agentes y oficinas» y «Ajustes». Lo demás está bajo «Más»."
+          "En las cuentas de empresa, el menú lateral muestra primero «Departamento», seguido de «Pendientes», «Agentes y oficinas» y «Ajustes». Lo demás está bajo «Más».",
+          "Cuando entras a la app, se abre directamente el Drive de tu departamento. La oficina 3D sigue en «Más»."
         ],
         "steps": [
           "Abre «Departamento» en el menú lateral. Se abre el primer departamento al que perteneces.",
@@ -30,13 +31,13 @@
       {
         "h": "Qué muestra la lista",
         "paras": [
-          "Cada fila tiene tres columnas: «Nombre», «Último cambio» (quién lo hizo, una persona o un agente) y «Estado». Con los filtros «Todo», «Para revisar» y «Cambiado hoy» puedes acotar la lista."
+          "Cada fila tiene tres columnas: «Nombre», «Último cambio» (quién lo hizo: el nombre de la persona o el agente) y «Estado». Con los filtros «Todo», «Para revisar» y «Cambiado hoy» puedes acotar la lista."
         ]
       },
       {
         "h": "«Para revisar» y «Propuesto»",
         "list": [
-          "«Para revisar»: un agente quiere hacer un cambio en ese archivo y espera tu aprobación. Nada cambia hasta que decidas.",
+          "«Para revisar»: un agente quiere hacer un cambio en ese archivo y espera tu aprobación (nada cambia hasta que decidas), o un agente escribió algo nuevo en ese archivo y nadie lo ha revisado todavía.",
           "«Propuesto»: un agente quiere crear un archivo nuevo. El archivo se crea solo cuando apruebas la propuesta."
         ]
       },
@@ -48,6 +49,15 @@
           "Pulsa «Aprobar» o «Rechazar»."
         ],
         "tip": "Las mismas decisiones también están en «Pendientes»."
+      },
+      {
+        "h": "Marca como revisado lo que hizo un agente",
+        "steps": [
+          "Abre un archivo que dice «Para revisar» porque lo escribió un agente.",
+          "Lee lo que hizo en la vista previa.",
+          "Pulsa «Marcar como revisado». Deja de aparecer en «Para revisar»."
+        ],
+        "note": "Si el agente vuelve a cambiar ese archivo, aparece de nuevo en «Para revisar». Para marcarlo necesitas poder editar la carpeta."
       },
       {
         "h": "Pide algo sobre una carpeta",
@@ -84,7 +94,8 @@
       {
         "h": "Where to find it",
         "paras": [
-          "On company accounts, the side menu starts with “Department”, followed by “Pending”, “Agents and offices” and “Settings”. Everything else is under “More”."
+          "On company accounts, the side menu starts with “Department”, followed by “Pending”, “Agents and offices” and “Settings”. Everything else is under “More”.",
+          "When you open the app, your department's Drive opens right away. The 3D office is still under “More”."
         ],
         "steps": [
           "Open “Department” in the side menu. The first department you belong to opens.",
@@ -96,13 +107,13 @@
       {
         "h": "What the list shows",
         "paras": [
-          "Each row has three columns: “Name”, “Last change” (who did it, a person or an agent) and “Status”. The filters “All”, “To review” and “Changed today” narrow the list."
+          "Each row has three columns: “Name”, “Last change” (who did it: the person's name or the agent) and “Status”. The filters “All”, “To review” and “Changed today” narrow the list."
         ]
       },
       {
         "h": "“To review” and “Proposed”",
         "list": [
-          "“To review”: an agent wants to change that file and is waiting for your approval. Nothing changes until you decide.",
+          "“To review”: an agent wants to change that file and is waiting for your approval (nothing changes until you decide), or an agent wrote something new in that file and nobody has reviewed it yet.",
           "“Proposed”: an agent wants to create a new file. The file is created only when you approve the proposal."
         ]
       },
@@ -114,6 +125,15 @@
           "Click “Approve” or “Reject”."
         ],
         "tip": "The same decisions are also in “Pending”."
+      },
+      {
+        "h": "Mark an agent's work as reviewed",
+        "steps": [
+          "Open a file marked “To review” because an agent wrote it.",
+          "Read what it did in the preview.",
+          "Click “Mark as reviewed”. It no longer shows under “To review”."
+        ],
+        "note": "If the agent changes that file again, it shows under “To review” again. To mark it you need to be able to edit the folder."
       },
       {
         "h": "Ask for something on a folder",
