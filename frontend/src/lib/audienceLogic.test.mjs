@@ -12,3 +12,13 @@ test("outside the mock the welcome decides, empty means today's menu", () => {
   assert.equal(audienceOf({ audience: "team" }, false), "team");
   assert.equal(audienceOf({ audience: "" }, false), null);
 });
+
+import { audienceKey, initialAudience } from "./audienceLogic.ts";
+test("initial audience: saved value per org, validated; demo is company", () => {
+  assert.equal(initialAudience("company", false), "company");
+  assert.equal(initialAudience("team", false), "team");
+  assert.equal(initialAudience(null, false), null);
+  assert.equal(initialAudience("junk", false), null);
+  assert.equal(initialAudience(null, true), "company");
+  assert.notEqual(audienceKey("a"), audienceKey("b"));
+});
