@@ -118,3 +118,19 @@ Comportamiento:
 - [ ] **Step 1:** escribir docs y guía (lenguaje simple, "departamento", sin jerga).
 - [ ] **Step 2:** regenerar la landing; `cd backend && go test ./...` y en frontend `npm run test:unit` una última vez.
 - [ ] **Step 3:** commit `docs: the department Drive (D2) in the team docs and the user guide`.
+
+## Decisiones tomadas durante la ejecución (2026-11-09)
+
+- Ruling: statuses Borrador/Enviado from spec deferred; only Para revisar (+ Propuesto) — no data source for draft/sent yet — cost if wrong: owner may want those chips; add with tags later.
+- Ruling: "Compartido conmigo" omitted until D4 (no fake placeholder) — cost: the tree lacks that section for now.
+- Task 2: implemented 5617456. Ruling: "Agentes" = section org (/org, Agentes y oficinas), not office (3D) — spec lists "Agentes del departamento" — cost if wrong: one id swap.
+- Ruling: audience null/failed → today's menu; only MOCK demo is explicitly company — protects the open demo and network failures from a menu switch — cost if wrong: none.
+- Ruling: accept the residual one-frame flash on full page load — AppShell renders behind AuthGate (client session) and the stored audience applies in the first effect; removing it needs server-known audience (cookie) — cost if wrong: a single-frame menu switch on hard reload for company accounts.
+- Task 3: fix round 1/5 (1 addressed; commits 2b9510f..0ecb5a0). Ruling: controller verified the 2-line diff directly instead of a scoped re-review (CREATES set + test) — cost if wrong: none beyond the final review catching it.
+- Task 5: fix round 1/5 (6 addressed; commit a3a785b). Ruling: controller verified the doc-only fix directly (menu entry present in generated /guia/, API doc codes correct) instead of a scoped re-review — cost if wrong: copy nit in the guide.
+- Ruling: company accounts land on /d once per app entry (sessionStorage mark), "/" keeps the 3D office reachable from "Más" — cost if wrong: one redirect to undo.
+- Ruling: add "Del agente, sin revisar": a file whose last version was written by an agent inside /Offices and not yet marked reviewed shows "Para revisar"; "Marcar como revisado" sets tag "revisado" (existing tags API, needs edit); any new agent version clears the tag server-side — this makes the department screen the supervisor's review queue the spec intends without forcing approve_each — cost if wrong: one extra chip/button, easy to remove.
+- Ruling: folder only for agent:<id> conversations (400 otherwise).
+- Ruling: fix-now minors: stale stored audience cleared when welcome is empty; review counter counts only what the list can show; person author names; single chip on proposed rows; tree ~240px and no wrap in "Último cambio".
+
+Resultado: 5 tareas + revisión final (1 crítico: marcas perdidas al recargar; inicio en /d; "Para revisar" incluye trabajo de agentes sin revisar con "Marcar como revisado"). Integrado en main.
