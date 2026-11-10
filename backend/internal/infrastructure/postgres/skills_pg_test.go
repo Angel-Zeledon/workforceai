@@ -65,7 +65,7 @@ func TestSkillStoreLifecycleRLSAndImmutability(t *testing.T) {
 	if err != nil || l.Version != 1 || !strings.Contains(l.Text, "Body") {
 		t.Fatalf("load: %v %+v", err, l)
 	}
-	list, err := svc.List(ctxA)
+	list, err := svc.List(ctxA, skills.Actor{ID: "admin", Admin: true})
 	if err != nil {
 		t.Fatal(err)
 	}

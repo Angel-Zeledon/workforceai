@@ -39,7 +39,7 @@ func (s *server) mountSkills(r chi.Router) {
 	r.With(write).Post("/skills/{id}/submit", s.submitSkill)
 	r.With(review).Post("/skills/{id}/review", s.reviewSkill)
 	r.With(review).Post("/skills/{id}/disable", s.disableSkill)
-	r.With(review).Delete("/skills/{id}", s.deleteSkill)
+	r.With(write).Delete("/skills/{id}", s.deleteSkill) // an office skill: its responsible too (the service decides)
 	r.With(read).Get("/skills/{id}/export", s.exportSkill)
 	r.With(s.can(auth.PermAgentsRead)).Get("/agents/{id}/skills", s.agentSkills)
 	r.With(s.can(auth.PermAgentsWrite)).Put("/agents/{id}/skills/{skillId}", s.assignSkill)
@@ -47,7 +47,7 @@ func (s *server) mountSkills(r chi.Router) {
 }
 
 func (s *server) skillActor(r *http.Request) skills.Actor {
-	a := skills.Actor{ID: s.actor(r), Admin: true}
+	a := skills.Actor{ID: s.actor(r), Admin: true, Open: !s.AuthEnabled}
 	if s.AuthEnabled {
 		p, ok := auth.PrincipalFrom(r.Context())
 		a.Admin = ok && p.Role.Has(auth.PermSkillsReview)
@@ -82,7 +82,7 @@ func (s *server) skillFail(w http.ResponseWriter, err error) {
 }
 
 func (s *server) listSkills(w http.ResponseWriter, r *http.Request) {
-	l, err := s.Skills.List(r.Context())
+	l, err := s.Skills.List(r.Context(), s.skillActor(r))
 	if err != nil {
 		s.skillFail(w, err)
 		return
@@ -151,7 +151,7 @@ func (s *server) importSkill(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) getSkill(w http.ResponseWriter, r *http.Request) {
-	d, err := s.Skills.Get(r.Context(), chi.URLParam(r, "id"), queryInt(r, "version"))
+	d, err := s.Skills.Get(r.Context(), s.skillActor(r), chi.URLParam(r, "id"), queryInt(r, "version"))
 	if err != nil {
 		s.skillFail(w, err)
 		return
@@ -176,7 +176,7 @@ func (s *server) updateSkill(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) skillVersions(w http.ResponseWriter, r *http.Request) {
-	v, err := s.Skills.Versions(r.Context(), chi.URLParam(r, "id"))
+	v, err := s.Skills.Versions(r.Context(), s.skillActor(r), chi.URLParam(r, "id"))
 	if err != nil {
 		s.skillFail(w, err)
 		return

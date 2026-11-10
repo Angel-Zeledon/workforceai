@@ -494,7 +494,7 @@ func cmdSkill(c *cmdCall) (*cmdResult, *cmdFail) {
 		return nil, f
 	}
 	ref := c.str("skill")
-	list, err := c.s.Skills.List(c.ctx)
+	list, err := c.s.Skills.List(c.ctx, c.s.skillActorOf(c))
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}

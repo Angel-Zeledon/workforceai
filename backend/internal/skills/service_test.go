@@ -212,7 +212,7 @@ func TestMemberEditsOfActiveSkillWaitForReview(t *testing.T) {
 		t.Fatalf("rename: %v", err)
 	}
 	// versions are immutable and restorable
-	vs, _ := e.svc.Versions(e.ctx, d.ID)
+	vs, _ := e.svc.Versions(e.ctx, admin, d.ID)
 	if len(vs) != 3 || vs[0].Version != 3 {
 		t.Fatalf("versions: %+v", vs)
 	}
@@ -223,7 +223,7 @@ func TestMemberEditsOfActiveSkillWaitForReview(t *testing.T) {
 	if _, err := e.svc.Restore(e.ctx, member, d.ID, 4); CodeOf(err) != "already_current" {
 		t.Fatalf("restore current: %v", err)
 	}
-	old, err := e.svc.Get(e.ctx, d.ID, 2)
+	old, err := e.svc.Get(e.ctx, admin, d.ID, 2)
 	if err != nil || !strings.Contains(old.Instructions, "New steps") {
 		t.Fatalf("v2 still readable: %v", err)
 	}
@@ -253,7 +253,7 @@ func TestDisableDeleteAndRecreate(t *testing.T) {
 	if err := e.svc.Delete(e.ctx, admin, d.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.svc.Get(e.ctx, d.ID, 0); !errors.Is(err, domain.ErrNotFound) {
+	if _, err := e.svc.Get(e.ctx, admin, d.ID, 0); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("deleted: %v", err)
 	}
 	if len(e.svc.SkillRefs(e.ctx, org, "sales")) != 0 {
@@ -322,7 +322,7 @@ func TestExportThenImportGivesTheSameContent(t *testing.T) {
 
 func TestAssignmentRoleDefaultsAndBounds(t *testing.T) {
 	e := newEnv(t, true) // starters
-	l, err := e.svc.List(e.ctx)
+	l, err := e.svc.List(e.ctx, admin)
 	if err != nil || len(l) < 7 {
 		t.Fatalf("starters: %v %d", err, len(l))
 	}
@@ -551,7 +551,7 @@ func TestNewStartersReachSeededOrganizationsButDeletedOnesStayDeleted(t *testing
 		t.Fatal(err)
 	}
 	e.svc.seeded.Delete(org) // a new process (release) sees the organization for the first time
-	l, err := e.svc.List(e.ctx)
+	l, err := e.svc.List(e.ctx, admin)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -576,7 +576,7 @@ func TestNewStartersReachSeededOrganizationsButDeletedOnesStayDeleted(t *testing
 		t.Fatal(err)
 	}
 	e.svc.seeded.Delete(org) // the next release
-	l, _ = e.svc.List(e.ctx)
+	l, _ = e.svc.List(e.ctx, admin)
 	if len(l) != want-1 {
 		t.Fatalf("a deleted starter came back: %d skills, want %d", len(l), want-1)
 	}

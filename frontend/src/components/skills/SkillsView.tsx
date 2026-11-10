@@ -109,6 +109,7 @@ export function SkillsView() {
                 <p className="mt-1.5 line-clamp-3 text-xs text-ink2">{s.description}</p>
                 <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-3 text-[10.5px] text-mute">
                   <SourceChip source={s.source} builtin={s.builtin} />
+                  {s.office_id && <span data-testid="skill-office-chip" className="rounded-full border border-line px-2 py-0.5 text-ink2">{t("skills.office.chip", { name: s.office_name || "" })}</span>}
                   <span className="font-mono">v{s.current_version}</span>
                   {s.active_version > 0 && s.active_version !== s.current_version && <span className="text-warn">{t("skills.activeVersion", { v: s.active_version })}</span>}
                   {!!s.agents && <span>{t("skills.agentsCount", { n: s.agents })}</span>}

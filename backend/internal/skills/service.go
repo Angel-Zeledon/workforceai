@@ -19,6 +19,7 @@ import (
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/objstore"
+	"aiworkforce/backend/internal/offices"
 	"aiworkforce/backend/internal/sanitize"
 )
 
@@ -29,6 +30,9 @@ type Actor struct {
 	ID     string
 	Admin  bool
 	System bool
+	// Open is the demo without accounts: there are no people to tell apart, so the
+	// departments filter and restrict nothing.
+	Open bool
 }
 
 // Config wires the service.
@@ -50,8 +54,9 @@ type Config struct {
 
 // Service is the skill library use-case layer.
 type Service struct {
-	cfg    Config
-	seeded sync.Map // org -> struct{}
+	cfg     Config
+	seeded  sync.Map // org -> struct{}
+	offices officeSource
 }
 
 // New builds the service.
@@ -219,6 +224,9 @@ type Input struct {
 	Changelog    string            `json:"changelog"`
 	// Source is "created" (default) or "from_work" (saved from a finished task).
 	Source string `json:"source"`
+	// OfficeID is the department the new skill belongs to ("" = the whole company).
+	// It is only read on creation: a skill never changes department.
+	OfficeID string `json:"office_id"`
 }
 
 func (in Input) toPackage() (Package, error) {
@@ -275,6 +283,7 @@ type Detail struct {
 }
 
 func (s *Service) detail(ctx context.Context, org string, sk Skill, v Version) (Detail, error) {
+	sk = withOfficeName(s.model(ctx, org), sk)
 	pkg, err := s.readPackage(ctx, org, sk, v)
 	if err != nil {
 		return Detail{}, err
@@ -297,15 +306,23 @@ func (s *Service) detail(ctx context.Context, org string, sk Skill, v Version) (
 
 // ---- reading ----
 
-// List returns the live skills of the organization.
-func (s *Service) List(ctx context.Context) ([]Skill, error) {
+// List returns the live skills the actor may see: the company's, those of open
+// departments and those of private departments the actor belongs to.
+func (s *Service) List(ctx context.Context, a Actor) ([]Skill, error) {
 	org := s.org(ctx)
 	s.Ensure(ctx, org)
-	l, err := s.cfg.Store.ListSkills(ctx, org)
-	if l == nil {
-		l = []Skill{}
+	all, err := s.cfg.Store.ListSkills(ctx, org)
+	if err != nil {
+		return []Skill{}, err
 	}
-	return l, err
+	m := s.model(ctx, org)
+	l := []Skill{}
+	for _, sk := range all {
+		if canSee(m, a, sk) {
+			l = append(l, withOfficeName(m, sk))
+		}
+	}
+	return l, nil
 }
 
 func (s *Service) skill(ctx context.Context, org, id string) (Skill, error) {
@@ -314,9 +331,9 @@ func (s *Service) skill(ctx context.Context, org, id string) (Skill, error) {
 }
 
 // Get returns a skill with the content of a version (0 = latest).
-func (s *Service) Get(ctx context.Context, id string, version int) (Detail, error) {
+func (s *Service) Get(ctx context.Context, a Actor, id string, version int) (Detail, error) {
 	org := s.org(ctx)
-	sk, err := s.skill(ctx, org, id)
+	sk, err := s.visible(ctx, org, a, id)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -331,9 +348,9 @@ func (s *Service) Get(ctx context.Context, id string, version int) (Detail, erro
 }
 
 // Versions lists the history, newest first.
-func (s *Service) Versions(ctx context.Context, id string) ([]Version, error) {
+func (s *Service) Versions(ctx context.Context, a Actor, id string) ([]Version, error) {
 	org := s.org(ctx)
-	if _, err := s.skill(ctx, org, id); err != nil {
+	if _, err := s.visible(ctx, org, a, id); err != nil {
 		return nil, err
 	}
 	vs, err := s.cfg.Store.Versions(ctx, org, id)
@@ -350,6 +367,10 @@ func (s *Service) Versions(ctx context.Context, id string) ([]Version, error) {
 // the same name is brought back with a new version.
 func (s *Service) Create(ctx context.Context, a Actor, in Input) (Detail, error) {
 	s.Ensure(ctx, s.org(ctx))
+	office, err := s.officeFor(ctx, s.org(ctx), a, in.OfficeID)
+	if err != nil {
+		return Detail{}, err
+	}
 	pkg, err := in.toPackage()
 	if err != nil {
 		return Detail{}, err
@@ -358,10 +379,10 @@ func (s *Service) Create(ctx context.Context, a Actor, in Input) (Detail, error)
 	if in.Source == SourceFromWork {
 		src = SourceFromWork
 	}
-	return s.createFrom(ctx, a, pkg, src, StatusDraft, cleanChangelog(in.Changelog), false)
+	return s.createFrom(ctx, a, pkg, src, StatusDraft, cleanChangelog(in.Changelog), false, office)
 }
 
-func (s *Service) createFrom(ctx context.Context, a Actor, pkg Package, source, status, changelog string, builtin bool) (Detail, error) {
+func (s *Service) createFrom(ctx context.Context, a Actor, pkg Package, source, status, changelog string, builtin bool, office string) (Detail, error) {
 	org := s.org(ctx)
 	name := pkg.Front.Name
 	now := s.now()
@@ -385,7 +406,7 @@ func (s *Service) createFrom(ctx context.Context, a Actor, pkg Package, source, 
 	}
 	v := Version{Version: n, Author: a.ID, CreatedAt: now, Changelog: changelog, Description: pkg.Front.Description,
 		AllowedTools: nonNil(pkg.Front.AllowedTools), Files: metas, Warnings: scan(pkg, pkg.Notes), Source: source, Bytes: total}
-	sk := Skill{ID: newID(), Name: name, Description: pkg.Front.Description, Status: status, Source: source, Builtin: builtin,
+	sk := Skill{ID: newID(), Name: name, Description: pkg.Front.Description, Status: status, Source: source, Builtin: builtin, OfficeID: office,
 		CurrentVersion: n, CreatedBy: a.ID, CreatedAt: now, UpdatedAt: now}
 	if status == StatusActive {
 		sk.ActiveVersion, sk.ActiveDescription = n, pkg.Front.Description
@@ -394,7 +415,7 @@ func (s *Service) createFrom(ctx context.Context, a Actor, pkg Package, source, 
 	v.SkillID = sk.ID
 	if restoredDeleted {
 		sk = existing
-		sk.DeletedAt, sk.Description, sk.Status, sk.Source, sk.Builtin = nil, pkg.Front.Description, status, source, builtin
+		sk.DeletedAt, sk.Description, sk.Status, sk.Source, sk.Builtin, sk.OfficeID = nil, pkg.Front.Description, status, source, builtin, office
 		sk.CurrentVersion, sk.ActiveVersion, sk.ActiveDescription, sk.UpdatedAt = n, 0, "", now
 		sk.ReviewedBy, sk.ReviewedAt, sk.ReviewNote = "", nil, ""
 		v.SkillID = sk.ID
@@ -412,7 +433,7 @@ func (s *Service) createFrom(ctx context.Context, a Actor, pkg Package, source, 
 	if source == SourceImported {
 		act = "skill.imported"
 	}
-	s.audit(ctx, org, a, act, sk.ID, map[string]any{"name": name, "version": n, "source": source, "status": status, "files": len(metas), "warnings": warningCodes(v.Warnings)})
+	s.audit(ctx, org, a, act, sk.ID, map[string]any{"name": name, "version": n, "source": source, "status": status, "files": len(metas), "office_id": office, "warnings": warningCodes(v.Warnings)})
 	return s.detail(ctx, org, sk, v)
 }
 
@@ -438,9 +459,12 @@ func warningCodes(ws []Warning) []string {
 // is itself the review. Identical content creates nothing.
 func (s *Service) Update(ctx context.Context, a Actor, id string, in Input) (Detail, bool, error) {
 	org := s.org(ctx)
-	sk, err := s.skill(ctx, org, id)
+	sk, err := s.writable(ctx, org, a, id)
 	if err != nil {
 		return Detail{}, false, err
+	}
+	if in.OfficeID != "" && in.OfficeID != sk.OfficeID && !(in.OfficeID == offices.GeneralID && sk.OfficeID == "") {
+		return Detail{}, false, invalid("office_immutable", "a skill cannot change department; create a new skill instead")
 	}
 	if in.Name != "" && in.Name != sk.Name {
 		return Detail{}, false, invalid("name_immutable", "the name of a skill cannot change; create a new skill instead")
@@ -520,7 +544,7 @@ func (s *Service) addVersion(ctx context.Context, a Actor, sk Skill, pkg Package
 // Restore makes an old version the newest one (a new version; nothing is lost).
 func (s *Service) Restore(ctx context.Context, a Actor, id string, version int) (Detail, error) {
 	org := s.org(ctx)
-	sk, err := s.skill(ctx, org, id)
+	sk, err := s.writable(ctx, org, a, id)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -541,7 +565,7 @@ func (s *Service) Restore(ctx context.Context, a Actor, id string, version int) 
 // Submit sends a draft for review.
 func (s *Service) Submit(ctx context.Context, a Actor, id string) (Skill, error) {
 	org := s.org(ctx)
-	sk, err := s.skill(ctx, org, id)
+	sk, err := s.writable(ctx, org, a, id)
 	if err != nil {
 		return Skill{}, err
 	}
@@ -560,7 +584,7 @@ func (s *Service) Submit(ctx context.Context, a Actor, id string) (Skill, error)
 // the one the reviewer saw. Only call it for administrators.
 func (s *Service) Review(ctx context.Context, a Actor, id string, approve bool, version int, note string) (Skill, error) {
 	org := s.org(ctx)
-	sk, err := s.skill(ctx, org, id)
+	sk, err := s.writable(ctx, org, a, id)
 	if err != nil {
 		return Skill{}, err
 	}
@@ -608,7 +632,7 @@ func (s *Service) Review(ctx context.Context, a Actor, id string, approve bool, 
 // Disable stops agents from receiving the skill (reversible: approve it again).
 func (s *Service) Disable(ctx context.Context, a Actor, id string) (Skill, error) {
 	org := s.org(ctx)
-	sk, err := s.skill(ctx, org, id)
+	sk, err := s.writable(ctx, org, a, id)
 	if err != nil {
 		return Skill{}, err
 	}
@@ -627,9 +651,12 @@ func (s *Service) Disable(ctx context.Context, a Actor, id string) (Skill, error
 // files stay (nothing is erased); creating the name again brings it back.
 func (s *Service) Delete(ctx context.Context, a Actor, id string) error {
 	org := s.org(ctx)
-	sk, err := s.skill(ctx, org, id)
+	sk, err := s.writable(ctx, org, a, id)
 	if err != nil {
 		return err
+	}
+	if sk.OfficeID == "" && !a.Admin && !a.System {
+		return forbidden("admin_required", "only an administrator can delete a company skill")
 	}
 	if err := s.cfg.Store.DeleteSkill(ctx, org, id, s.now()); err != nil {
 		return mapStore(err, "skill")
@@ -669,7 +696,7 @@ func (s *Service) Import(ctx context.Context, a Actor, data []byte, rename strin
 		pkg.SkillMD = RenderSkillMD(pkg.Front, pkg.Body)
 		pkg.Notes = append(pkg.Notes, "imported under the name "+rename)
 	}
-	d, err := s.createFrom(ctx, a, pkg, SourceImported, StatusInReview, "Imported", false)
+	d, err := s.createFrom(ctx, a, pkg, SourceImported, StatusInReview, "Imported", false, "")
 	if err != nil {
 		return ImportResult{}, err
 	}
@@ -678,7 +705,7 @@ func (s *Service) Import(ctx context.Context, a Actor, data []byte, rename strin
 
 // Export returns a version as a .zip in the standard Agent Skills layout.
 func (s *Service) Export(ctx context.Context, a Actor, id string, version int) ([]byte, string, error) {
-	pkg, sk, n, err := s.exportPackage(ctx, id, version)
+	pkg, sk, n, err := s.exportPackage(ctx, a, id, version)
 	if err != nil {
 		return nil, "", err
 	}
@@ -692,7 +719,7 @@ func (s *Service) Export(ctx context.Context, a Actor, id string, version int) (
 
 // ExportMD returns only the SKILL.md of a version.
 func (s *Service) ExportMD(ctx context.Context, a Actor, id string, version int) ([]byte, string, error) {
-	pkg, sk, n, err := s.exportPackage(ctx, id, version)
+	pkg, sk, n, err := s.exportPackage(ctx, a, id, version)
 	if err != nil {
 		return nil, "", err
 	}
@@ -700,9 +727,9 @@ func (s *Service) ExportMD(ctx context.Context, a Actor, id string, version int)
 	return []byte(pkg.SkillMD), "SKILL.md", nil
 }
 
-func (s *Service) exportPackage(ctx context.Context, id string, version int) (Package, Skill, int, error) {
+func (s *Service) exportPackage(ctx context.Context, a Actor, id string, version int) (Package, Skill, int, error) {
 	org := s.org(ctx)
-	sk, err := s.skill(ctx, org, id)
+	sk, err := s.visible(ctx, org, a, id)
 	if err != nil {
 		return Package{}, Skill{}, 0, err
 	}

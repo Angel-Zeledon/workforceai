@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"aiworkforce/backend/internal/api"
 	"aiworkforce/backend/internal/auth"
 )
 
@@ -169,5 +170,106 @@ func TestSkillsOverHTTP(t *testing.T) {
 	}
 	if c := e.status("GET", base+"/"+str(imp, "id"), rival.AccessToken, nil); c != 404 {
 		t.Fatalf("cross-tenant = %d", c)
+	}
+}
+
+// Skills of a department over HTTP: a private office's skills are invisible to everyone outside it (administrators
+// too), the responsible writes them, and only the agents of that department can receive them.
+func TestSkillsOfADepartmentOverHTTP(t *testing.T) {
+	e := newEnv(t, opts{auth: true, orgchart: true, skills: true, deps: func(d *api.Deps) {
+		withOffices(d)
+		d.Skills.SetOffices(d.Offices.Model)
+	}})
+	owner := e.register("owner-sd@example.com", "OwnerSD")
+	ana := e.member(owner, "ana-sd@example.com", auth.RoleMember)   // responsible of Legal
+	luis := e.member(owner, "luis-sd@example.com", auth.RoleMember) // member of Legal
+	marta := e.member(owner, "marta-sd@example.com", auth.RoleMember)
+	dan := e.member(owner, "dan-sd@example.com", auth.RoleAdmin) // admin who works in Legal
+	anaID, luisID, danID := e.userID(ana), e.userID(luis), e.userID(dan)
+	dep := e.json("POST", api1+"/org/departments", owner.AccessToken, map[string]any{"name": "Legal", "head": map[string]any{"kind": "person", "id": anaID}}, 201)
+	depID := str(dep, "id")
+	e.json("PUT", api1+"/org/people/"+luisID, owner.AccessToken, map[string]any{"department_id": depID}, 200)
+	e.json("PUT", api1+"/org/people/"+danID, owner.AccessToken, map[string]any{"department_id": depID}, 200)
+	e.json("PUT", api1+"/agents/sales/job", owner.AccessToken, map[string]any{"department_id": depID}, 200)
+	e.json("POST", api1+"/offices", owner.AccessToken, map[string]any{"department_id": depID, "visibility": "private"}, 201)
+	base := api1 + "/skills"
+	body := func(name string) map[string]any {
+		return map[string]any{"name": name, "description": "Use for " + name, "instructions": "# " + name + "\n\nSteps.\n", "office_id": depID}
+	}
+
+	// the responsible creates; a plain member of the office and an outsider cannot
+	d := e.json("POST", base, ana, body("contract-review"), 201)
+	id := str(d, "id")
+	if str(d, "office_id") != depID || str(d, "office_name") != "Legal" {
+		t.Fatalf("created: %v", d)
+	}
+	if c := e.status("POST", base, luis, body("nda-checklist")); c != 403 {
+		t.Fatalf("member create = %d", c)
+	}
+	if c := e.status("POST", base, marta, body("legal-spy")); c != 403 {
+		t.Fatalf("outsider create = %d", c)
+	}
+	e.json("POST", base, owner.AccessToken, map[string]any{"name": "company-wide", "description": "Everybody", "instructions": "# Hi\n"}, 201)
+
+	// the list: members of Legal see it, the owner (admin, not a member) and Marta do not
+	has := func(tok, name string) bool {
+		for _, s := range e.list(base, tok) {
+			if str(s, "name") == name {
+				return true
+			}
+		}
+		return false
+	}
+	if !has(luis, "contract-review") || !has(dan, "contract-review") || !has(ana, "contract-review") {
+		t.Fatal("members of Legal must see its skill")
+	}
+	if has(marta, "contract-review") || has(owner.AccessToken, "contract-review") {
+		t.Fatal("a private department's skill leaked to the list")
+	}
+	if !has(marta, "company-wide") || !has(owner.AccessToken, "company-wide") {
+		t.Fatal("company skills are for everybody")
+	}
+	// hidden = inexistent, in detail, versions, edit, delete and export
+	for _, tok := range []string{marta, owner.AccessToken} {
+		for _, c := range []struct{ m, p string }{{"GET", ""}, {"GET", "/versions"}, {"GET", "/export"}, {"PUT", ""}, {"DELETE", ""}} {
+			if got := e.status(c.m, base+"/"+id+c.p, tok, body("contract-review")); got != 404 {
+				t.Fatalf("%s %s = %d, want 404", c.m, c.p, got)
+			}
+		}
+	}
+	if c := e.status("POST", base+"/"+id+"/disable", owner.AccessToken, nil); c != 404 {
+		t.Fatalf("admin outside the department disables = %d, want 404", c)
+	}
+	e.json("GET", base+"/"+id, luis, nil, 200)
+
+	// only the responsible edits; a skill never changes department
+	if c := e.status("PUT", base+"/"+id, luis, body("contract-review")); c != 403 {
+		t.Fatalf("member edit = %d", c)
+	}
+	edit := body("contract-review")
+	edit["instructions"] = "# contract-review\n\nNew steps.\n"
+	e.json("PUT", base+"/"+id, ana, edit, 200)
+	edit["office_id"] = "general-other"
+	if c := e.status("PUT", base+"/"+id, ana, edit); c != 400 {
+		t.Fatalf("change department = %d", c)
+	}
+
+	// assigning: only to the agents of the department
+	if r, b := e.do("PUT", api1+"/agents/accounting/skills/"+id, dan, nil, nil); r.StatusCode != 400 || !strings.Contains(string(b), "skill belongs to another department") {
+		t.Fatalf("assign to another department = %d %s", r.StatusCode, b)
+	}
+	if c := e.status("PUT", api1+"/agents/sales/skills/"+id, dan, nil); c != 200 {
+		t.Fatalf("assign to Legal's agent = %d", c)
+	}
+	if c := e.status("PUT", api1+"/agents/sales/skills/"+id, owner.AccessToken, nil); c != 404 {
+		t.Fatalf("hidden assign = %d", c)
+	}
+
+	// the responsible deletes her own; a member who is not responsible cannot
+	if c := e.status("DELETE", base+"/"+id, luis, nil); c != 403 {
+		t.Fatalf("member delete = %d", c)
+	}
+	if c := e.status("DELETE", base+"/"+id, ana, nil); c != 204 {
+		t.Fatalf("responsible delete = %d", c)
 	}
 }

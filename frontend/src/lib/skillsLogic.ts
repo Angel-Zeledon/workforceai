@@ -73,6 +73,8 @@ export function joinFiles(p: Parts): SkillFileEntry[] {
 
 export interface SkillDraft {
   name: string; description: string; instructions: string; allowed_tools: string[]; parts: Parts; changelog: string; source?: "created" | "from_work";
+  /** Department the new skill is for ("" = the whole company); only read on creation. */
+  office_id?: string;
 }
 export const emptyDraft = (): SkillDraft => ({ name: "", description: "", instructions: "", allowed_tools: [], parts: { files: [], examples: [], quality: [] }, changelog: "" });
 
@@ -147,3 +149,12 @@ export function countByStatus(list: { status: string }[]): Record<SkillFilter, n
   return c;
 }
 export const errorCode = (e: unknown): string => (e && typeof e === "object" && "code" in e ? String((e as { code: unknown }).code) : "");
+
+/** Departments a person can add skills to: the ones they manage (administrator or responsible) and can see inside
+ * (an administrator who is not a member of a private department cannot). General is "the whole company". */
+export function skillOfficeChoices(offices: { id: string; name: string; general: boolean; visibility: string; can_manage: boolean; is_member: boolean }[]): { id: string; name: string }[] {
+  return offices
+    .filter((o) => !o.general && o.can_manage && (o.visibility !== "private" || o.is_member))
+    .map(({ id, name }) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

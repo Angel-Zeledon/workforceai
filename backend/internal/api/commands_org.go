@@ -157,7 +157,7 @@ func (s *server) completeCommands(w http.ResponseWriter, r *http.Request) {
 		}
 	case commands.KindSkill:
 		if s.Skills != nil && s.has(r, auth.PermSkillsRead) {
-			if l, err := s.Skills.List(ctx); err == nil {
+			if l, err := s.Skills.List(ctx, s.skillActor(r)); err == nil {
 				for _, sk := range l {
 					if sk.Status == "active" && match(sk.Name, sk.Description) {
 						out = append(out, completion{sk.Name, sk.Name, trunc(sk.Description, 80)})

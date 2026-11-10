@@ -112,7 +112,7 @@ func (s *Service) Ensure(ctx context.Context, org string) {
 				continue // it has (or had) a skill by this name
 			}
 		}
-		if _, err := s.createFrom(ctx, sys, p, SourceCreated, StatusActive, "Starter skill", true); err != nil && CodeOf(err) != "name_taken" {
+		if _, err := s.createFrom(ctx, sys, p, SourceCreated, StatusActive, "Starter skill", true, ""); err != nil && CodeOf(err) != "name_taken" {
 			s.cfg.Log.Warn("skills: starter not created", "name", p.Front.Name, "err", err)
 			s.seeded.Delete(org) // e.g. read-only mode: try again later
 		}

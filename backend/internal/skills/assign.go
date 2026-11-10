@@ -49,9 +49,14 @@ func (s *Service) Assign(ctx context.Context, a Actor, agentID, skillID string) 
 	if _, err := s.checkAgent(ctx, org, agentID); err != nil {
 		return err
 	}
-	sk, err := s.skill(ctx, org, skillID)
+	sk, err := s.visible(ctx, org, a, skillID)
 	if err != nil {
 		return err
+	}
+	if sk.OfficeID != "" {
+		if m := s.model(ctx, org); m != nil && m.Agent(agentID).OfficeID != sk.OfficeID {
+			return invalid("other_department", "skill belongs to another department")
+		}
 	}
 	if err := s.cfg.Store.Assign(ctx, org, Assignment{AgentID: agentID, SkillID: skillID, AssignedBy: a.ID, AssignedAt: s.now()}); err != nil {
 		return err
@@ -63,7 +68,7 @@ func (s *Service) Assign(ctx context.Context, a Actor, agentID, skillID string) 
 // Unassign removes a direct assignment.
 func (s *Service) Unassign(ctx context.Context, a Actor, agentID, skillID string) error {
 	org := s.org(ctx)
-	sk, err := s.skill(ctx, org, skillID)
+	sk, err := s.visible(ctx, org, a, skillID)
 	if err != nil {
 		return err
 	}
@@ -97,17 +102,20 @@ func (s *Service) AgentSkills(ctx context.Context, agentID string) ([]AgentSkill
 	}
 	out := []AgentSkill{}
 	seen := map[string]bool{}
+	// a skill of a department only works for the agents of that department (an agent that moved loses it)
+	m := s.model(ctx, org)
+	here := func(sk Skill) bool { return sk.OfficeID == "" || m == nil || m.Agent(agentID).OfficeID == sk.OfficeID }
 	for _, a := range as {
-		if sk, ok := byID[a.SkillID]; ok && !seen[sk.ID] {
+		if sk, ok := byID[a.SkillID]; ok && !seen[sk.ID] && here(sk) {
 			seen[sk.ID] = true
-			out = append(out, AgentSkill{Skill: sk, Via: ViaAgent, AssignedBy: a.AssignedBy, Servable: servable(sk)})
+			out = append(out, AgentSkill{Skill: withOfficeName(m, sk), Via: ViaAgent, AssignedBy: a.AssignedBy, Servable: servable(sk)})
 		}
 	}
 	if s.cfg.RoleDefaults != nil {
 		for _, name := range s.cfg.RoleDefaults(role) {
-			if sk, ok := byName[name]; ok && !seen[sk.ID] {
+			if sk, ok := byName[name]; ok && !seen[sk.ID] && here(sk) {
 				seen[sk.ID] = true
-				out = append(out, AgentSkill{Skill: sk, Via: ViaRole, Servable: servable(sk)})
+				out = append(out, AgentSkill{Skill: withOfficeName(m, sk), Via: ViaRole, Servable: servable(sk)})
 			}
 		}
 	}

@@ -386,6 +386,9 @@ func run(log *slog.Logger) error {
 		// agents work in their office folder and never beyond the person they work for
 		ws.drive.SetAgentOffices(agentOffices{svc: deps.Offices})
 	}
+	if skillsSvc != nil && deps.Offices != nil {
+		skillsSvc.SetOffices(deps.Offices.Model) // D3: skills of a department follow its visibility
+	}
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	// Governance: API tokens, reports, retention job, webhooks (internal/governance, internal/webhooks).
 	wireGovernance(ctx, log, pg, store, rec, auditSvc, orch, cw.vault, whSvc, &deps)

@@ -18,12 +18,12 @@ type SkillStore struct{ S *Store }
 var _ skills.Store = (*SkillStore)(nil)
 
 const skillCols = `id, name, description, status, source, builtin, current_version, active_version, active_description,
-	created_by, created_at, updated_at, reviewed_by, reviewed_at, review_note, deleted_at`
+	created_by, created_at, updated_at, reviewed_by, reviewed_at, review_note, deleted_at, office_id`
 
 func scanSkill(r scanner) (skills.Skill, error) {
 	var s skills.Skill
 	err := r.Scan(&s.ID, &s.Name, &s.Description, &s.Status, &s.Source, &s.Builtin, &s.CurrentVersion, &s.ActiveVersion, &s.ActiveDescription,
-		&s.CreatedBy, &s.CreatedAt, &s.UpdatedAt, &s.ReviewedBy, &s.ReviewedAt, &s.ReviewNote, &s.DeletedAt)
+		&s.CreatedBy, &s.CreatedAt, &s.UpdatedAt, &s.ReviewedBy, &s.ReviewedAt, &s.ReviewNote, &s.DeletedAt, &s.OfficeID)
 	return s, err
 }
 
@@ -60,10 +60,10 @@ func insertSkillVersion(ctx context.Context, tx pgx.Tx, org string, v skills.Ver
 func (d *SkillStore) CreateSkill(ctx context.Context, org string, s skills.Skill, v skills.Version) error {
 	return mapDrive(d.S.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `INSERT INTO skills (org_id, id, name, description, status, source, builtin, current_version, active_version, active_description,
-				created_by, created_at, updated_at, reviewed_by, reviewed_at, review_note)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+				created_by, created_at, updated_at, reviewed_by, reviewed_at, review_note, office_id)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
 			org, s.ID, s.Name, s.Description, s.Status, s.Source, s.Builtin, s.CurrentVersion, s.ActiveVersion, s.ActiveDescription,
-			s.CreatedBy, s.CreatedAt, s.UpdatedAt, s.ReviewedBy, s.ReviewedAt, s.ReviewNote)
+			s.CreatedBy, s.CreatedAt, s.UpdatedAt, s.ReviewedBy, s.ReviewedAt, s.ReviewNote, s.OfficeID)
 		if err != nil {
 			return err
 		}
@@ -86,7 +86,7 @@ func (d *SkillStore) ListSkills(ctx context.Context, org string) ([]skills.Skill
 	return many(ctx, d.S, org, func(r scanner) (skills.Skill, error) {
 		var s skills.Skill
 		err := r.Scan(&s.ID, &s.Name, &s.Description, &s.Status, &s.Source, &s.Builtin, &s.CurrentVersion, &s.ActiveVersion, &s.ActiveDescription,
-			&s.CreatedBy, &s.CreatedAt, &s.UpdatedAt, &s.ReviewedBy, &s.ReviewedAt, &s.ReviewNote, &s.DeletedAt, &s.Agents)
+			&s.CreatedBy, &s.CreatedAt, &s.UpdatedAt, &s.ReviewedBy, &s.ReviewedAt, &s.ReviewNote, &s.DeletedAt, &s.OfficeID, &s.Agents)
 		return s, err
 	}, `SELECT `+skillCols+`, (SELECT count(*) FROM skill_assignments a WHERE a.org_id = skills.org_id AND a.skill_id = skills.id)
 		FROM skills WHERE org_id=$1 AND deleted_at IS NULL ORDER BY name`, org)
@@ -103,10 +103,10 @@ func (d *SkillStore) CountSkills(ctx context.Context, org string) (int, error) {
 func (d *SkillStore) AddVersion(ctx context.Context, org string, expected int, s skills.Skill, v skills.Version) error {
 	return mapDrive(d.S.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `UPDATE skills SET description=$4, status=$5, source=$6, builtin=$7, current_version=$8, active_version=$9, active_description=$10,
-				updated_at=$11, reviewed_by=$12, reviewed_at=$13, review_note=$14, deleted_at=NULL
+				updated_at=$11, reviewed_by=$12, reviewed_at=$13, review_note=$14, office_id=$15, deleted_at=NULL
 			WHERE org_id=$1 AND id=$2 AND current_version=$3`,
 			org, s.ID, expected, s.Description, s.Status, s.Source, s.Builtin, s.CurrentVersion, s.ActiveVersion, s.ActiveDescription,
-			s.UpdatedAt, s.ReviewedBy, s.ReviewedAt, s.ReviewNote)
+			s.UpdatedAt, s.ReviewedBy, s.ReviewedAt, s.ReviewNote, s.OfficeID)
 		if err != nil {
 			return err
 		}
