@@ -117,3 +117,48 @@ export function lastChange(iso: string, now: Date): { relative: boolean } {
   const t = Date.parse(iso);
   return { relative: !Number.isNaN(t) && now.getTime() - t < 24 * 3600_000 };
 }
+
+/**
+ * The folder the URL names (`?carpeta=`, relative to the department root) as a full path. Anything that is not plainly
+ * under the root (`..`, `.`, a backslash) falls back to the root.
+ */
+export function folderFromParam(root: string, param: string | null | undefined): string {
+  const r = root.replace(/\/+$/, "");
+  const segs = String(param ?? "").split("/").filter(Boolean);
+  if (segs.some((s) => s === ".." || s === "." || s.includes("\\"))) return r;
+  return segs.length ? `${r}/${segs.join("/")}` : r;
+}
+
+/** The `?carpeta=` value of a folder: its path under the root ("" for the root itself or anything outside it). */
+export function folderParam(root: string, path: string): string {
+  const r = norm(root);
+  const p = path.replace(/\/+$/, "");
+  return norm(p).startsWith(r + "/") ? p.slice(r.length + 1) : "";
+}
+
+/** The office's agents the person may use (the agents directory's `rights.use`); no directory (older backend): all. */
+export function usableAgents(office: string[], directory: { id: string; rights: { use: boolean } }[] | null): string[] {
+  if (!directory) return office;
+  const ok = new Set(directory.filter((d) => d.rights.use).map((d) => d.id));
+  return office.filter((id) => ok.has(id));
+}
+
+/** The text for a refused "Pedir": not allowed to use that agent, the folder is not available, or a generic failure. */
+export function sendErrorKey(e: unknown): string {
+  const m = /-> (\d{3})\b/.exec(e instanceof Error ? e.message : "");
+  const code = m ? Number(m[1]) : 0;
+  if (code === 403) return "dept.ask.err.forbidden";
+  if (code === 400 || code === 404) return "dept.ask.err.folder";
+  return "chat.sendError";
+}
+
+/** Milliseconds until the next local midnight ("Cambiado hoy" is recomputed then). */
+export function msUntilMidnight(now: Date): number {
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  return next.getTime() - now.getTime();
+}
+
+/** The URL of a department at a folder (`carpeta` = folderParam; "" = the root). */
+export function deptHref(officeId: string, carpeta: string): string {
+  return `/d/${encodeURIComponent(officeId)}${carpeta ? `?carpeta=${encodeURIComponent(carpeta)}` : ""}`;
+}

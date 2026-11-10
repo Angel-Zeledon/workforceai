@@ -6282,5 +6282,9 @@
   "dept.emptyFilter": "Nothing here with this filter.",
   "dept.proposedBody": "The file is created once you approve the proposal.",
   "dept.file": "File",
-  "action.write_document": "Create a document"
+  "action.write_document": "Create a document",
+  "dept.expand": "Expand {name}",
+  "dept.unavailable.body": "You may not be a member of this department, or it no longer exists. Open your department from the menu or ask whoever manages it for access.",
+  "dept.ask.err.forbidden": "You can't ask this agent for work. Pick another one or ask for access.",
+  "dept.ask.err.folder": "This folder isn't available for requests. Reopen the department and try again."
 }

@@ -51,7 +51,7 @@ export function DeptTree({ root, rootName, current, pending, onOpen, refresh }: 
       <li key={k}>
         <div className={`flex min-h-10 items-center gap-0.5 rounded-md pr-1.5 text-[13px] md:min-h-8 ${here ? "bg-accent-soft font-semibold text-accent" : "text-ink hover:bg-panel2"}`}
           style={{ paddingLeft: 2 + depth * 14 }}>
-          <button type="button" onClick={() => toggle(path)} aria-label={name} aria-expanded={isOpen}
+          <button type="button" onClick={() => toggle(path)} aria-label={t("dept.expand", { name })} title={t("dept.expand", { name })} aria-expanded={isOpen}
             className={`flex h-7 w-6 shrink-0 items-center justify-center rounded text-mute hover:text-ink ${kids && !kids.length ? "invisible" : ""}`}>
             <Icon name="chevron" size={13} className={`transition-transform ${isOpen ? "rotate-90" : ""}`} />
           </button>

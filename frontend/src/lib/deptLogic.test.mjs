@@ -1,7 +1,8 @@
 // Unit tests of the department drive logic (run: npm run test:unit).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { myDepartments, pendingByPath, filterRows, proposedRows, defaultAgent, crumbs, pathKey, pendingUnder, findDepartment, deptView, lastChange } from "./deptLogic.ts";
+import { myDepartments, pendingByPath, filterRows, proposedRows, defaultAgent, crumbs, pathKey, pendingUnder, findDepartment, deptView, lastChange,
+  folderFromParam, folderParam, usableAgents, sendErrorKey, msUntilMidnight, deptHref } from "./deptLogic.ts";
 
 const off = (o) => ({ id: "x", name: "x", general: false, is_member: true, folder_path: "/Offices/X", agents: [], ...o });
 const ap = (id, path, over = {}) => ({ id, status: "pending", context: path === undefined ? {} : { path, action: "write" }, ...over });
@@ -115,4 +116,50 @@ test("lastChange: relative under a day, a date after", () => {
   assert.deepEqual(lastChange(new Date(2026, 10, 9, 14, 0, 0).toISOString(), now), { relative: true });
   assert.deepEqual(lastChange(new Date(2026, 10, 7, 14, 0, 0).toISOString(), now), { relative: false });
   assert.deepEqual(lastChange("nope", now), { relative: false });
+});
+
+test("folderFromParam: relative to the root, never outside it", () => {
+  const R = "/Offices/Contabilidad";
+  assert.equal(folderFromParam(R, null), R);
+  assert.equal(folderFromParam(R, ""), R);
+  assert.equal(folderFromParam(R, "Bancos y conciliaciones"), R + "/Bancos y conciliaciones");
+  assert.equal(folderFromParam(R, "/Clientes/Grupo Alfa/"), R + "/Clientes/Grupo Alfa");
+  assert.equal(folderFromParam(R, "Clientes//Grupo Alfa"), R + "/Clientes/Grupo Alfa");
+  assert.equal(folderFromParam(R, "../Legal"), R);
+  assert.equal(folderFromParam(R, "Clientes/../../Legal"), R);
+  assert.equal(folderFromParam(R, "./Clientes"), R);
+  assert.equal(folderFromParam(R, String.raw`a\b`), R);
+});
+
+test("folderParam is the inverse of folderFromParam", () => {
+  const R = "/Offices/Contabilidad";
+  assert.equal(folderParam(R, R), "");
+  assert.equal(folderParam(R, R + "/Clientes/Grupo Alfa"), "Clientes/Grupo Alfa");
+  assert.equal(folderParam(R, "/offices/contabilidad/Impuestos"), "Impuestos");
+  assert.equal(folderParam(R, "/Shared/x"), "");
+  assert.equal(folderFromParam(R, folderParam(R, R + "/Impuestos")), R + "/Impuestos");
+});
+
+test("usableAgents: the office's agents the person may use; without a directory, all of them", () => {
+  const dir = [{ id: "a", rights: { see: true, use: true, edit: false } }, { id: "b", rights: { see: true, use: false, edit: false } }];
+  assert.deepEqual(usableAgents(["a", "b", "c"], dir), ["a"]);
+  assert.deepEqual(usableAgents(["a", "b"], null), ["a", "b"]);
+});
+
+test("sendErrorKey maps the refusal to a clear text", () => {
+  assert.equal(sendErrorKey(new Error("POST /messages -> 403")), "dept.ask.err.forbidden");
+  assert.equal(sendErrorKey(new Error("POST /messages -> 400")), "dept.ask.err.folder");
+  assert.equal(sendErrorKey(new Error("POST /messages -> 404")), "dept.ask.err.folder");
+  assert.equal(sendErrorKey(new Error("POST /messages -> 500")), "chat.sendError");
+  assert.equal(sendErrorKey("boom"), "chat.sendError");
+});
+
+test("msUntilMidnight", () => {
+  assert.equal(msUntilMidnight(new Date(2026, 10, 9, 23, 59, 0)), 60_000);
+  assert.equal(msUntilMidnight(new Date(2026, 10, 9, 0, 0, 0)), 24 * 3600_000);
+});
+
+test("deptHref: the department and, below its root, the folder", () => {
+  assert.equal(deptHref("contabilidad", ""), "/d/contabilidad");
+  assert.equal(deptHref("Ventas Norte", "Clientes/Grupo Alfa"), "/d/Ventas%20Norte?carpeta=Clientes%2FGrupo%20Alfa");
 });

@@ -259,7 +259,8 @@ function Preview({ file, text }: { file: DriveFile; text: string }) {
 }
 
 /** `embedded`: inside a host panel that already shows the name and the close button (the department's Drive):
- * no header and no placement of its own, it fills the host. Default: the Files screen's side pane, as always. */
+ * no header, no "Mover a la papelera" and no placement of its own, it fills the host. Default: the Files screen's
+ * side pane, as always. */
 export function FilePane({ file, focus, onClearFocus, onClose, onChanged, onDeleted, embedded = false }: {
   file: DriveFile; focus?: { start: number; page?: number } | null; onClearFocus?: () => void; onClose: () => void; onChanged: () => void; onDeleted: () => void; embedded?: boolean;
 }) {
@@ -294,7 +295,7 @@ export function FilePane({ file, focus, onClearFocus, onClose, onChanged, onDele
       </div>}
       <div className="flex gap-2 border-b border-line px-4 py-2">
         <Btn data-testid="drive-download" onClick={() => drive.download(file)}>{t("drive.download")}</Btn>
-        <Btn kind="danger" data-testid="drive-delete" onClick={async () => { try { await drive.remove(file.id); onDeleted(); } catch (e) { alertCode(e); } }}>{t("drive.delete")}</Btn>
+        {!embedded && <Btn kind="danger" data-testid="drive-delete" onClick={async () => { try { await drive.remove(file.id); onDeleted(); } catch (e) { alertCode(e); } }}>{t("drive.delete")}</Btn>}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {shown > 0 && <div className="mb-2 rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800">{t("drive.viewingVersion", { v: shown })}</div>}

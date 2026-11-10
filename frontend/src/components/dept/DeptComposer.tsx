@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
+import { sendErrorKey } from "@/lib/deptLogic";
 import { useAgentName } from "../ui";
 import { Icon } from "../icons";
 
@@ -15,9 +16,12 @@ export interface AskSeed { text: string; path: string; name: string; n: number }
  * what you need and "Pedir" sends it to that agent's chat with the current folder as the work folder
  * (POST /messages `folder`). A row's "Pedir a un agente…" fills the text and attaches that file.
  */
-export function DeptComposer({ agents, initialAgent, folder, seed }: {
-  agents: string[]; initialAgent?: string; folder: string; seed?: AskSeed | null;
+export function DeptComposer({ agents: usable, initialAgent, folder, seed }: {
+  /** the office's agents the person may use; null while they load */
+  agents: string[] | null; initialAgent?: string; folder: string; seed?: AskSeed | null;
 }) {
+  const loading = usable === null;
+  const agents = useMemo(() => usable ?? [], [usable]);
   const { t } = useT();
   const name = useAgentName();
   const [agent, setAgent] = useState(initialAgent ?? agents[0] ?? "");
@@ -41,19 +45,19 @@ export function DeptComposer({ agents, initialAgent, folder, seed }: {
     setBusy(true); setErr(""); setSent(null);
     const conv = `agent:${agent}`;
     const attachments = file ? [file.path] : [];
-    // the person's message shows in the agent's chat right away, as from the chat itself
-    useStore.getState().addLocalChat({
-      id: `local:${Date.now().toString(36)}`, conversation: conv, turn_id: null, from: "user", to: agent, kind: "chat", text: v, reply_to: null,
-      ts: new Date().toISOString(), ...(file ? { files: [{ path: file.path, name: file.name, action: "attach" }] } : {}),
-    });
     try {
       await api.postMessage(conv, v, attachments, undefined, folder);
+      // accepted: the person's message shows in the agent's chat (a refused one never appears there)
+      useStore.getState().addLocalChat({
+        id: `local:${Date.now().toString(36)}`, conversation: conv, turn_id: null, from: "user", to: agent, kind: "chat", text: v, reply_to: null,
+        ts: new Date().toISOString(), ...(file ? { files: [{ path: file.path, name: file.name, action: "attach" }] } : {}),
+      });
       setText(""); setFile(null); setSent(agent);
-    } catch { setErr(t("chat.sendError")); }
+    } catch (e) { setErr(t(sendErrorKey(e))); }
     setBusy(false);
   };
 
-  if (!agents.length) {
+  if (!loading && !agents.length) {
     return <div data-testid="dept-composer" className="border-t border-line bg-panel px-3 py-3 text-[12.5px] text-mute sm:px-5">{t("dept.ask.noAgents")}</div>;
   }
   return (
@@ -82,7 +86,7 @@ export function DeptComposer({ agents, initialAgent, folder, seed }: {
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 sm:flex-nowrap">
         <label className="flex min-w-0 items-center gap-1.5 max-sm:w-full sm:contents" htmlFor="dept-ask-agent">
           <span className="text-[12px] text-mute sm:sr-only">{t("dept.ask.agent")}:</span>
-          <select id="dept-ask-agent" data-testid="dept-ask-agent" value={agent} onChange={(e) => setAgent(e.target.value)}
+          <select id="dept-ask-agent" data-testid="dept-ask-agent" disabled={loading} value={agent} onChange={(e) => setAgent(e.target.value)}
             className="min-h-9 min-w-0 shrink-0 truncate rounded-lg border border-line bg-panel px-2 text-[13px] text-ink outline-none focus:border-accent max-sm:max-w-[70%] max-sm:py-1 sm:max-w-[200px]">
             {agents.map((id) => <option key={id} value={id}>{name(id)}</option>)}
           </select>
@@ -90,7 +94,7 @@ export function DeptComposer({ agents, initialAgent, folder, seed }: {
         <input ref={input} data-testid="dept-ask-input" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("dept.ask.placeholder")}
           aria-label={t("dept.ask.placeholder")}
           className="min-h-10 min-w-0 flex-1 rounded-lg border border-line bg-panel2 px-3 text-base text-ink outline-none focus:border-accent sm:min-h-9 sm:text-[13px]" />
-        <button type="submit" data-testid="dept-ask-send" disabled={!text.trim() || busy}
+        <button type="submit" data-testid="dept-ask-send" disabled={!text.trim() || busy || !agent}
           className="min-h-10 shrink-0 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-9">
           {t("dept.ask.send")}
         </button>

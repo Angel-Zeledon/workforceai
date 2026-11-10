@@ -6283,5 +6283,9 @@
   "dept.emptyFilter": "Nada aqui com este filtro.",
   "dept.proposedBody": "O arquivo será criado quando você aprovar a proposta.",
   "dept.file": "Arquivo",
-  "action.write_document": "Criar um documento"
+  "action.write_document": "Criar um documento",
+  "dept.expand": "Expandir {name}",
+  "dept.unavailable.body": "Talvez você não seja membro deste departamento ou ele não exista mais. Abra seu departamento pelo menu ou peça acesso a quem o administra.",
+  "dept.ask.err.forbidden": "Você não pode pedir trabalho a este agente. Escolha outro ou peça acesso.",
+  "dept.ask.err.folder": "Esta pasta não está disponível para pedidos. Abra o departamento de novo e tente outra vez."
 }
