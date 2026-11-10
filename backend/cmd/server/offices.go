@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
@@ -98,16 +99,16 @@ func officeRecall(m *memory.Service, svc *offices.Service) {
 		return
 	}
 	// D3: what the agents of a department learn stays in the department; General's agents (and unknown ones) keep
-	// writing organization memory.
-	m.SetAgentOffice(func(ctx context.Context, org, agentID string) string {
+	// writing organization memory. An unreadable model is an error (the memory writes nothing), never "General".
+	m.SetOfficeScope(func(ctx context.Context, org, agentID string) (string, error) {
+		return agentOffices{svc: svc}.AgentOffice(ctx, org, agentID)
+	}, func(ctx context.Context, org, office string) (bool, error) {
 		model, err := svc.Model(ctx, org)
 		if err != nil || model == nil {
-			return ""
+			return true, errors.New("offices model unavailable")
 		}
-		if id := model.Agent(agentID).OfficeID; id != offices.GeneralID {
-			return id
-		}
-		return ""
+		o, ok := model.Office(office)
+		return !ok || o.Visibility == offices.Private, nil
 	})
 	m.SetExtraRecall(func(ctx context.Context, org, agentID, _, text string) []application.RecalledMemory {
 		var out []application.RecalledMemory

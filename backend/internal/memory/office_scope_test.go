@@ -2,6 +2,7 @@ package memory_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -13,7 +14,88 @@ import (
 func officeSvc(store memory.DocStore) *memory.Service {
 	offices := map[string]string{"acct1": "acct", "acct2": "acct", "legal1": "legal"} // others: General ("")
 	return memory.New(memory.Config{Docs: store, Retriever: &memory.FTS{Docs: store},
-		AgentOffice: func(_ context.Context, _, agentID string) string { return offices[agentID] }})
+		AgentOffice:  func(_ context.Context, _, agentID string) (string, error) { return offices[agentID], nil },
+		OfficeSealed: func(_ context.Context, _, office string) (bool, error) { return office == "legal", nil }})
+}
+
+func report(id string, contributors ...string) domain.Report {
+	return domain.Report{ID: id, RequestID: "rq-" + id, Title: "Informe de cierre", Summary: "Conciliación bancaria del trimestre",
+		Contributors: append(contributors, "assistant"), CreatedAt: time.Now()}
+}
+
+func TestReportOfOfficeAgentsStaysInOffice(t *testing.T) {
+	store := memory.NewMemStore()
+	svc := officeSvc(store)
+	ctx := context.Background()
+	svc.RememberReport(ctx, "o", report("r1", "acct1", "acct2"))
+	d, err := store.GetByRef(ctx, "o", "report:r1")
+	if err != nil || d.Scope != memory.ScopeOffice || d.OfficeID != "acct" {
+		t.Fatalf("doc: %+v %v", d, err)
+	}
+}
+
+func TestMixedReportWithPrivateOfficeIsNotIndexed(t *testing.T) {
+	store := memory.NewMemStore()
+	svc := officeSvc(store)
+	ctx := context.Background()
+	svc.RememberReport(ctx, "o", report("r1", "acct1", "legal1")) // two offices, one private
+	svc.RememberReport(ctx, "o", report("r2", "general1", "legal1"))
+	for _, ref := range []string{"report:r1", "report:r2"} {
+		if _, err := store.GetByRef(ctx, "o", ref); err == nil {
+			t.Fatalf("%s must not be indexed", ref)
+		}
+	}
+}
+
+func TestReportOfGeneralStaysOrg(t *testing.T) {
+	store := memory.NewMemStore()
+	svc := officeSvc(store)
+	ctx := context.Background()
+	svc.RememberReport(ctx, "o", report("r1", "general1", "general2"))
+	svc.RememberReport(ctx, "o", report("r2", "general1", "acct1")) // General + an open office
+	for _, ref := range []string{"report:r1", "report:r2"} {
+		if d, err := store.GetByRef(ctx, "o", ref); err != nil || d.Scope != memory.ScopeOrg {
+			t.Fatalf("%s: %+v %v", ref, d, err)
+		}
+	}
+}
+
+func TestOfficeErrorFailsClosedOnWrite(t *testing.T) {
+	store := memory.NewMemStore()
+	svc := memory.New(memory.Config{Docs: store, Retriever: &memory.FTS{Docs: store},
+		AgentOffice: func(context.Context, string, string) (string, error) { return "", errors.New("model unavailable") }})
+	ctx := context.Background()
+	svc.RememberTask(ctx, "o", finished("t1", "acct1", "Conciliación bancaria del trimestre"), "conciliación")
+	svc.RememberReport(ctx, "o", report("r1", "acct1"))
+	for _, ref := range []string{"task:t1", "report:r1"} {
+		if _, err := store.GetByRef(ctx, "o", ref); err == nil {
+			t.Fatalf("%s must not be indexed when the office is unknown", ref)
+		}
+	}
+}
+
+type backfillSrc struct{}
+
+func (backfillSrc) ListTasks(context.Context, string, string, string) ([]domain.Task, error) {
+	return []domain.Task{finished("t1", "acct1", "Conciliación bancaria del trimestre")}, nil
+}
+func (backfillSrc) ListReports(context.Context, string) ([]domain.Report, error) {
+	return []domain.Report{report("r1", "acct1")}, nil
+}
+func (backfillSrc) GetRequest(context.Context, string, string) (domain.Request, error) {
+	return domain.Request{}, nil
+}
+
+func TestBackfillTagsOfficeWork(t *testing.T) {
+	store := memory.NewMemStore()
+	svc := officeSvc(store)
+	ctx := context.Background()
+	svc.Backfill(ctx, "o", backfillSrc{}, 10, 10)
+	for _, ref := range []string{"task:t1", "report:r1"} {
+		if d, err := store.GetByRef(ctx, "o", ref); err != nil || d.Scope != memory.ScopeOffice || d.OfficeID != "acct" {
+			t.Fatalf("%s: %+v %v", ref, d, err)
+		}
+	}
 }
 
 func finished(id, agent, summary string) domain.Task {

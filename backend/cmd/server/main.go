@@ -381,6 +381,7 @@ func run(log *slog.Logger) error {
 	// E2 offices (offices.go): offices, agent owners and visibility; their notes reach the tasks.
 	deps.Offices = wireOffices(pg, store, authStore, orgChartSvc, rec, noteCleaner(memorySvc))
 	officeRecall(memorySvc, deps.Offices)
+	startMemoryBackfill(ctx, log, memorySvc, store, orgIDs, cfg.App.OrgID) // after the office scope: see startMemoryBackfill
 	if cfg.AuthEnabled && deps.Offices != nil && ws.drive != nil {
 		ws.drive.SetPeople(officePeople{svc: deps.Offices}) // office folders: member edits, open reads, private none
 		// agents work in their office folder and never beyond the person they work for

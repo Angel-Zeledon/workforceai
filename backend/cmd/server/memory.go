@@ -13,6 +13,23 @@ import (
 	"aiworkforce/backend/internal/memory"
 )
 
+// startMemoryBackfill indexes what existed before the memory did. It runs AFTER the offices are wired
+// (officeRecall): a document written before the office scope is installed would be filed as organization memory.
+func startMemoryBackfill(ctx context.Context, log *slog.Logger, svc *memory.Service, store application.Store, orgIDs []string, defaultOrg string) {
+	go func() { // idempotent, bounded, never blocks the start
+		bctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
+		defer cancel()
+		if defaultOrg != "" && !slices.Contains(orgIDs, defaultOrg) {
+			orgIDs = append(orgIDs, defaultOrg)
+		}
+		for _, org := range orgIDs {
+			if n := svc.Backfill(application.WithOrg(bctx, org), org, store, 2000, 500); n > 0 {
+				log.Info("memory backfill", "org", org, "documents", n)
+			}
+		}
+	}()
+}
+
 // wireMemory builds the long-term memory (docs/architecture/memory.md): the
 // document index (Postgres or memory), the full-text retriever over documents
 // and the drive files an agent may read, the memory.search tool of the Tool
@@ -61,18 +78,6 @@ func wireMemory(ctx context.Context, log *slog.Logger, pg *postgres.Store, store
 		cw.gw.AddNative(&memory.GatewayTool{Svc: svc, Suspects: cw.sus, CustomerOf: customerOf(ws.customers)})
 	}
 	orch.SetMemorySource(svc)
-	go func() { // backfill: idempotent, bounded, never blocks the start
-		bctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
-		defer cancel()
-		if defaultOrg != "" && !slices.Contains(orgIDs, defaultOrg) {
-			orgIDs = append(orgIDs, defaultOrg)
-		}
-		for _, org := range orgIDs {
-			if n := svc.Backfill(application.WithOrg(bctx, org), org, store, 2000, 500); n > 0 {
-				log.Info("memory backfill", "org", org, "documents", n)
-			}
-		}
-	}()
 	log.Info("long-term memory ready", "tool", memory.ToolName, "store", map[bool]string{true: "postgres", false: "memory"}[pg != nil])
 	return svc
 }

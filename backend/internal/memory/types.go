@@ -55,13 +55,13 @@ const (
 
 // Doc is an indexed document (task output, report or note).
 type Doc struct {
-	ID          string `json:"id"`
-	Kind        string `json:"kind"` // task | report | note
-	Ref         string `json:"ref"`  // task:<id> | report:<id> | memory:<task id>.<n>
-	Title       string `json:"title"`
-	Body        string `json:"body"`
-	AgentID     string `json:"agent_id"`
-	Scope       string `json:"scope"`
+	ID      string `json:"id"`
+	Kind    string `json:"kind"` // task | report | note
+	Ref     string `json:"ref"`  // task:<id> | report:<id> | memory:<task id>.<n>
+	Title   string `json:"title"`
+	Body    string `json:"body"`
+	AgentID string `json:"agent_id"`
+	Scope   string `json:"scope"`
 	// OfficeID is the office a ScopeOffice document belongs to ("" for every other scope).
 	OfficeID    string `json:"office_id,omitempty"`
 	ProjectID   string `json:"project_id,omitempty"`

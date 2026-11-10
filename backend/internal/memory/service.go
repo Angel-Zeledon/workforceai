@@ -36,8 +36,12 @@ type Config struct {
 	ExtraRecall func(ctx context.Context, org, agentID, requestID, text string) []application.RecalledMemory
 	// AgentOffice (D3) tells the office an agent works in ("" for General's agents, unknown agents and when
 	// there are no offices: then everything stays organization memory, as before). What a department's agents
-	// learn is written with ScopeOffice and only the agents of that office recall it.
-	AgentOffice func(ctx context.Context, org, agentID string) string
+	// learn is written with ScopeOffice and only the agents of that office recall it. An error means the office is
+	// unknown: nothing is written (fail closed) and nothing of an office is read.
+	AgentOffice func(ctx context.Context, org, agentID string) (string, error)
+	// OfficeSealed tells whether an office is private. A report whose authors belong to several offices is only
+	// indexed when none of them is private (nil = unknown: such a report is not indexed).
+	OfficeSealed func(ctx context.Context, org, office string) (bool, error)
 	// Audit records a memory change by a person (optional).
 	Audit func(ctx context.Context, org, actor, action, id string, details map[string]any)
 	Now   func() time.Time
@@ -48,6 +52,7 @@ type Config struct {
 // relevant for a task and lets people see and delete what an agent remembers.
 type Service struct {
 	cfg   Config
+	offMu sync.RWMutex // guards cfg.AgentOffice / cfg.OfficeSealed (set after New by SetOfficeScope)
 	topMu sync.Mutex
 	topAt map[string]time.Time // last lazy embedding top-up per organization
 }
@@ -94,12 +99,70 @@ func (s *Service) tagCustomer(ctx context.Context, org, requestID string, docs .
 	}
 }
 
-// office is the office of an agent ("" = General, unknown or no offices).
+func (s *Service) officeFns() (func(context.Context, string, string) (string, error), func(context.Context, string, string) (bool, error)) {
+	s.offMu.RLock()
+	defer s.offMu.RUnlock()
+	return s.cfg.AgentOffice, s.cfg.OfficeSealed
+}
+
+// officeOf is the office of an agent ("" = General or no offices); an error means unknown.
+func (s *Service) officeOf(ctx context.Context, org, agentID string) (string, error) {
+	fn, _ := s.officeFns()
+	if fn == nil || agentID == "" {
+		return "", nil
+	}
+	return fn(ctx, org, agentID)
+}
+
+// office is the office of the agent who READS: unknown counts as none, so it sees no office documents.
 func (s *Service) office(ctx context.Context, org, agentID string) string {
-	if s.cfg.AgentOffice == nil || agentID == "" {
+	off, err := s.officeOf(ctx, org, agentID)
+	if err != nil {
 		return ""
 	}
-	return s.cfg.AgentOffice(ctx, org, agentID)
+	return off
+}
+
+// assistantAgent is the planner/synthesizer that signs every report next to the agents that worked on it.
+const assistantAgent = "assistant"
+
+// reportOffice decides where a report is remembered from the offices of its contributors: all of one office
+// (not General) -> that office; only General's or open offices -> the organization; anything involving a private
+// office with other authors, or an office that cannot be determined -> ok=false (not indexed).
+func (s *Service) reportOffice(ctx context.Context, org string, r domain.Report) (office string, ok bool) {
+	offs, general := map[string]bool{}, false
+	for _, a := range r.Contributors {
+		if a == assistantAgent || a == "" {
+			continue
+		}
+		off, err := s.officeOf(ctx, org, a)
+		if err != nil {
+			return "", false
+		}
+		if off == "" {
+			general = true
+		} else {
+			offs[off] = true
+		}
+	}
+	switch {
+	case len(offs) == 0:
+		return "", true
+	case len(offs) == 1 && !general:
+		for o := range offs {
+			return o, true
+		}
+	}
+	_, sealed := s.officeFns()
+	if sealed == nil {
+		return "", false
+	}
+	for o := range offs {
+		if priv, err := sealed(ctx, org, o); err != nil || priv {
+			return "", false
+		}
+	}
+	return "", true
 }
 
 func (s *Service) scrub(text string) string {
@@ -206,7 +269,12 @@ func (s *Service) RememberTask(ctx context.Context, org string, t domain.Task, r
 	d.Body = s.scrub(d.Body)
 	d.Title = s.scrub(d.Title)
 	d.ProjectID, d.ProjectName = s.project(ctx, org, t.RequestID)
-	if off := s.office(ctx, org, t.AgentID); off != "" { // D3: what a department learns stays in the department
+	off, err := s.officeOf(ctx, org, t.AgentID)
+	if err != nil { // fail closed: an unknown office must not turn department work into organization memory
+		s.cfg.Log.Warn("memory: office of agent, task not indexed", "task", t.ID, "err", err)
+		return
+	}
+	if off != "" { // D3: what a department learns stays in the department
 		d.Scope, d.OfficeID = ScopeOffice, off
 	}
 	docs := []*Doc{&d}
@@ -230,7 +298,15 @@ func (s *Service) RememberTask(ctx context.Context, org string, t domain.Task, r
 
 // RememberReport implements application.MemorySource.
 func (s *Service) RememberReport(ctx context.Context, org string, r domain.Report) {
+	off, ok := s.reportOffice(ctx, org, r)
+	if !ok {
+		s.cfg.Log.Warn("memory: report of several offices or of unknown office, not indexed", "report", r.ID)
+		return
+	}
 	d := ReportDoc(r)
+	if off != "" {
+		d.Scope, d.OfficeID = ScopeOffice, off
+	}
 	d.Body, d.Title = s.scrub(d.Body), s.scrub(d.Title)
 	d.ProjectID, d.ProjectName = s.project(ctx, org, r.RequestID)
 	s.tagCustomer(ctx, org, r.RequestID, &d)
@@ -466,9 +542,13 @@ func (s *Service) RememberNote(ctx context.Context, org, agentID, text string) e
 	return s.cfg.Docs.Upsert(ctx, org, d)
 }
 
-// SetAgentOffice installs Config.AgentOffice after construction (the offices are wired after the memory). Call it
-// at start-up, before the first task.
-func (s *Service) SetAgentOffice(fn func(ctx context.Context, org, agentID string) string) { s.cfg.AgentOffice = fn }
+// SetOfficeScope installs Config.AgentOffice and Config.OfficeSealed after construction (safe at any time; the
+// server installs them before the backfill starts, so no document is ever written without them).
+func (s *Service) SetOfficeScope(agentOffice func(ctx context.Context, org, agentID string) (string, error), sealed func(ctx context.Context, org, office string) (bool, error)) {
+	s.offMu.Lock()
+	defer s.offMu.Unlock()
+	s.cfg.AgentOffice, s.cfg.OfficeSealed = agentOffice, sealed
+}
 
 // SetExtraRecall installs Config.ExtraRecall after construction (the offices are wired after the memory). Call it
 // at start-up, before the first task.
