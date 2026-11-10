@@ -101,9 +101,9 @@ func WorkAgentsFrom(ctx context.Context) []string {
 }
 
 // EventRefs is what an event is about, read from its envelope, its payload and its context: the agents, requests,
-// tasks and conversations it names, and the people it is for (who asked, who wrote).
+// tasks, conversations and departments (offices) it names, and the people it is for (who asked, who wrote).
 type EventRefs struct {
-	Agents, Requests, Tasks, Conversations, People []string
+	Agents, Requests, Tasks, Conversations, Offices, People []string
 }
 
 // Keys of a payload (at any depth) that name each kind of reference. Values that are not ids of that kind (a
@@ -114,6 +114,7 @@ var (
 	requestKeys = map[string]bool{"request_id": true}
 	taskKeys    = map[string]bool{"task_id": true, "parent_task_id": true}
 	convKeys    = map[string]bool{"conversation_id": true}
+	officeKeys  = map[string]bool{"office_id": true} // a resource of a department: a connection, a skill
 	personKeys  = map[string]bool{"requested_by": true, "author_id": true}
 )
 
@@ -133,7 +134,7 @@ func RefsOf(ctx context.Context, ev domain.Event) EventRefs {
 			}
 		}
 	}
-	for _, s := range []*[]string{&r.Agents, &r.Requests, &r.Tasks, &r.Conversations, &r.People} {
+	for _, s := range []*[]string{&r.Agents, &r.Requests, &r.Tasks, &r.Conversations, &r.Offices, &r.People} {
 		slices.Sort(*s)
 		*s = slices.Compact(*s)
 	}
@@ -157,6 +158,8 @@ func (r *EventRefs) walk(v any, depth int) {
 					r.Tasks = append(r.Tasks, s)
 				case convKeys[k]:
 					r.Conversations = append(r.Conversations, s)
+				case officeKeys[k]:
+					r.Offices = append(r.Offices, s)
 				case personKeys[k]:
 					if p := PersonID(s); p != "" {
 						r.People = append(r.People, p)

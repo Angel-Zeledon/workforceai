@@ -19,7 +19,8 @@ var unscopedEvents = map[string]bool{domain.EvAgentCreated: true, domain.EvMetri
 // New returns the recorder's AudienceFor: a live event about the work of an agent of a private office (the event's
 // agent, or the agent of the task, request, approval or conversation it names) reaches only the members of that
 // office, admins included only as members, plus whoever asked for the request it belongs to (they always see their
-// request: the person in the event's context, or the request's run meta through requestedBy). The work of agents of
+// request: the person in the event's context, or the request's run meta through requestedBy). An event about a resource
+// of a private office (a connection or skill naming its office_id) is sealed the same way. The work of agents of
 // several private offices needs membership of all of them (the rule of GET /requests). The audience's Agent is the
 // private agent that sealed the event (the first in id order), so its activity line is filed under it. Everything else
 // reaches the whole organization as before. An unreadable offices model fails closed: the event reaches nobody and
@@ -66,17 +67,27 @@ func New(svc *offices.Service, store application.Store, requestedBy func(ctx con
 		var aud application.Audience
 		sealed := false
 		seen := map[string]bool{}
-		for _, a := range uniqueIDs(agents) {
-			o, ok := m.Office(m.Agent(a).OfficeID)
+		seal := func(officeID, agent string) {
+			o, ok := m.Office(officeID)
 			if !ok || o.General || o.Visibility != offices.Private || seen[o.ID] {
-				continue
+				return
 			}
 			seen[o.ID] = true
 			if !sealed {
-				aud, sealed = application.Audience{Users: slices.Clone(o.Members), Agent: a}, true
-				continue
+				aud, sealed = application.Audience{Users: slices.Clone(o.Members), Agent: agent}, true
+				return
 			}
 			aud.Users = slices.DeleteFunc(aud.Users, func(u string) bool { return !slices.Contains(o.Members, u) })
+			if aud.Agent == "" {
+				aud.Agent = agent
+			}
+		}
+		for _, a := range uniqueIDs(agents) {
+			seal(m.Agent(a).OfficeID, a)
+		}
+		// A resource of a department (a connection, a skill: its office_id) follows the department's visibility.
+		for _, id := range refs.Offices {
+			seal(id, "")
 		}
 		if !sealed {
 			return application.Audience{}, false

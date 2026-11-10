@@ -327,3 +327,35 @@ func TestRequesterReceivesTheirRequestLive(t *testing.T) {
 		t.Errorf("an event outside the run reaches the requester through the run meta: %v", got)
 	}
 }
+
+// A connection of a private office (its office_id in the payload) is the office's: its live events reach its members
+// only, with no activity line filed under any agent; a General connection keeps reaching everybody.
+func TestPrivateOfficeConnectionEventsReachOnlyMembers(t *testing.T) {
+	f := newFix(t)
+	f.install(nil)
+	f.rec.Emit(f.ctx, application.Action{Type: "connection.created",
+		Payload: map[string]any{"connection": map[string]any{"id": "cn-1", "label": "Banco Privado", "office_id": "d-priv"}}})
+	got := f.got()
+	if !slices.Contains(got["u-pri"], "connection.created") {
+		t.Errorf("the member must receive it: %v", got)
+	}
+	for _, u := range []string{"u-boss", "u-ana", "u-eve"} {
+		if len(got[u]) != 0 {
+			t.Errorf("%s (not a member) received %v", u, got[u])
+		}
+	}
+	for _, ev := range f.saved() {
+		if ev.Type == "connection.created" {
+			t.Errorf("a private office connection event must stay out of the organization's event log: %+v", ev)
+		}
+	}
+
+	f.rec.Emit(f.ctx, application.Action{Type: "connection.updated",
+		Payload: map[string]any{"connection": map[string]any{"id": "cn-2", "label": "Correo", "office_id": "general"}}})
+	got = f.got()
+	for _, u := range []string{"u-boss", "u-ana", "u-pri", "u-eve"} {
+		if !slices.Contains(got[u], "connection.updated") {
+			t.Errorf("%s must receive a General connection's event: %v", u, got[u])
+		}
+	}
+}

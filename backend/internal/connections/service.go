@@ -492,7 +492,7 @@ func dedupe(in []string) []string {
 
 func (s *Service) brief(c Connection) map[string]any {
 	return map[string]any{"id": c.ID, "provider": c.Provider, "label": c.Label, "status": c.Status,
-		"granted_capabilities": c.GrantedCapabilities}
+		"granted_capabilities": c.GrantedCapabilities, "office_id": NormOffice(c.OfficeID)}
 }
 
 // view decorates a connection for API responses (credential metadata, grants).
