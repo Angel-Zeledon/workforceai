@@ -105,6 +105,8 @@ export const drive = MOCK ? mockDrive() : {
   remove: (id: string) => req("DELETE", `/drive/files/${id}`),
   restore: (id: string) => req("POST", `/drive/files/${id}/restore`),
   trash: () => req<Trash>("GET", "/drive/trash"),
+  /** Replaces the tags of a file (needs edit on its folder). D2 "Marcar como revisado" adds `revisado`. */
+  setTags: (id: string, tags: string[]) => { const j = json({ tags }); return req<DriveFile>("PUT", `/drive/files/${id}/tags`, j.body, j.headers); },
   /** Downloads through the session (the token is in memory, not in a cookie). */
   download: async (f: DriveFile) => {
     const res = await authFetch(contentURL(f.id, 0, true), { cache: "no-store" });
@@ -133,6 +135,8 @@ function mockDrive() {
       const n = cur.file.current_version + 1;
       cur.versions.push({ v: { file_id: cur.file.id, version: n, size: text.length, author: by, message, created_at: at }, text });
       Object.assign(cur.file, { current_version: n, size: text.length, updated_by: by, updated_at: at });
+      // as the backend: a new version by an agent under /Offices is no longer "revisado"
+      if (by.kind === "agent" && path.toLowerCase().startsWith("/offices/")) cur.file.tags = cur.file.tags.filter((t) => t !== "revisado");
       return cur.file;
     }
     const id = `fil_mock_${++seq}`;
@@ -150,20 +154,25 @@ function mockDrive() {
   put("/Offices/Contabilidad/Clientes/Grupo Alfa/estado-de-cuenta.csv", "concepto,monto\nServicios octubre,12500\nAnticipo,-5000\n", human);
   put("/Offices/Contabilidad/Clientes/Grupo Alfa/notas-de-cierre.md", "# Cierre de octubre\n\nPendiente conciliar el anticipo.\n", human);
   // D2 demo: the department's Drive. Contabilidad has the accounting template (Clientes, Proveedores, Bancos y
-  // conciliaciones, Impuestos, Cierres mensuales, Políticas) with files by people and by its agent (Tomás Vidal).
+  // conciliaciones, Impuestos, Cierres mensuales, Políticas) with files by a member (Laura Méndez, lib/officesApi.ts) and
+  // by its agent (Tomás Vidal). Two of the agent's files are new work nobody reviewed yet ("Para revisar": the weekly
+  // summary and the unidentified bank items); the others carry the `revisado` tag a person put on them.
   const acc: Principal = { kind: "agent", id: "accounting" };
+  const laura: Principal = { kind: "human", id: "u_laura" };
+  const reviewed = (f: DriveFile) => { f.tags = ["revisado"]; };
   const C = "/Offices/Contabilidad";
   put(`${C}/resumen-semanal.md`, "# Resumen semanal de Contabilidad\n\n- Cobros de la semana registrados.\n- Conciliación de octubre en revisión.\n- Declaración de IVA lista para presentar.\n", acc, "resumen de la semana", ago(0.7));
-  put(`${C}/plan-de-cuentas.csv`, "cuenta,nombre,tipo\n1101,Caja,activo\n1102,Bancos,activo\n2101,Proveedores,pasivo\n4101,Ventas,ingreso\n5101,Costo de ventas,gasto\n", human, "", ago(24 * 15));
-  put(`${C}/Clientes/Distribuidora Norte/contrato-servicios.md`, "# Contrato de servicios — Distribuidora Norte\n\nVigencia: 12 meses. Facturación mensual a 30 días.\n", human, "", ago(24 * 3));
-  put(`${C}/Proveedores/lista-de-proveedores.csv`, "proveedor,plazo,contacto\nPapelería Central,30 días,ventas@papeleria.example\nTransportes Ruta 1,15 días,cobros@ruta1.example\n", human, "", ago(24 * 6));
-  put(`${C}/Proveedores/facturas-por-pagar-noviembre.csv`, "proveedor,factura,vence,monto\nPapelería Central,F-2201,2026-11-20,850\nTransportes Ruta 1,TR-993,2026-11-14,1240\n", acc, "facturas de noviembre", ago(2));
-  put(`${C}/Bancos y conciliaciones/extracto-bac-octubre.csv`, "fecha,concepto,monto\n2026-10-03,Depósito Grupo Alfa,5000\n2026-10-15,Pago planilla,-18200\n2026-10-28,Comisión bancaria,-12\n", human, "", ago(26));
-  put(`${C}/Bancos y conciliaciones/conciliacion-septiembre.md`, "# Conciliación bancaria — septiembre\n\nSaldo según banco y según libros coinciden. Sin partidas abiertas.\n", acc, "conciliación de septiembre", ago(24 * 12));
-  put(`${C}/Impuestos/declaracion-iva-octubre.md`, "# Declaración de IVA — octubre\n\nDébito fiscal: 4.180\nCrédito fiscal: 2.960\nA pagar: 1.220\n", acc, "borrador de la declaración", ago(24 * 4));
-  put(`${C}/Cierres mensuales/cierre-septiembre.md`, "# Cierre de septiembre\n\nCerrado el 5 de octubre. Ajustes: depreciación y provisión de vacaciones.\n", acc, "cierre de septiembre", ago(24 * 9));
-  put(`${C}/Cierres mensuales/checklist-de-cierre.md`, "# Checklist de cierre mensual\n\n1. Conciliar bancos\n2. Registrar provisiones\n3. Revisar cuentas por cobrar\n4. Emitir estados financieros\n", human, "", ago(24 * 20));
-  put(`${C}/Políticas/politica-de-reembolsos.md`, "# Política de reembolsos de gastos\n\nSe reembolsan gastos con factura a nombre de la empresa, presentados en 30 días.\n", human, "", ago(24 * 30));
+  put(`${C}/plan-de-cuentas.csv`, "cuenta,nombre,tipo\n1101,Caja,activo\n1102,Bancos,activo\n2101,Proveedores,pasivo\n4101,Ventas,ingreso\n5101,Costo de ventas,gasto\n", laura, "", ago(24 * 15));
+  put(`${C}/Clientes/Distribuidora Norte/contrato-servicios.md`, "# Contrato de servicios — Distribuidora Norte\n\nVigencia: 12 meses. Facturación mensual a 30 días.\n", laura, "", ago(24 * 3));
+  put(`${C}/Proveedores/lista-de-proveedores.csv`, "proveedor,plazo,contacto\nPapelería Central,30 días,ventas@papeleria.example\nTransportes Ruta 1,15 días,cobros@ruta1.example\n", laura, "", ago(24 * 6));
+  reviewed(put(`${C}/Proveedores/facturas-por-pagar-noviembre.csv`, "proveedor,factura,vence,monto\nPapelería Central,F-2201,2026-11-20,850\nTransportes Ruta 1,TR-993,2026-11-14,1240\n", acc, "facturas de noviembre", ago(5)));
+  put(`${C}/Bancos y conciliaciones/extracto-bac-octubre.csv`, "fecha,concepto,monto\n2026-10-03,Depósito Grupo Alfa,5000\n2026-10-15,Pago planilla,-18200\n2026-10-28,Comisión bancaria,-12\n", laura, "", ago(26));
+  put(`${C}/Bancos y conciliaciones/partidas-por-identificar-octubre.csv`, "fecha,concepto,monto,nota\n2026-10-21,Depósito sin referencia,1350,Pedir comprobante al banco\n2026-10-29,Transferencia recibida,480,Posible anticipo de Distribuidora Norte\n", acc, "partidas por identificar de octubre", ago(1.2));
+  reviewed(put(`${C}/Bancos y conciliaciones/conciliacion-septiembre.md`, "# Conciliación bancaria — septiembre\n\nSaldo según banco y según libros coinciden. Sin partidas abiertas.\n", acc, "conciliación de septiembre", ago(24 * 12)));
+  reviewed(put(`${C}/Impuestos/declaracion-iva-octubre.md`, "# Declaración de IVA — octubre\n\nDébito fiscal: 4.180\nCrédito fiscal: 2.960\nA pagar: 1.220\n", acc, "borrador de la declaración", ago(24 * 4)));
+  reviewed(put(`${C}/Cierres mensuales/cierre-septiembre.md`, "# Cierre de septiembre\n\nCerrado el 5 de octubre. Ajustes: depreciación y provisión de vacaciones.\n", acc, "cierre de septiembre", ago(24 * 9)));
+  put(`${C}/Cierres mensuales/checklist-de-cierre.md`, "# Checklist de cierre mensual\n\n1. Conciliar bancos\n2. Registrar provisiones\n3. Revisar cuentas por cobrar\n4. Emitir estados financieros\n", laura, "", ago(24 * 20));
+  put(`${C}/Políticas/politica-de-reembolsos.md`, "# Política de reembolsos de gastos\n\nSe reembolsan gastos con factura a nombre de la empresa, presentados en 30 días.\n", laura, "", ago(24 * 30));
   // B6 demo: the capacity cost the accountant cites is in version 2 of this file (version 1 had an older figure)
   put("/Shared/Finanzas/costo-capacidad.csv", "concepto,mensual\nPerfil senior ops,3600\nPerfil senior ops,3600\n", human);
   put("/Shared/Finanzas/costo-capacidad.csv", "concepto,mensual\nPerfil senior ops (cargado),3900\nPerfil senior ops (cargado),3900\nTotal capacidad adicional,7800\n", human, "costo cargado");
@@ -275,6 +284,11 @@ function mockDrive() {
     remove: async (id: string) => { byId(id).file.deleted_at = now(); return {}; },
     restore: async (id: string) => { byId(id).file.deleted_at = null; return {}; },
     trash: async () => ({ folders: [], files: [...files.values()].filter((m) => m.file.deleted_at).map((m) => m.file) }),
+    setTags: async (id: string, tags: string[]) => {
+      const f = byId(id).file; // as the backend: tagging is a change by the person
+      Object.assign(f, { tags: [...new Set(tags.map((t) => t.trim().toLowerCase()).filter(Boolean))], updated_by: human, updated_at: now() });
+      return { ...f };
+    },
     download: async (f: DriveFile) => {
       const url = URL.createObjectURL(new Blob([byId(f.id).versions.slice(-1)[0].text], { type: f.mime }));
       const a = document.createElement("a");

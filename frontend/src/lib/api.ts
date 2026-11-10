@@ -6,6 +6,12 @@ import type {
 import type { AnswerKind, QuestionItem, SkipImpact } from "./questionsLogic";
 import { afterRequest } from "./firstSteps";
 
+/** A refused call. The message keeps the "METHOD path -> status" form other screens read; `code` is the backend's
+ * stable error code when the body carries one (the drive's "not_found", "folder_invalid"...). */
+export class ApiError extends Error {
+  constructor(message: string, public status: number, public code?: string) { super(message); }
+}
+
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   if (MOCK) {
     const { mockBackend } = await import("./mock/engine");
@@ -19,7 +25,11 @@ export async function call<T>(method: string, path: string, body?: unknown): Pro
     body: body !== undefined ? JSON.stringify(body) : undefined,
     cache: "no-store",
   });
-  if (!res.ok) throw new Error(`${method} ${path} -> ${res.status}`);
+  if (!res.ok) {
+    let code: string | undefined;
+    try { const j = JSON.parse(await res.text()); if (typeof j?.code === "string") code = j.code; } catch { /* no JSON body */ }
+    throw new ApiError(`${method} ${path} -> ${res.status}`, res.status, code);
+  }
   const text = await res.text();
   afterRequest(method, path);
   return (text ? JSON.parse(text) : {}) as T;

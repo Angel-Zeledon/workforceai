@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { MOCK } from "./config";
 import { teamsApi } from "./teamsApi";
 import type { Audience } from "./teamsLogic";
-import { audienceKey, audienceOf, initialAudience } from "./audienceLogic";
+import { audienceKey, audienceOf, initialAudience, storedAudience } from "./audienceLogic";
 import { useSession } from "./session";
 
 /**
@@ -16,7 +16,9 @@ import { useSession } from "./session";
 interface AudienceState { audience: Audience | null; key: string | null; bind: (uid: string | null, orgId: string | null) => void }
 
 const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
-const write = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
+const write = (k: string, v: string | null) => {
+  try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch { /* private mode */ }
+};
 
 export const useAudienceStore = create<AudienceState>((set, get) => ({
   audience: initialAudience(null, MOCK),
@@ -30,7 +32,7 @@ export const useAudienceStore = create<AudienceState>((set, get) => ({
       if (get().key !== key) return; // the person changed org/user meanwhile
       const a = audienceOf(w, MOCK);
       set({ audience: a });
-      if (a) write(audienceKey(orgId!), a);
+      write(audienceKey(orgId!), storedAudience(a)); // no audience any more: the old saved value goes too
     }).catch(() => { /* keep what we had */ });
   },
 }));

@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { myDepartments, pendingByPath, filterRows, proposedRows, defaultAgent, crumbs, pathKey, pendingUnder, findDepartment, deptView, lastChange,
-  folderFromParam, folderParam, usableAgents, sendErrorKey, msUntilMidnight, deptHref } from "./deptLogic.ts";
+  folderFromParam, folderParam, usableAgents, sendErrorKey, msUntilMidnight, deptHref, needsReview, agentUnreviewed, withReviewed, TAG_REVIEWED, personNames, landOnDepartment } from "./deptLogic.ts";
 
 const off = (o) => ({ id: "x", name: "x", general: false, is_member: true, folder_path: "/Offices/X", agents: [], ...o });
 const ap = (id, path, over = {}) => ({ id, status: "pending", context: path === undefined ? {} : { path, action: "write" }, ...over });
@@ -101,7 +101,7 @@ test("deptView: what each filter shows and the review count", () => {
   const proposed = proposedRows(pend, "/Offices/L", new Set(files.map((f) => f.path)));
   const all = deptView({ folder: "/Offices/L", folders, files, proposed, pending: pend, now }, "all");
   assert.equal(all.folders.length, 2); assert.equal(all.files.length, 2); assert.equal(all.proposed.length, 1);
-  assert.equal(all.reviewCount, 3);
+  assert.equal(all.reviewCount, 3); // a.md, new.md and Sub/x.md
   const rev = deptView({ folder: "/Offices/L", folders, files, proposed, pending: pend, now }, "review");
   assert.deepEqual(rev.folders.map((f) => f.path), ["/Offices/L/Sub"]);
   assert.deepEqual(rev.files.map((f) => f.path), ["/Offices/L/a.md"]);
@@ -148,8 +148,13 @@ test("usableAgents: the office's agents the person may use; without a directory,
 
 test("sendErrorKey maps the refusal to a clear text", () => {
   assert.equal(sendErrorKey(new Error("POST /messages -> 403")), "dept.ask.err.forbidden");
-  assert.equal(sendErrorKey(new Error("POST /messages -> 400")), "dept.ask.err.folder");
-  assert.equal(sendErrorKey(new Error("POST /messages -> 404")), "dept.ask.err.folder");
+  const err = (status, code) => Object.assign(new Error(`POST /messages -> ${status}`), { status, code });
+  assert.equal(sendErrorKey(err(400, "folder_invalid")), "dept.ask.err.folder");
+  assert.equal(sendErrorKey(err(400)), "chat.sendError"); // another 400 (text too long...) is not the folder's fault
+  // 404: the drive's not_found is the folder (missing or not visible); a 404 without that code is an unknown agent
+  assert.equal(sendErrorKey(err(404, "not_found")), "dept.ask.err.folder");
+  assert.equal(sendErrorKey(err(404)), "dept.ask.err.agent");
+  assert.equal(sendErrorKey(new Error("POST /messages -> 404")), "dept.ask.err.agent");
   assert.equal(sendErrorKey(new Error("POST /messages -> 500")), "chat.sendError");
   assert.equal(sendErrorKey("boom"), "chat.sendError");
 });
@@ -162,4 +167,65 @@ test("msUntilMidnight", () => {
 test("deptHref: the department and, below its root, the folder", () => {
   assert.equal(deptHref("contabilidad", ""), "/d/contabilidad");
   assert.equal(deptHref("Ventas Norte", "Clientes/Grupo Alfa"), "/d/Ventas%20Norte?carpeta=Clientes%2FGrupo%20Alfa");
+});
+
+test("needsReview: a pending approval, or an agent's last version nobody marked as reviewed", () => {
+  const agent = { kind: "agent", id: "accounting" }, person = { kind: "human", id: "u1" };
+  const f = (path, updated_by, tags = []) => ({ path, updated_by, tags });
+  const none = new Map();
+  assert.equal(needsReview(f("/Offices/L/a.md", agent), none), true);
+  assert.equal(needsReview(f("/Offices/L/a.md", agent, ["cierre", "Revisado"]), none), false); // tags compare case-insensitively
+  assert.equal(needsReview(f("/Offices/L/a.md", person), none), false);
+  assert.equal(needsReview(f("/Shared/a.md", agent), none), false); // only department files
+  assert.equal(needsReview(f("/Offices/L/a.md", person, [TAG_REVIEWED]), new Map([["/offices/l/a.md", 1]])), true); // pending wins
+  assert.equal(needsReview({ path: "/Offices/L/a.md" }, none), false); // no author, no tags: nothing to review
+  assert.equal(agentUnreviewed(f("/offices/l/x.md", agent, null)), true);
+});
+
+test("withReviewed adds the tag once and keeps the others", () => {
+  assert.deepEqual(withReviewed(["cierre"]), ["cierre", "revisado"]);
+  assert.deepEqual(withReviewed(["revisado"]), ["revisado"]);
+  assert.deepEqual(withReviewed(undefined), ["revisado"]);
+});
+
+test("deptView: agent work counts and shows under Para revisar; the count is only what the list can show", () => {
+  const now = new Date(2026, 10, 9, 15, 0, 0);
+  const at = new Date(2026, 10, 1).toISOString();
+  const agent = { kind: "agent", id: "accounting" }, person = { kind: "human", id: "u1" };
+  const pend = pendingByPath([
+    ap("1", "/Offices/L/b.md"), // on an existing file
+    ap("2", "/Offices/L/ghost.md", { context: { path: "/Offices/L/ghost.md", action: "move" } }), // no file, creates nothing: not shown, not counted
+    ap("3", "/Offices/L/new.md", { context: { path: "/Offices/L/new.md", action: "write" } }), // proposed
+    ap("4", "/Offices/L/Sub/x.md"), // inside a listed subfolder
+    ap("5", "/Offices/L/Gone/y.md"), // inside a folder that is not listed
+  ], "/Offices/L");
+  const files = [
+    { path: "/Offices/L/a.md", updated_by: agent, tags: [], updated_at: at },
+    { path: "/Offices/L/b.md", updated_by: person, tags: [], updated_at: at },
+    { path: "/Offices/L/c.md", updated_by: agent, tags: ["revisado"], updated_at: at },
+    { path: "/Offices/L/d.md", updated_by: person, tags: [], updated_at: at },
+  ];
+  const folders = [{ path: "/Offices/L/Sub" }];
+  const proposed = proposedRows(pend, "/Offices/L", new Set(files.map((f) => f.path)));
+  const rev = deptView({ folder: "/Offices/L", folders, files, proposed, pending: pend, now }, "review");
+  assert.deepEqual(rev.files.map((f) => f.path), ["/Offices/L/a.md", "/Offices/L/b.md"]);
+  assert.equal(rev.proposed.length, 1);
+  assert.equal(rev.reviewCount, 4); // a.md (agent) + b.md (pending) + new.md (proposed) + Sub/x.md
+});
+
+test("personNames: leads, members and the person reading, by user id", () => {
+  const m = personNames({ leads: [{ user_id: "u1", name: "Ana" }], members: [{ user_id: "u1", name: "Ana" }, { user_id: "u2", name: " Beto " }, { user_id: "u3", name: "" }] },
+    { id: "me", name: "Carla" });
+  assert.equal(m.get("u1"), "Ana"); assert.equal(m.get("u2"), "Beto"); assert.equal(m.has("u3"), false); assert.equal(m.get("me"), "Carla");
+  assert.equal(personNames({ leads: [], members: [] }, null).size, 0);
+});
+
+test("landOnDepartment: a company account entering the tab at / with a department", () => {
+  const v = { firstEntry: true, path: "/", audience: "company", departments: 1 };
+  assert.equal(landOnDepartment(v), true);
+  assert.equal(landOnDepartment({ ...v, firstEntry: false }), false); // back at / later (from "Más")
+  assert.equal(landOnDepartment({ ...v, path: "/files" }), false);
+  assert.equal(landOnDepartment({ ...v, audience: "team" }), false);
+  assert.equal(landOnDepartment({ ...v, audience: null }), false);
+  assert.equal(landOnDepartment({ ...v, departments: 0 }), false);
 });

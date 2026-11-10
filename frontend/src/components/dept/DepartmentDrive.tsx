@@ -3,16 +3,17 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { intlLocale, useT } from "@/lib/i18n";
-import { drive, parentOf, type DriveFile, type DriveFolder, type Hit, type Listing } from "@/lib/drive";
+import { drive, parentOf, type DriveFile, type DriveFolder, type Hit, type Listing, type Principal } from "@/lib/drive";
 import { officesApi } from "@/lib/officesApi";
 import type { DirectoryEntry, OfficeView, OfficesResponse } from "@/lib/officesLogic";
 import {
-  crumbs, defaultAgent, deptHref, deptView, findDepartment, folderFromParam, folderParam, lastChange, msUntilMidnight, myDepartments, pathKey,
-  pendingByPath, pendingUnder, proposedRows, usableAgents, type DeptFilter,
+  agentUnreviewed, crumbs, defaultAgent, deptHref, deptView, findDepartment, folderFromParam, folderParam, lastChange, msUntilMidnight, myDepartments,
+  needsReview, pathKey, pendingByPath, pendingUnder, personNames, proposedRows, usableAgents, withReviewed, type DeptFilter,
 } from "@/lib/deptLogic";
 import { useStore } from "@/lib/store";
+import { useSession } from "@/lib/session";
 import type { Approval } from "@/lib/types";
-import { Empty, Loading, timeAgo } from "../ui";
+import { Empty, Loading, timeAgo, useAgentName } from "../ui";
 import { EmptyState, PageSkeleton } from "../nav/ui2";
 import { Icon } from "../icons";
 import { Author, FilePane } from "../drive/DriveView";
@@ -106,6 +107,17 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
   const [treeOpen, setTreeOpen] = useState(false);
   const [menu, setMenu] = useState<{ file: DriveFile; top: number; right: number; trigger: HTMLButtonElement } | null>(null);
   const menuBox = useRef<HTMLDivElement>(null);
+  // "Marcar como revisado": a mark in flight and a refusal (a folder the person may only read)
+  const [marking, setMarking] = useState(false);
+  const [markErr, setMarkErr] = useState(false);
+  // "Último cambio" names the person (the department's leads and members, and whoever is reading)
+  const me = useSession((s) => s.user);
+  const names = useMemo(() => personNames(dept, me), [dept, me]);
+  const agentName = useAgentName();
+  const authorText = (p: Principal) => (p.kind === "agent" ? agentName(p.id) : p.kind === "human" ? names.get(p.id) ?? t("drive.person")
+    : p.kind === "system" ? t("drive.system") : p.id);
+  const who = (p: Principal, copy?: boolean) => (p.kind === "human" && names.has(p.id)
+    ? <span data-testid={copy ? undefined : "dept-author-person"}>{names.get(p.id)}</span> : <Author p={p} copy={copy} />);
 
   // pending approvals of fs actions under the department (they carry context.path)
   const approvals = useStore((s) => s.approvals);
@@ -150,6 +162,14 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
     drive.byPath(target).then((x) => done(x ? { kind: "file", file: x } : null)).catch(() => done(null));
     return () => { live = false; };
   }, [urlDoc, wantDoc, listing, proposed, files, path, rootKey]);
+
+  useEffect(() => { setMarkErr(false); }, [selPath]);
+  const markReviewed = async (f: DriveFile) => {
+    if (marking) return;
+    setMarking(true); setMarkErr(false);
+    try { await drive.setTags(f.id, withReviewed(f.tags)); await load(); } catch { setMarkErr(true); }
+    setMarking(false);
+  };
 
   // a new folder: nothing of the previous one stays open
   useEffect(() => { setHits(null); setTreeOpen(false); setMenu(null); }, [path]);
@@ -219,7 +239,7 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
   return (
     <div data-testid="dept-drive" className="relative flex h-full min-h-0 bg-bg">
       {/* left: the folders (desktop) */}
-      <aside className="hidden w-[216px] shrink-0 overflow-y-auto border-r border-line bg-panel px-2 py-3 md:block">
+      <aside className="hidden w-[240px] shrink-0 overflow-y-auto border-r border-line bg-panel px-2 py-3 md:block">
         <div className="px-2 pb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{t("dept.folders")}</div>
         {tree}
       </aside>
@@ -323,13 +343,14 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
                             <button type="button" data-testid={`dept-open-${p.name}`} onClick={(e) => { e.stopPropagation(); setSelected({ kind: "proposed", row: p }); }}
                               className="min-w-0 break-words rounded text-left font-medium [overflow-wrap:anywhere] hover:underline">{p.name}</button>
                           </span>
-                          <span className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 pl-[23px] text-[11.5px] text-mute">
-                            <span data-testid="dept-chip-proposed" className={`${PROPOSED} border border-accent/25 bg-panel`}>{t("dept.proposed")}</span>
-                            <span className="contents sm:hidden"><Author p={{ kind: "agent", id: p.approval.agent_id }} copy /><span aria-hidden>·</span><span>{when(p.approval.created_at)}</span></span>
-                          </span>
+                          <span className="mt-0.5 flex flex-wrap gap-x-1.5 pl-[23px] text-[11.5px] text-mute sm:hidden"><Author p={{ kind: "agent", id: p.approval.agent_id }} copy /><span aria-hidden>·</span><span>{when(p.approval.created_at)}</span></span>
                         </td>
-                        <td className="hidden py-2 pr-2 text-[12px] leading-snug text-ink2 sm:table-cell"><Author p={{ kind: "agent", id: p.approval.agent_id }} /> <span className="whitespace-nowrap text-mute">·&nbsp;{when(p.approval.created_at)}</span></td>
-                        <td><span className={REVIEW}>{t("dept.review")}</span></td>
+                        <td className="hidden py-2 pr-2 text-[12px] text-ink2 sm:table-cell">
+                          <div className="truncate whitespace-nowrap" title={`${agentName(p.approval.agent_id)} · ${when(p.approval.created_at)}`}>
+                            <Author p={{ kind: "agent", id: p.approval.agent_id }} /> <span className="text-mute">·&nbsp;{when(p.approval.created_at)}</span>
+                          </div>
+                        </td>
+                        <td><span data-testid="dept-chip-proposed" className={`${PROPOSED} border border-accent/25`}>{t("dept.proposed")}</span></td>
                         <td />
                       </tr>
                     );
@@ -347,16 +368,20 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
                   })}
                   {view.files.map((f) => {
                     const sel = selected?.kind === "file" && selected.file.id === f.id;
-                    const rev = pending.has(pathKey(f.path));
+                    const rev = needsReview(f, pending);
                     return (
                       <tr key={f.id} data-testid={`dept-file-${f.name}`} data-selected={sel} onClick={() => setSelected({ kind: "file", file: f })}
                         className={`cursor-pointer border-t border-line first:border-t-0 ${sel ? "bg-accent-soft" : "hover:bg-panel2"}`}>
                         <td className="py-2.5 pl-3">
                           <span className="flex min-w-0 items-start gap-2 text-ink"><Icon name="doc" size={15} className="mt-[2px] shrink-0 text-mute" /><button type="button" data-testid={`dept-open-${f.name}`} onClick={(e) => { e.stopPropagation(); setSelected({ kind: "file", file: f }); }}
                             className="min-w-0 break-words rounded text-left [overflow-wrap:anywhere] hover:underline">{f.name}</button></span>
-                          <span className="mt-0.5 flex flex-wrap gap-x-1.5 pl-[23px] text-[11.5px] text-mute sm:hidden"><Author p={f.updated_by} copy /><span aria-hidden>·</span><span>{when(f.updated_at)}</span></span>
+                          <span className="mt-0.5 flex flex-wrap gap-x-1.5 pl-[23px] text-[11.5px] text-mute sm:hidden">{who(f.updated_by, true)}<span aria-hidden>·</span><span>{when(f.updated_at)}</span></span>
                         </td>
-                        <td className="hidden py-2 pr-2 text-[12px] leading-snug text-ink2 sm:table-cell"><Author p={f.updated_by} /> <span className="whitespace-nowrap text-mute">·&nbsp;{when(f.updated_at)}</span></td>
+                        <td className="hidden py-2 pr-2 text-[12px] text-ink2 sm:table-cell">
+                          <div data-testid="dept-changed" className="truncate whitespace-nowrap" title={`${authorText(f.updated_by)} · ${when(f.updated_at)}`}>
+                            {who(f.updated_by)} <span className="text-mute">·&nbsp;{when(f.updated_at)}</span>
+                          </div>
+                        </td>
                         <td>{rev && <span data-testid="dept-chip-review" className={REVIEW}>{t("dept.review")}</span>}</td>
                         <td className="pr-1 text-right" onClick={(e) => e.stopPropagation()}>
                           <button type="button" data-testid={`dept-menu-${f.name}`} aria-label={t("dept.menu.more")} title={t("dept.menu.more")} aria-haspopup="menu" aria-expanded={menu?.file.id === f.id} aria-controls={menu?.file.id === f.id ? "dept-row-menu" : undefined}
@@ -404,14 +429,22 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
           title={selected.kind === "file" ? selected.file.name : selected.row.name}
           subtitle={selWhere}
           meta={selected.kind === "file"
-            ? <><Author p={selected.file.updated_by} /><span aria-hidden>·</span><span>{when(selected.file.updated_at)}</span><span aria-hidden>·</span><span>v{selected.file.current_version}</span></>
+            ? <>{who(selected.file.updated_by)}<span aria-hidden>·</span><span>{when(selected.file.updated_at)}</span><span aria-hidden>·</span><span>v{selected.file.current_version}</span></>
             : <><span className={PROPOSED}>{t("dept.proposed")}</span><Author p={{ kind: "agent", id: selected.row.approval.agent_id }} /><span aria-hidden>·</span><span>{when(selected.row.approval.created_at)}</span></>}
           actions={selected.kind === "file" ? (
-            <button type="button" data-testid="dept-panel-ask" onClick={() => ask(selected.file)}
-              className="min-h-10 rounded-lg border border-line-strong bg-panel px-3 text-[12.5px] font-medium text-ink hover:bg-panel2 sm:min-h-8">{t("dept.menu.ask")}</button>
+            <>
+              {agentUnreviewed(selected.file) && (
+                <button type="button" data-testid="dept-panel-reviewed" disabled={marking} onClick={() => void markReviewed(selected.file)}
+                  className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-accent px-3 text-[12.5px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50 sm:min-h-8">
+                  <Icon name="check" size={13} />{t("dept.markReviewed")}</button>
+              )}
+              <button type="button" data-testid="dept-panel-ask" onClick={() => ask(selected.file)}
+                className="min-h-10 rounded-lg border border-line-strong bg-panel px-3 text-[12.5px] font-medium text-ink hover:bg-panel2 sm:min-h-8">{t("dept.menu.ask")}</button>
+            </>
           ) : undefined}
           onClose={() => setSelected(null)}
           className="xl:w-[380px] 2xl:w-[440px] max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:top-[14dvh] max-md:z-50 max-md:rounded-t-[10px] max-md:border-t max-md:border-line max-md:shadow-float">
+          {markErr && <div role="alert" data-testid="dept-panel-reviewed-err" className="shrink-0 border-b border-line bg-err/5 px-4 py-2 text-[12px] text-err">{t("dept.markReviewed.err")}</div>}
           {selPending.length > 0 && (
             <div data-testid="dept-panel-pending" className="max-h-[50%] shrink-0 space-y-2 overflow-y-auto border-b border-line bg-panel2/50 p-3">
               {selPending.map((a) => <ApprovalPending key={a.id} a={a} variant="compact" />)}

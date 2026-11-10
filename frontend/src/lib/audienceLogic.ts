@@ -13,3 +13,9 @@ export function initialAudience(stored: string | null | undefined, mock: boolean
   if (mock) return "company";
   return stored === "solo" || stored === "team" || stored === "company" ? stored : null;
 }
+
+/** What to keep saved for an organization after /me/welcome answered: its audience, or nothing (null = delete the saved
+ * value, so an old "company" does not come back on the next reload once the organization has no audience). */
+export function storedAudience(a: Audience | null): Audience | null {
+  return a === "solo" || a === "team" || a === "company" ? a : null;
+}

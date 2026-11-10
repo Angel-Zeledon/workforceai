@@ -22,3 +22,10 @@ test("initial audience: saved value per org, validated; demo is company", () => 
   assert.equal(initialAudience(null, true), "company");
   assert.notEqual(audienceKey("a"), audienceKey("b"));
 });
+
+import { storedAudience } from "./audienceLogic.ts";
+test("after /me/welcome: keep its audience, or delete the saved value when it has none", () => {
+  assert.equal(storedAudience("company"), "company");
+  assert.equal(storedAudience(audienceOf({ audience: "" }, false)), null);
+  assert.equal(storedAudience(audienceOf({}, false)), null);
+});

@@ -6287,5 +6287,8 @@
   "dept.expand": "Expandir {name}",
   "dept.unavailable.body": "Talvez você não seja membro deste departamento ou ele não exista mais. Abra seu departamento pelo menu ou peça acesso a quem o administra.",
   "dept.ask.err.forbidden": "Você não pode pedir trabalho a este agente. Escolha outro ou peça acesso.",
-  "dept.ask.err.folder": "Esta pasta não está disponível para pedidos. Abra o departamento de novo e tente outra vez."
+  "dept.ask.err.folder": "Esta pasta não está disponível para pedidos. Abra o departamento de novo e tente outra vez.",
+  "dept.ask.err.agent": "Esse agente não está mais disponível. Escolha outro agente do departamento.",
+  "dept.markReviewed": "Marcar como revisado",
+  "dept.markReviewed.err": "Não foi possível marcar como revisado: você precisa de permissão para editar esta pasta."
 }

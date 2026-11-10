@@ -22,6 +22,7 @@ import { navGroups, setNavigator, SECTIONS, sectionOf } from "@/lib/navBridge";
 import { usePendingCount } from "@/lib/pending";
 import { useViewMode } from "@/lib/viewMode";
 import { useAudience } from "@/lib/audience";
+import { useDepartmentLanding } from "../dept/useDepartmentLanding";
 import { useSession } from "@/lib/session";
 import { ViewAllSwitch } from "./ViewAll";
 import { AccountMenu } from "../admin/AdminMenu";
@@ -129,6 +130,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => { setNavigator((href) => router.push(href)); return () => setNavigator(null); }, [router]);
   useEffect(() => startRealtime(), []);
   useAwayHeartbeat(); // last seen, for "while you were away" (B3)
+  useDepartmentLanding(pathname); // D2: a company account enters at its department's Drive (once per tab)
   useEffect(() => { hydratePrefs(); }, [hydratePrefs]);
   // the organization's language wins over the browser's until the person picks one in Settings
   // and the organization says whether new people start in simple mode (decision 3 of the owner)

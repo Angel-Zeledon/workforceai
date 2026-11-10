@@ -6286,5 +6286,8 @@
   "dept.expand": "Expand {name}",
   "dept.unavailable.body": "You may not be a member of this department, or it no longer exists. Open your department from the menu or ask whoever manages it for access.",
   "dept.ask.err.forbidden": "You can't ask this agent for work. Pick another one or ask for access.",
-  "dept.ask.err.folder": "This folder isn't available for requests. Reopen the department and try again."
+  "dept.ask.err.folder": "This folder isn't available for requests. Reopen the department and try again.",
+  "dept.ask.err.agent": "That agent is no longer available. Pick another agent of the department.",
+  "dept.markReviewed": "Mark as reviewed",
+  "dept.markReviewed.err": "It couldn't be marked as reviewed: you need permission to edit this folder."
 }
