@@ -77,6 +77,10 @@ type ChatThread struct {
 	LastMessageAt time.Time `json:"last_message_at"`
 	MessageCount  int       `json:"message_count"`
 	Unread        int       `json:"unread"`
+	// PreviewTo and PreviewConv (never sent) are the addressee and the STORED conversation of the previewed
+	// message, so the service can tell whether the person may read it (D3, SharedMessageVisible).
+	PreviewTo   string `json:"-"`
+	PreviewConv string `json:"-"`
 }
 
 // ChatConvQuery filters the history list. Archived: "" (hide archived), "only", "all".
@@ -170,6 +174,13 @@ func (h *ChatHistory) Conversations(ctx context.Context, q ChatConvQuery) ([]Cha
 		return nil, false, err
 	}
 	rows = slices.DeleteFunc(rows, func(c ChatConversation) bool { return !storedRowVisible(ctx, c) }) // D3: private work
+	for i := range rows {
+		// D3: the preview of a shared chat never quotes an agent whose work the person does not see (its reply in the
+		// office chat); the row lacks the addressee, so a consultation OF such an agent may still show (see Threads)
+		if rows[i].OwnerID == "" && IsChatConversation(rows[i].ID) && IsAgentActor(rows[i].PreviewFrom) && !WorkVisible(ctx, rows[i].PreviewFrom) {
+			rows[i].Preview, rows[i].PreviewFrom = "", ""
+		}
+	}
 	rows = publicRows(q.Viewer, rows)
 	h.link(ctx, org, rows)
 	return rows, more, nil
@@ -249,8 +260,10 @@ func (h *ChatHistory) Threads(ctx context.Context) ([]ChatThread, error) {
 	}
 	ts, err := h.Store.ChatThreads(ctx, org, PersonFrom(ctx), ids, noShared)
 	for i := range ts {
-		// D3: a preview never quotes an agent whose work the person does not see (its reply in the office chat)
-		if IsAgentActor(ts[i].PreviewFrom) && !WorkVisible(ctx, ts[i].PreviewFrom) {
+		// D3: a preview never quotes what an agent whose work the person does not see said or was told in a shared
+		// chat (its reply in the office chat, a consultation of it); their own thread with it is theirs
+		m := domain.Message{From: ts[i].PreviewFrom, To: ts[i].PreviewTo, ConversationID: ts[i].PreviewConv}
+		if !SharedMessageVisible(ctx, m) {
 			ts[i].Preview, ts[i].PreviewFrom = "", ""
 		}
 	}

@@ -236,9 +236,9 @@ func (s *Store) ChatThreads(ctx context.Context, org, viewer string, agentIDs, n
 			}
 			if t.MessageCount > 0 {
 				var text string
-				if err := tx.QueryRow(ctx, `SELECT m.text, m.from_id, m.ts FROM messages m WHERE `+threadPred("$3")+
+				if err := tx.QueryRow(ctx, `SELECT m.text, m.from_id, m.to_id, m.conversation_id, m.ts FROM messages m WHERE `+threadPred("$3")+
 					` AND NOT (m.conversation_id = ANY($4::text[])) ORDER BY m.ts DESC, m.id DESC LIMIT 1`,
-					org, agent, viewer, hidden).Scan(&text, &t.PreviewFrom, &t.LastMessageAt); err != nil {
+					org, agent, viewer, hidden).Scan(&text, &t.PreviewFrom, &t.PreviewTo, &t.PreviewConv, &t.LastMessageAt); err != nil {
 					return err
 				}
 				t.Preview = application.Preview(text)

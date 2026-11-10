@@ -223,6 +223,7 @@ func (s *Store) ChatThreads(_ context.Context, _, viewer string, agentIDs, noSha
 		for _, m := range s.threadMessages(all, key) {
 			t.MessageCount++
 			t.Preview, t.PreviewFrom, t.LastMessageAt = application.Preview(m.Text), m.From, m.TS
+			t.PreviewTo, t.PreviewConv = m.To, m.ConversationID
 			if application.UnreadFor(m, viewer) && m.TS.After(read) {
 				t.Unread++
 			}

@@ -173,8 +173,11 @@ type chatTurn struct {
 	byID                map[string]domain.Agent
 	direct              string // agent id of a 1:1 chat, "" for the office
 	history             []ChatHistoryItem
-	noticed             bool // a blocking notice (pause, budget) was already posted
-	handoff             *handoff
+	// hidden (D3) are the agents whose work the person who wrote does not see: in a shared chat, what they said or
+	// were told stays out of the history the model gets (an agent could repeat it). Set when the turn is posted.
+	hidden  map[string]bool
+	noticed bool // a blocking notice (pause, budget) was already posted
+	handoff *handoff
 }
 
 // handoff is a redirect the user may accept ("yes, pass it on"): the colleague
@@ -361,13 +364,24 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	if err != nil {
 		return ChatTurn{}, err
 	}
+	var hidden map[string]bool
+	if domain.ChatConvOwner(stored) == "" { // D3: a shared chat (the office): its history as the person may read it
+		for _, a := range agents {
+			if !WorkVisible(ctx, a.ID) {
+				if hidden == nil {
+					hidden = map[string]bool{}
+				}
+				hidden[a.ID] = true
+			}
+		}
+	}
 	if !strings.HasPrefix(domain.PublicChatConv(stored), domain.ChatAgentPrefix) {
 		// D3: the office chat only routes to the agents the person may use (a direct chat was checked by the API)
 		agents = slices.DeleteFunc(agents, func(a domain.Agent) bool { return !AgentUsable(ctx, a.ID) })
 	}
 	t := &chatTurn{conv: stored, pub: domain.PublicChatConv(stored), owner: domain.ChatConvOwner(stored),
 		author: PersonFrom(ctx), authorName: ActorNameFrom(ctx), id: newID(), text: text, userMsgID: newID(), agents: agents,
-		byID: map[string]domain.Agent{}, style: o.loadStyle(ctx)}
+		byID: map[string]domain.Agent{}, style: o.loadStyle(ctx), hidden: hidden}
 	t.loc = chatLocale(t.style)
 	for _, a := range agents {
 		t.byID[a.ID] = a
@@ -508,9 +522,16 @@ func (o *Orchestrator) chatHistory(ctx context.Context, t *chatTurn) []ChatHisto
 		}
 	}
 	msgs, summary := o.applyConvContext(ctx, t.conv, msgs) // /clear and /compact
+	if len(t.hidden) > 0 && summary != nil {
+		// D3: the summary of a shared chat may quote an agent whose work this person does not see (written by a member)
+		summary = nil
+	}
 	out := make([]ChatHistoryItem, 0, len(msgs))
 	for _, m := range msgs {
 		if m.From == "system" || (m.Kind != domain.MsgChat && m.Kind != domain.MsgAnswer) {
+			continue
+		}
+		if t.hidden[m.From] || t.hidden[m.To] { // D3: what a private office's agent said or was told
 			continue
 		}
 		if m.ID == t.userMsgID || (m.From == "user" && !mine.IsZero() && m.TS.After(mine)) {

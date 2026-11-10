@@ -168,13 +168,18 @@ func (s *server) listMessages(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	if agent, ok := strings.CutPrefix(domain.PublicChatConv(id), domain.ChatAgentPrefix); ok && !s.work(r).agent(agent) {
-		// D3: using a private office's agent opens one's own thread, not the history shared before private threads
-		msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool { return m.SharedLegacy })
-	} else if !ok && application.IsChatConversation(id) {
-		// D3: in the shared office chat, what a private office's agent said or was told is that office's (sealed live)
+	if application.IsChatConversation(id) {
+		// D3: using a private office's agent opens one's own thread, not the history shared before private threads;
+		// in a shared chat (the office, that earlier history) what a private office's agent said or was told is that
+		// office's (sealed live too), like in the threads (ChatHistory.Thread)
 		ctx := s.work(r).context().Context()
-		msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool { return application.NamesHiddenAgent(ctx, m) })
+		agent, direct := strings.CutPrefix(domain.PublicChatConv(id), domain.ChatAgentPrefix)
+		msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool {
+			if direct && !m.SharedLegacy {
+				return false // the person's own thread
+			}
+			return direct && !application.WorkVisible(ctx, agent) || application.NamesHiddenAgent(ctx, m)
+		})
 	}
 	if limit > 0 {
 		w.Header().Set("Access-Control-Expose-Headers", "X-Has-More, X-Next-Before")
