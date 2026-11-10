@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"slices"
 
 	"github.com/go-chi/chi/v5"
 
@@ -17,11 +18,13 @@ func (s *server) mountOutbox(r chi.Router) {
 	if s.Gateway == nil {
 		return
 	}
-	decide := s.can(auth.PermApprovalsDecide)
-	r.With(s.can(auth.PermApprovalsRead)).Get("/outbox", s.listOutbox)
-	r.With(decide).Patch("/outbox/{id}", s.editOutbox)
-	r.With(decide).Post("/outbox/{id}/approve", s.approveOutbox)
-	r.With(decide).Post("/outbox/{id}/reject", s.rejectOutbox)
+	// D3: an entry of a department's agent is decided by its responsible (approvals_office.go: outboxGuard), and one
+	// of an agent whose work the person does not see is left out (404 by id).
+	read := s.can(auth.PermApprovalsRead)
+	r.With(read).Get("/outbox", s.listOutbox)
+	r.With(read).Patch("/outbox/{id}", s.editOutbox)
+	r.With(read).Post("/outbox/{id}/approve", s.approveOutbox)
+	r.With(read).Post("/outbox/{id}/reject", s.rejectOutbox)
 	r.With(s.can(auth.PermRequestsRead)).Get("/plan-reviews", s.listPlanReviews)
 	if s.Controls != nil {
 		r.With(s.can(auth.PermConnectionsRead)).Get("/agent-controls", s.listAgentControls)
@@ -36,6 +39,12 @@ func (s *server) listOutbox(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
+	ws := s.work(r) // D3: a private department's e-mails are its members'
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	items = slices.DeleteFunc(items, func(it gateway.OutboxItem) bool { return it.AgentID != "" && !ws.agent(it.AgentID) })
 	writeJSON(w, 200, map[string]any{"items": items})
 }
 
@@ -48,6 +57,9 @@ func (s *server) editOutbox(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.connErr(w, err)
+		return
+	}
+	if !s.outboxGuard(w, r, false) {
 		return
 	}
 	it, err := s.Gateway.OutboxEdit(r.Context(), s.org(r), chi.URLParam(r, "id"), gateway.OutboxPatch{To: body.To, Cc: body.Cc, Subject: body.Subject, Body: body.Body})
@@ -78,6 +90,9 @@ func (s *server) approveOutbox(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
+	if !s.outboxGuard(w, r, true) { // before anything is scheduled: a refused decision sends nothing
+		return
+	}
 	ctx := r.Context()
 	it, err := s.Gateway.OutboxApprove(ctx, s.org(r), chi.URLParam(r, "id"), body.Version, s.actor(r), func(approvalID string) error {
 		_, e := s.Approvals.Decide(ctx, approvalID, "approve", "approved from the outbox")
@@ -91,6 +106,9 @@ func (s *server) approveOutbox(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) rejectOutbox(w http.ResponseWriter, r *http.Request) {
+	if !s.outboxGuard(w, r, false) {
+		return
+	}
 	ctx := r.Context()
 	it, err := s.Gateway.OutboxReject(ctx, s.org(r), chi.URLParam(r, "id"), s.actor(r), func(approvalID string) error {
 		_, e := s.Approvals.Decide(ctx, approvalID, "reject", "rejected from the outbox")

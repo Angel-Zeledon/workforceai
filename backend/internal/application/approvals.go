@@ -210,6 +210,13 @@ func (a *Approvals) Supersede(ctx context.Context, id, note string) (domain.Appr
 	return a.resolve(ctx, id, domain.ApprovalRejected, note, "system")
 }
 
+// Withdraw rejects a pending approval because the work it guarded was cancelled (a cancelled project). It is not a
+// human decision, so none of Decide's rules apply (D3: whoever cancels need not be the responsible of the approval's
+// office); the audit names who cancelled.
+func (a *Approvals) Withdraw(ctx context.Context, id, note string) (domain.Approval, error) {
+	return a.resolve(ctx, id, domain.ApprovalRejected, note, ActorFrom(ctx, "system"))
+}
+
 // Wait blocks until the approval is resolved, the timeout expires (auto-reject)
 // or ctx is cancelled.
 func (a *Approvals) Wait(ctx context.Context, ch <-chan domain.Approval, id string) (domain.Approval, error) {

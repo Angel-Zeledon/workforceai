@@ -49,10 +49,9 @@ type Service struct {
 	TTL       time.Duration
 	// AgentName (optional) turns an agent id into a name for the message.
 	AgentName func(ctx context.Context, org, id string) string
-	// Approvers (optional, D3) returns the e-mail addresses of the responsibles who decide an approval of an office
-	// (none: an approval of General, sent as before). They get the e-mail too, with its links; the other recipients
-	// of an office's approval are told without links (they open the app, where the office rule applies).
-	Approvers func(ctx context.Context, org string, ap domain.Approval) []string
+	// Approvers (optional, D3) says who an approval is for by the office of its agent (ApprovalAudience). An error
+	// fails closed: nothing goes to the organization's addresses or chats and no link decides it.
+	Approvers func(ctx context.Context, org string, ap domain.Approval) (ApprovalAudience, error)
 	Log       *slog.Logger
 	Now       func() time.Time
 	// Outbox (optional) is the durable retry queue (migration 784): Notify and NotifyCap queue messages and the worker
@@ -99,6 +98,41 @@ func (s *Service) client() *http.Client {
 		return s.HTTP
 	}
 	return &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+}
+
+// ApprovalAudience is who an approval is for (D3, equipos-oficinas.md §4.2). An approval of General (Office false)
+// is sent as before. One of an office is e-mailed to its responsibles (Emails), the only ones whose links decide it;
+// the organization's addresses and chats hear about one of an open office without links, and nothing about one of
+// a private office.
+type ApprovalAudience struct {
+	Office  bool
+	Private bool
+	Emails  []string
+}
+
+// audience is the audience of ap (General without Approvers); an error is treated as a private office without
+// responsibles (fails closed).
+func (s *Service) audience(ctx context.Context, org string, ap domain.Approval) (ApprovalAudience, bool) {
+	if s.Approvers == nil {
+		return ApprovalAudience{}, true
+	}
+	a, err := s.Approvers(ctx, org, ap)
+	if err != nil {
+		s.log().Warn("notify: who decides the approval", "org", org, "approval", ap.ID, "err", err)
+		return ApprovalAudience{Office: true, Private: true}, false
+	}
+	return a, true
+}
+
+// responsible reports whether the address is one of the responsibles of the audience.
+func (a ApprovalAudience) responsible(to string) bool {
+	to = strings.ToLower(strings.TrimSpace(to))
+	for _, e := range a.Emails {
+		if to != "" && strings.ToLower(strings.TrimSpace(e)) == to {
+			return true
+		}
+	}
+	return false
 }
 
 // LinksAvailable: the deployment can sign links and knows its public address.
@@ -181,39 +215,35 @@ func (s *Service) Notify(ctx context.Context, org string, ap domain.Approval) {
 	if RiskRank(ap.Risk) < RiskRank(st.MinRisk) {
 		return
 	}
-	var leads map[string]bool // D3: the responsibles of an office's approval (lowercase address)
-	if s.Approvers != nil {
-		for _, to := range s.Approvers(ctx, org, ap) {
-			if to = strings.ToLower(strings.TrimSpace(to)); to != "" {
-				if leads == nil {
-					leads = map[string]bool{}
-				}
-				leads[to] = true
-			}
-		}
-	}
+	aud, _ := s.audience(ctx, org, ap) // D3: an office's approval goes to its responsibles
 	msg := func(to string) Message {
 		m := s.message(ctx, org, st, ap, to)
-		if leads != nil && !leads[strings.ToLower(strings.TrimSpace(to))] {
+		if aud.Office && !aud.responsible(to) {
 			m.Approve, m.Reject, m.NeedsApp = "", "", true
 		}
 		return m
 	}
 	if st.EmailEnabled && s.Mail != nil {
 		sent := map[string]bool{}
-		for _, to := range st.EmailTo {
+		send := func(to string) {
+			key := strings.ToLower(strings.TrimSpace(to))
+			if key == "" || sent[key] {
+				return
+			}
+			sent[key] = true
 			m := msg(to)
 			s.sendEmail(ctx, org, to, mailer.Message{Subject: m.Subject(), Text: m.PlainText(), HTML: m.HTMLBody()})
-			sent[strings.ToLower(strings.TrimSpace(to))] = true
 		}
-		for to := range leads {
-			if !sent[to] {
-				m := msg(to)
-				s.sendEmail(ctx, org, to, mailer.Message{Subject: m.Subject(), Text: m.PlainText(), HTML: m.HTMLBody()})
+		if !aud.Private {
+			for _, to := range st.EmailTo {
+				send(to)
 			}
 		}
+		for _, to := range aud.Emails {
+			send(to)
+		}
 	}
-	if st.SlackWebhook != "" || st.TeamsWebhook != "" {
+	if (st.SlackWebhook != "" || st.TeamsWebhook != "") && !aud.Private {
 		s.chat(ctx, org, st, msg("chat"))
 	}
 	s.flush(ctx, org)
@@ -391,6 +421,10 @@ func (s *Service) Peek(ctx context.Context, tok string) (Claims, domain.Approval
 	}
 	if st, err := s.Settings.GetSettings(ctx, c.Org); err == nil && !st.LinksEnabled {
 		return c, ap, ErrLinksOff
+	}
+	// D3: a link decides an office's approval only for one of its responsibles (anyone else opens the app)
+	if aud, ok := s.audience(ctx, c.Org, ap); !ok || aud.Office && !aud.responsible(c.To) {
+		return c, ap, ErrNeedsApp
 	}
 	return c, ap, nil
 }

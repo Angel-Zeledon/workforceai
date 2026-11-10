@@ -104,6 +104,9 @@ type Viewer struct {
 	// stay exact numbers of the organization.
 	SeesAgent   func(agentID string) bool
 	SeesRequest func(requestID string) bool
+	// Decides (D3, optional) replaces the role rules with application.DecidesApproval: an office's approvals are
+	// its responsibles'.
+	Decides func(ap domain.Approval) bool
 }
 
 func (v Viewer) seesAgent(id string) bool { return id == "" || v.SeesAgent == nil || v.SeesAgent(id) }
@@ -231,6 +234,9 @@ func emptySummary(now time.Time, minHours float64) Summary {
 // CanDecide reports whether viewer may approve ap right now: the same rules as Approvals.Decide (role, no
 // self-approval, a different person for each approval of a double approval). Agents never decide.
 func CanDecide(ap domain.Approval, v Viewer) bool {
+	if v.Decides != nil {
+		return v.Decides(ap)
+	}
 	return application.CanDecideApproval(ap, v.UserID, v.Role, v.CanDecide)
 }
 

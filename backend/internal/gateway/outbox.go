@@ -326,6 +326,17 @@ func (g *Gateway) pendingEntry(org, id string) (*outboxEntry, error) {
 	return e, nil
 }
 
+// OutboxEntry returns the pending item id (what a human may still edit, approve or reject).
+func (g *Gateway) OutboxEntry(org, id string) (OutboxItem, error) {
+	e, err := g.pendingEntry(org, id)
+	if err != nil {
+		return OutboxItem{}, err
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.entryItem(e), nil
+}
+
 // OutboxPatch is what a human may edit before approving. Editing invalidates
 // any earlier approval of the old content: the version and args_hash change.
 type OutboxPatch struct {

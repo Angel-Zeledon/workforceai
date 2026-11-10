@@ -134,6 +134,10 @@ type Approval struct {
 	Status     string     `json:"status"`
 	CreatedAt  time.Time  `json:"created_at"`
 	ResolvedAt *time.Time `json:"resolved_at"`
+	// D3, set by the API for the person reading: whether they may decide it now, and who decides an approval of an
+	// office (names of its responsibles).
+	CanDecide *bool    `json:"can_decide,omitempty"`
+	Approvers []string `json:"approvers,omitempty"`
 }
 
 type BudgetPolicy struct {
@@ -507,6 +511,9 @@ type BatchDecision struct {
 	Decision      string `json:"decision"`
 	ExpectedCount int    `json:"expected_count"`
 	IncludeHigh   bool   `json:"include_high"`
+	// Visible (set by the API, D3) leaves out of the group the approvals the person may not see: they are neither
+	// counted nor decided. nil: every approval.
+	Visible func(domain.Approval) bool `json:"-"`
 }
 
 // ---- persisted record ----

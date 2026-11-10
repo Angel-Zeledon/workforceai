@@ -42,6 +42,8 @@ export interface Approval {
   tool?: string; project_id?: string; standing_eligible?: boolean;
   /** The rule that asked for it (policy engine rule id) and, for connection-backed actions, the gateway context (flags). */
   policy_rule?: string; context?: { flags?: unknown; [k: string]: unknown };
+  /** D3 (signed-in servers): whether the reader may decide it now, and the responsibles of its office who decide it. */
+  can_decide?: boolean; approvers?: string[];
 }
 
 /** Devil's advocate (B8): the advisory review of a high-risk approval. Never a decision. */

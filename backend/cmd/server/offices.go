@@ -126,22 +126,25 @@ func wireApprovers(orch *application.Orchestrator, notifySvc *notify.Service, sv
 	}}
 	orch.SetApproverPolicy(pol)
 	if notifySvc != nil {
-		notifySvc.Approvers = func(ctx context.Context, org string, ap domain.Approval) []string {
-			ids := pol.Approvers(ctx, org, ap)
+		notifySvc.Approvers = func(ctx context.Context, org string, ap domain.Approval) (notify.ApprovalAudience, error) {
+			o, ok, ids, err := pol.Audience(ctx, org, ap)
+			if err != nil || !ok {
+				return notify.ApprovalAudience{}, err
+			}
+			aud := notify.ApprovalAudience{Office: true, Private: o.Visibility == offices.Private}
 			if len(ids) == 0 {
-				return nil
+				return aud, nil
 			}
 			ms, err := authStore.ListMembers(ctx, org)
 			if err != nil {
-				return nil
+				return aud, err
 			}
-			var out []string
 			for _, m := range ms {
 				if m.Email != "" && slices.Contains(ids, m.UserID) {
-					out = append(out, m.Email)
+					aud.Emails = append(aud.Emails, m.Email)
 				}
 			}
-			return out
+			return aud, nil
 		}
 	}
 }

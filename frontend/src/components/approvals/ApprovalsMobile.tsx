@@ -6,7 +6,8 @@ import { usePreferences } from "@/lib/preferences";
 import { useT } from "@/lib/i18n";
 import type { Approval } from "@/lib/types";
 import { currentSubscription, disablePush, enablePush, getPushConfig, pushSupported, sendLabels, type PushConfig } from "@/lib/push";
-import { useSession } from "@/lib/session";
+import { useCan, useSession } from "@/lib/session";
+import { decidersLine, itemDecidable } from "@/lib/inboxLogic";
 import { OrgIndicator } from "../auth/OrgIndicator";
 import { Progress } from "../ui";
 import { ApprovalReason } from "./ApprovalReason";
@@ -83,6 +84,10 @@ function ApprovalItem({ a, focused, onDone }: { a: Approval; focused: boolean; o
   const { t } = useT();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
+  // D3: an office's approvals are decided by its responsibles (the server says so per approval), whatever the role
+  const roleCan = useCan("approvals:decide");
+  const can = itemDecidable(a, roleCan);
+  const deciders = can ? "" : decidersLine(a);
   const decide = async (d: "approve" | "reject", scope?: "session" | "project") => {
     setBusy(true); setErr(false);
     try { await call("POST", `/approvals/${encodeURIComponent(a.id)}/decision`, scope ? { decision: d, scope } : { decision: d }); onDone(); }
@@ -112,13 +117,14 @@ function ApprovalItem({ a, focused, onDone }: { a: Approval; focused: boolean; o
             <Progress value={(done / total) * 100} />
           </div>
         )}
-        <div className="grid grid-cols-2 gap-3">
+        {!can && <p data-testid={`approval-deciders-${a.id}`} className="rounded-md border border-line bg-panel2 px-3 py-2 text-[12.5px] text-ink2">{deciders ? t("approvalInbox.decidedBy", { names: deciders }) : t("approvals.noPermission")}</p>}
+        {can && <div className="grid grid-cols-2 gap-3">
           <button type="button" data-testid={`approval-approve-${a.id}`} disabled={busy} onClick={() => decide("approve")}
             className="min-h-[48px] rounded-md border border-ok/40 bg-ok/10 text-sm font-semibold text-ok disabled:opacity-40">{canRemember ? t("approvals.approveOnce") : t("approvals.approve")}</button>
           <button type="button" data-testid={`approval-reject-${a.id}`} disabled={busy} onClick={() => decide("reject")}
             className="min-h-[48px] rounded-md border border-err/40 bg-err/10 text-sm font-semibold text-err disabled:opacity-40">{t("approvals.reject")}</button>
-        </div>
-        {canRemember && (
+        </div>}
+        {can && canRemember && (
           <div className="mt-3 grid grid-cols-2 gap-3">
             <button type="button" data-testid={`approval-session-${a.id}`} disabled={busy} onClick={() => decide("approve", "session")}
               className="min-h-[44px] rounded-md border border-ok/30 text-[13px] font-semibold text-ok disabled:opacity-40">{t("approvals.approveSession")}</button>
@@ -126,7 +132,7 @@ function ApprovalItem({ a, focused, onDone }: { a: Approval; focused: boolean; o
               className="min-h-[44px] rounded-md border border-ok/30 text-[13px] font-semibold text-ok disabled:opacity-40">{t("approvals.approveProject")}</button>
           </div>
         )}
-        <div className="mt-2 flex flex-wrap justify-center"><RememberApproval a={a} busy={busy} setBusy={setBusy} onDone={() => { setBusy(false); onDone(); }} /></div>
+        {can && roleCan && <div className="mt-2 flex flex-wrap justify-center"><RememberApproval a={a} busy={busy} setBusy={setBusy} onDone={() => { setBusy(false); onDone(); }} /></div>}
         {err && <p role="alert" className="mt-2 text-[12px] text-err">{t("approvals.decideError")}</p>}
       </>} />
   );

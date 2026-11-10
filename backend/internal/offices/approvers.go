@@ -30,13 +30,29 @@ func (p ApprovalPolicy) model(ctx context.Context, org string) (*Model, error) {
 	return m, nil
 }
 
-// Sees reports whether the person sees the approval: the work of its agent (fails closed).
+// Sees reports whether the person sees the approval: the work of its agent, or they asked for the action (they see
+// it, they do not decide it). Fails closed.
 func (p ApprovalPolicy) Sees(ctx context.Context, org, userID string, a domain.Approval) bool {
 	m, err := p.model(ctx, org)
 	if err != nil {
 		return false
 	}
-	return m == nil || m.CanSeeWork(Viewer{UserID: userID}, a.AgentID)
+	return m == nil || m.CanSeeWork(Viewer{UserID: userID}, a.AgentID) || userID != "" && a.RequestedBy == userID
+}
+
+// Audience says who an approval is for: the office of its agent (ok false for General, or without offices), and the
+// responsibles who decide it (none: today's rules). An error means it cannot be told (the caller fails closed).
+func (p ApprovalPolicy) Audience(ctx context.Context, org string, a domain.Approval) (office Office, ok bool, leads []string, err error) {
+	m, err := p.model(ctx, org)
+	if err != nil || m == nil {
+		return Office{}, false, nil, err
+	}
+	o, found := m.Office(m.Agent(a.AgentID).OfficeID)
+	if !found || o.General {
+		return Office{}, false, nil, nil
+	}
+	leads, err = p.approvers(ctx, org, m, a)
+	return o, true, leads, err
 }
 
 // Approvers returns the responsibles who decide the approval: the leads of its agent's office who see the work and

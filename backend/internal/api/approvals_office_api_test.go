@@ -39,9 +39,21 @@ type officeApprovals struct {
 	org              string
 }
 
-func newOfficeApprovals(t *testing.T) *officeApprovals {
+func newOfficeApprovals(t *testing.T, more ...func(*opts)) *officeApprovals {
 	t.Helper()
-	e := newEnv(t, opts{auth: true, orgchart: true, deps: func(d *api.Deps) { withOffices(d); withApprovers(d) }})
+	o := opts{auth: true, orgchart: true}
+	for _, f := range more {
+		f(&o)
+	}
+	extra := o.deps
+	o.deps = func(d *api.Deps) {
+		withOffices(d)
+		withApprovers(d)
+		if extra != nil {
+			extra(d)
+		}
+	}
+	e := newEnv(t, o)
 	owner := e.register("owner-ap@example.com", "OwnerAP")
 	p := &officeApprovals{e: e, owner: owner, org: owner.OrgID,
 		ana:   e.member(owner, "ana-ap@example.com", auth.RoleMember),
