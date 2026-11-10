@@ -232,7 +232,11 @@ func (s *Service) Notify(ctx context.Context, org string, ap domain.Approval) {
 			}
 			sent[key] = true
 			m := msg(to)
-			s.sendEmail(ctx, org, to, mailer.Message{Subject: m.Subject(), Text: m.PlainText(), HTML: m.HTMLBody()})
+			forApproval := "" // a responsible's e-mail is delivered by the queue while they still are one
+			if aud.responsible(to) {
+				forApproval = ap.ID
+			}
+			s.sendEmailFor(ctx, org, to, forApproval, mailer.Message{Subject: m.Subject(), Text: m.PlainText(), HTML: m.HTMLBody()})
 		}
 		if !aud.Private {
 			for _, to := range st.EmailTo {

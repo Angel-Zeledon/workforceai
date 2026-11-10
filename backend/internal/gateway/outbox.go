@@ -35,6 +35,10 @@ const (
 // ErrVersionMismatch: the item was edited after the approver loaded it.
 var ErrVersionMismatch = errors.New("gateway: the item changed; reload it before approving")
 
+// ErrApprovalIncomplete is what the decide callback of OutboxApprove returns when the vote was recorded but the
+// approval still needs another person (double approval): nothing is sent yet.
+var ErrApprovalIncomplete = errors.New("gateway: the approval needs another person before it is sent")
+
 // DeniedError carries the stable deny code of a refused approval.
 type DeniedError struct{ Code string }
 
@@ -408,7 +412,10 @@ func (g *Gateway) OutboxEdit(ctx context.Context, org, id string, p OutboxPatch)
 
 // OutboxApprove approves item id at the given version: the send is scheduled
 // (it still waits out its 60 s window). decide, when set, resolves the pending
-// approval record so the waiting task continues.
+// approval record so the waiting task continues. It runs FIRST: when it fails
+// (the person may not decide, the approval was decided meanwhile) or the vote
+// leaves the approval incomplete (ErrApprovalIncomplete, double approval),
+// nothing is scheduled and its error is returned with the item as it is.
 func (g *Gateway) OutboxApprove(ctx context.Context, org, id string, version int, actor string, decide func(approvalID string) error) (OutboxItem, error) {
 	e, err := g.pendingEntry(org, id)
 	if err != nil {
@@ -426,10 +433,19 @@ func (g *Gateway) OutboxApprove(ctx context.Context, org, id string, version int
 	call := e.call
 	call.Args = cloneArgs(e.call.Args)
 	call.ApprovalID, call.ApprovedArgsHash = e.key(), e.hash()
-	g.byKey[call.ApprovalID] = e.id
 	approvalID := e.approvalID
 	g.mu.Unlock()
 
+	if approvalID != "" && decide != nil {
+		if err := decide(approvalID); err != nil {
+			g.mu.Lock()
+			defer g.mu.Unlock()
+			return g.entryItem(e), err
+		}
+	}
+	g.mu.Lock()
+	g.byKey[call.ApprovalID] = e.id
+	g.mu.Unlock()
 	out := g.Execute(ctx, call)
 	if out.Decision == "denied" {
 		return OutboxItem{}, &DeniedError{Code: out.DenyReason}
@@ -438,9 +454,6 @@ func (g *Gateway) OutboxApprove(ctx context.Context, org, id string, version int
 		return OutboxItem{}, &DeniedError{Code: CodeRehearsal}
 	}
 	g.Audit(ctx, org, actor, "outbox.approved", "connection", e.connID, map[string]any{"item_id": id, "version": version, "hold_id": out.HoldID})
-	if approvalID != "" && decide != nil {
-		_ = decide(approvalID) // already-resolved is fine: the first decision wins
-	}
 	if out.HoldID != "" {
 		if h, err := g.Conns.Store.GetHold(ctx, org, out.HoldID); err == nil {
 			return g.holdItem(ctx, h), nil
@@ -462,15 +475,20 @@ func (g *Gateway) OutboxReject(ctx context.Context, org, id, actor string, decid
 		g.mu.Unlock()
 		return OutboxItem{}, fmt.Errorf("%w: item is %s", connections.ErrConflict, e.status)
 	}
-	e.status, e.reason, e.updatedAt = OutboxRejected, "rejected_by_user", g.now()
 	approvalID := e.approvalID
+	g.mu.Unlock()
+	// the decision first: a refused rejection leaves the item pending
+	if approvalID != "" && decide != nil {
+		if err := decide(approvalID); err != nil {
+			return OutboxItem{}, err
+		}
+	}
+	g.mu.Lock()
+	e.status, e.reason, e.updatedAt = OutboxRejected, "rejected_by_user", g.now()
 	it := g.entryItem(e)
 	g.mu.Unlock()
 	g.Audit(ctx, org, actor, "outbox.rejected", "connection", e.connID, map[string]any{"item_id": id})
 	g.Emit(ctx, org, "tool_call.hold_changed", map[string]any{"hold_id": id, "status": OutboxRejected, "tool_call": it})
-	if approvalID != "" && decide != nil {
-		_ = decide(approvalID)
-	}
 	return it, nil
 }
 

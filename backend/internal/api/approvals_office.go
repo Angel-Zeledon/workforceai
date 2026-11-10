@@ -104,8 +104,13 @@ func (s *server) outboxGuard(w http.ResponseWriter, r *http.Request, approve boo
 	}
 	ap := domain.Approval{ID: it.ApprovalID, AgentID: it.AgentID, Status: domain.ApprovalPending, RequiredApprovals: 1}
 	if it.ApprovalID != "" {
-		if got, err := s.Store.GetApproval(ctx, org, it.ApprovalID); err == nil {
+		got, err := s.Store.GetApproval(ctx, org, it.ApprovalID)
+		switch {
+		case err == nil:
 			ap = got
+		case !errors.Is(err, domain.ErrNotFound): // fails closed: the rules cannot be told
+			s.fail(w, err)
+			return false
 		}
 	}
 	if !ws.seesApproval(ap) {

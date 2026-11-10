@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/gateway"
 )
 
@@ -94,10 +95,19 @@ func (s *server) approveOutbox(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
+	// The decision first (gateway.OutboxApprove): the e-mail is scheduled only once the approval is granted. A vote
+	// that leaves a double approval incomplete is recorded and answers 202 with the item still pending.
 	it, err := s.Gateway.OutboxApprove(ctx, s.org(r), chi.URLParam(r, "id"), body.Version, s.actor(r), func(approvalID string) error {
-		_, e := s.Approvals.Decide(ctx, approvalID, "approve", "approved from the outbox")
+		ap, e := s.Approvals.Decide(ctx, approvalID, "approve", "approved from the outbox")
+		if e == nil && ap.Status != domain.ApprovalApproved {
+			return gateway.ErrApprovalIncomplete
+		}
 		return e
 	})
+	if errors.Is(err, gateway.ErrApprovalIncomplete) {
+		writeJSON(w, http.StatusAccepted, it)
+		return
+	}
 	if err != nil {
 		s.outboxErr(w, err)
 		return

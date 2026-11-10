@@ -55,7 +55,7 @@ func withGateway(gw **gateway.Gateway) func(*opts) {
 
 // outboxItem queues an e-mail of agent for approval (as a task of it would) with its approval record, and returns
 // the outbox item id and the approval id.
-func (p *officeApprovals) outboxItem(gw *gateway.Gateway, agent string) (string, string) {
+func (p *officeApprovals) outboxItem(gw *gateway.Gateway, agent string, more ...func(*domain.Approval)) (string, string) {
 	t := p.e.t
 	t.Helper()
 	c := p.e.json("POST", api1+"/connections", p.owner.AccessToken, map[string]any{"provider": "google_gmail", "label": "Gmail " + agent,
@@ -68,8 +68,11 @@ func (p *officeApprovals) outboxItem(gw *gateway.Gateway, agent string) (string,
 	if out.Pending == nil {
 		t.Fatalf("no pending send: %+v", out)
 	}
-	ap, _, err := p.e.appr.Request(application.WithOrg(context.Background(), p.org), domain.Approval{TaskID: "t-" + agent, AgentID: agent,
-		Action: "send", Risk: "high", Title: "enviar " + agent})
+	want := domain.Approval{TaskID: "t-" + agent, AgentID: agent, Action: "send", Risk: "high", Title: "enviar " + agent}
+	for _, f := range more {
+		f(&want)
+	}
+	ap, _, err := p.e.appr.Request(application.WithOrg(context.Background(), p.org), want)
 	if err != nil {
 		t.Fatal(err)
 	}

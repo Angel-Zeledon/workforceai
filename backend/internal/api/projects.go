@@ -56,9 +56,9 @@ func (s *server) mountProjects(r chi.Router) {
 	r.With(s.can(auth.PermRequestsCreate)).Post("/project-batches", s.createBatch)
 	r.With(s.can(auth.PermTasksRead)).Get("/project-batches", s.listBatches)
 	r.With(s.can(auth.PermTasksRead)).Get("/project-batches/{id}", s.getBatch)
-	r.With(s.can(auth.PermTasksManage)).Post("/project-batches/{id}/control", s.controlBatch)
-	r.With(s.can(auth.PermTasksManage)).Post("/project-batches/{id}/customers/{customerId}/cancel", s.cancelBatchCustomer)
-	r.With(s.can(auth.PermTasksManage)).Post("/project-batches/{id}/retry-failed", s.retryBatchFailed)
+	r.With(s.can(auth.PermTasksManage), s.workBatch).Post("/project-batches/{id}/control", s.controlBatch)
+	r.With(s.can(auth.PermTasksManage), s.workBatch).Post("/project-batches/{id}/customers/{customerId}/cancel", s.cancelBatchCustomer)
+	r.With(s.can(auth.PermTasksManage), s.workBatch).Post("/project-batches/{id}/retry-failed", s.retryBatchFailed)
 	r.With(s.can(auth.PermTasksRead)).Get("/project-templates", s.listProjectTemplates)
 	// Customizable work templates (G2): members create and edit, admins delete.
 	r.With(s.can(auth.PermRequestsCreate)).Post("/project-templates", s.createProjectTemplate)
