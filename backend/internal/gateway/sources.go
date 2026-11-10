@@ -29,8 +29,8 @@ func (g *Gateway) SourcesFor(ctx context.Context, org, agentID string) []applica
 			continue
 		}
 		cn, err := g.Conns.Store.GetConnection(ctx, org, gr.ConnectionID)
-		if err != nil || cn.Status != connections.StatusActive || !g.Conns.ProviderEnabled(cn.Provider) {
-			continue
+		if err != nil || cn.Status != connections.StatusActive || !g.Conns.ProviderEnabled(cn.Provider) || !g.Conns.AgentFits(ctx, org, cn, agentID) {
+			continue // D3: another office's connection is not the agent's source
 		}
 		m, ok := g.Conns.Manifest(cn.Provider)
 		if !ok || (cn.Provider == connections.SourceProvider && cn.Source == nil) || (cn.Provider == connections.DatabaseProvider && cn.Database == nil) {

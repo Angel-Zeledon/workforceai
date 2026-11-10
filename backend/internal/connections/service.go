@@ -61,6 +61,10 @@ type Config struct {
 	// A provider it refuses is absent from the catalog, cannot be connected, and its existing connections are kept
 	// but unusable. nil = every provider enabled (the server always wires it; nil is for package tests).
 	ProviderEnabled func(provider string) bool
+	// AgentOffice answers the department (office) of an agent, "" for General (D3). A connection of an office serves
+	// only the agents of that office: when this is nil or fails, the office cannot be told and such a connection
+	// serves nobody (fail closed). Connections without an office never ask.
+	AgentOffice func(ctx context.Context, org, agentID string) (string, error)
 }
 
 // Service implements the connection use cases.
@@ -114,6 +118,39 @@ func (s *Service) AdminCount(ctx context.Context, org string) int {
 // ProviderEnabled reports whether a provider may be used (VENDOR_INTEGRATIONS, v1).
 func (s *Service) ProviderEnabled(provider string) bool {
 	return s.Config.ProviderEnabled == nil || s.Config.ProviderEnabled(provider)
+}
+
+// GeneralOffice is the id of the virtual office of the whole company (offices.GeneralID): a connection of General
+// is a connection without an office.
+const GeneralOffice = "general"
+
+// NormOffice normalizes the office of a connection: "" and General are no office.
+func NormOffice(id string) string {
+	id = strings.TrimSpace(id)
+	if id == GeneralOffice {
+		return ""
+	}
+	return id
+}
+
+// AgentFits reports whether an agent may use a connection by its office: always for a connection without office,
+// else only when the agent is one of the office's agents. It fails closed when the agent's office cannot be told.
+func (s *Service) AgentFits(ctx context.Context, org string, c Connection, agentID string) bool {
+	if c.OfficeID == "" {
+		return true
+	}
+	if s.AgentOffice == nil {
+		return false
+	}
+	off, err := s.AgentOffice(ctx, org, agentID)
+	return err == nil && off == c.OfficeID
+}
+
+func validOffice(id string) error {
+	if len(id) > 120 || strings.ContainsAny(id, "/\\ \t\r\n") {
+		return invalid("office_id is not valid")
+	}
+	return nil
 }
 
 // usable refuses a connection whose provider is switched off.
@@ -255,6 +292,9 @@ type CreateInput struct {
 	Source *Source
 	// Database configures a read-only database source (provider database only). The password is Secret.
 	Database *Database
+	// OfficeID is the department (office) the connection belongs to ("" or "general" = General). The caller checks
+	// that the office exists and that the actor may manage it.
+	OfficeID string
 }
 
 // SourceProvider is the provider whose connections carry a Source.
@@ -330,6 +370,10 @@ func (s *Service) Create(ctx context.Context, org string, in CreateInput) (Conne
 	if err != nil {
 		return Connection{}, err
 	}
+	office := NormOffice(in.OfficeID)
+	if err := validOffice(office); err != nil {
+		return Connection{}, err
+	}
 	if in.Mode == "" {
 		in.Mode = ModeLive
 	}
@@ -349,7 +393,7 @@ func (s *Service) Create(ctx context.Context, org string, in CreateInput) (Conne
 	c := Connection{ID: newID(), OrgID: org, Provider: in.Provider, Kind: in.Kind, Label: label, Mode: in.Mode,
 		Status: StatusPending, Class: m.ClassOf(in.Capabilities), RequestedCapabilities: in.Capabilities,
 		GrantedCapabilities: []string{}, ProviderScopes: []string{}, ResourceScope: in.ResourceScope, Limits: m.DefaultLimits,
-		CreatedBy: in.Actor, CreatedAt: now, UpdatedAt: now, ExpiresAt: in.ExpiresAt, Source: src, Database: dbc}
+		CreatedBy: in.Actor, CreatedAt: now, UpdatedAt: now, ExpiresAt: in.ExpiresAt, Source: src, Database: dbc, OfficeID: office}
 	if c.Limits.OnExceed == "" {
 		c.Limits.OnExceed = "deny"
 	}
@@ -418,7 +462,7 @@ func (s *Service) Create(ctx context.Context, org string, in CreateInput) (Conne
 		return Connection{}, err
 	}
 	s.Audit(ctx, org, in.Actor, "connection.created", "connection", c.ID,
-		map[string]any{"provider": c.Provider, "mode": c.Mode, "kind": c.Kind, "capabilities": c.RequestedCapabilities})
+		map[string]any{"provider": c.Provider, "mode": c.Mode, "kind": c.Kind, "capabilities": c.RequestedCapabilities, "office_id": c.OfficeID})
 	s.Emit(ctx, org, "connection.created", map[string]any{"connection": s.brief(c)})
 	return s.view(ctx, c), nil
 }
@@ -513,6 +557,9 @@ type PatchInput struct {
 	Source *Source
 	// Database replaces the database configuration (database only; the password is rotated apart).
 	Database *Database
+	// OfficeID moves the connection to a department (office); "" or "general" = General. The caller checks the
+	// office and the actor's rights; grants of agents of other offices stay but no longer serve (AgentFits).
+	OfficeID *string
 	Actor    string
 }
 
@@ -561,11 +608,23 @@ func (s *Service) Patch(ctx context.Context, org, id string, in PatchInput) (Con
 			c.AccountLabel = dbc.Account()
 		}
 	}
+	officeBefore := c.OfficeID
+	if in.OfficeID != nil {
+		office := NormOffice(*in.OfficeID)
+		if err := validOffice(office); err != nil {
+			return Connection{}, err
+		}
+		c.OfficeID = office
+	}
 	c.UpdatedAt = s.Now().UTC()
 	if err := s.Store.UpdateConnection(ctx, c); err != nil {
 		return Connection{}, err
 	}
-	s.Audit(ctx, org, in.Actor, "connection.updated", "connection", id, map[string]any{"read_only": c.ReadOnly, "source_changed": in.Source != nil, "database_changed": in.Database != nil})
+	details := map[string]any{"read_only": c.ReadOnly, "source_changed": in.Source != nil, "database_changed": in.Database != nil}
+	if c.OfficeID != officeBefore {
+		details["office_before"], details["office_id"] = officeBefore, c.OfficeID
+	}
+	s.Audit(ctx, org, in.Actor, "connection.updated", "connection", id, details)
 	s.Emit(ctx, org, "connection.updated", map[string]any{"connection": s.brief(c)})
 	return s.view(ctx, c), nil
 }

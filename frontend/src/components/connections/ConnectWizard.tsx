@@ -11,7 +11,10 @@ import { useStore } from "@/lib/store";
 import { Btn } from "../ui";
 import { AuthStyleFields, SourceFields } from "./ApiSourceForm";
 import { DbFields, DbReadOnlyNote, dbErrText, dbTestText } from "./DatabaseForm";
-import { ErrorLine, errText, Field, inputCls, Modal } from "./shared";
+import { ErrorLine, errText, Field, inputCls, Modal, useViewer } from "./shared";
+import { OfficeField } from "./OfficeField";
+import { useConnOffices } from "./useConnOffices";
+import { agentFitsConn, officeChoices } from "@/lib/connections/officeLogic";
 
 const STEPS = 5;
 
@@ -45,6 +48,13 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
   const [dbShowErrors, setDbShowErrors] = useState(false);
   const idRef = useRef<HTMLInputElement>(null);
   const secretRef = useRef<HTMLInputElement>(null);
+  // D3: the department the connection belongs to ("" = the whole company; a responsible starts on their department)
+  const { isAdmin } = useViewer();
+  const { offices, agentOffice } = useConnOffices();
+  const [officePick, setOffice] = useState<string | null>(null);
+  const office = officePick ?? officeChoices(offices, isAdmin)[0]?.id ?? "";
+  const officeField = <OfficeField value={office} isAdmin={isAdmin} onChange={setOffice} />;
+  const assignable = agentOrder.filter((a) => agentFitsConn(office, agentOffice[a]));
   const isCustom = prov?.id === CUSTOM_API;
   const isDb = prov?.id === DATABASE;
   /** generic read-only sources skip the resource-filter step: 1 -> 2 -> 4 -> 5 */
@@ -128,6 +138,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
     const secretVal = secretRef.current?.value ?? "";
     if (secretRef.current) secretRef.current.value = "";
     const base: CreateConnectionInput = { provider: prov.id, kind: wantsOAuth ? "oauth2" : "api_key", label: label.trim() || t(`conn.provider.${prov.id}`), capabilities: caps, resource_scope: resourceScope() };
+    if (office) base.office_id = office;
     if (isCustom) { base.source = draftToSource(src); base.mode = simulated ? "simulated" : "live"; }
     if (isDb) { base.database = draftToDatabase(db); base.mode = simulated ? "simulated" : "live"; }
     try {
@@ -195,6 +206,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
             <Field label={t("conn.wizard.label")}>
               <input data-testid="conn-label-input" className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} placeholder={t("conn.src.labelPlaceholder")} />
             </Field>
+            {officeField}
             <SourceFields draft={src} setDraft={(fn) => setSrc(fn)} errors={srcErrors} />
             <p data-testid="conn-src-readonly-note" className="rounded-xl border border-line bg-panel2 px-3 py-2 text-[11px] text-mute">{t("conn.src.readOnlyNote")}</p>
           </div>
@@ -206,6 +218,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
             <Field label={t("conn.wizard.label")}>
               <input data-testid="conn-label-input" className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} placeholder={t("conn.db.labelPlaceholder")} />
             </Field>
+            {officeField}
             <DbFields draft={db} setDraft={(fn) => setDb(fn)} errors={dbErrors} />
             <DbReadOnlyNote />
           </div>
@@ -216,6 +229,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
             <Field label={t("conn.wizard.label")}>
               <input data-testid="conn-label-input" className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} />
             </Field>
+            {officeField}
             {prov.split_read_write && (
               <div>
                 <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-mute">{t("conn.wizard.profile")}</div>
@@ -343,16 +357,17 @@ export function ConnectWizard({ onClose }: { onClose: () => void }) {
             <div>
               <div className="mb-1 flex items-center justify-between gap-2">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-mute">{t("conn.wizard.assign")}</span>
-                {agentOrder.length > 0 && (
+                {assignable.length > 0 && (
                   <button type="button" data-testid="conn-assign-all" className="text-[11px] font-medium text-accent hover:underline"
-                    onClick={() => setAssign(assign.length === agentOrder.length ? [] : [...agentOrder])}>
-                    {assign.length === agentOrder.length ? t("conn.wizard.assignNone") : t("conn.wizard.assignAll")}
+                    onClick={() => setAssign(assign.length === assignable.length ? [] : [...assignable])}>
+                    {assign.length === assignable.length ? t("conn.wizard.assignNone") : t("conn.wizard.assignAll")}
                   </button>
                 )}
               </div>
               <p className="mb-2 text-[11px] text-mute">{t("conn.not_granted_note")} {hasWrite ? t("conn.wizard.assignWriteNote") : ""}</p>
+              {office && <p data-testid="conn-assign-office-note" className="mb-2 text-[11px] text-mute">{t("conn.office.assignNote")}</p>}
               <div className="grid grid-cols-2 gap-1.5">
-                {agentOrder.map((a) => (
+                {assignable.map((a) => (
                   <label key={a} className="flex items-center gap-2 rounded-xl border border-line bg-panel2 px-2 py-1 text-xs">
                     <input type="checkbox" data-testid={`conn-assign-${a}`} checked={assign.includes(a)} onChange={() => setAssign((s) => (s.includes(a) ? s.filter((x) => x !== a) : [...s, a]))} />
                     {agents[a]?.name ?? a}

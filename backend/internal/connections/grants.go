@@ -27,7 +27,10 @@ type GrantInput struct {
 	AllowNoRedaction bool
 }
 
-var capNameRe = regexp.MustCompile(`^[a-z][a-z_]*\.[a-z][a-z_]*$`)
+// errOtherOffice refuses a grant to an agent outside the department (office) of the connection (D3).
+var errOtherOffice = fmt.Errorf("%w: %s: the agent is not in the department of this connection", ErrInvalid, CodeAgentOtherOffice)
+
+var capNameRe =regexp.MustCompile(`^[a-z][a-z_]*\.[a-z][a-z_]*$`)
 
 // forbiddenCaps can never be granted to an agent, whatever a manifest says:
 // agents NEVER receive approval, connection-management or control powers.
@@ -68,6 +71,9 @@ func (s *Service) PutGrant(ctx context.Context, org, connID, agentID string, in 
 	}
 	if err := s.usable(c); err != nil {
 		return Grant{}, err
+	}
+	if !s.AgentFits(ctx, org, c, agentID) {
+		return Grant{}, errOtherOffice
 	}
 	m := s.manifests[c.Provider]
 	caps := dedupe(in.Capabilities)
@@ -191,6 +197,13 @@ func (s *Service) ApproveGrant(ctx context.Context, org, connID, agentID, approv
 	}
 	if approver == "" || approver == g.GrantedBy {
 		return Grant{}, ErrNeedsSecondApprover
+	}
+	c, err := s.Store.GetConnection(ctx, org, connID)
+	if err != nil {
+		return Grant{}, err
+	}
+	if !s.AgentFits(ctx, org, c, agentID) {
+		return Grant{}, errOtherOffice // the agent moved to another office since the grant was asked for
 	}
 	g.Status, g.ApprovedBy = GrantActive, approver
 	if err := s.Store.UpsertGrant(ctx, g); err != nil {

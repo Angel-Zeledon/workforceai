@@ -528,6 +528,7 @@ export class MockConnections {
           if (typeof body?.label === "string") c.label = body.label;
           if (typeof body?.read_only === "boolean") c.read_only = body.read_only;
           if (body?.limits) c.limits = { ...c.limits, ...body.limits };
+          if (typeof body?.office_id === "string") c.office_id = body.office_id === "general" ? "" : body.office_id; // D3
           if (body?.source !== undefined) {
             // custom_api only; full replace, validated like on create (400 with the usual error shape)
             if (c.provider !== CUSTOM_API || sourceErrorCode(body.source)) fail(400, "invalid_source");
@@ -634,6 +635,7 @@ export class MockConnections {
       last_tested_at: null, last_used_at: null, created_at: nowIso(), revoked_at: null,
       ...(prov.id === CUSTOM_API ? { source: JSON.parse(JSON.stringify(body.source)) } : {}),
       ...(prov.id === DATABASE ? { database: mockDatabase(body) } : {}),
+      ...(typeof body?.office_id === "string" && body.office_id !== "general" ? { office_id: body.office_id } : {}), // D3
     };
     if (prov.id === DATABASE) {
       // the connection string is split and dropped like on the server: only the password would be kept (here: discarded)

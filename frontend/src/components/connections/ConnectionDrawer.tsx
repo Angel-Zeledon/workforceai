@@ -11,6 +11,9 @@ import { ApiSourceSection } from "./ApiSourceForm";
 import { DatabaseSection } from "./DatabaseForm";
 import { DATABASE } from "@/lib/connections/dbSource";
 import { CapChip, ErrorLine, errText, inputCls, Modal, StatusBadge, useViewer } from "./shared";
+import { OfficeField } from "./OfficeField";
+import { agentFitsConn, canManageConn, connOffice } from "@/lib/connections/officeLogic";
+import { useConnOffices } from "./useConnOffices";
 
 const REVOKE_STEPS = ["suspend", "cancel", "provider", "destroy", "grants", "audit"] as const;
 
@@ -66,13 +69,17 @@ export function ConnectionDrawer({ id, onClose }: { id: string; onClose: () => v
   const providers = useConnections((s) => s.providers);
   const usage = useConnections((s) => s.usage).filter((u) => u.connection_id === id).slice(0, 6);
   const agents = useStore((s) => s.agents);
-  const { isAdmin } = useViewer();
+  const { isAdmin: isOrgAdmin } = useViewer();
+  const { agentOffice } = useConnOffices();
   const [test, setTest] = useState<TestResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [revoke, setRevoke] = useState(false);
   const [simAgent, setSimAgent] = useState("assistant");
   const rotateRef = useRef<HTMLInputElement>(null);
   if (!c) return null;
+  // D3: an admin, or the responsible of the connection's department, manages it
+  const isAdmin = canManageConn(c, isOrgAdmin);
+  const office = connOffice(c);
   const prov = providers.find((p) => p.id === c.provider);
   const defs = prov?.capabilities ?? [];
   const live = c.status !== "revoked";
@@ -102,6 +109,7 @@ export function ConnectionDrawer({ id, onClose }: { id: string; onClose: () => v
         </header>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 text-xs">
           <ErrorLine msg={err} />
+          {live && <OfficeField value={office} isAdmin={isOrgAdmin} disabled={!isAdmin} onChange={(next) => run(() => connApi.patch(id, { office_id: next }))} />}
           <section>
             <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-mute">{t("conn.drawer.capabilities")}</h3>
             <div className="flex flex-wrap gap-1">
@@ -137,7 +145,10 @@ export function ConnectionDrawer({ id, onClose }: { id: string; onClose: () => v
               <ul className="space-y-1">
                 {grants.map((g) => (
                   <li key={g.id} className="flex items-center justify-between rounded-xl border border-line bg-panel2 px-2 py-1">
-                    <span className="font-semibold">{agents[g.agent_id]?.name ?? g.agent_id}</span>
+                    <span className="min-w-0">
+                      <span className="font-semibold">{agents[g.agent_id]?.name ?? g.agent_id}</span>
+                      {office && !agentFitsConn(office, agentOffice[g.agent_id]) && <span data-testid="conn-grant-other-office" className="block text-[10.5px] font-medium text-amber-700">{t("conn.office.grantUnused")}</span>}
+                    </span>
                     <span className="flex flex-wrap items-center justify-end gap-1">
                       {g.capabilities.map((cap) => <CapChip key={cap} cap={cap} risk={defs.find((d) => d.id === cap)?.risk ?? "low"} />)}
                       {g.status === "pending_second_approval" && <span className="rounded-full bg-amber-500/20 px-2 text-[10px] font-semibold text-amber-700">{t("conn.grant.pending")}</span>}

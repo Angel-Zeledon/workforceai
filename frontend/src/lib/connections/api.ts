@@ -38,6 +38,8 @@ export interface CreateConnectionInput {
   database?: Partial<DatabaseConfig>;
   /** database only. WRITE-ONLY: a pasted postgresql:// URL; the server splits it and keeps only the password (in the vault). */
   connection_string?: string;
+  /** D3: the department (office) it belongs to; "" = the whole company. */
+  office_id?: string;
 }
 
 export const connApi = {
@@ -45,7 +47,7 @@ export const connApi = {
   list: async () => items<Connection>(await call("GET", "/connections")),
   create: (b: CreateConnectionInput) => call<Connection>("POST", "/connections", b),
   /** `source` (custom_api) is a full replace. */
-  patch: (id: string, b: Partial<Pick<Connection, "label" | "read_only" | "limits" | "source" | "database">>) => call<Connection>("PATCH", `/connections/${id}`, b),
+  patch: (id: string, b: Partial<Pick<Connection, "label" | "read_only" | "limits" | "source" | "database" | "office_id">>) => call<Connection>("PATCH", `/connections/${id}`, b),
   oauthStart: (id: string) => call<{ auth_url: string; expires_at: string }>("POST", `/connections/${id}/oauth/start`),
   /** Mock only: simulates the provider redirect landing on the callback. */
   oauthSimulateCallback: (id: string, denyScopes = false) => call<Connection>("GET", `/connections/oauth/callback?connection_id=${id}${denyScopes ? "&deny_scopes=1" : ""}`),

@@ -343,3 +343,27 @@ func TestConnectionsStoreDatabaseConfig(t *testing.T) {
 		t.Fatal("provider")
 	}
 }
+
+// Migration 820: a connection may belong to a department (office); '' is General.
+func TestConnectionsStoreOffice(t *testing.T) {
+	env := testStore(t)
+	ctx := context.Background()
+	seedOrg(t, env.Store, "org-a")
+	cs := &ConnStore{S: env.Store}
+	c := newConn("org-a", "cn_off")
+	c.OfficeID = "dept-legal"
+	if err := cs.CreateConnection(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	got, err := cs.GetConnection(ctx, "org-a", "cn_off")
+	if err != nil || got.OfficeID != "dept-legal" {
+		t.Fatalf("round trip: %v %q", err, got.OfficeID)
+	}
+	got.OfficeID = ""
+	if err := cs.UpdateConnection(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	if again, _ := cs.GetConnection(ctx, "org-a", "cn_off"); again.OfficeID != "" {
+		t.Fatalf("update: %q", again.OfficeID)
+	}
+}

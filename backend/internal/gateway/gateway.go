@@ -241,6 +241,9 @@ func (g *Gateway) resolve(ctx context.Context, c application.GatewayCall, t targ
 		if err != nil || cn.Provider != t.provider.ID {
 			continue
 		}
+		if !g.Conns.AgentFits(ctx, c.Org, cn, c.AgentID) {
+			continue // D3: an old grant on another office's connection is no grant (fails closed when unknown)
+		}
 		if alias != "" && gr.Alias != alias {
 			continue
 		}
@@ -902,7 +905,8 @@ func (g *Gateway) sendHold(ctx context.Context, h connections.Hold) bool {
 	}
 	gr, err := g.Conns.Store.GetGrant(ctx, h.OrgID, h.ConnectionID, h.AgentID)
 	now := g.now()
-	if err != nil || gr.Status != connections.GrantActive || (gr.ValidUntil != nil && now.After(*gr.ValidUntil)) || !contains(gr.Capabilities, t.cap) {
+	if err != nil || gr.Status != connections.GrantActive || (gr.ValidUntil != nil && now.After(*gr.ValidUntil)) || !contains(gr.Capabilities, t.cap) ||
+		!g.Conns.AgentFits(ctx, h.OrgID, conn, h.AgentID) {
 		g.finishHold(ctx, h, connections.HoldCancelled, connections.CodeScopeNotGranted, "system")
 		return false
 	}
