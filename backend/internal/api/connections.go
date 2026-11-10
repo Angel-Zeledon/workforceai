@@ -290,22 +290,37 @@ func (s *server) patchConnection(w http.ResponseWriter, r *http.Request) {
 		Database      *connections.Database      `json:"database"`
 		// OfficeID moves the connection to a department (office); "" or "general" = the whole company (D3).
 		OfficeID *string `json:"office_id"`
+		// Secret (write-only) replaces the stored secret in the same change; without connections:manage it is
+		// required to change where the secret goes (base_url; host, port, user): 400 credential_required.
+		Secret string `json:"secret"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.connErr(w, err)
 		return
+	}
+	var secret *vault.Secret
+	if body.Secret != "" {
+		sec := vault.SecretFromString(body.Secret)
+		defer sec.Zero()
+		secret, body.Secret = &sec, "" // write-only: drop our copy of the plain text
 	}
 	sc, err := s.connScope(r)
 	if err != nil {
 		s.connErr(w, err)
 		return
 	}
+	admin := s.has(r, auth.PermConnectionsManage)
+	cur, err := s.Conns.Store.GetConnection(r.Context(), s.org(r), id)
+	if err != nil {
+		s.connErr(w, err)
+		return
+	}
+	if body.ReadOnly != nil && !*body.ReadOnly && cur.ReadOnly && !admin {
+		// lifting read only would let blocked write grants act again: an admin decides it
+		codeErr(w, http.StatusForbidden, "forbidden", "only an admin turns read only off")
+		return
+	}
 	if body.OfficeID != nil {
-		cur, err := s.Conns.Store.GetConnection(r.Context(), s.org(r), id)
-		if err != nil {
-			s.connErr(w, err)
-			return
-		}
 		office := connections.NormOffice(*body.OfficeID)
 		if office != cur.OfficeID && !s.officeOK(w, r, sc, office) {
 			return
@@ -314,7 +329,7 @@ func (s *server) patchConnection(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := s.Conns.Patch(r.Context(), s.org(r), id, connections.PatchInput{Label: body.Label, Limits: body.Limits,
 		ResourceScope: body.ResourceScope, ReadOnly: body.ReadOnly, Source: body.Source, Database: body.Database, OfficeID: body.OfficeID,
-		Actor: s.actor(r)})
+		Secret: secret, SecretToMove: !admin, Actor: s.actor(r)})
 	if err != nil {
 		s.connErr(w, err)
 		return
@@ -532,8 +547,21 @@ func (s *server) putGrant(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) approveGrant(w http.ResponseWriter, r *http.Request) {
 	if !s.has(r, auth.PermConnectionsGrantWrite) {
-		codeErr(w, http.StatusForbidden, "forbidden", "approving write grants needs connections:grant:write")
-		return
+		// D3: the second human of a write grant on a department's connection may also be its responsible
+		c, err := s.Conns.Store.GetConnection(r.Context(), s.org(r), chi.URLParam(r, "id"))
+		if err != nil {
+			s.connErr(w, err)
+			return
+		}
+		sc, err := s.connScope(r)
+		if err != nil {
+			s.connErr(w, err)
+			return
+		}
+		if !sc.leads(c.OfficeID) {
+			codeErr(w, http.StatusForbidden, "forbidden", "approving write grants needs connections:grant:write or leading the connection's department")
+			return
+		}
 	}
 	g, err := s.Conns.ApproveGrant(r.Context(), s.org(r), chi.URLParam(r, "id"), chi.URLParam(r, "agent_id"), s.actor(r))
 	if err != nil {

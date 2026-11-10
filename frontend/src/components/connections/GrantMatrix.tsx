@@ -9,7 +9,7 @@ import type { Connection, Grant } from "@/lib/connections/types";
 import { useStore } from "@/lib/store";
 import { Btn, Empty } from "../ui";
 import { CapChip, ErrorLine, errText, Field, inputCls, useViewer } from "./shared";
-import { agentFitsConn, canManageConn, connOffice } from "@/lib/connections/officeLogic";
+import { agentFitsConn, canCoSignWrite, canManageConn, connOffice } from "@/lib/connections/officeLogic";
 import { OfficeTag } from "./OfficeField";
 import { useConnOffices } from "./useConnOffices";
 
@@ -58,7 +58,8 @@ function GrantDrawer({ conn, agentId, onClose }: { conn: Connection; agentId: st
   const addsWrite = caps.some((c) => isWrite(c) && !before.includes(c));
   const anyWrite = caps.some(isWrite);
   const secondNeeded = addsWrite && (controls?.admin_count ?? 1) > 1;
-  const canApproveSecond = grant?.status === "pending_second_approval" && isAdmin && viewer?.id !== grant.requested_by;
+  // the second human: an admin, or the responsible of the connection's department (same rule as the server)
+  const canApproveSecond = grant?.status === "pending_second_approval" && canCoSignWrite(conn, isOrgAdmin) && viewer?.id !== grant.requested_by;
 
   const save = async () => {
     setBusy(true); setErr(null);

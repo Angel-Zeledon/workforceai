@@ -20,6 +20,12 @@ export function canManageConn(c: { can_manage?: boolean }, isAdmin: boolean): bo
   return c.can_manage ?? isAdmin;
 }
 
+/** whether the person may be the second human of a pending write grant: an admin of the organization, or, for a
+ *  department's connection, its responsible (the server says so through can_manage). Same rule as the server. */
+export function canCoSignWrite(c: { office_id?: string | null; can_manage?: boolean }, isOrgAdmin: boolean): boolean {
+  return isOrgAdmin || (connOffice(c) !== "" && !!c.can_manage);
+}
+
 export interface OfficeChoice { id: string; name: string }
 
 /**

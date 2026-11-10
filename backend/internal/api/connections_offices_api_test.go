@@ -1,7 +1,9 @@
 package api_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -31,7 +33,9 @@ func newOfficeConns(t *testing.T) *officeConns {
 		prev := o.deps
 		o.deps = func(d *api.Deps) {
 			prev(d)
-			cs, err := connections.NewService(connections.Config{Store: connections.NewMemStore(), Vault: vault.New(vault.NewMemRepo(), nil)})
+			kw, _ := vault.NewEnvKeyWrapper(base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{5}, 32)))
+			cs, err := connections.NewService(connections.Config{Store: connections.NewMemStore(), Vault: vault.New(vault.NewMemRepo(), kw),
+				AdminCount: func(context.Context, string) int { return 3 }}) // owner, ana and beto: write grants need a second human
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -183,4 +187,96 @@ func TestOfficeLeadManagesOfficeConnections(t *testing.T) {
 	o.e.json("PATCH", api1+"/connections/"+shared, owner, map[string]any{"office_id": o.office}, 200)
 	o.body("GET", "/connections/"+shared, o.ana, 200)
 	o.body("GET", "/connections/"+shared, owner, 404)
+}
+
+func (o *officeConns) conn(id, token string) map[string]any {
+	o.e.t.Helper()
+	return o.e.json("GET", api1+"/connections/"+id, token, nil, 200)
+}
+
+// Fix round 1: a responsible without connections:manage cannot send a credential an admin stored to another server
+// (changing host, port, user or base_url needs the secret again in the same call), nor lift read only.
+func TestOfficeLeadCannotRedirectACredential(t *testing.T) {
+	o := newOfficeConns(t)
+	owner := o.owner.AccessToken
+	db := func(host string) map[string]any {
+		return map[string]any{"host": host, "port": 5432, "database": "app", "user": "reader", "sslmode": "require"}
+	}
+	m := o.e.json("POST", api1+"/connections", owner, map[string]any{"provider": connections.DatabaseProvider, "label": "Base real",
+		"database": db("db.example.test"), "secret": "admin-password-0001"}, 201)
+	id := m["id"].(string)
+	o.e.json("PATCH", api1+"/connections/"+id, owner, map[string]any{"office_id": o.office}, 200)
+	version := func() float64 { return o.conn(id, o.carla)["credential"].(map[string]any)["version"].(float64) }
+	host := func() string { return o.conn(id, o.carla)["database"].(map[string]any)["host"].(string) }
+
+	// the responsible points it elsewhere without the secret: refused, nothing changes
+	if c, raw := o.code("PATCH", "/connections/"+id, o.carla, map[string]any{"database": db("evil.example.test")}); c != 400 ||
+		!strings.Contains(raw, connections.CodeCredentialRequired) {
+		t.Fatalf("redirect without the secret = %d %s", c, raw)
+	}
+	if host() != "db.example.test" || version() != 1 {
+		t.Fatalf("the connection changed: %s v%v", host(), version())
+	}
+	for field, val := range map[string]any{"port": 6543, "user": "admin"} {
+		d := db("db.example.test")
+		d[field] = val
+		if c, raw := o.code("PATCH", "/connections/"+id, o.carla, map[string]any{"database": d}); c != 400 {
+			t.Fatalf("changing %s without the secret = %d %s", field, c, raw)
+		}
+	}
+	// what does not move the credential needs no secret
+	d := db("db.example.test")
+	d["description"] = "Pedidos"
+	o.e.json("PATCH", api1+"/connections/"+id, o.carla, map[string]any{"database": d}, 200)
+	// with its own secret it may: the admin's secret is replaced
+	o.e.json("PATCH", api1+"/connections/"+id, o.carla, map[string]any{"database": db("other.example.test"), "secret": "lead-password-0002"}, 200)
+	if host() != "other.example.test" || version() != 2 {
+		t.Fatalf("with the secret: %s v%v", host(), version())
+	}
+	// an admin, as before
+	o.e.json("PATCH", api1+"/connections/"+id, o.ana, map[string]any{"database": db("db.example.test")}, 200)
+
+	// read only: the responsible may turn it on, never off
+	o.e.json("PATCH", api1+"/connections/"+id, o.carla, map[string]any{"read_only": true}, 200)
+	if c, raw := o.code("PATCH", "/connections/"+id, o.carla, map[string]any{"read_only": false}); c != 403 {
+		t.Fatalf("lifting read only = %d %s", c, raw)
+	}
+	o.e.json("PATCH", api1+"/connections/"+id, o.ana, map[string]any{"read_only": false}, 200)
+}
+
+func TestOfficeCustomAPILeadNeedsSecretToMoveBaseURL(t *testing.T) {
+	o := newOfficeConns(t)
+	src := func(base string) map[string]any {
+		return map[string]any{"base_url": base, "auth": map[string]any{"style": "bearer"}}
+	}
+	m := o.e.json("POST", api1+"/connections", o.ana, map[string]any{"provider": connections.SourceProvider, "label": "API Legal", "kind": "api_key",
+		"source": src("https://api.example.test"), "secret": "admin-api-key-000000001", "office_id": o.office}, 201)
+	id := m["id"].(string)
+	if c, raw := o.code("PATCH", "/connections/"+id, o.carla, map[string]any{"source": src("https://evil.example.test")}); c != 400 ||
+		!strings.Contains(raw, connections.CodeCredentialRequired) {
+		t.Fatalf("moving base_url without the secret = %d %s", c, raw)
+	}
+	o.e.json("PATCH", api1+"/connections/"+id, o.carla, map[string]any{"source": src("https://other.example.test"), "secret": "lead-api-key-0000000002"}, 200)
+}
+
+// Fix round 1: the second human of a write grant on a department's connection may be its responsible (the first
+// grant still needs connections:grant:write).
+func TestOfficeLeadCoSignsAWriteGrant(t *testing.T) {
+	o := newOfficeConns(t)
+	m := o.e.json("POST", api1+"/connections", o.ana, map[string]any{"provider": "google_gmail", "label": "Correo Legal", "mode": "simulated",
+		"capabilities": []string{"mail.draft", "mail.send"}, "office_id": o.office}, 201)
+	id := m["id"].(string)
+	write := map[string]any{"capabilities": []string{"mail.draft"}, "confirm_name": "Correo Legal"}
+	if c, raw := o.code("PUT", "/connections/"+id+"/grants/legal", o.carla, write); c != 403 {
+		t.Fatalf("the responsible cannot grant write access = %d %s", c, raw)
+	}
+	o.e.json("PUT", api1+"/connections/"+id+"/grants/legal", o.ana, write, 202)
+	if c, raw := o.code("POST", "/connections/"+id+"/grants/legal/approve", o.ana, nil); c != 409 {
+		t.Fatalf("the same human cannot co-sign = %d %s", c, raw)
+	}
+	o.body("POST", "/connections/"+id+"/grants/legal/approve", o.dora, 404)
+	g := o.e.json("POST", api1+"/connections/"+id+"/grants/legal/approve", o.carla, nil, 200)
+	if g["status"] != connections.GrantActive || g["approved_by"] != o.e.userID(o.carla) {
+		t.Fatalf("co-signed grant: %v", g)
+	}
 }

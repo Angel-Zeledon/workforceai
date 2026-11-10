@@ -10,7 +10,10 @@ const items = <T>(x: any): T[] => (Array.isArray(x) ? x : Array.isArray(x?.items
 /** Stable error code of a failed call (mock throws the code; the real client throws "METHOD path -> status"). */
 export function errCode(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e);
-  return /^[a-z_]+$/.test(m) ? m : "request_failed";
+  if (/^[a-z_]+$/.test(m)) return m;
+  // the API layer's error keeps the server's stable code ({"code": "credential_required"})
+  const code = (e as { code?: unknown } | null)?.code;
+  return typeof code === "string" && /^[a-z_]+$/.test(code) ? code : "request_failed";
 }
 
 export interface TestResult { status: "ok" | "failed"; latency_ms: number; account_label: string | null; granted_capabilities: string[]; error_code?: string }
@@ -47,7 +50,10 @@ export const connApi = {
   list: async () => items<Connection>(await call("GET", "/connections")),
   create: (b: CreateConnectionInput) => call<Connection>("POST", "/connections", b),
   /** `source` (custom_api) is a full replace. */
-  patch: (id: string, b: Partial<Pick<Connection, "label" | "read_only" | "limits" | "source" | "database" | "office_id">>) => call<Connection>("PATCH", `/connections/${id}`, b),
+  patch: (id: string, b: Partial<Pick<Connection, "label" | "read_only" | "limits" | "source" | "database" | "office_id">> & {
+    /** WRITE-ONLY: a new secret with the change; needed (without admin rights) to change where the secret goes. */
+    secret?: string;
+  }) => call<Connection>("PATCH", `/connections/${id}`, b),
   oauthStart: (id: string) => call<{ auth_url: string; expires_at: string }>("POST", `/connections/${id}/oauth/start`),
   /** Mock only: simulates the provider redirect landing on the callback. */
   oauthSimulateCallback: (id: string, denyScopes = false) => call<Connection>("GET", `/connections/oauth/callback?connection_id=${id}${denyScopes ? "&deny_scopes=1" : ""}`),

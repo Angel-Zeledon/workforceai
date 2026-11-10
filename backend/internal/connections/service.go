@@ -560,7 +560,25 @@ type PatchInput struct {
 	// OfficeID moves the connection to a department (office); "" or "general" = General. The caller checks the
 	// office and the actor's rights; grants of agents of other offices stay but no longer serve (AgentFits).
 	OfficeID *string
-	Actor    string
+	// Secret, optional, replaces the stored secret of a live api_key connection in the same change (write-only).
+	Secret *vault.Secret
+	// SecretToMove: changing where the credential goes (a source's base URL; a database's host, port or user) needs
+	// Secret in the same call. The API sets it for whoever is not an admin, so the secret an admin stored is never
+	// sent to a server somebody else chose.
+	SecretToMove bool
+	Actor        string
+}
+
+// credentialTarget is where a connection's stored secret is sent: a source's base URL, a database's host, port and
+// user ("" for every other provider).
+func credentialTarget(c Connection) string {
+	switch {
+	case c.Source != nil:
+		return c.Source.BaseURL
+	case c.Database != nil:
+		return fmt.Sprintf("%s|%d|%s", strings.ToLower(c.Database.Host), c.Database.Port, c.Database.User)
+	}
+	return ""
 }
 
 // Patch updates label, limits, resource scope and the read-only switch.
@@ -571,6 +589,20 @@ func (s *Service) Patch(ctx context.Context, org, id string, in PatchInput) (Con
 	}
 	if c.Status == StatusRevoked {
 		return Connection{}, fmt.Errorf("%w: connection is revoked", ErrConflict)
+	}
+	target := credentialTarget(c)
+	hasSecret := in.Secret != nil && in.Secret.Len() > 0
+	stored := c.Kind == "api_key" && c.Mode == ModeLive // a simulated connection keeps no secret
+	if hasSecret {
+		if err := s.usable(c); err != nil {
+			return Connection{}, err
+		}
+		if !stored {
+			return Connection{}, invalid("only live api_key connections take a secret")
+		}
+		if am, _ := s.manifests[c.Provider].AuthMethodFor("api_key"); am.SecretRegex != "" && !regexp.MustCompile(am.SecretRegex).Match(in.Secret.Reveal()) {
+			return Connection{}, invalid("secret has an unexpected format")
+		}
 	}
 	if in.Label != nil {
 		l := strings.TrimSpace(*in.Label)
@@ -616,11 +648,23 @@ func (s *Service) Patch(ctx context.Context, org, id string, in PatchInput) (Con
 		}
 		c.OfficeID = office
 	}
+	moved := credentialTarget(c) != target
+	if moved && stored && in.SecretToMove && !hasSecret {
+		return Connection{}, invalid("%s: changing where this connection sends its secret needs the secret again", CodeCredentialRequired)
+	}
+	if hasSecret {
+		// the new secret is stored before the connection points elsewhere: the old one never follows it
+		if _, err := s.Vault.Put(ctx, org, id, vault.KindAPIKey, *in.Secret, in.Actor, c.ExpiresAt); err != nil {
+			return Connection{}, err
+		}
+		s.purgeToken(id)
+	}
 	c.UpdatedAt = s.Now().UTC()
 	if err := s.Store.UpdateConnection(ctx, c); err != nil {
 		return Connection{}, err
 	}
-	details := map[string]any{"read_only": c.ReadOnly, "source_changed": in.Source != nil, "database_changed": in.Database != nil}
+	details := map[string]any{"read_only": c.ReadOnly, "source_changed": in.Source != nil, "database_changed": in.Database != nil,
+		"target_changed": moved, "secret_replaced": hasSecret}
 	if c.OfficeID != officeBefore {
 		details["office_before"], details["office_id"] = officeBefore, c.OfficeID
 	}

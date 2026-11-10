@@ -1,7 +1,7 @@
 // Unit tests of the connections of a department (D3) (run: npm run test:unit).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { agentFitsConn, canCreateConn, canManageConn, connOffice, officeChoices } from "./officeLogic.ts";
+import { agentFitsConn, canCoSignWrite, canCreateConn, canManageConn, connOffice, officeChoices } from "./officeLogic.ts";
 
 test("General is no office", () => {
   assert.equal(connOffice({}), "");
@@ -38,6 +38,13 @@ test("an admin gives a connection to the company or any office", () => {
 test("a responsible gives it only to the offices they lead", () => {
   assert.deepEqual(officeChoices(offices, false, "legal").map((o) => o.id), ["legal"]);
   assert.deepEqual(officeChoices(offices, false, "ventas").map((o) => o.id), ["legal", "ventas"]);
+});
+
+test("the second human of a write grant: an admin, or the responsible of the connection's department", () => {
+  assert.equal(canCoSignWrite({ can_manage: true }, true), true);
+  assert.equal(canCoSignWrite({ office_id: "legal", can_manage: true }, false), true);
+  assert.equal(canCoSignWrite({ can_manage: true }, false), false); // a company connection: admins only
+  assert.equal(canCoSignWrite({ office_id: "legal", can_manage: false }, false), false);
 });
 
 test("creating needs an admin or the responsible of some office", () => {

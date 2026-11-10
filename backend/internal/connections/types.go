@@ -42,21 +42,24 @@ const (
 	CodeScopeNotGranted       = "scope_not_granted"
 	CodeConnectionUnavailable = "connection_unavailable"
 	// CodeProviderDisabled: the provider is a vendor-specific integration switched off for v1 (VENDOR_INTEGRATIONS).
-	CodeProviderDisabled = "vendor_integrations_disabled"
-	CodeReauthRequired        = "reauth_required"
-	CodeReadOnlyMode          = "read_only_mode"
-	CodeKillSwitch            = "kill_switch_active"
-	CodeAgentPaused           = "agent_paused"
-	CodeRateLimit             = "rate_limit"
-	CodeBudget                = "budget_exceeded"
-	CodeRiskExceedsGrant      = "risk_exceeds_grant"
-	CodeControlsUnavailable   = "controls_unavailable"
-	CodeOutOfScope            = "resource_out_of_scope"
-	CodeSecretDetected        = "secret_detected"
-	CodeProviderError         = "provider_error"
-	CodeInvalidArgs           = "invalid_args"
+	CodeProviderDisabled    = "vendor_integrations_disabled"
+	CodeReauthRequired      = "reauth_required"
+	CodeReadOnlyMode        = "read_only_mode"
+	CodeKillSwitch          = "kill_switch_active"
+	CodeAgentPaused         = "agent_paused"
+	CodeRateLimit           = "rate_limit"
+	CodeBudget              = "budget_exceeded"
+	CodeRiskExceedsGrant    = "risk_exceeds_grant"
+	CodeControlsUnavailable = "controls_unavailable"
+	CodeOutOfScope          = "resource_out_of_scope"
+	CodeSecretDetected      = "secret_detected"
+	CodeProviderError       = "provider_error"
+	CodeInvalidArgs         = "invalid_args"
 	// CodeAgentOtherOffice: the connection belongs to a department (office) and the agent is not one of its agents.
 	CodeAgentOtherOffice = "agent_other_office"
+	// CodeCredentialRequired: changing where a connection's credential goes (host, port, user, base URL) needs the
+	// secret again in the same call when the person is not an admin.
+	CodeCredentialRequired = "credential_required"
 )
 
 var (

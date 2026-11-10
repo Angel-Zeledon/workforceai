@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode, type RefObject } from "react";
 import { useT, trOr, tr } from "@/lib/i18n";
 import { errCode } from "@/lib/connections/api";
 import { useConnections } from "@/lib/connections/store";
@@ -75,6 +75,24 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   );
 }
 export const inputCls = "w-full rounded-md border border-line-strong bg-panel px-3 py-1.5 text-sm text-ink outline-none transition placeholder:text-mute/70 focus:border-accent disabled:bg-panel2 disabled:opacity-60";
+
+/** Optional new secret sent with an edit (uncontrolled: read from the DOM at save time and cleared right away).
+ *  Without the admin permissions it is required to change where the secret goes (credential_required). */
+export function EditSecretField({ inputRef }: { inputRef: RefObject<HTMLInputElement | null> }) {
+  const { t } = useT();
+  return (
+    <Field label={t("conn.edit.newSecret")} hint={t("conn.edit.newSecretHint")}>
+      <input ref={inputRef} data-testid="conn-edit-secret" data-sensitive type="password" autoComplete="off" data-1p-ignore data-lpignore="true" className={inputCls} />
+    </Field>
+  );
+}
+
+/** Reads and wipes an EditSecretField: the secret leaves the DOM before the request is sent. */
+export function takeSecret(ref: RefObject<HTMLInputElement | null>): string | undefined {
+  const v = ref.current?.value ?? "";
+  if (ref.current) ref.current.value = "";
+  return v || undefined;
+}
 
 export function ErrorLine({ msg }: { msg: string | null }) {
   if (!msg) return null;

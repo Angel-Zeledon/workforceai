@@ -30,7 +30,7 @@ type GrantInput struct {
 // errOtherOffice refuses a grant to an agent outside the department (office) of the connection (D3).
 var errOtherOffice = fmt.Errorf("%w: %s: the agent is not in the department of this connection", ErrInvalid, CodeAgentOtherOffice)
 
-var capNameRe =regexp.MustCompile(`^[a-z][a-z_]*\.[a-z][a-z_]*$`)
+var capNameRe = regexp.MustCompile(`^[a-z][a-z_]*\.[a-z][a-z_]*$`)
 
 // forbiddenCaps can never be granted to an agent, whatever a manifest says:
 // agents NEVER receive approval, connection-management or control powers.

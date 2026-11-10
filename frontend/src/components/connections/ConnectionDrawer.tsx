@@ -187,7 +187,7 @@ export function ConnectionDrawer({ id, onClose }: { id: string; onClose: () => v
           <Btn data-testid="conn-test" disabled={!isAdmin || !live} onClick={doTest}>{t("conn.test")}</Btn>
           {c.status === "active" && <Btn data-testid="conn-suspend" disabled={!isAdmin} onClick={() => run(() => connApi.suspend(id))}>{t("conn.suspend")}</Btn>}
           {c.status === "suspended" && <Btn data-testid="conn-resume" disabled={!isAdmin} onClick={() => run(() => connApi.resume(id))}>{t("conn.resume")}</Btn>}
-          {live && <Btn data-testid="conn-readonly-toggle" disabled={!isAdmin} onClick={() => run(() => connApi.patch(id, { read_only: !c.read_only }))}>{c.read_only ? t("conn.readOnly.off") : t("conn.readOnly.on")}</Btn>}
+          {live && <Btn data-testid="conn-readonly-toggle" disabled={!isAdmin || (c.read_only && !isOrgAdmin) /* only an admin lifts read only */} onClick={() => run(() => connApi.patch(id, { read_only: !c.read_only }))}>{c.read_only ? t("conn.readOnly.off") : t("conn.readOnly.on")}</Btn>}
           {live && <Btn data-testid="conn-revoke" kind="danger" disabled={!isAdmin} onClick={() => setRevoke(true)}>{t("conn.revoke")}</Btn>}
         </footer>
       </aside>
