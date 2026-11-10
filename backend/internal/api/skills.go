@@ -266,6 +266,9 @@ func (s *server) exportSkill(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) agentSkills(w http.ResponseWriter, r *http.Request) {
+	if s.hideAgent(w, r) { // an agent the person may not see
+		return
+	}
 	l, err := s.Skills.AgentSkills(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
 		s.skillFail(w, err)

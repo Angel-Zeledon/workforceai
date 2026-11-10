@@ -233,6 +233,19 @@ func (o *Orchestrator) saveRunMeta(ctx context.Context, rs *run) {
 	}
 }
 
+// RequestedBy returns the person who submitted a request, as stored in its run meta ("" when unknown: no run
+// store, no meta, or a request no person made). D3: whoever asked for a request always sees it.
+func (o *Orchestrator) RequestedBy(ctx context.Context, requestID string) string {
+	if o.durable.runs == nil {
+		return ""
+	}
+	m, err := o.durable.runs.GetRunMeta(ctx, o.org(ctx), requestID)
+	if err != nil {
+		return ""
+	}
+	return PersonID(m.RequestedBy)
+}
+
 // setGate records the human gate the request waits on (nil: none) in the run meta.
 func (o *Orchestrator) setGate(ctx context.Context, rs *run, g *RunGate) {
 	rs.mu.Lock()

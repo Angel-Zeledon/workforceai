@@ -94,6 +94,9 @@ func (s *server) traceRetentionDays() int {
 }
 
 func (s *server) listTraces(w http.ResponseWriter, r *http.Request) {
+	if s.hideWork(w, r) { // D3: the thought audit of a private office's agent is its members'
+		return
+	}
 	limit := 50
 	if n, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && n > 0 {
 		limit = min(n, 200)
@@ -122,6 +125,9 @@ func (s *server) listTraces(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) getTrace(w http.ResponseWriter, r *http.Request) {
+	if s.hideWork(w, r) { // D3: the thought audit of a private office's agent is its members'
+		return
+	}
 	t, err := s.V2.GetTrace(r.Context(), s.org(r), chi.URLParam(r, "id"), chi.URLParam(r, "traceId"))
 	if err != nil {
 		s.fail(w, err)
@@ -134,6 +140,9 @@ func (s *server) getTrace(w http.ResponseWriter, r *http.Request) {
 // exportTraces downloads the (already redacted) traces of an agent. The export
 // itself is audited: who exported what, never the content.
 func (s *server) exportTraces(w http.ResponseWriter, r *http.Request) {
+	if s.hideWork(w, r) { // D3: the thought audit of a private office's agent is its members'
+		return
+	}
 	org, agent := s.org(r), chi.URLParam(r, "id")
 	trs, err := s.V2.ListTraces(r.Context(), org, agent, 500, time.Time{})
 	if err != nil {

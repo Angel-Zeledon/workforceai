@@ -54,6 +54,7 @@ func (s *server) listConversationsHistory(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
+	r = s.work(r).context() // D3: the conversations of a private office's agents are its members'
 	rows, more, err := s.Chats.Conversations(r.Context(), application.ChatConvQuery{
 		AgentID: q.Get("agent_id"), Q: q.Get("q"), Kind: q.Get("kind"), Archived: q.Get("archived"), Limit: limit, Offset: offset})
 	if err != nil {
@@ -102,6 +103,7 @@ func (s *server) readConversation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) listChatThreads(w http.ResponseWriter, r *http.Request) {
+	r = s.work(r).context() // D3
 	v, err := s.Chats.Threads(r.Context())
 	if err != nil {
 		s.fail(w, err)
@@ -117,6 +119,7 @@ func (s *server) listThreadMessages(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	r = s.work(r).context() // D3
 	msgs, more, err := s.Chats.Thread(r.Context(), application.ChatThreadQuery{
 		Thread: strings.TrimSpace(chi.URLParam(r, "key")), BeforeID: r.URL.Query().Get("before"), Limit: limit})
 	if err != nil {
@@ -132,6 +135,7 @@ func (s *server) listThreadMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) readChatThread(w http.ResponseWriter, r *http.Request) {
+	r = s.work(r).context() // D3
 	if err := s.Chats.MarkThreadRead(r.Context(), chi.URLParam(r, "key")); err != nil {
 		s.fail(w, err)
 		return

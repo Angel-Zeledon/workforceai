@@ -2,12 +2,14 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -472,6 +474,17 @@ func (s *server) agentDetail(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.agent(d.Agent.ID) { // D3: the agent is listed (an admin manages it), its work is not
+		d.Tasks, d.Conversations, d.Memory, d.RecentActivity = nil, nil, nil, nil
+	} else if !ws.open() {
+		ws.index(d.Tasks)
+		d.Conversations = slices.DeleteFunc(d.Conversations, func(c domain.Conversation) bool { return !ws.conversation(c) })
+	}
 	d.Tasks, d.Conversations, d.Memory, d.RecentActivity = list(d.Tasks), list(d.Conversations), list(d.Memory), list(d.RecentActivity)
 	writeJSON(w, 200, d)
 }
@@ -482,6 +495,12 @@ func (s *server) listTasks(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	t = slices.DeleteFunc(t, func(x domain.Task) bool { return !ws.agent(x.AgentID) }) // D3
 	writeJSON(w, 200, list(t))
 }
 
@@ -489,6 +508,10 @@ func (s *server) getTask(w http.ResponseWriter, r *http.Request) {
 	t, err := s.Store.GetTask(r.Context(), s.org(r), chi.URLParam(r, "id"))
 	if err != nil {
 		s.fail(w, err)
+		return
+	}
+	if ws := s.work(r); !ws.agent(t.AgentID) { // D3
+		s.fail(w, cmp.Or(ws.err, notFound("task", t.ID)))
 		return
 	}
 	writeJSON(w, 200, t)
@@ -532,6 +555,12 @@ func (s *server) listRequests(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.indexAll(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	v = slices.DeleteFunc(v, func(x domain.Request) bool { return !ws.request(x.ID) }) // D3
 	writeJSON(w, 200, list(v))
 }
 
@@ -541,12 +570,21 @@ func (s *server) getRequest(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if ws.index(d.Tasks); !ws.request(d.ID) { // D3
+		s.fail(w, cmp.Or(ws.err, notFound("request", d.ID)))
+		return
+	}
 	d.Tasks = list(d.Tasks)
 	writeJSON(w, 200, s.withCost(r, d))
 }
 
 // getRequestAudit: GET /requests/{id}/audit, the internal auditor's stamp of a request (B7).
 func (s *server) getRequestAudit(w http.ResponseWriter, r *http.Request) {
+	if ws, id := s.work(r), chi.URLParam(r, "id"); !ws.request(id) { // D3
+		s.fail(w, cmp.Or(ws.err, notFound("request", id)))
+		return
+	}
 	v, err := s.Queries.RequestAudit(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
 		s.fail(w, err)
@@ -576,7 +614,16 @@ func (s *server) postMessage(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	m, err := s.Orch.PostUserMessage(r.Context(), chi.URLParam(r, "id"), body.Text)
+	id := chi.URLParam(r, "id")
+	if err := s.checkAgentUse(r, id); err != nil { // E2 + D3: an agent the person may not use, or whose work is hidden
+		s.fail(w, err)
+		return
+	}
+	if ok, err := s.work(r).conversationID(id); err != nil || !ok {
+		s.fail(w, cmp.Or(err, notFound("conversation", id)))
+		return
+	}
+	m, err := s.Orch.PostUserMessage(r.Context(), id, body.Text)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -667,6 +714,12 @@ func (s *server) listReports(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.indexAll(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	v = slices.DeleteFunc(v, func(x domain.Report) bool { return !ws.request(x.RequestID) }) // D3
 	writeJSON(w, 200, list(v))
 }
 
@@ -676,13 +729,26 @@ func (s *server) getReport(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	if ws := s.work(r); !ws.request(v.RequestID) { // D3
+		s.fail(w, cmp.Or(ws.err, notFound("report", v.ID)))
+		return
+	}
 	writeJSON(w, 200, v)
 }
 
 // reportEvidence is GET /reports/{id}/evidence (B6): the checked citations of
 // the tasks behind the report.
 func (s *server) reportEvidence(w http.ResponseWriter, r *http.Request) {
-	v, err := s.Queries.ReportEvidence(r.Context(), chi.URLParam(r, "id"))
+	rep, err := s.Store.GetReport(r.Context(), s.org(r), chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if ws := s.work(r); !ws.request(rep.RequestID) { // D3
+		s.fail(w, cmp.Or(ws.err, notFound("report", rep.ID)))
+		return
+	}
+	v, err := s.Queries.ReportEvidence(r.Context(), rep.ID)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -695,12 +761,22 @@ func (s *server) activity(w http.ResponseWriter, r *http.Request) {
 	if n, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && n > 0 {
 		limit = min(n, 1000)
 	}
-	v, err := s.Store.ListActivity(r.Context(), s.org(r), "", limit)
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	read := limit
+	if !ws.open() {
+		read = 1000 // D3: room for what is left out, so the page stays full
+	}
+	v, err := s.Store.ListActivity(r.Context(), s.org(r), "", read)
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, 200, list(v))
+	v = slices.DeleteFunc(v, func(x domain.ActivityItem) bool { return x.AgentID != nil && !ws.agent(*x.AgentID) })
+	writeJSON(w, 200, list(v[:min(len(v), limit)]))
 }
 
 func (s *server) metrics(w http.ResponseWriter, r *http.Request) {

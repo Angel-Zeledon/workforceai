@@ -28,6 +28,9 @@ func (s *server) mountMemory(r chi.Router) {
 func (s *server) agentMemory(w http.ResponseWriter, r *http.Request) {
 	org := s.org(r)
 	id := chi.URLParam(r, "id")
+	if s.hideWork(w, r) { // D3: what a private office's agent remembers is its members'
+		return
+	}
 	if _, err := s.Store.GetAgent(r.Context(), org, id); err != nil {
 		s.fail(w, err)
 		return
@@ -51,6 +54,9 @@ func (s *server) agentMemory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) deleteAgentMemory(w http.ResponseWriter, r *http.Request) {
+	if s.hideWork(w, r) { // D3
+		return
+	}
 	if err := s.Memory.Delete(r.Context(), s.org(r), chi.URLParam(r, "id"), chi.URLParam(r, "docId"), s.actor(r)); err != nil {
 		s.fail(w, err)
 		return

@@ -307,3 +307,20 @@ func TestRunMetaIsPersisted(t *testing.T) {
 		t.Fatalf("read_only not kept: %+v", got)
 	}
 }
+
+func TestRequestedByReadsTheRunMeta(t *testing.T) {
+	store := newStore(t)
+	p := startProcess(t, store, &capture{}, nil, nil)
+	ctx := context.Background()
+	for id, by := range map[string]string{"r-person": "u-ana", "r-system": "system"} {
+		if err := store.PutRunMeta(ctx, domain.DemoOrgID, application.RunMeta{RequestID: id, RequestedBy: by}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := p.orch.RequestedBy(ctx, "r-person"); got != "u-ana" {
+		t.Fatalf("requested by = %q", got)
+	}
+	if got := p.orch.RequestedBy(ctx, "r-system") + p.orch.RequestedBy(ctx, "r-missing"); got != "" {
+		t.Fatalf("no person = %q", got)
+	}
+}

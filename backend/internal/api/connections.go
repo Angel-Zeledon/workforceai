@@ -514,6 +514,9 @@ func (s *server) deleteGrant(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) agentConnections(w http.ResponseWriter, r *http.Request) {
+	if s.hideAgent(w, r) { // an agent the person may not see
+		return
+	}
 	v, err := s.Conns.AgentConnections(r.Context(), s.org(r), chi.URLParam(r, "id"))
 	if err != nil {
 		s.connErr(w, err)

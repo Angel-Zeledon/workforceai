@@ -160,3 +160,35 @@ func contains(xs []string, x string) bool {
 	}
 	return false
 }
+
+func TestCanSeeWork(t *testing.T) {
+	f := newFix(t)
+	m := f.model(t)
+	if !m.CanSeeWork(marta, "a-elena") { // no offices: General
+		t.Fatal("General agent hidden")
+	}
+	f.enable(t, "d-legal", "")
+	m = f.model(t)
+	if !m.CanSeeWork(marta, "a-elena") { // open office
+		t.Fatal("open office agent hidden from a non member")
+	}
+	if !m.CanSeeWork(marta, "a-unknown") || !m.CanSeeWork(marta, "a-valeria") { // unknown / not an office: General
+		t.Fatal("General agent hidden")
+	}
+	if _, err := f.svc.SetVisibility(context.Background(), org, admin, "d-legal", Private); err != nil {
+		t.Fatal(err)
+	}
+	m = f.model(t)
+	if !m.CanSeeWork(luis, "a-elena") || !m.CanSeeWork(ana, "a-elena") {
+		t.Fatal("private office agent hidden from a member")
+	}
+	if m.CanSeeWork(marta, "a-elena") {
+		t.Fatal("private office agent seen by a non member")
+	}
+	if m.CanSeeWork(admin, "a-elena") {
+		t.Fatal("private office agent seen by an admin who is not a member")
+	}
+	if !m.CanSeeWork(admin, "a-valeria") {
+		t.Fatal("General agent hidden from the admin")
+	}
+}

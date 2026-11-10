@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"net/http"
 	"path"
@@ -149,7 +150,12 @@ func (s *server) listMessages(w http.ResponseWriter, r *http.Request) {
 	if before != "" && limit == 0 {
 		limit = 50
 	}
-	msgs, more, err := s.Queries.ChatMessages(r.Context(), chi.URLParam(r, "id"), before, limit)
+	id := chi.URLParam(r, "id")
+	if ok, err := s.work(r).conversationID(id); err != nil || !ok { // D3: a private office's conversation
+		s.fail(w, cmp.Or(err, notFound("conversation", id)))
+		return
+	}
+	msgs, more, err := s.Queries.ChatMessages(r.Context(), id, before, limit)
 	if err != nil {
 		s.fail(w, err)
 		return

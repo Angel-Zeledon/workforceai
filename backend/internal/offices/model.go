@@ -231,3 +231,15 @@ func (m *Model) Rights(v Viewer, agentID string) Rights {
 	edit := owner || shareEdit || v.Admin
 	return Rights{See: see, Use: use, Edit: edit}
 }
+
+// CanSeeWork reports whether the viewer sees the work of an agent (its requests, tasks, reports, activity, chats
+// and memory): an agent of General or of an open office is everybody's; one of a private office is only its
+// members', even for an admin (equipos-oficinas.md §4.1). An agent the model does not know belongs to General.
+func (m *Model) CanSeeWork(v Viewer, agentID string) bool {
+	office := m.Agent(agentID).OfficeID
+	o, ok := m.byID[office]
+	if !ok || o.General || o.Visibility != Private {
+		return true
+	}
+	return m.IsMember(v.UserID, office)
+}
