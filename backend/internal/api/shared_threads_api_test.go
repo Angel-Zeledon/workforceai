@@ -2,6 +2,8 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -174,5 +176,50 @@ func TestSharedThreadsLeaveOutPrivateMessagesEverywhere(t *testing.T) {
 			t.Fatalf("beto /compact office = %d %s", code, got)
 		}
 		time.Sleep(20 * time.Millisecond) // the reply to beto's turn (two spoken messages) may still be on its way
+	}
+}
+
+// D3, round 3: the preview of a conversation row (GET /conversations, the row PATCH answers with) never quotes what an
+// agent whose work the person does not see said or was told: here sales consulting legal, the newest message of the
+// earlier shared history with sales and of the office chat.
+func TestConversationPreviewsStaySealed(t *testing.T) {
+	p := newPrivateWork(t)
+	seedShared(t, p)
+	ctx, org := context.Background(), p.owner.OrgID
+	if err := p.e.store.AddMessage(ctx, org, domain.Message{ID: "s-4", ConversationID: "agent:sales", From: "sales", To: "legal",
+		Kind: domain.MsgConsult, Text: "consulta-final-de-ventas-a-legal", TurnID: "s-t2", TS: time.Now().UTC()}); err != nil {
+		t.Fatal(err)
+	}
+	type row struct {
+		ID      string `json:"id"`
+		Preview string `json:"preview"`
+	}
+	rows := func(token string) map[string]string {
+		t.Helper()
+		var rs []row
+		if err := json.Unmarshal([]byte(p.body("GET", "/conversations?archived=all", token, 200)), &rs); err != nil {
+			t.Fatal(err)
+		}
+		out := map[string]string{}
+		for _, r := range rs {
+			out[r.ID] = r.Preview
+		}
+		return out
+	}
+	for id, preview := range rows(p.beto) {
+		if strings.Contains(preview, "consulta") {
+			t.Errorf("beto: the %s row previews %q", id, preview)
+		}
+	}
+	ana := rows(p.ana)
+	if !strings.Contains(ana["agent:sales"], "consulta-final-de-ventas-a-legal") || !strings.Contains(ana["office"], "consulta-ventas-a-legal") {
+		t.Errorf("ana's previews = %v", ana)
+	}
+
+	for token, want := range map[string]bool{p.beto: false, p.ana: true} {
+		got := p.e.json("PATCH", api1+"/conversations/office", token, map[string]any{"archived": false}, 200)
+		if strings.Contains(fmt.Sprint(got["preview"]), "consulta-ventas-a-legal") != want {
+			t.Errorf("PATCH /conversations/office (member %v) answers the preview %q", want, got["preview"])
+		}
 	}
 }

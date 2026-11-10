@@ -53,6 +53,7 @@ type ChatConversation struct {
 	ProjectID    *string   `json:"project_id"`
 	Preview      string    `json:"preview"`
 	PreviewFrom  string    `json:"preview_from,omitempty"`
+	PreviewTo    string    `json:"-"` // the addressee of the previewed message (D3, sealPreview); never sent
 	MessageCount int       `json:"message_count"`
 	Unread       int       `json:"unread"`
 	Archived     bool      `json:"archived"`
@@ -175,15 +176,23 @@ func (h *ChatHistory) Conversations(ctx context.Context, q ChatConvQuery) ([]Cha
 	}
 	rows = slices.DeleteFunc(rows, func(c ChatConversation) bool { return !storedRowVisible(ctx, c) }) // D3: private work
 	for i := range rows {
-		// D3: the preview of a shared chat never quotes an agent whose work the person does not see (its reply in the
-		// office chat); the row lacks the addressee, so a consultation OF such an agent may still show (see Threads)
-		if rows[i].OwnerID == "" && IsChatConversation(rows[i].ID) && IsAgentActor(rows[i].PreviewFrom) && !WorkVisible(ctx, rows[i].PreviewFrom) {
-			rows[i].Preview, rows[i].PreviewFrom = "", ""
-		}
+		sealPreview(ctx, &rows[i])
 	}
 	rows = publicRows(q.Viewer, rows)
 	h.link(ctx, org, rows)
 	return rows, more, nil
+}
+
+// sealPreview (D3) clears the preview of a STORED chat row when it quotes what an agent whose work the person does not
+// see said or was told in a shared chat (its reply in the office chat, a consultation of it in the history shared with
+// another agent), like the thread previews; the person's own thread keeps it.
+func sealPreview(ctx context.Context, c *ChatConversation) {
+	if !IsChatConversation(c.ID) {
+		return
+	}
+	if !SharedMessageVisible(ctx, domain.Message{From: c.PreviewFrom, To: c.PreviewTo, ConversationID: c.ID}) {
+		c.Preview, c.PreviewFrom, c.PreviewTo = "", "", ""
+	}
 }
 
 // publicRows turns stored rows into what the viewer sees: public ids, and one row per agent chat (their
@@ -406,6 +415,7 @@ func (h *ChatHistory) Update(ctx context.Context, id string, p ChatConvPatch) (C
 	}
 	c, err := h.Store.ChatGetConversation(ctx, org, PersonFrom(ctx), stored)
 	if err == nil {
+		sealPreview(ctx, &c) // D3: the row answered is read like the list's
 		rows := []ChatConversation{publicRow(PersonFrom(ctx), c)}
 		h.link(ctx, org, rows)
 		c = rows[0]

@@ -74,7 +74,7 @@ func (s *Store) convRow(c domain.Conversation, msgs []domain.Message, viewer str
 			continue
 		}
 		row.MessageCount++
-		row.Preview, row.PreviewFrom = application.Preview(x.Text), x.From
+		row.Preview, row.PreviewFrom, row.PreviewTo = application.Preview(x.Text), x.From, x.To
 		if firstUser == "" && x.From == "user" {
 			firstUser = x.Text
 		}

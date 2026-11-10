@@ -67,9 +67,13 @@ func spokenMessages(msgs []domain.Message) []domain.Message {
 }
 
 // hidesAnyAgent reports whether some agent's work is hidden from the person (D3: an agent of a private office they
-// are not in).
+// are not in). An unreadable agent list fails closed: it counts as hiding some agent.
 func (c *cmdCall) hidesAnyAgent() bool {
-	for _, a := range c.loadAgents() {
+	agents, err := c.s.Store.ListAgents(c.ctx, c.org)
+	if err != nil {
+		return true
+	}
+	for _, a := range agents {
 		if !c.work.agent(a.ID) {
 			return true
 		}

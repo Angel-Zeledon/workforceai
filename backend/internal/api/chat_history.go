@@ -79,6 +79,7 @@ func (s *server) patchConversation(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	r = s.work(r).context() // D3: the row answered has its preview sealed like the list's
 	c, err := s.Chats.Update(r.Context(), chi.URLParam(r, "id"), application.ChatConvPatch{Title: body.Title, Archived: body.Archived})
 	if err != nil {
 		s.fail(w, err)
