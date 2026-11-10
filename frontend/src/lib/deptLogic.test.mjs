@@ -42,6 +42,12 @@ test("proposedRows: exact folder only, skips existing and non-write", () => {
   assert.equal(r[0].approval.id, "1");
 });
 
+test("proposedRows accepts write_document and income_statement, not edit", () => {
+  const mk = (id, name, action) => ap(id, "/Offices/Legal/" + name, { context: { path: "/Offices/Legal/" + name, action } });
+  const pend = pendingByPath([mk("1", "d.md", "write_document"), mk("2", "p.md", "income_statement"), mk("3", "e.md", "edit"), mk("4", "m.md", "move")], "/Offices/Legal");
+  assert.deepEqual(proposedRows(pend, "/Offices/Legal", new Set()).map((x) => x.name).sort(), ["d.md", "p.md"]);
+});
+
 test("defaultAgent", () => {
   assert.equal(defaultAgent(off({ agents: ["a1", "a2"] })), "a1");
   assert.equal(defaultAgent(off({ agents: [] })), undefined);

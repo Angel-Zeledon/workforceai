@@ -2,6 +2,8 @@
 import type { Approval } from "./types";
 import type { OfficeView } from "./officesLogic";
 
+/** Actions that create a file (backend canonical names: drive/agent.go, gwtool.go, pnl.go). */
+const CREATES = new Set(["write", "write_document", "income_statement"]);
 const norm = (p: string) => p.replace(/\/+$/, "").toLowerCase();
 const parentOf = (p: string) => { const i = norm(p).lastIndexOf("/"); return i <= 0 ? "/" : norm(p).slice(0, i); };
 
@@ -48,7 +50,7 @@ export function proposedRows(
   const out: { path: string; name: string; approval: Approval }[] = [];
   for (const [key, list] of pending) {
     if (parentOf(key) !== dir || have.has(key)) continue;
-    const a = list.find((x) => x.context?.action === "write");
+    const a = list.find((x) => CREATES.has(String(x.context?.action)));
     if (!a) continue;
     const raw = String(a.context?.path ?? key);
     out.push({ path: raw, name: raw.replace(/\/+$/, "").split("/").pop() || raw, approval: a });
