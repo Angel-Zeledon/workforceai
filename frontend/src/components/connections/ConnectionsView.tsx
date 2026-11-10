@@ -14,6 +14,9 @@ import { GrantMatrix } from "./GrantMatrix";
 import { LimitsTab } from "./LimitsTab";
 import { LinkImportsSection } from "./LinkImportsSection";
 import { CapChip, StatusBadge, useViewer } from "./shared";
+import { OfficeTag } from "./OfficeField";
+import { useConnOffices } from "./useConnOffices";
+import { canCreateConn } from "@/lib/connections/officeLogic";
 import { UsageTable } from "./UsageTable";
 import { ConceptHelp } from "../concepts/ConceptHelp";
 
@@ -31,6 +34,7 @@ function ConnectionCard({ c, onOpen }: { c: Connection; onOpen: () => void }) {
         <div className="min-w-0">
           <div className="truncate text-sm font-semibold">{c.label}</div>
           <div className="truncate text-[11px] text-mute">{t(`conn.provider.${c.provider}`)} · <span data-testid="conn-account-label">{c.account_label ?? "—"}</span></div>
+          <OfficeTag c={c} className="mt-1" />
         </div>
         {c.provider_disabled
           ? <span data-testid="conn-provider-disabled" title={t("conn.providerDisabledHint")} className="max-w-[48%] shrink-0 rounded-xl bg-slate-500/15 px-2 py-[2px] text-right text-[10px] font-semibold uppercase leading-tight text-ink2">{t("conn.providerDisabled")}</span>
@@ -82,6 +86,8 @@ export function ConnectionsView() {
   const storeTab = useConnections((s) => s.tab);
   const connections = useConnections((s) => s.connections);
   const { isAdmin } = useViewer();
+  const { offices } = useConnOffices();
+  const canAdd = canCreateConn(offices, isAdmin); // D3: the responsible of a department adds its connections too
   const [target, setTarget] = useState<ConnTarget>(() => resolveConnTab(storeTab));
   const [access, setAccess] = useState<"matrix" | "capabilities">(() => accessViewOf(resolveConnTab(storeTab).section));
   const [wizard, setWizard] = useState(false);
@@ -125,7 +131,7 @@ export function ConnectionsView() {
           <div className="flex items-center gap-1.5"><h1 className="font-display text-[18px] sm:text-xl font-semibold">{t("conn.title")}</h1><ConceptHelp concept="connection" /></div>
           <p className="text-xs text-mute">{t("conn.subtitle")}</p>
         </div>
-        <Btn data-testid="conn-add" kind="primary" disabled={!isAdmin} onClick={() => setWizard(true)}>{t("conn.add")}</Btn>
+        <Btn data-testid="conn-add" kind="primary" disabled={!canAdd} onClick={() => setWizard(true)}>{t("conn.add")}</Btn>
       </div>
       <div role="tablist" className="mb-4 flex flex-wrap gap-1 border-b border-line pb-2 wf-tabs">
         {CONN_PAGE_TABS.map((k) => (
@@ -159,7 +165,7 @@ export function ConnectionsView() {
             </section>
             <section data-section="databases" data-testid="conn-section-databases" className="scroll-mt-2">
               <SectionHead title={t("conn.section.databases")} help={t("conn.section.databasesHelp")}
-                right={<Btn data-testid="conn-db-add" disabled={!isAdmin} onClick={() => setWizard(true)}>{t("conn.section.databasesAdd")}</Btn>} />
+                right={<Btn data-testid="conn-db-add" disabled={!canAdd} onClick={() => setWizard(true)}>{t("conn.section.databasesAdd")}</Btn>} />
               {databases.length === 0 ? <Empty>{t("conn.section.databasesEmpty")}</Empty> : (
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {databases.map((c) => <ConnectionCard key={c.id} c={c} onOpen={() => setOpenId(c.id)} />)}

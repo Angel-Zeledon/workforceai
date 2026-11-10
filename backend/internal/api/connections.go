@@ -91,34 +91,39 @@ func (s *server) mountConnections(r chi.Router) {
 		return
 	}
 	read := s.can(auth.PermConnectionsRead)
-	manage := s.can(auth.PermConnectionsManage)
+	// D3 (connections_offices.go): the routes of one connection answer 404 for a connection of a private office the
+	// person is not in, and let the office's responsible do what the admin permission allows on its connections.
+	one := func(p auth.Permission) func(http.Handler) http.Handler { return s.connRoute(p) }
+	manage := one(auth.PermConnectionsManage)
 	r.With(read).Get("/connection-providers", s.listProviders)
 	r.With(read).Get("/connections", s.listConnections)
-	r.With(manage).Post("/connections", s.createConnection)
-	r.With(read).Get("/connections/{id}", s.getConnection)
-	r.With(manage).Patch("/connections/{id}", s.patchConnection)
-	r.With(manage).Post("/connections/{id}/oauth/start", s.oauthStart)
-	r.With(manage).Post("/connections/{id}/scopes", s.addScopes)
-	r.With(manage).Put("/connections/{id}/credential", s.putCredential)
-	r.With(manage).Post("/connections/{id}/test", s.testConnection)
+	r.With(read).Post("/connections", s.createConnection) // connections:manage, or the responsible of the office given
+	r.With(read, one(auth.PermConnectionsRead)).Get("/connections/{id}", s.getConnection)
+	r.With(read, manage).Patch("/connections/{id}", s.patchConnection)
+	r.With(read, manage).Post("/connections/{id}/oauth/start", s.oauthStart)
+	r.With(read, manage).Post("/connections/{id}/scopes", s.addScopes)
+	r.With(read, manage).Put("/connections/{id}/credential", s.putCredential)
+	r.With(read, manage).Post("/connections/{id}/test", s.testConnection)
 	// read-only database sources: what the user may read, and one test query by hand (same rules as the agents)
-	r.With(manage).Get("/connections/{id}/database/schema", s.databaseSchema)
-	r.With(manage).Post("/connections/{id}/database/query", s.databaseQuery)
-	r.With(s.can(auth.PermConnectionsRevoke)).Post("/connections/{id}/suspend", s.suspendConnection)
-	r.With(s.can(auth.PermConnectionsRevoke)).Post("/connections/{id}/resume", s.resumeConnection)
-	r.With(s.can(auth.PermConnectionsRevoke)).Post("/connections/{id}/revoke", s.revokeConnection)
-	r.With(read).Get("/connections/{id}/grants", s.listGrants)
-	r.With(s.can(auth.PermConnectionsGrant)).Put("/connections/{id}/grants/{agent_id}", s.putGrant)
-	r.With(s.can(auth.PermConnectionsGrant)).Post("/connections/{id}/grants/{agent_id}/approve", s.approveGrant)
+	r.With(read, manage).Get("/connections/{id}/database/schema", s.databaseSchema)
+	r.With(read, manage).Post("/connections/{id}/database/query", s.databaseQuery)
+	revoke := one(auth.PermConnectionsRevoke)
+	r.With(read, revoke).Post("/connections/{id}/suspend", s.suspendConnection)
+	r.With(read, revoke).Post("/connections/{id}/resume", s.resumeConnection)
+	r.With(read, revoke).Post("/connections/{id}/revoke", s.revokeConnection)
+	r.With(read, one(auth.PermConnectionsRead)).Get("/connections/{id}/grants", s.listGrants)
+	grant := one(auth.PermConnectionsGrant)
+	r.With(read, grant).Put("/connections/{id}/grants/{agent_id}", s.putGrant)
+	r.With(read, grant).Post("/connections/{id}/grants/{agent_id}/approve", s.approveGrant)
 	// {approve:true} form of the same second-human approval
-	r.With(s.can(auth.PermConnectionsGrant)).Post("/connections/{id}/grants/{agent_id}", s.approveGrantBody)
-	r.With(s.can(auth.PermConnectionsRevoke)).Delete("/connections/{id}/grants/{agent_id}", s.deleteGrant)
+	r.With(read, grant).Post("/connections/{id}/grants/{agent_id}", s.approveGrantBody)
+	r.With(read, revoke).Delete("/connections/{id}/grants/{agent_id}", s.deleteGrant)
 	r.With(read).Get("/agents/{id}/connections", s.agentConnections)
-	usage := s.can(auth.PermConnectionsUsageRead)
-	r.With(usage).Get("/connections/{id}/usage", s.listUsage)
-	r.With(usage).Get("/connections/{id}/usage/summary", s.usageSummary)
-	r.With(read).Get("/connections/{id}/limits", s.getLimits)
-	r.With(manage).Put("/connections/{id}/limits", s.putLimits)
+	usage := one(auth.PermConnectionsUsageRead)
+	r.With(read, usage).Get("/connections/{id}/usage", s.listUsage)
+	r.With(read, usage).Get("/connections/{id}/usage/summary", s.usageSummary)
+	r.With(read, one(auth.PermConnectionsRead)).Get("/connections/{id}/limits", s.getLimits)
+	r.With(read, manage).Put("/connections/{id}/limits", s.putLimits)
 	if s.Gateway != nil {
 		r.With(read).Get("/connection-holds", s.listHolds)
 		// cancel-hold: the author or whoever may decide approvals (members cancel their own sends).
@@ -157,7 +162,18 @@ func (s *server) listConnections(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
-	writeJSON(w, 200, v)
+	sc, err := s.connScope(r)
+	if err != nil {
+		s.connErr(w, err)
+		return
+	}
+	out := make([]connections.Connection, 0, len(v))
+	for _, c := range v {
+		if sc.sees(c) { // D3: a private office's connections are its members' only
+			out = append(out, s.connOut(r, sc, c))
+		}
+	}
+	writeJSON(w, 200, out)
 }
 
 func (s *server) createConnection(w http.ResponseWriter, r *http.Request) {
@@ -179,9 +195,20 @@ func (s *server) createConnection(w http.ResponseWriter, r *http.Request) {
 		// connection_string (write-only: split here, the password goes to the vault and the string is dropped).
 		Database         *connections.Database `json:"database"`
 		ConnectionString string                `json:"connection_string"`
+		// OfficeID: the department (office) the connection belongs to; "" or "general" = the whole company (D3).
+		OfficeID string `json:"office_id"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.connErr(w, err)
+		return
+	}
+	sc, err := s.connScope(r)
+	if err != nil {
+		s.connErr(w, err)
+		return
+	}
+	office := connections.NormOffice(body.OfficeID)
+	if !s.officeOK(w, r, sc, office) {
 		return
 	}
 	if body.ConnectionString != "" {
@@ -204,7 +231,8 @@ func (s *server) createConnection(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	in := connections.CreateInput{Provider: body.Provider, Kind: body.Kind, Label: body.Label, Capabilities: body.Capabilities,
-		ResourceScope: body.ResourceScope, Mode: body.Mode, ExpiresAt: body.ExpiresAt, Source: body.Source, Database: body.Database, Actor: s.actor(r)}
+		ResourceScope: body.ResourceScope, Mode: body.Mode, ExpiresAt: body.ExpiresAt, Source: body.Source, Database: body.Database, Actor: s.actor(r),
+		OfficeID: office}
 	if body.Secret != "" {
 		sec := vault.SecretFromString(body.Secret)
 		defer sec.Zero()
@@ -222,7 +250,7 @@ func (s *server) createConnection(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, c)
+	writeJSON(w, http.StatusCreated, s.connOut(r, sc, c))
 }
 
 func (s *server) getConnection(w http.ResponseWriter, r *http.Request) {
@@ -231,8 +259,13 @@ func (s *server) getConnection(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
+	sc, err := s.connScope(r)
+	if err != nil {
+		s.connErr(w, err)
+		return
+	}
 	w.Header().Set("ETag", `"`+strconv.FormatInt(c.UpdatedAt.UnixNano(), 36)+`"`)
-	writeJSON(w, 200, c)
+	writeJSON(w, 200, s.connOut(r, sc, c))
 }
 
 func (s *server) patchConnection(w http.ResponseWriter, r *http.Request) {
@@ -255,18 +288,53 @@ func (s *server) patchConnection(w http.ResponseWriter, r *http.Request) {
 		ReadOnly      *bool                      `json:"read_only"`
 		Source        *connections.Source        `json:"source"`
 		Database      *connections.Database      `json:"database"`
+		// OfficeID moves the connection to a department (office); "" or "general" = the whole company (D3).
+		OfficeID *string `json:"office_id"`
+		// Secret (write-only) replaces the stored secret in the same change; without connections:manage it is
+		// required to change where the secret goes (base_url; host, port, user): 400 credential_required.
+		Secret string `json:"secret"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.connErr(w, err)
 		return
 	}
-	c, err := s.Conns.Patch(r.Context(), s.org(r), id, connections.PatchInput{Label: body.Label, Limits: body.Limits,
-		ResourceScope: body.ResourceScope, ReadOnly: body.ReadOnly, Source: body.Source, Database: body.Database, Actor: s.actor(r)})
+	var secret *vault.Secret
+	if body.Secret != "" {
+		sec := vault.SecretFromString(body.Secret)
+		defer sec.Zero()
+		secret, body.Secret = &sec, "" // write-only: drop our copy of the plain text
+	}
+	sc, err := s.connScope(r)
 	if err != nil {
 		s.connErr(w, err)
 		return
 	}
-	writeJSON(w, 200, c)
+	admin := s.has(r, auth.PermConnectionsManage)
+	cur, err := s.Conns.Store.GetConnection(r.Context(), s.org(r), id)
+	if err != nil {
+		s.connErr(w, err)
+		return
+	}
+	if body.ReadOnly != nil && !*body.ReadOnly && cur.ReadOnly && !admin {
+		// lifting read only would let blocked write grants act again: an admin decides it
+		codeErr(w, http.StatusForbidden, "forbidden", "only an admin turns read only off")
+		return
+	}
+	if body.OfficeID != nil {
+		office := connections.NormOffice(*body.OfficeID)
+		if office != cur.OfficeID && !s.officeOK(w, r, sc, office) {
+			return
+		}
+		body.OfficeID = &office
+	}
+	c, err := s.Conns.Patch(r.Context(), s.org(r), id, connections.PatchInput{Label: body.Label, Limits: body.Limits,
+		ResourceScope: body.ResourceScope, ReadOnly: body.ReadOnly, Source: body.Source, Database: body.Database, OfficeID: body.OfficeID,
+		Secret: secret, SecretToMove: !admin, Actor: s.actor(r)})
+	if err != nil {
+		s.connErr(w, err)
+		return
+	}
+	writeJSON(w, 200, s.connOut(r, sc, c))
 }
 
 func (s *server) oauthStart(w http.ResponseWriter, r *http.Request) {
@@ -479,8 +547,21 @@ func (s *server) putGrant(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) approveGrant(w http.ResponseWriter, r *http.Request) {
 	if !s.has(r, auth.PermConnectionsGrantWrite) {
-		codeErr(w, http.StatusForbidden, "forbidden", "approving write grants needs connections:grant:write")
-		return
+		// D3: the second human of a write grant on a department's connection may also be its responsible
+		c, err := s.Conns.Store.GetConnection(r.Context(), s.org(r), chi.URLParam(r, "id"))
+		if err != nil {
+			s.connErr(w, err)
+			return
+		}
+		sc, err := s.connScope(r)
+		if err != nil {
+			s.connErr(w, err)
+			return
+		}
+		if !sc.leads(c.OfficeID) {
+			codeErr(w, http.StatusForbidden, "forbidden", "approving write grants needs connections:grant:write or leading the connection's department")
+			return
+		}
 	}
 	g, err := s.Conns.ApproveGrant(r.Context(), s.org(r), chi.URLParam(r, "id"), chi.URLParam(r, "agent_id"), s.actor(r))
 	if err != nil {
@@ -522,7 +603,19 @@ func (s *server) agentConnections(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
-	writeJSON(w, 200, v)
+	sc, err := s.connScope(r)
+	if err != nil {
+		s.connErr(w, err)
+		return
+	}
+	out := make([]connections.AgentAccess, 0, len(v))
+	for _, a := range v {
+		if sc.sees(a.Connection) { // D3: never a private office's connection through one of its agents
+			a.Connection = s.connOut(r, sc, a.Connection)
+			out = append(out, a)
+		}
+	}
+	writeJSON(w, 200, out)
 }
 
 func (s *server) listUsage(w http.ResponseWriter, r *http.Request) {
@@ -596,6 +689,20 @@ func (s *server) listHolds(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.connErr(w, err)
 		return
+	}
+	sc, err := s.connScope(r)
+	if err != nil {
+		s.connErr(w, err)
+		return
+	}
+	if sc.m != nil { // D3: the held sends of a private office's connections are its members'
+		out := make([]connections.Hold, 0, len(h))
+		for _, x := range h {
+			if c, err := s.Conns.Store.GetConnection(r.Context(), s.org(r), x.ConnectionID); err == nil && sc.sees(c) {
+				out = append(out, x)
+			}
+		}
+		h = out
 	}
 	writeJSON(w, 200, h)
 }

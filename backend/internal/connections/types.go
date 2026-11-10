@@ -42,19 +42,24 @@ const (
 	CodeScopeNotGranted       = "scope_not_granted"
 	CodeConnectionUnavailable = "connection_unavailable"
 	// CodeProviderDisabled: the provider is a vendor-specific integration switched off for v1 (VENDOR_INTEGRATIONS).
-	CodeProviderDisabled = "vendor_integrations_disabled"
-	CodeReauthRequired        = "reauth_required"
-	CodeReadOnlyMode          = "read_only_mode"
-	CodeKillSwitch            = "kill_switch_active"
-	CodeAgentPaused           = "agent_paused"
-	CodeRateLimit             = "rate_limit"
-	CodeBudget                = "budget_exceeded"
-	CodeRiskExceedsGrant      = "risk_exceeds_grant"
-	CodeControlsUnavailable   = "controls_unavailable"
-	CodeOutOfScope            = "resource_out_of_scope"
-	CodeSecretDetected        = "secret_detected"
-	CodeProviderError         = "provider_error"
-	CodeInvalidArgs           = "invalid_args"
+	CodeProviderDisabled    = "vendor_integrations_disabled"
+	CodeReauthRequired      = "reauth_required"
+	CodeReadOnlyMode        = "read_only_mode"
+	CodeKillSwitch          = "kill_switch_active"
+	CodeAgentPaused         = "agent_paused"
+	CodeRateLimit           = "rate_limit"
+	CodeBudget              = "budget_exceeded"
+	CodeRiskExceedsGrant    = "risk_exceeds_grant"
+	CodeControlsUnavailable = "controls_unavailable"
+	CodeOutOfScope          = "resource_out_of_scope"
+	CodeSecretDetected      = "secret_detected"
+	CodeProviderError       = "provider_error"
+	CodeInvalidArgs         = "invalid_args"
+	// CodeAgentOtherOffice: the connection belongs to a department (office) and the agent is not one of its agents.
+	CodeAgentOtherOffice = "agent_other_office"
+	// CodeCredentialRequired: changing where a connection's credential goes (host, port, user, base URL) needs the
+	// secret again in the same call when the person is not an admin.
+	CodeCredentialRequired = "credential_required"
 )
 
 var (
@@ -142,6 +147,9 @@ type Connection struct {
 	Source *Source `json:"source,omitempty"`
 	// Database configures a read-only database source (provider database only). Never holds the password.
 	Database *Database `json:"database,omitempty"`
+	// OfficeID is the department (office) the connection belongs to; "" = General (the whole company). Only the
+	// agents of that office may be granted it, and only its members see it when the office is private (D3).
+	OfficeID string `json:"office_id"`
 
 	// Filled by the service for responses.
 	Credential  *vault.Meta `json:"credential"`
@@ -149,6 +157,9 @@ type Connection struct {
 	// ProviderDisabled: the provider is a vendor-specific integration switched off (VENDOR_INTEGRATIONS). The
 	// connection is kept (nothing is deleted) but cannot be used, tested, re-authorized or extended.
 	ProviderDisabled bool `json:"provider_disabled,omitempty"`
+	// CanManage: the person of the request may manage the connection (an admin, or the responsible of its office).
+	// Filled by the API; never stored.
+	CanManage bool `json:"can_manage"`
 }
 
 // Grant lets one agent use some capabilities of one connection.

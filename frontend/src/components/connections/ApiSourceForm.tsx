@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { connApi } from "@/lib/connections/api";
 import {
@@ -9,7 +9,7 @@ import {
 import { useConnections } from "@/lib/connections/store";
 import type { ApiAuthStyle, ApiSource, Connection } from "@/lib/connections/types";
 import { Btn } from "../ui";
-import { ErrorLine, errText, Field, inputCls } from "./shared";
+import { EditSecretField, ErrorLine, errText, Field, inputCls, takeSecret } from "./shared";
 
 /** Forms of the custom_api provider ("Other platform (API)"): a generic read-only HTTP source. The API key is NOT here:
  *  it stays in the uncontrolled secret input of the wizard / drawer. */
@@ -157,6 +157,8 @@ export function ApiSourceSection({ c, canEdit }: { c: Connection; canEdit: boole
   const setDraft: SetDraft = (fn) => setDraftState((d) => (d ? fn(d) : d));
   // re-validate as the owner types once the errors are visible, so they disappear when fixed
   const shownErrors = errors && draft ? validateSource(draft) : null;
+  const secretRef = useRef<HTMLInputElement>(null);
+  const storesSecret = c.mode === "live" && c.kind === "api_key";
 
   const save = async () => {
     if (!draft) return;
@@ -164,7 +166,7 @@ export function ApiSourceSection({ c, canEdit }: { c: Connection; canEdit: boole
     if (hasErrors(e)) { setErrors(e); setErr(t("conn.src.fixErrors")); return; }
     setBusy(true); setErr(null);
     try {
-      await connApi.patch(c.id, { source: draftToSource(draft) });
+      await connApi.patch(c.id, { source: draftToSource(draft), secret: takeSecret(secretRef) });
       await useConnections.getState().loadConnections();
       setDraftState(null); setErrors(null);
     } catch (x) { setErr(errText(x)); }
@@ -181,7 +183,7 @@ export function ApiSourceSection({ c, canEdit }: { c: Connection; canEdit: boole
         <div data-testid="conn-src-editor" className="space-y-3">
           <SourceFields draft={draft} setDraft={setDraft} errors={shownErrors} />
           <AuthStyleFields draft={draft} setDraft={setDraft} errors={shownErrors} />
-          <p className="text-[11px] text-mute">{t("conn.src.keyStays")}</p>
+          {storesSecret ? <EditSecretField inputRef={secretRef} /> : <p className="text-[11px] text-mute">{t("conn.src.keyStays")}</p>}
           <ErrorLine msg={err} />
           <div className="flex justify-end gap-2">
             <Btn data-testid="conn-src-cancel" disabled={busy} onClick={() => { setDraftState(null); setErrors(null); setErr(null); }}>{t("conn.src.cancel")}</Btn>

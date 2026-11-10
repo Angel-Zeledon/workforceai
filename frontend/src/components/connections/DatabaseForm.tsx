@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useT, trOr, tr } from "@/lib/i18n";
 import { connApi, dbApi, errCode } from "@/lib/connections/api";
 import {
@@ -9,7 +9,7 @@ import {
 import { useConnections } from "@/lib/connections/store";
 import type { Connection, DatabaseConfig, DbResult, DbSchema, DbSslMode } from "@/lib/connections/types";
 import { Btn } from "../ui";
-import { ErrorLine, errText, Field, inputCls } from "./shared";
+import { EditSecretField, ErrorLine, errText, Field, inputCls, takeSecret } from "./shared";
 
 /** Forms of the "database" provider ("Database (read only)"). The password and the connection string are NOT here:
  *  they stay in the uncontrolled secret inputs of the wizard / drawer and are sent once. */
@@ -207,13 +207,15 @@ export function DatabaseSection({ c, canEdit }: { c: Connection; canEdit: boolea
   const setDraft: SetDraft = (fn) => setDraftState((d) => (d ? fn(d) : d));
   const errors = showErr && draft ? validateDb(draft) : null;
   const active = c.status === "active";
+  const secretRef = useRef<HTMLInputElement>(null);
+  const storesSecret = c.mode === "live" && c.kind === "api_key";
 
   const save = async () => {
     if (!draft) return;
     if (hasDbErrors(validateDb(draft))) { setShowErr(true); setErr(t("conn.db.fixErrors")); return; }
     setBusy("save"); setErr(null);
     try {
-      await connApi.patch(c.id, { database: draftToDatabase(draft) as DatabaseConfig });
+      await connApi.patch(c.id, { database: draftToDatabase(draft) as DatabaseConfig, secret: takeSecret(secretRef) });
       await useConnections.getState().loadConnections();
       setDraftState(null); setShowErr(false); setSchema(null);
     } catch (x) { setErr(dbErrText(x)); }
@@ -240,7 +242,7 @@ export function DatabaseSection({ c, canEdit }: { c: Connection; canEdit: boolea
         {!draft ? <Summary c={c} /> : (
           <div data-testid="conn-db-editor" className="space-y-3">
             <DbFields draft={draft} setDraft={setDraft} errors={errors} allowUrl={false} />
-            <p className="text-[11px] text-mute">{t("conn.db.passwordStays")}</p>
+            {storesSecret ? <EditSecretField inputRef={secretRef} /> : <p className="text-[11px] text-mute">{t("conn.db.passwordStays")}</p>}
             <div className="flex justify-end gap-2">
               <Btn data-testid="conn-db-cancel" disabled={!!busy} onClick={() => { setDraftState(null); setShowErr(false); setErr(null); }}>{t("conn.src.cancel")}</Btn>
               <Btn data-testid="conn-db-save" kind="primary" disabled={!!busy} onClick={save}>{busy === "save" ? t("conn.working") : t("conn.src.save")}</Btn>

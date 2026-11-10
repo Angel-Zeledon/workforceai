@@ -107,6 +107,10 @@ export interface Connection {
   source?: ApiSource;
   /** database only: where the read-only database is and as whom we log in. Never the password. */
   database?: DatabaseConfig;
+  /** D3: the department (office) the connection belongs to; "" or missing = the whole company. */
+  office_id?: string;
+  /** D3: the person may manage it (an admin, or the responsible of its department). */
+  can_manage?: boolean;
 }
 
 /** "database" provider: a read-only database source. The password is write-only and never comes back. */

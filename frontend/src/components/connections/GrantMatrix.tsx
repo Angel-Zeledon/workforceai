@@ -9,6 +9,9 @@ import type { Connection, Grant } from "@/lib/connections/types";
 import { useStore } from "@/lib/store";
 import { Btn, Empty } from "../ui";
 import { CapChip, ErrorLine, errText, Field, inputCls, useViewer } from "./shared";
+import { agentFitsConn, canCoSignWrite, canManageConn, connOffice } from "@/lib/connections/officeLogic";
+import { OfficeTag } from "./OfficeField";
+import { useConnOffices } from "./useConnOffices";
 
 /** role -> provider -> capabilities the role template recommends (never granted automatically). */
 const useRecommended = create<{ byRole: Record<string, Record<string, string[]>>; loaded: boolean; load: (locale: string) => void }>((set, get) => ({
@@ -36,7 +39,10 @@ function GrantDrawer({ conn, agentId, onClose }: { conn: Connection; agentId: st
   const providers = useConnections((s) => s.providers);
   const controls = useConnections((s) => s.controls);
   const grant = useConnections((s) => (s.grants[conn.id] ?? []).find((g) => g.agent_id === agentId));
-  const { viewer, isOwner, isAdmin } = useViewer();
+  const { viewer, isOwner, isAdmin: isOrgAdmin } = useViewer();
+  const isAdmin = canManageConn(conn, isOrgAdmin); // D3: the responsible of the connection's department grants it too
+  const { agentOffice } = useConnOffices();
+  const fits = agentFitsConn(connOffice(conn), agentOffice[agentId]);
   const defs = providers.find((p) => p.id === conn.provider)?.capabilities ?? [];
   const recommended = useRecommendedFor(agentId, conn.provider);
   // a new grant starts with what the role recommends (offered capabilities only); saving is still explicit
@@ -52,7 +58,8 @@ function GrantDrawer({ conn, agentId, onClose }: { conn: Connection; agentId: st
   const addsWrite = caps.some((c) => isWrite(c) && !before.includes(c));
   const anyWrite = caps.some(isWrite);
   const secondNeeded = addsWrite && (controls?.admin_count ?? 1) > 1;
-  const canApproveSecond = grant?.status === "pending_second_approval" && isAdmin && viewer?.id !== grant.requested_by;
+  // the second human: an admin, or the responsible of the connection's department (same rule as the server)
+  const canApproveSecond = grant?.status === "pending_second_approval" && canCoSignWrite(conn, isOrgAdmin) && viewer?.id !== grant.requested_by;
 
   const save = async () => {
     setBusy(true); setErr(null);
@@ -84,6 +91,7 @@ function GrantDrawer({ conn, agentId, onClose }: { conn: Connection; agentId: st
       </header>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 text-xs">
         <p className="rounded-xl bg-panel2 px-3 py-2 text-mute" data-testid="conn-grant-no-approve-note">{t("conn.grant.noApprove")}</p>
+        {!fits && <p data-testid="conn-grant-other-office" className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 font-semibold text-amber-800">{t("conn.office.otherHint")}</p>}
         {grant?.status === "pending_second_approval" && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 font-semibold text-amber-800">{t("conn.grant.pendingSecond")}</div>
         )}
@@ -127,7 +135,7 @@ function GrantDrawer({ conn, agentId, onClose }: { conn: Connection; agentId: st
           {grant && <Btn data-testid="conn-grant-remove" kind="danger" disabled={busy || !isAdmin} onClick={() => act(() => connApi.deleteGrant(conn.id, agentId))}>{t("conn.grant.remove")}</Btn>}
           {canApproveSecond && <Btn data-testid="conn-grant-approve" kind="ok" disabled={busy} onClick={() => act(() => connApi.approveGrant(conn.id, agentId))}>{t("conn.grant.approveSecond")}</Btn>}
         </div>
-        <Btn data-testid="conn-grant-save" kind="primary" disabled={busy || !isAdmin || caps.length === 0 || (anyWrite && confirm !== conn.label)} onClick={save}>{t("conn.grant.save")}</Btn>
+        <Btn data-testid="conn-grant-save" kind="primary" disabled={busy || !isAdmin || !fits || caps.length === 0 || (anyWrite && confirm !== conn.label)} onClick={save}>{t("conn.grant.save")}</Btn>
       </footer>
     </aside>
   );
@@ -144,6 +152,7 @@ export function GrantMatrix() {
   const { locale } = useT();
   const loadRecommended = useRecommended((s) => s.load);
   const byRole = useRecommended((s) => s.byRole);
+  const { agentOffice } = useConnOffices();
   useEffect(() => { loadRecommended(locale); }, [loadRecommended, locale]);
   const cols = Object.values(connections).filter((c) => c.status !== "revoked");
   if (cols.length === 0) return <Empty>{t("conn.empty")}</Empty>;
@@ -157,7 +166,7 @@ export function GrantMatrix() {
           <thead>
             <tr className="border-b border-line bg-panel2">
               <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-mute">{t("conn.matrix.employee")}</th>
-              {cols.map((c) => <th key={c.id} className="px-3 py-2 text-left text-[11px] font-semibold text-ink">{c.label}</th>)}
+              {cols.map((c) => <th key={c.id} className="px-3 py-2 text-left align-top text-[11px] font-semibold text-ink"><span className="block">{c.label}</span><OfficeTag c={c} className="mt-0.5 font-medium" /></th>)}
             </tr>
           </thead>
           <tbody>
@@ -168,6 +177,22 @@ export function GrantMatrix() {
                   const g = cell(a, c);
                   // only what this connection actually offers (read and write live in separate connections)
                   const rec = (byRole[agents[a]?.role ?? a]?.[c.provider] ?? []).filter((cap) => c.granted_capabilities.includes(cap));
+                  // D3: a department's connection is only for its own agents; an old grant of another one does not serve
+                  if (!agentFitsConn(connOffice(c), agentOffice[a])) {
+                    const cls = "flex min-h-[32px] w-full flex-wrap items-center gap-1 rounded-xl bg-panel2 px-2 py-1 text-left text-[10.5px] text-mute";
+                    return (
+                      <td key={c.id} className="px-2 py-1.5">
+                        {g ? ( // an old grant: it can still be removed
+                          <button type="button" data-testid={`conn-matrix-cell-${a}-${c.id}`} data-status="other_office" title={t("conn.office.otherHint")}
+                            onClick={() => setSel({ conn: c.id, agent: a })} className={`${cls} transition hover:text-ink`}>
+                            <span className="font-medium text-amber-700">{t("conn.office.grantUnused")}</span>
+                          </button>
+                        ) : (
+                          <div data-testid={`conn-matrix-cell-${a}-${c.id}`} data-status="other_office" title={t("conn.office.otherHint")} className={cls}>{t("conn.office.other")}</div>
+                        )}
+                      </td>
+                    );
+                  }
                   return (
                     <td key={c.id} className="px-2 py-1.5">
                       <button type="button" data-testid={`conn-matrix-cell-${a}-${c.id}`} data-caps={g?.capabilities.join(",") ?? ""} data-status={g?.status ?? "none"} onClick={() => setSel({ conn: c.id, agent: a })}

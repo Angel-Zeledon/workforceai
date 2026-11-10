@@ -382,6 +382,9 @@ func run(log *slog.Logger) error {
 	deps.Offices = wireOffices(pg, store, authStore, orgChartSvc, rec, noteCleaner(memorySvc))
 	officeRecall(memorySvc, deps.Offices)
 	startMemoryBackfill(ctx, log, memorySvc, store, orgIDs, cfg.App.OrgID) // after the office scope: see startMemoryBackfill
+	if cw.conns != nil && deps.Offices != nil {
+		cw.conns.AgentOffice = agentOffices{svc: deps.Offices}.AgentOffice // D3: a department's connections serve its agents only
+	}
 	if cfg.AuthEnabled && deps.Offices != nil && ws.drive != nil {
 		ws.drive.SetPeople(officePeople{svc: deps.Offices}) // office folders: member edits, open reads, private none
 		// agents work in their office folder and never beyond the person they work for

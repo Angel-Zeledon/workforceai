@@ -61,8 +61,8 @@ func (g *Gateway) Begin(ctx context.Context, org, requestID string, tasks []appl
 				continue
 			}
 			c, err := g.Conns.Store.GetConnection(ctx, org, gr.ConnectionID)
-			if err != nil || c.Status == connections.StatusRevoked {
-				continue
+			if err != nil || c.Status == connections.StatusRevoked || !g.Conns.AgentFits(ctx, org, c, t.AgentID) {
+				continue // D3: another office's connection is out of the agent's reach
 			}
 			key := t.AgentID + "/" + c.ID
 			if seen[key] {
