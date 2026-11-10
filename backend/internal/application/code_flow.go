@@ -59,7 +59,7 @@ func (o *Orchestrator) handleCodeRun(ctx context.Context, rs *run, t *domain.Tas
 	org := o.org(ctx)
 	apID := newID()
 	scope := o.codeScope(ctx, rs, t, agent, pv) // nil unless the organization opted into desk mode
-	plan, err := o.code.Prepare(ctx, CodeRunInput{Org: org, AgentID: agent.ID, TaskID: t.ID, RequestID: rs.req.ID, OnBehalfOf: ActorFrom(ctx, ""),
+	plan, err := o.code.Prepare(ctx, CodeRunInput{Org: org, AgentID: agent.ID, TaskID: t.ID, RequestID: rs.req.ID, OnBehalfOf: rs.requestedBy,
 		ApprovalID: apID, Args: tr.Args, Scope: scope})
 	if err != nil {
 		o.codeDenied(ctx, t, agent, codeErrCode(err))

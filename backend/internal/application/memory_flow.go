@@ -62,7 +62,11 @@ func (o *Orchestrator) recallFor(ctx context.Context, rs *run, t domain.Task) []
 	if r := []rune(text); len(r) > recallTextChars {
 		text = string(r[:recallTextChars])
 	}
-	out := o.memSrc.Recall(ctx, o.org(ctx), MemoryRecall{AgentID: t.AgentID, TaskID: t.ID, RequestID: rs.req.ID, Text: text})
+	mctx := ctx // the files recalled are only what the person who asked may see (drive office folders)
+	if rs.requestedBy != "" {
+		mctx = WithActor(ctx, rs.requestedBy)
+	}
+	out := o.memSrc.Recall(mctx, o.org(ctx), MemoryRecall{AgentID: t.AgentID, TaskID: t.ID, RequestID: rs.req.ID, Text: text})
 	for _, m := range out {
 		if m.foreign() {
 			taint := rs.taintOf(t.ID)

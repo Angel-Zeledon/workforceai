@@ -258,7 +258,7 @@ func (o *Orchestrator) connectionReads(ctx context.Context, rs *run, t *domain.T
 			if i >= maxReadsPerRound {
 				break
 			}
-			out := gw.Execute(ctx, GatewayCall{Org: org, AgentID: agent.ID, TaskID: t.ID, RequestID: rs.req.ID, OnBehalfOf: ActorFrom(ctx, ""),
+			out := gw.Execute(ctx, GatewayCall{Org: org, AgentID: agent.ID, TaskID: t.ID, RequestID: rs.req.ID, OnBehalfOf: rs.requestedBy,
 				Tool: tr.Tool, Action: tr.Action, Args: tr.Args, Autonomy: agent.Autonomy, Tainted: taint.tainted,
 				ReadOnlyRequest: rs.readOnlyRequest()})
 			switch {
@@ -358,7 +358,7 @@ func (o *Orchestrator) gatewayCall(ctx context.Context, rs *run, t domain.Task, 
 	taint := rs.taintOf(t.ID)
 	rs.ext.mu.Lock()
 	defer rs.ext.mu.Unlock()
-	return GatewayCall{Org: o.org(ctx), AgentID: agent.ID, TaskID: t.ID, RequestID: rs.req.ID, OnBehalfOf: ActorFrom(ctx, ""),
+	return GatewayCall{Org: o.org(ctx), AgentID: agent.ID, TaskID: t.ID, RequestID: rs.req.ID, OnBehalfOf: rs.requestedBy,
 		Tool: tr.Tool, Action: tr.Action, Args: tr.Args, Autonomy: agent.Autonomy, Tainted: taint.tainted,
 		ReadConnections: append([]string{}, taint.conns...), InjectionSuspected: taint.suspected, ReadOnlyRequest: rs.ext.readOnly}
 }

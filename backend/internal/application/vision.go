@@ -164,7 +164,7 @@ func (o *Orchestrator) firstPassImages(ctx context.Context, rs *run, t *domain.T
 	var images []ImagePart
 	var blocks []string
 	for _, p := range paths {
-		out := gw.Execute(ctx, GatewayCall{Org: org, AgentID: agent.ID, TaskID: t.ID, RequestID: rs.req.ID, OnBehalfOf: ActorFrom(ctx, ""),
+		out := gw.Execute(ctx, GatewayCall{Org: org, AgentID: agent.ID, TaskID: t.ID, RequestID: rs.req.ID, OnBehalfOf: rs.requestedBy,
 			Tool: "fs", Action: "read", Args: map[string]any{"path": p, "view": "image"}, Autonomy: agent.Autonomy, Tainted: taint.tainted,
 			ReadOnlyRequest: rs.readOnlyRequest()})
 		if out.Decision != "allowed" || out.Status != "succeeded" {
