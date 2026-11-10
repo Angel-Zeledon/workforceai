@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"slices"
 
@@ -98,6 +99,23 @@ func (s *server) projectView(r *http.Request, id string) (projectView, bool, err
 	pv.hidden = hiddenNodes(d, ws.agent)
 	pv.all = redactProject(&d, ws.agent)
 	return pv, true, nil
+}
+
+// checkProjectTemplate (D3) refuses to save as a template a project with work the person may not see: a template
+// copies every node whole (title, agent, criteria) and anyone who may read templates reads it. A project that is
+// only that work answers like a missing one; a mixed one answers 403 (its hidden nodes are already shown redacted,
+// so saying so reveals nothing). A missing project is left to the caller.
+func (s *server) checkProjectTemplate(r *http.Request, id string) error {
+	pv, ok, err := s.projectView(r, id)
+	switch {
+	case err != nil:
+		return err
+	case ok && pv.all:
+		return notFound("project", id)
+	case len(pv.hidden) > 0:
+		return fmt.Errorf("%w: the project has work of a private department you do not see; it cannot be saved as a template", domain.ErrForbidden)
+	}
+	return nil
 }
 
 // workProject guards the routes about the project {id}: a project that is only a private office's work answers like

@@ -22,14 +22,18 @@ type privateWork struct {
 	ana, beto string
 }
 
-func newPrivateWork(t *testing.T) *privateWork {
+func newPrivateWork(t *testing.T, more ...func(*opts)) *privateWork {
 	t.Helper()
-	e := newEnv(t, opts{auth: true, orgchart: true, away: true, code: true, v2: true, quality: true, ws: true, trust: true, deps: func(d *api.Deps) {
+	o := opts{auth: true, orgchart: true, away: true, code: true, v2: true, quality: true, ws: true, trust: true, deps: func(d *api.Deps) {
 		withOffices(d)
 		docs := longmem.NewMemStore()
 		d.Memory = longmem.New(longmem.Config{Docs: docs, Retriever: &longmem.FTS{Docs: docs}})
 		d.Commands = &api.CommandsDeps{}
-	}})
+	}}
+	for _, f := range more {
+		f(&o)
+	}
+	e := newEnv(t, o)
 	owner := e.register("owner-pw@example.com", "OwnerPW")
 	p := &privateWork{e: e, owner: owner,
 		ana:  e.member(owner, "ana-pw@example.com", auth.RoleAdmin),

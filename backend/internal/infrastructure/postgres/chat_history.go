@@ -197,8 +197,12 @@ func (s *Store) ChatThreadMessages(ctx context.Context, org string, q applicatio
 	return out, more, err
 }
 
-func (s *Store) ChatThreads(ctx context.Context, org, viewer string, agentIDs []string) ([]application.ChatThread, error) {
+func (s *Store) ChatThreads(ctx context.Context, org, viewer string, agentIDs, noShared []string) ([]application.ChatThread, error) {
 	keys := append([]string{application.ThreadGeneral}, agentIDs...)
+	hidden := make([]string, 0, len(noShared)) // D3: the stored shared 1:1 chats left out (agent:<id>, no owner)
+	for _, id := range noShared {
+		hidden = append(hidden, domain.ChatAgentConv(id))
+	}
 	out := make([]application.ChatThread, 0, len(keys))
 	err := s.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
 		reads := map[string]time.Time{}
@@ -225,14 +229,16 @@ func (s *Store) ChatThreads(ctx context.Context, org, viewer string, agentIDs []
 				agent = ""
 			}
 			t := application.ChatThread{Key: key, AgentID: agent}
-			if err := tx.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE `+unreadPred("$4")+` AND m.ts > $3) FROM messages m WHERE `+threadPred("$4"),
-				org, agent, reads["thread:"+key], viewer).Scan(&t.MessageCount, &t.Unread); err != nil {
+			if err := tx.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE `+unreadPred("$4")+` AND m.ts > $3) FROM messages m WHERE `+threadPred("$4")+
+				` AND NOT (m.conversation_id = ANY($5::text[]))`,
+				org, agent, reads["thread:"+key], viewer, hidden).Scan(&t.MessageCount, &t.Unread); err != nil {
 				return err
 			}
 			if t.MessageCount > 0 {
 				var text string
-				if err := tx.QueryRow(ctx, `SELECT m.text, m.from_id, m.ts FROM messages m WHERE `+threadPred("$3")+` ORDER BY m.ts DESC, m.id DESC LIMIT 1`,
-					org, agent, viewer).Scan(&text, &t.PreviewFrom, &t.LastMessageAt); err != nil {
+				if err := tx.QueryRow(ctx, `SELECT m.text, m.from_id, m.ts FROM messages m WHERE `+threadPred("$3")+
+					` AND NOT (m.conversation_id = ANY($4::text[])) ORDER BY m.ts DESC, m.id DESC LIMIT 1`,
+					org, agent, viewer, hidden).Scan(&text, &t.PreviewFrom, &t.LastMessageAt); err != nil {
 					return err
 				}
 				t.Preview = application.Preview(text)

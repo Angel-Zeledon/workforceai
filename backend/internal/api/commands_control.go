@@ -67,11 +67,22 @@ func spokenMessages(msgs []domain.Message) []domain.Message {
 }
 
 func cmdCompact(c *cmdCall) (*cmdResult, *cmdFail) {
+	// D3: like /export, the chat with an agent is the person's own thread (when they may chat with it or already
+	// have one), never the history shared before private threads when they do not see the agent's work
+	agent, direct := strings.CutPrefix(domain.PublicChatConv(c.conv), domain.ChatAgentPrefix)
+	if direct && !c.work.chat(agent) && !c.work.ownChat(agent) {
+		return nil, fail(http.StatusBadRequest, "unknown_agent", fmt.Sprintf("No encuentro al agente «%s».", agent), fmt.Sprintf("I cannot find the agent “%s”.", agent))
+	}
 	cc := c.s.Orch.ConvContextOf(c.ctx, c.conv)
 	msgs, err := c.s.Orch.ChatMessagesSince(c.ctx, c.conv, cc.Cutoff(), 80)
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
+	// ChatMessagesSince reads the caller's own thread (E0); should it ever read the stored shared chat (no person in
+	// the context), that history stays out unless the agent's work is visible
+	msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool {
+		return direct && m.ConversationID == domain.ChatAgentConv(agent) && !c.work.agent(agent)
+	})
 	msgs = spokenMessages(msgs)
 	if len(msgs) < 2 {
 		return nil, fail(http.StatusUnprocessableEntity, "nothing_to_do", "Todavía no hay suficiente conversación para resumir.", "There is not enough conversation to summarize yet.")
@@ -82,8 +93,7 @@ func cmdCompact(c *cmdCall) (*cmdResult, *cmdFail) {
 		before += application.ApproxTokens(m.Text)
 		items = append(items, application.ChatHistoryItem{From: m.From, Text: trunc(m.Text, 800)})
 	}
-	agent := c.agentID
-	res, err := c.s.Orch.Summarize(c.ctx, agent, application.SummarizeRequest{Mode: "compact", Messages: items, PreviousSummary: cc.Summary, Locale: c.lang})
+	res, err := c.s.Orch.Summarize(c.ctx, c.agentID, application.SummarizeRequest{Mode: "compact", Messages: items, PreviousSummary: cc.Summary, Locale: c.lang})
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}

@@ -206,10 +206,17 @@ func (s *Store) ChatThreadMessages(_ context.Context, _ string, q application.Ch
 	return out, more, nil
 }
 
-func (s *Store) ChatThreads(_ context.Context, _, viewer string, agentIDs []string) ([]application.ChatThread, error) {
+func (s *Store) ChatThreads(_ context.Context, _, viewer string, agentIDs, noShared []string) ([]application.ChatThread, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	all := visibleMessages(s.sortedMessages(), viewer)
+	if len(noShared) > 0 {
+		hidden := map[string]bool{}
+		for _, id := range noShared {
+			hidden[domain.ChatAgentConv(id)] = true
+		}
+		all = slices.DeleteFunc(slices.Clone(all), func(m domain.Message) bool { return hidden[m.ConversationID] })
+	}
 	mk := func(key, agent string) application.ChatThread {
 		t := application.ChatThread{Key: key, AgentID: agent}
 		read := s.readAt(viewer, "thread:"+key)

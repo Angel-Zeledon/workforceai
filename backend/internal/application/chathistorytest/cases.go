@@ -186,7 +186,7 @@ func renameArchive(t *testing.T, f Fixture) {
 
 func threadOf(t *testing.T, s *seeded, key string) application.ChatThread {
 	t.Helper()
-	ts, err := s.f.Hist.ChatThreads(context.Background(), s.f.Org, "", []string{"sales", "accounting", "hr"})
+	ts, err := s.f.Hist.ChatThreads(context.Background(), s.f.Org, "", []string{"sales", "accounting", "hr"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,7 +330,7 @@ func isolation(t *testing.T, f Fixture) {
 	if err != nil || len(ms) != 0 {
 		t.Fatalf("other org thread = %d, %v", len(ms), err)
 	}
-	ts, err := f.Hist.ChatThreads(ctx, f.Other, "", []string{"sales"})
+	ts, err := f.Hist.ChatThreads(ctx, f.Other, "", []string{"sales"}, nil)
 	if err != nil || ts[0].MessageCount != 0 || ts[1].MessageCount != 0 {
 		t.Fatalf("other org threads = %+v, %v", ts, err)
 	}

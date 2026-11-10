@@ -437,6 +437,9 @@ func cmdSaveTemplate(c *cmdCall) (*cmdResult, *cmdFail) {
 		name = ""
 	}
 	if c.project != "" {
+		if err := c.s.checkProjectTemplate(c.r, c.project); err != nil { // D3: the same rule as the route
+			return nil, c.serviceFail(err)
+		}
 		t, err := c.s.Projects.SaveAsTemplateWith(c.ctx, c.project, projects.SaveOpts{Name: name})
 		if err != nil {
 			return nil, c.serviceFail(err)
@@ -444,9 +447,13 @@ func cmdSaveTemplate(c *cmdCall) (*cmdResult, *cmdFail) {
 		return msgResult(c.t("Plantilla guardada", "Template saved"), fmt.Sprintf(c.t("«%s» quedó en tus plantillas.", "“%s” is now in your templates."), t.Name), map[string]any{"template_id": t.ID}), nil
 	}
 	reqs, err := c.s.Store.ListRequests(c.ctx, c.org)
+	if err == nil {
+		err = c.work.indexAll()
+	}
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
+	reqs = slices.DeleteFunc(reqs, func(r domain.Request) bool { return !c.work.request(r.ID) }) // D3: only requests the person sees
 	if len(reqs) == 0 {
 		return nil, fail(http.StatusUnprocessableEntity, "nothing_to_do", "Todavía no hay un pedido para convertir en plantilla.", "There is no request yet to turn into a template.")
 	}
@@ -538,10 +545,14 @@ func cmdLearn(c *cmdCall) (*cmdResult, *cmdFail) {
 			agentID = a.ID
 		}
 	}
+	if agentID != "" && !c.work.agent(agentID) { // D3: a private office's agent answers like an unknown one
+		return nil, fail(http.StatusBadRequest, "unknown_agent", fmt.Sprintf("No encuentro al agente «%s».", agentID), fmt.Sprintf("I cannot find the agent “%s”.", agentID))
+	}
 	tasks, err := c.s.Store.ListTasks(c.ctx, c.org, agentID, string(domain.TaskDone))
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
+	tasks = slices.DeleteFunc(tasks, func(t domain.Task) bool { return !c.work.agent(t.AgentID) }) // D3: only work the person sees
 	var last *domain.Task
 	for i := range tasks {
 		if tasks[i].Output != nil && (last == nil || tasks[i].CreatedAt.After(last.CreatedAt)) {

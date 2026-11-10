@@ -119,7 +119,9 @@ type ChatHistoryStore interface {
 	ChatGetConversation(ctx context.Context, org, viewer, id string) (ChatConversation, error)
 	ChatThreadMessages(ctx context.Context, org string, q ChatThreadQuery) ([]ChatMessage, bool, error)
 	// ChatThreads returns General first, then one entry per given agent id (in that order), as viewer sees them.
-	ChatThreads(ctx context.Context, org, viewer string, agentIDs []string) ([]ChatThread, error)
+	// noShared (D3) lists the agents whose earlier shared 1:1 history (the stored conversation agent:<id>, no
+	// owner) the viewer may not see: it is left out of every entry (preview, count, unread), General's included.
+	ChatThreads(ctx context.Context, org, viewer string, agentIDs, noShared []string) ([]ChatThread, error)
 	// ChatMarkRead stores viewer's read marker of a thread ("thread:<key>") or a conversation ("conv:<stored id>").
 	ChatMarkRead(ctx context.Context, org, viewer, key string, at time.Time) error
 	ChatPatchConversation(ctx context.Context, org, id string, p ChatConvPatch) error
@@ -232,14 +234,20 @@ func (h *ChatHistory) Threads(ctx context.Context) ([]ChatThread, error) {
 		return nil, err
 	}
 	ids := make([]string, 0, len(agents))
+	var noShared []string
 	for _, a := range agents {
 		// D3: no thread with an agent the person neither uses nor sees the work of, unless they already have their
 		// own (it stays readable)
 		if ChatVisible(ctx, a.ID) || HasOwnChat(ctx, h.Core, org, a.ID) {
 			ids = append(ids, a.ID)
 		}
+		// D3: the history shared with the agent before private threads existed is its work: it does not show in
+		// the list (preview, count, unread) of whoever does not see that work, not even in General
+		if !WorkVisible(ctx, a.ID) {
+			noShared = append(noShared, a.ID)
+		}
 	}
-	return h.Store.ChatThreads(ctx, org, PersonFrom(ctx), ids)
+	return h.Store.ChatThreads(ctx, org, PersonFrom(ctx), ids, noShared)
 }
 
 func (h *ChatHistory) checkThread(ctx context.Context, key string) error {
@@ -275,11 +283,15 @@ func (h *ChatHistory) Thread(ctx context.Context, q ChatThreadQuery) ([]ChatMess
 	for i := range msgs {
 		msgs[i].Message = plain[i]
 	}
-	if q.Thread != ThreadGeneral && !WorkVisible(ctx, q.Thread) {
-		// D3: someone who uses a private office's agent without being in it sees their own thread only, not the
-		// history the organization shared with the agent before private threads existed
-		msgs = slices.DeleteFunc(msgs, func(m ChatMessage) bool { return m.SharedLegacy })
-	}
+	// D3: someone who uses a private office's agent without being in it sees their own thread only, not the history
+	// the organization shared with the agent before private threads existed; General leaves that history out too
+	ownOnly := q.Thread != ThreadGeneral && !WorkVisible(ctx, q.Thread)
+	msgs = slices.DeleteFunc(msgs, func(m ChatMessage) bool {
+		if !m.SharedLegacy {
+			return false
+		}
+		return ownOnly || !WorkVisible(ctx, strings.TrimPrefix(m.ConversationID, domain.ChatAgentPrefix))
+	})
 	return msgs, more, nil
 }
 

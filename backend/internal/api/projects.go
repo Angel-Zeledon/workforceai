@@ -309,6 +309,10 @@ func (s *server) saveProjectTemplate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if err := s.checkProjectTemplate(r, chi.URLParam(r, "id")); err != nil { // D3: a template copies every node whole
+		s.fail(w, err)
+		return
+	}
 	t, err := s.Projects.SaveAsTemplateWith(r.Context(), chi.URLParam(r, "id"), body)
 	if err != nil {
 		s.fail(w, err)

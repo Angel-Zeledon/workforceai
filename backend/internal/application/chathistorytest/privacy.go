@@ -107,7 +107,7 @@ func privacy(t *testing.T, f Fixture) {
 
 	// unread per person: what you wrote is never unread; Ana's office message is unread for Luis
 	th := func(viewer, key string) application.ChatThread {
-		ts, err := f.Hist.ChatThreads(ctx, f.Org, viewer, []string{"legal"})
+		ts, err := f.Hist.ChatThreads(ctx, f.Org, viewer, []string{"legal"}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -137,5 +137,20 @@ func privacy(t *testing.T, f Fixture) {
 	}
 	if c, _ := f.Hist.ChatGetConversation(ctx, f.Org, luis, luisConv); c.Unread != 0 {
 		t.Fatalf("luis' conversation was read with the thread: %+v", c)
+	}
+
+	// D3: without the earlier shared history of legal (noShared), no entry counts or previews it, General included
+	all, err := f.Hist.ChatThreads(ctx, f.Org, ana, []string{"legal"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	own, err := f.Hist.ChatThreads(ctx, f.Org, ana, []string{"legal"}, []string{"legal"})
+	if err != nil || len(own) != len(all) {
+		t.Fatalf("threads without the shared history = %+v, %v", own, err)
+	}
+	for i := range own {
+		if all[i].MessageCount-own[i].MessageCount != 2 || strings.Contains(own[i].Preview, "vieja") || strings.Contains(own[i].Preview, "viejo") {
+			t.Fatalf("thread %s without the shared history = %+v (with it %+v)", own[i].Key, own[i], all[i])
+		}
 	}
 }

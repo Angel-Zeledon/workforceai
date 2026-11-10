@@ -50,7 +50,7 @@ func TestChatHistoryMigrationAndRLS(t *testing.T) {
 		t.Fatalf("chat_reads RLS = %v/%v", rls, force)
 	}
 	// org-b cannot see or move org-a's markers: its own thread list is unread-only
-	ts, err := env.Store.ChatThreads(ctx, "org-b", "", nil)
+	ts, err := env.Store.ChatThreads(ctx, "org-b", "", nil, nil)
 	if err != nil || len(ts) != 1 || ts[0].Unread != 0 {
 		t.Fatalf("org-b threads = %+v, %v", ts, err)
 	}
