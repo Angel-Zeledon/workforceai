@@ -199,6 +199,10 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 		received["rehearsal"] = true
 	}
 	rs.customer = CustomerFrom(ctx)
+	// D3: until its plan exists, the request is the work of the agents it was addressed to (its chat, a preset plan),
+	// so its live events reach whoever may see their work (Recorder.SetAudienceFor).
+	addressed := addressedAgents(rs)
+	ctx = WithWorkAgents(ctx, addressed...)
 	o.rec.Emit(ctx, Action{Type: domain.EvRequestReceived, Entity: "request", EntityID: req.ID,
 		Payload: received, Text: "Nuevo pedido: " + truncate(text, 100)})
 	o.sendMessage(ctx, rs, "user", assistantID, "chat", text, nil)
@@ -211,6 +215,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	rctx := WithRequestID(WithOrg(o.base, o.org(ctx)), req.ID)
 	rctx = WithCustomer(rctx, rs.customer)               // B12: the run works for this customer (tools re-resolve it from the request id)
 	rctx = WithWorkPriority(rctx, WorkPriorityFrom(ctx)) // queue priority (orgqueue.go)
+	rctx = WithWorkAgents(rctx, addressed...)            // D3: who receives its live events
 	o.track(req.ID)
 	o.wg.Add(1)
 	go func() {

@@ -386,6 +386,11 @@ func run(log *slog.Logger) error {
 		// agents work in their office folder and never beyond the person they work for
 		ws.drive.SetAgentOffices(agentOffices{svc: deps.Offices})
 	}
+	if cfg.AuthEnabled && deps.Offices != nil { // D3 (event_audience.go): a private office's live events reach its members only
+		rec.SetAudienceFor(officeAudience(deps.Offices, store, func(c context.Context, org, id string) string {
+			return orch.RequestedBy(application.WithOrg(c, org), id)
+		}, log))
+	}
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	// Governance: API tokens, reports, retention job, webhooks (internal/governance, internal/webhooks).
 	wireGovernance(ctx, log, pg, store, rec, auditSvc, orch, cw.vault, whSvc, &deps)
