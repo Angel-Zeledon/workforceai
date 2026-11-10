@@ -96,7 +96,18 @@ func withConvContext(o *opts) {
 	}
 }
 
-func withSkills(o *opts) { o.skills = true }
+func withSkills(o *opts) {
+	o.skills = true
+	prev := o.deps
+	o.deps = func(d *api.Deps) {
+		if prev != nil {
+			prev(d)
+		}
+		if d.Offices != nil && d.Skills != nil {
+			d.Skills.SetOffices(d.Offices.Model) // D3: a department's skills follow its visibility
+		}
+	}
+}
 
 // cmdRaw runs a command and returns the status code and body.
 func (p *privateWork) cmdRaw(token string, body map[string]any) (int, string) {
@@ -130,6 +141,21 @@ func TestRemainingCommandsLeaveOutPrivateWork(t *testing.T) {
 	}
 	if got := p.command(p.ana, map[string]any{"command": "learn", "args": map[string]any{"agent": "legal"}, "context": office}); !strings.Contains(got, "task-legal-new") {
 		t.Fatalf("ana /learn @legal = %s", got)
+	}
+	// what legal's agent taught stays in Legal: the skill belongs to the department and beto does not see it
+	hasLearned := func(token string) (found bool, office string) {
+		for _, s := range p.e.list(api1+"/skills", token) {
+			if strings.Contains(str(s, "name"), "secreta") {
+				return true, str(s, "office_id")
+			}
+		}
+		return false, ""
+	}
+	if found, office := hasLearned(p.ana); !found || office == "" {
+		t.Fatalf("ana's learned skill: found=%v office=%q", found, office)
+	}
+	if found, _ := hasLearned(p.beto); found {
+		t.Fatal("the skill learned from a private department's task leaked to beto")
 	}
 
 	// /save-template without a project: the newest request the person sees

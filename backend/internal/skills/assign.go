@@ -54,7 +54,7 @@ func (s *Service) Assign(ctx context.Context, a Actor, agentID, skillID string) 
 		return err
 	}
 	if sk.OfficeID != "" {
-		if m := s.model(ctx, org); m != nil && m.Agent(agentID).OfficeID != sk.OfficeID {
+		if v := s.model(ctx, org); v.m != nil && v.m.Agent(agentID).OfficeID != sk.OfficeID {
 			return invalid("other_department", "skill belongs to another department")
 		}
 	}
@@ -104,7 +104,9 @@ func (s *Service) AgentSkills(ctx context.Context, agentID string) ([]AgentSkill
 	seen := map[string]bool{}
 	// a skill of a department only works for the agents of that department (an agent that moved loses it)
 	m := s.model(ctx, org)
-	here := func(sk Skill) bool { return sk.OfficeID == "" || m == nil || m.Agent(agentID).OfficeID == sk.OfficeID }
+	here := func(sk Skill) bool {
+		return sk.OfficeID == "" || !m.failed && (m.m == nil || m.m.Agent(agentID).OfficeID == sk.OfficeID)
+	}
 	for _, a := range as {
 		if sk, ok := byID[a.SkillID]; ok && !seen[sk.ID] && here(sk) {
 			seen[sk.ID] = true
@@ -244,7 +246,8 @@ func (s *Service) Load(ctx context.Context, org string, c LoadCall) (Loaded, err
 		}
 		out.File, text = c.File, pkg.Files[i].Content
 	} else {
-		text = buildLoadText(sk.Name, v.Version, pkg)
+		dir, _ := s.skillDir(ctx, org, sk.OfficeID, sk.Name, v.Version)
+		text = buildLoadText(dir, pkg)
 	}
 	score, _ := sanitize.ScoreInjection(text)
 	out.Suspect = score >= sanitize.InjectionThreshold
@@ -257,7 +260,7 @@ func (s *Service) Load(ctx context.Context, org string, c LoadCall) (Loaded, err
 	return out, nil
 }
 
-func buildLoadText(name string, version int, pkg Package) string {
+func buildLoadText(dir string, pkg Package) string {
 	var b strings.Builder
 	b.WriteString(strings.TrimSpace(pkg.Body))
 	b.WriteString("\n")
@@ -270,7 +273,7 @@ func buildLoadText(name string, version int, pkg Package) string {
 			}
 			b.WriteString(line + "\n")
 		}
-		b.WriteString("Read a file with skill.load {name, file} or fs.read " + VersionDir(name, version) + "/<file>.\n")
+		b.WriteString("Read a file with skill.load {name, file} or fs.read " + dir + "/<file>.\n")
 	}
 	if len(pkg.Front.AllowedTools) > 0 {
 		b.WriteString("\nSuggested tools (informational: they grant nothing): " + strings.Join(pkg.Front.AllowedTools, ", ") + "\n")

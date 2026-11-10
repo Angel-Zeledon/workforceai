@@ -140,9 +140,12 @@ func (s *Service) readDrive(ctx context.Context, f drive.File) ([]byte, error) {
 	return io.ReadAll(io.LimitReader(rc, MaxFileBytes+1))
 }
 
-func (s *Service) writePackage(ctx context.Context, org string, a Actor, name string, n int, pkg Package) ([]FileMeta, int64, error) {
+func (s *Service) writePackage(ctx context.Context, org string, a Actor, office, name string, n int, pkg Package) ([]FileMeta, int64, error) {
 	ctx = application.WithOrg(ctx, org)
-	dir := VersionDir(name, n)
+	dir, err := s.skillDir(ctx, org, office, name, n)
+	if err != nil {
+		return nil, 0, err
+	}
 	msg := fmt.Sprintf("skill %s v%d", name, n)
 	all := append([]File{{Path: SkillFile, Content: pkg.SkillMD}}, pkg.Files...)
 	var metas []FileMeta
@@ -163,7 +166,10 @@ func (s *Service) writePackage(ctx context.Context, org string, a Actor, name st
 // makes the version unusable instead of silently changing what agents follow.
 func (s *Service) readPackage(ctx context.Context, org string, sk Skill, v Version) (Package, error) {
 	ctx = application.WithOrg(ctx, org)
-	dir := VersionDir(sk.Name, v.Version)
+	dir, err := s.skillDir(ctx, org, sk.OfficeID, sk.Name, v.Version)
+	if err != nil {
+		return Package{}, err
+	}
 	var skillMD string
 	var files []File
 	for _, m := range v.Files {
@@ -395,9 +401,12 @@ func (s *Service) createFrom(ctx context.Context, a Actor, pkg Package, source, 
 	}
 	n, restoredDeleted := 1, err == nil
 	if restoredDeleted {
+		if existing.OfficeID != office { // its old versions' files are in the other place
+			return Detail{}, conflict("name_taken", "a deleted skill named %q belonged to another department; pick another name", name)
+		}
 		n = existing.CurrentVersion + 1
 	}
-	metas, total, err := s.writePackage(ctx, org, a, name, n, pkg)
+	metas, total, err := s.writePackage(ctx, org, a, office, name, n, pkg)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -505,7 +514,7 @@ func samePackage(v Version, pkg Package) bool {
 func (s *Service) addVersion(ctx context.Context, a Actor, sk Skill, pkg Package, changelog string, restoredFrom int, notes []string) (Detail, error) {
 	org := s.org(ctx)
 	n := sk.CurrentVersion + 1
-	metas, total, err := s.writePackage(ctx, org, a, sk.Name, n, pkg)
+	metas, total, err := s.writePackage(ctx, org, a, sk.OfficeID, sk.Name, n, pkg)
 	if err != nil {
 		return Detail{}, err
 	}

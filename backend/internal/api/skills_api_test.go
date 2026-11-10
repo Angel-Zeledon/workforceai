@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"mime/multipart"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -178,6 +179,7 @@ func TestSkillsOverHTTP(t *testing.T) {
 func TestSkillsOfADepartmentOverHTTP(t *testing.T) {
 	e := newEnv(t, opts{auth: true, orgchart: true, skills: true, deps: func(d *api.Deps) {
 		withOffices(d)
+		d.Drive.SetPeople(officeDriveAccess{svc: d.Offices}) // the same rule as the server's drive adapter
 		d.Skills.SetOffices(d.Offices.Model)
 	}})
 	owner := e.register("owner-sd@example.com", "OwnerSD")
@@ -241,6 +243,26 @@ func TestSkillsOfADepartmentOverHTTP(t *testing.T) {
 		t.Fatalf("admin outside the department disables = %d, want 404", c)
 	}
 	e.json("GET", base+"/"+id, luis, nil, 200)
+
+	// the files of the skill live in the department's sealed folder: the drive hides them like the API does
+	skillDir := url.QueryEscape("/Offices/Legal/Skills/contract-review/v1")
+	for _, tok := range []string{marta, owner.AccessToken} {
+		if c := e.status("GET", api1+"/drive/list?path="+skillDir, tok, nil); c != 404 {
+			t.Fatalf("outsider lists the skill's folder = %d", c)
+		}
+		if s := e.json("GET", api1+"/drive/search?q=Steps", tok, nil, 200); len(s["hits"].([]any)) != 0 {
+			t.Fatalf("outsider finds the skill's text: %v", s)
+		}
+	}
+	for _, tok := range []string{luis, ana, dan} {
+		l := e.json("GET", api1+"/drive/list?path="+skillDir, tok, nil, 200)
+		if fs := l["files"].([]any); len(fs) != 1 || str(fs[0].(map[string]any), "name") != "SKILL.md" {
+			t.Fatalf("member lists the skill's folder: %v", l)
+		}
+	}
+	if l := e.json("GET", api1+"/drive/list?path="+url.QueryEscape("/Shared/Skills"), owner.AccessToken, nil, 200); strings.Contains(mustJSON(t, l), `/Shared/Skills/contract-review"`) {
+		t.Fatalf("the shared skills folder must not hold a department's skill: %v", l)
+	}
 
 	// only the responsible edits; a skill never changes department
 	if c := e.status("PUT", base+"/"+id, luis, body("contract-review")); c != 403 {
