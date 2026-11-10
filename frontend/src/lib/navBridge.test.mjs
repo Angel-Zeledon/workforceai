@@ -64,7 +64,7 @@ test("sectionOf knows the new homes and the old links", () => {
 test("company accounts get a short menu led by their department, the rest under More", () => {
   const g = navGroups({ shopAvailable: false, company: true });
   assert.deepEqual(g.map((x) => x.id), ["main", "more"]);
-  assert.deepEqual(g[0].items.map((s) => s.id), ["department", "pending", "office", "settings"]);
+  assert.deepEqual(g[0].items.map((s) => s.id), ["department", "pending", "org", "settings"]);
   const more = g[1].items.map((s) => s.id);
   assert.ok(!more.includes("shop"));
   const all = [...g[0].items, ...g[1].items].map((s) => s.id);

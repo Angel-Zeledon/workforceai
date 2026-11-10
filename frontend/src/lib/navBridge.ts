@@ -46,7 +46,7 @@ export const NAV_GROUPS: { id: "day" | "company" | "teach" | "bottom"; label: st
 ];
 
 /** Company accounts: a short menu led by their department; everything else folds under "More". */
-const COMPANY_MAIN: Section["id"][] = ["department", "pending", "office", "settings"];
+const COMPANY_MAIN: Section["id"][] = ["department", "pending", "org", "settings"];
 
 /** The menu groups with their sections; the shop only where the rewards system is on. */
 export function navGroups({ shopAvailable, company = false }: { shopAvailable: boolean; company?: boolean }) {
