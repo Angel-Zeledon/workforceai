@@ -1,0 +1,138 @@
+{
+  "id": "departments",
+  "slug": {
+    "es": "departamentos",
+    "en": "departments"
+  },
+  "related": [
+    "files-and-chats",
+    "approvals-and-security",
+    "the-office"
+  ],
+  "es": {
+    "title": "El Drive de tu departamento",
+    "metaTitle": "El Drive de tu departamento | AI Workforce OS",
+    "description": "Encuentra las carpetas de tu departamento, revisa lo que preparan los agentes, aprueba y pide trabajo sobre una carpeta.",
+    "intro": "Cada departamento tiene su propio Drive: las carpetas y los archivos donde trabajan juntos las personas y los agentes. Aquí ves qué cambió, qué espera tu revisión y puedes pedirle algo a un agente sin salir de la carpeta.",
+    "sections": [
+      {
+        "h": "Dónde está",
+        "paras": [
+          "En las cuentas de empresa, el menú lateral muestra primero «Departamento», seguido de «Pendientes», «Agentes y oficinas» y «Ajustes». Lo demás está bajo «Más»."
+        ],
+        "steps": [
+          "Abre «Departamento» en el menú lateral. Se abre el primer departamento al que perteneces.",
+          "Usa el árbol de carpetas de la izquierda para moverte. La carpeta y el archivo que abres quedan en la dirección de la página, así que el botón Atrás del navegador funciona.",
+          "Si perteneces a varios departamentos, usa «Cambiar de departamento»."
+        ],
+        "note": "Si todavía no estás en un departamento, verás un aviso. Los administradores también ven «Crear departamentos». Si abres un departamento que no es tuyo, la página dice que no está disponible."
+      },
+      {
+        "h": "Qué muestra la lista",
+        "paras": [
+          "Cada fila tiene tres columnas: «Nombre», «Último cambio» (quién lo hizo, una persona o un agente) y «Estado». Con los filtros «Todo», «Para revisar» y «Cambiado hoy» puedes acotar la lista."
+        ]
+      },
+      {
+        "h": "«Para revisar» y «Propuesto»",
+        "list": [
+          "«Para revisar»: un agente quiere hacer un cambio en ese archivo y espera tu aprobación. Nada cambia hasta que decidas.",
+          "«Propuesto»: un agente quiere crear un archivo nuevo. El archivo se crea solo cuando apruebas la propuesta."
+        ]
+      },
+      {
+        "h": "Aprueba o rechaza",
+        "steps": [
+          "Abre el archivo que dice «Para revisar» o «Propuesto». Se abre el panel del archivo.",
+          "Revisa la vista previa y, si existe, las versiones anteriores.",
+          "Pulsa «Aprobar» o «Rechazar»."
+        ],
+        "tip": "Las mismas decisiones también están en «Pendientes»."
+      },
+      {
+        "h": "Pide algo sobre una carpeta",
+        "steps": [
+          "Abre la carpeta en la que quieres trabajar.",
+          "Abajo, escribe en «Pedir algo sobre esta carpeta…».",
+          "Elige el agente en el selector. Solo aparecen los agentes que puedes usar.",
+          "Pulsa «Pedir». El agente trabaja dentro de esa carpeta."
+        ],
+        "paras": [
+          "También puedes usar el menú «⋯» de un archivo: «Abrir», «Pedir a un agente…» o «Descargar». «Pedir a un agente…» deja el nombre del archivo escrito en tu pedido."
+        ]
+      },
+      {
+        "h": "Qué ve cada quien",
+        "list": [
+          "Solo ves los departamentos a los que perteneces, y solo las carpetas que tu acceso permite.",
+          "Un agente nunca puede ver o cambiar más de lo que puedes tú.",
+          "Las cuentas personales y de equipo conservan el menú de siempre."
+        ],
+        "warning": "Un departamento privado no se ve desde fuera, ni siquiera siendo administrador de la organización."
+      }
+    ]
+  },
+  "en": {
+    "title": "Your department's Drive",
+    "metaTitle": "Your department's Drive | AI Workforce OS",
+    "description": "Find your department's folders, review what agents prepare, approve it and ask for work on a folder.",
+    "intro": "Every department has its own Drive: the folders and files where people and agents work together. Here you see what changed, what is waiting for your review, and you can ask an agent for something without leaving the folder.",
+    "sections": [
+      {
+        "h": "Where to find it",
+        "paras": [
+          "On company accounts, the side menu starts with “Department”, followed by “Pending”, “Agents and offices” and “Settings”. Everything else is under “More”."
+        ],
+        "steps": [
+          "Open “Department” in the side menu. The first department you belong to opens.",
+          "Use the folder tree on the left to move around. The folder and file you open are kept in the page address, so the browser Back button works.",
+          "If you belong to several departments, use “Switch department”."
+        ],
+        "note": "If you are not in a department yet, you will see a notice. Admins also see “Create departments”. If you open a department that is not yours, the page says it is not available."
+      },
+      {
+        "h": "What the list shows",
+        "paras": [
+          "Each row has three columns: “Name”, “Last change” (who did it, a person or an agent) and “Status”. The filters “All”, “To review” and “Changed today” narrow the list."
+        ]
+      },
+      {
+        "h": "“To review” and “Proposed”",
+        "list": [
+          "“To review”: an agent wants to change that file and is waiting for your approval. Nothing changes until you decide.",
+          "“Proposed”: an agent wants to create a new file. The file is created only when you approve the proposal."
+        ]
+      },
+      {
+        "h": "Approve or reject",
+        "steps": [
+          "Open the file marked “To review” or “Proposed”. The file panel opens.",
+          "Check the preview and, if there are any, the earlier versions.",
+          "Click “Approve” or “Reject”."
+        ],
+        "tip": "The same decisions are also in “Pending”."
+      },
+      {
+        "h": "Ask for something on a folder",
+        "steps": [
+          "Open the folder you want to work in.",
+          "At the bottom, type in “Ask something about this folder…”.",
+          "Choose the agent in the selector. Only agents you can use are listed.",
+          "Click “Ask”. The agent works inside that folder."
+        ],
+        "paras": [
+          "You can also use the “⋯” menu on a file: “Open”, “Ask an agent…” or “Download”. “Ask an agent…” puts the file name in your request."
+        ]
+      },
+      {
+        "h": "Who sees what",
+        "list": [
+          "You only see departments you belong to, and only the folders your access allows.",
+          "An agent can never see or change more than you can.",
+          "Personal and team accounts keep the usual menu."
+        ],
+        "warning": "A private department is not visible from outside, not even to an organization admin."
+      }
+    ]
+  }
+}

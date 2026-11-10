@@ -606,6 +606,8 @@ Contrato completo y reglas en [chat-routing.md](chat-routing.md). Resumen:
 
 Opcional `"attachments": ["/Shared/Chat/x1/saldos.csv", ...]` (máx. 10 rutas; con más responde `400` "too many attachments", nunca recorta en silencio de archivos ya subidos al drive, ver §19): el mensaje guardado conserva el texto del usuario y gana `files` con una referencia por archivo que existe (`action: "attach"`); a los agentes les llega, tras el texto y entre `[attachments]...[/attachments]`, la lista de rutas para que las lean con `fs.read` (datos, nunca instrucciones). Las rutas que no resuelven se ignoran.
 
+Opcional `"folder": "/Offices/<departamento>/..."` (D2, Drive del departamento): carpeta de departamento a la que se limita el trabajo del agente; se valida (`400` si no es una carpeta de departamento válida o la persona no tiene acceso) y se pasa al agente como su carpeta de trabajo. Las aprobaciones de herramientas `fs.*` traen en `context` la ruta (`path`) y la acción (`action`), con lo que la pantalla del departamento marca "Para revisar" (archivo existente) o "Propuesto" (archivo nuevo).
+
 ### 15.2 `GET /conversations/{id}/messages`
 
 Sin parámetros devuelve todo (como antes). `?limit=N` (máx. 200) devuelve los N más recientes; `?before=<message_id>` los N anteriores. Cuerpo = array; headers `X-Has-More` y `X-Next-Before`. `office` es común a la organización; desde E0, `agent:<id>` es **el hilo privado de quien llama** con ese agente más el historial anterior compartido (`shared_legacy: true`, solo lectura); nadie más lo lee, tampoco un admin ([chat-history.md](chat-history.md), sección E0). Lista vacía si aún no hay mensajes. Los mensajes de personas traen `author_id` y `author_name`.

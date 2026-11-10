@@ -74,7 +74,7 @@ const icon = (name, cls = "dx-i") => `<svg class="${cls}" viewBox="0 0 24 24" wi
 const PAGE_ICON = {
   architecture: "layers", "agent-runtime": "cpu", "api-reference": "code", "auth-and-tenancy": "key", "skills-format": "blocks",
   deployment: "server", configuration: "sliders", "security-model": "shield",
-  "getting-started": "play", "the-office": "building", projects: "board", "files-and-chats": "chat", "approvals-and-security": "shieldCheck",
+  "getting-started": "play", "the-office": "building", projects: "board", "files-and-chats": "chat", departments: "layers", "approvals-and-security": "shieldCheck",
   skills: "sparkle", "shop-and-coins": "coins", settings: "gear",
   "security-overview": "lock", "vulnerability-disclosure": "bug", "data-protection": "database", subprocessors: "network",
 };

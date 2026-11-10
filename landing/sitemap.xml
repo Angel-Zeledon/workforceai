@@ -267,6 +267,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/guia/ajustes/"/>
   </url>
   <url>
+    <loc>https://workforceai.es/guia/departamentos/</loc>
+    <lastmod>2026-11-10</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/guia/departamentos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/guide/departments/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/guia/departamentos/"/>
+  </url>
+  <url>
+    <loc>https://workforceai.es/en/guide/departments/</loc>
+    <lastmod>2026-11-10</lastmod>
+    <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/guia/departamentos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://workforceai.es/en/guide/departments/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://workforceai.es/guia/departamentos/"/>
+  </url>
+  <url>
     <loc>https://workforceai.es/confianza/</loc>
     <lastmod>2026-11-10</lastmod>
     <xhtml:link rel="alternate" hreflang="es" href="https://workforceai.es/confianza/"/>
