@@ -1,9 +1,14 @@
 package api
 
 import (
+	"errors"
+	"net/http"
 	"slices"
 
+	"github.com/go-chi/chi/v5"
+
 	"aiworkforce/backend/internal/artifacts"
+	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/projects"
 )
 
@@ -31,6 +36,9 @@ func redactProject(d *projects.Detail, sees func(agentID string) bool) (allHidde
 		n.Review, n.Audit, n.TaskID, n.Acceptance, n.SkipReason, n.DelegationChain = nil, nil, "", nil, "", []string{}
 	}
 	d.Approvals = slices.DeleteFunc(d.Approvals, func(a projects.Approval) bool { return a.AgentID != nil && !sees(*a.AgentID) })
+	if d.Estimate != nil {
+		d.Estimate.ByAgent = slices.DeleteFunc(d.Estimate.ByAgent, func(e projects.EstAgent) bool { return e.AgentID != "" && !sees(e.AgentID) })
+	}
 	return withAgent > 0 && hidden == withAgent
 }
 
@@ -50,4 +58,113 @@ func redactWorkspace(ws *artifacts.ProjectWorkspace, sees func(agentID string) b
 	})
 	ws.Links = slices.DeleteFunc(ws.Links, func(l artifacts.Link) bool { return gone[l.From] || gone[l.To] })
 	return total > 0 && len(ws.Deliverables) == 0
+}
+
+// hiddenNodes returns the ids of the nodes of d whose agent's work the person may not see.
+func hiddenNodes(d projects.Detail, sees func(agentID string) bool) map[string]bool {
+	out := map[string]bool{}
+	for _, n := range d.Nodes {
+		if n.AgentID != nil && *n.AgentID != "" && !sees(*n.AgentID) {
+			out[n.ID] = true
+		}
+	}
+	return out
+}
+
+// projectView is what the person sees of the project {id}: nil hidden = nothing hidden. all reports a project that
+// is only the work of hidden agents (it answers 404). A missing project is left to the handler (ok false).
+type projectView struct {
+	ws     *workScope
+	hidden map[string]bool
+	all    bool
+}
+
+func (s *server) projectView(r *http.Request, id string) (projectView, bool, error) {
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		return projectView{}, false, err
+	}
+	pv := projectView{ws: ws}
+	if ws.open() {
+		return pv, true, nil
+	}
+	d, err := s.Projects.Get(r.Context(), id)
+	if errors.Is(err, domain.ErrNotFound) {
+		return pv, false, nil
+	}
+	if err != nil {
+		return pv, false, err
+	}
+	pv.hidden = hiddenNodes(d, ws.agent)
+	pv.all = redactProject(&d, ws.agent)
+	return pv, true, nil
+}
+
+// workProject guards the routes about the project {id}: a project that is only a private office's work answers like
+// a missing one (D3).
+func (s *server) workProject(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		pv, ok, err := s.projectView(r, id)
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		if ok && pv.all {
+			s.fail(w, notFound("project", id))
+			return
+		}
+		if node := chi.URLParam(r, "nodeId"); node != "" && pv.hidden[node] { // retry, skip, replan of a hidden node
+			s.fail(w, notFound("node", node))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// changeHidden reports whether a plan change belongs to the hidden part of a project: proposed by a hidden agent,
+// about a hidden node, or adding tasks for a hidden agent.
+func (pv projectView) changeHidden(c projects.PlanChange) bool {
+	if pv.hidden == nil {
+		return false
+	}
+	if c.ProposedBy == "agent" && !pv.ws.agent(c.Actor) || pv.hidden[c.SourceNodeID] {
+		return true
+	}
+	return pv.opsHidden(c.Ops)
+}
+
+func (pv projectView) opsHidden(ops []projects.PlanChangeOp) bool {
+	for _, op := range ops {
+		if pv.hidden[op.NodeID] {
+			return true
+		}
+		for _, t := range op.Tasks {
+			if t.AgentID != "" && !pv.ws.agent(t.AgentID) {
+				return true
+			}
+		}
+		if op.Fields.AgentID != nil && *op.Fields.AgentID != "" && !pv.ws.agent(*op.Fields.AgentID) {
+			return true
+		}
+	}
+	return false
+}
+
+// redactHealth leaves out the risks of hidden agents and hidden nodes.
+func (pv projectView) redactHealth(h *projects.Health) {
+	if pv.hidden == nil {
+		return
+	}
+	h.Risks = slices.DeleteFunc(h.Risks, func(r projects.Risk) bool {
+		if r.AgentID != "" && !pv.ws.agent(r.AgentID) {
+			return true
+		}
+		for _, n := range r.NodeIDs {
+			if pv.hidden[n] {
+				return true
+			}
+		}
+		return false
+	})
 }

@@ -159,7 +159,7 @@ func (s *server) listMessages(w http.ResponseWriter, r *http.Request) {
 		limit = 50
 	}
 	id := chi.URLParam(r, "id")
-	if ok, err := s.work(r).conversationID(id); err != nil || !ok { // D3: a private office's conversation
+	if ok, err := s.work(r).conversationID(id, true); err != nil || !ok { // D3: a private office's conversation
 		s.fail(w, cmp.Or(err, notFound("conversation", id)))
 		return
 	}

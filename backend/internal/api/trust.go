@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -49,6 +50,12 @@ func (s *server) trustOverview(w http.ResponseWriter, r *http.Request) {
 		s.trustFail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	rep.Agents = slices.DeleteFunc(rep.Agents, func(a trust.AgentTrust) bool { return !ws.agent(a.AgentID) }) // D3
 	writeJSON(w, 200, rep)
 }
 

@@ -71,7 +71,7 @@ func (s *server) mountArtifacts(r chi.Router) {
 	r.With(comment).Post("/artifacts/{id}/proposals", s.proposeArtifact)
 	r.With(s.can(auth.PermArtifactsApprove)).Post("/artifacts/{id}/proposals/{pid}/decision", s.decideArtifactProposal)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/artifacts/{id}/ask", s.askAboutArtifact)
-	r.With(read).Get("/projects/{id}/workspace", s.projectWorkspace)
+	r.With(read, s.workProject).Get("/projects/{id}/workspace", s.projectWorkspace)
 	r.With(write).Post("/artifacts/{id}/pdf", s.uploadArtifactPDF)
 	r.With(read).Get("/artifact-blobs/{id}", s.downloadArtifactBlob)
 }

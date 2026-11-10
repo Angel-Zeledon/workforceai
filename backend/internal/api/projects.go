@@ -25,31 +25,31 @@ func (s *server) mountProjects(r chi.Router) {
 	r.With(s.can(auth.PermTasksRead)).Get("/projects", s.listProjects)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/projects/draft", s.createProjectDraft)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/projects/from-template", s.createProjectDraft)
-	r.With(s.can(auth.PermTasksRead)).Get("/projects/{id}", s.getProject)
-	r.With(s.can(auth.PermTasksRead)).Get("/projects/{id}/snapshot", s.getProject)
-	r.With(s.can(auth.PermTasksRead)).Get("/projects/{id}/health", s.projectHealth)
-	r.With(s.can(auth.PermApprovalsRead)).Get("/projects/{id}/approvals", s.projectApprovals)
-	r.With(s.can(auth.PermRequestsCreate)).Patch("/projects/{id}/plan", s.patchProjectPlan)
-	r.With(s.can(auth.PermRequestsCreate)).Post("/projects/{id}/estimate", s.estimateProject)
-	r.With(s.can(auth.PermRequestsCreate)).Post("/projects/{id}/validate", s.validateProject)
-	r.With(s.can(auth.PermRequestsCreate)).Post("/projects/{id}/launch", s.launchProject)
+	r.With(s.can(auth.PermTasksRead), s.workProject).Get("/projects/{id}", s.getProject)
+	r.With(s.can(auth.PermTasksRead), s.workProject).Get("/projects/{id}/snapshot", s.getProject)
+	r.With(s.can(auth.PermTasksRead), s.workProject).Get("/projects/{id}/health", s.projectHealth)
+	r.With(s.can(auth.PermApprovalsRead), s.workProject).Get("/projects/{id}/approvals", s.projectApprovals)
+	r.With(s.can(auth.PermRequestsCreate), s.workProject).Patch("/projects/{id}/plan", s.patchProjectPlan)
+	r.With(s.can(auth.PermRequestsCreate), s.workProject).Post("/projects/{id}/estimate", s.estimateProject)
+	r.With(s.can(auth.PermRequestsCreate), s.workProject).Post("/projects/{id}/validate", s.validateProject)
+	r.With(s.can(auth.PermRequestsCreate), s.workProject).Post("/projects/{id}/launch", s.launchProject)
 	// Running projects spend money and hold agents: pausing, cancelling and the budget are admin actions.
-	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/control", s.controlProject)
+	r.With(s.can(auth.PermTasksManage), s.workProject).Post("/projects/{id}/control", s.controlProject)
 	for _, a := range []string{"pause", "resume", "cancel"} {
 		a := a
-		r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/"+a, func(w http.ResponseWriter, r *http.Request) { s.projectAction(w, r, a) })
+		r.With(s.can(auth.PermTasksManage), s.workProject).Post("/projects/{id}/"+a, func(w http.ResponseWriter, r *http.Request) { s.projectAction(w, r, a) })
 	}
-	r.With(s.can(auth.PermTasksManage)).Put("/projects/{id}/budget", s.projectBudget)
+	r.With(s.can(auth.PermTasksManage), s.workProject).Put("/projects/{id}/budget", s.projectBudget)
 	// W2 manual recovery of a failed/blocked node (human-only, audited).
-	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/nodes/{nodeId}/retry", s.retryProjectNode)
-	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/nodes/{nodeId}/skip", s.skipProjectNode)
+	r.With(s.can(auth.PermTasksManage), s.workProject).Post("/projects/{id}/nodes/{nodeId}/retry", s.retryProjectNode)
+	r.With(s.can(auth.PermTasksManage), s.workProject).Post("/projects/{id}/nodes/{nodeId}/skip", s.skipProjectNode)
 	// Q2 mid-flight replanning: agents only propose; a human decides.
-	r.With(s.can(auth.PermTasksRead)).Get("/projects/{id}/plan-changes", s.listPlanChanges)
-	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/plan-changes", s.createPlanChange)
-	r.With(s.can(auth.PermApprovalsDecide)).Post("/projects/{id}/plan-changes/{changeId}/approve", func(w http.ResponseWriter, r *http.Request) { s.decidePlanChange(w, r, "approve") })
-	r.With(s.can(auth.PermApprovalsDecide)).Post("/projects/{id}/plan-changes/{changeId}/reject", func(w http.ResponseWriter, r *http.Request) { s.decidePlanChange(w, r, "reject") })
-	r.With(s.can(auth.PermTasksManage)).Post("/projects/{id}/nodes/{nodeId}/replan", s.replanProjectNode)
-	r.With(s.can(auth.PermRequestsCreate)).Post("/projects/{id}/save-as-template", s.saveProjectTemplate)
+	r.With(s.can(auth.PermTasksRead), s.workProject).Get("/projects/{id}/plan-changes", s.listPlanChanges)
+	r.With(s.can(auth.PermTasksManage), s.workProject).Post("/projects/{id}/plan-changes", s.createPlanChange)
+	r.With(s.can(auth.PermApprovalsDecide), s.workProject).Post("/projects/{id}/plan-changes/{changeId}/approve", func(w http.ResponseWriter, r *http.Request) { s.decidePlanChange(w, r, "approve") })
+	r.With(s.can(auth.PermApprovalsDecide), s.workProject).Post("/projects/{id}/plan-changes/{changeId}/reject", func(w http.ResponseWriter, r *http.Request) { s.decidePlanChange(w, r, "reject") })
+	r.With(s.can(auth.PermTasksManage), s.workProject).Post("/projects/{id}/nodes/{nodeId}/replan", s.replanProjectNode)
+	r.With(s.can(auth.PermRequestsCreate), s.workProject).Post("/projects/{id}/save-as-template", s.saveProjectTemplate)
 	// Batches: one template for many customers (a project per customer, launched at the plan's pace).
 	r.With(s.can(auth.PermRequestsCreate)).Post("/project-batches/preview", s.previewBatch)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/project-batches", s.createBatch)
@@ -78,6 +78,25 @@ func (s *server) listProjects(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.fail(w, err)
 		return
+	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.open() { // D3: a project that is only a private office's work is left out (work_projects.go)
+		out := v[:0]
+		for _, p := range v {
+			d, err := s.Projects.Get(r.Context(), p.ID)
+			if err != nil {
+				s.fail(w, err)
+				return
+			}
+			if !redactProject(&d, ws.agent) {
+				out = append(out, p)
+			}
+		}
+		v = out
 	}
 	writeJSON(w, 200, list(v))
 }
@@ -124,6 +143,12 @@ func (s *server) projectHealth(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	pv, _, err := s.projectView(r, chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	pv.redactHealth(&h) // D3
 	writeJSON(w, 200, h)
 }
 
@@ -150,6 +175,17 @@ func (s *server) patchProjectPlan(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	pv, _, err := s.projectView(r, chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	for _, op := range body.Ops { // D3: a hidden node answers like a missing one
+		if pv.hidden[op.ID] {
+			s.fail(w, notFound("node", op.ID))
+			return
+		}
+	}
 	ver, issues, err := s.Projects.PatchPlan(r.Context(), chi.URLParam(r, "id"), body.Ops)
 	if err != nil {
 		s.fail(w, err)
@@ -163,6 +199,9 @@ func (s *server) estimateProject(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.fail(w, err)
 		return
+	}
+	if ws := s.work(r); !ws.open() { // D3: the cost lines of hidden agents
+		e.ByAgent = slices.DeleteFunc(e.ByAgent, func(x projects.EstAgent) bool { return x.AgentID != "" && !ws.agent(x.AgentID) })
 	}
 	writeJSON(w, 200, map[string]any{"estimate": e})
 }
@@ -307,6 +346,12 @@ func (s *server) listPlanChanges(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	pv, _, err := s.projectView(r, chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	v = slices.DeleteFunc(v, pv.changeHidden) // D3
 	writeJSON(w, 200, list(v))
 }
 
@@ -314,6 +359,15 @@ func (s *server) createPlanChange(w http.ResponseWriter, r *http.Request) {
 	var body projects.NewPlanChange
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
+		return
+	}
+	pv, _, err := s.projectView(r, chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if pv.opsHidden(body.Ops) { // D3: a hidden node (or agent) answers like a missing one
+		s.fail(w, notFound("node", ""))
 		return
 	}
 	c, err := s.Projects.ProposeChange(r.Context(), chi.URLParam(r, "id"), body)
@@ -329,6 +383,24 @@ func (s *server) decidePlanChange(w http.ResponseWriter, r *http.Request, decisi
 		Note string `json:"note"`
 	}
 	_ = s.decode(w, r, &body)
+	pv, _, err := s.projectView(r, chi.URLParam(r, "id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if pv.hidden != nil { // D3: a change of the hidden part answers like a missing one
+		cs, err := s.Projects.ListChanges(r.Context(), chi.URLParam(r, "id"))
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		for _, x := range cs {
+			if x.ID == chi.URLParam(r, "changeId") && pv.changeHidden(x) {
+				s.fail(w, notFound("plan change", x.ID))
+				return
+			}
+		}
+	}
 	c, err := s.Projects.DecideChange(r.Context(), chi.URLParam(r, "id"), chi.URLParam(r, "changeId"), decision, body.Note)
 	if err != nil {
 		s.fail(w, err)

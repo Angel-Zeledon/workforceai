@@ -312,3 +312,8 @@ func (s *Service) ListRuns(ctx context.Context, caseID string, limit int) ([]Run
 	}
 	return s.cfg.Store.ListRuns(ctx, org, caseID, min(max(limit, 1), 200))
 }
+
+// Case returns one golden case (D3: the API checks whose agent it is before acting on it).
+func (s *Service) Case(ctx context.Context, id string) (Case, error) {
+	return s.cfg.Store.GetCase(ctx, s.org(ctx), id)
+}

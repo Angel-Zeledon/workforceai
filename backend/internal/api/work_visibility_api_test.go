@@ -24,7 +24,7 @@ type privateWork struct {
 
 func newPrivateWork(t *testing.T) *privateWork {
 	t.Helper()
-	e := newEnv(t, opts{auth: true, orgchart: true, away: true, code: true, v2: true, quality: true, deps: func(d *api.Deps) {
+	e := newEnv(t, opts{auth: true, orgchart: true, away: true, code: true, v2: true, quality: true, ws: true, trust: true, deps: func(d *api.Deps) {
 		withOffices(d)
 		docs := longmem.NewMemStore()
 		d.Memory = longmem.New(longmem.Config{Docs: docs, Retriever: &longmem.FTS{Docs: docs}})

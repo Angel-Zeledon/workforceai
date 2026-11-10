@@ -1,12 +1,15 @@
 package api
 
 import (
+	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/quality"
 )
 
@@ -24,10 +27,10 @@ func (s *server) mountQuality(r chi.Router) {
 	r.With(read, s.workAgent).Get("/agents/{id}/quality", s.qualityAgent)
 	r.With(read, s.workAgent).Get("/agents/{id}/golden-cases", s.goldenList)
 	r.With(write, s.workAgent).Post("/agents/{id}/golden-cases", s.goldenCreate)
-	r.With(write).Put("/golden-cases/{id}", s.goldenUpdate)
-	r.With(write).Delete("/golden-cases/{id}", s.goldenDelete)
-	r.With(read).Get("/golden-cases/{id}/runs", s.goldenRuns)
-	r.With(write).Post("/golden-cases/{id}/runs", s.goldenRecordRun)
+	r.With(write, s.workGoldenCase).Put("/golden-cases/{id}", s.goldenUpdate)
+	r.With(write, s.workGoldenCase).Delete("/golden-cases/{id}", s.goldenDelete)
+	r.With(read, s.workGoldenCase).Get("/golden-cases/{id}/runs", s.goldenRuns)
+	r.With(write, s.workGoldenCase).Post("/golden-cases/{id}/runs", s.goldenRecordRun)
 }
 
 // windowDays reads ?window_days= (the service clamps it).
@@ -42,6 +45,12 @@ func (s *server) qualityOverview(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	rep.Agents = slices.DeleteFunc(rep.Agents, func(a quality.AgentQuality) bool { return !ws.agent(a.AgentID) }) // D3
 	writeJSON(w, 200, rep)
 }
 
@@ -124,4 +133,28 @@ func (s *server) goldenRecordRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 201, run)
+}
+
+// workGoldenCase guards the routes about the golden case {id}: a case of an agent whose work the person may not see
+// answers like a missing one (D3). A missing case is left to the handler.
+func (s *server) workGoldenCase(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ws, id := s.work(r), chi.URLParam(r, "id")
+		if err := ws.load(); err != nil {
+			s.fail(w, err)
+			return
+		}
+		if !ws.open() {
+			c, err := s.Quality.Case(r.Context(), id)
+			if err != nil && !errors.Is(err, domain.ErrNotFound) {
+				s.fail(w, err)
+				return
+			}
+			if err == nil && !ws.agent(c.AgentID) {
+				s.fail(w, notFound("golden case", id))
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }

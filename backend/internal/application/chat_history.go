@@ -167,8 +167,8 @@ func (h *ChatHistory) Conversations(ctx context.Context, q ChatConvQuery) ([]Cha
 	if err != nil {
 		return nil, false, err
 	}
+	rows = slices.DeleteFunc(rows, func(c ChatConversation) bool { return !storedRowVisible(ctx, c) }) // D3: private work
 	rows = publicRows(q.Viewer, rows)
-	rows = slices.DeleteFunc(rows, func(c ChatConversation) bool { return !convVisible(ctx, c) }) // D3: private work
 	h.link(ctx, org, rows)
 	return rows, more, nil
 }
@@ -233,7 +233,9 @@ func (h *ChatHistory) Threads(ctx context.Context) ([]ChatThread, error) {
 	}
 	ids := make([]string, 0, len(agents))
 	for _, a := range agents {
-		if ChatVisible(ctx, a.ID) { // D3: no thread with an agent the person neither uses nor sees the work of
+		// D3: no thread with an agent the person neither uses nor sees the work of, unless they already have their
+		// own (it stays readable)
+		if ChatVisible(ctx, a.ID) || HasOwnChat(ctx, h.Core, org, a.ID) {
 			ids = append(ids, a.ID)
 		}
 	}
@@ -244,7 +246,7 @@ func (h *ChatHistory) checkThread(ctx context.Context, key string) error {
 	if key == ThreadGeneral {
 		return nil
 	}
-	if !ChatVisible(ctx, key) { // D3: answered like an agent that does not exist
+	if !ChatVisible(ctx, key) && !HasOwnChat(ctx, h.Core, h.org(ctx), key) { // D3: like an agent that does not exist
 		return fmt.Errorf("%w: agent %s", domain.ErrNotFound, key)
 	}
 	_, err := h.Core.GetAgent(ctx, h.org(ctx), key)

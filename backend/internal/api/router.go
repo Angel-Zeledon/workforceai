@@ -619,7 +619,7 @@ func (s *server) postMessage(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	if ok, err := s.work(r).conversationID(id); err != nil || !ok {
+	if ok, err := s.work(r).conversationID(id, false); err != nil || !ok {
 		s.fail(w, cmp.Or(err, notFound("conversation", id)))
 		return
 	}

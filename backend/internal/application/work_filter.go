@@ -1,6 +1,11 @@
 package application
 
-import "context"
+import (
+	"context"
+	"strings"
+
+	"aiworkforce/backend/internal/domain"
+)
 
 // WorkFilter (D3, equipos-oficinas.md §4.1) says which work the person reading may see: the work of an agent of a
 // private office is only its members'. Whoever may use such an agent (shared with them, or in the directory) talks
@@ -42,10 +47,32 @@ func ChatVisible(ctx context.Context, agentID string) bool {
 	return WorkVisible(ctx, agentID) || AgentUsable(ctx, agentID)
 }
 
+// HasOwnChat reports whether the person has their own (E0 private) thread with an agent. D3: it stays readable to
+// them even when they can no longer use the agent (read only: sending is refused by the API).
+func HasOwnChat(ctx context.Context, store Store, org, agentID string) bool {
+	me := PersonFrom(ctx)
+	if me == "" || agentID == "" || store == nil {
+		return false
+	}
+	_, err := store.GetConversation(ctx, org, domain.ChatPrivateConv(agentID, me))
+	return err == nil
+}
+
 // RequestVisible reports whether the person reading may see a request (true without a filter).
 func RequestVisible(ctx context.Context, requestID string) bool {
 	f := workFilter(ctx)
 	return f.Request == nil || f.Request(requestID)
+}
+
+// storedRowVisible reports whether the person reading may see a STORED history row (before the rows of an agent
+// chat are merged): their own thread with an agent always (D3: read only once they cannot use it), the history shared
+// before private threads existed only with the agent's work, a request's conversation with the request, else every
+// participant's work.
+func storedRowVisible(ctx context.Context, c ChatConversation) bool {
+	if agent, ok := strings.CutPrefix(domain.PublicChatConv(c.ID), domain.ChatAgentPrefix); ok {
+		return c.OwnerID != "" || WorkVisible(ctx, agent)
+	}
+	return convVisible(ctx, c)
 }
 
 // convVisible reports whether the person reading may see a history row: their chat with an agent (ChatVisible),

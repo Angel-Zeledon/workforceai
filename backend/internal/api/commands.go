@@ -332,7 +332,7 @@ func (s *server) execCommand(r *http.Request, req runRequest) (int, runResponse)
 	if rf := c.agentRef(c.agentID); rf != nil {
 		c.agentID = rf.ID
 	}
-	if c.agentID != "" && !c.work.chat(c.agentID) { // D3: a context agent the person neither uses nor sees
+	if c.agentID != "" && !c.work.chat(c.agentID) && !c.work.ownChat(c.agentID) { // D3: neither used, seen nor talked to
 		return errResp(http.StatusBadRequest, "unknown_agent", commands.L{ES: "El agente del contexto no existe.", EN: "The context agent does not exist."})
 	}
 	c.conv = c.convID(req.Context.ConversationID)

@@ -71,6 +71,12 @@ func (w *workScope) use(id string) bool {
 // chat reports whether the person may open their own chat with an agent: they see its work or may use it.
 func (w *workScope) chat(id string) bool { return w.agent(id) || w.use(id) }
 
+// ownChat reports whether the person already has their own thread with an agent: it stays readable to them even
+// when they can no longer use the agent (read only; sending is checkAgentUse's).
+func (w *workScope) ownChat(id string) bool {
+	return application.HasOwnChat(w.ctx, w.s.Store, w.org, id)
+}
+
 // index records the agents of the given tasks by request, so the visibility of their requests needs no more reads.
 // The tasks must be every task of each request they name.
 func (w *workScope) index(tasks []domain.Task) {
@@ -145,12 +151,16 @@ func (w *workScope) conversation(c domain.Conversation) bool {
 }
 
 // conversationID reports whether the person sees a conversation by id: a chat with an agent (their own thread)
-// when they may chat with it, else the stored conversation. A missing one is left to the caller's own not found;
-// any other error fails closed.
-func (w *workScope) conversationID(id string) (bool, error) {
+// when they may chat with it (or, with own, when that thread already exists: reading it and its read marker), else
+// the stored conversation. A missing one is left to the caller's own not found; any other error fails closed.
+func (w *workScope) conversationID(id string, own bool) (bool, error) {
 	if application.IsChatConversation(id) {
 		agent, ok := strings.CutPrefix(domain.PublicChatConv(id), domain.ChatAgentPrefix)
-		return !ok || w.chat(agent), w.err
+		vis := !ok || w.chat(agent)
+		if !vis && w.err == nil && own {
+			vis = w.ownChat(agent)
+		}
+		return vis, w.err
 	}
 	if err := w.load(); err != nil || w.m == nil {
 		return err == nil, err
@@ -240,11 +250,21 @@ func (s *server) workTask(next http.Handler) http.Handler {
 	})
 }
 
-// workConversation guards the routes about the conversation {id}.
+// workConversation guards the writes on the conversation {id} (rename, delete): one's own thread with an agent one
+// can no longer use is read only.
 func (s *server) workConversation(next http.Handler) http.Handler {
+	return s.guardConversation(next, false)
+}
+
+// readOwnConversation guards marking the conversation {id} read: allowed on one's own read-only thread.
+func (s *server) readOwnConversation(next http.Handler) http.Handler {
+	return s.guardConversation(next, true)
+}
+
+func (s *server) guardConversation(next http.Handler, own bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		if ok, err := s.work(r).conversationID(id); err != nil || !ok {
+		if ok, err := s.work(r).conversationID(id, own); err != nil || !ok {
 			s.fail(w, cmp.Or(err, notFound("conversation", id)))
 			return
 		}

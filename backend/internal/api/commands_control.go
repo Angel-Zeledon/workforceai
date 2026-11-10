@@ -664,7 +664,7 @@ func cmdExport(c *cmdCall) (*cmdResult, *cmdFail) {
 		return nil, fail(http.StatusForbidden, "forbidden", "Exportar guarda un archivo en el drive: tu rol no puede escribir archivos.", "Exporting saves a file in the drive: your role cannot write files.")
 	}
 	agent, direct := strings.CutPrefix(domain.PublicChatConv(c.conv), domain.ChatAgentPrefix)
-	if direct && !c.work.chat(agent) {
+	if direct && !c.work.chat(agent) && !c.work.ownChat(agent) {
 		return nil, fail(http.StatusBadRequest, "unknown_agent", fmt.Sprintf("No encuentro al agente «%s».", agent), fmt.Sprintf("I cannot find the agent “%s”.", agent))
 	}
 	msgs, err := c.s.Orch.ChatMessagesSince(c.ctx, c.conv, time.Time{}, 500)
@@ -672,8 +672,8 @@ func cmdExport(c *cmdCall) (*cmdResult, *cmdFail) {
 		return nil, c.serviceFail(err)
 	}
 	msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool {
-		// D3: replies of agents the person neither uses nor sees, and the shared history of a private office's agent
-		return !c.work.chat(m.From) || direct && m.SharedLegacy && !c.work.agent(agent)
+		// D3: the person's own messages are theirs; the history shared before private threads is the agent's work
+		return direct && m.SharedLegacy && !c.work.agent(agent)
 	})
 	if len(msgs) == 0 {
 		return nil, fail(http.StatusUnprocessableEntity, "nothing_to_do", "No hay nada que exportar todavía.", "There is nothing to export yet.")
