@@ -107,7 +107,7 @@
       {
         "h": "Carpetas de cada departamento",
         "paras": [
-          "En Archivos aparece la raíz «Oficinas», con una carpeta por departamento (por ejemplo Contabilidad). Cada una nace con las subcarpetas propias de la profesión, como Facturas o Contratos. Si el departamento es privado, la carpeta muestra un candado.",
+          "En Archivos aparece la raíz «Oficinas», con una carpeta por departamento (por ejemplo Contabilidad). Cada una nace con las subcarpetas propias de la profesión (en Contabilidad: Clientes, Proveedores, Impuestos y más). Si no hay plantilla para la profesión, nacen Documentos y Políticas. Si el departamento es privado, la carpeta muestra un candado.",
           "Los miembros del departamento pueden editar. Quien no es miembro de un departamento abierto solo puede leer. Quien no es miembro de un departamento privado no ve nada, ni siquiera siendo administrador. Los agentes de un departamento trabajan en su carpeta sin pedir aprobación, no tocan las de otros departamentos y nunca pueden más que la persona para la que trabajan."
         ],
         "steps": [
@@ -115,7 +115,7 @@
           "Pulsa «Oficinas» y elige la carpeta de tu departamento.",
           "Sube archivos o abre las subcarpetas para ordenarlos."
         ],
-        "tip": "Los archivos que adjuntas en un chat se guardan por defecto en la carpeta Adjuntos de tu departamento."
+        "tip": "Los archivos que adjuntas en un chat se guardan por defecto en la carpeta Adjuntos del departamento del agente con el que chateas, en una subcarpeta por día (si ese agente no tiene departamento, van a Compartido > Chat); puedes elegir otra carpeta."
       },
       {
         "h": "Sube tus propios archivos",
@@ -247,15 +247,15 @@
       {
         "h": "Each department's folders",
         "paras": [
-          "Files shows an \"Offices\" root with one folder per department (for example Accounting). Each one starts with the subfolders that fit its profession, such as Invoices or Contracts. If the department is private, its folder shows a lock.",
+          "Files shows an “Offices” root with one folder per department (for example Accounting). Each one starts with the subfolders that fit its profession (in Accounting: Clients, Suppliers, Taxes and more). If there is no template for the profession, it starts with Documents and Policies. If the department is private, its folder shows a lock.",
           "Members of a department can edit. Someone who is not a member of an open department can only read. Someone who is not a member of a private department sees nothing, even as an administrator. A department's agents work in its folder without asking for approval, never touch other departments' folders, and can never do more than the person they work for."
         ],
         "steps": [
-          "Open \"Files\" in the side menu.",
-          "Click \"Offices\" and choose your department's folder.",
+          "Open “Files” in the side menu.",
+          "Click “Offices” and choose your department's folder.",
           "Upload files or open the subfolders to keep them in order."
         ],
-        "tip": "Files you attach in a chat are saved by default in your department's Attachments folder."
+        "tip": "Files you attach in a chat are saved by default in the Attachments folder of the department of the agent you chat with, in one subfolder per day (if that agent has no department, they go to Shared > Chat); you can pick another folder."
       },
       {
         "h": "Upload your own files",
