@@ -21,6 +21,11 @@ func (s *server) getApprovalInbox(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	history, err := s.Store.ListApprovals(ctx, org, "")
+	if err == nil { // D3: a private department's approvals are its members'
+		if pending, err = s.visibleApprovals(r, pending); err == nil {
+			history, err = s.visibleApprovals(r, history)
+		}
+	}
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -50,6 +55,7 @@ func (s *server) getApprovalInbox(w http.ResponseWriter, r *http.Request) {
 		// the demo without accounts acts as its owner: everything is decidable, nothing was "asked by me"
 		in.Viewer, in.ViewerRole, in.ViewerCanDecide = "demo", string(auth.RoleOwner), true
 	}
+	s.inboxOffices(r, &in) // D3: an office's approvals are decided by its responsibles
 	if s.Projects != nil {
 		in.ProjectOf = func(requestID string) string { return s.Projects.ProjectIDForRequest(ctx, org, requestID) }
 		var names map[string]string

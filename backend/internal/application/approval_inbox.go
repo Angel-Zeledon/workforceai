@@ -42,6 +42,8 @@ type InboxItem struct {
 	// may decide it now (role, no self-approval, a different person for each approval of a double approval).
 	RequestedByMe bool `json:"requested_by_me"`
 	CanDecide     bool `json:"can_decide"`
+	// Approvers (D3) are the names of the responsibles who decide an approval of an office ("Decide: <name>").
+	Approvers []string `json:"approvers,omitempty"`
 }
 
 // Inbox filters (E0): every pending approval, the ones I asked for, the ones I can decide.
@@ -146,6 +148,10 @@ type InboxInput struct {
 	ViewerRole      string
 	ViewerCanDecide bool
 	Mine            string
+	// D3 (optional): Decides replaces CanDecideApproval for the viewer (the office rule, DecidesApproval) and
+	// Approvers names the responsibles who decide an approval of an office.
+	Decides   func(ap domain.Approval) bool
+	Approvers func(ap domain.Approval) []string
 }
 
 var riskRank = map[string]int{"low": 0, "medium": 1, "high": 2}
@@ -162,7 +168,14 @@ func BuildApprovalInbox(in InboxInput) ApprovalInbox {
 		}
 		it := InboxItem{Approval: ap, HighRisk: IsHighRiskApproval(ap)}
 		it.RequestedByMe = in.Viewer != "" && ap.RequestedBy == in.Viewer
-		it.CanDecide = CanDecideApproval(ap, in.Viewer, in.ViewerRole, in.ViewerCanDecide)
+		if in.Decides != nil {
+			it.CanDecide = in.Decides(ap)
+		} else {
+			it.CanDecide = CanDecideApproval(ap, in.Viewer, in.ViewerRole, in.ViewerCanDecide)
+		}
+		if in.Approvers != nil {
+			it.Approvers = in.Approvers(ap)
+		}
 		out.Counts.All++
 		if it.RequestedByMe {
 			out.Counts.Requested++

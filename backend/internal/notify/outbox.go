@@ -169,6 +169,9 @@ type emailPayload struct {
 	Subject string `json:"subject"`
 	Text    string `json:"text"`
 	HTML    string `json:"html"`
+	// ForApproval (D3) marks the e-mail of a responsible of an office's approval: the address need not be one of the
+	// organization's, and it is delivered only while the recipient still is a responsible who decides it.
+	ForApproval string `json:"for_approval,omitempty"`
 }
 
 // ---- delivery ----
@@ -244,8 +247,13 @@ func (s *Service) enqueue(ctx context.Context, org, channel, recipient string, p
 
 // sendEmail queues an e-mail, or sends it right away when there is no outbox (or the queue refused it).
 func (s *Service) sendEmail(ctx context.Context, org, to string, m mailer.Message) {
+	s.sendEmailFor(ctx, org, to, "", m)
+}
+
+// sendEmailFor is sendEmail for a responsible of the approval approvalID ("" = an address of the organization).
+func (s *Service) sendEmailFor(ctx context.Context, org, to, approvalID string, m mailer.Message) {
 	if s.Outbox != nil {
-		b, _ := json.Marshal(emailPayload{Subject: m.Subject, Text: m.Text, HTML: m.HTML})
+		b, _ := json.Marshal(emailPayload{Subject: m.Subject, Text: m.Text, HTML: m.HTML, ForApproval: approvalID})
 		if err := s.enqueue(ctx, org, ChanEmail, to, b); err == nil {
 			return
 		} else {
@@ -291,12 +299,22 @@ func (s *Service) deliver(ctx context.Context, it OutboxItem) error {
 	}
 	switch it.Channel {
 	case ChanEmail:
-		if !st.EmailEnabled || s.Mail == nil || !containsFold(st.EmailTo, it.Recipient) {
+		if !st.EmailEnabled || s.Mail == nil {
 			return errChannelOff
 		}
 		var ep emailPayload
 		if err := json.Unmarshal(payload, &ep); err != nil {
 			return fmt.Errorf("%w: bad e-mail payload", domain.ErrInvalid)
+		}
+		if !containsFold(st.EmailTo, it.Recipient) {
+			// D3: a responsible of an office's approval, still one when it is delivered
+			ok, err := s.stillResponsible(ctx, it.OrgID, ep.ForApproval, it.Recipient)
+			if err != nil {
+				return err // transient: retried
+			}
+			if !ok {
+				return errChannelOff
+			}
 		}
 		return s.Mail.Send(ctx, mailer.Message{To: it.Recipient, Subject: ep.Subject, Text: ep.Text, HTML: ep.HTML})
 	case ChanSlack, ChanTeams:
@@ -310,6 +328,25 @@ func (s *Service) deliver(ctx context.Context, it OutboxItem) error {
 		return s.post(ctx, it.Channel, hook, payload)
 	}
 	return fmt.Errorf("%w: unknown channel", domain.ErrInvalid)
+}
+
+// stillResponsible reports whether to is (still) a responsible who decides the approval id.
+func (s *Service) stillResponsible(ctx context.Context, org, id, to string) (bool, error) {
+	if id == "" || s.Approvers == nil || s.Approvals == nil {
+		return false, nil
+	}
+	ap, err := s.Approvals.Get(ctx, org, id)
+	if errors.Is(err, domain.ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	aud, err := s.Approvers(ctx, org, ap)
+	if err != nil {
+		return false, err
+	}
+	return aud.Office && aud.responsible(to), nil
 }
 
 func containsFold(list []string, v string) bool {

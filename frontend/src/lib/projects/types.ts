@@ -85,6 +85,8 @@ export interface ProjectApproval {
   id: string; project_id: string; node_id: string; agent_id: string | null;
   action: string; title: string; details: string; risk: Risk;
   status: "pending" | "approved" | "rejected"; created_at: string; resolved_at: string | null;
+  /** D3 (signed-in servers): whether the reader may decide it now, and the responsibles of its office who decide it. */
+  can_decide?: boolean; approvers?: string[];
 }
 
 export interface BudgetPolicy { mode: "hard" | "soft"; warn_at: number[]; on_hard: "pause_and_ask" | "fail"; reserve_pct: number }

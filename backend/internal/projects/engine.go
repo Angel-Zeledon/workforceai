@@ -382,8 +382,10 @@ func (s *Service) Control(ctx context.Context, id, action string) (Summary, erro
 	return d.Project, nil
 }
 
-// rejectPending rejects the pending approvals of a cancelled project (as the
-// person who cancelled it), which also releases the tasks waiting on them.
+// rejectPending withdraws the pending approvals of a cancelled project, which
+// also releases the tasks waiting on them. It is not a decision (D3: the person
+// who cancels need not be the responsible of each approval's office): the
+// approvals are rejected as withdrawn, audited with who cancelled.
 func (s *Service) rejectPending(ctx context.Context, rec Record) {
 	snap, err := s.loadSnapshot(ctx, rec)
 	if err != nil {
@@ -391,7 +393,7 @@ func (s *Service) rejectPending(ctx context.Context, rec Record) {
 	}
 	for _, a := range snap.approvals {
 		if a.Status == domain.ApprovalPending {
-			if _, err := s.cfg.Approvals.Decide(ctx, a.ID, "reject", "project cancelled"); err != nil {
+			if _, err := s.cfg.Approvals.Withdraw(ctx, a.ID, "project cancelled"); err != nil {
 				s.cfg.Log.Warn("reject approval of cancelled project", "approval", a.ID, "err", err)
 			}
 		}
@@ -462,7 +464,7 @@ func (s *Service) DecideBatch(ctx context.Context, b BatchDecision) (BatchResult
 	}
 	var group []domain.Approval
 	for _, a := range snap.approvals {
-		if a.Status == domain.ApprovalPending && a.Action == b.Filter.Action {
+		if a.Status == domain.ApprovalPending && a.Action == b.Filter.Action && (b.Visible == nil || b.Visible(a)) {
 			group = append(group, a)
 		}
 	}

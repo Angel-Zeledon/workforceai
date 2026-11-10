@@ -298,8 +298,8 @@ func NewRouter(d Deps) http.Handler {
 			r.With(s.can(auth.PermConversationsPost)).Post("/conversations/{id}/messages", s.postMessage)
 			r.With(s.can(auth.PermApprovalsRead)).Get("/approvals", s.listApprovals)
 			r.With(s.can(auth.PermApprovalsRead)).Get("/approvals/inbox", s.getApprovalInbox)
-			// Deciding approvals is a privileged action: admin/owner only.
-			r.With(s.can(auth.PermApprovalsDecide)).Post("/approvals/{id}/decision", s.decide)
+			// Deciding approvals is a privileged action: admin/owner, or (D3) a responsible of the agent's office.
+			r.With(s.workApproval, s.canDecide).Post("/approvals/{id}/decision", s.decide)
 			r.With(s.can(auth.PermReportsRead)).Get("/reports", s.listReports)
 			r.With(s.can(auth.PermReportsRead)).Get("/reports/{id}", s.getReport)
 			r.With(s.can(auth.PermReportsRead)).Get("/reports/{id}/evidence", s.reportEvidence) // B6 evidence chain
@@ -633,6 +633,9 @@ func (s *server) postMessage(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) listApprovals(w http.ResponseWriter, r *http.Request) {
 	v, err := s.Store.ListApprovals(r.Context(), s.org(r), r.URL.Query().Get("status"))
+	if err == nil {
+		v, err = s.visibleApprovals(r, v) // D3: a private department's approvals are its members'
+	}
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -642,7 +645,7 @@ func (s *server) listApprovals(w http.ResponseWriter, r *http.Request) {
 			v[i].Context = s.approvalContext(v[i].ID)
 		}
 	}
-	writeJSON(w, 200, list(v))
+	writeJSON(w, 200, s.withDeciders(r, v)) // D3: who may decide each pending one
 }
 
 // decidedApproval is the approval (flat) plus the outcome of the "always allow" choice.
@@ -684,6 +687,14 @@ func (s *server) decide(w http.ResponseWriter, r *http.Request) {
 	default:
 		codeErr(w, http.StatusBadRequest, "invalid", "scope must be once, session or project")
 		return
+	}
+	// D3: "for every agent of the project" widens the permission beyond the approval's office: approvals:decide only
+	// (a responsible without it may only allow this same agent)
+	if body.AlwaysAllowAnyAgent && s.AuthEnabled {
+		if p, _ := auth.PrincipalFrom(r.Context()); !p.Can(auth.PermApprovalsDecide) {
+			codeErr(w, http.StatusForbidden, "forbidden", "allowing every agent of the project needs the approvals:decide permission")
+			return
+		}
 	}
 	if body.AlwaysAllow && (s.Standing == nil || !strings.EqualFold(body.Decision, "approve")) {
 		codeErr(w, http.StatusBadRequest, "invalid", "always_allow only applies when approving, and standing approvals must be enabled")

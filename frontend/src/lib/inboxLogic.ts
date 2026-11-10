@@ -8,7 +8,15 @@ export interface InboxItem extends Approval {
   counterargument?: InboxCounter | null; high_risk: boolean;
   /** E0 "my approvals": the reader asked for it / may decide it now (absent on older servers) */
   requested_by_me?: boolean; can_decide?: boolean;
+  /** D3: names of the responsibles of the agent's office, who decide it */
+  approvers?: string[];
 }
+/** D3: whether the reader may decide this item: the server's answer when it sent one (an office's approvals are its
+ * responsibles'), else the permission of the role (older servers, the demo). */
+export const itemDecidable = (it: Pick<InboxItem, "can_decide">, roleCan: boolean): boolean =>
+  typeof it.can_decide === "boolean" ? it.can_decide : roleCan;
+/** D3: who decides an item ("Decide: Ana, Luis"); "" when the server did not say. */
+export const decidersLine = (it: Pick<InboxItem, "approvers">): string => (it.approvers ?? []).filter(Boolean).join(", ");
 /** E0 filters of the inbox: everything, the ones I asked for, the ones I can decide. */
 export type InboxMine = "" | "requested" | "decidable";
 export interface InboxCounts { all: number; requested: number; decidable: number }

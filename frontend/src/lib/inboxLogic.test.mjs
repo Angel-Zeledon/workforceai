@@ -1,7 +1,16 @@
 // Unit tests of the fast approvals inbox rules (run: npm run test:unit).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { batchGroupOf, clampIndex, deckOf, keyToCommand, needsConfirm, swipeIntent } from "./inboxLogic.ts";
+import { batchGroupOf, clampIndex, decidersLine, deckOf, itemDecidable, keyToCommand, needsConfirm, swipeIntent } from "./inboxLogic.ts";
+
+test("D3: the server says who may decide each item; otherwise the role's permission", () => {
+  assert.equal(itemDecidable({ can_decide: true }, false), true); // an office's responsible without approvals:decide
+  assert.equal(itemDecidable({ can_decide: false }, true), false); // an admin outside the office
+  assert.equal(itemDecidable({}, true), true); // older servers and the demo
+  assert.equal(itemDecidable({}, false), false);
+  assert.equal(decidersLine({ approvers: ["Ana", "", "Luis"] }), "Ana, Luis");
+  assert.equal(decidersLine({}), "");
+});
 
 test("keyboard: A R J K E, case-insensitive, no modifiers", () => {
   assert.equal(keyToCommand({ key: "a" }), "approve");

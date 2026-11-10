@@ -314,8 +314,9 @@ type Member struct {
 type Recipients struct {
 	// Members lists the people of an organization with their roles.
 	Members func(ctx context.Context, org string) ([]Member, error)
-	// CanDecide reports whether a person may decide an approval now (role, no self-approval, double approval).
-	CanDecide func(ap domain.Approval, userID, role string) bool
+	// CanDecide reports whether a person may decide an approval now (role, no self-approval, double approval and,
+	// D3, the office rule: an office's approvals go to its responsibles).
+	CanDecide func(ctx context.Context, org string, ap domain.Approval, userID, role string) bool
 }
 
 // approvers are the people who may decide ap (scoped=false: no identity store, notify everyone).
@@ -328,7 +329,7 @@ func (r *Recipients) approvers(ctx context.Context, org string, ap domain.Approv
 		return nil, true // fail closed: nobody rather than everybody
 	}
 	for _, m := range ms {
-		if r.CanDecide(ap, m.UserID, m.Role) {
+		if r.CanDecide(ctx, org, ap, m.UserID, m.Role) {
 			users = append(users, m.UserID)
 		}
 	}

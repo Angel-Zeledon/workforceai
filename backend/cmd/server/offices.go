@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/infrastructure/postgres"
 	"aiworkforce/backend/internal/memory"
+	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/offices"
 	"aiworkforce/backend/internal/orgchart"
 )
@@ -117,4 +119,45 @@ func officeRecall(m *memory.Service, svc *offices.Service) {
 		}
 		return out
 	})
+}
+
+// wireApprovers installs the D3 approval rule (equipos-oficinas.md §4.2): an approval of an office's agent goes to the
+// responsibles of that office (the admins when it has none), and whoever does not see the agent's work does not see
+// its approvals. The e-mail notice also goes to those responsibles. Without authentication there are no people, so
+// nothing changes.
+func wireApprovers(orch *application.Orchestrator, notifySvc *notify.Service, svc *offices.Service, authStore auth.Store, authOn bool) {
+	if !authOn || svc == nil || authStore == nil {
+		return
+	}
+	pol := offices.ApprovalPolicy{Svc: svc, Roles: func(ctx context.Context, org string) (map[string]string, error) {
+		ms, err := authStore.ListMembers(ctx, org)
+		out := make(map[string]string, len(ms))
+		for _, m := range ms {
+			out[m.UserID] = string(m.Role)
+		}
+		return out, err
+	}}
+	orch.SetApproverPolicy(pol)
+	if notifySvc != nil {
+		notifySvc.Approvers = func(ctx context.Context, org string, ap domain.Approval) (notify.ApprovalAudience, error) {
+			o, ok, ids, err := pol.Audience(ctx, org, ap)
+			if err != nil || !ok {
+				return notify.ApprovalAudience{}, err
+			}
+			aud := notify.ApprovalAudience{Office: true, Private: o.Visibility == offices.Private}
+			if len(ids) == 0 {
+				return aud, nil
+			}
+			ms, err := authStore.ListMembers(ctx, org)
+			if err != nil {
+				return aud, err
+			}
+			for _, m := range ms {
+				if m.Email != "" && slices.Contains(ids, m.UserID) {
+					aud.Emails = append(aud.Emails, m.Email)
+				}
+			}
+			return aud, nil
+		}
+	}
 }

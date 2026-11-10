@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/projects"
 )
 
@@ -55,9 +56,9 @@ func (s *server) mountProjects(r chi.Router) {
 	r.With(s.can(auth.PermRequestsCreate)).Post("/project-batches", s.createBatch)
 	r.With(s.can(auth.PermTasksRead)).Get("/project-batches", s.listBatches)
 	r.With(s.can(auth.PermTasksRead)).Get("/project-batches/{id}", s.getBatch)
-	r.With(s.can(auth.PermTasksManage)).Post("/project-batches/{id}/control", s.controlBatch)
-	r.With(s.can(auth.PermTasksManage)).Post("/project-batches/{id}/customers/{customerId}/cancel", s.cancelBatchCustomer)
-	r.With(s.can(auth.PermTasksManage)).Post("/project-batches/{id}/retry-failed", s.retryBatchFailed)
+	r.With(s.can(auth.PermTasksManage), s.workBatch).Post("/project-batches/{id}/control", s.controlBatch)
+	r.With(s.can(auth.PermTasksManage), s.workBatch).Post("/project-batches/{id}/customers/{customerId}/cancel", s.cancelBatchCustomer)
+	r.With(s.can(auth.PermTasksManage), s.workBatch).Post("/project-batches/{id}/retry-failed", s.retryBatchFailed)
 	r.With(s.can(auth.PermTasksRead)).Get("/project-templates", s.listProjectTemplates)
 	// Customizable work templates (G2): members create and edit, admins delete.
 	r.With(s.can(auth.PermRequestsCreate)).Post("/project-templates", s.createProjectTemplate)
@@ -134,6 +135,7 @@ func (s *server) getProject(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, notFound("project", d.Project.ID))
 		return
 	}
+	s.projectDeciders(r, d.Approvals) // D3: who may decide each pending one
 	writeJSON(w, 200, d)
 }
 
@@ -164,6 +166,7 @@ func (s *server) projectApprovals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v = slices.DeleteFunc(v, func(a projects.Approval) bool { return a.AgentID != nil && !ws.agent(*a.AgentID) }) // D3
+	s.projectDeciders(r, v)
 	writeJSON(w, 200, list(v))
 }
 
@@ -335,6 +338,20 @@ func (s *server) decideApprovalsBatch(w http.ResponseWriter, r *http.Request) {
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
 		return
+	}
+	// D3: the same rule as /projects/{id}: a project of hidden work answers like a missing one, and the approvals of
+	// agents the person does not see are neither counted nor decided
+	pv, ok, err := s.projectView(r, body.Filter.ProjectID)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if ok && pv.all {
+		s.fail(w, notFound("project", body.Filter.ProjectID))
+		return
+	}
+	if !pv.ws.open() {
+		body.Visible = func(a domain.Approval) bool { return pv.ws.agent(a.AgentID) }
 	}
 	res, err := s.Projects.DecideBatch(r.Context(), body)
 	if err != nil {

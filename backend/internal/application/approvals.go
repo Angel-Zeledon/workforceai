@@ -3,8 +3,10 @@ package application
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"aiworkforce/backend/internal/domain"
@@ -24,6 +26,93 @@ type Approvals struct {
 	decideMu sync.Mutex
 	// Observer (optional) is told about rejected approvals (anomaly detection).
 	Observer AnomalyObserver
+	// policy (optional, D3) narrows who decides and who sees an approval by the office of its agent.
+	policy atomic.Pointer[approverBox]
+}
+
+type approverBox struct{ p ApproverPolicy }
+
+// ApproverPolicy (D3, equipos-oficinas.md §4.2) says who decides an approval and who sees it, by the office of its
+// agent: the approvals of an office with a responsible are its responsibles' (the admins' when it has none); an
+// agent of General keeps today's rules; whoever does not see the agent's work does not see its approvals either.
+// It only narrows: the rules of Decide (minimum role, no self-approval, double approval, agents never decide) still
+// apply on top. userID is a person (PersonID).
+type ApproverPolicy interface {
+	// CanDecide reports whether the office rule lets the person decide a (true for an agent of General).
+	CanDecide(ctx context.Context, org, userID string, a domain.Approval) (bool, error)
+	// Sees reports whether the person sees a (the work of its agent; false when it cannot be told).
+	Sees(ctx context.Context, org, userID string, a domain.Approval) bool
+	// Approvers returns the people who decide a by the office rule; none means today's rules (General, or nobody of
+	// the office may: the admins who see the work).
+	Approvers(ctx context.Context, org string, a domain.Approval) []string
+}
+
+// SetPolicy installs the approver policy (before serving).
+func (a *Approvals) SetPolicy(p ApproverPolicy) { a.policy.Store(&approverBox{p}) }
+
+// Policy returns the approver policy (nil: today's rules only).
+func (a *Approvals) Policy() ApproverPolicy {
+	if a == nil {
+		return nil
+	}
+	if b := a.policy.Load(); b != nil {
+		return b.p
+	}
+	return nil
+}
+
+// SetApproverPolicy installs the D3 approver policy on the orchestrator's approvals.
+func (o *Orchestrator) SetApproverPolicy(p ApproverPolicy) { o.approvals.SetPolicy(p) }
+
+// Responsible reports whether the person is one of the responsibles who decide ap by the office rule: they decide it
+// without the approvals:decide permission of their role.
+func (a *Approvals) Responsible(ctx context.Context, userID string, ap domain.Approval) bool {
+	p := a.Policy()
+	if p == nil || PersonID(userID) == "" {
+		return false
+	}
+	return slices.Contains(p.Approvers(ctx, a.org(ctx), ap), userID)
+}
+
+// DecidesApproval is CanDecideApproval plus the office rule of p (nil: today's rules): the person must see the
+// approval and be let by the rule, and a responsible of the office decides without approvals:decide.
+func DecidesApproval(ctx context.Context, p ApproverPolicy, org string, ap domain.Approval, userID, role string, hasDecide bool) bool {
+	if p == nil || PersonID(userID) == "" {
+		return CanDecideApproval(ap, userID, role, hasDecide)
+	}
+	if !p.Sees(ctx, org, userID, ap) {
+		return false
+	}
+	if ok, err := p.CanDecide(ctx, org, userID, ap); err != nil || !ok {
+		return false
+	}
+	if slices.Contains(p.Approvers(ctx, org, ap), userID) {
+		hasDecide = true
+	}
+	return CanDecideApproval(ap, userID, role, hasDecide)
+}
+
+// officeRule applies the approver policy to a person deciding: a hidden approval answers like a missing one, and
+// outside the responsibles of its office the decision is refused (audited). Non-person actors (signed links, the
+// system) keep today's rules: links are only sent where the rule allows (notify).
+func (a *Approvals) officeRule(ctx context.Context, ap domain.Approval, actor string) error {
+	person, pol := PersonID(actor), a.Policy()
+	if pol == nil || person == "" {
+		return nil
+	}
+	org := a.org(ctx)
+	if !pol.Sees(ctx, org, person, ap) {
+		return fmt.Errorf("%w: approval %s", domain.ErrNotFound, ap.ID)
+	}
+	ok, err := pol.CanDecide(ctx, org, person, ap)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		a.deny(ctx, ap, actor, "not_office_responsible")
+		return fmt.Errorf("%w: the responsible of the agent's office decides this approval", domain.ErrForbidden)
+	}
+	return nil
 }
 
 func NewApprovals(cfg Config, store Store, rec *Recorder) *Approvals {
@@ -119,6 +208,13 @@ func (a *Approvals) Deadline(ap domain.Approval) time.Time {
 // guarded will be asked again (its task restarts from scratch after a restart).
 func (a *Approvals) Supersede(ctx context.Context, id, note string) (domain.Approval, error) {
 	return a.resolve(ctx, id, domain.ApprovalRejected, note, "system")
+}
+
+// Withdraw rejects a pending approval because the work it guarded was cancelled (a cancelled project). It is not a
+// human decision, so none of Decide's rules apply (D3: whoever cancels need not be the responsible of the approval's
+// office); the audit names who cancelled.
+func (a *Approvals) Withdraw(ctx context.Context, id, note string) (domain.Approval, error) {
+	return a.resolve(ctx, id, domain.ApprovalRejected, note, ActorFrom(ctx, "system"))
 }
 
 // Wait blocks until the approval is resolved, the timeout expires (auto-reject)
@@ -261,6 +357,10 @@ func (a *Approvals) Decide(ctx context.Context, id, decision, note string) (doma
 	ap, err := a.store.GetApproval(ctx, a.org(ctx), id)
 	if err != nil {
 		return ap, err
+	}
+	// D3: the office rule first, so a hidden approval answers like a missing one whatever its state
+	if err := a.officeRule(ctx, ap, actor); err != nil {
+		return domain.Approval{}, err
 	}
 	if ap.Status != domain.ApprovalPending {
 		return ap, fmt.Errorf("%w: approval already %s", domain.ErrConflict, ap.Status)

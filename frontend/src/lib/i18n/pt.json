@@ -6224,6 +6224,7 @@
   "approvalInbox.filter.label": "Mostrar:",
   "approvalInbox.filter.all": "Tudo",
   "approvalInbox.filter.email": "E-mails para aprovar",
+  "approvalInbox.decidedBy": "Decide: {names}",
   "ctl.outbox.waiting_one": "{count} e-mail espera a sua aprovação.",
   "ctl.outbox.waiting_other": "{count} e-mails esperam a sua aprovação.",
   "ctl.outbox.moved": "Agora são revistos em Pendências, junto com tudo o que espera a sua decisão.",

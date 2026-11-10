@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useCan } from "@/lib/session";
+import { decidersLine, itemDecidable } from "@/lib/inboxLogic";
 import { explainNode, fmtDuration, isDoneState } from "@/lib/projects/calc";
 import { useProjects } from "@/lib/projects/store";
 import { Btn } from "../ui";
@@ -106,8 +107,8 @@ export function NodeDrawer() {
         {approval && (
           <div className="rounded-xl border border-line bg-panel2 p-2">
             <div className="text-[11px] font-semibold text-ink">{approval.title}</div>
-            {canDecide ? <div className="mt-2 flex gap-2"><Btn kind="ok" onClick={() => decide(approval.id, "approve")}>{t("pv.approve")}</Btn><Btn kind="danger" onClick={() => decide(approval.id, "reject")}>{t("pv.reject")}</Btn></div>
-              : <div className="mt-1 text-[11px] text-mute">{t("approvals.noPermission")}</div>}
+            {itemDecidable(approval, canDecide) ? <div className="mt-2 flex gap-2"><Btn kind="ok" onClick={() => decide(approval.id, "approve")}>{t("pv.approve")}</Btn><Btn kind="danger" onClick={() => decide(approval.id, "reject")}>{t("pv.reject")}</Btn></div>
+              : <div className="mt-1 text-[11px] text-mute">{decidersLine(approval) ? t("approvalInbox.decidedBy", { names: decidersLine(approval) }) : t("approvals.noPermission")}</div>}
           </div>
         )}
         {headline && (

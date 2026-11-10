@@ -1,6 +1,7 @@
 "use client";
 import { fmtNumber, fmtTime, useT } from "@/lib/i18n";
 import { useCan } from "@/lib/session";
+import { decidersLine, itemDecidable } from "@/lib/inboxLogic";
 import { fmtDuration, isDoneState } from "@/lib/projects/calc";
 import { useProjects } from "@/lib/projects/store";
 import { Btn, Card, Empty, Progress, RiskBadge, useAgentName } from "../ui";
@@ -91,12 +92,12 @@ export function HealthView() {
                     <RiskBadge risk={a.risk} />
                   </div>
                   <div className="mt-0.5 text-[11px] text-mute">{a.details}</div>
-                  {canDecide ? (
+                  {itemDecidable(a, canDecide) ? (
                     <div className="mt-2 flex gap-2">
                       <Btn kind="ok" onClick={() => decide(a.id, "approve")}>{t("pv.approve")}</Btn>
                       <Btn kind="danger" onClick={() => decide(a.id, "reject")}>{t("pv.reject")}</Btn>
                     </div>
-                  ) : <div className="mt-1 text-[11px] text-mute">{t("approvals.noPermission")}</div>}
+                  ) : <div className="mt-1 text-[11px] text-mute">{decidersLine(a) ? t("approvalInbox.decidedBy", { names: decidersLine(a) }) : t("approvals.noPermission")}</div>}
                 </div>
               ))}
             </div>
