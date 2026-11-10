@@ -247,7 +247,14 @@ func (h *ChatHistory) Threads(ctx context.Context) ([]ChatThread, error) {
 			noShared = append(noShared, a.ID)
 		}
 	}
-	return h.Store.ChatThreads(ctx, org, PersonFrom(ctx), ids, noShared)
+	ts, err := h.Store.ChatThreads(ctx, org, PersonFrom(ctx), ids, noShared)
+	for i := range ts {
+		// D3: a preview never quotes an agent whose work the person does not see (its reply in the office chat)
+		if IsAgentActor(ts[i].PreviewFrom) && !WorkVisible(ctx, ts[i].PreviewFrom) {
+			ts[i].Preview, ts[i].PreviewFrom = "", ""
+		}
+	}
+	return ts, err
 }
 
 func (h *ChatHistory) checkThread(ctx context.Context, key string) error {
@@ -275,6 +282,8 @@ func (h *ChatHistory) Thread(ctx context.Context, q ChatThreadQuery) ([]ChatMess
 	if err != nil {
 		return nil, false, err
 	}
+	// D3: in a shared chat, what a private office's agent said or was told is that office's (sealed live too)
+	msgs = slices.DeleteFunc(msgs, func(m ChatMessage) bool { return !SharedMessageVisible(ctx, m.Message) })
 	plain := make([]domain.Message, len(msgs))
 	for i := range msgs {
 		plain[i] = msgs[i].Message

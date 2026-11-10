@@ -1,4 +1,6 @@
-package main
+// Package officeaudience is the recorder's audience rule of D3 (equipos-oficinas.md §4.1): the live events about the
+// work of a private office reach its members only.
+package officeaudience
 
 import (
 	"context"
@@ -14,25 +16,27 @@ import (
 // everybody (an admin sees every agent, the directory lists them).
 var unscopedEvents = map[string]bool{domain.EvAgentCreated: true, domain.EvMetricsUpdated: true, domain.EvHello: true}
 
-// officeAudience (D3, equipos-oficinas.md §4.1) is the recorder's AudienceFor: a live event about the work of an
-// agent of a private office (the event's agent, or the agent of the task, request, approval or conversation it
-// names) reaches only the members of that office, admins included only as members, plus whoever asked for the
-// request it belongs to (they always see their request). The work of agents of several private offices needs
-// membership of all of them (the rule of GET /requests). Everything else reaches the whole organization as before.
-// An unreadable offices model fails closed: the event reaches nobody.
-func officeAudience(svc *offices.Service, store application.Store, requestedBy func(ctx context.Context, org, requestID string) string,
+// New returns the recorder's AudienceFor: a live event about the work of an agent of a private office (the event's
+// agent, or the agent of the task, request, approval or conversation it names) reaches only the members of that
+// office, admins included only as members, plus whoever asked for the request it belongs to (they always see their
+// request: the person in the event's context, or the request's run meta through requestedBy). The work of agents of
+// several private offices needs membership of all of them (the rule of GET /requests). The audience's Agent is the
+// private agent that sealed the event (the first in id order), so its activity line is filed under it. Everything else
+// reaches the whole organization as before. An unreadable offices model fails closed: the event reaches nobody and
+// keeps no activity line.
+func New(svc *offices.Service, store application.Store, requestedBy func(ctx context.Context, org, requestID string) string,
 	log *slog.Logger) application.AudienceFunc {
-	return func(ctx context.Context, org string, ev domain.Event) ([]string, bool) {
+	return func(ctx context.Context, org string, ev domain.Event) (application.Audience, bool) {
 		if svc == nil || unscopedEvents[ev.Type] {
-			return nil, false
+			return application.Audience{}, false
 		}
 		m, err := svc.Model(ctx, org)
 		if err != nil {
 			log.Warn("event audience: offices model", "type", ev.Type, "err", err)
-			return nil, true
+			return application.Audience{}, true
 		}
 		if !hasPrivateOffice(m) {
-			return nil, false
+			return application.Audience{}, false
 		}
 		refs := application.RefsOf(ctx, ev)
 		ctx = application.WithOrg(ctx, org)
@@ -59,7 +63,7 @@ func officeAudience(svc *offices.Service, store application.Store, requestedBy f
 				}
 			}
 		}
-		var members []string
+		var aud application.Audience
 		sealed := false
 		seen := map[string]bool{}
 		for _, a := range uniqueIDs(agents) {
@@ -69,15 +73,16 @@ func officeAudience(svc *offices.Service, store application.Store, requestedBy f
 			}
 			seen[o.ID] = true
 			if !sealed {
-				members, sealed = slices.Clone(o.Members), true
+				aud, sealed = application.Audience{Users: slices.Clone(o.Members), Agent: a}, true
 				continue
 			}
-			members = slices.DeleteFunc(members, func(u string) bool { return !slices.Contains(o.Members, u) })
+			aud.Users = slices.DeleteFunc(aud.Users, func(u string) bool { return !slices.Contains(o.Members, u) })
 		}
 		if !sealed {
-			return nil, false
+			return application.Audience{}, false
 		}
-		return uniqueIDs(append(members, people...)), true
+		aud.Users = uniqueIDs(append(aud.Users, people...))
+		return aud, true
 	}
 }
 

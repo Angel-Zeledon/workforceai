@@ -200,9 +200,10 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	}
 	rs.customer = CustomerFrom(ctx)
 	// D3: until its plan exists, the request is the work of the agents it was addressed to (its chat, a preset plan),
-	// so its live events reach whoever may see their work (Recorder.SetAudienceFor).
-	addressed := addressedAgents(rs)
-	ctx = WithWorkAgents(ctx, addressed...)
+	// so its live events reach whoever may see their work (Recorder.SetAudienceFor); and whoever asked for it always
+	// receives them, from the first one (the run meta that also says it is saved later).
+	addressed, asker := addressedAgents(rs), PersonID(rs.requestedBy)
+	ctx = WithWorkPeople(WithWorkAgents(ctx, addressed...), asker)
 	o.rec.Emit(ctx, Action{Type: domain.EvRequestReceived, Entity: "request", EntityID: req.ID,
 		Payload: received, Text: "Nuevo pedido: " + truncate(text, 100)})
 	o.sendMessage(ctx, rs, "user", assistantID, "chat", text, nil)
@@ -215,7 +216,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	rctx := WithRequestID(WithOrg(o.base, o.org(ctx)), req.ID)
 	rctx = WithCustomer(rctx, rs.customer)               // B12: the run works for this customer (tools re-resolve it from the request id)
 	rctx = WithWorkPriority(rctx, WorkPriorityFrom(ctx)) // queue priority (orgqueue.go)
-	rctx = WithWorkAgents(rctx, addressed...)            // D3: who receives its live events
+	rctx = WithWorkPeople(WithWorkAgents(rctx, addressed...), asker) // D3: who receives its live events
 	o.track(req.ID)
 	o.wg.Add(1)
 	go func() {

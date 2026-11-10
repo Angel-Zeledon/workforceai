@@ -56,13 +56,14 @@ func TestRecorderScopedEvents(t *testing.T) {
 	ctx := application.WithOrg(context.Background(), "org1")
 	st, pub := memory.New(), &capturePub{}
 	rec := &application.Recorder{OrgID: "org1", Store: st, Pub: pub, Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
-	aud := map[string][]string{"a-priv": {"u-pri"}, "a-empty": nil}
-	rec.SetAudienceFor(func(_ context.Context, org string, ev domain.Event) ([]string, bool) {
+	aud := map[string]application.Audience{"a-priv": {Users: []string{"u-pri"}, Agent: "a-priv"}, "a-empty": {Agent: "a-empty"},
+		"assistant": {Users: []string{"u-pri"}, Agent: "a-priv"}, "a-unknown": {}}
+	rec.SetAudienceFor(func(_ context.Context, org string, ev domain.Event) (application.Audience, bool) {
 		if org != "org1" {
 			t.Errorf("org %q", org)
 		}
-		u, ok := aud[ev.AgentID]
-		return u, ok
+		a, ok := aud[ev.AgentID]
+		return a, ok
 	})
 	rec.Emit(ctx, application.Action{Type: domain.EvTaskStarted, AgentID: "a-priv", Text: "empieza"})
 	rec.Emit(ctx, application.Action{Type: domain.EvTaskStarted, AgentID: "a-empty", Text: "empieza"})
@@ -90,6 +91,13 @@ func TestRecorderScopedEvents(t *testing.T) {
 	items, _ := st.ListActivity(ctx, "org1", "", 10)
 	if len(items) != 4 {
 		t.Errorf("every activity line is kept: %d", len(items))
+	}
+	// the line of a sealed event is filed under the agent that sealed it; without one (unknown) it is not kept
+	rec.Emit(ctx, application.Action{Type: domain.EvReportCreated, AgentID: "assistant", Text: "informe"})
+	rec.Emit(ctx, application.Action{Type: domain.EvTaskStarted, AgentID: "a-unknown", Text: "nada"})
+	items, _ = st.ListActivity(ctx, "org1", "", 10)
+	if len(items) != 5 || items[0].AgentID == nil || *items[0].AgentID != "a-priv" || items[0].Text != "informe" {
+		t.Errorf("sealed lines: %+v", items)
 	}
 	rec.SetAudienceFor(nil)
 	rec.Emit(ctx, application.Action{Type: domain.EvTaskStarted, AgentID: "a-priv"})

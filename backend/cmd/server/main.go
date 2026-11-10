@@ -28,6 +28,7 @@ import (
 	"aiworkforce/backend/internal/infrastructure/runtime"
 	"aiworkforce/backend/internal/mailer"
 	"aiworkforce/backend/internal/notify"
+	"aiworkforce/backend/internal/officeaudience"
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
@@ -386,8 +387,8 @@ func run(log *slog.Logger) error {
 		// agents work in their office folder and never beyond the person they work for
 		ws.drive.SetAgentOffices(agentOffices{svc: deps.Offices})
 	}
-	if cfg.AuthEnabled && deps.Offices != nil { // D3 (event_audience.go): a private office's live events reach its members only
-		rec.SetAudienceFor(officeAudience(deps.Offices, store, func(c context.Context, org, id string) string {
+	if cfg.AuthEnabled && deps.Offices != nil { // D3 (internal/officeaudience): a private office's live events reach its members only
+		rec.SetAudienceFor(officeaudience.New(deps.Offices, store, func(c context.Context, org, id string) string {
 			return orch.RequestedBy(application.WithOrg(c, org), id)
 		}, log))
 	}

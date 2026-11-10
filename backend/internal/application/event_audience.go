@@ -8,10 +8,18 @@ import (
 	"aiworkforce/backend/internal/domain"
 )
 
+// Audience is who may receive a scoped live event: Users, and Agent, the agent of the private office whose work
+// sealed it. The event's activity line is kept under Agent, so GET /activity shows it to whoever sees that agent's
+// work only; without an Agent (the rule could not tell) the line is not kept.
+type Audience struct {
+	Users []string
+	Agent string
+}
+
 // AudienceFunc (D3, equipos-oficinas.md §4.1) says who may receive a live event that names no audience of its own.
-// scoped=false: the whole organization (as before). scoped=true: only users (possibly none); such an event is kept
-// out of the organization's event log, while its activity line is kept (GET /activity filters it per person).
-type AudienceFunc func(ctx context.Context, org string, ev domain.Event) (users []string, scoped bool)
+// scoped=false: the whole organization (as before). scoped=true: only aud.Users (possibly none); such an event is
+// kept out of the organization's event log, while its activity line is kept under aud.Agent.
+type AudienceFunc func(ctx context.Context, org string, ev domain.Event) (aud Audience, scoped bool)
 
 // nobody is the audience of a scoped event no one may receive: an id no socket has, so the hub delivers it to no
 // one (an empty audience would mean the whole organization) while the observers of the bus still see the event.
@@ -27,20 +35,37 @@ func (r *Recorder) SetAudienceFor(fn AudienceFunc) {
 	r.audienceFor.Store(&fn)
 }
 
-// scope applies the installed AudienceFunc to ev.
-func (r *Recorder) scope(ctx context.Context, ev domain.Event) ([]string, bool) {
+// scope applies the installed AudienceFunc to ev; a scoped audience is never empty (nobody).
+func (r *Recorder) scope(ctx context.Context, ev domain.Event) (Audience, bool) {
 	fn := r.audienceFor.Load()
 	if fn == nil {
-		return nil, false
+		return Audience{}, false
 	}
-	users, scoped := (*fn)(ctx, ev.OrgID, ev)
+	aud, scoped := (*fn)(ctx, ev.OrgID, ev)
 	if !scoped {
-		return nil, false
+		return Audience{}, false
 	}
-	if len(users) == 0 {
-		return []string{nobody}, true
+	if len(aud.Users) == 0 {
+		aud.Users = []string{nobody}
 	}
-	return users, true
+	return aud, true
+}
+
+type workPeopleKey struct{}
+
+// WithWorkPeople marks the people the events emitted under ctx are for (whoever asked for the request), so they
+// receive them even when they are not members of the private office whose work it is.
+func WithWorkPeople(ctx context.Context, people ...string) context.Context {
+	people = slices.DeleteFunc(slices.Clone(people), func(p string) bool { return p == "" })
+	if len(people) == 0 {
+		return ctx
+	}
+	return context.WithValue(ctx, workPeopleKey{}, append(slices.Clone(workPeopleFrom(ctx)), people...))
+}
+
+func workPeopleFrom(ctx context.Context) []string {
+	p, _ := ctx.Value(workPeopleKey{}).([]string)
+	return p
 }
 
 type workAgentsKey struct{}
@@ -99,6 +124,7 @@ func RefsOf(ctx context.Context, ev domain.Event) EventRefs {
 		r.Agents = append(r.Agents, ev.AgentID)
 	}
 	r.Agents = append(r.Agents, WorkAgentsFrom(ctx)...)
+	r.People = append(r.People, workPeopleFrom(ctx)...)
 	if ev.Payload != nil {
 		if raw, err := json.Marshal(ev.Payload); err == nil {
 			var v any
