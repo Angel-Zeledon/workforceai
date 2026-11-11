@@ -350,6 +350,22 @@ func TestPrivateOfficeConnectionEventsReachOnlyMembers(t *testing.T) {
 		}
 	}
 
+	// The lifecycle events (connections.Service: status_changed, tested, revoked, rotated) name the office at the top.
+	for _, typ := range []string{"connection.status_changed", "connection.tested", "connection.revoked", "connection.rotated"} {
+		f.rec.Emit(f.ctx, application.Action{Type: typ, Payload: map[string]any{"connection_id": "cn-1", "office_id": "d-priv", "from": "active", "to": "suspended"}})
+	}
+	got = f.got()
+	for _, typ := range []string{"connection.status_changed", "connection.tested", "connection.revoked", "connection.rotated"} {
+		if !slices.Contains(got["u-pri"], typ) {
+			t.Errorf("the member must receive %s: %v", typ, got["u-pri"])
+		}
+		for _, u := range []string{"u-boss", "u-ana", "u-eve"} {
+			if slices.Contains(got[u], typ) {
+				t.Errorf("%s (not a member) received %s", u, typ)
+			}
+		}
+	}
+
 	f.rec.Emit(f.ctx, application.Action{Type: "connection.updated",
 		Payload: map[string]any{"connection": map[string]any{"id": "cn-2", "label": "Correo", "office_id": "general"}}})
 	got = f.got()
