@@ -75,6 +75,16 @@ func (ws *workScope) seesDebate(d domain.Debate) bool {
 	return true
 }
 
+// firstN keeps the first n items (all of them when n <= 0). The listings that take a limit but no cursor read a wider
+// window when something may be left out, leave it out and then cut at the limit, so the page the person asked for
+// stays full (D3).
+func firstN[T any](v []T, n int) []T {
+	if n > 0 && len(v) > n {
+		return v[:n]
+	}
+	return v
+}
+
 // agentOK reports whether an optional agent id ("" = none) is one whose work the person sees.
 func (ws *workScope) agentOK(id string) bool { return id == "" || ws.agent(id) }
 

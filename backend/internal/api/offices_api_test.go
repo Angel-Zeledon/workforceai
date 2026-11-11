@@ -13,9 +13,16 @@ import (
 )
 
 // withOffices mounts the E2 offices over the org chart and the auth members of the caller's organization.
-func withOffices(d *api.Deps) {
+func withOffices(d *api.Deps) { withOfficesAs(d, nil) }
+
+// withOfficesAs is withOffices reading the people as reader when the request has no person (the public API's token;
+// the server reads them by organization).
+func withOfficesAs(d *api.Deps, reader func() auth.Principal) {
 	members := func(ctx context.Context) ([]auth.Member, error) {
-		p, _ := auth.PrincipalFrom(ctx)
+		p, ok := auth.PrincipalFrom(ctx)
+		if !ok && reader != nil {
+			p = reader()
+		}
 		return d.Auth.ListMembers(ctx, p)
 	}
 	d.OrgChart.People = func(ctx context.Context, _ string) ([]orgchart.Person, error) {

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"net/http"
 	"slices"
 	"strconv"
@@ -64,19 +65,33 @@ func (s *server) scanInitiatives(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) listInitiatives(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	v, err := s.Initiative.List(r.Context(), application.InitiativeStatus(r.URL.Query().Get("status")), limit)
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
 	ws := s.work(r)
 	if err := ws.load(); err != nil {
 		s.fail(w, err)
 		return
 	}
+	read := limit
+	if !ws.open() {
+		read = max(limit, initiativeListWindow) // D3: room for what is left out, cut at the limit after
+	}
+	v, err := s.Initiative.List(r.Context(), application.InitiativeStatus(r.URL.Query().Get("status")), read)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
 	v = slices.DeleteFunc(v, func(it application.Initiative) bool { return !ws.agentOK(it.AgentID) })
+	if !ws.open() {
+		v = firstN(v, cmp.Or(max(limit, 0), initiativeListDefault))
+	}
 	writeJSON(w, http.StatusOK, list(v))
 }
+
+// initiativeListDefault is the stores' page of initiatives when no limit is given; initiativeListWindow the window
+// read when some may be left out.
+const (
+	initiativeListDefault = 100
+	initiativeListWindow  = 500
+)
 
 func (s *server) acceptInitiative(w http.ResponseWriter, r *http.Request) {
 	v, err := s.Initiative.Accept(r.Context(), chi.URLParam(r, "id"))

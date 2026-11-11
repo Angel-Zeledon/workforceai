@@ -18,7 +18,7 @@ func TestRedactProject(t *testing.T) {
 	d := projects.Detail{
 		Nodes: []projects.Node{
 			{ID: "n1", Title: "contrato secreto", AgentID: ptr("legal"), State: "done", Error: ptr("cláusula secreta"),
-				Files: []string{"/Offices/Legal/x.md"}, TaskID: "t-legal", DelegationChain: []string{"legal"}},
+				Files: []string{"/Offices/Legal/x.md"}, TaskID: "t-legal", DelegationChain: []string{"legal"}, ApprovalAction: "firmar_secreto"},
 			{ID: "n2", Title: "cotización", AgentID: ptr("sales"), State: "running"},
 			{ID: "root", Title: "Proyecto", Kind: "objective"},
 		},

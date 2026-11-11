@@ -20,6 +20,7 @@ type privateWork struct {
 	e         *env
 	owner     *auth.Session
 	ana, beto string
+	dep       string // the department (and office) Legal
 }
 
 func newPrivateWork(t *testing.T, more ...func(*opts)) *privateWork {
@@ -41,6 +42,7 @@ func newPrivateWork(t *testing.T, more ...func(*opts)) *privateWork {
 	anaID := e.userID(p.ana)
 	dep := e.json("POST", api1+"/org/departments", owner.AccessToken, map[string]any{"name": "Legal", "head": map[string]any{"kind": "person", "id": anaID}}, 201)
 	depID := dep["id"].(string)
+	p.dep = depID
 	e.json("PUT", api1+"/agents/legal/job", owner.AccessToken, map[string]any{"department_id": depID}, 200)
 	e.json("POST", api1+"/offices", owner.AccessToken, map[string]any{"department_id": depID, "visibility": "private"}, 201)
 

@@ -78,8 +78,15 @@ func (s *server) skillFail(w http.ResponseWriter, err error) {
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, status, map[string]string{"code": skills.CodeOf(err), "error": err.Error()})
+	code, msg := skills.CodeOf(err), err.Error()
+	if code == "name_taken" {
+		msg = nameTakenMsg // D3: the same answer whoever holds the name (a private department's skill is not revealed)
+	}
+	writeJSON(w, status, map[string]string{"code": code, "error": msg})
 }
+
+// nameTakenMsg is the answer to a skill name already in use, whatever skill holds it.
+const nameTakenMsg = "that skill name is already in use; pick another one"
 
 func (s *server) listSkills(w http.ResponseWriter, r *http.Request) {
 	l, err := s.Skills.List(r.Context(), s.skillActor(r))

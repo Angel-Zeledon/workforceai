@@ -85,7 +85,7 @@ func (s *server) listProjects(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	if !ws.open() { // D3: a project that is only a private office's work is left out (work_projects.go)
+	if !ws.open() && ws.hidesAny() { // D3: a project that is only a private office's work is left out (work_projects.go)
 		out := v[:0]
 		for _, p := range v {
 			d, err := s.Projects.Get(r.Context(), p.ID)
@@ -584,13 +584,48 @@ func (s *server) listBatches(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.open() && ws.hidesAny() { // D3: a batch that is only a private department's work is left out
+		out := list[:0]
+		for _, b := range list {
+			v, err := s.Projects.BatchView(r.Context(), b.ID)
+			if err != nil {
+				s.fail(w, err)
+				return
+			}
+			ok, err := s.batchVisible(r, ws, &v)
+			if err != nil {
+				s.fail(w, err)
+				return
+			}
+			if ok {
+				out = append(out, b)
+			}
+		}
+		list = out
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": list})
 }
 
 func (s *server) getBatch(w http.ResponseWriter, r *http.Request) {
-	v, err := s.Projects.BatchView(r.Context(), chi.URLParam(r, "id"))
+	id := chi.URLParam(r, "id")
+	v, err := s.Projects.BatchView(r.Context(), id)
 	if err != nil {
 		s.fail(w, err)
+		return
+	}
+	ws := s.work(r)
+	ok, err := s.batchVisible(r, ws, &v)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ok {
+		s.fail(w, notFound("batch", id))
 		return
 	}
 	writeJSON(w, http.StatusOK, v)

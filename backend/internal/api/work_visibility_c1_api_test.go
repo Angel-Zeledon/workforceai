@@ -30,6 +30,7 @@ type sealedWork struct {
 	projects map[string]string // project id -> customer id (sealedCustomerWork)
 	artLegal string
 	artSales string
+	rituals  *rituals.MemStore
 }
 
 // sealedCustomerWork reads the requests of the store and the projects registered in the fixture.
@@ -104,7 +105,7 @@ func newSealedWork(t *testing.T) *sealedWork {
 			d.Customers.SetHistory(sealedHistory{store: d.Store, projects: &sw.projects})
 		}
 	})
-	sw.privateWork = p
+	sw.privateWork, sw.rituals = p, rs
 	sw.carla = p.e.member(p.owner, "carla-pw@example.com", auth.RoleViewer)
 	ctx, org, now := application.WithOrg(context.Background(), p.owner.OrgID), p.owner.OrgID, time.Now().UTC()
 	st := p.e.store
