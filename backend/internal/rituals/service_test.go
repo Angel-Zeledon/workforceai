@@ -595,3 +595,42 @@ func TestChatNoteLeavesOutPrivateDepartmentAgents(t *testing.T) {
 		t.Errorf("only public agents walk to the meeting room: %v", ids)
 	}
 }
+
+// failingProposals is a store whose proposals cannot be saved.
+type failingProposals struct{ rituals.Store }
+
+func (failingProposals) CreateProposals(context.Context, string, []rituals.Proposal) error {
+	return errors.New("db down")
+}
+
+// If the proposals cannot be saved, none exists: the summary, the chat note, the event and the audit must not count
+// them (the hidden ones of a private department included), and the ritual itself is still held.
+func TestRetroCountsNoProposalsWhenTheyCannotBeSaved(t *testing.T) {
+	e := newEnv(t, func(c *rituals.Config) {
+		c.Store = failingProposals{c.Store}
+		c.Public = func(_ context.Context, id string) bool { return id != "sales" } // sales is private
+	})
+	n := e.now
+	day := 24 * time.Hour
+	for i := 0; i < 3; i++ {
+		e.approval(fmt.Sprintf("rj%d", i), "sales", domain.ApprovalRejected, "importe incorrecto", ptr(n.Add(-time.Duration(i+1)*day)))
+	}
+	r, err := e.svc.RunNow(e.ctx(), rituals.KindRetro)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(r.Summary, " 0 propuestas") {
+		t.Errorf("summary counts proposals that were never saved: %q", r.Summary)
+	}
+	if got := e.events[0].Payload.(map[string]any)["proposals"]; got != 0 {
+		t.Errorf("event proposals = %v, want 0", got)
+	}
+	if len(e.notes) != 1 || strings.Contains(e.notes[0], " 1 propuesta") || strings.Contains(e.notes[0], " 2 propuestas") {
+		t.Errorf("chat note: %q", e.notes)
+	}
+	for _, a := range e.audits {
+		if a.Action == "ritual.held" && a.Details.(map[string]any)["proposals"] != 0 {
+			t.Errorf("audit proposals = %v", a.Details)
+		}
+	}
+}

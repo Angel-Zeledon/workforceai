@@ -333,6 +333,13 @@ func (s *Service) hold(ctx context.Context, org string, kind Kind, origin, perio
 	if len(proposals) > 0 {
 		if err := s.cfg.Store.CreateProposals(ctx, org, proposals); err != nil {
 			s.cfg.Log.Warn("rituals: store proposals", "org", org, "ritual", r.ID, "err", err)
+			// none was saved: the summary, the chat note, the event and the audit count none (the hidden ones of a
+			// private department included, which Redact could not tell apart without the saved list)
+			proposals = nil
+			r.Summary = deterministicSummary(r, 0, loc)
+			if err := s.cfg.Store.SetRitualSummary(ctx, org, r.ID, r.Summary, SummaryDeterministic); err != nil {
+				s.cfg.Log.Warn("rituals: store summary", "org", org, "ritual", r.ID, "err", err)
+			}
 		} else {
 			r.Proposals = proposals
 		}

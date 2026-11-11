@@ -3,6 +3,7 @@ package memory_test
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -40,4 +41,31 @@ func TestExtraRecallWithinBudget(t *testing.T) {
 			t.Fatal("a note over the budget is left out")
 		}
 	}
+}
+
+// SetExtraRecall is safe while tasks recall (like SetOfficeScope); `go test -race` checks it where cgo exists.
+func TestSetExtraRecallIsSafeWhileRecalling(t *testing.T) {
+	store := memory.NewMemStore()
+	svc := memory.New(memory.Config{Docs: store, Retriever: &memory.FTS{Docs: store}})
+	note := func(context.Context, string, string, string, string) []application.RecalledMemory {
+		return []application.RecalledMemory{{Ref: "team:n1", Kind: memory.KindNote, Title: "N", Snippet: "x"}}
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 50; j++ {
+				svc.SetExtraRecall(note)
+				svc.SetExtraRecall(nil)
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 50; j++ {
+				svc.Recall(context.Background(), "o", application.MemoryRecall{AgentID: "a", Text: "x"})
+			}
+		}()
+	}
+	wg.Wait()
 }

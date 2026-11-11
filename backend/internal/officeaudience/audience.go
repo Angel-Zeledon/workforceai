@@ -16,6 +16,10 @@ import (
 // everybody (an admin sees every agent, the directory lists them).
 var unscopedEvents = map[string]bool{domain.EvAgentCreated: true, domain.EvMetricsUpdated: true, domain.EvHello: true}
 
+// echoToActor are the events of a change a person makes on an agent (its autonomy or trust level): the person who
+// made it is part of the audience, so an admin outside a private office still sees the effect of their own action.
+var echoToActor = map[string]bool{domain.EvAutonomyChanged: true, domain.EvTrustProposal: true}
+
 // New returns the recorder's AudienceFor: a live event about the work of an agent of a private office (the event's
 // agent, or the agent of the task, request, approval or conversation it names) reaches only the members of that
 // office, admins included only as members, plus whoever asked for the request it belongs to (they always see their
@@ -42,6 +46,12 @@ func New(svc *offices.Service, store application.Store, requestedBy func(ctx con
 		refs := application.RefsOf(ctx, ev)
 		ctx = application.WithOrg(ctx, org)
 		agents, requests, people := refs.Agents, refs.Requests, refs.People
+		if echoToActor[ev.Type] {
+			// the person who made the change receives its echo even when they are not in the office
+			if p := application.PersonFrom(ctx); p != "" {
+				people = append(people, p)
+			}
+		}
 		for _, id := range refs.Tasks {
 			if t, err := store.GetTask(ctx, org, id); err == nil {
 				agents, requests = append(agents, t.AgentID), append(requests, t.RequestID)

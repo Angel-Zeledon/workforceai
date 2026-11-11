@@ -239,6 +239,12 @@ func (s *Service) RecallNotes(ctx context.Context, org, agentID, personID, text 
 		return nil
 	}
 	office := m.Agent(agentID).OfficeID
+	// I6: an agent of a private office working for a person who is not a member does not recall the office's notes
+	// (work without a person is the agent's own and keeps them)
+	officeNotes := true
+	if o, ok := m.Office(office); ok && !o.General && o.Visibility == Private && personID != "" && !m.IsMember(personID, office) {
+		officeNotes = false
+	}
 	all, err := s.cfg.Store.ListNotes(ctx, org, "", "")
 	if err != nil {
 		return nil
@@ -254,7 +260,7 @@ func (s *Service) RecallNotes(ctx context.Context, org, agentID, personID, text 
 		switch {
 		case n.Scope == ScopePerson && personID != "" && n.OwnerRef == personID:
 			base = 0.5 // a preference of the person applies even without shared words
-		case n.Scope == ScopeOffice && n.OwnerRef == office, n.Scope == ScopeCompany && n.OwnerRef == "":
+		case n.Scope == ScopeOffice && n.OwnerRef == office && officeNotes, n.Scope == ScopeCompany && n.OwnerRef == "":
 		default:
 			continue
 		}
