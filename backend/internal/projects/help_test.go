@@ -12,10 +12,20 @@ import (
 	"aiworkforce/backend/internal/projects"
 )
 
-// helpProject launches the generic template; its first node asks a person once.
+// siblingNode runs next to failingNode (both start the generic template, neither depends on the other).
+const siblingNode = "Evaluar la viabilidad operativa"
+
+// helpProject launches the generic template; its first node asks a person once. The sibling node is always the slow
+// one: on a loaded machine (the whole suite) it can still be running when the failing node asks, and the project is
+// only waiting for a person once it ended. That interleaving is forced here so the helper always waits for it.
 func helpProject(t *testing.T) (*env, string, *application.Questions) {
 	t.Helper()
 	rt := newRT()
+	rt.onRun = func(in application.RunTaskRequest) {
+		if in.Task.Title == siblingNode {
+			time.Sleep(150 * time.Millisecond)
+		}
+	}
 	rt.help = func(in application.RunTaskRequest) *application.HelpRequest {
 		if in.Task.Title == failingNode && in.HelpAllowed && len(in.HelpAnswers) == 0 {
 			return &application.HelpRequest{Kind: "data", WhatHappened: "Falta un dato", Need: "¿Qué periodo uso?", Options: []string{"Q3", "Q4"}}
@@ -29,8 +39,12 @@ func helpProject(t *testing.T) (*env, string, *application.Questions) {
 	e.orch.SetRequestOwner(e.svc)
 	id := e.draft("tpl-generic", 0)
 	e.launch(id, budgetBig)
-	e.waitFor("node needs input", func() bool {
-		return nodeByTitle(e.detail(id), failingNode).State == projects.StateNeedsInput
+	// Settled, not only the node: the task is marked needs_input before its question is stored, and the sibling may
+	// still run (the project is "running" until it ends).
+	e.waitFor("project waiting for a person", func() bool {
+		d := e.detail(id)
+		qs, _ := e.store.ListQuestions(context.Background(), domain.DemoOrgID, application.QuestionOpen)
+		return nodeByTitle(d, failingNode).State == projects.StateNeedsInput && len(qs) == 1 && d.Project.Status == projects.StatusWaitingHuman
 	})
 	return e, id, qs
 }
