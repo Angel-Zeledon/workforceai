@@ -332,3 +332,22 @@ func TestNoDebateWithoutFlagOrMarkerAndMarkerForcesOne(t *testing.T) {
 	id3, _ := h.orch.Submit(context.Background(), application.WithDebateMarker("Elegir proveedor"))
 	h.waitFor("request done", func() bool { return h.request(id3).Status == domain.RequestDone })
 }
+
+// D3: with Eligible set (a person's debate), the participants picked for the topic are only agents whose work that
+// person sees, even when a hidden agent matches the topic best.
+func TestDebatePicksOnlyEligibleAgents(t *testing.T) {
+	h := newHarness(t, &fakeRuntime{}, nil)
+	rt := chatty("sales", "accounting")
+	svc := newDebates(h, rt)
+	ctx := application.WithActor(context.Background(), "ana")
+	in := application.DebateInput{Topic: "Contrato y cláusulas legales del margen de costos",
+		Eligible: func(id string) bool { return id != "legal" }}
+	if _, err := svc.Run(ctx, in); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range rt.last.Participants {
+		if p.ID == "legal" {
+			t.Fatalf("a hidden agent was picked: %+v", rt.last.Participants)
+		}
+	}
+}

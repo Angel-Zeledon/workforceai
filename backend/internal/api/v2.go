@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -217,6 +218,10 @@ func (s *server) reassignTask(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
+		return
+	}
+	if ws := s.work(r); body.AgentID != "" && !ws.agent(body.AgentID) {
+		s.fail(w, cmp.Or(ws.err, notFound("agent", body.AgentID))) // D3: handing work to an agent whose work is hidden
 		return
 	}
 	t, err := s.Orch.Reassign(r.Context(), chi.URLParam(r, "id"), body.AgentID)

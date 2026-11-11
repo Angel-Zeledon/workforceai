@@ -257,3 +257,14 @@ func TestLimitedListingsCutAfterLeavingOut(t *testing.T) {
 		}
 	}
 }
+
+// A visible task cannot be handed to an agent whose work the person does not see either.
+func TestTaskReassignToHiddenAgentIsRefused(t *testing.T) {
+	sw := newSealedWork(t)
+	if c := sw.e.status("POST", api1+"/tasks/task-sales/reassign", sw.beto, map[string]any{"agent_id": "legal"}); c != 404 {
+		t.Fatalf("beto hands task-sales to legal = %d, want 404", c)
+	}
+	if got := sw.body("GET", "/tasks/task-sales", sw.ana, 200); !strings.Contains(got, `"agent_id":"sales"`) {
+		t.Fatalf("the task changed hands: %s", got)
+	}
+}

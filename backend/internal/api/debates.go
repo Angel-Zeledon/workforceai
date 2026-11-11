@@ -90,7 +90,7 @@ func (s *server) createDebate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	d, err := s.Debates.Run(r.Context(), application.DebateInput{Topic: body.Topic, Details: body.Details, Options: body.Options,
-		AgentIDs: body.AgentIDs, Locale: body.Locale})
+		AgentIDs: body.AgentIDs, Locale: body.Locale, Eligible: ws.agent})
 	var de *application.DebateError
 	if errors.As(err, &de) {
 		status := http.StatusServiceUnavailable

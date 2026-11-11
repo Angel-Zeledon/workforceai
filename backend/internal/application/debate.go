@@ -140,6 +140,9 @@ type DebateInput struct {
 	TaskID    string
 	Locale    string
 	Tone      string
+	// Eligible, when set, limits the agents that may take part (D3: a person's debate only with agents whose work they
+	// see, also when the participants are picked for the topic). nil = every agent.
+	Eligible func(agentID string) bool
 }
 
 // Debates runs and lists team debates.
@@ -247,6 +250,9 @@ func (s *Debates) Run(ctx context.Context, in DebateInput) (domain.Debate, error
 	agents, err := s.Agents.ListAgents(ctx, org)
 	if err != nil {
 		return domain.Debate{}, err
+	}
+	if in.Eligible != nil {
+		agents = slices.DeleteFunc(agents, func(a domain.Agent) bool { return !in.Eligible(a.ID) })
 	}
 	picked, err := pickDebaters(agents, in.AgentIDs, topic+" "+in.Details, in.Trigger == domain.DebateTriggerUser && len(in.AgentIDs) > 0)
 	if err != nil {
