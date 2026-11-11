@@ -375,3 +375,25 @@ func TestPrivateOfficeConnectionEventsReachOnlyMembers(t *testing.T) {
 		}
 	}
 }
+
+// An admin who is not a member changing the autonomy of a private agent gets the echo of their own change live,
+// and no other non-member does.
+func TestActorReceivesTheEchoOfTheirOwnAutonomyChange(t *testing.T) {
+	for _, typ := range []string{domain.EvAutonomyChanged, domain.EvTrustProposal} {
+		f := newFix(t)
+		f.install(nil)
+		ctx := application.WithActor(f.ctx, "u-boss")
+		f.rec.Emit(ctx, application.Action{Type: typ, AgentID: "legal", Entity: "agent", EntityID: "legal",
+			Payload: map[string]any{"agent_id": "legal", "from": "supervised", "to": "assisted"}})
+		got := f.got()
+		if !slices.Contains(got["u-boss"], typ) {
+			t.Errorf("%s: the actor must receive the echo of their own change: %v", typ, got)
+		}
+		if !slices.Contains(got["u-pri"], typ) {
+			t.Errorf("%s: the member must receive it: %v", typ, got)
+		}
+		if len(got["u-ana"]) != 0 {
+			t.Errorf("%s: another non-member received %v", typ, got["u-ana"])
+		}
+	}
+}
