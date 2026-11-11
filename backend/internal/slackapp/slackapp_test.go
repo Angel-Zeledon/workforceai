@@ -197,6 +197,7 @@ type harness struct {
 	svc   *Service
 	store *MemStore
 	mem   *memory.Store
+	appr  *application.Approvals
 	slack *fakeSlack
 	dir   *fakeDir
 	now   time.Time
@@ -214,6 +215,7 @@ func newHarness(t *testing.T) *harness {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	rec := &application.Recorder{OrgID: org, Store: h.mem, Pub: nopPub{}, Log: log}
 	appr := application.NewApprovals(application.Config{OrgID: org}, h.mem, rec)
+	h.appr = appr
 	h.svc = &Service{Store: h.store, Sealer: fakeSealer{}, Slack: &Client{HTTP: &http.Client{Transport: h.slack}}, Directory: h.dir,
 		Approvals: ApprovalsAdapter{Approvals: appr, Store: h.mem},
 		Controls:  func(context.Context, string) (string, bool) { return h.kill, h.ro },

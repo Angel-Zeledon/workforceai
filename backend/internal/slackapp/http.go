@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -214,7 +215,7 @@ func (s *Service) Command(ctx context.Context, org string, rec Record, bot, team
 		if !canRead(who.Member.Role) {
 			return ephemeral(tr(loc, "rForbidden"))
 		}
-		return s.pending(ctx, org, rec, canDecide(who.Member.Role))
+		return s.pending(ctx, org, rec, who.Member)
 	}
 	return ephemeral(fmt.Sprintf(tr(loc, "help"), command))
 }
@@ -288,19 +289,25 @@ func (s *Service) status(ctx context.Context, org, loc string) map[string]any {
 	return out
 }
 
-func (s *Service) pending(ctx context.Context, org string, rec Record, decide bool) map[string]any {
+func (s *Service) pending(ctx context.Context, org string, rec Record, who Member) map[string]any {
 	loc := rec.Locale
-	list, err := s.Approvals.Pending(ctx, org)
+	all, err := s.Approvals.Pending(ctx, org)
 	if err != nil {
 		return ephemeral(tr(loc, "rFail"))
+	}
+	// D3: only the approvals whose work the person sees; the responsible of an office decides its approvals.
+	list := make([]domain.Approval, 0, len(all))
+	for _, ap := range all {
+		if s.sees(ctx, org, who.UserID, ap) {
+			list = append(list, ap)
+		}
 	}
 	if len(list) == 0 {
 		return ephemeral(tr(loc, "pNone"))
 	}
+	canAll := canDecide(who.Role)
 	blocks := []map[string]any{{"type": "section", "text": mrkdwn("*" + fmt.Sprintf(tr(loc, "pTitle"), len(list)) + "*")}}
-	if !decide {
-		blocks = append(blocks, map[string]any{"type": "context", "elements": []map[string]any{mrkdwn(tr(loc, "pViewOnly"))}})
-	}
+	anyDecide := false
 	for i, ap := range list {
 		if i == maxPendingListed {
 			blocks = append(blocks, map[string]any{"type": "context", "elements": []map[string]any{mrkdwn(fmt.Sprintf(tr(loc, "pMore"), len(list)-i))}})
@@ -308,6 +315,8 @@ func (s *Service) pending(ctx context.Context, org string, rec Record, decide bo
 		}
 		c := card{Locale: loc, Approval: ap, Agent: s.agent(ctx, org, ap), OpenURL: s.openURL(ap.ID), NeedsApp: needsApp(rec, ap)}
 		m := c.msg()
+		decide := canAll || s.responsible(ctx, org, who.UserID, ap)
+		anyDecide = anyDecide || decide
 		if !decide {
 			// Without the permission the buttons are not offered (the server would refuse them anyway).
 			m.Blocks = m.Blocks[:len(m.Blocks)-1]
@@ -318,6 +327,9 @@ func (s *Service) pending(ctx context.Context, org string, rec Record, decide bo
 		}
 		blocks = append(blocks, map[string]any{"type": "divider"})
 		blocks = append(blocks, m.Blocks...)
+	}
+	if !anyDecide {
+		blocks = slices.Insert(blocks, 1, map[string]any{"type": "context", "elements": []map[string]any{mrkdwn(tr(loc, "pViewOnly"))}})
 	}
 	out := ephemeral(fmt.Sprintf(tr(loc, "pTitle"), len(list)))
 	out["blocks"] = blocks
