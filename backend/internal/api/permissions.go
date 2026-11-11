@@ -32,7 +32,7 @@ func (s *server) mountPermissions(r chi.Router) {
 	r.With(read).Post("/agents/{id}/permissions/floor/{category}", s.permLiftFloor)
 	r.With(read).Delete("/agents/{id}/permissions/floor/{category}", s.permRestoreFloor)
 	// "Approve and do not ask again" (Pendientes) and the project / batch scopes it can create.
-	r.With(s.can(auth.PermApprovalsDecide), s.workApproval).Post("/approvals/{id}/remember", s.permRemember)
+	r.With(s.workApproval, s.decidesApproval).Post("/approvals/{id}/remember", s.permRemember)
 	r.With(read).Get("/permissions/scopes", s.permScopes)
 	r.With(read).Delete("/permissions/scopes/{id}", s.permRevokeScope)
 }

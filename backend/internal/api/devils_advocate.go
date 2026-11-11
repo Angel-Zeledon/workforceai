@@ -25,7 +25,7 @@ func (s *server) mountDevilsAdvocate(r chi.Router) {
 		return
 	}
 	r.With(s.can(auth.PermApprovalsRead), s.workApproval).Get("/approvals/{id}/counterargument", s.getCounterargument)
-	r.With(s.can(auth.PermApprovalsDecide), s.workApproval).Post("/approvals/{id}/counterargument", s.makeCounterargument)
+	r.With(s.workApproval, s.decidesApproval).Post("/approvals/{id}/counterargument", s.makeCounterargument)
 }
 
 func (s *server) getCounterargument(w http.ResponseWriter, r *http.Request) {
