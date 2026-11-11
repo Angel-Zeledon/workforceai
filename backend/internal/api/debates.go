@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"errors"
 	"net/http"
 	"slices"
@@ -33,21 +34,32 @@ func (s *server) mountDebates(r chi.Router) {
 
 func (s *server) listDebates(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	v, err := s.Debates.List(r.Context(), r.URL.Query().Get("request_id"), limit)
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
 	ws := s.work(r) // D3: a debate about a private department's work is its members' (work_sealed.go)
 	if err := ws.load(); err != nil {
 		s.fail(w, err)
 		return
 	}
+	read := limit
 	if !ws.open() {
-		v = slices.DeleteFunc(v, func(d domain.Debate) bool { return !ws.seesDebate(d) })
+		read = debateListMax // the widest window, cut at the limit after leaving out
+	}
+	v, err := s.Debates.List(r.Context(), r.URL.Query().Get("request_id"), read)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.open() {
+		want := min(cmp.Or(max(limit, 0), debateListDefault), debateListMax)
+		v = firstN(slices.DeleteFunc(v, func(d domain.Debate) bool { return !ws.seesDebate(d) }), want)
 	}
 	writeJSON(w, http.StatusOK, list(v))
 }
+
+// The default and maximum page of application.Debates.List.
+const (
+	debateListDefault = 30
+	debateListMax     = 100
+)
 
 func (s *server) getDebate(w http.ResponseWriter, r *http.Request) {
 	d, err := s.Debates.Get(r.Context(), chi.URLParam(r, "id"))
@@ -69,6 +81,13 @@ func (s *server) createDebate(w http.ResponseWriter, r *http.Request) {
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
 		return
+	}
+	ws := s.work(r) // D3: the positions of an agent whose work the person does not see are that work
+	for _, id := range body.AgentIDs {
+		if !ws.agent(id) {
+			s.fail(w, cmp.Or(ws.err, notFound("agent", id)))
+			return
+		}
 	}
 	d, err := s.Debates.Run(r.Context(), application.DebateInput{Topic: body.Topic, Details: body.Details, Options: body.Options,
 		AgentIDs: body.AgentIDs, Locale: body.Locale})

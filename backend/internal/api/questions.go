@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"errors"
 	"net/http"
 	"strings"
@@ -128,9 +129,11 @@ func (s *server) getQuestion(w http.ResponseWriter, r *http.Request) {
 			out["impact"] = imp
 		}
 		cands := []application.Candidate{}
+		ws := s.work(r)
 		if agents, err := s.Store.ListAgents(r.Context(), s.org(r)); err == nil {
 			for _, a := range agents {
-				if a.ID != q.AgentID && a.Role != application.AuditorRole {
+				// D3: the task would become the work of an agent the person may not see: not offered
+				if a.ID != q.AgentID && a.Role != application.AuditorRole && ws.agent(a.ID) {
 					cands = append(cands, application.Candidate{ID: a.ID, Name: a.Name, Role: a.Role, Title: a.Title})
 				}
 			}
@@ -167,6 +170,10 @@ func (s *server) answerQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 	if !s.mayAnswer(r, q) {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "only the person this question is for (or an admin) can answer it"})
+		return
+	}
+	if ws := s.work(r); body.Kind == application.AnswerReassign && body.AgentID != "" && !ws.agent(body.AgentID) {
+		s.fail(w, cmp.Or(ws.err, notFound("agent", body.AgentID))) // D3: handing it to an agent whose work is hidden
 		return
 	}
 	res, err := s.Orch.AnswerQuestion(r.Context(), id, body.Resolution, body.Confirm)

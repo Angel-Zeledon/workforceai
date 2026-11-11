@@ -790,14 +790,26 @@ func (s *server) activity(w http.ResponseWriter, r *http.Request) {
 	if !ws.open() {
 		read = 1000 // D3: room for what is left out, so the page stays full
 	}
-	v, err := s.Store.ListActivity(r.Context(), s.org(r), "", read)
-	if err != nil {
-		s.fail(w, err)
-		return
+	var v []domain.ActivityItem
+	for {
+		all, err := s.Store.ListActivity(r.Context(), s.org(r), "", read)
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		v = slices.DeleteFunc(all, func(x domain.ActivityItem) bool { return x.AgentID != nil && !ws.agent(*x.AgentID) })
+		// D3: still short after leaving out: read a wider window, until the page is full, nothing older is left or
+		// the window reaches its ceiling
+		if len(v) >= limit || len(all) < read || read >= maxActivityRead {
+			break
+		}
+		read = min(read*4, maxActivityRead)
 	}
-	v = slices.DeleteFunc(v, func(x domain.ActivityItem) bool { return x.AgentID != nil && !ws.agent(*x.AgentID) })
 	writeJSON(w, 200, list(v[:min(len(v), limit)]))
 }
+
+// maxActivityRead is the widest window GET /activity reads to fill a page that leaves out a private department's lines.
+const maxActivityRead = 16000
 
 func (s *server) metrics(w http.ResponseWriter, r *http.Request) {
 	m, err := s.Queries.Metrics(r.Context())

@@ -75,6 +75,28 @@ func SharedMessageVisible(ctx context.Context, m domain.Message) bool {
 	return !NamesHiddenAgent(ctx, m)
 }
 
+// OwnTurns returns the turns of msgs that the person reading started (their own message). D3: in a shared chat, what
+// an agent whose work they do not see said or was told in such a turn is their own exchange with it (a private
+// department's agent they use through the directory answers them in the office chat), so it stays theirs to read;
+// nobody else outside that department reads it. A turn whose first message is not among msgs (an older page) is not
+// recognized.
+func OwnTurns(ctx context.Context, msgs []domain.Message) map[string]bool {
+	return ownTurns(PersonFrom(ctx), msgs)
+}
+
+func ownTurns(person string, msgs []domain.Message) map[string]bool {
+	out := map[string]bool{}
+	if person == "" {
+		return out
+	}
+	for _, m := range msgs {
+		if m.From == "user" && m.AuthorID == person && m.TurnID != "" {
+			out[m.TurnID] = true
+		}
+	}
+	return out
+}
+
 // NamesHiddenAgent reports whether a message was written by or to an agent whose work the person reading does not see.
 func NamesHiddenAgent(ctx context.Context, m domain.Message) bool {
 	for _, a := range []string{m.From, m.To} {

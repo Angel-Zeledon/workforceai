@@ -100,19 +100,36 @@ func (s *server) runRitual(w http.ResponseWriter, r *http.Request) {
 func (s *server) listRitualProposals(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	v, err := s.Rituals.Proposals(r.Context(), rituals.ProposalQuery{Status: q.Get("status"), AgentID: q.Get("agent_id"), RitualID: q.Get("ritual_id"), Limit: limit})
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
 	ws := s.work(r)
 	if err := ws.load(); err != nil {
 		s.fail(w, err)
 		return
 	}
+	read := limit
+	if !ws.open() {
+		read = proposalListMax // D3: the widest window, cut at the limit after leaving out
+	}
+	v, err := s.Rituals.Proposals(r.Context(), rituals.ProposalQuery{Status: q.Get("status"), AgentID: q.Get("agent_id"), RitualID: q.Get("ritual_id"), Limit: read})
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
 	v = slices.DeleteFunc(v, func(p rituals.Proposal) bool { return !ws.agentOK(p.AgentID) })
+	if !ws.open() {
+		want := limit
+		if want <= 0 || want > proposalListMax {
+			want = proposalListDefault
+		}
+		v = firstN(v, want)
+	}
 	writeJSON(w, http.StatusOK, list(v))
 }
+
+// The default and maximum page of rituals.Service.Proposals.
+const (
+	proposalListDefault = 100
+	proposalListMax     = 200
+)
 
 func (s *server) acceptRitualProposal(w http.ResponseWriter, r *http.Request) {
 	v, err := s.Rituals.AcceptProposal(r.Context(), chi.URLParam(r, "id"))

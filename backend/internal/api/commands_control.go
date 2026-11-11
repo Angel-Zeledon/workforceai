@@ -97,8 +97,9 @@ func cmdCompact(c *cmdCall) (*cmdResult, *cmdFail) {
 	// the context), that history stays out unless the agent's work is visible
 	// D3: in a shared chat (the office) what a private office's agent said or was told stays out for whoever does not
 	// see its work, like in the threads
+	own := application.OwnTurns(c.ctx, msgs) // what was said in the person's own turns is theirs
 	msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool {
-		return direct && m.ConversationID == domain.ChatAgentConv(agent) && !c.work.agent(agent) || !application.SharedMessageVisible(c.ctx, m)
+		return direct && m.ConversationID == domain.ChatAgentConv(agent) && !c.work.agent(agent) || !own[m.TurnID] && !application.SharedMessageVisible(c.ctx, m)
 	})
 	msgs = spokenMessages(msgs)
 	if !direct && c.hidesAnyAgent() {
@@ -261,6 +262,9 @@ func (c *cmdCall) modelOf(a domain.Agent) string {
 
 // ---- usage ----
 
+// otherAgents is the key of /usage's line for the agents whose work the person does not see (never an agent id).
+const otherAgents = "\x00others"
+
 func cmdUsage(c *cmdCall) (*cmdResult, *cmdFail) {
 	usage, err := c.s.Store.ListUsage(c.ctx, c.org)
 	if err != nil {
@@ -278,7 +282,11 @@ func cmdUsage(c *cmdCall) (*cmdResult, *cmdFail) {
 		}
 		if !u.TS.Before(month) {
 			thisMonth += u.CostUSD
-			byAgent[u.AgentID] += u.CostUSD
+			agent := u.AgentID
+			if agent != "" && !c.work.agent(agent) {
+				agent = otherAgents // D3: the spend of agents whose work the person does not see, as one line
+			}
+			byAgent[agent] += u.CostUSD
 		}
 		if u.Kind == domain.UsageChat && (c.conv == domain.ChatOffice || u.AgentID == c.agentID) {
 			conv += u.CostUSD
@@ -311,15 +319,24 @@ func cmdUsage(c *cmdCall) (*cmdResult, *cmdFail) {
 		return 1
 	})
 	for _, id := range ids {
+		if id == otherAgents {
+			continue
+		}
 		name := id
 		if a := c.agentRef(id); a != nil {
 			name = a.Name
 		}
 		rows = append(rows, []string{c.t("Agente: ", "Agent: ") + name, usd(byAgent[id]), c.t("este mes", "this month")})
 	}
+	if v, ok := byAgent[otherAgents]; ok {
+		rows = append(rows, []string{c.t("Otros agentes", "Other agents"), usd(v), c.t("este mes", "this month")})
+	}
 	if c.s.Projects != nil {
 		if ps, err := c.s.Projects.List(c.ctx); err == nil {
 			for _, p := range ps {
+				if pv, found, err := c.s.projectView(c.r, p.ID); err != nil || found && pv.all {
+					continue // D3: a project that is only a private department's work is left out (fails closed)
+				}
 				if p.SpentUSD > 0 || p.BudgetUSD > 0 {
 					rows = append(rows, []string{c.t("Proyecto: ", "Project: ") + p.Name, usd(p.SpentUSD), fmt.Sprintf(c.t("de $%.2f", "of $%.2f"), p.BudgetUSD)})
 				}
@@ -703,10 +720,12 @@ func cmdExport(c *cmdCall) (*cmdResult, *cmdFail) {
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
+	own := application.OwnTurns(c.ctx, msgs)
 	msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool {
 		// D3: the person's own messages are theirs; the history shared before private threads is the agent's work; in
-		// a shared chat (the office) what a private office's agent said or was told is that office's
-		return direct && m.SharedLegacy && !c.work.agent(agent) || !application.SharedMessageVisible(c.ctx, m)
+		// a shared chat (the office) what a private office's agent said or was told is that office's, unless it was
+		// in the person's own turn
+		return direct && m.SharedLegacy && !c.work.agent(agent) || !own[m.TurnID] && !application.SharedMessageVisible(c.ctx, m)
 	})
 	if len(msgs) == 0 {
 		return nil, fail(http.StatusUnprocessableEntity, "nothing_to_do", "No hay nada que exportar todavía.", "There is nothing to export yet.")

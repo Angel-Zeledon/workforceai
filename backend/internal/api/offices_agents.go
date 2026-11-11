@@ -114,6 +114,7 @@ func (s *server) visibleAgents(r *http.Request, agents []domain.Agent) (any, err
 // the current or last task ("Completó: <title>"), with its id and progress. The state stays: the agent is listed.
 func hideActivity(a domain.Agent) domain.Agent {
 	a.Activity, a.CurrentTaskID, a.Progress = "", nil, 0
+	a.Metrics = domain.AgentMetrics{} // its tasks and their cost are that work too (D3)
 	return a
 }
 

@@ -168,25 +168,50 @@ func (s *server) listMessages(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	next := "" // the oldest message read: the next page starts after it
+	if len(msgs) > 0 {
+		next = msgs[0].ID
+	}
 	if application.IsChatConversation(id) {
 		// D3: using a private office's agent opens one's own thread, not the history shared before private threads;
 		// in a shared chat (the office, that earlier history) what a private office's agent said or was told is that
-		// office's (sealed live too), like in the threads (ChatHistory.Thread)
+		// office's (sealed live too), like in the threads (ChatHistory.Thread), unless it was the person's own turn
 		ctx := s.work(r).context().Context()
 		agent, direct := strings.CutPrefix(domain.PublicChatConv(id), domain.ChatAgentPrefix)
-		msgs = slices.DeleteFunc(msgs, func(m domain.Message) bool {
-			if direct && !m.SharedLegacy {
-				return false // the person's own thread
+		visible := func(page []domain.Message) []domain.Message {
+			own := application.OwnTurns(ctx, page)
+			return slices.DeleteFunc(page, func(m domain.Message) bool {
+				if direct && !m.SharedLegacy {
+					return false // the person's own thread
+				}
+				return direct && !application.WorkVisible(ctx, agent) || application.NamesHiddenAgent(ctx, m) && !own[m.TurnID]
+			})
+		}
+		msgs = visible(msgs)
+		// a page that left messages out is filled from older ones (up to a few reads); the cursor always moves on
+		for reads := 1; limit > 0 && more && len(msgs) < limit && next != "" && reads < maxFillReads; reads++ {
+			older, m, err := s.Queries.ChatMessages(r.Context(), id, next, limit-len(msgs))
+			if err != nil {
+				s.fail(w, err)
+				return
 			}
-			return direct && !application.WorkVisible(ctx, agent) || application.NamesHiddenAgent(ctx, m)
-		})
+			if more = m; len(older) == 0 {
+				more = false
+				break
+			}
+			next = older[0].ID
+			msgs = append(visible(older), msgs...)
+		}
 	}
 	if limit > 0 {
 		w.Header().Set("Access-Control-Expose-Headers", "X-Has-More, X-Next-Before")
 		w.Header().Set("X-Has-More", strconv.FormatBool(more))
-		if more && len(msgs) > 0 {
-			w.Header().Set("X-Next-Before", msgs[0].ID)
+		if more && next != "" {
+			w.Header().Set("X-Next-Before", next)
 		}
 	}
 	writeJSON(w, http.StatusOK, list(msgs))
 }
+
+// maxFillReads bounds the reads of a page that leaves out what the person may not see (D3, like application's).
+const maxFillReads = 10

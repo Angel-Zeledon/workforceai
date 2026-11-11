@@ -132,6 +132,33 @@ func (s *server) customersDistrict(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.open() && ws.hidesAny() {
+		// D3: each building's status and counts are those of the work the person sees, as in the customer's detail
+		if err := ws.indexAll(); err != nil {
+			s.fail(w, err)
+			return
+		}
+		for i := range d.Customers {
+			x, err := s.Customers.Detail(r.Context(), d.Customers[i].Customer.ID)
+			if err != nil {
+				s.fail(w, err)
+				return
+			}
+			ps, rs, err := s.customerWorkIn(r, ws, x.Projects, x.Requests)
+			if err != nil {
+				s.fail(w, err)
+				return
+			}
+			if len(ps) != len(x.Projects) || len(rs) != len(x.Requests) {
+				d.Customers[i].Health = customers.HealthOf(ps, rs, time.Now())
+			}
+		}
+	}
 	writeJSON(w, 200, d)
 }
 
@@ -231,6 +258,11 @@ func (s *server) visibleCustomerWork(r *http.Request, ps []customers.ProjectInfo
 	if err := ws.indexAll(); err != nil {
 		return nil, nil, err
 	}
+	return s.customerWorkIn(r, ws, ps, rs)
+}
+
+// customerWorkIn is visibleCustomerWork with a scope already loaded and indexed (several customers in one read).
+func (s *server) customerWorkIn(r *http.Request, ws *workScope, ps []customers.ProjectInfo, rs []customers.RequestInfo) ([]customers.ProjectInfo, []customers.RequestInfo, error) {
 	rs = slices.DeleteFunc(rs, func(x customers.RequestInfo) bool { return !ws.request(x.ID) })
 	if s.Projects == nil {
 		return ps, rs, nil

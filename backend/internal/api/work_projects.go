@@ -16,9 +16,9 @@ import (
 // Projects mix the work of several departments in one plan (D3). A project is left out entirely (404) only when
 // every node that has an agent belongs to agents whose work the person may not see: there is nothing of theirs in
 // it. Otherwise the project stays readable (its structure, states, progress and cost are the organization's plan)
-// and the hidden nodes are redacted: no title, error, files, review, audit, agent or task, and their approvals are
-// left out. Hiding the whole project would take General's work away from the people who planned it; showing the
-// hidden nodes whole would leak the private department's work.
+// and the hidden nodes are redacted: no title, error, files, review, audit, agent, task or approval action, and their
+// approvals are left out. Hiding the whole project would take General's work away from the people who planned it;
+// showing the hidden nodes whole would leak the private department's work.
 
 // redactProject redacts d in place and reports whether every agent node is hidden (the project answers 404 then).
 func redactProject(d *projects.Detail, sees func(agentID string) bool) (allHidden bool) {
@@ -35,6 +35,7 @@ func redactProject(d *projects.Detail, sees func(agentID string) bool) (allHidde
 		hidden++
 		n.Title, n.TitleKey, n.TitleParams, n.AgentID, n.Error, n.Files = "", "", nil, nil, nil, nil
 		n.Review, n.Audit, n.TaskID, n.Acceptance, n.SkipReason, n.DelegationChain = nil, nil, "", nil, "", []string{}
+		n.ApprovalAction = "" // the action it would ask to approve names the hidden work too
 	}
 	d.Approvals = slices.DeleteFunc(d.Approvals, func(a projects.Approval) bool { return a.AgentID != nil && !sees(*a.AgentID) })
 	if d.Estimate != nil {
@@ -86,7 +87,7 @@ func (s *server) projectView(r *http.Request, id string) (projectView, bool, err
 		return projectView{}, false, err
 	}
 	pv := projectView{ws: ws}
-	if ws.open() || s.Projects == nil {
+	if ws.open() || s.Projects == nil || !ws.hidesAny() {
 		return pv, true, nil
 	}
 	d, err := s.Projects.Get(r.Context(), id)
@@ -185,4 +186,32 @@ func (pv projectView) redactHealth(h *projects.Health) {
 		}
 		return false
 	})
+}
+
+// batchVisible (D3) is the read side of the batch rule (work_batches.go): a batch whose launched projects are all
+// only the work of departments the person does not see answers like a missing one; in any other batch the current
+// step of a hidden agent is blanked in its row (its title is that work).
+func (s *server) batchVisible(r *http.Request, ws *workScope, v *projects.BatchView) (bool, error) {
+	if err := ws.load(); err != nil || ws.open() || !ws.hidesAny() {
+		return err == nil, err
+	}
+	launched, all := 0, true
+	for i := range v.Rows {
+		row := &v.Rows[i]
+		if row.CurrentAgentID != "" && !ws.agent(row.CurrentAgentID) {
+			row.CurrentStep, row.CurrentAgentID = "", ""
+		}
+		if row.ProjectID == "" {
+			continue
+		}
+		pv, ok, err := s.projectView(r, row.ProjectID)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			launched++
+			all = all && pv.all
+		}
+	}
+	return launched == 0 || !all, nil
 }

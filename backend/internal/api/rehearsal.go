@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 )
@@ -38,7 +39,43 @@ func (s *server) rehearsalAgents(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	if v, err = s.visibleRehearsals(r, v); err != nil {
+		s.fail(w, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"agents": v})
+}
+
+// visibleRehearsals (D3) recounts the evidence of the agents whose work the person does not see with only the
+// rehearsed actions they see (those of their own requests, work_sealed.go); the switch stays (an admin manages the
+// agent). An agent left with no switch and no action is left out, like one that never rehearsed.
+func (s *server) visibleRehearsals(r *http.Request, v []application.AgentSummary) ([]application.AgentSummary, error) {
+	ws := s.work(r)
+	if err := ws.load(); err != nil || ws.open() || !ws.hidesAny() {
+		return v, err
+	}
+	as, err := s.Rehearsal.List(r.Context(), domain.RehearsalQuery{})
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string][]domain.RehearsalAction{}
+	for _, a := range as {
+		if !ws.agent(a.AgentID) && ws.seesRehearsal(a) {
+			seen[a.AgentID] = append(seen[a.AgentID], a)
+		}
+	}
+	out := v[:0]
+	for _, x := range v {
+		if !ws.agent(x.AgentID) {
+			c := application.Count(seen[x.AgentID])
+			x.Actions, x.WouldApprove, x.WouldReject, x.Undecided = c.Total, c.WouldApprove, c.WouldReject, c.Undecided
+			if x.UpdatedAt == nil && x.Actions == 0 {
+				continue
+			}
+		}
+		out = append(out, x)
+	}
+	return out, nil
 }
 
 func (s *server) putAgentRehearsal(w http.ResponseWriter, r *http.Request) {
@@ -81,18 +118,22 @@ func (s *server) rehearsalActions(w http.ResponseWriter, r *http.Request) {
 		}
 		q.Limit = n
 	}
-	v, err := s.Rehearsal.List(r.Context(), q)
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
 	ws := s.work(r) // D3: a private department's rehearsals are its members' (work_sealed.go)
 	if err := ws.load(); err != nil {
 		s.fail(w, err)
 		return
 	}
+	want := q.Limit
 	if !ws.open() {
-		v = slices.DeleteFunc(v, func(a domain.RehearsalAction) bool { return !ws.seesRehearsal(a) })
+		q.Limit = 0 // the widest window (the service's maximum), cut at the limit after leaving out
+	}
+	v, err := s.Rehearsal.List(r.Context(), q)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.open() {
+		v = firstN(slices.DeleteFunc(v, func(a domain.RehearsalAction) bool { return !ws.seesRehearsal(a) }), want)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": v})
 }

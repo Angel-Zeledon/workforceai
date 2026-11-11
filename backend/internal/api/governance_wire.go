@@ -1,8 +1,10 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"net/http"
+	"slices"
 
 	"github.com/go-chi/chi/v5"
 
@@ -10,6 +12,7 @@ import (
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/governance"
+	"aiworkforce/backend/internal/offices"
 	"aiworkforce/backend/internal/webhooks"
 )
 
@@ -97,20 +100,63 @@ func (s *server) mountPublicAPI(r chi.Router) {
 // the context by the token middleware.
 type publicBackend struct{ s *server }
 
-func (b publicBackend) org(ctx context.Context) string { return application.OrgFrom(ctx, b.s.Cfg.OrgID) }
+func (b publicBackend) org(ctx context.Context) string {
+	return application.OrgFrom(ctx, b.s.Cfg.OrgID)
+}
+
+// scope (D3) is the work rule of the public API. A token is the organization's: it records who created it, not a
+// person it acts for, so no department's membership comes with it. It reads like an administrator outside every
+// private department: the work of their agents is left out (their activity blanked, their requests and reports gone)
+// and the rest, requests still being planned included, stays. An unreadable offices model fails closed.
+func (b publicBackend) scope(ctx context.Context) *workScope {
+	ws := &workScope{s: b.s, ctx: ctx, org: b.org(ctx), loaded: true, v: offices.Viewer{Admin: true},
+		agents: map[string][]string{}, seen: map[string]bool{}}
+	if b.s.Offices == nil || !b.s.AuthEnabled {
+		return ws
+	}
+	m, err := b.s.Offices.Model(ctx, ws.org)
+	switch {
+	case err != nil:
+		ws.err = err
+	case m.Restricted():
+		ws.m = m
+	}
+	return ws
+}
 
 func (b publicBackend) Agents(ctx context.Context) (any, error) {
 	v, err := b.s.Queries.Agents(ctx)
-	return list(v), err
+	if err != nil {
+		return nil, err
+	}
+	ws := b.scope(ctx)
+	for i := range v {
+		if !ws.agent(v[i].ID) {
+			v[i] = hideActivity(v[i])
+		}
+	}
+	return list(v), ws.err
 }
 func (b publicBackend) Requests(ctx context.Context) (any, error) {
 	v, err := b.s.Store.ListRequests(ctx, b.org(ctx))
-	return list(v), err
+	if err != nil {
+		return nil, err
+	}
+	ws := b.scope(ctx)
+	if err := ws.indexAll(); err != nil {
+		return nil, err
+	}
+	v = slices.DeleteFunc(v, func(x domain.Request) bool { return !ws.request(x.ID) })
+	return list(v), ws.err
 }
 func (b publicBackend) Request(ctx context.Context, id string) (any, error) {
 	d, err := b.s.Queries.RequestDetail(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	ws := b.scope(ctx)
+	if ws.index(d.Tasks); !ws.request(d.ID) {
+		return nil, cmp.Or(ws.err, notFound("request", d.ID))
 	}
 	d.Tasks = list(d.Tasks)
 	return d, nil
@@ -120,8 +166,23 @@ func (b publicBackend) Submit(ctx context.Context, text string, capUSD float64) 
 }
 func (b publicBackend) Reports(ctx context.Context) (any, error) {
 	v, err := b.s.Store.ListReports(ctx, b.org(ctx))
-	return list(v), err
+	if err != nil {
+		return nil, err
+	}
+	ws := b.scope(ctx)
+	if err := ws.indexAll(); err != nil {
+		return nil, err
+	}
+	v = slices.DeleteFunc(v, func(x domain.Report) bool { return !ws.request(x.RequestID) })
+	return list(v), ws.err
 }
 func (b publicBackend) Report(ctx context.Context, id string) (any, error) {
-	return b.s.Store.GetReport(ctx, b.org(ctx), id)
+	v, err := b.s.Store.GetReport(ctx, b.org(ctx), id)
+	if err != nil {
+		return nil, err
+	}
+	if ws := b.scope(ctx); !ws.request(v.RequestID) {
+		return nil, cmp.Or(ws.err, notFound("report", v.ID))
+	}
+	return v, nil
 }
