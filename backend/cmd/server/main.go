@@ -349,7 +349,7 @@ func run(log *slog.Logger) error {
 		orch.SetInitiative(initiativeSvc)
 	}
 	// Rituals (B4): daily stand-up and weekly retro, deterministic from tasks and approvals; schedule off until a person turns it on.
-	ritualsSvc := wireRituals(ctx, cfg, log, pg, store, rec, orch, orgCfg, qualitySvc, profiles)
+	ritualsSvc := wireRituals(ctx, cfg, log, pg, store, rec, orch, orgCfg, qualitySvc, profiles, officesSvc)
 
 	// AI payroll and return (B15): AI cost per agent next to the estimated human time, with the org's own model.
 	var roiSvc *application.ROIService
