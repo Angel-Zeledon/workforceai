@@ -10,8 +10,10 @@ import (
 	"log/slog"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"aiworkforce/backend/internal/application"
@@ -128,6 +130,60 @@ type Service struct {
 
 	failMu   sync.Mutex
 	failures map[string][]time.Time
+
+	offices atomic.Pointer[OfficeRule] // D3 (SetOffices); nil: today's rules
+}
+
+// OfficeRule is the D3 rule of the approvals in the channel (equipos-oficinas.md §4.2): an approval of a private
+// office is never posted in the company channel, /oficina pendientes lists only the approvals whose work the person
+// sees, and a responsible of the office decides it without approvals:decide. Decisions also go through the same
+// rule in application.Approvals.Decide.
+type OfficeRule struct {
+	Policy application.ApproverPolicy
+	// Private reports whether ap belongs to a private office (whose work only its members see). An error means it
+	// cannot be told: the approval is not posted (fails closed). Nil with a rule installed: nothing is posted.
+	Private func(ctx context.Context, org string, ap domain.Approval) (bool, error)
+}
+
+// SetOffices installs the D3 rule (before serving; safe while events are flowing).
+func (s *Service) SetOffices(r OfficeRule) { s.offices.Store(&r) }
+
+func (s *Service) officeRule() *OfficeRule { return s.offices.Load() }
+
+// sees reports whether the person sees ap by the office rule (true without one).
+func (s *Service) sees(ctx context.Context, org, userID string, ap domain.Approval) bool {
+	r := s.officeRule()
+	if r == nil || r.Policy == nil {
+		return r == nil
+	}
+	return r.Policy.Sees(ctx, org, userID, ap)
+}
+
+// responsible reports whether the person is one of the responsibles who decide ap by the office rule.
+func (s *Service) responsible(ctx context.Context, org, userID string, ap domain.Approval) bool {
+	r := s.officeRule()
+	if r == nil || r.Policy == nil || userID == "" {
+		return false
+	}
+	return slices.Contains(r.Policy.Approvers(ctx, org, ap), userID)
+}
+
+// postable reports whether ap may be posted in the company channel: not when it belongs to a private office or when
+// that cannot be told.
+func (s *Service) postable(ctx context.Context, org string, ap domain.Approval) bool {
+	r := s.officeRule()
+	if r == nil {
+		return true
+	}
+	if r.Private == nil {
+		return false
+	}
+	private, err := r.Private(ctx, org, ap)
+	if err != nil {
+		s.log().Warn("slackapp: office of the approval", "org", org, "approval", ap.ID, "err", err)
+		return false
+	}
+	return !private
 }
 
 func (s *Service) now() time.Time {
@@ -651,12 +707,15 @@ func (s *Service) decide(ctx context.Context, org string, r Record, bot, team, s
 		return decision{Outcome: OutcomeFailed, Reply: s.refusal(loc, "rFail")}
 	}
 	d := decision{Member: who.Member, Method: who.Method}
-	if !canDecide(who.Member.Role) {
+	// D3: an approval the person does not see answers like a missing one (whatever its state), and a responsible of
+	// its office decides it without approvals:decide.
+	ap, err := s.Approvals.Get(ctx, org, id)
+	hidden := err != nil || !s.sees(ctx, org, who.Member.UserID, ap)
+	if !canDecide(who.Member.Role) && (hidden || !s.responsible(ctx, org, who.Member.UserID, ap)) {
 		d.Outcome, d.Reply = OutcomeForbidden, s.refusal(loc, "rForbidden")
 		return d
 	}
-	ap, err := s.Approvals.Get(ctx, org, id)
-	if err != nil {
+	if hidden {
 		d.Outcome, d.Reply = OutcomeNotFound, s.refusal(loc, "rNotFound")
 		return d
 	}
@@ -768,6 +827,9 @@ func (s *Service) Post(ctx context.Context, org string, ap domain.Approval) {
 	if err != nil || !found || !r.Enabled || r.ChannelID == "" || riskRank(ap.Risk) < riskRank(r.MinRisk) {
 		return
 	}
+	if !s.postable(ctx, org, ap) { // D3: a private office's approval never reaches the company channel
+		return
+	}
 	_, bot := s.secrets(ctx, r)
 	if bot == "" {
 		return
@@ -792,6 +854,9 @@ func (s *Service) Refresh(ctx context.Context, org string, ap domain.Approval) {
 	}
 	r, found, err := s.Store.GetRecord(ctx, org)
 	if err != nil || !found {
+		return
+	}
+	if !s.postable(ctx, org, ap) { // D3: its office became private after it was posted: the channel learns nothing more
 		return
 	}
 	_, bot := s.secrets(ctx, r)

@@ -23,11 +23,26 @@ func startMemoryBackfill(ctx context.Context, log *slog.Logger, svc *memory.Serv
 			orgIDs = append(orgIDs, defaultOrg)
 		}
 		for _, org := range orgIDs {
-			if n := svc.Backfill(application.WithOrg(bctx, org), org, store, 2000, 500); n > 0 {
-				log.Info("memory backfill", "org", org, "documents", n)
-			}
+			backfillOrg(bctx, log, svc, store, org)
 		}
 	}()
+}
+
+// backfillOrg seals and re-indexes the memory of one organization. D3 (I4): first, with no cap, the organization
+// memory the agents of private offices wrote before D3 moves to their office; then the re-index of the newest work
+// (bounded), which also takes the older mixed reports out of the organization memory.
+func backfillOrg(ctx context.Context, log *slog.Logger, svc *memory.Service, store memory.BackfillSource, org string) {
+	octx := application.WithOrg(ctx, org)
+	n, err := svc.SealOfficeMemory(octx, org)
+	if err != nil {
+		log.Warn("memory: seal office memory", "org", org, "err", err)
+	}
+	if n > 0 {
+		log.Info("memory sealed into offices", "org", org, "documents", n)
+	}
+	if n := svc.Backfill(octx, org, store, 2000, 500); n > 0 {
+		log.Info("memory backfill", "org", org, "documents", n)
+	}
 }
 
 // wireMemory builds the long-term memory (docs/architecture/memory.md): the

@@ -778,7 +778,7 @@ func (s *Service) OAuthCallback(ctx context.Context, code, state, providerErr st
 		}
 		_ = s.Store.UpdateConnection(ctx, c)
 		s.Audit(ctx, c.OrgID, st.UserID, "connection.error", "connection", c.ID, map[string]any{"reason": reason})
-		s.Emit(ctx, c.OrgID, "connection.status_changed", map[string]any{"connection_id": c.ID, "to": c.Status, "reason": reason})
+		s.Emit(ctx, c.OrgID, "connection.status_changed", map[string]any{"connection_id": c.ID, "office_id": NormOffice(c.OfficeID), "to": c.Status, "reason": reason})
 		return s.uiPath(c.ID, "error="+reason), nil
 	}
 	if providerErr != "" || code == "" {
@@ -838,7 +838,7 @@ func (s *Service) OAuthCallback(ctx context.Context, code, state, providerErr st
 	}
 	s.Audit(ctx, c.OrgID, st.UserID, "connection.connected", "connection", c.ID,
 		map[string]any{"granted_capabilities": c.GrantedCapabilities, "account_label": c.AccountLabel})
-	s.Emit(ctx, c.OrgID, "connection.status_changed", map[string]any{"connection_id": c.ID, "from": "pending", "to": StatusActive, "reason": ""})
+	s.Emit(ctx, c.OrgID, "connection.status_changed", map[string]any{"connection_id": c.ID, "office_id": NormOffice(c.OfficeID), "from": "pending", "to": StatusActive, "reason": ""})
 	_, _ = s.Test(ctx, c.OrgID, c.ID, st.UserID)
 	return s.uiPath(c.ID, "connected=1"), nil
 }
@@ -1067,7 +1067,7 @@ func (s *Service) Test(ctx context.Context, org, id, actor string) (TestResult, 
 		if res.Code == CodeReauthRequired && c.Status == StatusActive {
 			c.Status, c.StatusReason = StatusNeedsReauth, CodeReauthRequired
 			s.purgeToken(c.ID)
-			s.Emit(ctx, org, "connection.status_changed", map[string]any{"connection_id": id, "from": StatusActive, "to": StatusNeedsReauth, "reason": CodeReauthRequired})
+			s.Emit(ctx, org, "connection.status_changed", map[string]any{"connection_id": id, "office_id": NormOffice(c.OfficeID), "from": StatusActive, "to": StatusNeedsReauth, "reason": CodeReauthRequired})
 		}
 	}
 	c.UpdatedAt = now
@@ -1075,7 +1075,7 @@ func (s *Service) Test(ctx context.Context, org, id, actor string) (TestResult, 
 		return res, err
 	}
 	s.Audit(ctx, org, actor, "connection.tested", "connection", id, map[string]any{"ok": res.OK, "code": res.Code})
-	s.Emit(ctx, org, "connection.tested", map[string]any{"connection_id": id, "status": c.LastTestStatus, "latency_ms": res.LatencyMS})
+	s.Emit(ctx, org, "connection.tested", map[string]any{"connection_id": id, "office_id": NormOffice(c.OfficeID), "status": c.LastTestStatus, "latency_ms": res.LatencyMS})
 	return res, nil
 }
 
@@ -1088,7 +1088,7 @@ func (s *Service) MarkNeedsReauth(ctx context.Context, org, id string) {
 	c.Status, c.StatusReason, c.LastErrorCode, c.UpdatedAt = StatusNeedsReauth, CodeReauthRequired, CodeReauthRequired, s.Now().UTC()
 	_ = s.Store.UpdateConnection(ctx, c)
 	s.purgeToken(id)
-	s.Emit(ctx, org, "connection.status_changed", map[string]any{"connection_id": id, "from": StatusActive, "to": StatusNeedsReauth, "reason": CodeReauthRequired})
+	s.Emit(ctx, org, "connection.status_changed", map[string]any{"connection_id": id, "office_id": NormOffice(c.OfficeID), "from": StatusActive, "to": StatusNeedsReauth, "reason": CodeReauthRequired})
 }
 
 // Suspend blocks new uses at once (reversible; the secret is kept).
@@ -1111,7 +1111,7 @@ func (s *Service) Suspend(ctx context.Context, org, id, actor, reason string) (C
 			s.OnRevoke(ctx, org, id, "suspended")
 		}
 		s.Audit(ctx, org, actor, "connection.suspended", "connection", id, map[string]any{"reason": c.StatusReason})
-		s.Emit(ctx, org, "connection.status_changed", map[string]any{"connection_id": id, "from": from, "to": StatusSuspended, "reason": c.StatusReason})
+		s.Emit(ctx, org, "connection.status_changed", map[string]any{"connection_id": id, "office_id": NormOffice(c.OfficeID), "from": from, "to": StatusSuspended, "reason": c.StatusReason})
 	}
 	return s.view(ctx, c), nil
 }
@@ -1134,7 +1134,7 @@ func (s *Service) Resume(ctx context.Context, org, id, actor string) (Connection
 		return Connection{}, err
 	}
 	s.Audit(ctx, org, actor, "connection.resumed", "connection", id, nil)
-	s.Emit(ctx, org, "connection.status_changed", map[string]any{"connection_id": id, "from": StatusSuspended, "to": StatusActive, "reason": ""})
+	s.Emit(ctx, org, "connection.status_changed", map[string]any{"connection_id": id, "office_id": NormOffice(c.OfficeID), "from": StatusSuspended, "to": StatusActive, "reason": ""})
 	return s.view(ctx, c), nil
 }
 
@@ -1171,8 +1171,8 @@ func (s *Service) Revoke(ctx context.Context, org, id, confirmName, actor string
 		return Connection{}, err
 	}
 	s.Audit(ctx, org, actor, "connection.revoked", "connection", id, map[string]any{"grants_revoked": n, "pending_provider_revocation": pending})
-	s.Emit(ctx, org, "connection.status_changed", map[string]any{"connection_id": id, "from": from, "to": StatusRevoked, "reason": "user_revoked"})
-	s.Emit(ctx, org, "connection.revoked", map[string]any{"connection_id": id, "pending_provider_revocation": pending})
+	s.Emit(ctx, org, "connection.status_changed", map[string]any{"connection_id": id, "office_id": NormOffice(c.OfficeID), "from": from, "to": StatusRevoked, "reason": "user_revoked"})
+	s.Emit(ctx, org, "connection.revoked", map[string]any{"connection_id": id, "office_id": NormOffice(c.OfficeID), "pending_provider_revocation": pending})
 	return s.view(ctx, c), nil
 }
 
@@ -1246,7 +1246,7 @@ func (s *Service) RotateCredential(ctx context.Context, org, id string, secret v
 	c.UpdatedAt = s.Now().UTC()
 	_ = s.Store.UpdateConnection(ctx, c)
 	s.Audit(ctx, org, actor, "connection.rotated", "connection", id, map[string]any{"version": meta.Version, "destroy_previous": destroyPrevious})
-	s.Emit(ctx, org, "connection.rotated", map[string]any{"connection_id": id, "version": meta.Version})
+	s.Emit(ctx, org, "connection.rotated", map[string]any{"connection_id": id, "office_id": NormOffice(c.OfficeID), "version": meta.Version})
 	return s.view(ctx, c), nil
 }
 

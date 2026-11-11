@@ -28,7 +28,6 @@ import (
 	"aiworkforce/backend/internal/infrastructure/runtime"
 	"aiworkforce/backend/internal/mailer"
 	"aiworkforce/backend/internal/notify"
-	"aiworkforce/backend/internal/officeaudience"
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/projects"
 	"aiworkforce/backend/internal/push"
@@ -324,6 +323,9 @@ func run(log *slog.Logger) error {
 	}
 	memorySvc := wireMemory(ctx, log, pg, store, rec, orch, cw, ws, orgIDs, cfg.App.OrgID)
 	bindCustomerHistory(custSvc, ws, store, memorySvc) // B12: earlier work is assigned to a customer explicitly, never silently
+	// D3: departments are sealed BEFORE the resumed requests run (their events, approvals and memory).
+	officesSvc := wireDepartments(departmentWiring{AuthOn: cfg.AuthEnabled, PG: pg, Store: store, AuthStore: authStore, Chart: orgChartSvc,
+		Rec: rec, Memory: memorySvc, Orch: orch, Notify: notifySvc, Slack: slackSvc, Conns: cw.conns, Drive: ws.drive, Skills: skillsSvc, Log: log})
 	if n, err := orch.Recover(ctx, orgIDs); err != nil {
 		log.Warn("recover in-progress requests", "err", err)
 	} else if n > 0 {
@@ -380,27 +382,10 @@ func run(log *slog.Logger) error {
 	// GDPR export / deletion of the organization and the purge janitor (internal/tenantdata).
 	deps.OrgChart = orgChartSvc // corporate organization model
 	deps.Permissions = wirePermissions(cfg, log, store, rec, trustSvc, cw.ctl, orgChartSvc, permObs, policySvc, ws.projects) // approval permissions per agent
-	// E2 offices (offices.go): offices, agent owners and visibility; their notes reach the tasks.
-	deps.Offices = wireOffices(pg, store, authStore, orgChartSvc, rec, noteCleaner(memorySvc))
-	wireApprovers(orch, notifySvc, deps.Offices, authStore, cfg.AuthEnabled) // D3: an office's approvals go to its responsibles
-	officeRecall(memorySvc, deps.Offices)
+	// E2 offices (offices.go): offices, agent owners and visibility; their notes reach the tasks. Sealed by D3 in
+	// wireDepartments, before orch.Recover above.
+	deps.Offices = officesSvc
 	startMemoryBackfill(ctx, log, memorySvc, store, orgIDs, cfg.App.OrgID) // after the office scope: see startMemoryBackfill
-	if cw.conns != nil && deps.Offices != nil {
-		cw.conns.AgentOffice = agentOffices{svc: deps.Offices}.AgentOffice // D3: a department's connections serve its agents only
-	}
-	if cfg.AuthEnabled && deps.Offices != nil && ws.drive != nil {
-		ws.drive.SetPeople(officePeople{svc: deps.Offices}) // office folders: member edits, open reads, private none
-		// agents work in their office folder and never beyond the person they work for
-		ws.drive.SetAgentOffices(agentOffices{svc: deps.Offices})
-	}
-	if skillsSvc != nil && deps.Offices != nil {
-		skillsSvc.SetOffices(deps.Offices.Model) // D3: skills of a department follow its visibility
-	}
-	if cfg.AuthEnabled && deps.Offices != nil { // D3 (internal/officeaudience): a private office's live events reach its members only
-		rec.SetAudienceFor(officeaudience.New(deps.Offices, store, func(c context.Context, org, id string) string {
-			return orch.RequestedBy(application.WithOrg(c, org), id)
-		}, log))
-	}
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	// Governance: API tokens, reports, retention job, webhooks (internal/governance, internal/webhooks).
 	wireGovernance(ctx, log, pg, store, rec, auditSvc, orch, cw.vault, whSvc, &deps)

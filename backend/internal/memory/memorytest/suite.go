@@ -6,6 +6,7 @@ package memorytest
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -245,6 +246,68 @@ func Run(t *testing.T, docs memory.DocStore, drv *drive.Service, orgA, orgB stri
 		}
 		if g := strings.Join(paths("sales"), ","); strings.Contains(g, "politica.md") {
 			t.Fatalf("a deleted file must not be recalled: %s", g)
+		}
+	})
+
+	// D3 (I4): the store moves the earlier organization memory of some agents to an office, with no cap, and a
+	// document of an office is seen only by reading that office, never through its author alone.
+	t.Run("office retag", func(t *testing.T) {
+		rt, ok := docs.(memory.OfficeRetagger)
+		if !ok {
+			t.Fatal("the store must implement memory.OfficeRetagger")
+		}
+		now := time.Now().UTC()
+		for _, d := range []memory.Doc{
+			{ID: "task_lg1", Kind: memory.KindTask, Ref: "task:lg1", Title: "Acuerdo de confidencialidad", Body: "cláusula penal", AgentID: "legal", Scope: memory.ScopeOrg, CreatedAt: now, UpdatedAt: now},
+			{ID: "task_lg2", Kind: memory.KindTask, Ref: "task:lg2", Title: "Acuerdo con proveedor", Body: "cláusula penal", AgentID: "legal", Scope: memory.ScopeOrg, CreatedAt: now, UpdatedAt: now},
+			{ID: "note_lg", Kind: memory.KindNote, Ref: "memory:lg.1", Title: "cláusula penal", Body: "cláusula penal", AgentID: "legal", Scope: memory.ScopeAgent, CreatedAt: now, UpdatedAt: now},
+		} {
+			if err := docs.Upsert(ctxA, orgA, d); err != nil {
+				t.Fatal(err)
+			}
+		}
+		agents, err := rt.OrgScopeAgents(ctxA, orgA)
+		if err != nil || !slices.Contains(agents, "legal") || !slices.Contains(agents, "finance") {
+			t.Fatalf("agents with organization memory = %v %v", agents, err)
+		}
+		if n, err := rt.RetagOffice(ctxA, orgA, "off-legal", []string{"legal"}); err != nil || n != 2 {
+			t.Fatalf("retag = %d %v, want 2 (the agent's note keeps its scope)", n, err)
+		}
+		if n, _ := rt.RetagOffice(ctxB, orgB, "off-legal", []string{"legal"}); n != 0 {
+			t.Fatalf("retag crossed organizations: %d", n)
+		}
+		if d, _ := docs.GetByRef(ctxA, orgA, "task:lg1"); d.Scope != memory.ScopeOffice || d.OfficeID != "off-legal" {
+			t.Fatalf("retagged doc = %+v", d)
+		}
+		if d, _ := docs.GetByRef(ctxA, orgA, "memory:lg.1"); d.Scope != memory.ScopeAgent {
+			t.Fatalf("the agent's note changed scope: %+v", d)
+		}
+		if agents, _ := rt.OrgScopeAgents(ctxA, orgA); slices.Contains(agents, "legal") {
+			t.Fatalf("legal still has organization memory: %v", agents)
+		}
+		terms := []string{"clausula", "penal"}
+		count := func(p memory.SearchParams) int {
+			p.Terms = terms
+			hits, err := docs.Search(ctxA, orgA, p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			n := 0
+			for _, h := range hits {
+				if strings.HasPrefix(h.Doc.Ref, "task:lg") {
+					n++
+				}
+			}
+			return n
+		}
+		if n := count(memory.SearchParams{AgentID: "legal", OfficeID: "off-legal"}); n != 2 {
+			t.Fatalf("reading its office = %d, want 2", n)
+		}
+		if n := count(memory.SearchParams{AgentID: "legal"}); n != 0 {
+			t.Fatalf("its office's work seen through the author alone = %d", n)
+		}
+		if n := count(memory.SearchParams{AgentID: "finance"}); n != 0 {
+			t.Fatalf("another agent sees the office's work = %d", n)
 		}
 	})
 

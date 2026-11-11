@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -42,6 +43,10 @@ type Config struct {
 	// OfficeSealed tells whether an office is private. A report whose authors belong to several offices is only
 	// indexed when none of them is private (nil = unknown: such a report is not indexed).
 	OfficeSealed func(ctx context.Context, org, office string) (bool, error)
+	// OfficeMember (D3) tells whether a person is a member of an office. An agent of a private office working for a
+	// person who is not a member (a shared or directory agent) does not recall that office's memory; nil: no person
+	// gets a private office's memory (fails closed). Work without a person (the agent's own) is not affected.
+	OfficeMember func(ctx context.Context, org, office, userID string) (bool, error)
 	// Audit records a memory change by a person (optional).
 	Audit func(ctx context.Context, org, actor, action, id string, details map[string]any)
 	Now   func() time.Time
@@ -52,7 +57,7 @@ type Config struct {
 // relevant for a task and lets people see and delete what an agent remembers.
 type Service struct {
 	cfg   Config
-	offMu sync.RWMutex // guards cfg.AgentOffice / cfg.OfficeSealed (set after New by SetOfficeScope)
+	offMu sync.RWMutex // guards cfg.AgentOffice / cfg.OfficeSealed / cfg.OfficeMember (set after New)
 	topMu sync.Mutex
 	topAt map[string]time.Time // last lazy embedding top-up per organization
 }
@@ -118,6 +123,37 @@ func (s *Service) officeOf(ctx context.Context, org, agentID string) (string, er
 func (s *Service) office(ctx context.Context, org, agentID string) string {
 	off, err := s.officeOf(ctx, org, agentID)
 	if err != nil {
+		return ""
+	}
+	return off
+}
+
+// readOffice is the office whose memory the agent READS for the person it works for (application.PersonFrom):
+// its office, except a private one when that person is not a member of it (I6). Without a person (the agent's own
+// work) it is the agent's office. Anything that cannot be told counts as no office.
+func (s *Service) readOffice(ctx context.Context, org, agentID string) string {
+	off := s.office(ctx, org, agentID)
+	person := application.PersonFrom(ctx)
+	if off == "" || person == "" {
+		return off
+	}
+	s.offMu.RLock()
+	sealed, member := s.cfg.OfficeSealed, s.cfg.OfficeMember
+	s.offMu.RUnlock()
+	if sealed == nil {
+		return ""
+	}
+	priv, err := sealed(ctx, org, off)
+	if err != nil {
+		return ""
+	}
+	if !priv {
+		return off
+	}
+	if member == nil {
+		return ""
+	}
+	if ok, err := member(ctx, org, off, person); err != nil || !ok {
 		return ""
 	}
 	return off
@@ -301,6 +337,7 @@ func (s *Service) RememberReport(ctx context.Context, org string, r domain.Repor
 	off, ok := s.reportOffice(ctx, org, r)
 	if !ok {
 		s.cfg.Log.Warn("memory: report of several offices or of unknown office, not indexed", "report", r.ID)
+		s.forgetReport(ctx, org, r.ID) // I4: one remembered before D3 as organization memory is taken out too
 		return
 	}
 	d := ReportDoc(r)
@@ -314,6 +351,85 @@ func (s *Service) RememberReport(ctx context.Context, org string, r domain.Repor
 	if err := s.cfg.Docs.Upsert(ctx, org, d); err != nil {
 		s.cfg.Log.Warn("memory: index report", "report", r.ID, "err", err)
 	}
+}
+
+// forgetReport suppresses the document of a report that must not be remembered (it mixes a private office with
+// other authors, or its office cannot be told) when one was written before (as organization memory, before D3).
+func (s *Service) forgetReport(ctx context.Context, org, reportID string) {
+	d, err := s.cfg.Docs.GetByRef(ctx, org, "report:"+reportID)
+	if err != nil || d.Suppressed {
+		return
+	}
+	if err := s.cfg.Docs.Suppress(ctx, org, d.ID, sealActor, s.cfg.Now().UTC()); err != nil {
+		s.cfg.Log.Warn("memory: suppress a mixed report", "report", reportID, "err", err)
+	}
+}
+
+// sealActor is who suppresses or moves documents to seal the departments (D3), never a person.
+const sealActor = "system:d3"
+
+// resealReport fixes, without re-indexing it, the existing organization document of a report the backfill does
+// not re-read (beyond its cap): suppressed when the report must not be remembered, moved to its office when all its
+// authors are of one office. It reports whether it changed something.
+func (s *Service) resealReport(ctx context.Context, org string, r domain.Report) bool {
+	d, err := s.cfg.Docs.GetByRef(ctx, org, "report:"+r.ID)
+	if err != nil || d.Suppressed || d.Scope != ScopeOrg {
+		return false
+	}
+	off, ok := s.reportOffice(ctx, org, r)
+	switch {
+	case !ok:
+		s.forgetReport(ctx, org, r.ID)
+		return true
+	case off != "":
+		s.RememberReport(ctx, org, r)
+		return true
+	}
+	return false
+}
+
+// SealOfficeMemory moves the organization memory that the agents of PRIVATE offices wrote before D3 (their task
+// documents) to their office, with no cap, and returns how many documents moved. Idempotent; an agent whose office
+// cannot be told is left as it is (and the error is returned). Stores that cannot do it move nothing.
+func (s *Service) SealOfficeMemory(ctx context.Context, org string) (int, error) {
+	rt, ok := s.cfg.Docs.(OfficeRetagger)
+	agentOffice, sealed := s.officeFns()
+	if !ok || agentOffice == nil || sealed == nil {
+		return 0, nil
+	}
+	agents, err := rt.OrgScopeAgents(ctx, org)
+	if err != nil {
+		return 0, err
+	}
+	byOffice := map[string][]string{}
+	var errs []error
+	for _, a := range agents {
+		off, err := agentOffice(ctx, org, a)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if off == "" {
+			continue
+		}
+		priv, err := sealed(ctx, org, off)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if priv {
+			byOffice[off] = append(byOffice[off], a)
+		}
+	}
+	n := 0
+	for off, as := range byOffice {
+		m, err := rt.RetagOffice(ctx, org, off, as)
+		n += m
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return n, errors.Join(errs...)
 }
 
 // BackfillSource is what the backfill reads (the application store).
@@ -355,10 +471,14 @@ func (s *Service) Backfill(ctx context.Context, org string, src BackfillSource, 
 	if err != nil {
 		s.cfg.Log.Warn("memory: backfill reports", "org", org, "err", err)
 	}
-	if maxReports > 0 && len(reports) > maxReports {
-		reports = reports[:maxReports]
-	}
-	for _, r := range reports {
+	for i, r := range reports {
+		if maxReports > 0 && i >= maxReports {
+			// I4: beyond the cap, only the organization documents that D3 seals (cheap: no re-index, no embedding)
+			if s.resealReport(ctx, org, r) {
+				n++
+			}
+			continue
+		}
 		s.RememberReport(ctx, org, r)
 		n++
 	}
@@ -424,7 +544,7 @@ func (s *Service) Recall(ctx context.Context, org string, q application.MemoryRe
 	}
 	s.topUp(ctx, org)
 	pid, _ := s.project(ctx, org, q.RequestID)
-	query := Query{AgentID: q.AgentID, OfficeID: s.office(ctx, org, q.AgentID), Text: q.Text, Limit: MaxItems * 2, ExcludeRequest: q.RequestID, PreferProject: pid, CustomerID: cid}
+	query := Query{AgentID: q.AgentID, OfficeID: s.readOffice(ctx, org, q.AgentID), Text: q.Text, Limit: MaxItems * 2, ExcludeRequest: q.RequestID, PreferProject: pid, CustomerID: cid}
 	if pid != "" && s.cfg.ProjectPath != nil {
 		query.PreferPath = s.cfg.ProjectPath(ctx, org, pid)
 	}
@@ -446,7 +566,7 @@ func (s *Service) Search(ctx context.Context, org, agentID, query string, limit 
 		limit = MaxItems
 	}
 	query = capRunes(strings.TrimSpace(query), 500)
-	items := s.retrieve(ctx, org, Query{AgentID: agentID, OfficeID: s.office(ctx, org, agentID), Text: query, Limit: limit})
+	items := s.retrieve(ctx, org, Query{AgentID: agentID, OfficeID: s.readOffice(ctx, org, agentID), Text: query, Limit: limit})
 	if items == nil {
 		items = []Item{}
 	}
@@ -457,7 +577,7 @@ func (s *Service) Search(ctx context.Context, org, agentID, query string, limit 
 // when the agent may see it. Files are opened with fs.read.
 func (s *Service) Open(ctx context.Context, org, agentID, ref string) (Item, error) {
 	d, err := s.cfg.Docs.GetByRef(ctx, org, ref)
-	if err != nil || d.Suppressed || d.Scope == ScopeAgent && d.AgentID != agentID || d.Scope == ScopeOffice && (d.OfficeID == "" || d.OfficeID != s.office(ctx, org, agentID)) || !VisibleToCustomer(d, application.CustomerFrom(ctx)) {
+	if err != nil || d.Suppressed || d.Scope == ScopeAgent && d.AgentID != agentID || d.Scope == ScopeOffice && (d.OfficeID == "" || d.OfficeID != s.readOffice(ctx, org, agentID)) || !VisibleToCustomer(d, application.CustomerFrom(ctx)) {
 		return Item{}, ErrNotFound
 	}
 	it := docItem(DocHit{Doc: d}, nil)
@@ -548,6 +668,13 @@ func (s *Service) SetOfficeScope(agentOffice func(ctx context.Context, org, agen
 	s.offMu.Lock()
 	defer s.offMu.Unlock()
 	s.cfg.AgentOffice, s.cfg.OfficeSealed = agentOffice, sealed
+}
+
+// SetOfficeMembers installs Config.OfficeMember after construction (safe at any time).
+func (s *Service) SetOfficeMembers(fn func(ctx context.Context, org, office, userID string) (bool, error)) {
+	s.offMu.Lock()
+	defer s.offMu.Unlock()
+	s.cfg.OfficeMember = fn
 }
 
 // SetExtraRecall installs Config.ExtraRecall after construction (the offices are wired after the memory). Call it

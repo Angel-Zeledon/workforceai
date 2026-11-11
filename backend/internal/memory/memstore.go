@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -72,9 +73,47 @@ func (m *MemStore) RetagCustomer(_ context.Context, org string, sel RetagSelecto
 	return n, nil
 }
 
-// visible: organization knowledge, the notes of the agent itself and, D3, the documents of its own office.
+var _ OfficeRetagger = (*MemStore)(nil)
+
+// OrgScopeAgents implements OfficeRetagger.
+func (m *MemStore) OrgScopeAgents(_ context.Context, org string) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	seen := map[string]bool{}
+	var out []string
+	for k, d := range m.docs {
+		if strings.HasPrefix(k, org+"|") && d.Scope == ScopeOrg && d.AgentID != "" && !seen[d.AgentID] {
+			seen[d.AgentID] = true
+			out = append(out, d.AgentID)
+		}
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// RetagOffice implements OfficeRetagger.
+func (m *MemStore) RetagOffice(_ context.Context, org, office string, agentIDs []string) (int, error) {
+	if office == "" || len(agentIDs) == 0 {
+		return 0, nil
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	n := 0
+	for k, d := range m.docs {
+		if strings.HasPrefix(k, org+"|") && d.Scope == ScopeOrg && d.AgentID != "" && slices.Contains(agentIDs, d.AgentID) {
+			d.Scope, d.OfficeID = ScopeOffice, office
+			m.docs[k] = d
+			n++
+		}
+	}
+	return n, nil
+}
+
+// visible: organization knowledge, the notes of the agent itself and, D3, the documents of the office it reads
+// (officeID): a document of an office is never seen through its author alone (an agent working for a person outside
+// its private office, or whose office cannot be told, does not see its office's work).
 func visible(d Doc, agentID, officeID string) bool {
-	return !d.Suppressed && (d.Scope == ScopeOrg || d.AgentID == agentID || d.Scope == ScopeOffice && officeID != "" && d.OfficeID == officeID)
+	return !d.Suppressed && (d.Scope == ScopeOrg || d.Scope != ScopeOffice && d.AgentID == agentID || d.Scope == ScopeOffice && officeID != "" && d.OfficeID == officeID)
 }
 
 // Search implements DocStore.
