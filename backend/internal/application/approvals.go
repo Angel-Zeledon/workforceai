@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -342,6 +343,37 @@ func (a *Approvals) remind(ctx context.Context, ap domain.Approval, n int, waite
 //     stays pending until a second, different human approves. One rejection by
 //     any authorized human is final.
 func (a *Approvals) Decide(ctx context.Context, id, decision, note string) (domain.Approval, error) {
+	return a.DecideIf(ctx, id, decision, note, nil)
+}
+
+// ErrApprovalVoted is what WhileUndecided answers when the approval already has a vote or a decision.
+var ErrApprovalVoted = fmt.Errorf("%w: the approval already has a vote", domain.ErrConflict)
+
+// DecideIf is Decide with check run right before the decision is recorded, in the same critical section as every
+// other decision and as WhileUndecided: what check verifies (the outbox: the e-mail is still the version the person
+// approved) cannot change before the vote is stored. A check error refuses the decision and is returned as is.
+func (a *Approvals) DecideIf(ctx context.Context, id, decision, note string, check func(domain.Approval) error) (domain.Approval, error) {
+	return a.decide(ctx, id, decision, note, check)
+}
+
+// WhileUndecided runs fn while nobody can decide the approval id, and only if it has no vote yet (ErrApprovalVoted
+// otherwise): an edit of what the approval is about (the outbox) cannot cross a vote. A missing approval runs fn.
+func (a *Approvals) WhileUndecided(ctx context.Context, id string, fn func() error) error {
+	a.decideMu.Lock()
+	defer a.decideMu.Unlock()
+	ap, err := a.store.GetApproval(ctx, a.org(ctx), id)
+	switch {
+	case errors.Is(err, domain.ErrNotFound):
+		return fn()
+	case err != nil:
+		return err
+	case ap.Status != domain.ApprovalPending || len(ap.Decisions) > 0:
+		return ErrApprovalVoted
+	}
+	return fn()
+}
+
+func (a *Approvals) decide(ctx context.Context, id, decision, note string, check func(domain.Approval) error) (domain.Approval, error) {
 	var st domain.ApprovalStatus
 	switch strings.ToLower(decision) {
 	case "approve":
@@ -368,6 +400,11 @@ func (a *Approvals) Decide(ctx context.Context, id, decision, note string) (doma
 	if isAgentPrincipal(actor, ap.AgentID) {
 		a.deny(ctx, ap, actor, "agents_cannot_decide")
 		return ap, fmt.Errorf("%w: agents and system principals can never decide approvals", domain.ErrForbidden)
+	}
+	if check != nil {
+		if err := check(ap); err != nil {
+			return ap, err
+		}
 	}
 	if st == domain.ApprovalRejected {
 		return a.resolveLocked(ctx, ap, st, note, actor)

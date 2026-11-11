@@ -62,7 +62,8 @@ type Gateway struct {
 	OrgIDs func(ctx context.Context) []string
 	// Executions (optional) records every executed approval durably, so an
 	// approved action runs at most once across restarts and instances. Without
-	// it only the in-memory record of this process applies.
+	// it the claims of this process apply (local): the outbox and the woken task
+	// of one approval still run it once.
 	Executions application.ExecutionLedger
 	// Rehearsal (optional, B9) answers whether the agent or the request is in
 	// rehearsal; GatewayCall.Rehearsal is honored without it (rehearsal.go).
@@ -77,6 +78,7 @@ type Gateway struct {
 	entries     map[string]*outboxEntry
 	byKey       map[string]string // approval key -> entry id
 	approvedOut map[string]application.GatewayOutcome
+	local       localLedger // the claims without Executions
 }
 
 // New builds a Gateway.
@@ -439,8 +441,8 @@ func (g *Gateway) Execute(ctx context.Context, c application.GatewayCall) applic
 		}
 	}
 
-	if approved && c.ApprovalID != "" && g.Executions != nil {
-		claimed, prev, err := g.Executions.ClaimExecution(ctx, c.Org, application.ApprovalExecution{ApprovalID: c.ApprovalID, TaskID: c.TaskID,
+	if approved && c.ApprovalID != "" {
+		claimed, prev, err := g.ledger().ClaimExecution(ctx, c.Org, application.ApprovalExecution{ApprovalID: c.ApprovalID, TaskID: c.TaskID,
 			Tool: c.Tool, Action: c.Action, ArgsHash: c.ApprovedArgsHash})
 		if err != nil {
 			g.Log.Warn("gateway: claim approved execution", "approval", c.ApprovalID, "err", err)
@@ -464,12 +466,12 @@ func (g *Gateway) Execute(ctx context.Context, c application.GatewayCall) applic
 	if approved && c.ApprovalID != "" && out.Decision == "allowed" && (out.Status == "scheduled" || out.Status == "succeeded") {
 		g.rememberApproved(c.ApprovalID, out)
 	}
-	if approved && c.ApprovalID != "" && g.Executions != nil {
+	if approved && c.ApprovalID != "" {
 		st := out.Status
 		if out.Decision != "allowed" {
 			st = "denied:" + out.DenyReason
 		}
-		if err := g.Executions.FinishExecution(ctx, c.Org, c.ApprovalID, st, out.HoldID); err != nil {
+		if err := g.ledger().FinishExecution(ctx, c.Org, c.ApprovalID, st, out.HoldID); err != nil {
 			g.Log.Warn("gateway: finish approved execution", "approval", c.ApprovalID, "err", err)
 		}
 	}

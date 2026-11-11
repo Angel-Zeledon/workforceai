@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/gateway"
@@ -60,38 +61,34 @@ func (s *server) editOutbox(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
-	if !s.outboxGuard(w, r, false) || !s.outboxEditable(w, r) {
+	if !s.outboxGuard(w, r, false) {
 		return
 	}
-	it, err := s.Gateway.OutboxEdit(r.Context(), s.org(r), chi.URLParam(r, "id"), gateway.OutboxPatch{To: body.To, Cc: body.Cc, Subject: body.Subject, Body: body.Body})
+	ctx, org, id := r.Context(), s.org(r), chi.URLParam(r, "id")
+	var it gateway.OutboxItem
+	edit := func() (err error) {
+		it, err = s.Gateway.OutboxEdit(ctx, org, id, gateway.OutboxPatch{To: body.To, Cc: body.Cc, Subject: body.Subject, Body: body.Body})
+		return err
+	}
+	var err error
+	if cur, e := s.Gateway.OutboxEntry(org, id); e == nil && cur.ApprovalID != "" {
+		// What leaves must be what every approver saw: once a vote is recorded nobody edits (reject it to change it),
+		// and the edit runs where no vote can be recorded meanwhile (Approvals.WhileUndecided). It fails closed when the
+		// approval cannot be read.
+		err = s.Approvals.WhileUndecided(ctx, cur.ApprovalID, edit)
+	} else {
+		err = edit() // a missing entry answers 404 there
+	}
+	if errors.Is(err, application.ErrApprovalVoted) {
+		codeErr(w, http.StatusConflict, "partially_approved",
+			"someone already approved this e-mail as it is; it cannot be edited until the approval is decided (reject it to change it)")
+		return
+	}
 	if err != nil {
-		s.connErr(w, err)
+		s.connErr(w, err) // an approval that cannot be read: 500
 		return
 	}
 	writeJSON(w, 200, it)
-}
-
-// outboxEditable refuses (409) editing an e-mail whose approval already has a vote of a double approval: what leaves
-// must be what every approver saw, and the earlier vote approved the text as it was. Reject it and let the agent ask
-// again to change it. It fails closed when the approval cannot be read; a missing entry is left to the handler.
-func (s *server) outboxEditable(w http.ResponseWriter, r *http.Request) bool {
-	it, err := s.Gateway.OutboxEntry(s.org(r), chi.URLParam(r, "id"))
-	if err != nil || it.ApprovalID == "" {
-		return true
-	}
-	ap, err := s.Store.GetApproval(r.Context(), s.org(r), it.ApprovalID)
-	switch {
-	case errors.Is(err, domain.ErrNotFound):
-		return true
-	case err != nil:
-		s.fail(w, err)
-		return false
-	case ap.Status == domain.ApprovalPending && len(ap.Decisions) > 0:
-		codeErr(w, http.StatusConflict, "partially_approved",
-			"someone already approved this e-mail as it is; it cannot be edited until the approval is decided (reject it to change it)")
-		return false
-	}
-	return true
 }
 
 func (s *server) outboxErr(w http.ResponseWriter, err error) {
@@ -99,6 +96,8 @@ func (s *server) outboxErr(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, gateway.ErrVersionMismatch):
 		codeErr(w, http.StatusConflict, "version_mismatch", err.Error())
+	case errors.Is(err, gateway.ErrApprovalNotReady):
+		codeErr(w, http.StatusConflict, "approval_not_ready", err.Error())
 	case errors.As(err, &de):
 		codeErr(w, http.StatusConflict, de.Code, "the action was denied when it was about to be scheduled: "+de.Code)
 	default:
@@ -117,11 +116,14 @@ func (s *server) approveOutbox(w http.ResponseWriter, r *http.Request) {
 	if !s.outboxGuard(w, r, true) { // before anything is scheduled: a refused decision sends nothing
 		return
 	}
-	ctx := r.Context()
+	ctx, org, id := r.Context(), s.org(r), chi.URLParam(r, "id")
 	// The decision first (gateway.OutboxApprove): the e-mail is scheduled only once the approval is granted. A vote
-	// that leaves a double approval incomplete is recorded and answers 202 with the item still pending.
-	it, err := s.Gateway.OutboxApprove(ctx, s.org(r), chi.URLParam(r, "id"), body.Version, s.actor(r), func(approvalID string) error {
-		ap, e := s.Approvals.Decide(ctx, approvalID, "approve", "approved from the outbox")
+	// that leaves a double approval incomplete is recorded and answers 202 with the item still pending. The vote is
+	// recorded only if the e-mail is still the version the person approved, checked where no edit can slip in.
+	it, err := s.Gateway.OutboxApprove(ctx, org, id, body.Version, s.actor(r), func(approvalID string) error {
+		ap, e := s.Approvals.DecideIf(ctx, approvalID, "approve", "approved from the outbox", func(domain.Approval) error {
+			return s.Gateway.OutboxCurrent(org, id, body.Version)
+		})
 		if e == nil && ap.Status != domain.ApprovalApproved {
 			return gateway.ErrApprovalIncomplete
 		}

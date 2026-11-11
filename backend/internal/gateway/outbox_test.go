@@ -26,6 +26,7 @@ func TestOutboxListsEditsAndApprovesWithVersionCheck(t *testing.T) {
 	e := newEnv(t, gmail.Config{})
 	ctx := context.Background()
 	c, p := pendingSend(t, e)
+	e.g.RegisterApproval("ap-1", p) // approving from the outbox decides its approval (an unbound item is refused)
 
 	items, err := e.g.Outbox(ctx, org, "")
 	if err != nil || len(items) != 1 {
