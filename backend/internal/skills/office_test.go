@@ -5,8 +5,10 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/offices"
 )
 
@@ -14,7 +16,8 @@ import (
 
 type officeEnv struct {
 	*env
-	off *offices.Service
+	off       *offices.Service
+	agentDept map[string]string
 }
 
 var (
@@ -52,7 +55,7 @@ func newOfficeEnv(t *testing.T) *officeEnv {
 		}
 		return prev(c, o, id)
 	}
-	return &officeEnv{env: e, off: off}
+	return &officeEnv{env: e, off: off, agentDept: agentDept}
 }
 
 func officeIn(name, office string) Input {
@@ -253,6 +256,71 @@ func TestOfficeSkillFilesLiveInTheOfficeFolder(t *testing.T) {
 		t.Fatalf("load: %v %q", err, got.Text)
 	}
 }
+
+// An agent that moved to another office loses the skills of the old one, both the ones assigned to it and the
+// defaults of its role.
+func TestAgentSkillsLeaveOutTheOldOfficeSkillOfAMovedAgent(t *testing.T) {
+	e := newOfficeEnv(t)
+	d, err := e.svc.Create(e.ctx, ana, officeIn("contract-review", "d-legal"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.Review(e.ctx, Actor{ID: "u-ana", Admin: true}, d.ID, true, 1, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.svc.Assign(e.ctx, ana, "a-elena", d.ID); err != nil {
+		t.Fatal(err)
+	}
+	e.svc.cfg.RoleDefaults = func(string) []string { return []string{"contract-review"} } // also a default of the role
+	has := func() map[string]string {
+		l, err := e.svc.AgentSkills(e.ctx, "a-elena")
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := map[string]string{}
+		for _, s := range l {
+			out[s.Name] = s.Via
+		}
+		return out
+	}
+	if _, ok := has()["contract-review"]; !ok {
+		t.Fatalf("an agent of Legal must have its office's skill: %v", has())
+	}
+	e.agentDept["a-elena"] = "d-sales" // the agent moves to Ventas
+	time.Sleep(30 * time.Millisecond)   // the offices model is cached for TTL (a coarse clock on Windows)
+	if got := has(); len(got) != 0 {
+		t.Fatalf("a moved agent keeps the old office's skills (assigned or by role default): %v", got)
+	}
+}
+
+// An agent's drive tool cannot read the skill files of another office (/Offices/<other>/Skills), with or without
+// an approval, while the office's own agent can.
+func TestAgentCannotReadAnotherOfficesSkillFiles(t *testing.T) {
+	e := newOfficeEnv(t)
+	if _, err := e.svc.Create(e.ctx, ana, officeIn("contract-review", "d-legal")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.drv.EnsureOfficeFolder(e.ctx, "d-sales", "Ventas", nil); err != nil {
+		t.Fatal(err)
+	}
+	fs := &drive.AgentFS{Svc: e.drv, Offices: agentOffices{"a-elena": "d-legal", "a-valeria": "d-sales"}}
+	args := map[string]any{"path": "/Offices/Legal/Skills/contract-review/v1/SKILL.md"}
+	for _, approved := range []bool{false, true} {
+		if r := fs.Run(e.ctx, "a-valeria", "read", args, approved); r.OK || strings.Contains(r.Text, "contract-review") {
+			t.Fatalf("an agent of Ventas read Legal's skill (approved=%v): %+v", approved, r)
+		}
+	}
+	if r := fs.Run(e.ctx, "a-sofia", "read", args, true); r.OK {
+		t.Fatalf("an agent of General read Legal's skill: %+v", r)
+	}
+	if r := fs.Run(e.ctx, "a-elena", "read", args, false); !r.OK {
+		t.Fatalf("the office's own agent must read its skill: %+v", r)
+	}
+}
+
+type agentOffices map[string]string
+
+func (a agentOffices) AgentOffice(_ context.Context, _, id string) (string, error) { return a[id], nil }
 
 func TestOfficeSkillsFailClosedWhenTheModelFails(t *testing.T) {
 	e := newOfficeEnv(t)
