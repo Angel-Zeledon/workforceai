@@ -133,6 +133,28 @@ func TestBackfillSealsOlderReportsBeyondTheCap(t *testing.T) {
 	}
 }
 
+// Moving an older single-office report to its office asks for no new embedding: the store keeps the vector of an
+// unchanged text (embedDocs skips it), so resealing costs nothing in provider calls.
+func TestResealOfOlderReportRequestsNoEmbedding(t *testing.T) {
+	ctx, store, emb := context.Background(), memory.NewMemStore(), &fakeEmbedder{model: "fake"}
+	reports := []domain.Report{report("r0", "general1"), report("r2", "legal1")}
+	before := memory.New(memory.Config{Docs: store, Embedder: emb, Retriever: &memory.FTS{Docs: store}}) // before D3
+	for _, r := range reports {
+		before.RememberReport(ctx, "o", r)
+	}
+	seeded := emb.callCount()
+	svc := memory.New(memory.Config{Docs: store, Embedder: emb, Retriever: &memory.FTS{Docs: store},
+		AgentOffice:  func(_ context.Context, _, a string) (string, error) { return map[string]string{"legal1": "legal"}[a], nil },
+		OfficeSealed: func(_ context.Context, _, o string) (bool, error) { return o == "legal", nil }})
+	svc.Backfill(ctx, "o", reportsSrc(reports), 0, 1) // r2 is beyond the cap
+	if d, _ := store.GetByRef(ctx, "o", "report:r2"); d.Scope != memory.ScopeOffice || d.OfficeID != "legal" {
+		t.Fatalf("the older report did not move: %+v", d)
+	}
+	if got := emb.callCount(); got != seeded {
+		t.Fatalf("resealing asked for %d new embedding calls, want 0", got-seeded)
+	}
+}
+
 type reportsSrc []domain.Report
 
 func (reportsSrc) ListTasks(context.Context, string, string, string) ([]domain.Task, error) {

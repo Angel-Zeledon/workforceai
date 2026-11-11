@@ -57,7 +57,7 @@ type Config struct {
 // relevant for a task and lets people see and delete what an agent remembers.
 type Service struct {
 	cfg   Config
-	offMu sync.RWMutex // guards cfg.AgentOffice / cfg.OfficeSealed / cfg.OfficeMember (set after New)
+	offMu sync.RWMutex // guards cfg.AgentOffice / cfg.OfficeSealed / cfg.OfficeMember / cfg.ExtraRecall (set after New)
 	topMu sync.Mutex
 	topAt map[string]time.Time // last lazy embedding top-up per organization
 }
@@ -540,8 +540,11 @@ func (s *Service) Recall(ctx context.Context, org string, q application.MemoryRe
 	}
 	// E2: notes people wrote (the office's, the person's, the company's) are instructions like /recordar, never
 	// customer data, so they also reach customer-scoped tasks
-	if s.cfg.ExtraRecall != nil {
-		for _, m := range s.cfg.ExtraRecall(ctx, org, q.AgentID, q.RequestID, q.Text) {
+	s.offMu.RLock()
+	extra := s.cfg.ExtraRecall
+	s.offMu.RUnlock()
+	if extra != nil {
+		for _, m := range extra(ctx, org, q.AgentID, q.RequestID, q.Text) {
 			m.Title, m.Snippet = Clean(m.Title, s.cfg.Suspects), Clean(m.Snippet, s.cfg.Suspects)
 			if len([]rune(m.Title))+len([]rune(m.Snippet)) > budget {
 				continue // too big for what is left: the next ones may fit
@@ -692,8 +695,10 @@ func (s *Service) SetOfficeMembers(fn func(ctx context.Context, org, office, use
 	s.cfg.OfficeMember = fn
 }
 
-// SetExtraRecall installs Config.ExtraRecall after construction (the offices are wired after the memory). Call it
-// at start-up, before the first task.
+// SetExtraRecall installs Config.ExtraRecall after construction (the offices are wired after the memory). Safe at
+// any time, like SetOfficeScope.
 func (s *Service) SetExtraRecall(fn func(ctx context.Context, org, agentID, requestID, text string) []application.RecalledMemory) {
+	s.offMu.Lock()
+	defer s.offMu.Unlock()
 	s.cfg.ExtraRecall = fn
 }
