@@ -109,6 +109,17 @@ func (s *server) officeOK(w http.ResponseWriter, r *http.Request, sc connScope, 
 	return true
 }
 
+// writeConn answers 200 with the connection decorated for the person (can_manage, like the listing): the answers of
+// the lifecycle routes (credential, suspend, resume, revoke) replace the connection on the screen.
+func (s *server) writeConn(w http.ResponseWriter, r *http.Request, c connections.Connection) {
+	sc, err := s.connScope(r)
+	if err != nil {
+		s.connErr(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, s.connOut(r, sc, c))
+}
+
 // connOut decorates a connection for the person: whether they may manage it.
 func (s *server) connOut(r *http.Request, sc connScope, c connections.Connection) connections.Connection {
 	c.CanManage = s.manages(r, sc, c, auth.PermConnectionsManage)
