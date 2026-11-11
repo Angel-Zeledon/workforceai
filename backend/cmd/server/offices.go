@@ -3,16 +3,22 @@ package main
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"slices"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/connections"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/infrastructure/postgres"
 	"aiworkforce/backend/internal/memory"
 	"aiworkforce/backend/internal/notify"
+	"aiworkforce/backend/internal/officeaudience"
 	"aiworkforce/backend/internal/offices"
 	"aiworkforce/backend/internal/orgchart"
+	"aiworkforce/backend/internal/skills"
+	"aiworkforce/backend/internal/slackapp"
 )
 
 // wireOffices builds E2 "Oficinas" (docs/architecture/equipos-oficinas.md §3 and §4): offices over the departments of
@@ -80,6 +86,55 @@ func wireOffices(pg *postgres.Store, store application.Store, authStore auth.Sto
 	return offices.New(cfg)
 }
 
+// departmentWiring is what wireDepartments seals (nil parts are skipped).
+type departmentWiring struct {
+	AuthOn    bool
+	PG        *postgres.Store
+	Store     application.Store
+	AuthStore auth.Store
+	Chart     *orgchart.Service
+	Rec       *application.Recorder
+	Memory    *memory.Service
+	Orch      *application.Orchestrator
+	Notify    *notify.Service
+	Slack     *slackapp.Service
+	Conns     *connections.Service
+	Drive     *drive.Service
+	Skills    *skills.Service
+	Log       *slog.Logger
+}
+
+// wireDepartments builds the offices (E2) and installs everything D3 seals a private department with: the office
+// scope of the memory, who decides and sees its approvals (web, e-mail, Slack), its connections, its drive folders,
+// its skills and who receives its live events. It runs BEFORE orch.Recover (TestDepartmentsAreWiredBeforeRecover):
+// a request resumed by durable execution emits events, asks for approvals and writes memory right away.
+func wireDepartments(w departmentWiring) *offices.Service {
+	svc := wireOffices(w.PG, w.Store, w.AuthStore, w.Chart, w.Rec, noteCleaner(w.Memory))
+	wireApprovers(w.Orch, w.Notify, w.Slack, svc, w.AuthStore, w.AuthOn) // D3: an office's approvals go to its responsibles
+	officeRecall(w.Memory, svc)
+	if svc == nil {
+		return nil
+	}
+	if w.Conns != nil {
+		w.Conns.AgentOffice = agentOffices{svc: svc}.AgentOffice // D3: a department's connections serve its agents only
+	}
+	if w.AuthOn && w.Drive != nil {
+		w.Drive.SetPeople(officePeople{svc: svc}) // office folders: member edits, open reads, private none
+		// agents work in their office folder and never beyond the person they work for
+		w.Drive.SetAgentOffices(agentOffices{svc: svc})
+	}
+	if w.Skills != nil {
+		w.Skills.SetOffices(svc.Model) // D3: skills of a department follow its visibility
+	}
+	if w.AuthOn && w.Rec != nil { // D3 (internal/officeaudience): a private office's live events reach its members only
+		orch := w.Orch
+		w.Rec.SetAudienceFor(officeaudience.New(svc, w.Store, func(c context.Context, org, id string) string {
+			return orch.RequestedBy(application.WithOrg(c, org), id)
+		}, w.Log))
+	}
+	return svc
+}
+
 // noteCleaner is the cleaner of the notes people write for an office or for themself: the same one as /recordar (a
 // text with a secret or an injection pattern is refused).
 func noteCleaner(m *memory.Service) func(string) string {
@@ -125,7 +180,7 @@ func officeRecall(m *memory.Service, svc *offices.Service) {
 // responsibles of that office (the admins when it has none), and whoever does not see the agent's work does not see
 // its approvals. The e-mail notice also goes to those responsibles. Without authentication there are no people, so
 // nothing changes.
-func wireApprovers(orch *application.Orchestrator, notifySvc *notify.Service, svc *offices.Service, authStore auth.Store, authOn bool) {
+func wireApprovers(orch *application.Orchestrator, notifySvc *notify.Service, slackSvc *slackapp.Service, svc *offices.Service, authStore auth.Store, authOn bool) {
 	if !authOn || svc == nil || authStore == nil {
 		return
 	}
@@ -138,6 +193,17 @@ func wireApprovers(orch *application.Orchestrator, notifySvc *notify.Service, sv
 		return out, err
 	}}
 	orch.SetApproverPolicy(pol)
+	if slackSvc != nil {
+		// The two-way Slack app: a private office's approvals never reach the company channel (an office that cannot
+		// be told counts as private), /oficina pendientes lists what the person sees, the responsible decides.
+		slackSvc.SetOffices(slackapp.OfficeRule{Policy: pol, Private: func(ctx context.Context, org string, ap domain.Approval) (bool, error) {
+			o, ok, _, err := pol.Audience(ctx, org, ap)
+			if err != nil {
+				return true, err
+			}
+			return ok && o.Visibility == offices.Private, nil
+		}})
+	}
 	if notifySvc != nil {
 		notifySvc.Approvers = func(ctx context.Context, org string, ap domain.Approval) (notify.ApprovalAudience, error) {
 			o, ok, ids, err := pol.Audience(ctx, org, ap)
