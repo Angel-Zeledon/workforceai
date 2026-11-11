@@ -10,6 +10,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/offices"
 	"aiworkforce/backend/internal/projects"
 )
 
@@ -187,7 +188,7 @@ func (s *server) decider(r *http.Request) func(ap domain.Approval) (bool, []stri
 	if !ok {
 		return nil
 	}
-	ctx, org, pol := r.Context(), s.org(r), s.Approvals.Policy()
+	ctx, org, pol := offices.Once(r.Context()), s.org(r), s.Approvals.Policy() // one read of the rule for the whole list
 	names := s.approverNames(r)
 	return func(ap domain.Approval) (bool, []string) {
 		can := application.DecidesApproval(ctx, pol, org, ap, p.UserID, string(p.Role), p.Can(auth.PermApprovalsDecide))
@@ -270,7 +271,7 @@ func (s *server) inboxOffices(r *http.Request, in *application.InboxInput) {
 	if pol == nil || !s.AuthEnabled || in.Viewer == "" {
 		return
 	}
-	ctx, org := r.Context(), s.org(r)
+	ctx, org := offices.Once(r.Context()), s.org(r) // one read of the rule for the whole inbox
 	viewer, role, hasDecide := in.Viewer, in.ViewerRole, in.ViewerCanDecide
 	in.Decides = func(ap domain.Approval) bool {
 		return application.DecidesApproval(ctx, pol, org, ap, viewer, role, hasDecide)
@@ -285,7 +286,7 @@ func (s *server) awayDecides(r *http.Request, userID, role string, hasDecide boo
 	if pol == nil || !s.AuthEnabled {
 		return nil
 	}
-	ctx, org := r.Context(), s.org(r)
+	ctx, org := offices.Once(r.Context()), s.org(r)
 	return func(ap domain.Approval) bool {
 		return application.DecidesApproval(ctx, pol, org, ap, userID, role, hasDecide)
 	}
