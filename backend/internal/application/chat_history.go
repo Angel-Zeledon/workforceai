@@ -146,18 +146,19 @@ type ChatHistory struct {
 
 func (h *ChatHistory) org(ctx context.Context) string { return OrgFrom(ctx, h.Cfg.OrgID) }
 
-// Conversations lists the history (title, preview, unread...). It reports whether more rows exist.
-func (h *ChatHistory) Conversations(ctx context.Context, q ChatConvQuery) ([]ChatConversation, bool, error) {
+// Conversations lists the history (title, preview, unread...). It reports whether more rows exist and the offset
+// of the next page (the stored rows read: D3, the rows left out count too, so the next page never repeats them).
+func (h *ChatHistory) Conversations(ctx context.Context, q ChatConvQuery) ([]ChatConversation, bool, int, error) {
 	q.Q = strings.TrimSpace(q.Q)
 	switch q.Archived {
 	case "", "only", "all":
 	default:
-		return nil, false, fmt.Errorf("%w: archived must be only or all", domain.ErrInvalid)
+		return nil, false, 0, fmt.Errorf("%w: archived must be only or all", domain.ErrInvalid)
 	}
 	switch q.Kind {
 	case "", ConvKindOffice, ConvKindAgent, ConvKindRequest:
 	default:
-		return nil, false, fmt.Errorf("%w: kind must be office, agent or request", domain.ErrInvalid)
+		return nil, false, 0, fmt.Errorf("%w: kind must be office, agent or request", domain.ErrInvalid)
 	}
 	if q.Limit <= 0 || q.Limit > defaultHistoryLimit {
 		q.Limit = defaultHistoryLimit
@@ -170,17 +171,31 @@ func (h *ChatHistory) Conversations(ctx context.Context, q ChatConvQuery) ([]Cha
 	}
 	org := h.org(ctx)
 	q.Viewer = PersonFrom(ctx)
-	rows, more, err := h.Store.ChatConversations(ctx, org, q)
-	if err != nil {
-		return nil, false, err
+	want := q.Limit
+	rows := []ChatConversation{}
+	more := false
+	for reads := 0; reads < maxFillReads; reads++ { // D3: a page that left out private work is filled from the next rows
+		page, m, err := h.Store.ChatConversations(ctx, org, q)
+		if err != nil {
+			return nil, false, 0, err
+		}
+		more, q.Offset = m, q.Offset+len(page)
+		if len(page) == 0 {
+			more = false
+			break
+		}
+		rows = append(rows, slices.DeleteFunc(page, func(c ChatConversation) bool { return !storedRowVisible(ctx, c) })...)
+		if !more || len(rows) >= want {
+			break
+		}
+		q.Limit = want - len(rows)
 	}
-	rows = slices.DeleteFunc(rows, func(c ChatConversation) bool { return !storedRowVisible(ctx, c) }) // D3: private work
 	for i := range rows {
 		sealPreview(ctx, &rows[i])
 	}
 	rows = publicRows(q.Viewer, rows)
 	h.link(ctx, org, rows)
-	return rows, more, nil
+	return rows, more, q.Offset, nil
 }
 
 // sealPreview (D3) clears the preview of a STORED chat row when it quotes what an agent whose work the person does not
@@ -196,7 +211,8 @@ func sealPreview(ctx context.Context, c *ChatConversation) {
 }
 
 // publicRows turns stored rows into what the viewer sees: public ids, and one row per agent chat (their
-// private thread and the earlier shared history are the same chat for them: counts add up, the newest wins).
+// private thread and the earlier shared history are the same chat for them: counts add up, the newest wins, its
+// preview too unless sealed blank).
 func publicRows(viewer string, rows []ChatConversation) []ChatConversation {
 	out := make([]ChatConversation, 0, len(rows))
 	at := map[string]int{}
@@ -212,8 +228,13 @@ func publicRows(viewer string, rows []ChatConversation) []ChatConversation {
 		c.MessageCount += r.MessageCount
 		c.Unread += r.Unread
 		c.SharedLegacy = c.SharedLegacy || r.SharedLegacy
-		if r.UpdatedAt.After(c.UpdatedAt) {
-			c.Preview, c.PreviewFrom, c.UpdatedAt, c.LastMessageAt = r.Preview, r.PreviewFrom, r.UpdatedAt, r.LastMessageAt
+		newer := r.UpdatedAt.After(c.UpdatedAt)
+		if newer {
+			c.UpdatedAt, c.LastMessageAt = r.UpdatedAt, r.LastMessageAt
+		}
+		// the newest preview wins, but one sealed blank (D3, sealPreview) does not blank the other's
+		if r.Preview != "" && (newer || c.Preview == "") {
+			c.Preview, c.PreviewFrom = r.Preview, r.PreviewFrom
 		}
 		if c.OwnerID == "" && r.OwnerID != "" { // the private row owns title and archive state
 			c.Title, c.TitleCustom, c.Archived, c.ArchivedAt, c.OwnerID = r.Title, r.TitleCustom, r.Archived, r.ArchivedAt, r.OwnerID
@@ -290,40 +311,74 @@ func (h *ChatHistory) checkThread(ctx context.Context, key string) error {
 	return err
 }
 
-// Thread pages the messages of General or of one agent, oldest first.
-func (h *ChatHistory) Thread(ctx context.Context, q ChatThreadQuery) ([]ChatMessage, bool, error) {
+// maxFillReads bounds the extra reads of a page that leaves out what the person may not see (D3): it keeps reading
+// older rows until the page is full or nothing is left, up to this many reads; the cursor it gives always moves on.
+const maxFillReads = 10
+
+// Thread pages the messages of General or of one agent, oldest first. It reports whether older messages exist and
+// the id to page from (the oldest message read, which may be one left out: the next page starts after it).
+func (h *ChatHistory) Thread(ctx context.Context, q ChatThreadQuery) ([]ChatMessage, bool, string, error) {
 	if err := h.checkThread(ctx, q.Thread); err != nil {
-		return nil, false, err
+		return nil, false, "", err
 	}
 	if q.Limit <= 0 {
 		q.Limit = 50
 	}
 	q.Limit = min(q.Limit, maxHistoryLimit)
 	q.Viewer = PersonFrom(ctx)
-	msgs, more, err := h.Store.ChatThreadMessages(ctx, h.org(ctx), q)
-	if err != nil {
-		return nil, false, err
+	want := q.Limit
+	var out []ChatMessage
+	more := false
+	for reads := 0; reads < maxFillReads; reads++ {
+		page, m, err := h.Store.ChatThreadMessages(ctx, h.org(ctx), q)
+		if err != nil {
+			return nil, false, "", err
+		}
+		more = m
+		if len(page) == 0 {
+			more = false
+			break
+		}
+		q.BeforeID = page[0].ID
+		out = append(h.threadVisible(ctx, q.Thread, page), out...)
+		if !more || len(out) >= want {
+			break
+		}
+		q.Limit = want - len(out)
 	}
-	// D3: in a shared chat, what a private office's agent said or was told is that office's (sealed live too)
-	msgs = slices.DeleteFunc(msgs, func(m ChatMessage) bool { return !SharedMessageVisible(ctx, m.Message) })
+	if out == nil {
+		out = []ChatMessage{}
+	}
+	return out, more, q.BeforeID, nil
+}
+
+// threadVisible leaves out of a page of a thread what the person may not read (D3).
+func (h *ChatHistory) threadVisible(ctx context.Context, thread string, msgs []ChatMessage) []ChatMessage {
 	plain := make([]domain.Message, len(msgs))
 	for i := range msgs {
 		plain[i] = msgs[i].Message
+	}
+	// in a shared chat, what a private office's agent said or was told is that office's (sealed live too), but for
+	// the person whose own turn it was
+	own := OwnTurns(ctx, plain)
+	msgs = slices.DeleteFunc(msgs, func(m ChatMessage) bool { return !own[m.TurnID] && !SharedMessageVisible(ctx, m.Message) })
+	plain = plain[:0]
+	for i := range msgs {
+		plain = append(plain, msgs[i].Message)
 	}
 	plain = PublicMessages(ctx, plain)
 	for i := range msgs {
 		msgs[i].Message = plain[i]
 	}
-	// D3: someone who uses a private office's agent without being in it sees their own thread only, not the history
-	// the organization shared with the agent before private threads existed; General leaves that history out too
-	ownOnly := q.Thread != ThreadGeneral && !WorkVisible(ctx, q.Thread)
-	msgs = slices.DeleteFunc(msgs, func(m ChatMessage) bool {
+	// someone who uses a private office's agent without being in it sees their own thread only, not the history the
+	// organization shared with the agent before private threads existed; General leaves that history out too
+	ownOnly := thread != ThreadGeneral && !WorkVisible(ctx, thread)
+	return slices.DeleteFunc(msgs, func(m ChatMessage) bool {
 		if !m.SharedLegacy {
 			return false
 		}
 		return ownOnly || !WorkVisible(ctx, strings.TrimPrefix(m.ConversationID, domain.ChatAgentPrefix))
 	})
-	return msgs, more, nil
 }
 
 // MarkThreadRead says the person has seen everything in a thread (their own marker).

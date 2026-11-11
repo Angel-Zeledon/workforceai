@@ -56,7 +56,7 @@ func (s *server) listConversationsHistory(w http.ResponseWriter, r *http.Request
 		return
 	}
 	r = s.work(r).context() // D3: the conversations of a private office's agents are its members'
-	rows, more, err := s.Chats.Conversations(r.Context(), application.ChatConvQuery{
+	rows, more, next, err := s.Chats.Conversations(r.Context(), application.ChatConvQuery{
 		AgentID: q.Get("agent_id"), Q: q.Get("q"), Kind: q.Get("kind"), Archived: q.Get("archived"), Limit: limit, Offset: offset})
 	if err != nil {
 		s.fail(w, err)
@@ -65,7 +65,7 @@ func (s *server) listConversationsHistory(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Access-Control-Expose-Headers", "X-Has-More, X-Next-Offset")
 	w.Header().Set("X-Has-More", strconv.FormatBool(more))
 	if more {
-		w.Header().Set("X-Next-Offset", strconv.Itoa(offset+len(rows)))
+		w.Header().Set("X-Next-Offset", strconv.Itoa(next)) // D3: past the rows left out too
 	}
 	writeJSON(w, http.StatusOK, list(rows))
 }
@@ -122,7 +122,7 @@ func (s *server) listThreadMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r = s.work(r).context() // D3
-	msgs, more, err := s.Chats.Thread(r.Context(), application.ChatThreadQuery{
+	msgs, more, next, err := s.Chats.Thread(r.Context(), application.ChatThreadQuery{
 		Thread: strings.TrimSpace(chi.URLParam(r, "key")), BeforeID: r.URL.Query().Get("before"), Limit: limit})
 	if err != nil {
 		s.fail(w, err)
@@ -130,8 +130,8 @@ func (s *server) listThreadMessages(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Access-Control-Expose-Headers", "X-Has-More, X-Next-Before")
 	w.Header().Set("X-Has-More", strconv.FormatBool(more))
-	if more && len(msgs) > 0 {
-		w.Header().Set("X-Next-Before", msgs[0].ID)
+	if more && next != "" {
+		w.Header().Set("X-Next-Before", next) // D3: the oldest message read, also when it was left out
 	}
 	writeJSON(w, http.StatusOK, list(msgs))
 }

@@ -268,7 +268,7 @@ func cmdSearch(c *cmdCall) (*cmdResult, *cmdFail) {
 		}
 	}
 	if c.s.Chats != nil {
-		if cs, _, err := c.s.Chats.Conversations(c.ctx, application.ChatConvQuery{Q: q, Limit: 5}); err == nil {
+		if cs, _, _, err := c.s.Chats.Conversations(c.ctx, application.ChatConvQuery{Q: q, Limit: 5}); err == nil {
 			for _, cv := range cs {
 				href := "/chats"
 				if cv.AgentID != "" {
@@ -514,6 +514,9 @@ func (s *server) skillActorOf(c *cmdCall) skills.Actor { return s.skillActor(c.r
 
 func (c *cmdCall) skillErr(err error) *cmdFail {
 	if se, ok := err.(*skills.Error); ok {
+		if se.Code == "name_taken" { // D3: the same answer whoever holds the name
+			return fail(http.StatusBadRequest, "invalid_args", "Ese nombre de habilidad ya está en uso; elige otro.", "That skill name is already in use; pick another one.")
+		}
 		return fail(http.StatusBadRequest, "invalid_args", se.Msg, se.Msg)
 	}
 	return c.serviceFail(err)
@@ -545,7 +548,13 @@ func cmdLearn(c *cmdCall) (*cmdResult, *cmdFail) {
 			agentID = a.ID
 		}
 	}
-	if agentID != "" && !c.work.agent(agentID) { // D3: a private office's agent answers like an unknown one
+	if agentID != "" && !c.work.agent(agentID) {
+		if c.work.chat(agentID) { // D3: the person uses it (the directory, a share) but its work is its department's
+			return nil, fail(http.StatusForbidden, "private_work",
+				"Este agente es de un departamento privado: solo sus miembros pueden guardar habilidades de su trabajo.",
+				"This agent belongs to a private department: only its members can save skills from its work.")
+		}
+		// D3: a private office's agent the person does not use answers like an unknown one
 		return nil, fail(http.StatusBadRequest, "unknown_agent", fmt.Sprintf("No encuentro al agente «%s».", agentID), fmt.Sprintf("I cannot find the agent “%s”.", agentID))
 	}
 	tasks, err := c.s.Store.ListTasks(c.ctx, c.org, agentID, string(domain.TaskDone))

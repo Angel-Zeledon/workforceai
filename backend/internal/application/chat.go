@@ -527,11 +527,12 @@ func (o *Orchestrator) chatHistory(ctx context.Context, t *chatTurn) []ChatHisto
 		summary = nil
 	}
 	out := make([]ChatHistoryItem, 0, len(msgs))
+	own := ownTurns(t.author, msgs)
 	for _, m := range msgs {
 		if m.From == "system" || (m.Kind != domain.MsgChat && m.Kind != domain.MsgAnswer) {
 			continue
 		}
-		if t.hidden[m.From] || t.hidden[m.To] { // D3: what a private office's agent said or was told
+		if (t.hidden[m.From] || t.hidden[m.To]) && !own[m.TurnID] { // D3: what a private office's agent said or was told, but to this person
 			continue
 		}
 		if m.ID == t.userMsgID || (m.From == "user" && !mine.IsZero() && m.TS.After(mine)) {

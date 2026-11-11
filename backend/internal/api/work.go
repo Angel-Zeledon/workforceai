@@ -52,6 +52,23 @@ func (w *workScope) load() error {
 // open reports whether nothing is hidden for this person (no model to apply).
 func (w *workScope) open() bool { return w.load() == nil && w.m == nil }
 
+// hidesAny reports whether the work of some agent is hidden from the person, so a listing that would read every item
+// again to redact it can skip that when there is nothing to leave out (an unreadable model counts as hiding).
+func (w *workScope) hidesAny() bool {
+	if w.load() != nil {
+		return true
+	}
+	if w.m == nil {
+		return false
+	}
+	for _, a := range w.m.Agents() {
+		if !w.m.CanSeeWork(w.v, a.ID) {
+			return true
+		}
+	}
+	return false
+}
+
 // agent reports whether the person sees the work of an agent (fails closed when the model cannot be read).
 func (w *workScope) agent(id string) bool {
 	if err := w.load(); err != nil {
@@ -273,7 +290,8 @@ func (s *server) guardConversation(next http.Handler, own bool) http.Handler {
 }
 
 // checkMentions refuses an office chat message that calls by @name an agent the person may not use (the same
-// answer as a direct chat with it, checkAgentUse).
+// answer as a direct chat with it, checkAgentUse). A person is resolved first: @elena calling a colleague is not a
+// call to an agent whose first name is Elena too.
 func (s *server) checkMentions(r *http.Request, text string) error {
 	if !strings.Contains(text, "@") {
 		return nil
@@ -286,13 +304,23 @@ func (s *server) checkMentions(r *http.Request, text string) error {
 	if err != nil {
 		return err
 	}
+	people := map[string]bool{} // the first names of the people of the organization
+	if g, ok := ws.m.Office(offices.GeneralID); ok {
+		for _, id := range g.Members {
+			if p, ok := ws.m.Person(id); ok {
+				if first, _, _ := strings.Cut(commands.Fold(p.Name), " "); first != "" {
+					people[first] = true
+				}
+			}
+		}
+	}
 	for _, word := range strings.Fields(text) {
 		ref, ok := strings.CutPrefix(word, "@")
 		if !ok {
 			continue
 		}
 		ref = commands.Fold(strings.TrimRight(ref, ".,;:!?¿¡)\"'"))
-		if ref == "" {
+		if ref == "" || people[ref] {
 			continue
 		}
 		for _, a := range agents {
