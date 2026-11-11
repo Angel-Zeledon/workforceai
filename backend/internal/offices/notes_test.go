@@ -143,3 +143,36 @@ func TestRecallScopes(t *testing.T) {
 		t.Fatalf("valeria for nobody = %q", r)
 	}
 }
+
+// I6 for the notes people wrote: an agent of a PRIVATE office working for a person who is not a member does not
+// recall the office's notes (an admin who is not a member neither); the person's own notes still apply.
+func TestRecallOfficeNotesNeedMembership(t *testing.T) {
+	f := newFix(t)
+	ctx := context.Background()
+	f.enable(t, "d-legal", Private)
+	f.note(t, luis, ScopeOffice, "d-legal", "Los contratos de alquiler usan la plantilla de la socia")
+	f.note(t, marta, ScopePerson, "", "Prefiero contratos cortos")
+	got := func(person string) string {
+		var b []string
+		for _, n := range f.svc.RecallNotes(ctx, org, "a-elena", person, "revisar contrato de alquiler", 5) {
+			b = append(b, n.Text)
+		}
+		return strings.Join(b, " | ")
+	}
+	if r := got("u-luis"); !strings.Contains(r, "plantilla de la socia") {
+		t.Fatalf("a member recalls the office notes: %q", r)
+	}
+	if r := got(""); !strings.Contains(r, "plantilla de la socia") {
+		t.Fatalf("work without a person is the office's own: %q", r)
+	}
+	r := got("u-marta")
+	if strings.Contains(r, "socia") {
+		t.Fatalf("a non-member's task must not carry the private office's notes: %q", r)
+	}
+	if !strings.Contains(r, "contratos cortos") {
+		t.Fatalf("the person's own note still applies: %q", r)
+	}
+	if r := got("u-owner"); strings.Contains(r, "socia") {
+		t.Fatalf("an admin who is not a member neither: %q", r)
+	}
+}
