@@ -167,6 +167,14 @@ func officeRecall(m *memory.Service, svc *offices.Service) {
 		o, ok := model.Office(office)
 		return !ok || o.Visibility == offices.Private, nil
 	})
+	// I6: an agent of a private office working for a person who is not a member recalls nothing of the office
+	m.SetOfficeMembers(func(ctx context.Context, org, office, userID string) (bool, error) {
+		model, err := svc.Model(ctx, org)
+		if err != nil || model == nil {
+			return false, errors.New("offices model unavailable")
+		}
+		return model.IsMember(userID, office), nil
+	})
 	m.SetExtraRecall(func(ctx context.Context, org, agentID, _, text string) []application.RecalledMemory {
 		var out []application.RecalledMemory
 		for _, n := range svc.RecallNotes(ctx, org, agentID, application.PersonFrom(ctx), text, 3) {

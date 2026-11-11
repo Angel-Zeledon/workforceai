@@ -78,7 +78,7 @@ func (m *MemoryStore) Search(ctx context.Context, org string, p memory.SearchPar
 		SELECT `+memCols+`, ts_rank_cd(tsv, qq.q, 32)::float8 AS score
 		FROM memory_docs, qq
 		WHERE org_id=$1 AND NOT suppressed AND tsv @@ qq.q
-		  AND (scope='org' OR agent_id=$3 OR (scope='office' AND $8<>'' AND office_id=$8))
+		  AND (scope='org' OR (scope<>'office' AND agent_id=$3) OR (scope='office' AND $8<>'' AND office_id=$8))
 		  AND (NOT $5 OR agent_id=$3)
 		  AND ($4='' OR request_id<>$4)
 		  AND `+memCustomerFilter("$7")+`
@@ -139,6 +139,31 @@ func (m *MemoryStore) RetagCustomer(ctx context.Context, org string, sel memory.
 	return int(tag.RowsAffected()), nil
 }
 
+var _ memory.OfficeRetagger = (*MemoryStore)(nil)
+
+// OrgScopeAgents implements memory.OfficeRetagger: the agents with organization-scope documents (D3).
+func (m *MemoryStore) OrgScopeAgents(ctx context.Context, org string) ([]string, error) {
+	return many(ctx, m.S, org, func(r scanner) (string, error) {
+		var a string
+		err := r.Scan(&a)
+		return a, err
+	}, `SELECT DISTINCT agent_id FROM memory_docs WHERE org_id=$1 AND scope='org' AND agent_id<>'' ORDER BY agent_id`, org)
+}
+
+// RetagOffice implements memory.OfficeRetagger: every organization-scope document of the agents moves to the office
+// (D3, with no cap; suppressed ones too, so a tombstone keeps its place). Migration 818 has the scope and the column.
+func (m *MemoryStore) RetagOffice(ctx context.Context, org, office string, agentIDs []string) (int, error) {
+	if office == "" || len(agentIDs) == 0 {
+		return 0, nil
+	}
+	tag, err := m.S.execTag(ctx, org, `UPDATE memory_docs SET scope='office', office_id=$2, updated_at=now()
+		WHERE org_id=$1 AND scope='org' AND agent_id = ANY($3)`, org, office, agentIDs)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 // Clear implements memory.DocStore (demo reset).
 func (m *MemoryStore) Clear(ctx context.Context, org string) error {
 	return m.S.exec(ctx, org, `DELETE FROM memory_docs WHERE org_id=$1`, org)
@@ -159,7 +184,7 @@ func (m *MemoryStore) Candidates(ctx context.Context, org string, q memory.VecQu
 		return c, err
 	}, `SELECT id, embedding FROM memory_docs
 		WHERE org_id=$1 AND NOT suppressed AND embedding IS NOT NULL AND embed_model=$2
-		  AND (scope='org' OR agent_id=$3 OR (scope='office' AND $8<>'' AND office_id=$8))
+		  AND (scope='org' OR (scope<>'office' AND agent_id=$3) OR (scope='office' AND $8<>'' AND office_id=$8))
 		  AND (NOT $5 OR agent_id=$3)
 		  AND ($4='' OR request_id<>$4)
 		  AND `+memCustomerFilter("$7")+`

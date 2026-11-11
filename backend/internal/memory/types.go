@@ -176,6 +176,16 @@ type CustomerRetagger interface {
 	RetagCustomer(ctx context.Context, org string, sel RetagSelector, from, to string) (int, error)
 }
 
+// OfficeRetagger is implemented by the document stores that can seal earlier organization memory into an office
+// (D3, Service.SealOfficeMemory): with no cap, unlike the backfill.
+type OfficeRetagger interface {
+	// OrgScopeAgents returns the agents that have organization-scope documents.
+	OrgScopeAgents(ctx context.Context, org string) ([]string, error)
+	// RetagOffice moves every organization-scope document of agentIDs to the office scope of office and returns
+	// how many changed.
+	RetagOffice(ctx context.Context, org, office string, agentIDs []string) (int, error)
+}
+
 // RetagSelector picks the documents of one request, or one document (DocID wins).
 type RetagSelector struct {
 	RequestID string
