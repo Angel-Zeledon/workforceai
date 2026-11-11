@@ -155,6 +155,25 @@ func TestResealOfOlderReportRequestsNoEmbedding(t *testing.T) {
 	}
 }
 
+// A report with no collaborators (only the assistant signs it, or nobody) belongs to the organization, never to an
+// office, and a private office's agents do not recall it by accident either way.
+func TestReportWithoutCollaboratorsGoesToTheOrganization(t *testing.T) {
+	ctx := context.Background()
+	for name, contributors := range map[string][]string{"assistant only": nil, "empty ids": {""}} {
+		store := memory.NewMemStore()
+		svc := officeSvc(store)
+		r := report("r1", contributors...) // the assistant always signs
+		svc.RememberReport(ctx, "o", r)
+		d, err := store.GetByRef(ctx, "o", "report:r1")
+		if err != nil || d.Scope != memory.ScopeOrg || d.OfficeID != "" || d.Suppressed {
+			t.Fatalf("%s: %+v %v", name, d, err)
+		}
+		if !recalledRef(svc, "general1", "report:r1") {
+			t.Fatalf("%s: an organization report must reach General's agents", name)
+		}
+	}
+}
+
 type reportsSrc []domain.Report
 
 func (reportsSrc) ListTasks(context.Context, string, string, string) ([]domain.Task, error) {

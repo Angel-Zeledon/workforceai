@@ -376,6 +376,20 @@ func TestPrivateOfficeConnectionEventsReachOnlyMembers(t *testing.T) {
 	}
 }
 
+// A report with no collaborators (only the assistant, a General request) goes to the whole organization.
+func TestReportWithoutCollaboratorsReachesEveryone(t *testing.T) {
+	f := newFix(t)
+	f.install(nil)
+	f.rec.Emit(f.ctx, application.Action{Type: domain.EvReportCreated, AgentID: "assistant", Text: "Informe",
+		Payload: map[string]any{"report": domain.Report{ID: "rep2", RequestID: "r-gen", Title: "Cierre", Contributors: []string{"assistant"}}}})
+	got := f.got()
+	for _, u := range []string{"u-boss", "u-ana", "u-pri", "u-eve"} {
+		if !slices.Contains(got[u], domain.EvReportCreated) {
+			t.Errorf("%s must receive a report without collaborators: %v", u, got[u])
+		}
+	}
+}
+
 // An admin who is not a member changing the autonomy of a private agent gets the echo of their own change live,
 // and no other non-member does.
 func TestActorReceivesTheEchoOfTheirOwnAutonomyChange(t *testing.T) {
