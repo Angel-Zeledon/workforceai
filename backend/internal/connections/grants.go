@@ -72,8 +72,8 @@ func (s *Service) PutGrant(ctx context.Context, org, connID, agentID string, in 
 	if err := s.usable(c); err != nil {
 		return Grant{}, err
 	}
-	if !s.AgentFits(ctx, org, c, agentID) {
-		return Grant{}, errOtherOffice
+	if err := s.officeFit(ctx, org, c, agentID); err != nil {
+		return Grant{}, err
 	}
 	m := s.manifests[c.Provider]
 	caps := dedupe(in.Capabilities)
@@ -202,8 +202,8 @@ func (s *Service) ApproveGrant(ctx context.Context, org, connID, agentID, approv
 	if err != nil {
 		return Grant{}, err
 	}
-	if !s.AgentFits(ctx, org, c, agentID) {
-		return Grant{}, errOtherOffice // the agent moved to another office since the grant was asked for
+	if err := s.officeFit(ctx, org, c, agentID); err != nil {
+		return Grant{}, err // the agent moved to another office since the grant was asked for, or its office cannot be told
 	}
 	g.Status, g.ApprovedBy = GrantActive, approver
 	if err := s.Store.UpsertGrant(ctx, g); err != nil {

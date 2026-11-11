@@ -27,7 +27,7 @@ type officeConns struct {
 	dora   string // a plain member outside Legal
 }
 
-func newOfficeConns(t *testing.T) *officeConns {
+func newOfficeConns(t *testing.T, more ...func(d *api.Deps)) *officeConns {
 	t.Helper()
 	p := newPrivateWork(t, func(o *opts) {
 		prev := o.deps
@@ -51,6 +51,9 @@ func newOfficeConns(t *testing.T) *officeConns {
 				return "", nil
 			}
 			d.Conns = cs
+			for _, f := range more {
+				f(d)
+			}
 		}
 	})
 	e := p.e

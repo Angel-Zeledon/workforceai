@@ -2,6 +2,7 @@ package offices
 
 import (
 	"context"
+	"sync"
 
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/policy"
@@ -19,15 +20,63 @@ type ApprovalPolicy struct {
 	Roles func(ctx context.Context, org string) (map[string]string, error)
 }
 
+// onceKey carries the reads of one listing (Once).
+type onceKey struct{}
+
+type onceReads struct {
+	mu     sync.Mutex
+	models map[string]onceRead[*Model]
+	roles  map[string]onceRead[map[string]string]
+}
+
+type onceRead[T any] struct {
+	v   T
+	err error
+}
+
+// Once returns a context in which the approval policy reads the model and the roles of an organization once: a
+// listing asks it about many approvals of one request (the inbox, the away summary, can_decide of a list) and each
+// question would read them again (the roles are a database query). Only for the life of one request.
+func Once(ctx context.Context) context.Context {
+	if _, ok := ctx.Value(onceKey{}).(*onceReads); ok {
+		return ctx
+	}
+	return context.WithValue(ctx, onceKey{}, &onceReads{models: map[string]onceRead[*Model]{}, roles: map[string]onceRead[map[string]string]{}})
+}
+
+// remembered returns what read gives for key, read once per Once context (every time without one).
+func remembered[T any](ctx context.Context, cache func(*onceReads) map[string]onceRead[T], key string, read func() (T, error)) (T, error) {
+	o, ok := ctx.Value(onceKey{}).(*onceReads)
+	if !ok {
+		return read()
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if r, ok := cache(o)[key]; ok {
+		return r.v, r.err
+	}
+	v, err := read()
+	cache(o)[key] = onceRead[T]{v, err}
+	return v, err
+}
+
 func (p ApprovalPolicy) model(ctx context.Context, org string) (*Model, error) {
 	if p.Svc == nil {
 		return nil, nil
 	}
-	m, err := p.Svc.Model(ctx, org)
+	m, err := remembered(ctx, func(o *onceReads) map[string]onceRead[*Model] { return o.models }, org, func() (*Model, error) {
+		return p.Svc.Model(ctx, org)
+	})
 	if err != nil || !m.Restricted() {
 		return nil, err
 	}
 	return m, nil
+}
+
+func (p ApprovalPolicy) roles(ctx context.Context, org string) (map[string]string, error) {
+	return remembered(ctx, func(o *onceReads) map[string]onceRead[map[string]string] { return o.roles }, org, func() (map[string]string, error) {
+		return p.Roles(ctx, org)
+	})
 }
 
 // Sees reports whether the person sees the approval: the work of its agent, or they asked for the action (they see
@@ -73,7 +122,7 @@ func (p ApprovalPolicy) approvers(ctx context.Context, org string, m *Model, a d
 	}
 	var roles map[string]string
 	if a.RequiredRole != "" && p.Roles != nil {
-		r, err := p.Roles(ctx, org)
+		r, err := p.roles(ctx, org)
 		if err != nil {
 			return nil, err
 		}

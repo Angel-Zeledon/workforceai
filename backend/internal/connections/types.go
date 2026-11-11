@@ -72,6 +72,9 @@ var (
 	ErrProviderDisabled = errors.New("connections: vendor-specific integration disabled (VENDOR_INTEGRATIONS)")
 	// ErrNeedsSecondApprover: a write grant needs a different human to approve it.
 	ErrNeedsSecondApprover = errors.New("connections: a second human must approve this write grant")
+	// ErrOfficeUnknown: the connection belongs to a department and the agent's department cannot be told now (the
+	// offices are unavailable or not wired). Nothing is granted (fail closed); it is not "another office".
+	ErrOfficeUnknown = errors.New("connections: the agent's department cannot be told right now")
 )
 
 // Limits caps usage of a connection or a grant (a grant can only be <= its connection).

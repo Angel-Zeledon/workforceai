@@ -10,6 +10,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/offices"
 	"aiworkforce/backend/internal/projects"
 )
 
@@ -84,6 +85,45 @@ func (s *server) canDecide(next http.Handler) http.Handler {
 	})
 }
 
+// decidesApproval guards what only who decides the approval {id} may do besides deciding it ("approve and do not ask
+// again", the devil's advocate review): the office rule (ApproverPolicy.CanDecide) and, on top, approvals:decide or
+// being one of the responsibles of its agent's office. Without a policy, approvals:decide as before. A missing
+// approval is left to the handler (after approvals:decide).
+func (s *server) decidesApproval(next http.Handler) http.Handler {
+	if !s.AuthEnabled {
+		return next
+	}
+	perm := auth.RequirePermission(auth.PermApprovalsDecide)(next)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pol := s.Approvals.Policy()
+		p, ok := auth.PrincipalFrom(r.Context())
+		if pol == nil || !ok {
+			perm.ServeHTTP(w, r)
+			return
+		}
+		ctx, org := r.Context(), s.org(r)
+		ap, err := s.Store.GetApproval(ctx, org, chi.URLParam(r, "id"))
+		if errors.Is(err, domain.ErrNotFound) {
+			perm.ServeHTTP(w, r)
+			return
+		}
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		allowed, err := pol.CanDecide(ctx, org, p.UserID, ap)
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		if !allowed || !p.Can(auth.PermApprovalsDecide) && !s.Approvals.Responsible(ctx, p.UserID, ap) {
+			codeErr(w, http.StatusForbidden, "forbidden", "the responsible of the agent's office decides this approval")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // outboxGuard checks the outbox entry {id} before it is edited, approved or rejected, and answers when it refuses:
 // an entry of an agent whose work the person does not see answers 404; deciding it needs approvals:decide or being
 // a responsible of the agent's office, and the office rule (approving: every rule of Approvals.Decide, so nothing is
@@ -148,7 +188,7 @@ func (s *server) decider(r *http.Request) func(ap domain.Approval) (bool, []stri
 	if !ok {
 		return nil
 	}
-	ctx, org, pol := r.Context(), s.org(r), s.Approvals.Policy()
+	ctx, org, pol := offices.Once(r.Context()), s.org(r), s.Approvals.Policy() // one read of the rule for the whole list
 	names := s.approverNames(r)
 	return func(ap domain.Approval) (bool, []string) {
 		can := application.DecidesApproval(ctx, pol, org, ap, p.UserID, string(p.Role), p.Can(auth.PermApprovalsDecide))
@@ -231,7 +271,7 @@ func (s *server) inboxOffices(r *http.Request, in *application.InboxInput) {
 	if pol == nil || !s.AuthEnabled || in.Viewer == "" {
 		return
 	}
-	ctx, org := r.Context(), s.org(r)
+	ctx, org := offices.Once(r.Context()), s.org(r) // one read of the rule for the whole inbox
 	viewer, role, hasDecide := in.Viewer, in.ViewerRole, in.ViewerCanDecide
 	in.Decides = func(ap domain.Approval) bool {
 		return application.DecidesApproval(ctx, pol, org, ap, viewer, role, hasDecide)
@@ -246,7 +286,7 @@ func (s *server) awayDecides(r *http.Request, userID, role string, hasDecide boo
 	if pol == nil || !s.AuthEnabled {
 		return nil
 	}
-	ctx, org := r.Context(), s.org(r)
+	ctx, org := offices.Once(r.Context()), s.org(r)
 	return func(ap domain.Approval) bool {
 		return application.DecidesApproval(ctx, pol, org, ap, userID, role, hasDecide)
 	}

@@ -43,6 +43,8 @@ func (s *server) connErr(w http.ResponseWriter, err error) {
 			"vendor-specific integrations are disabled in this deployment (VENDOR_INTEGRATIONS); use a generic import")
 	case errors.Is(err, connections.ErrOAuthUnavailable):
 		codeErr(w, http.StatusServiceUnavailable, "oauth_not_configured", err.Error())
+	case errors.Is(err, connections.ErrOfficeUnknown):
+		codeErr(w, http.StatusServiceUnavailable, "office_unavailable", "the agent's department cannot be told right now; try again in a moment")
 	case errors.Is(err, connections.ErrNeedsSecondApprover):
 		codeErr(w, http.StatusConflict, "second_approver_required", err.Error())
 	case errors.Is(err, controls.ErrNoReason):
@@ -415,7 +417,7 @@ func (s *server) putCredential(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
-	writeJSON(w, 200, c)
+	s.writeConn(w, r, c)
 }
 
 func (s *server) testConnection(w http.ResponseWriter, r *http.Request) {
@@ -436,7 +438,7 @@ func (s *server) suspendConnection(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
-	writeJSON(w, 200, c)
+	s.writeConn(w, r, c)
 }
 
 // resumeConnection: after a kill switch only the owner (controls:release) may resume.
@@ -456,7 +458,7 @@ func (s *server) resumeConnection(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
-	writeJSON(w, 200, c)
+	s.writeConn(w, r, c)
 }
 
 func (s *server) revokeConnection(w http.ResponseWriter, r *http.Request) {
@@ -472,7 +474,7 @@ func (s *server) revokeConnection(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
-	writeJSON(w, 200, c)
+	s.writeConn(w, r, c)
 }
 
 func (s *server) listGrants(w http.ResponseWriter, r *http.Request) {
@@ -695,10 +697,19 @@ func (s *server) listHolds(w http.ResponseWriter, r *http.Request) {
 		s.connErr(w, err)
 		return
 	}
-	if sc.m != nil { // D3: the held sends of a private office's connections are its members'
+	if sc.m != nil && len(h) > 0 { // D3: the held sends of a private office's connections are its members'
+		conns, err := s.Conns.Store.ListConnections(r.Context(), s.org(r), "", "") // once, not once per hold
+		if err != nil {
+			s.connErr(w, err)
+			return
+		}
+		seen := make(map[string]bool, len(conns))
+		for _, c := range conns {
+			seen[c.ID] = sc.sees(c)
+		}
 		out := make([]connections.Hold, 0, len(h))
 		for _, x := range h {
-			if c, err := s.Conns.Store.GetConnection(r.Context(), s.org(r), x.ConnectionID); err == nil && sc.sees(c) {
+			if seen[x.ConnectionID] { // a connection that is gone: like one that cannot be seen
 				out = append(out, x)
 			}
 		}

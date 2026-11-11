@@ -75,6 +75,7 @@ type Service struct {
 	tokMu  sync.Mutex
 	tokens map[string]AccessToken
 	locks  map[string]*sync.Mutex
+	wlocks map[string]*sync.Mutex // writeLock
 
 	emitMu   sync.Mutex
 	lastEmit map[string]time.Time
@@ -144,6 +145,25 @@ func (s *Service) AgentFits(ctx context.Context, org string, c Connection, agent
 	}
 	off, err := s.AgentOffice(ctx, org, agentID)
 	return err == nil && off == c.OfficeID
+}
+
+// officeFit is AgentFits for granting: nil when the agent may hold a grant on c, errOtherOffice when it is of another
+// office, ErrOfficeUnknown when its office cannot be told (fail closed, and said as what it is).
+func (s *Service) officeFit(ctx context.Context, org string, c Connection, agentID string) error {
+	if c.OfficeID == "" {
+		return nil
+	}
+	if s.AgentOffice == nil {
+		return ErrOfficeUnknown
+	}
+	off, err := s.AgentOffice(ctx, org, agentID)
+	switch {
+	case err != nil:
+		return fmt.Errorf("%w: %v", ErrOfficeUnknown, err)
+	case off != c.OfficeID:
+		return errOtherOffice
+	}
+	return nil
 }
 
 func validOffice(id string) error {
@@ -569,20 +589,22 @@ type PatchInput struct {
 	Actor        string
 }
 
-// credentialTarget is where a connection's stored secret is sent: a source's base URL, a database's host, port and
-// user ("" for every other provider).
+// credentialTarget is where a connection's stored secret is sent: a source's base URL, a database's host, port, user
+// and TLS mode (sslmode decides whether the password travels encrypted and to a verified server) ("" for every other
+// provider).
 func credentialTarget(c Connection) string {
 	switch {
 	case c.Source != nil:
 		return c.Source.BaseURL
 	case c.Database != nil:
-		return fmt.Sprintf("%s|%d|%s", strings.ToLower(c.Database.Host), c.Database.Port, c.Database.User)
+		return fmt.Sprintf("%s|%d|%s|%s", strings.ToLower(c.Database.Host), c.Database.Port, c.Database.User, c.Database.SSLMode)
 	}
 	return ""
 }
 
 // Patch updates label, limits, resource scope and the read-only switch.
 func (s *Service) Patch(ctx context.Context, org, id string, in PatchInput) (Connection, error) {
+	defer s.writeLock(id)()
 	c, err := s.Store.GetConnection(ctx, org, id)
 	if err != nil {
 		return Connection{}, err
@@ -658,9 +680,15 @@ func (s *Service) Patch(ctx context.Context, org, id string, in PatchInput) (Con
 			return Connection{}, err
 		}
 		s.purgeToken(id)
+		if c.Status == StatusExpired || c.Status == StatusError { // a new secret revives it, like RotateCredential
+			c.Status, c.StatusReason = StatusActive, ""
+		}
 	}
 	c.UpdatedAt = s.Now().UTC()
 	if err := s.Store.UpdateConnection(ctx, c); err != nil {
+		if hasSecret { // the vault already holds the new secret: that change is on the record even if the rest failed
+			s.Audit(ctx, org, in.Actor, "connection.secret_replaced", "connection", id, map[string]any{"saved": false, "target_changed": moved})
+		}
 		return Connection{}, err
 	}
 	details := map[string]any{"read_only": c.ReadOnly, "source_changed": in.Source != nil, "database_changed": in.Database != nil,
@@ -901,6 +929,23 @@ func (s *Service) purgeToken(connID string) {
 	s.tokMu.Unlock()
 }
 
+// writeLock serializes the read-modify-write of one connection inside this process (the test result, the lifecycle
+// and the edits), so a slow writer never stores a copy older than another writer's. It returns the unlock.
+func (s *Service) writeLock(connID string) func() {
+	s.tokMu.Lock()
+	if s.wlocks == nil {
+		s.wlocks = map[string]*sync.Mutex{}
+	}
+	l, ok := s.wlocks[connID]
+	if !ok {
+		l = &sync.Mutex{}
+		s.wlocks[connID] = l
+	}
+	s.tokMu.Unlock()
+	l.Lock()
+	return l.Unlock
+}
+
 func (s *Service) lockFor(connID string) *sync.Mutex {
 	s.tokMu.Lock()
 	defer s.tokMu.Unlock()
@@ -1057,6 +1102,13 @@ func (s *Service) Test(ctx context.Context, org, id, actor string) (TestResult, 
 		res = p.Test(ctx, s.Handle(c))
 		res.LatencyMS = int(time.Since(start).Milliseconds())
 	}
+	// The provider call takes a while: what changed meanwhile (a suspension, a revocation, an edit) is kept. Only the
+	// result of the test is written, on the connection as it is now, and no other change of it slips in between.
+	unlock := s.writeLock(id)
+	defer unlock()
+	if c, err = s.Store.GetConnection(ctx, org, id); err != nil {
+		return res, err
+	}
 	c.LastTestedAt = &now
 	c.LastTestStatus = "ok"
 	if res.OK {
@@ -1081,6 +1133,7 @@ func (s *Service) Test(ctx context.Context, org, id, actor string) (TestResult, 
 
 // MarkNeedsReauth is called by the gateway when the provider rejects the token.
 func (s *Service) MarkNeedsReauth(ctx context.Context, org, id string) {
+	defer s.writeLock(id)()
 	c, err := s.Store.GetConnection(ctx, org, id)
 	if err != nil || c.Status != StatusActive {
 		return
@@ -1093,6 +1146,7 @@ func (s *Service) MarkNeedsReauth(ctx context.Context, org, id string) {
 
 // Suspend blocks new uses at once (reversible; the secret is kept).
 func (s *Service) Suspend(ctx context.Context, org, id, actor, reason string) (Connection, error) {
+	defer s.writeLock(id)()
 	c, err := s.Store.GetConnection(ctx, org, id)
 	if err != nil {
 		return Connection{}, err
@@ -1119,6 +1173,7 @@ func (s *Service) Suspend(ctx context.Context, org, id, actor, reason string) (C
 // Resume re-enables a suspended connection. The caller enforces who may
 // resume after a kill switch (owner).
 func (s *Service) Resume(ctx context.Context, org, id, actor string) (Connection, error) {
+	defer s.writeLock(id)()
 	c, err := s.Store.GetConnection(ctx, org, id)
 	if err != nil {
 		return Connection{}, err
@@ -1142,6 +1197,7 @@ func (s *Service) Resume(ctx context.Context, org, id, actor string) (Connection
 // held sends, revoke at the provider, crypto-shred, revoke grants. If the
 // provider call fails the ciphertext is kept so SweepRevocations can retry.
 func (s *Service) Revoke(ctx context.Context, org, id, confirmName, actor string) (Connection, error) {
+	defer s.writeLock(id)()
 	c, err := s.Store.GetConnection(ctx, org, id)
 	if err != nil {
 		return Connection{}, err
@@ -1219,6 +1275,7 @@ func (s *Service) SweepRevocations(ctx context.Context, org string) {
 // RotateCredential replaces an API key (write-only). OAuth connections are
 // re-authorized instead.
 func (s *Service) RotateCredential(ctx context.Context, org, id string, secret vault.Secret, actor string, destroyPrevious bool) (Connection, error) {
+	defer s.writeLock(id)()
 	c, err := s.Store.GetConnection(ctx, org, id)
 	if err != nil {
 		return Connection{}, err

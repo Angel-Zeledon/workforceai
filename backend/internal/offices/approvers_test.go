@@ -8,6 +8,39 @@ import (
 	"aiworkforce/backend/internal/domain"
 )
 
+// A listing asks the rule about many approvals of one request (the inbox, the away summary): under Once the model
+// and the roles of the organization are read once, not once (or three times) per item.
+func TestApprovalPolicyOnceReadsOnce(t *testing.T) {
+	f := newFix(t)
+	f.enable(t, "d-legal", Private)
+	f.svc.cfg.TTL = -1 // every read of the model rebuilds it: the builds can be counted
+	builds, roleReads := 0, 0
+	depts := f.svc.cfg.Departments
+	f.svc.cfg.Departments = func(ctx context.Context, org string) ([]Dept, error) { builds++; return depts(ctx, org) }
+	roles := map[string]string{"u-owner": "owner", "u-ana": "member", "u-luis": "member"}
+	p := ApprovalPolicy{Svc: f.svc, Roles: func(context.Context, string) (map[string]string, error) { roleReads++; return roles, nil }}
+	ask := func(ctx context.Context) {
+		for i := range 5 {
+			ap := domain.Approval{ID: "ap-" + string(rune('a'+i)), AgentID: "a-elena", RequiredRole: "member"}
+			if ok, err := p.CanDecide(ctx, org, "u-ana", ap); !ok || err != nil {
+				t.Fatalf("ana decides Legal's approval: %v %v", ok, err)
+			}
+			if !p.Sees(ctx, org, "u-luis", ap) || !slices.Equal(p.Approvers(ctx, org, ap), []string{"u-ana"}) {
+				t.Fatal("the rule changed under Once")
+			}
+		}
+	}
+	ask(Once(context.Background()))
+	if builds != 1 || roleReads != 1 {
+		t.Fatalf("under Once: %d model builds, %d role reads; want 1 and 1", builds, roleReads)
+	}
+	builds, roleReads = 0, 0
+	ask(context.Background())
+	if builds < 5 || roleReads < 5 {
+		t.Fatalf("without Once every question reads again: %d builds, %d role reads", builds, roleReads)
+	}
+}
+
 // D3 (equipos-oficinas.md §4.2): who decides the approvals of an office's agent.
 func TestApprovalPolicy(t *testing.T) {
 	ctx := context.Background()

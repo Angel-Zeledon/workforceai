@@ -91,8 +91,8 @@ func (g *Gateway) executeNative(ctx context.Context, c application.GatewayCall, 
 		g.Audit(ctx, c.Org, c.AgentID, "tool.native_held", "tool", c.Tool, map[string]any{"tool": c.Tool, "action": c.Action, "flags": flags, "task_id": c.TaskID})
 		return application.GatewayOutcome{Decision: "needs_approval", Pending: &p, Tainted: c.Tainted}
 	}
-	if approved && c.ApprovalID != "" && g.Executions != nil {
-		claimed, _, err := g.Executions.ClaimExecution(ctx, c.Org, application.ApprovalExecution{ApprovalID: c.ApprovalID, TaskID: c.TaskID,
+	if approved && c.ApprovalID != "" {
+		claimed, _, err := g.ledger().ClaimExecution(ctx, c.Org, application.ApprovalExecution{ApprovalID: c.ApprovalID, TaskID: c.TaskID,
 			Tool: c.Tool, Action: c.Action, ArgsHash: c.ApprovedArgsHash})
 		if err != nil {
 			g.Log.Warn("gateway: claim approved execution", "approval", c.ApprovalID, "err", err)
@@ -115,11 +115,8 @@ func (g *Gateway) executeNative(ctx context.Context, c application.GatewayCall, 
 		if out.Status == "succeeded" {
 			g.rememberApproved(c.ApprovalID, out)
 		}
-		if g.Executions != nil {
-			st := out.Status
-			if err := g.Executions.FinishExecution(ctx, c.Org, c.ApprovalID, st, ""); err != nil {
-				g.Log.Warn("gateway: finish approved execution", "approval", c.ApprovalID, "err", err)
-			}
+		if err := g.ledger().FinishExecution(ctx, c.Org, c.ApprovalID, out.Status, ""); err != nil {
+			g.Log.Warn("gateway: finish approved execution", "approval", c.ApprovalID, "err", err)
 		}
 	}
 	return out

@@ -440,6 +440,12 @@ func TestOutboxAndControlCenterEndpoints(t *testing.T) {
 	if out.Pending == nil {
 		t.Fatalf("%+v", out)
 	}
+	// the orchestrator binds the item to its approval (an unbound item is not approved from the outbox)
+	ap, _, err := e.appr.Request(context.Background(), domain.Approval{TaskID: "t1", AgentID: "assistant", Action: "send", Risk: "high", Title: "Hola"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.gw.RegisterApproval(ap.ID, *out.Pending)
 	resp, raw := e.do("GET", "/api/v1/outbox?status=pending_approval", "", nil, nil)
 	var list struct {
 		Items []map[string]any `json:"items"`
