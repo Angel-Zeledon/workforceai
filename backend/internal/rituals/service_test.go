@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -559,5 +560,38 @@ func TestSettingsValidation(t *testing.T) {
 	}
 	if e.audited("ritual.settings_changed") != 1 {
 		t.Error("settings change is audited")
+	}
+}
+
+// D3: the office chat and the meeting room are the whole organization's, so the note and the event leave out the agents
+// of a private department (their lines stay in the ritual itself, which the API redacts per person).
+func TestChatNoteLeavesOutPrivateDepartmentAgents(t *testing.T) {
+	e := newEnv(t, func(c *rituals.Config) {
+		c.Public = func(_ context.Context, id string) bool { return id != "sales" }
+	})
+	n := e.now
+	e.task("r1", "sales", domain.TaskRunning, n.Add(-1*time.Hour), nil, nil)
+	r, err := e.svc.RunNow(e.ctx(), rituals.KindStandup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := entryOf(r, "sales"); !ok {
+		t.Fatal("the stored ritual keeps every participant")
+	}
+	if len(e.notes) != 1 || strings.Contains(e.notes[0], "«Tarea r1»") {
+		t.Errorf("the chat note must not carry a private agent's work: %q", e.notes)
+	}
+	var sales string
+	for _, a := range roles.SeedAgents() {
+		if a.ID == "sales" {
+			sales = a.Name
+		}
+	}
+	if sales != "" && strings.Contains(e.notes[0], sales+":") {
+		t.Errorf("the chat note must not list the private agent: %q", e.notes[0])
+	}
+	ids := e.events[0].Payload.(map[string]any)["agent_ids"].([]string)
+	if slices.Contains(ids, "sales") || len(ids) != len(r.Entries)-1 {
+		t.Errorf("only public agents walk to the meeting room: %v", ids)
 	}
 }

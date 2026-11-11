@@ -41,6 +41,9 @@ type Config struct {
 	Summarize func(ctx context.Context, in application.SummarizeRequest) (application.SummaryResult, error)
 	// Notice posts a system line in the office chat. nil = no chat note.
 	Notice func(ctx context.Context, text string) error
+	// Public tells whether everybody in the organization may see an agent's work (D3: not an agent of a private
+	// department). The office chat note and the meeting-room event leave the others out. nil = every agent is public.
+	Public func(ctx context.Context, agentID string) bool
 	// Emit publishes an event (office: agents walk to the meeting room). nil = none.
 	Emit func(ctx context.Context, a application.Action)
 	// Audit records every write and every run or skip. nil = none.
@@ -414,6 +417,18 @@ func (s *Service) modelSummary(ctx context.Context, org string, r *Ritual, actor
 // announce publishes the event the office reacts to (agents walk to the meeting room), posts the note in the
 // office chat and audits the run.
 func (s *Service) announce(ctx context.Context, r Ritual, actor string, proposals int) {
+	audited, auditedProposals := r, proposals
+	if s.cfg.Public != nil { // the chat and the office are the whole organization's: a private department's work stays out
+		r.Entries, r.Absent, r.Proposals = slices.Clone(r.Entries), slices.Clone(r.Absent), slices.Clone(r.Proposals)
+		public := func(agentID string) bool { return s.cfg.Public(ctx, agentID) }
+		visible := proposals
+		if len(r.Proposals) > 0 {
+			visible = len(slices.DeleteFunc(slices.Clone(r.Proposals), func(p Proposal) bool { return !public(p.AgentID) }))
+		}
+		if Redact(&r, public, visible) {
+			proposals = visible
+		}
+	}
 	ids := make([]string, 0, len(r.Entries))
 	for _, e := range r.Entries {
 		ids = append(ids, e.AgentID)
@@ -431,8 +446,9 @@ func (s *Service) announce(ctx context.Context, r Ritual, actor string, proposal
 			s.cfg.Log.Warn("rituals: chat note", "ritual", r.ID, "err", err)
 		}
 	}
-	s.audit(ctx, actor, "ritual.held", "ritual", r.ID, map[string]any{"kind": r.Kind, "origin": r.Origin, "period": r.PeriodKey,
-		"agents": len(r.Entries), "absent": len(r.Absent), "proposals": proposals, "summary_source": r.SummarySource})
+	s.audit(ctx, actor, "ritual.held", "ritual", audited.ID, map[string]any{"kind": audited.Kind, "origin": audited.Origin,
+		"period": audited.PeriodKey, "agents": len(audited.Entries), "absent": len(audited.Absent), "proposals": auditedProposals,
+		"summary_source": audited.SummarySource})
 }
 
 // ---- schedule ----
