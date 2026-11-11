@@ -86,7 +86,7 @@ func (s *server) projectView(r *http.Request, id string) (projectView, bool, err
 		return projectView{}, false, err
 	}
 	pv := projectView{ws: ws}
-	if ws.open() {
+	if ws.open() || s.Projects == nil {
 		return pv, true, nil
 	}
 	d, err := s.Projects.Get(r.Context(), id)

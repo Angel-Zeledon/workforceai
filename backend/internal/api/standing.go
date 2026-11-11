@@ -2,9 +2,11 @@ package api
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/go-chi/chi/v5"
 
+	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 )
 
@@ -20,8 +22,10 @@ func (s *server) mountStanding(r chi.Router) {
 	if s.Standing == nil {
 		return
 	}
-	r.With(s.can(auth.PermApprovalsRead)).Get("/projects/{id}/standing-approvals", s.listStanding)
-	r.With(s.can(auth.PermApprovalsDecide)).Delete("/projects/{id}/standing-approvals/{sid}", s.revokeStanding)
+	// D3: a project that is only a private department's work answers 404 (workProject), and the standing approvals of
+	// an agent whose work the person may not see are left out (revoking one answers 404).
+	r.With(s.can(auth.PermApprovalsRead), s.workProject).Get("/projects/{id}/standing-approvals", s.listStanding)
+	r.With(s.can(auth.PermApprovalsDecide), s.workProject, s.workStanding).Delete("/projects/{id}/standing-approvals/{sid}", s.revokeStanding)
 }
 
 func (s *server) listStanding(w http.ResponseWriter, r *http.Request) {
@@ -30,6 +34,12 @@ func (s *server) listStanding(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	v = slices.DeleteFunc(v, func(sa application.StandingApproval) bool { return !ws.agentOK(sa.AgentID) })
 	writeJSON(w, http.StatusOK, list(v))
 }
 

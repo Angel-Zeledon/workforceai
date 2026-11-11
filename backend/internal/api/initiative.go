@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -21,7 +22,8 @@ import (
 //	POST /initiatives/scan               org:manage       evaluate the metric signals now (optional route)
 //
 // Agents never call these: a suggestion is created by the platform from a signal and only a person accepts it,
-// which goes through the same path as POST /requests. No-op when Deps.Initiative is nil.
+// which goes through the same path as POST /requests. D3: the suggestions of an agent whose work the person may not see
+// are left out (accepting or dismissing one answers 404). No-op when Deps.Initiative is nil.
 func (s *server) mountInitiative(r chi.Router) {
 	if s.Initiative == nil {
 		return
@@ -30,8 +32,8 @@ func (s *server) mountInitiative(r chi.Router) {
 	if s.InitiativeScanner != nil {
 		r.With(s.can(auth.PermOrgManage)).Post("/initiatives/scan", s.scanInitiatives)
 	}
-	r.With(s.can(auth.PermRequestsCreate)).Post("/initiatives/{id}/accept", s.acceptInitiative)
-	r.With(s.can(auth.PermRequestsCreate)).Post("/initiatives/{id}/dismiss", s.dismissInitiative)
+	r.With(s.can(auth.PermRequestsCreate), s.workInitiative).Post("/initiatives/{id}/accept", s.acceptInitiative)
+	r.With(s.can(auth.PermRequestsCreate), s.workInitiative).Post("/initiatives/{id}/dismiss", s.dismissInitiative)
 	r.With(s.can(auth.PermRequestsRead)).Get("/settings/initiative", s.getInitiativeSettings)
 	r.With(s.can(auth.PermOrgManage)).Put("/settings/initiative", s.putInitiativeSettings)
 }
@@ -67,6 +69,12 @@ func (s *server) listInitiatives(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	v = slices.DeleteFunc(v, func(it application.Initiative) bool { return !ws.agentOK(it.AgentID) })
 	writeJSON(w, http.StatusOK, list(v))
 }
 

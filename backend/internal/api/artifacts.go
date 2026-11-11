@@ -1,11 +1,13 @@
 package api
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"io"
 	"mime"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -51,28 +53,28 @@ func (s *server) mountArtifacts(r chi.Router) {
 	r.With(read).Get("/artifacts", s.listArtifacts)
 	r.With(create).Post("/artifacts", s.createArtifact)
 	r.With(create).Post("/artifacts/import-statement", s.importStatement)
-	r.With(read).Get("/artifacts/{id}", s.getArtifact)
-	r.With(write).Patch("/artifacts/{id}", s.patchArtifact)
-	r.With(write).Delete("/artifacts/{id}", s.archiveArtifact)
-	r.With(write).Post("/artifacts/{id}/versions", s.saveArtifactVersion)
-	r.With(read, s.can(auth.PermArtifactsExport)).Get("/artifacts/{id}/export", s.exportArtifact)
-	r.With(read).Get("/artifacts/{id}/versions", s.artifactVersions)
-	r.With(read).Get("/artifacts/{id}/versions/{n}", s.artifactVersion)
-	r.With(write).Post("/artifacts/{id}/restore", s.restoreArtifact)
-	r.With(write).Put("/artifacts/{id}/attachments/{agent_id}", s.attachArtifact)
-	r.With(read).Get("/artifacts/{id}/links", s.artifactLinks)
-	r.With(write).Post("/artifacts/{id}/links", s.addArtifactLink)
-	r.With(write).Post("/artifacts/{id}/refresh-dependencies", s.refreshArtifact)
+	r.With(read, s.workArtifact).Get("/artifacts/{id}", s.getArtifact)
+	r.With(write, s.workArtifact).Patch("/artifacts/{id}", s.patchArtifact)
+	r.With(write, s.workArtifact).Delete("/artifacts/{id}", s.archiveArtifact)
+	r.With(write, s.workArtifact).Post("/artifacts/{id}/versions", s.saveArtifactVersion)
+	r.With(read, s.can(auth.PermArtifactsExport), s.workArtifact).Get("/artifacts/{id}/export", s.exportArtifact)
+	r.With(read, s.workArtifact).Get("/artifacts/{id}/versions", s.artifactVersions)
+	r.With(read, s.workArtifact).Get("/artifacts/{id}/versions/{n}", s.artifactVersion)
+	r.With(write, s.workArtifact).Post("/artifacts/{id}/restore", s.restoreArtifact)
+	r.With(write, s.workArtifact).Put("/artifacts/{id}/attachments/{agent_id}", s.attachArtifact)
+	r.With(read, s.workArtifact).Get("/artifacts/{id}/links", s.artifactLinks)
+	r.With(write, s.workArtifact).Post("/artifacts/{id}/links", s.addArtifactLink)
+	r.With(write, s.workArtifact).Post("/artifacts/{id}/refresh-dependencies", s.refreshArtifact)
 	comment := s.can(auth.PermArtifactsComment)
-	r.With(read).Get("/artifacts/{id}/comments", s.listArtifactComments)
-	r.With(comment).Post("/artifacts/{id}/comments", s.addArtifactComment)
-	r.With(comment).Patch("/artifacts/{id}/comments/{cid}", s.resolveArtifactComment)
-	r.With(read).Get("/artifacts/{id}/proposals", s.listArtifactProposals)
-	r.With(comment).Post("/artifacts/{id}/proposals", s.proposeArtifact)
-	r.With(s.can(auth.PermArtifactsApprove)).Post("/artifacts/{id}/proposals/{pid}/decision", s.decideArtifactProposal)
-	r.With(s.can(auth.PermRequestsCreate)).Post("/artifacts/{id}/ask", s.askAboutArtifact)
+	r.With(read, s.workArtifact).Get("/artifacts/{id}/comments", s.listArtifactComments)
+	r.With(comment, s.workArtifact).Post("/artifacts/{id}/comments", s.addArtifactComment)
+	r.With(comment, s.workArtifact).Patch("/artifacts/{id}/comments/{cid}", s.resolveArtifactComment)
+	r.With(read, s.workArtifact).Get("/artifacts/{id}/proposals", s.listArtifactProposals)
+	r.With(comment, s.workArtifact).Post("/artifacts/{id}/proposals", s.proposeArtifact)
+	r.With(s.can(auth.PermArtifactsApprove), s.workArtifact).Post("/artifacts/{id}/proposals/{pid}/decision", s.decideArtifactProposal)
+	r.With(s.can(auth.PermRequestsCreate), s.workArtifact).Post("/artifacts/{id}/ask", s.askAboutArtifact)
 	r.With(read, s.workProject).Get("/projects/{id}/workspace", s.projectWorkspace)
-	r.With(write).Post("/artifacts/{id}/pdf", s.uploadArtifactPDF)
+	r.With(write, s.workArtifact).Post("/artifacts/{id}/pdf", s.uploadArtifactPDF)
 	r.With(read).Get("/artifact-blobs/{id}", s.downloadArtifactBlob)
 }
 
@@ -120,11 +122,33 @@ func (s *server) uploadArtifactPDF(w http.ResponseWriter, r *http.Request) {
 // for the viewer (attachment with ?download=1, which is audited), never sniffed,
 // never cached by shared caches and sandboxed if opened directly.
 func (s *server) downloadArtifactBlob(w http.ResponseWriter, r *http.Request) {
-	dl := r.URL.Query().Get("download") == "1"
-	b, err := s.Artifacts.PDFBlob(r.Context(), s.artifactActor(r), chi.URLParam(r, "id"), dl)
+	dl, id := r.URL.Query().Get("download") == "1", chi.URLParam(r, "id")
+	b, err := s.Artifacts.PDFBlob(r.Context(), s.artifactActor(r), id, false)
 	if err != nil {
 		s.fail(w, err)
 		return
+	}
+	// D3: the file of an artifact the person may not see answers like a missing one (checked before the download
+	// is audited).
+	if b.ArtifactID != "" {
+		ws := s.work(r)
+		ok, err := s.artifactVisible(r, ws, b.ArtifactID)
+		if errors.Is(err, domain.ErrNotFound) { // the artifact is gone: the file answers as before
+			ok, err = true, nil
+		}
+		if err == nil && !ok {
+			err = notFound("blob", id)
+		}
+		if err != nil {
+			s.fail(w, cmp.Or(ws.err, err))
+			return
+		}
+	}
+	if dl {
+		if b, err = s.Artifacts.PDFBlob(r.Context(), s.artifactActor(r), id, true); err != nil {
+			s.fail(w, err)
+			return
+		}
 	}
 	disp := "inline"
 	if dl {
@@ -158,6 +182,19 @@ func (s *server) listArtifacts(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.fail(w, err)
 		return
+	}
+	ws := s.work(r) // D3: the artifacts of a private department's work are its members' (work_sealed.go)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.open() {
+		rule := s.artifactRule(r, ws)
+		v = slices.DeleteFunc(v, func(m artifacts.Meta) bool { return !rule.sees(m) })
+		if rule.err != nil {
+			s.fail(w, rule.err)
+			return
+		}
 	}
 	writeJSON(w, 200, map[string]any{"items": list(v)})
 }

@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -22,7 +23,8 @@ import (
 //	GET  /settings/rituals                            requests:read
 //	PUT  /settings/rituals                            org:manage
 //
-// Agents never run rituals nor resolve proposals (the service refuses agent principals). No-op when Deps.Rituals is nil.
+// Agents never run rituals nor resolve proposals (the service refuses agent principals). D3: the entries and proposals
+// of an agent whose work the person may not see are left out (resolving one answers 404). No-op when Deps.Rituals is nil.
 func (s *server) mountRituals(r chi.Router) {
 	if s.Rituals == nil {
 		return
@@ -32,8 +34,8 @@ func (s *server) mountRituals(r chi.Router) {
 	r.With(read).Get("/rituals/proposals", s.listRitualProposals)
 	r.With(read).Get("/rituals/{id}", s.getRitual)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/rituals/{kind}/run", s.runRitual)
-	r.With(s.can(auth.PermAgentsWrite)).Post("/rituals/proposals/{id}/accept", s.acceptRitualProposal)
-	r.With(s.can(auth.PermAgentsWrite)).Post("/rituals/proposals/{id}/dismiss", s.dismissRitualProposal)
+	r.With(s.can(auth.PermAgentsWrite), s.workRitualProposal).Post("/rituals/proposals/{id}/accept", s.acceptRitualProposal)
+	r.With(s.can(auth.PermAgentsWrite), s.workRitualProposal).Post("/rituals/proposals/{id}/dismiss", s.dismissRitualProposal)
 	r.With(read).Get("/settings/rituals", s.getRitualSettings)
 	r.With(s.can(auth.PermOrgManage)).Put("/settings/rituals", s.putRitualSettings)
 }
@@ -59,12 +61,23 @@ func (s *server) listRituals(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	for i := range v {
+		if err := s.redactRitual(r, ws, &v[i]); err != nil {
+			s.fail(w, err)
+			return
+		}
+	}
 	writeJSON(w, http.StatusOK, list(v))
 }
 
 func (s *server) getRitual(w http.ResponseWriter, r *http.Request) {
 	v, err := s.Rituals.Get(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if err := s.redactRitual(r, s.work(r), &v); err != nil {
 		s.fail(w, err)
 		return
 	}
@@ -88,6 +101,12 @@ func (s *server) listRitualProposals(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	v = slices.DeleteFunc(v, func(p rituals.Proposal) bool { return !ws.agentOK(p.AgentID) })
 	writeJSON(w, http.StatusOK, list(v))
 }
 

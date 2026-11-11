@@ -188,8 +188,16 @@ func (s *server) planShape(r *http.Request, pv gateway.PlanView) map[string]any 
 
 func (s *server) listPlanReviews(w http.ResponseWriter, r *http.Request) {
 	views := s.Gateway.PlanList(s.org(r))
+	ws := s.work(r) // D3: the plan of a request the person may not see is left out (like /requests/{id}/plan)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
 	out := make([]map[string]any, 0, len(views))
 	for _, v := range views {
+		if !ws.request(v.RequestID) {
+			continue
+		}
 		out = append(out, s.planShape(r, v))
 	}
 	writeJSON(w, 200, map[string]any{"items": out})

@@ -197,6 +197,27 @@ func (s *Service) Proposals(ctx context.Context, q ProposalQuery) ([]Proposal, e
 	return s.cfg.Store.ListProposals(ctx, s.org(ctx), q)
 }
 
+// Proposal returns one retro proposal.
+func (s *Service) Proposal(ctx context.Context, id string) (Proposal, error) {
+	return s.cfg.Store.GetProposal(ctx, s.org(ctx), id)
+}
+
+// Redact removes from a ritual what belongs to agents whose work the person may not see (D3: a private department's
+// work is its members'): their entries, absences and proposals. When something was removed the team summary, which
+// may speak of that work, is rewritten from what is left (the deterministic summary; proposals counts the ritual's
+// visible proposals). It reports whether something was removed.
+func Redact(r *Ritual, sees func(agentID string) bool, proposals int) bool {
+	n := len(r.Entries) + len(r.Absent) + len(r.Proposals)
+	r.Entries = slices.DeleteFunc(r.Entries, func(e Entry) bool { return !sees(e.AgentID) })
+	r.Absent = slices.DeleteFunc(r.Absent, func(a Absent) bool { return !sees(a.AgentID) })
+	r.Proposals = slices.DeleteFunc(r.Proposals, func(p Proposal) bool { return !sees(p.AgentID) })
+	if len(r.Entries)+len(r.Absent)+len(r.Proposals) == n {
+		return false
+	}
+	r.Summary, r.SummarySource = deterministicSummary(*r, proposals, r.Locale), SummaryDeterministic
+	return true
+}
+
 // ---- holding a ritual ----
 
 // RunNow holds a ritual because a person asked ("Hacer stand-up ahora"). It is refused while the kill switch is on;

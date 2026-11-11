@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -28,7 +29,7 @@ func (s *server) mountRehearsal(r chi.Router) {
 	r.With(s.can(auth.PermControlsPause)).Put("/agents/{id}/rehearsal", s.putAgentRehearsal)
 	r.With(s.can(auth.PermApprovalsRead)).Get("/rehearsal/actions", s.rehearsalActions)
 	r.With(s.can(auth.PermRequestsRead), s.workRequest).Get("/requests/{id}/rehearsal", s.requestRehearsal)
-	r.With(s.can(auth.PermApprovalsDecide)).Post("/rehearsal/actions/{id}/verdict", s.rehearsalVerdict)
+	r.With(s.can(auth.PermApprovalsDecide), s.workRehearsal).Post("/rehearsal/actions/{id}/verdict", s.rehearsalVerdict)
 }
 
 func (s *server) rehearsalAgents(w http.ResponseWriter, r *http.Request) {
@@ -84,6 +85,14 @@ func (s *server) rehearsalActions(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.fail(w, err)
 		return
+	}
+	ws := s.work(r) // D3: a private department's rehearsals are its members' (work_sealed.go)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.open() {
+		v = slices.DeleteFunc(v, func(a domain.RehearsalAction) bool { return !ws.seesRehearsal(a) })
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": v})
 }

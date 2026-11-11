@@ -15,14 +15,15 @@ import (
 
 // "Necesita tu ayuda" (docs/architecture/approvals-inbox.md, questions; 08-api.md §16.9): the questions agents ask
 // people mid-task. Reading needs tasks:read; answering needs tasks:create and being the person the question is for,
-// or tasks:manage (admins answer any). Agents never answer.
+// or tasks:manage (admins answer any). Agents never answer. D3: a question of an agent whose work the person may not
+// see is left out and answers 404 (work_sealed.go), unless it is for them.
 func (s *server) mountQuestions(r chi.Router) {
 	if s.Orch == nil || s.Orch.Questions() == nil {
 		return
 	}
 	r.With(s.can(auth.PermTasksRead)).Get("/questions", s.listQuestions)
-	r.With(s.can(auth.PermTasksRead)).Get("/questions/{id}", s.getQuestion)
-	r.With(s.can(auth.PermTasksCreate)).Post("/questions/{id}/answer", s.answerQuestion)
+	r.With(s.can(auth.PermTasksRead), s.workQuestion).Get("/questions/{id}", s.getQuestion)
+	r.With(s.can(auth.PermTasksCreate), s.workQuestion).Post("/questions/{id}/answer", s.answerQuestion)
 	r.With(s.can(auth.PermTasksCreate)).Post("/questions/answer-batch", s.answerQuestions)
 }
 
@@ -97,9 +98,17 @@ func (s *server) listQuestions(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
 	names := s.projectNamer(r)
 	items := make([]QuestionItem, 0, len(qs))
 	for _, q := range qs {
+		if !ws.open() && !ws.seesQuestion(q) {
+			continue
+		}
 		items = append(items, s.questionItem(r, q, names))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
@@ -196,9 +205,17 @@ func (s *server) answerQuestions(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "a batch answer is text or option"})
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
 	answered, failed := []string{}, map[string]string{}
 	for _, id := range body.IDs {
 		q, err := s.Orch.Questions().Store.GetQuestion(r.Context(), s.org(r), id)
+		if err == nil && !ws.open() && !ws.seesQuestion(q) {
+			err = domain.ErrNotFound // D3: a hidden question answers like a missing one
+		}
 		if err == nil && !s.mayAnswer(r, q) {
 			err = domain.ErrForbidden
 		}

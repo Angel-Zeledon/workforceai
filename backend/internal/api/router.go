@@ -462,6 +462,14 @@ func (s *server) getAgent(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.agent(a.ID) { // D3: the agent is listed, not what it is working on
+		a = hideActivity(a)
+	}
 	writeJSON(w, 200, a)
 }
 
@@ -480,6 +488,7 @@ func (s *server) agentDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !ws.agent(d.Agent.ID) { // D3: the agent is listed (an admin manages it), its work is not
+		d.Agent = hideActivity(d.Agent)
 		d.Tasks, d.Conversations, d.Memory, d.RecentActivity = nil, nil, nil, nil
 	} else if !ws.open() {
 		ws.index(d.Tasks)

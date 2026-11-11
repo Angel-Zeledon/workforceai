@@ -102,9 +102,19 @@ func (s *server) visibleAgents(r *http.Request, agents []domain.Agent) (any, err
 		if !av.Rights.See {
 			continue
 		}
+		if !m.CanSeeWork(v, a.ID) {
+			a = hideActivity(a)
+		}
 		out = append(out, agentView{Agent: a, Access: &av})
 	}
 	return out, nil
+}
+
+// hideActivity blanks what an agent's live state says about its work (D3, final review I2): the activity line names
+// the current or last task ("Completó: <title>"), with its id and progress. The state stays: the agent is listed.
+func hideActivity(a domain.Agent) domain.Agent {
+	a.Activity, a.CurrentTaskID, a.Progress = "", nil, 0
+	return a
 }
 
 // agentHidden reports whether the viewer may not see the agent (GET /agents/{id} answers 404 then).

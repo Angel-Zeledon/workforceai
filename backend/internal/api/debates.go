@@ -3,12 +3,14 @@ package api
 import (
 	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
+	"aiworkforce/backend/internal/domain"
 )
 
 // mountDebates registers the team debates (B5, docs/architecture/team-debates.md):
@@ -25,7 +27,7 @@ func (s *server) mountDebates(r chi.Router) {
 		return
 	}
 	r.With(s.can(auth.PermRequestsRead)).Get("/debates", s.listDebates)
-	r.With(s.can(auth.PermRequestsRead)).Get("/debates/{id}", s.getDebate)
+	r.With(s.can(auth.PermRequestsRead), s.workDebate).Get("/debates/{id}", s.getDebate)
 	r.With(s.can(auth.PermRequestsCreate)).Post("/debates", s.createDebate)
 }
 
@@ -35,6 +37,14 @@ func (s *server) listDebates(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.fail(w, err)
 		return
+	}
+	ws := s.work(r) // D3: a debate about a private department's work is its members' (work_sealed.go)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.open() {
+		v = slices.DeleteFunc(v, func(d domain.Debate) bool { return !ws.seesDebate(d) })
 	}
 	writeJSON(w, http.StatusOK, list(v))
 }

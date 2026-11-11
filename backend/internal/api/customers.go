@@ -1,7 +1,10 @@
 package api
 
 import (
+	"cmp"
 	"net/http"
+	"slices"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -78,6 +81,10 @@ func (s *server) customersHistoryCandidates(w http.ResponseWriter, r *http.Reque
 		s.fail(w, err)
 		return
 	}
+	if v.Projects, v.Requests, err = s.visibleCustomerWork(r, v.Projects, v.Requests); err != nil {
+		s.fail(w, err)
+		return
+	}
 	writeJSON(w, 200, v)
 }
 
@@ -133,6 +140,14 @@ func (s *server) customersDetail(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.fail(w, err)
 		return
+	}
+	ps, rs, err := s.visibleCustomerWork(r, d.Projects, d.Requests)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if len(ps) != len(d.Projects) || len(rs) != len(d.Requests) { // the status counts only what the person sees
+		d.Projects, d.Requests, d.Health = ps, rs, customers.HealthOf(ps, rs, time.Now())
 	}
 	d.Assignments, d.Requests = list(d.Assignments), list(d.Requests)
 	writeJSON(w, 200, d)
@@ -204,4 +219,27 @@ func (s *server) customersUnlinkFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// visibleCustomerWork leaves out the requests the person may not see and the projects that are only work they may not
+// see (D3: the same rule as /requests and /projects).
+func (s *server) visibleCustomerWork(r *http.Request, ps []customers.ProjectInfo, rs []customers.RequestInfo) ([]customers.ProjectInfo, []customers.RequestInfo, error) {
+	ws := s.work(r)
+	if err := ws.load(); err != nil || ws.open() {
+		return ps, rs, err
+	}
+	if err := ws.indexAll(); err != nil {
+		return nil, nil, err
+	}
+	rs = slices.DeleteFunc(rs, func(x customers.RequestInfo) bool { return !ws.request(x.ID) })
+	if s.Projects == nil {
+		return ps, rs, nil
+	}
+	var err error
+	ps = slices.DeleteFunc(ps, func(p customers.ProjectInfo) bool {
+		pv, ok, e := s.projectView(r, p.ID)
+		err = cmp.Or(err, e)
+		return e != nil || ok && pv.all
+	})
+	return ps, rs, err
 }
