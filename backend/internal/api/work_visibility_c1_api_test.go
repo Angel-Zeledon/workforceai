@@ -315,6 +315,17 @@ func TestSealedRituals(t *testing.T) {
 	}
 }
 
+// Holding a ritual answers with the new ritual, redacted as GET /rituals/{id} redacts it (final re-review).
+func TestSealedRitualRun(t *testing.T) {
+	sw := newSealedWork(t)
+	if got := sw.body("POST", "/rituals/standup/run", sw.beto, 201); strings.Contains(got, `"agent_id":"legal"`) {
+		t.Fatalf("beto: POST /rituals/standup/run shows legal's entry: %s", got)
+	}
+	if got := sw.body("POST", "/rituals/retro/run", sw.ana, 201); !strings.Contains(got, `"agent_id":"legal"`) {
+		t.Fatalf("ana: POST /rituals/retro/run lacks legal's entry: %s", got)
+	}
+}
+
 func TestSealedDebates(t *testing.T) {
 	sw := newSealedWork(t)
 	sw.listing(t, "/debates", []string{"deb-legal", "deb-free", "postura legal"}, "deb-sales")
@@ -411,5 +422,34 @@ func TestAgentActivityHiddenFromOutsiders(t *testing.T) {
 		if a.Activity != "Completó: tarea legal" || a.CurrentTaskID == nil || a.Progress != 60 {
 			t.Fatalf("ana's view of legal: %+v", a)
 		}
+	}
+}
+
+// The WebSocket hello carries the agents as GET /agents shows them: an outsider never gets a private agent's activity
+// there either (final re-review).
+func TestWebSocketHelloHidesPrivateActivity(t *testing.T) {
+	p := newPrivateWork(t)
+	tid := "task-legal"
+	if err := p.e.store.UpdateAgentState(context.Background(), p.owner.OrgID, "legal", domain.StateWorking, "Completó: tarea legal", &tid, 60); err != nil {
+		t.Fatal(err)
+	}
+	hello := func(tok string) string {
+		c, _, err := dialWS(t, p.e, tok, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		h := readFrame(t, c)
+		if h.Type != domain.EvHello {
+			t.Fatalf("first frame = %+v", h)
+		}
+		raw, _ := json.Marshal(h.Payload)
+		return string(raw)
+	}
+	if got := hello(p.beto); strings.Contains(got, "tarea legal") || strings.Contains(got, "task-legal") {
+		t.Fatalf("beto's hello shows legal's work: %s", got)
+	}
+	if got := hello(p.ana); !strings.Contains(got, "tarea legal") {
+		t.Fatalf("ana's hello lacks legal's activity: %s", got)
 	}
 }

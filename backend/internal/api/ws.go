@@ -51,8 +51,18 @@ func (s *server) ws(w http.ResponseWriter, r *http.Request) {
 		s.Log.Error("ws hello", "err", err)
 		agents = []domain.Agent{}
 	}
+	// D3: the same agents and live state as GET /agents (a private department's activity stays its members'); an
+	// unreadable offices model fails closed: every agent's activity is blanked.
+	seen, err := s.visibleAgents(r, agents)
+	if err != nil {
+		s.Log.Warn("ws hello: offices model", "err", err)
+		for i := range agents {
+			agents[i] = hideActivity(agents[i])
+		}
+		seen = list(agents)
+	}
 	hello, _ := json.Marshal(domain.Event{ID: uuid.NewString(), Type: domain.EvHello, TS: time.Now().UTC(), OrgID: org,
-		Payload: map[string]any{"agents": list(agents)}})
+		Payload: map[string]any{"agents": seen}})
 	_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
 	if err := conn.WriteMessage(websocket.TextMessage, hello); err != nil {
 		return

@@ -21,31 +21,43 @@ func sealSvc(store memory.DocStore) *memory.Service {
 }
 
 // D3 (I4): a report that was remembered as organization memory before the offices existed, and that now mixes a
-// private office with other authors (or whose office cannot be told), is taken out of every memory.
+// private office with other authors, is taken out of every memory.
 func TestMixedReportSuppressesTheEarlierOrgDocument(t *testing.T) {
 	ctx := context.Background()
-	for name, svcOf := range map[string]func(memory.DocStore) *memory.Service{
-		"mixed with a private office": officeSvc,
-		"office unknown": func(st memory.DocStore) *memory.Service {
-			return memory.New(memory.Config{Docs: st, Retriever: &memory.FTS{Docs: st},
-				AgentOffice: func(context.Context, string, string) (string, error) { return "", errors.New("model unavailable") }})
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			store := memory.NewMemStore()
-			r := report("r1", "acct1", "legal1")
-			if err := store.Upsert(ctx, "o", memory.ReportDoc(r)); err != nil { // written before D3: organization memory
-				t.Fatal(err)
-			}
-			svc := svcOf(store)
-			svc.RememberReport(ctx, "o", r)
-			if d, err := store.GetByRef(ctx, "o", "report:r1"); err == nil && !d.Suppressed {
-				t.Fatalf("the earlier organization document is still remembered: %+v", d)
-			}
-			if items, _ := svc.Search(ctx, "o", "general1", "conciliación bancaria", 5); len(items) != 0 {
-				t.Fatalf("a General agent still finds the mixed report: %+v", items)
-			}
-		})
+	store := memory.NewMemStore()
+	r := report("r1", "acct1", "legal1")
+	if err := store.Upsert(ctx, "o", memory.ReportDoc(r)); err != nil { // written before D3: organization memory
+		t.Fatal(err)
+	}
+	svc := officeSvc(store)
+	svc.RememberReport(ctx, "o", r)
+	if d, err := store.GetByRef(ctx, "o", "report:r1"); err == nil && !d.Suppressed {
+		t.Fatalf("the earlier organization document is still remembered: %+v", d)
+	}
+	if items, _ := svc.Search(ctx, "o", "general1", "conciliación bancaria", 5); len(items) != 0 {
+		t.Fatalf("a General agent still finds the mixed report: %+v", items)
+	}
+}
+
+// A passing failure of the offices model never forgets a report for good (final re-review): what is stored stays
+// as it is, nothing new is indexed, and the next pass with a readable model seals it.
+func TestReportOfficeUnknownForgetsNothing(t *testing.T) {
+	ctx := context.Background()
+	store := memory.NewMemStore()
+	r := report("r1", "acct1", "legal1")
+	if err := store.Upsert(ctx, "o", memory.ReportDoc(r)); err != nil {
+		t.Fatal(err)
+	}
+	down := memory.New(memory.Config{Docs: store, Retriever: &memory.FTS{Docs: store},
+		AgentOffice: func(context.Context, string, string) (string, error) { return "", errors.New("model unavailable") }})
+	down.RememberReport(ctx, "o", r)
+	down.Backfill(ctx, "o", reportsSrc{r}, 0, 0)
+	if d, err := store.GetByRef(ctx, "o", "report:r1"); err != nil || d.Suppressed {
+		t.Fatalf("a passing failure suppressed the report for good: %+v %v", d, err)
+	}
+	officeSvc(store).RememberReport(ctx, "o", r)
+	if d, err := store.GetByRef(ctx, "o", "report:r1"); err == nil && !d.Suppressed {
+		t.Fatalf("with the model back the mixed report is still remembered: %+v", d)
 	}
 }
 

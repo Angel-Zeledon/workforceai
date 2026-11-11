@@ -90,6 +90,10 @@ func (s *server) runRitual(w http.ResponseWriter, r *http.Request) {
 		s.ritualFail(w, err)
 		return
 	}
+	if err := s.redactRitual(r, s.work(r), &v); err != nil { // D3: the new ritual is shown as GET /rituals/{id} shows it
+		s.fail(w, err)
+		return
+	}
 	writeJSON(w, http.StatusCreated, v)
 }
 

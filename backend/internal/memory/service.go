@@ -164,8 +164,10 @@ const assistantAgent = "assistant"
 
 // reportOffice decides where a report is remembered from the offices of its contributors: all of one office
 // (not General) -> that office; only General's or open offices -> the organization; anything involving a private
-// office with other authors, or an office that cannot be determined -> ok=false (not indexed).
-func (s *Service) reportOffice(ctx context.Context, org string, r domain.Report) (office string, ok bool) {
+// office with other authors -> ok=false (not remembered). An office that cannot be determined now (the offices model
+// failed) -> err: the caller leaves what is stored as it is and does not index, so a passing failure never forgets
+// a report for good.
+func (s *Service) reportOffice(ctx context.Context, org string, r domain.Report) (office string, ok bool, err error) {
 	offs, general := map[string]bool{}, false
 	for _, a := range r.Contributors {
 		if a == assistantAgent || a == "" {
@@ -173,7 +175,7 @@ func (s *Service) reportOffice(ctx context.Context, org string, r domain.Report)
 		}
 		off, err := s.officeOf(ctx, org, a)
 		if err != nil {
-			return "", false
+			return "", false, err
 		}
 		if off == "" {
 			general = true
@@ -183,23 +185,30 @@ func (s *Service) reportOffice(ctx context.Context, org string, r domain.Report)
 	}
 	switch {
 	case len(offs) == 0:
-		return "", true
+		return "", true, nil
 	case len(offs) == 1 && !general:
 		for o := range offs {
-			return o, true
+			return o, true, nil
 		}
 	}
 	_, sealed := s.officeFns()
 	if sealed == nil {
-		return "", false
+		return "", false, errNoOfficeRule
 	}
 	for o := range offs {
-		if priv, err := sealed(ctx, org, o); err != nil || priv {
-			return "", false
+		priv, err := sealed(ctx, org, o)
+		if err != nil {
+			return "", false, err
+		}
+		if priv {
+			return "", false, nil
 		}
 	}
-	return "", true
+	return "", true, nil
 }
+
+// errNoOfficeRule: the office scope is not installed, so whether a mixed report involves a private office is unknown.
+var errNoOfficeRule = errors.New("memory: office visibility rule not installed")
 
 func (s *Service) scrub(text string) string {
 	return sanitize.RedactSecrets(text, s.cfg.Suspects)
@@ -334,9 +343,13 @@ func (s *Service) RememberTask(ctx context.Context, org string, t domain.Task, r
 
 // RememberReport implements application.MemorySource.
 func (s *Service) RememberReport(ctx context.Context, org string, r domain.Report) {
-	off, ok := s.reportOffice(ctx, org, r)
+	off, ok, err := s.reportOffice(ctx, org, r)
+	if err != nil { // not now: what is stored stays, the next backfill retries
+		s.cfg.Log.Warn("memory: report office unknown, not indexed", "report", r.ID, "err", err)
+		return
+	}
 	if !ok {
-		s.cfg.Log.Warn("memory: report of several offices or of unknown office, not indexed", "report", r.ID)
+		s.cfg.Log.Warn("memory: report of several offices with a private one, not indexed", "report", r.ID)
 		s.forgetReport(ctx, org, r.ID) // I4: one remembered before D3 as organization memory is taken out too
 		return
 	}
@@ -368,16 +381,18 @@ func (s *Service) forgetReport(ctx context.Context, org, reportID string) {
 // sealActor is who suppresses or moves documents to seal the departments (D3), never a person.
 const sealActor = "system:d3"
 
-// resealReport fixes, without re-indexing it, the existing organization document of a report the backfill does
-// not re-read (beyond its cap): suppressed when the report must not be remembered, moved to its office when all its
-// authors are of one office. It reports whether it changed something.
+// resealReport fixes the existing organization document of a report the backfill does
+// not re-read (beyond its cap): suppressed when the report must not be remembered, moved to its office (re-indexed) when all
+// its authors are of one office; left alone when the offices cannot be read now. It reports whether it changed something.
 func (s *Service) resealReport(ctx context.Context, org string, r domain.Report) bool {
 	d, err := s.cfg.Docs.GetByRef(ctx, org, "report:"+r.ID)
 	if err != nil || d.Suppressed || d.Scope != ScopeOrg {
 		return false
 	}
-	off, ok := s.reportOffice(ctx, org, r)
+	off, ok, err := s.reportOffice(ctx, org, r)
 	switch {
+	case err != nil:
+		return false
 	case !ok:
 		s.forgetReport(ctx, org, r.ID)
 		return true
