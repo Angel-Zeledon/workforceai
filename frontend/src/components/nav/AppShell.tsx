@@ -16,7 +16,7 @@ import { useSkillsNav } from "@/lib/skills";
 import { useProjects } from "@/lib/projects/store";
 import { fmtUsd } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
-import { usePreferences } from "@/lib/preferences";
+import { usePreferences, useOffice3d } from "@/lib/preferences";
 import { orgApi } from "@/lib/orgConfigApi";
 import { navGroups, setNavigator, SECTIONS, sectionOf } from "@/lib/navBridge";
 import { usePendingCount } from "@/lib/pending";
@@ -59,7 +59,9 @@ function NavLink({ href, icon, label, testid, active, collapsed, onNavigate, bad
 
 function Sidebar({ section, collapsed, onToggle, onNavigate }: { section: string; collapsed: boolean; onToggle?: () => void; onNavigate?: () => void }) {
   const { t } = useT();
-  const shopAvailable = useRewards((s) => s.available);
+  // the shop decorates the animated office: it is in the menu only while that is on (and the server has coins)
+  const office3d = useOffice3d();
+  const shopAvailable = useRewards((s) => s.available) && office3d;
   const pending = usePendingCount(); // the ONE number of Pendientes for the whole app
   const company = useAudience() === "company";
   const groups = navGroups({ shopAvailable, company });
@@ -117,7 +119,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useT();
   const router = useRouter();
   const pathname = usePathname() || "/";
+  const office3d = useOffice3d();
   const section = sectionOf(pathname);
+  // without the animated office, the home ("/") is the list view: tours and the store follow what is on screen
+  const shown = section === "office" && !office3d ? "dashboard" : section;
   const hydratePrefs = usePreferences((s) => s.hydrate);
   const reduce = usePreferences((s) => s.prefs.reduceMotion);
   const connected = useStore((s) => s.connected);
@@ -151,11 +156,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     useSkillsNav.setState({ open: section === "skills" });
     useShopNav.setState({ open: section === "shop" });
     useProjects.setState({ open: section === "projects" });
-    useStore.getState().setMode(section === "dashboard" ? "dashboard" : "office");
-  }, [section]);
+    useStore.getState().setMode(shown === "dashboard" ? "dashboard" : "office");
+  }, [section, shown]);
 
   const toggleCollapsed = () => setCollapsed((c) => { try { localStorage.setItem(COLLAPSE_KEY, c ? "0" : "1"); } catch { /* ignore */ } return !c; });
-  const modeToggle = section === "office" || section === "dashboard";
+  // "Vista 3D / Vista lista" only when the animated office is on (Settings > Apariencia); otherwise there is one view
+  const modeToggle = office3d && (section === "office" || section === "dashboard");
   // the list view is a view of the Office ("Vista 3D / Vista lista"), so the title stays "Oficina"
   const title = t(SECTIONS.find((s) => s.id === section)?.label ?? "nav.office");
   const pendingCount = usePendingCount();
@@ -202,8 +208,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
             )}
             <ActivationChecklist />
-            <TourLauncher section={section} />
-            <span data-tour="shell.coins" className="inline-flex"><CoinCounter /></span>
+            <TourLauncher section={shown === "shop" && !office3d ? null : shown} />
+            {office3d && <span data-tour="shell.coins" className="inline-flex"><CoinCounter /></span>}
             {MOCK && <span data-testid="mock-badge" className="hidden rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 sm:inline">Mock</span>}
             <span className="hidden items-center gap-1.5 whitespace-nowrap font-medium text-ink2 sm:flex">
               <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-ok" : "animate-pulse bg-err"}`} />

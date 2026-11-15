@@ -3205,7 +3205,7 @@
   "settings.needsSession.title": "Disponible con inicio de sesión",
   "settings.needsSession.body": "Miembros, verificación en dos pasos e inicio de sesión único se usan cuando tu organización entra con cuentas. Esta demo abierta no tiene cuentas.",
   "settings.page.desc": "Lo que configuras una vez: tu empresa, la seguridad y tu cuenta. Conexiones y Clientes están en el menú.",
-  "settings.page.office": "Idioma, etiquetas, movimiento y personalización de cada agente.",
+  "settings.page.office": "Idioma, oficina animada (3D), etiquetas, movimiento y personalización de cada agente.",
   "settings.page.hire": "Añade un nuevo agente de IA a partir de un puesto.",
   "settings.page.templates": "Pedidos rápidos y proyectos listos para usar, en la biblioteca de Proyectos.",
   "settings.page.connections": "Correo, calendario y otras herramientas que tus agentes pueden usar.",
@@ -6313,5 +6313,14 @@
   "dept.ask.err.folder": "Esta carpeta no está disponible para pedidos. Vuelve a abrir el departamento e inténtalo de nuevo.",
   "dept.ask.err.agent": "Ese agente ya no está disponible. Elige otro agente del departamento.",
   "dept.markReviewed": "Marcar como revisado",
-  "dept.markReviewed.err": "No se pudo marcar como revisado: necesitas permiso para editar esta carpeta."
+  "dept.markReviewed.err": "No se pudo marcar como revisado: necesitas permiso para editar esta carpeta.",
+  "settings.office3d.section": "Oficina animada",
+  "settings.office3d.label": "Oficina animada (3D)",
+  "settings.office3d.help": "Muestra la oficina en 3D con tus agentes en sus escritorios y abre la Tienda de objetos para decorarla. Usa más recursos del dispositivo; apagada, el inicio es la vista lista. Se guarda en este dispositivo.",
+  "settings.kw.office3d": "3d animacion animada oficina virtual tienda objetos monedas personajes rendimiento recursos",
+  "shop.off.title": "La Tienda es parte de la oficina animada",
+  "shop.off.body": "Los objetos de la Tienda decoran la oficina en 3D. Actívala para usar la Tienda; usa más recursos del dispositivo. Puedes apagarla cuando quieras en Ajustes > Apariencia e idioma.",
+  "shop.off.enable": "Activar la oficina animada",
+  "welcome.step1.dList": "Abre Chats o elige un agente y escríbele lo que necesitas.",
+  "welcome.step2.dList": "En Agentes ves qué hace cada uno; haz clic en uno para hablar con él."
 }

@@ -16,6 +16,12 @@
     "intro": "Cada vez que tu equipo de agentes termina trabajo, tu organización gana monedas. En la Tienda las cambias por objetos para tus agentes y tu oficina. Aquí aprendes cómo se ganan, cómo comprar y cómo usar lo que compras.",
     "sections": [
       {
+        "h": "Abre la Tienda",
+        "paras": [
+          "La Tienda y las monedas son parte de la oficina animada (3D), que viene apagada. Para usarlas, enciende «Oficina animada (3D)» en «Ajustes» > «Apariencia e idioma», o pulsa «Activar la oficina animada» en la pantalla de la Tienda."
+        ]
+      },
+      {
         "h": "Gana monedas",
         "paras": [
           "Las monedas se ganan solo con trabajo terminado: no se compran con dinero ni hay forma de pagar para tener más. Cada organización nueva empieza con 1,000 monedas de bienvenida, y después el saldo sube por tres vías:"
@@ -117,6 +123,12 @@
     "description": "Learn how coins are earned by finished work and how to spend them in the Shop to dress your agents and decorate your office.",
     "intro": "Every time your team of agents finishes work, your organization earns coins. In the Shop you trade them for items for your agents and your office. Here you learn how coins are earned, how to buy and how to use what you buy.",
     "sections": [
+      {
+        "h": "Open the Shop",
+        "paras": [
+          "The Shop and coins are part of the animated office (3D), which starts off. To use them, turn on «Animated office (3D)» in «Settings» > «Appearance and language», or press «Turn on the animated office» on the Shop screen."
+        ]
+      },
       {
         "h": "Earn coins",
         "paras": [

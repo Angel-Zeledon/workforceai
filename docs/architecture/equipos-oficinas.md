@@ -215,6 +215,11 @@ archivo**, incluidas las lecturas de texto y vistas previas (hoy solo se audita 
 - Las oficinas privadas se ven con la puerta cerrada; las abiertas se pueden visitar mirando (sin tocar).
 - Cada persona tiene su mesa con sus agentes personales al lado.
 - Estados de presencia (disponible, concentrado, en reunión, fuera), que ya existen, más los automáticos por calendario.
+- **Opcional (decisión del dueño, 2026-11-13):** la oficina animada viene apagada porque consume muchos recursos del
+  dispositivo. Sin ella, el inicio (`/` y `/dashboard`) es la vista lista con el panel del agente a la derecha y la
+  escena 3D no se carga. Se enciende en Ajustes > Apariencia e idioma (`prefs.office3d`, por dispositivo), y al
+  encenderla aparecen la Tienda, las monedas, la meta del día y el selector "Vista 3D / Vista lista". `/shop` con la
+  oficina apagada explica cómo activarla. Las pruebas e2e arrancan con ella encendida (`e2e/playwright.config.ts`).
 
 ---
 

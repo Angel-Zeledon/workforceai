@@ -30,6 +30,9 @@ export interface Prefs {
   showBubbles: boolean;
   /** office light follows the viewer's local time (dawn / day / dusk / night) instead of the room's mood (B5) */
   lightAuto: boolean;
+  /** the animated 3D office (and with it the shop of objects and the coins). Off by default: it uses a lot of the
+   *  device, so the home is the list view until the person turns it on (owner's decision, 2026-11-13). Per device. */
+  office3d: boolean;
   agents: Record<string, AgentPrefs>;
 }
 
@@ -43,7 +46,7 @@ export interface PreferencesBackend {
 }
 
 const KEY = "aiwos.preferences.v1";
-export const DEFAULT_PREFS: Prefs = { version: 1, locale: "es", lighting: "ambient", showNames: true, labelSize: "m", reduceMotion: false, showBubbles: true, lightAuto: false, agents: {} };
+export const DEFAULT_PREFS: Prefs = { version: 1, locale: "es", lighting: "ambient", showNames: true, labelSize: "m", reduceMotion: false, showBubbles: true, lightAuto: false, office3d: false, agents: {} };
 
 export const localBackend: PreferencesBackend = {
   load() {
@@ -51,7 +54,7 @@ export const localBackend: PreferencesBackend = {
       const raw = window.localStorage.getItem(KEY);
       if (!raw) return null;
       const p = JSON.parse(raw) as Partial<Prefs>;
-      return { ...DEFAULT_PREFS, ...p, agents: { ...(p.agents || {}) }, version: 1 };
+      return { ...DEFAULT_PREFS, ...p, locale: p.locale ?? detectLocale(), agents: { ...(p.agents || {}) }, version: 1 };
     } catch { return null; }
   },
   save(p) {
@@ -119,6 +122,11 @@ export const usePreferences = create<PrefState>((set, get) => {
     },
   };
 });
+
+/** Whether this device shows the animated 3D office (and the shop). `ready` is false until the saved choice is read,
+ *  so the home does not start loading the 3D scene for someone who turned it off (or the other way round). */
+export const useOffice3d = () => usePreferences((s) => s.prefs.office3d);
+export const useOffice3dReady = () => usePreferences((s) => s.hydrated);
 
 export interface AgentView {
   id: string; name: string; label: string; title: string; color: string; skin: string; hair: string;

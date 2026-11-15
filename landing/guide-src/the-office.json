@@ -20,7 +20,7 @@
     "title": "La oficina: vista 3D, vista lista y tus agentes",
     "metaTitle": "La oficina y tus agentes | AI Workforce OS",
     "description": "Recorre el menú, mueve la cámara, habla con un agente, sigue sus pendientes, cambia a la vista lista, contrata agentes y redecora la oficina.",
-    "intro": "La Oficina tiene dos vistas del mismo trabajo: la «Vista 3D», para pedir trabajo y ver a tus agentes, y la «Vista lista», para revisar cifras y tablas. Aquí aprendes a moverte por la app, a hablar con cada agente, a contratar otros y a dejar la oficina a tu gusto.",
+    "intro": "La Oficina abre en la «Vista lista», para revisar cifras, agentes y tareas. Si quieres ver a tus agentes trabajando en 3D, activa la oficina animada en Ajustes. Aquí aprendes a moverte por la app, a hablar con cada agente, a contratar otros y a dejar la oficina a tu gusto.",
     "sections": [
       {
         "h": "Recorre el menú",
@@ -49,6 +49,19 @@
           ]
         },
         "tip": "Junto a muchos títulos verás «¿Qué es esto?»: explica en dos líneas qué es un pedido, un pendiente, una plantilla y otros conceptos."
+      },
+      {
+        "h": "Activa la oficina animada (3D)",
+        "paras": [
+          "La oficina en 3D viene apagada porque usa bastantes recursos del dispositivo. Mientras está apagada, el inicio es la vista lista y no aparecen la Tienda ni las monedas.",
+          "Al encenderla vuelven la «Vista 3D», el selector «Vista 3D / Vista lista» y la Tienda para decorarla. La elección se guarda en cada dispositivo."
+        ],
+        "steps": [
+          "Abre «Ajustes» y entra en «Apariencia e idioma».",
+          "Enciende «Oficina animada (3D)».",
+          "Vuelve a «Oficina»: verás a tus agentes en sus escritorios."
+        ],
+        "tip": "Si el equipo se pone lento, apágala desde el mismo interruptor."
       },
       {
         "h": "Mueve la cámara",
@@ -272,7 +285,7 @@
     "title": "The office: 3D view, list view and your agents",
     "metaTitle": "The office and your agents | AI Workforce OS",
     "description": "Find your way around the menu, move the camera, talk to an agent, follow pending items, switch to the list view, hire agents and redecorate the office.",
-    "intro": "The Office has two views of the same work: the “3D view”, to ask for work and watch your agents, and the “List view”, to review numbers and tables. Here you learn to move around the app, talk to each agent, hire new ones and make the office your own.",
+    "intro": "The Office opens in the «List view», to review figures, agents and tasks. If you want to see your agents working in 3D, turn on the animated office in Settings. Here you learn how to move around the app, talk to each agent, hire others and make the office your own.",
     "sections": [
       {
         "h": "Find your way around the menu",
@@ -301,6 +314,19 @@
           ]
         },
         "tip": "Next to many titles you will see “What is this?”: it explains in two lines what a request, a pending item, a template and other concepts are."
+      },
+      {
+        "h": "Turn on the animated office (3D)",
+        "paras": [
+          "The 3D office starts off because it uses a lot of your device. While it is off, the home is the list view and the Shop and coins do not appear.",
+          "Turning it on brings back the «3D view», the «3D view / List view» switch and the Shop to decorate it. The choice is saved on each device."
+        ],
+        "steps": [
+          "Open «Settings» and go to «Appearance and language».",
+          "Turn on «Animated office (3D)».",
+          "Go back to «Office»: you will see your agents at their desks."
+        ],
+        "tip": "If your computer slows down, turn it off with the same switch."
       },
       {
         "h": "Move the camera",

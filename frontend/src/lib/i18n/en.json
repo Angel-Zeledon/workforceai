@@ -3205,7 +3205,7 @@
   "settings.needsSession.title": "Available with sign-in",
   "settings.needsSession.body": "Members, two-step verification and single sign-on are used when your organization signs in with accounts. This open demo has no accounts.",
   "settings.page.desc": "What you set up once: your company, safety and your account. Connections and Customers are in the menu.",
-  "settings.page.office": "Language, labels, motion and customization of each agent.",
+  "settings.page.office": "Language, animated office (3D), labels, motion and customization of each agent.",
   "settings.page.hire": "Add a new AI agent: pick its role.",
   "settings.page.templates": "Quick requests and ready-made projects, in the Projects library.",
   "settings.page.connections": "Email, calendar and other tools your agents can use.",
@@ -6313,5 +6313,14 @@
   "dept.ask.err.folder": "This folder isn't available for requests. Reopen the department and try again.",
   "dept.ask.err.agent": "That agent is no longer available. Pick another agent of the department.",
   "dept.markReviewed": "Mark as reviewed",
-  "dept.markReviewed.err": "It couldn't be marked as reviewed: you need permission to edit this folder."
+  "dept.markReviewed.err": "It couldn't be marked as reviewed: you need permission to edit this folder.",
+  "settings.office3d.section": "Animated office",
+  "settings.office3d.label": "Animated office (3D)",
+  "settings.office3d.help": "Shows the office in 3D with your agents at their desks and opens the Shop of objects to decorate it. Uses more of your device; when off, the home is the list view. Saved on this device.",
+  "settings.kw.office3d": "3d animation animated virtual office shop objects coins characters performance resources",
+  "shop.off.title": "The Shop is part of the animated office",
+  "shop.off.body": "Shop objects decorate the 3D office. Turn it on to use the Shop; it uses more of your device. You can turn it off any time in Settings > Appearance and language.",
+  "shop.off.enable": "Turn on the animated office",
+  "welcome.step1.dList": "Open Chats or pick an agent and write what you need.",
+  "welcome.step2.dList": "Agents shows what each one is doing; click one to talk to them."
 }

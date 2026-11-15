@@ -65,15 +65,25 @@ export function OfficeSettingsPanel({ onClose }: { onClose: () => void }) {
               options={LOCALES.map((l) => ({ v: l, label: langName(l) }))} />
           </section>
 
+          {/* the animated 3D office is opt-in: it uses a lot of the device. Turning it on also opens the shop. */}
           <section className="mb-4 space-y-1">
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-mute">{t("settings.labels")}</div>
-            <Toggle testid="setting-show-names" on={prefs.showNames} onChange={(v) => set({ showNames: v })} label={t("settings.showNames")} />
-            <div className="flex items-center justify-between px-1 py-1 text-[12px] font-medium text-ink">
-              <span>{t("settings.labelSize")}</span>
-              <Seg<LabelSize> value={prefs.labelSize} testid="setting-label-size" onChange={(v) => set({ labelSize: v })}
-                options={[{ v: "s", label: "S" }, { v: "m", label: "M" }, { v: "l", label: "L" }]} />
-            </div>
-            <Toggle testid="setting-show-bubbles" on={prefs.showBubbles} onChange={(v) => set({ showBubbles: v })} label={t("settings.showBubbles")} />
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-mute">{t("settings.office3d.section")}</div>
+            <Toggle testid="setting-office-3d" on={prefs.office3d} onChange={(v) => set({ office3d: v })} label={t("settings.office3d.label")} />
+            <p className="px-1 text-[11.5px] leading-snug text-mute">{t("settings.office3d.help")}</p>
+            {prefs.office3d && (
+              <div data-testid="setting-office-3d-labels" className="space-y-1 pt-1">
+                <Toggle testid="setting-show-names" on={prefs.showNames} onChange={(v) => set({ showNames: v })} label={t("settings.showNames")} />
+                <div className="flex items-center justify-between px-1 py-1 text-[12px] font-medium text-ink">
+                  <span>{t("settings.labelSize")}</span>
+                  <Seg<LabelSize> value={prefs.labelSize} testid="setting-label-size" onChange={(v) => set({ labelSize: v })}
+                    options={[{ v: "s", label: "S" }, { v: "m", label: "M" }, { v: "l", label: "L" }]} />
+                </div>
+                <Toggle testid="setting-show-bubbles" on={prefs.showBubbles} onChange={(v) => set({ showBubbles: v })} label={t("settings.showBubbles")} />
+              </div>
+            )}
+          </section>
+
+          <section className="mb-4 space-y-1">
             <Toggle testid="setting-reduce-motion" on={prefs.reduceMotion} onChange={(v) => set({ reduceMotion: v })} label={t("settings.reduceMotion")} />
           </section>
 

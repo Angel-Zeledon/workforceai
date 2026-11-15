@@ -27,6 +27,7 @@ import { PortalBranding } from "./PortalBranding";
 import { MyCosts } from "./MyCosts";
 import { ApprovalSettings } from "./ApprovalSettings";
 import { useViewMode } from "@/lib/viewMode";
+import { useOffice3d } from "@/lib/preferences";
 
 /** Sub-pages of Settings. The URL (/settings?s=...) says which one is open, so the browser's Back button and the
  *  sidebar both just work: nothing needs a "Close" button. */
@@ -100,6 +101,7 @@ export function SettingsView() {
   const loaded = useConnections((s) => s.loaded);
   const onboarding = useOnboardingEntry();
   const [q, setQ] = useState("");
+  const office3d = useOffice3d(); // editing the office layout only exists with the animated office
   const level = controls?.kill_switch_level ?? "none";
   // Conexiones moved to the main menu (/connections); the old link keeps working.
   useEffect(() => { if (sub === "connections") router.replace("/connections"); }, [sub, router]);
@@ -156,7 +158,8 @@ export function SettingsView() {
     { id: "logout", group: "account", searchOnly: true, testid: "settings-logout", icon: "power", title: t("auth.logout"), body: t("settings.page.logout"), hidden: !signedIn, run: () => { logout().then(() => { window.location.href = "/login"; }); } },
     { id: "viewAll", group: "workspace", searchOnly: true, icon: "grid", title: t("ux.viewAll.label"), body: t("ux.viewAll.find"), run: () => useViewMode.getState().setViewAll(!useViewMode.getState().viewAll) },
     { id: "llm", group: "workspace", searchOnly: true, icon: "settings", title: t("llm.title"), body: t("settings.find.llm"), hidden: !onboarding.supported, run: onboarding.open },
-    { id: "editOffice", group: "workspace", searchOnly: true, icon: "edit", title: t("settings.find.editOffice.t"), body: t("settings.find.editOffice"), run: () => goOffice(true) },
+    { id: "editOffice", group: "workspace", searchOnly: true, icon: "edit", title: t("settings.find.editOffice.t"), body: t("settings.find.editOffice"), hidden: !office3d, run: () => goOffice(true) },
+    { id: "office3d", group: "workspace", searchOnly: true, icon: "office", title: t("settings.office3d.label"), body: t("settings.office3d.help"), run: () => open("office") },
     { id: "language", group: "workspace", searchOnly: true, icon: "settings", title: t("settings.language"), body: t("settings.find.language"), run: () => open("office") },
     { id: "skills", group: "workspace", searchOnly: true, icon: "layers", title: t("nav.skills"), body: t("settings.find.skills"), run: () => router.push("/skills") },
     { id: "projects", group: "workspace", searchOnly: true, icon: "list", title: t("tpl.lib.title"), body: t("settings.find.projects"), run: () => router.push("/projects") },

@@ -3205,7 +3205,7 @@
   "settings.needsSession.title": "Disponível com login",
   "settings.needsSession.body": "Membros, verificação em duas etapas e login único são usados quando sua organização entra com contas. Esta demo aberta não tem contas.",
   "settings.page.desc": "O que você configura uma vez: sua empresa, a segurança e sua conta. Conexões e Clientes estão no menu.",
-  "settings.page.office": "Idioma, etiquetas, movimento e personalização de cada agente.",
+  "settings.page.office": "Idioma, escritório animado (3D), etiquetas, movimento e personalização de cada agente.",
   "settings.page.hire": "Adicione um novo agente de IA escolhendo um cargo.",
   "settings.page.templates": "Pedidos rápidos e projetos prontos para usar, na biblioteca de Projetos.",
   "settings.page.connections": "E-mail, calendário e outras ferramentas que seus agentes podem usar.",
@@ -6314,5 +6314,14 @@
   "dept.ask.err.folder": "Esta pasta não está disponível para pedidos. Abra o departamento de novo e tente outra vez.",
   "dept.ask.err.agent": "Esse agente não está mais disponível. Escolha outro agente do departamento.",
   "dept.markReviewed": "Marcar como revisado",
-  "dept.markReviewed.err": "Não foi possível marcar como revisado: você precisa de permissão para editar esta pasta."
+  "dept.markReviewed.err": "Não foi possível marcar como revisado: você precisa de permissão para editar esta pasta.",
+  "settings.office3d.section": "Escritório animado",
+  "settings.office3d.label": "Escritório animado (3D)",
+  "settings.office3d.help": "Mostra o escritório em 3D com seus agentes nas mesas e abre a Loja de objetos para decorá-lo. Usa mais recursos do dispositivo; desligado, o início é a visão em lista. Fica salvo neste dispositivo.",
+  "settings.kw.office3d": "3d animacao animado escritorio virtual loja objetos moedas personagens desempenho recursos",
+  "shop.off.title": "A Loja faz parte do escritório animado",
+  "shop.off.body": "Os objetos da Loja decoram o escritório em 3D. Ative-o para usar a Loja; ele usa mais recursos do dispositivo. Você pode desligá-lo quando quiser em Ajustes > Aparência e idioma.",
+  "shop.off.enable": "Ativar o escritório animado",
+  "welcome.step1.dList": "Abra Chats ou escolha um agente e escreva o que precisa.",
+  "welcome.step2.dList": "Em Agentes você vê o que cada um faz; clique em um para conversar com ele."
 }

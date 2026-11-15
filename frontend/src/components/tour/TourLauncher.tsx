@@ -8,9 +8,9 @@ import { tourForSection } from "./tours";
 
 /** The "?" in the top bar. Renders nothing on screens without a tour, so it is never a control that does nothing.
  *  Stays mounted (lit) while the tour runs and closes it when pressed again. Leaving the screen abandons the tour. */
-export function TourLauncher({ section }: { section: SectionId }) {
+export function TourLauncher({ section }: { section: SectionId | null }) {
   const { t, locale } = useT();
-  const tour = tourForSection(section);
+  const tour = section ? tourForSection(section) : null;
   const activeId = useTour((s) => s.activeId);
   const stop = useTour((s) => s.stop);
   const start = useTour((s) => s.start);

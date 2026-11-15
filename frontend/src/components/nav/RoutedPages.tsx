@@ -19,6 +19,10 @@ import { CustomerDistrict } from "../customers/CustomerDistrict";
 import { ConnectionsView } from "../connections/ConnectionsView";
 import { useConnections } from "@/lib/connections/store";
 import { useBootConnections } from "../security/ControlsChrome";
+import { useStore } from "@/lib/store";
+import { useOffice3d, useOffice3dReady } from "@/lib/preferences";
+import { WorkspaceHost } from "../workspace/WorkspaceHost";
+import { ShopOff } from "../shop/ShopOff";
 
 /** Page body with a first-run hint strip on top (dismissed once, remembered in localStorage). */
 function Hinted({ id, children }: { id: string; children: ReactNode }) {
@@ -31,10 +35,38 @@ function Hinted({ id, children }: { id: string; children: ReactNode }) {
   );
 }
 
+/**
+ * The office without the animation: the list view, with the agent's panel on the right when one is picked (every
+ * "open this agent" in the app selects it and goes home). The 3D scene is never loaded here.
+ */
+function ListHome() {
+  const selected = useStore((s) => s.selectedAgentId);
+  return (
+    <div data-testid="list-home" className="relative h-full">
+      <Dashboard />
+      {selected && <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-30"><WorkspaceHost id={selected} /></div>}
+    </div>
+  );
+}
+
 /** Thin client wrappers so every route renders one existing screen; query strings carry the deep links. */
-export const OfficePage = () => <OfficeView />;
-export const DashboardPage = () => <Dashboard />;
-export const ShopPage = () => <Hinted id="shop"><ShopView /></Hinted>;
+export function OfficePage() {
+  const ready = useOffice3dReady();
+  const on = useOffice3d();
+  if (!ready) return <PageSkeleton />;
+  return on ? <OfficeView /> : <ListHome />;
+}
+export function DashboardPage() {
+  const on = useOffice3d();
+  return on ? <Dashboard /> : <ListHome />;
+}
+/** The shop decorates the 3D office: without the animation it only explains how to turn it on. */
+export function ShopPage() {
+  const ready = useOffice3dReady();
+  const on = useOffice3d();
+  if (!ready) return <PageSkeleton />;
+  return on ? <Hinted id="shop"><ShopView /></Hinted> : <ShopOff />;
+}
 export const SettingsPage = () => <Suspense fallback={<PageSkeleton />}><SettingsView /></Suspense>;
 export const ChatsPage = ({ agentId }: { agentId?: string }) => <ChatsView agentId={agentId ? decodeURIComponent(agentId) : undefined} />;
 

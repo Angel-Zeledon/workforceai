@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 import { orgApi } from "@/lib/orgConfigApi";
 import { notifyApi, type DailyGoal } from "@/lib/notifyApi";
 import { useRewards } from "@/lib/rewards";
+import { useOffice3d } from "@/lib/preferences";
 import { useSession } from "@/lib/session";
 import { go } from "@/lib/navBridge";
 import { toast } from "@/lib/toast";
@@ -147,12 +148,14 @@ function DailyGoalChip() {
   const { t } = useT();
   const [g, setG] = useState<DailyGoal | null>(null);
   const earnTick = useRewards((s) => s.earnTick); // a coin was just earned: the progress may have moved
+  const office3d = useOffice3d(); // the goal pays coins, which only exist with the animated office
   useEffect(() => {
+    if (!office3d) return;
     let live = true;
     notifyApi.dailyGoal().then((d) => { if (live) setG(d); }).catch(() => { if (live) setG(null); });
     return () => { live = false; };
-  }, [earnTick]);
-  if (!g || !g.enabled) return null;
+  }, [earnTick, office3d]);
+  if (!office3d || !g || !g.enabled) return null;
   const shown = Math.min(g.progress, g.target);
   const pct = Math.round((shown / g.target) * 100);
   return (
