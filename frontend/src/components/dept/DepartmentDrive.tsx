@@ -327,7 +327,7 @@ function DeptScreen({ dept, depts, offices }: { dept: OfficeView; depts: OfficeV
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="shrink-0 border-b border-line bg-panel px-3 pb-2.5 pt-3 sm:px-5">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <h1 data-testid="dept-title" className="min-w-0 truncate font-display text-[18px] font-semibold leading-tight tracking-tight text-ink sm:text-xl">{dept.name}</h1>
+            <h1 data-testid="dept-title" className="min-w-0 truncate font-display text-[18px] font-semibold leading-tight tracking-tight text-ink sm:text-xl">{share ? share.name : dept.name}</h1>
             {depts.length > 1 && (
               <select aria-label={t("dept.switch")} data-testid="dept-switch" value={dept.id} onChange={(e) => router.push(`/d/${encodeURIComponent(e.target.value)}`)}
                 className="min-h-9 rounded-lg border border-line bg-panel px-2 text-[13px] text-ink outline-none focus:border-accent">
