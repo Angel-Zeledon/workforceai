@@ -75,6 +75,48 @@
         ]
       },
       {
+        "h": "Comparte con otro departamento",
+        "paras": [
+          "Puedes compartir un archivo o una carpeta de tu departamento con otro departamento. Quien lo recibe solo puede leerlo, nunca cambiarlo. Necesitas poder editar lo que compartes, y no se puede compartir la carpeta raíz del departamento ni compartir con el mismo departamento o con General."
+        ],
+        "steps": [
+          "En el Drive de tu departamento, abre la carpeta o busca el archivo que quieres compartir.",
+          "Pulsa «⋯» y elige «Compartir con otro departamento…».",
+          "Elige el departamento y confirma.",
+          "Si eres responsable de tu departamento, el archivo se comparte al momento. Si no, el pedido queda «Pendiente de aprobación» hasta que un responsable decida.",
+          "Para decidir un pedido, mira «Pedidos para compartir» encima de la lista y pulsa «Aprobar» o «Rechazar».",
+          "Para ver con quién está compartido, abre el archivo y mira «Quién puede verlo». Pulsa «Dejar de compartir» para quitar el acceso."
+        ],
+        "note": "Los pedidos para compartir no aparecen en «Pendientes»: se deciden en el Drive del departamento dueño. Si el departamento no tiene responsables, decide cualquier miembro.",
+        "tip": "Al dejar de compartir, el otro departamento pierde el acceso de inmediato."
+      },
+      {
+        "h": "Compartido conmigo",
+        "paras": [
+          "Lo que otros departamentos comparten con el tuyo aparece al final del árbol de carpetas, en «Compartido conmigo». Solo aparece lo que ya está aprobado."
+        ],
+        "steps": [
+          "Abre «Departamento» en el menú lateral.",
+          "Al final del árbol de carpetas, abre «Compartido conmigo».",
+          "Abre la carpeta o el archivo que quieres ver."
+        ],
+        "note": "Es de solo lectura: no hay acciones para escribir ni «Pedir algo sobre esta carpeta». Los agentes de tu departamento también pueden leerlo, siempre limitados a lo que tú puedes ver.",
+        "tip": "Si dejas de ver algo, es que el otro departamento dejó de compartirlo."
+      },
+      {
+        "h": "Marca un archivo como Borrador o Enviado",
+        "paras": [
+          "La columna «Estado» también puede decir «Borrador» o «Enviado». Los pones tú; no cambian solos, salvo uno: si un agente escribe una versión nueva de un archivo «Enviado», pierde ese estado. Si un archivo tiene varios estados, la lista muestra uno solo, en este orden: «Para revisar», «Enviado», «Borrador»."
+        ],
+        "steps": [
+          "En la lista, pulsa «⋯» en la fila del archivo.",
+          "Elige «Marcar como enviado» o «Marcar como borrador».",
+          "Para quitarlo, elige «Quitar estado»."
+        ],
+        "note": "Para marcar un archivo necesitas poder editar la carpeta.",
+        "tip": "Marca «Borrador» lo que aún no está listo, para que nadie lo tome por final."
+      },
+      {
         "h": "Qué ve cada quien",
         "list": [
           "Solo ves los departamentos a los que perteneces, y solo las carpetas que tu acceso permite.",
@@ -178,6 +220,48 @@
         "paras": [
           "In the list, click “⋯” on a file's row: “Open”, “Ask an agent…” or “Download”. “Ask an agent…” puts the file name in your request and attaches the file."
         ]
+      },
+      {
+        "h": "Share with another department",
+        "paras": [
+          "You can share a file or a folder from your department with another department. The people who receive it can only read it, never change it. You need to be able to edit what you share, and you cannot share the department's root folder, or share with the same department or with General."
+        ],
+        "steps": [
+          "In your department's Drive, open the folder or find the file you want to share.",
+          "Click “⋯” and choose “Share with another department…”.",
+          "Choose the department and confirm.",
+          "If you are a lead of your department, the file is shared right away. If not, the request stays “Pending approval” until a lead decides.",
+          "To decide a request, look at “Share requests” above the list and click “Approve” or “Reject”.",
+          "To see who it is shared with, open the file and look at “Who can see it”. Click “Stop sharing” to remove access."
+        ],
+        "note": "Share requests do not appear in “Pending”: they are decided in the owning department's Drive. If the department has no leads, any member can decide.",
+        "tip": "When you stop sharing, the other department loses access immediately."
+      },
+      {
+        "h": "Shared with me",
+        "paras": [
+          "What other departments share with yours appears at the bottom of the folder tree, under “Shared with me”. Only what is already approved appears."
+        ],
+        "steps": [
+          "Open “Department” in the side menu.",
+          "At the bottom of the folder tree, open “Shared with me”.",
+          "Open the folder or file you want to see."
+        ],
+        "note": "It is read-only: there are no actions to write and no “Ask for something on this folder”. The agents in your department can also read it, always limited to what you can see.",
+        "tip": "If something stops showing, the other department stopped sharing it."
+      },
+      {
+        "h": "Mark a file as Draft or Sent",
+        "paras": [
+          "The “Status” column can also say “Draft” or “Sent”. You set them; they do not change by themselves, except one: if an agent writes a new version of a “Sent” file, it loses that status. If a file has several statuses, the list shows only one, in this order: “To review”, “Sent”, “Draft”."
+        ],
+        "steps": [
+          "In the list, click “⋯” on the file's row.",
+          "Choose “Mark as sent” or “Mark as draft”.",
+          "To remove it, choose “Clear status”."
+        ],
+        "note": "To mark a file you need to be able to edit the folder.",
+        "tip": "Mark as “Draft” what is not ready yet, so nobody takes it for final."
       },
       {
         "h": "Who sees what",

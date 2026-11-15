@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { drive, type DriveFolder } from "@/lib/drive";
+import { drive, type DriveFolder, type DriveShare } from "@/lib/drive";
 import { pathKey, pendingUnder } from "@/lib/deptLogic";
 import { Icon } from "../icons";
 
@@ -10,8 +10,10 @@ import { Icon } from "../icons";
  * expanded; the current folder is highlighted in soft blue. A folder that holds something pending shows how many.
  * `refresh` changes when files changed: the open levels are listed again.
  */
-export function DeptTree({ root, rootName, current, pending, onOpen, refresh }: {
+export function DeptTree({ root, rootName, current, pending, onOpen, refresh, shared, sharedCurrent, ownerName, onOpenShared }: {
   root: string; rootName: string; current: string; pending: Map<string, unknown>; onOpen: (path: string) => void; refresh?: string;
+  /** "Compartido conmigo": what other departments share with this one (D4); `sharedCurrent` is the one being browsed (the own folders are then not highlighted). */
+  shared: DriveShare[]; sharedCurrent: string | null; ownerName: (officeId: string) => string; onOpenShared: (s: DriveShare) => void;
 }) {
   const { t } = useT();
   const [children, setChildren] = useState<Record<string, DriveFolder[]>>({});
@@ -44,7 +46,7 @@ export function DeptTree({ root, rootName, current, pending, onOpen, refresh }: 
   const node = (path: string, name: string, depth: number) => {
     const k = pathKey(path);
     const isOpen = !!open[k];
-    const here = k === pathKey(current);
+    const here = !sharedCurrent && k === pathKey(current);
     const kids = children[k];
     const n = pendingUnder(pending, path);
     return (
@@ -71,6 +73,28 @@ export function DeptTree({ root, rootName, current, pending, onOpen, refresh }: 
   return (
     <nav aria-label={t("dept.folders")} data-testid="dept-tree">
       <ul className="space-y-px">{node(root, rootName, 0)}</ul>
+      <div data-testid="dept-tree-shared" className="mt-3 border-t border-line pt-2">
+        <div className="px-2 pb-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-mute">{t("dept.shared.title")}</div>
+        {shared.length === 0 ? <p className="px-2 py-1 text-[12px] text-mute">{t("dept.shared.empty")}</p> : (
+          <ul className="space-y-px">
+            {shared.map((s) => {
+              const here = !!sharedCurrent && pathKey(s.path) === pathKey(sharedCurrent);
+              return (
+                <li key={s.id}>
+                  <button type="button" data-testid={`dept-shared-${s.name}`} aria-current={here ? "true" : undefined} onClick={() => onOpenShared(s)}
+                    className={`flex min-h-10 w-full items-center gap-1.5 rounded-md px-2 text-left text-[13px] md:min-h-8 ${here ? "bg-accent-soft font-semibold text-accent" : "text-ink hover:bg-panel2"}`}>
+                    <Icon name={s.kind === "folder" ? "folder" : "doc"} size={14} className={`shrink-0 ${here ? "text-accent" : "text-mute"}`} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate" title={s.name}>{s.name}</span>
+                      <span className="block truncate text-[11px] font-normal text-mute">{t("dept.shared.from", { office: ownerName(s.owner_office_id) })}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </nav>
   );
 }

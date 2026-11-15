@@ -38,6 +38,25 @@ func (o officeDriveAccess) OfficeAccess(ctx context.Context, org, userID, office
 	return drive.AccessNone, nil
 }
 
+// OfficeRoster mirrors the server's adapter for shares between departments (cmd/server/drive_people.go).
+func (o officeDriveAccess) OfficeRoster(ctx context.Context, org, officeID string) (drive.OfficeRoster, error) {
+	m, err := o.svc.Model(ctx, org)
+	if err != nil {
+		return drive.OfficeRoster{}, err
+	}
+	off, ok := m.Office(officeID)
+	if !ok {
+		return drive.OfficeRoster{}, nil
+	}
+	ro := drive.OfficeRoster{Known: true, General: off.General, Members: off.Members}
+	for _, l := range off.Leads {
+		if m.IsMember(l, officeID) {
+			ro.Leads = append(ro.Leads, l)
+		}
+	}
+	return ro, nil
+}
+
 // officeDrive: a private office "Legal" and an open office "Ventas", both led by ana; beto belongs to none. Both are
 // admins (admins get no pass into a private office's folder).
 type officeDrive struct {
@@ -45,6 +64,8 @@ type officeDrive struct {
 	owner         *auth.Session
 	ana, beto     string
 	legal, ventas string // office ids
+	// mk creates one more office (a department with its folder) led by ana and returns its id.
+	mk func(name, vis string) string
 }
 
 func newOfficeDrive(t *testing.T) *officeDrive {
@@ -59,6 +80,7 @@ func newOfficeDriveRT(t *testing.T, rt application.Runtime) *officeDrive {
 	e := newEnv(t, opts{auth: true, orgchart: true, drive: true, ws: true, runtime: rt, deps: func(d *api.Deps) {
 		withOffices(d)
 		d.Drive.SetPeople(officeDriveAccess{svc: d.Offices})
+		d.Drive.SetShareOffices(officeDriveAccess{svc: d.Offices})
 		dr = d.Drive
 		// the other HTTP paths that read drive files: commands, meeting minutes, chat attachments
 		d.Commands = &api.CommandsDeps{}
@@ -81,6 +103,7 @@ func newOfficeDriveRT(t *testing.T, rt application.Runtime) *officeDrive {
 		}
 		return id
 	}
+	o.mk = office
 	o.legal, o.ventas = office("Legal", "private"), office("Ventas", "open")
 	return o
 }

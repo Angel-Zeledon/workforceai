@@ -19,6 +19,7 @@ import (
 type DriveStore struct{ S *Store }
 
 var _ drive.Store = (*DriveStore)(nil)
+var _ drive.ShareStore = (*DriveStore)(nil)
 
 func isUnique(err error) bool {
 	var pe *pgconn.PgError
@@ -411,4 +412,59 @@ func (d *DriveStore) RecentFiles(ctx context.Context, org string, q drive.Recent
 		  AND `+scopeSQL("$6", "$7")+`
 		ORDER BY f.updated_at DESC, fo.path, f.name LIMIT $8`,
 		org, q.Since, byKind, byID, pats, under, scoped, limit)
+}
+
+// ---- shares between departments (migration 821) ----
+
+const shareCols = `id, path, kind, file_id, owner_office_id, target_office_id, status, requested_by, requested_at, decided_by, decided_at`
+
+func scanShare(r scanner) (drive.Share, error) {
+	var sh drive.Share
+	err := r.Scan(&sh.ID, &sh.Path, &sh.Kind, &sh.FileID, &sh.OwnerOfficeID, &sh.TargetOfficeID, &sh.Status, &sh.RequestedBy, &sh.RequestedAt, &sh.DecidedBy, &sh.DecidedAt)
+	sh.Name = pathBase(sh.Path)
+	return sh, err
+}
+
+// pathBase is the last segment of a drive path (the name of the shared file or folder).
+func pathBase(p string) string {
+	if i := strings.LastIndex(p, "/"); i >= 0 {
+		return p[i+1:]
+	}
+	return p
+}
+
+func (d *DriveStore) CreateShare(ctx context.Context, org string, sh drive.Share) error {
+	return mapDrive(d.S.exec(ctx, org, `INSERT INTO drive_office_shares (org_id, id, path, kind, file_id, owner_office_id, target_office_id, status, requested_by, requested_at, decided_by, decided_at)
+		VALUES ($1,$2,$3,$4,$12,$5,$6,$7,$8,$9,$10,$11)`,
+		org, sh.ID, sh.Path, sh.Kind, sh.OwnerOfficeID, sh.TargetOfficeID, sh.Status, sh.RequestedBy, sh.RequestedAt, sh.DecidedBy, sh.DecidedAt, sh.FileID))
+}
+
+func (d *DriveStore) ShareByID(ctx context.Context, org, id string) (drive.Share, error) {
+	sh, err := one(ctx, d.S, org, scanShare, `SELECT `+shareCols+` FROM drive_office_shares WHERE org_id=$1 AND id=$2`, org, id)
+	return sh, mapErr(err)
+}
+
+func (d *DriveStore) ListShares(ctx context.Context, org string, q drive.ShareQuery) ([]drive.Share, error) {
+	if q.Statuses == nil {
+		q.Statuses = []string{} // a NULL array would make the filter NULL and drop every row
+	}
+	return many(ctx, d.S, org, scanShare, `SELECT `+shareCols+` FROM drive_office_shares
+		WHERE org_id=$1 AND ($2='' OR owner_office_id=$2) AND ($3='' OR target_office_id=$3)
+		  AND (cardinality($4::text[]) = 0 OR status = ANY($4::text[]))
+		ORDER BY requested_at DESC, id`, org, q.OwnerOfficeID, q.TargetOfficeID, q.Statuses)
+}
+
+func (d *DriveStore) MoveShare(ctx context.Context, org, id string, from []string, to, by string, at time.Time) error {
+	tag, err := d.S.execTag(ctx, org, `UPDATE drive_office_shares SET status=$4, decided_by=$5, decided_at=$6
+		WHERE org_id=$1 AND id=$2 AND status = ANY($3::text[])`, org, id, from, to, by, at)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		if _, err := d.ShareByID(ctx, org, id); err != nil {
+			return err // unknown id
+		}
+		return domain.ErrConflict
+	}
+	return nil
 }

@@ -257,7 +257,7 @@ func (a *AgentFS) runRecent(ctx context.Context, agentID string, args map[string
 		q.Under = nil
 		if all, err := a.Svc.Recent(ctx, q); err == nil {
 			idx := map[string]int{}
-			memo := map[string]string{}
+			memo := newAccessMemo()
 			for _, f := range all {
 				if z := a.zoneAll(ctx, org, sc, f.Path); canRead(z) || z == ZonePersonDenied {
 					continue

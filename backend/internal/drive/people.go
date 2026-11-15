@@ -20,10 +20,23 @@ func (s *Service) SetPeople(p PeopleAccess) { s.cfg.People = p }
 // PersonAccess is what a person may do at path. Only /Offices/<office>/... is restricted: /Offices itself is
 // readable, and everything else (and a drive without an adapter) is edit, as before.
 func (s *Service) PersonAccess(ctx context.Context, userID, path string) string {
-	return s.personAccess(ctx, userID, path, map[string]string{})
+	return s.personAccess(ctx, userID, path, newAccessMemo())
 }
 
-func (s *Service) personAccess(ctx context.Context, userID, path string, memo map[string]string) string {
+// accessMemo remembers, for the duration of one call, what was asked: the level of the person in each office folder,
+// the active shares of each office and who belongs to the target of a share.
+type accessMemo struct {
+	level  map[string]string // office folder name (lower case) -> level
+	office map[string]string // office folder name (lower case) -> office id
+	shares map[string][]Share
+	member map[string]bool // target office id|user id -> member
+}
+
+func newAccessMemo() *accessMemo {
+	return &accessMemo{level: map[string]string{}, office: map[string]string{}, shares: map[string][]Share{}, member: map[string]bool{}}
+}
+
+func (s *Service) personAccess(ctx context.Context, userID, path string, memo *accessMemo) string {
 	if s.cfg.People == nil {
 		return AccessEdit
 	}
@@ -35,30 +48,36 @@ func (s *Service) personAccess(ctx context.Context, userID, path string, memo ma
 		return AccessRead
 	}
 	key := strings.ToLower(segs[1]) // the store resolves paths without regard to case
-	if lvl, ok := memo[key]; ok {
-		return lvl
+	lvl, ok := memo.level[key]
+	if !ok {
+		lvl, memo.office[key] = s.officeLevel(ctx, userID, segs[1])
+		memo.level[key] = lvl
 	}
-	lvl := s.officeLevel(ctx, userID, segs[1])
-	memo[key] = lvl
+	// A department's folder opens to nobody else by default, but an active share (shares.go) gives the members of the
+	// target department read on the shared path and what lies under it, never more.
+	if lvl == AccessNone && len(segs) >= 3 && memo.office[key] != "" && s.sharedRead(ctx, s.org(ctx), userID, memo.office[key], path, memo) {
+		return AccessRead
+	}
 	return lvl
 }
 
-func (s *Service) officeLevel(ctx context.Context, userID, name string) string {
+// officeLevel is the level of the person in the office folder called name, and the office id of that folder.
+func (s *Service) officeLevel(ctx context.Context, userID, name string) (string, string) {
 	org := s.org(ctx)
 	f, err := s.cfg.Store.FolderByPath(ctx, org, JoinPath(RootOffices, name))
 	if err != nil || f.RefID == "" {
-		return AccessNone
+		return AccessNone, ""
 	}
 	lvl, err := s.cfg.People.OfficeAccess(ctx, org, userID, f.RefID)
 	if err != nil || !ValidAccess(lvl) {
-		return AccessNone
+		return AccessNone, f.RefID
 	}
-	return lvl
+	return lvl, f.RefID
 }
 
 // VisibleTo reports, per path, whether the person may see it at all. Each office folder is resolved once per call.
 func (s *Service) VisibleTo(ctx context.Context, userID string, paths []string) []bool {
-	memo := map[string]string{}
+	memo := newAccessMemo()
 	out := make([]bool, len(paths))
 	for i, p := range paths {
 		out[i] = s.personAccess(ctx, userID, p, memo) != AccessNone

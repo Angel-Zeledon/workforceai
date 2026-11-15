@@ -40,6 +40,7 @@ const (
 	ZoneClients     = "clients"       // /Clients/...
 	ZoneOffice      = "office"        // /Offices/<its office>/... (agent_offices.go): read and write without approval
 	ZoneOtherOffice = "other_office"  // /Offices/<another office>/... and /Offices itself
+	ZoneSharedIn    = "shared_in"     // a file or folder another office shares with the agent's office (shares.go): read only, never written
 	ZoneOutside     = "outside"       // anything else
 )
 
@@ -120,6 +121,10 @@ type scope struct {
 	office  string
 	person  string
 	foreign bool
+	// officeID is the id of the agent's office ("" = General or none); sharedIn are the paths other offices share
+	// with it (active shares, shares.go).
+	officeID string
+	sharedIn []string
 }
 
 func (a *AgentFS) scopeOf(ctx context.Context, agentID string) (scope, error) {
@@ -139,8 +144,11 @@ func (a *AgentFS) scopeOf(ctx context.Context, agentID string) (scope, error) {
 		return sc, err
 	}
 	sc.rules = gs
-	if sc.office, err = a.officeFolderOf(ctx, org, agentID); err != nil {
+	if sc.office, sc.officeID, err = a.officeFolderOf(ctx, org, agentID); err != nil {
 		return sc, err
+	}
+	if sc.sharedIn, err = a.Svc.sharedInPaths(ctx, org, sc.officeID); err != nil {
+		return sc, err // fail closed
 	}
 	sc.person, sc.foreign = requesterOf(ctx)
 	if sc.customer = customerFromCtx(ctx); sc.customer != "" {
@@ -161,6 +169,9 @@ func (a *AgentFS) baseZone(ctx context.Context, org string, sc scope, p string) 
 	if a.Svc.isOfficesRoot(ctx, org, segs[0]) { // the store resolves paths without regard to case (people.go)
 		if len(segs) >= 2 && sc.office != "" && strings.EqualFold(JoinPath(RootOffices, segs[1]), sc.office) {
 			return ZoneOffice, 2
+		}
+		if len(segs) >= 3 && sc.sharedUnder(p) {
+			return ZoneSharedIn, 0
 		}
 		return ZoneOtherOffice, 0
 	}
@@ -206,11 +217,14 @@ func (sc scope) applyRule(z string, depth int, p string) string {
 	case AccessEdit:
 		return ZoneGrantedEdit
 	}
+	if z == ZoneSharedIn {
+		return z // a Leer rule on something shared for reading changes nothing
+	}
 	return ZoneGranted
 }
 
 func canRead(z string) bool {
-	return z == ZoneDesk || z == ZoneProject || z == ZoneShared || z == ZoneGranted || z == ZoneGrantedEdit || z == ZoneCustomer || z == ZoneOffice
+	return z == ZoneDesk || z == ZoneProject || z == ZoneShared || z == ZoneGranted || z == ZoneGrantedEdit || z == ZoneCustomer || z == ZoneOffice || z == ZoneSharedIn
 }
 
 func autoWrite(z string) bool {
@@ -459,6 +473,8 @@ func (a *AgentFS) planWrite(ctx context.Context, org string, sc scope, args map[
 	pl := Plan{Path: c, Bytes: len(content), Reversibility: "versioned", Risk: "medium"}
 	if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
 		return personDeny()
+	} else if z == ZoneSharedIn {
+		return sharedInDeny()
 	} else if sc.otherOfficeRefused(z) {
 		return otherOfficeDeny()
 	} else if sc.writeRefused(z) {
@@ -507,6 +523,8 @@ func (a *AgentFS) planWriteDocument(ctx context.Context, org string, sc scope, a
 	}
 	if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
 		return personDeny()
+	} else if z == ZoneSharedIn {
+		return sharedInDeny()
 	} else if sc.otherOfficeRefused(z) {
 		return otherOfficeDeny()
 	}
@@ -565,6 +583,9 @@ func (a *AgentFS) planMove(ctx context.Context, org string, sc scope, args map[s
 	if zd == ZonePersonDenied {
 		return personDeny()
 	}
+	if zs == ZoneSharedIn || zd == ZoneSharedIn {
+		return sharedInDeny()
+	}
 	if sc.otherOfficeRefused(zd) {
 		return otherOfficeDeny()
 	}
@@ -592,6 +613,9 @@ func (a *AgentFS) planDelete(ctx context.Context, org string, sc scope, args map
 	}
 	if f.DeletedAt != nil || !(canRead(zs) || autoWrite(zs)) {
 		return deny("not_granted", "this file is outside the areas you can read; tell the person and offer to give you access to its folder (or to ask for it)")
+	}
+	if zs == ZoneSharedIn {
+		return sharedInDeny()
 	}
 	if sc.writeRefused(zs) {
 		return deny(denyCustomerIsolation, "this task works for one customer: delete only in that customer's folders")
@@ -745,6 +769,7 @@ func (a *AgentFS) readableRoots(ctx context.Context, org string, sc scope) []str
 	if sc.office != "" {
 		roots = append(roots, sc.office)
 	}
+	roots = append(roots, sc.sharedIn...)
 	roots = append(roots, a.projectRoots(ctx, org, sc)...)
 	return a.personRoots(ctx, org, sc, sc.withRules(roots))
 }

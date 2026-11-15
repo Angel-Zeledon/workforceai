@@ -120,6 +120,7 @@ func wireDepartments(w departmentWiring) *offices.Service {
 	}
 	if w.AuthOn && w.Drive != nil {
 		w.Drive.SetPeople(officePeople{svc: svc}) // office folders: member edits, open reads, private none
+		w.Drive.SetShareOffices(officePeople{svc: svc}) // D4: files shared between departments
 		// agents work in their office folder and never beyond the person they work for
 		w.Drive.SetAgentOffices(agentOffices{svc: svc})
 	}

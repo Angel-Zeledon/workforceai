@@ -213,3 +213,104 @@ export const LANDED_KEY = "wf.dept.landed";
 export function landOnDepartment(v: { firstEntry: boolean; path: string; audience: string | null; departments: number }): boolean {
   return v.firstEntry && v.path === "/" && v.audience === "company" && v.departments > 0;
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// D4 "Entre departamentos": the Estado column (Para revisar > Enviado > Borrador) and the shares between departments.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Tags a person puts on a department file by hand (backend: `enviado` is dropped when an agent writes a new version). */
+export const TAG_SENT = "enviado";
+export const TAG_DRAFT = "borrador";
+const hasTag = (tags: string[] | null | undefined, tag: string) => (tags ?? []).some((x) => x.toLowerCase() === tag);
+
+export type FileStatus = "review" | "sent" | "draft";
+
+/** The one chip of the Estado column: Para revisar wins over Enviado, and Enviado over Borrador. */
+export function fileStatus(f: ReviewFile, pending: Map<string, unknown>): FileStatus | null {
+  if (needsReview(f, pending)) return "review";
+  if (hasTag(f.tags, TAG_SENT)) return "sent";
+  if (hasTag(f.tags, TAG_DRAFT)) return "draft";
+  return null;
+}
+
+/** Tags after choosing a status by hand: the other manual status goes, every other tag (`revisado` too) stays. */
+export function withStatus(tags: string[] | null | undefined, status: "sent" | "draft" | null): string[] {
+  const rest = (tags ?? []).filter((x) => { const k = x.toLowerCase(); return k !== TAG_SENT && k !== TAG_DRAFT; });
+  return status === "sent" ? [...rest, TAG_SENT] : status === "draft" ? [...rest, TAG_DRAFT] : rest;
+}
+
+export type RowMenuItem = "open" | "ask" | "download" | "share" | "markSent" | "markDraft" | "clearStatus";
+
+/**
+ * The items of a row's "⋯" menu. Own file: open, ask, download, share and the status changes that make sense (not the
+ * one it already has; "Quitar estado" only when there is one). Own folder: open and share. Shared with me: read only,
+ * so a file offers open and download, and a folder only open.
+ */
+export function rowMenuItems(v: { kind: "file" | "folder"; shared: boolean; tags?: string[] | null }): RowMenuItem[] {
+  if (v.shared) return v.kind === "file" ? ["open", "download"] : ["open"];
+  if (v.kind === "folder") return ["open", "share"];
+  const sent = hasTag(v.tags, TAG_SENT), draft = hasTag(v.tags, TAG_DRAFT);
+  const out: RowMenuItem[] = ["open", "ask", "download", "share"];
+  if (!sent) out.push("markSent");
+  if (!draft) out.push("markDraft");
+  if (sent || draft) out.push("clearStatus");
+  return out;
+}
+
+/** A share between departments (backend contract: GET /drive/shares). */
+export interface ShareLike {
+  id: string; path: string; kind: "file" | "folder"; name: string; owner_office_id: string; target_office_id: string;
+  status: "pending" | "active" | "rejected" | "revoked"; requested_by: string; can_decide: boolean; can_revoke: boolean;
+}
+
+/** Pending requests of a department: the ones the person can decide, and the ones they made that still wait. */
+export function splitRequests<S extends ShareLike>(shares: S[], me: string | null | undefined): { toDecide: S[]; mine: S[] } {
+  const pend = shares.filter((s) => s.status === "pending");
+  return { toDecide: pend.filter((s) => s.can_decide), mine: pend.filter((s) => !s.can_decide && !!me && s.requested_by === me) };
+}
+
+/** Departments a path can be shared with: not General and not the owner. */
+export function shareTargets<O extends { id: string; general: boolean }>(offices: O[], ownerId: string): O[] {
+  return offices.filter((o) => !o.general && o.id !== ownerId);
+}
+
+/** The folder a shared item is browsed from: the folder itself, or the folder that holds a shared file. */
+export function sharedRoot(s: Pick<ShareLike, "path" | "kind">): string {
+  const p = s.path.replace(/\/+$/, "");
+  if (s.kind === "folder") return p;
+  const i = p.lastIndexOf("/");
+  return i <= 0 ? "/" : p.slice(0, i);
+}
+
+/** The shared item the URL (`?comp=`) names, among the ones that arrive (by path, case-insensitive). */
+export function shareFromParam<S extends Pick<ShareLike, "path">>(incoming: S[], param: string | null | undefined): S | undefined {
+  if (!param) return undefined;
+  const k = norm(param);
+  return incoming.find((s) => norm(s.path) === k);
+}
+
+/** The URL of a shared item (`comp` = its path) at a folder under it (`carpeta` relative to `sharedRoot`). */
+export function sharedHref(officeId: string, sharePath: string, carpeta: string): string {
+  return `/d/${encodeURIComponent(officeId)}?comp=${encodeURIComponent(sharePath)}${carpeta ? `&carpeta=${encodeURIComponent(carpeta)}` : ""}`;
+}
+
+/** What a shared file's listing shows: only the shared file (the rest of its folder is not shared). */
+export function onlySharedFile<F extends { path: string }>(files: F[], s: Pick<ShareLike, "path" | "kind">): F[] {
+  return s.kind === "file" ? files.filter((f) => norm(f.path) === norm(s.path)) : files;
+}
+
+/** The text key for a refused share action (the backend's error code). */
+export function shareErrorKey(e: unknown): string {
+  const code = e && typeof e === "object" && typeof (e as { code?: unknown }).code === "string" ? (e as { code: string }).code : "";
+  const status = e && typeof e === "object" && typeof (e as { status?: unknown }).status === "number" ? (e as { status: number }).status : 0;
+  switch (code) {
+    case "read_only_folder": return "dept.share.err.readOnly";
+    case "not_in_office": return "dept.share.err.notInOffice";
+    case "same_office": return "dept.share.err.same";
+    case "general_office": return "dept.share.err.general";
+    case "already_shared": return "dept.share.err.exists";
+    case "not_decider": return "dept.share.err.notDecider";
+    case "not_pending": return "dept.share.err.notPending";
+  }
+  return status === 404 ? "dept.share.err.notFound" : "dept.share.err.generic";
+}

@@ -83,6 +83,8 @@ type Config struct {
 	// AgentOffices (optional) tells the office of each agent: its folder /Offices/<office> is its work area
 	// (agent_offices.go). nil = agents have no office folder.
 	AgentOffices AgentOffices
+	// ShareOffices (optional) lets departments share files with each other (shares.go). nil = no sharing.
+	ShareOffices ShareOffices
 }
 
 // Service is the drive use case layer. It does NOT decide who may do what:
@@ -914,15 +916,19 @@ func (s *Service) MoveFile(ctx context.Context, p Principal, fileID, newPath str
 // (D2, "Marcar como revisado"). A new version written by an agent takes it off, so the file is "Para revisar" again.
 const TagReviewed = "revisado"
 
+// TagSent is the tag a person puts on a department file to say it was sent ("Marcar como enviado", D4). Like
+// TagReviewed, a new version written by an agent takes it off: what was sent is no longer what is there.
+const TagSent = "enviado"
+
 // reviewAfterWrite returns the tags of a file after p wrote a version of it at path: an agent writing under /Offices
-// loses the TagReviewed tag (an agent never marks its own work as reviewed); anything else keeps the tags as they are.
+// loses the TagReviewed and TagSent tags (an agent never marks its own work as reviewed); anything else keeps the tags as they are.
 func (s *Service) reviewAfterWrite(ctx context.Context, org string, p Principal, path string, tags []string) []string {
-	if !p.IsAgent() || !slices.Contains(tags, TagReviewed) || !s.underOffices(ctx, org, path) {
+	if !p.IsAgent() || !(slices.Contains(tags, TagReviewed) || slices.Contains(tags, TagSent)) || !s.underOffices(ctx, org, path) {
 		return tags
 	}
-	out := make([]string, 0, len(tags)-1)
+	out := make([]string, 0, len(tags))
 	for _, t := range tags {
-		if t != TagReviewed {
+		if t != TagReviewed && t != TagSent {
 			out = append(out, t)
 		}
 	}

@@ -12,6 +12,7 @@ import { API_URL, MOCK } from "./config";
 import { authFetch, authUpload, type UploadProgress } from "./session";
 import { useStore } from "./store";
 import { draftSlug } from "./mock/draft";
+import { mockShares } from "./mock/shares-mock";
 
 /** "inbox" = a data inbox: software outside the platform pushed the content (lib/dataInboxLogic.ts). */
 export interface Principal { kind: "human" | "agent" | "system" | "inbox"; id: string }
@@ -37,6 +38,28 @@ export interface DriveUsage { used_bytes: number; quota_bytes: number; max_file_
 export interface UploadResult { name: string; path?: string; status: number; code?: string; error?: string; created?: boolean; result?: { file: DriveFile } }
 export type { UploadProgress };
 
+/** A share of a file or folder with another department (D4; contract: docs/superpowers/plans/2026-11-15-d4-entre-departamentos.md). */
+export interface DriveShare {
+  id: string; path: string; kind: "file" | "folder"; name: string; owner_office_id: string; target_office_id: string;
+  status: "pending" | "active" | "rejected" | "revoked"; requested_by: string; requested_at: string; decided_by?: string; decided_at?: string;
+  can_decide: boolean; can_revoke: boolean;
+  /** the shared file (kind "file") or folder: the receiving department opens it by id, without access to its parent */
+  file_id?: string;
+}
+export interface DriveSharesApi {
+  /** Asks to share `path` (inside a department folder) with another department: active at once when the person can decide. */
+  create: (path: string, targetOffice: string) => Promise<DriveShare>;
+  /** The requests that leave `office` (its members only). */
+  out: (office: string) => Promise<DriveShare[]>;
+  /** The active shares that arrive at `office`: "Compartido conmigo". */
+  inbox: (office: string) => Promise<DriveShare[]>;
+  /** The pending and active shares of a file or folder ("Quién puede verlo"). */
+  forPath: (path: string) => Promise<DriveShare[]>;
+  decide: (id: string, decision: "approve" | "reject") => Promise<DriveShare>;
+  /** Stops sharing (or cancels the request): the share becomes `revoked`. */
+  revoke: (id: string) => Promise<void>;
+}
+
 /** A drive error with the backend's stable code (version_conflict, read_only_mode, too_large...). */
 export class DriveError extends Error {
   constructor(public status: number, public code: string, message: string, public currentVersion?: number) { super(message); }
@@ -52,6 +75,7 @@ async function parse<T>(res: Response): Promise<T> {
   return data as T;
 }
 const q = (p: string) => encodeURIComponent(p);
+const shareList = (r: DriveShare[] | { shares?: DriveShare[] } | null) => (Array.isArray(r) ? r : r?.shares ?? []);
 const json = (v: unknown) => ({ body: JSON.stringify(v), headers: { "Content-Type": "application/json" } });
 
 export const isTextual = (f: { mime: string; name: string }) =>
@@ -118,6 +142,16 @@ export const drive = MOCK ? mockDrive() : {
   },
 };
 
+/** Shares between departments (D4). */
+export const driveShares: DriveSharesApi = MOCK ? mockShares((status, code) => new DriveError(status, code, code)) : {
+  create: (path, target_office_id) => { const j = json({ path, target_office_id }); return req<DriveShare>("POST", "/drive/shares", j.body, j.headers); },
+  out: (office) => req<DriveShare[]>("GET", `/drive/shares?office=${q(office)}&dir=out`).then(shareList),
+  inbox: (office) => req<DriveShare[]>("GET", `/drive/shares?office=${q(office)}&dir=in`).then(shareList),
+  forPath: (path) => req<DriveShare[]>("GET", `/drive/shares?path=${q(path)}`).then(shareList),
+  decide: (id, decision) => { const j = json({ decision }); return req<DriveShare>("POST", `/drive/shares/${q(id)}/decision`, j.body, j.headers); },
+  revoke: async (id) => { await req("DELETE", `/drive/shares/${q(id)}`); },
+};
+
 // ------------------------------------------------------------------------------------------
 // Mock (NEXT_PUBLIC_MOCK=true): an in-memory drive good enough for demos and screenshots.
 // ------------------------------------------------------------------------------------------
@@ -135,8 +169,8 @@ function mockDrive() {
       const n = cur.file.current_version + 1;
       cur.versions.push({ v: { file_id: cur.file.id, version: n, size: text.length, author: by, message, created_at: at }, text });
       Object.assign(cur.file, { current_version: n, size: text.length, updated_by: by, updated_at: at });
-      // as the backend: a new version by an agent under /Offices is no longer "revisado"
-      if (by.kind === "agent" && path.toLowerCase().startsWith("/offices/")) cur.file.tags = cur.file.tags.filter((t) => t !== "revisado");
+      // as the backend: a new version by an agent under /Offices is no longer "revisado" nor "enviado"
+      if (by.kind === "agent" && path.toLowerCase().startsWith("/offices/")) cur.file.tags = cur.file.tags.filter((t) => t !== "revisado" && t !== "enviado");
       return cur.file;
     }
     const id = `fil_mock_${++seq}`;
@@ -173,6 +207,9 @@ function mockDrive() {
   reviewed(put(`${C}/Cierres mensuales/cierre-septiembre.md`, "# Cierre de septiembre\n\nCerrado el 5 de octubre. Ajustes: depreciación y provisión de vacaciones.\n", acc, "cierre de septiembre", ago(24 * 9)));
   put(`${C}/Cierres mensuales/checklist-de-cierre.md`, "# Checklist de cierre mensual\n\n1. Conciliar bancos\n2. Registrar provisiones\n3. Revisar cuentas por cobrar\n4. Emitir estados financieros\n", laura, "", ago(24 * 20));
   put(`${C}/Políticas/politica-de-reembolsos.md`, "# Política de reembolsos de gastos\n\nSe reembolsan gastos con factura a nombre de la empresa, presentados en 30 días.\n", laura, "", ago(24 * 30));
+  // D4 demo: a folder Legal shares with Contabilidad ("Compartido conmigo", lib/mock/shares-mock.ts)
+  put("/Offices/Legal/Contratos/modelo-nda.md", "# Modelo de acuerdo de confidencialidad\n\nVigencia de 2 años. Jurisdicción: domicilio del receptor.\n", { kind: "human", id: "u_legal" }, "", ago(24 * 10));
+  put("/Offices/Legal/Contratos/Vigentes/contrato-marco-proveedores.md", "# Contrato marco de proveedores\n\nPlazo de pago: 30 días. Renovación anual.\n", { kind: "human", id: "u_legal" }, "", ago(24 * 20));
   // B6 demo: the capacity cost the accountant cites is in version 2 of this file (version 1 had an older figure)
   put("/Shared/Finanzas/costo-capacidad.csv", "concepto,mensual\nPerfil senior ops,3600\nPerfil senior ops,3600\n", human);
   put("/Shared/Finanzas/costo-capacidad.csv", "concepto,mensual\nPerfil senior ops (cargado),3900\nPerfil senior ops (cargado),3900\nTotal capacidad adicional,7800\n", human, "costo cargado");

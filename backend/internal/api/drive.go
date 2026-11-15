@@ -54,6 +54,7 @@ func (s *server) mountDrive(r chi.Router) {
 	r.With(read).Get("/drive/grants", s.driveGrants)
 	r.With(grant).Post("/drive/grants", s.driveAddGrant)
 	r.With(grant).Delete("/drive/grants/{id}", s.driveRevokeGrant)
+	s.mountDriveShares(r, read, write)
 }
 
 func (s *server) drivePrincipal(r *http.Request) drive.Principal { return drive.Human(s.actor(r)) }

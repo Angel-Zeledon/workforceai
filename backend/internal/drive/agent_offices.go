@@ -39,26 +39,45 @@ func (s *Service) SetAgentOffices(o AgentOffices) { s.cfg.AgentOffices = o }
 func RequesterFrom(ctx context.Context) string { return requesterFrom(ctx) }
 
 // officeFolderOf is the folder path of the agent's office ("" = none: General, no adapter or no folder yet).
-func (a *AgentFS) officeFolderOf(ctx context.Context, org, agentID string) (string, error) {
+// It also returns the office id (set only when the office has a folder).
+func (a *AgentFS) officeFolderOf(ctx context.Context, org, agentID string) (string, string, error) {
 	src := a.Offices
 	if src == nil {
 		src = a.Svc.cfg.AgentOffices
 	}
 	if src == nil {
-		return "", nil
+		return "", "", nil
 	}
 	id, err := src.AgentOffice(ctx, org, agentID)
 	if err != nil || id == "" {
-		return "", err
+		return "", "", err
 	}
 	f, err := a.Svc.OfficeFolder(ctx, id)
 	if errors.Is(err, domain.ErrNotFound) {
-		return "", nil
+		return "", "", nil
 	}
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return f.Path, nil
+	return f.Path, id, nil
+}
+
+// sharedUnder reports whether p is, or lies under, something another office shares with the agent's office.
+func (sc scope) sharedUnder(p string) bool {
+	for _, s := range sc.sharedIn {
+		if pathCovers(s, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// ZoneSharedIn is read only for everyone: a write, edit, move or delete there is refused outright (the owner
+// office shared it for reading; no approval changes that).
+const denySharedIn = "shared_read_only"
+
+func sharedInDeny() Plan {
+	return deny(denySharedIn, "this file or folder is shared with your office for reading only: you cannot change it, move it or delete it")
 }
 
 // requesterOf is who a call works for: a person (application.PersonID), or nobody. foreign marks a requester that is
@@ -135,7 +154,7 @@ func (a *AgentFS) personRoots(ctx context.Context, org string, sc scope, roots [
 	if sc.person == "" || a.Svc.cfg.People == nil {
 		return roots
 	}
-	memo := map[string]string{}
+	memo := newAccessMemo()
 	out := make([]string, 0, len(roots))
 	for _, r := range roots {
 		if !strings.HasPrefix(r, "!") && depthOf(r) >= 2 && a.Svc.underOffices(ctx, org, r) && a.Svc.personAccess(ctx, sc.person, r, memo) == AccessNone {

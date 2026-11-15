@@ -79,3 +79,23 @@ func (a agentOffices) AgentOffice(ctx context.Context, org, agentID string) (str
 	}
 	return "", nil
 }
+
+// OfficeRoster implements drive.ShareOffices over the offices model (D4, shares between departments): who belongs to
+// an office and who are its responsibles. A person who left is not a member (the model drops them).
+func (o officePeople) OfficeRoster(ctx context.Context, org, officeID string) (drive.OfficeRoster, error) {
+	m, err := o.svc.Model(ctx, org)
+	if err != nil {
+		return drive.OfficeRoster{}, err
+	}
+	off, ok := m.Office(officeID)
+	if !ok {
+		return drive.OfficeRoster{}, nil
+	}
+	ro := drive.OfficeRoster{Known: true, General: off.General, Members: off.Members}
+	for _, l := range off.Leads {
+		if m.IsMember(l, officeID) { // the admins that stand in for a missing lead are not members
+			ro.Leads = append(ro.Leads, l)
+		}
+	}
+	return ro, nil
+}

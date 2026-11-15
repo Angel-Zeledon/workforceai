@@ -314,4 +314,70 @@ func Run(t *testing.T, svc *drive.Service, orgA, orgB string, o Options) {
 			t.Fatalf("recent leaked across organizations: %+v", fs)
 		}
 	})
+	t.Run("shares between departments", func(t *testing.T) {
+		svc.SetShareOffices(shareRoster{
+			"dep_own": {Known: true, Leads: []string{"lead"}, Members: []string{"lead", "member"}},
+			"dep_tgt": {Known: true, Members: []string{"tgt"}},
+			"general": {Known: true, General: true, Members: []string{"lead", "member", "tgt"}},
+		})
+		must[drive.Folder](t)(svc.EnsureOfficeFolder(ctxA, "dep_own", "Dueno", nil))
+		must[drive.Folder](t)(svc.EnsureOfficeFolder(ctxA, "dep_tgt", "Destino", nil))
+		must[drive.WriteResult](t)(svc.Write(ctxA, h, drive.WriteInput{Path: "/Offices/Dueno/Casos/a.md", Data: []byte("a")}))
+		if _, err := svc.RequestShare(ctxA, "member", "/Offices/Dueno/Casos/a.md", "general"); code(err) != "general_office" {
+			t.Fatalf("General: %v", err)
+		}
+		sh := must[drive.Share](t)(svc.RequestShare(ctxA, "member", "/Offices/Dueno/Casos", "dep_tgt"))
+		if sh.Status != drive.ShareStatusPending || sh.Kind != drive.ShareKindFolder || sh.Name != "Casos" || sh.OwnerOfficeID != "dep_own" || sh.RequestedAt.IsZero() {
+			t.Fatalf("request: %+v", sh)
+		}
+		if _, err := svc.RequestShare(ctxA, "lead", "/offices/dueno/casos", "dep_tgt"); code(err) != "already_shared" {
+			t.Fatalf("duplicate: %v", err)
+		}
+		if in := must[[]drive.Share](t)(svc.OfficeShares(ctxA, "tgt", "dep_tgt", drive.ShareIn, nil)); len(in) != 0 {
+			t.Fatalf("pending is not shared in: %+v", in)
+		}
+		if _, err := svc.DecideShare(ctxB, "lead", sh.ID, drive.ShareApprove); err == nil {
+			t.Fatal("org B decided a share of org A")
+		}
+		ok := must[drive.Share](t)(svc.DecideShare(ctxA, "lead", sh.ID, drive.ShareApprove))
+		if ok.Status != drive.ShareStatusActive || ok.DecidedBy != "lead" || ok.DecidedAt == nil {
+			t.Fatalf("approve: %+v", ok)
+		}
+		if _, err := svc.DecideShare(ctxA, "lead", sh.ID, drive.ShareReject); code(err) != "not_pending" {
+			t.Fatalf("decided twice: %v", err)
+		}
+		in := must[[]drive.Share](t)(svc.OfficeShares(ctxA, "tgt", "dep_tgt", drive.ShareIn, nil))
+		if len(in) != 1 || in[0].ID != sh.ID || in[0].Path != "/Offices/Dueno/Casos" {
+			t.Fatalf("in: %+v", in)
+		}
+		if in = must[[]drive.Share](t)(svc.OfficeShares(ctxB, "tgt", "dep_tgt", drive.ShareIn, nil)); len(in) != 0 {
+			t.Fatalf("shares leaked across organizations: %+v", in)
+		}
+		if at := must[[]drive.Share](t)(svc.SharesAt(ctxA, "lead", "/Offices/Dueno/Casos/a.md")); len(at) != 1 {
+			t.Fatalf("at: %+v", at)
+		}
+		out := must[[]drive.Share](t)(svc.OfficeShares(ctxA, "member", "dep_own", drive.ShareOut, []string{drive.ShareStatusActive}))
+		if len(out) != 1 || !out[0].CanRevoke || out[0].CanDecide {
+			t.Fatalf("out: %+v", out)
+		}
+		if err := svc.RevokeShare(ctxA, "lead", sh.ID); err != nil {
+			t.Fatal(err)
+		}
+		if err := svc.RevokeShare(ctxA, "lead", sh.ID); code(err) != "not_active" {
+			t.Fatalf("revoked twice: %v", err)
+		}
+		if in = must[[]drive.Share](t)(svc.OfficeShares(ctxA, "tgt", "dep_tgt", drive.ShareIn, nil)); len(in) != 0 {
+			t.Fatalf("revoked is not shared: %+v", in)
+		}
+		if all := must[[]drive.Share](t)(svc.OfficeShares(ctxA, "lead", "dep_own", drive.ShareOut, nil)); len(all) != 1 || all[0].Status != drive.ShareStatusRevoked || all[0].DecidedAt == nil {
+			t.Fatalf("history: %+v", all)
+		}
+	})
+}
+
+// shareRoster is the fake offices adapter of the shares scenario.
+type shareRoster map[string]drive.OfficeRoster
+
+func (r shareRoster) OfficeRoster(_ context.Context, _, officeID string) (drive.OfficeRoster, error) {
+	return r[officeID], nil
 }

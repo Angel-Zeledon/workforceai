@@ -261,8 +261,10 @@ function Preview({ file, text }: { file: DriveFile; text: string }) {
 /** `embedded`: inside a host panel that already shows the name and the close button (the department's Drive):
  * no header, no "Mover a la papelera" and no placement of its own, it fills the host. Default: the Files screen's
  * side pane, as always. */
-export function FilePane({ file, focus, onClearFocus, onClose, onChanged, onDeleted, embedded = false }: {
+export function FilePane({ file, focus, onClearFocus, onClose, onChanged, onDeleted, embedded = false, readOnly = false }: {
   file: DriveFile; focus?: { start: number; page?: number } | null; onClearFocus?: () => void; onClose: () => void; onChanged: () => void; onDeleted: () => void; embedded?: boolean;
+  /** No way to change the file (shared with me): the versions cannot be restored. */
+  readOnly?: boolean;
 }) {
   const { t } = useT();
   const [text, setText] = useState<string | null>(null);
@@ -318,7 +320,7 @@ export function FilePane({ file, focus, onClearFocus, onClose, onChanged, onDele
                 onClick={() => setShown(v.version === file.current_version ? 0 : v.version)}>v{v.version}</button>
               <span className="min-w-0 flex-1 truncate"><Author p={v.author} />{v.message ? ` · ${v.message}` : ""}</span>
               <span className="text-mute">{new Date(v.created_at).toLocaleString()}</span>
-              {v.version !== file.current_version && (
+              {!readOnly && v.version !== file.current_version && (
                 <button type="button" data-testid={`drive-restore-v${v.version}`} className="text-accent hover:underline"
                   onClick={async () => { await drive.restoreVersion(file.id, v.version); onChanged(); }}>{t("drive.restore")}</button>
               )}

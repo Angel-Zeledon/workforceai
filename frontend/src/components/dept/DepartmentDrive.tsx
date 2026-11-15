@@ -3,12 +3,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { intlLocale, useT } from "@/lib/i18n";
-import { drive, parentOf, type DriveFile, type DriveFolder, type Hit, type Listing, type Principal } from "@/lib/drive";
+import { drive, driveShares, parentOf, type DriveFile, type DriveFolder, type DriveShare, type Hit, type Listing, type Principal } from "@/lib/drive";
 import { officesApi } from "@/lib/officesApi";
 import type { DirectoryEntry, OfficeView, OfficesResponse } from "@/lib/officesLogic";
 import {
-  agentUnreviewed, crumbs, defaultAgent, deptHref, deptView, findDepartment, folderFromParam, folderParam, lastChange, msUntilMidnight, myDepartments,
-  needsReview, pathKey, pendingByPath, pendingUnder, personNames, proposedRows, usableAgents, withReviewed, type DeptFilter,
+  agentUnreviewed, crumbs, defaultAgent, deptHref, deptView, fileStatus, findDepartment, folderFromParam, folderParam, lastChange, msUntilMidnight, myDepartments,
+  onlySharedFile, pathKey, pendingByPath, pendingUnder, personNames, proposedRows, rowMenuItems, shareFromParam, sharedHref, sharedRoot, usableAgents,
+  withReviewed, withStatus, type DeptFilter, type RowMenuItem,
 } from "@/lib/deptLogic";
 import { useStore } from "@/lib/store";
 import { useSession } from "@/lib/session";
@@ -21,6 +22,9 @@ import { ApprovalPending } from "../approvals/PendingCard";
 import { DetailPanel, dropDetailUrl, useDetailUrl, useIsPhone } from "../ui/DetailPanel";
 import { DeptTree } from "./DeptTree";
 import { DeptComposer, type AskSeed } from "./DeptComposer";
+import { ShareDialog } from "./ShareDialog";
+import { ShareRequests } from "./ShareRequests";
+import { ShareAccess } from "./ShareAccess";
 
 /** The offices of the person (null while loading; an unreachable backend counts as "no departments"). */
 function useOffices(): OfficesResponse | null | undefined {
@@ -58,7 +62,7 @@ export function DepartmentDrive({ officeId }: { officeId: string }) {
   const depts = r ? myDepartments(r.offices) : [];
   const dept = findDepartment(depts, officeId);
   if (!dept) return <NoDepartment admin={!!r?.me.admin} unavailable />;
-  return <Suspense fallback={<PageSkeleton />}><DeptScreen key={dept.id} dept={dept} depts={depts} /></Suspense>;
+  return <Suspense fallback={<PageSkeleton />}><DeptScreen key={dept.id} dept={dept} depts={depts} offices={r?.offices ?? []} /></Suspense>;
 }
 
 type Proposed = ReturnType<typeof proposedRows>[number];
@@ -72,15 +76,41 @@ const WIDE = "(min-width: 1280px)";
 const chip = "inline-flex items-center whitespace-nowrap rounded-[6px] px-1.5 py-[1px] text-[10.5px] font-semibold";
 const REVIEW = `${chip} bg-warn/10 text-warn`;
 const PROPOSED = `${chip} bg-accent-soft text-accent`;
+const SENT = `${chip} bg-ok/10 text-ok`;
+const DRAFT = `${chip} border border-line bg-panel2 text-ink2`;
+/** The "⋯" menu: the height of an item (min-h-10) plus the padding of the box. */
+const MENU_ITEM_H = 40;
+const MENU_LABEL: Record<RowMenuItem, string> = {
+  open: "dept.menu.open", ask: "dept.menu.ask", download: "dept.menu.download", share: "dept.menu.share",
+  markSent: "dept.menu.markSent", markDraft: "dept.menu.markDraft", clearStatus: "dept.menu.clearStatus",
+};
+type MenuTarget = { kind: "file"; file: DriveFile } | { kind: "folder"; folder: DriveFolder };
 
-function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) {
+function DeptScreen({ dept, depts, offices }: { dept: OfficeView; depts: OfficeView[]; offices: OfficeView[] }) {
   const { t } = useT();
   const router = useRouter();
   const phone = useIsPhone();
-  const root = (dept.folder_path ?? "").replace(/\/+$/, "");
+  const ownRoot = (dept.folder_path ?? "").replace(/\/+$/, "");
   // the folder lives in the URL (?carpeta=, relative to the root): Back returns to the previous folder, a reload keeps it
   const params = useSearchParams();
+  // D4: what other departments share with this one ("Compartido conmigo") and the requests that leave this one
+  const [incoming, setIncoming] = useState<DriveShare[] | null>(null);
+  const [outgoing, setOutgoing] = useState<DriveShare[]>([]);
+  const [sharesTick, setSharesTick] = useState(0);
+  useEffect(() => {
+    driveShares.inbox(dept.id).then(setIncoming).catch(() => setIncoming([]));
+    driveShares.out(dept.id).then(setOutgoing).catch(() => setOutgoing([]));
+  }, [dept.id, sharesTick]);
+  // `?comp=` names a shared item: the list and the panel then show it from its own folder, read only
+  const comp = params.get("comp");
+  const share = shareFromParam(incoming ?? [], comp);
+  const waiting = !!comp && incoming === null;
+  const readOnly = !!share;
+  const root = share ? sharedRoot(share) : ownRoot;
   const path = folderFromParam(root, params.get("carpeta"));
+  const nameOfOffice = (id: string) => offices.find((o) => o.id === id)?.name ?? id;
+  const [sharing, setSharing] = useState<{ name: string; path: string } | null>(null);
+  const [statusErr, setStatusErr] = useState(false);
   // a file named by the URL (?doc=) or by a search hit, until it is found and opened
   const [urlDoc, setUrlDoc] = useState<string | null>(() => params.get(DOC_PARAM));
   const [wantDoc, setWantDoc] = useState<string | null>(null);
@@ -99,13 +129,14 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
   }, [day]);
   const [listing, setListing] = useState<Listing | null>(null);
   const [error, setError] = useState(false);
-  const [filter, setFilter] = useState<DeptFilter>("all");
+  const [filterPick, setFilter] = useState<DeptFilter>("all");
+  const filter: DeptFilter = readOnly ? "all" : filterPick; // a shared folder has nothing to review
   const [selected, setSelected] = useState<Selected | null>(null);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<Hit[] | null>(null);
   const [seed, setSeed] = useState<AskSeed | null>(null);
   const [treeOpen, setTreeOpen] = useState(false);
-  const [menu, setMenu] = useState<{ file: DriveFile; top: number; right: number; trigger: HTMLButtonElement } | null>(null);
+  const [menu, setMenu] = useState<{ target: MenuTarget; id: string; items: RowMenuItem[]; top: number; right: number; trigger: HTMLButtonElement } | null>(null);
   const menuBox = useRef<HTMLDivElement>(null);
   // "Marcar como revisado": a mark in flight and a refusal (a folder the person may only read)
   const [marking, setMarking] = useState(false);
@@ -121,19 +152,27 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
 
   // pending approvals of fs actions under the department (they carry context.path)
   const approvals = useStore((s) => s.approvals);
-  const pending = useMemo(() => pendingByPath(Object.values(approvals) as Approval[], root), [approvals, root]);
+  const pending = useMemo(() => pendingByPath(readOnly ? [] : (Object.values(approvals) as Approval[]), root), [approvals, root, readOnly]);
   const pendingSig = useMemo(() => [...pending.keys()].sort().join("|"), [pending]);
   // an agent touched a file of the department: list again
   const rootKey = pathKey(root) + "/";
   const touched = useStore((s) => Object.values(s.files).filter((f) => pathKey(f.path).startsWith(rootKey)).map((f) => f.ts).join(","));
 
+  // a shared file is opened by its id: whoever receives it cannot list the folder that holds it
+  const sharedFileId = share?.kind === "file" ? share.file_id : undefined;
   const load = useCallback(async () => {
-    try { setError(false); setListing(await drive.list(path)); } catch { setError(true); }
-  }, [path]);
+    try {
+      setError(false);
+      if (sharedFileId) {
+        const f = await drive.file(sharedFileId);
+        setListing({ folder: { id: "", name: "", path }, folders: [], files: [f] });
+      } else setListing(await drive.list(path));
+    } catch { setError(true); }
+  }, [path, sharedFileId]);
   useEffect(() => { void load(); }, [load, touched, pendingSig]);
 
-  const files = useMemo(() => listing?.files ?? [], [listing]);
-  const folders: DriveFolder[] = useMemo(() => listing?.folders ?? [], [listing]);
+  const files = useMemo(() => (share ? onlySharedFile(listing?.files ?? [], share) : listing?.files ?? []), [listing, share]);
+  const folders: DriveFolder[] = useMemo(() => (share?.kind === "file" ? [] : listing?.folders ?? []), [listing, share]);
   const proposed = useMemo(() => proposedRows(pending, path, new Set(files.map((f) => f.path))), [pending, path, files]);
   const view = useMemo(() => deptView({ folder: path, folders, files, proposed, pending, now: new Date() }, filter), [path, folders, files, proposed, pending, filter, day]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -164,6 +203,12 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
   }, [urlDoc, wantDoc, listing, proposed, files, path, rootKey]);
 
   useEffect(() => { setMarkErr(false); }, [selPath]);
+  useEffect(() => { setStatusErr(false); }, [path, comp]);
+  /** "Marcar como enviado / borrador" and "Quitar estado": the person's tags, no agent involved. */
+  const setStatus = async (f: DriveFile, status: "sent" | "draft" | null) => {
+    setMenu(null); setStatusErr(false);
+    try { await drive.setTags(f.id, withStatus(f.tags, status)); await load(); } catch { setStatusErr(true); }
+  };
   const markReviewed = async (f: DriveFile) => {
     if (marking) return;
     setMarking(true); setMarkErr(false);
@@ -200,13 +245,44 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
     else if (e.key === "Tab") closeMenu(false);
   };
 
-  /** Go to a folder of the department (a new history entry, so Back returns here). */
-  const openFolder = (p: string) => {
+  /** Go to a folder (a new history entry, so Back returns here): of the shared item being browsed, or of the department when `own`. */
+  const openFolder = (p: string, own = false) => {
     setTreeOpen(false); setHits(null);
-    if (pathKey(p) === pathKey(path)) return;
+    const toOwn = own || !share;
+    if (!(own && share) && pathKey(p) === pathKey(path)) return;
     dropDetailUrl(DOC_PARAM); // the open file belongs to this folder: it closes without its own history step
     setSelected(null); setUrlDoc(null); setWantDoc(null);
-    router.push(deptHref(dept.id, folderParam(root, p)), { scroll: false });
+    router.push(toOwn ? deptHref(dept.id, folderParam(ownRoot, p)) : sharedHref(dept.id, share.path, folderParam(root, p)), { scroll: false });
+  };
+  /** "Compartido conmigo": open a shared item from the tree. */
+  const openShared = (s: DriveShare) => {
+    setTreeOpen(false); setHits(null);
+    dropDetailUrl(DOC_PARAM);
+    setSelected(null); setUrlDoc(null); setWantDoc(null);
+    router.push(sharedHref(dept.id, s.path, ""), { scroll: false });
+  };
+  const openMenu = (e: { currentTarget: HTMLButtonElement }, target: MenuTarget) => {
+    const id = target.kind === "file" ? target.file.id : target.folder.id;
+    const items = rowMenuItems({ kind: target.kind, shared: readOnly, tags: target.kind === "file" ? target.file.tags : undefined });
+    const r = e.currentTarget.getBoundingClientRect();
+    const h = items.length * MENU_ITEM_H + 8;
+    const below = r.bottom + h < window.innerHeight;
+    const trigger = e.currentTarget;
+    setMenu(menu?.id === id ? null : { target, id, items, top: below ? r.bottom + 4 : r.top - h, right: window.innerWidth - r.right, trigger });
+  };
+  const runMenu = (it: RowMenuItem, target: MenuTarget) => {
+    const file = target.kind === "file" ? target.file : null;
+    if (it === "open") {
+      if (file) setSelected({ kind: "file", file }); else openFolder(target.kind === "folder" ? target.folder.path : path);
+      closeMenu(false);
+    } else if (it === "ask" && file) ask(file);
+    else if (it === "download" && file) { void drive.download(file); closeMenu(true); }
+    else if (it === "share") {
+      setSharing(target.kind === "file" ? { name: target.file.name, path: target.file.path } : { name: target.folder.name, path: target.folder.path });
+      closeMenu(false);
+    } else if (file && it === "markSent") void setStatus(file, "sent");
+    else if (file && it === "markDraft") void setStatus(file, "draft");
+    else if (file && it === "clearStatus") void setStatus(file, null);
   };
   // the panel covers the composer below the wide layout (a sheet on a phone, floating on a tablet): it closes
   const ask = (f: DriveFile) => {
@@ -234,7 +310,10 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
   const selPending = selPath ? pending.get(pathKey(selPath)) ?? [] : [];
   const empty = !view.folders.length && !view.files.length && !view.proposed.length;
 
-  const tree = <DeptTree root={root} rootName={dept.name} current={path} pending={pending} onOpen={openFolder} refresh={touched + pendingSig} />;
+  const tree = <DeptTree root={ownRoot} rootName={dept.name} current={readOnly ? ownRoot : path} pending={pending} onOpen={(p) => openFolder(p, true)}
+    refresh={touched + pendingSig} shared={incoming ?? []} sharedCurrent={share?.path ?? null} ownerName={nameOfOffice} onOpenShared={openShared} />;
+
+  if (waiting) return <PageSkeleton />;
 
   return (
     <div data-testid="dept-drive" className="relative flex h-full min-h-0 bg-bg">
@@ -282,7 +361,7 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
             </button>
             {treeOpen && <div className="mt-1.5 max-h-[45dvh] overflow-y-auto rounded-lg border border-line bg-panel p-1.5">{tree}</div>}
           </div>
-          <div role="group" aria-label={t("dept.filters")} className="mt-2 flex flex-wrap gap-1.5">
+          {!readOnly && <div role="group" aria-label={t("dept.filters")} className="mt-2 flex flex-wrap gap-1.5">
             {(["all", "review", "today"] as const).map((f) => (
               <button key={f} type="button" data-testid={`dept-filter-${f}`} aria-pressed={filter === f} onClick={() => { setFilter(f); setHits(null); }}
                 className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-[12.5px] font-medium transition sm:min-h-8 ${filter === f
@@ -293,10 +372,18 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
                 )}
               </button>
             ))}
-          </div>
+          </div>}
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-5">
+          {readOnly && share && (
+            <div data-testid="dept-shared-banner" className="mb-3 flex items-center gap-2 rounded-[10px] border border-line bg-panel2 px-3 py-2 text-[12.5px] text-ink2">
+              <Icon name="folder" size={14} className="shrink-0 text-accent" />{t("dept.shared.banner", { office: nameOfOffice(share.owner_office_id) })}
+            </div>
+          )}
+          {!readOnly && !hits && <ShareRequests shares={outgoing} meId={me?.id} nameOfPerson={(id) => names.get(id) ?? t("drive.person")} nameOfOffice={nameOfOffice}
+            onChanged={() => setSharesTick((n) => n + 1)} />}
+          {statusErr && <div role="alert" data-testid="dept-status-err" className="mb-3 rounded-lg border border-err/30 bg-err/5 px-3 py-2 text-[12.5px] text-err">{t("dept.status.err")}</div>}
           {hits ? (
             <div data-testid="dept-search-results" className="space-y-2">
               <div className="flex items-center justify-between gap-2">
@@ -362,13 +449,19 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
                         <td className="py-2.5 pl-3"><span className="flex min-w-0 items-center gap-2 font-medium text-ink"><Icon name="folder" size={15} className="shrink-0 text-mute" /><button type="button" onClick={(e) => { e.stopPropagation(); openFolder(f.path); }} className="min-w-0 break-words rounded text-left [overflow-wrap:anywhere] hover:underline">{f.name}</button></span></td>
                         <td className="hidden sm:table-cell" />
                         <td>{n > 0 && <span className={REVIEW} title={t("dept.reviewUnder", { n })}>{t("dept.reviewUnder", { n })}</span>}</td>
-                        <td />
+                        <td className="pr-1 text-right" onClick={(e) => e.stopPropagation()}>
+                          {!readOnly && (
+                            <button type="button" data-testid={`dept-menu-${f.name}`} aria-label={t("dept.menu.more")} title={t("dept.menu.more")} aria-haspopup="menu" aria-expanded={menu?.id === f.id} aria-controls={menu?.id === f.id ? "dept-row-menu" : undefined}
+                              onMouseDown={(e) => e.stopPropagation()} onClick={(e) => openMenu(e, { kind: "folder", folder: f })}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[16px] font-semibold leading-none text-mute hover:bg-panel2 hover:text-ink">⋯</button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
                   {view.files.map((f) => {
                     const sel = selected?.kind === "file" && selected.file.id === f.id;
-                    const rev = needsReview(f, pending);
+                    const status = readOnly ? null : fileStatus(f, pending);
                     return (
                       <tr key={f.id} data-testid={`dept-file-${f.name}`} data-selected={sel} onClick={() => setSelected({ kind: "file", file: f })}
                         className={`cursor-pointer border-t border-line first:border-t-0 ${sel ? "bg-accent-soft" : "hover:bg-panel2"}`}>
@@ -382,16 +475,14 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
                             {who(f.updated_by)} <span className="text-mute">·&nbsp;{when(f.updated_at)}</span>
                           </div>
                         </td>
-                        <td>{rev && <span data-testid="dept-chip-review" className={REVIEW}>{t("dept.review")}</span>}</td>
+                        <td>
+                          {status === "review" && <span data-testid="dept-chip-review" className={REVIEW}>{t("dept.review")}</span>}
+                          {status === "sent" && <span data-testid="dept-chip-sent" className={SENT}>{t("dept.status.sent")}</span>}
+                          {status === "draft" && <span data-testid="dept-chip-draft" className={DRAFT}>{t("dept.status.draft")}</span>}
+                        </td>
                         <td className="pr-1 text-right" onClick={(e) => e.stopPropagation()}>
-                          <button type="button" data-testid={`dept-menu-${f.name}`} aria-label={t("dept.menu.more")} title={t("dept.menu.more")} aria-haspopup="menu" aria-expanded={menu?.file.id === f.id} aria-controls={menu?.file.id === f.id ? "dept-row-menu" : undefined}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onClick={(e) => {
-                              const r = e.currentTarget.getBoundingClientRect();
-                              const below = r.bottom + 132 < window.innerHeight;
-                              const trigger = e.currentTarget;
-                              setMenu(menu?.file.id === f.id ? null : { file: f, top: below ? r.bottom + 4 : r.top - 132, right: window.innerWidth - r.right, trigger });
-                            }}
+                          <button type="button" data-testid={`dept-menu-${f.name}`} aria-label={t("dept.menu.more")} title={t("dept.menu.more")} aria-haspopup="menu" aria-expanded={menu?.id === f.id} aria-controls={menu?.id === f.id ? "dept-row-menu" : undefined}
+                            onMouseDown={(e) => e.stopPropagation()} onClick={(e) => openMenu(e, { kind: "file", file: f })}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[16px] font-semibold leading-none text-mute hover:bg-panel2 hover:text-ink">⋯</button>
                         </td>
                       </tr>
@@ -403,21 +494,17 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
           )}
         </div>
 
-        <DeptComposer agents={agents} initialAgent={firstAgent ?? undefined} folder={path} seed={seed} />
+        {!readOnly && <DeptComposer agents={agents} initialAgent={firstAgent ?? undefined} folder={path} seed={seed} />}
       </section>
 
       {/* the row menu (fixed, so the scrolling list never clips it) */}
       {menu && (
-        <div ref={menuBox} id="dept-row-menu" role="menu" aria-label={menu.file.name} data-testid="dept-row-menu" onKeyDown={menuKeys}
+        <div ref={menuBox} id="dept-row-menu" role="menu" aria-label={menu.target.kind === "file" ? menu.target.file.name : menu.target.folder.name} data-testid="dept-row-menu" onKeyDown={menuKeys}
           onMouseDown={(e) => e.stopPropagation()} style={{ top: menu.top, right: menu.right }}
-          className="fixed z-50 w-52 rounded-[8px] border border-line bg-panel py-1 shadow-float">
-          {[
-            { id: "open", label: t("dept.menu.open"), run: () => { setSelected({ kind: "file", file: menu.file }); closeMenu(false); } },
-            { id: "ask", label: t("dept.menu.ask"), run: () => ask(menu.file) },
-            { id: "download", label: t("dept.menu.download"), run: () => { void drive.download(menu.file); closeMenu(true); } },
-          ].map((it) => (
-            <button key={it.id} type="button" role="menuitem" tabIndex={-1} data-testid={`dept-menu-${it.id}`} onClick={it.run}
-              className="flex min-h-10 w-full items-center px-3 text-left text-[13px] text-ink outline-none hover:bg-panel2 focus:bg-accent-soft focus:text-accent sm:min-h-9">{it.label}</button>
+          className="fixed z-50 w-60 rounded-[8px] border border-line bg-panel py-1 shadow-float">
+          {menu.items.map((it) => (
+            <button key={it} type="button" role="menuitem" tabIndex={-1} data-testid={`dept-menu-${it}`} onClick={() => runMenu(it, menu.target)}
+              className="flex min-h-10 w-full items-center px-3 text-left text-[13px] text-ink outline-none hover:bg-panel2 focus:bg-accent-soft focus:text-accent sm:min-h-9">{t(MENU_LABEL[it])}</button>
           ))}
         </div>
       )}
@@ -431,7 +518,7 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
           meta={selected.kind === "file"
             ? <>{who(selected.file.updated_by)}<span aria-hidden>·</span><span>{when(selected.file.updated_at)}</span><span aria-hidden>·</span><span>v{selected.file.current_version}</span></>
             : <><span className={PROPOSED}>{t("dept.proposed")}</span><Author p={{ kind: "agent", id: selected.row.approval.agent_id }} /><span aria-hidden>·</span><span>{when(selected.row.approval.created_at)}</span></>}
-          actions={selected.kind === "file" ? (
+          actions={selected.kind === "file" && !readOnly ? (
             <>
               {agentUnreviewed(selected.file) && (
                 <button type="button" data-testid="dept-panel-reviewed" disabled={marking} onClick={() => void markReviewed(selected.file)}
@@ -445,19 +532,24 @@ function DeptScreen({ dept, depts }: { dept: OfficeView; depts: OfficeView[] }) 
           onClose={() => setSelected(null)}
           className="xl:w-[380px] 2xl:w-[440px] max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:top-[14dvh] max-md:z-50 max-md:rounded-t-[10px] max-md:border-t max-md:border-line max-md:shadow-float">
           {markErr && <div role="alert" data-testid="dept-panel-reviewed-err" className="shrink-0 border-b border-line bg-err/5 px-4 py-2 text-[12px] text-err">{t("dept.markReviewed.err")}</div>}
+          {!readOnly && selected.kind === "file" && (
+            <ShareAccess path={selected.file.path} ownerName={dept.name} nameOfOffice={nameOfOffice} tick={sharesTick} />
+          )}
           {selPending.length > 0 && (
             <div data-testid="dept-panel-pending" className="max-h-[50%] shrink-0 space-y-2 overflow-y-auto border-b border-line bg-panel2/50 p-3">
               {selPending.map((a) => <ApprovalPending key={a.id} a={a} variant="compact" />)}
             </div>
           )}
           {selected.kind === "file" ? (
-            <FilePane key={selected.file.id} file={selected.file} embedded onClose={() => setSelected(null)} onChanged={() => void load()}
+            <FilePane key={selected.file.id} file={selected.file} embedded readOnly={readOnly} onClose={() => setSelected(null)} onChanged={() => void load()}
               onDeleted={() => { setSelected(null); void load(); }} />
           ) : (
             <div className="min-h-0 flex-1 overflow-y-auto p-4 text-[12.5px] leading-relaxed text-mute">{t("dept.proposedBody")}</div>
           )}
         </DetailPanel>
       )}
+      {sharing && <ShareDialog name={sharing.name} path={sharing.path} owner={dept} offices={offices} onClose={() => setSharing(null)}
+        onShared={() => { setSharesTick((n) => n + 1); void load(); }} />}
     </div>
   );
 }

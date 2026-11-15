@@ -48,6 +48,9 @@ func (a *AgentFS) planEdit(ctx context.Context, org string, sc scope, args map[s
 	if !(canRead(zs) || autoWrite(zs)) { // an edit needs to read the file first
 		return deny("not_granted", "this file is outside the areas you can read")
 	}
+	if zs == ZoneSharedIn {
+		return sharedInDeny()
+	}
 	if sc.writeRefused(zs) {
 		return deny(denyCustomerIsolation, "this task works for one customer: edit only in that customer's folders or your desk for it")
 	}

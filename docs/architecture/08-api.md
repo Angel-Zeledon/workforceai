@@ -1321,3 +1321,19 @@ Regla: `offices.Model.CanSeeWork`. Lo que es de un departamento privado solo lo 
 | Memoria | Los documentos tienen `scope: org\|agent\|office` y `office_id`. Sin cambio de rutas; un agente recuerda `org`, lo suyo y lo de su departamento. |
 | Aprobaciones | Cada aprobación (`GET /approvals`, bandeja, `/away-summary`, móvil) trae `can_decide` para esa persona. Decide el responsable del departamento sin `approvals:decide`; quien hizo el pedido la ve pero no decide. `POST /approvals/{id}/remember` con alcance de cualquier agente requiere `approvals:decide`. En el outbox, aprobar o rechazar decide antes de enviar, editar un correo con un voto ya dado devuelve `409 partially_approved` y la lista se filtra por departamento. Cancelar un proyecto retira sus aprobaciones pendientes. Las aprobaciones de un departamento privado no se envían a correos, Slack ni Teams de la empresa. |
 
+
+## 46. Compartir entre departamentos (D4)
+
+Un departamento comparte un archivo o una carpeta con otro, en solo lectura; decide un responsable del departamento dueño (si no tiene, cualquier miembro; si quien pide puede decidir, nace activo). No usa la bandeja de aprobaciones. Migración `821_drive_office_shares` (bajada en `backend/migrations/down/`). Reglas: `equipos-oficinas.md`, "D4 hecha".
+
+Tipo `Share`: `{ id, path, kind: "file"|"folder", name, owner_office_id, target_office_id, status: "pending"|"active"|"rejected"|"revoked", requested_by, requested_at, decided_by?, decided_at?, can_decide, can_revoke }`.
+
+| Ruta | Cambio de API |
+|---|---|
+| `POST /drive/shares` | Cuerpo `{ path, target_office_id }` -> `201 Share`. Exige `edit` sobre `path`. Errores: `404` sin acceso o destino desconocido; `403 read_only_folder` con solo lectura; `400 not_in_office` si `path` no está estrictamente dentro de `/Offices/<o>/`; `400 same_office`; `400 general_office`; `409 already_shared` si ya hay uno `pending` o `active` para el mismo `path` y destino. |
+| `GET /drive/shares?office=<id>&dir=out\|in[&status=...]` | `out`: los pedidos que salen de `office` (solo sus miembros). `in`: los **activos** que llegan a `office` (solo sus miembros). Quien no es miembro recibe `404`. |
+| `GET /drive/shares?path=<p>` | Los `pending` y `active` de ese archivo o carpeta (panel "Quién puede verlo"). Exige `read` sobre `path`. |
+| `POST /drive/shares/{id}/decision` | Cuerpo `{ decision: "approve"\|"reject" }` -> `200 Share`. `403 not_decider`; `404` si la persona no es miembro del dueño; `409 not_pending`. |
+| `DELETE /drive/shares/{id}` | `204`; lo pueden hacer quien lo pidió y quienes deciden. El compartido pasa a `revoked`. |
+
+Acceso: un miembro del departamento destino de un compartido `active` tiene `read` sobre `path` y todo lo que cuelga de él, nunca `edit`; un agente de ese departamento lo lee recortado por la persona por la que trabaja (`personLimit`), sin escritura. Rechazar o revocar quita el acceso en la siguiente petición. Las etiquetas de archivo `enviado` y `borrador` las pone la persona; una versión nueva escrita por un agente quita `enviado` (como `revisado`).

@@ -167,6 +167,9 @@ func (a *AgentFS) AgentAccess(ctx context.Context, agentID string) ([]AccessEntr
 	for _, p := range a.projectRoots(ctx, org, sc) {
 		defaults = append(defaults, AccessEntry{Path: p, Level: AccessEdit, Source: SourceDefault})
 	}
+	for _, p := range sc.sharedIn {
+		defaults = append(defaults, AccessEntry{Path: p, Level: AccessRead, Source: SourceDefault})
+	}
 	for _, d := range defaults {
 		if sc.ruleAt(d.Path) == "" {
 			out = append(out, d)
@@ -192,7 +195,7 @@ func (a *AgentFS) AccessAt(ctx context.Context, agentID, p string) (level, sourc
 	switch a.zone(ctx, a.Svc.org(ctx), sc, c) {
 	case ZoneDesk, ZoneProject, ZoneOffice:
 		return AccessEdit, SourceDefault, nil
-	case ZoneShared:
+	case ZoneShared, ZoneSharedIn:
 		return AccessRead, SourceDefault, nil
 	case ZoneGranted:
 		return AccessRead, SourceManual, nil

@@ -94,6 +94,8 @@ func (a *AgentFS) planIncomeStatement(ctx context.Context, org string, sc scope,
 		"period": res.Period}
 	if z := a.zoneAll(ctx, org, sc, c); z == ZonePersonDenied {
 		return personDeny()
+	} else if z == ZoneSharedIn {
+		return sharedInDeny()
 	} else if sc.otherOfficeRefused(z) {
 		return otherOfficeDeny()
 	} else if sc.writeRefused(z) {

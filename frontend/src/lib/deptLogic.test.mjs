@@ -2,7 +2,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { myDepartments, pendingByPath, filterRows, proposedRows, defaultAgent, crumbs, pathKey, pendingUnder, findDepartment, deptView, lastChange,
-  folderFromParam, folderParam, usableAgents, sendErrorKey, msUntilMidnight, deptHref, needsReview, agentUnreviewed, withReviewed, TAG_REVIEWED, personNames, landOnDepartment } from "./deptLogic.ts";
+  folderFromParam, folderParam, usableAgents, sendErrorKey, msUntilMidnight, deptHref, needsReview, agentUnreviewed, withReviewed, TAG_REVIEWED, personNames, landOnDepartment,
+  fileStatus, withStatus, rowMenuItems, splitRequests, shareTargets, sharedRoot, shareFromParam, sharedHref, onlySharedFile, shareErrorKey } from "./deptLogic.ts";
 
 const off = (o) => ({ id: "x", name: "x", general: false, is_member: true, folder_path: "/Offices/X", agents: [], ...o });
 const ap = (id, path, over = {}) => ({ id, status: "pending", context: path === undefined ? {} : { path, action: "write" }, ...over });
@@ -228,4 +229,70 @@ test("landOnDepartment: a company account entering the tab at / with a departmen
   assert.equal(landOnDepartment({ ...v, audience: "team" }), false);
   assert.equal(landOnDepartment({ ...v, audience: null }), false);
   assert.equal(landOnDepartment({ ...v, departments: 0 }), false);
+});
+
+// ---- D4: Estado, menu, shares ----
+const fl = (o = {}) => ({ path: "/Offices/X/a.md", updated_by: { kind: "human" }, tags: [], ...o });
+test("fileStatus: Para revisar > Enviado > Borrador", () => {
+  const none = new Map();
+  assert.equal(fileStatus(fl(), none), null);
+  assert.equal(fileStatus(fl({ tags: ["borrador"] }), none), "draft");
+  assert.equal(fileStatus(fl({ tags: ["borrador", "enviado"] }), none), "sent");
+  assert.equal(fileStatus(fl({ tags: ["Enviado"] }), none), "sent");
+  assert.equal(fileStatus(fl({ tags: ["enviado", "borrador"], updated_by: { kind: "agent" } }), none), "review");
+  assert.equal(fileStatus(fl({ tags: ["enviado"] }), new Map([["/offices/x/a.md", []]])), "review");
+  assert.equal(fileStatus(fl({ tags: ["enviado", "revisado"], updated_by: { kind: "agent" } }), none), "sent");
+});
+
+test("withStatus keeps other tags and swaps the manual status", () => {
+  assert.deepEqual(withStatus(["revisado"], "sent"), ["revisado", "enviado"]);
+  assert.deepEqual(withStatus(["enviado", "x"], "draft"), ["x", "borrador"]);
+  assert.deepEqual(withStatus(["Borrador", "revisado"], null), ["revisado"]);
+  assert.deepEqual(withStatus(null, "draft"), ["borrador"]);
+});
+
+test("rowMenuItems: own file, own folder, shared with me", () => {
+  assert.deepEqual(rowMenuItems({ kind: "file", shared: false, tags: [] }), ["open", "ask", "download", "share", "markSent", "markDraft"]);
+  assert.deepEqual(rowMenuItems({ kind: "file", shared: false, tags: ["enviado"] }), ["open", "ask", "download", "share", "markDraft", "clearStatus"]);
+  assert.deepEqual(rowMenuItems({ kind: "file", shared: false, tags: ["borrador"] }), ["open", "ask", "download", "share", "markSent", "clearStatus"]);
+  assert.deepEqual(rowMenuItems({ kind: "folder", shared: false }), ["open", "share"]);
+  assert.deepEqual(rowMenuItems({ kind: "file", shared: true, tags: [] }), ["open", "download"]);
+  assert.deepEqual(rowMenuItems({ kind: "folder", shared: true }), ["open"]);
+});
+
+const sh = (id, over = {}) => ({ id, path: "/Offices/X/a.md", kind: "file", name: "a.md", owner_office_id: "x", target_office_id: "y",
+  status: "pending", requested_by: "u1", can_decide: false, can_revoke: true, ...over });
+test("splitRequests separates the ones I decide from my own pending ones", () => {
+  const r = splitRequests([sh("1", { can_decide: true, requested_by: "u2" }), sh("2", { requested_by: "me" }), sh("3", { requested_by: "u9" }),
+    sh("4", { status: "active", can_decide: true }), sh("5", { status: "rejected", requested_by: "me" })], "me");
+  assert.deepEqual(r.toDecide.map((s) => s.id), ["1"]);
+  assert.deepEqual(r.mine.map((s) => s.id), ["2"]);
+  assert.deepEqual(splitRequests([sh("1")], undefined).mine, []);
+});
+
+test("shareTargets skips General and the owner", () => {
+  const r = shareTargets([{ id: "general", general: true }, { id: "x", general: false }, { id: "y", general: false }], "x");
+  assert.deepEqual(r.map((o) => o.id), ["y"]);
+});
+
+test("sharedRoot, shareFromParam, sharedHref, onlySharedFile", () => {
+  assert.equal(sharedRoot({ kind: "folder", path: "/Offices/L/Contratos/" }), "/Offices/L/Contratos");
+  assert.equal(sharedRoot({ kind: "file", path: "/Offices/L/Contratos/a.md" }), "/Offices/L/Contratos");
+  const inc = [{ path: "/Offices/L/Contratos" }];
+  assert.equal(shareFromParam(inc, "/offices/l/contratos/"), inc[0]);
+  assert.equal(shareFromParam(inc, null), undefined);
+  assert.equal(shareFromParam(inc, "/Offices/L"), undefined);
+  assert.equal(sharedHref("c", "/Offices/L/Contratos", ""), "/d/c?comp=%2FOffices%2FL%2FContratos");
+  assert.equal(sharedHref("c", "/Offices/L/Contratos", "2026"), "/d/c?comp=%2FOffices%2FL%2FContratos&carpeta=2026");
+  const files = [{ path: "/Offices/L/a.md" }, { path: "/Offices/L/b.md" }];
+  assert.deepEqual(onlySharedFile(files, { kind: "file", path: "/offices/l/A.md" }), [files[0]]);
+  assert.equal(onlySharedFile(files, { kind: "folder", path: "/Offices/L" }), files);
+});
+
+test("shareErrorKey maps the backend codes", () => {
+  assert.equal(shareErrorKey({ code: "read_only_folder", status: 403 }), "dept.share.err.readOnly");
+  assert.equal(shareErrorKey({ code: "already_shared", status: 409 }), "dept.share.err.exists");
+  assert.equal(shareErrorKey({ code: "not_decider", status: 403 }), "dept.share.err.notDecider");
+  assert.equal(shareErrorKey({ code: "404", status: 404 }), "dept.share.err.notFound");
+  assert.equal(shareErrorKey(new Error("x")), "dept.share.err.generic");
 });

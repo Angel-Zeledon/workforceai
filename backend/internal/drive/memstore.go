@@ -20,13 +20,15 @@ type MemStore struct {
 	files    map[string]File      // org|id
 	versions map[string][]Version // org|file id
 	grants   map[string]Grant     // org|id
+	shares   map[string]Share     // org|id
 }
 
 func NewMemStore() *MemStore {
-	return &MemStore{folders: map[string]Folder{}, files: map[string]File{}, versions: map[string][]Version{}, grants: map[string]Grant{}}
+	return &MemStore{folders: map[string]Folder{}, files: map[string]File{}, versions: map[string][]Version{}, grants: map[string]Grant{}, shares: map[string]Share{}}
 }
 
 var _ Store = (*MemStore)(nil)
+var _ ShareStore = (*MemStore)(nil)
 
 func k(org, id string) string { return org + "|" + id }
 
@@ -526,4 +528,61 @@ func (m *MemStore) RecentFiles(_ context.Context, org string, q RecentQuery) ([]
 		out = out[:q.Limit]
 	}
 	return out, nil
+}
+
+func (m *MemStore) CreateShare(_ context.Context, org string, sh Share) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.shares[k(org, sh.ID)]; ok {
+		return domain.ErrConflict
+	}
+	m.shares[k(org, sh.ID)] = sh
+	return nil
+}
+
+func (m *MemStore) ShareByID(_ context.Context, org, id string) (Share, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	sh, ok := m.shares[k(org, id)]
+	if !ok {
+		return Share{}, domain.ErrNotFound
+	}
+	return sh, nil
+}
+
+func (m *MemStore) ListShares(_ context.Context, org string, q ShareQuery) ([]Share, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := []Share{}
+	for key, sh := range m.shares {
+		if !strings.HasPrefix(key, org+"|") ||
+			q.OwnerOfficeID != "" && sh.OwnerOfficeID != q.OwnerOfficeID ||
+			q.TargetOfficeID != "" && sh.TargetOfficeID != q.TargetOfficeID ||
+			len(q.Statuses) > 0 && !slices.Contains(q.Statuses, sh.Status) {
+			continue
+		}
+		out = append(out, sh)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if !out[i].RequestedAt.Equal(out[j].RequestedAt) {
+			return out[i].RequestedAt.After(out[j].RequestedAt)
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out, nil
+}
+
+func (m *MemStore) MoveShare(_ context.Context, org, id string, from []string, to, by string, at time.Time) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	sh, ok := m.shares[k(org, id)]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	if !slices.Contains(from, sh.Status) {
+		return domain.ErrConflict
+	}
+	sh.Status, sh.DecidedBy, sh.DecidedAt = to, by, &at
+	m.shares[k(org, id)] = sh
+	return nil
 }

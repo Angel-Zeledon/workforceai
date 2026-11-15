@@ -9,7 +9,10 @@ const mockOffices: OfficesResponse = {
     member_count: 1, agents: [], can_enter: true, can_manage: true, is_member: true, is_lead: true },
     { id: "contabilidad", name: "Contabilidad", visibility: "private", general: false, leads: [{ user_id: "demo", name: "Demo" }],
       members: [{ user_id: "demo", name: "Demo" }, { user_id: "u_laura", name: "Laura Méndez" }], // Laura's files: lib/drive.ts (D2 demo)
-      member_count: 2, agents: ["accounting"], can_enter: true, can_manage: true, is_member: true, is_lead: true, folder_path: "/Offices/Contabilidad" }],
+      member_count: 2, agents: ["accounting"], can_enter: true, can_manage: true, is_member: true, is_lead: true, folder_path: "/Offices/Contabilidad" },
+    // D4 demo: a department the person is not in (it shares a folder with Contabilidad and can receive what Contabilidad shares)
+    { id: "legal", name: "Legal", visibility: "open", general: false, leads: [{ user_id: "u_legal", name: "Rodrigo Pineda" }], members: [{ user_id: "u_legal", name: "Rodrigo Pineda" }],
+      member_count: 1, agents: [], can_enter: false, can_manage: false, is_member: false, is_lead: false, folder_path: "/Offices/Legal" }],
   departments: [], restricted: false, me: { user_id: "demo", admin: true, offices: ["general", "contabilidad"] },
 };
 
