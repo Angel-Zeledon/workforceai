@@ -34,7 +34,7 @@ test("Clientes and Conexiones are in the main menu, Pendientes inside the app", 
   const ids = NAV_GROUPS.flatMap((g) => g.items);
   for (const id of ["customers", "connections", "pending"]) assert.ok(ids.includes(id), id);
   const href = (id) => SECTIONS.find((s) => s.id === id).href;
-  assert.equal(href("pending"), "/approvals/inbox");
+  assert.equal(href("pending"), "/needs-you"); // "Te necesitan" leads; the approvals inbox is one click away
   assert.equal(href("customers"), "/clients");
   assert.equal(href("connections"), "/connections");
 });
@@ -52,6 +52,7 @@ test("the shop hides when the rewards system is off, nothing else does", () => {
 
 test("sectionOf knows the new homes and the old links", () => {
   assert.equal(sectionOf("/approvals/inbox"), "pending");
+  assert.equal(sectionOf("/needs-you"), "pending");
   assert.equal(sectionOf("/approvals"), "pending");
   assert.equal(sectionOf("/approvals/ap-1"), "pending");
   assert.equal(sectionOf("/clients"), "customers");

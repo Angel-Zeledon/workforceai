@@ -347,6 +347,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountSlack(r)  // Slack channel: settings card and account link
 			s.mountV2(r)
 			s.mountQuestions(r) // needs your help: the questions agents ask people (questions.go)
+			s.mountNeedsYou(r)  // "Te necesitan": one list of what waits for the person (needs_you.go)
 			s.mountCommands(r)
 			s.mountTenantData(r)
 			s.mountGovernance(r)  // governance (single line)

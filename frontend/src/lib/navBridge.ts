@@ -18,7 +18,7 @@ export function openInOffice(agentId: string, select: (id: string) => void) {
 /** Sections of the app: route, i18n label key and icon. Settings is a section too (bottom of the menu). */
 export const SECTIONS = [
   { id: "office", href: "/", label: "nav.office", icon: "office" },
-  { id: "pending", href: "/approvals/inbox", label: "nav.pending", icon: "bell" },
+  { id: "pending", href: "/needs-you", label: "nav.needsYou", icon: "bell" }, // "Te necesitan": everything that waits for you
   { id: "chats", href: "/chats", label: "nav.chats", icon: "chat" },
   { id: "projects", href: "/projects", label: "nav.projects", icon: "flag" },
   // >>> org
@@ -65,7 +65,7 @@ export function navGroups({ shopAvailable, company = false }: { shopAvailable: b
 export function sectionOf(pathname: string): SectionId {
   if (pathname.startsWith("/dashboard")) return "dashboard";
   if (pathname === "/d" || pathname.startsWith("/d/")) return "department";
-  if (pathname.startsWith("/approvals")) return "pending";
+  if (pathname.startsWith("/approvals") || pathname.startsWith("/needs-you")) return "pending";
   if (pathname.startsWith("/chats")) return "chats";
   if (pathname.startsWith("/projects")) return "projects";
   if (pathname.startsWith("/org")) return "org"; // >>> org <<<

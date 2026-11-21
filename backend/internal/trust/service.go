@@ -385,17 +385,34 @@ func isAgentPrincipal(actor, agentID string) bool {
 // MinDeciderRole is the least role that may accept, decline or revert a change of level.
 const MinDeciderRole = "admin"
 
+// refusal is the actor of ctx and why they may not decide a change of level of the agent ("" when they may).
+func refusal(ctx context.Context, agentID string) (actor, why string) {
+	actor = application.ActorFrom(ctx, "")
+	role := application.ActorRoleFrom(ctx, policy.RoleOwner)
+	switch {
+	case isAgentPrincipal(actor, agentID):
+		return actor, "agents_cannot_decide"
+	case policy.RoleRank(role) < policy.RoleRank(MinDeciderRole):
+		return actor, "role_too_low"
+	}
+	return actor, ""
+}
+
+// MayDecide reports whether the actor of ctx may accept or decline a change of level of the agent: the rule of
+// Accept and Decline, without auditing (a listing asks it; "Te necesitan", needs-you.md).
+func (s *Service) MayDecide(ctx context.Context, agentID string) bool {
+	_, why := refusal(ctx, agentID)
+	return why == ""
+}
+
+// Pending returns the proposals of every agent waiting for a person, newest first (at most limit, 1..500).
+func (s *Service) Pending(ctx context.Context, limit int) ([]Proposal, error) {
+	return s.cfg.Store.ListProposals(ctx, s.org(ctx), "", StatusPending, min(max(limit, 1), 500))
+}
+
 // decider checks who is deciding. Without auth the demo acts as owner (like approvals).
 func (s *Service) decider(ctx context.Context, org string, p Proposal, action string) (string, error) {
-	actor := application.ActorFrom(ctx, "")
-	role := application.ActorRoleFrom(ctx, policy.RoleOwner)
-	why := ""
-	switch {
-	case isAgentPrincipal(actor, p.AgentID):
-		why = "agents_cannot_decide"
-	case policy.RoleRank(role) < policy.RoleRank(MinDeciderRole):
-		why = "role_too_low"
-	}
+	actor, why := refusal(ctx, p.AgentID)
 	if why != "" {
 		s.audit(ctx, org, domain.AuditLog{Actor: actor, Action: "trust.decision_refused", Entity: "trust_proposal", EntityID: p.ID,
 			Details: map[string]any{"reason": why, "action": action, "agent_id": p.AgentID, "kind": p.Kind}})

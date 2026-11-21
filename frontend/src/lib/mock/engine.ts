@@ -26,6 +26,7 @@ import { mockAway, mockAwayDismiss, overnightApproval } from "./away-mock";
 import { MockShield } from "./shield-mock";
 import { MockRehearsal } from "./rehearsal-mock";
 import { MockInitiatives } from "./initiative-mock";
+import { mockNeedsYou } from "./needsyou-mock";
 import { METRIC_SIGNALS, SIGNAL_FIELDS } from "../initiativeLogic";
 import { MockCustomers } from "./customers-mock";
 import { tr } from "../i18n-core";
@@ -294,6 +295,12 @@ export class MockBackend {
     return new Promise<void>((res, rej) => setTimeout(() => (g === this.gen ? res() : rej(new Cancelled())), ms));
   }
   private agent(id: string) { return this.agents.find((a) => a.id === id)!; }
+  /** GET /needs-you(/count): the demo acts as its owner (needsyou-mock.ts). */
+  private async needsYou(countOnly: boolean) {
+    const inbox = (await this.inbox.handle("GET", ["approvals", "inbox"], undefined, async () => null)) as { items: Parameters<typeof mockNeedsYou>[0] };
+    const sugg = (await this.initiatives.handle("GET", ["initiatives"], new URLSearchParams("status=pending"))) as Parameters<typeof mockNeedsYou>[1];
+    return mockNeedsYou(inbox.items, sugg, (id) => this.agents.find((a) => a.id === id)?.name ?? id, Date.now(), countOnly);
+  }
 
   private setState(id: string, state: AgentState, activity: string, task_id: string | null, progress: number) {
     const a = this.agent(id);
@@ -697,6 +704,7 @@ export class MockBackend {
     if (this.rehearsal.matches(method, seg)) return this.rehearsal.handle(method, seg, q, body);
     if (this.conns.matches(r0, r2)) return this.conns.handle(method, seg, q, body);
     if (r0 === "away-summary") return this.awaySummary(method, r1, q);
+    if (r0 === "needs-you" && method === "GET") return this.needsYou(r1 === "count");
     if (method === "GET") {
       if (r0 === "agents" && !r1) return this.agents;
       if (r0 === "agents" && r1 && r2 === "detail") {

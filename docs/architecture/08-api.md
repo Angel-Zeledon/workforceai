@@ -953,7 +953,7 @@ Los empleados avisan solos ("la tarea X falló, ¿la reviso?") con un presupuest
 | PUT | `/settings/initiative` | `org:manage` | mismo cuerpo; límites 0..1000 (`400` si no), `agent_daily` sobrescribe el tope diario de un agente (0 lo silencia). Auditado (`initiative.settings_changed`) |
 | POST | `/initiatives/scan` | `org:manage` | Evalúa ahora las señales de métricas de la organización. `200` `{raised, results: [{signal, signal_key, agent_id?, raised, reason?: disabled\|duplicate\|daily_limit\|monthly_limit\|agent_limit\|controls\|no_agent\|error, initiative_id?}]}`. Auditado (`initiative.scanned`). Ruta presente solo si el servidor tiene el escáner |
 
-Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditoría: `initiative.raised`, `initiative.accepted`, `initiative.dismissed`, `initiative.settings_changed`.
+Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}` y `initiative.resolved` `{initiative_id, agent_id, status}` (aditivo: aceptada o descartada; "Te necesitan" se recarga). Auditoría: `initiative.raised`, `initiative.accepted`, `initiative.dismissed`, `initiative.settings_changed`.
 
 **Señales de métricas (aditivo, migración `800_initiative_signals`).** Detección determinista (sin modelo) de `metric_change` (margen/ventas/caja en hojas y tablas), `spend_pace` (ritmo del gasto del mes frente a lo disponible bajo el tope), `approval_aging` (aprobaciones que esperan) y `quality_drop` (puntaje B11 frente a la ventana anterior); detalle en `initiative.md`. Campos nuevos:
 
@@ -1337,3 +1337,14 @@ Tipo `Share`: `{ id, path, kind: "file"|"folder", name, owner_office_id, target_
 | `DELETE /drive/shares/{id}` | `204`; lo pueden hacer quien lo pidió y quienes deciden. El compartido pasa a `revoked`. |
 
 Acceso: un miembro del departamento destino de un compartido `active` tiene `read` sobre `path` y todo lo que cuelga de él, nunca `edit`; un agente de ese departamento lo lee recortado por la persona por la que trabaja (`personLimit`), sin escritura. Rechazar o revocar quita el acceso en la siguiente petición. Las etiquetas de archivo `enviado` y `borrador` las pone la persona; una versión nueva escrita por un agente quita `enviado` (como `revisado`).
+
+## 47. Te necesitan (F5)
+
+Una sola lista con lo que espera a la persona que mira y que ella puede resolver. Solo lectura: cada acción sigue en la ruta de su pantalla. Diseño y reglas: [needs-you.md](needs-you.md). Código: `backend/internal/needsyou`, `backend/internal/api/needs_you.go`. Sin migración.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/needs-you?limit=` | `activity:read` (cada fuente exige el suyo) | `{items: Item[], total, counts: {approval?, question?, suggestion?, trust?}, truncated?, unavailable?}`. `Item = {kind, id, title, detail?, agent_id?, agent_name?, office_id?, office_name?, created_at, risk?, double?, urgency (high\|normal\|low), target, direct, action?, project_name?, signal?, params?, options?, proposal_kind?, from_level?, to_level?}`. Orden: urgencia y luego la más antigua. `limit` 1..500 (defecto 200) corta `items`, no los conteos. `400` si no es un número positivo |
+| GET | `/needs-you/count` | igual | Lo mismo sin `items` (contador del menú) |
+
+Un principal que no es persona (agente, token, sistema) recibe la lista vacía. Una fuente que no se pudo leer se omite y se nombra en `unavailable`.

@@ -11,6 +11,8 @@ import { useRituals } from "./rituals";
 import { isShieldFrame, useShield } from "./shield";
 import { isRehearsalFrame, useRehearsal } from "./rehearsal";
 import { LINK_IMPORT_EVENT, useLinkImportsLive } from "./linkImportsApi";
+import { isNeedsYouFrame } from "./needsYouLogic";
+import { refreshNeedsYou } from "./needsYou";
 import type {
   ActivityItem, Agent, Approval, ChatMessage, Conversation, Debate, ErrorItem, Message, Metrics, PlanTask,
   Report, Request, RouteDecision, Task, WsFrame,
@@ -188,6 +190,7 @@ export const useStore = create<State>((set, get) => ({
     if (isRewardsFrame(f.type)) { useRewards.getState().applyFrame(f); return; }
     if (f.type === "provider.no_balance") useProviderAlert.setState({ noBalance: true });
     if (f.type === "provider.no_vision") useProviderAlert.setState({ noVision: true });
+    if (isNeedsYouFrame(f.type) || f.type === "hello") refreshNeedsYou(); // "Te necesitan": reload the badge (and the list when open)
     if (f.type === "hello") { useArtifacts.getState().load(); useConnections.getState().applyFrame(f); void useRewards.getState().load(); }
     if (isCostFrame(f.type)) useCost.getState().applyFrame(f);
     if (f.type === "ritual.held") useRituals.getState().applyFrame(f); // B4: participants walk to the meeting room

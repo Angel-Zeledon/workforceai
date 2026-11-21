@@ -20,6 +20,7 @@ import { usePreferences, useOffice3d } from "@/lib/preferences";
 import { orgApi } from "@/lib/orgConfigApi";
 import { navGroups, setNavigator, SECTIONS, sectionOf } from "@/lib/navBridge";
 import { usePendingCount } from "@/lib/pending";
+import { useNeedsYouBadge } from "@/lib/useNeedsYouBadge";
 import { useViewMode } from "@/lib/viewMode";
 import { useAudience } from "@/lib/audience";
 import { useDepartmentLanding } from "../dept/useDepartmentLanding";
@@ -44,7 +45,7 @@ const COLLAPSE_KEY = "wf.sidebar.collapsed";
 const MORE_KEY = "wf.sidebar.more";
 
 function NavLink({ href, icon, label, testid, active, collapsed, onNavigate, badge }: {
-  href: string; icon: IconName; label: string; testid: string; active: boolean; collapsed: boolean; onNavigate?: () => void; badge?: number;
+  href: string; icon: IconName; label: string; testid: string; active: boolean; collapsed: boolean; onNavigate?: () => void; badge?: number | string;
 }) {
   return (
     <Link href={href} prefetch={false} data-testid={testid} data-active={active} aria-current={active ? "page" : undefined} title={collapsed ? label : undefined} onClick={onNavigate}
@@ -62,7 +63,7 @@ function Sidebar({ section, collapsed, onToggle, onNavigate }: { section: string
   // the shop decorates the animated office: it is in the menu only while that is on (and the server has coins)
   const office3d = useOffice3d();
   const shopAvailable = useRewards((s) => s.available) && office3d;
-  const pending = usePendingCount(); // the ONE number of Pendientes for the whole app
+  const pending = useNeedsYouBadge(); // "Te necesitan": everything that waits for this person, from the server
   const company = useAudience() === "company";
   const groups = navGroups({ shopAvailable, company });
   const [moreOpen, setMoreOpen] = useState(false);
