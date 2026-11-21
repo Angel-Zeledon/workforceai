@@ -1,5 +1,9 @@
 # Pendientes: aprobaciones en 1 minuto (B17) y preguntas de los agentes
 
+> Desde F5 la entrada del menú es **Te necesitan** (`/needs-you`, [needs-you.md](needs-you.md)): junta aprobaciones,
+> preguntas, sugerencias y propuestas de confianza. Esta bandeja sigue igual y se abre desde allí ("Aprobar en modo
+> rápido").
+
 Bandeja rápida de aprobaciones **de todos los proyectos**: una tarjeta a la vez con lo esencial, teclado, gestos y
 agrupación donde la API ya lo permite. Página `/approvals/inbox` (`frontend/src/components/approvals/ApprovalsInbox.tsx`),
 enlazada desde la lista móvil (`/approvals`, "Modo rápido") y desde la bandeja de la oficina cuando hay dos o más pendientes.
