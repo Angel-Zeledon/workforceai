@@ -1321,3 +1321,18 @@ Regla: `offices.Model.CanSeeWork`. Lo que es de un departamento privado solo lo 
 | Memoria | Los documentos tienen `scope: org\|agent\|office` y `office_id`. Sin cambio de rutas; un agente recuerda `org`, lo suyo y lo de su departamento. |
 | Aprobaciones | Cada aprobación (`GET /approvals`, bandeja, `/away-summary`, móvil) trae `can_decide` para esa persona. Decide el responsable del departamento sin `approvals:decide`; quien hizo el pedido la ve pero no decide. `POST /approvals/{id}/remember` con alcance de cualquier agente requiere `approvals:decide`. En el outbox, aprobar o rechazar decide antes de enviar, editar un correo con un voto ya dado devuelve `409 partially_approved` y la lista se filtra por departamento. Cancelar un proyecto retira sus aprobaciones pendientes. Las aprobaciones de un departamento privado no se envían a correos, Slack ni Teams de la empresa. |
 
+
+## 46. Vigilante de trabajo atascado (F6)
+
+Detalle y garantías en `watchdog.md`. Sin migración: el umbral vive en `signals.stalled_work` de `GET/PUT /settings/initiative`.
+
+| Método y ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /stalled-work` | `tasks:read` | Tareas atascadas que la persona ve (D3): `[{task_id, request_id, agent_id, title, status, kind, project, last_progress, minutes, episode}]` |
+| `POST /stalled-work/scan` | `org:manage` | Barrido ahora: `{results: [{...tarea, announced, raised, reason?, initiative_id?}], raised}`; auditado `watchdog.scanned` |
+| `GET /tasks/{id}/stall` | `tasks:read` | `{task, stalled, stall?, reassign_candidates[], cancel_cascade[], hidden_cascade}`; candidatos y cascada limitados a lo que la persona ve |
+| `POST /tasks/{id}/stall/retry` | `requests:create` | `202 {task, action, status}` con `status` `applied` \| `requested` \| `resumed` \| `reopened` \| `finished` |
+| `POST /tasks/{id}/stall/reassign` | `tasks:manage` | `{agent_id}`: mismo departamento y mismo rol; `400` si no puede tomarla o si la persona no ve su trabajo |
+| `POST /tasks/{id}/stall/cancel` | `tasks:manage` | `{confirm_task_ids}` = exactamente `cancel_cascade`; `202 {…, cancelled[]}`. `409 cascade_changed` (con `cancel_cascade` nueva) si la lista cambió; `409 cascade_hidden` si detendría trabajo de un departamento que la persona no ve |
+
+Errores comunes: `404` si la tarea no existe o es de un departamento privado ajeno; `409 not_stalled` si ya no está atascada (avanzó, espera a una persona o alguien la está recuperando); `409 already_recovering`; `409 execution_blocked (código)` si el kill-switch, la pausa o el modo solo lectura frenan al agente; `403` para un actor que no es persona. `POST /initiatives/{id}/accept` de una sugerencia `stalled_task` reintenta la tarea (`request_id` = el pedido de la tarea).

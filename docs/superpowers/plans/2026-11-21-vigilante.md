@@ -20,10 +20,10 @@
 
 ## Tareas
 
-- [ ] Ajustes `stalled_work` (validación, defectos al leer) + pruebas.
-- [ ] Supervisor de ejecución, marcas de espera, detección con reloj falso + pruebas (no detecta aprobación / pregunta / pausa).
-- [ ] `RecoverStalled` vivo y sin trabajador (reintento idempotente, reasignar, cancelar en cascada, sin doble ejecución con `Recover`) + pruebas.
-- [ ] `Watchdog` (barrido, sugerencia, evento, auditoría, cierre de sugerencias resueltas) + pruebas de duplicados y presupuesto.
-- [ ] API + pruebas (permisos, aislamiento entre orgs y departamentos privados).
-- [ ] Cableado (`cmd/server`), frontend (api, lógica, componente, i18n es/en/pt) + `node --test`.
-- [ ] `docs/architecture/watchdog.md`, 08-api, initiative.md; `go test`, `go vet`, `npm run build`.
+- [x] Ajustes `stalled_work` (validación, defectos al leer) + pruebas.
+- [x] Supervisor de ejecución, marcas de espera, detección con reloj falso + pruebas (no detecta aprobación / pregunta / pausa).
+- [x] `RecoverStalled` vivo y sin trabajador (reintento idempotente, reasignar, cancelar en cascada, sin doble ejecución con `Recover`) + pruebas.
+- [x] `Watchdog` (barrido, sugerencia, evento, auditoría, cierre de sugerencias resueltas) + pruebas de duplicados y presupuesto.
+- [x] API + pruebas (permisos, aislamiento entre orgs y departamentos privados).
+- [x] Cableado (`cmd/server`), frontend (api, lógica, componente, i18n es/en/pt) + `node --test`.
+- [x] `docs/architecture/watchdog.md`, 08-api, initiative.md; `go test`, `go vet`, `npm run build`.
