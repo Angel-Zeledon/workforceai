@@ -118,6 +118,7 @@ func wireDepartments(w departmentWiring) *offices.Service {
 	if w.Conns != nil {
 		w.Conns.AgentOffice = agentOffices{svc: svc}.AgentOffice // D3: a department's connections serve its agents only
 	}
+	w.Orch.SetAgentOffice(agentOffices{svc: svc}.AgentOffice) // F6: a stalled task is reassigned inside its department
 	if w.AuthOn && w.Drive != nil {
 		w.Drive.SetPeople(officePeople{svc: svc}) // office folders: member edits, open reads, private none
 		// agents work in their office folder and never beyond the person they work for
