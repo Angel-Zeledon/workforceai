@@ -155,6 +155,10 @@ func New(ctx context.Context, cfg Config) *Service {
 
 func (s *Service) org(ctx context.Context) string { return application.OrgFrom(ctx, s.cfg.OrgID) }
 
+// SetGoalCheck installs the check of the company goal a new project points to (F1). The goals are built after the
+// projects (they need the departments), so the server installs it at start-up, before serving.
+func (s *Service) SetGoalCheck(fn func(ctx context.Context, org, userID, goalID string) error) { s.cfg.GoalCheck = fn }
+
 func (s *Service) locale(ctx context.Context, explicit string) string {
 	if explicit != "" {
 		return catalog.NormalizeLocale(explicit)

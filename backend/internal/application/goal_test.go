@@ -71,7 +71,10 @@ func TestGoalReachesThePlannerAndTheTasksAsData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h.waitFor("done", func() bool { r, _ := h.store.GetRequest(context.Background(), org, id); return r.Status == domain.RequestDone })
+	h.waitFor("done", func() bool {
+		r, _ := h.store.GetRequest(context.Background(), org, id)
+		return r.Status == domain.RequestDone
+	})
 	r, _ := h.store.GetRequest(context.Background(), org, id)
 	if r.GoalID != "goal-ok" {
 		t.Fatalf("stored goal = %q", r.GoalID)
@@ -118,7 +121,10 @@ func TestNoGoalChangesNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h.waitFor("done", func() bool { r, _ := h.store.GetRequest(context.Background(), org, id); return r.Status == domain.RequestDone })
+	h.waitFor("done", func() bool {
+		r, _ := h.store.GetRequest(context.Background(), org, id)
+		return r.Status == domain.RequestDone
+	})
 	spy.mu.Lock()
 	defer spy.mu.Unlock()
 	if len(spy.plans) != 1 || spy.plans[0].Recalled != nil {
@@ -132,4 +138,21 @@ func TestNoGoalChangesNothing(t *testing.T) {
 	if r, _ := h.store.GetRequest(context.Background(), org, id); r.GoalID != "" {
 		t.Fatalf("goal = %q", r.GoalID)
 	}
+}
+
+// A chat message sent "for a goal" refuses a goal that is not linkable at once (before anything is stored).
+func TestChatRefusesABadGoalAtOnce(t *testing.T) {
+	h := newHarness(t, goalRuntime(&goalSpy{}, "sales"), nil)
+	h.orch.SetGoals(&fakeGoals{})
+	before, _ := h.store.ListMessages(context.Background(), org, domain.ChatOffice)
+	if _, err := h.orch.PostChat(application.WithGoal(context.Background(), "goal-x"), domain.ChatOffice, "prepara algo"); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("bad goal: %v", err)
+	}
+	if after, _ := h.store.ListMessages(context.Background(), org, domain.ChatOffice); len(after) != len(before) {
+		t.Fatalf("a message was stored: %d -> %d", len(before), len(after))
+	}
+	if _, err := h.orch.PostChat(application.WithGoal(context.Background(), "goal-ok"), domain.ChatOffice, "prepara algo"); err != nil {
+		t.Fatalf("good goal: %v", err)
+	}
+	h.orch.Wait()
 }

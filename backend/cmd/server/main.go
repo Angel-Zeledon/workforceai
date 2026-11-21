@@ -326,6 +326,7 @@ func run(log *slog.Logger) error {
 	// D3: departments are sealed BEFORE the resumed requests run (their events, approvals and memory).
 	officesSvc := wireDepartments(departmentWiring{AuthOn: cfg.AuthEnabled, PG: pg, Store: store, AuthStore: authStore, Chart: orgChartSvc,
 		Rec: rec, Memory: memorySvc, Orch: orch, Notify: notifySvc, Slack: slackSvc, Conns: cw.conns, Drive: ws.drive, Skills: skillsSvc, Log: log})
+	goalsSvc := wireGoals(pg, rec, orch, ws.projects, officesSvc, cw.sus) // F1: before Recover, so resumed work keeps its goal
 	if n, err := orch.Recover(ctx, orgIDs); err != nil {
 		log.Warn("recover in-progress requests", "err", err)
 	} else if n > 0 {
@@ -368,6 +369,7 @@ func run(log *slog.Logger) error {
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
 	deps.Slack = slackSvc
+	deps.Goals = goalsSvc
 	deps.AgentFolders = agentFolders(ws) // folder access per agent (folder_access.go)
 	deps.LinkImports = wireLinkImports(ctx, cfg, log, pg, rec, cw, ws.drive, custSvc, orgLister(store)) // import from a link (single line)
 	deps.VendorIntegrations = &cfg.VendorIntegrations // v1: vendor-specific integrations (VENDOR_INTEGRATIONS, default off)

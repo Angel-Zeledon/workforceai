@@ -40,6 +40,9 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		// /Offices/<office> (else 400 folder_invalid); a folder that is missing or that the person may not read is the
 		// same 404 not_found.
 		Folder string `json:"folder"`
+		// GoalID (F1, optional) is the company goal any request this message creates contributes to, like
+		// POST /requests (a goal that is not linkable answers 400 at once).
+		GoalID string `json:"goal_id"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
@@ -64,7 +67,7 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 	if key == "" {
 		key = body.ClientMessageID
 	}
-	ctx := application.WithCustomer(r.Context(), body.CustomerID)
+	ctx := application.WithGoal(application.WithCustomer(r.Context(), body.CustomerID), body.GoalID)
 	ctx = application.WithActorName(ctx, s.authorName(ctx)) // E0: the author shown on the message and told to the agent
 	if len(body.Attachments) > 0 {
 		// a path the person may not read (an office folder) is dropped exactly like one that does not resolve; more

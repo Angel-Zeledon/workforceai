@@ -360,6 +360,11 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	if err := o.checkCustomer(ctx); err != nil {
 		return ChatTurn{}, err
 	}
+	// F1: so does the company goal of the chat's goal picker (checked again when the request is created)
+	goal, err := o.checkGoal(ctx)
+	if err != nil {
+		return ChatTurn{}, err
+	}
 	agents, err := o.store.ListAgents(ctx, org)
 	if err != nil {
 		return ChatTurn{}, err
@@ -416,6 +421,7 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	rctx = WithActor(rctx, ActorFrom(ctx, ""))
 	rctx = WithActorRole(rctx, ActorRoleFrom(ctx, ""))
 	rctx = WithCustomer(rctx, customer) // B12: a request born in this turn is linked to the customer before it exists
+	rctx = WithGoal(rctx, goal)         // F1: and points to the goal
 	// Turns of one conversation run one after the other, in the order the messages arrived: answers never
 	// interleave between turns and a follow-up always sees what the previous turn said.
 	key := org + "|" + stored // the private thread of each person has its own queue

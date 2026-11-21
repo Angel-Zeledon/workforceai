@@ -125,6 +125,8 @@ type requestWithCost struct {
 	application.RequestDetail
 	BudgetCapUSD float64              `json:"budget_cap_usd"`
 	Estimate     *domain.CostEstimate `json:"estimate,omitempty"`
+	// Goal (F1) is the company goal the request contributes to, when the person sees it.
+	Goal *goalRef `json:"goal,omitempty"`
 }
 
 func (s *server) withCost(r *http.Request, d application.RequestDetail) requestWithCost {

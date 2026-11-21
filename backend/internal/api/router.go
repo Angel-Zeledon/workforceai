@@ -29,6 +29,7 @@ import (
 	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/docindex"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/goals"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
 	"aiworkforce/backend/internal/gateway"
@@ -158,6 +159,8 @@ type Deps struct {
 	Away *away.Service
 	// Customers serves /customers/* (customers.go): the customer district, clones and scoped folders (B12). Optional.
 	Customers *customers.Service
+	// Goals serves /goals and the "contributes to" of requests and reports (F1, goals.go). Optional.
+	Goals *goals.Service
 	// LinkImports serves /link-imports/* (linkimports.go): import from a link, once or on a schedule. Optional.
 	LinkImports *linkimports.Service
 	// Portal serves the client portal (portal.go): branding, share links and the public read-only page.
@@ -313,6 +316,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountConnections(r)
 			s.mountControls(r)
 			s.mountProjects(r)
+			s.mountGoals(r)
 			s.mountProjectInputs(r)
 			s.mountStanding(r)
 			s.mountInitiative(r)
@@ -538,6 +542,9 @@ func (s *server) createRequest(w http.ResponseWriter, r *http.Request) {
 		CustomerID string `json:"customer_id"`
 		// Debate (B5, optional): the team debates the plan's decision before it runs (adds the [[debate]] marker).
 		Debate bool `json:"debate"`
+		// GoalID (F1, optional): the company goal the request contributes to. A goal of another organization, one
+		// the person cannot see or one that is not active refuses the request (400).
+		GoalID string `json:"goal_id"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
@@ -547,6 +554,7 @@ func (s *server) createRequest(w http.ResponseWriter, r *http.Request) {
 		body.Text = application.WithDebateMarker(body.Text)
 	}
 	ctx := application.WithCustomer(application.WithBudgetCap(r.Context(), body.BudgetCapUSD), body.CustomerID)
+	ctx = application.WithGoal(ctx, body.GoalID)
 	if body.Rehearsal {
 		ctx = application.WithRehearsal(ctx, true)
 	}
@@ -570,6 +578,7 @@ func (s *server) listRequests(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v = slices.DeleteFunc(v, func(x domain.Request) bool { return !ws.request(x.ID) }) // D3
+	s.hideGoals(r, v)                                                                  // F1: a hidden goal reads as none
 	writeJSON(w, 200, list(v))
 }
 
@@ -585,7 +594,11 @@ func (s *server) getRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	d.Tasks = list(d.Tasks)
-	writeJSON(w, 200, s.withCost(r, d))
+	out := s.withCost(r, d)
+	if out.Goal = s.goalOf(r, d.GoalID); out.Goal == nil { // F1: what it contributes to (a hidden goal reads as none)
+		out.GoalID = ""
+	}
+	writeJSON(w, 200, out)
 }
 
 // getRequestAudit: GET /requests/{id}/audit, the internal auditor's stamp of a request (B7).
@@ -740,7 +753,7 @@ func (s *server) listReports(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v = slices.DeleteFunc(v, func(x domain.Report) bool { return !ws.request(x.RequestID) }) // D3
-	writeJSON(w, 200, list(v))
+	writeJSON(w, 200, list(s.reportViews(r, v)))
 }
 
 func (s *server) getReport(w http.ResponseWriter, r *http.Request) {
@@ -753,7 +766,7 @@ func (s *server) getReport(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, cmp.Or(ws.err, notFound("report", v.ID)))
 		return
 	}
-	writeJSON(w, 200, v)
+	writeJSON(w, 200, s.reportViews(r, []domain.Report{v})[0])
 }
 
 // reportEvidence is GET /reports/{id}/evidence (B6): the checked citations of

@@ -25,7 +25,10 @@ type Config struct {
 	Emit func(ctx context.Context, org, typ string, g Goal, audience []string)
 	// Clean makes a text people wrote safe to hand an agent (the cleaner of the memory notes). nil = as is.
 	Clean func(string) string
-	Now   func() time.Time
+	// Accept refuses a text that reads like instructions for the agents (the injection check of the memory notes):
+	// false refuses the goal. nil = everything is accepted.
+	Accept func(string) bool
+	Now    func() time.Time
 }
 
 // Service holds the rules of the goals.
@@ -186,6 +189,19 @@ func texts(title, desc, period string) (string, string, string, error) {
 	return title, desc, period, nil
 }
 
+// texts also refuses a goal that reads like instructions for the agents: a goal is context, never an order.
+func (s *Service) texts(title, desc, period string) (string, string, string, error) {
+	title, desc, period, err := texts(title, desc, period)
+	if err == nil && s.cfg.Accept != nil {
+		for _, t := range []string{title, desc, period} {
+			if t != "" && !s.cfg.Accept(t) {
+				return "", "", "", invalid("the goal reads like instructions for the agents; write what the company wants to achieve")
+			}
+		}
+	}
+	return title, desc, period, err
+}
+
 func dueDate(s string) (*time.Time, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -237,7 +253,7 @@ func (v view) officeFor(a Actor, office string) (string, error) {
 
 // Create adds a goal (active).
 func (s *Service) Create(ctx context.Context, org string, a Actor, in Input) (Goal, error) {
-	title, desc, period, err := texts(in.Title, in.Description, in.Period)
+	title, desc, period, err := s.texts(in.Title, in.Description, in.Period)
 	if err != nil {
 		return Goal{}, err
 	}
@@ -300,7 +316,7 @@ func (s *Service) Update(ctx context.Context, org string, a Actor, id string, p 
 	if p.Period != nil {
 		period, changed = *p.Period, append(changed, "period")
 	}
-	if g.Title, g.Description, g.Period, err = texts(title, desc, period); err != nil {
+	if g.Title, g.Description, g.Period, err = s.texts(title, desc, period); err != nil {
 		return Goal{}, err
 	}
 	if p.DueDate != nil {
