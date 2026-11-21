@@ -127,6 +127,33 @@ type InitiativeService struct {
 	Now    func() time.Time
 
 	mu sync.Mutex // serializes budget check + insert inside this process
+
+	actMu   sync.Mutex
+	actions map[string]InitiativeAction // signal -> what accepting does instead of submitting the prompt
+}
+
+// InitiativeAction is what accepting a suggestion of one signal does instead of submitting its prompt (a stalled task
+// is retried, watchdog.go). It returns the request the work belongs to.
+type InitiativeAction func(ctx context.Context, it Initiative) (requestID string, err error)
+
+// SetAction installs the accept action of a signal (nil removes it).
+func (s *InitiativeService) SetAction(signal string, fn InitiativeAction) {
+	s.actMu.Lock()
+	defer s.actMu.Unlock()
+	if s.actions == nil {
+		s.actions = map[string]InitiativeAction{}
+	}
+	if fn == nil {
+		delete(s.actions, signal)
+		return
+	}
+	s.actions[signal] = fn
+}
+
+func (s *InitiativeService) action(signal string) InitiativeAction {
+	s.actMu.Lock()
+	defer s.actMu.Unlock()
+	return s.actions[signal]
 }
 
 var _ InitiativeRaiser = (*InitiativeService)(nil)
@@ -175,6 +202,7 @@ func (s *InitiativeService) Settings(ctx context.Context) (InitiativeSettings, e
 		sig := DefaultSignalSettings()
 		st.Signals = &sig
 	}
+	st.Signals.normalize()
 	return st, nil
 }
 
@@ -200,6 +228,7 @@ func (s *InitiativeService) PutSettings(ctx context.Context, in InitiativeSettin
 		in.Signals = cur.Signals
 	} else {
 		sig := *in.Signals
+		sig.normalize()
 		if err := sig.Validate(); err != nil {
 			return InitiativeSettings{}, err
 		}
@@ -309,15 +338,22 @@ func (s *InitiativeService) List(ctx context.Context, status InitiativeStatus, l
 // (so two people cannot both accept it); if the request is refused (kill switch, budget, delegation rules...) the claim
 // is undone and the error comes back.
 func (s *InitiativeService) Accept(ctx context.Context, id string) (Initiative, error) {
-	if s.Submit == nil {
+	org, actor, now := s.org(ctx), ActorFrom(ctx, "user"), s.now()
+	if cur, err := s.Store.GetInitiative(ctx, org, id); err == nil && s.action(cur.Signal) == nil && s.Submit == nil {
 		return Initiative{}, fmt.Errorf("%w: requests are not available", domain.ErrConflict)
 	}
-	org, actor, now := s.org(ctx), ActorFrom(ctx, "user"), s.now()
 	it, err := s.Store.ResolveInitiative(ctx, org, id, InitiativePending, InitiativeAccepted, actor, "", now)
 	if err != nil {
 		return Initiative{}, err
 	}
-	reqID, err := s.Submit.Submit(ctx, it.Prompt)
+	var reqID string
+	if act := s.action(it.Signal); act != nil {
+		reqID, err = act(ctx, it) // e.g. a stalled task is retried, not asked for again
+	} else if s.Submit != nil {
+		reqID, err = s.Submit.Submit(ctx, it.Prompt)
+	} else {
+		err = fmt.Errorf("%w: requests are not available", domain.ErrConflict)
+	}
 	if err != nil {
 		_, _ = s.Store.ResolveInitiative(context.WithoutCancel(ctx), org, id, InitiativeAccepted, InitiativePending, "", "", now)
 		return Initiative{}, err
