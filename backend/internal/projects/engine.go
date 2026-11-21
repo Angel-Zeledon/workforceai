@@ -199,7 +199,7 @@ func (s *Service) Launch(ctx context.Context, id string, b LaunchBody) (Summary,
 	s.launching.Add(1)
 	defer s.launching.Add(-1)
 	// B12: the request of a customer's project is scoped to that customer before anything runs.
-	sctx := application.WithCustomer(ctx, rec.CustomerID)
+	sctx := application.WithGoal(application.WithCustomer(ctx, rec.CustomerID), rec.GoalID) // F1: the request inherits the goal
 	reqID, err := s.cfg.Orch.SubmitPlan(application.WithRunParallel(application.WithWorkPriority(application.WithBudgetCap(sctx, rec.BudgetUSD), application.PriorityProject), rec.MaxParallel), rec.Goal, planOf(rec))
 	if err != nil {
 		return Summary{}, err

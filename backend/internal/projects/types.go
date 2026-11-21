@@ -237,6 +237,8 @@ type Summary struct {
 	RequestID string `json:"request_id,omitempty"`
 	// CustomerID is the customer the project works for (B12, additive).
 	CustomerID string `json:"customer_id,omitempty"`
+	// GoalID is the company goal the project contributes to (F1, additive).
+	GoalID string `json:"goal_id,omitempty"`
 	// BatchID is the batch the project belongs to (additive).
 	BatchID string `json:"batch_id,omitempty"`
 	// BudgetWarnPct is the highest budget early-warning threshold already crossed
@@ -477,6 +479,8 @@ type NewProject struct {
 	Locale     string            `json:"locale,omitempty"`
 	// CustomerID (B12, optional) scopes the project to one customer of the organization.
 	CustomerID string `json:"customer_id,omitempty"`
+	// GoalID (F1, optional) is the company goal the project contributes to; its request inherits it at launch.
+	GoalID string `json:"goal_id,omitempty"`
 }
 
 type LaunchBody struct {
@@ -582,6 +586,9 @@ type Record struct {
 	// CustomerID (B12) is the customer the project works for ("" = none). It is set at creation and the
 	// project's request is scoped to it at launch.
 	CustomerID string `json:"customer_id,omitempty"`
+	// GoalID (F1) is the company goal the project contributes to ("" = none), set at creation; the request the
+	// project launches points to it, so its agents know what the work is for.
+	GoalID string `json:"goal_id,omitempty"`
 	// BatchID is the batch the project belongs to ("" = a project on its own): one template launched for many
 	// customers. A batch counts as one active project.
 	BatchID string `json:"batch_id,omitempty"`

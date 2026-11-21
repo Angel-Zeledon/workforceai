@@ -229,7 +229,7 @@ func (s *Service) build(ctx context.Context, snap snapshot) Detail {
 	c := countStates(nodes)
 	sum := Summary{ID: rec.ID, Name: rec.Name, NameKey: rec.NameKey, Goal: rec.Goal, Status: rec.Status, Control: rec.Control, TemplateID: rec.TemplateID,
 		BudgetUSD: rec.BudgetUSD, TasksDone: c.done, TasksTotal: c.total, Running: c.running, Awaiting: c.awaiting, Failed: c.failed, NeedsInput: c.needsInput, Light: "green",
-		CreatedAt: rec.CreatedAt, StartedAt: rec.StartedAt, FinishedAt: rec.FinishedAt, DeadlineAt: rec.DeadlineAt, ObjectivesCnt: len(rec.Objectives), RequestID: rec.RequestID, BudgetWarnPct: warnedPct(rec.BudgetWarned), CustomerID: rec.CustomerID, BatchID: rec.BatchID}
+		CreatedAt: rec.CreatedAt, StartedAt: rec.StartedAt, FinishedAt: rec.FinishedAt, DeadlineAt: rec.DeadlineAt, ObjectivesCnt: len(rec.Objectives), RequestID: rec.RequestID, BudgetWarnPct: warnedPct(rec.BudgetWarned), CustomerID: rec.CustomerID, GoalID: rec.GoalID, BatchID: rec.BatchID}
 	if sum.Control == "" {
 		sum.Control = ControlActive
 	}
