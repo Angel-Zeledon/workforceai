@@ -28,6 +28,7 @@ import { MockRehearsal } from "./rehearsal-mock";
 import { MockInitiatives } from "./initiative-mock";
 import { METRIC_SIGNALS, SIGNAL_FIELDS } from "../initiativeLogic";
 import { MockCustomers } from "./customers-mock";
+import { MockGoals } from "./goals-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
 import type { RequestAudit, TaskAudit } from "../auditLogic";
@@ -157,6 +158,8 @@ const fullOutput = (o: Partial<StructuredOutput>): StructuredOutput => ({
 });
 
 export class MockBackend {
+  /** F1: a report with the goal its request points to */
+  private withGoal(r: Report): Report { const goal = this.goals.refOf(r.request_id); return goal ? { ...r, goal } : r; }
   /** the demo's agents, read-only (the offices directory lists them) */
   agentList(): readonly Agent[] { return this.agents; }
   private listeners = new Set<(f: WsFrame) => void>();
@@ -184,6 +187,7 @@ export class MockBackend {
   private orgCfg = new MockOrgConfig(); // workflow templates, onboarding, org settings and schedules
   private orgChart = new MockOrgChart(() => this.agents); // >>> org <<< departments, org chart, job descriptions, delegation, industries
   private customers = new MockCustomers(() => this.agents, () => this.requests); // B12: customer district (buildings, clones, scoped requests)
+  private goals = new MockGoals(() => this.requests, (id) => (id === "contabilidad" ? "Contabilidad" : id)); // F1: company goals
   private perms = new MockPermissions(); // approval permissions per agent
   private art = new MockArtifacts((t, p, a) => this.emit(t, p, a), (ms) => this.wait(ms)); // workspaces: artifact.* endpoints/events
   private chat = new MockChat({
@@ -691,6 +695,7 @@ export class MockBackend {
     // >>> org
     if (this.orgChart.matches(seg)) return this.orgChart.handle(method, seg, body, q);
     if (this.customers.matches(seg)) return this.customers.handle(method, seg, q, body);
+    if (this.goals.matches(seg)) return this.goals.handle(method, seg, q, body);
     // <<< org
     if (this.orgCfg.matches(seg)) return this.orgCfg.handle(method, seg, body, (text) => this.handle("POST", "/requests", { text }));
     if (this.shield.matches(method, seg)) return this.shield.handle(method, seg, q);
@@ -733,7 +738,9 @@ export class MockBackend {
         return this.audits.get(r1) ?? { request_id: r1, status: "none", audits: [] };
       }
       if (r0 === "requests" && r1) {
-        return { request: this.requests.find((r) => r.id === r1), tasks: this.tasks.filter((t) => t.request_id === r1) };
+        const request = this.requests.find((r) => r.id === r1);
+        const goal = request ? this.goals.refOf(request.id) : undefined;
+        return { request: request && goal ? { ...request, goal_id: goal.id, goal } : request, tasks: this.tasks.filter((t) => t.request_id === r1) };
       }
       if (r0 === "conversations" && !r1) return this.conversations;
       if (r0 === "conversations" && r1 && r2 === "messages") {
@@ -741,13 +748,13 @@ export class MockBackend {
         return this.messages[r1] || [];
       }
       if (r0 === "approvals") { const st = q.get("status"); return this.approvals.filter((a) => !st || a.status === st); }
-      if (r0 === "reports" && !r1) return this.reports;
+      if (r0 === "reports" && !r1) return this.reports.map((r) => this.withGoal(r));
       if (r0 === "reports" && r1 && r2 === "evidence") { // B6 evidence chain
         const rep = this.reports.find((r) => r.id === r1);
         if (!rep) throw new Error("mock: report not found");
         return this.evidence.get(r1) ?? { report_id: r1, request_id: rep.request_id, citations: [], verified: 0, total: 0 };
       }
-      if (r0 === "reports" && r1) return this.reports.find((r) => r.id === r1);
+      if (r0 === "reports" && r1) { const r = this.reports.find((x) => x.id === r1); return r ? this.withGoal(r) : r; }
       if (r0 === "activity") return this.activity.slice(0, Number(q.get("limit") || 100));
       if (r0 === "metrics") return this.metrics();
       if (r0 === "budget" && !r1) return this.budgetStatus();
@@ -755,6 +762,7 @@ export class MockBackend {
     }
     if (method === "POST") {
       if (r0 === "agents" && r1 && r2 === "trust" && seg[3] === "evaluate") { const x = mockTrust(this.agent(r1)); return { methodology: x.methodology, agent: x.agent }; }
+      if ((r0 === "messages" && !r1 || r0 === "requests") && body?.goal_id) this.goals.assertLinkable(String(body.goal_id)); // F1
       if (r0 === "messages" && !r1 && body?.customer_id && !this.customers.hasCustomer(String(body.customer_id))) throw new Error("customer not found"); // B12
       if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : []);
       if (r0 === "requests") {
@@ -762,6 +770,7 @@ export class MockBackend {
         if (cid && !this.customers.hasCustomer(cid)) throw new Error("customer not found");
         const id = await this.startRequest(String(body?.text || "").trim(), body?.rehearsal === true);
         if (cid) this.customers.linkRequest(id, cid); // B12: the request is scoped to the customer
+        if (body?.goal_id) this.goals.linkRequest(id, String(body.goal_id)); // F1
         return { request_id: id };
       }
       if (r0 === "conversations" && r1 && r2 === "messages") {

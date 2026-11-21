@@ -114,6 +114,8 @@ export interface ProjectSummary {
   tasks_done: number; tasks_total: number; running: number; awaiting: number; failed: number;
   /** the batch (one template for many customers) the project belongs to */
   batch_id?: string;
+  /** F1: the company goal it contributes to (older backends omit it) */
+  goal_id?: string;
   /** tasks whose agent asked a person and waits for the answer (older backends omit it) */
   needs_input?: number;
   light: Light;
@@ -256,7 +258,7 @@ export type PlanOp =
   | { op: "update"; id: string; fields: { title?: string; agent_id?: string; acceptance?: string[] } }
   | { op: "set_quality"; id?: string; fields: { review: ReviewMode } };
 
-export interface NewProjectBody { goal: string; template_id?: string; params?: Record<string, string>; budget_usd?: number }
+export interface NewProjectBody { goal: string; template_id?: string; params?: Record<string, string>; budget_usd?: number; /** F1: the company goal the project contributes to */ goal_id?: string }
 export interface LaunchBody { approved_budget_usd: number; acknowledge_underbudget?: boolean; max_parallel?: number; proceed_without_inputs?: boolean }
 export type ControlAction = "pause" | "resume" | "cancel";
 

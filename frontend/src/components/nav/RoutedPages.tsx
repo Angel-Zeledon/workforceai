@@ -16,6 +16,7 @@ import { FirstRunHint, PageSkeleton } from "./ui2";
 import { ApprovalsInbox } from "../approvals/ApprovalsInbox";
 import { ApprovalsMobile } from "../approvals/ApprovalsMobile";
 import { CustomerDistrict } from "../customers/CustomerDistrict";
+import { GoalsView } from "../goals/GoalsView";
 import { ConnectionsView } from "../connections/ConnectionsView";
 import { useConnections } from "@/lib/connections/store";
 import { useBootConnections } from "../security/ControlsChrome";
@@ -70,6 +71,11 @@ export const PendingPage = ({ view, focusId }: { view: "inbox" | "list"; focusId
 /** Clientes: the customer district, now with its own place in the menu. */
 export const ClientsPage = () => (
   <div className="h-full overflow-y-auto bg-bg"><div className="mx-auto w-full max-w-6xl p-4 md:p-6"><CustomerDistrict /></div></div>
+);
+
+/** Objetivos: the company goals that requests and projects can point to (F1). */
+export const GoalsPage = () => (
+  <div className="h-full overflow-y-auto bg-bg"><div className="mx-auto w-full max-w-4xl p-4 md:p-6"><GoalsView /></div></div>
 );
 
 /** Conexiones: the same screen that lived in Ajustes, unchanged (it manages its own scrolling). */

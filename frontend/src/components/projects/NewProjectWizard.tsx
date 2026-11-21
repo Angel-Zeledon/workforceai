@@ -6,6 +6,7 @@ import { useProjects } from "@/lib/projects/store";
 import { listMax, splitList } from "@/lib/projects/templateLogic";
 import type { TemplateIssue, TemplatePreview } from "@/lib/projects/types";
 import { Btn } from "../ui";
+import { GoalPicker } from "../goals/GoalPicker";
 import { Modal, fmtMoney } from "./shared";
 import { inputCls, issuesOfError, labelCls, useIssueText, useTplText } from "./templateUi";
 
@@ -17,6 +18,7 @@ export function NewProjectWizard({ initialTemplate, onClose }: { initialTemplate
   const templates = useProjects((s) => s.templates);
   const createDraft = useProjects((s) => s.createDraft);
   const [goal, setGoal] = useState("");
+  const [goalId, setGoalId] = useState(""); // F1: optional company goal
   const [tplId, setTplId] = useState(initialTemplate);
   const [params, setParams] = useState<Record<string, string>>({});
   const [budget, setBudget] = useState("");
@@ -74,7 +76,7 @@ export function NewProjectWizard({ initialTemplate, onClose }: { initialTemplate
     setBusy(true); setErr("");
     try {
       const b = Number(budget);
-      await createDraft({ goal: goal.trim(), template_id: tplId || undefined, params, budget_usd: b > 0 ? b : undefined });
+      await createDraft({ goal: goal.trim(), template_id: tplId || undefined, params, budget_usd: b > 0 ? b : undefined, ...(goalId ? { goal_id: goalId } : {}) });
       onClose();
     } catch (e) {
       const lc = limitCode(e);
@@ -100,6 +102,7 @@ export function NewProjectWizard({ initialTemplate, onClose }: { initialTemplate
             <textarea data-testid="wizard-goal" value={goal} onChange={(e) => setGoal(e.target.value)} rows={3} placeholder={t("pv.wizard.goalPlaceholder")}
               className="mt-1 w-full resize-none rounded-xl border border-line-strong bg-panel px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
           </label>
+          <GoalPicker testId="wizard-goal-select" value={goalId} onChange={setGoalId} />
           {tpl?.params.map((p) => {
             const label = tx.paramLabel(p);
             const base = "mt-1 w-full rounded-xl border bg-panel px-3 py-2 text-sm text-ink outline-none focus:border-accent";

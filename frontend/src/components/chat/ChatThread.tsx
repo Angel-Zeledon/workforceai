@@ -17,6 +17,8 @@ import { surfaceOf } from "@/lib/commands/logic";
 import { withOpenFile } from "@/lib/fileEdit";
 import { useFileViewer } from "@/lib/fileView";
 import { useChatCustomer } from "@/lib/chatCustomer";
+import { useChatGoal } from "@/lib/chatGoal";
+import { GoalPicker } from "../goals/GoalPicker";
 import { AttachMenu, AttachmentTray, DrivePicker, DropOverlay, MAX_FILES, useAttachments } from "./attachments";
 import { useSession } from "@/lib/session";
 
@@ -252,8 +254,9 @@ export async function sendChat(conv: string, text: string, from = "user", attach
   const files = refs ?? attachments.map((p) => ({ path: p, name: p.split("/").pop() || p, action: "attach" }));
   store.addLocalChat({ id: `local:${Date.now().toString(36)}`, conversation: conv, turn_id: null, from, to: conv === "office" ? "all" : conv.slice(6), kind: "chat", text, reply_to: null, ts: new Date().toISOString(), ...(files.length ? { files } : {}) });
   const customer = useChatCustomer.getState().customer; // B12: the chat works for this customer (its view is open)
+  const goalId = useChatGoal.getState().goalId || undefined; // F1: optional company goal chosen for this message
   try {
-    await api.postMessage(conv, text, attachments, customer?.id);
+    await api.postMessage(conv, text, attachments, customer?.id, undefined, goalId);
   } catch (e) {
     if (!customer && conv === "office" && /-> (404|405|501)\b/.test(String((e as Error)?.message))) { await api.postRequest(text); return; }
     throw e;
@@ -286,6 +289,8 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
   const setEditInChat = useFileViewer((s) => s.setEditInChat);
   const forCustomer = useChatCustomer((s) => s.customer);
   const setForCustomer = useChatCustomer((s) => s.set);
+  const forGoal = useChatGoal((s) => s.goalId);
+  const setForGoal = useChatGoal((s) => s.set);
   // the box grows with what is typed (up to ~8 lines) and shrinks back when it is sent
   useEffect(() => {
     const el = inputRef.current;
@@ -314,7 +319,7 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
         }
       }
       await sendChat(conv, body, "user", refs.map((r) => r.path), refs);
-      setText(""); att.clear(); onSent?.();
+      setText(""); att.clear(); useChatGoal.getState().set(""); onSent?.();
     } catch (e) {
       // the server refuses more attachments than a message may carry with a clear 400 (never a silent cut)
       setErr(/too many attachments/i.test(String((e as Error)?.message)) ? t("att.err.tooMany", { n: MAX_FILES }) : t("chat.sendError"));
@@ -346,6 +351,7 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
             className="shrink-0 font-semibold underline-offset-2 hover:underline">{t("chat.customer.clear")}</button>
         </div>
       )}
+      <GoalPicker compact testId="chat-goal-select" value={forGoal} onChange={setForGoal} />
       <AttachmentTray items={att.items} onRemove={att.remove} />
       <div className="flex items-end gap-2">
         <input ref={fileRef} type="file" multiple data-testid="chat-attach-input" className="hidden" onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length && att.addFiles(fs)) setErr(t("att.err.tooMany", { n: MAX_FILES })); e.target.value = ""; }} />

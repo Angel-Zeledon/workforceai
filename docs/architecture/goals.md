@@ -43,11 +43,13 @@ Auditoría: `goal.created` / `goal.updated` (entidad `goal`; solo metadatos: dep
 - Orquestador: `application/goal.go` (`WithGoal`, `GoalSource`, `SetGoals`), `orchestrator.go` (`submit`, plan, `buildRunRequest`), `chat.go`; proyectos: `NewProject/Record/Summary.GoalID`, `SetGoalCheck`.
 - API: `backend/internal/api/goals.go`; cableado `backend/cmd/server/goals.go` (después de los departamentos y antes de `orch.Recover`).
 - Runtime: `PlanRequest.recalled`, `security.memory_block` / `plan_goal_lines` / `GOAL_GUIDANCE`.
-- UI: sección Objetivos, selector en el chat y en proyectos, "Contribuye a" en el informe; claves `goals.*` en es/en/pt.
+- UI: sección Objetivos (`/goals`, `components/goals/GoalsView.tsx`; menú "Tu empresa"), selector `GoalPicker` en el chat (`lib/chatGoal.ts`; se limpia tras enviar) y en el asistente de proyecto nuevo, "Contribuye a" en `ReportView`; lógica pura en `lib/goalsLogic.ts` (+ prueba), mock en `lib/mock/goals-mock.ts`; claves `goals.*` en es/en/pt.
 
 ## Límites conocidos
 
 - El tope de 10 activos se serializa con un mutex por proceso: con varias réplicas una carrera puede pasarlo por uno o dos.
 - Un borrador de proyecto cuyo objetivo se logra o archiva antes de lanzarlo falla al lanzar (400): solo un objetivo activo admite trabajo nuevo. Se cambia el objetivo del proyecto o se reactiva.
 - El planificador de **borradores de proyecto** (`projects/planner.go`) y la **síntesis** del informe no reciben el objetivo; sí lo reciben el planificador de pedidos y cada tarea (también las de proyectos). Los proyectos por lotes no llevan objetivo.
+- UI pendiente: "Contribuye a" en el detalle de un pedido (la API ya lo da), refrescar la lista con `goal.changed`, paso opcional en `/onboarding`, y el mock de proyectos ignora `goal_id`. El selector aparece en todos los chats (el campo de texto es el mismo componente).
+- Los eventos en vivo de proyecto (`project.created`, ...) llevan el `goal_id` opaco aunque quien los recibe no vea el objetivo (sin título ni texto).
 - Las pruebas de Postgres (`goals_pg_test.go`: ida y vuelta, RLS, FK compuesta) necesitan `TEST_DATABASE_URL`; en esta rama no se corrieron. La UI no se vio en un navegador.
