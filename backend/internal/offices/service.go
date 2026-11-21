@@ -132,6 +132,10 @@ func (s *Service) build(ctx context.Context, org string) (*Model, error) {
 	return buildModel(depts, adept, people, agents, rows, members, access), nil
 }
 
+// Fresh is the model without the cache, for a caller that has just changed where agents live (F2: installing a team
+// must see the agents it placed a moment ago, or a second install would hire them again).
+func (s *Service) Fresh(ctx context.Context, org string) (*Model, error) { return s.fresh(ctx, org) }
+
 // fresh rebuilds the model without the cache (writes check against the current state).
 func (s *Service) fresh(ctx context.Context, org string) (*Model, error) {
 	s.invalidate(org)

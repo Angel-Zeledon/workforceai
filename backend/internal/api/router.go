@@ -349,9 +349,10 @@ func NewRouter(d Deps) http.Handler {
 			s.mountQuestions(r) // needs your help: the questions agents ask people (questions.go)
 			s.mountCommands(r)
 			s.mountTenantData(r)
-			s.mountGovernance(r) // governance (single line)
-			s.mountPresence(r)   // human presence + people chat (presence_people.go)
-			s.mountTeams(r)      // E1: welcome per person and team set-up (teams.go)
+			s.mountGovernance(r)  // governance (single line)
+			s.mountPresence(r)    // human presence + people chat (presence_people.go)
+			s.mountTeams(r)       // E1: welcome per person and team set-up (teams.go)
+			s.mountTeamCatalog(r) // F2: ready-to-hire teams with a preview (teams_catalog.go)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}
