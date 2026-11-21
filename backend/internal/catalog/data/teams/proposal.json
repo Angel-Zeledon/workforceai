@@ -1,0 +1,46 @@
+{
+  "schema": "aiw.team/1",
+  "key": "proposal",
+  "version": 1,
+  "packs": ["professional_services"],
+  "name_key": "team.name",
+  "for_key": "team.for",
+  "solves_key": "team.solves",
+  "department_key": "team.department",
+  "agents": [
+    { "role": "sales", "does_key": "agent.sales" },
+    { "role": "legal", "does_key": "agent.legal" },
+    { "role": "operations", "does_key": "agent.operations" }
+  ],
+  "week": [
+    { "template": "new_client", "day": 1, "why_key": "week.new_client" },
+    { "template": "proposal", "day": 2, "why_key": "week.proposal" },
+    { "template": "contract_review", "day": 4, "why_key": "week.contract_review" }
+  ],
+  "i18n": {
+    "es": {
+      "team.name": "Propuesta comercial",
+      "team.for": "Equipos que cotizan a mano y tardan días en responder a un cliente interesado.",
+      "team.solves": "Pasar de la primera conversación a una propuesta revisada, con alcance y condiciones claras.",
+      "team.department": "Ventas",
+      "agent.sales": "Redacta la propuesta con alcance, precio y calendario, y da seguimiento al cliente.",
+      "agent.legal": "Revisa las condiciones y el contrato antes de que algo salga al cliente.",
+      "agent.operations": "Confirma que lo prometido se puede entregar, con tiempos y recursos reales.",
+      "week.new_client": "Registra al cliente nuevo con lo que necesita y quién decide.",
+      "week.proposal": "Arma la propuesta con alcance, equipo, calendario y precio.",
+      "week.contract_review": "Revisa el contrato o las condiciones antes de enviarlos."
+    },
+    "en": {
+      "team.name": "Sales proposal",
+      "team.for": "Teams that quote by hand and take days to answer an interested customer.",
+      "team.solves": "Go from the first conversation to a reviewed proposal with clear scope and terms.",
+      "team.department": "Sales",
+      "agent.sales": "Writes the proposal with scope, price and schedule, and follows up with the customer.",
+      "agent.legal": "Reviews the terms and the contract before anything goes out to the customer.",
+      "agent.operations": "Confirms that what is promised can be delivered, with real times and resources.",
+      "week.new_client": "Registers the new customer with what they need and who decides.",
+      "week.proposal": "Builds the proposal with scope, team, schedule and price.",
+      "week.contract_review": "Reviews the contract or terms before sending them."
+    }
+  }
+}

@@ -23,7 +23,7 @@ import (
 	"aiworkforce/backend/internal/roles"
 )
 
-//go:embed data/workflows/*.json data/packs/*.json data/tax/*.json
+//go:embed data/workflows/*.json data/packs/*.json data/tax/*.json data/teams/*.json
 var dataFS embed.FS
 
 const (
@@ -265,6 +265,7 @@ type Catalog struct {
 	workflows map[string]rawWorkflow
 	packs     map[string]rawPack
 	tax       map[string]rawTax
+	teams     map[string]rawTeam
 }
 
 var (
@@ -286,7 +287,7 @@ func Default() *Catalog {
 // Load parses and validates a catalog from an fs with data/workflows,
 // data/packs and data/tax directories.
 func Load(fsys fs.FS) (*Catalog, error) {
-	c := &Catalog{workflows: map[string]rawWorkflow{}, packs: map[string]rawPack{}, tax: map[string]rawTax{}}
+	c := &Catalog{workflows: map[string]rawWorkflow{}, packs: map[string]rawPack{}, tax: map[string]rawTax{}, teams: map[string]rawTeam{}}
 	seedIDs := map[string]bool{}
 	for _, a := range roles.SeedAgents() {
 		seedIDs[a.ID] = true
@@ -353,6 +354,8 @@ func Load(fsys fs.FS) (*Catalog, error) {
 		c.tax[t.Key] = t
 		return nil
 	})
+	// Teams point at roles, workflow templates and packs (checked once they are all loaded).
+	c.loadTeams(fsys, &errs)
 	// Cross references: packs recommend existing workflow templates.
 	for _, p := range c.packs {
 		for _, tk := range p.Templates {

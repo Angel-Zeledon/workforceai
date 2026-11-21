@@ -1,0 +1,49 @@
+{
+  "schema": "aiw.team/1",
+  "key": "month_close",
+  "version": 1,
+  "packs": ["professional_services", "general"],
+  "name_key": "team.name",
+  "for_key": "team.for",
+  "solves_key": "team.solves",
+  "department_key": "team.department",
+  "agents": [
+    { "role": "accounting", "does_key": "agent.accounting" },
+    { "role": "finance_treasury", "does_key": "agent.finance_treasury" },
+    { "role": "internal_auditor", "does_key": "agent.internal_auditor" },
+    { "role": "analyst", "does_key": "agent.analyst" }
+  ],
+  "week": [
+    { "template": "month_close", "day": 1, "why_key": "week.month_close" },
+    { "template": "expense_audit", "day": 3, "why_key": "week.expense_audit" },
+    { "template": "budget_planning", "day": 5, "why_key": "week.budget_planning" }
+  ],
+  "i18n": {
+    "es": {
+      "team.name": "Cierre contable del mes",
+      "team.for": "Negocios que cierran su mes con hojas sueltas y llegan tarde a sus números.",
+      "team.solves": "Cerrar el mes con cuentas conciliadas, gastos revisados y un resumen claro para decidir.",
+      "team.department": "Contabilidad",
+      "agent.accounting": "Concilia bancos, registra lo pendiente y prepara el cierre del mes.",
+      "agent.finance_treasury": "Vigila el flujo de caja, los pagos por hacer y el margen de cada línea.",
+      "agent.internal_auditor": "Revisa que los gastos tengan respaldo y marca lo que no cuadra antes de cerrar.",
+      "agent.analyst": "Compara el mes contra el anterior y el presupuesto, y explica las diferencias.",
+      "week.month_close": "Arranca el cierre: lista de pendientes, conciliación y asientos del mes.",
+      "week.expense_audit": "Revisa los gastos del mes con su respaldo y señala los que piden aclaración.",
+      "week.budget_planning": "Con el mes cerrado, ajusta el presupuesto del siguiente."
+    },
+    "en": {
+      "team.name": "Month-end close",
+      "team.for": "Businesses that close the month with loose spreadsheets and reach their numbers late.",
+      "team.solves": "Close the month with reconciled accounts, reviewed expenses and a clear summary to decide on.",
+      "team.department": "Accounting",
+      "agent.accounting": "Reconciles banks, records what is pending and prepares the month-end close.",
+      "agent.finance_treasury": "Watches cash flow, payments due and the margin of each line.",
+      "agent.internal_auditor": "Checks that expenses have support and flags what does not add up before closing.",
+      "agent.analyst": "Compares the month against the last one and the budget, and explains the differences.",
+      "week.month_close": "Starts the close: pending list, reconciliation and the month's entries.",
+      "week.expense_audit": "Reviews the month's expenses with their support and flags the ones that need clarification.",
+      "week.budget_planning": "With the month closed, adjusts next month's budget."
+    }
+  }
+}
