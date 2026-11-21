@@ -371,6 +371,8 @@ type Request struct {
 	CreatedAt time.Time     `json:"created_at"`
 	ReportID  *string       `json:"report_id"`
 	CostUSD   float64       `json:"cost_usd"`
+	// GoalID (F1) is the company goal the request contributes to ("" = none; omitted). Set when it is created.
+	GoalID string `json:"goal_id,omitempty"`
 
 	Plan Plan `json:"-"`
 }

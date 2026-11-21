@@ -1348,3 +1348,16 @@ Una sola lista con lo que espera a la persona que mira y que ella puede resolver
 | GET | `/needs-you/count` | igual | Lo mismo sin `items` (contador del menú) |
 
 Un principal que no es persona (agente, token, sistema) recibe la lista vacía. Una fuente que no se pudo leer se omite y se nombra en `unavailable`.
+
+## 48. Objetivos de la empresa (F1)
+
+Detalle en [goals.md](goals.md). `requests:read` para leer, `requests:create` para escribir; el servicio aplica el resto (objetivo de empresa: `org:manage`; de departamento: admin o su responsable; sellado D3 al leer).
+
+- `GET /goals[?include_archived=1]` → `{goals: Goal[], max_active: 10}`.
+- `POST /goals` `{title, description?, period?, due_date?: "AAAA-MM-DD", office_id?}` → 201 `Goal`; 403 sin permiso; 409 con 10 activos; 400 por textos (título 1..120, descripción ≤ 280, periodo ≤ 40) o si parecen instrucciones.
+- `GET /goals/{id}` → `{goal, requests: [{id, text, status, report_id, created_at}], projects: [{id, name, status}]}` (solo el trabajo que la persona ve); 404 si no existe o no lo ve.
+- `PATCH /goals/{id}` `{title?, description?, period?, due_date? ("" la quita), status?: active|achieved|archived}` → 200 `Goal`.
+- `Goal = {id, office_id?, office_name?, title, description, status, period?, due_date?, created_by, created_at, updated_at}`.
+- Enlace (opcional, aditivo): `goal_id` en `POST /requests`, `POST /messages`, `POST /projects/draft`, `POST /projects/from-template` (400 si es de otra organización, no visible o no activo; no se crea nada).
+- Lectura (aditivo, omitido sin objetivo): `goal: {id, title, status, office_name?}` en `GET /reports`, `GET /reports/{id}`, `GET /requests/{id}`; `goal_id` en pedidos y resúmenes de proyecto. Un objetivo que la persona no ve no aparece.
+- Evento `goal.changed` `{goal}`; auditoría `goal.created` / `goal.updated`.

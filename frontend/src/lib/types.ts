@@ -72,11 +72,17 @@ export interface StandingApproval {
 export interface Report {
   id: string; request_id: string; title: string; summary: string;
   sections: { heading: string; body: string }[]; contributors: string[]; cost_usd: number; created_at: string;
+  /** F1: the company goal the request contributes to (absent when it points to none) */
+  goal?: { id: string; title: string; status: string; office_name?: string };
 }
 export interface ActivityItem { id: string; ts: string; agent_id: string | null; kind: string; text: string }
 export type RequestStatus =
   | "planning" | "running" | "awaiting_approval" | "awaiting_confirmation" | "paused" | "done" | "failed";
-export interface Request { id: string; text: string; status: RequestStatus; created_at: string; report_id: string | null; cost_usd: number }
+export interface Request {
+  id: string; text: string; status: RequestStatus; created_at: string; report_id: string | null; cost_usd: number;
+  /** F1: the company goal it contributes to (only GET /requests/{id} carries them) */
+  goal_id?: string; goal?: { id: string; title: string; status: string; office_name?: string };
+}
 export interface Metrics {
   tasks_active: number; tasks_done: number; approvals_pending: number;
   cost_usd: number; budget_usd: number; errors: number; requests_total: number;

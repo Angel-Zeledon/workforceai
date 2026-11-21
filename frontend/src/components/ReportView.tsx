@@ -50,6 +50,13 @@ export function ReportView({ r }: { r: Report }) {
             {r.contributors.map((c) => (<span key={c} className="flex items-center gap-1"><Dot color={color(c)} />{name(c)}</span>))}
           </span>
         </div>
+        {r.goal && (
+          <div data-testid="report-goal" className="mt-1.5 text-[12px] text-ink2">
+            <span className="text-mute">{t("report.contributesTo")}</span>{" "}
+            <span className="font-semibold text-ink">{r.goal.title}</span>
+            {r.goal.office_name ? <span className="text-mute"> · {r.goal.office_name}</span> : null}
+          </div>
+        )}
         {(traced > 0 || unverified.length > 0) && (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
             {traced > 0 && (

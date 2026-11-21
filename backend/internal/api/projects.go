@@ -99,6 +99,11 @@ func (s *server) listProjects(w http.ResponseWriter, r *http.Request) {
 		}
 		v = out
 	}
+	for i := range v { // F1: a goal the person may not see reads as none
+		if v[i].GoalID != "" && s.goalOf(r, v[i].GoalID) == nil {
+			v[i].GoalID = ""
+		}
+	}
 	writeJSON(w, 200, list(v))
 }
 
@@ -136,6 +141,9 @@ func (s *server) getProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.projectDeciders(r, d.Approvals) // D3: who may decide each pending one
+	if d.Project.GoalID != "" && s.goalOf(r, d.Project.GoalID) == nil {
+		d.Project.GoalID = "" // F1: a goal the person may not see reads as none
+	}
 	writeJSON(w, 200, d)
 }
 

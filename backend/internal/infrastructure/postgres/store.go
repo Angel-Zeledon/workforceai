@@ -370,21 +370,22 @@ func (s *Store) ListTasksByRequest(ctx context.Context, orgID, requestID string)
 
 // ---- requests ----
 
-const reqCols = `id, text, status, plan, report_id, cost_usd, created_at`
+const reqCols = `id, text, status, plan, report_id, cost_usd, created_at, COALESCE(goal_id, '')`
 
 func scanRequest(r scanner) (domain.Request, error) {
 	var q domain.Request
 	var status string
 	var plan []byte
-	err := r.Scan(&q.ID, &q.Text, &status, &plan, &q.ReportID, &q.CostUSD, &q.CreatedAt)
+	err := r.Scan(&q.ID, &q.Text, &status, &plan, &q.ReportID, &q.CostUSD, &q.CreatedAt, &q.GoalID)
 	q.Status = domain.RequestStatus(status)
 	unmarshal(plan, &q.Plan)
 	return q, err
 }
 
 func (s *Store) CreateRequest(ctx context.Context, orgID string, r domain.Request) error {
-	return s.exec(ctx, orgID, `INSERT INTO requests (id, org_id, text, status, plan, report_id, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-		r.ID, orgID, r.Text, string(r.Status), jb(r.Plan), r.ReportID, r.CreatedAt)
+	// goal_id (F1, migration 822): NULL without a goal; the composite foreign key refuses another organization's goal
+	return s.exec(ctx, orgID, `INSERT INTO requests (id, org_id, text, status, plan, report_id, created_at, goal_id) VALUES ($1,$2,$3,$4,$5,$6,$7,NULLIF($8,''))`,
+		r.ID, orgID, r.Text, string(r.Status), jb(r.Plan), r.ReportID, r.CreatedAt, r.GoalID)
 }
 
 func (s *Store) GetRequest(ctx context.Context, orgID, id string) (domain.Request, error) {
