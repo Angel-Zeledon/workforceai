@@ -17,6 +17,7 @@ import { ApprovalsInbox } from "../approvals/ApprovalsInbox";
 import { ApprovalsMobile } from "../approvals/ApprovalsMobile";
 import { CustomerDistrict } from "../customers/CustomerDistrict";
 import { ConnectionsView } from "../connections/ConnectionsView";
+import { TeamsGallery } from "../teams/TeamsGallery";
 import { useConnections } from "@/lib/connections/store";
 import { useBootConnections } from "../security/ControlsChrome";
 
@@ -71,6 +72,13 @@ export const PendingPage = ({ view, focusId }: { view: "inbox" | "list"; focusId
 export const ClientsPage = () => (
   <div className="h-full overflow-y-auto bg-bg"><div className="mx-auto w-full max-w-6xl p-4 md:p-6"><CustomerDistrict /></div></div>
 );
+
+function TeamsInner() {
+  const q = useSearchParams();
+  return <TeamsGallery team={q.get("team") || undefined} pack={q.get("pack") || undefined} />;
+}
+/** Equipos: ready-to-hire business teams with a preview (F2). `?team=` opens one, `?pack=` suits an onboarding pack. */
+export const TeamsPage = () => <Suspense fallback={<PageSkeleton />}><TeamsInner /></Suspense>;
 
 /** Conexiones: the same screen that lived in Ajustes, unchanged (it manages its own scrolling). */
 export function ConnectionsPage() {

@@ -24,6 +24,7 @@ export const SECTIONS = [
   // >>> org
   { id: "org", href: "/org", label: "nav.org", icon: "users" },
   // <<< org
+  { id: "teams", href: "/teams", label: "nav.teams", icon: "users" }, // F2: ready-to-hire teams
   { id: "customers", href: "/clients", label: "nav.customers", icon: "briefcase" },
   { id: "drive", href: "/files", label: "nav.drive", icon: "folder" },
   { id: "meetings", href: "/meetings", label: "nav.meetings", icon: "calendar" }, // meetings
@@ -40,7 +41,7 @@ export type SectionId = Section["id"] | "dashboard";
 /** The grouped menu (proposal 5.2): what you do every day, your company, what agents know and use; extras at the bottom. */
 export const NAV_GROUPS: { id: "day" | "company" | "teach" | "bottom"; label: string | null; items: Section["id"][] }[] = [
   { id: "day", label: "nav.group.day", items: ["office", "pending", "chats", "projects"] },
-  { id: "company", label: "nav.group.company", items: ["org", "customers", "drive", "meetings"] },
+  { id: "company", label: "nav.group.company", items: ["org", "teams", "customers", "drive", "meetings"] },
   { id: "teach", label: "nav.group.teach", items: ["skills", "connections"] },
   { id: "bottom", label: null, items: ["shop", "settings"] },
 ];
@@ -68,6 +69,7 @@ export function sectionOf(pathname: string): SectionId {
   if (pathname.startsWith("/chats")) return "chats";
   if (pathname.startsWith("/projects")) return "projects";
   if (pathname.startsWith("/org")) return "org"; // >>> org <<<
+  if (pathname.startsWith("/teams")) return "teams";
   if (pathname.startsWith("/clients")) return "customers";
   if (pathname.startsWith("/meetings")) return "meetings"; // meetings
   if (pathname.startsWith("/files")) return "drive";

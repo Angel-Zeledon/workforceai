@@ -25,7 +25,7 @@ test("the menu is grouped: Tu día, Tu empresa, Enseñar y conectar; Tienda and 
   const g = navGroups({ shopAvailable: true });
   assert.deepEqual(g.map((x) => x.id), ["day", "company", "teach", "bottom"]);
   assert.deepEqual(g[0].items.map((s) => s.id), ["office", "pending", "chats", "projects"]);
-  assert.deepEqual(g[1].items.map((s) => s.id), ["org", "customers", "drive", "meetings"]);
+  assert.deepEqual(g[1].items.map((s) => s.id), ["org", "teams", "customers", "drive", "meetings"]);
   assert.deepEqual(g[2].items.map((s) => s.id), ["skills", "connections"]);
   assert.deepEqual(g[3].items.map((s) => s.id), ["shop", "settings"]);
 });
