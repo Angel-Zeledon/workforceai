@@ -192,6 +192,14 @@ func (s *server) workInitiative(next http.Handler) http.Handler {
 	})(next)
 }
 
+// workTrustProposal: a change of autonomy is decided only by those who see the agent's work (D3).
+func (s *server) workTrustProposal(next http.Handler) http.Handler {
+	return s.guardWork("proposal", "id", func(r *http.Request, ws *workScope, id string) (bool, error) {
+		p, err := s.Trust.Proposal(r.Context(), id)
+		return err == nil && ws.agentOK(p.AgentID), err
+	})(next)
+}
+
 func (s *server) workRitualProposal(next http.Handler) http.Handler {
 	return s.guardWork("proposal", "id", func(r *http.Request, ws *workScope, id string) (bool, error) {
 		p, err := s.Rituals.Proposal(r.Context(), id)

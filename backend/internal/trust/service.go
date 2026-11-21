@@ -405,6 +405,12 @@ func (s *Service) MayDecide(ctx context.Context, agentID string) bool {
 	return why == ""
 }
 
+// Proposal returns one proposal of the organization (domain.ErrNotFound when missing), for the routes that guard it
+// by the agent it belongs to.
+func (s *Service) Proposal(ctx context.Context, id string) (Proposal, error) {
+	return s.cfg.Store.GetProposal(ctx, s.org(ctx), id)
+}
+
 // Pending returns the proposals of every agent waiting for a person, newest first (at most limit, 1..500).
 func (s *Service) Pending(ctx context.Context, limit int) ([]Proposal, error) {
 	return s.cfg.Store.ListProposals(ctx, s.org(ctx), "", StatusPending, min(max(limit, 1), 500))

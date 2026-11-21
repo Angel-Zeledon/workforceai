@@ -26,9 +26,9 @@ func (s *server) mountTrust(r chi.Router) {
 	r.With(read, s.workAgent).Get("/agents/{id}/trust", s.trustAgent)
 	r.With(read, s.workAgent).Get("/agents/{id}/trust/proposals", s.trustProposals)
 	r.With(write, s.workAgent).Post("/agents/{id}/trust/evaluate", s.trustEvaluate)
-	r.With(write, decide).Post("/trust/proposals/{id}/accept", s.trustDecide("accept"))
-	r.With(write, decide).Post("/trust/proposals/{id}/decline", s.trustDecide("decline"))
-	r.With(write, decide).Post("/trust/proposals/{id}/revert", s.trustDecide("revert"))
+	r.With(write, decide, s.workTrustProposal).Post("/trust/proposals/{id}/accept", s.trustDecide("accept"))
+	r.With(write, decide, s.workTrustProposal).Post("/trust/proposals/{id}/decline", s.trustDecide("decline"))
+	r.With(write, decide, s.workTrustProposal).Post("/trust/proposals/{id}/revert", s.trustDecide("revert"))
 }
 
 func (s *server) trustFail(w http.ResponseWriter, err error) {
