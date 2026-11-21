@@ -220,6 +220,9 @@ class PlanRequest(_ProviderPolicyMixin):
     budget_usd: float = 0.0
     locale: Locale = "es"
     tone: Tone = "neutral"
+    # F1 (additive): the company goal the request contributes to, chosen by the backend. UNTRUSTED data written by
+    # people of the organization (same shape as RunTaskRequest.recalled).
+    recalled: list[RecalledMemory] | None = None
 
     _norm = field_validator("locale", mode="before")(normalize_locale)
     _norm_tone = field_validator("tone", mode="before")(normalize_tone)
@@ -500,6 +503,7 @@ class WorkspaceInput(_Base):
 
 
 RunWorkspace.model_rebuild()
+PlanRequest.model_rebuild()
 
 
 class SkillRef(_Base):

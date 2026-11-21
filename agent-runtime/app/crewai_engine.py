@@ -105,6 +105,7 @@ from .security import (
     build_synthesis_prompt,
     build_system_prompt,
     build_task_prompt,
+    plan_goal_lines,
     wrap_untrusted,
 )
 
@@ -696,6 +697,8 @@ class CrewAIEngine(AgentEngine):
             "Si la solicitud exige una decision de alto impacto entre alternativas (elegir proveedor, precio, contratar, "
             "invertir), marca decision=true SOLO en la tarea que toma esa decision (como maximo una); en las demas omitelo."
         )
+        if goal := plan_goal_lines(req):  # F1: the company goal the request serves, as untrusted data
+            desc += "\n" + "\n".join(goal)
         plan, usage = await self._run(
             role="Orquestadora / Asistente Ejecutiva",
             goal="Planificar el trabajo de la empresa asignando tareas a los agentes correctos",
