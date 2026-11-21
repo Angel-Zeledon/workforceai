@@ -74,20 +74,21 @@ type slotKey struct{}
 // free) and must be called before the task continues; it is idempotent. Outside
 // a scheduler, or when the slot is already released, it does nothing.
 func YieldSlot(ctx context.Context) (resume func()) {
+	waited := execWait(ctx) // F6: a task waiting for a person or a pause is not stalled (watchdog_exec.go)
 	h, _ := ctx.Value(slotKey{}).(*slotHandle)
 	if h == nil {
-		return func() {}
+		return waited
 	}
 	h.mu.Lock()
 	if !h.held {
 		h.mu.Unlock()
-		return func() {}
+		return waited
 	}
 	h.held = false
 	h.mu.Unlock()
 	h.events <- event{kind: evYield}
 	var once sync.Once
-	return func() { once.Do(h.reacquire) }
+	return func() { waited(); once.Do(h.reacquire) }
 }
 
 func (h *slotHandle) reacquire() {
