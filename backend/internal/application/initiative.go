@@ -326,6 +326,7 @@ func (s *InitiativeService) Accept(ctx context.Context, id string) (Initiative, 
 		return Initiative{}, err
 	}
 	s.audit(ctx, actor, "initiative.accepted", it.ID, map[string]any{"agent_id": it.AgentID, "signal": it.Signal, "request_id": reqID})
+	s.resolved(ctx, it)
 	return it, nil
 }
 
@@ -337,7 +338,19 @@ func (s *InitiativeService) Dismiss(ctx context.Context, id string) (Initiative,
 		return Initiative{}, err
 	}
 	s.audit(ctx, actor, "initiative.dismissed", it.ID, map[string]any{"agent_id": it.AgentID, "signal": it.Signal})
+	s.resolved(ctx, it)
 	return it, nil
+}
+
+// resolved announces that a person accepted or dismissed a suggestion, so the lists of the others ("Te necesitan",
+// needs-you.md) refresh. It names the agent: the event of a private department's agent reaches its members only. The
+// audit entry is the one above.
+func (s *InitiativeService) resolved(ctx context.Context, it Initiative) {
+	if s.Rec == nil {
+		return
+	}
+	s.Rec.Emit(ctx, Action{Type: domain.EvInitiativeResolved, AgentID: it.AgentID, Entity: "initiative", EntityID: it.ID, SkipAudit: true,
+		Payload: map[string]any{"initiative_id": it.ID, "agent_id": it.AgentID, "status": string(it.Status)}})
 }
 
 func (s *InitiativeService) audit(ctx context.Context, actor, action, entityID string, details map[string]any) {

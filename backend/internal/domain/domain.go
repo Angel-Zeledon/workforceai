@@ -426,6 +426,8 @@ const (
 	EvTaskFailed       = "task.failed"
 	EvTaskBlocked      = "task.blocked"
 	EvInitiativeRaised = "initiative.raised"
+	// EvInitiativeResolved: a person accepted or dismissed a suggestion ("Te necesitan" refreshes; additive).
+	EvInitiativeResolved = "initiative.resolved"
 	// EvAutonomyChanged: an agent's autonomy level changed (a human accepted a promotion or a demotion, or the
 	// trust ladder demoted it automatically); EvTrustProposal: a promotion or demotion was suggested or resolved
 	// (docs/architecture/trust-ladder.md, additive).

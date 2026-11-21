@@ -953,7 +953,7 @@ Los empleados avisan solos ("la tarea X falló, ¿la reviso?") con un presupuest
 | PUT | `/settings/initiative` | `org:manage` | mismo cuerpo; límites 0..1000 (`400` si no), `agent_daily` sobrescribe el tope diario de un agente (0 lo silencia). Auditado (`initiative.settings_changed`) |
 | POST | `/initiatives/scan` | `org:manage` | Evalúa ahora las señales de métricas de la organización. `200` `{raised, results: [{signal, signal_key, agent_id?, raised, reason?: disabled\|duplicate\|daily_limit\|monthly_limit\|agent_limit\|controls\|no_agent\|error, initiative_id?}]}`. Auditado (`initiative.scanned`). Ruta presente solo si el servidor tiene el escáner |
 
-Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}`. Auditoría: `initiative.raised`, `initiative.accepted`, `initiative.dismissed`, `initiative.settings_changed`.
+Eventos: `initiative.raised` `{initiative_id, agent_id, signal, title}` y `initiative.resolved` `{initiative_id, agent_id, status}` (aditivo: aceptada o descartada; "Te necesitan" se recarga). Auditoría: `initiative.raised`, `initiative.accepted`, `initiative.dismissed`, `initiative.settings_changed`.
 
 **Señales de métricas (aditivo, migración `800_initiative_signals`).** Detección determinista (sin modelo) de `metric_change` (margen/ventas/caja en hojas y tablas), `spend_pace` (ritmo del gasto del mes frente a lo disponible bajo el tope), `approval_aging` (aprobaciones que esperan) y `quality_drop` (puntaje B11 frente a la ventana anterior); detalle en `initiative.md`. Campos nuevos:
 
