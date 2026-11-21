@@ -157,7 +157,7 @@ func (w *Watchdog) Scan(ctx context.Context) ([]StallScanResult, error) {
 		}
 		out = append(out, r)
 	}
-	w.closeResolved(ctx, open, "system", "no_longer_stalled", "")
+	w.closeResolved(ctx, func(task string) bool { return !open[task] }, "system", "no_longer_stalled", "")
 	return out, nil
 }
 
@@ -214,9 +214,9 @@ func (w *Watchdog) suggestion(ctx context.Context, st StalledTask) RaiseInput {
 			"kind": st.Kind, "project": strconv.FormatBool(st.Project)}}
 }
 
-// closeResolved closes the pending stalled-task suggestions whose task is not in open (it moved again, or a person
+// closeResolved closes the pending stalled-task suggestions about the tasks done says (it moved again, or a person
 // recovered it): accepted by the person who recovered it, dismissed by the system when it moved on its own.
-func (w *Watchdog) closeResolved(ctx context.Context, open map[string]bool, by, reason, requestID string) {
+func (w *Watchdog) closeResolved(ctx context.Context, done func(taskID string) bool, by, reason, requestID string) {
 	if w.Initiative == nil || w.Initiative.Store == nil {
 		return
 	}
@@ -230,7 +230,7 @@ func (w *Watchdog) closeResolved(ctx context.Context, open map[string]bool, by, 
 		to = InitiativeAccepted
 	}
 	for _, it := range its {
-		if it.Signal != SignalStalledTask || it.Params["task_id"] == "" || open[it.Params["task_id"]] {
+		if it.Signal != SignalStalledTask || it.Params["task_id"] == "" || !done(it.Params["task_id"]) {
 			continue
 		}
 		if _, err := w.Initiative.Store.ResolveInitiative(ctx, org, it.ID, InitiativePending, to, by, requestID, w.now()); err == nil {
@@ -260,7 +260,7 @@ func (w *Watchdog) Recover(ctx context.Context, taskID string, in StallRecoverIn
 	if err != nil {
 		return res, err
 	}
-	w.closeResolved(ctx, map[string]bool{}, ActorFrom(ctx, "user"), "recovered:"+in.Action, res.Task.RequestID)
+	w.closeResolved(ctx, func(task string) bool { return task == taskID }, ActorFrom(ctx, "user"), "recovered:"+in.Action, res.Task.RequestID)
 	return res, nil
 }
 

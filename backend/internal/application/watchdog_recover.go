@@ -296,10 +296,16 @@ func (o *Orchestrator) recoverLive(ctx context.Context, t domain.Task, h *taskEx
 	}
 	res := StallRecoverResult{Status: "requested"}
 	if cmd.action == StallCancel {
-		for _, c := range cascade { // the dependents stop too: live ones get the same order, the others when reached
+		// The dependents stop too: the live ones (running, waiting for an approval or an answer) get the same order; a
+		// pending one is skipped by the scheduler once the task it depends on is blocked; anything else is blocked
+		// when the scheduler reaches it.
+		for _, c := range cascade {
 			res.Cancelled = append(res.Cancelled, c.ID)
 			ch := o.watch.handle(org, c.ID)
-			if ch == nil || !o.watch.order(org, c.ID, ch, &stallCmd{action: StallCancel, actor: cmd.actor, done: make(chan string, 1)}) {
+			if ch != nil && o.watch.order(org, c.ID, ch, &stallCmd{action: StallCancel, actor: cmd.actor, done: make(chan string, 1)}) {
+				continue
+			}
+			if c.Status != domain.TaskPending {
 				o.watch.markCancelled(org, c.ID, cmd.actor)
 			}
 		}

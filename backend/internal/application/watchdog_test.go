@@ -139,6 +139,23 @@ func TestWatchdogScanAnnouncesAndSuggestsOncePerEpisode(t *testing.T) {
 	if n := h.pub.count(application.EvTaskStalled); n != 1 {
 		t.Fatalf("task.stalled events = %d", n)
 	}
+	// an unrelated pending suggestion is not touched when the stalled task is recovered; the stall one is closed
+	other, err := is.Raise(context.Background(), application.RaiseInput{AgentID: "sales", Signal: application.SignalStalledTask, SignalKey: "other:1",
+		Title: "otra", Prompt: "otra", Params: map[string]string{"task_id": "another-task"}})
+	if err != nil || !other.Raised {
+		t.Fatalf("other = %+v %v", other, err)
+	}
+	if _, err := w.Recover(context.Background(), its[0].Params["task_id"], application.StallRecoverInput{Action: application.StallRetry}); err != nil {
+		t.Fatal(err)
+	}
+	left, _ := is.List(context.Background(), application.InitiativePending, 0)
+	if len(left) != 1 || left[0].ID != other.Initiative.ID {
+		t.Fatalf("pending after the recovery = %+v", left)
+	}
+	closed, _ := is.Store.GetInitiative(context.Background(), domain.DemoOrgID, its[0].ID)
+	if closed.Status != application.InitiativeAccepted || closed.ResolvedBy != "user" {
+		t.Fatalf("the stall suggestion = %+v", closed)
+	}
 }
 
 func TestWatchdogSuggestionRespectsTheBudgetButStillAnnounces(t *testing.T) {
@@ -205,6 +222,7 @@ func TestStalledRetryRerunsTheSameExecutionOnceAndIsIdempotent(t *testing.T) {
 	if n := h.auditCount("task.stall_retried"); n != 1 {
 		t.Fatalf("audits = %d", n)
 	}
+	// no other suggestion was touched; a stall suggestion of this task is closed by the recovery (see the scan test)
 	if _, err := w.Recover(context.Background(), task.ID, application.StallRecoverInput{Action: application.StallRetry}); !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("retrying a finished task must conflict: %v", err)
 	}
