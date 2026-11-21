@@ -1321,3 +1321,14 @@ Regla: `offices.Model.CanSeeWork`. Lo que es de un departamento privado solo lo 
 | Memoria | Los documentos tienen `scope: org\|agent\|office` y `office_id`. Sin cambio de rutas; un agente recuerda `org`, lo suyo y lo de su departamento. |
 | Aprobaciones | Cada aprobación (`GET /approvals`, bandeja, `/away-summary`, móvil) trae `can_decide` para esa persona. Decide el responsable del departamento sin `approvals:decide`; quien hizo el pedido la ve pero no decide. `POST /approvals/{id}/remember` con alcance de cualquier agente requiere `approvals:decide`. En el outbox, aprobar o rechazar decide antes de enviar, editar un correo con un voto ya dado devuelve `409 partially_approved` y la lista se filtra por departamento. Cancelar un proyecto retira sus aprobaciones pendientes. Las aprobaciones de un departamento privado no se envían a correos, Slack ni Teams de la empresa. |
 
+
+## 46. Te necesitan (F5)
+
+Una sola lista con lo que espera a la persona que mira y que ella puede resolver. Solo lectura: cada acción sigue en la ruta de su pantalla. Diseño y reglas: [needs-you.md](needs-you.md). Código: `backend/internal/needsyou`, `backend/internal/api/needs_you.go`. Sin migración.
+
+| Método | Ruta | Permiso | Notas |
+|---|---|---|---|
+| GET | `/needs-you?limit=` | `activity:read` (cada fuente exige el suyo) | `{items: Item[], total, counts: {approval?, question?, suggestion?, trust?}, truncated?, unavailable?}`. `Item = {kind, id, title, detail?, agent_id?, agent_name?, office_id?, office_name?, created_at, risk?, double?, urgency (high\|normal\|low), target, direct, action?, project_name?, signal?, params?, options?, proposal_kind?, from_level?, to_level?}`. Orden: urgencia y luego la más antigua. `limit` 1..500 (defecto 200) corta `items`, no los conteos. `400` si no es un número positivo |
+| GET | `/needs-you/count` | igual | Lo mismo sin `items` (contador del menú) |
+
+Un principal que no es persona (agente, token, sistema) recibe la lista vacía. Una fuente que no se pudo leer se omite y se nombra en `unavailable`.
