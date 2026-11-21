@@ -56,6 +56,8 @@ type Orchestrator struct {
 	memSrc   MemorySource     // optional: long-term memory (memory_flow.go)
 	// customers (optional) scopes requests to one customer of the organization (customer.go, B12).
 	customers CustomerScope
+	// goals (optional) validates the company goal a request points to and hands it to the agents (goal.go, F1).
+	goals GoalSource
 
 	initiative InitiativeRaiser  // optional: failed tasks become suggestions (initiative.go)
 	rehearsal  *RehearsalService // optional: per-agent rehearsal switch and the "would have done" log (rehearsal.go)
@@ -169,8 +171,12 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 			return "", err
 		}
 	}
+	goalID, err := o.checkGoal(ctx) // F1: a goal of another organization, hidden or not active refuses the request
+	if err != nil {
+		return "", err
+	}
 	now := time.Now().UTC()
-	req := domain.Request{ID: newID(), Text: text, Status: domain.RequestPlanning, CreatedAt: now}
+	req := domain.Request{ID: newID(), Text: text, Status: domain.RequestPlanning, CreatedAt: now, GoalID: goalID}
 	// B12: the customer scope is stored BEFORE the request exists, so no task can ever run unscoped.
 	if err := o.linkCustomer(ctx, req.ID); err != nil {
 		return "", err
@@ -245,8 +251,12 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 				pa.Skills = skills[a.ID]
 				agents = append(agents, pa)
 			}
-			plan, err = o.rt.Plan(c, PlanRequest{RequestText: rs.req.Text, Agents: agents, BudgetUSD: o.cfg.BudgetUSD,
-				Locale: rs.style.Locale, Tone: rs.style.Tone})
+			preq := PlanRequest{RequestText: rs.req.Text, Agents: agents, BudgetUSD: o.cfg.BudgetUSD,
+				Locale: rs.style.Locale, Tone: rs.style.Tone}
+			if note, ok := o.goalNote(c, rs, ""); ok { // F1: what the work is for, as untrusted data
+				preq.Recalled = []RecalledMemory{note}
+			}
+			plan, err = o.rt.Plan(c, preq)
 			return err
 		})
 	}
@@ -735,6 +745,9 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 		rc.Memory = append(rc.Memory, MemoryEntry{Scope: m.Scope, Key: m.Key, Value: m.Value})
 	}
 	recalled := o.recallFor(ctx, rs, t)
+	if note, ok := o.goalNote(ctx, rs, t.AgentID); ok { // F1: the goal first, so the memory budget never drops it
+		recalled = append([]RecalledMemory{note}, recalled...)
+	}
 	if note, ok := rs.debateNoteFor(t.ID); ok { // B5: the team debate, as untrusted recalled data
 		recalled = append(recalled, note)
 	}

@@ -166,6 +166,9 @@ type PlanRequest struct {
 	// when the organization has not configured them (runtime defaults apply).
 	Locale string `json:"locale,omitempty"`
 	Tone   string `json:"tone,omitempty"`
+	// Recalled (F1, additive, omitted when empty): the company goal the request contributes to, as untrusted data
+	// (the same shape as RunTaskRequest.Recalled). Old runtimes ignore it.
+	Recalled []RecalledMemory `json:"recalled,omitempty"`
 }
 
 type PlannedTask struct {
