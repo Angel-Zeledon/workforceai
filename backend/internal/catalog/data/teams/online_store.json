@@ -1,0 +1,52 @@
+{
+  "schema": "aiw.team/1",
+  "key": "online_store",
+  "version": 1,
+  "packs": ["commerce"],
+  "name_key": "team.name",
+  "for_key": "team.for",
+  "solves_key": "team.solves",
+  "department_key": "team.department",
+  "agents": [
+    { "role": "operations", "does_key": "agent.operations" },
+    { "role": "sales", "does_key": "agent.sales" },
+    { "role": "accounting", "does_key": "agent.accounting" },
+    { "role": "analyst", "does_key": "agent.analyst" }
+  ],
+  "week": [
+    { "template": "daily_briefing", "day": 1, "why_key": "week.daily_briefing" },
+    { "template": "supplier_selection", "day": 2, "why_key": "week.supplier_selection" },
+    { "template": "customer_complaint", "day": 3, "why_key": "week.customer_complaint" },
+    { "template": "quarterly_review", "day": 5, "why_key": "week.quarterly_review" }
+  ],
+  "i18n": {
+    "es": {
+      "team.name": "Tienda online",
+      "team.for": "Tiendas que venden por internet y viven entre pedidos, inventario y reclamos.",
+      "team.solves": "Mantener el inventario al día, atender los reclamos y saber qué se vende y qué no.",
+      "team.department": "Tienda online",
+      "agent.operations": "Vigila el inventario, los proveedores y los envíos con retraso.",
+      "agent.sales": "Responde consultas de compradores y da seguimiento a clientes que dejaron de comprar.",
+      "agent.accounting": "Concilia los cobros de la tienda y lleva las cuentas con proveedores.",
+      "agent.analyst": "Revisa qué productos se mueven, cuáles se estancan y cómo van las ventas.",
+      "week.daily_briefing": "Cada mañana, ventas de ayer, pedidos pendientes y alertas de inventario.",
+      "week.supplier_selection": "Compara proveedores de los productos que más se agotan.",
+      "week.customer_complaint": "Ordena la atención de reclamos y devoluciones con respuestas claras.",
+      "week.quarterly_review": "Cierra la semana con una mirada a lo que ha dejado el trimestre hasta hoy."
+    },
+    "en": {
+      "team.name": "Online store",
+      "team.for": "Stores that sell online and live between orders, inventory and complaints.",
+      "team.solves": "Keep inventory up to date, handle complaints and know what sells and what does not.",
+      "team.department": "Online store",
+      "agent.operations": "Watches inventory, suppliers and delayed shipments.",
+      "agent.sales": "Answers buyer questions and follows up with customers who stopped buying.",
+      "agent.accounting": "Reconciles the store's payments and keeps the accounts with suppliers.",
+      "agent.analyst": "Reviews which products move, which stall and how sales are going.",
+      "week.daily_briefing": "Every morning, yesterday's sales, pending orders and inventory alerts.",
+      "week.supplier_selection": "Compares suppliers for the products that run out most.",
+      "week.customer_complaint": "Organizes complaint and return handling with clear answers.",
+      "week.quarterly_review": "Closes the week with a look at what the quarter has left so far."
+    }
+  }
+}

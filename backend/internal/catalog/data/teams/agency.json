@@ -1,0 +1,52 @@
+{
+  "schema": "aiw.team/1",
+  "key": "agency",
+  "version": 1,
+  "packs": ["agency"],
+  "name_key": "team.name",
+  "for_key": "team.for",
+  "solves_key": "team.solves",
+  "department_key": "team.department",
+  "agents": [
+    { "role": "project_manager", "does_key": "agent.project_manager" },
+    { "role": "sales", "does_key": "agent.sales" },
+    { "role": "accounting", "does_key": "agent.accounting" },
+    { "role": "assistant", "does_key": "agent.assistant" }
+  ],
+  "week": [
+    { "template": "new_client", "day": 1, "why_key": "week.new_client" },
+    { "template": "proposal", "day": 2, "why_key": "week.proposal" },
+    { "template": "marketing_campaign", "day": 3, "why_key": "week.marketing_campaign" },
+    { "template": "collections", "day": 5, "why_key": "week.collections" }
+  ],
+  "i18n": {
+    "es": {
+      "team.name": "Agencia de servicios",
+      "team.for": "Agencias y estudios que venden proyectos y retainers a clientes.",
+      "team.solves": "Llevar cada cliente del brief a la entrega y a la factura sin perder fechas.",
+      "team.department": "Proyectos",
+      "agent.project_manager": "Convierte cada brief en un plan con entregables, fechas y responsables.",
+      "agent.sales": "Prepara propuestas y renovaciones de retainer, y mantiene viva la relación con el cliente.",
+      "agent.accounting": "Factura al inicio del mes y avisa cuando un cliente se atrasa.",
+      "agent.assistant": "Agenda reuniones, toma minutas y recuerda lo que se acordó con cada cliente.",
+      "week.new_client": "Da de alta al cliente con su brief y sus contactos.",
+      "week.proposal": "Prepara la propuesta con alcance y rondas de revisión.",
+      "week.marketing_campaign": "Planea una campaña o entrega tipo con fechas y revisión interna.",
+      "week.collections": "Revisa lo que hay por facturar y lo que está vencido."
+    },
+    "en": {
+      "team.name": "Service agency",
+      "team.for": "Agencies and studios that sell projects and retainers to clients.",
+      "team.solves": "Take each client from brief to delivery to invoice without missing dates.",
+      "team.department": "Projects",
+      "agent.project_manager": "Turns each brief into a plan with deliverables, dates and owners.",
+      "agent.sales": "Prepares proposals and retainer renewals, and keeps the client relationship alive.",
+      "agent.accounting": "Invoices at the start of the month and warns when a client falls behind.",
+      "agent.assistant": "Schedules meetings, takes minutes and remembers what was agreed with each client.",
+      "week.new_client": "Registers the client with their brief and contacts.",
+      "week.proposal": "Prepares the proposal with scope and review rounds.",
+      "week.marketing_campaign": "Plans a campaign or a typical delivery with dates and internal review.",
+      "week.collections": "Reviews what is left to invoice and what is overdue."
+    }
+  }
+}

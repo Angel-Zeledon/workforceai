@@ -1,0 +1,46 @@
+{
+  "schema": "aiw.team/1",
+  "key": "collections",
+  "version": 1,
+  "packs": ["commerce", "general"],
+  "name_key": "team.name",
+  "for_key": "team.for",
+  "solves_key": "team.solves",
+  "department_key": "team.department",
+  "agents": [
+    { "role": "accounting", "does_key": "agent.accounting" },
+    { "role": "sales", "does_key": "agent.sales" },
+    { "role": "assistant", "does_key": "agent.assistant" }
+  ],
+  "week": [
+    { "template": "collections", "day": 1, "why_key": "week.collections" },
+    { "template": "customer_complaint", "day": 3, "why_key": "week.customer_complaint" },
+    { "template": "daily_briefing", "day": 5, "why_key": "week.daily_briefing" }
+  ],
+  "i18n": {
+    "es": {
+      "team.name": "Cobranza",
+      "team.for": "Negocios con clientes que pagan tarde y facturas vencidas que nadie persigue.",
+      "team.solves": "Saber quién te debe, recordárselo a tiempo y cuidar la relación mientras se cobra.",
+      "team.department": "Cobranza",
+      "agent.accounting": "Lleva la lista de facturas vencidas y prepara los recordatorios de pago.",
+      "agent.sales": "Habla con los clientes que deben para acordar fechas sin enfriar la relación.",
+      "agent.assistant": "Reúne cada mañana lo que vence hoy y lo que quedó sin respuesta.",
+      "week.collections": "Revisa las cuentas vencidas y prepara los primeros recordatorios.",
+      "week.customer_complaint": "Atiende a quien dice que no debe o que la factura está mal, antes de insistir.",
+      "week.daily_briefing": "Deja un resumen diario de lo cobrado y lo que sigue pendiente."
+    },
+    "en": {
+      "team.name": "Collections",
+      "team.for": "Businesses whose customers pay late and whose overdue invoices nobody chases.",
+      "team.solves": "Know who owes you, remind them in time and look after the relationship while you collect.",
+      "team.department": "Collections",
+      "agent.accounting": "Keeps the list of overdue invoices and prepares the payment reminders.",
+      "agent.sales": "Talks to customers who owe to agree on dates without cooling the relationship.",
+      "agent.assistant": "Gathers every morning what is due today and what went unanswered.",
+      "week.collections": "Reviews overdue accounts and prepares the first reminders.",
+      "week.customer_complaint": "Handles whoever says they do not owe or that the invoice is wrong, before pushing again.",
+      "week.daily_briefing": "Leaves a daily summary of what was collected and what is still open."
+    }
+  }
+}
