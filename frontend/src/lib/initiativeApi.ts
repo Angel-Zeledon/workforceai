@@ -22,6 +22,8 @@ export interface SignalSettings {
   spend_pace: { enabled: boolean; pace_pct: number; min_days: number };
   approval_aging: { enabled: boolean; min_age_hours: number; min_count: number };
   quality_drop: { enabled: boolean; drop_points: number };
+  /** Stalled-work watchdog: minutes without progress before a task (or a project task) counts as stalled. */
+  stalled_work: { enabled: boolean; task_minutes: number; project_minutes: number };
 }
 
 export interface InitiativeSettings {

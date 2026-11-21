@@ -20,6 +20,8 @@ import { Icon, type IconName } from "./icons";
 import { ProfileSheet } from "./agent/ProfileSheet";
 import { ThoughtAudit } from "./agent/ThoughtAudit";
 import { TaskIntervention } from "./agent/TaskIntervention";
+import { StallActions } from "./watchdog/StallActions";
+import { mayBeStalled } from "@/lib/watchdogLogic";
 import { AgentPauseToggle } from "./agent/AgentPauseToggle";
 import { RehearsalToggle } from "./rehearsal/RehearsalToggle";
 import { DeskFiles } from "./drive/DeskFiles";
@@ -248,6 +250,7 @@ export function AgentPanel({ id }: { id: string }) {
                 )}
                 <SaveAsSkillButton task={task} />
                 <TaskIntervention taskId={task.id} status={task.status} />
+                {mayBeStalled(task.status) && <StallActions taskId={task.id} />}
               </Card>
             )) : <Empty>{t("panel.noTasks")}</Empty>)}
             {part("reports", t("panel.tab.reports"), openReport ? (

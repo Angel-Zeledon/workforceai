@@ -11,6 +11,7 @@ import { QuestionCard } from "../approvals/QuestionCard";
 import { useStore } from "@/lib/store";
 import { AgentChip, StatePill, fmtMoney, useNodeTitle } from "./shared";
 import { DetailPanel, useDetailUrl } from "../ui/DetailPanel";
+import { StallActions } from "../watchdog/StallActions";
 
 /** The task of a project in the single side panel (components/ui/DetailPanel.tsx): facts, dependencies in/out and a
  *  deterministic "why is it blocked?". The URL says which task is open (?tarea=<id>), so Back closes it. */
@@ -85,6 +86,7 @@ export function NodeDrawer() {
         {n.audit && <AuditDetail audit={n.audit} testId="node-audit" />}
         {n.superseded && <div data-testid="node-superseded" className="rounded-xl bg-panel2 px-2 py-1 text-[11px] text-mute">{t(`pv.changes.superseded.${n.superseded}`)}</div>}
         {n.skipped && <div data-testid="node-skipped" className="rounded-xl bg-amber-500/10 px-2 py-1 text-[11px] text-amber-800">{t("pv.recover.skipped", { reason: n.skip_reason ?? "" })}</div>}
+        {n.task_id && (n.state === "running" || n.state === "ready") && <StallActions taskId={n.task_id} />}
         {canRecover && (n.state === "failed" || n.state === "blocked") && (
           <div data-testid="node-recovery" className="space-y-2 rounded-xl border border-line bg-panel2 p-2">
             <div className="text-[10px] font-semibold uppercase tracking-wide text-mute">{t("pv.recover.title")}</div>
