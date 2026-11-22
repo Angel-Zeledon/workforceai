@@ -16,6 +16,19 @@ function mockEntries(agentId: string): AccessEntry[] {
   ];
 }
 
+/** The demo's default levels (the backend's AgentFS defaults): every agent reads /Shared, each edits its own desk, the
+ * accountant edits Contabilidad (its office). Nobody else sees a department. */
+async function mockFolder(path: string): Promise<FolderAgent[]> {
+  const { mockBackend } = await import("./mock/engine");
+  const p = path.toLowerCase();
+  const inside = (root: string) => p === root || p.startsWith(root + "/");
+  return mockBackend.agentList().map((a): FolderAgent => {
+    const own = inside(`/agents/${a.id.toLowerCase()}`) || (a.id === "accounting" && inside("/offices/contabilidad"));
+    const level = own ? "edit" : inside("/shared") ? "read" : "none";
+    return { agent_id: a.id, name: a.name, level, source: "default", can_manage: true };
+  });
+}
+
 export const folderAccess = {
   async agent(agentId: string): Promise<{ entries: AccessEntry[]; can_manage: boolean }> {
     if (MOCK) return { entries: mockEntries(agentId), can_manage: true };
@@ -31,7 +44,7 @@ export const folderAccess = {
     return call<{ entries: AccessEntry[] }>("PUT", `/agents/${encodeURIComponent(agentId)}/folder-access`, { path, level });
   },
   async folder(path: string): Promise<FolderAgent[]> {
-    if (MOCK) return [];
+    if (MOCK) return mockFolder(path);
     const r = await call<{ agents: FolderAgent[] }>("GET", `/drive/folder-access?path=${encodeURIComponent(path)}`);
     return Array.isArray(r?.agents) ? r.agents : [];
   },
