@@ -14,6 +14,7 @@ import { docSearch, type Passage, type PassageResult } from "@/lib/docsearch";
 import { officesApi } from "@/lib/officesApi";
 import { privateOfficeFolders, rootLabel } from "@/lib/officeFoldersLogic";
 import { IndexStatusChip, PassageResults } from "./PassageSearch";
+import { errorText } from "@/lib/errors";
 
 
 const fmtSize = (n: number) => (n < 1024 ? `${n} B` : n < 1 << 20 ? `${(n / 1024).toFixed(1)} KB` : `${(n / (1 << 20)).toFixed(1)} MB`);
@@ -50,7 +51,7 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
       setError("");
       setListing(await drive.list(path));
     } catch (e) {
-      setError(e instanceof DriveError ? t("drive.error", { code: e.code }) : t("drive.unavailable"));
+      setError(errorText(e, { fallbackKey: "drive.unavailable" }));
     }
   }, [path, t]);
   useEffect(() => { load(); }, [load, touched]);
@@ -78,13 +79,13 @@ export function DriveView({ initialPath = "/" }: { initialPath?: string }) {
       await load();
       if (list.length > failed.length) toast(t("toast.uploaded"));
     } catch (e) {
-      setError(e instanceof DriveError ? (e.code === "plan_limit" ? t("drive.planLimit") : t("drive.error", { code: e.code })) : String(e));
+      setError(e instanceof DriveError && e.code === "plan_limit" ? t("drive.planLimit") : errorText(e));
     } finally {
       setBusy(false); setProgress(null);
     }
     const first = failed[0];
     if (tooBig.length) setError(`${tooBig.map((f) => f.name).join(", ")}: ${t("att.err.file_too_large", { mb: Math.round(maxBytes / (1 << 20)) })}`);
-    else if (first) setError(`${failed.map((f) => f.name).join(", ")}: ${first.code === "plan_limit" ? t("drive.planLimit") : t("drive.error", { code: first.code ?? String(first.status) })}`);
+    else if (first) setError(`${failed.map((f) => f.name).join(", ")}: ${first.code === "plan_limit" ? t("drive.planLimit") : errorText({ status: first.status, code: first.code })}`);
   };
   const search = async () => {
     if (!query.trim()) { setHits(null); setPassages(null); return; }

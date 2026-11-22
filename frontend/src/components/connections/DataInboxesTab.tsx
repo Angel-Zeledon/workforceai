@@ -14,7 +14,9 @@ import {
   DEFAULT_MAX_MB, INBOX_KINDS, curlExamples, driveHref, fmtBytes, pushUrlOf, validateInbox,
   type CreatedDataInbox, type DataInbox, type InboxKind, type InboxPush,
 } from "@/lib/dataInboxLogic";
-import { fmtDateTime, trOr, useT } from "@/lib/i18n";
+import { fmtDateTime, tr, useT } from "@/lib/i18n";
+import { hasKey } from "@/lib/i18n-core";
+import { errorText } from "@/lib/errors";
 import { Btn, Empty, Loading } from "../ui";
 import { ErrorLine, Field, Modal, inputCls } from "./shared";
 
@@ -23,7 +25,8 @@ const urlOf = (ib: DataInbox) => pushUrlOf(ib, API_URL, origin());
 
 function errMsg(e: unknown): string {
   const code = e instanceof InboxApiError ? e.code : "request_failed";
-  return trOr(`dataInbox.err.${code}`, trOr("dataInbox.err.request_failed", "Error"));
+  const key = `dataInbox.err.${code}`;
+  return code !== "request_failed" && hasKey(key) ? tr(key) : errorText(e);
 }
 
 function CopyField({ label, value, testId, secret }: { label: string; value: string; testId: string; secret?: boolean }) {

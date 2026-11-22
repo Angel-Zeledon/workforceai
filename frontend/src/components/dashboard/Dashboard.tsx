@@ -428,7 +428,7 @@ function Costs() {
       <Card title={tt("dash.costs.errorsTitle", { count: errors.length + failed.length })}>
         {errors.length + failed.length === 0 ? <Empty>{tt("dash.costs.noErrors")}</Empty> : (
           <ul className="space-y-2 text-[12px]">
-            {errors.map((e) => (<li key={e.id} className="rounded-md border border-red-500/30 bg-red-500/5 p-2.5"><div className="flex justify-between text-[10px] text-mute"><span>{e.agent_id ? name(e.agent_id) : tt("common.system")}</span><span className="font-mono">{fmtTime(e.ts)}</span></div><div className="text-red-700">{e.message}</div></li>))}
+            {errors.map((ev) => (<li key={ev.id} className="rounded-md border border-red-500/30 bg-red-500/5 p-2.5"><div className="flex justify-between text-[10px] text-mute"><span>{ev.agent_id ? name(ev.agent_id) : tt("common.system")}</span><span className="font-mono">{fmtTime(ev.ts)}</span></div><div className="text-red-700">{ev.message}</div></li>))}
             {failed.map((t) => (<li key={t.id} className="rounded-md border border-line bg-panel2 p-2.5"><div className="flex justify-between"><span className="text-ink">{t.title}</span><TaskBadge status={t.status} /></div><div className="text-[10px] text-mute">{name(t.agent_id)}</div></li>))}
           </ul>
         )}

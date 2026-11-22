@@ -7,6 +7,7 @@ import { useProjects } from "@/lib/projects/store";
 import type { PlanChange } from "@/lib/projects/types";
 import { Btn, Card, Empty, RiskBadge, useAgentName } from "../ui";
 import { fmtMoney } from "./shared";
+import { errorText } from "@/lib/errors";
 
 const STATUS_STYLE: Record<PlanChange["status"], string> = {
   pending: "bg-amber-500/15 text-amber-800", approved: "bg-sky-500/15 text-sky-800", applied: "bg-emerald-500/15 text-emerald-800", rejected: "bg-red-500/10 text-red-700",
@@ -31,7 +32,7 @@ export function PlanChangesPanel() {
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { loadChanges(); }, [loadChanges, detail.structure_version]);
   const nodeTitle = (id?: string) => detail.nodes.find((n) => n.id === id)?.title ?? id ?? "";
-  const run = async (fn: () => Promise<void>) => { setBusy(true); setErr(null); try { await fn(); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); } };
+  const run = async (fn: () => Promise<void>) => { setBusy(true); setErr(null); try { await fn(); } catch (e) { setErr(errorText(e)); } finally { setBusy(false); } };
   const sorted = [...changes].sort((a, b) => (a.status === "pending" ? 0 : 1) - (b.status === "pending" ? 0 : 1) || b.created_at.localeCompare(a.created_at));
   const chosen = agent || agentOrder[0] || "";
 
@@ -63,7 +64,7 @@ export function PlanChangesPanel() {
                   <li key={i}>{t(`pv.changes.op.${op.op}`)}{op.node_id ? `: ${nodeTitle(op.node_id)}` : ""}{op.tasks?.length ? ` → ${op.tasks.map((x) => x.title).join("; ")}` : ""}</li>
                 ))}
               </ul>
-              {c.error && <div className="text-[11px] text-red-700">{t("pv.changes.error", { error: c.error })}</div>}
+              {c.error && <div className="text-[11px] text-red-700">{errorText({ code: c.error })}</div>}
               {c.status === "pending" && (
                 canDecide ? (
                   <div className="flex items-center gap-2">
