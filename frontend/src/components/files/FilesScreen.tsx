@@ -671,7 +671,7 @@ function Screen({ dept, offices, mine, others }: { dept?: OfficeView; offices: O
               <IndexStatusChip path={path} refresh={touched} />
             </div>
           )}
-          {!home && (
+          {/* search (by meaning or by name, inside this place; everywhere at the home) and Para revisar */}
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <form role="search" className="relative min-w-0 flex-1 basis-[200px] sm:max-w-sm" onSubmit={(e) => { e.preventDefault(); void search(); }}>
                 <Icon name="search" size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-mute" />
@@ -692,7 +692,6 @@ function Screen({ dept, offices, mine, others }: { dept?: OfficeView; offices: O
                 </button>
               ))}
             </div>
-          )}
           {/* phone: the sections fold under one button */}
           <div className="mt-2 md:hidden">
             <button type="button" data-testid="dept-tree-toggle" aria-expanded={navOpen} onClick={() => setNavOpen(!navOpen)}
@@ -727,9 +726,7 @@ function Screen({ dept, offices, mine, others }: { dept?: OfficeView; offices: O
             </div>
           )}
           {osDrag && <div className="mb-3 rounded-[10px] border-2 border-dashed border-accent px-4 py-6 text-center text-[13px] text-accent">{t("files.dropHere", { place: here })}</div>}
-          {home ? (
-            <HomeSections mine={mine} others={others} desks={desks} onOpen={openFolder} />
-          ) : passages ? (
+          {passages ? (
             <PassageResults result={passages} onOpen={(p) => void openPassage(p)} onClose={() => setPassages(null)} />
           ) : hits ? (
             <div data-testid="dept-search-results" className="space-y-2">
@@ -747,6 +744,8 @@ function Screen({ dept, offices, mine, others }: { dept?: OfficeView; offices: O
                 </button>
               ))}
             </div>
+          ) : home ? (
+            <HomeSections mine={mine} others={others} desks={desks} onOpen={openFolder} />
           ) : trash ? (
             <div data-testid="drive-trash-list" className="space-y-2">
               <div className="flex items-center justify-between gap-2">
@@ -827,7 +826,12 @@ function Screen({ dept, offices, mine, others }: { dept?: OfficeView; offices: O
         </div>
       )}
 
-      {whoSees && !selected && showSeers && <FolderAgentsPanel path={path} label={trail.map((c) => c.label).join(" › ")} onClose={() => setWhoSees(false)} />}
+      {/* "Qué agentes la ven": a column on a desktop, the whole screen on a phone (never a sideways scroll) */}
+      {whoSees && !selected && showSeers && (
+        <div className="flex max-md:fixed max-md:inset-0 max-md:z-50 max-md:[&>aside]:w-full">
+          <FolderAgentsPanel path={path} label={trail.map((c) => c.label).join(" › ")} onClose={() => setWhoSees(false)} />
+        </div>
+      )}
 
       {selected && phone && <div aria-hidden className="fixed inset-0 z-40 bg-ink/30" onClick={() => setSelected(null)} />}
       {selected && (
