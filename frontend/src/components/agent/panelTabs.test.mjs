@@ -61,3 +61,9 @@ test("every inner section belongs to exactly one tab", () => {
     seen.set(s, tab);
   }
 });
+
+test("the position (puestos) lives in Perfil, right after the job, also by its Spanish name", () => {
+  assert.deepEqual(resolvePanelTarget("position"), { tab: "profile", section: "position", unfold: null });
+  assert.equal(resolvePanelTarget("Puesto").section, "position");
+  assert.equal(TAB_SECTIONS.profile.indexOf("position"), TAB_SECTIONS.profile.indexOf("job") + 1);
+});
