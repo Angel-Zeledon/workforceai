@@ -82,7 +82,13 @@ func (s *server) positionTemplates(w http.ResponseWriter, r *http.Request) {
 		s.positionFail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"templates": list(ts)})
+	// the proposal carries its superior too, so the screen creates it as it comes ({name, ...proposal, template})
+	out := make([]map[string]any, 0, len(ts))
+	for _, t := range ts {
+		out = append(out, map[string]any{"key": t.Key, "reports_to": t.ReportsTo,
+			"proposal": map[string]any{"reports_to": t.ReportsTo, "skills": list(t.Proposal.Skills), "library": list(t.Proposal.Library)}})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"templates": out})
 }
 
 func (s *server) createPosition(w http.ResponseWriter, r *http.Request) {

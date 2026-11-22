@@ -150,8 +150,9 @@ func TestPositionsOverHTTP(t *testing.T) {
 	}
 	asst := p.e.json("POST", base, p.ana, map[string]any{"name": "Asistente", "reports_to": bossID, "skills": []string{skill},
 		"library": []map[string]any{{"path": "/Shared/Plantillas", "level": "read"}, {"path": "/Shared/Precios", "level": "read"}}}, 201)
-	if ts := p.e.json("GET", base+"/templates", p.ana, nil, 200)["templates"].([]any); len(ts) != 3 {
-		t.Fatalf("templates: %v", ts)
+	if ts := p.e.json("GET", base+"/templates", p.ana, nil, 200)["templates"].([]any); len(ts) != 3 ||
+		ts[1].(map[string]any)["proposal"].(map[string]any)["reports_to"] != bossID {
+		t.Fatalf("templates (the assistant's proposal reports to the manager): %v", ts)
 	}
 
 	// not the responsible of Finanzas: 403; a private department: 404 to an admin who is not a member
