@@ -9,6 +9,8 @@ import { Icon } from "../icons";
 import { useAgentName } from "../ui";
 import { FileBadge } from "./FileCard";
 import { AskForChange } from "./AskForChange";
+import { CommentsPanel, SelectionBar, useCommentHighlights, useFileComments, useSelectionQuote } from "./AnchoredComments";
+import { ANCHORABLE } from "@/lib/anchoredComments";
 import { Markdown } from "./markdown";
 import { parseCsv } from "@/lib/csv";
 import { CodeView, DiffView, DocView, ImageView, JsonView, PdfBytesView, SheetView, TableView } from "./viewers";
@@ -33,6 +35,11 @@ export function FileViewerPanel() {
   // the agent that touched this path last (file.activity) refreshes the panel
   const touched = useStore((s) => (ref ? Object.values(s.files).find((f) => f.path === ref.path)?.ts : 0));
   const rev = useFileViewer((s) => s.rev); // an Undo in a chat card changed this file
+  // F7: comments anchored to a passage (text documents only)
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [activeThread, setActiveThread] = useState<string | null>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const reload = useCallback(async () => {
     if (!ref) return;
@@ -55,12 +62,19 @@ export function FileViewerPanel() {
     else if (useFileViewer.getState().ref?.path !== path) open({ path, name: path.split("/").pop() || path });
   });
 
-  if (!ref) return null;
   const file = load.state === "ok" ? load.file : null;
-  const kind = fileKind(file?.name ?? ref.name, file?.mime ?? ref.mime);
+  const kind = fileKind(file?.name ?? ref?.name ?? "", file?.mime ?? ref?.mime);
   const current = file?.current_version ?? 0;
   const shown = version || current;
   const author = file?.updated_by;
+  const anchorable = !!file && ANCHORABLE.includes(kind) && !editing && !showDiff;
+  const fc = useFileComments(file, shown, !!file && ANCHORABLE.includes(kind));
+  const sel = useSelectionQuote(bodyRef, anchorable);
+  const reveal = useCommentHighlights(bodyRef, fc.threads, activeThread, anchorable && commentsOpen);
+  useEffect(() => { setCommentsOpen(false); setActiveThread(null); }, [ref?.path]);
+  const startComment = () => { setCommentsOpen(true); window.setTimeout(() => composerRef.current?.focus(), 0); };
+
+  if (!ref) return null;
 
   return (
     <DetailPanel
@@ -82,15 +96,23 @@ export function FileViewerPanel() {
           file={file} kind={kind} version={version} shown={shown} showDiff={showDiff} editing={editing}
           onVersion={(v) => { setVersion(v === current ? 0 : v); setShowDiff(false); }}
           onDiff={() => setShowDiff((d) => !d)} onEdit={() => { setVersion(0); setShowDiff(false); setEditing(true); }}
+          comments={anchorable ? { open: commentsOpen, count: fc.open, onToggle: () => setCommentsOpen((o) => !o) } : undefined}
         />
       )}
 
-      <div className="min-h-0 flex-1 overflow-auto" data-testid="viewer-body">
+      <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
+      <div ref={bodyRef} className="min-h-0 flex-1 overflow-auto" data-testid="viewer-body">
+        {anchorable && <SelectionBar quote={sel.quote} onComment={startComment} onDismiss={sel.clear} />}
         {load.state === "loading" && <div className="p-6 text-center text-xs text-mute">{t("drive.loading")}</div>}
         {load.state === "error" && <div role="alert" data-testid="viewer-error" className="p-6 text-center text-xs text-err">{load.code === "not_found" || load.code === "404" ? t("fileviewer.gone") : t("fileviewer.error", { code: load.code })}</div>}
         {file && (editing
           ? <Editor key={file.id} file={file} kind={kind} onDone={async (saved) => { setEditing(false); if (saved) await reload(); }} />
           : <Body file={file} kind={kind} version={shown} latest={current} showDiff={showDiff} />)}
+      </div>
+      {file && anchorable && commentsOpen && (
+        <CommentsPanel file={file} versions={load.state === "ok" ? load.versions : []} shown={shown} state={fc} pending={sel.quote} onClearPending={sel.clear}
+          onVersion={(v) => { setVersion(v === current ? 0 : v); setShowDiff(false); }} active={activeThread} onActive={setActiveThread} onReveal={reveal} composerRef={composerRef} />
+      )}
       </div>
 
       {file && <AskForChange file={file} versions={load.state === "ok" ? load.versions : []} />}
@@ -98,9 +120,10 @@ export function FileViewerPanel() {
   );
 }
 
-function Toolbar({ file, kind, version, shown, showDiff, editing, onVersion, onDiff, onEdit }: {
+function Toolbar({ file, kind, version, shown, showDiff, editing, onVersion, onDiff, onEdit, comments }: {
   file: DriveFile; kind: ReturnType<typeof fileKind>; version: number; shown: number; showDiff: boolean; editing: boolean;
   onVersion: (v: number) => void; onDiff: () => void; onEdit: () => void;
+  comments?: { open: boolean; count: number; onToggle: () => void };
 }) {
   const { t } = useT();
   const show = useDriveNav((s) => s.show);
@@ -127,6 +150,12 @@ function Toolbar({ file, kind, version, shown, showDiff, editing, onVersion, onD
       {EDITABLE.includes(kind) && !editing && version === 0 && (
         <button type="button" data-testid="viewer-edit" onClick={onEdit} className={`inline-flex items-center gap-1 border-line text-ink2 hover:border-accent ${btn}`}>
           <Icon name="edit" size={12} />{t("fileviewer.edit")}
+        </button>
+      )}
+      {comments && (
+        <button type="button" data-testid="viewer-comments-toggle" aria-pressed={comments.open} onClick={comments.onToggle}
+          className={`inline-flex items-center gap-1 ${btn} ${comments.open ? "border-accent bg-accent/10 text-accent-hover" : "border-line text-ink2 hover:border-accent"}`}>
+          <Icon name="chat" size={12} />{t("fcomments.title")}{comments.count > 0 && <span className="rounded-full bg-accent/10 px-1.5 font-mono text-[10.5px]">{comments.count}</span>}
         </button>
       )}
       <span className="flex-1" />
