@@ -1376,3 +1376,18 @@ Detalle y garantías en `watchdog.md`. Sin migración: el umbral vive en `signal
 | `POST /tasks/{id}/stall/cancel` | `tasks:manage` | `{confirm_task_ids}` = exactamente `cancel_cascade`; `202 {…, cancelled[]}`. `409 cascade_changed` (con `cancel_cascade` nueva) si la lista cambió; `409 cascade_hidden` si detendría trabajo de un departamento que la persona no ve |
 
 Errores comunes: `404` si la tarea no existe o es de un departamento privado ajeno; `409 not_stalled` si ya no está atascada (avanzó, espera a una persona o alguien la está recuperando); `409 already_recovering`; `409 execution_blocked (código)` si el kill-switch, la pausa o el modo solo lectura frenan al agente; `403` para un actor que no es persona. `POST /initiatives/{id}/accept` de una sugerencia `stalled_task` reintenta la tarea (`request_id` = el pedido de la tarea).
+
+## 52. Comentarios anclados a un pasaje (F7)
+
+Detalle y garantías en `anchored-comments.md`. Migración 828 (`file_comments`). Todo corre como persona y comprueba primero su nivel sobre la carpeta del archivo (sellado D3: un archivo de un departamento privado responde `404`, también sus comentarios).
+
+| Método y ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /drive/files/{id}/comments[?version=n]` | `files:read` | `{comments: View[], version, current_version}`; cada comentario con ancla trae `location: {status: intact\|moved\|lost, start, end}` calculado contra esa versión (por defecto la actual) |
+| `POST /drive/files/{id}/comments` | `artifacts:comment` | `{body (1..4000), quote?, version?, parent_id?}` → 201 `Comment`. Con `quote`: ancla al pasaje de `version` (el texto debe contenerlo: `400 anchor_not_in_text`); con `parent_id`: respuesta; sin ninguno: nota sobre todo el archivo |
+| `PATCH /drive/files/{id}/comments/{cid}` | `artifacts:comment` | `{resolved}` → 200 `Comment` (solo comentarios raíz) |
+| `POST /drive/files/{id}/comments/{cid}/request-change` | `artifacts:comment` + `conversations:post` | `{agent_id, lang?: es\|en\|pt}` → 200 `Comment` con `change`. Exige poder **editar** la carpeta (`403 read_only_folder`) y poder usar al agente. `409 anchor_lost` si el pasaje ya no existe, `409 change_already_requested`, `409 already_resolved`, `400 no_anchor` |
+
+`Comment = {id, file_id, parent_id?, anchor?: {quote, prefix, suffix, version, start, end}, author: {kind, id}, body, resolved, resolved_by?: "person:<id>" \| "agent:<id>", resolved_version?, resolved_at?, change?: {agent_id, base_version, requested_by, requested_at, turn_id}, created_at}`.
+
+Errores de archivo: los del drive (`404 not_found`, `403 read_only_folder`). Auditoría `file.comment_added`, `file.comment_resolved`, `file.comment_change_requested` (solo metadatos, nunca el texto). El pedido al agente es un mensaje de chat normal (`POST /messages` por dentro, con el archivo adjunto): mismos permisos, aprobaciones, presupuesto y auditoría que "Pedir un cambio".
