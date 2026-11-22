@@ -764,7 +764,7 @@ export class MockBackend {
         if (this.chat.matches(r1)) return this.chat.list(r1, q.get("before"), Number(q.get("limit") || 60));
         return this.messages[r1] || [];
       }
-      if (r0 === "approvals") { const st = q.get("status"); return this.approvals.filter((a) => !st || a.status === st); }
+      if (r0 === "approvals" && !r1) { const st = q.get("status"); return [...this.approvals.filter((a) => !st || a.status === st), ...this.inbox.demoApprovals(st ?? undefined)]; }
       if (r0 === "reports" && !r1) return this.reports.map((r) => this.withGoal(r));
       if (r0 === "reports" && r1 && r2 === "evidence") { // B6 evidence chain
         const rep = this.reports.find((r) => r.id === r1);

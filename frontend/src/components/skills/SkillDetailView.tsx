@@ -5,7 +5,8 @@ import { skillsApi, SkillError, useSkillsNav, type SkillDetail, type SkillVersio
 import type { SkillDraft } from "@/lib/skillsLogic";
 import { useStore } from "@/lib/store";
 import { useCan } from "@/lib/session";
-import { Btn, Card, Empty, timeAgo, useAgentName } from "../ui";
+import { Btn, Card, Empty, useAgentName } from "../ui";
+import { relativeAge, skillTitle } from "@/lib/skillTitles";
 import { Icon } from "../icons";
 import { SkillEditor } from "./SkillEditor";
 import { SkillReview } from "./SkillReview";
@@ -15,7 +16,7 @@ type Tab = "content" | "review" | "versions" | "agents";
 
 /** One skill: editor, review, versions and the agents that have it. "new" opens an empty editor. */
 export function SkillDetailView({ id, prefill, tab, onBack, onChanged }: { id: string | "new"; prefill: SkillDraft | null; tab: Tab; onBack: () => void; onChanged: () => void }) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const select = useSkillsNav((s) => s.select);
   const canWrite = useCan("skills:write");
   const canReview = useCan("skills:review");
@@ -58,8 +59,8 @@ export function SkillDetailView({ id, prefill, tab, onBack, onChanged }: { id: s
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4 p-4 sm:p-5" data-testid="skill-detail" data-skill={detail.name}>
-      <BackBar onBack={onBack} title={<span className="flex flex-wrap items-center gap-2"><span className="font-mono">{detail.name}</span><StatusBadge status={detail.status} testId="skill-detail-status" /><SourceChip source={detail.source} builtin={detail.builtin} />
-        <span className="font-sans text-[11px] font-normal text-mute">v{detail.current_version}{detail.active_version > 0 && detail.active_version !== detail.current_version ? ` · ${t("skills.activeVersion", { v: detail.active_version })}` : ""}</span></span>}
+      <BackBar onBack={onBack} title={<span className="flex flex-wrap items-center gap-2"><span>{skillTitle(detail.name, locale)}</span><StatusBadge status={detail.status} testId="skill-detail-status" /><SourceChip source={detail.source} builtin={detail.builtin} />
+        <span title={t("skills.editor.nameLocked")} className="font-mono text-[10px] font-normal text-mute">{detail.name}</span><span className="font-sans text-[11px] font-normal text-mute">v{detail.current_version}{detail.active_version > 0 && detail.active_version !== detail.current_version ? ` · ${t("skills.activeVersion", { v: detail.active_version })}` : ""}</span></span>}
         right={<div className="flex gap-2">
           <Btn data-testid="skill-export-zip" disabled={busy} onClick={() => download("zip")}>{t("skills.export.zip")}</Btn>
           <Btn data-testid="skill-export-md" disabled={busy} onClick={() => download("md")}>{t("skills.export.md")}</Btn>
@@ -104,7 +105,7 @@ function BackBar({ onBack, title, right }: { onBack: () => void; title: React.Re
 }
 
 function Versions({ versions, detail, canWrite, onRestore }: { versions: SkillVersion[]; detail: SkillDetail; canWrite: boolean; onRestore: (v: number) => void }) {
-  const { t } = useT();
+  const { t, locale } = useT();
   return (
     <div data-testid="skill-versions" className="space-y-2">
       {versions.map((v) => (
@@ -114,7 +115,7 @@ function Versions({ versions, detail, canWrite, onRestore }: { versions: SkillVe
             {v.version === detail.current_version && <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase text-accent">{t("skills.versions.latest")}</span>}
             {v.version === detail.active_version && <span className="rounded bg-ok/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-ok">{t("skills.versions.active")}</span>}
             {v.restored_from ? <span className="text-mute">{t("skills.versions.restoredFrom", { v: v.restored_from })}</span> : null}
-            <span className="text-mute">{v.author} · {timeAgo(v.created_at)}</span>
+            <span className="text-mute">{v.author} · {relativeAge(v.created_at, locale)}</span>
             {v.warnings.some((w) => w.code === "injection" || w.code === "script") && <span className="rounded bg-warn/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-warn">{t("skills.versions.warnings")}</span>}
             {canWrite && v.version !== detail.current_version && <Btn className="ml-auto" data-testid={`skill-restore-${v.version}`} onClick={() => onRestore(v.version)}>{t("skills.versions.restore")}</Btn>}
           </div>

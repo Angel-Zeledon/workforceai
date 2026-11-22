@@ -4,7 +4,8 @@ import { useT } from "@/lib/i18n";
 import { skillsApi, SkillError, useSkillsNav, type Skill } from "@/lib/skills";
 import { countByStatus, filterSkills, needsReview, type SkillFilter } from "@/lib/skillsLogic";
 import { useCan } from "@/lib/session";
-import { Btn, Empty, Loading, timeAgo } from "../ui";
+import { Btn, Empty, Loading } from "../ui";
+import { relativeAge, skillTitle } from "@/lib/skillTitles";
 import { Icon } from "../icons";
 import { SkillDetailView } from "./SkillDetailView";
 import { SourceChip, StatusBadge } from "./shared";
@@ -15,7 +16,7 @@ const FILTERS: SkillFilter[] = ["all", "active", "in_review", "draft", "disabled
 
 /** "Skills" screen: the library of reusable know-how (Agent Skills format) with import, export and review. */
 export function SkillsView() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const nav = useSkillsNav();
   const canWrite = useCan("skills:write");
   const [list, setList] = useState<Skill[] | null>(null);
@@ -103,7 +104,7 @@ export function SkillsView() {
               <button key={s.id} type="button" data-testid={`skill-card-${s.name}`} data-status={s.status} onClick={() => nav.select(s.id, needsReview(s) ? "review" : "content")}
                 className="ac-card-hover flex flex-col rounded-xl border border-line bg-panel p-4 text-left shadow-soft hover:border-accent">
                 <div className="flex items-start justify-between gap-2">
-                  <span className="min-w-0 break-words font-mono text-[13px] font-semibold text-ink">{s.name}</span>
+                  <span className="min-w-0 break-words text-[14px] font-semibold text-ink">{skillTitle(s.name, locale)}</span>
                   <StatusBadge status={s.status} />
                 </div>
                 <p className="mt-1.5 line-clamp-3 text-xs text-ink2">{s.description}</p>
@@ -113,7 +114,7 @@ export function SkillsView() {
                   <span className="font-mono">v{s.current_version}</span>
                   {s.active_version > 0 && s.active_version !== s.current_version && <span className="text-warn">{t("skills.activeVersion", { v: s.active_version })}</span>}
                   {!!s.agents && <span>{t("skills.agentsCount", { n: s.agents })}</span>}
-                  <span className="ml-auto">{timeAgo(s.updated_at)}</span>
+                  <span className="ml-auto">{relativeAge(s.updated_at, locale)}</span>
                 </div>
               </button>
             ))}

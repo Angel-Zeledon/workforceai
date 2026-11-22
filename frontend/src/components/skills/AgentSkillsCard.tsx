@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
+import { skillTitle } from "@/lib/skillTitles";
 import { skillsApi, useSkillsNav, type AgentSkill, type Skill } from "@/lib/skills";
 import { useCan } from "@/lib/session";
 import { Btn, Card } from "../ui";
@@ -9,7 +10,7 @@ import { StatusBadge } from "./shared";
 /** The skills of an agent (Work profile): direct assignments and the defaults of its role. Assigning one
  * changes what the agent is told exists; it never changes what the agent can do. */
 export function AgentSkillsCard({ id }: { id: string }) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const canAssign = useCan("agents:write");
   const [mine, setMine] = useState<AgentSkill[] | null>(null);
   const [all, setAll] = useState<Skill[]>([]);
@@ -36,7 +37,7 @@ export function AgentSkillsCard({ id }: { id: string }) {
             {mine.map((s) => (
               <li key={s.id} data-testid={`agent-skill-${s.name}`} data-via={s.via} data-servable={s.servable} className="rounded-md bg-panel2 px-2.5 py-1.5">
                 <div className="flex items-center gap-2">
-                  <button type="button" className="min-w-0 flex-1 truncate text-left font-mono text-[12px] font-semibold text-ink hover:text-accent" onClick={() => useSkillsNav.getState().show(s.id)}>{s.name}</button>
+                  <button type="button" className="min-w-0 flex-1 truncate text-left text-[12.5px] font-semibold text-ink hover:text-accent" onClick={() => useSkillsNav.getState().show(s.id)}>{skillTitle(s.name, locale)}</button>
                   <StatusBadge status={s.status} />
                   <span className="shrink-0 rounded border border-line px-1.5 py-0.5 text-[9.5px] text-mute">{t(`skills.via.${s.via}`)}</span>
                   {canAssign && s.via === "agent" && <button type="button" data-testid={`agent-skill-remove-${s.name}`} aria-label={t("skills.agents.remove")} className="text-[11px] text-mute hover:text-err" onClick={() => run(() => skillsApi.unassign(id, s.id))}>✕</button>}

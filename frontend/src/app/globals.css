@@ -18,7 +18,7 @@
   --ink2: 47 62 86;             /* texto secundario fuerte */
   --mute: 91 102 120;           /* texto terciario (AA sobre bg y panel) */
   --accent: 10 102 194;         /* azul tipo LinkedIn #0A66C2 (blanco encima: 5.6:1) */
-  --accent-hover: 0 65 130;     /* #004182 */
+  --accent-hover: 8 84 160;      /* #0854A0: hover del azul de marca, sin llegar a azul marino */
   --accent-soft: 232 241 251;   /* #E8F1FB */
   --navy: 11 31 58;             /* #0B1F3A marca / héroes */
   --navy2: 19 41 75;            /* #13294B */
@@ -182,3 +182,12 @@ button:not(:disabled):active, a.ac-press:active { transform: scale(0.985); }
 .shop-sheen::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.5) 50%, transparent 58%); animation: shop-sheen 4.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .shop-sheen::after { animation: none; opacity: 0; } }
 [data-reduce="1"] .shop-sheen::after { animation: none; opacity: 0; }
+
+/* Sidebar on short screens (laptops with a small window, landscape phones): everything scrolls as one list, so the footer
+   (Settings, "Ver todo", collapse) never covers the last items ("Reuniones", "Habilidades"). */
+@media (max-height: 720px) {
+  .wf-nav { overflow-y: auto; }
+  .wf-nav-main { flex: none; overflow: visible; }
+  .wf-nav-foot { padding-top: 6px; padding-bottom: 6px; }
+  .wf-nav [data-testid="sidebar-toggle"] { display: none; }
+}

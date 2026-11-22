@@ -40,11 +40,11 @@ export function AppSplash() {
   const line = returning && first ? t("splash.hello", { name: first }) : t("splash.loading");
   return (
     <div data-testid="splash" role="status" aria-live="polite" aria-label={t("splash.loading")} data-leaving={leaving ? "1" : "0"} data-reduce={reduce ? "1" : "0"}
-      className="wf-splash fixed inset-0 z-[9500] flex flex-col items-center justify-center bg-navy text-white">
-      <div className="wf-splash-mark"><AgentMark size={84} tone="light" /></div>
+      className="wf-splash fixed inset-0 z-[9500] flex flex-col items-center justify-center bg-white text-ink">
+      <div className="wf-splash-mark"><AgentMark size={84} tone="dark" /></div>
       <div className="mt-5 text-[19px] font-semibold tracking-tight">AI Workforce OS</div>
-      <div className="wf-splash-line mt-1.5 min-h-[20px] text-[13.5px] text-white/70">{line}</div>
-      <div aria-hidden className="mt-6 h-[3px] w-44 overflow-hidden rounded-full bg-white/15"><div className="wf-splash-bar h-full w-1/3 rounded-full bg-[#70b5f9]" /></div>
+      <div className="wf-splash-line mt-1.5 min-h-[20px] text-[13.5px] text-mute">{line}</div>
+      <div aria-hidden className="mt-6 h-[3px] w-44 overflow-hidden rounded-full bg-accent-soft"><div className="wf-splash-bar h-full w-1/3 rounded-full bg-accent" /></div>
     </div>
   );
 }
