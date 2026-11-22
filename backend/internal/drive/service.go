@@ -83,6 +83,9 @@ type Config struct {
 	// AgentOffices (optional) tells the office of each agent: its folder /Offices/<office> is its work area
 	// (agent_offices.go). nil = agents have no office folder.
 	AgentOffices AgentOffices
+	// AgentLibraries (optional) tells the library of each agent's position (library.go). nil = no positions: every
+	// agent keeps the defaults.
+	AgentLibraries AgentLibraries
 	// ShareOffices (optional) lets departments share files with each other (shares.go). nil = no sharing.
 	ShareOffices ShareOffices
 	// OnVersion (optional) is told after every new version is saved (any author): F7 resolves the comments that were

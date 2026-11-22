@@ -168,7 +168,7 @@ func (sc scope) writeRefused(z string) bool {
 func (a *AgentFS) customerRoots(ctx context.Context, org string, sc scope) []string {
 	roots := []string{CustomerDesk(sc.agent, sc.customer), "/" + RootShared}
 	for _, o := range sc.owned {
-		if o.customer == sc.customer && (!a.Svc.underOffices(ctx, org, o.path) || canRead(a.zone(ctx, org, sc, o.path))) {
+		if z := a.zone(ctx, org, sc, o.path); o.customer == sc.customer && z != ZonePositionOut && (!a.Svc.underOffices(ctx, org, o.path) || canRead(z)) {
 			roots = append(roots, o.path)
 		}
 	}
