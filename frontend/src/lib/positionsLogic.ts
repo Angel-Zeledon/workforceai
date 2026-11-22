@@ -70,16 +70,16 @@ function probes(libs: LibraryEntry[][]): string[] {
   return [...out.values()];
 }
 
-/** What `sub` has above `sup`: skills the superior lacks and folders where sub's level is higher than sup's.
- * An empty sub library is "the usual base", decided by the server, so it never counts as exceeding here. */
+/** What `sub` has above `sup`: skills the superior lacks and folders where sub's level is higher than sup's. Same
+ * rule as the server (backend/internal/positions/rules.go): an empty library is the base on both sides, so a
+ * subordinate without a library under a manager with a narrower one does exceed. */
 export function exceeds(sup: Package, sub: Package, b: Bounds): { skills: string[]; folders: { path: string; level: Level }[] } {
   const skills = sub.skills.filter((s) => !sup.skills.includes(s));
   const folders: { path: string; level: Level }[] = [];
-  if (sub.library.length) {
-    for (const p of probes([sub.library, sup.library.filter((e) => e.level === "none")])) {
-      const mine = levelOf(sub.library, p, b);
-      if (RANK[mine] > RANK[levelOf(sup.library, p, b)]) folders.push({ path: p, level: mine });
-    }
+  const eff = (l: LibraryEntry[]) => (l.length ? l : baseLibrary(b));
+  for (const p of probes([eff(sub.library), eff(sup.library)])) {
+    const mine = levelOf(sub.library, p, b);
+    if (RANK[mine] > RANK[levelOf(sup.library, p, b)]) folders.push({ path: p, level: mine });
   }
   folders.sort((x, y) => x.path.localeCompare(y.path));
   return { skills, folders };
@@ -116,12 +116,21 @@ export function proposeFromSuperior(sup: Package, b: Bounds): Package {
 /** Drops from `draft` everything above the superior: skills it lacks, folders it can't see, levels lowered. */
 export function clampToSuperior(sup: Package, draft: Package, b: Bounds): Package {
   const library: LibraryEntry[] = [];
-  for (const e of draft.library) {
+  const src = draft.library.length ? draft.library : baseLibrary(b);
+  for (const e of src) {
     if (e.level === "none") { library.push(e); continue; }
     const top = levelOf(sup.library, e.path, b);
     if (top === "none") continue;
     library.push({ path: e.path, level: min(e.level, top) });
   }
+  // what the superior excludes or lowers below a kept folder stays excluded or lowered for the subordinate too
+  const supLib = sup.library.length ? sup.library : baseLibrary(b);
+  for (const e of supLib) {
+    if (library.some((x) => norm(x.path) === norm(e.path))) continue;
+    const mine = levelOf(library, e.path, b);
+    if (RANK[mine] > RANK[e.level] && library.some((x) => x.level !== "none" && covers(x.path, e.path))) library.push({ path: e.path, level: e.level });
+  }
+  if (!library.length) library.push({ path: b.shared, level: "none" }); // nothing left stays explicit (empty = the base)
   return { skills: draft.skills.filter((s) => sup.skills.includes(s)), library };
 }
 

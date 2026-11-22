@@ -50,9 +50,19 @@ test("a superior that excludes a subfolder blocks a subordinate that covers it f
   assert.deepEqual(exceeds(sup, sub, B).folders, [{ path: "/Offices/Contabilidad/Secreto", level: "read" }]);
 });
 
-test("an empty subordinate library is 'the usual' and does not count as exceeding", () => {
+test("an empty library is the base on both sides, like the server", () => {
   const sup = { skills: [], library: [{ path: "/Shared", level: "read" }] };
-  assert.deepEqual(exceeds(sup, { skills: [], library: [] }, B), { skills: [], folders: [] });
+  assert.ok(exceeds(sup, { skills: [], library: [] }, B).folders.length > 0, "no library under a narrower manager exceeds");
+  assert.deepEqual(exceeds({ skills: [], library: [] }, { skills: [], library: [{ path: "/Shared/x", level: "read" }] }, B), { skills: [], folders: [] });
+});
+
+test("clampToSuperior keeps the superior's exclusions and never ends as 'no library'", () => {
+  const sup = { skills: [], library: [{ path: "/Offices/Contabilidad", level: "edit" }, { path: "/Offices/Contabilidad/Secreto", level: "none" }] };
+  const c = clampToSuperior(sup, { skills: [], library: [{ path: "/Offices/Contabilidad", level: "read" }] }, B);
+  assert.deepEqual(exceeds(sup, c, B), { skills: [], folders: [] });
+  const none = clampToSuperior({ skills: [], library: [{ path: "/Shared", level: "none" }] }, { skills: [], library: [] }, B);
+  assert.ok(none.library.length > 0);
+  assert.deepEqual(exceeds({ skills: [], library: [{ path: "/Shared", level: "none" }] }, none, B), { skills: [], folders: [] });
 });
 
 test("proposeFromSuperior keeps the folders, lowers Edit to Read, keeps exclusions and ticks no skill", () => {

@@ -6930,5 +6930,6 @@
   "pos.src.fixed": "Fijo",
   "pos.src.default": "Predeterminado",
   "pos.src.position": "Del puesto",
-  "pos.src.manual": "Manual"
+  "pos.src.manual": "Manual",
+  "hist.field.position": "el puesto en el departamento"
 }

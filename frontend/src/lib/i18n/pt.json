@@ -6931,5 +6931,6 @@
   "pos.src.fixed": "Fixo",
   "pos.src.default": "Padrão",
   "pos.src.position": "Do cargo",
-  "pos.src.manual": "Manual"
+  "pos.src.manual": "Manual",
+  "hist.field.position": "o cargo no departamento"
 }

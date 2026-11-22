@@ -1443,3 +1443,29 @@ Detalle y garantías en `skills.md`, sección "Probar una habilidad". Migración
 | `GET /skills/{id}/tests/cases/{caseId}/runs` | `skills:read` | Historial del caso, el más reciente primero |
 
 Una ejecución lleva `version`, `active`, `agent_id`, `output`, `used_skill` (cargó el texto completo), `blocked[]` (`herramienta.acción` pedidas y no ejecutadas), `estimate_usd`, `cost_usd`, tokens, `duration_ms`. Errores comunes: `404` si la habilidad no existe, es de otra organización o de un departamento privado ajeno; `400 agent_not_eligible`; `403 humans_only` para un actor que no es persona; `403` si la persona no puede usar al agente (departamento privado).
+
+## 55. Puestos dentro del departamento
+
+Detalle en `positions.md`. Migración 830 (`office_positions`, `agent_positions`). Todas piden `agents:read`; cambiar exige
+ser admin/owner o responsable del departamento (`403 forbidden`; un actor que no es persona: `403 humans_only`). Un
+departamento privado, o un agente suyo, responde `404` a quien no es miembro (administradores incluidos). Errores:
+`{code, error, details?}`.
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /offices/{id}/positions` | `{office{id, name, folder_path}, can_manage, positions[], agents[{id, name, position_id}], skills[{id, name, description, office_id}], bounds{office_folder, shared, shared_in[]}}`. Un puesto: `{id, office_id, name, reports_to, skills[], library[{path, level: read\|edit\|none}], template, occupants[], created_by, created_at, updated_by, updated_at}` |
+| `GET /offices/{id}/positions/templates` | `{templates[{key: manager\|assistant\|specialist, reports_to, proposal{skills, library}}]}` (las de subordinado ya recortadas al gerente) |
+| `POST /offices/{id}/positions` | `{name, reports_to?, skills?, library?, template?}` → `201` puesto |
+| `PUT /offices/{id}/positions/{pid}` | `{name, reports_to, skills, library, dry_run?}` → `{position, impact{changed[{position_id, name, skills_removed[], folders[{path, from, to}]}]}, dry_run}`. Sin `dry_run` aplica el recorte a los subordinados en la misma transacción |
+| `DELETE /offices/{id}/positions/{pid}` | `{ok: true}`; los subordinados pasan a reportar a su superior, quien lo ocupaba queda sin puesto |
+| `GET /agents/{id}/position` | `{position \| null, office_id, office_name, can_manage, positions[]}` |
+| `PUT /agents/{id}/position` | `{position_id}` (vacío = quitar) → igual que `GET`. `400 position_other_office` |
+| `DELETE /agents/{id}/position` | Quita el puesto → igual que `GET` |
+
+Códigos `400`: `name_required`, `name_too_long`, `template_invalid`, `too_many` (30 por departamento), `too_many_skills`,
+`too_many_folders`, `reports_to_invalid`, `cycle`, `skill_invalid` (no existe o es de otro departamento),
+`folder_invalid`, `folder_outside` (fuera del departamento, `/Shared` y lo compartido hacia él), `folder_level_invalid`
+(Editar en algo compartido), `exceeds_superior` (`details{skills[], folders[{path, level}]}`), `position_other_office`;
+`409 name_taken`. Cambios aditivos en rutas existentes: `GET /agents/{id}/skills` añade `via: "position"` y
+`position_name` y ordena directas > puesto > oficio; `GET /agents/{id}/folder-access` añade `source: "position"` y
+`position` (nombre); el historial (sección 51) añade el campo `position`.

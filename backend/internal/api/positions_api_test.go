@@ -61,10 +61,12 @@ func (a testAgentOffices) AgentOffice(ctx context.Context, org, id string) (stri
 // withPositions wires the positions like cmd/server/positions.go does.
 func withPositions(d *api.Deps) {
 	rec := d.Rec
-	cfg := positions.Config{Store: positions.NewMemStore(), Model: d.Offices.Model, OrgID: d.Cfg.OrgID,
-		Audit: func(ctx context.Context, org, actor, action, id string, det map[string]any) {
+	cfg := positions.Config{Store: positions.NewMemStore(), Model: d.Offices.Model, OrgID: d.Cfg.OrgID}
+	if rec != nil {
+		cfg.Audit = func(ctx context.Context, org, actor, action, id string, det map[string]any) {
 			rec.Audit(application.WithOrg(ctx, org), domain.AuditLog{Actor: actor, Action: action, Entity: "position", EntityID: id, Details: det})
-		}}
+		}
+	}
 	if d.Skills != nil {
 		cfg.Skills = testSkillCatalog{svc: d.Skills}
 	}
