@@ -101,3 +101,19 @@ func TestPreviewTeamNewNamesAreDistinct(t *testing.T) {
 		t.Fatalf("roles to hire = %v", got)
 	}
 }
+
+// F3: an office template may bring the same role twice (two accountants); one agent fills one place only.
+func TestPreviewTeamSameRoleTwiceNeedsTwoAgents(t *testing.T) {
+	team := catalog.TeamView{Key: "d1", Agents: []catalog.TeamAgentView{{Role: "accounting"}, {Role: "accounting"}}}
+	acct := seedOf(t, "accounting")
+	p := PreviewTeam(team, []domain.Agent{acct}, nil, "general", "es")
+	if p.ExistingCount != 1 || p.NewCount != 1 || p.Agents[1].Status != TeamNew || p.Agents[1].Name == acct.Name {
+		t.Fatalf("preview = %+v", p)
+	}
+	second := acct
+	second.ID, second.Name = "accounting_2", p.Agents[1].Name
+	p = PreviewTeam(team, []domain.Agent{acct, second}, nil, "general", "es")
+	if p.NewCount != 0 || p.Agents[0].Existing.ID == p.Agents[1].Existing.ID {
+		t.Fatalf("both places must be filled by different agents: %+v", p)
+	}
+}

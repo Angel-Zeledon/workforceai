@@ -92,4 +92,5 @@ Instalar dos veces no duplica: la segunda vez todo es `existing` y la respuesta 
 - Si fallara `AssignAgent` a mitad de una instalación, el agente ya contratado queda en General y una segunda
   instalación contrataría otro en el departamento. Es un fallo de almacenamiento, no de lógica; se registra en el error.
 - Idiomas: el catálogo está en es y en. Otros idiomas de la interfaz reciben español en los textos del equipo.
-- Equipos de empresa propios (guardar la plantilla de un departamento como equipo) quedan fuera de este alcance.
+- Equipos de empresa propios: guardar un departamento como plantilla y llevarlo a otra empresa es F3
+  (`office-templates.md`); usa esta misma vista previa e instalación.

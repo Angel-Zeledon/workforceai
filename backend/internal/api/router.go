@@ -41,6 +41,7 @@ import (
 	"aiworkforce/backend/internal/memory"
 	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/offices"
+	"aiworkforce/backend/internal/officetemplates"
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/peoplechat"
 	"aiworkforce/backend/internal/portal"
@@ -168,6 +169,9 @@ type Deps struct {
 	Goals *goals.Service
 	// FileComments serves the comments anchored to a passage of a file and the request "change this passage" (F7, drive_comments.go). Optional.
 	FileComments *filecomments.Service
+	// OfficeTemplates serves /office-templates (F3, office_templates.go): save a department as a template file and
+	// install it in another organization. Optional: nil leaves the routes unmounted.
+	OfficeTemplates *officetemplates.Library
 	// LinkImports serves /link-imports/* (linkimports.go): import from a link, once or on a schedule. Optional.
 	LinkImports *linkimports.Service
 	// Portal serves the client portal (portal.go): branding, share links and the public read-only page.
@@ -366,6 +370,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountPresence(r)    // human presence + people chat (presence_people.go)
 			s.mountTeams(r)       // E1: welcome per person and team set-up (teams.go)
 			s.mountTeamCatalog(r) // F2: ready-to-hire teams with a preview (teams_catalog.go)
+			s.mountOfficeTemplates(r) // F3: a department saved as a template and installed elsewhere (office_templates.go)
 			if d.EnableDemoReset {
 				r.With(s.requireRole(auth.RoleAdmin)).Post("/demo/reset", s.reset)
 			}

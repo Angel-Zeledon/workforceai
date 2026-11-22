@@ -114,6 +114,33 @@ func areaOf(role, loc string) string {
 // otherwise exactly like HireFromTemplate. Same guarantees: no connection is granted and autonomy starts at the
 // template's default.
 func (o *Orchestrator) HireForRole(ctx context.Context, role, loc string) (domain.Agent, error) {
+	return o.HireForRoleNamed(ctx, role, loc, "")
+}
+
+// HireForRoleNamed is HireForRole keeping a given name when no agent of the organization has it (an office template,
+// F3, brings the names its people had). A taken or empty name falls back to HireForRole. The guarantees are the same:
+// no connection, the role's default autonomy under its ceiling, audited.
+func (o *Orchestrator) HireForRoleNamed(ctx context.Context, role, loc, name string) (domain.Agent, error) {
+	if name = strings.TrimSpace(name); name != "" && len([]rune(name)) <= 60 {
+		existing, err := o.store.ListAgents(ctx, o.org(ctx))
+		if err != nil {
+			return domain.Agent{}, err
+		}
+		free := true
+		for _, x := range existing {
+			if strings.EqualFold(x.Name, name) {
+				free = false
+				break
+			}
+		}
+		if free {
+			return o.HireFromTemplate(ctx, HireInput{TemplateID: role, Name: name, Locale: loc})
+		}
+	}
+	return o.hireForRole(ctx, role, loc)
+}
+
+func (o *Orchestrator) hireForRole(ctx context.Context, role, loc string) (domain.Agent, error) {
 	if loc == "" {
 		loc = o.loadStyle(ctx).Locale
 	}

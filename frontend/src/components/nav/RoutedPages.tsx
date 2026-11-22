@@ -108,7 +108,7 @@ export const ClientsPage = () => (
 
 function TeamsInner() {
   const q = useSearchParams();
-  return <TeamsGallery team={q.get("team") || undefined} pack={q.get("pack") || undefined} />;
+  return <TeamsGallery team={q.get("team") || undefined} pack={q.get("pack") || undefined} template={q.get("template") || undefined} />;
 }
 /** Equipos: ready-to-hire business teams with a preview (F2). `?team=` opens one, `?pack=` suits an onboarding pack. */
 export const TeamsPage = () => <Suspense fallback={<PageSkeleton />}><TeamsInner /></Suspense>;

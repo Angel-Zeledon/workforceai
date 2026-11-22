@@ -1377,6 +1377,22 @@ Detalle y garantías en `watchdog.md`. Sin migración: el umbral vive en `signal
 
 Errores comunes: `404` si la tarea no existe o es de un departamento privado ajeno; `409 not_stalled` si ya no está atascada (avanzó, espera a una persona o alguien la está recuperando); `409 already_recovering`; `409 execution_blocked (código)` si el kill-switch, la pausa o el modo solo lectura frenan al agente; `403` para un actor que no es persona. `POST /initiatives/{id}/accept` de una sugerencia `stalled_task` reintenta la tarea (`request_id` = el pedido de la tarea).
 
+## 50. Plantillas de oficina (F3)
+
+Detalle en [office-templates.md](office-templates.md). Guardar un departamento (o la empresa) como archivo `aiw.office-template` (`format_version: 1`) y llevarlo a otra organización con la vista previa e instalación de los equipos listos (§ F2, `team-catalog.md`).
+
+| Método y ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /office-templates/export?office_id=<id>` | `agents:read` + gestionar ese departamento (admin o responsable) y verlo | `{file_name, template, left_out[]}`; un departamento privado ajeno responde 404 (también a un admin); `general` exige admin |
+| `GET /office-templates/export?scope=company` | `agents:read` + admin | La empresa: General y los departamentos que el admin ve (los privados de los que no es miembro quedan fuera) |
+| `POST /office-templates/import` | `agents:write` | Cuerpo = el archivo (JSON, ≤ 3 MB). 201 con la vista previa (200 si ese mismo contenido ya estaba); 400 `template_invalid` (campo desconocido, formato o versión, topes, rol/tono/plantilla desconocidos, secreto, correo o texto con forma de instrucciones, habilidad inválida); 413 `file_too_large`; 409 con 30 plantillas guardadas |
+| `GET /office-templates` | `agents:read` | Tarjetas de "Tus plantillas": `[{id, name, kind, for, solves, departments[], agents, skills, workflows, goals, new_count, existing_count}]` |
+| `GET /office-templates/{id}?office_id=` | `agents:read` | Vista previa: `{id, name, kind, departments: [{key, name, destination: {office_id, office_name, matched}, agents[], new_count, existing_count, skills}], skills[], workflows[], schedules[], goals[], new_count, existing_count, can_install, blocked_reason}`; los elementos son `{name, status: new\|existing\|active\|archived, detail?}` |
+| `POST /office-templates/{id}/install` `{office_id?}` | `agents:write` + gestionar el destino | `{created[], skills[], workflows[], schedules, goals[], skipped[], preview}`; 201 si creó algo, 200 si ya estaba todo; 409 oficina llena o `plan_limit` antes de contratar a nadie; 404 destino oculto |
+| `DELETE /office-templates/{id}` | `agents:write` | 204 |
+
+Auditoría: `office_template.exported`, `office_template.imported`, `office_template.installed`, `office_template.deleted` (solo recuentos y destino, nunca el contenido), además de las de cada pieza creada (`agent.created_from_template`, `skill.imported`, `template.created`, `schedule.created`, `goal.created`).
+
 ## 52. Comentarios anclados a un pasaje (F7)
 
 Detalle y garantías en `anchored-comments.md`. Migración 828 (`file_comments`). Todo corre como persona y comprueba primero su nivel sobre la carpeta del archivo (sellado D3: un archivo de un departamento privado responde `404`, también sus comentarios).

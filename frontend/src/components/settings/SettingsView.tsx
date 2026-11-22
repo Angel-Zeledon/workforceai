@@ -24,6 +24,7 @@ import { PlanBilling } from "./PlanBilling";
 import { notifyApi } from "@/lib/notifyApi";
 import { IdentitySettings } from "./IdentitySettings";
 import { PortalBranding } from "./PortalBranding";
+import { SaveTemplatePanel } from "../teams/SaveTemplatePanel";
 import { MyCosts } from "./MyCosts";
 import { ApprovalSettings } from "./ApprovalSettings";
 import { useViewMode } from "@/lib/viewMode";
@@ -31,9 +32,10 @@ import { useOffice3d } from "@/lib/preferences";
 
 /** Sub-pages of Settings. The URL (/settings?s=...) says which one is open, so the browser's Back button and the
  *  sidebar both just work: nothing needs a "Close" button. */
-const SUBS = ["office", "hire", "templates", "members", "kill", "connections", "security", "account", "data", "identity", "portal", "plan", "costs", "approvals"] as const;
+const SUBS = ["office", "hire", "templates", "members", "kill", "connections", "security", "account", "data", "identity", "portal", "plan", "costs", "approvals", "officeTemplate"] as const;
 type Sub = (typeof SUBS)[number];
 const SUB_TITLE: Record<Sub, string> = {
+  officeTemplate: "otpl.save.titleCompany",
   office: "settings.title", hire: "hire.open", templates: "tpl.open", members: "members.title",
   kill: "ctl.killswitch.title", connections: "nav.connections", security: "nav.security", account: "mfa.rowTitle", data: "data.title", identity: "idn.title", portal: "portal.brand.title", plan: "planpage.title", costs: "mycosts.title", approvals: "perm.settings.title",
 };
@@ -123,6 +125,7 @@ export function SettingsView() {
             {sub === "plan" && <PlanBilling />}
             {sub === "identity" && (noSession ? <NeedsSession /> : <IdentitySettings />)}
             {sub === "portal" && <PortalBranding />}
+            {sub === "officeTemplate" && <div className="mx-auto max-w-3xl p-4 sm:p-6"><SaveTemplatePanel company /></div>}
             {sub === "office" && <OfficeSettingsPanel onClose={() => open(null)} />}
             {sub === "hire" && <HireFromTemplateDialog onClose={() => open(null)} />}
             {sub === "members" && (noSession ? <NeedsSession /> : <MembersDialog onClose={() => open(null)} />)}
@@ -143,6 +146,7 @@ export function SettingsView() {
     { id: "office", group: "workspace", tour: "settings.office", testid: "settings-office", icon: "edit", title: t("settings.title"), body: t("settings.page.office"), run: () => open("office") },
     { id: "members", group: "workspace", testid: "settings-members", icon: "users", title: t("members.title"), body: t("settings.page.members"), hidden: !signedIn || !canMembers, run: () => open("members") },
     { id: "plan", group: "workspace", testid: "settings-plan", icon: "bag", title: t("planpage.title"), body: t("settings.page.plan"), hidden: !hasPlan, run: () => open("plan") },
+    { id: "officeTemplate", group: "workspace", testid: "settings-office-template", icon: "layers", title: t("otpl.save.titleCompany"), body: t("otpl.settings.rowBody"), hidden: !isAdmin, run: () => open("officeTemplate") },
     { id: "portal", group: "workspace", testid: "settings-portal", icon: "layout", title: t("portal.brand.title"), body: t("portal.brand.rowBody"), run: () => open("portal") },
     { id: "approvals", group: "safety", tour: "settings.approvals", testid: "settings-approvals", icon: "shield", title: t("perm.settings.title"), body: t("perm.settings.rowBody"), run: () => open("approvals") },
     { id: "security", group: "safety", tour: "settings.security", testid: "settings-security", icon: "shield", title: t("nav.security"), body: t("settings.page.security"), run: () => open("security") },
