@@ -264,6 +264,9 @@ func newEnv(t *testing.T, o opts) *env {
 				a, err := mem.GetAgent(c, org, id)
 				return a.Role, err
 			}})
+		d.SkillTests = skills.NewTester(skills.TesterConfig{Svc: d.Skills, Store: skills.NewMemTestStore(), Runtime: rt, Budget: orch,
+			Agent:  func(c context.Context, org, id string) (domain.Agent, error) { return spy.GetAgent(c, org, id) },
+			Agents: func(c context.Context, org string) ([]domain.Agent, error) { return spy.ListAgents(c, org) }})
 	}
 	if o.standing {
 		d.Standing = &application.StandingService{Store: mem, Core: spy, Projects: standingProjects{}, Rec: rec, Cfg: cfg, Days: 7}
