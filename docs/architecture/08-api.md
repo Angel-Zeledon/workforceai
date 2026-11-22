@@ -1443,3 +1443,13 @@ Detalle y garantías en `skills.md`, sección "Probar una habilidad". Migración
 | `GET /skills/{id}/tests/cases/{caseId}/runs` | `skills:read` | Historial del caso, el más reciente primero |
 
 Una ejecución lleva `version`, `active`, `agent_id`, `output`, `used_skill` (cargó el texto completo), `blocked[]` (`herramienta.acción` pedidas y no ejecutadas), `estimate_usd`, `cost_usd`, tokens, `duration_ms`. Errores comunes: `404` si la habilidad no existe, es de otra organización o de un departamento privado ajeno; `400 agent_not_eligible`; `403 humans_only` para un actor que no es persona; `403` si la persona no puede usar al agente (departamento privado).
+
+## 54. Archivos que se entienden
+
+Plan en `docs/superpowers/plans/2026-11-22-archivos-claros.md`; la pantalla en `drive.md`, sección "La pantalla de Archivos". Sin rutas nuevas ni migración.
+
+| Método y ruta | Permiso | Qué cambia |
+|---|---|---|
+| `GET /drive/list?path=` | `files:read` | Añade `access: "edit" \| "read"`: lo que la persona puede hacer en la carpeta listada (crear carpetas, subir, renombrar, mover). Es su nivel en el drive (`PersonAccess`: miembro edita su departamento, un no miembro lee uno abierto, `/Offices` y `/` son de lectura) combinado con `files:write` de su rol (un `viewer` siempre lee). Un departamento sellado sigue siendo `404` para quien no es miembro |
+
+Renombrar una carpeta es `POST /drive/folders/{id}/move` al mismo padre con otro nombre; renombrar un archivo, `POST /drive/files/{id}/move` (la extensión no cambia: `400 extension_change`). Las carpetas propias del sistema (raíces, la de cada departamento, proyecto, cliente enlazado o agente) responden `400 protected_folder`.

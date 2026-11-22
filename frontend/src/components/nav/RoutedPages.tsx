@@ -6,7 +6,7 @@ import { useSkillsNav } from "@/lib/skills";
 import { useProjects } from "@/lib/projects/store";
 import { OfficeView } from "../office/OfficeView";
 import { Dashboard } from "../dashboard/Dashboard";
-import { DriveView } from "../drive/DriveView";
+import { FilesScreen } from "../files/FilesScreen";
 import { SkillsView } from "../skills/SkillsView";
 import { ProjectsView } from "../projects/ProjectsView";
 import { ShopView } from "../shop/ShopView";
@@ -72,11 +72,8 @@ export function ShopPage() {
 export const SettingsPage = () => <Suspense fallback={<PageSkeleton />}><SettingsView /></Suspense>;
 export const ChatsPage = ({ agentId }: { agentId?: string }) => <ChatsView agentId={agentId ? decodeURIComponent(agentId) : undefined} />;
 
-function FilesInner() {
-  const path = useSearchParams().get("path") || "/";
-  return <Hinted id="files"><DriveView key={path} initialPath={path} /></Hinted>;
-}
-export const FilesPage = () => <Suspense fallback={<PageSkeleton />}><FilesInner /></Suspense>;
+/** `/files?path=`: the one Files screen (the same one a department's direct link `/d/<office>` opens). */
+export const FilesPage = () => <Suspense fallback={<PageSkeleton />}><Hinted id="files"><FilesScreen /></Hinted></Suspense>;
 
 function SkillsInner() {
   const id = useSearchParams().get("id");
