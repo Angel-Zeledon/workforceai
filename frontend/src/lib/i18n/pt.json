@@ -7063,5 +7063,6 @@
   "err.c.no_subscription": "Não há assinatura ativa.",
   "err.c.calendar_blocked": "O calendário não permite essa ação agora.",
   "err.c.bad_credentials": "E-mail ou senha incorretos.",
-  "err.c.demo": "Este recurso não está disponível na demonstração."
+  "err.c.demo": "Este recurso não está disponível na demonstração.",
+  "pos.err.too_many_skills": "Você escolheu habilidades demais para um cargo. Remova algumas."
 }

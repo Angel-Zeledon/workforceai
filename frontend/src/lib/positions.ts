@@ -1,4 +1,5 @@
 import { call } from "./api";
+import { errorText } from "./errors";
 import { errorKey, type Bounds, type Impact, type LibraryEntry, type Position, type Template } from "./positionsLogic";
 
 export type { Bounds, Change, FolderLoss, Impact, Level, LibraryEntry, Position, Template } from "./positionsLogic";
@@ -49,5 +50,8 @@ export const agentPositionApi = {
 /** The sentence to show for a refused call (never the raw code or message). `t` is the screen's translator. */
 export function positionError(e: unknown, t: (key: string) => string): string {
   const x = e as { code?: string; status?: number } | null;
-  return t(errorKey(x?.code, x?.status));
+  const key = errorKey(x?.code, x?.status);
+  // a refusal of the positions rules has its own sentence; anything else (network, session, a server failure) goes
+  // through the app's central translator (lib/errors.ts), which never shows a code or an exception's text
+  return key === "pos.err.generic" ? errorText(e) : t(key);
 }

@@ -7062,5 +7062,6 @@
   "err.c.no_subscription": "There is no active subscription.",
   "err.c.calendar_blocked": "The calendar does not allow that action right now.",
   "err.c.bad_credentials": "Wrong email or password.",
-  "err.c.demo": "This feature is not available in the demo."
+  "err.c.demo": "This feature is not available in the demo.",
+  "pos.err.too_many_skills": "You chose too many skills for one position. Remove some."
 }

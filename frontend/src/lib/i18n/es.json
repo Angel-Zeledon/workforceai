@@ -7062,5 +7062,6 @@
   "err.c.no_subscription": "No hay una suscripción activa.",
   "err.c.calendar_blocked": "El calendario no permite esa acción ahora.",
   "err.c.bad_credentials": "Correo o contraseña incorrectos.",
-  "err.c.demo": "Esta función no está disponible en la demo."
+  "err.c.demo": "Esta función no está disponible en la demo.",
+  "pos.err.too_many_skills": "Elegiste demasiadas habilidades para un puesto. Quita algunas."
 }

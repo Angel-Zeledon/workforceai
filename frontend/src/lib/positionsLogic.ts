@@ -222,6 +222,8 @@ const KNOWN_ERRORS = new Set([
 /** i18n key of what to tell the person for a refused call. Never the raw code or message. */
 export function errorKey(code?: string | null, status?: number): string {
   if (status === 404 && (!code || code === "not_found")) return "pos.err.notFoundOffice";
+  if (code === "humans_only") return "pos.err.forbidden";
+  if (code === "too_many_skills") return "pos.err.too_many_skills";
   if (code && KNOWN_ERRORS.has(code)) return `pos.err.${code}`;
   return "pos.err.generic";
 }
