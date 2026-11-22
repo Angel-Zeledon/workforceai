@@ -18,7 +18,7 @@ const ROLE: Record<string, Record<Loc, [string, string]>> = {
   assistant: { es: ["Asistente", "Reúne cada mañana lo que vence hoy."], en: ["Assistant", "Gathers every morning what is due today."] },
   legal: { es: ["Legal", "Revisa condiciones y contratos antes de enviarlos."], en: ["Legal", "Reviews terms and contracts before they go out."] },
   operations: { es: ["Operaciones", "Confirma que lo prometido se puede entregar."], en: ["Operations", "Confirms that what is promised can be delivered."] },
-  project_manager: { es: ["Project manager", "Convierte cada brief en un plan con fechas."], en: ["Project manager", "Turns each brief into a plan with dates."] },
+  project_manager: { es: ["Gestión de proyectos", "Convierte cada brief en un plan con fechas."], en: ["Project manager", "Turns each brief into a plan with dates."] },
 };
 const FLOW: Record<string, Record<Loc, string>> = {
   month_close: { es: "Cierre de mes", en: "Month close" }, expense_audit: { es: "Auditoría de gastos", en: "Expense audit" },

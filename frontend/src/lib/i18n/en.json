@@ -6803,5 +6803,8 @@
   "hist.reason.failed": "it could not be applied.",
   "approvals.mobile.outcome.approved": "Already approved: nothing more to do.",
   "approvals.mobile.outcome.rejected": "Already rejected: nothing more to do.",
-  "approvals.mobile.others": "Other pending items"
+  "approvals.mobile.others": "Other pending items",
+  "otpl.import.stage.reading": "Reading the file…",
+  "otpl.import.stage.checking": "Checking that it is a valid template…",
+  "otpl.import.stage.preparing": "Preparing the preview…"
 }

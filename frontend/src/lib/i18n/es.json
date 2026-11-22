@@ -6803,5 +6803,8 @@
   "hist.reason.failed": "no se pudo aplicar.",
   "approvals.mobile.outcome.approved": "Ya la aprobaste: no hay nada más que hacer.",
   "approvals.mobile.outcome.rejected": "Ya la rechazaste: no hay nada más que hacer.",
-  "approvals.mobile.others": "Otras pendientes"
+  "approvals.mobile.others": "Otras pendientes",
+  "otpl.import.stage.reading": "Leyendo el archivo…",
+  "otpl.import.stage.checking": "Revisando que sea una plantilla válida…",
+  "otpl.import.stage.preparing": "Preparando la vista previa…"
 }

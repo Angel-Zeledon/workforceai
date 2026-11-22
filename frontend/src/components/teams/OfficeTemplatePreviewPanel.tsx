@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
+import { nameAndRole } from "@/lib/teamsCatalogLogic";
 import { go } from "@/lib/navBridge";
 import { ApiError } from "@/lib/api";
 import { officesApi } from "@/lib/officesApi";
@@ -99,8 +100,8 @@ export function OfficeTemplatePreviewPanel({ id, onBack, onChanged }: { id: stri
                   {arriving.map((a, i) => (
                     <li key={`${a.role}-${i}`} className="rounded-[10px] border border-line bg-panel p-3">
                       <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-[14px] font-semibold text-ink">{a.name}</span>
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-accent">{a.title}</span>
+                        <span className="text-[14px] font-semibold text-ink">{nameAndRole(a.name, a.title).primary}</span>
+                        {nameAndRole(a.name, a.title).secondary && <span className="text-[12px] font-medium text-accent">{nameAndRole(a.name, a.title).secondary}</span>}
                       </div>
                       {a.does && <p className="mt-1 text-[12.5px] leading-snug text-ink2">{a.does}</p>}
                     </li>

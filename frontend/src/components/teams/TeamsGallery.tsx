@@ -6,7 +6,7 @@ import { ApiError } from "@/lib/api";
 import { useCan } from "@/lib/session";
 import { teamsCatalogApi } from "@/lib/teamsCatalogApi";
 import { officeTemplatesApi } from "@/lib/officeTemplatesApi";
-import { cardState, orderForPack, type TeamCard } from "@/lib/teamsCatalogLogic";
+import { cardState, orderForPack, uniqueTitles, type TeamCard } from "@/lib/teamsCatalogLogic";
 import { checkFile, type OfficeTemplateCard } from "@/lib/officeTemplatesLogic";
 import { PageHeader, PageSkeleton } from "../nav/ui2";
 import { TeamPreviewPanel } from "./TeamPreviewPanel";
@@ -25,6 +25,7 @@ export function TeamsGallery({ team, pack, template }: { team?: string; pack?: s
   const [tick, setTick] = useState(0); // reload the cards after hiring: their counts change
   const [importNote, setImportNote] = useState("");
   const [importing, setImporting] = useState(false);
+  const [stage, setStage] = useState<"" | "reading" | "checking" | "preparing">(""); // visible progress of the import
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -42,13 +43,16 @@ export function TeamsGallery({ team, pack, template }: { team?: string; pack?: s
   const importFile = async (f: File | undefined) => {
     if (!f) return;
     setImportNote("");
+    setImporting(true); setStage("reading");
     const early = checkFile(f.name, f.size);
-    if (early) { setImportNote(t(early)); return; }
-    const text = await f.text();
+    if (early) { setImportNote(t(early)); setImporting(false); setStage(""); if (fileRef.current) fileRef.current.value = ""; return; }
+    let text = "";
+    try { text = await f.text(); } catch { setImportNote(t("otpl.import.notJson")); setImporting(false); setStage(""); return; }
+    setStage("checking");
     const why = checkFile(f.name, f.size, text);
-    if (why) { setImportNote(t(why)); return; }
-    setImporting(true);
+    if (why) { setImportNote(t(why)); setImporting(false); setStage(""); if (fileRef.current) fileRef.current.value = ""; return; }
     try {
+      setStage("preparing");
       const p = await officeTemplatesApi.importFile(JSON.parse(text));
       setTick((n) => n + 1);
       openTemplate(p.id);
@@ -56,7 +60,7 @@ export function TeamsGallery({ team, pack, template }: { team?: string; pack?: s
       const s = e instanceof ApiError ? e.status : 0;
       setImportNote(t(s === 413 ? "otpl.import.tooLarge" : s === 400 ? "otpl.import.invalid" : s === 403 ? "teams.err.forbidden" : s === 409 ? "otpl.import.full" : "teams.err.generic"));
     } finally {
-      setImporting(false);
+      setImporting(false); setStage("");
       if (fileRef.current) fileRef.current.value = "";
     }
   };
@@ -81,6 +85,7 @@ export function TeamsGallery({ team, pack, template }: { team?: string; pack?: s
           </>
         ) : undefined} />
       <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
+        {stage && <p role="status" data-testid="otpl-import-stage" className="mb-4 flex items-center gap-2 text-[13px] font-medium text-ink"><span aria-hidden className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />{t(`otpl.import.stage.${stage}`)}</p>}
         {importNote && <p role="alert" data-testid="otpl-import-note" className="mb-4 text-[13px] font-semibold text-red-600">{importNote}</p>}
         {mine.length > 0 && (
           <section aria-labelledby="otpl-mine" className="mb-6">
@@ -124,7 +129,7 @@ export function TeamsGallery({ team, pack, template }: { team?: string; pack?: s
               <p className="mt-1 text-[12px] leading-snug text-mute">{c.for}</p>
               <p className="mt-2 flex-1 text-[13px] leading-snug text-ink">{c.solves}</p>
               <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={t("teams.arrive")}>
-                {c.agents.map((a) => <li key={a.role} className="rounded-full border border-line bg-panel2 px-2 py-0.5 text-[11px] text-ink2">{a.title}</li>)}
+                {uniqueTitles(c.agents).map((title) => <li key={title} className="rounded-full border border-line bg-panel2 px-2 py-0.5 text-[11px] text-ink2">{title}</li>)}
               </ul>
               <p data-testid={`team-card-state-${c.key}`} className="mt-3 text-[11.5px] font-semibold text-mute">
                 {{ all: t("teams.card.all"), some: t("teams.card.some", { new: c.new_count, have: c.existing_count }), none: t("teams.card.none", { count: c.new_count }) }[cardState(c)]}
