@@ -94,6 +94,22 @@ func (b *Budget) departmentCheck(ctx context.Context, org, agentID string) (dept
 	return deptCheck{name: name, limit: limit, spent: deptSpend(usage, agentsOfDept(agents, name), PeriodStart(time.Now()))}, true, nil
 }
 
+// AgentCeiling is the lowest positive limit above an agent's own cap: its department's monthly limit or the
+// organization's cap in force (0 = none). An agent cap above it would never be reached, and restoring an old
+// version must not set one (docs/architecture/agent-history.md).
+func (b *Budget) AgentCeiling(ctx context.Context, agentID string) float64 {
+	org := b.org(ctx)
+	c := b.orgCap(ctx, org)
+	if limits := b.deptLimits(ctx, org); len(limits) > 0 {
+		if a, err := b.store.GetAgent(ctx, org, agentID); err == nil && a.Department != nil && strings.TrimSpace(*a.Department) != "" {
+			if _, l := deptLimitOf(limits, *a.Department); l > 0 && (c <= 0 || l < c) {
+				c = l
+			}
+		}
+	}
+	return c
+}
+
 // Wake makes every call paused on a cap check again. The admin console calls it after a department limit
 // changes (the limits live outside the budget service).
 func (b *Budget) Wake() {

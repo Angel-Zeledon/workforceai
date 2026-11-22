@@ -29,6 +29,7 @@ import { MockInitiatives } from "./initiative-mock";
 import { mockNeedsYou } from "./needsyou-mock";
 import { CONFIG_SIGNALS, SIGNAL_FIELDS } from "../initiativeLogic";
 import { MockStalls } from "./watchdog-mock";
+import { MockAgentHistory } from "./agent-history-mock";
 import { MockCustomers } from "./customers-mock";
 import { MockGoals } from "./goals-mock";
 import { tr } from "../i18n-core";
@@ -218,6 +219,7 @@ export class MockBackend {
   // proactive suggestions (B2): one per metric signal; accepting starts a normal mock request
   private initiatives = new MockInitiatives((text) => this.startRequest(text), { signals: CONFIG_SIGNALS, fields: SIGNAL_FIELDS });
   private stalls = new MockStalls();
+  private agentHist = new MockAgentHistory(); // F4: configuration history of each agent
   private conns = new MockConnections((t, p, a) => this.emit(t, p, a)); // connections + controls: connection.*, control.* endpoints/events
   private rituals = new MockRituals({
     agents: () => this.agents, tasks: () => this.tasks, approvals: () => this.approvals,
@@ -235,7 +237,7 @@ export class MockBackend {
     this.agents = SEED_AGENTS.map((a) => ({ ...a, metrics: { ...a.metrics }, state: "idle" as AgentState, activity: "Disponible", current_task_id: null, progress: 0 }));
     this.tasks = []; this.requests = []; this.conversations = []; this.messages = {}; this.approvals = [];
     this.reports = []; this.audits.clear(); this.evidence?.clear(); this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
-    this.debates?.reset(); this.debateWanted?.clear();
+    this.debates?.reset(); this.debateWanted?.clear(); this.agentHist?.reset();
     this.seedDeptApproval();
   }
 
@@ -687,6 +689,10 @@ export class MockBackend {
     }
     if (this.cmds.matches(seg)) return this.cmds.handle(method, seg, q, body);
     if (this.rituals.matches(seg)) return this.rituals.handle(method, seg, body, q);
+    if (this.agentHist.matches(seg)) return this.agentHist.handle(method, seg, this.agents, (id, lvl) => {
+      const ag = this.agents.find((x) => x.id === id);
+      if (ag && ag.autonomy !== lvl) { const from = ag.autonomy; ag.autonomy = lvl as typeof ag.autonomy; this.emit("agent.autonomy_changed", { agent_id: id, from, to: lvl, source: "restore" }, id); }
+    });
     if (this.perms.matches(seg)) return this.perms.handle(method, seg, body, this.agents, (id, lvl) => {
       const ag = this.agents.find((x) => x.id === id);
       if (ag && ag.autonomy !== lvl) { const from = ag.autonomy; ag.autonomy = lvl; this.emit("agent.autonomy_changed", { agent_id: id, from, to: lvl, source: "permissions.manual" }, id); }

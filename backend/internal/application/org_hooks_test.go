@@ -13,6 +13,28 @@ import (
 
 // ---- department budget (budget_dept.go) ----
 
+// F4: the ceiling of an agent's own cap is the strictest of its department's limit and the organization's cap.
+func TestAgentCeilingIsTheStrictestLimitAbove(t *testing.T) {
+	h := newHarness(t, &fakeRuntime{plan: proposalPlan()}, nil)
+	ctx := context.Background()
+	b := h.orch.Budget()
+	org := b.OrgCap(ctx)
+	if got := b.AgentCeiling(ctx, "sales"); got != org {
+		t.Fatalf("no department: ceiling %v, want the organization cap %v", got, org)
+	}
+	dept := "Ventas"
+	if err := h.store.SetAgentDepartment(ctx, domain.DemoOrgID, "sales", &dept); err != nil {
+		t.Fatal(err)
+	}
+	b.DepartmentLimitsFor = func(context.Context, string) map[string]float64 { return map[string]float64{"ventas": 0.10} }
+	if got := b.AgentCeiling(ctx, "sales"); !near(got, 0.10) {
+		t.Fatalf("department limit: ceiling %v", got)
+	}
+	if got := b.AgentCeiling(ctx, "legal"); got != org {
+		t.Fatalf("other department: ceiling %v", got)
+	}
+}
+
 func TestDepartmentLimitBlocksTheDepartmentAndStrictestWins(t *testing.T) {
 	h := newHarness(t, &fakeRuntime{plan: proposalPlan()}, nil)
 	ctx := context.Background()
