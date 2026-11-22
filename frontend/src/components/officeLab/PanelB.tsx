@@ -266,6 +266,7 @@ function buildRig(scene: THREE.Object3D, animations: THREE.AnimationClip[], role
       next.clampWhenFinished = true;
       next.timeScale = once && w.dur ? next.getClip().duration / w.dur : 1;
       if (once) next.time = Math.min(next.getClip().duration, w.since * next.timeScale);
+      else if (jump) next.time = (f.t * 1.1) % next.getClip().duration; // tras un salto del reloj, el ciclo sigue donde toca
       next.play();
       if (jump || !cur) { for (const [k, a] of Object.entries(actions)) if (k !== w.base) a.stop(); next.setEffectiveWeight(1); }
       else { next.fadeIn(0.28); actions[cur].fadeOut(0.28); }

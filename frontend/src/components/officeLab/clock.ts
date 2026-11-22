@@ -10,9 +10,15 @@ let speed = 1;
 const subs = new Set<() => void>();
 const emit = () => subs.forEach((f) => f());
 
+let pinned: number | null = null;
 /** Segundos de guion transcurridos (crece sin fin; cada panel aplica el bucle con `sample`). */
 export function labTime(): number {
+  if (pinned !== null) return pinned;
   return offset + ((performance.now() - base) / 1000) * speed;
+}
+// ?captura: el reloj se puede fijar desde fuera (window.__labPin(t)) para grabar fotogramas exactos en un ordenador lento
+if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("captura")) {
+  (window as unknown as { __labPin: (t: number | null) => void }).__labPin = (t) => { pinned = t; emit(); };
 }
 export function labRestart() { base = performance.now(); offset = 0; emit(); }
 export function labSetSpeed(s: number) { offset = labTime(); base = performance.now(); speed = s; emit(); }
