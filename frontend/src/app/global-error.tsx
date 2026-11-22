@@ -14,6 +14,8 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           <p style={{ fontSize: 14, color: "#5b6678", margin: "0 0 16px" }}>{tr("err.boundary.detail", undefined, l)}</p>
           {error.digest && <p style={{ fontSize: 11, color: "#8a93a3" }}>{tr("err.ref", { ref: error.digest }, l)}</p>}
           <button type="button" onClick={reset} style={{ background: "#0A66C2", color: "#fff", border: 0, borderRadius: 10, padding: "8px 14px", fontSize: 14, fontWeight: 500, cursor: "pointer", marginRight: 8 }}>{tr("err.boundary.retry", undefined, l)}</button>
+          {/* A full reload on purpose: the whole app crashed, so client-side navigation inside it is not safe. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/" style={{ border: "1px solid #d8dee8", borderRadius: 10, padding: "8px 14px", fontSize: 14, color: "#3d4757", textDecoration: "none" }}>{tr("err.boundary.home", undefined, l)}</a>
         </div>
       </body>

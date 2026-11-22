@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import Link from "next/link";
 import { useT } from "@/lib/i18n";
 
 /** What a screen shows when it crashed (React error boundary): never a blank page. The error is logged to the console. */
@@ -13,7 +14,7 @@ export function ErrorScreen({ error, reset }: { error: Error & { digest?: string
       {error.digest && <p className="text-[11px] text-mute">{t("err.ref", { ref: error.digest })}</p>}
       <div className="mt-1 flex gap-2">
         <button type="button" onClick={reset} className="rounded-[10px] bg-accent px-3.5 py-1.5 text-sm font-medium text-white hover:bg-accent-hover">{t("err.boundary.retry")}</button>
-        <a href="/" className="rounded-[10px] border border-line px-3.5 py-1.5 text-sm font-medium text-ink2 hover:border-accent hover:text-ink">{t("err.boundary.home")}</a>
+        <Link href="/" className="rounded-[10px] border border-line px-3.5 py-1.5 text-sm font-medium text-ink2 hover:border-accent hover:text-ink">{t("err.boundary.home")}</Link>
       </div>
     </div>
   );
