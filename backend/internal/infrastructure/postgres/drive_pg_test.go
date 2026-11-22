@@ -81,7 +81,7 @@ func TestDriveRLSAndImmutability(t *testing.T) {
 	}
 	// The file-name length and the mime of search text are bounded by CHECKs.
 	// Down migration removes everything.
-	for _, f := range []string{"821_drive_office_shares_down.sql", "481_artifact_blobs_object_down.sql", "480_drive_down.sql"} {
+	for _, f := range []string{"828_file_comments_down.sql", "821_drive_office_shares_down.sql", "481_artifact_blobs_object_down.sql", "480_drive_down.sql"} {
 		down, err := os.ReadFile("../../../migrations/down/" + f)
 		if err != nil {
 			t.Fatal(err)

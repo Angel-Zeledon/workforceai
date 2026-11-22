@@ -82,6 +82,9 @@ textarea[rows="1"]:placeholder-shown { white-space: nowrap; overflow: hidden; te
 select { color-scheme: light; }
 input::placeholder, textarea::placeholder { color: rgb(var(--mute) / 0.75); }
 ::selection { background: rgb(var(--accent) / 0.18); }
+/* F7: passages with a comment in the document viewer (CSS Custom Highlight API; no markup is added to the text) */
+::highlight(fc-comments) { background-color: rgb(var(--accent) / 0.2); }
+::highlight(fc-active) { background-color: rgb(var(--accent) / 0.42); }
 
 /* Focus accesible y consistente (solo teclado) */
 :focus { outline: none; }

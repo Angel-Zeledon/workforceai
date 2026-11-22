@@ -374,6 +374,7 @@ func run(log *slog.Logger) error {
 		EnableDemoReset: cfg.EnableDemoReset, MaxBodyBytes: cfg.MaxBodyBytes}
 	deps.Slack = slackSvc
 	deps.Goals = goalsSvc
+	deps.FileComments = wireFileComments(pg, rec, ws.drive, cfg.App.OrgID) // F7: comments anchored to a passage of a file
 	deps.AgentFolders = agentFolders(ws) // folder access per agent (folder_access.go)
 	deps.LinkImports = wireLinkImports(ctx, cfg, log, pg, rec, cw, ws.drive, custSvc, orgLister(store)) // import from a link (single line)
 	deps.VendorIntegrations = &cfg.VendorIntegrations // v1: vendor-specific integrations (VENDOR_INTEGRATIONS, default off)

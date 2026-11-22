@@ -74,7 +74,7 @@ func newOfficeDrive(t *testing.T) *officeDrive {
 }
 
 // newOfficeDriveRT is newOfficeDrive with its own runtime (nil: the default fake).
-func newOfficeDriveRT(t *testing.T, rt application.Runtime) *officeDrive {
+func newOfficeDriveRT(t *testing.T, rt application.Runtime, more ...func(d *api.Deps)) *officeDrive {
 	t.Helper()
 	var dr *drive.Service
 	e := newEnv(t, opts{auth: true, orgchart: true, drive: true, ws: true, runtime: rt, deps: func(d *api.Deps) {
@@ -88,6 +88,9 @@ func newOfficeDriveRT(t *testing.T, rt application.Runtime) *officeDrive {
 			Summarizer: meetSummary{orch: d.Orch}, Tasks: meetTasks{orch: d.Orch}, Files: meetFiles{d: d.Drive}, Agents: meetAgents{st: d.Store},
 			JitsiBase: "https://jitsi.example.org"})
 		d.Orch.SetFileResolver(chatDriveFiles{d: d.Drive})
+		for _, f := range more {
+			f(d)
+		}
 	}})
 	owner := e.register("owner-do@example.com", "OwnerDO")
 	o := &officeDrive{e: e, owner: owner,
