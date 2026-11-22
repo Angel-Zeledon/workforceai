@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, type ReactNode, type RefObject } from "react";
 import { useT, trOr, tr } from "@/lib/i18n";
+import { hasKey } from "@/lib/i18n-core";
+import { errorText } from "@/lib/errors";
 import { errCode } from "@/lib/connections/api";
 import { useConnections } from "@/lib/connections/store";
 import type { ConnStatus, Human, Risk } from "@/lib/connections/types";
@@ -8,7 +10,8 @@ import { usePageMode } from "../nav/pageMode";
 
 /** Translates an error thrown by the API layer into a localized, provider-agnostic message. */
 export function errText(e: unknown): string {
-  return trOr(`conn.err.${errCode(e)}`, tr("conn.err.generic"));
+  const code = errCode(e), key = `conn.err.${code}`;
+  return code !== "request_failed" && hasKey(key) ? tr(key) : errorText(e);
 }
 
 /** Current (mock or real) viewer; permissions follow the table in section 10 of the spec. */

@@ -4,6 +4,7 @@ import { useT } from "@/lib/i18n";
 import type { Customer, CustomerInput } from "@/lib/customersApi";
 import { customerColor, validateCustomer } from "@/lib/customersLogic";
 import { Btn } from "../ui";
+import { errorText } from "@/lib/errors";
 
 const field = "w-full rounded-md border border-line bg-panel2 px-2.5 py-1.5 text-[16px] text-ink md:text-[13px]";
 
@@ -24,7 +25,7 @@ export function CustomerForm({ initial, onSave, onCancel }: { initial?: Customer
     if (v) { setErr(t(`customers.form.error.${v}`)); return; }
     setBusy(true); setErr(null);
     try { await onSave({ name: name.trim(), tax_id: taxId.trim(), color, notes: notes.trim(), contact_name: contact.trim(), email: email.trim(), phone: phone.trim() }); }
-    catch (e) { setErr(e instanceof Error && e.message ? e.message : t("customers.error.save")); }
+    catch (e) { setErr(errorText(e, { fallbackKey: "customers.error.save" })); }
     finally { setBusy(false); }
   };
   return (

@@ -15,6 +15,7 @@ import { Markdown } from "./markdown";
 import { parseCsv } from "@/lib/csv";
 import { CodeView, DiffView, DocView, ImageView, JsonView, PdfBytesView, SheetView, TableView } from "./viewers";
 import { DetailPanel, dropDetailUrl, useDetailUrl } from "../ui/DetailPanel";
+import { errorText } from "@/lib/errors";
 
 const FILE_PARAM = "archivo";
 
@@ -104,7 +105,7 @@ export function FileViewerPanel() {
       <div ref={bodyRef} className="min-h-0 flex-1 overflow-auto" data-testid="viewer-body">
         {anchorable && <SelectionBar quote={sel.quote} onComment={startComment} onDismiss={sel.clear} />}
         {load.state === "loading" && <div className="p-6 text-center text-xs text-mute">{t("drive.loading")}</div>}
-        {load.state === "error" && <div role="alert" data-testid="viewer-error" className="p-6 text-center text-xs text-err">{load.code === "not_found" || load.code === "404" ? t("fileviewer.gone") : t("fileviewer.error", { code: load.code })}</div>}
+        {load.state === "error" && <div role="alert" data-testid="viewer-error" className="p-6 text-center text-xs text-err">{load.code === "not_found" || load.code === "404" ? t("fileviewer.gone") : errorText({ code: load.code })}</div>}
         {file && (editing
           ? <Editor key={file.id} file={file} kind={kind} onDone={async (saved) => { setEditing(false); if (saved) await reload(); }} />
           : <Body file={file} kind={kind} version={shown} latest={current} showDiff={showDiff} />)}
@@ -214,7 +215,7 @@ function Body({ file, kind, version, latest, showDiff }: { file: DriveFile; kind
     return () => { dead = true; };
   }, [showDiff, file.id, version, file.current_version]);
 
-  if (err) return <div role="alert" className="p-6 text-center text-xs text-err">{t("fileviewer.error", { code: err })}</div>;
+  if (err) return <div role="alert" className="p-6 text-center text-xs text-err">{errorText({ code: err })}</div>;
   if (showDiff) return <div className="p-3">{diff ? <DiffView lines={diff.lines} added={diff.added} removed={diff.removed} /> : <div className="text-xs text-mute">{t("drive.loading")}</div>}</div>;
   if (kind === "other") {
     return (
@@ -304,7 +305,7 @@ function Editor({ file, kind, onDone }: { file: DriveFile; kind: string; onDone:
         onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); save(file.current_version); } }}
         className="min-h-[260px] flex-1 resize-none rounded-lg border border-line bg-panel2 p-2.5 font-mono text-[12px] leading-[1.55] text-ink outline-none focus:border-accent"
       />
-      {err && <div role="alert" className="text-[11px] text-err">{t("fileviewer.saveError", { code: err })}</div>}
+      {err && <div role="alert" className="text-[11px] text-err">{errorText({ code: err })}</div>}
       <div className="flex items-center gap-2">
         <button type="submit" data-testid="viewer-save" disabled={busy || text === null} className="rounded-md border border-accent bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-hover disabled:opacity-40">
           {busy ? t("fileviewer.saving") : t("fileviewer.save")}

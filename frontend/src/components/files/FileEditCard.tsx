@@ -7,6 +7,7 @@ import { fileKind, useFileViewer, TEXTUAL } from "@/lib/fileView";
 import type { FileRef } from "@/lib/types";
 import { FileBadge } from "./FileCard";
 import { DiffView } from "./viewers";
+import { errorText } from "@/lib/errors";
 
 type State = "pending" | "kept" | "undone";
 
@@ -60,7 +61,7 @@ export function FileEditCard({ f }: { f: FileRef }) {
       if (!canUndoEdit({ version: to, from_version: from }, file.current_version)) { setCurrent(file.current_version); setBusy(false); return; }
       await drive.restoreVersion(f.file_id, from);
       setRestored(from); setState("undone"); touch();
-    } catch (e) { setErr(t("edit.undoError", { code: e instanceof DriveError ? e.code : "unavailable" })); }
+    } catch (e) { setErr(errorText(e)); }
     setBusy(false);
   };
 
@@ -87,7 +88,7 @@ export function FileEditCard({ f }: { f: FileRef }) {
       {expanded && (
         <div data-testid="edit-diff" className="mt-1.5 max-h-64 overflow-auto rounded-lg border border-line">
           {diff ? <DiffView lines={diff.lines} added={diff.added} removed={diff.removed} />
-            : diffErr ? <p className="p-2 text-[11px] text-mute">{diffErr === "none" || diffErr === "not_text" ? t("edit.noDiff") : t("edit.diffError", { code: diffErr })}</p>
+            : diffErr ? <p className="p-2 text-[11px] text-mute">{diffErr === "none" || diffErr === "not_text" ? t("edit.noDiff") : errorText({ code: diffErr })}</p>
             : <p className="p-2 text-[11px] text-mute">{t("drive.loading")}</p>}
         </div>
       )}

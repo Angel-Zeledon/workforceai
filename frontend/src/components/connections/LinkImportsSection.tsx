@@ -6,6 +6,7 @@ import {
   LINK_SCHEDULES, linkImportsApi, linkProblem, useLinkImportsLive,
   type LinkImport, type LinkImportInput, type LinkRun, type LinkSchedule,
 } from "@/lib/linkImportsApi";
+import { errorText } from "@/lib/errors";
 import { Btn, Card, Empty } from "../ui";
 import { ErrorLine, Field, inputCls, Modal, useViewer } from "./shared";
 
@@ -25,7 +26,7 @@ function errMessage(e: unknown): string {
   if (/^[a-z_]+$/.test(m)) return codeText(m);
   if (/-> 403$/.test(m)) return trOr("linkImports.adminOnly", m);
   if (/-> 400$/.test(m)) return trOr("linkImports.err.rejected", m);
-  return trOr("linkImports.code.generic", m);
+  return errorText(e);
 }
 
 function StatusChip({ status }: { status: string }) {
