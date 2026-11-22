@@ -73,3 +73,16 @@ export function destinationChoices(offices: OfficeChoice[] | undefined): { id: s
 export function installOutcome(r: Pick<TeamInstallResult, "created">): { key: "teams.installed" | "teams.alreadyThere"; count: number } {
   return r.created.length > 0 ? { key: "teams.installed", count: r.created.length } : { key: "teams.alreadyThere", count: 0 };
 }
+
+/** Name and role of a person without repeating themselves: when both say the same ("Ventas" / "Ventas") only one shows. */
+export function nameAndRole(name: string, title: string): { primary: string; secondary: string } {
+  const n = (name || "").trim(), r = (title || "").trim();
+  if (!n) return { primary: r, secondary: "" };
+  return { primary: n, secondary: r.toLowerCase() === n.toLowerCase() ? "" : r };
+}
+
+/** Role labels of a team, each once (two people with the same role make one chip). */
+export function uniqueTitles(agents: { title: string }[]): string[] {
+  const seen = new Set<string>();
+  return agents.map((a) => a.title.trim()).filter((x) => x && !seen.has(x.toLowerCase()) && !!seen.add(x.toLowerCase()));
+}

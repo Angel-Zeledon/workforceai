@@ -5,7 +5,7 @@ import { go } from "@/lib/navBridge";
 import { ApiError } from "@/lib/api";
 import { officesApi } from "@/lib/officesApi";
 import { teamsCatalogApi } from "@/lib/teamsCatalogApi";
-import { blockedKey, destinationChoices, installOutcome, splitAgents, weekByDay, type TeamPreview } from "@/lib/teamsCatalogLogic";
+import { blockedKey, destinationChoices, installOutcome, nameAndRole, splitAgents, weekByDay, type TeamPreview } from "@/lib/teamsCatalogLogic";
 import { PageHeader, PageSkeleton } from "../nav/ui2";
 
 /** Preview of one team for THIS organization: who arrives, what they do the first week, who is already there, and
@@ -68,8 +68,8 @@ export function TeamPreviewPanel({ teamKey, onBack, onInstalled }: { teamKey: st
               {arriving.map((a) => (
                 <li key={a.role} data-testid={`team-new-${a.role}`} className="rounded-[10px] border border-line bg-panel p-3">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[14px] font-semibold text-ink">{a.name}</span>
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-accent">{a.title}</span>
+                    <span className="text-[14px] font-semibold text-ink">{nameAndRole(a.name, a.title).primary}</span>
+                    {nameAndRole(a.name, a.title).secondary && <span className="text-[12px] font-medium text-accent">{nameAndRole(a.name, a.title).secondary}</span>}
                   </div>
                   <p className="mt-1 text-[12.5px] leading-snug text-ink2">{a.does}</p>
                 </li>
@@ -84,7 +84,7 @@ export function TeamPreviewPanel({ teamKey, onBack, onInstalled }: { teamKey: st
             <ul className="flex flex-wrap gap-2">
               {already.map((a) => (
                 <li key={a.role} data-testid={`team-have-${a.role}`} className="rounded-full border border-line bg-panel2 px-3 py-1 text-[12.5px] text-ink">
-                  {a.existing?.name ? <><span className="font-semibold">{a.existing.name}</span> · {a.title}</> : a.title}
+                  {a.existing?.name ? <><span className="font-semibold">{nameAndRole(a.existing.name, a.title).primary}</span>{nameAndRole(a.existing.name, a.title).secondary && <> · {nameAndRole(a.existing.name, a.title).secondary}</>}</> : a.title}
                 </li>
               ))}
             </ul>

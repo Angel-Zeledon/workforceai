@@ -62,3 +62,10 @@ export function caseIssue(c: { title: string; prompt: string; expect: string }, 
 
 /** A stable code of a failed run to a translation key suffix: "budget_exceeded:org" -> "budget_exceeded". */
 export const failKey = (code?: string): string => (code ?? "").split(":")[0] || "unknown";
+
+/** The case to keep selected: the current one while it exists, else the first, else none. A pure function so the effect
+ * that applies it only sets state when the answer differs (no state churn on each render). */
+export function pickCaseId(cases: { id: string }[], current: string): string {
+  if (current && cases.some((c) => c.id === current)) return current;
+  return cases[0]?.id ?? "";
+}
