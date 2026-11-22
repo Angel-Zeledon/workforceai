@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"aiworkforce/backend/internal/agenthistory"
 	"aiworkforce/backend/internal/api"
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
@@ -130,6 +131,11 @@ func run(log *slog.Logger) error {
 	// its first action. Bound once the service exists (permissions.go).
 	permObs := &application.PermissionsObserver{Inner: pub}
 	pub = permObs
+
+	// F4 agent history: changes of an agent that no request names (an automatic demotion after an incident, a hire)
+	// leave a version too. Bound once the API dependencies exist (agent_history.go).
+	histObs := &agenthistory.Observer{Inner: pub}
+	pub = histObs
 
 	// --- governance (BEGIN): public webhook events (request.done, approval.requested, report.created) ---
 	whSvc := &webhooks.Service{Log: log}
@@ -468,6 +474,7 @@ func run(log *slog.Logger) error {
 	if cfg.EnableDemoReset {
 		log.Warn("ENABLE_DEMO_RESET=true: POST /api/v1/demo/reset is exposed")
 	}
+	deps.History = wireAgentHistory(pg, deps, histObs) // F4: configuration history of each agent (agent_history.go)
 	srv := api.NewHTTPServer(":"+cfg.Port, api.NewRouter(deps), api.Timeouts{
 		ReadHeader: cfg.ReadHeaderTimeout, Read: cfg.ReadTimeout, Write: cfg.WriteTimeout, Idle: cfg.IdleTimeout})
 

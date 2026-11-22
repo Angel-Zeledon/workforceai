@@ -443,7 +443,7 @@ func (s *Service) Restore(ctx context.Context, org, agentID string, n int, c Cau
 		}
 		res.Applied = append(res.Applied, st)
 	}
-	v, wrote, err := s.Record(ctx, org, agentID, Cause{Actor: c.Actor, ActorName: c.ActorName, Source: "restore", RestoredFrom: &n})
+	v, wrote, err := s.Record(ctx, org, agentID, Cause{Actor: c.Actor, ActorName: c.ActorName, Source: SourceRestore, RestoredFrom: &n})
 	if err != nil {
 		return res, err
 	}

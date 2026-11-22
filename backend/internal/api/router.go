@@ -19,6 +19,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gorilla/websocket"
 
+	"aiworkforce/backend/internal/agenthistory"
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/artifacts"
 	"aiworkforce/backend/internal/auth"
@@ -192,6 +193,9 @@ type Deps struct {
 	Profiles *application.ProfileService
 	V2       application.V2Store
 	Tracer   *application.Tracer
+	// History keeps the configuration history of every agent and serves /agents/{id}/versions (agent_history.go, F4):
+	// build it with NewAgentHistory. Optional: nil leaves the routes and the recording hook off.
+	History *agenthistory.Service
 	// TenantData serves /org/export and /org/deletion (tenantdata.go): GDPR export and deletion. Optional.
 	TenantData *tenantdata.Service
 	// --- governance (BEGIN): admin console, reports, retention, API tokens, webhooks (governance_wire.go) ---
@@ -286,7 +290,7 @@ func NewRouter(d Deps) http.Handler {
 		s.mountPortalPublic(r)   // client portal: the read-only page of a share link (token in the body)
 		s.mountInboxesPublic(r)  // data inboxes: POST /inbox/{id}, Authorization: Bearer <inbox token>
 		r.Group(func(r chi.Router) {
-			r.Use(s.authenticate, s.tenant)
+			r.Use(s.authenticate, s.tenant, s.historyHook) // F4: every change of an agent leaves a version (agent_history.go)
 			r.With(s.can(auth.PermAgentsRead)).Get("/agents", s.listAgents)
 			r.With(s.can(auth.PermAgentsRead)).Get("/agents/{id}", s.getAgent)
 			r.With(s.can(auth.PermAgentsRead)).Get("/agents/{id}/detail", s.agentDetail)
@@ -343,6 +347,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountQuality(r)
 			s.mountTrust(r)
 			s.mountPermissions(r) // approval permissions per agent (permissions.go)
+			s.mountAgentHistory(r) // F4: configuration history of each agent, "go back to how it was" (agent_history.go)
 			s.mountRituals(r)
 			s.mountAway(r)
 			s.mountCustomers(r)

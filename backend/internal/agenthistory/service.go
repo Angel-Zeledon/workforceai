@@ -15,6 +15,13 @@ import (
 // DefaultKeep is how many versions are kept per agent.
 const DefaultKeep = 100
 
+// Sources of a version that are not a route.
+const (
+	SourceBaseline = "baseline"      // how the agent was when its history started
+	SourceCreated  = "agent.created" // the agent was hired
+	SourceRestore  = "restore"       // a person restored an older version
+)
+
 // Source fills its part of the snapshot of one agent. The first source must fail with domain.ErrNotFound for an
 // agent that does not exist. A source that cannot read its part right now returns an error: no version is written
 // (a partial snapshot would look like a change).
@@ -125,6 +132,10 @@ func (s *Service) recordOnce(ctx context.Context, org, agentID string, c Cause) 
 	if actor == "" {
 		actor = ActorSystem
 	}
+	if !had && c.Source != SourceCreated {
+		// the first known state of an agent hired before the history existed: nobody "changed" it into this
+		actor, c.Source, c.ActorName, c.RestoredFrom = ActorSystem, SourceBaseline, "", nil
+	}
 	v := Version{AgentID: agentID, Version: last.Version + 1, CreatedAt: s.now(), Actor: actor, ActorKind: actorKind(actor),
 		Source: clip(c.Source, 120), Fields: fields, RestoredFrom: c.RestoredFrom, Config: cfg}
 	if v.ActorKind == ActorPerson {
@@ -148,8 +159,22 @@ func (s *Service) EnsureBaseline(ctx context.Context, org, agentID string) {
 	if _, had, err := s.Store.Last(ctx, org, agentID); err != nil || had {
 		return
 	}
-	if _, _, err := s.Record(ctx, org, agentID, Cause{Actor: ActorSystem, Source: "baseline"}); err != nil && !errors.Is(err, domain.ErrNotFound) {
+	if _, _, err := s.Record(ctx, org, agentID, Cause{Actor: ActorSystem, Source: SourceBaseline}); err != nil && !errors.Is(err, domain.ErrNotFound) {
 		s.log().Warn("agent history: baseline", "agent", agentID, "err", err)
+	}
+}
+
+// EnsureBaselineAll writes the baseline of every agent of the organization that has no history yet.
+func (s *Service) EnsureBaselineAll(ctx context.Context, org string) {
+	if s.Agents == nil || org == "" {
+		return
+	}
+	ids, err := s.Agents(ctx, org)
+	if err != nil {
+		return
+	}
+	for _, id := range ids {
+		s.EnsureBaseline(ctx, org, id)
 	}
 }
 
