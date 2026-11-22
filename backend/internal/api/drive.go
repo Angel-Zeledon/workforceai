@@ -91,7 +91,7 @@ func driveStatus(err error) (int, string, string) {
 func (s *server) driveFail(w http.ResponseWriter, err error) {
 	status, code, msg := driveStatus(err)
 	if status == http.StatusInternalServerError {
-		s.fail(w, err) // unexpected: 500, logged
+		s.internalFail(w, err) // unexpected: 500, logged with a reference
 		return
 	}
 	body := map[string]any{"code": code, "error": msg}

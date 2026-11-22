@@ -9,6 +9,7 @@ import { fileKind } from "@/lib/fileView";
 import { useStore } from "@/lib/store";
 import { Icon } from "../icons";
 import { useAgentName } from "../ui";
+import { errorText } from "@/lib/errors";
 
 /**
  * Comments anchored to a passage of a text document (F7, docs/architecture/anchored-comments.md).
@@ -163,7 +164,7 @@ export function CommentsPanel({ file, versions, shown, state, pending, onClearPe
 
   const fail = (e: unknown) => {
     const code = e instanceof DriveError ? e.code : "unavailable";
-    setErr(KNOWN_ERRORS.includes(code) ? t(`fcomments.err.${code}`) : t("fcomments.err.generic", { code }));
+    setErr(KNOWN_ERRORS.includes(code) ? t(`fcomments.err.${code}`) : errorText(e));
   };
   const quote = pending ?? (manual ? cleanQuote(manualQuote) : null);
 
@@ -212,7 +213,7 @@ export function CommentsPanel({ file, versions, shown, state, pending, onClearPe
 
       <div className="min-h-0 flex-1 overflow-auto px-3 py-2">
         {state.loading && <p className="text-[11.5px] text-mute">{t("drive.loading")}</p>}
-        {state.error && <p role="alert" className="text-[11.5px] text-err">{t("fcomments.err.load", { code: state.error })}</p>}
+        {state.error && <p role="alert" className="text-[11.5px] text-err">{errorText({ code: state.error })}</p>}
         {!state.loading && !state.error && state.threads.length === 0 && <p className="text-[11.5px] leading-relaxed text-mute" data-testid="fc-empty">{t("fcomments.empty")}</p>}
         <ul className="flex flex-col gap-2.5">
           {state.threads.map((th) => (

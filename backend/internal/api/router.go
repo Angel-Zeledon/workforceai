@@ -4,6 +4,8 @@ package api
 import (
 	"cmp"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -408,7 +410,14 @@ func (s *server) fail(w http.ResponseWriter, err error) {
 		status = http.StatusRequestEntityTooLarge
 	}
 	if status == http.StatusInternalServerError {
-		s.Log.Error("request failed", "err", err)
+		s.internalFail(w, err)
+		return
+	}
+	var bad *badRequestError
+	if errors.As(err, &bad) {
+		s.Log.Debug("malformed request body", "err", bad.cause)
+		writeJSON(w, status, map[string]string{"error": bad.Error(), "code": "bad_request", "message": bad.Error()})
+		return
 	}
 	if pe, ok := domain.AsPlanLimit(err); ok {
 		writeJSON(w, status, map[string]any{"error": err.Error(), "code": "plan_limit", "limit_kind": pe.Kind, "limit": pe.Limit, "plan": pe.Plan})
@@ -416,6 +425,32 @@ func (s *server) fail(w http.ResponseWriter, err error) {
 	}
 	writeJSON(w, status, map[string]string{"error": err.Error()})
 }
+
+// internalMessage is the only text an unexpected failure ever shows: the details (database, wrapping, paths) stay in the log.
+const internalMessage = "Algo salió mal de nuestro lado. Inténtalo de nuevo en unos minutos."
+
+// internalFail answers an unexpected failure (HTTP 500) without leaking its text: a stable code, a safe phrase and a
+// short reference that is also written to the log with the full error, so support can find it.
+func (s *server) internalFail(w http.ResponseWriter, err error) {
+	ref := newErrorRef()
+	s.Log.Error("request failed", "ref", ref, "err", err)
+	writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal", "code": "internal", "message": internalMessage, "ref": ref})
+}
+
+// newErrorRef returns a short random reference (8 hex chars) people can quote to support.
+func newErrorRef() string {
+	var b [4]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return strconv.FormatInt(time.Now().UnixNano()%0xffffffff, 16)
+	}
+	return hex.EncodeToString(b[:])
+}
+
+// badRequestError is a body that is not valid JSON: it reads as a generic sentence, never the decoder's text.
+type badRequestError struct{ cause error }
+
+func (e *badRequestError) Error() string { return "La solicitud no tiene un formato válido" }
+func (e *badRequestError) Unwrap() []error { return []error{domain.ErrInvalid, e.cause} } // callers still test errors.Is(err, io.EOF)
 
 // errTooLarge marks a body that exceeded MaxBodyBytes (HTTP 413).
 var errTooLarge = errors.New("request body too large")
@@ -429,7 +464,7 @@ func (s *server) decode(w http.ResponseWriter, r *http.Request, dst any) error {
 		if errors.As(err, &mbe) {
 			return errTooLarge
 		}
-		return errors.Join(domain.ErrInvalid, err)
+		return &badRequestError{cause: err}
 	}
 	return nil
 }

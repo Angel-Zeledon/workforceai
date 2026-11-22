@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useT } from "@/lib/i18n";
 import { inputCls } from "../connections/shared";
 import { GovError } from "./governanceApi";
+import { errorText } from "@/lib/errors";
 
 export const thCls = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-mute";
 export const tdCls = "px-3 py-2 text-[12.5px] text-ink";
@@ -35,8 +36,7 @@ export function Notice({ kind, children }: { kind: "ok" | "err" | "warn"; childr
 
 /** Message for a failed call (the server's own text is short and safe to show). */
 export function useErrText() {
-  const { t } = useT();
-  return useCallback((e: unknown) => t("adm.err", { msg: e instanceof GovError || e instanceof Error ? e.message : String(e) }), [t]);
+  return useCallback((e: unknown) => errorText(e), []);
 }
 
 /** Loads on mount and on reload(); keeps the last value while reloading. */

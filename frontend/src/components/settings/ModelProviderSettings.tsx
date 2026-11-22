@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { LLMError, llmApi, type LLMProvider, type LLMTestResult, type LLMView } from "@/lib/llmApi";
+import { errorText } from "@/lib/errors";
 
 /**
  * Settings -> "Modelo de IA": bring your own model. Self-contained (own API client, own testids `llm-*`),
@@ -30,7 +31,7 @@ function ProviderCard({ p, active, encryption, onChange, onError }: {
   const body = () => ({ api_key: key.trim() || undefined, model, base_url: base.trim(), org_id: org.trim(), project_id: proj.trim() });
   const fail = (e: unknown) => {
     if (e instanceof LLMError && e.code === "encryption_unavailable") onError(t("llm.err.encryption"));
-    else onError(t("llm.err.generic", { detail: e instanceof Error ? e.message : "" }));
+    else onError(errorText(e));
   };
   const run = async (fn: () => Promise<LLMView | void>) => {
     setBusy(true); onError("");
