@@ -1469,3 +1469,13 @@ Códigos `400`: `name_required`, `name_too_long`, `template_invalid`, `too_many`
 `409 name_taken`. Cambios aditivos en rutas existentes: `GET /agents/{id}/skills` añade `via: "position"` y
 `position_name` y ordena directas > puesto > oficio; `GET /agents/{id}/folder-access` añade `source: "position"` y
 `position` (nombre); el historial (sección 51) añade el campo `position`.
+
+## 56. Errores claros
+
+Un error nunca llega a la persona como texto de código. Contrato:
+
+- **500**: `{"error":"internal","code":"internal","message":"<frase segura>","ref":"<8 hex>"}`. El detalle completo (BD, wrapping, rutas) va solo al log, junto con el mismo `ref` (`internalFail` en `api/router.go`; también lo usan `driveFail` y `meetingsFail`). Nunca se devuelve `err.Error()` en un 500.
+- **400 de JSON mal formado**: `{"error":"La solicitud no tiene un formato válido","code":"bad_request","message":...}`, sin el texto del decoder (que queda en el log a nivel debug). Sigue siendo `domain.ErrInvalid` (y `io.EOF` para un cuerpo vacío).
+- Los códigos estables existentes no cambian.
+
+Frontend: `lib/errors.ts` (`describeError`, `errorText`, `toastError`) sobre `lib/errorsCore.ts` (clasificación pura: red, timeout, 401/403/404/409/413/415/422/423/429/5xx y el catálogo `CODE_PHRASE` código -> frase `err.c.*` en es/en/pt). Un código desconocido nunca se muestra: cae a la frase de su estado HTTP o a la genérica con "Si se repite, comparte esta referencia: {ref}" (la del backend, o una local registrada en consola). `components/ui/ErrorNote.tsx` pinta el aviso con "Reintentar"; `app/error.tsx`, `app/(app)/error.tsx` y `app/global-error.tsx` son los límites de error de React. `lib/errors.test.mjs` incluye una guarda que falla si reaparece `e.message` / `String(e)` en una pantalla.

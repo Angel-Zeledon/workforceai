@@ -9,6 +9,7 @@ import { customerColor, defaultCloneName, normalizeStatus, STATUS_COLOR } from "
 import { Btn, Card, Dot, Empty, Loading, timeAgo, useAgentColor, useAgentName } from "../ui";
 import { CustomerForm } from "./CustomerForm";
 import { DetailPanel, useDetailUrl, type DetailPanelProps } from "../ui/DetailPanel";
+import { toastError } from "@/lib/errors";
 
 const field = "w-full rounded-md border border-line bg-panel2 px-2.5 py-1.5 text-[16px] text-ink md:text-[13px]";
 
@@ -105,7 +106,7 @@ export function CustomerView({ id, onBack, onChanged, onOpen }: { id: string; on
   const addClone = async () => {
     if (!picked) return;
     try { await customersApi.addAssignment(c.id, picked.id, cloneName.trim() || undefined); setAgentId(""); setCloneName(""); load(); onChanged(); toast(t("customers.toast.cloneAdded")); }
-    catch (e) { toast(e instanceof Error && e.message ? e.message : t("customers.error.save"), "err"); }
+    catch (e) { toastError(e, { fallbackKey: "customers.error.save" }); }
   };
   const removeClone = async (aid: string) => {
     try { await customersApi.removeAssignment(c.id, aid); load(); onChanged(); }
@@ -119,7 +120,7 @@ export function CustomerView({ id, onBack, onChanged, onOpen }: { id: string; on
       toast(to ? t("customers.history.assigned", { count: r.memories }) : t("customers.history.unassigned"));
       load(); onChanged();
       if (earlierOpen) loadEarlier();
-    } catch (e) { toast(e instanceof Error && e.message ? e.message : t("customers.error.save"), "err"); }
+    } catch (e) { toastError(e, { fallbackKey: "customers.error.save" }); }
   };
   const finishedProject = (st: string) => ["done", "failed", "cancelled", "draft"].includes(st);
   const finishedRequest = (st: string) => st === "done" || st === "failed";

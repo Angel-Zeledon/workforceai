@@ -12,6 +12,7 @@ import { useStore } from "@/lib/store";
 import { AgentChip, StatePill, fmtMoney, useNodeTitle } from "./shared";
 import { DetailPanel, useDetailUrl } from "../ui/DetailPanel";
 import { StallActions } from "../watchdog/StallActions";
+import { errorText } from "@/lib/errors";
 
 /** The task of a project in the single side panel (components/ui/DetailPanel.tsx): facts, dependencies in/out and a
  *  deterministic "why is it blocked?". The URL says which task is open (?tarea=<id>), so Back closes it. */
@@ -27,7 +28,7 @@ export function NodeDrawer() {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const run = async (fn: () => Promise<void>) => { setBusy(true); setErr(null); try { await fn(); setSkipping(false); setReason(""); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); } };
+  const run = async (fn: () => Promise<void>) => { setBusy(true); setErr(null); try { await fn(); setSkipping(false); setReason(""); } catch (e) { setErr(errorText(e)); } finally { setBusy(false); } };
   const detail = useProjects((s) => s.detail)!;
   const id = useProjects((s) => s.selectedNodeId)!;
   const select = useProjects((s) => s.selectNode);
@@ -62,7 +63,7 @@ export function NodeDrawer() {
           <Fact k={t("pv.node.depth")} v={`${n.delegation_depth}/5`} />
           <Fact k={t("pv.node.complexity")} v={n.complexity} />
         </dl>
-        {n.error && <div className="rounded-xl bg-red-500/10 px-2 py-1 text-[11px] text-red-700">{t("pv.node.error", { code: n.error })}</div>}
+        {n.error && <div className="rounded-xl bg-red-500/10 px-2 py-1 text-[11px] text-red-700">{errorText({ code: n.error })}</div>}
         {n.task_id && Object.values(questions).filter((q) => q.task_id === n.task_id && q.status === "open").map((q) => <QuestionCard key={q.id} q={q} />)}
         {n.omitted && <div data-testid="node-omitted" className="rounded-xl bg-panel2 px-2 py-1 text-[11px] text-mute">{t("pv.node.omitted")}</div>}
         {n.files && n.files.length > 0 && (
