@@ -234,19 +234,30 @@ func (s *Service) Load(ctx context.Context, org string, c LoadCall) (Loaded, err
 	if err != nil {
 		return Loaded{}, err
 	}
-	out := Loaded{Name: sk.Name, Version: v.Version}
+	out, err := s.render(ctx, org, sk, v.Version, pkg, c.File)
+	if err != nil {
+		return Loaded{}, err
+	}
+	s.audit(ctx, org, Actor{ID: c.AgentID}, "skill.loaded", sk.ID, map[string]any{"name": sk.Name, "version": v.Version, "agent_id": c.AgentID, "task_id": c.TaskID, "file": c.File})
+	return out, nil
+}
+
+// render is what an agent gets back for one version of a skill: the instructions (or one resource file) cleaned,
+// scored and bounded. skill.load serves the approved version through it; a test run serves the version under test.
+func (s *Service) render(ctx context.Context, org string, sk Skill, version int, pkg Package, file string) (Loaded, error) {
+	out := Loaded{Name: sk.Name, Version: version}
 	for _, f := range pkg.Files {
 		out.Files = append(out.Files, f.Path)
 	}
 	var text string
-	if c.File != "" {
-		i := slices.IndexFunc(pkg.Files, func(f File) bool { return f.Path == c.File })
+	if file != "" {
+		i := slices.IndexFunc(pkg.Files, func(f File) bool { return f.Path == file })
 		if i < 0 {
 			return Loaded{}, &Error{Code: "file_not_found", Kind: domain.ErrNotFound, Msg: "that file is not part of the skill"}
 		}
-		out.File, text = c.File, pkg.Files[i].Content
+		out.File, text = file, pkg.Files[i].Content
 	} else {
-		dir, _ := s.skillDir(ctx, org, sk.OfficeID, sk.Name, v.Version)
+		dir, _ := s.skillDir(ctx, org, sk.OfficeID, sk.Name, version)
 		text = buildLoadText(dir, pkg)
 	}
 	score, _ := sanitize.ScoreInjection(text)
@@ -256,7 +267,6 @@ func (s *Service) Load(ctx context.Context, org string, c LoadCall) (Loaded, err
 		text, out.Truncated = string(r[:MaxLoadChars])+"\n[truncated: read the rest with skill.load {name, file} or fs.read]", true
 	}
 	out.Text = text
-	s.audit(ctx, org, Actor{ID: c.AgentID}, "skill.loaded", sk.ID, map[string]any{"name": sk.Name, "version": v.Version, "agent_id": c.AgentID, "task_id": c.TaskID, "file": c.File})
 	return out, nil
 }
 
