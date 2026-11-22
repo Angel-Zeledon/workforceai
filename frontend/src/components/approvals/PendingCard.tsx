@@ -90,7 +90,7 @@ export function PendingCard({
           {context && <div className="mt-0.5 truncate text-[11px] text-mute">{context}</div>}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center">
-          <span className={`whitespace-nowrap rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide ${kind === "question" ? "bg-accent/10 text-accent" : "bg-warn/10 text-warn"}`}>{t(`pendingCard.kind.${kind}`)}</span>
+          <span className={`whitespace-nowrap rounded px-1.5 py-[2px] text-[10px] font-semibold uppercase tracking-wide bg-accent/10 text-accent`}>{t(`pendingCard.kind.${kind}`)}</span>
           {risk && <RiskBadge risk={risk} />}
         </div>
       </div>

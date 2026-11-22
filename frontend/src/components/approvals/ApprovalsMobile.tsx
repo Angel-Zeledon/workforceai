@@ -120,21 +120,32 @@ function ApprovalItem({ a, focused, onDone }: { a: Approval; focused: boolean; o
         {!can && <p data-testid={`approval-deciders-${a.id}`} className="rounded-md border border-line bg-panel2 px-3 py-2 text-[12.5px] text-ink2">{deciders ? t("approvalInbox.decidedBy", { names: deciders }) : t("approvals.noPermission")}</p>}
         {can && <div className="grid grid-cols-2 gap-3">
           <button type="button" data-testid={`approval-approve-${a.id}`} disabled={busy} onClick={() => decide("approve")}
-            className="min-h-[48px] rounded-md border border-ok/40 bg-ok/10 text-sm font-semibold text-ok disabled:opacity-40">{canRemember ? t("approvals.approveOnce") : t("approvals.approve")}</button>
+            className="min-h-[48px] rounded-md border border-accent bg-accent text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-40">{canRemember ? t("approvals.approveOnce") : t("approvals.approve")}</button>
           <button type="button" data-testid={`approval-reject-${a.id}`} disabled={busy} onClick={() => decide("reject")}
-            className="min-h-[48px] rounded-md border border-err/40 bg-err/10 text-sm font-semibold text-err disabled:opacity-40">{t("approvals.reject")}</button>
+            className="min-h-[48px] rounded-md border border-line-strong bg-panel text-sm font-semibold text-ink hover:bg-panel2 disabled:opacity-40">{t("approvals.reject")}</button>
         </div>}
         {can && canRemember && (
           <div className="mt-3 grid grid-cols-2 gap-3">
             <button type="button" data-testid={`approval-session-${a.id}`} disabled={busy} onClick={() => decide("approve", "session")}
-              className="min-h-[44px] rounded-md border border-ok/30 text-[13px] font-semibold text-ok disabled:opacity-40">{t("approvals.approveSession")}</button>
+              className="min-h-[44px] rounded-md border border-line-strong text-[13px] font-semibold text-ink hover:bg-panel2 disabled:opacity-40">{t("approvals.approveSession")}</button>
             <button type="button" data-testid={`approval-project-${a.id}`} disabled={busy} onClick={() => decide("approve", "project")}
-              className="min-h-[44px] rounded-md border border-ok/30 text-[13px] font-semibold text-ok disabled:opacity-40">{t("approvals.approveProject")}</button>
+              className="min-h-[44px] rounded-md border border-line-strong text-[13px] font-semibold text-ink hover:bg-panel2 disabled:opacity-40">{t("approvals.approveProject")}</button>
           </div>
         )}
         {can && roleCan && <div className="mt-2 flex flex-wrap justify-center"><RememberApproval a={a} busy={busy} setBusy={setBusy} onDone={() => { setBusy(false); onDone(); }} /></div>}
         {err && <p role="alert" className="mt-2 text-[12px] text-err">{t("approvals.decideError")}</p>}
       </>} />
+  );
+}
+
+/** An approval that is no longer pending: the same card, read-only, with its outcome. */
+function ResolvedItem({ a }: { a: Approval }) {
+  const { t } = useT();
+  const approved = a.status === "approved";
+  return (
+    <PendingCard kind="approval" variant="full" testId={`approval-resolved-${a.id}`} agentId={a.agent_id} title={a.title} action={a.action} risk={a.risk}
+      body={a.details ? <p className="mt-2 text-[13px] leading-snug text-ink2 [overflow-wrap:anywhere]">{a.details}</p> : null}
+      actions={<p data-testid={`approval-outcome-${a.id}`} data-status={a.status} className="rounded-md border border-line bg-panel2 px-3 py-2 text-[12.5px] font-medium text-ink">{approved ? t("approvals.mobile.outcome.approved") : t("approvals.mobile.outcome.rejected")}</p>} />
   );
 }
 
@@ -145,6 +156,7 @@ export function ApprovalsMobile({ focusId }: { focusId?: string }) {
   const signedIn = useSession((s) => s.status === "authenticated");
   const [items, setItems] = useState<Approval[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [resolved, setResolved] = useState<Approval | null>(null);
   useEffect(() => { hydrate(); }, [hydrate]);
 
   const load = useCallback(async () => {
@@ -165,6 +177,16 @@ export function ApprovalsMobile({ focusId }: { focusId?: string }) {
 
   const sorted = (items ?? []).slice().sort((a, b) => (a.id === focusId ? -1 : b.id === focusId ? 1 : +new Date(b.created_at) - +new Date(a.created_at)));
   const focusGone = !!focusId && items !== null && !items.some((a) => a.id === focusId);
+  // the opened approval is no longer pending: look it up among all of them to show it read-only with its result
+  useEffect(() => {
+    if (!focusId || !focusGone) { setResolved(null); return; }
+    let live = true;
+    call<Approval[] | { items: Approval[] }>("GET", "/approvals").then((r) => {
+      const all = Array.isArray(r) ? r : r.items ?? [];
+      if (live) setResolved(all.find((a) => a.id === focusId && a.status !== "pending") ?? null);
+    }).catch(() => undefined);
+    return () => { live = false; };
+  }, [focusId, focusGone]);
   return (
     <main className="mx-auto min-h-full max-w-xl space-y-3 bg-bg px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-5" data-testid="approvals-page">
       <header>
@@ -180,7 +202,13 @@ export function ApprovalsMobile({ focusId }: { focusId?: string }) {
           <button type="button" data-testid="approvals-retry" onClick={load} className="min-h-[44px] rounded-md border border-err/40 px-3 font-semibold">{t("approvals.mobile.retry")}</button>
         </div>
       )}
-      {focusGone && <p role="status" data-testid="approval-not-pending" className="rounded-lg border border-line bg-panel p-3 text-[13px] text-ink2">{t("approvals.mobile.notPending")}</p>}
+      {focusGone && (
+        <section data-testid="approval-not-pending" className="space-y-2">
+          <p role="status" className="rounded-lg border border-line bg-panel p-3 text-[13px] text-ink2">{t("approvals.mobile.notPending")}</p>
+          {resolved && <ResolvedItem a={resolved} />}
+          {sorted.length > 0 && <h2 className="pt-2 text-[12px] font-semibold uppercase tracking-wide text-mute">{t("approvals.mobile.others")}</h2>}
+        </section>
+      )}
       {items && items.length === 0 && !failed && <p data-testid="approvals-empty" className="py-8 text-center text-[14px] text-mute">{t("approvals.mobile.empty")}</p>}
       <ul className="space-y-3" aria-label={t("approvals.mobile.title")}>
         {sorted.map((a) => <ApprovalItem key={a.id} a={a} focused={a.id === focusId} onDone={load} />)}

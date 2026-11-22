@@ -38,14 +38,21 @@ export class MockInbox {
       checks: [tr("mock.inbox.check1")], cost_usd: 0.004, created_at: new Date().toISOString() };
   }
 
-  private items(): InboxItem[] {
+  /** The demo approvals as GET /approvals returns them, so the page of one approval (/approvals/<id> from "Te necesitan")
+   * finds the same ids the inbox and "Te necesitan" show; decided ones keep their outcome (read-only card). */
+  demoApprovals(status?: string): InboxItem[] {
+    return this.items(true).filter((a) => this.isDemo(a.id) && (!status || a.status === status));
+  }
+
+  private items(withDecided = false): InboxItem[] {
     const out: InboxItem[] = [];
     DEMO.forEach((d, n) => {
-      if (this.decided.has(d.id)) return;
+      const outcome = this.decided.get(d.id);
+      if (outcome && !withDecided) return;
       const pid = d.project ? `prj-demo-${d.project}` : undefined;
       out.push({
         id: d.id, task_id: `${d.id}-task`, agent_id: d.agent, action: d.action, title: tr(`mock.inbox.${d.key}.title`), details: tr(`mock.inbox.${d.key}.details`),
-        risk: d.risk, status: "pending", created_at: new Date(this.created - (DEMO.length - n) * 60_000).toISOString(), resolved_at: null,
+        risk: d.risk, status: outcome ?? "pending", created_at: new Date(this.created - (DEMO.length - n) * 60_000).toISOString(), resolved_at: outcome ? new Date().toISOString() : null,
         required_approvals: 1, decisions: [], task_title: tr(`mock.inbox.${d.key}.task`), task_cost_usd: d.cost, high_risk: d.risk === "high",
         ...(pid ? { project_id: pid, project_name: tr(`mock.inbox.project.${d.project}`) } : {}),
         ...(d.counter || this.counters.has(d.id) ? { counterargument: { summary: tr("mock.inbox.counter"), risks: [tr("mock.inbox.risk1"), tr("mock.inbox.risk2")] } } : {}),
