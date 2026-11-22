@@ -46,14 +46,14 @@ respuesta lo explica. El resultado es una versión nueva (`restored_from`), nunc
 
 ## Tasks
 
-- [ ] 1. `agenthistory`: tipos, instantánea, diff, `MemStore`, `Service.Record/RecordAll/List/Get`, retención,
+- [x] 1. `agenthistory`: tipos, instantánea, diff, `MemStore`, `Service.Record/RecordAll/List/Get`, retención,
   secretos. Pruebas unitarias.
-- [ ] 2. `PlanRestore` (puro) + `Service.Restore` con `Executor`. Pruebas: no sube autonomía, no relaja permisos,
+- [x] 2. `PlanRestore` (puro) + `Service.Restore` con `Executor`. Pruebas: no sube autonomía, no relaja permisos,
   habilidad inexistente, tope sobre el techo, agente no restaura, versión nueva.
-- [ ] 3. Postgres: migración 827 (`agent_config_versions`, RLS, sin UPDATE) + down + `PgStore`.
-- [ ] 4. API: rutas `GET /agents/{id}/versions`, `GET …/versions/{v}`, `POST …/versions/{v}/restore`; middleware;
+- [x] 3. Postgres: migración 827 (`agent_config_versions`, RLS, sin UPDATE) + down + `PgStore`.
+- [x] 4. API: rutas `GET /agents/{id}/versions`, `GET …/versions/{v}`, `POST …/versions/{v}/restore`; middleware;
   fuentes y ejecutor desde `Deps`; observador cableado en `cmd/server`. Pruebas: recorrido de rutas, sellado,
   permisos, aislamiento entre organizaciones, descenso automático.
-- [ ] 5. Frontend: `agentHistoryApi.ts`, `agentHistoryLogic.ts` (+ test), sección "Historial" en el Perfil del agente
+- [x] 5. Frontend: `agentHistoryApi.ts`, `agentHistoryLogic.ts` (+ test), sección "Historial" en el Perfil del agente
   con línea de tiempo, antes/después y confirmación; mock; i18n es/en/pt.
-- [ ] 6. Docs: `docs/architecture/agent-history.md`, `08-api.md` §51.
+- [x] 6. Docs: `docs/architecture/agent-history.md`, `08-api.md` §51.

@@ -1376,3 +1376,23 @@ Detalle y garantías en `watchdog.md`. Sin migración: el umbral vive en `signal
 | `POST /tasks/{id}/stall/cancel` | `tasks:manage` | `{confirm_task_ids}` = exactamente `cancel_cascade`; `202 {…, cancelled[]}`. `409 cascade_changed` (con `cancel_cascade` nueva) si la lista cambió; `409 cascade_hidden` si detendría trabajo de un departamento que la persona no ve |
 
 Errores comunes: `404` si la tarea no existe o es de un departamento privado ajeno; `409 not_stalled` si ya no está atascada (avanzó, espera a una persona o alguien la está recuperando); `409 already_recovering`; `409 execution_blocked (código)` si el kill-switch, la pausa o el modo solo lectura frenan al agente; `403` para un actor que no es persona. `POST /initiatives/{id}/accept` de una sugerencia `stalled_task` reintenta la tarea (`request_id` = el pedido de la tarea).
+
+## 51. Historial de la configuración del agente (F4)
+
+Detalle y reglas en [agent-history.md](agent-history.md). Migración `827_agent_config_versions.sql`. Todas las rutas
+responden `404` para el agente de un departamento privado si la persona no es miembro (D3), igual que si no existiera.
+
+| Método y ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /agents/{id}/versions[?limit=N]` | `agents:read` | `{agent_id, current, keep, can_restore, versions: [{version, created_at, actor, actor_kind: person\|system, actor_name?, source, fields[], restored_from?}]}`, la más nueva primero. Un agente sin historial recibe primero su versión `baseline` |
+| `GET /agents/{id}/versions/{v}` | `agents:read` | `{version: {…, config}, previous?, changes: [{field, from?, to?, secret?}]}` contra la versión anterior; un campo secreto solo dice `secret: true` |
+| `GET /agents/{id}/versions/{v}/restore` | `agents:read` | Vista previa, no cambia nada: `{version, apply: Step[], skip: Step[], can_restore}` |
+| `POST /agents/{id}/versions/{v}/restore` | `agents:write` | Restaura como versión NUEVA: `{from, version?, applied: Step[], skipped: Step[], unchanged}` |
+
+`Step = {field, op?, category?, skill?: {id, name}, autonomy?, budget_usd?, reason?, detail?}`. Motivos estables de
+`skip`: `autonomy_earned`, `permissions_freer`, `skill_unavailable`, `budget_above_ceiling`, `tools_freer`, `control`,
+`structural`, `access`, `secret`, `not_allowed`, `unavailable`, `failed`. Errores: `400` versión no numérica, `403` un
+agente o el sistema (o un rol sin `agents:write`), `404` versión inexistente o fuera de la retención. Cada campo se
+aplica con el servicio y el permiso de siempre (presupuesto `approvals:decide`, puesto `org:manage`, nivel y
+excepciones: admin, owner o responsable del equipo); lo que la persona no puede cambiar vuelve en `skipped` con
+`not_allowed`. Auditoría `agent.config_restored` `{restored_from, version?, applied[], skipped[], unchanged}`.
