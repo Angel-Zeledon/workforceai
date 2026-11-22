@@ -47,7 +47,7 @@ palabras (secciones, migas, carpetas ocultas, reglas de crear/renombrar/mover, a
   nada ni cambió dónde se guardan.
 - **Ayuda**: cada lugar dice en una línea qué va ahí y quién lo ve, y el indicador "N agentes pueden consultar esto" sale
   de `GET /drive/folder-access` (las reglas por agente de siempre) y abre "Qué agentes la ven".
-- Errores en palabras (`filesErrorKey`), nunca el código del backend.
+- Errores en palabras con el traductor central (`lib/errors.ts`, `errorText`), nunca el código del backend.
 
 ## Storage
 

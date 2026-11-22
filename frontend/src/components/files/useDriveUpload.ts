@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import { drive, useUploadLimit, type UploadResult } from "@/lib/drive";
-import { filesErrorKey } from "@/lib/filesLogic";
+import { errorText } from "@/lib/errors";
 import { toast } from "@/lib/toast";
 
 /**
@@ -39,14 +39,14 @@ export function useDriveUpload(folder: string, onDone: () => void) {
       onDone();
       if (list.length > failed.length) toast(t("toast.uploaded"));
     } catch (e) {
-      thrown = t(filesErrorKey(e));
+      thrown = errorText(e);
     } finally {
       setBusy(false); setProgress(null);
     }
     const msgs: string[] = [];
     if (thrown) msgs.push(thrown);
     if (tooBig.length) msgs.push(`${tooBig.map((f) => f.name).join(", ")}: ${t("att.err.file_too_large", { mb: Math.round(maxBytes / (1 << 20)) })}`);
-    if (failed.length) msgs.push(`${failed.map((f) => f.name).join(", ")}: ${t(filesErrorKey({ code: failed[0].code, status: failed[0].status }))}`);
+    if (failed.length) msgs.push(`${failed.map((f) => f.name).join(", ")}: ${errorText({ code: failed[0].code, status: failed[0].status })}`);
     setError(msgs.join(" "));
   };
   return { upload, busy, progress, error, clearError: () => setError("") };

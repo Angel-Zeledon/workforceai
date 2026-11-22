@@ -1453,3 +1453,13 @@ Plan en `docs/superpowers/plans/2026-11-22-archivos-claros.md`; la pantalla en `
 | `GET /drive/list?path=` | `files:read` | Añade `access: "edit" \| "read"`: lo que la persona puede hacer en la carpeta listada (crear carpetas, subir, renombrar, mover). Es su nivel en el drive (`PersonAccess`: miembro edita su departamento, un no miembro lee uno abierto, `/Offices` y `/` son de lectura) combinado con `files:write` de su rol (un `viewer` siempre lee). Un departamento sellado sigue siendo `404` para quien no es miembro |
 
 Renombrar una carpeta es `POST /drive/folders/{id}/move` al mismo padre con otro nombre; renombrar un archivo, `POST /drive/files/{id}/move` (la extensión no cambia: `400 extension_change`). Las carpetas propias del sistema (raíces, la de cada departamento, proyecto, cliente enlazado o agente) responden `400 protected_folder`.
+
+## 56. Errores claros
+
+Un error nunca llega a la persona como texto de código. Contrato:
+
+- **500**: `{"error":"internal","code":"internal","message":"<frase segura>","ref":"<8 hex>"}`. El detalle completo (BD, wrapping, rutas) va solo al log, junto con el mismo `ref` (`internalFail` en `api/router.go`; también lo usan `driveFail` y `meetingsFail`). Nunca se devuelve `err.Error()` en un 500.
+- **400 de JSON mal formado**: `{"error":"La solicitud no tiene un formato válido","code":"bad_request","message":...}`, sin el texto del decoder (que queda en el log a nivel debug). Sigue siendo `domain.ErrInvalid` (y `io.EOF` para un cuerpo vacío).
+- Los códigos estables existentes no cambian.
+
+Frontend: `lib/errors.ts` (`describeError`, `errorText`, `toastError`) sobre `lib/errorsCore.ts` (clasificación pura: red, timeout, 401/403/404/409/413/415/422/423/429/5xx y el catálogo `CODE_PHRASE` código -> frase `err.c.*` en es/en/pt). Un código desconocido nunca se muestra: cae a la frase de su estado HTTP o a la genérica con "Si se repite, comparte esta referencia: {ref}" (la del backend, o una local registrada en consola). `components/ui/ErrorNote.tsx` pinta el aviso con "Reintentar"; `app/error.tsx`, `app/(app)/error.tsx` y `app/global-error.tsx` son los límites de error de React. `lib/errors.test.mjs` incluye una guarda que falla si reaparece `e.message` / `String(e)` en una pantalla.

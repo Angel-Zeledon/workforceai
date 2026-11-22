@@ -36,11 +36,11 @@ la interfaz no adivine. Sin migración ni rutas nuevas (sección 54 de `08-api.m
 ## Pruebas
 
 - `node --test src/lib/filesLogic.test.mjs`: etiquetas, migas, secciones, carpetas ocultas, agentes por nombre, validación
-  de nombres, destinos de mover, agrupación por fecha, textos de solo lectura.
+  de nombres, destinos de mover, agrupación por fecha, textos de solo lectura. Los errores usan el traductor central `lib/errors.ts`.
 - `go test ./internal/api/ -run 'TestDriveListAccess|TestFolderRename'`: `access` por rol y departamento (miembro, no
   miembro de abierto, sellado = 404), renombrar/mover carpeta respetando permisos y carpetas protegidas.
 
 ## Fuera de alcance
 
-Subcarpetas "Puestos" y `FolderAccessSection.tsx` (otro agente); el traductor central de errores (otro agente: aquí los
-mensajes son propios en es/en/pt y no muestran códigos).
+Subcarpetas "Puestos" y `FolderAccessSection.tsx` (otro agente); el traductor central de errores (otro agente; esta
+pantalla lo usa: `errorText` de `lib/errors.ts`).

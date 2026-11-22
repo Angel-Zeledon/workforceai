@@ -4,9 +4,10 @@ import { createPortal } from "react-dom";
 import { useT } from "@/lib/i18n";
 import { drive, type DriveFolder } from "@/lib/drive";
 import {
-  filesErrorKey, folderLabel, isAttachmentsFolder, moveError, moveWarning, nameError, visibleFolders, type NameCtx, type OfficeRef,
+  folderLabel, isAttachmentsFolder, moveError, moveWarning, nameError, visibleFolders, type NameCtx, type OfficeRef,
 } from "@/lib/filesLogic";
 import { pathKey } from "@/lib/deptLogic";
+import { errorText } from "@/lib/errors";
 import { Icon } from "../icons";
 
 /** The frame of a small dialog (rendered on <body>; Esc and a click outside close it; focus goes to the first field). */
@@ -65,7 +66,7 @@ export function NameDialog({ title, label, cta, initial = "", siblings, original
     setTouched(true);
     if (problem || unchanged || busy) { if (unchanged) onClose(); return; }
     setBusy(true); setErr("");
-    try { await submit(name.trim()); onClose(); } catch (e) { setErr(t(filesErrorKey(e))); setBusy(false); }
+    try { await submit(name.trim()); onClose(); } catch (e) { setErr(errorText(e)); setBusy(false); }
   };
   return (
     <Dialog title={title} testid="files-name-dialog" onClose={onClose}>
@@ -117,7 +118,7 @@ export function MoveDialog({ item, roots, ctx, onMove, onClose }: {
   const go = async () => {
     if (!sel || problem || !ready || busy) return;
     setBusy(true); setErr("");
-    try { await onMove(sel); onClose(); } catch (e) { setErr(t(filesErrorKey(e))); setBusy(false); }
+    try { await onMove(sel); onClose(); } catch (e) { setErr(errorText(e)); setBusy(false); }
   };
   return (
     <Dialog title={t("files.move.title", { name: item.name })} testid="files-move-dialog" onClose={onClose}>

@@ -12,7 +12,7 @@ import {
   usableAgents, withReviewed, withStatus, type DeptFilter, type RowMenuItem,
 } from "@/lib/deptLogic";
 import {
-  agentDesks, canCreateHere, dayFolders, filesErrorKey, folderHref, folderLabel, groupAttachments, humanCrumbs, isAttachmentsFolder, isHiddenPath,
+  agentDesks, canCreateHere, dayFolders, folderHref, folderLabel, groupAttachments, humanCrumbs, isAttachmentsFolder, isHiddenPath,
   isProtectedFolder, joinPath, moveError, navDepartments, officeOfPath, placeRoot, readOnlyReason, sectionHelp, sectionOf, visibleFolders,
   type Desk, type NameCtx,
 } from "@/lib/filesLogic";
@@ -22,6 +22,7 @@ import { useFileViewer } from "@/lib/fileView";
 import { useStore } from "@/lib/store";
 import { useSession } from "@/lib/session";
 import { toast } from "@/lib/toast";
+import { errorText } from "@/lib/errors";
 import type { Approval } from "@/lib/types";
 import { Empty, Loading, timeAgo, useAgentName } from "../ui";
 import { EmptyState, PageSkeleton } from "../nav/ui2";
@@ -235,8 +236,8 @@ function Screen({ dept, offices, mine, others }: { dept?: OfficeView; offices: O
         const f = await drive.file(sharedFileId);
         setListing({ folder: { id: "", name: "", path }, folders: [], files: [f], access: "read" });
       } else setListing(await drive.list(path));
-    } catch (e) { setError(t(filesErrorKey(e) === "files.err.notFound" ? "files.err.notFound" : "files.err.load")); }
-  }, [path, sharedFileId, t]);
+    } catch (e) { setError(errorText(e, { fallbackKey: "files.err.load" })); }
+  }, [path, sharedFileId]);
   useEffect(() => { void load(); }, [load, touched, pendingSig]);
 
   // the chat's attachments: the files of every day folder, grouped by date in the list
@@ -377,7 +378,7 @@ function Screen({ dept, offices, mine, others }: { dept?: OfficeView; offices: O
       if (file) setSelected({ kind: "file", file }); else if (target.kind === "folder") openFolder(target.folder.path);
       closeMenu(false);
     } else if (it === "ask" && file) ask(file);
-    else if (it === "download" && file) { void drive.download(file).catch((e) => setActionErr(t(filesErrorKey(e)))); closeMenu(true); }
+    else if (it === "download" && file) { void drive.download(file).catch((e) => setActionErr(errorText(e))); closeMenu(true); }
     else if (it === "share") {
       setSharing(target.kind === "file" ? { name: target.file.name, path: target.file.path } : { name: target.folder.name, path: target.folder.path });
       closeMenu(false);
@@ -426,7 +427,7 @@ function Screen({ dept, offices, mine, others }: { dept?: OfficeView; offices: O
       await drive.remove(f.id);
       if (selected?.kind === "file" && selected.file.id === f.id) { dropDetailUrl(DOC_PARAM); setSelected(null); }
       toast(t("files.toTrash.done")); await load();
-    } catch (e) { setActionErr(t(filesErrorKey(e))); }
+    } catch (e) { setActionErr(errorText(e)); }
   };
   const showTrash = async () => {
     if (trash) { setTrash(null); return; }
@@ -435,7 +436,7 @@ function Screen({ dept, offices, mine, others }: { dept?: OfficeView; offices: O
   };
   const restore = async (f: DriveFile) => {
     try { await drive.restore(f.id); setTrash((x) => x?.filter((y) => y.id !== f.id) ?? null); await load(); }
-    catch (e) { setActionErr(t(filesErrorKey(e))); }
+    catch (e) { setActionErr(errorText(e)); }
   };
 
   // "N": a new folder where the person may create one
@@ -477,7 +478,7 @@ function Screen({ dept, offices, mine, others }: { dept?: OfficeView; offices: O
       const problem = moveError(it, dest);
       if (problem) { if (problem !== "files.move.same") setActionErr(t(problem)); return; }
       setActionErr("");
-      moveTo(it, dest).catch((err) => setActionErr(t(filesErrorKey(err))));
+      moveTo(it, dest).catch((err) => setActionErr(errorText(err)));
     },
   } : {});
 

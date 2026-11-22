@@ -4,19 +4,8 @@ import { test } from "node:test";
 import {
   sectionOf, officeOfPath, placeRoot, isHiddenPath, visibleFolders, isAttachmentsFolder, folderLabel, humanCrumbs, agentDesks,
   navDepartments, sectionHelp, canCreateHere, readOnlyReason, isProtectedFolder, nameError, moveError, moveWarning, joinPath,
-  dateGroup, groupAttachments, dayFolders, folderHref, parentPath, filesErrorKey,
+  dateGroup, groupAttachments, dayFolders, folderHref, parentPath,
 } from "./filesLogic.ts";
-
-test("filesErrorKey: codes become words, never the code itself", () => {
-  assert.equal(filesErrorKey({ status: 403, code: "read_only_folder" }), "files.err.readOnly");
-  assert.equal(filesErrorKey({ status: 400, code: "protected_folder" }), "files.err.protected");
-  assert.equal(filesErrorKey({ status: 404, code: "not_found" }), "files.err.notFound");
-  assert.equal(filesErrorKey({ status: 409, code: "whatever" }), "files.err.conflict");
-  assert.equal(filesErrorKey({ status: 400, code: "extension_change" }), "files.name.ext");
-  assert.equal(filesErrorKey({ status: 413, code: "too_large" }), "files.err.tooLarge");
-  assert.equal(filesErrorKey(new Error("boom")), "files.err.generic");
-  assert.equal(filesErrorKey(null), "files.err.generic");
-});
 
 const L = {
   "files.title": "Archivos", "files.section.depts": "Mis departamentos", "files.section.shared": "Compartido con todos",
