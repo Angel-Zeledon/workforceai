@@ -195,3 +195,9 @@ func outsideDeny(msg string) Plan {
 	pl.outside = true
 	return pl
 }
+
+// SharedInPaths lists what other departments share with a department (active shares): the read-only part of its
+// bounds for a position's library.
+func (s *Service) SharedInPaths(ctx context.Context, officeID string) ([]string, error) {
+	return s.sharedInPaths(ctx, s.org(ctx), officeID)
+}

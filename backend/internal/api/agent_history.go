@@ -462,6 +462,16 @@ func (s *server) historySources() []agenthistory.Source {
 			return nil
 		})
 	}
+	if s.Positions != nil {
+		src = append(src, func(ctx context.Context, org, id string, c *agenthistory.Config) error {
+			name, _, err := s.Positions.PositionSkills(application.WithOrg(ctx, org), org, id)
+			if err != nil {
+				return err
+			}
+			c.Position = name
+			return nil
+		})
+	}
 	if s.Drive != nil {
 		src = append(src, func(ctx context.Context, org, id string, c *agenthistory.Config) error {
 			es, err := s.agentFolders().AgentAccess(application.WithOrg(ctx, org), id)

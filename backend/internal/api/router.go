@@ -42,6 +42,7 @@ import (
 	"aiworkforce/backend/internal/memory"
 	"aiworkforce/backend/internal/notify"
 	"aiworkforce/backend/internal/offices"
+	"aiworkforce/backend/internal/positions"
 	"aiworkforce/backend/internal/officetemplates"
 	"aiworkforce/backend/internal/orgchart"
 	"aiworkforce/backend/internal/peoplechat"
@@ -147,6 +148,9 @@ type Deps struct {
 	// <<< corporate organization model
 	// Skills serves /skills/* and /agents/{id}/skills (skills.go). Optional.
 	Skills *skills.Service
+	// Positions serves /offices/{id}/positions/* and /agents/{id}/position (positions.go): the positions inside a
+	// department with their skills and library. Optional.
+	Positions *positions.Service
 	// SkillTests serves /skills/{id}/tests/* (skill_tests.go): saved cases and test runs of a skill. Optional.
 	SkillTests *skills.Tester
 	// Memory serves /agents/{id}/memory (memory.go): the long-term memory. Optional.
@@ -350,6 +354,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountWeb(r)
 			s.mountOrgChart(r) // corporate organization model
 			s.mountOffices(r)  // E2 offices, agent owners and visibility, team memory
+			s.mountPositions(r) // positions inside a department: skills and library per position (positions.go)
 			s.mountSkills(r)
 			s.mountMemory(r)
 			s.mountRewards(r)

@@ -74,6 +74,10 @@ func TestDepartmentsAreWiredBeforeRecover(t *testing.T) {
 	if wire > rec {
 		t.Fatal("wireDepartments runs after orch.Recover: resumed work would run unsealed")
 	}
+	// positions: resumed work already searches only the library of its position
+	if pos, n := callsIn(run, "wirePositions"); n != 1 || pos > rec || pos < wire {
+		t.Fatalf("wirePositions must run once, after wireDepartments and before Recover (%d calls)", n)
+	}
 	for _, name := range []string{"wireOffices", "wireApprovers", "officeRecall", "SetAudienceFor", "SetAgentOffices", "SetPeople"} {
 		if _, n := callsIn(run, name); n != 0 {
 			t.Errorf("run calls %s directly: it belongs in wireDepartments (before Recover)", name)

@@ -94,6 +94,17 @@ func (s *Service) Unassign(ctx context.Context, a Actor, agentID, skillID string
 	return nil
 }
 
+// SetPositionSkills plugs the positions of the departments (built after the library). Call it before serving.
+func (s *Service) SetPositionSkills(fn func(ctx context.Context, org, agentID string) (string, []string, error)) {
+	s.cfg.PositionSkills = fn
+}
+
+// Catalog lists every live skill of an organization, the departments' ones included (for the positions screen,
+// which filters them by department and visibility itself).
+func (s *Service) Catalog(ctx context.Context, org string) ([]Skill, error) {
+	return s.List(application.WithOrg(ctx, org), Actor{System: true})
+}
+
 // AgentSkills lists the skills of an agent: direct assignments, the skills of its
 // position and the defaults of its role, in that order of priority (then by name).
 func (s *Service) AgentSkills(ctx context.Context, agentID string) ([]AgentSkill, error) {
