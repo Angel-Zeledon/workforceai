@@ -18,6 +18,7 @@
     "@react-three/postprocessing": "3.2.2",
     "next": "^15.1.0",
     "pdfjs-dist": "^6.4.299",
+    "pixi.js": "8.22.0",
     "postprocessing": "6.39.6",
     "qrcode-generator": "1.4.4",
     "react": "^19.0.0",
