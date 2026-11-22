@@ -121,3 +121,70 @@ role, every role has some; `MaxRunSkills` = 12 bounds what an agent sees per run
 - `agent-runtime/tests/test_s1_skills.py` (prompt lines, bounds, delimiters, simulation).
 - `frontend` unit tests (`skillsLogic.test.mjs`) and the e2e `e2e/tests/skills.spec.ts`
   (create, assign, export, re-import, review).
+
+## Probar una habilidad (F8)
+
+Antes de activar, una persona puede pedirle a un agente que resuelva un **caso de ejemplo** con una versión concreta de la
+habilidad (borrador, en revisión o activa) y ver qué respondió, si de verdad usó la habilidad, cuánto tardó y cuánto costó. No
+es obligatorio para activar: la pantalla de revisión solo muestra "Sin probar" o "Probada el …" junto a "Activar".
+
+### Casos y ejecuciones (migración 829)
+
+- **Caso** (`skill_test_cases`): pedido en lenguaje natural + lo que se espera ver (opcional). Ligado a la **habilidad**, no a una
+  versión. Límites: 10 casos por habilidad, 2000 caracteres el pedido, 1000 lo esperado, 120 el título. Se redactan los secretos
+  antes de guardar. Se puede editar y borrar.
+- **Ejecución** (`skill_test_runs`, solo añadir): versión probada, si era la activa, agente, respuesta (acotada a 12 000 y redactada),
+  `used_skill`, herramientas bloqueadas (solo `herramienta.acción`), estimado y costo real, tokens, duración. Borrar un caso no
+  borra su historial. Dos ejecuciones de una comparación comparten `pair_id`.
+
+### Sin efectos, por construcción en Go
+
+No se reutiliza el ensayo (B9): éste ejecuta lecturas reales y registra "habría hecho", y aquí no hace falta nada de eso. El
+`skills.Tester` **solo tiene** `RunTask` del runtime, el presupuesto y la biblioteca: no tiene Tool Gateway, conexiones, drive ni
+aprobaciones, así que no existe una ruta de código desde una prueba hasta un efecto externo.
+
+1. Al agente se le manda `Tools: []` (el prompt no le anuncia herramientas) y como única habilidad la que se prueba, con la
+   descripción de la versión probada.
+2. La única petición que el probador atiende es `skill.load` de **esa** habilidad, respondida desde la versión probada (mismo
+   limpiado, tope e inyección que `skill.load` real, hashes verificados: una versión alterada no se prueba). Carga por archivo
+   también. Como mucho `MaxTestRounds` = 2 llamadas por ejecución; en la última no se atiende nada.
+3. Cualquier otra petición (correo, drive, código, otra habilidad, lo que sea) se descarta y se anota como `herramienta.acción`
+   en `blocked`; los argumentos no se guardan.
+
+Prueba: `TestProbeRejectsEveryToolThatIsNotTheSkillLoad` (escritura, correo, código y otra habilidad rechazados; sin segunda
+llamada) y `TestSkillTestsOverHTTP` (`email.send` y `fs.write` quedan en `blocked`, el agente nunca recibió herramientas).
+
+### Presupuesto
+
+Cada llamada pasa por el orquestador igual que una respuesta de chat (`ReserveAgentCall` / `RecordAgentCall`): reserva con el
+tamaño real del pedido (tope de agente y límite de la organización), interruptor de emergencia y pausa del agente (`AdmitReview`),
+y el costo real queda en el libro de gastos a nombre del agente (se registra con la clase `chat`: no pertenece a ninguna
+solicitud). `POST …/tests/estimate` da el peor caso **antes** (primera llamada + la de después de `skill.load`, por cada versión);
+la ejecución guarda estimado y real. Si el tope no permite la llamada, la ejecución queda `failed` (`budget_exceeded:<alcance>`)
+sin llamar al modelo.
+
+### Comparación lado a lado
+
+`compare: true` ejecuta además la versión **activa** sobre el mismo caso y el mismo agente (solo si existe y es otra versión que
+la probada). La pantalla muestra las dos columnas: "La que revisas" y "Activa hoy".
+
+### Permisos y sellado
+
+| Acción | Permiso | Además |
+|---|---|---|
+| Ver casos, resultados, candidatos | `skills:read` | La habilidad de un departamento privado responde 404 a quien no lo ve (administradores ajenos incluidos) |
+| Guardar / editar / borrar casos | `skills:write` | Habilidad de departamento: su responsable o un administrador |
+| Estimar y probar (gasta presupuesto) | `skills:review` (el mismo que activa) | El agente debe poder usar la habilidad (asignada o por defecto de su rol) y la persona debe poder **usarlo** (D3) |
+
+Un agente nunca dispara pruebas: la API no tiene identidad de agente y el servicio rechaza (`humans_only`) a cualquier actor de
+sistema o sin identidad. Aislamiento entre organizaciones: tablas con RLS y todas las lecturas pasan por la visibilidad de la
+habilidad; el almacén en memoria también está acotado por organización.
+
+### Decisiones y límites
+
+- Las **lecturas** del agente (conexiones, drive, web) tampoco se ejecutan en una prueba: el caso es un pedido en lenguaje natural y
+  se prueba la habilidad, no los datos. Si el agente las pide, aparecen en "herramientas que no se ejecutaron".
+- El runtime en simulación (sin clave) solo pide `skill.load` si el pedido contiene `[sim:skill]`; sin él, `used_skill` sale "No".
+- Pruebas: `go test ./internal/skills/` (`probe_test.go`), `./internal/api/` (`skill_tests_api_test.go`), frontend
+  `skillTestsLogic.test.mjs`. `skill_tests_pg_test.go` (RLS, historial inmutable) escrito pero **no ejecutado**: sin
+  `TEST_DATABASE_URL` aquí.
