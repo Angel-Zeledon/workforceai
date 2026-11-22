@@ -49,11 +49,11 @@ function NavLink({ href, icon, label, testid, active, collapsed, onNavigate, bad
 }) {
   return (
     <Link href={href} prefetch={false} data-testid={testid} data-active={active} aria-current={active ? "page" : undefined} title={collapsed ? label : undefined} onClick={onNavigate}
-      className={`group relative flex min-h-9 items-center gap-3 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-150 ${active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"} ${collapsed ? "justify-center px-0" : ""}`}>
-      {active && <span aria-hidden className="absolute inset-y-1.5 left-0 w-[3px] rounded-r bg-[#70b5f9]" />}
+      className={`group relative flex min-h-9 items-center gap-3 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-150 ${active ? "bg-accent-soft font-semibold text-accent" : "text-ink2 hover:bg-panel2 hover:text-ink"} ${collapsed ? "justify-center px-0" : ""}`}>
+      {active && <span aria-hidden className="absolute inset-y-1.5 left-0 w-[3px] rounded-r bg-accent" />}
       <Icon name={icon} size={18} className="shrink-0 transition-transform duration-150 group-hover:scale-110" />
       {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
-      {!collapsed && badge ? <span className="rounded-full bg-white/15 px-1.5 text-[10px] font-semibold">{badge}</span> : null}
+      {!collapsed && badge ? <span className="rounded-full bg-accent px-1.5 text-[10px] font-semibold text-white">{badge}</span> : null}
     </Link>
   );
 }
@@ -74,22 +74,22 @@ function Sidebar({ section, collapsed, onToggle, onNavigate }: { section: string
     <NavLink key={s.id} href={s.href} icon={s.icon} label={t(s.label)} testid={`nav-${s.id}`} active={isActive(s.id)} collapsed={collapsed} onNavigate={onNavigate} badge={s.id === "pending" ? pending : undefined} />
   );
   return (
-    <nav aria-label={t("nav.main")} data-testid="sidebar" data-collapsed={collapsed} className="flex h-full flex-col bg-navy text-white">
-      <div className={`flex h-14 shrink-0 items-center gap-2.5 border-b border-white/10 ${collapsed ? "justify-center" : "px-4"}`}>
-        <AgentMark size={32} tone="light" className="shrink-0" />
+    <nav aria-label={t("nav.main")} data-testid="sidebar" data-collapsed={collapsed} className="wf-nav flex h-full flex-col border-r border-line bg-panel text-ink">
+      <div className={`flex h-14 shrink-0 items-center gap-2.5 border-b border-line ${collapsed ? "justify-center" : "px-4"}`}>
+        <AgentMark size={32} tone="dark" className="shrink-0" />
         {!collapsed && <span className="truncate text-[14px] font-semibold tracking-tight">AI Workforce OS</span>}
       </div>
-      <div className="flex-1 overflow-y-auto p-2.5">
+      <div className="wf-nav-main min-h-0 flex-1 overflow-y-auto p-2.5">
         {groups.filter((g) => g.id !== "bottom").map((g) => (
           <div key={g.id} role="group" aria-label={g.label ? t(g.label) : undefined} data-testid={`nav-group-${g.id}`} className="mb-2 space-y-0.5 last:mb-0">
             {g.label && g.id !== "more" && (collapsed
-              ? <div aria-hidden className="mx-3 my-2 border-t border-white/10 first:hidden" />
-              : <div className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">{t(g.label)}</div>)}
+              ? <div aria-hidden className="mx-3 my-2 border-t border-line first:hidden" />
+              : <div className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-mute">{t(g.label)}</div>)}
             {g.id === "more" ? (
               <>
                 {!collapsed && (
                   <button type="button" data-testid="nav-more-toggle" aria-expanded={moreOpen} onClick={toggleMore}
-                    className="flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1.5 text-[13px] font-medium text-white/70 transition hover:bg-white/5 hover:text-white">
+                    className="flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1.5 text-[13px] font-medium text-ink2 transition hover:bg-panel2 hover:text-ink">
                     <Icon name="chevron" size={16} className={`shrink-0 transition-transform duration-150 ${moreOpen ? "rotate-90" : ""}`} />
                     <span className="min-w-0 flex-1 truncate text-left">{t("nav.group.more")}</span>
                   </button>
@@ -100,12 +100,12 @@ function Sidebar({ section, collapsed, onToggle, onNavigate }: { section: string
           </div>
         ))}
       </div>
-      <div className="space-y-0.5 border-t border-white/10 p-2.5">
+      <div className="wf-nav-foot shrink-0 space-y-0.5 border-t border-line p-2.5">
         {(groups.find((g) => g.id === "bottom")?.items ?? []).map(link)}
-        <ViewAllSwitch tone="dark" compact={collapsed} />
+        <ViewAllSwitch tone="light" compact={collapsed} />
         {onToggle && (
           <button type="button" onClick={onToggle} data-testid="sidebar-toggle" title={collapsed ? t("nav.expand") : t("nav.collapse")} aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
-            className={`flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1.5 text-[12px] text-white/50 transition hover:bg-white/5 hover:text-white ${collapsed ? "justify-center px-0" : ""}`}>
+            className={`flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1.5 text-[12px] text-mute transition hover:bg-panel2 hover:text-ink ${collapsed ? "justify-center px-0" : ""}`}>
             <Icon name="sidebar" size={17} className={`transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`} />
             {!collapsed && <span>{t("nav.collapse")}</span>}
           </button>
@@ -175,7 +175,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {drawer && (
         <div className="fixed inset-0 z-[80] md:hidden" data-testid="nav-drawer">
           <button type="button" aria-label={t("nav.close")} className="absolute inset-0 bg-navy/50 ac-fade" onClick={() => setDrawer(false)} />
-          <aside className="ac-slide-left absolute inset-y-0 left-0 w-[260px] max-w-[85vw] bg-navy pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-float"><Sidebar section={section} collapsed={false} onNavigate={() => setDrawer(false)} /></aside>
+          <aside className="ac-slide-left absolute inset-y-0 left-0 w-[260px] max-w-[85vw] bg-panel pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-float"><Sidebar section={section} collapsed={false} onNavigate={() => setDrawer(false)} /></aside>
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
@@ -211,9 +211,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <ActivationChecklist />
             <TourLauncher section={shown === "shop" && !office3d ? null : shown} />
             {office3d && <span data-tour="shell.coins" className="inline-flex"><CoinCounter /></span>}
-            {MOCK && <span data-testid="mock-badge" className="hidden rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 sm:inline">Mock</span>}
-            <span className="hidden items-center gap-1.5 whitespace-nowrap font-medium text-ink2 sm:flex">
-              <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-ok" : "animate-pulse bg-err"}`} />
+            {MOCK && <span data-testid="mock-badge" className="hidden rounded border border-accent/30 bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent sm:inline">Mock</span>}
+            <span data-testid="hud-connection" data-connected={connected ? "1" : "0"} className={`hidden items-center gap-1.5 whitespace-nowrap sm:flex ${connected ? "font-medium text-ink2" : "text-[10.5px] font-normal text-mute"}`}>
+              <span className={`rounded-full ${connected ? "h-1.5 w-1.5 bg-ok" : "h-1 w-1 bg-line-strong"}`} />
               {connected ? t("hud.live") : t("hud.reconnecting")}
             </span>
             <AccountMenu />

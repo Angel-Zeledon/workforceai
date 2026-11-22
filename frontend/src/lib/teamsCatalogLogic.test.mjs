@@ -1,7 +1,7 @@
 // Unit tests of the ready-to-hire teams logic (run: node --test src/lib/teamsCatalogLogic.test.mjs).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { blockedKey, cardState, destinationChoices, installOutcome, orderForPack, splitAgents, weekByDay } from "./teamsCatalogLogic.ts";
+import { blockedKey, cardState, destinationChoices, installOutcome, nameAndRole, orderForPack, splitAgents, uniqueTitles, weekByDay } from "./teamsCatalogLogic.ts";
 
 const agent = (role, status) => ({ role, title: role, does: "", status, name: status === "new" ? "Nombre" : "", autonomy: "suggest", skills: [] });
 
@@ -49,4 +49,11 @@ test("destinationChoices: General first; only departments the person enters and 
 test("installOutcome tells who came or that everybody was already there", () => {
   assert.deepEqual(installOutcome({ created: [{}, {}] }), { key: "teams.installed", count: 2 });
   assert.deepEqual(installOutcome({ created: [] }), { key: "teams.alreadyThere", count: 0 });
+});
+
+test("a person's name and role never repeat each other, and role chips are unique", () => {
+  assert.deepEqual(nameAndRole("Ventas", "ventas"), { primary: "Ventas", secondary: "" });
+  assert.deepEqual(nameAndRole("Valeria", "Ventas"), { primary: "Valeria", secondary: "Ventas" });
+  assert.deepEqual(nameAndRole("", "Ventas"), { primary: "Ventas", secondary: "" });
+  assert.deepEqual(uniqueTitles([{ title: "Ventas" }, { title: "ventas" }, { title: "Legal" }]), ["Ventas", "Legal"]);
 });

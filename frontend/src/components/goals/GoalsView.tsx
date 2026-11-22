@@ -69,7 +69,8 @@ export function GoalsView() {
           <h1 className="font-display text-lg font-semibold text-ink">{t("goals.title")}</h1>
           <p className="mt-0.5 max-w-2xl text-xs text-mute">{t("goals.help")}</p>
         </div>
-        <Btn data-testid="goals-new" kind="primary" onClick={() => setCreating((v) => !v)}>{t("goals.new")}</Btn>
+        <button type="button" data-testid="goals-new" aria-pressed={creating} onClick={() => setCreating((v) => !v)}
+          className={`min-h-10 rounded-md border px-3.5 py-1.5 text-xs font-medium transition sm:min-h-0 ${creating ? "border-accent bg-accent-soft text-accent" : "border-accent bg-accent text-white hover:bg-accent-hover"}`}>{t("goals.new")}</button>
       </div>
       {creating && (
         <Card title={t("goals.new")}>
