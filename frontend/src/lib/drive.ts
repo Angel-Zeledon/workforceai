@@ -16,13 +16,15 @@ import { mockShares } from "./mock/shares-mock";
 
 /** "inbox" = a data inbox: software outside the platform pushed the content (lib/dataInboxLogic.ts). */
 export interface Principal { kind: "human" | "agent" | "system" | "inbox"; id: string }
-export interface DriveFolder { id: string; name: string; path: string; root_kind?: string }
+/** `ref_id`: the project, client, agent or office the folder belongs to (its own folder: it cannot be renamed nor moved). */
+export interface DriveFolder { id: string; name: string; path: string; root_kind?: string; parent_id?: string; ref_id?: string; virtual?: boolean }
 export interface DriveFile {
   id: string; name: string; path: string; mime: string; size: number; current_version: number;
   updated_by: Principal; updated_at: string; tags: string[]; deleted_at?: string | null;
 }
 export interface DriveVersion { file_id: string; version: number; size: number; author: Principal; message: string; created_at: string }
-export interface Listing { folder: DriveFolder; folders: DriveFolder[]; files: DriveFile[] }
+/** `access`: what the person may do in this folder (edit = create, upload, rename, move); older backends leave it out. */
+export interface Listing { folder: DriveFolder; folders: DriveFolder[]; files: DriveFile[]; access?: "edit" | "read" }
 export interface TextResult { text: string; more: boolean; offset: number; returned: number; info?: { kind?: string; note?: string } }
 export interface Hit { file_id: string; path: string; name: string; snippet: string; size: number }
 export interface DiffLine { op: string; text: string }
@@ -126,6 +128,10 @@ export const drive = MOCK ? mockDrive() : {
   },
   usage: () => req<DriveUsage>("GET", "/drive/usage"),
   mkdir: (path: string) => { const j = json({ path }); return req<DriveFolder>("POST", "/drive/folders", j.body, j.headers); },
+  /** Moves and/or renames a file: `path` is its new full path (the extension cannot change). */
+  moveFile: (id: string, path: string) => { const j = json({ path }); return req<DriveFile>("POST", `/drive/files/${id}/move`, j.body, j.headers); },
+  /** Moves and/or renames a folder with everything inside (renaming = the same parent, another name). */
+  moveFolder: (id: string, path: string) => { const j = json({ path }); return req<DriveFolder>("POST", `/drive/folders/${id}/move`, j.body, j.headers); },
   remove: (id: string) => req("DELETE", `/drive/files/${id}`),
   restore: (id: string) => req("POST", `/drive/files/${id}/restore`),
   trash: () => req<Trash>("GET", "/drive/trash"),
@@ -175,7 +181,9 @@ function mockDrive() {
     }
     const id = `fil_mock_${++seq}`;
     const name = path.split("/").pop() || "file";
-    const mime = name.endsWith(".csv") ? "text/csv" : name.endsWith(".md") ? "text/markdown" : name.endsWith(".json") ? "application/json" : "text/plain";
+    const mime = name.endsWith(".csv") ? "text/csv" : name.endsWith(".md") ? "text/markdown" : name.endsWith(".json") ? "application/json"
+      : name.endsWith(".docx") ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      : name.endsWith(".xlsx") ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : name.endsWith(".pdf") ? "application/pdf" : "text/plain";
     const file: DriveFile = { id, name, path, mime, size: text.length, current_version: 1, updated_by: by, updated_at: at, tags: [] };
     files.set(id, { file, versions: [{ v: { file_id: id, version: 1, size: text.length, author: by, message, created_at: at }, text }] });
     return file;
@@ -218,6 +226,24 @@ function mockDrive() {
   put("/Shared/Imports/pedidos-erp/orders-2026-10-26.json", '[{"order_id":1040,"total":120.5},{"order_id":1041,"total":88}]\n', erp, "pushed to the data inbox Pedidos ERP (diario)");
   put("/Shared/Imports/pedidos-erp/orders-2026-10-26.json", '[{"order_id":1040,"total":120.5},{"order_id":1041,"total":88},{"order_id":1042,"total":250.75}]\n', erp, "pushed to the data inbox Pedidos ERP (diario)");
 
+  // Files screen demo: something to open in every section (a document, a sheet, notes), the chat's attachments on
+  // several days (grouped by date in the view), the agents' desks and an internal skills folder that stays hidden.
+  const day = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
+  const val: Principal = { kind: "agent", id: "sales" };
+  put("/Shared/Politicas/manual-de-bienvenida.docx", "# Manual de bienvenida\n\nHorario de oficina: 8:00 a 17:00.\n\n- Vacaciones: pedirlas con 15 días.\n- Gastos: con factura a nombre de la empresa.\n", human, "", ago(24 * 40));
+  put("/Shared/Politicas/calendario-de-feriados.xlsx", "fecha,feriado\n2026-12-08,Inmaculada Concepción\n2026-12-25,Navidad\n2027-01-01,Año Nuevo\n", human, "", ago(24 * 25));
+  put(`/Shared/Chat/${day(0)}/lista-de-precios.csv`, "producto,precio\nTornillo 1/4,0.15\nTaladro 500W,62\n", human, "", ago(2));
+  put(`/Shared/Chat/${day(4)}/cotizacion-proveedor.docx`, "# Cotización Papelería Central\n\nResmas carta: 4,50 c/u.\n\nEntrega en 3 días.\n", human, "", ago(24 * 4));
+  put(`${C}/Adjuntos/${day(0)}/recibo-luz-noviembre.md`, "# Recibo de luz — noviembre\n\nMonto: 182,40. Vence el 30.\n", human, "", ago(1));
+  put(`${C}/Adjuntos/${day(2)}/extracto-bcr-noviembre.xlsx`, "fecha,concepto,monto\n2026-11-03,Depósito,2500\n2026-11-09,Comisión,-8\n", laura, "", ago(24 * 2));
+  put(`${C}/Adjuntos/${day(45)}/factura-alquiler-octubre.md`, "# Factura de alquiler — octubre\n\nMonto: 1.200.\n", laura, "", ago(24 * 45));
+  put("/Projects/Lanzamiento tienda online/plan-de-lanzamiento.md", "# Plan de lanzamiento\n\n1. Catálogo listo\n2. Pasarela de pago\n3. Campaña de apertura\n", val, "plan inicial", ago(30));
+  put("/Projects/Lanzamiento tienda online/presupuesto.xlsx", "partida,monto\nDiseño,1800\nPublicidad,1200\nFotografía,600\n", acc, "presupuesto", ago(20));
+  put("/Clients/Ferretería López/propuesta-de-servicios.docx", "# Propuesta para Ferretería López\n\nCierre contable mensual y declaración de impuestos.\n", val, "propuesta", ago(24 * 6));
+  put("/Agents/sales/borrador-seguimiento-grupo-alfa.md", "# Seguimiento Grupo Alfa\n\nLlamar el jueves para revisar el presupuesto.\n", val, "borrador", ago(5));
+  put("/Agents/accounting/notas-de-conciliacion.md", "# Notas de conciliación\n\nRevisar el depósito sin referencia del 21 de octubre.\n", acc, "notas", ago(8));
+  put("/Shared/Skills/conciliar-bancos/v1/SKILL.md", "# Conciliar bancos\n", human, "", ago(24 * 9));
+
   /** Each finished task leaves its draft on the agent's desk, as the simulated runtime does. */
   const drafted = new Set<string>(); // one draft per task: later edits by people are not overwritten
   const syncDesks = () => {
@@ -232,24 +258,34 @@ function mockDrive() {
   };
   const live = () => [...files.values()].filter((m) => !m.file.deleted_at);
   const folderOf = (p: string) => p.split("/").slice(0, -1).join("/") || "/";
+  /** Folders created on their own ("Nueva carpeta"); the others exist because files live in them. */
+  const dirs = new Set<string>();
+  const addDir = (p: string) => { const s = p.split("/").filter(Boolean); for (let i = 1; i <= s.length; i++) dirs.add("/" + s.slice(0, i).join("/")); };
+  const lower = (p: string) => p.toLowerCase();
+  const under = (p: string, base: string) => lower(p).startsWith(lower(base) + "/");
+  // as the backend: an open department the demo person is not a member of (Legal) is read only, and so is the root
+  const access = (p: string): "edit" | "read" => (p === "/" || lower(p) === "/offices" || lower(p) === "/offices/legal" || under(p, "/Offices/Legal") ? "read" : "edit");
   const list = async (path: string): Promise<Listing> => {
     syncDesks();
     const base = path === "/" ? "" : path.replace(/\/$/, "");
-    const sub = new Set<string>();
+    const sub = new Map<string, string>(); // lower name -> name
     const out: DriveFile[] = [];
     for (const m of live()) {
-      if (!m.file.path.startsWith(base + "/")) continue;
+      if (!under(m.file.path, base)) continue;
       const rest = m.file.path.slice(base.length + 1).split("/");
-      if (rest.length === 1) out.push(m.file); else sub.add(rest[0]);
+      if (rest.length === 1) out.push(m.file); else sub.set(rest[0].toLowerCase(), rest[0]);
     }
-    if (path === "/") ["Agents", "Projects", "Clients", "Shared", "Offices"].forEach((r) => sub.add(r));
+    for (const d of dirs) if (under(d, base)) { const n = d.slice(base.length + 1).split("/")[0]; if (!sub.has(n.toLowerCase())) sub.set(n.toLowerCase(), n); }
+    if (path === "/") ["Agents", "Projects", "Clients", "Shared", "Offices"].forEach((r) => sub.set(r.toLowerCase(), r));
     const name = base.split("/").pop() || "/";
     return {
       folder: { id: `fld:${path}`, name, path: path || "/" },
-      folders: [...sub].sort().map((n) => ({ id: `fld:${base}/${n}`, name: n, path: `${base}/${n}` })),
+      folders: [...sub.values()].sort((a, b) => a.localeCompare(b)).map((n) => ({ id: `fld:${base}/${n}`, name: n, path: `${base}/${n}`, parent_id: base ? `fld:${base}` : "" })),
       files: out.sort((a, b) => a.name.localeCompare(b.name)),
+      access: access(path),
     };
   };
+  const refuseReadOnly = (p: string) => { if (access(p) !== "edit") throw new DriveError(403, "read_only_folder", "read only"); };
   const byId = (id: string) => {
     const m = files.get(id);
     if (!m) throw new DriveError(404, "not_found", "file not found");
@@ -270,7 +306,24 @@ function mockDrive() {
       return { text: v?.text ?? "", more: false, offset: 0, returned: v?.text.length ?? 0 } as TextResult;
     },
     versions: async (id: string) => byId(id).versions.map((x) => x.v).reverse(),
-    preview: async (): Promise<Preview> => ({ kind: "none", truncated: false, note: "mock" }),
+    // the demo's .docx and .xlsx hold plain text: the preview reads it as the server would read the real package
+    preview: async (id: string): Promise<Preview> => {
+      const m = byId(id);
+      const text = m.versions[m.versions.length - 1].text;
+      if (m.file.name.endsWith(".xlsx")) return { kind: "sheets", truncated: false, sheets: [{ name: "Hoja 1", rows: text.trim().split(/\r?\n/).map((l) => l.split(",")) }] };
+      if (m.file.name.endsWith(".docx")) {
+        const blocks: PreviewBlock[] = [];
+        for (const raw of text.split(/\n{2,}/)) {
+          const b = raw.trim();
+          if (!b) continue;
+          if (b.startsWith("# ")) blocks.push({ type: "heading", level: 1, text: b.slice(2) });
+          else if (b.split("\n").every((l) => l.startsWith("- "))) blocks.push({ type: "bullets", items: b.split("\n").map((l) => l.slice(2)) });
+          else blocks.push({ type: "paragraph", text: b.replace(/\n/g, " ") });
+        }
+        return { kind: "doc", truncated: false, blocks };
+      }
+      return { kind: "none", truncated: false, note: "mock" };
+    },
     file: async (id: string) => byId(id).file,
     byPath: async (path: string) => { syncDesks(); return live().find((m) => m.file.path === path)?.file ?? null; },
     diff: async (id: string, from: number, to: number): Promise<DiffResult> => {
@@ -317,8 +370,24 @@ function mockDrive() {
       return out;
     },
     usage: async (): Promise<DriveUsage> => ({ used_bytes: 0, quota_bytes: 5 << 30, max_file_bytes: 25 << 20, max_upload_bytes: 25 << 20 }),
-    mkdir: async (path: string) => ({ id: `fld:${path}`, name: path.split("/").pop() || "", path }),
-    remove: async (id: string) => { byId(id).file.deleted_at = now(); return {}; },
+    mkdir: async (path: string) => { refuseReadOnly(folderOf(path)); addDir(path); return { id: `fld:${path}`, name: path.split("/").pop() || "", path } as DriveFolder; },
+    moveFile: async (id: string, path: string) => {
+      const f = byId(id).file;
+      refuseReadOnly(folderOf(f.path)); refuseReadOnly(folderOf(path));
+      if (live().some((m) => m.file.id !== id && lower(m.file.path) === lower(path))) throw new DriveError(409, "name_taken", "exists");
+      Object.assign(f, { path, name: path.split("/").pop() || f.name, updated_by: human, updated_at: now() });
+      return { ...f };
+    },
+    moveFolder: async (id: string, path: string) => {
+      const from = id.replace(/^fld:/, "");
+      refuseReadOnly(from); refuseReadOnly(folderOf(path));
+      const swap = (p: string) => path + p.slice(from.length);
+      for (const m of live()) if (under(m.file.path, from)) m.file.path = swap(m.file.path);
+      for (const d of [...dirs]) if (lower(d) === lower(from) || under(d, from)) { dirs.delete(d); dirs.add(swap(d)); }
+      addDir(path);
+      return { id: `fld:${path}`, name: path.split("/").pop() || "", path } as DriveFolder;
+    },
+    remove: async (id: string) => { const f = byId(id).file; refuseReadOnly(folderOf(f.path)); f.deleted_at = now(); return {}; },
     restore: async (id: string) => { byId(id).file.deleted_at = null; return {}; },
     trash: async () => ({ folders: [], files: [...files.values()].filter((m) => m.file.deleted_at).map((m) => m.file) }),
     setTags: async (id: string, tags: string[]) => {

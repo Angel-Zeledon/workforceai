@@ -9,13 +9,45 @@ Tool Gateway. Every change is versioned and reversible.
 
 | Root | Who | Notes |
 |---|---|---|
-| `/Agents/<agent id>` | the agent's desk | created on demand; the folder name is the agent id |
+| `/Agents/<agent id>` | the agent's desk | created on demand; the folder name is the agent id (the Files screen shows the agent's name) |
 | `/Projects/<project>` | a launched project | created on demand; deliverables land here |
 | `/Clients/<client>` | client material | agents read only with a grant |
 | `/Shared` | the whole team | agents read; writes need approval |
 | `/Offices/<office>` | a department (RefID = office id) | born with the profession's folder template (accounting, legal, hr, education, otherwise Documentos/Políticas); migration 817 allows `root_kind 'offices'` |
 
 **Permissions under `/Offices` (D1).** People: a member edits; a non-member of an open office reads; a non-member of a private office gets 404 (admins too). Outside `/Offices` the roles apply as before. This holds across the drive API, meeting minutes, project entries, chat commands (`/search`, `/file`, `/minutes`, `/undo`), autocomplete and chat attachments (by default into `/Offices/<the chatted agent's office>/Adjuntos/<day>`, or `Compartido > Chat` when that agent has no office; the person can pick another folder). Agents: edit without approval in their own office's folder, nothing in other offices (also in client tasks and `code.run`), and never more than the person they work for (`person_no_access`; the person is the one who submitted the request, also after an approval or a restart); with no person (scheduled runs, the system) they keep their office but write nothing into another office nor create one (`other_office`, refused, not sent for approval); an actor that is neither a person nor the system (an API token, a signed link, Slack, another agent) gets no office at all. Paths are recognized as `/Offices` the way the store resolves them (any case, and spellings such as `/OFFİCES` that the database folds to it). The live `file.activity` event of a file inside an office goes only to that office's members (without them, it names no file). The full organization export (`GET /org/export`, owner/admin) includes every department's folders.
+
+## La pantalla de Archivos
+
+Una sola pantalla (`frontend/src/components/files/FilesScreen.tsx`) sirve `/files?path=<ruta>&doc=<archivo>` y el enlace
+directo de un departamento `/d/<office>?carpeta=<relativa>&doc=&comp=` (este último conserva Para revisar, el compositor y
+"Compartido conmigo"). Una ruta de departamento abierta desde `/files` se reemplaza por su enlace directo. La lógica en
+palabras (secciones, migas, carpetas ocultas, reglas de crear/renombrar/mover, agrupación por fecha) está en
+`frontend/src/lib/filesLogic.ts` y sus pruebas.
+
+- **Secciones**, en este orden: Mis departamentos (los de la persona; los abiertos donde no es miembro aparecen como "Otros
+  departamentos", solo lectura; nunca General ni uno sellado), Compartido con todos (`/Shared`), Proyectos, Clientes y
+  Escritorios de los agentes (cada `/Agents/<id>` por el nombre del agente y su inicial; un agente que ya no existe se
+  llama "Agente que ya no está", nunca por su id). `/files` sin ruta muestra esas secciones como portada.
+- **Migas en palabras**: un departamento empieza por su nombre ("Contabilidad › Bancos y conciliaciones"), lo demás por
+  su sección. La ruta técnica solo se ve en el panel del archivo, en "Detalles".
+- **Ocultas** en la navegación normal: `/Shared/Skills` y lo que cuelga (las versiones `v<n>` de las habilidades), que se
+  gestionan desde Habilidades. También se quitan de los resultados de búsqueda de esta pantalla.
+- **Nueva carpeta** (botón y tecla `N`), **Cambiar nombre**, **Mover a…** (árbol de destinos: mis departamentos,
+  Compartido, Proyectos, Clientes) y arrastrar una fila sobre una carpeta o una miga. Se activan con `access` de
+  `GET /drive/list` (sección 54 de `08-api.md`); en `/`, `/Offices`, `/Agents` y `/Projects` no se crea nada (las carpetas
+  las pone la plataforma). Donde no se puede, el botón queda deshabilitado y una línea dice por qué ("Solo lectura: pide
+  acceso a Laura Méndez, responsable de Contabilidad"). El nombre se valida como `CleanName` y contra los nombres de la
+  carpeta (el backend reutiliza en silencio una carpeta que ya existe). Mover avisa cuando cambia quién lo ve (sale de un
+  departamento, entra en otro o en Compartido). Las carpetas propias (de departamento, agente, proyecto, cliente enlazado,
+  los adjuntos del chat) no ofrecen renombrar ni mover; el backend también las protege (`protected_folder`).
+- **Adjuntos del chat**: `<departamento>/Adjuntos` (o `Attachments`/`Anexos`, según el idioma con que se creó) y
+  `/Shared/Chat` se llaman "Adjuntos del chat"; la lista junta los archivos de sus subcarpetas por día (las 60 más
+  recientes) bajo cabeceras Hoy, Esta semana, Este mes y Antes. Físicamente siguen las subcarpetas por día: no se migró
+  nada ni cambió dónde se guardan.
+- **Ayuda**: cada lugar dice en una línea qué va ahí y quién lo ve, y el indicador "N agentes pueden consultar esto" sale
+  de `GET /drive/folder-access` (las reglas por agente de siempre) y abre "Qué agentes la ven".
+- Errores en palabras con el traductor central (`lib/errors.ts`, `errorText`), nunca el código del backend.
 
 ## Storage
 
