@@ -106,8 +106,7 @@ func (s *server) meetingFail(w http.ResponseWriter, err error) {
 		code, status = "invalid", http.StatusBadRequest
 	}
 	if status == http.StatusInternalServerError {
-		s.Log.Error("meetings request failed", "err", err)
-		writeJSON(w, status, map[string]string{"error": "internal error", "code": code})
+		s.internalFail(w, err)
 		return
 	}
 	writeJSON(w, status, map[string]string{"error": err.Error(), "code": code})
