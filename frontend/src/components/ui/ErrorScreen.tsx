@@ -13,6 +13,8 @@ export function ErrorScreen({ error, reset }: { error: Error & { digest?: string
       {error.digest && <p className="text-[11px] text-mute">{t("err.ref", { ref: error.digest })}</p>}
       <div className="mt-1 flex gap-2">
         <button type="button" onClick={reset} className="rounded-[10px] bg-accent px-3.5 py-1.5 text-sm font-medium text-white hover:bg-accent-hover">{t("err.boundary.retry")}</button>
+        {/* a full page load on purpose: after a crash the client router may be the broken part */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a href="/" className="rounded-[10px] border border-line px-3.5 py-1.5 text-sm font-medium text-ink2 hover:border-accent hover:text-ink">{t("err.boundary.home")}</a>
       </div>
     </div>
