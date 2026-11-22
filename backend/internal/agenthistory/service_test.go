@@ -488,15 +488,27 @@ func TestObserverLeavesHookedRequestsToTheirCaller(t *testing.T) {
 	o := &Observer{Inner: nopPub{}}
 	o.Bind(s)
 	hc, done := WithHook(application.WithActor(ctx, "u-carla"))
+	if !Hooked(hc) || Hooked(ctx) {
+		t.Fatal("hooked")
+	}
 	_ = o.Publish(hc, domain.Event{Type: domain.EvAutonomyChanged, OrgID: "o", AgentID: "a", Payload: map[string]any{"source": "auto_demotion"}})
+	// a later event of the same agent in the request does not hide that the system acted on its own
+	_ = o.Publish(hc, domain.Event{Type: "agent.profile_changed", OrgID: "o", AgentID: "a"})
+	_ = o.Publish(hc, domain.Event{Type: domain.EvAgentCreated, OrgID: "o", AgentID: "b"})
 	s.Flush()
 	if _, had, _ := s.Store.Last(ctx, "o", "a"); had {
 		t.Fatal("the observer recorded inside a hooked request")
 	}
-	if c, ok := SystemCause(hc); !ok || c.Source != "trust.auto_demotion" || c.Actor != ActorSystem {
-		t.Fatalf("system cause not noted: %+v", c)
+	pending := done()
+	if c := pending["a"]; c.Source != "trust.auto_demotion" || c.Actor != ActorSystem {
+		t.Fatalf("system cause not handed over: %+v", pending)
 	}
-	done()
+	if c := pending["b"]; c.Source != domain.EvAgentCreated || c.Actor != "u-carla" {
+		t.Fatalf("hire not handed over: %+v", pending)
+	}
+	if Hooked(hc) {
+		t.Fatal("still hooked after done")
+	}
 	_ = o.Publish(hc, domain.Event{Type: domain.EvAgentCreated, OrgID: "o", AgentID: "a"})
 	s.Flush()
 	if _, had, _ := s.Store.Last(ctx, "o", "a"); !had {

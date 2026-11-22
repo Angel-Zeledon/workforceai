@@ -151,32 +151,59 @@ func (s *server) historyHook(next http.Handler) http.Handler {
 			s.History.EnsureBaselineAll(r.Context(), org)
 		}
 		ctx, done := agenthistory.WithHook(r.Context())
-		defer done()
+		var pending map[string]agenthistory.Cause
+		closed := false
+		closeHook := func() {
+			if !closed {
+				pending, closed = done(), true
+			}
+		}
+		defer closeHook() // a panicking handler still closes it: later background events are recorded by the observer
 		r = r.WithContext(ctx)
 		sw := &statusWriter{ResponseWriter: w}
 		next.ServeHTTP(sw, r)
-		if sw.status < 200 || sw.status > 299 {
-			return
-		}
+		closeHook()
+
 		pattern := ""
 		if rc := chi.RouteContext(r.Context()); rc != nil {
 			pattern = rc.RoutePattern()
 		}
-		cause := agenthistory.Cause{Actor: s.actor(r), Source: r.Method + " " + strings.TrimPrefix(pattern, "/api/v1")}
-		if sys, ok := agenthistory.SystemCause(ctx); ok {
-			cause = sys // e.g. the ladder demoted the agent on its own while the person asked to evaluate it
-		} else if !agenthistory.IsMachine(cause.Actor) && cause.Actor != "user" {
-			cause.ActorName = s.authorName(ctx)
-		}
 		rec := context.WithoutCancel(ctx)
-		if id := agentRouteID(r, pattern); id != "" {
-			if _, _, err := s.History.Record(rec, org, id, cause); err != nil && !errors.Is(err, domain.ErrNotFound) {
+		name, named := "", false
+		withName := func(c agenthistory.Cause) agenthistory.Cause {
+			if c.ActorName == "" && !agenthistory.IsMachine(c.Actor) && c.Actor != "user" {
+				if !named {
+					name, named = s.authorName(ctx), true
+				}
+				c.ActorName = name
+			}
+			return c
+		}
+		record := func(id string, c agenthistory.Cause) {
+			if _, _, err := s.History.Record(rec, org, id, withName(c)); err != nil && !errors.Is(err, domain.ErrNotFound) {
 				s.Log.Warn("agent history: record", "agent", id, "route", pattern, "err", err)
 			}
-			return
 		}
-		if orgWide {
-			s.History.RecordAll(rec, org, cause)
+		person := agenthistory.Cause{Actor: s.actor(r), Source: r.Method + " " + strings.TrimPrefix(pattern, "/api/v1")}
+		routeAgent := ""
+		if sw.status >= 200 && sw.status <= 299 {
+			routeAgent = agentRouteID(r, pattern)
+		}
+		if routeAgent != "" {
+			c := person
+			if p, ok := pending[routeAgent]; ok && p.Actor == agenthistory.ActorSystem {
+				c = p // e.g. the ladder demoted the agent on its own while the person asked to evaluate it
+			}
+			record(routeAgent, c)
+		}
+		// the agents the events of this request named (a hire, the ladder): with the cause of their event
+		for id, c := range pending {
+			if id != routeAgent {
+				record(id, c)
+			}
+		}
+		if routeAgent == "" && orgWide && sw.status >= 200 && sw.status <= 299 {
+			s.History.RecordAll(rec, org, withName(person))
 		}
 	})
 }

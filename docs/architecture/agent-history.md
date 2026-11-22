@@ -54,9 +54,12 @@ dos ganchos comunes:
    `agent.autonomy_changed`, `agent.control_changed` y `agent.profile_changed` que no pertenecen a una petición ya
    cubierta registran al agente en segundo plano. Así entra el **descenso automático por incidente**: actor `system`,
    `source` `trust.auto_demotion` ("El sistema bajó la autonomía tras un incidente"), aunque el contexto lleve a la
-   persona cuya decisión lo desencadenó. Mientras una petición está en curso el observador no registra sus eventos
-   (una petición, una versión); si dentro de ella el sistema actúa solo (evaluar y descender), la versión se atribuye
-   al sistema.
+   persona cuya decisión lo desencadenó. Mientras una petición está en curso, el observador le **entrega** al
+   middleware los agentes que nombran sus eventos (con la causa de cada evento) en vez de registrarlos él: una
+   petición deja una versión por agente, una contratación (`POST /agents/from-template`, que no lleva `{id}`) empieza
+   el historial del agente nuevo con `source: agent.created`, y si dentro de la petición el sistema actúa solo (evaluar
+   y descender) la versión se atribuye al sistema. Entregar y cerrar comparten un candado: un evento que llega después
+   del cierre (trabajo en segundo plano que sobrevive a la petición) lo registra el observador.
 
 `TestEveryAgentChangeRouteLeavesAVersion` recorre las rutas reales (perfil, restaurar perfil, tono, tope, puesto,
 habilidades, nivel, excepciones, piso, pausa, solo lectura, ensayo, acceso, carpetas) y comprueba que cada una deja una
@@ -77,7 +80,8 @@ Reglas de seguridad:
 
 - **Autonomía**: nunca sube por esta vía (`autonomy_earned`: "la autonomía se gana con evidencia; pide un ascenso").
   Bajar sí, y por `PermissionsService.ChooseLevel` → `trust.Service.ChooseLevel` (techo del rol, controles,
-  auditoría `agent.autonomy_changed`), la única ruta que escribe `agents.autonomy`.
+  auditoría `agent.autonomy_changed`), la única ruta que escribe `agents.autonomy`. Como elegir el nivel en Permisos,
+  bajar el nivel así también enciende las reglas de fábrica del agente (solo añade supervisión).
 - **Permisos de aprobación**: por categoría, se compara lo que pregunta cada versión al nivel resultante (debajo de
   `rules` se compara como `rules`, donde las excepciones importan): preguntar siempre > preguntar si… > nunca; dos
   "preguntar si…" se comparan condición por condición. Solo se aplica lo igual o más estricto; quitar el piso, "nunca

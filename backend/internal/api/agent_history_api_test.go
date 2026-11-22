@@ -257,6 +257,21 @@ func TestTimelineAndDetail(t *testing.T) {
 	}
 }
 
+// Hiring (a route that names no agent) starts the new agent's history through its event, as the person's.
+func TestHireStartsTheHistory(t *testing.T) {
+	h := newHistEnv(t)
+	res := h.e.json("POST", api1+"/agents/from-template", h.owner.AccessToken, map[string]any{"template_id": "project_manager", "locale": "es"}, 201)
+	id := res["agent"].(map[string]any)["id"].(string)
+	v := h.last(id)
+	if v.Version != 1 || v.Source != agenthistory.SourceCreated || v.ActorKind != agenthistory.ActorPerson || v.ActorName == "" {
+		t.Fatalf("hire version: %+v", v)
+	}
+	vs := h.versions(id, h.owner.AccessToken)
+	if len(vs) != 1 || vs[0]["source"] != "agent.created" {
+		t.Fatalf("timeline of a new agent: %v", vs)
+	}
+}
+
 func (h *histEnv) restore(agent string, v int, token string, want int) map[string]any {
 	h.e.t.Helper()
 	return h.e.json("POST", fmt.Sprintf("%s/agents/%s/versions/%d/restore", api1, agent, v), token, nil, want)

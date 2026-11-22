@@ -11,52 +11,61 @@ import (
 	"aiworkforce/backend/internal/domain"
 )
 
-// hook marks a context whose changes are recorded by the caller when it finishes (the HTTP middleware of the API,
-// a restore). While it is active the Observer leaves the events of that context alone, so a request that changes
-// several things leaves one version. Work that outlives the request (the trust ladder evaluates in the background)
-// finds it inactive and is recorded by the Observer.
+// hook marks a context whose changes are recorded by the caller when it finishes (the HTTP middleware of the API).
+// While it is open, the Observer hands the agents its events name to the caller instead of recording them itself, so
+// a request that changes several things leaves one version per agent, with the cause of the event (a hire, or the
+// system demoting an agent on its own inside the request). Once the caller closed it, work that outlives the request
+// (the trust ladder evaluates in the background) is recorded by the Observer. Opening, handing over and closing share
+// one lock: no event falls between the caller's last look and the close.
 type hook struct {
-	active atomic.Bool
-	mu     sync.Mutex
-	system *Cause // a change the system made on its own inside the request (an automatic demotion)
+	mu      sync.Mutex
+	open    bool
+	pending map[string]Cause // agent id -> the cause of its last event
 }
 
 type hookKey struct{}
 
-// WithHook marks ctx as recorded by the caller; call the returned func when the caller has recorded.
-func WithHook(ctx context.Context) (context.Context, func()) {
-	h := &hook{}
-	h.active.Store(true)
-	return context.WithValue(ctx, hookKey{}, h), func() { h.active.Store(false) }
+// WithHook marks ctx as recorded by the caller. The returned func closes it and returns the agents that events
+// named meanwhile (with their cause); the caller records them.
+func WithHook(ctx context.Context) (context.Context, func() map[string]Cause) {
+	h := &hook{open: true, pending: map[string]Cause{}}
+	return context.WithValue(ctx, hookKey{}, h), func() map[string]Cause {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		h.open = false
+		out := h.pending
+		h.pending = map[string]Cause{}
+		return out
+	}
 }
 
 // Hooked reports whether a caller will record the changes made under ctx.
 func Hooked(ctx context.Context) bool {
 	h, ok := ctx.Value(hookKey{}).(*hook)
-	return ok && h.active.Load()
-}
-
-// SystemCause is the change the system made on its own inside a hooked context (ok=false when none): the caller
-// records it as the system's, not as the person's whose request set it off.
-func SystemCause(ctx context.Context) (Cause, bool) {
-	h, ok := ctx.Value(hookKey{}).(*hook)
 	if !ok {
-		return Cause{}, false
+		return false
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.system == nil {
-		return Cause{}, false
-	}
-	return *h.system, true
+	return h.open
 }
 
-func noteSystem(ctx context.Context, c Cause) {
-	if h, ok := ctx.Value(hookKey{}).(*hook); ok {
-		h.mu.Lock()
-		h.system = &c
-		h.mu.Unlock()
+// handOver gives the agent to the caller of an open hook (false when there is none or it is closed). A change the
+// system made on its own is never overwritten by a later event of the same agent.
+func handOver(ctx context.Context, agentID string, c Cause) bool {
+	h, ok := ctx.Value(hookKey{}).(*hook)
+	if !ok {
+		return false
 	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if !h.open {
+		return false
+	}
+	if prev, had := h.pending[agentID]; !had || prev.Actor != ActorSystem {
+		h.pending[agentID] = c
+	}
+	return true
 }
 
 // Triggers are the events that may change an agent's configuration without a request that names it: hiring, the
@@ -104,10 +113,7 @@ func (o *Observer) Publish(ctx context.Context, e domain.Event) error {
 		return err
 	}
 	org, agent, cause := e.OrgID, e.AgentID, CauseOf(ctx, e)
-	if Hooked(ctx) {
-		if cause.Actor == ActorSystem {
-			noteSystem(ctx, cause)
-		}
+	if handOver(ctx, agent, cause) {
 		return err
 	}
 	c := application.WithOrg(context.WithoutCancel(ctx), org)
