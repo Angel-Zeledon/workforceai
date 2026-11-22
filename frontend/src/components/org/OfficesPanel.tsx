@@ -8,6 +8,7 @@ import { officesApi } from "@/lib/officesApi";
 import { addableMembers, convertibleDepartments, officeBadge, sortOffices, type OfficeView, type OfficeVisibility, type OfficesResponse, type PersonRef } from "@/lib/officesLogic";
 import { Icon } from "../icons";
 import { TeamMemory } from "./TeamMemory";
+import { SaveTemplatePanel } from "../teams/SaveTemplatePanel";
 import { btnDanger, btnGhost, btnPrimary, inputCls } from "./shared";
 
 const badgeCls: Record<string, string> = {
@@ -39,6 +40,7 @@ export function OfficesPanel({ people, onChanged, depts = [], onEditDept, onNewD
   const [vis, setVis] = useState<OfficeVisibility>("open");
   const [busy, setBusy] = useState(false);
   const [memoryOf, setMemoryOf] = useState<string | null>(null);
+  const [saveOf, setSaveOf] = useState<string | null>(null); // F3: "Guardar como plantilla" of this office
   const deptsRef = useRef<HTMLElement>(null);
 
   const load = useCallback(() => {
@@ -82,10 +84,15 @@ export function OfficesPanel({ people, onChanged, depts = [], onEditDept, onNewD
           <ul className="grid gap-3 md:grid-cols-2">
             {offices.map((o) => (
               <OfficeCard key={o.id} o={o} people={people} admin={data.me.admin} meId={data.me.user_id} busy={busy} run={run} onMemory={() => setMemoryOf(o.id)}
-                onEdit={onEditDept && !o.general && editable.has(o.id) ? () => onEditDept(o.id) : undefined} />
+                onEdit={onEditDept && !o.general && editable.has(o.id) ? () => onEditDept(o.id) : undefined}
+                onSaveTemplate={o.can_enter && o.can_manage ? () => setSaveOf(o.id) : undefined} />
             ))}
           </ul>
         )}
+        {saveOf && data && (() => {
+          const o = data.offices.find((x) => x.id === saveOf);
+          return o ? <SaveTemplatePanel officeId={o.id} officeName={o.general ? t("offices.general") : o.name} onClose={() => setSaveOf(null)} /> : null;
+        })()}
       </section>
 
       {/* the old "Estructura" tab: same test ids, so old links and tests still find it */}
@@ -161,9 +168,9 @@ function SectionTitle({ title, count, hint }: { title: string; count?: number; h
   );
 }
 
-function OfficeCard({ o, people, admin, meId, busy, run, onMemory, onEdit }: {
+function OfficeCard({ o, people, admin, meId, busy, run, onMemory, onEdit, onSaveTemplate }: {
   o: OfficeView; people: PersonRef[]; admin: boolean; meId: string; busy: boolean;
-  run: (fn: () => Promise<unknown>, err?: string) => Promise<void>; onMemory: () => void; onEdit?: () => void;
+  run: (fn: () => Promise<unknown>, err?: string) => Promise<void>; onMemory: () => void; onEdit?: () => void; onSaveTemplate?: () => void;
 }) {
   const { t } = useT();
   const [add, setAdd] = useState("");
@@ -225,6 +232,7 @@ function OfficeCard({ o, people, admin, meId, busy, run, onMemory, onEdit }: {
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
         {o.can_enter && <button type="button" data-testid={`office-memory-${o.id}`} onClick={onMemory} className="text-[12px] font-semibold text-accent hover:underline">{t("offices.memory")}</button>}
         {onEdit && <button type="button" data-testid={`office-edit-${o.id}`} onClick={onEdit} className="text-[12px] font-semibold text-mute hover:text-ink hover:underline">{t("org.offices.edit")}</button>}
+        {onSaveTemplate && <button type="button" data-testid={`office-save-template-${o.id}`} onClick={onSaveTemplate} className="text-[12px] font-semibold text-mute hover:text-ink hover:underline">{t("otpl.save.button")}</button>}
         {o.is_member && !o.is_lead && !o.general && (
           <button type="button" disabled={busy} className="text-[12px] text-mute hover:text-ink" data-testid={`office-leave-${o.id}`}
             onClick={() => void run(() => officesApi.removeMember(o.id, meId))}>{t("offices.leave")}</button>
