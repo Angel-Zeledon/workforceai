@@ -1376,3 +1376,19 @@ Detalle y garantías en `watchdog.md`. Sin migración: el umbral vive en `signal
 | `POST /tasks/{id}/stall/cancel` | `tasks:manage` | `{confirm_task_ids}` = exactamente `cancel_cascade`; `202 {…, cancelled[]}`. `409 cascade_changed` (con `cancel_cascade` nueva) si la lista cambió; `409 cascade_hidden` si detendría trabajo de un departamento que la persona no ve |
 
 Errores comunes: `404` si la tarea no existe o es de un departamento privado ajeno; `409 not_stalled` si ya no está atascada (avanzó, espera a una persona o alguien la está recuperando); `409 already_recovering`; `409 execution_blocked (código)` si el kill-switch, la pausa o el modo solo lectura frenan al agente; `403` para un actor que no es persona. `POST /initiatives/{id}/accept` de una sugerencia `stalled_task` reintenta la tarea (`request_id` = el pedido de la tarea).
+
+## 53. Probar una habilidad con un caso (F8)
+
+Detalle y garantías en `skills.md`, sección "Probar una habilidad". Migración 829 (`skill_test_cases`, `skill_test_runs`).
+
+| Método y ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /skills/{id}/tests` | `skills:read` | `{cases[], runs[] (últimas 30), last_by_version[{version, at, status, used_skill, case_id, run_id}], limits{cases, title, prompt, expect}}` |
+| `GET /skills/{id}/tests/candidates` | `skills:read` | Agentes que pueden usar la habilidad (asignada o por defecto de su rol, en cualquier estado) y que la persona puede usar: `[{id, name, role, title}]` |
+| `POST /skills/{id}/tests/cases` · `PUT …/cases/{caseId}` | `skills:write` | `{title?, prompt, expect?}`; `201`/`200` con el caso. `409 too_many_cases` (máx. 10), `400 case_prompt_required` / `case_prompt_too_long` (2000) / `case_expect_too_long` (1000) / `case_title_too_long` (120). Habilidad de departamento: solo su responsable o un administrador (`403 office_forbidden`) |
+| `DELETE /skills/{id}/tests/cases/{caseId}` | `skills:write` | `204`; el historial de sus pruebas se conserva |
+| `POST /skills/{id}/tests/estimate` | `skills:review` | `{case_id, agent_id, version?, compare?}` -> `{runs, versions[], estimate_usd, per_run_usd[]}`: el peor caso de las llamadas, antes de gastar nada |
+| `POST /skills/{id}/tests/run` | `skills:review` | Mismo cuerpo -> `{runs: [...]}`. `version` 0 = la última (borrador, en revisión o activa); `compare` añade la versión activa sobre el mismo caso (`pair_id` común). Una prueba que no pudo ocurrir (presupuesto, interruptor de emergencia, runtime) es una ejecución `status: "failed"` con `fail_code` (`budget_exceeded:<alcance>`, `blocked:<código>`, `runtime_unavailable`, `provider_no_balance`, `empty_answer`) |
+| `GET /skills/{id}/tests/cases/{caseId}/runs` | `skills:read` | Historial del caso, el más reciente primero |
+
+Una ejecución lleva `version`, `active`, `agent_id`, `output`, `used_skill` (cargó el texto completo), `blocked[]` (`herramienta.acción` pedidas y no ejecutadas), `estimate_usd`, `cost_usd`, tokens, `duration_ms`. Errores comunes: `404` si la habilidad no existe, es de otra organización o de un departamento privado ajeno; `400 agent_not_eligible`; `403 humans_only` para un actor que no es persona; `403` si la persona no puede usar al agente (departamento privado).

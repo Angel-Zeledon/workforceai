@@ -144,6 +144,8 @@ type Deps struct {
 	// <<< corporate organization model
 	// Skills serves /skills/* and /agents/{id}/skills (skills.go). Optional.
 	Skills *skills.Service
+	// SkillTests serves /skills/{id}/tests/* (skill_tests.go): saved cases and test runs of a skill. Optional.
+	SkillTests *skills.Tester
 	// Memory serves /agents/{id}/memory (memory.go): the long-term memory. Optional.
 	Memory *memory.Service
 	// Rewards serves /rewards/* and /shop/* (rewards.go): the coin wallet,

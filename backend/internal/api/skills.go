@@ -44,6 +44,7 @@ func (s *server) mountSkills(r chi.Router) {
 	r.With(s.can(auth.PermAgentsRead)).Get("/agents/{id}/skills", s.agentSkills)
 	r.With(s.can(auth.PermAgentsWrite)).Put("/agents/{id}/skills/{skillId}", s.assignSkill)
 	r.With(s.can(auth.PermAgentsWrite)).Delete("/agents/{id}/skills/{skillId}", s.unassignSkill)
+	s.mountSkillTests(r)
 }
 
 func (s *server) skillActor(r *http.Request) skills.Actor {

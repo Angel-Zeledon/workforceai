@@ -51,3 +51,28 @@ func wireSkills(cfg config.Config, log *slog.Logger, pg *postgres.Store, store a
 	log.Info("skill library ready", "tool", skills.ToolName, "store", map[bool]string{true: "postgres", false: "memory"}[pg != nil])
 	return svc
 }
+
+// wireSkillTests builds the tester of the skill library (F8): saved cases and test runs of a skill. It holds only the
+// runtime's RunTask and the orchestrator's budget: it has no path to the Tool Gateway, the connections or the drive.
+func wireSkillTests(log *slog.Logger, pg *postgres.Store, store application.Store, rt skills.TestRuntime, orch *application.Orchestrator,
+	orgCfg *application.OrgConfig, svc *skills.Service) *skills.Tester {
+	if svc == nil {
+		return nil
+	}
+	var st skills.TestStore = skills.NewMemTestStore()
+	if pg != nil {
+		st = &postgres.SkillTestStore{S: pg}
+	}
+	cfg := skills.TesterConfig{Svc: svc, Store: st, Runtime: rt, Budget: orch,
+		Agent: func(ctx context.Context, org, id string) (domain.Agent, error) {
+			return store.GetAgent(application.WithOrg(ctx, org), org, id)
+		},
+		Agents: func(ctx context.Context, org string) ([]domain.Agent, error) {
+			return store.ListAgents(application.WithOrg(ctx, org), org)
+		}}
+	if orgCfg != nil {
+		cfg.Locale = func(ctx context.Context) string { return orgCfg.Locale(ctx, "") }
+	}
+	log.Info("skill tests ready")
+	return skills.NewTester(cfg)
+}

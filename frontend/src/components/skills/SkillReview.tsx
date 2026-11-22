@@ -1,10 +1,12 @@
 "use client";
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
+import { useCan } from "@/lib/session";
 import { skillsApi, SkillError, type SkillDetail, type SkillWarning } from "@/lib/skills";
 import { hasPending } from "@/lib/skillsLogic";
 import { Btn, Card } from "../ui";
 import { fmtSize } from "./shared";
+import { SkillTestPanel, TestedBadge, useSkillTests } from "./SkillTestPanel";
 
 const WARN_CLS: Record<string, string> = { injection: "border-err/40 bg-err/10 text-err", script: "border-warn/40 bg-warn/10 text-warn", allowed_tools: "border-line bg-panel2 text-ink2", import_note: "border-line bg-panel2 text-ink2" };
 
@@ -29,6 +31,8 @@ export function SkillReview({ detail, canReview, onChanged, onDeleted }: { detai
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const canWrite = useCan("skills:write");
+  const { ov, reload } = useSkillTests(detail.id);
   const warnings = detail.version.warnings ?? [];
   const pending = hasPending(detail) || detail.status === "draft" || detail.status === "disabled";
   const fail = (e: unknown) => setErr(e instanceof SkillError && t(`skills.error.${e.code}`) !== `skills.error.${e.code}` ? t(`skills.error.${e.code}`) : t("skills.error.generic"));
@@ -70,6 +74,8 @@ export function SkillReview({ detail, canReview, onChanged, onDeleted }: { detai
         );
       })}
 
+      <SkillTestPanel detail={detail} ov={ov} reload={reload} canRun={canReview} canWrite={canWrite} />
+
       {err && <div data-testid="skill-review-error" className="rounded-lg bg-err/10 px-3 py-2 text-xs text-err">{err}</div>}
       {canReview ? (
         <Card title={t("skills.review.decision")}>
@@ -77,9 +83,10 @@ export function SkillReview({ detail, canReview, onChanged, onDeleted }: { detai
             <div className="space-y-2">
               <p className="text-xs text-mute">{t("skills.review.decisionHelp")}</p>
               <input data-testid="skill-review-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={400} placeholder={t("skills.review.notePh")} className="w-full rounded-lg border border-line bg-panel2 px-3 py-2 text-xs outline-none focus:border-accent" />
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Btn kind="ok" data-testid="skill-approve" disabled={busy} onClick={() => run(() => skillsApi.review(detail.id, "approve", detail.current_version))}>{detail.status === "disabled" ? t("skills.review.enable") : t("skills.review.approve")}</Btn>
                 {detail.status !== "disabled" && <Btn kind="danger" data-testid="skill-reject" disabled={busy} onClick={() => run(() => skillsApi.review(detail.id, "reject", detail.current_version, note))}>{t("skills.review.reject")}</Btn>}
+                <TestedBadge ov={ov} version={detail.current_version} />
               </div>
             </div>
           ) : <p className="text-xs text-mute">{t("skills.review.nothingPending")}</p>}
