@@ -79,6 +79,9 @@ type SignalSettings struct {
 	SpendPace     SpendPaceSignal     `json:"spend_pace"`
 	ApprovalAging ApprovalAgingSignal `json:"approval_aging"`
 	QualityDrop   QualityDropSignal   `json:"quality_drop"`
+	// StalledWork (F6, watchdog.go) is the "no progress" threshold of the stalled-work watchdog. Additive: a row
+	// stored before it existed reads with the defaults (normalize).
+	StalledWork StalledWorkSignal `json:"stalled_work"`
 }
 
 // Defaults and accepted ranges of the thresholds.
@@ -125,6 +128,14 @@ func DefaultSignalSettings() SignalSettings {
 		SpendPace:     SpendPaceSignal{Enabled: true, PacePct: DefaultSpendPacePct, MinDays: DefaultSpendMinDays},
 		ApprovalAging: ApprovalAgingSignal{Enabled: true, MinAgeHours: DefaultApprovalAgeHours, MinCount: DefaultApprovalMinCount},
 		QualityDrop:   QualityDropSignal{Enabled: true, DropPoints: DefaultQualityDropPoints},
+		StalledWork:   DefaultStalledWork(),
+	}
+}
+
+// normalize fills what a row stored before a signal existed lacks (today: stalled_work, whose minutes are never 0).
+func (s *SignalSettings) normalize() {
+	if s != nil && s.StalledWork.TaskMinutes == 0 && s.StalledWork.ProjectMinutes == 0 {
+		s.StalledWork = DefaultStalledWork()
 	}
 }
 
@@ -149,6 +160,10 @@ func (s SignalSettings) Validate() error {
 		return bad("approval_aging.min_count", minApprovals, maxApprovals)
 	case s.QualityDrop.DropPoints < minQualityDrop || s.QualityDrop.DropPoints > maxQualityDrop:
 		return bad("quality_drop.drop_points", minQualityDrop, maxQualityDrop)
+	case s.StalledWork.TaskMinutes < minStallTaskMinutes || s.StalledWork.TaskMinutes > maxStallTaskMinutes:
+		return bad("stalled_work.task_minutes", minStallTaskMinutes, maxStallTaskMinutes)
+	case s.StalledWork.ProjectMinutes < minStallProjectMinutes || s.StalledWork.ProjectMinutes > maxStallProjectMinutes:
+		return bad("stalled_work.project_minutes", minStallProjectMinutes, maxStallProjectMinutes)
 	}
 	return nil
 }
@@ -163,6 +178,7 @@ func (s *SignalSettings) AuditDetails() map[string]any {
 		"spend_pace": s.SpendPace.Enabled, "spend_pace_pct": s.SpendPace.PacePct, "spend_min_days": s.SpendPace.MinDays,
 		"approval_aging": s.ApprovalAging.Enabled, "approval_min_age_hours": s.ApprovalAging.MinAgeHours, "approval_min_count": s.ApprovalAging.MinCount,
 		"quality_drop": s.QualityDrop.Enabled, "quality_drop_points": s.QualityDrop.DropPoints,
+		"stalled_work": s.StalledWork.Enabled, "stalled_task_minutes": s.StalledWork.TaskMinutes, "stalled_project_minutes": s.StalledWork.ProjectMinutes,
 	}
 }
 

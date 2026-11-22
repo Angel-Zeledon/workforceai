@@ -71,6 +71,8 @@ type Deps struct {
 	ROI *application.ROIService
 	// InitiativeScanner evaluates the metric signals on demand (POST /initiatives/scan). Optional.
 	InitiativeScanner *application.InitiativeScanner
+	// Watchdog serves /stalled-work and /tasks/{id}/stall (watchdog.go): stalled work and its recovery. Optional.
+	Watchdog *application.Watchdog
 	// DevilsAdvocate serves /approvals/{id}/counterargument (devils_advocate.go): the advisory review of a
 	// high-risk approval. Optional: nil leaves the routes unmounted.
 	DevilsAdvocate *application.DevilsAdvocate
@@ -320,6 +322,7 @@ func NewRouter(d Deps) http.Handler {
 			s.mountProjectInputs(r)
 			s.mountStanding(r)
 			s.mountInitiative(r)
+			s.mountWatchdog(r) // F6: stalled work and its recovery (watchdog.go)
 			s.mountROI(r)
 			s.mountDevilsAdvocate(r)
 			s.mountRehearsal(r)

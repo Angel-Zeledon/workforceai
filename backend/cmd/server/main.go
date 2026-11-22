@@ -361,9 +361,12 @@ func run(log *slog.Logger) error {
 	// Metric signals (margin / sales / cash in sheets, spend pace, aging approvals, quality drop): same budget, same path.
 	initiativeScan := wireInitiativeScanner(initiativeSvc, store, orch, ws.artifacts, qualitySvc, cw.ctl, orgCfg)
 	startInitiativeScan(ctx, log, initiativeScan, store, cfg.App.OrgID, initiativeScanInterval(log))
+	// F6 stalled-work watchdog: no model call; suggestions through the same budget; retry / reassign / cancel by a person.
+	watchdog := wireWatchdog(orch, initiativeSvc, rec, cfg.App, orgCfg)
+	startWatchdog(ctx, log, watchdog, store, cfg.App.OrgID, watchdogInterval(log))
 
 	deps := api.Deps{Cfg: cfg.App, Audit: auditSvc, ROI: roiSvc, Conns: cw.conns, Controls: cw.ctl, Gateway: cw.gw, Queries: queries, Orch: orch, Approvals: approvals,
-		Standing: standingSvc, Initiative: initiativeSvc, InitiativeScanner: initiativeScan, DevilsAdvocate: devilsSvc, Rehearsal: rehearsalSvc, Debates: debatesSvc,
+		Standing: standingSvc, Initiative: initiativeSvc, InitiativeScanner: initiativeScan, Watchdog: watchdog, DevilsAdvocate: devilsSvc, Rehearsal: rehearsalSvc, Debates: debatesSvc,
 		Projects: ws.projects, Artifacts: ws.artifacts, Drive: ws.drive, Sandbox: ws.sandbox.svc, SandboxAvailable: ws.sandbox.available, Web: webSvc, Skills: skillsSvc, Memory: memorySvc, Rewards: rewardsSvc, Quality: qualitySvc, Trust: trustSvc, Rituals: ritualsSvc, Away: awaySvc, Customers: custSvc, Chats: chats, Commands: &api.CommandsDeps{LongMemory: longMemoryFor(memorySvc)}, Push: pushSvc, Notify: notifySvc, PlanSelfServe: envOn("PLAN_SELF_SERVE"), Billing: billingSvc, Rec: rec, Profiles: profiles, V2: v2Store, Tracer: tracer,
 		Store: store, Runtime: rt, Hub: hub, Log: log, OrgConfig: orgCfg, ModelPolicy: modelPolicy, LLM: llmSvc, DocIndex: ws.docIndex, Meetings: meetingsSvc,
 		AuthEnabled: cfg.AuthEnabled, AllowedOrigins: cfg.AllowedOrigins,

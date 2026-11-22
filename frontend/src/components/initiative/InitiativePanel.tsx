@@ -3,8 +3,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useCan } from "@/lib/session";
 import { initiativeApi, type Initiative, type InitiativeSettings, type SignalSettings } from "@/lib/initiativeApi";
-import { METRIC_SIGNALS, SIGNAL_FIELDS, clampThreshold, signalText, type MetricSignal, type ThresholdField } from "@/lib/initiativeLogic";
+import { CONFIG_SIGNALS, SIGNAL_FIELDS, clampThreshold, signalText, type ConfigSignal, type ThresholdField } from "@/lib/initiativeLogic";
+import { stallTaskOf } from "@/lib/watchdogLogic";
 import { Btn, Card, Dot, Empty, timeAgo, useAgentColor, useAgentName } from "../ui";
+import { StallActions } from "../watchdog/StallActions";
 
 const REFRESH_MS = 30_000;
 
@@ -53,6 +55,7 @@ export function InitiativePanel() {
           <ul className="space-y-2">
             {items.map((it) => {
               const x = text(it);
+              const stalledTask = stallTaskOf(it.signal, it.params); // a stalled task: retry / reassign / cancel, not "accept"
               return (
                 <li key={it.id} data-testid={`initiative-${it.id}`} data-signal={it.signal} className="rounded-md border border-line bg-panel2 p-3">
                   <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-mute">
@@ -61,7 +64,12 @@ export function InitiativePanel() {
                   </div>
                   <div className="break-words text-[13px] font-semibold text-ink [overflow-wrap:anywhere]">{x.title}</div>
                   {x.body && <p className="mt-1 line-clamp-4 break-words text-[12px] leading-snug text-ink2 [overflow-wrap:anywhere]">{x.body}</p>}
-                  {canAct ? (
+                  {stalledTask ? (
+                    <>
+                      <StallActions taskId={stalledTask} explain onDone={load} />
+                      {canAct && <div className="mt-2 flex items-center gap-2"><Btn disabled={busy === it.id} data-testid={`initiative-dismiss-${it.id}`} onClick={() => act(it, "dismiss")}>{t("initiative.dismiss")}</Btn></div>}
+                    </>
+                  ) : canAct ? (
                     <div className="mt-2.5 flex items-center gap-2">
                       <Btn kind="primary" disabled={busy === it.id} data-testid={`initiative-accept-${it.id}`} onClick={() => act(it, "accept")}>{t("initiative.accept")}</Btn>
                       <Btn disabled={busy === it.id} data-testid={`initiative-dismiss-${it.id}`} onClick={() => act(it, "dismiss")}>{t("initiative.dismiss")}</Btn>
@@ -106,11 +114,11 @@ export function InitiativeBudgetCard() {
     setBusy(false);
   };
   const signals = cfg.signals;
-  const setSignal = (s: MetricSignal, patch: Partial<SignalSettings[MetricSignal]>) => {
+  const setSignal = (s: ConfigSignal, patch: Partial<SignalSettings[ConfigSignal]>) => {
     if (!signals) return;
     setCfg({ ...cfg, signals: { ...signals, [s]: { ...signals[s], ...patch } } });
   };
-  const value = (s: MetricSignal, f: ThresholdField) => (signals?.[s] as unknown as Record<string, number> | undefined)?.[f] ?? 0;
+  const value = (s: ConfigSignal, f: ThresholdField) => (signals?.[s] as unknown as Record<string, number> | undefined)?.[f] ?? 0;
 
   return (
     <div data-testid="initiative-budget-card">
@@ -137,7 +145,7 @@ export function InitiativeBudgetCard() {
             <fieldset className="space-y-2 rounded-md border border-line p-3" data-testid="initiative-signals" disabled={busy || !cfg.enabled}>
               <legend className="px-1 font-semibold">{t("initiative.signals.title")}</legend>
               <p className="text-mute">{t("initiative.signals.help")}</p>
-              {METRIC_SIGNALS.map((s) => (
+              {CONFIG_SIGNALS.map((s) => (
                 <div key={s} className="space-y-1.5 border-t border-line pt-2 first-of-type:border-t-0 first-of-type:pt-0">
                   <label className="flex items-center gap-2 font-semibold">
                     <input type="checkbox" data-testid={`initiative-signal-${s}`} checked={signals[s].enabled}
@@ -150,8 +158,8 @@ export function InitiativeBudgetCard() {
                         {t(`initiative.signals.${s}.${f.field}`)}
                         <input type="number" min={f.min} max={f.max} step={f.step} data-testid={`initiative-signal-${s}-${f.field}`}
                           value={value(s, f.field)} disabled={!signals[s].enabled}
-                          onChange={(e) => setSignal(s, { [f.field]: Number(e.target.value) } as Partial<SignalSettings[MetricSignal]>)}
-                          onBlur={(e) => setSignal(s, { [f.field]: clampThreshold(s, f.field, e.target.value) } as Partial<SignalSettings[MetricSignal]>)}
+                          onChange={(e) => setSignal(s, { [f.field]: Number(e.target.value) } as Partial<SignalSettings[ConfigSignal]>)}
+                          onBlur={(e) => setSignal(s, { [f.field]: clampThreshold(s, f.field, e.target.value) } as Partial<SignalSettings[ConfigSignal]>)}
                           className={inputCls} />
                       </label>
                     ))}

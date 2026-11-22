@@ -488,8 +488,12 @@ func (o *Orchestrator) emitResumed(ctx context.Context, rs *run, done, total int
 	if gate != "" {
 		p["gate"] = gate
 	}
-	o.rec.Emit(ctx, Action{Type: domain.EvRequestResumed, Entity: "request", EntityID: rs.req.ID, Payload: p,
-		Text: "Pedido reanudado tras un reinicio del servidor"})
+	text := "Pedido reanudado tras un reinicio del servidor"
+	if by := o.watch.takeResumedBy(o.org(ctx), rs.req.ID); by != "" { // F6: a person recovered stalled work
+		p["resumed_by"], p["reason"] = by, "stalled"
+		text = "Pedido reanudado por una persona: tenía trabajo atascado"
+	}
+	o.rec.Emit(ctx, Action{Type: domain.EvRequestResumed, Entity: "request", EntityID: rs.req.ID, Payload: p, Text: text})
 }
 
 // resumeGated continues a request that was waiting on a human gate before it

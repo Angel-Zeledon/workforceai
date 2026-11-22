@@ -69,6 +69,8 @@ type Orchestrator struct {
 
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
 
+	watch watchState // stalled-work watchdog: execution handles and recovery orders (watchdog_exec.go)
+
 	stateMu sync.Map // org|agent -> *sync.Mutex: serializes setState of one agent (see setState)
 
 	// >>> organization model hooks (delegation_hook.go, hold.go): optional, zero value = off
@@ -300,7 +302,8 @@ func (o *Orchestrator) execute(ctx context.Context, rs *run, tasks []domain.Task
 	sched := Scheduler{MaxParallel: o.parallelFor(rs), Live: lr.h}
 	outcomes := sched.Run(ctx, lr.nodes(tasks),
 		func(c context.Context, id string) Outcome {
-			out := exec(c, lr.task(id))
+			t := lr.task(id)
+			out := o.supervise(c, rs, t, func(c context.Context) Outcome { return exec(c, t) }) // F6 watchdog
 			if c.Err() == nil {
 				o.dropCheckpoint(c, id) // the task is over; a shutdown keeps it for Recover
 			}
@@ -1085,6 +1088,9 @@ func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.
 }
 
 func (o *Orchestrator) failTask(ctx context.Context, rs *run, t domain.Task, cause error) {
+	if ctx.Err() != nil && errors.Is(context.Cause(ctx), errStallRecover) {
+		return // a person is recovering this stalled task: supervise re-runs or blocks it (watchdog_exec.go)
+	}
 	if errors.Is(cause, errBudget) {
 		o.stopForBudget(ctx, rs, t)
 		return

@@ -46,7 +46,8 @@ test("the mock demos one pending suggestion per metric signal, rendered from par
   const submitted = [];
   const m = new MockInitiatives(async (text) => { submitted.push(text); return "req-1"; }, spec);
   const list = await m.handle("GET", ["initiatives"], new URLSearchParams("status=pending"));
-  assert.deepEqual(list.map((i) => i.signal).sort(), [...METRIC_SIGNALS].sort());
+  assert.deepEqual(list.map((i) => i.signal).filter((s) => s !== "stalled_task").sort(), [...METRIC_SIGNALS].sort());
+  assert.ok(list.some((i) => i.signal === "stalled_task"), "the stalled-task suggestion of the watchdog mock");
   for (const it of list) assert.ok(signalText(it.signal, it.params), `${it.signal} has params`);
   const acc = await m.handle("POST", ["initiatives", list[0].id, "accept"], new URLSearchParams());
   assert.equal(acc.status, "accepted");
@@ -54,7 +55,7 @@ test("the mock demos one pending suggestion per metric signal, rendered from par
   assert.deepEqual(submitted, [list[0].prompt]);
   await assert.rejects(m.handle("POST", ["initiatives", list[0].id, "accept"], new URLSearchParams()));
   const left = await m.handle("GET", ["initiatives"], new URLSearchParams("status=pending"));
-  assert.equal(left.length, 3);
+  assert.equal(left.length, 4);
 });
 
 test("the mock settings validate thresholds like the backend and merge signals", async () => {

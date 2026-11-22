@@ -220,6 +220,8 @@ func (q *orgQueue) stats(org string) (inUse, queued int) {
 func (o *Orchestrator) acquireSlot(ctx context.Context, call string) (func(), error) {
 	org, prio, reqID := o.org(ctx), WorkPriorityFrom(ctx), RequestIDFrom(ctx)
 	var since time.Time
+	waited := execWait(ctx) // F6: waiting for a slot of the organization's queue is not being stalled
+	defer waited()
 	release, err := o.queue.acquire(ctx, org, o.cfg.MaxParallelPerOrg, prio, func(ahead int) {
 		since = time.Now()
 		act := Action{Type: domain.EvRequestQueued, Entity: "request", EntityID: reqID,

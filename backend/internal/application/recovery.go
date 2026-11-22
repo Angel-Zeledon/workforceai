@@ -474,7 +474,8 @@ func (o *Orchestrator) reopenRun(ctx context.Context, rs *run, sub []domain.Task
 	lr := o.registerLive(rs, sub, false)
 	outcomes := Scheduler{MaxParallel: o.parallelFor(rs), Live: lr.h}.Run(ctx, lr.nodes(sub),
 		func(c context.Context, id string) Outcome {
-			out := o.runTask(c, rs, lr.task(id))
+			t := lr.task(id)
+			out := o.supervise(c, rs, t, func(c context.Context) Outcome { return o.runTask(c, rs, t) }) // F6 watchdog
 			if c.Err() == nil {
 				o.dropCheckpoint(c, id)
 			}

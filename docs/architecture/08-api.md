@@ -1361,3 +1361,18 @@ Detalle en [goals.md](goals.md). `requests:read` para leer, `requests:create` pa
 - Enlace (opcional, aditivo): `goal_id` en `POST /requests`, `POST /messages`, `POST /projects/draft`, `POST /projects/from-template` (400 si es de otra organización, no visible o no activo; no se crea nada).
 - Lectura (aditivo, omitido sin objetivo): `goal: {id, title, status, office_name?}` en `GET /reports`, `GET /reports/{id}`, `GET /requests/{id}`; `goal_id` en pedidos y resúmenes de proyecto. Un objetivo que la persona no ve no aparece.
 - Evento `goal.changed` `{goal}`; auditoría `goal.created` / `goal.updated`.
+
+## 49. Vigilante de trabajo atascado (F6)
+
+Detalle y garantías en `watchdog.md`. Sin migración: el umbral vive en `signals.stalled_work` de `GET/PUT /settings/initiative`.
+
+| Método y ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /stalled-work` | `tasks:read` | Tareas atascadas que la persona ve (D3): `[{task_id, request_id, agent_id, title, status, kind, project, last_progress, minutes, episode}]` |
+| `POST /stalled-work/scan` | `org:manage` | Barrido ahora: `{results: [{...tarea, announced, raised, reason?, initiative_id?}], raised}`; auditado `watchdog.scanned` |
+| `GET /tasks/{id}/stall` | `tasks:read` | `{task, stalled, stall?, reassign_candidates[], cancel_cascade[], hidden_cascade}`; candidatos y cascada limitados a lo que la persona ve |
+| `POST /tasks/{id}/stall/retry` | `requests:create` | `202 {task, action, status}` con `status` `applied` \| `requested` \| `resumed` \| `reopened` \| `finished` |
+| `POST /tasks/{id}/stall/reassign` | `tasks:manage` | `{agent_id}`: mismo departamento y mismo rol; `400` si no puede tomarla o si la persona no ve su trabajo |
+| `POST /tasks/{id}/stall/cancel` | `tasks:manage` | `{confirm_task_ids}` = exactamente `cancel_cascade`; `202 {…, cancelled[]}`. `409 cascade_changed` (con `cancel_cascade` nueva) si la lista cambió; `409 cascade_hidden` si detendría trabajo de un departamento que la persona no ve |
+
+Errores comunes: `404` si la tarea no existe o es de un departamento privado ajeno; `409 not_stalled` si ya no está atascada (avanzó, espera a una persona o alguien la está recuperando); `409 already_recovering`; `409 execution_blocked (código)` si el kill-switch, la pausa o el modo solo lectura frenan al agente; `403` para un actor que no es persona. `POST /initiatives/{id}/accept` de una sugerencia `stalled_task` reintenta la tarea (`request_id` = el pedido de la tarea).

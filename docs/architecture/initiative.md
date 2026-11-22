@@ -30,6 +30,7 @@ Límite conocido: la comprobación de presupuesto y la inserción se serializan 
 
 1. **Tarea fallida.** `Orchestrator.failTask` llama a `InitiativeRaiser.TaskFailed` (gancho opcional, `Orchestrator.SetInitiative`). Una tarea que falla (no las detenidas por presupuesto o saldo del proveedor, que quedan `blocked`) genera "La tarea X falló" con un texto de solicitud para revisarla. La clave de duplicado es agente + título de la tarea.
 2. **Señales de métricas** (migración `800`, sección siguiente).
+3. **Trabajo atascado** (F6, `watchdog.md`): el vigilante crea `stalled_task` del agente dueño de una tarea que dejó de avanzar ("La tarea X lleva 40 min sin avanzar. ¿La reintento, se la paso a otro o la cancelo?"). Clave = episodio (tarea + inicio del intento), ventana 24 h. **Aceptarla reintenta la tarea** (acción registrada con `InitiativeService.SetAction`), no crea un pedido. Umbral en `signals.stalled_work` (`enabled`, `task_minutes` 30 en 5..1440, `project_minutes` 120 en 15..4320); una fila guardada antes lee los defectos.
 
 Cualquier otro código puede llamar `InitiativeService.Raise` con su propia señal. `RaiseInput.Dedupe` (opcional) cambia la ventana de duplicados de esa señal y `RaiseInput.Params` guarda los valores detrás del texto.
 

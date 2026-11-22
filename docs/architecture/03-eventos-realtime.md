@@ -46,6 +46,7 @@ SPEC: `{ id, type, ts, org_id, agent_id?, payload }`. **[CAMBIO] aditivo y compa
 | `request.failed` | `{request_id, reason}` | Fallo irrecuperable | 1 |
 | `task.created` (campo nuevo) | `assigned_reason` (también en `task`) | Por qué ese agente tiene la tarea | 1 |
 | `task.retrying` | `{task_id, attempt, next_attempt_at, error}` | Reintento programado | 1 |
+| `task.stalled` | `{task_id, request_id, agent_id, title, kind, minutes, project, last_progress}` | El vigilante (F6) vio una tarea sin avanzar más allá del umbral de la organización: una vez por episodio. `kind`: `no_progress` (este proceso la ejecuta) o `no_worker` (nadie la ejecuta). Lleva el agente, así que en un departamento privado solo llega a sus miembros. Ver `watchdog.md` | 1 |
 | `file.activity` | `{agent_id, task_id, action, path}` | Un agente usó la unidad de archivos (`fs.list/read/search/write/move/delete`, F1/F2): solo la ruta, nunca el contenido. La oficina muestra en el globo del agente el archivo que tiene abierto | 1 |
 | `task.reviewed` | `{task_id, request_id, verdict, reasons, reworks, rework_exhausted, reviewer}` | Revisión de calidad (Q1): pass/rework/fail | 1 |
 | `task.awaiting_approval` | `{task_id, approval_id}` | Tarea pausada | 1 |

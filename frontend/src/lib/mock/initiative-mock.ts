@@ -1,8 +1,8 @@
 import type { Initiative, InitiativeSettings, SignalSettings } from "../initiativeApi";
-import type { MetricSignal, SIGNAL_FIELDS } from "../initiativeLogic";
+import type { ConfigSignal, SIGNAL_FIELDS } from "../initiativeLogic";
 
 /** The ranges of initiativeLogic.ts, passed in (type-only import keeps this file runnable under node --test). */
-export type SignalSpec = { signals: MetricSignal[]; fields: typeof SIGNAL_FIELDS };
+export type SignalSpec = { signals: ConfigSignal[]; fields: typeof SIGNAL_FIELDS };
 
 /**
  * Proactive suggestions in mock mode (NEXT_PUBLIC_MOCK=true): one pending suggestion per metric signal, built the
@@ -15,6 +15,7 @@ const defaults = (): SignalSettings => ({
   spend_pace: { enabled: true, pace_pct: 100, min_days: 3 },
   approval_aging: { enabled: true, min_age_hours: 24, min_count: 1 },
   quality_drop: { enabled: true, drop_points: 10 },
+  stalled_work: { enabled: true, task_minutes: 30, project_minutes: 120 },
 });
 
 const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
@@ -40,6 +41,10 @@ function seed(): Initiative[] {
       "Pasó de 86 a 71 frente a la ventana anterior. ¿Reviso qué cambió?",
       "Revisa por qué bajó el puntaje de calidad de Valeria Ríos (de 86 a 71): aprobaciones rechazadas, tareas fallidas y revisiones recientes. Propón cómo mejorar; no cambies configuraciones.",
       { agent: "Valeria Ríos", previous: "86", current: "71", drop: "15" }),
+    // the stalled task of watchdog-mock.ts: accepting it retries the task (no new request)
+    mk("ini-stall", "accounting", "stalled_task", "t-stall-close:1", 5, "La tarea \"Conciliar extractos de agosto\" lleva 40 min sin avanzar",
+      "¿La reintento, se la paso a otro o la cancelo?", "Reintentar la tarea atascada \"Conciliar extractos de agosto\" por el camino normal.",
+      { task_id: "t-stall-close", request_id: "req-stall", task: "Conciliar extractos de agosto", minutes: "40", kind: "no_progress", project: "false" }),
   ];
 }
 
@@ -77,7 +82,9 @@ export class MockInitiatives {
       it.status = r2 === "accept" ? "accepted" : "dismissed";
       it.resolved_at = new Date().toISOString();
       it.resolved_by = "demo";
-      if (r2 === "accept") {
+      if (r2 === "accept" && it.signal === "stalled_task") {
+        it.request_id = it.params?.request_id; // a stalled task is retried, not asked for again
+      } else if (r2 === "accept") {
         try { it.request_id = await this.submit(it.prompt || it.title); } catch (e) { it.status = "pending"; delete it.resolved_at; throw e; }
       }
       return structuredClone(it);
