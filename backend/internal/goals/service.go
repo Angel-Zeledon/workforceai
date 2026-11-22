@@ -253,6 +253,16 @@ func (v view) officeFor(a Actor, office string) (string, error) {
 
 // Create adds a goal (active).
 func (s *Service) Create(ctx context.Context, org string, a Actor, in Input) (Goal, error) {
+	return s.create(ctx, org, a, in, false)
+}
+
+// Import adds a goal that came in an office template (F3): active when it fits under the cap of active goals,
+// archived otherwise (nothing is lost and a person decides which to reactivate). Same texts and rights as Create.
+func (s *Service) Import(ctx context.Context, org string, a Actor, in Input) (Goal, error) {
+	return s.create(ctx, org, a, in, true)
+}
+
+func (s *Service) create(ctx context.Context, org string, a Actor, in Input, archiveWhenFull bool) (Goal, error) {
 	title, desc, period, err := s.texts(in.Title, in.Description, in.Period)
 	if err != nil {
 		return Goal{}, err
@@ -274,14 +284,18 @@ func (s *Service) Create(ctx context.Context, org string, a Actor, in Input) (Go
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	status := StatusActive
 	if n, err := s.activeCount(ctx, org); err != nil {
 		return Goal{}, err
 	} else if n >= MaxActive {
-		return Goal{}, fmt.Errorf("%w: at most %d active goals; mark one achieved or archive it first", domain.ErrConflict, MaxActive)
+		if !archiveWhenFull {
+			return Goal{}, fmt.Errorf("%w: at most %d active goals; mark one achieved or archive it first", domain.ErrConflict, MaxActive)
+		}
+		status = StatusArchived
 	}
 	now := s.cfg.Now().UTC()
 	g := Goal{ID: "goal-" + strings.ReplaceAll(uuid.NewString(), "-", "")[:16], OfficeID: office, Title: title, Description: desc,
-		Status: StatusActive, Period: period, DueDate: due, CreatedBy: a.ID, CreatedAt: now, UpdatedAt: now}
+		Status: status, Period: period, DueDate: due, CreatedBy: a.ID, CreatedAt: now, UpdatedAt: now}
 	if err := s.cfg.Store.CreateGoal(ctx, org, g); err != nil {
 		return Goal{}, err
 	}

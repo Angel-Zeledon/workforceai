@@ -142,6 +142,25 @@ func TestActiveGoalsAreCapped(t *testing.T) {
 	}
 }
 
+// F3: a goal that came in an office template is active only when it fits; over the cap it is kept archived.
+func TestImportedGoalsAreActiveOnlyWhenTheyFit(t *testing.T) {
+	e := newEnv(t, false)
+	g, err := e.svc.Import(e.ctx, org, owner, Input{Title: "importado con cupo"})
+	if err != nil || g.Status != StatusActive {
+		t.Fatalf("import with room = %+v %v", g, err)
+	}
+	for i := 1; i < MaxActive; i++ {
+		e.create(t, owner, Input{Title: "objetivo " + string(rune('a'+i))})
+	}
+	g, err = e.svc.Import(e.ctx, org, owner, Input{Title: "importado sin cupo"})
+	if err != nil || g.Status != StatusArchived {
+		t.Fatalf("import over the cap = %+v %v", g, err)
+	}
+	if _, err := e.svc.Import(e.ctx, org, owner, Input{Title: ""}); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("imported goals pass the same text checks: %v", err)
+	}
+}
+
 func TestCompanyGoalsNeedAnAdministrator(t *testing.T) {
 	e := newEnv(t, true)
 	if _, err := e.svc.Create(e.ctx, org, ana, Input{Title: "de empresa"}); !errors.Is(err, domain.ErrForbidden) {

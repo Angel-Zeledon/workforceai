@@ -71,7 +71,7 @@ func PreviewTeam(t catalog.TeamView, agents []domain.Agent, officeOf func(agentI
 	}
 	here := func(a domain.Agent) bool { return officeOf == nil || officeOf(a.ID) == dest }
 	p := TeamPreview{Agents: []TeamPreviewAgent{}, Skills: []string{}}
-	seenSkill := map[string]bool{}
+	seenSkill, taken := map[string]bool{}, map[string]bool{}
 	for _, ta := range t.Agents {
 		tpl, ok := roles.Get(ta.Role)
 		if !ok {
@@ -86,8 +86,10 @@ func PreviewTeam(t catalog.TeamView, agents []domain.Agent, officeOf func(agentI
 			}
 		}
 		for _, a := range agents {
-			if a.Role == ta.Role && here(a) {
+			// an agent fills one place: a team (an office template) with the same role twice needs two of them
+			if a.Role == ta.Role && here(a) && !taken[a.ID] {
 				pa.Status, pa.Existing = TeamExisting, &TeamExistingRef{ID: a.ID, Name: a.Name, Title: a.Title}
+				taken[a.ID] = true
 				break
 			}
 		}
