@@ -85,6 +85,9 @@ type Config struct {
 	AgentOffices AgentOffices
 	// ShareOffices (optional) lets departments share files with each other (shares.go). nil = no sharing.
 	ShareOffices ShareOffices
+	// OnVersion (optional) is told after every new version is saved (any author): F7 resolves the comments that were
+	// waiting for the agent's delivery. It must not fail the write and runs in the writer's goroutine, so it stays short.
+	OnVersion func(ctx context.Context, org string, f File, v Version)
 }
 
 // Service is the drive use case layer. It does NOT decide who may do what:
@@ -99,6 +102,9 @@ func New(cfg Config) *Service {
 	}
 	return &Service{cfg: cfg}
 }
+
+// SetVersionHook plugs the hook after construction (the comments are built after the drive). Call it before serving.
+func (s *Service) SetVersionHook(h func(ctx context.Context, org string, f File, v Version)) { s.cfg.OnVersion = h }
 
 // Limits returns the effective limits.
 func (s *Service) Limits() Limits { return s.cfg.Limits }
@@ -774,6 +780,9 @@ func (s *Service) addVersion(ctx context.Context, org string, p Principal, cur F
 	}
 	s.audit(ctx, org, p, "drive.file.version_created", "file", nf.ID, map[string]any{"path": nf.Path, "version": nf.CurrentVersion, "size": nf.Size,
 		"sha256": sum, "previous_version": cur.CurrentVersion, "source": source})
+	if s.cfg.OnVersion != nil {
+		s.cfg.OnVersion(ctx, org, nf, v)
+	}
 	return WriteResult{File: nf, Version: v}, nil
 }
 

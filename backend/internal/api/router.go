@@ -29,6 +29,7 @@ import (
 	"aiworkforce/backend/internal/customers"
 	"aiworkforce/backend/internal/docindex"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/filecomments"
 	"aiworkforce/backend/internal/goals"
 	"aiworkforce/backend/internal/drive"
 	"aiworkforce/backend/internal/events"
@@ -163,6 +164,8 @@ type Deps struct {
 	Customers *customers.Service
 	// Goals serves /goals and the "contributes to" of requests and reports (F1, goals.go). Optional.
 	Goals *goals.Service
+	// FileComments serves the comments anchored to a passage of a file and the request "change this passage" (F7, drive_comments.go). Optional.
+	FileComments *filecomments.Service
 	// LinkImports serves /link-imports/* (linkimports.go): import from a link, once or on a schedule. Optional.
 	LinkImports *linkimports.Service
 	// Portal serves the client portal (portal.go): branding, share links and the public read-only page.
