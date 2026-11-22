@@ -480,6 +480,14 @@ func (s *server) officeTemplatePlan(r *http.Request, st ot.Stored, requested str
 		dv.TeamPreview = application.PreviewTeam(t.TeamFor(d.Key), taken, dest.officeOf, dest.ID, loc)
 		s.maskHiddenExisting(r, &dv.TeamPreview)
 		for i, ta := range t.AgentsOf(d.Key) {
+			if i < len(dv.Agents) && dv.Agents[i].Existing != nil {
+				// an agent that fills a place here does not fill a place of another department of the template too
+				for j := range taken {
+					if taken[j].ID == dv.Agents[i].Existing.ID {
+						taken[j].Role = ""
+					}
+				}
+			}
 			if i < len(dv.Agents) && dv.Agents[i].Status == application.TeamNew {
 				if ta.Name != "" && !nameTaken(taken, ta.Name) {
 					dv.Agents[i].Name = ta.Name // the name the person had, kept when free here

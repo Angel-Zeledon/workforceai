@@ -461,3 +461,31 @@ func TestOfficeTemplatePermissionsAndPrivateDepartments(t *testing.T) {
 		t.Fatalf("admin deletes = %d", c)
 	}
 }
+
+// Two departments of a company template that both land in General do not count the same agent twice.
+func TestOfficeTemplateOneAgentFillsOnePlace(t *testing.T) {
+	e := newOfficeTemplatesEnv(t)
+	owner := e.signup(auth.RegisterInput{Email: "dueno@empresa.com", Name: "Dueño", OrgName: "Empresa", Audience: auth.AudienceTeam, Locale: "es"})
+	if c := e.call("POST", "/api/v1/teams/month_close/install", owner.AccessToken, map[string]any{"office_id": "general"}, nil); c != 201 {
+		t.Fatalf("an accountant in General = %d", c)
+	}
+	file := `{"format":"aiw.office-template","format_version":1,"kind":"company","name":"Dos sedes",` +
+		`"departments":[{"key":"d1","name":"Contabilidad Norte"},{"key":"d2","name":"Contabilidad Sur"}],` +
+		`"agents":[{"department":"d1","role":"accounting"},{"department":"d2","role":"accounting"}],"skills":[],"workflows":[],"schedules":[],"goals":[]}`
+	c, raw := e.raw("POST", "/api/v1/office-templates/import", owner.AccessToken, []byte(file))
+	if c != 201 {
+		t.Fatalf("import = %d %s", c, raw)
+	}
+	var p otPreview
+	_ = json.Unmarshal(raw, &p)
+	if p.NewCount != 1 || p.ExistingCount != 1 {
+		t.Fatalf("one accountant is there, one must come: %+v", p)
+	}
+	var in otInstall
+	if c := e.call("POST", "/api/v1/office-templates/"+p.ID+"/install", owner.AccessToken, map[string]any{}, &in); c != 201 || len(in.Created) != 1 {
+		t.Fatalf("install = %d %+v", c, in)
+	}
+	if in.Preview.NewCount != 0 || in.Preview.CanInstall {
+		t.Fatalf("after the install = %+v", in.Preview)
+	}
+}
