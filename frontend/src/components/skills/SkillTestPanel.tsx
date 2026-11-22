@@ -1,10 +1,10 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { SkillError, type SkillDetail } from "@/lib/skills";
 import { skillTestsApi } from "@/lib/skillTests";
 import {
-  canCompare, caseIssue, failKey, fmtSeconds, fmtUSD, groupRuns, testedLabel,
+  canCompare, caseIssue, pickCaseId, failKey, fmtSeconds, fmtUSD, groupRuns, testedLabel,
   type SkillTestAgent, type SkillTestCase, type SkillTestEstimate, type SkillTestOverview, type SkillTestRun,
 } from "@/lib/skillTestsLogic";
 import { Btn, Card } from "../ui";
@@ -72,7 +72,7 @@ export function SkillTestPanel({ detail, ov, reload, canRun, canWrite }: { detai
   const [err, setErr] = useState("");
   const [fresh, setFresh] = useState<SkillTestRun[]>([]);
   const lim = ov?.limits ?? { cases: 10, title: 120, prompt: 2000, expect: 1000 };
-  const cases = ov?.cases ?? [];
+  const cases = useMemo(() => ov?.cases ?? [], [ov]);
   const comparable = canCompare(detail.active_version, version);
 
   const fail = (e: unknown) => setErr(e instanceof SkillError && t(`skills.error.${e.code}`) !== `skills.error.${e.code}` ? t(`skills.error.${e.code}`) : t("skills.error.generic"));
@@ -83,7 +83,7 @@ export function SkillTestPanel({ detail, ov, reload, canRun, canWrite }: { detai
     skillTestsApi.candidates(detail.id).then((l) => { if (live) { setAgents(l); setAgentId((a) => a || l[0]?.id || ""); } }).catch(() => undefined);
     return () => { live = false; };
   }, [open, detail.id]);
-  useEffect(() => { if (!caseId && cases[0]) setCaseId(cases[0].id); if (caseId && !cases.some((c) => c.id === caseId)) setCaseId(cases[0]?.id ?? ""); }, [cases, caseId]);
+  useEffect(() => { const next = pickCaseId(cases, caseId); if (next !== caseId) setCaseId(next); }, [cases, caseId]);
   useEffect(() => {
     setEst(null);
     if (!open || !canRun || !caseId || !agentId) return;
