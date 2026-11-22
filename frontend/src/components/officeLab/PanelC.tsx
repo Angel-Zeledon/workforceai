@@ -209,6 +209,7 @@ export default function PanelC({ active }: { active: boolean }) {
       await a.init({ resizeTo: el, background: 0xffffff, antialias: true, resolution: Math.min(2, window.devicePixelRatio || 1), autoDensity: true });
       if (disposed) { a.destroy(true, { children: true }); return; }
       app = a; appRef.current = a;
+      a.ticker.maxFPS = 30;
       el.appendChild(a.canvas);
       a.canvas.style.display = "block";
 
@@ -293,7 +294,7 @@ export default function PanelC({ active }: { active: boolean }) {
       let bubbleText = "";
 
       const fit = () => {
-        const w = a.renderer.width / a.renderer.resolution, h = a.renderer.height / a.renderer.resolution;
+        const w = a.screen.width, h = a.screen.height;
         const left = iso(x0, z1).x, right = iso(x1, z0).x, top = iso(x0, z0, H).y, bottom = iso(x1, z1).y;
         const k = Math.min(w / (right - left + 30), h / (bottom - top + 30));
         world.scale.set(k);

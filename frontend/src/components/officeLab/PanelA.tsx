@@ -5,16 +5,17 @@
 // depende de la tienda en vivo de agentes.
 "use client";
 import { useMemo, useRef } from "react";
+import { BubbleProjector, FpsDriver } from "./Bubble3D";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Html, RoundedBox } from "@react-three/drei";
+import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { ChairMesh, DeskSet } from "../office/Furniture";
-import { DESK_H } from "../office/OfficeEnv";
 import { GESTURE_DURATION, KEYS, applyGesture, computePose, zeroPose, type GestureKind, type Pose } from "../office/gestures";
 import { MOOD_BASE } from "@/lib/officeLayoutModel";
 import { labTime } from "./clock";
 import { PLAN, sample, type Frame } from "./script";
 
+const DESK_H = 0.72; // = OfficeEnv.DESK_H (sin importar todo OfficeEnv)
 const BODY_SCALE = 1.2;
 const L = MOOD_BASE.natural;
 
@@ -188,28 +189,6 @@ function LooseFolder() {
   return <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0.3]}><boxGeometry args={[0.3, 0.24, 0.02]} /><meshStandardMaterial color="#0A66C2" roughness={0.6} /></mesh>;
 }
 
-function Bubbles() {
-  const ref = useRef<HTMLDivElement>(null);
-  const grp = useRef<THREE.Group>(null!);
-  useFrame(() => {
-    const f = sample(labTime());
-    const b = f.bubble;
-    if (!ref.current) return;
-    ref.current.style.opacity = b ? "1" : "0";
-    if (!b) return;
-    if (ref.current.textContent !== b.text) ref.current.textContent = b.text;
-    const p = b.who === "agent" ? f.pos : b.who === "partner" ? PLAN.partner : PLAN.boss;
-    grp.current.position.set(p[0], b.who === "boss" ? 2.0 : 2.35, p[1]);
-  });
-  return (
-    <group ref={grp}>
-      <Html center zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-        <div ref={ref} className="whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm transition-opacity" />
-      </Html>
-    </group>
-  );
-}
-
 function Room() {
   const { x0, x1, z0, z1 } = PLAN.room;
   const w = x1 - x0, d = z1 - z0;
@@ -233,7 +212,7 @@ function Room() {
   );
 }
 
-function Scene() {
+function Scene({ bubble }: { bubble: React.RefObject<HTMLDivElement | null> }) {
   return (
     <>
       <color attach="background" args={[L.bg]} />
@@ -250,16 +229,21 @@ function Scene() {
       <MiniChar drive={agentDrive} colors={{ blazer: "#2f5f9e", pants: "#3a414c", skin: "#f1c7a5", hair: "#4a3626", shirt: "#ffffff" }} />
       <MiniChar drive={partnerDrive} colors={{ blazer: "#6b7c8f", pants: "#59616d", skin: "#d9a27e", hair: "#22252b", shirt: "#e8edf3" }} />
       <MiniChar drive={bossDrive} colors={{ blazer: "#7a4b5c", pants: "#3a414c", skin: "#f3d1b5", hair: "#8a5a3a", shirt: "#fff6f0" }} />
-      <Bubbles />
+      <BubbleProjector el={bubble} standH={2.3} seatH={1.95} />
     </>
   );
 }
 
 export default function PanelA({ active }: { active: boolean }) {
+  const bubble = useRef<HTMLDivElement>(null);
   return (
-    <Canvas shadows="soft" dpr={[1, 1.5]} frameloop={active ? "always" : "never"} camera={{ position: [4.6, 10.5, 12.5], fov: 32, near: 0.5, far: 80 }}
-      onCreated={({ camera }) => camera.lookAt(0, 0.4, -0.2)} gl={{ antialias: true }}>
-      <Scene />
-    </Canvas>
+    <div className="absolute inset-0 overflow-hidden">
+      <Canvas shadows="soft" dpr={1} frameloop="demand" camera={{ position: [4.6, 10.5, 12.5], fov: 32, near: 0.5, far: 80 }}
+        onCreated={({ camera }) => camera.lookAt(0, 0.4, -0.2)} gl={{ antialias: true }}>
+        <Scene bubble={bubble} />
+        <FpsDriver fps={30} active={active} />
+      </Canvas>
+      <div ref={bubble} style={{ opacity: 0 }} className="pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm transition-opacity" />
+    </div>
   );
 }

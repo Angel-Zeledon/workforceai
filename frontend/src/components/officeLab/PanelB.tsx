@@ -8,12 +8,13 @@
 "use client";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Html, useGLTF } from "@react-three/drei";
+import { Environment, useGLTF } from "@react-three/drei";
+import { BubbleProjector, FpsDriver } from "./Bubble3D";
 import { EffectComposer, N8AO, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing";
 import { ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
 import { labTime } from "./clock";
-import { PLAN, sample, smooth, type Frame } from "./script";
+import { PLAN, sample, type Frame } from "./script";
 
 const K = 1.95; // Kenney -> metros
 const BASE = "/office-lab";
@@ -165,11 +166,31 @@ function additiveClip(name: string, model: THREE.Object3D, dur: number, n: numbe
 
 const TAU = Math.PI * 2;
 
+/** Piel y ropa por personaje (nombres de material del paquete de Quaternius). */
+const LOOKS: Record<Role, { colors: Record<string, string>; hide?: string[] }> = {
+  // agente: piel morena media, traje azul marino, camisa blanca
+  agent: { colors: { Skin: "#a8714d", Black: "#26303d", Shirt: "#f3f5f7", Details: "#3b4452", Belt: "#1d2127", Hair: "#24180f" } },
+  // compañera: piel oscura, chaqueta gris azulado, pantalón grafito
+  partner: { colors: { Skin: "#6a4330", Shirt: "#6c7b8e", Pants: "#2c3542", Belt: "#2a211b", Hair: "#17110d" } },
+  // jefa: piel clara, blusa marfil, pantalón ciruela, sin el sombrero del modelo
+  boss: { colors: { Skin: "#eec6a3", Shirt: "#ece6dc", Pants: "#4d3f57", Detail: "#7a4b5c", Belt: "#3b2c22", Hair: "#6f5f52" }, hide: ["Hat"] },
+};
+
 function buildRig(scene: THREE.Object3D, animations: THREE.AnimationClip[], role: Role): Rig {
   const model = scene;
+  // el paquete trae la piel casi negra (material "Skin" de maniquí) y ropa de colores de juego: tonos de piel humanos
+  // variados y ropa de oficina sobria, por personaje
+  const look = LOOKS[role];
   model.traverse((n) => {
     const m = n as THREE.Mesh;
-    if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; (m.material as THREE.MeshStandardMaterial).envMapIntensity = 0.6; }
+    if (!m.isMesh) return;
+    m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
+    const mat = m.material as THREE.MeshStandardMaterial;
+    const c = look.colors[mat.name];
+    if (c) mat.color.set(c);
+    if (mat.name === "Skin") mat.roughness = 0.62;
+    mat.envMapIntensity = 0.6;
+    if (look.hide?.includes(mat.name)) m.visible = false;
   });
   // altura ~1.72 m
   model.updateMatrixWorld(true);
@@ -291,29 +312,6 @@ function LooseFolder() {
   return <mesh ref={ref} castShadow rotation={[0, 0.4, 0]}><boxGeometry args={[0.25, 0.02, 0.32]} /><meshStandardMaterial color={FOLDER} roughness={0.55} /></mesh>;
 }
 
-function Bubble() {
-  const ref = useRef<HTMLDivElement>(null);
-  const grp = useRef<THREE.Group>(null!);
-  useFrame(() => {
-    const f = sample(labTime());
-    const b = f.bubble, el = ref.current;
-    if (!el) return;
-    el.style.opacity = b ? "1" : "0";
-    el.style.transform = `translateY(${b ? 0 : 6}px)`;
-    if (!b) return;
-    if (el.textContent !== b.text) el.textContent = b.text;
-    const p = b.who === "agent" ? f.pos : b.who === "partner" ? PLAN.partner : PLAN.boss;
-    grp.current.position.set(p[0], b.who === "boss" ? 1.75 : 2.1, p[1]);
-  });
-  return (
-    <group ref={grp}>
-      <Html center zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-        <div ref={ref} style={{ transition: "opacity .25s, transform .25s" }} className="whitespace-nowrap rounded-[10px] bg-white/95 px-3 py-1.5 text-[11.5px] font-medium text-slate-800 shadow-[0_6px_18px_rgba(15,23,42,0.18)] ring-1 ring-slate-900/5" />
-      </Html>
-    </group>
-  );
-}
-
 /** Cámara de cine: un plano general que respira (dolly lento) y reencuadra suavemente hacia donde está el agente. */
 function CineCam() {
   const cam = useThree((s) => s.camera);
@@ -381,21 +379,21 @@ function Furniture() {
   );
 }
 
-function Scene() {
+function Scene({ bubble }: { bubble: React.RefObject<HTMLDivElement | null> }) {
   return (
     <>
       <color attach="background" args={["#f2f1ef"]} />
       <fog attach="fog" args={["#f2f1ef", 16, 30]} />
       <Environment files="/office/env/room_512.hdr" environmentIntensity={0.55} />
       <hemisphereLight args={["#ffffff", "#d9d3ca", 0.35]} />
-      <directionalLight castShadow position={[6, 9, 5]} intensity={2.1} color="#fff6ea" shadow-mapSize={[2048, 2048]} shadow-bias={-0.0004} shadow-normalBias={0.02} shadow-radius={6}
+      <directionalLight castShadow position={[6, 9, 5]} intensity={2.1} color="#fff6ea" shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004} shadow-normalBias={0.02} shadow-radius={6}
         shadow-camera-left={-7} shadow-camera-right={7} shadow-camera-top={6} shadow-camera-bottom={-6} shadow-camera-near={1} shadow-camera-far={30} />
       <Room />
       <Furniture />
       <Person role="agent" />
       <Person role="partner" />
       <Person role="boss" />
-      <Bubble />
+      <BubbleProjector el={bubble} standH={2.05} seatH={1.65} />
       <CineCam />
       <EffectComposer multisampling={0} depthBuffer>
         <N8AO halfRes quality="performance" aoRadius={0.5} intensity={2.2} distanceFalloff={0.8} />
@@ -408,9 +406,14 @@ function Scene() {
 }
 
 export default function PanelB({ active }: { active: boolean }) {
+  const bubble = useRef<HTMLDivElement>(null);
   return (
-    <Canvas shadows="soft" dpr={[1, 1.5]} frameloop={active ? "always" : "never"} camera={{ position: [4, 5.4, 9], fov: 34, near: 0.3, far: 60 }} gl={{ antialias: false, powerPreference: "high-performance" }}>
-      <Suspense fallback={null}><Scene /></Suspense>
-    </Canvas>
+    <div className="absolute inset-0 overflow-hidden">
+      <Canvas shadows="soft" dpr={1} frameloop="demand" camera={{ position: [4, 5.4, 9], fov: 34, near: 0.3, far: 60 }} gl={{ antialias: false, powerPreference: "high-performance" }}>
+        <Suspense fallback={null}><Scene bubble={bubble} /></Suspense>
+        <FpsDriver fps={30} active={active} />
+      </Canvas>
+      <div ref={bubble} style={{ opacity: 0, transition: "opacity .25s" }} className="pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded-[10px] bg-white/95 px-3 py-1.5 text-[11.5px] font-medium text-slate-800 shadow-[0_6px_18px_rgba(15,23,42,0.18)] ring-1 ring-slate-900/5" />
+    </div>
   );
 }

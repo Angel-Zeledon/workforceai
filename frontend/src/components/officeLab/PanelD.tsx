@@ -1,287 +1,329 @@
 // EXPERIMENTAL (spike /office-lab, desechable).
-// Panel D, "Pictograma": infografía animada en SVG con una línea de tiempo de GSAP. Vista de alzado (de lado), figuras
-// tipo pictograma de señalética (monocromas, geométricas, sin caras ni contornos) y movimiento de "motion graphics":
-// curvas con rebote y sobreimpulso, una marca de aprobado que se dibuja sola. La línea de tiempo se construye UNA vez
-// con las mismas horas del guion (PHASES / LINES) y cada fotograma se posiciona en el instante del reloj compartido
-// (tl.seek), así va sincronizada con los otros paneles y se puede rebobinar.
+// Panel D, "Maqueta": miniatura de plastilina en Three.js. Una maqueta cálida sobre una mesa de madera clara, con luz de
+// tarde suave y desenfoque de miniatura (tilt-shift). El movimiento es fluido y con intención: las poses clave del guion
+// (puppet.ts) se persiguen con MUELLES por articulación (anticipación, ligero sobreimpulso y seguimiento: la cabeza y los
+// brazos llegan un poco después que el cuerpo), el cuerpo se inclina con la aceleración y los personajes parpadean y
+// sonríen. Nada tiembla: ni las figuras, ni la luz. Figuras de plastilina, muebles de cartón y balsa.
 "use client";
-import { useEffect, useRef } from "react";
+import { useMemo, useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { EffectComposer, TiltShift2, ToneMapping, Vignette } from "@react-three/postprocessing";
+import { ToneMappingMode } from "postprocessing";
+import * as THREE from "three";
 import { labTime } from "./clock";
-import { LINES, LOOP, PHASES, STEPS } from "./script";
+import { BubbleProjector, FpsDriver } from "./Bubble3D";
+import { PLAN, sample, type Frame } from "./script";
+import { JOINTS, poseFor, zero, type PPose, type Role } from "./puppet";
 
-const NAVY = "#1B2B44";
-const AGENT = "#0A66C2";
-const GREY = "#8A96A8";
-const BOSS = "#4A5568";
-const LINE = "#D5DCE6";
-const GROUND = 300;
-/** Posiciones en el alzado (px). */
-const XD = { door: 38, desk: 150, chair: 196, meet: 292, table: 340, partner: 388, bossStand: 468, bossDesk: 522, boss: 566 };
+/** Variación fija por pieza (no cambia con el tiempo). */
+const rnd = (n: number) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
-interface Fig { x: number; face: number; walk: number; cycle: number; sit: number; type: number; tcyc: number; talk: number; tk: number; reach: number; lift: number; sq: number; up: number; nod: number; folder: number }
-const fig = (x: number, face: number): Fig => ({ x, face, walk: 0, cycle: 0, sit: 0, type: 0, tcyc: 0, talk: 0, tk: 0, reach: 0, lift: 0, sq: 1, up: 0, nod: 0, folder: 0 });
-
-/** Extremidades: ángulo 0 = hacia abajo, positivo = hacia delante. Devuelve el path "M hombro L codo L mano". */
-function limb(ox: number, oy: number, a: number, b: number, l1: number, l2: number) {
-  const mx = ox + Math.sin(a) * l1, my = oy + Math.cos(a) * l1;
-  const ex = mx + Math.sin(a + b) * l2, ey = my + Math.cos(a + b) * l2;
-  return { d: `M${ox.toFixed(1)} ${oy.toFixed(1)} L${mx.toFixed(1)} ${my.toFixed(1)} L${ex.toFixed(1)} ${ey.toFixed(1)}`, ex, ey };
+/** Plastilina: desplaza los vértices con un ruido suave para que no haya superficies perfectas. */
+function lumpy<G extends THREE.BufferGeometry>(g: G, amt = 0.008, seed = 1): G {
+  const p = g.attributes.position as THREE.BufferAttribute;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const n = Math.sin(v.x * 23 + seed) * Math.sin(v.y * 19 + seed * 2) * Math.sin(v.z * 21 + seed * 3) + 0.5 * Math.sin(v.x * 51 + v.y * 47 + seed);
+    const len = v.length() || 1;
+    v.addScaledVector(v.clone().divideScalar(len), n * amt);
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  g.computeVertexNormals();
+  return g;
 }
 
-/** Pose del pictograma a partir de los canales que anima GSAP. */
-function figurePaths(f: Fig, t: number) {
-  const s = Math.sin(f.cycle), w = f.walk;
-  const sit = f.sit;
-  const hipY = -40 + 14 * sit - f.lift;
-  const hipX = 0;
-  let legA = [s * 0.55 * w + 1.5 * sit, -s * 0.55 * w + 1.4 * sit];
-  let knee = [-Math.max(0, Math.sin(f.cycle + 1.3)) * 0.8 * w - 1.5 * sit, -Math.max(0, -Math.sin(f.cycle + 1.3)) * 0.8 * w - 1.4 * sit];
-  // agacharse antes y después del salto (sq < 1)
-  const crouch = Math.max(0, 1 - f.sq) * 4;
-  if (crouch > 0) { legA = legA.map((v) => v + crouch * 0.4); knee = knee.map((v) => v - crouch * 0.8); }
-  const shX = hipX + 4 * f.reach + 3 * f.type, shY = hipY - 32;
-  let armA = [-s * 0.5 * w, s * 0.5 * w], el = [0.3 * w, 0.3 * w];
-  if (f.type > 0) { armA = [1.25 * f.type, 1.2 * f.type]; el = [0.3 * f.type + Math.sin(f.tcyc) * 0.14 * f.type, 0.3 * f.type + Math.sin(f.tcyc + 2.2) * 0.14 * f.type]; }
-  if (f.talk > 0) { armA = [armA[0] + (0.9 + Math.sin(f.tk) * 0.35) * f.talk, armA[1] + 0.3 * f.talk]; el = [el[0] + (0.8 + Math.sin(f.tk * 1.4) * 0.3) * f.talk, el[1] + 0.4 * f.talk]; }
-  if (f.reach > 0) { armA[0] += 1.35 * f.reach; el[0] -= 0.2 * f.reach; }
-  if (f.folder > 0 && w > 0) { armA[0] = 0.95; el[0] = 0.9; }
-  if (f.up > 0) { armA = [armA[0] + (Math.PI * 0.86 - armA[0]) * f.up, armA[1] + (Math.PI * 0.78 - armA[1]) * f.up]; el = [el[0] * (1 - f.up), el[1] * (1 - f.up)]; }
-  const legN = limb(hipX, hipY, legA[0], knee[0], 20, 20), legF = limb(hipX, hipY, legA[1], knee[1], 20, 20);
-  const armN = limb(shX, shY + 3, armA[0], el[0], 15, 15), armF = limb(shX, shY + 3, armA[1], el[1], 15, 15);
-  const nod = f.nod * Math.max(0, Math.sin(t * 6)) * 3;
-  return { hipX, hipY, shX, shY, legN, legF, armN, armF, head: { x: shX + 3 + f.type * 2, y: shY - 13 + nod } };
+const clay = (color: string) => <meshStandardMaterial color={color} roughness={0.7} metalness={0} />;
+
+// ------------------------------------------------------------------------------------------------ figuras
+
+interface Look { skin: string; top: string; bottom: string; hair: string; shoes: string; long?: boolean }
+const LOOKS: Record<Role, Look> = {
+  agent: { skin: "#c48a62", top: "#3f5f8f", bottom: "#4a4f58", hair: "#3a2618", shoes: "#4a3426" },
+  partner: { skin: "#8a5a3e", top: "#c9894f", bottom: "#4a4f58", hair: "#2a1a12", shoes: "#3b2c22", long: true },
+  boss: { skin: "#f1cfae", top: "#9a5b6e", bottom: "#4a4f58", hair: "#9a6a44", shoes: "#5a3e2c", long: true },
+};
+
+function Figure({ role }: { role: Role }) {
+  const L = LOOKS[role];
+  const g = useMemo(() => {
+    const s = role === "agent" ? 1 : role === "partner" ? 2 : 3;
+    return {
+      thigh: lumpy(new THREE.CapsuleGeometry(0.085, 0.3, 4, 10), 0.006, s),
+      shin: lumpy(new THREE.CapsuleGeometry(0.075, 0.3, 4, 10), 0.006, s + 1),
+      foot: lumpy(new THREE.SphereGeometry(0.08, 12, 8), 0.006, s + 2),
+      torso: lumpy(new THREE.CapsuleGeometry(0.2, 0.26, 6, 14), 0.01, s + 3),
+      arm: lumpy(new THREE.CapsuleGeometry(0.065, 0.18, 4, 10), 0.005, s + 4),
+      hand: lumpy(new THREE.SphereGeometry(0.06, 10, 8), 0.006, s + 5),
+      head: lumpy(new THREE.SphereGeometry(0.16, 20, 16), 0.008, s + 6),
+      hair: lumpy(new THREE.SphereGeometry(0.168, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), 0.012, s + 7),
+    };
+  }, [role]);
+  const r = {
+    root: useRef<THREE.Group>(null!), body: useRef<THREE.Group>(null!), pelvis: useRef<THREE.Group>(null!), torso: useRef<THREE.Group>(null!), head: useRef<THREE.Group>(null!),
+    lSh: useRef<THREE.Group>(null!), rSh: useRef<THREE.Group>(null!), lEl: useRef<THREE.Group>(null!), rEl: useRef<THREE.Group>(null!),
+    lHip: useRef<THREE.Group>(null!), rHip: useRef<THREE.Group>(null!), lKnee: useRef<THREE.Group>(null!), rKnee: useRef<THREE.Group>(null!),
+    folder: useRef<THREE.Mesh>(null!), eyes: useRef<THREE.Group>(null!),
+  };
+  const sp = useMemo(() => ({ x: zero(), v: zero(), last: -1, vel: 0, lean: 0, blinkAt: 2 + rnd(role.length) * 3 }), [role]);
+  useFrame(() => {
+    const t = labTime();
+    const f: Frame = sample(t);
+    const target: PPose = poseFor(role, f, t);
+    const first = sp.last < 0;
+    let dt = first ? 0 : t - sp.last;
+    const jump = first || dt < 0 || dt > 0.5;
+    sp.last = t;
+    if (jump) dt = 0;
+    // muelles por articulación: el cuerpo llega rápido, cabeza y antebrazos un poco después (seguimiento)
+    for (const k of JOINTS) {
+      if (jump) { sp.x[k] = target[k]; sp.v[k] = 0; continue; }
+      const soft = k.startsWith("head") || k.endsWith("ElX") ? 0.6 : k.startsWith("l") || k.startsWith("r") ? 0.8 : 1;
+      const stiff = 140 * soft, damp = 2 * Math.sqrt(stiff) * 0.62;
+      const steps = Math.max(1, Math.ceil(dt * 120));
+      const h = dt / steps;
+      for (let i = 0; i < steps; i++) { const a = stiff * (target[k] - sp.x[k]) - damp * sp.v[k]; sp.v[k] += a * h; sp.x[k] += sp.v[k] * h; }
+    }
+    const p = sp.x;
+    const pos = role === "agent" ? f.pos : role === "partner" ? PLAN.partner : PLAN.boss;
+    const yaw = role === "agent" ? f.yaw : role === "partner" ? f.partner.yaw : 0;
+    // se inclina con la aceleración: hacia delante al arrancar, hacia atrás al frenar
+    const vel = role === "agent" ? f.speed : 0;
+    if (dt > 0) { const acc = (vel - sp.vel) / dt; sp.lean += (Math.max(-3, Math.min(3, acc)) * 0.035 - sp.lean) * Math.min(1, dt * 6); }
+    sp.vel = vel;
+    r.root.current.position.set(pos[0], 0, pos[1]);
+    r.root.current.rotation.y = yaw;
+    r.body.current.position.y = p.y;
+    r.pelvis.current.position.y = p.pelvis;
+    r.torso.current.rotation.set(p.torsoX + sp.lean, p.torsoY, p.torsoZ);
+    r.head.current.rotation.set(p.headX - sp.lean * 0.5, p.headY, p.headZ);
+    // parpadeo
+    if (t > sp.blinkAt + 0.14 || t < sp.blinkAt - 8) sp.blinkAt = t + 2.5 + rnd(Math.floor(t) + role.length) * 3;
+    r.eyes.current.scale.y = t > sp.blinkAt && t < sp.blinkAt + 0.14 ? 0.15 : 1;
+    r.lSh.current.rotation.set(p.lShX, 0, p.lShZ); r.rSh.current.rotation.set(p.rShX, 0, -p.rShZ);
+    r.lEl.current.rotation.x = p.lElX; r.rEl.current.rotation.x = p.rElX;
+    r.lHip.current.rotation.x = p.lHipX; r.rHip.current.rotation.x = p.rHipX;
+    r.lKnee.current.rotation.x = p.lKneeX; r.rKnee.current.rotation.x = p.rKneeX;
+    r.folder.current.visible = role === "agent" ? f.folder === "agent" : role === "partner" ? f.partner.mode === "hand" : false;
+  });
+  const M = (c: string, geo: THREE.BufferGeometry, pos: [number, number, number] = [0, 0, 0], sc?: [number, number, number]) => (
+    <mesh geometry={geo} position={pos} scale={sc} castShadow receiveShadow>{clay(c)}</mesh>
+  );
+  return (
+    <group ref={r.root}>
+      <group ref={r.body}>
+        <group ref={r.pelvis}>
+          {M(L.bottom, g.torso, [0, 0.02, 0], [0.85, 0.42, 0.8])}
+          {([[0.1, r.lHip, r.lKnee], [-0.1, r.rHip, r.rKnee]] as const).map(([x, hip, knee], i) => (
+            <group key={i} ref={hip} position={[x, -0.02, 0]}>
+              {M(L.bottom, g.thigh, [0, -0.2, 0])}
+              <group ref={knee} position={[0, -0.43, 0]}>
+                {M(L.bottom, g.shin, [0, -0.2, 0])}
+                {M(L.shoes, g.foot, [0, -0.43, 0.05], [1, 0.6, 1.5])}
+              </group>
+            </group>
+          ))}
+          <group ref={r.torso}>
+            {M(L.top, g.torso, [0, 0.3, 0], [1, 1, 0.78])}
+            {role === "agent" && M("#f2efe9", g.hand, [0, 0.5, 0.13], [0.9, 1.2, 0.35])}
+            {([[0.25, r.lSh, r.lEl], [-0.25, r.rSh, r.rEl]] as const).map(([x, sh, el], i) => (
+              <group key={i} ref={sh} position={[x, 0.5, 0]}>
+                {M(L.top, g.arm, [0, -0.14, 0])}
+                <group ref={el} position={[0, -0.28, 0]}>
+                  {M(L.top, g.arm, [0, -0.12, 0], [0.95, 0.95, 0.95])}
+                  {M(L.skin, g.hand, [0, -0.27, 0])}
+                  {i === 1 && <mesh ref={r.folder} position={[0, -0.3, 0.12]} rotation={[0.25, 0, 0]} castShadow visible={false}><boxGeometry args={[0.24, 0.3, 0.035]} />{clay("#2f6db3")}</mesh>}
+                </group>
+              </group>
+            ))}
+            <group ref={r.head} position={[0, 0.62, 0]}>
+              {M(L.skin, g.head, [0, 0.14, 0])}
+              {M(L.hair, g.hair, [0, 0.17, -0.015], [1.02, 1, 1.04])}
+              {L.long && M(L.hair, g.head, [0, 0.07, -0.08], [0.95, 0.9, 0.55])}
+              <group ref={r.eyes} position={[0, 0.165, 0]}>
+                {[0.055, -0.055].map((x) => (
+                  <group key={x} position={[x, 0, 0.142]}>
+                    <mesh scale={[1, 1.15, 0.6]}><sphereGeometry args={[0.026, 12, 10]} /><meshStandardMaterial color="#fbf8f2" roughness={0.4} /></mesh>
+                    <mesh position={[0, -0.002, 0.014]}><sphereGeometry args={[0.014, 10, 8]} /><meshStandardMaterial color="#3a2a20" roughness={0.25} /></mesh>
+                    <mesh position={[0.005, 0.006, 0.026]}><sphereGeometry args={[0.004, 6, 4]} /><meshBasicMaterial color="#ffffff" /></mesh>
+                  </group>
+                ))}
+              </group>
+              <mesh position={[0, 0.085, 0.14]} rotation={[0.25, 0, Math.PI]}><torusGeometry args={[0.035, 0.008, 6, 14, Math.PI]} /><meshStandardMaterial color="#9a4a40" roughness={0.6} /></mesh>
+              <mesh position={[0.085, 0.11, 0.125]} scale={[1, 0.7, 0.4]}><sphereGeometry args={[0.025, 8, 6]} /><meshBasicMaterial color="#e98f7f" transparent opacity={0.35} /></mesh>
+              <mesh position={[-0.085, 0.11, 0.125]} scale={[1, 0.7, 0.4]}><sphereGeometry args={[0.025, 8, 6]} /><meshBasicMaterial color="#e98f7f" transparent opacity={0.35} /></mesh>
+              {M(L.skin, g.hand, [0, 0.11, 0.16], [0.35, 0.4, 0.4])}
+            </group>
+          </group>
+        </group>
+      </group>
+    </group>
+  );
+}
+
+// ------------------------------------------------------------------------------------------------ la maqueta
+
+/** Caja "hecha a mano": cada pieza lleva un giro y desplazamiento mínimos, fijos. */
+function Card({ a, p, c, seed = 1, rough = 0.9 }: { a: [number, number, number]; p: [number, number, number]; c: string; seed?: number; rough?: number }) {
+  const r = (rnd(seed) - 0.5) * 0.03;
+  return <mesh position={p} rotation={[0, r, (rnd(seed + 9) - 0.5) * 0.012]} castShadow receiveShadow><boxGeometry args={a} /><meshStandardMaterial color={c} roughness={rough} /></mesh>;
+}
+
+const BALSA = "#d9c29b", CARD = "#b8b0a3", DARK = "#3d3a37", FELT = "#8a9a86";
+
+function Desk({ at, rot = 0, seed }: { at: [number, number]; rot?: number; seed: number }) {
+  return (
+    <group position={[at[0], 0, at[1]]} rotation={[0, rot, 0]}>
+      <Card a={[1.5, 0.05, 0.75]} p={[0, 0.72, 0]} c={BALSA} seed={seed} />
+      {[[-0.68, -0.32], [0.68, -0.32], [-0.68, 0.32], [0.68, 0.32]].map(([x, z], i) => <Card key={i} a={[0.05, 0.7, 0.05]} p={[x, 0.35, z]} c={DARK} seed={seed + i + 1} />)}
+      <Card a={[1.38, 0.32, 0.03]} p={[0, 0.5, -0.33]} c={CARD} seed={seed + 7} />
+    </group>
+  );
+}
+function Chair({ at, rot = 0, seed }: { at: [number, number]; rot?: number; seed: number }) {
+  return (
+    <group position={[at[0], 0, at[1]]} rotation={[0, rot, 0]}>
+      <Card a={[0.46, 0.07, 0.46]} p={[0, 0.44, 0]} c="#4b4f57" seed={seed} />
+      <Card a={[0.44, 0.48, 0.06]} p={[0, 0.72, 0.22]} c="#4b4f57" seed={seed + 1} />
+      <Card a={[0.06, 0.4, 0.06]} p={[0, 0.2, 0]} c={DARK} seed={seed + 2} />
+      <Card a={[0.5, 0.04, 0.08]} p={[0, 0.02, 0]} c={DARK} seed={seed + 3} />
+      <Card a={[0.08, 0.04, 0.5]} p={[0, 0.02, 0]} c={DARK} seed={seed + 4} />
+    </group>
+  );
+}
+
+function Screen() {
+  const mat = useRef<THREE.MeshStandardMaterial>(null!);
+  useFrame(() => {
+    const t = labTime(), f = sample(t);
+    mat.current.emissiveIntensity = 0.1 + f.screen * (0.9 + f.typing * 0.15 * (0.5 + 0.5 * Math.sin(t * 5)));
+  });
+  return (
+    <group position={[PLAN.desk.pos[0], 0.745, PLAN.desk.pos[1] - 0.12]}>
+      <Card a={[0.18, 0.02, 0.14]} p={[0, 0.01, 0]} c={DARK} seed={40} />
+      <Card a={[0.04, 0.22, 0.04]} p={[0, 0.12, 0]} c={DARK} seed={41} />
+      <Card a={[0.66, 0.42, 0.05]} p={[0, 0.42, 0]} c="#2b2a29" seed={42} />
+      <mesh position={[0, 0.42, 0.027]}><planeGeometry args={[0.58, 0.34]} /><meshStandardMaterial ref={mat} color="#1a2230" emissive="#cfe3ff" emissiveIntensity={0.1} roughness={0.4} /></mesh>
+      <Card a={[0.46, 0.025, 0.15]} p={[0, 0.012, 0.36]} c="#e9e4da" seed={43} />
+    </group>
+  );
+}
+
+function Loose() {
+  const folder = useRef<THREE.Mesh>(null!);
+  const stamp = useRef<THREE.Group>(null!);
+  useFrame(() => {
+    const t = labTime(), f = sample(t);
+    folder.current.visible = (f.folder === "table" && f.partner.mode !== "hand") || f.folder === "boss";
+    if (f.folder === "table") folder.current.position.set(PLAN.meeting.pos[0] + 0.15, 0.775, PLAN.meeting.pos[1] - 0.05);
+    else folder.current.position.set(PLAN.bossDesk.pos[0] - 0.35, 0.765, PLAN.bossDesk.pos[1] + 0.12);
+    // la ficha verde de "aprobado" aparece con un rebote suave (easeOutBack), flota y se encoge al final
+    const u = Math.min(1, Math.max(0, (t - 19.1) / 0.5)), o = Math.min(1, Math.max(0, (t - 23.0) / 0.4));
+    const back = 1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2);
+    const k = f.approved && t < 23.4 ? back * (1 - o) : 0;
+    stamp.current.visible = k > 0.01;
+    stamp.current.scale.setScalar(Math.max(0.01, k));
+    stamp.current.position.y = 0.95 + Math.sin(t * 2.5) * 0.02;
+  });
+  return (
+    <>
+      <mesh ref={folder} castShadow rotation={[0, 0.35, 0]}><boxGeometry args={[0.26, 0.03, 0.33]} />{clay("#2f6db3")}</mesh>
+      <group ref={stamp} position={[PLAN.bossDesk.pos[0] - 0.35, 0.95, PLAN.bossDesk.pos[1] + 0.12]}>
+        <mesh castShadow rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.13, 0.13, 0.04, 20]} />{clay("#3f8f5a")}</mesh>
+        <mesh position={[-0.03, -0.01, 0.025]} rotation={[0, 0, 0.8]}><boxGeometry args={[0.08, 0.03, 0.02]} />{clay("#f4efe6")}</mesh>
+        <mesh position={[0.03, 0.02, 0.025]} rotation={[0, 0, -0.85]}><boxGeometry args={[0.15, 0.03, 0.02]} />{clay("#f4efe6")}</mesh>
+      </group>
+    </>
+  );
+}
+
+function Plant({ at, seed }: { at: [number, number]; seed: number }) {
+  const leaf = useMemo(() => lumpy(new THREE.SphereGeometry(0.2, 12, 10), 0.03, seed), [seed]);
+  return (
+    <group position={[at[0], 0, at[1]]}>
+      <Card a={[0.32, 0.36, 0.32]} p={[0, 0.18, 0]} c="#c46f4c" seed={seed} rough={0.95} />
+      {[[0, 0.55, 0, 1], [0.12, 0.72, 0.05, 0.8], [-0.1, 0.78, -0.05, 0.75], [0.02, 0.92, 0.02, 0.6]].map(([x, y, z, s], i) => (
+        <mesh key={i} geometry={leaf} position={[x, y, z]} scale={s} castShadow>{clay("#5f7f55")}</mesh>
+      ))}
+    </group>
+  );
+}
+
+function Set() {
+  const { x0, x1, z0, z1 } = PLAN.room;
+  const w = x1 - x0, d = z1 - z0;
+  return (
+    <>
+      {/* mesa de estudio sobre la que está la maqueta */}
+      <mesh position={[0, -0.16, 0]} receiveShadow><boxGeometry args={[w + 5, 0.2, d + 4]} /><meshStandardMaterial color="#d9b994" roughness={0.75} /></mesh>
+      {/* base de la maqueta (cartón pluma con canto blanco) */}
+      <mesh position={[(x0 + x1) / 2, -0.03, (z0 + z1) / 2]} receiveShadow><boxGeometry args={[w, 0.06, d]} /><meshStandardMaterial color="#e9e4da" roughness={0.95} /></mesh>
+      <mesh position={[(x0 + x1) / 2, 0.002, (z0 + z1) / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[w - 0.1, d - 0.1]} /><meshStandardMaterial color="#cfc6b7" roughness={1} /></mesh>
+      {/* paredes de cartón, cortadas bajas */}
+      <Card a={[w, 1.6, 0.06]} p={[(x0 + x1) / 2, 0.8, z0 - 0.03]} c="#efe9df" seed={2} />
+      <Card a={[0.06, 1.6, d]} p={[x0 - 0.03, 0.8, (z0 + z1) / 2]} c="#e6dfd3" seed={3} />
+      <Card a={[2.0, 0.9, 0.02]} p={[-0.9, 1.05, z0 + 0.01]} c="#bcd0e0" seed={4} rough={0.4} />
+      <Card a={[0.9, 1.5, 0.02]} p={[x0 + 0.01, 0.75, PLAN.door[1]]} c="#a58d6f" seed={5} />
+      {/* alfombra de fieltro de la reunión */}
+      <mesh position={[PLAN.meeting.pos[0], 0.01, PLAN.meeting.pos[1]]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><circleGeometry args={[1.45, 28]} /><meshStandardMaterial color={FELT} roughness={1} /></mesh>
+      <Desk at={PLAN.desk.pos} seed={10} />
+      <Chair at={PLAN.seat} seed={20} />
+      <Screen />
+      <Desk at={PLAN.bossDesk.pos} rot={Math.PI} seed={30} />
+      <Chair at={PLAN.boss} rot={Math.PI} seed={50} />
+      <group position={[PLAN.bossDesk.pos[0] + 0.15, 0.745, PLAN.bossDesk.pos[1] - 0.05]}>
+        <Card a={[0.42, 0.02, 0.3]} p={[0, 0.01, 0]} c="#9a9ea6" seed={60} />
+        <Card a={[0.42, 0.28, 0.02]} p={[0, 0.15, -0.14]} c="#9a9ea6" seed={61} />
+      </group>
+      {/* mesa redonda de balsa */}
+      <group position={[PLAN.meeting.pos[0], 0, PLAN.meeting.pos[1]]}>
+        <mesh position={[0, 0.74, 0]} castShadow receiveShadow><cylinderGeometry args={[PLAN.meeting.r, PLAN.meeting.r, 0.05, 16]} /><meshStandardMaterial color={BALSA} roughness={0.9} /></mesh>
+        <Card a={[0.08, 0.72, 0.08]} p={[0, 0.36, 0]} c={DARK} seed={70} />
+      </group>
+      <Plant at={[-4.7, -3.1]} seed={80} />
+      <Plant at={[4.7, 2.9]} seed={81} />
+      <Card a={[1.6, 1.4, 0.35]} p={[-0.2, 0.7, -3.4]} c={BALSA} seed={90} />
+      {[0.35, 0.8, 1.2].map((y, i) => <Card key={i} a={[1.5, 0.03, 0.32]} p={[-0.2, y, -3.38]} c="#c7ae86" seed={91 + i} />)}
+      <Loose />
+    </>
+  );
+}
+
+/** Luz de tarde, cálida y estable. */
+function Lights() {
+  return (
+    <>
+      <ambientLight intensity={0.7} color="#fff1e0" />
+      <hemisphereLight args={["#fff4e6", "#d9c3a5", 0.9]} />
+      <directionalLight castShadow position={[5, 9, 7]} intensity={2.0} color="#ffe2bd"
+        shadow-mapSize={[1024, 1024]} shadow-bias={-0.0006} shadow-normalBias={0.02} shadow-radius={8}
+        shadow-camera-left={-8} shadow-camera-right={8} shadow-camera-top={7} shadow-camera-bottom={-7} shadow-camera-near={1} shadow-camera-far={30} />
+      <directionalLight position={[-6, 5, 4]} intensity={0.6} color="#ffeedd" />
+    </>
+  );
 }
 
 export default function PanelD({ active }: { active: boolean }) {
-  const svg = useRef<SVGSVGElement>(null);
-  const activeRef = useRef(active);
-  activeRef.current = active;
-
-  useEffect(() => {
-    const root = svg.current!;
-    let raf = 0, killed = false;
-    let tl: gsap.core.Timeline | null = null;
-    const q = <T extends Element>(sel: string) => root.querySelector(sel) as T;
-    (async () => {
-      const { gsap } = await import("gsap");
-      if (killed) return;
-      const A = fig(XD.door, 1), Pt = fig(XD.partner, -1), B = fig(XD.boss, -1);
-      B.sit = 1; B.type = 1;
-      const scr = { on: 0, lines: 0 }, stamp = { k: 0, draw: 1, ring: 0 }, cheer = { ring: 0, ro: 0 }, folder = { table: 1, boss: 0 };
-      const bub = LINES.map(() => ({ o: 0, y: 6 }));
-      tl = gsap.timeline({ paused: true });
-      const ph = Object.fromEntries(PHASES.map((p) => [p.name, p]));
-      const walk = (name: string, x0: number, x1: number) => {
-        const p = ph[name], d = p.t1 - p.t0;
-        tl!.fromTo(A, { x: x0 }, { x: x1, duration: d, ease: "power1.inOut", immediateRender: false }, p.t0);
-        tl!.fromTo(A, { walk: 0 }, { walk: 1, duration: 0.3, ease: "power1.out", immediateRender: false }, p.t0);
-        tl!.fromTo(A, { walk: 1 }, { walk: 0, duration: 0.3, ease: "power1.in", immediateRender: false }, p.t1 - 0.3);
-        tl!.fromTo(A, { cycle: 0 }, { cycle: (Math.abs(x1 - x0) / 13) * Math.PI, duration: d, ease: "power1.inOut", immediateRender: false }, p.t0);
-        tl!.set(A, { face: x1 > x0 ? 1 : -1 }, p.t0);
-      };
-      walk("enter", XD.door, XD.chair);
-      tl.set(A, { face: -1 }, ph.sit.t0);
-      tl.fromTo(A, { sit: 0 }, { sit: 1, duration: 0.7, ease: "back.out(1.6)", immediateRender: false }, ph.sit.t0 + 0.3);
-      tl.fromTo(scr, { on: 0 }, { on: 1, duration: 0.5, ease: "power2.out", immediateRender: false }, ph.sit.t0 + 0.7);
-      tl.fromTo(A, { type: 0 }, { type: 1, duration: 0.35, ease: "power2.out", immediateRender: false }, ph.type.t0);
-      tl.fromTo(A, { tcyc: 0 }, { tcyc: 70, duration: ph.type.t1 - ph.type.t0, ease: "none", immediateRender: false }, ph.type.t0);
-      tl.fromTo(scr, { lines: 0 }, { lines: 1, duration: ph.type.t1 - ph.type.t0, ease: "steps(12)", immediateRender: false }, ph.type.t0);
-      tl.fromTo(A, { type: 1 }, { type: 0, duration: 0.3, immediateRender: false }, ph.type.t1 - 0.3);
-      tl.fromTo(A, { sit: 1 }, { sit: 0, duration: 0.6, ease: "power2.inOut", immediateRender: false }, ph.stand.t0);
-      tl.fromTo(scr, { on: 1 }, { on: 0, duration: 0.6, immediateRender: false }, ph.stand.t0 + 0.2);
-      walk("walkMeet", XD.chair, XD.meet);
-      // conversación
-      const l0 = LINES[0], l1 = LINES[1];
-      tl.fromTo(A, { talk: 0 }, { talk: 1, duration: 0.25, immediateRender: false }, l0.t0);
-      tl.fromTo(A, { tk: 0 }, { tk: 30, duration: l0.t1 - l0.t0, ease: "none", immediateRender: false }, l0.t0);
-      tl.fromTo(A, { talk: 1 }, { talk: 0, duration: 0.25, immediateRender: false }, l0.t1 - 0.25);
-      tl.fromTo(Pt, { nod: 0 }, { nod: 1, duration: 0.2, immediateRender: false }, l0.t0);
-      tl.fromTo(Pt, { nod: 1 }, { nod: 0, duration: 0.2, immediateRender: false }, l0.t1 - 0.2);
-      tl.fromTo(Pt, { talk: 0 }, { talk: 1, duration: 0.25, immediateRender: false }, l1.t0);
-      tl.fromTo(Pt, { tk: 0 }, { tk: 30, duration: l1.t1 - l1.t0, ease: "none", immediateRender: false }, l1.t0);
-      tl.fromTo(Pt, { talk: 1 }, { talk: 0, duration: 0.2, immediateRender: false }, 14.6);
-      tl.fromTo(A, { nod: 0 }, { nod: 1, duration: 0.2, immediateRender: false }, l1.t0);
-      tl.fromTo(A, { nod: 1 }, { nod: 0, duration: 0.2, immediateRender: false }, l1.t1 - 0.4);
-      // el compañero le pasa la carpeta
-      tl.fromTo(Pt, { reach: 0 }, { reach: 1, duration: 0.3, ease: "power2.out", immediateRender: false }, 14.7);
-      tl.set(folder, { table: 0 }, 14.7);
-      tl.set(Pt, { folder: 1 }, 14.7);
-      tl.set(Pt, { folder: 0 }, 15.0);
-      tl.set(A, { folder: 1 }, 15.0);
-      tl.fromTo(Pt, { reach: 1 }, { reach: 0, duration: 0.35, immediateRender: false }, 15.0);
-      walk("walkBoss", XD.meet, XD.bossStand);
-      tl.fromTo(B, { type: 1 }, { type: 0, duration: 0.3, immediateRender: false }, 16.4);
-      // entrega
-      tl.fromTo(A, { reach: 0 }, { reach: 1, duration: 0.45, ease: "power3.out", immediateRender: false }, ph.give.t0);
-      tl.fromTo(B, { reach: 0 }, { reach: 1, duration: 0.4, ease: "power3.out", immediateRender: false }, ph.give.t0 + 0.3);
-      tl.set(A, { folder: 0 }, 18.5);
-      tl.set(folder, { boss: 1 }, 18.5);
-      tl.fromTo(A, { reach: 1 }, { reach: 0, duration: 0.35, immediateRender: false }, 18.5);
-      tl.fromTo(B, { reach: 1 }, { reach: 0, duration: 0.35, immediateRender: false }, 18.55);
-      // aprobado: la jefa asiente, aparece el sello y la marca se dibuja
-      tl.fromTo(B, { nod: 0 }, { nod: 1, duration: 0.2, immediateRender: false }, ph.approve.t0);
-      tl.fromTo(B, { nod: 1 }, { nod: 0, duration: 0.2, immediateRender: false }, ph.approve.t1);
-      tl.fromTo(stamp, { k: 0 }, { k: 1, duration: 0.5, ease: "back.out(2.6)", immediateRender: false }, 19.1);
-      tl.fromTo(stamp, { draw: 1 }, { draw: 0, duration: 0.45, ease: "power2.inOut", immediateRender: false }, 19.3);
-      tl.fromTo(stamp, { ring: 0 }, { ring: 1, duration: 0.9, ease: "power2.out", immediateRender: false }, 19.2);
-      tl.fromTo(stamp, { k: 1 }, { k: 0, duration: 0.35, ease: "back.in(2)", immediateRender: false }, 23.2);
-      // celebración: brazos en Y, salto con anticipación, aro que se expande
-      const c0 = ph.celebrate.t0;
-      tl.set(A, { face: 1 }, c0);
-      tl.to(A, { keyframes: [
-        { sq: 0.82, duration: 0.22, ease: "power2.out" },
-        { sq: 1.12, lift: 30, duration: 0.3, ease: "power3.out" },
-        { sq: 1, lift: 0, duration: 0.26, ease: "power2.in" },
-        { sq: 0.86, duration: 0.1, ease: "power1.out" },
-        { sq: 1.06, lift: 12, duration: 0.2, ease: "power2.out" },
-        { sq: 1, lift: 0, duration: 0.2, ease: "bounce.out" },
-      ] }, c0);
-      tl.fromTo(A, { up: 0 }, { up: 1, duration: 0.35, ease: "back.out(2)", immediateRender: false }, c0 + 0.15);
-      tl.fromTo(A, { up: 1 }, { up: 0, duration: 0.4, ease: "power2.inOut", immediateRender: false }, ph.celebrate.t1 - 0.45);
-      tl.fromTo(cheer, { ring: 0, ro: 1 }, { ring: 1, ro: 0, duration: 1.1, ease: "power2.out", immediateRender: false }, c0 + 0.45);
-      tl.fromTo(B, { type: 0 }, { type: 1, duration: 0.3, immediateRender: false }, 21.4);
-      walk("walkBack", XD.bossStand, XD.chair);
-      tl.set(A, { face: -1 }, ph.sitBack.t0);
-      tl.fromTo(A, { sit: 0 }, { sit: 1, duration: 0.7, ease: "back.out(1.6)", immediateRender: false }, ph.sitBack.t0 + 0.3);
-      tl.fromTo(scr, { on: 0 }, { on: 1, duration: 0.5, immediateRender: false }, ph.sitBack.t0 + 0.8);
-      LINES.forEach((l, i) => {
-        tl!.fromTo(bub[i], { o: 0, y: 8 }, { o: 1, y: 0, duration: 0.3, ease: "back.out(2)", immediateRender: false }, l.t0);
-        tl!.fromTo(bub[i], { o: 1, y: 0 }, { o: 0, y: -4, duration: 0.2, ease: "power1.in", immediateRender: false }, l.t1 - 0.2);
-      });
-      tl.set({}, {}, LOOP); // duración exacta del bucle
-      tl.seek(0);
-
-      // --- nodos SVG
-      const parts = (id: string) => ({
-        g: q<SVGGElement>(`#${id}`), legN: q<SVGPathElement>(`#${id}-legN`), legF: q<SVGPathElement>(`#${id}-legF`), armN: q<SVGPathElement>(`#${id}-armN`), armF: q<SVGPathElement>(`#${id}-armF`),
-        torso: q<SVGLineElement>(`#${id}-torso`), head: q<SVGCircleElement>(`#${id}-head`), folder: q<SVGRectElement>(`#${id}-folder`),
-      });
-      const PA = parts("ag"), PP = parts("pt"), PB = parts("bs");
-      const scrEl = q<SVGRectElement>("#scr"), scrGlow = q<SVGRectElement>("#scr-glow"), scrLines = Array.from(root.querySelectorAll<SVGRectElement>(".scr-line"));
-      const stampG = q<SVGGElement>("#stamp"), stampCheck = q<SVGPathElement>("#stamp-check"), stampRing = q<SVGCircleElement>("#stamp-ring");
-      const cheerRing = q<SVGCircleElement>("#cheer-ring");
-      const fTable = q<SVGRectElement>("#f-table"), fBoss = q<SVGRectElement>("#f-boss");
-      const bubEls = LINES.map((_, i) => q<SVGGElement>(`#bub-${i}`));
-      const prog = q<SVGRectElement>("#prog");
-      const draw = (P: ReturnType<typeof parts>, F: Fig, t: number) => {
-        const p = figurePaths(F, t);
-        P.g.setAttribute("transform", `translate(${F.x.toFixed(1)} ${GROUND}) scale(${(F.face * (2 - F.sq)).toFixed(3)} ${F.sq.toFixed(3)})`);
-        P.legN.setAttribute("d", p.legN.d); P.legF.setAttribute("d", p.legF.d); P.armN.setAttribute("d", p.armN.d); P.armF.setAttribute("d", p.armF.d);
-        P.torso.setAttribute("x1", String(p.hipX)); P.torso.setAttribute("y1", String(p.hipY - 4)); P.torso.setAttribute("x2", String(p.shX)); P.torso.setAttribute("y2", String(p.shY + 5));
-        P.head.setAttribute("cx", p.head.x.toFixed(1)); P.head.setAttribute("cy", p.head.y.toFixed(1));
-        if (P.folder) { P.folder.style.opacity = F.folder ? "1" : "0"; P.folder.setAttribute("transform", `translate(${(p.armN.ex - 2).toFixed(1)} ${(p.armN.ey - 14).toFixed(1)})`); }
-      };
-      const render = () => {
-        const t = labTime() % LOOP;
-        tl!.seek(t, false);
-        draw(PA, A, t); draw(PP, Pt, t); draw(PB, B, t);
-        scrEl.setAttribute("fill", scr.on > 0.05 ? "#EAF3FC" : NAVY);
-        scrGlow.style.opacity = String(scr.on * (0.35 + 0.25 * A.type * (0.5 + 0.5 * Math.sin(t * 9))));
-        const n = Math.round(scr.lines * scrLines.length);
-        scrLines.forEach((l, i) => { l.style.opacity = scr.on > 0.05 && (A.type > 0 ? i < n : true) ? String(scr.on) : "0"; });
-        stampG.setAttribute("transform", `translate(${XD.bossDesk} ${GROUND - 92}) scale(${stamp.k.toFixed(3)})`);
-        stampCheck.style.strokeDashoffset = String(stamp.draw);
-        stampRing.setAttribute("r", String(16 + stamp.ring * 16)); stampRing.style.opacity = String((1 - stamp.ring) * 0.8);
-        cheerRing.setAttribute("cx", A.x.toFixed(1)); cheerRing.setAttribute("r", String(20 + cheer.ring * 50)); cheerRing.style.opacity = String(cheer.ro * 0.7);
-        fTable.style.opacity = String(folder.table); fBoss.style.opacity = String(folder.boss);
-        bubEls.forEach((el, i) => { el.style.opacity = String(bub[i].o); el.setAttribute("transform", `translate(0 ${bub[i].y.toFixed(1)})`); });
-        prog.setAttribute("width", ((t / LOOP) * 584).toFixed(1));
-      };
-      const loop = () => { if (killed) return; if (activeRef.current) render(); raf = requestAnimationFrame(loop); };
-      render();
-      raf = requestAnimationFrame(loop);
-    })();
-    return () => { killed = true; cancelAnimationFrame(raf); tl?.kill(); };
-  }, []);
-
-  const figure = (id: string, color: string, folder = false) => (
-    <g id={id}>
-      <path id={`${id}-legF`} stroke={color} strokeOpacity={0.55} strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path id={`${id}-armF`} stroke={color} strokeOpacity={0.55} strokeWidth={7.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <line id={`${id}-torso`} stroke={color} strokeWidth={20} strokeLinecap="round" />
-      <path id={`${id}-legN`} stroke={color} strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <circle id={`${id}-head`} r={10} fill={color} />
-      <path id={`${id}-armN`} stroke={color} strokeWidth={7.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      {folder && <rect id={`${id}-folder`} width={14} height={18} rx={2} fill="#F5B83D" style={{ opacity: 0 }} />}
-    </g>
-  );
-  const bubbleAt = (i: number) => {
-    const l = LINES[i];
-    const x = l.who === "agent" ? (i < 2 ? XD.meet : XD.bossStand) : l.who === "partner" ? XD.partner : XD.boss;
-    const w = l.text.length * 6.1 + 22;
-    const left = Math.min(632 - w, Math.max(8, x - w / 2));
-    const y = l.who === "boss" ? GROUND - 128 : GROUND - 140;
-    return (
-      <g key={i} id={`bub-${i}`} style={{ opacity: 0 }}>
-        <rect x={left} y={y} width={w} height={26} rx={10} fill={l.who === "agent" ? AGENT : "#FFFFFF"} stroke={l.who === "agent" ? AGENT : LINE} />
-        <path d={`M${x - 6} ${y + 25} L${x} ${y + 34} L${x + 6} ${y + 25}`} fill={l.who === "agent" ? AGENT : "#FFFFFF"} stroke={l.who === "agent" ? AGENT : LINE} />
-        <rect x={x - 5.5} y={y + 23} width={11} height={3} fill={l.who === "agent" ? AGENT : "#FFFFFF"} />
-        <text x={left + w / 2} y={y + 17} textAnchor="middle" fontSize={11.5} fontWeight={500} fill={l.who === "agent" ? "#FFFFFF" : NAVY}>{l.text}</text>
-      </g>
-    );
-  };
-
+  const bubble = useRef<HTMLDivElement>(null);
   return (
-    <svg ref={svg} viewBox="0 0 640 400" className="absolute inset-0 h-full w-full" style={{ fontFamily: "IBM Plex Sans, Inter, system-ui, sans-serif" }} preserveAspectRatio="xMidYMid meet">
-      <rect width={640} height={400} fill="#FFFFFF" />
-      {/* retícula de infografía */}
-      {Array.from({ length: 11 }, (_, i) => <line key={i} x1={20 + i * 60} y1={40} x2={20 + i * 60} y2={GROUND} stroke="#F1F4F8" />)}
-      <line x1={16} y1={GROUND} x2={624} y2={GROUND} stroke={NAVY} strokeWidth={2} />
-      {/* puerta */}
-      <rect x={XD.door - 18} y={GROUND - 84} width={36} height={84} fill="none" stroke={NAVY} strokeWidth={3} />
-      <circle cx={XD.door + 10} cy={GROUND - 42} r={2.5} fill={NAVY} />
-      {/* escritorio del agente con monitor */}
-      <rect x={XD.desk - 46} y={GROUND - 46} width={92} height={6} fill={NAVY} />
-      <rect x={XD.desk - 42} y={GROUND - 40} width={5} height={40} fill={NAVY} /><rect x={XD.desk + 37} y={GROUND - 40} width={5} height={40} fill={NAVY} />
-      <rect id="scr-glow" x={XD.desk - 40} y={GROUND - 112} width={64} height={60} rx={16} fill="#9CC8F5" style={{ opacity: 0, filter: "blur(8px)" }} />
-      <rect x={XD.desk - 32} y={GROUND - 100} width={48} height={36} rx={3} fill={NAVY} />
-      <rect id="scr" x={XD.desk - 28} y={GROUND - 96} width={40} height={28} rx={1.5} fill={NAVY} />
-      {[0, 1, 2, 3, 4].map((i) => <rect key={i} className="scr-line" x={XD.desk - 24} y={GROUND - 92 + i * 5} width={10 + ((i * 7) % 20)} height={2.4} fill={i === 0 ? AGENT : GREY} style={{ opacity: 0 }} />)}
-      <rect x={XD.desk - 10} y={GROUND - 64} width={4} height={18} fill={NAVY} />
-      {/* silla */}
-      <rect x={XD.chair - 14} y={GROUND - 28} width={30} height={5} rx={2} fill={GREY} />
-      <rect x={XD.chair + 12} y={GROUND - 58} width={5} height={35} rx={2} fill={GREY} />
-      <rect x={XD.chair - 1} y={GROUND - 23} width={4} height={23} fill={GREY} />
-      {/* mesa de reunión */}
-      <rect x={XD.table - 34} y={GROUND - 46} width={68} height={6} rx={3} fill={NAVY} />
-      <rect x={XD.table - 2.5} y={GROUND - 40} width={5} height={40} fill={NAVY} />
-      <rect x={XD.table - 16} y={GROUND - 4} width={32} height={4} fill={NAVY} />
-      <rect id="f-table" x={XD.table - 4} y={GROUND - 50} width={20} height={4} rx={1} fill="#F5B83D" />
-      {/* escritorio de la jefa */}
-      <rect x={XD.bossDesk - 30} y={GROUND - 46} width={60} height={6} fill={NAVY} />
-      <rect x={XD.bossDesk - 30} y={GROUND - 40} width={60} height={40} fill={NAVY} fillOpacity={0.12} />
-      <rect x={XD.bossDesk - 26} y={GROUND - 40} width={5} height={40} fill={NAVY} /><rect x={XD.bossDesk + 21} y={GROUND - 40} width={5} height={40} fill={NAVY} />
-      <rect id="f-boss" x={XD.bossDesk - 18} y={GROUND - 50} width={20} height={4} rx={1} fill="#F5B83D" style={{ opacity: 0 }} />
-      <path d={`M${XD.bossDesk + 4} ${GROUND - 46} L${XD.bossDesk + 20} ${GROUND - 46} L${XD.bossDesk + 26} ${GROUND - 66}`} stroke={NAVY} strokeWidth={4} fill="none" strokeLinecap="round" />
-      {/* silla de la jefa */}
-      <rect x={XD.boss - 16} y={GROUND - 28} width={30} height={5} rx={2} fill={GREY} />
-      <rect x={XD.boss + 11} y={GROUND - 62} width={5} height={39} rx={2} fill={GREY} />
-      <rect x={XD.boss - 2} y={GROUND - 23} width={4} height={23} fill={GREY} />
-
-      <circle id="cheer-ring" cy={GROUND - 60} r={20} fill="none" stroke={AGENT} strokeWidth={3} style={{ opacity: 0 }} />
-      {figure("pt", GREY, true)}
-      {figure("bs", BOSS)}
-      {figure("ag", AGENT, true)}
-      {/* sello de aprobado */}
-      <g id="stamp" transform={`translate(${XD.bossDesk} ${GROUND - 92}) scale(0)`}>
-        <circle id="stamp-ring" r={16} fill="none" stroke="#16A34A" strokeWidth={2} />
-        <circle r={16} fill="#16A34A" />
-        <path id="stamp-check" d="M-7 0 L-2 5 L8 -6" pathLength={1} stroke="#FFFFFF" strokeWidth={3.5} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ strokeDasharray: 1, strokeDashoffset: 1 }} />
-      </g>
-      {LINES.map((_, i) => bubbleAt(i))}
-      {/* barra de tiempo con los cinco pasos, como en una infografía */}
-      <rect x={28} y={350} width={584} height={3} fill="#E8EDF3" rx={1.5} />
-      <rect id="prog" x={28} y={350} width={0} height={3} fill={AGENT} rx={1.5} />
-      {STEPS.map((s) => {
-        const x = 28 + (s.from / LOOP) * 584;
-        return (
-          <g key={s.n}>
-            <circle cx={x} cy={351.5} r={4} fill="#FFFFFF" stroke={NAVY} strokeWidth={1.5} />
-            <text x={x + 7} y={370} fontSize={9.5} fill={NAVY} fontWeight={600}>{String(s.n).padStart(2, "0")}</text>
-            <text x={x + 7} y={382} fontSize={8.5} fill="#5B6B80">{s.label.split(":")[0]}</text>
-          </g>
-        );
-      })}
-    </svg>
+    <div className="absolute inset-0 overflow-hidden">
+      <Canvas shadows="soft" dpr={1} frameloop="demand" camera={{ position: [5.8, 4.6, 8.2], fov: 30, near: 0.3, far: 60 }}
+        onCreated={({ camera }) => camera.lookAt(0.1, 0.5, -0.4)} gl={{ antialias: false }}>
+        <color attach="background" args={["#f4e9dc"]} />
+        <Lights />
+        <Set />
+        <Figure role="agent" />
+        <Figure role="partner" />
+        <Figure role="boss" />
+        <BubbleProjector el={bubble} standH={2.15} seatH={1.75} />
+        <EffectComposer multisampling={0}>
+          <TiltShift2 blur={0.14} taper={0.6} start={[0, 0.52]} end={[1, 0.52]} samples={8} />
+          <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+          <Vignette offset={0.35} darkness={0.18} />
+        </EffectComposer>
+        <FpsDriver fps={30} active={active} />
+      </Canvas>
+      <div ref={bubble} style={{ opacity: 0, transition: "opacity .3s" }} className="pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded-[12px] bg-[#fffaf2] px-3 py-1.5 text-[11.5px] font-medium text-[#5a3e2c] shadow-[0_4px_14px_rgba(120,80,40,0.18)] ring-1 ring-[#e9d8c2]" />
+    </div>
   );
 }
