@@ -237,7 +237,25 @@ func (s *server) driveList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	l.Folders, l.Files = driveVisible(s, r, l.Folders, folderPath), driveVisible(s, r, l.Files, filePath)
-	writeJSON(w, http.StatusOK, l)
+	writeJSON(w, http.StatusOK, struct {
+		drive.Listing
+		Access string `json:"access"`
+	}{l, s.driveListAccess(r, p)})
+}
+
+// driveListAccess is what the person may do in a listed folder, so the Files screen does not guess: "edit" (create
+// folders, upload, rename, move) or "read". It is the person's level in the drive (PersonAccess) combined with the
+// role's files:write; the rules themselves are the ones every write route already applies.
+func (s *server) driveListAccess(r *http.Request, path string) string {
+	if s.AuthEnabled {
+		if p, ok := auth.PrincipalFrom(r.Context()); !ok || !p.Can(auth.PermFilesWrite) {
+			return drive.AccessRead
+		}
+	}
+	if path == "/" || s.Drive.PersonAccess(r.Context(), application.PersonFrom(r.Context()), path) != drive.AccessEdit {
+		return drive.AccessRead
+	}
+	return drive.AccessEdit
 }
 
 // driveSearch: GET /drive/search?q=&path=&limit=. Full text over names and
