@@ -31,6 +31,7 @@ import { AgentSkillsCard } from "./skills/AgentSkillsCard";
 import { QualityCard } from "./quality/QualityCard";
 import { TrustCard } from "./trust/TrustCard";
 import { PermissionsSection } from "./agent/PermissionsSection";
+import { HistorySection } from "./agent/HistorySection";
 import { SaveAsSkillButton } from "./skills/SaveAsSkillButton";
 import { useViewAll } from "@/lib/viewMode";
 import { SIMPLE_AGENT_TABS, splitTabs } from "@/lib/viewModeLogic";
@@ -308,6 +309,7 @@ export function AgentPanel({ id }: { id: string }) {
             {part("look", null, <Card title={t("panel.profile.look")}><AgentCustomizer id={id} /></Card>)}
             {part("trust", null, <TrustCard id={id} />)}
             {part("quality", null, <QualityCard id={id} />)}
+            {part("history", null, <HistorySection id={id} />)}
           </>
         )}
       </div>

@@ -41,6 +41,12 @@ test("new tab ids, inner sections and aliases work as link values, ignoring case
   assert.equal(resolvePanelTarget("team").unfold, "chats");
 });
 
+test("the configuration history (F4) lives in Perfil, also by its Spanish name", () => {
+  assert.deepEqual(resolvePanelTarget("history"), { tab: "profile", section: "history", unfold: null });
+  assert.equal(resolvePanelTarget("Historial").tab, "profile");
+  assert.equal(resolvePanelTarget("versions").section, "history");
+});
+
 test("unknown or empty values change nothing", () => {
   assert.equal(resolvePanelTarget(""), null);
   assert.equal(resolvePanelTarget(null), null);

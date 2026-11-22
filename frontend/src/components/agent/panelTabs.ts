@@ -21,7 +21,7 @@ export const TAB_SECTIONS: Record<AgentTab, readonly string[]> = {
   work: ["state", "tasks", "reports", "files", "activity", "thoughts", "chats"],
   can: ["controls", "permissions", "folders", "tools"],
   knows: ["skills", "memory"],
-  profile: ["about", "job", "look", "trust", "quality"],
+  profile: ["about", "job", "look", "trust", "quality", "history"],
 };
 
 // Old names and handy aliases -> section inside a tab. The new tab ids also work as a `section` value.
@@ -30,6 +30,7 @@ const ALIAS: Record<string, string> = {
   thought: "thoughts", audit: "thoughts", team: "chats", conversations: "chats",
   approvals: "permissions", perm: "permissions", access: "folders", pause: "controls", rehearsal: "controls",
   connections: "tools", skill: "skills", appearance: "look", customizer: "look", knowledge: "knows",
+  historial: "history", versions: "history", changes: "history",
 };
 
 export interface PanelTarget { tab: AgentTab; section: string | null; unfold: Folded | null }
