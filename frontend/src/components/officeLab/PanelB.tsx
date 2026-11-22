@@ -354,12 +354,12 @@ function Furniture() {
       <Screen pos={[P.desk.pos[0], P.desk.pos[1] - 0.105]} y={0.74 + 0.31} rot={0} />
       <Piece name="computerKeyboard" pos={[P.desk.pos[0], P.desk.pos[1] + 0.2]} y={0.74} rot={0} />
       <Piece name="computerMouse" pos={[P.desk.pos[0] + 0.42, P.desk.pos[1] + 0.2]} y={0.74} rot={0} />
-      <Piece name="chairDesk" pos={[P.seat[0], P.seat[1] + 0.05]} rot={0} />
+      <Piece name="chairDesk" pos={[P.seat[0], P.seat[1] + 0.05]} rot={Math.PI} /> {/* el respaldo del modelo está en -z: girada, queda detrás del agente */}
       {/* la jefa */}
       <Piece name="desk" pos={P.bossDesk.pos} rot={0} />
       <Piece name="laptop" pos={[P.bossDesk.pos[0] + 0.15, P.bossDesk.pos[1] - 0.05]} y={0.74} rot={Math.PI} />
       <Piece name="lampSquareTable" pos={[P.bossDesk.pos[0] + 0.55, P.bossDesk.pos[1] - 0.15]} y={0.74} />
-      <Piece name="chairDesk" pos={[P.boss[0], P.boss[1] - 0.05]} rot={Math.PI} />
+      <Piece name="chairDesk" pos={[P.boss[0], P.boss[1] - 0.05]} rot={0} />
       {/* reunión */}
       <Piece name="rugRectangle" pos={P.meeting.pos} rot={0} />
       <Piece name="tableRound" pos={P.meeting.pos} />

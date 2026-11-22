@@ -48,7 +48,7 @@ void main() {
 // ------------------------------------------------------------------------------------------------ materiales (paleta)
 
 const PAL = {
-  floor: "#c7c3bb", floor2: "#b8b3aa", wall: "#ece8e1", wall2: "#d9d3c9", wood: "#a98463", woodL: "#c9a57f", dark: "#3a3f4b", grey: "#7d838f",
+  floor: "#cfd2d6", floor2: "#c0c4ca", wall: "#ece8e1", wall2: "#d9d3c9", wood: "#a98463", woodL: "#c9a57f", dark: "#3a3f4b", grey: "#7d838f",
   navy: "#2b3a67", blue: "#0a66c2", plum: "#6e4256", slate: "#5d6b7d", green: "#4f7a58", greenL: "#6f9a63", pot: "#b5673f", screen: "#cfe6ff", white: "#f4f1ea",
 };
 let gradient: THREE.DataTexture | null = null;
