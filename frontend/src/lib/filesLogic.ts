@@ -313,3 +313,30 @@ export function folderHref(path: string, offices: OfficeRef[]): string {
   }
   return `/files?path=${encodeURIComponent(p)}`;
 }
+
+// ------------------------------------------------------------------ errors in words
+
+/** The text key for a refused drive action (a DriveError's status and stable code): never the raw code. */
+export function filesErrorKey(e: unknown): string {
+  const o = (e && typeof e === "object" ? e : {}) as { code?: unknown; status?: unknown };
+  const code = typeof o.code === "string" ? o.code : "";
+  const status = typeof o.status === "number" ? o.status : 0;
+  switch (code) {
+    case "read_only_folder": case "read_only_mode": return "files.err.readOnly";
+    case "protected_folder": return "files.err.protected";
+    case "name_taken": case "exists": case "already_exists": return "files.err.conflict";
+    case "extension_change": return "files.name.ext";
+    case "name_invalid": case "path_invalid": return "files.err.invalid";
+    case "plan_limit": return "drive.planLimit";
+    case "quota_exceeded": case "quota": return "files.err.quota";
+    case "too_large": return "files.err.tooLarge";
+    case "unsupported_type": return "files.err.type";
+  }
+  if (status === 403 || status === 423) return "files.err.readOnly";
+  if (status === 404) return "files.err.notFound";
+  if (status === 409) return "files.err.conflict";
+  if (status === 413) return "files.err.tooLarge";
+  if (status === 415) return "files.err.type";
+  if (status === 400) return "files.err.invalid";
+  return "files.err.generic";
+}
