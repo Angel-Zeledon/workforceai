@@ -144,14 +144,17 @@ func containsFold(l []string, s string) bool {
 type AccessEntry struct {
 	Path    string `json:"path"`
 	Level   string `json:"level"`
-	Source  string `json:"source"` // default | manual
+	Source  string `json:"source"` // default | manual | position
 	GrantID string `json:"grant_id,omitempty"`
+	// Position names the position a "position" line comes from.
+	Position string `json:"position,omitempty"`
 	// Fixed: the agent's own desk, which is always Edit.
 	Fixed bool `json:"fixed,omitempty"`
 }
 
 // AgentAccess lists the folders of an agent with their level: the defaults first (desk, /Shared, its office, its
-// projects), then the rules people set. A rule on exactly a default folder replaces that default line.
+// projects), then the rules people set. A rule on exactly a default folder replaces that default line. With a
+// position library, the library lines (source position) replace /Shared, its office and what is shared with it.
 func (a *AgentFS) AgentAccess(ctx context.Context, agentID string) ([]AccessEntry, error) {
 	sc, err := a.scopeOf(ctx, agentID)
 	if err != nil {
@@ -160,29 +163,35 @@ func (a *AgentFS) AgentAccess(ctx context.Context, agentID string) ([]AccessEntr
 	org := a.Svc.org(ctx)
 	desk := JoinPath(RootAgents, agentID)
 	out := []AccessEntry{{Path: desk, Level: AccessEdit, Source: SourceDefault, Fixed: true}}
-	defaults := []AccessEntry{{Path: "/" + RootShared, Level: AccessRead, Source: SourceDefault}}
-	if sc.office != "" {
-		defaults = append(defaults, AccessEntry{Path: sc.office, Level: AccessEdit, Source: SourceDefault})
+	var defaults []AccessEntry
+	if !sc.libOn {
+		defaults = append(defaults, AccessEntry{Path: "/" + RootShared, Level: AccessRead, Source: SourceDefault})
+		if sc.office != "" {
+			defaults = append(defaults, AccessEntry{Path: sc.office, Level: AccessEdit, Source: SourceDefault})
+		}
 	}
 	for _, p := range a.projectRoots(ctx, org, sc) {
 		defaults = append(defaults, AccessEntry{Path: p, Level: AccessEdit, Source: SourceDefault})
 	}
-	for _, p := range sc.sharedIn {
-		defaults = append(defaults, AccessEntry{Path: p, Level: AccessRead, Source: SourceDefault})
+	if !sc.libOn {
+		for _, p := range sc.sharedIn {
+			defaults = append(defaults, AccessEntry{Path: p, Level: AccessRead, Source: SourceDefault})
+		}
 	}
 	for _, d := range defaults {
 		if sc.ruleAt(d.Path) == "" {
 			out = append(out, d)
 		}
 	}
+	out = append(out, sc.libraryEntries()...)
 	for _, g := range sc.rules {
 		out = append(out, AccessEntry{Path: g.Path, Level: grantMode(g.Mode), Source: SourceManual, GrantID: g.ID})
 	}
 	return out, nil
 }
 
-// AccessAt is the effective level of an agent on a path (outside any customer scope) and whether a rule or a default
-// decided it.
+// AccessAt is the effective level of an agent on a path (outside any customer scope) and whether a rule, the library
+// of its position or a default decided it.
 func (a *AgentFS) AccessAt(ctx context.Context, agentID, p string) (level, source string, err error) {
 	c, err := CleanPath(p)
 	if err != nil {
@@ -192,19 +201,23 @@ func (a *AgentFS) AccessAt(ctx context.Context, agentID, p string) (level, sourc
 	if err != nil {
 		return "", "", err
 	}
-	switch a.zone(ctx, a.Svc.org(ctx), sc, c) {
-	case ZoneDesk, ZoneProject, ZoneOffice:
-		return AccessEdit, SourceDefault, nil
-	case ZoneShared, ZoneSharedIn:
-		return AccessRead, SourceDefault, nil
-	case ZoneGranted:
-		return AccessRead, SourceManual, nil
-	case ZoneGrantedEdit:
-		return AccessEdit, SourceManual, nil
-	case ZoneDenied:
-		return AccessNone, SourceManual, nil
+	org := a.Svc.org(ctx)
+	base, depth := a.baseZone(ctx, org, sc, c)
+	zp, dp := sc.applyPosition(base, depth, c)
+	z := sc.applyRule(zp, dp, c)
+	src := SourceDefault
+	if g := sc.deepestGrant(c); base != ZoneDesk && g != nil && depthOf(g.Path) >= dp {
+		src = SourceManual
+	} else if sc.libOn && libraryBase(base) {
+		src = SourcePosition
 	}
-	return AccessNone, SourceDefault, nil
+	switch z {
+	case ZoneDesk, ZoneProject, ZoneOffice, ZoneGrantedEdit:
+		return AccessEdit, src, nil
+	case ZoneShared, ZoneSharedIn, ZoneGranted:
+		return AccessRead, src, nil
+	}
+	return AccessNone, src, nil
 }
 
 // projectRoots are the folders of the projects the agent works on.

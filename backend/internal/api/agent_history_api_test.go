@@ -49,6 +49,7 @@ func newHistEnv(t *testing.T) *histEnv {
 				})
 			d.Permissions = &application.PermissionsService{Store: cs, Agents: d.Store, Rec: d.Rec, OrgID: d.Cfg.OrgID, Log: d.Log,
 				SetLevel: d.Trust.ChooseLevel}
+			withPositions(d) // positions inside a department: the position is part of the snapshot
 			h.hist = api.NewAgentHistory(*d, agenthistory.NewMemStore())
 			obs := &agenthistory.Observer{Inner: rec.Pub}
 			obs.Bind(h.hist)
@@ -188,6 +189,8 @@ func TestEveryAgentChangeRouteLeavesAVersion(t *testing.T) {
 		"PUT /agents/{id}/tone":                      "covered above",
 		"PUT /agents/{id}/budget":                    "covered above",
 		"PUT /agents/{id}/job":                       "covered above",
+		"PUT /agents/{id}/position":                  "covered by TestAgentPositionLeavesAVersion",
+		"DELETE /agents/{id}/position":               "covered by TestAgentPositionLeavesAVersion",
 	}
 	routes, ok := h.router.(chi.Routes)
 	if !ok {
@@ -461,5 +464,36 @@ func TestHistoryIsSealedAndIsolated(t *testing.T) {
 	// and the rival cannot restore this organization's versions onto anything
 	if c := h.e.status("POST", api1+"/agents/hr/versions/3/restore", rival.AccessToken, nil); c != 404 && c != 403 {
 		t.Fatalf("rival restores = %d", c)
+	}
+}
+
+// Holding a position (positions.md) is part of the agent's configuration: giving and taking it leave a version, which
+// is never restored by "volver a como estaba" (positions are granted by hand).
+func TestAgentPositionLeavesAVersion(t *testing.T) {
+	h := newHistEnv(t)
+	tok := h.owner.AccessToken
+	legal := ""
+	for _, o := range h.e.json("GET", api1+"/offices", tok, nil, 200)["offices"].([]any) {
+		if m := o.(map[string]any); m["name"] == "Legal" {
+			legal = m["id"].(string)
+		}
+	}
+	pos := h.e.json("POST", api1+"/offices/"+legal+"/positions", tok, map[string]any{"name": "Abogada"}, 201)
+	h.versions("legal", tok) // baseline
+	prev := h.last("legal").Version
+	h.e.json("PUT", api1+"/agents/legal/position", tok, map[string]any{"position_id": pos["id"]}, 200)
+	v := h.last("legal")
+	if v.Version != prev+1 || !slices.Contains(v.Fields, "position") || v.Config.Position != "Abogada" {
+		t.Fatalf("assign: %+v", v)
+	}
+	h.e.json("DELETE", api1+"/agents/legal/position", tok, nil, 200)
+	if v := h.last("legal"); v.Version != prev+2 || v.Config.Position != "" {
+		t.Fatalf("unassign: %+v", v)
+	}
+	pre := h.e.json("GET", api1+"/agents/legal/versions/"+fmt.Sprint(prev+1)+"/restore", tok, nil, 200)
+	for _, st := range pre["apply"].([]any) {
+		if st.(map[string]any)["field"] == "position" {
+			t.Fatalf("a position is never restored: %v", pre)
+		}
 	}
 }

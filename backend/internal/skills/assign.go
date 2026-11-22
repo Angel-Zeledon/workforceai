@@ -14,15 +14,30 @@ import (
 
 // Via says why an agent has a skill.
 const (
-	ViaAgent = "agent" // assigned to the agent
-	ViaRole  = "role"  // default of its role template
+	ViaAgent    = "agent"    // assigned to the agent
+	ViaPosition = "position" // given by the position it holds in its department (internal/positions)
+	ViaRole     = "role"     // default of its role template
 )
+
+// viaRank is the priority of each origin: what an agent receives on a run is cut at MaxRunSkills in this order
+// (direct assignments, then its position, then its trade), so a position never pushes out a skill a person gave it.
+func viaRank(v string) int {
+	switch v {
+	case ViaAgent:
+		return 0
+	case ViaPosition:
+		return 1
+	}
+	return 2
+}
 
 // AgentSkill is a skill as seen from an agent.
 type AgentSkill struct {
 	Skill
 	Via        string `json:"via"`
 	AssignedBy string `json:"assigned_by,omitempty"`
+	// PositionName names the position a "position" skill comes from.
+	PositionName string `json:"position_name,omitempty"`
 	// Servable: agents receive it now (an approved version, not disabled).
 	Servable bool `json:"servable"`
 }
@@ -79,8 +94,19 @@ func (s *Service) Unassign(ctx context.Context, a Actor, agentID, skillID string
 	return nil
 }
 
-// AgentSkills lists the skills of an agent: direct assignments and the defaults
-// of its role.
+// SetPositionSkills plugs the positions of the departments (built after the library). Call it before serving.
+func (s *Service) SetPositionSkills(fn func(ctx context.Context, org, agentID string) (string, []string, error)) {
+	s.cfg.PositionSkills = fn
+}
+
+// Catalog lists every live skill of an organization, the departments' ones included (for the positions screen,
+// which filters them by department and visibility itself).
+func (s *Service) Catalog(ctx context.Context, org string) ([]Skill, error) {
+	return s.List(application.WithOrg(ctx, org), Actor{System: true})
+}
+
+// AgentSkills lists the skills of an agent: direct assignments, the skills of its
+// position and the defaults of its role, in that order of priority (then by name).
 func (s *Service) AgentSkills(ctx context.Context, agentID string) ([]AgentSkill, error) {
 	org := s.org(ctx)
 	s.Ensure(ctx, org)
@@ -113,6 +139,18 @@ func (s *Service) AgentSkills(ctx context.Context, agentID string) ([]AgentSkill
 			out = append(out, AgentSkill{Skill: withOfficeName(m, sk), Via: ViaAgent, AssignedBy: a.AssignedBy, Servable: servable(sk)})
 		}
 	}
+	if s.cfg.PositionSkills != nil {
+		pos, ids, err := s.cfg.PositionSkills(ctx, org, agentID)
+		if err != nil {
+			s.cfg.Log.Warn("skills: position skills unavailable", "agent", agentID, "err", err)
+		}
+		for _, id := range ids {
+			if sk, ok := byID[id]; ok && !seen[sk.ID] && here(sk) {
+				seen[sk.ID] = true
+				out = append(out, AgentSkill{Skill: withOfficeName(m, sk), Via: ViaPosition, PositionName: pos, Servable: servable(sk)})
+			}
+		}
+	}
 	if s.cfg.RoleDefaults != nil {
 		for _, name := range s.cfg.RoleDefaults(role) {
 			if sk, ok := byName[name]; ok && !seen[sk.ID] && here(sk) {
@@ -121,7 +159,12 @@ func (s *Service) AgentSkills(ctx context.Context, agentID string) ([]AgentSkill
 			}
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	sort.SliceStable(out, func(i, j int) bool {
+		if ri, rj := viaRank(out[i].Via), viaRank(out[j].Via); ri != rj {
+			return ri < rj
+		}
+		return out[i].Name < out[j].Name
+	})
 	return out, nil
 }
 

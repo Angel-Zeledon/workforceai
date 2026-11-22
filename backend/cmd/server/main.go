@@ -333,6 +333,8 @@ func run(log *slog.Logger) error {
 	// D3: departments are sealed BEFORE the resumed requests run (their events, approvals and memory).
 	officesSvc := wireDepartments(departmentWiring{AuthOn: cfg.AuthEnabled, PG: pg, Store: store, AuthStore: authStore, Chart: orgChartSvc,
 		Rec: rec, Memory: memorySvc, Orch: orch, Notify: notifySvc, Slack: slackSvc, Conns: cw.conns, Drive: ws.drive, Skills: skillsSvc, Log: log})
+	// positions inside a department: before Recover, so resumed work already searches only its position's library
+	positionsSvc := wirePositions(pg, officesSvc, skillsSvc, ws.drive, rec, cfg.App.OrgID, log)
 	goalsSvc := wireGoals(pg, rec, orch, ws.projects, officesSvc, cw.sus) // F1: before Recover, so resumed work keeps its goal
 	if n, err := orch.Recover(ctx, orgIDs); err != nil {
 		log.Warn("recover in-progress requests", "err", err)
@@ -399,6 +401,7 @@ func run(log *slog.Logger) error {
 	// E2 offices (offices.go): offices, agent owners and visibility; their notes reach the tasks. Sealed by D3 in
 	// wireDepartments, before orch.Recover above.
 	deps.Offices = officesSvc
+	deps.Positions = positionsSvc
 	startMemoryBackfill(ctx, log, memorySvc, store, orgIDs, cfg.App.OrgID) // after the office scope: see startMemoryBackfill
 	deps.TenantData = wireTenantData(ctx, cfg, log, pg, authStore, limiter, ws.objects)
 	// Governance: API tokens, reports, retention job, webhooks (internal/governance, internal/webhooks).

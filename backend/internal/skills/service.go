@@ -46,6 +46,9 @@ type Config struct {
 	AgentRole func(ctx context.Context, org, agentID string) (role string, err error)
 	// RoleDefaults are the skill names a role template assigns by default.
 	RoleDefaults func(role string) []string
+	// PositionSkills (optional) names the position an agent holds in its department and the skills (ids) it gives
+	// (internal/positions). An error leaves them out: fewer skills, never more.
+	PositionSkills func(ctx context.Context, org, agentID string) (position string, skillIDs []string, err error)
 	// Locale is the organization language for the starter skills (default "es").
 	Locale func(ctx context.Context) string
 	Now    func() time.Time

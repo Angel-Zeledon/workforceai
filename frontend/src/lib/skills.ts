@@ -30,7 +30,7 @@ export interface SkillDetail extends Skill {
   version: SkillVersion; instructions: string; skill_md: string; license?: string; metadata?: Record<string, string>;
   allowed_tools: string[]; files: SkillFileEntry[]; assignments: { agent_id: string; assigned_by: string }[];
 }
-export interface AgentSkill extends Skill { via: "agent" | "role"; assigned_by?: string; servable: boolean }
+export interface AgentSkill extends Skill { via: "agent" | "position" | "role"; position_name?: string; assigned_by?: string; servable: boolean }
 export interface SkillPayload { name: string; description: string; instructions: string; allowed_tools: string[]; files: SkillFileEntry[]; changelog?: string; source?: string; office_id?: string }
 
 /** A skills error with the backend's stable code (name_taken, path_traversal, zip_bomb, stale_review...). */

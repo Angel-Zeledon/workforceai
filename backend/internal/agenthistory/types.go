@@ -45,6 +45,8 @@ type Config struct {
 
 	Access  *Access       `json:"access"`  // who owns and may use the agent (offices)
 	Folders []FolderGrant `json:"folders"` // what the agent may do in folders of the drive
+	// Position is the name of the position the agent holds in its department ("" none; internal/positions).
+	Position string `json:"position"`
 
 	// Secrets holds only a fingerprint per secret field (never the value): the history can say "it changed".
 	Secrets map[string]string `json:"secrets,omitempty"`
@@ -92,7 +94,7 @@ type FolderGrant struct {
 
 // Fields lists the fields of Config in display order (the JSON names).
 var Fields = []string{"name", "title", "role", "department", "instructions", "creativity", "tags", "tone", "autonomy",
-	"permissions", "skills", "budget_usd", "paused", "read_only", "rehearsal", "tools", "job", "access", "folders"}
+	"permissions", "skills", "budget_usd", "paused", "read_only", "rehearsal", "tools", "job", "access", "folders", "position"}
 
 // Actor kinds.
 const (

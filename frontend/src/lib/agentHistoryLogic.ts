@@ -9,7 +9,7 @@ export type T = (key: string, params?: Record<string, string | number>) => strin
 
 /** Fields in display order; anything else is shown by its name. */
 export const HISTORY_FIELDS = ["instructions", "creativity", "tags", "tone", "autonomy", "permissions", "skills", "budget_usd",
-  "paused", "read_only", "rehearsal", "tools", "job", "access", "folders", "name", "title", "role", "department"] as const;
+  "paused", "read_only", "rehearsal", "tools", "job", "access", "folders", "position", "name", "title", "role", "department"] as const;
 
 const KNOWN = new Set<string>(HISTORY_FIELDS);
 
@@ -94,6 +94,8 @@ export function fieldValue(field: string, raw: unknown, t: T): string {
       const l = Array.isArray(raw) ? raw.map((f: any) => `${str(f?.path)} (${str(f?.level)})`) : [];
       return l.length ? l.join(", ") : t("hist.value.none");
     }
+    case "position":
+      return str(raw) || t("hist.value.none");
   }
   if (Array.isArray(raw)) return raw.length ? raw.map(str).join(", ") : t("hist.value.none");
   if (raw && typeof raw === "object") return clip(JSON.stringify(raw));

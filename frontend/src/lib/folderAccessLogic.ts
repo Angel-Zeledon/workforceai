@@ -2,7 +2,7 @@
  * unit tests run them under node --test. Levels: none (Ninguno), read (Leer), edit (Editar); inherited downwards, the
  * most specific rule wins (docs/superpowers/specs/2026-11-03-agentes-ubican-archivos-y-accesos-design.md, part 3). */
 export type AccessLevel = "none" | "read" | "edit";
-export type AccessSource = "default" | "manual";
+export type AccessSource = "default" | "manual" | "position";
 export interface AccessEntry { path: string; level: AccessLevel; source: AccessSource; grant_id?: string; fixed?: boolean }
 export interface FolderAgent { agent_id: string; name: string; level: AccessLevel; source: AccessSource; can_manage: boolean }
 

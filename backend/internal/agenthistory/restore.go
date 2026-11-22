@@ -19,7 +19,7 @@ const (
 	ReasonToolsFreer         = "tools_freer"          // the old version had more tools
 	ReasonControl            = "control"              // pause, read-only and rehearsal are changed from their switches
 	ReasonStructural         = "structural"           // name, title, role and department are not restored
-	ReasonAccess             = "access"               // who may use the agent and its folders are granted by hand
+	ReasonAccess             = "access"               // who may use the agent, its folders and its position are granted by hand
 	ReasonSecret             = "secret"               // a secret is never kept, so it cannot be brought back
 	ReasonNotAllowed         = "not_allowed"          // the person may not change that field
 	ReasonUnavailable        = "unavailable"          // that part is not available in this deployment
@@ -209,7 +209,7 @@ func PlanRestore(old, cur Config, env PlanEnv) Plan {
 		switch {
 		case c.Secret:
 			skip(c.Field, ReasonSecret)
-		case c.Field == "access" || c.Field == "folders":
+		case c.Field == "access" || c.Field == "folders" || c.Field == "position":
 			skip(c.Field, ReasonAccess)
 		}
 	}
