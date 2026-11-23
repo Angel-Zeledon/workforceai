@@ -215,11 +215,24 @@ archivo**, incluidas las lecturas de texto y vistas previas (hoy solo se audita 
 - Las oficinas privadas se ven con la puerta cerrada; las abiertas se pueden visitar mirando (sin tocar).
 - Cada persona tiene su mesa con sus agentes personales al lado.
 - Estados de presencia (disponible, concentrado, en reunión, fuera), que ya existen, más los automáticos por calendario.
-- **Opcional (decisión del dueño, 2026-11-13):** la oficina animada viene apagada porque consume muchos recursos del
-  dispositivo. Sin ella, el inicio (`/` y `/dashboard`) es la vista lista con el panel del agente a la derecha y la
-  escena 3D no se carga. Se enciende en Ajustes > Apariencia e idioma (`prefs.office3d`, por dispositivo), y al
-  encenderla aparecen la Tienda, las monedas, la meta del día y el selector "Vista 3D / Vista lista". `/shop` con la
-  oficina apagada explica cómo activarla. Las pruebas e2e arrancan con ella encendida (`e2e/playwright.config.ts`).
+- **Opcional, y se elige al entrar a Oficina (decisión del dueño, 2026-11-23):** la oficina animada consume muchos
+  recursos del dispositivo, así que Oficina abre en **Lista** por defecto y la escena 3D no se carga. En el encabezado
+  de Oficina, en todos los tamaños, está siempre el selector **Lista | Oficina 3D** (dos botones con su nombre). Pulsar
+  "Oficina 3D" enciende `prefs.office3d` y la abre ahí mismo, sin pasar por Ajustes; la primera vez muestra un aviso
+  breve (usa más recursos; se vuelve con "Lista"). Pulsar "Lista" desmonta la escena. La última vista usada se recuerda
+  en el dispositivo (`wf.office.view`; lógica pura en `lib/officeViewLogic.ts`) y Oficina abre en ella. Con la 3D
+  encendida aparecen la Tienda, las monedas y la meta del día. En Ajustes > Apariencia e idioma se conserva el
+  interruptor: apagarlo oculta Tienda y monedas y Oficina vuelve a Lista. `/shop` con la oficina apagada explica cómo
+  activarla. Las pruebas e2e arrancan con ella encendida (`e2e/playwright.config.ts`).
+- **La Lista es un espacio de trabajo multiagente** (`components/dashboard/workspace/`): a la izquierda el equipo en
+  filas agrupadas (Te esperan / Trabajando / Disponibles), en el centro la conversación con toda la oficina o con el
+  agente elegido y, siempre visible, la caja para escribir con "Para:" (reutiliza `ChatInput`/`sendChat`); a la derecha
+  Te necesitan (aprobar y responder en el sitio), En curso (pedidos con sus pasos en vivo) y Listo (archivos e
+  informes). Vacío: la caja va centrada con ejemplos según los agentes reales. Tableta: el equipo es una franja; móvil:
+  tres pestañas (Conversación, En curso con el número de lo que te espera, Equipo). Tareas, Agentes, Informes, Calidad y
+  Costos son pestañas discretas de la misma cabecera (modo simple: Trabajo, Agentes y Tareas); el gasto y los errores
+  viven en Costos. Cada bloque tiene su propio límite de error: si uno falla, los demás siguen. Los enlaces antiguos
+  `/dashboard?section=…` se mantienen (`listViewLogic.ts`).
 
 ---
 
