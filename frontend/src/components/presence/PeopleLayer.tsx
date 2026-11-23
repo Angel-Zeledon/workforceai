@@ -4,13 +4,13 @@
 // server announces. Own art (primitives): the Character / Furniture / Worn files are not touched.
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useOfficeLayout } from "@/lib/officeLayout";
 import { ZONE_NAMES, ZONE_SIZE } from "@/lib/officeLayoutModel";
 import { zoneCenter } from "../office/zones";
 import { usePresence } from "./store";
 import { sendPresence } from "./tap";
+import { PersonTag } from "./PersonTag";
 import {
   SPAWN, clampToFloor, colorFor, createMoveThrottle, keyDirection, shouldPing, smoothToward, stepToward, type PStatus, type Pt,
 } from "./logic";
@@ -56,16 +56,7 @@ function Figure({ color, status, name, self, moving }: { color: string; status: 
           <meshStandardMaterial color="#e8c4a0" roughness={0.8} transparent={away} opacity={away ? 0.6 : 1} />
         </mesh>
       </group>
-      <Html center position={[0, 1.95, 0]} zIndexRange={[6, 0]} style={{ pointerEvents: "none" }}>
-        <div
-          data-testid={self ? "presence-self-tag" : "presence-person-tag"}
-          className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-panel/95 px-2.5 py-0.5 text-[11px] font-semibold text-ink shadow-soft"
-          style={{ opacity: away ? 0.7 : 1 }}
-        >
-          <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: STATUS_COLOR[status] }} />
-          {name}
-        </div>
-      </Html>
+      <PersonTag position={[0, 1.95, 0]} name={name} color={STATUS_COLOR[status]} self={self} away={away} testId={self ? "presence-self-tag" : "presence-person-tag"} />
     </group>
   );
 }
