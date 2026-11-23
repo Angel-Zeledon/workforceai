@@ -63,7 +63,7 @@ export function Tile({ selected, onClick, name, sub, children, testid, pressed =
       className={`group flex min-w-0 flex-col overflow-hidden rounded-[10px] border bg-panel text-left transition ${FOCUS} ${selected ? "border-accent ring-2 ring-accent/30" : "border-line hover:border-line-strong hover:shadow-soft"} ${className}`}>
       <span className={`flex items-center justify-center bg-panel2/70 py-1.5 transition-colors ${selected ? "bg-accent-soft/50" : ""}`}>{children}</span>
       <span className="block px-2 py-1.5">
-        <span className="block truncate text-[12px] font-medium leading-tight text-ink">{name}</span>
+        <span className="line-clamp-2 min-h-[2.1rem] break-words text-[12px] font-medium leading-[1.05rem] text-ink">{name}</span>
         {sub && <span className="mt-0.5 block truncate text-[11px] leading-tight text-mute">{sub}</span>}
       </span>
     </button>

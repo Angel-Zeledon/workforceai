@@ -7162,7 +7162,6 @@
   "oe.style.pixel.d": "Crisp pixel art: few colors, a thin outline and sprite-like movement.",
   "oe.style.noEdit": "To move things around, the normal view is shown.",
   "oe.style.current": "Chosen",
-  "oe.style.same": "All five show the same scene, so the only difference you see is the style.",
   "oe.d.emptyTitle": "You have no desks or chairs yet",
   "oe.f.emptyTitle": "No furniture waiting to be placed",
   "oe.f.noneTitle": "Your office has no furniture yet",

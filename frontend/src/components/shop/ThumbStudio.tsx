@@ -12,7 +12,7 @@ import { Model, PieceView } from "../office/studio/StudioRoom";
 import { acquireAssets, releaseAssets, type Assets } from "../office/studio/studioAssets";
 import { disposeFlatThumbs, fixtureThumb, flatDraws, flatThumb, roomThumb } from "../office/editor/flatThumb";
 import { RoomSubject, fxKey, type Fx } from "../office/editor/RoomSubject";
-import { pixelate } from "../office/editor/thumbPost";
+import { fitted, pixelate } from "../office/editor/thumbPost";
 
 /**
  * Item pictures (shop and office editor) drawn the way the office draws them in its current style, instead of flat icons.
@@ -209,7 +209,8 @@ function Shot({ item, fx, style, onDone, ground, shadow, assets }: { item?: Shop
     }
     if (frames.current === 6) {
       gl.render(scene, camera);
-      onDone(style === "pixel" ? pixelate(gl.domElement) : gl.domElement.toDataURL("image/png"));
+      const cv = kind === "object" ? fitted(gl.domElement, 0.8) : gl.domElement; // furniture: crop to the piece so it fills its window
+      onDone(style === "pixel" ? pixelate(cv) : cv.toDataURL("image/png"));
     }
   });
   if (fx) return <group ref={stage}><RoomSubject fx={fx} assets={assets} focus={focusRef} /></group>;

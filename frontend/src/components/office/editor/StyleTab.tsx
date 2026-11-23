@@ -51,25 +51,24 @@ export function StyleTab() {
         onClick={() => pick(id)} onFocus={() => { setFocusId(id); setHot(id); }} onBlur={() => setHot((h) => (h === id ? null : h))}
         onPointerEnter={(e) => { if (e.pointerType !== "touch") setHot(id); }} onPointerLeave={() => setHot((h) => (h === id ? null : h))}
         className={`group block w-full min-w-0 overflow-hidden rounded-[10px] border bg-panel text-left transition ${FOCUS} ${on ? "border-accent ring-2 ring-accent/30" : "border-line hover:border-line-strong hover:shadow-soft"}`}>
-        <StyleClip id={id} playing={on || hot === id} priority={big} />
-        <span className={big ? "block px-3 py-2.5" : "block px-2.5 py-2"}>
+        <StyleClip id={id} playing={on || hot === id} priority={big} wide={big} />
+        <span className={big ? "block px-3 py-2" : "block px-2.5 py-1.5"}>
           <span className="flex items-center justify-between gap-2">
             <span className={`${big ? "text-[14px]" : "text-[12.5px]"} font-semibold text-ink`}>{t(`oe.style.${id}`)}</span>
             {on && <span className="shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent">{t("oe.style.current")}</span>}
           </span>
-          <span className={`mt-0.5 block text-mute ${big ? "text-[12px] leading-snug" : "text-[11.5px] leading-snug line-clamp-2"}`}>{t(`oe.style.${id}.d`)}</span>
+          <span className={`mt-0.5 block text-mute ${big ? "text-[12px] leading-snug" : "text-[11.5px] leading-snug line-clamp-1"}`}>{t(`oe.style.${id}.d`)}</span>
         </span>
       </button>
     );
   };
   return (
-    <div className="space-y-3.5">
+    <div className="space-y-3">
       <p className="text-[12px] leading-snug text-mute">{t("oe.style.hint")}</p>
       <div ref={group} role="radiogroup" aria-label={t("oe.style.title")} onKeyDown={onKey} className="space-y-3">
         {win(order[0], true)}
         <div className="grid grid-cols-2 gap-2.5">{order.slice(1).map((id) => win(id, false))}</div>
       </div>
-      <p className="text-[11.5px] leading-snug text-mute">{t("oe.style.same")}</p>
     </div>
   );
 }

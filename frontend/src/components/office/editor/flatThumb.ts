@@ -41,7 +41,7 @@ async function shoot(draw: (g: PIXI.Graphics, P: Pix) => void, fill = 0.8): Prom
   try {
     const b = holder.getLocalBounds();
     if (b.width < 1 || b.height < 1) return null;
-    const k = Math.min((SIDE * fill) / b.width, (SIDE * fill) / b.height, 3);
+    const k = Math.min((SIDE * fill) / b.width, (SIDE * fill) / b.height, 12);
     holder.scale.set(k);
     holder.position.set(SIDE / 2 - (b.x + b.width / 2) * k, SIDE / 2 - (b.y + b.height / 2) * k);
     app.render();

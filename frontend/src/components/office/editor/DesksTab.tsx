@@ -14,12 +14,18 @@ import { ItemThumb } from "../../shop/ItemThumb";
 import { EmptyArt, FOCUS, Tile } from "./parts";
 
 /** The pieces to pick from (the original first), as little windows. */
-function Picker({ items, value, none, onPick, testid }: { items: ShopItem[]; value: string | undefined; none: string; onPick: (id: string | undefined) => void; testid: string }) {
+/** The original desk and chair of the office, as stand-in pieces so the "Clásico" window shows a picture too. */
+const ORIGINAL: Record<"desk" | "chair", ShopItem> = {
+  desk: { id: "desk_original", kind: "office", category: "desk", slot: "desk", price: 0, rarity: "common", name: { es: "Escritorio", en: "Desk" }, description: { es: "", en: "" }, color: "#d9c4a3" },
+  chair: { id: "chair_original", kind: "office", category: "chair", slot: "chair", price: 0, rarity: "common", name: { es: "Silla", en: "Chair" }, description: { es: "", en: "" }, color: "#59616d" },
+};
+
+function Picker({ items, value, none, onPick, testid, kind }: { items: ShopItem[]; value: string | undefined; none: string; onPick: (id: string | undefined) => void; testid: string; kind: "desk" | "chair" }) {
   const { locale } = useT();
   return (
     <div className="grid grid-cols-3 gap-2" data-testid={testid}>
       <Tile selected={!value} name={none} onClick={() => onPick(undefined)}>
-        <span className="flex h-16 w-16 items-center justify-center rounded-md border border-dashed border-line-strong text-[11px] text-mute" aria-hidden>—</span>
+        <ItemThumb item={ORIGINAL[kind]} size={64} />
       </Tile>
       {items.map((it) => (
         <Tile key={it.id} testid={`oe-pick-${it.id}`} selected={value === it.id} name={itemName(it, locale)} onClick={() => onPick(it.id)}>
@@ -89,13 +95,13 @@ export function DesksTab() {
                   {desks.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-[12px] text-mute"><span className="font-medium text-ink2">{t("oe.d.desk")}</span><button type="button" onClick={() => all("desk", cfg.desk)} className={`rounded font-medium text-accent hover:underline ${FOCUS}`}>{t("oe.d.all")}</button></div>
-                      <Picker testid={`oe-desks-${id}`} items={desks} value={cfg.desk} none={t("oe.d.default")} onPick={(v) => (v ? setCfg(id, { desk: v }) : setCfg(id, {}, ["desk"]))} />
+                      <Picker kind="desk" testid={`oe-desks-${id}`} items={desks} value={cfg.desk} none={t("oe.d.default")} onPick={(v) => (v ? setCfg(id, { desk: v }) : setCfg(id, {}, ["desk"]))} />
                     </div>
                   )}
                   {chairs.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-[12px] text-mute"><span className="font-medium text-ink2">{t("oe.d.chair")}</span><button type="button" onClick={() => all("chair", cfg.chair)} className={`rounded font-medium text-accent hover:underline ${FOCUS}`}>{t("oe.d.all")}</button></div>
-                      <Picker testid={`oe-chairs-${id}`} items={chairs} value={cfg.chair} none={t("oe.d.default")} onPick={(v) => (v ? setCfg(id, { chair: v }) : setCfg(id, {}, ["chair"]))} />
+                      <Picker kind="chair" testid={`oe-chairs-${id}`} items={chairs} value={cfg.chair} none={t("oe.d.default")} onPick={(v) => (v ? setCfg(id, { chair: v }) : setCfg(id, {}, ["chair"]))} />
                     </div>
                   )}
                   {cfg.x !== undefined && <Btn onClick={() => setCfg(id, {}, ["pos"])}>{t("oe.d.reset")}</Btn>}

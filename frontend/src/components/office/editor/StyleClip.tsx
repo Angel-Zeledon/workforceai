@@ -28,15 +28,15 @@ export function useReducedMotion(): boolean {
   return !!pref || os;
 }
 
-export function StyleClip({ id, playing, className = "", priority = false }: { id: OfficeStyle; playing: boolean; className?: string; priority?: boolean }) {
+export function StyleClip({ id, playing, className = "", priority = false, wide = false }: { id: OfficeStyle; playing: boolean; className?: string; priority?: boolean; wide?: boolean }) {
   const reduced = useReducedMotion();
   const [ready, setReady] = useState(false);
   const run = playing && !reduced;
   useEffect(() => { if (!run) setReady(false); }, [run]);
   return (
-    <div className={`relative aspect-[16/10] w-full overflow-hidden bg-panel2 ${className}`}>
+    <div className={`relative w-full overflow-hidden bg-panel2 ${wide ? "aspect-[16/9]" : "aspect-[16/10]"} ${className}`}>
       {/* eslint-disable @next/next/no-img-element -- recorded loops, not worth the image optimizer */}
-      <img src={STYLE_POSTER[id]} alt="" width={448} height={280} draggable={false} loading={priority ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover" />
+      <img src={STYLE_POSTER[id]} alt="" width={448} height={280} draggable={false} loading={priority ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover" style={id === "pixel" ? { imageRendering: "pixelated" } : undefined} />
       {run && <img src={STYLE_LOOP[id]} alt="" width={448} height={280} draggable={false} onLoad={() => setReady(true)} className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-200 ${ready ? "opacity-100" : "opacity-0"}`}
         style={id === "pixel" ? { imageRendering: "pixelated" } : undefined} />}
       {/* eslint-enable @next/next/no-img-element */}

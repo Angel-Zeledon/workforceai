@@ -38,5 +38,31 @@ export function pixelate(src: HTMLCanvasElement): string {
   return small.toDataURL("image/png");
 }
 
+/**
+ * Crops a render to the piece itself and puts it back at `fill` of a side x side square (centered), so every picture
+ * fills its window the same way whatever the piece's size. Returns a new canvas.
+ */
+export function fitted(src: HTMLCanvasElement, fill = 0.8, side = 256): HTMLCanvasElement {
+  const probe = document.createElement("canvas");
+  const n = 128;
+  probe.width = probe.height = n;
+  const pg = probe.getContext("2d", { willReadFrequently: true })!;
+  pg.drawImage(src, 0, 0, n, n);
+  const d = pg.getImageData(0, 0, n, n).data;
+  let x0 = n, y0 = n, x1 = -1, y1 = -1;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (d[(y * n + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const out = document.createElement("canvas");
+  out.width = out.height = side;
+  if (x1 < 0) return out;
+  const k = src.width / n;
+  const w = (x1 - x0 + 1) * k, h = (y1 - y0 + 1) * k;
+  const s = Math.max(w, h) / fill;
+  const cx = ((x0 + x1 + 1) / 2) * k, cy = ((y0 + y1 + 1) / 2) * k;
+  const g = out.getContext("2d")!;
+  g.imageSmoothingQuality = "high";
+  g.drawImage(src, cx - s / 2, cy - s / 2, s, s, 0, 0, side, side);
+  return out;
+}
+
 /** Displayed side of a Pixel picture for a box of `size` px: a whole multiple of PIXEL_SIDE (at least 1x). */
 export const pixelDisplay = (size: number) => PIXEL_SIDE * Math.max(1, Math.floor(size / PIXEL_SIDE));
