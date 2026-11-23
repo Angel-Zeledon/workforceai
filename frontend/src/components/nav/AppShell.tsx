@@ -75,10 +75,18 @@ function Sidebar({ section, collapsed, onToggle, onNavigate }: { section: string
   );
   return (
     <nav aria-label={t("nav.main")} data-testid="sidebar" data-collapsed={collapsed} className="wf-nav flex h-full flex-col border-r border-line bg-panel text-ink">
-      <div className={`flex h-14 shrink-0 items-center gap-2.5 border-b border-line ${collapsed ? "justify-center" : "px-4"}`}>
-        <AgentMark size={32} tone="dark" className="shrink-0" />
-        {!collapsed && <span className="truncate text-[14px] font-semibold tracking-tight">AI Workforce OS</span>}
-      </div>
+      {collapsed && onToggle ? (
+        // collapsed: the logo is also the way back to the full menu, so it never depends on the footer being in view
+        <button type="button" onClick={onToggle} data-testid="sidebar-expand-logo" title={t("nav.expand")} aria-label={t("nav.expand")}
+          className="flex h-14 w-full shrink-0 items-center justify-center border-b border-line transition hover:bg-panel2">
+          <AgentMark size={32} tone="dark" className="shrink-0" />
+        </button>
+      ) : (
+        <div className={`flex h-14 shrink-0 items-center gap-2.5 border-b border-line ${collapsed ? "justify-center" : "px-4"}`}>
+          <AgentMark size={32} tone="dark" className="shrink-0" />
+          {!collapsed && <span className="truncate text-[14px] font-semibold tracking-tight">AI Workforce OS</span>}
+        </div>
+      )}
       <div className="wf-nav-main min-h-0 flex-1 overflow-y-auto p-2.5">
         {groups.filter((g) => g.id !== "bottom").map((g) => (
           <div key={g.id} role="group" aria-label={g.label ? t(g.label) : undefined} data-testid={`nav-group-${g.id}`} className="mb-2 space-y-0.5 last:mb-0">

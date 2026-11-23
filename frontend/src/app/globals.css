@@ -184,10 +184,10 @@ button:not(:disabled):active, a.ac-press:active { transform: scale(0.985); }
 [data-reduce="1"] .shop-sheen::after { animation: none; opacity: 0; }
 
 /* Sidebar on short screens (laptops with a small window, landscape phones): everything scrolls as one list, so the footer
-   (Settings, "Ver todo", collapse) never covers the last items ("Reuniones", "Habilidades"). */
+   (Settings, "Ver todo", collapse) never covers the last items ("Reuniones", "Habilidades"). The collapse/expand button
+   stays: hiding it left a collapsed menu with no way back to the full labels. */
 @media (max-height: 720px) {
   .wf-nav { overflow-y: auto; }
   .wf-nav-main { flex: none; overflow: visible; }
   .wf-nav-foot { padding-top: 6px; padding-bottom: 6px; }
-  .wf-nav [data-testid="sidebar-toggle"] { display: none; }
 }
