@@ -83,7 +83,7 @@ function FixtureTile({ id }: { id: FixtureId }) {
       </button>
       {(hidden || cfg) && (
         <button type="button" data-testid={hidden ? `oe-fixture-show-${id}` : undefined} onClick={() => mutate((l) => (hidden ? showFixture(l, id) : resetFixture(l, id)))}
-          className={`mx-1.5 mb-1.5 mt-1 min-h-8 rounded-md px-2 text-[12px] font-medium text-accent transition hover:bg-accent-soft ${FOCUS}`}>{hidden ? t("oe.fx.show") : t("oe.z.reset")}</button>
+          className={`mx-1.5 mb-1.5 mt-1 min-h-10 rounded-md px-2 text-[12px] font-medium text-accent transition hover:bg-accent-soft ${FOCUS}`}>{hidden ? t("oe.fx.show") : t("oe.z.reset")}</button>
       )}
     </div>
   );
@@ -118,8 +118,8 @@ function RoomsSection() {
                 </span>
               </button>
               <div className="flex items-center justify-between gap-2 border-t border-line px-2 py-1">
-                <button type="button" aria-expanded={expanded} data-testid={`oe-zone-open-${z}`} onClick={() => setOpen(open === z ? null : z)} className={`min-h-9 rounded-md px-2 text-[12px] font-medium text-accent hover:bg-accent-soft ${FOCUS}`}>{expanded ? t("oe.z.hideParts") : t("oe.z.parts")}</button>
-                {moved && <button type="button" onClick={() => mutate((l) => { const zs = { ...l.zones }; delete zs[z]; return { ...l, zones: zs }; })} className={`min-h-9 rounded-md px-2 text-[12px] font-medium text-accent hover:bg-accent-soft ${FOCUS}`}>{t("oe.z.reset")}</button>}
+                <button type="button" aria-expanded={expanded} data-testid={`oe-zone-open-${z}`} onClick={() => setOpen(open === z ? null : z)} className={`min-h-10 rounded-md px-2 text-[12px] font-medium text-accent hover:bg-accent-soft ${FOCUS}`}>{expanded ? t("oe.z.hideParts") : t("oe.z.parts")}</button>
+                {moved && <button type="button" onClick={() => mutate((l) => { const zs = { ...l.zones }; delete zs[z]; return { ...l, zones: zs }; })} className={`min-h-10 rounded-md px-2 text-[12px] font-medium text-accent hover:bg-accent-soft ${FOCUS}`}>{t("oe.z.reset")}</button>}
               </div>
               {expanded && <div className="grid grid-cols-3 gap-2 border-t border-line bg-panel2/40 p-2" data-testid={`oe-zone-parts-${z}`}>{ROOM_PARTS[z].map((id) => <FixtureTile key={id} id={id} />)}</div>}
             </li>
@@ -192,7 +192,7 @@ export function FurnitureTab() {
             <div className="flex flex-wrap gap-1.5">
               {["all", ...cats].map((c) => (
                 <button key={c} type="button" aria-pressed={cat === c} onClick={() => setCat(c)}
-                  className={`min-h-8 rounded-full border px-3 py-1 text-[12px] font-medium transition ${FOCUS} ${cat === c ? "border-accent/40 bg-accent-soft text-accent" : "border-line bg-panel text-ink2 hover:bg-panel2"}`}>{c === "all" ? t("oe.f.all") : t(`shop.cat.${c}`)}</button>
+                  className={`min-h-8 [@media(pointer:coarse)]:min-h-10 rounded-full border px-3 py-1 text-[12px] font-medium transition ${FOCUS} ${cat === c ? "border-accent/40 bg-accent-soft text-accent" : "border-line bg-panel text-ink2 hover:bg-panel2"}`}>{c === "all" ? t("oe.f.all") : t(`shop.cat.${c}`)}</button>
               ))}
             </div>
             <div className="grid grid-cols-3 gap-2" data-testid="oe-stock">
@@ -202,7 +202,7 @@ export function FurnitureTab() {
                 </Tile>
               ))}
             </div>
-            <button type="button" onClick={toShop} className={`rounded text-[12px] font-medium text-accent hover:underline ${FOCUS}`}>{t("oe.f.shop")}</button>
+            <button type="button" onClick={toShop} className={`inline-flex min-h-10 items-center rounded text-[12px] font-medium text-accent hover:underline ${FOCUS}`}>{t("oe.f.shop")}</button>
           </>
         )}
       </Section>

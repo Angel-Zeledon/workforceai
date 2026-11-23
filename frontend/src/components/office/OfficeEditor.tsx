@@ -66,7 +66,7 @@ export function OfficeEditor() {
         <header className="border-b border-line px-4 pb-0 pt-3">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-[15px] font-semibold text-ink">{t("oe.title")}</h2>
-            <button type="button" onClick={() => st().cancel()} aria-label={t("oe.cancel")} className={`-m-1.5 rounded-md p-2.5 text-mute hover:bg-panel2 hover:text-ink ${FOCUS}`}><Icon name="x" size={16} /></button>
+            <button type="button" onClick={() => st().cancel()} aria-label={t("oe.cancel")} className={`-m-2 rounded-md p-3 text-mute hover:bg-panel2 hover:text-ink ${FOCUS}`}><Icon name="x" size={16} /></button>
           </div>
           <div role="tablist" onKeyDown={onTabKey} className="mt-2 flex gap-1">
             {TABS.map((k) => (

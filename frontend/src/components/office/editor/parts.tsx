@@ -21,7 +21,7 @@ export function Swatches({ colors, value, onPick, label }: { colors: string[]; v
     <div className="flex flex-wrap gap-1.5">
       {colors.map((c) => (
         <button key={c} type="button" aria-label={label(c)} aria-pressed={value.toLowerCase() === c.toLowerCase()} onClick={() => onPick(c)}
-          className={`h-7 w-7 rounded-full border transition hover:scale-110 ${FOCUS} ${value.toLowerCase() === c.toLowerCase() ? "border-accent ring-2 ring-accent/40" : "border-line-strong"}`} style={{ background: c }} />
+          className={`h-7 w-7 [@media(pointer:coarse)]:h-10 [@media(pointer:coarse)]:w-10 rounded-full border transition hover:scale-110 ${FOCUS} ${value.toLowerCase() === c.toLowerCase() ? "border-accent ring-2 ring-accent/40" : "border-line-strong"}`} style={{ background: c }} />
       ))}
     </div>
   );
@@ -31,11 +31,11 @@ export function ColorField({ value, onPick, label }: { value: string; onPick: (c
   const [text, setText] = useState("");
   return (
     <div className="mt-2 flex items-center gap-2 text-[12px] text-mute">
-      <label className="relative flex h-7 w-7 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-line-strong focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent" style={{ background: value }} title={label}>
+      <label className="relative flex h-7 w-7 [@media(pointer:coarse)]:h-10 [@media(pointer:coarse)]:w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-line-strong focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent" style={{ background: value }} title={label}>
         <input type="color" value={isHex(value) && value.length === 7 ? value : "#ffffff"} onChange={(e) => onPick(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label={label} />
       </label>
       <input value={text} onChange={(e) => { setText(e.target.value); if (isHex(e.target.value)) onPick(e.target.value); }} placeholder={value}
-        className={`w-24 rounded-md border border-line bg-panel2 px-2 py-1 font-mono text-[11.5px] text-ink ${FOCUS}`} aria-label={label} />
+        className={`w-24 [@media(pointer:coarse)]:min-h-10 rounded-md border border-line bg-panel2 px-2 py-1 font-mono text-[11.5px] text-ink ${FOCUS}`} aria-label={label} />
       <span>{label}</span>
     </div>
   );
