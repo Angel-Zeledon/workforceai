@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { APPEAR_SECONDS, STYLE_LOOKS, appearPose, bodySquash, lookOf, stopMotionTick, styleMaterial, stylePose } from "./officeTheme.ts";
-import { LEGACY_STYLES, OFFICE_STYLES, SPACE_EFFECTS, STYLES_WITHOUT_EDITING, normalizeLayout, normalizeStyle } from "../../lib/officeLayoutModel.ts";
+import { LEGACY_STYLES, OFFICE_STYLES, SPACE_EFFECTS, normalizeLayout, normalizeStyle } from "../../lib/officeLayoutModel.ts";
 
 const MAT = { roughness: 0.8, metalness: 0, transparent: false };
 const REST = { y: 0, sx: 1, sy: 1, sz: 1, rx: 0, ry: 0, visible: true };
@@ -86,8 +86,7 @@ test("the layout keeps a known style, drops unknown or default ones and migrates
   assert.equal(normalizeStyle(undefined), "classic");
 });
 
-test("the editor moves pieces on the normal view in the styles that cannot edit, and Space shows what each style uses", () => {
-  assert.deepEqual(STYLES_WITHOUT_EDITING, ["studio", "flat"]);
+test("Space shows what each style uses", () => {
   for (const s of OFFICE_STYLES) assert.ok(SPACE_EFFECTS[s].wallColor && SPACE_EFFECTS[s].floor && SPACE_EFFECTS[s].trim && SPACE_EFFECTS[s].windows, s);
   // Plano has no light of the day and no view; the 3D styles have light
   assert.equal(SPACE_EFFECTS.flat.light, false);

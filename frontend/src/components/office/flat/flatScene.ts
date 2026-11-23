@@ -519,6 +519,8 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     wdbg.__officeFlat = {
       freeze: (on: boolean) => { if (on) app.ticker.stop(); else app.ticker.start(); },
       step: (n: number, dt: number) => { for (let i = 0; i < n; i++) tick({ deltaMS: dt * 1000 } as PIXI.Ticker); app.render(); },
+      /** page pixel (client coordinates) of the floor point (x, z) at height h */
+      project: (x: number, z: number, h = 0) => { const s = toScreen(x, z, h), r = app.canvas.getBoundingClientRect(); return { x: r.left + s.x, y: r.top + s.y }; },
     };
   }
 

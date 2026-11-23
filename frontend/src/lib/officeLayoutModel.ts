@@ -19,8 +19,6 @@ export function normalizeStyle(v: unknown): OfficeStyle {
   if ((OFFICE_STYLES as string[]).includes(v)) return v as OfficeStyle;
   return Object.prototype.hasOwnProperty.call(LEGACY_STYLES, v) ? LEGACY_STYLES[v] : "classic";
 }
-/** Styles drawn by their own renderer, which cannot move pieces: the editor shows the normal view while moving things. */
-export const STYLES_WITHOUT_EDITING: OfficeStyle[] = ["studio", "flat"];
 /**
  * What the "Espacio" tab of the editor offers in each style: only the controls that change something in that style's
  * renderer (the 3D styles draw everything; the illustrated one has no light of the day and no window view).
