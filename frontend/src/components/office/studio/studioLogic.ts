@@ -50,6 +50,9 @@ export function nextBase(cur: BaseState, want: BaseWant, dt: number): { state: B
   return { state: { base, t }, hold: base === "StandUp" };
 }
 
+/** Playback speed of the Walk clip for a walking speed given as a share of the agents' (1 = gestures.WALK_SPEED): proportional above 1 so faster walkers do not skate. */
+export const walkTimeScale = (speed: number) => (speed >= 1 ? 1.2 * Math.min(2, speed) : 0.45 + 0.75 * Math.max(0, speed));
+
 /** The clip state a person starts in. */
 export const startBase = (seated: boolean): BaseState => ({ base: seated ? "Seated" : "Idle", t: 0 });
 

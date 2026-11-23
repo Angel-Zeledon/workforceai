@@ -149,7 +149,9 @@ function Subject({ item, focus, assets }: { item: ShopItem; focus: React.RefObje
           <group position={[0, 0.0, 0]}><BodyMesh worn={{}} withHead={false} /></group>
         </group>
       );
-    case "scarf": case "badge":
+    case "badge": // the chest close-up: no head at all, so no half head cut by the frame (the badge is what the picture is about)
+      return <group><group ref={focus}><BodyMesh worn={worn} withHead={false} /></group></group>;
+    case "scarf":
       return <group><group ref={focus}><BodyMesh worn={worn} /></group></group>;
     case "buddy":
       return <group ref={focus}><BodyMesh worn={worn} /></group>;
@@ -193,7 +195,7 @@ function Shot({ item, fx, style, onDone, ground, shadow, assets }: { item?: Shop
       const center = box.getCenter(new THREE.Vector3());
       if (kind === "head") center.y -= size.y * 0.08;
       if (kind === "torso") { center.set(0, 0.3, 0); size.set(0.82, 0.95, 0.5); }
-      if (kind === "chest") { center.y = 0.3; size.set(0.55, 0.55, 0.45); center.x = 0; center.z = 0; }
+      if (kind === "chest") { center.y = 0.27; size.set(0.62, 0.55, 0.45); center.x = 0; center.z = 0; }
       if (kind === "shoulder") { center.set(-0.12, 0.38, 0.05); size.set(0.55, 0.5, 0.45); }
       // the soft shadow sits under the object and is only as wide as it (Estudio: a real cast shadow instead of the blob)
       const lit = !!assets && kind === "object";

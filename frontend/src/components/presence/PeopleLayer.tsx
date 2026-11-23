@@ -2,15 +2,14 @@
 // The PEOPLE of the office inside the 3D scene: one avatar per person online, walking next to the agents.
 // Mine is driven by WASD / arrow keys or by double-clicking the floor; the others glide toward the position the
 // server announces. Own art (primitives): the Character / Furniture / Worn files are not touched.
-import { useEffect, useMemo, useRef } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useOfficeLayout } from "@/lib/officeLayout";
-import { ZONE_NAMES, ZONE_SIZE } from "@/lib/officeLayoutModel";
-import { zoneCenter } from "../office/zones";
+import { zoneAt } from "./zoneAt";
 import { usePresence } from "./store";
 import { sendPresence } from "./tap";
+import { PersonTag } from "./PersonTag";
 import {
   SPAWN, clampToFloor, colorFor, createMoveThrottle, keyDirection, shouldPing, smoothToward, stepToward, type PStatus, type Pt,
 } from "./logic";
@@ -18,17 +17,14 @@ import {
 const SPEED = 3.2; // meters per second
 export const STATUS_COLOR: Record<PStatus, string> = { available: "#2f9e6b", focus: "#c0392b", meeting: "#b7791f", away: "#8b95a5" };
 
-/** The room a point is in ("meeting" | "approvals" | "cafe") or "floor". Reads the organization's own layout. */
-export function zoneAt(x: number, z: number): string {
-  for (const n of ZONE_NAMES) {
-    const [cx, cz] = zoneCenter(n);
-    const s = ZONE_SIZE[n];
-    if (Math.abs(x - (cx + s.dx)) <= s.w / 2 && Math.abs(z - (cz + s.dz)) <= s.d / 2) return n;
-  }
-  return "floor";
-}
+export { zoneAt };
 
-function Figure({ color, status, name, self, moving }: { color: string; status: PStatus; name: string; self: boolean; moving: { current: boolean } }) {
+/** What draws the body of a person: the capsule figure by default; the Estudio office supplies its glTF people (same movement and tag). */
+export type BodyRender = (o: { id: string; color: string; status: PStatus; moving: { current: boolean } }) => React.ReactNode;
+const Ctx = createContext<BodyRender | null>(null);
+
+function Figure({ id, color, status, name, self, moving }: { id: string; color: string; status: PStatus; name: string; self: boolean; moving: { current: boolean } }) {
+  const custom = useContext(Ctx);
   const body = useRef<THREE.Group>(null);
   const t0 = useRef(Math.random() * 6);
   useFrame(({ clock }) => {
@@ -46,6 +42,7 @@ function Figure({ color, status, name, self, moving }: { color: string; status: 
         <ringGeometry args={[0.36, 0.46, 32]} />
         <meshBasicMaterial color={STATUS_COLOR[status]} transparent opacity={away ? 0.5 : 0.95} />
       </mesh>
+      {custom ? custom({ id, color, status, moving }) : (
       <group ref={body}>
         <mesh position-y={0.58} castShadow>
           <capsuleGeometry args={[0.22, 0.58, 6, 14]} />
@@ -56,16 +53,8 @@ function Figure({ color, status, name, self, moving }: { color: string; status: 
           <meshStandardMaterial color="#e8c4a0" roughness={0.8} transparent={away} opacity={away ? 0.6 : 1} />
         </mesh>
       </group>
-      <Html center position={[0, 1.95, 0]} zIndexRange={[6, 0]} style={{ pointerEvents: "none" }}>
-        <div
-          data-testid={self ? "presence-self-tag" : "presence-person-tag"}
-          className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-panel/95 px-2.5 py-0.5 text-[11px] font-semibold text-ink shadow-soft"
-          style={{ opacity: away ? 0.7 : 1 }}
-        >
-          <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: STATUS_COLOR[status] }} />
-          {name}
-        </div>
-      </Html>
+      )}
+      <PersonTag position={[0, 1.95, 0]} name={name} color={STATUS_COLOR[status]} self={self} away={away} testId={self ? "presence-self-tag" : "presence-person-tag"} />
     </group>
   );
 }
@@ -92,7 +81,7 @@ function Remote({ id }: { id: string }) {
   if (!p) return null;
   return (
     <group ref={g}>
-      <Figure color={color} status={p.status} name={p.name} self={false} moving={moving} />
+      <Figure id={id} color={color} status={p.status} name={p.name} self={false} moving={moving} />
     </group>
   );
 }
@@ -190,22 +179,22 @@ function Self() {
   if (!me) return null;
   return (
     <group ref={g} position={[pos.current.x, 0, pos.current.z]}>
-      <Figure color={color} status={me.status} name={me.name} self moving={moving} />
+      <Figure id={selfId ?? "me"} color={color} status={me.status} name={me.name} self moving={moving} />
     </group>
   );
 }
 
 /** All the people of the office. Hidden while the office is being edited. */
-export function PeopleLayer() {
+export function PeopleLayer({ body }: { body?: BodyRender } = {}) {
   const editing = useOfficeLayout((s) => s.editing);
   const ids = usePresence((s) => Object.keys(s.people).filter((k) => k !== s.selfId).sort().join("|"));
   const load = usePresence((s) => s.load);
   useEffect(() => { void load(); }, [load]);
   if (editing) return null;
   return (
-    <>
+    <Ctx.Provider value={body ?? null}>
       <Self />
       {ids ? ids.split("|").map((id) => <Remote key={id} id={id} />) : null}
-    </>
+    </Ctx.Provider>
   );
 }

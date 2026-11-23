@@ -25,6 +25,7 @@ import { makeSim, stepAgent, type Own, type Sim } from "./agentSim";
 import { wornLookOf } from "./wornLook";
 import { eventGestures } from "./flatGestures";
 import { createFx, type Fx } from "./flatFx";
+import { createPeople, type People } from "./flatPeople";
 import { dropFeet, placePopups, publishFeet } from "./flatPopups";
 import { createFlatEditor, type FlatEditor } from "./flatEditor";
 
@@ -457,6 +458,7 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
 
     // consult / delegation lines, travelling folders, coins and shields
     fx.update({ now: nowMs, dtS: dt, reduce, scale: chipScale });
+    people.update({ dtS: dt, clock, reduce, scale: chipScale, figScale: FS });
     placePopups(toScreen, app.screen.width, app.screen.height);
 
     // speech bubbles (a message line wins over the working line of the same agent)
@@ -508,6 +510,7 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     agent: (id) => { const n = nodes.get(id); return n ? { x: n.sim.x, z: n.sim.z, up: headPx(n) * k } : null; },
     desk: (id) => deskInfo.get(id)?.pos ?? null,
   });
+  const people: People = createPeople({ P, world, ui, canvas: app.canvas, fit: () => ({ k, x: world.position.x, y: world.position.y }), toScreen });
   const editor: FlatEditor = createFlatEditor({
     P, world, canvas: app.canvas, fit: () => ({ k, x: world.position.x, y: world.position.y }), requestRebuild: () => { sigAt = 1; },
   });
@@ -539,7 +542,7 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
       const gl = (app.renderer as { gl?: WebGLRenderingContext | WebGL2RenderingContext }).gl;
       try { app.destroy(true, { children: true, texture: true }); } catch { /* destroyed during init */ }
       try { gl?.getExtension("WEBGL_lose_context")?.loseContext(); } catch { /* not supported */ }
-      editor.destroy(); fx.destroy(); dropFeet(nodes.keys());
+      editor.destroy(); fx.destroy(); people.destroy(); dropFeet(nodes.keys());
       nodes.clear(); zoneChips.clear(); bubViews.clear(); statics = []; deskDyn = [];
     },
   };
