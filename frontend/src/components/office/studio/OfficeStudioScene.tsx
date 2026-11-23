@@ -28,10 +28,18 @@ import { deskOf, seatOf, standOf } from "../registry";
 import { acquireAssets, releaseAssets, type Assets } from "./studioAssets";
 import { Fixtures, Mats, Pieces, RoomShell, Workstations, disposeShared, type Desk } from "./StudioRoom";
 import { People, type DeskInfo } from "./StudioPeople";
+import { StudioEdit } from "./StudioEdit";
+import { Links } from "../Links";
+import { Folders } from "../Folders";
+import { CoinFloats } from "../CoinFloats";
+import { ShieldFloats } from "../ShieldFloats";
+import { PeopleLayer } from "../../presence/PeopleLayer";
 
 const OfficeScene = dynamic(() => import("../OfficeScene"), { ssr: false });
 
 const VIEW = { pos: new THREE.Vector3(7, 16, 19), target: new THREE.Vector3(0.5, 0.4, -0.3) };
+/** The editor looks down on the floor plan so the grid and the footprints read clearly (same view as the 3D office). */
+const EDIT = { pos: new THREE.Vector3(0, 25, 15), target: new THREE.Vector3(0, 0, 0.8) };
 const WARM = new THREE.Color("#ffb878"), COOL = new THREE.Color("#b8d4ff");
 
 /** Mixes a color toward warm (temp < 0) or cool (temp > 0): the lighting-temperature slider of the editor. */
@@ -86,6 +94,8 @@ function Lights() {
 /** The same near-isometric camera as the other 3D styles, with bounded zoom and turn (a phone upright backs off and widens). */
 function Rig() {
   const ref = useRef<OrbitControlsImpl>(null);
+  const editing = useOfficeLayout((s) => s.editing);
+  const dragging = useOfficeLayout((s) => s.dragging);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const aspect = useThree((s) => s.size.width / Math.max(1, s.size.height));
   const narrow = aspect < 0.9;
@@ -94,24 +104,41 @@ function Rig() {
     const fov = narrow ? Math.min(52, 32 + (0.9 - aspect) * 40) : 32;
     if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
     const c = ref.current;
-    if (!c) return;
+    if (!c || editing) return;
     c.object.position.copy(c.target.clone().add(VIEW.pos.clone().sub(VIEW.target).multiplyScalar(back)));
     c.update();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only a change of shape reframes the view
   }, [narrow]);
-  useFrame(() => {
+  const tween = useRef<{ t: number; fromPos: THREE.Vector3; fromTarget: THREE.Vector3; to: typeof VIEW } | null>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
     const c = ref.current;
     if (!c) return;
-    const t = c.target;
-    t.x = THREE.MathUtils.clamp(t.x, narrow ? -10 : -7, narrow ? 10 : 7);
-    t.z = THREE.MathUtils.clamp(t.z, narrow ? -8 : -5, narrow ? 8 : 6);
+    tween.current = { t: 0, fromPos: c.object.position.clone(), fromTarget: c.target.clone(), to: editing ? EDIT : { pos: VIEW.target.clone().add(VIEW.pos.clone().sub(VIEW.target).multiplyScalar(back)), target: VIEW.target } };
+  }, [editing]); // eslint-disable-line react-hooks/exhaustive-deps -- `back` is read when the edit mode ends
+  useFrame((_, dt) => {
+    const c = ref.current;
+    if (!c) return;
+    const tw = tween.current;
+    if (tw) { // the camera glides between the editing view and the normal one
+      tw.t = Math.min(1, tw.t + dt / 0.9);
+      const e = 1 - Math.pow(1 - tw.t, 3);
+      c.object.position.lerpVectors(tw.fromPos, tw.to.pos, e);
+      c.target.lerpVectors(tw.fromTarget, tw.to.target, e);
+      if (tw.t >= 1) tween.current = null;
+      return;
+    }
+    const t = c.target, wide = editing || narrow;
+    t.x = THREE.MathUtils.clamp(t.x, wide ? -10 : -7, wide ? 10 : 7);
+    t.z = THREE.MathUtils.clamp(t.z, wide ? -8 : -5, wide ? 8 : 6);
     t.y = THREE.MathUtils.clamp(t.y, 0, 1.2);
   });
   return (
     <OrbitControls
-      ref={ref as never} makeDefault target={[0.5, 0.4, -0.3]} enableDamping dampingFactor={0.08}
-      minDistance={narrow ? 7 : 11} maxDistance={30 * back} minPolarAngle={0.55} maxPolarAngle={1.1}
-      minAzimuthAngle={narrow ? -1.4 : -0.7} maxAzimuthAngle={narrow ? 1.4 : 0.7}
+      ref={ref as never} makeDefault target={[0.5, 0.4, -0.3]} enabled={!dragging} enableDamping dampingFactor={0.08}
+      minDistance={editing ? 8 : narrow ? 7 : 11} maxDistance={(editing ? 38 : 30) * back} minPolarAngle={editing ? 0.08 : 0.55} maxPolarAngle={editing ? 1.2 : 1.1}
+      minAzimuthAngle={editing || narrow ? -1.4 : -0.7} maxAzimuthAngle={editing || narrow ? 1.4 : 0.7}
       panSpeed={narrow ? 1 : 0.7} rotateSpeed={0.45} zoomSpeed={0.7} screenSpacePanning={!narrow}
       touches={{ ONE: narrow ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE }}
     />
@@ -133,7 +160,11 @@ function PostFx() {
 }
 
 function World({ a }: { a: Assets }) {
-  const layout = useOfficeLayout((s) => effective(s));
+  const base = useOfficeLayout((s) => effective(s));
+  const zoneGhost = useOfficeLayout((s) => s.zoneGhost);
+  const deskGhost = useOfficeLayout((s) => s.deskGhost);
+  // a room being dragged shows where it would land: its furniture follows
+  const layout = useMemo(() => (zoneGhost ? { ...base, zones: { ...base.zones, [zoneGhost.id]: { x: zoneGhost.x, z: zoneGhost.z } } } : base), [base, zoneGhost]);
   const catalog = useRewards((s) => s.catalog);
   const key = useStore((s) => s.agentOrder.map((id) => `${id}:${s.agents[id]?.role ?? ""}`).join(","));
   const { mix, night } = useMix();
@@ -147,14 +178,14 @@ function World({ a }: { a: Assets }) {
     S.agentOrder.forEach((id, i) => {
       const ag = S.agents[id];
       if (!ag) return;
-      const pos = deskOf({ id, role: ag.role }, i);
+      const pos: [number, number] = deskGhost?.id === id ? [deskGhost.x, deskGhost.z] : deskOf({ id, role: ag.role }, i);
       const cfg = layout.desks[id];
       list.push({ id, pos, deskItem: cfg?.desk ? byId.get(cfg.desk) : undefined, chairItem: cfg?.chair ? byId.get(cfg.chair) : undefined });
       map.set(id, { pos, own: { seat: seatOf(pos), stand: standOf(pos) } });
     });
     return { desks: list, info: map };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` stands for the team (ids and roles)
-  }, [key, layout, catalog]);
+  }, [key, layout, catalog, deskGhost]);
   const infoRef = useRef(info);
   infoRef.current = info;
   return (
@@ -165,6 +196,12 @@ function World({ a }: { a: Assets }) {
       <Fixtures a={a} layout={layout} />
       <Pieces a={a} layout={layout} />
       <People a={a} desks={infoRef} />
+      <Links />
+      <Folders />
+      <CoinFloats />
+      <ShieldFloats />
+      <PeopleLayer />
+      <StudioEdit layout={layout} desks={desks} />
     </>
   );
 }
@@ -197,7 +234,10 @@ export default function OfficeStudioScene() {
         frameloop="never" /* FrameDriver draws the frames: paused off screen, 30 fps when idle, adaptive quality */
         camera={{ position: [7, 16, 19], fov: 32, near: 0.5, far: 160 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
-        onPointerMissed={() => { if (!useOfficeLayout.getState().editing) select(null); }}
+        onPointerMissed={() => {
+          const ed = useOfficeLayout.getState();
+          if (ed.editing) { if (!ed.placing && !ed.dragging) ed.select(null); } else select(null);
+        }}
       >
         <Lights />
         <Suspense fallback={null}>{assets && <World a={assets} />}</Suspense>

@@ -23,7 +23,7 @@ export function normalizeStyle(v: unknown): OfficeStyle {
 export const STYLES_WITHOUT_EDITING: OfficeStyle[] = ["studio", "flat"];
 /**
  * What the "Espacio" tab of the editor offers in each style: only the controls that change something in that style's
- * renderer (the 3D styles draw everything; the illustrated one has no ceiling trim and no window view).
+ * renderer (the 3D styles draw everything; the illustrated one has no light of the day and no window view).
  */
 export interface SpaceEffects { wallColor: boolean; trim: boolean; windows: boolean; floor: boolean; light: boolean; view: boolean }
 const ALL_SPACE: SpaceEffects = { wallColor: true, trim: true, windows: true, floor: true, light: true, view: true };
@@ -31,7 +31,8 @@ export const SPACE_EFFECTS: Record<OfficeStyle, SpaceEffects> = {
   classic: ALL_SPACE, clay: ALL_SPACE, pixel: ALL_SPACE,
   // Estudio draws walls, trim, windows, floor and light from the layout, but not the shop "view" behind the glass
   studio: { ...ALL_SPACE, view: false },
-  flat: { ...ALL_SPACE, trim: false, view: false },
+  // Plano draws the wall color, the trim line, the windows and the floor from the layout; it has no mood / time-of-day light and no view behind the glass
+  flat: { ...ALL_SPACE, light: false, view: false },
 };
 export interface DeskCfg { x?: number; z?: number; desk?: string; chair?: string }
 export interface Piece { uid: string; item: string; x: number; z: number; rot: number; s: number; y?: number }

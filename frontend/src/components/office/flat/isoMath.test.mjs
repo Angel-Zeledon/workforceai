@@ -1,7 +1,7 @@
 // Unit tests of the pure maths of the "Plano" office style (run: npm run test:unit).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { facing, floorLook, hexToNum, humanSkin, iso, mapPose, shade, turn } from "./isoMath.ts";
+import { facing, floorLook, hexToNum, humanSkin, iso, mapPose, pointInBox, shade, turn, unIso } from "./isoMath.ts";
 
 test("iso: greater x + z is lower on screen; x grows right, z grows left", () => {
   const a = iso(0, 0), b = iso(1, 1), c = iso(1, 0), d = iso(0, 1);
@@ -49,4 +49,26 @@ test("humanSkin keeps real skin tones and replaces anything else", () => {
   assert.equal(humanSkin("#a8734f"), 0xa8734f);
   assert.notEqual(humanSkin("#3333ff"), 0x3333ff);
   assert.notEqual(humanSkin("#00ff00"), 0x00ff00);
+});
+
+test("unIso is the inverse of iso at any height", () => {
+  for (const [x, z, h] of [[0, 0, 0], [3.5, -2.25, 0], [-12, 8, 0], [4, 4, 0.9], [-7.5, -3, 2.4]]) {
+    const p = iso(x, z, h), q = unIso(p.x, p.y, h);
+    assert.ok(Math.abs(q.x - x) < 1e-9 && Math.abs(q.z - z) < 1e-9, `${x},${z},${h}`);
+  }
+});
+
+test("unIso: read as a floor point, something raised lies behind where it truly stands", () => {
+  const p = iso(2, 2, 1);
+  const floor = unIso(p.x, p.y, 0), up = unIso(p.x, p.y, 1);
+  assert.ok(floor.x + floor.z < up.x + up.z);
+});
+
+test("pointInBox: rotated rectangles and circles follow the editor's footprints", () => {
+  const b = { x: 2, z: 1, w: 2, d: 1, rot: 0 };
+  assert.ok(pointInBox(b, 2.9, 1.4) && !pointInBox(b, 3.1, 1) && !pointInBox(b, 2, 1.6));
+  const r = { ...b, rot: Math.PI / 2 }; // a quarter turn swaps the sides (corners() convention)
+  assert.ok(pointInBox(r, 2.4, 1.9) && !pointInBox(r, 2.9, 1));
+  const c = { x: 0, z: 0, w: 1, d: 1, rot: 0, round: true };
+  assert.ok(pointInBox(c, 0.4, 0) && !pointInBox(c, 0.4, 0.4));
 });

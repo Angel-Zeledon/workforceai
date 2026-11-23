@@ -5,13 +5,13 @@ import * as THREE from "three";
 import { useStore } from "@/lib/store";
 import { usePreferences } from "@/lib/preferences";
 import { deskOf } from "./registry";
-import { FolderPool, detectHandoffs, type Handoff } from "./officeState";
+import { FolderPool } from "./officeState";
+import { watchHandoffs } from "./handoffWatch";
 
 /** Max folders flying at once (performance cap) and the flight time of one hand-off. */
 const MAX_FOLDERS = 4;
 const FLIGHT_MS = 2600;
 const LIFT = 0.9;
-const NON_AGENT = new Set(["user", "all", "system", ""]);
 
 /**
  * The pipeline made visible: when a task finishes and another agent's task depends on its output, or a delegation /
@@ -26,30 +26,12 @@ export function Folders() {
   // endpoints per slot: ax, az, bx, bz
   const ends = useRef(new Float32Array(MAX_FOLDERS * 4));
 
-  useEffect(() => {
-    let prev = detectHandoffs(null, useStore.getState().tasks).next;
-    let linkTs = Date.now();
-    const push = (h: Handoff) => {
-      if (usePreferences.getState().prefs.reduceMotion) return;
-      const S = useStore.getState();
-      if (!S.agents[h.from] || !S.agents[h.to]) return;
-      pool.current.enqueue(h, performance.now());
-    };
-    return useStore.subscribe((s, p) => {
-      if (s.tasks !== p.tasks) {
-        const r = detectHandoffs(prev, s.tasks as never);
-        prev = r.next;
-        r.handoffs.forEach(push);
-      }
-      if (s.links !== p.links) {
-        for (let i = s.links.length - 1; i >= 0 && s.links[i].ts > linkTs; i--) {
-          const l = s.links[i];
-          if ((l.kind === "delegation" || l.kind === "consult") && !l.chat && !NON_AGENT.has(l.from) && !NON_AGENT.has(l.to)) push({ from: l.from, to: l.to });
-        }
-        if (s.links.length) linkTs = Math.max(linkTs, s.links[s.links.length - 1].ts);
-      }
-    });
-  }, []);
+  useEffect(() => watchHandoffs((h) => {
+    if (usePreferences.getState().prefs.reduceMotion) return;
+    const S = useStore.getState();
+    if (!S.agents[h.from] || !S.agents[h.to]) return;
+    pool.current.enqueue(h, performance.now());
+  }), []);
 
   useFrame((_, dt) => {
     const P = pool.current;

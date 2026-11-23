@@ -2,18 +2,24 @@
 // illustrated manner as the lab's panel C (ink outline, flat fills). Pixi is only a type here: the scene passes the Graphics.
 import type * as PIXI from "pixi.js";
 import { shade, type Pose2 } from "./isoMath";
+import { accessoryAfterWorn, type WornLook } from "./wornLook";
+import { drawBuddy, drawHat, drawNeck, drawBadge, drawGlasses, drawCans } from "./figureWorn";
 
 export const INK = 0x1f2a37;
 export const ACCENT = 0x0a66c2;
 
 export interface Look {
   body: number; bodyDark: number; pants: number; skin: number; hair: number; hairStyle: string; accessory: string;
+  /** the collar / shirt color and the shop items worn (undefined: nothing) */
+  shirt: number; worn?: WornLook;
 }
 /** What is drawn on top of the figure besides the body. */
 export interface Extras { mug: boolean; badge: "" | "check" | "alert" | "warn" | "think"; docs: boolean; selectedColor: number | null; t: number }
 
-export const lookOf = (color: number, skin: number, hair: number, hairStyle: string, accessory: string): Look =>
-  ({ body: color, bodyDark: shade(color, 0.78), pants: 0x374151, skin, hair, hairStyle, accessory });
+export const lookOf = (color: number, skin: number, hair: number, hairStyle: string, accessory: string, worn?: WornLook): Look => {
+  const body = worn?.outfit?.body ?? color;
+  return { body, bodyDark: shade(body, 0.78), pants: worn?.outfit?.pants ?? 0x374151, skin, hair, hairStyle, accessory: accessoryAfterWorn(accessory, worn), shirt: worn?.outfit?.shirt ?? 0xffffff, worn };
+};
 
 type Pt = { x: number; y: number };
 
@@ -40,7 +46,8 @@ export function drawPerson(g: PIXI.Graphics, p: Pose2, look: Look, dir: number, 
   // far side (darker, behind the body)
   stroke(legs[1], 8, 0x2b3038);
   g.circle(legs[1][2].x + 2 * dir, legs[1][2].y, 3.6).fill(0x2b3038);
-  stroke(arms[1], 6.5, look.bodyDark);
+  if (look.worn?.buddy) drawBuddy(g, look.worn.buddy, sh.x - 11 * dir, sh.y - 1, dir, ex.t);
+  stroke(arms[1], 6.5, look.worn?.outfit?.style === "vest" ? shade(look.shirt, 0.9) : look.bodyDark);
   g.circle(arms[1][2].x, arms[1][2].y, 3).fill(shade(look.skin, 0.9));
   // near leg + shoe
   stroke(legs[0], 8, look.pants);
@@ -50,7 +57,12 @@ export function drawPerson(g: PIXI.Graphics, p: Pose2, look: Look, dir: number, 
   const nx = Math.cos(p.lean), ny = Math.sin(p.lean) * dir;
   g.poly([hip.x - hw * nx, hip.y + 2 - hw * ny, hip.x + hw * nx, hip.y + 2 + hw * ny, sh.x + tw * nx, sh.y + tw * ny, sh.x - tw * nx, sh.y - tw * ny]).fill(look.body);
   g.stroke({ width: 1.2, color: INK, alpha: 0.55, join: "round" });
-  if (!back) g.poly([sh.x + 1 * dir, sh.y + 1, sh.x + 5 * dir, sh.y + 1, sh.x + 2 * dir, sh.y + 9]).fill(0xffffff);
+  const o = look.worn?.outfit;
+  if (o?.stripe) { const m = { x: (hip.x + sh.x) / 2, y: (hip.y + sh.y) / 2 }; g.moveTo(m.x - 8 * nx, m.y - 8 * ny).lineTo(m.x + 8 * nx, m.y + 8 * ny).stroke({ width: 3, color: o.trim, alpha: 0.9 }); }
+  if (o?.style === "hoodie") g.ellipse(sh.x - 4 * dir, sh.y + 1, 6, 3.5).fill(shade(look.body, 0.88));
+  if (!back) g.poly([sh.x + 1 * dir, sh.y + 1, sh.x + 5 * dir, sh.y + 1, sh.x + 2 * dir, sh.y + 9]).fill(look.shirt);
+  if (look.worn?.neck) drawNeck(g, look.worn.neck, sh.x, sh.y, dir);
+  if (look.worn?.badge) drawBadge(g, look.worn.badge, sh.x + 3.5 * dir, sh.y + 8);
   // head
   const hc = { x: sh.x + Math.sin(p.lean + p.head) * 10 * dir, y: sh.y - 9 };
   const hs = look.hairStyle;
@@ -70,6 +82,7 @@ export function drawPerson(g: PIXI.Graphics, p: Pose2, look: Look, dir: number, 
   if (hs === "bun") g.circle(hc.x - 1 * dir, hc.y - 10, 4.2).fill(look.hair);
   if (!back) {
     g.circle(hc.x + 4.2 * dir, hc.y + 0.5, 1.15).fill(INK);
+    if (look.worn?.glasses) drawGlasses(g, look.worn.glasses, hc.x, hc.y, dir);
     if (look.accessory === "glasses" || look.accessory === "roundglasses") g.circle(hc.x + 4.4 * dir, hc.y + 0.5, 2.8).stroke({ width: 1, color: INK, alpha: 0.8 });
   }
   if (look.accessory === "headphones" || look.accessory === "headset") {
@@ -79,8 +92,10 @@ export function drawPerson(g: PIXI.Graphics, p: Pose2, look: Look, dir: number, 
     g.arc(hc.x, hc.y - 2, 9.4, Math.PI, Math.PI * 2).fill(0xf5c542);
     g.stroke({ width: 1, color: INK, alpha: 0.5 });
   }
+  if (look.worn?.cans) drawCans(g, look.worn.cans, hc.x, hc.y, dir);
+  if (look.worn?.hat) drawHat(g, look.worn.hat, hc.x, hc.y, dir);
   // near arm (in front) and what it holds
-  stroke(arms[0], 6.5, look.body);
+  stroke(arms[0], 6.5, look.worn?.outfit?.style === "vest" ? shade(look.shirt, 0.95) : look.body);
   g.circle(arms[0][2].x, arms[0][2].y, 3.3).fill(look.skin);
   if (ex.mug) {
     const h = arms[0][2];
