@@ -3532,7 +3532,7 @@
   "oe.part.cafe_plant": "Plant",
   "oe.part.hint": "Moves within its room",
   "oe.part.carries": "what stands on it moves with it",
-  "oe.z.parts": "Furniture of the room",
+  "oe.z.parts": "Show pieces",
   "oe.z.changed_one": "1 change",
   "oe.z.changed_other": "{count} changes",
   "oe.a.windows": "Glass windows",
@@ -7161,6 +7161,13 @@
   "oe.style.pixel": "Pixel",
   "oe.style.pixel.d": "Crisp pixel art: few colors, a thin outline and sprite-like movement.",
   "oe.style.noEdit": "To move things around, the normal view is shown.",
+  "oe.style.current": "Chosen",
+  "oe.d.emptyTitle": "You have no desks or chairs yet",
+  "oe.f.emptyTitle": "No furniture waiting to be placed",
+  "oe.f.noneTitle": "Your office has no furniture yet",
+  "oe.f.placeOne": "Place one",
+  "oe.z.pieces": "{count} pieces",
+  "oe.z.hideParts": "Hide pieces",
   "oe.space.title": "Space",
   "oe.space.hint": "Walls, floor, light and the view from the window. Only what changes in the chosen style is shown."
 }

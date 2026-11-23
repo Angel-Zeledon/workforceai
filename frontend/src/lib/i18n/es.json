@@ -3532,7 +3532,7 @@
   "oe.part.cafe_plant": "Planta",
   "oe.part.hint": "Se mueve dentro de su sala",
   "oe.part.carries": "lo que tiene encima se mueve con ella",
-  "oe.z.parts": "Muebles de la sala",
+  "oe.z.parts": "Ver piezas",
   "oe.z.changed_one": "1 cambio",
   "oe.z.changed_other": "{count} cambios",
   "oe.a.windows": "Ventanales de cristal",
@@ -7161,6 +7161,13 @@
   "oe.style.pixel": "Píxel",
   "oe.style.pixel.d": "Pixel art nítido: pocos colores, contorno fino y movimientos de sprite.",
   "oe.style.noEdit": "Para mover cosas se muestra la vista normal.",
+  "oe.style.current": "Elegido",
+  "oe.d.emptyTitle": "Aún no tienes escritorios ni sillas",
+  "oe.f.emptyTitle": "No tienes muebles por colocar",
+  "oe.f.noneTitle": "Tu oficina aún está sin muebles",
+  "oe.f.placeOne": "Colocar uno",
+  "oe.z.pieces": "{count} piezas",
+  "oe.z.hideParts": "Ocultar piezas",
   "oe.space.title": "Espacio",
   "oe.space.hint": "Paredes, suelo, luz y vista desde el ventanal. Solo se muestra lo que cambia en el estilo elegido."
 }
