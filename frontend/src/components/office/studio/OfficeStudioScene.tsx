@@ -35,6 +35,7 @@ import { Folders } from "../Folders";
 import { CoinFloats } from "../CoinFloats";
 import { ShieldFloats } from "../ShieldFloats";
 import { PeopleLayer } from "../../presence/PeopleLayer";
+import { connectedBody } from "./StudioConnected";
 
 const OfficeScene = dynamic(() => import("../OfficeScene"), { ssr: false });
 
@@ -187,6 +188,7 @@ function World({ a }: { a: Assets }) {
     return { desks: list, info: map };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` stands for the team (ids and roles)
   }, [key, layout, catalog, deskGhost]);
+  const body = useMemo(() => connectedBody(a), [a]); // the connected people are glTF figures here, like the agents
   const infoRef = useRef(info);
   infoRef.current = info;
   return (
@@ -201,7 +203,7 @@ function World({ a }: { a: Assets }) {
       <Folders />
       <CoinFloats />
       <ShieldFloats />
-      <PeopleLayer />
+      <PeopleLayer body={body} />
       <StudioEdit layout={layout} desks={desks} />
     </>
   );

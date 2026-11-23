@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { humanSkin } from "../flat/isoMath";
-import { ADD_CLIPS, SIT_S, STAND_S, type Add, type Base, type Model, type Outfit } from "./studioLogic";
+import { ADD_CLIPS, SIT_S, STAND_S, walkTimeScale, type Add, type Base, type Model, type Outfit } from "./studioLogic";
 import { disposeMaterial, type PersonModel } from "./studioAssets";
 
 const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
@@ -116,6 +116,7 @@ function additiveClips(src: PersonModel): Record<Add, THREE.AnimationClip> {
   return out;
 }
 
+const FACE_FEATURES = "#2b2420";
 const hex = (n: number) => "#" + n.toString(16).padStart(6, "0");
 
 export interface Rig {
@@ -127,9 +128,12 @@ export interface Rig {
 
 /** Colors by the material names of each pack (the packs ship a near-black mannequin skin and game colors). */
 function colorsFor(model: Model, o: Outfit, skin: string, hair: string): Record<string, string> {
-  if (model === "suit") return { Skin: skin, Black: o.jacket, Shirt: o.shirt, Details: "#3b4452", Belt: o.belt, Hair: hair };
-  if (model === "casual") return { Skin: skin, Shirt: o.knit, Pants: o.pants, Belt: o.belt, Hair: hair };
-  return { Skin: skin, Shirt: o.shirt, Pants: o.pants, Detail: o.knit, Belt: o.belt, Hair: hair };
+  // "Face" is the mesh of the eyes, brows and mouth (x +-0.37, y 2.47-2.76 on the head, no texture) and ships near-white: left as is
+  // it paints white blanks on the skin, so the face reads as empty. Dark features give back eyes, brows and mouth.
+  const f = { Face: FACE_FEATURES };
+  if (model === "suit") return { ...f, Skin: skin, Black: o.jacket, Shirt: o.shirt, Details: "#3b4452", Belt: o.belt, Hair: hair };
+  if (model === "casual") return { ...f, Skin: skin, Shirt: o.knit, Pants: o.pants, Belt: o.belt, Hair: hair };
+  return { ...f, Skin: skin, Shirt: o.shirt, Pants: o.pants, Detail: o.knit, Belt: o.belt, Hair: hair };
 }
 
 export function buildRig(src: PersonModel, model: Model, outfit: Outfit, skinHex: string, hairHex: string): Rig {
@@ -200,7 +204,7 @@ export function buildRig(src: PersonModel, model: Model, outfit: Outfit, skinHex
       else { next.fadeIn(want === "Seated" ? 0.05 : 0.28); base[cur].fadeOut(0.28); }
       cur = want;
     }
-    if (want === "Walk") base.Walk.timeScale = 0.45 + 0.75 * Math.min(1, speed);
+    if (want === "Walk") base.Walk.timeScale = walkTimeScale(speed);
     for (const k of ADD_CLIPS) {
       weights[k] += (target[k] - weights[k]) * (reduce ? 1 : Math.min(1, dt * 7));
       add[k].setEffectiveWeight(weights[k]);

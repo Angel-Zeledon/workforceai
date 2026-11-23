@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ADD_CLIPS, SIT_S, STAND_S, addWeights, gestureClip, nextBase, outfitFor, startBase } from "./studioLogic.ts";
+import { ADD_CLIPS, SIT_S, STAND_S, addWeights, gestureClip, nextBase, outfitFor, startBase, walkTimeScale } from "./studioLogic.ts";
 
 const run = (state, want, secs, step = 0.1) => {
   let s = state, hold = false;
@@ -60,4 +60,13 @@ test("outfits are stable per agent, sober and use the right person", () => {
   assert.notEqual(outfitFor("x", true).model, "suit");
   assert.ok(a.height >= 0.95 && a.height <= 1.05);
   assert.match(a.shirt, /^#[0-9a-f]{6}$/i);
+});
+
+test("walkTimeScale: unchanged up to the agents' pace, proportional above it (faster walkers do not skate), capped", () => {
+  assert.equal(walkTimeScale(0), 0.45);
+  assert.ok(Math.abs(walkTimeScale(1) - 1.2) < 1e-9);
+  assert.ok(Math.abs(walkTimeScale(0.5) - 0.825) < 1e-9);
+  assert.ok(walkTimeScale(1.52) > walkTimeScale(1));
+  assert.ok(Math.abs(walkTimeScale(1.5) / walkTimeScale(1) - 1.5) < 1e-9);
+  assert.equal(walkTimeScale(9), 2.4);
 });
