@@ -18,11 +18,13 @@ import { ShieldFloats } from "./ShieldFloats";
 import { OfficeItems } from "./OfficeItems";
 import { CoinAnnouncer } from "../shop/Coin";
 import { EditorLayer } from "./EditorLayer";
-import { useOfficeLayout } from "@/lib/officeLayout";
+import { useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
 import { useRewards } from "@/lib/rewards";
 import { PeopleLayer } from "../presence/PeopleLayer";
 import { StyleAmbient, StyleVeil, ThemeApplier } from "./ThemeLayer";
 import { FrameDriver } from "./FrameDriver";
+import { PixelLayer } from "./PixelLayer";
+import { lookOf } from "./officeTheme";
 
 const VIEW = { pos: new THREE.Vector3(7, 16, 19), target: new THREE.Vector3(0.5, 0.4, -0.3) };
 /** The editor looks down on the floor plan so the grid and the footprints read clearly. */
@@ -35,19 +37,28 @@ function Rig() {
   const dragging = useOfficeLayout((s) => s.dragging);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const aspect = useThree((s) => s.size.width / Math.max(1, s.size.height));
+  const size = useThree((s) => s.size);
+  // Pixel draws the office with an orthographic camera (whole-number zoom, see PixelLayer): zoom replaces distance
+  const ortho = !!(camera as unknown as THREE.OrthographicCamera).isOrthographicCamera;
   // A phone held upright shows a narrow slice of the floor plan: back the camera off and widen the lens
   // so the office fits, and let one finger pan and two fingers pinch/rotate (rotating with one finger
   // fought the page and made the office impossible to move around).
   const narrow = aspect < 0.9;
   const back = narrow ? 1 + Math.min(0.55, (0.9 - aspect) * 1.2) : 1;
   useEffect(() => {
-    const fov = narrow ? Math.min(52, 32 + (0.9 - aspect) * 40) : 32;
-    if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+    if (!ortho) {
+      const fov = narrow ? Math.min(52, 32 + (0.9 - aspect) * 40) : 32;
+      if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+    }
     const c = ref.current;
     if (!c || editing) return;
     // frame the office for this aspect ratio (also when the phone is rotated)
     const dir = VIEW.pos.clone().sub(VIEW.target).multiplyScalar(back);
     c.object.position.copy(c.target.clone().add(dir));
+    if (ortho) { // fit the whole floor plan: CSS pixels per meter from the canvas size
+      c.object.zoom = Math.max(10, Math.min(size.width / 34, size.height / 21));
+      c.object.updateProjectionMatrix();
+    }
     c.update();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only a change of shape reframes the view
   }, [narrow]);
@@ -83,7 +94,7 @@ function Rig() {
       makeDefault
       target={[0.5, 0.4, -0.3]}
       enabled={!dragging}
-      enableDamping dampingFactor={0.08}
+      enableDamping={!ortho} dampingFactor={0.08}
       minDistance={editing ? 8 : narrow ? 7 : 11} maxDistance={(editing ? 38 : 30) * back}
       minPolarAngle={editing ? 0.08 : 0.55} maxPolarAngle={editing ? 1.2 : 1.1}
       minAzimuthAngle={editing || narrow ? -1.4 : -0.7} maxAzimuthAngle={editing || narrow ? 1.4 : 0.7}
@@ -101,6 +112,7 @@ function Cast() {
 
 export default function OfficeScene() {
   const select = useStore((s) => s.select);
+  const pixel = !!lookOf(useOfficeStyle()).pixel;
   // project summaries / planning phases feed the meeting room (reference-counted with the Projects screen)
   useEffect(() => startProjectsRealtime(), []);
   // the organization's own layout (walls, floor, light, desks, furniture) and the catalog its pieces come from
@@ -115,11 +127,13 @@ export default function OfficeScene() {
   return (
     <div className="relative h-full w-full">
       <Canvas
-        shadows="soft"
-        dpr={[1, 1.75]}
+        key={pixel ? "pixel" : "3d"} /* the camera changes kind, so the canvas starts over */
+        shadows={pixel ? "basic" : "soft"}
+        dpr={pixel && typeof window !== "undefined" ? window.devicePixelRatio || 1 : [1, 1.75]}
+        orthographic={pixel}
         frameloop="never" /* FrameDriver draws the frames: paused off screen, 30 fps when idle, adaptive quality */
-        camera={{ position: [7, 16, 19], fov: 32, near: 0.5, far: 160 }}
-        gl={{ antialias: true, powerPreference: "high-performance" }}
+        camera={pixel ? { position: [7, 16, 19], zoom: 30, near: 0.1, far: 90 } : { position: [7, 16, 19], fov: 32, near: 0.5, far: 160 }}
+        gl={{ antialias: !pixel, powerPreference: "high-performance" }}
         onPointerMissed={() => {
           const ed = useOfficeLayout.getState();
           if (ed.editing) { if (!ed.placing && !ed.dragging) ed.select(null); } else select(null);
@@ -141,6 +155,7 @@ export default function OfficeScene() {
         <LabelSolver />
         <Rig />
         <FrameDriver />
+        {pixel && <PixelLayer />} {/* Pixel: draws small and enlarges by whole pixels (takes over the render) */}
       </Canvas>
       <StyleVeil /> {/* short dissolve while the office switches style */}
       <LabelLayer />

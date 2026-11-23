@@ -94,6 +94,7 @@ function makeSim(id: string, seat: [number, number]) {
     linkSrc: null as unknown, linkTs: 0, apprSrc: null as unknown, seenAppr: new Set<string>(),
     debTurn: "", // last debate turn this character reacted to (B5)
     stopAcc: [0] as [number], // stop-motion clock (Pixel)
+    vel: zeroPose(), // joint velocities of the spring that moves the pose (Maqueta)
   };
 }
 
@@ -364,12 +365,21 @@ export function Character({ id, index }: { id: string; index: number }) {
     }
     const k = Math.min(1, dt * (walking ? 14 : 8) * (0.4 + 0.6 * smooth(sm.blend)));
     const c = sm.pose;
-    for (const key of KEYS) c[key] += (target[key] - c[key]) * k;
+    if (mo.spring && !reduce) {
+      // Maqueta: every joint follows its pose through a lightly under-damped spring (a little anticipation and follow-through,
+      // never a jitter). Sub-steps keep it stable on a slow frame.
+      const sdt = Math.min(dt, 0.1), steps = Math.max(1, Math.ceil(sdt * 120)), h = sdt / steps, stiff = 150, damp = 2 * Math.sqrt(stiff) * 0.78;
+      for (const key of KEYS) {
+        let x = c[key], v = sm.vel[key];
+        for (let i = 0; i < steps; i++) { v += (stiff * (target[key] - x) - damp * v) * h; x += v * h; }
+        c[key] = x; sm.vel[key] = v;
+      }
+    } else for (const key of KEYS) c[key] += (target[key] - c[key]) * k;
 
     // --- apply --- (the Pixel style poses in stop-motion: the body only takes a new pose a few times per second)
+    root.current.position.set(sm.pos.x, 0, sm.pos.y); // where it stands moves smoothly; only the poses step in Pixel
     if (reduce || stopMotionTick(sm.stopAcc, dt, mo.stopFps)) {
-      root.current.position.set(sm.pos.x, 0, sm.pos.y);
-      root.current.rotation.y = sm.yaw;
+      root.current.rotation.y = mo.stopFps ? Math.round(sm.yaw / (Math.PI / 4)) * (Math.PI / 4) : sm.yaw; // sprites face 8 directions
       pelvis.current.position.y = c.pelvisY;
       torso.current.rotation.set(c.torsoX, c.torsoY, c.torsoZ);
       head.current.rotation.set(c.headX, c.headY, c.headZ);

@@ -10,6 +10,7 @@ import { roleMeta } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { deskOf, seatOf } from "./registry";
 import { effective, useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
+import { lookOf } from "./officeTheme";
 import { Appear, seedOf, useLeaving } from "./ThemeLayer";
 import { DECOR_IDS, FIXTURES, MOOD_BASE, ROOM_PARTS, ZONE_DEFAULTS, ZONE_SIZE, fixturePose, localHour, restOn, timeOfDayMix, type FixtureId, type FloorKind, type LightMix, type ZoneName } from "@/lib/officeLayoutModel";
 import { useRewards } from "@/lib/rewards";
@@ -658,11 +659,23 @@ function useLightTarget(): LightMix & { temp: number } {
   const light = useOfficeLayout((s) => effective(s).light);
   const auto = usePreferences((s) => s.prefs.lightAuto);
   const hour = useLocalHour(auto);
+  const warm = !!lookOf(useOfficeStyle()).warmLight;
   return useMemo(() => {
-    const base = auto ? timeOfDayMix(hour) : (MOOD_BASE[light.mood] ?? MOOD_BASE.natural);
+    let base = auto ? timeOfDayMix(hour) : (MOOD_BASE[light.mood] ?? MOOD_BASE.natural);
+    if (warm && !auto && light.mood !== "night") base = afternoon(base);
     const k = light.brightness;
     return { ...base, amb: base.amb * k, hemi: base.hemi * k, sun: base.sun * k, temp: auto || light.mood === "night" ? 0 : light.temp };
-  }, [auto, hour, light.mood, light.brightness, light.temp]);
+  }, [auto, hour, light.mood, light.brightness, light.temp, warm]);
+}
+
+const hexMix = (c: string, to: string, t: number) => "#" + new THREE.Color(c).lerp(new THREE.Color(to), t).getHexString();
+/** Maqueta: the room's mood seen in the soft low light of an afternoon (a warm sun from the side, warm bounce, no hard contrast). */
+function afternoon(b: LightMix): LightMix {
+  return {
+    ...b, amb: b.amb * 1.05, sun: b.sun * 0.9, hemi: b.hemi * 1.05,
+    ambColor: hexMix(b.ambColor, "#ffe2c4", 0.45), hemiSky: hexMix(b.hemiSky, "#ffe9d2", 0.4), hemiGround: hexMix(b.hemiGround, "#b89572", 0.5),
+    sunColor: hexMix(b.sunColor, "#ffcf9a", 0.6), bg: hexMix(b.bg, "#b39a86", 0.5), sunPos: [14, 12, 10],
+  };
 }
 
 /** Scene lights, background and fog driven by the layout's light and the `lighting` preference, eased toward the target. */

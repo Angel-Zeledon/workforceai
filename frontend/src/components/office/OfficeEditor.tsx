@@ -185,7 +185,7 @@ function StyleTab() {
           <button key={id} type="button" role="radio" data-testid={`oe-style-${id}`} aria-checked={cur === id} onClick={() => { if (cur !== id) pick(id); }}
             className={`flex overflow-hidden rounded-[10px] border text-left transition ${cur === id ? "border-accent ring-2 ring-accent/30" : "border-line hover:border-line-strong"}`}>
             {/* eslint-disable-next-line @next/next/no-img-element -- a small static capture, not worth the image optimizer */}
-            <img src={STYLE_THUMB[id]} alt="" width={120} height={80} loading="lazy" className="h-[80px] w-[120px] shrink-0 bg-panel2 object-cover" style={id === "pixel" ? { imageRendering: "pixelated" } : undefined} />
+            <img src={STYLE_THUMB[id]} alt="" width={120} height={80} loading="lazy" className="h-[80px] w-[120px] shrink-0 bg-panel2 object-cover" />
             <span className="min-w-0 px-3 py-2">
               <span className="block text-[12.5px] font-semibold text-ink">{t(`oe.style.${id}`)}</span>
               <span className="mt-0.5 block text-[11px] leading-snug text-mute">{t(`oe.style.${id}.d`)}</span>
