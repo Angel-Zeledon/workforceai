@@ -17,6 +17,8 @@ import { useProjects } from "@/lib/projects/store";
 import { fmtUsd } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { usePreferences, useOffice3d } from "@/lib/preferences";
+import { useOfficeView } from "@/lib/officeView";
+import { isListShown } from "@/lib/officeViewLogic";
 import { orgApi } from "@/lib/orgConfigApi";
 import { navGroups, setNavigator, SECTIONS, sectionOf } from "@/lib/navBridge";
 import { usePendingCount } from "@/lib/pending";
@@ -130,8 +132,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/";
   const office3d = useOffice3d();
   const section = sectionOf(pathname);
-  // without the animated office, the home ("/") is the list view: tours and the store follow what is on screen
-  const shown = section === "office" && !office3d ? "dashboard" : section;
+  // the view Oficina is in (Lista or Oficina 3D, remembered on this device): tours and the store follow what is on screen
+  const { view, setView } = useOfficeView();
+  const listShown = isListShown(section, view);
+  const shown = section === "office" && view === "list" ? "dashboard" : section;
   const hydratePrefs = usePreferences((s) => s.hydrate);
   const reduce = usePreferences((s) => s.prefs.reduceMotion);
   const connected = useStore((s) => s.connected);
@@ -169,9 +173,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [section, shown]);
 
   const toggleCollapsed = () => setCollapsed((c) => { try { localStorage.setItem(COLLAPSE_KEY, c ? "0" : "1"); } catch { /* ignore */ } return !c; });
-  // "Vista 3D / Vista lista" only when the animated office is on (Settings > Apariencia); otherwise there is one view
-  const modeToggle = office3d && (section === "office" || section === "dashboard");
-  // the list view is a view of the Office ("Vista 3D / Vista lista"), so the title stays "Oficina"
+  // "Lista | Oficina 3D" is always there in Oficina: the 3D is chosen here, not in Ajustes
+  const modeToggle = section === "office" || section === "dashboard";
+  // the list is a view of the Office ("Lista | Oficina 3D"), so the title stays "Oficina"
   const title = t(SECTIONS.find((s) => s.id === section)?.label ?? "nav.office");
   const pendingCount = usePendingCount();
 
@@ -196,16 +200,21 @@ export function AppShell({ children }: { children: ReactNode }) {
               <OrgIndicator className="truncate text-[10.5px] text-mute" />
             </div>
             {modeToggle && (
-              <button type="button" data-tour="shell.mode" data-testid="mode-toggle" data-mode={section === "dashboard" ? "dashboard" : "office"} onClick={() => router.push(section === "dashboard" ? "/" : "/dashboard")} title={t("mode.switchTitle")} aria-label={t("mode.switchTitle")}
-                className="ml-0.5 flex shrink-0 rounded-lg border border-line bg-panel2 p-0.5 text-xs font-medium sm:ml-1">
-                {(["office", "dashboard"] as const).map((m) => (
-                  <span key={m} className={`flex min-h-9 items-center gap-1.5 rounded-md px-2.5 py-1.5 transition sm:min-h-0 sm:px-3 ${(section === "dashboard") === (m === "dashboard") ? "bg-panel text-ink shadow-pop ring-1 ring-line" : "text-mute hover:text-ink"}`}>
-                    <Icon name={m === "office" ? "office" : "list"} size={14} />
-                    {/* "Vista 3D / Vista lista"; icons only on the phone and while the sidebar leaves the header narrow (md to lg) */}
-                    <span className="hidden sm:inline md:hidden lg:inline">{m === "office" ? t("mode.view3d") : t("mode.viewList")}</span>
-                  </span>
-                ))}
-              </button>
+              <div role="group" aria-label={t("mode.switchTitle")} data-tour="shell.mode" data-testid="mode-toggle" data-mode={listShown ? "dashboard" : "office"}
+                className="ml-0.5 flex shrink-0 rounded-lg border border-line bg-panel2 p-0.5 text-[13px] font-medium sm:ml-1">
+                {([["list", "mode.list", "list"], ["3d", "mode.office3d", "office"]] as const).map(([v, key, icon]) => {
+                  const on = (v === "list") === listShown;
+                  return (
+                    <button key={v} type="button" data-testid={v === "list" ? "mode-list" : "mode-3d"} aria-pressed={on} title={t(`${key}.title`)}
+                      onClick={() => { setView(v); if (v === "3d" && section === "dashboard") router.push("/"); }}
+                      className={`flex min-h-10 items-center gap-1.5 rounded-md px-2.5 py-1.5 transition-colors sm:min-h-9 sm:px-3 ${on ? "bg-panel text-accent shadow-pop ring-1 ring-line" : "text-ink2 hover:text-ink"}`}>
+                      <Icon name={icon} size={14} />
+                      <span className="sm:hidden">{t(`${key}.short`)}</span>
+                      <span className="hidden sm:inline">{t(key)}</span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-x-2 text-[11px] text-mute sm:gap-x-3">
