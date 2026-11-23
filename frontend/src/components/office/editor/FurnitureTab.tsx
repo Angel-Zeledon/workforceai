@@ -77,7 +77,7 @@ function FixtureTile({ id }: { id: FixtureId }) {
         className={`flex min-w-0 flex-1 flex-col text-left transition enabled:hover:bg-panel2/70 disabled:opacity-55 ${FOCUS}`}>
         <span className="flex items-center justify-center bg-panel2/70 py-1.5"><Art k={{ kind: "fixture", id }} size={64} /></span>
         <span className="block px-2 pt-1.5">
-          <span className="block truncate text-[12px] font-medium leading-tight text-ink">{fixtureName(t, id)}</span>
+          <span className="line-clamp-2 min-h-[2.1rem] break-words text-[12px] font-medium leading-[1.05rem] text-ink">{fixtureName(t, id)}</span>
           <span className="block min-h-[14px] truncate text-[11px] leading-tight text-mute">{hidden ? t("oe.fx.hidden") : cfg ? t("oe.d.moved") : ""}</span>
         </span>
       </button>
