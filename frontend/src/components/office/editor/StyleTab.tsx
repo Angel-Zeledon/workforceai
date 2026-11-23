@@ -51,7 +51,7 @@ export function StyleTab() {
         onClick={() => pick(id)} onFocus={() => { setFocusId(id); setHot(id); }} onBlur={() => setHot((h) => (h === id ? null : h))}
         onPointerEnter={(e) => { if (e.pointerType !== "touch") setHot(id); }} onPointerLeave={() => setHot((h) => (h === id ? null : h))}
         className={`group block w-full min-w-0 overflow-hidden rounded-[10px] border bg-panel text-left transition ${FOCUS} ${on ? "border-accent ring-2 ring-accent/30" : "border-line hover:border-line-strong hover:shadow-soft"}`}>
-        <StyleClip id={id} playing={on || hot === id} priority={big} wide={big} />
+        <StyleClip id={id} playing={on || hot === id} priority={big} />
         <span className={big ? "block px-3 py-2" : "block px-2.5 py-1.5"}>
           <span className="flex items-center justify-between gap-2">
             <span className={`${big ? "text-[14px]" : "text-[12.5px]"} font-semibold text-ink`}>{t(`oe.style.${id}`)}</span>

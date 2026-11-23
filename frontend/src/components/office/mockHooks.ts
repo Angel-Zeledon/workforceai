@@ -6,12 +6,13 @@ import { MOCK } from "@/lib/config";
 import { useStore } from "@/lib/store";
 import { useOfficeLayout } from "@/lib/officeLayout";
 import { useCost } from "@/lib/cost";
-import { feetPos } from "./registry";
+import { useRewards } from "@/lib/rewards";
+import { deskOf, feetPos } from "./registry";
 
 declare global {
   interface Window {
     __aiw?: {
-      store: typeof useStore; layout: typeof useOfficeLayout; cost: typeof useCost; feet: typeof feetPos;
+      store: typeof useStore; layout: typeof useOfficeLayout; cost: typeof useCost; rewards: typeof useRewards; feet: typeof feetPos; desk: typeof deskOf;
       frame: (type: string, payload: Record<string, unknown>, agentId?: string) => void;
     };
   }
@@ -23,7 +24,9 @@ if (MOCK && typeof window !== "undefined") {
     store: useStore,
     layout: useOfficeLayout,
     cost: useCost,
+    rewards: useRewards,
     feet: feetPos,
+    desk: deskOf,
     frame: (type, payload, agentId) =>
       useStore.getState().apply({ id: `dbg_${++n}`, type, ts: new Date().toISOString(), agent_id: agentId, payload }),
   };

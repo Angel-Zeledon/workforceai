@@ -164,6 +164,11 @@ export function FrameDriver() {
           for (let i = 0; i < n; i++) { t += dt; sc.visible = draw && i === n - 1; advance(t, true, get()); } // only the last frame is drawn (the rest just move the people)
           sc.visible = true;
         },
+        /** page pixel (client coordinates) of the floor point (x, z) at height y: drives the editor with real pointer events in tests */
+        project: (x: number, z: number, y = 0) => {
+          const st = get(); const v = new THREE.Vector3(x, y, z).project(st.camera); const r = gl.domElement.getBoundingClientRect();
+          return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
+        },
         /** renderer.info of the last frame (draw calls, triangles) and what lives in the GPU (programs, geometries, textures) */
         info: () => ({
           calls: gl.info.render.calls, triangles: gl.info.render.triangles, programs: gl.info.programs?.length ?? 0,

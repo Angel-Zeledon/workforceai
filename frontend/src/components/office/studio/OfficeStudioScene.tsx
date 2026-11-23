@@ -5,6 +5,7 @@
 // dynamic(..., { ssr: false }) when the style is "studio", so three's loaders and the models load only when it is chosen.
 // Names, speech bubbles and the approvals card are the 3D office's own (LabelLayer + LabelSolver), fed by the heads
 // registered in registry.ts. Drawing is paused off screen and throttled when idle by FrameDriver (also its quality tiers).
+import { placed } from "../editorActions";
 import dynamic from "next/dynamic";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -236,7 +237,7 @@ export default function OfficeStudioScene() {
         gl={{ antialias: false, powerPreference: "high-performance" }}
         onPointerMissed={() => {
           const ed = useOfficeLayout.getState();
-          if (ed.editing) { if (!ed.placing && !ed.dragging) ed.select(null); } else select(null);
+          if (ed.editing) { if (!ed.placing && !ed.dragging && performance.now() - placed.at > 400) ed.select(null); } else select(null);
         }}
       >
         <Lights />

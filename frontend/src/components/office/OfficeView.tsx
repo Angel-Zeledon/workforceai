@@ -15,7 +15,6 @@ import { FirstRunHint } from "../nav/ui2";
 import { EditOfficeButton, OfficeEditor } from "./OfficeEditor";
 import { OfficePicker } from "./OfficePicker";
 import { useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
-import { STYLES_WITHOUT_EDITING } from "@/lib/officeLayoutModel";
 import { PresenceHost } from "../presence/PresenceHost";
 import { AwayButton, AwayHost } from "../away/AwayHost";
 import "./mockHooks"; // demo mode only: window.__aiw for driving states from a test browser
@@ -26,16 +25,11 @@ const OfficeScene = dynamic(() => import("./OfficeScene"), { ssr: false, loading
 const OfficeFlatScene = dynamic(() => import("./flat/OfficeFlatScene"), { ssr: false, loading: sceneLoading });
 const OfficeStudioScene = dynamic(() => import("./studio/OfficeStudioScene"), { ssr: false, loading: sceneLoading });
 
-/**
- * The renderer of the office style. While pieces are being moved (Puestos / Muebles tabs of the editor) a style whose
- * renderer cannot edit shows the normal 3D view instead (the editor says so); Estilo and Espacio show the chosen style.
- */
+/** The renderer of the office style; every one of them edits in place (the same rules: editorActions.ts). */
 function StageScene() {
   const style = useOfficeStyle();
-  const moving = useOfficeLayout((s) => s.editing && (s.tab === "desks" || s.tab === "furniture"));
-  const shown = moving && STYLES_WITHOUT_EDITING.includes(style) ? "classic" : style;
-  if (shown === "flat") return <OfficeFlatScene />;
-  if (shown === "studio") return <OfficeStudioScene />;
+  if (style === "flat") return <OfficeFlatScene />;
+  if (style === "studio") return <OfficeStudioScene />;
   return <OfficeScene />;
 }
 

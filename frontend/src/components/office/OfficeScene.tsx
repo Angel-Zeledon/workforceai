@@ -23,6 +23,7 @@ import { useRewards } from "@/lib/rewards";
 import { PeopleLayer } from "../presence/PeopleLayer";
 import { StyleAmbient, StyleVeil, ThemeApplier } from "./ThemeLayer";
 import { FrameDriver } from "./FrameDriver";
+import { placed } from "./editorActions";
 import { PixelLayer } from "./PixelLayer";
 import { lookOf } from "./officeTheme";
 
@@ -136,7 +137,7 @@ export default function OfficeScene() {
         gl={{ antialias: !pixel, powerPreference: "high-performance" }}
         onPointerMissed={() => {
           const ed = useOfficeLayout.getState();
-          if (ed.editing) { if (!ed.placing && !ed.dragging) ed.select(null); } else select(null);
+          if (ed.editing) { if (!ed.placing && !ed.dragging && performance.now() - placed.at > 400) ed.select(null); } else select(null);
         }}
       >
         <Suspense fallback={null}>

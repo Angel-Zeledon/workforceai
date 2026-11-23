@@ -2,7 +2,8 @@
 // One office style shown as a short silent loop of the SAME scene in all five (an agent walks a folder to the boss and
 // celebrates, recorded from the lab at /office-lab). A still poster is always there; the loop (an animated image of
 // ~200 KB) is only loaded and shown while the window is playing, so five of them never run at once and no WebGL lives in
-// the menu. With reduced motion the poster stays.
+// the menu. With reduced motion the poster stays. The Píxel pair is stored enlarged 4x (nearest neighbour) and scaled
+// smoothly: every pixel of the art comes out the same size in the window, which a non-integer 'pixelated' scale cannot do.
 import { useEffect, useState } from "react";
 import type { OfficeStyle } from "@/lib/officeLayoutModel";
 import { usePreferences } from "@/lib/preferences";
@@ -28,17 +29,16 @@ export function useReducedMotion(): boolean {
   return !!pref || os;
 }
 
-export function StyleClip({ id, playing, className = "", priority = false, wide = false }: { id: OfficeStyle; playing: boolean; className?: string; priority?: boolean; wide?: boolean }) {
+export function StyleClip({ id, playing, className = "", priority = false }: { id: OfficeStyle; playing: boolean; className?: string; priority?: boolean }) {
   const reduced = useReducedMotion();
   const [ready, setReady] = useState(false);
   const run = playing && !reduced;
   useEffect(() => { if (!run) setReady(false); }, [run]);
   return (
-    <div className={`relative w-full overflow-hidden bg-panel2 ${wide ? "aspect-[16/9]" : "aspect-[16/10]"} ${className}`}>
+    <div className={`relative w-full overflow-hidden bg-panel2 aspect-[16/10] ${className}`}>
       {/* eslint-disable @next/next/no-img-element -- recorded loops, not worth the image optimizer */}
-      <img src={STYLE_POSTER[id]} alt="" width={448} height={280} draggable={false} loading={priority ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover" style={id === "pixel" ? { imageRendering: "pixelated" } : undefined} />
-      {run && <img src={STYLE_LOOP[id]} alt="" width={448} height={280} draggable={false} onLoad={() => setReady(true)} className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-200 ${ready ? "opacity-100" : "opacity-0"}`}
-        style={id === "pixel" ? { imageRendering: "pixelated" } : undefined} />}
+      <img src={STYLE_POSTER[id]} alt="" width={448} height={280} draggable={false} loading={priority ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover" />
+      {run && <img src={STYLE_LOOP[id]} alt="" width={448} height={280} draggable={false} onLoad={() => setReady(true)} className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-200 ${ready ? "opacity-100" : "opacity-0"}`} />}
       {/* eslint-enable @next/next/no-img-element */}
     </div>
   );

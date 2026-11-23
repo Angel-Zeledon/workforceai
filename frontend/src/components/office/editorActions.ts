@@ -124,6 +124,9 @@ export function placingGhost(fp: { x: number; z: number }, rot: number, ctx: Edi
   return { item: it, x: c.x, z: c.z, rot: c.rot, y: info.y, valid: c.valid };
 }
 
+/** When the last piece was dropped: the click that ends the drop must not count as "a click on nothing" that deselects it. */
+export const placed = { at: 0 };
+
 /** A click on the floor drops the piece being placed (when it fits) and selects it. Returns whether it was placed. */
 export function placeAt(fp: { x: number; z: number }, rot: number, ctx: EditCtx): boolean {
   const st = useOfficeLayout.getState();
@@ -133,6 +136,7 @@ export function placeAt(fp: { x: number; z: number }, rot: number, ctx: EditCtx)
   const uid = newUid();
   st.mutate((l) => ({ ...l, pieces: [...l.pieces, { uid, item: g.item.id, x: g.x, z: g.z, rot: g.rot, s: 1, ...(info.mount !== "floor" ? { y: info.y } : {}) }] }));
   useOfficeLayout.setState({ placing: null, selection: { kind: "piece", uid } });
+  placed.at = performance.now();
   return true;
 }
 

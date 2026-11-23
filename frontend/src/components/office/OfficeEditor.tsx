@@ -2,8 +2,7 @@
 // The office editor panel: the shell (title, tabs, undo, save) and the entry button. Each tab lives in ./editor/.
 import { useT } from "@/lib/i18n";
 import { useCan } from "@/lib/session";
-import { effective, styleOf, useOfficeLayout } from "@/lib/officeLayout";
-import { STYLES_WITHOUT_EDITING } from "@/lib/officeLayoutModel";
+import { useOfficeLayout } from "@/lib/officeLayout";
 import { Btn } from "../ui";
 import { Icon } from "../icons";
 import { ErrorLine } from "../connections/shared";
@@ -48,7 +47,6 @@ export function OfficeEditor() {
   const dragging = useOfficeLayout((s) => s.dragging);
   const sel = useOfficeLayout((s) => s.selection);
   const dirty = useOfficeLayout((s) => !!s.draft && JSON.stringify(s.draft) !== JSON.stringify(s.layout));
-  const noMove = useOfficeLayout((s) => (s.tab === "desks" || s.tab === "furniture") && STYLES_WITHOUT_EDITING.includes(styleOf(effective(s))));
   if (!editing) return null;
   const st = useOfficeLayout.getState;
   const hint = placing ? t("oe.hint.placing") : sel ? t("oe.hint.drag") : t("oe.hint.idle");
@@ -78,7 +76,6 @@ export function OfficeEditor() {
           </div>
         </header>
         <div role="tabpanel" className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          {noMove && <p data-testid="oe-view-note" className="mb-3 rounded-[10px] border border-line bg-panel2 px-3 py-2 text-[12px] text-ink2">{t("oe.style.noEdit")}</p>}
           {tab === "style" && <StyleTab />}
           {tab === "space" && <SpaceTab />}
           {tab === "desks" && <DesksTab />}
