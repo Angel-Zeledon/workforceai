@@ -71,3 +71,23 @@ test("office items go to their slot", async () => {
   await call(r, "DELETE", "/office/items/plant_1");
   assert.equal((await get(r, "/shop/state")).office.length, 0);
 });
+
+test("the saved office style survives a reload: PUT, then a new mock on the same storage GETs it back (backend rules for the style)", async () => {
+  const mem = new Map();
+  const store = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
+  const first = new MockRewards(() => {}, 0, store);
+  assert.equal((await get(first, "/office/layout")).version, 0);
+  for (const [sent, kept] of [["studio", "studio"], ["flat", "flat"], ["clay", "clay"], ["pixel", "pixel"], ["paper", "flat"], ["bricks", "pixel"], ["toon", undefined], ["classic", undefined]]) {
+    const v = (await get(first, "/office/layout")).version;
+    const out = await call(first, "PUT", "/office/layout", { layout: { v: 1, style: sent, light: { time: 12 } }, base_version: v });
+    assert.equal(out.layout.style, kept, sent);
+    assert.equal(out.layout.light.time, 12, "the rest of the document is kept");
+  }
+  await call(first, "PUT", "/office/layout", { layout: { v: 1, style: "clay" }, base_version: 8 });
+  const reopened = new MockRewards(() => {}, 0, store);
+  const doc = await get(reopened, "/office/layout");
+  assert.equal(doc.layout.style, "clay");
+  assert.equal(doc.version, 9);
+  await assert.rejects(() => call(reopened, "PUT", "/office/layout", { layout: { style: "nope" }, base_version: 9 }), /400/);
+  await assert.rejects(() => call(reopened, "PUT", "/office/layout", { layout: { style: "pixel" }, base_version: 3 }), /409/);
+});

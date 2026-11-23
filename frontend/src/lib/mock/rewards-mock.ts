@@ -10,6 +10,25 @@ type Emit = (type: string, payload: unknown, agentId?: string) => void;
  */
 const BASE: Record<string, number> = { S: 5, M: 10, L: 20, XL: 40 };
 
+export interface LayoutStorage { getItem(k: string): string | null; setItem(k: string, v: string): void }
+const LAYOUT_KEY = "aiw.mock.office.layout.v1";
+const defaultStorage = (): LayoutStorage | null => { try { return typeof localStorage === "undefined" ? null : localStorage; } catch { return null; } };
+
+// What backend/internal/rewards/layout.go does to the style of a saved layout (the rest of the document is kept as sent).
+const STYLES = ["classic", "studio", "flat", "clay", "pixel"];
+const LEGACY_STYLES: Record<string, string> = { bricks: "pixel", paper: "flat", real: "studio", toon: "classic" };
+/** Saved-layout rules for the style: an old name becomes its replacement, "classic" is stored as no style, an unknown one is a 400. */
+export function normalizeLayoutDoc(layout: unknown): unknown {
+  if (!layout || typeof layout !== "object") return layout ?? null;
+  const l = { ...(layout as Record<string, unknown>) };
+  let style = typeof l.style === "string" ? l.style : "";
+  if (style && LEGACY_STYLES[style]) style = LEGACY_STYLES[style];
+  if (style === "classic") style = "";
+  if (style && !STYLES.includes(style)) throw new Error("PUT /office/layout -> 400");
+  if (style) l.style = style; else delete l.style;
+  return l;
+}
+
 export class MockRewards {
   private catalog = catalogJson as unknown as Catalog;
   private wallet: Wallet = { balance: 0, earned_total: 0, spent_total: 0 };
@@ -19,15 +38,22 @@ export class MockRewards {
   private equip = new Map<string, string>(); // "agent|slot" -> item
   private office = new Map<string, string>();
   private earnedBy: Record<string, number> = {};
-  /** The office layout document (docs/architecture/office-editor.md): kept in memory in the demo. */
+  /** The office layout document (docs/architecture/office-editor.md). The demo keeps it in the browser's localStorage so a
+   *  reload keeps the saved style and furniture, as the backend would (the backend stores it in the database). */
   private layout: unknown = null;
   private layoutVersion = 0;
+  private store: LayoutStorage | null;
   private seq = 0;
 
   private emit: Emit;
   /** The demo office starts with `startCoins` (same as the backend's REWARDS_DEMO_COINS welcome grant). */
-  constructor(emit: Emit, startCoins = 1000) {
+  constructor(emit: Emit, startCoins = 1000, store: LayoutStorage | null = defaultStorage()) {
     this.emit = emit;
+    this.store = store;
+    try {
+      const saved = JSON.parse(store?.getItem(LAYOUT_KEY) ?? "null") as { layout: unknown; version: number } | null;
+      if (saved && typeof saved.version === "number") { this.layout = saved.layout ?? null; this.layoutVersion = saved.version; }
+    } catch { /* private mode or a broken value: start from the built-in look */ }
     if (startCoins > 0) {
       this.keys.add("grant:welcome");
       this.wallet = { balance: startCoins, earned_total: startCoins, spent_total: 0 };
@@ -106,8 +132,9 @@ export class MockRewards {
       if (method === "GET") return { layout: this.layout, version: this.layoutVersion };
       if (method === "PUT") {
         if (Number(body?.base_version) !== this.layoutVersion) throw new Error("PUT /office/layout -> 409");
-        this.layout = body?.layout ?? null;
+        this.layout = normalizeLayoutDoc(body?.layout);
         this.layoutVersion += 1;
+        try { this.store?.setItem(LAYOUT_KEY, JSON.stringify({ layout: this.layout, version: this.layoutVersion })); } catch { /* quota / private mode */ }
         this.emit("office.layout_updated", { version: this.layoutVersion, actor: "user" });
         return { layout: this.layout, version: this.layoutVersion };
       }
