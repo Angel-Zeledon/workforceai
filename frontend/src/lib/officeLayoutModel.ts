@@ -28,7 +28,9 @@ export const STYLES_WITHOUT_EDITING: OfficeStyle[] = ["studio", "flat"];
 export interface SpaceEffects { wallColor: boolean; trim: boolean; windows: boolean; floor: boolean; light: boolean; view: boolean }
 const ALL_SPACE: SpaceEffects = { wallColor: true, trim: true, windows: true, floor: true, light: true, view: true };
 export const SPACE_EFFECTS: Record<OfficeStyle, SpaceEffects> = {
-  classic: ALL_SPACE, studio: ALL_SPACE, clay: ALL_SPACE, pixel: ALL_SPACE,
+  classic: ALL_SPACE, clay: ALL_SPACE, pixel: ALL_SPACE,
+  // Estudio draws walls, trim, windows, floor and light from the layout, but not the shop "view" behind the glass
+  studio: { ...ALL_SPACE, view: false },
   flat: { ...ALL_SPACE, trim: false, view: false },
 };
 export interface DeskCfg { x?: number; z?: number; desk?: string; chair?: string }
