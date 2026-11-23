@@ -62,7 +62,7 @@ export function OfficeEditor() {
   return (
     <>
       <ThumbStudio />
-      <div data-testid="office-editor" className="pointer-events-auto absolute inset-x-0 bottom-0 z-40 flex max-h-[56dvh] flex-col overflow-hidden rounded-t-2xl border-b-0 pb-[env(safe-area-inset-bottom)] md:inset-x-auto md:bottom-4 md:left-4 md:top-4 md:max-h-none md:w-[380px] md:rounded-2xl md:border-b md:pb-0 border border-line bg-panel shadow-pop">
+      <div data-testid="office-editor" className="pointer-events-auto absolute inset-x-0 bottom-0 z-40 flex h-[52dvh] flex-col overflow-hidden rounded-t-2xl border-b-0 pb-[env(safe-area-inset-bottom)] md:inset-x-auto md:bottom-4 md:left-4 md:top-4 md:h-auto md:w-[380px] md:rounded-2xl md:border-b md:pb-0 border border-line bg-panel shadow-pop">
         <header className="border-b border-line px-4 pb-0 pt-3">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-[15px] font-semibold text-ink">{t("oe.title")}</h2>

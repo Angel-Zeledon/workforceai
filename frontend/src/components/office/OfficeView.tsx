@@ -55,7 +55,8 @@ export function OfficeView() {
     // the editor owns the stage: the activity feed, trays and chat bar would only get in the way
     return (
       <>
-        <div className="absolute inset-0 isolate"><StageScene /></div>
+        {/* on the phone the editor is a sheet over the bottom 52dvh: the stage ends where it starts, so the floor stays in view and touchable */}
+        <div className="absolute inset-x-0 bottom-[52dvh] top-0 isolate md:bottom-0"><StageScene /></div>
         <OfficeEditor />
       </>
     );
