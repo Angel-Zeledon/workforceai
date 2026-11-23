@@ -113,7 +113,7 @@ export function FrameDriver() {
   }, [tier, get]);
 
   useEffect(() => {
-    let raf = 0, last = 0, frame = 0, busy = 0, drawnAt = 0, restUntil = 0;
+    let raf = 0, last = 0, frame = 0, busy = 0, drawnAt = 0, restUntil = 0, frozen = false;
     let onScreen = true, lastInput = performance.now();
     const mon: MonitorState = monitorStart(useQuality.getState().tier, useQuality.getState().floor);
     const io = new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; }, { threshold: 0 });
@@ -123,7 +123,7 @@ export function FrameDriver() {
     for (const e of evs) window.addEventListener(e, input, { passive: true });
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
-      if (document.hidden || !onScreen) { last = 0; drawnAt = 0; return; }
+      if (document.hidden || !onScreen || frozen) { last = 0; drawnAt = 0; return; }
       // pacing: how long the previous draw held the page (start of that tick to this one); a slow one is followed by a rest
       const tn = performance.now();
       if (drawnAt) { restUntil = tn + paceWait(tn - drawnAt); drawnAt = 0; }
@@ -157,6 +157,13 @@ export function FrameDriver() {
         /** drawn frames and main-thread milliseconds spent drawing them, since the office opened */
         counters: () => ({ frames: frame, busyMs: busy }),
         pin: (t: number | null) => useQuality.setState({ pinned: t }),
+        /** stops the real loop and draws `n` frames of virtual time `dt` seconds apart (deterministic walks for screenshots) */
+        freeze: (on: boolean) => { frozen = on; },
+        step: (n: number, dt: number, draw = true) => {
+          const sc = get().scene; let t = get().clock.elapsedTime;
+          for (let i = 0; i < n; i++) { t += dt; sc.visible = draw && i === n - 1; advance(t, true, get()); } // only the last frame is drawn (the rest just move the people)
+          sc.visible = true;
+        },
         /** renderer.info of the last frame (draw calls, triangles) and what lives in the GPU (programs, geometries, textures) */
         info: () => ({
           calls: gl.info.render.calls, triangles: gl.info.render.triangles, programs: gl.info.programs?.length ?? 0,

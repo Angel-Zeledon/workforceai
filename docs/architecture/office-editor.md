@@ -208,6 +208,16 @@ JavaScript math, so WebAssembly would not help. What helps is drawing less:
   under 6 cm cast no shadow); 2 (ratio 1, shadow map redrawn every 2nd frame, pieces under 15 cm cast no shadow, no
   AO / bloom); 3 (ratio 0.75, no shadow map: only the blob and contact shadows). The style keeps its look at every tier
   (geometry, materials, ink); only the costly extras go.
+* Machines without a GPU (2026-11-23). Measured in Chrome with SwiftShader (software GL), style Actual, no detection: in
+  8 s the office drew 12 frames and held the main thread 8.0 s of 8 s (the time is inside the browser's GL calls, `(program)`
+  in the profile; our JavaScript is under 5 %), and even the old lowest tier held it 7.7 s of 8 s, so the tab was
+  unresponsive. The monitor could not see it (it started at full quality and ignored every frame over a second). Now:
+  `FrameDriver` reads the GL renderer (`WEBGL_debug_renderer_info`) before the first frame; a software renderer starts on
+  tier 4 (ratio 0.5, no shadows, 24 fps cap, idle 12) and never climbs; a machine with 2 cores or 2 GB starts on tier 2;
+  two frames in a row over a second step down at once; and every tier has a frame-rate cap. On top of that the loop
+  *paces itself*: after a frame that held the page longer than 100 ms it rests as long again (max 1.5 s), so the page
+  keeps at least half of every second for clicks and for closing the tab (same scene, 45 % blocked instead of 96 %).
+  The scene stays 3D at every tier.
 * Console handles for screenshots and FPS checks (`window.__officeStyle.set(style)`, `.view(fov, x, y, z)` for
   close-ups, `.camera()` to project scene points to the screen in browser checks, `window.__officeQuality.get()` / `.pin(tier)` / `.counters()`) exist in development builds or in a build
   made with `NEXT_PUBLIC_OFFICE_DEBUG=true`.
