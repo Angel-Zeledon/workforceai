@@ -358,7 +358,7 @@ export function Fixtures({ a, layout }: { a: Assets; layout: Layout }) {
 
 const HEIGHT: Record<string, number> = { table: 0.75, sofa: 0.8, cabinet: 1.1, divider: 1.6, appliance: 0.9, aquarium: 0.7, arcade: 1.8, trophy: 0.9, shelf: 1.7, chair: 0.9 };
 
-function PieceView({ a, item, x, z, rot, s, y }: { a: Assets; item: ShopItem; x: number; z: number; rot: number; s: number; y?: number }) {
+export function PieceView({ a, item, x, z, rot, s, y }: { a: Assets; item: ShopItem; x: number; z: number; rot: number; s: number; y?: number }) {
   const info = pieceInfo(item);
   const c = item.color || "#c4aa84", c2 = item.color2 || "#8f9aab";
   const w = info.w * s, d = info.d * s;
