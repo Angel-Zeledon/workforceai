@@ -458,7 +458,7 @@ const Mug = ({ color }: { color: string }) => (
 const MUG_COLORS: Record<string, string> = { cafe_mug_1: "#f4efe6", cafe_mug_2: "#e0735a", cafe_mug_3: "#5a95e8", cafe_table_mug: "#f4efe6" };
 
 /** One built-in object, drawn around its own origin (floor level, or the surface it rests on for small things). */
-function FixtureMesh({ id }: { id: FixtureId }) {
+export function FixtureMesh({ id }: { id: FixtureId }) {
   const f = FIXTURES[id];
   switch (id) {
     case "rack": return <Rack position={[0, 0, 0]} />;

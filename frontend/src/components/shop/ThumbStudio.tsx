@@ -10,7 +10,8 @@ import type { OfficeStyle } from "@/lib/officeLayoutModel";
 import { addStaticStuds, themeTree } from "../office/themeRuntime";
 import { Model, PieceView } from "../office/studio/StudioRoom";
 import { acquireAssets, releaseAssets, type Assets } from "../office/studio/studioAssets";
-import { disposeFlatThumbs, flatDraws, flatThumb } from "../office/editor/flatThumb";
+import { disposeFlatThumbs, fixtureThumb, flatDraws, flatThumb, roomThumb } from "../office/editor/flatThumb";
+import { RoomSubject, fxKey, type Fx } from "../office/editor/RoomSubject";
 import { pixelate } from "../office/editor/thumbPost";
 
 /**
@@ -27,7 +28,7 @@ const SIZE = 256;
 const MAX_CACHE = 500;
 
 const cache = new Map<string, string>();
-interface Job { item: ShopItem; style: OfficeStyle; key: string }
+interface Job { item?: ShopItem; fx?: Fx; style: OfficeStyle; key: string }
 const queue: Job[] = [];
 const queued = new Set<string>();
 const subs = new Set<() => void>();
@@ -35,6 +36,22 @@ const notify = () => subs.forEach((f) => f());
 const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
 
 const keyOf = (style: OfficeStyle, id: string) => (style === "classic" ? id : `${style}:${id}`);
+
+export function requestFxThumb(fx: Fx, style: OfficeStyle = getOfficeStyle()) {
+  const key = keyOf(style, fxKey(fx));
+  if (cache.has(key) || queued.has(key)) return;
+  queued.add(key);
+  queue.push({ fx, style, key });
+  notify();
+}
+/** Picture of a room or of a built-in object of the office, in the current style (same states as useThumb). */
+export function useFxThumb(fx: Fx): string | null {
+  const style = useOfficeStyle();
+  const key = keyOf(style, fxKey(fx));
+  const url = useSyncExternalStore(subscribe, () => cache.get(key) ?? null, () => null);
+  useEffect(() => { if (url === null) requestFxThumb(fx, style); }, [url, fx.kind, fx.id, style]); // eslint-disable-line react-hooks/exhaustive-deps
+  return url;
+}
 
 export function requestThumb(item: ShopItem, style: OfficeStyle = getOfficeStyle()) {
   const key = keyOf(style, item.id);
@@ -152,14 +169,14 @@ function focusOf(item: ShopItem): Focus {
 }
 
 /** Frames the subject (a focus-specific part of it), takes the picture a few frames later and reports it. */
-function Shot({ item, style, onDone, ground, shadow, assets }: { item: ShopItem; style: OfficeStyle; onDone: (url: string) => void; ground: React.RefObject<THREE.Mesh | null>; shadow: React.RefObject<THREE.Mesh | null>; assets: Assets | null }) {
+function Shot({ item, fx, style, onDone, ground, shadow, assets }: { item?: ShopItem; fx?: Fx; style: OfficeStyle; onDone: (url: string) => void; ground: React.RefObject<THREE.Mesh | null>; shadow: React.RefObject<THREE.Mesh | null>; assets: Assets | null }) {
   const { gl, camera, scene } = useThree();
   const focusRef = useRef<THREE.Group>(null);
   const stage = useRef<THREE.Group>(null);
   const studs = useRef<THREE.InstancedMesh | null>(null);
   useEffect(() => () => { const m = studs.current; if (m) { m.dispose(); (m.material as THREE.Material).dispose(); } }, []);
   const frames = useRef(0);
-  const kind = focusOf(item);
+  const kind = item ? focusOf(item) : "object";
   useFrame(() => {
     frames.current++;
     const g = focusRef.current;
@@ -195,7 +212,8 @@ function Shot({ item, style, onDone, ground, shadow, assets }: { item: ShopItem;
       onDone(style === "pixel" ? pixelate(gl.domElement) : gl.domElement.toDataURL("image/png"));
     }
   });
-  return <group ref={stage} userData={{ noStuds: item.kind !== "office", figure: item.kind !== "office" }}><Subject item={item} focus={focusRef} assets={assets} /></group>;
+  if (fx) return <group ref={stage}><RoomSubject fx={fx} assets={assets} focus={focusRef} /></group>;
+  return <group ref={stage} userData={{ noStuds: item!.kind !== "office", figure: item!.kind !== "office" }}><Subject item={item!} focus={focusRef} assets={assets} /></group>;
 }
 
 /** The ground shadow of floor objects. */
@@ -269,11 +287,11 @@ export function ThumbStudio() {
     busy.current = true;
     try {
       if (n.style === "flat") {
-        const url = flatDraws(n.item) ? await flatThumb(n.item) : null;
+        const url = n.fx ? (n.fx.kind === "room" ? await roomThumb(n.fx.id) : await fixtureThumb(n.fx.id)) : n.item && flatDraws(n.item) ? await flatThumb(n.item) : null;
         finish(n, url ?? "");
         return next();
       }
-      if (n.style === "studio" && studioDraws(n.item) && !assets.current) {
+      if (n.style === "studio" && (n.fx || (n.item && studioDraws(n.item))) && !assets.current) {
         held.current = true;
         assets.current = await acquireAssets();
       }
@@ -306,7 +324,7 @@ export function ThumbStudio() {
         <Rig style={cur?.style ?? null} />
         <Ground gref={groundRef} />
         <mesh ref={shadowRef} rotation={[-Math.PI / 2, 0, 0]} visible={false} receiveShadow><planeGeometry args={[8, 8]} /><shadowMaterial opacity={0.3} /></mesh>
-        {cur && <Shot key={cur.key} item={cur.item} style={cur.style} onDone={done} ground={groundRef} shadow={shadowRef} assets={cur.style === "studio" && studioDraws(cur.item) ? assets.current : null} />}
+        {cur && <Shot key={cur.key} item={cur.item} fx={cur.fx} style={cur.style} onDone={done} ground={groundRef} shadow={shadowRef} assets={cur.style === "studio" && (cur.fx || (cur.item && studioDraws(cur.item))) ? assets.current : null} />}
       </Canvas>
     </div>
   );

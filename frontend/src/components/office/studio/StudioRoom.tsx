@@ -267,7 +267,7 @@ export function Workstations({ a, desks }: { a: Assets; desks: Desk[] }) {
 
 // ------------------------------------------------------------------------------------------------ built-in furniture
 
-function Fixture({ a, id, layout, tableAt, pending }: { a: Assets; id: FixtureId; layout: Layout; tableAt: [number, number]; pending: number }) {
+export function Fixture({ a, id, layout, tableAt, pending }: { a: Assets; id: FixtureId; layout: Layout; tableAt: [number, number]; pending: number }) {
   const w = fixtureWorld(layout, id);
   if (!w) return null;
   const def = FIXTURES[id];

@@ -73,18 +73,6 @@ export const roomThumb = (zone: ZoneName) => serial(() => shoot((g) => { const [
 /** One built-in object (a seat, the coffee machine, a plant, the server rack). */
 export const fixtureThumb = (id: FixtureId) => serial(() => shoot((g) => drawParts(g, [id]), 0.7));
 
-/** A picture turned into the Pixel look (see thumbPost). */
-export async function toPixelUrl(url: string): Promise<string> {
-  const { pixelate } = await import("./thumbPost");
-  const img = new Image();
-  img.src = url;
-  await img.decode();
-  const c = document.createElement("canvas");
-  c.width = c.height = SIDE;
-  c.getContext("2d")!.drawImage(img, 0, 0, SIDE, SIDE);
-  return pixelate(c);
-}
-
 /** Lets the surface go (the editor or the shop closed): frees its WebGL context. */
 export function disposeFlatThumbs() {
   const b = boot; boot = null;
