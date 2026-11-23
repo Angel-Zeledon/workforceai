@@ -75,8 +75,11 @@ const GESTURES: Record<Add, { dur: number; n: number; refPose: "sit" | "idle"; s
   look: { dur: 3, n: 30, refPose: "idle", spec: { "Head": (u) => [0.02, s(u * TAU) * 0.55, 0], "Neck": (u) => [0, s(u * TAU) * 0.2, 0], "Torso": (u) => [0, s(u * TAU) * 0.1, 0] } },
   stretch: {
     dur: 2, n: 20, refPose: "idle", spec: {
-      "UpperArm.L": () => [-2.7, 0, 0.35], "UpperArm.R": () => [-2.7, 0, -0.35], "LowerArm.L": () => [-0.2, 0, 0], "LowerArm.R": () => [-0.2, 0, 0],
-      "Torso": () => [-0.14, 0, 0], "Head": () => [-0.18, 0, 0],
+      // arms rise out to the sides with the elbows a little bent (straight, parallel arms read as "hands up"), the chest opens and
+      // the whole thing breathes in and out once; it is a stretch, not a pose
+      "UpperArm.L": (u) => [-2.3 - s(u * Math.PI) * 0.25, 0, 0.75], "UpperArm.R": (u) => [-2.3 - s(u * Math.PI) * 0.25, 0, -0.75],
+      "LowerArm.L": () => [-0.45, 0, 0], "LowerArm.R": () => [-0.45, 0, 0],
+      "Torso": (u) => [-0.1 - s(u * Math.PI) * 0.08, 0, 0], "Head": (u) => [-0.16 - s(u * Math.PI) * 0.06, 0, 0],
     },
   },
   sip: { dur: 1, n: 2, refPose: "idle", spec: { "UpperArm.R": () => [-0.7, 0, -0.1], "LowerArm.R": () => [-1.75, 0, 0], "Head": () => [-0.12, 0, 0] } },

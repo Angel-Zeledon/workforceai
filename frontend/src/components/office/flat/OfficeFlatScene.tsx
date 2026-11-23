@@ -8,6 +8,7 @@ import { useRewards } from "@/lib/rewards";
 import { startProjectsRealtime } from "@/lib/projects/store";
 import { useT } from "@/lib/i18n";
 import { ApprovalDeskCard } from "../OfficeOverlays";
+import { paceWait } from "../officeQuality";
 import { mountFlatScene, type FlatHandle, type Tr } from "./flatScene";
 
 export default function OfficeFlatScene() {
@@ -33,7 +34,21 @@ export default function OfficeFlatScene() {
     let handle: FlatHandle | null = null;
     let tabVisible = typeof document === "undefined" ? true : !document.hidden;
     let onScreen = true;
-    const sync = () => handle?.setRunning(tabVisible && onScreen);
+    let resting = false;
+    const sync = () => handle?.setRunning(tabVisible && onScreen && !resting);
+    // Pacing (same rule as the 3D office, officeQuality.paceWait): on a computer without a GPU every Pixi frame holds the page for
+    // hundreds of ms; after a slow stretch the scene rests as long again so clicks and closing the tab always get through.
+    let pace = 0, prev = 0, restTimer: ReturnType<typeof setTimeout> | undefined;
+    const watch = (t: number) => {
+      pace = requestAnimationFrame(watch);
+      const wait = prev && handle && !resting ? paceWait(t - prev) : 0;
+      prev = t;
+      if (wait > 0) {
+        resting = true; prev = 0; sync();
+        restTimer = setTimeout(() => { resting = false; prev = 0; sync(); }, wait);
+      }
+    };
+    pace = requestAnimationFrame(watch);
     mountFlatScene(el, () => trRef.current).then((h) => {
       if (disposed) { h.destroy(); return; }
       handle = h;
@@ -46,6 +61,7 @@ export default function OfficeFlatScene() {
     io?.observe(el);
     return () => {
       disposed = true;
+      cancelAnimationFrame(pace); clearTimeout(restTimer);
       document.removeEventListener("visibilitychange", onVis);
       io?.disconnect();
       handle?.destroy();

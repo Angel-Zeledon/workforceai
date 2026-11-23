@@ -18,6 +18,7 @@ import { useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
 import { STYLES_WITHOUT_EDITING } from "@/lib/officeLayoutModel";
 import { PresenceHost } from "../presence/PresenceHost";
 import { AwayButton, AwayHost } from "../away/AwayHost";
+import "./mockHooks"; // demo mode only: window.__aiw for driving states from a test browser
 
 const sceneLoading = () => <div className="flex h-full items-center justify-center text-sm font-medium text-mute">…</div>;
 // The 3D scene draws Actual, Maqueta and Pixel; Plano and Estudio have a renderer of their own (loaded only when chosen).
