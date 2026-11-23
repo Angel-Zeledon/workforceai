@@ -27,10 +27,10 @@ type Tab = "shop" | "mine" | "history";
 type Group = "character" | "office";
 
 /** Rarity shows as a quiet dot + word, and as the card's edge: epic items get a soft violet glow. */
-const RARITY_DOT: Record<string, string> = { common: "bg-slate-400", rare: "bg-sky-500", epic: "bg-violet-500" };
+const RARITY_DOT: Record<string, string> = { common: "bg-slate-400", rare: "bg-info", epic: "bg-violet-500" };
 const RARITY_CARD: Record<string, string> = {
   common: "border-line",
-  rare: "border-sky-300/60",
+  rare: "border-info/40",
   epic: "border-violet-400/60 shadow-[0_0_0_1px_rgba(139,92,246,.18),0_6px_22px_-8px_rgba(139,92,246,.45)]",
 };
 

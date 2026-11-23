@@ -10,7 +10,7 @@ import { fmtMoney } from "./shared";
 import { errorText } from "@/lib/errors";
 
 const STATUS_STYLE: Record<PlanChange["status"], string> = {
-  pending: "bg-amber-500/15 text-amber-800", approved: "bg-sky-500/15 text-sky-800", applied: "bg-emerald-500/15 text-emerald-800", rejected: "bg-red-500/10 text-red-700",
+  pending: "bg-amber-500/15 text-amber-800", approved: "bg-info/15 text-info", applied: "bg-emerald-500/15 text-emerald-800", rejected: "bg-red-500/10 text-red-700",
 };
 
 /** Plan changes of a running project: proposals with their diff summary (added / replaced / removed nodes, cost and time delta), approve / reject by a human, and a direct "add task". Agents only propose. */
@@ -52,7 +52,7 @@ export function PlanChangesPanel() {
               </div>
               <div data-testid={`plan-change-diff-${c.id}`} className="flex flex-wrap gap-2 text-[11px] font-semibold">
                 <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-emerald-800">{t("pv.changes.added", { n: im.added })}</span>
-                <span className="rounded-md bg-sky-500/10 px-2 py-0.5 text-sky-800">{t("pv.changes.replaced", { n: im.replaced })}</span>
+                <span className="rounded-md bg-info/10 px-2 py-0.5 text-info">{t("pv.changes.replaced", { n: im.replaced })}</span>
                 <span className="rounded-md bg-red-500/10 px-2 py-0.5 text-red-700">{t("pv.changes.removed", { n: im.removed })}</span>
                 {im.updated > 0 && <span className="rounded-md bg-panel2 px-2 py-0.5 text-mute">{t("pv.changes.updated", { n: im.updated })}</span>}
                 <span className="rounded-md bg-panel2 px-2 py-0.5 font-mono text-ink">{t("pv.changes.cost", { v: `${im.est_cost_delta_usd >= 0 ? "+" : "-"}${fmtMoney(Math.abs(im.est_cost_delta_usd))}` })}</span>

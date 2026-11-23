@@ -47,7 +47,7 @@ function ProviderCard({ p, active, encryption, onChange, onError }: {
         <span className="text-[14px] font-semibold">{p.label}</span>
         {active && <span data-testid={`llm-active-${p.id}`} className="rounded bg-accent px-1.5 py-[2px] text-[10px] font-semibold uppercase text-white">{t("llm.inUse")}</span>}
         {p.platform && !p.configured && <span data-testid="llm-badge-default" className="rounded bg-emerald-500/15 px-1.5 py-[2px] text-[10px] font-semibold uppercase text-emerald-800">{t("llm.included")}</span>}
-        {p.configured && <span className="rounded bg-sky-500/15 px-1.5 py-[2px] text-[10px] font-semibold text-sky-800" data-testid={`llm-saved-${p.id}`}>{t("llm.keySaved", { last4: p.key_last4 || "····" })}</span>}
+        {p.configured && <span className="rounded bg-info/15 px-1.5 py-[2px] text-[10px] font-semibold text-info" data-testid={`llm-saved-${p.id}`}>{t("llm.keySaved", { last4: p.key_last4 || "····" })}</span>}
       </div>
       <p className="mt-1 text-[12px] text-mute">{p.platform ? t("llm.help.platform", { name: p.label }) : t(`llm.help.${p.id}`)}</p>
       <div className="mt-2 flex flex-wrap gap-2">

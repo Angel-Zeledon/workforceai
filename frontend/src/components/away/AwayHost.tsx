@@ -290,7 +290,7 @@ function itemText(it: AwayItem, t: (k: string, v?: Record<string, string | numbe
   return { main: it.title };
 }
 
-const SEV_DOT: Record<string, string> = { high: "bg-red-500", medium: "bg-amber-500", low: "bg-sky-500", info: "bg-emerald-500" };
+const SEV_DOT: Record<string, string> = { high: "bg-red-500", medium: "bg-amber-500", low: "bg-info", info: "bg-emerald-500" };
 
 function SectionBlock({ sec, onNavigate }: { sec: AwaySection; onNavigate: () => void }) {
   const { t } = useT();

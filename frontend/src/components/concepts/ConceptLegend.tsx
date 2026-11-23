@@ -30,7 +30,7 @@ export const CONCEPTS: { id: Concept; icon: IconName; tint: string; href: string
   { id: "project", icon: "flag", tint: "bg-violet-500/10 text-violet-700", href: "/projects" },
   { id: "batch", icon: "copies", tint: "bg-violet-500/10 text-violet-600", href: "/projects" },
   { id: "pending", icon: "bell", tint: "bg-amber-500/15 text-amber-800", href: "/approvals/inbox" },
-  { id: "file", icon: "folder", tint: "bg-sky-500/10 text-sky-700", href: "/files" },
+  { id: "file", icon: "folder", tint: "bg-info/10 text-info", href: "/files" },
   { id: "report", icon: "doc", tint: "bg-blue-500/10 text-blue-700", href: "/dashboard" },
   { id: "customer", icon: "briefcase", tint: "bg-emerald-500/10 text-emerald-700", href: "/clients" },
   { id: "connection", icon: "plug", tint: "bg-slate-400/15 text-slate-600", href: "/connections" },
