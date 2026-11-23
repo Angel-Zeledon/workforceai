@@ -3,7 +3,8 @@ import { useEffect } from "react";
 import { advance, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { create } from "zustand";
-import { useOfficeLayout } from "@/lib/officeLayout";
+import { useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
+import { lookOf } from "./officeTheme";
 import { IDLE_AFTER, IDLE_FPS, QUALITY_TIERS, monitorStart, monitorStep, shouldDraw, tierDpr, type MonitorState } from "./officeQuality";
 
 /**
@@ -24,19 +25,22 @@ export const useQualityTier = () => useQuality((s) => s.pinned ?? s.tier);
 const casters = new WeakMap<THREE.Mesh, boolean>();
 
 const SHADOW_TYPE = { soft: THREE.PCFSoftShadowMap, basic: THREE.PCFShadowMap, off: THREE.PCFShadowMap } as const;
+/** Pixel draws hard, unfiltered shadows. */
+const HARD_SHADOW = THREE.BasicShadowMap;
 
 export function FrameDriver() {
   const get = useThree((s) => s.get);
   const gl = useThree((s) => s.gl);
   const setDpr = useThree((s) => s.setDpr);
   const tier = useQualityTier();
+  const pixel = !!lookOf(useOfficeStyle()).pixel;
 
-  // the tier's pixel ratio and shadows
+  // the tier's pixel ratio and shadows (Pixel keeps the screen's own ratio: its scale must stay a whole number of physical pixels)
   useEffect(() => {
     const q = QUALITY_TIERS[tier];
-    setDpr(tierDpr(tier, window.devicePixelRatio));
+    setDpr(pixel ? window.devicePixelRatio || 1 : tierDpr(tier, window.devicePixelRatio));
     const { scene } = get();
-    const type = SHADOW_TYPE[q.shadows];
+    const type = pixel && q.shadows !== "off" ? HARD_SHADOW : SHADOW_TYPE[q.shadows];
     const typeChanged = gl.shadowMap.type !== type;
     gl.shadowMap.type = type;
     gl.shadowMap.autoUpdate = q.shadowEvery <= 1;
@@ -59,7 +63,7 @@ export function FrameDriver() {
         if (mats) for (const m of Array.isArray(mats) ? mats : [mats]) m.needsUpdate = true;
       }
     });
-  }, [tier, gl, get, setDpr]);
+  }, [tier, pixel, gl, get, setDpr]);
 
   // small pieces stop casting shadows on the lower tiers (fewer draw calls in the shadow pass); re-checked every
   // 1.5 s so pieces added later follow, and restored exactly when the tier allows them again

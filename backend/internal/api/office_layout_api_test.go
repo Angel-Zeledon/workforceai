@@ -79,11 +79,11 @@ func TestOfficeLayoutOverHTTP(t *testing.T) {
 	}
 	next := piece("plant_cactus")
 	next["base_version"] = 1
-	next["layout"].(map[string]any)["style"] = "bricks" // the office's visual style round-trips with the layout
+	next["layout"].(map[string]any)["style"] = "pixel" // the office's visual style round-trips with the layout
 	if s := e.json("PUT", api1+"/office/layout", owner.AccessToken, next, 200); s["version"].(float64) != 2 {
 		t.Fatalf("second save: %v", s)
 	}
-	if g := e.json("GET", api1+"/office/layout", viewer, nil, 200); g["layout"].(map[string]any)["style"] != "bricks" {
+	if g := e.json("GET", api1+"/office/layout", viewer, nil, 200); g["layout"].(map[string]any)["style"] != "pixel" {
 		t.Fatalf("style lost: %v", g)
 	}
 	bogus := piece("plant_cactus")

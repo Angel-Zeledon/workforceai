@@ -10,6 +10,7 @@ import { roleMeta } from "@/lib/meta";
 import { useT } from "@/lib/i18n";
 import { deskOf, seatOf } from "./registry";
 import { effective, useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
+import { lookOf } from "./officeTheme";
 import { Appear, seedOf, useLeaving } from "./ThemeLayer";
 import { DECOR_IDS, FIXTURES, MOOD_BASE, ROOM_PARTS, ZONE_DEFAULTS, ZONE_SIZE, fixturePose, localHour, restOn, timeOfDayMix, type FixtureId, type FloorKind, type LightMix, type ZoneName } from "@/lib/officeLayoutModel";
 import { useRewards } from "@/lib/rewards";
@@ -237,37 +238,6 @@ function Plant({ position, s = 1, tint = "#7f9a86" }: { position: [number, numbe
       </group>
     );
   }
-  if (style === "paper") { // long leaves of card, each folded down its middle
-    return (
-      <group position={position} scale={s}>
-        {pot}
-        {leaves.map(([x, z, h, tilt], i) => (
-          <group key={i} position={[x, 0.4, z]} rotation={[tilt * 0.5, i * 1.05, tilt * 0.8]}>
-            {[-1, 1].map((side) => (
-              <mesh key={side} castShadow position={[side * 0.035, h / 2, 0]} rotation={[0, side * 0.5, 0]}><planeGeometry args={[0.07, h]} />{leaf(i)}</mesh>
-            ))}
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (style === "real") { // a real plant: many slender arching leaves from the soil
-    return (
-      <group position={position} scale={s}>
-        {pot}
-        {Array.from({ length: 14 }, (_, i) => {
-          const a = (i / 14) * Math.PI * 2 + (i % 3) * 0.3, h = 0.38 + ((i * 37) % 30) / 100;
-          return (
-            <group key={i} position={[0, 0.41, 0]} rotation={[0, a, 0]}>
-              <mesh castShadow position={[0, h / 2, 0.05]} rotation={[0.35 + (i % 4) * 0.08, 0, 0]} scale={[1, 1, 0.18]}>
-                <coneGeometry args={[0.035, h, 8]} />{leaf(i % 6)}
-              </mesh>
-            </group>
-          );
-        })}
-      </group>
-    );
-  }
   return (
     <group position={position} scale={s}>
       {pot}
@@ -313,7 +283,6 @@ function Desk({ id, index }: { id: string; index: number }) {
   const progTrack = useRef<THREE.Mesh>(null!);
   const progFill = useRef<THREE.Mesh>(null!);
   const meta = roleMeta(agent?.role);
-  const officeStyle = useOfficeStyle();
   const cfg = useOfficeLayout((s) => effective(s).desks[id]);
   const editing = useOfficeLayout((s) => s.editing);
   const catalog = useRewards((s) => s.catalog);
@@ -361,17 +330,8 @@ function Desk({ id, index }: { id: string; index: number }) {
       <DeskSet item={deskItem} accent={meta.color}>
       {/* monitor (pantalla hacia +z) */}
       <group position={[0, T, -0.12]}>
-        {officeStyle === "real" ? ( // a real stand: round foot, slim neck leaning back a little
-          <>
-            <mesh castShadow position={[0, 0.008, 0.02]}><cylinderGeometry args={[0.13, 0.14, 0.016, 32]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
-            <mesh castShadow position={[0, 0.18, -0.02]} rotation={[-0.08, 0, 0]}><boxGeometry args={[0.035, 0.34, 0.02]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
-          </>
-        ) : (
-          <>
-            <mesh castShadow position={[0, 0.01, 0]}><boxGeometry args={[0.26, 0.02, 0.18]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
-            <mesh castShadow position={[0, 0.17, 0]}><boxGeometry args={[0.04, 0.3, 0.03]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
-          </>
-        )}
+        <mesh castShadow position={[0, 0.01, 0]}><boxGeometry args={[0.26, 0.02, 0.18]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
+        <mesh castShadow position={[0, 0.17, 0]}><boxGeometry args={[0.04, 0.3, 0.03]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
         <RoundedBox args={[0.98, 0.58, 0.04]} radius={0.02} smoothness={3} castShadow position={[0, 0.5, 0]}><meshStandardMaterial color="#2c323b" roughness={0.5} /></RoundedBox>
         <mesh position={[0, 0.5, 0.024]}><planeGeometry args={[0.9, 0.5]} /><meshBasicMaterial ref={screen} color="#bfe6ff" toneMapped={false} /></mesh>
         <group ref={bars} position={[0, 0.5, 0.03]}>
@@ -699,11 +659,23 @@ function useLightTarget(): LightMix & { temp: number } {
   const light = useOfficeLayout((s) => effective(s).light);
   const auto = usePreferences((s) => s.prefs.lightAuto);
   const hour = useLocalHour(auto);
+  const warm = !!lookOf(useOfficeStyle()).warmLight;
   return useMemo(() => {
-    const base = auto ? timeOfDayMix(hour) : (MOOD_BASE[light.mood] ?? MOOD_BASE.natural);
+    let base = auto ? timeOfDayMix(hour) : (MOOD_BASE[light.mood] ?? MOOD_BASE.natural);
+    if (warm && !auto && light.mood !== "night") base = afternoon(base);
     const k = light.brightness;
     return { ...base, amb: base.amb * k, hemi: base.hemi * k, sun: base.sun * k, temp: auto || light.mood === "night" ? 0 : light.temp };
-  }, [auto, hour, light.mood, light.brightness, light.temp]);
+  }, [auto, hour, light.mood, light.brightness, light.temp, warm]);
+}
+
+const hexMix = (c: string, to: string, t: number) => "#" + new THREE.Color(c).lerp(new THREE.Color(to), t).getHexString();
+/** Maqueta: the room's mood seen in the soft low light of an afternoon (a warm sun from the side, warm bounce, no hard contrast). */
+function afternoon(b: LightMix): LightMix {
+  return {
+    ...b, amb: b.amb * 1.05, sun: b.sun * 0.9, hemi: b.hemi * 1.05,
+    ambColor: hexMix(b.ambColor, "#ffe2c4", 0.45), hemiSky: hexMix(b.hemiSky, "#ffe9d2", 0.4), hemiGround: hexMix(b.hemiGround, "#b89572", 0.5),
+    sunColor: hexMix(b.sunColor, "#ffcf9a", 0.6), bg: hexMix(b.bg, "#b39a86", 0.5), sunPos: [14, 12, 10],
+  };
 }
 
 /** Scene lights, background and fog driven by the layout's light and the `lighting` preference, eased toward the target. */

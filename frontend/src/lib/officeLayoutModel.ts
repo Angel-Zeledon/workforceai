@@ -5,11 +5,32 @@
 export type FloorKind = "concrete" | "wood" | "parquet" | "carpet" | "tile" | "marble";
 export type Mood = "natural" | "warm" | "cool" | "sunset" | "night";
 /**
- * Visual style of the whole office (scene, furniture, what the characters wear and how everything moves). "classic" is
- * the original look and the default; the rest are drawn by a transform layer (components/office/officeTheme.ts).
+ * Visual style of the whole office. "classic" (A, Actual) is the original look and the default; "studio" (B, Estudio) and
+ * "flat" (C, Plano) have their own renderer; "clay" (D, Maqueta) and "pixel" (E, Píxel) restyle the same 3D scene
+ * (components/office/officeTheme.ts).
  */
-export type OfficeStyle = "classic" | "bricks" | "clay" | "paper" | "toon" | "real";
-export const OFFICE_STYLES: OfficeStyle[] = ["classic", "bricks", "clay", "paper", "toon", "real"];
+export type OfficeStyle = "classic" | "studio" | "flat" | "clay" | "pixel";
+export const OFFICE_STYLES: OfficeStyle[] = ["classic", "studio", "flat", "clay", "pixel"];
+/** Styles saved before the five-style menu, and the one that replaced each. */
+export const LEGACY_STYLES: Record<string, OfficeStyle> = { bricks: "pixel", clay: "clay", paper: "flat", real: "studio", toon: "classic" };
+/** The style a stored value stands for ("classic" for anything unknown). */
+export function normalizeStyle(v: unknown): OfficeStyle {
+  if (typeof v !== "string") return "classic";
+  if ((OFFICE_STYLES as string[]).includes(v)) return v as OfficeStyle;
+  return Object.prototype.hasOwnProperty.call(LEGACY_STYLES, v) ? LEGACY_STYLES[v] : "classic";
+}
+/** Styles drawn by their own renderer, which cannot move pieces: the editor shows the normal view while moving things. */
+export const STYLES_WITHOUT_EDITING: OfficeStyle[] = ["studio", "flat"];
+/**
+ * What the "Espacio" tab of the editor offers in each style: only the controls that change something in that style's
+ * renderer (the 3D styles draw everything; the illustrated one has no ceiling trim and no window view).
+ */
+export interface SpaceEffects { wallColor: boolean; trim: boolean; windows: boolean; floor: boolean; light: boolean; view: boolean }
+const ALL_SPACE: SpaceEffects = { wallColor: true, trim: true, windows: true, floor: true, light: true, view: true };
+export const SPACE_EFFECTS: Record<OfficeStyle, SpaceEffects> = {
+  classic: ALL_SPACE, studio: ALL_SPACE, clay: ALL_SPACE, pixel: ALL_SPACE,
+  flat: { ...ALL_SPACE, trim: false, view: false },
+};
 export interface DeskCfg { x?: number; z?: number; desk?: string; chair?: string }
 export interface Piece { uid: string; item: string; x: number; z: number; rot: number; s: number; y?: number }
 export type ZoneName = "meeting" | "approvals" | "cafe";
@@ -77,7 +98,8 @@ export function normalizeLayout(raw: unknown): Layout {
     fixtures: {},
   };
   if (r.seeded) out.seeded = true;
-  if (OFFICE_STYLES.includes(r.style) && r.style !== "classic") out.style = r.style;
+  const style = normalizeStyle(r.style);
+  if (style !== "classic") out.style = style;
   if (r.zones && typeof r.zones === "object") {
     for (const name of ZONE_NAMES) { const z = r.zones[name]; if (z && Number.isFinite(z.x) && Number.isFinite(z.z)) out.zones[name] = { x: z.x, z: z.z }; }
   }

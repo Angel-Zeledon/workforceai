@@ -117,7 +117,10 @@ var (
 	}
 	floorKinds = map[string]bool{"concrete": true, "wood": true, "parquet": true, "carpet": true, "tile": true, "marble": true}
 	moods      = map[string]bool{"natural": true, "warm": true, "cool": true, "sunset": true, "night": true}
-	styles     = map[string]bool{"classic": true, "bricks": true, "clay": true, "paper": true, "toon": true, "real": true}
+	// The five office styles: A "classic" (Actual), B "studio" (Estudio), C "flat" (Plano), D "clay" (Maqueta), E "pixel" (Píxel).
+	styles = map[string]bool{"classic": true, "studio": true, "flat": true, "clay": true, "pixel": true}
+	// Styles saved before the five-style menu, mapped to the one that replaced them.
+	legacyStyles = map[string]string{"bricks": "pixel", "paper": "flat", "real": "studio", "toon": "classic"}
 )
 
 // ErrLayoutConflict is returned (as *LayoutConflictError) when base_version is not the stored version.
@@ -157,6 +160,12 @@ func inRange(v, lo, hi float64) bool { return v >= lo && v <= hi }
 func Validate(c *Catalog, l *Layout) error {
 	if l.V != LayoutVersion {
 		return invalidf("v must be %d", LayoutVersion)
+	}
+	if to, old := legacyStyles[l.Style]; old {
+		l.Style = to
+	}
+	if l.Style == "classic" {
+		l.Style = "" // the default look is stored as "no style"
 	}
 	if l.Style != "" && !styles[l.Style] {
 		return invalidf("unknown office style %q", clip(l.Style, 20))

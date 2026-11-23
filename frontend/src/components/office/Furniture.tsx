@@ -175,7 +175,6 @@ export function DeskSet({ item, accent, children }: { item?: ShopItem; accent: s
   const veins = sp.veins ? rnd(item?.id ?? "v", 6) : null;
   return (
     <group>
-      {style === "real" && <><ContactShadow w={2.7} d={1.4} o={0.35} /><DeskCable T={T} /></>}
       <RoundedBox args={[2.2, th, 0.95]} radius={Math.min(0.015, th / 3)} smoothness={3} castShadow receiveShadow position={[0, T - th / 2, 0]}>{M(top, sp.topFin)}</RoundedBox>
       {veins && veins.map((v, i) => <mesh key={i} position={[(v - 0.5) * 1.6, T + 0.001, (veins[(i + 2) % 6] - 0.5) * 0.6]} rotation={[-Math.PI / 2, 0, v * 2 - 1]}><planeGeometry args={[0.5 + v * 0.6, 0.012]} /><meshBasicMaterial color={darken(top, 0.16)} transparent opacity={0.6} /></mesh>)}
       <mesh position={[0, T - th - 0.015, 0.44]}><boxGeometry args={[2.18, 0.03, 0.03]} /><meshStandardMaterial color={accent} roughness={0.6} /></mesh>
@@ -220,10 +219,10 @@ function Legs4({ x, z, h, c, f, t = 0.028, b = 0.018, sp = 0.08 }: { x: number; 
 /** Chair seat at the origin (floor-center), back toward +z, seat top about 0.34 so seated characters line up. */
 export function ChairMesh({ item }: { item?: ShopItem }) {
   const style = useOfficeStyle();
-  // the built-in chair in the shape styles (same graphite colors): toy chair, ball of clay, folded card, real office chair
-  if (!item && (style === "bricks" || style === "clay" || style === "paper" || style === "real")) {
+  // the built-in chair in the clay style (same graphite colors): a little ball of clay
+  if (!item && style === "clay") {
     const sp = styleChair(CHAIR_DEFAULT, style);
-    return <group>{chairBody(sp, sp.seat, sp.back, sp.base, sp.trim && sp.trim[0] === "#" ? sp.trim : "#59616d")}{style === "real" && <ContactShadow w={0.9} d={0.9} />}</group>;
+    return <group>{chairBody(sp, sp.seat, sp.back, sp.base, sp.trim && sp.trim[0] === "#" ? sp.trim : "#59616d")}</group>;
   }
   if (!item) {
     return (
@@ -237,38 +236,7 @@ export function ChairMesh({ item }: { item?: ShopItem }) {
   }
   const sp = chairSpec(item, style);
   const seat = tone(item, sp.seat), back = tone(item, sp.back), base = tone(item, sp.base), trim = tone(item, sp.trim ?? "c2");
-  return <group>{chairBody(sp, seat, back, base, trim)}{style === "real" && <ContactShadow w={0.9} d={0.9} />}</group>;
-}
-
-let contactTex: THREE.CanvasTexture | null = null;
-/** Realistic: the soft dark patch where a piece meets the floor (one shared texture, one quad per piece). */
-function ContactShadow({ w, d, o = 0.42 }: { w: number; d: number; o?: number }) {
-  if (!contactTex && typeof document !== "undefined") {
-    const c = document.createElement("canvas");
-    c.width = c.height = 64;
-    const g = c.getContext("2d")!;
-    const gr = g.createRadialGradient(32, 32, 4, 32, 32, 32);
-    gr.addColorStop(0, "rgba(18,22,30,0.85)"); gr.addColorStop(0.55, "rgba(18,22,30,0.35)"); gr.addColorStop(1, "rgba(18,22,30,0)");
-    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
-    contactTex = new THREE.CanvasTexture(c);
-  }
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]} userData={{ noTheme: true }} renderOrder={1}>
-      <planeGeometry args={[w, d]} />
-      <meshBasicMaterial map={contactTex} transparent opacity={o} depthWrite={false} toneMapped={false} />
-    </mesh>
-  );
-}
-
-/** Realistic: the monitor cable running down the back of a desk and along the floor to the wall box. */
-function DeskCable({ T }: { T: number }) {
-  return (
-    <group userData={{ noStuds: true }}>
-      <Cy p={[0.35, T / 2, -0.42]} t={0.007} h={T} n={6} c="#23272e" f="plastic" s={false} />
-      <Cy p={[0.35, 0.012, -0.62]} r={[Math.PI / 2, 0, 0]} t={0.007} h={0.4} n={6} c="#23272e" f="plastic" s={false} />
-      <Bx p={[0.35, 0.03, -0.82]} a={[0.06, 0.05, 0.03]} c="#3a414c" f="plastic" />
-    </group>
-  );
+  return <group>{chairBody(sp, seat, back, base, trim)}</group>;
 }
 
 function chairBody(sp: ChairSpec, seat: string, back: string, base: string, trim: string): React.ReactNode {

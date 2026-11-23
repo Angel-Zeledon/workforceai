@@ -66,6 +66,8 @@ export interface Motion {
   smear: number;
   /** natural weight shift over the stance leg while walking (realistic) */
   weight: number;
+  /** every joint follows its pose through a spring: a little anticipation and follow-through, never a jitter */
+  spring?: boolean;
 }
 
 export interface StyleLook {
@@ -89,6 +91,10 @@ export interface StyleLook {
   appear: AppearKind;
   ambient: AmbientKind;
   motion: Motion;
+  /** warm afternoon light over the scene (Maqueta) */
+  warmLight?: boolean;
+  /** drawn small and enlarged by whole pixels with a palette and an outline (Pixel) */
+  pixel?: boolean;
   /** colors of the picker's preview tile (today's palette, drawn in the style) */
   swatch: [string, string, string];
   /** body proportions of the characters */
@@ -107,34 +113,23 @@ const BASE: StyleLook = {
 
 export const STYLE_LOOKS: Record<OfficeStyle, StyleLook> = {
   classic: BASE,
-  bricks: {
-    ...BASE, geometry: "blocks", studs: true, appear: "stack", env: "hdri",
-    post: { ao: 2.4, aoRadius: 0.32, bloom: 0.12, tilt: 0.5, smaa: true }, // deep joints, a miniature photo of a toy
-    motion: { ...STILL, walk: 1.25, speed: 0.9, turn: 1.6, stopFps: 8, rigid: true, fidget: 1.3 },
-  },
+  // Studio and Flat have their own renderers (components/office/studio, /flat); in the 3D scene (the editor's normal view)
+  // they look like the current office.
+  studio: BASE,
+  flat: BASE,
+  // Maqueta: a clay scale model. Matte warm materials, soft contact shadows, afternoon light and a tilt-shift blur. Nothing
+  // flickers: the body is smoothed by springs (Character) instead of stop-motion.
   clay: {
-    ...BASE, geometry: "soft", lump: 0.028, appear: "squish",
-    post: { ao: 1.8, aoRadius: 0.45, bloom: 0, tilt: 0, smaa: true }, // soft contact shadows of modelled clay
-    body: { head: 1.14, torsoW: 1.25, torsoH: 0.96, limb: 1.55 }, // chubby, big head, sausage arms and legs
-    motion: { ...STILL, idle: 1.3, walk: 1.2, speed: 0.85, squash: 2.2, fidget: 1.3, stopFps: 12 }, // stop-motion on twelves
+    ...BASE, geometry: "soft", lump: 0.022, appear: "squish", warmLight: true,
+    post: { ao: 1.6, aoRadius: 0.45, bloom: 0, tilt: 1, smaa: true },
+    body: { head: 1.14, torsoW: 1.2, torsoH: 0.96, limb: 1.45 }, // chubby, big head, sausage arms and legs
+    motion: { ...STILL, idle: 1.15, walk: 1.1, speed: 0.9, squash: 1.2, fidget: 1.1, spring: true },
   },
-  paper: {
-    ...BASE, geometry: "lowpoly", flat: true, ink: 0.3, appear: "unfold", ambient: "paper",
-    outline: { px: 2, color: "#4a3c30", alpha: 0.7, shadow: 1 }, // the shadowed edge of a cut sheet, lifted off the page
-    post: { ao: 0.9, aoRadius: 0.3, bloom: 0, tilt: 0, smaa: true },
-    motion: { ...STILL, walk: 0.9, turn: 2.6, fidget: 1.4, depth: 0.16, waddle: 0.3, flutter: 2.2 }, // almost flat cut-outs
-  },
-  toon: {
-    ...BASE, cel: true, appear: "pop",
-    outline: { px: 2.4, color: "#1d1a22", alpha: 0.95, boil: 0.9, boilFps: 8 }, // thick ink on everything, drawn by hand
-    post: { ao: 0, aoRadius: 0, bloom: 0, tilt: 0, smaa: true },
-    motion: { ...STILL, idle: 1.7, walk: 1.6, turn: 2, fidget: 1.8, squash: 1.4, smear: 1.6 },
-  },
-  real: {
-    ...BASE, env: "hdri", appear: "rise",
-    post: { ao: 2, aoRadius: 0.6, bloom: 0.3, tilt: 0, smaa: true }, // an architectural render
-    body: { head: 0.76, torsoW: 0.94, torsoH: 1.16, limb: 0.86 }, // less of a doll: smaller head, taller torso, slimmer limbs
-    motion: { ...STILL, idle: 0.7, walk: 0.8, speed: 0.95, turn: 0.8, fidget: 0.8, weight: 1 },
+  // Pixel: pixel art in 3D. The picture is drawn small and enlarged by a whole number of screen pixels (PixelLayer), with a
+  // few flat bands of light, a 1 px outline, hard shadows and poses at 6 per second, like a sprite.
+  pixel: {
+    ...BASE, cel: true, pixel: true,
+    motion: { ...STILL, stopFps: 6 },
   },
 };
 
@@ -169,57 +164,19 @@ export function styleMaterial(m: MatIn, style: OfficeStyle, role: MatRole = "ite
   const look = lookOf(style);
   const out: MatOut = { roughness: m.roughness, metalness: m.metalness, flat: look.flat, cel: look.cel, ink: role === "ground" ? 0 : look.ink, lump: 0, surface: 0, bump: 0, tex: 0, pbr: null, tile: 1, roughVar: 0, envIntensity: 0 };
   const figure = role === "figure";
-  const pbr = (k: PbrKind, bump: number, tex: number, roughVar: number) => { out.pbr = k; out.surface = PBR_SURFACE[k]; out.tile = PBR_TILE[k]; out.bump = bump; out.tex = tex; out.roughVar = roughVar; };
   switch (style) {
-    case "bricks": // molded ABS: glossy, never metal, a clear reflection on every face; the walls are built course by course
-      out.metalness = 0;
-      if (m.transparent) { out.roughness = 0.05; out.envIntensity = 0.7; break; }
-      out.roughness = figure ? 0.24 : 0.2; out.envIntensity = role === "ground" ? 0.25 : 0.55;
-      if (role === "wall") { out.surface = 10; out.bump = 1; out.tex = 0.1; }
-      if (role === "ground" && m.hint !== "backdrop") { out.surface = 11; out.bump = 1; out.tex = 1; } // the floor is a baseplate
-      break;
-    case "clay": // smooth, waxy, with soft dents and finger marks in the relief only (no color stains); glass stays glass
+    case "clay": // matte warm clay: soft dents and finger marks in the relief only (no color stains); glass stays glass
       if (m.transparent) break;
-      out.roughness = 0.56; out.metalness = 0; out.surface = 1;
+      out.roughness = 0.82; out.metalness = 0; out.surface = 1;
       out.bump = figure ? 0.7 : role === "ground" ? 0.8 : 1;
       out.lump = role === "ground" ? 0 : look.lump * (figure ? 0.55 : 1);
       break;
-    case "paper": // matte card with a soft fibrous grain, on every surface
+    case "pixel": // flat bands of light, nothing shiny
       if (m.transparent) break;
-      out.roughness = 1; out.metalness = 0; out.surface = 2; out.bump = 1; out.tex = role === "ground" || role === "wall" ? 0.07 : 0.05;
+      out.roughness = Math.max(0.85, m.roughness); out.metalness = 0;
       break;
-    case "toon":
-      out.roughness = Math.max(0.5, m.roughness); out.metalness = Math.min(m.metalness, 0.2);
-      break;
-    case "real": {
-      // the finish decides the real-world surface (photographed CC0 textures); reflections stay low on matte things so
-      // the light reads as in classic
-      if (role === "ground") {
-        // the floor keeps its own pattern (planks, tiles...): the photographed set only adds the matching relief and sheen
-        const h = m.hint ?? "concrete";
-        if (h === "backdrop") break;
-        if (h === "wood" || h === "parquet") { pbr("wood", 0.5, 0.25, 0.4); out.tile = 1.6; out.roughness = 0.42; out.envIntensity = 0.2; }
-        else if (h === "carpet") { pbr("fabric", 0.8, 0.3, 0.1); out.tile = 0.5; out.envIntensity = 0.02; }
-        else if (h === "tile" || h === "marble") { out.surface = 6; out.roughness = 0.14; out.envIntensity = 0.32; }
-        else { pbr("concrete", 0.8, 0.7, 0.5); out.roughness = 0.38; out.envIntensity = 0.22; }
-        break;
-      }
-      if (role === "wall") { pbr("plaster", 0.9, 0.35, 0.3); out.envIntensity = 0.05; break; }
-      if (figure) { if (m.roughness > 0.85) pbr("fabric", 0.7, 0.3, 0.2); out.envIntensity = 0.06; break; }
-      if (m.metalness >= 0.3) { pbr("metal", 0.5, 0.25, 0.5); out.roughness = 0.32; out.metalness = 0.9; out.envIntensity = 0.7; }
-      else if (m.transparent) { out.roughness = 0.04; out.envIntensity = 0.6; }
-      else if (m.roughness >= 0.88) { pbr("fabric", 0.9, 0.4, 0.2); out.envIntensity = 0.04; }
-      else if (m.roughness >= 0.6) { pbr("wood", 0.6, 0.7, 0.45); out.roughness = 0.5; out.envIntensity = 0.16; }
-      else { out.surface = 6; out.envIntensity = 0.3; }
-      break;
-    }
   }
   return out;
-}
-
-/** The texture sets a style needs (loaded only while that style is active). */
-export function pbrKindsOf(style: OfficeStyle): PbrKind[] {
-  return style === "real" ? PBR_KINDS : [];
 }
 
 // ------------------------------------------------------------------------------------------------ motion
