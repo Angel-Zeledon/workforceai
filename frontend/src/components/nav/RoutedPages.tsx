@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/lib/i18n";
 import { useSkillsNav } from "@/lib/skills";
 import { useProjects } from "@/lib/projects/store";
-import { OfficeView } from "../office/OfficeView";
+import dynamic from "next/dynamic";
 import { Dashboard } from "../dashboard/Dashboard";
 import { FilesScreen } from "../files/FilesScreen";
 import { SkillsView } from "../skills/SkillsView";
@@ -23,8 +23,13 @@ import { useConnections } from "@/lib/connections/store";
 import { useBootConnections } from "../security/ControlsChrome";
 import { useStore } from "@/lib/store";
 import { useOffice3d, useOffice3dReady } from "@/lib/preferences";
+import { useOfficeView } from "@/lib/officeView";
+import { Office3dNotice } from "./Office3dNotice";
 import { WorkspaceHost } from "../workspace/WorkspaceHost";
 import { ShopOff } from "../shop/ShopOff";
+
+/** The 3D office (and everything it pulls in: scene, editor) loads only when that view opens; the list never loads it. */
+const OfficeView = dynamic(() => import("../office/OfficeView").then((m) => m.OfficeView), { ssr: false, loading: () => <PageSkeleton /> });
 
 /** Page body with a first-run hint strip on top (dismissed once, remembered in localStorage). */
 function Hinted({ id, children }: { id: string; children: ReactNode }) {
@@ -53,15 +58,12 @@ function ListHome() {
 
 /** Thin client wrappers so every route renders one existing screen; query strings carry the deep links. */
 export function OfficePage() {
-  const ready = useOffice3dReady();
-  const on = useOffice3d();
+  const { view, ready } = useOfficeView();
   if (!ready) return <PageSkeleton />;
-  return on ? <OfficeView /> : <ListHome />;
+  return view === "3d" ? <><OfficeView /><Office3dNotice /></> : <ListHome />;
 }
-export function DashboardPage() {
-  const on = useOffice3d();
-  return on ? <Dashboard /> : <ListHome />;
-}
+/** The old `/dashboard` address is the list. */
+export const DashboardPage = () => <ListHome />;
 /** The shop decorates the 3D office: without the animation it only explains how to turn it on. */
 export function ShopPage() {
   const ready = useOffice3dReady();

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { fmtNumber, useT } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { usePreferences } from "@/lib/preferences";
+import { useOfficeView } from "@/lib/officeView";
 import { useRewards } from "@/lib/rewards";
 import { AgentMark } from "../brand/AgentMark";
 import { CoinIcon } from "../shop/Coin";
@@ -26,6 +27,7 @@ export function WelcomeOverlay() {
   const user = useSession((s) => s.user);
   const reduce = usePreferences((s) => s.prefs.reduceMotion);
   const office3d = usePreferences((s) => s.prefs.office3d);
+  const { view } = useOfficeView();
   // the coins are spent in the shop, which only exists with the animated office: without it the welcome does not show them
   const wallet = useRewards((s) => s.wallet.balance);
   const balance = office3d ? wallet : 0;
@@ -68,7 +70,7 @@ export function WelcomeOverlay() {
   const close = (tour: boolean) => {
     write(key);
     setOpen(false);
-    if (tour) setTimeout(() => useTour.getState().start(office3d ? "office-v1" : "dashboard-v1"), 250);
+    if (tour) setTimeout(() => useTour.getState().start(view === "3d" ? "office-v1" : "dashboard-v1"), 250);
   };
   // The responsible's main button opens the team set-up instead of closing into the office.
   const primary = () => {
@@ -125,7 +127,7 @@ export function WelcomeOverlay() {
           {steps.map((s) => (
             <li key={s.k} className="flex flex-col items-center gap-1 rounded-xl border border-line bg-panel2 px-2 py-2 text-center sm:flex-row sm:items-start sm:gap-3 sm:px-3 sm:py-2.5 sm:text-left">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent sm:mt-0.5 sm:h-7 sm:w-7"><Icon name={s.icon} size={13} /></span>
-              <span className="min-w-0 text-[12.5px] leading-snug text-ink2"><b className="block text-[12px] text-ink sm:text-[13px]">{t(`welcome.step${s.k}.t`)}</b><span className="hidden sm:inline">{t(`welcome.step${s.k}.d${!office3d && s.k !== "3" ? "List" : ""}`)}</span></span>
+              <span className="min-w-0 text-[12.5px] leading-snug text-ink2"><b className="block text-[12px] text-ink sm:text-[13px]">{t(`welcome.step${s.k}.t`)}</b><span className="hidden sm:inline">{t(`welcome.step${s.k}.d${view !== "3d" && s.k !== "3" ? "List" : ""}`)}</span></span>
             </li>
           ))}
         </ol>}
