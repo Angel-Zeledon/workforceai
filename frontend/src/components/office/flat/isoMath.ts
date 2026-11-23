@@ -7,6 +7,19 @@ export const S = 30;
 export const CS = Math.cos(Math.PI / 6);
 /** World (x, z, height) -> scene pixels. The camera looks from +x, +z: what is greater x + z is closer (lower on screen). */
 export const iso = (x: number, z: number, h = 0) => ({ x: (x - z) * CS * S, y: (x + z) * 0.5 * S - h * S });
+/** Inverse of iso(): the floor point (x, z) that is drawn at scene pixels (sx, sy) when it is at height `h` above the floor. */
+export const unIso = (sx: number, sy: number, h = 0) => {
+  const a = sx / (CS * S), b = (2 * (sy + h * S)) / S; // a = x - z, b = x + z
+  return { x: (a + b) / 2, z: (b - a) / 2 };
+};
+/** Whether a floor point is inside a footprint (a rotated rectangle, or a circle of diameter w when round), as officeGeometry.corners() lays it out. */
+export function pointInBox(b: { x: number; z: number; w: number; d: number; rot: number; round?: boolean }, px: number, pz: number): boolean {
+  const dx = px - b.x, dz = pz - b.z;
+  if (b.round) return Math.hypot(dx, dz) <= b.w / 2;
+  const c = Math.cos(b.rot), s = Math.sin(b.rot);
+  const lx = dx * c - dz * s, lz = dx * s + dz * c; // the point in the box own frame (inverse of corners())
+  return Math.abs(lx) <= b.w / 2 && Math.abs(lz) <= b.d / 2;
+}
 /** Depth key for sorting: greater is closer to the camera. */
 export const depthOf = (x: number, z: number) => x + z;
 

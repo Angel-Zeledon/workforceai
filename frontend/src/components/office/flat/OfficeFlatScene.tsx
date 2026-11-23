@@ -7,6 +7,7 @@ import { useOfficeLayout } from "@/lib/officeLayout";
 import { useRewards } from "@/lib/rewards";
 import { startProjectsRealtime } from "@/lib/projects/store";
 import { useT } from "@/lib/i18n";
+import { ApprovalDeskCard } from "../OfficeOverlays";
 import { mountFlatScene, type FlatHandle, type Tr } from "./flatScene";
 
 export default function OfficeFlatScene() {
@@ -52,5 +53,11 @@ export default function OfficeFlatScene() {
     };
   }, []);
 
-  return <div ref={host} data-testid="office-flat" className="absolute inset-0 overflow-hidden bg-white" />;
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-white">
+      <div ref={host} data-testid="office-flat" className="absolute inset-0" />
+      {/* the approvals desk card of the 3D office (same data and actions as the tray); flatPopups.ts positions it over the desk */}
+      <div className="pointer-events-none absolute inset-0"><ApprovalDeskCard /></div>
+    </div>
+  );
 }
