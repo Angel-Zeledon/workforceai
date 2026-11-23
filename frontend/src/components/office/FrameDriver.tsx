@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { create } from "zustand";
 import { useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
 import { lookOf } from "./officeTheme";
-import { IDLE_AFTER, IDLE_FPS, QUALITY_TIERS, monitorStart, monitorStep, shouldDraw, tierDpr, type MonitorState } from "./officeQuality";
+import { IDLE_AFTER, QUALITY_TIERS, isSoftwareRenderer, monitorStart, monitorStep, paceWait, shouldDraw, startingTier, targetFps, tierDpr, type MonitorState } from "./officeQuality";
 
 /**
  * Drives the office canvas (docs/architecture/office-editor.md, "Styles" > "Speed on slow computers"). The Canvas runs
@@ -17,8 +17,8 @@ import { IDLE_AFTER, IDLE_FPS, QUALITY_TIERS, monitorStart, monitorStep, shouldD
  *    back up when there is room, with hysteresis. The tier caps the pixel ratio, the shadows and, through
  *    `useQualityTier`, the post-processing of the active style.
  */
-interface QualityStore { tier: number; fps: number; pinned: number | null }
-export const useQuality = create<QualityStore>(() => ({ tier: 0, fps: 60, pinned: null }));
+interface QualityStore { tier: number; fps: number; pinned: number | null; /** the tier never climbed above (software rendering) */ floor: number; /** the GL renderer string, once read */ renderer: string }
+export const useQuality = create<QualityStore>(() => ({ tier: 0, fps: 60, pinned: null, floor: 0, renderer: "" }));
 export const useQualityTier = () => useQuality((s) => s.pinned ?? s.tier);
 
 /** Meshes whose shadow a low tier switched off (their own castShadow, to restore). */
@@ -28,9 +28,31 @@ const SHADOW_TYPE = { soft: THREE.PCFSoftShadowMap, basic: THREE.PCFShadowMap, o
 /** Pixel draws hard, unfiltered shadows. */
 const HARD_SHADOW = THREE.BasicShadowMap;
 
+/** The GPU driver's own name for itself (WEBGL_debug_renderer_info; falls back to the generic one). */
+export function softwareName(ctx: WebGLRenderingContext | WebGL2RenderingContext): string {
+  try {
+    const ext = ctx.getExtension("WEBGL_debug_renderer_info");
+    return String(ctx.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : ctx.RENDERER) || "");
+  } catch { return ""; }
+}
+
+/** Reads the machine once, before the first frame: no GPU -> the lowest tier and it stays there; a weak machine -> tier 2. */
+function detectStart(gl: THREE.WebGLRenderer) {
+  const st = useQuality.getState();
+  if (st.renderer) return;
+  // development only: localStorage office-nodetect=1 skips the detection (to measure what a machine without a GPU does at full quality)
+  if (process.env.NODE_ENV !== "production" && localStorage.getItem("office-nodetect") === "1") { useQuality.setState({ renderer: "skipped" }); return; }
+  const renderer = softwareName(gl.getContext());
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  const { tier, floor } = startingTier({ renderer, memoryGb: nav.deviceMemory, cores: navigator.hardwareConcurrency });
+  useQuality.setState({ renderer: renderer || "unknown", floor, tier: Math.max(st.tier, tier) });
+  if (isSoftwareRenderer(renderer)) console.info("[office] software rendering detected (" + renderer + "): drawing at the lowest quality tier");
+}
+
 export function FrameDriver() {
   const get = useThree((s) => s.get);
   const gl = useThree((s) => s.gl);
+  detectStart(gl); // synchronous, before the first effect and the first frame
   const setDpr = useThree((s) => s.setDpr);
   const tier = useQualityTier();
   const pixel = !!lookOf(useOfficeStyle()).pixel;
@@ -91,9 +113,9 @@ export function FrameDriver() {
   }, [tier, get]);
 
   useEffect(() => {
-    let raf = 0, last = 0, frame = 0, busy = 0;
+    let raf = 0, last = 0, frame = 0, busy = 0, drawnAt = 0, restUntil = 0;
     let onScreen = true, lastInput = performance.now();
-    const mon: MonitorState = monitorStart(useQuality.getState().tier);
+    const mon: MonitorState = monitorStart(useQuality.getState().tier, useQuality.getState().floor);
     const io = new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; }, { threshold: 0 });
     io.observe(gl.domElement);
     const input = () => { lastInput = performance.now(); };
@@ -101,24 +123,30 @@ export function FrameDriver() {
     for (const e of evs) window.addEventListener(e, input, { passive: true });
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
-      if (document.hidden || !onScreen) { last = 0; return; }
+      if (document.hidden || !onScreen) { last = 0; drawnAt = 0; return; }
+      // pacing: how long the previous draw held the page (start of that tick to this one); a slow one is followed by a rest
+      const tn = performance.now();
+      if (drawnAt) { restUntil = tn + paceWait(tn - drawnAt); drawnAt = 0; }
+      if (tn < restUntil) return;
       const ed = useOfficeLayout.getState();
       const idle = (now - lastInput) / 1000 > IDLE_AFTER && !ed.editing && !ed.dragging;
       const since = last ? (now - last) / 1000 : 1;
-      if (!shouldDraw(since, idle)) return;
-      const q = QUALITY_TIERS[useQuality.getState().pinned ?? mon.tier];
+      const tierNow = useQuality.getState().pinned ?? mon.tier;
+      if (!shouldDraw(since, idle, tierNow)) return;
+      const q = QUALITY_TIERS[tierNow];
       if (q.shadowEvery > 1 && frame % q.shadowEvery === 0) gl.shadowMap.needsUpdate = true;
       frame++;
       const t0 = performance.now();
       advance(now / 1000, true, get());
       busy += performance.now() - t0;
       if (last) {
-        monitorStep(mon, since, idle ? IDLE_FPS : 60);
+        monitorStep(mon, since, targetFps(mon.tier, idle), !idle);
         const st = useQuality.getState();
         if (st.tier !== mon.tier) useQuality.setState({ tier: mon.tier });
         if (frame % 30 === 0) useQuality.setState({ fps: Math.round(mon.fps) });
       }
       last = now;
+      drawnAt = tn;
     };
     raf = requestAnimationFrame(tick);
     // development (or NEXT_PUBLIC_OFFICE_DEBUG) only: read / pin the quality tier from the console (screenshots, FPS checks)
@@ -129,6 +157,12 @@ export function FrameDriver() {
         /** drawn frames and main-thread milliseconds spent drawing them, since the office opened */
         counters: () => ({ frames: frame, busyMs: busy }),
         pin: (t: number | null) => useQuality.setState({ pinned: t }),
+        /** renderer.info of the last frame (draw calls, triangles) and what lives in the GPU (programs, geometries, textures) */
+        info: () => ({
+          calls: gl.info.render.calls, triangles: gl.info.render.triangles, programs: gl.info.programs?.length ?? 0,
+          geometries: gl.info.memory.geometries, textures: gl.info.memory.textures, dpr: gl.getPixelRatio(),
+          renderer: softwareName(gl.getContext()),
+        }),
       };
     }
     return () => {
