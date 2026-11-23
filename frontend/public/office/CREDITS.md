@@ -19,3 +19,7 @@ The HDRI was downsampled to 512 x 256, desaturated by 85 % (reflections never ti
 | `env/room_512.hdr` | Poly Haven, "Photo Studio Loft Hall" (photo_studio_loft_hall, 1k HDR) https://polyhaven.com/a/photo_studio_loft_hall | Sergej Majboroda | CC0 |
 
 Total: about 1.1 MB.
+
+## Style gallery of the office editor
+
+`styles/*.webp` and `styles/*.jpg` are recordings of the same scripted scene (the /office-lab spike) drawn in each style. Estudio uses the Quaternius people and Kenney furniture (CC0, see public/office-lab); the other styles use the app own drawing code. Nothing else third-party.
