@@ -237,37 +237,6 @@ function Plant({ position, s = 1, tint = "#7f9a86" }: { position: [number, numbe
       </group>
     );
   }
-  if (style === "paper") { // long leaves of card, each folded down its middle
-    return (
-      <group position={position} scale={s}>
-        {pot}
-        {leaves.map(([x, z, h, tilt], i) => (
-          <group key={i} position={[x, 0.4, z]} rotation={[tilt * 0.5, i * 1.05, tilt * 0.8]}>
-            {[-1, 1].map((side) => (
-              <mesh key={side} castShadow position={[side * 0.035, h / 2, 0]} rotation={[0, side * 0.5, 0]}><planeGeometry args={[0.07, h]} />{leaf(i)}</mesh>
-            ))}
-          </group>
-        ))}
-      </group>
-    );
-  }
-  if (style === "real") { // a real plant: many slender arching leaves from the soil
-    return (
-      <group position={position} scale={s}>
-        {pot}
-        {Array.from({ length: 14 }, (_, i) => {
-          const a = (i / 14) * Math.PI * 2 + (i % 3) * 0.3, h = 0.38 + ((i * 37) % 30) / 100;
-          return (
-            <group key={i} position={[0, 0.41, 0]} rotation={[0, a, 0]}>
-              <mesh castShadow position={[0, h / 2, 0.05]} rotation={[0.35 + (i % 4) * 0.08, 0, 0]} scale={[1, 1, 0.18]}>
-                <coneGeometry args={[0.035, h, 8]} />{leaf(i % 6)}
-              </mesh>
-            </group>
-          );
-        })}
-      </group>
-    );
-  }
   return (
     <group position={position} scale={s}>
       {pot}
@@ -313,7 +282,6 @@ function Desk({ id, index }: { id: string; index: number }) {
   const progTrack = useRef<THREE.Mesh>(null!);
   const progFill = useRef<THREE.Mesh>(null!);
   const meta = roleMeta(agent?.role);
-  const officeStyle = useOfficeStyle();
   const cfg = useOfficeLayout((s) => effective(s).desks[id]);
   const editing = useOfficeLayout((s) => s.editing);
   const catalog = useRewards((s) => s.catalog);
@@ -361,17 +329,8 @@ function Desk({ id, index }: { id: string; index: number }) {
       <DeskSet item={deskItem} accent={meta.color}>
       {/* monitor (pantalla hacia +z) */}
       <group position={[0, T, -0.12]}>
-        {officeStyle === "real" ? ( // a real stand: round foot, slim neck leaning back a little
-          <>
-            <mesh castShadow position={[0, 0.008, 0.02]}><cylinderGeometry args={[0.13, 0.14, 0.016, 32]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
-            <mesh castShadow position={[0, 0.18, -0.02]} rotation={[-0.08, 0, 0]}><boxGeometry args={[0.035, 0.34, 0.02]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
-          </>
-        ) : (
-          <>
-            <mesh castShadow position={[0, 0.01, 0]}><boxGeometry args={[0.26, 0.02, 0.18]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
-            <mesh castShadow position={[0, 0.17, 0]}><boxGeometry args={[0.04, 0.3, 0.03]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
-          </>
-        )}
+        <mesh castShadow position={[0, 0.01, 0]}><boxGeometry args={[0.26, 0.02, 0.18]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
+        <mesh castShadow position={[0, 0.17, 0]}><boxGeometry args={[0.04, 0.3, 0.03]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.5} /></mesh>
         <RoundedBox args={[0.98, 0.58, 0.04]} radius={0.02} smoothness={3} castShadow position={[0, 0.5, 0]}><meshStandardMaterial color="#2c323b" roughness={0.5} /></RoundedBox>
         <mesh position={[0, 0.5, 0.024]}><planeGeometry args={[0.9, 0.5]} /><meshBasicMaterial ref={screen} color="#bfe6ff" toneMapped={false} /></mesh>
         <group ref={bars} position={[0, 0.5, 0.03]}>

@@ -2,9 +2,9 @@
 import { create } from "zustand";
 import { call } from "./api";
 import { useRewards } from "./rewards";
-import { DEFAULT_LAYOUT, LEGACY_SLOTS, newUid, normalizeLayout, sameLayout, type FixtureId, type Layout, type OfficeStyle, type Piece, type ZoneName } from "./officeLayoutModel";
+import { DEFAULT_LAYOUT, LEGACY_SLOTS, newUid, normalizeLayout, normalizeStyle, sameLayout, type FixtureId, type Layout, type OfficeStyle, type Piece, type ZoneName } from "./officeLayoutModel";
 
-export type EditorTab = "ambience" | "furniture" | "desks";
+export type EditorTab = "style" | "space" | "desks" | "furniture";
 export type Selection = { kind: "piece"; uid: string } | { kind: "desk"; id: string } | { kind: "zone"; id: ZoneName } | { kind: "fixture"; id: FixtureId } | null;
 
 interface LayoutDoc { layout: unknown; version: number }
@@ -63,7 +63,7 @@ let lastCoalesce = { key: "", at: 0 };
 export const effective = (s: Pick<State, "draft" | "layout">): Layout => s.draft ?? s.layout;
 
 /** The office's visual style (the draft's while editing, so the picker previews live). */
-export const styleOf = (l: Layout): OfficeStyle => l.style ?? "classic";
+export const styleOf = (l: Layout): OfficeStyle => normalizeStyle(l.style);
 export const useOfficeStyle = (): OfficeStyle => useOfficeLayout((s) => styleOf(effective(s)));
 /** Same, read outside React (per-frame code). */
 export const getOfficeStyle = (): OfficeStyle => styleOf(effective(useOfficeLayout.getState()));
@@ -93,7 +93,7 @@ const errorOf = (e: unknown): State["error"] => {
 export const useOfficeLayout = create<State>((set, get) => ({
   layout: DEFAULT_LAYOUT, version: 0, loaded: false,
   editing: false, draft: null, past: [], future: [], selection: null, placing: null, dragging: false, deskGhost: null, zoneGhost: null, saving: false, error: null,
-  tab: "furniture", grid: true, officeId: "", officeEditable: true,
+  tab: "style", grid: true, officeId: "", officeEditable: true,
 
   load: async () => {
     const office = get().officeId;
@@ -118,7 +118,7 @@ export const useOfficeLayout = create<State>((set, get) => ({
   startEdit: () => {
     const s = get();
     if (s.editing) return;
-    set({ editing: true, draft: seeded(s.layout), past: [], future: [], selection: null, placing: null, error: null, tab: "furniture" });
+    set({ editing: true, draft: seeded(s.layout), past: [], future: [], selection: null, placing: null, error: null, tab: "style" });
   },
   cancel: () => set({ editing: false, draft: null, past: [], future: [], selection: null, placing: null, dragging: false, deskGhost: null, zoneGhost: null, error: null }),
 

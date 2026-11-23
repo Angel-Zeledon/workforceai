@@ -241,43 +241,32 @@ export function lightSpec(item: ShopItem): LightSpec { return pick(LIGHTS, item)
 const THIN_TABLE = new Set<TableLegs>(["hairpin", "x", "cross", "splay"]);
 export function styleDesk(sp: DeskSpec, style: OfficeStyle): DeskSpec {
   switch (style) {
-    case "bricks": return { ...sp, legs: "slab", legFin: "plastic", topFin: sp.topFin === "glass" ? "glass" : "plastic", thick: Math.max(sp.thick, 0.08) };
     // modeled by hand: chunky posts under a thick top (the geometry layer then puffs and rounds them)
     case "clay": return { ...sp, legs: sp.legs === "panel" || sp.legs === "slab" || sp.legs === "pedestal" ? sp.legs : "post", thick: Math.max(sp.thick, 0.08) };
-    // thick card top; the posts become folded strips in the geometry layer
-    case "paper": return { ...sp, legs: sp.legs === "panel" || sp.legs === "slab" ? sp.legs : "post", topFin: sp.topFin === "glass" ? "glass" : "board", legFin: "board", thick: Math.max(sp.thick, 0.07) };
-    // a real desk: a visible edge band in a darker shade of the top, slim metal frame legs
-    case "real": return { ...sp, legs: sp.legs === "post" || sp.legs === "splay" || sp.legs === "pipe" ? "sled" : sp.legs, legFin: sp.legs === "pedestal" || sp.legs === "panel" ? sp.legFin : "metal", rim: sp.rim ?? "d1" };
     default: return sp;
   }
 }
 export function styleChair(sp: ChairSpec, style: OfficeStyle): ChairSpec {
   switch (style) {
-    case "bricks": return { ...sp, kind: sp.kind === "ball" || sp.kind === "bean" || sp.kind === "cube" ? "cube" : "wood", seatFin: "plastic", baseFin: "plastic", mesh: false };
     case "clay": return { ...sp, kind: sp.kind === "bean" ? "bean" : "ball", mesh: false }; // little balls of clay
-    case "paper": return { ...sp, kind: sp.kind === "ball" || sp.kind === "bean" || sp.kind === "cube" ? "cube" : "wood", mesh: false }; // folded card chairs
-    // a real office chair: mesh back, arms, five-star base on casters
-    case "real": return sp.kind === "task" || sp.kind === "exec" || sp.kind === "gaming" ? { ...sp, kind: "task", mesh: true, arms: true } : sp;
     default: return sp;
   }
 }
 export function styleTable(sp: TableSpec, style: OfficeStyle): TableSpec {
   switch (style) {
-    case "bricks": return { ...sp, legs: "post", legFin: "plastic", topFin: sp.topFin === "glass" ? "glass" : "plastic" };
     case "clay": return { ...sp, legs: THIN_TABLE.has(sp.legs) ? "post" : sp.legs };
-    case "paper": return { ...sp, topFin: sp.topFin === "glass" ? "glass" : "board" };
     default: return sp;
   }
 }
 export function styleSofa(sp: SofaSpec, style: OfficeStyle): SofaSpec {
   switch (style) {
-    case "bricks": return { ...sp, fin: "plastic", arms: sp.arms === "none" ? "none" : "block", legs: "none", tuft: false };
     case "clay": return { ...sp, arms: sp.arms === "slim" ? "roll" : sp.arms };
     default: return sp;
   }
 }
 export function styleCab(sp: CabSpec, style: OfficeStyle): CabSpec {
-  return style === "bricks" ? { ...sp, fin: "plastic", legs: false } : sp;
+  void style;
+  return sp;
 }
 
 // ---------------------------------------------------------------- the contract

@@ -93,7 +93,7 @@ function makeSim(id: string, seat: [number, number]) {
     leaveAt: 0, curDest: [0, 0] as [number, number], curFace: null as number | null,
     linkSrc: null as unknown, linkTs: 0, apprSrc: null as unknown, seenAppr: new Set<string>(),
     debTurn: "", // last debate turn this character reacted to (B5)
-    stopAcc: [0] as [number], // stop-motion clock of the bricks style
+    stopAcc: [0] as [number], // stop-motion clock (Pixel)
   };
 }
 
@@ -150,7 +150,6 @@ export function Character({ id, index }: { id: string; index: number }) {
   const noseCol = useMemo(() => "#" + new THREE.Color(skin).multiplyScalar(0.9).getHexString(), [skin]);
   // the office style: toy figures get a stud on top of the head (the rest of the restyle is ThemeLayer's)
   const officeStyle = useOfficeStyle();
-  const brickHead = officeStyle === "bricks" && !worn?.hat;
   // body proportions of the style: chubby clay figures, slimmer realistic people (all 1 in classic)
   const bp = lookOf(officeStyle).body;
 
@@ -367,7 +366,7 @@ export function Character({ id, index }: { id: string; index: number }) {
     const c = sm.pose;
     for (const key of KEYS) c[key] += (target[key] - c[key]) * k;
 
-    // --- apply --- (the bricks style poses in stop-motion: the body only takes a new pose a few times per second)
+    // --- apply --- (the Pixel style poses in stop-motion: the body only takes a new pose a few times per second)
     if (reduce || stopMotionTick(sm.stopAcc, dt, mo.stopFps)) {
       root.current.position.set(sm.pos.x, 0, sm.pos.y);
       root.current.rotation.y = sm.yaw;
@@ -530,7 +529,6 @@ export function Character({ id, index }: { id: string; index: number }) {
           {/* cabeza grande */}
           <group ref={head} position={[0, 0.32 * bp.torsoH, 0]} scale={1.75 * bp.head}>
             <mesh castShadow position={[0, 0.15, 0]} userData={{ brick: "cyl" }}><sphereGeometry args={[0.165, 24, 18]} /><meshStandardMaterial color={skin} roughness={0.75} /></mesh>
-            {brickHead && <mesh position={[0, meta.hairStyle === "bald" ? 0.297 : 0.345, 0]}><cylinderGeometry args={[0.065, 0.065, 0.045, 14]} /><meshStandardMaterial color={meta.hairStyle === "bald" ? skin : hair} roughness={0.3} /></mesh>}
             <group ref={eyes} position={[0, 0.17, 0]}>
               <mesh position={[0.058, 0, 0.145]} scale={[1, 1.35, 0.5]}><sphereGeometry args={[0.022, 10, 8]} /><meshBasicMaterial color={dark} /></mesh>
               <mesh position={[-0.058, 0, 0.145]} scale={[1, 1.35, 0.5]}><sphereGeometry args={[0.022, 10, 8]} /><meshBasicMaterial color={dark} /></mesh>

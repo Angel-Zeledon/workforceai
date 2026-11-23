@@ -5,10 +5,9 @@ import { go } from "@/lib/navBridge";
 import { useStore } from "@/lib/store";
 import { useCan } from "@/lib/session";
 import { itemName, useRewards, type ShopItem } from "@/lib/rewards";
-import { effective, pieceOf, useOfficeLayout, withPiece, withoutPiece } from "@/lib/officeLayout";
-import { DECOR_IDS, DEFAULT_LAYOUT, FIXTURES, FLOOR_KINDS, FLOOR_TINTS, MOODS, OFFICE_STYLES, ROOM_PARTS, TRIM_COLORS, WALL_COLORS, ZONE_NAMES, dayPhase, hideFixture, isHex, isRoomPart, localHour, resetFixture, showFixture, type FixtureId, type FloorKind, type Layout, type Mood, type OfficeStyle, type ZoneName } from "@/lib/officeLayoutModel";
+import { effective, pieceOf, styleOf, useOfficeLayout, withPiece, withoutPiece } from "@/lib/officeLayout";
+import { DECOR_IDS, DEFAULT_LAYOUT, FIXTURES, FLOOR_KINDS, FLOOR_TINTS, MOODS, OFFICE_STYLES, ROOM_PARTS, SPACE_EFFECTS, STYLES_WITHOUT_EDITING, normalizeStyle, TRIM_COLORS, WALL_COLORS, ZONE_NAMES, dayPhase, hideFixture, isHex, isRoomPart, localHour, resetFixture, showFixture, type FixtureId, type FloorKind, type Layout, type Mood, type OfficeStyle, type ZoneName } from "@/lib/officeLayoutModel";
 import { turnFixture } from "./editorWorld";
-import { STYLE_LOOKS } from "./officeTheme";
 import { usePreferences } from "@/lib/preferences";
 import { Btn, useAgentName } from "../ui";
 import { Icon } from "../icons";
@@ -160,57 +159,45 @@ export function LightButton() {
   );
 }
 
-/**
- * Preview tile of each office style: today's three colors (wall, oak, accent) drawn the way the style renders them.
- * CSS only, so the picker costs nothing.
- */
-function styleTile(id: OfficeStyle): React.CSSProperties {
-  const [a, b, c] = STYLE_LOOKS[id].swatch;
-  switch (id) {
-    case "bricks": // studs catching the light on molded plastic
-      return { background: `radial-gradient(circle at 45% 40%, rgba(255,255,255,.55) 0 1.6px, rgba(255,255,255,.12) 2.2px 3px, rgba(0,0,0,.2) 3.4px, transparent 4px) 0 0/11px 11px, linear-gradient(90deg, ${a} 0 34%, ${b} 34% 67%, ${c} 67%)` };
-    case "clay": // soft lumps with a matte, finger-marked surface
-      return { background: `radial-gradient(ellipse at 22% 70%, ${b} 0 30%, transparent 31%), radial-gradient(ellipse at 74% 62%, ${c} 0 26%, transparent 27%), radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 60%), repeating-radial-gradient(circle at 70% 30%, rgba(0,0,0,.05) 0 1px, transparent 1px 4px), ${a}`, filter: "saturate(.9)" };
-    case "paper": // folded card with crisp creases and a fibrous grain
-      return { background: `linear-gradient(225deg, transparent 0 14px, rgba(0,0,0,.18) 14px 15px, transparent 15px), linear-gradient(135deg, ${a} 0 50%, ${b} 50% 76%, ${c} 76%), repeating-linear-gradient(80deg, rgba(0,0,0,.035) 0 1px, transparent 1px 3px)`, backgroundBlendMode: "normal, normal, multiply" };
-    case "toon": // flat bands of light and an ink outline
-      return { background: `linear-gradient(135deg, ${a} 0 52%, #1f1d24 52% 54%, ${b} 54% 70%, color-mix(in srgb, ${b} 78%, #000) 70% 76%, #1f1d24 76% 78%, ${c} 78%)` };
-    case "real": // wood grain, brushed metal sheen and a soft reflection
-      return { background: `linear-gradient(115deg, rgba(255,255,255,.5) 0 8%, transparent 22%), repeating-linear-gradient(100deg, rgba(90,60,30,.12) 0 2px, transparent 2px 6px), linear-gradient(135deg, ${a} 0 50%, ${b} 50% 80%, ${c} 80%)` };
-    default:
-      return { background: `linear-gradient(135deg, ${a} 0 55%, ${b} 55% 80%, ${c} 80%)` };
-  }
-}
+/** Static picture of each style (a capture of the office drawn in it): five small images, no 3D canvas in the menu. */
+const STYLE_THUMB: Record<OfficeStyle, string> = {
+  classic: "/office/styles/classic.jpg", studio: "/office/styles/studio.jpg", flat: "/office/styles/flat.jpg", clay: "/office/styles/clay.jpg", pixel: "/office/styles/pixel.jpg",
+};
 
 /**
- * The office style (saved with the layout): how the whole office is RENDERED (geometry, surfaces, shading and motion),
- * never its colors or its light. Applies live to the draft.
+ * The office style (saved with the layout): five ways of drawing the same office. Applies live to the draft; the
+ * furniture, the workstations and the colors are never touched.
  */
-function OfficeStylePicker({ layout, set }: { layout: Layout; set: (fn: (l: Layout) => Layout, key?: string) => void }) {
+function StyleTab() {
   const { t } = useT();
-  const cur = layout.style ?? "classic";
-  const pick = (id: OfficeStyle) => set((l) => {
+  const layout = useOfficeLayout((s) => s.draft) as Layout;
+  const mutate = useOfficeLayout((s) => s.mutate);
+  const cur = normalizeStyle(layout.style);
+  const pick = (id: OfficeStyle) => mutate((l) => {
     const { style: _drop, ...rest } = l; // eslint-disable-line @typescript-eslint/no-unused-vars
     return id === "classic" ? rest : { ...rest, style: id };
   });
   return (
-    <Section title={t("oe.style.title")}>
+    <div className="space-y-3">
       <p className="text-[11.5px] text-mute">{t("oe.style.hint")}</p>
-      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t("oe.style.title")}>
+      <div className="grid grid-cols-1 gap-2.5" role="radiogroup" aria-label={t("oe.style.title")}>
         {OFFICE_STYLES.map((id) => (
           <button key={id} type="button" role="radio" data-testid={`oe-style-${id}`} aria-checked={cur === id} onClick={() => { if (cur !== id) pick(id); }}
-            className={`overflow-hidden rounded-lg border text-left transition ${cur === id ? "border-accent ring-2 ring-accent/30" : "border-line hover:border-line-strong"}`}>
-            <span className="block h-10 w-full" style={styleTile(id)} />
-            <span className="block px-2 pt-1 text-[11.5px] font-semibold text-ink">{t(`oe.style.${id}`)}</span>
-            <span className="block px-2 pb-1.5 text-[10.5px] leading-snug text-mute">{t(`oe.style.${id}.d`)}</span>
+            className={`flex overflow-hidden rounded-[10px] border text-left transition ${cur === id ? "border-accent ring-2 ring-accent/30" : "border-line hover:border-line-strong"}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a small static capture, not worth the image optimizer */}
+            <img src={STYLE_THUMB[id]} alt="" width={120} height={80} loading="lazy" className="h-[80px] w-[120px] shrink-0 bg-panel2 object-cover" style={id === "pixel" ? { imageRendering: "pixelated" } : undefined} />
+            <span className="min-w-0 px-3 py-2">
+              <span className="block text-[12.5px] font-semibold text-ink">{t(`oe.style.${id}`)}</span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-mute">{t(`oe.style.${id}.d`)}</span>
+            </span>
           </button>
         ))}
       </div>
-    </Section>
+    </div>
   );
 }
 
-function AmbienceTab() {
+function SpaceTab() {
   const { t, locale } = useT();
   const layout = useOfficeLayout((s) => s.draft) as Layout;
   const mutate = useOfficeLayout((s) => s.mutate);
@@ -219,19 +206,22 @@ function AmbienceTab() {
   const office = useRewards((s) => s.office);
   const views = catalog.filter((i) => i.kind === "office" && i.category === "window" && owned[i.id]);
   const set = (fn: (l: Layout) => Layout, key?: string) => mutate(fn, key);
+  const fx = SPACE_EFFECTS[normalizeStyle(layout.style)];
   return (
     <div className="space-y-5">
-      <OfficeStylePicker layout={layout} set={set} />
+      <p className="text-[11.5px] text-mute">{t("oe.space.hint")}</p>
       <Section title={t("oe.a.walls")}>
         <Swatches colors={WALL_COLORS} value={layout.walls.color} label={(c) => t("oe.a.swatch", { c })} onPick={(c) => set((l) => ({ ...l, walls: { ...l.walls, color: c } }), "wall")} />
         <ColorField value={layout.walls.color} label={t("oe.a.custom")} onPick={(c) => set((l) => ({ ...l, walls: { ...l.walls, color: c } }), "wall")} />
-        <button type="button" data-testid="oe-windows" role="switch" aria-checked={layout.walls.windows} onClick={() => set((l) => ({ ...l, walls: { ...l.walls, windows: !l.walls.windows } }))}
+        {fx.windows && <button type="button" data-testid="oe-windows" role="switch" aria-checked={layout.walls.windows} onClick={() => set((l) => ({ ...l, walls: { ...l.walls, windows: !l.walls.windows } }))}
           className="flex w-full items-center justify-between rounded-lg border border-line px-3 py-2 text-[12px] font-medium text-ink2 transition hover:bg-panel2">
           <span>{t("oe.a.windows")}</span>
           <span className={`flex h-5 w-9 items-center rounded-full px-0.5 transition ${layout.walls.windows ? "bg-accent" : "bg-line-strong"}`}><i className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${layout.walls.windows ? "translate-x-4" : ""}`} /></span>
-        </button>
-        <div className="pt-1 text-[11.5px] text-mute">{t("oe.a.trim")}</div>
-        <Swatches colors={TRIM_COLORS} value={layout.walls.trim} label={(c) => t("oe.a.swatch", { c })} onPick={(c) => set((l) => ({ ...l, walls: { ...l.walls, trim: c } }), "trim")} />
+        </button>}
+        {fx.trim && <>
+          <div className="pt-1 text-[11.5px] text-mute">{t("oe.a.trim")}</div>
+          <Swatches colors={TRIM_COLORS} value={layout.walls.trim} label={(c) => t("oe.a.swatch", { c })} onPick={(c) => set((l) => ({ ...l, walls: { ...l.walls, trim: c } }), "trim")} />
+        </>}
       </Section>
 
       <Section title={t("oe.a.floor")}>
@@ -248,9 +238,9 @@ function AmbienceTab() {
         <Swatches colors={FLOOR_TINTS} value={layout.floor.tint} label={(c) => t("oe.a.swatch", { c })} onPick={(c) => set((l) => ({ ...l, floor: { ...l.floor, tint: c } }), "tint")} />
       </Section>
 
-      <Section title={t("oe.a.light")}><LightControls /></Section>
+      {fx.light && <Section title={t("oe.a.light")}><LightControls /></Section>}
 
-      {views.length > 0 && (
+      {fx.view && views.length > 0 && (
         <Section title={t("oe.a.view")}>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => void useRewards.getState().remove("window_1")} aria-pressed={!office.window_1}
@@ -552,7 +542,7 @@ function DesksTab() {
 
 // ------------------------------------------------------------------ the panel
 
-const TABS = ["furniture", "desks", "ambience"] as const;
+const TABS = ["style", "space", "desks", "furniture"] as const;
 
 export function OfficeEditor() {
   const { t } = useT();
@@ -567,6 +557,7 @@ export function OfficeEditor() {
   const dragging = useOfficeLayout((s) => s.dragging);
   const sel = useOfficeLayout((s) => s.selection);
   const dirty = useOfficeLayout((s) => !!s.draft && JSON.stringify(s.draft) !== JSON.stringify(s.layout));
+  const noMove = useOfficeLayout((s) => (s.tab === "desks" || s.tab === "furniture") && STYLES_WITHOUT_EDITING.includes(styleOf(effective(s))));
   if (!editing) return null;
   const st = useOfficeLayout.getState;
   const hint = placing ? t("oe.hint.placing") : sel ? t("oe.hint.drag") : t("oe.hint.idle");
@@ -587,9 +578,11 @@ export function OfficeEditor() {
           </div>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          {tab === "furniture" && <FurnitureTab />}
+          {noMove && <p data-testid="oe-view-note" className="mb-3 rounded-lg border border-line bg-panel2 px-3 py-2 text-[11.5px] text-ink2">{t("oe.style.noEdit")}</p>}
+          {tab === "style" && <StyleTab />}
+          {tab === "space" && <SpaceTab />}
           {tab === "desks" && <DesksTab />}
-          {tab === "ambience" && <AmbienceTab />}
+          {tab === "furniture" && <FurnitureTab />}
         </div>
         <footer className="space-y-2 border-t border-line bg-panel2/60 px-4 py-3">
           {error && (

@@ -57,15 +57,22 @@ func TestValidateLayout(t *testing.T) {
 	ok := []string{
 		`{"v":1}`,
 		`{"v":1,"walls":{"color":"#fff","trim":"#3a414c"},"floor":{"kind":"marble","tint":"#e7eaee"},"light":{"mood":"night","temp":-1,"brightness":1.5},"seeded":true}`,
-		`{"v":1,"style":"bricks"}`,
 		`{"v":1,"style":"classic"}`,
-		`{"v":1,"style":"clay"}`, `{"v":1,"style":"paper"}`, `{"v":1,"style":"toon"}`, `{"v":1,"style":"real"}`,
+		`{"v":1,"style":"studio"}`, `{"v":1,"style":"flat"}`, `{"v":1,"style":"clay"}`, `{"v":1,"style":"pixel"}`,
+		// saved before the five-style menu: still accepted, mapped to their replacement
+		`{"v":1,"style":"bricks"}`, `{"v":1,"style":"paper"}`, `{"v":1,"style":"toon"}`, `{"v":1,"style":"real"}`,
 		`{"v":1,"desks":{"analyst":{"x":-9.5,"z":-4,"desk":"desk_walnut","chair":"chair_teal"},"sales":{}},"pieces":[{"uid":"p_1","item":"sofa_a","x":40,"z":-40,"rot":1.5708,"s":0.6},{"uid":"p-2","item":"plant_cactus","x":0,"z":0,"s":1.6}]}`,
 	}
 	for _, s := range ok {
 		l := mustLayout(t, s)
 		if err := rewards.Validate(cat, &l); err != nil {
 			t.Errorf("rejected %s: %v", s, err)
+		}
+	}
+	for old, want := range map[string]string{"bricks": "pixel", "paper": "flat", "real": "studio", "toon": "", "clay": "clay", "classic": ""} {
+		l := mustLayout(t, `{"v":1,"style":"`+old+`"}`)
+		if err := rewards.Validate(cat, &l); err != nil || l.Style != want {
+			t.Errorf("style %s -> %q (%v), want %q", old, l.Style, err, want)
 		}
 	}
 	l := mustLayout(t, `{"v":1,"pieces":[{"uid":"a","item":"sofa_a","x":1,"z":1}]}`)

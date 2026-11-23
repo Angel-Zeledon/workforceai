@@ -14,14 +14,29 @@ import { ProjectPill } from "../projects/ProjectPill";
 import { FirstRunHint } from "../nav/ui2";
 import { EditOfficeButton, OfficeEditor } from "./OfficeEditor";
 import { OfficePicker } from "./OfficePicker";
-import { useOfficeLayout } from "@/lib/officeLayout";
+import { useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
+import { STYLES_WITHOUT_EDITING } from "@/lib/officeLayoutModel";
 import { PresenceHost } from "../presence/PresenceHost";
 import { AwayButton, AwayHost } from "../away/AwayHost";
 
-const OfficeScene = dynamic(() => import("./OfficeScene"), {
-  ssr: false,
-  loading: () => <div className="flex h-full items-center justify-center text-sm font-medium text-mute">…</div>,
-});
+const sceneLoading = () => <div className="flex h-full items-center justify-center text-sm font-medium text-mute">…</div>;
+// The 3D scene draws Actual, Maqueta and Pixel; Plano and Estudio have a renderer of their own (loaded only when chosen).
+const OfficeScene = dynamic(() => import("./OfficeScene"), { ssr: false, loading: sceneLoading });
+const OfficeFlatScene = dynamic(() => import("./flat/OfficeFlatScene"), { ssr: false, loading: sceneLoading });
+const OfficeStudioScene = dynamic(() => import("./studio/OfficeStudioScene"), { ssr: false, loading: sceneLoading });
+
+/**
+ * The renderer of the office style. While pieces are being moved (Puestos / Muebles tabs of the editor) a style whose
+ * renderer cannot edit shows the normal 3D view instead (the editor says so); Estilo and Espacio show the chosen style.
+ */
+function StageScene() {
+  const style = useOfficeStyle();
+  const moving = useOfficeLayout((s) => s.editing && (s.tab === "desks" || s.tab === "furniture"));
+  const shown = moving && STYLES_WITHOUT_EDITING.includes(style) ? "classic" : style;
+  if (shown === "flat") return <OfficeFlatScene />;
+  if (shown === "studio") return <OfficeStudioScene />;
+  return <OfficeScene />;
+}
 
 const ACTIVITY_KEY = "aiw.office.activity.collapsed";
 /** The live-activity window can be folded into a small pill; the choice is remembered in this browser. */
@@ -45,14 +60,14 @@ export function OfficeView() {
     // the editor owns the stage: the activity feed, trays and chat bar would only get in the way
     return (
       <>
-        <div className="absolute inset-0 isolate"><OfficeScene /></div>
+        <div className="absolute inset-0 isolate"><StageScene /></div>
         <OfficeEditor />
       </>
     );
   }
   return (
     <>
-      <div data-tour="office.scene" className="absolute inset-0 isolate"><OfficeScene /></div>
+      <div data-tour="office.scene" className="absolute inset-0 isolate"><StageScene /></div>
       <div className="pointer-events-none absolute left-4 top-[max(1rem,env(safe-area-inset-top))] w-[330px] max-w-[calc(100vw-32px)] sm:max-w-[40vw]">
         {folded ? (
           <button type="button" data-testid="activity-expand" onClick={() => setFolded(false)}
