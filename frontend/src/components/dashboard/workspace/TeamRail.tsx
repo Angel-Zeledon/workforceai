@@ -11,12 +11,13 @@ import { groupAgents, needsYouAgentIds, type RailGroup } from "./workspaceLogic"
 
 const SEARCH_FROM = 8; // with many agents a search box appears
 
-function AgentRow({ id, active, onPick, onPanel }: { id: string; active: boolean; onPick: () => void; onPanel: () => void }) {
+function AgentRow({ id, active, waiting, onPick, onPanel }: { id: string; active: boolean; waiting: boolean; onPick: () => void; onPanel: () => void }) {
   const { t } = useT();
   const v = useAgentView(id);
   const a = useStore((s) => s.agents[id]);
   if (!a) return null;
   const m = stateMeta(a.state);
+  const idle = a.state === "idle" || a.state === "completed";
   return (
     <li className="group relative">
       <button type="button" data-testid={`team-row-${id}`} data-active={active ? "1" : "0"} aria-pressed={active} onClick={onPick}
@@ -25,9 +26,11 @@ function AgentRow({ id, active, onPick, onPanel }: { id: string; active: boolean
         <Avatar id={id} size={30} />
         <span className="min-w-0 flex-1">
           <span className={`block truncate text-[13px] font-semibold ${active ? "text-accent" : "text-ink"}`}>{v.name}</span>
-          <span className="block truncate text-[12px] leading-snug text-ink2">{a.activity || v.title}</span>
-          <span className="mt-px flex items-center gap-1.5 text-[11px] font-medium" style={{ color: readable(m.color) }}>
-            <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: m.color }} />{m.label}
+          {/* one line: what they are doing; free people show their job instead of "Disponible" twice */}
+          <span className="flex items-center gap-1.5 text-[12px] leading-snug text-ink2">
+            <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${waiting ? "bg-warn" : ""}`} style={waiting ? undefined : { background: m.color }} />
+            <span className="min-w-0 truncate" style={idle || waiting ? undefined : { color: readable(m.color) }}>{idle ? (waiting ? t("work.team.needsReply") : v.title) : (a.activity || m.label)}</span>
+            <span className="sr-only">, {m.label}</span>
           </span>
         </span>
       </button>
@@ -73,7 +76,7 @@ export function TeamRail({ target, onPick, onPanel, className = "" }: { target: 
         {sections.map((s) => (
           <section key={s.group} data-testid={`team-group-${s.group}`} aria-label={t(GROUP_KEY[s.group])} className="mt-2">
             <h3 className={`px-2.5 pb-0.5 text-[12px] font-semibold ${s.group === "waiting" ? "text-warn" : "text-mute"}`}>{t(GROUP_KEY[s.group])} <span className="font-normal text-mute">{s.ids.length}</span></h3>
-            <ul>{s.ids.map((id) => <AgentRow key={id} id={id} active={target === id} onPick={() => onPick(id)} onPanel={() => onPanel(id)} />)}</ul>
+            <ul>{s.ids.map((id) => <AgentRow key={id} id={id} active={target === id} waiting={s.group === "waiting"} onPick={() => onPick(id)} onPanel={() => onPanel(id)} />)}</ul>
           </section>
         ))}
         {q && sections.length === 0 && <p className="px-3 py-4 text-[12.5px] text-mute">{t("work.team.noMatch")}</p>}

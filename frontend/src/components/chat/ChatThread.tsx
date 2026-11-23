@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import { useStore, typingIn } from "@/lib/store";
 import { fmtTime } from "@/lib/meta";
@@ -263,7 +263,7 @@ export async function sendChat(conv: string, text: string, from = "user", attach
   }
 }
 
-export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, autoFocus = false, general = false, large = false }: { conv: string; placeholder: string; testId?: string; submitTestId?: string; onSent?: () => void; autoFocus?: boolean; general?: boolean; large?: boolean }) {
+export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, autoFocus = false, general = false, large = false, lead }: { conv: string; placeholder: string; testId?: string; submitTestId?: string; onSent?: () => void; autoFocus?: boolean; general?: boolean; large?: boolean; lead?: ReactNode }) {
   const { t } = useT();
   const [text, setTextRaw] = useState("");
   const [caret, setCaret] = useState(0);
@@ -351,12 +351,16 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
             className="shrink-0 font-semibold underline-offset-2 hover:underline">{t("chat.customer.clear")}</button>
         </div>
       )}
-      <GoalPicker compact testId="chat-goal-select" value={forGoal} onChange={setForGoal} />
+      {!large && <GoalPicker compact testId="chat-goal-select" value={forGoal} onChange={setForGoal} />}
       <AttachmentTray items={att.items} onRemove={att.remove} />
-      <div className="flex items-end gap-2">
+      {/* large: one box — the text on top and, under it, attach, who it goes to, the goal, help and send */}
+      <div className={large ? "flex flex-wrap items-center gap-1.5 rounded-[10px] border border-line-strong bg-panel p-2 shadow-soft transition focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20" : "flex items-end gap-2"}>
         <input ref={fileRef} type="file" multiple data-testid="chat-attach-input" className="hidden" onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length && att.addFiles(fs)) setErr(t("att.err.tooMany", { n: MAX_FILES })); e.target.value = ""; }} />
         <input ref={dirRef} type="file" multiple className="hidden" data-testid="chat-attach-dir" {...({ webkitdirectory: "", directory: "" } as Record<string, string>)} onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length && att.addFiles(fs, true)) setErr(t("att.err.tooMany", { n: MAX_FILES })); e.target.value = ""; }} />
         <AttachMenu dest={att.dest} full={att.full} disabled={busy} onUpload={() => fileRef.current?.click()} onFolderUpload={() => dirRef.current?.click()} onDrive={() => setPicker("files")} onPickDest={() => setPicker("folder")} />
+        {large && lead}
+        {large && <div className="hidden min-w-0 max-w-[220px] sm:block"><GoalPicker compact testId="chat-goal-select" value={forGoal} onChange={setForGoal} /></div>}
+        {large && <span className="min-w-0 flex-1" />}
         <textarea
           ref={inputRef} data-testid={testId} value={text} onChange={(e) => { setText(e.target.value, e.target.selectionStart ?? e.target.value.length); sc.clearErr(); }}
           onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
@@ -366,7 +370,7 @@ export function ChatInput({ conv, placeholder, testId, submitTestId, onSent, aut
             // Enter sends, Shift+Enter makes a new line (and an IME composition keeps its own Enter)
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void submit(); }
           }} {...sc.aria} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus} rows={1}
-          className={`max-h-[200px] min-w-0 flex-1 resize-none overflow-y-auto border border-line text-ink outline-none placeholder:text-mute ${large ? "min-h-[56px] rounded-[10px] bg-panel px-3.5 py-3 text-[15px] leading-[1.5] focus:border-accent" : "min-h-[40px] rounded-lg bg-panel2 px-3 py-2 text-base leading-[1.45] sm:text-[13px]"}`}
+          className={`max-h-[200px] min-w-0 resize-none overflow-y-auto text-ink outline-none placeholder:text-mute ${large ? "order-first min-h-[52px] basis-full !outline-none bg-transparent px-2 py-1.5 text-base leading-[1.5] sm:text-[15px]" : "flex-1 border border-line min-h-[40px] rounded-lg bg-panel2 px-3 py-2 text-base leading-[1.45] sm:text-[13px]"}`}
         />
         <button type="button" data-testid="cmd-help" title={t("cmds.help.button")} aria-label={t("cmds.help.button")} onClick={sc.openHelp}
           className="min-h-10 min-w-10 rounded-lg border border-line bg-panel2 px-2.5 py-1.5 text-[12px] font-semibold text-mute hover:border-accent hover:text-ink sm:min-h-0 sm:min-w-0">?</button>

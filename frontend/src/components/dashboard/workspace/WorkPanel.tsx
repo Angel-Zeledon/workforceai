@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { fileKind, useFileViewer } from "@/lib/fileView";
@@ -30,15 +30,19 @@ function Block({ id, title, count, empty, children }: { id: string; title: strin
   );
 }
 
+const NEEDS_SHOWN = 2; // the rest is one click away, so what is in motion and what is ready stay in view
+
 function NeedsBlock() {
   const { t } = useT();
   const approvals = useStore((s) => s.approvals);
   const questions = useStore((s) => s.questions);
   const items = useMemo(() => needsYouItems(Object.values(approvals), Object.values(questions ?? {})), [approvals, questions]);
+  const [all, setAll] = useState(false);
+  const shown = all ? items : items.slice(0, NEEDS_SHOWN);
   return (
     <Block id="needs" title={t("work.panel.needs")} count={items.length} empty={t("work.panel.needs.empty")}>
       <ul className="space-y-2">
-        {items.map((it) => (
+        {shown.map((it) => (
           <li key={`${it.kind}:${it.id}`}>
             <BlockBoundary name={`need-${it.id}`}>
               {it.kind === "approval" ? <ApprovalPending a={approvals[it.id]} variant="compact" /> : <QuestionPending q={questions[it.id]} variant="compact" />}
@@ -46,6 +50,12 @@ function NeedsBlock() {
           </li>
         ))}
       </ul>
+      {items.length > NEEDS_SHOWN && (
+        <button type="button" data-testid="needs-more" aria-expanded={all} onClick={() => setAll((v) => !v)}
+          className="mt-1.5 min-h-10 w-full rounded-md text-[12.5px] font-semibold text-accent transition hover:bg-accent-soft">
+          {all ? t("work.panel.needs.less") : t("work.panel.needs.more", { n: items.length })}
+        </button>
+      )}
     </Block>
   );
 }

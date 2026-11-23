@@ -33,8 +33,8 @@ function ThreadHeader({ target }: { target: string | null }) {
   );
 }
 
-/** The first thing you see when nothing has been asked yet: one clear title, examples that fill the box, and the box. */
-function Hero({ onPick }: { onPick: (text: string) => void }) {
+/** Nothing asked yet: examples under the box; picking one fills it (it is never sent on its own). */
+function Examples({ onPick }: { onPick: (text: string) => void }) {
   const { t } = useT();
   const order = useStore((s) => s.agentOrder);
   const agents = useStore((s) => s.agents);
@@ -42,14 +42,12 @@ function Hero({ onPick }: { onPick: (text: string) => void }) {
   const lines = ex.length ? ex.map((e) => ({ key: e.role, text: t(`work.example.${e.role}`) })) : [{ key: "generic", text: t("work.example.generic") }];
   const first = (id: string) => (agents[id]?.name ?? "").split(" ")[0];
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 text-center md:px-0">
-      <h2 className="text-[22px] font-semibold leading-tight tracking-tight text-ink sm:text-[26px]">{t("work.empty.title")}</h2>
-      <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-ink2">{t("work.empty.body", { n: order.length })}</p>
-      <ul className="mx-auto mt-5 max-w-xl space-y-1.5 text-left" aria-label={t("work.empty.examples")}>
+    <div className="mx-auto w-full max-w-2xl px-3 md:px-5">
+      <ul className="divide-y divide-line" aria-label={t("work.empty.examples")}>
         {lines.map((l, i) => (
           <li key={l.key}>
             <button type="button" data-testid={`work-example-${l.key}`} onClick={() => onPick(l.text)}
-              className="flex min-h-11 w-full items-center gap-2.5 rounded-[10px] border border-line bg-panel px-3.5 py-2 text-left text-[13.5px] text-ink transition hover:border-accent hover:bg-accent-soft">
+              className="flex min-h-11 w-full items-center gap-2.5 px-2 py-2 text-left text-[13.5px] text-ink2 transition hover:bg-panel2 hover:text-accent">
               <span className="min-w-0 flex-1">{l.text}</span>
               {ex[i] && <span className="shrink-0 text-[12px] text-mute">{first(ex[i].agentId)}</span>}
             </button>
@@ -74,12 +72,18 @@ export function WorkThread({ target, onTarget, autoFocus }: { target: string | n
   useEffect(() => { loadChat(OFFICE_CONV); }, [loadChat]);
   const running = useMemo(() => inProgress(requests, Object.values(tasks), { agent: target }).slice(0, 2), [requests, tasks, target]);
   const empty = loaded && target === null && office.length === 0 && Object.keys(requests).length === 0;
+  const teamSize = useStore((s) => s.agentOrder.length);
   const first = useStore((s) => (target ? (s.agents[target]?.name ?? "").split(" ")[0] : ""));
 
   return (
-    <section aria-label={t("work.thread.label")} data-testid="work-thread" data-empty={empty ? "1" : "0"} className={`flex h-full min-h-0 min-w-0 flex-col ${empty ? "justify-center gap-6 overflow-y-auto pb-6 pt-4" : ""}`}>
+    <section aria-label={t("work.thread.label")} data-testid="work-thread" data-empty={empty ? "1" : "0"} className={`flex h-full min-h-0 min-w-0 flex-col bg-panel ${empty ? "gap-5 overflow-y-auto pb-6 pt-[clamp(24px,14vh,150px)]" : ""}`}>
       {!loaded ? <div className="flex-1 p-5"><Loading rows={4} /></div>
-        : empty ? <BlockBoundary name="hero"><Hero onPick={(text) => setDraft(conv, text)} /></BlockBoundary>
+        : empty ? (
+          <div className="px-4 text-center">
+            <h2 className="text-[22px] font-semibold leading-tight tracking-tight text-ink sm:text-[26px]">{t("work.empty.title")}</h2>
+            <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-ink2">{t("work.empty.body", { n: teamSize })}</p>
+          </div>
+        )
         : (
           <>
             <ThreadHeader target={target} />
@@ -91,11 +95,12 @@ export function WorkThread({ target, onTarget, autoFocus }: { target: string | n
           </>
         )}
       {loaded && !empty && running.length > 0 && (
-        <div data-testid="work-running" role="status" aria-live="polite" className="max-h-[38%] shrink-0 space-y-2 overflow-y-auto border-t border-line bg-bg px-3 py-2.5 md:px-5">
-          {running.map((r) => <div key={r.id} className="mx-auto w-full max-w-3xl"><BlockBoundary name={`run-${r.id}`}><RunBlock row={r} /></BlockBoundary></div>)}
+        <div data-testid="work-running" role="status" aria-live="polite" className="max-h-[38%] shrink-0 space-y-2 overflow-y-auto border-t border-line px-3 py-2 md:px-5">
+          {running.map((r) => <div key={r.id} className="mx-auto w-full max-w-3xl"><BlockBoundary name={`run-${r.id}`}><RunBlock row={r} collapsible defaultOpen={false} /></BlockBoundary></div>)}
         </div>
       )}
       <Composer target={target} onTarget={onTarget} autoFocus={autoFocus} hero={empty} />
+      {empty && <BlockBoundary name="examples"><Examples onPick={(text) => setDraft(conv, text)} /></BlockBoundary>}
     </section>
   );
 }
