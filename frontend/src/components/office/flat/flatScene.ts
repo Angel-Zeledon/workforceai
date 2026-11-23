@@ -512,6 +512,15 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     P, world, canvas: app.canvas, fit: () => ({ k, x: world.position.x, y: world.position.y }), requestRebuild: () => { sigAt = 1; },
   });
   app.ticker.add(tick);
+  // development (or NEXT_PUBLIC_OFFICE_DEBUG) only, like window.__officeQuality in the 3D styles: stop the real loop and advance
+  // the simulation by virtual time (deterministic walks for screenshots on a computer that renders WebGL in software)
+  const wdbg = window as unknown as { __officeFlat?: unknown };
+  if (process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_OFFICE_DEBUG === "true") {
+    wdbg.__officeFlat = {
+      freeze: (on: boolean) => { if (on) app.ticker.stop(); else app.ticker.start(); },
+      step: (n: number, dt: number) => { for (let i = 0; i < n; i++) tick({ deltaMS: dt * 1000 } as PIXI.Ticker); app.render(); },
+    };
+  }
 
   let running = true;
   return {
@@ -522,6 +531,7 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     },
     destroy() {
       running = false;
+      delete wdbg.__officeFlat;
       resizeObs.disconnect();
       try { app.ticker.remove(tick); app.ticker.stop(); } catch { /* already gone */ }
       const gl = (app.renderer as { gl?: WebGLRenderingContext | WebGL2RenderingContext }).gl;
