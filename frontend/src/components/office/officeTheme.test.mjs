@@ -88,6 +88,10 @@ test("the layout keeps a known style, drops unknown or default ones and migrates
 
 test("the editor moves pieces on the normal view in the styles that cannot edit, and Space shows what each style uses", () => {
   assert.deepEqual(STYLES_WITHOUT_EDITING, ["studio", "flat"]);
-  for (const s of OFFICE_STYLES) assert.ok(SPACE_EFFECTS[s].wallColor && SPACE_EFFECTS[s].floor && SPACE_EFFECTS[s].light, s);
+  for (const s of OFFICE_STYLES) assert.ok(SPACE_EFFECTS[s].wallColor && SPACE_EFFECTS[s].floor && SPACE_EFFECTS[s].trim && SPACE_EFFECTS[s].windows, s);
+  // Plano has no light of the day and no view; the 3D styles have light
+  assert.equal(SPACE_EFFECTS.flat.light, false);
+  assert.equal(SPACE_EFFECTS.flat.view, false);
+  for (const s of ["classic", "clay", "pixel", "studio"]) assert.ok(SPACE_EFFECTS[s].light, s);
 }
 );

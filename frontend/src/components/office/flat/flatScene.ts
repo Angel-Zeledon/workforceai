@@ -6,10 +6,15 @@ import { useStore, type Link } from "@/lib/store";
 import { useRewards, type ShopItem } from "@/lib/rewards";
 import { effective, useOfficeLayout } from "@/lib/officeLayout";
 import { usePreferences, getAgentView } from "@/lib/preferences";
+import { useCost } from "@/lib/cost";
+import { useProjects } from "@/lib/projects/store";
+import { fmtUsd } from "@/lib/i18n";
 import { stateMeta } from "@/lib/meta";
 import { FIXTURE_IDS, FIXTURES, LEGACY_SLOTS, ZONE_NAMES, fixtureWorld, restOn, zoneCenterOf } from "@/lib/officeLayoutModel";
 import { LINK_KIND } from "../kinds";
 import { getSignals } from "../officeSignals";
+import { agentAlertPaused, energyFor, progressOf } from "../officeHooks";
+import { etaShort } from "../officeState";
 import { userPos } from "../zones";
 import { BUBBLE_GAP_MS, BUBBLE_SHOW_MS, phaseFor, pickBubble, stepBubbles, truncateText, type Bubble, type BubbleState } from "../officeState";
 import { deskOf, seatOf, standOf, visitorOf } from "../registry";
@@ -17,6 +22,11 @@ import { depthOf, facing, hexToNum, humanSkin, iso, mapPose, S } from "./isoMath
 import { INK, drawPerson, lookOf, type Extras } from "./figure";
 import { deskHeightOf, drawChair, drawDesk, drawFixture, drawMat, drawMonitorBody, drawPile, drawPiece, drawRoom, isFlatPiece } from "./draw";
 import { makeSim, stepAgent, type Own, type Sim } from "./agentSim";
+import { wornLookOf } from "./wornLook";
+import { eventGestures } from "./flatGestures";
+import { createFx, type Fx } from "./flatFx";
+import { dropFeet, placePopups, publishFeet } from "./flatPopups";
+import { createFlatEditor, type FlatEditor } from "./flatEditor";
 
 const ACCENT = 0x0a66c2;
 const FONT = "IBM Plex Sans, Inter, system-ui, sans-serif";
@@ -28,11 +38,13 @@ export interface Tr { (key: string, vars?: Record<string, string | number>): str
 export interface FlatHandle { setRunning(on: boolean): void; destroy(): void }
 
 type XZ = [number, number];
-interface Chip { c: PIXI.Container; bg: PIXI.Graphics; name: PIXI.Text; pill: PIXI.Text; sub: PIXI.Text; dot: PIXI.Graphics; sig: string; w: number }
+interface Chip { c: PIXI.Container; bg: PIXI.Graphics; name: PIXI.Text; pill: PIXI.Text; sub: PIXI.Text; dot: PIXI.Graphics; bars: PIXI.Graphics; t1: PIXI.Text; t2: PIXI.Text; sig: string; w: number }
+/** The progress / time left and the remaining budget of an agent on its chip (real data: officeHooks.progressOf / energyFor). */
+interface ChipMeter { pct: number; eta: string; etaLines: string; energy: { f: number; color: number; text: string; short: string } | null; showEnergy: boolean }
 interface Bub { c: PIXI.Container; bg: PIXI.Graphics; kind: PIXI.Text; body: PIXI.Text; sig: string; w: number; h: number }
 interface Node {
   id: string; g: PIXI.Graphics; sim: Sim; own: Own; chip: Chip; seatKey: string;
-  look: ReturnType<typeof lookOf>; view: ReturnType<typeof getAgentView>; viewAt: number; hipY: number;
+  look: ReturnType<typeof lookOf>; view: ReturnType<typeof getAgentView>; viewAt: number; hipY: number; meter?: ChipMeter; meterAt: number;
 }
 interface DeskDyn { id: string; g: PIXI.Graphics; x: number; z: number; deskH: number }
 
@@ -85,11 +97,14 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     const bg = new P.Graphics(), dot = new P.Graphics();
     const mk = (size: number, weight: string, fill: number) => new P.Text({ text: "", style: { fontFamily: FONT, fontSize: size, fontWeight: weight as "500", fill }, resolution: 2 });
     const name = mk(12, "600", 0x111827), pill = mk(9, "700", 0x64748b), sub = mk(10.5, "500", 0x475569);
-    c.addChild(bg, dot, name, pill, sub);
+    const bars = new P.Graphics();
+    const t1 = mk(9.5, "600", 0x475569), t2 = mk(9.5, "600", 0x475569);
+    t1.visible = false; t2.visible = false;
+    c.addChild(bg, dot, name, pill, sub, bars, t1, t2);
     ui.addChild(c);
-    return { c, bg, name, pill, sub, dot, sig: "", w: 0 };
+    return { c, bg, name, pill, sub, dot, bars, t1, t2, sig: "", w: 0 };
   };
-  const layoutChip = (ch: Chip, o: { name: string; stateLabel: string; color: number; sub: string; expanded: boolean; showName: boolean; selected: boolean; ring: number }) => {
+  const layoutChip = (ch: Chip, o: { name: string; stateLabel: string; color: number; sub: string; expanded: boolean; showName: boolean; selected: boolean; ring: number; meter?: ChipMeter }) => {
     const sig = JSON.stringify(o);
     if (sig === ch.sig) return;
     ch.sig = sig;
@@ -105,9 +120,36 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     ch.pill.position.set(pad + 14 + ch.name.width + 8, 7.5);
     ch.pill.visible = !!o.stateLabel;
     let w = row1, h = 22;
+    const m = o.meter;
+    ch.bars.clear(); ch.t1.visible = false; ch.t2.visible = false;
     if (o.expanded && o.sub) {
       ch.sub.style.wordWrap = true; ch.sub.style.wordWrapWidth = 176; ch.sub.position.set(pad + 2, 24);
       w = Math.max(row1, Math.min(200, ch.sub.width + pad * 2 + 4)); h = 28 + ch.sub.height + 4;
+      if (m && (m.etaLines || m.energy)) w = Math.max(w, 196);
+      if (m?.etaLines) { ch.t1.text = m.etaLines; ch.t1.style.fill = 0x475569; ch.t1.position.set(pad + 2, h - 2); ch.t1.visible = true; h += ch.t1.height + 1; }
+      if (m?.energy) {
+        const bw = w - pad * 2 - 4;
+        ch.bars.roundRect(pad + 2, h + 1, bw, 5, 2.5).fill({ color: 0x94a3b8, alpha: 0.25 });
+        ch.bars.roundRect(pad + 2, h + 1, Math.max(3, bw * m.energy.f), 5, 2.5).fill(m.energy.color);
+        ch.t2.text = m.energy.text; ch.t2.style.fill = m.energy.color; ch.t2.position.set(pad + 2, h + 8); ch.t2.visible = true;
+        h += 8 + ch.t2.height + 2;
+      }
+      h += 2;
+    } else if (m && !o.expanded) {
+      let x = row1 - pad;
+      if (m.pct >= 0) {
+        ch.bars.roundRect(x + 5, 9, 26, 4, 2).fill({ color: 0x94a3b8, alpha: 0.3 });
+        ch.bars.roundRect(x + 5, 9, Math.max(3, 26 * m.pct / 100), 4, 2).fill(o.color);
+        x += 36;
+        if (m.eta) { ch.t1.text = m.eta; ch.t1.style.fill = 0x475569; ch.t1.position.set(x - 2, 5.5); ch.t1.visible = true; x += ch.t1.width; }
+      }
+      if (m.showEnergy && m.energy) {
+        ch.bars.roundRect(x + 5, 9, 28, 4, 2).fill({ color: 0x94a3b8, alpha: 0.3 });
+        ch.bars.roundRect(x + 5, 9, Math.max(3, 28 * m.energy.f), 4, 2).fill(m.energy.color);
+        ch.t2.text = m.energy.short; ch.t2.style.fill = m.energy.color; ch.t2.position.set(x + 37, 5.5); ch.t2.visible = true;
+        x += 37 + ch.t2.width;
+      }
+      w = x + pad;
     }
     ch.w = w;
     ch.bg.clear().roundRect(0, 0, w, h, o.expanded ? 10 : 9).fill({ color: 0xffffff, alpha: 0.96 }).stroke({ width: o.selected ? 1.6 : 1, color: o.selected ? o.ring : 0xcfd6e0 });
@@ -140,6 +182,11 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     b.c.pivot.set(w / 2, h + 7);
   };
 
+  /** the figure's colors and what it wears (shop items equipped, same data as the 3D character) */
+  const lookFor = (id: string, v: ReturnType<typeof getAgentView>) => {
+    const R = useRewards.getState();
+    return lookOf(hexToNum(v.color), humanSkin(v.skin), hexToNum(v.hair, 0x3b2a1e), v.hairStyle, v.accessory, wornLookOf(R.equip[id], R.catalog, v.color));
+  };
   const catalogOf = () => new Map(useRewards.getState().catalog.map((i) => [i.id, i] as const));
   const rebuild = () => {
     for (const g of statics) g.destroy();
@@ -218,7 +265,7 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
       const view = getAgentView(id);
       nodes.set(id, {
         id, g, sim: makeSim(id, info.own.seat), own: info.own, chip, seatKey: `${info.own.seat[0].toFixed(2)},${info.own.seat[1].toFixed(2)}`,
-        look: lookOf(hexToNum(view.color), humanSkin(view.skin), hexToNum(view.hair, 0x3b2a1e), view.hairStyle, view.accessory), view, viewAt: 0, hipY: 30,
+        look: lookFor(id, view), view, viewAt: 0, hipY: 30, meterAt: 0,
       });
     }
   };
@@ -288,6 +335,26 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     void T;
   };
 
+  /** progress / time left and remaining budget of one agent (the 3D tags show the same, from the same functions) */
+  const meterOf = (id: string, ag: NonNullable<ReturnType<typeof useStore.getState>["agents"][string]>, now: number, T: Tr): ChipMeter | undefined => {
+    const S0 = useStore.getState(), C = useCost.getState(), Pj = useProjects.getState();
+    const prog = progressOf(ag, ag.current_task_id ? S0.tasks[ag.current_task_id] : undefined, Pj.detail, Pj.health, now);
+    const en = energyFor(C.status?.agents.find((a) => a.agent_id === id), agentAlertPaused(C.alerts, id));
+    if (!prog && !en) return undefined;
+    const col = en ? (en.level === "ok" ? 0x2f9e6b : en.level === "low" ? 0xd9890b : 0xd14343) : 0;
+    const lines: string[] = [];
+    if (prog) {
+      lines.push([T("office.progress", { pct: Math.round(prog.eta.pct) }), prog.eta.etaS !== null ? T("office.eta", { time: etaShort(prog.eta.etaS) }) : ""].filter(Boolean).join("  "));
+      if (prog.projectEtaS !== null) lines.push(T("office.eta.project", { time: etaShort(prog.projectEtaS) }));
+    }
+    if (en?.paused) lines.push(T("office.energy.paused"));
+    return {
+      pct: prog ? Math.round(prog.eta.pct) : -1, eta: prog && prog.eta.etaS !== null ? etaShort(prog.eta.etaS) : "", etaLines: lines.join("\n"),
+      energy: en ? { f: en.fraction, color: col, text: T("office.energy.left", { amount: fmtUsd(en.remaining) }), short: fmtUsd(en.remaining) } : null,
+      showEnergy: !!en && (en.paused || en.level !== "ok"),
+    };
+  };
+
   // ---------------------------------------------------------------- frame
   const headPx = (n: Node) => (n.hipY + 24 + 9 + 9 + 22) * FS;
   let sigAt = 0;
@@ -346,7 +413,7 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
         n.viewAt = nowMs;
         const v = getAgentView(n.id);
         n.view = v;
-        n.look = lookOf(hexToNum(v.color), humanSkin(v.skin), hexToNum(v.hair, 0x3b2a1e), v.hairStyle, v.accessory);
+        n.look = lookFor(n.id, v);
       }
       const step = stepAgent(n.sim, n.id, dt, n.own, {
         selected, reduce,
@@ -355,6 +422,9 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
       });
       if (!step) continue;
       const sm = n.sim;
+      publishFeet(n.id, sm.x, sm.z); // the approvals card reads who has reached the desk
+      eventGestures(sm, n.id, step, reduce, (id) => { const o = nodes.get(id); return o ? [o.sim.x, o.sim.z] : null; });
+      if (nowMs - n.meterAt > 1000) { n.meterAt = nowMs; n.meter = meterOf(n.id, ag, nowMs, T); }
       const p2 = mapPose(sm.pose);
       n.hipY = p2.hipY;
       const f = facing(sm.yaw);
@@ -372,13 +442,22 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
       const exp = selected;
       layoutChip(n.chip, {
         name: n.view.label || n.view.name, stateLabel: st === "idle" ? "" : sm2.label, color: hexToNum(sm2.color), ring: hexToNum(n.view.color),
-        sub: exp ? [n.view.title, ag.activity ? truncateText(ag.activity, 110) : ""].filter(Boolean).join("\n") : "", expanded: exp, showName, selected,
+        sub: exp ? [n.view.title, ag.activity ? truncateText(ag.activity, 110) : ""].filter(Boolean).join("\n") : "", expanded: exp, showName, selected, meter: n.meter,
       });
       const sp = toScreen(sm.x, sm.z);
       n.chip.c.position.set(sp.x, sp.y + 8 * FS * k);
       n.chip.c.scale.set(chipScale);
       n.chip.c.zIndex = exp ? 2 : 1;
     }
+
+    // while the office is edited the pointer belongs to the editor (pick, drag, place): people do not catch it
+    const editingNow = useOfficeLayout.getState().editing;
+    for (const n of nodes.values()) { const m = editingNow ? "none" : "static"; if (n.g.eventMode !== m) { n.g.eventMode = m; n.chip.c.eventMode = m; } }
+    editor.update();
+
+    // consult / delegation lines, travelling folders, coins and shields
+    fx.update({ now: nowMs, dtS: dt, reduce, scale: chipScale });
+    placePopups(toScreen, app.screen.width, app.screen.height);
 
     // speech bubbles (a message line wins over the working line of the same agent)
     const live = new Set<string>();
@@ -424,6 +503,14 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     }
   };
   ui.sortableChildren = true;
+  const fx: Fx = createFx(P, {
+    ui, toScreen,
+    agent: (id) => { const n = nodes.get(id); return n ? { x: n.sim.x, z: n.sim.z, up: headPx(n) * k } : null; },
+    desk: (id) => deskInfo.get(id)?.pos ?? null,
+  });
+  const editor: FlatEditor = createFlatEditor({
+    P, world, canvas: app.canvas, fit: () => ({ k, x: world.position.x, y: world.position.y }), requestRebuild: () => { sigAt = 1; },
+  });
   app.ticker.add(tick);
 
   let running = true;
@@ -440,6 +527,7 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
       const gl = (app.renderer as { gl?: WebGLRenderingContext | WebGL2RenderingContext }).gl;
       try { app.destroy(true, { children: true, texture: true }); } catch { /* destroyed during init */ }
       try { gl?.getExtension("WEBGL_lose_context")?.loseContext(); } catch { /* not supported */ }
+      editor.destroy(); fx.destroy(); dropFeet(nodes.keys());
       nodes.clear(); zoneChips.clear(); bubViews.clear(); statics = []; deskDyn = [];
     },
   };
