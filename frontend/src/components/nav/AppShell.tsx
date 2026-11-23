@@ -226,8 +226,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
             )}
             <ActivationChecklist />
-            <TourLauncher section={shown === "shop" && !office3d ? null : shown} />
-            {office3d && <span data-tour="shell.coins" className="inline-flex"><CoinCounter /></span>}
+            <span className="contents max-[399px]:hidden"><TourLauncher section={shown === "shop" && !office3d ? null : shown} /></span>
+            {/* phone: the List / 3D selector needs the room; the coins are in the shop */}
+            {office3d && <span data-tour="shell.coins" className="hidden sm:inline-flex"><CoinCounter /></span>}
             {MOCK && <span data-testid="mock-badge" className="hidden rounded border border-accent/30 bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent sm:inline">Mock</span>}
             <span data-testid="hud-connection" data-connected={connected ? "1" : "0"} className={`hidden items-center gap-1.5 whitespace-nowrap sm:flex ${connected ? "font-medium text-ink2" : "text-[10.5px] font-normal text-mute"}`}>
               <span className={`rounded-full ${connected ? "h-1.5 w-1.5 bg-ok" : "h-1 w-1 bg-line-strong"}`} />
