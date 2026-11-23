@@ -94,13 +94,13 @@ export function DesksTab() {
                 <div className="mt-3 space-y-4">
                   {desks.length > 0 && (
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between text-[12px] text-mute"><span className="font-medium text-ink2">{t("oe.d.desk")}</span><button type="button" onClick={() => all("desk", cfg.desk)} className={`rounded font-medium text-accent hover:underline ${FOCUS}`}>{t("oe.d.all")}</button></div>
+                      <div className="flex items-center justify-between text-[12px] text-mute"><span className="font-medium text-ink2">{t("oe.d.desk")}</span><button type="button" onClick={() => all("desk", cfg.desk)} className={`inline-flex min-h-10 items-center rounded px-1 font-medium text-accent hover:underline ${FOCUS}`}>{t("oe.d.all")}</button></div>
                       <Picker kind="desk" testid={`oe-desks-${id}`} items={desks} value={cfg.desk} none={t("oe.d.default")} onPick={(v) => (v ? setCfg(id, { desk: v }) : setCfg(id, {}, ["desk"]))} />
                     </div>
                   )}
                   {chairs.length > 0 && (
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between text-[12px] text-mute"><span className="font-medium text-ink2">{t("oe.d.chair")}</span><button type="button" onClick={() => all("chair", cfg.chair)} className={`rounded font-medium text-accent hover:underline ${FOCUS}`}>{t("oe.d.all")}</button></div>
+                      <div className="flex items-center justify-between text-[12px] text-mute"><span className="font-medium text-ink2">{t("oe.d.chair")}</span><button type="button" onClick={() => all("chair", cfg.chair)} className={`inline-flex min-h-10 items-center rounded px-1 font-medium text-accent hover:underline ${FOCUS}`}>{t("oe.d.all")}</button></div>
                       <Picker kind="chair" testid={`oe-chairs-${id}`} items={chairs} value={cfg.chair} none={t("oe.d.default")} onPick={(v) => (v ? setCfg(id, { chair: v }) : setCfg(id, {}, ["chair"]))} />
                     </div>
                   )}
