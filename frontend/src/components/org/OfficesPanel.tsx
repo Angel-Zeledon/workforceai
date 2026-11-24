@@ -302,8 +302,9 @@ function OfficeCard({ o, people, admin, meId, busy, run, onMemory, onEdit, onSav
           <button type="button" disabled={busy} className="text-[12px] text-mute hover:text-ink" data-testid={`office-leave-${o.id}`}
             onClick={() => void run(() => officesApi.removeMember(o.id, meId))}>{t("offices.leave")}</button>
         )}
-        {admin && !o.general && !confirmClose && <button type="button" data-testid={`office-close-${o.id}`} disabled={busy} onClick={() => setConfirmClose(true)} className="ml-auto text-[12px] text-red-600 hover:underline">{t("offices.close")}</button>}
-        {admin && !o.general && confirmClose && <button type="button" data-testid={`office-close-confirm-${o.id}`} disabled={busy} onClick={() => void run(() => officesApi.disable(o.id))} className={`ml-auto ${btnDanger}`}>{t("offices.closeConfirm")}</button>}
+        {admin && !o.general && o.visibility === "private" && <p data-testid={`office-close-private-${o.id}`} className="ml-auto text-[12px] text-mute">{t("offices.closePrivate")}</p>}
+        {admin && !o.general && o.visibility !== "private" && !confirmClose && <button type="button" data-testid={`office-close-${o.id}`} disabled={busy} onClick={() => setConfirmClose(true)} className="ml-auto text-[12px] text-red-600 hover:underline">{t("offices.close")}</button>}
+        {admin && !o.general && o.visibility !== "private" && confirmClose && <button type="button" data-testid={`office-close-confirm-${o.id}`} disabled={busy} onClick={() => void run(() => officesApi.disable(o.id))} className={`ml-auto ${btnDanger}`}>{t("offices.closeConfirm")}</button>}
       </div>
     </li>
   );

@@ -5916,6 +5916,7 @@
   "offices.leave": "Salir de la oficina",
   "offices.close": "Cerrar oficina",
   "offices.closeConfirm": "Sí, quitarle su espacio propio",
+  "offices.closePrivate": "Abre esta oficina antes de cerrarla: su historial es privado y al cerrarla lo vería toda la empresa.",
   "offices.myMemory": "Mi memoria",
   "offices.myMemory.hint": "Lo que escribas aquí lo tienen en cuenta los agentes cuando trabajan para ti. Nadie más lo ve.",
   "offices.done": "Listo",

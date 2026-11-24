@@ -5917,6 +5917,7 @@
   "offices.leave": "Sair do escritório",
   "offices.close": "Fechar escritório",
   "offices.closeConfirm": "Sim, voltar a ser só parte do organograma",
+  "offices.closePrivate": "Abra este escritório antes de fechá-lo: o histórico é privado e, ao fechá-lo, toda a empresa o veria.",
   "offices.myMemory": "Minha memória",
   "offices.myMemory.hint": "O que você escrever aqui os agentes levam em conta quando trabalham para você. Ninguém mais vê.",
   "offices.done": "Pronto",

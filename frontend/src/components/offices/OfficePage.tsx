@@ -85,7 +85,7 @@ function Page({ id }: { id: string }) {
                     {o.can_enter && o.can_manage && <button type="button" role="menuitem" data-testid="office-menu-save" className={menuItem} onClick={() => { setMenu(false); setSaveOpen(true); }}>{t("otpl.save.button")}</button>}
                     {o.is_member && !o.is_lead && <button type="button" role="menuitem" data-testid="office-menu-leave" className={menuItem}
                       onClick={() => { setMenu(false); officesApi.removeMember(id, data?.me.user_id ?? "").then(load).catch(() => setError(true)); }}>{t("offices.leave")}</button>}
-                    {data?.me.admin && (confirmClose
+                    {data?.me.admin && (o.visibility === "private" ? <p data-testid="office-close-private" className="px-2.5 py-1.5 text-[12px] text-mute">{t("offices.closePrivate")}</p> : confirmClose
                       ? <button type="button" data-testid="office-close-confirm" className={btnDanger} onClick={() => { officesApi.disable(id).then(() => router.push("/offices")).catch(() => setError(true)); }}>{t("offices.closeConfirm")}</button>
                       : <button type="button" role="menuitem" data-testid="office-menu-close" className={`${menuItem} text-red-600`} onClick={() => setConfirmClose(true)}>{t("offices.close")}</button>)}
                   </div>

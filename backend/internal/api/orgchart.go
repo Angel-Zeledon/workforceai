@@ -132,6 +132,12 @@ func (s *server) updateDepartment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) deleteDepartment(w http.ResponseWriter, r *http.Request) {
+	if s.Offices != nil { // D3: a private office's history is not opened by deleting its department
+		if err := s.Offices.CanDelete(r.Context(), s.org(r), chi.URLParam(r, "id")); err != nil {
+			s.fail(w, err)
+			return
+		}
+	}
 	if err := s.OrgChart.DeleteDepartment(r.Context(), chi.URLParam(r, "id")); err != nil {
 		s.fail(w, err)
 		return

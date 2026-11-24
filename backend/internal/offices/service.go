@@ -249,6 +249,22 @@ func (s *Service) Enable(ctx context.Context, org string, v Viewer, deptID, visi
 	return s.officeAfter(ctx, org, deptID)
 }
 
+// errPrivateOffice: what was asked and answered in a private office is sealed by the office, so it cannot go away while
+// it is private (its history would become everybody's without anyone deciding it).
+var errPrivateOffice = fmt.Errorf("%w: a private office cannot be closed or deleted; open it first (its history becomes visible to the company)", domain.ErrConflict)
+
+// CanDelete is the check before the department of an office is deleted: a private office is opened first.
+func (s *Service) CanDelete(ctx context.Context, org, id string) error {
+	m, err := s.fresh(ctx, org)
+	if err != nil {
+		return err
+	}
+	if o, ok := m.Office(id); ok && o.Visibility == Private {
+		return errPrivateOffice
+	}
+	return nil
+}
+
 // Disable turns an office back into a plain department (admins only). An office that still owns agents cannot
 // be closed: they are passed to another office first (equipos-colaboracion.md §4).
 func (s *Service) Disable(ctx context.Context, org string, v Viewer, id string) error {
@@ -264,8 +280,12 @@ func (s *Service) Disable(ctx context.Context, org string, v Viewer, id string) 
 	if err != nil {
 		return err
 	}
-	if _, ok := m.Office(id); !ok {
+	o, ok := m.Office(id)
+	if !ok {
 		return fmt.Errorf("%w: office %s", domain.ErrNotFound, id)
+	}
+	if o.Visibility == Private { // its work would be everybody's once the office is gone: opening it is said first
+		return errPrivateOffice
 	}
 	for _, row := range m.rows {
 		if row.OwnerKind == OwnerOffice && row.OwnerID == id {

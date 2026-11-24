@@ -5916,6 +5916,7 @@
   "offices.leave": "Leave the office",
   "offices.close": "Close office",
   "offices.closeConfirm": "Yes, close its own space",
+  "offices.closePrivate": "Open this office before closing it: its history is private and closing it would show it to the whole company.",
   "offices.myMemory": "My memory",
   "offices.myMemory.hint": "What you write here is kept in mind by the agents when they work for you. Nobody else sees it.",
   "offices.done": "Done",

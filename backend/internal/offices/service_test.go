@@ -224,3 +224,25 @@ func TestDeletedDepartmentDropsOffice(t *testing.T) {
 		t.Fatal("an office whose department is gone is not listed")
 	}
 }
+
+// A private office is opened before it is closed or its department is deleted: its history is sealed by the office.
+func TestPrivateOfficeIsOpenedBeforeItIsClosed(t *testing.T) {
+	f := newFix(t)
+	ctx := context.Background()
+	f.enable(t, "d-legal", Private)
+	if err := f.svc.Disable(ctx, org, admin, "d-legal"); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("close a private office: %v", err)
+	}
+	if err := f.svc.CanDelete(ctx, org, "d-legal"); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("delete the department of a private office: %v", err)
+	}
+	if _, err := f.svc.SetVisibility(ctx, org, admin, "d-legal", Open); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.CanDelete(ctx, org, "d-legal"); err != nil {
+		t.Fatalf("delete the department of an open office: %v", err)
+	}
+	if err := f.svc.Disable(ctx, org, admin, "d-legal"); err != nil {
+		t.Fatalf("close an open office: %v", err)
+	}
+}
