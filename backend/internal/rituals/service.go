@@ -44,6 +44,10 @@ type Config struct {
 	// Public tells whether everybody in the organization may see an agent's work (D3: not an agent of a private
 	// department). The office chat note and the meeting-room event leave the others out. nil = every agent is public.
 	Public func(ctx context.Context, agentID string) bool
+	// PrivateOffice tells whether an office is private (D3). A ritual is stored once for everybody, so the tasks that
+	// a public agent (a General one) did for a private office are left out of it: their titles and reasons are that
+	// office's. It must answer true when it cannot tell. nil = no office is private.
+	PrivateOffice func(ctx context.Context, officeID string) bool
 	// Emit publishes an event (office: agents walk to the meeting room). nil = none.
 	Emit func(ctx context.Context, a application.Action)
 	// Audit records every write and every run or skip. nil = none.
@@ -221,6 +225,45 @@ func Redact(r *Ritual, sees func(agentID string) bool, proposals int) bool {
 	return true
 }
 
+// leaveOutPrivateOffices drops the tasks (and the approvals of those tasks) that a public agent did for a private
+// office. The work of an agent of the private office stays: its entry is only shown to who may see that agent.
+func (s *Service) leaveOutPrivateOffices(ctx context.Context, tasks []domain.Task, approvals []domain.Approval) ([]domain.Task, []domain.Approval) {
+	if s.cfg.PrivateOffice == nil {
+		return tasks, approvals
+	}
+	private := map[string]bool{} // office -> private (asked once)
+	left := map[string]bool{}    // task -> left out
+	pub := map[string]bool{}     // agent -> public
+	isPublic := func(id string) bool {
+		if s.cfg.Public == nil {
+			return true
+		}
+		v, ok := pub[id]
+		if !ok {
+			v = s.cfg.Public(ctx, id)
+			pub[id] = v
+		}
+		return v
+	}
+	tasks = slices.DeleteFunc(slices.Clone(tasks), func(t domain.Task) bool {
+		if t.OfficeID == "" {
+			return false
+		}
+		p, ok := private[t.OfficeID]
+		if !ok {
+			p = s.cfg.PrivateOffice(ctx, t.OfficeID)
+			private[t.OfficeID] = p
+		}
+		if p && isPublic(t.AgentID) {
+			left[t.ID] = true
+			return true
+		}
+		return false
+	})
+	approvals = slices.DeleteFunc(slices.Clone(approvals), func(a domain.Approval) bool { return left[a.TaskID] })
+	return tasks, approvals
+}
+
 // ---- holding a ritual ----
 
 // RunNow holds a ritual because a person asked ("Hacer stand-up ahora"). It is refused while the kill switch is on;
@@ -289,6 +332,7 @@ func (s *Service) hold(ctx context.Context, org string, kind Kind, origin, perio
 	if err != nil {
 		return Ritual{}, false, err
 	}
+	tasks, approvals = s.leaveOutPrivateOffices(ctx, tasks, approvals)
 	data := groupByAgent(tasks, approvals)
 
 	from, to := now.Add(-24*time.Hour), now

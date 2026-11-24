@@ -327,7 +327,7 @@ func (s *Debates) Run(ctx context.Context, in DebateInput) (domain.Debate, error
 			return domain.Debate{}, s.fail(ctx, d, DebateOverBudget, fmt.Errorf("%s cap", ex.Scope))
 		}
 	}
-	s.Rec.Emit(ctx, Action{Type: EvDebateStarted, AgentID: assistantID, Entity: "debate", EntityID: d.ID, SkipAudit: true,
+	s.Rec.Emit(sealDebate(ctx, d), Action{Type: EvDebateStarted, AgentID: assistantID, Entity: "debate", EntityID: d.ID, SkipAudit: true,
 		Payload: map[string]any{"debate_id": d.ID, "topic": d.Topic, "participants": d.Participants, "trigger": d.Trigger,
 			"request_id": d.RequestID, "task_id": d.TaskID, "max_turns": d.MaxTurns}})
 	resp, err := rt.Debate(ctx, req)
@@ -361,9 +361,16 @@ func (s *Debates) Run(ctx context.Context, in DebateInput) (domain.Debate, error
 	s.Rec.Audit(ctx, domain.AuditLog{Actor: actor, Action: "debate.completed", Entity: "debate", EntityID: d.ID, RequestID: d.RequestID,
 		Details: map[string]any{"trigger": d.Trigger, "task_id": d.TaskID, "participants": d.Participants, "turns": len(d.Turns),
 			"max_turns": d.MaxTurns, "model": d.Model, "cost_usd": d.CostUSD, "advisory": true}})
-	s.Rec.Emit(ctx, Action{Type: EvDebateCompleted, AgentID: assistantID, Entity: "debate", EntityID: d.ID, SkipAudit: true,
+	s.Rec.Emit(sealDebate(ctx, d), Action{Type: EvDebateCompleted, AgentID: assistantID, Entity: "debate", EntityID: d.ID, SkipAudit: true,
 		Payload: map[string]any{"debate": d}})
 	return d, nil
+}
+
+// sealDebate makes the live events of a debate the work of its participants (D3): they carry the topic and who took
+// part but, without a request, no task or agent the audience rule could read. They reach the people who may see all the
+// participants' work and whoever opened the debate.
+func sealDebate(ctx context.Context, d domain.Debate) context.Context {
+	return WithWorkAgents(WithWorkPeople(ctx, PersonID(d.CreatedBy)), d.Participants...)
 }
 
 // fail stores the failed attempt (so the meetings view can say why), audits it and tells the office.
@@ -375,7 +382,7 @@ func (s *Debates) fail(ctx context.Context, d domain.Debate, code string, cause 
 	}
 	s.Rec.Audit(ctx, domain.AuditLog{Actor: d.CreatedBy, Action: "debate.failed", Entity: "debate", EntityID: d.ID, RequestID: d.RequestID,
 		Details: map[string]any{"trigger": d.Trigger, "task_id": d.TaskID, "reason": code}})
-	s.Rec.Emit(ctx, Action{Type: EvDebateFailed, AgentID: assistantID, Entity: "debate", EntityID: d.ID, SkipAudit: true,
+	s.Rec.Emit(sealDebate(ctx, d), Action{Type: EvDebateFailed, AgentID: assistantID, Entity: "debate", EntityID: d.ID, SkipAudit: true,
 		Payload: map[string]any{"debate_id": d.ID, "participants": d.Participants, "code": code, "request_id": d.RequestID}})
 	return &DebateError{Code: code, Err: cause, Debate: d}
 }

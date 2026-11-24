@@ -607,6 +607,7 @@ func (s *Service) Search(ctx context.Context, org, agentID, query string, limit 
 	}
 	query = capRunes(strings.TrimSpace(query), 500)
 	items := s.retrieve(ctx, org, Query{AgentID: agentID, OfficeID: s.readOffice(ctx, org, agentID), Text: query, Limit: limit})
+	items = slices.DeleteFunc(items, func(it Item) bool { return officeHidden(ctx, it.OfficeID) })
 	if items == nil {
 		items = []Item{}
 	}
@@ -638,6 +639,9 @@ func (s *Service) List(ctx context.Context, org, agentID string, limit int) ([]I
 	}
 	out := make([]Item, 0, len(docs))
 	for _, d := range docs {
+		if officeHidden(ctx, d.OfficeID) {
+			continue
+		}
 		it := docItem(DocHit{Doc: d}, nil)
 		it.Snippet = Clean(Passage(d.Body, nil, MaxSnippetChars), s.cfg.Suspects)
 		it.Title = Clean(it.Title, s.cfg.Suspects)
@@ -651,7 +655,7 @@ func (s *Service) List(ctx context.Context, org, agentID string, limit int) ([]I
 // back on a re-index. Only what the agent itself produced can be removed here.
 func (s *Service) Delete(ctx context.Context, org, agentID, id, actor string) error {
 	d, err := s.cfg.Docs.Get(ctx, org, id)
-	if err != nil || d.Suppressed || d.AgentID != agentID {
+	if err != nil || d.Suppressed || d.AgentID != agentID || officeHidden(ctx, d.OfficeID) {
 		return ErrNotFound
 	}
 	if err := s.cfg.Docs.Suppress(ctx, org, id, actor, s.cfg.Now().UTC()); err != nil {

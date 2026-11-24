@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"aiworkforce/backend/internal/commands"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/drive"
+	"aiworkforce/backend/internal/memory"
 	"aiworkforce/backend/internal/officedoc"
 )
 
@@ -450,9 +452,15 @@ func cmdModel(c *cmdCall) (*cmdResult, *cmdFail) {
 
 type memEntry struct{ scope, key, value string }
 
+// memCtx is the context of the long-term memory reads and deletes of a command: it leaves out what was remembered for
+// an office the person does not see (D3).
+func (c *cmdCall) memCtx() context.Context {
+	return memory.WithOfficeVisible(c.ctx, c.work.office)
+}
+
 func (c *cmdCall) memories(agentID string) ([]memEntry, error) {
 	if lm := c.s.cmds.LongMemory; lm != nil {
-		items, err := lm.List(c.ctx, c.org, agentID)
+		items, err := lm.List(c.memCtx(), c.org, agentID)
 		out := make([]memEntry, 0, len(items))
 		for _, i := range items {
 			out = append(out, memEntry{i.Scope, i.Key, i.Value})
@@ -464,6 +472,9 @@ func (c *cmdCall) memories(agentID string) ([]memEntry, error) {
 	for _, m := range ms {
 		if m.Scope == "chat" {
 			continue // internal chat state (a pending redirect of someone's thread, with their question): not a memory
+		}
+		if !c.work.agentMemory(m) {
+			continue // what it kept for a private office is that office's (D3)
 		}
 		out = append(out, memEntry{m.Scope, m.Key, m.Value})
 	}
@@ -536,7 +547,7 @@ func cmdMemory(c *cmdCall) (*cmdResult, *cmdFail) {
 	n := len(hits)
 	if lm := c.s.cmds.LongMemory; lm != nil && action == "forget" {
 		var err error
-		if n, err = lm.Forget(c.ctx, c.org, a.ID, c.str("text")); err != nil {
+		if n, err = lm.Forget(c.memCtx(), c.org, a.ID, c.str("text")); err != nil {
 			return nil, c.serviceFail(err)
 		}
 	} else {

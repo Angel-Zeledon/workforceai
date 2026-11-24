@@ -40,12 +40,22 @@ func officesWorldSealedCfg(t *testing.T, cfg func(*application.Config), more ...
 // officesWorldSealedOpts is officesWorldSealed with a last word on the whole environment.
 func officesWorldSealedOpts(t *testing.T, more ...func(*opts)) (e *env, owner, ana, marta, luis, ventas, soporte, org string) {
 	t.Helper()
+	e, owner, ana, marta, luis, ventas, soporte, org, _ = officesWorldSealedDocs(t)
+	return
+}
+
+// officesWorldSealedDocs is officesWorldSealed that also hands out the long-term memory store, to seed documents.
+func officesWorldSealedDocs(t *testing.T, tweak ...func(*api.Deps)) (e *env, owner, ana, marta, luis, ventas, soporte, org string, docs *longmem.MemStore) {
+	t.Helper()
 	var d *api.Deps
 	cfg := opts{auth: true, orgchart: true, away: true, code: true, v2: true, quality: true, ws: true, trust: true, deps: func(x *api.Deps) {
 		withOfficesMulti(x)
-		docs := longmem.NewMemStore()
+		docs = longmem.NewMemStore()
 		x.Memory = longmem.New(longmem.Config{Docs: docs, Retriever: &longmem.FTS{Docs: docs}})
 		x.Commands = &api.CommandsDeps{}
+		for _, f := range tweak {
+			f(x)
+		}
 		d = x
 	}}
 	for _, f := range more { // extra surfaces a test needs (they chain onto the dependencies above)

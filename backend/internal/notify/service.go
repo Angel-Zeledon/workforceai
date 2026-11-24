@@ -512,6 +512,9 @@ func (o *Observer) Publish(ctx context.Context, e domain.Event) error {
 			go o.bg(ctx, svc, func(c context.Context) { svc.Notify(c, e.OrgID, ap) })
 		}
 	case domain.EvHelpNotice:
+		if len(e.Audience) > 0 {
+			break // D3: the recorder sealed it to the members of a private office (and whoever asked): the channels of the whole organization do not hear of it, like an approval of a private office
+		}
 		if p, ok := e.Payload.(map[string]any); ok {
 			count, _ := p["count"].(int)
 			need, _ := p["need"].(string)
