@@ -174,6 +174,9 @@ func TestEveryAgentChangeRouteLeavesAVersion(t *testing.T) {
 	notConfig := map[string]string{
 		"DELETE /agents/{id}/memory/{docId}":         "forgetting a memory is the agent's knowledge, not its configuration",
 		"POST /agents/{id}/golden-cases":             "quality test cases",
+		"POST /agents/{id}/offices":                  "the offices an agent works for are audited (agent.office_*), not part of its versioned configuration",
+		"POST /agents/{id}/offices/{officeID}/accept": "same: audited, not versioned",
+		"DELETE /agents/{id}/offices/{officeID}":     "same: audited, not versioned",
 		"POST /agents/{id}/trust/evaluate":           "an evaluation; a demotion it applies is recorded as the system's",
 		"PUT /agents/{id}/equipment/{slot}":          "cosmetic items bought with coins",
 		"DELETE /agents/{id}/equipment/{slot}":       "cosmetic items bought with coins",
