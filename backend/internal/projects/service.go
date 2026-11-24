@@ -433,6 +433,7 @@ func (s *Service) CreateDraft(ctx context.Context, in NewProject) (Record, error
 	rec.Estimate = estimatePlanWith(rec.Nodes, rec.Objectives, s.estimator(ctx, rec.Planner))
 	rec.BudgetUSD = in.BudgetUSD
 	rec.CustomerID, rec.GoalID = in.CustomerID, in.GoalID
+	rec.OfficeID = application.RequestOfficeFrom(ctx) // asked from an office: the project (and its request) are that office's
 	if rec.BudgetUSD <= 0 {
 		rec.BudgetUSD = defaultBudget(rec.Estimate)
 	}

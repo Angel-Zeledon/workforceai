@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/go-chi/chi/v5"
 
@@ -189,6 +190,12 @@ func (s *server) listSchedules(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	v = slices.DeleteFunc(v, func(sc application.Schedule) bool { return sc.OfficeID != "" && !ws.office(sc.OfficeID) }) // D3: a private office's routines are its members'
 	writeJSON(w, 200, list(v))
 }
 

@@ -67,6 +67,9 @@ type Schedule struct {
 	NextRunAt   *time.Time        `json:"next_run_at"`
 	LastRunAt   *time.Time        `json:"last_run_at"`
 	CreatedAt   time.Time         `json:"created_at"`
+	// OfficeID is the office the schedule was created from (a request or a conversation asked from an office; "" = the
+	// agents' base offices). Every request it starts is asked from that office.
+	OfficeID string `json:"office_id,omitempty"`
 }
 
 // ConfigStore is the persistence port of organization configuration. It is a

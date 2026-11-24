@@ -20,6 +20,15 @@ import (
 // approvals are left out. Hiding the whole project would take General's work away from the people who planned it;
 // showing the hidden nodes whole would leak the private department's work.
 
+// redactProjectFor is redactProject for who reads: a project created from an office the person cannot see is that
+// office's work whole (it answers 404), whatever the agents of its nodes.
+func redactProjectFor(d *projects.Detail, ws *workScope) bool {
+	if id := d.Project.OfficeID; id != "" && !ws.office(id) {
+		return true
+	}
+	return redactProject(d, ws.agent)
+}
+
 // redactProject redacts d in place and reports whether every agent node is hidden (the project answers 404 then).
 func redactProject(d *projects.Detail, sees func(agentID string) bool) (allHidden bool) {
 	withAgent, hidden := 0, 0
@@ -98,7 +107,7 @@ func (s *server) projectView(r *http.Request, id string) (projectView, bool, err
 		return pv, false, err
 	}
 	pv.hidden = hiddenNodes(d, ws.agent)
-	pv.all = redactProject(&d, ws.agent)
+	pv.all = redactProjectFor(&d, ws)
 	return pv, true, nil
 }
 

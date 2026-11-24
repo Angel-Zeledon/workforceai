@@ -406,7 +406,7 @@ func (s *OrgConfig) buildSchedule(ctx context.Context, tpl string, params map[st
 		return Schedule{}, err
 	}
 	return Schedule{ID: uuid.NewString(), TemplateKey: tpl, Params: params, Hour: hour, Minute: minute,
-		Timezone: tz, Weekdays: weekdays, Enabled: true, NextRunAt: &next, CreatedAt: s.now()}, nil
+		Timezone: tz, Weekdays: weekdays, Enabled: true, NextRunAt: &next, CreatedAt: s.now(), OfficeID: RequestOfficeFrom(ctx)}, nil
 }
 
 // replaceSchedule keeps a single schedule per template: it removes previous
@@ -548,6 +548,7 @@ func (s *OrgConfig) RunDue(ctx context.Context, orgs []string) int {
 }
 
 func (s *OrgConfig) runSchedule(ctx context.Context, sc Schedule) (string, error) {
+	ctx = WithRequestOffice(WithoutRequestOffice(ctx), sc.OfficeID) // the office it was created from, none = the agents' base
 	return s.InstantiateTemplate(WithWorkPriority(WithActor(ctx, "scheduler"), PrioritySchedule), sc.TemplateKey, sc.Params, "")
 }
 

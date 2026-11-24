@@ -66,7 +66,7 @@ func (w *workScope) hidesAny() bool {
 			return true
 		}
 	}
-	return false
+	return len(w.hiddenOffices()) > 0 // a private office the person is not in hides the work asked from it too
 }
 
 // agent reports whether the person sees the work of an agent (fails closed when the model cannot be read).

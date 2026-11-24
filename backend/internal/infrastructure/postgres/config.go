@@ -103,13 +103,13 @@ func (s *Store) SetAgentAutonomy(ctx context.Context, orgID, agentID, autonomy s
 	return nil
 }
 
-const scheduleCols = `id, template_key, params, hour, minute, timezone, weekdays, enabled, next_run_at, last_run_at, created_at`
+const scheduleCols = `id, template_key, params, hour, minute, timezone, weekdays, enabled, next_run_at, last_run_at, created_at, COALESCE(office_id, '')`
 
 func scanSchedule(r scanner) (application.Schedule, error) {
 	var sc application.Schedule
 	var params, weekdays []byte
 	if err := r.Scan(&sc.ID, &sc.TemplateKey, &params, &sc.Hour, &sc.Minute, &sc.Timezone, &weekdays,
-		&sc.Enabled, &sc.NextRunAt, &sc.LastRunAt, &sc.CreatedAt); err != nil {
+		&sc.Enabled, &sc.NextRunAt, &sc.LastRunAt, &sc.CreatedAt, &sc.OfficeID); err != nil {
 		return sc, err
 	}
 	unmarshal(params, &sc.Params)
@@ -140,13 +140,13 @@ func (s *Store) PutSchedule(ctx context.Context, orgID string, sc application.Sc
 	if sc.Weekdays == nil {
 		sc.Weekdays = []int{}
 	}
-	return s.exec(ctx, orgID, `INSERT INTO schedules (id, org_id, template_key, params, hour, minute, timezone, weekdays, enabled, next_run_at, last_run_at, created_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+	return s.exec(ctx, orgID, `INSERT INTO schedules (id, org_id, template_key, params, hour, minute, timezone, weekdays, enabled, next_run_at, last_run_at, created_at, office_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NULLIF($13,''))
 		ON CONFLICT (id) DO UPDATE SET template_key=EXCLUDED.template_key, params=EXCLUDED.params, hour=EXCLUDED.hour,
 			minute=EXCLUDED.minute, timezone=EXCLUDED.timezone, weekdays=EXCLUDED.weekdays, enabled=EXCLUDED.enabled,
-			next_run_at=EXCLUDED.next_run_at, last_run_at=EXCLUDED.last_run_at`,
+			next_run_at=EXCLUDED.next_run_at, last_run_at=EXCLUDED.last_run_at, office_id=EXCLUDED.office_id`,
 		sc.ID, orgID, sc.TemplateKey, jb(sc.Params), sc.Hour, sc.Minute, sc.Timezone, jb(sc.Weekdays), sc.Enabled,
-		sc.NextRunAt, sc.LastRunAt, sc.CreatedAt)
+		sc.NextRunAt, sc.LastRunAt, sc.CreatedAt, sc.OfficeID)
 }
 
 func (s *Store) DeleteSchedule(ctx context.Context, orgID, id string) error {

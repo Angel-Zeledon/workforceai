@@ -198,7 +198,7 @@ func (s *server) projectSeen(r *http.Request, ws *workScope, p projects.Summary)
 	if err != nil {
 		return false, err
 	}
-	return !redactProject(&d, ws.agent), nil
+	return !redactProjectFor(&d, ws), nil
 }
 
 // reportView is a report with the goal its request contributed to ("Contribuye a: …").

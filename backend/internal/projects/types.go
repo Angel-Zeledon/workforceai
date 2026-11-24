@@ -239,6 +239,8 @@ type Summary struct {
 	CustomerID string `json:"customer_id,omitempty"`
 	// GoalID is the company goal the project contributes to (F1, additive).
 	GoalID string `json:"goal_id,omitempty"`
+	// OfficeID is the office the project was created from ("" = none): who does not see that office does not see it.
+	OfficeID string `json:"office_id,omitempty"`
 	// BatchID is the batch the project belongs to (additive).
 	BatchID string `json:"batch_id,omitempty"`
 	// BudgetWarnPct is the highest budget early-warning threshold already crossed
@@ -589,6 +591,10 @@ type Record struct {
 	// GoalID (F1) is the company goal the project contributes to ("" = none), set at creation; the request the
 	// project launches points to it, so its agents know what the work is for.
 	GoalID string `json:"goal_id,omitempty"`
+	// OfficeID is the office the project was created from (a request or a conversation asked from an office; "" = the
+	// agents' base offices). Set at creation; the request the project launches is asked from that office, so memory,
+	// files, skills and visibility are that office's.
+	OfficeID string `json:"office_id,omitempty"`
 	// BatchID is the batch the project belongs to ("" = a project on its own): one template launched for many
 	// customers. A batch counts as one active project.
 	BatchID string `json:"batch_id,omitempty"`

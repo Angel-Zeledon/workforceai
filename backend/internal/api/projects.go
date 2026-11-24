@@ -93,7 +93,7 @@ func (s *server) listProjects(w http.ResponseWriter, r *http.Request) {
 				s.fail(w, err)
 				return
 			}
-			if !redactProject(&d, ws.agent) {
+			if !redactProjectFor(&d, ws) {
 				out = append(out, p)
 			}
 		}
@@ -136,7 +136,7 @@ func (s *server) getProject(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	if !ws.open() && redactProject(&d, ws.agent) { // D3 (work_projects.go)
+	if !ws.open() && redactProjectFor(&d, ws) { // D3 (work_projects.go)
 		s.fail(w, notFound("project", d.Project.ID))
 		return
 	}
