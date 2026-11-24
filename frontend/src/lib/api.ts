@@ -46,6 +46,7 @@ export function toChatMessage(x: any, conv: string): ChatMessage {
     turn_id: x.turn_id ?? null, from: String(x.from), to: String(x.to ?? ""),
     kind: x.kind ?? "chat", text: String(x.text ?? ""), reply_to: x.reply_to ?? null, ts: String(x.ts ?? new Date().toISOString()), handoff_to: x.handoff_to ?? null,
     ...(x.request_id ? { request_id: String(x.request_id) } : {}),
+    ...(x.office_id ? { office_id: String(x.office_id) } : {}),
     ...(x.helper_group_id ? { helper_group_id: String(x.helper_group_id) } : {}),
     ...(Array.isArray(x.agent_ids) ? { agent_ids: x.agent_ids.map(String) } : {}),
     ...(x.author_id ? { author_id: String(x.author_id) } : {}),
@@ -82,10 +83,11 @@ export const api = {
   },
   /** POST /messages: the backend decides who answers and replies over the WebSocket (chat.message / chat.typing / route.decided). */
   /** `customerId` (B12) scopes any request the turn creates to that customer (stored before the request exists). */
+  /** `officeId` is the office the turn is for (the one in the header, or the one picked in "Para:"); absent = General. */
   /** `folder` (D2) is the department folder the turn works in (a /Offices/... folder the person can read; 400/404 otherwise). */
-  postMessage: (conversation: string, text: string, attachments?: string[], customerId?: string, folder?: string, goalId?: string, helpers?: boolean) =>
+  postMessage: (conversation: string, text: string, attachments?: string[], customerId?: string, folder?: string, goalId?: string, helpers?: boolean, officeId?: string) =>
     call<{ message_id: string; turn_id: string }>("POST", "/messages", {
-      conversation, text, ...(attachments?.length ? { attachments } : {}), ...(customerId ? { customer_id: customerId } : {}), ...(folder ? { folder } : {}), ...(goalId ? { goal_id: goalId } : {}), ...(helpers ? { helpers: true } : {}),
+      conversation, text, ...(attachments?.length ? { attachments } : {}), ...(customerId ? { customer_id: customerId } : {}), ...(folder ? { folder } : {}), ...(goalId ? { goal_id: goalId } : {}), ...(helpers ? { helpers: true } : {}), ...(officeId ? { office_id: officeId } : {}),
     }),
   approvals: async () => list<Approval>(await call("GET", "/approvals")),
   reports: async () => list<Report>(await call("GET", "/reports")),

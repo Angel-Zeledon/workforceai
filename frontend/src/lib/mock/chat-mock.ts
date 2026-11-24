@@ -18,9 +18,9 @@ export interface ChatHost {
   log(agentId: string | null, kind: string, text: string): void;
   planPreview(text: string): PlanPreview[];
   /** opens a request (assistant plans and delegates) */
-  startRequest(text: string): Promise<string>;
+  startRequest(text: string, office?: string): Promise<string>;
   /** a task for one agent only, asked from their 1:1 chat; resolves with the summary when done */
-  startDirectTask(agentId: string, text: string, reason?: string): Promise<string>;
+  startDirectTask(agentId: string, text: string, reason?: string, office?: string): Promise<string>;
   uid(prefix: string): string;
   /** the draft file the last finished task of this agent left on its desk (a file card for the chat) */
   draftOf(agentId: string): FileRef | undefined;
@@ -65,9 +65,11 @@ export class MockChat {
   private history: Record<string, ChatMessage[]> = {};
   /** a redirect offered in a 1:1 chat, waiting for the user to accept or insist */
   private pending = new Map<string, { to: string; text: string; task: boolean }>();
+  /** the office each turn was sent for (POST /messages `office_id`); messages and requests of the turn carry it */
+  private turnOffice = new Map<string, string>();
   constructor(private host: ChatHost) {}
 
-  reset() { this.history = {}; this.pending.clear(); }
+  reset() { this.history = {}; this.pending.clear(); this.turnOffice.clear(); }
 
   list(conv: string, before?: string | null, limit = 60): ChatMessage[] {
     let rows = this.history[conv] || [];
@@ -82,7 +84,8 @@ export class MockChat {
 
   /** Say something in a conversation (stores history and emits chat.message). */
   say(conv: string, from: string, to: string, kind: MessageKind, text: string, turn: string | null, replyTo: string | null = null, handoffTo: string | null = null, files?: FileRef[], helperGroupId?: string) {
-    const m: ChatMessage = { id: this.host.uid("cm"), conversation: conv, turn_id: turn, from, to, kind, text, reply_to: replyTo, ts: new Date().toISOString(), ...(handoffTo ? { handoff_to: handoffTo } : {}), ...(files?.length ? { files } : {}), ...(helperGroupId ? { helper_group_id: helperGroupId } : {}) };
+    const office = turn ? this.turnOffice.get(turn) : undefined;
+    const m: ChatMessage = { id: this.host.uid("cm"), conversation: conv, turn_id: turn, from, to, kind, text, reply_to: replyTo, ts: new Date().toISOString(), ...(office ? { office_id: office } : {}), ...(handoffTo ? { handoff_to: handoffTo } : {}), ...(files?.length ? { files } : {}), ...(helperGroupId ? { helper_group_id: helperGroupId } : {}) };
     (this.history[conv] ||= []).push(m);
     this.host.emit("chat.message", { ...m, message_id: m.id }, from !== "user" && from !== "system" ? from : undefined);
     return m;
@@ -141,8 +144,9 @@ export class MockChat {
   }
 
   /** POST /messages */
-  post(conversation: string, text: string, attachments: string[] = [], helpers = false): { message_id: string; turn_id: string } {
+  post(conversation: string, text: string, attachments: string[] = [], helpers = false, office?: string): { message_id: string; turn_id: string } {
     const turn = this.host.uid("turn");
+    if (office) this.turnOffice.set(turn, office);
     const files: FileRef[] = attachments.slice(0, 6).map((p) => ({ path: p, name: p.split("/").pop() || p, action: "attach" }));
     const um = this.say(conversation, "user", conversation === "office" ? "all" : conversation.slice(6), "chat", text, turn, null, null, files);
     this.route(conversation, text, turn, um.id, helpers ? attachments.length : null).catch(() => { /* cancelled by reset */ });
@@ -182,7 +186,7 @@ export class MockChat {
       if (cls.intent === "task") {
         await this.speak(conv, convAgent, "user", tr("mock.chat.direct.ok"), turn, replyTo);
         h.log(convAgent, "task.started", tr("mock.act.direct", { name: first(me), task: text.slice(0, 60) }));
-        const summary = await h.startDirectTask(convAgent, text);
+        const summary = await h.startDirectTask(convAgent, text, undefined, this.turnOffice.get(turn));
         await this.speak(conv, convAgent, "user", tr("mock.chat.direct.done", { summary }), turn, replyTo, "answer", null, h.draftOf(convAgent) && [h.draftOf(convAgent)!]);
         return;
       }
@@ -239,7 +243,7 @@ export class MockChat {
     // a helpers request with fewer than 4 parts goes on as a normal request, and the assistant says so
     if (helpers !== null && splitItems(text, helpers).length < 4) await this.speak(conv, "assistant", "user", tr("helpers.noSplit"), turn, replyTo);
     const said = await this.speak(conv, "assistant", "user", free ? tr("helpers.free.intro") : `${tr("mock.task.intro")}\n${lines.join("\n")}`, turn, replyTo, free ? "chat" : "delegation");
-    h.startRequest(text).then((rid) => {
+    h.startRequest(text, this.turnOffice.get(turn)).then((rid) => {
       // the message that announced the work points to the request it created (deep link from the chat history)
       if (said) said.request_id = rid;
     }).catch(() => {});

@@ -24,6 +24,8 @@ export interface Task {
   created_at: string; started_at: string | null; finished_at: string | null; output: StructuredOutput | null;
   /** plain-language reason why this agent got the task (task.created.assigned_reason) */
   assigned_reason?: string | null;
+  /** Office the request was made from (absent = General). */
+  office_id?: string;
   /** Temporary helpers: this task is one part of a helper group (never an employee). Absent = a normal task. */
   helper?: { group_id: string; index: number; total: number; label: string };
 }
@@ -31,11 +33,15 @@ export type MessageKind = "chat" | "delegation" | "consult" | "answer" | "system
 export interface Message {
   id: string; conversation_id: string; from: string; to: string; kind: MessageKind;
   text: string; task_id: string | null; ts: string;
+  /** Office of the conversation turn (absent = General). */
+  office_id?: string;
 }
 export interface Conversation { id: string; title: string; participants: string[]; request_id: string | null; last_message_at: string }
 export interface Approval {
   id: string; task_id: string; agent_id: string; action: string; title: string; details: string;
   risk: "low" | "medium" | "high"; status: "pending" | "approved" | "rejected";
+  /** Office of its request (absent = General). */
+  office_id?: string;
   created_at: string; resolved_at: string | null;
   /** Governance (optional: older backends omit them). */
   required_approvals?: number; required_role?: string; requested_by?: string;
@@ -82,6 +88,8 @@ export type RequestStatus =
   | "planning" | "running" | "awaiting_approval" | "awaiting_confirmation" | "paused" | "done" | "failed";
 export interface Request {
   id: string; text: string; status: RequestStatus; created_at: string; report_id: string | null; cost_usd: number;
+  /** Office it was asked from (absent = General). */
+  office_id?: string;
   /** F1: the company goal it contributes to (only GET /requests/{id} carries them) */
   goal_id?: string; goal?: { id: string; title: string; status: string; office_name?: string };
 }
@@ -124,6 +132,8 @@ export interface ChatMessage {
   card?: import("./commands/registry").CmdResult & { command?: string; error?: boolean };
   id: string; conversation: ChatConversationId; turn_id: string | null; from: string; to: string;
   kind: MessageKind; text: string; reply_to: string | null; ts: string;
+  /** Office this message belongs to; messages without it are General's. */
+  office_id?: string;
   /** optional: the agent redirects the topic to this colleague (offers a quick action) */
   handoff_to?: string | null;
   /** the folded result of a helpers group (rendered as a block, not as text) */
