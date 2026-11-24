@@ -122,6 +122,12 @@ func (s *server) listThreadMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r = s.work(r).context() // D3
+	office, err := s.enterOffice(r, strings.TrimSpace(r.URL.Query().Get("office_id"))) // ?office_id=: that office's thread only
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	r = r.WithContext(application.WithRequestOffice(r.Context(), office))
 	msgs, more, next, err := s.Chats.Thread(r.Context(), application.ChatThreadQuery{
 		Thread: strings.TrimSpace(chi.URLParam(r, "key")), BeforeID: r.URL.Query().Get("before"), Limit: limit})
 	if err != nil {

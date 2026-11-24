@@ -361,7 +361,15 @@ func (h *ChatHistory) threadVisible(ctx context.Context, thread string, msgs []C
 	// in a shared chat, what a private office's agent said or was told is that office's (sealed live too), but for
 	// the person whose own turn it was
 	own := OwnTurns(ctx, plain)
-	msgs = slices.DeleteFunc(msgs, func(m ChatMessage) bool { return !own[m.TurnID] && !SharedMessageVisible(ctx, m.Message) })
+	msgs = slices.DeleteFunc(msgs, func(m ChatMessage) bool {
+		if f := workFilter(ctx); m.OfficeID != "" && f.Office != nil && !f.Office(m.OfficeID) {
+			return true // an office the person cannot see: not even their own turn in it
+		}
+		if asked := RequestOfficeFrom(ctx); asked != "" && messageOffice(m.OfficeID) != messageOffice(asked) {
+			return true // the thread of the office asked for (?office_id=)
+		}
+		return !own[m.TurnID] && !SharedMessageVisible(ctx, m.Message)
+	})
 	plain = plain[:0]
 	for i := range msgs {
 		plain = append(plain, msgs[i].Message)
