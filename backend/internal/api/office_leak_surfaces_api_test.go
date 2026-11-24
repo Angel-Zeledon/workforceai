@@ -12,6 +12,7 @@ import (
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/gateway"
+	"aiworkforce/backend/internal/sandbox"
 )
 
 // The surfaces that used to filter by agent only (outbox, code runs, thought audit, stalled work, rehearsals): the
@@ -103,3 +104,37 @@ func TestOfficeLeakOutboxFollowsTheRequestOffice(t *testing.T) {
 }
 
 var _ = json.Marshal
+
+// ---- 2. code runs ----
+
+func TestOfficeLeakCodeRunsFollowTheTaskAndRequest(t *testing.T) {
+	w := newLeakWorld(t)
+	e, now := w.e, time.Now().UTC()
+	for i, tag := range []string{"SECRETO", "ABIERTO"} { // the private office's run is the newest one
+		run := sandbox.Run{ID: "run-" + tag, OrgID: w.org, AgentID: "assistant", TaskID: "task-" + tag, RequestID: "req-" + tag, ApprovalID: "ap-" + tag,
+			Language: "python", Code: "print('" + tag + "-codigo')", Purpose: tag + "-proposito", CreatedAt: now.Add(-time.Duration(i) * time.Minute)}
+		if err := e.code.Store.CreateRun(context.Background(), run); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for who, tok := range map[string]string{"admin outside the office": w.owner} {
+		for _, p := range []string{"/code-runs", "/code-runs?limit=5", "/code-runs/run-SECRETO", "/code-runs?approval_id=ap-SECRETO"} {
+			if w.sees(tok, "GET", p, "SECRETO", nil) {
+				t.Fatalf("%s: GET %s shows the private office's code run", who, p)
+			}
+		}
+		if !w.sees(tok, "GET", "/code-runs", "ABIERTO-proposito", nil) || !w.sees(tok, "GET", "/code-runs/run-ABIERTO", "ABIERTO-codigo", nil) ||
+			!w.sees(tok, "GET", "/code-runs?approval_id=ap-ABIERTO", "ABIERTO-proposito", nil) {
+			t.Fatalf("%s: General's code run is hidden too", who)
+		}
+		// the page is not left short by what is left out: the newest run is hidden, the limit still returns one
+		if !w.sees(tok, "GET", "/code-runs?limit=1", "ABIERTO-proposito", nil) {
+			t.Fatalf("%s: limit=1 returned nothing though a visible run exists", who)
+		}
+	}
+	for _, p := range []string{"/code-runs", "/code-runs/run-SECRETO", "/code-runs?approval_id=ap-SECRETO"} {
+		if !w.sees(w.chief, "GET", p, "SECRETO-proposito", nil) {
+			t.Fatalf("the member of the office does not see GET %s", p)
+		}
+	}
+}
