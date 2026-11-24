@@ -104,12 +104,36 @@ type Viewer struct {
 	// stay exact numbers of the organization.
 	SeesAgent   func(agentID string) bool
 	SeesRequest func(requestID string) bool
+	// SeesOffice (optional) says whether the person sees what was asked in an office (a private one: its members);
+	// SeesApproval whether they see an approval (its agent's work and its request's office). An event that names
+	// an office (its own, or its task's) or a request is left out when they do not.
+	SeesOffice   func(officeID string) bool
+	SeesApproval func(ap domain.Approval) bool
 	// Decides (D3, optional) replaces the role rules with application.DecidesApproval: an office's approvals are
 	// its responsibles'.
 	Decides func(ap domain.Approval) bool
 }
 
 func (v Viewer) seesAgent(id string) bool { return id == "" || v.SeesAgent == nil || v.SeesAgent(id) }
+
+func (v Viewer) seesOffice(id string) bool {
+	return id == "" || v.SeesOffice == nil || v.SeesOffice(id)
+}
+
+// seesWorkOf reports whether the person sees the work an event is about, besides its agent's: the office it names (or
+// its task's) and the request it belongs to (D3: a General agent that worked for a private office).
+func (v Viewer) seesWorkOf(e domain.Event) bool {
+	if v.SeesOffice == nil && v.SeesRequest == nil {
+		return true
+	}
+	p := payload(e)
+	return v.seesOffice(str(p, "office_id")) && v.seesOffice(str(sub(p, "task"), "office_id")) &&
+		v.seesRequest(str(p, "request_id")) && v.seesRequest(str(sub(p, "task"), "request_id"))
+}
+
+func (v Viewer) seesApproval(ap domain.Approval) bool {
+	return v.seesAgent(ap.AgentID) && (v.SeesApproval == nil || v.SeesApproval(ap))
+}
 
 func (v Viewer) seesRequest(id string) bool {
 	return id == "" || v.SeesRequest == nil || v.SeesRequest(id)
@@ -462,7 +486,7 @@ func Build(f Facts, v Viewer, from, to, now time.Time, minHours float64) Summary
 	if v.ReadApprovals {
 		mine := []domain.Approval{}
 		for _, ap := range f.Pending {
-			if ap.Status != domain.ApprovalPending || !v.seesAgent(ap.AgentID) {
+			if ap.Status != domain.ApprovalPending || !v.seesApproval(ap) {
 				continue
 			}
 			if CanDecide(ap, v) {
@@ -508,7 +532,7 @@ func Build(f Facts, v Viewer, from, to, now time.Time, minHours float64) Summary
 		if !ok || (sec == SectionDecided && !v.ReadApprovals) {
 			continue
 		}
-		if !v.seesAgent(it.AgentID) || e.Type == domain.EvRequestCompleted && !v.seesRequest(str(payload(e), "request_id")) {
+		if !v.seesAgent(it.AgentID) || !v.seesWorkOf(e) {
 			continue // D3
 		}
 		k := sec + "|" + foldKey(sec, it)
@@ -575,6 +599,9 @@ func Build(f Facts, v Viewer, from, to, now time.Time, minHours float64) Summary
 	}
 	s.Spend.USD = round4(s.Spend.USD)
 	for _, e := range f.Completed {
+		if !v.seesWorkOf(e) {
+			continue
+		}
 		id := e.AgentID
 		if id == "" {
 			id = str(sub(payload(e), "task"), "agent_id")
@@ -584,7 +611,7 @@ func Build(f Facts, v Viewer, from, to, now time.Time, minHours float64) Summary
 		}
 	}
 	for _, e := range f.Notable {
-		if e.Type == domain.EvTaskFailed {
+		if e.Type == domain.EvTaskFailed && v.seesWorkOf(e) {
 			if l := line(e.AgentID); l != nil {
 				l.TasksFailed++
 			}

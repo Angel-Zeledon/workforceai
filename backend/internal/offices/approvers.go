@@ -18,6 +18,30 @@ type ApprovalPolicy struct {
 	// tier, a role per action), a responsible below it does not count: without one who reaches it the approval keeps
 	// today's rules (the admins with that role who see the work). Without Roles every responsible counts.
 	Roles func(ctx context.Context, org string) (map[string]string, error)
+	// TaskOffice (optional) returns the office the request of a task was asked from ("" = none or unknown). An approval
+	// belongs to that office when it has one (a General agent working for a private office asks that office), else to
+	// the base office of its agent. An error means unknown: the caller fails closed.
+	TaskOffice func(ctx context.Context, org, taskID string) (string, error)
+}
+
+// officeOf is the office an approval belongs to: the one its task's request was asked from, else its agent's base.
+func (p ApprovalPolicy) officeOf(ctx context.Context, org string, m *Model, a domain.Approval) (string, error) {
+	if p.TaskOffice != nil && a.TaskID != "" {
+		office, err := p.TaskOffice(ctx, org, a.TaskID)
+		if err != nil {
+			return "", err
+		}
+		if _, ok := m.Office(office); ok && office != "" {
+			return office, nil
+		}
+	}
+	return m.Agent(a.AgentID).OfficeID, nil
+}
+
+// sees reports whether the viewer sees the work of the approval: the work of its agent and of its office.
+func (p ApprovalPolicy) sees(ctx context.Context, org string, m *Model, v Viewer, a domain.Approval) bool {
+	office, err := p.officeOf(ctx, org, m, a)
+	return err == nil && m.CanSeeWork(v, a.AgentID) && m.CanSeeOfficeWork(v, office)
 }
 
 // onceKey carries the reads of one listing (Once).
@@ -86,7 +110,7 @@ func (p ApprovalPolicy) Sees(ctx context.Context, org, userID string, a domain.A
 	if err != nil {
 		return false
 	}
-	return m == nil || m.CanSeeWork(Viewer{UserID: userID}, a.AgentID) || userID != "" && a.RequestedBy == userID
+	return m == nil || p.sees(ctx, org, m, Viewer{UserID: userID}, a) || userID != "" && a.RequestedBy == userID
 }
 
 // Audience says who an approval is for: the office of its agent (ok false for General, or without offices), and the
@@ -96,7 +120,11 @@ func (p ApprovalPolicy) Audience(ctx context.Context, org string, a domain.Appro
 	if err != nil || m == nil {
 		return Office{}, false, nil, err
 	}
-	o, found := m.Office(m.Agent(a.AgentID).OfficeID)
+	officeID, err := p.officeOf(ctx, org, m, a)
+	if err != nil {
+		return Office{}, false, nil, err
+	}
+	o, found := m.Office(officeID)
 	if !found || o.General {
 		return Office{}, false, nil, nil
 	}
@@ -116,7 +144,11 @@ func (p ApprovalPolicy) Approvers(ctx context.Context, org string, a domain.Appr
 }
 
 func (p ApprovalPolicy) approvers(ctx context.Context, org string, m *Model, a domain.Approval) ([]string, error) {
-	o, ok := m.Office(m.Agent(a.AgentID).OfficeID)
+	office, err := p.officeOf(ctx, org, m, a)
+	if err != nil {
+		return nil, err
+	}
+	o, ok := m.Office(office)
 	if !ok || o.General {
 		return nil, nil
 	}
@@ -130,7 +162,7 @@ func (p ApprovalPolicy) approvers(ctx context.Context, org string, m *Model, a d
 	}
 	var out []string
 	for _, u := range o.Leads {
-		if !m.CanSeeWork(Viewer{UserID: u}, a.AgentID) {
+		if !p.sees(ctx, org, m, Viewer{UserID: u}, a) {
 			continue
 		}
 		if roles != nil && policy.RoleRank(roles[u]) < policy.RoleRank(a.RequiredRole) {
@@ -148,7 +180,7 @@ func (p ApprovalPolicy) CanDecide(ctx context.Context, org, userID string, a dom
 	if err != nil || m == nil {
 		return err == nil, err
 	}
-	if !m.CanSeeWork(Viewer{UserID: userID}, a.AgentID) {
+	if !p.sees(ctx, org, m, Viewer{UserID: userID}, a) {
 		return false, nil
 	}
 	leads, err := p.approvers(ctx, org, m, a)

@@ -36,7 +36,7 @@ func (s *server) awayViewer(r *http.Request) away.Viewer {
 		v.CanDecide, v.ReadApprovals = p.Can(auth.PermApprovalsDecide), p.Can(auth.PermApprovalsRead)
 	}
 	if ws := s.work(r); !ws.open() { // D3: a private department's work is its members' (fails closed on an error)
-		v.SeesAgent, v.SeesRequest = ws.agent, ws.request
+		v.SeesAgent, v.SeesRequest, v.SeesOffice, v.SeesApproval = ws.agent, ws.request, ws.office, ws.seesApproval
 	}
 	v.Decides = s.awayDecides(r, v.UserID, v.Role, v.CanDecide) // D3: "decide now" follows the office rule
 	return v

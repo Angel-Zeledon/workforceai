@@ -112,7 +112,13 @@ type departmentWiring struct {
 // a request resumed by durable execution emits events, asks for approvals and writes memory right away.
 func wireDepartments(w departmentWiring) *offices.Service {
 	svc := wireOffices(w.PG, w.Store, w.AuthStore, w.Chart, w.Rec, noteCleaner(w.Memory), w.MultiOffice)
-	wireApprovers(w.Orch, w.Notify, w.Slack, svc, w.AuthStore, w.AuthOn) // D3: an office's approvals go to its responsibles
+	wireApprovers(w.Orch, w.Notify, w.Slack, svc, w.AuthStore, w.AuthOn, func(c context.Context, org, id string) (string, error) {
+		t, err := w.Store.GetTask(c, org, id)
+		if errors.Is(err, domain.ErrNotFound) {
+			return "", nil
+		}
+		return t.OfficeID, err
+	}) // D3: an office's approvals go to its responsibles
 	officeRecall(w.Memory, svc)
 	if svc == nil {
 		return nil
@@ -198,11 +204,12 @@ func officeRecall(m *memory.Service, svc *offices.Service) {
 // responsibles of that office (the admins when it has none), and whoever does not see the agent's work does not see
 // its approvals. The e-mail notice also goes to those responsibles. Without authentication there are no people, so
 // nothing changes.
-func wireApprovers(orch *application.Orchestrator, notifySvc *notify.Service, slackSvc *slackapp.Service, svc *offices.Service, authStore auth.Store, authOn bool) {
+func wireApprovers(orch *application.Orchestrator, notifySvc *notify.Service, slackSvc *slackapp.Service, svc *offices.Service, authStore auth.Store, authOn bool,
+	taskOffice func(ctx context.Context, org, taskID string) (string, error)) {
 	if !authOn || svc == nil || authStore == nil {
 		return
 	}
-	pol := offices.ApprovalPolicy{Svc: svc, Roles: func(ctx context.Context, org string) (map[string]string, error) {
+	pol := offices.ApprovalPolicy{Svc: svc, TaskOffice: taskOffice, Roles: func(ctx context.Context, org string) (map[string]string, error) {
 		ms, err := authStore.ListMembers(ctx, org)
 		out := make(map[string]string, len(ms))
 		for _, m := range ms {
