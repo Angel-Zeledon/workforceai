@@ -5,6 +5,7 @@ import { useT } from "@/lib/i18n";
 import { ChatInput, ChatThread, TurnChip, sendChat } from "./chat/ChatThread";
 import { Icon } from "./icons";
 import { useAgentName } from "./ui";
+import { HelperProposal, useProposals } from "./helpers/HelperProposal";
 
 // Canned demo messages: label localized, prompt always from the catalog.
 const SUGGESTIONS = ["cmd.suggestionHello", "cmd.suggestionFinance", "cmd.suggestion1", "cmd.suggestion2", "cmd.suggestion3"];
@@ -14,6 +15,7 @@ const OFFICE = "office";
 export function CommandBar() {
   const { t } = useT();
   const name = useAgentName();
+  const proposals = useProposals(); // temporary helpers: the person decides here too (3D office)
   const [open, setOpen] = useState(true);
   const [seen, setSeen] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -41,6 +43,7 @@ export function CommandBar() {
 
   return (
     <div data-testid="office-chat" data-open={open && hasThread ? "true" : "false"} className="pointer-events-auto w-full max-w-[720px]">
+      {proposals.length > 0 && <div data-testid="office-helper-proposals" className="mb-2 max-h-[40dvh] space-y-2 overflow-y-auto rounded-xl bg-panel/95 shadow-float">{proposals.map((g) => <HelperProposal key={g.id} group={g} />)}</div>}
       {hasThread && (
         <section data-tour="office.thread" aria-label={t("chat.office.title")} className="mb-2 overflow-hidden rounded-xl border border-line-strong bg-panel/95 shadow-float backdrop-blur">
           <header className="flex items-center gap-2 px-3 py-2">
