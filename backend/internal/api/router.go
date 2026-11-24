@@ -574,7 +574,7 @@ func (s *server) listTasks(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	t = slices.DeleteFunc(t, func(x domain.Task) bool { return !ws.agent(x.AgentID) }) // D3
+	t = slices.DeleteFunc(t, func(x domain.Task) bool { return !ws.task(x) }) // D3
 	writeJSON(w, 200, list(t))
 }
 
@@ -584,7 +584,7 @@ func (s *server) getTask(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	if ws := s.work(r); !ws.agent(t.AgentID) { // D3
+	if ws := s.work(r); !ws.task(t) { // D3
 		s.fail(w, cmp.Or(ws.err, notFound("task", t.ID)))
 		return
 	}

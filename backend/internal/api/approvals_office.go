@@ -21,7 +21,7 @@ import (
 
 // seesApproval reports whether the person sees an approval: the work of its agent, or they asked for the action.
 func (ws *workScope) seesApproval(ap domain.Approval) bool {
-	if ws.agent(ap.AgentID) {
+	if ws.agent(ap.AgentID) && ws.taskID(ap.TaskID) { // ...and the office its task's request was asked from
 		return true
 	}
 	return ws.err == nil && ws.v.UserID != "" && ap.RequestedBy == ws.v.UserID

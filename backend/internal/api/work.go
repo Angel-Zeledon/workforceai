@@ -202,6 +202,30 @@ func (w *workScope) conversationID(id string, own bool) (bool, error) {
 	return w.conversation(c), nil
 }
 
+// task reports whether the person sees a task: the work of its agent, and the office its request was asked from (a
+// General agent that worked for a private office is that office's work, whatever its own base office).
+func (w *workScope) task(t domain.Task) bool {
+	return w.agent(t.AgentID) && (t.OfficeID == "" || w.office(t.OfficeID))
+}
+
+// taskID is task by id; a missing task is left to the caller (true), any other error fails closed.
+func (w *workScope) taskID(id string) bool {
+	if id == "" {
+		return true
+	}
+	if err := w.load(); err != nil {
+		return false
+	}
+	if w.m == nil {
+		return true
+	}
+	t, err := w.s.Store.GetTask(w.ctx, w.org, id)
+	if errors.Is(err, domain.ErrNotFound) {
+		return true
+	}
+	return err == nil && w.task(t)
+}
+
 // office reports whether the person sees what was asked and answered in an office (fails closed).
 func (w *workScope) office(id string) bool {
 	if err := w.load(); err != nil {
@@ -294,7 +318,7 @@ func (s *server) workTask(next http.Handler) http.Handler {
 				s.fail(w, err)
 				return
 			}
-			if err == nil && !ws.agent(t.AgentID) {
+			if err == nil && !ws.task(t) {
 				s.fail(w, notFound("task", id))
 				return
 			}
