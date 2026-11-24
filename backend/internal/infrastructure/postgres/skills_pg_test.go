@@ -122,12 +122,14 @@ func TestSkillStoreLifecycleRLSAndImmutability(t *testing.T) {
 	if err := env.exec(ctx, "org-a", `DELETE FROM skills`); err == nil {
 		t.Fatal("skills must not be deletable by app_user")
 	}
-	// down migration
-	down, err := os.ReadFile("../../../migrations/down/510_skills_down.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := env.owner(t).Exec(ctx, string(down)); err != nil {
-		t.Fatal(err)
+	// down migrations, the later one first (829 references the tables of 510)
+	for _, f := range []string{"829_skill_tests_down.sql", "510_skills_down.sql"} {
+		down, err := os.ReadFile("../../../migrations/down/" + f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := env.owner(t).Exec(ctx, string(down)); err != nil {
+			t.Fatalf("%s: %v", f, err)
+		}
 	}
 }
