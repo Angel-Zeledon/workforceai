@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
 	"aiworkforce/backend/internal/policy"
@@ -46,6 +45,7 @@ func (s *server) mountRoles(r chi.Router) {
 	r.With(s.can(auth.PermAgentsRead)).Get("/role-templates", s.listRoleTemplates)
 	r.With(s.can(auth.PermAgentsRead)).Get("/role-templates/{id}", s.getRoleTemplate)
 	r.With(s.can(auth.PermAgentsWrite)).Post("/agents/from-template", s.hireFromTemplate)
+	s.mountHireSuggestions(r)
 }
 
 func templateLocale(r *http.Request) string {
@@ -101,7 +101,7 @@ func (s *server) getRoleTemplate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) hireFromTemplate(w http.ResponseWriter, r *http.Request) {
-	var body application.HireInput
+	var body hireBody
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
 		return
@@ -122,9 +122,8 @@ func (s *server) hireFromTemplate(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, &domain.PlanLimitError{Kind: policy.LimitAgents, Limit: t.MaxAgents, Plan: t.ID})
 		return
 	}
-	a, err := s.Orch.HireFromTemplate(r.Context(), body)
-	if err != nil {
-		s.fail(w, err)
+	a, ok := s.hireWithOffice(w, r, body)
+	if !ok {
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"agent": a, "template_id": body.TemplateID})

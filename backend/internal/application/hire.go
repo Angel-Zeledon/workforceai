@@ -21,6 +21,14 @@ type HireInput struct {
 // connection and starts at the template's default autonomy (approve_each for
 // every new profession); raising it stays a separate, audited decision.
 func (o *Orchestrator) HireFromTemplate(ctx context.Context, in HireInput) (domain.Agent, error) {
+	return o.HireWithSetup(ctx, in, nil)
+}
+
+// HireWithSetup is HireFromTemplate plus a setup step that runs right after the agent is created and before anybody
+// is told (office, position, skills, access: design 2026-11-23 §3). If setup fails, the agent is removed again, no
+// audit entry and no event are written, and the error is returned: the hire is all or nothing. setup undoes what it
+// applied itself before returning an error.
+func (o *Orchestrator) HireWithSetup(ctx context.Context, in HireInput, setup func(ctx context.Context, a domain.Agent) error) (domain.Agent, error) {
 	t, ok := roles.Get(strings.TrimSpace(in.TemplateID))
 	if !ok {
 		return domain.Agent{}, fmt.Errorf("%w: unknown role template %q", domain.ErrNotFound, in.TemplateID)
@@ -56,6 +64,16 @@ func (o *Orchestrator) HireFromTemplate(ctx context.Context, in HireInput) (doma
 	a := roles.Instantiate(t, loc, id, name)
 	if err := w.CreateAgent(ctx, o.org(ctx), a); err != nil {
 		return domain.Agent{}, err
+	}
+	if setup != nil {
+		if err := setup(ctx, a); err != nil {
+			if d, ok := o.store.(AgentDeleter); ok {
+				if derr := d.DeleteAgent(ctx, o.org(ctx), a.ID); derr != nil {
+					return domain.Agent{}, fmt.Errorf("%w (and the new agent %s could not be removed: %v)", err, a.ID, derr)
+				}
+			}
+			return domain.Agent{}, err
+		}
 	}
 	o.rec.Audit(ctx, domain.AuditLog{Actor: ActorFrom(ctx, "user"), Action: "agent.created_from_template", Entity: "agent", EntityID: a.ID,
 		Details: map[string]any{"template_id": t.ID, "template_version": t.Version, "risk_tier": t.RiskTier, "autonomy": a.Autonomy, "tools": a.Tools}})

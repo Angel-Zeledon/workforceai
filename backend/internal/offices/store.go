@@ -17,6 +17,11 @@ type Store interface {
 	PutAgentAccess(ctx context.Context, org string, a AgentAccess) error
 	DeleteAgentAccess(ctx context.Context, org, agentID string) error
 
+	// Extra offices of the agents (migration 832). Put is an upsert; Delete of a missing row is not an error.
+	ListAgentOffices(ctx context.Context, org string) ([]AgentOffice, error)
+	PutAgentOffice(ctx context.Context, org string, a AgentOffice) error
+	DeleteAgentOffice(ctx context.Context, org, agentID, officeID string) error
+
 	ListNotes(ctx context.Context, org, scope, ref string) ([]Note, error) // scope "" = every scope; ref "" = every owner
 	PutNote(ctx context.Context, org string, n Note) error
 	DeleteNote(ctx context.Context, org, id, by string) error // soft: hidden from every list

@@ -23,6 +23,9 @@ type Config struct {
 	CleanNote func(text string) string
 	Audit     func(ctx context.Context, org, actor, action, id string, details map[string]any)
 	Now       func() time.Time
+	// MultiOffice (MULTI_OFFICE_AGENTS, off by default) lets an agent also work for offices other than its base one
+	// (agent_offices.go). It stays off until requests carry their office and memory and files are isolated by it.
+	MultiOffice bool
 	// TTL of the cached model (default 10 s). Every write through the service drops it at once.
 	TTL time.Duration
 }
@@ -129,7 +132,13 @@ func (s *Service) build(ctx context.Context, org string) (*Model, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buildModel(depts, adept, people, agents, rows, members, access), nil
+	m := buildModel(depts, adept, people, agents, rows, members, access)
+	extras, err := s.cfg.Store.ListAgentOffices(ctx, org)
+	if err != nil {
+		return nil, err
+	}
+	m.setExtras(extras, s.cfg.MultiOffice)
+	return m, nil
 }
 
 // Fresh is the model without the cache, for a caller that has just changed where agents live (F2: installing a team

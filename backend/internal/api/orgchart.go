@@ -62,7 +62,36 @@ func (s *server) getOrgChart(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	s.stampBaseOffices(r, &c)
 	writeJSON(w, http.StatusOK, c)
+}
+
+// stampBaseOffices writes into every agent of the chart the base office the offices model says (the same one the
+// directory and the positions show): an agent without a job is "General" here too, never "no office".
+func (s *server) stampBaseOffices(r *http.Request, c *orgchart.Chart) {
+	if s.Offices == nil {
+		return
+	}
+	m, err := s.Offices.Model(r.Context(), s.org(r))
+	if err != nil {
+		return
+	}
+	stamp := func(ms []orgchart.Member) {
+		for i := range ms {
+			if ms[i].Kind == orgchart.KindAgent {
+				ms[i].OfficeID, ms[i].OfficeName = officeNameOf(m, ms[i].ID)
+			}
+		}
+	}
+	var walk func(ns []orgchart.DeptNode)
+	walk = func(ns []orgchart.DeptNode) {
+		for i := range ns {
+			stamp(ns[i].Members)
+			walk(ns[i].Children)
+		}
+	}
+	walk(c.Roots)
+	stamp(c.Unassigned)
 }
 
 func (s *server) listDepartments(w http.ResponseWriter, r *http.Request) {

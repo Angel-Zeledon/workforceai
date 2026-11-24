@@ -90,6 +90,20 @@ type AgentAccess struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+// AgentOffice lets an agent also work for an office other than its base one (design §5). AcceptedBy is "" while
+// the responsible of that office has not accepted: the members cannot use the agent yet.
+type AgentOffice struct {
+	AgentID    string     `json:"agent_id"`
+	OfficeID   string     `json:"office_id"`
+	GrantedBy  string     `json:"granted_by"`
+	AcceptedBy string     `json:"accepted_by"`
+	CreatedAt  time.Time  `json:"created_at"`
+	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
+}
+
+// Accepted reports whether the other office accepted the agent.
+func (a AgentOffice) Accepted() bool { return a.AcceptedBy != "" }
+
 // Note is a memory of an office, of a person or of the company (promoted).
 type Note struct {
 	ID           string    `json:"id"`

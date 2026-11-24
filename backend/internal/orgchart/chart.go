@@ -29,6 +29,10 @@ type Member struct {
 	Open          *bool      `json:"open,omitempty"` // agents with a schedule: may act right now
 	NextOpen      *time.Time `json:"next_open,omitempty"`
 	BudgetUSD     *float64   `json:"budget_usd,omitempty"`
+	// OfficeID and OfficeName are the base office of an agent as the offices model says it (the single source the
+	// directory and the positions use). The API fills them; a department is not always an office.
+	OfficeID   string `json:"office_id,omitempty"`
+	OfficeName string `json:"office_name,omitempty"`
 }
 
 // DeptNode is a department with its members and sub-departments.

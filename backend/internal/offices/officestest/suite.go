@@ -62,6 +62,29 @@ func Run(t *testing.T, st offices.Store, orgA, orgB string) {
 	if as, _ := st.ListAgentAccess(ctx, orgA); len(as) != 0 {
 		t.Fatal("access not deleted")
 	}
+	ao := offices.AgentOffice{AgentID: "a1", OfficeID: "d1", GrantedBy: "u1", CreatedAt: now}
+	if err := st.PutAgentOffice(ctx, orgA, ao); err != nil {
+		t.Fatal(err)
+	}
+	acc := now.Add(time.Minute)
+	ao.AcceptedBy, ao.AcceptedAt = "u2", &acc
+	if err := st.PutAgentOffice(ctx, orgA, ao); err != nil {
+		t.Fatal(err)
+	}
+	if aos, err := st.ListAgentOffices(ctx, orgA); err != nil || len(aos) != 1 || !aos[0].Accepted() || aos[0].AcceptedAt == nil {
+		t.Fatalf("agent offices = %+v %v", aos, err)
+	}
+	if aos, _ := st.ListAgentOffices(ctx, orgB); len(aos) != 0 {
+		t.Fatal("other org sees agent offices")
+	}
+	for i := 0; i < 2; i++ { // deleting a missing row is not an error
+		if err := st.DeleteAgentOffice(ctx, orgA, "a1", "d1"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if aos, _ := st.ListAgentOffices(ctx, orgA); len(aos) != 0 {
+		t.Fatal("agent office not deleted")
+	}
 	n1 := offices.Note{ID: "n1", Scope: offices.ScopeOffice, OwnerRef: "d1", Text: "Usamos la plantilla A", CreatedBy: "u1", CreatedAt: now}
 	n2 := offices.Note{ID: "n2", Scope: offices.ScopeCompany, Text: "Usamos la plantilla A", PromotedFrom: "n1", CreatedBy: "u1", CreatedAt: now.Add(time.Second)}
 	for _, n := range []offices.Note{n1, n2} {

@@ -16,6 +16,7 @@ type MemStore struct {
 	offices map[string]map[string]OfficeRow
 	members map[string]map[string]MemberRow // key office|user
 	access  map[string]map[string]AgentAccess
+	agentOf map[string]map[string]AgentOffice // key agent|office
 	notes   map[string][]Note
 	deleted map[string]map[string]bool
 }
@@ -23,7 +24,7 @@ type MemStore struct {
 // NewMemStore returns an empty MemStore.
 func NewMemStore() *MemStore {
 	return &MemStore{offices: map[string]map[string]OfficeRow{}, members: map[string]map[string]MemberRow{},
-		access: map[string]map[string]AgentAccess{}, notes: map[string][]Note{}, deleted: map[string]map[string]bool{}}
+		access: map[string]map[string]AgentAccess{}, agentOf: map[string]map[string]AgentOffice{}, notes: map[string][]Note{}, deleted: map[string]map[string]bool{}}
 }
 
 func sub[T any](m map[string]map[string]T, org string) map[string]T {
