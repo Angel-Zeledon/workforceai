@@ -18,6 +18,8 @@ const (
 	KindQuestion   = "question"
 	KindSuggestion = "suggestion"
 	KindTrust      = "trust"
+	// KindHelpers: a split into temporary helpers was proposed to the person who asked and waits for their answer.
+	KindHelpers = "helpers"
 )
 
 // Urgency of an item: high first, then normal, then low.
@@ -94,7 +96,7 @@ type Result struct {
 // approval or has waited StaleAfter; otherwise normal. Suggestions and trust proposals block nothing: low.
 func Urgency(it Item, now time.Time) string {
 	switch it.Kind {
-	case KindApproval, KindQuestion:
+	case KindApproval, KindQuestion, KindHelpers:
 		if strings.EqualFold(it.Risk, "high") || it.Double || !it.CreatedAt.IsZero() && now.Sub(it.CreatedAt) >= StaleAfter {
 			return UrgencyHigh
 		}

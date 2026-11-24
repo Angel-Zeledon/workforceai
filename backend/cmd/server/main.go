@@ -386,6 +386,7 @@ func run(log *slog.Logger) error {
 	deps.FileComments = wireFileComments(pg, rec, ws.drive, cfg.App.OrgID) // F7: comments anchored to a passage of a file
 	deps.OfficeTemplates = wireOfficeTemplates(pg) // F3: a department saved as a template and installed elsewhere
 	deps.AgentFolders = agentFolders(ws) // folder access per agent (folder_access.go)
+	orch.SetHelperFileCheck(helperFileCheck(deps.AgentFolders)) // temporary helpers never read what their responsible cannot
 	deps.LinkImports = wireLinkImports(ctx, cfg, log, pg, rec, cw, ws.drive, custSvc, orgLister(store)) // import from a link (single line)
 	deps.VendorIntegrations = &cfg.VendorIntegrations // v1: vendor-specific integrations (VENDOR_INTEGRATIONS, default off)
 	// Client portal (B13): read-only share links of a project with the firm's branding.
