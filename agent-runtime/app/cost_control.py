@@ -25,6 +25,7 @@ DEFAULT_MAX_TOKENS: dict[str, int] = {
     "plan": 3000,
     "plan_phases": 2048,
     "plan_phase": 4096,
+    "split": 1500,
     "run_task": 4000,
     "consult": 800,
     "synthesize": 6000,

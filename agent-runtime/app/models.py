@@ -991,3 +991,53 @@ class ProviderTestResponse(_Base):
     provider: str = ""
     model: str = ""
     latency_ms: int = 0
+
+
+# ---- /v1/split ------------------------------------------------------------
+MAX_SPLIT_ITEMS = 500
+
+
+def normalize_split_locale(value: Any) -> str:
+    """/v1/split also writes Portuguese: "pt", "pt-BR" -> "pt"; "en*" -> "en"; anything else -> "es"."""
+    v = str(value or "").strip().lower().replace("_", "-")
+    if v == "pt" or v.startswith("pt-"):
+        return "pt"
+    return "en" if v == "en" or v.startswith("en-") else "es"
+
+
+class SplitItem(_Base):
+    name: str
+    ref: str = Field(min_length=1, max_length=128)
+
+
+class SplitRequest(_ProviderPolicyMixin):
+    """Is this request worth dividing into parallel parts, and how? The text and the items are untrusted data."""
+
+    text: str = ""
+    items: list[SplitItem] = Field(default_factory=list, max_length=MAX_SPLIT_ITEMS)
+    max_parts: int = Field(default=8, ge=2, le=50)
+    locale: Literal["es", "en", "pt"] = "es"
+
+    _norm = field_validator("locale", mode="before")(normalize_split_locale)
+
+    @field_validator("items")
+    @classmethod
+    def _unique_refs(cls, items: list[SplitItem]) -> list[SplitItem]:
+        if len({i.ref for i in items}) != len(items):
+            raise ValueError("item refs must be unique")
+        return items
+
+
+class SplitPart(_Base):
+    label: str
+    instructions: str = ""
+    item_refs: list[str] = Field(default_factory=list)
+
+
+class SplitResponse(_Base):
+    worth_it: bool
+    reason: str = ""
+    parts: list[SplitPart] = Field(default_factory=list)
+    join_instructions: str = ""
+    source: Literal["rules", "llm", "simulation"]
+    usage: Usage | None = None

@@ -94,6 +94,8 @@ from .vision import (
     unavailable_note,
 )
 from .review import build_review_prompt, normalize_review
+from .models import SplitPart, SplitRequest, SplitResponse
+from .split import _SplitLLM, build_split_prompt, split_backstory, split_rules
 from .routing import compose_reply, detect_locale, rules_route, validate_route
 from .security import (
     build_chat_prompt,
@@ -835,6 +837,23 @@ class CrewAIEngine(AgentEngine):
         if o <= 0:
             o = max(1, len(text) // 4)
         return parsed, self._usage(cfg, (i, c, o), t0, image_count=len(images), image_tokens=img_tokens)
+
+    async def split(self, req: SplitRequest) -> SplitResponse:
+        """/v1/split: the rules answer when they can (no model call); otherwise the model decides, and only a split
+        it calls independent is offered. The finalize step in app/split.py validates whatever comes back."""
+        if (fast := split_rules(req)) is not None:
+            return fast
+        res, usage = await self._run(
+            role="Orquestadora / Asistente Ejecutiva",
+            goal="Decidir si una solicitud se divide en partes independientes que se hacen en paralelo",
+            backstory=split_backstory(req), description=build_split_prompt(req),
+            expected="JSON con worth_it, independent, reason, parts y join_instructions", schema=_SplitLLM,
+            policy=policy_from_request(req, "plan"), kind="split", max_cost_usd=req.max_cost_usd)
+        if not res.worth_it or not res.independent:
+            return SplitResponse(worth_it=False, reason=res.reason, source="llm", usage=usage)
+        parts = [SplitPart(label=p.label, instructions=p.instructions, item_refs=p.item_refs) for p in res.parts]
+        return SplitResponse(worth_it=True, reason=res.reason, parts=parts, join_instructions=res.join_instructions,
+                             source="llm", usage=usage)
 
     async def review(self, req: ReviewRequest) -> ReviewResponse:
         """Quality review (Q1): the reviewer persona (internal auditor or neutral) judges ONE output."""
