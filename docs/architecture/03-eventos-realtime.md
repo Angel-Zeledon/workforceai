@@ -174,3 +174,16 @@ sequenceDiagram
 ## 9. Observabilidad del bus
 
 Metricas: `events_emitted_total{type}`, `outbox_lag_seconds` (now - min(ts) no publicado), `ws_connections`, `ws_dropped_total{reason}`, `resync_total`. Alerta si `outbox_lag_seconds > 5`.
+
+## 10. Ayudantes temporales (aditivo, solo con `HELPERS_ENABLED`)
+
+Con la bandera apagada no se emite nada de esto y el `hello` solo suma `helpers_enabled: false`.
+
+| Tipo | Cuándo | Payload |
+|---|---|---|
+| `helpers.proposed` | el runtime dijo que el pedido se puede repartir en 4 o más partes y la propuesta quedó guardada (el pedido espera a la persona) | `{request_id, agent_id (responsable), group}` |
+| `helpers.updated` | cambia el estado del grupo, el de una parte, o su gasto; también al aceptar, rechazar, detener o reintentar | `{request_id, agent_id, group}` |
+
+`group` es el `helper_group` de `GET /requests/{id}` (08, sección 57). `helpers.updated` va **agrupado**: una ráfaga (una llamada con gasto por parte, varias partes que terminan a la vez) produce un solo evento cada ~150 ms con el último estado, nunca uno por token ni por llamada. `helpers.proposed` no repite `helpers.updated` mientras el grupo está solo propuesto. Los dos nombran `agent_id` y `request_id`, así que el filtro de oficinas privadas (D3) los entrega solo a quien ve el trabajo de ese responsable.
+
+`hello` suma `helpers_enabled` (bool) y, con la bandera encendida, `helper_groups`: los grupos propuestos o en curso de pedidos cuyo trabajo ve la persona. Los terminados se leen con `GET /requests/{id}`. La auditoría registra `helpers.proposed`, `launched`, `declined`, `part_failed`, `part_skipped`, `stopped` y `completed` (quién aceptó, cuántos, tope y gasto real).
