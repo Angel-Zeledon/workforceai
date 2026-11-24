@@ -9,7 +9,7 @@
 ------------------------------------------------------------------- */
 :root {
   color-scheme: light;
-  --bg: 243 245 248;            /* lienzo de la app */
+  --bg: 255 255 255;            /* lienzo de la app */
   --panel: 255 255 255;         /* superficies elevadas */
   --panel2: 247 248 250;        /* superficie secundaria / inputs */
   --line: 226 230 236;          /* bordes de 1px */
@@ -191,3 +191,6 @@ button:not(:disabled):active, a.ac-press:active { transform: scale(0.985); }
   .wf-nav-main { flex: none; overflow: visible; }
   .wf-nav-foot { padding-top: 6px; padding-bottom: 6px; }
 }
+
+/* Labels and headings read as plain sentences: no spaced capitals anywhere in the app (owner, 2026-11-24). */
+.uppercase { text-transform: none; letter-spacing: 0 !important; }

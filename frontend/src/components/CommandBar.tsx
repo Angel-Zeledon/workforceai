@@ -62,7 +62,7 @@ export function CommandBar() {
               <Icon name="down" size={15} className={`transition-transform ${open ? "" : "rotate-180"}`} />
             </button>
           </header>
-          {open && <ChatThread conv={OFFICE} showRoute emptyText={t("chat.empty.office")} className="h-[min(300px,30dvh)] border-t border-line lg:h-[min(300px,36dvh)]" />}
+          {open && <ChatThread conv={OFFICE} showRoute emptyText={t("chat.empty.office")} className="h-[min(260px,28dvh)] border-t border-line lg:h-[min(260px,28dvh)]" />}
         </section>
       )}
       {(!hasThread || !open) && !busy && (
