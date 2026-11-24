@@ -69,7 +69,7 @@ export function createHelpers(host: PeopleHost, deskMap: () => Map<string, { pos
     g.on("pointerover", () => { hover = f.key; });
     g.on("pointerout", () => { if (hover === f.key) hover = null; });
     world.addChild(g);
-    const look = lookOf(hexToNum(HELPER_GREY.body), humanSkin(HELPER_SKINS[h % HELPER_SKINS.length]), hexToNum(HELPER_HAIRS[(h >> 3) % HELPER_HAIRS.length]), STYLES[(h >> 5) % STYLES.length], "");
+    const look = lookOf(hexToNum(HELPER_GREY.body), humanSkin(HELPER_SKINS[h % HELPER_SKINS.length]), hexToNum(HELPER_HAIRS[(h >>> 3) % HELPER_HAIRS.length]), STYLES[(h >>> 5) % STYLES.length], "");
     items.set(f.key, { fig: f, g, born: now, gone: null, look });
   };
   const dropItem = (k: string) => { const it = items.get(k); if (it) { it.g.destroy(); items.delete(k); } if (hover === k) hover = null; };
