@@ -389,7 +389,7 @@ export class MockBackend {
     if (want.marked || want.decision) this.debateWanted.set(req.id, want);
     this.requests.unshift(req);
     if (rehearsal) this.rehearsal.markRequest(req.id); // B9: nothing this request would send is sent
-    this.emit("request.received", { request_id: req.id, text, ...(rehearsal ? { rehearsal: true } : {}) });
+    this.emit("request.received", { request_id: req.id, text, ...(office ? { office_id: office } : {}), ...(rehearsal ? { rehearsal: true } : {}) });
     this.art.onRequest(text);
     this.log("assistant", "request.received", `Nuevo pedido: ${text}`);
     const conv: Conversation = { id: uid("conv"), title: text.slice(0, 80), participants: ["assistant"], request_id: req.id, last_message_at: nowIso() };
@@ -415,7 +415,7 @@ export class MockBackend {
     const title = tr("mock.direct.title", { text: text.slice(0, 48) });
     const req: Request = { id: uid("req"), text, status: "running", created_at: nowIso(), report_id: null, cost_usd: 0, ...(office ? { office_id: office } : {}) };
     this.requests.unshift(req);
-    this.emit("request.received", { request_id: req.id, text });
+    this.emit("request.received", { request_id: req.id, text, ...(office ? { office_id: office } : {}) });
     const spec: TaskSpec = {
       key: "direct", agent: agentId, title, desc: tr("mock.direct.desc"), secs: 4, deps: [],
       activities: [tr("mock.direct.act1"), tr("mock.direct.act2"), tr("mock.direct.act3")],

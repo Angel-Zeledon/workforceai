@@ -108,7 +108,6 @@ export function OfficesPanel({ people, onChanged, depts = [], onEditDept, focusD
       <section ref={deptsRef} data-testid="org-tab-departments" className="grid scroll-mt-4 gap-2">
         {withoutSpace.length > 0 && <SectionTitle title={t("org.offices.withoutSpace")} count={withoutSpace.length} hint={t("org.offices.withoutSpaceHint")} />}
         <div data-testid="org-dept-table">
-          {depts.length === 0 && <p className="text-[13px] text-mute">{t("org.offices.noneWithout")}</p>}
           {depts.length > 0 && withoutSpace.length === 0 && <p className="text-[13px] text-mute">{t("org.offices.allSpaced")}</p>}
           <ul className="grid gap-1.5">
             {withoutSpace.map((d) => {
