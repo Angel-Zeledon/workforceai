@@ -21,7 +21,7 @@ export const SECTIONS = [
   { id: "pending", href: "/needs-you", label: "nav.needsYou", icon: "bell" }, // "Te necesitan": everything that waits for you
   { id: "chats", href: "/chats", label: "nav.chats", icon: "chat" },
   { id: "projects", href: "/projects", label: "nav.projects", icon: "flag" },
-  { id: "offices", href: "/offices", label: "nav.offices", icon: "office" }, // oficinas, organigrama, reglas, equipos listos
+  { id: "offices", href: "/offices", label: "nav.offices", icon: "grid" }, // oficinas, organigrama, reglas, equipos listos
   { id: "agents", href: "/agents", label: "nav.agents", icon: "bot" }, // directorio de agentes y puestos
   { id: "goals", href: "/goals", label: "nav.goals", icon: "checkbox" },
   { id: "customers", href: "/clients", label: "nav.customers", icon: "briefcase" },

@@ -7441,5 +7441,10 @@
   "ofp.skills.library": "Abrir a biblioteca de habilidades",
   "ofp.files.hint": "Os arquivos do escritório e o que outros escritórios compartilham com ele.",
   "ofp.files.open": "Abrir os arquivos do escritório",
-  "ofp.memory.hint": "O que seus agentes têm em mente ao trabalhar para este escritório."
+  "ofp.memory.hint": "O que seus agentes têm em mente ao trabalhar para este escritório.",
+  "office.select.all": "Todos os meus escritórios",
+  "office.select.label": "Escritório",
+  "office.select.closed": "privado, fechado",
+  "office.select.sendTo": "Escritório:",
+  "office.select.sendHint": "Esta mensagem vai para o escritório {name}"
 }

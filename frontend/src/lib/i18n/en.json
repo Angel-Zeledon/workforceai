@@ -7440,5 +7440,10 @@
   "ofp.skills.library": "Open the skills library",
   "ofp.files.hint": "The office's files and what other offices share with it.",
   "ofp.files.open": "Open the office files",
-  "ofp.memory.hint": "What its agents keep in mind when working for this office."
+  "ofp.memory.hint": "What its agents keep in mind when working for this office.",
+  "office.select.all": "All my offices",
+  "office.select.label": "Office",
+  "office.select.closed": "private, closed",
+  "office.select.sendTo": "Office:",
+  "office.select.sendHint": "This message goes to the {name} office"
 }

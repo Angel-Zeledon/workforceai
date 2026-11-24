@@ -42,6 +42,8 @@ import { RouteCurtain } from "./RouteCurtain";
 import { useAwayHeartbeat } from "../away/AwayHost";
 import { TrialBanner } from "./TrialBanner";
 import { ActivationChecklist } from "./ActivationChecklist";
+import { OfficeSelect } from "./OfficeSelect";
+import { useCurrentOffice, useCurrentOfficeBoot } from "@/lib/currentOffice";
 
 const COLLAPSE_KEY = "wf.sidebar.collapsed";
 const MORE_KEY = "wf.sidebar.more";
@@ -178,6 +180,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   // the list is a view of the Office ("Lista | Oficina 3D"), so the title stays "Oficina"
   const title = t(SECTIONS.find((s) => s.id === section)?.label ?? "nav.office");
   const pendingCount = usePendingCount();
+  // the office the screens show: in the header next to Lista | Oficina 3D (own row on the phone)
+  useCurrentOfficeBoot();
+  const hasOffices = useCurrentOffice().hasSelector;
+  const officeSelect = hasOffices && ["office", "dashboard", "pending", "agents", "projects", "department"].includes(section);
 
   return (
     <div data-reduce={reduce ? "1" : "0"} className="flex h-dvh w-full overflow-hidden bg-bg text-ink">
@@ -238,6 +244,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
+        {officeSelect && <div className="flex shrink-0 items-center gap-2 border-b border-line bg-panel px-3 py-1.5 sm:hidden"><OfficeSelect block /></div>}
         <TrialBanner />
         <ControlsBanner />
         <ProviderAlert />
