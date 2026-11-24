@@ -1,7 +1,7 @@
 // Unit tests of the list view as a workspace (grouping, targets, what needs you / is running / is ready). Run: npm run test:unit.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { convOf, exampleRoles, groupAgents, inProgress, needsYouAgentIds, needsYouItems, railGroupOf, readyItems, stepKind, targetOf, validTarget } from "./workspaceLogic.ts";
+import { composerHidden, convOf, exampleRoles, groupAgents, inProgress, needsYouAgentIds, needsYouItems, panelLayout, railGroupOf, readyItems, stepKind, targetOf, validTarget } from "./workspaceLogic.ts";
 import { isListShown, resolveView } from "../../../lib/officeViewLogic.ts";
 
 const A = (id, state, extra = {}) => ({ id, name: id.toUpperCase(), role: "sales", state, activity: "", ...extra });
@@ -117,4 +117,19 @@ test("the view: the list unless the 3D is on; with it on, the last used one (the
   assert.equal(isListShown("dashboard", "3d"), true);
   assert.equal(isListShown("office", "list"), true);
   assert.equal(isListShown("office", "3d"), false);
+});
+
+test("the panel sits in a gap on wide screens, over the conversation on tablet, and not at all on phones or without an agent", () => {
+  assert.equal(panelLayout("desktop", "a1"), "gap");
+  assert.equal(panelLayout("tablet", "a1"), "overlay");
+  assert.equal(panelLayout("mobile", "a1"), "none");
+  assert.equal(panelLayout("desktop", null), "none");
+});
+
+test("the box hides only when the open panel is for the same agent the conversation talks to", () => {
+  assert.equal(composerHidden("gap", "a1", "a1"), true);
+  assert.equal(composerHidden("overlay", "a1", "a1"), true);
+  assert.equal(composerHidden("gap", "a2", "a1"), false);
+  assert.equal(composerHidden("gap", null, "a1"), false);
+  assert.equal(composerHidden("none", "a1", "a1"), false);
 });

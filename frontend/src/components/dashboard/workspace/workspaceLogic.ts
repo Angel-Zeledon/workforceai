@@ -134,3 +134,12 @@ export function exampleRoles(order: string[], agents: Record<string, { role?: st
 
 export type MobileTab = "chat" | "running" | "team";
 export const MOBILE_TABS: MobileTab[] = ["chat", "running", "team"];
+
+export type PanelLayout = "none" | "gap" | "overlay";
+/** How the open agent panel sits beside the conversation: none (no panel, or phone where it stays as it is), a gap in the right column (wide screens), or over the conversation (tablet). */
+export function panelLayout(bp: "mobile" | "tablet" | "desktop", openAgent: string | null): PanelLayout {
+  if (!openAgent || bp === "mobile") return "none";
+  return bp === "desktop" ? "gap" : "overlay";
+}
+/** The box to write hides while the panel is open with the same agent the conversation talks to: two boxes for one agent would be two places to write. */
+export const composerHidden = (layout: PanelLayout, target: string | null, openAgent: string | null): boolean => layout !== "none" && !!target && target === openAgent;

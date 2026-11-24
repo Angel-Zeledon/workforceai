@@ -8,7 +8,7 @@ import { Loading } from "../../ui";
 import { BlockBoundary } from "./BlockBoundary";
 import { Composer } from "./Composer";
 import { RunBlock } from "./RunBlock";
-import { convOf, exampleRoles, inProgress, OFFICE_CONV } from "./workspaceLogic";
+import { composerHidden, convOf, exampleRoles, inProgress, OFFICE_CONV, type PanelLayout } from "./workspaceLogic";
 
 const KNOWN_ROLES = new Set(["sales", "analyst", "accounting", "hr", "legal", "operations", "assistant"]);
 const NO_MSGS: never[] = [];
@@ -59,8 +59,11 @@ function Examples({ onPick }: { onPick: (text: string) => void }) {
 }
 
 /** The conversation with the whole office or with one agent, the live block of what is in motion, and the box to write. */
-export function WorkThread({ target, onTarget, autoFocus }: { target: string | null; onTarget: (id: string | null) => void; autoFocus: boolean }) {
+export function WorkThread({ target, onTarget, autoFocus, layout = "none", openAgent = null }: { target: string | null; onTarget: (id: string | null) => void; autoFocus: boolean; layout?: PanelLayout; openAgent?: string | null }) {
   const { t } = useT();
+  const select = useStore((s) => s.select);
+  const targetName = useAgentView(target ?? "").name;
+  const boxHidden = composerHidden(layout, target, openAgent);
   const loaded = useStore((s) => s.loaded);
   const connected = useStore((s) => s.connected);
   const requests = useStore((s) => s.requests);
@@ -99,7 +102,13 @@ export function WorkThread({ target, onTarget, autoFocus }: { target: string | n
           {running.map((r) => <div key={r.id} className="mx-auto w-full max-w-3xl"><BlockBoundary name={`run-${r.id}`}><RunBlock row={r} collapsible defaultOpen={false} /></BlockBoundary></div>)}
         </div>
       )}
-      <Composer target={target} onTarget={onTarget} autoFocus={autoFocus} hero={empty} />
+      {boxHidden ? (
+        <div role="status" data-testid="work-panel-note" className="flex min-h-12 shrink-0 items-center gap-3 border-t border-line bg-panel px-3 py-2 text-[13px] text-ink2 md:px-5">
+          <span className="min-w-0 flex-1">{t("work.panel.talking", { name: targetName })}</span>
+          <button type="button" data-testid="work-panel-close" onClick={() => select(null)}
+            className="min-h-10 shrink-0 rounded-md border border-line-strong bg-panel px-3 text-[12.5px] font-medium text-ink2 transition hover:border-accent hover:text-accent">{t("work.panel.close")}</button>
+        </div>
+      ) : <Composer target={target} onTarget={onTarget} autoFocus={autoFocus} hero={empty} />}
       {empty && <BlockBoundary name="examples"><Examples onPick={(text) => setDraft(conv, text)} /></BlockBoundary>}
     </section>
   );

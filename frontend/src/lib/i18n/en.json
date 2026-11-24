@@ -7205,6 +7205,8 @@
   "work.thread.all": "Whole office",
   "work.thread.allSub": "The team decides who takes your request",
   "work.thread.openPanel": "Open panel",
+  "work.panel.talking": "You are talking to {name} in the panel",
+  "work.panel.close": "Close panel",
   "work.thread.emptyAll": "No messages yet. Write below what you need.",
   "work.thread.emptyAgent": "You have not talked to {name} yet. Write below.",
   "work.offline": "Offline. Reconnecting… you cannot send until it is back.",
