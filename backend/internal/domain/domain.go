@@ -223,8 +223,10 @@ type Task struct {
 	// AssignedReason says, in plain language, why this agent got the task
 	// (optional: tasks created before the chat layer have none).
 	AssignedReason string `json:"assigned_reason,omitempty"`
+	// Helper marks the task as one part of a temporary helper group (helpers.go); nil for an ordinary task.
+	Helper *TaskHelper `json:"helper,omitempty"`
 
-	Depth   int     `json:"-"` // delegation depth, 1-based
+	Depth   int    `json:"-"` // delegation depth, 1-based
 	CostUSD float64 `json:"-"`
 }
 

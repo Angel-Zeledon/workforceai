@@ -29,6 +29,8 @@ const (
 	ScopeAgent   BudgetScope = "agent"
 	// ScopeDepartment is the monthly spend limit of a department (governance department_limits).
 	ScopeDepartment BudgetScope = "department"
+	// ScopeHelperGroup is the hard cap the person accepted for a group of temporary helpers.
+	ScopeHelperGroup BudgetScope = "helper_group"
 )
 
 // UsageKind is the kind of runtime call a usage entry records.

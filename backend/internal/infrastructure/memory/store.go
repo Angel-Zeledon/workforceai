@@ -55,6 +55,7 @@ type Store struct {
 	v2            v2State                                  // work profiles, traces, steer notes (v2.go)
 	hist          chatHistState                            // chat history: archive, custom titles, read markers (chat_history.go)
 	questions     map[string][]application.Question        // org -> "needs your help" questions, creation order (questions.go)
+	helperGroups  map[string][]domain.HelperGroup          // org -> temporary helper groups (helpers.go)
 }
 
 func New() *Store {
@@ -76,6 +77,7 @@ func (s *Store) clear() {
 	s.rehearsal.actions = nil // execution data; the per-agent switches are configuration and survive a reset
 	s.debates.byOrg = nil
 	s.executions = map[string]application.ApprovalExecution{}
+	s.helperGroups = nil
 	s.v2.traces, s.v2.steer = nil, nil // execution data; profiles are configuration and survive a reset
 	// Request caps are execution data; agent caps are configuration and survive a reset.
 	for k, c := range s.caps {

@@ -314,13 +314,13 @@ func (s *Store) UpdateAgentState(ctx context.Context, orgID, id string, st domai
 
 // ---- tasks ----
 
-const taskCols = `id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, cost_usd, output, created_at, started_at, finished_at, assigned_reason`
+const taskCols = `id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, cost_usd, output, created_at, started_at, finished_at, assigned_reason, helper`
 
 func scanTask(r scanner) (domain.Task, error) {
 	var t domain.Task
 	var status string
-	var deps, out []byte
-	err := r.Scan(&t.ID, &t.RequestID, &t.WorkflowID, &t.Title, &t.Description, &t.AgentID, &status, &deps, &t.ParentTaskID, &t.Depth, &t.CostUSD, &out, &t.CreatedAt, &t.StartedAt, &t.FinishedAt, &t.AssignedReason)
+	var deps, out, helper []byte
+	err := r.Scan(&t.ID, &t.RequestID, &t.WorkflowID, &t.Title, &t.Description, &t.AgentID, &status, &deps, &t.ParentTaskID, &t.Depth, &t.CostUSD, &out, &t.CreatedAt, &t.StartedAt, &t.FinishedAt, &t.AssignedReason, &helper)
 	t.Status = domain.TaskStatus(status)
 	unmarshal(deps, &t.DependsOn)
 	t.DependsOn = strs(t.DependsOn)
@@ -330,13 +330,16 @@ func scanTask(r scanner) (domain.Task, error) {
 		o.Normalize()
 		t.Output = &o
 	}
+	if len(helper) > 0 {
+		unmarshal(helper, &t.Helper)
+	}
 	return t, err
 }
 
 func (s *Store) CreateTask(ctx context.Context, orgID string, t domain.Task) error {
-	return s.exec(ctx, orgID, `INSERT INTO tasks (id, org_id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, output, created_at, started_at, finished_at, assigned_reason)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-		t.ID, orgID, t.RequestID, t.WorkflowID, t.Title, t.Description, t.AgentID, string(t.Status), jb(strs(t.DependsOn)), t.ParentTaskID, t.Depth, outJSON(t.Output), t.CreatedAt, t.StartedAt, t.FinishedAt, t.AssignedReason)
+	return s.exec(ctx, orgID, `INSERT INTO tasks (id, org_id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, output, created_at, started_at, finished_at, assigned_reason, helper)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+		t.ID, orgID, t.RequestID, t.WorkflowID, t.Title, t.Description, t.AgentID, string(t.Status), jb(strs(t.DependsOn)), t.ParentTaskID, t.Depth, outJSON(t.Output), t.CreatedAt, t.StartedAt, t.FinishedAt, t.AssignedReason, jbOpt(t.Helper))
 }
 
 func outJSON(o *domain.StructuredOutput) []byte {
@@ -491,7 +494,7 @@ func (s *Store) ListConversations(ctx context.Context, orgID string) ([]domain.C
 func (s *Store) AddMessage(ctx context.Context, orgID string, m domain.Message) error {
 	return s.WithOrgTx(ctx, orgID, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `INSERT INTO messages (id, org_id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id, files, author_id, author_name, owner_id)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
 			m.ID, orgID, m.ConversationID, m.From, m.To, m.Kind, m.Text, m.TaskID, m.TS, m.TurnID, m.ReplyTo, m.RequestID, jb(fileRefs(m.Files)),
 			m.AuthorID, m.AuthorName, domain.ChatConvOwner(m.ConversationID)); err != nil {
 			return err
