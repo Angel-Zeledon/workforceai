@@ -91,10 +91,12 @@ func (s *Store) convRow(c domain.Conversation, msgs []domain.Message, viewer str
 	return row
 }
 
-func (s *Store) ChatConversations(_ context.Context, _ string, q application.ChatConvQuery) ([]application.ChatConversation, bool, error) {
+func (s *Store) ChatConversations(ctx context.Context, _ string, q application.ChatConvQuery) ([]application.ChatConversation, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	msgs := s.sortedMessages()
+	every := s.sortedMessages()
+	f := application.MessageOfficesFrom(ctx)
+	msgs := f.FilterMessages(every) // the messages of an office the person cannot see do not exist for the list
 	var rows []application.ChatConversation
 	for _, id := range s.convOrder {
 		if !application.VisibleTo(id, q.Viewer) {
@@ -102,6 +104,9 @@ func (s *Store) ChatConversations(_ context.Context, _ string, q application.Cha
 		}
 		c := s.convs[id]
 		row := s.convRow(c, msgs, q.Viewer)
+		if f.Active() && row.MessageCount == 0 && slices.ContainsFunc(every, func(m domain.Message) bool { return m.ConversationID == c.ID }) {
+			continue // everything said there was said in an office the person cannot see
+		}
 		switch q.Archived {
 		case "":
 			if row.Archived {
@@ -162,14 +167,14 @@ func (s *Store) ChatConversations(_ context.Context, _ string, q application.Cha
 	return rows, more, nil
 }
 
-func (s *Store) ChatGetConversation(_ context.Context, _, viewer, id string) (application.ChatConversation, error) {
+func (s *Store) ChatGetConversation(ctx context.Context, _, viewer, id string) (application.ChatConversation, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	c, ok := s.convs[id]
 	if !ok || !application.VisibleTo(id, viewer) {
 		return application.ChatConversation{}, domain.ErrNotFound
 	}
-	return s.convRow(c, s.sortedMessages(), viewer), nil
+	return s.convRow(c, application.MessageOfficesFrom(ctx).FilterMessages(s.sortedMessages()), viewer), nil
 }
 
 // threadMessages filters msgs (already restricted to what the viewer may see) to a thread.
@@ -189,10 +194,10 @@ func (s *Store) threadMessages(msgs []domain.Message, thread string) []domain.Me
 	return out
 }
 
-func (s *Store) ChatThreadMessages(_ context.Context, _ string, q application.ChatThreadQuery) ([]application.ChatMessage, bool, error) {
+func (s *Store) ChatThreadMessages(ctx context.Context, _ string, q application.ChatThreadQuery) ([]application.ChatMessage, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	all := visibleMessages(s.sortedMessages(), q.Viewer)
+	all := application.MessageOfficesFrom(ctx).FilterMessages(visibleMessages(s.sortedMessages(), q.Viewer))
 	in := s.threadMessages(all, q.Thread)
 	page, more, err := application.PageMessages(in, q.BeforeID, q.Limit)
 	if err != nil {
@@ -206,10 +211,10 @@ func (s *Store) ChatThreadMessages(_ context.Context, _ string, q application.Ch
 	return out, more, nil
 }
 
-func (s *Store) ChatThreads(_ context.Context, _, viewer string, agentIDs, noShared []string) ([]application.ChatThread, error) {
+func (s *Store) ChatThreads(ctx context.Context, _, viewer string, agentIDs, noShared []string) ([]application.ChatThread, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	all := visibleMessages(s.sortedMessages(), viewer)
+	all := application.MessageOfficesFrom(ctx).FilterMessages(visibleMessages(s.sortedMessages(), viewer))
 	if len(noShared) > 0 {
 		hidden := map[string]bool{}
 		for _, id := range noShared {

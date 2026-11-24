@@ -127,7 +127,11 @@ func (s *server) listThreadMessages(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	r = r.WithContext(application.WithRequestOffice(r.Context(), office))
+	ctx := application.WithRequestOffice(r.Context(), office)
+	if office != "" { // ?office_id=: the store pages that office's messages only
+		ctx = application.WithMessageOffices(ctx, application.MessageOfficesFrom(ctx).WithOfficeAsked(office))
+	}
+	r = r.WithContext(ctx)
 	msgs, more, next, err := s.Chats.Thread(r.Context(), application.ChatThreadQuery{
 		Thread: strings.TrimSpace(chi.URLParam(r, "key")), BeforeID: r.URL.Query().Get("before"), Limit: limit})
 	if err != nil {

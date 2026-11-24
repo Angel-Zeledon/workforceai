@@ -198,7 +198,11 @@ func (s *server) listMessages(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, cmp.Or(err, notFound("conversation", id)))
 		return
 	}
-	msgs, more, err := s.Queries.ChatMessages(r.Context(), id, before, limit)
+	readCtx := s.work(r).context().Context() // the stores leave out the offices the person cannot see, before paging
+	if officeAsked != "" {
+		readCtx = application.WithMessageOffices(readCtx, application.MessageOfficesFrom(readCtx).WithOfficeAsked(officeAsked))
+	}
+	msgs, more, err := s.Queries.ChatMessages(readCtx, id, before, limit)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -228,7 +232,7 @@ func (s *server) listMessages(w http.ResponseWriter, r *http.Request) {
 		msgs = visible(msgs)
 		// a page that left messages out is filled from older ones (up to a few reads); the cursor always moves on
 		for reads := 1; limit > 0 && more && len(msgs) < limit && next != "" && reads < maxFillReads; reads++ {
-			older, m, err := s.Queries.ChatMessages(r.Context(), id, next, limit-len(msgs))
+			older, m, err := s.Queries.ChatMessages(readCtx, id, next, limit-len(msgs))
 			if err != nil {
 				s.fail(w, err)
 				return

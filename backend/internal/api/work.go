@@ -215,9 +215,27 @@ func (w *workScope) filter() application.WorkFilter {
 	return application.WorkFilter{Agent: w.agent, Use: w.use, Request: w.request, Office: w.office}
 }
 
-// context returns the request carrying the rule in its context.
+// hiddenOffices are the offices whose work the person does not see (a private one they are not in, an admin included):
+// what was written there never reaches a listing of messages (the stores leave it out in the query).
+func (w *workScope) hiddenOffices() []string {
+	if w.load() != nil || w.m == nil {
+		return nil
+	}
+	var out []string
+	for _, o := range w.m.Offices() {
+		if o.ID != offices.GeneralID && !w.m.CanSeeOfficeWork(w.v, o.ID) {
+			out = append(out, o.ID)
+		}
+	}
+	return out
+}
+
+// context returns the request carrying the rule in its context: the work filter and the offices whose messages the
+// stores leave out of every read of the history.
 func (w *workScope) context() *http.Request {
-	return w.r.WithContext(application.WithWorkFilter(w.r.Context(), w.filter()))
+	ctx := application.WithWorkFilter(w.r.Context(), w.filter())
+	ctx = application.WithMessageOffices(ctx, application.MessageOfficesFrom(ctx).WithHide(w.hiddenOffices()))
+	return w.r.WithContext(ctx)
 }
 
 // seesWork reports whether the person of the request sees the work of an agent (true without offices).

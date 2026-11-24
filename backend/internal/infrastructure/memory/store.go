@@ -384,11 +384,12 @@ func (s *Store) ListMessages(_ context.Context, _, conversationID string) ([]dom
 }
 
 // ListMessagesPage implements application.MessagePager.
-func (s *Store) ListMessagesPage(_ context.Context, _, conversationID, beforeID string, limit int) ([]domain.Message, bool, error) {
+func (s *Store) ListMessagesPage(ctx context.Context, _, conversationID, beforeID string, limit int) ([]domain.Message, bool, error) {
 	s.mu.Lock()
 	var all []domain.Message
+	offices := application.MessageOfficesFrom(ctx) // the office asked / hidden is decided here, before paging
 	for _, m := range s.messages {
-		if m.ConversationID == conversationID {
+		if m.ConversationID == conversationID && offices.Allows(m.OfficeID) {
 			all = append(all, m)
 		}
 	}

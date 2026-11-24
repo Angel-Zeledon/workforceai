@@ -1222,7 +1222,7 @@ func (q *Queries) ChatMessages(ctx context.Context, id, beforeID string, limit i
 	if err != nil {
 		return nil, false, err
 	}
-	return PageMessages(all, beforeID, limit)
+	return PageMessages(MessageOfficesFrom(ctx).FilterMessages(all), beforeID, limit)
 }
 
 // chatMessages is ChatMessages for "office" and "agent:<id>" (E0): the caller's private thread with the
@@ -1272,7 +1272,7 @@ func (q *Queries) chatMessages(ctx context.Context, org, id, beforeID string, li
 			if err != nil {
 				return nil, false, err
 			}
-			all = append(all, msgs...)
+			all = append(all, MessageOfficesFrom(ctx).FilterMessages(msgs)...)
 		}
 		slices.SortStableFunc(all, func(a, b domain.Message) int {
 			if c := a.TS.Compare(b.TS); c != 0 {

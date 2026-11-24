@@ -543,10 +543,12 @@ func (s *Store) ListMessagesPage(ctx context.Context, orgID, conversationID, bef
 		all, err := s.ListMessages(ctx, orgID, conversationID)
 		return all, false, err
 	}
+	f := application.MessageOfficesFrom(ctx) // the office asked / hidden is decided in the query, before paging
 	rows, err := many(ctx, s, orgID, scanMessage, `SELECT `+msgCols+` FROM messages
 		WHERE org_id=$1 AND conversation_id=$2
 		  AND ($3 = '' OR (ts, id) < (SELECT ts, id FROM messages WHERE org_id=$1 AND id=$3))
-		ORDER BY ts DESC, id DESC LIMIT $4`, orgID, conversationID, beforeID, limit+1)
+		  AND `+officePred("office_id", "$5", "$6", "$7")+`
+		ORDER BY ts DESC, id DESC LIMIT $4`, orgID, conversationID, beforeID, limit+1, f.Asked, f.Office, f.HideIDs())
 	if err != nil {
 		return nil, false, err
 	}

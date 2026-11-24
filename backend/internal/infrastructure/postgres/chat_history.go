@@ -48,15 +48,16 @@ func likePattern(q string) string {
 	return "%" + r.Replace(q) + "%"
 }
 
-func convSelect(v string) string {
+func convSelect(v, asked, office, hide string) string {
+	mp := ` AND ` + officePred("m.office_id", asked, office, hide)
 	return `SELECT c.id, c.title, c.participants, c.request_id, c.last_message_at, c.archived_at, c.title_custom, c.owner_id,
-	(SELECT count(*) FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id),
-	(SELECT count(*) FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id AND ` + unreadPred(v) + `
+	(SELECT count(*) FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id` + mp + `),
+	(SELECT count(*) FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id` + mp + ` AND ` + unreadPred(v) + `
 		AND m.ts > ` + readAtSQL("c.org_id", "'conv:' || c.id", v) + `),
-	COALESCE((SELECT m.text FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id ORDER BY m.ts DESC, m.id DESC LIMIT 1), ''),
-	COALESCE((SELECT m.from_id FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id ORDER BY m.ts DESC, m.id DESC LIMIT 1), ''),
-	COALESCE((SELECT m.to_id FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id ORDER BY m.ts DESC, m.id DESC LIMIT 1), ''),
-	COALESCE((SELECT m.text FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id AND m.from_id = 'user' ORDER BY m.ts, m.id LIMIT 1), '')
+	COALESCE((SELECT m.text FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id` + mp + ` ORDER BY m.ts DESC, m.id DESC LIMIT 1), ''),
+	COALESCE((SELECT m.from_id FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id` + mp + ` ORDER BY m.ts DESC, m.id DESC LIMIT 1), ''),
+	COALESCE((SELECT m.to_id FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id` + mp + ` ORDER BY m.ts DESC, m.id DESC LIMIT 1), ''),
+	COALESCE((SELECT m.text FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id` + mp + ` AND m.from_id = 'user' ORDER BY m.ts, m.id LIMIT 1), '')
 	FROM conversations c`
 }
 
@@ -91,16 +92,20 @@ func (s *Store) ChatConversations(ctx context.Context, org string, q application
 	if limit <= 0 {
 		limit = 500
 	}
-	rows, err := many(ctx, s, org, scanChatConv, convSelect("$8")+` WHERE c.org_id = $1 AND c.owner_id IN ('', $8)
+	f := application.MessageOfficesFrom(ctx) // an office the person cannot see (or another than the asked one) has no messages here
+	mp := officePred("m.office_id", "$9", "$10", "$11")
+	rows, err := many(ctx, s, org, scanChatConv, convSelect("$8", "$9", "$10", "$11")+` WHERE c.org_id = $1 AND c.owner_id IN ('', $8)
+		AND NOT (EXISTS (SELECT 1 FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id)
+			AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id AND `+mp+`))
 		AND ($2 = 'all' OR (c.archived_at IS NOT NULL) = ($2 = 'only'))
 		AND ($3 = '' OR ($3 = 'office' AND c.id = 'office') OR ($3 = 'agent' AND c.id LIKE 'agent:%')
 			OR ($3 = 'request' AND c.id <> 'office' AND c.id NOT LIKE 'agent:%'))
 		AND ($4 = '' OR split_part(c.id, '@', 1) = 'agent:' || $4 OR EXISTS (SELECT 1 FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id
-			AND (m.from_id = $4 OR m.to_id = $4)))
+			AND (m.from_id = $4 OR m.to_id = $4) AND `+mp+`))
 		AND ($5 = '' OR c.title ILIKE $5 ESCAPE '\' OR EXISTS (SELECT 1 FROM messages m WHERE m.org_id = c.org_id AND m.conversation_id = c.id
-			AND m.text ILIKE $5 ESCAPE '\'))
+			AND m.text ILIKE $5 ESCAPE '\' AND `+mp+`))
 		ORDER BY c.last_message_at DESC, c.id LIMIT $6 OFFSET $7`,
-		org, q.Archived, q.Kind, q.AgentID, pat, limit+1, q.Offset, q.Viewer)
+		org, q.Archived, q.Kind, q.AgentID, pat, limit+1, q.Offset, q.Viewer, f.Asked, f.Office, f.HideIDs())
 	if err != nil {
 		return nil, false, err
 	}
@@ -112,7 +117,8 @@ func (s *Store) ChatConversations(ctx context.Context, org string, q application
 }
 
 func (s *Store) ChatGetConversation(ctx context.Context, org, viewer, id string) (application.ChatConversation, error) {
-	c, err := one(ctx, s, org, scanChatConv, convSelect("$3")+` WHERE c.org_id = $1 AND c.id = $2 AND c.owner_id IN ('', $3)`, org, id, viewer)
+	f := application.MessageOfficesFrom(ctx)
+	c, err := one(ctx, s, org, scanChatConv, convSelect("$3", "$4", "$5", "$6")+` WHERE c.org_id = $1 AND c.id = $2 AND c.owner_id IN ('', $3)`, org, id, viewer, f.Asked, f.Office, f.HideIDs())
 	return c, mapErr(err)
 }
 
@@ -121,6 +127,7 @@ func (s *Store) ChatThreadMessages(ctx context.Context, org string, q applicatio
 	if agent == application.ThreadGeneral {
 		agent = ""
 	}
+	f := application.MessageOfficesFrom(ctx) // the office asked / hidden is decided here, before paging
 	var out []application.ChatMessage
 	more := false
 	err := s.WithOrgTx(ctx, org, func(tx pgx.Tx) error {
@@ -138,10 +145,10 @@ func (s *Store) ChatThreadMessages(ctx context.Context, org string, q applicatio
 			limit = 50
 		}
 		rs, err := tx.Query(ctx, `SELECT m.id, m.conversation_id, m.from_id, m.to_id, m.kind, m.text, m.task_id, m.ts, m.turn_id, m.reply_to, m.request_id, m.files,
-			m.author_id, m.author_name
-			FROM messages m WHERE `+threadPred("$5")+`
+			m.author_id, m.author_name, COALESCE(m.office_id, '')
+			FROM messages m WHERE `+threadPred("$5")+` AND `+officePred("m.office_id", "$6", "$7", "$8")+`
 			AND ($3 = '' OR (m.ts, m.id) < (SELECT b.ts, b.id FROM messages b WHERE b.org_id = $1 AND b.id = $3))
-			ORDER BY m.ts DESC, m.id DESC LIMIT $4`, org, agent, q.BeforeID, limit+1, q.Viewer)
+			ORDER BY m.ts DESC, m.id DESC LIMIT $4`, org, agent, q.BeforeID, limit+1, q.Viewer, f.Asked, f.Office, f.HideIDs())
 		if err != nil {
 			return err
 		}
@@ -171,7 +178,7 @@ func (s *Store) ChatThreadMessages(ctx context.Context, org string, q applicatio
 		var part []domain.Message
 		if len(turnIDs) > 0 {
 			trs, err := tx.Query(ctx, `SELECT conversation_id, turn_id, from_id, to_id FROM messages m
-				WHERE m.org_id = $1 AND m.turn_id = ANY($2) AND m.owner_id IN ('', $3) AND `+chatConvs, org, turnIDs, q.Viewer)
+				WHERE m.org_id = $1 AND m.turn_id = ANY($2) AND m.owner_id IN ('', $3) AND `+chatConvs+` AND `+officePred("m.office_id", "$4", "$5", "$6"), org, turnIDs, q.Viewer, f.Asked, f.Office, f.HideIDs())
 			if err != nil {
 				return err
 			}
@@ -200,6 +207,7 @@ func (s *Store) ChatThreadMessages(ctx context.Context, org string, q applicatio
 
 func (s *Store) ChatThreads(ctx context.Context, org, viewer string, agentIDs, noShared []string) ([]application.ChatThread, error) {
 	keys := append([]string{application.ThreadGeneral}, agentIDs...)
+	f := application.MessageOfficesFrom(ctx)
 	hidden := make([]string, 0, len(noShared)) // D3: the stored shared 1:1 chats left out (agent:<id>, no owner)
 	for _, id := range noShared {
 		hidden = append(hidden, domain.ChatAgentConv(id))
@@ -231,15 +239,15 @@ func (s *Store) ChatThreads(ctx context.Context, org, viewer string, agentIDs, n
 			}
 			t := application.ChatThread{Key: key, AgentID: agent}
 			if err := tx.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE `+unreadPred("$4")+` AND m.ts > $3) FROM messages m WHERE `+threadPred("$4")+
-				` AND NOT (m.conversation_id = ANY($5::text[]))`,
-				org, agent, reads["thread:"+key], viewer, hidden).Scan(&t.MessageCount, &t.Unread); err != nil {
+				` AND NOT (m.conversation_id = ANY($5::text[])) AND `+officePred("m.office_id", "$6", "$7", "$8"),
+				org, agent, reads["thread:"+key], viewer, hidden, f.Asked, f.Office, f.HideIDs()).Scan(&t.MessageCount, &t.Unread); err != nil {
 				return err
 			}
 			if t.MessageCount > 0 {
 				var text string
 				if err := tx.QueryRow(ctx, `SELECT m.text, m.from_id, m.to_id, m.conversation_id, m.ts FROM messages m WHERE `+threadPred("$3")+
-					` AND NOT (m.conversation_id = ANY($4::text[])) ORDER BY m.ts DESC, m.id DESC LIMIT 1`,
-					org, agent, viewer, hidden).Scan(&text, &t.PreviewFrom, &t.PreviewTo, &t.PreviewConv, &t.LastMessageAt); err != nil {
+					` AND NOT (m.conversation_id = ANY($4::text[])) AND `+officePred("m.office_id", "$5", "$6", "$7")+` ORDER BY m.ts DESC, m.id DESC LIMIT 1`,
+					org, agent, viewer, hidden, f.Asked, f.Office, f.HideIDs()).Scan(&text, &t.PreviewFrom, &t.PreviewTo, &t.PreviewConv, &t.LastMessageAt); err != nil {
 					return err
 				}
 				t.Preview = application.Preview(text)
