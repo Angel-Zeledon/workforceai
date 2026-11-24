@@ -372,6 +372,11 @@ func (s *server) meetingRooms(w http.ResponseWriter, r *http.Request) {
 		s.meetingFail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
 	out := make([]roomView, 0, len(set.Rooms))
 	for _, room := range set.Rooms {
 		v := roomView{Room: room}
@@ -380,6 +385,9 @@ func (s *server) meetingRooms(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			rm := &roomMeeting{ID: m.ID, Title: m.Title, Status: m.Status, Start: m.Start, End: m.End}
+			if !ws.seesMeeting(m) { // D3: the room is taken, by whom and about what is the office's
+				rm = &roomMeeting{Status: m.Status, Start: m.Start, End: m.End}
+			}
 			switch {
 			case m.Status == meetings.StatusLive || (!m.Start.After(now) && m.End.After(now)):
 				if v.Current == nil {

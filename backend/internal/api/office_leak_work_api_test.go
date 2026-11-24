@@ -17,14 +17,23 @@ import (
 )
 
 // officesWorldSealed is officesWorld with the live-event rule of D3 installed on the recorder, as the server wires it.
-func officesWorldSealed(t *testing.T) (e *env, owner, ana, marta, luis, ventas, soporte, org string) {
+func officesWorldSealed(t *testing.T, more ...func(*api.Deps)) (e *env, owner, ana, marta, luis, ventas, soporte, org string) {
+	t.Helper()
+	return officesWorldSealedCfg(t, nil, more...)
+}
+
+// officesWorldSealedCfg is officesWorldSealed with a last word on the orchestrator configuration.
+func officesWorldSealedCfg(t *testing.T, cfg func(*application.Config), more ...func(*api.Deps)) (e *env, owner, ana, marta, luis, ventas, soporte, org string) {
 	t.Helper()
 	var d *api.Deps
-	e = newEnv(t, opts{auth: true, orgchart: true, away: true, code: true, v2: true, quality: true, ws: true, trust: true, deps: func(x *api.Deps) {
+	e = newEnv(t, opts{auth: true, orgchart: true, away: true, code: true, v2: true, quality: true, ws: true, trust: true, cfg: cfg, deps: func(x *api.Deps) {
 		withOfficesMulti(x)
 		docs := longmem.NewMemStore()
 		x.Memory = longmem.New(longmem.Config{Docs: docs, Retriever: &longmem.FTS{Docs: docs}})
 		x.Commands = &api.CommandsDeps{}
+		for _, f := range more {
+			f(x)
+		}
 		d = x
 	}})
 	o := e.register("owner-ao@example.com", "OwnerAO")

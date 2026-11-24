@@ -47,11 +47,11 @@ func (s *server) mountPortal(r chi.Router) {
 	r.With(read).Get("/portal/branding/logo", s.portalLogo)
 	r.With(manage).Put("/portal/branding/logo", s.portalSetLogo)
 	r.With(manage).Delete("/portal/branding/logo", s.portalDeleteLogo)
-	r.With(manage).Get("/projects/{id}/portal-links", s.portalLinks)
-	r.With(manage).Post("/projects/{id}/portal-links", s.portalCreateLink)
-	r.With(manage).Get("/projects/{id}/portal-links/candidates", s.portalCandidates)
-	r.With(manage).Put("/projects/{id}/portal-links/{lid}", s.portalUpdateLink)
-	r.With(manage).Delete("/projects/{id}/portal-links/{lid}", s.portalRevokeLink)
+	r.With(manage, s.workProject).Get("/projects/{id}/portal-links", s.portalLinks)
+	r.With(manage, s.workProject).Post("/projects/{id}/portal-links", s.portalCreateLink)
+	r.With(manage, s.workProject).Get("/projects/{id}/portal-links/candidates", s.portalCandidates)
+	r.With(manage, s.workProject).Put("/projects/{id}/portal-links/{lid}", s.portalUpdateLink)
+	r.With(manage, s.workProject).Delete("/projects/{id}/portal-links/{lid}", s.portalRevokeLink)
 }
 
 func (s *server) mountPortalPublic(r chi.Router) {
