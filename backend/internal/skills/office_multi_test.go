@@ -22,8 +22,8 @@ func TestAgentSkillsFollowTheOfficeOfTheRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, d := range []Detail{legal, sales} {
-		if _, err := e.svc.Review(e.ctx, Actor{ID: "u-owner", Admin: true}, d.ID, true, 1, ""); err != nil {
-			t.Fatal(err)
+		if _, err := e.svc.Review(e.ctx, Actor{ID: "u-ana", Admin: true}, d.ID, true, 1, ""); err != nil {
+			t.Fatalf("review %q (%s): %v", d.Name, d.ID, err)
 		}
 	}
 	e.svc.cfg.RoleDefaults = func(string) []string { return []string{"contract-review", "sales-kit"} } // both are defaults of the role
