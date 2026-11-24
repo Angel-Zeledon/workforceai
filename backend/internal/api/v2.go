@@ -94,6 +94,40 @@ func (s *server) traceRetentionDays() int {
 	return application.DefaultTraceRetention
 }
 
+// visibleTraces reads up to limit traces of an agent older than before, leaving out those of a task or request whose
+// office the person does not see. A page is filled from the next ones, so what is left out never shortens it (a short
+// page would tell the client there is nothing more to read).
+func (s *server) visibleTraces(r *http.Request, org, agent string, limit int, before time.Time) ([]application.Trace, error) {
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		return nil, err
+	}
+	if ws.open() {
+		return s.V2.ListTraces(r.Context(), org, agent, limit, before)
+	}
+	ws.preloadTasks()
+	var out []application.Trace
+	for len(out) < limit {
+		page, err := s.V2.ListTraces(r.Context(), org, agent, limit, before)
+		if err != nil {
+			return nil, err
+		}
+		for _, t := range page {
+			if len(out) < limit && ws.ownWork(t.TaskID, t.RequestID) {
+				out = append(out, t)
+			}
+		}
+		if len(page) < limit {
+			break // nothing older
+		}
+		before = page[len(page)-1].CreatedAt
+	}
+	if out == nil {
+		out = []application.Trace{}
+	}
+	return out, nil
+}
+
 func (s *server) listTraces(w http.ResponseWriter, r *http.Request) {
 	if s.hideWork(w, r) { // D3: the thought audit of a private office's agent is its members'
 		return
@@ -112,7 +146,7 @@ func (s *server) listTraces(w http.ResponseWriter, r *http.Request) {
 		before = t
 	}
 	org := s.org(r)
-	trs, err := s.V2.ListTraces(r.Context(), org, chi.URLParam(r, "id"), limit, before)
+	trs, err := s.visibleTraces(r, org, chi.URLParam(r, "id"), limit, before)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -134,6 +168,10 @@ func (s *server) getTrace(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	if ws := s.work(r); !ws.ownWork(t.TaskID, t.RequestID) { // the assistant thinks for any office
+		s.fail(w, cmp.Or(ws.err, notFound("trace", t.ID)))
+		return
+	}
 	application.MergeDecisions(&t)
 	writeJSON(w, 200, t)
 }
@@ -145,7 +183,7 @@ func (s *server) exportTraces(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	org, agent := s.org(r), chi.URLParam(r, "id")
-	trs, err := s.V2.ListTraces(r.Context(), org, agent, 500, time.Time{})
+	trs, err := s.visibleTraces(r, org, agent, 500, time.Time{})
 	if err != nil {
 		s.fail(w, err)
 		return

@@ -97,7 +97,7 @@ func (s *server) listCodeRuns(w http.ResponseWriter, r *http.Request) {
 			s.fail(w, err)
 			return
 		}
-		if ws := s.work(r); !ws.agent(run.AgentID) { // D3
+		if ws := s.work(r); !ws.seesRun(run) { // D3
 			s.fail(w, cmp.Or(ws.err, notFound("code run", ap)))
 			return
 		}
@@ -105,24 +105,32 @@ func (s *server) listCodeRuns(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	runs, err := s.Sandbox.Store.ListRuns(r.Context(), org, limit)
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
 	ws := s.work(r)
 	if err := ws.load(); err != nil {
 		s.fail(w, err)
 		return
 	}
+	want := limit
+	if !ws.open() { // the widest window, cut at the limit after leaving out what is hidden: the page stays as full as it can
+		want = 100
+		if limit > 0 {
+			want = min(limit, 500)
+		}
+		limit = 500
+		ws.preloadTasks()
+	}
+	runs, err := s.Sandbox.Store.ListRuns(r.Context(), org, limit)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
 	out := make([]sandbox.Run, 0, len(runs))
 	for _, run := range runs {
-		if ws.agent(run.AgentID) { // D3: a private office's code runs are its members'
+		if ws.seesRun(run) { // D3: a private office's code runs are its members'
 			out = append(out, normalizeRun(run))
 		}
 	}
-	runs = out
-	writeJSON(w, http.StatusOK, runs)
+	writeJSON(w, http.StatusOK, firstN(out, want))
 }
 
 func (s *server) getCodeRun(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +139,7 @@ func (s *server) getCodeRun(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	if ws := s.work(r); !ws.agent(run.AgentID) { // D3
+	if ws := s.work(r); !ws.seesRun(run) { // D3
 		s.fail(w, cmp.Or(ws.err, notFound("code run", run.ID)))
 		return
 	}
@@ -153,4 +161,10 @@ func normalizeRun(r sandbox.Run) sandbox.Run {
 		r.Approvers = []string{}
 	}
 	return r
+}
+
+// seesRun reports whether the person sees a code run: the work of its agent, and the office of the task and request it
+// was written for (the assistant runs code for any office).
+func (w *workScope) seesRun(run sandbox.Run) bool {
+	return w.agent(run.AgentID) && w.ownWork(run.TaskID, run.RequestID)
 }

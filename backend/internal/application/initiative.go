@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -125,6 +126,9 @@ type InitiativeService struct {
 	// Dedupe is the window in which the same signal is not suggested again (0 = DefaultInitiativeDedupe).
 	Dedupe time.Duration
 	Now    func() time.Time
+	// RequestOffice (optional, D3) is the office a request was asked from: accepting a suggestion about its work asks
+	// from that same office.
+	RequestOffice func(ctx context.Context, org, requestID string) (string, error)
 
 	mu sync.Mutex // serializes budget check + insert inside this process
 
@@ -300,7 +304,7 @@ func (s *InitiativeService) Raise(ctx context.Context, in RaiseInput) (RaiseOutc
 	}
 	if s.Rec != nil {
 		s.Rec.Emit(ctx, Action{Type: domain.EvInitiativeRaised, AgentID: it.AgentID, Entity: "initiative", EntityID: it.ID,
-			Payload: map[string]any{"initiative_id": it.ID, "agent_id": it.AgentID, "signal": it.Signal, "title": it.Title}})
+			Payload: it.eventPayload()})
 	}
 	return RaiseOutcome{Initiative: it, Raised: true}, nil
 }
@@ -321,7 +325,24 @@ func (s *InitiativeService) TaskFailed(ctx context.Context, t domain.Task, cause
 		Title:  fmt.Sprintf("La tarea %q falló", truncate(t.Title, 100)),
 		Body:   reason,
 		Prompt: fmt.Sprintf("Revisa por qué falló la tarea %q y propón cómo resolverlo. Motivo registrado: %s", truncate(t.Title, 200), reason),
+		Params: map[string]string{"task_id": t.ID, "request_id": t.RequestID},
 	})
+}
+
+// Work is the task and the request a suggestion is about ("" = none): it follows the office they were asked from.
+func (it Initiative) Work() (taskID, requestID string) { return it.Params["task_id"], it.Params["request_id"] }
+
+// eventPayload of initiative.raised: it names the work it is about, so the event reaches who may see that work only.
+func (it Initiative) eventPayload() map[string]any {
+	p := map[string]any{"initiative_id": it.ID, "agent_id": it.AgentID, "signal": it.Signal, "title": it.Title}
+	task, request := it.Work()
+	if task != "" {
+		p["task_id"] = task
+	}
+	if request != "" {
+		p["request_id"] = request
+	}
+	return p
 }
 
 // List returns the suggestions newest first (status "" = all).
@@ -350,7 +371,17 @@ func (s *InitiativeService) Accept(ctx context.Context, id string) (Initiative, 
 	if act := s.action(it.Signal); act != nil {
 		reqID, err = act(ctx, it) // e.g. a stalled task is retried, not asked for again
 	} else if s.Submit != nil {
-		reqID, err = s.Submit.Submit(ctx, it.Prompt)
+		sctx := ctx
+		if _, from := it.Work(); from != "" && s.RequestOffice != nil { // the request it starts is asked from the office of the work it is about
+			office, oerr := s.RequestOffice(ctx, org, from)
+			if oerr != nil && !errors.Is(oerr, domain.ErrNotFound) {
+				err = oerr
+			}
+			sctx = WithRequestOffice(ctx, office)
+		}
+		if err == nil {
+			reqID, err = s.Submit.Submit(sctx, it.Prompt)
+		}
 	} else {
 		err = fmt.Errorf("%w: requests are not available", domain.ErrConflict)
 	}

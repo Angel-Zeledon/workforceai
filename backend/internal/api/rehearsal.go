@@ -51,22 +51,24 @@ func (s *server) rehearsalAgents(w http.ResponseWriter, r *http.Request) {
 // agent). An agent left with no switch and no action is left out, like one that never rehearsed.
 func (s *server) visibleRehearsals(r *http.Request, v []application.AgentSummary) ([]application.AgentSummary, error) {
 	ws := s.work(r)
-	if err := ws.load(); err != nil || ws.open() || !ws.hidesAny() {
+	if err := ws.load(); err != nil || ws.open() || !ws.hidesAny() && len(ws.hiddenOffices()) == 0 {
 		return v, err
 	}
 	as, err := s.Rehearsal.List(r.Context(), domain.RehearsalQuery{})
 	if err != nil {
 		return nil, err
 	}
-	seen := map[string][]domain.RehearsalAction{}
+	seen, hidden := map[string][]domain.RehearsalAction{}, map[string]bool{}
 	for _, a := range as {
-		if !ws.agent(a.AgentID) && ws.seesRehearsal(a) {
+		if ws.seesRehearsal(a) {
 			seen[a.AgentID] = append(seen[a.AgentID], a)
+		} else {
+			hidden[a.AgentID] = true
 		}
 	}
 	out := v[:0]
 	for _, x := range v {
-		if !ws.agent(x.AgentID) {
+		if hidden[x.AgentID] || !ws.agent(x.AgentID) { // a public agent's rehearsals for a private office are not counted either
 			c := application.Count(seen[x.AgentID])
 			x.Actions, x.WouldApprove, x.WouldReject, x.Undecided = c.Total, c.WouldApprove, c.WouldReject, c.Undecided
 			if x.UpdatedAt == nil && x.Actions == 0 {
@@ -133,6 +135,7 @@ func (s *server) rehearsalActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !ws.open() {
+		ws.preloadTasks()
 		v = firstN(slices.DeleteFunc(v, func(a domain.RehearsalAction) bool { return !ws.seesRehearsal(a) }), want)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": v})

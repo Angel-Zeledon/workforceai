@@ -142,7 +142,7 @@ func (s *server) outboxGuard(w http.ResponseWriter, r *http.Request, approve boo
 		s.fail(w, err)
 		return false
 	}
-	ap := domain.Approval{ID: it.ApprovalID, AgentID: it.AgentID, Status: domain.ApprovalPending, RequiredApprovals: 1}
+	ap := domain.Approval{ID: it.ApprovalID, AgentID: it.AgentID, TaskID: it.TaskID, Status: domain.ApprovalPending, RequiredApprovals: 1}
 	if it.ApprovalID != "" {
 		got, err := s.Store.GetApproval(ctx, org, it.ApprovalID)
 		switch {
@@ -153,7 +153,10 @@ func (s *server) outboxGuard(w http.ResponseWriter, r *http.Request, approve boo
 			return false
 		}
 	}
-	if !ws.seesApproval(ap) {
+	if ap.TaskID == "" {
+		ap.TaskID = it.TaskID // the approval of an item may not name its task
+	}
+	if !ws.seesApproval(ap) || !ws.ownWork(it.TaskID, it.RequestID) { // ...nor the office its task and request come from
 		s.fail(w, notFound("outbox item", id))
 		return false
 	}

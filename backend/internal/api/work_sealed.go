@@ -53,9 +53,14 @@ func (ws *workScope) seesQuestion(q application.Question) bool {
 	return ws.agent(q.AgentID) && ws.taskID(q.TaskID) || ws.viewer(q.AskedFor)
 }
 
-// seesRehearsal: the work of the agent, or the request it belongs to (its requester sees its rehearsal report).
+// seesRehearsal: what belongs to a request is the request's (whoever asked for it sees its rehearsal report, and an
+// agent's visible work for a private office's request does not open it); one with no request is the work of its agent
+// and of the office of its task.
 func (ws *workScope) seesRehearsal(a domain.RehearsalAction) bool {
-	return ws.agent(a.AgentID) || a.RequestID != "" && ws.request(a.RequestID)
+	if a.RequestID != "" {
+		return ws.request(a.RequestID)
+	}
+	return ws.agent(a.AgentID) && ws.taskID(a.TaskID)
 }
 
 // seesDebate: a request's debate is its request's; another one needs the work of every participant, unless the
@@ -188,8 +193,14 @@ func (s *server) workDebate(next http.Handler) http.Handler {
 func (s *server) workInitiative(next http.Handler) http.Handler {
 	return s.guardWork("initiative", "id", func(r *http.Request, ws *workScope, id string) (bool, error) {
 		it, err := s.Initiative.Store.GetInitiative(r.Context(), ws.org, id)
-		return err == nil && ws.agentOK(it.AgentID), err
+		return err == nil && ws.seesInitiative(it), err
 	})(next)
+}
+
+// seesInitiative: a suggestion of the agent and, when it is about a task, of that task's office (its title is named).
+func (ws *workScope) seesInitiative(it application.Initiative) bool {
+	task, _ := it.Work()
+	return ws.agentOK(it.AgentID) && ws.taskID(task)
 }
 
 // workTrustProposal: a change of autonomy is decided only by those who see the agent's work (D3).

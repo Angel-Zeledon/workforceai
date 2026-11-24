@@ -79,7 +79,7 @@ func (s *server) listInitiatives(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	v = slices.DeleteFunc(v, func(it application.Initiative) bool { return !ws.agentOK(it.AgentID) })
+	v = slices.DeleteFunc(v, func(it application.Initiative) bool { return !ws.seesInitiative(it) })
 	if !ws.open() {
 		v = firstN(v, cmp.Or(max(limit, 0), initiativeListDefault))
 	}

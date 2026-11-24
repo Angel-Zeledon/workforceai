@@ -356,7 +356,7 @@ func run(log *slog.Logger) error {
 	// Proactive suggestions (B2): failed tasks become suggestions a person accepts or dismisses; accepting submits a normal request.
 	var initiativeSvc *application.InitiativeService
 	if is, ok := store.(application.InitiativeStore); ok {
-		initiativeSvc = &application.InitiativeService{Store: is, Submit: orch, Rec: rec, Cfg: cfg.App}
+		initiativeSvc = &application.InitiativeService{Store: is, Submit: orch, Rec: rec, Cfg: cfg.App, RequestOffice: orch.OfficeOfRequest}
 		orch.SetInitiative(initiativeSvc)
 	}
 	// Rituals (B4): daily stand-up and weekly retro, deterministic from tasks and approvals; schedule off until a person turns it on.
