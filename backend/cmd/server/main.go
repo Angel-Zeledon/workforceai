@@ -332,7 +332,7 @@ func run(log *slog.Logger) error {
 	memorySvc := wireMemory(ctx, log, pg, store, rec, orch, cw, ws, orgIDs, cfg.App.OrgID)
 	bindCustomerHistory(custSvc, ws, store, memorySvc) // B12: earlier work is assigned to a customer explicitly, never silently
 	// D3: departments are sealed BEFORE the resumed requests run (their events, approvals and memory).
-	officesSvc := wireDepartments(departmentWiring{AuthOn: cfg.AuthEnabled, PG: pg, Store: store, AuthStore: authStore, Chart: orgChartSvc,
+	officesSvc := wireDepartments(departmentWiring{AuthOn: cfg.AuthEnabled, MultiOffice: cfg.MultiOfficeAgents, PG: pg, Store: store, AuthStore: authStore, Chart: orgChartSvc,
 		Rec: rec, Memory: memorySvc, Orch: orch, Notify: notifySvc, Slack: slackSvc, Conns: cw.conns, Drive: ws.drive, Skills: skillsSvc, Log: log})
 	// positions inside a department: before Recover, so resumed work already searches only its position's library
 	positionsSvc := wirePositions(pg, officesSvc, skillsSvc, ws.drive, rec, cfg.App.OrgID, log)

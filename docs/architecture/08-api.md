@@ -1480,6 +1480,45 @@ Códigos `400`: `name_required`, `name_too_long`, `template_invalid`, `too_many`
 `position_name` y ordena directas > puesto > oficio; `GET /agents/{id}/folder-access` añade `source: "position"` y
 `position` (nombre); el historial (sección 51) añade el campo `position`.
 
+## 57. Agentes en varias oficinas y contratar con oficina
+
+Diseño: `docs/superpowers/specs/2026-11-23-oficinas-agentes-habilidades-design.md` (§5, §7). Migración 832 (`agent_offices`).
+Todas piden `agents:read`; quién puede qué lo decide el modelo de oficinas. Un agente tiene **una oficina base** (la de
+`GET /agents/{id}/access`, la misma que usan el directorio, los puestos y el organigrama) y puede trabajar también en otras:
+la concede quien lleva la oficina base (o un admin) y la acepta quien lleva la otra (un admin que lleva las dos la deja
+aceptada al momento). Con la oficina aceptada, sus miembros pueden pedirle trabajo (`rights.use`), nunca editarlo.
+**Interruptor `MULTI_OFFICE_AGENTS`** (apagado por defecto): mientras no exista el aislamiento de memoria y archivos por
+pedido, conceder y aceptar responden `403` y las filas guardadas no dan acceso; `GET` y `DELETE` siguen funcionando.
+
+Vista (respuesta de todas las rutas): `{agent_id, base_office{id, name}, offices[{office_id, name, status: pending|accepted,
+granted_by, accepted_by?, can_accept, can_remove}], enabled}`. `base_office` va vacío (`{id:"",name:""}`) para quien usa al
+agente por otra oficina pero no puede ver la oficina base privada; `offices[]` no nombra una oficina privada a quien no puede
+entrar en ella (salvo a quien lleva la oficina base).
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /agents/{id}/offices` | La vista. `404` si no ve al agente |
+| `POST /agents/{id}/offices` `{office_id}` | Concede: queda `pending` (o `accepted` si quien lo hace lleva también esa oficina). Repetirlo no cambia nada. `403` si no lleva la oficina base o la bandera está apagada; `400` si es la oficina base o un agente personal; `404` oficina o agente inexistente |
+| `POST /agents/{id}/offices/{officeID}/accept` | Acepta: quien lleva esa oficina o un admin. Repetirlo no cambia nada. `404` si no se le ofreció; `403` si no la lleva |
+| `DELETE /agents/{id}/offices/{officeID}` | Quita (o rechaza) al instante: quien lleva la oficina base, quien lleva esa oficina o un admin. Quitar lo que no está no es error |
+
+Auditoría: `agent.office_granted`, `agent.office_accepted`, `agent.office_removed` (`entity_id` = agente; `details.office_id`).
+Cambio aditivo: cada agente de `GET /org/chart` (`members[]` y `unassigned[]`) trae `office_id` y `office_name` (oficina base;
+un agente sin puesto en el organigrama dice `general`, no "sin oficina").
+
+**Contratar con oficina.** `POST /agents/from-template` acepta además, todos opcionales:
+`{office_id, position_id, skills: [skillId], visibility: private|office|people|directory, shares: [{user_id, level: chat|edit}]}`.
+Sin ninguno, igual que antes (General). Todo se valida **antes** de crear nada y se aplica como una sola operación: oficina
+(el agente pasa a ese departamento y la oficina es su dueña), puesto, habilidades directas (máx. 30) y acceso; si un paso falla
+el agente se borra, sin auditoría ni evento, y se devuelve el error. `office_id` es obligatorio si se manda `position_id`
+(General no tiene puestos). Errores: `403` quien no lleva esa oficina (ni es admin), `404` oficina inexistente o privada de
+la que no es miembro, o puesto/habilidad inexistente, `400` visibilidad o personas inválidas, puesto de otra oficina
+(`position_other_office`) o habilidad de otro departamento (`other_department`). Respuesta: `201 {agent, template_id}`.
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /role-templates/{id}/suggested-skills?office_id=&position_id=` | `{template_id, office_id, skills[{id, name, description, office_id, via: position\|role, position_name, servable}], position?{id, name}}`: lo que el puesto (primero) y la plantilla sugieren, solo habilidades que valen en esa oficina y que la persona ve. Sin `office_id` = General (no admite `position_id`: `400`). `404` plantilla o puesto inexistente |
+
 ## 56. Errores claros
 
 Un error nunca llega a la persona como texto de código. Contrato:

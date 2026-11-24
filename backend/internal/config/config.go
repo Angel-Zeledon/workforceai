@@ -76,6 +76,10 @@ type Config struct {
 	// EmailVerification (EMAIL_VERIFICATION) makes new accounts verify their e-mail before they can sign in.
 	// It needs AUTH_ENABLED, UI_BASE_URL and either SMTP_* or EMAIL_DEV_LOG (development: links are logged, not sent).
 	EmailVerification bool
+	// MultiOfficeAgents (MULTI_OFFICE_AGENTS, off by default) lets an agent also work for offices other than its base
+	// one (offices.Config.MultiOffice). Keep it off until requests carry their office and the memory and files of each
+	// office are isolated per request: without that isolation an agent would mix the contexts of its offices.
+	MultiOfficeAgents bool
 	// Trial accounts (TRIAL_ENABLED): "try it without signing up". TRIAL_TTL_HOURS (24), TRIAL_PER_IP_PER_DAY (3),
 	// TRIAL_GLOBAL_PER_DAY (300), TRIAL_EMAIL_DOMAIN (generated addresses).
 	TrialEnabled      bool
@@ -257,6 +261,9 @@ func Load() Config {
 		c.errs = append(c.errs, err)
 	}
 	if c.App.HelpersEnabled, err = getBool("HELPERS_ENABLED", false); err != nil {
+		c.errs = append(c.errs, err)
+	}
+	if c.MultiOfficeAgents, err = getBool("MULTI_OFFICE_AGENTS", false); err != nil {
 		c.errs = append(c.errs, err)
 	}
 	c.AuthCookieName = strings.TrimSpace(getenv("AUTH_COOKIE_NAME", ""))
