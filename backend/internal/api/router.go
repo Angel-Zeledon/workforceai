@@ -606,8 +606,15 @@ func (s *server) createRequest(w http.ResponseWriter, r *http.Request) {
 		// GoalID (F1, optional): the company goal the request contributes to. A goal of another organization, one
 		// the person cannot see or one that is not active refuses the request (400).
 		GoalID string `json:"goal_id"`
+		// OfficeID (optional): the office the request is asked from (the person must be able to enter it, else 404).
+		OfficeID string `json:"office_id"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
+		s.fail(w, err)
+		return
+	}
+	office, err := s.enterOffice(r, strings.TrimSpace(body.OfficeID))
+	if err != nil {
 		s.fail(w, err)
 		return
 	}
@@ -615,7 +622,7 @@ func (s *server) createRequest(w http.ResponseWriter, r *http.Request) {
 		body.Text = application.WithDebateMarker(body.Text)
 	}
 	ctx := application.WithCustomer(application.WithBudgetCap(r.Context(), body.BudgetCapUSD), body.CustomerID)
-	ctx = application.WithGoal(ctx, body.GoalID)
+	ctx = application.WithRequestOffice(application.WithGoal(ctx, body.GoalID), office)
 	if body.Rehearsal {
 		ctx = application.WithRehearsal(ctx, true)
 	}
@@ -638,7 +645,14 @@ func (s *server) listRequests(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	v = slices.DeleteFunc(v, func(x domain.Request) bool { return !ws.request(x.ID) }) // D3
+	officeAsked := strings.TrimSpace(r.URL.Query().Get("office_id"))
+	if _, err := s.enterOffice(r, officeAsked); err != nil {
+		s.fail(w, err)
+		return
+	}
+	v = slices.DeleteFunc(v, func(x domain.Request) bool { // D3
+		return !ws.request(x.ID) || officeAsked != "" && !sameOffice(x.OfficeID, officeAsked)
+	})
 	s.hideGoals(r, v)                                                                  // F1: a hidden goal reads as none
 	writeJSON(w, 200, list(v))
 }
