@@ -1,6 +1,6 @@
-import { TeamsPage } from "@/components/nav/RoutedPages";
+import { TeamsRedirect } from "@/components/nav/RoutedPages";
 
-/** Equipos listos para contratar (F2): always reachable from the menu, not only during the onboarding. */
+/** The old "Equipos" address: the ready-to-hire teams now live in Oficinas (same query). */
 export default function Page() {
-  return <TeamsPage />;
+  return <TeamsRedirect />;
 }

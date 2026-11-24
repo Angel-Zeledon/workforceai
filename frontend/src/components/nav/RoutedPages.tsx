@@ -18,7 +18,8 @@ import { ApprovalsMobile } from "../approvals/ApprovalsMobile";
 import { CustomerDistrict } from "../customers/CustomerDistrict";
 import { GoalsView } from "../goals/GoalsView";
 import { ConnectionsView } from "../connections/ConnectionsView";
-import { TeamsGallery } from "../teams/TeamsGallery";
+import { orgRedirectTarget } from "@/lib/orgTabsLogic";
+import { teamsRedirectTarget } from "@/lib/navBridge";
 import { useConnections } from "@/lib/connections/store";
 import { useBootConnections } from "../security/ControlsChrome";
 import { useStore } from "@/lib/store";
@@ -105,12 +106,15 @@ export const ClientsPage = () => (
   <div className="h-full overflow-y-auto bg-bg"><div className="mx-auto w-full max-w-6xl p-4 md:p-6"><CustomerDistrict /></div></div>
 );
 
-function TeamsInner() {
+/** Old addresses (`/org?tab=…`, `/teams?…`) land on the screen that holds them now, keeping their query. */
+function LegacyRedirect({ target }: { target: (q: URLSearchParams) => string }) {
+  const router = useRouter();
   const q = useSearchParams();
-  return <TeamsGallery team={q.get("team") || undefined} pack={q.get("pack") || undefined} template={q.get("template") || undefined} />;
+  useEffect(() => { router.replace(target(q)); }, [q, router, target]);
+  return <PageSkeleton />;
 }
-/** Equipos: ready-to-hire business teams with a preview (F2). `?team=` opens one, `?pack=` suits an onboarding pack. */
-export const TeamsPage = () => <Suspense fallback={<PageSkeleton />}><TeamsInner /></Suspense>;
+export const OrgRedirect = () => <Suspense fallback={<PageSkeleton />}><LegacyRedirect target={(q) => orgRedirectTarget(q.get("tab"))} /></Suspense>;
+export const TeamsRedirect = () => <Suspense fallback={<PageSkeleton />}><LegacyRedirect target={(q) => teamsRedirectTarget(q.toString())} /></Suspense>;
 /** Objetivos: the company goals that requests and projects can point to (F1). */
 export const GoalsPage = () => (
   <div className="h-full overflow-y-auto bg-bg"><div className="mx-auto w-full max-w-4xl p-4 md:p-6"><GoalsView /></div></div>

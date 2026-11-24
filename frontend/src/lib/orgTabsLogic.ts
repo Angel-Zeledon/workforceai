@@ -11,6 +11,9 @@
 export const ORG_TABS = ["agents", "offices", "chart", "delegation"] as const;
 export type OrgTab = (typeof ORG_TABS)[number];
 
+/** The tabs of the Oficinas page (its own address, `/offices`): Agentes lives on `/agents` now. */
+export const OFFICE_TABS = ["offices", "chart", "delegation"] as const;
+
 /** The sections inside Agentes (the old "directory" and "roles" tabs). */
 export const AGENT_SECTIONS = ["directory", "roles"] as const;
 export type AgentSection = (typeof AGENT_SECTIONS)[number];
@@ -44,4 +47,14 @@ export function resolveOrgTab(raw: string | null | undefined): OrgPlace | null {
 export function splitBySpace<D extends { id: string }>(depts: readonly D[], offices: readonly { id: string; general?: boolean }[]): { withSpace: D[]; withoutSpace: D[] } {
   const spaced = new Set(offices.filter((o) => !o.general).map((o) => o.id));
   return { withSpace: depts.filter((d) => spaced.has(d.id)), withoutSpace: depts.filter((d) => !spaced.has(d.id)) };
+}
+
+/**
+ * Where an old `/org` link lands (the page is split in two): Agentes goes to `/agents` (keeping the section, `?tab=roles`),
+ * Oficinas, Organigrama and Reglas go to `/offices?tab=…`. No tab, or an unknown one, is Agentes, the old first tab.
+ */
+export function orgRedirectTarget(raw: string | null | undefined): string {
+  const place = resolveOrgTab(raw) ?? { tab: "agents" as OrgTab };
+  if (place.tab === "agents") return place.section === "roles" ? "/agents?tab=roles" : "/agents";
+  return `/offices?tab=${place.tab}${place.focus ? `&focus=${place.focus}` : ""}`;
 }

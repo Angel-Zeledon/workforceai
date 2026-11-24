@@ -19,13 +19,31 @@ test("openInOffice selects the agent and then navigates to the office", () => {
 });
 
 // ---- the grouped menu (UX tanda 1) ----
-import { NAV_GROUPS, navGroups, sectionOf, SECTIONS } from "./navBridge.ts";
+import { NAV_GROUPS, navGroups, sectionOf, SECTIONS, teamsRedirectTarget } from "./navBridge.ts";
+
+test("Oficinas, Agentes and Habilidades are their own entries, in simple mode too; Equipos and Agentes y oficinas are gone", () => {
+  const ids = SECTIONS.map((s) => s.id);
+  assert.ok(ids.includes("offices") && ids.includes("agents") && ids.includes("skills"));
+  assert.ok(!ids.includes("org") && !ids.includes("teams"));
+  const href = (id) => SECTIONS.find((s) => s.id === id).href;
+  assert.equal(href("offices"), "/offices");
+  assert.equal(href("agents"), "/agents");
+  assert.equal(href("skills"), "/skills");
+  assert.equal(SECTIONS.find((s) => s.id === "department").label, "nav.department");
+});
+
+test("old /teams addresses keep their query on /offices", () => {
+  assert.equal(teamsRedirectTarget(""), "/offices");
+  assert.equal(teamsRedirectTarget("?pack=sales"), "/offices?pack=sales");
+  assert.equal(teamsRedirectTarget("?team=legal&pack=sales"), "/offices?team=legal&pack=sales");
+  assert.equal(teamsRedirectTarget("template=tpl-1"), "/offices?template=tpl-1");
+});
 
 test("the menu is grouped: Tu día, Tu empresa, Enseñar y conectar; Tienda and Ajustes at the bottom", () => {
   const g = navGroups({ shopAvailable: true });
   assert.deepEqual(g.map((x) => x.id), ["day", "company", "teach", "bottom"]);
   assert.deepEqual(g[0].items.map((s) => s.id), ["office", "pending", "chats", "projects"]);
-  assert.deepEqual(g[1].items.map((s) => s.id), ["org", "goals", "teams", "customers", "drive", "meetings"]);
+  assert.deepEqual(g[1].items.map((s) => s.id), ["offices", "agents", "goals", "customers", "drive", "meetings"]);
   assert.deepEqual(g[2].items.map((s) => s.id), ["skills", "connections"]);
   assert.deepEqual(g[3].items.map((s) => s.id), ["shop", "settings"]);
 });
@@ -66,7 +84,7 @@ test("sectionOf knows the new homes and the old links", () => {
 test("company accounts get a short menu led by their department, the rest under More", () => {
   const g = navGroups({ shopAvailable: false, company: true });
   assert.deepEqual(g.map((x) => x.id), ["main", "more"]);
-  assert.deepEqual(g[0].items.map((s) => s.id), ["department", "pending", "org", "settings"]);
+  assert.deepEqual(g[0].items.map((s) => s.id), ["department", "pending", "offices", "agents", "settings"]);
   const more = g[1].items.map((s) => s.id);
   assert.ok(!more.includes("shop"));
   const all = [...g[0].items, ...g[1].items].map((s) => s.id);
@@ -84,6 +102,16 @@ test("non-company menu is the one of today and has no department", () => {
   assert.deepEqual(g.map((x) => x.id), ["day", "company", "teach", "bottom"]);
   assert.ok(!g.flatMap((x) => x.items).some((s) => s.id === "department"));
   assert.equal(SECTIONS.find((s) => s.id === "department").href, "/d");
+});
+
+test("sectionOf knows /offices, /agents and the old /org and /teams", () => {
+  assert.equal(sectionOf("/offices"), "offices");
+  assert.equal(sectionOf("/offices?tab=chart"), "offices");
+  assert.equal(sectionOf("/teams"), "offices");
+  assert.equal(sectionOf("/agents"), "agents");
+  assert.equal(sectionOf("/org"), "agents");
+  assert.equal(sectionOf("/skills"), "skills");
+  assert.equal(sectionOf("/office"), "office");
 });
 
 test("sectionOf maps /d to the department", () => {
