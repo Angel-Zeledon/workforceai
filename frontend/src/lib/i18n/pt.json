@@ -7206,6 +7206,8 @@
   "work.thread.all": "Todo o escritório",
   "work.thread.allSub": "A equipe decide quem assume o seu pedido",
   "work.thread.openPanel": "Ver painel",
+  "work.panel.talking": "Você está falando com {name} no painel",
+  "work.panel.close": "Fechar painel",
   "work.thread.emptyAll": "Ainda não há mensagens. Escreva abaixo o que você precisa.",
   "work.thread.emptyAgent": "Você ainda não falou com {name}. Escreva abaixo.",
   "work.offline": "Sem conexão. Reconectando… enquanto isso não é possível enviar.",

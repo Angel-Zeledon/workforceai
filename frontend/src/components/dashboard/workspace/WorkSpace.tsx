@@ -7,7 +7,7 @@ import { BlockBoundary } from "./BlockBoundary";
 import { TeamRail, TeamStrip } from "./TeamRail";
 import { WorkPanel } from "./WorkPanel";
 import { WorkThread } from "./WorkThread";
-import { MOBILE_TABS, validTarget, type MobileTab } from "./workspaceLogic";
+import { MOBILE_TABS, panelLayout, validTarget, type MobileTab } from "./workspaceLogic";
 
 type Bp = "mobile" | "tablet" | "desktop";
 const QUERIES = ["(min-width: 1280px)", "(min-width: 768px)"] as const;
@@ -29,12 +29,14 @@ export function WorkSpace({ picked, setPicked, onOpenReport, onOpenPanel, openDe
   const agents = useStore((s) => s.agents);
   const [tab, setTab] = useState<MobileTab>("chat");
   const target = validTarget(picked, agents);
+  const openAgent = useStore((s) => s.selectedAgentId);
+  const layout = panelLayout(bp, openAgent);
   const approvals = useStore((s) => s.approvals);
   const questions = useStore((s) => s.questions);
   const needs = useMemo(() => pendingTotal(approvals, questions ?? {}), [approvals, questions]);
   useEffect(() => { if (picked && !agents[picked] && Object.keys(agents).length) setPicked(null); }, [picked, agents]);
   const pick = (id: string | null) => { setPicked(id); setTab("chat"); };
-  const thread = <BlockBoundary name="conversation"><WorkThread target={target} onTarget={pick} autoFocus={bp === "desktop"} /></BlockBoundary>;
+  const thread = <BlockBoundary name="conversation"><WorkThread target={target} onTarget={pick} autoFocus={bp === "desktop"} layout={layout} openAgent={openAgent} /></BlockBoundary>;
   const live = (
     // new things that wait for the person are announced politely, without moving focus
     <p role="status" aria-live="polite" className="sr-only" data-testid="work-needs-live">{needs > 0 ? t("work.needs.live", { n: needs }) : ""}</p>
@@ -70,19 +72,21 @@ export function WorkSpace({ picked, setPicked, onOpenReport, onOpenPanel, openDe
         {live}
         <div className="flex min-h-0 min-w-0 flex-col">
           <BlockBoundary name="team"><TeamStrip target={target} onPick={pick} onPanel={onOpenPanel} /></BlockBoundary>
-          <div className="min-h-0 flex-1">{thread}</div>
+          {/* under the panel the conversation and its box are not reachable while the panel is open */}
+          <div className="min-h-0 flex-1" inert={layout === "overlay"} aria-hidden={layout === "overlay"}>{thread}</div>
         </div>
         <WorkPanel onOpenReport={onOpenReport} openDecisions={openDecisions} className="border-l border-line bg-panel" />
       </div>
     );
   }
 
+  // with an agent open, the panel's width is left free on the right so the conversation shrinks instead of being covered
   return (
-    <div data-testid="workspace" data-bp="desktop" className="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)_340px]">
+    <div data-testid="workspace" data-bp="desktop" className="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)_340px]" style={layout === "gap" ? { gridTemplateColumns: "260px minmax(0,1fr) var(--panel-w, 420px)" } : undefined}>
       {live}
       <BlockBoundary name="team"><TeamRail target={target} onPick={pick} onPanel={onOpenPanel} className="border-r border-line bg-panel" /></BlockBoundary>
       <div className="min-h-0 min-w-0">{thread}</div>
-      <WorkPanel onOpenReport={onOpenReport} openDecisions={openDecisions} className="border-l border-line bg-panel" />
+      {layout === "gap" ? <div data-testid="work-panel-gap" aria-hidden className="min-h-0" /> : <WorkPanel onOpenReport={onOpenReport} openDecisions={openDecisions} className="border-l border-line bg-panel" />}
     </div>
   );
 }
