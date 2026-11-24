@@ -1,4 +1,5 @@
 "use client";
+import { useHelpers } from "@/lib/helpers";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import { useStore, typingIn } from "@/lib/store";
@@ -256,7 +257,8 @@ export async function sendChat(conv: string, text: string, from = "user", attach
   const customer = useChatCustomer.getState().customer; // B12: the chat works for this customer (its view is open)
   const goalId = useChatGoal.getState().goalId || undefined; // F1: optional company goal chosen for this message
   try {
-    await api.postMessage(conv, text, attachments, customer?.id, undefined, goalId);
+    const hs = useHelpers.getState();
+    await api.postMessage(conv, text, attachments, customer?.id, undefined, goalId, conv === "office" && hs.enabled && hs.free);
   } catch (e) {
     if (!customer && conv === "office" && /-> (404|405|501)\b/.test(String((e as Error)?.message))) { await api.postRequest(text); return; }
     throw e;

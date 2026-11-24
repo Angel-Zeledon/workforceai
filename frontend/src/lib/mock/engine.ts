@@ -33,6 +33,7 @@ import { MockAgentHistory } from "./agent-history-mock";
 import { MockPositions } from "./positions-mock";
 import { MockCustomers } from "./customers-mock";
 import { MockGoals } from "./goals-mock";
+import { MockHelpers } from "./helpers-mock";
 import { tr } from "../i18n-core";
 import { draftSlug } from "./draft";
 import type { RequestAudit, TaskAudit } from "../auditLogic";
@@ -229,6 +230,11 @@ export class MockBackend {
   }); // B4: daily stand-up and weekly retro (/rituals/*, ritual.held)
   private shield = new MockShield((t, p, a) => this.emit(t, p, a), () => this.agents, ORG); // B10: security.alert demo, /audit security log, traces
   private rehearsal = new MockRehearsal((t, p, a) => this.emit(t, p, a)); // B9: rehearsal switches, would-have-done log, verdicts
+  private helpers = new MockHelpers({
+    emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), uid, nowIso, assistantId: () => this.agents.find((a) => a.role === "assistant")?.id ?? "assistant",
+    addTask: (t) => { this.tasks.push(t); }, emitTask: (type, t) => this.emitTask(type, t),
+    finishRequest: (id) => { const r = this.requests.find((x) => x.id === id); if (r) { r.status = "done"; this.emit("request.completed", { request_id: id, report_id: null }); this.pushMetrics(); } },
+  }); // temporary helpers: helpers.* events, /requests/{id}/helpers
   private debates = new MockDebates({ emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agents: () => this.agents }); // B5 team debates
   /** request id -> the person asked for a debate ([[debate]]) or the request is a decision between alternatives */
   private debateWanted = new Map<string, ReturnType<typeof MockDebates.wants>>();
@@ -239,7 +245,7 @@ export class MockBackend {
     this.agents = SEED_AGENTS.map((a) => ({ ...a, metrics: { ...a.metrics }, state: "idle" as AgentState, activity: "Disponible", current_task_id: null, progress: 0 }));
     this.tasks = []; this.requests = []; this.conversations = []; this.messages = {}; this.approvals = [];
     this.reports = []; this.audits.clear(); this.evidence?.clear(); this.activity = []; this.errorsCount = 0; this.chat?.reset(); this.hist?.reset(); this.decisions.clear(); this.counter.clear(); this.specs.clear(); this.running.clear();
-    this.debates?.reset(); this.debateWanted?.clear(); this.agentHist?.reset(); this.positions?.reset();
+    this.helpers?.reset(); this.debates?.reset(); this.debateWanted?.clear(); this.agentHist?.reset(); this.positions?.reset();
     this.seedDeptApproval();
   }
 
@@ -390,7 +396,10 @@ export class MockBackend {
     this.messages[conv.id] = [];
     this.sendMessage(conv, "user", "assistant", "chat", text);
     this.pushMetrics();
-    this.orchestrate(req, conv).catch(() => { /* cancelled by reset */ });
+    const plan = () => { this.orchestrate(req, conv).catch(() => { /* cancelled by reset */ }); };
+    // temporary helpers: a list of 4+ things or several attachments is offered as a split; the plan waits for the answer
+    const owner = buildPlan(text).find((s) => s.agent !== "assistant")?.agent ?? "assistant";
+    if (!this.helpers.propose(req, owner, plan)) plan();
     return req.id;
   }
 
@@ -686,7 +695,7 @@ export class MockBackend {
     if (this.roles.matches(method, seg)) {
       if (method === "GET") return this.roles.list(q);
       const res = this.roles.hire(body, this.agents);
-      this.emit("hello", { agents: this.agents });
+      this.emit("hello", { agents: this.agents, helpers_enabled: true, helper_groups: this.helpers.all() });
       return res;
     }
     if (this.cmds.matches(seg)) return this.cmds.handle(method, seg, q, body);
@@ -702,6 +711,7 @@ export class MockBackend {
     });
     if (this.roi.matches(seg)) return this.roi.handle(method, seg, q, body);
     if (this.inbox.matches(method, seg)) return this.inbox.handle(method, seg, body, () => this.projectsBatch(body));
+    if (this.helpers.matches(seg)) return this.helpers.handle(method, seg, body);
     if (this.debates.matches(seg)) return this.debates.handle(method, seg, q, body);
     if (this.hist.matches(method, seg, q)) return this.hist.handle(method, seg, q, body);
     if (this.rewards.matches(seg)) return this.rewards.handle(method, seg, q, body);
@@ -760,7 +770,8 @@ export class MockBackend {
       if (r0 === "requests" && r1) {
         const request = this.requests.find((r) => r.id === r1);
         const goal = request ? this.goals.refOf(request.id) : undefined;
-        return { request: request && goal ? { ...request, goal_id: goal.id, goal } : request, tasks: this.tasks.filter((t) => t.request_id === r1) };
+        const helper_group = this.helpers.groupOf(r1);
+        return { request: request && goal ? { ...request, goal_id: goal.id, goal } : request, tasks: this.tasks.filter((t) => t.request_id === r1), ...(helper_group ? { helper_group } : {}) };
       }
       if (r0 === "conversations" && !r1) return this.conversations;
       if (r0 === "conversations" && r1 && r2 === "messages") {
@@ -784,6 +795,7 @@ export class MockBackend {
       if (r0 === "agents" && r1 && r2 === "trust" && seg[3] === "evaluate") { const x = mockTrust(this.agent(r1)); return { methodology: x.methodology, agent: x.agent }; }
       if ((r0 === "messages" && !r1 || r0 === "requests") && body?.goal_id) this.goals.assertLinkable(String(body.goal_id)); // F1
       if (r0 === "messages" && !r1 && body?.customer_id && !this.customers.hasCustomer(String(body.customer_id))) throw new Error("customer not found"); // B12
+      if (r0 === "messages" && !r1) this.helpers.note(String(body?.text || ""), Array.isArray(body?.attachments) ? body.attachments.length : 0, body?.helpers === true);
       if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : []);
       if (r0 === "requests") {
         const cid = body?.customer_id ? String(body.customer_id) : "";
@@ -833,7 +845,7 @@ export class MockBackend {
         this.stalls.reset();
         this.decisions.clear();
         this.seed();
-        this.emit("hello", { agents: this.agents });
+        this.emit("hello", { agents: this.agents, helpers_enabled: true, helper_groups: this.helpers.all() });
         this.pushMetrics();
         return { ok: true };
       }
