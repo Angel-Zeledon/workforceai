@@ -7311,5 +7311,13 @@
   "helpers.part.items": "Itens {from} a {to}",
   "helpers.part.summary": "Resultado de: {label}",
   "helpers.join.title": "Juntar os resultados",
-  "helpers.join.summary": "{done} de {total} partes reunidas em um relatório."
+  "helpers.join.summary": "{done} de {total} partes reunidas em um relatório.",
+  "helpers.fig.name": "Ajudante {n} · {part} · {state}",
+  "helpers.fig.working": "lendo",
+  "helpers.fig.queued": "esperando",
+  "helpers.fig.failed": "falhou",
+  "helpers.fig.more": "+{n}",
+  "helpers.fig.moreTitle": "mais {n} ajudantes",
+  "helpers.fig.label": "+{n} ajudantes",
+  "helpers.fig.label1": "+1 ajudante"
 }
