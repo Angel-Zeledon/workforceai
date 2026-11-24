@@ -8,6 +8,7 @@ import { Loading } from "../../ui";
 import { BlockBoundary } from "./BlockBoundary";
 import { Composer } from "./Composer";
 import { RunBlock } from "./RunBlock";
+import { HelperProposal, useProposals } from "../../helpers/HelperProposal";
 import { convOf, exampleRoles, inProgress, OFFICE_CONV } from "./workspaceLogic";
 
 const KNOWN_ROLES = new Set(["sales", "analyst", "accounting", "hr", "legal", "operations", "assistant"]);
@@ -69,6 +70,7 @@ export function WorkThread({ target, onTarget, autoFocus }: { target: string | n
   const loadChat = useStore((s) => s.loadChat);
   const setDraft = useStore((s) => s.setDraft);
   const conv = convOf(target);
+  const proposals = useProposals();
   useEffect(() => { loadChat(OFFICE_CONV); }, [loadChat]);
   const running = useMemo(() => inProgress(requests, Object.values(tasks), { agent: target }).slice(0, 2), [requests, tasks, target]);
   const empty = loaded && target === null && office.length === 0 && Object.keys(requests).length === 0;
@@ -94,6 +96,11 @@ export function WorkThread({ target, onTarget, autoFocus }: { target: string | n
             </BlockBoundary>
           </>
         )}
+      {loaded && proposals.length > 0 && (
+        <div data-testid="work-proposals" className="max-h-[46%] shrink-0 space-y-2 overflow-y-auto border-t border-line px-3 py-2 md:px-5">
+          {proposals.map((g) => <div key={g.id} className="mx-auto w-full max-w-3xl"><BlockBoundary name={`helpers-${g.id}`}><HelperProposal group={g} /></BlockBoundary></div>)}
+        </div>
+      )}
       {loaded && !empty && running.length > 0 && (
         <div data-testid="work-running" role="status" aria-live="polite" className="max-h-[38%] shrink-0 space-y-2 overflow-y-auto border-t border-line px-3 py-2 md:px-5">
           {running.map((r) => <div key={r.id} className="mx-auto w-full max-w-3xl"><BlockBoundary name={`run-${r.id}`}><RunBlock row={r} collapsible defaultOpen={false} /></BlockBoundary></div>)}

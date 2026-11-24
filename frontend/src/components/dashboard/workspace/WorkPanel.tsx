@@ -10,6 +10,7 @@ import { Icon } from "../../icons";
 import { Loading, timeAgo, useAgentName } from "../../ui";
 import { BlockBoundary } from "./BlockBoundary";
 import { RunBlock } from "./RunBlock";
+import { HelperProposal, useProposals } from "../../helpers/HelperProposal";
 import { inProgress, needsYouItems, readyItems } from "./workspaceLogic";
 
 /** A block of the panel: a title with its number, or a single quiet line when there is nothing in it. */
@@ -37,11 +38,13 @@ function NeedsBlock() {
   const approvals = useStore((s) => s.approvals);
   const questions = useStore((s) => s.questions);
   const items = useMemo(() => needsYouItems(Object.values(approvals), Object.values(questions ?? {})), [approvals, questions]);
+  const props = useProposals();
   const [all, setAll] = useState(false);
   const shown = all ? items : items.slice(0, NEEDS_SHOWN);
   return (
-    <Block id="needs" title={t("work.panel.needs")} count={items.length} empty={t("work.panel.needs.empty")}>
+    <Block id="needs" title={t("work.panel.needs")} count={items.length + props.length} empty={t("work.panel.needs.empty")}>
       <ul className="space-y-2">
+        {props.map((g) => <li key={g.id}><BlockBoundary name={`helpers-${g.id}`}><HelperProposal group={g} compact /></BlockBoundary></li>)}
         {shown.map((it) => (
           <li key={`${it.kind}:${it.id}`}>
             <BlockBoundary name={`need-${it.id}`}>

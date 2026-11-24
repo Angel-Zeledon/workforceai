@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAgentName } from "../../ui";
 import { Icon } from "../../icons";
+import { useHelpers } from "@/lib/helpers";
+import { HelperProgress } from "../../helpers/HelperProgress";
 import type { RunRow, StepKind } from "./workspaceLogic";
 
 function StepMark({ kind }: { kind: StepKind }) {
@@ -18,6 +20,7 @@ export function RunBlock({ row, collapsible = false, defaultOpen = true }: { row
   const { t } = useT();
   const name = useAgentName();
   const [open, setOpen] = useState(defaultOpen);
+  const helperGroup = useHelpers((s) => (s.enabled ? Object.values(s.groups).filter((g) => g.request_id === row.id && g.status !== "declined" && g.status !== "proposed").pop() : undefined));
   const shown = !collapsible || open;
   const waiting = row.steps.some((s) => s.kind === "waiting");
   const status = row.status === "planning" && row.total === 0 ? t("work.run.planning")
@@ -54,7 +57,8 @@ export function RunBlock({ row, collapsible = false, defaultOpen = true }: { row
           ))}
         </ol>
       )}
-      {!shown || row.steps.length === 0 ? <div className="h-2.5" /> : null}
+      {shown && helperGroup && <HelperProgress group={helperGroup} />}
+      {!shown || (row.steps.length === 0 && !helperGroup) ? <div className="h-2.5" /> : null}
     </article>
   );
 }

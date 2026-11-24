@@ -60,7 +60,7 @@ export function needsYouItems(approvals: { id: string; status: string; created_a
   return out.sort((x, y) => +new Date(x.created_at) - +new Date(y.created_at));
 }
 
-export interface TaskLike { id: string; request_id: string; agent_id: string; status: string; title: string; created_at: string }
+export interface TaskLike { id: string; request_id: string; agent_id: string; status: string; title: string; created_at: string; /** a part of a helper group: it is shown by the helpers block, not as a step */ helper?: unknown }
 export interface RequestLike { id: string; text: string; status: string; created_at: string }
 
 const OPEN_REQUEST = new Set(["planning", "running", "awaiting_approval", "awaiting_confirmation", "paused"]);
@@ -84,7 +84,7 @@ export function inProgress(requests: Record<string, RequestLike>, tasks: TaskLik
   const rows: RunRow[] = [];
   for (const r of Object.values(requests)) {
     if (!isOpenRequest(r.status)) continue;
-    const ts = tasks.filter((t) => t.request_id === r.id).sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
+    const ts = tasks.filter((t) => t.request_id === r.id && !t.helper).sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
     if (opts.agent && !ts.some((t) => t.agent_id === opts.agent)) continue;
     const steps = ts.map((t) => ({ id: t.id, title: t.title, agent_id: t.agent_id, kind: stepKind(t.status) }));
     const done = steps.filter((s) => s.kind === "done").length;

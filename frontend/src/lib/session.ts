@@ -124,6 +124,7 @@ async function decideMode(): Promise<SessionStatus> {
     // An older backend without the endpoint is an open demo.
     const cfg = res.ok ? await res.json() : null;
     enabled = cfg?.enabled === true;
+    if (cfg?.helpers_enabled === true) void import("./helpers").then((m) => m.useHelpers.getState().setEnabled(true));
     if (enabled) useSession.setState({ flags: { verification: cfg?.verification === true, trial: cfg?.trial === true, passwordReset: cfg?.password_reset === true } });
   } catch { enabled = false; }
   if (!enabled) { useSession.setState({ status: "disabled" }); return "disabled"; }

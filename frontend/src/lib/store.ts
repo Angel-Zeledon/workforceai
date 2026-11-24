@@ -9,6 +9,7 @@ import { isRewardsFrame, useRewards } from "./rewards";
 import { isConnectionsFrame, useConnections } from "./connections/store";
 import { useRituals } from "./rituals";
 import { isShieldFrame, useShield } from "./shield";
+import { isHelpersFrame, useHelpers } from "./helpers";
 import { isRehearsalFrame, useRehearsal } from "./rehearsal";
 import { LINK_IMPORT_EVENT, useLinkImportsLive } from "./linkImportsApi";
 import { isNeedsYouFrame } from "./needsYouLogic";
@@ -191,6 +192,7 @@ export const useStore = create<State>((set, get) => ({
     if (f.type === "provider.no_balance") useProviderAlert.setState({ noBalance: true });
     if (f.type === "provider.no_vision") useProviderAlert.setState({ noVision: true });
     if (isNeedsYouFrame(f.type) || f.type === "hello") refreshNeedsYou(); // "Te necesitan": reload the badge (and the list when open)
+    if (isHelpersFrame(f.type) || f.type === "hello") useHelpers.getState().applyFrame(f); // temporary helpers: groups + the helpers_enabled flag
     if (f.type === "hello") { useArtifacts.getState().load(); useConnections.getState().applyFrame(f); void useRewards.getState().load(); }
     if (isCostFrame(f.type)) useCost.getState().applyFrame(f);
     if (f.type === "ritual.held") useRituals.getState().applyFrame(f); // B4: participants walk to the meeting room
