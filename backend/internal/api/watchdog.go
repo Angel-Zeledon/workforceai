@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"fmt"
 	"net/http"
 	"slices"
@@ -54,7 +55,8 @@ func (s *server) listStalled(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	v = slices.DeleteFunc(v, func(t application.StalledTask) bool { return !ws.agent(t.AgentID) })
+	ws.preloadTasks()
+	v = slices.DeleteFunc(v, func(t application.StalledTask) bool { return !ws.seesStalled(t) })
 	writeJSON(w, http.StatusOK, list(v))
 }
 
@@ -73,6 +75,22 @@ func (s *server) scanStalled(w http.ResponseWriter, r *http.Request) {
 	if s.Rec != nil {
 		s.Rec.Audit(r.Context(), domain.AuditLog{Actor: s.actor(r), Action: "watchdog.scanned", Entity: "watchdog", EntityID: "scan",
 			Details: map[string]any{"stalled": len(res), "raised": raised}})
+	}
+	// D3: the sweep covers everyone's work; the answer names only what the person sees (titles, counts)
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	if !ws.open() {
+		ws.preloadTasks()
+		res = slices.DeleteFunc(res, func(x application.StallScanResult) bool { return !ws.seesStalled(x.StalledTask) })
+		raised = 0
+		for _, x := range res {
+			if x.Raised {
+				raised++
+			}
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"results": res, "raised": raised})
 }
@@ -93,9 +111,13 @@ func (s *server) stallFor(r *http.Request) (stallView, error) {
 	if err := ws.load(); err != nil {
 		return stallView{}, err
 	}
+	if !ws.open() && !ws.task(d.Task) { // the task itself (the route guards it too)
+		return stallView{}, cmp.Or(ws.err, notFound("task", d.Task.ID))
+	}
+	ws.preloadTasks()
 	v := stallView{StallDetail: d}
 	v.Candidates = slices.DeleteFunc(slices.Clone(d.Candidates), func(c application.Candidate) bool { return !ws.agent(c.ID) })
-	v.Cascade = slices.DeleteFunc(slices.Clone(d.Cascade), func(c application.CascadeTask) bool { return !ws.agent(c.AgentID) })
+	v.Cascade = slices.DeleteFunc(slices.Clone(d.Cascade), func(c application.CascadeTask) bool { return !ws.agent(c.AgentID) || !ws.taskID(c.ID) })
 	v.HiddenCascade = len(d.Cascade) - len(v.Cascade)
 	return v, nil
 }
@@ -157,4 +179,9 @@ func (s *server) recoverStall(w http.ResponseWriter, r *http.Request, action str
 		return
 	}
 	writeJSON(w, http.StatusAccepted, res)
+}
+
+// seesStalled reports whether the person sees a stalled task: the work of its agent, and the office its task was asked from.
+func (w *workScope) seesStalled(t application.StalledTask) bool {
+	return w.agent(t.AgentID) && w.taskID(t.TaskID) // the task itself, not its whole request (a request may mix offices)
 }

@@ -201,3 +201,53 @@ func TestOfficeLeakTracesFollowTheTaskAndRequest(t *testing.T) {
 		}
 	}
 }
+
+// ---- 4. stalled work ----
+
+func TestOfficeLeakStalledWorkFollowsTheTaskOffice(t *testing.T) {
+	w := newLeakWorld(t)
+	e, now := w.e, time.Now().UTC()
+	// a dependent of General's task that was asked for the private office: the cancellation of the first stops it
+	if err := e.store.CreateTask(context.Background(), w.org, domain.Task{ID: "dep-ABIERTO", RequestID: "req-ABIERTO", Title: "SECRETO-dependiente", AgentID: "assistant",
+		OfficeID: w.soporte, Status: domain.TaskPending, DependsOn: []string{"task-ABIERTO"}, CreatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{"/stalled-work", "/tasks/task-ABIERTO/stall"} {
+		if w.sees(w.owner, "GET", p, "SECRETO", nil) {
+			t.Fatalf("admin outside the office: GET %s shows the private office's work", p)
+		}
+		if !w.sees(w.owner, "GET", p, "ABIERTO-tarea", nil) {
+			t.Fatalf("admin outside the office: GET %s lacks General's stalled task", p)
+		}
+	}
+	_, raw := e.do("GET", api1+"/tasks/task-ABIERTO/stall", w.owner, nil, nil)
+	if !strings.Contains(string(raw), `"hidden_cascade":1`) {
+		t.Fatalf("the hidden dependent is not counted: %s", raw)
+	}
+	if resp, _ := e.do("GET", api1+"/tasks/task-SECRETO/stall", w.owner, nil, nil); resp.StatusCode != 404 {
+		t.Fatalf("the stall of a hidden task = %d, want 404", resp.StatusCode)
+	}
+	// the scan names no title of work the person does not see
+	scan := func(token string) string {
+		resp, raw := e.do("POST", api1+"/stalled-work/scan", token, nil, nil)
+		if resp.StatusCode != 200 {
+			t.Fatalf("scan = %d %s", resp.StatusCode, raw)
+		}
+		return string(raw)
+	}
+	if got := scan(w.owner); strings.Contains(got, "SECRETO") || !strings.Contains(got, "ABIERTO-tarea") {
+		t.Fatalf("the scan of an admin outside the office: %s", got)
+	}
+	// the member of the office reads it all
+	for p, want := range map[string]string{"/stalled-work": "SECRETO-tarea", "/tasks/task-SECRETO/stall": "SECRETO-tarea"} {
+		if !w.sees(w.chief, "GET", p, want, nil) {
+			t.Fatalf("the member does not see GET %s", p)
+		}
+	}
+	if !w.sees(w.chief, "GET", "/tasks/task-ABIERTO/stall", "SECRETO-dependiente", nil) {
+		t.Fatal("the member does not see the dependent in the cascade")
+	}
+	if got := scan(w.chief); !strings.Contains(got, "SECRETO-tarea") {
+		t.Fatalf("the scan of the member lacks the office's task: %s", got)
+	}
+}
