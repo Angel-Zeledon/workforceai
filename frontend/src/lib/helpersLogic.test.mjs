@@ -10,10 +10,10 @@ const G = (extra = {}) => ({
 });
 
 test("helper tasks are recognised and filtered out of lists", () => {
-  const ts = [{ id: "a" }, { id: "b", helper: { group_id: "g1" } }];
+  const ts = [{ id: "a" }, { id: "b", helper: { group_id: "g1", index: 1 } }, { id: "c", helper: { group_id: "g1", index: 0 } }]; // index 0: the responsible joins the parts, an ordinary task
   assert.equal(isHelperTask(ts[1]), true);
   assert.equal(isHelperTask(ts[0]), false);
-  assert.deepEqual(withoutHelperTasks(ts).map((t) => t.id), ["a"]);
+  assert.deepEqual(withoutHelperTasks(ts).map((t) => t.id), ["a", "c"]);
 });
 
 test("count is clamped between 2 and the plan maximum", () => {

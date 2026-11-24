@@ -8,7 +8,7 @@ export interface GroupLike {
   id: string; request_id: string; owner_agent_id: string; count: number; max_count: number; parallel: number;
   parts: PartLike[]; estimate: { min_usd: number; max_usd: number }; cap_usd: number; spent_usd: number; status: string;
 }
-export interface TaskWithHelper { helper?: { group_id: string } | null }
+export interface TaskWithHelper { helper?: { group_id: string; index?: number } | null }
 
 export type PartKind = "done" | "active" | "queued" | "failed" | "stopped";
 
