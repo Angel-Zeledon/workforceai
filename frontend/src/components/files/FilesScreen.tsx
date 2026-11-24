@@ -57,7 +57,7 @@ function NoDepartment({ admin, unavailable }: { admin: boolean; unavailable?: bo
         title={unavailable ? t("dept.unavailable") : t("dept.none.title")} body={unavailable ? t("dept.unavailable.body") : t("dept.none.body")}
         action={<div className="flex flex-wrap justify-center gap-2">
           <Link href="/files" prefetch={false} className="inline-flex min-h-10 items-center rounded-lg border border-line-strong px-4 text-[13px] font-medium text-ink hover:bg-panel2 sm:min-h-9">{t("files.title")}</Link>
-          {admin && <Link href="/org?tab=offices" prefetch={false} data-testid="dept-create"
+          {admin && <Link href="/offices" prefetch={false} data-testid="dept-create"
             className="inline-flex min-h-10 items-center rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover sm:min-h-9">{t("dept.create")}</Link>}
         </div>} />
     </div>

@@ -140,7 +140,7 @@ export function TeamPreviewPanel({ teamKey, onBack, onInstalled }: { teamKey: st
               className="min-h-10 rounded-md bg-accent px-5 py-2 text-xs font-semibold text-white hover:bg-accent-hover disabled:opacity-50 sm:min-h-0">
               {busy ? t("teams.hire.busy") : t("teams.hire.button")}
             </button>
-            {note?.ok && <button type="button" data-testid="team-see-agents" onClick={() => go("/org")}
+            {note?.ok && <button type="button" data-testid="team-see-agents" onClick={() => go("/agents")}
               className="min-h-10 rounded-md border border-line px-4 py-2 text-xs font-semibold text-ink2 hover:bg-panel2 sm:min-h-0">{t("teams.seeAgents")}</button>}
           </div>
         </section>

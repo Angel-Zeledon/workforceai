@@ -98,7 +98,7 @@ export function OnboardingWizard({ onClose, onDone }: { onClose: () => void; onD
           </div>
           {packKey && (
             // F2: the same preview as the Equipos page, in another tab so the choices made here are kept
-            <a href={`/teams?pack=${encodeURIComponent(packKey)}`} target="_blank" rel="noreferrer" data-testid="onb-teams-link"
+            <a href={`/offices?pack=${encodeURIComponent(packKey)}`} target="_blank" rel="noreferrer" data-testid="onb-teams-link"
               className="mt-3 inline-block text-[12.5px] font-semibold text-accent underline-offset-2 hover:underline">{t("onb.pack.teamsLink")}</a>
           )}
         </div>

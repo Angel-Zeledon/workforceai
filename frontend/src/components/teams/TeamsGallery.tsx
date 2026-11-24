@@ -36,9 +36,9 @@ export function TeamsGallery({ team, pack, template }: { team?: string; pack?: s
     return () => { alive = false; };
   }, [locale, tick]);
 
-  const open = (key: string) => go(`/teams?team=${encodeURIComponent(key)}${pack ? `&pack=${encodeURIComponent(pack)}` : ""}`);
-  const openTemplate = (id: string) => go(`/teams?template=${encodeURIComponent(id)}`);
-  const back = () => go(`/teams${pack ? `?pack=${encodeURIComponent(pack)}` : ""}`);
+  const open = (key: string) => go(`/offices?team=${encodeURIComponent(key)}${pack ? `&pack=${encodeURIComponent(pack)}` : ""}`);
+  const openTemplate = (id: string) => go(`/offices?template=${encodeURIComponent(id)}`);
+  const back = () => go(`/offices${pack ? `?pack=${encodeURIComponent(pack)}` : ""}`);
 
   const importFile = async (f: File | undefined) => {
     if (!f) return;
