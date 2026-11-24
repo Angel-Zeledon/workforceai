@@ -209,6 +209,9 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	rs.style = o.loadStyle(ctx)
 	rs.chat = chatLinkFrom(ctx)
 	received := map[string]any{"request_id": req.ID, "text": text}
+	if req.OfficeID != "" {
+		received["office_id"] = req.OfficeID // the screens of that office show it at once
+	}
 	if RehearsalFrom(ctx) { // B9: the whole request is a rehearsal (persisted in the run meta)
 		rs.ext.rehearsal = true
 		o.rehearsal.MarkRequest(o.org(ctx), req.ID)
