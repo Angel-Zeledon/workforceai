@@ -64,7 +64,7 @@ export function TasksView() {
   const [filter, setFilter] = useState<Filter>("all");
   const [request, setRequest] = useState("all");
   const [open, setOpen] = useState<string | null>(null);
-  const all = useMemo(() => Object.values(tasks).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)), [tasks]);
+  const all = useMemo(() => Object.values(tasks).filter((x) => !x.helper).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)), [tasks]);
   const inScope = all.filter((x) => request === "all" || x.request_id === request);
   const groupOf = (x: Task) => GROUPS.find((g) => (g.statuses as readonly string[]).includes(x.status))?.id ?? "queued";
   const count = (f: Filter) => inScope.filter((x) => FILTER_GROUPS[f].includes(groupOf(x))).length;
