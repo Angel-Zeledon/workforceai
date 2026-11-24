@@ -35,6 +35,11 @@ func WithRequestOffice(ctx context.Context, office string) context.Context {
 	return context.WithValue(ctx, requestOfficeKey{}, office)
 }
 
+// WithoutRequestOffice returns ctx with no request office: what the agent's BASE office is, whatever it is asked for.
+func WithoutRequestOffice(ctx context.Context) context.Context {
+	return context.WithValue(ctx, requestOfficeKey{}, "")
+}
+
 // RequestOfficeFrom is the office ctx's work is asked from ("" = unknown).
 func RequestOfficeFrom(ctx context.Context) string {
 	s, _ := ctx.Value(requestOfficeKey{}).(string)

@@ -77,7 +77,7 @@ func coverage(text string, terms []string) float64 {
 func docItem(h DocHit, terms []string) Item {
 	d := h.Doc
 	return Item{cover: coverage(d.Title+" "+d.Body, terms), ID: d.ID, Ref: d.Ref, Kind: d.Kind, Title: d.Title, Snippet: Passage(d.Body, terms, MaxSnippetChars), AgentID: d.AgentID,
-		ProjectID: d.ProjectID, Project: d.ProjectName, SourceRef: d.SourceRef, At: d.UpdatedAt, Score: h.Score, Deletable: true}
+		ProjectID: d.ProjectID, Project: d.ProjectName, SourceRef: d.SourceRef, At: d.UpdatedAt, Score: h.Score, Deletable: true, scope: d.Scope}
 }
 
 // DriveFiles is the FileSource over the organization's drive: it searches only
