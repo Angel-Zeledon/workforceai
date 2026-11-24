@@ -24,6 +24,8 @@ export interface Task {
   created_at: string; started_at: string | null; finished_at: string | null; output: StructuredOutput | null;
   /** plain-language reason why this agent got the task (task.created.assigned_reason) */
   assigned_reason?: string | null;
+  /** Temporary helpers: this task is one part of a helper group (never an employee). Absent = a normal task. */
+  helper?: { group_id: string; index: number; total: number; label: string };
 }
 export type MessageKind = "chat" | "delegation" | "consult" | "answer" | "system";
 export interface Message {
@@ -99,6 +101,16 @@ export interface ErrorItem { id: string; ts: string; agent_id: string | null; me
 
 /** Chat routing contract (docs/architecture/chat-routing.md): conversation is "office" or "agent:<id>". */
 export type ChatConversationId = string;
+
+/** Temporary helpers (docs/superpowers/specs/2026-11-23-ayudantes-temporales-design.md): one owner splits a request into parts. */
+export type HelperGroupStatus = "proposed" | "running" | "joining" | "done" | "stopped" | "failed" | "declined";
+export type HelperPartStatus = "pending" | "running" | "done" | "failed" | "stopped";
+export interface HelperPart { index: number; label: string; task_id?: string; status?: HelperPartStatus | string }
+export interface HelperGroup {
+  id: string; request_id: string; owner_agent_id: string; mode: "position" | "free"; count: number; max_count: number; parallel: number;
+  parts: HelperPart[]; estimate: { min_usd: number; max_usd: number }; cap_usd: number; spent_usd: number;
+  status: HelperGroupStatus; accepted_by?: string;
+}
 /** A drive file a chat message points to (never content): what an agent produced or the user attached. */
 export interface FileRef {
   file_id?: string; path: string; name: string; mime?: string; size?: number; version?: number;
