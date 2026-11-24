@@ -12,6 +12,9 @@ import { BlockBoundary } from "./BlockBoundary";
 import { RunBlock } from "./RunBlock";
 import { HelperProposal, ProposalPointer, useProposals, useProposedRequests } from "../../helpers/HelperProposal";
 import { inProgress, needsYouItems, readyItems } from "./workspaceLogic";
+import { useCurrentOffice } from "@/lib/currentOffice";
+import { ALL_OFFICES, inOffice, officeOfApproval } from "@/lib/currentOfficeLogic";
+
 
 /** A block of the panel: a title with its number, or a single quiet line when there is nothing in it. */
 function Block({ id, title, count, empty, children }: { id: string; title: string; count: number; empty: string; children: ReactNode }) {
@@ -37,7 +40,13 @@ function NeedsBlock({ compactProposals }: { compactProposals: boolean }) {
   const { t } = useT();
   const approvals = useStore((s) => s.approvals);
   const questions = useStore((s) => s.questions);
-  const items = useMemo(() => needsYouItems(Object.values(approvals), Object.values(questions ?? {})), [approvals, questions]);
+  const requests = useStore((s) => s.requests);
+  const tasks = useStore((s) => s.tasks);
+  const { current } = useCurrentOffice(); // only what belongs to the office on screen (all of them with "Todas mis oficinas")
+  const items = useMemo(() => needsYouItems(
+    Object.values(approvals).filter((a) => inOffice(current, officeOfApproval(a, tasks, requests))),
+    Object.values(questions ?? {}).filter((q) => inOffice(current, requests[q.request_id]?.office_id)),
+  ), [approvals, questions, current, tasks, requests]);
   const props = useProposals();
   const [all, setAll] = useState(false);
   const shown = all ? items : items.slice(0, NEEDS_SHOWN);
@@ -69,7 +78,11 @@ function RunningBlock() {
   const requests = useStore((s) => s.requests);
   const tasks = useStore((s) => s.tasks);
   const proposed = useProposedRequests();
-  const rows = useMemo(() => inProgress(requests, Object.values(tasks)).filter((r) => !proposed.has(r.id)), [requests, tasks, proposed]);
+  const { current } = useCurrentOffice();
+  const rows = useMemo(() => {
+    const mine = current === ALL_OFFICES ? requests : Object.fromEntries(Object.entries(requests).filter(([, r]) => inOffice(current, r.office_id)));
+    return inProgress(mine, Object.values(tasks)).filter((r) => !proposed.has(r.id));
+  }, [requests, tasks, proposed, current]);
   return (
     <Block id="running" title={t("work.panel.running")} count={rows.length} empty={t("work.panel.running.empty")}>
       <ul className="space-y-2">
@@ -85,7 +98,11 @@ function ReadyBlock({ onOpenReport }: { onOpenReport: () => void }) {
   const reports = useStore((s) => s.reports);
   const open = useFileViewer((s) => s.open);
   const name = useAgentName();
-  const items = useMemo(() => readyItems(chat, reports, 6), [chat, reports]);
+  const { current } = useCurrentOffice();
+  const items = useMemo(() => {
+    const mine = current === ALL_OFFICES ? chat : Object.fromEntries(Object.entries(chat).map(([k, l]) => [k, l.filter((m) => inOffice(current, m.office_id))]));
+    return readyItems(mine, reports, 6);
+  }, [chat, reports, current]);
   return (
     <Block id="ready" title={t("work.panel.ready")} count={items.length} empty={t("work.panel.ready.empty")}>
       <ul className="divide-y divide-line overflow-hidden rounded-[10px] border border-line bg-panel">
@@ -117,7 +134,10 @@ function ReadyBlock({ onOpenReport }: { onOpenReport: () => void }) {
 function DecidedBlock({ open }: { open: boolean }) {
   const { t } = useT();
   const approvals = useStore((s) => s.approvals);
-  const decided = useMemo(() => Object.values(approvals).filter((a) => a.status !== "pending").sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)), [approvals]);
+  const requests = useStore((s) => s.requests);
+  const tasks = useStore((s) => s.tasks);
+  const { current } = useCurrentOffice();
+  const decided = useMemo(() => Object.values(approvals).filter((a) => a.status !== "pending" && inOffice(current, officeOfApproval(a, tasks, requests))).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)), [approvals, current, tasks, requests]);
   if (!decided.length) return null;
   return (
     <details id="dash-decisions" data-testid="dash-decisions" open={open || undefined} className="group mx-3 mt-4 rounded-[10px] border border-line bg-panel">

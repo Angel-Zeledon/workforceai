@@ -8,6 +8,7 @@ import { Avatar } from "../../chat/ChatThread";
 import { Icon } from "../../icons";
 import { readable } from "../../ui";
 import { groupAgents, needsYouAgentIds, type RailGroup } from "./workspaceLogic";
+import { useOfficeAgentIds } from "@/lib/currentOffice";
 
 const SEARCH_FROM = 8; // with many agents a search box appears
 
@@ -47,7 +48,7 @@ const GROUP_KEY: Record<RailGroup, string> = { waiting: "work.team.waiting", wor
 /** The team as rows (no cards): who waits for you, who works, who is free. Picking one changes the conversation. */
 export function TeamRail({ target, onPick, onPanel, className = "" }: { target: string | null; onPick: (id: string | null) => void; onPanel: (id: string) => void; className?: string }) {
   const { t } = useT();
-  const order = useStore((s) => s.agentOrder);
+  const { ids: order } = useOfficeAgentIds();
   const agents = useStore((s) => s.agents);
   const approvals = useStore((s) => s.approvals);
   const questions = useStore((s) => s.questions);
@@ -88,7 +89,7 @@ export function TeamRail({ target, onPick, onPanel, className = "" }: { target: 
 /** Tablet: the same team as a strip of chips above the conversation (picking one changes who the box writes to). */
 export function TeamStrip({ target, onPick, onPanel }: { target: string | null; onPick: (id: string | null) => void; onPanel: (id: string) => void }) {
   const { t } = useT();
-  const order = useStore((s) => s.agentOrder);
+  const { ids: order } = useOfficeAgentIds();
   const agents = useStore((s) => s.agents);
   const chip = (active: boolean) => `inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium transition-colors ${active ? "border-accent bg-accent-soft text-accent" : "border-line bg-panel text-ink hover:bg-panel2"}`;
   return (

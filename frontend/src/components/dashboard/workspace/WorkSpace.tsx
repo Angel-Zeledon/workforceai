@@ -7,6 +7,7 @@ import { BlockBoundary } from "./BlockBoundary";
 import { TeamRail, TeamStrip } from "./TeamRail";
 import { WorkPanel } from "./WorkPanel";
 import { WorkThread } from "./WorkThread";
+import { useOfficeAgentIds } from "@/lib/currentOffice";
 import { MOBILE_TABS, panelLayout, validTarget, type MobileTab } from "./workspaceLogic";
 
 type Bp = "mobile" | "tablet" | "desktop";
@@ -28,6 +29,7 @@ export function WorkSpace({ picked, setPicked, onOpenReport, onOpenPanel, openDe
   const bp = useSyncExternalStore(subscribe, snapshot, () => "desktop" as Bp);
   const agents = useStore((s) => s.agents);
   const [tab, setTab] = useState<MobileTab>("chat");
+  const { ids: officeAgents } = useOfficeAgentIds();
   const target = validTarget(picked, agents);
   const openAgent = useStore((s) => s.selectedAgentId);
   const layout = panelLayout(bp, openAgent);
@@ -35,6 +37,8 @@ export function WorkSpace({ picked, setPicked, onOpenReport, onOpenPanel, openDe
   const questions = useStore((s) => s.questions);
   const needs = useMemo(() => pendingTotal(approvals, questions ?? {}), [approvals, questions]);
   useEffect(() => { if (picked && !agents[picked] && Object.keys(agents).length) setPicked(null); }, [picked, agents]);
+  // changing office: a colleague who is not in it can no longer be the one written to
+  useEffect(() => { if (picked && agents[picked] && officeAgents.length && !officeAgents.includes(picked)) setPicked(null); }, [picked, officeAgents]);
   const pick = (id: string | null) => { setPicked(id); setTab("chat"); };
   const thread = <BlockBoundary name="conversation"><WorkThread target={target} onTarget={pick} autoFocus={bp === "desktop"} layout={layout} openAgent={openAgent} /></BlockBoundary>;
   const live = (

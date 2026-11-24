@@ -5,7 +5,7 @@ import { useT } from "@/lib/i18n";
 import { ChatInput } from "../../chat/ChatThread";
 import { useHelpers } from "@/lib/helpers";
 import { convOf } from "./workspaceLogic";
-import { usePickedOffice, useCurrentOffice } from "@/lib/currentOffice";
+import { usePickedOffice, useCurrentOffice, useOfficeAgentIds } from "@/lib/currentOffice";
 import { ALL_OFFICES } from "@/lib/currentOfficeLogic";
 
 /** While the header shows "Todas mis oficinas", the message must say which office it goes to (General by default). */
@@ -35,7 +35,7 @@ const FREE = "__helpers__";
  */
 export function Composer({ target, onTarget, autoFocus, hero = false }: { target: string | null; onTarget: (id: string | null) => void; autoFocus: boolean; hero?: boolean }) {
   const { t } = useT();
-  const order = useStore((s) => s.agentOrder);
+  const { ids: order } = useOfficeAgentIds();
   const agents = useStore((s) => s.agents);
   const helpersOn = useHelpers((s) => s.enabled);
   const free = useHelpers((s) => s.free) && helpersOn && !target;

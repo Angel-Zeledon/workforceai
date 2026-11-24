@@ -12,6 +12,8 @@ import { ALL_OFFICES, currentOfficeKey, filterAgentIds, officeChoices, officeOf,
 /** The office the person is in, per person and device. Pure rules: currentOfficeLogic.ts. */
 interface State {
   stored: string; offices: OfficeView[] | null; bases: Record<string, string>; userId: string | null;
+  /** accepted/pending "also works in" offices per agent (loaded once by the shell, only while an office is chosen) */
+  alsoIn: Record<string, AlsoIn[]>;
   boot: (userId: string | null) => void; refresh: () => Promise<void>; choose: (id: string) => void;
 }
 
@@ -27,7 +29,7 @@ function pointLayout(id: string, offices: OfficeView[] | null) {
 }
 
 export const useCurrentOfficeStore = create<State>((set, get) => ({
-  stored: ALL_OFFICES, offices: null, bases: {}, userId: null,
+  stored: ALL_OFFICES, offices: null, bases: {}, userId: null, alsoIn: {},
   boot: (userId) => {
     if (get().userId === userId && get().offices) return;
     set({ userId, stored: read(currentOfficeKey(userId)) || ALL_OFFICES });
@@ -56,6 +58,15 @@ export const useCurrentOfficeStore = create<State>((set, get) => ({
 /** Loads the offices once the session is known; mount it once in the shell. */
 export function useCurrentOfficeBoot() {
   const uid = useSession((s) => s.user?.id ?? null);
+  const { current, hasSelector } = useCurrentOffice();
+  const order = useStore((s) => s.agentOrder);
+  // who also works in which office: only while one office is chosen (no requests otherwise)
+  const { enabled, views } = useAgentOffices(hasSelector && current !== ALL_OFFICES ? order : []);
+  useEffect(() => {
+    const out: Record<string, AlsoIn[]> = {};
+    if (enabled) for (const [id, v] of Object.entries(views)) out[id] = v.offices.map((r) => ({ id: r.office_id, pending: r.status === "pending" }));
+    useCurrentOfficeStore.setState({ alsoIn: out });
+  }, [enabled, views]);
   useEffect(() => {
     useCurrentOfficeStore.getState().boot(uid);
     const onVisible = () => { if (document.visibilityState === "visible") void useCurrentOfficeStore.getState().refresh(); };
@@ -80,13 +91,8 @@ export function useCurrentOffice() {
 export function useOfficeAgentIds(): { ids: string[]; alsoIn: Record<string, AlsoIn[]>; current: string } {
   const { current, bases, hasSelector } = useCurrentOffice();
   const order = useStore((s) => s.agentOrder);
+  const alsoIn = useCurrentOfficeStore((s) => s.alsoIn);
   const scoped = hasSelector && current !== ALL_OFFICES;
-  const { enabled, views } = useAgentOffices(scoped ? order : []);
-  const alsoIn = useMemo(() => {
-    const out: Record<string, AlsoIn[]> = {};
-    if (enabled) for (const [id, v] of Object.entries(views)) out[id] = v.offices.map((r) => ({ id: r.office_id, pending: r.status === "pending" }));
-    return out;
-  }, [enabled, views]);
   const ids = useMemo(() => (scoped ? filterAgentIds(order, current, (id) => bases[id], alsoIn) : order), [scoped, order, current, bases, alsoIn]);
   return { ids, alsoIn, current };
 }

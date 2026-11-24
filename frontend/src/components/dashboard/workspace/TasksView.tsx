@@ -10,6 +10,8 @@ import { Icon } from "../../icons";
 import { Empty, ReasonChip, timeAgo, useAgentName } from "../../ui";
 import { Avatar } from "../../chat/ChatThread";
 import { stepKind } from "./workspaceLogic";
+import { useCurrentOffice } from "@/lib/currentOffice";
+import { inOffice } from "@/lib/currentOfficeLogic";
 
 type Filter = "all" | "active" | "waiting" | "done" | "problem";
 const FILTERS: Filter[] = ["all", "active", "waiting", "done", "problem"];
@@ -64,7 +66,8 @@ export function TasksView() {
   const [filter, setFilter] = useState<Filter>("all");
   const [request, setRequest] = useState("all");
   const [open, setOpen] = useState<string | null>(null);
-  const all = useMemo(() => Object.values(tasks).filter((x) => !x.helper?.index).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)), [tasks]);
+  const { current } = useCurrentOffice();
+  const all = useMemo(() => Object.values(tasks).filter((x) => !x.helper?.index && inOffice(current, x.office_id ?? requests[x.request_id]?.office_id)).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)), [tasks, requests, current]);
   const inScope = all.filter((x) => request === "all" || x.request_id === request);
   const groupOf = (x: Task) => GROUPS.find((g) => (g.statuses as readonly string[]).includes(x.status))?.id ?? "queued";
   const count = (f: Filter) => inScope.filter((x) => FILTER_GROUPS[f].includes(groupOf(x))).length;
@@ -86,7 +89,7 @@ export function TasksView() {
           <select value={request} onChange={(e) => setRequest(e.target.value)} aria-label={t("work.tasks.request")}
             className="h-10 max-w-[240px] rounded-lg border border-line bg-panel px-2.5 text-[13px] text-ink outline-none focus:border-accent sm:h-9">
             <option value="all">{t("dash.tasks.allRequests")}</option>
-            {Object.values(requests).map((r) => <option key={r.id} value={r.id}>{r.text.slice(0, 48)}</option>)}
+            {Object.values(requests).filter((r) => inOffice(current, r.office_id)).map((r) => <option key={r.id} value={r.id}>{r.text.slice(0, 48)}</option>)}
           </select>
         </label>
       </div>
