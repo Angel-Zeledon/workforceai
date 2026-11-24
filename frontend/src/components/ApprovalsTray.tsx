@@ -29,8 +29,8 @@ export function ApprovalsTray() {
   const loaded = useStore((s) => s.loaded);
   useEffect(() => {
     if (!loaded) return; // the first real list decides, not the empty one before it
-    // a long list starts folded (it covered half the office); one or two, or something new, opens it
-    if (seen.current === null ? total > 0 && total <= 2 : total > seen.current) setOpen(true);
+    // a long list stays folded (it covered half the office; the pill pulses and shows the number): one or two open by themselves
+    if (total > (seen.current ?? 0) && total <= 2) setOpen(true);
     seen.current = total;
   }, [total, loaded]);
   if (!total) return null;
