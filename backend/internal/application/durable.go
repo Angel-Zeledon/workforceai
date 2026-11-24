@@ -54,10 +54,10 @@ import (
 
 // RunMeta is what a request execution needs to be rebuilt after a restart.
 type RunMeta struct {
-	RequestID      string   `json:"request_id"`
-	RequestedBy    string   `json:"requested_by"`
-	ConversationID string   `json:"conversation_id"`
-	ReadOnly       bool     `json:"read_only"`
+	RequestID      string `json:"request_id"`
+	RequestedBy    string `json:"requested_by"`
+	ConversationID string `json:"conversation_id"`
+	ReadOnly       bool   `json:"read_only"`
 	// Rehearsal (B9): the request runs as a rehearsal; it stays one after a restart.
 	Rehearsal      bool     `json:"rehearsal,omitempty"`
 	RemovedTaskIDs []string `json:"removed_task_ids"`

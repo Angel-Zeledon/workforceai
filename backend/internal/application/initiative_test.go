@@ -169,7 +169,7 @@ func TestInitiativeDismissListAndTaskFailedHook(t *testing.T) {
 	ctx := context.Background()
 	svc.TaskFailed(ctx, domain.Task{ID: "t1", AgentID: "sales", Title: "Enviar propuesta"}, errors.New("boom"))
 	svc.TaskFailed(ctx, domain.Task{ID: "t2", AgentID: "sales", Title: "enviar propuesta"}, errors.New("boom")) // same signal: deduped
-	svc.TaskFailed(ctx, domain.Task{ID: "t3"}, errors.New("no agent"))                                           // ignored
+	svc.TaskFailed(ctx, domain.Task{ID: "t3"}, errors.New("no agent"))                                          // ignored
 	list, err := svc.List(ctx, "", 0)
 	if err != nil || len(list) != 1 || list[0].Signal != application.SignalTaskFailed || list[0].Status != application.InitiativePending {
 		t.Fatalf("list = %+v %v", list, err)

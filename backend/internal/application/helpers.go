@@ -248,9 +248,10 @@ func (o *Orchestrator) helperEnsureTasks(ctx context.Context, req domain.Request
 	var union *domain.Task
 	for i := range all {
 		if h := all[i].Helper; h != nil && h.GroupID == g.ID {
-			if h.Index == 0 {
+			switch {
+			case isFinalUnion(h):
 				union = &all[i]
-			} else {
+			case h.Index > 0:
 				partTask[h.Index] = all[i]
 			}
 		}
@@ -267,14 +268,30 @@ func (o *Orchestrator) helperEnsureTasks(ctx context.Context, req domain.Request
 		keys[p.Index] = key
 		deps = append(deps, key)
 		amend.Add = append(amend.Add, NewTaskSpec{Key: key, AgentID: g.OwnerAgentID,
-			Title:  fmt.Sprintf("Ayudante %d de %d: %s", p.Index, g.Count, p.Label),
-			Helper: &domain.TaskHelper{GroupID: g.ID, Index: p.Index, Total: g.Count, Label: p.Label},
+			Title:       fmt.Sprintf("Ayudante %d de %d: %s", p.Index, g.Count, p.Label),
+			Helper:      &domain.TaskHelper{GroupID: g.ID, Index: p.Index, Total: g.Count, Label: p.Label},
 			Description: helperPartDescription(p, g.Count), AssignedReason: "Parte de un pedido repartido entre ayudantes"})
 	}
 	if union == nil {
+		if batch := helperBatchSize(o.cfg); len(g.Parts) > batch && len(keys) == len(g.Parts) {
+			// Many parts: the responsible joins them in batches first (tasks with helper.index 0, "unión parcial k"), so the
+			// final join reads a few results and not dozens (a batch whose results already fit passes through without a call).
+			var mids []string
+			for from := 0; from < len(deps); from += batch {
+				k := len(mids) + 1
+				key := fmt.Sprintf("mid%d", k)
+				mids = append(mids, key)
+				amend.Add = append(amend.Add, NewTaskSpec{Key: key, AgentID: g.OwnerAgentID, DependsOn: deps[from:min(from+batch, len(deps))],
+					Title:          fmt.Sprintf("Juntar un grupo de resultados (%d): %s", k, truncate(req.Text, 50)),
+					Helper:         &domain.TaskHelper{GroupID: g.ID, Index: 0, Total: g.Count, Label: fmt.Sprintf("%s %d", helperMidLabel, k)},
+					Description:    helperUnionDescription(req.Text, min(batch, len(deps)-from)) + " (junta solo este grupo; otra unión juntará los grupos)",
+					AssignedReason: "Junta un grupo de resultados de los ayudantes antes de la unión final"})
+			}
+			deps = mids
+		}
 		amend.Add = append(amend.Add, NewTaskSpec{Key: "union", AgentID: g.OwnerAgentID, DependsOn: deps,
-			Title:  "Juntar los resultados de los ayudantes: " + truncate(req.Text, 60),
-			Helper: &domain.TaskHelper{GroupID: g.ID, Index: 0, Total: g.Count, Label: "unión"},
+			Title:       "Juntar los resultados de los ayudantes: " + truncate(req.Text, 60),
+			Helper:      &domain.TaskHelper{GroupID: g.ID, Index: 0, Total: g.Count, Label: helperFinalLabel},
 			Description: helperUnionDescription(req.Text, g.Count), AssignedReason: "Junta lo que hicieron los ayudantes y firma el resultado"})
 	} else if len(keys) > 0 {
 		amend.Repoint = map[string][]string{union.ID: deps}
@@ -391,9 +408,10 @@ func (o *Orchestrator) helperRefresh(ctx context.Context, groupID string) (domai
 	var union *domain.Task
 	for i := range all {
 		if h := all[i].Helper; h != nil && h.GroupID == g.ID {
-			if h.Index == 0 {
+			switch {
+			case isFinalUnion(h):
 				union = &all[i]
-			} else {
+			case h.Index > 0:
 				byIdx[h.Index] = all[i]
 			}
 		}
@@ -629,10 +647,12 @@ func (o *Orchestrator) retryHelperPart(ctx context.Context, groupID string, part
 			o.helpers.mu.Unlock()
 			return domain.HelperGroup{}, err
 		}
-		if g.UnionTaskID != "" {
-			if u, err := o.store.GetTask(ctx, org, g.UnionTaskID); err == nil && u.Status == domain.TaskDone {
-				u.Status, u.FinishedAt, u.Output = domain.TaskBlocked, &now, nil
-				_ = o.store.UpdateTask(ctx, org, u)
+		if all, err := o.store.ListTasksByRequest(ctx, org, g.RequestID); err == nil {
+			for _, u := range all { // the final join and the batch joins that read the part run again after it
+				if u.Helper != nil && u.Helper.GroupID == g.ID && u.Helper.Index == 0 && u.Status == domain.TaskDone {
+					u.Status, u.FinishedAt, u.Output = domain.TaskBlocked, &now, nil
+					_ = o.store.UpdateTask(ctx, org, u)
+				}
 			}
 		}
 	}
@@ -679,3 +699,21 @@ func (o *Orchestrator) RetryHelperPart(ctx context.Context, groupID string, part
 	}
 	return g, err
 }
+
+const (
+	helperFinalLabel = "unión"
+	helperMidLabel   = "unión parcial"
+)
+
+// isFinalUnion is the joining task whose result is the request's; the other tasks with helper.index 0 are batch joins.
+func isFinalUnion(h *domain.TaskHelper) bool {
+	return h != nil && h.Index == 0 && !strings.HasPrefix(h.Label, helperMidLabel)
+}
+
+func isMidUnion(h *domain.TaskHelper) bool {
+	return h != nil && h.Index == 0 && strings.HasPrefix(h.Label, helperMidLabel)
+}
+
+// helperBatchSize is how many parts one batch join reads: the dependency budget over about 800 tokens of result per
+// part, between 2 and 10. A group of that many parts or fewer is joined by the final task alone.
+func helperBatchSize(c Config) int { return min(max(c.depBudget()/800, 2), 10) }

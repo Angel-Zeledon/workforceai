@@ -26,7 +26,7 @@ type FileResolver interface {
 func (o *Orchestrator) SetFileResolver(r FileResolver) { o.files.res = r }
 
 const (
-	maxTaskFiles   = 8 // files shown per task message
+	maxTaskFiles   = 8  // files shown per task message
 	maxAttachments = 10 // files per user message (the composer allows the same; more is a 400, never a silent cut)
 	maxFileTracked = 2000
 )
@@ -34,7 +34,7 @@ const (
 type chatFiles struct {
 	res FileResolver
 	mu  sync.Mutex
-	by  map[string][]string // task id -> written paths (in order, unique)
+	by  map[string][]string            // task id -> written paths (in order, unique)
 	ed  map[string]map[string]EditNote // task id -> path -> last fs.edit of it (agent edit)
 }
 

@@ -226,8 +226,8 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	// The background run keeps the lifetime of the orchestrator but carries the
 	// tenant of the request that started it.
 	rctx := WithRequestID(WithOrg(o.base, o.org(ctx)), req.ID)
-	rctx = WithCustomer(rctx, rs.customer)               // B12: the run works for this customer (tools re-resolve it from the request id)
-	rctx = WithWorkPriority(rctx, WorkPriorityFrom(ctx)) // queue priority (orgqueue.go)
+	rctx = WithCustomer(rctx, rs.customer)                           // B12: the run works for this customer (tools re-resolve it from the request id)
+	rctx = WithWorkPriority(rctx, WorkPriorityFrom(ctx))             // queue priority (orgqueue.go)
 	rctx = WithWorkPeople(WithWorkAgents(rctx, addressed...), asker) // D3: who receives its live events
 	o.track(req.ID)
 	o.wg.Add(1)
@@ -335,12 +335,12 @@ func (o *Orchestrator) finish(ctx context.Context, rs *run, tasks []domain.Task,
 	contributors := []string{}
 	joined := map[string]bool{} // helper groups whose responsible joined the parts: the report carries that result, not every part
 	for _, t := range tasks {
-		if t.Helper != nil && t.Helper.Index == 0 && outcomes[t.ID] == OutcomeDone {
+		if isFinalUnion(t.Helper) && outcomes[t.ID] == OutcomeDone {
 			joined[t.Helper.GroupID] = true
 		}
 	}
 	for _, t := range tasks {
-		if isHelperPart(t) && joined[t.Helper.GroupID] {
+		if (isHelperPart(t) || isMidUnion(t.Helper)) && joined[t.Helper.GroupID] {
 			continue
 		}
 		if outcomes[t.ID] == OutcomeDone {

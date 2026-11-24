@@ -61,14 +61,12 @@ func (o *Orchestrator) helperCoordinator(_ context.Context, t *chatTurn) (string
 		return "", fmt.Errorf("%w: helpers without a position are asked in the office conversation", domain.ErrInvalid)
 	}
 	for _, a := range t.agents {
-		if a.Role == "assistant" && a.ID != assistantID {
+		if a.Role == "assistant" {
 			return a.ID, nil
 		}
 	}
-	for _, a := range t.agents {
-		if a.ID != assistantID {
-			return a.ID, nil
-		}
+	if len(t.agents) > 0 {
+		return t.agents[0].ID, nil
 	}
 	return "", fmt.Errorf("%w: there is nobody in your office to coordinate the helpers", domain.ErrInvalid)
 }
@@ -139,7 +137,7 @@ func (o *Orchestrator) maybeProposeHelpers(ctx context.Context, rs *run, tasks [
 		owner = own[0].AgentID
 	}
 	agent, known := rs.agents[owner]
-	if owner == "" || owner == assistantID || !known {
+	if owner == "" || !known {
 		return domain.HelperGroup{}, false
 	}
 	org := o.org(ctx)

@@ -24,7 +24,9 @@ const (
 	webRounds      = 3
 )
 
-func isWebTool(tr ToolRequest) bool { return strings.EqualFold(strings.TrimSpace(tr.Tool), WebToolName) }
+func isWebTool(tr ToolRequest) bool {
+	return strings.EqualFold(strings.TrimSpace(tr.Tool), WebToolName)
+}
 
 // webGate applies the controls that do not depend on the organization's web setting. "" means allowed.
 func (o *Orchestrator) webGate(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, tr ToolRequest) string {

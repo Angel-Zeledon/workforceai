@@ -83,7 +83,11 @@ type holdState struct {
 }
 
 // SetHoldStore installs the durable store of holds (nil: holds are only in memory).
-func (o *Orchestrator) SetHoldStore(s HoldStore) { o.hold.mu.Lock(); o.hold.store = s; o.hold.mu.Unlock() }
+func (o *Orchestrator) SetHoldStore(s HoldStore) {
+	o.hold.mu.Lock()
+	o.hold.store = s
+	o.hold.mu.Unlock()
+}
 
 func (o *Orchestrator) holdStore() HoldStore {
 	o.hold.mu.Lock()
