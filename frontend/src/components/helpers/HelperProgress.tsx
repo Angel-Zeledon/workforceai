@@ -81,7 +81,7 @@ export function HelperProgress({ group: g }: { group: HelperGroup }) {
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <p className="text-[12.5px] font-semibold text-ink" data-testid="helper-title">{t("helpers.run.title", { name: first, n: g.count })}</p>
         <p role="status" aria-live="polite" className="text-[12px] text-ink2" data-testid="helper-count-line">
-          {t("helpers.run.progress", { done: c.done, total: c.total })}{c.failed > 0 && <span className="font-medium text-err"> · {t("helpers.run.failedN", { n: c.failed })}</span>}
+          {t("helpers.run.progress", { done: c.done, total: c.total })}{c.failed > 0 && <span className="font-medium text-err"> · {t("helpers.run.failedN", { count: c.failed })}</span>}
         </p>
       </div>
       <ul className="mt-2 space-y-1.5">

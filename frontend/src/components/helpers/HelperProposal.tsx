@@ -36,7 +36,7 @@ export function HelperProposal({ group, compact = false }: { group: HelperGroup;
     <section data-testid="helper-proposal" data-group={group.id} aria-labelledby={`${id}-t`} className="rounded-[10px] border border-line bg-panel p-3">
       <h4 id={`${id}-t`} className="text-[13.5px] font-semibold leading-snug text-ink">{t("helpers.proposal.title", { name: first, n })}</h4>
       <p className="mt-1 text-[12.5px] leading-snug text-ink2">
-        {group.mode === "free" ? t("helpers.proposal.body.free", { name: first, share }) : t("helpers.proposal.body", { name: first, share })}
+        {group.mode === "free" ? t("helpers.proposal.body.free", { name: first, count: share }) : t("helpers.proposal.body", { name: first, count: share })}
       </p>
       {group.parts.length > 0 && !compact && (
         <details className="group mt-1.5">
@@ -61,7 +61,7 @@ export function HelperProposal({ group, compact = false }: { group: HelperGroup;
           {t("helpers.proposal.decline", { name: first })}
         </button>
         <label className="flex items-center gap-1.5 text-[12.5px] text-ink2">
-          <span className="sr-only sm:not-sr-only">{t("helpers.proposal.change")}</span>
+          <span>{t("helpers.proposal.quantity")}</span>
           <select data-testid="helper-count" value={n} disabled={!!busy} aria-label={t("helpers.proposal.count")} onChange={(e) => setCount(Number(e.target.value))}
             className="h-11 rounded-lg border border-line bg-panel px-2 text-[13px] font-semibold text-ink outline-none focus:border-accent sm:h-10">
             {options.map((o) => <option key={o} value={o}>{o}</option>)}
