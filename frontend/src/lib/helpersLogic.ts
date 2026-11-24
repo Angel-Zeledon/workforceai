@@ -119,3 +119,15 @@ export function demoEstimate(count: number): { estimate: { min_usd: number; max_
 
 /** Plan limits of the design (Free 3/6, Pro 6/20, Max 8/50): how many at once and how many parts. */
 export const PLAN_LIMITS = { free: { parallel: 3, parts: 6 }, pro: { parallel: 6, parts: 20 }, max: { parallel: 8, parts: 50 } } as const;
+
+/** The requests whose group waits for an answer: their run block stays hidden until the person decides. */
+export const proposedRequestIds = <G extends GroupLike>(groups: Record<string, G>): Set<string> => new Set(proposals(groups).map((g) => g.request_id));
+
+/** The bar of a launched group: the share of its parts that are done, 0..100. */
+export const groupPct = (g: Pick<GroupLike, "parts" | "status">): number => {
+  const { done, total } = doneOf(g);
+  return total > 0 ? Math.round((done / total) * 100) : 0;
+};
+
+/** The parts that did not finish, by label: "faltó: Bogotá". */
+export const missingLabels = (g: Pick<GroupLike, "parts" | "status">): string[] => g.parts.filter((p) => partKind(p.status, g.status) !== "done").map((p) => p.label);

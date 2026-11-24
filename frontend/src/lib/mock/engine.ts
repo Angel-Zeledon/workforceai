@@ -6,7 +6,7 @@
 import { MockRoles } from "./roles-mock";
 import type {
   ActivityItem, Agent, AgentState, Approval, Conversation, MemoryItem, Message, MessageKind,
-  FileRef, Metrics, PlanTask, Report, Request, StructuredOutput, Task, WsFrame,
+  FileRef, HelperGroup, Metrics, PlanTask, Report, Request, StructuredOutput, Task, WsFrame,
 } from "../types";
 import { MockArtifacts } from "./artifacts-mock";
 import { MockOrgConfig } from "./orgconfig-mock";
@@ -233,7 +233,7 @@ export class MockBackend {
   private helpers = new MockHelpers({
     emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), uid, nowIso, assistantId: () => this.agents.find((a) => a.role === "assistant")?.id ?? "assistant",
     addTask: (t) => { this.tasks.push(t); }, emitTask: (type, t) => this.emitTask(type, t),
-    finishRequest: (id) => { const r = this.requests.find((x) => x.id === id); if (r) { r.status = "done"; this.emit("request.completed", { request_id: id, report_id: null }); this.pushMetrics(); } },
+    deliver: (g) => this.deliverHelpers(g),
   }); // temporary helpers: helpers.* events, /requests/{id}/helpers
   private debates = new MockDebates({ emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agents: () => this.agents }); // B5 team debates
   /** request id -> the person asked for a debate ([[debate]]) or the request is a decision between alternatives */
@@ -518,6 +518,33 @@ export class MockBackend {
     this.pushMetrics();
   }
 
+  /** The helpers group is over: the responsible joins what the parts left into one report, says it in the conversation with
+   * its file, and the conversation gets the folded block of the group. What did not finish is said by name. */
+  private deliverHelpers(g: HelperGroup) {
+    const req = this.requests.find((x) => x.id === g.request_id);
+    if (!req) return;
+    const owner = g.owner_agent_id;
+    const done = g.parts.filter((p) => p.status === "done");
+    const missing = g.parts.filter((p) => p.status !== "done").map((p) => p.label);
+    const cost = Math.round(g.spent_usd * 100) / 100;
+    const report: Report = {
+      id: uid("rep"), request_id: req.id, title: `Informe: ${req.text.slice(0, 70)}`,
+      summary: tr("helpers.result.summary", { done: done.length, total: g.parts.length }),
+      sections: done.map((p) => ({ heading: p.label, body: this.tasks.find((x) => x.id === p.task_id)?.output?.summary ?? "" })),
+      contributors: [owner], cost_usd: cost, created_at: nowIso(),
+    };
+    this.reports.unshift(report);
+    this.emit("report.created", { report }, owner);
+    req.report_id = report.id; req.status = "done"; req.cost_usd = cost;
+    this.emit("request.completed", { request_id: req.id, report_id: report.id }, owner);
+    this.log(owner, "request.completed", `Pedido completado. Informe: ${report.title}`);
+    const said = tr("helpers.result.msg", { done: done.length, total: g.parts.length });
+    const gap = missing.length ? " " + tr(g.status === "stopped" ? "helpers.result.stopped" : "helpers.result.missing", { missing: missing.join(", ") }) : "";
+    this.chat.note(owner, "user", "chat", said + gap, [draftRef(owner, report.title)]);
+    this.chat.note(owner, "user", "answer", "", undefined, g.id);
+    this.pushMetrics();
+  }
+
   private async finishRequest(req: Request, tasks: Task[]) {
     this.setState("assistant", "working", "Sintetizando informe final", null, 50);
     await this.wait(1800);
@@ -796,7 +823,7 @@ export class MockBackend {
       if ((r0 === "messages" && !r1 || r0 === "requests") && body?.goal_id) this.goals.assertLinkable(String(body.goal_id)); // F1
       if (r0 === "messages" && !r1 && body?.customer_id && !this.customers.hasCustomer(String(body.customer_id))) throw new Error("customer not found"); // B12
       if (r0 === "messages" && !r1) this.helpers.note(String(body?.text || ""), Array.isArray(body?.attachments) ? body.attachments.length : 0, body?.helpers === true);
-      if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : []);
+      if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : [], body?.helpers === true);
       if (r0 === "requests") {
         const cid = body?.customer_id ? String(body.customer_id) : "";
         if (cid && !this.customers.hasCustomer(cid)) throw new Error("customer not found");

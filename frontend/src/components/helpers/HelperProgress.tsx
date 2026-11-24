@@ -15,7 +15,7 @@ function Mark({ kind }: { kind: PartKind }) {
   return <span aria-hidden className="flex h-4 w-4 shrink-0 items-center justify-center"><span className="h-2 w-2 rounded-full border border-line-strong bg-panel" /></span>;
 }
 
-function PartRow({ g, p, busy, run }: { g: HelperGroup; p: HelperPart; busy: boolean; run: (fn: () => Promise<unknown>) => void }) {
+export function PartRow({ g, p, busy, run, readOnly = false }: { g: HelperGroup; p: HelperPart; busy: boolean; run: (fn: () => Promise<unknown>) => void; readOnly?: boolean }) {
   const { t } = useT();
   const task = useStore((s) => (p.task_id ? s.tasks[p.task_id] : undefined));
   const [open, setOpen] = useState(false);
@@ -34,11 +34,11 @@ function PartRow({ g, p, busy, run }: { g: HelperGroup; p: HelperPart; busy: boo
             <button type="button" aria-expanded={open} aria-label={t("helpers.part.openAria", { label: p.label })} onClick={() => setOpen((v) => !v)}
               className="min-h-9 rounded-md px-2 text-[12px] font-semibold text-accent hover:bg-accent-soft md:min-h-8">{t("helpers.part.open")}</button>
           )}
-          {(kind === "failed" || kind === "stopped") && isActiveGroupOrOpen(g) && (
+          {!readOnly && (kind === "failed" || kind === "stopped") && isActiveGroupOrOpen(g) && (
             <button type="button" disabled={busy} data-testid={`helper-retry-${p.index}`} aria-label={t("helpers.part.retryAria", { label: p.label })} onClick={() => run(() => helpersApi.retry(g.request_id, p.index))}
               className="min-h-9 rounded-md px-2 text-[12px] font-semibold text-accent hover:bg-accent-soft disabled:opacity-60 md:min-h-8">{t("helpers.part.retry")}</button>
           )}
-          {(kind === "active" || kind === "queued") && isActiveGroup(g) && (
+          {!readOnly && (kind === "active" || kind === "queued") && isActiveGroup(g) && (
             <button type="button" disabled={busy} aria-label={t("helpers.part.stopAria", { label: p.label })} onClick={() => run(() => helpersApi.stop(g.request_id, p.index))}
               className="min-h-9 rounded-md px-2 text-[12px] font-medium text-ink2 hover:bg-panel2 disabled:opacity-60 md:min-h-8">{t("helpers.part.stop")}</button>
           )}

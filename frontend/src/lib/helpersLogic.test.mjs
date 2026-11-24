@@ -1,7 +1,7 @@
 // Unit tests of temporary helpers (counts, estimate rescale, folding of 50 parts, merge, demo split). Run: npm run test:unit.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { clampCount, countOptions, countParts, demoEstimate, doneOf, groupOfRequest, isHelperTask, mergeGroup, partKind, perHelper, proposals, rescale, spendOf, splitItems, visibleParts, withoutHelperTasks } from "./helpersLogic.ts";
+import { clampCount, countOptions, countParts, demoEstimate, doneOf, groupOfRequest, groupPct, isHelperTask, mergeGroup, missingLabels, partKind, perHelper, proposedRequestIds, proposals, rescale, spendOf, splitItems, visibleParts, withoutHelperTasks } from "./helpersLogic.ts";
 
 const G = (extra = {}) => ({
   id: "g1", request_id: "r1", owner_agent_id: "elena", count: 8, max_count: 8, parallel: 4, status: "running",
@@ -79,6 +79,18 @@ test("proposals and the group of a request", () => {
   assert.deepEqual(proposals(gs).map((g) => g.id), ["a"]);
   assert.equal(groupOfRequest(gs, "r2")?.id, "c");
   assert.equal(groupOfRequest(gs, "none"), undefined);
+});
+
+test("the run block waits while the proposal is open, and shows the parts' progress", () => {
+  const gs = { a: G({ id: "a", request_id: "r1", status: "proposed" }), b: G({ id: "b", request_id: "r2", status: "running" }) };
+  assert.deepEqual([...proposedRequestIds(gs)], ["r1"]);
+  const run = G({ status: "running", parts: [
+    { index: 1, label: "Madrid", status: "done" }, { index: 2, label: "Lima", status: "done" },
+    { index: 3, label: "Bogotá", status: "failed" }, { index: 4, label: "Quito", status: "running" },
+  ] });
+  assert.equal(groupPct(run), 50);
+  assert.deepEqual(missingLabels(run), ["Bogotá", "Quito"]);
+  assert.equal(groupPct(G({ parts: [] })), 0);
 });
 
 test("a late proposed event never undoes a launch", () => {
