@@ -7,7 +7,7 @@ import { useOfficeLayout } from "./officeLayout";
 import { useSession } from "./session";
 import { useAgentOffices } from "./useAgentOffices";
 import { useStore } from "./store";
-import { ALL_OFFICES, currentOfficeKey, filterAgentIds, officeChoices, officeOf, resolveCurrent, type AlsoIn } from "./currentOfficeLogic";
+import { ALL_OFFICES, currentOfficeKey, filterAgentIds, officeChoices, officeOf, resolveCurrent, sendOfficeId, type AlsoIn } from "./currentOfficeLogic";
 
 /** The office the person is in, per person and device. Pure rules: currentOfficeLogic.ts. */
 interface State {
@@ -89,4 +89,14 @@ export function useOfficeAgentIds(): { ids: string[]; alsoIn: Record<string, Als
   }, [enabled, views]);
   const ids = useMemo(() => (scoped ? filterAgentIds(order, current, (id) => bases[id], alsoIn) : order), [scoped, order, current, bases, alsoIn]);
   return { ids, alsoIn, current };
+}
+
+/** "Para:" office of the box while the header shows "Todas mis oficinas" (General by default). */
+export const usePickedOffice = create<{ id: string; set: (id: string) => void }>((set) => ({ id: "general", set: (id) => set({ id }) }));
+
+/** `office_id` the next message goes with, or undefined when the company has a single office (nothing to say). */
+export function officeForSend(): string | undefined {
+  const st = useCurrentOfficeStore.getState();
+  if (!officeChoices(st.offices)) return undefined;
+  return sendOfficeId(resolveCurrent(st.stored, st.offices), usePickedOffice.getState().id);
 }
