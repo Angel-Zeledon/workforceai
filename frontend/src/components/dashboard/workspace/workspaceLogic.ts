@@ -84,7 +84,7 @@ export function inProgress(requests: Record<string, RequestLike>, tasks: TaskLik
   const rows: RunRow[] = [];
   for (const r of Object.values(requests)) {
     if (!isOpenRequest(r.status)) continue;
-    const ts = tasks.filter((t) => t.request_id === r.id && !t.helper).sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
+    const ts = tasks.filter((t) => t.request_id === r.id && !t.helper?.index).sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
     if (opts.agent && !ts.some((t) => t.agent_id === opts.agent)) continue;
     const steps = ts.map((t) => ({ id: t.id, title: t.title, agent_id: t.agent_id, kind: stepKind(t.status) }));
     const done = steps.filter((s) => s.kind === "done").length;

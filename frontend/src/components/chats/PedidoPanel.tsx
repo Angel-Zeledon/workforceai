@@ -33,7 +33,7 @@ export function usePedidoCtx(): PedidoCtx {
   const questions = useStore((s) => s.questions);
   const approvals = useStore((s) => s.approvals);
   return useMemo(() => ({
-    requests, tasks: Object.values(tasks).filter((x) => !x.helper), questions: Object.values(questions ?? {}), approvals: Object.values(approvals),
+    requests, tasks: Object.values(tasks).filter((x) => !x.helper?.index), questions: Object.values(questions ?? {}), approvals: Object.values(approvals),
   }), [requests, tasks, questions, approvals]);
 }
 

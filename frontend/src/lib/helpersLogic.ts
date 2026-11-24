@@ -13,8 +13,8 @@ export interface TaskWithHelper { helper?: { group_id: string } | null }
 export type PartKind = "done" | "active" | "queued" | "failed" | "stopped";
 
 /** A task that belongs to a helper group: it stays out of Equipo, Agentes and the plain task lists. */
-export const isHelperTask = (t: TaskWithHelper | null | undefined): boolean => !!t?.helper;
-export const withoutHelperTasks = <T extends TaskWithHelper>(ts: T[]): T[] => ts.filter((t) => !t.helper);
+export const isHelperTask = (t: TaskWithHelper | null | undefined): boolean => !!t?.helper?.index; // index 0 is the responsible's own joining task
+export const withoutHelperTasks = <T extends TaskWithHelper>(ts: T[]): T[] => ts.filter((t) => !isHelperTask(t));
 
 /** A proposal waits for the person: nothing is launched until they accept. */
 export const isProposal = (g: Pick<GroupLike, "status"> | null | undefined): boolean => g?.status === "proposed";

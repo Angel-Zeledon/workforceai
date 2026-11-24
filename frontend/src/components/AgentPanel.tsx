@@ -114,7 +114,7 @@ export function AgentPanel({ id }: { id: string }) {
   const cur = agent.current_task_id ? storeTasks[agent.current_task_id] : null;
   const a = detail?.agent ?? agent;
   // tasks: prefer fresh store data over the (debounced) detail snapshot
-  const tasks = (detail?.tasks ?? []).map((t) => storeTasks[t.id] ?? t).filter((t) => !t.helper);
+  const tasks = (detail?.tasks ?? []).map((t) => storeTasks[t.id] ?? t).filter((t) => !t.helper?.index);
   const convs = detail?.conversations ?? [];
 
   // simple mode: Chat and Trabajo open, the rest one click away ("Más"); the open tab always shows
