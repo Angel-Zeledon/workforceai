@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -50,11 +51,17 @@ func (s *server) agentMemory(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	ws := s.work(r) // D3: what was remembered for a private office is its members'
+	items = slices.DeleteFunc(items, func(it memory.Item) bool { return !ws.memoryItem(it) })
 	writeJSON(w, http.StatusOK, list(items))
 }
 
 func (s *server) deleteAgentMemory(w http.ResponseWriter, r *http.Request) {
 	if s.hideWork(w, r) { // D3
+		return
+	}
+	if d, err := s.Memory.Doc(r.Context(), s.org(r), chi.URLParam(r, "docId")); err == nil && d.OfficeID != "" && !s.work(r).office(d.OfficeID) {
+		s.fail(w, notFound("memory", d.ID))
 		return
 	}
 	if err := s.Memory.Delete(r.Context(), s.org(r), chi.URLParam(r, "id"), chi.URLParam(r, "docId"), s.actor(r)); err != nil {

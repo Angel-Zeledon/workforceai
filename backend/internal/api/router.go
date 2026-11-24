@@ -556,10 +556,7 @@ func (s *server) agentDetail(w http.ResponseWriter, r *http.Request) {
 		ws.index(d.Tasks)
 		// a General agent's page holds no task asked from an office the person cannot see, nor what it remembers for it
 		d.Tasks = slices.DeleteFunc(d.Tasks, func(t domain.Task) bool { return !ws.task(t) })
-		d.Memory = slices.DeleteFunc(d.Memory, func(m domain.Memory) bool {
-			office, ok := strings.CutPrefix(m.Scope, "agent@")
-			return ok && !ws.office(office)
-		})
+		d.Memory = slices.DeleteFunc(d.Memory, func(m domain.Memory) bool { return !ws.agentMemory(m) })
 		d.Conversations = slices.DeleteFunc(d.Conversations, func(c domain.Conversation) bool { return !ws.conversation(c) })
 	}
 	d.Tasks, d.Conversations, d.Memory, d.RecentActivity = list(d.Tasks), list(d.Conversations), list(d.Memory), list(d.RecentActivity)

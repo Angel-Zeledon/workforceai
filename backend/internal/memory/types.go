@@ -86,6 +86,8 @@ type Doc struct {
 // Item is one retrieved memory: a document or a drive file.
 type Item struct {
 	scope string // the scope of the document ('' for files): see Service.forOtherOffice
+	// OfficeID is the office a ScopeOffice document belongs to ("" otherwise): the API leaves out what a person cannot see.
+	OfficeID string `json:"-"`
 	ID        string    `json:"id,omitempty"` // document id ("" for files)
 	Ref       string    `json:"ref"`          // task:<id> | report:<id> | file:<path> | memory:<id>
 	Kind      string    `json:"kind"`

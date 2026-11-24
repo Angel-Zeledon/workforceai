@@ -19,10 +19,17 @@ import (
 // officesWorldSealed is officesWorld with the live-event rule of D3 installed on the recorder, as the server wires it.
 func officesWorldSealed(t *testing.T) (e *env, owner, ana, marta, luis, ventas, soporte, org string) {
 	t.Helper()
+	e, owner, ana, marta, luis, ventas, soporte, org, _ = officesWorldSealedDocs(t)
+	return
+}
+
+// officesWorldSealedDocs is officesWorldSealed that also hands out the long-term memory store, to seed documents.
+func officesWorldSealedDocs(t *testing.T) (e *env, owner, ana, marta, luis, ventas, soporte, org string, docs *longmem.MemStore) {
+	t.Helper()
 	var d *api.Deps
 	e = newEnv(t, opts{auth: true, orgchart: true, away: true, code: true, v2: true, quality: true, ws: true, trust: true, deps: func(x *api.Deps) {
 		withOfficesMulti(x)
-		docs := longmem.NewMemStore()
+		docs = longmem.NewMemStore()
 		x.Memory = longmem.New(longmem.Config{Docs: docs, Retriever: &longmem.FTS{Docs: docs}})
 		x.Commands = &api.CommandsDeps{}
 		d = x

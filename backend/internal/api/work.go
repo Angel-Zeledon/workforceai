@@ -13,6 +13,7 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/commands"
 	"aiworkforce/backend/internal/domain"
+	"aiworkforce/backend/internal/memory"
 	"aiworkforce/backend/internal/offices"
 )
 
@@ -233,6 +234,16 @@ func (w *workScope) office(id string) bool {
 	}
 	return w.m == nil || w.m.CanSeeOfficeWork(w.v, id)
 }
+
+// agentMemory reports whether the person sees what an agent remembers (key/value): what it kept working for an office
+// (scope agent@<office>) is that office's.
+func (w *workScope) agentMemory(m domain.Memory) bool {
+	office, ok := strings.CutPrefix(m.Scope, "agent@")
+	return !ok || w.office(office)
+}
+
+// memoryItem reports whether the person sees a long-term memory document: one of an office is that office's.
+func (w *workScope) memoryItem(it memory.Item) bool { return it.OfficeID == "" || w.office(it.OfficeID) }
 
 // filter is the rule for the application's reads (the chat history, the office chat's routing).
 func (w *workScope) filter() application.WorkFilter {
