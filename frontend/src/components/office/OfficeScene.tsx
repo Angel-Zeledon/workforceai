@@ -21,6 +21,7 @@ import { EditorLayer } from "./EditorLayer";
 import { useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
 import { useRewards } from "@/lib/rewards";
 import { PeopleLayer } from "../presence/PeopleLayer";
+import { HelperLayer } from "./HelperLayer";
 import { StyleAmbient, StyleVeil, ThemeApplier } from "./ThemeLayer";
 import { FrameDriver } from "./FrameDriver";
 import { placed } from "./editorActions";
@@ -149,6 +150,7 @@ export default function OfficeScene() {
           <EditorLayer />
           <CoinFloats />
           <ShieldFloats /> {/* B10: a shield over the agent whose read content tried to give it orders */}
+          <HelperLayer /> {/* temporary helpers next to their owner's desk (nothing mounted while there are none) */}
           <PeopleLayer /> {/* human presence: the people of the office walk next to the agents */}
           <StyleAmbient /> {/* the office style's extras: drifting paper, reflections, texture sets, post-processing */}
           <ThemeApplier /> {/* restyles every lit mesh for the office style (classic: untouched) */}

@@ -7322,5 +7322,13 @@
   "helpers.part.items": "Items {from} to {to}",
   "helpers.part.summary": "Result of: {label}",
   "helpers.join.title": "Join the results",
-  "helpers.join.summary": "{done} of {total} parts gathered into one report."
+  "helpers.join.summary": "{done} of {total} parts gathered into one report.",
+  "helpers.fig.name": "Helper {n} · {part} · {state}",
+  "helpers.fig.working": "reading",
+  "helpers.fig.queued": "waiting",
+  "helpers.fig.failed": "failed",
+  "helpers.fig.more": "+{n}",
+  "helpers.fig.moreTitle": "{n} more helpers",
+  "helpers.fig.label": "+{n} helpers",
+  "helpers.fig.label1": "+1 helper"
 }

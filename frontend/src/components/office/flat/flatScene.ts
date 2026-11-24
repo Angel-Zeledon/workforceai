@@ -26,6 +26,7 @@ import { wornLookOf } from "./wornLook";
 import { eventGestures } from "./flatGestures";
 import { createFx, type Fx } from "./flatFx";
 import { createPeople, type People } from "./flatPeople";
+import { createHelpers, type Helpers } from "./flatHelpers";
 import { dropFeet, placePopups, publishFeet } from "./flatPopups";
 import { createFlatEditor, type FlatEditor } from "./flatEditor";
 
@@ -459,6 +460,7 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     // consult / delegation lines, travelling folders, coins and shields
     fx.update({ now: nowMs, dtS: dt, reduce, scale: chipScale });
     people.update({ dtS: dt, clock, reduce, scale: chipScale, figScale: FS });
+    helpers.update({ clock, reduce, scale: chipScale, figScale: FS });
     placePopups(toScreen, app.screen.width, app.screen.height);
 
     // speech bubbles (a message line wins over the working line of the same agent)
@@ -511,6 +513,16 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     desk: (id) => deskInfo.get(id)?.pos ?? null,
   });
   const people: People = createPeople({ P, world, ui, canvas: app.canvas, fit: () => ({ k, x: world.position.x, y: world.position.y }), toScreen });
+  // temporary helpers next to their owner's desk (reads the store only while there is a group; texts follow the language)
+  const helpers: Helpers = createHelpers(
+    { P, world, ui, canvas: app.canvas, fit: () => ({ k, x: world.position.x, y: world.position.y }), toScreen },
+    () => deskInfo,
+    () => { const T = tr(); return {
+      name: (f) => T("helpers.fig.name", { n: f.n, part: f.label, state: T(`helpers.fig.${f.state}`) }),
+      more: (n) => T("helpers.fig.more", { n }),
+      label: (n) => (n === 1 ? T("helpers.fig.label1") : T("helpers.fig.label", { n })),
+    }; },
+  );
   const editor: FlatEditor = createFlatEditor({
     P, world, canvas: app.canvas, fit: () => ({ k, x: world.position.x, y: world.position.y }), requestRebuild: () => { sigAt = 1; },
   });
@@ -542,7 +554,7 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
       const gl = (app.renderer as { gl?: WebGLRenderingContext | WebGL2RenderingContext }).gl;
       try { app.destroy(true, { children: true, texture: true }); } catch { /* destroyed during init */ }
       try { gl?.getExtension("WEBGL_lose_context")?.loseContext(); } catch { /* not supported */ }
-      editor.destroy(); fx.destroy(); people.destroy(); dropFeet(nodes.keys());
+      editor.destroy(); fx.destroy(); people.destroy(); helpers.destroy(); dropFeet(nodes.keys());
       nodes.clear(); zoneChips.clear(); bubViews.clear(); statics = []; deskDyn = [];
     },
   };
