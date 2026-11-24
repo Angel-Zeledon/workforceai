@@ -19,6 +19,8 @@ type Model struct {
 	rows       map[string]AgentAccess
 	restricted bool
 	depts      []Dept
+	multi      bool                     // MULTI_OFFICE_AGENTS (agent_offices.go)
+	extras     map[string][]AgentOffice // agent -> the other offices it works for
 }
 
 func buildModel(depts []Dept, agentDept map[string]string, people []Person, agents []AgentRef,
@@ -222,7 +224,7 @@ func (m *Model) Rights(v Viewer, agentID string) Rights {
 	// agent shared with some people is only theirs (in an organization without offices its office is everybody)
 	officeWide := ea.Visibility == VisOffice || ea.Visibility == VisDirectory || ea.Visibility == VisPeople && !personal
 	inOffice := m.IsMember(v.UserID, ea.OfficeID)
-	use := owner || shared || officeWide && inOffice || ea.Visibility == VisDirectory
+	use := owner || shared || officeWide && inOffice || ea.Visibility == VisDirectory || m.usesViaExtra(v, agentID)
 	if v.Admin && (!personal || officeWide) && m.CanSeeWork(v, agentID) {
 		// admins may use everything but the agents a person keeps for themself (and whom they share it with) and,
 		// D3, the agents of a private office they are not in (unless shared with them or in the directory: above)
