@@ -66,6 +66,9 @@ func cmdHire(c *cmdCall) (*cmdResult, *cmdFail) {
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
+	if c.s.Offices != nil {
+		c.s.Offices.Invalidate(c.org)
+	}
 	return msgResult(c.t("Nuevo agente", "New agent"),
 		fmt.Sprintf(c.t("%s se sumó a tus agentes como %s. Empieza con aprobación en cada acción.", "%s joined your agents as %s. They start with approval on every action."), a.Name, a.Title),
 		map[string]any{"agent_id": a.ID}), nil

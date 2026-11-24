@@ -56,6 +56,10 @@ func New(cfg Config) *Service {
 
 func (s *Service) now() time.Time { return s.cfg.Now().UTC() }
 
+// Invalidate drops the cached model: the set of agents changed outside this service (an agent was hired, or a hire was
+// undone), so the next read must see it at once.
+func (s *Service) Invalidate(org string) { s.invalidate(org) }
+
 func (s *Service) invalidate(org string) {
 	s.mu.Lock()
 	delete(s.cache, org)

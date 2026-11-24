@@ -45,6 +45,9 @@ func (s *server) mountHireSuggestions(r chi.Router) {
 // hireWithOffice validates and applies a hire with office. It writes the error answer itself and reports ok=false.
 func (s *server) hireWithOffice(w http.ResponseWriter, r *http.Request, b hireBody) (domain.Agent, bool) {
 	ctx, org := r.Context(), s.org(r)
+	if s.Offices != nil {
+		defer s.Offices.Invalidate(org) // the new agent (or its absence, if the hire was undone) is visible at once
+	}
 	if b.plain() {
 		a, err := s.Orch.HireFromTemplate(ctx, b.HireInput)
 		if err != nil {
