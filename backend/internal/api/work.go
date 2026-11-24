@@ -130,6 +130,16 @@ func (w *workScope) request(id string) bool {
 	if v, ok := w.seen[id]; ok {
 		return v
 	}
+	if req, err := w.s.Store.GetRequest(w.ctx, w.org, id); err == nil && req.OfficeID != "" {
+		// a request asked from an office is that office's work: whoever may see the office sees it, whatever the base
+		// office of the agents that took part (and never anyone outside a private office, except who asked it)
+		vis := w.m.CanSeeOfficeWork(w.v, req.OfficeID)
+		if !vis && w.v.UserID != "" && w.s.Orch != nil && w.s.Orch.RequestedBy(w.ctx, id) == w.v.UserID {
+			vis = true
+		}
+		w.seen[id] = vis
+		return vis
+	}
 	agents, ok := w.agents[id]
 	if !ok {
 		tasks, err := w.s.Store.ListTasksByRequest(w.ctx, w.org, id)
@@ -192,9 +202,17 @@ func (w *workScope) conversationID(id string, own bool) (bool, error) {
 	return w.conversation(c), nil
 }
 
+// office reports whether the person sees what was asked and answered in an office (fails closed).
+func (w *workScope) office(id string) bool {
+	if err := w.load(); err != nil {
+		return false
+	}
+	return w.m == nil || w.m.CanSeeOfficeWork(w.v, id)
+}
+
 // filter is the rule for the application's reads (the chat history, the office chat's routing).
 func (w *workScope) filter() application.WorkFilter {
-	return application.WorkFilter{Agent: w.agent, Use: w.use, Request: w.request}
+	return application.WorkFilter{Agent: w.agent, Use: w.use, Request: w.request, Office: w.office}
 }
 
 // context returns the request carrying the rule in its context.

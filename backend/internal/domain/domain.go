@@ -225,6 +225,8 @@ type Task struct {
 	AssignedReason string `json:"assigned_reason,omitempty"`
 	// Helper marks the task as one part of a temporary helper group (helpers.go); nil for an ordinary task.
 	Helper *TaskHelper `json:"helper,omitempty"`
+	// OfficeID is the office of its request ("" = General or unknown).
+	OfficeID string `json:"office_id,omitempty"`
 
 	Depth   int    `json:"-"` // delegation depth, 1-based
 	CostUSD float64 `json:"-"`
@@ -239,6 +241,8 @@ type Message struct {
 	Text           string    `json:"text"`
 	TaskID         *string   `json:"task_id"`
 	TS             time.Time `json:"ts"`
+	// OfficeID is the office the message was written in ("" = General or unknown, also all earlier history).
+	OfficeID string `json:"office_id,omitempty"`
 
 	// Chat layer (docs/architecture/chat-routing.md); all optional and omitted
 	// for the messages of a request conversation. TurnID groups the replies to
@@ -375,6 +379,9 @@ type Request struct {
 	CostUSD   float64       `json:"cost_usd"`
 	// GoalID (F1) is the company goal the request contributes to ("" = none; omitted). Set when it is created.
 	GoalID string `json:"goal_id,omitempty"`
+	// OfficeID is the office the request was asked from ("" = General or unknown: what was written before offices
+	// scoped work). Its tasks and messages inherit it and its agents use only that office's memory and files.
+	OfficeID string `json:"office_id,omitempty"`
 
 	Plan Plan `json:"-"`
 }

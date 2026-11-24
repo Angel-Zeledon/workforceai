@@ -291,6 +291,9 @@ func (b *Budget) Record(ctx context.Context, requestID string, u domain.UsageEnt
 			b.onHelperSpend(ctx, org, hc.groupID)
 		}
 	}
+	if u.OfficeID == "" {
+		u.OfficeID = RequestOfficeFrom(ctx) // the cost is the office's that asked, not the agent's base office
+	}
 	if err := b.store.AddUsage(ctx, org, u); err != nil {
 		return cost, err
 	}

@@ -231,6 +231,12 @@ func (s *Service) Promote(ctx context.Context, org string, v Viewer, id string) 
 // when they share words with the task, and the memory of the person it works for (preferences apply to any task).
 // personID "" (a scheduled task) recalls no personal memory.
 func (s *Service) RecallNotes(ctx context.Context, org, agentID, personID, text string, limit int) []Note {
+	return s.RecallNotesFor(ctx, org, agentID, "", personID, text, limit)
+}
+
+// RecallNotesFor is RecallNotes for a request asked from the office `requested` ("" = unknown): the agent recalls the
+// notes of THAT office when it works for it, else of its base office, never of another one.
+func (s *Service) RecallNotesFor(ctx context.Context, org, agentID, requested, personID, text string, limit int) []Note {
 	if limit <= 0 {
 		limit = 3
 	}
@@ -238,7 +244,7 @@ func (s *Service) RecallNotes(ctx context.Context, org, agentID, personID, text 
 	if err != nil {
 		return nil
 	}
-	office := m.Agent(agentID).OfficeID
+	office := m.WorkOffice(agentID, requested)
 	// I6: an agent of a private office working for a person who is not a member does not recall the office's notes
 	// (work without a person is the agent's own and keeps them)
 	officeNotes := true

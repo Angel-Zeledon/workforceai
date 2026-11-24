@@ -440,7 +440,7 @@ func (o *Orchestrator) recoverRequest(ctx context.Context, req domain.Request) b
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	rctx := WithRequestID(WithOrg(o.base, org), req.ID)
+	rctx := WithRequestOffice(WithRequestID(WithOrg(o.base, org), req.ID), req.OfficeID)
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()

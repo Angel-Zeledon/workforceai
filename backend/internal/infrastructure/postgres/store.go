@@ -314,13 +314,13 @@ func (s *Store) UpdateAgentState(ctx context.Context, orgID, id string, st domai
 
 // ---- tasks ----
 
-const taskCols = `id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, cost_usd, output, created_at, started_at, finished_at, assigned_reason, helper`
+const taskCols = `id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, cost_usd, output, created_at, started_at, finished_at, assigned_reason, helper, COALESCE(office_id, '')`
 
 func scanTask(r scanner) (domain.Task, error) {
 	var t domain.Task
 	var status string
 	var deps, out, helper []byte
-	err := r.Scan(&t.ID, &t.RequestID, &t.WorkflowID, &t.Title, &t.Description, &t.AgentID, &status, &deps, &t.ParentTaskID, &t.Depth, &t.CostUSD, &out, &t.CreatedAt, &t.StartedAt, &t.FinishedAt, &t.AssignedReason, &helper)
+	err := r.Scan(&t.ID, &t.RequestID, &t.WorkflowID, &t.Title, &t.Description, &t.AgentID, &status, &deps, &t.ParentTaskID, &t.Depth, &t.CostUSD, &out, &t.CreatedAt, &t.StartedAt, &t.FinishedAt, &t.AssignedReason, &helper, &t.OfficeID)
 	t.Status = domain.TaskStatus(status)
 	unmarshal(deps, &t.DependsOn)
 	t.DependsOn = strs(t.DependsOn)
@@ -337,9 +337,9 @@ func scanTask(r scanner) (domain.Task, error) {
 }
 
 func (s *Store) CreateTask(ctx context.Context, orgID string, t domain.Task) error {
-	return s.exec(ctx, orgID, `INSERT INTO tasks (id, org_id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, output, created_at, started_at, finished_at, assigned_reason, helper)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
-		t.ID, orgID, t.RequestID, t.WorkflowID, t.Title, t.Description, t.AgentID, string(t.Status), jb(strs(t.DependsOn)), t.ParentTaskID, t.Depth, outJSON(t.Output), t.CreatedAt, t.StartedAt, t.FinishedAt, t.AssignedReason, jbOpt(t.Helper))
+	return s.exec(ctx, orgID, `INSERT INTO tasks (id, org_id, request_id, workflow_id, title, description, agent_id, status, depends_on, parent_task_id, depth, output, created_at, started_at, finished_at, assigned_reason, helper, office_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,NULLIF($18,''))`,
+		t.ID, orgID, t.RequestID, t.WorkflowID, t.Title, t.Description, t.AgentID, string(t.Status), jb(strs(t.DependsOn)), t.ParentTaskID, t.Depth, outJSON(t.Output), t.CreatedAt, t.StartedAt, t.FinishedAt, t.AssignedReason, jbOpt(t.Helper), t.OfficeID)
 }
 
 func outJSON(o *domain.StructuredOutput) []byte {
@@ -373,13 +373,13 @@ func (s *Store) ListTasksByRequest(ctx context.Context, orgID, requestID string)
 
 // ---- requests ----
 
-const reqCols = `id, text, status, plan, report_id, cost_usd, created_at, COALESCE(goal_id, '')`
+const reqCols = `id, text, status, plan, report_id, cost_usd, created_at, COALESCE(goal_id, ''), COALESCE(office_id, '')`
 
 func scanRequest(r scanner) (domain.Request, error) {
 	var q domain.Request
 	var status string
 	var plan []byte
-	err := r.Scan(&q.ID, &q.Text, &status, &plan, &q.ReportID, &q.CostUSD, &q.CreatedAt, &q.GoalID)
+	err := r.Scan(&q.ID, &q.Text, &status, &plan, &q.ReportID, &q.CostUSD, &q.CreatedAt, &q.GoalID, &q.OfficeID)
 	q.Status = domain.RequestStatus(status)
 	unmarshal(plan, &q.Plan)
 	return q, err
@@ -387,8 +387,8 @@ func scanRequest(r scanner) (domain.Request, error) {
 
 func (s *Store) CreateRequest(ctx context.Context, orgID string, r domain.Request) error {
 	// goal_id (F1, migration 822): NULL without a goal; the composite foreign key refuses another organization's goal
-	return s.exec(ctx, orgID, `INSERT INTO requests (id, org_id, text, status, plan, report_id, created_at, goal_id) VALUES ($1,$2,$3,$4,$5,$6,$7,NULLIF($8,''))`,
-		r.ID, orgID, r.Text, string(r.Status), jb(r.Plan), r.ReportID, r.CreatedAt, r.GoalID)
+	return s.exec(ctx, orgID, `INSERT INTO requests (id, org_id, text, status, plan, report_id, created_at, goal_id, office_id) VALUES ($1,$2,$3,$4,$5,$6,$7,NULLIF($8,''),NULLIF($9,''))`,
+		r.ID, orgID, r.Text, string(r.Status), jb(r.Plan), r.ReportID, r.CreatedAt, r.GoalID, r.OfficeID)
 }
 
 func (s *Store) GetRequest(ctx context.Context, orgID, id string) (domain.Request, error) {
@@ -429,9 +429,9 @@ func (s *Store) AddUsage(ctx context.Context, orgID string, u domain.UsageEntry)
 	if u.TS.IsZero() {
 		u.TS = time.Now().UTC()
 	}
-	return s.exec(ctx, orgID, `INSERT INTO usage_entries (id, org_id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts, user_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-		u.ID, orgID, u.RequestID, u.TaskID, u.AgentID, string(u.Kind), u.Model, u.InputTokens, u.OutputTokens, u.CostUSD, jb(strs(u.Tools)), u.TS, u.UserID)
+	return s.exec(ctx, orgID, `INSERT INTO usage_entries (id, org_id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts, user_id, office_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NULLIF($14,''))`,
+		u.ID, orgID, u.RequestID, u.TaskID, u.AgentID, string(u.Kind), u.Model, u.InputTokens, u.OutputTokens, u.CostUSD, jb(strs(u.Tools)), u.TS, u.UserID, u.OfficeID)
 }
 
 func (s *Store) ListUsage(ctx context.Context, orgID string) ([]domain.UsageEntry, error) {
@@ -439,12 +439,12 @@ func (s *Store) ListUsage(ctx context.Context, orgID string) ([]domain.UsageEntr
 		var u domain.UsageEntry
 		var kind string
 		var tools []byte
-		err := r.Scan(&u.ID, &u.RequestID, &u.TaskID, &u.AgentID, &kind, &u.Model, &u.InputTokens, &u.OutputTokens, &u.CostUSD, &tools, &u.TS, &u.UserID)
+		err := r.Scan(&u.ID, &u.RequestID, &u.TaskID, &u.AgentID, &kind, &u.Model, &u.InputTokens, &u.OutputTokens, &u.CostUSD, &tools, &u.TS, &u.UserID, &u.OfficeID)
 		u.Kind = domain.UsageKind(kind)
 		unmarshal(tools, &u.Tools)
 		u.Tools = strs(u.Tools)
 		return u, err
-	}, `SELECT id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts, user_id FROM usage_entries WHERE org_id=$1 ORDER BY ts, id`, orgID)
+	}, `SELECT id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts, user_id, COALESCE(office_id, '') FROM usage_entries WHERE org_id=$1 ORDER BY ts, id`, orgID)
 }
 
 func (s *Store) SetBudgetCap(ctx context.Context, orgID string, scope domain.BudgetScope, scopeID string, capUSD float64) error {
@@ -493,10 +493,10 @@ func (s *Store) ListConversations(ctx context.Context, orgID string) ([]domain.C
 
 func (s *Store) AddMessage(ctx context.Context, orgID string, m domain.Message) error {
 	return s.WithOrgTx(ctx, orgID, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `INSERT INTO messages (id, org_id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id, files, author_id, author_name, owner_id)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+		if _, err := tx.Exec(ctx, `INSERT INTO messages (id, org_id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id, files, author_id, author_name, owner_id, office_id)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,NULLIF($18,''))`,
 			m.ID, orgID, m.ConversationID, m.From, m.To, m.Kind, m.Text, m.TaskID, m.TS, m.TurnID, m.ReplyTo, m.RequestID, jb(fileRefs(m.Files)),
-			m.AuthorID, m.AuthorName, domain.ChatConvOwner(m.ConversationID)); err != nil {
+			m.AuthorID, m.AuthorName, domain.ChatConvOwner(m.ConversationID), m.OfficeID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `UPDATE conversations SET last_message_at=$3 WHERE org_id=$1 AND id=$2`, orgID, m.ConversationID, m.TS); err != nil {
@@ -515,7 +515,7 @@ func (s *Store) AddMessage(ctx context.Context, orgID string, m domain.Message) 
 	})
 }
 
-const msgCols = `id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id, files, author_id, author_name`
+const msgCols = `id, conversation_id, from_id, to_id, kind, text, task_id, ts, turn_id, reply_to, request_id, files, author_id, author_name, COALESCE(office_id, '')`
 
 func fileRefs(f []domain.FileRef) []domain.FileRef {
 	if f == nil {
@@ -527,7 +527,7 @@ func fileRefs(f []domain.FileRef) []domain.FileRef {
 func scanMessage(r scanner) (domain.Message, error) {
 	var m domain.Message
 	var files []byte
-	err := r.Scan(&m.ID, &m.ConversationID, &m.From, &m.To, &m.Kind, &m.Text, &m.TaskID, &m.TS, &m.TurnID, &m.ReplyTo, &m.RequestID, &files, &m.AuthorID, &m.AuthorName)
+	err := r.Scan(&m.ID, &m.ConversationID, &m.From, &m.To, &m.Kind, &m.Text, &m.TaskID, &m.TS, &m.TurnID, &m.ReplyTo, &m.RequestID, &files, &m.AuthorID, &m.AuthorName, &m.OfficeID)
 	unmarshal(files, &m.Files)
 	return m, err
 }

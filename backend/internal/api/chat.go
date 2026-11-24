@@ -46,6 +46,9 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		// Helpers (optional, office conversation only) asks for temporary helpers without a position: the assistant
 		// coordinates and the request is offered split into parts (HELPERS_ENABLED; 404 while it is off).
 		Helpers bool `json:"helpers"`
+		// OfficeID (optional) is the office the message is written in: the person must be able to enter it (else 404),
+		// only the agents that work for it answer, and the message, its request and its tasks keep it.
+		OfficeID string `json:"office_id"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
@@ -70,7 +73,12 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 	if key == "" {
 		key = body.ClientMessageID
 	}
-	ctx := application.WithGoal(application.WithCustomer(r.Context(), body.CustomerID), body.GoalID)
+	office, err := s.enterOffice(r, strings.TrimSpace(body.OfficeID))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	ctx := application.WithRequestOffice(application.WithGoal(application.WithCustomer(r.Context(), body.CustomerID), body.GoalID), office)
 	ctx = application.WithActorName(ctx, s.authorName(ctx)) // E0: the author shown on the message and told to the agent
 	if body.Helpers {
 		if s.Orch == nil || !s.Orch.HelpersEnabled() {
@@ -175,6 +183,16 @@ func (s *server) listMessages(w http.ResponseWriter, r *http.Request) {
 	if before != "" && limit == 0 {
 		limit = 50
 	}
+	officeAsked := strings.TrimSpace(r.URL.Query().Get("office_id"))
+	if _, err := s.enterOffice(r, officeAsked); err != nil {
+		s.fail(w, err)
+		return
+	}
+	keepOffice, err := s.officeMessages(r, officeAsked)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
 	id := chi.URLParam(r, "id")
 	if ok, err := s.work(r).conversationID(id, true); err != nil || !ok { // D3: a private office's conversation
 		s.fail(w, cmp.Or(err, notFound("conversation", id)))
@@ -198,6 +216,9 @@ func (s *server) listMessages(w http.ResponseWriter, r *http.Request) {
 		visible := func(page []domain.Message) []domain.Message {
 			own := application.OwnTurns(ctx, page)
 			return slices.DeleteFunc(page, func(m domain.Message) bool {
+				if !keepOffice(m) {
+					return true
+				}
 				if direct && !m.SharedLegacy {
 					return false // the person's own thread
 				}

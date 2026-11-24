@@ -16,6 +16,7 @@ type WorkFilter struct {
 	Agent   func(agentID string) bool   // the agent's work (its tasks, memory, the shared history of its chat)
 	Use     func(agentID string) bool   // the person may use the agent (talk with it in their own thread)
 	Request func(requestID string) bool // a request (and its conversation, report...)
+	Office  func(officeID string) bool  // what was asked and answered in an office (a private one: its members)
 }
 
 type workFilterKey struct{}
@@ -69,6 +70,9 @@ func RequestVisible(ctx context.Context, requestID string) bool {
 // with an agent) not what an agent whose work they do not see said or was told, which is that office's work and is
 // sealed live as well (internal/officeaudience).
 func SharedMessageVisible(ctx context.Context, m domain.Message) bool {
+	if f := workFilter(ctx); m.OfficeID != "" && f.Office != nil && !f.Office(m.OfficeID) {
+		return false // written in an office the person cannot see: never, whoever the agent was
+	}
 	if domain.ChatConvOwner(m.ConversationID) != "" {
 		return true
 	}

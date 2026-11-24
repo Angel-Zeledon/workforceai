@@ -52,9 +52,15 @@ func New(svc *offices.Service, store application.Store, requestedBy func(ctx con
 				people = append(people, p)
 			}
 		}
+		var asked []string // offices requests were asked from: that office, not the base office of the agents that took part
 		for _, id := range refs.Tasks {
 			if t, err := store.GetTask(ctx, org, id); err == nil {
-				agents, requests = append(agents, t.AgentID), append(requests, t.RequestID)
+				requests = append(requests, t.RequestID)
+				if t.OfficeID != "" {
+					asked = append(asked, t.OfficeID)
+				} else {
+					agents = append(agents, t.AgentID)
+				}
 			}
 		}
 		for _, id := range refs.Conversations {
@@ -63,7 +69,9 @@ func New(svc *offices.Service, store application.Store, requestedBy func(ctx con
 			}
 		}
 		for _, id := range uniqueIDs(requests) {
-			if tasks, err := store.ListTasksByRequest(ctx, org, id); err == nil {
+			if req, err := store.GetRequest(ctx, org, id); err == nil && req.OfficeID != "" {
+				asked = append(asked, req.OfficeID)
+			} else if tasks, err := store.ListTasksByRequest(ctx, org, id); err == nil {
 				for _, t := range tasks {
 					agents = append(agents, t.AgentID)
 				}
@@ -94,6 +102,13 @@ func New(svc *offices.Service, store application.Store, requestedBy func(ctx con
 		}
 		for _, a := range uniqueIDs(agents) {
 			seal(m.Agent(a).OfficeID, a)
+		}
+		if pl, _ := ev.Payload.(map[string]any); pl != nil && pl["office_id"] != nil {
+			off, _ := pl["office_id"].(string) // a chat message written in an office
+			asked = append(asked, off)
+		}
+		for _, id := range uniqueIDs(asked) {
+			seal(id, "")
 		}
 		// A resource of a department (a connection, a skill: its office_id) follows the department's visibility.
 		for _, id := range refs.Offices {

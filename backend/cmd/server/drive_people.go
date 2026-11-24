@@ -74,10 +74,35 @@ func (a agentOffices) AgentOffice(ctx context.Context, org, agentID string) (str
 	if err != nil {
 		return "", err
 	}
-	if id := m.Agent(agentID).OfficeID; id != offices.GeneralID {
+	// the office whose files and memory the agent uses for the request of ctx: that office when it works for it, else
+	// its base office (never another one)
+	if id := m.WorkOffice(agentID, application.RequestOfficeFrom(ctx)); id != offices.GeneralID {
 		return id, nil
 	}
 	return "", nil
+}
+
+// WorksFor and Effective make agentOffices the application.OfficeScope over the offices model.
+func (a agentOffices) WorksFor(ctx context.Context, org, agentID, office string) (bool, error) {
+	if a.svc == nil {
+		return true, nil
+	}
+	m, err := a.svc.Model(ctx, org)
+	if err != nil {
+		return false, err
+	}
+	return m.WorksFor(agentID, office), nil
+}
+
+func (a agentOffices) Effective(ctx context.Context, org, agentID string) (string, string, error) {
+	if a.svc == nil {
+		return "", "", nil
+	}
+	m, err := a.svc.Model(ctx, org)
+	if err != nil {
+		return "", "", err
+	}
+	return m.WorkOffice(agentID, application.RequestOfficeFrom(ctx)), m.Agent(agentID).OfficeID, nil
 }
 
 // OfficeRoster implements drive.ShareOffices over the offices model (D4, shares between departments): who belongs to

@@ -36,7 +36,13 @@ type Service struct {
 	mu    sync.Mutex
 	cache map[string]cached
 	wmu   sync.Mutex // serializes the writes (check then write)
+	// onRemoved runs after an agent was taken out of an office it worked for besides its base one (the work of that
+	// office that has not started is blocked: cmd/server wires it to the orchestrator).
+	onRemoved func(ctx context.Context, org, agentID, officeID string)
 }
+
+// SetOnOfficeRemoved installs the hook run after RemoveOffice. Call it before serving.
+func (s *Service) SetOnOfficeRemoved(fn func(ctx context.Context, org, agentID, officeID string)) { s.onRemoved = fn }
 
 type cached struct {
 	at time.Time

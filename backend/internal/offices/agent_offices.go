@@ -256,6 +256,9 @@ func (s *Service) RemoveOffice(ctx context.Context, org string, v Viewer, agentI
 			return AgentOfficesView{}, err
 		}
 		s.audit(ctx, org, v, "agent.office_removed", agentID, map[string]any{"office_id": officeID})
+		if s.onRemoved != nil {
+			s.onRemoved(ctx, org, agentID, officeID)
+		}
 	}
 	return s.afterOffices(ctx, org, v, agentID)
 }

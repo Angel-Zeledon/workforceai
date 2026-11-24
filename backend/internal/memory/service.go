@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -117,6 +118,20 @@ func (s *Service) officeOf(ctx context.Context, org, agentID string) (string, er
 		return "", nil
 	}
 	return fn(ctx, org, agentID)
+}
+
+// forOtherOffice reports whether the agent works, for ctx's request, for an office that is not its base one (or whether
+// that cannot be told: fail closed). The agent's private notes and the legacy ones belong to its base office.
+func (s *Service) forOtherOffice(ctx context.Context, org, agentID string) bool {
+	if agentID == "" {
+		return false
+	}
+	eff, err := s.officeOf(ctx, org, agentID)
+	if err != nil {
+		return true
+	}
+	base, err := s.officeOf(application.WithoutRequestOffice(ctx), org, agentID)
+	return err != nil || eff != base
 }
 
 // office is the office of the agent who READS: unknown counts as none, so it sees no office documents.
@@ -311,6 +326,7 @@ func (s *Service) RememberTask(ctx context.Context, org string, t domain.Task, r
 		return
 	}
 	d := TaskDoc(t, requestText)
+	other := s.forOtherOffice(ctx, org, t.AgentID)
 	d.Body = s.scrub(d.Body)
 	d.Title = s.scrub(d.Title)
 	d.ProjectID, d.ProjectName = s.project(ctx, org, t.RequestID)
@@ -327,6 +343,9 @@ func (s *Service) RememberTask(ctx context.Context, org string, t domain.Task, r
 		docs = append(docs, &Doc{ID: fmt.Sprintf("note_%s_%d", t.ID, i+1), Kind: KindNote, Ref: fmt.Sprintf("memory:%s.%d", t.ID, i+1), Title: capRunes(n, 120), Body: n,
 			AgentID: t.AgentID, Scope: ScopeAgent, ProjectID: d.ProjectID, ProjectName: d.ProjectName, RequestID: t.RequestID,
 			SourceRef: application.TaskRef(t.ID), CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt})
+		if other && off != "" { // what an agent learns working for another office stays in that office, not in the agent
+			docs[len(docs)-1].Scope, docs[len(docs)-1].OfficeID = ScopeOffice, off
+		}
 	}
 	s.tagCustomer(ctx, org, t.RequestID, docs...)
 	s.embedDocs(ctx, org, docs...) // one provider call for the task and its notes
@@ -514,6 +533,9 @@ func (s *Service) retrieve(ctx context.Context, org string, q Query) []Item {
 		s.cfg.Log.Warn("memory: retrieve", "err", err)
 		return nil
 	}
+	if s.forOtherOffice(ctx, org, q.AgentID) { // the private notes of the agent were written for its base office
+		items = slices.DeleteFunc(items, func(it Item) bool { return it.scope == ScopeAgent })
+	}
 	for i := range items {
 		items[i].Title = Clean(items[i].Title, s.cfg.Suspects)
 		items[i].Snippet = Clean(items[i].Snippet, s.cfg.Suspects)
@@ -595,7 +617,7 @@ func (s *Service) Search(ctx context.Context, org, agentID, query string, limit 
 // when the agent may see it. Files are opened with fs.read.
 func (s *Service) Open(ctx context.Context, org, agentID, ref string) (Item, error) {
 	d, err := s.cfg.Docs.GetByRef(ctx, org, ref)
-	if err != nil || d.Suppressed || d.Scope == ScopeAgent && d.AgentID != agentID || d.Scope == ScopeOffice && (d.OfficeID == "" || d.OfficeID != s.readOffice(ctx, org, agentID)) || !VisibleToCustomer(d, application.CustomerFrom(ctx)) {
+	if err != nil || d.Suppressed || d.Scope == ScopeAgent && (d.AgentID != agentID || s.forOtherOffice(ctx, org, agentID)) || d.Scope == ScopeOffice && (d.OfficeID == "" || d.OfficeID != s.readOffice(ctx, org, agentID)) || !VisibleToCustomer(d, application.CustomerFrom(ctx)) {
 		return Item{}, ErrNotFound
 	}
 	it := docItem(DocHit{Doc: d}, nil)

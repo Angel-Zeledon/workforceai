@@ -67,6 +67,8 @@ type UsageEntry struct {
 	// UserID (E0) is the person whose message or request started the call ("" = nobody: scheduled work, the
 	// system, entries written before persons were recorded).
 	UserID string `json:"user_id,omitempty"`
+	// OfficeID is the office whose request caused the cost ("" = General or unknown).
+	OfficeID string `json:"office_id,omitempty"`
 }
 
 // BudgetCap is a hard cap: scope "agent" (per-period) or "request".
