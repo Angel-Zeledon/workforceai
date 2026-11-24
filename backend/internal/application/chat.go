@@ -1057,6 +1057,9 @@ func (o *Orchestrator) emitChat(ctx context.Context, m domain.Message, requestID
 	if requestID != "" {
 		payload["request_id"] = requestID
 	}
+	if m.OfficeID != "" {
+		payload["office_id"] = m.OfficeID // a private office's chat reaches its members only (officeaudience)
+	}
 	if len(m.Files) > 0 {
 		payload["files"] = m.Files
 	}
