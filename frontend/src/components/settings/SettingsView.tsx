@@ -9,7 +9,7 @@ import { useViewer } from "../connections/shared";
 import { Icon, type IconName } from "../icons";
 import { OfficeSettingsPanel } from "../OfficeSettings";
 import { useOnboardingEntry } from "../onboarding/OnboardingEntry";
-import { HireFromTemplateDialog } from "../admin/HireFromTemplateDialog";
+import { HireWizard } from "../agents/HireWizard";
 import { KillSwitchDialog } from "../security/KillSwitchDialog";
 import { useBootConnections } from "../security/ControlsChrome";
 import { MembersDialog } from "../auth/MembersDialog";
@@ -127,7 +127,7 @@ export function SettingsView() {
             {sub === "portal" && <PortalBranding />}
             {sub === "officeTemplate" && <div className="mx-auto max-w-3xl p-4 sm:p-6"><SaveTemplatePanel company /></div>}
             {sub === "office" && <OfficeSettingsPanel onClose={() => open(null)} />}
-            {sub === "hire" && <HireFromTemplateDialog onClose={() => open(null)} />}
+            {sub === "hire" && <HireWizard onClose={() => open(null)} />}
             {sub === "members" && (noSession ? <NeedsSession /> : <MembersDialog onClose={() => open(null)} />)}
             {sub === "kill" && <KillSwitchDialog onClose={() => open(null)} />}
           </PageModeCtx.Provider>
