@@ -256,6 +256,9 @@ func Load() Config {
 	if c.AuthCookieSecure, err = getBool("AUTH_COOKIE_SECURE", true); err != nil {
 		c.errs = append(c.errs, err)
 	}
+	if c.App.HelpersEnabled, err = getBool("HELPERS_ENABLED", false); err != nil {
+		c.errs = append(c.errs, err)
+	}
 	c.AuthCookieName = strings.TrimSpace(getenv("AUTH_COOKIE_NAME", ""))
 	if c.EmailVerification, err = getBool("EMAIL_VERIFICATION", false); err != nil {
 		c.errs = append(c.errs, err)

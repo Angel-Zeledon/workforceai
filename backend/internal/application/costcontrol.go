@@ -340,6 +340,10 @@ func (o *Orchestrator) announceExceeded(ctx context.Context, rs *run, ex *Exceed
 	o.rec.Audit(ctx, domain.AuditLog{Actor: "system", Action: "budget.exceeded", Entity: string(ex.Scope), EntityID: ex.ScopeID,
 		Details: map[string]any{"scope": ex.Scope, "cap_usd": ex.CapUSD, "spent_usd": ex.SpentUSD, "reserved_usd": ex.ReservedUSD,
 			"needed_usd": ex.NeededUSD, "request_id": ex.RequestID, "agent_id": ex.AgentID, "task_id": ex.TaskID}})
+	if ex.Scope == domain.ScopeHelperGroup { // the cap the person accepted for the helpers: it stops the group, never pauses
+		o.announceHelperCap(ctx, rs, ex)
+		return
+	}
 	msg := o.exceededMessage(ex)
 	act := Action{Type: domain.EvBudgetExceeded, AgentID: ex.AgentID, SkipAudit: true, Entity: string(ex.Scope), EntityID: ex.ScopeID,
 		Payload: map[string]any{"scope": ex.Scope, "scope_id": ex.ScopeID, "request_id": ex.RequestID, "agent_id": ex.AgentID,

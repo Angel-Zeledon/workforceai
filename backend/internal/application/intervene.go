@@ -89,7 +89,19 @@ func (o *Orchestrator) applyGuidance(ctx context.Context, in *RunTaskRequest) {
 // call is traced (success or failure) and the trace never leaks to callers.
 func (o *Orchestrator) rtRunTask(ctx context.Context, rs *run, kind string, in RunTaskRequest) (RunTaskResponse, error) {
 	t0 := time.Now()
+	restricted := false
+	if hc := helperCtxFrom(ctx); hc != nil && hc.enforce { // a part of a helper group: the last gate before the runtime (helpers_run.go)
+		restricted = true
+		agent, ok := rs.agents[in.Agent.ID]
+		if !ok {
+			agent, _ = o.store.GetAgent(ctx, o.org(ctx), in.Agent.ID)
+		}
+		in = o.sanitizeHelperRun(rs, agent, in)
+	}
 	resp, err := o.rt.RunTask(ctx, in)
+	if restricted && err == nil {
+		resp = o.helperGuardResponse(ctx, rs, in, resp)
+	}
 	if o.v2.tracer != nil {
 		c := RunCall{AgentID: in.Agent.ID, TaskID: in.Task.ID, RequestID: rs.req.ID, Kind: kind, In: in, Err: err, Latency: time.Since(t0)}
 		if err == nil {

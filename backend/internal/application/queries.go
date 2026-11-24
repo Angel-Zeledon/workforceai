@@ -44,6 +44,9 @@ type Config struct {
 	// runtime may ask to list/read/search (drive, connections) and be called
 	// again with the results before it must deliver. Each round reserves budget.
 	WorkReadRounds int
+	// HelpersEnabled (HELPERS_ENABLED, off by default) turns on temporary helpers: one request split in independent
+	// parts (helpers.go). Off: Launch refuses and nothing else changes.
+	HelpersEnabled bool
 	// Projects never lose an overnight run to an unanswered human: their
 	// approvals and budget pauses WAIT and remind every ProjectReminderEvery
 	// (0: wait without reminders). A timeout > 0 restores the auto-reject

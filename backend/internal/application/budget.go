@@ -38,6 +38,9 @@ type Budget struct {
 	estimates map[string]domain.CostEstimate // org|request id
 	// observer (optional) receives every recorded cost (anomaly detection).
 	observer AnomalyObserver
+	// groups (optional) holds the temporary helper groups: their hard cap is checked on every reservation and their
+	// real spend is added to them on every recorded call (helpers_run.go).
+	groups HelperStore
 	// spend is the incremental org spend counter (spend.go).
 	spend spendCounter
 	// OrgCapFor (optional) returns a stricter HARD cap for one organization, 0 = none: the free plan
@@ -51,7 +54,8 @@ type Budget struct {
 
 // NewBudget builds the manager. Config zero values disable the optional caps.
 func NewBudget(cfg Config, store Store, rec *Recorder, log *slog.Logger) *Budget {
-	return &Budget{cfg: cfg, store: store, rec: rec, log: log,
+	groups, _ := store.(HelperStore)
+	return &Budget{cfg: cfg, store: store, rec: rec, log: log, groups: groups,
 		reserved: map[string]float64{}, pauses: map[string]*PauseInfo{}, warned: map[string]bool{},
 		wake: make(chan struct{}), confirm: map[string]chan Confirmation{}, estimates: map[string]domain.CostEstimate{}}
 }
@@ -91,7 +95,9 @@ type Exceeded struct {
 }
 
 // Resumable reports whether raising a cap through the API can unblock it.
-func (e *Exceeded) Resumable() bool { return e.Scope != domain.ScopeOrg }
+func (e *Exceeded) Resumable() bool {
+	return e.Scope != domain.ScopeOrg && e.Scope != domain.ScopeHelperGroup // the cap of a helper group is final: what is left is stopped
+}
 
 func (e *Exceeded) Error() string {
 	return fmt.Sprintf("budget cap reached (%s %s): needs $%.4f, cap $%.4f", e.Scope, e.ScopeID, e.NeededUSD, e.CapUSD)
@@ -218,6 +224,14 @@ func (b *Budget) Reserve(ctx context.Context, requestID, agentID string, estimat
 	} else if ok {
 		checks = append(checks, check{domain.ScopeDepartment, dc.name, dc.limit, dc.spent, requestID, agentID})
 	}
+	// The hard cap of a helper group (only for the parts, never for the joining task: it must run with what exists).
+	if hc := helperCtxFrom(ctx); hc != nil && hc.enforce && b.groups != nil {
+		g, err := b.groups.GetHelperGroup(ctx, org, hc.groupID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("helper group %s: %w", hc.groupID, err) // fail closed: no cap known, no call
+		}
+		checks = append(checks, check{domain.ScopeHelperGroup, g.ID, helperCapOf(g), g.SpentUSD, requestID, agentID})
+	}
 	var keys []string
 	var blocked *Exceeded
 	blockedRoom := 0.0
@@ -268,6 +282,11 @@ func (b *Budget) Record(ctx context.Context, requestID string, u domain.UsageEnt
 		return cost, err
 	}
 	b.spend.add(org, cost)
+	if hc := helperCtxFrom(ctx); hc != nil && b.groups != nil && cost > 0 { // real spend of the group (parts and joining task)
+		if err := b.groups.AddHelperSpend(ctx, org, hc.groupID, cost); err != nil {
+			b.log.Warn("helper spend", "group", hc.groupID, "err", err)
+		}
+	}
 	if err := b.store.AddUsage(ctx, org, u); err != nil {
 		return cost, err
 	}

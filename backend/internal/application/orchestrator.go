@@ -69,6 +69,8 @@ type Orchestrator struct {
 
 	durable durableState // run meta, task checkpoints and restart recovery (durable.go)
 
+	helpers helperState // temporary helpers (helpers.go); zero value = off
+
 	watch watchState // stalled-work watchdog: execution handles and recovery orders (watchdog_exec.go)
 
 	stateMu sync.Map // org|agent -> *sync.Mutex: serializes setState of one agent (see setState)
@@ -93,6 +95,7 @@ func NewOrchestrator(ctx context.Context, cfg Config, store Store, rt Runtime, l
 	o := &Orchestrator{cfg: cfg, store: store, rt: rt, locks: locks, rec: rec, approvals: approvals, q: q, log: log}
 	o.budget = NewBudget(cfg, store, rec, log)
 	o.durable.runs, _ = store.(RunStore)
+	o.helpers.store, _ = store.(HelperStore)
 	o.root = ctx
 	o.base, o.cancel = context.WithCancel(ctx)
 	return o
@@ -323,7 +326,16 @@ func (o *Orchestrator) finish(ctx context.Context, rs *run, tasks []domain.Task,
 	var wfKeys []string // workflow of each output (grouping hint for hierarchical synthesis)
 	var unfinished []string
 	contributors := []string{}
+	joined := map[string]bool{} // helper groups whose responsible joined the parts: the report carries that result, not every part
 	for _, t := range tasks {
+		if t.Helper != nil && t.Helper.Index == 0 && outcomes[t.ID] == OutcomeDone {
+			joined[t.Helper.GroupID] = true
+		}
+	}
+	for _, t := range tasks {
+		if isHelperPart(t) && joined[t.Helper.GroupID] {
+			continue
+		}
 		if outcomes[t.ID] == OutcomeDone {
 			d := rs.done[t.ID]
 			outs = append(outs, SynthOutput{TaskID: t.ID, AgentID: t.AgentID, Title: t.Title, Output: *d.Output})
@@ -508,6 +520,20 @@ func (o *Orchestrator) createTasks(ctx context.Context, rs *run, plan PlanRespon
 
 // runTask executes one task end to end. It is called by the scheduler.
 func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outcome {
+	if t.Helper != nil {
+		out := o.runTaskLocked(ctx, rs, t)
+		if out == OutcomeFailed && isHelperPart(t) { // a part stopped by the cap of its group is finished, not failed
+			if cur, err := o.store.GetTask(context.WithoutCancel(ctx), o.org(ctx), t.ID); err == nil && cur.Status == domain.TaskDone {
+				out = OutcomeDone
+			}
+		}
+		o.helperAfterRun(ctx, t)
+		return out
+	}
+	return o.runTaskLocked(ctx, rs, t)
+}
+
+func (o *Orchestrator) runTaskLocked(ctx context.Context, rs *run, t domain.Task) Outcome {
 	// Lock per task so that a second instance never runs it twice.
 	unlock, ok, err := o.locks.Lock(ctx, "task:"+t.ID, o.cfg.LockTTL)
 	if err != nil {
@@ -536,6 +562,14 @@ func (o *Orchestrator) runTask(ctx context.Context, rs *run, t domain.Task) Outc
 // runTaskOnce is one run of a task: guards, budget, the runtime call, tools and completion. asked=true means the
 // agent asked a person for help instead: the task is needs_input and runTask waits for the answer.
 func (o *Orchestrator) runTaskOnce(ctx context.Context, rs *run, t domain.Task) (Outcome, bool) {
+	if t.Helper != nil { // temporary helpers (helpers_run.go): stopped groups, the cap and the slots; the run itself is restricted below
+		hctx, release, out, handled := o.helperEnter(ctx, rs, t)
+		if handled {
+			return out, false
+		}
+		defer release()
+		ctx = hctx
+	}
 	if !o.admitTask(ctx, rs, t) {
 		return OutcomeFailed, false // kill switch / pause never released before shutdown
 	}
@@ -576,10 +610,18 @@ func (o *Orchestrator) runTaskOnce(ctx context.Context, rs *run, t domain.Task) 
 
 	in := o.buildRunRequest(ctx, rs, t, agent)
 	o.decorateRun(ctx, &in)
-	o.helpContext(ctx, &in)
-	// Vision: images the user attached to the chat message, read as the agent.
-	o.firstPassImages(ctx, rs, &t, agent, &in)
+	helperPart := isHelperPart(t)
+	if helperPart { // the whole request of a part is rebuilt; no help flow, no vision of the request's attachments, no review
+		in = o.sanitizeHelperRun(rs, agent, in)
+	} else {
+		o.helpContext(ctx, &in)
+		// Vision: images the user attached to the chat message, read as the agent.
+		o.firstPassImages(ctx, rs, &t, agent, &in)
+	}
 	spec := o.reviewSpecOf(ctx, t) // Q1: off (zero spec) unless the project enabled the review
+	if helperPart {
+		spec = ReviewSpec{} // the quality review only looks at the responsible's own result
+	}
 	if len(spec.Criteria) > 0 {
 		in.Task.Acceptance = spec.Criteria
 	} else {
@@ -706,11 +748,13 @@ func (o *Orchestrator) completeTask(ctx context.Context, rs *run, t domain.Task,
 	rs.mu.Lock()
 	rs.done[t.ID] = t
 	rs.mu.Unlock()
-	if err := o.store.SetMemory(ctx, o.org(ctx), t.AgentID, domain.Memory{Scope: "agent", Key: "last_task", Value: t.Title + ": " + t.Output.Summary}); err != nil {
-		o.log.Warn("set memory", "err", err)
-	}
-	if o.memSrc != nil {
-		o.memSrc.RememberTask(ctx, o.org(ctx), t, rs.req.Text)
+	if !isHelperPart(t) { // a helper leaves nothing behind but its result and the log: no memory
+		if err := o.store.SetMemory(ctx, o.org(ctx), t.AgentID, domain.Memory{Scope: "agent", Key: "last_task", Value: t.Title + ": " + t.Output.Summary}); err != nil {
+			o.log.Warn("set memory", "err", err)
+		}
+		if o.memSrc != nil {
+			o.memSrc.RememberTask(ctx, o.org(ctx), t, rs.req.Text)
+		}
 	}
 	o.setState(ctx, t.AgentID, domain.StateCompleted, "Completó: "+t.Title, &tid, 100)
 	o.rec.Emit(ctx, Action{Type: domain.EvTaskCompleted, AgentID: t.AgentID, Entity: "task", EntityID: t.ID,
@@ -721,6 +765,9 @@ func (o *Orchestrator) completeTask(ctx context.Context, rs *run, t domain.Task,
 }
 
 func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Task, agent domain.Agent) RunTaskRequest {
+	if isHelperPart(t) { // helpers_run.go: neutral persona, no memory, no recalled memories, no folder
+		return o.buildHelperRunRequest(rs, t, agent)
+	}
 	rc := RunContext{RequestText: rs.req.Text, DependencyOutputs: []DependencyOutput{}, Memory: []MemoryEntry{}}
 	var deps, others []domain.Task
 	rs.mu.Lock()
@@ -924,6 +971,9 @@ func approverIDs(ap domain.Approval) []string {
 // handleTools applies the approval policy to the runtime's tool requests.
 // Phase 1 has no real tools: approved/allowed actions are recorded as executed.
 func (o *Orchestrator) handleTools(ctx context.Context, rs *run, t *domain.Task, agent domain.Agent, reqs []ToolRequest) Outcome {
+	if isHelperPart(*t) { // a helper never asks for approvals or acts: only whitelisted reads reach the loop below
+		reqs = o.helperFilterTools(ctx, *t, agent, reqs)
+	}
 	return o.handleToolsFrom(ctx, rs, t, agent, reqs, 0)
 }
 
@@ -1090,6 +1140,10 @@ func (o *Orchestrator) waitToolApproval(ctx context.Context, rs *run, t *domain.
 func (o *Orchestrator) failTask(ctx context.Context, rs *run, t domain.Task, cause error) {
 	if ctx.Err() != nil && errors.Is(context.Cause(ctx), errStallRecover) {
 		return // a person is recovering this stalled task: supervise re-runs or blocks it (watchdog_exec.go)
+	}
+	if errors.Is(cause, errBudget) && isHelperPart(t) && o.helperCapStopped(ctx, t) {
+		o.helperSkipPart(ctx, rs, t, "tope de gasto alcanzado") // the cap of the helpers, not of the company: the part is simply not done
+		return
 	}
 	if errors.Is(cause, errBudget) {
 		o.stopForBudget(ctx, rs, t)
