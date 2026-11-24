@@ -167,10 +167,14 @@ func (r *EventRefs) walk(v any, depth int) {
 				}
 				continue
 			}
-			if list, ok := val.([]any); ok && agentsKeys[k] {
+			if list, ok := val.([]any); ok && (agentsKeys[k] || k == "request_ids") {
 				for _, e := range list {
 					if s, ok := e.(string); ok && s != "" {
-						r.Agents = append(r.Agents, s)
+						if k == "request_ids" {
+							r.Requests = append(r.Requests, s) // a notice that gathers several requests
+						} else {
+							r.Agents = append(r.Agents, s)
+						}
 					}
 				}
 				continue

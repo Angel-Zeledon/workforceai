@@ -325,11 +325,14 @@ func (q *Questions) notice(ctx context.Context, qu Question, reminder bool) {
 	c.add(q.org(ctx), qu, reminder)
 }
 
-func (q *Questions) emitNotice(org string, first Question, ids []string, reminder bool) {
-	ctx := WithOrg(context.Background(), org)
+// emitNotice publishes a help notice. It carries the need of the question and no task, so it names the requests of the
+// group it gathers (request_id, request_ids): the recorder seals it to whoever may see all of them (the most
+// restrictive office of a mixed burst), and the person the question is for always receives it.
+func (q *Questions) emitNotice(org string, first Question, ids, requests []string, reminder bool) {
+	ctx := WithWorkPeople(WithOrg(context.Background(), org), PersonID(first.AskedFor))
 	q.Rec.Emit(ctx, Action{Type: domain.EvHelpNotice, AgentID: first.AgentID, Entity: "question", EntityID: first.ID, SkipAudit: true,
 		Payload: map[string]any{"asked_for": first.AskedFor, "group": first.GroupKey, "project_id": first.ProjectID, "count": len(ids),
-			"question_ids": ids, "reminder": reminder, "need": first.Need}})
+			"question_ids": ids, "reminder": reminder, "need": first.Need, "request_id": first.RequestID, "request_ids": requests}})
 }
 
 // helpCoalescer turns a burst of questions of one group for one person into few notices: the first goes out at
@@ -337,7 +340,7 @@ func (q *Questions) emitNotice(org string, first Question, ids []string, reminde
 // reminders (the 5th and later) gather over a day, so a batch gets one weekly summary instead of one per customer.
 type helpCoalescer struct {
 	window time.Duration
-	emit   func(org string, first Question, ids []string, reminder bool)
+	emit   func(org string, first Question, ids, requests []string, reminder bool)
 	mu     sync.Mutex
 	open   map[string]*noticeWindow
 }
@@ -345,6 +348,7 @@ type helpCoalescer struct {
 type noticeWindow struct {
 	first    Question
 	ids      []string
+	requests []string // the request of each of ids
 	reminder bool
 }
 
@@ -356,21 +360,21 @@ func (c *helpCoalescer) add(org string, qu Question, reminder bool) {
 	key := fmt.Sprintf("%s|%s|%s|%t", org, qu.GroupKey, qu.AskedFor, reminder)
 	c.mu.Lock()
 	if w, ok := c.open[key]; ok {
-		w.ids = append(w.ids, qu.ID)
+		w.ids, w.requests = append(w.ids, qu.ID), append(w.requests, qu.RequestID)
 		c.mu.Unlock()
 		return
 	}
 	w := &noticeWindow{first: qu, reminder: reminder}
 	c.open[key] = w
 	c.mu.Unlock()
-	c.emit(org, qu, []string{qu.ID}, reminder)
+	c.emit(org, qu, []string{qu.ID}, []string{qu.RequestID}, reminder)
 	time.AfterFunc(window, func() {
 		c.mu.Lock()
 		delete(c.open, key)
-		ids := w.ids
+		ids, requests := w.ids, w.requests
 		c.mu.Unlock()
 		if len(ids) > 0 {
-			c.emit(org, w.first, ids, reminder)
+			c.emit(org, w.first, ids, requests, reminder)
 		}
 	})
 }
