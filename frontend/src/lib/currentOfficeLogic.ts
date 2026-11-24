@@ -1,6 +1,8 @@
 /** The office the person is looking at ("all" = every office they can see), and what belongs to it. Pure: tests in
  *  currentOfficeLogic.test.mjs. Spec: docs/superpowers/specs/2026-11-23-oficinas-agentes-habilidades-design.md §4-§5. */
-import { GENERAL_ID, isGeneral } from "./agentOfficesLogic.ts";
+// same rule as agentOfficesLogic.isGeneral (inlined: node --test cannot resolve extensionless value imports)
+const GENERAL_ID = "general";
+const isGeneral = (id?: string | null): boolean => !id || id === GENERAL_ID;
 
 export const ALL_OFFICES = "all";
 
