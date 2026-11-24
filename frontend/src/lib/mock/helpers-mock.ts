@@ -102,6 +102,7 @@ export class MockHelpers {
       if (part == null) { this.stopped.add(g.id); for (const p of g.parts) if (p.status === "pending") p.status = "stopped"; if (g.status === "running" || g.status === "joining") g.status = "stopped"; }
       else { this.stopped.add(`${g.id}:${part}`); const p = g.parts.find((x) => x.index === Number(part)); if (p && p.status === "pending") p.status = "stopped"; }
       this.publish(g);
+      void this.finish(g).catch(() => { /* cancelled by reset */ }); // nothing left running: the responsible hands over what there is
       return { group: { ...g } };
     }
     if (action === "retry") {

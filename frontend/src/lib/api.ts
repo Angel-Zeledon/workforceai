@@ -46,6 +46,7 @@ export function toChatMessage(x: any, conv: string): ChatMessage {
     turn_id: x.turn_id ?? null, from: String(x.from), to: String(x.to ?? ""),
     kind: x.kind ?? "chat", text: String(x.text ?? ""), reply_to: x.reply_to ?? null, ts: String(x.ts ?? new Date().toISOString()), handoff_to: x.handoff_to ?? null,
     ...(x.request_id ? { request_id: String(x.request_id) } : {}),
+    ...(x.helper_group_id ? { helper_group_id: String(x.helper_group_id) } : {}),
     ...(Array.isArray(x.agent_ids) ? { agent_ids: x.agent_ids.map(String) } : {}),
     ...(x.author_id ? { author_id: String(x.author_id) } : {}),
     ...(x.author_name ? { author_name: String(x.author_name) } : {}),

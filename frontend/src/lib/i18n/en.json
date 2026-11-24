@@ -7286,6 +7286,7 @@
   "helpers.run.partsOf": "{done} of {total} parts",
   "helpers.proposal.quantity": "Amount",
   "helpers.proposal.see": "View",
+  "helpers.free.intro": "I'll coordinate it. I'm preparing how to split it among helpers and you decide.",
   "helpers.noSplit": "Splitting it among helpers needs at least 4 parts. I'll do it as a normal request.",
   "helpers.result.msg": "Done: I gathered the result of {done} of {total} parts into the report.",
   "helpers.result.missing": "Missing: {missing}.",

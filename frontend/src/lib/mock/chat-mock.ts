@@ -228,7 +228,8 @@ export class MockChat {
     }
 
     // ---------- office / assistant: a task ----------
-    const plan = h.planPreview(text);
+    const free = helpers !== null && splitItems(text, helpers).length >= 4; // "Ayudantes (sin puesto)": the assistant coordinates, nobody else is assigned
+    const plan = free ? [] : h.planPreview(text);
     const seen = new Set<string>();
     const responders: RouteResponder[] = [{ agent_id: "assistant", role: "primary", reason: tr("mock.reason.coordinator") }];
     for (const p of plan) if (p.agent !== "assistant" && !seen.has(p.agent)) { seen.add(p.agent); responders.push({ agent_id: p.agent, role: "contributor", reason: tr(`mock.reason.${p.key}`) }); }
@@ -237,7 +238,7 @@ export class MockChat {
     const lines = plan.filter((p) => p.agent !== "assistant").map((p) => tr("mock.task.line", { name: first(h.agent(p.agent)!), task: p.title, reason: tr(`mock.reason.${p.key}`) }));
     // a helpers request with fewer than 4 parts goes on as a normal request, and the assistant says so
     if (helpers !== null && splitItems(text, helpers).length < 4) await this.speak(conv, "assistant", "user", tr("helpers.noSplit"), turn, replyTo);
-    const said = await this.speak(conv, "assistant", "user", `${tr("mock.task.intro")}\n${lines.join("\n")}`, turn, replyTo, "delegation");
+    const said = await this.speak(conv, "assistant", "user", free ? tr("helpers.free.intro") : `${tr("mock.task.intro")}\n${lines.join("\n")}`, turn, replyTo, free ? "chat" : "delegation");
     h.startRequest(text).then((rid) => {
       // the message that announced the work points to the request it created (deep link from the chat history)
       if (said) said.request_id = rid;

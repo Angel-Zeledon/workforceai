@@ -7287,6 +7287,7 @@
   "helpers.run.partsOf": "{done} de {total} partes",
   "helpers.proposal.quantity": "Quantidade",
   "helpers.proposal.see": "Ver",
+  "helpers.free.intro": "Eu coordeno. Preparo como dividir entre ajudantes e você decide.",
   "helpers.noSplit": "Para repartir entre ajudantes são necessárias pelo menos 4 partes. Faço como um pedido normal.",
   "helpers.result.msg": "Pronto: juntei o resultado de {done} de {total} partes no relatório.",
   "helpers.result.missing": "Faltou: {missing}.",
