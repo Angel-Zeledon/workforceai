@@ -280,7 +280,7 @@ func NewRouter(d Deps) http.Handler {
 			}
 		} else {
 			// Open demo: the frontend asks here whether to show the login.
-			r.Get("/auth/config", auth.AuthConfigHandler(false))
+			r.Get("/auth/config", auth.AuthConfigHandlerHelpers(false, false, false, false, d.Cfg.HelpersEnabled))
 		}
 		// ---- enterprise identity: SSO, verified domains, policy, SCIM (own auth inside each handler) ----
 		if d.AuthEnabled {
@@ -315,6 +315,7 @@ func NewRouter(d Deps) http.Handler {
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests", s.listRequests)
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}", s.getRequest)
 			r.With(s.can(auth.PermRequestsRead)).Get("/requests/{id}/audit", s.getRequestAudit)
+			s.mountHelpers(r) // temporary helpers: accept, decline, stop, retry (helpers.go); 404 while HELPERS_ENABLED is off
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations", s.listConversations)
 			s.mountChatHistory(r)
 			r.With(s.can(auth.PermConversationsRead)).Get("/conversations/{id}/messages", s.listMessages)
@@ -655,6 +656,7 @@ func (s *server) getRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	d.Tasks = list(d.Tasks)
 	out := s.withCost(r, d)
+	out.HelperGroup = s.helperGroupView(r, d.ID) // nil without helpers (flag off, no group)
 	if out.Goal = s.goalOf(r, d.GoalID); out.Goal == nil { // F1: what it contributes to (a hidden goal reads as none)
 		out.GoalID = ""
 	}

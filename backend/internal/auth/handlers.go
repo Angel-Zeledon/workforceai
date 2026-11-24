@@ -170,7 +170,7 @@ func (h *Handler) Routes() http.Handler {
 	r.With(lim("pwd-reset", h.cfg.RegisterLimit)).Post("/password/reset", h.resetPassword)
 	r.With(lim("verify", h.cfg.RegisterLimit)).Post("/verify", h.verify)
 	r.With(lim("verify-resend", h.cfg.RegisterLimit)).Post("/verify/resend", h.resendVerification)
-	r.Get("/config", AuthConfigHandlerV(true, h.svc.cfg.RequireVerification, h.svc.cfg.TrialEnabled, h.svc.PasswordResetEnabled()))
+	r.Get("/config", AuthConfigHandlerHelpers(true, h.svc.cfg.RequireVerification, h.svc.cfg.TrialEnabled, h.svc.PasswordResetEnabled(), h.svc.cfg.HelpersEnabled))
 	// Accepting is public (the invitee may not have an account yet); throttled like registration.
 	r.With(lim("invite-accept", h.cfg.RegisterLimit)).Post("/invitations/accept", h.acceptInvitation)
 
@@ -601,8 +601,14 @@ func AuthConfigHandler(enabled bool) http.HandlerFunc {
 
 // AuthConfigHandlerV also tells the UI whether new accounts must verify their e-mail.
 func AuthConfigHandlerV(enabled, verification, trial, passwordReset bool) http.HandlerFunc {
+	return AuthConfigHandlerHelpers(enabled, verification, trial, passwordReset, false)
+}
+
+// AuthConfigHandlerHelpers also tells the UI whether temporary helpers are on (HELPERS_ENABLED): the frontend reads
+// helpers_enabled to show or hide everything about them.
+func AuthConfigHandlerHelpers(enabled, verification, trial, passwordReset, helpers bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{"enabled": enabled, "registration": enabled, "verification": verification, "trial": trial, "password_reset": passwordReset, "mfa": enabled})
+		writeJSON(w, http.StatusOK, map[string]any{"enabled": enabled, "registration": enabled, "verification": verification, "trial": trial, "password_reset": passwordReset, "mfa": enabled, "helpers_enabled": helpers})
 	}
 }
 
