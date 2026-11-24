@@ -23,17 +23,15 @@ const badgeCls: Record<string, string> = {
  * org chart's departments that are not an office yet (they work in General); an admin can give one its own space.
  * Nothing changes in the data: a department is an office without a space of its own.
  */
-export function OfficesPanel({ people, onChanged, depts = [], onEditDept, onNewDept, actions, focusDepartments = false, officeId, only }: {
+export function OfficesPanel({ people, onChanged, depts = [], onEditDept, focusDepartments = false, officeId, only }: {
   people: PersonRef[]; onChanged?: () => void;
   /** the page of one office: only that office's card (its people, visibility, memory), nothing else */
   officeId?: string;
-  /** `rest`: the list page already shows the offices as cards, so only the departments without a space and the person's own memory */
-  only?: "rest";
+  /** `intro`: only the line above the office cards; `rest`: the departments without a space (the cards come from OfficeCards) */
+  only?: "rest" | "intro";
   /** every department of the org chart (parents first), for the "without a space yet" part */
   depts?: ChartDept[];
-  onEditDept?: (id: string) => void; onNewDept?: () => void;
-  /** buttons for the top of the tab ("Empezar con un tipo de empresa") */
-  actions?: ReactNode;
+  onEditDept?: (id: string) => void;
   /** an old `?tab=departments` link: scroll to the "without a space yet" part */
   focusDepartments?: boolean;
 }) {
@@ -76,25 +74,16 @@ export function OfficesPanel({ people, onChanged, depts = [], onEditDept, onNewD
       <div data-testid="offices-panel">
         {error && <div role="alert" data-testid="offices-error" className="text-[12px] font-semibold text-red-600">{error} {!data && <button type="button" onClick={load} className="underline">{t("org.retry")}</button>}</div>}
         {!data && !error && <div className="text-sm text-mute">{t("org.loading")}</div>}
-        {data && o && (
-          <ul><OfficeCard o={o} people={people} admin={data.me.admin} meId={data.me.user_id} busy={busy} run={run} onMemory={() => setMemoryOf(o.id)}
-            onSaveTemplate={o.can_enter && o.can_manage ? () => setSaveOf(o.id) : undefined} /></ul>
-        )}
-        {saveOf && o && <SaveTemplatePanel officeId={o.id} officeName={o.general ? t("offices.general") : o.name} onClose={() => setSaveOf(null)} />}
-        {memoryOf && o && <TeamMemory scope="office" refId={o.id} title={t("offices.memoryOf", { name: o.name })} onClose={() => setMemoryOf(null)} />}
+        {data && o && <OfficePeople o={o} people={people} onChanged={() => { load(); onChanged?.(); }} />}
       </div>
     );
   }
 
+  const intro = <p className="max-w-3xl text-[13px] text-mute">{data && data.offices.length > 1 ? t("offices.intro") : t("offices.introGeneral")}</p>;
+  if (only === "intro") return <div data-testid="offices-panel">{intro}</div>;
+
   return (
     <div className="grid gap-5" data-testid="offices-panel">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="min-w-[220px] max-w-3xl flex-1 text-[13px] text-mute">{data && data.offices.length > 1 ? t("offices.intro") : t("offices.introGeneral")}</p>
-        <div className="flex flex-wrap items-center gap-2">
-          {actions}
-          {onNewDept && <button type="button" data-testid="org-new-dept" onClick={onNewDept} className={btnGhost}>{t("org.dept.new")}</button>}
-        </div>
-      </div>
       {error && <div role="alert" data-testid="offices-error" className="text-[12px] font-semibold text-red-600">{error} {!data && <button type="button" onClick={load} className="underline">{t("org.retry")}</button>}</div>}
 
       {only !== "rest" && <section data-testid="offices-with-space" className="grid gap-2">
@@ -117,7 +106,7 @@ export function OfficesPanel({ people, onChanged, depts = [], onEditDept, onNewD
 
       {/* the old "Estructura" tab: same test ids, so old links and tests still find it */}
       <section ref={deptsRef} data-testid="org-tab-departments" className="grid scroll-mt-4 gap-2">
-        <SectionTitle title={t("org.offices.withoutSpace")} count={withoutSpace.length} hint={t("org.offices.withoutSpaceHint")} />
+        {withoutSpace.length > 0 && <SectionTitle title={t("org.offices.withoutSpace")} count={withoutSpace.length} hint={t("org.offices.withoutSpaceHint")} />}
         <div data-testid="org-dept-table">
           {depts.length === 0 && <p className="text-[13px] text-mute">{t("org.offices.noneWithout")}</p>}
           {depts.length > 0 && withoutSpace.length === 0 && <p className="text-[13px] text-mute">{t("org.offices.allSpaced")}</p>}
@@ -166,15 +155,72 @@ export function OfficesPanel({ people, onChanged, depts = [], onEditDept, onNewD
         )}
       </section>
 
-      <section className="rounded-[10px] border border-line bg-panel p-4" data-testid="my-memory">
-        <h3 className="flex items-center gap-2 text-[14px] font-semibold"><Icon name="user" size={14} />{t("offices.myMemory")}</h3>
-        <p className="mb-2 text-[12px] text-mute">{t("offices.myMemory.hint")}</p>
-        <TeamMemory scope="person" refId="" />
-      </section>
       {memoryOf && data && (() => {
         const o = data.offices.find((x) => x.id === memoryOf);
         return o ? <TeamMemory scope="office" refId={o.id} title={t("offices.memoryOf", { name: o.name })} onClose={() => setMemoryOf(null)} /> : null;
       })()}
+    </div>
+  );
+}
+
+/** The "Personas" tab of one office: who is in it, as a list. The responsible one is marked; with rights, add, make responsible
+ *  or member, remove, and open or close the door. General lists everyone in the company (nobody is added or removed there). */
+export function OfficePeople({ o, people, onChanged }: { o: OfficeView; people: PersonRef[]; onChanged: () => void }) {
+  const { t } = useT();
+  const [add, setAdd] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const leadIds = new Set(o.leads.map((l) => l.user_id));
+  const manage = o.can_manage && !o.general;
+  const run = async (fn: () => Promise<unknown>, msg = "offices.error.save") => {
+    setBusy(true); setErr(null);
+    try { await fn(); onChanged(); } catch (e) {
+      const s = String(e);
+      setErr(t(s.includes("409") ? "offices.error.hasAgents" : s.includes("403") ? "offices.error.forbidden" : msg));
+    } finally { setBusy(false); }
+  };
+  if (!o.can_enter) return <p className="text-[13px] text-mute" data-testid={`office-people-closed-${o.id}`}>{t("offices.closedDoor")}</p>;
+  const rows = o.general
+    ? people.map((p) => ({ user_id: p.user_id, name: p.name || p.user_id, lead: false }))
+    : o.members.map((m) => ({ user_id: m.user_id, name: m.name || m.user_id, lead: leadIds.has(m.user_id) }));
+  return (
+    <div className="grid gap-3" data-testid={`office-people-${o.id}`}>
+      {manage && (
+        <div className="flex flex-wrap items-center gap-2">
+          <select aria-label={t("offices.addMember")} data-testid={`office-add-${o.id}`} value={add} onChange={(e) => setAdd(e.target.value)} className={`${inputCls} max-w-[220px] py-1 text-[12px]`}>
+            <option value="">{t("offices.addMember")}</option>
+            {addableMembers(people, o).map((p) => <option key={p.user_id} value={p.user_id}>{p.name}</option>)}
+          </select>
+          <button type="button" disabled={!add || busy} data-testid={`office-add-go-${o.id}`} className={btnGhost}
+            onClick={() => void run(async () => { await officesApi.setMember(o.id, add, "member"); setAdd(""); })}>{t("offices.add")}</button>
+          <button type="button" disabled={busy} data-testid={`office-vis-${o.id}`} className={btnGhost}
+            onClick={() => void run(() => officesApi.setVisibility(o.id, o.visibility === "open" ? "private" : "open"))}>
+            {o.visibility === "open" ? t("offices.makePrivate") : t("offices.makeOpen")}
+          </button>
+        </div>
+      )}
+      {err && <p role="alert" className="text-[12px] font-semibold text-red-600">{err}</p>}
+      {rows.length === 0 && <p className="text-[13px] text-mute" data-testid={`office-people-none-${o.id}`}>{t("offices.noMembers")}</p>}
+      {rows.length > 0 && (
+        <ul data-testid={`office-members-${o.id}`}>
+          {rows.map((p) => (
+            <li key={p.user_id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line/70 py-2.5">
+              <span className="min-w-0 flex-1 basis-40 truncate text-[13.5px] font-semibold">{p.name}</span>
+              {!o.general && <span className={`text-[12px] ${p.lead ? "font-semibold text-accent" : "text-mute"}`}>{t(p.lead ? "offices.lead" : "offices.member")}</span>}
+              {manage && (
+                <span className="flex items-center gap-3">
+                  <button type="button" disabled={busy} data-testid={`office-role-${o.id}-${p.user_id}`} className="text-[12px] font-semibold text-ink2 underline-offset-2 hover:text-ink hover:underline"
+                    onClick={() => void run(() => officesApi.setMember(o.id, p.user_id, p.lead ? "member" : "lead"))}>
+                    {p.lead ? t("offices.makeMember") : t("offices.makeLead")}
+                  </button>
+                  <button type="button" disabled={busy} aria-label={t("offices.remove", { name: p.name })} data-testid={`office-remove-${o.id}-${p.user_id}`}
+                    className="text-ink2 hover:text-red-600" onClick={() => void run(() => officesApi.removeMember(o.id, p.user_id))}><Icon name="x" size={12} /></button>
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

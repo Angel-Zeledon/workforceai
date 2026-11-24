@@ -101,7 +101,11 @@ function OrgScreen({ scope }: { scope: "agents" | "offices" }) {
               className={`rounded-md border px-3 py-1 text-[12px] font-semibold ${!gallery && tab === k ? "border-accent/30 bg-accent-soft text-accent" : "border-line text-mute hover:text-ink"}`}>{t(`org.tab.${k}`)}</button>
           ))}
           {!viewAll && <MoreButton testid="org-more" count={more ? 1 : tabs.folded.length} open={more} onToggle={() => setMore((m) => !m)} />}
-          <button type="button" data-testid="org-teams-start" onClick={() => setTeamsOpen(true)} className={`${btnGhost} ml-auto`}>{t("org.teams.start")}</button>
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            {!gallery && tab === "offices" && <button type="button" data-testid="org-industries-link" onClick={() => setIndustries(true)} className={btnGhost}>{t("org.offices.industries")}</button>}
+            {!gallery && tab === "offices" && <button type="button" data-testid="org-new-dept" onClick={() => setDept(null)} className={btnGhost}>{t("org.dept.new")}</button>}
+            <button type="button" data-testid="org-teams-start" onClick={() => setTeamsOpen(true)} className={btnGhost}>{t("org.teams.start")}</button>
+          </div>
         </div>
       )}
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-5">
@@ -133,9 +137,9 @@ function OrgScreen({ scope }: { scope: "agents" | "offices" }) {
         )}
         {chart && !gallery && scope === "offices" && tab === "offices" && (
           <div className="grid gap-6">
+            <OfficesPanel only="intro" people={people} depts={depts} />
             <section aria-label={t("nav.offices")}><OfficeCards refresh={cardsKey} /></section>
-            <OfficesPanel only="rest" people={people} onChanged={() => { load(); setCardsKey((k) => k + 1); }} depts={depts} onEditDept={setDept} onNewDept={() => setDept(null)} focusDepartments={focusDepts}
-              actions={<button type="button" data-testid="org-industries-link" onClick={() => setIndustries(true)} className={btnGhost}>{t("org.offices.industries")}</button>} />
+            <OfficesPanel only="rest" people={people} onChanged={() => { load(); setCardsKey((k) => k + 1); }} depts={depts} onEditDept={setDept} focusDepartments={focusDepts} />
           </div>
         )}
         {chart && !gallery && scope === "offices" && tab === "chart" && <OrgChartTree chart={chart} onDept={setDept} onAgent={setAgent} onPerson={setPerson} onNewDept={() => setDept(null)} />}
