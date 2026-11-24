@@ -37,6 +37,15 @@ func wireRituals(ctx context.Context, cfg config.Config, log *slog.Logger, pg *p
 		Audit:  rec.Audit,
 	}
 	if officesSvc != nil { // D3: the office chat note leaves out a private department's agents (unreadable model: all left out)
+		// a ritual is stored once for everybody: what a public agent did for a private office stays out of it
+		rc.PrivateOffice = func(c context.Context, officeID string) bool {
+			m, err := officesSvc.Model(c, application.OrgFrom(c, cfg.App.OrgID))
+			if err != nil {
+				return true
+			}
+			o, ok := m.Office(officeID)
+			return !ok || (!o.General && o.Visibility == offices.Private)
+		}
 		rc.Public = func(c context.Context, agentID string) bool {
 			m, err := officesSvc.Model(c, application.OrgFrom(c, cfg.App.OrgID))
 			return err == nil && m.CanSeeWork(offices.Viewer{}, agentID)
