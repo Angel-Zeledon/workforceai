@@ -281,9 +281,7 @@ func TestLaunchValidatesTheRequest(t *testing.T) {
 	if _, err := w.orch.LaunchHelpers(ctx, withFile, 2, 1, "alice"); !errors.Is(err, domain.ErrForbidden) {
 		t.Fatalf("a file nobody checked is refused: %v", err)
 	}
-	w.orch.SetHelperFileCheck(func(_ context.Context, _, agent string, f domain.FileRef) bool {
-		return agent == helperOwner && f.Path != "/secreto"
-	})
+	w.orch.SetHelperFileCheck(func(_ context.Context, _, agent string, f domain.FileRef) bool { return agent == helperOwner && f.Path != "/secreto" })
 	withFile.Parts[1].Files = []domain.FileRef{{Path: "/secreto"}}
 	if _, err := w.orch.LaunchHelpers(ctx, withFile, 2, 1, "alice"); !errors.Is(err, domain.ErrForbidden) {
 		t.Fatalf("a file the responsible cannot read: %v", err)
@@ -667,9 +665,7 @@ func (r *restartRuntime) RunTask(ctx context.Context, in application.RunTaskRequ
 func TestARestartMidwayDoesNotRepeatWhatFinished(t *testing.T) {
 	store, pub := newStore(t), &capture{}
 	cfgFn := func(c *application.Config) { helperCfg(c) }
-	tier := func(context.Context, string) policy.Tier {
-		return policy.Tier{ID: "pro", HelpersParallel: 1, HelperParts: 20}
-	}
+	tier := func(context.Context, string) policy.Tier { return policy.Tier{ID: "pro", HelpersParallel: 1, HelperParts: 20} }
 
 	var started atomic.Int32
 	rt1 := &restartRuntime{helperRuntime: newHelperRuntime()}

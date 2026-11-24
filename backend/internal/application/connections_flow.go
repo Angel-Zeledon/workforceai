@@ -29,11 +29,11 @@ type connState struct {
 
 // runExt is the per-request state added by this feature.
 type runExt struct {
-	mu        sync.Mutex
-	readOnly  bool                  // the human marked the request "no external actions"
-	rehearsal bool                  // B9: the request runs as a rehearsal (rehearsal.go): no side effect is executed
-	taint     map[string]*taskTaint // task id -> what it read
-	seen      map[string]*taskSeen  // task id -> ids of what its reads returned (evidence.go)
+	mu       sync.Mutex
+	readOnly bool                  // the human marked the request "no external actions"
+	rehearsal bool                 // B9: the request runs as a rehearsal (rehearsal.go): no side effect is executed
+	taint    map[string]*taskTaint // task id -> what it read
+	seen     map[string]*taskSeen  // task id -> ids of what its reads returned (evidence.go)
 }
 
 type taskTaint struct {

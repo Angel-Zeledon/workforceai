@@ -45,9 +45,9 @@ type GateApprovalSpec struct {
 
 // GateDecision is the answer of a TaskGate.
 type GateDecision struct {
-	Action  GateAction
-	Reason  string
-	Summary string // GateComplete: summary stored as the task output
+	Action   GateAction
+	Reason   string
+	Summary  string // GateComplete: summary stored as the task output
 	// Until (GateHold, optional) is the moment the gate will let the task go (the next opening of a working
 	// schedule): the orchestrator sleeps until then and records a durable hold (hold.go).
 	Until    time.Time
