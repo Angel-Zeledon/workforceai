@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useT, fmtUsd } from "@/lib/i18n";
 import { helpersApi, useHelpers } from "@/lib/helpers";
-import { clampCount, countOptions, rescale } from "@/lib/helpersLogic";
+import { clampCount, countOptions, proposedRequestIds, rescale } from "@/lib/helpersLogic";
 import type { HelperGroup } from "@/lib/types";
 
 /**
@@ -33,10 +33,10 @@ export function HelperProposal({ group, compact = false }: { group: HelperGroup;
   };
   const share = Math.ceil(group.parts.length / n);
   return (
-    <section data-testid="helper-proposal" data-group={group.id} aria-labelledby={`${id}-t`} className="rounded-[10px] border border-line bg-panel p-3">
+    <section data-testid="helper-proposal" data-group={group.id} tabIndex={-1} aria-labelledby={`${id}-t`} className="rounded-[10px] border border-line bg-panel p-3 focus:outline-none">
       <h4 id={`${id}-t`} className="text-[13.5px] font-semibold leading-snug text-ink">{t("helpers.proposal.title", { name: first, n })}</h4>
       <p className="mt-1 text-[12.5px] leading-snug text-ink2">
-        {group.mode === "free" ? t("helpers.proposal.body.free", { name: first, share }) : t("helpers.proposal.body", { name: first, share })}
+        {group.mode === "free" ? t("helpers.proposal.body.free", { name: first, count: share }) : t("helpers.proposal.body", { name: first, count: share })}
       </p>
       {group.parts.length > 0 && !compact && (
         <details className="group mt-1.5">
@@ -61,7 +61,7 @@ export function HelperProposal({ group, compact = false }: { group: HelperGroup;
           {t("helpers.proposal.decline", { name: first })}
         </button>
         <label className="flex items-center gap-1.5 text-[12.5px] text-ink2">
-          <span className="sr-only sm:not-sr-only">{t("helpers.proposal.change")}</span>
+          <span>{t("helpers.proposal.quantity")}</span>
           <select data-testid="helper-count" value={n} disabled={!!busy} aria-label={t("helpers.proposal.count")} onChange={(e) => setCount(Number(e.target.value))}
             className="h-11 rounded-lg border border-line bg-panel px-2 text-[13px] font-semibold text-ink outline-none focus:border-accent sm:h-10">
             {options.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -83,3 +83,29 @@ export function useProposals(): HelperGroup[] {
   return list.length ? list : NONE;
 }
 const NONE: HelperGroup[] = [];
+
+/** The requests whose proposal is open: their run block is not shown until the person decides. */
+export function useProposedRequests(): Set<string> {
+  const enabled = useHelpers((s) => s.enabled);
+  const groups = useHelpers((s) => s.groups);
+  return useMemo(() => (enabled ? proposedRequestIds(groups) : NO_REQUESTS), [enabled, groups]);
+}
+const NO_REQUESTS: Set<string> = new Set();
+
+/** The short form of a proposal in "Te necesitan" while its conversation is on screen: who proposes and how many, and "Ver" moves to it. */
+export function ProposalPointer({ group }: { group: HelperGroup }) {
+  const { t } = useT();
+  const owner = useStore((s) => s.agents[group.owner_agent_id]);
+  const first = (owner?.name ?? "").split(" ")[0] || t("common.system");
+  const see = () => {
+    const el = document.querySelector<HTMLElement>(`[data-testid="helper-proposal"][data-group="${CSS.escape(group.id)}"]`);
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    el?.focus({ preventScroll: true });
+  };
+  return (
+    <div data-testid="helper-pointer" data-group={group.id} className="flex items-center justify-between gap-2 rounded-[10px] border border-line bg-panel px-3 py-2">
+      <p className="min-w-0 text-[12.5px] leading-snug text-ink">{t("helpers.proposal.title", { name: first, n: group.count })}</p>
+      <button type="button" data-testid="helper-see" onClick={see} className="min-h-10 shrink-0 rounded-md px-2 text-[12.5px] font-semibold text-accent hover:bg-accent-soft">{t("helpers.proposal.see")}</button>
+    </div>
+  );
+}

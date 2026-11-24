@@ -126,6 +126,8 @@ export interface ChatMessage {
   kind: MessageKind; text: string; reply_to: string | null; ts: string;
   /** optional: the agent redirects the topic to this colleague (offers a quick action) */
   handoff_to?: string | null;
+  /** the folded result of a helpers group (rendered as a block, not as text) */
+  helper_group_id?: string;
   /** drive files of this message (cards in the chat) */
   files?: FileRef[];
   /** the request this message created or reports on (deep link from the chat history) */

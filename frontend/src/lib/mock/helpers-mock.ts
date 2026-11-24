@@ -10,7 +10,8 @@ export interface HelpersHost {
   assistantId: () => string;
   addTask: (t: Task) => void;
   emitTask: (type: string, t: Task) => void;
-  finishRequest: (requestId: string) => void;
+  /** the group is over: the responsible delivers what the parts left (in the conversation, with its file) */
+  deliver: (g: HelperGroup) => void;
   nowIso: () => string;
 }
 
@@ -190,6 +191,6 @@ export class MockHelpers {
     this.h.emitTask("task.completed", join);
     g.status = this.stopped.has(g.id) && n < g.parts.length ? "stopped" : "done";
     this.publish(g);
-    this.h.finishRequest(g.request_id);
+    this.h.deliver({ ...g, parts: g.parts.map((p) => ({ ...p })) });
   }
 }

@@ -15,7 +15,7 @@ function Mark({ kind }: { kind: PartKind }) {
   return <span aria-hidden className="flex h-4 w-4 shrink-0 items-center justify-center"><span className="h-2 w-2 rounded-full border border-line-strong bg-panel" /></span>;
 }
 
-function PartRow({ g, p, busy, run }: { g: HelperGroup; p: HelperPart; busy: boolean; run: (fn: () => Promise<unknown>) => void }) {
+export function PartRow({ g, p, busy, run, readOnly = false }: { g: HelperGroup; p: HelperPart; busy: boolean; run: (fn: () => Promise<unknown>) => void; readOnly?: boolean }) {
   const { t } = useT();
   const task = useStore((s) => (p.task_id ? s.tasks[p.task_id] : undefined));
   const [open, setOpen] = useState(false);
@@ -34,11 +34,11 @@ function PartRow({ g, p, busy, run }: { g: HelperGroup; p: HelperPart; busy: boo
             <button type="button" aria-expanded={open} aria-label={t("helpers.part.openAria", { label: p.label })} onClick={() => setOpen((v) => !v)}
               className="min-h-9 rounded-md px-2 text-[12px] font-semibold text-accent hover:bg-accent-soft md:min-h-8">{t("helpers.part.open")}</button>
           )}
-          {(kind === "failed" || kind === "stopped") && isActiveGroupOrOpen(g) && (
+          {!readOnly && (kind === "failed" || kind === "stopped") && isActiveGroupOrOpen(g) && (
             <button type="button" disabled={busy} data-testid={`helper-retry-${p.index}`} aria-label={t("helpers.part.retryAria", { label: p.label })} onClick={() => run(() => helpersApi.retry(g.request_id, p.index))}
               className="min-h-9 rounded-md px-2 text-[12px] font-semibold text-accent hover:bg-accent-soft disabled:opacity-60 md:min-h-8">{t("helpers.part.retry")}</button>
           )}
-          {(kind === "active" || kind === "queued") && isActiveGroup(g) && (
+          {!readOnly && (kind === "active" || kind === "queued") && isActiveGroup(g) && (
             <button type="button" disabled={busy} aria-label={t("helpers.part.stopAria", { label: p.label })} onClick={() => run(() => helpersApi.stop(g.request_id, p.index))}
               className="min-h-9 rounded-md px-2 text-[12px] font-medium text-ink2 hover:bg-panel2 disabled:opacity-60 md:min-h-8">{t("helpers.part.stop")}</button>
           )}
@@ -81,7 +81,7 @@ export function HelperProgress({ group: g }: { group: HelperGroup }) {
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <p className="text-[12.5px] font-semibold text-ink" data-testid="helper-title">{t("helpers.run.title", { name: first, n: g.count })}</p>
         <p role="status" aria-live="polite" className="text-[12px] text-ink2" data-testid="helper-count-line">
-          {t("helpers.run.progress", { done: c.done, total: c.total })}{c.failed > 0 && <span className="font-medium text-err"> · {t("helpers.run.failedN", { n: c.failed })}</span>}
+          {t("helpers.run.progress", { done: c.done, total: c.total })}{c.failed > 0 && <span className="font-medium text-err"> · {t("helpers.run.failedN", { count: c.failed })}</span>}
         </p>
       </div>
       <ul className="mt-2 space-y-1.5">

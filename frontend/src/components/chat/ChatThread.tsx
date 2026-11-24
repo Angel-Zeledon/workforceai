@@ -13,6 +13,7 @@ import { FileCards } from "../files/FileCard";
 import { drive } from "@/lib/drive";
 import type { FileRef } from "@/lib/types";
 import { CommandCard } from "./commands/CommandCard";
+import { HelperResult } from "../helpers/HelperResult";
 import { useSlashComposer } from "./commands/useSlashComposer";
 import { surfaceOf } from "@/lib/commands/logic";
 import { withOpenFile } from "@/lib/fileEdit";
@@ -158,6 +159,7 @@ export function Bubble({ m, grouped, showRoute }: { m: ChatMessage; grouped: boo
     select(handoff);
   };
   if (m.card) return <CommandCard m={m} />;
+  if (m.helper_group_id) return <div className="pl-8 pt-1"><HelperResult groupId={m.helper_group_id} /></div>;
   if (m.kind === "system" || m.from === "system") {
     return <div className="py-0.5 text-center text-[10.5px] text-mute">{m.text}</div>;
   }

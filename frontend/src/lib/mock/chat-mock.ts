@@ -4,6 +4,7 @@
  * and answers over the WebSocket with chat.typing / route.decided / chat.message. All texts are localized (es/en).
  */
 import { tr } from "../i18n-core";
+import { splitItems } from "../helpersLogic";
 import type { Agent, AgentState, ChatMessage, FileRef, MessageKind, RouteResponder, TurnIntent } from "../types";
 
 export interface PlanPreview { key: string; agent: string; title: string }
@@ -80,14 +81,14 @@ export class MockChat {
   remove(conv: string) { delete this.history[conv]; }
 
   /** Say something in a conversation (stores history and emits chat.message). */
-  say(conv: string, from: string, to: string, kind: MessageKind, text: string, turn: string | null, replyTo: string | null = null, handoffTo: string | null = null, files?: FileRef[]) {
-    const m: ChatMessage = { id: this.host.uid("cm"), conversation: conv, turn_id: turn, from, to, kind, text, reply_to: replyTo, ts: new Date().toISOString(), ...(handoffTo ? { handoff_to: handoffTo } : {}), ...(files?.length ? { files } : {}) };
+  say(conv: string, from: string, to: string, kind: MessageKind, text: string, turn: string | null, replyTo: string | null = null, handoffTo: string | null = null, files?: FileRef[], helperGroupId?: string) {
+    const m: ChatMessage = { id: this.host.uid("cm"), conversation: conv, turn_id: turn, from, to, kind, text, reply_to: replyTo, ts: new Date().toISOString(), ...(handoffTo ? { handoff_to: handoffTo } : {}), ...(files?.length ? { files } : {}), ...(helperGroupId ? { helper_group_id: helperGroupId } : {}) };
     (this.history[conv] ||= []).push(m);
     this.host.emit("chat.message", { ...m, message_id: m.id }, from !== "user" && from !== "system" ? from : undefined);
     return m;
   }
   /** Team notes mirrored into the office thread while a task runs (who does what, who asks whom). */
-  note(from: string, to: string, kind: MessageKind, text: string, files?: FileRef[]) { this.say("office", from, to, kind, text, null, null, null, files); }
+  note(from: string, to: string, kind: MessageKind, text: string, files?: FileRef[], helperGroupId?: string) { this.say("office", from, to, kind, text, null, null, null, files, helperGroupId); }
 
   private typing(conv: string, id: string, on: boolean) { this.host.emit("chat.typing", { conversation: conv, agent_id: id, on }, id); }
 
@@ -140,18 +141,19 @@ export class MockChat {
   }
 
   /** POST /messages */
-  post(conversation: string, text: string, attachments: string[] = []): { message_id: string; turn_id: string } {
+  post(conversation: string, text: string, attachments: string[] = [], helpers = false): { message_id: string; turn_id: string } {
     const turn = this.host.uid("turn");
     const files: FileRef[] = attachments.slice(0, 6).map((p) => ({ path: p, name: p.split("/").pop() || p, action: "attach" }));
     const um = this.say(conversation, "user", conversation === "office" ? "all" : conversation.slice(6), "chat", text, turn, null, null, files);
-    this.route(conversation, text, turn, um.id).catch(() => { /* cancelled by reset */ });
+    this.route(conversation, text, turn, um.id, helpers ? attachments.length : null).catch(() => { /* cancelled by reset */ });
     return { message_id: um.id, turn_id: turn };
   }
 
-  private async route(conv: string, text: string, turn: string, replyTo: string) {
+  /** `helpers` (office only): the person asked for helpers without a position, so it is always a task the assistant coordinates; `attach` = its attachments. */
+  private async route(conv: string, text: string, turn: string, replyTo: string, helpers: number | null = null) {
     const h = this.host;
     const convAgent = conv.startsWith("agent:") ? conv.slice(6) : null;
-    const cls = classify(text);
+    const cls = helpers !== null && conv === "office" ? { ...classify(text), intent: "task" as const, topic: "task" as const } : classify(text);
     await h.wait(350);
     const others = h.agents().filter((a) => a.id !== "assistant");
 
@@ -233,6 +235,8 @@ export class MockChat {
     h.emit("route.decided", { turn_id: turn, intent: "task", topic: cls.topic === "task" ? "task" : cls.topic, responders });
     h.log("assistant", "route", tr("mock.act.routed", { name: first(assistant), intent: tr("mock.intent.task"), who: responders.slice(1).map((r) => first(h.agent(r.agent_id)!)).join(", ") }));
     const lines = plan.filter((p) => p.agent !== "assistant").map((p) => tr("mock.task.line", { name: first(h.agent(p.agent)!), task: p.title, reason: tr(`mock.reason.${p.key}`) }));
+    // a helpers request with fewer than 4 parts goes on as a normal request, and the assistant says so
+    if (helpers !== null && splitItems(text, helpers).length < 4) await this.speak(conv, "assistant", "user", tr("helpers.noSplit"), turn, replyTo);
     const said = await this.speak(conv, "assistant", "user", `${tr("mock.task.intro")}\n${lines.join("\n")}`, turn, replyTo, "delegation");
     h.startRequest(text).then((rid) => {
       // the message that announced the work points to the request it created (deep link from the chat history)
