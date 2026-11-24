@@ -164,6 +164,9 @@ type Debates struct {
 	MaxTurns int
 	// MaxCostUSD caps the cost of one debate (DEBATE_MAX_COST_USD; default 0.10).
 	MaxCostUSD float64
+	// OfficeAgents (optional, D3) keeps the agents that work for an office: a debate held in a request asked from an
+	// office only has agents of that office (also when they are named, or picked for the topic).
+	OfficeAgents func(ctx context.Context, office string, agents []domain.Agent) []domain.Agent
 }
 
 func (s *Debates) org(ctx context.Context) string { return OrgFrom(ctx, s.Cfg.OrgID) }
@@ -253,6 +256,9 @@ func (s *Debates) Run(ctx context.Context, in DebateInput) (domain.Debate, error
 	}
 	if in.Eligible != nil {
 		agents = slices.DeleteFunc(agents, func(a domain.Agent) bool { return !in.Eligible(a.ID) })
+	}
+	if office := RequestOfficeFrom(ctx); office != "" && s.OfficeAgents != nil {
+		agents = s.OfficeAgents(ctx, office, agents) // only the agents that work for the office the debate is held for
 	}
 	picked, err := pickDebaters(agents, in.AgentIDs, topic+" "+in.Details, in.Trigger == domain.DebateTriggerUser && len(in.AgentIDs) > 0)
 	if err != nil {

@@ -31,6 +31,7 @@ func wireDebates(store application.Store, rt any, orch *application.Orchestrator
 	if orgCfg != nil {
 		svc.Locale = func(c context.Context) string { return orgCfg.Locale(c, "") }
 	}
+	svc.OfficeAgents = orch.OfficeAgents // D3: a debate of an office's request only has agents that work for it
 	orch.SetDebates(svc)
 	return svc
 }

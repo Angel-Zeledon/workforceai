@@ -69,6 +69,11 @@ func (o *Orchestrator) OfficeOfRequest(ctx context.Context, org, requestID strin
 	return r.OfficeID, err
 }
 
+// OfficeAgents is officeAgents for the services around the orchestrator (the team debates).
+func (o *Orchestrator) OfficeAgents(ctx context.Context, office string, agents []domain.Agent) []domain.Agent {
+	return o.officeAgents(ctx, office, agents)
+}
+
 // officeAgents keeps the agents that work for the office (plus the assistant). An agent whose office cannot be told
 // is dropped (fail closed). office "" or no scope: everyone, as before.
 func (o *Orchestrator) officeAgents(ctx context.Context, office string, agents []domain.Agent) []domain.Agent {
