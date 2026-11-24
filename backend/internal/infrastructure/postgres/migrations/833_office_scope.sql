@@ -7,5 +7,6 @@
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS office_id TEXT;
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS office_id TEXT;
 ALTER TABLE tasks    ADD COLUMN IF NOT EXISTS office_id TEXT;
+ALTER TABLE usage_entries ADD COLUMN IF NOT EXISTS office_id TEXT; -- the office whose request caused the cost
 CREATE INDEX IF NOT EXISTS messages_office_idx ON messages (org_id, office_id) WHERE office_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS requests_office_idx ON requests (org_id, office_id) WHERE office_id IS NOT NULL;

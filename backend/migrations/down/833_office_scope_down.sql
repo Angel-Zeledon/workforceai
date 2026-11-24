@@ -4,3 +4,4 @@ DROP INDEX IF EXISTS requests_office_idx;
 ALTER TABLE messages DROP COLUMN IF EXISTS office_id;
 ALTER TABLE requests DROP COLUMN IF EXISTS office_id;
 ALTER TABLE tasks    DROP COLUMN IF EXISTS office_id;
+ALTER TABLE usage_entries DROP COLUMN IF EXISTS office_id;

@@ -429,9 +429,9 @@ func (s *Store) AddUsage(ctx context.Context, orgID string, u domain.UsageEntry)
 	if u.TS.IsZero() {
 		u.TS = time.Now().UTC()
 	}
-	return s.exec(ctx, orgID, `INSERT INTO usage_entries (id, org_id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts, user_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-		u.ID, orgID, u.RequestID, u.TaskID, u.AgentID, string(u.Kind), u.Model, u.InputTokens, u.OutputTokens, u.CostUSD, jb(strs(u.Tools)), u.TS, u.UserID)
+	return s.exec(ctx, orgID, `INSERT INTO usage_entries (id, org_id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts, user_id, office_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NULLIF($14,''))`,
+		u.ID, orgID, u.RequestID, u.TaskID, u.AgentID, string(u.Kind), u.Model, u.InputTokens, u.OutputTokens, u.CostUSD, jb(strs(u.Tools)), u.TS, u.UserID, u.OfficeID)
 }
 
 func (s *Store) ListUsage(ctx context.Context, orgID string) ([]domain.UsageEntry, error) {
@@ -439,12 +439,12 @@ func (s *Store) ListUsage(ctx context.Context, orgID string) ([]domain.UsageEntr
 		var u domain.UsageEntry
 		var kind string
 		var tools []byte
-		err := r.Scan(&u.ID, &u.RequestID, &u.TaskID, &u.AgentID, &kind, &u.Model, &u.InputTokens, &u.OutputTokens, &u.CostUSD, &tools, &u.TS, &u.UserID)
+		err := r.Scan(&u.ID, &u.RequestID, &u.TaskID, &u.AgentID, &kind, &u.Model, &u.InputTokens, &u.OutputTokens, &u.CostUSD, &tools, &u.TS, &u.UserID, &u.OfficeID)
 		u.Kind = domain.UsageKind(kind)
 		unmarshal(tools, &u.Tools)
 		u.Tools = strs(u.Tools)
 		return u, err
-	}, `SELECT id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts, user_id FROM usage_entries WHERE org_id=$1 ORDER BY ts, id`, orgID)
+	}, `SELECT id, request_id, task_id, agent_id, kind, model, input_tokens, output_tokens, cost_usd, tools, ts, user_id, COALESCE(office_id, '') FROM usage_entries WHERE org_id=$1 ORDER BY ts, id`, orgID)
 }
 
 func (s *Store) SetBudgetCap(ctx context.Context, orgID string, scope domain.BudgetScope, scopeID string, capUSD float64) error {
