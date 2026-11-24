@@ -138,3 +138,66 @@ func TestOfficeLeakCodeRunsFollowTheTaskAndRequest(t *testing.T) {
 		}
 	}
 }
+
+// ---- 3. thought audit ----
+
+func TestOfficeLeakTracesFollowTheTaskAndRequest(t *testing.T) {
+	w := newLeakWorld(t)
+	e, now := w.e, time.Now().UTC()
+	add := func(tag string, n int, newest time.Time) {
+		for i := n - 1; i >= 0; i-- { // oldest first: the store lists the last one added first
+			tr := application.Trace{ID: tag + "-" + string(rune('a'+i)), AgentID: "assistant", TaskID: "task-" + tag, RequestID: "req-" + tag, Kind: "run-task",
+				CreatedAt: newest.Add(-time.Duration(i) * time.Second), Status: "ok", Rationale: tag + "-razon"}
+			if err := e.store.AddTrace(context.Background(), w.org, tr); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	add("ABIERTO", 3, now.Add(-time.Hour)) // older
+	add("SECRETO", 3, now)                 // newer: the first page of the list is all private
+	count := func(token, path, marker string) int {
+		w.e.t.Helper()
+		resp, raw := e.do("GET", api1+path, token, nil, nil)
+		if resp.StatusCode != 200 {
+			return -1
+		}
+		return strings.Count(string(raw), marker)
+	}
+	o := "/agents/assistant/traces"
+	for _, p := range []string{o, o + "?limit=2", o + "/export", o + "/SECRETO-a"} {
+		if n := count(w.owner, p, "SECRETO"); n > 0 {
+			t.Fatalf("admin outside the office: GET %s shows %d private traces", p, n)
+		}
+	}
+	if resp, _ := e.do("GET", api1+o+"/SECRETO-a", w.owner, nil, nil); resp.StatusCode != 404 {
+		t.Fatalf("a hidden trace by id = %d, want 404", resp.StatusCode)
+	}
+	if n := count(w.owner, o+"/ABIERTO-a", "ABIERTO-razon"); n != 1 {
+		t.Fatalf("General's trace by id is hidden: %d", n)
+	}
+	// the pages are not left short by what is left out: limit=2 over 3 private + 3 open traces gives 2 open ones, and
+	// following `before` gives the rest
+	if n := count(w.owner, o+"?limit=2", "ABIERTO-razon"); n != 2 {
+		t.Fatalf("limit=2 returned %d traces, want 2", n)
+	}
+	var page struct {
+		Traces []application.Trace `json:"traces"`
+	}
+	_, raw := e.do("GET", api1+o+"?limit=2", w.owner, nil, nil)
+	if err := json.Unmarshal(raw, &page); err != nil || len(page.Traces) != 2 {
+		t.Fatalf("page = %s", raw)
+	}
+	before := page.Traces[1].CreatedAt.Format(time.RFC3339Nano)
+	if n := count(w.owner, o+"?limit=2&before="+before, "ABIERTO-razon"); n != 1 {
+		t.Fatalf("the second page has %d traces, want the last 1", n)
+	}
+	if n := count(w.owner, o+"/export", "ABIERTO-razon"); n != 3 {
+		t.Fatalf("the export has %d open traces, want 3", n)
+	}
+	// the member of the office reads everything
+	for p, want := range map[string]int{o: 6, o + "/export": 6, o + "/SECRETO-a": 1} {
+		if n := count(w.chief, p, "-razon"); n != want {
+			t.Fatalf("the member: GET %s shows %d traces, want %d", p, n, want)
+		}
+	}
+}
